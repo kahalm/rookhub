@@ -127,3 +127,13 @@ internal sealed class EbookMissedDiagramConfiguration : IEntityTypeConfiguration
     }
 }
 
+internal sealed class EbookDiagramCorrectionConfiguration : IEntityTypeConfiguration<EbookDiagramCorrection>
+{
+    public void Configure(EntityTypeBuilder<EbookDiagramCorrection> e)
+    {
+        e.HasIndex(c => new { c.EbookId, c.CreatedAt });
+        e.HasIndex(c => c.FontFamily);
+        e.HasOne(c => c.Ebook).WithMany().HasForeignKey(c => c.EbookId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+

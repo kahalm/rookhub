@@ -27,4 +27,23 @@ public class EbookMissedDiagramTests : IDisposable
         await _kit.Service.DeleteAsync(owner.Id, false, book.Id);
         Assert.Empty(_kit.Db.EbookMissedDiagrams);
     }
+
+    [Fact]
+    public async Task Epub_PageZeroWithImageOrChapter_IsStored_WithoutAnyPlace_Rejected()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var book = await _kit.BookAsync("Dvoretsky", owner.Id, "epub");
+
+        await _kit.Service.RecordMissedDiagramAsync(owner.Id, false, book.Id,
+            new EbookMissedDiagramDto { Page = 0, EpubRef = " OEBPS/images/fig12.png ", EpubChapter = "OEBPS/ch03.xhtml", IsDiagram = true });
+        await _kit.Service.RecordMissedDiagramAsync(owner.Id, false, book.Id,
+            new EbookMissedDiagramDto { Page = 0, EpubChapter = "OEBPS/ch04.xhtml", IsDiagram = false });
+        var rows = await _kit.Db.EbookMissedDiagrams.OrderBy(m => m.Id).ToListAsync();
+        Assert.Equal(("OEBPS/images/fig12.png", "OEBPS/ch03.xhtml", 0), (rows[0].EpubRef, rows[0].EpubChapter, rows[0].Page));
+        Assert.Equal((null, "OEBPS/ch04.xhtml"), (rows[1].EpubRef, rows[1].EpubChapter));
+
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
+            _kit.Service.RecordMissedDiagramAsync(owner.Id, false, book.Id, new EbookMissedDiagramDto { Page = 0, EpubRef = "  ", IsDiagram = true }));
+        Assert.Equal(2, await _kit.Db.EbookMissedDiagrams.CountAsync());
+    }
 }

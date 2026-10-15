@@ -2453,6 +2453,55 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookDiagrams");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCorrection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<float?>("Confidence")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("DiagramId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FontFamily")
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<string>("NewFen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("OldFen")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FontFamily");
+
+                    b.HasIndex("EbookId", "CreatedAt");
+
+                    b.ToTable("EbookDiagramCorrections");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagramReport", b =>
                 {
                     b.Property<int>("Id")
@@ -2576,6 +2625,14 @@ namespace RookHub.Api.Migrations
 
                     b.Property<int>("EbookId")
                         .HasColumnType("int");
+
+                    b.Property<string>("EpubChapter")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("EpubRef")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
 
                     b.Property<bool>("IsDiagram")
                         .HasColumnType("tinyint(1)");
@@ -9172,6 +9229,17 @@ namespace RookHub.Api.Migrations
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCorrection", b =>
                 {
                     b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
                         .WithMany()

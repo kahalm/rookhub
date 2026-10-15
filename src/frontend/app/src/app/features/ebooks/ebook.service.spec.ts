@@ -28,6 +28,21 @@ describe('EbookService', () => {
     req.flush(null);
   });
 
+  it('EPUB: „Nicht erkanntes Diagramm?“ schickt Bildpfad und Kapitel statt Seite (Seite 0)', () => {
+    service.reportMissedDiagram(42, 0, 0, 0, false, { ref: 'OEBPS/i/a.png', chapter: 'OEBPS/c3.xhtml' }).subscribe();
+    const req = http.expectOne('/api/ebooks/42/missed-diagram');
+    expect(req.request.body).toEqual({ page: 0, x: 0, y: 0, isDiagram: false, epubRef: 'OEBPS/i/a.png', epubChapter: 'OEBPS/c3.xhtml' });
+    req.flush(null);
+  });
+
+  it('„Stellung korrigieren“ schickt PUT mit der FEN an …/diagrams/{id}/position', () => {
+    service.correctDiagramPosition(42, 7, '4k3/8/8/8/8/8/8/4K3 b - - 0 1').subscribe();
+    const req = http.expectOne('/api/ebooks/42/diagrams/7/position');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ fen: '4k3/8/8/8/8/8/8/4K3 b - - 0 1' });
+    req.flush({});
+  });
+
   it('„Als Kurs anlegen“ schickt POST an /api/ebooks/{id}/course', () => {
     let id = 0;
     service.createCourse(42).subscribe(c => id = c.bookId);

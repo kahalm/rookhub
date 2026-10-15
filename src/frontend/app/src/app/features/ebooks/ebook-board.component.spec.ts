@@ -130,6 +130,36 @@ describe('EbookBoardComponent', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  it('⋮ „Stellung korrigieren“ nur mit „correctable“; eine korrigierte Stellung (gleiche Id) zeigt das Brett sofort und beginnt von vorn', async () => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    el.querySelector<HTMLButtonElement>('.eb-more')!.click();
+    fixture.detectChanges(); await fixture.whenStable();
+    expect(document.querySelector('.cdk-overlay-container .eb-correct-item')).toBeNull();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    (document.querySelector('.cdk-overlay-backdrop') as HTMLElement | null)?.click();
+    fixture.detectChanges(); await fixture.whenStable();
+
+    fixture.componentRef.setInput('correctable', true);
+    fixture.detectChanges();
+    const spy = jasmine.createSpy('correct');
+    c.correct.subscribe(spy);
+    el.querySelector<HTMLButtonElement>('.eb-more')!.click();
+    fixture.detectChanges(); await fixture.whenStable();
+    document.querySelector<HTMLButtonElement>('.cdk-overlay-container .eb-correct-item')!.click();
+    expect(spy).toHaveBeenCalled();
+
+    c.setMode('free');
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 } as never);
+    expect(c.played().length).toBe(1);
+    const corrected = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    fixture.componentRef.setInput('diagram', { ...D, fen: corrected });
+    fixture.detectChanges();
+    expect(c.boardFen()).toBe(corrected);
+    expect(c.played()).toEqual([]);
+  });
+
   it('Statuszeile beim Lösen: EINE Zeile mit Zustand und Lösung-zeigen-Knopf, Hinweis als Tooltip', () => {
     const fixture = make();
     const el: HTMLElement = fixture.nativeElement;

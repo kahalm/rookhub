@@ -12,7 +12,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { By } from '@angular/platform-browser';
 import { EbookReaderComponent } from './ebook-reader.component';
 import { EbookBoardComponent } from './ebook-board.component';
-import { Ebook, EbookService } from './ebook.service';
+import { Ebook, EbookDiagram, EbookService } from './ebook.service';
 import { PdfEngineLoader } from './pdf-engine';
 import { EpubViewerComponent } from './epub-viewer.component';
 
@@ -33,7 +33,7 @@ describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
   async function make(b: Ebook, query: Map<string, string> = new Map()) {
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram', 'reportMissedDiagram']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram', 'reportMissedDiagram', 'correctDiagramPosition']);
     service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
     service.accessToken.and.returnValue(of('tok'));
@@ -67,6 +67,40 @@ describe('EbookReaderComponent', () => {
     spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
     for (let i = 0; i < 3; i++) c.askMissedDiagram(b, { page: 4, x: 0.5, y: 0.25 });
     expect(service.reportMissedDiagram.calls.allArgs()).toEqual([[b.id, 4, 0.5, 0.25, true], [b.id, 4, 0.5, 0.25, false]]);
+  });
+
+  it('EPUB: Doppelklick ohne erkanntes Diagramm fragt ebenso und speichert Bildpfad + Kapitel (Seite 0)', async () => {
+    const b = book();
+    const fixture = await make(b);
+    const c = fixture.componentInstance;
+    const dialog = TestBed.inject(MatDialog);
+    spyOn(dialog, 'open').and.returnValue({ afterClosed: () => of(true) } as never);
+    service.reportMissedDiagram.and.returnValue(of(void 0));
+    spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
+    const spot = { ref: 'OEBPS/i/a.png', chapter: 'OEBPS/c3.xhtml' };
+    c.askMissedEpub(b, spot);
+    expect(service.reportMissedDiagram).toHaveBeenCalledWith(b.id, 0, 0, 0, true, spot);
+  });
+
+  it('„Stellung korrigieren“: Editor-FEN wird gespeichert, Liste und Brett zeigen sofort die neue Stellung; Abbrechen speichert nichts', async () => {
+    const b = book();
+    const fixture = await make(b);
+    const c = fixture.componentInstance;
+    const d = { id: 5, page: 3, x: 0, y: 0, w: 0.2, h: 0.2, fen: '8/8/8/8/8/8/8/K6k w - - 0 1', label: null, caption: null, sideKnown: false,
+      reportedByMe: true, reportCount: 2 } as EbookDiagram;
+    c.diagrams.set([d]);
+    c.picked.set(d);
+    const answers: (string | undefined)[] = [undefined, '4k3/8/8/8/8/8/8/4K3 b - - 0 1'];
+    const dialog = TestBed.inject(MatDialog);
+    spyOn(dialog, 'open').and.callFake(() => ({ afterClosed: () => of(answers.shift()) }) as never);
+    service.correctDiagramPosition.and.returnValue(of({ ...d, fen: '4k3/8/8/8/8/8/8/4K3 b - - 0 1', sideKnown: true, reportedByMe: false, reportCount: 0 }));
+    c.correctPosition(d);
+    expect(service.correctDiagramPosition).not.toHaveBeenCalled();
+    c.correctPosition(d);
+    expect(service.correctDiagramPosition).toHaveBeenCalledWith(b.id, 5, '4k3/8/8/8/8/8/8/4K3 b - - 0 1');
+    expect(c.picked()!.fen).toBe('4k3/8/8/8/8/8/8/4K3 b - - 0 1');
+    expect(c.picked()!.reportedByMe).toBeTrue();   // eigene Meldung bleibt
+    expect(c.diagrams()[0].sideKnown).toBeTrue();
   });
 
   it('EPUB und PDF im selben Buch (0.793.0): liest das EPUB, „Als PDF lesen“ nimmt die Lesefassung des PDF', async () => {

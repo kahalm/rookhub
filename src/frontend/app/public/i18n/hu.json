@@ -2297,7 +2297,8 @@
       "apply": "Alkalmaz",
       "erase": "Radír",
       "clear": "Tábla ürítése",
-      "startpos": "Alapállás"
+      "startpos": "Alapállás",
+      "needKings": "Mindkét színből pontosan egy király szükséges."
     },
     "queueBackground": "Elemzés a háttérben",
     "openJobs": "Elemzési feladatok",
@@ -5322,7 +5323,12 @@
       "engineOn": "Motor bekapcsolása",
       "engineOff": "Motor kikapcsolása",
       "settings": "Beállítások",
-      "maiaStrength": "Maia erőssége"
+      "maiaStrength": "Maia erőssége",
+      "correct": "Állás javítása",
+      "correctTitle": "Állás javítása",
+      "correctHint": "Helyezz el, mozgass vagy távolíts el bábukat, és válaszd ki, ki lép. A javítás mentésre kerül, és segít javítani a diagramfelismerést.",
+      "correctSaved": "Állás javítva.",
+      "correctFailed": "Az állást nem sikerült menteni."
     },
     "title": "E-könyvek",
     "intro": "Sakk-könyvek böngészőben olvasásra vagy letöltésre; minden könyv azokkal a csoportokkal van megosztva, amelyeket a feltöltője választott.",

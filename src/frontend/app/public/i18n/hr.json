@@ -3155,7 +3155,8 @@
       "apply": "Primijeni",
       "erase": "Gumica",
       "clear": "Isprazni ploču",
-      "startpos": "Početna pozicija"
+      "startpos": "Početna pozicija",
+      "needKings": "Potreban je točno jedan kralj svake boje."
     },
     "queueBackground": "Analiziraj u pozadini",
     "openJobs": "Analize u pozadini",
@@ -5322,7 +5323,12 @@
       "engineOn": "Uključi engine",
       "engineOff": "Isključi engine",
       "settings": "Mogućnosti",
-      "maiaStrength": "Jačina Maie"
+      "maiaStrength": "Jačina Maie",
+      "correct": "Ispravi poziciju",
+      "correctTitle": "Ispravi poziciju",
+      "correctHint": "Postavi, pomakni ili ukloni figure i odaberi stranu na potezu. Ispravak se sprema i pomaže poboljšati prepoznavanje dijagrama.",
+      "correctSaved": "Pozicija ispravljena.",
+      "correctFailed": "Poziciju nije bilo moguće spremiti."
     },
     "title": "E-knjige",
     "intro": "Šahovske knjige za čitanje u pregledniku ili preuzimanje; svaka je knjiga podijeljena s grupama koje je odabrao onaj tko ju je prenio.",

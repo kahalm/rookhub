@@ -128,6 +128,7 @@ public partial class AppDbContext : DbContext
     public DbSet<EbookDiagram> EbookDiagrams => Set<EbookDiagram>();
     public DbSet<EbookCollection> EbookCollections => Set<EbookCollection>();
     public DbSet<EbookMissedDiagram> EbookMissedDiagrams => Set<EbookMissedDiagram>();
+    public DbSet<EbookDiagramCorrection> EbookDiagramCorrections => Set<EbookDiagramCorrection>();
     public DbSet<EbookDiagramReport> EbookDiagramReports => Set<EbookDiagramReport>();
     public DbSet<WeeklyPost> WeeklyPosts => Set<WeeklyPost>();
     public DbSet<WeeklyPostAttempt> WeeklyPostAttempts => Set<WeeklyPostAttempt>();

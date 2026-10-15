@@ -171,6 +171,12 @@ public class EbooksController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>„Stellung korrigieren“ (0.798.0): neue FEN eines Diagramms (nur Verwalter des Buchs) → das aktualisierte Diagramm.
+    /// Wird immer als Korrektur mitgeschrieben; das Buch gilt danach als kuratiert.</summary>
+    [HttpPut("{id:int}/diagrams/{diagramId:int}/position")]
+    public async Task<ActionResult<EbookDiagramDto>> CorrectDiagramPosition(int id, int diagramId, [FromBody] EbookDiagramPositionDto dto, CancellationToken ct)
+        => Ok(await _service.CorrectDiagramPositionAsync(GetUserId(), await ManageAllAsync(), id, diagramId, dto.Fen, ct));
+
     /// <summary>„Als Kurs anlegen“ (0.785.0): persönlicher Kurs aus den Diagrammen des Buchs → der neue Kurs.</summary>
     [HttpPost("{id:int}/course")]
     public async Task<ActionResult<RookHub.Api.DTOs.Courses.CourseListItemDto>> CreateCourse(int id, [FromServices] EbookCourseBuilder builder, CancellationToken ct)

@@ -3155,7 +3155,8 @@
       "apply": "Apply",
       "erase": "Eraser",
       "clear": "Empty board",
-      "startpos": "Starting position"
+      "startpos": "Starting position",
+      "needKings": "Exactly one king of each colour is required."
     },
     "queueBackground": "Analyse in the background",
     "openJobs": "Analysis jobs",
@@ -5322,7 +5323,12 @@
       "engineOn": "Switch engine on",
       "engineOff": "Switch engine off",
       "settings": "Options",
-      "maiaStrength": "Maia strength"
+      "maiaStrength": "Maia strength",
+      "correct": "Correct position",
+      "correctTitle": "Correct position",
+      "correctHint": "Place, move or remove pieces and set the side to move. The correction is saved and helps improve diagram recognition.",
+      "correctSaved": "Position corrected.",
+      "correctFailed": "The position could not be saved."
     },
     "title": "E-books",
     "intro": "Chess books to read in the browser or download; each book is shared with the groups its uploader chose.",

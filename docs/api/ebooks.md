@@ -348,6 +348,24 @@ erkannt wurde?“ (Ja/Nein; Schließen speichert nichts). `POST /api/ebooks/{id}
 legt eine Zeile in `EbookMissedDiagrams` an (Klickpunkt als Seitenanteil, Nutzer, Zeit) — Rohmaterial für die Auswertung,
 welche Bücher/Seiten die Erkennung verpasst. Keine Oberfläche zum Auswerten; abfragen per SQL.
 
+**EPUB (0.798.0):** im EPUB-Leser fragt ein Doppelklick auf ein Bild OHNE erkanntes Diagramm (oder auf Text) dasselbe
+(`epub-viewer` → `missedPick`). Gespeichert wird `{ page: 0, isDiagram, epubRef, epubChapter }`: `EpubRef` = Bildpfad im
+EPUB (wie `EbookDiagram.ImageRef`, bei Text `null`), `EpubChapter` = Spine-href des Kapitels. Regel: `Page ≥ 1` ODER
+`EpubRef`/`EpubChapter` gesetzt, sonst 400.
+
+## „Stellung korrigieren“ (0.798.0)
+
+⋮ des Bretts → „Stellung korrigieren“ (nur, wer das Buch verwalten darf: Besitzer bzw. `ebooks.manage`; sonst ausgeblendet)
+öffnet den Stellungs-Editor des Analysebretts (`PositionSetupComponent`, `requireLegal=false`) im Dialog
+`ebook-position-dialog`: Figuren setzen/verschieben/entfernen, Weiß/Schwarz am Zug. `PUT /api/ebooks/{id}/diagrams/{diagramId}/position`
+`{ fen }` prüft die FEN (8 Reihen à 8 Felder, genau ein König je Farbe, Zugrecht w/b; Rest ergänzt), setzt `EbookDiagram.Fen`
+und `SideKnown = true` und antwortet mit dem aktualisierten Diagramm (das Brett zeigt es sofort). Dabei:
+- **Immer** eine Zeile in `EbookDiagramCorrections` (EbookId, DiagramId, UserId, Page, OldFen, NewFen, FontFamily und
+  Confidence des Diagramms zu dem Zeitpunkt, CreatedAt) — Material, um die Erkennung an diesen Fällen zu verbessern.
+- Buch wird `DiagramsCurated = true` (kein Rescan überschreibt Hand-Korrekturen) und `SolutionCheckState = Pending`.
+- Lösung: Buchlösung wird ab der neuen Stellung neu nachgespielt (nicht spielbar → keine Linie, Text bleibt), eine
+  Engine-Lösung verfällt; `SolutionCheck = Unchecked`, Stockfish rechnet beim nächsten Prüflauf neu.
+
 ## Mehrere Formate eines Buchs: EPUB bevorzugt, ein Diagrammsatz (0.793.0)
 
 - Leseformat (`EbookFormats.Preference`): **EPUB > PDF > DJVU > CBZ/CBR > MOBI/AZW3**. `PrimaryFormat` ist damit bei

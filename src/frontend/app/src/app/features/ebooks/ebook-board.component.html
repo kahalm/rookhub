@@ -1,6 +1,6 @@
 <!-- Brett-Leiste kompakt (0.785.x): EINE Zeile über dem Brett — fünf Modi als Symbole (Name + Erklärung als Tooltip und
      aria-label, gewählter Modus getönt), rechts ⚙ für die Optionen des Modus (Lösen: Art + Quelle; Maia: Stärke) und ⋮
-     (Analysieren, Engine, Drehen, FEN, Melden). -->
+     (Analysieren, Engine, Drehen, FEN, Stellung korrigieren, Melden). -->
 <div class="eb-bar">
   <div class="eb-modes" role="group" [attr.aria-label]="'ebooks.board.modes' | translate">
     @for (m of modes; track m) {
@@ -64,6 +64,9 @@
   </button>
   <button mat-menu-item (click)="flipped.set(!flipped())"><mat-icon>swap_vert</mat-icon><span>{{ 'ebooks.reader.flip' | translate }}</span></button>
   <button mat-menu-item (click)="copyFen()"><mat-icon>content_copy</mat-icon><span>{{ 'ebooks.reader.copyFen' | translate }}</span></button>
+  @if (correctable) {
+    <button mat-menu-item class="eb-correct-item" (click)="correct.emit()"><mat-icon>edit_square</mat-icon><span>{{ 'ebooks.board.correct' | translate }}</span></button>
+  }
   @if (reportable) {
     <button mat-menu-item class="eb-report-item" [class.eb-report-item--on]="diagram.reportedByMe" (click)="report.emit()">
       <mat-icon>{{ diagram.reportedByMe ? 'flag' : 'outlined_flag' }}</mat-icon>

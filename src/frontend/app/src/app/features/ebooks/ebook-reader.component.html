@@ -109,7 +109,7 @@
         <div class="rd-viewer">
           @if (isEpub) {
             <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
-                             [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)"
+                             [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)" (missedPick)="askMissedEpub(ebook, $event)"
                              (toc)="epubToc.set($event)" (failed)="onViewerFailed()"
                              [layout]="epubLayout()" [fontScale]="epubFont()" />
           } @else {
@@ -151,7 +151,8 @@
                 <p class="rd-sol-note rd-sol-note--warn"><mat-icon>warning_amber</mat-icon>{{ note | translate }}</p>
               }
               <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)"
-                               [reportable]="loggedIn" (report)="toggleReport(d)" (solvedNext)="autoNextDiagram()" />
+                               [reportable]="loggedIn" (report)="toggleReport(d)" (solvedNext)="autoNextDiagram()"
+                               [correctable]="loggedIn && ebook.canManage" (correct)="correctPosition(d)" />
             } @else {
               <div class="empty-state rd-panel-empty">
                 <mat-icon>touch_app</mat-icon>

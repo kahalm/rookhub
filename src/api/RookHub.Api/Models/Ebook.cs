@@ -374,13 +374,44 @@ public class EbookMissedDiagram
     public int Id { get; set; }
     public int EbookId { get; set; }
     public Ebook Ebook { get; set; } = null!;
+    /// <summary>PDF-Seite (1-basiert); bei EPUB-Meldungen 0 — dann steht die Stelle in <see cref="EpubRef"/>/<see cref="EpubChapter"/>.</summary>
     public int Page { get; set; }
     /// <summary>Klickpunkt als Anteil der Seite (0–1, links oben).</summary>
     public double X { get; set; }
     public double Y { get; set; }
+    /// <summary>EPUB (0.798.0): Pfad des doppelgeklickten Bilds im Buch (wie <see cref="EbookDiagram.ImageRef"/>); <c>null</c> bei PDF
+    /// oder wenn auf Text geklickt wurde.</summary>
+    [MaxLength(500)]
+    public string? EpubRef { get; set; }
+    /// <summary>EPUB (0.798.0): Kapitel (Spine-href) der Stelle.</summary>
+    [MaxLength(500)]
+    public string? EpubChapter { get; set; }
     /// <summary>Antwort: true = „ja, hier ist ein Diagramm“, false = „nein“.</summary>
     public bool IsDiagram { get; set; }
     public int UserId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Von Hand korrigierte Diagrammstellung (0.798.0, „Stellung korrigieren“ im ⋮ des Bretts). Jede Korrektur wird hier
+/// mitgeschrieben — alte und neue FEN samt Font und Sicherheit der Erkennung zu diesem Zeitpunkt —, damit sich die
+/// Erkennung später an diesen Fällen verbessern lässt. Hängt nur lose an <see cref="DiagramId"/> (kein FK, wie die Meldungen).
+/// </summary>
+public class EbookDiagramCorrection
+{
+    public int Id { get; set; }
+    public int EbookId { get; set; }
+    public Ebook Ebook { get; set; } = null!;
+    public int DiagramId { get; set; }
+    public int UserId { get; set; }
+    public int Page { get; set; }
+    [Required, MaxLength(100)]
+    public string OldFen { get; set; } = string.Empty;
+    [Required, MaxLength(100)]
+    public string NewFen { get; set; } = string.Empty;
+    [MaxLength(60)]
+    public string? FontFamily { get; set; }
+    public float? Confidence { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

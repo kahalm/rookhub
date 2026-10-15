@@ -59,6 +59,9 @@ export interface Ebook {
 }
 
 /** Ein erkanntes Diagramm: Lage als Anteil der Seite (0–1, Ursprung links oben), FEN, Nummer, Überschrift. */
+/** EPUB-Stelle eines Doppelklicks ohne erkanntes Diagramm (0.798.0): Bildpfad im Buch (`null` = Text) und Kapitel (Spine-href). */
+export interface EpubMissedSpot { ref: string | null; chapter: string | null; }
+
 export interface EbookDiagram {
   id: number;
   page: number;
@@ -240,8 +243,16 @@ export class EbookService {
   }
 
   /** „Ist hier ein Diagramm, das nicht erkannt wurde?“ — Antwort zur späteren Auswertung (0.788.0). */
-  reportMissedDiagram(id: number, page: number, x: number, y: number, isDiagram: boolean): Observable<void> {
-    return this.http.post<void>(`/api/ebooks/${id}/missed-diagram`, { page, x, y, isDiagram });
+  reportMissedDiagram(id: number, page: number, x: number, y: number, isDiagram: boolean, epub?: EpubMissedSpot): Observable<void> {
+    const body = epub
+      ? { page: 0, x: 0, y: 0, isDiagram, epubRef: epub.ref, epubChapter: epub.chapter }
+      : { page, x, y, isDiagram };
+    return this.http.post<void>(`/api/ebooks/${id}/missed-diagram`, body);
+  }
+
+  /** „Stellung korrigieren“ (0.798.0, nur Verwalter des Buchs): neue FEN → das aktualisierte Diagramm. */
+  correctDiagramPosition(ebookId: number, diagramId: number, fen: string): Observable<EbookDiagram> {
+    return this.http.put<EbookDiagram>(`/api/ebooks/${ebookId}/diagrams/${diagramId}/position`, { fen });
   }
 
   /** „Als Kurs anlegen“: persönlicher Kurs aus den Diagrammen des Buchs → Id des neuen Kurses. */

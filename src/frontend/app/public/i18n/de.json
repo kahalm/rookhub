@@ -3155,7 +3155,8 @@
       "apply": "Übernehmen",
       "erase": "Radierer",
       "clear": "Brett leeren",
-      "startpos": "Grundstellung"
+      "startpos": "Grundstellung",
+      "needKings": "Es braucht genau einen König je Farbe."
     },
     "queueBackground": "Im Hintergrund analysieren",
     "openJobs": "Analyse-Aufträge",
@@ -5322,7 +5323,12 @@
       "engineOn": "Engine zuschalten",
       "engineOff": "Engine ausschalten",
       "settings": "Optionen",
-      "maiaStrength": "Maia-Stärke"
+      "maiaStrength": "Maia-Stärke",
+      "correct": "Stellung korrigieren",
+      "correctTitle": "Stellung korrigieren",
+      "correctHint": "Figuren setzen, verschieben oder entfernen und die Seite am Zug wählen. Die Korrektur wird gespeichert und hilft, die Diagramm-Erkennung zu verbessern.",
+      "correctSaved": "Stellung korrigiert.",
+      "correctFailed": "Die Stellung konnte nicht gespeichert werden."
     },
     "title": "E-Books",
     "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",

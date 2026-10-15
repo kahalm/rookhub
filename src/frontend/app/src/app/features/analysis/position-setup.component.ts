@@ -1,10 +1,10 @@
 import {
-  Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy, OnChanges, SimpleChanges} from '@angular/core';
+  Component, ElementRef, EventEmitter, Input, inject, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy, OnChanges, SimpleChanges} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Color, Key, Role, Piece } from 'chessground/types';
@@ -137,12 +137,16 @@ export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
   /** Startstellung des Editors (volle FEN; Zugrecht wird übernommen). */
   @Input() initialFen = START_FEN;
   @Input() orientation: Color = 'white';
+  /** `false` (E-Book-Diagramm korrigieren, 0.798.0): nur je ein König pro Farbe verlangen statt einer regelgerechten
+   *  Stellung — Buchdiagramme sind manchmal Teilstellungen oder Studien, die chess.js ablehnt. */
+  @Input() requireLegal = true;
 
   /** Volle, validierte FEN. */
   @Output() apply = new EventEmitter<string>();
   @Output() cancel = new EventEmitter<void>();
 
   @ViewChild('board', { static: true }) boardEl!: ElementRef<HTMLDivElement>;
+  private readonly translate = inject(TranslateService);
   private ground?: Api;
 
   readonly roles = ROLES;
@@ -242,6 +246,14 @@ export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
   applyPosition(): void {
     if (!this.ground) return;
     const fen = composeFen(this.ground.getFen(), this.side);
+    if (!this.requireLegal) {
+      const placement = fen.split(' ')[0];
+      const kings = (k: string) => placement.split('').filter(ch => ch === k).length;
+      if (kings('K') !== 1 || kings('k') !== 1) { this.error = this.translate.instant('analysis.setup.needKings'); return; }
+      this.error = '';
+      this.apply.emit(fen);
+      return;
+    }
     try {
       new Chess(fen);   // wirft bei ungültiger Stellung (z.B. König fehlt)
     } catch (e: any) {

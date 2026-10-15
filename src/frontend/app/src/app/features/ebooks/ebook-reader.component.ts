@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { EbookMissedDiagramDialogComponent } from './ebook-missed-diagram-dialog.component';
+import { EbookPositionDialogComponent, EbookPositionDialogData } from './ebook-position-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
@@ -15,7 +16,7 @@ import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Ebook, EbookDiagram, EbookFile, EbookService, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
+import { Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
 import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
@@ -508,6 +509,38 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
       this.ebooks.reportMissedDiagram(ebook.id, at.page, at.x, at.y, isDiagram).subscribe({
         next: () => { if (isDiagram) this.snackbar.quick(this.translate.instant('ebooks.reader.missedThanks')); },
         error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
+      });
+    });
+  }
+
+  /** EPUB (0.798.0): Doppelklick auf ein Bild ohne erkanntes Diagramm oder auf Text — dieselbe Rückfrage, Stelle = Bildpfad + Kapitel. */
+  askMissedEpub(ebook: Ebook, spot: EpubMissedSpot): void {
+    if (!this.loggedIn) return;
+    this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '28rem' }).afterClosed().subscribe((isDiagram: boolean | undefined) => {
+      if (isDiagram === undefined) return;
+      this.ebooks.reportMissedDiagram(ebook.id, 0, 0, 0, isDiagram, spot).subscribe({
+        next: () => { if (isDiagram) this.snackbar.quick(this.translate.instant('ebooks.reader.missedThanks')); },
+        error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
+      });
+    });
+  }
+
+  /** „Stellung korrigieren“ (0.798.0, ⋮ des Bretts, nur Verwalter): Editor öffnen, speichern, das Brett zeigt sofort die neue Stellung. */
+  correctPosition(d: EbookDiagram): void {
+    const ebook = this.ebook;
+    if (!ebook?.canManage) return;
+    const data: EbookPositionDialogData = { fen: d.fen, flipped: d.fen.split(' ')[1] === 'b' };
+    this.dialog.open(EbookPositionDialogComponent, { data, maxWidth: '32rem', width: '100%' }).afterClosed().subscribe((fen: string | undefined) => {
+      if (!fen) return;
+      this.ebooks.correctDiagramPosition(ebook.id, d.id, fen).subscribe({
+        next: updated => {
+          const merged: EbookDiagram = { ...d, ...updated, reportedByMe: d.reportedByMe, reportCount: d.reportCount };
+          this.diagrams.update(list => list.map(x => x.id === d.id ? merged : x));
+          if (this.picked()?.id === d.id) this.picked.set(merged);
+          this.snackbar.quick(this.translate.instant('ebooks.board.correctSaved'));
+          this.cdr.markForCheck();
+        },
+        error: () => this.snackbar.warn(this.translate.instant('ebooks.board.correctFailed')),
       });
     });
   }

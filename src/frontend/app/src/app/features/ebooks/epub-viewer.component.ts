@@ -4,6 +4,7 @@ import {
 } from '@angular/core';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
+import type { EpubMissedSpot } from './ebook.service';
 
 /** Lesestelle im EPUB: Anteil (0–1) und CFI (genaue Stelle, wird gespeichert). */
 export interface EpubLocation { fraction: number; cfi: string; }
@@ -36,7 +37,7 @@ interface EpubRendition {
   destroy(): void;
 }
 
-interface EpubContents { document: Document; cfiFromNode(node: Node): string; }
+interface EpubContents { document: Document; cfiFromNode(node: Node): string; sectionIndex?: number; }
 
 /** `ePub(data)` (Archiv) bzw. `ePub(options)` (leeres Buch, danach `open`). */
 /** Darstellung des EPUB-Lesers. */
@@ -89,6 +90,8 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() images: readonly EpubDiagramImage[] = [];
   @Input() activeImage: number | null = null;
   @Output() imagePick = new EventEmitter<number>();
+  /** Doppelklick auf ein Bild OHNE erkanntes Diagramm oder auf Text (0.798.0): der Leser fragt „Ist hier ein Diagramm …?“. */
+  @Output() missedPick = new EventEmitter<EpubMissedSpot>();
   /** Darstellung (0.791.0): `pages` = eine Spalte, geblättert; `scroll` = fließend, das Buch als durchgehender Text. */
   @Input() layout: EpubLayout = 'pages';
   /** Schriftgröße in Prozent (100 = Vorgabe des Buchs). */
@@ -182,6 +185,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     rendition.themes.default({ body: { 'line-height': '1.5' }, img: { 'max-width': '100%' } });
     rendition.themes.fontSize(`${this.fontScale}%`);
     rendition.hooks.content.register(c => this.markImages(c));
+    rendition.hooks.content.register(c => this.listenMissed(c));
     // Mausrad im Kapitel (iframe): Ereignisse von dort erreichen den Host nicht (0.780.1).
     rendition.hooks.content.register((c: { document?: Document }) => c.document?.addEventListener('wheel',
       (ev: WheelEvent) => this.zone.run(() => this.onWheel(ev)), { passive: true }));
@@ -230,6 +234,33 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   private contents(): EpubContents[] {
     const c = this.rendition?.getContents();
     return !c ? [] : Array.isArray(c) ? c : [c];
+  }
+
+  /**
+   * Doppelklick im Kapitel, der KEIN erkanntes Diagramm trifft (die haben eigene Handler mit `data-rh-ref`): Bild → dessen
+   * Pfad im Buch, sonst Text (`ref` = null); dazu das Kapitel (Spine-href). Ein Handler je Kapiteldokument.
+   */
+  private listenMissed(c: EpubContents): void {
+    const doc = c.document;
+    if (!doc || (doc as Document & { __rhMissed?: boolean }).__rhMissed) return;
+    (doc as Document & { __rhMissed?: boolean }).__rhMissed = true;
+    doc.addEventListener('dblclick', ev => {
+      const target = ev.target as Element | null;
+      if (!target || typeof target.closest !== 'function' || target.closest('[data-rh-ref]')) return;
+      const imgEl = target.closest('img, image');
+      let ref: string | null = null;
+      if (imgEl) {
+        const res = this.book?.resources;
+        const blobs = new Map<string, string>();
+        (res?.replacementUrls ?? []).forEach((u, k) => { const path = res?.urls?.[k]; if (u && path) blobs.set(u, path); });
+        const raw = imgEl.getAttribute('src') ?? imgEl.getAttribute('xlink:href') ?? imgEl.getAttribute('href') ?? '';
+        ref = epubImagePath(raw, doc.baseURI, this.dirBase, blobs) || null;
+      }
+      const index = typeof c.sectionIndex === 'number' ? c.sectionIndex : this.chapter() - 1;
+      const chapter = this.book?.spine.get(index)?.href ?? null;
+      if (!ref && !chapter) return;
+      this.zone.run(() => this.missedPick.emit({ ref, chapter }));
+    });
   }
 
   private markImages(c: EpubContents): void {

@@ -66,6 +66,10 @@ export class EbookBoardComponent implements OnChanges {
   @Input() reportable = false;
   /** Melden/Zurücknehmen angeklickt — der Leser schickt es ab (Zustand kommt über `diagram.reportedByMe`). */
   @Output() report = new EventEmitter<void>();
+  /** „Stellung korrigieren“ im ⋮ (0.798.0) — nur wer das Buch verwalten darf. */
+  @Input() correctable = false;
+  /** „Stellung korrigieren“ angeklickt — der Leser öffnet den Editor und speichert; die neue Stellung kommt über `diagram`. */
+  @Output() correct = new EventEmitter<void>();
   /** Gelöst und „Automatisch weiter“ an: der Leser springt zum nächsten Diagramm. */
   @Output() solvedNext = new EventEmitter<void>();
 
@@ -161,7 +165,8 @@ export class EbookBoardComponent implements OnChanges {
   ngOnChanges(ch: SimpleChanges): void {
     if (!ch['diagram'] || !this.diagram) return;
     const prev = ch['diagram'].previousValue as EbookDiagram | undefined;
-    if (prev?.id === this.diagram.id) { this.start.set(this.diagram); return; }   // nur Meldung o. Ä. geändert
+    // Nur Meldung o. Ä. geändert; eine korrigierte Stellung (gleiche Id, neue FEN) beginnt dagegen von vorn.
+    if (prev?.id === this.diagram.id && prev.fen === this.diagram.fen) { this.start.set(this.diagram); return; }
     this.clearTimer();
     this.start.set(this.diagram);
     if (!prev) this.mode.set(this.defaultMode && this.modes.includes(this.defaultMode) ? this.defaultMode : 'solve');

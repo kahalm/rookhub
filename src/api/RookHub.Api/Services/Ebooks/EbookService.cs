@@ -388,6 +388,7 @@ public class EbookService
         _db.CourseLineEbookRefs.RemoveRange(_db.CourseLineEbookRefs.Where(r => r.EbookId == id));
         _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
         _db.EbookMissedDiagrams.RemoveRange(_db.EbookMissedDiagrams.Where(m => m.EbookId == id));
+        _db.EbookDiagramCorrections.RemoveRange(_db.EbookDiagramCorrections.Where(c => c.EbookId == id));
         _db.EbookGroupAccesses.RemoveRange(ebook.GroupAccess);
         _db.EbookFiles.RemoveRange(ebook.Files);
         _db.Ebooks.Remove(ebook);
@@ -595,11 +596,108 @@ public class EbookService
     public async Task RecordMissedDiagramAsync(int userId, bool manageAll, int id, EbookMissedDiagramDto dto, CancellationToken ct = default)
     {
         if (!await EbookAccess.CanAccessAsync(_db, userId, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
+        // PDF: Seite ≥ 1. EPUB (0.798.0): Seite 0, dafür Bildpfad und/oder Kapitel.
+        var epubRef = string.IsNullOrWhiteSpace(dto.EpubRef) ? null : Clip(dto.EpubRef.Trim(), 500);
+        var epubChapter = string.IsNullOrWhiteSpace(dto.EpubChapter) ? null : Clip(dto.EpubChapter.Trim(), 500);
+        if (dto.Page < 1 && epubRef == null && epubChapter == null)
+            throw new DomainValidationException("Either a page or an EPUB location is required.");
         _db.EbookMissedDiagrams.Add(new EbookMissedDiagram
         {
-            EbookId = id, Page = dto.Page, X = Math.Clamp(dto.X, 0, 1), Y = Math.Clamp(dto.Y, 0, 1), IsDiagram = dto.IsDiagram, UserId = userId,
+            EbookId = id, Page = Math.Max(0, dto.Page), X = Math.Clamp(dto.X, 0, 1), Y = Math.Clamp(dto.Y, 0, 1), IsDiagram = dto.IsDiagram,
+            EpubRef = epubRef, EpubChapter = epubChapter, UserId = userId,
         });
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// „Stellung korrigieren“ (0.798.0): neue FEN für ein Diagramm (nur wer das Buch verwalten darf). Die Korrektur wird IMMER
+    /// in <see cref="EbookDiagramCorrection"/> mitgeschrieben (alte/neue FEN, Font, Sicherheit) — Material für die Erkennung.
+    /// Das Buch gilt danach als kuratiert (kein Rescan überschreibt die Hand-Korrektur), und Stockfish prüft die Lösungen neu.
+    /// Die Buchlösung wird ab der neuen Stellung neu nachgespielt; eine Engine-Lösung verfällt (die Prüfung rechnet sie neu).
+    /// </summary>
+    public async Task<EbookDiagramDto> CorrectDiagramPositionAsync(EbookCaller caller, bool manageAll, int id, int diagramId, string fen, CancellationToken ct = default)
+    {
+        if (caller.IsAnonymous || caller.UserId is not int userId) throw new ForbiddenException(EbookAccess.ManageForbiddenMessage);
+        var ebook = await EbookAccess.LoadManageableAsync(_db, caller, id, manageAll, ct);
+        var d = await _db.EbookDiagrams.FirstOrDefaultAsync(x => x.Id == diagramId && x.EbookId == id, ct)
+            ?? throw new NotFoundException("Diagram not found.");
+        var newFen = NormalizeCorrectedFen(fen);
+        _db.EbookDiagramCorrections.Add(new EbookDiagramCorrection
+        {
+            EbookId = id, DiagramId = d.Id, UserId = userId, Page = d.Page, OldFen = d.Fen, NewFen = newFen,
+            FontFamily = d.FontFamily, Confidence = d.Confidence,
+        });
+        if (d.Fen != newFen)
+        {
+            d.Fen = newFen;
+            ResetSolutionForNewPosition(d);
+        }
+        // Zugrecht wurde im Editor ausdrücklich gesetzt (der Editor schickt es immer mit) — jetzt bekannt.
+        d.SideKnown = true;
+        ebook.DiagramsCurated = true;
+        ebook.SolutionCheckState = EbookDiagramState.Pending;
+        ebook.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        var all = await GetDiagramsAsync(caller, manageAll, id, ct);
+        return all.Items.FirstOrDefault(x => x.Id == d.Id) ?? throw new NotFoundException("Diagram not found.");
+    }
+
+    /// <summary>FEN prüfen und vervollständigen: 8 Reihen à 8 Felder, genau ein weißer und ein schwarzer König, Zugrecht w/b;
+    /// Rochade/e.p./Zähler ergänzt bzw. übernommen. Ungültig → 400.</summary>
+    internal static string NormalizeCorrectedFen(string? fen)
+    {
+        var parts = (fen ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) throw new DomainValidationException("The FEN is empty.");
+        var ranks = parts[0].Split('/');
+        if (ranks.Length != 8) throw new DomainValidationException("The FEN needs 8 ranks.");
+        int whiteKings = 0, blackKings = 0;
+        foreach (var rank in ranks)
+        {
+            var squares = 0;
+            foreach (var ch in rank)
+            {
+                if (ch is >= '1' and <= '8') squares += ch - '0';
+                else if ("KQRBNPkqrbnp".Contains(ch))
+                {
+                    squares++;
+                    if (ch == 'K') whiteKings++;
+                    if (ch == 'k') blackKings++;
+                }
+                else throw new DomainValidationException($"Invalid character '{ch}' in the FEN.");
+            }
+            if (squares != 8) throw new DomainValidationException("Every rank needs exactly 8 squares.");
+        }
+        if (whiteKings != 1 || blackKings != 1) throw new DomainValidationException("The position needs exactly one king of each colour.");
+        var side = parts.Length > 1 ? parts[1] : "w";
+        if (side is not ("w" or "b")) throw new DomainValidationException("The side to move must be w or b.");
+        var castling = parts.Length > 2 && System.Text.RegularExpressions.Regex.IsMatch(parts[2], "^(-|[KQkq]{1,4})$") ? parts[2] : "-";
+        var ep = parts.Length > 3 && System.Text.RegularExpressions.Regex.IsMatch(parts[3], "^(-|[a-h][36])$") ? parts[3] : "-";
+        var half = parts.Length > 4 && int.TryParse(parts[4], out var h) && h >= 0 ? h : 0;
+        var full = parts.Length > 5 && int.TryParse(parts[5], out var f) && f >= 1 ? f : 1;
+        var result = $"{parts[0]} {side} {castling} {ep} {half} {full}";
+        if (result.Length > 100) throw new DomainValidationException("The FEN is too long.");
+        return result;
+    }
+
+    /// <summary>Neue Stellung: Buchlösung ab ihr neu nachspielen (nicht spielbar → keine Linie, Text bleibt), Engine-Lösung
+    /// verwerfen; Prüfung und Bewertung zurück auf „ungeprüft“.</summary>
+    private static void ResetSolutionForNewPosition(EbookDiagram d)
+    {
+        if (d.SolutionSource == "engine" || string.IsNullOrEmpty(d.SolutionText))
+        {
+            d.SolutionUci = null;
+            d.SolutionSan = null;
+            if (d.SolutionSource == "engine") { d.SolutionSource = null; d.SolutionText = null; d.SolutionPage = null; }
+        }
+        else
+        {
+            var found = EbookSolutionFinder.TryParse(d.Fen, true, d.SolutionText, d.SolutionPage ?? d.Page);
+            d.SolutionUci = found == null ? null : Clip(string.Join(' ', found.Uci), 1200);
+            d.SolutionSan = found == null ? null : Clip(string.Join(' ', found.San), 1500);
+            d.SolutionSource = "book";
+        }
+        d.SolutionCheck = EbookSolutionCheck.Unchecked;
+        d.EngineEval = null;
     }
 
     // ── Dateien ────────────────────────────────────────────────────────────────────────────────

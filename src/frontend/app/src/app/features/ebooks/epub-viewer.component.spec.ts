@@ -152,4 +152,31 @@ describe('EpubViewerComponent', () => {
     a.dispatchEvent(new MouseEvent('dblclick'));
     expect(picked).toEqual([21]);
   });
+
+  it('Doppelklick auf ein Bild OHNE erkanntes Diagramm oder auf Text meldet die Stelle (Bildpfad + Kapitel), erkannte nicht', async () => {
+    const c = make(BASE);
+    await c.openBook(jasmine.createSpy('ePub').and.returnValue(fakeBook(() => Promise.resolve())) as never);
+    (c as unknown as { book: unknown }).book = { spine: { get: (i: number) => ({ href: `OEBPS/Text/ch${i + 1}.xhtml` }) } };
+    c.images = [{ id: 21, chapter: 3, ref: 'OEBPS/Images/d1.png' }];
+    const doc = document.implementation.createHTMLDocument('ch');
+    const base = doc.createElement('base');
+    base.href = BASE + 'OEBPS/Text/ch3.xhtml';
+    doc.head.appendChild(base);
+    doc.body.innerHTML = '<img id="a" src="../Images/d1.png"><img id="b" src="../Images/plain.png"><p id="t">Text</p>';
+    const contents = { document: doc, sectionIndex: 2 };
+    const host = c as unknown as { markImages(x: unknown): void; listenMissed(x: unknown): void };
+    host.markImages(contents);
+    host.listenMissed(contents);
+    host.listenMissed(contents);   // zweimal registriert = trotzdem ein Handler
+
+    const spots: unknown[] = [];
+    c.missedPick.subscribe(s => spots.push(s));
+    doc.getElementById('a')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    doc.getElementById('b')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    doc.getElementById('t')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(spots).toEqual([
+      { ref: 'OEBPS/Images/plain.png', chapter: 'OEBPS/Text/ch3.xhtml' },
+      { ref: null, chapter: 'OEBPS/Text/ch3.xhtml' },
+    ]);
+  });
 });

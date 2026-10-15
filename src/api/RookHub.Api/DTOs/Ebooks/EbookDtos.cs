@@ -286,10 +286,21 @@ public class EbookCollectionRenameDto
 /// <summary>„Nicht erkanntes Diagramm?“ (0.788.0): Stelle des Doppelklicks + Antwort.</summary>
 public class EbookMissedDiagramDto
 {
-    [System.ComponentModel.DataAnnotations.Range(1, 100000)] public int Page { get; set; }
+    /// <summary>PDF-Seite; bei EPUB 0 (dann muss <see cref="EpubRef"/> oder <see cref="EpubChapter"/> gesetzt sein).</summary>
+    [System.ComponentModel.DataAnnotations.Range(0, 100000)] public int Page { get; set; }
     [System.ComponentModel.DataAnnotations.Range(0.0, 1.0)] public double X { get; set; }
     [System.ComponentModel.DataAnnotations.Range(0.0, 1.0)] public double Y { get; set; }
+    /// <summary>EPUB: Bildpfad im Buch (Doppelklick auf ein Bild ohne erkanntes Diagramm).</summary>
+    [MaxLength(500)] public string? EpubRef { get; set; }
+    /// <summary>EPUB: Kapitel (Spine-href).</summary>
+    [MaxLength(500)] public string? EpubChapter { get; set; }
     public bool IsDiagram { get; set; }
+}
+
+/// <summary>„Stellung korrigieren“ (0.798.0): die neue, vollständige FEN des Diagramms.</summary>
+public class EbookDiagramPositionDto
+{
+    [System.ComponentModel.DataAnnotations.Required, MaxLength(100)] public string Fen { get; set; } = string.Empty;
 }
 
 
