@@ -76,6 +76,36 @@ public class EbookScanDiagramTests
     }
 
     [Fact]
+    public void SideMarker_TriangleAboveRight_HollowWhite_FilledBlack()
+    {
+        // Brett 120…360; Dreieck (Spitze oben, 14 px hoch) rechts über der oberen Kante.
+        static float[,] Tri(bool filled)
+        {
+            var g = Page(400, 400);
+            for (var y = 0; y < 14; y++)
+                for (var x = -y / 2; x <= y / 2; x++)
+                    if (filled || y == 13 || x == -y / 2 || x == y / 2) g[80 + y, 345 + x] = 0f;
+            return g;
+        }
+        Assert.Equal('w', EbookBoardImage.SideMarker(Tri(filled: false), (120, 100, 360, 340)));
+        Assert.Equal('b', EbookBoardImage.SideMarker(Tri(filled: true), (120, 100, 360, 340)));
+    }
+
+    [Fact]
+    public void SideMarker_RankDigitsLeftOfTheBoard_AreNoMarker()
+    {
+        // Acht „8“-artige Ziffern mit Innenraum untereinander = Koordinaten, nicht „B“.
+        var g = Page(400, 400);
+        for (var r = 0; r < 8; r++)
+        {
+            int top = 105 + r * 30;
+            for (var y = 0; y < 12; y++) for (var x = 0; x < 8; x++) g[top + y, 90 + x] = 0f;
+            for (var y = 2; y < 5; y++) for (var x = 2; x < 6; x++) g[top + y, 90 + x] = 1f;
+        }
+        Assert.Null(EbookBoardImage.SideMarker(g, (120, 100, 360, 340)));
+    }
+
+    [Fact]
     public void SideMarker_NothingLeftOfTheBoard_IsNull() => Assert.Null(EbookBoardImage.SideMarker(Page(400, 400), (120, 100, 360, 340)));
 
     [Fact]

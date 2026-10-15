@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.797.1", date: "2026-10-15", changes: [
+    { en: "E-books: in scanned books, the side to move is now also read from a small triangle above the board (△ White, ▼ Black, e.g. Yusupov’s „Boost Your Chess“); the rank numbers 1–8 beside the board are no longer mistaken for a „B“ marker (Black to move).", de: "E-Books: In eingescannten Büchern wird der Spieler am Zug jetzt auch aus einem kleinen Dreieck über dem Brett gelesen (△ Weiß, ▼ Schwarz, z. B. Yusupovs „Boost Your Chess“); die Randziffern 1–8 neben dem Brett gelten nicht mehr fälschlich als „B“-Marker (Schwarz am Zug)." },
+  ] },
   { version: "0.797.0", date: "2026-10-15", changes: [
     { en: "E-books: diagram recognition in scanned books is several times faster – several page batches are now read at the same time instead of strictly one page after another.", de: "E-Books: Die Diagrammerkennung in eingescannten Büchern ist um ein Vielfaches schneller – mehrere Seitenstapel werden jetzt gleichzeitig gelesen statt streng Seite für Seite." },
   ] },

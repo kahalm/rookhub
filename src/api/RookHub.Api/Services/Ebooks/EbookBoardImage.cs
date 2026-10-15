@@ -190,17 +190,49 @@ public static class EbookBoardImage
     /// </summary>
     public static char? SideMarker(float[,] g, (int X0, int Y0, int X1, int Y1) box)
     {
+        // Dreieck rechts über dem Brett (Quality Chess, z. B. Yusupov): △ hohl = Weiß, ▼ voll = Schwarz (0.797.0).
+        if (TriangleMarker(g, box) is char tri) return tri;
         int H = g.GetLength(0);
         var bw = box.X1 - box.X0;
         int sx0 = Math.Max(0, box.X0 - bw / 4), sx1 = box.X0 - 6, sy0 = Math.Max(0, box.Y0), sy1 = Math.Min(H, box.Y1);
         if (sx1 - sx0 < 8 || sy1 <= sy0) return null;
+        var comps = Components(g, sx0, sx1, sy0, sy1, 4)
+            .Where(c => c.H >= bw * 0.03 && c.H <= bw * 0.12 && c.W <= bw * 0.15).ToList();
+        // Randziffern 1–8 untereinander sind Koordinaten, kein Zugrecht (die Löcher von „8“, „6“, „4“ lasen sich als „B“).
+        if (comps.Count >= 4) return null;
+        var best = comps.OrderByDescending(c => c.Points.Count).FirstOrDefault();
+        if (best == null) return null;
+        if (Holes(best) > 0) return 'b';
+        return (double)best.W / best.H >= 1.05 ? 'w' : null;
+    }
+
+    /// <summary>Dreieck rechts oberhalb des Bretts: hohl (Innenraum) = Weiß am Zug, gefüllt = Schwarz; sonst <c>null</c>.</summary>
+    internal static char? TriangleMarker(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        var bw = box.X1 - box.X0;
+        int sx0 = Math.Max(0, box.X1 - bw / 5), sx1 = Math.Min(W, box.X1 + bw / 20), sy0 = Math.Max(0, box.Y0 - (int)(bw * 0.14)), sy1 = box.Y0 - 3;
+        if (sx1 - sx0 < 8 || sy1 - sy0 < 8) return null;
+        var tri = Components(g, sx0, sx1, sy0, sy1, 1)
+            .Where(c => c.H >= bw * 0.025 && c.H <= bw * 0.09 && c.W >= c.H * 0.7 && c.W <= c.H * 1.5)
+            .OrderByDescending(c => c.X0).FirstOrDefault();
+        if (tri == null) return null;
+        // Ein Dreieck füllt sein Rechteck etwa zur Hälfte: gefüllt ≥ 35 %, hohl nur der Umriss — aber mit Innenraum.
+        if (Holes(tri) > 0) return 'w';
+        return tri.Points.Count >= 0.35 * tri.W * tri.H ? 'b' : null;
+    }
+
+    private sealed record Component(List<(int Y, int X)> Points, int X0, int Y0, int W, int H);
+
+    /// <summary>Dunkle Zusammenhangskomponenten im Ausschnitt; Striche bis <paramref name="reach"/> px Abstand gehören zusammen.</summary>
+    private static List<Component> Components(float[,] g, int sx0, int sx1, int sy0, int sy1, int reach)
+    {
         int sw = sx1 - sx0, sh = sy1 - sy0;
         var ink = new bool[sh, sw];
         for (var y = 0; y < sh; y++) for (var x = 0; x < sw; x++) ink[y, x] = g[sy0 + y, sx0 + x] < 0.5f;
         var seen = new bool[sh, sw];
         var stack = new Stack<(int, int)>();
-        List<(int Y, int X)>? best = null;
-        const int reach = 4;
+        var list = new List<Component>();
         for (var y = 0; y < sh; y++)
             for (var x = 0; x < sw; x++)
             {
@@ -214,17 +246,20 @@ public static class EbookBoardImage
                         for (var nx = Math.Max(0, cx - reach); nx <= Math.Min(sw - 1, cx + reach); nx++)
                             if (ink[ny, nx] && !seen[ny, nx]) { seen[ny, nx] = true; stack.Push((ny, nx)); }
                 }
-                int h = comp.Max(p => p.Y) - comp.Min(p => p.Y) + 1, w = comp.Max(p => p.X) - comp.Min(p => p.X) + 1;
-                if (h < bw * 0.03 || h > bw * 0.12 || w > bw * 0.15) continue;
-                if (best == null || comp.Count > best.Count) best = comp;
+                int y0 = comp.Min(p => p.Y), x0 = comp.Min(p => p.X);
+                list.Add(new Component(comp, x0, y0, comp.Max(p => p.X) - x0 + 1, comp.Max(p => p.Y) - y0 + 1));
             }
-        if (best == null) return null;
-        int y0 = best.Min(p => p.Y), x0 = best.Min(p => p.X);
-        int bh = best.Max(p => p.Y) - y0 + 1, bwid = best.Max(p => p.X) - x0 + 1;
-        // Innenräume: weiße Bereiche im (um 1 Pixel gepolsterten) Rechteck, die den Rand nicht erreichen (4er-Nachbarschaft).
+        return list;
+    }
+
+    /// <summary>Innenräume: weiße Bereiche im (um 1 Pixel gepolsterten) Rechteck, die den Rand nicht erreichen (4er-Nachbarschaft).</summary>
+    private static int Holes(Component c)
+    {
+        int bh = c.H, bwid = c.W;
         var m = new bool[bh + 2, bwid + 2];
-        foreach (var (py, px) in best) m[py - y0 + 1, px - x0 + 1] = true;
+        foreach (var (py, px) in c.Points) m[py - c.Y0 + 1, px - c.X0 + 1] = true;
         var lab = new int[bh + 2, bwid + 2];
+        var stack = new Stack<(int, int)>();
         var holes = 0; var id = 0;
         for (var y = 0; y < bh + 2; y++)
             for (var x = 0; x < bwid + 2; x++)
@@ -241,8 +276,7 @@ public static class EbookBoardImage
                 }
                 if (!border && size >= 3) holes++;
             }
-        if (holes > 0) return 'b';
-        return (double)bwid / bh >= 1.05 ? 'w' : null;
+        return holes;
     }
 
     /// <summary>Hintergrund je Brett (Scans): Median der eigenen hellen bzw. dunklen Felder.</summary>
