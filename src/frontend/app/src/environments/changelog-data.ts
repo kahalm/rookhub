@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.798.1", date: "2026-10-15", changes: [
+    { en: "E-book reader (PDF): making the board bigger, dragging the window or changing the zoom no longer moves the book on by several pages – you stay at the same place on the same page.",
+      de: "E-Book-Leser (PDF): Brett vergrößern, Fenster ziehen oder Zoom ändern schiebt das Buch nicht mehr mehrere Seiten weiter – man bleibt an derselben Stelle derselben Seite." },
+  ] },
   { version: "0.798.0", date: "2026-10-15", changes: [
     { en: "E-books: in the EPUB reader, a double-click on a picture without a recognised diagram (or on the text) now also asks „Is there a diagram here that was not recognised?“ – the answer is saved together with the picture and chapter.", de: "E-Books: Im EPUB-Leser fragt ein Doppelklick auf ein Bild ohne erkanntes Diagramm (oder auf den Text) jetzt ebenfalls „Ist hier ein Diagramm, das nicht erkannt wurde?“ – die Antwort wird mit Bild und Kapitel gespeichert." },
     { en: "E-books: „Correct position“ in the board’s ⋮ menu (for whoever may manage the book) opens a position editor – place, move or remove pieces and set the side to move. The board shows the corrected position immediately; every correction is recorded to improve the recognition, and a rescan no longer overwrites hand corrections.", de: "E-Books: „Stellung korrigieren“ im ⋮-Menü des Bretts (für alle, die das Buch verwalten dürfen) öffnet einen Stellungs-Editor – Figuren setzen, verschieben oder entfernen und die Seite am Zug wählen. Das Brett zeigt die korrigierte Stellung sofort; jede Korrektur wird festgehalten, um die Erkennung zu verbessern, und ein Neuerkennen überschreibt Hand-Korrekturen nicht mehr." },

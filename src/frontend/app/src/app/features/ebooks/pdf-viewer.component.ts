@@ -5,7 +5,7 @@ import {
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PdfDocument, PdfEngineLoader, PdfLoadingTask, PdfPage } from './pdf-engine';
-import { WIDE_FIT_MAX_WIDTH, currentPage, fitWidthZoom, pagesToRender } from './reader-progress.util';
+import { WIDE_FIT_MAX_WIDTH, currentPage, fitWidthZoom, pagesToRender, readingAnchor, scrollTopForAnchor } from './reader-progress.util';
 import { mediaSignal } from '../../shared/layout/wide-media';
 
 /** Eine anklickbare Zone über der Seite (Lage als Anteil der Seite, 0–1). */
@@ -121,7 +121,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['src'] && !changes['src'].firstChange) void this.open();
-    if (changes['zoom'] && !changes['zoom'].firstChange && this.doc) this.applyZoom();
+    if (changes['zoom'] && !changes['zoom'].firstChange && this.doc) this.keepReadingPlace(() => this.applyZoom());
     if ((changes['zones'] && !changes['zones'].firstChange) || changes['activeZone']) this.placeZones();
   }
 
@@ -275,7 +275,23 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   }
 
   private onResize(): void {
-    if (this.zoom == null && this.doc) this.zone.run(() => this.applyZoom());
+    if (this.zoom == null && this.doc) this.zone.run(() => this.keepReadingPlace(() => this.applyZoom()));
+  }
+
+  /**
+   * Führt eine Änderung der Seitengrößen aus (neuer Zoom, andere Leserbreite) und hält dabei die Lesestelle: dieselbe
+   * Seite, gleich weit hineingescrollt. Ohne das blieb `scrollTop` in Pixeln stehen, und schmalere Seiten schoben das
+   * Buch Seiten weiter (0.798.1).
+   */
+  private keepReadingPlace(change: () => void): void {
+    const el = this.scrollRef.nativeElement;
+    const before = this.layout();
+    const anchor = readingAnchor(el.scrollTop, before.tops, before.heights);
+    change();
+    const after = this.layout();
+    const top = scrollTopForAnchor(anchor, after.tops, after.heights);
+    if (Math.abs(el.scrollTop - top) >= 1) el.scrollTop = top;
+    this.onScroll();
   }
 
   onScroll(): void {

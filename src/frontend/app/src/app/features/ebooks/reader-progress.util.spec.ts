@@ -1,4 +1,6 @@
-import { WIDE_FIT_MAX_WIDTH, ZOOM_STEPS, currentPage, fitWidthZoom, nextZoom, pagesToRender, parsePageInput } from './reader-progress.util';
+import {
+  WIDE_FIT_MAX_WIDTH, ZOOM_STEPS, currentPage, fitWidthZoom, nextZoom, pagesToRender, parsePageInput, readingAnchor, scrollTopForAnchor,
+} from './reader-progress.util';
 
 describe('reader-progress.util', () => {
   it('nextZoom geht stufenweise und bleibt am Rand stehen', () => {
@@ -51,5 +53,26 @@ describe('reader-progress.util', () => {
     expect(parsePageInput('101', 100)).toBeNull();
     expect(parsePageInput('abc', 100)).toBeNull();
     expect(parsePageInput('1', 0)).toBe(1);
+  });
+
+  it('readingAnchor/scrollTopForAnchor halten die Lesestelle, wenn die Seiten schmaler werden (Brett vergrößert)', () => {
+    // Vorher: Seiten 1000 px hoch + 12 px Abstand; man steht 300 px tief in Seite 8 (Index 7).
+    const tops = [0, 1012, 2024, 3036, 4048, 5060, 6072, 7084, 8096, 9108];
+    const heights = tops.map(() => 1000);
+    const anchor = readingAnchor(7384, tops, heights);
+    expect(anchor).toEqual({ index: 7, frac: 0.3 });
+    // Nachher: Leser schmaler, Seiten 700 px hoch — derselbe scrollTop 7384 läge auf Seite 11; die Lesestelle bleibt auf Seite 8.
+    const tops2 = tops.map((_, i) => i * 712);
+    const heights2 = tops.map(() => 700);
+    expect(scrollTopForAnchor(anchor, tops2, heights2)).toBe(7 * 712 + 210);
+    expect(currentPage(7 * 712 + 210, 300, tops2, heights2)).toBe(8);
+  });
+
+  it('readingAnchor: ganz oben, im Zwischenraum und ohne Seiten', () => {
+    expect(readingAnchor(0, [0, 1012], [1000, 1000])).toEqual({ index: 0, frac: 0 });
+    expect(readingAnchor(1005, [0, 1012], [1000, 1000])).toEqual({ index: 0, frac: 1 });   // Abstand gehört zur Seite darüber
+    expect(readingAnchor(50, [], [])).toEqual({ index: 0, frac: 0 });
+    expect(scrollTopForAnchor({ index: 5, frac: 0.5 }, [0, 712], [700, 700])).toBe(712 + 350);   // weniger Seiten → letzte
+    expect(scrollTopForAnchor({ index: 0, frac: 0 }, [], [])).toBe(0);
   });
 });

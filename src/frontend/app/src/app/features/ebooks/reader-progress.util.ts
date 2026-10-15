@@ -58,6 +58,32 @@ export function pagesToRender(scrollTop: number, viewportHeight: number, tops: r
   return result;
 }
 
+/**
+ * Lesestelle unabhängig von der Seitengröße (0.798.1): die Seite an der Oberkante des Sichtfelds (0-basiert) und wie weit
+ * man in sie hineingescrollt ist (Anteil ihrer Höhe, 0–1). Ändert sich die Breite des Lesers (Brett vergrößert,
+ * Fenster gezogen) oder der Zoom, werden alle Seiten anders hoch — derselbe `scrollTop` läge dann Seiten weiter
+ * (gemeldet 15.10.2026: Brett vergrößert → Buch drei Seiten weiter). Vorher merken, danach mit `scrollTopForAnchor`
+ * zurücksetzen. Der Zwischenraum unter einer Seite zählt noch zu ihr.
+ */
+export function readingAnchor(scrollTop: number, tops: readonly number[], heights: readonly number[]): { index: number; frac: number } {
+  if (tops.length === 0) return { index: 0, frac: 0 };
+  let index = 0;
+  for (let i = 0; i < tops.length; i++) {
+    if (tops[i] <= scrollTop) index = i;
+    else break;
+  }
+  const h = heights[index] ?? 0;
+  const frac = h > 0 ? Math.min(1, Math.max(0, (scrollTop - tops[index]) / h)) : 0;
+  return { index, frac };
+}
+
+/** `scrollTop`, der die mit `readingAnchor` gemerkte Lesestelle im neuen Seitenlayout wieder an die Oberkante bringt. */
+export function scrollTopForAnchor(anchor: { index: number; frac: number }, tops: readonly number[], heights: readonly number[]): number {
+  if (tops.length === 0) return 0;
+  const i = Math.min(Math.max(0, anchor.index), tops.length - 1);
+  return Math.max(0, Math.round(tops[i] + anchor.frac * (heights[i] ?? 0)));
+}
+
 /** Seiteneingabe des Nutzers: Zahl in 1…count, sonst `null`. */
 export function parsePageInput(raw: string, count: number): number | null {
   const n = Number.parseInt(raw.trim(), 10);
