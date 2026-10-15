@@ -792,7 +792,11 @@
       "title": "Erscheinungsbild",
       "system": "System",
       "light": "Hell",
-      "dark": "Dunkel"
+      "dark": "Dunkel",
+      "eink": "E-Ink-Modus (dieses Gerät)",
+      "einkHint": "Für E-Ink-Tablets: ohne Animationen, hoher Kontrast, Blättern statt Gleiten.",
+      "einkForcesLight": "Der E-Ink-Modus ist an: die App bleibt immer hell.",
+      "einkNotSaved": "Der E-Ink-Modus ließ sich auf diesem Gerät nicht speichern — er gilt nur bis zum Neuladen."
     },
     "displayNameHint": "Wird anderen statt „{{username}}“ angezeigt."
   },

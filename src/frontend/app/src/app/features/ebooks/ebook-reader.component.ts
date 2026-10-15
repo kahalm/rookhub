@@ -23,6 +23,7 @@ import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
 import { EbookBoardComponent } from './ebook-board.component';
 import { nextZoom, parsePageInput } from './reader-progress.util';
 import { NAV_DOCKED_CLASS } from '../../shared/navbar/navbar.component';
+import { EinkService } from '../../core/eink.service';
 
 /**
  * Leser-Seite (`/ebooks/:id`): Werkzeugleiste (zurück, Titel, Seite x / N, Zoom, Download) und darunter der
@@ -97,6 +98,8 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   readonly authorNames = ebookAuthorNames;
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  /** E-Ink-Modus: Pfeil hoch/runter blättert eine Bildschirmseite, Tippzonen links/rechts am Buch (DESIGN 3.6). */
+  readonly eink = inject(EinkService).enabled;
   private progress$ = new Subject<number>();
   private destroy$ = new Subject<void>();
 
@@ -243,10 +246,18 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
       if (forward || down) this.epubNext(); else this.epubPrev();
     } else if (forward || back) {
       this.viewer?.goTo(Math.max(1, Math.min(this.pageCount() || 1, this.page() + (forward ? 1 : -1))));
+    } else if (this.eink()) {
+      this.viewer?.pageBy(down ? 1 : -1);
     } else {
       this.viewer?.scrollByPx(down ? 80 : -80);
     }
     e.preventDefault();
+  }
+
+  /** Tippzone im E-Ink-Modus: EPUB eine Seite, PDF eine Bildschirmhöhe — springend, ohne Gleiten. */
+  turn(dir: 1 | -1): void {
+    if (this.isEpub) { if (dir > 0) this.epubNext(); else this.epubPrev(); }
+    else this.viewer?.pageBy(dir);
   }
 
   epubPrev(): void { this.epub?.prev(); }

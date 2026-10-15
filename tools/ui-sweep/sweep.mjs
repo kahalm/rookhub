@@ -18,6 +18,7 @@ import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.m
 import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
 import { writeIndex, foldSummary } from './report.mjs';
 import { withStates, runSteps, writeDecision, stubBody } from './states.mjs';
+import { themeSetup } from './themes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -30,6 +31,10 @@ const VIEWPORTS = {
   wide: { width: 1920, height: 1080 },
   // Ultrawide-Monitor des Betreibers (UWQHD 21:9). Nicht in der Vorgabe — nur mit --viewport ultrawide.
   ultrawide: { width: 3440, height: 1440 },
+  // E-Ink-Tablet des Betreibers: Boox Tab X C (13,3", Kaleido 3, 3200 × 2400 s/w) — CSS-Viewport ≈ 960 × 1280 hoch.
+  // Nicht in der Vorgabe; mit --viewport boox --theme eink. Aufnahme mit Pixeldichte 1 (gleich große Bilder wie die
+  // übrigen Breiten), das Gerät selbst rendert mit ≈ 2,5.
+  boox: { width: 960, height: 1280, isMobile: true, hasTouch: true },
 };
 const MAX_SHOT_HEIGHT = 4000;
 /** Browser-Sprache je Oberflächensprache (Datums-/Zahlenformat der Seite kommt aus der App, das hier ist navigator.language). */
@@ -158,7 +163,7 @@ function parseArgs(argv) {
   if (!ENV_DEFAULTS[o.env]) throw new Error(`Unbekannte Umgebung ${o.env} (dev, prod)`);
   o.rate ??= ENV_DEFAULTS[o.env].rate;
   o.concurrency ??= ENV_DEFAULTS[o.env].concurrency;
-  for (const t of o.theme) if (!['dark', 'light'].includes(t)) throw new Error(`Unbekanntes Design ${t}`);
+  for (const t of o.theme) themeSetup(t);
   for (const a of o.auth) if (!ROLES.includes(a)) throw new Error(`Unbekannte Rolle ${a} (${ROLES.join(', ')})`);
   if (o.env === 'prod' && o.auth.some(a => a !== 'anon')) {
     console.log('Hinweis: auf prod nur abgemeldet — --auth user/admin entfällt.');
@@ -447,15 +452,16 @@ async function main() {
       // --fast: ohne Handy-Emulation — isMobile/hasTouch lassen sich an einem offenen Kontext nicht umschalten.
       viewport: { width: first.width, height: first.height },
       isMobile: canMobile && !opts.fast && !!first.isMobile, hasTouch: !opts.fast && !!first.hasTouch,
-      deviceScaleFactor: 1, colorScheme: job.theme, reducedMotion: 'reduce', serviceWorkers: 'block',
+      deviceScaleFactor: 1, colorScheme: themeSetup(job.theme).colorScheme, reducedMotion: 'reduce', serviceWorkers: 'block',
       locale: BROWSER_LOCALE[job.lang] ?? job.lang, timezoneId: 'Europe/Vienna', ignoreHTTPSErrors: true,
     });
     let toolDelayMs = 0; const apiCalls = []; let cacheHits = 0;
     const userJson = sessions[job.auth] ? JSON.stringify(sessions[job.auth]) : null;
-    await ctx.addInitScript(([user, theme, lang, seedSolveMode]) => {
+    await ctx.addInitScript(([user, theme, lang, seedSolveMode, extra]) => {
       try {
         if (user) localStorage.setItem('rookhub_user', user); else localStorage.removeItem('rookhub_user');
         localStorage.setItem('rookhub_app_theme', theme);
+        for (const [k, v] of Object.entries(extra ?? {})) localStorage.setItem(k, v);
         // Sprache: LocaleService liest erst das geteilte Cookie, dann diesen Wert (LeagueHub/ClubHub sind fest deutsch).
         localStorage.setItem('rookhub_lang', lang);
         // Offline-Vorräte nicht vorladen: jede Seite holte sonst ~8 zusätzliche Puzzle-Anfragen (Drossel!).
@@ -467,11 +473,11 @@ async function main() {
           localStorage.setItem('rookhub_solve_modes', JSON.stringify({ '*': { mode: 'easy', at: 1 }, 'course:*': { mode: 'easy', at: 1 } }));
         }
       } catch { /* kein Speicher */ }
-    }, [userJson, job.theme, job.lang, !job.route.fresh]);
+    }, [userJson, themeSetup(job.theme).appTheme, job.lang, !job.route.fresh, themeSetup(job.theme).storage]);
     const host = new URL(origin).hostname;
     if (host.endsWith('oberschmid.homes')) {
       await ctx.addCookies([
-        { name: 'rookhub_theme', value: job.theme, domain: '.oberschmid.homes', path: '/' },
+        { name: 'rookhub_theme', value: themeSetup(job.theme).appTheme, domain: '.oberschmid.homes', path: '/' },
         { name: 'rookhub_lang', value: job.lang, domain: '.oberschmid.homes', path: '/' },
       ]);
     }

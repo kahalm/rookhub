@@ -1,0 +1,160 @@
+// E-Ink-Modus (0.799.0, docs/DESIGN.md 3.6) — für E-Ink-Tablets (Boox Tab X C, Kaleido 3).
+//
+// Geschaltet über die Klasse `eink` an <html> und <body> (`core/eink.ts`, je Gerät: localStorage `rookhub_eink`).
+// Was er tut, und warum:
+// * Keine Animationen/Übergänge: E-Ink braucht für jedes Zwischenbild einen Teil-Refresh — eine 200-ms-Bewegung wird zu
+//   Schlieren und Geisterbildern. Zustände springen.
+// * Maximaler Kontrast: Text #000 auf #fff, Rahmen dunkel und ≥ 2 px (Haarlinien und blasse Grautöne gehen im
+//   Graustufen-Raster unter), keine Schatten (werden zu grauem Rauschen).
+// * Bedeutung nie nur über Farbe: aktiv/ausgewählt/Fokus zusätzlich als dicker Rahmen.
+// * Ruhige Ladeanzeigen: kein drehender Kreis (Dauer-Refresh), sondern ein stehender gepunkteter Ring bzw. eine
+//   gestrichelte Leiste.
+// * Brett: helle Felder weiß, dunkle mittelgrau mit Kante; letzter Zug/Auswahl als Rahmen statt getönter Fläche.
+//
+// Eingebunden am ENDE von styles.scss (meta.load-css), damit die Regeln nach den Brettthemen stehen. Selektoren beginnen
+// mit `html.eink` (schlägt `html { mat.theme }` und die Brettthemen); wo gekapselte Komponenten-Regeln dagegenstehen,
+// mit !important. Getestet in `core/eink-styles.spec.ts`.
+
+// ── Tokens: hell erzwungen (ThemeService ignoriert „dunkel“, solange der Modus an ist) ────────────────────────────
+html.eink {
+  color-scheme: light;
+  --mat-sys-surface: #fff;
+  --mat-sys-surface-bright: #fff;
+  --mat-sys-surface-dim: #f2f2f2;
+  --mat-sys-surface-container-lowest: #fff;
+  --mat-sys-surface-container-low: #fff;
+  --mat-sys-surface-container: #fff;
+  --mat-sys-surface-container-high: #f4f4f4;
+  --mat-sys-surface-container-highest: #ececec;
+  --mat-sys-surface-variant: #ececec;
+  --mat-sys-background: #fff;
+  --mat-sys-on-surface: #000;
+  --mat-sys-on-background: #000;
+  // ≥ 7:1 auf Weiß (#333 ≈ 12,6:1) — Sekundärtext bleibt unterscheidbar, aber lesbar.
+  --mat-sys-on-surface-variant: #333;
+  --mat-sys-outline: #000;
+  --mat-sys-outline-variant: #4d4d4d;
+  // Farbe gedämpft: dunkles Blau (≈ 11:1) — auf Kaleido kaum noch farbig, als Graustufe fast schwarz.
+  --mat-sys-primary: #17386b;
+  --mat-sys-on-primary: #fff;
+  --mat-sys-primary-container: #dfe3ea;
+  --mat-sys-on-primary-container: #000;
+  --mat-sys-secondary-container: #d9d9d9;
+  --mat-sys-on-secondary-container: #000;
+  --mat-sys-error: #8c0000;
+  --rh-accent: #17386b;
+  --rh-error: #8c0000;
+  --rh-success: #0f4a13;
+  --rh-warn: #7a2300;
+  --rh-info: #0d3f80;
+  --eink-line: 2px;
+}
+
+html.eink body {
+  background: #fff;
+  color: #000;
+  // Kräftigere Schrift ohne andere Laufweite (Umbrüche bleiben): ein Hauch Kontur um jede Glyphe.
+  -webkit-text-stroke: 0.25px currentColor;
+}
+
+// ── Keine Bewegung ───────────────────────────────────────────────────────────────────────────────────────────────
+html.eink *,
+html.eink *::before,
+html.eink *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+// Ripples zusätzlich zum globalen Schalter (provideEinkMaterial) — auch Knöpfe, die vor dem Umschalten entstanden sind.
+html.eink .mat-ripple-element,
+html.eink .mat-mdc-button-ripple,
+html.eink .mat-mdc-focus-indicator::before { display: none !important; }
+
+// ── Rahmen statt Schatten, Fokus/aktiv als dicker Rahmen ──────────────────────────────────────────────────────────
+html.eink .mat-mdc-card,
+html.eink .mat-mdc-dialog-surface,
+html.eink .mat-mdc-menu-panel,
+html.eink .mat-mdc-select-panel,
+html.eink .mat-mdc-autocomplete-panel,
+html.eink .mat-mdc-snack-bar-container .mdc-snackbar__surface {
+  box-shadow: none !important;
+  border: var(--eink-line) solid #000;
+}
+html.eink .mat-mdc-snack-bar-container .mdc-snackbar__surface { background: #fff !important; color: #000 !important; }
+html.eink .mat-mdc-snack-bar-container .mat-mdc-snack-bar-label { color: #000 !important; }
+html.eink :focus-visible {
+  outline: 3px solid #000 !important;
+  outline-offset: 2px;
+}
+html.eink .mat-button-toggle-checked,
+html.eink [aria-pressed='true'],
+html.eink [aria-current='page'],
+html.eink [aria-selected='true'] {
+  box-shadow: inset 0 0 0 3px #000;
+  font-weight: 700;
+}
+html.eink .mat-mdc-outlined-button:not(:disabled),
+html.eink .mat-button-toggle-group,
+html.eink .mat-button-toggle-standalone { border: var(--eink-line) solid #000 !important; }
+html.eink .mdc-tab-indicator__content--underline { border-top-width: 4px !important; border-color: #000 !important; }
+html.eink mat-divider,
+html.eink .mat-divider { border-top-width: var(--eink-line) !important; border-top-color: #000 !important; }
+
+// ── Ruhige Ladeanzeigen ──────────────────────────────────────────────────────────────────────────────────────────
+// Unbestimmter Kreis: stehender gepunkteter Ring statt Drehung (bestimmte Kreise zeigen ihren Wert wie gehabt).
+html.eink .mat-mdc-progress-spinner.mdc-circular-progress--indeterminate .mdc-circular-progress__indeterminate-container {
+  display: none !important;
+}
+html.eink .mat-mdc-progress-spinner.mdc-circular-progress--indeterminate { position: relative; }
+html.eink .mat-mdc-progress-spinner.mdc-circular-progress--indeterminate::after {
+  content: '';
+  position: absolute;
+  inset: 10%;
+  border: 4px dotted #000;
+  border-radius: 50%;
+}
+// Unbestimmte Leiste: volle, gestrichelte Leiste statt laufender Balken.
+html.eink mat-progress-bar { --mat-progress-bar-track-color: #d9d9d9; }
+html.eink .mdc-linear-progress--indeterminate .mdc-linear-progress__primary-bar {
+  left: 0 !important;
+  transform: none !important;
+}
+html.eink .mdc-linear-progress--indeterminate .mdc-linear-progress__bar-inner { border-top-style: dashed !important; }
+html.eink .mdc-linear-progress--indeterminate .mdc-linear-progress__secondary-bar { display: none !important; }
+
+// ── Brett (chessground) ──────────────────────────────────────────────────────────────────────────────────────────
+// Helle Felder weiß, dunkle mittelgrau (#a3a3a3) mit dunkler Kante — in Graustufen klar getrennt, Figuren bleiben
+// davor gut lesbar. Gilt über jedem Brettthema und jeder Textur.
+html.eink cg-board {
+  background-color: #fff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2' shape-rendering='crispEdges'%3E%3Crect width='2' height='2' fill='%23fff'/%3E%3Crect x='1' width='1' height='1' fill='%23a3a3a3' stroke='%23555' stroke-width='0.04'/%3E%3Crect y='1' width='1' height='1' fill='%23a3a3a3' stroke='%23555' stroke-width='0.04'/%3E%3C/svg%3E") !important;
+  background-size: 25% 25% !important;
+  background-repeat: repeat !important;
+}
+html.eink .cg-wrap { box-shadow: 0 0 0 2px #000; }
+// Letzter Zug und Auswahl: Rahmen statt getönter Fläche.
+html.eink cg-board square.last-move {
+  background: transparent !important;
+  box-shadow: inset 0 0 0 4px #000;
+}
+html.eink cg-board square.selected {
+  background: transparent !important;
+  box-shadow: inset 0 0 0 6px #000;
+}
+html.eink cg-board square.move-dest { background: radial-gradient(#000 16%, transparent 18%) !important; }
+html.eink cg-board square.oc.move-dest { background: radial-gradient(transparent 76%, #000 78%) !important; }
+html.eink cg-board square.premove-dest { background: radial-gradient(#555 16%, transparent 18%) !important; }
+html.eink cg-board square.check { background: radial-gradient(ellipse at center, #000 0%, #000 22%, transparent 70%) !important; }
+// Pfeile/Kreise kräftig: volle Deckkraft statt 0,6.
+html.eink .cg-wrap .cg-shapes,
+html.eink .cg-wrap .cg-shapes g,
+html.eink .cg-wrap .cg-shapes line,
+html.eink .cg-wrap .cg-shapes circle { opacity: 1 !important; }
+// Gezogene Figur ohne halbe Deckkraft am Startfeld (Geisterbild).
+html.eink .cg-wrap piece.ghost { opacity: 0 !important; }
+// Koordinaten: schwarz mit weißem Hof auf beiden Feldfarben (≈ 8:1 auf dem Grau).
+html.eink .cg-wrap coords coord {
+  color: #000 !important;
+  --coord-halo: rgba(255, 255, 255, 0.9) !important;
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff !important;
+}

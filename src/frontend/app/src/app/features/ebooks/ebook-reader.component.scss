@@ -68,7 +68,12 @@
 .rd-toolbar-spacer { display: none; }
 
 .rd-body { flex: 1 1 auto; min-height: 0; display: flex; }
-.rd-viewer { flex: 1 1 auto; min-width: 0; min-height: 0; }
+.rd-viewer { flex: 1 1 auto; min-width: 0; min-height: 0; position: relative; }
+/* E-Ink-Modus (DESIGN 3.6): unsichtbare Tippzonen am linken/rechten Buchrand, mindestens 44 px breit. */
+.rd-tap { position: absolute; top: 0; bottom: 0; z-index: 3; width: 12%; min-width: 44px; padding: 0; border: 0;
+  background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.rd-tap--prev { left: 0; }
+.rd-tap--next { right: 0; }
 
 /* Buch links, Brett rechts (0.766.0). Die Leiste ist so breit wie ein gut lesbares Brett, das Buch nimmt den Rest. */
 .rd-panel {

@@ -13,6 +13,7 @@ import { resolveStartupLocale } from '@rh/core/locale.service';
 import { registerFormatLocaleData } from '@rh/core/locale-data';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
+import { provideEinkMaterial } from '@rh/core/eink.service';
 
 registerFormatLocaleData();
 
@@ -37,6 +38,8 @@ export const turnierConfig: ApplicationConfig = {
     { provide: RouteReuseStrategy, useClass: ReloadOnParamChangeStrategy },
     provideRhHttpClient(),
     provideAnimationsAsync(),
+    // E-Ink-Modus (docs/DESIGN.md 3.6): Ripples und Material-Animationen aus, solange er an ist.
+    ...provideEinkMaterial(),
     // Rechtsseiten wie in RookHub; das Profil hier hat aber keine Karte „Konto loeschen" — die Loeschseite verweist
     // auf RookHubs Profil (Codereview UX-023). Ohne Schritt zurueck fuehrt der Ruecklink auf den Kalender, die Startseite
     // hier — auch abgemeldet offen, die Anmeldung ist hier kein Ziel (UI-Sweep 2026-10-10, x-back-login).

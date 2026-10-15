@@ -792,7 +792,11 @@
       "title": "Izgled",
       "system": "Sustav",
       "light": "Svijetlo",
-      "dark": "Tamno"
+      "dark": "Tamno",
+      "eink": "E-ink način (ovaj uređaj)",
+      "einkHint": "Za e-ink tablete: bez animacija, visok kontrast, listanje umjesto klizanja.",
+      "einkForcesLight": "E-ink način je uključen: aplikacija uvijek ostaje svijetla.",
+      "einkNotSaved": "E-ink način nije se mogao spremiti na ovom uređaju — vrijedi samo do ponovnog učitavanja."
     },
     "displayNameHint": "Prikazuje se drugima umjesto „{{username}}“."
   },

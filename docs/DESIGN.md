@@ -147,6 +147,34 @@ Dialoge: Material-Vorgabe; der Spielweise-Dialog 20 px, als Blatt am Handy `20px
 - Codes, FEN, Formular-Rohtext: `ui-monospace, SFMono-Regular, Menlo, monospace`.
 - Eingabefelder auf Touch mindestens **16 px** Schrift (sonst zoomt iOS beim Antippen).
 
+### 3.6 E-Ink-Modus
+
+Für E-Ink-Tablets (Ziel: Boox Tab X C, 13,3", Kaleido 3, Android-Chrome, CSS-Viewport ≈ 960 × 1280 hoch). Gilt in
+RookHub und der Turnierseite (beide laden `src/styles.scss` und starten über `applyEinkEarly()` in `main.ts`).
+
+- **Schalter:** Profil → Darstellung (erste Karte), „E-Ink-Modus (dieses Gerät)“. **Je Gerät** in
+  `localStorage rookhub_eink` = `'1'` (an) / `'0'` (aus), sofort wirksam. Ohne gespeicherte Wahl: an, wenn
+  `matchMedia('(update: slow), (monochrome)')` passt (Boox meldet das meist nicht — darum der Schalter).
+- **Mechanik:** `core/eink.ts` (Zustand, früh gesetzt, Klasse `eink` an `<html>` und `<body>`), `core/eink.service.ts`
+  (Signal `enabled`, `set()`, `provideEinkMaterial()` in beiden `app.config.ts`), Stile zentral in `src/_eink.scss`
+  (am Ende von `styles.scss`). Tests: `core/eink.service.spec.ts`, `core/eink-styles.spec.ts`.
+- **Was er tut:** alle `animation`/`transition` aus, `scroll-behavior: auto`; ausdrückliches
+  `scrollTo/scrollBy/scrollIntoView({ behavior: 'smooth' })` wird zu `auto` (Wächter in `eink.ts`); Material-Ripples und
+  -Animationen aus (`MAT_RIPPLE_GLOBAL_OPTIONS`, `MATERIAL_ANIMATIONS`); **immer hell** (ThemeService ignoriert „dunkel“,
+  die Wahl bleibt gespeichert); Text #000 auf #fff, `--mat-sys-on-surface-variant` #333 (≥ 7:1), `--mat-sys-outline`
+  schwarz, Karten/Dialoge/Menüs mit 2-px-Rahmen statt Schatten; Fokus 3 px schwarz, aktiv/gewählt
+  (`aria-pressed`, `aria-selected`, `aria-current`, gewählter Umschalter) zusätzlich als 3-px-Innenrahmen + fett;
+  unbestimmter Ladekreis = stehender gepunkteter Ring, unbestimmte Leiste = volle gestrichelte Leiste.
+- **Brett:** keine Zuganimation (`boardAnimation()` aus `eink.ts` in allen drei Brett-Komponenten); helle Felder weiß,
+  dunkle #a3a3a3 mit Kante; letzter Zug / Auswahl als Innenrahmen statt Farbfläche; Zielpunkte schwarz; Pfeile volle
+  Deckkraft; Koordinaten schwarz mit weißem Hof.
+- **E-Book-Leser:** Mausrad/Scrollen bleiben; Pfeil hoch/runter blättert eine Bildschirmhöhe (PDF, `pageBy`), Tippzonen
+  am linken/rechten Buchrand (12 %, ≥ 44 px) blättern zurück/vor (EPUB: Seite, PDF: Bildschirmhöhe).
+- **Regel für neue UI:** keine Pflicht-Animationen — jeder Zustand muss ohne Übergang verständlich sein (kein Inhalt,
+  der erst „einfährt“, keine Rückmeldung nur als Animation/Ripple: Ergebnis als Text oder Zustand). Bedeutung **nie nur
+  über Farbe** (zusätzlich Symbol, Text oder Rahmen). Keine Bedeutung in Haarlinien oder hellen Grautönen. Eigene
+  JS-Animationen (Zähler, Fortschritt, Bewegung) fragen `isEinkActive()` bzw. `EinkService.enabled()` und springen.
+
 ---
 
 ## 4 Layout & Breakpoints
@@ -604,7 +632,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Klartext im `aria-label` (ClubHub-Anwesenheit ✓/✗, r2-c-attendance-da), Fehler mit `role="alert"`,
   versteckte Beschriftungen per `.sr-only`.
 - **Reiter nicht `[disabled]`** (dort feuert kein Tooltip): wählbar lassen, Grund im Inhalt (r2-t-history-disabled-tab).
-- Animationen respektieren `prefers-reduced-motion`.
+- Animationen respektieren `prefers-reduced-motion` und den E-Ink-Modus (3.6: keine Pflicht-Animationen, Bedeutung nie nur über Farbe).
 
 ---
 
@@ -877,6 +905,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-15 | 0.799.x | E-Ink-Modus (3.6): je Gerät schaltbar im Profil (Darstellung, erste Karte), ohne Animationen/Ripples, immer hell mit hohem Kontrast und kräftigen Rahmen, Brett ohne Zuganimation in Graustufen mit Rahmen statt Farbflächen, Leser blättert springend mit Tippzonen | Nutzer liest/trainiert auf einem Boox Tab X C (Kaleido 3): Animationen erzeugen Schlieren und Geisterbilder, Grautöne und Farbflächen gehen unter | Nutzerwunsch 15.10. |
 | 2026-10-15 | 0.786.0 | E-Book-Leser kompakt: EINE Leiste oben (Kopfleiste dockt per `body.nav-docked` 48 px hoch rechts auf der Leser-Leiste an, Glocke/☰/Vollbild dieselben); Brett-Leiste in einer Zeile (Modi als Symbole, Optionen hinter ⚙, Analysieren/Engine/Drehen/FEN/Melden im ⋮), Zugrecht/Bewertung/Herkunft im Brett-Kopf, eine Statuszeile; Lösen startet in „Training“ (gemerkte Wahl gewinnt); Brett ab 900 px bis `100dvh − 220px` | „Die Leiste oben ist viel zu breit“, „rund ums Brett ist so viel los“ — zwei Leisten (≈ 128 px) und sieben Zeilen um das Brett | Nutzerwunsch 15.10. |
 | 2026-10-14 | 0.780.2 | E-Book-Brett unter 900 px als Vollbild über dem Buch statt Leiste unten | Leiste war am Handy zu klein zum Lösen | Nutzerwunsch 14.10. |
 | 2026-10-14 | 0.777.0 | E-Book-Brett mit Modus-Leiste (Ansehen/Ziehen/Kalkulieren/Lösen/Maia) statt Hand-Knopf + „Lösen“-Knopf; Engine zuschaltbar | Nutzerwunsch: mehrere Arten, mit der Buchstellung zu arbeiten — ein Schalter je Art wäre unübersichtlich | Nutzerwunsch 14.10. |

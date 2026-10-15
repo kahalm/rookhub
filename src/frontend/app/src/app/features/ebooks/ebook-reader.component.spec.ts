@@ -8,6 +8,7 @@ import { of, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Type } from '@angular/core';
 import { PdfViewerComponent } from './pdf-viewer.component';
+import { setEinkActive } from '../../core/eink';
 import { SnackbarService } from '../../core/snackbar.service';
 import { By } from '@angular/platform-browser';
 import { EbookReaderComponent } from './ebook-reader.component';
@@ -353,6 +354,37 @@ describe('EbookReaderComponent', () => {
     key('ArrowLeft', board);
     expect(epub.next).toHaveBeenCalledTimes(1);
     expect(epub.prev).toHaveBeenCalledTimes(1);
+    fixture.destroy();
+  });
+
+  it('E-Ink-Modus: Pfeil runter blättert eine Bildschirmseite, Tippzonen links/rechts blättern zurück/vor', async () => {
+    setEinkActive(true);
+    try {
+      const fixture = await make(book());
+      const c = fixture.componentInstance;
+      fixture.detectChanges();
+      const viewer = { goTo: jasmine.createSpy('goTo'), scrollByPx: jasmine.createSpy('scrollByPx'), pageBy: jasmine.createSpy('pageBy') };
+      (c as unknown as { viewer: unknown }).viewer = viewer;
+      const e = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+      Object.defineProperty(e, 'target', { value: document.createElement('div') });
+      c.onDocumentKey(e);
+      expect(viewer.pageBy).toHaveBeenCalledWith(1);
+      expect(viewer.scrollByPx).not.toHaveBeenCalled();
+      const el: HTMLElement = fixture.nativeElement;
+      const prev = el.querySelector('.rd-tap--prev') as HTMLButtonElement;
+      const next = el.querySelector('.rd-tap--next') as HTMLButtonElement;
+      expect(prev).withContext('Tippzone links').not.toBeNull();
+      next.click();
+      prev.click();
+      expect(viewer.pageBy.calls.allArgs()).toEqual([[1], [1], [-1]]);
+      fixture.destroy();
+    } finally { setEinkActive(false); }
+  });
+
+  it('ohne E-Ink-Modus keine Tippzonen', async () => {
+    const fixture = await make(book());
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.rd-tap')).toBeNull();
     fixture.destroy();
   });
 

@@ -69,3 +69,13 @@ test('gestellte Antwort gibt den gesendeten JSON-Körper zurück (KidHub-Stand),
   assert.equal(stubBody('kein json'), '{}');
   assert.equal(stubBody('42'), '{}');
 });
+
+test('Design-Achse: eink = helles Design + E-Ink-Schalter im Speicher, unbekannte Namen werfen', async () => {
+  const { themeSetup, THEMES } = await import('./themes.mjs');
+  assert.deepEqual(Object.keys(THEMES), ['dark', 'light', 'eink']);
+  assert.equal(themeSetup('eink').appTheme, 'light');
+  assert.equal(themeSetup('eink').colorScheme, 'light');
+  assert.equal(themeSetup('eink').storage.rookhub_eink, '1');
+  assert.equal(themeSetup('dark').storage.rookhub_eink, '0', 'andere Designs schalten den Modus aus');
+  assert.throws(() => themeSetup('sepia'), /Unbekanntes Design/);
+});

@@ -792,7 +792,11 @@
       "title": "Appearance",
       "system": "System",
       "light": "Light",
-      "dark": "Dark"
+      "dark": "Dark",
+      "eink": "E-ink mode (this device)",
+      "einkHint": "For e-ink tablets: no animations, high contrast, page turning instead of smooth scrolling.",
+      "einkForcesLight": "E-ink mode is on: the app always stays light.",
+      "einkNotSaved": "E-ink mode could not be saved on this device — it only lasts until the page is reloaded."
     },
     "displayNameHint": "Shown to others instead of “{{username}}”."
   },

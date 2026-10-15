@@ -118,6 +118,11 @@
                             (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
                             (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
           }
+          @if (eink()) {
+            <!-- E-Ink-Modus (DESIGN 3.6): Tippzonen am Rand blättern zurück/vor; die Mitte bleibt fürs Buch (Diagramme, Scrollen). -->
+            <button type="button" class="rd-tap rd-tap--prev" (click)="turn(-1)" [attr.aria-label]="'common.paginator.previousPage' | translate"></button>
+            <button type="button" class="rd-tap rd-tap--next" (click)="turn(1)" [attr.aria-label]="'common.paginator.nextPage' | translate"></button>
+          }
         </div>
         @if (hasDiagrams) {
           <div class="rd-split" role="separator" aria-orientation="vertical" tabindex="0"

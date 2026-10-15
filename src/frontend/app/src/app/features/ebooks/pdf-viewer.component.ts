@@ -138,6 +138,13 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.onScroll();
   }
 
+  /** Um eine Bildschirmhöhe blättern, ohne Gleiten (E-Ink-Modus, docs/DESIGN.md 3.6); 32 px bleiben zur Orientierung stehen. */
+  pageBy(dir: 1 | -1): void {
+    const el = this.scrollRef.nativeElement;
+    el.scrollBy({ top: dir * Math.max(80, el.clientHeight - 32) });
+    this.onScroll();
+  }
+
   /** Zu einer Seite springen (1-basiert). */
   goTo(page: number): void {
     const slot = this.slots[page - 1];

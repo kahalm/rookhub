@@ -482,7 +482,11 @@
       "title": "Appearance",
       "system": "System",
       "light": "Light",
-      "dark": "Dark"
+      "dark": "Dark",
+      "eink": "E-ink mód (ez az eszköz)",
+      "einkHint": "E-ink táblagépekhez: animációk nélkül, nagy kontraszt, lapozás folyamatos görgetés helyett.",
+      "einkForcesLight": "Az e-ink mód be van kapcsolva: az alkalmazás mindig világos marad.",
+      "einkNotSaved": "Az e-ink módot nem sikerült menteni ezen az eszközön — csak az oldal újratöltéséig érvényes."
     },
     "engine": {
       "title": "Külső motor",

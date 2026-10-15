@@ -14,6 +14,7 @@ import { registerFormatLocaleData } from './core/locale-data';
 import { provideFullscreenSafeOverlays } from './shared/fullscreen/fullscreen-overlay.service';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 import { TranslatedPaginatorIntl } from './core/translated-paginator-intl';
+import { provideEinkMaterial } from './core/eink.service';
 
 // Locale-Daten für die übersetzten Sprachen registrieren (en ist eingebaut), damit
 // DatePipe/DecimalPipe/PercentPipe entsprechend der gewählten Sprache formatieren
@@ -31,6 +32,8 @@ export const appConfig: ApplicationConfig = {
     // Gemeinsame Kette (connectivity zuerst — sieht Erfolge/finale Fehler NACH den Retries); nur hier mit visitorInterceptor.
     provideRhHttpClient([visitorInterceptor]),
     provideAnimationsAsync(),
+    // E-Ink-Modus (docs/DESIGN.md 3.6): Ripples und Material-Animationen aus, solange er an ist.
+    ...provideEinkMaterial(),
     // Dialoge/Menüs/Snackbars NICHT als Popover in der obersten Browser-Ebene — dort verschwanden
     // sie beim Wechsel der Vollbild-Arten (Begründung und Messung am Provider).
     provideFullscreenSafeOverlays(),

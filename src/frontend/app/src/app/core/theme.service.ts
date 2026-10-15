@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import {
   onSharedPreferenceChange, readSharedPreference, writeSharedPreference,
 } from './shared-preference';
+import { isEinkActive, onEinkChange } from './eink';
 
 export type AppTheme = 'light' | 'dark' | 'system';
 
@@ -18,7 +19,9 @@ export class ThemeService {
   private mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
   get preference(): AppTheme { return this._preference; }
+  /** Im E-Ink-Modus immer hell (docs/DESIGN.md 3.6) — die gespeicherte Wahl bleibt und gilt wieder, sobald er aus ist. */
   get isDark(): boolean {
+    if (isEinkActive()) return false;
     return this._preference === 'dark' || (this._preference === 'system' && this._systemDark);
   }
 
@@ -46,6 +49,7 @@ export class ThemeService {
       this.apply();
     });
 
+    onEinkChange(() => this.apply());
     this.apply();
   }
 

@@ -4,6 +4,7 @@
 @use '@angular/material' as mat;
 // Semantische Farb-Tokens (--rh-error/-success/-warn/-info/-accent, hell + dunkel) — siehe _tokens.scss.
 @use 'tokens';
+@use 'sass:meta';
 
 html {
   @include mat.theme((
@@ -440,3 +441,6 @@ body.rd-reader-mode app-footer { display: none; }
 
 /* Löschen im ⋮-Menü (docs/DESIGN.md 5.5): rotes Symbol aus dem Fehler-Token statt festem #e53935 je Komponente. */
 .mat-mdc-menu-item.delete-item mat-icon { color: var(--rh-error); }
+
+/* E-Ink-Modus (docs/DESIGN.md 3.6): am ENDE, damit die Regeln nach Brettthemen und Koordinaten stehen. */
+@include meta.load-css('eink');

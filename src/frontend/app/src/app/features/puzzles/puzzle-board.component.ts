@@ -16,6 +16,7 @@ import {
 } from '../../shared/promotion-picker/promotion-picker.component';
 import { TranslatePipe } from '@ngx-translate/core';
 import { parseKeyboardMove } from './keyboard-move.util';
+import { boardAnimation } from '../../core/eink';
 
 /** Rückmeldung der Zug-Eingabe per Tastatur (i18n-Schlüssel + Parameter). */
 interface KeyboardFeedback { key: string; params?: Record<string, string>; }
@@ -547,7 +548,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       viewOnly: false,
       check: this.check,
       lastMove: this.lastMove as Key[] | undefined,
-      animation: { enabled: true, duration: 200 },
+      animation: boardAnimation(200),  // E-Ink-Modus: aus (docs/DESIGN.md 3.6)
       highlight: { lastMove: true, check: true },
       coordinates: true,
       movable: {

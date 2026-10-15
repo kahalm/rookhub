@@ -1,4 +1,4 @@
-import { Component, ElementRef } from '@angular/core';
+import { Component, ElementRef, input, model } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { convertToParamMap } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -254,5 +254,59 @@ describe('ProfileComponent (Template bei Ladefehler)', () => {
     (fixture.nativeElement.querySelector('.retry-btn') as HTMLButtonElement).click();
     expect(getProfile).toHaveBeenCalledTimes(2);
     expect(fixture.componentInstance.loading).toBeFalse();
+  });
+});
+
+// Nutzerwunsch 15.10. (E-Ink-Modus): die Darstellungs-Karte steht in BEIDEN Fassungen der Seite ganz oben.
+@Component({ selector: 'app-profile-identity-form', standalone: true, template: 'IDENTITY' })
+class IdentityStub { profile = input<unknown>(); savedEmail = input<unknown>(); currentPassword = model<string>(''); }
+@Component({ selector: 'app-api-tokens', standalone: true, template: 'TOKENS' })
+class TokensStub {}
+@Component({ selector: 'app-engine-card', standalone: true, template: 'ENGINE' })
+class EngineStub {}
+@Component({ selector: 'app-change-password-card', standalone: true, template: 'PW' })
+class PasswordStub {}
+@Component({ selector: 'app-delete-account-card', standalone: true, template: 'DEL' })
+class DeleteStub { open = input<boolean>(false); }
+
+describe('ProfileComponent (Darstellung zuerst)', () => {
+  function render(getProfile: jasmine.Spy) {
+    TestBed.configureTestingModule({
+      imports: [ProfileComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ProfileService, useValue: { getProfile, updateProfile: () => of({}) } },
+        { provide: SnackbarService, useValue: { success: () => {}, info: () => {} } },
+        { provide: DiscordLinkService, useValue: { unlink: () => of({}) } },
+        { provide: AuthService, useValue: { isImpersonating: false } },
+      ],
+    });
+    TestBed.overrideComponent(ProfileComponent, {
+      remove: { imports: [ApiTokensComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+        ChangePasswordCardComponent, DeleteAccountCardComponent, ProfileIdentityFormComponent] },
+      add: { imports: [OfflineStub, ThemeStub, IdentityStub, TokensStub, EngineStub, PasswordStub, DeleteStub] },
+    });
+    const fixture = TestBed.createComponent(ProfileComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function firstChildTag(el: HTMLElement): string | undefined {
+    return el.querySelector('mat-card-content')?.firstElementChild?.tagName.toLowerCase();
+  }
+
+  it('geladenes Profil: Darstellung ist die erste Karte, genau einmal', () => {
+    const fixture = render(jasmine.createSpy('getProfile').and.returnValue(of({ username: 'u', email: 'a@b.c' })));
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('form.profile-form')).withContext('Profil geladen').not.toBeNull();
+    expect(firstChildTag(el)).toBe('app-theme-card');
+    expect(el.querySelectorAll('app-theme-card').length).toBe(1);
+  });
+
+  it('Ladefehler: Darstellung ist ebenfalls die erste Karte', () => {
+    const fixture = render(jasmine.createSpy('getProfile').and.returnValue(throwError(() => ({ status: 0 }))));
+    const el: HTMLElement = fixture.nativeElement;
+    expect(firstChildTag(el)).toBe('app-theme-card');
+    expect(el.querySelectorAll('app-theme-card').length).toBe(1);
   });
 });

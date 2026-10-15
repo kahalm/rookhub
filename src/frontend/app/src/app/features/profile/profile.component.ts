@@ -66,6 +66,11 @@ interface Profile {
             <mat-card-title>{{ 'profile.title' | translate: { username: profile.username } }}</mat-card-title>
           </mat-card-header>
           <mat-card-content>
+            <!-- Darstellung (Hell/Dunkel + E-Ink-Modus) ganz oben (Nutzerwunsch 15.10.): auf einem E-Ink-Gerät ist das
+                 die erste Einstellung, die man sucht. -->
+            <app-theme-card></app-theme-card>
+            <mat-divider class="discord-divider"></mat-divider>
+
             <form (ngSubmit)="save()" class="profile-form">
               <!-- Name, Anzeigename, E-Mail und die Spielerkennungen samt Spielersuche stehen in
                    EINER Komponente, die auch die Turnierseite benutzt: sie gehen ohnehin ueber
@@ -112,9 +117,6 @@ interface Profile {
             <app-offline-settings-card></app-offline-settings-card>
 
             <mat-divider class="discord-divider"></mat-divider>
-            <app-theme-card></app-theme-card>
-
-            <mat-divider class="discord-divider"></mat-divider>
             <app-change-password-card></app-change-password-card>
 
             <mat-divider class="discord-divider"></mat-divider>
@@ -128,14 +130,14 @@ interface Profile {
       <div class="profile-container">
         <mat-card>
           <mat-card-content>
+            <app-theme-card></app-theme-card>
+            <mat-divider class="discord-divider"></mat-divider>
+
             <p class="load-failed">{{ 'profile.loadFailed' | translate }}</p>
             <button mat-stroked-button type="button" class="retry-btn" (click)="load()">{{ 'common.retry' | translate }}</button>
 
             <mat-divider class="discord-divider"></mat-divider>
             <app-offline-settings-card></app-offline-settings-card>
-
-            <mat-divider class="discord-divider"></mat-divider>
-            <app-theme-card></app-theme-card>
           </mat-card-content>
         </mat-card>
       </div>

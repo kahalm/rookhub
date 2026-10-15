@@ -10,6 +10,9 @@ import type * as PdfJs from 'pdfjs-dist';
  */
 export const PDFJS_ASSET_BASE = '/assets/pdfjs';
 
+/** Worker-Adresse: die Vorschaltdatei mit den Nachrüstungen, die dann `pdf.worker.min.mjs` lädt. */
+export const PDF_WORKER_SRC = `${PDFJS_ASSET_BASE}/pdf-worker-compat.mjs`;
+
 export type PdfJsLib = typeof PdfJs;
 export type PdfDocument = PdfJs.PDFDocumentProxy;
 export type PdfPage = PdfJs.PDFPageProxy;
@@ -28,7 +31,7 @@ export class PdfEngineLoader {
     if (!this.lib) {
       const url = `${PDFJS_ASSET_BASE}/pdf.min.mjs`;
       this.lib = (import(/* @vite-ignore */ /* webpackIgnore: true */ url) as Promise<PdfJsLib>).then(lib => {
-        lib.GlobalWorkerOptions.workerSrc = `${PDFJS_ASSET_BASE}/pdf.worker.min.mjs`;
+        lib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
         return lib;
       });
       this.lib.catch(() => { this.lib = null; });   // beim nächsten Versuch neu laden

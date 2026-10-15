@@ -9,6 +9,7 @@ import { PromotionPickerComponent, PromotionPiece } from '../../shared/promotion
 import {
   BoardFullscreenButtonComponent,
 } from '../../shared/fullscreen/board-fullscreen-button.component';
+import { boardAnimation } from '../../core/eink';
 
 /**
  * Interaktives Analyse-Brett (chessground): beide Seiten spielbar (movable.color = turnColor),
@@ -91,7 +92,7 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
       viewOnly: false,
       check: this.check,
       lastMove: this.lastMove as Key[] | undefined,
-      animation: { enabled: true, duration: 180 },
+      animation: boardAnimation(180),  // E-Ink-Modus: aus (docs/DESIGN.md 3.6)
       highlight: { lastMove: true, check: true },
       coordinates: true,
       movable: { free: false, color: this.turnColor, dests: this.dests, showDests: true },

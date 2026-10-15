@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.799.0", date: "2026-10-15", changes: [
+    { en: "E-ink mode for e-ink tablets (Profile → Appearance, at the top, per device; switches on by itself on e-ink screens): no animations, black-on-white high contrast, white/grey board with the last move as a thick frame, the reader turns pages by tapping the left/right edge or the arrow keys instead of sliding.", de: "E-Ink-Modus für E-Ink-Tablets (Profil → Darstellung, jetzt ganz oben, je Gerät; schaltet sich auf E-Ink-Bildschirmen selbst ein): keine Animationen, schwarz auf weiß mit hohem Kontrast, Brett weiß/grau mit dem letzten Zug als dickem Rahmen, der Leser blättert per Tipp an den linken/rechten Rand oder mit den Pfeiltasten statt zu gleiten." },
+    { en: "E-books: PDFs open again on devices with an older built-in browser (e.g. Boox e-readers) – before, every book stopped with „The PDF could not be loaded“.", de: "E-Books: PDFs gehen auch auf Geräten mit älterem eingebautem Browser auf (z. B. Boox-E-Reader) – vorher brach jedes Buch mit „Das PDF konnte nicht geladen werden“ ab." },
+  ]},
   { version: "0.798.2", date: "2026-10-15", changes: [
     { en: "Android app: right after installing it via „Install app“ it no longer asks you to update – the download always is the newest version.", de: "Android-App: Direkt nach der Installation über „App installieren“ fragt sie nicht mehr nach einem Update – der Download ist immer schon die neueste Fassung." },
   ] },

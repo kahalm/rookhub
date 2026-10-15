@@ -8,6 +8,7 @@ import { PromotionPickerComponent } from '../promotion-picker/promotion-picker.c
 import {
   BoardFullscreenButtonComponent,
 } from '../fullscreen/board-fullscreen-button.component';
+import { setEinkActive } from '../../core/eink';
 
 /**
  * Testet die Aufräum-Garantie der Breite-0-Retry-Schleife (requestAnimationFrame):
@@ -74,6 +75,30 @@ describe('ChessBoardComponent right-click drawing', () => {
     c.ngOnDestroy();
     document.body.removeChild(host);
   });
+});
+
+describe('ChessBoardComponent E-Ink-Modus', () => {
+  // docs/DESIGN.md 3.6: Zustände springen — keine Zuganimation, solange der Modus an ist.
+  for (const on of [true, false]) {
+    it(`Zuganimation ${on ? 'aus' : 'an'} (E-Ink ${on ? 'an' : 'aus'})`, () => {
+      setEinkActive(on);
+      const host = document.createElement('div');
+      host.style.width = '320px';
+      document.body.appendChild(host);
+      const inner = document.createElement('div');
+      host.appendChild(inner);
+      try {
+        const c: any = new ChessBoardComponent();
+        c.boardEl = { nativeElement: inner };
+        c.ngAfterViewInit();
+        expect(c.ground.state.animation.enabled).toBe(!on);
+        c.ngOnDestroy();
+      } finally {
+        setEinkActive(false);
+        host.remove();
+      }
+    });
+  }
 });
 
 describe('ChessBoardComponent Pfeile des Aufrufers (bester Zug)', () => {

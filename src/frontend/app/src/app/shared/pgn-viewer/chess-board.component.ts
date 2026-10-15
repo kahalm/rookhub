@@ -9,6 +9,7 @@ import { Key } from 'chessground/types';
 import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
 import { PromotionPickerComponent, PromotionPiece } from '../promotion-picker/promotion-picker.component';
 import { applyUserMove, isPromotionMove, legalDests, turnColorOf } from './board-moves.util';
+import { boardAnimation } from '../../core/eink';
 
 /** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). `promotion` = gewählte
  *  Umwandlungsfigur, nur bei einer Umwandlung gesetzt (SAN und FEN tragen sie schon). */
@@ -158,7 +159,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       turnColor: turnColorOf(this.fen),
       orientation: this.flipped ? 'black' : 'white',
       lastMove: this.lastMove as Key[] | undefined,
-      animation: { enabled: true, duration: ChessBoardComponent.AnimationMs },
+      animation: boardAnimation(ChessBoardComponent.AnimationMs),  // E-Ink-Modus: aus (docs/DESIGN.md 3.6)
       highlight: { lastMove: true, check: true },
       coordinates: true,
       ...this.interactionConfig(),
