@@ -277,3 +277,12 @@ public class EbookCollectionRenameDto
     [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(200)] public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>„Nicht erkanntes Diagramm?“ (0.788.0): Stelle des Doppelklicks + Antwort.</summary>
+public class EbookMissedDiagramDto
+{
+    [System.ComponentModel.DataAnnotations.Range(1, 100000)] public int Page { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(0.0, 1.0)] public double X { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(0.0, 1.0)] public double Y { get; set; }
+    public bool IsDiagram { get; set; }
+}
+

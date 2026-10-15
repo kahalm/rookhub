@@ -5467,6 +5467,12 @@
       "courseCreated": "Tečaj je napravljen – dijagrami s rješenjem su njegovi zadaci.",
       "courseNoSolutions": "Još nijedan dijagram nema rješenje – pričekaj da Stockfish provjeri knjigu.",
       "courseFailed": "Tečaj nije moguće napraviti.",
+      "missedTitle": "Postoji li ovdje dijagram koji nije prepoznat?",
+      "missedHint": "Tvoj odgovor pomaže nam poboljšati prepoznavanje dijagrama.",
+      "missedYes": "Da, dijagram",
+      "missedNo": "Ne",
+      "missedThanks": "Hvala – zabilježeno za prepoznavanje.",
+      "missedFailed": "Odgovor nije moguće spremiti.",
       "openBoard": "Ploča: {{n}} dijagrama",
       "openBoardOne": "Ploča: 1 dijagram"
     },

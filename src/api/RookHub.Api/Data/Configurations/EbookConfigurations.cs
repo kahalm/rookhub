@@ -117,3 +117,13 @@ internal sealed class EbookDiagramReportConfiguration : IEntityTypeConfiguration
         e.HasIndex(r => new { r.EbookId, r.CreatedAt });
     }
 }
+
+internal sealed class EbookMissedDiagramConfiguration : IEntityTypeConfiguration<EbookMissedDiagram>
+{
+    public void Configure(EntityTypeBuilder<EbookMissedDiagram> e)
+    {
+        e.HasIndex(m => new { m.EbookId, m.Page });
+        e.HasOne(m => m.Ebook).WithMany().HasForeignKey(m => m.EbookId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+

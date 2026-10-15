@@ -92,7 +92,7 @@
                              (toc)="epubToc.set($event)" (failed)="onViewerFailed()" />
           } @else {
             <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
-                            [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)"
+                            [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)" (blankDblclick)="askMissedDiagram(ebook, $event)"
                             (pageChange)="onPageChange($event)" (loaded)="onLoaded($event)"
                             (zoomApplied)="appliedZoom.set($event)" (failed)="onViewerFailed()" />
           }

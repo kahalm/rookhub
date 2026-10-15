@@ -86,6 +86,8 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   /** Hervorgehobene Zone (das Diagramm, das gerade auf dem Brett steht). */
   @Input() activeZone: number | null = null;
   @Output() zonePick = new EventEmitter<number>();
+  /** Doppelklick auf eine Seitenstelle OHNE Zone (0.788.0): Seite + Klickpunkt als Anteil der Seite. */
+  @Output() blankDblclick = new EventEmitter<{ page: number; x: number; y: number }>();
 
   @ViewChild('scroll', { static: true }) private scrollRef!: ElementRef<HTMLDivElement>;
   @ViewChild('pages', { static: true }) private pagesRef!: ElementRef<HTMLDivElement>;
@@ -197,6 +199,13 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
       canvas.height = 0;
       canvas.setAttribute('role', 'img');
       canvas.setAttribute('aria-label', `${slot.index}`);
+      canvas.addEventListener('dblclick', ev => {
+        const r = canvas.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) return;
+        const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+        const y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+        this.zone.run(() => this.blankDblclick.emit({ page: slot.index, x, y }));
+      });
       wrap.appendChild(canvas);
       frag.appendChild(wrap);
       this.wraps.push(wrap);

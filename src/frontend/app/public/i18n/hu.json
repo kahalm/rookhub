@@ -5467,6 +5467,12 @@
       "courseCreated": "A tanfolyam elkészült – a megoldással rendelkező diagramok a feladatai.",
       "courseNoSolutions": "Még egyik diagramnak sincs megoldása – várd meg, amíg a Stockfish ellenőrzi a könyvet.",
       "courseFailed": "A tanfolyamot nem sikerült létrehozni.",
+      "missedTitle": "Van itt egy diagram, amelyet nem ismert fel?",
+      "missedHint": "A válaszod segít javítani a diagramfelismerést.",
+      "missedYes": "Igen, diagram",
+      "missedNo": "Nem",
+      "missedThanks": "Köszönjük – feljegyeztük a felismeréshez.",
+      "missedFailed": "A választ nem sikerült menteni.",
       "openBoard": "Tábla: {{n}} diagram",
       "openBoardOne": "Tábla: 1 diagram"
     },

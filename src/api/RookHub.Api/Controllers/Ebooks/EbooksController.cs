@@ -163,6 +163,14 @@ public class EbooksController : BaseApiController
         return NoContent();
     }
 
+    /// <summary>„Nicht erkanntes Diagramm?“ — Antwort auf die Rückfrage beim Doppelklick auf eine leere Buchstelle.</summary>
+    [HttpPost("{id:int}/missed-diagram")]
+    public async Task<IActionResult> MissedDiagram(int id, [FromBody] EbookMissedDiagramDto dto, CancellationToken ct)
+    {
+        await _service.RecordMissedDiagramAsync(GetUserId(), await ManageAllAsync(), id, dto, ct);
+        return NoContent();
+    }
+
     /// <summary>„Als Kurs anlegen“ (0.785.0): persönlicher Kurs aus den Diagrammen des Buchs → der neue Kurs.</summary>
     [HttpPost("{id:int}/course")]
     public async Task<ActionResult<RookHub.Api.DTOs.Courses.CourseListItemDto>> CreateCourse(int id, [FromServices] EbookCourseBuilder builder, CancellationToken ct)

@@ -354,3 +354,23 @@ public class EbookCollection
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Doppelklick auf eine Buchstelle OHNE erkanntes Diagramm (0.788.0): der Leser fragt „Ist hier ein Diagramm, das nicht
+/// erkannt wurde?“ und speichert die Antwort samt Stelle (Seite, Klickpunkt als Seitenanteil) — Material, um die
+/// Erkennung später gezielt zu verbessern (welche Bücher, welche Seiten). Schließen ohne Antwort speichert nichts.
+/// </summary>
+public class EbookMissedDiagram
+{
+    public int Id { get; set; }
+    public int EbookId { get; set; }
+    public Ebook Ebook { get; set; } = null!;
+    public int Page { get; set; }
+    /// <summary>Klickpunkt als Anteil der Seite (0–1, links oben).</summary>
+    public double X { get; set; }
+    public double Y { get; set; }
+    /// <summary>Antwort: true = „ja, hier ist ein Diagramm“, false = „nein“.</summary>
+    public bool IsDiagram { get; set; }
+    public int UserId { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+

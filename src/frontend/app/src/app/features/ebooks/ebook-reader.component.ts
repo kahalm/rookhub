@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
+import { EbookMissedDiagramDialogComponent } from './ebook-missed-diagram-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
@@ -83,6 +85,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
 
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
   private ebooks = inject(EbookService);
   private snackbar = inject(SnackbarService);
   private auth = inject(AuthService);
@@ -444,6 +447,18 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
         this.creatingCourse.set(false);
         this.snackbar.warn(this.translate.instant(e.status === 400 ? 'ebooks.reader.courseNoSolutions' : 'ebooks.reader.courseFailed'));
       },
+    });
+  }
+
+  /** Doppelklick auf eine Stelle ohne erkanntes Diagramm: nachfragen und die Antwort für die Auswertung speichern. */
+  askMissedDiagram(ebook: Ebook, at: { page: number; x: number; y: number }): void {
+    if (!this.loggedIn) return;
+    this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '28rem' }).afterClosed().subscribe((isDiagram: boolean | undefined) => {
+      if (isDiagram === undefined) return;
+      this.ebooks.reportMissedDiagram(ebook.id, at.page, at.x, at.y, isDiagram).subscribe({
+        next: () => { if (isDiagram) this.snackbar.quick(this.translate.instant('ebooks.reader.missedThanks')); },
+        error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
+      });
     });
   }
 }

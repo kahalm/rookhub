@@ -20,6 +20,14 @@ describe('EbookService', () => {
 
   afterEach(() => http.verify());
 
+  it('„Nicht erkanntes Diagramm?“ schickt Stelle und Antwort an /api/ebooks/{id}/missed-diagram', () => {
+    service.reportMissedDiagram(42, 12, 0.25, 0.5, true).subscribe();
+    const req = http.expectOne('/api/ebooks/42/missed-diagram');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ page: 12, x: 0.25, y: 0.5, isDiagram: true });
+    req.flush(null);
+  });
+
   it('„Als Kurs anlegen“ schickt POST an /api/ebooks/{id}/course', () => {
     let id = 0;
     service.createCourse(42).subscribe(c => id = c.bookId);

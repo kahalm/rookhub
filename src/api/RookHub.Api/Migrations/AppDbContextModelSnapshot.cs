@@ -2517,6 +2517,42 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookGroupAccesses");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookMissedDiagram", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDiagram")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookId", "Page");
+
+                    b.ToTable("EbookMissedDiagrams");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookProgress", b =>
                 {
                     b.Property<int>("EbookId")
@@ -9121,6 +9157,17 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Ebook");
 
                     b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookMissedDiagram", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookProgress", b =>

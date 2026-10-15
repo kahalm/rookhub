@@ -381,6 +381,7 @@ public class EbookService
         _db.EbookAnonymousProgresses.RemoveRange(_db.EbookAnonymousProgresses.Where(p => p.EbookId == id));
         _db.EbookDiagrams.RemoveRange(_db.EbookDiagrams.Where(d => d.EbookId == id));
         _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
+        _db.EbookMissedDiagrams.RemoveRange(_db.EbookMissedDiagrams.Where(m => m.EbookId == id));
         _db.EbookGroupAccesses.RemoveRange(ebook.GroupAccess);
         _db.EbookFiles.RemoveRange(ebook.Files);
         _db.Ebooks.Remove(ebook);
@@ -582,6 +583,17 @@ public class EbookService
         foreach (var b in books) b.DiagramState = EbookDiagramState.Pending;
         await _db.SaveChangesAsync(ct);
         return books.Count;
+    }
+
+    /// <summary>„Ist hier ein Diagramm, das nicht erkannt wurde?“ — Antwort zur späteren Auswertung speichern (0.788.0).</summary>
+    public async Task RecordMissedDiagramAsync(int userId, bool manageAll, int id, EbookMissedDiagramDto dto, CancellationToken ct = default)
+    {
+        if (!await EbookAccess.CanAccessAsync(_db, userId, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
+        _db.EbookMissedDiagrams.Add(new EbookMissedDiagram
+        {
+            EbookId = id, Page = dto.Page, X = Math.Clamp(dto.X, 0, 1), Y = Math.Clamp(dto.Y, 0, 1), IsDiagram = dto.IsDiagram, UserId = userId,
+        });
+        await _db.SaveChangesAsync(ct);
     }
 
     // ── Dateien ────────────────────────────────────────────────────────────────────────────────

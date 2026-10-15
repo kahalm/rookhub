@@ -1,3 +1,4 @@
+import { MatDialog } from '@angular/material/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
@@ -32,7 +33,7 @@ describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
   async function make(b: Ebook) {
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram', 'reportMissedDiagram']);
     service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
     service.accessToken.and.returnValue(of('tok'));
@@ -54,6 +55,19 @@ describe('EbookReaderComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  it('Doppelklick ohne Diagramm: Ja/Nein wird gespeichert, Schließen ohne Antwort nicht (nur angemeldet)', async () => {
+    const b = book();
+    const fixture = await make(b);
+    const c = fixture.componentInstance;
+    const answers: (boolean | undefined)[] = [true, false, undefined];
+    const dialog = TestBed.inject(MatDialog);
+    spyOn(dialog, 'open').and.callFake(() => ({ afterClosed: () => of(answers.shift()) }) as never);
+    service.reportMissedDiagram.and.returnValue(of(void 0));
+    spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
+    for (let i = 0; i < 3; i++) c.askMissedDiagram(b, { page: 4, x: 0.5, y: 0.25 });
+    expect(service.reportMissedDiagram.calls.allArgs()).toEqual([[b.id, 4, 0.5, 0.25, true], [b.id, 4, 0.5, 0.25, false]]);
+  });
 
   it('öffnet ein PDF an der gemerkten Seite und speichert den Lesestand verzögert', fakeAsync(async () => {
     const fixture = await make(book());

@@ -5467,6 +5467,12 @@
       "courseCreated": "Kurs angelegt – die Diagramme mit Lösung sind seine Aufgaben.",
       "courseNoSolutions": "Noch kein Diagramm hat eine Lösung – warte, bis Stockfish das Buch geprüft hat.",
       "courseFailed": "Der Kurs konnte nicht angelegt werden.",
+      "missedTitle": "Ist hier ein Diagramm, das nicht erkannt wurde?",
+      "missedHint": "Deine Antwort hilft uns, die Diagramm-Erkennung zu verbessern.",
+      "missedYes": "Ja, ein Diagramm",
+      "missedNo": "Nein",
+      "missedThanks": "Danke – für die Erkennung vorgemerkt.",
+      "missedFailed": "Die Antwort konnte nicht gespeichert werden.",
       "openBoard": "Brett: {{n}} Diagramme",
       "openBoardOne": "Brett: 1 Diagramm"
     },

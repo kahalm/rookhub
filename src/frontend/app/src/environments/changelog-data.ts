@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.789.0", date: "2026-10-15", changes: [
+    { en: "E-books: double-clicking a spot in a PDF where no diagram was recognised asks „Is there a diagram here that was not recognised?“ – the answer is saved to improve the recognition.", de: "E-Books: Ein Doppelklick im PDF auf eine Stelle ohne erkanntes Diagramm fragt „Ist hier ein Diagramm, das nicht erkannt wurde?“ – die Antwort wird gespeichert, um die Erkennung zu verbessern." },
+  ] },
   { version: "0.788.0", date: "2026-10-15", changes: [
     { en: "E-books: when someone without e-book management rights (or without an account) uploads a book, every admin gets a notification in the bell with the title, the uploader and a link to the book.",
       de: "E-Books: Lädt jemand ohne E-Book-Verwaltung (oder ohne Anmeldung) ein Buch hoch, bekommt jeder Admin eine Meldung in der Glocke – mit Titel, Name des Hochladenden und Link aufs Buch." },

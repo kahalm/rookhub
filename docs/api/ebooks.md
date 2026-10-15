@@ -341,3 +341,10 @@ Sammlung, sobald eines ihrer Bücher sichtbar ist (keine eigene Freigabe). Seite
 Logik: `EbookCollectionService`; Oberfläche: Auswahl → „Zu Sammlung …“ (`ebook-collection-dialog`), in der Sammlung
 „Aus Sammlung nehmen“, ⋮ am Sammlungskopf Umbenennen/Auflösen.
 
+## „Nicht erkanntes Diagramm?“ (0.788.0)
+
+Doppelklick im PDF-Leser auf eine Stelle OHNE Diagramm-Zone (nur angemeldet) → Rückfrage „Ist hier ein Diagramm, das nicht
+erkannt wurde?“ (Ja/Nein; Schließen speichert nichts). `POST /api/ebooks/{id}/missed-diagram` `{ page, x, y, isDiagram }`
+legt eine Zeile in `EbookMissedDiagrams` an (Klickpunkt als Seitenanteil, Nutzer, Zeit) — Rohmaterial für die Auswertung,
+welche Bücher/Seiten die Erkennung verpasst. Keine Oberfläche zum Auswerten; abfragen per SQL.
+

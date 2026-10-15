@@ -227,6 +227,11 @@ export class EbookService {
     return this.http.get<EbookDiagramList>(`/api/ebooks/${id}/diagrams`);
   }
 
+  /** „Ist hier ein Diagramm, das nicht erkannt wurde?“ — Antwort zur späteren Auswertung (0.788.0). */
+  reportMissedDiagram(id: number, page: number, x: number, y: number, isDiagram: boolean): Observable<void> {
+    return this.http.post<void>(`/api/ebooks/${id}/missed-diagram`, { page, x, y, isDiagram });
+  }
+
   /** „Als Kurs anlegen“: persönlicher Kurs aus den Diagrammen des Buchs → Id des neuen Kurses. */
   createCourse(id: number): Observable<{ bookId: number; displayName: string }> {
     return this.http.post<{ bookId: number; displayName: string }>(`/api/ebooks/${id}/course`, {});

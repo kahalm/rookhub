@@ -5467,6 +5467,12 @@
       "courseCreated": "Course created – the diagrams with a solution are its tasks.",
       "courseNoSolutions": "No diagram has a solution yet – wait until Stockfish has checked the book.",
       "courseFailed": "The course could not be created.",
+      "missedTitle": "Is there a diagram here that was not recognised?",
+      "missedHint": "Your answer helps us improve diagram recognition.",
+      "missedYes": "Yes, a diagram",
+      "missedNo": "No",
+      "missedThanks": "Thanks – noted for the recognition.",
+      "missedFailed": "The answer could not be saved.",
       "openBoard": "Board: {{n}} diagrams",
       "openBoardOne": "Board: 1 diagram"
     },
