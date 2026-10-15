@@ -251,9 +251,15 @@ public class EbookDiagram
     public bool SideKnown { get; set; }
 
     /// <summary>EPUB (0.775.0): Pfad des Diagrammbilds im Buch; <see cref="Page"/> ist dann das Kapitel (Spine, 1-basiert) und
-    /// die Lage (<see cref="X"/> …) bleibt 0. <c>null</c> bei PDF-Diagrammen.</summary>
+    /// die Lage (<see cref="X"/> …) bleibt 0. Bei PDF-Diagrammen <c>null</c> — außer sie sind mit dem EPUB desselben Buchs
+    /// verknüpft (0.793.0), dann steht das Kapitel in <see cref="EpubChapter"/>.</summary>
     [MaxLength(300)]
     public string? ImageRef { get; set; }
+
+    /// <summary>EPUB-Kapitel (Spine, 1-basiert) eines aus dem PDF erkannten Diagramms, das zusätzlich mit einem Bild im
+    /// EPUB desselben Buchs verknüpft ist (0.793.0, <c>EbookFormatLinker</c>). Bei reinen EPUB-Diagrammen steht das Kapitel
+    /// weiter in <see cref="Page"/>, hier <c>null</c>.</summary>
+    public int? EpubChapter { get; set; }
 
     /// <summary>Welche Font-Familie das Diagramm gesetzt hat (zum Nachvollziehen von Lesefehlern).</summary>
     [MaxLength(60)]

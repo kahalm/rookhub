@@ -9,6 +9,8 @@ export interface EbookFile {
   format: string;
   fileName: string;
   sizeBytes: number;
+  /** Abgeleitete Lesefassung (z. B. aus DJVU umgewandeltes PDF). */
+  derived?: boolean;
 }
 
 export interface EbookProgress {
@@ -70,6 +72,8 @@ export interface EbookDiagram {
   sideKnown: boolean;
   /** EPUB (0.775.0): Bildpfad im Buch; `page` ist dann das Kapitel (Spine, 1-basiert). PDF: `null`. */
   imageRef?: string | null;
+  /** EPUB-Kapitel eines aus dem PDF erkannten, mit dem EPUB verknüpften Diagramms (0.793.0). */
+  epubChapter?: number | null;
   /** Lösung aus dem Buch: Hauptlinie (UCI/SAN, leerzeichengetrennt), Absatz, Seite — `null`, wenn keine gefunden. */
   solutionUci?: string | null;
   solutionSan?: string | null;

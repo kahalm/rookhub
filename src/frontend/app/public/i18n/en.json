@@ -5489,6 +5489,7 @@
       "fontLarger": "Larger text",
       "layoutScroll": "Continuous text (scroll)",
       "layoutPages": "Page by page",
+      "readAs": "Read as {{format}}",
       "openBoard": "Board: {{n}} diagrams",
       "openBoardOne": "Board: 1 diagram"
     },

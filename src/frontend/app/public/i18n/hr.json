@@ -5489,6 +5489,7 @@
       "fontLarger": "Veći tekst",
       "layoutScroll": "Neprekinuti tekst (pomicanje)",
       "layoutPages": "Stranicu po stranicu",
+      "readAs": "Čitaj kao {{format}}",
       "openBoard": "Ploča: {{n}} dijagrama",
       "openBoardOne": "Ploča: 1 dijagram"
     },

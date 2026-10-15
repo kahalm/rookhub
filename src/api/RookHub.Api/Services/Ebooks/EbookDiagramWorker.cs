@@ -58,6 +58,22 @@ public class EbookDiagramWorker : PeriodicWorker
                     ? await Task.Run(() => services.GetRequiredService<EbookEpubDiagramExtractor>().Extract(path, ebook.Id, ct), ct)
                     : await Task.Run(() => extractor.Extract(path, ebook.Id, ct,
                         reading != null && reading != file ? storage.ResolveFile(ebook, reading) : null), ct);
+                // PDF und EPUB im selben Buch (0.793.0): EIN Diagrammsatz aus dem PDF (exakt), verknüpft mit den Bildern im EPUB.
+                var epub = ebook.Files.FirstOrDefault(f => f.Format == "epub");
+                if (file.Format == "pdf" && epub != null && result.Diagrams.Count > 0)
+                {
+                    try
+                    {
+                        var epubPath = storage.ResolveFile(ebook, epub);
+                        var er = await Task.Run(() => services.GetRequiredService<EbookEpubDiagramExtractor>().Extract(epubPath, ebook.Id, ct), ct);
+                        var ordered = result.Diagrams.OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X).ToList();
+                        var linked = EbookFormatLinker.Link(ordered, er.Diagrams);
+                        Logger.LogInformation("E-Book {EbookId}: {Linked} von {Total} PDF-Diagrammen mit dem EPUB verknüpft ({Images} EPUB-Bilder)",
+                            ebook.Id, linked, ordered.Count, er.Diagrams.Count);
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch (Exception ex) { Logger.LogWarning(ex, "E-Book {EbookId}: EPUB-Verknüpfung fehlgeschlagen", ebook.Id); }
+                }
                 db.EbookDiagrams.RemoveRange(db.EbookDiagrams.Where(d => d.EbookId == ebook.Id));
                 db.EbookDiagrams.AddRange(result.Diagrams);
                 ebook.DiagramCount = result.Diagrams.Count;

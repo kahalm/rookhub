@@ -9,6 +9,8 @@ public class EbookFileDto
     public string Format { get; set; } = string.Empty;
     public string FileName { get; set; } = string.Empty;
     public long SizeBytes { get; set; }
+    /// <summary>Abgeleitete Lesefassung (aus DJVU umgewandelt bzw. leichtes PDF zu einem übergroßen Scan).</summary>
+    public bool Derived { get; set; }
 }
 
 /// <summary>Lesestand des Nutzers in einem Buch.</summary>
@@ -203,6 +205,8 @@ public class EbookDiagramDto
     public string? Caption { get; set; }
     public bool SideKnown { get; set; }
     /// <summary>EPUB: Bildpfad im Buch (der Leser findet so das &lt;img&gt;); <see cref="Page"/> = Kapitel. PDF: <c>null</c>.</summary>
+    /// <summary>EPUB-Kapitel eines aus dem PDF erkannten, mit dem EPUB verknüpften Diagramms (0.793.0); sonst <c>null</c>.</summary>
+    public int? EpubChapter { get; set; }
     public string? ImageRef { get; set; }
     /// <summary>Lösung aus dem Buch (UCI/SAN leerzeichengetrennt, Absatz, Seite) — <c>null</c>, wenn keine gefunden.</summary>
     public string? SolutionUci { get; set; }

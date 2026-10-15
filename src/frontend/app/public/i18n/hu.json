@@ -5489,6 +5489,7 @@
       "fontLarger": "Nagyobb betű",
       "layoutScroll": "Folyamatos szöveg (görgetés)",
       "layoutPages": "Oldalanként",
+      "readAs": "Olvasás {{format}} formátumban",
       "openBoard": "Tábla: {{n}} diagram",
       "openBoardOne": "Tábla: 1 diagram"
     },

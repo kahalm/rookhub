@@ -218,7 +218,7 @@ public class EbookService
                 IsOwner = caller.IsAnonymous ? anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon : b.OwnerUserId == userId,
                 CanManage = canManage,
                 GroupIds = canManage ? (groups.TryGetValue(b.Id, out var g) ? g : []) : null,
-                Files = files.Select(f => new EbookFileDto { Id = f.Id, Format = f.Format, FileName = f.FileName, SizeBytes = f.SizeBytes }).ToList(),
+                Files = files.Select(f => new EbookFileDto { Id = f.Id, Format = f.Format, FileName = f.FileName, SizeBytes = f.SizeBytes, Derived = f.Derived }).ToList(),
                 PrimaryFormat = EbookFormats.Primary(files)?.Format,
                 Progress = progress.TryGetValue(b.Id, out var p)
                     ? new EbookProgressDto { Page = p.Page, PageCount = p.PageCount ?? b.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt }
@@ -511,7 +511,7 @@ public class EbookService
             ? await _db.EbookDiagrams.Where(d => d.EbookId == id).OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
                 .Select(d => new EbookDiagramDto
                 {
-                    Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown, ImageRef = d.ImageRef,
+                    Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown, ImageRef = d.ImageRef, EpubChapter = d.EpubChapter,
                     SolutionUci = d.SolutionUci, SolutionSan = d.SolutionSan, SolutionText = d.SolutionText, SolutionPage = d.SolutionPage,
                     SolutionSource = d.SolutionSource, SolutionCheck = d.SolutionCheck.ToString().ToLower(), EngineEval = d.EngineEval,
                 }).ToListAsync(ct)

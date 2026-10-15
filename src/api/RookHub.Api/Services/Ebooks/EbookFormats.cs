@@ -10,8 +10,9 @@ public static class EbookFormats
     /// <summary>Formate, aus denen sich ein Titelbild rendern lässt (pdftoppm, ddjvu, Bild im Zip).</summary>
     public static readonly IReadOnlySet<string> WithCover = new HashSet<string> { "pdf", "epub", "djvu", "cbz" };
 
-    /// <summary>Reihenfolge, in der eine Datei als „Hauptdatei" gilt: PDF liest der Browser, der Rest ist Download.</summary>
-    public static readonly string[] Preference = ["pdf", "epub", "djvu", "cbz", "cbr", "mobi", "azw3"];
+    /// <summary>Reihenfolge, in der eine Datei als „Hauptdatei" (Leseformat) gilt — EPUB vor PDF (0.793.0, Nutzerwunsch:
+    /// fließt mit, Schrift einstellbar); die anderen Formate liest man im Leser über „Als … lesen“, der Rest ist Download.</summary>
+    public static readonly string[] Preference = ["epub", "pdf", "djvu", "cbz", "cbr", "mobi", "azw3"];
 
     /// <summary>Braucht dieses Buch eine PDF-Fassung? (DJVU vorhanden, PDF nicht.)</summary>
     public static bool NeedsPdfConversion(IEnumerable<Models.EbookFile> files) =>

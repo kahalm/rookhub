@@ -348,3 +348,15 @@ erkannt wurde?“ (Ja/Nein; Schließen speichert nichts). `POST /api/ebooks/{id}
 legt eine Zeile in `EbookMissedDiagrams` an (Klickpunkt als Seitenanteil, Nutzer, Zeit) — Rohmaterial für die Auswertung,
 welche Bücher/Seiten die Erkennung verpasst. Keine Oberfläche zum Auswerten; abfragen per SQL.
 
+## Mehrere Formate eines Buchs: EPUB bevorzugt, ein Diagrammsatz (0.793.0)
+
+- Leseformat (`EbookFormats.Preference`): **EPUB > PDF > DJVU > CBZ/CBR > MOBI/AZW3**. `PrimaryFormat` ist damit bei
+  EPUB+PDF das EPUB; im Leser-⋮ „Als PDF lesen“/„Als EPUB lesen“ (`readAs`), beim PDF die Lesefassung (`EbookFileDto.Derived`)
+  vor dem Original. Downloads aller Dateien wie bisher.
+- Diagramme nur EINMAL: der `EbookDiagramWorker` erkennt aus dem PDF (Schachfont exakt) und verknüpft per
+  `EbookFormatLinker` jedes Diagramm mit seinem Bild im EPUB (Needleman-Wunsch über die Buchreihenfolge, Ähnlichkeit =
+  gleiche Steine auf besetzten Feldern, ab 0,6). Verknüpfte Diagramme tragen `ImageRef` + `EpubChapter` UND ihre PDF-Lage
+  (`Page`/`X…`); reine EPUB-Diagramme wie bisher (`Page` = Kapitel, `W` = 0). Der Leser nimmt im PDF die Diagramme mit
+  `W > 0` als Zonen, im EPUB die mit `ImageRef` (Kapitel `EpubChapter ?? Page`).
+- Migration `EbookDiagramEpubChapter` reiht alle nicht kuratierten Bücher mit PDF+EPUB neu zur Erkennung ein.
+

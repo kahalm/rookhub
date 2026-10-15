@@ -69,6 +69,21 @@ describe('EbookReaderComponent', () => {
     expect(service.reportMissedDiagram.calls.allArgs()).toEqual([[b.id, 4, 0.5, 0.25, true], [b.id, 4, 0.5, 0.25, false]]);
   });
 
+  it('EPUB und PDF im selben Buch (0.793.0): liest das EPUB, „Als PDF lesen“ nimmt die Lesefassung des PDF', async () => {
+    const b = book({ primaryFormat: 'epub', files: [
+      { id: 1, format: 'epub', fileName: 'x.epub', sizeBytes: 1 },
+      { id: 2, format: 'pdf', fileName: 'x.pdf', sizeBytes: 9 },
+      { id: 3, format: 'pdf', fileName: 'x-lesen.pdf', sizeBytes: 2, derived: true },
+    ] });
+    const c = (await make(b)).componentInstance;
+    expect(c.isEpub).toBeTrue();
+    expect(c.otherReadableFormats).toEqual(['pdf']);
+    c.readAs('pdf');
+    expect(c.isEpub).toBeFalse();
+    expect(c.fileUrl).toContain('fileId=3');
+    expect(c.otherReadableFormats).toEqual(['epub']);
+  });
+
   it('öffnet ein PDF an der gemerkten Seite und speichert den Lesestand verzögert', fakeAsync(async () => {
     const fixture = await make(book());
     const c = fixture.componentInstance;
@@ -299,7 +314,7 @@ describe('EbookReaderComponent', () => {
     // EPUB: dieselben Tasten blättern Seiten.
     const epub = { next: jasmine.createSpy('next'), prev: jasmine.createSpy('prev') };
     (c as unknown as { epub: unknown }).epub = epub;
-    c.ebook = { ...c.ebook!, primaryFormat: 'epub' };
+    c.viewFormat.set('epub');
     key('ArrowRight', board);
     key('ArrowLeft', board);
     expect(epub.next).toHaveBeenCalledTimes(1);

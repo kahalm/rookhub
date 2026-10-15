@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.793.0", date: "2026-10-15", changes: [
+    { en: "E-books: if a book is available as EPUB and PDF, the reader opens the EPUB (flowing text, adjustable font); „Read as PDF“ in the ⋮ menu switches. The diagrams are recognised only once (exactly, from the PDF) and work in both formats – double-click in the EPUB or on the PDF page.", de: "E-Books: Liegt ein Buch als EPUB und PDF vor, öffnet der Leser das EPUB (Fließtext, Schrift einstellbar); „Als PDF lesen“ im ⋮-Menü wechselt. Die Diagramme werden nur einmal erkannt (exakt aus dem PDF) und funktionieren in beiden Formaten – Doppelklick im EPUB wie auf der PDF-Seite." },
+  ] },
   { version: "0.792.2", date: "2026-10-15", changes: [
     { en: "E-books: an EPUB adapts when its area gets narrower or wider (e.g. when you enlarge the board) – the text no longer runs out of the page.", de: "E-Books: Ein EPUB passt sich an, wenn sein Bereich schmaler oder breiter wird (z. B. beim Vergrößern des Bretts) – der Text läuft nicht mehr aus der Seite." },
   ] },

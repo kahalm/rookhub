@@ -15,7 +15,7 @@ import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Ebook, EbookDiagram, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
+import { Ebook, EbookDiagram, EbookFile, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
 import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
@@ -152,8 +152,8 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
         this.ebooks.accessToken().subscribe({
           next: token => {
             this.token = token;
-            this.fileUrl = book.primaryFormat && READABLE_FORMATS.has(book.primaryFormat) ? this.ebooks.fileUrl(book.id, token) : null;
-            this.epubDirUrl = book.primaryFormat === 'epub' ? this.ebooks.epubBaseUrl(book.id, token) : null;
+            this.viewFormat.set(book.primaryFormat && READABLE_FORMATS.has(book.primaryFormat) ? book.primaryFormat : null);
+            this.applyViewFormat();
             this.loading = false;
             this.cdr.markForCheck();
           },
@@ -171,8 +171,39 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
 
   get readable(): boolean { return this.fileUrl != null; }
 
-  /** Liest der Browser ein EPUB (kein PDF da)? */
-  get isEpub(): boolean { return this.ebook?.primaryFormat === 'epub'; }
+  /** Liest der Browser gerade das EPUB? (Bevorzugtes Format, 0.793.0; „Als PDF lesen“ wechselt.) */
+  get isEpub(): boolean { return this.viewFormat() === 'epub'; }
+
+  /** Format, in dem gerade gelesen wird (`epub`/`pdf`); `null` = nichts lesbar (nur Download). */
+  readonly viewFormat = signal<string | null>(null);
+
+  /** Lesbare Formate dieses Buchs außer dem gerade gezeigten (für „Als … lesen“). */
+  get otherReadableFormats(): string[] {
+    const fmts = new Set((this.ebook?.files ?? []).map(f => f.format).filter(f => READABLE_FORMATS.has(f)));
+    return [...fmts].filter(f => f !== this.viewFormat());
+  }
+
+  /** Datei zum gewählten Format: beim PDF die abgeleitete Lesefassung vor dem Original (wie der Server). */
+  private fileFor(format: string): EbookFile | undefined {
+    const files = (this.ebook?.files ?? []).filter(f => f.format === format);
+    return files.find(f => f.derived) ?? files[0];
+  }
+
+  private applyViewFormat(): void {
+    const book = this.ebook, fmt = this.viewFormat();
+    const file = fmt ? this.fileFor(fmt) : undefined;
+    // Hauptformat ohne fileId (der Server liefert dann genau diese Datei, die Adresse bleibt wie bisher).
+    this.fileUrl = book && file ? this.ebooks.fileUrl(book.id, this.token, fmt === book.primaryFormat ? {} : { fileId: file.id }) : null;
+    this.epubDirUrl = book && fmt === 'epub' ? this.ebooks.epubBaseUrl(book.id, this.token) : null;
+  }
+
+  /** „Als PDF lesen“ / „Als EPUB lesen“: anderes Format desselben Buchs (Diagramme bleiben dieselben). */
+  readAs(format: string): void {
+    if (format === this.viewFormat() || !READABLE_FORMATS.has(format)) return;
+    this.viewFormat.set(format);
+    this.applyViewFormat();
+    this.cdr.markForCheck();
+  }
 
   onEpubLocated(l: EpubLocation): void {
     this.epubPercent.set(Math.round(l.fraction * 100));
@@ -276,12 +307,13 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
       next: list => {
         this.diagrams.set(list.items);
         const title = this.translate.instant('ebooks.reader.diagramZone');
-        this.zones.set(list.items.filter(d => !d.imageRef).map(d => ({
+        // Zonen im PDF = Diagramme mit Seitenlage; Bilder im EPUB = Diagramme mit Bildpfad (auch aus dem PDF verknüpfte, 0.793.0).
+        this.zones.set(list.items.filter(d => d.w > 0).map(d => ({
           id: d.id, page: d.page, x: d.x, y: d.y, w: d.w, h: d.h,
           title: d.label ? `${d.label} · ${title}` : title,
         })));
         this.epubImages.set(list.items.filter(d => !!d.imageRef).map(d => ({
-          id: d.id, chapter: d.page, ref: d.imageRef!, title: d.label ? `${d.label} · ${title}` : title,
+          id: d.id, chapter: d.epubChapter ?? d.page, ref: d.imageRef!, title: d.label ? `${d.label} · ${title}` : title,
         })));
         // Sprung aus dem Kurs: das Diagramm gleich aufs Brett (EPUB zusätzlich hinblättern).
         const jump = this.jumpDiagramId;
@@ -291,7 +323,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
           if (idx >= 0) {
             this.pick(jump);
             const d = list.items[idx];
-            if (d.imageRef) setTimeout(() => this.epub?.revealImage(d.page, d.imageRef!));
+            if (this.isEpub && d.imageRef) setTimeout(() => this.epub?.revealImage(d.epubChapter ?? d.page, d.imageRef!));
           }
         }
         this.cdr.markForCheck();
@@ -340,8 +372,8 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     const d = this.diagrams()[idx];
     if (!d) return;
     this.pick(d.id);
-    if (d.imageRef) this.epub?.revealImage(d.page, d.imageRef);
-    else this.viewer?.revealZone(d);
+    if (this.isEpub) { if (d.imageRef) this.epub?.revealImage(d.epubChapter ?? d.page, d.imageRef); }
+    else if (d.w > 0) this.viewer?.revealZone(d);
   }
 
   /** Position in der Liste (für „3 / 1 144"). */

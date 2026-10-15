@@ -2370,6 +2370,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("EngineEval")
                         .HasColumnType("int");
 
+                    b.Property<int?>("EpubChapter")
+                        .HasColumnType("int");
+
                     b.Property<string>("Fen")
                         .IsRequired()
                         .HasMaxLength(100)

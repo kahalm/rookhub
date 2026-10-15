@@ -5489,6 +5489,7 @@
       "fontLarger": "Schrift größer",
       "layoutScroll": "Fließtext (scrollen)",
       "layoutPages": "Seitenweise",
+      "readAs": "Als {{format}} lesen",
       "openBoard": "Brett: {{n}} Diagramme",
       "openBoardOne": "Brett: 1 Diagramm"
     },

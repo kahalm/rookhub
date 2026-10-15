@@ -82,6 +82,12 @@
             <span>{{ 'ebooks.downloadFormat' | translate: { format: f.format.toUpperCase(), size: size(f.sizeBytes) } }}</span>
           </a>
         }
+        @for (f of otherReadableFormats; track f) {
+          <button mat-menu-item (click)="readAs(f)">
+            <mat-icon>{{ f === 'epub' ? 'auto_stories' : 'picture_as_pdf' }}</mat-icon>
+            <span>{{ 'ebooks.reader.readAs' | translate: { format: f.toUpperCase() } }}</span>
+          </button>
+        }
         @if (loggedIn && diagrams().length > 0) {
           <button mat-menu-item (click)="createCourse(ebook)" [disabled]="creatingCourse()">
             <mat-icon>school</mat-icon><span>{{ 'ebooks.reader.createCourse' | translate }}</span>
