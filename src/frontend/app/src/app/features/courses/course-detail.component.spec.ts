@@ -47,6 +47,9 @@ function line(over: Partial<CourseLine> = {}): CourseLine {
  * mitzählenden Standard-Stubs — nötig, wo ein Test die Zahl der `getDetail`-Aufrufe prüft (ein
  * eigener `getDetail`-Stub in `api` protokolliert nicht mit).
  */
+let linkResult: { ebookId: number | null; ebookTitle: string | null; linked: number; lines: number } =
+  { ebookId: 5, ebookTitle: 'Woodpecker', linked: 1118, lines: 1128 };
+
 function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
               detailOver: Partial<CourseDetail> = {}) {
   const calls: string[] = [];
@@ -65,6 +68,7 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     reset: () => { calls.push('reset'); return of({}); },
     pinCourse: () => { calls.push('pinCourse'); return of(undefined); },
     unpinCourse: () => { calls.push('unpinCourse'); return of(undefined); },
+    linkEbook: () => { calls.push('linkEbook'); return of(linkResult); },
     setSkipInfoLines: (_id: number, v: boolean) => { calls.push(`skipInfo:${v}`); return of({ skipInfoLines: v }); },
     downloadPgn: () => of(new Blob(['x'])),
     ...api,
@@ -81,7 +85,8 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     calc as never,
     calcEditions as never,
     dialog as never,
-    { warn: (m: string) => warnings.push(m), quick: () => undefined } as never,
+    { warn: (m: string) => warnings.push(m), quick: () => undefined,
+      info: (m: string) => calls.push(`info:${m}`), success: (m: string) => calls.push(`success:${m}`) } as never,
     { instant: (k: string) => k } as never,
     { sendAndNotify: (target: number | null, items: unknown[]) => calls.push(`worksheet:${target}:${items.length}`) } as never,
     courseLang(),
@@ -320,6 +325,20 @@ describe('CourseDetailComponent Anpinnen', () => {
     component.togglePin();
     expect(calls).toContain('unpinCourse');
     expect(component.detail!.isPinned).toBeFalse();
+  });
+});
+
+describe('CourseDetailComponent Mit E-Book verknüpfen', () => {
+  it('meldet die Trefferzahl bzw. dass kein Buch passt', () => {
+    linkResult = { ebookId: 5, ebookTitle: 'Woodpecker', linked: 1118, lines: 1128 };
+    const { component, calls } = make();
+    component.ngOnInit();
+    component.linkEbook();
+    expect(calls).toContain('linkEbook');
+    expect(calls).toContain('success:courses.linkEbookDone');
+    linkResult = { ebookId: null, ebookTitle: null, linked: 0, lines: 1128 };
+    component.linkEbook();
+    expect(calls).toContain('info:courses.linkEbookNone');
   });
 });
 

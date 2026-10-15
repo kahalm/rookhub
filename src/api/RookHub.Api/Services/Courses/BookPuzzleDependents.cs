@@ -39,6 +39,8 @@ public static class BookPuzzleDependents
             await db.CourseInfoViews.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
         (typeof(CourseLineReset), async (db, ids, ct) => db.CourseLineResets.RemoveRange(
             await db.CourseLineResets.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
+        (typeof(CourseLineEbookRef), async (db, ids, ct) => db.CourseLineEbookRefs.RemoveRange(
+            await db.CourseLineEbookRefs.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
         (typeof(BookPuzzleAttempt), async (db, ids, ct) => db.BookPuzzleAttempts.RemoveRange(
             await db.BookPuzzleAttempts.Where(x => ids.Contains(x.BookPuzzleId)).ToListAsync(ct))),
         (typeof(DailyPuzzle), async (db, ids, ct) => db.DailyPuzzles.RemoveRange(

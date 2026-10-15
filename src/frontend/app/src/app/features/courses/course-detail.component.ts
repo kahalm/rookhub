@@ -535,6 +535,22 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     }));
   }
 
+  /** „Mit E-Book verknüpfen“: der Server sucht das Buch mit den meisten gleichen Stellungen und merkt sich je Linie
+   *  das Diagramm — im Löser steht dann „Im Buch · S. n“. */
+  linkEbook(): void {
+    if (!this.detail || this.busy) return;
+    this.busy = true;
+    this.subs.add(this.courses.linkEbook(this.bookId).subscribe({
+      next: r => {
+        this.busy = false;
+        if (r.ebookId == null) this.snackbar.info(this.translate.instant('courses.linkEbookNone'), { duration: 5000 });
+        else this.snackbar.success(this.translate.instant('courses.linkEbookDone',
+          { linked: r.linked, lines: r.lines, title: r.ebookTitle ?? '' }), { duration: 6000 });
+      },
+      error: () => { this.busy = false; this.fail('courses.linkEbookFailed'); },
+    }));
+  }
+
   toggleSkipInfoLines(): void {
     if (!this.detail) return;
     const skip = !this.detail.skipInfoLines;

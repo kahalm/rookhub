@@ -161,6 +161,13 @@
               <mat-icon>push_pin</mat-icon>
               <span>{{ (d.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate }}</span>
             </button>
+            <!-- Kurslinien den Diagrammen eines E-Books zuordnen („Im Buch“ im Löser), Besitzer/Admin. -->
+            @if (d.canManage && !d.isCalculation) {
+              <button mat-menu-item class="link-ebook" [disabled]="busy" (click)="linkEbook()">
+                <mat-icon>menu_book</mat-icon>
+                <span>{{ 'courses.linkEbook' | translate }}</span>
+              </button>
+            }
             <!-- Persönlich: Info-/Erklärlinien im Durchlauf überspringen (nur wenn es welche gibt). -->
             @if (!d.isCalculation && d.infoLineCount > 0) {
               <button mat-menu-item class="skip-info-lines" (click)="toggleSkipInfoLines()">

@@ -286,3 +286,31 @@ public class EbookMissedDiagramDto
     public bool IsDiagram { get; set; }
 }
 
+
+/// <summary>Wo eine Kurslinie im E-Book steht (<c>GET /api/courses/{bookId}/ebook-refs</c>).</summary>
+public class CourseLineEbookRefDto
+{
+    public int LineId { get; set; }
+    public int EbookId { get; set; }
+    public string EbookTitle { get; set; } = string.Empty;
+    public int DiagramId { get; set; }
+    /// <summary>PDF-Seite (EPUB: Kapitel).</summary>
+    public int Page { get; set; }
+    public string? Label { get; set; }
+}
+
+/// <summary>Eingabe „Mit E-Book verknüpfen“: <c>null</c> = das passendste sichtbare Buch selbst suchen.</summary>
+public class LinkCourseEbookInputDto
+{
+    public int? EbookId { get; set; }
+}
+
+/// <summary>Ergebnis des Abgleichs Kurs ↔ E-Book.</summary>
+public class CourseEbookLinkResultDto
+{
+    /// <summary><c>null</c>, wenn kein Buch genug Stellungen des Kurses enthält.</summary>
+    public int? EbookId { get; set; }
+    public string? EbookTitle { get; set; }
+    public int Linked { get; set; }
+    public int Lines { get; set; }
+}

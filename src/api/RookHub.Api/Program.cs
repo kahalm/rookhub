@@ -492,6 +492,7 @@ try
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueAnalysisQueue>();   // Liga-Partien für den Stapel (0.665.0)
     builder.Services.AddHostedService<MasterAnalysisScheduler>();
     builder.Services.AddScoped<CourseAuthoringService>();
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.CourseEbookLinker>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
     // Linien-Cache für den Cache-Weg von „Aktualisieren" (StaleAction.Cache). Bewusst NICHT hinter

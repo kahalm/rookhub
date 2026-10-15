@@ -376,6 +376,22 @@ internal sealed class CommentTextConfiguration : IEntityTypeConfiguration<Commen
     }
 }
 
+internal sealed class CourseLineEbookRefConfiguration : IEntityTypeConfiguration<CourseLineEbookRef>
+{
+    public void Configure(EntityTypeBuilder<CourseLineEbookRef> e)
+    {
+        e.HasIndex(r => new { r.BookPuzzleId, r.EbookDiagramId }).IsUnique();
+        e.HasOne(r => r.BookPuzzle)
+         .WithMany()
+         .HasForeignKey(r => r.BookPuzzleId)
+         .OnDelete(DeleteBehavior.Restrict);
+        e.HasOne(r => r.EbookDiagram)
+         .WithMany()
+         .HasForeignKey(r => r.EbookDiagramId)
+         .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class CourseLineResetConfiguration : IEntityTypeConfiguration<CourseLineReset>
 {
     public void Configure(EntityTypeBuilder<CourseLineReset> e)

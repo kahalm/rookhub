@@ -32,7 +32,7 @@ const DIAGRAMS = [
 describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
-  async function make(b: Ebook) {
+  async function make(b: Ebook, query: Map<string, string> = new Map()) {
     service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram', 'reportMissedDiagram']);
     service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
@@ -45,7 +45,7 @@ describe('EbookReaderComponent', () => {
       providers: [
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: EbookService, useValue: service },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', '9']]) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: new Map([['id', '9']]), queryParamMap: query } } },
         { provide: SnackbarService, useValue: { warn: () => {}, quick: () => {} } },
         // pdf.js läuft im Test nicht — der Leser bekommt einen Lader, der nie fertig wird.
         { provide: PdfEngineLoader, useValue: { load: () => new Promise(() => {}), documentParams: (url: string) => ({ url }) } },
@@ -151,6 +151,15 @@ describe('EbookReaderComponent', () => {
     expect(c.sideKey(c.picked()!)).toBe('ebooks.reader.sideUnknown');
     c.step(-1);
     expect(c.picked()!.id).toBe(12);
+  });
+
+  it('Sprung aus dem Kurs (?page=&diagram=): öffnet die Seite und legt das Diagramm aufs Brett', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3, progress: { page: 2, pageCount: null, updatedAt: '' } } as never),
+      new Map([['page', '7'], ['diagram', '12']]));
+    const c = fixture.componentInstance;
+    expect(c.initialPage).toBe(7);
+    expect(c.picked()!.id).toBe(12);
+    expect(c.panelOpen()).toBeTrue();
   });
 
   it('› nach dem letzten Diagramm springt zum ersten, ‹ vor dem ersten zum letzten (im Kreis)', async () => {

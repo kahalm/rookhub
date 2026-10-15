@@ -116,6 +116,7 @@ public partial class AppDbContext : DbContext
     public DbSet<CourseLink> CourseLinks => Set<CourseLink>();
     public DbSet<CourseInfoView> CourseInfoViews => Set<CourseInfoView>();
     public DbSet<CourseLineReset> CourseLineResets => Set<CourseLineReset>();
+    public DbSet<CourseLineEbookRef> CourseLineEbookRefs => Set<CourseLineEbookRef>();
     public DbSet<CourseAttempt> CourseAttempts => Set<CourseAttempt>();
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     // E-Book-Bibliothek (/ebooks): Titel mit Dateien, Gruppen-Freigabe je Buch, Lesestand je Nutzer.

@@ -1902,6 +1902,33 @@ namespace RookHub.Api.Migrations
                     b.ToTable("CourseInfoViews");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.CourseLineEbookRef", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookPuzzleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("EbookDiagramId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookDiagramId");
+
+                    b.HasIndex("BookPuzzleId", "EbookDiagramId")
+                        .IsUnique();
+
+                    b.ToTable("CourseLineEbookRefs");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.CourseLineReset", b =>
                 {
                     b.Property<int>("Id")
@@ -8909,6 +8936,25 @@ namespace RookHub.Api.Migrations
                     b.Navigation("BookPuzzle");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.CourseLineEbookRef", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.BookPuzzle", "BookPuzzle")
+                        .WithMany()
+                        .HasForeignKey("BookPuzzleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.EbookDiagram", "EbookDiagram")
+                        .WithMany()
+                        .HasForeignKey("EbookDiagramId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BookPuzzle");
+
+                    b.Navigation("EbookDiagram");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.CourseLineReset", b =>

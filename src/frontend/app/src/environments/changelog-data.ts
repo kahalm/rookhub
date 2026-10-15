@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.792.0", date: "2026-10-15", changes: [
+    { en: "Courses ↔ e-books: „Link with e-book“ in the ⋮ menu of a course matches every line by its position with the recognised diagrams of the best-fitting e-book (also after the opening setup move) and remembers the page. In the solver, „In the book · p. n“ then opens the book at that diagram in a new tab, with the position already on the board.",
+      de: "Kurse ↔ E-Books: „Mit E-Book verknüpfen“ im ⋮-Menü eines Kurses ordnet jede Linie über ihre Stellung den erkannten Diagrammen des passendsten E-Books zu (auch nach dem vorgespielten Gegnerzug) und merkt sich die Seite. Im Löser öffnet „Im Buch · S. n“ das Buch dann in einem neuen Tab genau an diesem Diagramm, die Stellung liegt schon auf dem Brett." },
+  ] },
   { version: "0.791.0", date: "2026-10-15", changes: [
     { en: "E-books: EPUBs are no longer always shown in two columns – one column page by page, or switch to continuous text that you simply scroll; text can be made larger or smaller (A−/A+). Both are remembered on this device.", de: "E-Books: EPUBs erscheinen nicht mehr immer zweispaltig – eine Spalte zum Blättern oder umschaltbar auf Fließtext, den man einfach scrollt; die Schrift lässt sich vergrößern und verkleinern (A−/A+). Beides wird auf diesem Gerät gemerkt." },
   ] },

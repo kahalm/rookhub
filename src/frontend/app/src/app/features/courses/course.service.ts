@@ -111,6 +111,24 @@ export interface CourseChapter {
 
 /** Statistik eines Kurs-Bereichs (ganzes Buch ODER aktuelles Kapitel): Fortschritt + Zeit + Erst-Versuch-Trefferquote.
  *  Zeit/Trefferquote zählen nur Versuche seit dem letzten Reset. */
+/** Wo eine Kurslinie im E-Book steht (Diagramm + Seite). */
+export interface CourseLineEbookRef {
+  lineId: number;
+  ebookId: number;
+  ebookTitle: string;
+  diagramId: number;
+  page: number;
+  label: string | null;
+}
+
+/** Ergebnis von „Mit E-Book verknüpfen“; `ebookId` null = kein passendes Buch gefunden. */
+export interface CourseEbookLinkResult {
+  ebookId: number | null;
+  ebookTitle: string | null;
+  linked: number;
+  lines: number;
+}
+
 export interface CourseScopeStats {
   solvedCount: number;
   total: number;
@@ -386,6 +404,16 @@ export class CourseService {
   }
 
   /** Der aktuell verknüpfte Partner-Kurs (leere Felder = keine Verknüpfung). */
+  /** Wo die Linien des Kurses im E-Book stehen (nur sichtbare Bücher). */
+  getEbookRefs(bookId: number): Observable<CourseLineEbookRef[]> {
+    return this.http.get<CourseLineEbookRef[]>(`/api/courses/${bookId}/ebook-refs`);
+  }
+
+  /** „Mit E-Book verknüpfen“: Linien über die Stellung den Buch-Diagrammen zuordnen (ohne Buch: Server sucht). */
+  linkEbook(bookId: number, ebookId?: number | null): Observable<CourseEbookLinkResult> {
+    return this.http.post<CourseEbookLinkResult>(`/api/courses/${bookId}/ebook-refs`, { ebookId: ebookId ?? null });
+  }
+
   getLink(bookId: number): Observable<CourseLink> {
     return this.http.get<CourseLink>(`/api/courses/${bookId}/link`);
   }

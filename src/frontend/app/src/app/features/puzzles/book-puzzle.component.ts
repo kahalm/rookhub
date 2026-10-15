@@ -44,7 +44,7 @@ import { applyUci, tryLoadFen, fenSideToMove } from './puzzle-move.util';
 import { replayIllegalFen } from './illegal-board.util';
 import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
-import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.service';
+import { CourseService, CourseMode, CourseScopeStats, CourseLineEbookRef } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { isElementFullscreen } from '../../shared/fullscreen/fullscreen.util';
 import { AuthService } from '../../core/auth.service';
@@ -866,6 +866,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.loadCourseNext();
         this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
         this.loadCourseLink();    // verknüpften Partner-Kurs für den Schnellwechsel laden
+        this.loadCourseEbookRefs();   // wo die Linien im E-Book stehen („Im Buch“)
       });
       return;
     }
@@ -924,6 +925,26 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.challengeId == null || this.challengeResolved) return null;
     this.challengeResolved = true;
     return this.challengeId;
+  }
+
+  /** Kurslinie → E-Book-Diagramm (Wunsch 2026-10-15), je Linie der erste Verweis. */
+  private courseEbookRefs = new Map<number, CourseLineEbookRef>();
+  /** Verweis der aktuellen Linie ins E-Book (Knopf „Im Buch“), sonst null. */
+  get currentEbookRef(): CourseLineEbookRef | null {
+    return this.inCourse && this.puzzle ? this.courseEbookRefs.get(this.puzzle.id) ?? null : null;
+  }
+
+  private loadCourseEbookRefs(): void {
+    this.courseEbookRefs = new Map();
+    if (this.courseBookId == null || this.isAnonCourse) return;
+    this.courseService.getEbookRefs(this.courseBookId).subscribe({
+      next: refs => {
+        const m = new Map<number, CourseLineEbookRef>();
+        for (const r of refs) if (!m.has(r.lineId)) m.set(r.lineId, r);
+        this.courseEbookRefs = m;
+      },
+      error: () => {},   // still: ohne Verweise fehlt nur der Knopf
+    });
   }
 
   /** Lädt den verknüpften Partner-Kurs (falls vorhanden) für den Schnellwechsel-Knopf. */

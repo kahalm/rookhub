@@ -61,6 +61,8 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   readonly appliedZoom = signal(1);
   readonly viewerFailed = signal(false);
   initialPage = 1;
+  /** Diagramm aus dem Kurs-Sprung (`?diagram=`), wird nach dem Laden der Diagramme aufs Brett gelegt. */
+  private jumpDiagramId: number | null = null;
 
   /** Erkannte Diagramme in Lesereihenfolge (leer, solange die Erkennung läuft oder das Buch ein Scan ist). */
   readonly diagrams = signal<EbookDiagram[]>([]);
@@ -138,7 +140,11 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     this.ebooks.get(id).subscribe({
       next: book => {
         this.ebook = book;
-        this.initialPage = book.progress?.page ?? 1;
+        // Sprung aus dem Kurs („Im Buch“, 2026-10-15): ?page=…&diagram=… schlägt die gemerkte Lesestelle.
+        const q = this.route.snapshot.queryParamMap;
+        const jumpPage = Number(q?.get('page')) || 0;
+        this.jumpDiagramId = Number(q?.get('diagram')) || null;
+        this.initialPage = jumpPage > 0 ? jumpPage : book.progress?.page ?? 1;
         this.epubLocator = book.progress?.locator ?? null;
         this.page.set(this.initialPage);
         if (book.pageCount) this.pageCount.set(book.pageCount);
@@ -277,6 +283,17 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
         this.epubImages.set(list.items.filter(d => !!d.imageRef).map(d => ({
           id: d.id, chapter: d.page, ref: d.imageRef!, title: d.label ? `${d.label} · ${title}` : title,
         })));
+        // Sprung aus dem Kurs: das Diagramm gleich aufs Brett (EPUB zusätzlich hinblättern).
+        const jump = this.jumpDiagramId;
+        this.jumpDiagramId = null;
+        if (jump != null) {
+          const idx = list.items.findIndex(d => d.id === jump);
+          if (idx >= 0) {
+            this.pick(jump);
+            const d = list.items[idx];
+            if (d.imageRef) setTimeout(() => this.epub?.revealImage(d.page, d.imageRef!));
+          }
+        }
         this.cdr.markForCheck();
       },
       // Ohne Diagramme bleibt der Leser einspaltig — das Buch ist trotzdem lesbar, kein Fehlerhinweis nötig.

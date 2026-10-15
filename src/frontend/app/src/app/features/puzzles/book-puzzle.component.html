@@ -161,6 +161,15 @@
                                             [value]="courseLang.effective(langRef)"
                                             (picked)="pickLanguage($event)" />
                   }
+                  @if (currentEbookRef; as er) {
+                    <!-- Kurslinie → Stelle im E-Book (neuer Tab, der Kurs bleibt offen). -->
+                    <a mat-stroked-button class="ctx-switch ctx-in-book" target="_blank" rel="noopener"
+                       [routerLink]="['/ebooks', er.ebookId]" [queryParams]="{ diagram: er.diagramId, page: er.page }"
+                       [matTooltip]="'book.course.inBookTooltip' | translate:{ title: er.ebookTitle, page: er.page }">
+                      <mat-icon>menu_book</mat-icon>
+                      <span class="ctx-switch-label">{{ 'book.course.inBook' | translate:{ page: er.page } }}</span>
+                    </a>
+                  }
                   @if (inCourse && linkedCourseBookId) {
                     <button mat-stroked-button class="ctx-switch" (click)="switchToLinkedCourse()"
                             [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName }">
