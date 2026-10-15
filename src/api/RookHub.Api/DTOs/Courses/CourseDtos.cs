@@ -196,6 +196,13 @@ public class CourseScopeStatsDto
     public int FirstTryCorrect { get; set; }
     /// <summary>0–100, gerundet: <see cref="FirstTryCorrect"/> / <see cref="AttemptedCount"/>.</summary>
     public int AccuracyPercent { get; set; }
+    /// <summary>Gelöst ohne Hilfe: erster Versuch seit Reset richtig, ohne Tipp. <see cref="CleanCount"/> +
+    /// <see cref="HelpedCount"/> = <see cref="SolvedCount"/>.</summary>
+    public int CleanCount { get; set; }
+    /// <summary>Gelöst, aber mit Tipp oder nach einem Fehlversuch/Neustart.</summary>
+    public int HelpedCount { get; set; }
+    /// <summary>Versucht (seit Reset), aber nicht gelöst — aufgegeben.</summary>
+    public int GaveUpCount { get; set; }
 }
 
 /// <summary>Nächstes zu lösendes Puzzle eines Kurses + aktueller Fortschritt.</summary>

@@ -2259,6 +2259,12 @@
       "backToCourses": "Na pregled tečajeva",
       "completed": "Tečaj završen!",
       "roundFinished": "Nasumični krug završen — preostalo {{remaining}} zagonetki",
+      "split": {
+        "clean": "Riješeno bez pomoći (prvi pokušaj, bez savjeta)",
+        "helped": "Riješeno uz savjet ili nakon pogreške/ponovnog pokretanja",
+        "gaveUp": "Odustao (još nije riješeno)",
+        "ofTotal": "od {{total}}"
+      },
       "continueRemaining": "Nastavi s preostalima",
       "toOverview": "Na pregled",
       "toStart": "Na početnu stranicu",

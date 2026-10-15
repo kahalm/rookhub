@@ -2197,7 +2197,11 @@ describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
       c.courseBookStats = stats; c.courseChapterStats = stats;
       spyOnProperty(c, 'courseChapterDisplay', 'get').and.returnValue('Kapitel 2');
     }, '/courses/7/solve');
-    expect(bars(el).map(b => b.getAttribute('aria-label'))).toEqual(['book.course.wholeBook', 'Kapitel 2']);
+    // Seit der Dreiteilung (2026-10-15) eine eigene Leiste; ihr Name beginnt mit Buch bzw. Kapitel, dann die Zahlen.
+    // (Der Helfer rendert Kindkomponenten nicht — geprüft wird der übergebene Name; die Leiste selbst testet
+    // course-progress-split.component.spec.)
+    const split = [...el.querySelectorAll('app-course-progress-split')].map(b => (b as any).ariaPrefix);
+    expect(split).toEqual(['book.course.wholeBook', 'Kapitel 2']);
   });
 
   it('Kurs ohne Buchstatistik: der Sammelbalken hat ebenfalls einen Namen', () => {

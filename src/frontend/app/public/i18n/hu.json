@@ -1841,6 +1841,12 @@
       "accuracyHint": "Első próbálkozásra siker",
       "timeHint": "Összes eltöltött idő",
       "roundFinished": "Véletlen forduló kész — még {{remaining}} feladat vár megoldásra",
+      "split": {
+        "clean": "Segítség nélkül megoldva (első próbálkozás, tipp nélkül)",
+        "helped": "Tippel vagy hiba/újrakezdés után megoldva",
+        "gaveUp": "Feladva (még nincs megoldva)",
+        "ofTotal": "/ {{total}}"
+      },
       "continueRemaining": "Folytatás a maradékkal",
       "restart": "Kezdés elölről",
       "restarted": "Tanfolyam visszaállítva — kezdjük elölről",

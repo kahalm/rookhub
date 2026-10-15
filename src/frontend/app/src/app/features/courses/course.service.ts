@@ -123,6 +123,12 @@ export interface CourseScopeStats {
   firstTryCorrect: number;
   /** 0–100: firstTryCorrect / attemptedCount. */
   accuracyPercent: number;
+  /** Gelöst ohne Hilfe (erster Versuch richtig, ohne Tipp); cleanCount + helpedCount = solvedCount. */
+  cleanCount?: number;
+  /** Gelöst mit Tipp oder nach Fehlversuch/Neustart. */
+  helpedCount?: number;
+  /** Versucht, aber nicht gelöst (aufgegeben). */
+  gaveUpCount?: number;
 }
 
 export interface CourseNextPuzzle {

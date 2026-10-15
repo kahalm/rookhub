@@ -2259,6 +2259,12 @@
       "backToCourses": "Zur Kursübersicht",
       "completed": "Kurs abgeschlossen!",
       "roundFinished": "Zufalls-Runde durch — noch {{remaining}} Aufgaben zu lösen",
+      "split": {
+        "clean": "Ohne Hilfe gelöst (erster Versuch, ohne Tipp)",
+        "helped": "Mit Tipp oder nach Fehler/Neustart gelöst",
+        "gaveUp": "Aufgegeben (noch nicht gelöst)",
+        "ofTotal": "von {{total}}"
+      },
       "continueRemaining": "Mit den restlichen weitermachen",
       "toOverview": "Zur Übersicht",
       "toStart": "Zur Startseite",

@@ -1340,6 +1340,7 @@ public class CourseService
                 PuzzleId = g.Key,
                 Seconds = g.Sum(a => a.TimeSeconds),
                 FirstSolved = g.OrderBy(a => a.AttemptedAt).ThenBy(a => a.Id).First().Solved,
+                FirstHints = g.OrderBy(a => a.AttemptedAt).ThenBy(a => a.Id).First().HintsUsed,
             })
             .ToListAsync();
 
@@ -1348,8 +1349,18 @@ public class CourseService
             var solved = solvedIds.Count(inScope);
             var scoped = perPuzzle.Where(p => inScope(p.PuzzleId)).ToList();
             var firstCorrect = scoped.Count(p => p.FirstSolved);
+            // Aufschlüsselung (Wunsch 2026-10-15): gelöst ohne Hilfe = erster Versuch seit Reset richtig und
+            // ohne Tipp (gelöst ohne Versuch seit Reset — Altbestand — zählt ebenfalls dazu); sonst „mit
+            // Tipp/Neustart". Aufgegeben = versucht, aber (noch) nicht gelöst.
+            var byId = scoped.ToDictionary(p => p.PuzzleId);
+            var solvedInScope = solvedIds.Where(inScope).ToList();
+            var clean = solvedInScope.Count(id => !byId.TryGetValue(id, out var p) || (p.FirstSolved && p.FirstHints == 0));
+            var gaveUp = scoped.Count(p => !solvedIds.Contains(p.PuzzleId));
             return new CourseScopeStatsDto
             {
+                CleanCount = Math.Min(clean, total),
+                HelpedCount = Math.Min(solvedInScope.Count - clean, total),
+                GaveUpCount = gaveUp,
                 SolvedCount = Math.Min(solved, total),
                 Total = total,
                 ProgressPercent = Percent(solved, total),

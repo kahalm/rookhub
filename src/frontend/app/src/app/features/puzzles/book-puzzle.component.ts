@@ -16,6 +16,7 @@ import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CommentSegment } from './comment-variation.util';
+import { CourseProgressSplitComponent } from '../courses/course-progress-split.component';
 import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
 import { CommentBlockCache, lineStepAt } from './line-step.util';
 import {
@@ -79,7 +80,7 @@ const ANON_COURSE_PAGE_SIZE = 300;
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, IconLabelDirective, MatDialogModule,
     PuzzleBoardComponent, BoardFsActionsComponent, PuzzleTagsComponent,
     TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent,
-    RouterLink, CourseLangPickerComponent, MachineNoteComponent,
+    RouterLink, CourseLangPickerComponent, MachineNoteComponent, CourseProgressSplitComponent,
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],

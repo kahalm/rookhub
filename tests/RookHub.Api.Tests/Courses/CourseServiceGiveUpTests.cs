@@ -143,4 +143,27 @@ public class CourseServiceGiveUpTests : IDisposable
         var again = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: null);
         Assert.Equal("info", again.Puzzle?.LineId);
     }
+
+    [Fact]
+    public async Task Stats_SplitCleanHelpedGaveUp()
+    {
+        var (book, p1, p2) = await SeedAsync();
+        var p3 = await AddPuzzleAsync(book, "p3", "003");
+        var p4 = await AddPuzzleAsync(book, "p4", "004");
+        Task Rec(BookPuzzle p, bool solved, int hints = 0) =>
+            _svc.RecordResultAsync(UserId, book.Id, new RecordCourseResultDto { BookPuzzleId = p.Id, Solved = solved, Mode = "sequential", HintsUsed = hints }, isAdmin: false);
+
+        await Rec(p1, true);                 // ohne Hilfe
+        await Rec(p2, true, hints: 1);       // mit Tipp
+        await Rec(p3, false);                // Fehler …
+        await Rec(p3, true);                 // … dann gelöst (Neustart) → mit Hilfe
+        await Rec(p4, false);                // aufgegeben
+
+        var next = await _svc.GetNextAsync(UserId, book.Id, "sequential", after: null, exclude: null, isAdmin: false, chapterIndex: null);
+        var bk = next.Book!;
+        Assert.Equal(3, bk.SolvedCount);
+        Assert.Equal(1, bk.CleanCount);
+        Assert.Equal(2, bk.HelpedCount);
+        Assert.Equal(1, bk.GaveUpCount);
+    }
 }

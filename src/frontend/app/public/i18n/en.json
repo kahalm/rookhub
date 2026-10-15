@@ -2259,6 +2259,12 @@
       "backToCourses": "To course overview",
       "completed": "Course completed!",
       "roundFinished": "Random round finished — {{remaining}} puzzles still to solve",
+      "split": {
+        "clean": "Solved without help (first try, no hint)",
+        "helped": "Solved with a hint or after a mistake/restart",
+        "gaveUp": "Given up (not solved yet)",
+        "ofTotal": "of {{total}}"
+      },
       "continueRemaining": "Continue with remaining",
       "toOverview": "To overview",
       "toStart": "To the start page",

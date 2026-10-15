@@ -225,10 +225,9 @@
                       <!-- Ganzes Buch -->
                       <div class="cs-scope">
                         <span class="cs-label">{{ 'book.course.wholeBook' | translate }}</span>
-                        <mat-progress-bar mode="determinate" [value]="bk.progressPercent"
-                                          [attr.aria-label]="'book.course.wholeBook' | translate"></mat-progress-bar>
                         <div class="cs-stats">
-                          <span class="cs-prog">{{ bk.solvedCount }}/{{ bk.total }} ({{ bk.progressPercent }}%)</span>
+                          <!-- Dreigeteilt statt „x/y (n %)": ohne Hilfe / mit Tipp oder Neustart / aufgegeben. -->
+                          <app-course-progress-split [stats]="bk" [ariaPrefix]="'book.course.wholeBook' | translate" />
                           @if (bk.attemptedCount > 0) {
                             <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
                               <mat-icon>check_circle</mat-icon>{{ bk.accuracyPercent }}%
@@ -248,10 +247,8 @@
                       @if (courseChapterStats; as ch) {
                         <div class="cs-scope cs-chapter">
                           <span class="cs-label">{{ courseChapterDisplay || ('book.course.noChapter' | translate) }}</span>
-                          <mat-progress-bar mode="determinate" [value]="ch.progressPercent"
-                                            [attr.aria-label]="courseChapterDisplay || ('book.course.noChapter' | translate)"></mat-progress-bar>
                           <div class="cs-stats">
-                            <span class="cs-prog">{{ ch.solvedCount }}/{{ ch.total }} ({{ ch.progressPercent }}%)</span>
+                            <app-course-progress-split [stats]="ch" [ariaPrefix]="courseChapterDisplay || ('book.course.noChapter' | translate)" />
                             @if (ch.attemptedCount > 0) {
                               <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
                                 <mat-icon>check_circle</mat-icon>{{ ch.accuracyPercent }}%
