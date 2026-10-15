@@ -30,6 +30,7 @@ interface EpubRendition {
   on(event: string, cb: (...args: unknown[]) => void): void;
   themes: { default(rules: Record<string, Record<string, string>>): void; fontSize(size: string): void };
   currentLocation(): { start?: { cfi?: string } } | null;
+  resize(width?: number, height?: number): void;
   hooks: { content: { register(fn: (c: EpubContents) => void): void } };
   getContents(): EpubContents[] | EpubContents;
   destroy(): void;
@@ -107,6 +108,11 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   /** Absolute Basis, wenn das Buch als Ordner offen ist (für die Bildzuordnung). */
   private dirBase: string | null = null;
   private locationsTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Bereich wird schmaler/breiter (Brett-Spalte gezogen, Fenster, Vollbild): epub.js misst nur beim Aufbau — ohne
+   *  Nachmessen läuft der Text über den Rand (0.792.2). Gebündelt per Animationsframe. */
+  private resizeObs: ResizeObserver | null = null;
+  private resizeRaf = 0;
+  private lastSize = '';
 
   async ngAfterViewInit(): Promise<void> {
     try {
@@ -116,6 +122,10 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       if (!book) return;
       this.book = book;
       const rendition = this.createRendition(book);
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObs = new ResizeObserver(() => this.onAreaResize());
+        this.resizeObs.observe(this.area.nativeElement);
+      }
       await rendition.display(this.initialLocator || undefined).catch(() => rendition.display());
       this.zone.run(() => this.loading.set(false));
       book.loaded.navigation.then(nav => this.zone.run(() => this.toc.emit(nav.toc.map(t => ({ label: t.label.trim(), href: t.href })))))
@@ -259,7 +269,24 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     });
   }
 
+  /** Neue Größe an epub.js weitergeben (nur bei echter Änderung, höchstens einmal je Frame). */
+  onAreaResize(): void {
+    cancelAnimationFrame(this.resizeRaf);
+    this.resizeRaf = requestAnimationFrame(() => {
+      const el = this.area.nativeElement;
+      const w = Math.floor(el.clientWidth), h = Math.floor(el.clientHeight);
+      const key = `${w}x${h}`;
+      if (!w || !h || key === this.lastSize) return;
+      const first = this.lastSize === '';
+      this.lastSize = key;
+      if (first) return;   // erste Messung = Aufbau, epub.js hat schon die richtige Größe
+      try { this.rendition?.resize(w, h); } catch { /* Darstellung gerade im Umbau */ }
+    });
+  }
+
   ngOnDestroy(): void {
+    this.resizeObs?.disconnect();
+    cancelAnimationFrame(this.resizeRaf);
     this.destroyed = true;
     if (this.locationsTimer) clearTimeout(this.locationsTimer);
     try { this.rendition?.destroy(); this.book?.destroy(); } catch { /* schon weg */ }

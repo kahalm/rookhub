@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.792.2", date: "2026-10-15", changes: [
+    { en: "E-books: an EPUB adapts when its area gets narrower or wider (e.g. when you enlarge the board) – the text no longer runs out of the page.", de: "E-Books: Ein EPUB passt sich an, wenn sein Bereich schmaler oder breiter wird (z. B. beim Vergrößern des Bretts) – der Text läuft nicht mehr aus der Seite." },
+  ] },
   { version: "0.792.1", date: "2026-10-15", changes: [
     { en: "E-books: in PDFs with pages of different sizes (e.g. scanned double pages in landscape) every page now fits the width of the reader – before, wide pages were cut off on the right.", de: "E-Books: In PDFs mit unterschiedlich großen Seiten (z. B. eingescannte Doppelseiten im Querformat) passt jetzt jede Seite in die Breite des Lesers – vorher wurden breite Seiten rechts abgeschnitten." },
   ] },

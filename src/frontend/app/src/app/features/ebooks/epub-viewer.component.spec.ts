@@ -75,6 +75,24 @@ describe('EpubViewerComponent', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('Größenänderung des Bereichs (Brett-Spalte gezogen) misst epub.js neu — nicht beim ersten Messen, nicht ohne Änderung', () => {
+    const c = make(null);
+    const resize = jasmine.createSpy('resize');
+    (c as unknown as { rendition: unknown }).rendition = { resize };
+    spyOn(window, 'requestAnimationFrame').and.callFake((f: FrameRequestCallback) => { f(0); return 1; });
+    const area = (c as unknown as { area: { nativeElement: HTMLElement } }).area.nativeElement;
+    let w = 800;
+    spyOnProperty(area, 'clientWidth').and.callFake(() => w);
+    spyOnProperty(area, 'clientHeight').and.returnValue(600);
+    c.onAreaResize();
+    expect(resize).not.toHaveBeenCalled();             // Aufbau
+    c.onAreaResize();
+    expect(resize).not.toHaveBeenCalled();             // keine Änderung
+    w = 520;
+    c.onAreaResize();
+    expect(resize).toHaveBeenCalledOnceWith(520, 600);
+  });
+
   it('öffnet als Ordner (absolute Basis, ohne Ersetzungen) und lädt das Archiv NICHT', async () => {
     const c = make('/api/ebooks/9/epub/tok/');
     const book = fakeBook(() => Promise.resolve());
