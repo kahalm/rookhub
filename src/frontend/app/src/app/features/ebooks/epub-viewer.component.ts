@@ -108,7 +108,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   private book: EpubBook | null = null;
   private rendition: EpubRendition | null = null;
   private destroyed = false;
-  private touchX: number | null = null;
+  private touchStart: { x: number; y: number } | null = null;
   /** Absolute Basis, wenn das Buch als Ordner offen ist (für die Bildzuordnung). */
   private dirBase: string | null = null;
   private locationsTimer: ReturnType<typeof setTimeout> | null = null;
@@ -190,6 +190,14 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     // Mausrad im Kapitel (iframe): Ereignisse von dort erreichen den Host nicht (0.780.1).
     rendition.hooks.content.register((c: { document?: Document }) => c.document?.addEventListener('wheel',
       (ev: WheelEvent) => this.zone.run(() => this.onWheel(ev)), { passive: true }));
+    // Wischen im Kapitel (iframe): auch Touch erreicht den Host nicht — im Modus „Seite“ ging am Handy/Tablet nur ‹ ›
+    // (pdf_reader, 15.10.: Boox Tab X C + Xiaomi). Passiv: Doppeltipp auf Diagramme und das Auswählen bleiben unberührt.
+    rendition.hooks.content.register((c: { document?: Document }) => {
+      const doc = c.document;
+      if (!doc) return;
+      doc.addEventListener('touchstart', (ev: TouchEvent) => this.onTouchStart(ev), { passive: true });
+      doc.addEventListener('touchend', (ev: TouchEvent) => this.zone.run(() => this.onTouchEnd(ev)), { passive: true });
+    });
     rendition.on('relocated', (loc: unknown) => {
       const l = loc as { start?: { cfi?: string; percentage?: number; index?: number } };
       if (typeof l.start?.index === 'number') this.chapter.set(l.start.index + 1);
@@ -363,16 +371,19 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   @HostListener('touchstart', ['$event'])
-  onTouchStart(e: TouchEvent): void { this.touchX = e.changedTouches[0]?.clientX ?? null; }
+  onTouchStart(e: TouchEvent): void {
+    const t = e.changedTouches[0];
+    this.touchStart = t && e.touches.length <= 1 ? { x: t.clientX, y: t.clientY } : null;
+  }
 
   @HostListener('touchend', ['$event'])
   onTouchEnd(e: TouchEvent): void {
-    const x = e.changedTouches[0]?.clientX;
-    if (this.touchX == null || x == null) return;
-    const dx = x - this.touchX;
-    this.touchX = null;
-    if (Math.abs(dx) < 50) return;
-    if (dx < 0) this.next(); else this.prev();
+    const t = e.changedTouches[0];
+    const start = this.touchStart;
+    this.touchStart = null;
+    if (!start || !t || this.layout === 'scroll') return;   // fließend: der Finger scrollt selbst
+    const dir = swipeDirection(start, { x: t.clientX, y: t.clientY });
+    if (dir === 1) this.next(); else if (dir === -1) this.prev();
   }
 }
 
@@ -411,4 +422,17 @@ function normalizePath(p: string): string {
 function baseName(p: string): string {
   const v = normalizePath(p);
   return v.slice(v.lastIndexOf('/') + 1);
+}
+
+/** Mindestweg eines Wischers in px; darunter ist es ein Tipp (Doppeltipp auf Diagramme bleibt frei). */
+export const SWIPE_MIN_PX = 50;
+
+/**
+ * Wischrichtung: 1 = weiter (nach links gewischt), -1 = zurück, 0 = kein Blättern (zu kurz oder eher senkrecht —
+ * senkrechtes Ziehen ist Lesen/Scrollen, kein Umblättern).
+ */
+export function swipeDirection(start: { x: number; y: number }, end: { x: number; y: number }): -1 | 0 | 1 {
+  const dx = end.x - start.x, dy = end.y - start.y;
+  if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) <= Math.abs(dy)) return 0;
+  return dx < 0 ? 1 : -1;
 }

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.800.1", date: "2026-10-15", changes: [
+    { en: "E-books: in EPUBs you can turn pages by swiping left/right on phones and tablets again (in „Page“ view only the ‹ › buttons worked).", de: "E-Books: In EPUBs blätterst du am Handy und Tablet wieder durch Wischen nach links/rechts (in der Ansicht „Seite“ gingen nur die Knöpfe ‹ ›)." },
+  ]},
   { version: "0.800.0", date: "2026-10-15", changes: [
     { en: "UI size per device (Profile → Appearance, below the e-ink switch): 100 to 200 % – for large tablets where everything looks tiny. On phones and tablets the page is laid out narrower and enlarged, so taps and the board stay exact; PDF pages are rendered sharper to match.", de: "UI-Größe je Gerät (Profil → Darstellung, unter dem E-Ink-Schalter): 100 bis 200 % – für große Tablets, auf denen alles winzig wirkt. Auf Handy und Tablet wird die Seite schmaler gesetzt und vergrößert, Tippen und Brett treffen weiter genau; PDF-Seiten werden passend schärfer gezeichnet." },
   ]},

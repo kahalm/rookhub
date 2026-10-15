@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { EpubViewerComponent, epubImagePath } from './epub-viewer.component';
+import { EpubViewerComponent, epubImagePath, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
 import { setEinkActive } from '../../core/eink';
 
 const BASE = 'http://rh.test/api/ebooks/9/epub/tok/';
@@ -52,6 +52,42 @@ describe('EpubViewerComponent', () => {
     expect(next).toHaveBeenCalledTimes(1);        // Pause läuft noch
     now += 400; wheel(-3, 1);                     // 3 Zeilen hoch (Firefox)
     expect(prev).toHaveBeenCalledTimes(1);
+  });
+
+  it('Wischen im Kapitel (iframe) blättert: links = weiter, rechts = zurück; kurz oder senkrecht nicht; fließend nicht', () => {
+    const c = make(null);
+    const hooks: ((x: { document: Document }) => void)[] = [];
+    const rendition = {
+      themes: { default: () => {}, fontSize: () => {} },
+      hooks: { content: { register: (f: (x: { document: Document }) => void) => hooks.push(f) } }, on: () => {},
+    };
+    (c as unknown as { createRendition(b: unknown): unknown }).createRendition.call(c, { renderTo: () => rendition });
+    const doc = document.implementation.createHTMLDocument('ch');
+    hooks.forEach(h => h({ document: doc }));
+    const next = spyOn(c, 'next'), prev = spyOn(c, 'prev');
+    const swipe = (x0: number, y0: number, x1: number, y1: number) => {
+      const touch = (x: number, y: number) => new Touch({ identifier: 1, target: doc.body, clientX: x, clientY: y });
+      doc.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(x0, y0)], changedTouches: [touch(x0, y0)] }));
+      doc.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touch(x1, y1)] }));
+    };
+    swipe(300, 200, 150, 210);
+    expect(next).toHaveBeenCalledTimes(1);
+    swipe(100, 200, 260, 190);
+    expect(prev).toHaveBeenCalledTimes(1);
+    swipe(300, 200, 270, 200);            // zu kurz: Tipp
+    swipe(300, 100, 220, 300);            // eher senkrecht
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(prev).toHaveBeenCalledTimes(1);
+    c.layout = 'scroll';
+    swipe(300, 200, 100, 200);
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it('swipeDirection: Schwelle und Richtung', () => {
+    expect(swipeDirection({ x: 200, y: 0 }, { x: 200 - SWIPE_MIN_PX, y: 0 })).toBe(1);
+    expect(swipeDirection({ x: 0, y: 0 }, { x: SWIPE_MIN_PX, y: 10 })).toBe(-1);
+    expect(swipeDirection({ x: 0, y: 0 }, { x: SWIPE_MIN_PX - 1, y: 0 })).toBe(0);
+    expect(swipeDirection({ x: 0, y: 0 }, { x: 60, y: 60 })).toBe(0);
   });
 
   it('Darstellung (0.791.0): „Seite“ = paginiert eine Spalte, „Fließend“ = scrollen; Schriftgröße als Prozent; fließend blättert das Rad nicht', () => {
