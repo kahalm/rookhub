@@ -29,8 +29,10 @@ import { mediaSignal } from '../../shared/layout/wide-media';
 import { Ebook, EbookGroupOption, EbookList, EbookTagFacet, EbookService, EbookSort, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
+import { EbookCollectionDialogComponent, EbookCollectionDialogData } from './ebook-collection-dialog.component';
+import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
 
-export const EBOOK_PAGE_SIZE = 24;
+export const EBOOK_PAGE_SIZE = 60;
 
 /** Zugeklappt zeigt die Schlagwort-Leiste nur die häufigsten (der Server liefert sie nach Anzahl), c1-eb-tag-filter-lead. */
 export const EBOOK_TAGS_COLLAPSED = 8;
@@ -38,7 +40,7 @@ export const EBOOK_TAGS_COLLAPSED = 8;
 /** Sitzungs-Schlüssel der Listen-Ansicht (Suche, Filter, Seite) — „zurück" aus dem Leser landet wieder dort. */
 export const EBOOK_LIST_STATE_KEY = 'rh.ebooks.listState';
 
-export interface EbookListState { search: string; tag: string | null; sort: EbookSort; mine: boolean; withDiagrams: boolean; page: number; }
+export interface EbookListState { search: string; tag: string | null; sort: EbookSort; mine: boolean; withDiagrams: boolean; page: number; collection?: number | null; }
 
 /**
  * Übersicht der E-Book-Bibliothek (`/ebooks`): Suche, Schlagwort-Filter, Sortierung, Seiten; je Buch eine Karte mit
@@ -78,6 +80,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Auswahlmodus für „Sichtbarkeit setzen" (nur verwaltbare Bücher lassen sich ankreuzen). */
   readonly selecting = signal(false);
   readonly selected = signal<Set<number>>(new Set());
+  /** Geöffnete Sammlung (0.787.0); `null` = Hauptliste, Sammlungen dort als Ordner. */
+  collection: number | null = null;
   readonly importing = signal(false);
   /** Schlagwort-Leiste ganz aufgeklappt (sonst nur die häufigsten + das aktive). */
   readonly tagsOpen = signal(false);
@@ -92,6 +96,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private dialog = inject(MatDialog);
   private confirm = inject(ConfirmService);
+  private prompt = inject(PromptService);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
@@ -119,7 +124,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
     let st: Partial<EbookListState> | null = null;
     if (q && q.keys.length > 0) {
       st = { search: q.get('q') ?? '', tag: q.get('tag'), sort: (q.get('sort') as EbookSort) ?? 'newest',
-        mine: q.get('mine') === '1', withDiagrams: q.get('diagrams') === '1', page: Number(q.get('page')) || 1 };
+        mine: q.get('mine') === '1', withDiagrams: q.get('diagrams') === '1', page: Number(q.get('page')) || 1,
+        collection: Number(q.get('collection')) || null };
     } else {
       const store = sessionStore();
       st = store ? readJson<Partial<EbookListState>>(store, EBOOK_LIST_STATE_KEY) : null;
@@ -131,16 +137,18 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.mine = !!st.mine;
     this.withDiagrams = !!st.withDiagrams;
     this.page = Math.max(1, Math.floor(st.page ?? 1));
+    this.collection = st.collection ?? null;
   }
 
   /** Aktuelle Ansicht in Sitzung + Adresse (replaceUrl: kein neuer Verlaufseintrag je Tastendruck). */
   private saveState(): void {
-    const st: EbookListState = { search: this.search.trim(), tag: this.tag, sort: this.sort, mine: this.mine, withDiagrams: this.withDiagrams, page: this.page };
+    const st: EbookListState = { search: this.search.trim(), tag: this.tag, sort: this.sort, mine: this.mine, withDiagrams: this.withDiagrams, page: this.page, collection: this.collection };
     const store = sessionStore();
     if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
     const queryParams: Record<string, string | null> = {
       q: st.search || null, tag: st.tag, sort: st.sort !== 'newest' ? st.sort : null,
       mine: st.mine ? '1' : null, diagrams: st.withDiagrams ? '1' : null, page: st.page > 1 ? String(st.page) : null,
+      collection: st.collection ? String(st.collection) : null,
     };
     void this.router?.navigate([], { relativeTo: this.route ?? undefined, queryParams, replaceUrl: true });
   }
@@ -149,7 +157,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.saveState();
     this.loading = this.list == null;
     this.error = false;
-    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, mine: this.mine, withDiagrams: this.withDiagrams, sort: this.sort, page: this.page, pageSize: this.pageSize })
+    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, mine: this.mine, withDiagrams: this.withDiagrams, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
       .subscribe({
         next: list => {
           this.list = list;
@@ -361,6 +369,78 @@ export class EbookListComponent implements OnInit, OnDestroy {
         this.load();
       },
       error: err => { this.importing.set(false); this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.library.failed')); },
+    });
+  }
+
+  // ── Sammlungen (0.787.0) ────────────────────────────────────────────────────────────────────
+
+  openCollection(id: number): void {
+    this.collection = id;
+    this.page = 1;
+    this.selected.set(new Set());
+    this.load();
+    window.scrollTo?.({ top: 0 });
+  }
+
+  closeCollection(): void {
+    this.collection = null;
+    this.page = 1;
+    this.selected.set(new Set());
+    this.load();
+  }
+
+  assignCollectionSelected(): void {
+    const ebookIds = [...this.selected()];
+    if (ebookIds.length === 0) return;
+    const data: EbookCollectionDialogData = { ebookIds };
+    this.dialog.open(EbookCollectionDialogComponent, { data, width: '440px', maxWidth: '94vw' })
+      .afterClosed().subscribe(c => {
+        if (c === undefined) return;
+        this.snackbar.quick(this.translate.instant('ebooks.collection.assigned', { name: c?.name ?? '' }));
+        this.selected.set(new Set());
+        this.selecting.set(false);
+        this.load();
+      });
+  }
+
+  removeFromCollectionSelected(): void {
+    const ebookIds = [...this.selected()];
+    if (ebookIds.length === 0) return;
+    this.ebooks.assignCollection(ebookIds, null, null).subscribe({
+      next: () => {
+        this.snackbar.quick(this.translate.instant('ebooks.collection.removed', { n: ebookIds.length }));
+        this.selected.set(new Set());
+        this.selecting.set(false);
+        if (this.list?.collection && ebookIds.length >= this.list.collection.bookCount) this.closeCollection(); else this.load();
+      },
+      error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.saveFailed')),
+    });
+  }
+
+  renameCollection(): void {
+    const c = this.list?.collection;
+    if (!c) return;
+    this.prompt.ask({ title: this.translate.instant('ebooks.collection.rename'),
+      fields: [{ key: 'name', label: this.translate.instant('ebooks.collection.name'), value: c.name }] })
+      .subscribe(v => {
+        const name = v?.['name']?.trim();
+        if (!name || name === c.name) return;
+        this.ebooks.renameCollection(c.id, name).subscribe({
+          next: () => this.load(),
+          error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.saveFailed')),
+        });
+      });
+  }
+
+  dissolveCollection(): void {
+    const c = this.list?.collection;
+    if (!c) return;
+    this.confirm.ask('ebooks.collection.dissolveConfirm', { name: c.name }).subscribe(ok => {
+      if (!ok) return;
+      this.ebooks.deleteCollection(c.id).subscribe({
+        next: () => { this.snackbar.quick(this.translate.instant('ebooks.collection.dissolved')); this.closeCollection(); },
+        error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.saveFailed')),
+      });
     });
   }
 }

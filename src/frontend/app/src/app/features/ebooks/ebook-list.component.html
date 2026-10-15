@@ -105,6 +105,23 @@
       }
     }
 
+    @if (list.collection; as coll) {
+      <div class="eb-coll-head">
+        <button mat-icon-button type="button" (click)="closeCollection()" [appIconLabel]="'ebooks.collection.back' | translate"><mat-icon>arrow_back</mat-icon></button>
+        <mat-icon class="eb-coll-icon">folder_open</mat-icon>
+        <h2>{{ coll.name }}</h2>
+        <span class="eb-coll-count">{{ 'ebooks.collection.count' | translate: { n: coll.bookCount } }}</span>
+        @if (list.canManageAll) {
+          <span class="eb-spacer"></span>
+          <button mat-icon-button type="button" [matMenuTriggerFor]="collMenu" [appIconLabel]="'common.moreActions' | translate"><mat-icon>more_vert</mat-icon></button>
+          <mat-menu #collMenu="matMenu">
+            <button mat-menu-item (click)="renameCollection()"><mat-icon>edit</mat-icon><span>{{ 'ebooks.collection.rename' | translate }}</span></button>
+            <button mat-menu-item (click)="dissolveCollection()"><mat-icon>folder_off</mat-icon><span>{{ 'ebooks.collection.dissolve' | translate }}</span></button>
+          </mat-menu>
+        }
+      </div>
+    }
+
     @if (selecting()) {
       <div class="eb-bulk">
         <span>{{ 'ebooks.bulk.selected' | translate: { n: selected().size } }}</span>
@@ -112,6 +129,16 @@
         <button mat-flat-button color="primary" type="button" (click)="setVisibilitySelected()" [disabled]="selected().size === 0">
           <mat-icon>visibility</mat-icon>{{ 'ebooks.bulk.setVisibility' | translate }}
         </button>
+        @if (list.canManageAll) {
+          <button mat-stroked-button type="button" (click)="assignCollectionSelected()" [disabled]="selected().size === 0">
+            <mat-icon>create_new_folder</mat-icon>{{ 'ebooks.collection.assign' | translate }}
+          </button>
+          @if (list.collection) {
+            <button mat-stroked-button type="button" (click)="removeFromCollectionSelected()" [disabled]="selected().size === 0">
+              <mat-icon>drive_file_move_outline</mat-icon>{{ 'ebooks.collection.remove' | translate }}
+            </button>
+          }
+        }
       </div>
     }
 
@@ -129,6 +156,23 @@
     } @else {
       <div class="eb-grid">
         @for (book of items; track book.id) {
+          @if (book.collectionStub && book.collection; as coll) {
+            <mat-card class="eb-card eb-card--folder">
+              <button type="button" class="eb-cover eb-folder" (click)="openCollection(coll.id)" [attr.aria-label]="coll.name">
+                @if (coverUrl(book); as url) { <img [src]="url" [alt]="''" loading="lazy" decoding="async" /> }
+                <span class="eb-folder-badge"><mat-icon>folder</mat-icon>{{ coll.bookCount }}</span>
+              </button>
+              <mat-card-content class="eb-body">
+                <button type="button" class="eb-title eb-folder-title" (click)="openCollection(coll.id)">{{ coll.name }}</button>
+                <div class="eb-meta"><span>{{ 'ebooks.collection.count' | translate: { n: coll.bookCount } }}</span></div>
+              </mat-card-content>
+              <div class="eb-actions">
+                <button mat-flat-button color="primary" class="eb-act" type="button" (click)="openCollection(coll.id)">
+                  <mat-icon>folder_open</mat-icon><span class="eb-act-label">{{ 'ebooks.collection.open' | translate }}</span>
+                </button>
+              </div>
+            </mat-card>
+          } @else {
           <mat-card class="eb-card" [class.eb-card--selected]="selected().has(book.id)">
             <a class="eb-cover" [routerLink]="['/ebooks', book.id]" [attr.aria-label]="book.title">
               @if (coverUrl(book); as url) {
@@ -201,6 +245,7 @@
               </mat-menu>
             </div>
           </mat-card>
+          }
         }
       </div>
       @if (list.total > pageSize) {

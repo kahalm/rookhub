@@ -119,3 +119,19 @@
   .eb-act--download .eb-act-label { display: none; }
   .eb-act--download mat-icon { margin: 0; }
 }
+
+// Sammlungen (0.787.0): Ordner-Karte + Kopf der geöffneten Sammlung.
+.eb-coll-head { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; flex-wrap: wrap;
+  h2 { margin: 0; font-size: 1.25rem; }
+  .eb-coll-icon { color: var(--rh-accent); }
+  .eb-coll-count { opacity: .7; font-size: .9rem; }
+  .eb-spacer { flex: 1; }
+}
+.eb-folder { border: 0; padding: 0; cursor: pointer; background: transparent; position: relative; width: 100%; }
+.eb-folder-badge { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 12px; background: color-mix(in srgb, var(--mat-sys-surface) 88%, transparent);
+  font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--rh-accent); }
+}
+.eb-folder-title { border: 0; padding: 0; background: transparent; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.eb-card--folder { outline: 2px solid color-mix(in srgb, var(--rh-accent) 35%, transparent); }

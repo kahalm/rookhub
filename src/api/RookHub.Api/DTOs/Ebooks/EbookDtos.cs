@@ -55,6 +55,10 @@ public class EbookDto
     /// <summary>Format der Hauptdatei (PDF liest der Browser); <c>null</c> ohne Dateien.</summary>
     public string? PrimaryFormat { get; set; }
     public EbookProgressDto? Progress { get; set; }
+    /// <summary>Sammlung des Buchs (0.787.0); <c>null</c> = keine.</summary>
+    public EbookCollectionDto? Collection { get; set; }
+    /// <summary>Dieser Eintrag steht in der Liste STELLVERTRETEND für seine Sammlung (Ordner-Karte, Titelbild von ihm).</summary>
+    public bool CollectionStub { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -69,6 +73,8 @@ public class EbookTagFacetDto
 public class EbookListDto
 {
     public List<EbookDto> Items { get; set; } = new();
+    /// <summary>Die geöffnete Sammlung (bei <c>?collection=</c>), sonst <c>null</c>.</summary>
+    public EbookCollectionDto? Collection { get; set; }
     public int Total { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
@@ -94,10 +100,13 @@ public class EbookQuery
     public bool Mine { get; set; }
     /// <summary>Nur Bücher mit erkannten Diagrammen (Brett neben dem Buch).</summary>
     public bool WithDiagrams { get; set; }
+    /// <summary>Nur die Bücher dieser Sammlung (0.787.0). Ohne: Sammlungen erscheinen als je EIN Eintrag (Ordner),
+    /// außer bei einer Suche — dann stehen die Treffer einzeln da.</summary>
+    public int? Collection { get; set; }
     /// <summary><c>title</c> (Vorgabe), <c>newest</c>, <c>recent</c> (zuletzt gelesen zuerst).</summary>
     public string? Sort { get; set; }
     public int Page { get; set; } = 1;
-    public int PageSize { get; set; } = 24;
+    public int PageSize { get; set; } = 60;
 }
 
 /// <summary>Metadaten + Freigabe beim Anlegen/Ändern; beim PUT wirken nur gesetzte Felder.</summary>
@@ -245,3 +254,26 @@ public class ClaimEbookSessionDto
 {
     [MaxLength(36)] public string? SessionId { get; set; }
 }
+
+/// <summary>Sammlung (0.787.0): Kennung, Name und Zahl der (für den Aufrufer sichtbaren) Bücher darin.</summary>
+public class EbookCollectionDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int BookCount { get; set; }
+}
+
+/// <summary>Bücher einer Sammlung zuordnen: <c>CollectionId</c> = bestehende, <c>NewName</c> = neue anlegen, beides leer = aus der
+/// Sammlung nehmen.</summary>
+public class EbookCollectionAssignDto
+{
+    public List<int> EbookIds { get; set; } = new();
+    public int? CollectionId { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(200)] public string? NewName { get; set; }
+}
+
+public class EbookCollectionRenameDto
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MaxLength(200)] public string Name { get; set; } = string.Empty;
+}
+

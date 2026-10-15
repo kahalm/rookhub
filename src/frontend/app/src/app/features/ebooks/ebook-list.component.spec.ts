@@ -57,6 +57,16 @@ describe('EbookListComponent', () => {
     return c;
   }
 
+  it('Sammlung (0.787.0): Ordner-Karte öffnet die Sammlung (Seite 1), Zurück lädt wieder die Hauptliste; 60 je Seite', () => {
+    const c = make([book({ id: 3, collectionStub: true, collection: { id: 9, name: 'British Chess Magazine', bookCount: 6 } })]);
+    expect(calls[0]).toEqual(jasmine.objectContaining({ pageSize: 60, collection: null }));
+    c.page = 3;
+    c.openCollection(9);
+    expect(calls.at(-1)).toEqual(jasmine.objectContaining({ collection: 9, page: 1 }));
+    c.closeCollection();
+    expect(calls.at(-1)).toEqual(jasmine.objectContaining({ collection: null, page: 1 }));
+  });
+
   it('lädt die erste Seite mit der Titel-Sortierung und ohne Filter', () => {
     const c = make([book()]);
     expect(c.loading).toBeFalse();

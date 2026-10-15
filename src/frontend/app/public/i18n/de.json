@@ -5388,6 +5388,24 @@
       "result": "Bibliothek eingelesen: {{added}} neue Bücher, {{files}} Dateien, {{skipped}} schon bekannt. Titelbilder folgen im Hintergrund.",
       "failed": "Einlesen hat nicht geklappt."
     },
+    "collection": {
+      "assign": "Zu Sammlung …",
+      "assignTitle": "Zu einer Sammlung hinzufügen",
+      "new": "Neue Sammlung",
+      "existing": "Bestehende Sammlung",
+      "name": "Name",
+      "label": "Sammlung",
+      "assigned": "Zu „{{name}}“ hinzugefügt.",
+      "remove": "Aus Sammlung nehmen",
+      "removed": "{{n}} aus der Sammlung genommen.",
+      "rename": "Sammlung umbenennen",
+      "dissolve": "Sammlung auflösen",
+      "dissolveConfirm": "„{{name}}“ auflösen? Die Bücher bleiben in der Bibliothek.",
+      "dissolved": "Sammlung aufgelöst.",
+      "back": "Zurück zu allen Büchern",
+      "count": "{{n}} Bücher",
+      "open": "Öffnen"
+    },
     "reader": {
       "area": "Seiten",
       "back": "Zurück zur Bibliothek",

@@ -316,3 +316,22 @@ großes Buch in Hunderten Bereichsanfragen, die Adresse war danach eine Minute l
 ohne Lösung Info-Linien (Stellung + Bildunterschrift); unspielbare Lehrbilder (ohne König u. Ä.) fallen weg. Titel der
 Linie „Diagramm {Label}“, Reihenfolge wie im Buch. Läuft über den normalen PGN-Import (`UploadPersonalCourseAsync`).
 Keine einzige Lösung → 400 (erst die Stockfish-Prüfung abwarten). Oberfläche: ⋮-Menü im Leser „Als Kurs anlegen“.
+
+## Sammlungen (0.787.0)
+
+`EbookCollections` (Id, Name) + `Ebook.CollectionId` (FK, SetNull). In `GET /api/ebooks` erscheint ohne `collection` und
+ohne Suche je Sammlung EIN Eintrag (das Buch mit der kleinsten Id unter den sichtbaren, gefilterten Büchern der Sammlung,
+`collectionStub=true`, `collection={ id, name, bookCount }`) — die Liste zeigt ihn als Ordner. `?collection={id}` zeigt
+nur die Bücher der Sammlung (`EbookListDto.collection` = Kopf). Mit Suche stehen Treffer einzeln da. Sichtbar ist eine
+Sammlung, sobald eines ihrer Bücher sichtbar ist (keine eigene Freigabe). Seitengröße der Liste 60 (0.787.0).
+
+| Methode | Endpoint | Recht | Zweck |
+|---|---|---|---|
+| GET | `/api/ebooks/collections` | `ebooks.manage` | alle Sammlungen mit Buchzahl |
+| PUT | `/api/ebooks/collections/assign` | `ebooks.manage` | `{ ebookIds, collectionId?, newName? }` — zuordnen / neu anlegen / (beides leer) herausnehmen; leere Sammlungen verschwinden |
+| PUT | `/api/ebooks/collections/{id}` | `ebooks.manage` | umbenennen `{ name }` |
+| DELETE | `/api/ebooks/collections/{id}` | `ebooks.manage` | auflösen, die Bücher bleiben |
+
+Logik: `EbookCollectionService`; Oberfläche: Auswahl → „Zu Sammlung …“ (`ebook-collection-dialog`), in der Sammlung
+„Aus Sammlung nehmen“, ⋮ am Sammlungskopf Umbenennen/Auflösen.
+

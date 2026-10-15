@@ -5388,6 +5388,24 @@
       "result": "Library imported: {{added}} new books, {{files}} files, {{skipped}} already known. Covers follow in the background.",
       "failed": "Importing did not work."
     },
+    "collection": {
+      "assign": "Add to collection…",
+      "assignTitle": "Add to a collection",
+      "new": "New collection",
+      "existing": "Existing collection",
+      "name": "Name",
+      "label": "Collection",
+      "assigned": "Added to “{{name}}”.",
+      "remove": "Remove from collection",
+      "removed": "{{n}} removed from the collection.",
+      "rename": "Rename collection",
+      "dissolve": "Dissolve collection",
+      "dissolveConfirm": "Dissolve “{{name}}”? The books stay in the library.",
+      "dissolved": "Collection dissolved.",
+      "back": "Back to all books",
+      "count": "{{n}} books",
+      "open": "Open"
+    },
     "reader": {
       "area": "Pages",
       "back": "Back to the library",

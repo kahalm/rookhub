@@ -5388,6 +5388,24 @@
       "result": "Knjižnica uvezena: {{added}} novih knjiga, {{files}} datoteka, {{skipped}} već poznatih. Naslovnice slijede u pozadini.",
       "failed": "Uvoz nije uspio."
     },
+    "collection": {
+      "assign": "Dodaj u zbirku…",
+      "assignTitle": "Dodaj u zbirku",
+      "new": "Nova zbirka",
+      "existing": "Postojeća zbirka",
+      "name": "Naziv",
+      "label": "Zbirka",
+      "assigned": "Dodano u „{{name}}“.",
+      "remove": "Ukloni iz zbirke",
+      "removed": "{{n}} uklonjeno iz zbirke.",
+      "rename": "Preimenuj zbirku",
+      "dissolve": "Raspusti zbirku",
+      "dissolveConfirm": "Raspustiti „{{name}}“? Knjige ostaju u knjižnici.",
+      "dissolved": "Zbirka raspuštena.",
+      "back": "Natrag na sve knjige",
+      "count": "{{n}} knjiga",
+      "open": "Otvori"
+    },
     "reader": {
       "area": "Stranice",
       "back": "Natrag u knjižnicu",

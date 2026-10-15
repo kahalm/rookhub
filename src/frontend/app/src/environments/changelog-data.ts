@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.787.0", date: "2026-10-15", changes: [
+    { en: "E-books: collections – several books (e.g. all issues of a magazine) appear in the library as one folder; a click shows the single issues. Managers bundle books via selection → „Add to collection…“, and can rename or dissolve a collection. The library now shows 60 books per page.", de: "E-Books: Sammlungen – mehrere Bücher (z. B. alle Hefte einer Zeitschrift) erscheinen in der Bibliothek als ein Ordner, ein Klick zeigt die einzelnen Hefte. Verwalter fassen Bücher über die Auswahl → „Zu Sammlung …“ zusammen und können eine Sammlung umbenennen oder auflösen. Die Bibliothek zeigt jetzt 60 Bücher je Seite." },
+  ] },
   { version: "0.786.3", date: "2026-10-15", changes: [
     { en: "Internal: a reader test no longer fails depending on test order (it checked another test's menu).",
       de: "Intern: ein Leser-Test scheitert nicht mehr je nach Testreihenfolge (er prüfte das Menü eines anderen Tests)." },

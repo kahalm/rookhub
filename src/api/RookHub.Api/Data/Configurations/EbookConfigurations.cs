@@ -21,6 +21,12 @@ internal sealed class EbookConfiguration : IEntityTypeConfiguration<Ebook>
          .HasForeignKey(b => b.OwnerUserId)
          // Konto weg → das Buch bleibt in der Bibliothek, nur noch Admins verwalten es.
          .OnDelete(DeleteBehavior.SetNull);
+        e.HasIndex(b => b.CollectionId);
+        e.HasOne(b => b.Collection)
+         .WithMany()
+         .HasForeignKey(b => b.CollectionId)
+         // Sammlung aufgelöst → die Bücher stehen wieder einzeln in der Liste.
+         .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

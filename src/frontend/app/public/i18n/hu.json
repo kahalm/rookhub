@@ -5388,6 +5388,24 @@
       "result": "Könyvtár beolvasva: {{added}} új könyv, {{files}} fájl, {{skipped}} már ismert. A borítók a háttérben következnek.",
       "failed": "A beolvasás nem sikerült."
     },
+    "collection": {
+      "assign": "Gyűjteménybe…",
+      "assignTitle": "Hozzáadás gyűjteményhez",
+      "new": "Új gyűjtemény",
+      "existing": "Meglévő gyűjtemény",
+      "name": "Név",
+      "label": "Gyűjtemény",
+      "assigned": "Hozzáadva ehhez: „{{name}}“.",
+      "remove": "Eltávolítás a gyűjteményből",
+      "removed": "{{n}} eltávolítva a gyűjteményből.",
+      "rename": "Gyűjtemény átnevezése",
+      "dissolve": "Gyűjtemény feloszlatása",
+      "dissolveConfirm": "Feloszlatod: „{{name}}“? A könyvek a könyvtárban maradnak.",
+      "dissolved": "Gyűjtemény feloszlatva.",
+      "back": "Vissza az összes könyvhöz",
+      "count": "{{n}} könyv",
+      "open": "Megnyitás"
+    },
     "reader": {
       "area": "Oldalak",
       "back": "Vissza a könyvtárba",

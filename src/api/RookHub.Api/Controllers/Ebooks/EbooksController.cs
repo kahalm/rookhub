@@ -140,6 +140,29 @@ public class EbooksController : BaseApiController
     public async Task<ActionResult<EbookDiagramListDto>> GetDiagrams(int id, CancellationToken ct)
         => Ok(await _service.GetDiagramsAsync(Caller, await ManageAllAsync(), id, ct));
 
+    // ── Sammlungen (0.787.0) — Literal-Routen, verwalten nur mit ebooks.manage ─────────────────────────
+
+    [HttpGet("collections")]
+    public async Task<ActionResult<List<EbookCollectionDto>>> Collections([FromServices] EbookCollectionService collections, CancellationToken ct)
+        => Ok(await collections.ListAsync(await ManageAllAsync(), ct));
+
+    /// <summary>Bücher einer (neuen) Sammlung zuordnen oder herausnehmen.</summary>
+    [HttpPut("collections/assign")]
+    public async Task<ActionResult<EbookCollectionDto?>> AssignCollection([FromBody] EbookCollectionAssignDto dto, [FromServices] EbookCollectionService collections, CancellationToken ct)
+        => Ok(await collections.AssignAsync(await ManageAllAsync(), dto, ct));
+
+    [HttpPut("collections/{collectionId:int}")]
+    public async Task<ActionResult<EbookCollectionDto>> RenameCollection(int collectionId, [FromBody] EbookCollectionRenameDto dto, [FromServices] EbookCollectionService collections, CancellationToken ct)
+        => Ok(await collections.RenameAsync(await ManageAllAsync(), collectionId, dto.Name, ct));
+
+    /// <summary>Sammlung auflösen — die Bücher bleiben.</summary>
+    [HttpDelete("collections/{collectionId:int}")]
+    public async Task<IActionResult> DeleteCollection(int collectionId, [FromServices] EbookCollectionService collections, CancellationToken ct)
+    {
+        await collections.DeleteAsync(await ManageAllAsync(), collectionId, ct);
+        return NoContent();
+    }
+
     /// <summary>„Als Kurs anlegen“ (0.785.0): persönlicher Kurs aus den Diagrammen des Buchs → der neue Kurs.</summary>
     [HttpPost("{id:int}/course")]
     public async Task<ActionResult<RookHub.Api.DTOs.Courses.CourseListItemDto>> CreateCourse(int id, [FromServices] EbookCourseBuilder builder, CancellationToken ct)

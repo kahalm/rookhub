@@ -38,6 +38,10 @@ export interface Ebook {
   diagramCount: number;
   /** Hintergrundschritte laufen noch (Titelbild, Umwandlung, Diagramme, Prüfung). */
   processing?: boolean;
+  /** Sammlung des Buchs (0.787.0), z. B. alle Hefte einer Zeitschrift. */
+  collection?: EbookCollection | null;
+  /** Dieser Eintrag steht in der Liste für seine ganze Sammlung (Ordner-Karte). */
+  collectionStub?: boolean;
   conversionState?: 'notneeded' | 'pending' | 'done' | 'failed';
   ownerUserId: number | null;
   ownerName: string | null;
@@ -88,8 +92,13 @@ export interface EbookDiagramList {
 
 export interface EbookTagFacet { tag: string; count: number; }
 
+/** Sammlung (0.787.0): mehrere Bücher als ein Ordner in der Liste. */
+export interface EbookCollection { id: number; name: string; bookCount: number; }
+
 export interface EbookList {
   items: Ebook[];
+  /** Die geöffnete Sammlung (bei `collection` in der Anfrage). */
+  collection?: EbookCollection | null;
   total: number;
   page: number;
   pageSize: number;
@@ -110,6 +119,8 @@ export interface EbookQuery {
   mine?: boolean;
   /** Nur Bücher mit erkannten Diagrammen. */
   withDiagrams?: boolean;
+  /** Nur die Bücher dieser Sammlung; ohne erscheinen Sammlungen als je ein Ordner. */
+  collection?: number | null;
   sort?: EbookSort;
   page?: number;
   pageSize?: number;
@@ -182,10 +193,30 @@ export class EbookService {
     if (q.tag) params = params.set('tag', q.tag);
     if (q.mine) params = params.set('mine', 'true');
     if (q.withDiagrams) params = params.set('withDiagrams', 'true');
+    if (q.collection) params = params.set('collection', String(q.collection));
     if (q.sort) params = params.set('sort', q.sort);
     if (q.page) params = params.set('page', String(q.page));
     if (q.pageSize) params = params.set('pageSize', String(q.pageSize));
     return this.http.get<EbookList>('/api/ebooks', { params });
+  }
+
+  /** Sammlungen (nur Verwalter). */
+  collections(): Observable<EbookCollection[]> {
+    return this.http.get<EbookCollection[]>('/api/ebooks/collections');
+  }
+
+  /** Bücher einer bestehenden (`collectionId`) oder neuen (`newName`) Sammlung zuordnen; beides leer = herausnehmen. */
+  assignCollection(ebookIds: number[], collectionId: number | null, newName: string | null): Observable<EbookCollection | null> {
+    return this.http.put<EbookCollection | null>('/api/ebooks/collections/assign', { ebookIds, collectionId, newName });
+  }
+
+  renameCollection(id: number, name: string): Observable<EbookCollection> {
+    return this.http.put<EbookCollection>(`/api/ebooks/collections/${id}`, { name });
+  }
+
+  /** Sammlung auflösen — die Bücher bleiben. */
+  deleteCollection(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/ebooks/collections/${id}`);
   }
 
   get(id: number): Observable<Ebook> {

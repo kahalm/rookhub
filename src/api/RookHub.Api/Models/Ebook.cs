@@ -104,6 +104,11 @@ public class Ebook
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Sammlung (0.787.0, z. B. alle Hefte einer Zeitschrift): in der Liste erscheint die Sammlung als EIN Ordner,
+    /// ein Klick zeigt die einzelnen Bücher. <c>null</c> = steht für sich.</summary>
+    public int? CollectionId { get; set; }
+    public EbookCollection? Collection { get; set; }
+
     public List<EbookFile> Files { get; set; } = new();
     public List<EbookGroupAccess> GroupAccess { get; set; } = new();
 }
@@ -336,3 +341,16 @@ public enum EbookSolutionCheck
     /// <summary>Keine Buchlösung und keine entscheidende Fortsetzung — keine Aufgabe (z. B. Eröffnungs- oder Ausgleichsstellung).</summary>
     NoPuzzle = 5,
 }
+
+/// <summary>Sammlung von E-Books (0.787.0): mehrere Bücher, die in der Liste als ein Ordner erscheinen (Zeitschriften-
+/// Jahrgänge, mehrbändige Werke). Sichtbar ist sie, sobald eines ihrer Bücher sichtbar ist — eine eigene Freigabe hat sie nicht.</summary>
+public class EbookCollection
+{
+    public int Id { get; set; }
+
+    [Required, MaxLength(200)]
+    public string Name { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+

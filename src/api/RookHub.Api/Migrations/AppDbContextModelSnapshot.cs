@@ -2195,6 +2195,9 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<int?>("CollectionId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ConversionState")
                         .HasColumnType("int");
 
@@ -2259,6 +2262,8 @@ namespace RookHub.Api.Migrations
 
                     b.HasIndex("AnonymousSessionId");
 
+                    b.HasIndex("CollectionId");
+
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("Title");
@@ -2297,6 +2302,27 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("SessionId", "UpdatedAt");
 
                     b.ToTable("EbookAnonymousProgresses");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookCollection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EbookCollections");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
@@ -9011,10 +9037,17 @@ namespace RookHub.Api.Migrations
 
             modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>
                 {
+                    b.HasOne("RookHub.Api.Models.EbookCollection", "Collection")
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("RookHub.Api.Models.AppUser", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Collection");
 
                     b.Navigation("Owner");
                 });

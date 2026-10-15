@@ -79,6 +79,14 @@ public class EbookService
             query = query.Where(b => ("," + b.Tags.ToLower() + ",").Contains(needle));
         }
 
+        // Sammlungen (0.787.0): geöffnet → nur ihre Bücher; sonst steht je Sammlung EIN Buch (das älteste passende) als
+        // Ordner da — außer bei einer Suche, die soll das einzelne Heft finden.
+        var filtered = query;
+        var collapse = q.Collection == null && string.IsNullOrWhiteSpace(q.Search);
+        if (q.Collection != null) query = query.Where(b => b.CollectionId == q.Collection);
+        else if (collapse)
+            query = query.Where(b => b.CollectionId == null || b.Id == filtered.Where(x => x.CollectionId == b.CollectionId).Min(x => x.Id));
+
         query = (string.IsNullOrWhiteSpace(q.Sort) ? "newest" : q.Sort).ToLowerInvariant() switch   // Standard „Neueste zuerst“
         {
             // „Neueste zuerst“ = Erscheinungsjahr (0.778.1, Nutzerwunsch); ohne Jahr ans Ende, sonst nach Aufnahme.
@@ -100,11 +108,29 @@ public class EbookService
         var total = await query.CountAsync(ct);
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).Include(b => b.Files).ToListAsync(ct);
         var dtos = await MapAsync(items, caller, manageAll, ct);
+        var collIds = items.Where(b => b.CollectionId != null).Select(b => b.CollectionId!.Value).Distinct().ToList();
+        if (q.Collection != null && !collIds.Contains(q.Collection.Value)) collIds.Add(q.Collection.Value);
+        var colls = new Dictionary<int, EbookCollectionDto>();
+        if (collIds.Count > 0)
+        {
+            var counts = await filtered.Where(b => b.CollectionId != null && collIds.Contains(b.CollectionId.Value))
+                .GroupBy(b => b.CollectionId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
+            colls = await _db.EbookCollections.Where(c => collIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => new EbookCollectionDto { Id = c.Id, Name = c.Name }, ct);
+            foreach (var c in counts) if (colls.TryGetValue(c.Key, out var dto)) dto.BookCount = c.Count;
+        }
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (items[i].CollectionId is not { } cid || !colls.TryGetValue(cid, out var coll)) continue;
+            dtos[i].Collection = coll;
+            dtos[i].CollectionStub = collapse;
+        }
 
         var used = await UsedBytesAsync(caller, ct);
         return new EbookListDto
         {
             Items = dtos,
+            Collection = q.Collection is { } open && colls.TryGetValue(open, out var openColl) ? openColl : null,
             Total = total,
             Page = page,
             PageSize = pageSize,
