@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.798.2", date: "2026-10-15", changes: [
+    { en: "Android app: right after installing it via „Install app“ it no longer asks you to update – the download always is the newest version.", de: "Android-App: Direkt nach der Installation über „App installieren“ fragt sie nicht mehr nach einem Update – der Download ist immer schon die neueste Fassung." },
+  ] },
   { version: "0.798.1", date: "2026-10-15", changes: [
     { en: "E-book reader (PDF): making the board bigger, dragging the window or changing the zoom no longer moves the book on by several pages – you stay at the same place on the same page.",
       de: "E-Book-Leser (PDF): Brett vergrößern, Fenster ziehen oder Zoom ändern schiebt das Buch nicht mehr mehrere Seiten weiter – man bleibt an derselben Stelle derselben Seite." },

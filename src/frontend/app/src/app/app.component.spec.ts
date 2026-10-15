@@ -19,6 +19,7 @@ import { AnalysisEngineService } from './features/analysis/analysis-engine.servi
 import { ThemeService } from './core/theme.service';
 import { DISCORD_INVITE_URL } from './core/community';
 import { environment } from '../environments/environment';
+import { APK_VERSION } from '../environments/changelog';
 
 // Sichert das v0.181.1-Refactoring ab: die langlebigen Root-Subscriptions
 // (router.events, swUpdate.versionUpdates/unrecoverable) hängen jetzt an
@@ -102,6 +103,37 @@ describe('AppComponent lifecycle', () => {
     versionUpdates.next({ type: 'VERSION_INSTALLATION_FAILED', error: 'Hash mismatch (cacheBustedFetchFromNetwork)' });
 
     expect(reportSpy).toHaveBeenCalledWith('sw_install_failed', 'Hash mismatch (cacheBustedFetchFromNetwork)');
+  });
+
+  // /install liefert immer die neueste APK — eine frisch installierte App (noch kein Merker) darf
+  // also nicht sofort zum Update auffordern; nur ein älterer gemerkter Stand löst den Hinweis aus.
+  describe('APK-Update-Hinweis in der Android-App', () => {
+    const KEY = 'rookhub_apk_seen_version';
+
+    function openApp(): AppComponent {
+      TestBed.overrideProvider(PwaInstallService, { useValue: { isAndroid: true, isInstalled: () => true } });
+      const fixture = TestBed.createComponent(AppComponent);
+      fixture.detectChanges();
+      return fixture.componentInstance;
+    }
+
+    afterEach(() => localStorage.removeItem(KEY));
+
+    it('frisch installiert: kein Hinweis, aktueller Stand wird gemerkt', () => {
+      localStorage.removeItem(KEY);
+      expect(openApp().showApkUpdate).toBeFalse();
+      expect(localStorage.getItem(KEY)).toBe(String(APK_VERSION));
+    });
+
+    it('älterer gemerkter Stand: Hinweis erscheint', () => {
+      localStorage.setItem(KEY, String(APK_VERSION - 1));
+      expect(openApp().showApkUpdate).toBeTrue();
+    });
+
+    it('aktueller gemerkter Stand: kein Hinweis', () => {
+      localStorage.setItem(KEY, String(APK_VERSION));
+      expect(openApp().showApkUpdate).toBeFalse();
+    });
   });
 
   // Anti-Eviction (angular/angular#36539): beim Start wird persistenter Storage angefordert;

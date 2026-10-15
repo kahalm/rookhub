@@ -300,10 +300,13 @@ export class AppComponent implements OnInit {
     const offFs = onFullscreenChange(() => this.appFullscreen = isFullscreen(document.documentElement));
     this.destroyRef.onDestroy(offFs);
 
-    // APK-Update-Banner: nur auf Android im Standalone-Modus (= TWA-App).
+    // APK-Update-Banner: nur auf Android im Standalone-Modus (= TWA-App). Ohne Merker ist die App
+    // frisch installiert — /install liefert immer die neueste APK, also Stand merken statt
+    // sofort zum Update aufzufordern.
     if (this.pwa.isAndroid && this.pwa.isInstalled()) {
-      const seen = parseInt(localStorage.getItem(this.APK_UPDATE_LS_KEY) ?? '0', 10);
-      this.showApkUpdate = APK_VERSION > seen;
+      const stored = localStorage.getItem(this.APK_UPDATE_LS_KEY);
+      if (stored === null) localStorage.setItem(this.APK_UPDATE_LS_KEY, String(APK_VERSION));
+      else this.showApkUpdate = APK_VERSION > parseInt(stored, 10);
     }
 
     // Offline-Pools (Standard + Endless) gleich beim Start vorab laden, sobald online —
