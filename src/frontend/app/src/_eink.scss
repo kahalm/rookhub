@@ -164,10 +164,10 @@ html.eink .cg-wrap coords coord {
 // ── E-Book-Leser: Diagrammzonen ohne Dauerrahmen ─────────────────────────────────────────────────────────────────
 // Auf Touch sind die Zonen sonst dauerhaft gestrichelt (Auffindbarkeit) — auf dem E-Ink-Tablet nur Unruhe über jedem
 // Diagramm (User, 0.799.1). Doppeltippen geht weiter; das gerade aufs Brett geholte Diagramm behält seinen Rahmen
-// (schwarz statt Primärfarbe). Im EPUB (iframe) setzt epub-viewer dieselbe Regel selbst.
+// — seit 0.802.1 auch das nicht mehr (kein Dauerrahmen). Im EPUB (iframe) setzt epub-viewer dieselbe Regel selbst.
 html.eink .pv-zone:not(.pv-zone--active) {
   border-color: transparent !important;
   box-shadow: none !important;
   background: transparent !important;
 }
-html.eink .pv-zone--active { border: 2px solid #000 !important; box-shadow: none !important; background: transparent !important; }
+html.eink .pv-zone--active { animation: none !important; border-color: transparent !important; box-shadow: none !important; background: transparent !important; }

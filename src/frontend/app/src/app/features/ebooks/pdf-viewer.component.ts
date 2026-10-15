@@ -65,7 +65,13 @@ interface PageSlot {
         border: 2px dashed var(--mat-sys-primary); box-shadow: 0 0 0 1px var(--mat-sys-on-primary);
       }
     }
-    :host ::ng-deep .pv-zone--active { border-color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
+    /* Gewähltes Diagramm: Rahmen blitzt kurz auf und verschwindet (Nutzerwunsch 15.10.: kein Dauerrahmen). */
+    :host ::ng-deep .pv-zone--active { animation: pv-flash 1.5s ease-out forwards; }
+    @keyframes pv-flash {
+      0%, 35% { border-color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
+      100% { border-color: transparent; background: transparent; box-shadow: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { :host ::ng-deep .pv-zone--active { animation: none; } }
     .pv-error { text-align: center; padding: 2rem 1rem; color: var(--rh-error); }
   `],
 })

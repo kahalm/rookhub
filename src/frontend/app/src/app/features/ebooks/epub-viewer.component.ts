@@ -288,12 +288,16 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       const st = doc.createElement('style');
       st.id = 'rh-diagram-style';
       st.textContent = '.rh-diagram{cursor:zoom-in;outline:2px dashed transparent;outline-offset:2px}'
-        + '.rh-diagram:hover,.rh-diagram:focus{outline-color:#6750a4}.rh-diagram--active{outline:3px solid #6750a4}'
+        + '.rh-diagram:hover,.rh-diagram:focus{outline-color:#6750a4}'
+        // Gewähltes Diagramm: Rahmen blitzt kurz auf und verschwindet (kein Dauerrahmen, Nutzerwunsch 15.10.).
+        + '.rh-diagram--active{animation:rh-flash 1.5s ease-out forwards}'
+        + '@keyframes rh-flash{0%,35%{outline:3px solid #6750a4}100%{outline:3px solid transparent}}'
+        + '@media (prefers-reduced-motion:reduce){.rh-diagram--active{animation:none}}'
         // Touch: kein Überfahren — Diagramme dauerhaft gestrichelt (c1-eb-reader-mobile-diagrams-undiscoverable).
         + '@media (hover:none){.rh-diagram{outline-color:#6750a4}}'
         // E-Ink-Modus: keine Dauerrahmen, nur das aktive Diagramm schwarz umrandet (wie .pv-zone in _eink.scss).
         + 'html.eink .rh-diagram:not(.rh-diagram--active){outline-color:transparent!important}'
-        + 'html.eink .rh-diagram--active{outline:2px solid #000}';
+        + 'html.eink .rh-diagram--active{animation:none;outline-color:transparent!important}';
       doc.head?.appendChild(st);
     }
     doc.documentElement?.classList.toggle(EINK_CLASS, isEinkActive());

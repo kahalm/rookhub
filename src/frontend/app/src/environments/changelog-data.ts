@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.802.1", date: "2026-10-15", changes: [
+    { en: "E-books: a diagram you double-click no longer keeps a frame – the frame flashes briefly and fades out (PDF and EPUB; in E-Ink mode no frame at all).", de: "E-Books: Ein doppelt angeklicktes Diagramm behält keinen Rahmen mehr – der Rahmen blitzt kurz auf und verschwindet (PDF und EPUB; im E-Ink-Modus gar kein Rahmen)." },
+  ] },
   { version: "0.802.0", date: "2026-10-15", changes: [
     { en: "E-books (prototype, admins): text PDFs with a chess diagram font (e.g. „The Woodpecker Method“) can get a reflowable EPUB – paragraphs, headings and chapters from the PDF, running heads and page numbers removed, figurines as ♘♗♖♕♔, every recognised diagram as a clean board picture. The reader then opens the book as EPUB with adjustable font size; a double-click on a diagram still puts it on the board, and „Read as PDF“ switches back. A real EPUB of the book always takes precedence.",
       de: "E-Books (Prototyp, Admins): Text-PDFs mit Schach-Diagrammschrift (z. B. „The Woodpecker Method“) bekommen auf Wunsch ein Fließtext-EPUB – Absätze, Überschriften und Kapitel aus dem PDF, ohne Kolumnentitel und Seitenzahlen, Figurinen als ♘♗♖♕♔, jedes erkannte Diagramm als sauberes Brettbild. Der Leser öffnet das Buch dann als EPUB mit einstellbarer Schriftgröße; Doppelklick auf ein Diagramm holt es weiterhin aufs Brett, „Als PDF lesen“ wechselt zurück. Ein echtes EPUB des Buchs hat immer Vorrang." },
