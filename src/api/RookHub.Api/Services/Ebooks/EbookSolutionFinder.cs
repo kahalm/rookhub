@@ -38,23 +38,44 @@ public static class EbookSolutionFinder
         var sb = new StringBuilder(text.Length);
         foreach (var raw in text)
         {
+            if (FigurinePiece(raw) is char piece) { sb.Append(piece); continue; }
             // Symbol-Fonts liefern Figurinen oft im Private-Use-Bereich U+F0xx (PdfPig, ToUnicode fehlt) → zurückfalten.
             var c = raw >= '\uF020' && raw <= '\uF0FF' ? (char)(raw - 0xF000) : raw;
             sb.Append(c switch
             {
-                '¢' or '♔' or '♚' or '' => 'K',
-                '£' or '♕' or '♛' or '' => 'Q',
-                '¦' or '♖' or '♜' or '' => 'R',
-                '¥' or '♗' or '♝' or '' => 'B',
-                '¤' or '♘' or '♞' or '' => 'N',
                 '†' => '+',
                 '‡' => '#',
-                ' ' => ' ',
+                '\u00A0' => ' ',
                 _ => c,
             });
         }
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Figurine → Figurbuchstabe (<c>K Q R B N</c>) oder <c>null</c>: SP-Fonts (<c>¢ £ ¦ ¥ ¤</c>, auch im Bereich U+F0xx),
+    /// Unicode ♔–♘/♚–♞ und die RookHub-Figurinen U+E024…U+E028. Die SP-Zeichen sind in normalen Schriften Währungszeichen —
+    /// wer Text NICHT nur nach Zügen durchsucht (Fließtext-EPUB), fragt erst, ob die Schrift eine Figurinen-Schrift ist
+    /// (<see cref="IsFigurineFont"/>).
+    /// </summary>
+    public static char? FigurinePiece(char raw)
+    {
+        var c = raw >= '\uF020' && raw <= '\uF0FF' ? (char)(raw - 0xF000) : raw;
+        return c switch
+        {
+            '¢' or '♔' or '♚' or '\uE024' => 'K',
+            '£' or '♕' or '♛' or '\uE025' => 'Q',
+            '¦' or '♖' or '♜' or '\uE026' => 'R',
+            '¥' or '♗' or '♝' or '\uE027' => 'B',
+            '¤' or '♘' or '♞' or '\uE028' => 'N',
+            _ => null,
+        };
+    }
+
+    /// <summary>Ist das eine Figurinen-Schrift (SPAriesFig, SPTimeFig, SemFig…, FigurineCB…)? Diagramm-Fonts zählen nicht.</summary>
+    public static bool IsFigurineFont(string? fontName) =>
+        !string.IsNullOrEmpty(fontName) && ChessDiagramFonts.Detect(fontName) == null
+        && (fontName.Contains("Fig", StringComparison.OrdinalIgnoreCase) || fontName.Contains("Figurine", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Alle nummerierten Absätze des Buchs: Nummer → (Seite, Text), in Lesereihenfolge.</summary>
     public static Dictionary<int, List<(int Page, string Text)>> NumberedEntries(IReadOnlyList<PageLine> lines)

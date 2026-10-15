@@ -42,6 +42,9 @@ public static class ChessDiagramFonts
             || name.Contains("LinaresDiagram", StringComparison.OrdinalIgnoreCase), MapHastings),
     ];
 
+    /// <summary>Namen der Familien (= <c>EbookDiagram.FontFamily</c> der Font-Diagramme).</summary>
+    public static readonly IReadOnlyList<string> FamilyNames = Families.Select(f => f.Name).ToList();
+
     /// <summary>Die Familie zu einem PDF-Fontnamen (mit oder ohne Subset-Präfix „ABCDEF+") — <c>null</c> = kein bekannter Diagramm-Font.</summary>
     public static Family? Detect(string? fontName)
     {

@@ -188,10 +188,11 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     return [...fmts].filter(f => f !== this.viewFormat());
   }
 
-  /** Datei zum gewählten Format: beim PDF die abgeleitete Lesefassung vor dem Original (wie der Server). */
+  /** Datei zum gewählten Format (wie der Server, `EbookFormats.Primary`): beim PDF die abgeleitete Lesefassung vor dem
+   *  Original, beim EPUB das echte vor dem Fließtext-EPUB aus dem PDF (0.802.0). */
   private fileFor(format: string): EbookFile | undefined {
     const files = (this.ebook?.files ?? []).filter(f => f.format === format);
-    return files.find(f => f.derived) ?? files[0];
+    return (format === 'pdf' ? files.find(f => f.derived) : files.find(f => !f.derived)) ?? files[0];
   }
 
   private applyViewFormat(): void {

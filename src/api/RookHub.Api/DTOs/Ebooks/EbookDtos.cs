@@ -184,6 +184,21 @@ public class EbookLibraryImportResultDto
     public int Unreadable { get; set; }
 }
 
+/// <summary>Ergebnis von <c>POST /api/admin/ebooks/{id}/reflow</c> (Fließtext-EPUB, 0.802.0).</summary>
+public class EbookReflowResultDto
+{
+    public int EbookId { get; set; }
+    /// <summary>Die abgeleitete EPUB-Datei (<c>EbookFile.Id</c>, <c>Derived = true</c>).</summary>
+    public int FileId { get; set; }
+    public long SizeBytes { get; set; }
+    public int Pages { get; set; }
+    public int Chapters { get; set; }
+    public int Paragraphs { get; set; }
+    public int Diagrams { get; set; }
+    /// <summary>Diagramme, die jetzt ein Brettbild im EPUB haben (<c>ImageRef</c> + <c>EpubChapter</c>).</summary>
+    public int DiagramsLinked { get; set; }
+}
+
 public class EbookLibraryStatusDto
 {
     public bool Configured { get; set; }

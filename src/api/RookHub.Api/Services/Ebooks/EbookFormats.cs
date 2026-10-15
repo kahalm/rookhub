@@ -84,8 +84,10 @@ public static class EbookFormats
         {
             var rank = Array.IndexOf(Preference, f.Format);
             if (rank < 0) rank = int.MaxValue - 1;
-            // Gleiches Format: die Lesefassung (Derived) vor dem Original — sie ist bei übergroßen Scans die lesbare.
-            if (rank < bestRank || (rank == bestRank && f.Derived && best is { Derived: false })) { best = f; bestRank = rank; }
+            // Gleiches Format: beim PDF die Lesefassung (Derived) vor dem Original — sie ist bei übergroßen Scans die lesbare;
+            // beim EPUB das echte vor dem Fließtext-EPUB aus dem PDF (0.802.0) — der Verlag setzt besser als die Umwandlung.
+            var better = f.Format == "pdf" ? f.Derived && best is { Derived: false } : !f.Derived && best is { Derived: true };
+            if (rank < bestRank || (rank == bestRank && better)) { best = f; bestRank = rank; }
         }
         return best;
     }

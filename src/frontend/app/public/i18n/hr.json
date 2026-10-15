@@ -104,6 +104,7 @@
     "ebook_file_empty": "Datoteka je prazna.",
     "ebook_quota_exceeded": "Tvoj prostor za prijenos je potrošen. Izbriši neku e-knjigu ili pitaj administratora.",
     "ebook_anonymous_upload_disabled": "Učitavanje bez računa trenutno nije moguće – prijavi se.",
+    "ebook_reflow_unsupported": "Prilagodljivi EPUB može nastati samo iz tekstualnog PDF-a s prepoznatim dijagramima (bez skena, bez postojećeg EPUB-a).",
     "ebook_duplicate_file": "Ova je datoteka već u knjižnici.",
     "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
   },

@@ -41,7 +41,7 @@ public class EbookDiagramWorker : PeriodicWorker
             // PDF (Schach-Font) vor EPUB (Brettbilder, 0.775.0); DJVU-Scans erst mit Stufe 2.
             // Schach-Fonts stehen nur im ORIGINAL-PDF; gerendert (Scans) wird die leichte Lesefassung, falls es eine gibt.
             var file = ebook.Files.FirstOrDefault(f => f.Format == "pdf" && !f.Derived) ?? ebook.Files.FirstOrDefault(f => f.Format == "pdf")
-                ?? ebook.Files.FirstOrDefault(f => f.Format == "epub");
+                ?? ebook.Files.FirstOrDefault(f => f.Format == "epub" && !f.Derived);
             var reading = EbookFormats.ReadingPdf(ebook.Files);
             if (file == null)
             {
@@ -61,7 +61,8 @@ public class EbookDiagramWorker : PeriodicWorker
                 // PDF und EPUB im selben Buch (0.793.0): EIN Diagrammsatz aus dem PDF (exakt), verknüpft mit den Bildern im EPUB.
                 // Ist das PDF nur ein Scan, sind die sauberen EPUB-Bilder die bessere Quelle (0.795.0) — sonst verlor ein
                 // zusammengelegtes Buch fast alle Diagramme (Swindler: 44 Scan-Bretter statt 905 EPUB-Bilder).
-                var epub = ebook.Files.FirstOrDefault(f => f.Format == "epub");
+                // Nur ein ECHTES EPUB: das Fließtext-EPUB (0.802.0) entsteht aus diesen Diagrammen, nicht umgekehrt.
+                var epub = ebook.Files.FirstOrDefault(f => f.Format == "epub" && !f.Derived);
                 if (file.Format == "pdf" && epub != null)
                 {
                     try
@@ -103,8 +104,29 @@ public class EbookDiagramWorker : PeriodicWorker
             // Kurs-Verweise auf die neuen Diagramme umhängen (gleiche Stellung, nächste Seite) — sonst zeigte „Im Buch“
             // nach jedem Neulesen ins Leere.
             if (ebook.DiagramState == EbookDiagramState.Done) await CourseEbookLinker.RelinkEbookAsync(db, ebook.Id, ct);
+            if (ebook.DiagramState == EbookDiagramState.Done) await ReflowAsync(services, ebook, ct);
             await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
         }
+    }
+
+    /// <summary>Fließtext-EPUB nach der Erkennung (0.802.0): neu bauen, wenn es schon eins gibt (die neuen Diagramme brauchen
+    /// ihre Bildverweise), sonst nur mit <see cref="EbookOptions.ReflowAfterDiagrams"/> und nur bei Schach-Font-Diagrammen.
+    /// Ein Fehler hier lässt die Erkennung gelten.</summary>
+    private async Task ReflowAsync(IServiceProvider services, Ebook ebook, CancellationToken ct)
+    {
+        if (!EbookReflowService.Eligible(ebook)) return;
+        var hasDerived = ebook.Files.Any(f => f.Format == "epub" && f.Derived);
+        if (!hasDerived)
+        {
+            var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<EbookOptions>>().Value;
+            if (!options.ReflowAfterDiagrams) return;
+            var fontDiagrams = await services.GetRequiredService<AppDbContext>().EbookDiagrams
+                .AnyAsync(d => d.EbookId == ebook.Id && d.FontFamily != null && ChessDiagramFonts.FamilyNames.Contains(d.FontFamily), ct);
+            if (!fontDiagrams) return;
+        }
+        try { await services.GetRequiredService<EbookReflowService>().ConvertAsync(ebook.Id, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { Logger.LogWarning(ex, "E-Book {EbookId}: Fließtext-EPUB nicht gebaut", ebook.Id); }
     }
 
     /// <summary>EPUB-Bilder statt PDF-Diagramme, wenn das PDF keinen Schach-Font hat (nur Scan-/CNN-Lesungen) und das EPUB

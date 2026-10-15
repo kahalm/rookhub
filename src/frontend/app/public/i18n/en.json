@@ -104,6 +104,7 @@
     "ebook_file_empty": "The file is empty.",
     "ebook_quota_exceeded": "Your upload quota is used up. Delete an e-book or ask an admin.",
     "ebook_anonymous_upload_disabled": "Uploading without an account is not possible right now – please sign in.",
+    "ebook_reflow_unsupported": "A reflowable EPUB can only be made from a text PDF with recognised diagrams (no scan, no existing EPUB).",
     "ebook_duplicate_file": "This file is already in the library.",
     "ebook_file_missing": "The file is missing on the server."
   },

@@ -218,6 +218,8 @@ try
         sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RookHub.Api.Services.Ebooks.EbookOptions>>().Value.ScanDiagrams
             ? sp.GetRequiredService<RookHub.Api.Services.Ebooks.EbookScanDiagramExtractor>() : null));
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookEpubDiagramExtractor>();
+    // Fließtext-EPUB aus Text-PDFs (0.802.0, Prototyp): POST /api/admin/ebooks/{id}/reflow; nach der Erkennung nur mit Ebooks__ReflowAfterDiagrams.
+    builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookReflowService>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookScanDiagramExtractor>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDiagramWorker>();
     builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookAnonymousCleanupWorker>();

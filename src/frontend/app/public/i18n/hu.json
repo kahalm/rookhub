@@ -26,6 +26,7 @@
     "ebook_file_empty": "A fájl üres.",
     "ebook_quota_exceeded": "A feltöltési kereted elfogyott. Törölj egy e-könyvet, vagy kérj meg egy adminisztrátort.",
     "ebook_anonymous_upload_disabled": "Fiók nélkül most nem lehet feltölteni – kérjük, jelentkezz be.",
+    "ebook_reflow_unsupported": "Újratördelhető EPUB csak felismert diagramokat tartalmazó szöveges PDF-ből készülhet (nem szkennelt, és még nincs EPUB).",
     "ebook_duplicate_file": "Ez a fájl már a könyvtárban van.",
     "ebook_file_missing": "A fájl hiányzik a szerverről."
   },

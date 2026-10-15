@@ -86,6 +86,9 @@ public class EbookStorage
     /// <summary>Relativer Zielpfad der PDF-Fassung eines DJVU-Buchs.</summary>
     public static string ConvertedPdfPath(int ebookId) => $"converted/{ebookId}.pdf";
 
+    /// <summary>Relativer Zielpfad des Fließtext-EPUBs eines Text-PDFs (0.802.0, <see cref="EbookReflowService"/>).</summary>
+    public static string ConvertedEpubPath(int ebookId) => $"converted/{ebookId}.epub";
+
     /// <summary>Relativer Pfad (mit „/“) einer Datei unter der Bibliothek; <c>null</c>, wenn sie nicht darunter liegt.</summary>
     public string? LibraryRelativePath(string fullPath)
     {

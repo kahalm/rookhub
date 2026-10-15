@@ -59,4 +59,10 @@ public class EbookOptions
 
     /// <summary>Wie viele 20-Seiten-Stapel eines gescannten Buchs gleichzeitig gerendert und gelesen werden (0.797.0).</summary>
     public int ScanParallelism { get; set; } = 4;
+
+    /// <summary>Fließtext-EPUB (0.802.0) automatisch nach der Diagrammerkennung bauen, wenn das Buch ein Text-PDF mit
+    /// Schach-Font hat (ENV <c>Ebooks__ReflowAfterDiagrams</c>). Vorgabe AUS — Prototyp, erst einzelne Bücher über
+    /// <c>POST /api/admin/ebooks/{id}/reflow</c> beurteilen. Ein schon vorhandenes Fließtext-EPUB wird nach jeder Neuerkennung
+    /// unabhängig davon neu gebaut (sonst zeigten die Bildverweise der neuen Diagramme ins Leere).</summary>
+    public bool ReflowAfterDiagrams { get; set; }
 }

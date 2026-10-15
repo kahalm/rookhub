@@ -51,6 +51,7 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 | GET | `/api/ebooks/{id:int}/epub/{token}/{**path}` | **AllowAnonymous** (Ausweis im PFAD oder Bearer), Rate-Limit `ebook-entries` | EIN Eintrag aus dem EPUB-ZIP (`EbookEpubEntries`) für den EPUB-Leser „als Ordner“. Ausweis im Pfad, damit epub.js relative Adressen (Kapitel, Bilder, CSS) ohne Query auflösen kann; Sichtbarkeit wie `…/file`, gewählt wird die EPUB-Datei des Buchs (kein EPUB → 404). Pfad nur als ZIP-Eintrag (nie Dateisystem), `..`/absolut/Backslash → 404, Schreibweise wie im ZIP, Content-Type nach Endung, `Cache-Control: private, max-age=86400`, Einträge > 64 MB → 404. Eigener Deckel 600/min je Adresse statt des globalen 100/min-Topfs (ein Kapitel mit 50 Diagrammbildern = 50+ Anfragen) |
 | GET | `/api/ebooks/{id:int}/cover?t=` | **AllowAnonymous** (Ausweis oder Bearer) | Titelbild (JPEG/PNG, Typ an den Bytes erkannt) oder 404, solange keines da ist; `Cache-Control: private, max-age=86400` |
 | GET | `/api/admin/ebooks/library` | `ebooks.manage` | `{ configured, uploadsEnabled, imported, coversPending }` |
+| POST | `/api/admin/ebooks/{id:int}/reflow` | `ebooks.manage` | Fließtext-EPUB aus dem Text-PDF bauen (0.802.0, Prototyp, synchron ~10–20 s je 400 Seiten) → `{ ebookId, fileId, sizeBytes, pages, chapters, paragraphs, diagrams, diagramsLinked }`. Ersetzt ein vorhandenes. 400 `ebook_reflow_unsupported`: kein Original-PDF, schon ein echtes EPUB, Diagramme noch nicht erkannt, keine Textebene (Scan). Siehe „Fließtext-EPUB aus Text-PDFs“ |
 | POST | `/api/admin/ebooks/library/import` | `ebooks.manage` | Bibliothek einlesen (synchron, Sekunden): gleichnamige Dateien eines Ordners (`Buch.pdf` + `Buch.djvu`) werden EIN Buch; Beiblatt `Buch.json` (`title`, `author` als Text oder Liste, `year`, `tags[]`, `targetMinElo`) liefert die Metadaten, sonst Ordner „Nachname, Vorname" + Dateiname (Ordner `AAA…`, `Unknown`, `.…` gelten nicht als Autor). Idempotent: bekannte Pfade werden übersprungen, ein neues Format neben einem bekannten Buch angehängt. Eingelesene Bücher gehören dem Admin und sind zunächst NUR für Verwalter sichtbar — Freigabe danach in der Übersicht (Auswahl → „Sichtbarkeit setzen"). Antwort `{ configured, filesSeen, added, filesAdded, skipped, unreadable }` |
 
 **Oberfläche** (`features/ebooks/`): Übersicht `/ebooks` (Suche mit 300 ms Verzögerung, Schlagwort-Chips, Sortierung,
@@ -389,4 +390,41 @@ sonst wie bisher die MLP-Modelle. Trainiert auf ~3 400 Opus-Diagrammen (Pongó, 
 Awerbach 82–87 %, Wasserzeichen (Läufer/Springer) 64 %, Pongó (kleine Bretter) 2 % — dort braucht es eigene Beispiele.
 Migration `EbookDiagramConfidence` reiht nicht kuratierte Scan-Bücher (Scan-Diagramme oder ohne Treffer) neu ein.
 Neues Modell: ONNX (Eingabe `cells` [n,1,32,32], Ausgabe `logits` [n,13]) unter demselben Namen ablegen.
+
+## Fließtext-EPUB aus Text-PDFs (0.802.0, Prototyp)
+
+Gute Schach-PDFs (Textebene + Schach-Font, z. B. Woodpecker, Grooten) bekommen auf Zuruf ein sauberes EPUB 3 als
+ABGELEITETE Datei `converted/<id>.epub` unter `Ebooks:Root` (`EbookFile.Derived`, wie die PDF-Fassung der DJVU-Bücher;
+wird mit dem Buch gelöscht, ein zweiter Lauf ersetzt sie). Weil der Leser EPUB bevorzugt (0.793.0), liest man das Buch
+danach fließend mit einstellbarer Schrift; „Als PDF lesen“ wechselt zurück. Ein ECHTES EPUB geht immer vor
+(`EbookFormats.Primary`: beim EPUB das Original vor dem abgeleiteten, beim PDF umgekehrt — Frontend `fileFor` ebenso);
+für Bücher mit echtem EPUB lehnt der Dienst ohnehin ab.
+
+- **Auslöser**: `POST /api/admin/ebooks/{id}/reflow` (`EbookReflowService`). Automatisch nach der Diagrammerkennung nur mit
+  `Ebooks__ReflowAfterDiagrams=true` (Vorgabe AUS — erst 2–3 Bücher beurteilen) und nur bei Font-Diagrammen. Hat ein Buch
+  schon ein Fließtext-EPUB, baut der `EbookDiagramWorker` es nach jeder Neuerkennung neu (die neuen Diagrammzeilen
+  brauchen ihre Bildverweise). Die EPUB-Verknüpfung (`EbookFormatLinker`) nimmt nur echte EPUBs.
+- **Pipeline**: `EbookReflowPdfReader` (PdfPig: Glyphen mit Grundlinie/Größe/fett/kursiv, Diagramm-Fonts fallen weg,
+  Lesezeichen) → `EbookReflowLayout` (Zeilen, Bundsteg-Erkennung für zwei Spalten — auch aus nebeneinanderstehenden
+  Diagrammen —, Kolumnentitel/Seitenzahlen weg: Randstreifen + Wiederholung auf ≥ 3 Seiten oder ein Lesezeichen-Titel,
+  Absätze über Zeilenabstand/Einzug/kurze Zeile/„erstes Wort hätte gepasst“, hängender Einzug der Variantenbücher,
+  Trennungen zusammengezogen, Überschriften aus der Schriftgröße h1–h3 + ganz fette Einzeiler ohne Ziffern = h3,
+  Kapitel aus den Lesezeichen der obersten zwei Ebenen, sonst h1/h2, sonst je 20 Seiten; Kapitel über 24 Seiten in Teile)
+  → `EbookEpubWriter` (mimetype unkomprimiert zuerst, container.xml, OPF mit Titel/Autor/Sprache/Kennung/
+  `dcterms:modified`, nav.xhtml mit Unterpunkten auf Seitenanker `#p<Seite>`, Titelblatt, je Kapitel ein XHTML).
+- **Zeichen**: Figurinen der Figurinen-Schriften (`EbookSolutionFinder.FigurinePiece`/`IsFigurineFont`, SP-Fonts `¢£¦¥¤`,
+  U+F0xx, Unicode, RookHub U+E024…) → ♔♕♖♗♘ in einer Spanne mit Symbol-Schriften; „£“ in normaler Schrift bleibt „£“.
+  SP-Bewertungszeichen (² ³ µ ÷ „ ©) → ⩲ ⩱ ∓ ∞ ⇆ =/∞; Wingdings-Häkchen → ✓; Zugrecht-Dreiecke (Wingdings3) weg.
+- **Diagramme**: an der Stelle jedes `EbookDiagram` mit PDF-Lage (`W > 0`) ein Brettbild aus der FEN
+  (`EbookBoardSvg`, cburnett-Figuren aus `Assets/pieces`, App-Farben, je Figur ein `<symbol>`; ~3–8 KB) unter
+  `OEBPS/images/p<Seite:D4>-<n>.svg`, Bildunterschrift Nummer + △/▲ (Zugrecht, wenn bekannt). Text im Brett, Koordinaten
+  und die Nummer im Rand fallen weg. `EbookDiagram.ImageRef` (= ZIP-Pfad) + `EpubChapter` (Spine-Position, 1 = Titelblatt)
+  werden gesetzt → Doppelklick im EPUB-Leser holt die Stellung aufs Brett. Kuratierte Diagramme bleiben, sie bekommen nur
+  die Verweise.
+- **Nicht im Prototyp**: Bilder und Tabellen des PDF (Tabellen werden zu Textzeilen, Inhaltsverzeichnis-Seiten zu
+  Einzelzeilen), Fußnoten, nicht erkannte Diagramme (deren Font-Zeichen fallen einfach weg), Buchstaben-Figurinen
+  (SemFig bei Grooten bleibt „Rb1“), eine Stellungskorrektur (`…/position`) zeichnet das Bild erst beim nächsten Lauf neu.
+- Gemessen 15.10. (lokal, Dateien nur gelesen): Woodpecker 394 S. → 32 Kapitel, 1 144/1 144 Diagramme als Bild, 2,7 MB,
+  17 s; Grooten 544 S. → 52 Kapitel, 995/995, 9 s; Ward „Dragon“ 59 S., 80/80, < 1 s. epub.js (Ordner-Modus wie im Leser)
+  zeigt alle drei.
 

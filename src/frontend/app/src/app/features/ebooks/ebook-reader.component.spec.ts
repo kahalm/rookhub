@@ -119,6 +119,30 @@ describe('EbookReaderComponent', () => {
     expect(c.otherReadableFormats).toEqual(['epub']);
   });
 
+  it('Fließtext-EPUB aus dem PDF (0.802.0): liest es als EPUB, „Als PDF lesen“ nimmt das Original-PDF', async () => {
+    const b = book({ primaryFormat: 'epub', files: [
+      { id: 2, format: 'pdf', fileName: 'x.pdf', sizeBytes: 9 },
+      { id: 4, format: 'epub', fileName: 'x (reflow).epub', sizeBytes: 3, derived: true },
+    ] });
+    const c = (await make(b)).componentInstance;
+    expect(c.isEpub).toBeTrue();
+    expect(c.epubDirUrl).not.toBeNull();
+    c.readAs('pdf');
+    expect(c.isEpub).toBeFalse();
+    expect(c.fileUrl).toContain('fileId=2');
+  });
+
+  it('echtes EPUB neben einem Fließtext-EPUB (0.802.0): „Als EPUB lesen“ nimmt das echte', async () => {
+    const b = book({ primaryFormat: 'pdf', files: [
+      { id: 2, format: 'pdf', fileName: 'x.pdf', sizeBytes: 9 },
+      { id: 4, format: 'epub', fileName: 'x (reflow).epub', sizeBytes: 3, derived: true },
+      { id: 5, format: 'epub', fileName: 'x.epub', sizeBytes: 3 },
+    ] });
+    const c = (await make(b)).componentInstance;
+    c.readAs('epub');
+    expect(c.fileUrl).toContain('fileId=5');
+  });
+
   it('öffnet ein PDF an der gemerkten Seite und speichert den Lesestand verzögert', fakeAsync(async () => {
     const fixture = await make(book());
     const c = fixture.componentInstance;
