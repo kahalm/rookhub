@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.797.2", date: "2026-10-15", changes: [
+    { en: "E-books: boards on grey-screened pages (e.g. the chapter openings in „Boost Your Chess“) are now found as well – before, the first diagram of every chapter was missing.", de: "E-Books: Bretter auf grau gerasterten Seiten (z. B. den Kapitelanfängen in „Boost Your Chess“) werden jetzt auch gefunden – vorher fehlte das erste Diagramm jedes Kapitels." },
+  ] },
   { version: "0.797.1", date: "2026-10-15", changes: [
     { en: "E-books: in scanned books, the side to move is now also read from a small triangle above the board (△ White, ▼ Black, e.g. Yusupov’s „Boost Your Chess“); the rank numbers 1–8 beside the board are no longer mistaken for a „B“ marker (Black to move).", de: "E-Books: In eingescannten Büchern wird der Spieler am Zug jetzt auch aus einem kleinen Dreieck über dem Brett gelesen (△ Weiß, ▼ Schwarz, z. B. Yusupovs „Boost Your Chess“); die Randziffern 1–8 neben dem Brett gelten nicht mehr fälschlich als „B“-Marker (Schwarz am Zug)." },
   ] },

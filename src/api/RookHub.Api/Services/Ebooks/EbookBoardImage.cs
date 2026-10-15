@@ -114,7 +114,7 @@ public static class EbookBoardImage
     }
 
     /// <summary>
-    /// Alle Bretter einer gescannten SEITE (0.776.0): jede dunkle Komponente (8er-Nachbarschaft, &lt; 235/255) mit annähernd
+    /// Alle Bretter einer gescannten SEITE (0.776.0): jede dunkle Komponente (8er-Nachbarschaft, &lt; 235/255, zweiter Durchgang &lt; 210/255) mit annähernd
     /// quadratischem Rechteck ab 100 px, abgeschält. Fehlt im Scan eine Rahmenlinie, endet die Komponente an der ersten
     /// Schraffur — das Rechteck wird dann auf ein Quadrat ergänzt, auf der Seite, deren Schachbrettmuster am besten passt
     /// (<see cref="GridScore"/>). Ob es wirklich ein Brett ist, entscheidet der Aufrufer über <see cref="GridScore"/>.
@@ -122,11 +122,14 @@ public static class EbookBoardImage
     public static List<(int X0, int Y0, int X1, int Y1)> FindBoards(float[,] g)
     {
         int H = g.GetLength(0), W = g.GetLength(1);
-        const float light = 235f / 255f;
-        var lab = new bool[H, W];
         var result = new List<(int X0, int Y0, int X1, int Y1)>();
         var found = new List<((int X0, int Y0, int X1, int Y1) Box, double Fit)>();
         var stack = new Stack<(int, int)>();
+        // Zweiter Durchgang strenger (0.797.2): auf grau gerasterten Kapitelseiten (Yusupov) verschmilzt das Brett bei 235
+        // mit dem Raster zu einer großen Fläche — bei 210 steht es wieder für sich. Doppelte Treffer räumt das Ende ab.
+        foreach (var light in new[] { 235f / 255f, 210f / 255f })
+        {
+        var lab = new bool[H, W];
         for (var y = 0; y < H; y++)
             for (var x = 0; x < W; x++)
             {
@@ -164,6 +167,7 @@ public static class EbookBoardImage
                 }
                 found.Add((best, bestScore));
             }
+        }
         // Dasselbe Brett zweimal (doppelter Rahmen: äußere Linie + inneres Brett, 0.780.5): von überlappenden Treffern
         // bleibt der mit dem besseren Schachbrettmuster — der äußere liest sonst mit verschobenem Raster lauter Figuren.
         foreach (var (box, _) in found.OrderByDescending(f => f.Fit))
