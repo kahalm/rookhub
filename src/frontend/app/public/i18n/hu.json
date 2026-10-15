@@ -492,7 +492,8 @@
       "uiScaleHint": "Mindent nagyobbra vesz — nagy táblagépekhez, például e-ink olvasókhoz. Azonnal érvényes.",
       "uiScaleValue": "{{value}}%",
       "uiScaleNotSaved": "A felület méretét nem sikerült menteni ezen az eszközön — csak az oldal újratöltéséig érvényes.",
-      "uiScaleUnsupported": "Ez a böngésző nem tudja biztonságosan nagyítani az oldalt — használja a böngésző nagyítását (Ctrl +)."
+      "uiScaleUnsupported": "Ez a böngésző nem tudja biztonságosan nagyítani az oldalt — használja a böngésző nagyítását (Ctrl +).",
+      "uiScaleDiag": "Eszközvizsgálat: módszer {{mode}}, elrendezés {{layout}} px a(z) {{screen}} px-es képernyőn, a nagyítás érvényes: {{ok}}"
     },
     "engine": {
       "title": "Külső motor",

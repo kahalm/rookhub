@@ -18,7 +18,7 @@ import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.m
 import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
 import { writeIndex, foldSummary } from './report.mjs';
 import { withStates, runSteps, writeDecision, stubBody } from './states.mjs';
-import { themeSetup } from './themes.mjs';
+import { themeSetup, storageFor } from './themes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '../..');
@@ -141,6 +141,7 @@ function parseArgs(argv) {
       case '--route': o.route = csv(); break;
       case '--viewport': o.viewport = csv(); break;
       case '--theme': o.theme = csv(); break;
+      case '--ui-scale': o.uiScale = Number(v()); break;
       case '--lang': o.lang = csv(); break;
       case '--auth': o.auth = csv(); break;
       case '--concurrency': o.concurrency = Number(v()); break;
@@ -164,6 +165,8 @@ function parseArgs(argv) {
   o.rate ??= ENV_DEFAULTS[o.env].rate;
   o.concurrency ??= ENV_DEFAULTS[o.env].concurrency;
   for (const t of o.theme) themeSetup(t);
+  o.uiScale ??= 100;
+  storageFor(o.theme[0], o.uiScale);   // prüft die Stufe
   for (const a of o.auth) if (!ROLES.includes(a)) throw new Error(`Unbekannte Rolle ${a} (${ROLES.join(', ')})`);
   if (o.env === 'prod' && o.auth.some(a => a !== 'anon')) {
     console.log('Hinweis: auf prod nur abgemeldet — --auth user/admin entfällt.');
@@ -473,7 +476,7 @@ async function main() {
           localStorage.setItem('rookhub_solve_modes', JSON.stringify({ '*': { mode: 'easy', at: 1 }, 'course:*': { mode: 'easy', at: 1 } }));
         }
       } catch { /* kein Speicher */ }
-    }, [userJson, themeSetup(job.theme).appTheme, job.lang, !job.route.fresh, themeSetup(job.theme).storage]);
+    }, [userJson, themeSetup(job.theme).appTheme, job.lang, !job.route.fresh, storageFor(job.theme, opts.uiScale)]);
     const host = new URL(origin).hostname;
     if (host.endsWith('oberschmid.homes')) {
       await ctx.addCookies([
@@ -611,7 +614,7 @@ async function main() {
         const h = await page.evaluate(() => document.documentElement.scrollHeight);
         // Deutsch ohne Zusatz im Namen — so bleiben die Bilder mit Läufen von vor der Sprach-Achse vergleichbar.
         // Auch mit --fast dieselben Namen: Vergleich mit normalen Läufen greift.
-        const stem = `shots/${job.id}__${job.auth}__${viewport}__${job.theme}${job.lang === 'de' ? '' : '__' + job.lang}`;
+        const stem = `shots/${job.id}__${job.auth}__${viewport}__${job.theme}${opts.uiScale !== 100 ? '__s' + opts.uiScale : ''}${job.lang === 'de' ? '' : '__' + job.lang}`;
         const file = `${stem}.png`;
         await page.screenshot({ path: path.join(runDir, file), fullPage: true, clip: { x: 0, y: 0, width: vp.width, height: Math.min(h, MAX_SHOT_HEIGHT) } });
         record.file = file;
@@ -716,7 +719,7 @@ async function main() {
     run: runName, env: opts.env, local: !!opts.local, fast: !!opts.fast, rate: opts.rate, concurrency: opts.concurrency,
     cache: !opts.noCache, apiCalls: shots.reduce((n, s) => n + (s.apiCalls ?? 0), 0), cacheHits: shots.reduce((n, s) => n + (s.cacheHits ?? 0), 0),
     pauses429, startedAt: new Date(started).toISOString(),
-    seconds: Math.round((Date.now() - started) / 1000), matrix: { viewport: opts.viewport, theme: opts.theme, lang: opts.lang, auth: opts.auth },
+    seconds: Math.round((Date.now() - started) / 1000), matrix: { viewport: opts.viewport, theme: opts.theme, lang: opts.lang, auth: opts.auth, uiScale: opts.uiScale },
     comparedWith: compareName, params: resolveLog, unresolved, noDataSkipped, shots,
   };
   fs.writeFileSync(path.join(runDir, 'report.json'), JSON.stringify(report, null, 2));

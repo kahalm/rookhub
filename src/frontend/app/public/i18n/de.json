@@ -802,7 +802,8 @@
       "uiScaleHint": "Macht alles größer — für große Tablets wie E-Ink-Lesegeräte. Wirkt sofort.",
       "uiScaleValue": "{{value}} %",
       "uiScaleNotSaved": "Die UI-Größe ließ sich auf diesem Gerät nicht speichern — sie gilt nur bis zum Neuladen.",
-      "uiScaleUnsupported": "Dieser Browser kann die Seite nicht sicher vergrößern — bitte den Zoom des Browsers nutzen (Strg +)."
+      "uiScaleUnsupported": "Dieser Browser kann die Seite nicht sicher vergrößern — bitte den Zoom des Browsers nutzen (Strg +).",
+      "uiScaleDiag": "Gerätebefund: Weg {{mode}}, Layout {{layout}} px bei {{screen}} px Bildschirm, Vergrößerung wirksam: {{ok}}"
     },
     "displayNameHint": "Wird anderen statt „{{username}}“ angezeigt."
   },

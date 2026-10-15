@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.802.2", date: "2026-10-15", changes: [
+    { en: "UI size: now also takes effect on tablets and e-readers whose browser applies the new page width a moment later (e.g. Boox) – before, the choice did nothing there. The profile now shows a short device check (method, layout and screen width).", de: "UI-Größe: Wirkt jetzt auch auf Tablets und E-Readern, deren Browser die neue Seitenbreite erst einen Moment später übernimmt (z. B. Boox) – dort tat die Auswahl vorher gar nichts. Im Profil steht dazu ein kurzer Gerätebefund (Weg, Layout- und Bildschirmbreite)." },
+  ]},
   { version: "0.802.1", date: "2026-10-15", changes: [
     { en: "E-books: a diagram you double-click no longer keeps a frame – the frame flashes briefly and fades out (PDF and EPUB; in E-Ink mode no frame at all).", de: "E-Books: Ein doppelt angeklicktes Diagramm behält keinen Rahmen mehr – der Rahmen blitzt kurz auf und verschwindet (PDF und EPUB; im E-Ink-Modus gar kein Rahmen)." },
   ] },

@@ -58,6 +58,10 @@ import { UiScaleService } from '../../core/ui-scale.service';
         @if (uiScale.unsupported() && uiScale.scale() !== 100) {
           <p class="ui-scale-note">{{ 'profile.theme.uiScaleUnsupported' | translate }}</p>
         }
+        <!-- Befund zur Fehlersuche am Gerät (0.800.2): Weg + Breiten, damit man ablesen kann, was der Browser tut. -->
+        @if (uiScale.diagnostics(); as d) {
+          <p class="ui-scale-diag">{{ 'profile.theme.uiScaleDiag' | translate: { mode: d.mode ?? '–', layout: d.layoutWidth, screen: d.screenWidth, ok: d.viewportOk === null ? '–' : (d.viewportOk ? '✓' : '✗') } }}</p>
+        }
       </div>
     </div>
   `,
@@ -75,6 +79,7 @@ import { UiScaleService } from '../../core/ui-scale.service';
     .ui-scale-toggle { display: inline-flex; flex-wrap: wrap; max-width: 100%; }
     .ui-scale-hint { margin: 0.25rem 0 0; color: var(--mat-sys-on-surface-variant); }
     .ui-scale-note { margin: 0.5rem 0 0; color: var(--rh-warn); }
+    .ui-scale-diag { margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--mat-sys-on-surface-variant); }
   `]
 })
 export class ThemeCardComponent {
@@ -83,7 +88,9 @@ export class ThemeCardComponent {
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
 
-  constructor(public theme: ThemeService) {}
+  constructor(public theme: ThemeService) {
+    this.uiScale.refreshDiagnostics();
+  }
 
   /** Umschalten; scheitert das Speichern (Speicher gesperrt), gilt der Modus nur bis zum Neuladen — das sagen wir. */
   setEink(on: boolean): void {

@@ -79,3 +79,10 @@ test('Design-Achse: eink = helles Design + E-Ink-Schalter im Speicher, unbekannt
   assert.equal(themeSetup('dark').storage.rookhub_eink, '0', 'andere Designs schalten den Modus aus');
   assert.throws(() => themeSetup('sepia'), /Unbekanntes Design/);
 });
+
+test('UI-Größe: Speicher-Vorbelegung je Stufe, 100 ohne Schlüssel, unbekannte Stufe wirft', async () => {
+  const { storageFor } = await import('./themes.mjs');
+  assert.deepEqual(storageFor('eink', 200), { rookhub_eink: '1', rookhub_ui_scale: '200' });
+  assert.deepEqual(storageFor('dark'), { rookhub_eink: '0' });
+  assert.throws(() => storageFor('light', 180), /Unbekannte UI-Größe/);
+});

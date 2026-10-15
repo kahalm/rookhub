@@ -1,5 +1,6 @@
+import { fakeAsync, tick } from '@angular/core/testing';
 import {
-  UI_SCALE_STORAGE_KEY, UI_SCALE_TOUCH_QUERY, UI_SCALE_ZOOM_CLASS, applyUiScale, applyUiScaleEarly, currentUiScale,
+  UI_SCALE_STORAGE_KEY, UI_SCALE_VERIFY_MS, uiScaleDiagnostics, UI_SCALE_TOUCH_QUERY, UI_SCALE_ZOOM_CLASS, applyUiScale, applyUiScaleEarly, currentUiScale,
   currentUiScaleMode, normalizeUiScale, readUiScale, resetUiScaleForTests, screenCssWidth, viewportContentFor, writeUiScale,
   zoomIsStandardized,
 } from './ui-scale';
@@ -109,16 +110,40 @@ describe('UI-Skalierung', () => {
     expect(meta.content).toBe('width=device-width, initial-scale=1');
   });
 
-  it('Touch-Gerät, das den Meta-Viewport ignoriert (Windows-Tablet): zurück auf device-width und zoom', () => {
+  it('Touch-Gerät, das den Meta-Viewport ignoriert (Windows-Tablet): nach der Nachprüfung zurück auf device-width und zoom', fakeAsync(() => {
     fakeTouch(true);
     fake(screen, 'width', 960);
     fake(screen, 'height', 1280);
     fake(document.documentElement, 'clientWidth', 960); // Layoutbreite bleibt
     applyUiScale(200);
-    expect(currentUiScaleMode()).toBe('zoom');
+    expect(currentUiScaleMode()).toBe('viewport');      // erst versuchen …
+    tick(UI_SCALE_VERIFY_MS);
+    expect(currentUiScaleMode()).toBe('zoom');          // … dann zurückfallen
     expect(meta.content).toBe('width=device-width, initial-scale=1');
     expect(document.documentElement.style.zoom).toBe('2');
-  });
+    expect(uiScaleDiagnostics().viewportOk).toBeFalse();
+  }));
+
+  // Regression 0.800.2 (User am Boox Tab X C, Chrome 111: „funktioniert überhaupt nicht“): echtes Android-Chrome
+  // übernimmt die neue Layoutbreite erst ein paar Bilder später. Die alte Sofortprüfung sah noch 960 px, fiel auf zoom
+  // zurück — in Chrome 111 nicht standardisiert → `none`, die Auswahl tat nichts.
+  it('Boox: Layoutbreite folgt erst verzögert, zoom nicht standardisiert → bleibt beim Meta-Viewport, nie `none`', fakeAsync(() => {
+    fakeTouch(true);
+    fake(screen, 'width', 960);
+    fake(screen, 'height', 1280);
+    fake(screen, 'orientation', { type: 'portrait-primary' });
+    fake(document.documentElement, 'clientWidth', 960);  // im selben Takt noch die alte Breite
+    spyOn(Element.prototype, 'getBoundingClientRect').and.returnValue({ width: 10 } as DOMRect); // zoom alt (Chrome 111)
+    const svc = new UiScaleService();
+    svc.set(200);
+    expect(currentUiScaleMode()).toBe('viewport');
+    expect(meta.content).toBe('width=480, initial-scale=2');
+    expect(svc.unsupported()).toBeFalse();
+    fake(document.documentElement, 'clientWidth', 480);  // ein paar Bilder später
+    tick(UI_SCALE_VERIFY_MS);
+    expect(currentUiScaleMode()).toBe('viewport');
+    expect(svc.diagnostics()).toEqual(jasmine.objectContaining({ mode: 'viewport', layoutWidth: 480, screenWidth: 960, viewportOk: true }));
+  }));
 
   it('erkennt standardisiertes zoom (Karma-Chrome ≥ 128); altes Modell (gBCR ungezoomt) → nichts skalieren', () => {
     expect(zoomIsStandardized()).toBeTrue();

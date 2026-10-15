@@ -198,19 +198,52 @@ export function applyUiScale(pct: number): void {
     if (mode === 'viewport') setViewport(DEFAULT_VIEWPORT);
     if (mode === 'zoom') setZoom(UI_SCALE_DEFAULT);
   } else {
-    if (mode === null && isViewportCandidate()) {
-      const content = viewportContentFor(value, screenCssWidth());
-      if (content !== DEFAULT_VIEWPORT) {
-        setViewport(content);
-        if (viewportHonored(Math.round(screenCssWidth() * 100 / value))) mode = 'viewport';
-        else setViewport(DEFAULT_VIEWPORT);
-      }
-    }
+    // Touch/Mobil: IMMER erst der Meta-Viewport. Ob er greift, wird NACH ein paar Bildern geprüft (verifyViewport) —
+    // echtes Android-Chrome übernimmt die neue Layoutbreite nicht im selben Takt. Die frühere Sofortprüfung schlug am
+    // Boox (Chrome 111) deshalb fehl, fiel auf `zoom` zurück, und das ist dort nicht standardisiert → `none`: die
+    // Auswahl tat gar nichts (User 15.10., 0.800.2). Headless-Chromium meldet die Breite sofort, darum fiel es im Test
+    // nicht auf.
+    if (mode === null && isViewportCandidate() && screenCssWidth() > 0) mode = 'viewport';
     if (mode === null) mode = zoomIsStandardized() ? 'zoom' : 'none';
-    if (mode === 'viewport') { setViewport(viewportContentFor(value, screenCssWidth())); installListeners(); }
+    if (mode === 'viewport') { setViewport(viewportContentFor(value, screenCssWidth())); installListeners(); verifyViewport(); }
     else if (mode === 'zoom') setZoom(value);
   }
   for (const fn of listeners) fn(value);
+}
+
+/** Wartezeit bis zur Nachprüfung des Meta-Viewports (zwei Bilder + Puffer für langsame Geräte). */
+export const UI_SCALE_VERIFY_MS = 600;
+let verifyTimer: ReturnType<typeof setTimeout> | null = null;
+/** Ergebnis der letzten Nachprüfung: true = Layoutbreite folgt, false = nicht, null = (noch) nicht geprüft. */
+let viewportOk: boolean | null = null;
+
+/**
+ * Nachprüfung: Greift der Meta-Viewport nach {@link UI_SCALE_VERIFY_MS} nicht (Windows-Touch-Tablet im Desktop-Chrome),
+ * zurück auf device-width und — wenn standardisiert — `zoom`. Sonst bleibt der Meta-Viewport (lieber vielleicht wirksam
+ * als sicher wirkungslos); die Profilkarte zeigt den Befund.
+ */
+function verifyViewport(): void {
+  if (verifyTimer !== null) clearTimeout(verifyTimer);
+  viewportOk = null;
+  verifyTimer = setTimeout(() => {
+    verifyTimer = null;
+    if (mode !== 'viewport' || current === UI_SCALE_DEFAULT) return;
+    viewportOk = viewportHonored(Math.round(screenCssWidth() * 100 / current));
+    if (!viewportOk && zoomIsStandardized()) {
+      setViewport(DEFAULT_VIEWPORT);
+      mode = 'zoom';
+      setZoom(current);
+    }
+    for (const fn of listeners) fn(current);
+  }, UI_SCALE_VERIFY_MS);
+}
+
+/** Befund fürs Profil (Fehlersuche am Gerät): Weg, Layout- und Bildschirmbreite in CSS-px, Meta-Viewport. */
+export interface UiScaleDiagnostics { mode: UiScaleMode | null; layoutWidth: number; screenWidth: number; viewportOk: boolean | null; meta: string; }
+export function uiScaleDiagnostics(): UiScaleDiagnostics {
+  let layoutWidth = 0;
+  try { layoutWidth = document.documentElement.clientWidth; } catch { /* ohne DOM */ }
+  return { mode, layoutWidth, screenWidth: screenCssWidth(), viewportOk, meta: viewportMeta()?.content ?? '' };
 }
 
 /** Früh beim Start (main.ts, vor bootstrapApplication): gespeicherte Stufe anwenden, damit nichts springt. */
@@ -221,6 +254,8 @@ export function applyUiScaleEarly(): void {
 
 /** Nur für Tests: Weg und Stufe vergessen, Seite auf 100 % zurück. */
 export function resetUiScaleForTests(): void {
+  if (verifyTimer !== null) { clearTimeout(verifyTimer); verifyTimer = null; }
+  viewportOk = null;
   if (mode === 'viewport') setViewport(DEFAULT_VIEWPORT);
   if (mode === 'zoom') setZoom(UI_SCALE_DEFAULT);
   mode = null;

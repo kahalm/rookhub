@@ -802,7 +802,8 @@
       "uiScaleHint": "Sve povećava — za velike tablete poput e-ink čitača. Primjenjuje se odmah.",
       "uiScaleValue": "{{value}} %",
       "uiScaleNotSaved": "Veličina sučelja nije se mogla spremiti na ovom uređaju — vrijedi samo do ponovnog učitavanja.",
-      "uiScaleUnsupported": "Ovaj preglednik ne može sigurno povećati stranicu — koristite zumiranje preglednika (Ctrl +)."
+      "uiScaleUnsupported": "Ovaj preglednik ne može sigurno povećati stranicu — koristite zumiranje preglednika (Ctrl +).",
+      "uiScaleDiag": "Provjera uređaja: način {{mode}}, raspored {{layout}} px na zaslonu od {{screen}} px, povećanje djeluje: {{ok}}"
     },
     "displayNameHint": "Prikazuje se drugima umjesto „{{username}}“."
   },

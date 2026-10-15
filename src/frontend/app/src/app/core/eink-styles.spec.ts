@@ -94,16 +94,14 @@ describe('_eink.scss (E-Ink-Modus)', () => {
     expect(getComputedStyle(host.querySelector('.cg-shapes')!).opacity).toBe('1');
   });
 
-  it('E-Book-Leser: Diagrammzonen ohne Dauerrahmen, nur die aktive schwarz umrandet', () => {
+  it('E-Book-Leser: Diagrammzonen ohne Rahmen, auch die aktive nicht (seit 0.802.1)', () => {
     const host = mount(`<div class="pv-page" style="position:relative">
       <button class="pv-zone" style="border:2px dashed rgb(103, 80, 164)"></button>
       <button class="pv-zone pv-zone--active"></button></div>`);
     setEinkActive(true);
     const zones = host.querySelectorAll('.pv-zone');
     expect(getComputedStyle(zones[0]).borderTopColor).toBe('rgba(0, 0, 0, 0)');
-    const active = getComputedStyle(zones[1]);
-    expect(active.borderTopStyle).toBe('solid');
-    expect(parseColor(active.borderTopColor)).toEqual(parseColor('rgb(0, 0, 0)'));
+    expect(getComputedStyle(zones[1]).borderTopColor).toBe('rgba(0, 0, 0, 0)');
   });
 
   @Component({ standalone: true, imports: [MatProgressSpinnerModule], template: '<mat-spinner diameter="40" />' })

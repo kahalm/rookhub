@@ -120,6 +120,15 @@ describe('ThemeCardComponent UI-Größe', () => {
     expect(el.querySelector('.ui-scale-note')?.textContent).toContain('profile.theme.uiScaleUnsupported');
   });
 
+  it('zeigt den Gerätebefund (Weg, Layout-/Bildschirmbreite) zur Fehlersuche am Tablet', async () => {
+    const fixture = await create();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.ui-scale-diag')?.textContent).toContain('profile.theme.uiScaleDiag');
+    fixture.componentInstance.setUiScale(150);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.uiScale.diagnostics().mode).toBe('zoom');
+  });
+
   it('warnt, wenn das Speichern scheitert (gilt dann nur bis zum Neuladen)', async () => {
     const fixture = await create();
     const snackbar = TestBed.inject(SnackbarService);
