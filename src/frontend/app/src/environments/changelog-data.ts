@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.789.1", date: "2026-10-15", changes: [
+    { en: "Deleting an account also removes its answers to „Is there a diagram here?“ in e-books.", de: "Beim Löschen eines Kontos werden auch seine Antworten auf „Ist hier ein Diagramm?“ in E-Books entfernt." },
+  ] },
   { version: "0.789.0", date: "2026-10-15", changes: [
     { en: "E-books: double-clicking a spot in a PDF where no diagram was recognised asks „Is there a diagram here that was not recognised?“ – the answer is saved to improve the recognition.", de: "E-Books: Ein Doppelklick im PDF auf eine Stelle ohne erkanntes Diagramm fragt „Ist hier ein Diagramm, das nicht erkannt wurde?“ – die Antwort wird gespeichert, um die Erkennung zu verbessern." },
   ] },
