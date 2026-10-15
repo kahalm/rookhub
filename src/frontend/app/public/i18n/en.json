@@ -796,7 +796,12 @@
       "eink": "E-ink mode (this device)",
       "einkHint": "For e-ink tablets: no animations, high contrast, page turning instead of smooth scrolling.",
       "einkForcesLight": "E-ink mode is on: the app always stays light.",
-      "einkNotSaved": "E-ink mode could not be saved on this device — it only lasts until the page is reloaded."
+      "einkNotSaved": "E-ink mode could not be saved on this device — it only lasts until the page is reloaded.",
+      "uiScale": "UI size (this device)",
+      "uiScaleHint": "Makes everything larger — for big tablets such as e-ink readers. Applies immediately.",
+      "uiScaleValue": "{{value}}%",
+      "uiScaleNotSaved": "The UI size could not be saved on this device — it only lasts until the page is reloaded.",
+      "uiScaleUnsupported": "This browser cannot enlarge the page safely — use the browser's own zoom (Ctrl +) instead."
     },
     "displayNameHint": "Shown to others instead of “{{username}}”."
   },

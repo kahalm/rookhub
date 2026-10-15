@@ -7,6 +7,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { PdfDocument, PdfEngineLoader, PdfLoadingTask, PdfPage } from './pdf-engine';
 import { WIDE_FIT_MAX_WIDTH, currentPage, fitWidthZoom, pagesToRender, readingAnchor, scrollTopForAnchor } from './reader-progress.util';
 import { mediaSignal } from '../../shared/layout/wide-media';
+import { currentUiScale } from '../../core/ui-scale';
 
 /** Eine anklickbare Zone über der Seite (Lage als Anteil der Seite, 0–1). */
 export interface PdfZone { id: number; page: number; x: number; y: number; w: number; h: number; title?: string; }
@@ -367,7 +368,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
         canvas.style.width = `${Math.round(slot.width * scaleAtStart)}px`;
         canvas.style.height = `${Math.round(slot.height * scaleAtStart)}px`;
       }
-      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      const dpr = renderPixelRatio(window.devicePixelRatio, currentUiScale());
       const viewport = page.getViewport({ scale: scaleAtStart * dpr });
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
@@ -379,4 +380,13 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     await slot.rendering;
     if (!this.destroyed && this.scaleFor(slot) !== scaleAtStart) this.renderVisible();
   }
+}
+
+/**
+ * Pixeldichte der PDF-Leinwand: Geräte-Pixeldichte × UI-Skalierung (core/ui-scale.ts, DESIGN 3.7). Beide Wege der
+ * Skalierung (Meta-Viewport, CSS-zoom) lassen `devicePixelRatio` unverändert — bei 200 % wurde die Seite sonst mit der
+ * halben Auflösung gerechnet und unscharf hochgezogen. Obergrenze 3 wie bisher (Speicher je Seite).
+ */
+export function renderPixelRatio(devicePixelRatio: number | undefined, uiScalePercent: number): number {
+  return Math.min(3, (devicePixelRatio || 1) * Math.max(1, uiScalePercent / 100));
 }

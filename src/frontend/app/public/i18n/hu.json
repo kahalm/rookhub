@@ -486,7 +486,12 @@
       "eink": "E-ink mód (ez az eszköz)",
       "einkHint": "E-ink táblagépekhez: animációk nélkül, nagy kontraszt, lapozás folyamatos görgetés helyett.",
       "einkForcesLight": "Az e-ink mód be van kapcsolva: az alkalmazás mindig világos marad.",
-      "einkNotSaved": "Az e-ink módot nem sikerült menteni ezen az eszközön — csak az oldal újratöltéséig érvényes."
+      "einkNotSaved": "Az e-ink módot nem sikerült menteni ezen az eszközön — csak az oldal újratöltéséig érvényes.",
+      "uiScale": "Felület mérete (ez az eszköz)",
+      "uiScaleHint": "Mindent nagyobbra vesz — nagy táblagépekhez, például e-ink olvasókhoz. Azonnal érvényes.",
+      "uiScaleValue": "{{value}}%",
+      "uiScaleNotSaved": "A felület méretét nem sikerült menteni ezen az eszközön — csak az oldal újratöltéséig érvényes.",
+      "uiScaleUnsupported": "Ez a böngésző nem tudja biztonságosan nagyítani az oldalt — használja a böngésző nagyítását (Ctrl +)."
     },
     "engine": {
       "title": "Külső motor",

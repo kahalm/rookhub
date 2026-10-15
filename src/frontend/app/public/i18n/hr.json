@@ -796,7 +796,12 @@
       "eink": "E-ink način (ovaj uređaj)",
       "einkHint": "Za e-ink tablete: bez animacija, visok kontrast, listanje umjesto klizanja.",
       "einkForcesLight": "E-ink način je uključen: aplikacija uvijek ostaje svijetla.",
-      "einkNotSaved": "E-ink način nije se mogao spremiti na ovom uređaju — vrijedi samo do ponovnog učitavanja."
+      "einkNotSaved": "E-ink način nije se mogao spremiti na ovom uređaju — vrijedi samo do ponovnog učitavanja.",
+      "uiScale": "Veličina sučelja (ovaj uređaj)",
+      "uiScaleHint": "Sve povećava — za velike tablete poput e-ink čitača. Primjenjuje se odmah.",
+      "uiScaleValue": "{{value}} %",
+      "uiScaleNotSaved": "Veličina sučelja nije se mogla spremiti na ovom uređaju — vrijedi samo do ponovnog učitavanja.",
+      "uiScaleUnsupported": "Ovaj preglednik ne može sigurno povećati stranicu — koristite zumiranje preglednika (Ctrl +)."
     },
     "displayNameHint": "Prikazuje se drugima umjesto „{{username}}“."
   },

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.800.0", date: "2026-10-15", changes: [
+    { en: "UI size per device (Profile → Appearance, below the e-ink switch): 100 to 200 % – for large tablets where everything looks tiny. On phones and tablets the page is laid out narrower and enlarged, so taps and the board stay exact; PDF pages are rendered sharper to match.", de: "UI-Größe je Gerät (Profil → Darstellung, unter dem E-Ink-Schalter): 100 bis 200 % – für große Tablets, auf denen alles winzig wirkt. Auf Handy und Tablet wird die Seite schmaler gesetzt und vergrößert, Tippen und Brett treffen weiter genau; PDF-Seiten werden passend schärfer gezeichnet." },
+  ]},
   { version: "0.799.1", date: "2026-10-15", changes: [
     { en: "E-ink mode: the lines between the board squares are all equally thin again (every second one was thicker), and switching to a different position or turning the board briefly flashes the board black and white to wipe out afterimages.", de: "E-Ink-Modus: Die Linien zwischen den Brettfeldern sind wieder alle gleich dünn (jede zweite war dicker), und beim Wechsel auf eine andere Stellung oder beim Drehen blitzt das Brett kurz schwarz und weiß auf, damit keine Nachbilder bleiben." },
     { en: "E-ink mode: no more dashed frames around the diagrams in e-books – only the diagram currently on the board keeps a thin black frame.", de: "E-Ink-Modus: Keine gestrichelten Rahmen mehr um die Diagramme im E-Book – nur das gerade aufs Brett geholte Diagramm behält einen dünnen schwarzen Rahmen." },

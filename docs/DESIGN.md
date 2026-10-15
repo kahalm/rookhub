@@ -180,6 +180,25 @@ RookHub und der Turnierseite (beide laden `src/styles.scss` und starten über `a
   über Farbe** (zusätzlich Symbol, Text oder Rahmen). Keine Bedeutung in Haarlinien oder hellen Grautönen. Eigene
   JS-Animationen (Zähler, Fortschritt, Bewegung) fragen `isEinkActive()` bzw. `EinkService.enabled()` und springen.
 
+### 3.7 UI-Skalierung (je Gerät)
+
+Für große Tablets (Boox Tab X C: 13,3", CSS-Viewport ≈ 960 px, dort ist alles winzig). Gilt in RookHub und der
+Turnierseite (`applyUiScaleEarly()` in beiden `main.ts`, vor dem ersten Bild).
+
+- **Auswahl:** Profil → Darstellung (erste Karte), unter dem E-Ink-Schalter: „UI-Größe (dieses Gerät)“ als
+  Segmentgruppe 100 / 125 / 150 / 175 / 200 %. **Je Gerät** in `localStorage rookhub_ui_scale` (Ganzzahl Prozent;
+  100 = Schlüssel entfernt), sofort wirksam; scheitert das Speichern → Snackbar „gilt nur bis zum Neuladen“.
+- **Mechanik** (`core/ui-scale.ts`, `core/ui-scale.service.ts`, Tests `core/ui-scale.spec.ts`): auf Touch-/Mobilbrowsern
+  (`(hover: none) and (pointer: coarse)` oder Android/iOS-UA) Meta-Viewport `width=<Bildschirmbreite ÷ S>,
+  initial-scale=S` — der Browser rechnet ein schmaleres Layout und vergrößert es wie beim Aufziehen, alle Treffer und
+  Koordinaten bleiben stimmig; nach Drehen neu berechnet. Greift der Meta-Viewport nicht (Desktop, Windows-Tablet),
+  CSS `zoom` auf `<html>`; `cg-container` hebt den Zoom dort auf, weil Chessground Figurenlagen aus
+  `getBoundingClientRect` als px-`translate()` setzt (sonst doppelt skaliert).
+- **Regel für neue UI:** Lagen/Größen aus `getBoundingClientRect` nie als px-Werte zurück in ein Element INNERHALB der
+  Seite schreiben — Verhältnisse rechnen (`(clientX − left) / width`) oder `offsetWidth` nehmen. Canvas-Auflösung
+  zusätzlich mit `currentUiScale() / 100` multiplizieren, sonst wird gezeichneter Inhalt (PDF-Seiten) unscharf
+  hochgezogen — `devicePixelRatio` bleibt bei beiden Wegen gleich.
+
 ---
 
 ## 4 Layout & Breakpoints
@@ -911,6 +930,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
 | 2026-10-15 | 0.799.x | E-Ink-Modus (3.6): je Gerät schaltbar im Profil (Darstellung, erste Karte), ohne Animationen/Ripples, immer hell mit hohem Kontrast und kräftigen Rahmen, Brett ohne Zuganimation in Graustufen mit Rahmen statt Farbflächen, Leser blättert springend mit Tippzonen | Nutzer liest/trainiert auf einem Boox Tab X C (Kaleido 3): Animationen erzeugen Schlieren und Geisterbilder, Grautöne und Farbflächen gehen unter | Nutzerwunsch 15.10. |
+| 2026-10-15 | 0.800.x | UI-Skalierung (3.7): je Gerät 100–200 % im Profil (Darstellung, unter E-Ink), Touch über Meta-Viewport, Desktop über `zoom` (Chessground-Container ausgenommen) | Auf dem Boox Tab X C (960 CSS-px) ist die UI viel zu klein; Browser-Zoom gibt es in der TWA nicht | Nutzerwunsch 15.10. |
 | 2026-10-15 | 0.786.0 | E-Book-Leser kompakt: EINE Leiste oben (Kopfleiste dockt per `body.nav-docked` 48 px hoch rechts auf der Leser-Leiste an, Glocke/☰/Vollbild dieselben); Brett-Leiste in einer Zeile (Modi als Symbole, Optionen hinter ⚙, Analysieren/Engine/Drehen/FEN/Melden im ⋮), Zugrecht/Bewertung/Herkunft im Brett-Kopf, eine Statuszeile; Lösen startet in „Training“ (gemerkte Wahl gewinnt); Brett ab 900 px bis `100dvh − 220px` | „Die Leiste oben ist viel zu breit“, „rund ums Brett ist so viel los“ — zwei Leisten (≈ 128 px) und sieben Zeilen um das Brett | Nutzerwunsch 15.10. |
 | 2026-10-14 | 0.780.2 | E-Book-Brett unter 900 px als Vollbild über dem Buch statt Leiste unten | Leiste war am Handy zu klein zum Lösen | Nutzerwunsch 14.10. |
 | 2026-10-14 | 0.777.0 | E-Book-Brett mit Modus-Leiste (Ansehen/Ziehen/Kalkulieren/Lösen/Maia) statt Hand-Knopf + „Lösen“-Knopf; Engine zuschaltbar | Nutzerwunsch: mehrere Arten, mit der Buchstellung zu arbeiten — ein Schalter je Art wäre unübersichtlich | Nutzerwunsch 14.10. |
