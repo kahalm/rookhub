@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.799.1", date: "2026-10-15", changes: [
+    { en: "E-ink mode: the lines between the board squares are all equally thin again (every second one was thicker), and switching to a different position or turning the board briefly flashes the board black and white to wipe out afterimages.", de: "E-Ink-Modus: Die Linien zwischen den Brettfeldern sind wieder alle gleich dünn (jede zweite war dicker), und beim Wechsel auf eine andere Stellung oder beim Drehen blitzt das Brett kurz schwarz und weiß auf, damit keine Nachbilder bleiben." },
+    { en: "E-ink mode: no more dashed frames around the diagrams in e-books – only the diagram currently on the board keeps a thin black frame.", de: "E-Ink-Modus: Keine gestrichelten Rahmen mehr um die Diagramme im E-Book – nur das gerade aufs Brett geholte Diagramm behält einen dünnen schwarzen Rahmen." },
+  ]},
   { version: "0.799.0", date: "2026-10-15", changes: [
     { en: "E-ink mode for e-ink tablets (Profile → Appearance, at the top, per device; switches on by itself on e-ink screens): no animations, black-on-white high contrast, white/grey board with the last move as a thick frame, the reader turns pages by tapping the left/right edge or the arrow keys instead of sliding.", de: "E-Ink-Modus für E-Ink-Tablets (Profil → Darstellung, jetzt ganz oben, je Gerät; schaltet sich auf E-Ink-Bildschirmen selbst ein): keine Animationen, schwarz auf weiß mit hohem Kontrast, Brett weiß/grau mit dem letzten Zug als dickem Rahmen, der Leser blättert per Tipp an den linken/rechten Rand oder mit den Pfeiltasten statt zu gleiten." },
     { en: "E-books: PDFs open again on devices with an older built-in browser (e.g. Boox e-readers) – before, every book stopped with „The PDF could not be loaded“.", de: "E-Books: PDFs gehen auch auf Geräten mit älterem eingebautem Browser auf (z. B. Boox-E-Reader) – vorher brach jedes Buch mit „Das PDF konnte nicht geladen werden“ ab." },

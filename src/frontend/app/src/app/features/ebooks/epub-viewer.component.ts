@@ -5,6 +5,7 @@ import {
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import type { EpubMissedSpot } from './ebook.service';
+import { EINK_CLASS, isEinkActive } from '../../core/eink';
 
 /** Lesestelle im EPUB: Anteil (0–1) und CFI (genaue Stelle, wird gespeichert). */
 export interface EpubLocation { fraction: number; cfi: string; }
@@ -281,9 +282,13 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       st.textContent = '.rh-diagram{cursor:zoom-in;outline:2px dashed transparent;outline-offset:2px}'
         + '.rh-diagram:hover,.rh-diagram:focus{outline-color:#6750a4}.rh-diagram--active{outline:3px solid #6750a4}'
         // Touch: kein Überfahren — Diagramme dauerhaft gestrichelt (c1-eb-reader-mobile-diagrams-undiscoverable).
-        + '@media (hover:none){.rh-diagram{outline-color:#6750a4}}';
+        + '@media (hover:none){.rh-diagram{outline-color:#6750a4}}'
+        // E-Ink-Modus: keine Dauerrahmen, nur das aktive Diagramm schwarz umrandet (wie .pv-zone in _eink.scss).
+        + 'html.eink .rh-diagram:not(.rh-diagram--active){outline-color:transparent!important}'
+        + 'html.eink .rh-diagram--active{outline:2px solid #000}';
       doc.head?.appendChild(st);
     }
+    doc.documentElement?.classList.toggle(EINK_CLASS, isEinkActive());
     doc.querySelectorAll<Element>('img, image').forEach(el => {
       const raw = el.getAttribute('src') ?? el.getAttribute('xlink:href') ?? el.getAttribute('href') ?? '';
       const path = epubImagePath(raw, doc.baseURI, this.dirBase, blobs);

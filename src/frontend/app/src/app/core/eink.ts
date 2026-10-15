@@ -104,3 +104,50 @@ export function installSmoothScrollGuard(): void {
     wrap(window, 'scrollBy');
   }
 }
+
+/**
+ * Brettwechsel oder bloß ein Zug? Verglichen wird nur die Figurenstellung (erstes FEN-Feld): ein Zug ändert höchstens
+ * 4 Felder (Rochade), alles darüber ist eine andere Stellung (neues Diagramm, Sprung im Zugbaum, neue Aufgabe).
+ */
+export function isBoardSwitch(prevFen: string | undefined, nextFen: string): boolean {
+  if (!prevFen) return false;
+  const grid = (fen: string): string[] => {
+    const out: string[] = [];
+    for (const ch of (fen.split(' ')[0] ?? '')) {
+      if (ch === '/') continue;
+      if (ch >= '1' && ch <= '8') for (let i = 0; i < +ch; i++) out.push('');
+      else out.push(ch);
+    }
+    return out;
+  };
+  const a = grid(prevFen), b = grid(nextFen);
+  if (a.length !== 64 || b.length !== 64) return a.join() !== b.join();
+  let diff = 0;
+  for (let i = 0; i < 64; i++) if (a[i] !== b[i]) diff++;
+  return diff > 4;
+}
+
+/** Dauer je Blitzphase (schwarz, dann weiß): lang genug für einen Bildwechsel im schnellen Boox-Modus. */
+export const EINK_FLASH_PHASE_MS = 160;
+
+/**
+ * Nachbild-Löscher fürs Brett (User am Boox, 0.799.1: „beim Wechsel des Brettes blieb Ghosting zurück“). Eine Webseite
+ * kann am E-Ink-Gerät keine Vollauffrischung anfordern (das macht nur die Geräte-Software: E-Ink-Center / Auffrisch-
+ * Knopf). Ersatz wie beim Vollrefresh selbst: jedes Pixel des Bretts einmal ganz nach Schwarz, dann ganz nach Weiß
+ * treiben, dann die neue Stellung zeigen — die Zwischenstufen der alten Figuren sind damit weg. Eine feste Ebene über
+ * dem Brett (fixed, nach dessen Maßen; chessground baut sein DOM selbst neu), ohne Mausereignisse. Nur im E-Ink-Modus.
+ */
+export function flashEinkRefresh(target: Element | null | undefined): void {
+  if (!active || !target || typeof document === 'undefined') return;
+  const r = target.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
+  const veil = document.createElement('div');
+  veil.className = 'eink-flash';
+  Object.assign(veil.style, {
+    position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`,
+    background: '#000', zIndex: '10000', pointerEvents: 'none',
+  });
+  document.body.appendChild(veil);
+  setTimeout(() => { veil.style.background = '#fff'; }, EINK_FLASH_PHASE_MS);
+  setTimeout(() => veil.remove(), 2 * EINK_FLASH_PHASE_MS);
+}

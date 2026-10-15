@@ -9,7 +9,7 @@ import { PromotionPickerComponent, PromotionPiece } from '../../shared/promotion
 import {
   BoardFullscreenButtonComponent,
 } from '../../shared/fullscreen/board-fullscreen-button.component';
-import { boardAnimation } from '../../core/eink';
+import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
 
 /**
  * Interaktives Analyse-Brett (chessground): beide Seiten spielbar (movable.color = turnColor),
@@ -154,6 +154,11 @@ export class AnalysisBoardComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
+    // E-Ink: bei einer ganz anderen Stellung/Drehung erst schwarz/weiß über das Brett, gegen Nachbilder (core/eink.ts).
+    if ((changes['fen'] && !changes['fen'].firstChange && isBoardSwitch(changes['fen'].previousValue, this.fen))
+        || (changes['orientation'] && !changes['orientation'].firstChange)) {
+      flashEinkRefresh(this.boardEl?.nativeElement);
+    }
     // Brett-State nur aktualisieren, wenn er sich wirklich ändert. WICHTIG: Engine-Updates
     // ändern nur `shapes` (häufig, ~10×/s) — würde man dabei jedes Mal set() aufrufen, würde
     // das laufende Rechtsklick-Zeichnen ständig unterbrochen/verworfen (= „Pfeile gehen nicht").

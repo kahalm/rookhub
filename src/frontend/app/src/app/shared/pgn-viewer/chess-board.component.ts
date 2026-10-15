@@ -9,7 +9,7 @@ import { Key } from 'chessground/types';
 import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
 import { PromotionPickerComponent, PromotionPiece } from '../promotion-picker/promotion-picker.component';
 import { applyUserMove, isPromotionMove, legalDests, turnColorOf } from './board-moves.util';
-import { boardAnimation } from '../../core/eink';
+import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
 
 /** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). `promotion` = gewählte
  *  Umwandlungsfigur, nur bei einer Umwandlung gesetzt (SAN und FEN tragen sie schon). */
@@ -243,6 +243,12 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     // Neue Stellung oder gesperrt, während die Umwandlungs-Auswahl offen ist: sie gehört zur alten.
     if (changes['fen'] || changes['playable']) this.pendingPromotion.set(null);
     if (!this.ground) return;
+    // E-Ink: bei einer ganz anderen Stellung erst schwarz/weiß über das Brett, gegen Nachbilder (core/eink.ts).
+    const switched = changes['fen'] && !changes['fen'].firstChange && isBoardSwitch(changes['fen'].previousValue, this.fen);
+    const turned = changes['flipped'] && !changes['flipped'].firstChange;
+    if (switched || turned) {
+      flashEinkRefresh(this.boardEl?.nativeElement);
+    }
     if (changes['fen'] || changes['lastMove'] || changes['flipped'] || changes['playable'] || changes['clickToMove']) {
       this.ground.set({
         fen: this.fen,

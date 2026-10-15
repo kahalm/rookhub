@@ -123,11 +123,13 @@ html.eink .mdc-linear-progress--indeterminate .mdc-linear-progress__bar-inner { 
 html.eink .mdc-linear-progress--indeterminate .mdc-linear-progress__secondary-bar { display: none !important; }
 
 // ── Brett (chessground) ──────────────────────────────────────────────────────────────────────────────────────────
-// Helle Felder weiß, dunkle mittelgrau (#a3a3a3) mit dunkler Kante — in Graustufen klar getrennt, Figuren bleiben
-// davor gut lesbar. Gilt über jedem Brettthema und jeder Textur.
+// Helle Felder weiß, dunkle mittelgrau (#a3a3a3) — in Graustufen klar getrennt, Figuren bleiben davor gut lesbar.
+// Gilt über jedem Brettthema und jeder Textur. KEINE Feldkanten: die Kachel ist 2 × 2 Felder groß, eine Kante am
+// Kachelrand wurde nur halb gezeichnet, innen ganz — zwischen a|b, c|d, e|f, g|h lagen sichtbar dickere Linien
+// (User am Boox, 0.799.1).
 html.eink cg-board {
   background-color: #fff !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2' shape-rendering='crispEdges'%3E%3Crect width='2' height='2' fill='%23fff'/%3E%3Crect x='1' width='1' height='1' fill='%23a3a3a3' stroke='%23555' stroke-width='0.04'/%3E%3Crect y='1' width='1' height='1' fill='%23a3a3a3' stroke='%23555' stroke-width='0.04'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2' shape-rendering='crispEdges'%3E%3Crect width='2' height='2' fill='%23fff'/%3E%3Crect x='1' width='1' height='1' fill='%23a3a3a3'/%3E%3Crect y='1' width='1' height='1' fill='%23a3a3a3'/%3E%3C/svg%3E") !important;
   background-size: 25% 25% !important;
   background-repeat: repeat !important;
 }
@@ -158,3 +160,14 @@ html.eink .cg-wrap coords coord {
   --coord-halo: rgba(255, 255, 255, 0.9) !important;
   text-shadow: 0 0 2px #fff, 0 0 2px #fff !important;
 }
+
+// ── E-Book-Leser: Diagrammzonen ohne Dauerrahmen ─────────────────────────────────────────────────────────────────
+// Auf Touch sind die Zonen sonst dauerhaft gestrichelt (Auffindbarkeit) — auf dem E-Ink-Tablet nur Unruhe über jedem
+// Diagramm (User, 0.799.1). Doppeltippen geht weiter; das gerade aufs Brett geholte Diagramm behält seinen Rahmen
+// (schwarz statt Primärfarbe). Im EPUB (iframe) setzt epub-viewer dieselbe Regel selbst.
+html.eink .pv-zone:not(.pv-zone--active) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+html.eink .pv-zone--active { border: 2px solid #000 !important; box-shadow: none !important; background: transparent !important; }

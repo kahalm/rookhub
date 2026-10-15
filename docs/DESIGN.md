@@ -166,9 +166,14 @@ RookHub und der Turnierseite (beide laden `src/styles.scss` und starten über `a
   (`aria-pressed`, `aria-selected`, `aria-current`, gewählter Umschalter) zusätzlich als 3-px-Innenrahmen + fett;
   unbestimmter Ladekreis = stehender gepunkteter Ring, unbestimmte Leiste = volle gestrichelte Leiste.
 - **Brett:** keine Zuganimation (`boardAnimation()` aus `eink.ts` in allen drei Brett-Komponenten); helle Felder weiß,
-  dunkle #a3a3a3 mit Kante; letzter Zug / Auswahl als Innenrahmen statt Farbfläche; Zielpunkte schwarz; Pfeile volle
-  Deckkraft; Koordinaten schwarz mit weißem Hof.
-- **E-Book-Leser:** Mausrad/Scrollen bleiben; Pfeil hoch/runter blättert eine Bildschirmhöhe (PDF, `pageBy`), Tippzonen
+  dunkle #a3a3a3 **ohne Feldkanten** (das Kachelmuster ist 2 × 2 Felder groß — Kanten wurden am Kachelrand halbiert,
+  jede zweite Linie war dicker); letzter Zug / Auswahl als Innenrahmen statt Farbfläche; Zielpunkte schwarz; Pfeile
+  volle Deckkraft; Koordinaten schwarz mit weißem Hof. **Nachbild-Löscher:** bei einer ganz anderen Stellung (> 4
+  Felder anders, `isBoardSwitch`) oder beim Drehen legt `flashEinkRefresh()` je 160 ms Schwarz, dann Weiß über das
+  Brett — eine Webseite kann am Gerät keine Vollauffrischung anfordern, das Durchfahren beider Extreme ersetzt sie fürs
+  Brett. Ein normaler Zug blitzt nicht.
+- **E-Book-Leser:** Diagrammzonen ohne Dauerrahmen (auch nicht auf Touch), nur das aktive Diagramm 2 px schwarz
+  (PDF `.pv-zone` in `_eink.scss`, EPUB per Klasse `eink` im Kapitel-Dokument); Mausrad/Scrollen bleiben; Pfeil hoch/runter blättert eine Bildschirmhöhe (PDF, `pageBy`), Tippzonen
   am linken/rechten Buchrand (12 %, ≥ 44 px) blättern zurück/vor (EPUB: Seite, PDF: Bildschirmhöhe).
 - **Regel für neue UI:** keine Pflicht-Animationen — jeder Zustand muss ohne Übergang verständlich sein (kein Inhalt,
   der erst „einfährt“, keine Rückmeldung nur als Animation/Ripple: Ergebnis als Text oder Zustand). Bedeutung **nie nur

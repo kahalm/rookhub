@@ -16,7 +16,7 @@ import {
 } from '../../shared/promotion-picker/promotion-picker.component';
 import { TranslatePipe } from '@ngx-translate/core';
 import { parseKeyboardMove } from './keyboard-move.util';
-import { boardAnimation } from '../../core/eink';
+import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
 
 /** Rückmeldung der Zug-Eingabe per Tastatur (i18n-Schlüssel + Parameter). */
 interface KeyboardFeedback { key: string; params?: Record<string, string>; }
@@ -623,6 +623,11 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground) return;
+    // E-Ink: bei einer ganz anderen Stellung/Drehung erst schwarz/weiß über das Brett, gegen Nachbilder (core/eink.ts).
+    if ((changes['fen'] && !changes['fen'].firstChange && isBoardSwitch(changes['fen'].previousValue, this.fen))
+        || (changes['orientation'] && !changes['orientation'].firstChange)) {
+      flashEinkRefresh(this.boardEl?.nativeElement);
+    }
 
     // Check for pending premove before updating the board
     // When transitioning from premovable to interactive (user's turn), execute premove

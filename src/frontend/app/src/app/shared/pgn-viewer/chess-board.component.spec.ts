@@ -101,6 +101,42 @@ describe('ChessBoardComponent E-Ink-Modus', () => {
   }
 });
 
+describe('ChessBoardComponent E-Ink-Nachbild-Löscher', () => {
+  it('blitzt bei einer anderen Stellung und beim Drehen, nicht bei einem Zug', fakeAsync(() => {
+    setEinkActive(true);
+    const host = document.createElement('div');
+    host.style.width = '320px';
+    document.body.appendChild(host);
+    const inner = document.createElement('div');
+    host.appendChild(inner);
+    const veils = () => document.querySelectorAll('.eink-flash').length;
+    try {
+      const c: any = new ChessBoardComponent();
+      c.boardEl = { nativeElement: inner };
+      const start = c.fen;
+      c.ngAfterViewInit();
+      const change = (prev: unknown, cur: unknown) => ({ previousValue: prev, currentValue: cur, firstChange: false, isFirstChange: () => false });
+      c.fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+      c.ngOnChanges({ fen: change(start, c.fen) });
+      expect(veils()).toBe(0);
+      const prev = c.fen;
+      c.fen = '8/8/4k3/8/8/4K3/4P3/8 w - - 0 1';
+      c.ngOnChanges({ fen: change(prev, c.fen) });
+      expect(veils()).toBe(1);
+      tick(1000);
+      c.flipped = true;
+      c.ngOnChanges({ flipped: change(false, true) });
+      expect(veils()).toBe(1);
+      tick(1000);
+      expect(veils()).toBe(0);
+      c.ngOnDestroy();
+    } finally {
+      setEinkActive(false);
+      host.remove();
+    }
+  }));
+});
+
 describe('ChessBoardComponent Pfeile des Aufrufers (bester Zug)', () => {
   it('legt die Pfeile als autoShapes an, beim Ändern neu, und lässt selbst gezogene Pfeile in Ruhe', () => {
     const host = document.createElement('div');

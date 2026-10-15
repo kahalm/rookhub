@@ -1,7 +1,7 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { MAT_RIPPLE_GLOBAL_OPTIONS, MATERIAL_ANIMATIONS } from '@angular/material/core';
 import {
-  EINK_CLASS, EINK_MEDIA_QUERY, EINK_STORAGE_KEY, applyEinkEarly, boardAnimation, isEinkActive, readEinkChoice,
+  EINK_CLASS, EINK_FLASH_PHASE_MS, EINK_MEDIA_QUERY, EINK_STORAGE_KEY, applyEinkEarly, flashEinkRefresh, isBoardSwitch, boardAnimation, isEinkActive, readEinkChoice,
   resolveEink, setEinkActive,
 } from './eink';
 import { EinkService, provideEinkMaterial } from './eink.service';
@@ -125,4 +125,35 @@ describe('E-Ink-Modus', () => {
       expect(box.scrollTop).toBe(300);
     } finally { box.remove(); }
   });
+});
+
+describe('E-Ink: Nachbild-Löscher beim Brettwechsel', () => {
+  afterEach(() => { setEinkActive(false); document.querySelectorAll('.eink-flash').forEach(e => e.remove()); });
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+  it('ein Zug (auch Rochade) ist kein Brettwechsel, eine andere Stellung schon', () => {
+    expect(isBoardSwitch(START, 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1')).toBeFalse();
+    expect(isBoardSwitch('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1', 'r3k2r/8/8/8/8/8/8/2KR3R b kq - 1 1')).toBeFalse();
+    expect(isBoardSwitch(START, '8/8/4k3/8/8/4K3/4P3/8 w - - 0 1')).toBeTrue();
+    expect(isBoardSwitch(undefined, START)).toBeFalse();
+  });
+
+  it('blitzt nur im E-Ink-Modus: erst schwarz, dann weiß, dann weg — ohne Mausereignisse', fakeAsync(() => {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:100px;height:100px';
+    document.body.appendChild(el);
+    try {
+      flashEinkRefresh(el);
+      expect(document.querySelector('.eink-flash')).toBeNull();
+      setEinkActive(true);
+      flashEinkRefresh(el);
+      const veil = document.querySelector<HTMLElement>('.eink-flash')!;
+      expect(veil.style.background).toContain('rgb(0, 0, 0)');
+      expect(veil.style.pointerEvents).toBe('none');
+      tick(EINK_FLASH_PHASE_MS);
+      expect(veil.style.background).toContain('rgb(255, 255, 255)');
+      tick(EINK_FLASH_PHASE_MS);
+      expect(document.querySelector('.eink-flash')).toBeNull();
+    } finally { el.remove(); }
+  }));
 });

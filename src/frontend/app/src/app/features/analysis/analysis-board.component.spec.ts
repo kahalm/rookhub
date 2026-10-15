@@ -1,4 +1,5 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { setEinkActive } from '../../core/eink';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -78,4 +79,34 @@ describe('AnalysisBoardComponent', () => {
       host.remove();
     }
   });
+
+  it('E-Ink: neue Stellung → schwarz/weiß über das Brett (Nachbilder), ein Zug nicht', fakeAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [AnalysisBoardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    });
+    const fixture = TestBed.createComponent(AnalysisBoardComponent);
+    fixture.nativeElement.style.cssText = 'display:block;width:320px';
+    document.body.appendChild(fixture.nativeElement);
+    setEinkActive(true);
+    try {
+      fixture.componentRef.setInput('fen', 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+      fixture.detectChanges();
+      fixture.componentRef.setInput('fen', 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1');
+      fixture.detectChanges();
+      expect(document.querySelectorAll('.eink-flash').length).toBe(0);
+      fixture.componentRef.setInput('fen', '8/8/4k3/8/8/4K3/4P3/8 w - - 0 1');
+      fixture.detectChanges();
+      expect(document.querySelectorAll('.eink-flash').length).toBe(1);
+      tick(1000);
+      expect(document.querySelectorAll('.eink-flash').length).toBe(0);
+    } finally {
+      setEinkActive(false);
+      fixture.destroy();
+      fixture.nativeElement.remove();
+    }
+  }));
 });

@@ -85,11 +85,25 @@ describe('_eink.scss (E-Ink-Modus)', () => {
     const board = getComputedStyle(host.querySelector('cg-board')!);
     expect(parseColor(board.backgroundColor)).toEqual(parseColor('rgb(255, 255, 255)'));
     expect(board.backgroundImage).toContain('a3a3a3');
+    // Keine Feldkanten im Kachelmuster: sie wurden am Kachelrand halbiert (ungleich dicke Linien).
+    expect(board.backgroundImage).not.toContain('stroke');
     const last = getComputedStyle(host.querySelector('square.last-move')!);
     expect(last.backgroundColor).toBe('rgba(0, 0, 0, 0)');
     expect(last.boxShadow).toContain('inset');
     expect(getComputedStyle(host.querySelector('square.selected')!).boxShadow).toContain('inset');
     expect(getComputedStyle(host.querySelector('.cg-shapes')!).opacity).toBe('1');
+  });
+
+  it('E-Book-Leser: Diagrammzonen ohne Dauerrahmen, nur die aktive schwarz umrandet', () => {
+    const host = mount(`<div class="pv-page" style="position:relative">
+      <button class="pv-zone" style="border:2px dashed rgb(103, 80, 164)"></button>
+      <button class="pv-zone pv-zone--active"></button></div>`);
+    setEinkActive(true);
+    const zones = host.querySelectorAll('.pv-zone');
+    expect(getComputedStyle(zones[0]).borderTopColor).toBe('rgba(0, 0, 0, 0)');
+    const active = getComputedStyle(zones[1]);
+    expect(active.borderTopStyle).toBe('solid');
+    expect(parseColor(active.borderTopColor)).toEqual(parseColor('rgb(0, 0, 0)'));
   });
 
   @Component({ standalone: true, imports: [MatProgressSpinnerModule], template: '<mat-spinner diameter="40" />' })

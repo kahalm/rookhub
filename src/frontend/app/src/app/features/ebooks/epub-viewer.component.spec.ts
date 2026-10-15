@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { EpubViewerComponent, epubImagePath } from './epub-viewer.component';
+import { setEinkActive } from '../../core/eink';
 
 const BASE = 'http://rh.test/api/ebooks/9/epub/tok/';
 
@@ -151,6 +152,23 @@ describe('EpubViewerComponent', () => {
     c.imagePick.subscribe(id => picked.push(id));
     a.dispatchEvent(new MouseEvent('dblclick'));
     expect(picked).toEqual([21]);
+  });
+
+  it('E-Ink-Modus: Kapitel-Dokument bekommt die Klasse eink und die Regel ohne Dauerrahmen', async () => {
+    const c = make(BASE);
+    await c.openBook(jasmine.createSpy('ePub').and.returnValue(fakeBook(() => Promise.resolve())) as never);
+    c.images = [{ id: 21, chapter: 4, ref: 'OEBPS/Images/d1.png' }];
+    const mark = (doc: Document) => (c as unknown as { markImages(x: { document: Document }): void }).markImages({ document: doc });
+    setEinkActive(true);
+    try {
+      const doc = document.implementation.createHTMLDocument('ch');
+      mark(doc);
+      expect(doc.documentElement.classList).toContain('eink');
+      expect(doc.getElementById('rh-diagram-style')!.textContent).toContain('html.eink .rh-diagram:not(.rh-diagram--active)');
+    } finally { setEinkActive(false); }
+    const plain = document.implementation.createHTMLDocument('ch2');
+    mark(plain);
+    expect(plain.documentElement.classList).not.toContain('eink');
   });
 
   it('Doppelklick auf ein Bild OHNE erkanntes Diagramm oder auf Text meldet die Stelle (Bildpfad + Kapitel), erkannte nicht', async () => {
