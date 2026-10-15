@@ -6,7 +6,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { Router, RouterLink, provideRouter } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { NavbarComponent } from './navbar.component';
+import { NAV_DOCKED_CLASS, NAV_WIDTH_VAR, NavbarComponent } from './navbar.component';
 import { AuthService } from '../../core/auth.service';
 import { CourseService } from '../../features/courses/course.service';
 import { CatalogService } from '../../features/catalog/catalog.service';
@@ -437,3 +437,74 @@ describe('NavbarComponent Breitbild-Stufe (u1-rk-navbar-raender)', () => {
   });
 });
 
+
+/** EINE Leiste (0.785.x, E-Book-Leser kompakt): body.nav-docked legt die Kopfleiste oben rechts auf die Leiste der Seite. */
+describe('NavbarComponent angedockt (body.nav-docked)', () => {
+  function render(loggedIn: boolean) {
+    TestBed.configureTestingModule({
+      imports: [NavbarComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {
+          currentUser$: of(loggedIn ? { username: 'u' } : null), isLoggedIn: loggedIn, isAdmin: false, logout: () => {}, has: () => false,
+        } },
+        { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
+        { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
+        { provide: MenuService, useValue: { visible$: of(new Set<string>(['puzzles', 'analysis'])) } },
+        { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
+        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
+        { provide: LocaleService, useValue: { languages: [], current: 'en', use: () => {} } },
+        { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
+        provideRouter([]),
+      ],
+    });
+    const fixture = TestBed.createComponent(NavbarComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+  afterEach(() => document.body.classList.remove(NAV_DOCKED_CLASS));
+
+  it('ohne Klasse unverändert: im Fluss, volle Höhe, Logo sichtbar', () => {
+    const el = render(true).nativeElement as HTMLElement;
+    expect(getComputedStyle(el).position).toBe('static');
+    expect(getComputedStyle(el.querySelector('.logo')!).display).not.toBe('none');
+  });
+
+  it('angedockt: fixed oben rechts, 48 px hoch, ohne Logo und Hintergrund — Glocke und ☰ bleiben dieselben Knöpfe', async () => {
+    document.body.classList.add(NAV_DOCKED_CLASS);
+    const fixture = render(true);
+    const el = fixture.nativeElement as HTMLElement;
+    const host = getComputedStyle(el);
+    expect(host.position).toBe('fixed');
+    expect(host.top).toBe('0px');
+    expect(host.right).toBe('0px');
+    expect(Number(host.zIndex)).toBeLessThan(900);   // unter dem Handy-Vollbild-Brett und den Overlays
+    const bar = el.querySelector('mat-toolbar') as HTMLElement;
+    expect(bar.getBoundingClientRect().height).toBe(48);
+    expect(getComputedStyle(bar).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(el.querySelector('.logo')!).display).toBe('none');
+    expect(el.querySelector('.notif-bell')).not.toBeNull();
+    expect(el.querySelector('.msg-mail')).not.toBeNull();
+    // Schmal: nur die Knöpfe, nicht die ganze Fensterbreite.
+    expect(el.getBoundingClientRect().width).toBeLessThan(200);
+    // Breite für die andockende Seite.
+    const want = `${Math.ceil(el.getBoundingClientRect().width)}px`;
+    for (let i = 0; i < 20 && document.documentElement.style.getPropertyValue(NAV_WIDTH_VAR) !== want; i++) {
+      await new Promise(r => requestAnimationFrame(() => r(null)));
+    }
+    expect(document.documentElement.style.getPropertyValue(NAV_WIDTH_VAR)).toBe(`${Math.ceil(el.getBoundingClientRect().width)}px`);
+    fixture.destroy();
+    expect(document.documentElement.style.getPropertyValue(NAV_WIDTH_VAR)).toBe('');
+  });
+
+  it('angedockt als Gast: Text-Links Puzzles/Analyse ausgeblendet (stehen im ☰), Anmelden + ☰ bleiben', () => {
+    document.body.classList.add(NAV_DOCKED_CLASS);
+    const el = render(false).nativeElement as HTMLElement;
+    const anon = Array.from(el.querySelectorAll<HTMLElement>('.nav-anon'));
+    expect(anon.length).toBe(2);
+    expect(anon.every(a => getComputedStyle(a).display === 'none')).toBeTrue();
+    expect(getComputedStyle(el.querySelector('.nav-login')!).display).not.toBe('none');
+    expect(el.querySelector('.anon-menu')).not.toBeNull();
+  });
+});

@@ -10,6 +10,9 @@
 @media (max-width: 599.98px) {
   .rd-page { height: calc(100dvh - var(--rh-navbar-height, 56px)); }
 }
+/* EINE Leiste (0.785.x, Nutzerwunsch „die Leiste oben ist viel zu breit“): ist das Buch geladen, dockt die App-Kopfleiste
+   oben rechts auf der Leser-Leiste an (body.nav-docked, Regeln in navbar.component) — die Seite ist dann fensterhoch. */
+:host-context(body.nav-docked) .rd-page { height: 100dvh; }
 
 /* Fehler-/Leerzustände in der Seitenbreite statt am Rand (Ultrawide: Text bei x 30, Knopf bei x 3 400). */
 .rd-pad { padding: 1rem; max-width: min(var(--page-max-width, 1240px), 96vw); width: 100%; margin: 0 auto; box-sizing: border-box; }
@@ -21,6 +24,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  min-height: 48px;
+  box-sizing: border-box;
   padding: 4px 8px;
   border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-on-surface) 12%, transparent);
   background: var(--mat-sys-surface);
@@ -66,8 +71,8 @@
 /* Buch links, Brett rechts (0.766.0). Die Leiste ist so breit wie ein gut lesbares Brett, das Buch nimmt den Rest. */
 .rd-panel {
   flex: 0 0 var(--rd-panel-w, clamp(300px, 32vw, 460px));
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 8px 12px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 4px 8px 8px;
   background: var(--mat-sys-surface);
   overflow-y: auto;
 }
@@ -85,17 +90,18 @@
 }
 :host-context(body.rd-resizing) .rd-viewer { pointer-events: none; }
 .rd-panel-head { display: flex; align-items: center; gap: 2px; }
-.rd-panel-pos { flex: 1 1 auto; text-align: center; font-variant-numeric: tabular-nums; font-weight: 500; }
+.rd-panel-pos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.2;
+  font-variant-numeric: tabular-nums; }
+.rd-panel-no { font-weight: 500; }
+.rd-side { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+  font-size: .78rem; color: var(--mat-sys-on-surface-variant); }
+.rd-sol-icon { margin-left: 4px; vertical-align: -3px; font-size: 15px; width: 15px; height: 15px; cursor: help; }
 .rd-panel-close { display: none; }
 .rd-caption { margin: 0; font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.rd-side { margin: 0; font-size: .85rem; opacity: .75; }
 .rd-eval { font-variant-numeric: tabular-nums; }
 .rd-sol-note { display: flex; align-items: center; gap: 4px; margin: 0; font-size: .82rem; opacity: .8;
   mat-icon { font-size: 16px; width: 16px; height: 16px; } }
 .rd-sol-note--warn { color: var(--rh-warn); opacity: 1; }
-.rd-report { align-self: flex-start; opacity: .8; }
-.rd-report--on { color: var(--rh-warn); opacity: 1; }
-.rd-report-count { margin-left: 4px; font-variant-numeric: tabular-nums; }
 .rd-panel-empty { text-align: center; padding: 2rem 1rem; }
 .rd-panel-empty mat-icon { font-size: 36px; width: 36px; height: 36px; opacity: .5; }
 
@@ -116,6 +122,8 @@
   }
   .rd-body--panel-open .rd-panel { display: flex; }
   .rd-panel-close { display: inline-flex; }
+  /* Sechs Knöpfe im Kopf lassen der Mitte ≈ 96 px — Zugrecht/Bewertung dürfen dort umbrechen statt abzubrechen. */
+  .rd-side { white-space: normal; }
   .rd-diag-btn { display: inline-flex; }
 }
 
@@ -133,9 +141,16 @@
   .rd-panel { flex: 0 0 var(--rd-panel-w, clamp(460px, 24vw, 720px)); }
 }
 
+/* Ab 600 px hält die Leiste rechts die Breite der angedockten Kopfleiste frei (gemessen: --rh-nav-w). */
+@media (min-width: 600px) {
+  :host-context(body.nav-docked) .rd-toolbar { padding-right: calc(8px + var(--rh-nav-w, 96px)); }
+}
+
 @media (max-width: 599.98px) {
   .rd-toolbar { flex-wrap: wrap; }
   .rd-title { order: -1; flex-basis: calc(100% - 96px); }
+  /* Angedockt: die Kopfleiste (Vollbild/Glocke/☰) steht rechts in der Titelzeile — der Titel lässt ihr die Breite. */
+  :host-context(body.nav-docked) .rd-title { flex-basis: calc(100% - 96px - var(--rh-nav-w, 96px)); }
   .rd-back { order: -2; }
   /* ⋮ in die Titelzeile (dort sind 96 px für Zurück + ⋮ frei) — sonst rutscht es mit dem Diagramm-Knopf in eine dritte Zeile. */
   .rd-more { order: -1; }

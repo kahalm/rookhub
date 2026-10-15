@@ -105,11 +105,18 @@
             <div class="rd-panel-head">
               <button mat-icon-button class="rd-jump" (click)="jumpDiagram('first')" [appIconLabel]="'ebooks.reader.firstDiagram' | translate"><mat-icon>first_page</mat-icon></button>
               <button mat-icon-button (click)="step(-1)" [appIconLabel]="'ebooks.reader.prevDiagram' | translate"><mat-icon>chevron_left</mat-icon></button>
+              <!-- 0.785.x: Seite am Zug, Bewertung und Herkunft der Lösung als zweite Zeile IM Kopf statt zwei eigener Zeilen;
+                   Herkunft als Symbol (Text in Tooltip + aria-label). „Fraglich“ bleibt als sichtbare Warnzeile. -->
               <span class="rd-panel-pos">
+                <span class="rd-panel-no">
+                  @if (picked(); as d) {
+                    {{ d.label ? ('ebooks.reader.diagramNo' | translate: { n: d.label }) : d.imageRef ? ('ebooks.reader.diagramNo' | translate: { n: pickedIndex }) : ('ebooks.reader.diagramAt' | translate: { page: d.page }) }}
+                  } @else {
+                    {{ 'ebooks.reader.diagramCount' | translate: { n: diagrams().length } }}
+                  }
+                </span>
                 @if (picked(); as d) {
-                  {{ d.label ? ('ebooks.reader.diagramNo' | translate: { n: d.label }) : d.imageRef ? ('ebooks.reader.diagramNo' | translate: { n: pickedIndex }) : ('ebooks.reader.diagramAt' | translate: { page: d.page }) }}
-                } @else {
-                  {{ 'ebooks.reader.diagramCount' | translate: { n: diagrams().length } }}
+                  <span class="rd-side">{{ sideKey(d) | translate }}@if (evalText(d); as ev) { · <span class="rd-eval" [title]="'ebooks.reader.evalTitle' | translate">{{ ev }}</span> }@if (solutionNoteKey(d); as note) {@if (d.solutionCheck !== 'doubtful') {<mat-icon class="rd-sol-icon" role="img" tabindex="0" [attr.aria-label]="note | translate" [matTooltip]="note | translate">{{ solutionNoteIcon(d) }}</mat-icon>}}</span>
                 }
               </span>
               <button mat-icon-button (click)="step(1)" [appIconLabel]="'ebooks.reader.nextDiagram' | translate"><mat-icon>chevron_right</mat-icon></button>
@@ -118,21 +125,11 @@
             </div>
             @if (picked(); as d) {
               @if (d.caption) { <p class="rd-caption" [title]="d.caption">{{ d.caption }}</p> }
-              <p class="rd-side">{{ sideKey(d) | translate }}@if (evalText(d); as ev) { · <span class="rd-eval" [title]="'ebooks.reader.evalTitle' | translate">{{ ev }}</span> }</p>
-              @if (solutionNoteKey(d); as note) {
-                <p class="rd-sol-note" [class.rd-sol-note--warn]="d.solutionCheck === 'doubtful'">
-                  <mat-icon>{{ d.solutionCheck === 'doubtful' ? 'warning_amber' : d.solutionCheck === 'engine' ? 'memory' : 'verified' }}</mat-icon>{{ note | translate }}
-                </p>
+              @if (d.solutionCheck === 'doubtful' && solutionNoteKey(d); as note) {
+                <p class="rd-sol-note rd-sol-note--warn"><mat-icon>warning_amber</mat-icon>{{ note | translate }}</p>
               }
-              <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)" />
-              @if (loggedIn) {
-              <button mat-button type="button" class="rd-report" [class.rd-report--on]="d.reportedByMe" (click)="toggleReport(d)"
-                      [attr.aria-pressed]="d.reportedByMe">
-                <mat-icon>{{ d.reportedByMe ? 'flag' : 'outlined_flag' }}</mat-icon>
-                {{ (d.reportedByMe ? 'ebooks.reader.reportedUndo' : 'ebooks.reader.report') | translate }}
-                @if (d.reportCount > 0) { <span class="rd-report-count">({{ d.reportCount }})</span> }
-              </button>
-              }
+              <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)"
+                               [reportable]="loggedIn" (report)="toggleReport(d)" />
             } @else {
               <div class="empty-state rd-panel-empty">
                 <mat-icon>touch_app</mat-icon>

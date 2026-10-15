@@ -30,6 +30,22 @@ import {
 } from '../fullscreen/fullscreen.util';
 import { trackNavEdge } from './nav-edge';
 
+/** Body-Klasse: die Seite hat eine eigene Werkzeugleiste, die Kopfleiste dockt oben rechts darauf an (0.785.x). */
+export const NAV_DOCKED_CLASS = 'nav-docked';
+/** Breite der Kopfleiste als CSS-Variable am Wurzelelement — die andockende Seite hält sie frei. */
+export const NAV_WIDTH_VAR = '--rh-nav-w';
+
+/** Misst die Breite der Kopfleiste (ResizeObserver) und legt sie als {@link NAV_WIDTH_VAR} ab; ausgeblendet = 0 px. */
+export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
+  if (typeof ResizeObserver === 'undefined') return;
+  const root = host.ownerDocument.documentElement;
+  const sync = () => root.style.setProperty(NAV_WIDTH_VAR, `${Math.ceil(host.getBoundingClientRect().width)}px`);
+  const ro = new ResizeObserver(sync);
+  ro.observe(host);
+  sync();
+  destroyRef.onDestroy(() => { ro.disconnect(); root.style.removeProperty(NAV_WIDTH_VAR); });
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-navbar',
@@ -343,6 +359,21 @@ import { trackNavEdge } from './nav-edge';
     @media (min-width: 2400px) {
       mat-toolbar { padding-inline: max(16px, calc((100% - var(--nav-edge, var(--page-max-width-wide, 1880px))) / 2 + 16px)); }
     }
+    :host { display: block; }
+    /* EINE Leiste (0.785.x, E-Book-Leser kompakt, DESIGN 4.5): Seiten mit eigener Werkzeugleiste setzen body.nav-docked
+       (NAV_DOCKED_CLASS) — die Kopfleiste verliert Logo und Hintergrund und legt sich als 48 px hoher Block oben rechts
+       AUF die Leiste der Seite (Glocke, ☰, Vollbild bleiben dieselben Knöpfe und Menüs). Die Seite hält rechts so viel
+       frei, wie die Leiste breit ist (--rh-nav-w, gemessen in ngOnInit). z-index unter den CDK-Overlays (1000) und unter
+       dem Handy-Vollbild-Brett des Lesers (900), das sie verdecken darf (es hat einen eigenen Schließen-Knopf).
+       Spezifischer als die 2400-px-Regel oben: keine Flucht-Polsterung, die Leiste steht wie die der Seite am Rand. */
+    :host-context(body.nav-docked) { position: fixed; top: 0; right: 0; z-index: 800; width: auto; }
+    :host-context(body.nav-docked) mat-toolbar {
+      --mat-toolbar-standard-height: 48px; --mat-toolbar-mobile-height: 48px;
+      width: auto; height: 48px; min-height: 48px; padding: 0 4px; gap: 0; background: transparent; box-shadow: none;
+    }
+    :host-context(body.nav-docked) .logo,
+    :host-context(body.nav-docked) .spacer,
+    :host-context(body.nav-docked) .nav-anon { display: none; }
   `]
 })
 export class NavbarComponent implements OnInit {
@@ -451,6 +482,9 @@ export class NavbarComponent implements OnInit {
 
     // b1-rk-kopfleiste-ultrawide-flucht: ab 2400 px fluchtet der Kopfinhalt mit der Inhaltskante der Seite.
     if (this.host) trackNavEdge(this.host.nativeElement, this.router, this.zone, this.destroyRef);
+
+    // EINE Leiste (body.nav-docked): die Seite hält rechts genau die Breite der angedockten Kopfleiste frei.
+    if (this.host) trackNavWidth(this.host.nativeElement, this.destroyRef);
 
     // Admin-konfigurierte Menü-Sichtbarkeit live übernehmen.
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(set => this.visible = set);

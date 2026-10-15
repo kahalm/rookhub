@@ -1,44 +1,47 @@
-:host { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+:host { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
-/* Modus-Leiste: fünf kompakte Knöpfe, umbrechend statt über den Rand. */
-.eb-modes { display: flex; flex-wrap: wrap; gap: 2px; }
-.eb-mode { min-width: 0; padding: 0 8px; font-size: .82rem; opacity: .8;
-  mat-icon { font-size: 18px; width: 18px; height: 18px; margin-right: 4px; } }
-.eb-mode--on { opacity: 1; color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+/* Brett-Leiste kompakt (0.785.x): EINE Zeile — fünf Modus-Symbole links, ⚙ und ⋮ rechts. Ab 600 px 40-px-Knöpfe
+   (7 × 40 = 280 px passen in die schmalste Leiste von 300 px), am Handy 44 px (DESIGN 7, Tippziele). */
+.eb-bar { display: flex; align-items: center; gap: 0; min-width: 0; }
+.eb-modes { display: flex; gap: 0; }
+.eb-bar-spacer { flex: 1 1 auto; }
+.eb-mode { color: var(--mat-sys-on-surface-variant); }
+.eb-mode--on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); }
+.eb-menu-label { padding: 8px 16px 4px; font-size: .75rem; text-transform: uppercase; color: var(--mat-sys-on-surface-variant); }
 
-/* c2-eb-board-leiste-laptop-falz: ab 900 px ist das Brett höchstens so groß, dass unter ihm noch die Bedienzeile des
-   gewählten Modus („Maia laden“, Umschalter, Aktionszeile) sichtbar bleibt — 330 px ≈ Leser-Leiste + Panel-Kopf +
-   Zugseite + Modus-Leiste + eine Bedienzeile. Auf hohen Fenstern greift 100 % wie bisher; nie schmaler als 280 px. */
-.eb-board { width: clamp(min(280px, 100%), calc(100dvh - var(--rh-navbar-height, 64px) - 330px), 100%); margin-inline: auto; }
+/* c2-eb-board-leiste-laptop-falz, 0.785.x: ab 900 px ist das Brett höchstens so groß, dass darunter noch die Statuszeile
+   und eine Bedienzeile sichtbar bleiben — 220 px ≈ EINE Leiste oben (48) + Panel-Kopf (40) + Brett-Leiste (40) +
+   Statuszeile (40) + Abstände; vorher 64 + 330 px. Auf hohen Fenstern greift 100 %; nie schmaler als 280 px. */
+.eb-board { width: clamp(min(280px, 100%), calc(100dvh - 220px), 100%); margin-inline: auto; }
 .eb-note { margin: 0; font-size: .85rem; opacity: .75; }
 .eb-note--warn { color: var(--rh-warn); opacity: 1; }
-.eb-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.eb-options mat-button-toggle-group { font-size: .82rem; }
 .eb-busy { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; opacity: .85; }
 .eb-moves { display: flex; align-items: center; gap: 2px; }
 .eb-moves-text { flex: 1 1 auto; min-width: 0; margin: 0; font-size: .9rem; overflow-wrap: anywhere; }
 .eb-solve {
-  display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px;
-  background: color-mix(in srgb, var(--rh-info) 14%, transparent);
-  span { flex: 1 1 auto; }
+  display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 0 0 8px; border-radius: 8px; box-sizing: border-box;
+  font-size: .9rem; background: color-mix(in srgb, var(--rh-info) 14%, transparent);
+  .eb-solve-text { flex: 1 1 auto; min-width: 0; }
+  > mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
 }
+.eb-solve--idle { background: transparent; color: var(--mat-sys-on-surface-variant); }
+.eb-sol-toggle, .eb-again { flex: none; margin-left: auto; }
+.eb-again + .eb-sol-toggle { margin-left: 0; }
+.eb-maia-state { color: var(--mat-sys-on-surface-variant); margin-right: 6px; }
 .eb-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
 .eb-solve--failed { background: color-mix(in srgb, var(--rh-warn) 16%, transparent); mat-icon { color: var(--rh-warn); } }
-.eb-sol-toggle { align-self: flex-start; }
 .eb-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
 .eb-solution-line { margin: 0 0 4px; font-weight: 500; }
 .eb-solution-text { margin: 0; font-size: .85rem; opacity: .85; white-space: pre-line; max-height: 14em; overflow-y: auto; }
 .eb-maia-load { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.eb-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.eb-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+.eb-on { color: var(--mat-sys-primary); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Handy (c2-eb-board-modus-leiste-maia-allein): alle fünf Modi in EINER Zeile — Symbol über dem Wort, gleich breite
-   Spalten; sonst rutscht in de „Maia“ allein in eine zweite Zeile und kostet 40 px über dem Brett. */
+/* Handy (c2-eb-board-modus-leiste-maia-allein, 0.785.x): alle Symbole in EINER Zeile mit 44-px-Tippzielen
+   (7 × 44 = 308 px ≤ 336 px Inhaltsbreite bei 360 px). */
 @media (max-width: 599.98px) {
-  .eb-modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .eb-mode { flex-direction: column; justify-content: center; height: auto; min-height: 44px; padding: 4px 0; font-size: .72rem; line-height: 1.1;
-    mat-icon { margin: 0 0 2px; }
-    span { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+  .eb-bar .mat-mdc-icon-button { --mat-icon-button-state-layer-size: 44px; width: 44px; height: 44px; padding: 10px; }
+  .eb-sol-toggle { --mat-icon-button-state-layer-size: 44px; width: 44px; height: 44px; padding: 10px; }
 }
 
 /* Schmal (Brett als Vollbild, 0.780.2): Brett so breit wie möglich, aber Platz für Modi und Knöpfe darunter lassen. */

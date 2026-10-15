@@ -5304,7 +5304,9 @@
       "maiaThinking": "Maia gondolkodik …",
       "maiaYourMove": "Te következel",
       "engineOn": "Motor bekapcsolása",
-      "engineOff": "Motor kikapcsolása"
+      "engineOff": "Motor kikapcsolása",
+      "settings": "Beállítások",
+      "maiaStrength": "Maia erőssége"
     },
     "title": "E-könyvek",
     "intro": "Sakk-könyvek böngészőben olvasásra vagy letöltésre; minden könyv azokkal a csoportokkal van megosztva, amelyeket a feltöltője választott.",

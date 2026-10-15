@@ -5304,7 +5304,9 @@
       "maiaThinking": "Maia razmišlja …",
       "maiaYourMove": "Ti si na potezu",
       "engineOn": "Uključi engine",
-      "engineOff": "Isključi engine"
+      "engineOff": "Isključi engine",
+      "settings": "Mogućnosti",
+      "maiaStrength": "Jačina Maie"
     },
     "title": "E-knjige",
     "intro": "Šahovske knjige za čitanje u pregledniku ili preuzimanje; svaka je knjiga podijeljena s grupama koje je odabrao onaj tko ju je prenio.",

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.786.0", date: "2026-10-15", changes: [
+    { en: "E-book reader with more room: only one bar at the top (the reader bar now carries the bell and the ☰ menu, about 70 px more for the book); the board panel is tidier — modes as a compact icon row, side to move, evaluation and solution source in the board header, solve and Maia options behind ⚙, extra actions behind ⋮, one status line below the board; the board can grow larger. Solving now starts in “Training” style by default (your own choice is remembered).",
+      de: "E-Book-Leser mit mehr Platz: oben nur noch eine Leiste (die Leser-Leiste trägt jetzt Glocke und ☰-Menü, rund 70 px mehr fürs Buch); die Brett-Leiste ist aufgeräumt — Modi als schlanke Symbolzeile, Seite am Zug, Bewertung und Lösungsherkunft im Brett-Kopf, Lösen- und Maia-Optionen hinter ⚙, weitere Aktionen hinter ⋮, eine Statuszeile unter dem Brett; das Brett darf größer werden. Lösen startet jetzt standardmäßig im Stil „Training“ (eine eigene Wahl wird gemerkt)." },
+  ] },
   { version: "0.785.0", date: "2026-10-14", changes: [
     { en: "E-books: „Create a course from the diagrams“ in the reader’s ⋮ menu turns a book’s recognised diagrams into a personal course – diagrams with a solution (from the book or from Stockfish) become tasks, the rest are shown as positions in book order.", de: "E-Books: „Als Kurs anlegen“ im ⋮-Menü des Lesers macht aus den erkannten Diagrammen eines Buchs einen persönlichen Kurs – Diagramme mit Lösung (aus dem Buch oder von Stockfish) werden Aufgaben, die übrigen erscheinen als Stellungen in der Reihenfolge des Buchs." },
   ] },

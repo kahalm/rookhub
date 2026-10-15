@@ -1,11 +1,71 @@
-<div class="eb-modes" role="group" [attr.aria-label]="'ebooks.board.modes' | translate">
-  @for (m of modes; track m) {
-    <button mat-button type="button" class="eb-mode" [class.eb-mode--on]="mode() === m" [attr.aria-pressed]="mode() === m"
-            [disabled]="m !== 'view' && !legal()" (click)="setMode(m)" [title]="('ebooks.board.modeHint.' + m) | translate">
-      <mat-icon>{{ modeIcon(m) }}</mat-icon><span>{{ ('ebooks.board.mode.' + m) | translate }}</span>
+<!-- Brett-Leiste kompakt (0.785.x): EINE Zeile über dem Brett — fünf Modi als Symbole (Name + Erklärung als Tooltip und
+     aria-label, gewählter Modus getönt), rechts ⚙ für die Optionen des Modus (Lösen: Art + Quelle; Maia: Stärke) und ⋮
+     (Analysieren, Engine, Drehen, FEN, Melden). -->
+<div class="eb-bar">
+  <div class="eb-modes" role="group" [attr.aria-label]="'ebooks.board.modes' | translate">
+    @for (m of modes; track m) {
+      <button mat-icon-button type="button" class="eb-mode" [class.eb-mode--on]="mode() === m" [attr.aria-pressed]="mode() === m"
+              [disabled]="m !== 'view' && !legal()" (click)="setMode(m)"
+              [appIconLabel]="(('ebooks.board.mode.' + m) | translate) + ': ' + (('ebooks.board.modeHint.' + m) | translate)">
+        <mat-icon>{{ modeIcon(m) }}</mat-icon>
+      </button>
+    }
+  </div>
+  <span class="eb-bar-spacer"></span>
+  @if (mode() === 'solve' || (mode() === 'maia' && maia.status() === 'ready')) {
+    <button mat-icon-button type="button" class="eb-settings" [matMenuTriggerFor]="settingsMenu" [appIconLabel]="'ebooks.board.settings' | translate">
+      <mat-icon>tune</mat-icon>
     </button>
   }
+  <button mat-icon-button type="button" class="eb-more" [matMenuTriggerFor]="boardMenu" [appIconLabel]="'common.moreActions' | translate">
+    <mat-icon>more_vert</mat-icon>
+  </button>
 </div>
+
+<mat-menu #settingsMenu="matMenu" class="eb-settings-menu">
+  @if (mode() === 'solve') {
+    <div class="eb-menu-label">{{ 'ebooks.board.solveStyle' | translate }}</div>
+    @for (s of solveStyles; track s) {
+      <button mat-menu-item role="menuitemradio" [attr.aria-checked]="solveStyle() === s" (click)="setSolveStyle(s)">
+        <mat-icon>{{ solveStyle() === s ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+        <span>{{ (s === 'easy' ? 'ebooks.board.solveEasy' : 'ebooks.board.solveTraining') | translate }}</span>
+      </button>
+    }
+    <div class="eb-menu-label">{{ 'ebooks.board.solveSource' | translate }}</div>
+    <button mat-menu-item role="menuitemradio" [attr.aria-checked]="solveSource() === 'stored'" [disabled]="!hasStoredSolution" (click)="setSolveSource('stored')">
+      <mat-icon>{{ solveSource() === 'stored' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+      <span>{{ (diagram.solutionSource === 'engine' ? 'ebooks.board.sourceStoredEngine' : 'ebooks.board.sourceBook') | translate }}</span>
+    </button>
+    <button mat-menu-item role="menuitemradio" [attr.aria-checked]="solveSource() === 'engine'" (click)="setSolveSource('engine')">
+      <mat-icon>{{ solveSource() === 'engine' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+      <span>{{ 'ebooks.board.sourceStockfish' | translate }}</span>
+    </button>
+  } @else {
+    <div class="eb-menu-label">{{ 'ebooks.board.maiaStrength' | translate }}</div>
+    @for (e of maiaEloOptions; track e) {
+      <button mat-menu-item role="menuitemradio" [attr.aria-checked]="maiaElo() === e" (click)="setMaiaElo(e)">
+        <mat-icon>{{ maiaElo() === e ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon><span>{{ e }}</span>
+      </button>
+    }
+  }
+</mat-menu>
+
+<mat-menu #boardMenu="matMenu">
+  <a mat-menu-item routerLink="/analysis" [queryParams]="analysisParams()">
+    <mat-icon>biotech</mat-icon><span>{{ 'ebooks.reader.analyse' | translate }}</span>
+  </a>
+  <button mat-menu-item class="eb-engine-item" (click)="toggleEngine()" [disabled]="!legal()" role="menuitemcheckbox" [attr.aria-checked]="!!engine()">
+    <mat-icon [class.eb-on]="!!engine()">memory</mat-icon><span>{{ (engine() ? 'ebooks.board.engineOff' : 'ebooks.board.engineOn') | translate }}</span>
+  </button>
+  <button mat-menu-item (click)="flipped.set(!flipped())"><mat-icon>swap_vert</mat-icon><span>{{ 'ebooks.reader.flip' | translate }}</span></button>
+  <button mat-menu-item (click)="copyFen()"><mat-icon>content_copy</mat-icon><span>{{ 'ebooks.reader.copyFen' | translate }}</span></button>
+  @if (reportable) {
+    <button mat-menu-item class="eb-report-item" [class.eb-report-item--on]="diagram.reportedByMe" (click)="report.emit()">
+      <mat-icon>{{ diagram.reportedByMe ? 'flag' : 'outlined_flag' }}</mat-icon>
+      <span>{{ (diagram.reportedByMe ? 'ebooks.reader.reportedUndo' : 'ebooks.reader.report') | translate }}@if (diagram.reportCount > 0) { ({{ diagram.reportCount }})}</span>
+    </button>
+  }
+</mat-menu>
 
 <div class="eb-board">
   <app-chess-board [fen]="boardFen()" [flipped]="flipped()" [playable]="playable()" [arrows]="engine()?.arrows() ?? []"
@@ -33,49 +93,41 @@
     }
   }
   @case ('solve') {
-    <div class="eb-options">
-      <mat-button-toggle-group [value]="solveStyle()" (change)="setSolveStyle($event.value)" hideSingleSelectionIndicator
-                               [attr.aria-label]="'ebooks.board.solveStyle' | translate">
-        <mat-button-toggle value="easy">{{ 'ebooks.board.solveEasy' | translate }}</mat-button-toggle>
-        <mat-button-toggle value="training">{{ 'ebooks.board.solveTraining' | translate }}</mat-button-toggle>
-      </mat-button-toggle-group>
-      <mat-button-toggle-group [value]="solveSource()" (change)="setSolveSource($event.value)" hideSingleSelectionIndicator
-                               [attr.aria-label]="'ebooks.board.solveSource' | translate">
-        <mat-button-toggle value="stored" [disabled]="!hasStoredSolution">{{ (diagram.solutionSource === 'engine' ? 'ebooks.board.sourceStoredEngine' : 'ebooks.board.sourceBook') | translate }}</mat-button-toggle>
-        <mat-button-toggle value="engine">{{ 'ebooks.board.sourceStockfish' | translate }}</mat-button-toggle>
-      </mat-button-toggle-group>
-    </div>
     @if (engineLineBusy()) {
       <div class="eb-busy"><mat-progress-bar mode="indeterminate" /><span>{{ 'ebooks.board.engineComputing' | translate }}</span></div>
     }
-    @switch (solveState()) {
-      @case ('running') {
-        <div class="eb-solve" role="status"><mat-icon>{{ checking() ? 'hourglass_top' : 'psychology' }}</mat-icon>
-          <span>{{ (checking() ? 'ebooks.board.checking' : 'ebooks.reader.yourMove') | translate }}</span></div>
-        <p class="eb-note">{{ 'ebooks.board.anyMoveHint' | translate }}</p>
+    <!-- Statuszeile: Zustand + „Nochmal“ + Lösung zeigen in EINER Zeile; der Hinweis „jeder Zug, der das Ergebnis hält“
+         steht als Tooltip/Beschreibung daran statt als eigene Zeile. -->
+    @if (solveState() !== 'idle' || !engineLineBusy()) {
+    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'" [class.eb-solve--failed]="solveState() === 'failed'"
+         [class.eb-solve--idle]="solveState() === 'idle'" [attr.title]="solveState() === 'running' ? ('ebooks.board.anyMoveHint' | translate) : null">
+      @switch (solveState()) {
+        @case ('running') {
+          <mat-icon>{{ checking() ? 'hourglass_top' : 'psychology' }}</mat-icon>
+          <span class="eb-solve-text">{{ (checking() ? 'ebooks.board.checking' : 'ebooks.reader.yourMove') | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
+        }
+        @case ('solved') {
+          <mat-icon>check_circle</mat-icon><span class="eb-solve-text">{{ 'ebooks.reader.solved' | translate }}</span>
+          <button mat-button type="button" class="eb-again" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
+        }
+        @case ('failed') {
+          <mat-icon>cancel</mat-icon><span class="eb-solve-text">{{ 'ebooks.board.trainingFailed' | translate }}</span>
+          <button mat-button type="button" class="eb-again" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
+        }
+        @default {
+          @if (solutionLine.length === 0) { <span class="eb-solve-text">{{ 'ebooks.board.noSolution' | translate }}</span> }
+        }
       }
-      @case ('solved') {
-        <div class="eb-solve eb-solve--done" role="status">
-          <mat-icon>check_circle</mat-icon><span>{{ 'ebooks.reader.solved' | translate }}</span>
-          <button mat-button type="button" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
-        </div>
+      @if (solutionLine.length > 0) {
+        <button mat-icon-button type="button" class="eb-sol-toggle" (click)="showSolution.set(!showSolution())" [attr.aria-expanded]="showSolution()"
+                [appIconLabel]="(showSolution() ? 'ebooks.reader.hideSolution' : 'ebooks.reader.showSolution') | translate">
+          <mat-icon>{{ showSolution() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
       }
-      @case ('failed') {
-        <div class="eb-solve eb-solve--failed" role="status">
-          <mat-icon>cancel</mat-icon><span>{{ 'ebooks.board.trainingFailed' | translate }}</span>
-          <button mat-button type="button" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
-        </div>
-      }
-      @default {
-        @if (!engineLineBusy() && solutionLine.length === 0) { <p class="eb-note">{{ 'ebooks.board.noSolution' | translate }}</p> }
-      }
+    </div>
     }
     @if (movesText) { <p class="eb-moves-text">{{ movesText }}</p> }
     @if (solutionLine.length > 0) {
-      <button mat-button type="button" class="eb-sol-toggle" (click)="showSolution.set(!showSolution())" [attr.aria-expanded]="showSolution()">
-        <mat-icon>{{ showSolution() ? 'visibility_off' : 'visibility' }}</mat-icon>
-        {{ (showSolution() ? 'ebooks.reader.hideSolution' : 'ebooks.reader.showSolution') | translate }}
-      </button>
       @if (showSolution()) {
         <div class="eb-solution">
           <p class="eb-solution-line">{{ solutionText }}</p>
@@ -106,18 +158,13 @@
       }
       @case ('error') { <p class="eb-note eb-note--warn">{{ 'ebooks.board.maiaFailed' | translate }}</p> }
       @default {
-        <div class="eb-options">
-          <button mat-stroked-button type="button" [matMenuTriggerFor]="eloMenu">
-            <mat-icon>speed</mat-icon>{{ 'ebooks.board.maiaElo' | translate: { elo: maiaElo() } }}
-          </button>
-          <mat-menu #eloMenu="matMenu">
-            @for (e of maiaEloOptions; track e) { <button mat-menu-item (click)="setMaiaElo(e)">{{ e }}</button> }
-          </mat-menu>
-          <span class="eb-note">{{ (maiaThinking() ? 'ebooks.board.maiaThinking' : 'ebooks.board.maiaYourMove') | translate }}</span>
-        </div>
-        <!-- c2-eb-brett-maia-leere-zugzeile: Zugzeile erst, wenn Maia bereit ist — vorher wäre sie leer mit zwei gesperrten Knöpfen. -->
+        <!-- c2-eb-brett-maia-leere-zugzeile: Zugzeile erst, wenn Maia bereit ist — vorher wäre sie leer mit zwei gesperrten Knöpfen.
+             Stärke + Zustand stehen vorn in derselben Zeile (Stärke wählen: ⚙ in der Brett-Leiste). -->
         <div class="eb-moves">
-          <span class="eb-moves-text">{{ movesText }}</span>
+          <span class="eb-moves-text">
+            <span class="eb-maia-state">{{ 'ebooks.board.maiaElo' | translate: { elo: maiaElo() } }} · {{ (maiaThinking() ? 'ebooks.board.maiaThinking' : 'ebooks.board.maiaYourMove') | translate }}</span>
+            {{ movesText }}
+          </span>
           <button mat-icon-button (click)="undo()" [disabled]="played().length === 0 || maiaThinking()" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
           <button mat-icon-button (click)="reset()" [disabled]="played().length === 0" [appIconLabel]="'ebooks.reader.resetPosition' | translate"><mat-icon>restart_alt</mat-icon></button>
         </div>
@@ -130,12 +177,3 @@
   <app-live-engine-panel class="eb-engine" [session]="s" [gameFen]="boardFen()" [steps]="false" (closed)="toggleEngine()" />
 }
 
-<div class="eb-actions">
-  <a mat-stroked-button routerLink="/analysis" [queryParams]="analysisParams()">
-    <mat-icon>biotech</mat-icon>{{ 'ebooks.reader.analyse' | translate }}
-  </a>
-  <button mat-icon-button (click)="toggleEngine()" [class.eb-on]="!!engine()" [attr.aria-pressed]="!!engine()" [disabled]="!legal()"
-          [appIconLabel]="(engine() ? 'ebooks.board.engineOff' : 'ebooks.board.engineOn') | translate"><mat-icon>memory</mat-icon></button>
-  <button mat-icon-button (click)="flipped.set(!flipped())" [appIconLabel]="'ebooks.reader.flip' | translate"><mat-icon>swap_vert</mat-icon></button>
-  <button mat-icon-button (click)="copyFen()" [appIconLabel]="'ebooks.reader.copyFen' | translate"><mat-icon>content_copy</mat-icon></button>
-</div>

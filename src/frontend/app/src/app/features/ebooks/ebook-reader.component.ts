@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DoCheck, HostListener, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -19,6 +19,7 @@ import { EpubDiagramImage, EpubLocation, EpubTocEntry, EpubViewerComponent } fro
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
 import { EbookBoardComponent } from './ebook-board.component';
 import { nextZoom, parsePageInput } from './reader-progress.util';
+import { NAV_DOCKED_CLASS } from '../../shared/navbar/navbar.component';
 
 /**
  * Leser-Seite (`/ebooks/:id`): Werkzeugleiste (zurück, Titel, Seite x / N, Zoom, Download) und darunter der
@@ -37,7 +38,7 @@ import { nextZoom, parsePageInput } from './reader-progress.util';
   templateUrl: './ebook-reader.component.html',
   styleUrls: ['./ebook-reader.component.scss'],
 })
-export class EbookReaderComponent implements OnInit, OnDestroy {
+export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   @ViewChild(PdfViewerComponent) private viewer?: PdfViewerComponent;
   @ViewChild(EpubViewerComponent) private epub?: EpubViewerComponent;
 
@@ -105,8 +106,23 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
     this.load();
   }
 
+  /**
+   * EINE Leiste (0.785.x): solange die Leser-Leiste steht (Buch geladen), dockt die App-Kopfleiste oben rechts auf ihr an
+   * (body.nav-docked, Regeln in navbar.component) — Lade-/Fehlerzustände behalten die normale Kopfleiste.
+   */
+  get docked(): boolean { return !this.loading && !this.notFound && !this.error && !!this.ebook; }
+  private dockedApplied = false;
+
+  ngDoCheck(): void {
+    const want = this.docked;
+    if (want === this.dockedApplied) return;
+    this.dockedApplied = want;
+    document.body.classList.toggle(NAV_DOCKED_CLASS, want);
+  }
+
   ngOnDestroy(): void {
     document.body.classList.remove(EbookReaderComponent.BODY_CLASS);
+    document.body.classList.remove(NAV_DOCKED_CLASS);
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -319,6 +335,16 @@ export class EbookReaderComponent implements OnInit, OnDestroy {
       case 'replaced': return 'ebooks.reader.solutionReplaced';
       case 'confirmed': return 'ebooks.reader.solutionConfirmed';
       default: return null;
+    }
+  }
+
+  /** Symbol zur Herkunft der Lösung im Brett-Kopf (Text dazu: {@link solutionNoteKey}). */
+  solutionNoteIcon(d: EbookDiagram): string {
+    switch (d.solutionCheck) {
+      case 'engine': return 'memory';
+      case 'replaced': return 'published_with_changes';
+      case 'doubtful': return 'warning_amber';
+      default: return 'verified';
     }
   }
 

@@ -5304,7 +5304,9 @@
       "maiaThinking": "Maia überlegt …",
       "maiaYourMove": "Du bist am Zug",
       "engineOn": "Engine zuschalten",
-      "engineOff": "Engine ausschalten"
+      "engineOff": "Engine ausschalten",
+      "settings": "Optionen",
+      "maiaStrength": "Maia-Stärke"
     },
     "title": "E-Books",
     "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",

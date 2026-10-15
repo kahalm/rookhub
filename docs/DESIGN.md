@@ -218,6 +218,9 @@ und „ragt raus“ automatisch.
 
 - **Vollbild-Brett / App-Vollbild:** `shared/fullscreen/` (Details `src/frontend/CLAUDE.md`). Ins Vollbild
   projizierte Elemente tragen `data-fs-only`.
+- **Angedockte Kopfleiste** (`body.nav-docked`, alle Breiten, 0.785.x): Seiten mit eigener Werkzeugleiste (E-Book-Leser)
+  bekommen EINE Leiste — die Kopfleiste liegt 48 px hoch oben rechts darauf (Regeln in `navbar.component`, Breite als
+  `--rh-nav-w`); Vorbild ist der Kalkulations-Modus.
 - **Kalkulations-Modus** (`body.calc-mode`, ab 900 px): Navbar schwebt oben rechts, Fußzeile unten rechts
   (`styles.scss`).
 - **KidHub-Aufgabenseiten:** Brettgröße als Variable `--kid-board`/`--kid-row` in der App-Hülle, drei Ansichten
@@ -634,10 +637,20 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Schlagwörter zugeklappt die 8 häufigsten + „Alle Schlagwörter (n)“, am Handy alles hinter „Filter ▾“; ohne Bücher keine
   Filterzeile; gefiltert leer → „Filter zurücksetzen“. Leser: 404/403 = „gibt es nicht“ + „Zurück zur Bibliothek“, keine
   App-Fußzeile (Seite genau fensterhoch).
-  Brett-Leiste (`app-ebook-board`, 0.777.0): über dem Brett eine umbrechende Modus-Leiste aus fünf flachen Knöpfen
-  (Symbol + Wort, gewählter Modus in Primärfarbe getönt, `aria-pressed`) — Ansehen, Ziehen, Kalkulieren, Lösen, Maia; je
-  Modus darunter nur seine eigenen Bedienelemente (Lösen: zwei Umschaltgruppen Einfach/Training und Quelle). Engine als
-  Symbolknopf in der Aktionszeile, die Linien darunter wie auf der Partieseite (`app-live-engine-panel`).
+  **EINE Leiste oben (0.785.x):** ist das Buch geladen, setzt der Leser `body.nav-docked` — die App-Kopfleiste verliert Logo
+  und Hintergrund und dockt als 48 px hoher Block oben rechts auf der Leser-Leiste an (dieselbe Instanz, Glocke/☰/Vollbild
+  unverändert, Gast ohne die Text-Links Puzzles/Analyse); die Leser-Leiste ist 48 px hoch und hält rechts die gemessene
+  Breite der Kopfleiste frei (`--rh-nav-w`), am Handy in ihrer Titelzeile. Lade-/Fehlerzustände behalten die normale
+  Kopfleiste. Andere Seiten mit eigener Werkzeugleiste dürfen `nav-docked` genauso nutzen.
+  Brett-Leiste (`app-ebook-board`, 0.777.0, kompakt 0.785.x): **eine** Zeile über dem Brett — fünf Modi als Symbolknöpfe
+  (Name + Erklärung als Tooltip/`aria-label`, gewählter Modus in Primärfarbe getönt, `aria-pressed`): Ansehen, Ziehen,
+  Kalkulieren, Lösen, Maia; rechts ⚙ für die Optionen des Modus (Lösen: Art Einfach/Training und Quelle als Auswahl im
+  Menü; Maia: Stärke) und ⋮ (Analysieren, Engine an/aus, Brett drehen, FEN kopieren, „Diagramm falsch“). Ab 600 px
+  40-px-, am Handy 44-px-Knöpfe, nie umbrechend. Zugrecht, Bewertung und Herkunft der Lösung (Symbol, Text im Tooltip)
+  stehen als zweite Zeile im Brett-Kopf; nur „Lösung fraglich“ bleibt eine sichtbare Warnzeile. Unter dem Brett EINE
+  Statuszeile (Zustand, „Nochmal“, Lösung zeigen als Symbol; „jeder Zug, der das Ergebnis hält“ als Tooltip). Lösen startet
+  in „Training“, die eigene Wahl ist auf dem Gerät gemerkt. Brett ab 900 px bis `100dvh − 220px` (vorher − 394 px).
+  Engine-Linien wie auf der Partieseite (`app-live-engine-panel`).
 
 - Woodpecker (`features/woodpecker/`, 0.773.0): Übersicht als Karten-Raster (`minmax(min(100%, 360px), 1fr)`) — je
   Training eine Karte mit Status-Abzeichen, Frist und Fortschrittsbalken, die Zyklen als kleine Zahlentabelle (erst
@@ -863,6 +876,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-15 | 0.786.0 | E-Book-Leser kompakt: EINE Leiste oben (Kopfleiste dockt per `body.nav-docked` 48 px hoch rechts auf der Leser-Leiste an, Glocke/☰/Vollbild dieselben); Brett-Leiste in einer Zeile (Modi als Symbole, Optionen hinter ⚙, Analysieren/Engine/Drehen/FEN/Melden im ⋮), Zugrecht/Bewertung/Herkunft im Brett-Kopf, eine Statuszeile; Lösen startet in „Training“ (gemerkte Wahl gewinnt); Brett ab 900 px bis `100dvh − 220px` | „Die Leiste oben ist viel zu breit“, „rund ums Brett ist so viel los“ — zwei Leisten (≈ 128 px) und sieben Zeilen um das Brett | Nutzerwunsch 15.10. |
 | 2026-10-14 | 0.780.2 | E-Book-Brett unter 900 px als Vollbild über dem Buch statt Leiste unten | Leiste war am Handy zu klein zum Lösen | Nutzerwunsch 14.10. |
 | 2026-10-14 | 0.777.0 | E-Book-Brett mit Modus-Leiste (Ansehen/Ziehen/Kalkulieren/Lösen/Maia) statt Hand-Knopf + „Lösen“-Knopf; Engine zuschaltbar | Nutzerwunsch: mehrere Arten, mit der Buchstellung zu arbeiten — ein Schalter je Art wäre unübersichtlich | Nutzerwunsch 14.10. |
 | 2026-10-14 | 0.775.2 | E-Books (c1): Regal-Hauptknopf `flex: 1`, einzeilig mit „…“, „Weiter“ statt „Weiter auf Seite N“ (Seite im Namen), Download am Handy nur Symbol; Schlagwörter zugeklappt 8 + „Alle Schlagwörter (n)“, am Handy Sortierung/Schalter/Schlagwörter hinter „Filter ▾“ (aktive als Chips); leere Bibliothek ohne Filterzeile; gefiltert leer → „Filter zurücksetzen“; Leerzustands-Symbol nur `> mat-icon`; Regal ab 2400 px in `--page-max-width-wide`; Hochladen-Dialog: Grund neben gesperrtem Knopf, Scrollkante (`--mat-sys-outline-variant`), Autor + Jahr auch am Handy nebeneinander; Leser: 404/403 Klartext + Weg zurück, Fehlerzeile in Seitenbreite, Seitenfeld ohne Drehknöpfe (WebKit), Fußzeile aus (`body.rd-reader-mode`), unter 900 px Diagramm-Knopf, Touch-Zonen dauerhaft gestrichelt, ab 2400 px „Breite füllen“ ≤ 1 400 px, Seite/Zoom neben dem Titel, Brett-Leiste bis 720 px | Knopftext dreizeilig/abgeschnitten, Regal unter der Falz (17 Chip-Zeilen), Sackgassen-Leerzustand, Sperre ohne Grund, „Prüfe die Verbindung“ bei 404, doppeltes Scrollen, Diagramme am Handy unauffindbar, 2 300-px-Seite | UI-Sweep c1: c1-eb-card-action-button, c1-eb-tag-filter-lead, c1-eb-filter-empty-no-reset, c1-eb-upload-disabled-no-reason, c1-eb-reader-404-misleading, c1-eb-ebook-leser-seitenfeld-spinner, c1-eb-ebook-leser-seite-scrollt-um-fusszeile, c1-eb-reader-mobile-diagrams-undiscoverable, c1-eb-reader-ultrawide-layout, c1-eb-empty-upload-icon, c1-eb-empty-lead-mobile, c1-eb-ultrawide-not-wide |

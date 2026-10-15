@@ -5304,7 +5304,9 @@
       "maiaThinking": "Maia is thinking …",
       "maiaYourMove": "Your move",
       "engineOn": "Switch engine on",
-      "engineOff": "Switch engine off"
+      "engineOff": "Switch engine off",
+      "settings": "Options",
+      "maiaStrength": "Maia strength"
     },
     "title": "E-books",
     "intro": "Chess books to read in the browser or download; each book is shared with the groups its uploader chose.",

@@ -50,7 +50,77 @@ describe('EbookBoardComponent', () => {
     return fixture;
   }
 
-  beforeEach(() => { try { localStorage.removeItem('rh.ebooks.calc.11'); } catch { /* egal */ } });
+  beforeEach(() => { try { localStorage.removeItem('rh.ebooks.calc.11'); localStorage.removeItem(EbookBoardComponent.SOLVE_STYLE_KEY); } catch { /* egal */ } });
+  afterEach(() => { try { localStorage.removeItem(EbookBoardComponent.SOLVE_STYLE_KEY); } catch { /* egal */ } });
+
+  it('Lösen: Standard ist „Training“; die eigene Wahl wird gemerkt und gewinnt beim nächsten Brett', () => {
+    const c = make().componentInstance;
+    expect(c.solveStyle()).toBe('training');
+    c.setSolveStyle('easy');
+    expect(localStorage.getItem(EbookBoardComponent.SOLVE_STYLE_KEY)).toBe('easy');
+    TestBed.resetTestingModule();
+    expect(make().componentInstance.solveStyle()).toBe('easy');
+    localStorage.setItem(EbookBoardComponent.SOLVE_STYLE_KEY, 'quatsch');
+    expect(EbookBoardComponent.loadSolveStyle()).toBe('training');
+  });
+
+  it('kompakte Brett-Leiste: fünf Modi als Symbolknöpfe (Name im aria-label, gewählter mit aria-pressed), ⚙ nur bei Lösen/Maia', () => {
+    const fixture = make();
+    const el: HTMLElement = fixture.nativeElement;
+    const modes = Array.from(el.querySelectorAll<HTMLButtonElement>('.eb-bar .eb-mode'));
+    expect(modes.length).toBe(5);
+    expect(modes.every(b => b.textContent!.trim() === b.querySelector('mat-icon')!.textContent!.trim())).toBeTrue();   // nur Symbol
+    expect(modes[3].getAttribute('aria-label')).toContain('ebooks.board.mode.solve');
+    expect(modes[3].getAttribute('aria-pressed')).toBe('true');
+    expect(modes[3].classList).toContain('eb-mode--on');
+    expect(el.querySelector('.eb-bar .eb-settings')).not.toBeNull();
+    expect(el.querySelector('.eb-options')).toBeNull();          // keine Umschaltgruppen mehr unter dem Brett
+    expect(el.querySelector('.eb-actions')).toBeNull();          // Analysieren/Drehen/FEN im ⋮
+    expect(el.querySelector('.eb-bar .eb-more')).not.toBeNull();
+    fixture.componentInstance.setMode('free');
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-bar .eb-settings')).toBeNull();
+    fixture.componentInstance.setMode('maia');
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-bar .eb-settings')).not.toBeNull();
+    // Maia: Stärke steht in der Zugzeile.
+    expect(el.querySelector('.eb-maia-state')!.textContent).toContain('ebooks.board.maiaElo');
+  });
+
+  it('⚙ beim Lösen: Art und Quelle als Auswahl im Menü; ⋮ meldet das Diagramm (nur „reportable“)', async () => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    el.querySelector<HTMLButtonElement>('.eb-settings')!.click();
+    fixture.detectChanges(); await fixture.whenStable();
+    const items = Array.from(document.querySelectorAll<HTMLButtonElement>('.cdk-overlay-container [role="menuitemradio"]'));
+    expect(items.length).toBe(4);
+    expect(items[1].getAttribute('aria-checked')).toBe('true');   // Training
+    items[0].click();
+    expect(c.solveStyle()).toBe('easy');
+    fixture.detectChanges(); await fixture.whenStable();
+    fixture.componentRef.setInput('reportable', true);
+    fixture.detectChanges();
+    const spy = jasmine.createSpy('report');
+    c.report.subscribe(spy);
+    el.querySelector<HTMLButtonElement>('.eb-more')!.click();
+    fixture.detectChanges(); await fixture.whenStable();
+    document.querySelector<HTMLButtonElement>('.cdk-overlay-container .eb-report-item')!.click();
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('Statuszeile beim Lösen: EINE Zeile mit Zustand und Lösung-zeigen-Knopf, Hinweis als Tooltip', () => {
+    const fixture = make();
+    const el: HTMLElement = fixture.nativeElement;
+    const row = el.querySelector<HTMLElement>('.eb-solve')!;
+    expect(row.getAttribute('title')).toBe('ebooks.board.anyMoveHint');
+    const toggle = row.querySelector<HTMLButtonElement>('.eb-sol-toggle')!;
+    expect(toggle).not.toBeNull();
+    toggle.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-solution')).not.toBeNull();
+    expect(el.querySelectorAll('.eb-note').length).toBe(0);   // kein eigener Hinweis-Absatz mehr
+  });
 
   it('startet standardmäßig im Lösen-Modus; Schwarz am Zug dreht das Brett', () => {
     const c = make().componentInstance;
@@ -102,6 +172,7 @@ describe('EbookBoardComponent', () => {
 
   it('Lösen einfach: falscher Zug wird zurückgenommen, Buchzug angenommen, Antwort kommt von selbst', fakeAsync(() => {
     const c = make().componentInstance;
+    c.setSolveStyle('easy');
     c.setMode('solve');
     expect(c.solveState()).toBe('running');
     expect(c.solutionText).toBe('17… Rxh2+ 18. Kxh2 Rh8+');
@@ -254,20 +325,21 @@ describe('EbookBoardComponent', () => {
   it('c2-eb-board-leiste-laptop-falz: Brett ab 900 px höchstens Fensterhöhe minus Kopf und Bedienzeile, mind. 280 px', () => {
     const c = css();
     const base = c.slice(0, c.indexOf('@media'));
-    expect(base).toMatch(/\.eb-board(\[[^\]]*\])?\{width:clamp\(min\(280px,100%\),(?:calc\()?100dvh-var\(--rh-navbar-height,64px\)-330px\)?,100%\);margin-inline:auto/);
-    expect(CSS.supports('width', 'clamp(min(280px, 100%), calc(100dvh - 64px - 330px), 100%)')).toBeTrue();
+    // 0.785.x: EINE Leiste oben + kompakte Brett-Leiste — 220 px statt 64 + 330 px über/unter dem Brett.
+    expect(base).toMatch(/\.eb-board(\[[^\]]*\])?\{width:clamp\(min\(280px,100%\),(?:calc\()?100dvh-220px\)?,100%\);margin-inline:auto/);
+    expect(CSS.supports('width', 'clamp(min(280px, 100%), calc(100dvh - 220px), 100%)')).toBeTrue();
     // Unter 900 px (Vollbild am Handy) bleibt die eigene Regel.
     expect(c.slice(c.indexOf('@media(max-width:899.98px)'))).toMatch(/\.eb-board(\[[^\]]*\])?\{width:min\(100%,62dvh\)/);
   });
 
-  it('c2-eb-board-modus-leiste-maia-allein: am Handy alle fünf Modi in einer Zeile (Symbol über Wort), darüber unverändert', () => {
+  it('c2-eb-board-modus-leiste-maia-allein, 0.785.x: am Handy alle Symbole der Leiste in EINER Zeile mit 44-px-Tippzielen', () => {
     const c = css();
     const at = c.indexOf('@media(max-width:599.98px)');
     expect(at).toBeGreaterThan(-1);
     const mobile = c.slice(at, c.indexOf('@media(max-width:899.98px)'));
-    expect(mobile).toMatch(/\.eb-modes(\[[^\]]*\])?\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
-    expect(mobile).toMatch(/\.eb-mode(\[[^\]]*\])?\{flex-direction:column;[^}]*min-height:44px/);
-    expect(c.slice(0, at)).toMatch(/\.eb-modes(\[[^\]]*\])?\{display:flex;flex-wrap:wrap/);
+    expect(mobile).toMatch(/\.eb-bar(\[[^\]]*\])?\.mat-mdc-icon-button(\[[^\]]*\])?\{[^}]*width:44px;height:44px/);
+    expect(c.slice(0, at)).toMatch(/\.eb-bar(\[[^\]]*\])?\{display:flex;align-items:center/);
+    expect(c.slice(0, at)).not.toContain('flex-wrap:wrap');   // eine Zeile, kein Umbruch
   });
 });
 

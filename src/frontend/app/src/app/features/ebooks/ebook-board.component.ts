@@ -4,11 +4,9 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -51,7 +49,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-ebook-board',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatButtonToggleModule, MatIconModule, MatMenuModule, MatProgressBarModule, MatSlideToggleModule,
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
     TranslatePipe, IconLabelDirective, ChessBoardComponent, CalcLinesComponent, LiveEnginePanelComponent],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
@@ -64,6 +62,10 @@ export class EbookBoardComponent implements OnChanges {
   @Input() defaultMode: EbookBoardMode | null | undefined = 'solve';
   /** „Zur Lösungsseite“ — der Leser springt dorthin. */
   @Output() solutionPage = new EventEmitter<number>();
+  /** „Diagramm falsch“ im ⋮ des Bretts (0.785.x, vorher eigene Zeile im Leser) — nur mit Konto. */
+  @Input() reportable = false;
+  /** Melden/Zurücknehmen angeklickt — der Leser schickt es ab (Zustand kommt über `diagram.reportedByMe`). */
+  @Output() report = new EventEmitter<void>();
 
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
@@ -86,8 +88,10 @@ export class EbookBoardComponent implements OnChanges {
   readonly calcCursor = signal(0);
   readonly calcRevision = signal(0);
 
-  /** Lösen. */
-  readonly solveStyle = signal<EbookSolveStyle>('easy');
+  /** Lösen. Standard „Training“ (Nutzerwunsch 15.10.); die eigene Wahl ist auf dem Gerät gemerkt und gewinnt. */
+  readonly solveStyles: EbookSolveStyle[] = ['easy', 'training'];
+  readonly solveStyle = signal<EbookSolveStyle>(EbookBoardComponent.loadSolveStyle());
+  static readonly SOLVE_STYLE_KEY = 'rh.ebooks.solveStyle';
   readonly solveSource = signal<EbookSolveSource>('stored');
   readonly solveState = signal<'idle' | 'running' | 'solved' | 'failed'>('idle');
   /** Stockfish-Lösung (UCI), sobald gerechnet; `null` = noch nicht / läuft. */
@@ -286,8 +290,15 @@ export class EbookBoardComponent implements OnChanges {
     if (this.mode() === 'solve') this.startSolving();
   }
 
+  /** Gemerkte Art des Lösens; ohne (gültigen) Eintrag „Training“. */
+  static loadSolveStyle(): EbookSolveStyle {
+    const raw = readRaw(localStore(), EbookBoardComponent.SOLVE_STYLE_KEY);
+    return raw === 'easy' || raw === 'training' ? raw : 'training';
+  }
+
   setSolveStyle(s: EbookSolveStyle): void {
     this.solveStyle.set(s);
+    writeRaw(localStore(), EbookBoardComponent.SOLVE_STYLE_KEY, s);   // nur Bequemlichkeit — scheitert still
     if (this.mode() === 'solve') this.startSolving();
   }
 

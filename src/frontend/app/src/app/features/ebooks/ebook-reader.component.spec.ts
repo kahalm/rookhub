@@ -442,4 +442,68 @@ describe('EbookReaderComponent', () => {
     expect(css.slice(0, at)).toMatch(/\.rd-toolbar-spacer(\[[^\]]*\])?\{display:none/);
     expect(css.slice(0, at)).toContain('clamp(300px,32vw,460px)');
   });
+
+  // ── 0.785.x E-Book-Leser kompakt ─────────────────────────────────────────────────────────────
+  it('EINE Leiste: geladen dockt die Kopfleiste an (body.nav-docked), Fehlerzustand nicht; beim Verlassen weg', async () => {
+    const fixture = await make(book());
+    expect(document.body.classList.contains('nav-docked')).toBeTrue();
+    fixture.destroy();
+    expect(document.body.classList.contains('nav-docked')).toBeFalse();
+    TestBed.resetTestingModule();
+    const failing = await makeFailing(new HttpErrorResponse({ status: 500 }));
+    expect(document.body.classList.contains('nav-docked')).toBeFalse();
+    failing.destroy();
+  });
+
+  it('EINE Leiste: fensterhoch, Leiste 48 px, rechts die gemessene Breite der Kopfleiste frei (am Handy in der Titelzeile)', () => {
+    const css = compactCss(EbookReaderComponent);
+    expect(css).toMatch(/body\.nav-docked[^{]*\.rd-page(\[[^\]]*\])?\{height:100dvh;?\}/);
+    expect(css).toMatch(/\.rd-toolbar(\[[^\]]*\])?\{[^}]*min-height:48px;box-sizing:border-box;padding:4px8px/);
+    const wide = css.slice(css.indexOf('@media(min-width:600px)'));
+    expect(wide).toMatch(/^@media\(min-width:600px\)\{[^{]*body\.nav-docked[^{]*\.rd-toolbar(\[[^\]]*\])?\{padding-right:calc\(8px\+var\(--rh-nav-w,96px\)\)/);
+    const mobile = css.slice(css.lastIndexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/body\.nav-docked[^{]*\.rd-title(\[[^\]]*\])?\{flex-basis:calc\(100%-96px-var\(--rh-nav-w,96px\)\)/);
+    expect(CSS.supports('flex-basis', 'calc(100% - 96px - var(--rh-nav-w, 96px))')).toBeTrue();
+  });
+
+  it('Brett-Kopf: Zugrecht + Bewertung + Herkunft als zweite Kopfzeile, Melden im ⋮ des Bretts, „fraglich“ bleibt sichtbar', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    Object.defineProperty(c, 'loggedIn', { get: () => true });
+    c.diagrams.update(l => l.map(d => d.id === 11 ? { ...d, engineEval: 350, solutionCheck: 'engine' as const } : d));
+    c.pick(11);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const head = el.querySelector('.rd-panel-head')!;
+    expect(head.querySelector('.rd-side')!.textContent).toContain('common.blackToMove');
+    expect(head.querySelector('.rd-eval')!.textContent).toMatch(/\+3[.,]5/);
+    expect(head.querySelector('.rd-sol-icon')!.getAttribute('aria-label')).toBe('ebooks.reader.solutionEngine');
+    expect(el.querySelector('.rd-report')).toBeNull();
+    expect(el.querySelector('.rd-panel > .rd-side')).toBeNull();
+    const board = fixture.debugElement.query(By.directive(EbookBoardComponent)).componentInstance as EbookBoardComponent;
+    expect(board.reportable).toBeTrue();
+    service.reportDiagram.and.returnValue(of({ reported: true }));
+    board.report.emit();
+    expect(service.reportDiagram).toHaveBeenCalledWith(9, 11, true);
+    c.diagrams.update(l => l.map(d => d.id === 12 ? { ...d, solutionCheck: 'doubtful' as const } : d));
+    c.pick(12);
+    fixture.detectChanges();
+    expect(el.querySelector('.rd-sol-note--warn')!.textContent).toContain('ebooks.reader.solutionDoubtful');
+    expect(el.querySelector('.rd-panel-head .rd-sol-icon')).toBeNull();
+    expect(c.solutionNoteIcon({ ...DIAGRAMS[0], solutionCheck: 'replaced' })).toBe('published_with_changes');
+    fixture.destroy();
+  });
+
+  it('⋮ des Lesers behält Download und „Als Kurs anlegen“', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const el: HTMLElement = fixture.nativeElement;
+    Object.defineProperty(fixture.componentInstance, 'loggedIn', { get: () => true });
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('.rd-more')!.click();
+    fixture.detectChanges(); await fixture.whenStable();
+    const text = document.querySelector('.cdk-overlay-container')!.textContent!;
+    expect(text).toContain('ebooks.downloadFormat');
+    expect(text).toContain('ebooks.reader.createCourse');
+    fixture.destroy();
+  });
 });
