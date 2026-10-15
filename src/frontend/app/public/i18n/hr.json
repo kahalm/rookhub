@@ -5479,6 +5479,10 @@
       "missedNo": "Ne",
       "missedThanks": "Hvala – zabilježeno za prepoznavanje.",
       "missedFailed": "Odgovor nije moguće spremiti.",
+      "fontSmaller": "Manji tekst",
+      "fontLarger": "Veći tekst",
+      "layoutScroll": "Neprekinuti tekst (pomicanje)",
+      "layoutPages": "Stranicu po stranicu",
       "openBoard": "Ploča: {{n}} dijagrama",
       "openBoardOne": "Ploča: 1 dijagram"
     },

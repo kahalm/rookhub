@@ -28,7 +28,8 @@ interface EpubRendition {
   next(): Promise<unknown>;
   prev(): Promise<unknown>;
   on(event: string, cb: (...args: unknown[]) => void): void;
-  themes: { default(rules: Record<string, Record<string, string>>): void };
+  themes: { default(rules: Record<string, Record<string, string>>): void; fontSize(size: string): void };
+  currentLocation(): { start?: { cfi?: string } } | null;
   hooks: { content: { register(fn: (c: EpubContents) => void): void } };
   getContents(): EpubContents[] | EpubContents;
   destroy(): void;
@@ -37,6 +38,9 @@ interface EpubRendition {
 interface EpubContents { document: Document; cfiFromNode(node: Node): string; }
 
 /** `ePub(data)` (Archiv) bzw. `ePub(options)` (leeres Buch, danach `open`). */
+/** Darstellung des EPUB-Lesers. */
+export type EpubLayout = 'pages' | 'scroll';
+
 type EpubFactory = (input: ArrayBuffer | Record<string, unknown>) => EpubBook;
 
 /** Wie lange das Öffnen als Ordner (container.xml + OPF) höchstens dauern darf, bevor das ganze Archiv geladen wird. */
@@ -84,6 +88,10 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() images: readonly EpubDiagramImage[] = [];
   @Input() activeImage: number | null = null;
   @Output() imagePick = new EventEmitter<number>();
+  /** Darstellung (0.791.0): `pages` = eine Spalte, geblättert; `scroll` = fließend, das Buch als durchgehender Text. */
+  @Input() layout: EpubLayout = 'pages';
+  /** Schriftgröße in Prozent (100 = Vorgabe des Buchs). */
+  @Input() fontScale = 100;
   /** Aktuelles Kapitel (Spine, 1-basiert). */
   readonly chapter = signal(1);
 
@@ -107,23 +115,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       const book = await this.openBook((mod as unknown as { default: EpubFactory }).default);
       if (!book) return;
       this.book = book;
-      const rendition = book.renderTo(this.area.nativeElement, { width: '100%', height: '100%', flow: 'paginated', spread: 'auto' });
-      this.rendition = rendition;
-      rendition.themes.default({ body: { 'line-height': '1.5' }, img: { 'max-width': '100%' } });
-      rendition.hooks.content.register(c => this.markImages(c));
-      // Mausrad im Kapitel (iframe): Ereignisse von dort erreichen den Host nicht (0.780.1).
-      rendition.hooks.content.register((c: { document?: Document }) => c.document?.addEventListener('wheel',
-        (ev: WheelEvent) => this.zone.run(() => this.onWheel(ev)), { passive: true }));
-      rendition.on('relocated', (loc: unknown) => {
-        const l = loc as { start?: { cfi?: string; percentage?: number; index?: number } };
-        if (typeof l.start?.index === 'number') this.chapter.set(l.start.index + 1);
-        const cfi = l.start?.cfi;
-        if (!cfi) return;
-        let fraction = l.start?.percentage ?? 0;
-        if (book.locations.length() > 0) fraction = book.locations.percentageFromCfi(cfi);
-        this.zone.run(() => this.located.emit({ fraction, cfi }));
-      });
-      rendition.on('keyup', (e: unknown) => this.onKey(e as KeyboardEvent));
+      const rendition = this.createRendition(book);
       await rendition.display(this.initialLocator || undefined).catch(() => rendition.display());
       this.zone.run(() => this.loading.set(false));
       book.loaded.navigation.then(nav => this.zone.run(() => this.toc.emit(nav.toc.map(t => ({ label: t.label.trim(), href: t.href })))))
@@ -167,7 +159,50 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     return ePub(data);
   }
 
+  /**
+   * Darstellung aufbauen: „Seite“ = paginiert, EINE Spalte (vorher `spread: auto` — ab 800 px immer zwei Spalten,
+   * Nutzerwunsch 15.10.); „Fließend“ = alle Kapitel untereinander zum Scrollen (continuous manager).
+   */
+  private createRendition(book: EpubBook): EpubRendition {
+    const opts = this.layout === 'scroll'
+      ? { width: '100%', height: '100%', flow: 'scrolled', manager: 'continuous', spread: 'none' }
+      : { width: '100%', height: '100%', flow: 'paginated', spread: 'none' };
+    const rendition = book.renderTo(this.area.nativeElement, opts);
+    this.rendition = rendition;
+    rendition.themes.default({ body: { 'line-height': '1.5' }, img: { 'max-width': '100%' } });
+    rendition.themes.fontSize(`${this.fontScale}%`);
+    rendition.hooks.content.register(c => this.markImages(c));
+    // Mausrad im Kapitel (iframe): Ereignisse von dort erreichen den Host nicht (0.780.1).
+    rendition.hooks.content.register((c: { document?: Document }) => c.document?.addEventListener('wheel',
+      (ev: WheelEvent) => this.zone.run(() => this.onWheel(ev)), { passive: true }));
+    rendition.on('relocated', (loc: unknown) => {
+      const l = loc as { start?: { cfi?: string; percentage?: number; index?: number } };
+      if (typeof l.start?.index === 'number') this.chapter.set(l.start.index + 1);
+      const cfi = l.start?.cfi;
+      if (!cfi) return;
+      let fraction = l.start?.percentage ?? 0;
+      if (book.locations.length() > 0) fraction = book.locations.percentageFromCfi(cfi);
+      this.zone.run(() => this.located.emit({ fraction, cfi }));
+    });
+    rendition.on('keyup', (e: unknown) => this.onKey(e as KeyboardEvent));
+    return rendition;
+  }
+
+  /** Darstellung wechseln: an derselben Stelle neu aufbauen. */
+  private async relayout(): Promise<void> {
+    const book = this.book, old = this.rendition;
+    if (!book || !old) return;
+    let cfi: string | undefined;
+    try { cfi = old.currentLocation()?.start?.cfi; } catch { /* egal */ }
+    try { old.destroy(); } catch { /* schon weg */ }
+    this.area.nativeElement.replaceChildren();
+    const r = this.createRendition(book);
+    await r.display(cfi).catch(() => r.display());
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['layout'] && !changes['layout'].firstChange) void this.relayout();
+    if (changes['fontScale'] && !changes['fontScale'].firstChange) this.rendition?.themes.fontSize(`${this.fontScale}%`);
     if ((changes['images'] && !changes['images'].firstChange) || changes['activeImage']) this.contents().forEach(c => this.markImages(c));
   }
 
@@ -249,6 +284,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   /** Mausrad blättert seitenweise (0.780.1): das Buch ist paginiert, Scrollen gäbe es sonst nicht. Runter/rechts = weiter. */
   @HostListener('wheel', ['$event'])
   onWheel(e: WheelEvent): void {
+    if (this.layout === 'scroll') return;   // fließend: das Rad scrollt selbst
     const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
     if (!d) return;
     const now = Date.now();

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.791.0", date: "2026-10-15", changes: [
+    { en: "E-books: EPUBs are no longer always shown in two columns – one column page by page, or switch to continuous text that you simply scroll; text can be made larger or smaller (A−/A+). Both are remembered on this device.", de: "E-Books: EPUBs erscheinen nicht mehr immer zweispaltig – eine Spalte zum Blättern oder umschaltbar auf Fließtext, den man einfach scrollt; die Schrift lässt sich vergrößern und verkleinern (A−/A+). Beides wird auf diesem Gerät gemerkt." },
+  ] },
   { version: "0.790.0", date: "2026-10-15", changes: [
     { en: "Courses: progress in the solver is now split three ways instead of „x/y (3 %)“ — solved without help (first try, no hint), solved with a hint or after a mistake/restart, and given up; the bar shows the three parts in green, yellow and red.",
       de: "Kurse: Der Fortschritt im Löser ist jetzt dreigeteilt statt „x/y (3 %)“ — ohne Hilfe gelöst (erster Versuch, ohne Tipp), mit Tipp oder nach Fehler/Neustart gelöst und aufgegeben; die Leiste zeigt die drei Teile grün, gelb und rot." },

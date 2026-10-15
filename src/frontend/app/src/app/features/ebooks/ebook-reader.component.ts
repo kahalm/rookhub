@@ -17,7 +17,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { Ebook, EbookDiagram, EbookService, READABLE_FORMATS, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
-import { EpubDiagramImage, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
+import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
 import { EbookBoardComponent } from './ebook-board.component';
 import { nextZoom, parsePageInput } from './reader-progress.util';
@@ -460,5 +460,31 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
         error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
       });
     });
+  }
+
+  // ── EPUB-Darstellung (0.791.0): Seite/fließend + Schriftgröße, auf dem Gerät gemerkt ──────────────────
+  static readonly EPUB_LAYOUT_KEY = 'rh.ebooks.epubLayout';
+  static readonly EPUB_FONT_KEY = 'rh.ebooks.epubFont';
+  static readonly EPUB_FONT_STEPS = [80, 90, 100, 110, 125, 140, 160, 180, 200];
+  readonly epubLayout = signal<EpubLayout>(readRaw(localStore(), EbookReaderComponent.EPUB_LAYOUT_KEY) === 'scroll' ? 'scroll' : 'pages');
+  readonly epubFont = signal<number>(EbookReaderComponent.loadEpubFont());
+
+  static loadEpubFont(): number {
+    const v = Number(readRaw(localStore(), EbookReaderComponent.EPUB_FONT_KEY));
+    return EbookReaderComponent.EPUB_FONT_STEPS.includes(v) ? v : 100;
+  }
+
+  toggleEpubLayout(): void {
+    const next: EpubLayout = this.epubLayout() === 'scroll' ? 'pages' : 'scroll';
+    this.epubLayout.set(next);
+    writeRaw(localStore(), EbookReaderComponent.EPUB_LAYOUT_KEY, next);
+  }
+
+  epubFontBy(delta: 1 | -1): void {
+    const steps = EbookReaderComponent.EPUB_FONT_STEPS;
+    const i = Math.max(0, steps.indexOf(this.epubFont()));
+    const v = steps[Math.min(steps.length - 1, Math.max(0, i + delta))];
+    this.epubFont.set(v);
+    writeRaw(localStore(), EbookReaderComponent.EPUB_FONT_KEY, String(v));
   }
 }

@@ -5479,6 +5479,10 @@
       "missedNo": "Nem",
       "missedThanks": "Köszönjük – feljegyeztük a felismeréshez.",
       "missedFailed": "A választ nem sikerült menteni.",
+      "fontSmaller": "Kisebb betű",
+      "fontLarger": "Nagyobb betű",
+      "layoutScroll": "Folyamatos szöveg (görgetés)",
+      "layoutPages": "Oldalanként",
       "openBoard": "Tábla: {{n}} diagram",
       "openBoardOne": "Tábla: 1 diagram"
     },

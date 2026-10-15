@@ -53,6 +53,28 @@ describe('EpubViewerComponent', () => {
     expect(prev).toHaveBeenCalledTimes(1);
   });
 
+  it('Darstellung (0.791.0): „Seite“ = paginiert eine Spalte, „Fließend“ = scrollen; Schriftgröße als Prozent; fließend blättert das Rad nicht', () => {
+    const c = make(null);
+    const made: Record<string, unknown>[] = [];
+    const fontSizes: string[] = [];
+    const rendition = {
+      themes: { default: () => {}, fontSize: (s: string) => fontSizes.push(s) },
+      hooks: { content: { register: () => {} } }, on: () => {},
+    };
+    const book = { renderTo: (_el: HTMLElement, o: Record<string, unknown>) => { made.push(o); return rendition; } };
+    const create = (c as unknown as { createRendition(b: unknown): unknown }).createRendition.bind(c);
+    c.fontScale = 125;
+    create(book);
+    expect(made[0]).toEqual(jasmine.objectContaining({ flow: 'paginated', spread: 'none' }));
+    expect(fontSizes).toEqual(['125%']);
+    c.layout = 'scroll';
+    create(book);
+    expect(made[1]).toEqual(jasmine.objectContaining({ flow: 'scrolled', manager: 'continuous' }));
+    const next = spyOn(c, 'next');
+    c.onWheel(new WheelEvent('wheel', { deltaY: 300 }));
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('öffnet als Ordner (absolute Basis, ohne Ersetzungen) und lädt das Archiv NICHT', async () => {
     const c = make('/api/ebooks/9/epub/tok/');
     const book = fakeBook(() => Promise.resolve());

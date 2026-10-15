@@ -38,6 +38,14 @@
             </mat-menu>
           }
         </div>
+        <div class="rd-zoom">
+          <button mat-icon-button (click)="epubFontBy(-1)" [disabled]="epubFont() <= 80" [appIconLabel]="'ebooks.reader.fontSmaller' | translate"><mat-icon>text_decrease</mat-icon></button>
+          <button mat-icon-button (click)="epubFontBy(1)" [disabled]="epubFont() >= 200" [appIconLabel]="'ebooks.reader.fontLarger' | translate"><mat-icon>text_increase</mat-icon></button>
+          <button mat-icon-button (click)="toggleEpubLayout()" [attr.aria-pressed]="epubLayout() === 'scroll'"
+                  [appIconLabel]="(epubLayout() === 'scroll' ? 'ebooks.reader.layoutPages' : 'ebooks.reader.layoutScroll') | translate">
+            <mat-icon>{{ epubLayout() === 'scroll' ? 'auto_stories' : 'view_day' }}</mat-icon>
+          </button>
+        </div>
       } @else if (readable) {
         <div class="rd-pages">
           <label class="rd-page-label">
@@ -89,7 +97,8 @@
           @if (isEpub) {
             <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
                              [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)"
-                             (toc)="epubToc.set($event)" (failed)="onViewerFailed()" />
+                             (toc)="epubToc.set($event)" (failed)="onViewerFailed()"
+                             [layout]="epubLayout()" [fontScale]="epubFont()" />
           } @else {
             <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
                             [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)" (blankDblclick)="askMissedDiagram(ebook, $event)"

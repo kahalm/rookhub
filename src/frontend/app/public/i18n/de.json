@@ -5479,6 +5479,10 @@
       "missedNo": "Nein",
       "missedThanks": "Danke – für die Erkennung vorgemerkt.",
       "missedFailed": "Die Antwort konnte nicht gespeichert werden.",
+      "fontSmaller": "Schrift kleiner",
+      "fontLarger": "Schrift größer",
+      "layoutScroll": "Fließtext (scrollen)",
+      "layoutPages": "Seitenweise",
       "openBoard": "Brett: {{n}} Diagramme",
       "openBoardOne": "Brett: 1 Diagramm"
     },
