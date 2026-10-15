@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.802.3", date: "2026-10-16", changes: [
+    { en: "E-books: scanned PDFs with oversized pages (e.g. scans declared as several metres wide) are now rendered at a lower resolution for diagram recognition – before, single pages created temporary files of 250 MB each and could fill up the server’s disk.", de: "E-Books: Eingescannte PDFs mit übergroßen Seiten (z. B. Scans, die als mehrere Meter breit ausgewiesen sind) werden für die Diagrammerkennung mit geringerer Auflösung gerendert – vorher erzeugten einzelne Seiten Zwischendateien von je 250 MB und konnten die Platte des Servers füllen." },
+  ] },
   { version: "0.802.2", date: "2026-10-15", changes: [
     { en: "UI size: now also takes effect on tablets and e-readers whose browser applies the new page width a moment later (e.g. Boox) – before, the choice did nothing there. The profile now shows a short device check (method, layout and screen width).", de: "UI-Größe: Wirkt jetzt auch auf Tablets und E-Readern, deren Browser die neue Seitenbreite erst einen Moment später übernimmt (z. B. Boox) – dort tat die Auswahl vorher gar nichts. Im Profil steht dazu ein kurzer Gerätebefund (Weg, Layout- und Bildschirmbreite)." },
   ]},

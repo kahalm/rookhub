@@ -140,10 +140,63 @@ public class EbookScanDiagramExtractor
         return list;
     }
 
+    /// <summary>Längste Seite einer gerenderten Seite in Pixeln; größere Seiten werden mit weniger dpi gerendert (0.802.3).
+    /// Ein Buch mit Scans, die als 61 × 45 Zoll ausgewiesen waren (Troitzky), schrieb 250 MB je Seite und füllte /tmp.</summary>
+    internal const int MaxPagePixels = 6000;
+
     private bool Render(string pdf, int first, int last, string dir, CancellationToken ct)
     {
+        var sizes = PageSizes(pdf, first, last, ct);
+        var dpis = Enumerable.Range(first, last - first + 1).Select(p => RenderDpi(sizes.GetValueOrDefault(p))).ToList();
+        if (dpis.All(d => d == Dpi * 2)) return RunPdftoppm(pdf, first, last, Dpi * 2, dir, ct);
+        // Übergroße Seiten im Stapel: Seite für Seite, jede mit ihrer Auflösung.
+        var ok = true;
+        for (var i = 0; i < dpis.Count; i++) ok &= RunPdftoppm(pdf, first + i, first + i, dpis[i], dir, ct);
+        return ok;
+    }
+
+    /// <summary>dpi für eine Seite (Größe in Punkten): normal 300, höchstens so viel, dass die lange Seite <see cref="MaxPagePixels"/> nicht übersteigt.</summary>
+    internal static int RenderDpi((double W, double H) size)
+    {
+        var longest = Math.Max(size.W, size.H);
+        if (longest <= 0) return Dpi * 2;
+        return Math.Max(36, Math.Min(Dpi * 2, (int)(MaxPagePixels * 72.0 / longest)));
+    }
+
+    /// <summary>Seitengrößen (Punkte) aus <c>pdfinfo -f … -l …</c> („Page    3 size: 772.4 x 1210.35 pts“).</summary>
+    private Dictionary<int, (double W, double H)> PageSizes(string pdf, int first, int last, CancellationToken ct)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo(_options.PdfinfoPath) { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };
+            foreach (var a in new[] { "-f", first.ToString(), "-l", last.ToString(), pdf }) psi.ArgumentList.Add(a);
+            using var p = Process.Start(psi)!;
+            var output = p.StandardOutput.ReadToEndAsync(ct);
+            _ = p.StandardError.ReadToEndAsync(ct);
+            if (!p.WaitForExit(TimeSpan.FromSeconds(60))) { try { p.Kill(true); } catch { /* weg */ } return []; }
+            return ParsePageSizes(output.Result);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "pdfinfo Seitengrößen nicht lesbar");
+            return [];
+        }
+    }
+
+    internal static Dictionary<int, (double W, double H)> ParsePageSizes(string pdfinfo)
+    {
+        var result = new Dictionary<int, (double W, double H)>();
+        foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(pdfinfo,
+                     @"^Page\s+(\d+)\s+size:\s+([\d.]+)\s+x\s+([\d.]+)", System.Text.RegularExpressions.RegexOptions.Multiline))
+            result[int.Parse(m.Groups[1].Value)] = (double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture),
+                double.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture));
+        return result;
+    }
+
+    private bool RunPdftoppm(string pdf, int first, int last, int dpi, string dir, CancellationToken ct)
+    {
         var psi = new ProcessStartInfo(_options.PdftoppmPath) { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };
-        foreach (var a in new[] { "-r", (Dpi * 2).ToString(), "-gray", "-f", first.ToString(), "-l", last.ToString(), pdf, Path.Combine(dir, "p") })
+        foreach (var a in new[] { "-r", dpi.ToString(), "-gray", "-f", first.ToString(), "-l", last.ToString(), pdf, Path.Combine(dir, "p") })
             psi.ArgumentList.Add(a);
         using var p = new Process { StartInfo = psi };
         try { p.Start(); }

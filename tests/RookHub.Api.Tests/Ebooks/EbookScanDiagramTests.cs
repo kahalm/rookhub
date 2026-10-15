@@ -106,6 +106,17 @@ public class EbookScanDiagramTests
     }
 
     [Fact]
+    public void RenderDpi_CapsGiantPages_ParsesPdfinfoSizes()
+    {
+        var sizes = EbookScanDiagramExtractor.ParsePageSizes("Page    1 size: 595.276 x 841.89 pts (A4)\nPage    3 size: 4419 x 3272.25 pts\n");
+        Assert.Equal(2, sizes.Count);
+        Assert.Equal(300, EbookScanDiagramExtractor.RenderDpi(sizes[1]));            // A4: normal
+        var dpi = EbookScanDiagramExtractor.RenderDpi(sizes[3]);                      // 61 × 45 Zoll: gedrosselt
+        Assert.True(dpi < 300 && 4419 / 72.0 * dpi <= EbookScanDiagramExtractor.MaxPagePixels);
+        Assert.Equal(300, EbookScanDiagramExtractor.RenderDpi(default));               // unbekannt: wie bisher
+    }
+
+    [Fact]
     public void SideMarker_NothingLeftOfTheBoard_IsNull() => Assert.Null(EbookBoardImage.SideMarker(Page(400, 400), (120, 100, 360, 340)));
 
     [Fact]
