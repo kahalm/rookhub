@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.792.1", date: "2026-10-15", changes: [
+    { en: "E-books: in PDFs with pages of different sizes (e.g. scanned double pages in landscape) every page now fits the width of the reader – before, wide pages were cut off on the right.", de: "E-Books: In PDFs mit unterschiedlich großen Seiten (z. B. eingescannte Doppelseiten im Querformat) passt jetzt jede Seite in die Breite des Lesers – vorher wurden breite Seiten rechts abgeschnitten." },
+  ] },
   { version: "0.792.0", date: "2026-10-15", changes: [
     { en: "Courses ↔ e-books: „Link with e-book“ in the ⋮ menu of a course matches every line by its position with the recognised diagrams of the best-fitting e-book (also after the opening setup move) and remembers the page. In the solver, „In the book · p. n“ then opens the book at that diagram in a new tab, with the position already on the board.",
       de: "Kurse ↔ E-Books: „Mit E-Book verknüpfen“ im ⋮-Menü eines Kurses ordnet jede Linie über ihre Stellung den erkannten Diagrammen des passendsten E-Books zu (auch nach dem vorgespielten Gegnerzug) und merkt sich die Seite. Im Löser öffnet „Im Buch · S. n“ das Buch dann in einem neuen Tab genau an diesem Diagramm, die Stellung liegt schon auf dem Brett." },

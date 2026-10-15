@@ -249,6 +249,15 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     return fitWidthZoom(this.scrollRef.nativeElement.clientWidth, pageWidth, 16, this.wide() ? WIDE_FIT_MAX_WIDTH : Infinity);
   }
 
+  /**
+   * Zoom einer Seite: „Breite einpassen“ passt JEDE Seite für sich ein (0.792.1) — vorher galt der Faktor von Seite 1 für
+   * alle, und Doppelseiten-Scans im Querformat (z. B. Gambit-Bücher ab S. 3) ragten rechts aus dem Leser. Ein von Hand
+   * gewählter Zoom gilt für alle Seiten.
+   */
+  private scaleFor(slot: PageSlot): number {
+    return this.zoom ?? this.fitZoom(slot.width);
+  }
+
   private applyZoom(): void {
     const first = this.slots[0];
     if (!first) return;
@@ -257,8 +266,9 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.zoomApplied.emit(z);
     for (const slot of this.slots) {
       const canvas = this.canvases[slot.index - 1];
-      canvas.style.width = `${Math.round(slot.width * z)}px`;
-      canvas.style.height = `${Math.round(slot.height * z)}px`;
+      const sz = this.scaleFor(slot);
+      canvas.style.width = `${Math.round(slot.width * sz)}px`;
+      canvas.style.height = `${Math.round(slot.height * sz)}px`;
       slot.rendered = 0;   // neu zeichnen, sobald sichtbar
     }
     this.renderVisible();
@@ -301,7 +311,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
     for (const slot of this.slots) {
       const canvas = this.canvases[slot.index - 1];
       if (wanted.has(slot.index)) {
-        if (slot.rendered !== this.scale && !slot.rendering) void this.renderPage(slot, canvas);
+        if (slot.rendered !== this.scaleFor(slot) && !slot.rendering) void this.renderPage(slot, canvas);
       } else if (slot.rendered !== 0 && !slot.rendering) {
         canvas.width = 0;   // Speicher frei — die CSS-Größe bleibt, das Layout springt nicht
         canvas.height = 0;
@@ -313,7 +323,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
   private async renderPage(slot: PageSlot, canvas: HTMLCanvasElement): Promise<void> {
     const doc = this.doc;
     if (!doc) return;
-    const scaleAtStart = this.scale;
+    let scaleAtStart = this.scaleFor(slot);
     slot.rendering = (async () => {
       let page = this.pageCache.get(slot.index);
       if (!page) {
@@ -330,6 +340,7 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
         // Seiten mit anderem Format als Seite 1 (Querformat-Tafel): Größe korrigieren.
         slot.width = base.width;
         slot.height = base.height;
+        scaleAtStart = this.scaleFor(slot);
         canvas.style.width = `${Math.round(slot.width * scaleAtStart)}px`;
         canvas.style.height = `${Math.round(slot.height * scaleAtStart)}px`;
       }
@@ -343,6 +354,6 @@ export class PdfViewerComponent implements AfterViewInit, OnChanges, OnDestroy {
       slot.rendered = scaleAtStart;
     })().catch(() => { slot.rendered = 0; }).finally(() => { slot.rendering = null; });
     await slot.rendering;
-    if (!this.destroyed && this.scale !== scaleAtStart) this.renderVisible();
+    if (!this.destroyed && this.scaleFor(slot) !== scaleAtStart) this.renderVisible();
   }
 }
