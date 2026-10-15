@@ -56,4 +56,7 @@ public class EbookOptions
 
     /// <summary>Zeitdeckel je Werkzeug-Aufruf (ein 1,4-GB-PDF braucht für Seite 1 trotzdem nur Sekunden).</summary>
     public int CoverTimeoutSeconds { get; set; } = 90;
+
+    /// <summary>Wie viele 20-Seiten-Stapel eines gescannten Buchs gleichzeitig gerendert und gelesen werden (0.797.0).</summary>
+    public int ScanParallelism { get; set; } = 4;
 }

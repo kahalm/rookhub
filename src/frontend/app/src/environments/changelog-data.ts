@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.797.0", date: "2026-10-15", changes: [
+    { en: "E-books: diagram recognition in scanned books is several times faster – several page batches are now read at the same time instead of strictly one page after another.", de: "E-Books: Die Diagrammerkennung in eingescannten Büchern ist um ein Vielfaches schneller – mehrere Seitenstapel werden jetzt gleichzeitig gelesen statt streng Seite für Seite." },
+  ] },
   { version: "0.796.0", date: "2026-10-15", changes: [
     { en: "E-books: the author names below a book (and at the top of the reader) are now links – one click shows all books by that author; the „Author“ chip above the list removes the filter again.", de: "E-Books: Die Autorennamen unter einem Buch (und oben im Leser) sind jetzt Links – ein Klick zeigt alle Bücher dieses Autors; der Chip „Autor“ über der Liste nimmt den Filter wieder weg." },
   ] },

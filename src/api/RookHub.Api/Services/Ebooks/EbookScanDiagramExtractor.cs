@@ -44,16 +44,21 @@ public class EbookScanDiagramExtractor
     public List<ScanBoard> Scan(string pdfPath, int pageCount, CancellationToken ct)
     {
         var model = EbookBoardClassifier.Scan; var alt = EbookBoardClassifier.ScanAlt;
-        var result = new List<ScanCandidate>();
-        var dir = Path.Combine(Path.GetTempPath(), "rh-scan-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(dir);
+        // Stapel zu je 20 Seiten parallel rendern und lesen (0.797.0) — vorher lief ein Buch strikt Seite für Seite auf einem Kern.
+        var found = new System.Collections.Concurrent.ConcurrentBag<ScanCandidate>();
+        var root = Path.Combine(Path.GetTempPath(), "rh-scan-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
         try
         {
-            for (var first = 1; first <= pageCount; first += Batch)
+            var batches = Enumerable.Range(0, (pageCount + Batch - 1) / Batch).Select(i => 1 + i * Batch).ToList();
+            var failed = 0;
+            Parallel.ForEach(batches, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, _options.ScanParallelism), CancellationToken = ct }, first =>
             {
-                ct.ThrowIfCancellationRequested();
+                if (Volatile.Read(ref failed) != 0) return;
                 var last = Math.Min(pageCount, first + Batch - 1);
-                if (!Render(pdfPath, first, last, dir, ct)) break;
+                var dir = Path.Combine(root, first.ToString());
+                Directory.CreateDirectory(dir);
+                if (!Render(pdfPath, first, last, dir, ct)) { Interlocked.Exchange(ref failed, 1); return; }
                 foreach (var file in Directory.GetFiles(dir, "*.pgm").OrderBy(f => f, StringComparer.Ordinal))
                 {
                     ct.ThrowIfCancellationRequested();
@@ -61,16 +66,18 @@ public class EbookScanDiagramExtractor
                     try
                     {
                         var g = ReadPgm(File.ReadAllBytes(file));
-                        if (g != null && page > 0) result.AddRange(ScanPage(PreparePage(g), page, model, alt, g, EbookBoardCnn.Instance));
+                        if (g != null && page > 0) foreach (var c in ScanPage(PreparePage(g), page, model, alt, g, EbookBoardCnn.Instance)) found.Add(c);
                     }
                     finally { File.Delete(file); }
                 }
-            }
+            });
         }
+        catch (AggregateException ex) when (ex.InnerExceptions.All(e => e is OperationCanceledException)) { throw new OperationCanceledException(ct); }
         finally
         {
-            try { Directory.Delete(dir, true); } catch (IOException) { /* Zwischenordner, egal */ }
+            try { Directory.Delete(root, true); } catch (IOException) { /* Zwischenordner, egal */ }
         }
+        var result = found.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
         var chosen = Choose(result, out var useAlt);
         _logger.LogInformation("Scan {Path}: {Count} Diagramme auf {Pages} Seiten (Modell {Model})", Path.GetFileName(pdfPath), chosen.Count, pageCount, useAlt ? "scan2" : "scan");
         return chosen;
