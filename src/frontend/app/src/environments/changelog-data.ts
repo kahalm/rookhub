@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.786.1", date: "2026-10-15", changes: [
+    { en: "E-book reader on very wide screens (from 2400 px): the board panel now grows up to the window height, so the board gets much bigger (e.g. 1170 instead of 720 px at 3440 × 1392); a width you set with the drag handle still wins.",
+      de: "E-Book-Leser auf sehr breiten Bildschirmen (ab 2400 px): die Brett-Spalte wächst jetzt bis zur Fensterhöhe, das Brett wird deutlich größer (z. B. 1170 statt 720 px bei 3440 × 1392); eine mit dem Ziehgriff gewählte Breite gewinnt weiter." },
+  ] },
   { version: "0.786.0", date: "2026-10-15", changes: [
     { en: "E-book reader with more room: only one bar at the top (the reader bar now carries the bell and the ☰ menu, about 70 px more for the book); the board panel is tidier — modes as a compact icon row, side to move, evaluation and solution source in the board header, solve and Maia options behind ⚙, extra actions behind ⋮, one status line below the board; the board can grow larger. Solving now starts in “Training” style by default (your own choice is remembered).",
       de: "E-Book-Leser mit mehr Platz: oben nur noch eine Leiste (die Leser-Leiste trägt jetzt Glocke und ☰-Menü, rund 70 px mehr fürs Buch); die Brett-Leiste ist aufgeräumt — Modi als schlanke Symbolzeile, Seite am Zug, Bewertung und Lösungsherkunft im Brett-Kopf, Lösen- und Maia-Optionen hinter ⚙, weitere Aktionen hinter ⋮, eine Statuszeile unter dem Brett; das Brett darf größer werden. Lösen startet jetzt standardmäßig im Stil „Training“ (eine eigene Wahl wird gemerkt)." },

@@ -431,14 +431,16 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   });
 
-  it('c1-eb-reader-ultrawide-layout: ab 2400 px Seite/Zoom neben dem Titel, Brett-Leiste bis 720 px — darunter unverändert', () => {
+  it('c1-eb-reader-ultrawide-layout: ab 2400 px Seite/Zoom neben dem Titel, Brett-Leiste bis zur Fensterhöhe — darunter unverändert', () => {
     const css = compactCss(EbookReaderComponent);
     const at = css.indexOf('@media(min-width:2400px)');
     expect(at).toBeGreaterThan(-1);
     const wide = css.slice(at);
     expect(wide).toMatch(/\.rd-title(\[[^\]]*\])?\{flex:01auto/);
     expect(wide).toMatch(/\.rd-toolbar-spacer(\[[^\]]*\])?\{display:block;flex:1/);
-    expect(wide).toMatch(/\.rd-panel(\[[^\]]*\])?\{flex:00var\(--rd-panel-w,clamp\(460px,24vw,720px\)\)/);
+    // User 15.10.: ab 2400 px wächst die Brett-Spalte bis zur Fensterhöhe (vorher fest höchstens 720 px).
+    expect(wide).toMatch(/\.rd-panel(\[[^\]]*\])?\{flex:00var\(--rd-panel-w,clamp\(460px,(calc\()?100dvh-190px\)?,46vw\)\)/);
+    expect(wide).not.toContain('720px');
     expect(css.slice(0, at)).toMatch(/\.rd-toolbar-spacer(\[[^\]]*\])?\{display:none/);
     expect(css.slice(0, at)).toContain('clamp(300px,32vw,460px)');
   });
