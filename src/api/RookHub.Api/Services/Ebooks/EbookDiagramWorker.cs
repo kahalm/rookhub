@@ -59,17 +59,28 @@ public class EbookDiagramWorker : PeriodicWorker
                     : await Task.Run(() => extractor.Extract(path, ebook.Id, ct,
                         reading != null && reading != file ? storage.ResolveFile(ebook, reading) : null), ct);
                 // PDF und EPUB im selben Buch (0.793.0): EIN Diagrammsatz aus dem PDF (exakt), verknüpft mit den Bildern im EPUB.
+                // Ist das PDF nur ein Scan, sind die sauberen EPUB-Bilder die bessere Quelle (0.795.0) — sonst verlor ein
+                // zusammengelegtes Buch fast alle Diagramme (Swindler: 44 Scan-Bretter statt 905 EPUB-Bilder).
                 var epub = ebook.Files.FirstOrDefault(f => f.Format == "epub");
-                if (file.Format == "pdf" && epub != null && result.Diagrams.Count > 0)
+                if (file.Format == "pdf" && epub != null)
                 {
                     try
                     {
                         var epubPath = storage.ResolveFile(ebook, epub);
                         var er = await Task.Run(() => services.GetRequiredService<EbookEpubDiagramExtractor>().Extract(epubPath, ebook.Id, ct), ct);
-                        var ordered = result.Diagrams.OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X).ToList();
-                        var linked = EbookFormatLinker.Link(ordered, er.Diagrams);
-                        Logger.LogInformation("E-Book {EbookId}: {Linked} von {Total} PDF-Diagrammen mit dem EPUB verknüpft ({Images} EPUB-Bilder)",
-                            ebook.Id, linked, ordered.Count, er.Diagrams.Count);
+                        if (PreferEpub(result.Diagrams, er.Diagrams.Count))
+                        {
+                            Logger.LogInformation("E-Book {EbookId}: {Images} EPUB-Diagramme statt {Total} aus dem gescannten PDF",
+                                ebook.Id, er.Diagrams.Count, result.Diagrams.Count);
+                            result = er with { Pages = result.Pages };
+                        }
+                        else if (result.Diagrams.Count > 0)
+                        {
+                            var ordered = result.Diagrams.OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X).ToList();
+                            var linked = EbookFormatLinker.Link(ordered, er.Diagrams);
+                            Logger.LogInformation("E-Book {EbookId}: {Linked} von {Total} PDF-Diagrammen mit dem EPUB verknüpft ({Images} EPUB-Bilder)",
+                                ebook.Id, linked, ordered.Count, er.Diagrams.Count);
+                        }
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
                     catch (Exception ex) { Logger.LogWarning(ex, "E-Book {EbookId}: EPUB-Verknüpfung fehlgeschlagen", ebook.Id); }
@@ -94,4 +105,9 @@ public class EbookDiagramWorker : PeriodicWorker
             await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
         }
     }
+
+    /// <summary>EPUB-Bilder statt PDF-Diagramme, wenn das PDF keinen Schach-Font hat (nur Scan-/CNN-Lesungen) und das EPUB
+    /// mindestens gleich viele Bretter liefert. Ein PDF mit Schach-Font bleibt die Quelle — es liest die Stellungen exakt.</summary>
+    internal static bool PreferEpub(IReadOnlyCollection<EbookDiagram> pdf, int epubCount)
+        => epubCount > 0 && epubCount >= pdf.Count && pdf.All(d => d.FontFamily is "scan" or "cnn");
 }

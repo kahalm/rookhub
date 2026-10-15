@@ -48,4 +48,17 @@ public class EbookDiagramWorkerTests : IDisposable
         Assert.Equal(EbookDiagramState.Done, reloaded.SolutionCheckState);
         Assert.Equal(["1", "2"], await _kit.Db.EbookDiagrams.OrderBy(d => d.Label).Select(d => d.Label!).ToListAsync());
     }
+
+    [Theory]
+    [InlineData("scan", 44, 905, true)]     // Swindler: gescanntes PDF, sauberes EPUB → EPUB
+    [InlineData("cnn", 10, 10, true)]
+    [InlineData("scan", 0, 300, true)]      // PDF ohne erkannte Bretter
+    [InlineData("scan", 50, 20, false)]     // EPUB mit weniger Bildern bleibt Verknüpfung
+    [InlineData("chess-merida", 44, 905, false)] // Schach-Font liest exakt → PDF bleibt die Quelle
+    [InlineData("scan", 0, 0, false)]
+    public void PreferEpub_OnlyOverScannedPdf(string family, int pdfCount, int epubCount, bool expected)
+    {
+        var pdf = Enumerable.Range(0, pdfCount).Select(_ => new EbookDiagram { Fen = "8/8/8/8/8/8/8/K6k w - - 0 1", FontFamily = family }).ToList();
+        Assert.Equal(expected, EbookDiagramWorker.PreferEpub(pdf, epubCount));
+    }
 }

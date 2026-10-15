@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.795.0", date: "2026-10-15", changes: [
+    { en: "E-books: if a book is available as EPUB and as a scanned PDF, the diagrams now come from the clean images in the EPUB – before, such books lost most of their diagrams (e.g. „The Complete Chess Swindler“: 44 instead of about 900). Books with both formats are recognised again after the update.", de: "E-Books: Liegt ein Buch als EPUB und als eingescanntes PDF vor, kommen die Diagramme jetzt aus den sauberen Bildern im EPUB – vorher verloren solche Bücher die meisten Diagramme (z. B. „The Complete Chess Swindler“: 44 statt rund 900). Bücher mit beiden Formaten werden nach dem Update neu erkannt." },
+  ] },
   { version: "0.794.0", date: "2026-10-15", changes: [
     { en: "E-books: diagrams in scanned books are now read by a new neural network (trained on several thousand checked diagrams) – far more positions are recognised correctly. Scanned books are recognised again after the update.", de: "E-Books: Diagramme in eingescannten Büchern liest jetzt ein neues neuronales Netz (trainiert auf mehreren Tausend geprüften Diagrammen) – deutlich mehr Stellungen werden richtig erkannt. Eingescannte Bücher werden nach dem Update neu erkannt." },
   ] },
