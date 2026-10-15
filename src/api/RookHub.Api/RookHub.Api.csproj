@@ -21,6 +21,7 @@
     <EmbeddedResource Include="Assets\ebook-board-model.bin" />
     <EmbeddedResource Include="Assets\ebook-board-model-scan.bin" />
     <EmbeddedResource Include="Assets\ebook-board-model-scan2.bin" />
+    <EmbeddedResource Include="Assets\ebook-board-cnn.onnx" />
     <!-- Schrift für die Karte des Trainingslinks (0.745.0) — DejaVu, freie Lizenz (Assets/fonts/LICENSE-DejaVu.txt) -->
     <EmbeddedResource Include="Assets\fonts\*.ttf" />
     <EmbeddedResource Include="Assets\league-model-bayern.json" />
@@ -37,6 +38,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
     <PackageReference Include="Microting.EntityFrameworkCore.MySql" Version="10.0.10" />
     <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />

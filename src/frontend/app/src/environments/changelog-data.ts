@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.794.0", date: "2026-10-15", changes: [
+    { en: "E-books: diagrams in scanned books are now read by a new neural network (trained on several thousand checked diagrams) – far more positions are recognised correctly. Scanned books are recognised again after the update.", de: "E-Books: Diagramme in eingescannten Büchern liest jetzt ein neues neuronales Netz (trainiert auf mehreren Tausend geprüften Diagrammen) – deutlich mehr Stellungen werden richtig erkannt. Eingescannte Bücher werden nach dem Update neu erkannt." },
+  ] },
   { version: "0.793.1", date: "2026-10-15", changes: [
     { en: "Courses ↔ e-books: the link from a course line into the book survives re-reading the book — it remembers book, position and page and finds the diagram again by its position (nearest page wins); a position that is no longer read correctly comes back as soon as it is.",
       de: "Kurse ↔ E-Books: Die Verknüpfung einer Kurslinie ins Buch übersteht das Neulesen des Buchs — sie merkt sich Buch, Stellung und Seite und findet das Diagramm über die Stellung wieder (nächste Seite gewinnt); eine Stellung, die gerade nicht richtig gelesen wird, kommt zurück, sobald sie es wieder wird." },

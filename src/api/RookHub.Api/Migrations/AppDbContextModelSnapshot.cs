@@ -2377,6 +2377,9 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<float?>("Confidence")
+                        .HasColumnType("float");
+
                     b.Property<int>("EbookId")
                         .HasColumnType("int");
 

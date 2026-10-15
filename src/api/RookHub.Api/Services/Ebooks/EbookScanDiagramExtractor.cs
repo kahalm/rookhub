@@ -36,10 +36,10 @@ public class EbookScanDiagramExtractor
     }
 
     /// <summary>Ein gefundenes Brett: Seite, Lage als Seitenanteil, Brettteil der FEN, Zugrecht-Marker (oder null).</summary>
-    public sealed record ScanBoard(int Page, double X, double Y, double W, double H, string Board, char? Side);
+    public sealed record ScanBoard(int Page, double X, double Y, double W, double H, string Board, char? Side, float? Confidence = null);
 
     /// <summary>Ein Brett mit den Lesungen beider Scan-Modelle (<c>null</c> = nicht plausibel).</summary>
-    public sealed record ScanCandidate(int Page, double X, double Y, double W, double H, string? Board, string? AltBoard, char? Side);
+    public sealed record ScanCandidate(int Page, double X, double Y, double W, double H, string? Board, string? AltBoard, char? Side, float? Confidence = null);
 
     public List<ScanBoard> Scan(string pdfPath, int pageCount, CancellationToken ct)
     {
@@ -61,7 +61,7 @@ public class EbookScanDiagramExtractor
                     try
                     {
                         var g = ReadPgm(File.ReadAllBytes(file));
-                        if (g != null && page > 0) result.AddRange(ScanPage(PreparePage(g), page, model, alt, g));
+                        if (g != null && page > 0) result.AddRange(ScanPage(PreparePage(g), page, model, alt, g, EbookBoardCnn.Instance));
                     }
                     finally { File.Delete(file); }
                 }
@@ -84,7 +84,7 @@ public class EbookScanDiagramExtractor
         return candidates
             .Select(c => (c, board: alt ? c.AltBoard ?? c.Board : c.Board ?? c.AltBoard))
             .Where(x => x.board != null)
-            .Select(x => new ScanBoard(x.c.Page, x.c.X, x.c.Y, x.c.W, x.c.H, x.board!, x.c.Side))
+            .Select(x => new ScanBoard(x.c.Page, x.c.X, x.c.Y, x.c.W, x.c.H, x.board!, x.c.Side, x.board == x.c.Board ? x.c.Confidence : null))
             .ToList();
     }
 
@@ -101,7 +101,10 @@ public class EbookScanDiagramExtractor
 
     /// <summary>Bretter einer vorbereiteten Seite (<see cref="PreparePage"/>) erkennen.</summary>
     /// <param name="full">Die Seite in voller Auflösung (doppelt so groß) für den Zugrecht-Marker; <c>null</c> = keiner.</param>
-    public static List<ScanCandidate> ScanPage(float[,] g, int page, EbookBoardClassifier model, EbookBoardClassifier? alt = null, float[,]? full = null)
+    /// <param name="cnn">Faltungsnetz (0.794.0): liest das Brett aus der vollen Auflösung; ist seine Lesung plausibel, gilt sie
+    /// (mit Sicherheit), sonst die der alten Modelle.</param>
+    public static List<ScanCandidate> ScanPage(float[,] g, int page, EbookBoardClassifier model, EbookBoardClassifier? alt = null, float[,]? full = null,
+        EbookBoardCnn? cnn = null)
     {
         int H = g.GetLength(0), W = g.GetLength(1);
         var list = new List<ScanCandidate>();
@@ -113,11 +116,19 @@ public class EbookScanDiagramExtractor
             var bg = Enumerable.Range(0, 64).Select(i => (i / 8 + i % 8) % 2 == 0 ? light : dark).ToArray();
             var bLight = BoardImageMath.Blur(light, 1.6); var bDark = BoardImageMath.Blur(dark, 1.6);
             var bgBlur = Enumerable.Range(0, 64).Select(i => (i / 8 + i % 8) % 2 == 0 ? bLight : bDark).ToArray();
-            var board = EbookBoardImage.Recognise(cells, bg, bgBlur, model);
+            string? cnnBoard = null; float? conf = null;
+            if (cnn != null && full != null)
+            {
+                var reading = cnn.Read(full, box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2);
+                cnnBoard = EbookBoardImage.GridToBoard(reading.Grid);
+                if (cnnBoard != null) conf = reading.MinConfidence;
+            }
+            var board = cnnBoard ?? EbookBoardImage.Recognise(cells, bg, bgBlur, model);
             var altBoard = alt == null ? null : EbookBoardImage.Recognise(cells, bg, bgBlur, alt);
+            if (cnnBoard != null) altBoard = null;   // das Netz gewinnt, wo es eine plausible Stellung liest
             if (board == null && altBoard == null) continue;
             list.Add(new ScanCandidate(page, (double)box.X0 / W, (double)box.Y0 / H, (double)(box.X1 - box.X0) / W, (double)(box.Y1 - box.Y0) / H,
-                board, altBoard, full == null ? null : EbookBoardImage.SideMarker(full, (box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2))));
+                board, altBoard, full == null ? null : EbookBoardImage.SideMarker(full, (box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2)), conf));
         }
         return list;
     }

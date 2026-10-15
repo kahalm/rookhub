@@ -360,3 +360,15 @@ welche Bücher/Seiten die Erkennung verpasst. Keine Oberfläche zum Auswerten; a
   `W > 0` als Zonen, im EPUB die mit `ImageRef` (Kapitel `EpubChapter ?? Page`).
 - Migration `EbookDiagramEpubChapter` reiht alle nicht kuratierten Bücher mit PDF+EPUB neu zur Erkennung ein.
 
+## Faltungsnetz für Scan-Diagramme (0.794.0)
+
+`EbookBoardCnn` (ONNX Runtime, eingebettet `Assets/ebook-board-cnn.onnx`) liest in `EbookScanDiagramExtractor.ScanPage` jedes
+gefundene Brett aus der 300-dpi-Seite: Flächenmittel auf 256 × 256, 64 Felder zu 32 × 32 (Grauwert 0–1), Klassen
+PNBRQKpnbrqk + leer. Ist die Lesung plausibel (`EbookBoardImage.GridToBoard`: je ein König, keine Bauern auf der Grundreihe,
+mögliches Material), gilt sie (`FontFamily = cnn`, `EbookDiagram.Confidence` = Wahrscheinlichkeit des unsichersten Felds),
+sonst wie bisher die MLP-Modelle. Trainiert auf ~3 400 Opus-Diagrammen (Pongó, 5 × Awerbach, Silman; Skripte
+`~/claude/ebook-board-training/hr`); Gegenprobe ohne eigene Diagramme: Awerbach-Lehrbücher/Silman 99,5–100 %, andere
+Awerbach 82–87 %, Wasserzeichen (Läufer/Springer) 64 %, Pongó (kleine Bretter) 2 % — dort braucht es eigene Beispiele.
+Migration `EbookDiagramConfidence` reiht nicht kuratierte Scan-Bücher (Scan-Diagramme oder ohne Treffer) neu ein.
+Neues Modell: ONNX (Eingabe `cells` [n,1,32,32], Ausgabe `logits` [n,13]) unter demselben Namen ablegen.
+

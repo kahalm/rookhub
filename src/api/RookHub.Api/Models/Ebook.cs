@@ -256,6 +256,10 @@ public class EbookDiagram
     [MaxLength(300)]
     public string? ImageRef { get; set; }
 
+    /// <summary>Sicherheit der Bilderkennung (0.794.0, Faltungsnetz): Wahrscheinlichkeit des UNSICHERSTEN Felds (0–1); <c>null</c>
+    /// bei Font-Diagrammen und den alten Modellen. Unter ~0,9 lohnt ein zweiter Blick (Opus).</summary>
+    public float? Confidence { get; set; }
+
     /// <summary>EPUB-Kapitel (Spine, 1-basiert) eines aus dem PDF erkannten Diagramms, das zusätzlich mit einem Bild im
     /// EPUB desselben Buchs verknüpft ist (0.793.0, <c>EbookFormatLinker</c>). Bei reinen EPUB-Diagrammen steht das Kapitel
     /// weiter in <see cref="Page"/>, hier <c>null</c>.</summary>

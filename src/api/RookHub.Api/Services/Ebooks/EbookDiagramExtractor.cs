@@ -113,7 +113,7 @@ public class EbookDiagramExtractor
                 {
                     EbookId = ebookId, Page = b.Page,
                     X = Clamp(b.X), Y = Clamp(b.Y), W = Clamp(b.W), H = Clamp(b.H),
-                    Fen = fen, SideKnown = b.Side != null, FontFamily = "scan",
+                    Fen = fen, SideKnown = b.Side != null, FontFamily = b.Confidence != null ? "cnn" : "scan", Confidence = b.Confidence,
                 });
             }
         }

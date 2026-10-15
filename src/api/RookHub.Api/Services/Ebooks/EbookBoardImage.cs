@@ -393,6 +393,13 @@ public static class EbookBoardImage
             if (!strong && model.EmptyProbability(Feature2(cells[i], backgrounds[i])) > 0.5) continue;
             grid[i] = Pieces[model.Piece(Feature1(cells[i], backgrounds[i]))];
         }
+        return GridToBoard(grid);
+    }
+
+    /// <summary>64 Felder (Reihe 8 zuerst, '.' leer) → Brettteil der FEN, oder <c>null</c>, wenn die Stellung nicht sein
+    /// kann (nicht genau ein König je Seite, Bauern auf der Grundreihe, unmögliches Material).</summary>
+    public static string? GridToBoard(char[] grid)
+    {
         if (grid.Count(c => c == 'K') != 1 || grid.Count(c => c == 'k') != 1) return null;
         for (var i = 0; i < 8; i++) if (grid[i] is 'P' or 'p' || grid[56 + i] is 'P' or 'p') return null;
         if (!PossibleMaterial(grid)) return null;
