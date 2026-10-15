@@ -326,8 +326,8 @@ describe('EbookBoardComponent', () => {
     const c = css();
     const base = c.slice(0, c.indexOf('@media'));
     // 0.785.x: EINE Leiste oben + kompakte Brett-Leiste — 220 px statt 64 + 330 px über/unter dem Brett.
-    expect(base).toMatch(/\.eb-board(\[[^\]]*\])?\{width:clamp\(min\(280px,100%\),(?:calc\()?100dvh-220px\)?,100%\);margin-inline:auto/);
-    expect(CSS.supports('width', 'clamp(min(280px, 100%), calc(100dvh - 220px), 100%)')).toBeTrue();
+    expect(base).toMatch(/\.eb-board(\[[^\]]*\])?\{width:clamp\(min\(280px,100%\),(?:calc\()?100dvh-250px\)?,100%\);margin-inline:auto/);
+    expect(CSS.supports('width', 'clamp(min(280px, 100%), calc(100dvh - 250px), 100%)')).toBeTrue();
     // Unter 900 px (Vollbild am Handy) bleibt die eigene Regel.
     expect(c.slice(c.indexOf('@media(max-width:899.98px)'))).toMatch(/\.eb-board(\[[^\]]*\])?\{width:min\(100%,62dvh\)/);
   });

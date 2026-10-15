@@ -12,7 +12,7 @@
 /* c2-eb-board-leiste-laptop-falz, 0.785.x: ab 900 px ist das Brett höchstens so groß, dass darunter noch die Statuszeile
    und eine Bedienzeile sichtbar bleiben — 220 px ≈ EINE Leiste oben (48) + Panel-Kopf (40) + Brett-Leiste (40) +
    Statuszeile (40) + Abstände; vorher 64 + 330 px. Auf hohen Fenstern greift 100 %; nie schmaler als 280 px. */
-.eb-board { width: clamp(min(280px, 100%), calc(100dvh - 220px), 100%); margin-inline: auto; }
+.eb-board { width: clamp(min(280px, 100%), calc(100dvh - 250px), 100%); margin-inline: auto; }
 .eb-note { margin: 0; font-size: .85rem; opacity: .75; }
 .eb-note--warn { color: var(--rh-warn); opacity: 1; }
 .eb-busy { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; opacity: .85; }

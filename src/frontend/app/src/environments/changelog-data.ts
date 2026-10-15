@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.786.2", date: "2026-10-15", changes: [
+    { en: "E-book reader: the large board leaves room for its status line below, which no longer touches the bottom edge of the window.",
+      de: "E-Book-Leser: das große Brett lässt unten Platz für seine Statuszeile, die nicht mehr am Fensterrand klebt." },
+  ] },
   { version: "0.786.1", date: "2026-10-15", changes: [
     { en: "E-book reader on very wide screens (from 2400 px): the board panel now grows up to the window height, so the board gets much bigger (e.g. 1170 instead of 720 px at 3440 × 1392); a width you set with the drag handle still wins.",
       de: "E-Book-Leser auf sehr breiten Bildschirmen (ab 2400 px): die Brett-Spalte wächst jetzt bis zur Fensterhöhe, das Brett wird deutlich größer (z. B. 1170 statt 720 px bei 3440 × 1392); eine mit dem Ziehgriff gewählte Breite gewinnt weiter." },

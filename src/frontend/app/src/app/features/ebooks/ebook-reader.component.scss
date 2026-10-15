@@ -138,8 +138,8 @@
 @media (min-width: 2400px) {
   .rd-title { flex: 0 1 auto; max-width: 40vw; margin-right: 16px; }
   .rd-toolbar-spacer { display: block; flex: 1 1 auto; }
-  /* Brett-Spalte bis zur Fensterhöhe (User 15.10.: Brett 720 → ~1170 px bei 3440 × 1392); 190 px = Leiste + Brett-Kopf + Modi + Statuszeile. Eigene Breite (Ziehgriff) gewinnt. */
-  .rd-panel { flex: 0 0 var(--rd-panel-w, clamp(460px, calc(100dvh - 190px), 46vw)); }
+  /* Brett-Spalte bis zur Fensterhöhe (User 15.10.: Brett 720 → ~1170 px bei 3440 × 1392); 220 px = Leiste + Brett-Kopf + Modi + Statuszeile (Brett selbst: 100dvh − 250px, gemessen 15.10.). Eigene Breite (Ziehgriff) gewinnt. */
+  .rd-panel { flex: 0 0 var(--rd-panel-w, clamp(460px, calc(100dvh - 220px), 46vw)); }
 }
 
 /* Ab 600 px hält die Leiste rechts die Breite der angedockten Kopfleiste frei (gemessen: --rh-nav-w). */
