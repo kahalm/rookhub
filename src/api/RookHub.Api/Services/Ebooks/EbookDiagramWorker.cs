@@ -88,6 +88,9 @@ public class EbookDiagramWorker : PeriodicWorker
                 ebook.DiagramState = EbookDiagramState.Failed;
             }
             await db.SaveChangesAsync(ct);
+            // Kurs-Verweise auf die neuen Diagramme umhängen (gleiche Stellung, nächste Seite) — sonst zeigte „Im Buch“
+            // nach jedem Neulesen ins Leere.
+            if (ebook.DiagramState == EbookDiagramState.Done) await CourseEbookLinker.RelinkEbookAsync(db, ebook.Id, ct);
             await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
         }
     }

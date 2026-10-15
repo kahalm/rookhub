@@ -90,4 +90,47 @@ public class CourseEbookLinkerTests : IDisposable
         Assert.Null(r.EbookId);
         Assert.Equal(0, await _kit.Db.CourseLineEbookRefs.CountAsync());
     }
+
+    [Fact]
+    public async Task Reread_RefsFindTheNewDiagramsByPosition_NearestPageWins()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var ebook = new Ebook { Title = "WP", OwnerUserId = owner.Id, Source = EbookSource.Upload, DiagramState = EbookDiagramState.Done, DiagramCount = 3 };
+        _kit.Db.Ebooks.Add(ebook);
+        var course = new Book { FileName = "c.pgn", DisplayName = "C", OwnerUserId = owner.Id, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
+        _kit.Db.Books.Add(course);
+        await _kit.Db.SaveChangesAsync();
+        string[] fens = ["4k3/8/8/8/8/8/8/R3K3", "4k3/8/8/8/8/8/4P3/4K3", "4k3/8/8/8/8/8/8/4K2R"];
+        var lines = fens.Select((f, i) => new BookPuzzle { LineId = $"l{i}", BookId = course.Id, BookFileName = "c.pgn", Round = $"{i}", Fen = f + " w - - 0 1", Moves = "e1e2" }).ToList();
+        _kit.Db.BookPuzzles.AddRange(lines);
+        for (int i = 0; i < 3; i++)
+            _kit.Db.EbookDiagrams.Add(new EbookDiagram { EbookId = ebook.Id, Page = 10 + i, Fen = fens[i] + " w - - 0 1" });
+        await _kit.Db.SaveChangesAsync();
+        var linker = new CourseEbookLinker(_kit.Db);
+        Assert.Equal(3, (await linker.LinkAsync(owner.Id, course.Id, isAdmin: false, ebookId: ebook.Id)).Linked);
+
+        // Buch neu gelesen: alle Diagramme weg, neue Ids. Stellung 1 jetzt zweimal (S. 3 und S. 11 — 11 liegt näher an 10),
+        // Stellung 2 unverändert auf S. 11, Stellung 3 falsch gelesen (anderer Turm) → nicht wiederfindbar.
+        _kit.Db.EbookDiagrams.RemoveRange(_kit.Db.EbookDiagrams.Where(d => d.EbookId == ebook.Id));
+        await _kit.Db.SaveChangesAsync();
+        _kit.Db.EbookDiagrams.AddRange(
+            new EbookDiagram { EbookId = ebook.Id, Page = 3, Fen = fens[0] + " w - - 0 1" },
+            new EbookDiagram { EbookId = ebook.Id, Page = 11, Fen = fens[0] + " b - - 0 1" },
+            new EbookDiagram { EbookId = ebook.Id, Page = 11, Fen = fens[1] + " w - - 0 1" },
+            new EbookDiagram { EbookId = ebook.Id, Page = 12, Fen = "4k3/8/8/8/8/8/8/4K1R1 w - - 0 1" });
+        await _kit.Db.SaveChangesAsync();
+
+        // 2 umgehängt; der dritte stand schon beim Löschen auf null (SetNull) und bleibt es.
+        Assert.Equal(2, await CourseEbookLinker.RelinkEbookAsync(_kit.Db, ebook.Id));
+        var refs = await linker.GetRefsAsync(owner.Id, course.Id, isAdmin: false);
+        Assert.Equal(2, refs.Count);
+        Assert.Equal(11, refs.Single(r => r.LineId == lines[0].Id).Page);
+        Assert.Equal(11, refs.Single(r => r.LineId == lines[1].Id).Page);
+        // Der dritte Verweis bleibt gespeichert und kommt zurück, sobald die Stellung wieder gelesen wird.
+        var lost = await _kit.Db.CourseLineEbookRefs.SingleAsync(r => r.BookPuzzleId == lines[2].Id);
+        Assert.Null(lost.EbookDiagramId);
+        _kit.Db.EbookDiagrams.Add(new EbookDiagram { EbookId = ebook.Id, Page = 12, Fen = fens[2] + " w - - 0 1" });
+        await _kit.Db.SaveChangesAsync();
+        Assert.Equal(3, (await linker.GetRefsAsync(owner.Id, course.Id, isAdmin: false)).Count);   // Abruf heilt selbst
+    }
 }

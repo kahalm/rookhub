@@ -37,7 +37,7 @@ public class CourseEbookLinker
         if (ebookId != null) visible = visible.Where(e => e.Id == ebookId);
         var diagrams = await _db.EbookDiagrams.Where(d => visible.Any(e => e.Id == d.EbookId))
             .OrderBy(d => d.EbookId).ThenBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
-            .Select(d => new { d.Id, d.EbookId, d.Fen }).ToListAsync(ct);
+            .Select(d => new { d.Id, d.EbookId, d.Fen, d.Page }).ToListAsync(ct);
         if (ebookId != null && diagrams.Count == 0 && !await visible.AnyAsync(ct))
             throw new NotFoundException("E-book not found.");
 
@@ -49,15 +49,20 @@ public class CourseEbookLinker
             var pairs = Match(keys, list);
             if (pairs.Count > bestPairs.Count) { best = eid; bestPairs = pairs; }
         }
+        var info = diagrams.ToDictionary(d => d.Id);
         var result = new CourseEbookLinkResultDto { Lines = lines.Count };
         if (best == null || (ebookId == null && bestPairs.Count < MinAutoMatches)) return result;
 
         // Verweise dieses Kurses auf DIESES Buch ersetzen (andere Bücher bleiben).
         var lineIds = lines.Select(l => l.Id).ToList();
         _db.CourseLineEbookRefs.RemoveRange(await _db.CourseLineEbookRefs
-            .Where(r => lineIds.Contains(r.BookPuzzleId) && r.EbookDiagram!.EbookId == best).ToListAsync(ct));
+            .Where(r => lineIds.Contains(r.BookPuzzleId) && r.EbookId == best).ToListAsync(ct));
         var now = DateTime.UtcNow;
-        _db.CourseLineEbookRefs.AddRange(bestPairs.Select(p => new CourseLineEbookRef { BookPuzzleId = p.LineId, EbookDiagramId = p.DiagramId, CreatedAt = now }));
+        _db.CourseLineEbookRefs.AddRange(bestPairs.Select(p => new CourseLineEbookRef
+        {
+            BookPuzzleId = p.LineId, EbookId = best.Value, EbookDiagramId = p.DiagramId,
+            Placement = Placement(info[p.DiagramId].Fen), Page = info[p.DiagramId].Page, CreatedAt = now,
+        }));
         await _db.SaveChangesAsync(ct);
 
         result.EbookId = best;
@@ -66,20 +71,57 @@ public class CourseEbookLinker
         return result;
     }
 
-    /// <summary>Verweise aller Linien des Kurses auf Bücher, die der Aufrufer sehen darf. 404 ohne Kurszugang.</summary>
+    /// <summary>Verweise aller Linien des Kurses auf Bücher, die der Aufrufer sehen darf. 404 ohne Kurszugang.
+    /// Verweise, deren Diagramm verschwunden ist oder nicht mehr dieselbe Stellung zeigt (Buch neu gelesen), werden
+    /// vorher über die Stellung neu zugeordnet; was sich nicht wiederfindet, fehlt in der Antwort (bleibt aber gespeichert).</summary>
     public async Task<List<CourseLineEbookRefDto>> GetRefsAsync(int userId, int bookId, bool isAdmin, CancellationToken ct = default)
     {
         if (!await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin, ct)) throw new NotFoundException("Book not found.");
         var visible = EbookAccess.Visible(_db, userId, isAdmin).Select(e => e.Id);
-        return await _db.CourseLineEbookRefs
-            .Where(r => r.BookPuzzle!.BookId == bookId && visible.Contains(r.EbookDiagram!.EbookId))
+        var mine = _db.CourseLineEbookRefs.Where(r => r.BookPuzzle!.BookId == bookId && visible.Contains(r.EbookId));
+
+        var check = await mine.Select(r => new { r.EbookId, r.Placement, Fen = r.EbookDiagram == null ? null : r.EbookDiagram.Fen }).ToListAsync(ct);
+        foreach (var eid in check.Where(c => c.Fen == null || Placement(c.Fen) != c.Placement).Select(c => c.EbookId).Distinct())
+            await RelinkEbookAsync(_db, eid, ct);
+
+        return await mine.Where(r => r.EbookDiagramId != null)
             .OrderBy(r => r.Id)
             .Select(r => new CourseLineEbookRefDto
             {
-                LineId = r.BookPuzzleId, EbookId = r.EbookDiagram!.EbookId, EbookTitle = r.EbookDiagram.Ebook.Title,
-                DiagramId = r.EbookDiagramId, Page = r.EbookDiagram.Page, Label = r.EbookDiagram.Label,
+                LineId = r.BookPuzzleId, EbookId = r.EbookId, EbookTitle = r.Ebook!.Title,
+                DiagramId = r.EbookDiagramId!.Value, Page = r.EbookDiagram!.Page, Label = r.EbookDiagram.Label,
             })
             .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Hängt alle Kurs-Verweise auf das Buch <paramref name="ebookId"/> an dessen AKTUELLE Diagramme: ein Verweis behält
+    /// sein Diagramm, solange es dieselbe Stellung zeigt; sonst gewinnt das Diagramm mit derselben Stellung auf der
+    /// nächstgelegenen Seite (bei Gleichstand das frühere). Findet sich keines, bleibt der Verweis mit <c>null</c> liegen
+    /// und kommt beim nächsten Neulesen wieder. Aufgerufen nach dem Neulesen (Worker) und beim Abruf.
+    /// </summary>
+    public static async Task<int> RelinkEbookAsync(AppDbContext db, int ebookId, CancellationToken ct = default)
+    {
+        var refs = await db.CourseLineEbookRefs.Where(r => r.EbookId == ebookId).ToListAsync(ct);
+        if (refs.Count == 0) return 0;
+        var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebookId)
+            .OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
+            .Select(d => new { d.Id, d.Page, d.Fen }).ToListAsync(ct);
+        var byId = diagrams.ToDictionary(d => d.Id);
+        var byKey = diagrams.GroupBy(d => Placement(d.Fen)).ToDictionary(g => g.Key, g => g.ToList());
+        int changed = 0;
+        foreach (var r in refs)
+        {
+            if (r.EbookDiagramId is int cur && byId.TryGetValue(cur, out var still) && Placement(still.Fen) == r.Placement) continue;
+            int? next = byKey.TryGetValue(r.Placement, out var cands)
+                ? cands.OrderBy(d => Math.Abs(d.Page - r.Page)).First().Id
+                : null;
+            if (next == r.EbookDiagramId) continue;
+            r.EbookDiagramId = next;
+            changed++;
+        }
+        if (changed > 0) await db.SaveChangesAsync(ct);
+        return changed;
     }
 
     /// <summary>Linien in Kursreihenfolge gegen die Diagramme EINES Buchs (Lesereihenfolge).</summary>

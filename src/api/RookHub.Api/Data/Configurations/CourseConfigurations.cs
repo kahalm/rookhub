@@ -380,15 +380,21 @@ internal sealed class CourseLineEbookRefConfiguration : IEntityTypeConfiguration
 {
     public void Configure(EntityTypeBuilder<CourseLineEbookRef> e)
     {
-        e.HasIndex(r => new { r.BookPuzzleId, r.EbookDiagramId }).IsUnique();
+        // Eine Stelle je Linie und Buch; das Diagramm darf beim Neulesen verschwinden (SetNull) und wird über
+        // Placement wiedergefunden — ein gelöschtes BUCH nimmt seine Verweise mit (Cascade).
+        e.HasIndex(r => new { r.BookPuzzleId, r.EbookId }).IsUnique();
         e.HasOne(r => r.BookPuzzle)
          .WithMany()
          .HasForeignKey(r => r.BookPuzzleId)
          .OnDelete(DeleteBehavior.Restrict);
+        e.HasOne(r => r.Ebook)
+         .WithMany()
+         .HasForeignKey(r => r.EbookId)
+         .OnDelete(DeleteBehavior.Cascade);
         e.HasOne(r => r.EbookDiagram)
          .WithMany()
          .HasForeignKey(r => r.EbookDiagramId)
-         .OnDelete(DeleteBehavior.Cascade);
+         .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

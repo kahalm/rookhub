@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.793.1", date: "2026-10-15", changes: [
+    { en: "Courses ↔ e-books: the link from a course line into the book survives re-reading the book — it remembers book, position and page and finds the diagram again by its position (nearest page wins); a position that is no longer read correctly comes back as soon as it is.",
+      de: "Kurse ↔ E-Books: Die Verknüpfung einer Kurslinie ins Buch übersteht das Neulesen des Buchs — sie merkt sich Buch, Stellung und Seite und findet das Diagramm über die Stellung wieder (nächste Seite gewinnt); eine Stellung, die gerade nicht richtig gelesen wird, kommt zurück, sobald sie es wieder wird." },
+  ] },
   { version: "0.793.0", date: "2026-10-15", changes: [
     { en: "E-books: if a book is available as EPUB and PDF, the reader opens the EPUB (flowing text, adjustable font); „Read as PDF“ in the ⋮ menu switches. The diagrams are recognised only once (exactly, from the PDF) and work in both formats – double-click in the EPUB or on the PDF page.", de: "E-Books: Liegt ein Buch als EPUB und PDF vor, öffnet der Leser das EPUB (Fließtext, Schrift einstellbar); „Als PDF lesen“ im ⋮-Menü wechselt. Die Diagramme werden nur einmal erkannt (exakt aus dem PDF) und funktionieren in beiden Formaten – Doppelklick im EPUB wie auf der PDF-Seite." },
   ] },

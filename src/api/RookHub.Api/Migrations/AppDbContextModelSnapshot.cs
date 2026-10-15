@@ -1916,14 +1916,27 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int>("EbookDiagramId")
+                    b.Property<int?>("EbookDiagramId")
                         .HasColumnType("int");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Placement")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EbookDiagramId");
 
-                    b.HasIndex("BookPuzzleId", "EbookDiagramId")
+                    b.HasIndex("EbookId");
+
+                    b.HasIndex("BookPuzzleId", "EbookId")
                         .IsUnique();
 
                     b.ToTable("CourseLineEbookRefs");
@@ -8952,10 +8965,17 @@ namespace RookHub.Api.Migrations
                     b.HasOne("RookHub.Api.Models.EbookDiagram", "EbookDiagram")
                         .WithMany()
                         .HasForeignKey("EbookDiagramId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("BookPuzzle");
+
+                    b.Navigation("Ebook");
 
                     b.Navigation("EbookDiagram");
                 });
