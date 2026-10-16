@@ -16,8 +16,13 @@ public static class EbookBoardImage
     /// <summary>Bild dekodieren und in Grau wandeln (0,299 R + 0,587 G + 0,114 B; Transparenz auf Weiß). <c>null</c> = kein Bild.</summary>
     public static float[,]? DecodeGray(byte[] data, int maxSide = 1600)
     {
-        using var bmp = SKBitmap.Decode(data);
-        if (bmp == null || bmp.Width < 64 || bmp.Height < 64 || bmp.Width > maxSide || bmp.Height > maxSide) return null;
+        using var raw = SKBitmap.Decode(data);
+        if (raw == null || raw.Width < 64 || raw.Height < 64) return null;
+        // Große Bilder (z. B. 2000 × 2000 px je Brett in „How to Win at Chess“) verkleinern statt verwerfen.
+        var scale = Math.Min(1.0, (double)maxSide / Math.Max(raw.Width, raw.Height));
+        using var small = scale < 1 ? raw.Resize(new SKImageInfo((int)(raw.Width * scale), (int)(raw.Height * scale)), SKFilterQuality.Medium) : null;
+        var bmp = small ?? raw;
+        if (bmp == null) return null;
         var g = new float[bmp.Height, bmp.Width];
         if (bmp.ColorType == SKColorType.Gray8)
         {

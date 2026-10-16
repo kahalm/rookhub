@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.803.3", date: "2026-10-16", changes: [
+    { en: "E-books: EPUB books with very large board pictures (e.g. 2000 × 2000 pixels per diagram in „How to Win at Chess“) are now scanned for diagrams – before, such pictures were skipped and the book showed no diagrams at all.", de: "E-Books: EPUB-Bücher mit sehr großen Brettbildern (z. B. 2000 × 2000 Pixel je Diagramm in „How to Win at Chess“) werden jetzt nach Diagrammen durchsucht – vorher wurden solche Bilder übergangen und das Buch zeigte gar keine Diagramme." },
+  ] },
   { version: "0.803.2", date: "2026-10-16", changes: [
     { en: "E-books: in EPUB books the side to move is now also read from the square next to the board (■ Black, □ White, e.g. „Everyone’s First Chess Workbook“) – before, many black-to-move puzzles there opened with White to move.", de: "E-Books: In EPUB-Büchern wird der Spieler am Zug jetzt auch aus dem Kästchen neben dem Brett gelesen (■ Schwarz, □ Weiß, z. B. „Everyone’s First Chess Workbook“) – vorher öffneten dort viele Aufgaben mit Schwarz am Zug mit Weiß am Zug." },
     { en: "E-books: EPUB books now open in continuous scrolling by default instead of page by page; the reader toolbar still switches to pages, and your choice is remembered on the device.", de: "E-Books: EPUB-Bücher öffnen jetzt standardmäßig fließend zum Scrollen statt Seite für Seite; über die Leiste lässt sich weiterhin auf Seiten umstellen, die Wahl merkt sich das Gerät." },

@@ -108,6 +108,19 @@ public class EbookScanDiagramTests
     }
 
     [Fact]
+    public void DecodeGray_ShrinksOversizedImages_InsteadOfRejecting()
+    {
+        // „How to Win at Chess“ liefert jedes Brett als 2000 × 2000-JPEG — vorher fiel es durch (Obergrenze 1600 px).
+        using var bmp = new SkiaSharp.SKBitmap(2000, 2000);
+        bmp.Erase(SkiaSharp.SKColors.SaddleBrown);
+        using var data = bmp.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        var g = EbookBoardImage.DecodeGray(data.ToArray());
+        Assert.NotNull(g);
+        Assert.Equal(1600, g!.GetLength(0));
+        Assert.Equal(1600, g.GetLength(1));
+    }
+
+    [Fact]
     public void SideMarker_SquareFarLeftOfRankOne_HollowWhite_FilledBlack()
     {
         // Brett 120…360 × 100…340; Kästchen 18 × 18 weit links neben Reihe 1, jenseits der Randziffern (EPUB-Bilder).
