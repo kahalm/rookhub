@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.803.0", date: "2026-10-16", changes: [
+    { en: "E-books: much better diagram recognition in scanned books – the neural network has been retrained on about 14,000 diagrams from 340 books that Claude read; on unseen books it now reads 85 % of boards exactly instead of about half.", de: "E-Books: Deutlich bessere Diagrammerkennung in eingescannten Büchern – das neuronale Netz wurde auf rund 14.000 von Claude gelesenen Diagrammen aus 340 Büchern neu trainiert; bei Büchern, die es nicht kennt, liest es jetzt 85 % der Bretter exakt statt etwa der Hälfte." },
+  ] },
   { version: "0.802.4", date: "2026-10-16", changes: [
     { en: "Behind the scenes: the network that reads scanned chess diagrams can now be retrained on a separate GPU machine (training service as a container) – more training data, better recognition in scanned e-books.", de: "Hinter den Kulissen: Das Netz, das gescannte Schachdiagramme liest, kann jetzt auf einem eigenen GPU-Rechner neu trainiert werden (Trainingsdienst als Container) – mehr Trainingsdaten, bessere Erkennung in eingescannten E-Books." },
   ] },
