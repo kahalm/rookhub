@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.806.0", date: "2026-10-16", changes: [
+    { en: "Tighter page heads so the main content appears sooner: repertoire tree (board and tree side by side on tablets), mistake collection, game analyses, guess-the-move, worksheets, admin, profile appearance card; e-book list as compact rows on phones; course browsing with collapsible chapters on narrow screens; tournament calendar loads 25 at a time on phones.", de: "Straffere Seitenköpfe, damit die Hauptsache früher kommt: Repertoire-Baum (am Tablet Brett und Baum nebeneinander), Fehler-Sammlung, Partie-Analysen, Punktepartie, Aufgabenblätter, Admin, Darstellungs-Karte im Profil; E-Book-Liste am Handy als kompakte Zeilen; Kurs durchsehen schmal mit aufklappbaren Kapiteln; Turnierkalender lädt am Handy 25 auf einmal." },
+    { en: "LeagueHub: scoresheet correction, accounts and club page with a more compact head. ClubHub: today's training groups in one line instead of one banner per group.", de: "LeagueHub: Formular-Korrektur, Konten und Vereinsseite mit kompakterem Kopf. ClubHub: Die heutigen Trainingsgruppen stehen in einer Zeile statt je Gruppe ein eigener Streifen." },
+  ]},
   { version: "0.805.3", date: "2026-10-16", changes: [
     { en: "LeagueHub: the overview of games per source on the start page no longer overloads the server when several people open it at once – it is counted once and the others get the result; counting also needs far less memory.", de: "LeagueHub: Die Übersicht „Partien je Quelle“ auf der Startseite überlastet den Server nicht mehr, wenn mehrere sie gleichzeitig öffnen – gezählt wird einmal, die anderen bekommen das Ergebnis; das Zählen braucht außerdem deutlich weniger Speicher." },
   ]},

@@ -85,8 +85,10 @@ export function api(base, token) {
 const list = x => Array.isArray(x) ? x : (x?.items ?? []);
 
 /** Sucht/legt alle Parameter an. `log(name, wert | Fehler | null, grund?)` meldet jeden Resolver. Mit `only` (Menge von
- *  Namen) laufen nur die Resolver, die mindestens einen davon liefern — für das normale Konto die konto-eigenen. */
-export async function resolveParams(base, token, log = () => {}, previous = {}, only = null) {
+ *  Namen) laufen nur die Resolver, die mindestens einen davon liefern — für das normale Konto die konto-eigenen.
+ *  `viewers` (Rolle → Token, `anon` = null): mit diesen Ausweisen prüfen Resolver geteilter Inhalte (E-Books), dass
+ *  wirklich jede Rolle des Laufs den Parameter sieht. */
+export async function resolveParams(base, token, log = () => {}, previous = {}, only = null, viewers = {}) {
   const a = api(base, token);
   const p = {};
   const today = new Date();
@@ -193,30 +195,45 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { worksheetId: ws.id, worksheetToken: token };
   });
 
-  // E-Book-Bibliothek (0.764.0): ein winziges PDF mit dem Sweep-Namen — hochgeladen, wenn es fehlt (braucht Ebooks__Root auf Dev).
+  // E-Books (0.764.0 ff.): beide Leser-Routen laufen in ALLEN Rollen, auch abgemeldet — die Bücher müssen also für
+  // „Everyone" freigegeben sein (abgemeldet sieht man genau diese, EbookAccess.Visible). Sonst sah nur der Admin sie
+  // (alles verwalten) und die anderen Rollen fotografierten 404. Ob jede Rolle das Buch wirklich sieht, prüft
+  // `visibleToAll` mit den Ausweisen aus `viewers` (Rolle → Token, anon = null).
+  const ebooks = ebookHelpers(base, a, viewers);
+
+  // Leser: ein winziges PDF mit dem Sweep-Namen — hochgeladen, wenn es fehlt (braucht Ebooks__Root auf Dev).
   await step(['ebookId'], async () => {
-    const found = list(await a.get(`/api/ebooks?search=${encodeURIComponent(SWEEP_TAG)}`)).find(b => b.title === SWEEP_TAG);
-    if (found) return { ebookId: found.id };
-    const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
-      + '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 300]>>endobj\nxref\n0 4\n0000000000 65535 f \n'
-      + '0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n166\n%%EOF\n';
-    const fd = new FormData();
-    fd.append('file', new Blob([pdf], { type: 'application/pdf' }), `${SWEEP_TAG}.pdf`);
-    fd.append('title', SWEEP_TAG);
-    fd.append('tags', 'ui-sweep');
-    try {
-      const created = await a.post('/api/ebooks', fd);
-      return { ebookId: created.id };
-    } catch (e) {
-      return { _why: `Hochladen gescheitert (Ebooks__Root auf Dev gesetzt?): ${String(e).slice(0, 120)}` };
+    let book = list(await a.get(`/api/ebooks?search=${encodeURIComponent(SWEEP_TAG)}`)).find(b => b.title === SWEEP_TAG);
+    if (!book) {
+      if (only !== null) return { _why: 'nur über das Admin-Konto' };
+      const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+        + '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 300]>>endobj\nxref\n0 4\n0000000000 65535 f \n'
+        + '0000000009 00000 n \n0000000052 00000 n \n0000000101 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n166\n%%EOF\n';
+      const fd = new FormData();
+      fd.append('file', new Blob([pdf], { type: 'application/pdf' }), `${SWEEP_TAG}.pdf`);
+      fd.append('title', SWEEP_TAG);
+      fd.append('tags', 'ui-sweep');
+      try { book = await a.post('/api/ebooks', fd); }
+      catch (e) { return { _why: `Hochladen gescheitert (Ebooks__Root auf Dev gesetzt?): ${String(e).slice(0, 120)}` }; }
     }
+    return await ebooks.shareWithAll(book, only) ? { ebookId: book.id } : { _why: `Buch ${book.id} nicht für alle Rollen sichtbar` };
   });
 
-  // E-Book mit erkannten Diagrammen (Leser mit Brett rechts): das erste sichtbare Buch mit diagramCount > 0.
+  // Leser mit erkannten Diagrammen (Brett rechts): ein PDF-Buch (EPUB-Leser hängt an Kapiteldateien — auf Dev fehlten
+  // dort Einträge, 404 je Kapitel) mit fertig erkannten Diagrammen, dessen Datei sich laden lässt. Reihenfolge: das vom
+  // letzten Lauf (stabile Bilder), ein schon für alle freigegebenes, sonst das kürzeste — das gibt der Admin frei.
   await step(['ebookDiagramId'], async () => {
-    const res = await a.get('/api/ebooks?withDiagrams=true&pageSize=20');
-    const hit = list(res).find(b => (b.diagramCount ?? 0) > 0);
-    return hit ? { ebookDiagramId: hit.id } : { _why: 'kein sichtbares E-Book mit erkannten Diagrammen' };
+    const all = list(await a.get('/api/ebooks?withDiagrams=true&pageSize=100'))
+      .filter(b => b.diagramState === 'done' && (b.diagramCount ?? 0) > 0 && b.primaryFormat === 'pdf');
+    const prev = all.find(b => String(b.id) === String(previous.ebookDiagramId));
+    const shared = await ebooks.everyoneId().then(id => all.filter(b => (b.groupIds ?? []).includes(id)));
+    const rest = [...all].sort((x, y) => (x.pageCount ?? 1e9) - (y.pageCount ?? 1e9));
+    for (const book of [prev, ...shared, ...rest].filter(Boolean)) {
+      if (!await ebooks.fileLoads(book.id)) continue;
+      if (await ebooks.shareWithAll(book, only)) return { ebookDiagramId: book.id };
+      if (only !== null) break;
+    }
+    return { _why: 'kein PDF-Buch mit erkannten Diagrammen, das alle Rollen sehen (Freigabe „Everyone" nur über das Admin-Konto)' };
   });
 
   await step(['reconstructionId', 'reconstructionToken'], async () => {
@@ -386,6 +403,40 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
   });
 
   return p;
+}
+
+/** E-Book-Hilfen für die Resolver: Freigabe „Everyone" setzen und je Rolle nachprüfen, Datei ladbar? */
+function ebookHelpers(base, a, viewers) {
+  let everyone;
+  const everyoneId = async () => everyone ??= (await a.get('/api/ebooks/groups')).find(g => g.isEveryone)?.id;
+  // Sieht jede Rolle (auch abgemeldet) das Buch? Ohne Drossel-Pause genügt hier ein schlichtes fetch.
+  const visibleToAll = async id => {
+    for (const tok of [null, ...Object.values(viewers)]) {
+      const res = await fetch(`${base}/api/ebooks/${id}`, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
+      await res.arrayBuffer().catch(() => null);
+      if (!res.ok) return false;
+    }
+    return true;
+  };
+  return {
+    everyoneId,
+    visibleToAll,
+    /** Lädt die Buchdatei (erste Bytes)? Dev hat nicht jede Datei der Bibliothek. */
+    fileLoads: async id => {
+      const { token } = await a.get('/api/ebooks/access-token');
+      const res = await fetch(`${base}/api/ebooks/${id}/file?t=${encodeURIComponent(token)}`, { headers: { Range: 'bytes=0-15' } });
+      await res.arrayBuffer().catch(() => null);
+      return res.ok;
+    },
+    /** Für alle sichtbar machen (Gruppe „Everyone" ZUSÄTZLICH zu den bisherigen) — nur das Admin-Konto (`only` null). */
+    shareWithAll: async (book, only) => {
+      if (await visibleToAll(book.id)) return true;
+      const id = await everyoneId();
+      if (only !== null || id == null) return false;
+      await a.put('/api/ebooks/groups', { ebookIds: [book.id], groupIds: [...new Set([...(book.groupIds ?? []), id])] });
+      return visibleToAll(book.id);
+    },
+  };
 }
 
 /** Engine-unabhängige Parameter eines Kontos mit eingeschränkter Sicht (Rolle „trainer"): nur was ER in ClubHub sieht —

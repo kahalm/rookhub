@@ -34,6 +34,18 @@ export const DIRECTORY_GENDERS: TournamentGender[] = ['Female', 'Male'];
 export const DIRECTORY_KINDS: TournamentKind[] = ['Individual', 'Team'];
 
 /**
+ * Turniere je Abruf der Liste: am Handy 25 statt 50 (Falz-Runde 16.10.: 50 Karten à ≈ 190 px waren mit offenem Filter
+ * 12,8 Bildschirme — DESIGN 4.6 Regel 11); der Rest kommt über „Mehr anzeigen". Einmal beim Öffnen bestimmt.
+ */
+export const DIRECTORY_PAGE_SIZE = 50;
+export const DIRECTORY_PAGE_SIZE_NARROW = 25;
+export function directoryPageSize(
+  narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 599.98px)').matches,
+): number {
+  return narrow ? DIRECTORY_PAGE_SIZE_NARROW : DIRECTORY_PAGE_SIZE;
+}
+
+/**
  * Angebotene Umkreise in km. Bewusst gestufte Werte statt eines Schiebers: „112 km" ist keine
  * Angabe, die jemand meint, und ein Schieber laedt bei jedem Pixel neu.
  */

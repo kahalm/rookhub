@@ -144,8 +144,12 @@ describe('AccountSuggestionsPageComponent', () => {
     fixture.detectChanges();
     expect(el().querySelector('.sugg-top [role=status]')?.textContent).toContain('1 offen.');
     expect(el().textContent).not.toContain('Minderjähriger');
-    (el().querySelector('.sugg-page > .info-line .chk-btn') as HTMLButtonElement).click();
+    // Falz-Runde 16.10.: keine eigene Satzzeile mehr — das (i) sitzt an der Überschrift, der Satz steht im Feld dahinter
+    expect(el().querySelector('.sugg-page > .info-line')).toBeNull();
+    expect(el().textContent).not.toContain('Verworfenes kommt nicht wieder');
+    (el().querySelector('.sugg-top .chk-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el().querySelector('.sugg-info')?.textContent).toContain('Minderjähriger');
+    expect(el().querySelector('.sugg-info')?.textContent).toContain('Verworfenes kommt nicht wieder');
   });
 });

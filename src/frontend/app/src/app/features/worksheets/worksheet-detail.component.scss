@@ -64,6 +64,10 @@
    die Knöpfe in einer eigenen Zeile am Kartenende. Jetzt: Brett 140 px, Knöpfe 2 × N rechts daneben, die Felder darunter
    über die volle Breite — die Karte wird nicht höher, das Brett ist lesbar. */
 @media (max-width: 599.98px) {
+  /* Falz-Runde 16.10. (Vorlauf 40,5 %): Dichte-Zeile mit 4 px Abstand, der Lösungs-Hinweis in kleiner Schrift — die
+     erste Stellung rückt über die 40-%-Linie. */
+  .wd-density { margin: 0.25rem 0; }
+  .wd-warn { font-size: 0.8rem; line-height: 1.3; margin-bottom: 0.4rem; }
   .wd-board { width: 140px; }
   .wd-item-actions { order: 1; width: auto; margin-left: auto; display: grid; grid-template-columns: repeat(2, auto);
     justify-content: end; gap: 0; }

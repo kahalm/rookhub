@@ -338,7 +338,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     </div>
   `,
   styles: [`
-    .gl-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
+    /* Falz-Runde 16.10. (Laptop 41 %): 12 px über dem Kopf, 4 px über und unter der Suchzeile — die erste Partie rückt
+       über die 40-%-Linie. */
+    .gl-container { max-width: min(var(--page-max-width), 96vw); margin: 12px auto 16px; padding: 0 12px; }
     /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Tabellenseite breiter (DESIGN 4.1). */
     @media (min-width: 2400px) {
       .gl-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
@@ -357,7 +359,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .start-card { margin-bottom: 8px; }
     /* Filter und Sortieren in EINER Zeile, auch am Handy (d2-rk-guess-vorlauf). */
     /* z1-rk-guess-vorlauf: Suche, Filter und ⇅ in EINER Zeile; am Handy darf sie notfalls umbrechen. */
-    .sec-head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .sec-head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-bottom: 4px; }
     .sec-head .search { flex: 1 1 140px; min-width: 120px; width: auto; margin: 0; }
     .sec-head .count { white-space: nowrap; }
     .sort-btn { flex: none; margin-left: auto; }
@@ -370,7 +372,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
     .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     /* Die Karte sitzt IM Reiter — ohne das doppelte sich der Rahmen mit dem des Reiters. */
     .lists .start-card { box-shadow: none; background: transparent; margin: 0; }
-    .lists ::ng-deep .mat-mdc-tab-body-content { padding-top: 8px; }
+    .lists ::ng-deep .mat-mdc-tab-body-content { padding-top: 4px; }
     .lists .start-card .mat-mdc-card-content { padding-top: 0; }
     .lists.single .start-card .mat-mdc-card-content { padding-left: 0; padding-right: 0; }
     .search mat-icon[matPrefix] { margin-right: 8px; opacity: .6; }

@@ -348,6 +348,12 @@ describe('WorksheetDetailComponent Handy-Karte', () => {
     expect(phone).toMatch(/\.wd-item-actions[^{]*\{ ?order: 1;[^}]*display: grid; grid-template-columns: repeat\(2, auto\)/);
     expect(phone).toMatch(/\.wd-fields[^{]*\{ ?order: 2; flex-basis: 100%/);
   });
+  // Falz-Runde 16.10.: Vorlauf 40,5 % → Dichte-Zeile enger, Lösungs-Hinweis kleiner
+  it('unter 600 px Dichte-Zeile mit 0.25rem Abstand und Lösungs-Hinweis in 0.8rem', () => {
+    const phone = css.slice(css.indexOf('@media (max-width: 599.98px)'));
+    expect(phone).toMatch(/\.wd-density[^{]*\{ ?margin: 0\.25rem 0/);
+    expect(phone).toMatch(/\.wd-warn[^{]*\{ ?font-size: 0\.8rem/);
+  });
 });
 
 /** UI-Sweep a1 (a1-rk-ws-detail-bretter-klein): Diagramme 168 px, Tablet 140 px (nie kleiner als am Handy), ab 2400 px 220 px. */

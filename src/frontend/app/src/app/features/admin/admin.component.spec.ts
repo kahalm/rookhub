@@ -851,6 +851,13 @@ describe('AdminComponent – Kartenliste der Konten', () => {
     expect(css).toMatch(/\.users-table td\.mat-column-actions[^{]*\{ ?white-space: ?nowrap/);
   });
 
+  it('Kopf 16 px unter der Leiste, Suchfeld mit 4 px Nachabstand (Falz-Runde 16.10.)', () => {
+    const css = (((AdminComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
+      .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.admin-container ?\{[^}]*margin: ?16px auto 24px/);
+    expect(css).toMatch(/\.search-field ?\{[^}]*margin-bottom: ?4px/);
+  });
+
   it('Kartenliste klebt nicht an der Blätterleiste (b1-rk-admin-handy-seitenwahl-klebt)', () => {
     const css = (((AdminComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
       .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');

@@ -5,6 +5,8 @@
 .header h1 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 .intro { margin: 4px 0 12px; opacity: .8; }
+/* Das ⓘ am Titel gibt es nur am Handy — breit steht der Satz samt ⓘ in der Einleitung (Falz-Runde 16.10.). */
+.eb-title-hint { display: none; }
 /* Ohne Anmeldung (0.778.0): Banner nach DESIGN 5.11 — getönt, Symbol links, Text flexibel, ein Knopf rechts. */
 .eb-anon {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; border-radius: 8px;
@@ -123,6 +125,29 @@
   /* Download nur als Symbol (der Name steht im aria-label): „Herunterladen“ passt nicht in 110 px. */
   .eb-act--download .eb-act-label { display: none; }
   .eb-act--download mat-icon { margin: 0; }
+
+  /* Falz-Runde 16.10. (Regal am Handy 16–17 Bildschirme bei 60 Büchern je Seite): Einleitung nur im ⓘ am Titel; jedes Buch
+     als kompakte Zeile — Titelbild 64 px links, Titel/Angaben in der Mitte, Lesen/Herunterladen als Symbol + ⋮ rechts
+     übereinander (Titelbild und Titel führen ebenfalls in den Leser; der Name steht im aria-label). ≈ 9 statt 16
+     Bildschirme; Gliederung über die Seitenwahl (4.6 Regel 11). */
+  .intro { display: none; }
+  .eb-title-hint { display: inline-flex; }
+  .eb-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .eb-card {
+    display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; grid-template-areas: "cover body actions";
+    column-gap: 12px; align-items: start; padding: 8px 4px 8px 8px;
+  }
+  .eb-cover { grid-area: cover; width: 64px; border-radius: 4px; }
+  .eb-cover-fallback { padding: 4px; mat-icon { font-size: 24px; width: 24px; height: 24px; } }
+  .eb-cover-title { display: none; }
+  .eb-folder-badge { right: 2px; bottom: 2px; padding: 0 4px; font-size: .75rem; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
+  .eb-body { grid-area: body; padding: 0 !important; }
+  .eb-actions { grid-area: actions; flex-direction: column; gap: 0; padding: 0; }
+  .eb-actions .eb-spacer { display: none; }
+  .eb-act { flex: none; min-width: 44px; width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+  .eb-act .eb-act-label { display: none; }
+  .eb-act mat-icon { margin: 0; }
+  .eb-select { top: 8px; left: 8px; }
 }
 
 // Sammlungen (0.787.0): Ordner-Karte + Kopf der geöffneten Sammlung.

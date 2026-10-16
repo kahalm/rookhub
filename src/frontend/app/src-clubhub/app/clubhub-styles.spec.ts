@@ -172,6 +172,60 @@ describe('clubhub.scss', () => {
     }
   });
 
+  // Falz-Runde 16.10.: Kartei am Handy mit Trainingsstreifen — Vorlauf 54–70 % (zwei Streifen, Titelzeile, zwei Werkzeugzeilen,
+  // Registerbuchstabe in eigener Zeile). Jetzt: EIN schlanker Streifen, Suche + Anlege-Knöpfe in Zeile 1, Chips + Archiv +
+  // Zähler in Zeile 2, Buchstabe links neben der Karte. Kopf der App (≈ 132 px bis zum Inhalt) + dieser Block ≤ 338 px.
+  it('Kartei am Handy: erste Karte höchstens 206 px unter dem Seitenanfang, auch mit Trainingsstreifen', async () => {
+    const restore = await narrow(390);
+    try {
+      mount(`<main class="wrap"><p class="today"><strong>Heute ist Freitag – Anwesenheit abhaken:</strong>
+        <span class="today-links"><a class="btn">Anfänger</a><a class="btn">Fortgeschrittene</a></span></p>
+        <div class="kartei-top"><div class="page-head kartei-head"><h1>Kartei</h1><div class="actions">
+          <a class="btn primary"><span class="long">Kind anlegen</span><span class="short">+ Kind</span></a>
+          <a class="btn"><span class="long">Trainer anlegen</span><span class="short">+ Trainer</span></a></div></div>
+        <div class="tools with-chips"><label class="field search"><span class="sr-only">Suchen</span><input type="search" placeholder="Name suchen"></label>
+          <div class="filter-chips"><button class="chip-btn all">Alle</button><button class="chip-btn">Anfänger <span class="n">2</span></button>
+            <button class="chip-btn">Fortgeschrittene <span class="n">0</span></button></div>
+          <label class="check"><input type="checkbox"> Archiv</label><p class="count">3 Kinder</p></div></div>
+        <section class="register"><h2 class="letter">F</h2><ul class="cards"><li class="kid"><a class="kid-main">Felix</a></li></ul></section></main>`);
+      const top = host.querySelector('main')!.getBoundingClientRect().top;
+      const kid = host.querySelector('li.kid')!.getBoundingClientRect();
+      expect(kid.top - top).toBeLessThanOrEqual(206);
+      expect(kid.left - host.querySelector('.register')!.getBoundingClientRect().left).withContext('Buchstabe links daneben').toBeGreaterThan(20);
+      const r = (sel: string) => host.querySelector(sel)!.getBoundingClientRect();
+      expect(Math.abs(r('.search input').top - r('.kartei-head .actions').top)).withContext('Suche + Knöpfe in Zeile 1').toBeLessThan(10);
+      expect(r('.kartei-top h1').height).withContext('Titel nur für Vorleser').toBeLessThanOrEqual(1);
+      expect(r('.check').top).withContext('Archiv in Zeile 2').toBeGreaterThan(r('.search input').bottom - 2);
+      expect(r('.filter-chips').top).withContext('Chips in Zeile 2').toBeGreaterThan(r('.search input').bottom - 2);
+      expect(r('.filter-chips').width).withContext('Chips nicht zusammengequetscht').toBeGreaterThan(150);
+      expect(r('.today').height).withContext('ein schlanker Streifen').toBeLessThan(100);
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  // Falz-Runde 16.10.: Laptop (1366 × 768) mit Trainingsstreifen 43,5 % — der Streifen beginnt bei ≈ 137 px, also bis zur
+  // ersten Karte ≤ 170 px (40 % = 307 px).
+  it('Kartei am Laptop: erste Karte höchstens 170 px unter dem Seitenanfang, auch mit Trainingsstreifen', async () => {
+    const restore = await narrow(1366);
+    try {
+      mount(`<main class="wrap"><p class="today"><strong>Heute ist Freitag: Anfänger trainiert.</strong><a class="btn">Anwesenheit abhaken</a></p>
+        <div class="kartei-top"><div class="page-head kartei-head"><h1>Kartei</h1><div class="actions">
+          <a class="btn primary"><span class="long">Kind anlegen</span><span class="short">+ Kind</span></a>
+          <a class="btn"><span class="long">Trainer anlegen</span><span class="short">+ Trainer</span></a></div></div>
+        <div class="tools with-chips"><label class="field search"><span class="sr-only">Suchen</span><input type="search" placeholder="Name suchen"></label>
+          <div class="filter-chips"><button class="chip-btn all">Alle</button><button class="chip-btn">Anfänger <span class="n">2</span></button></div>
+          <label class="check"><input type="checkbox"> Archiv</label><p class="count">2 Kinder</p></div></div>
+        <section class="register"><h2 class="letter">F</h2><ul class="cards"><li class="kid"><a class="kid-main">Felix</a></li></ul></section></main>`);
+      const top = host.querySelector('.today')!.getBoundingClientRect().top;               // Streifen beginnt bei ≈ 137 px
+      expect(host.querySelector('li.kid')!.getBoundingClientRect().top - top).toBeLessThanOrEqual(170);
+      expect(host.querySelector('.kartei-top h1')!.getBoundingClientRect().height).withContext('Titel sichtbar').toBeGreaterThan(20);
+    } finally {
+      restore();
+    }
+  });
+
   // UI-Sweep 2026-10-11 (r2-c-privacy-style)
   it('Datenschutzseite: ClubHub-Karte, Slab-Köpfe in Kopflinienfarbe, Links in Primärfarbe, kein Extra-Rand im .wrap', () => {
     const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card">

@@ -85,11 +85,13 @@ function readAutoMine(): boolean {
              orangen Stellen hinter (i) — am Handy begann das Brett sonst erst bei ~770 px. -->
         <!-- z1-l-korrigieren-handy: „Speichern ↓" rechts in der Zeile des Rücklinks — neben der Überschrift brach er am Handy
              in eine eigene Zeile um. -->
+        <!-- Falz-Runde 16.10. (Handy: Brett erst bei 50 %): bis 720 px EIN Kopfblock — „←" vor der Überschrift (Ziel nur für
+             Vorleser), „Speichern ↓" rechts in der Zeile des Partietitels; die Rücklink-Zeile entfällt. -->
         <p class="back-row">
           @if (gameId != null) {
-            <a class="back-link" routerLink="/verein">← Vereinspartien</a>
+            <a class="back-link" routerLink="/verein">← <span class="back-lbl">Vereinspartien</span></a>
           } @else {
-            <a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a>
+            <a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← <span class="back-lbl">Deine Formulare</span></a>
           }
           @if (st.scan.status === 'done') {
             <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->

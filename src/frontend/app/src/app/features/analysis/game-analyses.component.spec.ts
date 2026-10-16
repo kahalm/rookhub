@@ -488,6 +488,32 @@ describe('GameAnalysesComponent', () => {
     expect(css).toMatch(/\.intro(\[[^\]]*\])?\{[^}]*max-width:75ch/);
   });
 
+  // Falz-Runde 16.10.: ohne Analysen steht der Leerhinweis VOR dem Formular, die Einleitung im Formular.
+  it('ohne Analysen: Leerhinweis vor dem Einwurf-Formular, Einleitung in dessen Karte', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const empty = el.querySelector('.empty-card .empty-state')!;
+    const form = el.querySelector('.new-card')!;
+    expect(empty).not.toBeNull();
+    expect(empty.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(form.querySelector('.intro')).not.toBeNull();
+    expect(el.querySelectorAll('.intro').length).toBe(1);
+  });
+
+  it('mit Analysen und zugeklapptem Formular: keine sichtbare Einleitung über der Liste (steht im ⓘ)', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 3, status: 'done' })]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.intro')).toBeNull();
+    expect(el.querySelector('.empty-card')).toBeNull();
+    expect(el.querySelector('mat-card.ga')).not.toBeNull();
+  });
+
   // b1-rk-h1-uneinheitlich: der Seitentitel war auf 1.5rem verkleinert — die Geschwisterseiten nutzen das Material-h1.
   it('setzt keine eigene Titelgröße (Material-h1 wie Analyse, Katalog, Statistik)', () => {
     const css = ((GameAnalysesComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s/g, '');

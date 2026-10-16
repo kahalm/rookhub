@@ -347,6 +347,33 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(box(doc, 'gt').top).toBeLessThan(box(doc, 'h').bottom);           // Partietitel in der Zeile der Überschrift
   });
 
+  // Falz-Runde 16.10.: am Handy begann das Brett bei 50 % — Rücklink-Zeile entfällt, Kopf in zwei Zeilen
+  it('Korrigieren am Handy: „←" vor der Überschrift, „Speichern ↓" in der Zeile des Partietitels', async () => {
+    const doc = await render(390, `<main class="wrap"><section class="club-intro" id="ci"><p class="back-row"><a class="back-link" id="bl">← <span class="back-lbl">Vereinspartien</span></a>
+      <button type="button" class="btn-link to-save" id="ts">Speichern ↓</button></p>
+      <div class="scan-head"><h2 id="h">Vereinspartie korrigieren</h2><button type="button" class="chk-btn" id="i">i</button>
+      <p class="muted game-title" id="gt">Schwaz – Frolik, Michael (2026) · 0-1</p></div></section></main>`);
+    const bl = box(doc, 'bl'), h = box(doc, 'h'), gt = box(doc, 'gt'), ts = box(doc, 'ts');
+    expect(Math.abs((bl.top + bl.bottom) / 2 - (h.top + h.bottom) / 2)).toBeLessThan(6);   // Pfeil in der Titelzeile
+    expect(bl.width).toBeLessThan(40);                                                     // nur der Pfeil sichtbar
+    expect(ts.top).toBeGreaterThanOrEqual(h.bottom - 2);                                   // „Speichern ↓" unter dem Titel …
+    expect(ts.top).toBeLessThan(gt.bottom);                                                // … neben dem Partietitel
+    expect(box(doc, 'ci').height).toBeLessThan(110);                                       // vorher eigene Rücklink-Zeile + Titel + Partietitel
+    expect(doc.getElementById('bl')!.textContent).toContain('Vereinspartien');            // Ziel für Vorleser
+  });
+
+  // Falz-Runde 16.10.: /verein am Handy 41,6 % Vorlauf → engere Abstände zwischen Satz-, Such- und Zählerzeile
+  it('Vereinspartien am Handy: Satz-, Such- und Zählerzeile mit 8 px Abstand', async () => {
+    const doc = await render(390, `<main class="wrap"><section class="club-intro"><p class="muted info-line" id="il">„Schwaz“ steht für ein Mitglied ohne Namen.</p></section>
+      <form class="club-search" id="cs"><input type="search"><button class="btn-sec">Suchen</button></form>
+      <div class="stand club-stand" id="st"><span>170 Partien</span><a class="btn-pri add-games" id="ag"><span class="add-plus">+</span><span class="add-label">Partien hinzufügen</span><span class="add-short">Hinzufügen</span></a></div></main>`);
+    expect(style(doc, 'il').marginBottom).toBe('8px');
+    expect(style(doc, 'cs').marginBottom).toBe('8px');
+    expect(style(doc, 'st').marginTop).toBe('0px');
+    expect(style(doc, 'st').marginBottom).toBe('10px');
+    expect(box(doc, 'ag').height).toBeGreaterThanOrEqual(44);                             // Tippziel bleibt 44 px
+  });
+
   // z2-l-uebertragungen-meta: am Handy „Zeitraum · Ort" unter dem Titel, die Spalten fallen weg
   it('Übertragungen: am Handy Meta-Zeile statt Zeitraum-/Ort-Spalte', async () => {
     const body = `<main class="wrap"><table class="rtable bc-list"><tbody><tr><td id="t"><a>28th Bavarian International Open</a>

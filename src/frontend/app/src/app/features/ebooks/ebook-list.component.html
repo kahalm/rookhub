@@ -1,6 +1,8 @@
 <div class="eb-page">
   <div class="header">
-    <h1><mat-icon>menu_book</mat-icon> {{ 'ebooks.title' | translate }}</h1>
+    <!-- Falz-Runde 16.10.: am Handy steht der Einleitungssatz nur im ⓘ am Titel (drei Zeilen über dem Regal). -->
+    <h1><mat-icon>menu_book</mat-icon> {{ 'ebooks.title' | translate }}
+      <app-help-hint class="eb-title-hint" [text]="('ebooks.intro' | translate) + '\n\n' + ('ebooks.introMore' | translate)" /></h1>
     <div class="header-actions">
       @if (!anonymous && (list?.canManageAll || manageable.length > 0)) {
         <button mat-stroked-button type="button" (click)="toggleSelecting()" [attr.aria-pressed]="selecting()">
@@ -176,7 +178,8 @@
                 <div class="eb-meta"><span>{{ 'ebooks.collection.count' | translate: { n: coll.bookCount } }}</span></div>
               </mat-card-content>
               <div class="eb-actions">
-                <button mat-flat-button color="primary" class="eb-act" type="button" (click)="openCollection(coll.id)">
+                <button mat-flat-button color="primary" class="eb-act" type="button" (click)="openCollection(coll.id)"
+                        [attr.aria-label]="'ebooks.collection.open' | translate">
                   <mat-icon>folder_open</mat-icon><span class="eb-act-label">{{ 'ebooks.collection.open' | translate }}</span>
                 </button>
               </div>
@@ -231,7 +234,7 @@
                 <!-- c1-eb-card-action-button: kurzer Text einzeilig im Knopf, die Seite steht im Tooltip/Namen. -->
                 <a mat-flat-button color="primary" class="eb-act" [routerLink]="['/ebooks', book.id]"
                    [matTooltip]="book.progress ? ('ebooks.continue' | translate: { page: book.progress.page }) : ''"
-                   [attr.aria-label]="book.progress ? ('ebooks.continue' | translate: { page: book.progress.page }) : null">
+                   [attr.aria-label]="book.progress ? ('ebooks.continue' | translate: { page: book.progress.page }) : ('ebooks.read' | translate)">
                   <mat-icon>auto_stories</mat-icon><span class="eb-act-label">{{ (book.progress ? 'ebooks.continueShort' : 'ebooks.read') | translate }}</span>
                 </a>
               } @else {

@@ -13,7 +13,7 @@ import { chromium, webkit, firefox } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
-import { APPS, AREAS, ROUTES, areaOf, routeId } from './routes.mjs';
+import { APPS, AREAS, ROUTES, areaOf, routeId, isExpectedFailure } from './routes.mjs';
 import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.mjs';
 import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
 import { writeIndex, foldSummary } from './report.mjs';
@@ -343,7 +343,7 @@ async function main() {
       const text = value instanceof Error ? `Fehler: ${value.message}` : value ?? `— ${why ?? '(nichts gefunden)'}`;
       resolveLog.push({ name, value: value instanceof Error ? null : value, note: text });
       say(name, value, why);
-    }, previousParams);
+    }, previousParams, null, Object.fromEntries(Object.entries(sessions).filter(([r]) => r !== 'admin').map(([r, x]) => [r, x.token])));
     fs.writeFileSync(cachePath, JSON.stringify({ ...previousParams, ...params }, null, 2));
   }
 
@@ -552,17 +552,24 @@ async function main() {
       }
     });
     const page = await ctx.newPage();
-    const consoleErrors = []; const failed = [];
+    const consoleErrors = []; const failed = []; const expectedFailed = [];
+    // Adressen erwarteter Fehlantworten: Chromiums „Failed to load resource“ dazu ist ebenfalls kein Befund.
+    const expectedUrls = new Set();
     const net = { inflight: 0, lastActivity: Date.now() };
-    page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 300)); });
-    page.on('pageerror', e => consoleErrors.push(`Ausnahme: ${String(e.message).slice(0, 300)}`));
+    page.on('console', m => { if (m.type() === 'error') consoleErrors.push({ text: m.text().slice(0, 300), url: m.location()?.url }); });
+    page.on('pageerror', e => consoleErrors.push({ text: `Ausnahme: ${String(e.message).slice(0, 300)}` }));
     page.on('request', () => { net.inflight++; net.lastActivity = Date.now(); });
     const finish = () => { net.inflight = Math.max(0, net.inflight - 1); net.lastActivity = Date.now(); };
     page.on('requestfinished', finish);
     page.on('requestfailed', req => { finish(); if (!/favicon|\.woff/.test(req.url())) failed.push(`${req.method()} ${shortUrl(req.url())} — ${req.failure()?.errorText}`); });
     page.on('response', res => {
       if (!res.url().includes('/api/')) return;
-      if (res.status() >= 400) failed.push(`${res.request().method()} ${shortUrl(res.url())} → ${res.status()}`);
+      if (res.status() >= 400) {
+        // Erwartete Fehlantworten der Route (routes.mjs `expectedFailures`, z. B. 404 = „noch nicht importiert") zählen
+        // nicht als Befund; sie stehen nur zur Nachvollziehbarkeit unter `expectedFailed` im Bericht.
+        const line = `${res.request().method()} ${shortUrl(res.url())} → ${res.status()}`;
+        if (isExpectedFailure(job.route, line)) { expectedFailed.push(line); expectedUrls.add(res.url()); } else failed.push(line);
+      }
       const mark = res.headers()['x-ui-sweep'];
       if (mark !== 'stub') apiLog.push({ id: job.id, auth: job.auth, lang: job.lang, viewport: job.viewports.join(','),
         method: res.request().method(), url: shortUrl(res.url()), status: res.status(), cached: mark === 'cache' });
@@ -660,8 +667,10 @@ async function main() {
       record.apiCalls = apiCalls.length - (opts.fast ? callsBefore : 0);
       record.cacheHits = cacheHits - (opts.fast ? hitsBefore : 0);
       if (toolDelayMs) record.toolDelayMs = toolDelayMs;   // Bild evtl. vor den Daten — vom Werkzeug, nicht von der App
-      record.console = [...new Set(consoleErrors)].slice(0, 10);
+      record.console = [...new Set(consoleErrors
+        .filter(c => !(c.url && expectedUrls.has(c.url) && /^Failed to load resource/.test(c.text))).map(c => c.text))].slice(0, 10);
       record.failedRequests = [...new Set(failed)].slice(0, 10);
+      if (expectedFailed.length) record.expectedFailed = [...new Set(expectedFailed)].slice(0, 10);
       if (record.finalUrl && stripQuery(record.finalUrl) !== stripQuery(job.url)) record.redirected = true;
       records.push(record);
     }

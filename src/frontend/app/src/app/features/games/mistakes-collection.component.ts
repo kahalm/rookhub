@@ -47,7 +47,8 @@ const LOAD_CONCURRENCY = 4;
       @if (!games()) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (!training()) {
-        <p class="hint">{{ 'games.mistakes.collection.hint' | translate }}</p>
+        <!-- Falz-Runde 16.10. (Handy 56 % bis „Starten“): Erklärsatz UNTER den Startknopf, die Auswahlzahl neben ihn,
+             am Handy beide Auswahlfelder nebeneinander. -->
         <!-- UI-Sweep 2026-10-11 (d1-rk-mistakes-native-selects): Filter als Material-Felder (DESIGN 5.8), nicht nativ. -->
         <div class="filters">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
@@ -68,14 +69,18 @@ const LOAD_CONCURRENCY = 4;
           </mat-form-field>
           <mat-checkbox [(ngModel)]="includeSolved" name="includeSolved">{{ 'games.mistakes.collection.includeSolved' | translate }}</mat-checkbox>
         </div>
-        <p class="count">{{ (selected().length === 1 ? 'games.mistakes.collection.selectionOne' : 'games.mistakes.collection.selection')
-          | translate: { games: selected().length, analysed: analysed().length } }}</p>
+        <div class="start-row">
         @if (loadProgress(); as p) {
           <p class="loading"><mat-spinner diameter="18"></mat-spinner> {{ 'games.mistakes.collection.loading' | translate: p }}</p>
         } @else {
           <button mat-flat-button color="primary" class="start" [disabled]="analysed().length === 0" (click)="start()">
             <mat-icon>replay</mat-icon> {{ 'games.mistakes.collection.start' | translate }}
           </button>
+        }
+          <p class="count">{{ (selected().length === 1 ? 'games.mistakes.collection.selectionOne' : 'games.mistakes.collection.selection')
+            | translate: { games: selected().length, analysed: analysed().length } }}</p>
+        </div>
+        @if (!loadProgress()) {
           <!-- UI-Sweep 2026-10-11 (d1-rk-mistakes-starten-ohne-grund): der Grund steht sichtbar unter dem gesperrten Knopf. -->
           @if (analysed().length === 0) {
             <p class="disabled-reason">{{ (selected().length === 0 ? 'games.mistakes.collection.noGames'
@@ -83,6 +88,7 @@ const LOAD_CONCURRENCY = 4;
           }
           @if (empty()) { <p class="empty-state">{{ 'games.mistakes.collection.none' | translate }}</p> }
         }
+        <p class="hint">{{ 'games.mistakes.collection.hint' | translate }}</p>
       } @else {
         @let t = training()!;
         <div class="body">
@@ -107,7 +113,10 @@ const LOAD_CONCURRENCY = 4;
     .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 12px 0 8px; }
     .filter-field { min-width: 200px; }
     .disabled-reason { margin: 6px 0 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
-    @media (max-width: 599.98px) { .filter-field { flex: 1 1 100%; } }
+    .start-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 8px 0 0; }
+    .start-row .count, .start-row .loading { margin: 0; }
+    .hint { margin: 16px 0 0; font-size: .9rem; }
+    @media (max-width: 599.98px) { .filter-field { flex: 1 1 140px; min-width: 0; } }
     .loading { display: flex; align-items: center; gap: 8px; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .body { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }

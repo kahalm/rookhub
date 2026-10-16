@@ -316,6 +316,23 @@ nur bei Seiten über 2 Bildschirmen, Regeln 9–13).
 
 **Ausnahmen:** Vollbild-Brett, Dialoge, Druckansicht des Aufgabenblatts.
 
+*Muster zum Straffen* (Falz-Runde 16.10., 0.806.x):
+- **Gleichartige Hinweise zusammenfassen:** trainieren heute mehrere Gruppen, steht EIN Streifen mit einem Knopf je
+  Ziel (ClubHub-Kartei), nie ein Streifen je Gruppe.
+- **Titel, die den aktiven Reiter wiederholen**, stehen am Handy nur für Vorleser (ClubHub „Kartei“); ihre Zeile nimmt
+  Suche + Anlege-Knöpfe auf. **Rücklinks** am Handy als „←“ vor der Überschrift (Ziel im Text für Vorleser, LeagueHub
+  Formular-Korrektur), „Speichern ↓“ in die Zeile darunter.
+- **Erklärsatz zur Aktion steht bei der Aktion:** unter dem Startknopf (Fehler nachspielen), in der Formularkarte
+  (Partie-Analysen), sonst im ⓘ am Titel; der Leerhinweis steht vor dem Formular, nicht darunter.
+- **Abstände vor der Hauptsache** 8–12 px statt 16–24 px (Seitenrand oben, Suchzeile, Zählerzeile); Tippziele bleiben
+  ≥ 44 px (Nebenknöpfe in Bannern dürfen wie `.btn.slim` 36 px sein).
+- **Lange Listen am Handy:** Regal-Karten werden zu kompakten Zeilen (Titelbild 64 px | Angaben | Symbolknöpfe,
+  E-Books); Turnierliste lädt am Handy 25 statt 50 je Abruf; Kurs-Linien einspaltig mit Kapiteln als Aufklapper
+  (offen ist das Kapitel der Auswahl, Springen öffnet das Zielkapitel).
+- **Brett + schmale Liste nebeneinander ab 600 px** (Repertoire-Baum), statt 640-px-Brett darüber.
+- **Profil:** die Darstellungs-Karte (Theme/E-Ink/UI-Größe) steht auf Nutzerwunsch ganz oben und ist dort die
+  Hauptsache; sie bleibt knapp (Hinweise 0,8125 rem, Gerätebefund 0,75 rem, UI-Größe ohne Häkchen in einer Zeile).
+
 ---
 
 ## 5 Komponenten-Muster
@@ -1029,3 +1046,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-14 | 0.783.2 | RookHub (c2, E-Books/Woodpecker): Bytegrößen binär (÷ 1024, „kB/MB/GB“) — Upload-Grenze 300 MiB = „300 MB“, der Hinweis ohne Konto nimmt sie als `{{max}}` aus derselben Zahl; randlose Seiten mit eigener Leiste markieren sich mit `data-nav-edge="full"`, die Kopfleiste fluchtet dann ab 2400 px bei 16 px (E-Book-Leser); Leser am Handy rechnet mit der 56-px-Kopfleiste; Brett in der Brett-Leiste ab 900 px höchstens `100dvh − Kopf − 330px` (≥ 280 px), am Handy fünf Modi als Raster (Symbol über Wort); Maia-Zugzeile erst bei bereitem Modell; Leersätze in `--mat-sys-on-surface-variant`; Sortierung 320 px, Suchfeld ≤ 640 px, am Handy kurzer Platzhalter „Bücher suchen“; „1 Seite“/„1 Diagramm“ über *One-Schlüssel; Zahl + Einheit/Zählwort mit geschütztem Leerzeichen („46 MB“, „Zyklus 1“); Jahr-Feld ohne Drehpfeile | zwei Zahlen für dieselbe Grenze, Kopf- und Leser-Leiste auf zwei Kanten, 8-px-Streifen, Bedienzeile unter der Falz, „Maia“ allein in Zeile 2, leere Zeile mit gesperrten Knöpfen, 3,3:1, „Neueste zuerst (E…“, „Schlagw“, „1 Seiten“, Umbrüche „46 / MB“ und „Zyklus / 1“, Safari-Drehpfeile | UI-Sweep c2: c2-eb-upload-limit-315-300, c2-eb-reader-ultrawide-kopfkante, c2-eb-reader-handy-streifen-unten, c2-eb-board-leiste-laptop-falz, c2-eb-board-modus-leiste-maia-allein, c2-eb-brett-maia-leere-zugzeile, c2-eb-calc-leersatz-kontrast, c2-eb-sort-select-truncated, c2-eb-search-placeholder-truncated, c2-eb-plural-1-seiten, c2-eb-maia-46mb-umbruch, c2-wp-dialog-zyklus-zahl-umbruch, c2-eb-upload-jahr-drehpfeile |
 | 2026-10-15 | 0.786.1 | E-Book-Leser ab 2400 px: Brett-Spalte `clamp(460px, calc(100dvh - 220px), 46vw)` (Brett 100dvh − 250px) statt höchstens 720 px | Brett 720 px bei 3440 × 1392, darunter ein Drittel leer, 650 px Lücke zwischen Buch und Brett | User-Wunsch 15.10. (Vergleichsbild) |
 | 2026-10-15 | 0.790.0 | RookHub, Kurs-Löser: Fortschritt dreigeteilt (ohne Hilfe / mit Tipp oder Neustart / aufgegeben) statt einer Leiste mit „x/y (n %)“ | Nutzerwunsch: „3 %“ sagte nicht, wie sauber gelöst wurde | Nutzer |
+| 2026-10-16 | 0.806.x · Falz-Runde 16.10. | ClubHub-Kartei: EIN Trainingsstreifen auch bei mehreren Gruppen (Knopf je Gruppe), Streifen 8 px Polster/Knopf 36 px; am Handy Titel nur für Vorleser, Suche + „+ Kind/+ Trainer“ in Zeile 1, Chips + Archiv + Zähler in Zeile 2, Registerbuchstabe links neben der Karte; Laptop Kopf 40-px-Knöpfe, 10 px Abstände | Vorlauf 54–70 %, zwei Banner über der Liste | UI-Sweep 20261016_1853: clubhub__start (fold-lead, fold-banners) |
+| 2026-10-16 | 0.806.x · Falz-Runde 16.10. | RookHub: Repertoire-Baum 600–899 px Brett (≤ 56 %) und Baum nebeneinander, Handy-Titel einzeilig mit „…“ (Name im `title`); „Fehler nachspielen“: Start + Auswahlzahl in einer Zeile, Erklärsatz darunter, Felder am Handy nebeneinander; Partie-Analysen: Einleitung im ⓘ bzw. in der Formularkarte, Leerhinweis vor dem Formular; Punktepartie/Admin/Aufgabenblatt: Abstände vor der Liste 4–16 px statt 8–24 px | Vorlauf 41–73 % | UI-Sweep 20261016_1853: rookhub__repertoires-tree, __games-mistakes, __analysis-games, __guess, __admin, __worksheets-worksheetId |
+| 2026-10-16 | 0.806.x · Falz-Runde 16.10. | RookHub: E-Books am Handy als kompakte Zeilen (Titelbild 64 px, Lesen/Herunterladen als 44-px-Symbol + ⋮ übereinander, Name im aria-label), Einleitung im ⓘ am Titel; Kurs-Linien einspaltig mit Kapitel-Aufklappern; Turnierliste am Handy 25 je Abruf; Profil-Darstellungskarte knapper (bleibt oben) | 16–27 Handy-Bildschirme, Darstellungskarte schob das Formular auf 60 % | UI-Sweep 20261016_1853: rookhub__ebooks (fold-too-long, fold-lead), __courses-bookId-browse, turnier__tournaments-calendar--filter, rookhub__profile |
+| 2026-10-16 | 0.806.x · Falz-Runde 16.10. | LeagueHub: Formular-Korrektur am Handy „← Überschrift (i)“ / „Partietitel … Speichern ↓“ in zwei Zeilen (Rücklink-Zeile entfällt), Prüf-/Brettkarte 10/12 px Polster; Konto-Vorschläge: (i) an der Überschrift, Erklärsatz im Feld dahinter; Vereinspartien am Handy 8/10 px zwischen Satz-, Such- und Zählerzeile | Vorlauf 41–50 % | UI-Sweep 20261016_1853: leaguehub__verein-partie-clubGameId-korrigieren, __konten, __verein |

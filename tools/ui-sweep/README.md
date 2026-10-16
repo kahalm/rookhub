@@ -116,6 +116,11 @@ Sprach-Achse, damit der Vergleich mit älteren Läufen weiter greift.
 - **Schlüssel statt Text** — sichtbarer Text wie `games.review.title` (Namensräume aus `public/i18n/en.json`).
 - **lädt noch** — nach dem Laden steht noch ein Ladekreis.
 - **Konsole / Anfrage** — Konsolenfehler, Ausnahmen, API-Antworten ab 400, abgebrochene Anfragen.
+  **Erwartete Fehlantworten** je Route (`expectedFailures` in `routes.mjs`, RegExps auf die Berichtszeile
+  `GET /api/… → 404`) zählen nicht: z. B. der Turnierkalender fragt mit `GET /api/tournaments/{chessResultsId}`, ob ein
+  Turnier schon importiert ist (404 = nein), die Partiekorrektur in LeagueHub mit `…/games/{id}/sheet`, ob ein Formular
+  aufbewahrt ist. Treffer stehen im Bericht unter `expectedFailed`; Zustände erben die Liste ihrer Route. Eng fassen
+  (Methode, Pfad, Status) und im Katalog die Stelle im Frontend nennen, die den Fehler absichtlich abfängt.
 - **weitergeleitet** — die Seite landete woanders (z. B. auf der Anmeldung).
 
 ### Erster Blick und Scrollen (DESIGN.md 4.6, ohne Modell gemessen)
@@ -165,6 +170,12 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   Kurs, Einlesung … — `OWNED_PARAMS`) kommen für `user` aus den eigenen Daten (`runs/params-dev-user.json`); `empty` und
   `trainer` haben keine, ihre Routen damit entfallen still („ohne eigene Daten"); der Trainer bekommt Kind und Gruppe aus
   SEINER Sicht (`TRAINER_PARAMS`). `anon` überspringt Routen, die ein Konto voraussetzen (`ANON_SKIP`).
+- **E-Books** (`ebookId`, `ebookDiagramId`): beide Leser-Routen laufen in allen Rollen, auch abgemeldet. Der Seed nimmt
+  das Sweep-PDF „ui-sweep" bzw. ein PDF-Buch mit fertig erkannten Diagrammen, dessen Datei auf Dev lädt (das vom
+  letzten Lauf, sonst ein schon für alle freigegebenes, sonst das kürzeste), gibt es über das Admin-Konto
+  ZUSÄTZLICH für die Gruppe „Everyone" frei und prüft mit den Ausweisen aller Rollen des Laufs (plus abgemeldet), dass
+  `GET /api/ebooks/{id}` 200 liefert — sonst „nicht auflösbar". Folge: auch das leere Konto sieht in `/ebooks` diese
+  Bücher statt des Leerzustands. EPUB-Bücher werden nicht genommen (auf Dev fehlten Kapiteldateien → 404 je Kapitel).
 - **Engine-abhängige Parameter** (`analysisId`, `analyzedGameId`, `analyzedShareToken`, `comparisonId`): der Seed stößt
   „Partie analysieren" an der Sweep-Partie bzw. einen Zugvergleich an, sobald Dev eine Engine hat
   (`/api/game-analyses/guess/status`), und nimmt nur FERTIGE — fertig ist eine Analyse erst nach Minuten, also beim

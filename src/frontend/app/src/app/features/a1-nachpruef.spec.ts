@@ -28,7 +28,10 @@ describe('Nachprüfung a1 (0.763.1)', () => {
     expect(c).toMatch(/grid-template-columns:auto minmax\(0,1fr\)auto|grid-template-columns:autominmax\(0,1fr\)auto/);
   });
 
-  it('Partie-Analysen: Erklärsatz 12 px unter der Knopfzeile', () => {
-    expect(css(GameAnalysesComponent)).toMatch(/\.intro(\[[^\]]*\])?\{margin:12px014px/);
+  // Falz-Runde 16.10.: die Einleitung steht jetzt in der Formularkarte (0 0 12px), den Abstand unter der Knopfzeile hält
+  // der Kopf selbst (margin-bottom 12px).
+  it('Partie-Analysen: 12 px zwischen Knopfzeile und Inhalt', () => {
+    expect(css(GameAnalysesComponent)).toMatch(/\.header(\[[^\]]*\])?\{margin-bottom:12px/);
+    expect(css(GameAnalysesComponent)).toMatch(/\.intro(\[[^\]]*\])?\{margin:0012px/);
   });
 });

@@ -44,7 +44,7 @@ import {
   DEFAULT_RADIUS_KM, DIRECTORY_AGE_GROUPS, DIRECTORY_GENDERS, DIRECTORY_KINDS, DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
-  TournamentGender, TournamentKind, TournamentSpeed, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
+  TournamentGender, TournamentKind, TournamentSpeed, directoryPageSize, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
 
 /**
  * Turnierkalender: Liste, Karte und Monatsansicht auf DENSELBEN Filterzustand.
@@ -100,7 +100,7 @@ export class TournamentDirectoryComponent implements OnInit {
   readonly ageGroups = DIRECTORY_AGE_GROUPS;
   readonly genders = DIRECTORY_GENDERS;
   readonly kinds = DIRECTORY_KINDS;
-  readonly pageSize = 50;
+  readonly pageSize = directoryPageSize();
 
   /** Vorgabe: die naechsten drei Monate (siehe rangeFor). */
   rangePreset: DirectoryRangePreset = 'quarter';

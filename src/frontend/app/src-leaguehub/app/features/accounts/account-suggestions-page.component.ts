@@ -45,15 +45,17 @@ export function filterGroups<T extends { name: string; team: string | null }>(gr
     } @else {
       <section class="sugg-page">
         <!-- UI-Sweep 2026-10-11 (d2-l-konten-vorlauf): Zähler neben der Überschrift, ein Satz + (i) statt drei Absätzen. -->
+        <!-- Falz-Runde 16.10. (Vorlauf 41–47 %): der Erklärsatz steht jetzt ganz im (i) an der Überschrift — die eigene
+             Satzzeile über der Suche entfällt. -->
         <div class="sugg-top">
           <h2>Konto-Vorschläge</h2>
+          <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Wie gesucht wird"
+                  title="Wie gesucht wird" (click)="infoOpen.set(!infoOpen())">i</button>
           @if (progress(); as p) { <span class="small muted" role="status">{{ p }}</span> }
         </div>
-        <p class="muted info-line">Gehört das Konto dem Spieler? Übernehmen oder verwerfen — Verworfenes kommt nicht wieder.
-          <button type="button" class="chk-btn" [attr.aria-expanded]="infoOpen()" aria-label="Wie gesucht wird"
-                  title="Wie gesucht wird" (click)="infoOpen.set(!infoOpen())">i</button></p>
         @if (infoOpen()) {
           <div class="info-panel sugg-info">
+            <p class="note">Gehört das Konto dem Spieler? Übernehmen oder verwerfen — Verworfenes kommt nicht wieder.</p>
             <p class="note">LeagueHub sucht auf Lichess und chess.com nach Konten, deren Name zum Spieler passt. Ob ein Konto
               wirklich ihm gehört, entscheidest du: übernehmen (unsicher oder gesichert) oder verwerfen; Verworfenes kommt nicht wieder.</p>
             <!-- UI-Sweep 2026-10-11 (r2-l-minor-intro): seit 0.610.0 werden auch Minderjährige gesucht (nur für Admins sichtbar) -->

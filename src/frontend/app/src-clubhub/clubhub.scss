@@ -195,6 +195,12 @@ ch-root > .foot { flex: none; width: 100%; }
 }
 .today strong { font: 700 20px/1.2 var(--slab); }
 .today .btn { border-color: var(--mark-ink); color: var(--mark-ink); background: transparent; }
+/* Falz-Runde 16.10.: der Streifen ist EIN Hinweis vor der Kartei — schlank (8 px Polster, Knopf 36 px), mehrere Gruppen
+   als Knöpfe in einer Reihe statt je eigener Streifen (4.6 Regel 6). */
+.today { padding: 8px 16px; margin-bottom: 10px; }
+.kartei-top .tools { margin-bottom: 10px; }
+.today .btn { min-height: 36px; padding: 6px 14px; }
+.today-links { display: flex; flex-wrap: wrap; gap: 8px; }
 .today .btn:hover { background: var(--mark-ink); color: var(--mark); }
 
 /* ---- Kartei: Register --------------------------------------------------------------------- */
@@ -228,6 +234,9 @@ ch-root > .foot { flex: none; width: 100%; }
 /* Zähler der Kartei am Ende der Werkzeugzeile (z1-c-kartei-lead: spart am Handy eine Zeile vor der Liste). */
 .tools .count { margin: 0 0 0 auto; flex: none; }
 .kartei-head .short { display: none; }
+/* Falz-Runde 16.10. (Laptop 43,5 %): Kartei-Kopf mit 40-px-Knöpfen und 10 px Abstand zur Werkzeugzeile. */
+.kartei-head { margin-bottom: 10px; }
+.kartei-head .btn { min-height: 40px; padding: 8px 16px; }
 .register { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0 10px; margin: 0 0 14px; }
 .register > .letter {
   font: 700 38px/1 var(--slab); color: var(--linen); position: sticky; top: 8px; align-self: start; padding-top: 8px;
@@ -585,8 +594,7 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { fo
   h1 { font-size: 27px; }
   .brand { font-size: 29px; }
   .tabs a { padding: 10px 14px 12px; font-size: 17px; }
-  .register { grid-template-columns: 1fr; }
-  .register > .letter { position: static; font-size: 26px; padding: 0 0 4px 2px; }
+  .register > .letter { position: static; }
   .kid { grid-template-columns: 1fr; }
   .kid-call { text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
   .kid-call span { margin: 0; }
@@ -619,6 +627,25 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { fo
   .kartei-head .btn { min-height: 36px; padding: 6px 12px; font-size: 15px; white-space: nowrap; }
   .kartei-head .long { display: none; }
   .kartei-head .short { display: inline; }
+  /* Falz-Runde 16.10. (Vorlauf 54–70 %): Titel nur für Vorleser (der Reiter „Kartei" nennt die Seite), Suche + Anlege-
+     Knöpfe in Zeile 1, Chips (wischbar) + Archiv + Zähler in Zeile 2; Streifen kompakt; Registerbuchstabe wieder links
+     neben der Karte (schmale Spalte) statt in eigener Zeile über ihr. */
+  .kartei-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
+  .kartei-top > .kartei-head, .kartei-top > .tools { display: contents; }
+  .kartei-top h1 {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .kartei-top .search { order: 1; flex: 1 1 6rem; min-width: 0; }
+  .kartei-top .actions { order: 2; }
+  .kartei-top .tools .filter-chips { order: 3; flex: 1 1 55%; min-width: 0; }   /* 55 % erzwingt Zeile 2 */
+  .kartei-top .check { order: 4; gap: 6px; }
+  .kartei-top .tools .count { order: 5; font-size: 14px; margin: 0; }
+  .register { grid-template-columns: 1.75rem minmax(0, 1fr); gap: 0 6px; margin-bottom: 10px; }
+  .register > .letter { font-size: 24px; padding: 10px 0 0; }
+  .today { padding: 6px 12px; gap: 6px 10px; margin-bottom: 8px; }
+  .today strong { font: 700 15px/1.25 var(--body); }
+  .today .btn { padding: 4px 12px; font-size: 15px; }
   .sheet { padding: 14px 14px 4px; }
   /* EINE Reihe (d2-c-form-save-bar: zwei Reihen waren 111 px = 13 % der Höhe): „Kind anlegen" nimmt den Platz,
      „+ Weiteres" kurz, „Abbrechen" als schlanker Textknopf. */

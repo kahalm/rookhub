@@ -1,7 +1,7 @@
 // node --test tools/ui-sweep  — Katalog und Zustände passen zusammen, Brett-Koordinaten stimmen.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ROUTES, routeId } from './routes.mjs';
+import { ROUTES, routeId, isExpectedFailure } from './routes.mjs';
 import { STATES, withStates, squareCenter, writeDecision, stubBody } from './states.mjs';
 
 test('jeder Zustand hängt an einer Katalog-Route, Ids sind eindeutig', () => {
@@ -85,4 +85,21 @@ test('UI-Größe: Speicher-Vorbelegung je Stufe, 100 ohne Schlüssel, unbekannte
   assert.deepEqual(storageFor('eink', 200), { rookhub_eink: '1', rookhub_ui_scale: '200' });
   assert.deepEqual(storageFor('dark'), { rookhub_eink: '0' });
   assert.throws(() => storageFor('light', 180), /Unbekannte UI-Größe/);
+});
+
+test('erwartete Fehlantworten: nur Methode + Pfad + Status der Route, Zustände erben sie', () => {
+  const dir = ROUTES.find(r => routeId(r) === 'turnier__tournaments-calendar-directoryId');
+  assert.ok(isExpectedFailure(dir, 'GET /api/tournaments/1410724 → 404'));
+  assert.ok(!isExpectedFailure(dir, 'GET /api/tournaments/1410724 → 500'), 'anderer Status bleibt Befund');
+  assert.ok(!isExpectedFailure(dir, 'POST /api/tournaments/1410724 → 404'), 'andere Methode bleibt Befund');
+  assert.ok(!isExpectedFailure(dir, 'GET /api/tournaments/1410724/rounds → 404'), 'anderer Pfad bleibt Befund');
+  const fix = ROUTES.find(r => routeId(r) === 'leaguehub__verein-partie-clubGameId-korrigieren');
+  assert.ok(isExpectedFailure(fix, 'GET /api/league/club/games/174/sheet?club=1 → 404'));
+  assert.ok(!isExpectedFailure(fix, 'GET /api/league/club/games/174/sheet/photo?club=1 → 404'));
+  // Routen ohne Liste: nichts ist erwartet.
+  assert.ok(!isExpectedFailure(ROUTES.find(r => routeId(r) === 'rookhub__ebooks'), 'GET /api/tournaments/1 → 404'));
+  assert.ok(!isExpectedFailure(undefined, 'GET /api/x → 404'));
+  const byId = new Map(ROUTES.map(r => [routeId(r), r]));
+  for (const d of withStates(ROUTES, routeId)) assert.equal(d.expectedFailures, byId.get(d.stateOf).expectedFailures);
+  for (const r of ROUTES) for (const re of r.expectedFailures) assert.ok(re instanceof RegExp, `${routeId(r)}: keine RegExp`);
 });

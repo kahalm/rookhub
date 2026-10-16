@@ -203,6 +203,27 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(strips[0].querySelector('a')!.getAttribute('href')).toBe('/gruppen/1/anwesenheit');
   });
 
+  // Falz-Runde 16.10.: zwei Gruppen am selben Tag → EIN Streifen mit einem Knopf je Gruppe (vorher zwei Streifen)
+  it('trainieren heute mehrere Gruppen, steht EIN Streifen mit einem Anwesenheits-Knopf je Gruppe', async () => {
+    api.groups.and.resolveTo([GROUP(1, 'Anfänger', 5), GROUP(2, 'Turnier', 2), GROUP(3, 'Fortgeschrittene', 5)]);
+    await create(new Date(2026, 8, 25, 16, 0));                                          // Freitag
+    const strips = Array.from(el().querySelectorAll('.today'));
+    expect(strips.length).toBe(1);
+    expect(strips[0].textContent).toContain('Heute ist Freitag – Anwesenheit abhaken:');
+    const links = Array.from(strips[0].querySelectorAll('a'));
+    expect(links.map(a => a.textContent?.trim())).toEqual(['Anfänger', 'Fortgeschrittene']);
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/gruppen/1/anwesenheit', '/gruppen/3/anwesenheit']);
+    expect(links[1].getAttribute('aria-label')).toBe('Anwesenheit Fortgeschrittene abhaken');
+  });
+
+  it('Kopf und Werkzeuge stehen in einem Block (.kartei-top), der Titel bleibt für Vorleser da', async () => {
+    await create();
+    const top = el().querySelector('.kartei-top')!;
+    expect(top.querySelector('h1')!.textContent).toBe('Kartei');
+    expect(top.querySelector('.actions a.btn.primary')).not.toBeNull();
+    expect(top.querySelector('.tools input[type="search"]')).not.toBeNull();
+  });
+
   it('an einem anderen Tag kein Streifen; „Archiv" lädt die archivierten Blätter', async () => {
     await create();
     expect(el().querySelector('.today')).toBeNull();

@@ -28,6 +28,22 @@
   .club-intro .scan-head h2 { margin: 2px 0 0; }
   .club-intro .scan-head .game-title { margin: 0; }
 }
+/* Falz-Runde 16.10. (Brett bei 50 % der Handyhöhe): bis 720 px Rücklink, Überschrift, (i), Partietitel und „Speichern ↓" als
+   EIN Kopfblock — Zeile 1 „← Überschrift (i)", Zeile 2 Partietitel + „Speichern ↓"; der Rücklink zeigt nur den Pfeil, sein
+   Ziel steht für Vorleser im Text (.back-lbl). Prüfteil und Brettkarte mit schmaleren Polstern. */
+@media (max-width: 720px) {
+  .club-intro:has(> .scan-head) { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin-bottom: 10px; }
+  .club-intro:has(> .scan-head) > .back-row, .club-intro:has(> .scan-head) > .scan-head { display: contents; }
+  .club-intro:has(> .scan-head) > :not(.back-row):not(.scan-head) { order: 6; flex: 1 1 100%; }
+  .club-intro .back-row .back-link { order: 1; font-size: 22px; line-height: 1; padding: 6px 4px 6px 0; text-decoration: none; }
+  .club-intro .back-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .club-intro .scan-head h2 { order: 2; flex: 0 1 auto; max-width: calc(100% - 66px); margin: 0; min-width: 0; font-size: 22px; }
+  .club-intro .scan-head .chk-btn { order: 3; margin-right: auto; }
+  .club-intro .scan-head .game-title { order: 4; flex: 1 1 0; min-width: 0; margin: 0; }
+  .club-intro .back-row .to-save { order: 5; margin-left: auto; }
+  .scan-layout .scan-check, .scan-layout .scan-board { padding: 10px 12px; }
+  .scan-layout { gap: 10px; }
+}
 .club-intro .scan-hint { margin: 4px 0 10px; }
 /* Am Handy steht der Prüfteil ÜBER dem Brett und ändert je Zug seine Höhe (Lesarten ja/nein, Ausschnitt). Er darf deshalb
    kein Scroll-Anker sein — dann hält der Browser das BRETT an seiner Stelle, statt es mit jedem Zug zu verschieben

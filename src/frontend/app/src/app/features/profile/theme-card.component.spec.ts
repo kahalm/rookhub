@@ -99,6 +99,8 @@ describe('ThemeCardComponent UI-Größe', () => {
     expect(toggles.length).toBe(5);
     expect(el.querySelector('.ui-scale-toggle .mat-button-toggle-checked button')?.textContent).toContain('profile.theme.uiScaleValue');
     expect(toggles[0].classList).toContain('mat-button-toggle-checked');
+    // Falz-Runde 16.10.: ohne Häkchen — die fünf Stufen passen am Handy in eine Zeile.
+    expect(el.querySelector('.ui-scale-toggle .mat-button-toggle-checkbox-wrapper')).toBeNull();
     (toggles[4].querySelector('button') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(localStorage.getItem(UI_SCALE_STORAGE_KEY)).toBe('200');

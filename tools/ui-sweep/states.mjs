@@ -68,15 +68,19 @@ export const STATES = [
   // ---------------------------------------------------------------- RookHub: Puzzles + Kurse
   { of: 'rookhub__puzzles-puzzleId', name: 'spielweise', fresh: true, steps: [{ waitFor: SOLVE_MODE }], expect: SOLVE_MODE },
   { of: 'rookhub__puzzles-puzzleId', name: 'tipp',
-    steps: [EASY, { click: '.board-hint-slot--board button.board-hint-tip' }], expect: '.board-hint-slot--board ol.hint-list li' },
+    // Der Tipp-Text steht seit b1 NEBEN dem Slot: unter dem Brett (.hint-list--board) bzw. ab 900 px in der Seitenspalte
+    // (.hint-list--side) — je Breite ist genau eine Liste sichtbar.
+    steps: [EASY, { click: '.board-hint-slot--board button.board-hint-tip' }], expect: 'ol.hint-list li:visible' },
   { of: 'rookhub__puzzles-puzzleId', name: 'aufgegeben',
     steps: [EASY, { click: 'app-puzzle-status-card .ytp-actions button[color="warn"]' }], expect: 'app-puzzle-status-card .psc-failed' },
   { of: 'rookhub__courses-bookId-sequential', name: 'aufgegeben',
     steps: [EASY, { click: 'app-puzzle-status-card .ytp-actions button[color="warn"]' }], expect: 'app-puzzle-status-card .psc-failed' },
   { of: 'rookhub__courses-bookId-sequential', name: 'uebersprungen',
     steps: [EASY, { click: '.ctx-nav button.skip-quiet' }], expect: 'app-puzzle-status-card .psc-card' },
+  // Konten mit offenem Lauf (user aus seed-user.mjs) sehen statt „Starten" den Fortsetzen-Kasten (b1-rk-endless-fortsetzen-kasten).
   { of: 'rookhub__puzzles-endless', name: 'gestartet',
-    steps: [{ click: '.config-screen button.start-btn-top' }, EASY], expect: '.play-screen app-puzzle-board' },
+    steps: [{ click: '.config-screen button.start-btn-top, .config-screen .resume-banner button.start-btn' }, EASY],
+    expect: '.play-screen app-puzzle-board' },
   { of: 'rookhub__stats', name: 'kurse', auth: [...LOGGED_IN, 'empty'],
     steps: [{ click: '.stats-container .mode-toggle mat-button-toggle[value="course"] button' }],
     expect: '.mode-toggle mat-button-toggle[value="course"].mat-button-toggle-checked' },
@@ -115,7 +119,8 @@ export const STATES = [
   { of: 'rookhub__ebooks', name: 'hochladen', steps: [{ click: '.eb-page .header-actions button.eb-upload' }], expect: DIALOG },
   { of: 'rookhub__ebooks', name: 'admin-menue', auth: ['admin'],
     steps: [{ click: '.eb-page .header-actions button[mat-icon-button]' }], expect: MENU },
-  // Seit c1 steht der Schalter in .eb-filter-more (am Handy hinter „Filter ▾“, ab 600 px offen in der Zeile).
+  // Seit c1 steht der Schalter in .eb-filter-more (am Handy hinter „Filter ▾“, ab 600 px offen in der Zeile). Die
+  // Filterzeile gibt es nur, wenn die Rolle mindestens ein Buch sieht — seed.mjs gibt zwei für „Everyone" frei.
   { of: 'rookhub__ebooks', name: 'mit-diagrammen',
     steps: [{ clickIf: '.eb-filters button.eb-filter-toggle' }, { click: '.eb-filter-more button.eb-chip:has(mat-icon:text-is("grid_on"))' }],
     expect: '.eb-filter-more button.eb-chip--on:has(mat-icon:text-is("grid_on"))' },
@@ -158,7 +163,7 @@ export const STATES = [
   { of: 'leaguehub__verein', name: 'zeilenmenue', auth: LEAGUE,
     steps: [{ click: 'table.club-table tr.game td.acts button.more-btn:visible, .gc-acts button.more-btn:visible' }], expect: MENU },
   { of: 'leaguehub__verein', name: 'info', auth: LEAGUE, steps: [{ click: 'p.info-line button.chk-btn' }], expect: '.info-panel .note' },
-  { of: 'leaguehub__konten', name: 'info', auth: ['admin'], steps: [{ click: 'p button.chk-btn' }], expect: '.info-panel.sugg-info' },
+  { of: 'leaguehub__konten', name: 'info', auth: ['admin'], steps: [{ click: 'button.chk-btn[aria-label="Wie gesucht wird"]' }], expect: '.info-panel.sugg-info' },
   { of: 'leaguehub__start', name: 'prognose-info', auth: LEAGUE,
     steps: [{ click: 'lh-fixture button.chk-btn[aria-label="Wie die Prognose zustande kommt"]' }], expect: 'lh-fixture .info-panel' },
   { of: 'leaguehub__start', name: 'kader', auth: LEAGUE,
@@ -170,7 +175,8 @@ export const STATES = [
   { of: 'clubhub__gruppen-clubGroupId', name: 'gruppe-aendern', auth: ['admin'],
     steps: [{ click: 'details.manage-group > summary' }], expect: 'details.manage-group[open] section.form' },
   { of: 'clubhub__kind-neu', name: 'leer', auth: CLUB,
-    steps: [{ click: 'form.sheet.form .form-save button[type="submit"]' }], expect: 'form.sheet.form p.err.status-line' },
+    // Leerer Vorname: Fehler direkt unter dem Feld (p.err.need), die Statuszeile bleibt für Serverfehler.
+    steps: [{ click: 'form.sheet.form .form-save button[type="submit"]' }], expect: 'form.sheet.form p.err.need' },
 ];
 
 /**

@@ -48,7 +48,8 @@ import { UiScaleService } from '../../core/ui-scale.service';
       <!-- UI-Größe (docs/DESIGN.md 3.7): je Gerät gespeichert, sofort wirksam (Meta-Viewport bzw. zoom). -->
       <div class="ui-scale-row">
         <span class="ui-scale-label" id="ui-scale-label">{{ 'profile.theme.uiScale' | translate }}</span>
-        <mat-button-toggle-group class="ui-scale-toggle" aria-labelledby="ui-scale-label"
+        <!-- Falz-Runde 16.10.: ohne Häkchen (der gewählte Wert ist eingefärbt) — die fünf Stufen passen am Handy in EINE Zeile. -->
+        <mat-button-toggle-group class="ui-scale-toggle" aria-labelledby="ui-scale-label" hideSingleSelectionIndicator
                                  [value]="uiScale.scale()" (change)="setUiScale($event.value)">
           @for (step of uiScale.steps; track step) {
             <mat-button-toggle [value]="step">{{ 'profile.theme.uiScaleValue' | translate: { value: step } }}</mat-button-toggle>
@@ -71,15 +72,19 @@ import { UiScaleService } from '../../core/ui-scale.service';
     .theme-toggle { display: inline-flex; flex-wrap: wrap; max-width: 100%; }
     .theme-toggle mat-button-toggle { display: flex; align-items: center; gap: 6px; }
     .theme-eink-note { margin: 0.5rem 0 0; color: var(--mat-sys-on-surface-variant); }
-    .eink-row { margin-top: 1rem; }
+    /* Falz-Runde 16.10.: die Karte steht auf Nutzerwunsch GANZ OBEN im Profil — daher knapp: Hinweise in kleiner Schrift
+       direkt unter ihrem Schalter, 12 px zwischen den Zeilen, Gerätebefund noch eine Stufe leiser (0,75 rem). */
+    .eink-row { margin-top: 0.75rem; }
     .eink-toggle { min-height: 44px; display: flex; align-items: center; }
-    .eink-hint { margin: 0.25rem 0 0; color: var(--mat-sys-on-surface-variant); }
-    .ui-scale-row { margin-top: 1rem; }
-    .ui-scale-label { display: block; margin-bottom: 0.5rem; }
-    .ui-scale-toggle { display: inline-flex; flex-wrap: wrap; max-width: 100%; }
-    .ui-scale-hint { margin: 0.25rem 0 0; color: var(--mat-sys-on-surface-variant); }
+    .eink-hint, .ui-scale-hint { margin: 0 0 0; font-size: 0.8125rem; line-height: 1.35; color: var(--mat-sys-on-surface-variant); }
+    .ui-scale-row { margin-top: 0.75rem; }
+    .ui-scale-label { display: block; margin-bottom: 0.375rem; }
+    .ui-scale-toggle { display: inline-flex; flex-wrap: wrap; max-width: 100%; margin-bottom: 0.25rem; }
     .ui-scale-note { margin: 0.5rem 0 0; color: var(--rh-warn); }
-    .ui-scale-diag { margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--mat-sys-on-surface-variant); }
+    .ui-scale-diag { margin: 0.125rem 0 0; font-size: 0.75rem; line-height: 1.3; color: var(--mat-sys-on-surface-variant); }
+    @media (max-width: 599.98px) {
+      .ui-scale-toggle ::ng-deep .mat-button-toggle-label-content { padding: 0 10px; }
+    }
   `]
 })
 export class ThemeCardComponent {

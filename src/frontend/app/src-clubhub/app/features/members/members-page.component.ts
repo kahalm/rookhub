@@ -43,12 +43,28 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
       <!-- UI-Sweep 2026-10-11 (r2-c-start-linked, r2-c-gate-deadend): dieselbe Sperrkarte wie auf den Unterseiten -->
       <ch-gate [start]="false" area="Die Kartei sehen nur Trainer und die Vereinsleitung." />
     } @else {
-      @for (g of today(); track g.id) {
-        <p class="today" role="status">
-          <strong>Heute ist {{ weekday(g.weekday) }}: {{ g.name }} trainiert.</strong>
-          <a class="btn" [routerLink]="['/gruppen', g.id, 'anwesenheit']">Anwesenheit abhaken</a>
-        </p>
+      <!-- EIN Streifen, auch wenn mehrere Gruppen heute trainieren (Falz-Runde 16.10.: zwei Streifen übereinander schoben die
+           Kartei auf 70 % der Handyhöhe; 4.6 Regel 6). Eine Gruppe: Satz + „Anwesenheit abhaken"; mehrere: ein Knopf je Gruppe. -->
+      @let t = today();
+      @if (t.length) {
+          <p class="today" role="status">
+            @if (t.length === 1) {
+              <strong>Heute ist {{ weekday(t[0].weekday) }}: {{ t[0].name }} trainiert.</strong>
+              <a class="btn" [routerLink]="['/gruppen', t[0].id, 'anwesenheit']">Anwesenheit abhaken</a>
+            } @else {
+              <strong>Heute ist {{ weekday(t[0].weekday) }} – Anwesenheit abhaken:</strong>
+              <span class="today-links">
+                @for (g of t; track g.id) {
+                  <a class="btn" [routerLink]="['/gruppen', g.id, 'anwesenheit']" [attr.aria-label]="'Anwesenheit ' + g.name + ' abhaken'">{{ g.name }}</a>
+                }
+              </span>
+            }
+          </p>
       }
+      <!-- Kopf und Werkzeuge in einem Block: am Handy (≤ 640 px) wird daraus Suche + Anlege-Knöpfe in Zeile 1, Chips +
+           Archiv + Zähler in Zeile 2; der Titel steht dort nur für Vorleser — der Reiter „Kartei" darüber nennt die Seite
+           schon (Falz-Runde 16.10.). Ab 641 px wie bisher Titelzeile + Werkzeugzeile. -->
+      <div class="kartei-top">
       <!-- Am Handy Titel und Knöpfe in EINER Zeile mit Kurztext (z1-c-kartei-lead). -->
       <div class="page-head kartei-head">
         <h1>Kartei</h1>
@@ -72,6 +88,7 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
         }
         <label class="check"><input type="checkbox" [checked]="archived()" (change)="toggleArchived($any($event.target).checked)"> Archiv</label>
         @if (rows().length) { <p class="count">{{ countText() }}</p> }
+      </div>
       </div>
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
       @if (loading() && !rows().length) { <p class="muted">Lade …</p> }

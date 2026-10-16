@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { SanPipe } from '../../shared/chess/san.pipe';
@@ -81,6 +82,31 @@ describe('CourseBrowseComponent', () => {
     expect(comp.selected?.id).toBe(1);
     expect(comp.totalPlies).toBe(2);
     expect(comp.sanMoves).toEqual(['e4', 'e5']);
+  });
+
+  // Falz-Runde 16.10.: einspaltig (Handy 16–27 Bildschirme) sind die Kapitel Aufklapper
+  it('einspaltig: nur das Kapitel der Auswahl ist offen, Tippen klappt um, Springen öffnet das Zielkapitel', () => {
+    const comp = build([
+      line({ id: 1, chapter: 'Intro' }), line({ id: 2, chapter: 'Intro' }),
+      line({ id: 3, chapter: 'Tactics' }), line({ id: 4, chapter: 'Endgames' }),
+    ]);
+    (comp as unknown as { foldChapters: () => boolean }).foldChapters = signal(true);
+    const [intro, tactics, endgames] = comp.groups;
+    expect(comp.chapterLinesShown(intro).map(l => l.id)).toEqual([1, 2]);
+    expect(comp.chapterLinesShown(tactics)).toEqual([]);
+    comp.toggleChapter(tactics);
+    expect(comp.isChapterOpen(tactics)).toBeTrue();
+    expect(comp.isChapterOpen(intro)).toBeTrue();
+    comp.toggleChapter(intro);
+    expect(comp.isChapterOpen(intro)).toBeFalse();
+    comp.selectLine(comp.lines[3]);                     // z. B. „Nächste Linie" ins zugeklappte Kapitel
+    expect(comp.isChapterOpen(endgames)).toBeTrue();
+  });
+
+  it('breit (zweispaltig) bleiben alle Kapitel offen', () => {
+    const comp = build([line({ id: 1, chapter: 'Intro' }), line({ id: 3, chapter: 'Tactics' })]);
+    (comp as unknown as { foldChapters: () => boolean }).foldChapters = signal(false);
+    expect(comp.groups.every(g => comp.isChapterOpen(g))).toBeTrue();
   });
 
   it('filters to a single chapter when a chapter index is given', () => {

@@ -1,4 +1,5 @@
-    .admin-container { max-width: 1400px; margin: 24px auto; padding: 0 16px; }
+    /* Falz-Runde 16.10. (Laptop 40,8 %): 16 px über dem Kopf statt 24 px, Suchfeld ohne Nachabstand. */
+    .admin-container { max-width: 1400px; margin: 16px auto 24px; padding: 0 16px; }
     /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Admin-Tabellen breiter (DESIGN 4.1). */
     @media (min-width: 2400px) {
       .admin-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
@@ -7,7 +8,7 @@
     .admin-header h1 { margin: 0; }
     .kibana-link { display: inline-flex; align-items: center; gap: 6px; }
     .tab-content { padding: 16px 0; }
-    .search-field { width: 100%; max-width: 400px; margin-bottom: 8px; }
+    .search-field { width: 100%; max-width: 400px; margin-bottom: 4px; }
     .full-width { width: 100%; }
     .admin-badge { color: #ff9800; font-size: 20px; }
     .group-chip { font-size: 0.72rem; min-height: 22px; }

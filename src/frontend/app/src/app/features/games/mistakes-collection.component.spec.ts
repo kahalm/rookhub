@@ -64,6 +64,16 @@ describe('MistakesCollectionComponent (UI-Sweep 2026-10-11)', () => {
     expect(el.querySelector('.disabled-reason')).toBeNull();
   });
 
+  // Falz-Runde 16.10.: „Starten" steht vor dem Erklärsatz, die Auswahlzahl in seiner Zeile.
+  it('Startknopf und Auswahlzahl in einer Zeile, der Erklärsatz erst danach', async () => {
+    const { el } = await setup([game(1, 'Landesliga', '2026/27', true)]);
+    const row = el.querySelector('.start-row')!;
+    expect(row.querySelector('button.start')).not.toBeNull();
+    expect(row.querySelector('.count')).not.toBeNull();
+    const hint = el.querySelector('.hint')!;
+    expect(row.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('schreibt bei genau einer Partie die Einzahl', async () => {
     const { el } = await setup([game(1, 'Landesliga', '2026/27', false)]);
     expect(el.querySelector('.count')?.textContent?.trim()).toBe('1 Partie gewählt, davon 0 analysiert');

@@ -253,6 +253,25 @@ describe('EbookListComponent', () => {
     fixture.destroy();
   });
 
+  // Falz-Runde 16.10.: Regal am Handy 16–17 Bildschirme → kompakte Zeilen, Einleitung im ⓘ am Titel
+  it('am Handy: Buch als kompakte Zeile (Titelbild 64 px | Angaben | Symbolknöpfe), Einleitung nur im ⓘ am Titel', () => {
+    const fixture = render([book()], {});
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('h1 app-help-hint.eb-title-hint')).not.toBeNull();
+    // Der Lesen-Knopf trägt seinen Namen immer im aria-label (am Handy steht nur das Symbol).
+    expect(el.querySelector('.eb-act')!.getAttribute('aria-label')).toBe('ebooks.read');
+    const css = compactCss(EbookListComponent);
+    const base = css.slice(0, css.indexOf('@media(max-width:599.98px)'));
+    expect(base).toMatch(/\.eb-title-hint(\[[^\]]*\])?\{display:none/);
+    const narrow = css.slice(css.indexOf('@media(max-width:599.98px)'));
+    expect(narrow).toMatch(/\.intro(\[[^\]]*\])?\{display:none/);
+    expect(narrow).toMatch(/\.eb-grid(\[[^\]]*\])?\{grid-template-columns:minmax\(0,1fr\)/);
+    expect(narrow).toMatch(/\.eb-card(\[[^\]]*\])?\{display:grid;grid-template-columns:64pxminmax\(0,1fr\)auto;grid-template-areas:"coverbodyactions"/);
+    expect(narrow).toMatch(/\.eb-act(\[[^\]]*\])?\.eb-act-label(\[[^\]]*\])?\{display:none/);
+    expect(narrow).toMatch(/\.eb-act(\[[^\]]*\])?\{[^}]*min-width:44px;width:44px;height:44px/);
+    fixture.destroy();
+  });
+
   it('c1-eb-filter-empty-no-reset: gefiltert ohne Treffer → „Filter zurücksetzen“ leert alle Filter (Sortierung bleibt)', () => {
     const fixture = render([], {}, { search: '', tag: 'Taktik', sort: 'newest', mine: true, withDiagrams: true, page: 2 });
     const el: HTMLElement = fixture.nativeElement;

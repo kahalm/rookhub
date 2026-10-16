@@ -385,4 +385,10 @@ describe('GuessListComponent Zeilenraster', () => {
   it('am Handy bleibt die Metazeile unter Titel und Knopf über die volle Breite', () => {
     expect(css.slice(phoneAt)).toMatch(/grid-template-areas:["']titleplay["']["']metameta["']/);
   });
+  // Falz-Runde 16.10.: Laptop 41 % Vorlauf → engere Abstände über dem Kopf und um die Suchzeile
+  it('Kopf 12 px unter der Leiste, Suchzeile mit 4 px Abstand', () => {
+    expect(css).toContain('.gl-container{max-width:min(var(--page-max-width),96vw);margin:12pxauto16px;');
+    expect(css).toMatch(/\.sec-head\{[^}]*margin-bottom:4px/);
+    expect(css).toMatch(/\.mat-mdc-tab-body-content\{padding-top:4px/);
+  });
 });

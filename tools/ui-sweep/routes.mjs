@@ -24,10 +24,20 @@ export const APPS = {
 //                und Sperrzustand, damit in jedem Zustand etwas trifft. null = bewusst keine Hauptsache.
 //                Trifft keiner → Hinweis „Hauptsache nicht gefunden" (Katalog nachziehen, kein Fehler der Seite).
 //   foldExempt — Ausnahme von der Falz-Prüfung (Vollbild-Brett, Dialog, Druckansicht); gemessen + fotografiert wird trotzdem.
+//   expectedFailures — Fehlantworten der API, die die Seite ABSICHTLICH bekommt (eine Rückfrage „gibt es das schon?",
+//                die mit 404 „nein" sagt). Liste von RegExps auf die Berichtszeile `METHODE /pfad?abfrage → STATUS`
+//                (wie in `failedRequests`); Treffer zählen nicht als Befund, sie stehen unter `expectedFailed`. Eng
+//                fassen (Methode, Pfad UND Status) und im Kommentar sagen, wo im Frontend die Absicht steht.
+//                Zustände (states.mjs) erben die Liste ihrer Route.
 const r = (app, url, auth = 'any', o = {}) => {
-  const { label, main = null, foldExempt = false } = typeof o === 'string' ? { label: o } : o;
-  return { app, url, auth, label, main, foldExempt };
+  const { label, main = null, foldExempt = false, expectedFailures = [] } = typeof o === 'string' ? { label: o } : o;
+  return { app, url, auth, label, main, foldExempt, expectedFailures };
 };
+
+/** Ist diese Fehlantwort (Zeile wie in `failedRequests`, „GET /api/x/1 → 404") für die Route erwartet? */
+export function isExpectedFailure(route, line) {
+  return (route?.expectedFailures ?? []).some(re => re.test(line));
+}
 
 // Wiederkehrende Hauptsachen.
 const PUZZLE_BOARD = ['.board-section app-puzzle-board', '.puzzle-page app-puzzle-board', '.revenge-done-card'];
@@ -54,7 +64,7 @@ export const ROUTES = [
   r('rookhub', '/forgot-password', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/reset-password?token=ui-sweep', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/dashboard', 'user', { main: ['.dashboard-grid > mat-card', '.dashboard-grid'] }),
-  r('rookhub', '/profile', 'user', { main: ['.profile-form', '.profile-container .retry-btn', '.profile-container mat-card'] }),
+  r('rookhub', '/profile', 'user', { main: ['app-theme-card .theme-section', '.profile-form', '.profile-container .retry-btn', '.profile-container mat-card'] }),
   r('rookhub', '/friends', 'user', { main: ['.friends-tabs mat-list-item', '.friends-tabs .empty-state'] }),
   r('rookhub', '/friends/{friendId}/stats', 'user', { main: ['.compare-card .compare-table tbody tr', '.compare-card'] }),
   r('rookhub', '/friends/{friendId}/revenge', 'user', { main: ['.rev-item', '.rev-container .empty-state'] }),
@@ -63,7 +73,7 @@ export const ROUTES = [
   r('rookhub', '/repertoires/{repertoireId}/train', 'user', { main: ['.play app-puzzle-board', 'mat-card.msg'] }),
   r('rookhub', '/repertoires/{repertoireId}/flashcards', 'user', { main: ['.fc-study-card', '.fc-sheet .fc-card', '.fc-center'] }),
   // Repertoire in allen Ansichten: Baum, Lochfinder, Bearbeiten, Lernmodus — dazu je ein Schwarz- und ein Endspiel-Repertoire.
-  r('rookhub', '/repertoires/{repertoireId}?mode=tree', 'user', { label: 'repertoires-tree', main: ['.viewer-layout app-repertoire-tree', '.viewer-layout app-chess-board'] }),
+  r('rookhub', '/repertoires/{repertoireId}?mode=tree', 'user', { label: 'repertoires-tree', main: ['.viewer-layout', '.viewer-layout app-repertoire-tree', '.viewer-layout app-chess-board'] }),
   r('rookhub', '/repertoires/{repertoireId}?mode=holes', 'user', { label: 'repertoires-holes', main: ['.viewer-layout app-repertoire-holes', '.viewer-layout app-chess-board'] }),
   r('rookhub', '/repertoires/{repertoireId}?mode=edit', 'user', { label: 'repertoires-edit', main: ['.edit-panel app-repertoire-edit', '.detail-header .train-btn'] }),
   r('rookhub', '/repertoires/{repertoireId}/train?mode=learn', 'user', { label: 'repertoires-train-learn', main: ['.play app-puzzle-board', 'mat-card.msg'] }),
@@ -86,9 +96,10 @@ export const ROUTES = [
   // Seit 0.778.0 auch ohne Anmeldung (für alle freigegebene Bücher + eigene Uploads).
   r('rookhub', '/ebooks', 'any', { main: ['.eb-grid .eb-card', '.eb-empty', '.eb-page app-load-error'] }),
   // Leser: Werkzeugleiste + Seiten in der Resthöhe — Sonderlayout wie das Brett (DESIGN.md 4.5).
-  r('rookhub', '/ebooks/{ebookId}', 'user', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
+  // Beide Leser-Routen für alle Rollen: seed.mjs gibt die Bücher für „Everyone" frei (abgemeldet sieht man genau diese).
+  r('rookhub', '/ebooks/{ebookId}', 'any', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
   // Leser mit erkannten Diagrammen: Buch links, Brett rechts (0.766.0 ff.) — ein Buch, das das Konto sehen darf.
-  r('rookhub', '/ebooks/{ebookDiagramId}', 'user', { label: 'ebooks-diagramme', main: ['.rd-panel app-chess-board', '.rd-viewer', '.rd-page app-load-error'], foldExempt: true }),
+  r('rookhub', '/ebooks/{ebookDiagramId}', 'any', { label: 'ebooks-diagramme', main: ['.rd-panel app-chess-board', '.rd-viewer', '.rd-page app-load-error'], foldExempt: true }),
   r('rookhub', '/weekly', 'user', { main: ['.wp-list .wp-card', '.weekly-container .empty-state', '.upload-card'] }),
   r('rookhub', '/weekly/{weeklyId}', 'user', { main: PUZZLE_BOARD }),
   r('rookhub', '/guess', 'any', { main: ['.game-row', '.lists .start-card', '.gl-container .start-card'] }),
@@ -158,7 +169,10 @@ export const ROUTES = [
 
   // ---------------------------------------------------------------- Turnierseite
   r('turnier', '/tournaments/calendar', 'any', { main: ['mat-card.entry-card', 'p.empty-state', 'app-loading-spinner'] }),
-  r('turnier', '/tournaments/calendar/{directoryId}', 'any', { main: ['mat-card.detail-card', 'mat-card.load-failed'] }),
+  // 404 auf /api/tournaments/{chessResultsId} = Turnier noch nicht importiert (tournament-directory-detail.component.ts,
+  // lookupImported fängt es ab und zeigt dann „Importieren").
+  r('turnier', '/tournaments/calendar/{directoryId}', 'any', { main: ['mat-card.detail-card', 'mat-card.load-failed'],
+    expectedFailures: [/^GET \/api\/tournaments\/\d+ → 404$/] }),
   r('turnier', '/tournaments/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', 'mat-card.load-failed'] }),
   r('turnier', '/t/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', '.detail-container mat-card'] }),
   r('turnier', '/tournaments', 'user', { main: ['.rows mat-card.row', 'mat-card.card.empty-state', 'mat-card.card.failed'] }),
@@ -197,7 +211,9 @@ export const ROUTES = [
   r('leaguehub', '/verein', 'user', { main: ['table.club-table tr.game', 'section.empty', 'section.gate', 'form.club-search'] }),
   r('leaguehub', '/verein/neu', 'user', { main: LH_UPLOAD }),
   r('leaguehub', '/verein/formular/{scanId}', 'user', { main: LH_SCAN }),
-  r('leaguehub', '/verein/partie/{clubGameId}/korrigieren', 'user', { main: LH_SCAN }),
+  // 404 auf …/sheet = kein Formular aufbewahrt → Korrektur am Brett (club-scan-page.component.ts, clubSheet-catch).
+  r('leaguehub', '/verein/partie/{clubGameId}/korrigieren', 'user', { main: LH_SCAN,
+    expectedFailures: [/^GET \/api\/league\/club\/games\/\d+\/sheet(\?club=\d+)? → 404$/] }),
   r('leaguehub', '/konten', 'user', { main: ['article.sugg-group lh-account-suggestions li', 'article.sugg-group', 'section.sugg-page', 'section.gate'] }),
   r('leaguehub', '/uebertragungen', 'user', { main: ['table.bc-list tbody tr', 'form.bc-add', 'section.gate'] }),
   r('leaguehub', '/vereine', 'user', { main: ['table.clubs-tbl tbody tr', 'section.clubs-page', 'section.gate'] }),

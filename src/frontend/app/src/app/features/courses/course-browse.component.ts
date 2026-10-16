@@ -35,6 +35,7 @@ import { labelOr } from './course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from './course-lang-picker.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { SanPipe } from '../../shared/chess/san.pipe';
+import { mediaSignal } from '../../shared/layout/wide-media';
 
 /** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). Die Gruppierung selbst
  *  liegt in `shared/lines/chapter-groups.util` — sie teilt sich diese Ansicht mit der
@@ -128,9 +129,20 @@ interface ChapterGroup {
           <aside class="line-list" role="listbox">
             @for (g of groups; track g.name) {
               @if (chapterName === undefined && groups.length > 1) {
-                <div class="chapter-head">{{ g.label || ('courses.browse.noChapter' | translate) }}</div>
+                @if (foldChapters()) {
+                  <!-- Falz-Runde 16.10. (Handy 16–27 Bildschirme): einspaltig sind die Kapitel Aufklapper — offen ist das
+                       Kapitel der gewählten Linie, die übrigen zeigen nur Kopf + Linienzahl (4.6 Regel 11). -->
+                  <button type="button" class="chapter-head chapter-toggle" [attr.aria-expanded]="isChapterOpen(g)"
+                          (click)="toggleChapter(g)">
+                    <span class="chapter-name">{{ g.label || ('courses.browse.noChapter' | translate) }}</span>
+                    <span class="chapter-count">{{ (g.lines.length === 1 ? 'courses.browse.lineCountOne' : 'courses.browse.lineCount') | translate:{ count: g.lines.length } }}</span>
+                    <mat-icon aria-hidden="true">{{ isChapterOpen(g) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                } @else {
+                  <div class="chapter-head">{{ g.label || ('courses.browse.noChapter' | translate) }}</div>
+                }
               }
-              @for (line of g.lines; track line.id) {
+              @for (line of (chapterLinesShown(g)); track line.id) {
                 <div class="line-row" [class.active]="selected?.id === line.id">
                   <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend). -->
                   <input type="checkbox" class="line-pick" [checked]="marked.has(line.id)"
@@ -286,6 +298,14 @@ interface ChapterGroup {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
       color: color-mix(in srgb, currentColor 55%, transparent); padding: 10px 8px 4px;
     }
+    .chapter-toggle {
+      display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; text-align: left; cursor: pointer;
+      padding: 8px; background: none; border: 0; border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); font-family: inherit;
+    }
+    .chapter-toggle:first-child { border-top: 0; }
+    .chapter-toggle .chapter-name { flex: 1 1 auto; min-width: 0; }
+    .chapter-toggle .chapter-count { flex: none; font-weight: 400; text-transform: none; letter-spacing: 0; }
+    .chapter-toggle mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
     .line-row {
       display: flex; align-items: center; border-radius: 6px;
     }
@@ -408,6 +428,11 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   loading = true;
   lines: BookPuzzleDto[] = [];
   groups: ChapterGroup[] = [];
+
+  /** Einspaltig (bis 899.98 px) werden die Kapitel zu Aufklappern (Falz-Runde 16.10.). */
+  readonly foldChapters = mediaSignal('(max-width: 899.98px)');
+  /** Ausdrücklich auf-/zugeklappte Kapitel (Schlüssel); `null` = noch nichts getippt → offen ist das Kapitel der Auswahl. */
+  private openChapters: Set<string | null> | null = null;
 
   selected: BookPuzzleDto | null = null;
   selectedIndex = -1;
@@ -627,6 +652,24 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
       }));
   }
 
+  /** Ist das Kapitel aufgeklappt? Ohne Aufklapper (breit, ein Kapitel, Kapitelfilter) immer. */
+  isChapterOpen(g: ChapterGroup): boolean {
+    if (!this.foldChapters() || this.chapterName !== undefined || this.groups.length <= 1) return true;
+    if (this.openChapters) return this.openChapters.has(g.name);
+    return !!this.selected && g.lines.includes(this.selected);
+  }
+
+  /** Die Linien eines Kapitels, die gerade in der Liste stehen (zugeklappt: keine). */
+  chapterLinesShown(g: ChapterGroup): BookPuzzleDto[] {
+    return this.isChapterOpen(g) ? g.lines : [];
+  }
+
+  toggleChapter(g: ChapterGroup): void {
+    const open = new Set(this.groups.filter(x => this.isChapterOpen(x)).map(x => x.name));
+    if (open.has(g.name)) open.delete(g.name); else open.add(g.name);
+    this.openChapters = open;
+  }
+
   /** 1-basierte laufende Nummer der Linie in der aktuellen (gefilterten) Liste. */
   lineNumber(line: BookPuzzleDto): number {
     return this.lines.indexOf(line) + 1;
@@ -695,6 +738,8 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   selectLine(line: BookPuzzleDto): void {
     this.stopAutoplay();
     this.selected = line;
+    // Springt die Auswahl (Tasten, „Nächste Linie") in ein zugeklapptes Kapitel, klappt es auf.
+    if (this.openChapters) this.openChapters.add(line.chapter || null);
     this.selectedIndex = this.lines.indexOf(line);
     this.shapesByPly = parseMoveShapes(line.moveShapes);
     this.uciMoves = (line.moves || '').split(' ').filter(Boolean);

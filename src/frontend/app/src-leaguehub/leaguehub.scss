@@ -611,6 +611,13 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .anon-box .anon-toggle { flex: 1 1 auto; margin: 0; padding: 0; background: none; }
 .anon-box .chk-btn { align-self: flex-start; flex: 0 0 auto; margin-top: 2px; }
 .club-intro .info-line { margin: 0 0 14px; }
+/* Falz-Runde 16.10. (/verein am Handy 41,6 %): Satzzeile, Suchzeile und Zählerzeile mit 8 px statt 14/16 px Abstand
+   (die Knöpfe behalten ihre 44 px). */
+@media (max-width: 640px) {
+  .club-intro .info-line { margin-bottom: 8px; }
+  .club-search { margin-bottom: 8px; }
+  .club-stand { margin: 0 0 10px; }
+}
 .result { margin: 14px 0 8px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
 .result a, .club-intro a, .gate a { color: var(--ink); }
 

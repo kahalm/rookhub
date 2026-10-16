@@ -60,7 +60,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
         }
         <div class="detail-header">
           <div class="header-info">
-            <h2>{{ repertoire.name }}</h2>
+            <h2 [attr.title]="repertoire.name">{{ repertoire.name }}</h2>
             <!-- b1-rk-keine-beschreibung: Untertitel nur mit Inhalt (keine Füllzeile „Keine Beschreibung“). -->
             @if (repertoire.description) {
               <span class="subtitle">{{ repertoire.description }}</span>
@@ -120,7 +120,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
         } @else {
           <!-- a1-rk-holes-handy-brett-vor-werkzeug: im Lochfinder ohne gewähltes Loch zeigt das Brett nur die
                Grundstellung — am Handy steht dann das Werkzeug zuerst (.holes-idle, CSS unter 900 px). -->
-          <div class="viewer-layout" [class.holes-idle]="mode === 'holes' && !holeView">
+          <div class="viewer-layout" [class.holes-idle]="mode === 'holes' && !holeView" [class.viewer-layout--tree]="mode === 'tree'">
             <div class="board-section">
               <app-chess-board
                 [fen]="boardFen"
@@ -310,6 +310,21 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       .side-panel--fit { height: auto; max-height: none; overflow: visible; }
       /* a1-rk-holes-handy-brett-vor-werkzeug: Lochfinder ohne gewähltes Loch — Werkzeug vor dem leeren Brett. */
       .viewer-layout.holes-idle .side-panel { order: -1; }
+    }
+    /* Falz-Runde 16.10. (Baum am Tablet 73 %: 640-px-Brett über dem Baum): im Baum-Modus stehen Brett und Baum ab
+       600 px nebeneinander — der Baum ist schmal (Zug, Prozent, Linienzahl) und braucht keine volle Breite (4.6 Regel 4). */
+    @media (min-width: 600px) and (max-width: 899.98px) {
+      .viewer-layout--tree { flex-direction: row; align-items: flex-start; }
+      .viewer-layout--tree .board-section { width: min(56%, calc(100vh - 300px)); max-width: none; flex-shrink: 0; }
+      .viewer-layout--tree .side-panel { flex: 1 1 0; width: auto; min-width: 0; height: max(400px, calc(100vh - 300px)); }
+    }
+    /* Am Handy der Titel in EINER Zeile (ganzer Name im title-Attribut): ein zweizeiliger Repertoirename schob Brett
+       und Baum um eine Zeile nach unten (Falz-Runde 16.10.). */
+    @media (max-width: 599.98px) {
+      .header-info { flex: 1 1 100%; }
+      .header-info h2 { font-size: 1.15rem; line-height: 1.3; max-width: 100%;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .detail-header { margin-bottom: .5rem; row-gap: .5rem; }
     }
     /* u1-rk-repertoire-brett: ab 2400 px die gemeinsame Breitbild-Breite (1 880 px) und ein Brett bis 1 040 px
        (höchstens Fensterhöhe) — vorher 640 px in 1 240 px, 64 % der Fläche leer. Die Seitenspalte behält ≈ 790 px. */

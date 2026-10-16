@@ -43,7 +43,9 @@ lh-online-accounts { display: block; }
 /* Konto-Vorschläge (UI-Sweep 2026-10-11): Zähler neben der Überschrift (d2-l-konten-vorlauf), Suche + Seiten zu 20 Spielern
    (d2-l-konten-endlos); ab 1280 px fließen die SPIELER in zwei Spalten, wer mehrere Vorschläge hat, nimmt die volle Breite
    und stellt sie nebeneinander (z2-l-konten-spalten, ersetzt d2-l-konten-zeilen-breit); Begründungen ≤ 68ch. */
-.sugg-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.sugg-top { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.sugg-top [role=status] { flex: 1 1 auto; }
+.sugg-info { margin: 6px 0 4px; }
 .sugg-top h2 { margin: 18px 0 2px; }
 .sugg-page > .info-line { margin: 2px 0 10px; }
 .sugg-filter { margin: 10px 0 4px; align-items: center; }

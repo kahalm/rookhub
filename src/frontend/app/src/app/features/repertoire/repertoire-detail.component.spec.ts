@@ -281,6 +281,16 @@ describe('RepertoireDetailComponent Layout (z1)', () => {
     expect(narrow()).toMatch(/\.viewer-layout\.holes-idle[^{]* \.side-panel[^{]*\{ ?order: -1/);
   });
 
+  // Falz-Runde 16.10.: Baum am Tablet 73 % Vorlauf (640-px-Brett darüber) → 600–899 px nebeneinander.
+  it('Baum-Modus 600–899 px: Brett und Baum nebeneinander; am Handy Titel einzeilig', () => {
+    const start = css.indexOf('@media (min-width: 600px) and (max-width: 899.98px)');
+    expect(start).withContext('Tablet-Regel für den Baum fehlt').toBeGreaterThan(-1);
+    const tab = css.slice(start, css.indexOf('} }', start) + 3);
+    expect(tab).toMatch(/\.viewer-layout--tree[^{]*\{ ?flex-direction: row/);
+    expect(tab).toMatch(/\.viewer-layout--tree[^{]* \.board-section[^{]*\{ ?width: min\(56%, (calc\()?100vh - 300px\)?\)/);
+    expect(css).toMatch(/\.header-info[^{]* h2[^{]*\{[^}]*white-space: nowrap;[^}]*text-overflow: ellipsis/);
+  });
+
   // a1-rk-repertoire-edit-breite
   it('Bearbeiten hat keinen eigenen 800-px-Deckel mehr', () => {
     expect(css).not.toContain('max-width: 800px');
@@ -353,6 +363,16 @@ describe('RepertoireDetailComponent Kopf', () => {
       expect(el.querySelector('.header-info .train-btn')).toBeNull();
     });
   }
+
+  it('Baum-Modus markiert das Layout (.viewer-layout--tree), der ganze Name steht im title des Titels', async () => {
+    const el = await render('tree');
+    expect(el.querySelector('.viewer-layout.viewer-layout--tree')).not.toBeNull();
+    expect(el.querySelector('.header-info h2')!.getAttribute('title')).toBe('Testrepertoire');
+  });
+  it('Linien-Modus ohne Baum-Klasse', async () => {
+    const el = await render('lines');
+    expect(el.querySelector('.viewer-layout--tree')).toBeNull();
+  });
 
   /** Regeln innerhalb `@media (max-width: …)` — Karma läuft mit 1400 px, Handy-Regeln greifen im Test also nie;
    *  geprüft wird, dass sie DA sind und was sie setzen (Muster `app-footer.component.spec.ts`). */

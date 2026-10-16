@@ -1,7 +1,14 @@
-import { DirectoryEntry, displayLocation, groupSameName, isPlaceholderLocation, sameNameSiblings } from './tournament-directory.model';
+import { DirectoryEntry, directoryPageSize, displayLocation, groupSameName, isPlaceholderLocation, sameNameSiblings } from './tournament-directory.model';
 
 /** UI-Sweep 2026-10-11 (r2-t-various, r2-t-dup-cards): reine Helfer der Turnierkarten. */
 describe('tournament-directory.model', () => {
+  // Falz-Runde 16.10.: am Handy 25 Turniere je Abruf (50 Karten waren 12,8 Bildschirme), breit weiter 50
+  it('Seitengröße der Liste: Handy 25, sonst 50; ohne Angabe nach der Fensterbreite', () => {
+    expect(directoryPageSize(true)).toBe(25);
+    expect(directoryPageSize(false)).toBe(50);
+    expect(directoryPageSize()).toBe(matchMedia('(max-width: 599.98px)').matches ? 25 : 50);
+  });
+
   it('erkennt Platzhalter statt eines Orts, sonst nicht', () => {
     for (const text of ['various', 'Various', ' various ', 'div.', 'Diverse', 'verschiedene', 'Various venues']) {
       expect(isPlaceholderLocation(text)).withContext(text).toBeTrue();

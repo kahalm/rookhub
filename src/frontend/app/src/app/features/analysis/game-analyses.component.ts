@@ -51,7 +51,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       <div class="header">
         <!-- a1-rk-ga-intro-zeile / a1-rk-partie-analysen-vorlauf: ein Satz als Einleitung, der Rest im ⓘ am Titel. -->
         <h1>{{ 'gameAnalysis.title' | translate }}
-          <app-help-hint [text]="'gameAnalysis.introMore' | translate" /></h1>
+          <app-help-hint [text]="('gameAnalysis.intro' | translate) + '\n\n' + ('gameAnalysis.introMore' | translate)" /></h1>
         <!-- Beide Sprünge in EINER Gruppe am rechten Rand: mit drei Kindern im
              space-between stand die Punktepartie zwischen Überschrift und Aufträgen. -->
         <div class="header-actions">
@@ -72,7 +72,13 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
           }
         </div>
       </div>
-      <p class="muted intro">{{ 'gameAnalysis.intro' | translate }}</p>
+      <!-- Falz-Runde 16.10. (Vorlauf 40–54 %): der Einleitungssatz gehört zum Einwurf-Formular — er steht nur bei offenem
+           Formular (in dessen Karte), sonst im ⓘ am Titel. Ohne Analysen steht der Leerhinweis VOR dem Formular. -->
+      @if (!loading && analyses.length === 0) {
+        <mat-card class="empty-card"><mat-card-content class="empty-state">
+          <p>{{ 'gameAnalysis.empty' | translate }}</p>
+        </mat-card-content></mat-card>
+      }
 
       @if (totalPlies > 0) {
         <div class="overall">
@@ -107,6 +113,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       @if (showForm) {
       <mat-card class="new-card">
         <mat-card-content>
+          <p class="muted intro">{{ 'gameAnalysis.intro' | translate }}</p>
           <mat-form-field appearance="outline" class="full">
             <mat-label>{{ 'gameAnalysis.pgnLabel' | translate }}</mat-label>
             <textarea matInput cdkTextareaAutosize cdkAutosizeMinRows="3" cdkAutosizeMaxRows="12"
@@ -148,11 +155,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
       @if (loading) {
         <app-loading-spinner />
-      } @else if (analyses.length === 0) {
-        <mat-card><mat-card-content class="empty-state">
-          <p>{{ 'gameAnalysis.empty' | translate }}</p>
-        </mat-card-content></mat-card>
-      } @else {
+      } @else if (analyses.length > 0) {
         @for (a of analyses; track a.id) {
           <mat-card class="ga">
             <mat-card-content>
@@ -204,7 +207,10 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     .overall { display: flex; flex-direction: column; gap: 4px; margin: 0 0 14px; font-variant-numeric: tabular-nums; }
     .overall mat-progress-bar { border-radius: 3px; }
     /* a1-rk-ga-intro-zeile: Fließtext ≤ ~75 Zeichen je Zeile (DESIGN 4.6 Regel 4). */
-    .intro { margin: 12px 0 14px; max-width: 75ch; }
+    .intro { margin: 0 0 12px; max-width: 75ch; }
+    .empty-card { margin: 0 0 12px; }
+    .empty-card .empty-state p { margin: 0; }
+    .header { margin-bottom: 12px; }
     .new-card { margin-bottom: 16px; }
     .full { width: 100%; }
     .new-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
