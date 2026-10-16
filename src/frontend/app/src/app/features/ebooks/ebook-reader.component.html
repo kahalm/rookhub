@@ -105,7 +105,7 @@
 
     @if (readable && fileUrl) {
       <div class="rd-body" [class.rd-body--split]="hasDiagrams" [class.rd-body--panel-open]="panelOpen()"
-           [style.--rd-panel-w.px]="panelWidth()">
+           [style.--rd-panel-w.px]="effectivePanelWidth()">
         <div class="rd-viewer">
           @if (isEpub) {
             <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"

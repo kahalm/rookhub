@@ -296,6 +296,26 @@ describe('EbookReaderComponent', () => {
     localStorage.removeItem('rh.ebooks.panelWidth');
   });
 
+  it('Trenner: gemerkte Breite passt sich dem jetzigen Fenster an — Buch und Trenner bleiben sichtbar (0.805.2)', async () => {
+    expect(EbookReaderComponent.clampPanel(1200, 1000, 2000)).toBe(700);   // 70 % der Breite
+    expect(EbookReaderComponent.clampPanel(1200, 2560, 900)).toBe(700);    // Brett + Kopf in der Höhe (900 − 200)
+    expect(EbookReaderComponent.clampPanel(1200, 600, 300)).toBe(260);     // nie unter das Mindestmaß
+    localStorage.setItem('rh.ebooks.panelWidth', '1200');                  // am großen Monitor gezogen …
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    expect(c.panelWidth()).toBe(1200);
+    spyOnProperty(window, 'innerWidth').and.returnValue(1000);           // … im kleineren Fenster geöffnet
+    spyOnProperty(window, 'innerHeight').and.returnValue(1100);
+    c.onWindowResize();
+    expect(c.effectivePanelWidth()).toBe(700);
+    fixture.detectChanges();
+    const body = fixture.nativeElement.querySelector('.rd-body') as HTMLElement;
+    expect(body.style.getPropertyValue('--rd-panel-w')).toBe('700px');
+    expect(c.panelWidth()).toBe(1200);                                      // die Wahl selbst bleibt für den großen Monitor
+    localStorage.removeItem('rh.ebooks.panelWidth');
+    fixture.destroy();
+  });
+
   it('EPUB ohne PDF öffnet den EPUB-Leser und speichert Prozent + CFI', fakeAsync(async () => {
     // epub.js lädt im Ordner-Modus per XHR (0.780.0) — in fakeAsync verboten; das Öffnen selbst prüft epub-viewer.spec.
     spyOn(EpubViewerComponent.prototype, 'ngAfterViewInit').and.resolveTo();

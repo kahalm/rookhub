@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DoCheck, HostListener, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DoCheck, HostListener, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -273,13 +273,36 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     return Number.isFinite(n) && n >= EbookReaderComponent.PANEL_MIN ? n : null;
   }
 
-  /** Breite begrenzen: mindestens 260 px, das Buch behält mindestens 30 % des Fensters. */
-  static clampPanel(width: number, viewport: number): number {
-    return Math.round(Math.max(EbookReaderComponent.PANEL_MIN, Math.min(width, viewport * 0.7)));
+  /** Platz über und unter dem Brett im Panel (Kopf mit ‹ ›, Leiste, Kopfzeile der Seite) — das Brett ist so breit wie das Panel. */
+  static readonly PANEL_CHROME_H = 200;
+
+  /**
+   * Breite begrenzen: mindestens 260 px; das Buch behält mindestens 30 % des Fensters, und das Brett (so breit wie das
+   * Panel) bleibt samt Kopf in der Fensterhöhe — sonst rutschen seine Knöpfe aus dem Bild.
+   */
+  static clampPanel(width: number, viewport: number, viewportHeight = Infinity): number {
+    const max = Math.min(viewport * 0.7, viewportHeight - EbookReaderComponent.PANEL_CHROME_H);
+    return Math.round(Math.max(EbookReaderComponent.PANEL_MIN, Math.min(width, max)));
   }
 
+  /** Fenstergröße — die gemerkte Breite gilt nur, soweit sie ins JETZIGE Fenster passt (siehe effectivePanelWidth). */
+  private readonly viewport = signal({ w: window.innerWidth, h: window.innerHeight });
+  @HostListener('window:resize')
+  onWindowResize(): void { this.viewport.set({ w: window.innerWidth, h: window.innerHeight }); }
+
+  /**
+   * Wirksame Panel-Breite: die gemerkte, aber gegen das aktuelle Fenster begrenzt (0.805.2). Vorher wurde sie nur beim
+   * Ziehen begrenzt — am großen Monitor 1 200 px gezogen, im kleineren Fenster geöffnet, war das Panel breiter als das
+   * Fenster: Buch und Trenner lagen links außerhalb, Zurücksetzen (Doppelklick auf den Trenner) ging nicht mehr.
+   */
+  readonly effectivePanelWidth = computed(() => {
+    const w = this.panelWidth();
+    const vp = this.viewport();
+    return w == null ? null : EbookReaderComponent.clampPanel(w, vp.w, vp.h);
+  });
+
   setPanelWidth(width: number): void {
-    const w = EbookReaderComponent.clampPanel(width, window.innerWidth);
+    const w = EbookReaderComponent.clampPanel(width, window.innerWidth, window.innerHeight);
     this.panelWidth.set(w);
     writeRaw(localStore(), EbookReaderComponent.PANEL_WIDTH_KEY, String(w));
   }
@@ -304,7 +327,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
 
   /** Tastatur am Trenner: ←/→ verschieben um 24 px, Doppelklick setzt zurück. */
   resizeKey(ev: KeyboardEvent): void {
-    const cur = this.panelWidth() ?? 380;
+    const cur = this.effectivePanelWidth() ?? 380;
     if (ev.key === 'ArrowLeft') { this.setPanelWidth(cur + 24); ev.preventDefault(); }
     else if (ev.key === 'ArrowRight') { this.setPanelWidth(cur - 24); ev.preventDefault(); }
   }

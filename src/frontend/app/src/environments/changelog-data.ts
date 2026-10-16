@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.805.2", date: "2026-10-16", changes: [
+    { en: "E-books: a board column you widened on a big screen now adapts to a smaller window – the book and the divider stay visible, and the board including its buttons fits the window height.", de: "E-Books: Eine am großen Bildschirm breit gezogene Brett-Spalte passt sich jetzt einem kleineren Fenster an – Buch und Trenner bleiben sichtbar, und das Brett passt samt Knöpfen in die Fensterhöhe." },
+  ]},
   { version: "0.805.1", date: "2026-10-16", changes: [
     { en: "E-books: the book's scrollbar next to the divider can be grabbed again – the divider's grip area no longer covers it.", de: "E-Books: Der Scrollbalken des Buchs neben dem Trenner lässt sich wieder greifen – die Greiffläche des Trenners liegt nicht mehr darüber." },
   ]},
