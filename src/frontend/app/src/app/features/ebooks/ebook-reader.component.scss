@@ -84,11 +84,12 @@
   overflow-y: auto;
 }
 
-/* Trenner Buch | Brett: 8 px Griff (44 px Trefferfläche über Pseudo-Element), ziehen oder ←/→. */
+/* Trenner Buch | Brett: 8 px Griff, ziehen oder ←/→. Die größere Trefferfläche (Pseudo-Element) reicht NUR nach rechts
+   ins Brett-Panel: nach links lag sie über dem Scrollbalken des Buchs, der sich dann nicht mehr greifen ließ (User, 0.805.1). */
 .rd-split {
   flex: 0 0 8px; position: relative; cursor: col-resize; touch-action: none;
   background: color-mix(in srgb, var(--mat-sys-on-surface) 10%, transparent);
-  &::before { content: ''; position: absolute; inset: 0 -18px; }
+  &::before { content: ''; position: absolute; inset: 0 -18px 0 0; }
   &::after {
     content: ''; position: absolute; top: 50%; left: 2px; width: 4px; height: 36px; margin-top: -18px; border-radius: 2px;
     background: color-mix(in srgb, var(--mat-sys-on-surface) 35%, transparent);

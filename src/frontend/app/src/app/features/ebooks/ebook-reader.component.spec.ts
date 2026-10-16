@@ -334,6 +334,17 @@ describe('EbookReaderComponent', () => {
     fixture.destroy();
   });
 
+  it('Trenner: die Greiffläche reicht nur ins Brett-Panel, nicht über den Scrollbalken des Buchs (0.805.1)', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    fixture.detectChanges();
+    const split = fixture.nativeElement.querySelector('.rd-split') as HTMLElement;
+    expect(split).not.toBeNull();
+    const before = getComputedStyle(split, '::before');
+    expect(before.left).toBe('0px');
+    expect(before.right).toBe('-18px');
+    fixture.destroy();
+  });
+
   it('die Brett-Leiste bekommt das gewählte Diagramm (Modi siehe ebook-board.component.spec.ts)', async () => {
     const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
     const c = fixture.componentInstance;

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.805.1", date: "2026-10-16", changes: [
+    { en: "E-books: the book's scrollbar next to the divider can be grabbed again – the divider's grip area no longer covers it.", de: "E-Books: Der Scrollbalken des Buchs neben dem Trenner lässt sich wieder greifen – die Greiffläche des Trenners liegt nicht mehr darüber." },
+  ]},
   { version: "0.805.0", date: "2026-10-16", changes: [
     { en: "E-books: “Create course” now groups the positions into the book’s own chapters – taken from the table of contents of the EPUB or the bookmarks of the PDF (for PDFs without bookmarks from the chapters of the reflowable EPUB).", de: "E-Books: „Als Kurs anlegen“ gliedert die Stellungen jetzt in die Kapitel des Buchs – aus dem Inhaltsverzeichnis des EPUBs bzw. den Lesezeichen des PDFs (bei PDFs ohne Lesezeichen aus den Kapiteln des Fließtext-EPUBs)." },
   ] },
