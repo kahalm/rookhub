@@ -183,6 +183,23 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_ProcessingOnlyWhileDiagramsPendingOrBacklog()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var everyone = await _kit.GroupAsync("Everyone", everyone: true);
+        await _kit.BookAsync("Fertig", owner.Id, "pdf", "", everyone.Id);
+        await _kit.BookAsync("Lückenfüller", owner.Id, "pdf", "", everyone.Id);
+        foreach (var b in _kit.Db.Ebooks)
+        {
+            b.DiagramState = EbookDiagramState.Done; b.SolutionCheckState = EbookDiagramState.Pending;   // Lösungsprüfung läuft still
+            b.DiagramsBacklog = b.Title == "Lückenfüller";
+        }
+        await _kit.Db.SaveChangesAsync();
+        var list = await _kit.Service.ListAsync(owner.Id, false, new EbookQuery { Sort = "title" });
+        Assert.Equal([false, true], list.Items.Select(i => i.Processing));
+    }
+
+    [Fact]
     public async Task List_Searches_FiltersByTag_Pages_AndBuildsFacetsOverAllVisible()
     {
         var owner = await _kit.UserAsync("owner");

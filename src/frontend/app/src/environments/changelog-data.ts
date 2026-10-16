@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.806.1", date: "2026-10-16", changes: [
+    { en: "E-books: books whose missing diagrams are still being added show “Processing” in the library until they are complete.", de: "E-Books: Bücher, in denen fehlende Diagramme noch ergänzt werden, zeigen in der Bibliothek „Wird verarbeitet“, bis sie vollständig sind." },
+  ] },
   { version: "0.806.0", date: "2026-10-16", changes: [
     { en: "Tighter page heads so the main content appears sooner: repertoire tree (board and tree side by side on tablets), mistake collection, game analyses, guess-the-move, worksheets, admin, profile appearance card; e-book list as compact rows on phones; course browsing with collapsible chapters on narrow screens; tournament calendar loads 25 at a time on phones.", de: "Straffere Seitenköpfe, damit die Hauptsache früher kommt: Repertoire-Baum (am Tablet Brett und Baum nebeneinander), Fehler-Sammlung, Partie-Analysen, Punktepartie, Aufgabenblätter, Admin, Darstellungs-Karte im Profil; E-Book-Liste am Handy als kompakte Zeilen; Kurs durchsehen schmal mit aufklappbaren Kapiteln; Turnierkalender lädt am Handy 25 auf einmal." },
     { en: "LeagueHub: scoresheet correction, accounts and club page with a more compact head. ClubHub: today's training groups in one line instead of one banner per group.", de: "LeagueHub: Formular-Korrektur, Konten und Vereinsseite mit kompakterem Kopf. ClubHub: Die heutigen Trainingsgruppen stehen in einer Zeile statt je Gruppe ein eigener Streifen." },

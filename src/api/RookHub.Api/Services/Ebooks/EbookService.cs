@@ -217,7 +217,7 @@ public class EbookService
                 DiagramState = b.DiagramState.ToString().ToLowerInvariant(),
                 DiagramCount = b.DiagramState == EbookDiagramState.Done ? b.DiagramCount : 0,
                 ConversionState = b.ConversionState.ToString().ToLowerInvariant(),
-                Processing = b.DiagramState == EbookDiagramState.Pending,   // Schild nur, solange Diagramme erkannt werden (0.803.4) — Titelbild/Lösungsprüfung laufen still
+                Processing = b.DiagramState == EbookDiagramState.Pending || b.DiagramsBacklog,   // Schild nur, solange Diagramme erkannt oder ergänzt werden (0.803.4, 0.806.1) — Titelbild/Lösungsprüfung laufen still
                 OwnerUserId = b.OwnerUserId,
                 OwnerName = b.OwnerUserId is int oid && owners.TryGetValue(oid, out var n) ? n : null,
                 IsOwner = caller.IsAnonymous ? anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon : b.OwnerUserId == userId,

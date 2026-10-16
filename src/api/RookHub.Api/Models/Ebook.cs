@@ -90,6 +90,11 @@ public class Ebook
     /// den Stand zurück auf <see cref="EbookDiagramState.Done"/>. Zurücksetzen nur von Hand in der DB.</summary>
     public bool DiagramsCurated { get; set; }
 
+    /// <summary>Weitere Diagramme werden noch außerhalb des Workers ergänzt (0.806.1, Lückenfüller mit Opus-Lesungen): die
+    /// Bibliothek zeigt dafür „Wird verarbeitet“, ohne den <see cref="DiagramState"/> anzufassen (Pending würde eine
+    /// Neuerkennung auslösen). Setzt und löscht nur das Werkzeug, das die Diagramme nachträgt.</summary>
+    public bool DiagramsBacklog { get; set; }
+
     /// <summary>Wann der Hochladende benachrichtigt wurde, dass die Verarbeitung (Titelbild, Umwandlung, Diagramme, Prüfung)
     /// fertig ist (0.773.0); <c>null</c> = noch nicht. Nur für Uploads — eingelesene Bibliotheksbücher melden sich nicht.</summary>
     public DateTime? ReadyNotifiedAt { get; set; }
