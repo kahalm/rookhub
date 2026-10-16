@@ -31,13 +31,61 @@ public class LeagueGameSourcesTests : IDisposable
     [Fact]
     public void CountBoard_EachGameOnce_SourceByTheCardsRule()
     {
-        var seen = new HashSet<string>();
+        var seen = new HashSet<ulong>();
         var counts = new Dictionary<string, int>();
         LeagueGameSources.CountBoard(MusterPgn, seen, counts);
         LeagueGameSources.CountBoard(HuberPgn, seen, counts);
         Assert.Equal(new Dictionary<string, int> { ["Lumbra"] = 1, ["Mega"] = 2, ["chess-results"] = 2, ["Lichess-Übertragung"] = 1 }, counts);
         LeagueGameSources.CountBoard("", seen, counts);                                                        // leeres Profil
         Assert.Equal(6, counts.Values.Sum());
+    }
+
+    [Fact]
+    public void GameKey_NamesOnlyLetters_FieldsSeparated()
+    {
+        static Dictionary<string, string> H(string w, string b, string d = "2024.03.01", string r = "1") =>
+            new() { ["White"] = w, ["Black"] = b, ["Date"] = d, ["Round"] = r };
+        Assert.Equal(LeagueGameSources.GameKey(H("Muster, Max", "Huber, Franz")), LeagueGameSources.GameKey(H("muster max", "HUBER FRANZ")));
+        Assert.NotEqual(LeagueGameSources.GameKey(H("Ab", "C")), LeagueGameSources.GameKey(H("A", "Bc")));   // Trenner zählt
+        Assert.NotEqual(LeagueGameSources.GameKey(H("A", "B", r: "1")), LeagueGameSources.GameKey(H("A", "B", r: "2")));
+        Assert.Equal(LeagueGameSources.GameKey(H("A", "B")), LeagueGameSources.GameKey(new Dictionary<string, string>
+            { ["Black"] = "B", ["White"] = "A", ["Round"] = "1", ["Date"] = "2024.03.01", ["Event"] = "egal" }));
+    }
+
+    /// <summary>Zählt, wie oft die Gesamtzählung in DIESEN Cache geschrieben wird (instanzlokal — kein statischer Zähler,
+    /// den parallele Testklassen mitbenutzen würden).</summary>
+    private sealed class CountingCache(IMemoryCache inner) : IMemoryCache
+    {
+        public int Writes;
+        public ICacheEntry CreateEntry(object key) { Interlocked.Increment(ref Writes); return inner.CreateEntry(key); }
+        public void Dispose() => inner.Dispose();
+        public void Remove(object key) => inner.Remove(key);
+        public bool TryGetValue(object key, out object? value) => inner.TryGetValue(key, out value);
+    }
+
+    // 16.10.2026: Vier gleichzeitige Anfragen bei leerem Cache rechneten je für sich alle Profile durch (Dev: OutOfMemory
+    // bei 6 GB). Jetzt rechnet eine, die übrigen warten und nehmen das Ergebnis aus dem Cache.
+    [Fact]
+    public async Task Get_ConcurrentColdRequests_CountOnce()
+    {
+        var name = Guid.NewGuid().ToString();
+        DbContextOptions<AppDbContext> opts = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options;
+        await using (var seed = new AppDbContext(opts))
+        {
+            seed.LeaguePlayerProfiles.AddRange(
+                new LeaguePlayerProfile { FideId = "222", Name = "Muster, Max", Pgn = MusterPgn },
+                new LeaguePlayerProfile { FideId = "333", Name = "Huber, Franz", Pgn = HuberPgn });
+            await seed.SaveChangesAsync();
+        }
+        var cache = new CountingCache(new MemoryCache(new MemoryCacheOptions()));
+        var contexts = Enumerable.Range(0, 4).Select(_ => new AppDbContext(opts)).ToList();
+        try
+        {
+            var results = await Task.WhenAll(contexts.Select(db => Task.Run(() => new LeagueGameSources(db, cache).GetAsync(TestClubs.HomeId, default))));
+            Assert.All(results, r => Assert.Equal(6, r["boardTotal"]!.GetValue<int>()));
+            Assert.Equal(1, cache.Writes);
+        }
+        finally { foreach (var db in contexts) await db.DisposeAsync(); }
     }
 
     [Fact]

@@ -27,6 +27,14 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     /// <summary>Mehr Spieler hat keine Meldeliste — Deckel für die frei übergebene Liste.</summary>
     public const int MaxOpponentPlayers = 40;
 
+    /// <summary>
+    /// Nur EINE kalte Zählung gleichzeitig (16.10.2026): Die Gesamtzählung liest alle Profile (Prod 16.10.: 2 267 Profile,
+    /// 843 MB PGN, 9–12 s). Kamen mehrere Anfragen bei leerem Cache gleichzeitig (UI-Sweep: 8 Browser), rechnete jede für
+    /// sich — die Dev-API lief ohne Grenze auf ~16 GB, mit 6 GB in <c>OutOfMemoryException</c> (500). Jetzt warten die
+    /// übrigen und nehmen danach das Ergebnis aus dem Cache.
+    /// </summary>
+    private static readonly SemaphoreSlim ColdGate = new(1, 1);
+
     /// <summary>Anzeige je Quelle; unbekannte Quellen (über <c>POST /api/league/admin/games</c> frei benannt) stehen, wie sie heißen.</summary>
     public static string Label(string source) => source switch
     {
@@ -64,6 +72,17 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     {
         var key = $"{CacheKey}:{clubId}:league:{tnr}:{onlySure}";
         if (cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+        await ColdGate.WaitAsync(ct);
+        try
+        {
+            if (cache?.TryGetValue(key, out hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+            return await ComputeLeagueAsync(clubId, tnr, onlySure, key, ct);
+        }
+        finally { ColdGate.Release(); }
+    }
+
+    private async Task<JsonObject> ComputeLeagueAsync(int clubId, int tnr, bool onlySure, string key, CancellationToken ct)
+    {
         var fides = await db.LeaguePlayers.AsNoTracking().Where(p => p.Tnr == tnr && p.FideId != null && p.FideId != "")
             .Select(p => p.FideId!).Distinct().ToListAsync(ct);
         var r = await PlayersAsync(clubId, fides, onlySure, ct);
@@ -78,7 +97,7 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     public async Task<JsonObject> PlayersAsync(int clubId, IReadOnlyCollection<string> fides, bool onlySure, CancellationToken ct)
     {
         var board = new Dictionary<string, int>(StringComparer.Ordinal);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<ulong>();
         var partials = new PartialCount(await LeaguePartialGames.LoadAsync(db, fides, ct));
         await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Where(p => fides.Contains(p.FideId)).Select(p => p.Pgn)
                            .AsAsyncEnumerable().WithCancellation(ct))
@@ -115,8 +134,19 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
     {
         var key = $"{CacheKey}:{clubId}";
         if (cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+        await ColdGate.WaitAsync(ct);
+        try
+        {
+            if (cache?.TryGetValue(key, out hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+            return await ComputeTotalsAsync(clubId, key, ct);
+        }
+        finally { ColdGate.Release(); }
+    }
+
+    private async Task<JsonObject> ComputeTotalsAsync(int clubId, string key, CancellationToken ct)
+    {
         var board = new Dictionary<string, int>(StringComparer.Ordinal);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<ulong>();
         var partials = new PartialCount(await LeaguePartialGames.LoadAsync(db, null, ct));
         await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Select(p => p.Pgn).AsAsyncEnumerable().WithCancellation(ct))
             CountBoard(pgn, seen, board, partials.Collect);
@@ -146,9 +176,11 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
 
     /// <summary>
     /// Die Partien EINES gespeicherten PGN zählen — jede, deren Schlüssel noch nicht in <paramref name="seen"/> steht, unter ihrer
-    /// Quelle. Liest nur die Kopfzeilen: eine neue Partie beginnt mit einer Kopfzeile nach Zugtext.
+    /// Quelle. Liest nur die Kopfzeilen: eine neue Partie beginnt mit einer Kopfzeile nach Zugtext. Der Schlüssel (beide Namen
+    /// nur aus Buchstaben + Datum + Runde) liegt als 64-Bit-Prüfsumme in <paramref name="seen"/> statt als Text, und die Zeilen
+    /// werden ohne <c>Split</c> gelesen — bei 843 MB PGN (Prod 16.10.2026) machte beides Hunderte MB je Zählung aus.
     /// </summary>
-    public static void CountBoard(string pgn, HashSet<string> seen, Dictionary<string, int> counts,
+    public static void CountBoard(string pgn, HashSet<ulong> seen, Dictionary<string, int> counts,
         Action<IReadOnlyDictionary<string, string>>? onGame = null)
     {
         var headers = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -157,16 +189,14 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         {
             if (headers.Count == 0) return;
             onGame?.Invoke(headers);
-            var key = string.Join('|', Letters(headers.GetValueOrDefault("White")), Letters(headers.GetValueOrDefault("Black")),
-                headers.GetValueOrDefault("Date") ?? "", headers.GetValueOrDefault("Round") ?? "");
-            if (seen.Add(key))
+            if (seen.Add(GameKey(headers)))
             {
                 var src = LeagueProfileBuilder.StoredSource(headers);
                 counts[src] = counts.GetValueOrDefault(src) + 1;
             }
             headers.Clear();
         }
-        foreach (var raw in pgn.Split('\n'))
+        foreach (var raw in pgn.AsSpan().EnumerateLines())
         {
             var line = raw.Trim();
             if (line.Length == 0) continue;
@@ -176,11 +206,26 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
                 var sp = line.IndexOf(' ');
                 var q1 = line.IndexOf('"');
                 var q2 = line.LastIndexOf('"');
-                if (sp > 1 && q1 > sp && q2 > q1) headers[line[1..sp]] = line[(q1 + 1)..q2];
+                if (sp > 1 && q1 > sp && q2 > q1) headers[line[1..sp].ToString()] = line[(q1 + 1)..q2].ToString();
             }
             else inMoves = true;
         }
         Flush();
+    }
+
+    /// <summary>Schlüssel einer Partie als FNV-1a-64 über: Weiß und Schwarz nur aus Buchstaben (klein), Datum, Runde — mit
+    /// Trennzeichen, damit „ab|c“ ≠ „a|bc“. Kollisionen sind bei einer Million Partien praktisch ausgeschlossen (≈ 3·10⁻⁸).</summary>
+    public static ulong GameKey(IReadOnlyDictionary<string, string> headers)
+    {
+        var h = 14695981039346656037UL;
+        void Add(char c) { h ^= c; h *= 1099511628211UL; }
+        void Letters(string? s) { if (s is null) return; foreach (var c in s) if (char.IsLetter(c)) Add(char.ToLowerInvariant(c)); }
+        void Raw(string? s) { if (s is null) return; foreach (var c in s) Add(c); }
+        Letters(headers.GetValueOrDefault("White")); Add('|');
+        Letters(headers.GetValueOrDefault("Black")); Add('|');
+        Raw(headers.GetValueOrDefault("Date")); Add('|');
+        Raw(headers.GetValueOrDefault("Round"));
+        return h;
     }
 
     /// <summary>
@@ -213,5 +258,4 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         }
     }
 
-    private static string Letters(string? s) => s is null ? "" : new string(s.Where(char.IsLetter).Select(char.ToLowerInvariant).ToArray());
 }

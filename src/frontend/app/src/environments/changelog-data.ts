@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.805.3", date: "2026-10-16", changes: [
+    { en: "LeagueHub: the overview of games per source on the start page no longer overloads the server when several people open it at once – it is counted once and the others get the result; counting also needs far less memory.", de: "LeagueHub: Die Übersicht „Partien je Quelle“ auf der Startseite überlastet den Server nicht mehr, wenn mehrere sie gleichzeitig öffnen – gezählt wird einmal, die anderen bekommen das Ergebnis; das Zählen braucht außerdem deutlich weniger Speicher." },
+  ]},
   { version: "0.805.2", date: "2026-10-16", changes: [
     { en: "E-books: a board column you widened on a big screen now adapts to a smaller window – the book and the divider stay visible, and the board including its buttons fits the window height.", de: "E-Books: Eine am großen Bildschirm breit gezogene Brett-Spalte passt sich jetzt einem kleineren Fenster an – Buch und Trenner bleiben sichtbar, und das Brett passt samt Knöpfen in die Fensterhöhe." },
   ]},
