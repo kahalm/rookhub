@@ -557,11 +557,11 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     });
   }
 
-  // ── EPUB-Darstellung (0.791.0): Seite/fließend + Schriftgröße, auf dem Gerät gemerkt ──────────────────
+  // ── EPUB-Darstellung (0.791.0): Seite/fließend (Vorgabe fließend seit 0.803.2) + Schriftgröße, auf dem Gerät gemerkt ──────────────────
   static readonly EPUB_LAYOUT_KEY = 'rh.ebooks.epubLayout';
   static readonly EPUB_FONT_KEY = 'rh.ebooks.epubFont';
   static readonly EPUB_FONT_STEPS = [80, 90, 100, 110, 125, 140, 160, 180, 200];
-  readonly epubLayout = signal<EpubLayout>(readRaw(localStore(), EbookReaderComponent.EPUB_LAYOUT_KEY) === 'scroll' ? 'scroll' : 'pages');
+  readonly epubLayout = signal<EpubLayout>(readRaw(localStore(), EbookReaderComponent.EPUB_LAYOUT_KEY) === 'pages' ? 'pages' : 'scroll');
   readonly epubFont = signal<number>(EbookReaderComponent.loadEpubFont());
 
   static loadEpubFont(): number {

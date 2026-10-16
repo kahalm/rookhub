@@ -64,10 +64,13 @@ public class EbookEpubDiagramExtractor
             {
                 ct.ThrowIfCancellationRequested();
                 var block = blocks[bi];
-                var cells = LoadCells(zip, block.Image!, box);
+                var g = LoadGray(zip, block.Image!);
+                var cells = g == null ? null : EbookBoardImage.Cells(g, box);
                 var board = cells == null ? null : EbookBoardImage.Recognise(cells, bg, bgBlur, model);
                 if (board == null) continue;
                 var (side, sideKnown) = GuessSide(blocks, bi);
+                // Zugrecht-Zeichen im Bild (■/□, ▼/△) schlägt den Text.
+                if (EbookBoardImage.SideMarker(g!, box) is char marked) (side, sideKnown) = (marked, true);
                 var label = GuessLabel(blocks, bi);
                 var fen = $"{board} {side} {DiagramGridBuilder.GuessCastling(board)} - 0 1";
                 meta.Add((diagrams.Count, block.Spine, 0, block.Order * 10.0, fen, sideKnown, label));

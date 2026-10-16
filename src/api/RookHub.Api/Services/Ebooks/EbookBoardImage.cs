@@ -234,10 +234,18 @@ public static class EbookBoardImage
         int H = g.GetLength(0), W = g.GetLength(1);
         var bw = box.X1 - box.X0;
         int sx0 = Math.Max(0, box.X0 - bw / 10), sx1 = Math.Min(W, box.X0 + 2), sy0 = Math.Max(0, box.Y1 - bw / 16), sy1 = Math.Min(H, box.Y1 + bw / 12);   // das Kästchen reicht über die Brettunterkante
-        if (sx1 - sx0 < 6 || sy1 - sy0 < 6) return null;
-        var sq = Components(g, sx0, sx1, sy0, sy1, 1)
+        var sq = sx1 - sx0 < 6 || sy1 - sy0 < 6 ? null : Components(g, sx0, sx1, sy0, sy1, 1)
             .Where(c => c.H >= bw * 0.015 && c.H <= bw * 0.06 && c.W >= c.H * 0.8 && c.W <= c.H * 1.25)
             .OrderBy(c => c.X0).FirstOrDefault();
+        // Weiter links neben Reihe 1, jenseits der Randziffern (EPUB-Bilder, z. B. Giannatos „Everyone's First Chess Workbook“).
+        if (sq == null)
+        {
+            sx0 = Math.Max(0, box.X0 - bw / 4); sx1 = box.X0 - bw / 20; sy0 = Math.Max(0, box.Y1 - bw / 7); sy1 = Math.Min(H, box.Y1 + bw / 20);
+            if (sx1 - sx0 < 6 || sy1 - sy0 < 6) return null;
+            sq = Components(g, sx0, sx1, sy0, sy1, 1)
+                .Where(c => c.H >= bw * 0.03 && c.H <= bw * 0.1 && c.W >= c.H * 0.8 && c.W <= c.H * 1.25)
+                .OrderBy(c => c.X0).FirstOrDefault();
+        }
         if (sq == null) return null;
         if (Holes(sq) > 0) return 'w';
         return sq.Points.Count >= 0.7 * sq.W * sq.H ? 'b' : null;

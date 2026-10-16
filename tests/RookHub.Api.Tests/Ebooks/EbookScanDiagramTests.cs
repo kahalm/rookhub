@@ -108,6 +108,22 @@ public class EbookScanDiagramTests
     }
 
     [Fact]
+    public void SideMarker_SquareFarLeftOfRankOne_HollowWhite_FilledBlack()
+    {
+        // Brett 120…360 × 100…340; Kästchen 18 × 18 weit links neben Reihe 1, jenseits der Randziffern (EPUB-Bilder).
+        static float[,] Sq(bool filled)
+        {
+            var g = Page(400, 400);
+            for (var y = 0; y < 18; y++)
+                for (var x = 0; x < 18; x++)
+                    if (filled || y < 2 || y > 15 || x < 2 || x > 15) g[316 + y, 70 + x] = 0f;
+            return g;
+        }
+        Assert.Equal('w', EbookBoardImage.SideMarker(Sq(filled: false), (120, 100, 360, 340)));
+        Assert.Equal('b', EbookBoardImage.SideMarker(Sq(filled: true), (120, 100, 360, 340)));
+    }
+
+    [Fact]
     public void SideMarker_RankDigitsLeftOfTheBoard_AreNoMarker()
     {
         // Acht „8“-artige Ziffern mit Innenraum untereinander = Koordinaten, nicht „B“.
