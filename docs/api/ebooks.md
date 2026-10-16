@@ -324,6 +324,8 @@ ohne Lösung Info-Linien (Stellung + Bildunterschrift); unspielbare Lehrbilder (
 Linie „Diagramm {Label}“, Reihenfolge wie im Buch. Läuft über den normalen PGN-Import (`UploadPersonalCourseAsync`).
 Keine einzige Lösung → 400 (erst die Stockfish-Prüfung abwarten). Oberfläche: ⋮-Menü im Leser „Als Kurs anlegen“.
 
+**Kapitel wie im Buch (0.805.0):** `EbookChapterIndex` liest das Inhaltsverzeichnis — PDF-Lesezeichen (Position = Seite) bzw. EPUB-`nav.xhtml`/`toc.ncx` (Position = Spine-Kapitel, URL-kodierte Dateinamen werden dekodiert verglichen). Ein Diagramm gehört zum letzten Eintrag an oder vor seiner Position; gegliedert wird nach der obersten Ebene (nur ein Eintrag oben → die Ebene darunter). PDF ohne Lesezeichen: über `EpubChapter` das Kapitel im echten EPUB bzw. im Fließtext-EPUB. Das Kapitel steht im PGN als `[Black]` (Kurs-Format).
+
 ## Sammlungen (0.787.0)
 
 `EbookCollections` (Id, Name) + `Ebook.CollectionId` (FK, SetNull). In `GET /api/ebooks` erscheint ohne `collection` und
