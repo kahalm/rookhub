@@ -89,7 +89,12 @@ jobs:
         # insgesamt bleibt gleich (5 s x 20 = 100 s wie vorher 10 s x 10), und `health-start-period`
         # sorgt dafuer, dass die unvermeidlichen Fehlschlaege waehrend des Hochfahrens nicht auf
         # die Versuche angerechnet werden. Gemessen: „Initialize containers" 24 s (2026-09-20).
+        #
+        # `--tmpfs`: Datenverzeichnis im RAM. Jede Fixture legt ein frisches Schema an und spielt
+        # ALLE Migrationen ein — das sind tausende DDL-Befehle, und InnoDB fsynct bei jedem. Auf der
+        # Runner-Platte war das der Grossteil der Laufzeit; der Container ist ohnehin Wegwerf.
         options: >-
+          --tmpfs /var/lib/mysql:rw
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s
           --health-timeout=5s
@@ -285,13 +290,51 @@ jobs:
         run: echo "CHROME_BIN=$(command -v google-chrome || command -v chromium-browser || command -v chromium || true)" >> "$GITHUB_ENV"
       # Der Build faengt nur Compile-Fehler — ohne diesen Schritt liefe kein einziger
       # Frontend-Spec im Gate, das die Image-Pushes freigibt.
-      # BEIDE Projekte NAMENTLICH, aus zwei Gruenden: der Karma-Builder sammelt Specs je PROJEKT
+      # JEDES Projekt NAMENTLICH (die vier Hubs in `build-frontend-hubs`; CiWorkflowTests haelt fest,
+      # dass jedes Projekt aus angular.json irgendwo getestet und gebaut wird), aus zwei Gruenden: der Karma-Builder sammelt Specs je PROJEKT
       # ein (nach dem Umzug nach src-turnier liefen deren 17 Spec-Dateien = 81 Tests gar nicht
       # mehr mit, ohne dass etwas rot wurde), und sobald es zwei Test-Targets gibt, waehlt
       # `ng test` OHNE Projektnamen nicht mehr verlaesslich das Hauptprojekt — gemessen lief dann
       # nur noch die kleine App (81 statt 1911 Tests), wieder lautlos.
       - run: npx ng test app --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
+      # Seit der Turnier-Trennung hat der Workspace ZWEI Projekte — ohne Projektnamen bricht
+      # `ng build` mit „Cannot determine project for command" ab. Alle bauen: das Gate soll
+      # jedes Image abfangen, bevor es gepusht wird.
+      - run: npx ng build app --configuration=production
+        working-directory: src/frontend/app
+
+  # Die vier kleinen Oberflaechen in einem EIGENEN Job neben `build-frontend` (nur RookHub selbst
+  # + Linter): nacheinander in einem Job lagen alle fuenf Projekte bei 4–5,5 min und damit auf dem
+  # kritischen Pfad vor den Image-Pushes. Dieselbe Bedingung wie dort — die Hubs teilen ueber den
+  # @rh/*-Alias den Code des Hauptprojekts, eine Aenderung an einem trifft potenziell alle.
+  build-frontend-hubs:
+    needs: changes
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.frontend == 'true'
+          || needs.changes.outputs.turnier == 'true'
+          || needs.changes.outputs.kidhub == 'true'
+          || needs.changes.outputs.leaguehub == 'true'
+          || needs.changes.outputs.clubhub == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/frontend/app/package-lock.json
+      - run: npm ci
+        working-directory: src/frontend/app
+      # karma.conf sucht ohne CHROME_BIN eine Puppeteer-Cache-Shell, die es auf dem
+      # Runner nicht gibt. Leerer Wert ist unschaedlich (karma faellt auf sein eigenes
+      # Chrome-Lookup zurueck).
+      - name: Chrome fuer Karma ermitteln
+        run: echo "CHROME_BIN=$(command -v google-chrome || command -v chromium-browser || command -v chromium || true)" >> "$GITHUB_ENV"
       - run: npx ng test turnier --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
       - run: npx ng test kidhub --watch=false --browsers=ChromeHeadlessNoSandbox
@@ -299,11 +342,6 @@ jobs:
       - run: npx ng test leaguehub --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
       - run: npx ng test clubhub --watch=false --browsers=ChromeHeadlessNoSandbox
-        working-directory: src/frontend/app
-      # Seit der Turnier-Trennung hat der Workspace ZWEI Projekte — ohne Projektnamen bricht
-      # `ng build` mit „Cannot determine project for command" ab. Beide bauen: das Gate soll
-      # jedes der beiden Images abfangen, bevor es gepusht wird.
-      - run: npx ng build app --configuration=production
         working-directory: src/frontend/app
       - run: npx ng build turnier --configuration=production
         working-directory: src/frontend/app

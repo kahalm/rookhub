@@ -877,6 +877,26 @@ public class CiWorkflowTests
         Assert.DoesNotMatch(@"(?m)^\s*'[^']+':\s*\[?\s*(?:'error'|2\b)", config);
     }
 
+    /// <summary>
+    /// Die Frontend-Projekte verteilen sich auf zwei Gate-Jobs (`build-frontend` + `build-frontend-hubs`, parallel statt
+    /// nacheinander). Fehlt ein Projekt aus angular.json in beiden, liefe sein Image ungetestet und ungebaut durchs Gate —
+    /// lautlos, wie schon einmal beim Umzug nach src-turnier.
+    /// </summary>
+    [Fact]
+    public void EveryAngularProject_IsTestedAndBuiltInTheGate()
+    {
+        using var angular = System.Text.Json.JsonDocument.Parse(ReadRepoFile($"{FrontendApp}/angular.json"));
+        var projects = angular.RootElement.GetProperty("projects").EnumerateObject().Select(p => p.Name).ToList();
+        Assert.Contains("app", projects);
+
+        var gate = TestJob("build-frontend") + TestJob("build-frontend-hubs");
+        foreach (var project in projects)
+        {
+            Assert.Matches($@"(?m)^      - run: npx ng test {Regex.Escape(project)} --watch=false\b", gate);
+            Assert.Matches($@"(?m)^      - run: npx ng build {Regex.Escape(project)} --configuration=production\s*$", gate);
+        }
+    }
+
     /// <summary>Alle Workflow-Dateien, als Repo-Pfad.</summary>
     private static List<string> AllWorkflows()
     {

@@ -65,7 +65,7 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   Treffer-Statistik (`ForecastStatsAsync(region)`) filtern nach der Region; `ClubJson` trägt `region`. Verwaltung: Auswahl
   „Region" statt „Liga-Quelle", 400 `invalidRegion` (eine Quelle wie `ligamanager` ist KEINE Region). Geprüft in
   `LeagueClubTenancyTests.Index_BavarianClubSeesLigamanagerAndZugspitze_TyroleanClubNeither`, gegen MariaDB in
-  `LeagueRegionSqlTests` und `MigrationsTests.LeagueClubRegion_MachtAusDerQuelleDieRegion`.
+  `LeagueRegionSqlTests` und `MigrationsLigaTests.LeagueClubRegion_MachtAusDerQuelleDieRegion`.
 * **Nur Ligen mit eigener Mannschaft (0.710.0)**, Wunsch 2026-10-07 („Zeig bei der Ligaauswahl nur die Ligen, in denen der
   Verein vertreten ist"): `LeagueService.IndexAsync(club, ct, all)` filtert die Ligen der Region auf die mit einer Mannschaft
   des Vereins (`LeagueClub.OwnsTeam` über DISTINCT `LeagueMatches.Home/Away` + `LeaguePlayers.Team` — drei Abfragen

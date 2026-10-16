@@ -151,6 +151,42 @@ public class MigrationsTests
     }
 
     /// <summary>
+    /// Faengt den Fall ab, dass jemand eine Entitaet aendert und die Migration vergisst: das
+    /// Modell traegt dann Aenderungen, die in keiner Migration stehen, und Prod liefe mit einem
+    /// Schema, das nicht zum Code passt.
+    /// </summary>
+    [MySqlFact]
+    public async Task ModellUndMigrationen_LaufenNichtAuseinander()
+    {
+        await using var schema = await MariaDbSchema.CreateAsync("drift");
+        await using var db = schema.NewContext();
+
+        var snapshot = db.GetService<IMigrationsAssembly>().ModelSnapshot;
+        Assert.NotNull(snapshot);
+
+        // Der Snapshot ist ein Roh-Modell; ohne Finalisierung fehlen ihm die relationalen
+        // Zusatzdaten und der Vergleich meldete Unterschiede, die es gar nicht gibt.
+        var fertigerSnapshot = db.GetService<IModelRuntimeInitializer>()
+            .Initialize((IModel)snapshot!.Model, designTime: true, validationLogger: null);
+
+        var differ = db.GetService<IMigrationsModelDiffer>();
+        var unterschiede = differ.GetDifferences(
+            fertigerSnapshot.GetRelationalModel(),
+            db.GetService<IDesignTimeModel>().Model.GetRelationalModel());
+
+        Assert.True(unterschiede.Count == 0,
+            $"Modell und Migrations-Snapshot laufen auseinander ({unterschiede.Count} Unterschiede) — fehlt eine Migration?");
+    }
+}
+
+/// <summary>
+/// Daten-Nachträge einzelner Migrationen: bis zur VORHERGEHENDEN migrieren, Zeilen einfügen, Rest laufen lassen.
+/// Eigene Klassen statt einer: xUnit führt die Tests EINER Klasse nacheinander aus, verschiedene Klassen parallel —
+/// zusammen lagen die acht Migrations-Tests mit ~76 s seriell auf dem kritischen Pfad der CI.
+/// </summary>
+public class MigrationsDatenTests
+{
+    /// <summary>
     /// <c>ChessableImportFromBrowser</c> markiert nur die LAUFENDEN bzw. pausierten Browser-Importe: Phase
     /// „importing" mit <c>Attempts = 0</c>. Ein Server-Import in derselben Phase hat schon gezaehlt, ein
     /// fortgesetzter wartet auf „queued", ein abgeschlossener spielt keine Rolle. Ohne den Nachtrag reihte der
@@ -235,7 +271,11 @@ public class MigrationsTests
             .ToDictionaryAsync(g => g.ExternalId, g => (g.Line, g.Moves, g.Opponent, g.Plies));
         Assert.All(zeilen, z => Assert.Equal((z.Nachher, z.Nachher, (string?)"O+#", 9), nachher[z.Id]));
     }
+}
 
+/// <summary>LeagueHub-Daten-Nachträge (Vereine, Region, Stufen) — getrennt von <see cref="MigrationsDatenTests"/>, damit sie parallel laufen.</summary>
+public class MigrationsLigaTests
+{
     /// <summary>
     /// <c>LeagueClubs</c> (Mandanten-Schritt 2026-10-07): ALLE Bestandszeilen der vereinsgebundenen Tabellen gehören danach
     /// Verein 1 (SK Schwaz), nur Liga-Einlesungen bekommen einen Verein, jede Gruppe mit <c>league.view</c> (außer „Everyone")
@@ -351,33 +391,5 @@ public class MigrationsTests
         await migrator.MigrateAsync(alle[index - 1]);
         Assert.Equal(new[] { 1, 2, 4, 3, 5 },
             await db.Database.SqlQueryRaw<int>("SELECT Level AS Value FROM LeagueTournaments ORDER BY Tnr").ToListAsync());
-    }
-
-    /// <summary>
-    /// Faengt den Fall ab, dass jemand eine Entitaet aendert und die Migration vergisst: das
-    /// Modell traegt dann Aenderungen, die in keiner Migration stehen, und Prod liefe mit einem
-    /// Schema, das nicht zum Code passt.
-    /// </summary>
-    [MySqlFact]
-    public async Task ModellUndMigrationen_LaufenNichtAuseinander()
-    {
-        await using var schema = await MariaDbSchema.CreateAsync("drift");
-        await using var db = schema.NewContext();
-
-        var snapshot = db.GetService<IMigrationsAssembly>().ModelSnapshot;
-        Assert.NotNull(snapshot);
-
-        // Der Snapshot ist ein Roh-Modell; ohne Finalisierung fehlen ihm die relationalen
-        // Zusatzdaten und der Vergleich meldete Unterschiede, die es gar nicht gibt.
-        var fertigerSnapshot = db.GetService<IModelRuntimeInitializer>()
-            .Initialize((IModel)snapshot!.Model, designTime: true, validationLogger: null);
-
-        var differ = db.GetService<IMigrationsModelDiffer>();
-        var unterschiede = differ.GetDifferences(
-            fertigerSnapshot.GetRelationalModel(),
-            db.GetService<IDesignTimeModel>().Model.GetRelationalModel());
-
-        Assert.True(unterschiede.Count == 0,
-            $"Modell und Migrations-Snapshot laufen auseinander ({unterschiede.Count} Unterschiede) — fehlt eine Migration?");
     }
 }

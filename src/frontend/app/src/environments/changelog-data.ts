@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.803.5", date: "2026-10-16", changes: [
+    { en: "Build pipeline: faster checks before each release – the integration database runs in memory, the migration tests run in parallel, and the four smaller sites (tournament, KidHub, LeagueHub, ClubHub) are tested in their own job next to the main app.", de: "Build: schnellere Prüfungen vor jeder Auslieferung – die Datenbank der Integrationstests läuft im Arbeitsspeicher, die Migrations-Tests laufen parallel, und die vier kleineren Seiten (Turnier, KidHub, LeagueHub, ClubHub) werden in einem eigenen Job neben der Haupt-App geprüft." },
+  ] },
   { version: "0.803.4", date: "2026-10-16", changes: [
     { en: "E-books: the “Processing” label in the library now only shows while the diagrams of a book are being recognised – cover and solution checks run quietly in the background.", de: "E-Books: Das Schild „Wird verarbeitet“ in der Bibliothek erscheint nur noch, solange die Diagramme eines Buchs erkannt werden – Titelbild und Lösungsprüfung laufen still im Hintergrund." },
   ] },
