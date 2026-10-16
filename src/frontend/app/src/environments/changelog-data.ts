@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.802.4", date: "2026-10-16", changes: [
+    { en: "Behind the scenes: the network that reads scanned chess diagrams can now be retrained on a separate GPU machine (training service as a container) – more training data, better recognition in scanned e-books.", de: "Hinter den Kulissen: Das Netz, das gescannte Schachdiagramme liest, kann jetzt auf einem eigenen GPU-Rechner neu trainiert werden (Trainingsdienst als Container) – mehr Trainingsdaten, bessere Erkennung in eingescannten E-Books." },
+  ] },
   { version: "0.802.3", date: "2026-10-16", changes: [
     { en: "E-books: scanned PDFs with oversized pages (e.g. scans declared as several metres wide) are now rendered at a lower resolution for diagram recognition – before, single pages created temporary files of 250 MB each and could fill up the server’s disk.", de: "E-Books: Eingescannte PDFs mit übergroßen Seiten (z. B. Scans, die als mehrere Meter breit ausgewiesen sind) werden für die Diagrammerkennung mit geringerer Auflösung gerendert – vorher erzeugten einzelne Seiten Zwischendateien von je 250 MB und konnten die Platte des Servers füllen." },
   ] },

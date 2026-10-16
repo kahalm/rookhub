@@ -1,0 +1,19 @@
+# Auf dem Spark:  TRAIN_TOKEN=<geheim> docker compose up -d   (Image aus GHCR, Bau per GitHub Action)
+services:
+  board-train:
+    image: ghcr.io/kahalm/rookhub-board-train:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TRAIN_TOKEN=${TRAIN_TOKEN:?TRAIN_TOKEN setzen}
+    volumes:
+      - ./work:/work
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
