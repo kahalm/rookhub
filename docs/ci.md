@@ -34,3 +34,15 @@
   `:latest`, kein Release, obwohl alles gruen ist), und hinter dem Gate steht `imagetools create` statt
   `build-push-action`. Ein uebriggebliebener `ci-*`-Tag ist ein Lauf mit roten Tests; Wegraeumen ist
   Kosmetik und gehoert in einen eigenen zeitgesteuerten Workflow, nicht hierher.
+  **Test-Gate parallel** (seit 0.803.5/0.804.0, gemessen 7:10 → 5:44 vor der zweiten Stufe): die Integrations-DB
+  (`test-rookhub-integration`) läuft per `--tmpfs` im RAM — jede Fixture spielt alle Migrationen ein, InnoDB
+  fsynct bei jedem DDL; die Migrations-Tests stehen in drei Klassen (xUnit: Tests einer Klasse seriell, Klassen
+  parallel). `build-frontend` prüft nur `app` + Linter, `build-frontend-hubs` die vier Hubs. `test-rookhub` ist
+  eine Matrix aus zwei Hälften: `scoresheet-accounts` (die langsamsten Klassen, je 30–70 s) und `rest` = deren
+  exakte Verneinung. Wächter in `CiWorkflowTests`: jedes Angular-Projekt wird in einem der Frontend-Jobs getestet
+  und gebaut, und die zweite Unit-Hälfte ist die Verneinung der ersten (deren Bereiche müssen als Testordner
+  existieren). Ein neuer langsamer Bereich → in die erste Hälfte aufnehmen, die zweite wird mitgeändert.
+  **GitHub-Release je Tag** (seit 0.804.0): `github-release` in `docker.yml` legt nach allen Image-Jobs einen
+  Release an, Text = Changelog-Einträge seit dem vorigen Versions-Tag (`scripts/release-notes.mjs`, Test in
+  `scripts/tests/test_release_notes.sh`). APK + AAB wandern vom bisherigen Latest-Release mit — `/install` lädt
+  `releases/latest/download/app-release-signed.apk`, ein Latest ohne die Datei wäre ein toter Link.

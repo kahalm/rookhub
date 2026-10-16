@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.804.0", date: "2026-10-16", changes: [
+    { en: "Releases: every version tag now gets its own GitHub release with the changelog since the previous tag – the Android app download stays attached, so the install link keeps working.", de: "Releases: Jeder Versions-Tag bekommt jetzt einen eigenen GitHub-Release mit den Änderungen seit dem vorigen Tag – die Android-App hängt weiter daran, der Download-Link auf der Installationsseite funktioniert also weiter." },
+    { en: "Build pipeline: the API unit tests run in two halves on two machines at once – another minute less until an update is ready.", de: "Build: Die Unit-Tests der API laufen in zwei Hälften gleichzeitig auf zwei Rechnern – eine weitere Minute weniger, bis ein Update bereitsteht." },
+  ] },
   { version: "0.803.6", date: "2026-10-16", changes: [
     { en: "E-books: “Correct position” shows the board at its real size again – the pieces no longer sit next to their squares (the board was measured while the dialog was still opening).", de: "E-Books: „Stellung korrigieren“ zeigt das Brett wieder in voller Größe – die Figuren stehen nicht mehr neben ihren Feldern (das Brett wurde vermessen, während der Dialog noch aufging)." },
     { en: "E-books: jumping to a chapter from the table of contents now also works in EPUBs whose chapter files contain spaces or brackets (e.g. „Chess Calculation Training for Kids“).", de: "E-Books: Der Sprung ins Kapitel über das Inhaltsverzeichnis klappt jetzt auch in EPUBs, deren Kapiteldateien Leerzeichen oder Klammern im Namen haben (z. B. „Chess Calculation Training for Kids“)." },

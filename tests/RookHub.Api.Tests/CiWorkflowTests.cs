@@ -897,6 +897,28 @@ public class CiWorkflowTests
         }
     }
 
+    /// <summary>
+    /// Die Unit-Suite laeuft in zwei Haelften (Matrix in `test-rookhub`). Die zweite muss die EXAKTE Verneinung der
+    /// ersten sein — sonst faellt ein Bereich lautlos zwischen beide, oder er laeuft doppelt. Und jeder Bereich der
+    /// ersten muss als Ordner existieren: ein umbenannter Bereich liesse die erste Haelfte leer und gruen.
+    /// </summary>
+    [Fact]
+    public void UnitTestShards_CoverEveryTestExactlyOnce()
+    {
+        var job = TestJob("test-rookhub");
+        Assert.Contains("--filter \"${{ matrix.filter }}\"", job);
+        var filters = Regex.Matches(job, @"(?m)^\s+filter: ""(?<f>[^""]+)""\s*$").Select(m => m.Groups["f"].Value).ToList();
+        Assert.Equal(2, filters.Count);
+
+        var included = filters[0].Split('|');
+        Assert.All(included, c => Assert.StartsWith("FullyQualifiedName~RookHub.Api.Tests.", c));
+        Assert.Equal(string.Join('&', included.Select(c => c.Replace("FullyQualifiedName~", "FullyQualifiedName!~"))), filters[1]);
+
+        foreach (var area in included.Select(c => c["FullyQualifiedName~RookHub.Api.Tests.".Length..].TrimEnd('.')))
+            Assert.True(Directory.Exists(Path.Combine(RepoRoot(), "tests", "RookHub.Api.Tests", area)),
+                $"Shard-Bereich '{area}' gibt es nicht als Testordner — die erste Haelfte liefe leer");
+    }
+
     /// <summary>Alle Workflow-Dateien, als Repo-Pfad.</summary>
     private static List<string> AllWorkflows()
     {

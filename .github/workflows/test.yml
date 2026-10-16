@@ -53,6 +53,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Zwei Haelften auf zwei Runnern statt einer Suite auf einem (lag bei 4–5 min auf dem kritischen
+    # Pfad): xUnit fuehrt die Tests EINER Klasse nacheinander aus, und die Scoresheet- und Auth-Klassen
+    # brauchen allein je 30–70 s — zusammen mit dem Rest teilten sie sich vier Kerne. `rest` ist die
+    # exakte Verneinung von `scoresheet-accounts`, damit kein Test zwischen die Haelften faellt
+    # (CiWorkflowTests haelt das fest). fail-fast aus: eine rote Haelfte soll die andere zu Ende laufen lassen.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: scoresheet-accounts
+            filter: "FullyQualifiedName~RookHub.Api.Tests.Scoresheet.|FullyQualifiedName~RookHub.Api.Tests.Accounts."
+          - shard: rest
+            filter: "FullyQualifiedName!~RookHub.Api.Tests.Scoresheet.&FullyQualifiedName!~RookHub.Api.Tests.Accounts."
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       # FALLE: Die Projekte targeten net10.0. Ein 9.0.x-Pin baut sie NICHT — dass es
@@ -61,7 +74,7 @@ jobs:
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet test tests/RookHub.Api.Tests --verbosity normal
+      - run: dotnet test tests/RookHub.Api.Tests --filter "${{ matrix.filter }}" --verbosity normal
 
   # Zweite API-Suite gegen eine ECHTE MariaDB. Grund: test-rookhub laeuft gegen EF InMemory,
   # das jede LINQ-Abfrage im Speicher auswertet - auch eine, die MySQL nicht uebersetzen kann.
@@ -232,6 +245,7 @@ jobs:
       - run: bash scripts/tests/test_init_db.sh
       - run: python3 scripts/tests/test_es_log_retention.py
       - run: python3 scripts/tests/test_prep_import.py
+      - run: bash scripts/tests/test_release_notes.sh
 
   build-frontend:
     needs: changes

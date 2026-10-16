@@ -526,3 +526,47 @@ jobs:
           printf 'Quelle: %s\n' "$SOURCE"
           printf 'Ziel:   %s\n' "${tags[@]}"
           docker buildx imagetools create "${tags[@]/#/--tag=}" "$SOURCE"
+
+  # GitHub-Release je Versions-Tag — vorher entstand einer nur beim (seltenen) Android-Build, die Repo-Seite zeigte
+  # daher wochenalte „Releases", obwohl laufend getaggt wurde. Erst NACH allen Image-Jobs: ein Release fuer einen Tag,
+  # dessen :latest-Images nicht entstanden sind, waere eine Falschmeldung (needs = alle muessen gruen sein).
+  #
+  # FALLE: /install laedt `releases/latest/download/app-release-signed.apk`. Ein neuer „Latest"-Release OHNE die
+  # Datei liesse den Download-Link ins Leere laufen. Deshalb wandern APK + AAB vom bisherigen Latest-Release mit
+  # (die App ist eine TWA-Huelle um die Website, dieselbe Datei bleibt gueltig); baut android-twa.yml spaeter eine
+  # neue, ersetzt es die Dateien an genau diesem Release (gleicher Tag v<APP_VERSION>).
+  github-release:
+    needs: [changes, build-api, build-frontend, build-turnier, build-kidhub, build-leaguehub, build-clubhub]
+    if: ${{ needs.changes.outputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Release mit Changelog anlegen (APK vom bisherigen Latest uebernehmen)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME gibt es schon — nichts zu tun."
+            exit 0
+          fi
+          # Voriger Versions-Tag = der hoechste unterhalb dieses (Text: alle Eintraege dazwischen). awk liest bis
+          # zum Ende statt frueh auszusteigen — sonst bekaeme `sort` unter pipefail ein SIGPIPE.
+          prev=$(git ls-remote --tags --refs origin 'v*' | sed 's#.*refs/tags/##' \
+                 | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | { cat; echo "$GITHUB_REF_NAME"; } | sort -uV \
+                 | awk -v t="$GITHUB_REF_NAME" '$0 == t { print p } { p = $0 }')
+          echo "Voriger Tag: ${prev:-keiner}"
+          node scripts/release-notes.mjs "$GITHUB_REF_NAME" "$prev" > "$RUNNER_TEMP/notes.md"
+
+          latest=$(gh release view --json tagName --jq .tagName)
+          mkdir -p "$RUNNER_TEMP/app"
+          gh release download "$latest" --dir "$RUNNER_TEMP/app" \
+            --pattern app-release-signed.apk --pattern app-release-bundle.aab
+          test -s "$RUNNER_TEMP/app/app-release-signed.apk"
+          echo "Android-App uebernommen aus $latest"
+
+          gh release create "$GITHUB_REF_NAME" --verify-tag --latest \
+            --title "RookHub ${GITHUB_REF_NAME#v}" --notes-file "$RUNNER_TEMP/notes.md" \
+            "$RUNNER_TEMP/app/app-release-signed.apk" "$RUNNER_TEMP/app/app-release-bundle.aab"
