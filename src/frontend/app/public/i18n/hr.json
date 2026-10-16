@@ -5516,7 +5516,7 @@
     "diagramsOne": "1 dijagram",
     "uploadedProcessing": "»{{title}}« je preneseno. Obrada (naslovnica, dijagrami, rješenja) traje nekoliko minuta do otprilike četvrt sata — dobit ćeš obavijest kad bude gotova.",
     "processing": "Obrađuje se …",
-    "processingHint": "Pripremaju se naslovnica, dijagrami i rješenja — dobit ćeš obavijest."
+    "processingHint": "Dijagrami se prepoznaju — dobit ćeš obavijest."
   },
   "woodpecker": {
     "title": "Woodpecker",

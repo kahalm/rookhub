@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.803.4", date: "2026-10-16", changes: [
+    { en: "E-books: the “Processing” label in the library now only shows while the diagrams of a book are being recognised – cover and solution checks run quietly in the background.", de: "E-Books: Das Schild „Wird verarbeitet“ in der Bibliothek erscheint nur noch, solange die Diagramme eines Buchs erkannt werden – Titelbild und Lösungsprüfung laufen still im Hintergrund." },
+  ] },
   { version: "0.803.3", date: "2026-10-16", changes: [
     { en: "E-books: EPUB books with very large board pictures (e.g. 2000 × 2000 pixels per diagram in „How to Win at Chess“) are now scanned for diagrams – before, such pictures were skipped and the book showed no diagrams at all.", de: "E-Books: EPUB-Bücher mit sehr großen Brettbildern (z. B. 2000 × 2000 Pixel je Diagramm in „How to Win at Chess“) werden jetzt nach Diagrammen durchsucht – vorher wurden solche Bilder übergangen und das Buch zeigte gar keine Diagramme." },
   ] },

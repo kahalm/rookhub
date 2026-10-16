@@ -5516,7 +5516,7 @@
     "diagramsOne": "1 diagram",
     "uploadedProcessing": "„{{title}}” feltöltve. A feldolgozás (borító, diagramok, megoldások) néhány perctől kb. negyed óráig tart — értesítést kapsz, ha kész.",
     "processing": "Feldolgozás …",
-    "processingHint": "A borító, a diagramok és a megoldások előkészítése folyik — értesítést kapsz."
+    "processingHint": "A diagramok felismerése folyamatban — értesítést kapsz."
   },
   "woodpecker": {
     "title": "Woodpecker",

@@ -5516,7 +5516,7 @@
     "diagramsOne": "1 diagram",
     "uploadedProcessing": "“{{title}}” is uploaded. Processing (cover, diagrams, solutions) takes a few minutes up to about a quarter of an hour — you will get a notification when it is done.",
     "processing": "Processing …",
-    "processingHint": "Cover, diagrams and solutions are being prepared — you will get a notification."
+    "processingHint": "Diagrams are being recognised — you will get a notification."
   },
   "woodpecker": {
     "title": "Woodpecker",

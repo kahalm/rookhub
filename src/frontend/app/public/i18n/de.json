@@ -5516,7 +5516,7 @@
     "diagramsOne": "1 Diagramm",
     "uploadedProcessing": "„{{title}}“ ist hochgeladen. Die Verarbeitung (Titelbild, Diagramme, Lösungen) dauert ein paar Minuten bis etwa eine Viertelstunde — du bekommst eine Benachrichtigung, sobald sie fertig ist.",
     "processing": "Wird verarbeitet …",
-    "processingHint": "Titelbild, Diagramme und Lösungen werden vorbereitet — du bekommst eine Benachrichtigung."
+    "processingHint": "Die Diagramme werden erkannt — du bekommst eine Benachrichtigung."
   },
   "woodpecker": {
     "title": "Woodpecker",
