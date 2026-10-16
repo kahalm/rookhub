@@ -196,6 +196,8 @@ public static class EbookBoardImage
     {
         // Dreieck rechts über dem Brett (Quality Chess, z. B. Yusupov): △ hohl = Weiß, ▼ voll = Schwarz (0.797.0).
         if (TriangleMarker(g, box) is char tri) return tri;
+        // Kästchen links unter dem Brett (Chessable/NIC, z. B. „The Checkmate Patterns Manual“): ■ voll = Schwarz, □ hohl = Weiß.
+        if (SquareMarker(g, box) is char sq) return sq;
         int H = g.GetLength(0);
         var bw = box.X1 - box.X0;
         int sx0 = Math.Max(0, box.X0 - bw / 4), sx1 = box.X0 - 6, sy0 = Math.Max(0, box.Y0), sy1 = Math.Min(H, box.Y1);
@@ -224,6 +226,21 @@ public static class EbookBoardImage
         // Ein Dreieck füllt sein Rechteck etwa zur Hälfte: gefüllt ≥ 35 %, hohl nur der Umriss — aber mit Innenraum.
         if (Holes(tri) > 0) return 'w';
         return tri.Points.Count >= 0.35 * tri.W * tri.H ? 'b' : null;
+    }
+
+    /// <summary>Kästchen links unterhalb des Bretts (neben der Linie „a“): hohl (Innenraum) = Weiß, voll = Schwarz.</summary>
+    internal static char? SquareMarker(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        var bw = box.X1 - box.X0;
+        int sx0 = Math.Max(0, box.X0 - bw / 10), sx1 = Math.Min(W, box.X0 + 2), sy0 = Math.Max(0, box.Y1 - bw / 16), sy1 = Math.Min(H, box.Y1 + bw / 12);   // das Kästchen reicht über die Brettunterkante
+        if (sx1 - sx0 < 6 || sy1 - sy0 < 6) return null;
+        var sq = Components(g, sx0, sx1, sy0, sy1, 1)
+            .Where(c => c.H >= bw * 0.015 && c.H <= bw * 0.06 && c.W >= c.H * 0.8 && c.W <= c.H * 1.25)
+            .OrderBy(c => c.X0).FirstOrDefault();
+        if (sq == null) return null;
+        if (Holes(sq) > 0) return 'w';
+        return sq.Points.Count >= 0.7 * sq.W * sq.H ? 'b' : null;
     }
 
     private sealed record Component(List<(int Y, int X)> Points, int X0, int Y0, int W, int H);

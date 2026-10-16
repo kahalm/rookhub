@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.803.1", date: "2026-10-16", changes: [
+    { en: "E-books: the side to move is now also read from the small square below the board (■ Black, □ White, e.g. in „The Checkmate Patterns Manual“).", de: "E-Books: Der Spieler am Zug wird jetzt auch aus dem kleinen Kästchen unter dem Brett gelesen (■ Schwarz, □ Weiß, z. B. in „The Checkmate Patterns Manual“)." },
+  ] },
   { version: "0.803.0", date: "2026-10-16", changes: [
     { en: "E-books: much better diagram recognition in scanned books – the neural network has been retrained on about 14,000 diagrams from 340 books that Claude read; on unseen books it now reads 85 % of boards exactly instead of about half.", de: "E-Books: Deutlich bessere Diagrammerkennung in eingescannten Büchern – das neuronale Netz wurde auf rund 14.000 von Claude gelesenen Diagrammen aus 340 Büchern neu trainiert; bei Büchern, die es nicht kennt, liest es jetzt 85 % der Bretter exakt statt etwa der Hälfte." },
   ] },
