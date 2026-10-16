@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.804.1", date: "2026-10-16", changes: [
+    { en: "Internal: the page-check tool now also covers the old tournament links on RookHub and reports every new page that is missing from its catalogue.", de: "Intern: Das Seiten-Prüfwerkzeug deckt jetzt auch die alten Turnier-Links auf RookHub ab und meldet jede neue Seite, die in seinem Katalog fehlt." },
+  ]},
   { version: "0.804.0", date: "2026-10-16", changes: [
     { en: "Releases: every version tag now gets its own GitHub release with the changelog since the previous tag – the Android app download stays attached, so the install link keeps working.", de: "Releases: Jeder Versions-Tag bekommt jetzt einen eigenen GitHub-Release mit den Änderungen seit dem vorigen Tag – die Android-App hängt weiter daran, der Download-Link auf der Installationsseite funktioniert also weiter." },
     { en: "Build pipeline: the API unit tests run in two halves on two machines at once – another minute less until an update is ready.", de: "Build: Die Unit-Tests der API laufen in zwei Hälften gleichzeitig auf zwei Rechnern – eine weitere Minute weniger, bis ein Update bereitsteht." },

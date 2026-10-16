@@ -151,6 +151,9 @@ export const ROUTES = [
   r('rookhub', '/impressum', 'any', { main: LEGAL }),
   r('rookhub', '/account-deletion', 'any', { main: LEGAL }),
   r('rookhub', '/tournaments', 'any', { label: 'tournaments-moved', main: ['.moved > p', '.moved'] }),
+  // Alte Turnier-Links (vor der eigenen Turnierseite) — dieselbe Umzugsseite, mit Weiterleitung auf turnier.*.
+  r('rookhub', '/tournaments/{tournamentId}', 'any', { label: 'tournaments-moved-id', main: ['.moved > p', '.moved'] }),
+  r('rookhub', '/t/{tournamentId}', 'any', { label: 'tournaments-moved-t', main: ['.moved > p', '.moved'] }),
   r('rookhub', '/diese-seite-gibt-es-nicht/xyz', 'any', { label: 'not-found', main: ['section.not-found .nf-actions a', 'section.not-found'] }),
 
   // ---------------------------------------------------------------- Turnierseite
