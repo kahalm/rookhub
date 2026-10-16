@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.803.6", date: "2026-10-16", changes: [
+    { en: "E-books: “Correct position” shows the board at its real size again – the pieces no longer sit next to their squares (the board was measured while the dialog was still opening).", de: "E-Books: „Stellung korrigieren“ zeigt das Brett wieder in voller Größe – die Figuren stehen nicht mehr neben ihren Feldern (das Brett wurde vermessen, während der Dialog noch aufging)." },
+    { en: "E-books: jumping to a chapter from the table of contents now also works in EPUBs whose chapter files contain spaces or brackets (e.g. „Chess Calculation Training for Kids“).", de: "E-Books: Der Sprung ins Kapitel über das Inhaltsverzeichnis klappt jetzt auch in EPUBs, deren Kapiteldateien Leerzeichen oder Klammern im Namen haben (z. B. „Chess Calculation Training for Kids“)." },
+  ] },
   { version: "0.803.5", date: "2026-10-16", changes: [
     { en: "Build pipeline: faster checks before each release – the integration database runs in memory, the migration tests run in parallel, and the four smaller sites (tournament, KidHub, LeagueHub, ClubHub) are tested in their own job next to the main app.", de: "Build: schnellere Prüfungen vor jeder Auslieferung – die Datenbank der Integrationstests läuft im Arbeitsspeicher, die Migrations-Tests laufen parallel, und die vier kleineren Seiten (Turnier, KidHub, LeagueHub, ClubHub) werden in einem eigenen Job neben der Haupt-App geprüft." },
   ] },

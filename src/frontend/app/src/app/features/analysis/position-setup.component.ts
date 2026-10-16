@@ -191,6 +191,12 @@ export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
     requestAnimationFrame(() => this.ground?.redrawAll());
   }
 
+  /** Brett neu vermessen — z. B. wenn ein Dialog fertig aufgegangen ist (0.803.6): während der Öffnungsanimation
+   *  (scale ≈ 0,8) misst Chessground das Brett zu klein und legt die Figuren daneben. */
+  redraw(): void {
+    this.ground?.redrawAll();
+  }
+
   ngOnDestroy(): void {
     this.ground?.destroy();
   }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ViewChild, inject } from '@angular/core';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PositionSetupComponent } from '../analysis/position-setup.component';
@@ -32,4 +32,10 @@ export interface EbookPositionDialogData { fen: string; flipped?: boolean; }
 export class EbookPositionDialogComponent {
   readonly data = inject<EbookPositionDialogData>(MAT_DIALOG_DATA);
   readonly ref = inject<MatDialogRef<EbookPositionDialogComponent, string>>(MatDialogRef);
+  @ViewChild(PositionSetupComponent) setup?: PositionSetupComponent;
+
+  constructor() {
+    // Erst nach der Öffnungsanimation hat das Brett seine echte Größe — vorher vermessen lagen die Figuren daneben (0.803.6).
+    this.ref.afterOpened().subscribe(() => this.setup?.redraw());
+  }
 }

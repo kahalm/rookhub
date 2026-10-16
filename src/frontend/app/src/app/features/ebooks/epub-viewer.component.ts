@@ -342,7 +342,32 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   next(): void { void this.rendition?.next(); }
   prev(): void { void this.rendition?.prev(); }
-  goTo(href: string): void { void this.rendition?.display(href); }
+  goTo(href: string): void {
+    const r = this.rendition;
+    if (!r) return;
+    // Kapitel mit Leerzeichen/Klammern im Dateinamen (calibre, #724): das Inhaltsverzeichnis kodiert sie (%20, %28, %29),
+    // epub.js sucht das Kapitel aber unter anderer Schreibweise und findet es nicht („No Section Found“) — dann das
+    // Kapitel selbst über die dekodierten Namen suchen (0.803.6).
+    r.display(href).catch(() => {
+      const target = EpubViewerComponent.spineHref(this.book, href);
+      if (target) void r.display(target).catch(() => {});
+    });
+  }
+
+  /** Spine-Eintrag zu einem (evtl. anders kodierten) Inhaltsverzeichnis-Link, samt Sprungmarke; sonst `null`. */
+  static spineHref(book: Pick<EpubBook, 'spine'> | null | undefined, href: string): string | null {
+    if (!book) return null;
+    const hash = href.indexOf('#');
+    const file = hash >= 0 ? href.slice(0, hash) : href, frag = hash >= 0 ? href.slice(hash) : '';
+    const norm = (h: string) => { let x = h; try { x = decodeURIComponent(h); } catch { /* ungültige Kodierung: so lassen */ } return x.replace(/^.*\//, ''); };
+    const want = norm(file);
+    for (let i = 0; i < 2000; i++) {
+      const item = book.spine.get(i);
+      if (!item) break;
+      if (norm(item.href) === want) return item.href + frag;
+    }
+    return null;
+  }
 
   @HostListener('keyup', ['$event'])
   onKey(e: KeyboardEvent): void {

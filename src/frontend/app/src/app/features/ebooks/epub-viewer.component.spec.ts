@@ -233,4 +233,11 @@ describe('EpubViewerComponent', () => {
       { ref: null, chapter: 'OEBPS/Text/ch3.xhtml' },
     ]);
   });
+
+  it('findet Kapitel mit kodierten Leerzeichen/Klammern im Inhaltsverzeichnis (0.803.6)', () => {
+    const hrefs = ['titlepage.xhtml', '5_Chapter 1 (1)_converted.html', '6_Chapter 1 (2)_converted.html'];
+    const book = { spine: { get: (i: number) => (i < hrefs.length ? { href: hrefs[i] } : null) } };
+    expect(EpubViewerComponent.spineHref(book, '6_Chapter%201%20%282%29_converted.html#x')).toBe('6_Chapter 1 (2)_converted.html#x');
+    expect(EpubViewerComponent.spineHref(book, 'fehlt.html')).toBeNull();
+  });
 });
