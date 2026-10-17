@@ -59,7 +59,7 @@ export const ROUTES = [
   // ---------------------------------------------------------------- RookHub
   // Start: angemeldet → /dashboard, abgemeldet → /puzzles (GUEST_START_URL) — Selektoren für beide.
   r('rookhub', '/', 'any', { label: 'start', main: ['.dashboard-grid > mat-card', '.board-section app-puzzle-board'] }),
-  r('rookhub', '/login', 'anon', { main: AUTH_FORM }),
+  r('rookhub', '/login', 'anon', { main: AUTH_FORM, expectedFailures: [/^POST \/api\/auth\/login → 401$/] }),
   r('rookhub', '/register', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/forgot-password', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/reset-password?token=ui-sweep', 'anon', { main: AUTH_FORM }),
@@ -114,12 +114,12 @@ export const ROUTES = [
   r('rookhub', '/games', 'user', { main: ['.games-page .row.game', '.games-page mat-card.empty-state', '.games-page .center'] }),
   r('rookhub', '/games/mistakes', 'user', { main: ['.page .board-wrap app-chess-board', '.page button.start', '.page .empty-state', '.page > p.hint'] }),
   r('rookhub', '/games/scoresheet', 'user', { main: ['.sheet-page mat-card.upload', '.sheet-page mat-card.notice', '.sheet-page .center'] }),
-  r('rookhub', '/games/{gameId}', 'user', { main: GAME_BOARD }),
+  r('rookhub', '/games/{gameId}', 'user', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/games/{gameId}/edit', 'user', { main: ['.edit-page .board-card app-chess-board', '.edit-page mat-card.empty-state', '.edit-page .center'] }),
-  r('rookhub', '/games/{analyzedGameId}', 'user', { label: 'games-analyzed', main: GAME_BOARD }),
-  r('rookhub', '/club-games/{clubGameId}', 'user', { main: GAME_BOARD }),
-  r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD }),
-  r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD }),
+  r('rookhub', '/games/{analyzedGameId}', 'user', { label: 'games-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
+  r('rookhub', '/club-games/{clubGameId}', 'user', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/club\/games\/\d+ → 403$/] }),
+  r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
+  r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/reconstruct', 'user', { main: ['.page mat-card.item', '.page .empty-state', '.page mat-card.new-card'] }),
   r('rookhub', '/reconstruct/{reconstructionId}', 'user', { main: ['.parts mat-card.part', '.parts .add-row', '.page > p.muted'] }),
   r('rookhub', '/r/{reconstructionToken}', 'any', { main: GAME_BOARD }),
@@ -132,7 +132,7 @@ export const ROUTES = [
   r('rookhub', '/messages', 'user', { main: ['.msg-container .thread .bubble-row', '.msg-container .empty-state', '.msg-container mat-card.admin-hint', '.msg-container .reply', '.msg-container app-load-error'] }),
   r('rookhub', '/courses', 'user', { main: ['.courses-container .course-grid mat-card.course-card', '.courses-container .empty-state', '.courses-container app-loading-spinner'] }),
   r('rookhub', '/woodpecker', 'user', { main: ['.plans .plan', '.page .empty-state', '.page app-load-error'] }),
-  r('rookhub', '/woodpecker/{woodpeckerPlanId}/solve', 'user', { main: ['.solver app-puzzle-board', '.page mat-card.done', '.page app-load-error'] }),
+  r('rookhub', '/woodpecker/{woodpeckerPlanId}/solve', 'user', { main: ['.solver app-puzzle-board', '.page mat-card.done', '.page app-load-error'], expectedFailures: [/^GET \/api\/woodpecker\/\d+\/next → 404$/] }),
   r('rookhub', '/catalog', 'user', { main: ['.catalog .item-list .item-row', '.catalog mat-card:not(.admin-card) .empty-state', '.catalog mat-card:not(.admin-card) app-load-error', '.catalog mat-card:not(.admin-card) p.empty'] }),
   r('rookhub', '/courses/{bookId}', 'user', { main: ['.detail-page .head-card .actions button', '.detail-page .head-card', '.detail-page .center', '.detail-page > mat-card'] }),
   r('rookhub', '/courses/{bookId}/browse', 'user', { main: COURSE_BROWSE }),
@@ -152,7 +152,7 @@ export const ROUTES = [
   r('rookhub', '/{courseSlug}', 'any', { label: 'course-slug', main: PUZZLE_BOARD.concat(['.detail-page .head-card', '.browse-container']) }),
   // Kapitel-Kurzlink /{slug}/{kapitel} (z. B. /noel/KW46): erstes Kapitel mit Aufgaben (Name aus seed.mjs).
   r('rookhub', '/{courseSlug}/{courseSlugChapter}', 'any', { label: 'course-slug-chapter', main: PUZZLE_BOARD.concat(['.detail-page .head-card', '.browse-container']) }),
-  r('rookhub', '/ui-sweep-gibt-es-nicht', 'any', { label: 'slug-not-found', main: ['section.not-found .nf-actions', 'section.not-found'] }),
+  r('rookhub', '/ui-sweep-gibt-es-nicht', 'any', { label: 'slug-not-found', main: ['section.not-found .nf-actions', 'section.not-found'], expectedFailures: [/^GET \/api\/courses\/by-slug\/[^ ]+ → 404$/] }),
   r('rookhub', '/chessable', 'user', { main: ['.extension-note .store-links', '.extension-note'] }),
   r('rookhub', '/admin', 'user', { main: ['.admin-container table.users-table tr.mat-mdc-row', '.admin-container .users-table-wrap', '.admin-container mat-tab-group'] }),
   r('rookhub', '/help', 'any', { main: ['.help-container mat-card.help-section', '.help-container .help-toc'] }),
@@ -165,7 +165,7 @@ export const ROUTES = [
   // Alte Turnier-Links (vor der eigenen Turnierseite) — dieselbe Umzugsseite, mit Weiterleitung auf turnier.*.
   r('rookhub', '/tournaments/{tournamentId}', 'any', { label: 'tournaments-moved-id', main: ['.moved > p', '.moved'] }),
   r('rookhub', '/t/{tournamentId}', 'any', { label: 'tournaments-moved-t', main: ['.moved > p', '.moved'] }),
-  r('rookhub', '/diese-seite-gibt-es-nicht/xyz', 'any', { label: 'not-found', main: ['section.not-found .nf-actions a', 'section.not-found'] }),
+  r('rookhub', '/diese-seite-gibt-es-nicht/xyz', 'any', { label: 'not-found', main: ['section.not-found .nf-actions a', 'section.not-found'], expectedFailures: [/^GET \/api\/courses\/by-slug\/[^ ]+ → 404$/] }),
 
   // ---------------------------------------------------------------- Turnierseite
   r('turnier', '/tournaments/calendar', 'any', { main: ['mat-card.entry-card', 'p.empty-state', 'app-loading-spinner'] }),

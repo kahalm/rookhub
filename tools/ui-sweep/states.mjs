@@ -51,8 +51,9 @@ export const STATES = [
   // ---------------------------------------------------------------- RookHub: Kopfleiste
   { of: 'rookhub__dashboard', name: 'menue', steps: [{ click: 'mat-toolbar button.msg-mail' }], expect: MENU },
   { of: 'rookhub__dashboard', name: 'menue-konto', auth: LOGGED_IN,
-    steps: [{ click: 'mat-toolbar button.msg-mail' }, { click: '.mat-mdc-menu-panel button:has-text("Konto")' }],
-    expect: '.mat-mdc-menu-panel button:has-text("Abmelden")' },
+    steps: [{ click: 'mat-toolbar button.msg-mail' }, { click: '.mat-mdc-menu-panel button:has(mat-icon:text-is("account_circle"))' }],
+    // über die Symbole statt der Beschriftung — sprachunabhängig (im --lang-en-Lauf scheiterte „Konto“, 17.10.2026)
+    expect: '.mat-mdc-menu-panel button.changelog-item' },
   { of: 'rookhub__dashboard', name: 'glocke', steps: [{ click: 'mat-toolbar button.notif-bell' }], expect: '.mat-mdc-menu-panel.notif-menu' },
   { of: 'rookhub__puzzles', name: 'menue-gast', auth: ['anon'], steps: [EASY, { click: 'mat-toolbar button.anon-menu' }], expect: MENU },
 
@@ -62,7 +63,7 @@ export const STATES = [
     steps: [{ click: '.games-page .row.game .actions button.mat-mdc-menu-trigger' }], expect: MENU },
   { of: 'rookhub__games', name: 'loeschen-dialog', auth: LOGGED_IN,
     steps: [{ click: '.games-page .row.game .actions button.mat-mdc-menu-trigger' },
-      { click: '.mat-mdc-menu-panel button.mat-mdc-menu-item:has-text("Löschen")' }],
+      { click: '.mat-mdc-menu-panel button.mat-mdc-menu-item:has(mat-icon:text-is("delete"))' }],
     expect: 'mat-dialog-container .confirm-text' },
 
   // ---------------------------------------------------------------- RookHub: Puzzles + Kurse
@@ -183,7 +184,9 @@ export const STATES = [
  * POSTs, die nur LESEN (Puzzle-Vorrat für Endlos, KidHub-Endlos): sie gehen auch in Zuständen zum Server. Mit dem
  * gestellten „{}" wartete der Endlos-Start ewig auf Puzzles (Spinner im Bild).
  */
-export const READ_POSTS = [/^\/api\/puzzles\/random-batch$/, /^\/api\/kids\/endless\/batch$/];
+// Lese-POSTs (Körper = Abfrage, nichts wird geschrieben) gehen zum Server — ein Echo des Körpers bräche die App:
+// same-game lieferte so ein Objekt statt einer Liste („a.filter is not a function“ im ⋮ der Partie, Volllauf 17.10.2026).
+export const READ_POSTS = [/^\/api\/puzzles\/random-batch$/, /^\/api\/kids\/endless\/batch$/, /^\/api\/game-analyses\/same-game$/];
 
 /**
  * Was das Werkzeug in einem Zustand mit einer Anfrage tut: 'pass' (zum Server), 'once' (einmal zum Server, dann aus dem

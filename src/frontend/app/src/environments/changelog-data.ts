@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.806.3", date: "2026-10-17", changes: [
+    { en: "Internal: the page-check tool no longer fakes answers to read-only requests, works in every language and knows which error answers are intended.", de: "Intern: Das Seiten-Prüfwerkzeug beantwortet reine Leseanfragen nicht mehr selbst, funktioniert in jeder Sprache und kennt die gewollten Fehlerantworten." },
+  ]},
   { version: "0.806.2", date: "2026-10-17", changes: [
     { en: "E-books: scrolling through an EPUB in the continuous view no longer jumps back – especially in puzzle books with one short chapter per puzzle, the view used to snap back by a screen before moving on.", de: "E-Books: Das Scrollen durch ein EPUB in der fließenden Ansicht springt nicht mehr zurück – besonders in Aufgabenbüchern mit einem kurzen Kapitel je Aufgabe sprang die Ansicht vorher um eine Bildschirmhöhe zurück, bevor es weiterging." },
   ] },

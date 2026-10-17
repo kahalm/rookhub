@@ -103,3 +103,10 @@ test('erwartete Fehlantworten: nur Methode + Pfad + Status der Route, Zustände 
   for (const d of withStates(ROUTES, routeId)) assert.equal(d.expectedFailures, byId.get(d.stateOf).expectedFailures);
   for (const r of ROUTES) for (const re of r.expectedFailures) assert.ok(re instanceof RegExp, `${routeId(r)}: keine RegExp`);
 });
+
+test('Lese-POSTs gehen zum Server (kein Echo): same-game liefert sonst ein Objekt statt einer Liste', async () => {
+  const { writeDecision } = await import('./states.mjs');
+  const st = { steps: [{ click: 'x' }] };
+  assert.equal(writeDecision(st, 'POST', '/api/game-analyses/same-game'), 'pass');
+  assert.equal(writeDecision(st, 'POST', '/api/game-analyses/123/rerun'), 'stub');
+});
