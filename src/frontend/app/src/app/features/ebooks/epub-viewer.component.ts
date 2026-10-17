@@ -131,6 +131,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
         this.resizeObs.observe(this.area.nativeElement);
       }
       await rendition.display(this.initialLocator || undefined).catch(() => rendition.display());
+      EpubViewerComponent.keepViews(rendition);
       this.zone.run(() => this.loading.set(false));
       book.loaded.navigation.then(nav => this.zone.run(() => this.toc.emit(nav.toc.map(t => ({ label: t.label.trim(), href: t.href })))))
         .catch(() => {});
@@ -221,6 +222,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.area.nativeElement.replaceChildren();
     const r = this.createRendition(book);
     await r.display(cfi).catch(() => r.display());
+    EpubViewerComponent.keepViews(r);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -352,6 +354,16 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       const target = EpubViewerComponent.spineHref(this.book, href);
       if (target) void r.display(target).catch(() => {});
     });
+  }
+
+  /** Fließend (continuous manager): epub.js entfernt beim Scrollen Kapitel weit oberhalb und korrigiert die Scrollposition
+   *  dabei falsch — bei vielen kurzen Kapiteln (Aufgabenbücher: eine Aufgabe je Kapitel) sprang die Ansicht ständig um
+   *  ~1 000 px zurück, statt weiterzuscrollen (User 17.10., #627; in reinem epub.js 0.3.93 nachgestellt). Ohne dieses
+   *  Aufräumen bleiben geladene Kapitel stehen und das Scrollen läuft ruhig durch (0.806.2). */
+  static keepViews(r: unknown): void {
+    // Nur der continuous manager (Fließend) hat trim(); im Seitenmodus gibt es nichts zu tun.
+    const m = (r as { manager?: { trim?: () => Promise<void> } }).manager;
+    if (m && typeof m.trim === 'function') m.trim = () => Promise.resolve();
   }
 
   /** Spine-Eintrag zu einem (evtl. anders kodierten) Inhaltsverzeichnis-Link, samt Sprungmarke; sonst `null`. */

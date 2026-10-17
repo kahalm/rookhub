@@ -240,4 +240,13 @@ describe('EpubViewerComponent', () => {
     expect(EpubViewerComponent.spineHref(book, '6_Chapter%201%20%282%29_converted.html#x')).toBe('6_Chapter 1 (2)_converted.html#x');
     expect(EpubViewerComponent.spineHref(book, 'fehlt.html')).toBeNull();
   });
+
+  it('Fließend: entfernt keine Kapitel mehr beim Scrollen (kein Rücksprung, 0.806.2)', async () => {
+    let trimmed = 0;
+    const r = { manager: { trim: () => { trimmed++; return Promise.resolve(); } } };
+    EpubViewerComponent.keepViews(r);
+    await r.manager.trim();
+    expect(trimmed).toBe(0);
+    expect(() => EpubViewerComponent.keepViews({})).not.toThrow();
+  });
 });
