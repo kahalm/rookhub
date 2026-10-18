@@ -101,7 +101,7 @@ export function isHomeUrl(url: string): boolean {
         <span class="caret" aria-hidden="true">▾</span>
       </label>
       <span>v{{ version }}</span>
-      <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+      <a routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</a>
       <!-- Pflichtangabe der Lizenz (CC BY 4.0) der Laenderliste, mit der die Startsprache bestimmt wird. -->
       <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
     </footer>

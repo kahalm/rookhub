@@ -1,7 +1,8 @@
 <div class="detail-page">
   <div class="topbar">
-    <a mat-stroked-button [routerLink]="['/courses']">
-      <mat-icon>arrow_back</mat-icon>{{ 'common.back' | translate }}
+    <!-- Niedrige Fenster (Boox 200 %): nur „←“ vor dem Titel, Ziel im aria-label (DESIGN 4.6 „Niedrige Fenster“). -->
+    <a mat-stroked-button class="back-btn" [routerLink]="['/courses']" [attr.aria-label]="'common.back' | translate">
+      <mat-icon>arrow_back</mat-icon><span class="back-label">{{ 'common.back' | translate }}</span>
     </a>
     <h1 class="page-title">{{ detail?.displayName || ('courses.detail.title' | translate) }}</h1>
     <span class="topbar-spacer"></span>

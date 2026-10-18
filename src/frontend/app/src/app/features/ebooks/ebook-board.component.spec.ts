@@ -407,6 +407,28 @@ describe('EbookBoardComponent', () => {
     expect(c.slice(0, at)).toMatch(/\.eb-bar(\[[^\]]*\])?\{display:flex;align-items:center/);
     expect(c.slice(0, at)).not.toContain('flex-wrap:wrap');   // eine Zeile, kein Umbruch
   });
+  // d4-rk-kalk-hilfetext-lang: unter dem Brett ein Satz, der Rest hinter dem ?-Symbol (DESIGN 2 Nr. 2).
+  it('Kalkulieren: ein Satz Erklärung, Einzelheiten hinter ?', async () => {
+    const fixture = make(D, 'calc');
+    fixture.componentInstance.setMode('calc');
+    fixture.detectChanges();
+    const note = fixture.nativeElement.querySelector('.eb-note') as HTMLElement;
+    expect(note.textContent).toContain('ebooks.board.calcHint');
+    const help = note.querySelector('app-help-hint button') as HTMLElement;
+    expect(help).not.toBeNull();
+    expect(help.getAttribute('aria-label')).toBe('ebooks.board.calcHelp');
+    for (const code of ['de', 'en', 'hr', 'hu']) {
+      let json: any = null;
+      for (const url of [`/i18n/${code}.json`, `/base/i18n/${code}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { json = await res.json(); break; }
+      }
+      const hint: string = json.ebooks.board.calcHint;
+      expect(hint.trim().split(/[.!?](\s|$)/).filter(x => x && x.trim()).length).withContext(`${code}: ${hint}`).toBe(1);
+      expect(hint).not.toContain('(');
+      expect(json.ebooks.board.calcHelp).withContext(code).toBeTruthy();
+    }
+  });
 });
 
 describe('Maia-Hinweis hält „etwa 46 MB“ zusammen (c2-eb-maia-46mb-umbruch)', () => {

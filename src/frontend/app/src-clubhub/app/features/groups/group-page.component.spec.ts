@@ -230,6 +230,33 @@ describe('ClubHub-Gruppen', () => {
       expect(Array.from(el.querySelectorAll('[role=alert]')).map(a => a.textContent).join('|')).toContain('Ein Konto mit diesem Benutzernamen gibt es nicht.');
     });
 
+    // d4-c-gruppe-zwei-hauptknoepfe: bei offenem „Gruppe ändern“ standen „Anwesenheit abhaken“ und „Änderungen speichern“
+    // beide gefüllt da (DESIGN 5.4: ein Hauptknopf je Seite).
+    it('„Gruppe ändern“ aufgeklappt: genau ein Hauptknopf — der Kopfknopf tritt zurück, zugeklappt kommt er wieder', async () => {
+      const fixture = await open(GROUP({ canManage: true }));
+      const el = fixture.nativeElement as HTMLElement;
+      const primaries = () => Array.from(el.querySelectorAll<HTMLElement>('.btn.primary')).filter(b => !b.closest('details:not([open])'));
+      expect(primaries().map(b => b.textContent!.trim())).toEqual(['Anwesenheit abhaken']);
+      const details = el.querySelector<HTMLDetailsElement>('.manage-group')!;
+      details.open = true;
+      await new Promise(r => setTimeout(r));                                               // toggle feuert asynchron
+      fixture.detectChanges();
+      expect(primaries().map(b => b.textContent!.trim())).toEqual(['Änderungen speichern']);
+      expect(el.querySelector('.page-head .take-roll')!.classList).toContain('btn');
+      details.open = false;
+      await new Promise(r => setTimeout(r));
+      fixture.detectChanges();
+      expect(el.querySelector('.page-head .take-roll')!.classList).toContain('primary');
+    });
+
+    // d4-c-gruppe-trainer-hinweis-jargon: drei Sätze, „PERSONEN“ in Versalien, der erste wiederholte die Überschrift.
+    it('Zugriffs-Hinweis: ein Satz, ohne Versalien-Wort', async () => {
+      const fixture = await open(GROUP({ canManage: true }));
+      const hint = (fixture.nativeElement as HTMLElement).querySelector('.manage-group .access-hint')!.textContent!.trim();
+      expect(hint).toBe('Das Konto braucht in RookHub zusätzlich eine Rolle mit dem Recht „ClubHub: Trainer“.');
+      expect(hint).not.toMatch(/\b[A-ZÄÖÜ]{4,}\b/);
+    });
+
     // b1-c-gesperrt-ohne-grund: „Dazunehmen"/„Zugriff geben" waren ohne Auswahl gesperrt, ohne zu sagen, was fehlt.
     it('Dazunehmen / Zugriff geben ohne Eingabe: Knopf frei, Fokus aufs Feld, Hinweis darunter, beim Wählen/Tippen weg', async () => {
       api.members.and.resolveTo([{ id: 30, firstName: 'Dora', lastName: 'Neu', archived: false, isTrainer: false, linked: false, groups: [], contacts: [] }]);

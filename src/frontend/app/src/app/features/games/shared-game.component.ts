@@ -20,6 +20,7 @@ import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GameRoast, GamesService, SharedGame } from './games.service';
@@ -93,6 +94,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private externalEngines = inject(ExternalEngineService);
   private scoresheets = inject(ScoresheetService);
   private dialog = inject(MatDialog);
+  private confirm = inject(ConfirmService);
 
   game: SharedGame | null = null;
   loading = true;
@@ -493,7 +495,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   analyzeTooltip(): string {
     if (this.analysisRunning()) return 'games.review.running';
-    return this.uploadStatus()?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyzeHint';
+    // d4-rk-engine-hinweis-jargon: nicht der Punktepartie-Text („eingeworfene Partien“), sondern der Grund der Partieseite.
+    return this.uploadStatus()?.engineAvailable === false ? 'games.analyzeNoEngine' : 'games.analyzeHint';
   }
 
   /** Quelle im Partiekopf — dieselbe Abbildung wie die Partieliste (b1-rk-partie-quelle-pgn: vorher stand „pgn“ roh da). */
@@ -631,6 +634,20 @@ export class SharedGameComponent implements OnInit, DoCheck {
       () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
       () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
     );
+  }
+
+  /** Eigene Partie löschen (d4-rk-partie-menue-loeschen-fehlt-partieseite): Rückfrage wie in der Partienliste, danach
+   *  zurück zur Liste — wer die Partie offen hat, muss dafür nicht erst zurück. */
+  remove(): void {
+    const id = this.gameId;
+    if (!this.own || !id) return;
+    this.confirm.ask('games.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.games.delete(id).subscribe({
+        next: () => void this.router.navigate(['/games']),
+        error: () => this.snackbar.warn(this.translate.instant('games.deleteError')),
+      });
+    });
   }
 
   /** Das PGN als Datei „Weiß_Schwarz_Datum.pgn". */

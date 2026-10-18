@@ -255,14 +255,16 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                   <div class="y-axis"><span>{{ overlay.maxElo }}</span><span>{{ overlay.minElo }}</span></div>
                   <svg [attr.viewBox]="'0 0 ' + overlay.w + ' ' + overlay.h" preserveAspectRatio="none" class="svg">
                     @for (l of overlay.lines; track l.level) {
-                      <path [attr.d]="l.path" fill="none" [attr.stroke]="l.color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+                      <path [attr.class]="'elo-line overlay-line lv' + l.level" [attr.d]="l.path" fill="none" [attr.stroke]="l.color" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
                     }
                   </svg>
                 </div>
                 <div class="x-axis"><span>{{ overlay.first }}</span><span>{{ overlay.last }}</span></div>
                 <div class="legend">
                   @for (l of overlay.lines; track l.level) {
-                    <span class="legend-item"><span class="legend-swatch" [style.background]="l.color"></span>{{ 'stats.vizLevel' | translate }} {{ l.level }}</span>
+                    <!-- d4-rk-eink-diagramm-farbe: Musterstrich wie die Kurve — im E-Ink-Modus unterscheiden sich die Stufen über
+                         die Strichart (schwarz), nicht über die Farbe. -->
+                    <span class="legend-item"><svg class="legend-swatch" viewBox="0 0 16 4" aria-hidden="true"><line [attr.class]="'overlay-line lv' + l.level" x1="0" y1="2" x2="16" y2="2" [attr.stroke]="l.color" stroke-width="3" /></svg>{{ 'stats.vizLevel' | translate }} {{ l.level }}</span>
                   }
                 </div>
               } @else {
@@ -474,8 +476,14 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .stat { text-align: center; padding: 8px; }
     .stat .val { font-size: 1.6rem; font-weight: 700; color: var(--rh-accent); }
     .stat .lbl { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .chart-card mat-card-header { display: flex; align-items: center; justify-content: space-between; }
+    /* d4-rk-stats-mobile-level-select-crowds-chart: Lücke zwischen Titel und Level-Feld, Abstand zur Diagrammfläche; am
+       Handy bricht das Feld unter den Titel (DESIGN 5.1). */
+    .chart-card mat-card-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 8px 12px; padding-bottom: 12px; }
     .level-field { width: 130px; }
+    @media (max-width: 599.98px) {
+      .chart-card .level-field { width: 100%; }
+    }
     .level-hint { font-size: .85rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 0; }
     .level-link { background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-decoration: underline;
       color: var(--mat-sys-primary, #1976d2); }
@@ -485,7 +493,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .x-axis { display: flex; justify-content: space-between; font-size: .7rem; color: color-mix(in srgb, currentColor 47%, transparent); margin-top: 2px; }
     .legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 8px; }
     .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
-    .legend-swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .legend-swatch { width: 16px; height: 4px; display: inline-block; overflow: visible; }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; }
     .perlevel { display: flex; flex-wrap: wrap; gap: 12px; }
     .pl { display: flex; flex-direction: column; align-items: center; padding: 6px 12px; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 6px; }
@@ -567,6 +575,19 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     :host-context(html.eink) .hm-cell.lvl4 { background: #000; }
     :host-context(html.eink) .svg { background: #fff; outline: 2px solid #000; }
     :host-context(html.eink) .elo-line { stroke: #000; stroke-width: 2.5px; }
+    /* d4-rk-eink-diagramm-farbe: auch die Überlagerung „Level: Alle“ schwarz — die Stufen über die Strichart (Legende
+       zeigt dasselbe Muster); Balken als Graustufe auf weißer, umrandeter Bahn, „schwach“ zusätzlich schraffiert
+       (Bedeutung nicht nur über die Farbe, 3.6). */
+    :host-context(html.eink) .overlay-line { stroke: #000; }
+    :host-context(html.eink) .overlay-line.lv1 { stroke-dasharray: 8 4; }
+    :host-context(html.eink) .overlay-line.lv2 { stroke-dasharray: 2 3; }
+    :host-context(html.eink) .overlay-line.lv3 { stroke-dasharray: 10 3 2 3; }
+    :host-context(html.eink) .overlay-line.lv4 { stroke-dasharray: 4 6; }
+    :host-context(html.eink) .theme-bar,
+    :host-context(html.eink) .band-bar { background: #fff; outline: 1px solid #000; }
+    :host-context(html.eink) .theme-fill,
+    :host-context(html.eink) .band-fill { background: #333; }
+    :host-context(html.eink) .theme-fill.warn { background: repeating-linear-gradient(45deg, #000 0 3px, #fff 3px 6px); }
     /* UI-Sweep z3 (z3-rk-stats-heatmap-gross): am großen Bildschirm wachsen die Zellen mit (53 × 21 px ≈ 1110 px),
        sonst stand das Raster in der linken Hälfte der Karte. */
     @media (min-width: 1280px) {

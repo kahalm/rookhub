@@ -45,16 +45,16 @@ const STOCKFISH_DEPTH = 12;
         <div class="top-text">
           <h1 [title]="plan()?.name ?? ''">{{ plan()?.name ?? ('woodpecker.title' | translate) }}</h1>
           @if (plan(); as p) {
-            <div class="meta">
+            <div class="meta rh-dots">
               <span>{{ 'woodpecker.cycleOf' | translate: { n: p.currentCycle, max: p.maxCycles } }}</span>
               @if (p.currentCycle === 1) {
                 <!-- d3-rk-wp-loeser-im-satz-beschriftung: derselbe Wortlaut wie auf der Übersichtskarte („Satz: 0 Aufgaben von
                      287“) statt „0 im Satz“. -->
-                <span class="sep">{{ (p.setSize === 1 ? 'woodpecker.setGrowingOne' : 'woodpecker.setGrowing') | translate: { n: p.setSize, total: p.availableCount } }}</span>
+                <span>{{ (p.setSize === 1 ? 'woodpecker.setGrowingOne' : 'woodpecker.setGrowing') | translate: { n: p.setSize, total: p.availableCount } }}</span>
               } @else {
-                <span class="sep">{{ 'woodpecker.cycleProgress' | translate: { done: cycle()!.attempted, total: p.setSize } }}</span>
+                <span>{{ 'woodpecker.cycleProgress' | translate: { done: cycle()!.attempted, total: p.setSize } }}</span>
               }
-              <span class="sep">{{ (left() === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft') | translate: { days: left() } }}</span>
+              <span>{{ (left() === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft') | translate: { days: left() } }}</span>
             </div>
           }
         </div>
@@ -146,9 +146,12 @@ const STOCKFISH_DEPTH = 12;
     .page { max-width: var(--page-max-width); margin: 0 auto; padding: 8px 16px 16px; box-sizing: border-box; }
     .top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .top-text { flex: 1 1 auto; min-width: 0; }
-    .top h1 { margin: 0; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
-    .sep::before { content: '· '; }
+    /* d4-rk-woodpecker-solve-titel-abgeschnitten: der Seitenkopf bricht um (DESIGN 5.1), einzeilig mit „…" nur in
+       Listenkarten (5.2). Trenner „·" über das geteilte .rh-dots (styles.scss, 5.13): nie am Zeilenanfang. */
+    .top h1 { margin: 0; font-size: 1.2rem; overflow-wrap: anywhere; text-wrap: balance; }
+    .meta { row-gap: 2px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    .meta > span { white-space: nowrap; }
+    @media (max-width: 599.98px) { .top h1 { font-size: 1.05rem; } }
     mat-progress-bar { margin-bottom: 12px; }
     .solver { display: grid; grid-template-columns: 1fr; gap: 16px; }
     .board-section { width: min(100%, calc(100vh - 180px)); margin: 0 auto; }

@@ -153,3 +153,48 @@ describe('BookPuzzleComponent Kurs-Kommentar ab 2400 px (b1)', () => {
     expect(s.slice(0, at)).not.toContain('68ch');
   });
 });
+
+// d4-rk-tipp-zaehler-beschriftung: die Klammer im Tipp-Knopf nennt die Stufe, die der Klick aufdeckt — vorher stand
+// „Nächster Tipp (1/3)“, während Tipp 1 schon zu sehen war.
+describe('BookPuzzleComponent Tipp-Knopf zählt den nächsten Tipp (d4)', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+  afterEach(() => TestBed.resetTestingModule());
+
+  const tip = (el: Element) => el.querySelector('.board-hint-tip')!.textContent!.replace(/\s+/g, ' ');
+
+  const withHints = (level: number) => (c: any) => {
+    c.state = 'AWAITING_USER_MOVE';
+    c.hintLevel = level;
+    Object.defineProperty(c, 'availableHints', { get: () => ['a', 'b', 'c'] });
+  };
+
+  it('vor dem ersten Klick „(1/3)“', () => {
+    expect(tip(render(withHints(0)))).toContain('(1/3)');
+  });
+
+  it('nach einem gezeigten Tipp „book.hints.next (2/3)“', () => {
+    const t = tip(render(withHints(1)));
+    expect(t).toContain('book.hints.next');
+    expect(t).toContain('(2/3)');
+  });
+});
+
+// d4-rk-daily-puzzle-ohne-tagesbezug: Chip „Tagespuzzle“ + Datum wie der Wochenpost-Chip.
+describe('BookPuzzleComponent Kontext-Card: Tagespuzzle nennt sich und den Tag (d4)', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('isDaily: Chip „book.dailyChip“ und das Datum des Tages', () => {
+    const el = render(c => { c.dailyDate = '20260714'; c.state = 'AWAITING_USER_MOVE'; });
+    const row = el.querySelector('.context-card .daily-chip-row');
+    expect(row).not.toBeNull();
+    expect(row!.querySelector('.weekly-chip')!.textContent!.trim()).toBe('book.dailyChip');
+    expect(row!.querySelector('.daily-date')!.textContent).toContain('2026');
+    expect(row!.querySelector('.daily-date')!.textContent).toContain('14');
+  });
+
+  it('Buch-Puzzle ohne Datum: kein Tagespuzzle-Chip', () => {
+    const el = render(c => { c.state = 'AWAITING_USER_MOVE'; });
+    expect(el.querySelector('.daily-chip-row')).toBeNull();
+  });
+});

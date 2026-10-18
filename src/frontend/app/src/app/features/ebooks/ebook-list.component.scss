@@ -116,7 +116,10 @@
 @media (max-width: 599.98px) {
   .eb-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .eb-upload-text { display: none; }
-  .eb-upload { min-width: 44px; padding: 0 10px; }
+  /* d4-rk-ebooks-upload-knopf-aussermittig: runder 44-px-Symbolknopf, Symbol mittig (Material lässt ihm sonst den
+     Abstand zur — hier ausgeblendeten — Beschriftung). */
+  .eb-upload { min-width: 44px; width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+  .eb-upload mat-icon { margin: 0; }
   /* Handy (DESIGN 4.6 Nr. 7): Suche + „Filter ▾“ in einer Zeile, der Rest zugeklappt; aktive Filter als Chips. */
   .eb-search { flex: 1 1 0; min-width: 0; max-width: none; }
   .eb-chip.eb-filter-toggle { display: inline-flex; min-height: 44px; }
@@ -168,3 +171,10 @@
 }
 .eb-folder-title { border: 0; padding: 0; background: transparent; text-align: left; cursor: pointer; font: inherit; color: inherit; }
 .eb-card--folder { outline: 2px solid color-mix(in srgb, var(--rh-accent) 35%, transparent); }
+
+/* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): ohne Anmeldung begann das erste Buch bei 44 %
+   der Höhe — Seitenrand oben 8 px, Anmelde-Banner in 0,875 rem mit 8 px Abstand (drei statt vier Zeilen). */
+@media (max-width: 768px) and (max-height: 720px) {
+  .eb-page { padding-top: 0.5rem; }
+  .eb-anon { margin-bottom: 8px; padding-block: 6px; font-size: 0.875rem; line-height: 1.35; }
+}

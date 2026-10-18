@@ -25,6 +25,9 @@ html {
   --rh-success: #1b5e20;
   --rh-warn: #bf360c;
   --rh-info: #1565c0;
+  // d4-rk-progress-bulb-light-red: „mit Hilfe/Tipp" — Bernstein-Braun, hell klar weg vom Rot (--rh-warn #bf360c lag
+  // im Ton fast auf --rh-error); dunkel wie --rh-warn.
+  --rh-hint: #8a5300;
 }
 
 html.dark-theme {
@@ -33,4 +36,5 @@ html.dark-theme {
   --rh-success: #81c784;
   --rh-warn: #ffb74d;
   --rh-info: #90caf9;
+  --rh-hint: #ffb74d;
 }

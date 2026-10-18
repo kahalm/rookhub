@@ -318,6 +318,21 @@ describe('WorksheetDetailComponent Themen + Teilen als eine Zeile', () => {
     expect(el.querySelector('app-qr-code')).not.toBeNull();
   });
 
+  // 0.808.x · Boox 200 % Falz: im niedrigen Fenster stehen Drucken und Link kopieren nur als Symbol — der Name muss
+  // deshalb im aria-label/title bleiben, die Beschriftung in einem eigenen Span (den die Abfrage ausblendet).
+  it('Drucken und Link kopieren tragen ihren Namen im aria-label, die Beschriftung im ausblendbaren Span', async () => {
+    const fixture = await render(sheet({ shareToken: 'Ux7f2K' }));
+    const el = fixture.nativeElement as HTMLElement;
+    for (const sel of ['.wd-print', '.wd-copy']) {
+      const b = el.querySelector(sel) as HTMLElement;
+      expect(b).withContext(sel).not.toBeNull();
+      expect(b.getAttribute('aria-label')).withContext(sel).toBeTruthy();
+      expect(b.getAttribute('title')).withContext(sel).toBe(b.getAttribute('aria-label'));
+      expect(b.querySelector('mat-icon')).withContext(sel).not.toBeNull();
+      expect(b.querySelector('.wd-btn-label')?.textContent?.trim()).withContext(sel).toBe(b.getAttribute('aria-label')!);
+    }
+  });
+
   it('ungeteilt: kein Kopieren, kein QR, keine Warnung', async () => {
     const fixture = await render(sheet());
     const el = fixture.nativeElement as HTMLElement;

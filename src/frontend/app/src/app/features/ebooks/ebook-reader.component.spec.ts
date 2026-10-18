@@ -697,12 +697,37 @@ describe('EbookReaderComponent', () => {
     const css = compactCss(EbookReaderComponent);
     const side = css.match(/\.rd-side(\[[^\]]*\])?\{([^}]*)\}/)![2];
     expect(side).toContain('white-space:normal');
-    expect(side).toContain('-webkit-line-clamp:2');
     expect(side).not.toContain('text-overflow:ellipsis');
     expect(side).not.toContain('nowrap');
-    // Brett als Vollbild (Handy): ohne Zeilengrenze.
-    const narrow = css.slice(css.indexOf('@media(max-width:899.98px)'));
-    expect(narrow).toMatch(/\.rd-side(\[[^\]]*\])?\{display:block;-webkit-line-clamp:unset/);
+  });
+
+  // d4-rk-brett-kopf-punkt-umbruch / d4-rk-ebook-brett-kopf-zeile-punkt-umbruch: am Handy begann die zweite Zeile mit
+  // „· Matt in 3“ (Text-Trenner vor der Bewertung). Jetzt eigene Teile im Muster `.rh-dots`: umgebrochen steht der Teil
+  // bündig am Rand, sein Punkt liegt außerhalb und wird abgeschnitten.
+  it('d4: Brett-Kopf ohne Text-Trenner; umgebrochen beginnt die zweite Zeile nicht mit „·“', async () => {
+    const fixture = await make(book({ diagramState: 'done', diagramCount: 3 }));
+    const c = fixture.componentInstance;
+    c.diagrams.update(l => l.map(d => d.id === 11 ? { ...d, engineEval: 350, solutionCheck: 'engine' as const } : d));
+    c.pick(11);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    const side = el.querySelector('.rd-panel-head .rd-side') as HTMLElement;
+    expect(side.classList).toContain('rh-dots');
+    const textNodes = Array.from(side.childNodes).filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent!.trim());
+    expect(textNodes.join('')).not.toContain('·');
+    const parts = Array.from(side.querySelectorAll(':scope > .rd-side-part')) as HTMLElement[];
+    expect(parts.length).toBe(2);
+    expect(parts[1].querySelector('.rd-sol-icon')).withContext('Symbol am letzten Teil').not.toBeNull();
+    expect(getComputedStyle(parts[1], '::before').content).toContain('·');
+    expect(getComputedStyle(parts[1], '::before').position).toBe('absolute');
+    // Schmal nachgestellt: der zweite Teil bricht um, steht bündig links → sein Punkt liegt außerhalb und wird geclippt.
+    side.style.width = '60px';
+    expect(getComputedStyle(side).overflowX).toBe('clip');
+    expect(parts[1].offsetTop).toBeGreaterThan(parts[0].offsetTop);
+    expect(Math.round(parts[1].getBoundingClientRect().left - side.getBoundingClientRect().left)).toBe(0);
+    el.remove();
+    fixture.destroy();
   });
 });
 

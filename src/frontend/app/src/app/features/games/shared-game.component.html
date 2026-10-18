@@ -100,8 +100,8 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #gameMenu="matMenu">
-              <!-- d3-rk-spielmenue-reihenfolge-uneinheitlich (DESIGN 5.5): Öffnen/Bearbeiten → Engine → Aktionen → Teilen/Export,
-                   in derselben Reihenfolge wie das ⋮ der Partienliste. -->
+              <!-- d3-rk-spielmenue-reihenfolge-uneinheitlich (DESIGN 5.5): Öffnen/Bearbeiten → Engine → Aktionen → Teilen/Export
+                   → Löschen, in derselben Reihenfolge wie das ⋮ der Partienliste. -->
               <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
                 <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
               </button>
@@ -176,6 +176,10 @@
                     <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
                   </button>
                 }
+                <!-- d4-rk-partie-menue-loeschen-fehlt-partieseite: Löschen zuletzt, rot — wie das Zeilen-⋮ der Partienliste. -->
+                <button mat-menu-item class="delete-item" (click)="remove()">
+                  <mat-icon>delete</mat-icon><span>{{ 'common.delete' | translate }}</span>
+                </button>
               }
             </mat-menu>
             <mat-menu #engineMenu="matMenu">

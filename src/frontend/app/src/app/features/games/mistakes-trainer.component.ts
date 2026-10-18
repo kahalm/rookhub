@@ -117,7 +117,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
           <button mat-stroked-button class="hint" (click)="session.showHint(hints(m).length)">
             <mat-icon>lightbulb</mat-icon>
             {{ (session.hintLevel() === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
-            ({{ session.hintLevel() }}/{{ hints(m).length }})
+            ({{ session.hintLevel() + 1 }}/{{ hints(m).length }})
           </button>
         }
         <!-- „Diesen Fehler nicht mehr zeigen" (0.748.0, Wunsch: „ich lerne nichts davon") — nur bei der eigenen Partie. -->

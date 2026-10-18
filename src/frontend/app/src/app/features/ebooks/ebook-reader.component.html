@@ -143,7 +143,14 @@
                   }
                 </span>
                 @if (picked(); as d) {
-                  <span class="rd-side">{{ sideKey(d) | translate }}@if (evalText(d); as ev) { · <span class="rd-eval" [title]="'ebooks.reader.evalTitle' | translate">{{ ev }}</span> }@if (solutionNoteKey(d); as note) {@if (d.solutionCheck !== 'doubtful') {<mat-icon class="rd-sol-icon" role="img" tabindex="0" [attr.aria-label]="note | translate" [matTooltip]="note | translate">{{ solutionNoteIcon(d) }}</mat-icon>}}</span>
+                  <!-- d4-rk-brett-kopf-punkt-umbruch / d4-rk-ebook-brett-kopf-zeile-punkt-umbruch: Angaben als eigene Teile mit dem
+                       gemeinsamen Trennpunkt-Muster `.rh-dots` (styles.scss, DESIGN 5.13) statt Text-„ · “ — bricht die Zeile um,
+                       fällt der Punkt weg, statt die zweite Zeile zu beginnen. Das Herkunftssymbol hängt am letzten Teil. -->
+                  <span class="rd-side rh-dots rh-dots--center">
+                    <span class="rd-side-part">{{ sideKey(d) | translate }}@if (!evalText(d)) {<ng-container *ngTemplateOutlet="solIcon; context: { $implicit: d }" />}</span>
+                    @if (evalText(d); as ev) {<span class="rd-side-part rd-eval" [title]="'ebooks.reader.evalTitle' | translate">{{ ev }}<ng-container *ngTemplateOutlet="solIcon; context: { $implicit: d }" /></span>}
+                  </span>
+                  <ng-template #solIcon let-d>@if (solutionNoteKey(d); as note) {@if (d.solutionCheck !== 'doubtful') {&#8288;<mat-icon class="rd-sol-icon" role="img" tabindex="0" [attr.aria-label]="note | translate" [matTooltip]="note | translate">{{ solutionNoteIcon(d) }}</mat-icon>}}</ng-template>
                 }
               </span>
               <button mat-icon-button (click)="step(1)" [appIconLabel]="'ebooks.reader.nextDiagram' | translate"><mat-icon>chevron_right</mat-icon></button>

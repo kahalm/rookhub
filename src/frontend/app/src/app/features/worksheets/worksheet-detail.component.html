@@ -23,9 +23,12 @@
 
     @if (sheet) {
       <span class="wd-count">{{ 'worksheets.count' | translate: { n: sheet.items.length } }}</span>
-      <a mat-flat-button color="primary" [routerLink]="['/worksheets', sheet.id, 'print']"
-         [queryParams]="{ print: 1 }" [class.wd-disabled]="sheet.items.length === 0">
-        <mat-icon>picture_as_pdf</mat-icon>{{ 'worksheets.print' | translate }}
+      <!-- Niedrige Fenster (Boox 200 %): nur das Symbol, damit Titel, Zähler und Knopf in EINER Zeile stehen; der Name
+           bleibt im aria-label/title (DESIGN 4.6 „Niedrige Fenster“). -->
+      <a mat-flat-button color="primary" class="wd-print" [routerLink]="['/worksheets', sheet.id, 'print']"
+         [queryParams]="{ print: 1 }" [class.wd-disabled]="sheet.items.length === 0"
+         [attr.aria-label]="'worksheets.print' | translate" [attr.title]="'worksheets.print' | translate">
+        <mat-icon>picture_as_pdf</mat-icon><span class="wd-btn-label">{{ 'worksheets.print' | translate }}</span>
       </a>
       <button mat-icon-button [matMenuTriggerFor]="sheetMenu"
               [attr.aria-label]="'common.moreActions' | translate">
@@ -110,8 +113,9 @@
             {{ 'worksheets.share.short' | translate }}
           </mat-slide-toggle>
           @if (sheet.shareToken) {
-            <button mat-stroked-button (click)="copyShareUrl()">
-              <mat-icon>content_copy</mat-icon>{{ 'worksheets.share.copy' | translate }}
+            <button mat-stroked-button class="wd-copy" (click)="copyShareUrl()"
+                    [attr.aria-label]="'worksheets.share.copy' | translate" [attr.title]="'worksheets.share.copy' | translate">
+              <mat-icon>content_copy</mat-icon><span class="wd-btn-label">{{ 'worksheets.share.copy' | translate }}</span>
             </button>
             <button mat-button class="wd-qr-toggle" (click)="qrOpen.set(!qrOpen())" [attr.aria-expanded]="qrOpen()">
               {{ 'worksheets.share.qr' | translate }}<mat-icon iconPositionEnd>{{ qrOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>

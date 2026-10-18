@@ -137,11 +137,7 @@
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
     .status-card { min-height: 80px; }
 
-    .board-hint {
-      margin-top: 0.5rem; padding: 0.35rem 0.5rem;
-      font-size: 0.88em; color: color-mix(in srgb, currentColor 60%, transparent);
-      display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
-    }
+    /* Hinweiszeile unter dem Brett: Grundregel `.board-hint` global in styles.scss (d4-rk-hint-chip-schriftgroesse-buchmodus). */
     .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
     .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
     .tomove-dot {
@@ -254,7 +250,7 @@
       display: flex; align-items: center; justify-content: center; gap: 0.4rem;
       margin-top: 0.5rem; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent);
     }
-    .depth-control mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .depth-label { white-space: nowrap; }
     .depth-control input[type="range"] { width: 100px; cursor: pointer; }
     .depth-value { font-weight: bold; min-width: 1.5em; text-align: center; }
     .puzzle-info { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
@@ -310,8 +306,9 @@
       .info-section { width: 100%; }
     }
 
+    /* d4-rk-endless-brett-breiter-als-puzzle: am Handy derselbe 1-rem-Seitenrand wie Standard- und Buch-Löser (das
+       Brett fluchtet mit der Kopfleiste); die Vollbild-Ausnahme bleibt. */
     @media (max-width: 768px) {
-      .endless-page { padding: 0.5rem; }
       .play-screen { flex-direction: column; }
       // .info-section explizit auf 100 % — der .play-screen-Container hat
       // align-items: flex-start, daher streckt flex-direction: column das

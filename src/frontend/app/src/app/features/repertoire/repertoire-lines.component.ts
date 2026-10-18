@@ -163,7 +163,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
                     } @else if (repertoireId != null && status(line) === 'new') {
                       <button type="button" class="sr-add" [disabled]="busy" (click)="promote([line.lineKey])"
                               [matTooltip]="'repertoire.lines.sr.addToPool' | translate"
-                              [attr.aria-label]="'repertoire.lines.sr.addToPool' | translate"><span class="sr-badge new">+</span></button>
+                              [attr.aria-label]="'repertoire.lines.sr.addToPool' | translate"><mat-icon aria-hidden="true">playlist_add</mat-icon><span class="sr-add-text">{{ 'repertoire.lines.sr.addShort' | translate }}</span></button>
                     } @else {
                       <span class="sr-badge" [ngClass]="status(line)"
                             [matTooltip]="badgeTooltip(line) | translate">{{ badge(line) }}</span>
@@ -243,11 +243,18 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .line-menu-btn { flex: 0 0 auto; margin: 4px 2px 0 0; }
     .line-players { font-weight: 500; font-size: 14px; overflow-wrap: anywhere; }
     .line-item > .sr-badge { margin: 0 4px; }
-    .sr-add { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px;
-      padding: 0; border: 0; background: none; color: inherit; cursor: pointer; border-radius: 50%; }
-    .sr-add:hover:not(:disabled) { background: color-mix(in srgb, currentColor 8%, transparent); }
+    /* d4-rk-line-add-plus-unlabeled: umrandete Pille mit Symbol + Wort („Üben“) statt eines „+“ im Stil der
+       Status-Abzeichen — als Knopf lesbar, nicht als Zustand; Trefferfläche 44 px (DESIGN 2 Nr. 5). */
+    .sr-add { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      min-width: 44px; min-height: 44px; margin: 0 2px; padding: 0 10px 0 8px; box-sizing: border-box;
+      background: none; color: var(--rh-accent); cursor: pointer;
+      font: inherit; font-size: 13px; font-weight: 500; white-space: nowrap;
+      border: 0; position: relative; }
+    .sr-add::before { content: ''; position: absolute; inset: 7px 0; border-radius: 999px;
+      border: 1px solid var(--mat-sys-outline); pointer-events: none; }
+    .sr-add mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .sr-add:hover:not(:disabled)::before { background: color-mix(in srgb, currentColor 8%, transparent); }
     .sr-add:disabled { cursor: default; opacity: .5; }
-    .sr-add .sr-badge { font-size: 14px; padding: 2px 9px; }
     .line-opening { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin-top: 2px; }
     .line-summary { font-family: 'Roboto Mono', monospace; font-size: 12px;
       color: color-mix(in srgb, currentColor 47%, transparent); margin-top: 4px;

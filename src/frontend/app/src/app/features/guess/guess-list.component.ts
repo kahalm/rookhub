@@ -448,6 +448,15 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
       .sec-head { flex-wrap: nowrap; }
       .sec-head .small-toggle { display: none; }
     }
+    /* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): die erste Partie begann bei 47 % der
+       Höhe — Abstände über, zwischen und in Kopf, Weiterspielen-Karte und Reitern 4 px statt 8–12 px. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .gl-container { margin-top: 4px; }
+      .header { margin-bottom: 6px; }
+      .run { margin-bottom: 4px; }
+      .lists ::ng-deep .mat-mdc-tab-body-content { padding-top: 0; }
+      .sec-head { margin-bottom: 0; }
+    }
     @media (min-width: 600px) {
       .annotated-option { display: none; }
     }

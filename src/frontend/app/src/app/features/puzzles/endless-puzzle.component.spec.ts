@@ -1346,3 +1346,42 @@ describe('EndlessPuzzleComponent b1 (Fortsetzen, Phase)', () => {
     expect(el.textContent).not.toContain('endless.game.phaseLabel');
   });
 });
+
+// Design-Runde d4 (Training, Endlos): Stufe nur einmal, kein Fähnchen, beschrifteter Tiefen-Regler.
+describe('EndlessPuzzleComponent d4 (Kennzahlen-Leiste, Tiefen-Regler)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
+
+  const running = (c: any) => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.lives = 3; c.level = 0; };
+
+  // d4-rk-endless-level-flagge-doppelt
+  it('Stufen-Pille ohne Fähnchen (gehört „Aufgeben“) und ohne englisches „Lv“', () => {
+    const el = renderEndless(running);
+    const icons = Array.from(el.querySelectorAll('.quick-stats mat-icon')).map(i => i.textContent!.trim());
+    expect(icons).not.toContain('flag');
+    expect(el.querySelector('.qs-level mat-icon')!.textContent!.trim()).toBe('stairs');
+    expect(el.querySelector('.quick-stats')!.textContent).not.toMatch(/\bLv\b/);
+  });
+
+  // d4-rk-endless-level-doppelt ([d3 nicht behoben]: 0.807.0 baute nur die Statistik-Kachel ab, die Aktionszeile
+  // wiederholte die Stufe über levelText)
+  it('Stufe samt Wertungsfenster steht genau einmal — in der Pille, nicht noch in der Aktionszeile', () => {
+    const el = renderEndless(running);
+    expect(el.querySelector('.qs-level')!.textContent).toContain('endless.game.levelRange');
+    const bar = el.querySelector('app-puzzle-action-bar') as any;
+    expect(bar).not.toBeNull();
+    expect(bar.levelText ?? '').toBe('');
+    expect(el.textContent!.split('endless.game.levelRange').length - 1).toBe(1);
+  });
+
+  // d4-rk-endless-regler-ohne-beschriftung
+  it('der Tiefen-Regler hat den sichtbaren Namen „Stockfish-Tiefe“ (Label umschließt das Feld)', () => {
+    const el = renderEndless(running);
+    const input = el.querySelector('.stats-card input[type="range"]') as HTMLInputElement;
+    const label = input.closest('label')!;
+    expect(label).not.toBeNull();
+    expect(label.classList).toContain('depth-control');
+    expect(label.querySelector('.depth-label')!.textContent!.trim()).toBe('endless.config.stockfishDepth');
+    expect(label.getAttribute('title')).toBe('endless.config.stockfishDepthHint');
+    expect(label.querySelector('mat-icon')).toBeNull();
+  });
+});

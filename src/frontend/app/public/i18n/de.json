@@ -62,7 +62,9 @@
     "opponentDone": "Alle {{n}} Linien gegen diesen Gegner durch.",
     "opponentAgain": "Von vorn",
     "opponentBack": "Zurück zur Spielerkarte",
-    "freqLineTip": "Wie oft du diese Linie in echten Partien erreichst (Lichess-Explorer, Auswahl wie im Lochfinder)"
+    "freqLineTip": "Wie oft du diese Linie in echten Partien erreichst (Lichess-Explorer, Auswahl wie im Lochfinder)",
+    "whiteToMoveLearn": "Weiß am Zug — das ist dein Repertoirezug.",
+    "blackToMoveLearn": "Schwarz am Zug — das ist dein Repertoirezug."
   },
   "srConfig": {
     "title": "Übungszyklen",
@@ -844,6 +846,7 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
+      "link": "Datenschutzerklärung",
       "updated": "Stand: 1. Oktober 2026",
       "tocTitle": "Inhalt",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
@@ -1130,7 +1133,8 @@
           "due": "Jetzt fällig",
           "scheduled": "Im Pool — geplant",
           "paused": "Pausiert"
-        }
+        },
+        "addShort": "Üben"
       }
     },
     "tree": {
@@ -1483,7 +1487,8 @@
         "queen": "die Dame",
         "king": "der König",
         "piece": "die Figur"
-      }
+      },
+      "shownOf": "{{n}} von {{total}} Tipps gezeigt"
     },
     "viz": {
       "countdown": "Figuren verschwinden in {{seconds}}s…",
@@ -2329,7 +2334,8 @@
     "commentDialog": {
       "open": "Im Fenster lesen",
       "moveHint": "Ein Zug im Text schließt das Fenster und zeigt die Variante am Brett."
-    }
+    },
+    "dailyChip": "Tagespuzzle"
   },
   "admin": {
     "title": "Admin",
@@ -2823,6 +2829,7 @@
     "analyze": "Partie analysieren",
     "analyzeHint": "Partie im Hintergrund rechnen lassen — danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen.",
     "analyzeNoEngine": "Gerade steht keine Engine bereit — versuch es später noch einmal.",
+    "listNoEngine": "Die Genauigkeit lässt sich gerade nicht berechnen — keine Engine frei.",
     "analyzeLogin": "Zum Analysieren bitte anmelden.",
     "loadError": "Partie konnte nicht geladen werden.",
     "notFound": "Diese Partie gibt es nicht oder nicht mehr.",
@@ -3604,7 +3611,7 @@
         "t": "Analyse",
         "p": [
           "Die Analyse läuft standardmäßig in deinem Browser über Stockfish (WebAssembly) – auch offline. Du erhältst mehrere Hauptvarianten (MultiPV), Bewertungen zu jeder Stellung und einen Eröffnungs-Explorer. Die Analyse ist ohne Login nutzbar; beim ersten Start lädt die Browser-Engine einmalig rund 7 MB.",
-          "Angemeldet kannst du im Profil unter „Externe Engine“ eine stärkere Engine anbinden (z. B. eine in deinem Lichess-Konto registrierte) und zwei Engines vergleichen. Mit „Im Hintergrund analysieren“ (Uhr-Symbol) merkst du eine Stellung für die Hintergrund-Engine vor; die Ergebnisse stehen unter „Analyse-Aufträge“."
+          "Angemeldet kannst du im Profil unter „Externe Engine“ eine stärkere Engine anbinden (z. B. eine in deinem Lichess-Konto registrierte) und zwei Engines vergleichen. Mit „Im Hintergrund analysieren“ (im ⋮ der Stellung) merkst du eine Stellung für die Hintergrund-Engine vor; die Ergebnisse stehen unter „Analyse-Aufträge“."
         ]
       },
       "repertoires": {
@@ -3878,7 +3885,7 @@
     "intro": "Stellungen, die die Hintergrund-Engine für dich durchrechnet.",
     "introMore": "Ein Auftrag nach dem anderen; pausiert, solange du live extern analysierst. Aufklappen zeigt die gespeicherten Linien.",
     "empty": "Noch keine Aufträge.",
-    "emptyHint": "Im Analysebrett über das Uhr-Symbol „Im Hintergrund analysieren“ eine Stellung vormerken.",
+    "emptyHint": "Im Analysebrett im ⋮ neben der Stellung „Im Hintergrund analysieren“ wählen.",
     "untitled": "Ohne Titel",
     "status": {
       "queued": "wartet",
@@ -5333,7 +5340,7 @@
         "solve": "Die Lösung ziehen: gespeichert (Buch oder Engine) oder Stockfish jetzt",
         "maia": "Die Stellung gegen Maia ausspielen"
       },
-      "calcHint": "Spiel Varianten auf dem Brett – sie werden als Linien notiert (auf diesem Gerät gemerkt). Eine Linie im Analysebrett prüfen oder die Engine zuschalten.",
+      "calcHint": "Zieh Varianten – sie werden als Linien notiert.",
       "calcSaveFailed": "Varianten ließen sich auf diesem Gerät nicht speichern.",
       "afterSolve": "Nach dem Lösen",
       "autoNext": "Automatisch zum nächsten Diagramm",
@@ -5363,7 +5370,8 @@
       "correctTitle": "Stellung korrigieren",
       "correctHint": "Figuren setzen, verschieben oder entfernen und die Seite am Zug wählen. Die Korrektur wird gespeichert und hilft, die Diagramm-Erkennung zu verbessern.",
       "correctSaved": "Stellung korrigiert.",
-      "correctFailed": "Die Stellung konnte nicht gespeichert werden."
+      "correctFailed": "Die Stellung konnte nicht gespeichert werden.",
+      "calcHelp": "Die Linien bleiben auf diesem Gerät gespeichert. Eine Linie kannst du im Analysebrett prüfen oder die Engine zuschalten."
     },
     "title": "E-Books",
     "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",

@@ -153,7 +153,7 @@ export function loginRetryAfterSeconds(err: any): number {
       <!-- Nur, wo keine Fusszeile dieselben Links zeigt: am PC steht sie bei RookHub darunter, auf der Turnierseite
            immer; am Handy ist RookHubs Fusszeile aus, KidHub/LeagueHub/ClubHub haben keine (UI-Review login-legal). -->
       <div class="legal-links" [class.footer-wide]="footer() === 'wide'" [class.footer-always]="footer() === 'always'">
-        <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+        <a routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</a>
         @if (legal.imprint) {
           <span>·</span>
           <a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>

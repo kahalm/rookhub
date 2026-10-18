@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
@@ -113,6 +115,34 @@ describe('SharedGameComponent (Design-Runde d3)', () => {
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();
     const items = Array.from(overlay.querySelectorAll('.mat-mdc-menu-panel .mat-mdc-menu-item-text')).map(x => x.textContent!.trim());
     expect(items).toEqual(['games.openInAnalysis', 'games.openOriginal', 'games.edit.menu', 'games.live.engineMenu',
-      'games.roast.menu', 'games.share', 'games.pgnCopy', 'common.downloadPgn']);
+      'games.roast.menu', 'games.share', 'games.pgnCopy', 'common.downloadPgn', 'common.delete']);
+  });
+
+  // d4-rk-partie-menue-loeschen-fehlt-partieseite: „Löschen“ auch im ⋮ der Partieseite (rot, zuletzt) — Rückfrage, danach
+  // zurück zur Liste.
+  it('d4: deletes the own game from its page after confirming and returns to the list', async () => {
+    const { fixture, http } = await setup(true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush(game());
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    flushEvals(http, '/api/games/4/evals');
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.componentInstance.remove();
+    expect(ask).toHaveBeenCalledWith('games.deleteConfirm');
+    http.expectOne(r => r.method === 'DELETE' && r.url === '/api/games/4').flush(null);
+    expect(nav).toHaveBeenCalledWith(['/games']);
+  });
+
+  // d4-rk-engine-hinweis-jargon: ohne Engine nannte der Tooltip „eingeworfene Partien“ (Punktepartie-Text).
+  it('d4: without an engine the analyse tooltip uses the game page reason, not the point-game text', async () => {
+    const { fixture, http } = await setup(true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush(game());
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: false, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    flushEvals(http, '/api/games/4/evals');
+    expect(fixture.componentInstance.analyzeTooltip()).toBe('games.analyzeNoEngine');
   });
 });

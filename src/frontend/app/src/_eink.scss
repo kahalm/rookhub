@@ -47,6 +47,8 @@ html.eink {
   --rh-success: #0f4a13;
   --rh-warn: #7a2300;
   --rh-info: #0d3f80;
+  // „mit Hilfe": dunkles Grau — die Bedeutung trägt das Symbol (Glühbirne), nicht der Farbton.
+  --rh-hint: #4d4d4d;
   --eink-line: 2px;
 }
 
@@ -111,6 +113,17 @@ html.eink [aria-current='page'],
 html.eink [aria-selected='true'] {
   box-shadow: inset 0 0 0 3px #000;
   font-weight: 700;
+}
+// d4-rk-segment-innenrahmen-abgeschnitten: die Gruppe ist eine Pille mit overflow hidden, die einzelnen Segmente sind
+// eckig — der Innenrahmen des gewählten End-Segments wurde in der Rundung abgeschnitten. Die End-Segmente übernehmen die
+// Rundung der Gruppe, der Innenrahmen folgt ihr.
+html.eink .mat-button-toggle-group:not(.mat-button-toggle-vertical) > .mat-button-toggle:first-child {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+html.eink .mat-button-toggle-group:not(.mat-button-toggle-vertical) > .mat-button-toggle:last-child {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
 }
 html.eink .mat-mdc-outlined-button:not(:disabled),
 html.eink .mat-button-toggle-group,

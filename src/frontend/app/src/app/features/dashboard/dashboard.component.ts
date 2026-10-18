@@ -371,7 +371,8 @@ export class DashboardComponent implements OnInit {
       ],
     },
     trainingGoals: {
-      id: 'trainingGoals', icon: 'track_changes', titleKey: 'dashboard.trainingGoals.title',
+      // d4-rk-dashboard-gleiches-symbol-punktepartie-trainingsziele: eigenes Symbol — `track_changes` (🎯) trägt die Punktepartie.
+      id: 'trainingGoals', icon: 'checklist', titleKey: 'dashboard.trainingGoals.title',
       eligible: () => this.menuKeys.has('training-goals'),
       subtitle: () => ({ key: 'dashboard.trainingGoals.subtitle' }),
       buttons: [{ labelKey: 'dashboard.trainingGoals.open', link: '/training-goals' }],

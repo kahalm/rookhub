@@ -69,7 +69,7 @@ import { FooterPresenceService } from './footer-presence';
           }
           @if (privacyRoute) {
             <span class="footer-sep">·</span>
-            <a class="feedback-link legal-link" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+            <a class="feedback-link legal-link" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</a>
           }
         </span>
       }

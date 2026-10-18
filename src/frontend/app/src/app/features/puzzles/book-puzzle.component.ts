@@ -723,6 +723,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   // ===== Tagespuzzle-Navigation (Datum statt Buch) =====
   get isDaily(): boolean { return this.dailyDate != null; }
+  /** Tag des Tagespuzzles als Datum (UTC-Mitternacht) für die DatePipe; `dailyDate` ist „YYYYMMDD“. */
+  get dailyDateValue(): Date | null {
+    const m = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(this.dailyDate ?? '');
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+  }
   /** „Vor" nur erlaubt, solange das angezeigte Datum vor heute (UTC) liegt — keine Zukunft. */
   get canGoForwardDaily(): boolean { return !!this.dailyDate && this.dailyDate < this.todayUtc(); }
 

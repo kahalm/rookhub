@@ -9,7 +9,7 @@ import { parseColor } from '../testing/contrast';
  * (Browser-Leinwand), Karte und Dialog. Genau daran scheiterten die festen Hex-Werte im
  * Standard-Dunkelmodus (#c62828 ≈ 3:1, #1976d2 ≈ 3,6:1 auf #1e1e1e).
  */
-const TOKENS = ['--rh-error', '--rh-success', '--rh-warn', '--rh-info', '--rh-accent'] as const;
+const TOKENS = ['--rh-error', '--rh-success', '--rh-warn', '--rh-info', '--rh-accent', '--rh-hint'] as const;
 
 /** Leinwand + die Material-Flaechen, auf denen Text steht (Seite, Karte, Dialog; ohne -highest). */
 const LIGHT_SURFACES = ['#ffffff', 'var(--mat-sys-surface)', 'var(--mat-sys-surface-container-low)',
@@ -105,6 +105,21 @@ describe('Design-Tokens (_tokens.scss)', () => {
       expect(a).withContext(`body-Hintergrund deckt nicht (${dark ? 'dunkel' : 'hell'})`).toBe(1);
       expect([r, g, b]).toEqual(resolve('var(--mat-sys-surface)')!);
     }
+  });
+
+  // d4-rk-progress-bulb-light-red: „mit Tipp" (Glühbirne) steht im Kursfortschritt direkt neben „aufgegeben" (✗).
+  // --rh-warn lag hell im Ton fast auf --rh-error; --rh-hint muss sich im Farbton klar abheben.
+  it('--rh-hint liegt hell im Farbton deutlich weg vom Fehler-Rot (≥ 25°)', () => {
+    setDark(false);
+    const hue = ([r, g, b]: Rgb): number => {
+      const [R, G, B] = [r / 255, g / 255, b / 255];
+      const max = Math.max(R, G, B), min = Math.min(R, G, B), d = max - min;
+      if (!d) return 0;
+      const h = max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+      return (h * 60 + 360) % 360;
+    };
+    const diff = Math.abs(hue(token('--rh-hint')!) - hue(token('--rh-error')!));
+    expect(Math.min(diff, 360 - diff)).toBeGreaterThanOrEqual(25);
   });
 
   it('jeder Token wechselt mit dem Dunkelmodus', () => {

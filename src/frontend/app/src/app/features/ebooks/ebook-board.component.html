@@ -93,7 +93,8 @@
     </div>
   }
   @case ('calc') {
-    <p class="eb-note">{{ 'ebooks.board.calcHint' | translate }}</p>
+    <!-- d4-rk-kalk-hilfetext-lang: ein Satz sichtbar, der Rest hinter ? (DESIGN 2 Nr. 2). -->
+    <p class="eb-note">{{ 'ebooks.board.calcHint' | translate }} <app-help-hint [text]="'ebooks.board.calcHelp' | translate" /></p>
     @if (calcTree) {
       <app-calc-lines [tree]="calcTree" [cursorId]="calcCursor()" [startFen]="diagram.fen" [revision]="calcRevision()"
                       (selectNode)="calcSelect($event)" (newLine)="calcNewLine()" (deleteLine)="calcDelete($event)"

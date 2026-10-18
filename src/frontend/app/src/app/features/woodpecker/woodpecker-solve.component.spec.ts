@@ -68,6 +68,32 @@ describe('WoodpeckerSolveComponent', () => {
     expect(meta).not.toContain('woodpecker.inSet');
   });
 
+  it('d4-rk-woodpecker-solve-titel-abgeschnitten: Handy-Kopf bricht um statt „…“, kein Meta-Eintrag beginnt mit „·“', () => {
+    const { fixture, el } = render({ puzzle, plan: plan({ name: '100 Endspiele, die Sie kennen müssen — Band zwei' }) });
+    el.style.display = 'block';
+    el.style.width = '390px';
+    document.body.appendChild(el);
+    fixture.detectChanges();
+    try {
+      const h1 = el.querySelector('.top h1') as HTMLElement;
+      const hs = getComputedStyle(h1);
+      expect(hs.textOverflow).not.toBe('ellipsis');
+      expect(hs.whiteSpace).toBe('normal');
+      expect(h1.scrollWidth).toBeLessThanOrEqual(h1.clientWidth + 1);
+      const meta = el.querySelector('.meta') as HTMLElement;
+      expect(getComputedStyle(meta).overflowX).toBe('clip');
+      // Der Trenner nimmt keinen Platz in der Zeile: absolut vor dem Eintrag, am Zeilenanfang abgeschnitten.
+      const parts = Array.from(meta.children) as HTMLElement[];
+      expect(parts.length).toBe(3);
+      for (const part of parts.slice(1)) {
+        expect(getComputedStyle(part, '::before').position).toBe('absolute');
+        expect(part.textContent!.trim().startsWith('·')).toBeFalse();
+      }
+    } finally {
+      el.remove();
+    }
+  });
+
   it('Aufgeben meldet genau einen Fehlversuch, Wiederholen keinen weiteren', () => {
     const { c } = render({ puzzle, plan: plan() });
     c.giveUp();

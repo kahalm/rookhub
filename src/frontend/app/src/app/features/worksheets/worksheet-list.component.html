@@ -2,8 +2,7 @@
   <div class="wl-head">
     <h1><mat-icon>assignment</mat-icon> {{ 'worksheets.title' | translate }}</h1>
     <!-- Ein Satz, der Rest hinter dem ⓘ (d2-rk-ws-list-clip). -->
-    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}
-      <app-help-hint [text]="'worksheets.list.hintMore' | translate" /></p>
+    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}&nbsp;<app-help-hint [text]="'worksheets.list.hintMore' | translate" /></p>
   </div>
 
   @if (loading) {
@@ -98,7 +97,7 @@
               </span>
               <!-- b1-rk-aufgabenblaetter-datum-umbruch: jede Angabe eine ungeteilte Einheit, „ · “ als ::before (DESIGN 5.13) —
                    sonst brach am Handy das Datum mitten im Wert um („Oct 11,“ / „2026“). -->
-              <span class="wl-sub">
+              <span class="wl-sub rh-dots">
                 <span class="wl-part">{{ 'worksheets.count' | translate: { n: sheet.itemCount } }}</span>
                 <span class="wl-part">{{ 'worksheets.perPage.short' | translate: { n: sheet.perPage } }}</span>
                 <span class="wl-part">{{ sheet.updatedAt | date:'mediumDate' }}</span>

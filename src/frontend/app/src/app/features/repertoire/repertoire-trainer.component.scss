@@ -14,7 +14,12 @@
     /* d3-rk-trainer-leer-zwei-aktionen: Repertoirename als Titel (einzeilig mit „…“), „Repertoire-Trainer“ leise. */
     .bar .title { min-width: 0; }
     .rep-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .title-kind { flex: none; font-weight: 400; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    /* d4-rk-trainer-titel-handy-gekuerzt / d4-rk-trainer-title-truncated-mobile: der Name ist die Hauptsache (DESIGN 8.1)
+       — der leise Zusatz schrumpft zuerst (flex-shrink 1000), unter 900 px steht nur der Name (Zusatz bleibt für
+       Bildschirmleser, visuell versteckt). */
+    .rep-name { flex: 0 1 auto; }
+    .title-kind { flex: 0 1000 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-weight: 400; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .freq-toggle mat-icon { margin-right: 4px; }
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
@@ -48,6 +53,9 @@
     @media (max-width: 899.98px) {
       app-puzzle-board { flex-basis: 100%; max-width: min(100%, calc(100vh - 540px)); margin: 0 auto; }
       .side { max-width: none; }
+      /* d4-rk-trainer-titel-handy-gekuerzt: unter 900 px nur der Name — „Repertoire-Trainer“ visuell versteckt. */
+      .title-kind { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+        clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
     }
     /* b1-rk-trainer-brett-handy-schmal: der Höhenabzug oben gilt nur fürs Tablet hochkant — am Handy
      * (390 × 844 → 304 px) war das Brett schmaler als die Seite; hier volle Inhaltsbreite. */

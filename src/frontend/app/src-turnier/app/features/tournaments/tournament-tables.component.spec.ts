@@ -555,9 +555,36 @@ describe('TournamentTablesComponent', () => {
     expect(Math.abs((s.top + s.bottom) / 2 - (r.top + r.bottom) / 2)).toBeLessThanOrEqual(2);
   });
 
+  // d4-t-teams-tabelle-spalten-gestreckt: ohne Punkte-Spalte wurde die Rangspalte bei 1920 px ≈ 220 px breit.
+  it('Teams-Tabelle breit: Rangspalte höchstens 80 px, der Name nimmt den Rest', async () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '1920px';
+    // echte Kopfbeschriftung statt Schlüssel (der Schlüssel allein wäre einzeilig ≈ 170 px breit)
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('en', { tournaments: { teams: { rank: 'Rank', team: 'Team', points: 'Pts' } } }, true);
+    t.use('en');
+    component.teams = component.displayedTeams = [team(), team({ id: 2, snr: 2, name: 'ŠK Modra' })];
+    component.selectedTabIndex = 1;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const w = (sel: string) => host.querySelector<HTMLElement>(`.teams-table ${sel}`)!.getBoundingClientRect().width;
+    expect(w('th.mat-column-rank')).toBeLessThanOrEqual(80);
+    expect(w('th.mat-column-name')).toBeGreaterThan(1600);
+  });
+
   // d3-t-kalender-vorlauf-zu-hoch: im niedrigen Fenster (Boox 200 %) Suchzeile kompakt wie am Laptop.
-  it('niedriges Fenster: Suchfeld 40 px, 8 px über der Suche', () => {
-    expect(tablesCss()).toMatch(/@media \(max-width: 768px\) and \(max-height: 720px\) \{ ?\.player-tools[^{]*\{ ?padding-top: 0\.5rem; ?\} ?\.player-search[^{]*\{ ?--mat-form-field-container-height: 40px/);
+  // 0.808.x · Boox 200 % Falz: 4 statt 8 px über der Suche, Sortierknopf so hoch wie das Feld, Liste 4 px darunter.
+  it('niedriges Fenster: Suchfeld und Sortierknopf 40 px, 4 px über der Suche, Liste 4 px darunter', () => {
+    const css = tablesCss();
+    expect(css).toMatch(/@media \(max-width: 768px\) and \(max-height: 720px\) \{ ?\.player-tools[^{]*\{ ?padding-top: 0\.25rem; ?\} ?\.player-search[^{]*\{ ?--mat-form-field-container-height: 40px/);
+    expect(css).toMatch(/max-height: 720px\) \{[^@]*\.player-menu-btn[^{]*\{ ?height: 40px; ?\}/);
+    // Nach der Grundregel `.player-cards { padding: 0.5rem 0 }` — sonst gewänne die.
+    const base = css.indexOf('.player-cards[_ngcontent');
+    const low = css.lastIndexOf('.player-cards[_ngcontent');
+    expect(low).toBeGreaterThan(base);
+    expect(css.slice(low)).toMatch(/^\.player-cards[^{]*\{ ?padding-top: 0\.25rem; ?\}/);
   });
 
   it('blendet die Spalte „Punkte" aus, solange kein Team Punkte hat (b1-t-teams-punkte-leer)', () => {

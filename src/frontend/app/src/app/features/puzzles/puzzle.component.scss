@@ -75,11 +75,7 @@
     .theme-chip.active { border-color: var(--rh-accent); }
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
 
-    .board-hint {
-      margin-top: 0.5rem; padding: 0.35rem 0.5rem;
-      font-size: 1em; color: color-mix(in srgb, currentColor 60%, transparent);
-      display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
-    }
+    /* Hinweiszeile unter dem Brett: Grundregel `.board-hint` global in styles.scss (d4-rk-hint-chip-schriftgroesse-buchmodus). */
     .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
     .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
     .tomove-dot {

@@ -277,4 +277,18 @@ describe('AccountDeletionComponent', () => {
       expect(en.profile.delete.warn).toContain('KidHub');
     });
   });
+
+  // d4-rk-konto-loeschen-textlinks-klein: der Rücklink hatte ohne Polster nur eine Zeilenhöhe (~24 px) Trefferfläche.
+  it('d4: Rücklink „← Zurück …“ mindestens 44 px hoch (gemeinsame Regel der Rechtsseiten)', () => {
+    TestBed.configureTestingModule({ imports: [AccountDeletionComponent], providers: base() });
+    const f = TestBed.createComponent(AccountDeletionComponent);
+    document.body.appendChild(f.nativeElement);
+    try {
+      f.detectChanges();
+      const a = (f.nativeElement as HTMLElement).querySelector('.back a') as HTMLElement;
+      expect(a.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    } finally {
+      (f.nativeElement as HTMLElement).remove();
+    }
+  });
 });

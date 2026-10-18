@@ -23,6 +23,7 @@ import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
 import { MAIA_DEFAULT_ELO, MAIA_ELO_OPTIONS } from '../analysis/maia/maia-model';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { EbookDiagram } from './ebook.service';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /** Was das Brett gerade tut (0.777.0). */
 export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia';
@@ -50,7 +51,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
   selector: 'app-ebook-board',
   standalone: true,
   imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
-    TranslatePipe, IconLabelDirective, ChessBoardComponent, CalcLinesComponent, LiveEnginePanelComponent],
+    TranslatePipe, IconLabelDirective, ChessBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
 })

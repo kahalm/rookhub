@@ -232,6 +232,30 @@ describe('clubhub.scss', () => {
     }
   });
 
+  // d4-c-kartei-filterchips-abgeschnitten: die wischbare Chipzeile endete ohne Scrollleiste an einer harten Kante.
+  it('Kartei am Handy: wischbare Chipzeile läuft rechts mit Verlauf aus, der letzte Chip lässt sich ganz ins Bild wischen', async () => {
+    const restore = await narrow(390);
+    try {
+      mount(`<main class="wrap"><div class="kartei-top"><div class="page-head kartei-head"><h1>Kartei</h1><div class="actions">
+          <a class="btn primary"><span class="long">Kind anlegen</span><span class="short">+ Kind</span></a></div></div>
+        <div class="tools with-chips"><label class="field search"><input type="search"></label>
+          <div class="filter-chips"><button class="chip-btn all">Alle</button><button class="chip-btn">Anfänger <span class="n">2</span></button>
+            <button class="chip-btn">Fortgeschrittene <span class="n">0</span></button></div>
+          <label class="check"><input type="checkbox"> Archiv</label><p class="count">3 Kinder</p></div></div></main>`);
+      const chips = host.querySelector<HTMLElement>('.filter-chips')!;
+      const cs = getComputedStyle(chips);
+      const mask = cs.getPropertyValue('mask-image') || cs.getPropertyValue('-webkit-mask-image');
+      expect(mask).toContain('linear-gradient');
+      expect(cs.overflowX).toBe('auto');
+      expect(chips.scrollWidth).withContext('die Zeile läuft wirklich über').toBeGreaterThan(chips.clientWidth);
+      chips.scrollLeft = chips.scrollWidth;
+      const last = host.querySelector<HTMLElement>('.filter-chips .chip-btn:last-child')!.getBoundingClientRect();
+      expect(last.right).withContext('am Ende steht der letzte Chip vor dem Verlauf').toBeLessThanOrEqual(chips.getBoundingClientRect().right - 27);
+    } finally {
+      restore();
+    }
+  });
+
   // Falz-Runde 16.10.: Laptop (1366 × 768) mit Trainingsstreifen 43,5 % — der Streifen beginnt bei ≈ 137 px, also bis zur
   // ersten Karte ≤ 170 px (40 % = 307 px).
   it('Kartei am Laptop: erste Karte höchstens 170 px unter dem Seitenanfang, auch mit Trainingsstreifen', async () => {

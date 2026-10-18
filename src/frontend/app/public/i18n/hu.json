@@ -585,6 +585,7 @@
     },
     "privacy": {
       "title": "Adatvédelmi nyilatkozat",
+      "link": "Adatvédelmi nyilatkozat",
       "updated": "Utoljára frissítve: 2026. október 1.",
       "tocTitle": "Tartalom",
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
@@ -865,7 +866,8 @@
           "due": "Most esedékes",
           "scheduled": "A készletben — ütemezve",
           "paused": "Szüneteltetve"
-        }
+        },
+        "addShort": "Gyakorlás"
       }
     },
     "tree": {
@@ -1246,7 +1248,8 @@
         "queen": "vezér",
         "king": "király",
         "piece": "bábu"
-      }
+      },
+      "shownOf": "{{n}}/{{total}} tipp megjelenítve"
     },
     "bar": {},
     "keyboardMove": {
@@ -1917,7 +1920,8 @@
     "commentDialog": {
       "open": "Olvasás ablakban",
       "moveHint": "A szövegben egy lépésre kattintva bezárul az ablak, és a változat a táblán látható."
-    }
+    },
+    "dailyChip": "Napi feladvány"
   },
   "admin": {
     "title": "Admin",
@@ -2763,7 +2767,9 @@
     "opponentDone": "Mind a(z) {{n}} vonal kész ez ellen az ellenfél ellen.",
     "opponentAgain": "Elölről",
     "opponentBack": "Vissza a játékoskártyához",
-    "freqLineTip": "Milyen gyakran jutsz el ehhez a változathoz valódi játszmákban (Lichess explorer, ugyanaz a beállítás, mint a lyukkeresőnél)"
+    "freqLineTip": "Milyen gyakran jutsz el ehhez a változathoz valódi játszmákban (Lichess explorer, ugyanaz a beállítás, mint a lyukkeresőnél)",
+    "whiteToMoveLearn": "Világos lép — ez a repertoárlépésed.",
+    "blackToMoveLearn": "Sötét lép — ez a repertoárlépésed."
   },
   "srConfig": {
     "title": "Gyakorlási ciklusok",
@@ -3185,6 +3191,7 @@
     "analyze": "Játszma elemzése",
     "analyzeHint": "A játszma elemzése a háttérben — utána a tábla alatt megjelenik az értékelési görbe pontossággal és lépésosztályokkal.",
     "analyzeNoEngine": "Jelenleg nincs elérhető motor — próbáld újra később.",
+    "listNoEngine": "A pontosság most nem számolható ki — nincs szabad motor.",
     "analyzeLogin": "Az elemzéshez jelentkezz be.",
     "loadError": "A játszmát nem sikerült betölteni.",
     "notFound": "Ez a játszma nem létezik, vagy törölték.",
@@ -3524,7 +3531,7 @@
     "intro": "Állások, amelyeket a háttérmotor számol ki neked.",
     "introMore": "Egyszerre egy feladat, és szünetel, amíg élőben, külső motorral elemzel. A feladatot kinyitva látod a tárolt változatokat.",
     "empty": "Még nincsenek feladatok.",
-    "emptyHint": "Az elemzőtáblán az óra ikonnal („Elemzés a háttérben”) jegyezhetsz elő egy állást.",
+    "emptyHint": "Az elemzőtáblán nyisd meg az állás melletti ⋮ menüt, és válaszd az „Elemzés a háttérben” pontot.",
     "untitled": "Cím nélkül",
     "status": {
       "queued": "várakozik",
@@ -4443,7 +4450,7 @@
         "t": "Elemzés",
         "p": [
           "Az elemzés alapértelmezés szerint a böngésződben fut Stockfishsel (WebAssembly) – offline is. Több fő változatot (MultiPV) és kiértékelést kapsz minden állásra, és van megnyitás-explorer is. Az elemzés bejelentkezés nélkül is használható; az első indításkor a böngészőmotor egyszer letölt kb. 7 MB-ot.",
-          "Bejelentkezve a profilodban a „Külső motor” alatt erősebb motort kapcsolhatsz be (pl. egy, a Lichess-fiókodban regisztráltat), és két motort össze is hasonlíthatsz. Az „Elemzés a háttérben” gombbal (óra ikon) egy állást a háttérmotornak adsz át; az eredményeket az „Elemzési feladatok” alatt találod."
+          "Bejelentkezve a profilodban a „Külső motor” alatt erősebb motort kapcsolhatsz be (pl. egy, a Lichess-fiókodban regisztráltat), és két motort össze is hasonlíthatsz. Az „Elemzés a háttérben” menüponttal (az állás ⋮ menüjében) egy állást a háttérmotornak adsz át; az eredményeket az „Elemzési feladatok” alatt találod."
         ]
       },
       "repertoires": {
@@ -5333,7 +5340,7 @@
         "solve": "A megoldás lejátszása: mentett (könyv vagy motor) vagy most a Stockfish",
         "maia": "Az állás lejátszása Maia ellen"
       },
-      "calcHint": "Játssz változatokat a táblán – vonalakként jegyzi fel (ezen az eszközön tárolva). Ellenőrizz egy vonalat az elemzőtáblán, vagy kapcsold be a motort.",
+      "calcHint": "Játssz változatokat – vonalakként jegyzi fel őket.",
       "calcSaveFailed": "A változatokat nem sikerült ezen az eszközön menteni.",
       "afterSolve": "Megoldás után",
       "autoNext": "Automatikusan a következő diagramra",
@@ -5363,7 +5370,8 @@
       "correctTitle": "Állás javítása",
       "correctHint": "Helyezz el, mozgass vagy távolíts el bábukat, és válaszd ki, ki lép. A javítás mentésre kerül, és segít javítani a diagramfelismerést.",
       "correctSaved": "Állás javítva.",
-      "correctFailed": "Az állást nem sikerült menteni."
+      "correctFailed": "Az állást nem sikerült menteni.",
+      "calcHelp": "A vonalak ezen az eszközön maradnak. Egy vonalat ellenőrizhetsz az elemzőtáblán, vagy bekapcsolhatod a motort."
     },
     "title": "E-könyvek",
     "intro": "Sakk-könyvek böngészőben olvasásra vagy letöltésre; minden könyv azokkal a csoportokkal van megosztva, amelyeket a feltöltője választott.",

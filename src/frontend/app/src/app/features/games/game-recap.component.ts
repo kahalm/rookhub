@@ -72,6 +72,11 @@ const RECAP_RETRY_MS = 15_000;
     @media (max-width: 768px) {
       .recap { margin: 0 16px 12px; width: auto; min-width: 0; cursor: pointer; }
     }
+    /* Niedrige Fenster (Boox 200 %, DESIGN 4.6 „Niedrige Fenster“): drei Zeilen in 0,875 rem, Polster 6 px, 8 px bis zum
+       Brett — „Mehr“ bleibt am Satzende. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .recap { margin-bottom: 8px; padding-block: 6px; font-size: 0.875rem; line-height: 1.4; }
+    }
   `],
 })
 export class GameRecapComponent {

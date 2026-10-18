@@ -125,6 +125,25 @@ describe('CourseDetailComponent', () => {
   });
 });
 
+// 0.808.x · Boox 200 % Falz: im niedrigen Fenster ist „Zurück“ nur „←“ vor dem Titel — der Name bleibt im aria-label.
+describe('CourseDetailComponent Rücklink', () => {
+  it('trägt „Zurück“ im aria-label, die Beschriftung im ausblendbaren Span', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CourseDetailComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseDetailComponent);
+    fixture.detectChanges();
+    const back = (fixture.nativeElement as HTMLElement).querySelector('.topbar .back-btn') as HTMLElement;
+    expect(back).not.toBeNull();
+    expect(back.getAttribute('href')).toBe('/courses');
+    expect(back.getAttribute('aria-label')).toBe('common.back');
+    expect(back.querySelector('mat-icon')?.textContent?.trim()).toBe('arrow_back');
+    expect(back.querySelector('.back-label')?.textContent?.trim()).toBe('common.back');
+  });
+});
+
 describe('CourseDetailComponent Starten', () => {
   it('führt beim Kalkulationsbuch in den Kalkulations-Modus', () => {
     const { component } = make();

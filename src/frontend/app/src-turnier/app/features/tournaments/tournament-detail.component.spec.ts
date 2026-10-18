@@ -646,3 +646,21 @@ describe('TournamentDetailComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.split-tables')).toBeNull();
   });
 });
+
+// 0.808.x · Boox 200 % Falz (DESIGN 4.6 „Niedrige Fenster“): in 480 × 640 begann die erste Spielerzeile bei 46 % — der
+// gemeinsame Kopf (_tournament-head.scss, auch /t/{id}) rückt oben auf 8 px, die Karte 8 px vor die Reiter, der Titel
+// 1,125 rem, das ⋮ ohne Rand oben (es bestimmte die Höhe der Titelzeile).
+describe('TournamentDetailComponent Kopf im niedrigen Fenster', () => {
+  const LOW = '@media (max-width: 768px) and (max-height: 720px)';
+  const css = () => ((TournamentDetailComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+    .replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+
+  it('Kopfkarte straffer: oben 8 px, Karte 8 px Abstand, Titel 1,125 rem, ⋮ ohne Rand', () => {
+    const all = css();
+    const block = all.slice(all.lastIndexOf(LOW));
+    expect(block).toMatch(/\.detail-container \{ ?padding-top: 0\.5rem/);
+    expect(block).toMatch(/mat-card \{ ?margin-bottom: 0\.5rem/);
+    expect(block).toMatch(/--mat-card-title-text-size: 1\.125rem/);
+    expect(block).toMatch(/\.more-actions \{ ?margin-top: 0/);
+  });
+});

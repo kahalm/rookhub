@@ -32,6 +32,8 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { PctPipe, formatPct } from '../../shared/format/pct';
+import { downloadBlob } from '../../shared/download.util';
+import { pgnFileName } from '../../shared/pgn-export.util';
 
 /** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
 export const ANALYSIS_POLL_MS = 10_000;
@@ -153,8 +155,11 @@ export type AnalysisState = 'none' | 'running' | 'done';
              Kopfzeile ist am Handy weg, dort steht dieselbe Zeile umbrochen. -->
         <!-- d3-rk-games-analyse-symbol-blass: ohne Engine einmal sichtbar der Grund statt eines grauen, gesperrten Knopfs
              in jeder Zeile, dessen Grund nur im Tooltip stand (am Handy nie zu sehen; DESIGN 5.4). -->
+        <!-- d4-rk-games-engine-hinweis-jargon/-engine-hinweis-jargon/-liste-engine-hinweis-verwaist/-engine-hint-unter-filter:
+             eigener Satz statt des Punktepartie-Texts („eingeworfene Partien“), der sagt, WAS fehlt (die Genauigkeit,
+             Spalte „–“); als Info-Zeile mit Symbol und Abstand zu den Filtern, damit er nicht wie deren Beschriftung wirkt. -->
         @if (uploadStatus?.engineAvailable === false) {
-          <p class="muted small no-engine">{{ 'guess.upload.noEngine' | translate }}</p>
+          <p class="no-engine" id="games-no-engine"><mat-icon aria-hidden="true">info_outline</mat-icon><span>{{ 'games.listNoEngine' | translate }}</span></p>
         }
         <div class="table">
           <div class="row head-row">
@@ -205,7 +210,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   @case ('none') {
                     <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach auf der Partie-Seite. -->
                     @if (uploadStatus?.engineAvailable === false) {
-                      <span class="no-analysis" aria-hidden="true">–</span>
+                      <span class="no-analysis" [matTooltip]="'games.listNoEngine' | translate">–</span>
                     } @else {
                       <button mat-icon-button class="analyze" (click)="analyze(g)" [disabled]="analyzingId === g.id"
                               [appIconLabel]="'games.analyze' | translate">
@@ -246,6 +251,13 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   </button>
                   <button mat-menu-item (click)="share(g)">
                     <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
+                  </button>
+                  <!-- d4-rk-partie-menue-loeschen-fehlt-partieseite: dieselben Einträge wie das ⋮ der Partieseite (DESIGN 5.5). -->
+                  <button mat-menu-item class="pgn-copy" (click)="copyPgn(g)">
+                    <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
+                  </button>
+                  <button mat-menu-item class="pgn-download" (click)="downloadPgn(g)">
+                    <mat-icon>file_download</mat-icon><span>{{ 'common.downloadPgn' | translate }}</span>
                   </button>
                   <!-- Partieformular (0.529.0): das Foto bleibt an der Partie; korrigieren geht bei jeder Partie. -->
                   @if (g.scanId) {
@@ -306,6 +318,13 @@ export type AnalysisState = 'none' | 'running' | 'done';
       .label-long { display: none; }
       .label-short { display: inline; }
     }
+    /* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): Abstände vor der Liste 4–8 px statt
+       12–16 px — die erste Partie begann bei 45 % der Höhe. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .games-page { padding-top: 8px; }
+      .hint { margin-bottom: 8px; }
+      .filters-bar { margin: 4px 0 8px; }
+    }
     .classifiers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
     .chip.tag { background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
     .chip { font-size: 0.72rem; line-height: 1; padding: 3px 7px; border-radius: 10px;
@@ -353,7 +372,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .score .win { color: inherit; font-weight: 700; }
 
     .acc-cell { display: flex; align-items: center; justify-content: center; }
-    .no-engine { margin: 0 0 6px; }
+    .no-engine { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; font-size: 0.875rem;
+      color: var(--mat-sys-on-surface-variant); }
+    .no-engine mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: 0.82rem; }
     .no-analysis { color: color-mix(in srgb, currentColor 45%, transparent); }
@@ -621,6 +642,30 @@ export class GamesListComponent implements OnInit {
       () => this.snackbar.copy(this.translate.instant('games.shareCopied')),
       () => this.snackbar.warn(url),
     );
+  }
+
+  /** PGN nachladen und in die Zwischenablage (wie „PGN kopieren“ auf der Partieseite). */
+  copyPgn(g: SavedGame): void {
+    this.service.get(g.id).subscribe({
+      next: detail => navigator.clipboard?.writeText(detail.pgn).then(
+        () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
+        () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
+      ),
+      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
+    });
+  }
+
+  /** PGN nachladen und als Datei „Weiß Schwarz_Datum.pgn“ speichern (wie auf der Partieseite). */
+  downloadPgn(g: SavedGame): void {
+    this.service.get(g.id).subscribe({
+      next: detail => {
+        const pgn = detail.pgn ?? '';
+        const players = [detail.white, detail.black].filter(n => !!n).join(' ');
+        downloadBlob(new Blob([pgn.endsWith('\n') ? pgn : pgn + '\n'], { type: 'application/x-chess-pgn' }),
+          pgnFileName(players || 'game', (detail.playedAt ?? detail.createdAt ?? '').slice(0, 10)));
+      },
+      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
+    });
   }
 
   remove(g: SavedGame): void {

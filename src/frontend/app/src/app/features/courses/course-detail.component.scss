@@ -348,3 +348,17 @@
 .pill--position { background: color-mix(in srgb, var(--rh-info) 18%, transparent); color: var(--rh-info); }
 
 .danger { color: var(--rh-error); }
+
+/* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): die Kursknöpfe begannen bei 53 % der Höhe —
+   „Zurück“ als „←“ vor dem Titel (eine Zeile weniger, Ziel im aria-label), Abstände 8 statt 12 px. */
+@media (max-width: 768px) and (max-height: 720px) {
+  .detail-page { padding-top: 0.5rem; gap: 0.5rem; }
+  .topbar { flex-wrap: nowrap; align-items: flex-start; }
+  .back-btn { flex: none; min-width: 44px; padding: 0 10px; }
+  .back-btn mat-icon { margin: 0; }
+  .back-label { display: none; }
+  .page-title { flex: 1 1 auto; min-width: 0; align-self: center; font-size: 1.125rem; }
+  .head-card mat-card-content { padding-top: 12px; }
+  .badges { margin-bottom: 0.25rem; }
+  .description, .empty-note { margin-bottom: 0.4rem; }
+}

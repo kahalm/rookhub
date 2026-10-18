@@ -25,23 +25,29 @@
       <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
     </mat-button-toggle-group>
     @if (!offlineSession) {
+      <!-- d4-rk-trainer-leerzustand-bedienelemente: im Leerzustand (keine Linien im Pool) weder Umschalter noch
+           „Fortschritt zurücksetzen“ — nichts zu ordnen, nichts zu löschen; Übungszyklen bleiben im ⋮. -->
       <!-- „Häufigste zuerst" braucht den Server (Lichess-Explorer) → offline ausgeblendet.
            d3-rk-trainer-symbolknoepfe-ohne-text: beschrifteter Umschalter (Häkchen + aria-pressed) statt nacktem
            trending_up; Einstellungen und das gefährliche „Fortschritt zurücksetzen“ (zuletzt, rot) im ⋮ (DESIGN 5.4/5.5). -->
-      <button mat-stroked-button class="freq-toggle" (click)="toggleFreqOrder()" [class.freq-on]="freqOrder"
-              [attr.aria-pressed]="freqOrder"
-              [matTooltip]="(freqOrder ? 'repertoireTrainer.freqOrderOn' : 'repertoireTrainer.freqOrderOff') | translate">
-        <mat-icon>{{ freqOrder ? 'check' : 'sort' }}</mat-icon>{{ 'repertoireTrainer.freqOrder' | translate }}
-      </button>
+      @if (phase !== 'EMPTY') {
+        <button mat-stroked-button class="freq-toggle" (click)="toggleFreqOrder()" [class.freq-on]="freqOrder"
+                [attr.aria-pressed]="freqOrder"
+                [matTooltip]="(freqOrder ? 'repertoireTrainer.freqOrderOn' : 'repertoireTrainer.freqOrderOff') | translate">
+          <mat-icon>{{ freqOrder ? 'check' : 'sort' }}</mat-icon>{{ 'repertoireTrainer.freqOrder' | translate }}
+        </button>
+      }
       <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet. -->
       <button mat-icon-button class="more" [matMenuTriggerFor]="trainerMenu" [appIconLabel]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #trainerMenu="matMenu">
         <button mat-menu-item (click)="openConfig()"><mat-icon>tune</mat-icon>{{ 'srConfig.title' | translate }}</button>
-        <button mat-menu-item class="delete-item reset-item" (click)="resetProgress()" [disabled]="resetting">
-          <mat-icon>restart_alt</mat-icon>{{ 'repertoireTrainer.resetProgress' | translate }}
-        </button>
+        @if (phase !== 'EMPTY') {
+          <button mat-menu-item class="delete-item reset-item" (click)="resetProgress()" [disabled]="resetting">
+            <mat-icon>restart_alt</mat-icon>{{ 'repertoireTrainer.resetProgress' | translate }}
+          </button>
+        }
       </mat-menu>
     }
   </div>
@@ -177,7 +183,11 @@
             </div>
           }
         }
-        <p class="prompt">{{ (color === 'w' ? 'repertoireTrainer.whiteToMove' : 'repertoireTrainer.blackToMove') | translate }}</p>
+        <!-- d4-rk-lernen-anweisung-widerspruch: in LEARN_SHOW spielt der Trainer den Zug selbst vor (Brett gesperrt) —
+             dort ohne Imperativ „spiel …“. -->
+        <p class="prompt">{{ (phase === 'LEARN_SHOW'
+          ? (color === 'w' ? 'repertoireTrainer.whiteToMoveLearn' : 'repertoireTrainer.blackToMoveLearn')
+          : (color === 'w' ? 'repertoireTrainer.whiteToMove' : 'repertoireTrainer.blackToMove')) | translate }}</p>
 
         @if (phase === 'LEARN_SHOW') {
           <div class="feedback learn">

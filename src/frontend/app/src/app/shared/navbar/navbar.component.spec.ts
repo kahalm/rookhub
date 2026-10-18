@@ -246,7 +246,7 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement;
     trigger.click();
     fixture.detectChanges();
-    expect(legalItems()).toEqual(['legal.privacy.title', 'legal.impressum.title']);
+    expect(legalItems()).toEqual(['legal.privacy.link', 'legal.impressum.title']);
     trigger.click();
     fixture.detectChanges();
   });
@@ -293,7 +293,7 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
       .find(b => b.textContent?.includes('nav.account')) as HTMLButtonElement;
     account.click();
     fixture.detectChanges();
-    expect(legalItems()).toEqual(['legal.privacy.title', 'legal.impressum.title']);
+    expect(legalItems()).toEqual(['legal.privacy.link', 'legal.impressum.title']);
     trigger.click();
     fixture.detectChanges();
   });

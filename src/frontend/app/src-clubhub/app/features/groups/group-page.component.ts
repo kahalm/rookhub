@@ -42,7 +42,8 @@ export function statusMark(status: Status | null): string {
           </p>
         </div>
         <div class="actions">
-          <a class="btn primary" [routerLink]="['/gruppen', g.id, 'anwesenheit']">Anwesenheit abhaken</a>
+          <!-- d4-c-gruppe-zwei-hauptknoepfe: bei offenem „Gruppe ändern“ hat das Formular die Hauptaktion (DESIGN 5.4) -->
+          <a class="btn take-roll" [class.primary]="!groupOpen()" [routerLink]="['/gruppen', g.id, 'anwesenheit']">Anwesenheit abhaken</a>
           <a class="btn" routerLink="/kind/neu" [queryParams]="{ gruppe: g.id }">Kind anlegen</a>
         </div>
       </div>
@@ -144,7 +145,7 @@ export function statusMark(status: Status | null): string {
       </details>
 
       @if (g.canManage) {
-        <details class="sheet manage-group mt">
+        <details class="sheet manage-group mt" (toggle)="groupOpen.set($any($event.target).open)">
           <summary><h3 class="inline">Gruppe ändern</h3></summary>
           <section class="form">
             <div class="grid-2">
@@ -182,8 +183,8 @@ export function statusMark(status: Status | null): string {
               <button type="button" class="btn" [disabled]="busy()" (click)="addTrainer()">Zugriff geben</button>
             </div>
             @if (trainerMissing()) { <p class="err need" id="trainer-missing">Erst den Benutzernamen eintippen.</p> }
-            <p class="muted small">Wer die Gruppe in ClubHub bedienen darf. Das Konto braucht zusätzlich eine Rolle mit dem Recht
-              „ClubHub: Trainer“ (in RookHub unter Rollen). Die Trainer als PERSONEN stehen in der Kartei und in jeder Anwesenheitsliste.</p>
+            <!-- d4-c-gruppe-trainer-hinweis-jargon: ein Satz statt drei (DESIGN 2.2) -->
+            <p class="muted small access-hint">Das Konto braucht in RookHub zusätzlich eine Rolle mit dem Recht „ClubHub: Trainer“.</p>
           </section>
         </details>
       }
@@ -215,6 +216,8 @@ export class GroupPageComponent implements OnInit {
   /** Tipp auf „Dazunehmen" ohne Kind bzw. „Zugriff geben" ohne Namen: Hinweis unter dem Feld statt gesperrtem Knopf (b1). */
   readonly kidMissing = signal(false);
   readonly trainerMissing = signal(false);
+  /** „Gruppe ändern" aufgeklappt — dann tritt „Anwesenheit abhaken" im Kopf als Hauptknopf zurück. */
+  readonly groupOpen = signal(false);
 
   readonly candidates = computed(() => {
     const inGroup = new Set(this.group()?.members.map(m => m.id) ?? []);

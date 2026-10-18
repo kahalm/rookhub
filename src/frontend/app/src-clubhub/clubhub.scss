@@ -634,6 +634,14 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { fo
   .tools .count { order: 2; margin-left: 0; }
   .tools .filter-chips { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .tools .filter-chips::-webkit-scrollbar { display: none; }
+  /* d4-c-kartei-filterchips-abgeschnitten: ohne Scrollleiste endete der letzte Chip an einer harten Kante — der Verlauf
+     am rechten Rand zeigt, dass die Zeile weitergeht (DESIGN 4.4); 28 px Polster, damit der letzte Chip ganz ins Bild
+     gewischt werden kann. Passen alle Chips, liegt der Verlauf nur über dem leeren Polster. */
+  .tools .filter-chips {
+    padding-right: 28px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
   .tools .filter-chips .chip-btn { flex: none; white-space: nowrap; }
   /* Titel und Anlege-Knöpfe in EINER Zeile, Knöpfe schlank mit Kurztext (z1-c-kartei-lead). */
   .kartei-head { flex-wrap: nowrap; margin-bottom: 12px; }

@@ -29,10 +29,9 @@
 /* b1-rk-aufgabenblaetter-datum-umbruch: Angaben umbrechen nur zwischen den Teilen (Flex-Umbruch, Angular entfernt den
    Leerraum zwischen den Spans). d3-rk-ws-liste-meta-punkt-zeilenanfang: der Trenner „·" sitzt absolut mitten in der Lücke
    (nimmt keinen Platz, Muster ClubHub `.kid-meta`, DESIGN 5.13). Steht ein Teil nach dem Umbruch am Zeilenanfang, liegt
-   sein Punkt links außerhalb der Zeile und `overflow-x: clip` schneidet ihn weg — kein „· 11.10.2026" mehr. */
-.wl-sub { display: flex; flex-wrap: wrap; column-gap: 0.7em; overflow-x: clip; }
-.wl-part { white-space: nowrap; position: relative; }
-.wl-part + .wl-part::before { content: '·'; position: absolute; right: 100%; margin-right: 0.22em; }
+   sein Punkt links außerhalb der Zeile und `overflow-x: clip` schneidet ihn weg — kein „· 11.10.2026" mehr.
+   Seit d4 über das gemeinsame Muster `.rh-dots` (styles.scss) — hier bleibt nur, dass jede Angabe einzeilig ist. */
+.wl-part { white-space: nowrap; }
 .wl-actions { display: flex; flex-shrink: 0; align-items: center; }
 .wl-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
 .wl-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
@@ -55,3 +54,13 @@
 .wl-chip--on { background: color-mix(in srgb, currentColor 16%, transparent); font-weight: 600; }
 .wl-themes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 2px; }
 .wl-theme { font-size: 0.78rem; color: color-mix(in srgb, currentColor 60%, transparent); }
+
+/* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): das erste Blatt begann bei 47 % der Höhe —
+   Seitenrand oben, Hinweis, Zwischenablage-Karte und Abschnittstitel mit 8 px statt 16 px Abstand. */
+@media (max-width: 768px) and (max-height: 720px) {
+  .wl-page { padding-top: 8px; }
+  .wl-hint { margin-bottom: 8px; }
+  .wl-clip { margin-bottom: 0.5rem; }
+  .wl-clip .mat-mdc-card-content { padding-block: 10px; }
+  .wl-section-title { margin: 0.5rem 0 0.375rem; }
+}

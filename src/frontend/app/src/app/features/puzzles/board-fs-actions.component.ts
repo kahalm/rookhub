@@ -33,7 +33,8 @@ import {
                 [attr.title]="hintTitle | translate" [attr.aria-label]="hintTitle | translate">
           <mat-icon>lightbulb</mat-icon>
           @if (hintLevel > 0 && totalHints > 0) {
-            <span class="bfa-badge">{{ hintLevel }}/{{ totalHints }}</span>
+            <!-- d4-rk-tipp-zaehler-beschriftung: das Abzeichen zählt die GEZEIGTEN Tipps — und sagt es. -->
+            <span class="bfa-badge" [attr.title]="'puzzles.hints.shownOf' | translate: { n: hintLevel, total: totalHints }">{{ hintLevel }}/{{ totalHints }}</span>
           }
         </button>
       }

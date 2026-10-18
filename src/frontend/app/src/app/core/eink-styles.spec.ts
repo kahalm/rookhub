@@ -149,6 +149,27 @@ describe('_eink.scss (E-Ink-Modus)', () => {
     expect(contrast(parseColor(tomove.color), parseColor('rgb(255, 255, 255)'))).toBeGreaterThanOrEqual(7);
   });
 
+  it('d4-rk-segment-innenrahmen-abgeschnitten: End-Segmente einer Umschaltergruppe übernehmen deren Rundung', () => {
+    const group = mount('<div class="mat-button-toggle-group" style="border-radius: 20px; overflow: hidden; display: flex">'
+      + '<div class="mat-button-toggle">A</div><div class="mat-button-toggle">B</div>'
+      + '<div class="mat-button-toggle mat-button-toggle-checked">C</div></div>').firstElementChild as HTMLElement;
+    const [first, mid, last] = Array.from(group.children) as HTMLElement[];
+    expect(getComputedStyle(last).borderTopRightRadius).toBe('0px');   // ohne Modus: eckig wie bisher
+    setEinkActive(true);
+    expect(getComputedStyle(first).borderTopLeftRadius).toBe('20px');
+    expect(getComputedStyle(first).borderBottomLeftRadius).toBe('20px');
+    expect(getComputedStyle(first).borderTopRightRadius).toBe('0px');
+    expect(getComputedStyle(mid).borderTopLeftRadius).toBe('0px');
+    expect(getComputedStyle(last).borderTopRightRadius).toBe('20px');
+    expect(getComputedStyle(last).borderBottomRightRadius).toBe('20px');
+    expect(getComputedStyle(last).boxShadow).toContain('inset');
+  });
+
+  it('d4-rk-progress-bulb-light-red: „mit Tipp“-Farbe im Modus dunkelgrau (Bedeutung trägt das Symbol)', () => {
+    setEinkActive(true);
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--rh-hint').trim()).toBe('#4d4d4d');
+  });
+
   @Component({ standalone: true, imports: [FlashcardBoardComponent],
     template: '<app-flashcard-board fen="8/8/8/8/8/8/8/4K2k w - - 0 1" />' })
   class BoardHost {}

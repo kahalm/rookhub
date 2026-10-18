@@ -17,6 +17,8 @@
  *   als ein mittlerer Buchstabe; mit 68ch passten noch 80–85 Zeichen in eine Zeile. 33em ≈ 72–75 Zeichen (gemessen ≈ 75 im Test-Chrome) (DESIGN 4.6
  *   Regel 4), in jeder Schrift der Hubs (die Breite wächst mit ihrer Schriftgröße mit).
  *
+ * - Runde d4: Rücklink `.back a` mit 44-px-Trefferhöhe (DESIGN 2.5).
+ *
  * Die Hubs überschreiben Rand und Karte in ihren globalen Stylesheets (DESIGN 8.6); deren Selektoren sind spezifischer.
  */
 export const LEGAL_PAGE_STYLES = `
@@ -27,6 +29,9 @@ export const LEGAL_PAGE_STYLES = `
   .legal-container:not(.legal-kid) mat-card-content > p,
   .legal-container:not(.legal-kid) mat-card-content > ul li { line-height: 1.55; }
   .legal-container:not(.legal-kid) mat-card-content > ul > li + li { margin-top: 0.5rem; }
+  /* d4-rk-konto-loeschen-textlinks-klein: der Rücklink „← Zurück …“ war am Handy nur eine Zeile (~24 px) hoch — mit
+     10 px Polster oben/unten ≈ 44 px Trefferhöhe wie die Exportlinks (.backup-links), auf allen drei Rechtsseiten. */
+  .back a { display: inline-block; padding: 10px 0; line-height: 24px; }
   @media (max-width: 599px) {
     .legal-container { padding: 0.75rem; }
     mat-card-header, mat-card-content { padding-left: 12px; padding-right: 12px; }

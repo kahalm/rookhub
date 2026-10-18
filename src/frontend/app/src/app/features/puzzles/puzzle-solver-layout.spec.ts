@@ -301,3 +301,27 @@ describe('Puzzle-Aktionsleiste als Container (b1-rk-puzzle-teilen-eigene-zeile)'
     expect(css(PuzzleActionBarComponent)).toMatch(/\.pab-row ?\{ ?container: pab ?\/ ?inline-size/);
   });
 });
+
+// d4-rk-hint-chip-schriftgroesse-buchmodus: Zugrecht-/Hinweiszeile in allen Puzzle-Modi gleich groß — eine globale
+// Grundregel statt drei Kopien (Standard 1em, Buch/Endlos 0.88em).
+describe('Hinweiszeile unter dem Brett: eine Schriftgröße in allen Puzzle-Modi (d4)', () => {
+  for (const [name, cmp] of SOLVERS.map(([n, c]) => [n, c] as const)) {
+    it(`${name}: keine eigene .board-hint-Grundregel`, () => {
+      expect(css(cmp).replace(/\s/g, '')).not.toMatch(/(^|\})\.board-hint\{/);
+    });
+  }
+
+  it('die globale Regel (styles.scss) setzt eine feste rem-Größe — im Buch-Kontext so groß wie im Standard-Kontext', () => {
+    const host = document.createElement('div');
+    host.innerHTML = '<div style="font-size:12px"><div class="board-hint">a</div></div><div style="font-size:18px"><div class="board-hint">b</div></div>';
+    document.body.appendChild(host);
+    try {
+      const [a, b] = Array.from(host.querySelectorAll('.board-hint')).map(e => getComputedStyle(e).fontSize);
+      expect(a).toBe(b);
+      expect(a).toBe('14px');
+      expect(getComputedStyle(host.querySelector('.board-hint')!).display).toBe('flex');
+    } finally {
+      host.remove();
+    }
+  });
+});

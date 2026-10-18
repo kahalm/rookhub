@@ -536,7 +536,10 @@ describe('PuzzleBoardComponent Markierungen auf ungemessenem Brett (NaN-Koordina
     expect(comp.shapesPending).toBeTrue();
 
     width = 320;
+    const clear = jasmine.createSpy('bounds.clear');
+    comp.ground.state.dom = { bounds: Object.assign(() => ({}), { clear }) };
     comp.applyAutoShapes();                    // nach dem Messen (ResizeObserver ruft das)
+    expect(clear).toHaveBeenCalled();          // gemerkte 0 × 0-Maße verworfen
     expect(calls[1]).toEqual([{ orig: 'e4', brush: 'green' }]);
     expect(comp.shapesPending).toBeFalse();
   });

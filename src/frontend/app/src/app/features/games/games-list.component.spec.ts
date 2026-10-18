@@ -297,7 +297,13 @@ describe('GamesListComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelectorAll('.no-engine').length).toBe(1);
-    expect(el.querySelector('.no-engine')!.textContent).toContain('guess.upload.noEngine');
+    // d4: eigener Schlüssel statt des Punktepartie-Texts, Info-Symbol davor, „–“ der Spalte verweist auf den Satz.
+    expect(el.querySelector('.no-engine')!.textContent).toContain('games.listNoEngine');
+    expect(el.querySelector('.no-engine')!.textContent).not.toContain('guess.upload');
+    expect(el.querySelector('.no-engine mat-icon')).not.toBeNull();
+    expect(parseFloat(getComputedStyle(el.querySelector('.no-engine')!).marginTop)).withContext('Abstand zu den Filtern').toBeGreaterThanOrEqual(8);
+    // Der Strich der Spalte trägt denselben Satz als Tooltip (MatTooltip hängt ihn per aria-describedby an).
+    expect(el.querySelector('.acc-cell .no-analysis')!.getAttribute('aria-describedby')).toMatch(/cdk-describedby-message/);
     expect(el.querySelectorAll('button.analyze').length).toBe(0);
     expect(el.querySelectorAll('.acc-cell .no-analysis').length).toBe(2);
   });
@@ -324,8 +330,9 @@ describe('GamesListComponent', () => {
     ((fixture.nativeElement as HTMLElement).querySelector('.actions button[mat-icon-button]') as HTMLButtonElement).click();
     fixture.detectChanges();
     const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel .mat-mdc-menu-item-text')).map(x => x.textContent!.trim());
+    // d4-rk-partie-menue-loeschen-fehlt-partieseite: PGN kopieren/herunterladen wie auf der Partieseite.
     expect(items).toEqual(['games.openInAnalysis', 'games.openOriginal', 'games.edit.menu', 'games.roast.menu', 'games.share',
-      'games.photo.show', 'games.photo.download', 'common.delete']);
+      'games.pgnCopy', 'common.downloadPgn', 'games.photo.show', 'games.photo.download', 'common.delete']);
   });
 
   /** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm: die native Rueckfrage

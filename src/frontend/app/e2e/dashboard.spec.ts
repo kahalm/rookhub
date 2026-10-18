@@ -24,21 +24,21 @@ test.describe('Dashboard', () => {
     await expect(page.locator('h1')).toContainText(`Welcome, ${username}`, { timeout: 10_000 });
   });
 
-  test('shows the default training tiles (Puzzles, Guess the moves, Training Goals)', async ({ page }) => {
+  test('shows the default training tiles (Puzzles, Point game, Training goals)', async ({ page }) => {
     await loginPage(page);
 
     // Kuratierter Standard (DEFAULT_VISIBLE im DashboardComponent): sichtbar ist nur der
     // Trainings-Kern; Repertoires, Freunde und Bestenlisten schaltet man ueber „Anpassen" zu.
     const titles = page.locator('mat-card-title');
     await expect(titles.filter({ hasText: /^Puzzles$/ })).toBeVisible({ timeout: 10_000 });
-    await expect(titles.filter({ hasText: /^Guess the moves$/ })).toBeVisible();
-    await expect(titles.filter({ hasText: /^Training Goals$/ })).toBeVisible();
+    await expect(titles.filter({ hasText: /^Point game$/ })).toBeVisible();
+    await expect(titles.filter({ hasText: /^Training goals$/ })).toBeVisible();
   });
 
   test('navigation to /puzzles works', async ({ page }) => {
     await loginPage(page);
 
-    await page.getByRole('button', { name: /Solve Puzzles/i }).click();
+    await page.getByRole('button', { name: /Solve puzzles/i }).click();
     await page.waitForURL('**/puzzles', { timeout: 10_000 });
     await expect(page).toHaveURL(/\/puzzles/);
   });

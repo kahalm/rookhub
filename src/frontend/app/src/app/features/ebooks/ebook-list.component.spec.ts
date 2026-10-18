@@ -312,6 +312,19 @@ describe('EbookListComponent', () => {
     fixture.destroy();
   });
 
+  // d4-rk-ebooks-upload-knopf-aussermittig: unter 600 px war der Knopf eine Pille mit Symbol links, ohne zugänglichen Namen.
+  it('d4: Hochladen trägt seinen Namen in aria-label + title; unter 600 px runder 44-px-Symbolknopf mit mittigem Symbol', () => {
+    const fixture = render([book()]);
+    const btn = (fixture.nativeElement as HTMLElement).querySelector('.eb-upload') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).toBe('ebooks.upload');
+    expect(btn.getAttribute('title')).toBe('ebooks.upload');
+    const css = compactCss(EbookListComponent);
+    const mobile = css.slice(css.indexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/\.eb-upload(\[[^\]]*\])?\{min-width:44px;width:44px;height:44px;padding:0;border-radius:50%/);
+    expect(mobile).toMatch(/\.eb-upload(\[[^\]]*\])?mat-icon(\[[^\]]*\])?\{margin:0/);
+    fixture.destroy();
+  });
+
   it('c1-eb-empty-upload-icon: das große Leerzustands-Symbol trifft nur das direkte Kind, nicht das im Knopf', () => {
     const css = compactCss(EbookListComponent);
     expect(css).toMatch(/\.eb-empty(\[[^\]]*\])?>mat-icon(\[[^\]]*\])?\{font-size:40px/);

@@ -621,4 +621,14 @@ describe('DashboardComponent a1 (Mehrzahl, Prozent, Knopfzeile)', () => {
     expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?> ?button ?\{ ?min-width: ?0; ?white-space: ?nowrap/);
     expect(css).toMatch(/\.dashboard-grid ?> ?mat-card ?> ?mat-card-actions ?\{ ?flex-wrap: ?wrap/);
   });
+
+  // d4-rk-dashboard-gleiches-symbol-punktepartie-trainingsziele: Punktepartie und Trainingsziele trugen beide track_changes.
+  it('d4: jede Kachel hat ein eigenes Symbol (paarweise verschieden)', () => {
+    const { component } = setup({ isAdmin: true });
+    const tiles = Object.values((component as unknown as { tileMap: Record<string, { id: string; icon: string }> }).tileMap);
+    const icons = tiles.map(t => t.icon);
+    const dup = icons.filter((ic, i) => icons.indexOf(ic) !== i);
+    expect(dup).withContext(tiles.map(t => `${t.id}:${t.icon}`).join(', ')).toEqual([]);
+    expect(tiles.find(t => t.id === 'guess')!.icon).toBe('track_changes');
+  });
 });

@@ -62,7 +62,9 @@
     "opponentDone": "All {{n}} lines against this opponent done.",
     "opponentAgain": "Start over",
     "opponentBack": "Back to the player card",
-    "freqLineTip": "How often you reach this line in real games (Lichess explorer, same selection as in the hole finder)"
+    "freqLineTip": "How often you reach this line in real games (Lichess explorer, same selection as in the hole finder)",
+    "whiteToMoveLearn": "White to move — this is your repertoire move.",
+    "blackToMoveLearn": "Black to move — this is your repertoire move."
   },
   "srConfig": {
     "title": "Practice cycles",
@@ -269,7 +271,7 @@
     "courses": "Courses",
     "admin": "Admin",
     "profile": "Profile",
-    "puzzleHistory": "Puzzle History",
+    "puzzleHistory": "Puzzle history",
     "changelog": "Changelog",
     "logout": "Logout",
     "login": "Login",
@@ -283,7 +285,7 @@
     "analysis": "Analysis",
     "games": "Games",
     "stats": "Statistics",
-    "trainingGoals": "Training Goals",
+    "trainingGoals": "Training goals",
     "installApp": "Install app",
     "themeSystem": "System theme",
     "themeLight": "Light theme",
@@ -324,7 +326,7 @@
       "guessTitle": "Point game",
       "guessDesc": "Take over one side of an annotated master game and guess move by move — points for every move, measured against what was really played."
     },
-    "feedback": "Feedback / Report a bug",
+    "feedback": "Feedback / report a bug",
     "blocked": "This area isn't enabled for your account.",
     "notFound": {
       "title": "Page not found",
@@ -386,7 +388,7 @@
       "passwordHint": "At least {{min}} characters",
       "submit": "Register",
       "submitting": "Registering...",
-      "loginLink": "Already have an account? Login",
+      "loginLink": "Already have an account? Log in",
       "failed": "Registration failed",
       "emailHint": "Optional – without an email you can’t reset a forgotten password.",
       "usernameTooShort": "At least {{min}} characters",
@@ -440,13 +442,13 @@
   },
   "dashboard": {
     "welcome": "Welcome, {{username}}!",
-    "subscribedTournaments": "Subscribed Tournaments",
+    "subscribedTournaments": "Subscribed tournaments",
     "subscribedAt": "Subscribed {{date}}",
     "puzzles": {
       "title": "Puzzles",
       "elo": "Elo {{elo}}",
       "solved": "{{solved}} solved ({{accuracy}})",
-      "solve": "Solve Puzzles",
+      "solve": "Solve puzzles",
       "daily": "Daily puzzle",
       "endless": "Endless"
     },
@@ -454,7 +456,7 @@
       "title": "Friends",
       "count": "{{count}} friends",
       "countOne": "{{count}} friend",
-      "manage": "Manage Friends"
+      "manage": "Manage friends"
     },
     "repertoires": {
       "title": "Repertoires",
@@ -463,17 +465,17 @@
       "viewAll": "View all"
     },
     "chessableQueue": {
-      "title": "Chessable Queue",
+      "title": "Chessable queue",
       "count": "{{count}} active imports",
       "countOne": "{{count}} active import",
       "view": "View all",
-      "heading": "Active Chessable Imports",
+      "heading": "Active Chessable imports",
       "cancel": "Cancel import",
       "cancelConfirm": "Cancel the import of “{{name}}” ({{user}})?",
       "cancelFailed": "Could not cancel the import."
     },
     "trainingGoals": {
-      "title": "Training Goals",
+      "title": "Training goals",
       "subtitle": "Track your daily training",
       "open": "Open goals"
     },
@@ -510,7 +512,7 @@
       "open": "Open favorites"
     },
     "weekly": {
-      "title": "Weekly Post",
+      "title": "Weekly post",
       "subtitle": "This week's puzzles",
       "view": "Open weekly"
     },
@@ -521,7 +523,7 @@
     },
     "analysis": {
       "title": "Analysis",
-      "subtitle": "Analyze a position",
+      "subtitle": "Analyse a position",
       "open": "Open board"
     },
     "messages": {
@@ -844,6 +846,7 @@
     },
     "privacy": {
       "title": "Privacy Policy",
+      "link": "Privacy policy",
       "updated": "Last updated: 1 October 2026",
       "tocTitle": "Contents",
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
@@ -1027,7 +1030,7 @@
     },
     "list": {
       "title": "My Repertoires",
-      "new": "New Repertoire",
+      "new": "New repertoire",
       "fileCount": "{{count}} files",
       "fileCountOne": "{{count}} file",
       "public": "Public",
@@ -1091,7 +1094,7 @@
       "endgame": "Endgame"
     },
     "lines": {
-      "allLines": "All Lines",
+      "allLines": "All lines",
       "info": "Info",
       "infoTooltip": "Info line: explanation to click through, not quizzed by the trainer",
       "empty": "No lines found in this repertoire.",
@@ -1130,7 +1133,8 @@
           "due": "Due now",
           "scheduled": "In pool — scheduled",
           "paused": "Paused"
-        }
+        },
+        "addShort": "Practice"
       }
     },
     "tree": {
@@ -1383,7 +1387,7 @@
       "share": "Share puzzle",
       "reviewLast": "Review last puzzle",
       "endlessMode": "Endless mode",
-      "analyze": "Analyze",
+      "analyze": "Analyse",
       "challengeFriend": "Send to a friend",
       "noFriends": "No friends to challenge",
       "showOriginalSolution": "Show original solution"
@@ -1483,7 +1487,8 @@
         "queen": "queen",
         "king": "king",
         "piece": "piece"
-      }
+      },
+      "shownOf": "{{n}} of {{total}} hints shown"
     },
     "viz": {
       "countdown": "Pieces disappear in {{seconds}}s…",
@@ -1533,7 +1538,7 @@
       "short": "New",
       "success": "“{{name}}” created ({{count}} puzzles)",
       "failed": "The course could not be created.",
-      "toRepertoires": "Go to Repertoires"
+      "toRepertoires": "Go to repertoires"
     },
     "deleteTooltip": "Delete course",
     "convertToRepertoireTooltip": "Convert to repertoire",
@@ -2168,8 +2173,8 @@
       "wrong": "Wrong!",
       "gaveUp": "Gave up",
       "continue": "Continue",
-      "analyze": "Analyze",
-      "reviewLast": "Analyze last puzzle",
+      "analyze": "Analyse",
+      "reviewLast": "Analyse last puzzle",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Show tags",
       "hideTags": "Hide tags",
@@ -2259,8 +2264,8 @@
       "nextPuzzle": "Next puzzle",
       "skip": "Skip",
       "viewFullGame": "View full game",
-      "analyze": "Analyze",
-      "reviewLast": "Analyze last puzzle",
+      "analyze": "Analyse",
+      "reviewLast": "Analyse last puzzle",
       "nextInBook": "Next in book",
       "randomInBook": "Random from book",
       "prevDaily": "Previous day",
@@ -2329,7 +2334,8 @@
     "commentDialog": {
       "open": "Read in a window",
       "moveHint": "A move in the text closes the window and shows the line on the board."
-    }
+    },
+    "dailyChip": "Daily puzzle"
   },
   "admin": {
     "title": "Admin",
@@ -2686,11 +2692,11 @@
   },
   "favorites": {
     "title": "Loved puzzles",
-    "hint": "Puzzles you marked with the heart after solving or giving up land here — replay or analyze them anytime.",
+    "hint": "Puzzles you marked with the heart after solving or giving up land here — replay or analyse them anytime.",
     "empty": "No loved puzzles yet.",
     "rating": "Rating",
     "replay": "Solve again",
-    "analyze": "Analyze",
+    "analyze": "Analyse",
     "removeTooltip": "Remove from favorites",
     "removeConfirm": "Remove this puzzle from your favorites?",
     "removeError": "Could not remove favorite.",
@@ -2823,6 +2829,7 @@
     "analyze": "Analyse game",
     "analyzeHint": "Have the game analysed in the background — the evaluation graph with accuracy and move classes then appears below the board.",
     "analyzeNoEngine": "No engine is available right now — please try again later.",
+    "listNoEngine": "Accuracy can’t be calculated right now — no engine is free.",
     "analyzeLogin": "Sign in to have this game analysed.",
     "loadError": "Could not load the game.",
     "notFound": "This game doesn't exist or was removed.",
@@ -3604,7 +3611,7 @@
         "t": "Analysis",
         "p": [
           "By default, analysis runs in your browser via Stockfish (WebAssembly) – also offline. You get several main lines (MultiPV), evaluations for any position and an opening explorer. Analysis works without login; on first start the browser engine downloads about 7 MB once.",
-          "Signed in, you can add a stronger engine in your profile under “External engine” (e.g. one registered on your Lichess account) and compare two engines. With “Analyse in the background” (clock icon) you queue a position for the background engine; the results are listed under “Analysis jobs”."
+          "Signed in, you can add a stronger engine in your profile under “External engine” (e.g. one registered on your Lichess account) and compare two engines. With “Analyse in the background” (in the ⋮ menu of the position) you queue a position for the background engine; the results are listed under “Analysis jobs”."
         ]
       },
       "repertoires": {
@@ -3828,7 +3835,7 @@
     "empty": "No remembered positions yet. Use “Remember line” in the RepCheck extension on chessable.com.",
     "setupRepCheck": "Set up RepCheck",
     "unknownCourse": "Unknown course",
-    "analyze": "Analyze",
+    "analyze": "Analyse",
     "copyFen": "Copy FEN",
     "delete": "Delete",
     "copied": "FEN copied",
@@ -3878,7 +3885,7 @@
     "intro": "Positions the background engine calculates for you.",
     "introMore": "One job at a time, paused while you analyse live with an external engine. Expand a job to see the stored lines.",
     "empty": "No jobs yet.",
-    "emptyHint": "On the analysis board, use the clock icon “Analyse in the background” to queue a position.",
+    "emptyHint": "On the analysis board, open ⋮ next to the position and choose “Analyse in the background”.",
     "untitled": "Untitled",
     "status": {
       "queued": "queued",
@@ -5333,7 +5340,7 @@
         "solve": "Play the solution: stored (book or engine) or Stockfish now",
         "maia": "Play the position out against Maia"
       },
-      "calcHint": "Play variations on the board – they are noted as lines (kept on this device). Check a line in the analysis board or switch on the engine.",
+      "calcHint": "Play variations – they are noted as lines.",
       "calcSaveFailed": "Variations could not be saved on this device.",
       "afterSolve": "After solving",
       "autoNext": "Go to the next diagram automatically",
@@ -5363,7 +5370,8 @@
       "correctTitle": "Correct position",
       "correctHint": "Place, move or remove pieces and set the side to move. The correction is saved and helps improve diagram recognition.",
       "correctSaved": "Position corrected.",
-      "correctFailed": "The position could not be saved."
+      "correctFailed": "The position could not be saved.",
+      "calcHelp": "The lines are kept on this device. Check a line in the analysis board or switch on the engine."
     },
     "title": "E-books",
     "intro": "Chess books to read in the browser or download; each book is shared with the groups its uploader chose.",

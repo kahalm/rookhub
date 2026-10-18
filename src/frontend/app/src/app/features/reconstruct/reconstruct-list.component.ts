@@ -32,8 +32,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       <div class="header">
         <div>
           <h1>{{ 'reconstruct.title' | translate }}</h1>
-          <p class="muted">{{ 'reconstruct.intro' | translate }}
-            <app-help-hint [text]="'reconstruct.introMore' | translate" /></p>
+          <p class="muted">{{ 'reconstruct.intro' | translate }}&nbsp;<app-help-hint [text]="'reconstruct.introMore' | translate" /></p>
         </div>
       </div>
 
@@ -127,6 +126,13 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     @media (max-width: 599.98px) {
       .create-suffix { display: inline-flex; }
       .create-btn { display: none; }
+    }
+    /* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): die erste Rekonstruktion begann bei 47 %
+       der Höhe — Seitenrand oben 8 px, Einleitung ohne Absatzränder, Anlege-Karte mit 8 px Abstand. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .page { padding-top: 0.5rem; }
+      .header .muted { margin: 0.25rem 0 0; }
+      .new-card { margin: 0.5rem 0; }
     }
   `],
 })

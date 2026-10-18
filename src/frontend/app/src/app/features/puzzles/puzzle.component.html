@@ -81,11 +81,13 @@
                 </button>
               }
               @if (hasHints && canShowMoreHints) {
+                <!-- d4-rk-tipp-zaehler-beschriftung: die Klammer nennt die Stufe, die der Klick aufdeckt (vorher „Nächster Tipp (1/3)“
+                     mit Tipp 1 schon sichtbar). -->
                 <button class="board-hint-tip" (click)="showNextHint()"
                         [attr.title]="'puzzles.hints.show' | translate">
                   <mat-icon>lightbulb</mat-icon>
                   {{ (hintLevel === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
-                  ({{ hintLevel }}/{{ totalHints }})
+                  ({{ hintLevel + 1 }}/{{ totalHints }})
                 </button>
               }
               @if (isLoggedIn && onSolutionPath && hasHints && hintLevel > 0) {
@@ -234,7 +236,7 @@
                     <span class="stat-label">{{ 'puzzles.stats.solved' | translate }}</span>
                   </div>
                   <div class="stat">
-                    <span class="stat-value">{{ stats.accuracy | pct }}</span>
+                    <span class="stat-value">{{ stats.accuracy | pct:1 }}</span>
                     <span class="stat-label">{{ 'puzzles.stats.accuracy' | translate }}</span>
                   </div>
                   <div class="stat">

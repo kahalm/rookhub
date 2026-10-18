@@ -87,3 +87,23 @@ describe('BoardFsActionsComponent', () => {
     expect(seen).toEqual(['hint', 'reset', 'mouseslip', 'giveUp']);
   });
 });
+
+// d4-rk-tipp-zaehler-beschriftung: das Vollbild-Abzeichen zählt die GEZEIGTEN Tipps (anders als die Klammer im
+// Tipp-Knopf, die den nächsten nennt) — und sagt das im title.
+describe('BoardFsActionsComponent Tipp-Abzeichen (d4)', () => {
+  it('zeigt „gezeigt/gesamt“ mit title „n von N Tipps gezeigt“', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    TestBed.configureTestingModule({ imports: [BoardFsActionsComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
+    const f = TestBed.createComponent(BoardFsActionsComponent);
+    f.componentRef.setInput('state', 'AWAITING_USER_MOVE');
+    f.componentRef.setInput('hasHints', true);
+    f.componentRef.setInput('canShowMoreHints', true);
+    f.componentRef.setInput('hintLevel', 1);
+    f.componentRef.setInput('totalHints', 3);
+    f.detectChanges();
+    const badge = (f.nativeElement as HTMLElement).querySelector('.bfa-badge')!;
+    expect(badge.textContent!.trim()).toBe('1/3');
+    expect(badge.getAttribute('title')).toBe('puzzles.hints.shownOf');
+  });
+});

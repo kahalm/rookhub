@@ -27,4 +27,13 @@ describe('Endlos-Abstände (UI-Sweep z2)', () => {
   it('der Umschalter Alle/Aktiv/Archiviert klebt nicht am Titel (z2-rk-endless-verlauf-filter)', () => {
     expect(css(EndlessHistoryComponent)).toMatch(/\.toolbar[^{]*\{[^}]*margin: 12px 0 16px/);
   });
+
+  it('d4-rk-endless-brett-breiter-als-puzzle: am Handy kein eigener 0,5-rem-Seitenrand (1 rem wie Standard-/Buch-Löser)', () => {
+    const s = css(EndlessPuzzleComponent);
+    const at = s.indexOf('@media (max-width: 768px)');
+    expect(at).toBeGreaterThan(-1);
+    const block = s.slice(at, s.indexOf('}', s.indexOf('{', at) + 1) + 1);
+    expect(block).not.toContain('.endless-page');
+    expect(s).toMatch(/\.endless-page[^{]*\{ padding: 1rem;/);
+  });
 });

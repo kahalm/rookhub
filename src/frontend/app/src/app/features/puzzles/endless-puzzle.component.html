@@ -318,11 +318,13 @@
                     </button>
                   }
                   @if (hasHints && canShowMoreHints) {
+                    <!-- d4-rk-tipp-zaehler-beschriftung: die Klammer nennt die Stufe, die der Klick aufdeckt (vorher „Nächster Tipp (1/3)“
+                         mit Tipp 1 schon sichtbar). -->
                     <button class="board-hint-tip" (click)="showNextHint()"
                             [attr.title]="'puzzles.hints.show' | translate">
                       <mat-icon>lightbulb</mat-icon>
                       {{ (hintLevel === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
-                      ({{ hintLevel }}/{{ totalHints }})
+                      ({{ hintLevel + 1 }}/{{ totalHints }})
                     </button>
                   }
                   @if (isLoggedIn && onSolutionPath && hasHints && hintLevel > 0) {
@@ -357,7 +359,10 @@
               @if (puzzle) {
                 <div class="quick-stats">
                   <span class="qs-pill"><mat-icon>star</mat-icon>{{ puzzle.rating }}</span>
-                  <span class="qs-pill"><mat-icon>flag</mat-icon>Lv {{ level }}</span>
+                  <!-- d4-rk-endless-level-flagge-doppelt + d4-rk-endless-level-doppelt: Stufe samt Wertungsfenster nur HIER
+                       (vorher „Lv 0“ hier und „Level 0 (719–759)“ in der Aktionszeile); Treppe statt Fähnchen — die Flagge
+                       gehört „Aufgeben“. -->
+                  <span class="qs-pill qs-level"><mat-icon aria-hidden="true">stairs</mat-icon>{{ 'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating } }}</span>
                   <div class="qs-hearts" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: lives, max: 3 }">
                     @for (i of [1,2,3]; track i) {
                       <mat-icon class="heart-sm" [class.full]="i <= lives">
@@ -411,11 +416,10 @@
                 </ol>
               }
 
-              <!-- UI-Welle 2: EINE Aktionszeile (Rating/Level stehen schon in den Quick-Stats;
-                   Level-Fenster bleibt als Zusatztext); Seltenes im ⋮-Menü. -->
+              <!-- UI-Welle 2: EINE Aktionszeile (Rating, Level und Wertungsfenster stehen in den Quick-Stats); Seltenes im
+                   ⋮-Menü. -->
               @if (puzzle) {
                 <app-puzzle-action-bar
-                  [levelText]="'endless.game.levelRange' | translate:{ level: level, min: currentMinRating, max: currentMaxRating }"
                   [tags]="puzzle.themes ?? ''"
                   [hasLast]="!!lastSolvedPuzzleId"
                   [canLoveLast]="isLoggedIn"
@@ -451,11 +455,14 @@
                     </div>
                   </div>
                   <!-- b1-rk-endless-phase-jargon: keine interne Zählung „Phase 1 (Schritt 63)“ mehr (DESIGN 2.7). -->
-                  <div class="depth-control">
-                    <mat-icon>psychology</mat-icon>
-                    <input type="range" [min]="1" [max]="24" [(ngModel)]="config.stockfishDepth" (change)="onDepthChange()">
-                    <span class="depth-value">{{ config.stockfishDepth }}</span>
-                  </div>
+                  <!-- d4-rk-endless-regler-ohne-beschriftung: der Regler nennt, was er stellt (wie im Startdialog), statt
+                       Symbol + nackter Zahl; Spanne als Tooltip. -->
+                  <label class="depth-control" [title]="'endless.config.stockfishDepthHint' | translate">
+                    <span class="depth-label">{{ 'endless.config.stockfishDepth' | translate }}</span>
+                    <input type="range" [min]="1" [max]="24" [(ngModel)]="config.stockfishDepth" (change)="onDepthChange()"
+                           [attr.aria-valuetext]="config.stockfishDepth + ' (1–24)'">
+                    <span class="depth-value" aria-hidden="true">{{ config.stockfishDepth }}</span>
+                  </label>
                 </mat-card-content>
               </mat-card>
             </div>

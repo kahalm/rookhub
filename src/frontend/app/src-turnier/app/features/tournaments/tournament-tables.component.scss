@@ -42,8 +42,10 @@
     }
     /* d3-t-kalender-vorlauf-zu-hoch: in niedrigen Fenstern (Boox 200 %) dieselbe kompakte Suchzeile wie am Laptop. */
     @media (max-width: 768px) and (max-height: 720px) {
-      .player-tools { padding-top: 0.5rem; }
+      .player-tools { padding-top: 0.25rem; }
       .player-search { --mat-form-field-container-height: 40px; --mat-form-field-container-vertical-padding: 8px; }
+      /* 0.808.x · Boox 200 % Falz: der Sortierknopf so hoch wie das 40-px-Feld (vorher 56 px). */
+      .player-menu-btn { height: 40px; }
     }
     /* Zahlenspalten rechtsbündig mit gleich breiten Ziffern (z2-t-detail-zahlen-rechts); die Köpfe tragen den
        Sortierpfeil vorne (arrowPosition="before"), damit auch ihr Text rechts abschließt. FIDE-ID bleibt als Kennung links. */
@@ -88,6 +90,11 @@
        brachen zweizeilig, Zeilen ungleich hoch. Sternspalte schmal, Namen einzeilig (voller Name im title). */
     .mat-column-fav { width: 40px; padding-right: 0; }
     td.mat-column-name { white-space: nowrap; }
+    /* d4-t-teams-tabelle-spalten-gestreckt: seit die leere Punkte-Spalte wegfällt (b1-t-teams-punkte-leer) verteilte
+       mat-table die Breite auf drei Spalten — die Rangspalte wurde bei 1920 px ≈ 220 px breit, Stern und Rang standen weit
+       vom Namen. Rang/Punkte schmal, der Name nimmt den Rest (am Handy zusätzlich max-width: 0, siehe unten). */
+    .teams-table .mat-column-rank, .teams-table .mat-column-points { width: 4rem; white-space: nowrap; }
+    .teams-table .mat-column-name { width: 100%; }
 
     /* Geteilte Ansicht am Tablet, englisch (b1-t-spieler-brettspalte-tablet-en): mit „FIDE ID", „Country" und langen
        Vereinsnamen war die Spielertabelle breiter als der Reiter; die Huelle schneidet (clip, wegen des klebenden
@@ -224,3 +231,8 @@
       .split-title { margin: 0.75rem 0 0; font-size: 1.05rem; font-weight: 500; }
     }
 
+    /* 0.808.x · Boox 200 % Falz (DESIGN 4.6 „Niedrige Fenster“): erste Spielerkarte 4 px unter der Suchzeile (nach der
+       Grundregel .player-cards, sonst gewänne die). */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .player-cards { padding-top: 0.25rem; }
+    }

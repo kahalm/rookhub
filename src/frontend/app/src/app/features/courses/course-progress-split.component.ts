@@ -43,12 +43,12 @@ export function splitPercent(count: number | undefined, total: number): number {
       background: color-mix(in srgb, currentColor 14%, transparent); }
     .seg { height: 100%; }
     .seg.clean { background: var(--rh-success); }
-    .seg.helped { background: var(--rh-warn); }
+    .seg.helped { background: var(--rh-hint); }  /* d4-rk-progress-bulb-light-red */
     .seg.gaveup { background: var(--rh-error); }
     .lg { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; font-variant-numeric: tabular-nums; }
     .lg mat-icon { width: 16px; height: 16px; font-size: 16px; }
     .lg.clean mat-icon { color: var(--rh-success); }
-    .lg.helped mat-icon { color: var(--rh-warn); }
+    .lg.helped mat-icon { color: var(--rh-hint); }
     .lg.gaveup mat-icon { color: var(--rh-error); }
   `],
 })

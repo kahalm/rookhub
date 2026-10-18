@@ -415,3 +415,64 @@ describe('StatsComponent E-Ink (d3)', () => {
     expect(css).toMatch(/html\.eink[^{]*\.elo-line[^{]*\{ ?stroke: #000/);
   });
 });
+
+// Design-Runde d4 (Statistik): E-Ink-Balken/Überlagerung in Graustufen + Strichart; Level-Feld am Handy unter dem Titel.
+describe('StatsComponent d4', () => {
+  afterEach(() => setEinkActive(false));
+
+  function renderFull() {
+    TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(StatsComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance as any;
+    c.loading = false;
+    c.stats = { totalAttempts: 30, solved: 20, accuracy: 66, currentStreak: 1, bestStreak: 2, puzzleElo: 1510 };
+    c.level = -1;
+    c.overlay = { w: 100, h: 50, minElo: 1000, maxElo: 1600, first: 'a', last: 'b',
+      lines: [0, 1, 2].map(level => ({ level, poly: '', path: 'M0 10 L100 40', color: '#1976d2' })) };
+    c.themes = Array.from({ length: 6 }, (_, i) => ({ theme: 'fork' + i, attempts: 10, solved: 5 }));
+    c.worstThemes = [{ theme: 'pin', attempts: 10, solved: 2 }];
+    c.ratingBands = [{ from: 1000, to: 1199, attempts: 10, solved: 5 }];
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
+  // d4-rk-eink-diagramm-farbe
+  it('E-Ink: Säulen/Themenbalken grau auf weißer, umrandeter Bahn, „schwach“ schraffiert; Überlagerung schwarz mit Strichart', () => {
+    const { el } = renderFull();
+    const fill = el.querySelector('.band-fill')!;
+    expect(getComputedStyle(fill).backgroundColor).toBe('rgb(67, 160, 71)');   // ohne Modus: Grün
+    setEinkActive(true);
+    expect(getComputedStyle(fill).backgroundColor).toBe('rgb(51, 51, 51)');
+    expect(getComputedStyle(el.querySelector('.theme-fill:not(.warn)')!).backgroundColor).toBe('rgb(51, 51, 51)');
+    expect(getComputedStyle(el.querySelector('.theme-fill.warn')!).backgroundImage).toContain('repeating-linear-gradient');
+    for (const bar of [el.querySelector('.band-bar')!, el.querySelector('.theme-bar')!]) {
+      expect(getComputedStyle(bar).backgroundColor).toBe('rgb(255, 255, 255)');
+      expect(getComputedStyle(bar).outlineColor).toBe('rgb(0, 0, 0)');
+    }
+    const paths = Array.from(el.querySelectorAll('.chart-card svg.svg path'));
+    expect(paths.length).toBe(3);
+    for (const p of paths) expect(getComputedStyle(p).stroke).toBe('rgb(0, 0, 0)');
+    const dashes = paths.map(p => getComputedStyle(p).strokeDasharray);
+    expect(new Set(dashes).size).toBe(3);   // jede Stufe eine eigene Strichart
+    const swatch = el.querySelector('.legend-swatch line')!;
+    expect(getComputedStyle(swatch).strokeDasharray).toBe(dashes[0]);
+  });
+
+  // d4-rk-stats-mobile-level-select-crowds-chart
+  it('Elo-Kopf: Lücke zwischen Titel und Level-Feld, Abstand zum Diagramm, am Handy bricht das Feld um', () => {
+    const { el } = renderFull();
+    const head = el.querySelector('.chart-card mat-card-header') as HTMLElement;
+    const cs = getComputedStyle(head);
+    expect(cs.flexWrap).toBe('wrap');
+    expect(parseFloat(cs.columnGap)).toBeGreaterThanOrEqual(12);
+    expect(parseFloat(cs.paddingBottom)).toBeGreaterThanOrEqual(8);
+    const css = ((StatsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/@media \(max-width: 599\.98px\) \{ ?\.chart-card \.level-field \{ ?width: 100%/);
+  });
+});

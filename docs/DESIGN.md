@@ -91,6 +91,7 @@ Rahmen), je Modus ≥ 4,5:1 auf Seite, Karte und Dialog, geprüft in `src/app/co
 | `--rh-success` | #1b5e20 | #81c784 | Erfolg, gelöst |
 | `--rh-warn` | #bf360c | #ffb74d | Warnung, unsicher |
 | `--rh-info` | #1565c0 | #90caf9 | Information |
+| `--rh-hint` | #8a5300 | #ffb74d | „mit Hilfe/Tipp“ (Glühbirne im Kursfortschritt) — hell Bernstein-Braun, klar weg vom Fehler-Rot (`--rh-warn` hell #bf360c lag im Ton fast auf `--rh-error`); E-Ink #4d4d4d (0.808.x, d4) |
 
 - **Getönte Flächen** nie mit dem Token direkt, sondern gemischt:
   `background: color-mix(in srgb, var(--rh-success) 18%, transparent)`.
@@ -169,7 +170,9 @@ RookHub und der Turnierseite (beide laden `src/styles.scss` und starten über `a
   (`.sm-choice`, Spielweise-Dialog) mit 2-px-Rahmen auf Weiß; Zugrecht-Zeile unter dem Puzzle-Brett (`.board-hint`) in
   #333 statt doppelt abgeblasst. Diagramme mit Stufen (Aktivitäts-Raster in /stats) als Helligkeitstreppe Weiß →
   #a3a3a3 → #6b6b6b → #333 → Schwarz mit 1-px-Rahmen je Zelle statt Farbtönen; Kurvenlinien schwarz, Fläche weiß mit
-  Rahmen. **Design-Wahl** (☰-Menü der Gäste, Untermenü System/Hell/Dunkel) ist im Modus wirkungslos — das Menü zeigt
+  Rahmen; mehrere Kurven (Elo „Level: Alle“) schwarz mit je eigener Strichart, die Legende zeigt dasselbe Muster;
+  Balken/Säulen #333 auf weißer, schwarz umrandeter Bahn, „schwach“ zusätzlich schraffiert (d4). Gewählte End-Segmente
+  einer Umschaltergruppe übernehmen die Rundung der Gruppe — der 3-px-Innenrahmen folgt der Pille (d4). **Design-Wahl** (☰-Menü der Gäste, Untermenü System/Hell/Dunkel) ist im Modus wirkungslos — das Menü zeigt
   statt ihrer den Hinweis „bleibt immer hell“ (wie die Profilkarte).
 - **Brett:** keine Zuganimation (`boardAnimation()` aus `eink.ts` in allen drei Brett-Komponenten); helle Felder weiß,
   dunkle #a3a3a3 **ohne Feldkanten** (das Kachelmuster ist 2 × 2 Felder groß — Kanten wurden am Kachelrand halbiert,
@@ -340,6 +343,25 @@ nur bei Seiten über 2 Bildschirmen, Regeln 9–13).
 - **Profil:** die Darstellungs-Karte (Theme/E-Ink/UI-Größe) steht auf Nutzerwunsch ganz oben und ist dort die
   Hauptsache; sie bleibt knapp (Hinweise 0,8125 rem, Gerätebefund 0,75 rem, UI-Größe ohne Häkchen in einer Zeile).
 
+*Niedrige Fenster* (0.808.x · Boox 200 % Falz): Boox Tab X C mit UI-Größe 200 % (3.7) rechnet **480 × 640** CSS-px,
+kleine Handys ≈ 375 × 667 — die Handy-Anordnung ist auf 844 px Höhe ausgelegt. Regeln 2–3 gelten dort genauso
+(Vorlauf ≤ 40 % ≈ 256 px). Abfrage überall gleich: **`@media (max-width: 768px) and (max-height: 720px)`** (Handy
+hochkant, Tablet und Laptop greifen nicht).
+- **Eine gemeinsame Regel** in `styles.scss` (nur RookHub + Turnierseite, Seiten hinter `app-navbar`/`trn-navbar`):
+  App-Kopf 48 statt 56 px (Abzeichen an Glocke/Post rücken mit `top: 4px` in die Leiste), Material-Suchfelder 44 statt
+  56 px, Reiter 40 statt 48 px, Seitentitel `h1` 1,5 rem, Abschnittstitel `h2` 1,125 rem mit knappen Rändern.
+  Komponenten, die `h1`/`h2` selbst setzen, behalten ihre Werte. Tippziele bleiben ≥ 44 px.
+- **Je Seite nur, wo das nicht reicht**, in derselben Abfrage und NACH der Grundregel: Seitenrand oben und Abstände vor
+  der Hauptsache 4–8 px (Gespeicherte Partien, Aufgabenblätter, Punktepartie, Rekonstruktion, Kurse, Turnier-Kopf);
+  Nebenknöpfe mit langem Namen als Symbolknopf, der Name bleibt im `aria-label`/`title` (Aufgabenblatt: „Drucken / als
+  PDF speichern“ in die Titelzeile, „Link kopieren“; Kursseite: „Zurück“ als „←“ vor dem Titel); Banner/„Kurz erzählt“
+  in 0,875 rem mit 6 px Polster (E-Books ohne Anmeldung, Partieseite); Turnier-Kopf Titel 1,125 rem, Sortierknopf so hoch
+  wie das 40-px-Suchfeld; Lernkarte richtet sich nach der Fensterhöhe (`min(92vw, 100vh − 230px)`), damit sie ganz über
+  die Falz passt; Repertoire-Brett (Baum/Lochfinder) `min(100%, max(300px, 100vh − 300px))` — Höhenabzüge ohne
+  Untergrenze ergaben dort 160 px (d4).
+- Prüfung: UI-Sweep `--viewport boox --theme eink --ui-scale 200`; Regeltexte in `features/low-window-fold.spec.ts`
+  (samt Wirkung im 480 × 640-iframe), Turnier-Kopf in `tournament-detail.component.spec.ts`/`tournament-tables…spec.ts`.
+
 ---
 
 ## 5 Komponenten-Muster
@@ -432,7 +454,8 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   (`.delete-item mat-icon` in Fehlerfarbe; Vorbilder `course-card`, `repertoire-list`, `reconstruct-detail`).
 - Dieselbe Sache, dieselbe Reihenfolge: das ⋮ einer Partie (Partieseite und Zeile der Partienliste) läuft „In Analyse
   öffnen → Original → Korrigieren → (Engine) → Roast/Vereins-Datenbank → Teilen/PGN/Foto → Löschen“ (0.807.x,
-  d3-rk-spielmenue-reihenfolge-uneinheitlich).
+  d3-rk-spielmenue-reihenfolge-uneinheitlich) — und hat denselben Inhalt: „PGN kopieren/herunterladen“ auch in der
+  Liste, „Löschen“ (eigene Partie, Rückfrage, danach zur Liste) auch auf der Partieseite (0.808.x, d4).
 - Ins ⋮ wandert, was in der Kopfzeile nicht mehr passt (Rekonstruktion: in der Kopfzeile nur ✓ und ⋮,
   r2-rg-recon-actions; Turnierseite am Handy, 0.746.0).
 - Am Handy bleibt das ⋮ **in derselben Zeile** wie die Knöpfe (0.751.2, Kursseite).
@@ -542,6 +565,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 
 - **Hilfe:** `app-help-hint` (`shared/help-hint/`): 22-px-Knopf, Deckkraft .55 (Fokus/Hover 1), Touch-Trefferfläche
   34 px, Tooltip per Klick fest (`.hh-tooltip`: max. 320 px, `pre-line`, Absätze mit `\n\n`, max. 60vh scrollbar).
+  Am Satzende steht davor **U+00A0** (`}}&nbsp;<app-help-hint …/>`, kein Zeilenumbruch im Markup) — sonst bricht das ?
+  allein in die nächste Zeile (0.808.x, d4-rk-hilfe-symbol-umbruch).
 - **Banner** (Seitenhinweise): Fläche getönt, Symbol links, Text `flex: 1 1 220px`, ein Knopf rechts, Radius 8 px
   (Vorbild `shared/reprocess-banner/`); Offline-Banner, Impersonation-Banner (`shared/impersonation-banner/`).
   Aktualisierungs- und Angebots-Banner tönen mit `--rh-info`, `--rh-warn` nur für echte Warnungen — hell liegt
@@ -600,7 +625,14 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Lösezeit** in der Status-Karte mit Uhr-Symbol `timer` und Namen „Lösezeit“ (Tooltip, `role="timer"` + `aria-label`),
   nie als nackte Zahl; „Tipps melden“ trägt den Daumen (`thumb_down_off_alt`/`thumb_down`), die Flagge gehört
   „Aufgeben“ (alle drei Modi, d3). Endlos: Rating, Level und Leben nur in den Quick-Stats, die Statistik-Karte zeigt
-  „Gelöst“ und „Sitzung“ (d3).
+  „Gelöst“ und „Sitzung“ (d3); die Stufe steht einmal als „Level n (min–max)“ mit Treppen-Symbol in den Quick-Stats
+  (nicht noch in der Aktionszeile, kein Fähnchen), der Tiefen-Regler trägt die sichtbare Beschriftung „Stockfish-Tiefe“
+  (d4). Endlos am Handy mit demselben 1-rem-Seitenrand wie Standard/Buch.
+- **Tipp-Knopf** zählt die Stufe, die der Klick aufdeckt: „Tipp (1/3)“, danach „Nächster Tipp (2/3)“ (alle Löser und
+  „Eigene Fehler“); das Vollbild-Abzeichen zählt die gezeigten Tipps und sagt es im `title` (d4).
+- **Hinweiszeile unter dem Brett** (`.board-hint`, Zugrecht/Tipp): EINE Grundregel in `styles.scss`, 0,875 rem in allen
+  Modi (vorher Standard 1em, Buch/Endlos 0,88em, d4).
+- **Tagespuzzle** nennt sich: Chip „Tagespuzzle“ + Datum (`mediumDate`, UTC) in der Kontext-Card wie der Wochenpost-Chip (d4).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
 ### 5.13 Zahlen, Mehrzahl, Datum
@@ -620,7 +652,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   „10/11/26, 12:20 AM“; Uhrzeit allein `shortTime`/`mediumTime`.
 - **Trenner** zwischen Angaben: „ · “; als `::before` des folgenden Elements, damit er beim Umbruch nie allein am
   Zeilenende steht (r2-t-meta-dot); in Flex-Zeilen mit Lücke (ClubHub `.kid-meta`) absolut in der Lücke, am
-  Zeilenanfang per `overflow-x: clip` abgeschnitten (8.5). Leerzeichen zwischen Interpolation und `@if` fest ins Markup schreiben —
+  Zeilenanfang per `overflow-x: clip` abgeschnitten (8.5). **Regel ab jetzt (RookHub/Turnierseite):** das gemeinsame
+  Muster `.rh-dots` (`styles.scss`) — jede Angabe ein eigenes Kind, kein Text-„ · “ im Markup; für zentrierte Zeilen
+  `.rh-dots--center` (Kinder wachsen, allein in einer Zeile füllen sie die Box, ihr Punkt fällt damit weg). Nutzer:
+  Aufgabenblatt-Liste, Brett-Kopf des E-Book-Lesers (0.808.x, d4-rk-brett-kopf-punkt-umbruch). Leerzeichen zwischen Interpolation und `@if` fest ins Markup schreiben —
   Angular entfernt sie sonst („Spielennoch offen“, 0.751.2).
 - Ländernamen ausgeschrieben, nicht als Code (LeagueHub, 0.751.0).
 - **Ergänzungsstrich** („Fortschritt und -Statistiken“) nie allein am Zeilenende: vor dem Strich U+00A0, danach
@@ -635,6 +670,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   „{{percent}}%“), Deutsch und Kroatisch „46 %“ mit U+00A0. Prozent im Code immer über **`formatPct`/`| pct`**
   (`shared/format/pct.ts`, `Intl.NumberFormat` `style: 'percent'` in der Oberflächensprache) — nie „ %“ oder „%“
   anhängen, nie `toLocaleString(undefined)` (Browser- statt App-Sprache).
+  Die Gesamt-Trefferquote (Puzzles) steht überall mit höchstens einer Nachkommastelle (`pct:1`: Startseite, Statistik,
+  Freundesvergleich, Puzzle-Löser); Themen- und Bandwerte ganzzahlig (0.808.x, d4-rk-dashboard-prozent-rundung).
 
 ### 5.14 Notation
 
@@ -671,7 +708,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   (`i18n-parity.spec`, 0.763.0). Im deutschen
   Changelog-Text Pflicht: ein gerades `"` beendet den JS-String und bricht den Build.
 - **Englische Knöpfe und Beschriftungen in Satzschreibung** („Give up“, „Next puzzle“, „Show eval“); Überschriften
-  dürfen Title Case behalten (d3-rk-puzzle-button-case-inconsistent).
+  dürfen Title Case behalten (d3-rk-puzzle-button-case-inconsistent). Gilt auch für Menüeinträge, Links und
+  Kacheltitel der Startseite („Puzzle history“, „Solve puzzles“, „Training goals“); ein Seitentitel, der zugleich als
+  Link dient, bekommt einen eigenen Link-Schlüssel („Privacy policy“ = `legal.privacy.link`, Titel „Privacy Policy“).
+  `features/d4-partien-texte.spec.ts` prüft `nav.*`, `dashboard.*` und `*.actions/button/menu/label/link.*` (0.808.x).
+- **Englisch britisch:** „analyse/analysed/Analyse game“, nie „analyze“ (Schlüsselnamen und Platzhalter ausgenommen;
+  0.808.x, d4-rk-en-analyse-analyze-uneinheitlich, Test wie oben).
 - **Englische Anführungszeichen typografisch “…”** (innen ‘…’) in `en.json` — keine »…«, „…“ oder geraden `"`
   (ausgenommen Syntax: HTML-Attribute, PGN-Tags in Platzhaltern); `i18n-parity.spec` prüft es (0.761.0).
 - Ein deutsches Wort im englischen Text nur als erkennbarer Befehl/Name mit Erklärung („/motivation, option “aus”
@@ -761,18 +803,26 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   ≥ 44 px, gleichnamige Kurse tragen eine Meta-Zeile (Herkunft, zuletzt geübt) (d3).
 - Repertoire-Trainer (d3): Kopf = Name des Repertoires, „Repertoire-Trainer“ leise daneben; „Häufigste Linien zuerst“
   als beschrifteter Umschalter (Häkchen, `aria-pressed`), Übungszyklen und „Fortschritt zurücksetzen“ (zuletzt, rot)
-  im ⋮; Leerzustand mit genau einer Aktion. Repertoire-Ansicht: Brett aus Sicht der Kapitelfarbe (gewählte Linie,
+  im ⋮; Leerzustand mit genau einer Aktion — dort weder „Häufigste Linien zuerst“ noch „Fortschritt zurücksetzen“ (nur
+  Übungszyklen im ⋮, d4). Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
+  schrumpft der Zusatz zuerst (d4). Lernen: solange der Trainer den Zug vorspielt (Brett gesperrt), ohne Imperativ —
+  „Schwarz am Zug — das ist dein Repertoirezug.“ (d4). Linienliste: neue Linie mit umrandeter 44-px-Pille „⊕ Üben“
+  (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Woodpecker-Löser: Titel bricht um (Seitenkopf, 5.1), Meta mit
+  `.rh-dots` (d4). Kalkulieren im E-Book-Brett: ein Satz, Rest hinter ? (d4). Statistik: Elo-Kopf `flex-wrap` mit
+  8/12-px-Lücke, Level-Feld am Handy volle Breite unter dem Titel (d4). Repertoire-Ansicht: Brett aus Sicht der Kapitelfarbe (gewählte Linie,
   sonst gedreht, wenn alle Kapitel Schwarz sind). Lochfinder: Quelle/Datenbank mit sichtbarer Zeilenbeschriftung,
   die Seite einfarbiger Repertoires als eigener Chip darüber.
 
 - `index.html` theme-color `#3f51b5`.
-- Kursfortschritt im Löser dreigeteilt (`app-course-progress-split`, 2026-10-15): Leiste 6 px mit Abschnitten `--rh-success` (ohne Hilfe) / `--rh-warn` (mit Tipp/Neustart) / `--rh-error` (aufgegeben), Rest = offen; darunter die drei Zahlen mit Symbol (✓ / Glühbirne / ✗) und „von N“, Bedeutung im Tooltip.
+- Kursfortschritt im Löser dreigeteilt (`app-course-progress-split`, 2026-10-15): Leiste 6 px mit Abschnitten `--rh-success` (ohne Hilfe) / `--rh-hint` (mit Tipp/Neustart; bis 0.807 `--rh-warn`, hell fast rot) / `--rh-error` (aufgegeben), Rest = offen; darunter die drei Zahlen mit Symbol (✓ / Glühbirne / ✗) und „von N“, Bedeutung im Tooltip.
 
 ### 8.2 Turnierseite (`src-turnier/`)
 
 - Gleiches Material-Thema und gleicher Design-Modus wie RookHub (Cookie geteilt); theme-color `#172345`.
   Navbar `shell/turnier-navbar.component.ts`: ≤ 768 px Kopfknöpfe + ⋮; 769–1023 px „Zu RookHub“ nur als Symbol;
-  auf `/login`, `/register`, `/forgot-password`, `/reset-password` kein „Anmelden“.
+  auf `/login`, `/register`, `/forgot-password`, `/reset-password` kein „Anmelden“. Der aktive Weg trägt in der Zeile
+  Primärfarbe, 600 und einen 2-px-Unterstrich (Innenschatten), im ☰ Primärfarbe + 600; beide mit
+  `aria-current="page"` (E-Ink-Rahmen 3.6), „Gemerkt“ nur exakt auf `/tournaments` (d4-t-navbar-aktiv-marker-fehlt).
 - **Turnierkarte** (`features/tournament-directory/tournament-card.component.ts`): vier feste Plätze
   Merken | Kalender | Ausblenden | Melden (40 px); fehlt eine Aktion, hält `.tc-slot` den Platz. ≤ 600 px:
   Kurzwort unter jedem Symbol, Fläche ≥ 64×48, Radius 12, `justify-content: space-between`. Gemerkt =
@@ -789,7 +839,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Zeitraum), Suche allein, Art/Alter/Geschlecht, Schalter, Bedenkzeit + Wochenende + „Mind. Teilnehmer“ (14rem) +
   Zurücksetzen. Am Handy stehen Zeitraum und Umkreis nur nebeneinander, wenn beide ganz hineinpassen. Wertechips unter
   der Leiste nur bei zugeklapptem Filter.
-- **Turnier-Tabellen** (b1): Team-Spalte „Punkte“ nur, wenn ein Team Punkte hat; Teamname am Handy mit „…“. Spieler-
+- **Turnier-Tabellen** (b1): Team-Spalte „Punkte“ nur, wenn ein Team Punkte hat; Teamname am Handy mit „…“; Rang und
+  Punkte 4rem, der Teamname nimmt den Rest (d4). Spieler-
   tabelle 769–1023 px ohne FIDE-ID, Verein ≤ 12rem mit „…“. Leere Paarungen: ohne Runden keine Rundenauswahl; EINE
   Aktion im Leerzustand — „Aktualisieren“ (Detailseite) bzw. „Volle Ansicht“ (`/t/:id`).
 - **Breitbild ≥ 2400 px** (u1): Turnierkalender zeigt Liste (Karten zweispaltig) und Karte nebeneinander unter EINEM
@@ -909,7 +960,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 - Überschriften Zilla Slab 700 (h1 32, h2 23, h3 19 px), Text Atkinson Hyperlegible 17 px.
 - `.btn` (min. 44 px, Radius 8, 1.5 px Rahmen), `.btn.primary`, `.btn.danger`, `.btn.slim` (36 px);
-  Gruppenfilter als `.chip-btn` statt Auswahlliste.
+  Gruppenfilter als `.chip-btn` statt Auswahlliste; am Handy eine waagrecht wischbare Chipzeile ohne Scrollleiste mit
+  28-px-Verlauf (`mask-image`) und gleich breitem Polster am Ende (4.4, d4-c-kartei-filterchips-abgeschnitten).
+- Ein gefüllter Knopf je Seite auch bei aufgeklapptem Formular: Hat ein Klappkasten seine eigene Hauptaktion (Gruppe
+  ändern → „Änderungen speichern“), verliert der Kopfknopf („Anwesenheit abhaken“) solange `.primary`
+  (d4-c-gruppe-zwei-hauptknoepfe).
 - `.sheet` (Karteiblatt, Kopflinie `2px solid var(--rule)`), `.cards` (Liste in einer Karte), `.gate`
   (Sperrkarte mit `.gate-actions`), `.empty` (gestrichelter Rahmen), klebende `.form-save` über die volle Breite.
 - Anwesenheit `.matrix`: eigener Scrollkasten, Namensspalte klebt links, Zellen ✓/✗ 26 px.
@@ -998,6 +1053,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-18 | 0.808.x · Runde d4 · Training | Token `--rh-hint` (hell #8a5300, dunkel #ffb74d, E-Ink #4d4d4d) für „mit Tipp“ im Kursfortschritt (3.1); Repertoire-Trainer: Zusatz „Repertoire-Trainer“ unter 900 px nur für Bildschirmleser, darüber schrumpft er vor dem Namen; Leerzustand ohne „Häufigste Linien zuerst“/„Fortschritt zurücksetzen“; Lernen ohne „spiel …“ solange vorgespielt wird (`whiteToMoveLearn`/`blackToMoveLearn`); Linienliste „⊕ Üben“ als umrandete 44-px-Pille; Woodpecker-Löser: Titel bricht um (1,05 rem < 600 px), Meta über `.rh-dots`; Tipp-Knopf zählt den nächsten Tipp („Tipp (1/3)“ → „Nächster Tipp (2/3)“, auch Eigene Fehler), Vollbild-Abzeichen mit `title` „n von N Tipps gezeigt“; `.board-hint` global 0,875 rem (alle Puzzle-Modi); Endlos: Stufe einmal als „Level n (min–max)“ mit `stairs` in den Quick-Stats (Aktionszeile ohne `levelText`), Tiefen-Regler als `<label>` „Stockfish-Tiefe“ + Spanne im Tooltip, Handy-Seitenrand 1 rem; Tagespuzzle-Chip + Datum; E-Book-Kalkulieren: ein Satz + ? (`calcHelp`); Repertoire-Brett nie unter 300 px, niedrige Fenster `100vh − 300px` (4.6); Statistik: Elo-Kopf mit Lücke/Umbruch, E-Ink-Balken grau + schraffiert, Überlagerung schwarz mit Strichart (3.6); E-Ink: End-Segmente der Umschaltergruppe mit Gruppenrundung | Glühbirne hell kaum vom ✗ zu unterscheiden, Name „Testrepertoire Mar…“ neben vollem Zusatz, zwei wirkungslose Bedienelemente im Leerzustand, Imperativ bei gesperrtem Brett, „+“ las sich als Zustand (40 px), „…“ im Seitenkopf + „· noch 24 Tage“, „Nächster Tipp (1/3)“ mit Tipp 1 sichtbar, zwei Schriftgrößen, „Lv 0“ mit Aufgeben-Fähnchen + „Level 0 (719–759)“ doppelt ([d3 nicht behoben]: 0.807.0 baute nur die Statistik-Kachel ab, die Aktionszeile behielt `levelText`), nackte Zahl „16“, Rand 8 statt 14 px, Tagespuzzle ohne Tagesbezug, Zwei-Satz-Absatz, 160-px-Brett auf dem Boox, 4 px Titel–Feld/2 px Feld–Diagramm, grüne/rote/blaue Diagramme im E-Ink-Modus, abgeschnittener Innenrahmen | UI-Sweep d4 (20261018_1723_local_nach-d3-voll, _1816_…-boox, _1819_…-en): d4-rk-woodpecker-solve-titel-abgeschnitten, d4-rk-progress-bulb-light-red, d4-rk-trainer-titel-handy-gekuerzt, d4-rk-trainer-title-truncated-mobile, d4-rk-trainer-leerzustand-bedienelemente, d4-rk-lernen-anweisung-widerspruch, d4-rk-tipp-zaehler-beschriftung, d4-rk-endless-regler-ohne-beschriftung, d4-rk-endless-level-flagge-doppelt, d4-rk-endless-level-doppelt, d4-rk-kalk-hilfetext-lang, d4-rk-repertoire-brett-winzig, d4-rk-eink-diagramm-farbe, d4-rk-stats-mobile-level-select-crowds-chart, d4-rk-segment-innenrahmen-abgeschnitten, d4-rk-endless-brett-breiter-als-puzzle, d4-rk-line-add-plus-unlabeled, d4-rk-daily-puzzle-ohne-tagesbezug, d4-rk-hint-chip-schriftgroesse-buchmodus |
+| 2026-10-18 | 0.808.x · Runde d4 · Apps | ClubHub: Gruppenchips am Handy mit Weiterscroll-Verlauf rechts (28 px, gleich breites Polster), bei aufgeklapptem „Gruppe ändern“ tritt „Anwesenheit abhaken“ als Hauptknopf zurück, Zugriffs-Hinweis ein Satz („Das Konto braucht in RookHub zusätzlich eine Rolle mit dem Recht „ClubHub: Trainer“.“); Turnierseite: aktiver Weg in Kopfleiste und ☰ markiert (Primärfarbe, 600, Unterstrich, `aria-current`), Teams-Tabelle Rang/Punkte 4rem, Name nimmt den Rest | Chip endete hart ohne Hinweis aufs Wischen, zwei gefüllte Knöpfe, drei Sätze samt Versalien-„PERSONEN“, aktuelle Seite nur an der Überschrift erkennbar, Rangspalte 220 px breit | UI-Sweep d4: d4-c-kartei-filterchips-abgeschnitten, d4-c-gruppe-zwei-hauptknoepfe, d4-c-gruppe-trainer-hinweis-jargon, d4-t-navbar-aktiv-marker-fehlt, d4-t-teams-tabelle-spalten-gestreckt |
+| 2026-10-18 | 0.808.x · Runde d4 · Partien/Texte | Partie korrigieren 769–1100 px: Raster-Zeilen `auto 1fr` (Zugliste-Überhang nur in Zeile 2, Zug-Karte folgt dem Brett im 12-px-Abstand); Partienliste ohne Engine: eigener Satz `games.listNoEngine` („Genauigkeit … — keine Engine frei“) als Info-Zeile mit Symbol, 12 px unter den Filtern, „–“ der Spalte verweist darauf (aria-describedby + Tooltip), Partieseite-Tooltip `games.analyzeNoEngine`; ⋮ der Partie in Liste und Seite mit gleichem Inhalt (PGN in der Liste, Löschen auf der Seite, 5.5); Rechtsseiten: Rücklink 44 px; Startseite: Trainingsziele `checklist` (Punktepartie behält `track_changes`); Trennpunkt-Muster `.rh-dots`/`.rh-dots--center` global (5.13), Brett-Kopf des E-Book-Lesers und Aufgabenblatt-Liste darauf; E-Books: Hochladen unter 600 px runder 44-px-Symbolknopf mit aria-label/title; U+00A0 vor `app-help-hint` am Satzende (5.11: Installieren, Rekonstruktion, Aufgabenblätter, E-Books); Puzzle-Löser Trefferquote `pct:1`; Analyse-Aufträge: Leerhinweis/Hilfe nennen das ⋮ der Stellung; Englisch: Menüs/Links/Kacheltitel in Satzschreibung, `legal.privacy.link`, britisch „analyse“ (6) | 85-px-Loch, Punktepartie-Fachwort ohne Bezug und klebend unter den Filtern, Löschen nur in der Liste/PGN nur auf der Seite, 24-px-Tippziel, zwei Kacheln mit gleichem Symbol, „· Matt in 3“ am Zeilenanfang, außermittiges Symbol ohne Namen, ? allein in neuer Zeile, „79%“ vs. „78.6%“, Uhr-Symbol gibt es nicht, Title Case trotz d3-Regel (d3 hatte nur Puzzle/Endlos umgestellt, kein Test), „Analyse“/„Analyze“ gemischt | UI-Sweep d4 (20261018_1723_local_nach-d3-voll, _1816_…-boox, _1819_…-en): d4-rk-edit-luecke-brett-zugkarte, d4-rk-games-engine-hinweis-jargon, d4-rk-engine-hinweis-jargon, d4-rk-games-liste-engine-hinweis-verwaist, d4-rk-games-engine-hint-unter-filter, d4-rk-konto-loeschen-textlinks-klein, d4-rk-partie-menue-loeschen-fehlt-partieseite, d4-rk-dashboard-gleiches-symbol-punktepartie-trainingsziele, d4-rk-brett-kopf-punkt-umbruch, d4-rk-ebook-brett-kopf-zeile-punkt-umbruch, d4-rk-ebooks-upload-knopf-aussermittig, d4-rk-hilfe-symbol-umbruch, d4-rk-dashboard-prozent-rundung, d4-rk-beschriftung-uhr-symbol-hinweis, d4-rk-en-title-case-labels, d4-rk-en-analyse-analyze-uneinheitlich |
+| 2026-10-18 | 0.808.x · Boox 200 % Falz | Niedrige Fenster (4.6, `(max-width: 768px) and (max-height: 720px)`): gemeinsame Regel in `styles.scss` für RookHub + Turnierseite — App-Kopf 48 px (Abzeichen in der Leiste), Suchfelder 44 px, Reiter 40 px, `h1` 1,5 rem, `h2` 1,125 rem; je Seite Abstände vor der Hauptsache 4–8 px (Partien, Aufgabenblätter, Punktepartie, Rekonstruktion, Kurse, Turnier-Kopf), Aufgabenblatt „Drucken“/„Link kopieren“ und Kursseite „Zurück“ als Symbolknopf mit Namen im `aria-label`, E-Book-Anmeldebanner und „Kurz erzählt“ 0,875 rem, Turnier-Titel 1,125 rem + Sortierknopf 40 px, Lernkarte nach Fensterhöhe | Boox Tab X C mit UI-Größe 200 % = 480 × 640 CSS-px: Vorlauf 42–54 % auf 13 Seiten, Lernkarte ragte 29 px unter die Falz | UI-Sweep 20261018_1816_local_nach-d3-boox: fold-lead rookhub__games, __games-analyzed, __g-analyzed, __worksheets, __worksheets-worksheetId, __ebooks (anon), __guess, __reconstruct, __courses, __courses-study, __friends, __games-mistakes, turnier__tournaments-tournamentId, __t-tournamentId, __tournaments-calendar; fold-below __repertoires-repertoireId-flashcards, __courses-bookId-flashcards |
 | 2026-10-18 | 0.807.x · Design-Runde d3 · Apps | ClubHub: Fußlinks am Handy 44 px, `.btn-link` mit unsichtbarer 44-px-Trefferfläche, „Gruppe löschen“ als `.btn.danger`, Feldhinweis in `.field-cell` unter seinem Feld, Seitentitel „Verknüpfung“ bei verknüpftem Konto; KidHub: Kursbalken über die Textspalte und kräftiger, Handy-Kurzformen der Kursaufgabe nur < 600 px, „← Kurse“ mit Abstand (gap), Anmeldung ohne leere Hinweiszeilen, Konto löschen: Kindersatz unter „Was entfernt wird“ + Knopf nach „Was bleibt“, Passwort vergessen: Eltern-Hinweise zugeklappt, Markierungen erst aufs vermessene Brett; LeagueHub: ⓘ mit letztem Wort nicht umbrechend, Korrigieren am Handy Partietitel in Zeile 2 (Basis 10rem); Turnierseite: Profil mit Darstellungskarte (theme-card), Ortshinweis leise mit 8 px Abstand, Spieltermine mit „·“, Stern mittig (20-px-Box), Detail in `--page-max-width`, Gast-Karte mit `.tc-slot`, niedrige Fenster kompakter | Tippziele 17–30 px, Fehler unter dem falschen Feld, Titel widersprach Fußzeile, Balken endete nach 260 px (≈ 1,3:1), Tablet zeigte Handy-Kopf, „←Kurse“, 44–50 px Leerraum, Knopf vor der Erklärung, gestapelte Erwachsenen-Absätze, NaN-Konsolenfehler, ⓘ allein in Zeile 2, 5-zeilige Titelspalte, fehlende E-Ink-/Größen-Wahl, klebender Hinweis, verschwimmende Termine, Stern 5 px zu hoch, 1 100 px statt 1 240 px, rutschende Aktionen, Vorlauf 48–50 % | UI-Sweep d3: d3-c-footer-links-tippziel-klein, d3-c-gruppe-textlinks-tippziel-klein, d3-c-kind-neu-fehler-vor-eingabe, d3-c-verknuepfen-titel-beschriftung, d3-k-kurskachel-balken-feste-breite, d3-k-zurueck-pille-tablet-nur-pfeil, d3-k-kid-back-pill-kurse-pfeil, d3-k-kid-login-feldluecken-ungleich, d3-k-delete-button-before-info, d3-k-forgot-stacked-muted-paragraphs, d3-l-info-icon-allein-handy, d3-l-korrigieren-mobil-kopf-schmal, d3-t-turnier-profil-darstellung-karte-fehlt, d3-t-detail-ortshinweis-ohne-abstand, d3-t-detail-spieltermine-ohne-trenner, d3-t-team-star-vertikal-versetzt, d3-t-detail-schmale-spalte-1920, d3-t-turnierkarte-slot-fehlt-anon, d3-t-kalender-vorlauf-zu-hoch; Konsole KidHub stars-1/levels-1 (NaN-Pfeile) |
 | 2026-10-18 | 0.807.x · Design-Runde d3 · Partien | RookHub, Partien: Züge vergleichen zeigt alle Bewertungen (Liste, Antworten, Erwiderungen) aus Sicht der Seite am Zug wie die Begründung, nennt die Sicht einmal über der Liste, der beste Zug nie rot; Ladefehler (≠ 404) auf Zugvergleich, Partie-Analysen und Kursliste = `app-load-error` statt endlosem Balken bzw. „nichts da“, Seitenladen mit `app-loading-spinner` (Balken nur für laufende Aufträge, 5.10); Partie korrigieren 769–1100 px: Zug-Karte unter dem Brett, Zugliste rechts über beide Zeilen; „Seite / Liga“ → „Plattform / Liga“ samt Beispiel-Platzhaltern, Fehler-Sammlung „Fehler mehrerer Partien nachspielen“ mit den Feldnamen; Partieseite: Kopfknöpfe oben bündig, sobald unter „Partie analysieren“ ein Grund steht; Gedankenstrich mit U+00A0 (5.13); fremde Partie „Fehler von {Spieler} nachspielen“ statt „Eigene …“; ⋮ der Partie und der Partienliste in einer Reihenfolge (5.5); Rekonstruktion: Halbzüge-Umschalter am Handy 44 px, ohne gewähltes Teil Vorschau-Brett + nächste Schritte (einspaltig ausgeblendet); Partienliste: leer nur EIN „PGN hochladen“, Handy-Typspalte fest 56 px (Tempo unter dem Symbol), ohne Engine einmal der Grund über der Liste statt grauer Knöpfe; Partieformular: ⓘ im h1; Punktepartie: Punkte erst ab `maxPoints > 0`, en überall „Point game“, Symbol `track_changes` wie 🎯 | Vorzeichen widersprach der Erklärung und färbte den besten Zug rot, Ladefehler sahen wie Laden/Leerzustand aus, 540 px Leerraum, „Seite“ las sich als Farbe, versetzte Knopfzeile, Strich am Zeilenanfang, „Eigene“ bei fremden Fehlern, zwei Menüreihenfolgen, 32-px-Tippziele, leere rechte Spalte, doppelte Aktion, springende Namensspalte, Grund nur im Tooltip, abgesetztes ⓘ, „0 of 0 points“, drei Namen/Symbole | UI-Sweep d3: d3-rk-vergleich-vorzeichen-widerspruch, d3-rk-vergleich-leere-seite-balken, d3-rk-ladefehler-endlos-spinner, d3-rk-edit-tablet-leerraum, d3-rk-edit-seite-liga-beschriftung, d3-rk-mistakes-filter-beschriftung-saison, d3-rk-partie-grund-neben-knopf-versetzt, d3-rk-partie-grund-strich-zeilenanfang, d3-rk-eigene-fehler-fremde-partie, d3-rk-spielmenue-reihenfolge-uneinheitlich, d3-rk-recon-halbzuege-tippziel-klein, d3-rk-recon-detail-leere-rechte-spalte, d3-rk-games-leer-pgn-doppelt, d3-rk-games-liste-mobile-namen-versetzt, d3-rk-games-analyse-symbol-blass, d3-rk-scoresheet-hilfe-icon-abgesetzt-handy, d3-rk-punktepartie-null-von-null, d3-rk-punktepartie-benennung |
 | 2026-10-18 | 0.807.x | Design-Runde d3 · Konto: Profil-Titel als `h1`-Seitenkopf über der Karte (5.1); Aktualisieren-Banner mit `--rh-info` (5.11); Aufgabenblatt-Liste: Meta-Trenner absolut in der Lücke + `overflow-x: clip` (wie ClubHub `.kid-meta`), Löschen als letzter roter Eintrag im ⋮ statt Papierkorb neben PDF; Installieren: je Karte ein Satz, Menü-Anleitung hinter ?; Bestenlisten: alles leer → eine Leerkarte mit Zeitraum-Satz + „Puzzles lösen“, einzelne Leerkarte nennt den Zeitraum; Trainingsziele: Untertitel „Tagesziel + Wochenziele“, Feld „Min/Tag“; Konto löschen: Knopf „Konto löschen …“ (führt nur zur Profilkarte), keine Pfadkürzel im Text; Lichess-Token: Speichern nur beim Speichern gesperrt, leer → Grund darunter; Aktivitäts-Raster am Tablet so breit wie die Karte; Passwort-Auge geteilt auf Anmeldung/Registrierung/Zurücksetzen (5.8) | Titel klebte an „Erscheinungsbild“, Hinweis-Banner sah hell wie ein Fehler aus, „· Datum“ am Zeilenanfang, Löschen gleichrangig, Fließtext-Stapel, Leerzustand ohne Grund/Weg, Text versprach Tagesziele je Kategorie, „jetzt löschen“ löschte nicht, gesperrter Knopf ohne Grund, halbleeres Raster, Auge nur beim Registrieren | UI-Sweep d3: d3-rk-profil-titel-ohne-abstand, d3-rk-update-banner-rot-hell, d3-rk-ws-liste-meta-punkt-zeilenanfang, d3-rk-ws-liste-loeschen-direkt-sichtbar, d3-rk-install-karte-fliesstext, d3-rk-bestenlisten-leer-ohne-weg, d3-rk-trainingsziele-tag-vs-woche, d3-rk-konto-jetzt-loeschen-beschriftung, d3-rk-konto-loeschen-url-kuerzel, d3-rk-profil-lichess-speichern-gesperrt-ohne-grund, d3-rk-stats-aktivitaet-raster-halbleer, d3-rk-login-passwort-ohne-auge |

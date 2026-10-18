@@ -32,6 +32,27 @@ describe('CourseProgressSplitComponent', () => {
     expect((el.querySelector('.seg.gaveup') as HTMLElement).style.width).toBe('0.5%');
   });
 
+  it('d4-rk-progress-bulb-light-red: „mit Tipp“ trägt --rh-hint, nicht die Warn-/Fehlerfarbe', () => {
+    TestBed.configureTestingModule({ imports: [CourseProgressSplitComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
+    const f = TestBed.createComponent(CourseProgressSplitComponent);
+    f.componentRef.setInput('stats', stats({ solvedCount: 30, cleanCount: 20, helpedCount: 10, gaveUpCount: 5 }));
+    f.detectChanges();
+    const el: HTMLElement = f.nativeElement;
+    document.body.appendChild(el);
+    try {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--rh-hint)';
+      document.body.appendChild(probe);
+      const hint = getComputedStyle(probe).color;
+      probe.remove();
+      expect(getComputedStyle(el.querySelector('.lg.helped mat-icon')!).color).toBe(hint);
+      expect(getComputedStyle(el.querySelector('.seg.helped')!).backgroundColor).toBe(hint);
+      expect(hint).not.toBe(getComputedStyle(el.querySelector('.lg.gaveup mat-icon')!).color);
+    } finally {
+      el.remove();
+    }
+  });
+
   it('ältere Antwort ohne Aufschlüsselung: alles Gelöste zählt als ohne Hilfe', () => {
     TestBed.configureTestingModule({ imports: [CourseProgressSplitComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
     const f = TestBed.createComponent(CourseProgressSplitComponent);

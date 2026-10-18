@@ -332,6 +332,14 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
     /* UI-Sweep u1 (u1-x-breite-stufe): Breitbild-Stufe ab 2400 px — Kartenraster mit 6 Spalten (DESIGN 4.1). */
+    /* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): der erste Kurs begann bei 47 % der Höhe —
+       oben 8 statt 24 px, Kopf, Import-Hinweis und Abschnittskopf mit 4–8 px statt 10–16 px Abstand. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .courses-container { margin-top: 8px; }
+      .header { margin-bottom: 8px; }
+      .reimport-legend { margin-bottom: 0.5rem; }
+      .section-head { margin-bottom: 6px; }
+    }
     @media (min-width: 2400px) {
       .courses-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
       .course-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }

@@ -184,3 +184,10 @@ $fc-study-size-wide: min(calc(100vh - 320px), 1100px);
   .fc-study { display: none; }
   .fc-sheets--screen-hidden { display: block; }
 }
+
+/* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): die Lernkarte (92vw ≈ 441 px + Kopf) ragte
+   29 px unter die Falz — dort richtet sie sich nach der Fensterhöhe (Kopf, Knopfzeilen und Kartentitel ≈ 230 px). */
+@media (max-width: 768px) and (max-height: 720px) {
+  .fc-study-card, .fc-fs-btn { width: min(92vw, calc(100vh - 230px)); }
+  .fc-flip-face { min-height: min(92vw, calc(100vh - 230px)); }
+}

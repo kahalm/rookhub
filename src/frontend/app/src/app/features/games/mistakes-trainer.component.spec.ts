@@ -37,8 +37,10 @@ describe('MistakesTrainerComponent', () => {
   it('Tipps wie beim Puzzle: Zugart → Figur → Zug, danach kein Knopf mehr', () => {
     const { fixture, el } = setup();
     const hint = () => el.querySelector('button.hint') as HTMLButtonElement | null;
-    expect(hint()!.textContent).toContain('(0/3)');
+    // d4-rk-tipp-zaehler-beschriftung: die Klammer nennt die Stufe, die der Klick aufdeckt (wie in den Puzzle-Lösern).
+    expect(hint()!.textContent).toContain('(1/3)');
     hint()!.click(); fixture.detectChanges();
+    expect(hint()!.textContent).toContain('(2/3)');
     hint()!.click(); fixture.detectChanges();
     hint()!.click(); fixture.detectChanges();
     expect(Array.from(el.querySelectorAll('.hint-list li')).map(li => li.textContent!.trim()))

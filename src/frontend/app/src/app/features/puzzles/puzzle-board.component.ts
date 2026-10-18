@@ -396,6 +396,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       return;
     }
     this.shapesPending = false;
+    // chessground merkt sich die Brettmaße (memo) — beim ersten Aufruf auf dem ungemessenen Brett 0 × 0. Wurde danach
+    // noch nicht neu gezeichnet, rechnete customSvg (KidHub-Sterne) weiter damit: `translate(NaN,NaN)`. Frisch messen.
+    (this.ground.state.dom?.bounds as { clear?: () => void } | undefined)?.clear?.();
     // Alle Auto-Shapes in EINEM setAutoShapes-Aufruf zusammenführen:
     //  • Review-Annotationen (Chessable-Pfeile/Feld-Markierungen zum aktuellen Zug),
     //  • Gegnerzug-Pfeil (Viz-Modus: Board eingefroren; Crazy-Modus: Zug schlecht erkennbar).

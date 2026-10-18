@@ -40,11 +40,12 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
            „Meine Turniere" gehoeren einem Konto und bleiben angemeldeten Nutzern vorbehalten (UX-038: ein Link, der
            nur auf die Anmeldemaske fuehrt, wirkt tot). -->
       <nav class="links">
-        <a mat-button routerLink="/tournaments/calendar" routerLinkActive="on">{{ 'nav.tournamentCalendar' | translate }}</a>
+        <!-- d4-t-navbar-aktiv-marker-fehlt: der aktive Weg trägt Farbe + Unterstrich und aria-current (E-Ink-Rahmen, DESIGN 3.6). -->
+        <a mat-button routerLink="/tournaments/calendar" routerLinkActive="on" ariaCurrentWhenActive="page">{{ 'nav.tournamentCalendar' | translate }}</a>
         @if (auth.isLoggedIn) {
-          <a mat-button routerLink="/tournaments" routerLinkActive="on"
+          <a mat-button routerLink="/tournaments" routerLinkActive="on" ariaCurrentWhenActive="page"
              [routerLinkActiveOptions]="{ exact: true }">{{ 'nav.tournamentBookmarks' | translate }}</a>
-          <a mat-button routerLink="/tournaments/history" routerLinkActive="on">{{ 'nav.tournamentHistory' | translate }}</a>
+          <a mat-button routerLink="/tournaments/history" routerLinkActive="on" ariaCurrentWhenActive="page">{{ 'nav.tournamentHistory' | translate }}</a>
         }
       </nav>
 
@@ -57,10 +58,11 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
         <mat-icon>menu</mat-icon>
       </button>
       <mat-menu #navMenu="matMenu">
-        <a mat-menu-item routerLink="/tournaments/calendar"><mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}</a>
+        <a mat-menu-item routerLink="/tournaments/calendar" routerLinkActive="on" ariaCurrentWhenActive="page"><mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}</a>
         @if (auth.isLoggedIn) {
-          <a mat-menu-item routerLink="/tournaments"><mat-icon>bookmarks</mat-icon> {{ 'nav.tournamentBookmarks' | translate }}</a>
-          <a mat-menu-item routerLink="/tournaments/history"><mat-icon>emoji_events</mat-icon> {{ 'nav.tournamentHistory' | translate }}</a>
+          <a mat-menu-item routerLink="/tournaments" routerLinkActive="on" ariaCurrentWhenActive="page"
+             [routerLinkActiveOptions]="{ exact: true }"><mat-icon>bookmarks</mat-icon> {{ 'nav.tournamentBookmarks' | translate }}</a>
+          <a mat-menu-item routerLink="/tournaments/history" routerLinkActive="on" ariaCurrentWhenActive="page"><mat-icon>emoji_events</mat-icon> {{ 'nav.tournamentHistory' | translate }}</a>
         }
         @if (partnerUrl) {
           <button mat-menu-item (click)="toRookHub()">
@@ -136,6 +138,14 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
     .tb { gap: 4px; }
     .brand { font-weight: 600; text-decoration: none; color: inherit; margin-right: 8px; }
     .links { display: flex; gap: 2px; }
+    /* d4-t-navbar-aktiv-marker-fehlt: routerLinkActive setzte „on“, aber keine Regel wirkte — die aktuelle Seite war in
+       der Kopfleiste nicht zu erkennen. Primärfarbe, halbfett, Unterstrich als Innenschatten (kein Layout-Sprung). */
+    .links a.on {
+      --mat-button-text-label-text-color: var(--mat-sys-primary);
+      color: var(--mat-sys-primary); font-weight: 600; border-radius: 0;
+      box-shadow: inset 0 -2px 0 var(--mat-sys-primary);
+    }
+    .mat-mdc-menu-item.on, .mat-mdc-menu-item.on .mat-icon { color: var(--mat-sys-primary); font-weight: 600; }
     /* Mindestabstand zwischen den Wegen und den Kopfknoepfen (a1-t-navbar-tablet-en). */
     .spacer { flex: 1 1 auto; min-width: 24px; }
     .who { opacity: .7; font-size: .85rem; }

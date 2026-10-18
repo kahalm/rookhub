@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
@@ -9,6 +9,7 @@ import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { RepertoireTrainingService } from './repertoire-training.service';
 import { RepertoireExplorerService, DEFAULT_EXPLORER_SETTINGS } from './repertoire-explorer.service';
 import { StockfishService } from '../puzzles/stockfish.service';
+import { lineKeyFromSans } from './repertoire-line-key.util';
 
 /** Gerenderte Lern-Ansicht des Trainers (UI-Sweep 2026-10-12, v1-rk-trainer-learn-*). */
 describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
@@ -45,6 +46,16 @@ describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
     expect(el.querySelector('.tap-hint')).not.toBeNull();   // Halt bis zum Weitertippen bleibt
   });
 
+  // d4-rk-lernen-anweisung-widerspruch
+  it('LEARN_SHOW (Trainer spielt vor, Brett gesperrt): Überschrift ohne „spiel …“-Imperativ', async () => {
+    // Mit Kommentar hält LEARN_SHOW bis zum Weitertippen (ohne springt es nach 1 s zurück).
+    const el = await render('[Event "Rep"]\n[White "1.e4"]\n[Black "Chapter A"]\n\n1. e4 {Zentrum.} e5 2. Nf3 *');
+    expect(el.querySelector('.feedback.learn')).withContext('LEARN_SHOW erwartet').not.toBeNull();
+    const prompt = el.querySelector('.prompt')!.textContent!;
+    expect(prompt).toContain('repertoireTrainer.whiteToMoveLearn');
+    expect(prompt).not.toMatch(/repertoireTrainer\.whiteToMove(?!Learn)/);
+  });
+
   it('ein PGN-Platzhalter „?" als Linienname erscheint nicht', async () => {
     const el = await render('[Event "?"]\n[White "?"]\n[Black "?"]\n\n1. e4 e5 2. Nf3 *');
     expect(el.querySelector('.line-label')).toBeNull();
@@ -54,9 +65,17 @@ describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
 
 /** Design-Runde d3: Kopfleiste und Leerzustand des Trainers. */
 describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
-  afterEach(() => { localStorage.removeItem('rookhub_rep_train_chaptercolor_1'); localStorage.removeItem('rookhub_rep_train_freq_order'); });
+  afterEach(() => {
+    localStorage.removeItem('rookhub_rep_train_chaptercolor_1'); localStorage.removeItem('rookhub_rep_train_freq_order');
+    document.querySelectorAll('.cdk-overlay-container').forEach(o => o.innerHTML = '');
+  });
 
-  async function renderQuiz(name: string | null): Promise<HTMLElement> {
+  /** Ein fälliger Pool-Eintrag für die Linie 1.e4 e5 2.Nf3 — sonst ist der Trainer im Leerzustand. */
+  let lastFixture: ComponentFixture<RepertoireTrainerComponent>;
+  const DUE = [{ lineKey: lineKeyFromSans(['e4', 'e5', 'Nf3']), level: 1, reps: 1, lapses: 0,
+    dueAt: new Date(Date.now() - 3_600_000).toISOString(), lastReviewedAt: null, inPool: true, paused: false }];
+
+  async function renderQuiz(name: string | null, states: unknown[] = []): Promise<HTMLElement> {
     localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w' }));
     await TestBed.configureTestingModule({
       imports: [RepertoireTrainerComponent],
@@ -66,14 +85,14 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } } } },
         { provide: RepertoireTrainingService, useValue: {
           getPgn: () => of('[Event "Rep"]\n[White "1.e4"]\n[Black "Chapter A"]\n\n1. e4 e5 2. Nf3 *'),
-          getLineStates: () => of([]), getRepertoireName: () => of(name),
+          getLineStates: () => of(states), getRepertoireName: () => of(name),
         } },
         { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
         { provide: RepertoireExplorerService, useValue: { run: () => EMPTY, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) } },
       ],
     }).compileComponents();
     localStorage.setItem('rookhub_rep_train_freq_order', '0');
-    const fixture = TestBed.createComponent(RepertoireTrainerComponent);
+    const fixture = lastFixture = TestBed.createComponent(RepertoireTrainerComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -82,7 +101,7 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
 
   // d3-rk-trainer-symbolknoepfe-ohne-text
   it('„Häufigste zuerst“ ist ein beschrifteter Umschalter; Einstellungen und Zurücksetzen liegen im ⋮', async () => {
-    const el = await renderQuiz(null);
+    const el = await renderQuiz(null, DUE);
     const toggle = el.querySelector('.bar .freq-toggle')!;
     expect(toggle.textContent).toContain('repertoireTrainer.freqOrder');
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
@@ -101,6 +120,60 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
     expect(el.querySelector('mat-card.msg')!.textContent).not.toContain('repertoireTrainer.manageLines');
     expect(el.querySelector('.bar .rep-name')!.textContent!.trim()).toBe('Schwarz-Repertoire');
     expect(el.querySelector('.bar .title-kind')!.textContent!.trim()).toBe('repertoireTrainer.title');
+  });
+
+  // d4-rk-trainer-leerzustand-bedienelemente
+  it('Leerzustand: kein „Häufigste Linien zuerst“, im ⋮ kein „Fortschritt zurücksetzen“ (Übungszyklen bleiben)', async () => {
+    const el = await renderQuiz('Leer');
+    expect(el.querySelector('.bar .freq-toggle')).toBeNull();
+    const more = el.querySelector('.bar > button.more') as HTMLButtonElement;
+    expect(more).not.toBeNull();
+    more.click();
+    lastFixture.detectChanges();
+    await lastFixture.whenStable();
+    const menu = document.querySelector('.mat-mdc-menu-panel');
+    expect(menu).not.toBeNull();
+    expect(menu!.querySelector('.reset-item')).toBeNull();
+    expect(menu!.textContent).toContain('srConfig.title');
+  });
+
+  it('mit Linien im Pool sind Umschalter und „Fortschritt zurücksetzen“ da', async () => {
+    const el = await renderQuiz('Voll', DUE);
+    expect(el.querySelector('.bar .freq-toggle')).not.toBeNull();
+    (el.querySelector('.bar > button.more') as HTMLButtonElement).click();
+    lastFixture.detectChanges();
+    await lastFixture.whenStable();
+    expect(document.querySelector('.mat-mdc-menu-panel .reset-item')).not.toBeNull();
+  });
+
+  // d4-rk-trainer-titel-handy-gekuerzt + d4-rk-trainer-title-truncated-mobile
+  it('Name vor Zusatz: der leise „Repertoire-Trainer“ schrumpft zuerst, der Name bleibt voll', async () => {
+    const el = await renderQuiz('Weiß: Italienisch + Abtausch');
+    const title = el.querySelector('.bar .title') as HTMLElement;
+    title.style.flex = '0 0 330px';
+    title.style.width = '330px';
+    document.body.appendChild(el);
+    try {
+      const name = el.querySelector('.bar .rep-name') as HTMLElement;
+      const kind = el.querySelector('.bar .title-kind') as HTMLElement;
+      expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth + 1);   // Name nicht gekürzt
+      expect(kind.scrollWidth).toBeGreaterThan(kind.clientWidth);           // Zusatz mit „…“
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('unter 900 px steht nur der Name (Zusatz nur für Bildschirmleser)', () => {
+    const css = ((RepertoireTrainerComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
+      .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    const at = css.indexOf('@media(max-width:899.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const media = css.slice(at, css.indexOf('}}', at));
+    const block = media.slice(media.indexOf('.title-kind'));
+    expect(media).toContain('.title-kind');
+    expect(block).toContain('position:absolute');
+    expect(block).toContain('clip-path:inset(50%)');
+    expect(block).not.toContain('display:none');
   });
 
   it('ohne Namen bleibt der bisherige Titel', async () => {

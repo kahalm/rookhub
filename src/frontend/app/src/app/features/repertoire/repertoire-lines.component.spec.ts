@@ -301,3 +301,44 @@ describe('RepertoireLinesComponent viele Linien', () => {
     expect(el.querySelector('.show-more')).toBeNull();
   });
 });
+
+// d4-rk-line-add-plus-unlabeled: „in den Übungspool“ ist ein beschrifteter Knopf (Symbol + „Üben“), nicht ein „+“ im
+// Stil der Status-Abzeichen, und hat eine 44-px-Trefferfläche.
+describe('RepertoireLinesComponent „Üben“-Knopf an neuen Linien (d4)', () => {
+  it('Symbol + Wort, kein Abzeichen, 44 × 44 px, nimmt die Linie in den Pool', async () => {
+    const { TestBed } = await import('@angular/core/testing');
+    const { provideRouter } = await import('@angular/router');
+    const { provideNoopAnimations } = await import('@angular/platform-browser/animations');
+    const { provideTranslateService } = await import('@ngx-translate/core');
+    const { RepertoireTrainingService } = await import('./repertoire-training.service');
+    const promote = jasmine.createSpy('promote').and.returnValue(of({ affected: 1 }));
+    TestBed.configureTestingModule({
+      imports: [RepertoireLinesComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireTrainingService, useValue: {
+          getLineStates: () => of([]), getFlashcardMarks: () => of({ lineKeys: [] }), promote,
+        } }],
+    });
+    const fixture = TestBed.createComponent(RepertoireLinesComponent);
+    fixture.componentInstance.repertoireId = 3;
+    fixture.componentInstance.lines = [line('A', 0)];
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(el);
+    try {
+      const add = el.querySelector('button.sr-add') as HTMLButtonElement;
+      expect(add).not.toBeNull();
+      expect(add.querySelector('.sr-badge')).toBeNull();
+      expect(add.querySelector('mat-icon')!.textContent!.trim()).toBe('playlist_add');
+      expect(add.querySelector('.sr-add-text')!.textContent!.trim()).toBe('repertoire.lines.sr.addShort');
+      expect(add.getAttribute('aria-label')).toBe('repertoire.lines.sr.addToPool');
+      const r = add.getBoundingClientRect();
+      expect(r.width).toBeGreaterThanOrEqual(44);
+      expect(r.height).toBeGreaterThanOrEqual(44);
+      add.click();
+      expect(promote).toHaveBeenCalled();
+    } finally {
+      el.remove();
+    }
+  });
+});

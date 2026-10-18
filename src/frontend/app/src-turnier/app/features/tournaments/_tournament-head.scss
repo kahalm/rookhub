@@ -49,4 +49,10 @@ mat-card-title, mat-card-subtitle { overflow-wrap: anywhere; }
   .title-row mat-card-header { padding-block: 4px; }
   .title-row .action-bar { padding-bottom: 4px; }
   .action-bar .keep-label { height: 40px; }
+  // 0.808.x · Boox 200 % Falz (DESIGN 4.6 „Niedrige Fenster“): noch 46 % — oben 8 px, Karte 8 px Abstand, Titel 1,125 rem.
+  .detail-container { padding-top: 0.5rem; }
+  mat-card { margin-bottom: 0.5rem; }
+  .title-row mat-card-header { --mat-card-title-text-size: 1.125rem; --mat-card-title-text-line-height: 1.5rem; }
+  // Das ⋮ bestimmte mit 8 px Rand oben die Höhe der Titelzeile.
+  .more-actions { margin-top: 0; }
 }

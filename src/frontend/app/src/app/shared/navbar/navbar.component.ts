@@ -192,7 +192,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           <!-- Rueckmeldung und Version: am Handy ist die Fusszeile aus, das Menue ist der einzige Weg (UX-053). -->
           <a mat-menu-item class="feedback-item" [href]="feedbackUrl" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
           <!-- Eingeloggt der einzige Weg zu den Rechtsseiten am Handy (die Fusszeile ist dort aus, UX-017). -->
-          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</button>
+          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</button>
           @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
@@ -242,7 +242,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
-          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</button>
+          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</button>
           @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
           <button mat-menu-item (click)="quickstartClick.emit()">
             <mat-icon>info_outline</mat-icon>
@@ -406,6 +406,12 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
        (über dem Knopf, Rand −12 px, pulsiert ×1,28) ragte darüber hinaus und wurde oben abgeschnitten. */
     :host-context(body.nav-docked) .notif-bell ::ng-deep .mat-badge-content,
     :host-context(body.nav-docked) .msg-mail ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
+    /* Niedrige Fenster (styles.scss, DESIGN 4.6 „Niedrige Fenster“): die Leiste ist dort 48 px hoch — das Abzeichen
+       ragte wie angedockt über den Fensterrand und wurde oben abgeschnitten. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .notif-bell ::ng-deep .mat-badge-content,
+      .msg-mail ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
+    }
   `]
 })
 export class NavbarComponent implements OnInit {

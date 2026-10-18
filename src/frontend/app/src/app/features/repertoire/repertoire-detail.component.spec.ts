@@ -271,7 +271,8 @@ describe('RepertoireDetailComponent Layout (z1)', () => {
   // a1-rk-tablet-brett-400: einspaltig bis 640 px statt fest 400 px.
   it('einspaltig Brett bis 640 px (höchstens Fensterhöhe − 480 px), Filterleiste nie breiter', () => {
     const n = narrow();
-    expect(n).toMatch(/\.board-section[^{]*\{ ?width: 100%; max-width: min\(100%, 640px, (calc\()?100vh - 480px\)?\)/);
+    // d4-rk-repertoire-brett-winzig: der Höhenterm hat eine Untergrenze von 300 px (Boox 480 × 640 ergab sonst 160 px).
+    expect(n).toMatch(/\.board-section[^{]*\{ ?width: 100%; max-width: min\(100%, 640px, max\(300px, (calc\()?100vh - 480px\)?\)\)/);
     expect(n).not.toContain('max-width: 400px');
     expect(n).toMatch(/\.filter-bar[^{]*\{ ?max-width: 100%/);
   });

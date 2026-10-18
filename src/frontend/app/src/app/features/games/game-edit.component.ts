@@ -341,10 +341,15 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
        nimmt die ganze rechte Spalte ein und schließt mit Brett + Zug-Karte ab. Handy (≤ 768 px) unverändert. */
     @media (min-width: 769px) and (max-width: 1100px) {
       .layout:not(.with-photo) .side { display: contents; }
+      /* d4-rk-edit-luecke-brett-zugkarte: bei zwei auto-Zeilen verteilte das Raster den Überhang der überspannenden,
+         höheren Zugliste auf BEIDE Zeilen — Zeile 1 wurde höher als das Brett, ~85 px Loch vor der Zug-Karte. Mit
+         „auto 1fr" nimmt die flexible zweite Zeile den Überhang allein auf (Grid-Spezifikation: Überhang über flexible
+         Spuren geht nur an diese), die Zug-Karte folgt dem Brett im 12-px-Rasterabstand. */
+      .layout:not(.with-photo) { grid-template-rows: auto 1fr; }
       .layout:not(.with-photo) .board-card { grid-column: 1; grid-row: 1; }
       .layout:not(.with-photo) .cursor-card { grid-column: 1; grid-row: 2; }
       .layout:not(.with-photo) .moves-card { grid-column: 2; grid-row: 1 / span 2; }
-      .layout:not(.with-photo) .moves { max-height: calc(100dvh - 330px); }
+      .layout:not(.with-photo) .moves { max-height: calc(100dvh - 360px); }
     }
     .photo { padding: 8px; }
     /* Zweite Zeile: Seite/Liga, Modus/Jahrgang, Tags — ein gemeinsamer Hinweis darunter statt drei umbrechender. */

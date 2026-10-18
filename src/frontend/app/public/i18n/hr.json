@@ -62,7 +62,9 @@
     "opponentDone": "Svih {{n}} linija protiv ovog protivnika je gotovo.",
     "opponentAgain": "Ispočetka",
     "opponentBack": "Natrag na karticu igrača",
-    "freqLineTip": "Koliko često dosegneš ovu varijantu u stvarnim partijama (Lichess explorer, isti odabir kao kod traženja rupa)"
+    "freqLineTip": "Koliko često dosegneš ovu varijantu u stvarnim partijama (Lichess explorer, isti odabir kao kod traženja rupa)",
+    "whiteToMoveLearn": "Bijeli na potezu — ovo je tvoj potez iz repertoara.",
+    "blackToMoveLearn": "Crni na potezu — ovo je tvoj potez iz repertoara."
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",
@@ -844,6 +846,7 @@
     },
     "privacy": {
       "title": "Pravila o privatnosti",
+      "link": "Pravila o privatnosti",
       "updated": "Zadnja izmjena: 1. listopada 2026.",
       "tocTitle": "Sadržaj",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
@@ -1130,7 +1133,8 @@
           "due": "Dospjelo sada",
           "scheduled": "U bazenu — zakazano",
           "paused": "Pauzirano"
-        }
+        },
+        "addShort": "Vježbaj"
       }
     },
     "tree": {
@@ -1483,7 +1487,8 @@
         "queen": "dama",
         "king": "kralj",
         "piece": "figura"
-      }
+      },
+      "shownOf": "Prikazano savjeta: {{n}} od {{total}}"
     },
     "viz": {
       "countdown": "Figure nestaju za {{seconds}}s…",
@@ -2329,7 +2334,8 @@
     "commentDialog": {
       "open": "Čitaj u prozoru",
       "moveHint": "Potez u tekstu zatvara prozor i prikazuje varijantu na ploči."
-    }
+    },
+    "dailyChip": "Dnevna zagonetka"
   },
   "admin": {
     "title": "Administracija",
@@ -2823,6 +2829,7 @@
     "analyze": "Analiziraj partiju",
     "analyzeHint": "Neka se partija analizira u pozadini — nakon toga ispod ploče stoji graf procjene s preciznošću i ocjenama poteza.",
     "analyzeNoEngine": "Trenutačno nijedan engine nije dostupan — pokušaj ponovno kasnije.",
+    "listNoEngine": "Točnost se trenutačno ne može izračunati — nijedan engine nije slobodan.",
     "analyzeLogin": "Za analizu se prijavi.",
     "loadError": "Partiju nije moguće učitati.",
     "notFound": "Ova partija ne postoji ili je uklonjena.",
@@ -3604,7 +3611,7 @@
         "t": "Analiza",
         "p": [
           "Analiza prema zadanim postavkama radi u tvom pregledniku putem Stockfisha (WebAssembly) – i izvanmrežno. Dobivaš nekoliko glavnih varijanti (MultiPV), procjene za svaku poziciju i explorer otvaranja. Analiza radi bez prijave; pri prvom pokretanju motor u pregledniku jednokratno preuzme oko 7 MB.",
-          "Kad si prijavljen, u profilu pod »Vanjski motor« možeš povezati jači motor (npr. onaj registriran na tvom Lichess računu) i usporediti dva motora. Putem »Analiziraj u pozadini« (ikona sata) poziciju predaješ motoru u pozadini; rezultati su pod »Analize u pozadini«."
+          "Kad si prijavljen, u profilu pod »Vanjski motor« možeš povezati jači motor (npr. onaj registriran na tvom Lichess računu) i usporediti dva motora. Putem »Analiziraj u pozadini« (u izborniku ⋮ pozicije) poziciju predaješ motoru u pozadini; rezultati su pod »Analize u pozadini«."
         ]
       },
       "repertoires": {
@@ -3878,7 +3885,7 @@
     "intro": "Pozicije koje pozadinski motor računa za tebe.",
     "introMore": "Jedan zadatak za drugim, pauzirano dok analiziraš uživo vanjskim motorom. Otvori zadatak da vidiš spremljene varijante.",
     "empty": "Još nema zadataka.",
-    "emptyHint": "Na ploči za analizu ikonom sata „Analiziraj u pozadini“ dodaj poziciju u red.",
+    "emptyHint": "Na ploči za analizu otvori ⋮ pored pozicije i odaberi „Analiziraj u pozadini“.",
     "untitled": "Bez naslova",
     "status": {
       "queued": "čeka",
@@ -5333,7 +5340,7 @@
         "solve": "Odigraj rješenje: spremljeno (knjiga ili engine) ili Stockfish sada",
         "maia": "Odigraj poziciju protiv Maie"
       },
-      "calcHint": "Igraj varijante na ploči – bilježe se kao linije (spremljene na ovom uređaju). Provjeri liniju na ploči za analizu ili uključi engine.",
+      "calcHint": "Igraj varijante – bilježe se kao linije.",
       "calcSaveFailed": "Varijante se nisu mogle spremiti na ovom uređaju.",
       "afterSolve": "Nakon rješavanja",
       "autoNext": "Automatski na sljedeći dijagram",
@@ -5363,7 +5370,8 @@
       "correctTitle": "Ispravi poziciju",
       "correctHint": "Postavi, pomakni ili ukloni figure i odaberi stranu na potezu. Ispravak se sprema i pomaže poboljšati prepoznavanje dijagrama.",
       "correctSaved": "Pozicija ispravljena.",
-      "correctFailed": "Poziciju nije bilo moguće spremiti."
+      "correctFailed": "Poziciju nije bilo moguće spremiti.",
+      "calcHelp": "Linije ostaju spremljene na ovom uređaju. Liniju možeš provjeriti na ploči za analizu ili uključiti engine."
     },
     "title": "E-knjige",
     "intro": "Šahovske knjige za čitanje u pregledniku ili preuzimanje; svaka je knjiga podijeljena s grupama koje je odabrao onaj tko ju je prenio.",

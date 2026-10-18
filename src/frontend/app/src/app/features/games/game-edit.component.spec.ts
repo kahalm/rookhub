@@ -474,4 +474,28 @@ describe('GameEditComponent', () => {
     expect(block).toMatch(/\.cursor-card \{ grid-column: 1; grid-row: 2; \}/);
     expect(block).toMatch(/\.moves-card \{ grid-column: 2; grid-row: 1 ?\/ ?span 2; \}/);
   });
+
+  // d4-rk-edit-luecke-brett-zugkarte: die überspannende, höhere Zugliste drückte Zeile 1 auf → ~85 px Loch zwischen
+  // Brett und Zug-Karte. „auto 1fr" gibt den Überhang nur der zweiten Zeile. Regel als Text + Wirkung am Nachbau.
+  it('d4: am Tablet folgt die Zug-Karte dem Brett ohne Loch (Zeilen auto 1fr)', () => {
+    const css = ((GameEditComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/\s+/g, ' ');
+    const at = css.indexOf('@media (min-width: 769px) and (max-width: 1100px)');
+    const block = css.slice(at, css.indexOf('@media', at + 10));
+    expect(block).toContain('.layout:not(.with-photo) { grid-template-rows: auto 1fr; }');
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:12px;align-items:start;width:820px';
+    grid.innerHTML = '<div style="height:400px;grid-column:1;grid-row:1"></div>'
+      + '<div style="height:120px;grid-column:1;grid-row:2"></div>'
+      + '<div style="height:900px;grid-column:2;grid-row:1 / span 2"></div>';
+    document.body.appendChild(grid);
+    try {
+      const [board, cursor] = Array.from(grid.children) as HTMLElement[];
+      const gap = cursor.getBoundingClientRect().top - board.getBoundingClientRect().bottom;
+      expect(gap).toBeLessThanOrEqual(16);
+    } finally {
+      grid.remove();
+    }
+  });
 });

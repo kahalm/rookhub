@@ -323,3 +323,53 @@ describe('TurnierNavbarComponent Breitbild-Stufe (u1-rk-navbar-raender)', () => 
   });
 });
 
+
+/** d4-t-navbar-aktiv-marker-fehlt: „Kalender“, „Gemerkt“ und „Meine Turniere“ sahen auf jeder Seite gleich aus. */
+describe('TurnierNavbarComponent aktiver Weg (d4-t-navbar-aktiv-marker-fehlt)', () => {
+  @Component({ standalone: true, template: '' })
+  class StubComponent {}
+
+  async function at(url: string): Promise<ComponentFixture<TurnierNavbarComponent>> {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [TurnierNavbarComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        provideRouter([{ path: '**', component: StubComponent }]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: HandoffService, useValue: { partnerUrl: null, jump: () => Promise.resolve() } },
+        { provide: AuthService, useValue: { isLoggedIn: true, isAdmin: false, currentUser: { username: 'tester' }, logout: () => {} } },
+      ],
+    });
+    await TestBed.inject(Router).navigateByUrl(url);
+    const fixture = TestBed.createComponent(TurnierNavbarComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('auf /tournaments/history trägt genau „Meine Turniere“ aria-current und sieht anders aus als die übrigen', async () => {
+    const fixture = await at('/tournaments/history');
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.links a'));
+    expect(links.length).toBe(3);
+    const current = links.filter(a => a.getAttribute('aria-current') === 'page');
+    expect(current.map(a => a.getAttribute('href'))).toEqual(['/tournaments/history']);
+    const [cal, , hist] = links.map(a => getComputedStyle(a));
+    expect(hist.color).not.toBe(cal.color);
+    expect(hist.boxShadow).not.toBe('none');
+    expect(cal.boxShadow).toBe('none');
+  });
+
+  it('„Gemerkt“ (/tournaments) nur exakt — und das ☰-Menü markiert denselben Weg', async () => {
+    const fixture = await at('/tournaments');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(Array.from(el.querySelectorAll('.links a[aria-current="page"]')).map(a => a.getAttribute('href'))).toEqual(['/tournaments']);
+    (el.querySelector('button[aria-label="nav.menu"]') as HTMLElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const marked = Array.from(document.querySelectorAll<HTMLElement>('.cdk-overlay-container a[mat-menu-item].on'));
+    expect(marked.map(a => a.getAttribute('href'))).toEqual(['/tournaments']);
+    expect(marked[0].getAttribute('aria-current')).toBe('page');
+  });
+});

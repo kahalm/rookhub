@@ -70,6 +70,16 @@ describe('InstallComponent', () => {
     expect(p.textContent).not.toContain('install.pwa.unavailableHelp');
   });
 
+  // d4-rk-hilfe-symbol-umbruch: vor dem ? stand ein normaler Umbruch (= Leerzeichen) — das Symbol brach allein um.
+  it('d4: vor dem ? steht ein geschütztes Leerzeichen, keine Umbruchstelle', () => {
+    const { el } = setup({ canInstall: false });
+    const hint = el.querySelector('.pwa-section .unavailable app-help-hint') as HTMLElement;
+    const prev = hint.previousSibling!;
+    expect(prev.nodeType).toBe(Node.TEXT_NODE);
+    expect(prev.textContent!.endsWith(' ')).withContext(JSON.stringify(prev.textContent)).toBeTrue();
+    expect(/\s$/.test(prev.textContent!.replace(/ $/, ''))).toBeFalse();
+  });
+
   it('Kartentexte sind je ein Satz (de/en/hr/hu)', async () => {
     for (const lang of ['de', 'en', 'hr', 'hu']) {
       let res = await fetch(`/i18n/${lang}.json`).catch(() => null);

@@ -304,7 +304,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       }
       /* a1-rk-tablet-brett-400: Brett bis 640 px (Tablet), höchstens so hoch, dass darunter noch die Liste beginnt;
          am Handy wie bisher volle Breite. */
-      .board-section { width: 100%; max-width: min(100%, 640px, calc(100vh - 480px)); }
+      /* d4-rk-repertoire-brett-winzig: Untergrenze 300 px — bei 640 px Fensterhöhe (Boox 200 %) ergab 100vh − 480px nur
+         160 px. */
+      .board-section { width: 100%; max-width: min(100%, 640px, max(300px, calc(100vh - 480px))); }
       .board-section app-chess-board { width: 100%; }
       .filter-bar { max-width: 100%; }
       .side-panel { width: 100%; min-width: 0; height: 400px; }
@@ -319,6 +321,11 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       .viewer-layout--tree { flex-direction: row; align-items: flex-start; }
       .viewer-layout--tree .board-section { width: min(56%, calc(100vh - 300px)); max-width: none; flex-shrink: 0; }
       .viewer-layout--tree .side-panel { flex: 1 1 0; width: auto; min-width: 0; height: max(400px, calc(100vh - 300px)); }
+    }
+    /* Niedrige Fenster (DESIGN 4.6, d4-rk-repertoire-brett-winzig): Brett ≈ Fensterhöhe − 300 px (Boox 480 × 640 →
+       340 px), der Baum beginnt darunter; nie unter 300 px. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .board-section { max-width: min(100%, max(300px, calc(100vh - 300px))); }
     }
     /* Am Handy der Titel in EINER Zeile (ganzer Name im title-Attribut): ein zweizeiliger Repertoirename schob Brett
        und Baum um eine Zeile nach unten (Falz-Runde 16.10.). */

@@ -25,12 +25,7 @@
     .settings-gear.active { color: var(--rh-accent); }
     .give-up-btn { color: var(--mat-sys-on-surface-variant) !important; font-size: 0.85em !important; }
 
-    /* Hinweistext unter dem Brett */
-    .board-hint {
-      margin-top: 0.5rem; padding: 0.35rem 0.5rem;
-      font-size: 0.88em; color: color-mix(in srgb, currentColor 60%, transparent);
-      display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
-    }
+    /* Hinweiszeile unter dem Brett: Grundregel `.board-hint` global in styles.scss (d4-rk-hint-chip-schriftgroesse-buchmodus). */
     .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
     .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
     .tomove-dot {

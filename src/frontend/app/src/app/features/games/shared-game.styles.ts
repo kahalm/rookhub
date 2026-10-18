@@ -220,4 +220,9 @@ export const SHARED_GAME_STYLES = `
       }
       .nav ::ng-deep .mat-mdc-icon-button:not(.nav-prev):not(.nav-next) .mat-mdc-button-touch-target { width: 36px; height: 36px; }
     }
+    /* Niedrige Fenster (Boox 200 % = 480 × 640, DESIGN 4.6 „Niedrige Fenster“): das Brett begann bei 43 % der Höhe —
+       Kopf mit 8 px statt 12 px Polster („Kurz erzählt“ knapper: game-recap.component.ts). */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .header { padding-block: 8px; }
+    }
 `;
