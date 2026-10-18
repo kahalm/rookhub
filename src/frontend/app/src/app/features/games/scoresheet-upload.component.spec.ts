@@ -38,6 +38,18 @@ describe('ScoresheetUploadComponent', () => {
     expect(el.querySelector('.upload')).toBeNull();
   });
 
+  // d3-rk-scoresheet-hilfe-icon-abgesetzt-handy: das ⓘ gehört IN den Titel, direkt hinter das letzte Wort.
+  it('puts the help hint inside the title, right after its last word', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(status());
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.header > h1 > app-help-hint')).not.toBeNull();
+    expect(el.querySelector('.header > app-help-hint')).toBeNull();
+  });
+
   it('uploads the photo with the chosen language, then polls until the game is there', fakeAsync(async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

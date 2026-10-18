@@ -111,4 +111,27 @@ describe('EbookEditDialogComponent', () => {
     expect(css).toMatch(/::-webkit-inner-spin-button[^{]*\{[^}]*appearance:none/);
     expect(css).toMatch(/\.year(\[[^\]]*\])?input(\[[^\]]*\])?\{[^}]*appearance:textfield/);
   });
+
+  it('d3-rk-ebook-upload-hint-ueberlappt-feld: Hinweis zum Brett-Modus wächst mit (auch zweizeilig) und liegt nicht auf „Beschreibung“', async () => {
+    await make({ ebook: null, groups: [], maxFileBytes: 1 });
+    const fixture = TestBed.createComponent(EbookEditDialogComponent);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { ebooks: { meta: { boardModeHint: 'Which mode the board next to the book starts with (default: solve). '.repeat(2) } } });
+    translate.use('en');
+    const el: HTMLElement = fixture.nativeElement;
+    el.style.display = 'block';
+    el.style.width = '300px';
+    document.body.appendChild(el);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const field = el.querySelector<HTMLElement>('mat-form-field.board-mode')!;
+    expect(field.querySelector('.mat-mdc-form-field-subscript-dynamic-size')).not.toBeNull();
+    const hint = field.querySelector<HTMLElement>('mat-hint')!;
+    expect(hint.getBoundingClientRect().height).toBeGreaterThan(20);   // wirklich zweizeilig
+    const next = field.nextElementSibling as HTMLElement;
+    expect(next.tagName.toLowerCase()).toBe('mat-form-field');
+    expect(next.getBoundingClientRect().top - hint.getBoundingClientRect().bottom).toBeGreaterThanOrEqual(8);
+    fixture.destroy();
+  });
 });
+

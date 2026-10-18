@@ -55,12 +55,15 @@ export type AnalysisState = 'none' | 'running' | 'done';
         <div class="header">
           <h1>{{ 'games.title' | translate }}</h1>
           <div class="header-actions">
-            <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
-              <mat-icon>upload_file</mat-icon>
-              <!-- Am Handy Kurztext, damit beide Kopfknöpfe in eine Zeile passen (v1-rk-games-mobile-fold-lead-filters-open). -->
-              <span class="label-long">{{ 'games.pgnUpload.button' | translate }}</span>
-              <span class="label-short" aria-hidden="true">{{ 'games.pgnUpload.short' | translate }}</span>
-            </button>
+            <!-- d3-rk-games-leer-pgn-doppelt: im Leerzustand steht die eine Aktion in der Leerkarte (DESIGN 5.10). -->
+            @if (loading || games.length > 0) {
+              <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
+                <mat-icon>upload_file</mat-icon>
+                <!-- Am Handy Kurztext, damit beide Kopfknöpfe in eine Zeile passen (v1-rk-games-mobile-fold-lead-filters-open). -->
+                <span class="label-long">{{ 'games.pgnUpload.button' | translate }}</span>
+                <span class="label-short" aria-hidden="true">{{ 'games.pgnUpload.short' | translate }}</span>
+              </button>
+            }
             <!-- Fehler mehrerer Partien am Stück (0.748.0) — übernimmt die gewählte Liga/Saison. -->
             @if (games.length > 0) {
               <a mat-stroked-button class="mistakes-collection" routerLink="/games/mistakes" [queryParams]="collectionParams()">
@@ -148,6 +151,11 @@ export type AnalysisState = 'none' | 'running' | 'done';
         <!-- Tabelle im Schnitt der chess.com-Uebersicht (gewuenscht 24.09.2026): Spieler, Ergebnis,
              Genauigkeit, Zuege, Datum — genau die Spalten, die der Nutzer dort vor sich hat. Die
              Kopfzeile ist am Handy weg, dort steht dieselbe Zeile umbrochen. -->
+        <!-- d3-rk-games-analyse-symbol-blass: ohne Engine einmal sichtbar der Grund statt eines grauen, gesperrten Knopfs
+             in jeder Zeile, dessen Grund nur im Tooltip stand (am Handy nie zu sehen; DESIGN 5.4). -->
+        @if (uploadStatus?.engineAvailable === false) {
+          <p class="muted small no-engine">{{ 'guess.upload.noEngine' | translate }}</p>
+        }
         <div class="table">
           <div class="row head-row">
             <span></span>
@@ -196,12 +204,14 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   }
                   @case ('none') {
                     <!-- Derselbe Weg wie auf der geteilten Partie: rechnen lassen, die Kurve steht danach auf der Partie-Seite. -->
-                    <button mat-icon-button class="analyze" (click)="analyze(g)"
-                            [disabled]="analyzingId === g.id || uploadStatus?.engineAvailable === false"
-                            [matTooltip]="(uploadStatus?.engineAvailable === false ? 'guess.upload.noEngine' : 'games.analyze') | translate"
-                            [attr.aria-label]="'games.analyze' | translate">
-                      <mat-icon>{{ analyzingId === g.id ? 'hourglass_top' : 'insights' }}</mat-icon>
-                    </button>
+                    @if (uploadStatus?.engineAvailable === false) {
+                      <span class="no-analysis" aria-hidden="true">–</span>
+                    } @else {
+                      <button mat-icon-button class="analyze" (click)="analyze(g)" [disabled]="analyzingId === g.id"
+                              [appIconLabel]="'games.analyze' | translate">
+                        <mat-icon>{{ analyzingId === g.id ? 'hourglass_top' : 'insights' }}</mat-icon>
+                      </button>
+                    }
                   }
                 }
               </div>
@@ -218,8 +228,21 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #menu="matMenu">
+                  <!-- d3-rk-spielmenue-reihenfolge-uneinheitlich (DESIGN 5.5): Öffnen/Bearbeiten → Aktionen → Teilen/Export →
+                       Löschen, wie das ⋮ der Partieseite. -->
                   <button mat-menu-item (click)="openInAnalysis(g)">
                     <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
+                  </button>
+                  @if (g.sourceUrl) {
+                    <a mat-menu-item [href]="g.sourceUrl" target="_blank" rel="noopener">
+                      <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
+                    </a>
+                  }
+                  <a mat-menu-item [routerLink]="['/games', g.id, 'edit']">
+                    <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                  </a>
+                  <button mat-menu-item (click)="roast(g)">
+                    <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
                   </button>
                   <button mat-menu-item (click)="share(g)">
                     <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
@@ -232,17 +255,6 @@ export type AnalysisState = 'none' | 'running' | 'done';
                     <button mat-menu-item (click)="photo(g, true)">
                       <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
                     </button>
-                  }
-                  <button mat-menu-item (click)="roast(g)">
-                    <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
-                  </button>
-                  <a mat-menu-item [routerLink]="['/games', g.id, 'edit']">
-                    <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
-                  </a>
-                  @if (g.sourceUrl) {
-                    <a mat-menu-item [href]="g.sourceUrl" target="_blank" rel="noopener">
-                      <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
-                    </a>
                   }
                   <!-- b1-rk-games-menue-loeschen-rot: rot über .delete-item (DESIGN 5.5) — color="warn" wirkt im M3-Thema nicht. -->
                   <button mat-menu-item class="delete-item" (click)="remove(g)">
@@ -341,6 +353,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .score .win { color: inherit; font-weight: 700; }
 
     .acc-cell { display: flex; align-items: center; justify-content: center; }
+    .no-engine { margin: 0 0 6px; }
+    .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+    .small { font-size: 0.82rem; }
+    .no-analysis { color: color-mix(in srgb, currentColor 45%, transparent); }
     .accuracy {
       display: flex; flex-direction: column; text-align: right; white-space: nowrap;
       font-size: 0.85rem; font-variant-numeric: tabular-nums;
@@ -371,6 +387,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
       /* MIT .row davor: beide Regeln haetten sonst dieselbe Spezifitaet, und die spaetere gewinnt —
          die Kopfzeile stand dann als Wortreihe ueber der Liste (im Bild nachgemessen). */
       .row.head-row { display: none; }
+      /* d3-rk-games-liste-mobile-namen-versetzt: feste Typspalte, Tempo unter dem Symbol — die Namen beginnen in jeder
+         Zeile an derselben Stelle (vorher x≈58 bei PGN, x≈90 mit „3 + 2“). */
+      .kind { flex: 0 0 56px; flex-direction: column; align-items: center; gap: 0; }
+      .tc { font-size: 0.7rem; white-space: normal; text-align: center; line-height: 1.15; }
       .players { flex: 1 1 55%; }
       .acc-cell { margin-left: auto; }
       /* Ohne Spaltenüberschrift als Etikett „♔ 85 % · ♚ 79 %" — eine nackte Zahl las sich nicht als Genauigkeit. */

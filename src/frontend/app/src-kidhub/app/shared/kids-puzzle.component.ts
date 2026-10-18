@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { PuzzleBoardComponent } from '@rh/features/puzzles/puzzle-board.component';
+import { KidBoardSizeDirective } from './kid-board-size.directive';
 import { KidsMove, KidsSolver, KidsTask } from '../core/kids-solver';
 import { isAdvanceKey } from '../core/kids-keys';
 import { KID_COORDS, KID_SIDE_WIDE, KID_STACKED } from './kids-layout';
@@ -40,12 +41,13 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
   selector: 'kid-puzzle',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PuzzleBoardComponent, TranslatePipe],
+  imports: [PuzzleBoardComponent, KidBoardSizeDirective, TranslatePipe],
   template: `
     <div class="puzzle">
       <div class="task-slot"><ng-content select="[kidTask]" /></div>
       <div class="board">
-        <app-puzzle-board
+        <!-- Markierungen erst auf das vermessene Brett (NaN-Pfeile, wie applyArrows in RookHub): kidBoardSize -->
+        <app-puzzle-board kidBoardSize #board="kidBoardSize"
           [fen]="fen()"
           [orientation]="orientation()"
           [turnColor]="turnColor()"
@@ -53,7 +55,7 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
           [lastMove]="lastMove()"
           [check]="check()"
           [viewOnly]="!interactive()"
-          [reviewShapes]="shapes()"
+          [reviewShapes]="board.measured() ? shapes() : noShapes"
           [allowFullscreen]="false"
           [autoQueen]="true"
           boardTheme="blue"
@@ -193,6 +195,8 @@ export class KidsPuzzleComponent {
   readonly lastMove = signal<[Key, Key] | undefined>(undefined);
   readonly check = signal(false);
   readonly shapes = signal<DrawShape[]>([]);
+  /** Feste leere Liste, solange das Brett ungemessen ist (gleiche Referenz — kein neues ngOnChanges je Prüflauf). */
+  readonly noShapes: DrawShape[] = [];
   readonly status = signal<KidsPuzzleStatus>('watch');
   readonly solvedKey = signal(SOLVED_KEYS[0]);
   readonly finalComment = signal<string | null>(null);

@@ -99,8 +99,9 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
                 <div class="resume-main">
                   <a class="g-title" [routerLink]="['/guess', s.id]" [title]="s.title || ''"><span class="resume-label">{{ 'guess.resume' | translate }}:</span>
                     {{ s.title || ('guess.untitled' | translate) }}</a>
-                  <span class="muted small resume-meta">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }} ·
-                    <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span></span>
+                  <!-- d3-rk-punktepartie-null-von-null: Punkte erst, wenn es welche zu holen gab. -->
+                  <span class="muted small resume-meta">{{ (s.guessWhite ? 'guess.white' : 'guess.black') | translate }}@if (s.maxPoints > 0) { ·
+                    <span class="pts">{{ 'guess.score' | translate:{ points: s.points, max: s.maxPoints } }}</span>}</span>
                 </div>
                 <a mat-flat-button color="primary" class="resume-btn" [routerLink]="['/guess', s.id]"
                    [attr.aria-label]="'guess.resume' | translate">

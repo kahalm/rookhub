@@ -101,7 +101,10 @@
 .rd-panel-pos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.2;
   font-variant-numeric: tabular-nums; }
 .rd-panel-no { font-weight: 500; }
-.rd-side { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+/* d3-rk-diagram-subtitle-abgeschnitten: Zugrecht · Bewertung · Herkunftssymbol bricht um (höchstens zwei Zeilen) statt
+   mit „…“ zu enden — das Symbol am Zeilenende verschwand sonst am Laptop ganz. */
+.rd-side { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; max-width: 100%; overflow: hidden;
+  white-space: normal; text-wrap: balance; text-align: center;
   font-size: .78rem; color: var(--mat-sys-on-surface-variant); }
 .rd-sol-icon { margin-left: 4px; vertical-align: -3px; font-size: 15px; width: 15px; height: 15px; cursor: help; }
 .rd-panel-close { display: none; }
@@ -130,8 +133,8 @@
   }
   .rd-body--panel-open .rd-panel { display: flex; }
   .rd-panel-close { display: inline-flex; }
-  /* Sechs Knöpfe im Kopf lassen der Mitte ≈ 96 px — Zugrecht/Bewertung dürfen dort umbrechen statt abzubrechen. */
-  .rd-side { white-space: normal; }
+  /* Sechs Knöpfe im Kopf lassen der Mitte ≈ 96 px — hier darf die Zeile ohne Zeilengrenze umbrechen. */
+  .rd-side { display: block; -webkit-line-clamp: unset; }
   .rd-diag-btn { display: inline-flex; }
 }
 
@@ -163,5 +166,8 @@
   .rd-back { order: -2; }
   /* ⋮ in die Titelzeile (dort sind 96 px für Zurück + ⋮ frei) — sonst rutscht es mit dem Diagramm-Knopf in eine dritte Zeile. */
   .rd-more { order: -1; }
+  /* d3-rk-leser-handy-kopfleiste-ueberlappt: ⋮ ist das letzte Element der Titelzeile — sein rechter Rand belegt die Breite
+     der angedockten Kopfleiste, sonst rückte das Seitenfeld in die Lücke darunter (Anmelden/Glocke lagen darauf). */
+  :host-context(body.nav-docked) .rd-more { margin-right: var(--rh-nav-w, 96px); }
   .rd-pages { margin-left: 4px; }
 }

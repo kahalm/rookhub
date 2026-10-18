@@ -555,7 +555,7 @@
       "by": "door {{name}}"
     },
     "reimport": {
-      "chip": "Opnieuw ophalen",
+      "chip": "Import verouderd",
       "legend": "{{count}} cursussen moeten opnieuw via RepCheck worden geïmporteerd",
       "legendOne": "1 cursus moet opnieuw via RepCheck worden geïmporteerd"
     }
@@ -677,8 +677,6 @@
       "showTags": "Labels tonen",
       "hideTags": "Labels verbergen",
       "sharePuzzle": "Puzzel delen",
-      "statRating": "Rating",
-      "statLevel": "Niveau",
       "statSolved": "Opgelost",
       "statTime": "Tijd",
       "phaseLabel": "Fase {{phase}} (stap {{step}})"

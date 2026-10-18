@@ -64,26 +64,32 @@ function orNull(value: string | null | undefined): string | null {
           <label class="check"><input type="radio" name="isTrainer" [checked]="!form().isTrainer" (change)="set('isTrainer', false)"> Kind</label>
           <label class="check"><input type="radio" name="isTrainer" [checked]="form().isTrainer" (change)="set('isTrainer', true)"> Trainer</label>
         </div>
+        <!-- d3-c-kind-neu-fehler-vor-eingabe: Hinweis in derselben Gitterzelle wie sein Feld — am Handy (eine Spalte) stand
+             er sonst unter dem Nachbarfeld (Nachname bzw. Stufe) und las sich als dessen Fehler. -->
         <div class="grid-2">
-          <label class="field"><span>Vorname</span>
-            <input #firstName name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName"
-              [attr.aria-invalid]="fieldError()?.field === 'firstName' || null" [attr.aria-describedby]="fieldError()?.field === 'firstName' ? 'firstName-need' : null"
-              (input)="set('firstName', $any($event.target).value)"></label>
+          <div class="field-cell">
+            <label class="field"><span>Vorname</span>
+              <input #firstName name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName"
+                [attr.aria-invalid]="fieldError()?.field === 'firstName' || null" [attr.aria-describedby]="fieldError()?.field === 'firstName' ? 'firstName-need' : null"
+                (input)="set('firstName', $any($event.target).value)"></label>
+            @if (fieldError(); as fe) { @if (fe.field === 'firstName') { <p class="err need" id="firstName-need">{{ fe.text }}</p> } }
+          </div>
           <label class="field"><span>Nachname (wenn bekannt)</span>
             <input name="lastName" autocomplete="off" maxlength="80" [value]="form().lastName" (input)="set('lastName', $any($event.target).value)"></label>
         </div>
-        @if (fieldError(); as fe) { @if (fe.field === 'firstName') { <p class="err need" id="firstName-need">{{ fe.text }}</p> } }
         <div class="grid-2">
-          <label class="field"><span>Geburtsdatum oder Jahrgang</span>
-            <input name="birth" inputmode="numeric" autocomplete="off" placeholder="12.3.2015 oder 2015" [value]="birthText()"
-              [attr.aria-invalid]="fieldError()?.field === 'birth' || null" [attr.aria-describedby]="fieldError()?.field === 'birth' ? 'birth-need' : null"
-              (input)="birthText.set($any($event.target).value); clearFieldError('birth')"></label>
+          <div class="field-cell">
+            <label class="field"><span>Geburtsdatum oder Jahrgang</span>
+              <input name="birth" inputmode="numeric" autocomplete="off" placeholder="12.3.2015 oder 2015" [value]="birthText()"
+                [attr.aria-invalid]="fieldError()?.field === 'birth' || null" [attr.aria-describedby]="fieldError()?.field === 'birth' ? 'birth-need' : null"
+                (input)="birthText.set($any($event.target).value); clearFieldError('birth')"></label>
+            @if (fieldError(); as fe) { @if (fe.field === 'birth') { <p class="err need" id="birth-need">{{ fe.text }}</p> } }
+          </div>
           @if (!form().isTrainer) {
             <label class="field"><span>Stufe oder Diplom</span>
               <input name="level" autocomplete="off" maxlength="60" placeholder="z. B. Bauerndiplom" [value]="form().level ?? ''" (input)="set('level', $any($event.target).value)"></label>
           }
         </div>
-        @if (fieldError(); as fe) { @if (fe.field === 'birth') { <p class="err need" id="birth-need">{{ fe.text }}</p> } }
         <div class="grid-2">
           <label class="field"><span>Personennummer (ÖSB)</span>
             <input name="nationalId" autocomplete="off" maxlength="16" [value]="form().nationalId ?? ''" (input)="set('nationalId', $any($event.target).value)"></label>

@@ -381,8 +381,21 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.ground.selectSquare(key);
   }
 
+  /** Markierungen, die auf ein noch ungemessenes Brett gesetzt werden sollten (siehe applyAutoShapes). */
+  private shapesPending = false;
+
   private applyAutoShapes(): void {
     if (!this.ground) return;
+    // Ungemessenes/verborgenes Brett: chessground rechnet Markierungen aus den gemerkten Brettmaßen — 0 × 0 ergibt
+    // `<line x1="NaN">` / `translate(NaN,NaN)` (KidHub Sternenjagd, Design-Runde d3). Wie chess-board.applyArrows:
+    // alte Markierungen weg, merken, nach dem nächsten Messen (ResizeObserver/redrawAll) nachholen.
+    const board = this.boardEl?.nativeElement?.querySelector?.('cg-board') as HTMLElement | null;
+    if (board && board.getBoundingClientRect().width === 0) {
+      if (this.ground.state.drawable.autoShapes.length > 0) this.ground.setAutoShapes([]);
+      this.shapesPending = true;
+      return;
+    }
+    this.shapesPending = false;
     // Alle Auto-Shapes in EINEM setAutoShapes-Aufruf zusammenführen:
     //  • Review-Annotationen (Chessable-Pfeile/Feld-Markierungen zum aktuellen Zug),
     //  • Gegnerzug-Pfeil (Viz-Modus: Board eingefroren; Crazy-Modus: Zug schlecht erkennbar).
@@ -597,6 +610,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       }
       this.ground?.redrawAll();
       this.repaintCrazyPieces();   // redrawAll baut die Figuren neu → erneut würfeln/malen
+      if (this.shapesPending) this.applyAutoShapes();
     });
     this.resizeObserver.observe(el.parentElement || el);
   }

@@ -83,11 +83,12 @@
               }
               @if (canFlagHints) {
                 <!-- b1-rk-puzzle-dumme-tipps-knopf: „Tipps melden“ leise, aber nicht gedimmt; am Handy nur das Fähnchen. -->
+                <!-- d3-rk-flaggen-symbol-doppelt: Daumen statt Fähnchen — die Flagge gehört „Aufgeben“; Name per appIconLabel
+                     (Tooltip + aria-label, am Handy steht nur das Symbol). -->
                 <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                         [disabled]="flagSaving" (click)="toggleHintsFlag()"
-                        [attr.title]="'book.hints.flagTitle' | translate"
-                        [attr.aria-label]="(puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flag') | translate">
-                  <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
+                        [appIconLabel]="(puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flagTitle') | translate">
+                  <mat-icon>{{ puzzle?.hintsFlagged ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
                   <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'book.hints.flagged' : 'book.hints.flag') | translate }}</span>
                 </button>
               }

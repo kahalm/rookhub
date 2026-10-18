@@ -203,7 +203,8 @@
       <mat-card class="map-card">
         <h2>{{ 'tournamentDirectory.detail.venueMap' | translate }}</h2>
         @if (entry.geoSource === 'Region') {
-          <p class="hint">{{ 'tournamentDirectory.approximate' | translate }}</p>
+          <!-- d3-t-detail-ortshinweis-ohne-abstand: leise wie der Hinweis der Kopfkarte -->
+          <p class="muted hint approx-hint">{{ 'tournamentDirectory.approximate' | translate }}</p>
         }
         @if (tilesFailed()) {
           <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>

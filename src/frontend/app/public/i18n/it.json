@@ -555,7 +555,7 @@
       "by": "di {{name}}"
     },
     "reimport": {
-      "chip": "Da reimportare",
+      "chip": "Import obsoleto",
       "legend": "{{count}} corsi vanno reimportati con RepCheck",
       "legendOne": "1 corso va reimportato con RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Mostra tag",
       "hideTags": "Nascondi tag",
       "sharePuzzle": "Condividi puzzle",
-      "statRating": "Valutazione",
-      "statLevel": "Livello",
       "statSolved": "Risolti",
       "statTime": "Tempo",
       "phaseLabel": "Fase {{phase}} (passo {{step}})"

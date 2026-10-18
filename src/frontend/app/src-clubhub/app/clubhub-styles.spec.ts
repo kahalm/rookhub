@@ -115,6 +115,33 @@ describe('clubhub.scss', () => {
     expect(links.columnGap).toBe(foot.columnGap);
   });
 
+  // UI-Sweep d3 (d3-c-footer-links-tippziel-klein): am Handy waren die Fußlinks ≈ 17 px hoch.
+  it('Fußzeile am Handy: jeder Link ist ein 44-px-Tippziel, Version und Links bleiben in einer Zeile', async () => {
+    const restore = await narrow(390);
+    try {
+      const el = mount(`<footer class="wrap foot"><span>v0.807.0</span><span class="foot-links"><a>Konto verknüpfen</a>
+        <a>Impressum</a><a>Datenschutz</a></span></footer>`);
+      const links = Array.from(el.querySelectorAll<HTMLElement>('.foot-links a'));
+      for (const a of links) expect(a.getBoundingClientRect().height).withContext(a.textContent!).toBeGreaterThanOrEqual(44);
+      const tops = [el.querySelector('.foot > span')!, ...links].map(n => Math.round(n.getBoundingClientRect().top));
+      expect(new Set(tops).size).withContext('eine Zeile').toBe(1);
+    } finally {
+      restore();
+    }
+  });
+
+  // UI-Sweep d3 (d3-c-gruppe-textlinks-tippziel-klein): .btn-link war ≈ 30 px hoch — die Trefferfläche (::after) misst ≥ 44 px,
+  // die sichtbare Zeile bleibt gleich hoch.
+  it('Textknopf .btn-link: Trefferfläche mindestens 44 px hoch, ohne die Zeile zu strecken', () => {
+    const el = mount(`<ul class="notes"><li>Lena <button type="button" class="btn-link danger">aus der Gruppe nehmen</button></li></ul>`);
+    const btn = el.querySelector<HTMLElement>('.btn-link')!;
+    const after = getComputedStyle(btn, '::after');
+    expect(getComputedStyle(btn).position).toBe('relative');
+    expect(after.position).toBe('absolute');
+    expect(parseFloat(after.height)).toBeGreaterThanOrEqual(44);
+    expect(btn.getBoundingClientRect().height).toBeLessThan(44);
+  });
+
   it('Anmelde-Maske außerhalb der Anmeldung bleibt unberührt', () => {
     const el = mount(`<div class="mat-mdc-card"></div>`);
     expect(getComputedStyle(el.querySelector('.mat-mdc-card')!).getPropertyValue('--mat-card-title-text-font').trim()).toBe('');

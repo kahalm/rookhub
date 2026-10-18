@@ -46,4 +46,18 @@ describe('PuzzleYourTurnComponent', () => {
     expect(el.querySelector('.ytp-timer')).toBeTruthy();    // Zeit bleibt
     expect(el.querySelectorAll('.ytp-actions button').length).toBeGreaterThan(0);
   });
+  it('d3-rk-puzzle-zeitanzeige-ohne-beschriftung: die Zeit trägt Uhr-Symbol und „Lösezeit“ als Namen', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PuzzleYourTurnComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PuzzleYourTurnComponent);
+    fixture.componentRef.setInput('timerSeconds', 4);
+    fixture.detectChanges();
+    const timer = (fixture.nativeElement as HTMLElement).querySelector('.ytp-timer')!;
+    expect(timer.querySelector('mat-icon')!.textContent!.trim()).toBe('timer');
+    expect(timer.querySelector('mat-icon')!.getAttribute('aria-hidden')).toBe('true');
+    expect(timer.getAttribute('role')).toBe('timer');
+    expect(timer.getAttribute('aria-label')).toMatch(/^puzzles\.solveTime: \S+/);
+  });
 });

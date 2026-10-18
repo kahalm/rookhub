@@ -538,6 +538,28 @@ describe('TournamentTablesComponent', () => {
   const tablesCss = () => ((TournamentTablesComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
     .replace(/%NS%/g, '').replace(/\s+/g, ' ');
 
+  // d3-t-team-star-vertikal-versetzt: die 24-px-Box des 20-px-Sterns saß auf der Grundlinie — Stern ~5 px über der Zeilenmitte.
+  it('Favoriten-Stern sitzt auf der Mitte der Zeile (Teams-Tabelle)', async () => {
+    component.teams = component.displayedTeams = [team()];
+    component.selectedTabIndex = 1;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const star = el.querySelector<HTMLElement>('.teams-table .fav-icon')!;
+    const rank = el.querySelector<HTMLElement>('.teams-table td.mat-column-rank')!;
+    const range = document.createRange();
+    range.selectNodeContents(rank);
+    const s = star.getBoundingClientRect(), r = range.getBoundingClientRect();
+    expect(s.height).toBe(20);
+    expect(Math.abs((s.top + s.bottom) / 2 - (r.top + r.bottom) / 2)).toBeLessThanOrEqual(2);
+  });
+
+  // d3-t-kalender-vorlauf-zu-hoch: im niedrigen Fenster (Boox 200 %) Suchzeile kompakt wie am Laptop.
+  it('niedriges Fenster: Suchfeld 40 px, 8 px über der Suche', () => {
+    expect(tablesCss()).toMatch(/@media \(max-width: 768px\) and \(max-height: 720px\) \{ ?\.player-tools[^{]*\{ ?padding-top: 0\.5rem; ?\} ?\.player-search[^{]*\{ ?--mat-form-field-container-height: 40px/);
+  });
+
   it('blendet die Spalte „Punkte" aus, solange kein Team Punkte hat (b1-t-teams-punkte-leer)', () => {
     component.teams = component.displayedTeams = [team(), team({ id: 2, snr: 2, name: 'ŠK Prakovce - www.sachovetreningy.sk' })];
     component.selectedTabIndex = 1;

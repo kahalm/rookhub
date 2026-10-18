@@ -2,8 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-/** „Züge vergleichen" (0.602.0) — siehe `MoveComparisonService` in der API. Bewertungen aus WEISS-Sicht wie auf dem
- *  Analysebrett. */
+/** „Züge vergleichen" (0.602.0) — siehe `MoveComparisonService` in der API. Bewertungen aus Sicht der Seite am Zug
+ *  der Ausgangsstellung (`whiteToMove`), wie die Begründung (d3; vorher Weiß-Sicht). */
 export type MoveComparisonStatus = 'candidates' | 'replies' | 'explaining' | 'done' | 'failed';
 export type MoveComparisonLineState = 'pending' | 'done' | 'failed' | 'illegal';
 

@@ -60,6 +60,14 @@ describe('WoodpeckerSolveComponent', () => {
     expect(el.querySelector('app-puzzle-board')).not.toBeNull();
   });
 
+  it('d3-rk-wp-loeser-im-satz-beschriftung: Zyklus 1 spricht wie die Karte vom Satz („Satz: n Aufgaben von N“)', () => {
+    const one = plan({ currentCycle: 1, setSize: 12, cycles: [plan().cycles[0]] });
+    const { el } = render({ puzzle, plan: one });
+    const meta = el.querySelector('.meta')!.textContent!;
+    expect(meta).toContain('woodpecker.setGrowing');
+    expect(meta).not.toContain('woodpecker.inSet');
+  });
+
   it('Aufgeben meldet genau einen Fehlversuch, Wiederholen keinen weiteren', () => {
     const { c } = render({ puzzle, plan: plan() });
     c.giveUp();

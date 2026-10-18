@@ -135,6 +135,48 @@ describe('i18n Sprachdateien', () => {
   });
 
   /**
+   * d3-rk-partie-grund-strich-zeilenanfang (DESIGN 5.13): der Grund unter „Partie analysieren“ brach mit text-wrap:
+   * balance genau vor dem Gedankenstrich um — die zweite Zeile begann mit „— versuch es …“. Kurze Gründe
+   * (`*NoEngine`) tragen vor „—“ ein geschütztes Leerzeichen.
+   */
+  it('kurze Gründe (*NoEngine): vor „—“ ein geschütztes Leerzeichen, kein normales', async () => {
+    for (const lang of FORMAT_LOCALES) {
+      const all = lang === 'en' ? en : await load(lang);
+      const bad = Object.entries(all).filter(([k, v]) => k.endsWith('NoEngine') && / [—–]/.test(v)).map(([k]) => k);
+      expect(bad).withContext(`${lang}: „ —“ mit normalem Leerzeichen`).toEqual([]);
+      expect(all['games.analyzeNoEngine']).toContain(' —');
+    }
+  });
+
+  /**
+   * d3-rk-punktepartie-benennung (DESIGN 2.9): auf Englisch hieß dasselbe Ziel „Point game“, „Points game“ und „Guess the
+   * moves“. Menü, Seitentitel, Knopf auf Partie-Analysen, Startseiten-Kachel und Schnellstart tragen je Sprache denselben Namen.
+   */
+  it('Punktepartie heißt überall gleich (je gepflegter Sprache)', async () => {
+    for (const lang of FORMAT_LOCALES) {
+      const all = lang === 'en' ? en : await load(lang);
+      const names = ['nav.guess', 'guess.title', 'gameAnalysis.toGuess', 'dashboard.guess.title', 'app.qs.guessTitle'].map(k => all[k]);
+      expect(new Set(names).size).withContext(`${lang}: ${names.join(' | ')}`).toBe(1);
+    }
+  });
+
+  /**
+   * d3-rk-mistakes-filter-beschriftung-saison / d3-rk-edit-seite-liga-beschriftung: die Sammlung filtert nach den
+   * Einordnungen „Plattform / Liga“ und „Modus / Jahrgang“ — Titel und Erklärsatz sprachen von „Liga/Saison“, und
+   * „Seite / Liga“ las man neben „Meine Seite“ als Farbe.
+   */
+  it('de: Einordnungsfelder heißen „Plattform / Liga“ + „Modus / Jahrgang“, die Fehler-Sammlung nennt sie so', async () => {
+    const de = await load('de');
+    expect(de['games.classifier.first']).toBe('Plattform / Liga');
+    expect(de['games.classifier.second']).toBe('Modus / Jahrgang');
+    expect(de['games.mistakes.collection.hint']).toContain('Plattform/Liga');
+    expect(de['games.mistakes.collection.hint']).toContain('Modus/Jahrgang');
+    for (const k of ['games.mistakes.collection.title', 'games.mistakes.collection.button', 'games.mistakes.collection.hint'])
+      expect(de[k]).not.toContain('Saison');
+    expect(en['games.mistakes.collection.title']).not.toMatch(/league\/season/i);
+  });
+
+  /**
    * Englisch-Nachprüfung e1 (e1-rk-hilfe-partien-satz): die Hilfe übernahm die deutsche Satzstellung „Unter ☰ → … siehst
    * du …“ als „Under ☰ → Community → Leaderboards you see …“. Natürlich: „Your … are under ☰ → …“ / „The … under ☰ → …
    * show …“ — keine Ortsangabe am Satzanfang, an die ohne Komma „you …“ anschließt.
@@ -182,7 +224,7 @@ describe('i18n Sprachdateien', () => {
    */
   const ENDLESS_SAME_AS_EN_OK = new Set([
     'endless.config.auto', 'endless.config.curvePuzzle', 'endless.config.highscore', 'endless.config.start',
-    'endless.game.levelRange', 'endless.game.statRating', 'endless.game.statLevel', 'endless.history.colEloDelta',
+    'endless.game.levelRange', 'endless.history.colEloDelta',
   ]);
   for (const lang of FORMAT_LOCALES.filter(l => l !== 'en')) {
     it(`${lang}: Endless-Texte übersetzt (nicht wortgleich wie en)`, async () => {

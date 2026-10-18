@@ -14,6 +14,44 @@ export function isAuthUrl(url: string): boolean {
 
 const MASKS = ':is(app-login, app-register, app-forgot-password, app-reset-password)';
 
+/** Pfad ohne Abfrage und Anker ist `/forgot-password`. */
+export function isForgotPasswordUrl(url: string): boolean {
+  return url.split(/[?#]/)[0].replace(/\/+$/, '') === '/forgot-password';
+}
+
+/**
+ * „Passwort vergessen" in der Kinder-Fassung (d3-k-forgot-stacked-muted-paragraphs): unter dem Knopf standen zwei leise
+ * Erwachsenen-Absätze offen übereinander (`p.kids-mail` „die Mail kann ›RookHub‹ zeigen", `p.no-email` „Keine E-Mail im
+ * Konto? … Adresse"). Beide richten sich an Eltern — sie kommen wie auf den Rechtsseiten in EIN zugeklapptes
+ * `<details class="kid-parent">` mit der Beschriftung `label` („Für Eltern: keine Mail bekommen?"). Die geteilte
+ * Komponente bleibt unberührt (DESIGN 8.6); verschoben werden die von Angular gezeichneten Absätze selbst (ihre Bindungen
+ * bleiben, ihre Bedingungen hängen nur an der Oberfläche). Gibt zurück, ob umgebaut wurde.
+ */
+export function foldForgotPassword(root: ParentNode, label: string): boolean {
+  const content = root.querySelector('app-forgot-password mat-card-content');
+  if (!content || content.querySelector(':scope > details.kid-parent')) return false;
+  const notes = Array.from(content.querySelectorAll(':scope > p.kids-mail, :scope > p.no-email'));
+  if (notes.length === 0) return false;
+  const doc = content.ownerDocument;
+  const details = doc.createElement('details');
+  details.className = 'kid-parent';
+  const summary = doc.createElement('summary');
+  const text = doc.createElement('span');
+  text.className = 'kid-parent-label';
+  text.textContent = label;
+  summary.append(text);
+  details.append(summary);
+  notes[0].before(details);
+  details.append(...notes);
+  return true;
+}
+
+/** Setzt die Beschriftung neu (Sprachwechsel); ohne umgebaute Seite passiert nichts. */
+export function setForgotPasswordTexts(root: ParentNode, label: string): void {
+  const text = root.querySelector('app-forgot-password details.kid-parent .kid-parent-label');
+  if (text) text.textContent = label;
+}
+
 /** Farbe der Feldhinweise auf der weißen Karte — leiser als der Text (#1f2d3d), aber ≥ 4,5:1 (b1-k-register-hinweise-abstand). */
 export const KID_AUTH_HINT_COLOR = '#4a6380';
 
@@ -40,7 +78,11 @@ export const KID_AUTH_STYLES = `
   /* b1-k-register-hinweise-abstand: die 1rem großen Hinweise klebten dunkel und 16 px eingerückt unter dem Feld, nur
      4–6 px über dem nächsten Feld bzw. dem Knopf — sie wirkten wie eigener Text. Jetzt an der Feldkante, leiser
      (KID_AUTH_HINT_COLOR, 6,1:1 auf Weiß) und mit 14 px Luft nach unten: klar der Hinweis zum Feld darüber. */
-  :host ::ng-deep ${MASKS} .mat-mdc-form-field-subscript-wrapper { margin-bottom: 14px; }
+  /* d3-k-kid-login-feldluecken-ungleich: Zeile + 14 px galten für JEDES Feld — auf der Anmeldung (keine Hinweise) blieben
+     44–50 px leer zwischen den Feldern. Die 14 px nur unter Feldern mit Hinweis; ohne Hinweis und ohne Fehler bleibt die
+     leere Unterzeile 8 px flach (:has ab Chrome 105, Boox 111 ok). Mit Fehler gilt Materials Höhe — die Meldung steht. */
+  :host ::ng-deep ${MASKS} .mat-mdc-form-field:has(.mat-mdc-form-field-hint) .mat-mdc-form-field-subscript-wrapper { margin-bottom: 14px; }
+  :host ::ng-deep ${MASKS} .mat-mdc-form-field:not(:has(.mat-mdc-form-field-hint, .mat-mdc-form-field-error)) .mat-mdc-form-field-subscript-wrapper { height: 8px; }
   :host ::ng-deep ${MASKS} .mat-mdc-form-field-hint-wrapper,
   :host ::ng-deep ${MASKS} .mat-mdc-form-field-error-wrapper { padding: 4px 4px 0; }
   :host ::ng-deep ${MASKS} .mat-mdc-form-field-hint { color: ${KID_AUTH_HINT_COLOR}; }
@@ -69,4 +111,21 @@ export const KID_AUTH_STYLES = `
     box-shadow: 0 3px 0 var(--kid-shadow); margin: 0;
   }
   :host ::ng-deep ${MASKS} .auth-required { border-left-color: var(--kid-title); background: var(--kid-sky); border-radius: 12px; }
+  /* d3-k-forgot-stacked-muted-paragraphs: Eltern-Hinweise zugeklappt — Aufklapper wie auf den Rechtsseiten
+     (KID_PRIVACY_STYLES): Trennlinie, 44-px-Zeile, ▸-Marke, Beschriftung fett in --kid-title. */
+  :host ::ng-deep ${MASKS} details.kid-parent { margin-top: 12px; border-top: 1px solid #dbe5f0; }
+  :host ::ng-deep ${MASKS} details.kid-parent > summary {
+    display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none;
+  }
+  :host ::ng-deep ${MASKS} details.kid-parent > summary::-webkit-details-marker { display: none; }
+  :host ::ng-deep ${MASKS} details.kid-parent > summary::before {
+    content: '▸'; color: var(--kid-title); font-weight: 800; transition: transform .15s;
+  }
+  :host ::ng-deep ${MASKS} details.kid-parent[open] > summary::before { transform: rotate(90deg); }
+  :host ::ng-deep ${MASKS} details.kid-parent > summary:focus-visible { outline: 3px solid var(--kid-title); outline-offset: 2px; }
+  :host ::ng-deep ${MASKS} details.kid-parent .kid-parent-label { font-weight: 700; color: var(--kid-title); }
+  :host ::ng-deep ${MASKS} details.kid-parent > p { margin: 0 0 8px; }
+  @media (prefers-reduced-motion: reduce) {
+    :host ::ng-deep ${MASKS} details.kid-parent > summary::before { transition: none; }
+  }
 `;

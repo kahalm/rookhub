@@ -579,9 +579,9 @@ public sealed class MoveComparisonService
         public string MoverEval(bool moverWhite) => GameMistakes.EvalText(CpWhite, MateWhite, moverWhite);
     }
 
-    /// <summary>Bewertung einer Stellung aus Weiß-Sicht: Rangwert (Matt ± <see cref="MateScore"/>) und Text wie auf dem
-    /// Analysebrett.</summary>
-    internal sealed record Ev(double Score, string Text, int? CpWhite, int? MateWhite, bool Checkmate);
+    /// <summary>Bewertung einer Stellung aus Weiß-Sicht: Rangwert (Matt ± <see cref="MateScore"/>) und die Rohwerte;
+    /// angezeigt wird sie über <see cref="ShownText(Ev, bool)"/> aus Sicht der Seite am Zug.</summary>
+    internal sealed record Ev(double Score, int? CpWhite, int? MateWhite, bool Checkmate);
 
     internal static List<Pv> Pvs(string fen, string? resultJson)
     {
@@ -603,10 +603,9 @@ public sealed class MoveComparisonService
         var pv = Pvs(fen, resultJson).FirstOrDefault();
         if (pv is null) return null;
         if (pv.MateWhite is int m)
-            return new Ev(m > 0 ? MateScore - m : -MateScore - m, "#" + m.ToString(CultureInfo.InvariantCulture), null, m, false);
+            return new Ev(m > 0 ? MateScore - m : -MateScore - m, null, m, false);
         var cp = pv.CpWhite ?? 0;
-        var v = cp / 100.0;
-        return new Ev(cp, (v > 0 ? "+" : "") + v.ToString("0.00", CultureInfo.InvariantCulture), cp, null, false);
+        return new Ev(cp, cp, null, false);
     }
 
     /// <summary>Matt oder Patt auf dem Brett (keine legalen Züge) — dann gibt es nichts zu rechnen.</summary>
@@ -619,8 +618,8 @@ public sealed class MoveComparisonService
             if (board.Moves().Length > 0) return null;
             var white = FenFields.WhiteToMove(fen);
             var mated = white ? board.WhiteKingChecked : board.BlackKingChecked;
-            if (!mated) return new Ev(0, "0.00", 0, null, false);
-            return white ? new Ev(-MateScore, "#-0", null, null, true) : new Ev(MateScore, "#0", null, null, true);
+            if (!mated) return new Ev(0, 0, null, false);
+            return white ? new Ev(-MateScore, null, null, true) : new Ev(MateScore, null, null, true);
         }
         catch { return null; }
     }
@@ -661,13 +660,13 @@ public sealed class MoveComparisonService
                         var san = replies.FirstOrDefault(p => p.Uci == r.ReplyUci)?.San ?? r.ReplyUci ?? "?";
                         var answer = r.State == MoveComparisonLineState.Illegal ? [] : Pvs(r.Fen, rj).FirstOrDefault()?.Line ?? [];
                         return new MoveComparisonTestDto(r.ReplyUci ?? "", san, StateText(r.State), rd,
-                            r.State == MoveComparisonLineState.Illegal ? null : EvalOf(r.Fen, rj)?.Text, answer);
+                            r.State == MoveComparisonLineState.Illegal ? null : ShownText(EvalOf(r.Fen, rj), moverWhite), answer);
                     })
                     .ToList();
                 var explanation = l.Explanation is null ? null : PieceLetters.Convert(l.Explanation, "en", c.Language);
                 return (Dto: new MoveComparisonCandidateDto(l.CandidateUci, SanOf(c.Fen, l.CandidateUci) ?? l.CandidateUci,
-                        StateText(l.State), depth, ev?.Text, l.CandidateUci == c.BestUci,
-                        replies.Select(p => new MoveComparisonReplyDto(p.Uci, p.San, EvalText(p), p.Line)).ToList(), tests, explanation),
+                        StateText(l.State), depth, ShownText(ev, moverWhite), l.CandidateUci == c.BestUci,
+                        replies.Select(p => new MoveComparisonReplyDto(p.Uci, p.San, ShownText(p, moverWhite), p.Line)).ToList(), tests, explanation),
                     Score: ev is null ? double.MinValue : moverWhite ? ev.Score : -ev.Score, l.Ordinal, Ranked: l.State == MoveComparisonLineState.Done);
             })
             .ToList();
@@ -681,10 +680,25 @@ public sealed class MoveComparisonService
             c.CreatedAt, c.FinishedAt, ordered.Select(x => x.Dto).ToList());
     }
 
-    private static string EvalText(Pv p)
+    // d3-rk-vergleich-vorzeichen-widerspruch: die ganze Seite zeigt die Bewertung aus Sicht der Seite am Zug der
+    // Ausgangsstellung — dieselbe Sicht wie die Begründung des Sprachmodells (MoverText). Vorher stand dort Weiß-Sicht,
+    // mit Schwarz am Zug also „-4.08" am besten Zug neben „+4,1" im Erklärtext.
+
+    /// <summary>Anzeige-Text aus Sicht des Lesers (Seite am Zug): „+4.08", „#3" (er setzt matt), „#-2" (er wird matt).</summary>
+    internal static string? ShownText(Ev? e, bool moverWhite)
     {
-        if (p.MateWhite is int m) return "#" + m.ToString(CultureInfo.InvariantCulture);
-        var v = (p.CpWhite ?? 0) / 100.0;
+        if (e is null) return null;
+        if (e.Checkmate) return (e.Score > 0) == moverWhite ? "#0" : "#-0";
+        return Plain(e.CpWhite, e.MateWhite, moverWhite);
+    }
+
+    private static string ShownText(Pv p, bool moverWhite) => Plain(p.CpWhite, p.MateWhite, moverWhite);
+
+    private static string Plain(int? cpWhite, int? mateWhite, bool moverWhite)
+    {
+        var sign = moverWhite ? 1 : -1;
+        if (mateWhite is int m) return "#" + (m * sign).ToString(CultureInfo.InvariantCulture);
+        var v = (cpWhite ?? 0) * sign / 100.0;
         return (v > 0 ? "+" : "") + v.ToString("0.00", CultureInfo.InvariantCulture);
     }
 

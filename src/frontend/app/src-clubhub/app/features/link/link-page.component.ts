@@ -18,7 +18,8 @@ import { LinkStateStore } from '../../core/link-state.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="sheet">
-      <header class="sheet-head"><h1>Konto verknüpfen</h1></header>
+      <!-- d3-c-verknuepfen-titel-beschriftung: verknüpft gibt es hier nichts zu verknüpfen — dasselbe Wort wie die Fußzeile. -->
+      <header class="sheet-head"><h1>{{ state()?.linked ? 'Verknüpfung' : 'Konto verknüpfen' }}</h1></header>
       @if (state(); as s) {
         @if (s.linked) {
           <section>

@@ -2,8 +2,15 @@
   <div class="bar">
     <!-- Offline führt „Zurück" zur Liste (die Detail-Seite braucht den Server). -->
     <a mat-button [routerLink]="offlineSession ? ['/repertoires'] : ['/repertoires', repertoireId]"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</a>
+    <!-- d3-rk-trainer-leer-zwei-aktionen: Name des Repertoires als Titel (Weiß/Schwarz/Endspiel sahen gleich aus),
+         „Repertoire-Trainer“ leise dahinter; ohne Namen der bisherige Titel. -->
     <span class="title">
-      {{ 'repertoireTrainer.title' | translate }}
+      @if (repertoireName) {
+        <span class="rep-name" [title]="repertoireName">{{ repertoireName }}</span>
+        <span class="title-kind">{{ 'repertoireTrainer.title' | translate }}</span>
+      } @else {
+        {{ 'repertoireTrainer.title' | translate }}
+      }
       @if (chapterFilter) {
         <span class="chapter-chip"><mat-icon>bookmark</mat-icon>{{ chapterFilter }}</span>
       }
@@ -18,22 +25,24 @@
       <mat-button-toggle value="learn">{{ 'repertoireTrainer.modeLearn' | translate }}</mat-button-toggle>
     </mat-button-toggle-group>
     @if (!offlineSession) {
-      <!-- „Häufigste zuerst" braucht den Server (Lichess-Explorer) → offline ausgeblendet. -->
-      <button mat-icon-button (click)="toggleFreqOrder()" [class.freq-on]="freqOrder"
+      <!-- „Häufigste zuerst" braucht den Server (Lichess-Explorer) → offline ausgeblendet.
+           d3-rk-trainer-symbolknoepfe-ohne-text: beschrifteter Umschalter (Häkchen + aria-pressed) statt nacktem
+           trending_up; Einstellungen und das gefährliche „Fortschritt zurücksetzen“ (zuletzt, rot) im ⋮ (DESIGN 5.4/5.5). -->
+      <button mat-stroked-button class="freq-toggle" (click)="toggleFreqOrder()" [class.freq-on]="freqOrder"
               [attr.aria-pressed]="freqOrder"
-              [matTooltip]="(freqOrder ? 'repertoireTrainer.freqOrderOn' : 'repertoireTrainer.freqOrderOff') | translate"
-              [attr.aria-label]="'repertoireTrainer.freqOrder' | translate">
-        <mat-icon>trending_up</mat-icon>
+              [matTooltip]="(freqOrder ? 'repertoireTrainer.freqOrderOn' : 'repertoireTrainer.freqOrderOff') | translate">
+        <mat-icon>{{ freqOrder ? 'check' : 'sort' }}</mat-icon>{{ 'repertoireTrainer.freqOrder' | translate }}
       </button>
       <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet. -->
-      <button mat-icon-button (click)="openConfig()"
-              [appIconLabel]="'srConfig.title' | translate">
-        <mat-icon>tune</mat-icon>
+      <button mat-icon-button class="more" [matMenuTriggerFor]="trainerMenu" [appIconLabel]="'common.moreActions' | translate">
+        <mat-icon>more_vert</mat-icon>
       </button>
-      <button mat-icon-button (click)="resetProgress()" [disabled]="resetting"
-              [appIconLabel]="'repertoireTrainer.resetTooltip' | translate">
-        <mat-icon>restart_alt</mat-icon>
-      </button>
+      <mat-menu #trainerMenu="matMenu">
+        <button mat-menu-item (click)="openConfig()"><mat-icon>tune</mat-icon>{{ 'srConfig.title' | translate }}</button>
+        <button mat-menu-item class="delete-item reset-item" (click)="resetProgress()" [disabled]="resetting">
+          <mat-icon>restart_alt</mat-icon>{{ 'repertoireTrainer.resetProgress' | translate }}
+        </button>
+      </mat-menu>
     }
   </div>
 
@@ -68,9 +77,6 @@
           <button mat-flat-button color="primary" (click)="setMode('quiz')">
             <mat-icon>fitness_center</mat-icon> {{ 'repertoireTrainer.switchToQuiz' | translate }}
           </button>
-          <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
-            <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
-          </a>
         </div>
       } @else {
       <mat-icon>{{ nextDueAt ? 'schedule' : 'school' }}</mat-icon>
@@ -79,7 +85,8 @@
       } @else {
         <p>{{ 'repertoireTrainer.nothingInPool' | translate }}</p>
       }
-      <!-- UI-Sweep 2026-10-11 (r2-rg-trainer-icons): Hauptaktion und „Linien verwalten" nebeneinander in einer Zeile. -->
+      <!-- d3-rk-trainer-leer-zwei-aktionen: höchstens EINE Aktion im Leerzustand (DESIGN 5.10). „Linien verwalten“
+           nur, wenn es keinen Hauptknopf gibt (offline) — online führt „Zurück“ zur selben Seite. -->
       <div class="msg-actions">
       @if (nextDueAt) {
         @if (!offlineSession) {
@@ -94,9 +101,11 @@
           </button>
         }
       }
-      <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
-        <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
-      </a>
+      @if (offlineSession) {
+        <a mat-stroked-button [routerLink]="['/repertoires', repertoireId]">
+          <mat-icon>list</mat-icon> {{ 'repertoireTrainer.manageLines' | translate }}
+        </a>
+      }
       </div>
       }
     </mat-card>

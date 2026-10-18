@@ -303,6 +303,15 @@ describe('ProfileComponent (Darstellung zuerst)', () => {
     expect(el.querySelectorAll('app-theme-card').length).toBe(1);
   });
 
+  it('d3-rk-profil-titel-ohne-abstand: Titel ist ein h1-Seitenkopf ueber der Karte, kein mat-card-title', () => {
+    const fixture = render(jasmine.createSpy('getProfile').and.returnValue(of({ username: 'u', email: 'a@b.c' })));
+    const el: HTMLElement = fixture.nativeElement;
+    const h1 = el.querySelector('.profile-container > .header > h1');
+    expect(h1?.textContent).toContain('profile.title');
+    expect(el.querySelector('mat-card-title')).toBeNull();
+    expect(el.querySelector('mat-card h1')).toBeNull();
+  });
+
   it('Ladefehler: Darstellung ist ebenfalls die erste Karte', () => {
     const fixture = render(jasmine.createSpy('getProfile').and.returnValue(throwError(() => ({ status: 0 }))));
     const el: HTMLElement = fixture.nativeElement;

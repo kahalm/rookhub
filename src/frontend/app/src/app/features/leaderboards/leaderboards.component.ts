@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LatestRequest } from '../../shared/latest-request.util';
@@ -24,7 +26,8 @@ interface CategoryDef {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-leaderboards',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonToggleModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonToggleModule, MatButtonModule, RouterLink, TranslatePipe,
+    LoadingSpinnerComponent],
   template: `
     <div class="lb-page">
       <h1 class="lb-title"><mat-icon>leaderboard</mat-icon> {{ 'leaderboards.title' | translate }}</h1>
@@ -39,6 +42,16 @@ interface CategoryDef {
         <app-loading-spinner />
       } @else if (error) {
         <p class="lb-error">{{ 'leaderboards.error' | translate }}</p>
+      } @else if (allEmpty) {
+        <!-- d3-rk-bestenlisten-leer-ohne-weg: alles leer → EINE Leerkarte mit Grund (Zeitraum) und einem Weg weiter
+             (DESIGN 5.10), statt vier Karten mit „Noch keine Einträge.“. -->
+        <mat-card class="lb-empty-all">
+          <mat-card-content class="empty-state">
+            <mat-icon>leaderboard</mat-icon>
+            <p>{{ 'leaderboards.emptyAll.' + period | translate }}</p>
+            <a mat-flat-button color="primary" routerLink="/puzzles">{{ 'leaderboards.emptyAction' | translate }}</a>
+          </mat-card-content>
+        </mat-card>
       } @else {
         <div class="lb-grid">
           @for (cat of categories; track cat.key) {
@@ -48,7 +61,7 @@ interface CategoryDef {
               </mat-card-header>
               <mat-card-content>
                 @if (rows(cat.key).length === 0) {
-                  <p class="empty-state">{{ 'leaderboards.empty' | translate }}</p>
+                  <p class="empty-state">{{ (period === 'alltime' ? 'leaderboards.empty' : 'leaderboards.emptyIn.' + period) | translate }}</p>
                 } @else {
                   <ol class="lb-list">
                     @for (e of rows(cat.key); track e.rank; let i = $index) {
@@ -100,6 +113,8 @@ interface CategoryDef {
     .lb-count { flex: 0 0 auto; font-weight: 600; font-variant-numeric: tabular-nums; }
     .lb-count small { font-weight: 400; opacity: 0.6; }
     .lb-error { color: var(--rh-error); }
+    .lb-empty-all .empty-state { text-align: center; padding: 2rem 1rem; }
+    .lb-empty-all .empty-state > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
   `],
 })
 export class LeaderboardsComponent implements OnInit {
@@ -126,6 +141,11 @@ export class LeaderboardsComponent implements OnInit {
     if (p === this.period) return;
     this.period = p;
     this.load();
+  }
+
+  /** Alle vier Kategorien leer (z. B. neue Woche): dann eine gemeinsame Leerkarte statt vier leerer. */
+  get allEmpty(): boolean {
+    return !!this.data && this.categories.every(c => this.rows(c.key).length === 0);
   }
 
   rows(key: CategoryDef['key']): LeaderboardEntry[] {

@@ -164,11 +164,18 @@ RookHub und der Turnierseite (beide laden `src/styles.scss` und starten über `a
   die Wahl bleibt gespeichert); Text #000 auf #fff, `--mat-sys-on-surface-variant` #333 (≥ 7:1), `--mat-sys-outline`
   schwarz, Karten/Dialoge/Menüs mit 2-px-Rahmen statt Schatten; Fokus 3 px schwarz, aktiv/gewählt
   (`aria-pressed`, `aria-selected`, `aria-current`, gewählter Umschalter) zusätzlich als 3-px-Innenrahmen + fett;
-  unbestimmter Ladekreis = stehender gepunkteter Ring, unbestimmte Leiste = volle gestrichelte Leiste.
+  unbestimmter Ladekreis = stehender gepunkteter Ring, unbestimmte Leiste = volle gestrichelte Leiste. Snackbar-Aktion
+  („Schließen“) schwarz, fett, unterstrichen (Material färbt sie sonst blass für eine dunkle Fläche); Wahlkacheln
+  (`.sm-choice`, Spielweise-Dialog) mit 2-px-Rahmen auf Weiß; Zugrecht-Zeile unter dem Puzzle-Brett (`.board-hint`) in
+  #333 statt doppelt abgeblasst. Diagramme mit Stufen (Aktivitäts-Raster in /stats) als Helligkeitstreppe Weiß →
+  #a3a3a3 → #6b6b6b → #333 → Schwarz mit 1-px-Rahmen je Zelle statt Farbtönen; Kurvenlinien schwarz, Fläche weiß mit
+  Rahmen. **Design-Wahl** (☰-Menü der Gäste, Untermenü System/Hell/Dunkel) ist im Modus wirkungslos — das Menü zeigt
+  statt ihrer den Hinweis „bleibt immer hell“ (wie die Profilkarte).
 - **Brett:** keine Zuganimation (`boardAnimation()` aus `eink.ts` in allen drei Brett-Komponenten); helle Felder weiß,
   dunkle #a3a3a3 **ohne Feldkanten** (das Kachelmuster ist 2 × 2 Felder groß — Kanten wurden am Kachelrand halbiert,
   jede zweite Linie war dicker); letzter Zug / Auswahl als Innenrahmen statt Farbfläche; Zielpunkte schwarz; Pfeile
-  volle Deckkraft; Koordinaten schwarz mit weißem Hof. **Nachbild-Löscher:** bei einer ganz anderen Stellung (> 4
+  volle Deckkraft; Koordinaten schwarz mit weißem Hof. Gilt auch fürs SVG-Brett `app-flashcard-board` (Lernkarten,
+  Aufgabenblatt, Rekonstruktion: Felder per Klasse `fb-l`/`fb-d`, 2-px-Rahmen). **Nachbild-Löscher:** bei einer ganz anderen Stellung (> 4
   Felder anders, `isBoardSwitch`) oder beim Drehen legt `flashEinkRefresh()` je 160 ms Schwarz, dann Weiß über das
   Brett — eine Webseite kann am Gerät keine Vollauffrischung anfordern, das Durchfahren beider Extreme ersetzt sie fürs
   Brett. Ein normaler Zug blitzt nicht.
@@ -423,6 +430,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   bevorzugt per `appIconLabel`).
 - Reihenfolge: Öffnen/Navigieren → Einstellungen/Umschalten → Teilen/Export → **Löschen zuletzt, rot**
   (`.delete-item mat-icon` in Fehlerfarbe; Vorbilder `course-card`, `repertoire-list`, `reconstruct-detail`).
+- Dieselbe Sache, dieselbe Reihenfolge: das ⋮ einer Partie (Partieseite und Zeile der Partienliste) läuft „In Analyse
+  öffnen → Original → Korrigieren → (Engine) → Roast/Vereins-Datenbank → Teilen/PGN/Foto → Löschen“ (0.807.x,
+  d3-rk-spielmenue-reihenfolge-uneinheitlich).
 - Ins ⋮ wandert, was in der Kopfzeile nicht mehr passt (Rekonstruktion: in der Kopfzeile nur ✓ und ⋮,
   r2-rg-recon-actions; Turnierseite am Handy, 0.746.0).
 - Am Handy bleibt das ⋮ **in derselben Zeile** wie die Knöpfe (0.751.2, Kursseite).
@@ -477,6 +487,11 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 ### 5.8 Formulare
 
 - RookHub/Turnierseite: `mat-form-field appearance="outline"` (171 von 172 bzw. 22 von 22) — **immer outline**.
+- Ein `mat-hint`, der am Handy umbrechen kann, braucht `subscriptSizing="dynamic"` und Abstand zum nächsten Feld (≥ 8 px) —
+  die feste Hinweiszeile reserviert nur eine Zeile, die zweite lag sonst auf dem Rahmen darunter (d3-rk-ebook-upload-hint-ueberlappt-feld).
+- Passwortfelder haben überall das Auge zum Einblenden: `<app-password-toggle matSuffix #pwEye />` +
+  `[type]="pwEye.type()"` (`shared/password-toggle/`, `aria-pressed`, Schlüssel `auth.passwordToggle.*`) — Anmeldung,
+  Registrierung und Zurücksetzen gleich (d3-rk-login-passwort-ohne-auge).
 - LeagueHub/ClubHub: native Felder, Beschriftung über dem Feld (`.field { display: grid; gap: 4px }`), Zustand in
   Signalen, kein FormsModule.
 - Feldbreite nach Inhalt (ClubHub-Code-Feld so breit wie „ABCDE-FGHJK“, r2-c-code-field); Feldgruppen per
@@ -495,7 +510,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Anzeige-Abzeichen:** eigene `.chip` (65×) / `.badge` (30×): ~0.72rem, `padding: 1px 7px`,
   `border-radius: 999px`, Fläche `color-mix(in srgb, currentColor 10%, transparent)`; Warnung
   `color-mix(in srgb, var(--mat-sys-error) 22%, transparent)` (`tournament-card.component.ts`).
-- **Nur gesetzte Werte** bekommen ein Abzeichen (keine Vorgabe-Themen wie „Taktik“, r2-rp-taktik-chip).
+- **Nur gesetzte Werte** bekommen ein Abzeichen (keine Vorgabe-Themen wie „Taktik“, r2-rp-taktik-chip) — Kurskarte und
+  Kursdetail über dieselbe Regel (`features/courses/course-themes.util.ts`, d3).
+- **Hinweis-Chips nennen einen Zustand, keine Aktion** („Import veraltet“ statt „Neu holen“, wenn der Tipp nur eine
+  Erklärung aufklappt, d3).
 - Ein erklärungsbedürftiges Abzeichen klappt seine Erklärung **per Tipp** auf (am Handy kein Tooltip,
   r2-rp-course-warn).
 - Zähler im Seitenkopf: KidHub `.kid-counter` (Abschnitt 8.3).
@@ -526,6 +544,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   34 px, Tooltip per Klick fest (`.hh-tooltip`: max. 320 px, `pre-line`, Absätze mit `\n\n`, max. 60vh scrollbar).
 - **Banner** (Seitenhinweise): Fläche getönt, Symbol links, Text `flex: 1 1 220px`, ein Knopf rechts, Radius 8 px
   (Vorbild `shared/reprocess-banner/`); Offline-Banner, Impersonation-Banner (`shared/impersonation-banner/`).
+  Aktualisierungs- und Angebots-Banner tönen mit `--rh-info`, `--rh-warn` nur für echte Warnungen — hell liegt
+  `--rh-warn` (#bf360c) im Ton fast auf `--rh-error` und wirkt als Fehler (d3-rk-update-banner-rot-hell).
 - **„Mehr“ steht im Satz:** als Textknopf am Satzende (`aria-expanded`), nicht als eigener Flex-Eintrag — sonst
   steht er am Handy allein in einer Zeile (0.751.2).
   Zugeklappter Text wird **gemessen** auf höchstens 3 Zeilen gekürzt (`shared/clamp-more/clamp-more.directive.ts`:
@@ -577,6 +597,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   (`min(100%, max(320px, 100vh - 300px))`), die Linienliste läuft mit der Seite, Kapitelköpfe kleben oben (b1).
 - **Lernkarte (Flashcards):** die verdeckte Seite ist zusätzlich `visibility: hidden` (Wechsel nach halber Drehzeit) —
   WebKit malte sonst die gespiegelte Rückseite über das Brett; Vollbild-Knopfzeile so breit wie die Karte (b1).
+- **Lösezeit** in der Status-Karte mit Uhr-Symbol `timer` und Namen „Lösezeit“ (Tooltip, `role="timer"` + `aria-label`),
+  nie als nackte Zahl; „Tipps melden“ trägt den Daumen (`thumb_down_off_alt`/`thumb_down`), die Flagge gehört
+  „Aufgeben“ (alle drei Modi, d3). Endlos: Rating, Level und Leben nur in den Quick-Stats, die Statistik-Karte zeigt
+  „Gelöst“ und „Sitzung“ (d3).
 - Gleiche Erweiterung in allen drei Puzzle-Modi prüfen (Standard, Endless, Buch/Kurs; `rookhub/CLAUDE.md`).
 
 ### 5.13 Zahlen, Mehrzahl, Datum
@@ -602,6 +626,9 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Ergänzungsstrich** („Fortschritt und -Statistiken“) nie allein am Zeilenende: vor dem Strich U+00A0, danach
   Wortverbinder U+2060 („und -⁠Statistiken“, 0.763.0, `i18n-parity.spec`). Vor einem Schrägstrich ebenso:
   „Chess.com-⁠/Lichess“ mit U+2060 zwischen Strich und „/“ — WebKit bricht sonst dort, die Zeile beginnt mit „/“ (0.765.0).
+- **Gedankenstrich** („bereit — versuch es …“) nie am Zeilenanfang: davor U+00A0 statt Leerzeichen — mit
+  `text-wrap: balance` brach der kurze Grund unter „Partie analysieren“ genau davor um (0.807.x, `*NoEngine` in
+  `i18n-parity.spec`, d3-rk-partie-grund-strich-zeilenanfang).
 - **Zahl und Einheit/%** mit geschütztem Leerzeichen (U+00A0) zusammenhalten, auch in Übersetzungen hinter einem
   Platzhalter („{{percent}} %“) — sonst steht „%)“ allein in der nächsten Zeile (0.759.0, `i18n-parity.spec`).
   **Sprachausnahme Prozent** (0.761.0): Englisch und Ungarisch schreiben „46%“ ohne Leerzeichen (en/hu-JSON
@@ -643,6 +670,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - **Deutsche Anführungszeichen typografisch „…“** (in `de.json` 145 Werte, 5 noch mit geraden), keine »…«
   (`i18n-parity.spec`, 0.763.0). Im deutschen
   Changelog-Text Pflicht: ein gerades `"` beendet den JS-String und bricht den Build.
+- **Englische Knöpfe und Beschriftungen in Satzschreibung** („Give up“, „Next puzzle“, „Show eval“); Überschriften
+  dürfen Title Case behalten (d3-rk-puzzle-button-case-inconsistent).
 - **Englische Anführungszeichen typografisch “…”** (innen ‘…’) in `en.json` — keine »…«, „…“ oder geraden `"`
   (ausgenommen Syntax: HTML-Attribute, PGN-Tags in Platzhaltern); `i18n-parity.spec` prüft es (0.761.0).
 - Ein deutsches Wort im englischen Text nur als erkennbarer Befehl/Name mit Erklärung („/motivation, option “aus”
@@ -665,8 +694,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   262× `matTooltip` (oft mit Hand-`aria-label`). **Regel ab jetzt:** bei neuen und angefassten Symbolknöpfen
   `appIconLabel`.
 - **Tippziele ≥ 44 px** (KidHub-Test `kids-targets.spec.ts`, `MIN_TARGET = 44`; Turnierkarten-Aktionen am Handy
-  64×48; LeagueHub-Fußlinks; ClubHub `.btn`). Kleinere Symbole vergrößern ihre Trefferfläche unsichtbar
-  (`::after { inset: -6px }`, `@media (pointer: coarse)`).
+  64×48; LeagueHub- und ClubHub-Fußlinks am Handy; ClubHub `.btn`). Kleinere Symbole vergrößern ihre Trefferfläche unsichtbar
+  (`::after { inset: -6px }`, `@media (pointer: coarse)`); ClubHubs Textknöpfe `.btn-link` immer per `::after` auf ≥ 44 px
+  Höhe, ohne die Zeile zu strecken.
 - **Fokus sichtbar:** `:focus-visible` — LeagueHub/ClubHub global `outline: 3px solid var(--focus); outline-offset: 2px`;
   KidHub-Pillen `:focus-within`. `outline: none` nur mit Ersatz.
 - **Zustände benennen:** Umschalter mit `aria-pressed`, Aufklapper mit `aria-expanded`, Zustandszeichen mit
@@ -725,6 +755,15 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Training eine Karte mit Status-Abzeichen, Frist und Fortschrittsbalken, die Zyklen als kleine Zahlentabelle (erst
   nach dem ersten beendeten Zyklus) und genau einer Hauptaktion („Weiter lösen“ / „Zyklus N starten“); in der Pause ist
   der Knopf gesperrt, der Grund steht darunter. Der Löser benutzt Brett und Status-Karte der Puzzle-Modi.
+  Zyklus 1: der Balken misst die verstrichene Frist und steht deshalb beschriftet (`aria-label` „3 von 28 Tagen
+  vorbei“) direkt unter der Fristzeile, nicht unter „Satz: n Aufgaben von N“; der Löser nennt den Satz im selben
+  Wortlaut. Ohne lösbaren Kurs zeigt die leere Übersicht gleich „Zu den Kursen“; im Dialog sind Kurszeilen ganzzeilig
+  ≥ 44 px, gleichnamige Kurse tragen eine Meta-Zeile (Herkunft, zuletzt geübt) (d3).
+- Repertoire-Trainer (d3): Kopf = Name des Repertoires, „Repertoire-Trainer“ leise daneben; „Häufigste Linien zuerst“
+  als beschrifteter Umschalter (Häkchen, `aria-pressed`), Übungszyklen und „Fortschritt zurücksetzen“ (zuletzt, rot)
+  im ⋮; Leerzustand mit genau einer Aktion. Repertoire-Ansicht: Brett aus Sicht der Kapitelfarbe (gewählte Linie,
+  sonst gedreht, wenn alle Kapitel Schwarz sind). Lochfinder: Quelle/Datenbank mit sichtbarer Zeilenbeschriftung,
+  die Seite einfarbiger Repertoires als eigener Chip darüber.
 
 - `index.html` theme-color `#3f51b5`.
 - Kursfortschritt im Löser dreigeteilt (`app-course-progress-split`, 2026-10-15): Leiste 6 px mit Abschnitten `--rh-success` (ohne Hilfe) / `--rh-warn` (mit Tipp/Neustart) / `--rh-error` (aufgegeben), Rest = offen; darunter die drei Zahlen mit Symbol (✓ / Glühbirne / ✗) und „von N“, Bedeutung im Tooltip.
@@ -758,6 +797,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   füllt den Rest — b1), Kalender bleibt Reiter; Turnier-Detail und `/t/:id`: Spieler/Teams
   als Reiter links, Paarungen der gewählten Runde rechts in eigenem klebendem Scroll-Kasten. Abfrage im Code über
   `wideScreen()` (`src-turnier/app/core/wide-screen.ts`, mit Rückruf zum Nachladen). Darunter unverändert Reiter.
+- Turnier-Detail und `/t/:id` in `min(--page-max-width, 96vw)` (Tabellenseite, 4.1; vorher fest 1 100 px). Niedrige
+  Fenster (`max-width: 768px and max-height: 720px`, Boox 200 %): Kalender-Titel nur für Vorleser, sein ⓘ hinter der
+  Trefferzahl; Detail-Kopfkarte mit 4-px-Polstern, 40-px-Knöpfen, Suchzeile kompakt wie am Laptop.
+- Profil: erste Karte „Darstellung“ = RookHubs `app-theme-card` (`@rh/features/profile/theme-card.component`), auch
+  beim Ladefehler. Spieltermine einer Liga mit „·“-Trenner in der Lücke (`overflow-x: clip`, wie ClubHub `.kid-meta`).
 
 ### 8.3 KidHub (`src-kidhub/`)
 
@@ -794,7 +838,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Die Spalte neben dem Brett wächst mit (`--kid-side: 480px`, Schrift größer über `KID_SIDE_WIDE`), Kopf + Fuß
   200 px (b1-k-ultrawide-seitenspalte). Brett-Koordinaten mit deckendem Hof in der Gegenfarbe (lesbar auch auf
   Auswahl-/Zugfeldern, b1-k-koordinate-auf-auswahlfeld). Texte vom Server (Kursnamen) folgen der Sprachpille.
-  Am Handy zeigt die Zurück-Pille der Kursaufgabe nur „←", der Titel bricht auf ≤ 2 Zeilen um (5.1).
+  Am Handy (< 600 px, nicht jedes Hochformat) zeigt die Zurück-Pille der Kursaufgabe nur „←", der Stand kurz „8/287“,
+  der Titel bricht auf ≤ 2 Zeilen um (5.1); Pfeil und Wort der Pille trennt `gap: .3em` (`KID_BACK`), kein Leerzeichen.
+  Markierungen (Sterne, Tipp-Pfeile) gehen erst an ein vermessenes Brett (`KidBoardSizeDirective`, `shared/kid-board-size.directive.ts`,
+  wie `applyArrows` in RookHub — sonst NaN-Koordinaten). Kurs-Fortschrittsbalken über die Textspalte (≤ 520 px), Spur
+  `rgba(120,60,0,.22)`, Füllung `#b45f06`, angefangen ≥ 8 px. Anmeldemasken: Feldunterzeile nur mit Hinweis 14 px Luft,
+  ohne Hinweis 8 px flach.
   Tablet (600–899 px): Startkacheln 2 × 2, eine allein übrige nimmt die ganze Zeile. Kurs-Zähler ist die `.kid-counter`-Pille.
 - Sprachwahl als Pille mit 🌐 über einem nativen `select`; Anmeldemasken mit „← Start“ über der Karte;
   Datenschutz kindgerecht, kein Impressum.
@@ -835,7 +884,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Wer mehrere Konto-Vorschläge hat (`.sugg-group.multi`), steht als umrahmte Fläche mit „N Konten“ im Kopf, Knöpfe auf einer Höhe.
 - ⋮-Menüs: `mat-menu class="lh-menu"` (Fläche `--surface`, 1 px `--line`, Radius 8, Barlow), „Löschen“ zuletzt mit
   `.delete-item` in `--red`. Aufgeklappte ⓘ-Kästen `.info-panel` enden mit ihrem Inhalt (`fit-content`, ≤ 760 px); ein
-  Satz mit ⓘ dahinter ist ein Absatz `.info-inline` (ⓘ am Satzende), keine Flex-Zeile.
+  Satz mit ⓘ dahinter ist ein Absatz `.info-inline` (ⓘ am Satzende), keine Flex-Zeile; letztes Wort + ⓘ stehen in
+  `.info-tail` (`nowrap`) — das ⓘ bricht nie allein um.
 - Tabellen: Namen kürzen nicht mit „…“ (am Touch fehlt der Tooltip) — sie brechen um, Nebenangaben (Elo) in die zweite
   Zeile; gekürzt wird nur Nebeninformation (Zugfolge mit `title`). Am Handy fallen Nebenspalten weg statt Hauptspalten
   rechts aus dem Bild zu schieben (Prognose-ⓘ).
@@ -869,7 +919,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   spätere ›") oder gerade gespeichert wird; fehlt eine Eingabe, fokussiert der Tipp das Feld und darunter steht, was fehlt
   (`.need`, a1-c-disabled-button-contrast). Eingabefehler, die das Formular selbst findet (Vorname leer, Datum unlesbar),
   stehen ebenso als `.need` unter dem Feld, das Feld bekommt Fokus + `aria-invalid`; die Statuszeile am Formularende
-  nur für Serverfehler (b1-c-kind-neu-fehler-unter-falz).
+  nur für Serverfehler (b1-c-kind-neu-fehler-unter-falz). Feld und sein `.need` bilden eine Gitterzelle `.field-cell`, damit der
+  Hinweis auch im einspaltigen `.grid-2` (Handy) unter SEINEM Feld steht. Zerstörende Aktionen als `.btn.danger`, nicht als
+  `.btn-link`.
 - Metazeilen `.kid-meta`: Trenner „·" als absolut gesetztes `::before` ab der zweiten Angabe mitten in der 14-px-Lücke,
   nicht vor Chips; `overflow-x: clip` schneidet ihn an einer umgebrochenen Zeile ab — weder am Zeilenende noch am
   -anfang (5.13, b1-c-meta-trenner-zeilenende). Seitenkopf
@@ -895,7 +947,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | RookHub, Turnierseite | Material unverändert |
 | LeagueHub | `lh-root :is(app-login, …, app-account-deletion) .mat-mdc-card { --mat-sys-primary: var(--red); --mat-card-elevated-container-shape: 10px; --mat-button-*-container-shape: 6px; … }`, Schrift Barlow, Rechtsseiten-Köpfe rot (r2-l-legal-style) |
 | ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style); Knöpfe auf Rechtsseiten wie `.btn` (Radius 8, 44 px) |
-| KidHub | `KID_AUTH_STYLES` / `KID_PRIVACY_STYLES` in der Hülle + „← Start“-Pille; Rechtsseiten = `/privacy` **und** `/account-deletion` (`isLegalUrl`, Breite `KID_PAGE_WIDTH.legal`); Fachbegriff-Listen für Eltern zugeklappt (`details.kid-parent`), davor ein Kindersatz (`foldPrivacy`, `foldAccountDeletion`) |
+| KidHub | `KID_AUTH_STYLES` / `KID_PRIVACY_STYLES` in der Hülle + „← Start“-Pille; Rechtsseiten = `/privacy` **und** `/account-deletion` (`isLegalUrl`, Breite `KID_PAGE_WIDTH.legal`); Fachbegriff-Listen für Eltern zugeklappt (`details.kid-parent`), davor ein Kindersatz (`foldPrivacy`, `foldAccountDeletion`: Kindersatz unter „Was entfernt wird“, Löschknopf nach „Was bleibt“); „Passwort vergessen“: beide Eltern-Hinweise in einem `details.kid-parent` (`foldForgotPassword`) |
 
 ---
 
@@ -946,6 +998,10 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-18 | 0.807.x · Design-Runde d3 · Apps | ClubHub: Fußlinks am Handy 44 px, `.btn-link` mit unsichtbarer 44-px-Trefferfläche, „Gruppe löschen“ als `.btn.danger`, Feldhinweis in `.field-cell` unter seinem Feld, Seitentitel „Verknüpfung“ bei verknüpftem Konto; KidHub: Kursbalken über die Textspalte und kräftiger, Handy-Kurzformen der Kursaufgabe nur < 600 px, „← Kurse“ mit Abstand (gap), Anmeldung ohne leere Hinweiszeilen, Konto löschen: Kindersatz unter „Was entfernt wird“ + Knopf nach „Was bleibt“, Passwort vergessen: Eltern-Hinweise zugeklappt, Markierungen erst aufs vermessene Brett; LeagueHub: ⓘ mit letztem Wort nicht umbrechend, Korrigieren am Handy Partietitel in Zeile 2 (Basis 10rem); Turnierseite: Profil mit Darstellungskarte (theme-card), Ortshinweis leise mit 8 px Abstand, Spieltermine mit „·“, Stern mittig (20-px-Box), Detail in `--page-max-width`, Gast-Karte mit `.tc-slot`, niedrige Fenster kompakter | Tippziele 17–30 px, Fehler unter dem falschen Feld, Titel widersprach Fußzeile, Balken endete nach 260 px (≈ 1,3:1), Tablet zeigte Handy-Kopf, „←Kurse“, 44–50 px Leerraum, Knopf vor der Erklärung, gestapelte Erwachsenen-Absätze, NaN-Konsolenfehler, ⓘ allein in Zeile 2, 5-zeilige Titelspalte, fehlende E-Ink-/Größen-Wahl, klebender Hinweis, verschwimmende Termine, Stern 5 px zu hoch, 1 100 px statt 1 240 px, rutschende Aktionen, Vorlauf 48–50 % | UI-Sweep d3: d3-c-footer-links-tippziel-klein, d3-c-gruppe-textlinks-tippziel-klein, d3-c-kind-neu-fehler-vor-eingabe, d3-c-verknuepfen-titel-beschriftung, d3-k-kurskachel-balken-feste-breite, d3-k-zurueck-pille-tablet-nur-pfeil, d3-k-kid-back-pill-kurse-pfeil, d3-k-kid-login-feldluecken-ungleich, d3-k-delete-button-before-info, d3-k-forgot-stacked-muted-paragraphs, d3-l-info-icon-allein-handy, d3-l-korrigieren-mobil-kopf-schmal, d3-t-turnier-profil-darstellung-karte-fehlt, d3-t-detail-ortshinweis-ohne-abstand, d3-t-detail-spieltermine-ohne-trenner, d3-t-team-star-vertikal-versetzt, d3-t-detail-schmale-spalte-1920, d3-t-turnierkarte-slot-fehlt-anon, d3-t-kalender-vorlauf-zu-hoch; Konsole KidHub stars-1/levels-1 (NaN-Pfeile) |
+| 2026-10-18 | 0.807.x · Design-Runde d3 · Partien | RookHub, Partien: Züge vergleichen zeigt alle Bewertungen (Liste, Antworten, Erwiderungen) aus Sicht der Seite am Zug wie die Begründung, nennt die Sicht einmal über der Liste, der beste Zug nie rot; Ladefehler (≠ 404) auf Zugvergleich, Partie-Analysen und Kursliste = `app-load-error` statt endlosem Balken bzw. „nichts da“, Seitenladen mit `app-loading-spinner` (Balken nur für laufende Aufträge, 5.10); Partie korrigieren 769–1100 px: Zug-Karte unter dem Brett, Zugliste rechts über beide Zeilen; „Seite / Liga“ → „Plattform / Liga“ samt Beispiel-Platzhaltern, Fehler-Sammlung „Fehler mehrerer Partien nachspielen“ mit den Feldnamen; Partieseite: Kopfknöpfe oben bündig, sobald unter „Partie analysieren“ ein Grund steht; Gedankenstrich mit U+00A0 (5.13); fremde Partie „Fehler von {Spieler} nachspielen“ statt „Eigene …“; ⋮ der Partie und der Partienliste in einer Reihenfolge (5.5); Rekonstruktion: Halbzüge-Umschalter am Handy 44 px, ohne gewähltes Teil Vorschau-Brett + nächste Schritte (einspaltig ausgeblendet); Partienliste: leer nur EIN „PGN hochladen“, Handy-Typspalte fest 56 px (Tempo unter dem Symbol), ohne Engine einmal der Grund über der Liste statt grauer Knöpfe; Partieformular: ⓘ im h1; Punktepartie: Punkte erst ab `maxPoints > 0`, en überall „Point game“, Symbol `track_changes` wie 🎯 | Vorzeichen widersprach der Erklärung und färbte den besten Zug rot, Ladefehler sahen wie Laden/Leerzustand aus, 540 px Leerraum, „Seite“ las sich als Farbe, versetzte Knopfzeile, Strich am Zeilenanfang, „Eigene“ bei fremden Fehlern, zwei Menüreihenfolgen, 32-px-Tippziele, leere rechte Spalte, doppelte Aktion, springende Namensspalte, Grund nur im Tooltip, abgesetztes ⓘ, „0 of 0 points“, drei Namen/Symbole | UI-Sweep d3: d3-rk-vergleich-vorzeichen-widerspruch, d3-rk-vergleich-leere-seite-balken, d3-rk-ladefehler-endlos-spinner, d3-rk-edit-tablet-leerraum, d3-rk-edit-seite-liga-beschriftung, d3-rk-mistakes-filter-beschriftung-saison, d3-rk-partie-grund-neben-knopf-versetzt, d3-rk-partie-grund-strich-zeilenanfang, d3-rk-eigene-fehler-fremde-partie, d3-rk-spielmenue-reihenfolge-uneinheitlich, d3-rk-recon-halbzuege-tippziel-klein, d3-rk-recon-detail-leere-rechte-spalte, d3-rk-games-leer-pgn-doppelt, d3-rk-games-liste-mobile-namen-versetzt, d3-rk-games-analyse-symbol-blass, d3-rk-scoresheet-hilfe-icon-abgesetzt-handy, d3-rk-punktepartie-null-von-null, d3-rk-punktepartie-benennung |
+| 2026-10-18 | 0.807.x | Design-Runde d3 · Konto: Profil-Titel als `h1`-Seitenkopf über der Karte (5.1); Aktualisieren-Banner mit `--rh-info` (5.11); Aufgabenblatt-Liste: Meta-Trenner absolut in der Lücke + `overflow-x: clip` (wie ClubHub `.kid-meta`), Löschen als letzter roter Eintrag im ⋮ statt Papierkorb neben PDF; Installieren: je Karte ein Satz, Menü-Anleitung hinter ?; Bestenlisten: alles leer → eine Leerkarte mit Zeitraum-Satz + „Puzzles lösen“, einzelne Leerkarte nennt den Zeitraum; Trainingsziele: Untertitel „Tagesziel + Wochenziele“, Feld „Min/Tag“; Konto löschen: Knopf „Konto löschen …“ (führt nur zur Profilkarte), keine Pfadkürzel im Text; Lichess-Token: Speichern nur beim Speichern gesperrt, leer → Grund darunter; Aktivitäts-Raster am Tablet so breit wie die Karte; Passwort-Auge geteilt auf Anmeldung/Registrierung/Zurücksetzen (5.8) | Titel klebte an „Erscheinungsbild“, Hinweis-Banner sah hell wie ein Fehler aus, „· Datum“ am Zeilenanfang, Löschen gleichrangig, Fließtext-Stapel, Leerzustand ohne Grund/Weg, Text versprach Tagesziele je Kategorie, „jetzt löschen“ löschte nicht, gesperrter Knopf ohne Grund, halbleeres Raster, Auge nur beim Registrieren | UI-Sweep d3: d3-rk-profil-titel-ohne-abstand, d3-rk-update-banner-rot-hell, d3-rk-ws-liste-meta-punkt-zeilenanfang, d3-rk-ws-liste-loeschen-direkt-sichtbar, d3-rk-install-karte-fliesstext, d3-rk-bestenlisten-leer-ohne-weg, d3-rk-trainingsziele-tag-vs-woche, d3-rk-konto-jetzt-loeschen-beschriftung, d3-rk-konto-loeschen-url-kuerzel, d3-rk-profil-lichess-speichern-gesperrt-ohne-grund, d3-rk-stats-aktivitaet-raster-halbleer, d3-rk-login-passwort-ohne-auge |
+| 2026-10-18 | 0.807.x | Design-Runde d3 · E-Ink (3.6): Snackbar-Aktion schwarz/fett/unterstrichen; Wahlkacheln mit 2-px-Rahmen; Zugrecht-Zeile #333; Aktivitäts-Raster als Graustufentreppe mit Zellrahmen, Elo-Linie schwarz; SVG-Lernkartenbrett weiß/#a3a3a3 mit Rahmen; ☰-Menü der Gäste: „Design“ als Untermenü System/Hell/Dunkel mit Häkchen (statt Umschalter, der den Ist-Zustand nannte), im E-Ink-Modus stattdessen der Hinweis „bleibt immer hell“ | „Schließen“ auf Weiß unsichtbar, Kacheln als Haarlinie, Zugrecht ≈ 4:1, Stufen nur über Grün, Lernkarten in Holzfarben; Menüpunkt nannte den Zustand und schaltete woanders hin, im E-Ink-Modus wirkungslos | UI-Sweep d3: d3-rk-gate-banner-schliessen-blass, d3-rk-eink-wahlkachel-haarlinie, d3-rk-eink-sekundaertext-hellgrau, d3-rk-eink-aktivitaet-heatmap-hellgrau, d3-rk-eink-flashcards-brett-farbig, d3-rk-theme-menu-label-zustand, d3-rk-helles-design-bei-eink |
 | 2026-10-15 | 0.799.x | E-Ink-Modus (3.6): je Gerät schaltbar im Profil (Darstellung, erste Karte), ohne Animationen/Ripples, immer hell mit hohem Kontrast und kräftigen Rahmen, Brett ohne Zuganimation in Graustufen mit Rahmen statt Farbflächen, Leser blättert springend mit Tippzonen | Nutzer liest/trainiert auf einem Boox Tab X C (Kaleido 3): Animationen erzeugen Schlieren und Geisterbilder, Grautöne und Farbflächen gehen unter | Nutzerwunsch 15.10. |
 | 2026-10-15 | 0.800.x | UI-Skalierung (3.7): je Gerät 100–200 % im Profil (Darstellung, unter E-Ink), Touch über Meta-Viewport, Desktop über `zoom` (Chessground-Container ausgenommen) | Auf dem Boox Tab X C (960 CSS-px) ist die UI viel zu klein; Browser-Zoom gibt es in der TWA nicht | Nutzerwunsch 15.10. |
 | 2026-10-15 | 0.786.0 | E-Book-Leser kompakt: EINE Leiste oben (Kopfleiste dockt per `body.nav-docked` 48 px hoch rechts auf der Leser-Leiste an, Glocke/☰/Vollbild dieselben); Brett-Leiste in einer Zeile (Modi als Symbole, Optionen hinter ⚙, Analysieren/Engine/Drehen/FEN/Melden im ⋮), Zugrecht/Bewertung/Herkunft im Brett-Kopf, eine Statuszeile; Lösen startet in „Training“ (gemerkte Wahl gewinnt); Brett ab 900 px bis `100dvh − 220px` | „Die Leiste oben ist viel zu breit“, „rund ums Brett ist so viel los“ — zwei Leisten (≈ 128 px) und sieben Zeilen um das Brett | Nutzerwunsch 15.10. |
@@ -1050,3 +1106,5 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-16 | 0.806.x · Falz-Runde 16.10. | RookHub: Repertoire-Baum 600–899 px Brett (≤ 56 %) und Baum nebeneinander, Handy-Titel einzeilig mit „…“ (Name im `title`); „Fehler nachspielen“: Start + Auswahlzahl in einer Zeile, Erklärsatz darunter, Felder am Handy nebeneinander; Partie-Analysen: Einleitung im ⓘ bzw. in der Formularkarte, Leerhinweis vor dem Formular; Punktepartie/Admin/Aufgabenblatt: Abstände vor der Liste 4–16 px statt 8–24 px | Vorlauf 41–73 % | UI-Sweep 20261016_1853: rookhub__repertoires-tree, __games-mistakes, __analysis-games, __guess, __admin, __worksheets-worksheetId |
 | 2026-10-16 | 0.806.x · Falz-Runde 16.10. | RookHub: E-Books am Handy als kompakte Zeilen (Titelbild 64 px, Lesen/Herunterladen als 44-px-Symbol + ⋮ übereinander, Name im aria-label), Einleitung im ⓘ am Titel; Kurs-Linien einspaltig mit Kapitel-Aufklappern; Turnierliste am Handy 25 je Abruf; Profil-Darstellungskarte knapper (bleibt oben) | 16–27 Handy-Bildschirme, Darstellungskarte schob das Formular auf 60 % | UI-Sweep 20261016_1853: rookhub__ebooks (fold-too-long, fold-lead), __courses-bookId-browse, turnier__tournaments-calendar--filter, rookhub__profile |
 | 2026-10-16 | 0.806.x · Falz-Runde 16.10. | LeagueHub: Formular-Korrektur am Handy „← Überschrift (i)“ / „Partietitel … Speichern ↓“ in zwei Zeilen (Rücklink-Zeile entfällt), Prüf-/Brettkarte 10/12 px Polster; Konto-Vorschläge: (i) an der Überschrift, Erklärsatz im Feld dahinter; Vereinspartien am Handy 8/10 px zwischen Satz-, Such- und Zählerzeile | Vorlauf 41–50 % | UI-Sweep 20261016_1853: leaguehub__verein-partie-clubGameId-korrigieren, __konten, __verein |
+| 2026-10-18 | 0.807.x · Design-Runde d3 · E-Books | RookHub, E-Books: Leser am Handy — angedockt belegt ⋮ (letztes Element der Titelzeile) mit `margin-right: var(--rh-nav-w)` die Breite der Kopfleiste, Seitenfeld/Zoom brechen in Zeile 2 um; angedockte Kopfleiste: Abzeichen von Glocke und ☰ `top: 4px` (ganz im Fenster, auch pulsierend); Brett-Kopf: Zugrecht-Zeile bricht um (höchstens 2 Zeilen, `text-wrap: balance`) statt „…“, kurzer Text „Zugrecht unbekannt“; Übersicht ohne Anmeldung ohne Einleitungssatz (Banner + ⓘ am Titel); Suchfeld Basis 360 px (Tablet: Rest bricht um); Formularfeld mit mehrzeiligem Hinweis `subscriptSizing="dynamic"` + 12 px Abstand; Bibliothek: Titel aus dem Dateinamen MIT Endung, Sammelordner „Gemeinfrei“ → Autor aus dem Unterordner, „[Autor, Jahr]“ liefert das Jahr | Seitenfeld unter Anmelden/Glocke, Abzeichen oben abgeschnitten, Herkunftssymbol hinter „…“, Vorlauf 43,5 %, „… Schlagwort such“, Hinweis auf dem Feldrahmen, Titel „Chess Problems [V. M. N“ mit Autor „Gemeinfrei“ | UI-Sweep d3: d3-rk-leser-handy-kopfleiste-ueberlappt, d3-rk-leser-glocken-abzeichen-abgeschnitten, d3-rk-diagram-subtitle-abgeschnitten, d3-rk-ebooks-anon-vorlauf-zu-lang, d3-rk-ebooks-suchfeld-platzhalter-abgeschnitten, d3-rk-ebook-upload-hint-ueberlappt-feld, d3-rk-reader-titel-ohne-ellipse |
+| 2026-10-18 | 0.807.x · Design-Runde d3 · Training | RookHub, Training: Repertoire-Trainer mit Repertoirenamen im Kopf, „Häufigste Linien zuerst“ als beschrifteter Umschalter, Übungszyklen + „Fortschritt zurücksetzen“ (rot, zuletzt) im ⋮, Leerzustand mit einer Aktion; Lernkarten ohne Titel „Linie n“ wie die Linienliste; Lochfinder: Seiten-Chip oben, Zeilenbeschriftungen Quelle/Datenbank, „RookHub-Server“, „Lichess-Partien | Meisterpartien“; Lösezeit mit Uhr-Symbol + Namen; Kursdetail ohne Vorgabe-Thema „Taktik“ (gemeinsame Regel mit der Karte); angeklebte Partieangabe mit Jahreszahl („Hastings 2012In …“) wird in der Anzeige abgesetzt (Daten bleiben); Woodpecker: Zeitbalken beschriftet unter der Frist, Löser „Satz: n Aufgaben von N“, Kurszeilen ≥ 44 px, Meta-Zeile bei gleichnamigen Kursen, leere Übersicht ohne Kurs → „Zu den Kursen“, Dialog „Schließen“ ohne Lücken; „Stellungsbewertung anzeigen“; „Tipps melden“ mit Daumen statt Flagge; Endlos-Statistik ohne doppelte Kennzahlen, Zeit = „Sitzung“; „Info“-Abzeichen aus Tokens; Kurs-Chip „Import veraltet“; englische Knöpfe in Satzschreibung; Repertoire-Brett aus Sicht der Kapitelfarbe | nackte Symbole samt offenem Reset, „#1“, Beschriftung las sich falsch zugeordnet, zwei Aktionen im Leerzustand + gleiche Titel, unbeschriftete Zahl, Vorgabe-Abzeichen, angeklebter Satz, Balken widersprach „0“, „0 im Satz“, mehrdeutige „Bewertung“, zwei gleiche Fähnchen, doppelte Kennzahlen, 2,5:1, Imperativ ohne Aktion, Title Case gemischt, Schwarz-Linien verkehrt herum | UI-Sweep d3: d3-rk-trainer-symbolknoepfe-ohne-text, d3-rk-flashcards-karte-titel-nummer, d3-rk-holes-kapitel-mit-schwarz-label, d3-rk-trainer-leer-zwei-aktionen, d3-rk-puzzle-zeitanzeige-ohne-beschriftung, d3-rk-kurs-thema-taktik-vorgabe, d3-rk-kommentar-text-ohne-leerzeichen, d3-rk-woodpecker-balken-zeit-statt-satz, d3-rk-wp-loeser-im-satz-beschriftung, d3-rk-bewertung-anzeigen-beschriftung, d3-rk-flaggen-symbol-doppelt, d3-rk-endless-doppelte-kennzahlen, d3-rk-info-abzeichen-kontrast-dunkel, d3-rk-kurskarte-neu-holen-chip, d3-rk-woodpecker-dialog-kurswahl-tippziel, d3-rk-woodpecker-kursliste-doppelte-namen, d3-rk-woodpecker-leerdialog-luecke-abbrechen, d3-rk-puzzle-button-case-inconsistent, d3-rk-schwarz-repertoire-brett-nicht-gedreht |

@@ -15,6 +15,7 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { formatEta } from '../../shared/eta.util';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -45,7 +46,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressBarModule,
-    TextFieldModule, TranslatePipe, LoadingSpinnerComponent, HelpHintComponent],
+    TextFieldModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, HelpHintComponent],
   template: `
     <div class="ga-container">
       <div class="header">
@@ -56,7 +57,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
              space-between stand die Punktepartie zwischen Überschrift und Aufträgen. -->
         <div class="header-actions">
           <a mat-stroked-button routerLink="/guess">
-            <mat-icon>casino</mat-icon> {{ 'gameAnalysis.toGuess' | translate }}
+            <!-- d3-rk-punktepartie-benennung: dasselbe Symbol wie Menü (🎯) und Startseiten-Kachel. -->
+            <mat-icon>track_changes</mat-icon> {{ 'gameAnalysis.toGuess' | translate }}
           </a>
           @if (isAdmin) {
             <a mat-stroked-button routerLink="/analysis/jobs">
@@ -65,7 +67,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
           }
           <!-- a1-rk-partie-analysen-vorlauf: mit vorhandenen Analysen ist das Formular zugeklappt — die Liste steht
                über der Falz, der Einwurf ist der Hauptknopf (rechts, zuletzt). -->
-          @if (!showForm && !loading) {
+          @if (!showForm && !loading && !loadError) {
             <button mat-flat-button color="primary" class="add-btn" (click)="formOpen = true">
               <mat-icon>add</mat-icon> {{ 'gameAnalysis.addGame' | translate }}
             </button>
@@ -74,7 +76,11 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       </div>
       <!-- Falz-Runde 16.10. (Vorlauf 40–54 %): der Einleitungssatz gehört zum Einwurf-Formular — er steht nur bei offenem
            Formular (in dessen Karte), sonst im ⓘ am Titel. Ohne Analysen steht der Leerhinweis VOR dem Formular. -->
-      @if (!loading && analyses.length === 0) {
+      <!-- d3-rk-ladefehler-endlos-spinner: gescheitertes Laden steht an der Stelle des Leerzustands (DESIGN 2.6/5.10) —
+           vorher kam nur eine Snackbar, danach „noch keine Analysen" samt offenem Formular. -->
+      @if (loadError) {
+        <app-load-error messageKey="gameAnalysis.loadFailed" (retry)="load()" />
+      } @else if (!loading && analyses.length === 0) {
         <mat-card class="empty-card"><mat-card-content class="empty-state">
           <p>{{ 'gameAnalysis.empty' | translate }}</p>
         </mat-card-content></mat-card>
@@ -262,6 +268,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
 
   analyses: GameAnalysis[] = [];
   loading = true;
+  loadError = false;
   creating = false;
   /**
    * Nur Admins waehlen die Tiefe. Fuer alle anderen setzt sie der SERVER — dort rechnet meist
@@ -296,7 +303,7 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.poll?.unsubscribe(); }
 
   get showForm(): boolean {
-    return this.formOpen || (!this.loading && this.analyses.length === 0);
+    return this.formOpen || (!this.loading && !this.loadError && this.analyses.length === 0);
   }
 
   hasOpen(): boolean {
@@ -416,20 +423,21 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     return a.plyCount > 0 ? Math.round((100 * a.analyzedPlies) / a.plyCount) : 0;
   }
 
-  private load(silent = false): void {
+  protected load(silent = false): void {
     if (!silent) this.loading = true;
     this.service.list(true).subscribe({
       next: list => {
         this.analyses = list;
         this.loading = false;
+        this.loadError = false;
         this.ensureEngineNames();
         this.loadThroughput();
         this.cdr.markForCheck();
       },
-      // Poll-Fehler bleiben still (nächster Durchlauf kommt), der ERSTE Ladefehler nicht.
+      // Poll-Fehler bleiben still (nächster Durchlauf kommt), der ERSTE Ladefehler nicht: er ersetzt den Leerzustand.
       error: () => {
         this.loading = false;
-        if (!silent) this.snackbar.warn(this.translate.instant('gameAnalysis.loadFailed'));
+        if (!silent) this.loadError = true;
         this.cdr.markForCheck();
       },
     });

@@ -7,6 +7,7 @@
 .intro { margin: 4px 0 12px; opacity: .8; }
 /* Das ⓘ am Titel gibt es nur am Handy — breit steht der Satz samt ⓘ in der Einleitung (Falz-Runde 16.10.). */
 .eb-title-hint { display: none; }
+.eb-page--anon .eb-title-hint { display: inline-flex; }
 /* Ohne Anmeldung (0.778.0): Banner nach DESIGN 5.11 — getönt, Symbol links, Text flexibel, ein Knopf rechts. */
 .eb-anon {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; border-radius: 8px;
@@ -18,7 +19,9 @@
 .eb-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 /* c2-eb-sort-select-truncated: die Sortierung ist so breit wie ihre längste Voreinstellung („Neueste zuerst
    (Erscheinungsjahr)“), das Suchfeld wächst höchstens auf 640 px (Breitbild: sonst ≈ 1 330 px). */
-.eb-search { flex: 1 1 240px; max-width: 640px; }
+/* d3-rk-ebooks-suchfeld-platzhalter-abgeschnitten: Basis 360 px — am Tablet (820 px) bricht „Meine Uploads“ in Zeile 2 um,
+   statt das Feld auf ≈ 317 px zu drücken („… Schlagwort such“); am Laptop passt weiter alles in eine Zeile. */
+.eb-search { flex: 1 1 360px; max-width: 640px; }
 .eb-sort { flex: 0 0 320px; max-width: 100%; }
 /* Ab 600 px stehen Sortierung und Schalter direkt in der Zeile (die Hülle zählt nicht); „Filter ▾“ nur am Handy. */
 .eb-filter-more { display: contents; }

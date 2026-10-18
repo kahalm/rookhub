@@ -102,6 +102,7 @@
     "themeSystem": "System theme",
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
+    "theme": "Téma",
     "chessable": "Chessable",
     "catalog": "Katalógus",
     "favorites": "Kedvencek",
@@ -175,6 +176,10 @@
     }
   },
   "auth": {
+    "passwordToggle": {
+      "show": "Jelszó megjelenítése",
+      "hide": "Jelszó elrejtése"
+    },
     "login": {
       "title": "Bejelentkezés",
       "usernameLabel": "Felhasználónév vagy e-mail",
@@ -199,8 +204,6 @@
       "emailLabel": "E-mail",
       "passwordLabel": "Jelszó",
       "passwordHint": "Legalább {{min}} karakter",
-      "showPassword": "Jelszó megjelenítése",
-      "hidePassword": "Jelszó elrejtése",
       "submit": "Regisztráció",
       "submitting": "Regisztráció folyamatban...",
       "loginLink": "Már van fiókod? Jelentkezz be",
@@ -501,6 +504,7 @@
       "setup": "Beállítás",
       "createToken": "Lichess-token létrehozása",
       "tokenLabel": "Lichess API-token",
+      "tokenMissing": "Először illeszd be a Lichess-tokenedet.",
       "stored": "Mentett token",
       "removeTokenConfirm": "Törlöd a mentett Lichess-tokent? A Lichess-motorok eltűnnek a listáról; újbóli használatukhoz új tokenre van szükséged a Lichesstől.",
       "saved": "Token elmentve",
@@ -556,8 +560,8 @@
       "inAppTitle": "Hogyan törölheted a fiókodat",
       "inApp": "Az alábbi gomb megnyitja a profilodban a \"Fiók törlése\" kártyát – ha nem vagy bejelentkezve, előbb bejelentkezel. Kézzel: ☰ → Fiók → Profil, legalul. Ott erősítsd meg a jelszavaddal. A fiók azonnal törlődik.",
       "inPartner": "A fiókot csak a RookHubon törölheted: jelentkezz be ott (ugyanazokkal az adatokkal), és menj a ☰ → Fiók → Profil menüpontba, legalul \"Fiók törlése\" – vagy használd közvetlenül a gombot. Erősítsd meg a jelszavaddal; a fiók azonnal törlődik, ezen az oldalon is.",
-      "deleteNow": "Fiók törlése most",
-      "deleteOnRookHub": "Fiók törlése a RookHubon",
+      "deleteNow": "Fiók törlése…",
+      "deleteOnRookHub": "Fiók törlése a RookHubon…",
       "backupTitle": "Előbb mentsd el",
       "backup": "A törlés azonnal érvényes, és nem vonható vissza. Előbb mentsd el, amit meg akarsz tartani: a tanfolyamokat, repertoárokat és játszmákat egyenként letöltheted PGN-ként – a tanfolyamban, a repertoárlistában (⋮) és minden játszmánál (⋮).",
       "removedTitle": "Mi kerül törlésre",
@@ -565,7 +569,7 @@
       "removedCourses": "A saját tanfolyamaid (importált vagy saját készítésű) – mindenkinek, akivel megosztottad őket: a megosztások, a csoportos hozzáférések és mások haladása ezekben a tanfolyamokban is törlődnek.",
       "removed2": "Személyes tartalmak és kapcsolatok: repertoárok, verseny-feliratkozások/kedvencek, barátságok és csoporttagságok.",
       "removedGames": "Mentett játszmák a játszmalap-fotókkal és rekonstrukciókkal, játszmaelemzések, pontjátszmák, elemzési feladatok, számítási fák és megjelölt állások.",
-      "removedShared": "Feladatlapok és a megosztási linkjeid: a megosztott játszmák (/g/), változatok (/l/), rekonstrukciók (/r/) és feladatlapok (/w/, a nyomtatott QR-kód is) többé nem nyílnak meg.",
+      "removedShared": "Feladatlapok és a megosztási linkjeid: a megosztott játszmákra, változatokra, rekonstrukciókra és feladatlapokra mutató linkek (a nyomtatott QR-kód is) többé nem nyílnak meg.",
       "removedKids": "A KidHub-haladásod (szintek, csillagok, tanfolyamok) – a KidHub ugyanazt a fiókot használja.",
       "removedConnections": "Kapcsolatok és beállítások: API-tokenek (a RepCheck, illetve a böngészőbővítmény azonnal elveszíti a kapcsolatot), Chessable-hozzáférés, Lichess- és saját motorok, push-értesítések, üzenetek az adminokkal és értesítések.",
       "removedLeague": "LeagueHub: a klubadatbázis nyitott importvázlatai, a félkészek is.",
@@ -923,6 +927,8 @@
     },
     "downloadLine": "Változat letöltése PGN-ként",
     "holes": {
+      "dbMasters": "Mesterjátszmák",
+      "dbLichess": "Lichess-játszmák",
       "color": "Szín",
       "white": "Világos",
       "black": "Sötét",
@@ -963,7 +969,7 @@
       "introMasters": "Indítsd a keresést a mesterjátszmákban.",
       "source": "Forrás",
       "sourceOnline": "Lichess.org",
-      "sourceLocal": "Helyi",
+      "sourceLocal": "RookHub-szerver",
       "localHint": "Helyi explorer a RookHub szerveren: token és várakozás nélkül. Lichess-játszmák csak 1600-as Élő-ponttól és bullet nélkül, mesterek a Lumbra-adatbázisból (tábla melletti játszmák 2200-tól). A Lichess-adatok még hónapról hónapra bővülnek – az arányok megbízhatók, a játszmák száma kisebb, mint a lichess.org-on."
     }
   },
@@ -1084,6 +1090,7 @@
     }
   },
   "puzzles": {
+    "solveTime": "Megoldási idő",
     "status": {
       "loading": "Feladvány betöltése…",
       "loadFailed": "Nem sikerült betölteni a feladványt",
@@ -1106,8 +1113,8 @@
     "eval": {
       "start": "Kezdet",
       "now": "Most",
-      "show": "Értékelés mutatása",
-      "hide": "Értékelés elrejtése"
+      "show": "Állásértékelés mutatása",
+      "hide": "Állásértékelés elrejtése"
     },
     "actions": {
       "reset": "Visszaállítás",
@@ -1570,7 +1577,7 @@
       "by": "feltöltő: {{name}}"
     },
     "reimport": {
-      "chip": "Újra lekérni",
+      "chip": "Elavult import",
       "legend": "{{count}} kurzust újra kell importálni a RepCheckkel",
       "legendOne": "1 kurzust újra kell importálni a RepCheckkel"
     }
@@ -1746,10 +1753,8 @@
       "showTags": "Címkék mutatása",
       "hideTags": "Címkék elrejtése",
       "sharePuzzle": "Feladvány megosztása",
-      "statRating": "Értékelés",
-      "statLevel": "Szint",
       "statSolved": "Megoldva",
-      "statTime": "Idő",
+      "statTime": "Munkamenet",
       "lives": "{{lives}} / {{max}} élet",
       "phaseLabel": "{{phase}}. fázis ({{step}}. lépés)",
       "showOriginalSolution": "Eredeti megoldás mutatása"
@@ -2478,21 +2483,22 @@
       }
     },
     "title": "Edzéscélok",
-    "intro": "Állíts be napi célokat kategóriánként, és kövesd nyomon a haladásodat.",
+    "intro": "Állítsd be a napi edzésidő-célodat és a heti céljaidat, és kövesd nyomon a haladásodat.",
     "today": "Ma",
     "setTitle": "Állítsd be a céljaidat",
     "tracker": "Célkövető",
     "min": "perc",
+    "minPerDay": "perc/nap",
     "hours": "ó",
     "days": "nap",
     "games": "games",
-    "gamesPerWeek": "games/week",
+    "gamesPerWeek": "játszma/hét",
     "weeklyDays": "Napok hetente",
     "weekProgress": "{{done}} / {{target}} nap ezen a héten",
     "fromGroup": "Sablon a(z) \"{{group}}\" csoportodtól. Felülírhatod saját magad számára.",
     "personal": "Személyes célod.",
     "resetOverride": "Visszaállítás a csoport-sablonra",
-    "noGoalHint": "Még nincsenek célok beállítva – add meg a napi céljaidat lent.",
+    "noGoalHint": "Még nincsenek célok beállítva – add meg a céljaidat lent.",
     "playHint": "Your rapid and classical games are counted automatically from your linked Lichess/chess.com account.",
     "saved": "Célok mentve.",
     "resetDone": "Visszaállítva a csoport-sablonra.",
@@ -2510,8 +2516,8 @@
     "syncCooldown": "A játékidő épp most frissült — próbáld újra {{minutes}} perc múlva.",
     "history": "Daily history",
     "dateCol": "Date",
-    "dailyGoal": "Training time",
-    "dailyHint": "Set one daily training-time goal — puzzles, courses and Chessable all count toward it together.",
+    "dailyGoal": "Edzésidő",
+    "dailyHint": "Egyetlen napi edzésidő-célt állíts be – a feladványok, a tanfolyamok és a Chessable együtt számítanak bele.",
     "total": "Total",
     "breakdownBySource": "By source",
     "breakdownByTheme": "By theme",
@@ -2695,6 +2701,7 @@
     }
   },
   "repertoireTrainer": {
+    "resetProgress": "Előrehaladás törlése",
     "train": "Gyakorlás",
     "title": "Repertoár-gyakorló",
     "done": "Foglalkozás kész! {{correct}} / {{total}} helyes.",
@@ -2720,7 +2727,6 @@
     "movesInLine": "A változat lépései",
     "moveComment": "Megjegyzés a lépéshez",
     "lineDone": "Változat kész — a következő töltődik…",
-    "resetTooltip": "Gyakorlási előrehaladás törlése (SM-2 állapot).",
     "resetConfirm": "Törlöd a repertoár gyakorlási előrehaladását? Minden ismétlési adat elvész.",
     "resetFailed": "A gyakorlási előrehaladást nem sikerült törölni – próbáld újra.",
     "nextDue": "Most nincs esedékes. A következő ismétlés: {{when}}.",
@@ -3178,7 +3184,7 @@
     "openOriginal": "Eredeti játszma megnyitása",
     "analyze": "Játszma elemzése",
     "analyzeHint": "A játszma elemzése a háttérben — utána a tábla alatt megjelenik az értékelési görbe pontossággal és lépésosztályokkal.",
-    "analyzeNoEngine": "Jelenleg nincs elérhető motor — próbáld újra később.",
+    "analyzeNoEngine": "Jelenleg nincs elérhető motor — próbáld újra később.",
     "analyzeLogin": "Az elemzéshez jelentkezz be.",
     "loadError": "A játszmát nem sikerült betölteni.",
     "notFound": "Ez a játszma nem létezik, vagy törölték.",
@@ -3312,7 +3318,9 @@
     "movesCount": "{{count}} lépés",
     "mistakes": {
       "button": "Saját hibák újrajátszása ({{count}})",
+      "buttonSide": "{{player}} hibáinak újrajátszása ({{count}})",
       "title": "Saját hibák újrajátszása",
+      "titleSide": "{{player}} hibáinak újrajátszása",
       "none": "Ezen az oldalon nincs mit újrajátszani.",
       "progress": "Hiba {{current}} / {{total}}",
       "prompt": "A lépésed {{san}} volt. Keresd a jobb lépést.",
@@ -3342,9 +3350,9 @@
       "restore": "{{count}} elrejtve — mutasd újra",
       "collection": {
         "short": "Hibák újrajátszása",
-        "button": "Hibák újrajátszása liga/szezon szerint",
-        "title": "Hibák újrajátszása liga/szezon szerint",
-        "hint": "Válassz ligát és/vagy szezont: a kiválasztás elemzett partijainak összes nyitott hibája egymás után jön egy táblán.",
+        "button": "Hibák újrajátszása több partiból",
+        "title": "Hibák újrajátszása több partiból",
+        "hint": "Válassz platformot/bajnokságot és/vagy módot/szezont: a kiválasztás elemzett partijainak összes nyitott hibája egymás után jön egy táblán.",
         "includeSolved": "A már megtalált hibák is",
         "selection": "{{games}} parti kiválasztva, ebből {{analysed}} elemezve",
         "selectionOne": "1 parti kiválasztva, ebből {{analysed}} elemezve",
@@ -3382,8 +3390,10 @@
       "remove": "{{tag}} címke eltávolítása"
     },
     "classifier": {
-      "first": "Oldal / bajnokság",
+      "first": "Platform / bajnokság",
       "second": "Mód / szezon",
+      "firstPlaceholder": "pl. Landesliga",
+      "secondPlaceholder": "pl. 2026/27",
       "all": "Mind",
       "none": "Nincs megadva"
     },
@@ -3454,7 +3464,7 @@
       "notOnSheet": "nincs a lapon",
       "ownerSide": "Az én oldalam",
       "sideNone": "nincs megadva",
-      "classifierHint": "Online: az oldal és a mód automatikusan kitöltődik · bajnoki partik: pl. „Landesliga” + „2026/27”",
+      "classifierHint": "Online: a platform és a mód automatikusan kitöltődik · bajnoki partik: pl. „Landesliga” + „2026/27”",
       "clubLinked": "Ez a játszma másolat a klub adatbázisából. Ha lépéseket javítasz és te töltötted fel (vagy kezelő vagy), a javítás ott és minden másolatban is érvényes — különben a másolatod önálló változat lesz."
     },
     "pgnCopy": "PGN másolása",
@@ -3629,7 +3639,7 @@
     "restartHint": "Minden még ki nem számolt állás újra sorba kerül, újonnan választott motoron",
     "restarted": "A játszma elemzése újraindult.",
     "restartFailed": "A játszmát nem sikerült újraindítani.",
-    "toGuess": "Pontozós játszma"
+    "toGuess": "Pontjátszma"
   },
   "guess": {
     "title": "Pontjátszma",
@@ -4269,6 +4279,7 @@
       "parents": "Szülőknek: pontosan mi törlődik",
       "parentsHowTo": "Szülőknek: így törölhető a fiók"
     },
+    "forgotParents": "Szülőknek: nem jött meg az e-mail?",
     "stars": {
       "title": "Csillagvadászat",
       "tileHint": "Egy bábu, sok csillag",
@@ -4555,6 +4566,16 @@
     "title": "Ranglisták",
     "error": "A ranglistákat nem sikerült betölteni.",
     "empty": "Még nincsenek bejegyzések.",
+    "emptyAll": {
+      "weekly": "Ezen a héten még senki sem edzett – oldj meg egy feladványt, és az élre kerülsz.",
+      "monthly": "Ebben a hónapban még senki sem edzett – oldj meg egy feladványt, és az élre kerülsz.",
+      "alltime": "Még senki sem edzett – oldj meg egy feladványt, és az élre kerülsz."
+    },
+    "emptyIn": {
+      "weekly": "Ezen a héten még nincs bejegyzés.",
+      "monthly": "Ebben a hónapban még nincs bejegyzés."
+    },
+    "emptyAction": "Feladványok megoldása",
     "period": {
       "weekly": "Ezen a héten",
       "monthly": "Ebben a hónapban",
@@ -4674,11 +4695,11 @@
       "download": "APK letöltése",
       "downloadAnyway": "APK letöltése mégis",
       "unavailable": "Az APK csak Androidon telepíthető – a jelenlegi rendszereden nem.",
-      "qrHint": "Olvasd be a kódot az Android-telefonoddal: ott megnyílik ez az oldal, és közvetlenül a telefonra telepítheted a RookHubot."
+      "qrHint": "Olvasd be az Android-telefonoddal, és ott telepítsd."
     },
     "pwa": {
       "title": "Telepítés appként (PWA)",
-      "desc": "A RookHubot közvetlenül a böngészőből telepíti – Androidon, Windowson, macOS-en és Linuxon. Utána saját ablakban és offline is fut.",
+      "desc": "A RookHubot közvetlenül a böngészőből telepíti, utána saját ablakban fut, offline is.",
       "recommended": "Ajánlott: nincs letöltés, nincs biztonsági figyelmeztetés",
       "button": "Telepítés most",
       "installed": "A RookHub ezen az eszközön már appként telepítve van.",
@@ -4686,7 +4707,8 @@
       "ios1": "Nyisd meg ezt az oldalt Safariban.",
       "ios2": "Koppints lent a Megosztás ikonra.",
       "ios3": "Válaszd a „Hozzáadás a kezdőképernyőhöz” lehetőséget, és erősítsd meg a „Hozzáadás” gombbal.",
-      "unavailable": "A böngésződ most nem mutat telepítés gombot. Általában a böngésző menüjén (⋮) keresztül mégis működik: válaszd az „Alkalmazás telepítése” vagy a „Hozzáadás a kezdőképernyőhöz” lehetőséget. Ha ez hiányzik, nyisd meg a RookHubot Chrome-ban vagy Edge-ben."
+      "unavailable": "A böngésződ most nem kínál telepítés gombot.",
+      "unavailableHelp": "Általában a böngésző menüjén (⋮) keresztül mégis működik: válaszd az „Alkalmazás telepítése” vagy a „Hozzáadás a kezdőképernyőhöz” lehetőséget.\n\nHa ez hiányzik, nyisd meg a RookHubot Chrome-ban vagy Edge-ben."
     }
   },
   "reconstruct": {
@@ -4916,6 +4938,8 @@
       "startPosition": "Kiinduló állás",
       "showStart": "Vissza a kiinduló álláshoz",
       "clickHint": "Egy lépésre, válaszra vagy a te válaszlépésedre kattintva az állás megjelenik a táblán.",
+      "perspectiveWhite": "Értékelés világos szemszögéből",
+      "perspectiveBlack": "Értékelés sötét szemszögéből",
       "best": "legjobb lépés",
       "calculating": "számol · mélység {{depth}}",
       "failed": "nem sikerült kiszámolni",
@@ -5462,7 +5486,7 @@
       "diagramAt": "Diagram a(z) {{page}}. oldalon",
       "diagramCount": "{{n}} diagram",
       "pickHint": "Kattints duplán egy diagramra a könyvben, és itt felállítjuk.",
-      "sideUnknown": "A könyv nem jelzi, ki lép",
+      "sideUnknown": "Nem ismert, ki lép",
       "analyse": "Elemzés",
       "flip": "Tábla forgatása",
       "copyFen": "FEN másolása",
@@ -5519,6 +5543,7 @@
     "processingHint": "A diagramok felismerése folyamatban — értesítést kapsz."
   },
   "woodpecker": {
+    "timeBar": "{{total}} napból {{used}} eltelt",
     "title": "Woodpecker",
     "new": "Új edzés",
     "intro": "Ugyanazok a feladatok újra és újra, mindig fele annyi idő alatt – Smith és Tikkanen módszere szerint.",
@@ -5560,14 +5585,16 @@
     "saveFailed": "A mentés nem sikerült. Próbáld újra.",
     "puzzles": "{{count}} feladat",
     "puzzlesOne": "{{count}} feladat",
-    "inSet": "{{n}} a sorozatban",
-    "inSetOne": "{{n}} a sorozatban",
     "toOverview": "Az áttekintéshez",
     "notFound": "Ez az edzés nem létezik (már).",
     "doneCompleted": "Woodpecker befejezve – szép munka!",
     "doneCycle": "A(z) {{n}}. ciklus kész. Tarts szünetet, majd indítsd a következő ciklust az áttekintésben.",
     "repeatHint": "Ismétlés – ebben a ciklusban csak az első próbálkozásod számít.",
     "create": {
+      "metaLast": "utoljára {{date}}",
+      "metaPublic": "Elérhető számodra",
+      "metaShared": "{{name}} megosztása",
+      "metaOwn": "Saját tanfolyam",
       "title": "Új Woodpecker-edzés",
       "coursesHint": "A tanfolyamok a bejelölés sorrendjében – az 1. ciklus ebben a sorrendben halad végig rajtuk.",
       "noCourses": "Még nincs feladatokat tartalmazó tanfolyamod.",

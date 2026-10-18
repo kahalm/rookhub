@@ -1,5 +1,6 @@
 {
   "repertoireTrainer": {
+    "resetProgress": "Poništi napredak",
     "train": "Treniraj",
     "title": "Trener repertoara",
     "done": "Sesija završena! {{correct}} od {{total}} točno.",
@@ -25,7 +26,6 @@
     "movesInLine": "Potezi ove linije",
     "moveComment": "Komentar poteza",
     "lineDone": "Linija gotova — sljedeća se učitava…",
-    "resetTooltip": "Poništi napredak treninga (obriši SM-2 stanje).",
     "resetConfirm": "Poništiti napredak treninga za ovaj repertoar? Svi podaci ponavljanog učenja bit će izbrisani.",
     "resetFailed": "Napredak treninga nije bilo moguće poništiti – pokušaj ponovno.",
     "nextDue": "Trenutno ništa nije na redu. Sljedeće ponavljanje za {{when}}.",
@@ -288,6 +288,7 @@
     "themeSystem": "Tema sustava",
     "themeLight": "Svijetla tema",
     "themeDark": "Tamna tema",
+    "theme": "Tema",
     "help": "Pomoć",
     "chessable": "Chessable",
     "leaderboards": "Ljestvice",
@@ -320,7 +321,7 @@
       "dailyDesc": "Svaki dan jedna zajednička zagonetka za sve — s dnevnom ljestvicom (i na Discordu).",
       "weeklyTitle": "Tjedna objava",
       "weeklyDesc": "Tjedni niz zagonetaka iz partije s rokom — odigraj ga do kraja, s ljestvicom.",
-      "guessTitle": "Partija na bodove",
+      "guessTitle": "Bodovna partija",
       "guessDesc": "Preuzmi jednu stranu komentirane majstorske partije i pogađaj potez za potezom — bodovi za svaki potez, mjereni prema stvarno odigranom."
     },
     "feedback": "Povratne informacije / Prijavi grešku",
@@ -355,6 +356,10 @@
     }
   },
   "auth": {
+    "passwordToggle": {
+      "show": "Prikaži lozinku",
+      "hide": "Sakrij lozinku"
+    },
     "login": {
       "title": "Prijava",
       "usernameLabel": "Korisničko ime ili e-mail",
@@ -379,8 +384,6 @@
       "emailLabel": "E-pošta",
       "passwordLabel": "Lozinka",
       "passwordHint": "Najmanje {{min}} znakova",
-      "showPassword": "Prikaži lozinku",
-      "hidePassword": "Sakrij lozinku",
       "submit": "Registracija",
       "submitting": "Registracija u tijeku...",
       "loginLink": "Već imaš račun? Prijavi se",
@@ -538,7 +541,7 @@
       "showAria": "Prikaži pločicu"
     },
     "guess": {
-      "title": "Partija na bodove",
+      "title": "Bodovna partija",
       "subtitle": "Odigraj majstorsku partiju potez za potezom na bodove.",
       "open": "Igraj"
     }
@@ -719,6 +722,7 @@
       "setup": "Postavi",
       "createToken": "Izradi Lichess token",
       "tokenLabel": "Lichess API token",
+      "tokenMissing": "Najprije zalijepi svoj Lichess token.",
       "stored": "Spremljeni token",
       "removeTokenConfirm": "Izbrisati spremljeni Lichess token? Lichess motori nestaju s popisa; za ponovno korištenje trebaš novi token s Lichessa.",
       "saved": "Token spremljen",
@@ -815,8 +819,8 @@
       "inAppTitle": "Kako izbrisati račun",
       "inApp": "Gumb ispod otvara u tvom profilu karticu „Izbriši račun“ – ako nisi prijavljen/a, najprije se prijaviš. Ručno: ☰ → Račun → Profil, sasvim dolje. Ondje potvrđuješ svojom lozinkom. Račun se odmah briše.",
       "inPartner": "Račun možeš izbrisati samo u RookHubu: ondje se prijavi (isti podaci) i idi na ☰ → Račun → Profil, sasvim dolje „Izbriši račun“ – ili izravno preko gumba. Potvrđuješ svojom lozinkom; račun se odmah briše, i za ovu stranicu.",
-      "deleteNow": "Izbriši račun sada",
-      "deleteOnRookHub": "Izbriši račun u RookHubu",
+      "deleteNow": "Izbriši račun…",
+      "deleteOnRookHub": "Izbriši račun u RookHubu…",
       "backupTitle": "Najprije spremi",
       "backup": "Brisanje djeluje odmah i ne može se poništiti. Najprije spremi ono što želiš zadržati: tečajeve, repertoare i partije možeš pojedinačno preuzeti kao PGN – u tečaju, u popisu repertoara (⋮) i u svakoj partiji (⋮).",
       "removedTitle": "Što se uklanja",
@@ -824,7 +828,7 @@
       "removedCourses": "Tvoji vlastiti tečajevi (uvezeni ili sam/a izrađeni) – i za sve s kojima si ih podijelio/la: dijeljenja, pristup grupa i napredak drugih u tim tečajevima nestaju s njima.",
       "removed2": "Osobni sadržaj i poveznice: repertoari, pretplate/favoriti turnira, prijateljstva i članstva u grupama.",
       "removedGames": "Spremljene partije s fotografijama zapisnika i rekonstrukcijama, analize partija, bodovne partije, analitički zadaci, stabla izračuna i zapamćene pozicije.",
-      "removedShared": "Radni listovi i tvoje poveznice za dijeljenje: podijeljene partije (/g/), linije (/l/), rekonstrukcije (/r/) i radni listovi (/w/, i kao QR kod na ispisu) više se ne otvaraju.",
+      "removedShared": "Radni listovi i tvoje poveznice za dijeljenje: poveznice na podijeljene partije, linije, rekonstrukcije i radne listove (i QR kod na ispisu) više se ne otvaraju.",
       "removedKids": "Tvoj KidHub napredak (razine, zvjezdice, tečajevi) – KidHub koristi isti račun.",
       "removedConnections": "Veze i postavke: API tokeni (RepCheck odnosno proširenje preglednika odmah gubi vezu), pristup Chessableu, Lichess i vlastiti engine-i, push obavijesti, poruke s administratorima i obavijesti.",
       "removedLeague": "LeagueHub: otvoreni nacrti uvoza klupske baze, i napola dovršeni.",
@@ -1182,6 +1186,8 @@
     },
     "downloadLine": "Preuzmi varijantu kao PGN",
     "holes": {
+      "dbMasters": "Majstorske partije",
+      "dbLichess": "Lichess partije",
       "color": "Boja",
       "white": "Bijeli",
       "black": "Crni",
@@ -1222,7 +1228,7 @@
       "introMasters": "Pokreni traženje u majstorskim partijama.",
       "source": "Izvor",
       "sourceOnline": "Lichess.org",
-      "sourceLocal": "Lokalno",
+      "sourceLocal": "RookHub poslužitelj",
       "localHint": "Lokalni explorer na RookHub poslužitelju: bez tokena, bez čekanja. Lichess partije tek od rejtinga 1600 i bez bulleta, majstori iz baze Lumbra (partije za pločom od 2200). Lichess podaci još rastu mjesec po mjesec – udjeli su pouzdani, brojevi partija manji nego na lichess.org."
     }
   },
@@ -1343,6 +1349,7 @@
     }
   },
   "puzzles": {
+    "solveTime": "Vrijeme rješavanja",
     "status": {
       "loading": "Učitavanje zagonetke…",
       "loadFailed": "Učitavanje zagonetke nije uspjelo",
@@ -1365,8 +1372,8 @@
     "eval": {
       "start": "Početak",
       "now": "Sada",
-      "show": "Prikaži procjenu",
-      "hide": "Sakrij procjenu"
+      "show": "Prikaži procjenu pozicije",
+      "hide": "Sakrij procjenu pozicije"
     },
     "actions": {
       "reset": "Poništi",
@@ -1829,7 +1836,7 @@
       "by": "korisnik {{name}}"
     },
     "reimport": {
-      "chip": "Ponovno preuzmi",
+      "chip": "Uvoz zastario",
       "legend": "{{count}} tečajeva treba ponovno uvesti putem RepChecka",
       "legendOne": "1 tečaj treba ponovno uvesti putem RepChecka"
     }
@@ -2167,10 +2174,8 @@
       "showTags": "Prikaži oznake",
       "hideTags": "Sakrij oznake",
       "sharePuzzle": "Podijeli zagonetku",
-      "statRating": "Rejting",
-      "statLevel": "Razina",
       "statSolved": "Riješeno",
-      "statTime": "Vrijeme",
+      "statTime": "Sesija",
       "lives": "{{lives}} od {{max}} života",
       "phaseLabel": "Faza {{phase}} (korak {{step}})",
       "showOriginalSolution": "Prikaži izvorno rješenje"
@@ -2817,7 +2822,7 @@
     "openOriginal": "Otvori izvornu partiju",
     "analyze": "Analiziraj partiju",
     "analyzeHint": "Neka se partija analizira u pozadini — nakon toga ispod ploče stoji graf procjene s preciznošću i ocjenama poteza.",
-    "analyzeNoEngine": "Trenutačno nijedan engine nije dostupan — pokušaj ponovno kasnije.",
+    "analyzeNoEngine": "Trenutačno nijedan engine nije dostupan — pokušaj ponovno kasnije.",
     "analyzeLogin": "Za analizu se prijavi.",
     "loadError": "Partiju nije moguće učitati.",
     "notFound": "Ova partija ne postoji ili je uklonjena.",
@@ -2951,7 +2956,9 @@
     "movesCount": "Potezi: {{count}}",
     "mistakes": {
       "button": "Ponovi vlastite pogreške ({{count}})",
+      "buttonSide": "Ponovi pogreške igrača {{player}} ({{count}})",
       "title": "Ponovi vlastite pogreške",
+      "titleSide": "Ponovi pogreške igrača {{player}}",
       "none": "Za ovu stranu nema ničega za ponavljanje.",
       "progress": "Pogreška {{current}} od {{total}}",
       "prompt": "Tvoj potez: {{san}}. Pronađi bolji.",
@@ -2981,9 +2988,9 @@
       "restore": "{{count}} skriveno — prikaži ponovno",
       "collection": {
         "short": "Ponovi pogreške",
-        "button": "Ponovi pogreške po ligi/sezoni",
-        "title": "Ponovi pogreške po ligi/sezoni",
-        "hint": "Odaberi ligu i/ili sezonu: sve otvorene pogreške tvojih analiziranih partija iz tog odabira dolaze jedna za drugom na jednoj ploči.",
+        "button": "Ponovi pogreške iz više partija",
+        "title": "Ponovi pogreške iz više partija",
+        "hint": "Odaberi platformu/ligu i/ili način/sezonu: sve otvorene pogreške tvojih analiziranih partija iz tog odabira dolaze jedna za drugom na jednoj ploči.",
         "includeSolved": "I već pronađene pogreške",
         "selection": "Odabrano partija: {{games}}, od toga analizirano: {{analysed}}",
         "selectionOne": "Odabrana 1 partija, od toga analizirano: {{analysed}}",
@@ -3021,8 +3028,10 @@
       "remove": "Ukloni oznaku {{tag}}"
     },
     "classifier": {
-      "first": "Stranica / liga",
+      "first": "Platforma / liga",
       "second": "Način / sezona",
+      "firstPlaceholder": "npr. Landesliga",
+      "secondPlaceholder": "npr. 2026/27",
       "all": "Sve",
       "none": "Bez oznake"
     },
@@ -3093,7 +3102,7 @@
       "notOnSheet": "nije na zapisniku",
       "ownerSide": "Moja strana",
       "sideNone": "nije postavljeno",
-      "classifierHint": "Online: stranica i način postavljaju se automatski · ligaške partije: npr. „Landesliga” + „2026/27”",
+      "classifierHint": "Online: platforma i način postavljaju se automatski · ligaške partije: npr. „Landesliga” + „2026/27”",
       "clubLinked": "Ova partija je kopija iz klupske baze. Ako ispraviš poteze, a ti si je prenio (ili si upravitelj), ispravak vrijedi i tamo i u svim kopijama — inače tvoja kopija postaje zasebna verzija."
     },
     "pgnCopy": "Kopiraj PGN",
@@ -3387,11 +3396,12 @@
       "other": "Ostalo"
     },
     "title": "Trening ciljevi",
-    "intro": "Postavi dnevne ciljeve po kategoriji i prati svoj napredak.",
+    "intro": "Postavi dnevni cilj vremena treninga i tjedne ciljeve te prati svoj napredak.",
     "today": "Danas",
     "setTitle": "Postavi ciljeve",
     "tracker": "Praćenje ciljeva",
     "min": "min",
+    "minPerDay": "min/dan",
     "hours": "h",
     "days": "dana",
     "games": "partije",
@@ -3401,7 +3411,7 @@
     "fromGroup": "Zadano iz tvoje grupe „{{group}}“. Možeš ga prilagoditi za sebe.",
     "personal": "Tvoj osobni cilj.",
     "resetOverride": "Vrati na zadano grupe",
-    "noGoalHint": "Još nema postavljenih ciljeva — postavi dnevne ciljeve ispod.",
+    "noGoalHint": "Još nema postavljenih ciljeva — postavi svoje ciljeve ispod.",
     "playHint": "Tvoje rapid i classical partije automatski se broje s tvojeg povezanog Lichess/chess.com računa.",
     "saved": "Ciljevi spremljeni.",
     "resetDone": "Vraćeno na zadano grupe.",
@@ -3471,11 +3481,11 @@
       "download": "Preuzmi APK",
       "downloadAnyway": "Ipak preuzmi APK",
       "unavailable": "APK se može instalirati samo na Androidu – ne na tvom trenutnom sustavu.",
-      "qrHint": "Skeniraj kôd svojim Android mobitelom: ondje se otvara ova stranica i RookHub instaliraš izravno na mobitel."
+      "qrHint": "Skeniraj Android mobitelom i ondje instaliraj."
     },
     "pwa": {
       "title": "Instaliraj kao aplikaciju (PWA)",
-      "desc": "Instalira RookHub izravno iz preglednika – na Androidu, Windowsu, macOS-u i Linuxu. Nakon toga radi u vlastitom prozoru i izvanmrežno.",
+      "desc": "Instalira RookHub izravno iz preglednika, a zatim radi u vlastitom prozoru, i izvanmrežno.",
       "recommended": "Preporučeno: bez preuzimanja, bez sigurnosnog upozorenja",
       "button": "Instaliraj sada",
       "installed": "RookHub je već instaliran kao aplikacija na ovom uređaju.",
@@ -3483,7 +3493,8 @@
       "ios1": "Otvori ovu stranicu u Safariju.",
       "ios2": "Dolje dodirni ikonu za dijeljenje.",
       "ios3": "Odaberi „Dodaj na početni zaslon“ i potvrdi s „Dodaj“.",
-      "unavailable": "Tvoj preglednik trenutačno ne prikazuje gumb za instalaciju. Obično ipak ide preko izbornika preglednika (⋮): odaberi „Instaliraj aplikaciju“ ili „Dodaj na početni zaslon“. Ako te stavke nema, otvori RookHub u Chromeu ili Edgeu."
+      "unavailable": "Tvoj preglednik trenutačno ne nudi gumb za instalaciju.",
+      "unavailableHelp": "Obično ipak ide preko izbornika preglednika (⋮): odaberi „Instaliraj aplikaciju“ ili „Dodaj na početni zaslon“.\n\nAko te stavke nema, otvori RookHub u Chromeu ili Edgeu."
     }
   },
   "help": {
@@ -3732,6 +3743,16 @@
     "title": "Ljestvice",
     "error": "Ljestvice nije moguće učitati.",
     "empty": "Još nema unosa.",
+    "emptyAll": {
+      "weekly": "Ovaj tjedan još nitko nije trenirao – riješi zagonetku i bit ćeš na vrhu.",
+      "monthly": "Ovaj mjesec još nitko nije trenirao – riješi zagonetku i bit ćeš na vrhu.",
+      "alltime": "Još nitko nije trenirao – riješi zagonetku i bit ćeš na vrhu."
+    },
+    "emptyIn": {
+      "weekly": "Ovaj tjedan još nema unosa.",
+      "monthly": "Ovaj mjesec još nema unosa."
+    },
+    "emptyAction": "Rješavaj zagonetke",
     "period": {
       "weekly": "Ovaj tjedan",
       "monthly": "Ovaj mjesec",
@@ -4634,6 +4655,7 @@
       "parents": "Za roditelje: što se točno briše",
       "parentsHowTo": "Za roditelje: kako se račun briše"
     },
+    "forgotParents": "Za roditelje: niste dobili e-poštu?",
     "stars": {
       "title": "Lov na zvijezde",
       "tileHint": "Jedna figura, puno zvijezda",
@@ -4916,6 +4938,8 @@
       "startPosition": "Početna pozicija",
       "showStart": "Natrag na početnu poziciju",
       "clickHint": "Klik na potez, odgovor ili tvoj uzvrat prikazuje poziciju na ploči.",
+      "perspectiveWhite": "Ocjene iz perspektive bijelog",
+      "perspectiveBlack": "Ocjene iz perspektive crnog",
       "best": "najbolji potez",
       "calculating": "računa · dubina {{depth}}",
       "failed": "nije se moglo izračunati",
@@ -5462,7 +5486,7 @@
       "diagramAt": "Dijagram na stranici {{page}}",
       "diagramCount": "Dijagrama: {{n}}",
       "pickHint": "Dvostruki klik na dijagram u knjizi postavlja ga ovdje.",
-      "sideUnknown": "Knjiga ne navodi tko je na potezu",
+      "sideUnknown": "Na potezu: nepoznato",
       "analyse": "Analiziraj",
       "flip": "Okreni ploču",
       "copyFen": "Kopiraj FEN",
@@ -5519,6 +5543,7 @@
     "processingHint": "Dijagrami se prepoznaju — dobit ćeš obavijest."
   },
   "woodpecker": {
+    "timeBar": "Prošlo {{used}} od {{total}} dana",
     "title": "Woodpecker",
     "new": "Novi trening",
     "intro": "Isti zadaci uvijek iznova, svaki put u pola vremena – po metodi Smitha i Tikkanena.",
@@ -5560,14 +5585,16 @@
     "saveFailed": "Spremanje nije uspjelo. Pokušaj ponovno.",
     "puzzles": "{{count}} zadataka",
     "puzzlesOne": "{{count}} zadatak",
-    "inSet": "{{n}} u setu",
-    "inSetOne": "{{n}} u setu",
     "toOverview": "Na pregled",
     "notFound": "Ovaj trening ne postoji (više).",
     "doneCompleted": "Woodpecker završen – bravo!",
     "doneCycle": "Ciklus {{n}} je gotov. Odmori se, zatim pokreni sljedeći ciklus u pregledu.",
     "repeatHint": "Ponavljanje – u ovom ciklusu računa se samo tvoj prvi pokušaj.",
     "create": {
+      "metaLast": "zadnje {{date}}",
+      "metaPublic": "Dostupan tebi",
+      "metaShared": "od {{name}}",
+      "metaOwn": "Tvoj tečaj",
       "title": "Novi Woodpecker trening",
       "coursesHint": "Tečajevi redoslijedom označavanja – ciklus 1 prolazi ih tim redom.",
       "noCourses": "Još nemaš tečaj sa zadacima.",

@@ -503,6 +503,25 @@ describe('GameAnalysesComponent', () => {
     expect(el.querySelectorAll('.intro').length).toBe(1);
   });
 
+  // d3-rk-ladefehler-endlos-spinner: ein gescheitertes Laden sah wie „noch keine Analysen" aus (Snackbar + Leerhinweis).
+  it('Ladefehler: app-load-error statt Leerhinweis und Formular, „Erneut versuchen" lädt neu', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush(null, { status: 502, statusText: 'Bad Gateway' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.querySelector('.empty-card')).toBeNull();
+    expect(el.querySelector('.new-card')).toBeNull();
+    expect(el.querySelector('.add-btn')).toBeNull();
+
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([]);
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.empty-card')).not.toBeNull();
+  });
+
   it('mit Analysen und zugeklapptem Formular: keine sichtbare Einleitung über der Liste (steht im ⓘ)', () => {
     const fixture = TestBed.createComponent(GameAnalysesComponent);
     fixture.detectChanges();

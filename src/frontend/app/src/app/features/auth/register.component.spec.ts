@@ -228,13 +228,13 @@ describe('RegisterComponent — ohne E-Mail kein Zurücksetzen (UX-002)', () => 
     expect(toggle.type).toBe('button');                 // kein Absenden des Formulars
     expect(input.type).toBe('password');
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
-    expect(toggle.getAttribute('aria-label')).toBe('auth.register.showPassword');
+    expect(toggle.getAttribute('aria-label')).toBe('auth.passwordToggle.show');
 
     toggle.click();
     fixture.detectChanges();
     expect(input.type).toBe('text');
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
-    expect(toggle.getAttribute('aria-label')).toBe('auth.register.hidePassword');
+    expect(toggle.getAttribute('aria-label')).toBe('auth.passwordToggle.hide');
 
     toggle.click();
     fixture.detectChanges();

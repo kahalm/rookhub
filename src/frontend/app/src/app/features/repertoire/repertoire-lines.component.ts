@@ -257,7 +257,8 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .sr-badge.due { background: color-mix(in srgb, var(--rh-success) 18%, transparent); color: var(--rh-success); }
     .sr-badge.scheduled { background: color-mix(in srgb, var(--rh-info) 15%, transparent); color: var(--rh-info); }
     .sr-badge.paused { background: color-mix(in srgb, var(--rh-warn) 18%, transparent); color: var(--rh-warn); }
-    .sr-badge.info { background: rgba(97,97,97,.15); color: #616161; }
+    /* d3-rk-info-abzeichen-kontrast-dunkel: Token statt festem Grau (#616161 war im dunklen Design ≈ 2,5:1). */
+    .sr-badge.info { background: color-mix(in srgb, currentColor 12%, transparent); color: var(--mat-sys-on-surface-variant); }
     .move-view { display: flex; flex-direction: column; height: 100%; }
     .back-btn { align-self: flex-start; margin: 4px; }
     .line-header { display: flex; justify-content: space-between; padding: 4px 16px 8px;
@@ -312,6 +313,8 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   @Input() repertoireId: number | null = null;
 
   @Output() lineSelected = new EventEmitter<number>();
+  /** Trainingsfarbe eines Kapitels festgelegt — die Detailseite dreht ihr Brett danach (d3-rk-schwarz-repertoire-brett-nicht-gedreht). */
+  @Output() chapterColorChanged = new EventEmitter<void>();
   @Output() lineDeselected = new EventEmitter<void>();
   @Output() moveClicked = new EventEmitter<number>();
   /** „Diese Linie als öffentlichen Link teilen" — der Container baut das PGN + ruft die API. */
@@ -428,6 +431,7 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
     if (this.repertoireId == null) return;
     setChapterColorOverride(this.repertoireId, group.chapter, color);
     this.colorOverrides.set({ ...this.colorOverrides(), [group.chapter]: color });
+    this.chapterColorChanged.emit();
   }
 
   // ===== SR-Status + Aktionen =====

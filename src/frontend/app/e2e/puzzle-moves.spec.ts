@@ -153,10 +153,10 @@ test.describe('Puzzle Moves', () => {
       await expect(card).toContainText('Your turn');
 
       // All PLAYING-state action buttons visible
-      await expect(card.getByRole('button', { name: /Show Eval/ })).toBeVisible();
+      await expect(card.getByRole('button', { name: /Show eval/i })).toBeVisible();
       await expect(card.getByRole('button', { name: /Reset/ })).toBeVisible();
       await expect(card.getByRole('button', { name: /Mouseslip/ })).toBeVisible();
-      await expect(card.getByRole('button', { name: /Give Up/ })).toBeVisible();
+      await expect(card.getByRole('button', { name: /Give up/i })).toBeVisible();
     });
 
     test('wrong move with Stockfish timeout keeps PLAYING (no instant Incorrect)', async ({ page }) => {
@@ -290,10 +290,10 @@ test.describe('Puzzle Moves', () => {
       await expect(card).toContainText('Your move');
 
       // All action buttons visible
-      await expect(card.getByRole('button', { name: /Show Eval/ })).toBeVisible();
+      await expect(card.getByRole('button', { name: /Show eval/i })).toBeVisible();
       await expect(card.getByRole('button', { name: /Reset/ })).toBeVisible();
       await expect(card.getByRole('button', { name: /Mouseslip/ })).toBeVisible();
-      await expect(card.getByRole('button', { name: /Give Up/ })).toBeVisible();
+      await expect(card.getByRole('button', { name: /Give up/i })).toBeVisible();
     });
 
     test('premove during THINKING solves the puzzle', async ({ page }) => {

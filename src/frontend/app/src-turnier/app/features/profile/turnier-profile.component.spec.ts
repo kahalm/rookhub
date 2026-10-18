@@ -250,6 +250,35 @@ describe('TurnierProfileComponent', () => {
     expect(component.profile()).not.toBeNull();
   });
 
+  // d3-t-turnier-profil-darstellung-karte-fehlt: Thema, E-Ink und UI-Größe (DESIGN 3.6/3.7) als erste Karte — dieselbe
+  // RookHub-Komponente, auch beim Ladefehler.
+  it('Darstellung (app-theme-card) ist die erste Karte nach dem Titel — geladen und beim Ladefehler', () => {
+    setup();
+    const page = (fixture.nativeElement as HTMLElement).querySelector('.page')!;
+    const first = page.querySelector(':scope > h1')!.nextElementSibling!;
+    expect(first.querySelector('app-theme-card')).withContext('erste Karte').not.toBeNull();
+    expect(first.querySelector('.eink-toggle')).withContext('E-Ink-Schalter').not.toBeNull();
+    expect(first.querySelector('.ui-scale-toggle')).withContext('UI-Größe').not.toBeNull();
+    expect(page.querySelectorAll('app-theme-card').length).toBe(1);
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [TurnierProfileComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: AuthService, useValue: { isImpersonating: false } },
+      ],
+    });
+    fixture = TestBed.createComponent(TurnierProfileComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/profile').flush(null, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+    const failedPage = (fixture.nativeElement as HTMLElement).querySelector('.page')!;
+    expect(failedPage.querySelector(':scope > h1')!.nextElementSibling!.querySelector('app-theme-card')).not.toBeNull();
+  });
+
   /** Mit Wiederholen-Knopf (common.retry) — ohne Knopf blieb nur Neuladen, in der PWA unsichtbar (UX-074). */
   it('meldet einen Ladefehler mit Wiederholen-Knopf statt eine leere Seite zu zeigen', () => {
     TestBed.configureTestingModule({

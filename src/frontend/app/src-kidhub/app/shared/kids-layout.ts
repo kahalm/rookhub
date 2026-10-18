@@ -31,10 +31,12 @@ export const KID_SHORT = '(width >= 600px) and (height <= 500px)';
  * Tipphoehe (Codereview 2026-09-29, F7-012). Handy quer muss die Titelzeile einzeilig und hoechstens 36 px hoch
  * bleiben (damit rechnet das Brett, siehe {@link KID_SHORT}): dort ist die Pille flacher, und eine unsichtbare Flaeche
  * ober- und unterhalb haelt die Tipphoehe bei 44 px, ohne die Zeile hoeher zu machen.
+ * `gap: .3em` (d3-k-kid-back-pill-kurse-pfeil): Pfeil und Wort als eigene Spannen („←" + „Kurse") bekommen ihren Abstand
+ * hier — ein fuehrendes Leerzeichen faellt im Flex-Block weg; einteiliger Text („← Start") bleibt unberuehrt.
  */
 export const KID_BACK = `
   .back {
-    position: relative; display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px;
+    position: relative; display: inline-flex; align-items: center; gap: .3em; box-sizing: border-box; min-height: 44px;
     padding: 6px 16px; border-radius: 999px; background: var(--kid-card); box-shadow: 0 3px 0 var(--kid-shadow);
     font-size: 1.1rem; font-weight: 800; line-height: 1.2; text-decoration: none; color: inherit; white-space: nowrap;
     flex-shrink: 0;

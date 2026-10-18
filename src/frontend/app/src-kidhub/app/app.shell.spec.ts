@@ -13,6 +13,7 @@ import { KID_HOME_WIDTH, KID_MAP_WIDTH } from './shared/kids-layout';
 import { LEGAL_SITE } from '@rh/features/legal/legal-site';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { AccountDeletionComponent } from '@rh/features/legal/account-deletion.component';
+import { ForgotPasswordComponent } from '@rh/features/auth/forgot-password.component';
 import { HandoffService } from '@rh/core/handoff.service';
 import { contrast, parseColor } from '@rh/testing/contrast';
 
@@ -38,6 +39,7 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
           { path: 'login', component: BlankComponent },
           { path: 'privacy', component: PrivacyComponent },
           { path: 'account-deletion', component: AccountDeletionComponent },
+          { path: 'forgot-password', component: ForgotPasswordComponent },
         ]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         legal!,
@@ -166,7 +168,15 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
       const n = content.querySelector<HTMLElement>(sel);
       if (n) expect(n.checkVisibility()).withContext(`${sel} zu`).toBeFalse();
     }
-    expect(content.firstElementChild!.nextElementSibling!.classList).withContext('Kindersatz unter der Einleitung').toContain('kid-short');
+    // d3-k-delete-button-before-info: Kindersatz unter „Was entfernt wird" (vor dem Eltern-Aufklapper), Knopf erst nach
+    // „Was anonym erhalten bleibt" — erst was verloren geht, dann die Aktion.
+    const short = content.querySelector('.kid-short')!;
+    expect(short.nextElementSibling).withContext('Kindersatz vor der Eltern-Liste').toBe(details);
+    expect(short.previousElementSibling!.tagName).toBe('H2');
+    const heads = Array.from(content.querySelectorAll(':scope > h2'));
+    const action = content.querySelector(':scope > p.action')!;
+    expect(heads[1].compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).withContext('Knopf nach „Was bleibt"').toBeTruthy();
+    expect(action.nextElementSibling).withContext('danach Kontakt').toBe(heads[2]);
     expect(el.querySelector('app-account-deletion details .delete-now')).withContext('Knopf nicht zugeklappt').toBeNull();
     expect(howTo.compareDocumentPosition(el.querySelector('app-account-deletion p.action')!) & Node.DOCUMENT_POSITION_FOLLOWING)
       .withContext('Knopf unter der Anleitung').toBeTruthy();
@@ -179,5 +189,22 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
     expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(52);
     expect(b.borderTopLeftRadius).toBe('18px');
     expect(b.fontWeight).toBe('800');
+  });
+  // d3-k-forgot-stacked-muted-paragraphs: zwei leise Eltern-Absätze offen unter „Link senden" — jetzt EIN zugeklappter Aufklapper.
+  it('Passwort vergessen: beide Eltern-Hinweise in einem geschlossenen „Für Eltern"-Aufklapper', async () => {
+    const f = await at('/forgot-password');
+    await new Promise(r => setTimeout(r));
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const content = el.querySelector('app-forgot-password mat-card-content')!;
+    const details = content.querySelectorAll(':scope > details.kid-parent');
+    expect(details.length).toBe(1);
+    expect(details[0].hasAttribute('open')).toBeFalse();
+    expect(details[0].querySelector('p.kids-mail')).not.toBeNull();
+    expect(details[0].querySelector('p.no-email a[href^="mailto:"]')).not.toBeNull();
+    expect(content.querySelector(':scope > p.kids-mail, :scope > p.no-email')).withContext('nichts mehr offen').toBeNull();
+    expect(details[0].querySelector('summary .kid-parent-label')!.textContent).toBeTruthy();
+    expect((details[0].querySelector('summary') as HTMLElement).getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    expect((content.querySelector('p.no-email') as HTMLElement).checkVisibility()).toBeFalse();
   });
 });

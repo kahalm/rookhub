@@ -19,8 +19,10 @@ import { pgnHeaderText } from '../../../shared/pgn-viewer/pgn-header.util';
  * Abschlussbeschreibung — man erkennt das Bild und rekonstruiert den Weg dorthin.
  */
 export interface Flashcard {
-  /** Kopfzeile zur Identifikation (Titel bzw. Linien-Nummer). */
-  heading: string;
+  /** Kopfzeile zur Identifikation (Titel); null = ohne Titel → „Linie {{lineNo}}“ (d3-rk-flashcards-karte-titel-nummer). */
+  heading: string | null;
+  /** Nummer der Linie (Repertoire: Platz im PGN wie in der Linienliste, Kurs: Runde) — Ersatz für einen fehlenden Titel. */
+  lineNo: number | string;
   chapter: string | null;
   /** FEN der Endstellung (bzw. der Stellung selbst, wenn keine Züge da sind). */
   frontFen: string;
@@ -41,7 +43,10 @@ export function buildFlashcard(p: BookPuzzleDto): Flashcard | null {
   const shapesByPly = parseMoveShapes(p.moveShapes);
   // Angezeigt wird die Kurs-Übersetzung, wo es eine gibt (Label), sonst das Original.
   const title = labelOr(p.titleLabel, p.title);
-  const heading = (title && title.trim()) || `#${p.round}`;
+  // d3-rk-flashcards-karte-titel-nummer: kein fertiger Ersatz „#n“ (wirkte wie eine interne Laufnummer) — die Vorlage
+  // zeigt „Linie n“ wie die Linienliste. Führende Nullen der Runde („0042“) fallen weg.
+  const heading = (title && title.trim()) || null;
+  const lineNo = Number(p.round) > 0 ? Number(p.round) : (p.round ?? '');
   const chapter = labelOr(p.chapterLabel, p.chapter)?.trim() || null;
 
   // Kommentare: Schlüssel = Halbzug NACH dem Zug; -1 = Einleitung. Abschluss = letzter Zug.
@@ -55,7 +60,7 @@ export function buildFlashcard(p: BookPuzzleDto): Flashcard | null {
     // Stellungs-/Info-Linie (auch bewusst illegale Muster-Diagramme): die Stellung selbst ist
     // die Karte; Markierungen aus der Einleitung (-1) bzw. dem letzten bekannten Ply.
     return {
-      heading, chapter,
+      heading, lineNo, chapter,
       frontFen: p.fen,
       orientation: fenTurn(p.fen),
       shapes: shapesByPly[-1] || shapesByPly[lastPly] || [],
@@ -82,7 +87,7 @@ export function buildFlashcard(p: BookPuzzleDto): Flashcard | null {
   }
 
   return {
-    heading, chapter,
+    heading, lineNo, chapter,
     frontFen,
     orientation,
     // VORN nur, was der Löser dort ohnehin sieht (Kontext-Markierungen des Setups) —
@@ -163,7 +168,8 @@ export function buildRepertoireFlashcards(
       card: {
         // UI-Sweep 2026-10-11 (r2-rg-rep-question): der PGN-Platzhalter gilt als fehlend - kein Fragezeichen
         // als Titel und keins als Kapitel auf der Karte.
-        heading: pgnHeaderText(game.headers['White']) || `#${g + 1}`,
+        heading: pgnHeaderText(game.headers['White']) || null,
+        lineNo: g + 1,
         chapter: pgnHeaderText(game.headers['Black']) || null,
         frontFen: game.fens[game.fens.length - 1],
         orientation: lastMoveWhite ? 'white' : 'black',

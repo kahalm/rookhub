@@ -53,6 +53,18 @@ describe('GuessBoardComponent', () => {
     expect(c.canGuess).toBeTrue();
   });
 
+  // d3-rk-punktepartie-null-von-null: vor dem ersten Zug stand „0 of 0 points“ — Fortschritt über nichts (DESIGN 5.10).
+  it('zeigt die Punkte erst, wenn es welche zu holen gab', () => {
+    const fixture = load();
+    fixture.detectChanges();
+    const meta = () => (fixture.nativeElement as HTMLElement).querySelector('.header p.muted')!.textContent!;
+    expect(meta()).toContain('guess.playingWhite');
+    expect(meta()).not.toContain('guess.score');
+    fixture.componentInstance.session = session({ points: 3, maxPoints: 5, movesPlayed: 1 });
+    fixture.detectChanges();
+    expect(meta()).toContain('guess.score');
+  });
+
   it('schickt den geratenen Zug und uebernimmt die Rueckmeldung', () => {
     const fixture = load();
     const c = fixture.componentInstance;

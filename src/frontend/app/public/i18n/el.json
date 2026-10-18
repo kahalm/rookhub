@@ -555,7 +555,7 @@
       "by": "από {{name}}"
     },
     "reimport": {
-      "chip": "Επανάληψη λήψης",
+      "chip": "Παλιά εισαγωγή",
       "legend": "{{count}} μαθήματα χρειάζονται νέα εισαγωγή μέσω RepCheck",
       "legendOne": "1 μάθημα χρειάζεται νέα εισαγωγή μέσω RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Εμφάνιση ετικετών",
       "hideTags": "Απόκρυψη ετικετών",
       "sharePuzzle": "Κοινοποίηση άσκησης",
-      "statRating": "Βαθμολογία",
-      "statLevel": "Επίπεδο",
       "statSolved": "Λυμένες",
       "statTime": "Χρόνος",
       "phaseLabel": "Φάση {{phase}} (βήμα {{step}})"

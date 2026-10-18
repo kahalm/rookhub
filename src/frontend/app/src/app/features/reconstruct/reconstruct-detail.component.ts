@@ -741,6 +741,22 @@ export class ReconstructDetailComponent implements OnInit {
     return this.showGenerated ? parts : parts.filter(p => !p.generated);
   }
 
+  /** Vorschau ohne gewähltes Teil (d3): die Stellung am Ende des letzten aufgezeichneten Teils; ohne Teile keine. */
+  previewFen(): string | null {
+    const recorded = (this.data()?.parts ?? []).filter(p => !p.generated);
+    return recorded.length ? (recorded[recorded.length - 1].endFen ?? null) : null;
+  }
+
+  /** Die erste Lücke, die sich schließen lässt (Ziel ist eine Stellung) — für „Lücke schließen" in der Vorschau. */
+  firstGap(): ReconstructionPart | null {
+    const parts = this.visibleParts();
+    for (let i = 1; i < parts.length; i++) {
+      const target = this.gapTargetAt(i);
+      if (target?.kind === PartKind.Position) return target;
+    }
+    return null;
+  }
+
   /** Wie viele Vorschläge liegen gerade in der Liste? (Für den Schalter oben.) */
   generatedCount(): number { return (this.data()?.parts ?? []).filter(p => p.generated).length; }
 

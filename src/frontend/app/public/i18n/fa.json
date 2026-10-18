@@ -555,7 +555,7 @@
       "by": "از {{name}}"
     },
     "reimport": {
-      "chip": "دریافت دوباره",
+      "chip": "درون‌ریزی قدیمی",
       "legend": "{{count}} دوره نیاز به وارد کردن دوباره با RepCheck دارند",
       "legendOne": "۱ دوره نیاز به وارد کردن دوباره با RepCheck دارد"
     }
@@ -677,8 +677,6 @@
       "showTags": "نمایش برچسب‌ها",
       "hideTags": "پنهان کردن برچسب‌ها",
       "sharePuzzle": "اشتراک‌گذاری تاکتیک",
-      "statRating": "رتبه",
-      "statLevel": "سطح",
       "statSolved": "حل‌شده",
       "statTime": "زمان",
       "phaseLabel": "فاز {{phase}} (گام {{step}})"

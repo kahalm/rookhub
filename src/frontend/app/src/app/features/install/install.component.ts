@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PwaInstallService } from '../../core/pwa-install.service';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Direktlink auf die APK des jeweils NEUESTEN GitHub-Releases — bewusst ohne
@@ -32,7 +33,7 @@ export const APK_DOWNLOAD_URL =
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-install',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, QrCodeComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, TranslatePipe, QrCodeComponent, HelpHintComponent],
   template: `
     <div class="install-container">
       <header class="install-header">
@@ -64,7 +65,10 @@ export const APK_DOWNLOAD_URL =
               <li>{{ 'install.pwa.ios3' | translate }}</li>
             </ol>
           } @else {
-            <p class="unavailable"><mat-icon>info</mat-icon>{{ 'install.pwa.unavailable' | translate }}</p>
+            <!-- d3-rk-install-karte-fliesstext: ein Satz sichtbar, die Anleitung (Browsermenü, Chrome/Edge) hinter dem ?
+                 (DESIGN 2 Grundsatz 2: höchstens ein Satz Fließtext je Karte). -->
+            <p class="unavailable"><mat-icon>info</mat-icon><span>{{ 'install.pwa.unavailable' | translate }}
+              <app-help-hint [text]="'install.pwa.unavailableHelp' | translate" /></span></p>
           }
         </mat-card-content>
       </mat-card>

@@ -555,7 +555,7 @@
       "by": "od {{name}}"
     },
     "reimport": {
-      "chip": "Pobierz ponownie",
+      "chip": "Nieaktualny import",
       "legend": "{{count}} kursów wymaga ponownego importu przez RepCheck",
       "legendOne": "1 kurs wymaga ponownego importu przez RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Pokaż tagi",
       "hideTags": "Ukryj tagi",
       "sharePuzzle": "Udostępnij zadanie",
-      "statRating": "Ocena",
-      "statLevel": "Poziom",
       "statSolved": "Rozwiązane",
       "statTime": "Czas",
       "phaseLabel": "Faza {{phase}} (krok {{step}})"

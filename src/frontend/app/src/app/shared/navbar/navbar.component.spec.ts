@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -15,6 +15,7 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 import { MessageService } from '../../core/message.service';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService } from '../../core/theme.service';
+import { EinkService } from '../../core/eink.service';
 import { HandoffService } from '../../core/handoff.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -105,7 +106,9 @@ describe('NavbarComponent', () => {
 });
 
 describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
-  function render(opts: { loggedIn?: boolean; keys?: string[]; perms?: string[] } = {}) {
+  let themeMock: { preference: string; isDark: boolean; toggle: () => void; setPreference: jasmine.Spy };
+  function render(opts: { loggedIn?: boolean; keys?: string[]; perms?: string[]; eink?: boolean; theme?: string } = {}) {
+    themeMock = { preference: opts.theme ?? 'system', isDark: false, toggle: () => {}, setPreference: jasmine.createSpy('setPreference') };
     TestBed.configureTestingModule({
       imports: [NavbarComponent],
       providers: [
@@ -122,7 +125,8 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
         { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
         { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
         { provide: LocaleService, useValue: { languages: [], current: 'en', use: () => {} } },
-        { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
+        { provide: ThemeService, useValue: themeMock },
+        { provide: EinkService, useValue: { enabled: signal(!!opts.eink) } },
         provideRouter([]),
       ],
     });
@@ -189,18 +193,47 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar button[mat-button], mat-toolbar button[mat-flat-button]').length).toBe(0);
   });
 
-  it('ausgeloggt: das ☰-Menü bietet den Theme-Umschalter (Anonyme haben keine Profil-Theme-Karte)', () => {
-    const fixture = render({ loggedIn: false, keys: ['puzzles'] });
-    const el: HTMLElement = fixture.nativeElement;
+  const openMenu = (fixture: ReturnType<typeof render>) => {
     // aria-label ist der rohe Key, weil im Test keine Übersetzungen geladen sind.
-    const trigger = el.querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement;
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement;
     trigger.click();
     fixture.detectChanges();
-    const items = Array.from(document.querySelectorAll('.cdk-overlay-container button'));
-    // preference 'system' → brightness_auto (siehe ThemeService-Mock oben)
-    expect(items.some(b => b.textContent?.includes('brightness_auto'))).toBeTrue();
-    trigger.click();
+    return () => { trigger.click(); fixture.detectChanges(); };
+  };
+
+  // d3-rk-theme-menu-label-zustand: der Eintrag nannte den IST-Zustand („Dunkles Design“) und schaltete beim Tippen weiter
+  // (dunkel → System). Jetzt ein Untermenü „Design“ wie „Sprache“: drei Wahlen, die aktive mit Häkchen.
+  it('ausgeloggt: ☰ → Design öffnet System/Hell/Dunkel, die aktive Wahl trägt das Häkchen', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles'], theme: 'dark' });
+    const close = openMenu(fixture);
+    const themeTrigger = document.querySelector('.cdk-overlay-container button.theme-menu-trigger') as HTMLButtonElement;
+    expect(themeTrigger).withContext('Design-Eintrag im ☰-Menü').not.toBeNull();
+    expect(themeTrigger.textContent).toContain('nav.theme');
+    themeTrigger.click();
     fixture.detectChanges();
+    const options = Array.from(document.querySelectorAll('.cdk-overlay-container .nav-submenu button.theme-option'));
+    expect(options.map(o => o.querySelector('span')?.textContent?.trim()))
+      .toEqual(['profile.theme.system', 'profile.theme.light', 'profile.theme.dark']);
+    const checked = options.filter(o => o.querySelector('mat-icon')?.textContent?.trim() === 'check');
+    expect(checked.length).toBe(1);
+    expect(checked[0].textContent).toContain('profile.theme.dark');
+    expect(checked[0].getAttribute('aria-checked')).toBe('true');
+    (options[1] as HTMLButtonElement).click();
+    expect(themeMock.setPreference).toHaveBeenCalledWith('light');
+    close();
+  });
+
+  // d3-rk-helles-design-bei-eink: im E-Ink-Modus ist die App immer hell — die Wahl war wirkungslos. Statt ihrer steht der
+  // Grund im Menü (wie in der Profilkarte), als Text in Sekundärfarbe statt eines blassen gesperrten Eintrags.
+  it('ausgeloggt im E-Ink-Modus: statt der Design-Wahl steht der Hinweis „bleibt immer hell“', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles'], eink: true });
+    const close = openMenu(fixture);
+    expect(document.querySelector('.cdk-overlay-container button.theme-menu-trigger')).toBeNull();
+    const note = document.querySelector('.cdk-overlay-container .theme-eink-note') as HTMLElement;
+    expect(note).not.toBeNull();
+    expect(note.textContent).toContain('profile.theme.einkForcesLight');
+    expect(getComputedStyle(note).opacity).toBe('1');
+    close();
   });
 
   // Impressum/Datenschutz standen nur unter der Anmeldekarte — eingeloggt nie erreichbar, am Handy (Fusszeile aus)
@@ -440,7 +473,7 @@ describe('NavbarComponent Breitbild-Stufe (u1-rk-navbar-raender)', () => {
 
 /** EINE Leiste (0.785.x, E-Book-Leser kompakt): body.nav-docked legt die Kopfleiste oben rechts auf die Leiste der Seite. */
 describe('NavbarComponent angedockt (body.nav-docked)', () => {
-  function render(loggedIn: boolean) {
+  function render(loggedIn: boolean, unseen = 0) {
     TestBed.configureTestingModule({
       imports: [NavbarComponent],
       providers: [
@@ -452,8 +485,8 @@ describe('NavbarComponent angedockt (body.nav-docked)', () => {
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
         { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
         { provide: MenuService, useValue: { visible$: of(new Set<string>(['puzzles', 'analysis'])) } },
-        { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
-        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
+        { provide: InAppNotificationService, useValue: { unseenCount$: of(unseen), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
+        { provide: MessageService, useValue: { userUnread$: of(unseen), refreshUserUnread: () => {}, reset: () => {} } },
         { provide: LocaleService, useValue: { languages: [], current: 'en', use: () => {} } },
         { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
         provideRouter([]),
@@ -464,6 +497,22 @@ describe('NavbarComponent angedockt (body.nav-docked)', () => {
     return fixture;
   }
   afterEach(() => document.body.classList.remove(NAV_DOCKED_CLASS));
+
+  it('d3-rk-leser-glocken-abzeichen-abgeschnitten: angedockt liegen die Abzeichen von Glocke und ☰ ganz im Fenster (auch beim Pulsieren)', () => {
+    document.body.classList.add(NAV_DOCKED_CLASS);
+    const fixture = render(true, 3);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    for (const sel of ['.notif-bell', '.msg-mail']) {
+      const badge = el.querySelector<HTMLElement>(`${sel} .mat-badge-content`)!;
+      expect(badge).withContext(sel).not.toBeNull();
+      badge.style.animation = 'none';
+      const r = badge.getBoundingClientRect();
+      // Pulsieren ×1,28 um die Mitte: Oberkante wandert um 14 % der Höhe nach oben.
+      expect(r.top - r.height * 0.14).withContext(sel).toBeGreaterThanOrEqual(0);
+    }
+    fixture.destroy();
+  });
 
   it('ohne Klasse unverändert: im Fluss, volle Höhe, Logo sichtbar', () => {
     const el = render(true).nativeElement as HTMLElement;

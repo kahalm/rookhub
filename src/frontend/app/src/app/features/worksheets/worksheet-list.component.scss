@@ -27,10 +27,12 @@
 .wl-shared { font-size: 18px; width: 18px; height: 18px; opacity: 0.65; }
 .wl-sub { font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
 /* b1-rk-aufgabenblaetter-datum-umbruch: Angaben umbrechen nur zwischen den Teilen (Flex-Umbruch, Angular entfernt den
-   Leerraum zwischen den Spans), der Trenner hängt vorn am Folgeteil. */
-.wl-sub { display: flex; flex-wrap: wrap; }
-.wl-part { white-space: nowrap; }
-.wl-part + .wl-part::before { content: '·'; padding: 0 0.35em; }
+   Leerraum zwischen den Spans). d3-rk-ws-liste-meta-punkt-zeilenanfang: der Trenner „·" sitzt absolut mitten in der Lücke
+   (nimmt keinen Platz, Muster ClubHub `.kid-meta`, DESIGN 5.13). Steht ein Teil nach dem Umbruch am Zeilenanfang, liegt
+   sein Punkt links außerhalb der Zeile und `overflow-x: clip` schneidet ihn weg — kein „· 11.10.2026" mehr. */
+.wl-sub { display: flex; flex-wrap: wrap; column-gap: 0.7em; overflow-x: clip; }
+.wl-part { white-space: nowrap; position: relative; }
+.wl-part + .wl-part::before { content: '·'; position: absolute; right: 100%; margin-right: 0.22em; }
 .wl-actions { display: flex; flex-shrink: 0; align-items: center; }
 .wl-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
 .wl-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }

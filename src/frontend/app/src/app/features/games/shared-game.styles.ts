@@ -52,6 +52,10 @@ export const SHARED_GAME_STYLES = `
     }
     .meta > .result { background: color-mix(in srgb, var(--rh-accent) 16%, transparent); color: var(--rh-accent); font-weight: 600; }
     .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    /* d3-rk-partie-grund-neben-knopf-versetzt: mit dem Grund unter „Partie analysieren“ ist die Hülle ~30 px höher als
+       die Nachbarn; mittig ausgerichtet stand der Knopf ~15 px über „Teilen-Link kopieren“ und dem ⋮. Dann oben
+       bündig — ohne Grundzeile bleibt alles mittig zum Titel. */
+    .header-actions:has(.analyze-no-engine) { align-items: flex-start; }
     /* „Kurz erzählt“ samt Handy-Kürzung: game-recap.component.ts. */
     .original, .analyze { white-space: nowrap; }
     /* Am Handy wandern „Originalpartie öffnen" und „Teilen-Link kopieren" ins ⋮ (v1-rk-first-view-lead-long-mobile). */

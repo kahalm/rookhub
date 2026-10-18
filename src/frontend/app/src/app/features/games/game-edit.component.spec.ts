@@ -83,6 +83,22 @@ describe('GameEditComponent', () => {
     expect(el.querySelector('.headers')!.classList).toContain('open');
   });
 
+  // d3-rk-edit-seite-liga-beschriftung: das Feld heißt „Plattform / Liga“ (nicht „Seite“ wie „Meine Seite“); ohne
+  // abgeleiteten Wert steht ein Beispiel als Platzhalter, sonst der abgeleitete Wert.
+  it('d3: Einordnungs-Felder zeigen den abgeleiteten Wert oder ein Beispiel als Platzhalter', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ classifier1: 'chess.com', classifier1Set: null, classifier2: null, classifier2Set: null }));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const c1 = el.querySelector('input[name="classifier1"]') as HTMLInputElement;
+    const c2 = el.querySelector('input[name="classifier2"]') as HTMLInputElement;
+    expect(c1.placeholder).toBe('chess.com');
+    expect(c2.placeholder).toBe('games.classifier.secondPlaceholder');
+    const labels = Array.from(el.querySelectorAll('.class-row mat-label')).map(l => l.textContent!.trim());
+    expect(labels).toContain('games.classifier.first');
+  });
+
   it('opens the header card right away when white or black is missing', async () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
@@ -443,5 +459,19 @@ describe('GameEditComponent', () => {
     } finally {
       grid.remove();
     }
+  });
+
+  // d3-rk-edit-tablet-leerraum: 769–1100 px ohne Foto — Zug-Karte unter dem Brett, Zugliste über die ganze rechte Spalte
+  // (vorher ~540 px leer unter dem Brett). Karma läuft breiter → die Regel als Text prüfen.
+  it('d3: am Tablet steht die Zug-Karte unter dem Brett und die Zugliste rechts über beide Zeilen', () => {
+    const css = ((GameEditComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/\s+/g, ' ');
+    const at = css.indexOf('@media (min-width: 769px) and (max-width: 1100px)');
+    expect(at).withContext('Tablet-Block').toBeGreaterThan(-1);
+    const block = css.slice(at, css.indexOf('@media', at + 10));
+    expect(block).toContain('.layout:not(.with-photo) .side { display: contents; }');
+    expect(block).toMatch(/\.board-card \{ grid-column: 1; grid-row: 1; \}/);
+    expect(block).toMatch(/\.cursor-card \{ grid-column: 1; grid-row: 2; \}/);
+    expect(block).toMatch(/\.moves-card \{ grid-column: 2; grid-row: 1 ?\/ ?span 2; \}/);
   });
 });

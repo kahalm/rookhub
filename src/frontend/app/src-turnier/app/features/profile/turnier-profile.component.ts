@@ -15,6 +15,7 @@ import {
 import { AuthService } from '@rh/core/auth.service';
 import { ProfileService } from '@rh/core/profile.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { ThemeCardComponent } from '@rh/features/profile/theme-card.component';
 import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
 
 /**
@@ -51,11 +52,16 @@ interface TurnierProfile {
   imports: [
     FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule,
     MatInputModule, TranslatePipe, LoadingSpinnerComponent, HelpHintComponent,
-    ProfileIdentityFormComponent, RouterLink, RookHubLinkComponent,
+    ProfileIdentityFormComponent, RouterLink, RookHubLinkComponent, ThemeCardComponent,
   ],
   template: `
     <div class="page">
       <h1>{{ 'turnier.profile.title' | translate }}</h1>
+
+      <!-- d3-t-turnier-profil-darstellung-karte-fehlt: Darstellung (Thema, E-Ink, UI-Größe je Gerät — DESIGN 3.6/3.7) als
+           ERSTE Karte wie in RookHub, dieselbe Komponente (@rh/*). Unabhängig vom Profil: auch beim Laden und beim
+           Ladefehler da — wer auf dem Boox nur die Turnierseite nutzt, stellt E-Ink und Größe hier ein. -->
+      <mat-card class="card theme-card"><app-theme-card /></mat-card>
 
       @if (loading()) {
         <app-loading-spinner />
@@ -128,6 +134,7 @@ interface TurnierProfile {
     }
 
     .card { padding: 1rem; }
+    .card.theme-card { margin-bottom: 1rem; }
     .card.spaced { margin-top: 1rem; }
 
     .row { display: flex; flex-wrap: wrap; gap: 0.75rem; }

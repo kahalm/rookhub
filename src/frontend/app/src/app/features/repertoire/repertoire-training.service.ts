@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 /** Ein Intervall-Eintrag der 9-Stufen-Leiter. */
 export interface SrLevel {
@@ -41,6 +41,11 @@ export class RepertoireTrainingService {
   /** Kombiniertes Repertoire-PGN (alle Dateien). */
   getPgn(repertoireId: number): Observable<string> {
     return this.http.get(`/api/repertoires/${repertoireId}/pgn`, { responseType: 'text' });
+  }
+
+  /** Nur der Name des Repertoires (Kopf des Trainers, d3-rk-trainer-leer-zwei-aktionen). */
+  getRepertoireName(repertoireId: number): Observable<string | null> {
+    return this.http.get<{ name?: string | null }>(`/api/repertoires/${repertoireId}`).pipe(map(r => r?.name?.trim() || null));
   }
 
   /** SR-Zustände aller (schon gelernten/pausierten) Linien. */

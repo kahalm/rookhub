@@ -553,4 +553,42 @@ describe('ReconstructDetailComponent', () => {
     expect(c.moveNo(1)).toBe(1);
     expect(c.moveNo(24)).toBe(13);
   });
+  // d3-rk-recon-detail-leere-rechte-spalte: ohne gewähltes Teil stand rechts nur ein Satz — jetzt Vorschau-Brett mit der
+  // Stellung am Ende des letzten Teils, darunter der Satz und die nächsten Schritte (bei offener Lücke „Lücke schließen").
+  it('zeigt ohne gewähltes Teil eine Vorschau mit Stellung und nächsten Schritten', () => {
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    const moves = part({ id: 1, endFen: MIDDLE });
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null, endFen: MIDDLE });
+    http.expectOne('/api/reconstructions/5').flush(data([moves, position]));
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.editingId()).toBeNull();
+    expect(c.previewFen()).toBe(MIDDLE);
+    expect(c.firstGap()?.id).toBe(2);
+    const editor = (fixture.nativeElement as HTMLElement).querySelector('section.editor')!;
+    expect(editor.classList).toContain('idle');
+    expect(editor.querySelector('app-chess-board.preview-board')).not.toBeNull();
+    const labels = Array.from(editor.querySelectorAll('.idle-actions button')).map(b => b.textContent!.trim());
+    expect(labels.some(l => l.includes('reconstruct.gap.close'))).toBeTrue();
+    expect(labels.some(l => l.includes('reconstruct.addMoves'))).toBeTrue();
+    expect(labels.some(l => l.includes('reconstruct.addPosition'))).toBeTrue();
+  });
+});
+
+/** Handy-Regeln als Text (Karma läuft breit). */
+describe('ReconstructDetailComponent Layout (d3)', () => {
+  const css = ((ReconstructDetailComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+    .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/--%NS%/g, '--').replace(/\s+/g, ' ');
+
+  // d3-rk-recon-halbzuege-tippziel-klein: am Handy waren die Segmente 32 × 26 px (DESIGN 2 Grundsatz 5: ≥ 44 px).
+  it('macht die Halbzüge-Segmente am Handy 44 px hoch', () => {
+    expect(css).toMatch(/@media \(max-width: 599\.98px\) \{ \.depth-toggle \{ --mat-button-toggle-height: 44px;/);
+  });
+
+  it('blendet die Vorschau einspaltig aus', () => {
+    const at = css.indexOf('@media (max-width: 899.98px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at, at + 120)).toMatch(/\.editor\.idle \{ ?display: none/);
+  });
 });

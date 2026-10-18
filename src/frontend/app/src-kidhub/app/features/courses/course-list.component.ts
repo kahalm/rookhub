@@ -41,7 +41,7 @@ import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
               @if (c.description) { <span class="desc">{{ c.description }}</span> }
               <span class="meta">{{ 'kids.courses.progress' | translate: { done: solved(c), total: c.puzzleCount } }}</span>
               <!-- UI-Sweep 2026-10-11 (r2-k-course-tile): dünner Balken unter der Zahl, wie auf der Startseite -->
-              <span class="bar" aria-hidden="true"><span [style.width.%]="percent(c)"></span></span>
+              <span class="bar" aria-hidden="true"><span [style.width.%]="percent(c)" [class.started]="percent(c) > 0"></span></span>
             </span>
           </a>
         }
@@ -80,8 +80,12 @@ import { KID_BACK, KID_PAGE_WIDTH } from '../../shared/kids-layout';
     .name { font-size: 1.4rem; font-weight: 800; }
     .desc, .meta { font-size: 1rem; opacity: .85; }
     .text { min-width: 0; flex: 1; }
-    .bar { display: block; width: min(260px, 100%); height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .12); overflow: hidden; }
-    .bar span { display: block; height: 100%; border-radius: 3px; background: #e08a00; }
+    /* d3-k-kurskachel-balken-feste-breite: der Balken endete nach 260 px (ein Drittel der breiten Karte) und war auf Pfirsich
+       kaum zu sehen (Spur ≈ 1,3:1, Füllung ≈ 2,2:1). Jetzt über die Textspalte (≤ 520 px), Spur und Füllung kräftiger
+       (#b45f06 ≈ 3,7:1 auf --kid-peach); ein angefangener Kurs zeigt mindestens 8 px Füllung. */
+    .bar { display: block; width: 100%; max-width: 520px; height: 8px; border-radius: 4px; background: rgba(120, 60, 0, .22); overflow: hidden; }
+    .bar span { display: block; height: 100%; border-radius: 4px; background: #b45f06; }
+    .bar span.started { min-width: 8px; }
   `],
 })
 export class CourseListComponent {

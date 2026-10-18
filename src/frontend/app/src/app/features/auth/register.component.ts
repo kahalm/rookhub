@@ -6,12 +6,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { PasswordToggleComponent } from '../../shared/password-toggle/password-toggle.component';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 import { AUTH_INTRO, AuthIntro } from './auth-intro';
 
@@ -55,7 +55,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, HelpHintComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, HelpHintComponent, PasswordToggleComponent, TranslatePipe],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -109,12 +109,8 @@ const ERROR_KEYS: Record<RegisterError, string> = {
               <mat-label>{{ 'auth.register.passwordLabel' | translate }}</mat-label>
               <!-- Anzeigen-Schalter (UX-002): es gibt keine Wiederholung, ein unbemerkter Tippfehler sperrte das neue Konto
                    aus — ohne E-Mail endgueltig. -->
-              <input matInput [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autocomplete="new-password">
-              <button mat-icon-button matSuffix type="button" class="pw-toggle" (click)="showPassword.set(!showPassword())"
-                      [attr.aria-pressed]="showPassword()"
-                      [attr.aria-label]="(showPassword() ? 'auth.register.hidePassword' : 'auth.register.showPassword') | translate">
-                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
+              <input matInput [type]="pwEye.type()" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autocomplete="new-password">
+              <app-password-toggle matSuffix #pwEye />
               <mat-hint>{{ 'auth.register.passwordHint' | translate:{ min: passwordMin } }}</mat-hint>
               <mat-error>{{ 'auth.register.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
             </mat-form-field>
@@ -181,8 +177,6 @@ export class RegisterComponent {
   // ein im error-Callback gesetztes Feld bliebe unsichtbar (der Knopf hinge auf „Wird registriert …").
   readonly loading = signal(false);
   readonly error = signal<RegisterError | null>(null);
-  /** Passwort im Klartext zeigen (Schalter am Feld). */
-  readonly showPassword = signal(false);
   readonly usernameMin = USERNAME_MIN_LENGTH;
   readonly passwordMin = PASSWORD_MIN_LENGTH;
   /** Kinderseite (LEGAL_SITE.kind): Eltern-Hinweis, Eltern-E-Mail, Spitzname statt Klarname (UX-032). */

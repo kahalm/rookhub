@@ -925,6 +925,8 @@ lh-claim-prompt { display: block; }
    b1-l-hinzufuegen-info-abgesetzt: allgemein als .info-inline (auch „Partien hinzufügen“). */
 .clubs-help, .info-inline { display: block; max-width: none; }
 :is(.clubs-help, .info-inline) .chk-btn { display: inline-flex; align-items: center; justify-content: center; vertical-align: -3px; margin-left: 6px; }
+/* d3-l-info-icon-allein-handy: das ⓘ nimmt sein letztes Wort mit in die nächste Zeile, statt allein darin zu hängen. */
+.info-inline .info-tail { white-space: nowrap; }
 .clubs-bar { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 12px 0 4px; }
 .clubs-tbl { table-layout: auto; }
 .clubs-tbl .club-name { font-weight: 600; overflow-wrap: anywhere; }

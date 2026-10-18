@@ -25,7 +25,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   imports: [IconLabelDirective, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent],
   template: `
     <div class="top">
-      <span class="title">{{ (title || 'games.mistakes.title') | translate }}</span>
+      <span class="title">{{ (title || 'games.mistakes.title') | translate: titleParams }}</span>
       @if (session.bothSides) {
         <span class="sides">
           @for (s of SIDES; track s) {
@@ -185,6 +185,8 @@ export class MistakesTrainerComponent {
   @Input() analyzable = true;
   /** Eigener Titel (Übersetzungsschlüssel) — die Sammlung nennt sich anders als das Training einer Partie. */
   @Input() title = '';
+  /** Platzhalter des Titels (d3: „Fehler von {{player}} nachspielen“ auf der geteilten Partie eines anderen). */
+  @Input() titleParams: Record<string, unknown> = {};
   /** Aus welcher Partie die Aufgaben stammen (für den „+"-Knopf); in der Sammlung trägt jede Aufgabe ihre `gameId`. */
   @Input() markSource: Partial<MarkOrigin> = {};
   private readonly originCache = new Map<Mistake, MarkOrigin>();

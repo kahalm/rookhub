@@ -160,3 +160,46 @@ describe('TrainingGoalsComponent Aktionszeile', () => {
     expect(css).toMatch(/\.actions[^{]* button[^{]*\{ ?white-space: nowrap/);
   });
 });
+
+/** UI-Sweep d3 (d3-rk-trainingsziele-tag-vs-woche): ein Tagesziel (Trainingszeit) + Wochenziele, nicht „je Kategorie“. */
+describe('TrainingGoalsComponent Texte Tag/Woche', () => {
+  it('Feld nennt Minuten pro Tag', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TrainingGoalsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(TrainingGoalsComponent);
+    const comp = fixture.componentInstance;
+    spyOn(comp, 'reload');
+    const goal: any = { dailyMinutes: 20, playGames: 3, weeklyDaysTarget: 4 };
+    comp.goal = goal;
+    comp.today = {
+      goal, daily: { targetMinutes: 20, doneSeconds: 0, met: false }, bySource: {}, byTheme: {},
+      play: { targetGames: 3, doneGames: 1, met: false }, status: 'none', weekDaysMet: 0, weeklyDaysTarget: 4,
+    } as any;
+    comp.loading = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.goal-fields mat-label'))
+      .map(l => l.textContent ?? '');
+    expect(labels.length).toBe(3);
+    expect(labels[0]).toContain('trainingGoals.minPerDay');
+    expect(labels[1]).toContain('trainingGoals.gamesPerWeek');
+  });
+
+  it('Untertitel und Leerhinweis versprechen keine Tagesziele je Kategorie (de/en/hr/hu)', async () => {
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      let res = await fetch(`/i18n/${lang}.json`).catch(() => null);
+      if (!res?.ok) res = await fetch(`/base/i18n/${lang}.json`);
+      expect(res!.ok).withContext(`${lang}.json`).toBeTrue();
+      const t = (await res!.json()).trainingGoals;
+      expect(t.minPerDay).withContext(lang).toBeTruthy();
+      expect(t.intro).withContext(lang).not.toMatch(/je Kategorie|per category|po kategoriji|kategóriánként/i);
+      expect(t.noGoalHint).withContext(lang).not.toMatch(/Tagesziele|daily targets|dnevne ciljeve|napi céljaidat/i);
+    }
+  });
+});

@@ -555,7 +555,7 @@
       "by": "{{name}}"
     },
     "reimport": {
-      "chip": "再取得",
+      "chip": "古いインポート",
       "legend": "{{count}}件のコースはRepCheckで再取り込みが必要です",
       "legendOne": "1件のコースはRepCheckで再取り込みが必要です"
     }
@@ -677,8 +677,6 @@
       "showTags": "タグを表示",
       "hideTags": "タグを非表示",
       "sharePuzzle": "パズルを共有",
-      "statRating": "レーティング",
-      "statLevel": "レベル",
       "statSolved": "正解数",
       "statTime": "時間",
       "phaseLabel": "フェーズ {{phase}}（ステップ {{step}}）"

@@ -15,7 +15,10 @@ import { DrawShape } from 'chessground/draw';
   template: `
     <svg [attr.viewBox]="viewBox" xmlns="http://www.w3.org/2000/svg">
       @for (sq of squares; track sq.x + '-' + sq.y) {
-        <rect [attr.x]="sq.x" [attr.y]="sq.y" width="1" height="1" [attr.fill]="sq.light ? '#f0d9b5' : '#b58863'" />
+        <!-- Klassen fb-l/fb-d: der E-Ink-Modus färbt die Felder weiß/grau um (_eink.scss, d3-rk-eink-flashcards-brett-
+             farbig); das fill-Attribut bleibt die Druck-/Normalfarbe (CSS schlägt Präsentationsattribute). -->
+        <rect [attr.x]="sq.x" [attr.y]="sq.y" width="1" height="1" [class.fb-l]="sq.light" [class.fb-d]="!sq.light"
+              [attr.fill]="sq.light ? '#f0d9b5' : '#b58863'" />
       }
       @for (p of pieces; track p.x + '-' + p.y) {
         <image [attr.href]="p.href" [attr.x]="p.x" [attr.y]="p.y" width="1" height="1" />

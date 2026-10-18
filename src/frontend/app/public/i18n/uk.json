@@ -555,7 +555,7 @@
       "by": "від {{name}}"
     },
     "reimport": {
-      "chip": "Завантажити знову",
+      "chip": "Імпорт застарів",
       "legend": "Курсів, які треба заново імпортувати через RepCheck: {{count}}",
       "legendOne": "1 курс треба заново імпортувати через RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Показати теги",
       "hideTags": "Сховати теги",
       "sharePuzzle": "Поділитися задачею",
-      "statRating": "Рейтинг",
-      "statLevel": "Рівень",
       "statSolved": "Розв'язано",
       "statTime": "Час",
       "phaseLabel": "Фаза {{phase}} (крок {{step}})"

@@ -323,6 +323,21 @@ describe('GuessListComponent', () => {
     expect(row.querySelector('a.resume-btn')?.getAttribute('aria-label')).toBe('guess.resume');
   });
 
+  // d3-rk-punktepartie-null-von-null: „Weiß · 0 von 0 Punkten“ vor dem ersten Zug — die Punkte fallen dann weg.
+  it('lässt in „Weiterspielen" die Punkte weg, solange es keine zu holen gab', () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([]);
+    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/guess-sessions').flush([{ id: 4, title: 'Lauf 4', guessWhite: true, status: 'running', points: 0, maxPoints: 0 } as GuessSession]);
+    fixture.detectChanges();
+    const meta = (fixture.nativeElement as HTMLElement).querySelector('mat-card.resume .resume-meta')!;
+    expect(meta.textContent).toContain('guess.white');
+    expect(meta.textContent).not.toContain('guess.score');
+    expect(meta.querySelector('.pts')).toBeNull();
+  });
+
   /** d2-rk-guess-vorlauf: Erklärtext ein Satz, Rest und „Seite des Gewinners" hinter dem ⓘ am Titel. */
   it('hält den Erklärtext kurz: Rest und Gewinner-Hinweis hinter dem ⓘ', () => {
     const fixture = setup();

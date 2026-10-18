@@ -555,7 +555,7 @@
       "by": "oleh {{name}}"
     },
     "reimport": {
-      "chip": "Ambil ulang",
+      "chip": "Impor usang",
       "legend": "{{count}} kursus perlu diimpor ulang lewat RepCheck",
       "legendOne": "1 kursus perlu diimpor ulang lewat RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Tampilkan tag",
       "hideTags": "Sembunyikan tag",
       "sharePuzzle": "Bagikan puzzle",
-      "statRating": "Rating",
-      "statLevel": "Level",
       "statSolved": "Diselesaikan",
       "statTime": "Waktu",
       "phaseLabel": "Fase {{phase}} (langkah {{step}})"

@@ -363,14 +363,19 @@ describe('CourseListComponent offline fallback', () => {
     expect(comp.courses.map(c => c.bookId)).toEqual([1]);
   });
 
-  it('keeps the plain error hint when nothing is downloaded', () => {
+  // d3-rk-ladefehler-endlos-spinner: ohne Offline-Vorrat ist ein gescheitertes Laden ein Ladefehler (app-load-error an
+  // der Stelle des Leerhinweises), nicht „keine Kurse" mit einer flüchtigen Snackbar.
+  it('marks a load error when nothing is downloaded, and clears it on the next successful load', () => {
     const info = jasmine.createSpy('info');
-    const svc: any = { getCourses: () => throwError(() => new Error('offline')) };
+    const svc: any = { getCourses: jasmine.createSpy().and.returnValues(throwError(() => new Error('offline')), of([])) };
     const comp = new CourseListComponent(svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
     comp.ngOnInit();
     expect(comp.offlineList).toBeFalse();
     expect(comp.courses.length).toBe(0);
-    expect(info).toHaveBeenCalled();
+    expect(comp.loadError).toBeTrue();
+    expect(info).not.toHaveBeenCalled();
+    comp.loadCourses();
+    expect(comp.loadError).toBeFalse();
   });
 });
 

@@ -674,4 +674,35 @@ describe('EbookReaderComponent', () => {
     expect(text).toContain('ebooks.reader.createCourse');
     fixture.destroy();
   });
+
+  // ── Design-Runde d3 ─────────────────────────────────────────────────────────────────────────
+  it('d3-rk-leser-handy-kopfleiste-ueberlappt: am Handy belegt ⋮ die Breite der angedockten Kopfleiste — das Seitenfeld bricht in Zeile 2 um', () => {
+    const css = compactCss(EbookReaderComponent);
+    const mobile = css.slice(css.lastIndexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/body\.nav-docked[^{]*\.rd-more(\[[^\]]*\])?\{margin-right:var\(--rh-nav-w,96px\)/);
+    // Nachgestellt bei 390 px mit 140 px breiter Kopfleiste: Titelzeile = Zurück | Titel | ⋮ + Rand, Seitenfeld darunter.
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:390px;padding:4px 8px;box-sizing:border-box;--rh-nav-w:140px';
+    bar.innerHTML = '<span style="order:-2;flex:none;width:40px;height:40px"></span>'
+      + '<span style="order:-1;flex:1 1 calc(100% - 96px - var(--rh-nav-w));min-width:0;height:40px"></span>'
+      + '<div class="pages" style="flex:none;width:110px;height:36px;margin-left:4px"></div>'
+      + '<span style="order:-1;flex:none;width:40px;height:40px;margin-right:var(--rh-nav-w)"></span>';
+    document.body.appendChild(bar);
+    const navBottom = bar.getBoundingClientRect().top + 48;
+    expect(bar.querySelector('.pages')!.getBoundingClientRect().top).toBeGreaterThanOrEqual(navBottom);
+    bar.remove();
+  });
+
+  it('d3-rk-diagram-subtitle-abgeschnitten: Zugrecht-Zeile im Brett-Kopf bricht um (≤ 2 Zeilen) statt das Herkunftssymbol mit „…“ abzuschneiden', () => {
+    const css = compactCss(EbookReaderComponent);
+    const side = css.match(/\.rd-side(\[[^\]]*\])?\{([^}]*)\}/)![2];
+    expect(side).toContain('white-space:normal');
+    expect(side).toContain('-webkit-line-clamp:2');
+    expect(side).not.toContain('text-overflow:ellipsis');
+    expect(side).not.toContain('nowrap');
+    // Brett als Vollbild (Handy): ohne Zeilengrenze.
+    const narrow = css.slice(css.indexOf('@media(max-width:899.98px)'));
+    expect(narrow).toMatch(/\.rd-side(\[[^\]]*\])?\{display:block;-webkit-line-clamp:unset/);
+  });
 });
+

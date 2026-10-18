@@ -555,7 +555,7 @@
       "by": "{{name}} द्वारा"
     },
     "reimport": {
-      "chip": "फिर से लाएँ",
+      "chip": "पुराना आयात",
       "legend": "{{count}} कोर्स को RepCheck से फिर से आयात करना होगा",
       "legendOne": "1 कोर्स को RepCheck से फिर से आयात करना होगा"
     }
@@ -677,8 +677,6 @@
       "showTags": "टैग दिखाएं",
       "hideTags": "टैग छुपाएं",
       "sharePuzzle": "पहेली साझा करें",
-      "statRating": "रेटिंग",
-      "statLevel": "स्तर",
       "statSolved": "हल किए",
       "statTime": "समय",
       "phaseLabel": "चरण {{phase}} (चरण {{step}})"

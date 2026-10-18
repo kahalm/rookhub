@@ -119,14 +119,16 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
             </mat-select></mat-form-field>
           <!-- Eigene Zeile (0.673.x, Screenshot 06.10.): Klassifizierer + Tags. In der Kopfzeile mit den Pflichtfeldern wurden die
                Beschriftungen abgeschnitten und die Hinweise zogen jedes Feld der Zeile auf drei Zeilen Höhe. Bei Online-Partien steht
-               der abgeleitete Wert als Platzhalter da; leer lassen = er gilt weiter. Vorschläge aus den eigenen Partien. -->
+               der abgeleitete Wert als Platzhalter da; leer lassen = er gilt weiter. Vorschläge aus den eigenen Partien.
+               d3-rk-edit-seite-liga-beschriftung: „Plattform / Liga“ statt „Seite / Liga“ (neben „Meine Seite“ las man
+               Farbe); ohne abgeleiteten Wert ein Beispiel als Platzhalter. -->
           <div class="class-row">
             <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.classifier.first' | translate }}</mat-label>
               <input matInput [(ngModel)]="header.classifier1" name="classifier1" maxlength="80" list="cls1-options"
-                     [placeholder]="derived1()" (ngModelChange)="dirty.set(true)" /></mat-form-field>
+                     [placeholder]="derived1() || ('games.classifier.firstPlaceholder' | translate)" (ngModelChange)="dirty.set(true)" /></mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.classifier.second' | translate }}</mat-label>
               <input matInput [(ngModel)]="header.classifier2" name="classifier2" maxlength="80" list="cls2-options"
-                     [placeholder]="derived2()" (ngModelChange)="dirty.set(true)" /></mat-form-field>
+                     [placeholder]="derived2() || ('games.classifier.secondPlaceholder' | translate)" (ngModelChange)="dirty.set(true)" /></mat-form-field>
             <!-- Eigene Tags (0.662.0): Freitext, Enter oder Komma fügt hinzu; die Vorschläge sind die schon vergebenen. -->
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tags-input"><mat-label>{{ 'games.tags.label' | translate }}</mat-label>
               <input matInput [(ngModel)]="tagInput" name="tagInput" [maxlength]="maxTagLength" list="tag-options"
@@ -334,6 +336,16 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
     .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     @media (max-width: 1100px) { .layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .photo { grid-column: 1 / -1; } }
     @media (max-width: 768px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
+    /* d3-rk-edit-tablet-leerraum: am Tablet (769–1100 px, ohne Foto) stand das Brett allein links, rechts Zug-Karte +
+       Zugliste (~1 050 px hoch) — unter dem Brett blieben ~540 px leer. Jetzt Zug-Karte unter dem Brett, die Zugliste
+       nimmt die ganze rechte Spalte ein und schließt mit Brett + Zug-Karte ab. Handy (≤ 768 px) unverändert. */
+    @media (min-width: 769px) and (max-width: 1100px) {
+      .layout:not(.with-photo) .side { display: contents; }
+      .layout:not(.with-photo) .board-card { grid-column: 1; grid-row: 1; }
+      .layout:not(.with-photo) .cursor-card { grid-column: 1; grid-row: 2; }
+      .layout:not(.with-photo) .moves-card { grid-column: 2; grid-row: 1 / span 2; }
+      .layout:not(.with-photo) .moves { max-height: calc(100dvh - 330px); }
+    }
     .photo { padding: 8px; }
     /* Zweite Zeile: Seite/Liga, Modus/Jahrgang, Tags — ein gemeinsamer Hinweis darunter statt drei umbrechender. */
     .class-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) minmax(180px, 1fr);

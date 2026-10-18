@@ -69,7 +69,8 @@ export interface EbookEditDialogData {
         <mat-label>{{ 'ebooks.meta.tags' | translate }}</mat-label>
         <input matInput [(ngModel)]="tags" maxlength="600" [placeholder]="'ebooks.meta.tagsHint' | translate" />
       </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
+      <!-- d3-rk-ebook-upload-hint-ueberlappt-feld: zweizeiliger Hinweis (Handy) wächst mit, statt auf dem nächsten Feld zu liegen. -->
+      <mat-form-field appearance="outline" class="full board-mode" subscriptSizing="dynamic">
         <mat-label>{{ 'ebooks.meta.boardMode' | translate }}</mat-label>
         <mat-select [(ngModel)]="boardMode">
           @for (m of boardModes; track m) { <mat-option [value]="m">{{ ('ebooks.board.mode.' + m) | translate }}</mat-option> }
@@ -119,6 +120,8 @@ export interface EbookEditDialogData {
     mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
     .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .full { width: 100%; }
+    /* Dynamischer Hinweisbereich reserviert unten nichts — 12 px Luft bis zur schwebenden Beschriftung des nächsten Felds. */
+    .board-mode { margin-bottom: 12px; }
     .two { display: grid; grid-template-columns: 1fr minmax(110px, 140px); gap: 8px; }
     .file-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .file-name { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; }

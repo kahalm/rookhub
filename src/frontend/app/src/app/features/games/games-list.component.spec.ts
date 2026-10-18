@@ -279,6 +279,55 @@ describe('GamesListComponent', () => {
     expect(upload).toHaveBeenCalled();
   });
 
+  // d3-rk-games-leer-pgn-doppelt: im Leerzustand stand „PGN hochladen“ oben UND in der Karte — jetzt nur in der Karte.
+  it('leer: genau ein Knopf „PGN hochladen“ auf der Seite (kein Kopfknopf)', async () => {
+    const { fixture } = await setupMitPartien([]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.header .pgn-upload')).toBeNull();
+    const uploads = Array.from(el.querySelectorAll('button')).filter(b => b.textContent!.includes('games.pgnUpload.button'));
+    expect(uploads.length).toBe(1);
+  });
+
+  // d3-rk-games-analyse-symbol-blass: ohne Engine kein grauer, gesperrter Knopf je Zeile, sondern einmal der Grund.
+  it('ohne Engine: ein Hinweissatz über der Liste und keine Analyse-Knöpfe in den Zeilen', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(listRequest).flush([game(null), { ...game(null), id: 5 }]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: false, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.no-engine').length).toBe(1);
+    expect(el.querySelector('.no-engine')!.textContent).toContain('guess.upload.noEngine');
+    expect(el.querySelectorAll('button.analyze').length).toBe(0);
+    expect(el.querySelectorAll('.acc-cell .no-analysis').length).toBe(2);
+  });
+
+  it('mit Engine: Analyse-Knopf mit Beschriftung (aria-label), kein Hinweissatz', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(listRequest).flush([game(null)]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.no-engine')).toBeNull();
+    expect(el.querySelector('button.analyze')!.getAttribute('aria-label')).toBe('games.analyze');
+  });
+
+  // d3-rk-spielmenue-reihenfolge-uneinheitlich: ⋮ der Zeile wie das der Partieseite — Öffnen/Bearbeiten → Aktion →
+  // Teilen/Export → Löschen (DESIGN 5.5).
+  it('⋮ der Zeile: Öffnen und Bearbeiten zuerst, Teilen danach, Löschen zuletzt', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(listRequest).flush([{ ...game(null), sourceUrl: 'https://lichess.org/abc', scanId: 3 }]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+    ((fixture.nativeElement as HTMLElement).querySelector('.actions button[mat-icon-button]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel .mat-mdc-menu-item-text')).map(x => x.textContent!.trim());
+    expect(items).toEqual(['games.openInAnalysis', 'games.openOriginal', 'games.edit.menu', 'games.roast.menu', 'games.share',
+      'games.photo.show', 'games.photo.download', 'common.delete']);
+  });
+
   /** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm: die native Rueckfrage
    *  liegt im Vollbild hinter der Seite und laesst sich vom Browser stummschalten (Codereview W5 F4-013). */
   it('remove: asks via ConfirmService — declined sends no DELETE, confirmed deletes', async () => {
@@ -315,6 +364,13 @@ describe('GamesListComponent Layout', () => {
     expect(phone).toMatch(/\.classifier-filters:not\(\.open\) \{ ?display: none/);
     expect(phone).toMatch(/\.label-long \{ ?display: none/);
     expect(phone).toMatch(/\.label-short \{ ?display: inline/);
+  });
+
+  // d3-rk-games-liste-mobile-namen-versetzt: feste Typspalte am Handy, Tempo unter dem Symbol.
+  it('setzt am Handy die Typspalte fest auf 56 px, das Tempo darunter', () => {
+    const mobile = css.slice(css.indexOf('@media (max-width: 768px)'));
+    expect(mobile).toMatch(/\.kind \{ ?flex: 0 0 56px; flex-direction: column;/);
+    expect(mobile).toMatch(/\.tc \{ ?font-size: 0\.7rem;/);
   });
 
   // a1-rk-games-handy-filter-abstand: 12 px zwischen „Filter ▾“ bzw. offenen Filtern und der ersten Partie; Einleitung ohne Waisenwort.

@@ -517,3 +517,27 @@ describe('PuzzleBoardComponent autoSelect (KidHub-Sternenjagd)', () => {
     expect(ground.state.selected).toBe('a3' as Key);
   });
 });
+
+describe('PuzzleBoardComponent Markierungen auf ungemessenem Brett (NaN-Koordinaten)', () => {
+  it('hält Markierungen zurück, solange cg-board keine Breite hat, und holt sie danach nach', () => {
+    const comp: any = new PuzzleBoardComponent();
+    const board = document.createElement('cg-board');
+    const wrap = document.createElement('div');
+    wrap.appendChild(board);
+    comp.boardEl = { nativeElement: wrap };
+    let width = 0;
+    spyOn(board, 'getBoundingClientRect').and.callFake(() => ({ width, height: width } as DOMRect));
+    const calls: unknown[] = [];
+    comp.ground = { state: { drawable: { autoShapes: [{ orig: 'a1' }] } }, setAutoShapes: (s: unknown[]) => calls.push(s) };
+    comp.reviewShapes = [{ orig: 'e4', brush: 'green' }];
+
+    comp.applyAutoShapes();
+    expect(calls).toEqual([[]]);              // alte weg, neue nicht auf 0 × 0
+    expect(comp.shapesPending).toBeTrue();
+
+    width = 320;
+    comp.applyAutoShapes();                    // nach dem Messen (ResizeObserver ruft das)
+    expect(calls[1]).toEqual([{ orig: 'e4', brush: 'green' }]);
+    expect(comp.shapesPending).toBeFalse();
+  });
+});

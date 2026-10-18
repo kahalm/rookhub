@@ -1,9 +1,11 @@
 // Gemeinsamer Kopf der Turnierseite (/tournaments/{id}) und des geteilten Links (/t/{id}): Rahmen, Titelzeile mit
 // Knopfreihe. Vorher als Kopie in beiden Komponenten — der Titel-Fix z1-t-detail-titel-versatz kam nur in einer an
 // (z2-t-public-titel-versatz). Wird per @use in beide Komponenten-Stile geholt (View-Encapsulation je Komponente).
-.detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+// d3-t-detail-schmale-spalte-1920: Tabellenseite in der Seitenbreite (DESIGN 4.1) statt fest 1100 px — die Spielertabelle
+// gewinnt 140 px, die Kopfkarte fluchtet mit Kalender und Profil.
+.detail-container { padding: 2rem; max-width: min(var(--page-max-width, 1240px), 96vw); margin: 0 auto; }
 // Breitbild-Stufe (UI-Sweep u1, u1-t-turnier-paarungen): ab 2400 px Spieler und Paarungen nebeneinander — dafür die
-// zweite Seitenbreite. Darunter unverändert 1100 px.
+// zweite Seitenbreite. Darunter --page-max-width.
 @media (min-width: 2400px) {
   .detail-container { max-width: var(--page-max-width-wide, 1880px); }
 }
@@ -39,4 +41,12 @@ mat-card-title, mat-card-subtitle { overflow-wrap: anywhere; }
   // UX-042 / r2-t-public-actions: Merken und Beobachten behalten am Handy ihren Text.
   .action-bar .keep-label { height: 44px; min-width: 0; }
   .action-bar .keep-label .btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+// d3-t-kalender-vorlauf-zu-hoch: niedrige Fenster (Boox 200 % = 480 × 640) — die Handy-Anordnung ist auf 844 px Höhe
+// ausgelegt, die erste Spielerzeile begann bei 50 %. Kopfkarte straffen: weniger Polster, Knöpfe 40 statt 44 px.
+@media (max-width: 768px) and (max-height: 720px) {
+  .title-row mat-card-header { padding-block: 4px; }
+  .title-row .action-bar { padding-bottom: 4px; }
+  .action-bar .keep-label { height: 40px; }
 }

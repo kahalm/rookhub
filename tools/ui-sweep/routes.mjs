@@ -177,7 +177,7 @@ export const ROUTES = [
   r('turnier', '/t/{tournamentId}', 'any', { main: ['app-tournament-tables tr.mat-mdc-row', 'app-tournament-tables .player-card', 'app-tournament-tables p.empty-state', '.detail-container mat-card'] }),
   r('turnier', '/tournaments', 'user', { main: ['.rows mat-card.row', 'mat-card.card.empty-state', 'mat-card.card.failed'] }),
   r('turnier', '/tournaments/history', 'user', { main: ['.rows button.row', 'mat-card.player-card', 'p.empty-state', 'p.hint.warn'] }),
-  r('turnier', '/profile', 'user', { main: ['app-profile-identity-form', 'mat-card.card'] }),
+  r('turnier', '/profile', 'user', { main: ['app-theme-card .theme-section', 'app-profile-identity-form', 'mat-card.card'] }),   // Darstellung zuoberst (Nutzerwunsch, wie RookHub)
   r('turnier', '/admin', 'user', { main: ['ul.ta-users > li', 'mat-card.ta-card p.muted', 'mat-card.ta-card'] }),
   r('turnier', '/login', 'anon', { main: AUTH_FORM }),
   r('turnier', '/register', 'anon', { main: AUTH_FORM }),

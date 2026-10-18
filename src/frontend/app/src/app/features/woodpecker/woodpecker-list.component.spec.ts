@@ -6,6 +6,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { CourseListItem, CourseService } from '../courses/course.service';
 import { WoodpeckerListComponent } from './woodpecker-list.component';
 import { WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService, daysLeft, startOfLocalDayIso, todayYmd } from './woodpecker.service';
 
@@ -26,7 +27,7 @@ describe('WoodpeckerListComponent', () => {
   let service: jasmine.SpyObj<WoodpeckerService>;
   let confirmAnswer = true;
 
-  function render(plans: WoodpeckerPlan[]) {
+  function render(plans: WoodpeckerPlan[], courses: Partial<CourseListItem>[] = [{ puzzleCount: 10, isCalculation: false }]) {
     service = jasmine.createSpyObj<WoodpeckerService>('WoodpeckerService', ['list', 'startNextCycle', 'finishSet', 'delete']);
     service.list.and.returnValue(of(plans));
     TestBed.resetTestingModule();
@@ -38,6 +39,7 @@ describe('WoodpeckerListComponent', () => {
         { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of(null) }) } },
         { provide: SnackbarService, useValue: { warn: () => {}, success: () => {}, info: () => {} } },
         { provide: ConfirmService, useValue: { ask: () => of(confirmAnswer) } },
+        { provide: CourseService, useValue: { getCourses: () => of(courses) } },
       ],
     });
     const fixture = TestBed.createComponent(WoodpeckerListComponent);
@@ -50,6 +52,27 @@ describe('WoodpeckerListComponent', () => {
     expect(el.querySelector('.empty-state')).not.toBeNull();
     expect(el.querySelectorAll('.empty-state button').length).toBe(1);
     expect(el.querySelector('.plan')).toBeNull();
+  });
+
+  it('d3-rk-woodpecker-leerdialog-luecke-abbrechen: ohne lösbaren Kurs direkt „Zu den Kursen“ statt „Neues Training“', () => {
+    const { el } = render([], [{ puzzleCount: 0, isCalculation: false }, { puzzleCount: 30, isCalculation: true }]);
+    const link = el.querySelector<HTMLAnchorElement>('.empty-state a');
+    expect(link?.getAttribute('href')).toBe('/courses');
+    expect(el.querySelectorAll('.empty-state button').length).toBe(0);
+    expect(el.querySelector('.empty-state')!.textContent).toContain('woodpecker.create.noCourses');
+  });
+
+  it('d3-rk-woodpecker-balken-zeit-statt-satz: Zyklus 1 — Zeitbalken folgt der Fristzeile und ist beschriftet', () => {
+    const { el } = render([plan({ setSize: 0 })]);
+    const state = el.querySelector('.state')!;
+    const kids = Array.from(state.children);
+    const deadline = state.querySelector('.deadline')!;
+    const bar = state.querySelector('mat-progress-bar.time-bar')!;
+    expect(state.querySelectorAll('mat-progress-bar').length).toBe(1);
+    expect(kids.indexOf(bar)).toBe(kids.indexOf(deadline) + 1);
+    expect(bar.getAttribute('aria-label')).toBe('woodpecker.timeBar');
+    // der Satz-Text steht darüber, ohne eigenen Balken
+    expect(kids.indexOf(state.querySelector('p')!)).toBeLessThan(kids.indexOf(deadline));
   });
 
   it('laufender Zyklus 1: „Weiter lösen“ führt zum Löser, Fortschritt nach Satzgröße', () => {

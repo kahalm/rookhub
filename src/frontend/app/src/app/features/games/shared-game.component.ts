@@ -169,6 +169,13 @@ export class SharedGameComponent implements OnInit, DoCheck {
   });
   readonly mistakeTotal = computed(() => mistakesOf(this.trainable(), this.mistakeSide()).length);
 
+  /** Name des Spielers einer Seite für „Fehler von … nachspielen“ (d3-rk-eigene-fehler-fremde-partie); ohne Namen
+   *  „Weiß“/„Schwarz“. */
+  sidePlayer(side: 'white' | 'black'): string {
+    const name = (side === 'white' ? this.game?.white : this.game?.black)?.trim();
+    return name && name !== '?' ? name : this.translate.instant('games.review.' + side);
+  }
+
   analysisRunning(): boolean {
     const s = this.reviewStatus();
     return s === 'pending' || s === 'running';

@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PuzzleYourTurnComponent, PuzzleMode } from './puzzle-your-turn.component';
 import { ReviewNavComponent } from './review-nav.component';
@@ -65,7 +66,7 @@ const CK = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatCardModule, TranslatePipe, PuzzleYourTurnComponent, ReviewNavComponent,
+    MatCardModule, MatTooltipModule, TranslatePipe, PuzzleYourTurnComponent, ReviewNavComponent,
   ],
   template: `
     <!-- data-state: fester Halt fuer die E2E-Specs — der sichtbare Statustext haengt an Modus
@@ -172,7 +173,11 @@ const CK = {
                   }
                 }
                 @if (elapsedSeconds !== null) {
-                  <p class="psc-timer">{{ formatTime(elapsedSeconds) }}</p>
+                  <!-- d3-rk-puzzle-zeitanzeige-ohne-beschriftung: wie beim Lösen mit Uhr-Symbol + „Lösezeit“. -->
+                  <p class="psc-timer" role="timer" [matTooltip]="'puzzles.solveTime' | translate"
+                     [attr.aria-label]="('puzzles.solveTime' | translate) + ': ' + formatTime(elapsedSeconds)">
+                    <mat-icon class="timer-icon" aria-hidden="true">timer</mat-icon>{{ formatTime(elapsedSeconds) }}
+                  </p>
                 }
                 <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal"
                   (prev)="reviewPrev.emit()" (next)="reviewNext.emit()" />
@@ -244,7 +249,8 @@ const CK = {
     .psc-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
     .psc-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .psc-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
-    .psc-timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
+    .psc-timer { display: inline-flex; align-items: center; gap: 6px; font-size: 1.25em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
+    .timer-icon { font-size: 20px; width: 20px; height: 20px; opacity: .7; }
     .psc-result-icon { font-size: 48px; width: 48px; height: 48px; }
     .psc-solved .psc-result-icon { color: var(--rh-success); }
     .psc-failed .psc-result-icon { color: var(--rh-error); }

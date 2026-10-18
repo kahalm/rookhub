@@ -67,6 +67,12 @@
 @media (min-width: 900px) {
   .editor { position: sticky; top: 1rem; align-self: start; }
 }
+/* d3-rk-recon-detail-leere-rechte-spalte: die Vorschau ohne gewähltes Teil füllt nur die rechte Spalte; einspaltig
+   (Handy/Tablet) sagt sie nichts, was die Knöpfe über der Teileliste nicht schon sagen. */
+@media (max-width: 899.98px) {
+  .editor.idle { display: none; }
+}
+.idle-actions { margin-top: 0.5rem; }
 
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
 /* Handy (d2-rk-recon-detail-actions): kurze Beschriftungen, beide Knöpfe in einer Zeile. */
@@ -242,6 +248,14 @@
   --mat-button-toggle-height: 32px;
   font-size: 0.85rem;
   ::ng-deep .mat-button-toggle-label-content { padding: 0 9px; line-height: 32px; }
+}
+/* d3-rk-recon-halbzuege-tippziel-klein: am Handy 44 px hohe Segmente (DESIGN 2 Grundsatz 5) — sechs zu je ~44 px plus
+   „Halbzüge" passen in 390 px. */
+@media (max-width: 599.98px) {
+  .depth-toggle {
+    --mat-button-toggle-height: 44px;
+    ::ng-deep .mat-button-toggle-label-content { padding: 0 12px; line-height: 44px; min-width: 20px; }
+  }
 }
 
 /* b1-rk-recon-breitstufe: Breitbild-Stufe (DESIGN 4.1) — Seite in --page-max-width-wide, Brett-Editor bis 900 px breit

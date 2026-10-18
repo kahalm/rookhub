@@ -104,23 +104,25 @@ describe('foldAccountDeletion (Konto loeschen in der Kinder-Fassung)', () => {
         <ul class="removed"><li>API-Tokens</li><li>Chessable-Zugang</li></ul>
         <h2 class="kept-title">Was bleibt</h2>
         <p class="kept">Anonym</p>
+        <h2 class="contact-title">Kontakt</h2>
+        <p class="contact">kidhub@example.org</p>
         <p class="back"><a>Zurueck</a></p>
       </mat-card-content></app-account-deletion>`;
     return root;
   }
 
-  it('Liste in ein zugeklapptes <details class="kid-parent">, Kindersatz direkt unter der Einleitung', () => {
+  it('Liste in ein zugeklapptes <details class="kid-parent">, Kindersatz unter „Was entfernt wird"', () => {
     const root = page();
     expect(foldAccountDeletion(root, texts)).toBeTrue();
     const details = root.querySelector('details.kid-parent:has(ul.removed)')!;
     expect(details.hasAttribute('open')).withContext('zugeklappt').toBeFalse();
     expect(details.querySelector('ul.removed li')).not.toBeNull();
     expect(details.querySelector('summary .kid-parent-label')!.textContent).toBe(texts.parents);
-    expect(details.previousElementSibling!.classList).toContain('removed-title');
     const short = root.querySelector('p.kid-short')!;
     expect(short.textContent).toBe(texts.short);
-    // a1-k-deletion-fachjargon: Kindersatz vor der Erwachsenen-Anleitung, nicht erst unter dem Knopf.
-    expect(short.previousElementSibling!.classList).toContain('intro');
+    // d3-k-delete-button-before-info: der Kindersatz steht unter „Was entfernt wird", direkt vor dem Eltern-Aufklapper.
+    expect(short.previousElementSibling!.classList).toContain('removed-title');
+    expect(short.nextElementSibling).toBe(details);
     // Uebriges bleibt stehen: Knopf, „Was bleibt", Ruecklink am Ende.
     expect(root.querySelector('details .delete-now, details .kept, details .back')).toBeNull();
     expect(root.querySelector('mat-card-content')!.lastElementChild!.classList).toContain('back');
@@ -137,7 +139,7 @@ describe('foldAccountDeletion (Konto loeschen in der Kinder-Fassung)', () => {
     expect(how.querySelector('summary .kid-parent-howto-label')!.textContent).toBe(texts.howTo);
     expect(Array.from(how.children).slice(1).map(c => c.className)).toEqual(['how-title', 'how', 'backup', 'backup-links']);
     expect(Array.from(content.children).map(c => c.tagName === 'DETAILS' ? 'details' : c.className))
-      .toEqual(['intro', 'kid-short', 'details', 'action', 'removed-title', 'details', 'kept-title', 'kept', 'back']);
+      .toEqual(['intro', 'details', 'removed-title', 'kid-short', 'details', 'kept-title', 'kept', 'action', 'contact-title', 'contact', 'back']);
     // Fachbegriffe sind nicht sichtbar, solange zu (gerendert im Dokument gemessen).
     document.body.appendChild(root);
     try {
@@ -148,6 +150,16 @@ describe('foldAccountDeletion (Konto loeschen in der Kinder-Fassung)', () => {
     } finally {
       root.remove();
     }
+  });
+
+  // d3-k-delete-button-before-info: erst was verloren geht, dann der Knopf — ohne Kontakt-Abschnitt vor dem Rücklink.
+  it('Knopf nach „Was bleibt"; fehlt der Kontakt-Abschnitt, steht er vor dem Rücklink', () => {
+    const root = page();
+    root.querySelector('.contact-title')!.remove();
+    root.querySelector('.contact')!.remove();
+    foldAccountDeletion(root, texts);
+    const kids = Array.from(root.querySelector('mat-card-content')!.children).map(c => c.tagName === 'DETAILS' ? 'details' : c.className);
+    expect(kids.slice(-3)).toEqual(['kept', 'action', 'back']);
   });
 
   it('Sprachwechsel setzt die Texte neu; ein zweiter Aufruf aendert nichts; andere Seiten bleiben unberuehrt', () => {

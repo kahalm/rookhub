@@ -78,6 +78,29 @@ describe('ReprocessBannerComponent', () => {
     expect(c.shortKey).toBe('reprocess.shortOne.repertoires');
   });
 
+  // d3-rk-update-banner-rot-hell: ein Angebot zum Aktualisieren tönt mit --rh-info, nicht mit --rh-warn (hell fast rot).
+  it('tönt Symbol und Rahmen mit --rh-info statt --rh-warn', () => {
+    const root = document.documentElement.style;
+    root.setProperty('--rh-info', 'rgb(1, 2, 3)');
+    root.setProperty('--rh-warn', 'rgb(200, 0, 0)');
+    try {
+      const fixture = TestBed.createComponent(ReprocessBannerComponent);
+      fixture.componentInstance.section = 'repertoires';
+      fixture.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne('/api/repertoires/reprocess/status').flush(
+        { currentVersion: 2, total: 3, stale: 3, reprocessableLocally: 3, refetchable: 0, needsReimport: 0 });
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(getComputedStyle(el.querySelector('.rb-icon')!).color).toBe('rgb(1, 2, 3)');
+      const banner = getComputedStyle(el.querySelector('.reprocess-banner')!);
+      expect(banner.borderTopColor).not.toContain('200, 0, 0');
+      expect(banner.backgroundColor).not.toContain('200, 0, 0');
+    } finally {
+      root.removeProperty('--rh-info');
+      root.removeProperty('--rh-warn');
+    }
+  });
+
   it('Zählungen = 0 ohne Status', () => {
     const c = createComponent();
     expect(c.allCount).toBe(0);

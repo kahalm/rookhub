@@ -34,7 +34,7 @@ Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpSer
 |---------|----------|-------|
 | GET | `/api/move-comparisons/status` | `{ engineAvailable, ownEngine, explanations, maxCandidates, defaultDepth, maxDepth, openComparisons, maxOpen }` (Literal vor `{id}`) |
 | GET | `/api/move-comparisons` | Die letzten 20 eigenen (`moves` als SAN, `bestSan`) |
-| GET | `/api/move-comparisons/{id}` | Stand: `status` (`candidates`/`replies`/`explaining`/`done`/`failed`), je Kandidat `evalText` (WEISS-Sicht), `replies` (beste Antworten, Linie als SAN), `tests` (dieselben nach dem besten Zug: `state` `pending`/`done`/`failed`/`illegal`, `line` = eigene Erwiderung), `explanation`; beste zuerst, solange gerechnet wird Reihenfolge der Auswahl. Laufende Zeilen zeigen den Zwischenstand ihres Auftrags |
+| GET | `/api/move-comparisons/{id}` | Stand: `status` (`candidates`/`replies`/`explaining`/`done`/`failed`), je Kandidat `evalText` (Sicht der Seite am Zug, wie die Begründung — auch Antworten/Erwiderungen; bis 0.807 Weiß-Sicht), `replies` (beste Antworten, Linie als SAN), `tests` (dieselben nach dem besten Zug: `state` `pending`/`done`/`failed`/`illegal`, `line` = eigene Erwiderung), `explanation`; beste zuerst, solange gerechnet wird Reihenfolge der Auswahl. Laufende Zeilen zeigen den Zwischenstand ihres Auftrags |
 | POST | `/api/move-comparisons` | `{ fen, moves[] (UCI, Rochade auch König-schlägt-Turm), depth?, lang?, title? }`; 400 `reason` ∈ invalid-fen/game-over/invalid-move/too-few-moves/too-many-moves/too-many-open/no-engine/too-many-jobs |
 | DELETE | `/api/move-comparisons/{id}` | Löschen samt offener Aufträge |
 

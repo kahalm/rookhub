@@ -26,6 +26,7 @@ import { AuthService } from '../../core/auth.service';
 import { CourseCardComponent } from './course-card.component';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 @Component({
   selector: 'app-course-list',
@@ -35,7 +36,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
     CommonModule, FormsModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatDialogModule,
     LoadingSpinnerComponent, TranslatePipe, ReprocessBannerComponent, CourseCardComponent, HelpHintComponent,
-    IconLabelDirective
+    IconLabelDirective, LoadErrorComponent
   ],
   template: `
     <div class="courses-container">
@@ -112,6 +113,9 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 
       @if (loading) {
         <app-loading-spinner />
+      } @else if (loadError) {
+        <!-- d3-rk-ladefehler-endlos-spinner: gescheitertes Laden ohne Offline-Vorrat ist nicht „keine Kurse". -->
+        <app-load-error messageKey="courses.loadFailed" (retry)="loadCourses()" />
       } @else if (courses.length === 0) {
         <p class="empty-state">{{ 'courses.emptyHint' | translate }}</p>
       } @else {
@@ -346,6 +350,8 @@ export class CourseListComponent implements OnInit {
   }
   private _search = '';
   loading = false;
+  /** Laden gescheitert und kein Offline-Vorrat — statt des Leerhinweises steht dann app-load-error. */
+  loadError = false;
   savingOffline: number | null = null;
   downloadingPgn: number | null = null;
   /** Läuft gerade ein Upload eines eigenen Kurs-PGN? */
@@ -571,6 +577,7 @@ export class CourseListComponent implements OnInit {
 
   loadCourses(): void {
     this.loading = true;
+    this.loadError = false;
     this.courseService.getCourses().subscribe({
       next: courses => {
         this.courses = this.sortCourses(courses);
@@ -583,14 +590,14 @@ export class CourseListComponent implements OnInit {
       },
       error: () => {
         // Offline/Server weg → letzte bekannte Liste zeigen, beschränkt auf heruntergeladene
-        // (offline spielbare) Kurse. Ohne Cache bleibt es beim bisherigen Fehlerhinweis.
+        // (offline spielbare) Kurse. Ohne Cache: Ladefehler an der Stelle des Leerhinweises (d3).
         const cached = loadCourseListCache<CourseListItem>().filter(c => this.offlineFiles.has(c.fileName));
         if (cached.length > 0) {
           this.courses = this.sortCourses(cached);
           this.rebuildSections();
           this.offlineList = true;
         } else {
-          this.snackbar.info(this.translate.instant('courses.loadFailed'), { action: 'common.ok', duration: 3000 });
+          this.loadError = true;
         }
         this.loading = false;
       }

@@ -555,7 +555,7 @@
       "by": "od {{name}}"
     },
     "reimport": {
-      "chip": "Načíst znovu",
+      "chip": "Zastaralý import",
       "legend": "{{count}} kurzů potřebuje nový import přes RepCheck",
       "legendOne": "1 kurz potřebuje nový import přes RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Zobrazit štítky",
       "hideTags": "Skrýt štítky",
       "sharePuzzle": "Sdílet úlohu",
-      "statRating": "Hodnocení",
-      "statLevel": "Úroveň",
       "statSolved": "Vyřešeno",
       "statTime": "Čas",
       "phaseLabel": "Fáze {{phase}} (krok {{step}})"

@@ -118,10 +118,17 @@
                  [appIconLabel]="'worksheets.print' | translate">
                 <mat-icon>picture_as_pdf</mat-icon>
               </a>
-              <button mat-icon-button color="warn" (click)="remove(sheet)"
-                      [appIconLabel]="'common.delete' | translate">
-                <mat-icon>delete</mat-icon>
+              <!-- d3-rk-ws-liste-loeschen-direkt-sichtbar: Löschen nicht gleichrangig neben PDF, sondern als letzter
+                   (roter) Eintrag im ⋮-Menü (DESIGN 5.4/5.5). -->
+              <button mat-icon-button class="wl-more" type="button" [matMenuTriggerFor]="sheetMenu"
+                      [appIconLabel]="'common.moreActions' | translate">
+                <mat-icon>more_vert</mat-icon>
               </button>
+              <mat-menu #sheetMenu="matMenu" xPosition="before">
+                <button mat-menu-item class="delete-item" type="button" (click)="remove(sheet)">
+                  <mat-icon>delete</mat-icon>{{ 'common.delete' | translate }}
+                </button>
+              </mat-menu>
             </div>
           </mat-card>
         }

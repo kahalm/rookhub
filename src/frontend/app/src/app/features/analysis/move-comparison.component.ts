@@ -7,6 +7,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { interval } from 'rxjs';
@@ -37,7 +39,7 @@ const POLL_MS = 3_000;
   selector: 'app-move-comparison',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, SanPipe],
+  imports: [IconLabelDirective, DatePipe, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, TranslatePipe, ChessBoardComponent, SanPipe, LoadErrorComponent, LoadingSpinnerComponent],
   template: `
     <div class="cmp-page">
       <!-- b1-rk-zuege-vergleichen-zwei-knoepfe: „Zum Analysebrett" ist ein Rücklink über dem Titel (Textknopf), nicht ein
@@ -56,6 +58,10 @@ const POLL_MS = 3_000;
 
       @if (notFound()) {
         <mat-card><mat-card-content><p>{{ 'moveCompare.page.notFound' | translate }}</p></mat-card-content></mat-card>
+      } @else if (loadError() && !data()) {
+        <!-- d3-rk-vergleich-leere-seite-balken: gescheitertes Laden (≠ 404) = Meldung + „Erneut versuchen", kein
+             Ladebalken für immer. Der Balken bleibt dem laufenden Vergleich vorbehalten (DESIGN 5.10). -->
+        <app-load-error (retry)="load()" />
       } @else if (data(); as d) {
         <!-- Statuszeile nur, solange sie etwas sagt — fertig steht allein „Fertig." über dem Brett (b1). -->
         @if (d.status !== 'done') {
@@ -82,6 +88,9 @@ const POLL_MS = 3_000;
           </div>
 
           <div class="detail-col">
+            <!-- d3-rk-vergleich-vorzeichen-widerspruch: alle Bewertungen der Seite (Liste, Antworten, Erwiderungen) aus
+                 Sicht der Seite am Zug — dieselbe Sicht wie die Begründung; hier einmal gesagt. -->
+            <p class="muted small perspective">{{ (d.whiteToMove ? 'moveCompare.page.perspectiveWhite' : 'moveCompare.page.perspectiveBlack') | translate }}</p>
             <mat-card class="cands">
               <mat-card-content>
                 @for (c of d.candidates; track c.uci; let i = $index) {
@@ -95,7 +104,7 @@ const POLL_MS = 3_000;
                     } @else if (c.state === 'failed') {
                       <span class="muted small">{{ 'moveCompare.page.failed' | translate }}</span>
                     }
-                    @if (c.evalText) { <span class="ev" [class.neg]="isNeg(c.evalText)">{{ c.evalText }}</span> }
+                    @if (c.evalText) { <span class="ev" [class.neg]="!c.isBest && isNeg(c.evalText)">{{ c.evalText }}</span> }
                   </button>
                   @if (c.replies.length > 0) {
                     <div class="line muted">{{ lineLabel(afterFen(c.uci), c.replies[0].line) }}</div>
@@ -110,7 +119,7 @@ const POLL_MS = 3_000;
                   <mat-card-content>
                     <h3>{{ 'moveCompare.page.whyBetter' | translate:{ best: moveLabel(b.san), weak: moveLabel(w.san) } }}</h3>
                     <div class="evals">
-                      <span>{{ moveLabel(b.san) }} <span class="ev" [class.neg]="isNeg(b.evalText)">{{ b.evalText }}</span></span>
+                      <span>{{ moveLabel(b.san) }} <span class="ev">{{ b.evalText }}</span></span>
                       <span>{{ moveLabel(w.san) }} <span class="ev" [class.neg]="isNeg(w.evalText)">{{ w.evalText }}</span></span>
                     </div>
                     @if (w.explanation) {
@@ -169,7 +178,7 @@ const POLL_MS = 3_000;
           </div>
         </div>
       } @else {
-        <mat-progress-bar mode="indeterminate" />
+        <app-loading-spinner />
       }
 
       @if (history().length > 1) {
@@ -200,6 +209,7 @@ const POLL_MS = 3_000;
     .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .status { margin: .5rem 0; display: flex; gap: 6px; flex-wrap: wrap; }
     .status.failed { color: var(--rh-error); }
+    .perspective { margin: 0; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
     .body { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 16px; align-items: start; margin-top: 10px; }
@@ -257,6 +267,7 @@ export class MoveComparisonComponent implements OnInit {
 
   readonly data = signal<MoveComparison | null>(null);
   readonly notFound = signal(false);
+  readonly loadError = signal(false);
   readonly view = signal<BoardView | null>(null);
   readonly history = signal<MoveComparisonSummary[]>([]);
   readonly currentId = signal(0);
@@ -283,6 +294,7 @@ export class MoveComparisonComponent implements OnInit {
       this.data.set(null);
       this.view.set(null);
       this.notFound.set(false);
+      this.loadError.set(false);
       this.load();
       this.loadHistory();
     });
@@ -291,18 +303,23 @@ export class MoveComparisonComponent implements OnInit {
     });
   }
 
-  private load(): void {
+  protected load(): void {
     const id = this.currentId();
     if (!id || this.loading) return;
     this.loading = true;
     this.api.get(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: d => {
         this.loading = false;
+        this.loadError.set(false);
         const wasRunning = this.running();
         this.data.set(d);
         if (wasRunning && !this.running()) this.loadHistory();
       },
-      error: (e: HttpErrorResponse) => { this.loading = false; if (e.status === 404) this.notFound.set(true); },
+      error: (e: HttpErrorResponse) => {
+        this.loading = false;
+        if (e.status === 404) this.notFound.set(true);
+        else this.loadError.set(true);
+      },
     });
   }
 
@@ -333,6 +350,7 @@ export class MoveComparisonComponent implements OnInit {
     return this.lineLabel(after?.fen ?? null, t.line.slice(0, 4));
   }
 
+  /** Schlecht für die Seite am Zug (die Werte kommen aus ihrer Sicht) — rot. Der beste Zug wird nie rot gefärbt. */
   isNeg(ev: string | null | undefined): boolean {
     return !!ev && ev.startsWith('-') || !!ev && ev.startsWith('#-');
   }

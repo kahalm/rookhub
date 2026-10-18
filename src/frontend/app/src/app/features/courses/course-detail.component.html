@@ -30,8 +30,10 @@
           }
           @if (d.isPublic) { <span class="badge">{{ 'courses.detail.public' | translate }}</span> }
           <span class="badge">{{ ('courses.detail.kind.' + d.kind) | translate }}</span>
-          @for (t of d.themes; track t) {
-            <span class="badge badge--theme">{{ ('trainingGoals.theme.' + t) | translate }}</span>
+          <!-- d3-rk-kurs-thema-taktik-vorgabe: nur gesetzte Themen (wie die Kurskarte, DESIGN 5.9); Kalkulationsbücher tragen
+               schon „Kalkulationsbuch“. -->
+          @for (k of themeChips; track k) {
+            <span class="badge badge--theme">{{ k | translate }}</span>
           }
         </div>
 

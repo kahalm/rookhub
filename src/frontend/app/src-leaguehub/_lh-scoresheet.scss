@@ -39,8 +39,11 @@
   .club-intro .back-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .club-intro .scan-head h2 { order: 2; flex: 0 1 auto; max-width: calc(100% - 66px); margin: 0; min-width: 0; font-size: 22px; }
   .club-intro .scan-head .chk-btn { order: 3; margin-right: auto; }
-  .club-intro .scan-head .game-title { order: 4; flex: 1 1 0; min-width: 0; margin: 0; }
-  .club-intro .back-row .to-save { order: 5; margin-left: auto; }
+  /* d3-l-korrigieren-mobil-kopf-schmal: mit Flex-Basis 0 passte der Partietitel in den Rest von Zeile 1 (≈ 70 px neben dem
+     ⓘ) und brach dort auf 5 Zeilen um. 10rem passt nicht hinter Überschrift + ⓘ, lässt in Zeile 2 aber Platz für
+     „Speichern ↓"; der Knopf selbst bricht nicht um. */
+  .club-intro .scan-head .game-title { order: 4; flex: 1 1 10rem; min-width: 0; margin: 0; }
+  .club-intro .back-row .to-save { order: 5; margin-left: auto; white-space: nowrap; }
   .scan-layout .scan-check, .scan-layout .scan-board { padding: 10px 12px; }
   .scan-layout { gap: 10px; }
 }

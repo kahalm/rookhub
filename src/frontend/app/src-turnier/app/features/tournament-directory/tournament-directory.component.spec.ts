@@ -918,6 +918,33 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  // d3-t-kalender-vorlauf-zu-hoch: Boox 200 % (480 × 640) — die erste Karte begann bei 48 %. Im niedrigen Fenster steht der
+  // Titel nur für Vorleser, sein ⓘ hinter der Zählzeile; im hohen Handyfenster bleibt alles wie gehabt.
+  it('niedriges Fenster (480 × 640): Titel nur für Vorleser, ⓘ hinter der Trefferzahl', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe');
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1')], 10);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const prev = [frame!.style.width, frame!.style.height];
+    try {
+      frame!.style.width = '480px';
+      frame!.style.height = '640px';
+      await new Promise<void>(r => requestAnimationFrame(() => r()));
+      expect(el.querySelector('.header h1')!.getBoundingClientRect().height).toBeLessThanOrEqual(1);
+      expect(getComputedStyle(el.querySelector('.count .low-help')!).display).not.toBe('none');
+      frame!.style.height = '900px';
+      await new Promise<void>(r => requestAnimationFrame(() => r()));
+      expect(el.querySelector('.header h1')!.getBoundingClientRect().height).toBeGreaterThan(10);
+      expect(getComputedStyle(el.querySelector('.count .low-help')!).display).toBe('none');
+    } finally {
+      [frame!.style.width, frame!.style.height] = prev;
+    }
+    http.verify();
+  });
+
   /** d2-t-calendar-filter-mobile: am Handy EINE Filterzeile; Zeitraum und Umkreis im Filterfeld, ihre Werte als Chips. */
   it('zeigt am Handy Zeitraum und Umkreis als Chips und legt die Felder ins Filterfeld', async () => {
     await setup();

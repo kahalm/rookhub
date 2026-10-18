@@ -177,7 +177,7 @@ describe('EbookListComponent', () => {
   // ── UI-Sweep c1 ─────────────────────────────────────────────────────────────────────────────
 
   /** Echte Darstellung (Vorlage + Übersetzungs-Pipe) statt nur der Klasse. */
-  function render(items: Ebook[], over: Partial<EbookList> = {}, state: Record<string, unknown> | null = null) {
+  function render(items: Ebook[], over: Partial<EbookList> = {}, state: Record<string, unknown> | null = null, loggedIn?: boolean) {
     if (state) sessionStorage.setItem('rh.ebooks.listState', JSON.stringify(state));
     service = jasmine.createSpyObj<EbookService>('EbookService', ['list', 'accessToken', 'coverUrl', 'fileUrl', 'groupOptions']);
     service.list.and.returnValue(of(list(items, over)));
@@ -193,6 +193,7 @@ describe('EbookListComponent', () => {
         { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of(null) }) } },
         { provide: SnackbarService, useValue: { warn: () => {}, success: () => {}, quick: () => {}, info: () => {} } },
         { provide: ConfirmService, useValue: { ask: () => of(true) } },
+        ...(loggedIn === undefined ? [] : [{ provide: AuthService, useValue: { isLoggedIn: loggedIn } }]),
       ],
     });
     const fixture = TestBed.createComponent(EbookListComponent);
@@ -366,7 +367,7 @@ describe('EbookListComponent', () => {
   it('c2-eb-sort-select-truncated: Sortierung so breit wie ihre Voreinstellung, Suchfeld höchstens 640 px (am Handy frei)', () => {
     const css = compactCss(EbookListComponent);
     expect(css).toMatch(/\.eb-sort(\[[^\]]*\])?\{flex:00320px;max-width:100%/);
-    expect(css).toMatch(/\.eb-search(\[[^\]]*\])?\{flex:11240px;max-width:640px/);
+    expect(css).toMatch(/\.eb-search(\[[^\]]*\])?\{flex:11360px;max-width:640px/);   // Basis 360 px seit d3 (Tablet)
     const mobile = css.slice(css.indexOf('@media(max-width:599.98px)'));
     expect(mobile).toMatch(/\.eb-search(\[[^\]]*\])?\{flex:110;min-width:0;max-width:none/);
   });
@@ -394,5 +395,42 @@ describe('EbookListComponent', () => {
     expect(ebookAuthorNames('Lev Alburt, Sam Palatnik')).toEqual(['Lev Alburt', 'Sam Palatnik']);
     expect(ebookAuthorNames('Reinfeld & Chernev')).toEqual(['Reinfeld', 'Chernev']);
     expect(ebookAuthorNames('')).toEqual([]);
+  });
+
+  // ── Design-Runde d3 ─────────────────────────────────────────────────────────────────────────
+  it('d3-rk-ebooks-anon-vorlauf-zu-lang: ohne Anmeldung kein Einleitungssatz über dem Regal (Banner + ⓘ am Titel), angemeldet unverändert', () => {
+    const anon = render([book()], {}, null, false);
+    let el: HTMLElement = anon.nativeElement;
+    expect(el.querySelector('.intro')).toBeNull();
+    expect(el.querySelector('.eb-anon')).not.toBeNull();
+    const hint = el.querySelector<HTMLElement>('h1 app-help-hint.eb-title-hint')!;
+    expect(el.querySelector('.eb-page')!.classList).toContain('eb-page--anon');
+    expect(getComputedStyle(hint).display).not.toBe('none');   // im Flex-Titel wird inline-flex zu flex
+    anon.destroy();
+
+    const user = render([book()], {}, null, true);
+    el = user.nativeElement;
+    expect(el.querySelector('.intro')).not.toBeNull();
+    expect(el.querySelector('.eb-anon')).toBeNull();
+    expect(el.querySelector('.eb-page')!.classList).not.toContain('eb-page--anon');
+    if (window.innerWidth >= 600) expect(getComputedStyle(el.querySelector('h1 .eb-title-hint')!).display).toBe('none');
+    user.destroy();
+  });
+
+  it('d3-rk-ebooks-suchfeld-platzhalter-abgeschnitten: Suchfeld mit Basis 360 px — am Tablet bricht der Rest um, statt die Suche zu drücken', () => {
+    const css = compactCss(EbookListComponent);
+    const base = css.slice(0, css.indexOf('@media(max-width:599.98px)'));
+    expect(base).toMatch(/\.eb-search(\[[^\]]*\])?\{flex:11360px;max-width:640px/);
+    expect(base).toMatch(/\.eb-sort(\[[^\]]*\])?\{flex:00320px/);
+    // Nachgestellt bei 820 px (788 px Inhalt): Suche + Sortierung in Zeile 1, Suche ≥ 440 px breit.
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;width:788px';
+    row.innerHTML = '<div style="flex:1 1 360px;max-width:640px"></div><div style="flex:0 0 320px"></div><div style="flex:none;width:150px"></div>';
+    document.body.appendChild(row);
+    const [search, sort, mine] = Array.from(row.children) as HTMLElement[];
+    expect(search.getBoundingClientRect().width).toBeGreaterThanOrEqual(440);
+    expect(sort.getBoundingClientRect().top).toBe(search.getBoundingClientRect().top);
+    expect(mine.getBoundingClientRect().top).toBeGreaterThan(search.getBoundingClientRect().top);
+    row.remove();
   });
 });

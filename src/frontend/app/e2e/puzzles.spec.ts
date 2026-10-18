@@ -40,8 +40,8 @@ test.describe('Puzzles', () => {
 
     // Reset und Mouseslip kommen erst nach dem ersten Zug dazu.
     const card = statusCard(page);
-    await expect(card.getByRole('button', { name: /Show Eval/ })).toBeVisible({ timeout: 15_000 });
-    await expect(card.getByRole('button', { name: /Give Up/ })).toBeVisible();
+    await expect(card.getByRole('button', { name: /Show eval/i })).toBeVisible({ timeout: 15_000 });
+    await expect(card.getByRole('button', { name: /Give up/i })).toBeVisible();
   });
 
   test('endless mode starts after clicking start button', async ({ page }) => {

@@ -447,7 +447,8 @@ export class DashboardComponent implements OnInit {
       buttons: [{ labelKey: 'dashboard.analysis.open', link: '/analysis' }],
     },
     guess: {
-      id: 'guess', icon: 'sports_esports', titleKey: 'dashboard.guess.title',
+      // d3-rk-punktepartie-benennung: Zielscheibe wie das Menü (🎯) — sports_esports trägt schon die Kachel „Partien“.
+      id: 'guess', icon: 'track_changes', titleKey: 'dashboard.guess.title',
       eligible: () => this.menuKeys.has('guess'),
       subtitle: () => ({ key: 'dashboard.guess.subtitle' }),
       buttons: [{ labelKey: 'dashboard.guess.open', link: '/guess' }],

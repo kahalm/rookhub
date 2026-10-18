@@ -6,6 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { StatsComponent } from './stats.component';
+import { setEinkActive } from '../../core/eink';
 
 describe('StatsComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -383,5 +384,34 @@ describe('StatsComponent b1', () => {
     c.heatmap = [[{ date: 'd', count: 1, level: 1 }]];
     fixture.detectChanges();
     expect(getComputedStyle(el.querySelector('.hm-cell')!).width).toBe('17px');   // Karma 1 400 px
+  });
+});
+
+// d3-rk-eink-aktivitaet-heatmap-hellgrau (DESIGN 3.6): im E-Ink-Modus Stufen als Helligkeitstreppe mit Rahmen, nicht als
+// Grüntöne bzw. 10-%-Grau; Elo-Linie schwarz.
+describe('StatsComponent E-Ink (d3)', () => {
+  afterEach(() => setEinkActive(false));
+
+  it('Aktivität: leerer Tag weiß umrandet, Stufen 1–4 grau bis schwarz; Elo-Linie schwarz', () => {
+    TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(StatsComponent);
+    fixture.detectChanges();
+    const c = fixture.componentInstance as StatsComponent & { loading: boolean };
+    c.loading = false;
+    c.stats = { totalAttempts: 3, solved: 2, accuracy: 66, currentStreak: 1, bestStreak: 2, puzzleElo: 1510 } as never;
+    c.heatmap = [[0, 1, 2, 3, 4].map(level => ({ date: 'd' + level, count: level, level }))];
+    fixture.detectChanges();
+    const cells = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.hm-cell'));
+    expect(getComputedStyle(cells[1]).backgroundColor).toBe('rgb(198, 228, 139)');   // ohne Modus: Grün
+    setEinkActive(true);
+    const bg = cells.map(el => getComputedStyle(el).backgroundColor);
+    expect(bg).toEqual(['rgb(255, 255, 255)', 'rgb(163, 163, 163)', 'rgb(107, 107, 107)', 'rgb(51, 51, 51)', 'rgb(0, 0, 0)']);
+    for (const el of cells) expect(getComputedStyle(el).borderTopColor).toBe('rgb(0, 0, 0)');
+    const css = ((StatsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/html\.eink[^{]*\.elo-line[^{]*\{ ?stroke: #000/);
   });
 });

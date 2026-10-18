@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { FlashcardsComponent } from './flashcards.component';
@@ -79,14 +79,14 @@ describe('FlashcardsComponent', () => {
     const c = fixture.componentInstance;
     expect(c.cards.length).toBe(3);
     expect(c.sheets.length).toBe(1);
-    expect(c.sheets[0].fronts.map(f => f?.heading)).toEqual(['#1', '#3', '#5', undefined as never]);
+    expect(c.sheets[0].fronts.map(f => f?.lineNo)).toEqual([1, 3, 5, undefined as never]);
   });
 
   it('Rückseiten-Blatt ist je Zeile spaltenvertauscht (Duplex an der langen Kante)', () => {
     const fixture = make([puzzle(1), puzzle(2), puzzle(3), puzzle(4)], {});
     const s = fixture.componentInstance.sheets[0];
-    expect(s.fronts.map(f => f?.heading)).toEqual(['#1', '#2', '#3', '#4']);
-    expect(s.backs.map(b => b?.heading)).toEqual(['#2', '#1', '#4', '#3']);
+    expect(s.fronts.map(f => f?.lineNo)).toEqual([1, 2, 3, 4]);
+    expect(s.backs.map(b => b?.lineNo)).toEqual([2, 1, 4, 3]);
   });
 
   it('marked=1 zeigt nur die persistent markierten Linien (schlägt lines/chapter)', () => {
@@ -97,7 +97,7 @@ describe('FlashcardsComponent', () => {
     );
     const c = fixture.componentInstance;
     expect(c.markedOnly).toBeTrue();
-    expect(c.cards.map(x => x.heading)).toEqual(['#2']);
+    expect(c.cards.map(x => x.lineNo)).toEqual([2]);
   });
 
   it('marked=1 ohne Markierungen → leerer Stapel (eigener Leertext)', () => {
@@ -132,10 +132,10 @@ describe('FlashcardsComponent', () => {
     const fixture = make([
       puzzle(1, { chapter: 'A' }), puzzle(2, { chapter: 'B' }), puzzle(3),
     ], { chapter: 'A' });
-    expect(fixture.componentInstance.cards.map(c => c.heading)).toEqual(['#1']);
+    expect(fixture.componentInstance.cards.map(c => c.lineNo)).toEqual([1]);
 
     const fixture2 = make([puzzle(1, { chapter: 'A' }), puzzle(2)], { chapter: '' });
-    expect(fixture2.componentInstance.cards.map(c => c.heading)).toEqual(['#2']);
+    expect(fixture2.componentInstance.cards.map(c => c.lineNo)).toEqual([2]);
   });
 
   it('rendert die Bretter als druckfestes SVG (Figuren als <image>, kein CSS-Hintergrund)', () => {
@@ -188,15 +188,15 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
     const fixture = make([puzzle(1), puzzle(2), puzzle(3)], {});
     const c = fixture.componentInstance;
     expect(c.view).toBe('digital');
-    expect(c.current!.heading).toBe('#1');
+    expect(c.current!.lineNo).toBe(1);
 
     c.flip();
     expect(c.flipped).toBeTrue();
     c.next();                                   // Weiterblättern dreht zurück auf die Vorderseite
     expect(c.flipped).toBeFalse();
-    expect(c.current!.heading).toBe('#2');
+    expect(c.current!.lineNo).toBe(2);
     c.prev(); c.prev();
-    expect(c.current!.heading).toBe('#3');      // zyklisch
+    expect(c.current!.lineNo).toBe(3);      // zyklisch
   });
 
   it('Flip ist animiert: beide Seiten gleichzeitig im DOM, Blättern schnappt ohne Animation zurück', () => {
@@ -272,13 +272,13 @@ describe('FlashcardsComponent digitale Lern-Ansicht', () => {
     const fixture = make([puzzle(1), puzzle(2)], {});
     const c = fixture.componentInstance;
     c.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(c.current!.heading).toBe('#2');
+    expect(c.current!.lineNo).toBe(2);
     c.onKey(new KeyboardEvent('keydown', { key: ' ' }));
     expect(c.flipped).toBeTrue();
 
     c.view = 'print';
     c.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(c.current!.heading).toBe('#2');      // unverändert
+    expect(c.current!.lineNo).toBe(2);      // unverändert
   });
 
   it('rendert die Druck-Blätter auch im Digital-Modus (nur am Schirm versteckt) — Drucken klappt immer', () => {
@@ -430,5 +430,14 @@ describe('FlashcardsComponent 3D-Flip (WebKit)', () => {
     } finally {
       el.remove();
     }
+  });
+  it('Karte ohne Titel heißt „Line 3“ wie in der Linienliste, nicht „#3“ (d3-rk-flashcards-karte-titel-nummer)', () => {
+    const fixture = make([puzzle(3, { title: '' })], {});
+    TestBed.inject(TranslateService).setTranslation('en', { repertoire: { lines: { lineN: 'Line {{n}}' } } }, true);
+    TestBed.inject(TranslateService).use('en');
+    fixture.detectChanges();
+    const heads = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.fc-heading')).map(h => h.textContent!.trim());
+    expect(heads.length).toBeGreaterThan(0);
+    expect(heads.every(h => h === 'Line 3')).toBeTrue();
   });
 });

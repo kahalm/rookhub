@@ -327,11 +327,12 @@
                   }
                   @if (isLoggedIn && onSolutionPath && hasHints && hintLevel > 0) {
                     <!-- b1-rk-puzzle-dumme-tipps-knopf: „Tipp melden“ leise, aber nicht gedimmt; am Handy nur das Fähnchen. -->
+                    <!-- d3-rk-flaggen-symbol-doppelt: Daumen statt Fähnchen — die Flagge gehört „Aufgeben“; Name per appIconLabel
+                         (Tooltip + aria-label, am Handy steht nur das Symbol). -->
                     <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                             [disabled]="flagSaving" (click)="toggleHintsFlag()"
-                            [attr.title]="'puzzles.hints.flagTitle' | translate"
-                            [attr.aria-label]="(puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate">
-                      <mat-icon>{{ puzzle?.hintsFlagged ? 'flag' : 'outlined_flag' }}</mat-icon>
+                            [appIconLabel]="(puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flagTitle') | translate">
+                      <mat-icon>{{ puzzle?.hintsFlagged ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
                       <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}</span>
                     </button>
                   }
@@ -437,15 +438,9 @@
 
               <mat-card class="stats-card">
                 <mat-card-content>
+                  <!-- d3-rk-endless-doppelte-kennzahlen: Rating, Level und Leben stehen schon in den Quick-Stats über der
+                       Status-Karte — hier nur, was dort fehlt (Gelöst, Sitzungszeit). -->
                   <div class="stats-grid">
-                    <div class="stat">
-                      <span class="stat-value">{{ currentRating }}</span>
-                      <span class="stat-label">{{ 'endless.game.statRating' | translate }}</span>
-                    </div>
-                    <div class="stat">
-                      <span class="stat-value">{{ level }}</span>
-                      <span class="stat-label">{{ 'endless.game.statLevel' | translate }}</span>
-                    </div>
                     <div class="stat">
                       <span class="stat-value">{{ solved }}</span>
                       <span class="stat-label">{{ 'endless.game.statSolved' | translate }}</span>
@@ -454,13 +449,6 @@
                       <span class="stat-value">{{ formatTime(sessionSeconds) }}</span>
                       <span class="stat-label">{{ 'endless.game.statTime' | translate }}</span>
                     </div>
-                  </div>
-                  <div class="lives-display" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: lives, max: 3 }">
-                    @for (i of [1,2,3]; track i) {
-                      <mat-icon [class]="i <= lives ? 'heart full' : 'heart empty'">
-                        {{ i <= lives ? 'favorite' : 'favorite_border' }}
-                      </mat-icon>
-                    }
                   </div>
                   <!-- b1-rk-endless-phase-jargon: keine interne Zählung „Phase 1 (Schritt 63)“ mehr (DESIGN 2.7). -->
                   <div class="depth-control">

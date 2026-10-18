@@ -159,4 +159,15 @@ describe('heatmapWeeksFor', () => {
     expect(heatmapWeeksFor(390)).toBe(27);
     expect(buildHeatmap([], new Date(2026, 9, 11), heatmapWeeksFor(1920)).length).toBe(53);
   });
+
+  // UI-Sweep d3 (d3-rk-stats-aktivitaet-raster-halbleer): am Tablet füllt das Raster die Karte statt der halben.
+  it('füllt am Tablet die Kartenbreite (820 → 49, 600 → 35), Raster passt hinein', () => {
+    expect(heatmapWeeksFor(820)).toBe(49);
+    expect(heatmapWeeksFor(600)).toBe(35);
+    expect(heatmapWeeksFor(1023)).toBe(53);
+    expect(heatmapWeeksFor(599)).toBe(27);
+    for (const w of [600, 700, 820, 900, 1000]) {
+      expect(heatmapWeeksFor(w) * 15 - 3).withContext(`${w}`).toBeLessThanOrEqual(w - 72);
+    }
+  });
 });

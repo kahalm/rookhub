@@ -69,6 +69,33 @@ public class EbookLibraryImporterTests : IDisposable
         Assert.Equal(["epub", "pdf"], (await _kit.Db.EbookFiles.Where(f => f.EbookId == kotov.Id).Select(f => f.Format).ToListAsync()).Order());
     }
 
+    // d3-rk-reader-titel-ohne-ellipse: Punkte im Namen kosteten Titelende, Autor und Jahr; „Gemeinfrei“ war der Autor.
+    [Fact]
+    public async Task Import_CollectionFolderWithDotsInName_KeepsTitle_TakesAuthorFromSubfolder_AndYear()
+    {
+        var admin = await _kit.UserAsync("admin", admin: true);
+        Put("Gemeinfrei/V. M. N. Portilla/Chess Problems [V. M. N. Portilla, 1890].pdf", "pdf");
+        Put("Gemeinfrei/Georg Marco, Carl Schlechter/Karlsbad 1907 [Georg Marco, Carl Schlechter, 1907].pdf", "pdf");
+        Put("Gemeinfrei/(Turnierbuch)/St. Petersburg 1914 [(Turnierbuch), 1914].pdf", "pdf");
+        Put("Nimzowitsch, Aron/My System 2. Ed.pdf", "pdf");
+
+        await Importer.ImportAsync(admin.Id);
+
+        var books = await _kit.Db.Ebooks.ToListAsync();
+        var portilla = books.Single(b => b.Title == "Chess Problems");
+        Assert.Equal("V. M. N. Portilla", portilla.Author);
+        Assert.Equal(1890, portilla.Year);
+        var karlsbad = books.Single(b => b.Title == "Karlsbad 1907");
+        Assert.Equal("Georg Marco, Carl Schlechter", karlsbad.Author);   // im Sammelordner wörtlich, nicht umgestellt
+        Assert.Equal(1907, karlsbad.Year);
+        var spb = books.Single(b => b.Title == "St. Petersburg 1914");
+        Assert.Equal(string.Empty, spb.Author);
+        var nimzo = books.Single(b => b.Author == "Aron Nimzowitsch");
+        Assert.Equal("My System 2. Ed", nimzo.Title);   // Punkt im Namen bleibt
+        Assert.Null(nimzo.Year);
+        Assert.DoesNotContain(books, b => b.Author == "Gemeinfrei");
+    }
+
     [Fact]
     public async Task Import_WithoutLibraryRoot_ReportsNotConfigured()
     {

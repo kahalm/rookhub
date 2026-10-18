@@ -71,7 +71,7 @@
           <div class="fc-flip" [class.fc-flip--flipped]="flipped" [class.fc-flip--noanim]="flipSnap">
             <div class="fc-flip-face fc-flip-front" [attr.aria-hidden]="flipped">
               <div class="fc-card-head">
-                <span class="fc-heading">{{ card.heading }}</span>
+                <span class="fc-heading">{{ card.heading || ('repertoire.lines.lineN' | translate: { n: card.lineNo }) }}</span>
                 @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
               </div>
               <app-flashcard-board class="fc-study-board"
@@ -84,7 +84,7 @@
             </div>
             <div class="fc-flip-face fc-flip-back" [attr.aria-hidden]="!flipped">
               <div class="fc-card-head">
-                <span class="fc-heading">{{ card.heading }}</span>
+                <span class="fc-heading">{{ card.heading || ('repertoire.lines.lineN' | translate: { n: card.lineNo }) }}</span>
                 @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
               </div>
               <div class="fc-study-back">
@@ -119,7 +119,7 @@
           <div class="fc-card fc-card--front">
             @if (card) {
               <div class="fc-card-head">
-                <span class="fc-heading">{{ card.heading }}</span>
+                <span class="fc-heading">{{ card.heading || ('repertoire.lines.lineN' | translate: { n: card.lineNo }) }}</span>
                 @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
               </div>
               <app-flashcard-board class="fc-board"
@@ -138,7 +138,7 @@
           <div class="fc-card fc-card--back">
             @if (card) {
               <div class="fc-card-head">
-                <span class="fc-heading">{{ card.heading }}</span>
+                <span class="fc-heading">{{ card.heading || ('repertoire.lines.lineN' | translate: { n: card.lineNo }) }}</span>
                 @if (card.chapter) { <span class="fc-chapter">{{ card.chapter }}</span> }
               </div>
               @if (card.notation) {

@@ -555,7 +555,7 @@
       "by": "bởi {{name}}"
     },
     "reimport": {
-      "chip": "Lấy lại",
+      "chip": "Bản nhập cũ",
       "legend": "{{count}} khóa học cần nhập lại qua RepCheck",
       "legendOne": "1 khóa học cần nhập lại qua RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Hiển thị thẻ",
       "hideTags": "Ẩn thẻ",
       "sharePuzzle": "Chia sẻ bài tập",
-      "statRating": "Xếp hạng",
-      "statLevel": "Cấp",
       "statSolved": "Đã giải",
       "statTime": "Thời gian",
       "phaseLabel": "Giai đoạn {{phase}} (bước {{step}})"

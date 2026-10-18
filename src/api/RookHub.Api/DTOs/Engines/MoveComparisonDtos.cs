@@ -28,8 +28,10 @@ public record MoveComparisonCandidateDto(
     string Uci, string San, string State, int Depth, string? EvalText, bool IsBest,
     IReadOnlyList<MoveComparisonReplyDto> Replies, IReadOnlyList<MoveComparisonTestDto> Tests, string? Explanation);
 
-/// <summary>Bewertungen immer aus WEISS-Sicht wie auf dem Analysebrett (<c>+0.35</c>, <c>#3</c>, <c>#-2</c>);
-/// Kandidaten nach Stärke für die Seite am Zug, der beste zuerst (noch nicht gerechnete hinten).</summary>
+/// <summary>Bewertungen immer aus Sicht der Seite am Zug in <see cref="Fen"/> (<see cref="WhiteToMove"/>) — auch die der
+/// Antworten und Erwiderungen, also dieselbe Sicht wie die Begründung (<c>+0.35</c> = gut für sie, <c>#3</c> sie setzt
+/// matt, <c>#-2</c> sie wird matt; d3, vorher Weiß-Sicht). Kandidaten nach Stärke, der beste zuerst (noch nicht
+/// gerechnete hinten).</summary>
 public record MoveComparisonDto(
     int Id, string Fen, string? Title, int Depth, string Status, string? Error, bool WhiteToMove, string? BestUci,
     string Language, bool ExplanationsAvailable, int Pending, int Total, DateTime CreatedAt, DateTime? FinishedAt,

@@ -95,8 +95,8 @@ function parentDetails(doc: Document, labelClass: string): HTMLDetailsElement {
  * nichts fuer Kinder. Sie kommt wie beim Datenschutz in ein zugeklapptes `<details class="kid-parent">` „Fuer Eltern".
  * a1-k-deletion-fachjargon: ebenso die Anleitung ueber dem Knopf (erstes `h2` „So loeschst du dein Konto" samt Absatz,
  * `p.backup` und `p.backup-links` — ☰ → Konto → Profil, PGN, Repertoires) in ein zweites Eltern-Aufklapp „so wird das
- * Konto geloescht"; der Kindersatz (`p.kid-short`) steht jetzt direkt unter der Einleitung, der Knopf (`p.action`)
- * bleibt sichtbar. Die geteilte Komponente bleibt unberuehrt; verschoben werden nur die von Angular gezeichneten
+ * Konto geloescht". d3-k-delete-button-before-info: der Kindersatz (`p.kid-short`) steht unter „Was entfernt wird" vor
+ * dessen Eltern-Aufklapper, der Knopf (`p.action`) bleibt sichtbar, steht aber hinter „Was anonym erhalten bleibt". Die geteilte Komponente bleibt unberuehrt; verschoben werden nur die von Angular gezeichneten
  * Elemente (ihre Bindungen bleiben). Gibt zurueck, ob umgebaut wurde.
  */
 export function foldAccountDeletion(root: ParentNode, texts: KidDeletionTexts): boolean {
@@ -118,8 +118,6 @@ export function foldAccountDeletion(root: ParentNode, texts: KidDeletionTexts): 
   }
   const short = doc.createElement('p');
   short.className = 'kid-short';
-  const intro = children.find(el => el.tagName === 'P' && (!howHead || children.indexOf(el) < children.indexOf(howHead)));
-  if (intro) intro.after(short); else content.prepend(short);
   if (how.length > 0) {
     const howDetails = parentDetails(doc, 'kid-parent-howto-label');
     how[0].before(howDetails);
@@ -129,8 +127,27 @@ export function foldAccountDeletion(root: ParentNode, texts: KidDeletionTexts): 
   const details = parentDetails(doc, 'kid-parent-label');
   list.before(details);
   details.append(list);
+  // d3-k-delete-button-before-info: der Kindersatz („Alles von dir wird gelöscht …") gehört zu „Was entfernt wird" — er
+  // steht jetzt unter dieser Überschrift, vor dem Eltern-Aufklapper (vorher oben unter der Einleitung, die Überschrift
+  // hatte keinen sichtbaren Inhalt). Der Knopf rückt hinter „Was anonym erhalten bleibt": erst was verloren geht, dann
+  // die Aktion (vorher stand er vor der Erklärung, die Überschrift klebte an ihm).
+  details.before(short);
+  const action = content.querySelector(':scope > p.action');
+  if (action) {
+    const keptHead = nextHeading(details);
+    const anchor = (keptHead && nextHeading(keptHead)) ?? content.querySelector(':scope > p.back');
+    if (anchor) anchor.before(action); else content.append(action);
+  }
   setAccountDeletionTexts(root, texts);
   return true;
+}
+
+/** Nächstes Geschwister, das eine `h2` oder der Rücklink (`p.back`) ist — Grenze eines Abschnitts. */
+function nextHeading(from: Element): Element | null {
+  for (let n = from.nextElementSibling; n; n = n.nextElementSibling) {
+    if (n.tagName === 'H2' || n.classList.contains('back')) return n.tagName === 'H2' ? n : null;
+  }
+  return null;
 }
 
 /** Setzt die Kindertexte neu (Sprachwechsel); ohne umgebaute Seite passiert nichts. */
@@ -184,6 +201,8 @@ export const KID_PRIVACY_STYLES = `
   :host ::ng-deep app-account-deletion mat-card-content h2 { font-size: 1.05rem; font-weight: 800; color: var(--kid-title); }
   :host ::ng-deep app-account-deletion mat-card-content a:not(.mat-mdc-button-base) { color: var(--kid-title); font-weight: 700; }
   :host ::ng-deep app-account-deletion .kid-short { font-size: 17px; }
+  /* d3-k-delete-button-before-info: der Knopf steht nach „Was anonym erhalten bleibt" — mit Luft nach oben und unten. */
+  :host ::ng-deep app-account-deletion .action { margin: 24px 0 8px; }
   :host ::ng-deep app-account-deletion :is(.kid-parent-label, .kid-parent-howto-label) { font-weight: 700; color: var(--kid-title); }
   /* a1-k-deletion-fachjargon: Ueberschrift der zugeklappten Anleitung nicht so gross wie ein Abschnittskopf. */
   :host ::ng-deep app-account-deletion details.kid-parent > h2 { margin-top: 8px; }

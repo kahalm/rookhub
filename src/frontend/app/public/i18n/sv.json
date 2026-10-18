@@ -555,7 +555,7 @@
       "by": "av {{name}}"
     },
     "reimport": {
-      "chip": "Hämta igen",
+      "chip": "Föråldrad import",
       "legend": "{{count}} kurser behöver importeras igen via RepCheck",
       "legendOne": "1 kurs behöver importeras igen via RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Visa taggar",
       "hideTags": "Dölj taggar",
       "sharePuzzle": "Dela uppgift",
-      "statRating": "Betyg",
-      "statLevel": "Nivå",
       "statSolved": "Lösta",
       "statTime": "Tid",
       "phaseLabel": "Fas {{phase}} (steg {{step}})"

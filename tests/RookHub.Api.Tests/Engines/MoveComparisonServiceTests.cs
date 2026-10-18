@@ -239,6 +239,48 @@ public class MoveComparisonServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SchwarzAmZug_BewertungenAusSichtDerSeiteAmZug_wieDieBegruendung()
+    {
+        // d3-rk-vergleich-vorzeichen-widerspruch: Schwarz am Zug — der beste Zug stand als „-0.45" da, die Begründung
+        // sprach von „+0.45". Jetzt zeigt die ganze Seite die Sicht von Schwarz.
+        var u = await UserWithEngineAsync();
+        const string afterE4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+        var dto = await CreateAsync(u, afterE4, "d7d5", "g8f6");
+        var d5Fen = MoveComparisonService.PlayUci(afterE4, "d7d5")!;
+        // Broker-Zeilen kommen in Weiß-Sicht: -45 = Schwarz steht 0,45 besser
+        await FinishJobAsync(d5Fen, Pvs((-45, "e4d5 d8d5")));
+        await FinishJobAsync(MoveComparisonService.PlayUci(afterE4, "g8f6")!, Pvs((-20, "e4e5 f6d5"), (-35, "b1c3 d7d5")));
+        await _svc.PumpOneAsync(dto.Id);
+        foreach (var job in await _db.AnalysisJobs.ToListAsync())
+            await FinishJobAsync(job.Fen, Pvs((-30, "d5d4 c2c3")));   // nach 1...d5 und der Antwort zieht wieder Schwarz
+        await _svc.PumpOneAsync(dto.Id);
+
+        var done = (await _svc.GetAsync(u, dto.Id))!;
+        Assert.False(done.WhiteToMove);
+        var best = done.Candidates[0];
+        Assert.Equal("d5", best.San);
+        Assert.True(best.IsBest);
+        Assert.Equal("+0.45", best.EvalText);
+        Assert.Equal("+0.45", best.Replies[0].EvalText);
+        var weak = done.Candidates[1];
+        Assert.Equal("+0.20", weak.EvalText);
+        Assert.Equal(new[] { "+0.20", "+0.35" }, weak.Replies.Select(r => r.EvalText));
+        Assert.All(weak.Tests.Where(t => t.State == "done"), t => Assert.Equal("+0.30", t.EvalText));
+        Assert.Contains(weak.Tests, t => t.State == "done");
+    }
+
+    [Fact]
+    public void ShownText_MattUndBauern_ausSichtDerSeiteAmZug()
+    {
+        Assert.Equal("#3", MoveComparisonService.ShownText(new MoveComparisonService.Ev(0, null, -3, false), moverWhite: false));
+        Assert.Equal("#-2", MoveComparisonService.ShownText(new MoveComparisonService.Ev(0, null, 2, false), moverWhite: false));
+        Assert.Equal("-1.50", MoveComparisonService.ShownText(new MoveComparisonService.Ev(150, 150, null, false), moverWhite: false));
+        Assert.Equal("+1.50", MoveComparisonService.ShownText(new MoveComparisonService.Ev(150, 150, null, false), moverWhite: true));
+        Assert.Equal("#0", MoveComparisonService.ShownText(new MoveComparisonService.Ev(-100_000, null, null, true), moverWhite: false));
+        Assert.Null(MoveComparisonService.ShownText(null, moverWhite: true));
+    }
+
+    [Fact]
     public async Task Begruendung_nutztDieFakten_undVerwirftFremdeZuege()
     {
         var u = await UserWithEngineAsync();

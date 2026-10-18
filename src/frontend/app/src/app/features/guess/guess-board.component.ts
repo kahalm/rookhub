@@ -63,7 +63,10 @@ interface HistoryRow {
             <h1>{{ session.title || ('guess.untitled' | translate) }}</h1>
             <p class="muted small">
               {{ (session.guessWhite ? 'guess.playingWhite' : 'guess.playingBlack') | translate }}
-              · {{ 'guess.score' | translate:{ points: session.points, max: session.maxPoints } }}
+              <!-- d3-rk-punktepartie-null-von-null: vor dem ersten Zug kein „0 von 0 Punkten“ (DESIGN 5.10). -->
+              @if (session.maxPoints > 0) {
+                · {{ 'guess.score' | translate:{ points: session.points, max: session.maxPoints } }}
+              }
               @if (session.movesPlayed > 0) {
                 · {{ 'guess.hits' | translate:{ hits: session.gameMoveHits, moves: session.movesPlayed } }}
               }

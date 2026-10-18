@@ -78,15 +78,26 @@ h2 {
 a.group-link { text-decoration: underline; }
 span.group-link { color: inherit; }
 
-/* Die Spieltermine einer Liga sind elf Angaben — als Reihe umbrechender Marken lesbar,
-   untereinander gestapelt nicht. */
+/* Die Spieltermine einer Liga sind elf Angaben — als umbrechende Reihe lesbar, untereinander gestapelt nicht.
+   d3-t-detail-spieltermine-ohne-trenner: Laufnummer und Datum bestehen beide aus Punkten und Kommas — ohne Trenner
+   verschwamm, wo ein Termin endet. Jetzt „ · " ab dem zweiten Termin (DESIGN 5.13), absolut mitten in der 14-px-Lücke;
+   overflow-x: clip schneidet ihn am Anfang einer umgebrochenen Zeile ab (Muster ClubHub .kid-meta, 8.5). */
 .play-dates {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 4px 14px;
+  overflow-x: clip;
 }
 
 .play-date { white-space: nowrap; }
+.play-date + .play-date { position: relative; }
+.play-date + .play-date::before {
+  content: '·';
+  position: absolute;
+  right: 100%;
+  margin-right: 5px;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
 
 .sources {
   display: flex;
@@ -129,6 +140,10 @@ span.group-link { color: inherit; }
 }
 
 .hint.warn { color: var(--mat-sys-error); }
+
+/* d3-t-detail-ortshinweis-ohne-abstand: der Hinweis klebte 3 px über der Kartenkachel (darüber 24 px). Die h2 bringt
+   12 px mit — jetzt 12 px darüber, 8 px darunter. */
+.map-card .hint { margin: 0 0 8px; }
 
 .muted { color: var(--mat-sys-on-surface-variant); }
 

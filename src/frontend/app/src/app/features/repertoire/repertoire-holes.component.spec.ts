@@ -239,4 +239,30 @@ describe('RepertoireHolesComponent', () => {
     // Tippziel ≥ 44 px (DESIGN.md 2, Grundsatz 5) — die alte Roh-Eingabe war ≈ 22 px hoch.
     expect(field.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
   });
+  // d3-rk-holes-kapitel-mit-schwarz-label
+  it('Seitenanzeige steht als eigener Chip oben, Quelle und Datenbank tragen sichtbare Zeilenbeschriftungen', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireHolesComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireExplorerService, useValue: { run: () => of(result()), sources: () => of(WITH_LOCAL) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireHolesComponent);
+    fixture.componentRef.setInput('repertoireId', 5);
+    fixture.componentRef.setInput('games', games(PGN_BLACK));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    const chip = el.querySelector('.side-chip')!;
+    expect(chip.textContent!.trim()).toBe('repertoire.holes.asBlack');
+    // Der Chip teilt seine Zeile mit keinem Umschalter — er liest sich nicht mehr als dessen Beschriftung.
+    expect(chip.closest('.row')!.querySelector('mat-button-toggle-group')).toBeNull();
+    const groups = Array.from(el.querySelectorAll('mat-button-toggle-group'));
+    expect(groups.length).toBe(2);
+    const labels = groups.map(g => g.parentElement!.querySelector('.row-label')?.textContent!.trim());
+    expect(labels).toEqual(['repertoire.holes.source', 'repertoire.holes.database']);
+    expect(groups[1].textContent).toContain('repertoire.holes.dbLichess');
+    expect(groups[1].textContent).toContain('repertoire.holes.dbMasters');
+  });
 });

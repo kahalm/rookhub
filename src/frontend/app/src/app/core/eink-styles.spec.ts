@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { setEinkActive } from './eink';
+import { FlashcardBoardComponent } from '../features/courses/flashcards/flashcard-board.component';
 import { contrast, parseColor } from '../testing/contrast';
 
 /**
@@ -102,6 +103,72 @@ describe('_eink.scss (E-Ink-Modus)', () => {
     const zones = host.querySelectorAll('.pv-zone');
     expect(getComputedStyle(zones[0]).borderTopColor).toBe('rgba(0, 0, 0, 0)');
     expect(getComputedStyle(zones[1]).borderTopColor).toBe('rgba(0, 0, 0, 0)');
+  });
+
+  /** Komponentenregel nachstellen (gekapselte Regeln haben die Spezifität einer Klasse + Attribut). */
+  function componentStyle(css: string): void {
+    const st = document.createElement('style');
+    st.textContent = css;
+    document.head.appendChild(st);
+    cleanup.push(() => st.remove());
+  }
+
+  it('d3-rk-gate-banner-schliessen-blass: Snackbar-Aktion schwarz, fett, unterstrichen statt blassem Hellblau', () => {
+    componentStyle('.mat-mdc-snack-bar-action[x] { color: rgb(170, 199, 255); }');
+    const host = mount(`<div class="mat-mdc-snack-bar-container"><div class="mdc-snackbar__surface">
+      <div class="mat-mdc-snack-bar-label">Hinweis</div>
+      <div class="mdc-snackbar__actions"><button x class="mat-mdc-button mat-mdc-snack-bar-action">Schließen</button></div>
+      </div></div>`);
+    const action = host.querySelector('button')!;
+    expect(getComputedStyle(action).color).toBe('rgb(170, 199, 255)');
+    setEinkActive(true);
+    const cs = getComputedStyle(action);
+    expect(cs.color).toBe('rgb(0, 0, 0)');
+    expect(cs.fontWeight).toBe('700');
+    expect(cs.textDecorationLine).toBe('underline');
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--mat-snack-bar-button-color').trim()).toBe('#000');
+  });
+
+  it('d3-rk-eink-wahlkachel-haarlinie: Wahlkacheln mit dickem schwarzem Rahmen auf Weiß, auch beim Überfahren', () => {
+    componentStyle('.sm-choice[x] { border: 1px solid rgba(0, 0, 0, 0.18); background: rgba(0, 0, 0, 0.04); }');
+    const tile = mount('<button x class="sm-choice">Trainingsmodus</button>').firstElementChild as HTMLElement;
+    setEinkActive(true);
+    const cs = getComputedStyle(tile);
+    expect(cs.borderTopWidth).toBe('2px');
+    expect(cs.borderTopColor).toBe('rgb(0, 0, 0)');
+    expect(cs.backgroundColor).toBe('rgb(255, 255, 255)');
+  });
+
+  it('d3-rk-eink-sekundaertext-hellgrau: Zugrecht unter dem Puzzle-Brett in #333 statt doppelt abgeblasst', () => {
+    componentStyle(`.board-hint[x] { color: color-mix(in srgb, currentColor 60%, transparent); }
+      .board-hint-tomove[x] { color: color-mix(in srgb, currentColor 85%, transparent); }`);
+    const host = mount('<div x class="board-hint"><span x class="board-hint-tomove">Weiß am Zug</span></div>');
+    setEinkActive(true);
+    const tomove = getComputedStyle(host.querySelector('.board-hint-tomove')!);
+    expect(parseColor(tomove.color)).toEqual(parseColor('rgb(51, 51, 51)'));
+    expect(contrast(parseColor(tomove.color), parseColor('rgb(255, 255, 255)'))).toBeGreaterThanOrEqual(7);
+  });
+
+  @Component({ standalone: true, imports: [FlashcardBoardComponent],
+    template: '<app-flashcard-board fen="8/8/8/8/8/8/8/4K2k w - - 0 1" />' })
+  class BoardHost {}
+
+  it('d3-rk-eink-flashcards-brett-farbig: SVG-Brett (Lernkarte/Aufgabenblatt) weiß/grau statt Holzfarben, mit Rahmen', () => {
+    // Über einen Wirt: TestBed rendert die Komponente sonst in ein <div>, die Regeln hängen am Element app-flashcard-board.
+    const fixture = TestBed.configureTestingModule({ imports: [BoardHost] }).createComponent(BoardHost);
+    document.body.appendChild(fixture.nativeElement);
+    cleanup.push(() => { fixture.nativeElement.remove(); TestBed.resetTestingModule(); });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const light = el.querySelector('rect.fb-l') as SVGRectElement;
+    const dark = el.querySelector('rect.fb-d') as SVGRectElement;
+    expect(el.querySelectorAll('rect.fb-l').length).toBe(32);
+    expect(el.querySelectorAll('rect.fb-d').length).toBe(32);
+    expect(getComputedStyle(dark).fill).toBe('rgb(181, 136, 99)');   // ohne Modus: Holz (#b58863)
+    setEinkActive(true);
+    expect(getComputedStyle(light).fill).toBe('rgb(255, 255, 255)');
+    expect(getComputedStyle(dark).fill).toBe('rgb(163, 163, 163)');
+    expect(getComputedStyle(el.querySelector('svg')!).outlineWidth).toBe('2px');
   });
 
   @Component({ standalone: true, imports: [MatProgressSpinnerModule], template: '<mat-spinner diameter="40" />' })

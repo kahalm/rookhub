@@ -161,3 +161,57 @@ describe('WorksheetListComponent Meta-Zeile', () => {
     expect(date.height).toBeLessThan(parseFloat(getComputedStyle(parts[2]).fontSize) * 2);
   });
 });
+
+/** UI-Sweep d3 (d3-rk-ws-liste-meta-punkt-zeilenanfang, d3-rk-ws-liste-loeschen-direkt-sichtbar). */
+describe('WorksheetListComponent d3', () => {
+  async function render(width: string) {
+    TestBed.resetTestingModule();
+    const ask = jasmine.createSpy('ask').and.returnValue(of(false));
+    await TestBed.configureTestingModule({
+      imports: [WorksheetListComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: WorksheetService, useValue: { list: () => of([summary({ id: 3, name: 'Gabeln', updatedAt: '2026-10-11T10:00:00Z' })]) } },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+        { provide: ConfirmService, useValue: { ask } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(WorksheetListComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = width;
+    document.body.appendChild(host);
+    fixture.detectChanges();
+    return { fixture, host, ask };
+  }
+
+  it('der Trenner sitzt absolut in der Lücke und wird am Zeilenanfang abgeschnitten', async () => {
+    const { host, fixture } = await render('200px');
+    const sub = host.querySelector('.wl-sub') as HTMLElement;
+    expect(getComputedStyle(sub).overflowX).toBe('clip');
+    const parts = Array.from(sub.querySelectorAll('.wl-part')) as HTMLElement[];
+    const before = getComputedStyle(parts[2], '::before');
+    expect(before.content).toContain('·');
+    expect(before.position).toBe('absolute');
+    // Teile, die eine neue Zeile beginnen, stehen bündig links — ohne vorangestellten Punkt im Fluss.
+    const left = sub.getBoundingClientRect().left;
+    const lineStarts = parts.filter((p, i) => i > 0 && p.offsetTop > parts[i - 1].offsetTop);
+    for (const p of lineStarts) expect(Math.round(p.getBoundingClientRect().left - left)).toBe(0);
+    fixture.destroy();
+  });
+
+  it('Löschen steht nicht als Symbolknopf in der Zeile, sondern als roter letzter Eintrag im ⋮-Menü', async () => {
+    const { host, fixture, ask } = await render('360px');
+    const actions = host.querySelector('.wl-actions') as HTMLElement;
+    expect(Array.from(actions.querySelectorAll('mat-icon')).map(i => i.textContent?.trim()))
+      .toEqual(['edit', 'picture_as_pdf', 'more_vert']);
+    (actions.querySelector('.wl-more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [mat-menu-item]')) as HTMLElement[];
+    const last = items[items.length - 1];
+    expect(last.classList).toContain('delete-item');
+    last.click();
+    expect(ask).toHaveBeenCalled();
+    fixture.destroy();
+  });
+});

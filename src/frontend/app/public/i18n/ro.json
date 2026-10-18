@@ -555,7 +555,7 @@
       "by": "de la {{name}}"
     },
     "reimport": {
-      "chip": "Reimportă",
+      "chip": "Import învechit",
       "legend": "{{count}} cursuri trebuie reimportate prin RepCheck",
       "legendOne": "1 curs trebuie reimportat prin RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Arată etichete",
       "hideTags": "Ascunde etichete",
       "sharePuzzle": "Distribuie problema",
-      "statRating": "Rating",
-      "statLevel": "Nivel",
       "statSolved": "Rezolvate",
       "statTime": "Timp",
       "phaseLabel": "Faza {{phase}} (pas {{step}})"

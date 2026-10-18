@@ -468,3 +468,39 @@ describe('LoginComponent — Rechtslinks nur ohne Fußzeile', () => {
     expect(getComputedStyle(links).display).toBe(window.innerWidth > 768 ? 'none' : 'block');
   });
 });
+
+/** UI-Sweep d3 (d3-rk-login-passwort-ohne-auge): dasselbe Augen-Symbol wie beim Registrieren. */
+describe('LoginComponent Template (Passwort einblenden)', () => {
+  it('das Passwort lässt sich einblenden und wieder verbergen, ohne das Formular abzuschicken', async () => {
+    const login = jasmine.createSpy('login').and.returnValue(of({}));
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { login } },
+        { provide: SnackbarService, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const input = el.querySelector('input[name="password"]') as HTMLInputElement;
+    const toggle = el.querySelector('mat-form-field button.pw-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.type).toBe('button');
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.getAttribute('aria-label')).toBe('auth.passwordToggle.show');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.type).toBe('text');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('auth.passwordToggle.hide');
+    expect(login).not.toHaveBeenCalled();
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.type).toBe('password');
+  });
+});

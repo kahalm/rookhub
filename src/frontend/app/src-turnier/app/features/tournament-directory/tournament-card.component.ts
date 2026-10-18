@@ -167,6 +167,10 @@ import { DirectoryEntry, isPlaceholderLocation, SameNameMark } from './tournamen
             <mat-icon>{{ ignored() ? 'visibility' : 'visibility_off' }}</mat-icon>
             <span class="tc-act-label" aria-hidden="true">{{ (ignored() ? 'tournamentDirectory.card.short.show' : 'tournamentDirectory.card.short.hide') | translate }}</span>
           </button>
+        } @else {
+          <!-- d3-t-turnierkarte-slot-fehlt-anon: abgemeldet hält der Platz „Ausblenden" leer — Kalender und Melden stehen
+               an derselben Stelle wie angemeldet (DESIGN 8.2: vier feste Plätze). -->
+          <span class="tc-act tc-slot" aria-hidden="true"></span>
         }
 
         <button mat-icon-button class="tc-act" (click)="report()"

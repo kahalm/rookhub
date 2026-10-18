@@ -52,6 +52,64 @@ describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
   });
 });
 
+/** Design-Runde d3: Kopfleiste und Leerzustand des Trainers. */
+describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
+  afterEach(() => { localStorage.removeItem('rookhub_rep_train_chaptercolor_1'); localStorage.removeItem('rookhub_rep_train_freq_order'); });
+
+  async function renderQuiz(name: string | null): Promise<HTMLElement> {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w' }));
+    await TestBed.configureTestingModule({
+      imports: [RepertoireTrainerComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } } } },
+        { provide: RepertoireTrainingService, useValue: {
+          getPgn: () => of('[Event "Rep"]\n[White "1.e4"]\n[Black "Chapter A"]\n\n1. e4 e5 2. Nf3 *'),
+          getLineStates: () => of([]), getRepertoireName: () => of(name),
+        } },
+        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+        { provide: RepertoireExplorerService, useValue: { run: () => EMPTY, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) } },
+      ],
+    }).compileComponents();
+    localStorage.setItem('rookhub_rep_train_freq_order', '0');
+    const fixture = TestBed.createComponent(RepertoireTrainerComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  // d3-rk-trainer-symbolknoepfe-ohne-text
+  it('„Häufigste zuerst“ ist ein beschrifteter Umschalter; Einstellungen und Zurücksetzen liegen im ⋮', async () => {
+    const el = await renderQuiz(null);
+    const toggle = el.querySelector('.bar .freq-toggle')!;
+    expect(toggle.textContent).toContain('repertoireTrainer.freqOrder');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    const icons = Array.from(el.querySelectorAll('.bar > button mat-icon')).map(i => i.textContent!.trim());
+    expect(icons).not.toContain('trending_up');
+    expect(icons).not.toContain('restart_alt');   // der Reset steht nicht offen in der Leiste
+    expect(icons).not.toContain('tune');
+    expect(el.querySelector('.bar > button.more')!.getAttribute('aria-label')).toBe('common.moreActions');
+  });
+
+  // d3-rk-trainer-leer-zwei-aktionen
+  it('Leerzustand: genau eine Aktion; Titel = Name des Repertoires', async () => {
+    const el = await renderQuiz('Schwarz-Repertoire');
+    const actions = el.querySelectorAll('mat-card.msg .msg-actions a, mat-card.msg .msg-actions button');
+    expect(actions.length).toBe(1);
+    expect(el.querySelector('mat-card.msg')!.textContent).not.toContain('repertoireTrainer.manageLines');
+    expect(el.querySelector('.bar .rep-name')!.textContent!.trim()).toBe('Schwarz-Repertoire');
+    expect(el.querySelector('.bar .title-kind')!.textContent!.trim()).toBe('repertoireTrainer.title');
+  });
+
+  it('ohne Namen bleibt der bisherige Titel', async () => {
+    const el = await renderQuiz(null);
+    expect(el.querySelector('.bar .rep-name')).toBeNull();
+    expect(el.querySelector('.bar .title')!.textContent).toContain('repertoireTrainer.title');
+  });
+});
+
 /** Brettgröße des Trainers (UI-Sweep a1). Karma läuft 1 400 px breit — Media-Query-Regeln als CSS-Text geprüft. */
 describe('RepertoireTrainerComponent Brettgröße (a1)', () => {
   const css = ((RepertoireTrainerComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)

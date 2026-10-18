@@ -82,7 +82,7 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
           @if (courses().length === 1) {
             <span class="meta">{{ 'kids.home.courseProgress' | translate: { title: courses()[0].title, done: courseDone(courses()[0]), total: courses()[0].puzzleCount } }}</span>
             <span class="tile-bar" aria-hidden="true">
-              <span [style.width.%]="coursePercent(courses()[0])"></span>
+              <span [style.width.%]="coursePercent(courses()[0])" [class.started]="coursePercent(courses()[0]) > 0"></span>
             </span>
           } @else if (coursesStarted() > 0) {
             <span class="meta">{{ 'kids.home.coursesStarted' | translate: { started: coursesStarted(), count: courses().length } }}</span>
@@ -136,9 +136,12 @@ export const KID_HOME_WIDE = '(width >= 900px) and (height >= 640px)';
     .meta .nw { white-space: nowrap; }
     .meta .nw::before { content: '· '; }
     /* Dünner Fortschrittsbalken der Kurs-Kachel (r2-k-course-tile). */
-    .tile-bar { display: block; width: min(220px, 80%); height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .12);
+    /* d3-k-kurskachel-balken-feste-breite: Spur und Füllung wie auf der Kurse-Liste (kräftiger auf Pfirsich); die Breite
+       bleibt, weil die Kachel mittig gesetzt ist. */
+    .tile-bar { display: block; width: min(220px, 80%); height: 6px; border-radius: 3px; background: rgba(120, 60, 0, .22);
                 overflow: hidden; margin-top: 4px; }
-    .tile-bar span { display: block; height: 100%; border-radius: 3px; background: #e08a00; min-width: 0; }
+    .tile-bar span { display: block; height: 100%; border-radius: 3px; background: #b45f06; min-width: 0; }
+    .tile-bar span.started { min-width: 6px; }
     .saved { text-align: center; margin: 22px 0 0; font-size: .95rem; opacity: .8; }
     /* PC (UI-Sweep 2026-10-10, k-start-space): die Kacheln endeten bei y ≈ 550, darunter fast 500 px leer. Jetzt steht
        der Inhalt senkrecht mittig zwischen Kopf- und Fusszeile (~140 px), die Kacheln sind ~360 × 260 px gross. */

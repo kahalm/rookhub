@@ -62,10 +62,12 @@ interface ReprocessStatus {
     .reprocess-banner {
       display: flex; align-items: flex-start; gap: 8px; flex-wrap: nowrap;
       margin: 0 0 1rem; padding: 6px 6px 6px 12px; border-radius: 8px; font-size: 0.9rem;
-      background: color-mix(in srgb, var(--rh-warn) 16%, transparent);
-      border: 1px solid color-mix(in srgb, var(--rh-warn) 35%, transparent);
+      /* d3-rk-update-banner-rot-hell: ein Aktualisierungs-Angebot ist kein Fehler — getönt mit --rh-info (hell Blau,
+         dunkel Hellblau). --rh-warn ist hell #bf360c und lag im Ton fast auf --rh-error: der Banner sah rot aus. */
+      background: color-mix(in srgb, var(--rh-info) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--rh-info) 35%, transparent);
     }
-    .rb-icon { flex: 0 0 auto; color: var(--rh-warn); margin-top: 8px; }
+    .rb-icon { flex: 0 0 auto; color: var(--rh-info); margin-top: 8px; }
     .rb-text { flex: 1 1 auto; min-width: 0; padding: 9px 0; line-height: 1.35; }
     .rb-lead app-help-hint { margin-left: 2px; }
     .rb-btn { flex: 0 0 auto; }

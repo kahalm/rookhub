@@ -1,3 +1,8 @@
+import { CUSTOM_ELEMENTS_SCHEMA, Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { contrast, parseColor } from '@rh/testing/contrast';
 import { KID_AUTH_HINT_COLOR, KID_AUTH_STYLES, isAuthUrl } from './kids-auth';
 
@@ -32,5 +37,40 @@ describe('KID_AUTH_STYLES', () => {
     const [hint, white] = [rgb(KID_AUTH_HINT_COLOR), rgb('#ffffff')];
     expect(contrast(hint, white)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(hint, white)).withContext('leiser als der Kartentext').toBeLessThan(contrast(rgb('#1f2d3d'), white));
+  });
+});
+
+/** Nachbau der Anmeldung: zwei Felder ohne Hinweis, ein Feld mit Hinweis — in den Stilen der KidHub-Hülle. */
+@Component({
+  standalone: true,
+  imports: [MatFormFieldModule, MatInputModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  styles: [KID_AUTH_STYLES],
+  template: `<app-login><div class="mat-mdc-card">
+    <mat-form-field appearance="outline" class="full-width" style="display: block" id="user"><mat-label>Benutzername</mat-label><input matInput></mat-form-field>
+    <mat-form-field appearance="outline" class="full-width" style="display: block" id="pass"><mat-label>Passwort</mat-label><input matInput></mat-form-field>
+    <mat-form-field appearance="outline" class="full-width" style="display: block" id="nick"><mat-label>Spitzname</mat-label><input matInput><mat-hint>Ein Spitzname reicht.</mat-hint></mat-form-field>
+    <mat-form-field appearance="outline" class="full-width" style="display: block" id="after"><mat-label>Weiter</mat-label><input matInput></mat-form-field>
+  </div></app-login>`,
+})
+class MaskHostComponent {}
+
+// d3-k-kid-login-feldluecken-ungleich: auf der Anmeldung (ohne Hinweise) standen 44–50 px Leerraum zwischen den Feldern.
+describe('KID_AUTH_STYLES — Feldabstände', () => {
+  it('ohne Hinweis höchstens 24 px zwischen zwei Feldern, mit Hinweis bleibt die Luft darunter', () => {
+    TestBed.configureTestingModule({ imports: [MaskHostComponent], providers: [provideNoopAnimations()] });
+    const f = TestBed.createComponent(MaskHostComponent);
+    document.body.appendChild(f.nativeElement);
+    try {
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      const flex = (id: string) => el.querySelector(`#${id} .mat-mdc-text-field-wrapper`)!.getBoundingClientRect();
+      expect(flex('pass').top - flex('user').bottom).withContext('Benutzername → Passwort').toBeLessThanOrEqual(24);
+      const hint = el.querySelector('#nick .mat-mdc-form-field-hint')!.getBoundingClientRect();
+      expect(hint.top).toBeGreaterThanOrEqual(flex('nick').bottom);
+      expect(flex('after').top - hint.bottom).withContext('Luft unter dem Hinweis (14 px Rand an der Unterzeile)').toBeGreaterThanOrEqual(8);
+    } finally {
+      f.nativeElement.remove();
+    }
   });
 });

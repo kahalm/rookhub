@@ -555,7 +555,7 @@
       "by": "от {{name}}"
     },
     "reimport": {
-      "chip": "Загрузить заново",
+      "chip": "Импорт устарел",
       "legend": "Курсов, которые нужно заново импортировать через RepCheck: {{count}}",
       "legendOne": "1 курс нужно заново импортировать через RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "Показать теги",
       "hideTags": "Скрыть теги",
       "sharePuzzle": "Поделиться задачей",
-      "statRating": "Рейтинг",
-      "statLevel": "Уровень",
       "statSolved": "Решено",
       "statTime": "Время",
       "phaseLabel": "Фаза {{phase}} (шаг {{step}})"

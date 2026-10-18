@@ -34,8 +34,10 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
   imports: [RouterLink, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
   template: `
     <header class="head">
-      <!-- b1-k-kurstitel-handy-gekuerzt: am Handy nur „←" (Text bleibt für Vorleser), damit der Kurstitel Platz hat. -->
-      <a class="back" routerLink="/courses"><span aria-hidden="true">←</span><span class="back-label"> {{ 'kids.courses.title' | translate }}</span></a>
+      <!-- b1-k-kurstitel-handy-gekuerzt: am Handy nur „←" (Text bleibt für Vorleser), damit der Kurstitel Platz hat.
+           d3-k-kid-back-pill-kurse-pfeil: der Abstand kommt aus KID_BACK (gap), nicht aus einem führenden Leerzeichen —
+           das fiel im Flex-Block weg („←Kurse"). -->
+      <a class="back" routerLink="/courses"><span aria-hidden="true">←</span><span class="back-label">{{ 'kids.courses.title' | translate }}</span></a>
       @if (title()) { <h1>📚 {{ title() }}</h1> }
       @if (lines().length > 0) {
         <!-- z1-k-course-intro: am Handy steht der Stand kurz („8/287") rechts neben dem Kurstitel, der lange Text bleibt
@@ -155,25 +157,12 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       /* z1-k-course-intro: Kopf in EINER Zeile (Titel gekürzt, Stand kurz rechts), Kapitel nur ohne Aufgabentitel —
          das Brett begann sonst erst bei 47 % der Höhe, der Tipp-Knopf lag unter der Falz. */
       .head { flex-wrap: nowrap; gap: 8px; margin-bottom: 8px; }
-      /* b1-k-kurstitel-handy-gekuerzt: „← Courses" ließ dem Titel nur „First endga…" — die Pille zeigt am Handy nur den
-         Pfeil (44 × 44, Text für Vorleser), ein langer Titel bricht auf höchstens zwei Zeilen um, statt zu kürzen. */
-      .back { min-width: 44px; justify-content: center; padding: 6px 12px; }
-      .back-label {
-        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
-        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-      }
+      /* Ein langer Titel bricht auf höchstens zwei Zeilen um, statt zu kürzen (b1-k-kurstitel-handy-gekuerzt). */
       .head h1 {
-        min-width: 0; font-size: 1.15rem; line-height: 1.2; white-space: normal; overflow: hidden; overflow-wrap: break-word;
+        min-width: 0; line-height: 1.2; white-space: normal; overflow: hidden; overflow-wrap: break-word;
         display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
       }
       .back, .count { flex-shrink: 0; white-space: nowrap; }
-      .count { font-size: .95rem; }
-      .count-long {
-        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
-        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-      }
-      .count-short { display: inline; }
-      .chapter.with-title { display: none; }
       .line-title { font-size: 1.1rem; }
       /* d2-k-course-intro: zugeklappt drei Zeilen statt 30vh (~8 Zeilen) — das Brett begann sonst erst bei 69 % der
          Höhe. Am PC (Text neben dem Brett) bleiben 40vh. */
@@ -184,6 +173,25 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       }
       .intro-actions { margin: 0 0 6px; }
       .intro-actions .more { padding: 4px 16px; }
+    }
+    /* d3-k-zurueck-pille-tablet-nur-pfeil: die Kurzformen gelten nur am Handy (< 600 px) — vorher hingen sie an KID_STACKED,
+       das auch jedes Hochformat erfasst; am Tablet hochkant stand dann „←", „✓ 0/287" und kein Kapitel, obwohl Platz war.
+       b1-k-kurstitel-handy-gekuerzt: „← Courses" ließ dem Titel am Handy nur „First endga…" — die Pille zeigt dort nur den
+       Pfeil (44 × 44, Text für Vorleser), der Stand steht kurz („8/287"), das Kapitel nur ohne Aufgabentitel. */
+    @media (width < 600px) {
+      .back { min-width: 44px; justify-content: center; padding: 6px 12px; }
+      .back-label {
+        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+      }
+      .head h1 { font-size: 1.15rem; }
+      .count { font-size: .95rem; }
+      .count-long {
+        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+        clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+      }
+      .count-short { display: inline; }
+      .chapter.with-title { display: none; }
     }
     /* Handy quer: EINE Titelzeile ueber dem Brett (damit rechnet die App-Huelle) — ein langer Kurstitel wird gekuerzt,
        statt umzubrechen und die unterste Reihe aus dem Bild zu schieben. */

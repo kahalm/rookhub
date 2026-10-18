@@ -61,10 +61,12 @@ interface Profile {
       <app-loading-spinner />
     } @else if (profile) {
       <div class="profile-container">
+        <!-- d3-rk-profil-titel-ohne-abstand: Seitenkopf nach DESIGN 5.1 ueber der Karte (h1), nicht als kleiner
+             mat-card-title, an dem die erste Abschnittsueberschrift „Erscheinungsbild“ klebte. -->
+        <div class="header">
+          <h1>{{ 'profile.title' | translate: { username: profile.username } }}</h1>
+        </div>
         <mat-card>
-          <mat-card-header>
-            <mat-card-title>{{ 'profile.title' | translate: { username: profile.username } }}</mat-card-title>
-          </mat-card-header>
           <mat-card-content>
             <!-- Darstellung (Hell/Dunkel + E-Ink-Modus) ganz oben (Nutzerwunsch 15.10.): auf einem E-Ink-Gerät ist das
                  die erste Einstellung, die man sucht. -->
@@ -144,8 +146,10 @@ interface Profile {
     }
   `,
   styles: [`
-    .profile-container { padding: 2rem; display: flex; justify-content: center; }
-    mat-card { width: 600px; max-width: 95vw; }
+    .profile-container { padding: 2rem; display: flex; flex-direction: column; align-items: center; }
+    .header, mat-card { width: 600px; max-width: 95vw; box-sizing: border-box; }
+    .header { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; }
+    .header h1 { margin: 0; }
     /* a1-t-profil-feldabstaende: alle Felder subscriptSizing="dynamic", Abstand einheitlich 16 px. */
     .profile-form { display: flex; flex-direction: column; gap: 16px; padding-top: 1rem; }
     mat-form-field { width: 100%; }
@@ -195,7 +199,7 @@ export class ProfileComponent implements OnInit {
   savedEmail: string | null = null;
   /** Aktuelles Passwort, nur fuer einen E-Mail-Wechsel (Feld im Identitaets-Formular). */
   currentPassword = '';
-  /** `?section=delete` (Knopf „Konto jetzt loeschen" auf /account-deletion, Codereview UX-023): die Karte „Konto
+  /** `?section=delete` (Knopf „Konto löschen …" auf /account-deletion, Codereview UX-023): die Karte „Konto
    *  loeschen" — der letzte Block der Seite — aufgeklappt und angesprungen, statt an allen anderen vorbeizuscrollen. */
   readonly openDelete: boolean;
   private deleteShown = false;

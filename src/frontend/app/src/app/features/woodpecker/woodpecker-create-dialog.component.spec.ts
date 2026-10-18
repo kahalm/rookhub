@@ -89,6 +89,69 @@ describe('WoodpeckerCreateDialogComponent (UI-Sweep c1)', () => {
   });
 });
 
+describe('WoodpeckerCreateDialogComponent (Design-Runde d3)', () => {
+  let en: I18n;
+  beforeAll(async () => { en = await loadI18n('en'); });
+
+  function render(courses: CourseListItem[]) {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [WoodpeckerCreateDialogComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MAT_DIALOG_DATA, useValue: { mode: 'create' } },
+        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: CourseService, useValue: { getCourses: () => of(courses) } },
+        { provide: WoodpeckerService, useValue: {} },
+        { provide: SnackbarService, useValue: { warn: () => {} } },
+      ],
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', en as unknown as TranslationObject);
+    translate.use('en');
+    const fixture = TestBed.createComponent(WoodpeckerCreateDialogComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
+  afterEach(() => document.querySelectorAll('app-woodpecker-create-dialog').forEach(e => e.remove()));
+
+  it('d3-rk-woodpecker-leerdialog-luecke-abbrechen: ohne Kurs heißt der Knopf „Close“, der Leerzustand ohne 2rem-Polster', () => {
+    const { el } = render([]);
+    expect(el.querySelector('mat-dialog-actions button')!.textContent!.trim()).toBe('Close');
+    expect(compactCss()).toContain('.wp-content.empty-state{padding:8px00;}');
+  });
+
+  it('mit Kursen bleibt es „Cancel“', () => {
+    const { el } = render([course(1, 'A', 10)]);
+    expect(el.querySelector('mat-dialog-actions button')!.textContent!.trim()).toBe('Cancel');
+  });
+
+  it('d3-rk-woodpecker-dialog-kurswahl-tippziel: jede Kurszeile ist ganzzeilig ≥ 44 px hoch', () => {
+    const { el } = render([course(1, 'Basic Endgames', 190), course(2, 'Other', 183)]);
+    const rows = Array.from(el.querySelectorAll('.courses mat-checkbox')) as HTMLElement[];
+    const list = el.querySelector('.courses') as HTMLElement;
+    expect(rows.length).toBe(2);
+    for (const r of rows) {
+      const field = r.querySelector('.mdc-form-field') as HTMLElement;
+      expect(field.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      expect(Math.round(field.getBoundingClientRect().width)).toBe(Math.round(list.getBoundingClientRect().width));
+    }
+  });
+
+  it('d3-rk-woodpecker-kursliste-doppelte-namen: nur gleichnamige Kurse bekommen eine unterscheidende Meta-Zeile', () => {
+    const own = { ...course(1, '100 Tactical Patterns', 448), isOwned: true } as CourseListItem;
+    const shared = { ...course(2, '100 Tactical Patterns', 438), isShared: true, sharedByUsername: 'noel', lastActivityAt: '2026-10-01T10:00:00Z' } as CourseListItem;
+    const { el } = render([own, shared, course(3, 'Basic Endgames', 190)]);
+    const metas = Array.from(el.querySelectorAll('.courses mat-checkbox')).map(r => r.querySelector('.c-meta')?.textContent?.trim() ?? null);
+    expect(metas[0]).toBe('Your course');
+    expect(metas[1]).toContain('from noel');
+    expect(metas[1]).toContain('last practised');
+    expect(metas[2]).toBeNull();
+  });
+});
+
 describe('Woodpecker-Texte halten Zyklus und Zahl zusammen (c2-wp-dialog-zyklus-zahl-umbruch)', () => {
   const load = async (lang: string) =>
     (await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json()) as

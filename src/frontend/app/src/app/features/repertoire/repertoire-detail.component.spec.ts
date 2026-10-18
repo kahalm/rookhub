@@ -532,3 +532,49 @@ describe('RepertoireDetailComponent Kopf ohne Beschreibung', () => {
     expect(el.querySelector('.header-info .subtitle')?.textContent).toContain('Bauernendspiele');
   });
 });
+
+/** d3-rk-schwarz-repertoire-brett-nicht-gedreht: Brett aus Sicht der Kapitelfarbe, wie im Trainer. */
+describe('RepertoireDetailComponent Brett-Ausrichtung (d3)', () => {
+  // Najdorf endet mit dem Schwarz-Zug d6 → Schwarz-Kapitel; „Weiss“ endet mit Bb5 → Weiß-Kapitel.
+  const BLACK = '[Event "Rep"]\n[Black "Najdorf"]\n\n1. e4 c5 2. Nf3 d6 *\n';
+  const WHITE = '[Event "Rep"]\n[Black "Weiss"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 *\n';
+
+  async function make(pgn: string) {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+    comp.id = 78;
+    comp.mode = 'lines';
+    comp.viewerService.loadPgn(pgn);
+    comp.trainableGames = comp.viewerService.games;
+    comp.refreshChapterColors();
+    return comp;
+  }
+
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_78'));
+
+  it('reines Schwarz-Repertoire: Brett gedreht, auch ohne gewählte Linie', async () => {
+    const comp = await make(BLACK);
+    expect(comp.boardFlipped).toBeTrue();
+  });
+
+  it('gemischt: ohne Linie Weiß unten, mit gewählter Schwarz-Linie gedreht', async () => {
+    const comp = await make(WHITE + '\n' + BLACK);
+    expect(comp.boardFlipped).toBeFalse();
+    const black = comp.viewerService.lines.findIndex(l => l.chapter === 'Najdorf');
+    comp.viewerService.selectLine(black);
+    expect(comp.boardFlipped).toBeTrue();
+    comp.viewerService.selectLine(comp.viewerService.lines.findIndex(l => l.chapter === 'Weiss'));
+    expect(comp.boardFlipped).toBeFalse();
+  });
+
+  it('eine eigene Farb-Festlegung im Linien-Panel dreht das Brett mit', async () => {
+    const comp = await make(BLACK);
+    localStorage.setItem('rookhub_rep_train_chaptercolor_78', JSON.stringify({ Najdorf: 'w' }));
+    comp.refreshChapterColors();
+    expect(comp.boardFlipped).toBeFalse();
+  });
+});

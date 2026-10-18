@@ -91,7 +91,9 @@ describe('buildFlashcard', () => {
 
   it('Kopfzeile: Titel, sonst #Runde', () => {
     expect(buildFlashcard(puzzle({ title: 'Tarrasch #1' }))!.heading).toBe('Tarrasch #1');
-    expect(buildFlashcard(puzzle({ round: '0042' }))!.heading).toBe('#0042');
+    // d3-rk-flashcards-karte-titel-nummer: kein fertiger Ersatz „#0042“ — die Vorlage zeigt „Linie 42“.
+    expect(buildFlashcard(puzzle({ round: '0042' }))!.heading).toBeNull();
+    expect(buildFlashcard(puzzle({ round: '0042' }))!.lineNo).toBe(42);
   });
 });
 
@@ -144,6 +146,15 @@ describe('buildRepertoireFlashcards', () => {
     expect(a.card.heading).toBe('Vorstoßvariante Hauptlinie');
     expect(a.card.chapter).toBe('Kapitel 4');
     expect(a.lineKey).toBe(lineKeyFromSans(['e4', 'e6', 'd4', 'd5', 'e5', 'c5']));
+  });
+
+  it('ohne White-Kopf kein „#2“, sondern Titel null + Linien-Nummer wie in der Linienliste (d3-rk-flashcards-karte-titel-nummer)', () => {
+    const raws = ['[Event "Kurs"]\n[White "A"]\n[Black "K"]\n\n1. e4 e5 *', '[Event "Kurs"]\n[White "?"]\n[Black "K"]\n\n1. d4 d5 *'];
+    const games = raws.map(r => parsePgnText(r)[0]);
+    const [a, b] = buildRepertoireFlashcards(games as never, raws, lineKeyFromSans);
+    expect(a.card.heading).toBe('A');
+    expect(b.card.heading).toBeNull();
+    expect(b.card.lineNo).toBe(2);
   });
 });
 

@@ -171,6 +171,31 @@ describe('EngineCardComponent', () => {
     expect(component.saving).toBeFalse();
   });
 
+  // UI-Sweep d3 (d3-rk-profil-lichess-speichern-gesperrt-ohne-grund): kein grundlos gesperrter Knopf — leer geklickt
+  // nennt ein Hinweis den Grund, das Feld bekommt den Fokus, gesendet wird nichts; Tippen raeumt den Hinweis ab.
+  it('leeres Token: Speichern bleibt klickbar, zeigt den Grund und sendet nichts', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const btn = [...el.querySelectorAll('button')].find(b => b.textContent?.includes('common.save')) as HTMLButtonElement;
+    expect(btn.disabled).toBeFalse();
+    expect(el.querySelector('.token-missing')).toBeNull();
+
+    btn.click();
+    fixture.detectChanges();
+    http.expectNone(r => r.url === '/api/engine/credentials' && r.method === 'POST');
+    expect(el.querySelector('.token-missing')?.textContent).toContain('profile.engine.tokenMissing');
+    expect(document.activeElement).toBe(el.querySelector('.token-field input'));
+
+    const input = el.querySelector('.token-field input') as HTMLInputElement;
+    input.value = 'lip_x';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.querySelector('.token-missing')).toBeNull();
+  });
+
   it('resets the state after deleting the token — direct engines stay', () => {
     spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
     fixture.detectChanges();

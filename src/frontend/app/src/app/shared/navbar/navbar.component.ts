@@ -21,6 +21,7 @@ import { MessageService } from '../../core/message.service';
 import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
+import { EinkService } from '../../core/eink.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
@@ -268,16 +269,38 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
                setzt einen Login voraus. Da der ThemeService als Default hart „dark" fährt,
                steckten Anonyme auf den offenen Seiten (/puzzles, /analysis, /g/, /help)
                unumkehrbar im Dunkel-Theme. Für Eingeloggte bleibt das Profil die einzige Stelle. -->
-          <button mat-menu-item (click)="theme.toggle()">
-            <mat-icon>{{ themeIcon }}</mat-icon>
-            <span>{{ themeTooltip }}</span>
-          </button>
+          <!-- d3-rk-theme-menu-label-zustand: Untermenü System/Hell/Dunkel mit Häkchen (wie Sprache) statt eines
+               Umschalters, der den IST-Zustand nannte und beim Tippen zum nächsten weiterschaltete.
+               d3-rk-helles-design-bei-eink: im E-Ink-Modus bleibt die App immer hell (DESIGN 3.6) — statt des Eintrags
+               steht der Grund da, keine wirkungslose Wahl. -->
+          @if (eink.enabled()) {
+            <!-- Kein gesperrter mat-menu-item: der wäre 38 % blass (Bedeutung in hellem Grau, DESIGN 3.6). -->
+            <div class="theme-eink-note" role="note">
+              <mat-icon>contrast</mat-icon>
+              <span>{{ 'profile.theme.einkForcesLight' | translate }}</span>
+            </div>
+          } @else {
+            <button mat-menu-item [matMenuTriggerFor]="themeMenu" class="theme-menu-trigger">
+              <mat-icon>contrast</mat-icon>
+              <span>{{ 'nav.theme' | translate }}</span>
+            </button>
+          }
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
           </button>
         </mat-menu>
       }
+      <mat-menu #themeMenu="matMenu" class="nav-submenu">
+        <div class="lang-menu-label">{{ 'nav.theme' | translate }}</div>
+        @for (t of themeOptions; track t) {
+          <button mat-menu-item class="theme-option" (click)="theme.setPreference(t)"
+                  [attr.aria-checked]="theme.preference === t" role="menuitemradio">
+            <mat-icon>{{ theme.preference === t ? 'check' : themeIcons[t] }}</mat-icon>
+            <span>{{ 'profile.theme.' + t | translate }}</span>
+          </button>
+        }
+      </mat-menu>
       <mat-menu #langMenu="matMenu" class="nav-submenu">
         <div class="lang-menu-label">{{ 'nav.language' | translate }}</div>
         @for (l of locale.languages; track l.code) {
@@ -293,6 +316,11 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
     .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; color: inherit; text-decoration: none; }
     .spacer { flex: 1 1 auto; }
     .menu-version { margin-left: 4px; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .theme-eink-note {
+      display: flex; align-items: flex-start; gap: 16px; padding: 12px 16px; max-width: 280px;
+      font-size: 0.875rem; line-height: 1.3; color: var(--mat-sys-on-surface-variant);
+    }
+    .theme-eink-note mat-icon { flex: none; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
@@ -374,6 +402,10 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
     :host-context(body.nav-docked) .logo,
     :host-context(body.nav-docked) .spacer,
     :host-context(body.nav-docked) .nav-anon { display: none; }
+    /* d3-rk-leser-glocken-abzeichen-abgeschnitten: angedockt sitzt die Leiste am Fensterrand (y = 0) — das Abzeichen
+       (über dem Knopf, Rand −12 px, pulsiert ×1,28) ragte darüber hinaus und wurde oben abgeschnitten. */
+    :host-context(body.nav-docked) .notif-bell ::ng-deep .mat-badge-content,
+    :host-context(body.nav-docked) .msg-mail ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
   `]
 })
 export class NavbarComponent implements OnInit {
@@ -451,21 +483,11 @@ export class NavbarComponent implements OnInit {
   }
 
   // ===== Theme (nur im ☰-Menü der Ausgeloggten) ============================
-  /** Icon der aktuellen Theme-Wahl; `toggle()` dreht system → hell → dunkel → system. */
-  get themeIcon(): string {
-    const icons: Record<AppTheme, string> = { system: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
-    return icons[this.theme.preference];
-  }
-
-  /** Beschriftung zur aktuellen Theme-Wahl. */
-  get themeTooltip(): string {
-    const labels: Record<AppTheme, string> = {
-      system: this.translate.instant('nav.themeSystem'),
-      light: this.translate.instant('nav.themeLight'),
-      dark: this.translate.instant('nav.themeDark'),
-    };
-    return labels[this.theme.preference];
-  }
+  /** Wahlmöglichkeiten im Untermenü „Design“; die aktive trägt das Häkchen. */
+  readonly themeOptions: readonly AppTheme[] = ['system', 'light', 'dark'];
+  readonly themeIcons: Record<AppTheme, string> = { system: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
+  /** E-Ink-Modus: Design-Wahl wirkungslos (immer hell) — der Menüeintrag sagt das statt sie anzubieten. */
+  readonly eink = inject(EinkService);
 
   constructor(public auth: AuthService, private courseService: CourseService, private catalogService: CatalogService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router, iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
     // Discord-Markenlogo als SVG-Icon registrieren (nicht im Material-Standardsatz enthalten).

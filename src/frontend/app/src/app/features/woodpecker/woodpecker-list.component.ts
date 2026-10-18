@@ -17,7 +17,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { WoodpeckerCreateDialogComponent, WoodpeckerDialogData } from './woodpecker-create-dialog.component';
+import { CourseService } from '../courses/course.service';
+import { WoodpeckerCreateDialogComponent, WoodpeckerDialogData, isWoodpeckerCourse } from './woodpecker-create-dialog.component';
 import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './woodpecker.service';
 
 /**
@@ -49,9 +50,17 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
       } @else if (loadFailed()) {
         <app-load-error (retry)="load()" />
       } @else if (plans().length === 0) {
+        <!-- d3-rk-woodpecker-leerdialog-luecke-abbrechen: ohne lösbaren Kurs gleich der einzige Weg weiter („Zu den
+             Kursen“) statt „Neues Training“ → Dialog → anderer Knopf. Solange die Kursliste lädt oder scheitert, bleibt
+             „Neues Training“ (der Dialog meldet den Fehler selbst). -->
         <div class="empty-state">
-          <p>{{ 'woodpecker.empty' | translate }}</p>
-          <button mat-flat-button color="primary" (click)="create()"><mat-icon>add</mat-icon>{{ 'woodpecker.new' | translate }}</button>
+          @if (hasCourses() === false) {
+            <p>{{ 'woodpecker.create.noCourses' | translate }}</p>
+            <a mat-flat-button color="primary" routerLink="/courses">{{ 'woodpecker.create.toCourses' | translate }}</a>
+          } @else {
+            <p>{{ 'woodpecker.empty' | translate }}</p>
+            <button mat-flat-button color="primary" (click)="create()"><mat-icon>add</mat-icon>{{ 'woodpecker.new' | translate }}</button>
+          }
         </div>
       } @else {
         <div class="plans">
@@ -82,9 +91,10 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
               <div class="state">
                 @switch (p.status) {
                   @case ('solving') {
+                    <!-- d3-rk-woodpecker-balken-zeit-statt-satz: Zyklus 1 misst der Balken die verstrichene Frist — er steht
+                         deshalb direkt unter der Fristzeile (mit Beschriftung), nicht unter „Satz: 0 Aufgaben“. -->
                     @if (c.number === 1) {
                       <p>{{ (p.setSize === 1 ? 'woodpecker.setGrowingOne' : 'woodpecker.setGrowing') | translate: { n: p.setSize, total: p.availableCount } }}</p>
-                      <mat-progress-bar mode="determinate" [value]="timePercent(c)" />
                     } @else {
                       <p>{{ 'woodpecker.cycleProgress' | translate: { done: c.attempted, total: p.setSize } }}</p>
                       <mat-progress-bar mode="determinate" [value]="p.setSize ? 100 * c.attempted / p.setSize : 0" />
@@ -93,6 +103,10 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
                       {{ (overdue(c) ? 'woodpecker.overdue' : (left(c) === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft')) | translate: { days: left(c) } }}
                       · {{ c.deadline | date: 'short' }}
                     </p>
+                    @if (c.number === 1) {
+                      <mat-progress-bar class="time-bar" mode="determinate" [value]="timePercent(c)"
+                        [attr.aria-label]="'woodpecker.timeBar' | translate: { used: elapsedDays(c), total: c.targetDays }" />
+                    }
                   }
                   @case ('break') {
                     <p>{{ 'woodpecker.breakUntil' | translate: { n: c.number + 1, at: (p.nextCycleAt | date: 'short') } }}</p>
@@ -177,6 +191,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
     .chip.done { color: var(--rh-success); }
     .state p { margin: 4px 0; }
     .deadline { font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    .time-bar { margin-bottom: 4px; }
     .deadline.over { color: var(--rh-warn); }
     .cycles-wrap { overflow-x: auto; }
     .cycles { width: 100%; border-collapse: collapse; font-size: .85rem; }
@@ -203,10 +218,13 @@ export class WoodpeckerListComponent implements OnInit {
   private confirm = inject(ConfirmService);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
+  private courses = inject(CourseService);
 
   readonly plans = signal<WoodpeckerPlan[]>([]);
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
+  /** Lösbare Kurse vorhanden? null = (noch) unbekannt; nur geprüft, solange es kein Training gibt. */
+  readonly hasCourses = signal<boolean | null>(null);
   /** Plan, für den gerade eine Aktion läuft. */
   readonly busy = signal<number | null>(null);
 
@@ -216,8 +234,20 @@ export class WoodpeckerListComponent implements OnInit {
     this.loading.set(true);
     this.loadFailed.set(false);
     this.service.list().subscribe({
-      next: list => { this.plans.set(list); this.loading.set(false); },
+      next: list => {
+        this.plans.set(list);
+        this.loading.set(false);
+        if (list.length === 0) this.checkCourses();
+      },
       error: () => { this.loading.set(false); this.loadFailed.set(true); },
+    });
+  }
+
+  /** Gibt es überhaupt einen lösbaren Kurs? Dieselbe Auswahl wie im Dialog (keine Kalkulation, mindestens 1 Aufgabe). */
+  private checkCourses(): void {
+    this.courses.getCourses().subscribe({
+      next: list => this.hasCourses.set(list.some(isWoodpeckerCourse)),
+      error: () => this.hasCourses.set(null),   // unbekannt → „Neues Training“ wie bisher
     });
   }
 
@@ -233,6 +263,11 @@ export class WoodpeckerListComponent implements OnInit {
   timePercent(c: WoodpeckerCycle): number {
     const start = new Date(c.startedAt).getTime(), end = new Date(c.deadline).getTime();
     return Math.min(100, Math.max(0, 100 * (Date.now() - start) / (end - start)));
+  }
+
+  /** Verstrichene volle Tage des laufenden Zyklus (für die Beschriftung des Zeitbalkens), höchstens die Frist. */
+  elapsedDays(c: WoodpeckerCycle): number {
+    return Math.min(c.targetDays, Math.max(0, Math.floor((Date.now() - new Date(c.startedAt).getTime()) / 86_400_000)));
   }
 
   /** Gebrauchte Tage eines Zyklus (aufgerundet; laufend = bis jetzt). */

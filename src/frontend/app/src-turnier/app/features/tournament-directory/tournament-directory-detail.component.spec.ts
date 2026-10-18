@@ -463,6 +463,39 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(dates).toEqual(['1. Sat, Sep 26', '2. Sat, Oct 10']);
   });
 
+  // d3-t-detail-spieltermine-ohne-trenner: „1. Sa., 17. Okt.  2. Sa., 7. Nov." verschwamm — jetzt „ · " ab dem zweiten Termin.
+  it('trennt die Spieltermine mit „·" (nicht vor dem ersten), am Zeilenanfang abgeschnitten', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', {
+      roundDates: [
+        { round: 1, date: '2026-09-26', time: '14:00' },
+        { round: 2, date: '2026-10-10', time: '14:00' },
+        { round: 3, date: '2026-10-24', time: '14:00' },
+      ],
+    }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const dates = [...el.querySelectorAll<HTMLElement>('.play-date')];
+    expect(getComputedStyle(dates[0], '::before').content).toBe('none');
+    expect(getComputedStyle(dates[1], '::before').content).toBe('"·"');
+    expect(getComputedStyle(dates[2], '::before').position).toBe('absolute');
+    expect(getComputedStyle(el.querySelector('.play-dates')!).overflowX).toBe('clip');
+  });
+
+  // d3-t-detail-ortshinweis-ohne-abstand: „Nur ungefähr verortet" klebte an der Kartenkachel und stand in voller Textfarbe.
+  it('setzt den Hinweis „ungefähr verortet" leise und mit 8 px Abstand zur Karte', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { geoSource: 'Region' }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const hint = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.map-card .approx-hint')!;
+    expect(hint.classList).toContain('muted');
+    const cs = getComputedStyle(hint);
+    expect(cs.marginTop).toBe('0px');
+    expect(cs.marginBottom).toBe('8px');
+  });
+
   /**
    * Was sich auf dieser Seite setzen laesst, muss sich hier auch zuruecknehmen lassen — vorher
    * stand dort nur der Vermerk „gemerkt" ohne Weg zurueck.

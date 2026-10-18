@@ -74,6 +74,44 @@ describe('CourseListComponent', () => {
     localStorage.removeItem('rh-kids-progress-v1');
   });
 
+  // d3-k-kurskachel-balken-feste-breite: Balken über die Textspalte statt fest 260 px, Füllung ≥ 3:1 auf Pfirsich,
+  // angefangen ist sichtbar (≥ 8 px), ohne Stand keine Füllung.
+  it('Fortschrittsbalken: so breit wie die Textspalte (≤ 520 px), Füllung kräftig, angefangen mindestens 8 px', async () => {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['courses']);
+    api.courses.and.returnValue(of([
+      { bookId: 339, title: 'Erste Endspiele', description: null, puzzleCount: 287 },
+      { bookId: 340, title: 'Gabeln', description: null, puzzleCount: 5 },
+    ]));
+    TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), { provide: KidsApiService, useValue: api }],
+    });
+    TestBed.inject(KidsProgressStore).recordCourseSolved(339, 1);              // 1 von 287 ≈ 0,3 %
+    await TestBed.inject(TranslateService).use('en');
+    const f = TestBed.createComponent(CourseListComponent);
+    const host = f.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '800px';
+    document.body.appendChild(host);
+    try {
+      f.detectChanges();
+      const [started, fresh] = Array.from(host.querySelectorAll<HTMLElement>('.course'));
+      const bar = started.querySelector<HTMLElement>('.bar')!;
+      const text = started.querySelector<HTMLElement>('.text')!;
+      expect(bar.getBoundingClientRect().width).toBeCloseTo(Math.min(520, text.getBoundingClientRect().width), 0);
+      expect(bar.getBoundingClientRect().width).toBeGreaterThan(260);
+      const fill = bar.querySelector<HTMLElement>('span')!;
+      expect(fill.getBoundingClientRect().width).toBeGreaterThanOrEqual(8);
+      const peach: [number, number, number, number] = [0xff, 0xe1, 0xcc, 1];                // --kid-peach (Hülle, hier nicht geladen)
+      expect(contrast(parseColor(getComputedStyle(fill).backgroundColor)!, peach)).toBeGreaterThanOrEqual(3);
+      expect(fresh.querySelector<HTMLElement>('.bar span')!.getBoundingClientRect().width).toBe(0);
+    } finally {
+      host.remove();
+      localStorage.removeItem('rh-kids-progress-v1');
+    }
+  });
+
   /** Codereview 2026-09-29, F7-011: ein Fehler setzte nur „laedt nicht mehr" — da stand „Noch keine Kurse für Kinder". */
   it('Ladefehler: Fehlerkachel statt „Noch keine Kurse", „Nochmal" holt die Kurse neu', () => {
     const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['courses']);

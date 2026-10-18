@@ -555,7 +555,7 @@
       "by": "{{name}}"
     },
     "reimport": {
-      "chip": "다시 가져오기",
+      "chip": "오래된 가져오기",
       "legend": "{{count}}개 코스를 RepCheck로 다시 가져와야 합니다",
       "legendOne": "1개 코스를 RepCheck로 다시 가져와야 합니다"
     }
@@ -677,8 +677,6 @@
       "showTags": "태그 보기",
       "hideTags": "태그 숨기기",
       "sharePuzzle": "퍼즐 공유",
-      "statRating": "등급",
-      "statLevel": "레벨",
       "statSolved": "풀음",
       "statTime": "시간",
       "phaseLabel": "{{phase}}단계 (스텝 {{step}})"

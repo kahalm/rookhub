@@ -20,7 +20,7 @@ import { isInfoLineGame } from './repertoire-info-line.util';
 import { ExplorerPosition, ExplorerSettings, RepertoireExplorerService } from './repertoire-explorer.service';
 import { Subscription, switchMap } from 'rxjs';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
-import { TrainColor, setChapterColorOverride } from './repertoire-color.util';
+import { TrainColor, chapterColorsOf, setChapterColorOverride } from './repertoire-color.util';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
@@ -125,6 +125,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
               <app-chess-board
                 [fen]="boardFen"
                 [lastMove]="boardLastMove"
+                [flipped]="boardFlipped"
                 [playable]="filterBoardActive"
                 (userMove)="onFilterMove($event)" />
               @if (filterBoardActive) {
@@ -194,7 +195,8 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                   (moveClicked)="viewerService.goToMove($event)"
                   (shareLine)="onShareLine($event)"
                   (downloadLine)="onDownloadLine($event)"
-                  (commentMovePreview)="onCommentMovePreview($event)" />
+                  (commentMovePreview)="onCommentMovePreview($event)"
+                  (chapterColorChanged)="refreshChapterColors()" />
               } @else if (mode === 'holes') {
                 <app-repertoire-holes
                   [repertoireId]="id"
@@ -407,6 +409,26 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     if (this.mode !== 'lines') return this.treeService.lastMove;
     if (this.viewerService.selectedLineIndex >= 0) return this.viewerService.lastMove;
     return this.filterStack.length ? this.filterStack[this.filterStack.length - 1].lastMove : undefined;
+  }
+
+  /** Trainingsfarbe je Kapitel (Auto-Erkennung + eigene Festlegungen) — dieselbe Rechnung wie Trainer und Lochfinder. */
+  private chapterColors = new Map<string, TrainColor>();
+
+  /**
+   * d3-rk-schwarz-repertoire-brett-nicht-gedreht: Schwarz unten, wenn die gewählte Linie zu einem Schwarz-Kapitel gehört —
+   * ohne gewählte Linie, wenn ALLE Kapitel Schwarz sind (Schwarz-Repertoire). Wie im Trainer (`[orientation]`).
+   */
+  get boardFlipped(): boolean {
+    const game = this.mode === 'lines' ? this.viewerService.selectedGame : null;
+    if (game) return this.chapterColors.get((game.headers['Black'] || '').trim()) === 'b';
+    const colors = [...this.chapterColors.values()];
+    return colors.length > 0 && colors.every(c => c === 'b');
+  }
+
+  /** Nach dem Laden und nach jeder Farb-Festlegung im Linien-Panel neu rechnen. */
+  refreshChapterColors(): void {
+    this.chapterColors = chapterColorsOf(this.id, this.trainableGames);
+    this.cdr.markForCheck();
   }
 
   /** Lochfinder: die angewählte Stellung (nach dem fehlenden Gegnerzug), sonst Grundstellung. */
@@ -652,6 +674,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
         this.cdr.markForCheck();
         this.trainableGames = this.viewerService.games.filter((_, i) => !isInfoLineGame(this.viewerService.rawGames[i]));
         this.applyTrainColor();
+        this.refreshChapterColors();
         this.loadTreePopularity();   // direkt im Baum geöffnet (?mode=tree)
         this.applyFocusLine();
         this.recomputeFilter();   // Filter-Treffer gegen den frischen Linien-Stand

@@ -142,6 +142,32 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(el().querySelector('h1')!.textContent).toBe('Emil');                          // kein hängendes Leerzeichen, kein „undefined"
   });
 
+  // d3-c-kind-neu-fehler-vor-eingabe: am Handy (eine Spalte) stand „Der Vorname fehlt noch." unter dem Nachnamen, der
+  // Geburtsdatum-Hinweis unter „Stufe oder Diplom" — jetzt steht jeder Hinweis direkt unter SEINEM Feld.
+  it('Handy (390 px): Hinweis direkt unter dem Vornamen bzw. Geburtsdatum, vor dem Nachbarfeld', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe');
+    const prev = frame!.style.width;
+    frame!.style.width = '390px';
+    try {
+      await new Promise<void>(r => requestAnimationFrame(() => r()));
+      await create(null);
+      el().querySelector('form')!.dispatchEvent(new Event('submit'));
+      await settle();
+      const box = (sel: string) => el().querySelector(sel)!.getBoundingClientRect();
+      expect(box('#firstName-need').top).toBeGreaterThanOrEqual(box('input[name=firstName]').bottom);
+      expect(box('#firstName-need').bottom).withContext('vor dem Nachnamen').toBeLessThanOrEqual(box('input[name=lastName]').top);
+      type('input[name=firstName]', 'Daniel');
+      type('input[name=birth]', 'März 2015');
+      el().querySelector('form')!.dispatchEvent(new Event('submit'));
+      await settle();
+      expect(box('#birth-need').top).toBeGreaterThanOrEqual(box('input[name=birth]').bottom);
+      expect(box('#birth-need').bottom).withContext('vor der Stufe').toBeLessThanOrEqual(box('input[name=level]').top);
+    } finally {
+      frame!.style.width = prev;
+    }
+  });
+
   // b1-c-kind-neu-fehler-unter-falz: der Hinweis steht unter dem Feld (nicht in der Statuszeile hinter der Leiste),
   // das Feld bekommt den Fokus und ist als ungültig markiert; beim Tippen geht der Hinweis.
   it('Anlegen: ohne Vornamen oder mit unlesbarem Geburtsdatum geht nichts an den Server — Hinweis am Feld, Fokus aufs Feld', async () => {

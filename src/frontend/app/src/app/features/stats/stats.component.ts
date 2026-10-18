@@ -73,7 +73,11 @@ export function heatLevel(count: number): number {
 /** UI-Sweep 2026-10-11 (d2-rk-stats-heatmap): ab Laptop-Breite ein ganzes Jahr (53 Wochen, ~800 px; der Server
  *  liefert 365 Tage), darunter ein halbes Jahr — am Handy scrollt das Raster ohnehin nach rechts. */
 export function heatmapWeeksFor(viewportWidth: number): number {
-  return viewportWidth >= 1024 ? 53 : 27;
+  if (viewportWidth >= 1024) return 53;
+  // d3-rk-stats-aktivitaet-raster-halbleer: am Tablet (600–1023 px) so viele Wochen, wie in die Karte passen
+  // (12-px-Zelle + 3 px Lücke = 15 px je Woche; 72 px = Seiten- und Kartenpolster) — 820 px → 49 statt fest 27.
+  if (viewportWidth >= 600) return Math.min(53, Math.floor((viewportWidth - 72) / 15));
+  return 27;
 }
 
 /** Baut ein Wochen-Raster (Spalten = Wochen Mo–So) für die Aktivitäts-Heatmap (rein, testbar). */
@@ -268,7 +272,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
               <div class="chart">
                 <div class="y-axis"><span>{{ curve.maxElo }}</span><span>{{ curve.minElo }}</span></div>
                 <svg [attr.viewBox]="'0 0 ' + curve.w + ' ' + curve.h" preserveAspectRatio="none" class="svg">
-                  <path [attr.d]="curve.path" fill="none" stroke="#1976d2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+                  <path class="elo-line" [attr.d]="curve.path" fill="none" stroke="#1976d2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
                 </svg>
               </div>
               <div class="x-axis"><span>{{ curve.first }}</span><span>{{ curve.last }}</span></div>
@@ -551,6 +555,18 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
     .hm-cell.lvl2 { background: #7bc96f; }
     .hm-cell.lvl3 { background: #239a3b; }
     .hm-cell.lvl4 { background: #196127; }
+    /* d3-rk-eink-aktivitaet-heatmap-hellgrau (DESIGN 3.6): im E-Ink-Modus keine Stufen in Grüntönen/10-%-Grau — jede Zelle
+       schwarz umrandet, leerer Tag weiß, dann eine Helligkeitstreppe bis Schwarz (auch in Graustufen unterscheidbar).
+       Elo-Verlauf: weiße Fläche mit Rahmen, Linie schwarz und kräftiger. */
+    :host-context(html.eink) .hm-cell { border: 1px solid #000; box-sizing: border-box; }
+    :host-context(html.eink) .hm-cell.lvl-1 { border-color: transparent; background: transparent; }
+    :host-context(html.eink) .hm-cell.lvl0 { background: #fff; }
+    :host-context(html.eink) .hm-cell.lvl1 { background: #a3a3a3; }
+    :host-context(html.eink) .hm-cell.lvl2 { background: #6b6b6b; }
+    :host-context(html.eink) .hm-cell.lvl3 { background: #333; }
+    :host-context(html.eink) .hm-cell.lvl4 { background: #000; }
+    :host-context(html.eink) .svg { background: #fff; outline: 2px solid #000; }
+    :host-context(html.eink) .elo-line { stroke: #000; stroke-width: 2.5px; }
     /* UI-Sweep z3 (z3-rk-stats-heatmap-gross): am großen Bildschirm wachsen die Zellen mit (53 × 21 px ≈ 1110 px),
        sonst stand das Raster in der linken Hälfte der Karte. */
     @media (min-width: 1280px) {

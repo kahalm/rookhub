@@ -301,7 +301,8 @@ describe('CoursePlayComponent — Kurstitel am Handy', () => {
       f.detectChanges();
       const el = f.nativeElement as HTMLElement;
       const back = el.querySelector<HTMLElement>('.head .back')!;
-      expect(back.textContent!.replace(/\s+/g, ' ').trim()).withContext('Vorleser hören „← Courses"').toBe('← Courses');
+      // d3-k-kid-back-pill-kurse-pfeil: kein führendes Leerzeichen mehr im Label (der Abstand kommt aus dem gap der Pille).
+      expect(back.querySelector('.back-label')!.textContent).withContext('Vorleser hören „Courses"').toBe('Courses');
       expect(back.querySelector('.back-label')!.getBoundingClientRect().width).toBeLessThanOrEqual(1);
       expect(back.getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
       expect(back.getBoundingClientRect().width).toBeLessThan(60);
@@ -319,6 +320,65 @@ describe('CoursePlayComponent — Kurstitel am Handy', () => {
       expect(h1Long.getBoundingClientRect().height).withContext('höchstens zwei Zeilen').toBeLessThanOrEqual(lineH * 2 + 1);
     } finally {
       frame!.style.width = prev;
+    }
+  });
+});
+
+/** d3: Kopf der Kursaufgabe am Tablet hochkant und am Laptop. */
+describe('CoursePlayComponent — Kopf am Tablet und am Laptop', () => {
+  const mk = (id: number): KidsCourseLine => ({
+    id, bookTitle: 'Erste Endspiele', fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8', startPly: 0,
+    title: 'Stellung I.1', chapter: '1. Einführung', comment: null, moveComments: null, altMoves: null,
+  });
+
+  async function renderAt(width: number, height: number): Promise<{ el: HTMLElement; restore: () => void }> {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe — der Viewport lässt sich nicht verstellen');
+    localStorage.removeItem('rh-kids-progress-v1');
+    const prev = [frame!.style.width, frame!.style.height];
+    frame!.style.width = `${width}px`;
+    frame!.style.height = `${height}px`;
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.returnValue(of([mk(1), mk(2)]));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '7' })) } },
+      ],
+    });
+    TestBed.inject(TranslateService).setTranslation('de', { kids: { courses: { title: 'Kurse', progress: '{{done}} von {{total}} geschafft' } } });
+    await TestBed.inject(TranslateService).use('de');
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    return { el: f.nativeElement as HTMLElement, restore: () => { [frame!.style.width, frame!.style.height] = prev; } };
+  }
+
+  // d3-k-zurueck-pille-tablet-nur-pfeil: die Handy-Kurzformen hingen am Hochformat — am Tablet hochkant „←", „✓ 0/2", kein Kapitel.
+  it('Tablet hochkant (820 × 1180): „← Kurse", langer Stand und Kapitel über dem Aufgabentitel', async () => {
+    const { el, restore } = await renderAt(820, 1180);
+    try {
+      expect(el.querySelector('.back-label')!.getBoundingClientRect().width).toBeGreaterThan(20);
+      expect(el.querySelector('.count-long')!.getBoundingClientRect().width).toBeGreaterThan(40);
+      expect(getComputedStyle(el.querySelector('.count-short')!).display).toBe('none');
+      expect(getComputedStyle(el.querySelector('.chapter.with-title')!).display).not.toBe('none');
+    } finally {
+      restore();
+    }
+  });
+
+  // d3-k-kid-back-pill-kurse-pfeil: „←Kurse" — der Pfeil klebte am Wort.
+  it('Zurück-Pille: zwischen „←" und „Kurse" steht ein Abstand', async () => {
+    const { el, restore } = await renderAt(1366, 768);
+    try {
+      const back = el.querySelector<HTMLElement>('.head .back')!;
+      const arrow = back.querySelector('[aria-hidden=true]')!.getBoundingClientRect();
+      const label = back.querySelector('.back-label')!.getBoundingClientRect();
+      expect(label.left - arrow.right).toBeGreaterThanOrEqual(3);
+    } finally {
+      restore();
     }
   });
 });

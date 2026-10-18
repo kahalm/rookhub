@@ -555,7 +555,7 @@
       "by": "来自 {{name}}"
     },
     "reimport": {
-      "chip": "重新获取",
+      "chip": "导入已过时",
       "legend": "{{count}} 门课程需要通过 RepCheck 重新导入",
       "legendOne": "1 门课程需要通过 RepCheck 重新导入"
     }
@@ -677,8 +677,6 @@
       "showTags": "显示标签",
       "hideTags": "隐藏标签",
       "sharePuzzle": "分享题目",
-      "statRating": "评分",
-      "statLevel": "级别",
       "statSolved": "已解",
       "statTime": "用时",
       "phaseLabel": "阶段 {{phase}}（步长 {{step}}）"

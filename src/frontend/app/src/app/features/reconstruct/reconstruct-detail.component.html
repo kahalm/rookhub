@@ -244,9 +244,28 @@
       </section>
 
       <!-- Der Editor: Zugfolge am Brett eintippen bzw. eine Stellung aufbauen. -->
-      <section class="editor">
+      <section class="editor" [class.idle]="editingId() === null">
         @if (editingId() === null) {
-          <p class="muted">{{ 'reconstruct.editorHint' | translate }}</p>
+          <!-- d3-rk-recon-detail-leere-rechte-spalte: ohne gewähltes Teil stand rechts nur ein Satz über der leeren Spalte.
+               Jetzt die Stellung am Ende des letzten Teils als Vorschau, der Satz leise darunter und die nächsten Schritte.
+               Unter 900 px entfällt der Block (die Knöpfe stehen dort schon über der Teileliste). -->
+          @if (previewFen(); as fen) {
+            <app-chess-board class="preview-board" [fen]="fen" [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
+          }
+          <p class="muted small">{{ 'reconstruct.editorHint' | translate }}</p>
+          <div class="editor-actions idle-actions">
+            @if (firstGap(); as gap) {
+              <button mat-flat-button color="primary" [disabled]="gapSearching() || busy()" (click)="closeGap(gap)">
+                <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
+              </button>
+            }
+            <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Moves)">
+              <mat-icon>timeline</mat-icon> {{ 'reconstruct.addMoves' | translate }}
+            </button>
+            <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Position)">
+              <mat-icon>grid_on</mat-icon> {{ 'reconstruct.addPosition' | translate }}
+            </button>
+          </div>
         } @else {
           @if (hasPrevious()) {
             <mat-checkbox [(ngModel)]="editContinues">{{ 'reconstruct.continuesLabel' | translate }}</mat-checkbox>

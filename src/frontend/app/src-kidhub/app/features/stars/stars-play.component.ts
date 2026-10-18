@@ -8,6 +8,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { PuzzleBoardComponent } from '@rh/features/puzzles/puzzle-board.component';
+import { KidBoardSizeDirective } from '../../shared/kid-board-size.directive';
 import {
   MAX_STARS, Rng, STARS_PER_STAGE, maxStars, reachableStars, solveStars, STAR_STAGES, STAR_SVG, StarPiece, StarPuzzle, StarStage, generateStarPuzzle, reachable,
   squareIndex, squareName, starFen,
@@ -60,7 +61,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
   selector: 'kid-stars-play',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, PuzzleBoardComponent, NgTemplateOutlet],
+  imports: [RouterLink, TranslatePipe, PuzzleBoardComponent, KidBoardSizeDirective, NgTemplateOutlet],
   template: `
     <header class="head" [class.free-head]="free()">
       <a class="back" routerLink="/stars">← {{ 'kids.stars.title' | translate }}</a>
@@ -119,7 +120,8 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
           </p>
         </div>
         <div class="board">
-          <app-puzzle-board
+          <!-- Sterne erst auf das vermessene Brett (NaN-Koordinaten, wie applyArrows in RookHub): kidBoardSize -->
+          <app-puzzle-board kidBoardSize #board="kidBoardSize"
             [autoSelect]="selectedSquare()"
             [fen]="fen()"
             orientation="white"
@@ -127,7 +129,7 @@ export type StarsStatus = 'play' | 'good' | 'empty' | 'deadEnd' | 'solved';
             [dests]="dests()"
             [lastMove]="lastMove()"
             [viewOnly]="!interactive()"
-            [reviewShapes]="shapes()"
+            [reviewShapes]="board.measured() ? shapes() : noShapes"
             [allowFullscreen]="false"
             boardTheme="blue"
             (moveMade)="onMove($event)" />
@@ -372,6 +374,8 @@ export class StarsPlayComponent {
     if (targets.length) map.set(squareName(this.pos()) as Key, targets);
     return map;
   });
+  /** Feste leere Liste, solange das Brett ungemessen ist (gleiche Referenz — kein neues ngOnChanges je Prüflauf). */
+  readonly noShapes: DrawShape[] = [];
   readonly shapes = computed<DrawShape[]>(() => [
     ...this.starsLeft().map(sq => ({ orig: squareName(sq) as Key, customSvg: { html: STAR_SVG } })),
     ...this.marks(),

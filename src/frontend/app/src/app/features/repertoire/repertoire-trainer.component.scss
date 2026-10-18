@@ -8,7 +8,14 @@
       .bar .mode-toggle { order: 1; flex: 1 1 100%; }
       .bar .mode-toggle mat-button-toggle { flex: 1 1 50%; }
       .bar > button { order: 2; }
+      /* d3-rk-trainer-symbolknoepfe-ohne-text: Umschalter links, ⋮ rechts in derselben Zeile (DESIGN 5.5). */
+      .bar > .more { margin-left: auto; }
     }
+    /* d3-rk-trainer-leer-zwei-aktionen: Repertoirename als Titel (einzeilig mit „…“), „Repertoire-Trainer“ leise. */
+    .bar .title { min-width: 0; }
+    .rep-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .title-kind { flex: none; font-weight: 400; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    .freq-toggle mat-icon { margin-right: 4px; }
     .chapter-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
     .chapter-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }

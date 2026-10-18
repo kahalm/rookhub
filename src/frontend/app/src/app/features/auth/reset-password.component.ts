@@ -10,6 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PASSWORD_MIN_LENGTH } from './register.component';
+import { PasswordToggleComponent } from '../../shared/password-toggle/password-toggle.component';
 
 /** Was beim Zuruecksetzen schiefging — steuert Text und Knopf im Fehlerblock. */
 export type ResetError = 'mismatch' | 'passwordRejected' | 'expired' | 'failed';
@@ -38,7 +39,7 @@ const ERROR_KEYS: Record<ResetError, string> = {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-reset-password',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, PasswordToggleComponent, TranslatePipe],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -54,13 +55,15 @@ const ERROR_KEYS: Record<ResetError, string> = {
                 <mat-label>{{ 'auth.reset.passwordLabel' | translate }}</mat-label>
                 <!-- Mindestlaenge wie der Server (UX-018): hier stand 4, die API verlangt 8 — der Knopf liess ein kurzes
                      Passwort zu, das dann am Server scheiterte. -->
-                <input matInput type="password" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autofocus autocomplete="new-password">
+                <input matInput [type]="pwEye.type()" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autofocus autocomplete="new-password">
+                <app-password-toggle matSuffix #pwEye />
                 <mat-hint>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-hint>
                 <mat-error>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.reset.confirmLabel' | translate }}</mat-label>
-                <input matInput type="password" [(ngModel)]="confirm" name="confirm" required [minlength]="passwordMin" autocomplete="new-password">
+                <input matInput [type]="confirmEye.type()" [(ngModel)]="confirm" name="confirm" required [minlength]="passwordMin" autocomplete="new-password">
+                <app-password-toggle matSuffix #confirmEye />
                 <mat-error>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
               </mat-form-field>
               <!-- Knopf immer aktiv wie bei Anmelden/Registrieren (UX-052); geprueft wird beim Absenden. -->

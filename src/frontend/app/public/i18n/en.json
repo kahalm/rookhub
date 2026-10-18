@@ -1,5 +1,6 @@
 {
   "repertoireTrainer": {
+    "resetProgress": "Reset progress",
     "train": "Train",
     "title": "Repertoire trainer",
     "done": "Session complete! {{correct}} of {{total}} correct.",
@@ -25,7 +26,6 @@
     "movesInLine": "Moves in this line",
     "moveComment": "Move comment",
     "lineDone": "Line complete — next one loading…",
-    "resetTooltip": "Reset training progress (delete SM-2 state).",
     "resetConfirm": "Reset training progress for this repertoire? All spaced-repetition data will be deleted.",
     "resetFailed": "Training progress could not be reset – please try again.",
     "nextDue": "Nothing due right now. Next review in {{when}}.",
@@ -288,6 +288,7 @@
     "themeSystem": "System theme",
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
+    "theme": "Theme",
     "help": "Help",
     "chessable": "Chessable",
     "leaderboards": "Leaderboards",
@@ -320,7 +321,7 @@
       "dailyDesc": "One shared puzzle for everyone each day — with a daily leaderboard (also on Discord).",
       "weeklyTitle": "Weekly post",
       "weeklyDesc": "A weekly series of puzzles from a game, with a date — play it through, with a leaderboard.",
-      "guessTitle": "Guess the moves",
+      "guessTitle": "Point game",
       "guessDesc": "Take over one side of an annotated master game and guess move by move — points for every move, measured against what was really played."
     },
     "feedback": "Feedback / Report a bug",
@@ -355,6 +356,10 @@
     }
   },
   "auth": {
+    "passwordToggle": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
     "login": {
       "title": "Login",
       "usernameLabel": "Username or email",
@@ -379,8 +384,6 @@
       "emailLabel": "Email",
       "passwordLabel": "Password",
       "passwordHint": "At least {{min}} characters",
-      "showPassword": "Show password",
-      "hidePassword": "Hide password",
       "submit": "Register",
       "submitting": "Registering...",
       "loginLink": "Already have an account? Login",
@@ -538,7 +541,7 @@
       "showAria": "Show tile"
     },
     "guess": {
-      "title": "Guess the moves",
+      "title": "Point game",
       "subtitle": "Play a master game move by move for points.",
       "open": "Play"
     }
@@ -719,6 +722,7 @@
       "setup": "Set up",
       "createToken": "Create a Lichess token",
       "tokenLabel": "Lichess API token",
+      "tokenMissing": "Paste your Lichess token first.",
       "stored": "Stored token",
       "removeTokenConfirm": "Delete the stored Lichess token? The Lichess engines disappear from the list; to use them again you need a new token from Lichess.",
       "saved": "Token saved",
@@ -815,8 +819,8 @@
       "inAppTitle": "How to delete your account",
       "inApp": "The button below opens the “Delete account” card in your profile – if you are not signed in, you sign in first. By hand: ☰ → Account → Profile, at the very bottom. Confirm with your password there. The account is deleted immediately.",
       "inPartner": "You can delete the account only in RookHub: sign in there (same details) and go to ☰ → Account → Profile, at the very bottom “Delete account” – or use the button directly. Confirm with your password; the account is deleted immediately, for this site too.",
-      "deleteNow": "Delete account now",
-      "deleteOnRookHub": "Delete account in RookHub",
+      "deleteNow": "Delete account…",
+      "deleteOnRookHub": "Delete account in RookHub…",
       "backupTitle": "Back up first",
       "backup": "Deletion takes effect immediately and cannot be undone. Save what you want to keep first: courses, repertoires and games can be downloaded one by one as PGN – in the course, in the repertoire list (⋮) and in each game (⋮).",
       "removedTitle": "What is removed",
@@ -824,7 +828,7 @@
       "removedCourses": "Your own courses (imported or created yourself) – also for everyone you shared them with: shares, group access and other people's learning progress in these courses go with them.",
       "removed2": "Personal content and links: repertoires, tournament subscriptions/favourites, friendships and group memberships.",
       "removedGames": "Saved games including scoresheet photos and reconstructions, game analyses, point game runs, analysis jobs, calculation trees and remembered positions.",
-      "removedShared": "Worksheets and your share links: shared games (/g/), lines (/l/), reconstructions (/r/) and worksheets (/w/, also as a QR code on the printout) no longer open.",
+      "removedShared": "Worksheets and your share links: links to shared games, lines, reconstructions and worksheets (including the QR code on the printout) no longer open.",
       "removedKids": "Your KidHub progress (levels, stars, courses) – KidHub uses the same account.",
       "removedConnections": "Connections and settings: API tokens (RepCheck or the browser extension loses its connection immediately), Chessable access, Lichess and your own engines, push notifications, messages with the admins and notifications.",
       "removedLeague": "LeagueHub: open import drafts of the club database, including half-finished ones.",
@@ -1182,6 +1186,8 @@
     },
     "downloadLine": "Download line as PGN",
     "holes": {
+      "dbMasters": "Masters games",
+      "dbLichess": "Lichess games",
       "color": "Colour",
       "white": "White",
       "black": "Black",
@@ -1222,7 +1228,7 @@
       "introMasters": "Start the search in the master games.",
       "source": "Source",
       "sourceOnline": "Lichess.org",
-      "sourceLocal": "Local",
+      "sourceLocal": "RookHub server",
       "localHint": "Local explorer on the RookHub server: no token, no waiting. Lichess games only from rating 1600 and without bullet, masters from the Lumbra database (over-the-board games from 2200). The Lichess data is still growing month by month – the shares are meaningful, the game counts smaller than on lichess.org."
     }
   },
@@ -1343,6 +1349,7 @@
     }
   },
   "puzzles": {
+    "solveTime": "Solve time",
     "status": {
       "loading": "Loading puzzle…",
       "loadFailed": "Failed to load puzzle",
@@ -1365,17 +1372,17 @@
     "eval": {
       "start": "Start",
       "now": "Now",
-      "show": "Show Eval",
-      "hide": "Hide Eval"
+      "show": "Show eval",
+      "hide": "Hide eval"
     },
     "actions": {
       "reset": "Reset",
       "mouseslip": "Mouseslip",
-      "giveUp": "Give Up",
-      "nextPuzzle": "Next Puzzle",
-      "share": "Share Puzzle",
+      "giveUp": "Give up",
+      "nextPuzzle": "Next puzzle",
+      "share": "Share puzzle",
       "reviewLast": "Review last puzzle",
-      "endlessMode": "Endless Mode",
+      "endlessMode": "Endless mode",
       "analyze": "Analyze",
       "challengeFriend": "Send to a friend",
       "noFriends": "No friends to challenge",
@@ -1408,14 +1415,14 @@
     "settings": {
       "title": "Settings",
       "pieces": "Pieces",
-      "board": "Board Theme",
+      "board": "Board theme",
       "mode": "Mode",
       "modeFixed": "Fixed",
       "modeRandom": "Random",
       "modeCrazy": "Crazy",
       "visualization": "Visualization",
-      "vizArrow": "Opponent Move Arrow",
-      "stockfishDepth": "Stockfish Depth",
+      "vizArrow": "Opponent move arrow",
+      "stockfishDepth": "Stockfish depth",
       "enPassantForced": "En passant forced",
       "enPassantForcedHint": "Anarchy board: when an en passant capture is available, it's mandatory.",
       "offPathWarn": "Wrong-turn warning",
@@ -1451,7 +1458,7 @@
       "veryHardDesc": "Puzzles ~600 Elo above your level — very demanding."
     },
     "theme": {
-      "boardTheme": "Board Theme",
+      "boardTheme": "Board theme",
       "pieces": "Pieces"
     },
     "hints": {
@@ -1829,7 +1836,7 @@
       "by": "by {{name}}"
     },
     "reimport": {
-      "chip": "Re-fetch",
+      "chip": "Import outdated",
       "legend": "{{count}} courses need a new import via RepCheck",
       "legendOne": "1 course needs a new import via RepCheck"
     }
@@ -2121,16 +2128,16 @@
       "title": "Endless Puzzle Mode",
       "livesHint": "3 lives – three mistakes and the run is over",
       "subtitle": "Progressive difficulty — how far can you go?",
-      "startRating": "Start Rating",
-      "stockfishDepth": "Stockfish Depth",
+      "startRating": "Start rating",
+      "stockfishDepth": "Stockfish depth",
       "stockfishDepthHint": "1 (weak) – 24 (strong)",
       "themes": "Themes (optional)",
       "themesPlaceholder": "e.g. fork pin (any of them)",
       "themesHint": "Search and pick themes — a puzzle just needs one of them.",
       "clearThemes": "Clear all",
       "thresholdExplain": "Ratings where you typically lose lives. Adjust to skip easier puzzles faster or slower.",
-      "firstThreshold": "1st Threshold",
-      "secondThreshold": "2nd Threshold",
+      "firstThreshold": "1st threshold",
+      "secondThreshold": "2nd threshold",
       "auto": "Auto: {{value}}",
       "curveHint": "Rating curve of the gauntlet (fixed when you start):",
       "curvePuzzle": "Puzzle {{n}}",
@@ -2138,11 +2145,11 @@
       "highscore": "Highscore: {{rating}} Rating",
       "sessionsPlayed": "{{count}} runs played",
       "sessionsPlayedOne": "{{count}} run played",
-      "viewHistory": "View History",
+      "viewHistory": "View history",
       "unfinishedRun": "Unfinished run: level {{level}} · {{solved}} solved · {{lives}} lives · best rating {{max}}",
       "continue": "Continue",
-      "archiveAndNew": "Archive & New Game",
-      "newGame": "New Game",
+      "archiveAndNew": "Archive & new game",
+      "newGame": "New game",
       "start": "Start",
       "advanced": "Fine-tuning"
     },
@@ -2159,7 +2166,7 @@
       "alternativeSolution": "Alternative solution — the puzzle had a different intended line.",
       "correct": "Correct!",
       "wrong": "Wrong!",
-      "gaveUp": "Gave Up",
+      "gaveUp": "Gave up",
       "continue": "Continue",
       "analyze": "Analyze",
       "reviewLast": "Analyze last puzzle",
@@ -2167,10 +2174,8 @@
       "showTags": "Show tags",
       "hideTags": "Hide tags",
       "sharePuzzle": "Share puzzle",
-      "statRating": "Rating",
-      "statLevel": "Level",
       "statSolved": "Solved",
-      "statTime": "Time",
+      "statTime": "Session",
       "lives": "{{lives}} of {{max}} lives",
       "phaseLabel": "Phase {{phase}} (step {{step}})",
       "showOriginalSolution": "Show original solution"
@@ -2183,25 +2188,25 @@
       "exhaustedTitle": "Played out!",
       "exhaustedSubtitle": "You have played through all puzzle rating ranges.",
       "areYouAStockfish": "Are you a Stockfish?",
-      "maxRating": "Max Rating",
-      "puzzlesSolved": "Puzzles Solved",
-      "livesLeft": "Lives Left",
-      "levelReached": "Level Reached",
+      "maxRating": "Max rating",
+      "puzzlesSolved": "Puzzles solved",
+      "livesLeft": "Lives left",
+      "levelReached": "Level reached",
       "time": "Time",
       "livesLostAt": "Lives lost at: {{ratings}}",
       "puzzleReview": "Puzzle Review",
       "newHighscore": "New Highscore!",
       "archiving": "Archiving...",
-      "archiveRun": "Archive this Run",
+      "archiveRun": "Archive this run",
       "archived": "Archived",
-      "playAgain": "Play Again",
-      "backToPuzzles": "Back to Puzzles",
-      "backToHistory": "Back to History"
+      "playAgain": "Play again",
+      "backToPuzzles": "Back to puzzles",
+      "backToHistory": "Back to history"
     },
     "history": {
       "title": "Endless Puzzle History",
       "noSessions": "No runs played yet.",
-      "startPlaying": "Start Playing",
+      "startPlaying": "Start playing",
       "filterAll": "All",
       "filterActive": "Active",
       "filterArchived": "Archived",
@@ -2211,12 +2216,12 @@
       "noArchivedSessions": "No archived runs.",
       "noActiveSessions": "No active runs.",
       "colDate": "Date",
-      "colMaxRating": "Max Rating",
+      "colMaxRating": "Max rating",
       "colEloDelta": "Elo ±",
       "colSolved": "Solved",
       "colDuration": "Duration",
       "colMistakes": "Mistakes",
-      "backToEndless": "Back to Endless Mode"
+      "backToEndless": "Back to Endless mode"
     },
     "loadFailed": "No new puzzles could be loaded right now. Please try again later."
   },
@@ -2817,7 +2822,7 @@
     "openOriginal": "Open original game",
     "analyze": "Analyse game",
     "analyzeHint": "Have the game analysed in the background — the evaluation graph with accuracy and move classes then appears below the board.",
-    "analyzeNoEngine": "No engine is available right now — please try again later.",
+    "analyzeNoEngine": "No engine is available right now — please try again later.",
     "analyzeLogin": "Sign in to have this game analysed.",
     "loadError": "Could not load the game.",
     "notFound": "This game doesn't exist or was removed.",
@@ -2951,7 +2956,9 @@
     "movesCount": "{{count}} moves",
     "mistakes": {
       "button": "Replay your mistakes ({{count}})",
+      "buttonSide": "Replay {{player}}’s mistakes ({{count}})",
       "title": "Replay your mistakes",
+      "titleSide": "Replay {{player}}’s mistakes",
       "none": "Nothing to replay for this side.",
       "progress": "Mistake {{current}} of {{total}}",
       "prompt": "You played {{san}}. Find a better move.",
@@ -2981,9 +2988,9 @@
       "restore": "{{count}} hidden — show again",
       "collection": {
         "short": "Replay mistakes",
-        "button": "Replay mistakes by league/season",
-        "title": "Replay mistakes by league/season",
-        "hint": "Choose a league and/or season: all open mistakes of your analysed games in that selection come one after the other on one board.",
+        "button": "Replay mistakes from several games",
+        "title": "Replay mistakes from several games",
+        "hint": "Choose a platform/league and/or mode/season: all open mistakes of your analysed games in that selection come one after the other on one board.",
         "includeSolved": "Also mistakes you already found",
         "selection": "{{games}} games selected, {{analysed}} of them analysed",
         "selectionOne": "1 game selected, {{analysed}} of them analysed",
@@ -3021,8 +3028,10 @@
       "remove": "Remove tag {{tag}}"
     },
     "classifier": {
-      "first": "Site / league",
+      "first": "Platform / league",
       "second": "Mode / season",
+      "firstPlaceholder": "e.g. Landesliga",
+      "secondPlaceholder": "e.g. 2026/27",
       "all": "All",
       "none": "Not set"
     },
@@ -3093,7 +3102,7 @@
       "notOnSheet": "not on the sheet",
       "ownerSide": "My side",
       "sideNone": "not set",
-      "classifierHint": "Online: site + mode are filled in automatically · league games: e.g. “Landesliga” + “2026/27”",
+      "classifierHint": "Online: platform + mode are filled in automatically · league games: e.g. “Landesliga” + “2026/27”",
       "clubLinked": "This game is a copy from the club database. If you correct moves and uploaded it (or are a manager), the correction also applies there and to all copies — otherwise your copy becomes a version of its own."
     },
     "pgnCopy": "Copy PGN",
@@ -3392,6 +3401,7 @@
     "setTitle": "Set your goals",
     "tracker": "Goal tracker",
     "min": "min",
+    "minPerDay": "min/day",
     "hours": "h",
     "days": "d",
     "games": "games",
@@ -3401,7 +3411,7 @@
     "fromGroup": "Preset from your group “{{group}}”. You can adjust it for yourself.",
     "personal": "Your personal goal.",
     "resetOverride": "Reset to group preset",
-    "noGoalHint": "No goals set yet — set your daily targets below.",
+    "noGoalHint": "No goals set yet — set your goals below.",
     "playHint": "Your rapid and classical games are counted automatically from your linked Lichess/chess.com account.",
     "saved": "Goals saved.",
     "resetDone": "Reset to the group preset.",
@@ -3471,11 +3481,11 @@
       "download": "Download APK",
       "downloadAnyway": "Download APK anyway",
       "unavailable": "The APK can only be installed on Android — not on your current system.",
-      "qrHint": "Scan the code with your Android phone: this page opens there and you can install RookHub right on the phone."
+      "qrHint": "Scan with your Android phone and install it there."
     },
     "pwa": {
       "title": "Install as an app (PWA)",
-      "desc": "Installs RookHub straight from the browser — on Android, Windows, macOS and Linux. Runs in its own window and offline afterwards.",
+      "desc": "Installs RookHub straight from the browser and then runs in its own window, even offline.",
       "recommended": "Recommended: no download, no security warning",
       "button": "Install now",
       "installed": "RookHub is already installed as an app on this device.",
@@ -3483,7 +3493,8 @@
       "ios1": "Open this page in Safari.",
       "ios2": "Tap the Share icon at the bottom.",
       "ios3": "Choose “Add to Home Screen” and confirm with “Add”.",
-      "unavailable": "Your browser isn’t showing an install button right now. Usually it still works from the browser menu (⋮): choose “Install app” or “Add to Home screen”. If that entry is missing, open RookHub in Chrome or Edge."
+      "unavailable": "Your browser isn’t offering an install button right now.",
+      "unavailableHelp": "It usually still works from the browser menu (⋮): choose “Install app” or “Add to Home screen”.\n\nIf that entry is missing, open RookHub in Chrome or Edge."
     }
   },
   "help": {
@@ -3744,6 +3755,16 @@
     "title": "Leaderboards",
     "error": "Could not load the leaderboards.",
     "empty": "No entries yet.",
+    "emptyAll": {
+      "weekly": "Nobody has trained this week yet – solve a puzzle and you’re at the top.",
+      "monthly": "Nobody has trained this month yet – solve a puzzle and you’re at the top.",
+      "alltime": "Nobody has trained yet – solve a puzzle and you’re at the top."
+    },
+    "emptyIn": {
+      "weekly": "No entries this week yet.",
+      "monthly": "No entries this month yet."
+    },
+    "emptyAction": "Solve puzzles",
     "period": {
       "weekly": "This week",
       "monthly": "This month",
@@ -3994,7 +4015,7 @@
     "restartHint": "Queue every position that is not analysed yet, on a freshly chosen engine",
     "restarted": "The game is being analysed again.",
     "restartFailed": "The game could not be started again.",
-    "toGuess": "Points game"
+    "toGuess": "Point game"
   },
   "guess": {
     "title": "Point game",
@@ -4634,6 +4655,7 @@
       "parents": "For parents: exactly what is deleted",
       "parentsHowTo": "For parents: how the account is deleted"
     },
+    "forgotParents": "For parents: no email received?",
     "stars": {
       "title": "Star Hunt",
       "tileHint": "One piece, many stars",
@@ -4916,6 +4938,8 @@
       "startPosition": "Starting position",
       "showStart": "Back to start",
       "clickHint": "Click a move, a reply or your answer to see the position on the board.",
+      "perspectiveWhite": "Evaluations from White's point of view",
+      "perspectiveBlack": "Evaluations from Black's point of view",
       "best": "best move",
       "calculating": "calculating · depth {{depth}}",
       "failed": "could not be calculated",
@@ -5462,7 +5486,7 @@
       "diagramAt": "Diagram on page {{page}}",
       "diagramCount": "{{n}} diagrams",
       "pickHint": "Double-click a diagram in the book to set it up here.",
-      "sideUnknown": "Side to move not given in the book",
+      "sideUnknown": "Side to move unknown",
       "analyse": "Analyse",
       "flip": "Flip board",
       "copyFen": "Copy FEN",
@@ -5519,6 +5543,7 @@
     "processingHint": "Diagrams are being recognised — you will get a notification."
   },
   "woodpecker": {
+    "timeBar": "{{used}} of {{total}} days gone",
     "title": "Woodpecker",
     "new": "New training",
     "intro": "The same puzzles again and again, each time in half the time – after the method by Smith and Tikkanen.",
@@ -5560,14 +5585,16 @@
     "saveFailed": "Could not save. Please try again.",
     "puzzles": "{{count}} puzzles",
     "puzzlesOne": "{{count}} puzzle",
-    "inSet": "{{n}} in the set",
-    "inSetOne": "{{n}} in the set",
     "toOverview": "To the overview",
     "notFound": "This training does not exist (any more).",
     "doneCompleted": "Woodpecker completed – well done!",
     "doneCycle": "Cycle {{n}} is finished. Take a break, then start the next cycle in the overview.",
     "repeatHint": "Repetition – only your first attempt counts in this cycle.",
     "create": {
+      "metaLast": "last practised {{date}}",
+      "metaPublic": "Shared with you",
+      "metaShared": "from {{name}}",
+      "metaOwn": "Your course",
       "title": "New Woodpecker training",
       "coursesHint": "Courses in the order you tick them – cycle 1 goes through them in this order.",
       "noCourses": "You have no course with puzzles yet.",

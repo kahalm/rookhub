@@ -133,7 +133,8 @@ export const STATES = [
       { waitFor: '.rd-panel app-ebook-board' }, ...(nth == null ? [] : [{ click: `.rd-panel .eb-modes .eb-mode >> nth=${nth}` }])],
     expect: nth == null ? '.rd-panel app-ebook-board' : `.rd-panel .eb-modes .eb-mode:nth-child(${nth + 1}).eb-mode--on`,
   })),
-  { of: 'rookhub__woodpecker', name: 'anlegen',
+  // Nur Konten mit lösbaren Kursen: ohne Kurs führt die leere Übersicht seit 0.807.0 direkt zu den Kursen (kein Dialog).
+  { of: 'rookhub__woodpecker', name: 'anlegen', auth: ['user', 'admin'],
     steps: [{ click: '.page .header-actions button, .page .empty-state button' }], expect: DIALOG },
   { of: 'rookhub__woodpecker', name: 'plan-menue', auth: ['admin'], steps: [{ click: '.plans .plan .plan-head button[mat-icon-button]' }], expect: MENU },
 

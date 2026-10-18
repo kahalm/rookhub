@@ -555,7 +555,7 @@
       "by": "بواسطة {{name}}"
     },
     "reimport": {
-      "chip": "إعادة الجلب",
+      "chip": "استيراد قديم",
       "legend": "{{count}} دورات تحتاج إلى استيراد جديد عبر RepCheck",
       "legendOne": "دورة واحدة تحتاج إلى استيراد جديد عبر RepCheck"
     }
@@ -677,8 +677,6 @@
       "showTags": "إظهار العلامات",
       "hideTags": "إخفاء العلامات",
       "sharePuzzle": "مشاركة اللغز",
-      "statRating": "التقييم",
-      "statLevel": "المستوى",
       "statSolved": "محلول",
       "statTime": "الوقت",
       "phaseLabel": "المرحلة {{phase}} (خطوة {{step}})"

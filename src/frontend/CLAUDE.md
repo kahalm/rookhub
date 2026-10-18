@@ -69,7 +69,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
   `checkSharedPageLinks` (`src/app/testing/shared-page-links.ts`, UX-003), dass jeder GERENDERTE Link der geteilten
   Anmelde- und Rechtsseiten auf seinen eigenen Weg fuehrt (nicht in '**'/`:slug`). Neue App mit diesen Seiten: dort
   aufrufen; neue geteilte Seite: in `SHARED_AUTH_LEGAL_PAGES` eintragen. Ein Link, der BEWUSST ueber die Anmeldung
-  geht (authGuard mit returnUrl, z. B. „Konto jetzt loeschen" → `/profile?section=delete`, UX-023), traegt
+  geht (authGuard mit returnUrl, z. B. „Konto löschen …" → `/profile?section=delete`, UX-023), traegt
   `data-login-required` — er muss trotzdem seine eigene Route treffen.
 - Gemerkte Ansicht der Turnierseite (F6-002): der lokale Schlüssel der Kalender-Filterleiste ist NUTZERGEBUNDEN
   (`rh.turnier.directoryView.<userId>`), `'rh.turnier.'` steht in den Abmelde-Spuren (wird beim Abmelden geräumt), und

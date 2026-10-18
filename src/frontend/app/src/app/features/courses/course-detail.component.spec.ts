@@ -595,6 +595,17 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     expect((el.querySelector('.desc-more') as HTMLElement).hidden).toBeTrue();
   });
 
+  // d3-rk-kurs-thema-taktik-vorgabe
+  it('Vorgabe-Thema „Taktik“ bekommt kein Abzeichen, gesetzte Themen schon (wie die Kurskarte)', async () => {
+    const { el } = await render({ themes: ['tactics'] });
+    expect(el.querySelectorAll('.badge--theme').length).toBe(0);
+    TestBed.resetTestingModule();
+    el.remove();
+    const second = await render({ themes: ['endgames', 'tactics'] });
+    expect(Array.from(second.el.querySelectorAll('.badge--theme')).map(b => b.textContent!.trim()))
+      .toEqual(['trainingGoals.theme.endgames', 'trainingGoals.theme.tactics']);
+  });
+
   it('zeigt Schlagwörter einzeln als Abzeichen, nicht als Rohtext', async () => {
     const { el } = await render({ tags: 'Meisterpartien,kommentiert,gemeinfrei' });
     const chips = Array.from(el.querySelectorAll('dd.tag-list .badge')).map(b => b.textContent!.trim());

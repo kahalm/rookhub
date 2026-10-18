@@ -15,6 +15,7 @@ import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 import { apiErrorCodeText } from '../../core/api-error';
 import { AUTH_INTRO, AuthIntro } from './auth-intro';
+import { PasswordToggleComponent } from '../../shared/password-toggle/password-toggle.component';
 import { FooterPresence, FooterPresenceService } from '../../shared/app-footer/footer-presence';
 
 /**
@@ -68,7 +69,7 @@ export function loginRetryAfterSeconds(err: any): number {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, PasswordToggleComponent, TranslatePipe],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -119,7 +120,9 @@ export function loginRetryAfterSeconds(err: any): number {
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.passwordLabel' | translate }}</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required autocomplete="current-password">
+              <!-- d3-rk-login-passwort-ohne-auge: dasselbe Auge wie beim Registrieren (geteilte Maske aller Hubs). -->
+              <input matInput [type]="pwEye.type()" [(ngModel)]="password" name="password" required autocomplete="current-password">
+              <app-password-toggle matSuffix #pwEye />
               <mat-error>{{ 'auth.login.fieldRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-checkbox [(ngModel)]="rememberMe" name="rememberMe">{{ 'auth.login.rememberMe' | translate }}</mat-checkbox>

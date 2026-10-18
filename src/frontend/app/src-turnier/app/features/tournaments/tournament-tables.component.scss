@@ -40,6 +40,11 @@
       .player-search { --mat-form-field-container-height: 40px; --mat-form-field-container-vertical-padding: 8px; }
       .player-search .search-clear { --mat-icon-button-state-layer-size: 32px; }
     }
+    /* d3-t-kalender-vorlauf-zu-hoch: in niedrigen Fenstern (Boox 200 %) dieselbe kompakte Suchzeile wie am Laptop. */
+    @media (max-width: 768px) and (max-height: 720px) {
+      .player-tools { padding-top: 0.5rem; }
+      .player-search { --mat-form-field-container-height: 40px; --mat-form-field-container-vertical-padding: 8px; }
+    }
     /* Zahlenspalten rechtsbündig mit gleich breiten Ziffern (z2-t-detail-zahlen-rechts); die Köpfe tragen den
        Sortierpfeil vorne (arrowPosition="before"), damit auch ihr Text rechts abschließt. FIDE-ID bleibt als Kennung links. */
     .mat-column-snr, .mat-column-elo, .mat-column-board, .mat-column-rank, .mat-column-points {
@@ -66,6 +71,10 @@
        ≈ 3,5:1 statt 1,6:1 fuer reines #ffc107, im Dunkeln bleibt es Gold. */
     :host { --fav-star-on: color-mix(in srgb, #ffc107 60%, var(--mat-sys-on-surface)); }
     .fav-icon, .fav-icon-sm { cursor: pointer; color: var(--mat-sys-on-surface-variant); font-size: 20px; }
+    /* d3-t-team-star-vertikal-versetzt: font-size verkleinerte nur die Glyphe — die 24-px-Box (Zeilenhöhe 24) saß auf der
+       Grundlinie, der Stern stand ~5 px über der Zeilenmitte. Box auf 20 px und mittig in der Zelle. */
+    .fav-icon, .fav-icon-sm { width: 20px; height: 20px; line-height: 20px; vertical-align: middle; }
+    td.mat-column-fav { vertical-align: middle; }
     .fav-icon.fav-active, .fav-icon-sm.fav-active { color: var(--fav-star-on); }
     .fav-icon:hover { color: var(--fav-star-on); }
     /* Sichtbarer Fokus für die jetzt tastaturbedienbaren Favoriten-Sterne. */

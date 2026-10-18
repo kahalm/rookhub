@@ -76,8 +76,9 @@
                Seit 0.518.1 auf dem Brett DIESER Seite; solange das Training läuft, steht die Leiste unter
                dem Brett und der Knopf entfällt. -->
           @if (mistakeTotal() > 0 && !training()) {
+            <!-- d3-rk-eigene-fehler-fremde-partie: „Eigene …“ nur für den Besitzer; sonst nennt der Knopf, wessen Fehler. -->
             <button mat-stroked-button class="mistakes" (click)="trainMistakes()">
-              <mat-icon>replay</mat-icon> {{ 'games.mistakes.button' | translate: { count: mistakeTotal() } }}
+              <mat-icon>replay</mat-icon> {{ (own ? 'games.mistakes.button' : 'games.mistakes.buttonSide') | translate: { count: mistakeTotal(), player: sidePlayer(mistakeSide()) } }}
             </button>
           }
           <!-- Ausgeblendete Fehler („nicht mehr zeigen", 0.748.0) lassen sich hier alle wieder einblenden. -->
@@ -99,12 +100,51 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #gameMenu="matMenu">
-              <!-- Am Handy stehen diese zwei hier statt als Knöpfe in der Kopfzeile (v1-rk-first-view-lead-long-mobile). -->
+              <!-- d3-rk-spielmenue-reihenfolge-uneinheitlich (DESIGN 5.5): Öffnen/Bearbeiten → Engine → Aktionen → Teilen/Export,
+                   in derselben Reihenfolge wie das ⋮ der Partienliste. -->
+              <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
+                <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
+              </button>
+              <!-- Am Handy steht „Original öffnen“ hier statt als Knopf in der Kopfzeile (v1-rk-first-view-lead-long-mobile). -->
               @if (game.sourceUrl) {
                 <a mat-menu-item class="original-item narrow-only" [href]="game.sourceUrl" target="_blank" rel="noopener">
                   <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
                 </a>
               }
+              @if (club && game.clubCanCorrect && leagueHub) {
+                <!-- Vereinspartie korrigieren (0.660.0): in LeagueHub, mit dem aufbewahrten Formular -->
+                <a mat-menu-item [href]="leagueHub + '/verein/partie/' + game.clubId + '/korrigieren'">
+                  <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                </a>
+              }
+              @if (own && gameId) {
+                <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
+                  <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                </a>
+              }
+              @if (loggedIn) {
+                <!-- Live-Engine waehlen (0.681.0): dieselbe Wahl wie am Analysebrett, hier ohne Umweg dorthin. -->
+                <button mat-menu-item class="live-engine-menu" [matMenuTriggerFor]="engineMenu">
+                  <mat-icon>memory</mat-icon><span>{{ 'games.live.engineMenu' | translate }}</span>
+                </button>
+              }
+              @if (canLc0()) {
+                <!-- Ganze Partie auf Lc0 (0.692.0): nur Vereinsmitglieder, nur solange es keine Lc0-Analyse gibt. -->
+                <button mat-menu-item class="lc0-game" (click)="analyzeLc0()">
+                  <mat-icon>psychology</mat-icon><span>{{ 'games.lc0.menu' | translate }}</span>
+                </button>
+              }
+              @if (own && gameId) {
+                <button mat-menu-item (click)="roast()">
+                  <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
+                </button>
+                @if (clubImport) {
+                  <button mat-menu-item (click)="toClub()">
+                    <mat-icon>groups</mat-icon><span>{{ 'games.clubImport' | translate }}</span>
+                  </button>
+                }
+              }
+              <!-- Am Handy steht „Teilen-Link kopieren“ hier statt als Knopf in der Kopfzeile. -->
               @if (own && shareToken) {
                 <button mat-menu-item class="share-item narrow-only" (click)="share()">
                   <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
@@ -121,45 +161,13 @@
                   }
                 }
               }
-              <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
-                <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
-              </button>
-              @if (loggedIn) {
-                <!-- Live-Engine waehlen (0.681.0): dieselbe Wahl wie am Analysebrett, hier ohne Umweg dorthin. -->
-                <button mat-menu-item class="live-engine-menu" [matMenuTriggerFor]="engineMenu">
-                  <mat-icon>memory</mat-icon><span>{{ 'games.live.engineMenu' | translate }}</span>
-                </button>
-              }
-              @if (canLc0()) {
-                <!-- Ganze Partie auf Lc0 (0.692.0): nur Vereinsmitglieder, nur solange es keine Lc0-Analyse gibt. -->
-                <button mat-menu-item class="lc0-game" (click)="analyzeLc0()">
-                  <mat-icon>psychology</mat-icon><span>{{ 'games.lc0.menu' | translate }}</span>
-                </button>
-              }
               <button mat-menu-item (click)="copyPgn()">
                 <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
               </button>
               <button mat-menu-item (click)="downloadPgn()">
                 <mat-icon>file_download</mat-icon><span>{{ 'common.downloadPgn' | translate }}</span>
               </button>
-              @if (club && game.clubCanCorrect && leagueHub) {
-                <!-- Vereinspartie korrigieren (0.660.0): in LeagueHub, mit dem aufbewahrten Formular -->
-                <a mat-menu-item [href]="leagueHub + '/verein/partie/' + game.clubId + '/korrigieren'">
-                  <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
-                </a>
-              }
               @if (own && gameId) {
-                <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
-                  <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
-                </a>
-                <button mat-menu-item (click)="roast()">
-                  <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
-                </button>
-                @if (clubImport) {
-                  <button mat-menu-item (click)="toClub()">
-                    <mat-icon>groups</mat-icon><span>{{ 'games.clubImport' | translate }}</span>
-                  </button>
-                }
                 @if (scanId) {
                   <button mat-menu-item (click)="photo(false)">
                     <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
@@ -230,6 +238,7 @@
           </div>
           @if (training(); as t) {
             <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
+                                  [title]="own ? '' : 'games.mistakes.titleSide'" [titleParams]="{ player: sidePlayer(t.side()) }"
                                   [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()" />
             @if (trainingAnalysis(); as a) {
               <app-live-engine-panel class="live-slot" [session]="a.session" [gameFen]="a.base" (closed)="stopTrainingAnalysis()" />

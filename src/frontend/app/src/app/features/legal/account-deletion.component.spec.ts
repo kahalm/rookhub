@@ -113,7 +113,7 @@ describe('AccountDeletionComponent', () => {
       return f.nativeElement as HTMLElement;
     };
 
-    it('RookHub: genau ein Primaerknopf „Konto jetzt loeschen" ins Profil mit aufgeklappter Karte', () => {
+    it('RookHub: genau ein Primaerknopf „Konto löschen …" ins Profil mit aufgeklappter Karte', () => {
       // Vorher nur Fliesstext „Profil → Konto loeschen" — kein Link, der einzige Primaerknopf war „Registrieren".
       const el = render();
       const buttons = el.querySelectorAll('a.delete-now');
@@ -124,6 +124,23 @@ describe('AccountDeletionComponent', () => {
       expect(el.textContent).toContain('legal.accountDeletion.deleteNow');
       expect(el.textContent).toContain('legal.accountDeletion.inApp');
       expect(el.textContent).not.toContain('legal.accountDeletion.inPartner');
+    });
+
+    // UI-Sweep d3 (d3-rk-konto-jetzt-loeschen-beschriftung, d3-rk-konto-loeschen-url-kuerzel): der Knopf fuehrt nur zur
+    // Karte im Profil (geloescht wird dort mit Passwort) — er verspricht kein „jetzt“, sondern zeigt mit „…“ den
+    // Folgeschritt; der Text nennt keine internen Pfadkuerzel (/g/ …).
+    it('Beschriftung passt zur Wirkung, keine Pfadkuerzel im Loeschtext (de/en/hr/hu)', async () => {
+      for (const lang of ['de', 'en', 'hr', 'hu']) {
+        let res = await fetch(`/i18n/${lang}.json`).catch(() => null);
+        if (!res?.ok) res = await fetch(`/base/i18n/${lang}.json`);
+        expect(res!.ok).withContext(`${lang}.json`).toBeTrue();
+        const a = (await res!.json()).legal.accountDeletion;
+        for (const k of ['deleteNow', 'deleteOnRookHub']) {
+          expect(a[k]).withContext(`${lang}.${k}`).not.toMatch(/jetzt|\bnow\b|\bsada\b|\bmost\b/i);
+          expect(a[k]).withContext(`${lang}.${k}`).toMatch(/…$/);
+        }
+        expect(a.removedShared).withContext(lang).not.toMatch(/\(\/[a-z]\/|\/[glrw]\//);
+      }
     });
 
     // UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored): im M3-Thema nahm der Knopf die Primärfarbe.

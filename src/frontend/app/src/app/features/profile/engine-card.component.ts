@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -102,13 +102,18 @@ import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../an
         <!-- UI-Sweep 2026-10-11 (d2-rk-engine-token-align): kein reservierter Hinweisbereich, sonst saß der Knopf 10 px tiefer. -->
         <mat-form-field appearance="outline" class="token-field" subscriptSizing="dynamic">
           <mat-label>{{ 'profile.engine.tokenLabel' | translate }}</mat-label>
-          <input matInput type="password" [(ngModel)]="tokenInput" name="lichessEngineToken"
-                 autocomplete="off" (keyup.enter)="save()">
+          <input #tokenField matInput type="password" [(ngModel)]="tokenInput" name="lichessEngineToken"
+                 autocomplete="off" (keyup.enter)="save()" (ngModelChange)="tokenMissing = false">
         </mat-form-field>
-        <button mat-stroked-button type="button" [disabled]="!tokenInput.trim() || saving" (click)="save()">
+        <!-- d3-rk-profil-lichess-speichern-gesperrt-ohne-grund: nur waehrend des Speicherns gesperrt; leer geklickt
+             nennt der Hinweis darunter den Grund (DESIGN 5.4, wie „Senden“ in den Nachrichten). -->
+        <button mat-stroked-button type="button" [disabled]="saving" (click)="save()">
           <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
         </button>
       </div>
+      @if (tokenMissing) {
+        <p class="engine-hint token-missing" role="status">{{ 'profile.engine.tokenMissing' | translate }}</p>
+      }
 
       @if (listFailed) {
         <p class="engine-warn"><mat-icon>cloud_off</mat-icon> {{ 'profile.engine.listFailed' | translate }}</p>
@@ -191,6 +196,9 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   maskedToken: string | null = null;
   tokenInput = '';
   saving = false;
+  /** „Speichern“ mit leerem Feld geklickt: Grund unter dem Feld zeigen statt den Knopf grundlos zu sperren. */
+  tokenMissing = false;
+  @ViewChild('tokenField') private tokenField?: ElementRef<HTMLInputElement>;
   tokenInvalid = false;
   enginesLoaded = false;
   listFailed = false;
@@ -270,7 +278,14 @@ export class EngineCardComponent implements OnInit, OnDestroy {
 
   save(): void {
     const token = this.tokenInput.trim();
-    if (!token || this.saving) return;
+    if (this.saving) return;
+    if (!token) {
+      this.tokenMissing = true;
+      this.tokenField?.nativeElement.focus();
+      this.cdr.markForCheck();
+      return;
+    }
+    this.tokenMissing = false;
     this.saving = true;
     this.externalEngines.saveToken(token).subscribe({
       next: s => {

@@ -18,7 +18,7 @@ import {
   KID_PRIVACY_STYLES, KidDeletionTexts, foldAccountDeletion, foldPrivacy, isAccountDeletionUrl, isLegalUrl, isPrivacyUrl,
   setAccountDeletionTexts,
 } from './shared/kids-privacy';
-import { KID_AUTH_STYLES, isAuthUrl } from './shared/kids-auth';
+import { KID_AUTH_STYLES, foldForgotPassword, isAuthUrl, isForgotPasswordUrl, setForgotPasswordTexts } from './shared/kids-auth';
 
 /** Die vollstaendig uebersetzten Sprachen — nur die bietet die Kinderseite an. */
 export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
@@ -251,6 +251,8 @@ export class KidHubAppComponent implements OnInit {
     ),
     { initialValue: { short: '', parents: '', howTo: '' } },
   );
+  /** Beschriftung des Eltern-Aufklappers auf „Passwort vergessen" (d3-k-forgot-stacked-muted-paragraphs). */
+  private readonly forgotParents = toSignal(this.translate.stream('kids.forgotParents'), { initialValue: '' });
 
   private readonly api = inject(KidsApiService);
   /** Die Antwort des Servers wird je Seitenaufruf nur EINMAL geholt. */
@@ -268,6 +270,11 @@ export class KidHubAppComponent implements OnInit {
       const url = (e as NavigationEnd).urlAfterRedirects;
       if (isPrivacyUrl(url)) afterNextRender(() => foldPrivacy(host), { injector });
       if (isAccountDeletionUrl(url)) afterNextRender(() => foldAccountDeletion(host, this.deletionTexts()), { injector });
+      if (isForgotPasswordUrl(url)) afterNextRender(() => foldForgotPassword(host, this.forgotParents()), { injector });
+    });
+    effect(() => {
+      const label = this.forgotParents();
+      untracked(() => setForgotPasswordTexts(host, label));
     });
     // „Konto loeschen" (d1-k-account-deletion-jargon): Kindersatz + Eltern-Aufklapper folgen der Sprache.
     effect(() => {

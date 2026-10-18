@@ -45,8 +45,17 @@ export interface HoleBoardView {
   template: `
     <div class="holes">
       <div class="settings">
+        <!-- d3-rk-holes-kapitel-mit-schwarz-label: die Seitenanzeige (einfarbiges Repertoire) als leiser Chip oben — vor dem
+             Datenbank-Umschalter las sie sich wie dessen Beschriftung. Quelle und Datenbank tragen sichtbare
+             Zeilenbeschriftungen wie Elo/Tempo. -->
+        @if (colorsPresent().length <= 1) {
+          <div class="row">
+            <span class="side-chip">{{ (color() === 'w' ? 'repertoire.holes.asWhite' : 'repertoire.holes.asBlack') | translate }}</span>
+          </div>
+        }
         @if (sources()?.local) {
           <div class="row">
+            <span class="row-label">{{ 'repertoire.holes.source' | translate }}</span>
             <mat-button-toggle-group [value]="settings().source" (change)="setSource($event.value)" hideSingleSelectionIndicator="true"
                                      [attr.aria-label]="'repertoire.holes.source' | translate">
               <mat-button-toggle value="online">{{ 'repertoire.holes.sourceOnline' | translate }}</mat-button-toggle>
@@ -57,20 +66,22 @@ export interface HoleBoardView {
             }
           </div>
         }
-        <div class="row">
-          @if (colorsPresent().length > 1) {
+        @if (colorsPresent().length > 1) {
+          <div class="row">
+            <span class="row-label">{{ 'repertoire.holes.color' | translate }}</span>
             <mat-button-toggle-group [value]="color()" (change)="setColor($event.value)" hideSingleSelectionIndicator="true"
                                      [attr.aria-label]="'repertoire.holes.color' | translate">
               <mat-button-toggle value="w">{{ 'repertoire.holes.white' | translate }}</mat-button-toggle>
               <mat-button-toggle value="b">{{ 'repertoire.holes.black' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
-          } @else {
-            <span class="side-label">{{ (color() === 'w' ? 'repertoire.holes.asWhite' : 'repertoire.holes.asBlack') | translate }}</span>
-          }
+          </div>
+        }
+        <div class="row">
+          <span class="row-label">{{ 'repertoire.holes.database' | translate }}</span>
           <mat-button-toggle-group [value]="settings().database" (change)="setDatabase($event.value)" hideSingleSelectionIndicator="true"
                                    [attr.aria-label]="'repertoire.holes.database' | translate">
-            <mat-button-toggle value="lichess">Lichess</mat-button-toggle>
-            <mat-button-toggle value="masters">{{ 'repertoire.holes.masters' | translate }}</mat-button-toggle>
+            <mat-button-toggle value="lichess">{{ 'repertoire.holes.dbLichess' | translate }}</mat-button-toggle>
+            <mat-button-toggle value="masters">{{ 'repertoire.holes.dbMasters' | translate }}</mat-button-toggle>
           </mat-button-toggle-group>
           <app-help-hint [text]="'repertoire.holes.help' | translate" />
         </div>
@@ -179,7 +190,8 @@ export interface HoleBoardView {
       border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
     .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .row-label { font-size: 12px; min-width: 64px; color: color-mix(in srgb, currentColor 65%, transparent); }
-    .side-label { font-size: 13px; font-weight: 500; }
+    .side-chip { font-size: .72rem; font-weight: 500; padding: 1px 7px; border-radius: 999px;
+      background: color-mix(in srgb, currentColor 10%, transparent); }
     .spacer { flex: 1; }
     .chip { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 12px; cursor: pointer;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }

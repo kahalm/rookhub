@@ -273,6 +273,16 @@ describe('ClubHub-Gruppen', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).not.toMatch(/„[^“"]*"/);
     });
 
+    // d3-c-gruppe-textlinks-tippziel-klein: zerstörende Aktion als Gefahrknopf (.btn.danger, 44 px), nicht als grauer Textlink.
+    it('„Gruppe löschen" ist ein Gefahrknopf neben „Änderungen speichern"', async () => {
+      const fixture = await open(GROUP({ canManage: true }));
+      const del = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.manage-group .delete-group')!;
+      expect(del.textContent!.trim()).toBe('Gruppe löschen');
+      expect(del.classList).toContain('btn');
+      expect(del.classList).toContain('danger');
+      expect(del.classList).not.toContain('btn-link');
+    });
+
     it('Gruppe löschen fragt nach und führt zur Liste', async () => {
       api.deleteGroup.and.resolveTo();
       const fixture = await open(GROUP({ canManage: true }));

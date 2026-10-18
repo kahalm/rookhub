@@ -143,6 +143,23 @@ describe('ResetPasswordComponent Template (Länge + Fehlerblock, UX-018)', () =>
     return fixture;
   }
 
+  // UI-Sweep d3 (d3-rk-login-passwort-ohne-auge): beide Felder mit eigenem Auge, wie Anmeldung und Registrierung.
+  it('beide Passwortfelder lassen sich einzeln einblenden', async () => {
+    const fixture = await render();
+    const el: HTMLElement = fixture.nativeElement;
+    const toggles = Array.from(el.querySelectorAll('button.pw-toggle')) as HTMLButtonElement[];
+    expect(toggles.length).toBe(2);
+    const pw = el.querySelector('input[name="password"]') as HTMLInputElement;
+    const confirm = el.querySelector('input[name="confirm"]') as HTMLInputElement;
+    toggles[0].click();
+    fixture.detectChanges();
+    expect(pw.type).toBe('text');
+    expect(confirm.type).toBe('password');
+    toggles[1].click();
+    fixture.detectChanges();
+    expect(confirm.type).toBe('text');
+  });
+
   it('prüft beide Felder auf die Server-Mindestlänge (8, nicht 4)', async () => {
     const el: HTMLElement = (await render()).nativeElement;
     expect(el.querySelector('input[name="password"]')!.getAttribute('minlength')).toBe('8');

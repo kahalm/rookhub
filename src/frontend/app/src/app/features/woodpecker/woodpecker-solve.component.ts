@@ -48,7 +48,9 @@ const STOCKFISH_DEPTH = 12;
             <div class="meta">
               <span>{{ 'woodpecker.cycleOf' | translate: { n: p.currentCycle, max: p.maxCycles } }}</span>
               @if (p.currentCycle === 1) {
-                <span class="sep">{{ (p.setSize === 1 ? 'woodpecker.inSetOne' : 'woodpecker.inSet') | translate: { n: p.setSize } }}</span>
+                <!-- d3-rk-wp-loeser-im-satz-beschriftung: derselbe Wortlaut wie auf der Übersichtskarte („Satz: 0 Aufgaben von
+                     287“) statt „0 im Satz“. -->
+                <span class="sep">{{ (p.setSize === 1 ? 'woodpecker.setGrowingOne' : 'woodpecker.setGrowing') | translate: { n: p.setSize, total: p.availableCount } }}</span>
               } @else {
                 <span class="sep">{{ 'woodpecker.cycleProgress' | translate: { done: cycle()!.attempted, total: p.setSize } }}</span>
               }

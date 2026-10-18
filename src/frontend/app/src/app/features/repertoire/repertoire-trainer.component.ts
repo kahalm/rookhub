@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, forkJoin, switchMap } from 'rxjs';
 import { Chess } from 'chess.js';
@@ -89,7 +90,7 @@ const LEARN_REPEATS = 3;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconLabelDirective,
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule,
-    MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, TranslatePipe, PuzzleBoardComponent,
+    MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, MatMenuModule, TranslatePipe, PuzzleBoardComponent,
   ],
   templateUrl: './repertoire-trainer.component.html',
   styleUrls: ['./repertoire-trainer.component.scss'],
@@ -170,6 +171,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** true = Session läuft aus der Offline-Kopie (Server unerreichbar); Bewertungen werden lokal
    *  berechnet und via Offline-Queue nachgereicht, Pool-/Config-Verwaltung ist ausgeblendet. */
   offlineSession = false;
+  /** Name des Repertoires für den Kopf (d3-rk-trainer-leer-zwei-aktionen); null = noch nicht da → „Repertoire-Trainer“. */
+  repertoireName: string | null = null;
   /** Effektive SR-Intervalle aus der Offline-Kopie (nur fürs lokale Fälligkeits-Rechnen). */
   private srLevels: SrLevel[] | null = null;
 
@@ -225,6 +228,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const oc = this.route.snapshot.queryParamMap.get('color');
     this.opponentColor = oc === 'w' || oc === 'b' ? oc : null;
     this.stockfish.init().catch(() => {});
+    // Name nur fürs Kopf-Label: ein Fehler ändert nichts (Titel bleibt „Repertoire-Trainer“). Getrennt vom forkJoin,
+    // damit ein Ausfall hier nicht in die Offline-Kopie fällt. `?.`: Test-Doubles ohne die Methode.
+    this.training.getRepertoireName?.(this.repertoireId)?.subscribe({
+      next: name => { if (name && !this.repertoireName) { this.repertoireName = name; this.cdr.markForCheck(); } },
+      error: () => {},
+    });
 
     forkJoin({
       pgn: this.training.getPgn(this.repertoireId),
@@ -241,6 +250,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         const cached = getRepertoireOffline(this.repertoireId);
         if (cached) {
           this.offlineSession = true;
+          this.repertoireName ??= cached.meta?.name || null;
           this.srLevels = cached.config;
           void this.initSession(cached.pgn, cached.states);
         } else {

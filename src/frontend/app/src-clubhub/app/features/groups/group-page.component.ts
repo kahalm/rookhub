@@ -161,7 +161,8 @@ export function statusMark(status: Status | null): string {
             <label class="check"><input type="checkbox" [checked]="form().archived" (change)="patch({ archived: $any($event.target).checked })"> Im Archiv (trainiert nicht mehr)</label>
             <div class="actions">
               <button type="button" class="btn primary save-group" [disabled]="busy()" (click)="saveGroup()">Änderungen speichern</button>
-              <button type="button" class="btn-link danger" [disabled]="busy()" (click)="deleteGroup()">Gruppe löschen</button>
+              <!-- d3-c-gruppe-textlinks-tippziel-klein: zerstörende Aktion als Gefahrknopf statt grauer Nebenlink -->
+              <button type="button" class="btn danger delete-group" [disabled]="busy()" (click)="deleteGroup()">Gruppe löschen</button>
             </div>
           </section>
           <section>

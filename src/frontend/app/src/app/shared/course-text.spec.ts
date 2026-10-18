@@ -69,4 +69,14 @@ describe('splitCourseText', () => {
     const t = 'Wie AlphaZero und LeelaZero zeigten, ist das Opfer korrekt.';
     expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
   });
+  it('angeklebte Partieangabe mit Jahreszahl wird abgesetzt (d3-rk-kommentar-text-ohne-leerzeichen, Buch 38 Dev)', () => {
+    expect(splitCourseText('Daniel Alsina Leal - Sarunas Sulskis, Hastings 2012In this game, White is more cautious.'))
+      .toEqual([
+        { kind: 'h', text: 'Daniel Alsina Leal - Sarunas Sulskis, Hastings 2012' },
+        { kind: 'p', text: 'In this game, White is more cautious.' },
+      ]);
+    // längere Zahlen und Züge bleiben stehen
+    const t = 'Nach 12345Ab und e4 bleibt alles. Seit 1999 Weiß am Zug.';
+    expect(splitCourseText(t)).toEqual([{ kind: 'p', text: t }]);
+  });
 });

@@ -59,6 +59,30 @@ describe('InstallComponent', () => {
     expect(el.querySelector('.pwa-section .unavailable')?.textContent).toContain('install.pwa.unavailable');
   });
 
+  // d3-rk-install-karte-fliesstext: ein Satz sichtbar, die Menü-Anleitung liegt hinter dem ?-Symbol.
+  it('zeigt ohne Installieren-Knopf nur einen Satz, die Anleitung steckt im ?', () => {
+    const { el } = setup({ canInstall: false });
+    const p = el.querySelector('.pwa-section .unavailable') as HTMLElement;
+    const hint = p.querySelector('app-help-hint button') as HTMLElement;
+    expect(hint).not.toBeNull();
+    expect(hint.getAttribute('aria-label')).toBe('install.pwa.unavailableHelp');
+    expect(p.textContent).toContain('install.pwa.unavailable');
+    expect(p.textContent).not.toContain('install.pwa.unavailableHelp');
+  });
+
+  it('Kartentexte sind je ein Satz (de/en/hr/hu)', async () => {
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      let res = await fetch(`/i18n/${lang}.json`).catch(() => null);
+      if (!res?.ok) res = await fetch(`/base/i18n/${lang}.json`);
+      expect(res!.ok).withContext(`${lang}.json`).toBeTrue();
+      const i = (await res!.json()).install;
+      for (const t of [i.pwa.desc, i.pwa.unavailable, i.apk.qrHint]) {
+        expect(t.split(/[.!?](\s|$)/).filter((x: string | undefined) => x && x.trim()).length)
+          .withContext(`${lang}: ${t}`).toBe(1);
+      }
+    }
+  });
+
   it('bietet am Desktop einen QR-Code zu dieser Seite an, auf iOS nicht', () => {
     let { el } = setup({});
     const qr = el.querySelector('.apk-section app-qr-code');
@@ -92,7 +116,8 @@ describe('install-Texte (Codereview W5 UX-051)', () => {
   for (const lang of ['en', 'de', 'hr', 'hu']) {
     it(`${lang}: der Rückfall nennt das Browsermenü, die APK-Karte rät nicht mehr zum Übertragen`, async () => {
       const t = await load(lang);
-      expect(t.install.pwa['unavailable']).toContain('⋮');
+      // d3-rk-install-karte-fliesstext: der Menüweg steht seitdem hinter dem ?-Symbol (unavailableHelp).
+      expect(t.install.pwa['unavailableHelp']).toContain('⋮');
       expect(t.install.pwa['recommended']).toBeTruthy();
       expect(t.install.apk['qrHint']).toBeTruthy();
       // „…und auf ein Android-Gerät übertragen" ist durch den QR-Code ersetzt.

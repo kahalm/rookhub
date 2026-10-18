@@ -379,7 +379,8 @@
       @if (truncated()) {
         <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>
       }
-      <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}<ng-container *ngTemplateOutlet="profileNote" /></p>
+      <!-- d3-t-kalender-vorlauf-zu-hoch: in niedrigen Fenstern (Boox 200 %) steht der Titel nur für Vorleser, sein ⓘ hier. -->
+      <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}<ng-container *ngTemplateOutlet="profileNote" /><app-help-hint class="low-help" [text]="'tournamentDirectory.help' | translate" /></p>
       @if (upcomingEntries().length > 0) {
         <div class="entry-grid">
           @for (entry of upcomingEntries(); track trackById($index, entry)) {

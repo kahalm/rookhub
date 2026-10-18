@@ -13,6 +13,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { CourseListItem, CourseChapter } from './course.service';
 import { formatScore, maxPoints } from './calc/calc-review.util';
 import { labelOr } from './course-language.util';
+import { setThemeKeys } from './course-themes.util';
 
 /**
  * Praesentationale Kurs-Karte: zeigt Titel/Badges/Fortschritt/Themen-Chips/Aktions-Menue/Kapitel
@@ -461,9 +462,7 @@ export class CourseCardComponent {
    */
   get themeChipKeys(): string[] {
     if (this.course.isCalculation) return ['courses.kindCalculation'];
-    const themes = this.course.themes ?? [];
-    if (themes.length === 0 || (themes.length === 1 && themes[0] === 'tactics')) return [];
-    return themes.map(t => 'trainingGoals.theme.' + t);
+    return setThemeKeys(this.course.themes);
   }
 
   get calcScore(): string {

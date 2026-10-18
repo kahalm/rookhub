@@ -555,7 +555,7 @@
       "by": "{{name}} tarafından"
     },
     "reimport": {
-      "chip": "Yeniden al",
+      "chip": "İçe aktarma eski",
       "legend": "{{count}} kursun RepCheck ile yeniden içe aktarılması gerekiyor",
       "legendOne": "1 kursun RepCheck ile yeniden içe aktarılması gerekiyor"
     }
@@ -677,8 +677,6 @@
       "showTags": "Etiketleri göster",
       "hideTags": "Etiketleri gizle",
       "sharePuzzle": "Problemi paylaş",
-      "statRating": "Derece",
-      "statLevel": "Seviye",
       "statSolved": "Çözüldü",
       "statTime": "Süre",
       "phaseLabel": "Aşama {{phase}} (adım {{step}})"

@@ -63,6 +63,25 @@ describe('ClubAddPageComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  // d3-l-info-icon-allein-handy: am Handy brach das ⓘ allein in Zeile 2 — jetzt steht es immer mit „Gegner." auf einer Zeile.
+  it('Einleitung: das ⓘ bricht nie allein um, es steht in derselben Zeile wie das letzte Wort', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const intro = el.querySelector<HTMLElement>('.club-intro p.info-inline')!;
+    const tail = intro.querySelector<HTMLElement>('.info-tail')!;
+    expect(getComputedStyle(tail).whiteSpace).toBe('nowrap');
+    expect(tail.textContent).toContain('Gegner.');
+    for (const width of [240, 300, 330, 358, 420]) {
+      intro.style.width = `${width}px`;
+      const range = document.createRange();
+      range.selectNodeContents(tail.firstChild!);
+      const word = range.getBoundingClientRect();
+      const btn = tail.querySelector('.chk-btn')!.getBoundingClientRect();
+      expect(Math.abs((btn.top + btn.bottom) / 2 - (word.top + word.bottom) / 2)).withContext(`${width}px`).toBeLessThan(8);
+    }
+  }));
+
   // UI-Sweep 2026-10-11 (d2-l-hinzufuegen-anon-text): Schalter mit einem Satz, der lange Datenschutztext hinter (i)
   it('Schalter „ersetzen": ein Satz, der Rest hinter (i) — der Knopf schaltet das Häkchen nicht um', fakeAsync(() => {
     const el = create();

@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { LeaderboardsComponent } from './leaderboards.component';
 import { LeaderboardService, Leaderboards } from './leaderboard.service';
@@ -93,6 +94,34 @@ describe('LeaderboardsComponent', () => {
     const css = (((LeaderboardsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
     expect(css).toMatch(/@media \(min-width: ?600px\) ?\{ ?\.lb-grid ?\{ ?grid-template-columns: ?repeat\(2/);
   });
+  /** UI-Sweep d3 (d3-rk-bestenlisten-leer-ohne-weg): alles leer → eine Leerkarte mit Zeitraum-Satz und „Puzzles lösen“. */
+  it('d3-rk-bestenlisten-leer-ohne-weg: eine Leerkarte mit Grund und einem Knopf; einzelne leere Karte nennt den Zeitraum', () => {
+    const empty = (p: string): Leaderboards => ({ period: p, puzzles: [], endlessRuns: [], courseLines: [], dailyPuzzles: [] });
+    let next: (p: string) => Leaderboards = empty;
+    TestBed.configureTestingModule({
+      imports: [LeaderboardsComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: LeaderboardService, useValue: { get: (p: string) => of(next(p)) } }],
+    });
+    const fixture = TestBed.createComponent(LeaderboardsComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.allEmpty).toBeTrue();
+    expect(el.querySelectorAll('.lb-card').length).toBe(0);
+    const card = el.querySelector('.lb-empty-all') as HTMLElement;
+    expect(card.textContent).toContain('leaderboards.emptyAll.weekly');
+    const links = card.querySelectorAll('a[mat-flat-button]');
+    expect(links.length).toBe(1);
+    expect(links[0].getAttribute('href')).toBe('/puzzles');
+
+    next = data;
+    fixture.componentInstance.onPeriod('monthly');
+    fixture.detectChanges();
+    expect(el.querySelector('.lb-empty-all')).toBeNull();
+    expect(el.querySelectorAll('.lb-card').length).toBe(4);
+    expect(el.querySelector('.lb-card .empty-state')?.textContent).toContain('leaderboards.emptyIn.monthly');
+  });
+
   /** UI-Sweep b1 (b1-rk-bestenlisten-namen-laptop): am Laptop (1 366 px) breiter, Einheit in vier schmalen Spalten aus. */
   it('b1-rk-bestenlisten-namen-laptop: Seite ab 1 280 px bis 1 400 px breit, Einheit 1 100–1 399 px ausgeblendet', () => {
     const css = (((LeaderboardsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');

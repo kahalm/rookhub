@@ -85,6 +85,21 @@ describe('LinkPageComponent (Konto verknüpfen)', () => {
     expect(el().querySelector('form')).not.toBeNull();
   });
 
+  // d3-c-verknuepfen-titel-beschriftung: verknüpft heißt die Seite „Verknüpfung" (wie die Fußzeile), sonst „Konto verknüpfen".
+  it('Überschrift folgt dem Stand: „Konto verknüpfen" vor dem Einlösen, „Verknüpfung" danach', async () => {
+    api.redeem.and.resolveTo({ linked: true, firstName: 'Lena' });
+    api.selfUnlink.and.resolveTo();
+    await create();
+    expect(el().querySelector('h1')!.textContent!.trim()).toBe('Konto verknüpfen');
+    fixture.componentInstance.code.set('ABCDE-FGHJK');
+    await fixture.componentInstance.redeem();
+    fixture.detectChanges();
+    expect(el().querySelector('h1')!.textContent!.trim()).toBe('Verknüpfung');
+    await fixture.componentInstance.unlink();
+    fixture.detectChanges();
+    expect(el().querySelector('h1')!.textContent!.trim()).toBe('Konto verknüpfen');
+  });
+
   // UI-Sweep 2026-10-11 (r2-c-footer-link, r2-c-code-field)
   it('Einlösen und Trennen landen auch im gemeinsamen Stand (Fußzeile); Feld und Knopf stehen in einer Zeile', async () => {
     api.redeem.and.resolveTo({ linked: true, firstName: 'Lena' });

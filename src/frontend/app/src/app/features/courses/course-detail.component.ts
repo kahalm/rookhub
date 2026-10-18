@@ -36,6 +36,7 @@ import { getBookOfflineLanguage, saveBookOffline } from '../puzzles/book-offline
 import { AuthService } from '../../core/auth.service';
 import { WeeklyService, nextWeeklySlot } from '../weekly/weekly.service';
 import { courseTagList } from './course-detail-text.util';
+import { setThemeKeys } from './course-themes.util';
 import { ClampMoreDirective } from '../../shared/clamp-more/clamp-more.directive';
 
 /**
@@ -320,6 +321,11 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   /** Schlagwörter einzeln als Abzeichen statt des rohen Komma-Strings (v1-rk-kursseite-schlagwoerter-ohne-leerzeichen). */
   get tagList(): string[] { return courseTagList(this.detail?.tags); }
+
+  /** Thema-Abzeichen: nur gesetzte Themen, keine Vorgabe „Taktik“ (d3-rk-kurs-thema-taktik-vorgabe). */
+  get themeChips(): string[] {
+    return this.detail && !this.detail.isCalculation ? setThemeKeys(this.detail.themes) : [];
+  }
 
   get calcScore(): string {
     const d = this.detail;

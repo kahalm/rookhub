@@ -45,6 +45,32 @@ public class EbookLibraryImporter
         return first.Length == 0 ? last : $"{first} {last}";
     }
 
+    /// <summary>Sammelordner (z. B. „Gemeinfrei“): darin liegt je Autor ein Unterordner „Vorname Nachname“.</summary>
+    internal static readonly HashSet<string> CollectionFolders = new(StringComparer.OrdinalIgnoreCase) { "Gemeinfrei" };
+
+    /// <summary>Autor aus dem Ordnerpfad relativ zur Bibliothek: erstes Segment („Nachname, Vorname“); liegt das Buch in
+    /// einem Sammelordner, der Unterordner darunter wörtlich („V. M. N. Portilla“, „Georg Marco, Carl Schlechter“) —
+    /// „(Turnierbuch)“ und ähnliche Klammer-Platzhalter sind kein Autor.</summary>
+    internal static string AuthorFromSegments(IReadOnlyList<string> segments)
+    {
+        if (segments.Count == 0 || segments[0] == ".") return string.Empty;
+        if (!CollectionFolders.Contains(segments[0])) return AuthorFromFolder(segments[0]);
+        if (segments.Count < 2) return string.Empty;
+        var sub = segments[1].Trim();
+        return sub.StartsWith('(') || !IsAuthorFolder(sub) ? string.Empty : sub;
+    }
+
+    /// <summary>Titel (und Jahr) aus einem Dateinamen MIT Endung. Endet der Name auf „[Autor, Jahr]“ (Sammelordner),
+    /// wird die Klammer abgetrennt und das Jahr übernommen: „Chess Problems [V. M. N. Portilla, 1890].pdf“ →
+    /// („Chess Problems“, 1890).</summary>
+    internal static (string Title, int? Year) TitleAndYearFromFileName(string fileName)
+    {
+        var title = EbookFormats.TitleFromFileName(fileName);
+        var m = System.Text.RegularExpressions.Regex.Match(title, @"^(?<t>.+?)\s*\[[^\[\]]*?,\s*(?<y>\d{4})\]$");
+        if (!m.Success) return (title, null);
+        return (m.Groups["t"].Value.Trim(), int.Parse(m.Groups["y"].Value, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     /// <summary>Metadaten aus dem Beiblatt — jedes Feld optional, Autor als Liste oder Text.</summary>
     internal sealed record Sidecar(string? Title, string? Author, int? Year, List<string> Tags, int? TargetMinElo);
 
@@ -118,13 +144,17 @@ public class EbookLibraryImporter
             else
             {
                 var sidecar = ReadSidecar(key + ".json");
-                var folder = Path.GetRelativePath(root, Path.GetDirectoryName(key) ?? root).Split(Path.DirectorySeparatorChar)[0];
-                var fileName = Path.GetFileName(key);
+                var segments = Path.GetRelativePath(root, Path.GetDirectoryName(key) ?? root).Split(Path.DirectorySeparatorChar);
+                // d3-rk-reader-titel-ohne-ellipse: der Schlüssel hat KEINE Endung mehr — der Titel kommt aus dem echten
+                // Dateinamen (mit Endung), sonst schnitt ein zweites „ohne Endung“ alles ab dem letzten Punkt ab
+                // („Chess Problems [V. M. N. Portilla, 1890]“ → „Chess Problems [V. M. N“).
+                var (fileTitle, fileYear) = TitleAndYearFromFileName(files[0].Name);
+                var year = sidecar?.Year ?? fileYear;
                 ebook = new Ebook
                 {
-                    Title = Clip(sidecar?.Title ?? EbookFormats.TitleFromFileName(fileName), 300),
-                    Author = Clip(sidecar?.Author ?? (folder == "." ? string.Empty : AuthorFromFolder(folder)), 300),
-                    Year = sidecar?.Year is >= 1400 and <= 2200 ? sidecar.Year : null,
+                    Title = Clip(sidecar?.Title ?? fileTitle, 300),
+                    Author = Clip(sidecar?.Author ?? AuthorFromSegments(segments), 300),
+                    Year = year is >= 1400 and <= 2200 ? year : null,
                     Tags = EbookFormats.JoinTags(EbookFormats.NormalizeTags(sidecar?.Tags)),
                     TargetMinElo = sidecar?.TargetMinElo is >= 100 and <= 3500 ? sidecar.TargetMinElo : null,
                     OwnerUserId = adminUserId,

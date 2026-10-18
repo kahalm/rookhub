@@ -143,6 +143,10 @@ ch-root > .foot { flex: none; width: 100%; }
 .btn.danger:disabled { background: var(--card); border-color: var(--muted); color: var(--muted); }
 .btn.slim { min-height: 36px; padding: 6px 12px; font-size: 15px; }
 .btn-link { font: inherit; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 6px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+/* d3-c-gruppe-textlinks-tippziel-klein: Textknöpfe sind nur ≈ 30 px hoch — die Trefferfläche wächst unsichtbar auf
+   mindestens 44 px (DESIGN 7), ohne die Zeile höher zu machen (sie stehen oft mitten in Listenzeilen). */
+.btn-link { position: relative; }
+.btn-link::after { content: ''; position: absolute; left: -4px; right: -4px; top: 50%; height: max(100%, 44px); transform: translateY(-50%); }
 .btn-link:hover { color: var(--ink); }
 .btn-link.danger:hover { color: var(--bad); }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -160,7 +164,11 @@ ch-root > .foot { flex: none; width: 100%; }
 .field textarea { min-height: 90px; resize: vertical; }
 .field input:focus, .field select:focus, .field textarea:focus, .bare-input:focus { border-color: var(--primary); }
 .field .hint { font-size: 14px; color: var(--muted); }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+/* d3-c-kind-neu-fehler-vor-eingabe: Feld + sein Hinweis (.need) als eine Gitterzelle — der Hinweis bleibt am Feld, auch
+   wenn .grid-2 am Handy einspaltig wird. */
+.field-cell { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.field-cell > .need { margin: 0; }
 /* UI-Sweep 2026-10-11 (r2-c-code-field): Code-Feld nur so breit wie „ABCDE-FGHJK", in Festbreitenschrift und
    Großbuchstaben (der Server normalisiert ohnehin); der Knopf steht daneben, am Handy darunter. */
 .code-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding-bottom: 14px; }
@@ -609,6 +617,12 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { fo
   .group { grid-template-columns: 1fr; }
   /* z3-c-fuss-umbruch: Version und drei Links passen bei 390 px in eine Zeile (vorher „Datenschutz" verwaist in Zeile 2). */
   .foot { gap: 4px 12px; font-size: 13px; }
+  /* d3-c-footer-links-tippziel-klein: die Fußlinks waren ≈ 17 px hohe Textlinks — jetzt 44-px-Tippziele wie im LeagueHub
+     (leaguehub.scss, .foot a). Die Version steht auf derselben Höhe; dafür weniger Polster oben/unten, damit die Fußzeile
+     kaum höher wird. Die 6 px Seitenpolster der Links ersetzen einen Teil der Lücke (12 → 6 px). */
+  .foot { gap: 0 6px; padding-top: 4px; padding-bottom: 16px; align-items: center; }
+  .foot > span:first-child, .foot-links a { display: inline-flex; align-items: center; min-height: 44px; }
+  .foot-links a { padding: 0 6px; }
   /* Tag und Thema nebeneinander (z1-c-attendance-lead: untereinander begann die Abhakliste erst bei 53 % der Höhe);
      9,75 rem fasst TT.MM.JJJJ samt Kalender-Knopf. */
   .roll-head { grid-template-columns: 9.75rem minmax(0, 1fr); gap: 8px; margin: 10px 0 8px; }

@@ -221,7 +221,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
                     }
                     <div class="goal-fields">
                       <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                        <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                        <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.minPerDay' | translate }})</mat-label>
                         <input matInput type="number" min="0" max="600" [(ngModel)]="edit.dailyMinutes" />
                       </mat-form-field>
                       <mat-form-field appearance="outline" subscriptSizing="dynamic">

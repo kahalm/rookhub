@@ -165,6 +165,47 @@ describe('MoveComparisonComponent', () => {
     discardPeriodicTasks();
   }));
 
+  // d3-rk-vergleich-vorzeichen-widerspruch: Schwarz am Zug — die Werte kommen aus Sicht von Schwarz (wie die Begründung),
+  // die Seite sagt das einmal, und der beste Zug ist nie rot (auch wenn Schwarz schlecht steht).
+  it('names the point of view and never colours the best move red', fakeAsync(() => {
+    const { fixture, http } = make();
+    const base = comparison() as ReturnType<typeof comparison> & { candidates: { evalText: string | null }[] };
+    base.candidates[0].evalText = '-0.30';
+    base.candidates[1].evalText = '-1.20';
+    http.expectOne('/api/move-comparisons/7').flush({ ...base, whiteToMove: false });
+    http.expectOne('/api/move-comparisons').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.perspective')?.textContent).toContain('moveCompare.page.perspectiveBlack');
+    const evs = Array.from(el.querySelectorAll('.cand-row .ev'));
+    expect(evs.map(e => e.textContent!.trim())).toEqual(['-0.30', '-1.20']);
+    expect(evs[0].classList).not.toContain('neg');
+    expect(evs[1].classList).toContain('neg');
+    expect(el.querySelector('.pair .evals .ev')!.classList).not.toContain('neg');
+    discardPeriodicTasks();
+  }));
+
+  // d3-rk-vergleich-leere-seite-balken: 502 nach den Wiederholungen ließ den Ladebalken für immer stehen.
+  it('shows a load error with retry instead of an endless bar when loading fails', fakeAsync(() => {
+    const { fixture, c, http } = make();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-loading-spinner')).not.toBeNull();
+    expect(el.querySelector('mat-progress-bar')).toBeNull();
+    http.expectOne('/api/move-comparisons/7').flush(null, { status: 502, statusText: 'Bad Gateway' });
+    http.expectOne('/api/move-comparisons').flush([]);
+    fixture.detectChanges();
+    expect(c.notFound()).toBeFalse();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.querySelector('mat-progress-bar')).toBeNull();
+
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne('/api/move-comparisons/7').flush(comparison());
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.cand-row')).not.toBeNull();
+    discardPeriodicTasks();
+  }));
+
   // b1-rk-analyse-unterseiten-brett-1920: bei 1920 × 1080 blieb das Brett auf 376 px. Karma läuft 1 400 px breit → Regel als Text.
   it('ab 1200 px wächst das Brett bis 620 px bzw. Fensterhöhe', () => {
     const css = (((MoveComparisonComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])

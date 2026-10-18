@@ -4,6 +4,7 @@ import { formatPuzzleTime } from './puzzle-format.util';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SOLVER_ACTION_KEYS, SOLVER_EVAL_KEYS, canMouseslip, canReset } from './solver-actions.util';
 
@@ -44,7 +45,7 @@ const ACTION_KEYS = SOLVER_ACTION_KEYS;
   selector: 'app-puzzle-your-turn',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe],
   template: `
     <div class="ytp-center">
       @if (state === 'THINKING') {
@@ -54,7 +55,12 @@ const ACTION_KEYS = SOLVER_ACTION_KEYS;
         <p class="ytp-status">{{ statusKey | translate }}</p>
       }
       @if (timerSeconds !== null) {
-        <p class="ytp-timer">{{ formatTime(timerSeconds) }}</p>
+        <!-- d3-rk-puzzle-zeitanzeige-ohne-beschriftung: Uhr-Symbol + „Lösezeit“ (Tooltip, Screenreader) statt einer
+             nackten Zahl an der wichtigsten Stelle der Karte. -->
+        <p class="ytp-timer" role="timer" [matTooltip]="'puzzles.solveTime' | translate"
+           [attr.aria-label]="('puzzles.solveTime' | translate) + ': ' + formatTime(timerSeconds)">
+          <mat-icon class="timer-icon" aria-hidden="true">timer</mat-icon>{{ formatTime(timerSeconds) }}
+        </p>
       }
       @if (showEval) {
         <div class="ytp-eval">
@@ -94,7 +100,8 @@ const ACTION_KEYS = SOLVER_ACTION_KEYS;
   styles: [`
     .ytp-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
     .ytp-status { font-size: 1.05em; font-weight: 500; margin: 0; text-align: center; }
-    .ytp-timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
+    .ytp-timer { display: inline-flex; align-items: center; gap: 6px; font-size: 1.25em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
+    .timer-icon { font-size: 20px; width: 20px; height: 20px; opacity: .7; }
     .ytp-eval { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; flex-wrap: wrap; justify-content: center; }
     .ytp-eval-item { display: flex; gap: 0.25rem; align-items: center; }
     .ytp-eval-label { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.85em; }

@@ -1,5 +1,6 @@
 {
   "repertoireTrainer": {
+    "resetProgress": "Fortschritt zurücksetzen",
     "train": "Trainieren",
     "title": "Repertoire-Trainer",
     "done": "Sitzung abgeschlossen! {{correct}} von {{total}} richtig.",
@@ -25,7 +26,6 @@
     "movesInLine": "Züge dieser Linie",
     "moveComment": "Kommentar zum Zug",
     "lineDone": "Linie fertig — nächste wird geladen…",
-    "resetTooltip": "Trainingsfortschritt zurücksetzen (SM-2-Zustand löschen).",
     "resetConfirm": "Trainingsfortschritt für dieses Repertoire zurücksetzen? Alle Spaced-Repetition-Daten werden gelöscht.",
     "resetFailed": "Der Trainingsfortschritt konnte nicht zurückgesetzt werden – bitte erneut versuchen.",
     "nextDue": "Gerade nichts fällig. Nächste Wiederholung in {{when}}.",
@@ -288,6 +288,7 @@
     "themeSystem": "System-Design",
     "themeLight": "Helles Design",
     "themeDark": "Dunkles Design",
+    "theme": "Design",
     "help": "Hilfe",
     "chessable": "Chessable",
     "leaderboards": "Bestenlisten",
@@ -355,6 +356,10 @@
     }
   },
   "auth": {
+    "passwordToggle": {
+      "show": "Passwort anzeigen",
+      "hide": "Passwort verbergen"
+    },
     "login": {
       "title": "Anmelden",
       "usernameLabel": "Benutzername oder E-Mail",
@@ -379,8 +384,6 @@
       "emailLabel": "E-Mail",
       "passwordLabel": "Passwort",
       "passwordHint": "Mindestens {{min}} Zeichen",
-      "showPassword": "Passwort anzeigen",
-      "hidePassword": "Passwort verbergen",
       "submit": "Registrieren",
       "submitting": "Registrierung läuft...",
       "loginLink": "Bereits ein Konto? Anmelden",
@@ -719,6 +722,7 @@
       "setup": "Einrichten",
       "createToken": "Lichess-Token erstellen",
       "tokenLabel": "Lichess-API-Token",
+      "tokenMissing": "Füge zuerst deinen Lichess-Token ein.",
       "stored": "Gespeicherter Token",
       "removeTokenConfirm": "Gespeicherten Lichess-Token löschen? Die Lichess-Engines verschwinden aus der Liste; um sie wieder zu nutzen, brauchst du einen neuen Token von Lichess.",
       "saved": "Token gespeichert",
@@ -815,8 +819,8 @@
       "inAppTitle": "So löschst du dein Konto",
       "inApp": "Der Knopf unten öffnet in deinem Profil die Karte „Konto löschen“ – bist du nicht angemeldet, meldest du dich zuerst an. Von Hand: ☰ → Konto → Profil, ganz unten. Dort bestätigst du mit deinem Passwort. Das Konto wird sofort gelöscht.",
       "inPartner": "Löschen kannst du das Konto nur in RookHub: dort anmelden (dieselben Daten) und ☰ → Konto → Profil, ganz unten „Konto löschen“ – oder direkt über den Knopf. Du bestätigst mit deinem Passwort, das Konto wird sofort gelöscht, auch für diese Seite.",
-      "deleteNow": "Konto jetzt löschen",
-      "deleteOnRookHub": "Konto in RookHub löschen",
+      "deleteNow": "Konto löschen …",
+      "deleteOnRookHub": "Konto in RookHub löschen …",
       "backupTitle": "Vorher sichern",
       "backup": "Die Löschung wirkt sofort und lässt sich nicht rückgängig machen. Sichere vorher, was du behalten willst: Kurse, Repertoires und Partien kannst du einzeln als PGN herunterladen – im Kurs, in der Repertoire-Liste (⋮) und in jeder Partie (⋮).",
       "removedTitle": "Was entfernt wird",
@@ -824,7 +828,7 @@
       "removedCourses": "Deine eigenen Kurse (importiert oder selbst angelegt) – auch für alle, mit denen du sie geteilt hast: Freigaben, Gruppenzugriffe und der Lernfortschritt anderer in diesen Kursen gehen mit.",
       "removed2": "Persönliche Inhalte und Verknüpfungen: Repertoires, Turnier-Abos/-Favoriten, Freundschaften und Gruppen-Mitgliedschaften.",
       "removedGames": "Gespeicherte Partien samt Formular-Fotos und Rekonstruktionen, Partie-Analysen, Punktepartie-Läufe, Analyseaufträge, Kalkulationsbäume und gemerkte Stellungen.",
-      "removedShared": "Aufgabenblätter und deine Teilen-Links: geteilte Partien (/g/), Linien (/l/), Rekonstruktionen (/r/) und Aufgabenblätter (/w/, auch als QR-Code auf dem Ausdruck) öffnen danach nicht mehr.",
+      "removedShared": "Aufgabenblätter und deine Teilen-Links: Links zu geteilten Partien, Linien, Rekonstruktionen und Aufgabenblättern (auch der QR-Code auf dem Ausdruck) öffnen danach nicht mehr.",
       "removedKids": "Dein KidHub-Fortschritt (Stufen, Sterne, Kurse) – KidHub nutzt dasselbe Konto.",
       "removedConnections": "Verbindungen und Einstellungen: API-Tokens (RepCheck bzw. die Browser-Erweiterung verliert sofort die Verbindung), Chessable-Zugang, Lichess- und eigene Engines, Push-Benachrichtigungen, Nachrichten mit den Admins und Benachrichtigungen.",
       "removedLeague": "LeagueHub: offene Import-Entwürfe der Vereins-Datenbank, auch halb fertige.",
@@ -1182,6 +1186,8 @@
     },
     "downloadLine": "Linie als PGN herunterladen",
     "holes": {
+      "dbMasters": "Meisterpartien",
+      "dbLichess": "Lichess-Partien",
       "color": "Farbe",
       "white": "Weiß",
       "black": "Schwarz",
@@ -1222,7 +1228,7 @@
       "introMasters": "Starte die Suche in den Meisterpartien.",
       "source": "Quelle",
       "sourceOnline": "Lichess.org",
-      "sourceLocal": "Lokal",
+      "sourceLocal": "RookHub-Server",
       "localHint": "Lokaler Explorer auf dem RookHub-Server: kein Token, keine Wartezeit. Lichess-Partien erst ab Elo 1600 und ohne Bullet, Meister aus der Lumbra-Datenbank (Brettpartien ab Elo 2200). Die Lichess-Daten wachsen noch Monat für Monat – die Anteile sind aussagekräftig, die Partienzahlen kleiner als auf lichess.org."
     }
   },
@@ -1343,6 +1349,7 @@
     }
   },
   "puzzles": {
+    "solveTime": "Lösezeit",
     "status": {
       "loading": "Puzzle wird geladen…",
       "loadFailed": "Puzzle konnte nicht geladen werden",
@@ -1365,8 +1372,8 @@
     "eval": {
       "start": "Start",
       "now": "Jetzt",
-      "show": "Bewertung anzeigen",
-      "hide": "Bewertung ausblenden"
+      "show": "Stellungsbewertung anzeigen",
+      "hide": "Stellungsbewertung ausblenden"
     },
     "actions": {
       "reset": "Zurücksetzen",
@@ -1829,7 +1836,7 @@
       "by": "von {{name}}"
     },
     "reimport": {
-      "chip": "Neu holen",
+      "chip": "Import veraltet",
       "legend": "{{count}} Kurse brauchen einen neuen Import über RepCheck",
       "legendOne": "1 Kurs braucht einen neuen Import über RepCheck"
     }
@@ -2167,10 +2174,8 @@
       "showTags": "Tags anzeigen",
       "hideTags": "Tags ausblenden",
       "sharePuzzle": "Puzzle teilen",
-      "statRating": "Rating",
-      "statLevel": "Level",
       "statSolved": "Gelöst",
-      "statTime": "Zeit",
+      "statTime": "Sitzung",
       "lives": "{{lives}} von {{max}} Leben",
       "phaseLabel": "Phase {{phase}} (Schritt {{step}})",
       "showOriginalSolution": "Originale Lösung zeigen"
@@ -2817,7 +2822,7 @@
     "openOriginal": "Originalpartie öffnen",
     "analyze": "Partie analysieren",
     "analyzeHint": "Partie im Hintergrund rechnen lassen — danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen.",
-    "analyzeNoEngine": "Gerade steht keine Engine bereit — versuch es später noch einmal.",
+    "analyzeNoEngine": "Gerade steht keine Engine bereit — versuch es später noch einmal.",
     "analyzeLogin": "Zum Analysieren bitte anmelden.",
     "loadError": "Partie konnte nicht geladen werden.",
     "notFound": "Diese Partie gibt es nicht oder nicht mehr.",
@@ -2951,7 +2956,9 @@
     "movesCount": "{{count}} Züge",
     "mistakes": {
       "button": "Eigene Fehler nachspielen ({{count}})",
+      "buttonSide": "Fehler von {{player}} nachspielen ({{count}})",
       "title": "Eigene Fehler nachspielen",
+      "titleSide": "Fehler von {{player}} nachspielen",
       "none": "Auf dieser Seite gibt es nichts nachzuspielen.",
       "progress": "Fehler {{current}} von {{total}}",
       "prompt": "Du spieltest {{san}}. Finde den besseren Zug.",
@@ -2981,9 +2988,9 @@
       "restore": "{{count}} ausgeblendet — wieder zeigen",
       "collection": {
         "short": "Fehler nachspielen",
-        "button": "Fehler nach Liga/Saison nachspielen",
-        "title": "Fehler nach Liga/Saison nachspielen",
-        "hint": "Wähle Liga und/oder Saison: alle offenen Fehler deiner analysierten Partien dieser Auswahl kommen nacheinander auf einem Brett.",
+        "button": "Fehler mehrerer Partien nachspielen",
+        "title": "Fehler mehrerer Partien nachspielen",
+        "hint": "Wähle Plattform/Liga und/oder Modus/Jahrgang: alle offenen Fehler deiner analysierten Partien dieser Auswahl kommen nacheinander auf einem Brett.",
         "includeSolved": "Auch schon gefundene Fehler",
         "selection": "{{games}} Partien gewählt, davon {{analysed}} analysiert",
         "selectionOne": "1 Partie gewählt, davon {{analysed}} analysiert",
@@ -3021,8 +3028,10 @@
       "remove": "Tag {{tag}} entfernen"
     },
     "classifier": {
-      "first": "Seite / Liga",
+      "first": "Plattform / Liga",
       "second": "Modus / Jahrgang",
+      "firstPlaceholder": "z. B. Landesliga",
+      "secondPlaceholder": "z. B. 2026/27",
       "all": "Alle",
       "none": "Ohne Angabe"
     },
@@ -3093,7 +3102,7 @@
       "notOnSheet": "steht nicht auf dem Formular",
       "ownerSide": "Meine Seite",
       "sideNone": "nicht festgelegt",
-      "classifierHint": "Online: Seite + Modus werden automatisch gesetzt · Ligapartien: z. B. „Landesliga“ + „2026/27“",
+      "classifierHint": "Online: Plattform + Modus werden automatisch gesetzt · Ligapartien: z. B. „Landesliga“ + „2026/27“",
       "clubLinked": "Diese Partie ist eine Kopie aus der Vereins-Datenbank. Korrigierst du Züge und hast sie hochgeladen (oder bist Verwalter), gilt das auch dort und in allen Kopien — sonst wird deine Kopie zu einer eigenen Fassung."
     },
     "pgnCopy": "PGN kopieren",
@@ -3387,11 +3396,12 @@
       "other": "Sonstiges"
     },
     "title": "Trainingsziele",
-    "intro": "Lege Tagesziele je Kategorie fest und verfolge deinen Fortschritt.",
+    "intro": "Lege dein tägliches Trainingszeit-Ziel und deine Wochenziele fest und verfolge deinen Fortschritt.",
     "today": "Heute",
     "setTitle": "Ziele festlegen",
     "tracker": "Ziele-Tracker",
     "min": "Min",
+    "minPerDay": "Min/Tag",
     "hours": "Std",
     "days": "Tage",
     "games": "Partien",
@@ -3401,7 +3411,7 @@
     "fromGroup": "Vorgabe aus deiner Gruppe „{{group}}“. Du kannst sie für dich anpassen.",
     "personal": "Dein persönliches Ziel.",
     "resetOverride": "Auf Gruppen-Vorgabe zurücksetzen",
-    "noGoalHint": "Noch keine Ziele gesetzt — lege unten deine Tagesziele fest.",
+    "noGoalHint": "Noch keine Ziele gesetzt — lege unten deine Ziele fest.",
     "playHint": "Deine Rapid- und Classical-Partien werden automatisch aus deinem verknüpften Lichess-⁠/chess.com-Konto gezählt.",
     "saved": "Ziele gespeichert.",
     "resetDone": "Auf die Gruppen-Vorgabe zurückgesetzt.",
@@ -3471,11 +3481,11 @@
       "download": "APK herunterladen",
       "downloadAnyway": "APK trotzdem herunterladen",
       "unavailable": "Die APK lässt sich nur unter Android installieren – auf deinem aktuellen System nicht.",
-      "qrHint": "Scanne den Code mit deinem Android-Handy: Dort öffnet sich diese Seite, und du installierst RookHub direkt auf dem Handy."
+      "qrHint": "Mit dem Android-Handy scannen und dort installieren."
     },
     "pwa": {
       "title": "Als App installieren (PWA)",
-      "desc": "Installiert RookHub direkt aus dem Browser – auf Android, Windows, macOS und Linux. Läuft danach im eigenen Fenster und offline.",
+      "desc": "Installiert RookHub direkt aus dem Browser und läuft danach im eigenen Fenster, auch offline.",
       "recommended": "Empfohlen: kein Download, keine Sicherheitswarnung",
       "button": "Jetzt installieren",
       "installed": "RookHub ist auf diesem Gerät bereits als App installiert.",
@@ -3483,7 +3493,8 @@
       "ios1": "Öffne diese Seite in Safari.",
       "ios2": "Tippe unten auf das Teilen-Symbol.",
       "ios3": "Wähle „Zum Home-Bildschirm“ und bestätige mit „Hinzufügen“.",
-      "unavailable": "Dein Browser zeigt gerade keinen Installieren-Knopf an. Meist geht es trotzdem über das Browsermenü (⋮): „App installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen. Fehlt der Eintrag dort, öffne RookHub in Chrome oder Edge."
+      "unavailable": "Dein Browser bietet gerade keinen Installieren-Knopf an.",
+      "unavailableHelp": "Meist geht es trotzdem über das Browsermenü (⋮): „App installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen.\n\nFehlt der Eintrag dort, öffne RookHub in Chrome oder Edge."
     }
   },
   "help": {
@@ -3744,6 +3755,16 @@
     "title": "Bestenlisten",
     "error": "Die Bestenlisten konnten nicht geladen werden.",
     "empty": "Noch keine Einträge.",
+    "emptyAll": {
+      "weekly": "Diese Woche hat noch niemand trainiert – löse ein Puzzle, dann stehst du ganz oben.",
+      "monthly": "Diesen Monat hat noch niemand trainiert – löse ein Puzzle, dann stehst du ganz oben.",
+      "alltime": "Bisher hat noch niemand trainiert – löse ein Puzzle, dann stehst du ganz oben."
+    },
+    "emptyIn": {
+      "weekly": "Diese Woche noch keine Einträge.",
+      "monthly": "Diesen Monat noch keine Einträge."
+    },
+    "emptyAction": "Puzzles lösen",
     "period": {
       "weekly": "Diese Woche",
       "monthly": "Dieser Monat",
@@ -4634,6 +4655,7 @@
       "parents": "Für Eltern: was genau gelöscht wird",
       "parentsHowTo": "Für Eltern: so wird das Konto gelöscht"
     },
+    "forgotParents": "Für Eltern: keine Mail bekommen?",
     "stars": {
       "title": "Sternenjagd",
       "tileHint": "Eine Figur, viele Sterne",
@@ -4916,6 +4938,8 @@
       "startPosition": "Ausgangsstellung",
       "showStart": "Zur Ausgangsstellung",
       "clickHint": "Klick auf einen Zug, eine Antwort oder deine Erwiderung zeigt die Stellung auf dem Brett.",
+      "perspectiveWhite": "Bewertungen aus Sicht von Weiß",
+      "perspectiveBlack": "Bewertungen aus Sicht von Schwarz",
       "best": "bester Zug",
       "calculating": "rechnet · Tiefe {{depth}}",
       "failed": "konnte nicht gerechnet werden",
@@ -5462,7 +5486,7 @@
       "diagramAt": "Diagramm auf Seite {{page}}",
       "diagramCount": "{{n}} Diagramme",
       "pickHint": "Doppelklick auf ein Diagramm im Buch stellt es hier auf.",
-      "sideUnknown": "Zugrecht steht nicht im Buch",
+      "sideUnknown": "Zugrecht unbekannt",
       "analyse": "Analysieren",
       "flip": "Brett drehen",
       "copyFen": "FEN kopieren",
@@ -5519,6 +5543,7 @@
     "processingHint": "Die Diagramme werden erkannt — du bekommst eine Benachrichtigung."
   },
   "woodpecker": {
+    "timeBar": "{{used}} von {{total}} Tagen vorbei",
     "title": "Woodpecker",
     "new": "Neues Training",
     "intro": "Dieselben Aufgaben immer wieder, jedes Mal in der halben Zeit – nach der Methode von Smith und Tikkanen.",
@@ -5560,14 +5585,16 @@
     "saveFailed": "Speichern fehlgeschlagen. Bitte noch einmal versuchen.",
     "puzzles": "{{count}} Aufgaben",
     "puzzlesOne": "{{count}} Aufgabe",
-    "inSet": "{{n}} im Satz",
-    "inSetOne": "{{n}} im Satz",
     "toOverview": "Zur Übersicht",
     "notFound": "Dieses Training gibt es nicht (mehr).",
     "doneCompleted": "Woodpecker abgeschlossen – stark!",
     "doneCycle": "Zyklus {{n}} ist geschafft. Mach Pause und starte danach den nächsten Zyklus in der Übersicht.",
     "repeatHint": "Wiederholung – in diesem Zyklus zählt nur dein erster Versuch.",
     "create": {
+      "metaLast": "zuletzt {{date}}",
+      "metaPublic": "Freigegeben",
+      "metaShared": "von {{name}}",
+      "metaOwn": "Eigener Kurs",
       "title": "Neues Woodpecker-Training",
       "coursesHint": "Kurse in der Reihenfolge des Ankreuzens – Zyklus 1 geht sie in dieser Reihenfolge durch.",
       "noCourses": "Du hast noch keinen Kurs mit Aufgaben.",

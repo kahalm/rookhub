@@ -82,6 +82,25 @@ html.eink .mat-mdc-snack-bar-container .mdc-snackbar__surface {
 }
 html.eink .mat-mdc-snack-bar-container .mdc-snackbar__surface { background: #fff !important; color: #000 !important; }
 html.eink .mat-mdc-snack-bar-container .mat-mdc-snack-bar-label { color: #000 !important; }
+// Aktion („Schließen“ …): Material färbt sie inverse-primary (blasses Hellblau für die dunkle Fläche) — auf der weißen
+// E-Ink-Fläche unsichtbar (d3-rk-gate-banner-schliessen-blass). Schwarz, fett, unterstrichen.
+html.eink {
+  --mat-snack-bar-button-color: #000;
+}
+html.eink .mat-mdc-snack-bar-container .mat-mdc-snack-bar-action,
+html.eink .mat-mdc-snack-bar-container .mdc-snackbar__actions .mat-mdc-button {
+  color: #000 !important;
+  font-weight: 700;
+  text-decoration: underline;
+}
+// Wahlkacheln (Spielweise-Dialog, shared/solve-mode): sonst 1-px-Haarlinie mit 18 % auf 4-%-Grau — als Knöpfe kaum zu
+// erkennen (d3-rk-eink-wahlkachel-haarlinie). Dicker schwarzer Rahmen, weiße Fläche, auch beim Überfahren.
+html.eink .sm-choice,
+html.eink .sm-choice:hover {
+  border: var(--eink-line) solid #000 !important;
+  background: #fff !important;
+}
+html.eink .sm-choice:focus-visible { box-shadow: inset 0 0 0 3px #000; }
 html.eink :focus-visible {
   outline: 3px solid #000 !important;
   outline-offset: 2px;
@@ -134,6 +153,11 @@ html.eink cg-board {
   background-repeat: repeat !important;
 }
 html.eink .cg-wrap { box-shadow: 0 0 0 2px #000; }
+// SVG-Brett (Lernkarten, Aufgabenblatt, Rekonstruktion — `app-flashcard-board`): Felder per Klasse wie oben weiß/grau,
+// CSS schlägt das fill-Attribut (d3-rk-eink-flashcards-brett-farbig). Rahmen wie .cg-wrap.
+html.eink app-flashcard-board .fb-l { fill: #fff; }
+html.eink app-flashcard-board .fb-d { fill: #a3a3a3; }
+html.eink app-flashcard-board svg { outline: 2px solid #000; }
 // Letzter Zug und Auswahl: Rahmen statt getönter Fläche.
 html.eink cg-board square.last-move {
   background: transparent !important;
@@ -171,3 +195,10 @@ html.eink .pv-zone:not(.pv-zone--active) {
   background: transparent !important;
 }
 html.eink .pv-zone--active { animation: none !important; border-color: transparent !important; box-shadow: none !important; background: transparent !important; }
+
+// ── Zugrecht/Hinweiszeile unter dem Puzzle-Brett ─────────────────────────────────────────────────────────────────
+// `.board-hint` (60 %) und darin `.board-hint-tomove` (85 %) blassen doppelt ab (≈ 51 % Schwarz, ≈ 4:1) — das Zugrecht
+// ist eine Bedeutung und braucht Sekundärtext #333 (d3-rk-eink-sekundaertext-hellgrau). Spezifischer als die gekapselten
+// Komponentenregeln (puzzle/book-puzzle/endless-puzzle).
+html.eink .board-hint,
+html.eink .board-hint-tomove { color: var(--mat-sys-on-surface-variant); }

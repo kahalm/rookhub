@@ -47,8 +47,9 @@ export const MAX_PAGES = 3;
   template: `
     <div class="sheet-page">
       <div class="header">
-        <h1>{{ 'scoresheet.title' | translate }}</h1>
-        <app-help-hint [text]="'scoresheet.help' | translate" />
+        <!-- d3-rk-scoresheet-hilfe-icon-abgesetzt-handy: das ⓘ steht IM Titel direkt hinter dem letzten Wort (wie bei der
+             Punktepartie) — als Geschwister des h1 stand es am Handy ~130 px rechts vom umbrochenen Titel. -->
+        <h1>{{ 'scoresheet.title' | translate }} <app-help-hint [text]="'scoresheet.help' | translate" /></h1>
       </div>
       <p class="hint">{{ 'scoresheet.hint' | translate }}</p>
 
@@ -215,7 +216,7 @@ export const MAX_PAGES = 3;
   styles: [`
     .sheet-page { max-width: 760px; margin: 0 auto; padding: 16px; }
     .header { display: flex; align-items: center; gap: 4px; }
-    .header h1 { margin: 0; }
+    .header h1 { margin: 0; text-wrap: balance; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 4px 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .notice { display: flex; align-items: center; gap: 12px; padding: 16px; }

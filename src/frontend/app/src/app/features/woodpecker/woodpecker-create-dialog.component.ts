@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,11 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { CourseListItem, CourseService } from '../courses/course.service';
 import { startOfLocalDayIso, todayYmd, WoodpeckerPlan, WoodpeckerService, ymdOf } from './woodpecker.service';
 
+/** Kurs mit lösbaren Aufgaben — Kalkulationsbücher haben keine Lösung. EINE Regel für Dialog und Übersicht. */
+export function isWoodpeckerCourse(c: CourseListItem): boolean {
+  return !c.isCalculation && c.puzzleCount > 0;
+}
+
 /** `create`: Kurse wählen + Start; `start`: nur den Start des laufenden Zyklus verschieben. */
 export type WoodpeckerDialogData =
   | { mode: 'create' }
@@ -30,7 +35,7 @@ export type WoodpeckerDialogData =
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-woodpecker-create-dialog',
   standalone: true,
-  imports: [DecimalPipe, RouterLink, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule,
+  imports: [DatePipe, DecimalPipe, RouterLink, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule,
     TranslatePipe, IsoDateFieldComponent, LoadErrorComponent, LoadingSpinnerComponent],
   template: `
     <h2 mat-dialog-title>{{ (data.mode === 'create' ? 'woodpecker.create.title' : 'woodpecker.start.title') | translate }}</h2>
@@ -68,13 +73,19 @@ export type WoodpeckerDialogData =
             <mat-checkbox [checked]="isSelected(c.bookId)" (change)="toggle(c.bookId, $event.checked)">
               <span class="c-name">{{ c.displayName }}</span>
               <span class="c-count">{{ (c.puzzleCount === 1 ? 'woodpecker.puzzlesOne' : 'woodpecker.puzzles') | translate: { count: (c.puzzleCount | number) } }}</span>
+              <!-- d3-rk-woodpecker-kursliste-doppelte-namen: nur bei gleichnamigen Kursen eine leise Zeile, die sie
+                   unterscheidet (Herkunft, zuletzt geübt). -->
+              @if (dupNames().has(c.displayName)) {
+                <span class="c-meta">{{ originKey(c) | translate: { name: c.sharedByUsername } }}@if (c.lastActivityAt) {<span class="c-meta-sep">{{ 'woodpecker.create.metaLast' | translate: { date: (c.lastActivityAt | date: 'mediumDate') } }}</span>}</span>
+              }
             </mat-checkbox>
           }
         </div>
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close [disabled]="busy()">{{ 'common.cancel' | translate }}</button>
+      <!-- d3-rk-woodpecker-leerdialog-luecke-abbrechen: ohne Kurs läuft kein Vorgang → „Schließen“ statt „Abbrechen“. -->
+      <button mat-button mat-dialog-close [disabled]="busy()">{{ (noCourses() ? 'common.close' : 'common.cancel') | translate }}</button>
       @if (showForm()) {
         <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
           {{ (data.mode === 'create' ? 'woodpecker.create.submit' : 'common.save') | translate }}
@@ -100,13 +111,23 @@ export type WoodpeckerDialogData =
           center bottom / 100% 14px no-repeat scroll;
     }
     .courses { display: flex; flex-direction: column; }
+    /* d3-rk-woodpecker-dialog-kurswahl-tippziel: jede Kurszeile ist ganzzeilig mindestens 44 px hoch und als Ganzes
+       antippbar (DESIGN 2.5/7) — das Label füllt die Zeile. Material-Interna → ::ng-deep, auf diese Liste begrenzt. */
+    .courses mat-checkbox { display: block; }
+    :host ::ng-deep .courses .mdc-form-field { display: flex; width: 100%; min-height: 44px; align-items: center; }
+    :host ::ng-deep .courses .mdc-label { flex: 1 1 auto; padding-block: 4px; }
     .c-name { margin-right: .5em; }
+    .c-meta { display: block; font-size: .8em; color: var(--mat-sys-on-surface-variant); }
+    .c-meta-sep::before { content: ' · '; }
     /* c1-wp-dialog-zahlformat: Zahl + Einheit bleiben zusammen (U+00A0 im Text, nowrap hier). */
     .c-count { font-size: .85em; color: var(--mat-sys-on-surface-variant); font-variant-numeric: tabular-nums; white-space: nowrap; }
     .date { display: block; margin-top: 8px; }
     /* c1-wp-dialog-leersatz-blass-hell: im Dialog ist currentColor schon on-surface-variant — nicht ein zweites Mal
        abblassen (DESIGN 5.10; hell sonst ≈ 3,1:1). */
     .empty-state { color: var(--mat-sys-on-surface-variant); }
+    /* d3-rk-woodpecker-leerdialog-luecke-abbrechen: mat-dialog-content polstert schon — die 2rem der globalen
+       .empty-state rissen große Lücken über und unter dem Satz. */
+    .wp-content .empty-state { padding: 8px 0 0; }
     .reason { margin: 0 24px 12px; text-align: right; font-size: .8rem; color: var(--mat-sys-on-surface-variant); }
   `],
 })
@@ -132,6 +153,12 @@ export class WoodpeckerCreateDialogComponent implements OnInit {
     const q = this.query().trim().toLowerCase();
     return q ? this.courses().filter(c => c.displayName.toLowerCase().includes(q)) : this.courses();
   });
+  /** Namen, die mehr als einmal vorkommen — nur dort steht die unterscheidende Meta-Zeile. */
+  readonly dupNames = computed(() => {
+    const seen = new Set<string>(), dup = new Set<string>();
+    for (const c of this.courses()) (seen.has(c.displayName) ? dup : seen).add(c.displayName);
+    return dup;
+  });
   /** Kursliste geladen, aber kein lösbarer Kurs — dann nur Leersatz + Weg zu den Kursen. */
   readonly noCourses = computed(() => this.data.mode === 'create' && !this.loading() && !this.loadFailed() && this.courses().length === 0);
   /** Datum, Kursliste und „Training starten“ nur, wenn es etwas zu wählen gibt (Modus `start`: immer). */
@@ -147,7 +174,7 @@ export class WoodpeckerCreateDialogComponent implements OnInit {
     this.courseService.getCourses().subscribe({
       // Nur Kurse mit lösbaren Aufgaben — Kalkulationsbücher haben keine Lösung.
       next: list => {
-        this.courses.set(list.filter(c => !c.isCalculation && c.puzzleCount > 0));
+        this.courses.set(list.filter(isWoodpeckerCourse));
         this.loading.set(false);
       },
       error: () => { this.loading.set(false); this.loadFailed.set(true); },
@@ -155,6 +182,12 @@ export class WoodpeckerCreateDialogComponent implements OnInit {
   }
 
   isSelected(bookId: number): boolean { return this.selected().includes(bookId); }
+
+  /** Herkunft eines Kurses für die Meta-Zeile: von jemandem geteilt, eigener Kurs oder freigegeben. */
+  originKey(c: CourseListItem): string {
+    return c.isShared && c.sharedByUsername ? 'woodpecker.create.metaShared'
+      : c.isOwned ? 'woodpecker.create.metaOwn' : 'woodpecker.create.metaPublic';
+  }
 
   toggle(bookId: number, checked: boolean): void {
     this.selected.update(s => checked ? [...s.filter(id => id !== bookId), bookId] : s.filter(id => id !== bookId));

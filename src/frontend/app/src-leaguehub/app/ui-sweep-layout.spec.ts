@@ -360,7 +360,12 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(ts.top).toBeLessThan(gt.bottom);                                                // … neben dem Partietitel
     expect(box(doc, 'ci').height).toBeLessThan(110);                                       // vorher eigene Rücklink-Zeile + Titel + Partietitel
     expect(doc.getElementById('bl')!.textContent).toContain('Vereinspartien');            // Ziel für Vorleser
+    // d3-l-korrigieren-mobil-kopf-schmal: der Partietitel steht UNTER der Überschrift, nicht als 5-zeilige Spalte daneben.
+    expect(gt.top).toBeGreaterThanOrEqual(h.bottom - 2);
+    expect(gt.width).toBeGreaterThan(200);
+    expect(Math.abs(ts.top - gt.top)).withContext('„Speichern ↓" in der Zeile des Partietitels').toBeLessThan(12);
   });
+
 
   // Falz-Runde 16.10.: /verein am Handy 41,6 % Vorlauf → engere Abstände zwischen Satz-, Such- und Zählerzeile
   it('Vereinspartien am Handy: Satz-, Such- und Zählerzeile mit 8 px Abstand', async () => {

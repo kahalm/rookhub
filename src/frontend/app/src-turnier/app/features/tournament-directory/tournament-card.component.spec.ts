@@ -79,6 +79,18 @@ describe('TournamentCardComponent', () => {
     http.verify();
   });
 
+  // d3-t-turnierkarte-slot-fehlt-anon: abgemeldet rutschten Kalender und Melden, weil „Ausblenden" ohne Platzhalter fehlte.
+  it('Gast: vier Plätze — „Ausblenden" als leerer Platz 3, Kalender und Melden an ihrer Stelle', () => {
+    signedIn = false;
+    setup();
+    const slots = [...fixture.nativeElement.querySelectorAll('.tc-actions > .tc-act')] as HTMLElement[];
+    expect(slots.length).toBe(4);
+    expect(slots[2].classList).toContain('tc-slot');
+    expect(slots[2].getAttribute('aria-hidden')).toBe('true');
+    expect(slots[1].querySelector('mat-icon')!.textContent!.trim()).toBe('event_available');
+    expect(slots[3].querySelector('mat-icon')!.textContent!.trim()).toBe('flag');
+  });
+
   it('bietet vier Aktionen an', () => {
     setup();
 
