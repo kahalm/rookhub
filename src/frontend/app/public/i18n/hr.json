@@ -1234,6 +1234,18 @@
       "sourceOnline": "Lichess.org",
       "sourceLocal": "RookHub poslužitelj",
       "localHint": "Lokalni explorer na RookHub poslužitelju: bez tokena, bez čekanja. Lichess partije tek od rejtinga 1600 i bez bulleta, majstori iz baze Lumbra (partije za pločom od 2200). Lichess podaci još rastu mjesec po mjesec – udjeli su pouzdani, brojevi partija manji nego na lichess.org."
+    },
+    "subset": {
+      "action": "Novi repertoar iz odabira…",
+      "title": "Novi repertoar iz odabira",
+      "count": "Odabrano {{n}} od {{total}} linija",
+      "all": "Sve",
+      "none": "Ništa",
+      "create": "Izradi repertoar",
+      "description": "Odabir od {{n}} linija iz „{{source}}”.",
+      "created": "„{{name}}” izrađen s {{n}} linija.",
+      "open": "Otvori",
+      "failed": "Repertoar nije moguće izraditi."
     }
   },
   "tournaments": {

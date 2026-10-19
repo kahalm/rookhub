@@ -93,6 +93,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
               <button mat-menu-item (click)="makeDue(allKeys())"><mat-icon>bolt</mat-icon>{{ 'repertoire.lines.sr.makeAllDue' | translate }}</button>
               <button mat-menu-item (click)="setPaused(allKeys(), true)"><mat-icon>pause_circle</mat-icon>{{ 'repertoire.lines.sr.pauseAll' | translate }}</button>
               <button mat-menu-item (click)="setPaused(allKeys(), false)"><mat-icon>play_circle</mat-icon>{{ 'repertoire.lines.sr.resumeAll' | translate }}</button>
+              <button mat-menu-item (click)="createSubset.emit(markedKeys())"><mat-icon>library_add</mat-icon>{{ 'repertoire.subset.action' | translate }}</button>
             </mat-menu>
           </div>
         }
@@ -327,6 +328,8 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   /** „Diese Linie als öffentlichen Link teilen" — der Container baut das PGN + ruft die API. */
   @Output() shareLine = new EventEmitter<RepertoireLine>();
   @Output() downloadLine = new EventEmitter<RepertoireLine>();
+  /** „Neues Repertoire aus Auswahl…" — mit den gerade markierten Linien-Schlüsseln als Vorauswahl. */
+  @Output() createSubset = new EventEmitter<string[]>();
   /** Ein Zug in einem Kommentar (auch einer eingefalteten Variante) wurde angeklickt → Brett-Vorschau. */
   @Output() commentMovePreview = new EventEmitter<MoveListCommentSegment>();
   /** Kommentare der gewählten Linie in Stücken mit anklickbaren Zügen (verankert über ihre Zugnummer). */
@@ -486,6 +489,9 @@ export class RepertoireLinesComponent implements OnInit, OnChanges {
   }
 
   // Info-Linien bleiben aus allen SR-Aktionen draußen (der Trainer fragt sie nicht ab).
+  /** Markierte Linien, die es in diesem Repertoire (noch) gibt. */
+  markedKeys(): string[] { return this.lines.filter(l => this.marked.has(l.lineKey)).map(l => l.lineKey); }
+
   allKeys(): string[] { return this.lines.filter(l => !l.isInfo).map(l => l.lineKey); }
   chapterKeys(group: ChapterGroup): string[] { return group.lines.filter(l => !l.isInfo).map(l => l.lineKey); }
 

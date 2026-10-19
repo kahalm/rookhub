@@ -973,6 +973,18 @@
       "sourceOnline": "Lichess.org",
       "sourceLocal": "RookHub-szerver",
       "localHint": "Helyi explorer a RookHub szerveren: token és várakozás nélkül. Lichess-játszmák csak 1600-as Élő-ponttól és bullet nélkül, mesterek a Lumbra-adatbázisból (tábla melletti játszmák 2200-tól). A Lichess-adatok még hónapról hónapra bővülnek – az arányok megbízhatók, a játszmák száma kisebb, mint a lichess.org-on."
+    },
+    "subset": {
+      "action": "Új repertoár a kijelölésből…",
+      "title": "Új repertoár a kijelölésből",
+      "count": "{{n}} / {{total}} változat kijelölve",
+      "all": "Mind",
+      "none": "Egyik sem",
+      "create": "Repertoár létrehozása",
+      "description": "{{n}} változat kijelölése innen: „{{source}}”.",
+      "created": "„{{name}}” létrehozva {{n}} változattal.",
+      "open": "Megnyitás",
+      "failed": "A repertoárt nem sikerült létrehozni."
     }
   },
   "tournaments": {

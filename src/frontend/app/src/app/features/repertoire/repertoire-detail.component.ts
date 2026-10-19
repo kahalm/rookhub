@@ -18,12 +18,14 @@ import { RepertoireEditComponent } from './repertoire-edit.component';
 import { HoleBoardView, RepertoireHolesComponent } from './repertoire-holes.component';
 import { isInfoLineGame } from './repertoire-info-line.util';
 import { ExplorerPosition, ExplorerSettings, RepertoireExplorerService } from './repertoire-explorer.service';
-import { Subscription, switchMap } from 'rxjs';
+import { Subscription, map, switchMap } from 'rxjs';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { TrainColor, chapterColorsOf, setChapterColorOverride } from './repertoire-color.util';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';
+import { CreateSubsetDialogComponent, CreateSubsetDialogData, CreateSubsetDialogResult } from './create-subset-dialog.component';
+import { chaptersOf, subsetPgn } from './repertoire-subset.util';
 import { MoveTreeService } from './move-tree.service';
 import { exceedsSyncLimits } from '../../shared/pgn-viewer/pgn-parser';
 import { commonStartFen, findPositionInGames, formatSansWithNumbers, normalizeFen } from './position-filter.util';
@@ -195,6 +197,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                   (moveClicked)="viewerService.goToMove($event)"
                   (shareLine)="onShareLine($event)"
                   (downloadLine)="onDownloadLine($event)"
+                  (createSubset)="onCreateSubset($event)"
                   (commentMovePreview)="onCommentMovePreview($event)"
                   (chapterColorChanged)="refreshChapterColors()" />
               } @else if (mode === 'holes') {
@@ -585,6 +588,50 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     const pgn = repertoireDownloadPgn(raw ? raw.trimEnd() + '\n' : parsedGameToPgn(game, { title }));
     const suffix = [line.chapter, line.white].filter(s => s && s !== '?').join(' ') || title;
     downloadBlob(new Blob([pgn], { type: 'application/x-chess-pgn' }), pgnFileName(this.repertoire?.name, suffix));
+  }
+
+  /**
+   * „Neues Repertoire aus Auswahl" (Wunsch 2026-10-19): Kapitel und/oder Linien wählen (markierte vorgewählt) → eigenes
+   * Repertoire mit den ORIGINALabschnitten (Varianten, Kommentare, [FEN] bleiben), Art und Extension-Häkchen wie die
+   * Quelle, privat. Die Kapitelfarben der Quelle (auch automatisch erkannte) gelten im neuen Repertoire weiter.
+   */
+  onCreateSubset(markedKeys: string[]): void {
+    if (!this.repertoire || this.parseProgress) return;
+    const source = this.repertoire;
+    const lines = this.viewerService.lines;
+    const ref = this.dialog.open<CreateSubsetDialogComponent, CreateSubsetDialogData, CreateSubsetDialogResult>(
+      CreateSubsetDialogComponent,
+      { data: { repertoireName: source.name, lines, markedKeys }, width: '640px', maxWidth: '96vw', autoFocus: false });
+    ref.afterClosed().subscribe(result => {
+      if (!result) return;
+      const { pgn, count } = subsetPgn(this.viewerService.rawGames, result.gameIndices);
+      if (!count) return;
+      const colors = new Map(this.chapterColors);
+      const chapters = chaptersOf(lines, new Set(result.gameIndices));
+      const description = this.translate.instant('repertoire.subset.description', { source: source.name, n: count });
+      this.repertoireService.create({
+        name: result.name, description: description.slice(0, 1000), isPublic: false,
+        kind: source.kind, useForExtension: source.useForExtension,
+      }).pipe(
+        switchMap(created => {
+          const newId = (created as { id: number }).id;
+          const form = new FormData();
+          form.append('file', new File([pgn], 'auswahl.pgn', { type: 'application/x-chess-pgn' }));
+          return this.repertoireService.uploadFile(newId, form).pipe(map(() => newId));
+        }),
+      ).subscribe({
+        next: newId => {
+          for (const ch of chapters) {
+            const c = colors.get(ch);
+            if (c) setChapterColorOverride(newId, ch, c);
+          }
+          this.snackbar.show(this.translate.instant('repertoire.subset.created', { name: result.name, n: count }),
+            { action: 'repertoire.subset.open', duration: 8000 })
+            .onAction().subscribe(() => this.router.navigate(['/repertoires', newId]));
+        },
+        error: () => this.snackbar.info(this.translate.instant('repertoire.subset.failed')),
+      });
+    });
   }
 
   ngOnInit(): void {

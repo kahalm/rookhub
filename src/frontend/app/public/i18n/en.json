@@ -1234,6 +1234,18 @@
       "sourceOnline": "Lichess.org",
       "sourceLocal": "RookHub server",
       "localHint": "Local explorer on the RookHub server: no token, no waiting. Lichess games only from rating 1600 and without bullet, masters from the Lumbra database (over-the-board games from 2200). The Lichess data is still growing month by month – the shares are meaningful, the game counts smaller than on lichess.org."
+    },
+    "subset": {
+      "action": "New repertoire from selection…",
+      "title": "New repertoire from selection",
+      "count": "{{n}} of {{total}} lines selected",
+      "all": "All",
+      "none": "None",
+      "create": "Create repertoire",
+      "description": "Selection of {{n}} lines from “{{source}}”.",
+      "created": "“{{name}}” created with {{n}} lines.",
+      "open": "Open",
+      "failed": "Could not create the repertoire."
     }
   },
   "tournaments": {

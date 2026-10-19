@@ -30,3 +30,15 @@
 | GET | `/api/explorer/sources` | Wie `/api/repertoires/explorer/sources` (Quellen für den Explorer) |
 | GET | `/api/repertoires/explorer/sources` | Welche Explorer-Quellen es gibt `{ online, local, localRatings[], localSpeeds[] }` — `local` nur mit `LichessExplorer:LocalUrl` (0.503.0) |
 | POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
+
+## Neues Repertoire aus Auswahl (0.809.0)
+
+Wunsch 2026-10-19: „mehrere kapitel oder/und lines markieren und ein neues repertoir daraus machen". Linienliste →
+⋮ der Leiste → „Neues Repertoire aus Auswahl…" öffnet `CreateSubsetDialogComponent`: Kapitel ankreuzen (= alle seine
+Linien, dreistufig) und/oder einzelne Linien; vorgewählt sind die als Flashcard **markierten** Linien (die Markierung
+selbst bleibt unberührt). Reine Client-Sache, kein neuer Endpunkt: `POST /api/repertoires` (Name, Beschreibung
+„Auswahl von n Linien aus …", **privat**, `kind` und `useForExtension` wie die Quelle) + `POST /api/repertoires/{id}/files`
+mit `auswahl.pgn` = die ORIGINALabschnitte (`viewerService.rawGames`, `repertoire-subset.util.ts`, Repertoire-Reihenfolge,
+jeder einmal; Varianten, Kommentare, `[FEN]` und interne Marker `[%alt]`/`[%info]` bleiben). Die effektiven
+Kapitelfarben der Quelle (auch automatisch erkannte) werden als lokale Overrides fürs neue Repertoire gesetzt. Geht auch
+aus einem nur geteilten Repertoire (die Kopie gehört dann dem Nutzer). Während des Einlesens großer Repertoires gesperrt.

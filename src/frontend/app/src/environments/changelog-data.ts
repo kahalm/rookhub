@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.809.0", date: "2026-10-19", changes: [
+    { en: "Repertoires: “New repertoire from selection…” in the ⋮ menu of the line list. Tick whole chapters and/or single lines (your marked lines are preselected) and RookHub creates a new, private repertoire from exactly these lines — with their variations, comments and starting positions, the chapter colours carried over.",
+      de: "Repertoires: „Neues Repertoire aus Auswahl…“ im ⋮-Menü der Linienliste. Ganze Kapitel und/oder einzelne Linien ankreuzen (deine markierten Linien sind vorgewählt), und RookHub legt aus genau diesen Linien ein neues, privates Repertoire an — mit ihren Varianten, Kommentaren und Startstellungen, die Kapitelfarben werden übernommen." },
+  ] },
   { version: "0.808.0", date: "2026-10-18", changes: [
     { en: "Small, low windows (e.g. e-readers at 200 % UI size): compact header, search fields, tabs and titles so the main content appears sooner; worksheets, courses, games, analyses, guess, reconstruct and tournament details tightened.", de: "Kleine, niedrige Fenster (z. B. E-Reader mit 200 % UI-Größe): kompakte Kopfleiste, Suchfelder, Reiter und Titel, damit die Hauptsache früher kommt; Aufgabenblätter, Kurse, Partien, Analysen, Punktepartie, Rekonstruktion und Turnierdetails gestrafft." },
     { en: "Training: hint bulb in its own amber colour, hint counter shows the next hint, endless shows the level once, labelled depth slider, “Practice” button in the line list, daily puzzle shows its date, calculation help behind ⓘ, larger repertoire board in low windows; e-ink charts in greys.", de: "Training: Tipp-Glühbirne in eigener Bernsteinfarbe, Tipp-Zähler nennt den nächsten Tipp, Endlos zeigt das Level einmal, beschrifteter Tiefen-Regler, Knopf „Üben“ in der Linienliste, Tagespuzzle mit Datum, Kalkulier-Hilfe hinter ⓘ, größeres Repertoire-Brett in niedrigen Fenstern; E-Ink-Diagramme in Graustufen." },

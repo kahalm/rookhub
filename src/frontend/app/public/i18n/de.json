@@ -1234,6 +1234,18 @@
       "sourceOnline": "Lichess.org",
       "sourceLocal": "RookHub-Server",
       "localHint": "Lokaler Explorer auf dem RookHub-Server: kein Token, keine Wartezeit. Lichess-Partien erst ab Elo 1600 und ohne Bullet, Meister aus der Lumbra-Datenbank (Brettpartien ab Elo 2200). Die Lichess-Daten wachsen noch Monat für Monat – die Anteile sind aussagekräftig, die Partienzahlen kleiner als auf lichess.org."
+    },
+    "subset": {
+      "action": "Neues Repertoire aus Auswahl…",
+      "title": "Neues Repertoire aus Auswahl",
+      "count": "{{n}} von {{total}} Linien gewählt",
+      "all": "Alle",
+      "none": "Keine",
+      "create": "Repertoire anlegen",
+      "description": "Auswahl von {{n}} Linien aus „{{source}}“.",
+      "created": "„{{name}}“ mit {{n}} Linien angelegt.",
+      "open": "Öffnen",
+      "failed": "Das Repertoire konnte nicht angelegt werden."
     }
   },
   "tournaments": {

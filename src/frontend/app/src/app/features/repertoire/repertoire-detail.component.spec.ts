@@ -579,3 +579,56 @@ describe('RepertoireDetailComponent Brett-Ausrichtung (d3)', () => {
     expect(comp.boardFlipped).toBeFalse();
   });
 });
+
+describe('RepertoireDetailComponent Neues Repertoire aus Auswahl', () => {
+  const PGN = '[Event "Rep"]\n[White "A1"]\n[Black "Kapitel A"]\n[Result "*"]\n\n1. e4 e5 {[%alt c5]Offen} 2. Nf3 *\n\n'
+    + '[Event "Rep"]\n[White "B1"]\n[Black "Kapitel B"]\n[Result "*"]\n\n1. d4 d5 (1... Nf6 2. c4) 2. c4 *\n\n'
+    + '[Event "Rep"]\n[White "A2"]\n[Black "Kapitel A"]\n[Result "*"]\n\n1. e4 c5 2. Nf3 *\n';
+
+  async function make(result: unknown) {
+    const { RepertoireService } = await import('../../core/repertoire.service');
+    const { MatDialog } = await import('@angular/material/dialog');
+    const create = jasmine.createSpy('create').and.returnValue(of({ id: 77 }));
+    const uploadFile = jasmine.createSpy('uploadFile').and.returnValue(of({}));
+    const open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(result) });
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireService, useValue: { create, uploadFile } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireDetailComponent);
+    const comp = fixture.componentInstance;
+    (comp as any).dialog = { open };
+    comp.repertoire = { id: 13, name: 'Quelle', kind: 1, useForExtension: false } as any;
+    comp.id = 13;
+    comp.viewerService.loadPgn(PGN);
+    return { comp, create, uploadFile, open, MatDialog };
+  }
+
+  it('legt ein privates Repertoire mit den Originalabschnitten der Auswahl an', async () => {
+    const { comp, create, uploadFile, open } = await make({ name: 'Nur offen', gameIndices: [2, 0] });
+
+    comp.onCreateSubset(['k-egal']);
+
+    const data = open.calls.mostRecent().args[1].data;
+    expect(data.repertoireName).toBe('Quelle');
+    expect(data.lines.length).toBe(3);
+    expect(data.markedKeys).toEqual(['k-egal']);
+    expect(create).toHaveBeenCalledWith(jasmine.objectContaining({ name: 'Nur offen', isPublic: false, kind: 1, useForExtension: false }));
+    const form = uploadFile.calls.mostRecent().args[1] as FormData;
+    expect(uploadFile.calls.mostRecent().args[0]).toBe(77);
+    const text = await (form.get('file') as File).text();
+    expect(text).toBe('[Event "Rep"]\n[White "A1"]\n[Black "Kapitel A"]\n[Result "*"]\n\n1. e4 e5 {[%alt c5]Offen} 2. Nf3 *\n\n'
+      + '[Event "Rep"]\n[White "A2"]\n[Black "Kapitel A"]\n[Result "*"]\n\n1. e4 c5 2. Nf3 *\n');
+    expect(text).not.toContain('d4');
+  });
+
+  it('abgebrochen: nichts angelegt', async () => {
+    const { comp, create } = await make(undefined);
+    comp.onCreateSubset([]);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
