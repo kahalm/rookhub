@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Move } from 'chess.js';
-import { ParsedGame, ParsedGameWithSource, START_FEN, parsePgnTextWithSource, parsePgnTextWithSourceAsync } from '../../shared/pgn-viewer/pgn-parser';
+import { ParsedGame, ParsedGameWithSource, START_FEN, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
+import { parsePgnTextParallel } from '../../shared/pgn-viewer/pgn-parse-pool';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { sideOfLastMove, TrainColor } from './repertoire-color.util';
 import { isInfoLineGame } from './repertoire-info-line.util';
@@ -68,9 +69,9 @@ export class RepertoireViewerService {
     this.loadParsed(parsePgnTextWithSource(pgnText, { foldVariations: true }));
   }
 
-  /** Das GANZE Repertoire in Portionen lesen (0.712.0) — vorher endete die Linienliste nach 2 MB/500 Partien. */
+  /** Das GANZE Repertoire lesen (0.712.0) — seit 0.810.0 parallel in Web Workern (Rückfall: Portionen im Hauptthread). */
   async loadPgnAsync(pgnText: string, onProgress?: (done: number, total: number) => void): Promise<void> {
-    this.loadParsed(await parsePgnTextWithSourceAsync(pgnText, { foldVariations: true }, onProgress));
+    this.loadParsed(await parsePgnTextParallel(pgnText, { foldVariations: true }, onProgress));
   }
 
   private loadParsed(parsed: ParsedGameWithSource[]): void {

@@ -223,7 +223,7 @@ export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions):
 }
 
 /** Eine Partie (Abschnitt aus {@link splitPgnGames}) lesen; `null` = leer, zu groß oder unlesbar. */
-function parseOneGame(raw: string, opts?: ParsePgnOptions): ParsedGameWithSource | null {
+export function parseOneGame(raw: string, opts?: ParsePgnOptions): ParsedGameWithSource | null {
     const trimmed = raw.trim();
     if (!trimmed || trimmed.length > MAX_GAME_CHARS) return null;
 

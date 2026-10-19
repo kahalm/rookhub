@@ -42,3 +42,14 @@ mit `auswahl.pgn` = die ORIGINALabschnitte (`viewerService.rawGames`, `repertoir
 jeder einmal; Varianten, Kommentare, `[FEN]` und interne Marker `[%alt]`/`[%info]` bleiben). Die effektiven
 Kapitelfarben der Quelle (auch automatisch erkannte) werden als lokale Overrides fürs neue Repertoire gesetzt. Geht auch
 aus einem nur geteilten Repertoire (die Kopie gehört dann dem Nutzer). Während des Einlesens großer Repertoires gesperrt.
+
+## Großes PGN parallel lesen (0.810.0)
+
+Repertoire 16 auf Prod (4,9 MB, 817 Abschnitte) zählte beim Öffnen ~5 s hoch; ~80 % der Zeit ist chess.js (jeder Zug wird
+gespielt). `shared/pgn-viewer/pgn-parse-pool.ts` → `parsePgnTextParallel`: Abschnitte in Stapeln (`BATCH` 20) an bis zu 4 Web
+Worker (`pgn-parse.worker.ts`, Kerne − 1), Ergebnis in Textreihenfolge, Züge bekommen danach wieder den `Move`-Prototyp
+von chess.js. Rückfall auf die Portionen im Hauptthread (`parsePgnTextWithSourceAsync`): ohne `Worker`, unter
+`MIN_GAMES_FOR_WORKERS` (120) Abschnitten oder wenn kein Worker startet; scheitert ein Worker unterwegs, liest der
+Hauptthread dessen Stapel. Genutzt von der Detailseite (`RepertoireViewerService.loadPgnAsync`) und dem Trainer. Gebündelt
+über `webWorkerTsConfig` (`tsconfig.worker.json`, nur Projekt `app`); CSP `worker-src 'self'` reicht. Gemessen in Chrome
+(16 Kerne): 2 348 ms → 721 ms.

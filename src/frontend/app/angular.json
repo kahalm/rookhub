@@ -127,7 +127,8 @@
               "marks-pane",
               "lodash/debounce",
               "lodash/throttle"
-            ]
+            ],
+            "webWorkerTsConfig": "tsconfig.worker.json"
           },
           "configurations": {
             "production": {
@@ -203,7 +204,8 @@
               "node_modules/leaflet/dist/leaflet.css"
             ],
             "scripts": [],
-            "karmaConfig": "karma.conf.js"
+            "karmaConfig": "karma.conf.js",
+            "webWorkerTsConfig": "tsconfig.worker.json"
           }
         }
       }

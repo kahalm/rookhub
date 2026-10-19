@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.810.0", date: "2026-10-19", changes: [
+    { en: "Large repertoires open about three times faster: the lines are now read in parallel by several background workers instead of piece by piece on the page (measured with an 817-line Chessable repertoire: 2.3 s → 0.7 s), and the page stays responsive meanwhile. The repertoire trainer benefits as well. Older browsers without workers read as before.",
+      de: "Große Repertoires öffnen etwa dreimal so schnell: die Linien werden jetzt von mehreren Hintergrund-Workern gleichzeitig gelesen statt Stück für Stück auf der Seite (gemessen an einem Chessable-Repertoire mit 817 Linien: 2,3 s → 0,7 s), und die Seite bleibt dabei bedienbar. Der Repertoire-Trainer profitiert ebenso. Ältere Browser ohne Worker lesen wie bisher." },
+  ] },
   { version: "0.809.1", date: "2026-10-19", changes: [
     { en: "ClubHub tests: two layout checks (card list and footer on the phone) now wait for the web fonts before measuring. Without them the fallback font runs wider and wraps lines, so the same markup measured sometimes 206 px and sometimes 233 px — the tag build of v0.809.0 failed on it.",
       de: "ClubHub-Tests: zwei Layout-Prüfungen (Kartei und Fußzeile am Handy) warten jetzt auf die Webschriften, bevor sie messen. Ohne sie läuft die Ersatzschrift breiter und bricht Zeilen um — dasselbe Markup maß mal 206 px, mal 233 px; daran scheiterte der Tag-Build von v0.809.0." },

@@ -1,0 +1,12 @@
+/* Web Worker (Angular bündelt `new Worker(new URL(...), import.meta.url)` damit): z. B. shared/pgn-viewer/pgn-parse.worker.ts. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/worker",
+    "lib": ["es2022", "webworker"],
+    "types": []
+  },
+  "include": [
+    "src/**/*.worker.ts"
+  ]
+}
