@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.809.1", date: "2026-10-19", changes: [
+    { en: "ClubHub tests: two layout checks (card list and footer on the phone) now wait for the web fonts before measuring. Without them the fallback font runs wider and wraps lines, so the same markup measured sometimes 206 px and sometimes 233 px — the tag build of v0.809.0 failed on it.",
+      de: "ClubHub-Tests: zwei Layout-Prüfungen (Kartei und Fußzeile am Handy) warten jetzt auf die Webschriften, bevor sie messen. Ohne sie läuft die Ersatzschrift breiter und bricht Zeilen um — dasselbe Markup maß mal 206 px, mal 233 px; daran scheiterte der Tag-Build von v0.809.0." },
+  ] },
   { version: "0.809.0", date: "2026-10-19", changes: [
     { en: "Repertoires: “New repertoire from selection…” in the ⋮ menu of the line list. Tick whole chapters and/or single lines (your marked lines are preselected) and RookHub creates a new, private repertoire from exactly these lines — with their variations, comments and starting positions, the chapter colours carried over.",
       de: "Repertoires: „Neues Repertoire aus Auswahl…“ im ⋮-Menü der Linienliste. Ganze Kapitel und/oder einzelne Linien ankreuzen (deine markierten Linien sind vorgewählt), und RookHub legt aus genau diesen Linien ein neues, privates Repertoire an — mit ihren Varianten, Kommentaren und Startstellungen, die Kapitelfarben werden übernommen." },

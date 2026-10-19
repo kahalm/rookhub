@@ -26,6 +26,14 @@ describe('clubhub.scss', () => {
     return host;
   }
 
+  /** Vor Längenmessungen: die Webschriften (Zilla Slab/Atkinson) müssen geladen sein — sonst misst der Test mit der
+   *  Ersatzschrift, die breiter läuft und Zeilen umbricht (CI: mal 206 px, mal 233 px für dasselbe Markup). */
+  async function fontsLoaded(): Promise<void> {
+    void host.offsetHeight;                         // Layout anstoßen, damit benutzte Schriften angefordert werden
+    await document.fonts.ready;
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+  }
+
   afterEach(() => host?.remove());
 
   const rootVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -121,6 +129,7 @@ describe('clubhub.scss', () => {
     try {
       const el = mount(`<footer class="wrap foot"><span>v0.807.0</span><span class="foot-links"><a>Konto verknüpfen</a>
         <a>Impressum</a><a>Datenschutz</a></span></footer>`);
+      await fontsLoaded();
       const links = Array.from(el.querySelectorAll<HTMLElement>('.foot-links a'));
       for (const a of links) expect(a.getBoundingClientRect().height).withContext(a.textContent!).toBeGreaterThanOrEqual(44);
       const tops = [el.querySelector('.foot > span')!, ...links].map(n => Math.round(n.getBoundingClientRect().top));
@@ -215,6 +224,7 @@ describe('clubhub.scss', () => {
             <button class="chip-btn">Fortgeschrittene <span class="n">0</span></button></div>
           <label class="check"><input type="checkbox"> Archiv</label><p class="count">3 Kinder</p></div></div>
         <section class="register"><h2 class="letter">F</h2><ul class="cards"><li class="kid"><a class="kid-main">Felix</a></li></ul></section></main>`);
+      await fontsLoaded();
       const top = host.querySelector('main')!.getBoundingClientRect().top;
       const kid = host.querySelector('li.kid')!.getBoundingClientRect();
       expect(kid.top - top).toBeLessThanOrEqual(206);
