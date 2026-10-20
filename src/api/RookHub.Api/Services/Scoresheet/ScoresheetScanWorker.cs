@@ -21,8 +21,17 @@ public sealed class ScoresheetScanSignal
 /// Schlange — die Warteschlange im Arbeitsspeicher (<see cref="IBackgroundTaskQueue"/>) verlöre es beim
 /// nächtlichen Watchtower-Neustart, und sie teilt sich die Plätze mit dem minutenlangen Chessable-Import.
 /// </summary>
-public class ScoresheetScanWorker : BackgroundService
+public class ScoresheetScanWorker : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): keine neue Einlesung; eine laufende (hoechstens
+    // MaxRuntime) wird fertig.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(ScoresheetScanWorker), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     /// <summary>So oft schaut der Worker ohne Weckruf nach.</summary>
     public static readonly TimeSpan IdlePoll = TimeSpan.FromSeconds(30);
 
@@ -61,6 +70,8 @@ public class ScoresheetScanWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopes, PauseGate.Recheck, stoppingToken)) continue;
+            Pause.MarkTick();
             int? id = null;
             try
             {

@@ -7,8 +7,16 @@ using RookHub.Api.Models;
 
 namespace RookHub.Api.Services.Tournaments;
 
-public class AutoSubscriptionService : BackgroundService
+public class AutoSubscriptionService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): der Tageslauf wartet, bis fortgesetzt wird.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(AutoSubscriptionService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AutoSubscriptionService> _logger;
 
@@ -55,6 +63,7 @@ public class AutoSubscriptionService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopeFactory, PauseGate.Recheck, stoppingToken)) continue;
             try
             {
                 await CheckAllUsersAsync(stoppingToken);
@@ -73,6 +82,7 @@ public class AutoSubscriptionService : BackgroundService
                 _logger.LogError(ex, "Unexpected error in AutoSubscriptionService refresh");
             }
 
+            Pause.MarkTick();
             await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
         }
     }

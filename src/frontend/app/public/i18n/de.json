@@ -2364,7 +2364,8 @@
       "courseDl": "Kurse holen",
       "ci": "CI / Actions",
       "roles": "Rollen",
-      "uploads": "Uploads"
+      "uploads": "Uploads",
+      "jobs": "Hintergrundjobs"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2701,6 +2702,24 @@
       "deleteConfirm": "Stapel #{{id}} mit {{count}} Bildern endgültig löschen?",
       "deleted": "Stapel gelöscht",
       "downloadError": "Download fehlgeschlagen"
+    },
+    "jobs": {
+      "title": "Hintergrundjobs",
+      "help": "Hält alle pausierbaren Hintergrunddienste auf einmal an: Analyseaufträge, Partie- und Meisterpartien-Analysen, Kurs-Übersetzungen, Importe, Abrufe und Nachtläufe. Wirkt sofort, ohne Neustart, und bleibt über Neustarts bestehen. Laufende Analyseaufträge und Übersetzungen werden angehalten und kommen zurück in die Warteschlange; das Erreichte bleibt. Lebenszeichen, Aufräum- und Aufbewahrungsdienste laufen weiter.",
+      "toggle": "Hintergrundjobs pausieren",
+      "statusPaused": "Pausiert",
+      "statusRunning": "Läuft",
+      "since": "Pausiert seit {{when}} von {{by}}",
+      "forced": "Die Serverkonfiguration erzwingt die Pause — der Schalter kann sie nicht aufheben.",
+      "services": "Dienste",
+      "noServices": "Keine Hintergrunddienste gefunden.",
+      "pausable": "pausierbar",
+      "notPausable": "läuft immer",
+      "lastTick": "zuletzt {{when}}",
+      "noTick": "noch kein Lauf",
+      "pausedNow": "Hintergrundjobs pausiert",
+      "resumedNow": "Hintergrundjobs laufen wieder",
+      "saveError": "Schalter konnte nicht umgelegt werden."
     }
   },
   "favorites": {

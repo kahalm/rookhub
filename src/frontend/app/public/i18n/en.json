@@ -2364,7 +2364,8 @@
       "courseDl": "Course download",
       "ci": "CI / Actions",
       "roles": "Roles",
-      "uploads": "Uploads"
+      "uploads": "Uploads",
+      "jobs": "Background jobs"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2701,6 +2702,24 @@
       "deleteConfirm": "Delete batch #{{id}} with {{count}} images for good?",
       "deleted": "Batch deleted",
       "downloadError": "Download failed"
+    },
+    "jobs": {
+      "title": "Background jobs",
+      "help": "Pauses all pausable background services at once: analysis jobs, game and master analyses, course translations, imports, fetches and nightly runs. Takes effect immediately, without a restart, and survives restarts. Running analysis jobs and translations are stopped and go back to the queue; the progress made is kept. Heartbeat, clean-up and retention services keep running.",
+      "toggle": "Pause background jobs",
+      "statusPaused": "Paused",
+      "statusRunning": "Running",
+      "since": "Paused since {{when}} by {{by}}",
+      "forced": "The server configuration forces the pause — the switch cannot lift it.",
+      "services": "Services",
+      "noServices": "No background services found.",
+      "pausable": "pausable",
+      "notPausable": "always runs",
+      "lastTick": "last run {{when}}",
+      "noTick": "no run yet",
+      "pausedNow": "Background jobs paused",
+      "resumedNow": "Background jobs running again",
+      "saveError": "Could not change the switch."
     }
   },
   "favorites": {

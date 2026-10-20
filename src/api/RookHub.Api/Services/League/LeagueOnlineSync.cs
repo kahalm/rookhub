@@ -356,8 +356,16 @@ public sealed class LeagueOnlineSync
 /// <c>LeagueBroadcasts:Enabled=false</c>).
 /// </summary>
 public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, LeagueOnlineSyncSignal signal, IConfiguration config,
-    ILogger<LeagueOnlineSyncScheduler> logger) : BackgroundService
+    ILogger<LeagueOnlineSyncScheduler> logger) : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt faellt bei Pause aus.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(LeagueOnlineSyncScheduler), logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     public static readonly TimeSpan StartDelay = TimeSpan.FromMinutes(2);
     public static readonly TimeSpan Budget = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan BacklogPause = TimeSpan.FromMinutes(1);
@@ -376,6 +384,8 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
         try { await Task.Delay(StartDelay, ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(scopes, PauseGate.Recheck, ct)) continue;
+            Pause.MarkTick();
             var more = false;
             try
             {

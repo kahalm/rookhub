@@ -21,6 +21,9 @@ public class NotificationRetentionScheduler : PeriodicWorker
 
     protected override WorkerSchedule Schedule { get; } = WorkerSchedule.DailyAtUtc(RunAtUtc);
     protected override WorkerStart Start => WorkerStart.After(TimeSpan.FromMinutes(10));
+    /// <summary>Nicht pausierbar: Aufbewahrungsfrist + Namen gelöschter Konten ersetzen (Datenschutz/Konsistenz),
+    /// einmal täglich und billig.</summary>
+    protected override bool Pausable => false;
     protected override void LogFailure(Exception ex) => _logger.LogError(ex, "Benachrichtigungs-Retention fehlgeschlagen");
 
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)

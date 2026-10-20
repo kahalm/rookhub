@@ -2364,7 +2364,8 @@
       "courseDl": "Preuzimanje tečajeva",
       "ci": "CI / Actions",
       "roles": "Uloge",
-      "uploads": "Prijenosi"
+      "uploads": "Prijenosi",
+      "jobs": "Pozadinski poslovi"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2701,6 +2702,24 @@
       "deleteConfirm": "Trajno izbrisati skup #{{id}} s {{count}} slika?",
       "deleted": "Skup izbrisan",
       "downloadError": "Preuzimanje nije uspjelo"
+    },
+    "jobs": {
+      "title": "Pozadinski poslovi",
+      "help": "Zaustavlja odjednom sve pozadinske servise koji se mogu pauzirati: zadatke analize, analize partija i majstorskih partija, prijevode tečajeva, uvoze, dohvaćanja i noćna pokretanja. Djeluje odmah, bez ponovnog pokretanja, i ostaje nakon ponovnog pokretanja. Zadaci analize i prijevodi koji su u tijeku zaustavljaju se i vraćaju u red čekanja; postignuto ostaje. Znakovi života, servisi čišćenja i čuvanja podataka nastavljaju raditi.",
+      "toggle": "Pauziraj pozadinske poslove",
+      "statusPaused": "Pauzirano",
+      "statusRunning": "Radi",
+      "since": "Pauzirano od {{when}}, korisnik {{by}}",
+      "forced": "Konfiguracija poslužitelja nameće pauzu — prekidač je ne može ukinuti.",
+      "services": "Servisi",
+      "noServices": "Nema pronađenih pozadinskih servisa.",
+      "pausable": "može se pauzirati",
+      "notPausable": "uvijek radi",
+      "lastTick": "zadnje {{when}}",
+      "noTick": "još nije pokrenuto",
+      "pausedNow": "Pozadinski poslovi pauzirani",
+      "resumedNow": "Pozadinski poslovi ponovno rade",
+      "saveError": "Prekidač nije moguće promijeniti."
     }
   },
   "favorites": {

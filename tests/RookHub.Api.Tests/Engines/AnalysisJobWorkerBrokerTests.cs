@@ -50,6 +50,7 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
             config, NullLogger<LichessEngineService>.Instance));
         services.AddScoped<EngineRegistry>();
         services.AddScoped<AnalysisJobService>();
+        services.AddSingleton<BackgroundPause>();   // nur der Pausen-Worker unten bekommt ihn; _worker läuft ohne
         _sp = services.BuildServiceProvider();
         _worker = new AnalysisJobWorker(_sp.GetRequiredService<IServiceScopeFactory>(), new EngineActivityTracker(), _broker,
             NullLogger<AnalysisJobWorker>.Instance, config, new AnalysisJobLive());
@@ -548,5 +549,68 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         var job = await WaitForAsync(jobId, j => j.Status == AnalysisJobStatus.Failed);
         Assert.Equal("Engine nicht (mehr) registriert", job.LastError);
         Assert.Empty(_broker.Calls);
+    }
+
+    // ── Admin-Schalter „Hintergrundjobs pausieren" ──────────────────────────────────────────────────────────
+
+    private AnalysisJobWorker PausableWorker(BackgroundPause pause) =>
+        new(_sp.GetRequiredService<IServiceScopeFactory>(), new EngineActivityTracker(), _broker,
+            NullLogger<AnalysisJobWorker>.Instance, _sp.GetRequiredService<IConfiguration>(), new AnalysisJobLive(), pause);
+
+    [Fact]
+    public async Task Paused_takesNoNewJob_andStartsItAfterResume()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Answers[engines[0]] = (200, Line(8, 10) + Line(12, 90, best: true));
+        var pause = _sp.GetRequiredService<BackgroundPause>();
+        await pause.SetAsync(true, userId, "kahalm");
+        var jobId = await JobAsync(userId, depth: 12);
+
+        var worker = PausableWorker(pause);
+        await worker.StartAsync(CancellationToken.None);
+        try
+        {
+            await Task.Delay(2500);                                  // mehr als zwei Ticks (TickSeconds = 1)
+            Assert.Empty(_broker.Calls);
+            Assert.Equal(AnalysisJobStatus.Queued, (await WaitForAsync(jobId, _ => true)).Status);
+            Assert.True(worker.PausableByAdmin);
+
+            await pause.SetAsync(false, userId, "kahalm");
+            var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Done or AnalysisJobStatus.Failed);
+            Assert.Equal(AnalysisJobStatus.Done, job.Status);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+            worker.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Pausing_stopsTheRunningJob_backToPaused_withoutAFruitlessAttempt()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Hanging.Add(engines[0]);                            // die Suche rechnet „ewig"
+        var pause = _sp.GetRequiredService<BackgroundPause>();
+        var jobId = await JobAsync(userId, depth: 30);
+
+        var worker = PausableWorker(pause);
+        await worker.StartAsync(CancellationToken.None);
+        try
+        {
+            await WaitForAsync(jobId, j => j.Status == AnalysisJobStatus.Running && j.ReachedDepth >= 8);
+            await pause.SetAsync(true, userId, "kahalm");
+            var job = await WaitForAsync(jobId, j => j.Status == AnalysisJobStatus.Paused);
+            Assert.Equal(0, job.FruitlessAttempts);
+            Assert.Null(job.LastError);
+            Assert.Equal(8, job.ReachedDepth);                      // das Erreichte bleibt
+            await Task.Delay(1500);
+            Assert.Single(_broker.Calls);                           // und es startet kein neuer Lauf
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+            worker.Dispose();
+        }
     }
 }

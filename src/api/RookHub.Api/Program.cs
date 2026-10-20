@@ -201,6 +201,9 @@ try
     builder.Services.AddScoped<ChallengeService>();
     builder.Services.AddScoped<FavoriteService>();
     builder.Services.AddScoped<WorksheetService>();
+    // Admin-Schalter „Hintergrundjobs pausieren" (DB SystemSettings + BackgroundJobs:Paused) — fragen PeriodicWorker und
+    // die übrigen Hintergrunddienste vor jedem Takt (docs/api/hintergrundjobs-pause.md).
+    builder.Services.AddSingleton<BackgroundPause>();
     // E-Book-Bibliothek (0.764.0): Wurzeln aus dem Abschnitt „Ebooks" (ENV Ebooks__Root / Ebooks__LibraryRoot);
     // ohne Root bleibt Hochladen aus, ohne LibraryRoot das Einlesen — Übersicht und Leser laufen trotzdem.
     builder.Services.Configure<RookHub.Api.Services.Ebooks.EbookOptions>(builder.Configuration.GetSection(RookHub.Api.Services.Ebooks.EbookOptions.Section));

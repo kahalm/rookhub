@@ -7073,6 +7073,32 @@ namespace RookHub.Api.Migrations
                     b.ToTable("SharedPuzzleAttempts");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.SystemSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UpdatedByName")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SystemSettings");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.TacticCandidate", b =>
                 {
                     b.Property<int>("Id")

@@ -1950,7 +1950,8 @@
       "courseDl": "Tanfolyamok letöltése",
       "ci": "CI / Actions",
       "roles": "Szerepek",
-      "uploads": "Feltöltések"
+      "uploads": "Feltöltések",
+      "jobs": "Háttérfeladatok"
     },
     "users": {
       "searchLabel": "Felhasználók keresése",
@@ -2287,6 +2288,24 @@
       "deleteConfirm": "Véglegesen törlöd a(z) #{{id}} csomagot ({{count}} kép)?",
       "deleted": "Csomag törölve",
       "downloadError": "A letöltés nem sikerült"
+    },
+    "jobs": {
+      "title": "Háttérfeladatok",
+      "help": "Egyszerre leállít minden szüneteltethető háttérszolgáltatást: elemzési feladatokat, játszma- és mesterjátszma-elemzéseket, kurzusfordításokat, importokat, lekérdezéseket és éjszakai futásokat. Azonnal hat, újraindítás nélkül, és újraindítás után is megmarad. A futó elemzési feladatok és fordítások leállnak, és visszakerülnek a várólistára; az elért eredmény megmarad. Az életjel-, takarító- és megőrzési szolgáltatások tovább futnak.",
+      "toggle": "Háttérfeladatok szüneteltetése",
+      "statusPaused": "Szüneteltetve",
+      "statusRunning": "Fut",
+      "since": "Szüneteltetve ekkortól: {{when}}, {{by}} által",
+      "forced": "A szerver beállítása kényszeríti a szünetet — a kapcsoló nem tudja feloldani.",
+      "services": "Szolgáltatások",
+      "noServices": "Nem található háttérszolgáltatás.",
+      "pausable": "szüneteltethető",
+      "notPausable": "mindig fut",
+      "lastTick": "utoljára {{when}}",
+      "noTick": "még nem futott",
+      "pausedNow": "Háttérfeladatok szüneteltetve",
+      "resumedNow": "A háttérfeladatok újra futnak",
+      "saveError": "A kapcsolót nem sikerült átállítani."
     }
   },
   "analysis": {

@@ -620,5 +620,11 @@
           </ng-template>
         </mat-tab>
 
+        <mat-tab [label]="'admin.tabs.jobs' | translate">
+          <ng-template matTabContent>
+            <app-admin-background-jobs />
+          </ng-template>
+        </mat-tab>
+
       </mat-tab-group>
     </div>

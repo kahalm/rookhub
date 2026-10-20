@@ -4,8 +4,16 @@ using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.Tournaments;
 
-public class RoundMonitorService : BackgroundService
+public class RoundMonitorService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(RoundMonitorService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RoundMonitorService> _logger;
 
@@ -21,9 +29,11 @@ public class RoundMonitorService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopeFactory, TimeSpan.FromSeconds(30), stoppingToken)) continue;
             try
             {
                 await CheckAllMonitorsAsync(stoppingToken);
+                Pause.MarkTick();
             }
             // FALLE: `ex is not OperationCanceledException` schloss AUSGERECHNET den häufigsten Fall aus.
             // Ein HttpClient-Timeout zum Crawler wirft eine TaskCanceledException (= OperationCanceled)

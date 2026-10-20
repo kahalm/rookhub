@@ -22,8 +22,16 @@ namespace RookHub.Api.Services.Chessable;
 /// Klassifiziert wird beim Anlegen (<c>IsCourseCachedAsync</c>); unklassifizierte (null) Jobs gelten
 /// als Download und werden hier NICHT angefasst → nichts kann hängen bleiben.
 /// </summary>
-public class ChessableImportFastLaneService : BackgroundService
+public class ChessableImportFastLaneService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(ChessableImportFastLaneService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     /// <summary>Phasen, in denen ein Import aktiv bearbeitet wird (nicht bloß wartend).</summary>
     internal static readonly ChessableImportPhase[] InflightPhases = ChessableImportStates.Inflight;
 
@@ -50,8 +58,9 @@ public class ChessableImportFastLaneService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopeFactory, IdleInterval, stoppingToken)) continue;
             bool drove = false;
-            try { drove = await TickAsync(stoppingToken); }
+            try { drove = await TickAsync(stoppingToken); Pause.MarkTick(); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { _logger.LogError(ex, "Chessable-Import-Fast-Lane: Tick fehlgeschlagen"); }
 

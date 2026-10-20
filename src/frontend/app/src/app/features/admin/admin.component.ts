@@ -36,6 +36,7 @@ import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.compo
 import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { AdminLeagueUploadsComponent } from './tabs/admin-league-uploads.component';
+import { AdminBackgroundJobsComponent } from './tabs/admin-background-jobs.component';
 import { adminTabIndex, ADMIN_TAB_KEYS, AdminTabKey } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 import { apiErrorText } from '../../core/api-error';
@@ -52,6 +53,7 @@ import { apiErrorText } from '../../core/api-error';
     AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent,
     AdminRolesComponent,
     AdminLeagueUploadsComponent,
+    AdminBackgroundJobsComponent,
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],

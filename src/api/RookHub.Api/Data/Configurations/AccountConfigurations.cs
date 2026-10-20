@@ -143,6 +143,18 @@ internal sealed class MenuItemSettingConfiguration : IEntityTypeConfiguration<Me
     }
 }
 
+/// <summary>Anwendungsweite Einstellungen (Schlüssel → Wert), z. B. „Hintergrundjobs pausieren".</summary>
+internal sealed class SystemSettingConfiguration : IEntityTypeConfiguration<SystemSetting>
+{
+    public void Configure(EntityTypeBuilder<SystemSetting> e)
+    {
+        e.HasKey(s => s.Key);
+        e.Property(s => s.Key).HasMaxLength(100);
+        e.Property(s => s.Value).HasMaxLength(2000);
+        e.Property(s => s.UpdatedByName).HasMaxLength(100);
+    }
+}
+
 internal sealed class MenuItemGroupAccessConfiguration : IEntityTypeConfiguration<MenuItemGroupAccess>
 {
     public void Configure(EntityTypeBuilder<MenuItemGroupAccess> e)

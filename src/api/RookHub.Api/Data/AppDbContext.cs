@@ -164,6 +164,7 @@ public partial class AppDbContext : DbContext
     public DbSet<ChessableImport> ChessableImports => Set<ChessableImport>();
     public DbSet<MenuItemSetting> MenuItemSettings => Set<MenuItemSetting>();
     public DbSet<MenuItemGroupAccess> MenuItemGroupAccesses => Set<MenuItemGroupAccess>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AdminMessage> AdminMessages => Set<AdminMessage>();
     public DbSet<MessageThread> MessageThreads => Set<MessageThread>();

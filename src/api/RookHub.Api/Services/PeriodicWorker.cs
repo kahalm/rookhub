@@ -13,16 +13,39 @@ namespace RookHub.Api.Services;
 /// mit (siehe RoundMonitorService).</para>
 ///
 /// <para>Jeder Schritt bekommt einen FRISCHEN Scope (eigener DbContext, kein Tracker-Erbe vom Vorlauf).</para>
+///
+/// <para><b>Pause.</b> Vor jedem Takt fragt der Rumpf den Admin-Schalter „Hintergrundjobs pausieren"
+/// (<see cref="BackgroundPause"/>). Steht er auf Pause, fällt der Takt aus, und der Dienst sieht nach
+/// <see cref="PauseGate.Recheck"/> wieder nach (höchstens nach seinem normalen Takt) — ein in die Pause gefallener
+/// Tageslauf wird so gleich nach dem Fortsetzen nachgeholt. Der Wechsel wird einmal geloggt, nicht jeder Takt.
+/// Dienste, die Speicher/Konsistenz schützen, überschreiben <see cref="Pausable"/> mit <c>false</c>.</para>
 /// </summary>
-public abstract class PeriodicWorker : BackgroundService
+public abstract class PeriodicWorker : BackgroundService, IBackgroundJobInfo
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly PauseGate _pause;
 
     protected PeriodicWorker(IServiceScopeFactory scopeFactory, ILogger logger)
     {
         _scopeFactory = scopeFactory;
         Logger = logger;
+        _pause = new PauseGate(GetType().Name, logger);
     }
+
+    /// <summary>Hält der Dienst bei „Hintergrundjobs pausieren" an? Vorgabe ja; <c>false</c> für Dienste, die
+    /// Speicher/Konsistenz schützen (Aufräumen, Fristen) oder deren Ausfall Nutzer sofort sehen.</summary>
+    protected virtual bool Pausable => true;
+
+    /// <inheritdoc/>
+    public bool PausableByAdmin => Pausable;
+
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pause.LastTickUtc;
+
+    private static readonly TimeSpan MinPausedDelay = TimeSpan.FromSeconds(1);
+
+    /// <summary>Für Tests: den Schalter direkt vorgeben statt ihn aus dem Scope zu holen.</summary>
+    internal void UsePause(BackgroundPause? pause) => _pause.Use(pause);
 
     protected ILogger Logger { get; }
 
@@ -74,9 +97,27 @@ public abstract class PeriodicWorker : BackgroundService
                 try { await Task.Delay(delay, stoppingToken); }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
             }
+            if (await ShouldSkipForPauseAsync(stoppingToken) is not { } skip) return;   // Herunterfahren
+            if (skip)
+            {
+                // Wieder nachsehen nach dem eigenen Takt, höchstens nach Recheck, mindestens nach einer
+                // Sekunde (kein Leerlauf-Kreisel bei sehr kurzem Takt).
+                var next = Schedule.NextDelay(DateTime.UtcNow);
+                delay = next < PauseGate.Recheck ? next : PauseGate.Recheck;
+                if (delay < MinPausedDelay) delay = MinPausedDelay;
+                continue;
+            }
             await RunStepAsync(stoppingToken);
             delay = Schedule.NextDelay(DateTime.UtcNow);
         }
+    }
+
+    /// <summary>Fällt der anstehende Takt wegen Pause aus? <c>null</c> beim Herunterfahren.</summary>
+    internal async Task<bool?> ShouldSkipForPauseAsync(CancellationToken stoppingToken)
+    {
+        if (!Pausable) return false;
+        try { return await _pause.ShouldSkipAsync(_scopeFactory, stoppingToken); }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return null; }
     }
 
     /// <summary>Wartezeit bis zum ersten Schritt nach einem Start um <paramref name="nowUtc"/>.</summary>
@@ -89,6 +130,7 @@ public abstract class PeriodicWorker : BackgroundService
         {
             using var scope = _scopeFactory.CreateScope();
             await StepAsync(scope.ServiceProvider, stoppingToken);
+            _pause.MarkTick();
             return true;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

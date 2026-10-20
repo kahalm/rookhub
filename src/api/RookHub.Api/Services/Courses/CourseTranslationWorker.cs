@@ -9,6 +9,8 @@ public enum CourseTranslationStop
     Preempted,
     /// <summary>Zurueckgezogen (Admin) — der Auftrag steht schon auf <c>Cancelled</c>.</summary>
     Withdrawn,
+    /// <summary>Admin hat „Hintergrundjobs pausieren" eingeschaltet — Auftrag zurueck in die Schlange.</summary>
+    Paused,
 }
 
 /// <summary>
@@ -101,8 +103,17 @@ public sealed class CourseTranslationSignal
 /// kommt beim naechsten Start zurueck (<see cref="CourseTranslationJobService.RequeueInterruptedAsync"/>). Weil alles
 /// inkrementell ist, ueberspringt der naechste Lauf das Fertige.</para>
 /// </summary>
-public class CourseTranslationWorker : BackgroundService
+public class CourseTranslationWorker : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): kein neuer Auftrag, der laufende geht wie bei
+    // der Sperrzeit zurueck in die Schlange.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(CourseTranslationWorker), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     /// <summary>So lange wartet der Dienst ohne Arbeit auf einen Weckruf. Auftraege entstehen nur in diesem Prozess
     /// (und wecken ihn), das Nachsehen ist nur die Rueckfallebene.</summary>
     public static readonly TimeSpan IdlePoll = TimeSpan.FromMinutes(5);
@@ -149,10 +160,12 @@ public class CourseTranslationWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopes, PauseGate.Recheck, stoppingToken)) continue;
             TimeSpan wait;
             try
             {
                 wait = await StepAsync(stoppingToken);
+                Pause.MarkTick();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -216,7 +229,7 @@ public class CourseTranslationWorker : BackgroundService
                 // Beim Herunterfahren bleibt der Auftrag auf Running und kommt beim naechsten Start zurueck.
                 _logger.LogInformation("Kurs-Uebersetzung {JobId}: Dienst stoppt, Auftrag kommt beim Start zurueck", jobId);
             }
-            else if (run.Reason is CourseTranslationStop.Quiet or CourseTranslationStop.Preempted)
+            else if (run.Reason is CourseTranslationStop.Quiet or CourseTranslationStop.Preempted or CourseTranslationStop.Paused)
             {
                 await WithJobsAsync(jobs => jobs.RequeueAsync(jobId, CancellationToken.None));
                 _logger.LogInformation("Kurs-Uebersetzung {JobId}: {Reason}, zurueck in die Schlange", jobId, run.Reason);
@@ -241,16 +254,22 @@ public class CourseTranslationWorker : BackgroundService
         return result;
     }
 
-    /// <summary>Waehrend ein Auftrag laeuft: beginnt die Sperrzeit, wird er abgebrochen (und zurueckgestellt).</summary>
+    /// <summary>Waehrend ein Auftrag laeuft: beginnt die Sperrzeit oder pausiert ein Admin die Hintergrundjobs, wird er
+    /// abgebrochen (und zurueckgestellt).</summary>
     private async Task WatchQuietAsync(int jobId, CancellationToken ct)
     {
-        if (_quiet is not { Enabled: true } quiet) return;
+        var quiet = _quiet is { Enabled: true } q ? q : null;
         while (!ct.IsCancellationRequested)
         {
             await Task.Delay(QuietCheck, ct);
-            if (quiet.IsQuietNow())
+            if (quiet?.IsQuietNow() == true)
             {
                 _signal.Cancel(jobId, CourseTranslationStop.Quiet);
+                return;
+            }
+            if (await Pause.ShouldSkipAsync(_scopes, ct))
+            {
+                _signal.Cancel(jobId, CourseTranslationStop.Paused);
                 return;
             }
         }

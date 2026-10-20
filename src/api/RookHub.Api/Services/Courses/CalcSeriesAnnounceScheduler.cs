@@ -6,8 +6,17 @@ namespace RookHub.Api.Services.Courses;
 /// Erster Lauf sofort beim Start (fängt beim Deploy bereits fällige Freigaben ab), danach je Intervall.
 /// Fehler eines Laufs werden nur geloggt; der Loop läuft weiter.
 /// </summary>
-public class CalcSeriesAnnounceScheduler : BackgroundService
+public class CalcSeriesAnnounceScheduler : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus. Ankuendigungen kommen
+    // nach dem Fortsetzen.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(CalcSeriesAnnounceScheduler), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CalcSeriesAnnounceScheduler> _logger;
     private readonly TimeSpan _interval;
@@ -28,9 +37,11 @@ public class CalcSeriesAnnounceScheduler : BackgroundService
         {
             try
             {
+                if (await Pause.ShouldSkipAsync(_scopeFactory, stoppingToken)) continue;   // continue → nächster Tick
                 using var scope = _scopeFactory.CreateScope();
                 var svc = scope.ServiceProvider.GetRequiredService<CalcSeriesAnnounceService>();
                 var n = await svc.RunOnceAsync(stoppingToken);
+                Pause.MarkTick();
                 if (n > 0)
                     _logger.LogInformation("CalcSeriesAnnounceScheduler: {Count} Ausgaben-Ankündigung(en) verschickt", n);
             }

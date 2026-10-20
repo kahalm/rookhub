@@ -19,7 +19,7 @@ public class ArchitectureGuardTests
     /// kommt hierher — dann mit Eintrag in diese Liste.</summary>
     private static readonly HashSet<string> GemeinsameBausteine =
     [
-        "ApiErrorResponses.cs", "BackgroundTaskQueue.cs", "ClaudeJsonClient.cs", "DbIdempotency.cs", "FenFields.cs",
+        "ApiErrorResponses.cs", "BackgroundPause.cs", "BackgroundTaskQueue.cs", "ClaudeJsonClient.cs", "DbIdempotency.cs", "FenFields.cs",
         "FenListParser.cs", "Figurines.cs", "GithubActionsService.cs", "HeartbeatService.cs", "IpCountryService.cs",
         "LimitedReadStream.cs", "LogThrottle.cs", "OpenAiJsonClient.cs", "Paging.cs", "PeriodicWorker.cs",
         "PermissiveSan.cs", "PgnMoveTree.cs", "PgnParser.cs", "PgnTokens.cs", "PgnWriter.cs", "PieceLetters.cs",
@@ -31,8 +31,9 @@ public class ArchitectureGuardTests
     /// die keinem Fachbereich gehören.</summary>
     private static readonly HashSet<string> StammControllerUndDtos =
     [
-        "Controllers/BaseApiController.cs", "Controllers/BotHeartbeatController.cs", "Controllers/CiController.cs",
-        "Controllers/ClientLogController.cs", "DTOs/CiDtos.cs", "DTOs/ClientLogDto.cs",
+        "Controllers/BackgroundJobsController.cs", "Controllers/BaseApiController.cs",
+        "Controllers/BotHeartbeatController.cs", "Controllers/CiController.cs", "Controllers/ClientLogController.cs",
+        "DTOs/BackgroundJobsDtos.cs", "DTOs/CiDtos.cs", "DTOs/ClientLogDto.cs",
     ];
 
     /// <summary>DTO-Dateien, die heute auf Dienste zugreifen — fast immer, um eine Grenze (MaxLength,

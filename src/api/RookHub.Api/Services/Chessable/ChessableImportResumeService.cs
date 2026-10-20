@@ -48,6 +48,14 @@ public class ChessableImportResumeService : IHostedService
                 imp.Phase = ChessableImportPhase.Queued;
             await db.SaveChangesAsync(cancellationToken);
 
+            // Admin-Schalter „Hintergrundjobs pausieren": nur zurückstellen, nicht anstoßen — die Warteschlange
+            // (BackgroundTaskQueue) pausiert nicht, der Watchdog (pausierbar) holt die wartenden nach dem Fortsetzen.
+            if (scope.ServiceProvider.GetService<BackgroundPause>() is { } pause && await pause.IsPausedAsync(cancellationToken))
+            {
+                _logger.LogInformation("Resume: {Count} unterbrochene Chessable-Importe zurückgestellt — Hintergrundjobs pausiert", running.Count);
+                return;
+            }
+
             _logger.LogInformation("Resume: {Count} unterbrochene Chessable-Importe werden fortgesetzt", running.Count);
             foreach (var _ in running)
             {

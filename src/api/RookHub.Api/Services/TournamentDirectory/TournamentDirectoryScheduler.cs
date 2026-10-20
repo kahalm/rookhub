@@ -13,8 +13,17 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// nachts steht der prozessweite Rate-Limiter des Crawlers also frei. Kein Lauf beim Start - ein
 /// Deploy soll keinen Sweep-Sturm ausloesen.
 /// </summary>
-public class TournamentDirectoryScheduler : BackgroundService
+public class TournamentDirectoryScheduler : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): der Nachtlauf wartet, bis fortgesetzt wird, und
+    // laeuft dann nach (statt einen Tag auszufallen).
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(TournamentDirectoryScheduler), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     public static readonly TimeSpan RunAtUtc = TimeSpan.FromHours(3);
 
     /// <summary>
@@ -103,6 +112,7 @@ public class TournamentDirectoryScheduler : BackgroundService
         // 213 holte niemand nach. Spanien stand deshalb bei einem einzigen Eintrag.
         try
         {
+            while (await Pause.SkipAndWaitAsync(_scopeFactory, PauseGate.Recheck, stoppingToken)) { }
             if (await ShouldCatchUpAsync(stoppingToken))
             {
                 _logger.LogInformation(
@@ -126,7 +136,11 @@ public class TournamentDirectoryScheduler : BackgroundService
             {
                 return;
             }
+            try { while (await Pause.SkipAndWaitAsync(_scopeFactory, PauseGate.Recheck, stoppingToken)) { } }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
+            if (stoppingToken.IsCancellationRequested) return;
             await RunOnceAsync(stoppingToken);
+            Pause.MarkTick();
         }
     }
 

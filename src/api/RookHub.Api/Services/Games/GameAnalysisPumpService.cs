@@ -6,8 +6,16 @@ namespace RookHub.Api.Services.Games;
 /// über Stunden, da zählt Verlässlichkeit, nicht Reaktionszeit.
 /// <para>Konfiguration: <c>GameAnalysis:PumpIntervalSeconds</c> (10..600).</para>
 /// </summary>
-public class GameAnalysisPumpService : BackgroundService
+public class GameAnalysisPumpService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(GameAnalysisPumpService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<GameAnalysisPumpService> _logger;
     private readonly TimeSpan _interval;
@@ -25,11 +33,13 @@ public class GameAnalysisPumpService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopes, _interval, stoppingToken)) continue;
             try
             {
                 using var scope = _scopes.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<GameAnalysisService>();
                 await service.PumpAllAsync(stoppingToken);
+                Pause.MarkTick();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

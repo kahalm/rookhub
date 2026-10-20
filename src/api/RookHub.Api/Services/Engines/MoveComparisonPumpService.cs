@@ -6,8 +6,16 @@ namespace RookHub.Api.Services.Engines;
 /// vor der Seite, und ein Vergleich besteht aus einer Handvoll Stellungen, nicht aus einer Partie.
 /// <para>Konfiguration: <c>MoveComparison:PumpIntervalSeconds</c> (2..120).</para>
 /// </summary>
-public class MoveComparisonPumpService : BackgroundService
+public class MoveComparisonPumpService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(MoveComparisonPumpService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<MoveComparisonPumpService> _logger;
     private readonly TimeSpan _interval;
@@ -24,10 +32,12 @@ public class MoveComparisonPumpService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopes, _interval, stoppingToken)) continue;
             try
             {
                 using var scope = _scopes.CreateScope();
                 await scope.ServiceProvider.GetRequiredService<MoveComparisonService>().PumpAllAsync(stoppingToken);
+                Pause.MarkTick();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

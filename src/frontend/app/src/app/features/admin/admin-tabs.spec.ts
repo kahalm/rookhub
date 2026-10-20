@@ -5,7 +5,8 @@ describe('admin-tabs', () => {
     expect(adminTabIndex('users')).toBe(0);
     expect(adminTabIndex('messages')).toBe(6);
     expect(adminTabIndex('ci')).toBe(8);
-    expect(adminTabIndex('uploads')).toBe(ADMIN_TAB_KEYS.length - 1);
+    expect(adminTabIndex('uploads')).toBe(10);
+    expect(adminTabIndex('jobs')).toBe(ADMIN_TAB_KEYS.length - 1);
   });
 
   it('returns -1 for unknown / null / empty keys (deep-link ignored)', () => {
@@ -19,6 +20,6 @@ describe('admin-tabs', () => {
   // Wird ein Tab im HTML verschoben/ergänzt, MUSS dieser erwartete Stand mitgezogen werden.
   it('keeps the expected canonical tab order (sync with admin.component.html)', () => {
     expect([...ADMIN_TAB_KEYS]).toEqual(
-      ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads']);
+      ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'jobs']);
   });
 });

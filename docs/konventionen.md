@@ -76,7 +76,10 @@
   A8-008) – `BackgroundServiceExceptionBehavior` steht in `Program.cs` ausdrücklich auf `StopHost`. Jeder Worker
   implementiert `LogFailure` mit einem EIGENEN wörtlichen Template (kein `{Text}`-Parameter, kein gemeinsames
   Template), weil log-watcher/Kibana nach `labels.MessageTemplate` gruppieren; ein umgezogener Dienst behält sein
-  altes Template wortgleich.
+  altes Template wortgleich. Vor jedem Takt fragt der Rumpf den Admin-Schalter „Hintergrundjobs pausieren“
+  (`BackgroundPause`); ein Dienst, der Speicher/Konsistenz schützt (Aufbewahrung, Aufräumen), setzt
+  `protected override bool Pausable => false` mit Begründung. Hintergrunddienste OHNE `PeriodicWorker` prüfen über
+  `PauseGate` (Liste und Gründe: `docs/api/hintergrundjobs-pause.md`).
 - **Fluent-Konfiguration neuer Entitäten gehört in `Data/Configurations/`** (Codereview 2026-09-29, A9-005) – je
   Entität eine `IEntityTypeConfiguration<T>` (`internal sealed class <T>Configuration`) in der Domänen-Datei
   (`AccountConfigurations.cs`, `LeagueConfigurations.cs`, `ClubConfigurations.cs`, …), eingesammelt per

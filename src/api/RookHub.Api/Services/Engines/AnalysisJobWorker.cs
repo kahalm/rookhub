@@ -184,8 +184,13 @@ public sealed class StreamTally
 /// weiter; nach <c>AnalysisJobs:IdleGraceSeconds</c> Ruhe (Standard 20 s) geht es dort weiter. Ergebnis-Zeilen werden nur
 /// übernommen, wenn sie mindestens die gespeicherte Tiefe haben (<see cref="AnalysisJobStream.ShouldPersist"/>).
 /// Kein 10-Minuten-Deckel wie beim Live-Proxy: ein Auftrag darf Stunden rechnen.
+///
+/// <para><b>Admin-Schalter „Hintergrundjobs pausieren"</b> (<see cref="BackgroundPause"/>): solange er steht, startet
+/// der Worker keine neuen Läufe, und LAUFENDE werden wie beim Live-Vorrang abgebrochen — Status Paused, KEIN
+/// Fehlversuch, Ergebnis und erreichte Tiefe bleiben, nach dem Fortsetzen geht es dort weiter. Bewusst nicht „zu Ende
+/// rechnen lassen": ein Auftrag darf Stunden dauern, die Pause soll aber sofort Rechenzeit freigeben.</para>
 /// </summary>
-public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
+public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgroundJobInfo
 {
     private sealed record Running(int JobId, string EngineId, CancellationTokenSource Cts, bool Background = false);
 
@@ -229,9 +234,13 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     private readonly IReadOnlySet<string> _explicitOnly;
     /// <summary>Schrittweite der Zwischenstände einer Knotenanalyse (<c>AnalysisJobs:SnapshotStepNodes</c>, Vorgabe 10 000, 0 = aus).</summary>
     private readonly long _snapshotStep;
+    /// <summary>Admin-Schalter „Hintergrundjobs pausieren" (ohne Registrierung, z. B. in Tests: läuft immer).</summary>
+    private readonly BackgroundPause? _pauseSwitch;
+    private readonly PauseGate _pause;
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
-        IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live)
+        IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live,
+        BackgroundPause? pause = null)
     {
         _scopeFactory = scopeFactory;
         _tracker = tracker;
@@ -249,6 +258,29 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         var step = config.GetValue<long?>("AnalysisJobs:SnapshotStepNodes") ?? 10_000;
         _snapshotStep = step <= 0 ? 0 : Math.Clamp(step, 1_000, 1_000_000);
         _tracker.LiveStarted += PauseEngine;
+        _pauseSwitch = pause;
+        _pause = new PauseGate(nameof(AnalysisJobWorker), logger).Use(pause);
+        if (pause is not null) pause.Changed += OnPauseChanged;
+    }
+
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pause.LastTickUtc;
+
+    /// <summary>Schalter umgelegt: bei Pause SOFORT alle laufenden Aufträge anhalten (nicht erst beim nächsten Tick),
+    /// in jedem Fall die Schleife wecken.</summary>
+    private void OnPauseChanged(bool paused)
+    {
+        if (paused) InterruptAll();
+        _wake.Wake();
+    }
+
+    /// <summary>Alle laufenden Aufträge abbrechen — sie enden auf Paused, ohne Fehlversuch.</summary>
+    private void InterruptAll()
+    {
+        foreach (var r in _running.Values) TryCancel(r.Cts);
     }
 
     /// <summary>Laufenden Auftrag AUF DIESER ENGINE unterbrechen (Live hat dort Vorrang). Aufträge auf
@@ -301,7 +333,17 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
         // frei gewordene Engine sofort den nächsten Auftrag bekommt statt bis zu einen Tick zu warten.
         while (!stoppingToken.IsCancellationRequested)
         {
-            try { await TickAsync(stoppingToken); }
+            try
+            {
+                // Pause: keine neuen Läufe, und was noch läuft (Schalter in der Datenbank/Konfiguration umgelegt, ohne
+                // dass Changed hier ankam — oder ein Lauf, der im selben Moment startete), wird angehalten.
+                if (await _pause.ShouldSkipAsync(null, stoppingToken)) InterruptAll();
+                else
+                {
+                    await TickAsync(stoppingToken);
+                    _pause.MarkTick();
+                }
+            }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { _logger.LogError(ex, "AnalysisJobWorker: Tick fehlgeschlagen"); }
             try { await _wake.WaitAsync(_tick, stoppingToken); }
@@ -808,6 +850,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     public override void Dispose()
     {
         _tracker.LiveStarted -= PauseEngine;
+        if (_pauseSwitch is not null) _pauseSwitch.Changed -= OnPauseChanged;
         base.Dispose();
     }
 }

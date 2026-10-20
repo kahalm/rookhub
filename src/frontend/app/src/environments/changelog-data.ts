@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.815.0", date: "2026-10-20", changes: [
+    { en: "Admin: new tab “Background jobs” with one switch that pauses all pausable background services (analyses, translations, e-book processing, tournament and league updates …) immediately and without a restart; running analyses stop and resume later where they left off. Health and retention jobs keep running.", de: "Admin: neuer Reiter „Hintergrundjobs“ mit einem Schalter, der alle pausierbaren Hintergrunddienste (Analysen, Übersetzungen, E-Book-Verarbeitung, Turnier- und Liga-Abgleich …) sofort und ohne Neustart anhält; laufende Analysen halten an und machen später dort weiter. Gesundheits- und Aufbewahrungsdienste laufen weiter." },
+  ]},
   { version: "0.814.0", date: "2026-10-20", changes: [
     { en: "E-book board, solve: a wrong move now only says “Wrong — keep looking” and is taken back; the board no longer plays out the solution. In training mode the mistake is remembered (“Solved (with a mistake)”). “Go to the next diagram automatically” is now on by default and waits 3 seconds after your own solution.",
       de: "E-Book-Brett, Lösen: Ein falscher Zug sagt jetzt nur „Falsch — such weiter“ und wird zurückgenommen; das Brett spielt die Lösung nicht mehr vor. Im Trainingsmodus wird der Fehler gemerkt („Gelöst (mit Fehler)“). „Automatisch zum nächsten Diagramm“ ist jetzt standardmäßig an und wartet nach der eigenen Lösung 3 Sekunden." },

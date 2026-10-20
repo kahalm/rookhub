@@ -21,8 +21,17 @@ namespace RookHub.Api.Services.Chessable;
 /// nicht hinter einem Ticket-Stau wartet und auch ein hängender Queue-Consumer den Drain nicht blockiert.
 /// Solange etwas läuft, hält er sich raus (kein Über-Parallelisieren).
 /// </summary>
-public class ChessableImportWatchdogService : BackgroundService
+public class ChessableImportWatchdogService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus. Verwaiste
+    // Importe/abgelaufene Browser-Sitzungen werden danach nachgeholt.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(ChessableImportWatchdogService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     /// <summary>Phasen, in denen ein Import AKTIV bearbeitet wird (nicht bloß wartend). Solange einer
     /// davon belegt ist, läuft der Drain — der Watchdog greift dann nicht ein.</summary>
     internal static readonly ChessableImportPhase[] InflightPhases = ChessableImportStates.Inflight;
@@ -78,10 +87,12 @@ public class ChessableImportWatchdogService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopeFactory, IdleInterval, stoppingToken)) continue;
             bool drove = false;
             try
             {
                 drove = await TickAsync(stoppingToken);
+                Pause.MarkTick();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex)

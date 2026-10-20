@@ -17,6 +17,9 @@ public class EbookAnonymousCleanupWorker : PeriodicWorker
     protected override WorkerSchedule Schedule => WorkerSchedule.Every(TimeSpan.FromHours(1));
     protected override WorkerStart Start => WorkerStart.After(TimeSpan.FromMinutes(5));
     protected override bool Enabled => _storage.Root != null;
+    /// <summary>Nicht pausierbar: hält den Speicherplatz in Grenzen (anonyme Uploads ohne Konto) — eine lange Pause ließe
+    /// Platte und Fristen auflaufen, und der Lauf ist klein (stündlich, höchstens 50 Bücher).</summary>
+    protected override bool Pausable => false;
     protected override void LogDisabled() => Logger.LogInformation("E-Books ohne Anmeldung aufräumen: kein Ebooks:Root konfiguriert — Dienst aus");
     protected override void LogFailure(Exception ex) => Logger.LogError(ex, "E-Books ohne Anmeldung aufräumen: Durchlauf fehlgeschlagen");
 

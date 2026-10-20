@@ -11,8 +11,17 @@ namespace RookHub.Api.Services.Social;
 ///
 /// Konfiguration: <c>PlayTime:IntervalHours</c> (Default 6).
 /// </summary>
-public class PlayTimeSyncService : BackgroundService
+public class PlayTimeSyncService : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus. Nach dem Fortsetzen
+    // kommt der Abgleich innerhalb von 30 s.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(PlayTimeSyncService), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PlayTimeSyncService> _logger;
     private readonly TimeSpan _interval;
@@ -33,7 +42,9 @@ public class PlayTimeSyncService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopeFactory, PauseGate.Recheck, stoppingToken)) continue;
             await RunOnceAsync(stoppingToken);
+            Pause.MarkTick();
             try { await Task.Delay(_interval, stoppingToken); }
             catch (TaskCanceledException) { return; }
         }

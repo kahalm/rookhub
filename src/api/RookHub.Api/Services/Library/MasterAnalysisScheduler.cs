@@ -37,8 +37,16 @@ namespace RookHub.Api.Services.Library;
 ///
 /// <para>Abschalten: <c>MasterAnalysis:Enabled=false</c>. Takt <c>MasterAnalysis:TickSeconds</c> (Vorgabe 30).</para>
 /// </summary>
-public class MasterAnalysisScheduler : BackgroundService
+public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
 {
+    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): Takt fällt bei Pause aus.
+    private PauseGate? _pauseGate;
+    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(MasterAnalysisScheduler), _logger);
+    /// <inheritdoc/>
+    public bool PausableByAdmin => true;
+    /// <inheritdoc/>
+    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
+
     private readonly IServiceScopeFactory _scopes;
     private readonly QuietHours _quiet;
     private readonly ILogger<MasterAnalysisScheduler> _logger;
@@ -85,11 +93,13 @@ public class MasterAnalysisScheduler : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (await Pause.SkipAndWaitAsync(_scopes, _tick, stoppingToken)) continue;
             try
             {
                 using var scope = _scopes.CreateScope();
                 await TickOnceAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(),
                     scope.ServiceProvider.GetRequiredService<GameAnalysisService>(), stoppingToken);
+                Pause.MarkTick();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { _logger.LogError(ex, "Meisterpartien-Analyse: Takt fehlgeschlagen"); }
