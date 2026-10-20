@@ -8,6 +8,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 import { provideRhHttpClient } from './core/http-chain';
+import { provideTouchSubmenuGuard } from './core/touch-submenu-guard';
 import { visitorInterceptor } from './core/visitor.interceptor';
 import { resolveStartupLocale } from './core/locale.service';
 import { registerFormatLocaleData } from './core/locale-data';
@@ -32,6 +33,8 @@ export const appConfig: ApplicationConfig = {
     // Gemeinsame Kette (connectivity zuerst — sieht Erfolge/finale Fehler NACH den Retries); nur hier mit visitorInterceptor.
     provideRhHttpClient([visitorInterceptor]),
     provideAnimationsAsync(),
+    // Untermenüs am Handy erst beim Tipp öffnen, nicht schon beim simulierten Hover (sonst trifft der Tipp das Untermenü).
+    provideTouchSubmenuGuard(),
     // E-Ink-Modus (docs/DESIGN.md 3.6): Ripples und Material-Animationen aus, solange er an ist.
     ...provideEinkMaterial(),
     // Dialoge/Menüs/Snackbars NICHT als Popover in der obersten Browser-Ebene — dort verschwanden

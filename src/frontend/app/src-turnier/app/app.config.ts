@@ -9,6 +9,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 import { provideRhHttpClient } from '@rh/core/http-chain';
+import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 import { registerFormatLocaleData } from '@rh/core/locale-data';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
@@ -38,6 +39,8 @@ export const turnierConfig: ApplicationConfig = {
     { provide: RouteReuseStrategy, useClass: ReloadOnParamChangeStrategy },
     provideRhHttpClient(),
     provideAnimationsAsync(),
+    // Untermenüs am Handy erst beim Tipp öffnen, nicht schon beim simulierten Hover (sonst trifft der Tipp das Untermenü).
+    provideTouchSubmenuGuard(),
     // E-Ink-Modus (docs/DESIGN.md 3.6): Ripples und Material-Animationen aus, solange er an ist.
     ...provideEinkMaterial(),
     // Rechtsseiten wie in RookHub; das Profil hier hat aber keine Karte „Konto loeschen" — die Loeschseite verweist

@@ -7,6 +7,7 @@ import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 import { provideRhHttpClient } from '@rh/core/http-chain';
+import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 import { registerFormatLocaleData } from '@rh/core/locale-data';
 import { LEGAL_SITE } from '@rh/features/legal/legal-site';
@@ -26,6 +27,8 @@ export const kidhubConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideRhHttpClient(),
     provideAnimationsAsync(),
+    // Untermenüs am Handy erst beim Tipp öffnen, nicht schon beim simulierten Hover (sonst trifft der Tipp das Untermenü).
+    provideTouchSubmenuGuard(),
     // Kein Impressum auf der Kinderseite, eigene Adresse fuer Datenschutzfragen (Wunsch 2026-09-27); die
     // Datenschutzerklaerung in der Kinder-Fassung, der Ruecklink fuehrt zur Startseite (Codereview F7-003). Konto
     // loeschen geht nur in RookHub — die Loeschseite verweist dorthin (Codereview UX-023).
