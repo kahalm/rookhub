@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.811.1", date: "2026-10-20", changes: [
+    { en: "E-book solution check: Stockfish now only checks diagrams that have not been checked yet (new, supplemented, corrected or reset ones). Already checked diagrams keep their solution and evaluation instead of being recalculated — and possibly changed — every time a book is queued again. If nothing is left to check, the engine is not started at all.",
+      de: "E-Book-Lösungsprüfung: Stockfish prüft jetzt nur noch Diagramme, die noch nicht geprüft sind (neue, ergänzte, korrigierte oder zurückgesetzte). Bereits geprüfte Diagramme behalten Lösung und Bewertung, statt bei jedem neuen Einreihen des Buchs neu gerechnet — und womöglich geändert — zu werden. Ist nichts mehr zu prüfen, startet die Engine gar nicht erst." },
+  ] },
   { version: "0.811.0", date: "2026-10-20", changes: [
     { en: "E-book diagrams: admins can now “supplement” a single book instead of re-reading it (POST /api/admin/ebooks/{id}/diagrams/supplement). Recognition runs again — even on hand- or Opus-curated books — but every existing diagram stays exactly as it is; only boards at places without a diagram are added. Board images whose reading is implausible are no longer thrown away but kept as “unread” (hidden from readers, courses, solution check and counts until corrected). EPUB diagrams now appear in the order of the chapter.",
       de: "E-Book-Diagramme: Admins können ein einzelnes Buch jetzt „ergänzen“ statt neu einlesen (POST /api/admin/ebooks/{id}/diagrams/supplement). Die Erkennung läuft erneut — auch bei von Hand oder per Opus kuratierten Büchern —, aber jedes vorhandene Diagramm bleibt genau so, wie es ist; nur Bretter an Stellen ohne Diagramm kommen dazu. Brettbilder mit unplausibler Lesung werden nicht mehr verworfen, sondern als „ungelesen“ aufgehoben (für Leser, Kurse, Lösungsprüfung und Zählung unsichtbar, bis sie korrigiert sind). EPUB-Diagramme erscheinen jetzt in der Reihenfolge des Kapitels." },

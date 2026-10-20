@@ -138,46 +138,73 @@ public class EbookSolutionCheckWorker : PeriodicWorker
         .Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount > 0 && b.SolutionCheckState == EbookDiagramState.Pending)
         .OrderByDescending(b => b.SolutionCheckQueuedAt ?? b.CreatedAt).ThenByDescending(b => b.Id);
 
+    /// <summary>
+    /// Was ein Prüflauf anfasst (0.811.1, Wunsch 20.10.2026): nur lesbare Diagramme mit <see cref="EbookSolutionCheck.Unchecked"/>.
+    /// Geprüfte (bestätigt/fraglich/ersetzt/Engine/keine Aufgabe) bleiben samt Lösung und <c>EngineEval</c> unverändert —
+    /// vorher rechnete jedes Einreihen das ganze Buch neu und Lösungen wechselten. Ungeprüft sind: neue Diagramme (Erkennung,
+    /// Ergänzen, Ersetzen-Neulauf), korrigierte (<c>ResetSolutionForNewPosition</c>) und per SQL zurückgesetzte. Eine
+    /// Vollprüfung = alle Diagramme des Buchs auf <c>SolutionCheck = 0</c> setzen und einreihen (docs/api/ebooks.md).
+    /// </summary>
+    public static IQueryable<EbookDiagram> ToCheck(IQueryable<EbookDiagram> diagrams) =>
+        diagrams.Readable().Where(d => d.SolutionCheck == EbookSolutionCheck.Unchecked);
+
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
         var db = services.GetRequiredService<AppDbContext>();
         var ebook = await NextInQueue(db.Ebooks).FirstOrDefaultAsync(ct);
         if (ebook == null) return;
         var path = StockfishPath.Resolve(_options.StockfishPath);
-        var engine = await UciEngineSession.StartAsync(path, Logger, ct);
-        if (engine == null)
+        await CheckBookAsync(db, ebook, async c => await UciEngineSession.StartAsync(path, Logger, c), _options.EngineMoveTimeMs, Logger, ct);
+        await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
+    }
+
+    /// <summary>
+    /// Ein Buch prüfen: nur die ungeprüften Diagramme (<see cref="ToCheck"/>); danach <c>SolutionCheckState = Done</c>
+    /// (Engine startet nicht → <c>Failed</c>). Stehen nur unprüfbare Stellungen an (kein König, Gegner im Schach …), startet
+    /// keine Engine — sie bleiben ungeprüft und kosten beim nächsten Einreihen nur die Legalitätsprüfung.
+    /// </summary>
+    internal static async Task CheckBookAsync(AppDbContext db, Ebook ebook, Func<CancellationToken, Task<IPositionEvaluator?>> startEngine,
+        int moveTimeMs, ILogger logger, CancellationToken ct)
+    {
+        var diagrams = (await ToCheck(db.EbookDiagrams.Where(d => d.EbookId == ebook.Id)).OrderBy(d => d.Page).ThenBy(d => d.Y).ToListAsync(ct))
+            .Where(d => EbookSolutionChecker.IsLegal(d.Fen)).ToList();
+        if (diagrams.Count > 0)
         {
-            ebook.SolutionCheckState = EbookDiagramState.Failed;
-            await db.SaveChangesAsync(ct);
-            await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
-            return;
-        }
-        var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebook.Id).Readable().OrderBy(d => d.Page).ThenBy(d => d.Y).ToListAsync(ct);
-        var n = 0;
-        try
-        {
-            foreach (var d in diagrams)
+            var engine = await startEngine(ct);
+            if (engine == null)
             {
-                ct.ThrowIfCancellationRequested();
-                try { await EbookSolutionChecker.CheckAsync(engine, d, _options.EngineMoveTimeMs, ct); }
-                catch (IOException ex)
-                {
-                    // Stockfish ist an dieser Stellung abgestürzt: Diagramm auslassen, Engine neu starten, weiter —
-                    // sonst scheitert das Buch bei jedem Durchlauf an derselben Stelle und blockiert alle dahinter.
-                    Logger.LogWarning(ex, "E-Book {EbookId}: Stockfish an Diagramm {DiagramId} abgestürzt ({Fen})", ebook.Id, d.Id, d.Fen);
-                    await engine.DisposeAsync();
-                    engine = await UciEngineSession.StartAsync(path, Logger, ct)
-                        ?? throw new IOException("Stockfish startet nach Absturz nicht neu");
-                }
-                if (++n % 25 == 0) await db.SaveChangesAsync(ct);
+                ebook.SolutionCheckState = EbookDiagramState.Failed;
+                await db.SaveChangesAsync(ct);
+                return;
             }
+            var n = 0;
+            try
+            {
+                foreach (var d in diagrams)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    try { await EbookSolutionChecker.CheckAsync(engine, d, moveTimeMs, ct); }
+                    catch (IOException ex)
+                    {
+                        // Stockfish ist an dieser Stellung abgestürzt: Diagramm auslassen, Engine neu starten, weiter —
+                        // sonst scheitert das Buch bei jedem Durchlauf an derselben Stelle und blockiert alle dahinter.
+                        logger.LogWarning(ex, "E-Book {EbookId}: Stockfish an Diagramm {DiagramId} abgestürzt ({Fen})", ebook.Id, d.Id, d.Fen);
+                        await engine.DisposeAsync();
+                        engine = await startEngine(ct) ?? throw new IOException("Stockfish startet nach Absturz nicht neu");
+                    }
+                    if (++n % 25 == 0) await db.SaveChangesAsync(ct);
+                }
+            }
+            finally { await engine.DisposeAsync(); }
         }
-        finally { await engine.DisposeAsync(); }
         ebook.SolutionCheckState = EbookDiagramState.Done;
         await db.SaveChangesAsync(ct);
-        await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
-        Logger.LogInformation("E-Book {EbookId}: Lösungen geprüft — {Confirmed} bestätigt, {Replaced} ersetzt, {Doubtful} fraglich, {Engine} von Stockfish",
-            ebook.Id, diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Confirmed), diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Replaced),
-            diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Doubtful), diagrams.Count(d => d.SolutionCheck == EbookSolutionCheck.Engine));
+        // Statistik über das ganze Buch (auch die übersprungenen, schon geprüften Diagramme).
+        var counts = await db.EbookDiagrams.Where(d => d.EbookId == ebook.Id).Readable()
+            .GroupBy(d => d.SolutionCheck).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+        int C(EbookSolutionCheck k) => counts.GetValueOrDefault(k);
+        logger.LogInformation("E-Book {EbookId}: Lösungen geprüft ({Checked} neu geprüft) — {Confirmed} bestätigt, {Replaced} ersetzt, {Doubtful} fraglich, {Engine} von Stockfish, {Unchecked} ungeprüft",
+            ebook.Id, diagrams.Count, C(EbookSolutionCheck.Confirmed), C(EbookSolutionCheck.Replaced), C(EbookSolutionCheck.Doubtful),
+            C(EbookSolutionCheck.Engine), C(EbookSolutionCheck.Unchecked));
     }
 }

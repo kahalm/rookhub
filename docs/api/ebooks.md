@@ -170,6 +170,16 @@ Tipp-Generator, `Ebooks__StockfishPath`) und prüft jedes regelgerechte Diagramm
 Gemessen 14.10. (300 ms): Woodpecker 1 129 bestätigt, 3 ersetzt (u. a. Nr. 631 jetzt = Kurs), 8 Engine-Lösungen, erster Zug = Kurs
 1 118 von 1 124; Baird 755 Engine-Lösungen von 764 (Matt in 2/3), 7,7 min für beide Bücher.
 
+**Nur ungeprüfte Diagramme** (0.811.1): Ein Prüflauf nimmt nur lesbare Diagramme mit `SolutionCheck = Unchecked` (0)
+(`EbookSolutionCheckWorker.ToCheck`). Geprüfte (`Confirmed`/`Doubtful`/`Replaced`/`Engine`/`NoPuzzle`) behalten Lösung und
+`EngineEval` — vorher rechnete jedes Einreihen das ganze Buch neu und Lösungen wechselten. Ungeprüft sind neue Diagramme
+(Erkennung/Ersetzen-Neulauf = alle, Ergänzen = die neuen), per Editor korrigierte und per SQL zurückgesetzte (extern korrigiert:
+`SolutionCheck=0, EngineEval=NULL, SolutionUci/San/Text/Source=NULL`). Ohne prüfbares ungeprüftes Diagramm startet keine Engine,
+das Buch wird trotzdem `Done`; unprüfbare Stellungen (kein König, Gegner im Schach) bleiben `Unchecked`. Die Log-Zeile zählt
+über das ganze Buch. **Vollprüfung** (z. B. andere Bedenkzeit) gibt es nur per SQL: Engine-Lösungen verwerfen
+(`SolutionUci/San/Source = NULL where SolutionSource = 'engine'`, sonst gälten sie als Buchlösung), alle Diagramme des Buchs
+`SolutionCheck = 0, EngineEval = NULL`, dann `SolutionCheckState = 0` (Pending), `SolutionCheckQueuedAt = now()`.
+
 **Fertig-Meldung** (0.774.0): `EbookProcessing.IsProcessing` (Titelbild, DJVU→PDF, Erkennung, Stockfish-Prüfung — letztere nur
 mit Diagrammen und eingeschalteter Prüfung) → DTO `processing` (Karte „Wird verarbeitet …“). Jeder Worker ruft nach seinem
 Schritt `NotifyIfReadyAsync`: bei Uploads (nicht bei Bibliotheksimporten) genau EINE Glocken-Meldung `ebook_ready`
@@ -258,7 +268,7 @@ Bücher mit `opus`-Diagrammen. Einspielen: alte Zeilen löschen, neue einfügen,
 lässt alle vorhandenen Diagramme unverändert (FEN, Familie, Lösungen, Ids) und fügt neue nur an freien Stellen hinzu
 (EPUB: gleicher `ImageRef` = vorhanden; PDF/Scan: gleiche Seite und IoU > 0,4 oder Mittelpunkt in der Box). Danach
 `DiagramSupplement = false`, `Done`, `DiagramCount` neu, Stockfish-Prüfung nur, wenn lesbare Diagramme dazukamen (sie prüft
-dann wie nach einer Korrektur das ganze Buch); Kurs-Verweise werden nur dann neu gesucht. Scheitert die Erkennung (Datei fehlt,
+nur die neuen, ungeprüften — 0.811.1); Kurs-Verweise werden nur dann neu gesucht. Scheitert die Erkennung (Datei fehlt,
 Fehler), bleibt ein Buch mit Diagrammen `Done`. `DiagramsCurated` bleibt, wie es war.
 
 - **Ungelesene Bretter** (`FontFamily = "unread"`, `Confidence = 0`): im Ergänzen-Modus werden Brettbilder/Scan-Bretter mit
