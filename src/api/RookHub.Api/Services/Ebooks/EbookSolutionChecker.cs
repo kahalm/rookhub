@@ -152,7 +152,7 @@ public class EbookSolutionCheckWorker : PeriodicWorker
             await EbookProcessing.NotifyIfReadyAsync(services, ebook, ct);
             return;
         }
-        var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebook.Id).OrderBy(d => d.Page).ThenBy(d => d.Y).ToListAsync(ct);
+        var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebook.Id).Readable().OrderBy(d => d.Page).ThenBy(d => d.Y).ToListAsync(ct);
         var n = 0;
         try
         {

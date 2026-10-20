@@ -95,6 +95,12 @@ public class Ebook
     /// Neuerkennung auslösen). Setzt und löscht nur das Werkzeug, das die Diagramme nachträgt.</summary>
     public bool DiagramsBacklog { get; set; }
 
+    /// <summary>„Ergänzen statt ersetzen“ (0.811.0, <c>POST /api/admin/ebooks/{id}/diagrams/supplement</c>): der nächste Lauf des
+    /// <c>EbookDiagramWorker</c> erkennt das Buch neu — auch wenn es <see cref="DiagramsCurated"/> ist —, lässt aber alle
+    /// vorhandenen Diagramme stehen und fügt nur die hinzu, die an einer noch freien Stelle liegen. Unplausible Lesungen werden
+    /// dabei als <c>FontFamily = "unread"</c> aufgehoben (für Nutzer unsichtbar). Der Worker löscht das Feld danach.</summary>
+    public bool DiagramSupplement { get; set; }
+
     /// <summary>Wann der Hochladende benachrichtigt wurde, dass die Verarbeitung (Titelbild, Umwandlung, Diagramme, Prüfung)
     /// fertig ist (0.773.0); <c>null</c> = noch nicht. Nur für Uploads — eingelesene Bibliotheksbücher melden sich nicht.</summary>
     public DateTime? ReadyNotifiedAt { get; set; }

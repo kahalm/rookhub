@@ -40,6 +40,18 @@ public class EbooksAdminController : BaseApiController
         => Ok(new { queued = await _service.RescanDiagramsAsync(ct) });
 
     /// <summary>
+    /// Diagramme EINES Buchs ergänzen statt ersetzen (0.811.0): die Erkennung läuft erneut (auch bei kuratierten Büchern),
+    /// vorhandene Diagramme bleiben unverändert, neue kommen nur an freien Stellen dazu; unplausible Lesungen werden als
+    /// <c>FontFamily = "unread"</c> aufgehoben (für Nutzer unsichtbar). 202 <c>{ ebookId, queued }</c>, unbekannt → 404.
+    /// </summary>
+    [HttpPost("{id:int}/diagrams/supplement")]
+    public async Task<IActionResult> SupplementDiagrams(int id, CancellationToken ct)
+    {
+        await _service.QueueDiagramSupplementAsync(id, ct);
+        return Accepted(new { ebookId = id, queued = true });
+    }
+
+    /// <summary>
     /// Fließtext-EPUB aus dem Text-PDF des Buchs bauen (0.802.0, Prototyp; synchron, ~10–20 s für 400 Seiten): abgeleitete
     /// Datei <c>converted/{id}.epub</c>, Diagramme als Brettbilder, ein zweiter Aufruf ersetzt sie. 400
     /// <c>ebook_reflow_unsupported</c> ohne Original-PDF, mit echtem EPUB, vor der Diagrammerkennung oder bei einem Scan.

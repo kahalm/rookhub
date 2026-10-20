@@ -24,7 +24,10 @@ public class EbookEpubDiagramExtractor
 
     public EbookEpubDiagramExtractor(ILogger<EbookEpubDiagramExtractor> logger) => _logger = logger;
 
-    public EbookDiagramExtractor.Result Extract(string epubPath, int ebookId, CancellationToken ct, EbookBoardClassifier? model = null)
+    /// <param name="keepUnread">Ergänzen-Modus (0.811.0): ein Brettbild mit unplausibler Lesung wird nicht verworfen, sondern
+    /// mit der rohen Lesung als <see cref="EbookDiagramVisibility.Unread"/> angelegt (für Nutzer unsichtbar).</param>
+    public EbookDiagramExtractor.Result Extract(string epubPath, int ebookId, CancellationToken ct, EbookBoardClassifier? model = null,
+        bool keepUnread = false)
     {
         model ??= EbookBoardClassifier.Instance;
         using var zip = ZipFile.OpenRead(epubPath);
@@ -66,8 +69,22 @@ public class EbookEpubDiagramExtractor
                 var block = blocks[bi];
                 var g = LoadGray(zip, block.Image!);
                 var cells = g == null ? null : EbookBoardImage.Cells(g, box);
-                var board = cells == null ? null : EbookBoardImage.Recognise(cells, bg, bgBlur, model);
-                if (board == null) continue;
+                var grid = cells == null ? null : EbookBoardImage.ReadGrid(cells, bg, bgBlur, model);
+                var board = grid == null ? null : EbookBoardImage.GridToBoard(grid);
+                if (board == null)
+                {
+                    if (!keepUnread || grid == null) continue;
+                    // Unplausible Lesung: aufheben statt verwerfen — ohne Lösungssuche (die Stellung stimmt ja nicht).
+                    diagrams.Add(new EbookDiagram
+                    {
+                        EbookId = ebookId, Page = block.Spine, Y = OrderY(block),
+                        ImageRef = block.Image!.Length <= 300 ? block.Image : null,
+                        Fen = $"{EbookBoardImage.GridToPlacement(grid)} w - - 0 1",
+                        Label = GuessLabel(blocks, bi), Caption = Caption(blocks, bi),
+                        FontFamily = EbookDiagramVisibility.Unread, Confidence = 0,
+                    });
+                    continue;
+                }
                 var (side, sideKnown) = GuessSide(blocks, bi);
                 // Zugrecht-Zeichen im Bild (■/□, ▼/△) schlägt den Text.
                 if (EbookBoardImage.SideMarker(g!, box) is char marked) (side, sideKnown) = (marked, true);
@@ -78,6 +95,7 @@ public class EbookEpubDiagramExtractor
                 {
                     EbookId = ebookId,
                     Page = block.Spine,
+                    Y = OrderY(block),
                     ImageRef = block.Image!.Length <= 300 ? block.Image : null,
                     Fen = fen,
                     Label = label,
@@ -103,15 +121,23 @@ public class EbookEpubDiagramExtractor
             d.SolutionPage = sol.Page;
             d.SolutionSource = "book";
         }
-        _logger.LogInformation("E-Book {EbookId} (EPUB): {Boards} Brettbilder, {Count} Diagramme, {Solutions} mit Lösung",
-            ebookId, boards.Count, diagrams.Count, solutions.Count);
+        _logger.LogInformation("E-Book {EbookId} (EPUB): {Boards} Brettbilder, {Count} Diagramme ({Unread} ungelesen), {Solutions} mit Lösung",
+            ebookId, boards.Count, diagrams.Count, diagrams.Count(d => !EbookDiagramVisibility.IsReadable(d)), solutions.Count);
         return new EbookDiagramExtractor.Result(diagrams, boards.Count > 0, 0, solutions.Count);
     }
+
+    /// <summary>„Höhe“ eines EPUB-Diagramms im Kapitel (0.811.0): die Blockreihenfolge — der Leser sortiert nach Kapitel, dann
+    /// <see cref="EbookDiagram.Y"/>; vorher war Y immer 0 und die Reihenfolge im Kapitel zufällig. Die Lage (<see cref="EbookDiagram.W"/>)
+    /// bleibt 0, daran erkennt man weiter ein EPUB-Diagramm.</summary>
+    internal static double OrderY(EpubBlock block) => block.Order * 10.0;
+
+    /// <summary>Höchstgröße EINES Bildeintrags im EPUB (das ganze Buch ist nicht begrenzt).</summary>
+    internal const long MaxImageBytes = 8_000_000;
 
     private static float[,]? LoadGray(ZipArchive zip, string path)
     {
         var entry = zip.GetEntry(path);
-        if (entry == null || entry.Length > 8_000_000) return null;
+        if (entry == null || entry.Length > MaxImageBytes) return null;
         try
         {
             using var s = entry.Open();

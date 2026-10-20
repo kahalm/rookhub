@@ -515,7 +515,7 @@ public class EbookService
             .Select(b => (EbookDiagramState?)b.DiagramState).FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("E-book not found.");
         var items = state == EbookDiagramState.Done
-            ? await _db.EbookDiagrams.Where(d => d.EbookId == id).OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
+            ? await _db.EbookDiagrams.Where(d => d.EbookId == id).Readable().OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
                 .Select(d => new EbookDiagramDto
                 {
                     Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown, ImageRef = d.ImageRef, EpubChapter = d.EpubChapter,
@@ -543,7 +543,7 @@ public class EbookService
     public async Task<bool> ReportDiagramAsync(int userId, bool manageAll, int ebookId, int diagramId, bool reported, string? note, CancellationToken ct = default)
     {
         if (!await EbookAccess.CanAccessAsync(_db, userId, ebookId, manageAll, ct)) throw new NotFoundException("E-book not found.");
-        var diagram = await _db.EbookDiagrams.FirstOrDefaultAsync(d => d.Id == diagramId && d.EbookId == ebookId, ct)
+        var diagram = await _db.EbookDiagrams.Readable().FirstOrDefaultAsync(d => d.Id == diagramId && d.EbookId == ebookId, ct)
             ?? throw new NotFoundException("Diagram not found.");
         var existing = await _db.EbookDiagramReports.FirstOrDefaultAsync(r => r.DiagramId == diagramId && r.UserId == userId, ct);
         if (reported)
@@ -592,6 +592,20 @@ public class EbookService
         return books.Count;
     }
 
+    /// <summary>
+    /// „Ergänzen statt ersetzen“ für EIN Buch (0.811.0): <see cref="Ebook.DiagramSupplement"/> setzen und die Erkennung einreihen.
+    /// Wirkt auch bei <see cref="Ebook.DiagramsCurated"/> — der Worker führt dann zusammen statt zu ersetzen. Unbekannt → 404.
+    /// </summary>
+    public async Task QueueDiagramSupplementAsync(int id, CancellationToken ct = default)
+    {
+        var book = await _db.Ebooks.FirstOrDefaultAsync(b => b.Id == id, ct) ?? throw new NotFoundException("E-book not found.");
+        book.DiagramSupplement = true;
+        book.DiagramState = EbookDiagramState.Pending;
+        book.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("E-Book {EbookId}: Diagramme ergänzen eingereiht (kuratiert {Curated})", id, book.DiagramsCurated);
+    }
+
     /// <summary>„Ist hier ein Diagramm, das nicht erkannt wurde?“ — Antwort zur späteren Auswertung speichern (0.788.0).</summary>
     public async Task RecordMissedDiagramAsync(int userId, bool manageAll, int id, EbookMissedDiagramDto dto, CancellationToken ct = default)
     {
@@ -634,6 +648,8 @@ public class EbookService
         }
         // Zugrecht wurde im Editor ausdrücklich gesetzt (der Editor schickt es immer mit) — jetzt bekannt.
         d.SideKnown = true;
+        // Ein ungelesenes Diagramm (0.811.0) ist nach der Korrektur gelesen — ab jetzt für Nutzer sichtbar.
+        if (d.FontFamily == EbookDiagramVisibility.Unread) d.FontFamily = "hand";
         ebook.DiagramsCurated = true;
         ebook.SolutionCheckState = EbookDiagramState.Pending;
         ebook.SolutionCheckQueuedAt = DateTime.UtcNow;

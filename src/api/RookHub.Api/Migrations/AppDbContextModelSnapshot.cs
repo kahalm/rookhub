@@ -2261,6 +2261,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("DiagramState")
                         .HasColumnType("int");
 
+                    b.Property<bool>("DiagramSupplement")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("DiagramsBacklog")
                         .HasColumnType("tinyint(1)");
 

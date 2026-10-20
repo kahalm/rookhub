@@ -35,7 +35,7 @@ public class CourseEbookLinker
 
         var visible = EbookAccess.Visible(_db, userId, isAdmin).Where(e => e.DiagramState == EbookDiagramState.Done);
         if (ebookId != null) visible = visible.Where(e => e.Id == ebookId);
-        var diagrams = await _db.EbookDiagrams.Where(d => visible.Any(e => e.Id == d.EbookId))
+        var diagrams = await _db.EbookDiagrams.Where(d => visible.Any(e => e.Id == d.EbookId)).Readable()
             .OrderBy(d => d.EbookId).ThenBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
             .Select(d => new { d.Id, d.EbookId, d.Fen, d.Page }).ToListAsync(ct);
         if (ebookId != null && diagrams.Count == 0 && !await visible.AnyAsync(ct))
@@ -104,7 +104,7 @@ public class CourseEbookLinker
     {
         var refs = await db.CourseLineEbookRefs.Where(r => r.EbookId == ebookId).ToListAsync(ct);
         if (refs.Count == 0) return 0;
-        var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebookId)
+        var diagrams = await db.EbookDiagrams.Where(d => d.EbookId == ebookId).Readable()
             .OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X)
             .Select(d => new { d.Id, d.Page, d.Fen }).ToListAsync(ct);
         var byId = diagrams.ToDictionary(d => d.Id);

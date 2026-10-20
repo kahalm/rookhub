@@ -36,7 +36,7 @@ public class EbookCourseBuilder
             .Select(b => new { b.Title, b.Author, b.DiagramState }).FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("E-book not found.");
         if (book.DiagramState != EbookDiagramState.Done) throw new DomainValidationException("This book has no recognised diagrams yet.");
-        var diagrams = await _db.EbookDiagrams.Where(d => d.EbookId == ebookId)
+        var diagrams = await _db.EbookDiagrams.Where(d => d.EbookId == ebookId).Readable()
             .OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X).ToListAsync(ct);
         var pgn = BuildPgn(book.Title, diagrams, await ChaptersAsync(ebookId, diagrams, ct));
         if (pgn.Puzzles == 0) throw new DomainValidationException("No diagram has a solution yet — wait until Stockfish has checked the book.");

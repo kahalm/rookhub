@@ -94,6 +94,7 @@ Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht d
 |---------|----------|------|-------|
 | GET | `/api/ebooks/{id:int}/diagrams` | Auth | `{ state, items[{ id, page, x, y, w, h, fen, label, caption, sideKnown }] }` in Lesereihenfolge; leer, solange nicht `done`. Unsichtbar → 404 |
 | POST | `/api/admin/ebooks/diagrams/rescan` | `ebooks.manage` | alle PDF-Bücher neu vormerken → `{ queued }` |
+| POST | `/api/admin/ebooks/{id:int}/diagrams/supplement` | `ebooks.manage` | EIN Buch „ergänzen statt ersetzen“ (0.811.0, auch kuratierte) → 202 `{ ebookId, queued }`, unbekannt 404 — siehe unten |
 | POST / DELETE | `/api/ebooks/{id:int}/diagrams/{diagramId:int}/report` | Auth | „Diagramm falsch“ melden (`{ note? }`, idempotent) bzw. eigene Meldung zurücknehmen → `{ reported }`. Tabelle `EbookDiagramReports` (Seite + FEN mitgeschrieben, `DiagramId` ohne FK — überlebt eine Neuerkennung, die die Diagramm-Zeilen ersetzt; unique je Nutzer + Diagramm). Im Diagramm-DTO `reportedByMe`, `reportCount` (nur Verwalter) |
 | GET | `/api/admin/ebooks/diagram-reports` | `ebooks.manage` | Meldungen, neueste zuerst (≤ 500) mit Buchtitel, Seite, FEN, Font-Familie, Hinweis, Nutzer, `diagramExists` |
 
@@ -249,6 +250,27 @@ Scheitert die Erkennung (Pongó „Tactical Targets 1“: 118 von 978), werden d
 DJVU-Umwandlung) nur zurück auf Done und lässt die Diagramme stehen. Die Migration `EbookDiagramsCurated` markiert alle
 Bücher mit `opus`-Diagrammen. Einspielen: alte Zeilen löschen, neue einfügen, `DiagramState=1`, `DiagramCount`,
 `SolutionCheckState=0` (Stockfish prüft neu), `DiagramsCurated=1`.
+
+## Diagramme ergänzen statt ersetzen (0.811.0)
+
+`POST /api/admin/ebooks/{id}/diagrams/supplement` setzt `Ebook.DiagramSupplement = true` und `DiagramState = Pending`. Der
+`EbookDiagramWorker` erkennt das Buch dann neu — **auch wenn `DiagramsCurated`** —, ersetzt aber nichts: `EbookDiagramMerge`
+lässt alle vorhandenen Diagramme unverändert (FEN, Familie, Lösungen, Ids) und fügt neue nur an freien Stellen hinzu
+(EPUB: gleicher `ImageRef` = vorhanden; PDF/Scan: gleiche Seite und IoU > 0,4 oder Mittelpunkt in der Box). Danach
+`DiagramSupplement = false`, `Done`, `DiagramCount` neu, Stockfish-Prüfung nur, wenn lesbare Diagramme dazukamen (sie prüft
+dann wie nach einer Korrektur das ganze Buch); Kurs-Verweise werden nur dann neu gesucht. Scheitert die Erkennung (Datei fehlt,
+Fehler), bleibt ein Buch mit Diagrammen `Done`. `DiagramsCurated` bleibt, wie es war.
+
+- **Ungelesene Bretter** (`FontFamily = "unread"`, `Confidence = 0`): im Ergänzen-Modus werden Brettbilder/Scan-Bretter mit
+  unplausibler Lesung (`EbookBoardImage.GridToBoard` = null: nicht genau ein K/k, Bauern auf Reihe 1/8, Material) nicht mehr
+  verworfen, sondern mit der rohen Lesung (`GridToPlacement`, immer syntaktisch gültig, Zugrecht w, ohne Lösungssuche)
+  angelegt. Für Nutzer UNSICHTBAR über `EbookDiagramVisibility.Readable()`: Leser-Liste, „Diagramm falsch“, Kurs-Verknüpfung
+  (Link + Relink), Kurs aus Buch, Stockfish-Prüfung, Fließtext-EPUB, `DiagramCount` (Katalog, Filter „mit Diagrammen“,
+  Fertig-Meldung). Werkzeuge (SQL/Opus) sehen sie; wer ein `unread` per „Stellung korrigieren“ (Diagramm-Id) korrigiert,
+  macht es zu `hand` und damit sichtbar — sonst die Familie beim Nachtragen ändern (z. B. `opus`).
+- **Reihenfolge EPUB**: EPUB-Diagramme bekommen `Y = Blockreihenfolge × 10` im Kapitel (vorher 0 → Reihenfolge im Kapitel
+  zufällig); `W` bleibt 0. Im Ergänzen-Modus wird vorhandenen EPUB-Diagrammen mit `Y = 0` die Höhe über den `ImageRef` nachgetragen.
+- Das 8-MB-Limit der EPUB-Erkennung gilt je BILD im EPUB (`MaxImageBytes`), nicht für die ganze Datei.
 
 ## Brett-Modi im Leser (0.777.0)
 

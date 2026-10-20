@@ -36,12 +36,16 @@ public class EbookScanDiagramExtractor
     }
 
     /// <summary>Ein gefundenes Brett: Seite, Lage als Seitenanteil, Brettteil der FEN, Zugrecht-Marker (oder null).</summary>
-    public sealed record ScanBoard(int Page, double X, double Y, double W, double H, string Board, char? Side, float? Confidence = null);
+    public sealed record ScanBoard(int Page, double X, double Y, double W, double H, string Board, char? Side, float? Confidence = null,
+        bool Unread = false);
 
     /// <summary>Ein Brett mit den Lesungen beider Scan-Modelle (<c>null</c> = nicht plausibel).</summary>
-    public sealed record ScanCandidate(int Page, double X, double Y, double W, double H, string? Board, string? AltBoard, char? Side, float? Confidence = null);
+    /// <param name="RawBoard">Ergänzen-Modus (0.811.0): die rohe (unplausible) Lesung, wenn beide Modelle versagen.</param>
+    public sealed record ScanCandidate(int Page, double X, double Y, double W, double H, string? Board, string? AltBoard, char? Side, float? Confidence = null,
+        string? RawBoard = null);
 
-    public List<ScanBoard> Scan(string pdfPath, int pageCount, CancellationToken ct)
+    /// <param name="keepUnread">Ergänzen-Modus (0.811.0): Bretter mit unplausibler Lesung als <see cref="ScanBoard.Unread"/> behalten.</param>
+    public List<ScanBoard> Scan(string pdfPath, int pageCount, CancellationToken ct, bool keepUnread = false)
     {
         var model = EbookBoardClassifier.Scan; var alt = EbookBoardClassifier.ScanAlt;
         // Stapel zu je 20 Seiten parallel rendern und lesen (0.797.0) — vorher lief ein Buch strikt Seite für Seite auf einem Kern.
@@ -66,7 +70,7 @@ public class EbookScanDiagramExtractor
                     try
                     {
                         var g = ReadPgm(File.ReadAllBytes(file));
-                        if (g != null && page > 0) foreach (var c in ScanPage(PreparePage(g), page, model, alt, g, EbookBoardCnn.Instance)) found.Add(c);
+                        if (g != null && page > 0) foreach (var c in ScanPage(PreparePage(g), page, model, alt, g, EbookBoardCnn.Instance, keepUnread)) found.Add(c);
                     }
                     finally { File.Delete(file); }
                 }
@@ -78,20 +82,22 @@ public class EbookScanDiagramExtractor
             try { Directory.Delete(root, true); } catch (IOException) { /* Zwischenordner, egal */ }
         }
         var result = found.OrderBy(c => c.Page).ThenBy(c => c.Y).ThenBy(c => c.X).ToList();
-        var chosen = Choose(result, out var useAlt);
+        var chosen = Choose(result, out var useAlt, keepUnread);
         _logger.LogInformation("Scan {Path}: {Count} Diagramme auf {Pages} Seiten (Modell {Model})", Path.GetFileName(pdfPath), chosen.Count, pageCount, useAlt ? "scan2" : "scan");
         return chosen;
     }
 
     /// <summary>Je Buch das Modell mit mehr plausiblen Brettern; ein Brett, das es nicht lesen kann, nimmt das andere.</summary>
-    internal static List<ScanBoard> Choose(IReadOnlyList<ScanCandidate> candidates, out bool useAlt)
+    internal static List<ScanBoard> Choose(IReadOnlyList<ScanCandidate> candidates, out bool useAlt, bool keepUnread = false)
     {
         useAlt = candidates.Count(c => c.AltBoard != null) > candidates.Count(c => c.Board != null);
         var alt = useAlt;
         return candidates
             .Select(c => (c, board: alt ? c.AltBoard ?? c.Board : c.Board ?? c.AltBoard))
-            .Where(x => x.board != null)
-            .Select(x => new ScanBoard(x.c.Page, x.c.X, x.c.Y, x.c.W, x.c.H, x.board!, x.c.Side, x.board == x.c.Board ? x.c.Confidence : null))
+            .Where(x => x.board != null || (keepUnread && x.c.RawBoard != null))
+            .Select(x => x.board != null
+                ? new ScanBoard(x.c.Page, x.c.X, x.c.Y, x.c.W, x.c.H, x.board, x.c.Side, x.board == x.c.Board ? x.c.Confidence : null)
+                : new ScanBoard(x.c.Page, x.c.X, x.c.Y, x.c.W, x.c.H, x.c.RawBoard!, x.c.Side, 0, Unread: true))
             .ToList();
     }
 
@@ -110,8 +116,10 @@ public class EbookScanDiagramExtractor
     /// <param name="full">Die Seite in voller Auflösung (doppelt so groß) für den Zugrecht-Marker; <c>null</c> = keiner.</param>
     /// <param name="cnn">Faltungsnetz (0.794.0): liest das Brett aus der vollen Auflösung; ist seine Lesung plausibel, gilt sie
     /// (mit Sicherheit), sonst die der alten Modelle.</param>
+    /// <param name="keepUnread">Ergänzen-Modus (0.811.0): ein Brett, das kein Modell plausibel liest, kommt mit der rohen Lesung
+    /// (<see cref="ScanCandidate.RawBoard"/>) statt gar nicht.</param>
     public static List<ScanCandidate> ScanPage(float[,] g, int page, EbookBoardClassifier model, EbookBoardClassifier? alt = null, float[,]? full = null,
-        EbookBoardCnn? cnn = null)
+        EbookBoardCnn? cnn = null, bool keepUnread = false)
     {
         int H = g.GetLength(0), W = g.GetLength(1);
         var list = new List<ScanCandidate>();
@@ -123,19 +131,26 @@ public class EbookScanDiagramExtractor
             var bg = Enumerable.Range(0, 64).Select(i => (i / 8 + i % 8) % 2 == 0 ? light : dark).ToArray();
             var bLight = BoardImageMath.Blur(light, 1.6); var bDark = BoardImageMath.Blur(dark, 1.6);
             var bgBlur = Enumerable.Range(0, 64).Select(i => (i / 8 + i % 8) % 2 == 0 ? bLight : bDark).ToArray();
-            string? cnnBoard = null; float? conf = null;
+            string? cnnBoard = null; float? conf = null; char[]? cnnGrid = null;
             if (cnn != null && full != null)
             {
                 var reading = cnn.Read(full, box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2);
+                cnnGrid = reading.Grid;
                 cnnBoard = EbookBoardImage.GridToBoard(reading.Grid);
                 if (cnnBoard != null) conf = reading.MinConfidence;
             }
             var board = cnnBoard ?? EbookBoardImage.Recognise(cells, bg, bgBlur, model);
             var altBoard = alt == null ? null : EbookBoardImage.Recognise(cells, bg, bgBlur, alt);
             if (cnnBoard != null) altBoard = null;   // das Netz gewinnt, wo es eine plausible Stellung liest
-            if (board == null && altBoard == null) continue;
+            string? raw = null;
+            if (board == null && altBoard == null)
+            {
+                if (!keepUnread) continue;
+                // Bestmögliche Lesung: die des Netzes, sonst die des Scan-Modells — ungeprüft.
+                raw = EbookBoardImage.GridToPlacement(cnnGrid ?? EbookBoardImage.ReadGrid(cells, bg, bgBlur, model));
+            }
             list.Add(new ScanCandidate(page, (double)box.X0 / W, (double)box.Y0 / H, (double)(box.X1 - box.X0) / W, (double)(box.Y1 - box.Y0) / H,
-                board, altBoard, full == null ? null : EbookBoardImage.SideMarker(full, (box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2)), conf));
+                board, altBoard, full == null ? null : EbookBoardImage.SideMarker(full, (box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2)), conf, raw));
         }
         return list;
     }

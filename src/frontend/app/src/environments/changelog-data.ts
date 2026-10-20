@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.811.0", date: "2026-10-20", changes: [
+    { en: "E-book diagrams: admins can now “supplement” a single book instead of re-reading it (POST /api/admin/ebooks/{id}/diagrams/supplement). Recognition runs again — even on hand- or Opus-curated books — but every existing diagram stays exactly as it is; only boards at places without a diagram are added. Board images whose reading is implausible are no longer thrown away but kept as “unread” (hidden from readers, courses, solution check and counts until corrected). EPUB diagrams now appear in the order of the chapter.",
+      de: "E-Book-Diagramme: Admins können ein einzelnes Buch jetzt „ergänzen“ statt neu einlesen (POST /api/admin/ebooks/{id}/diagrams/supplement). Die Erkennung läuft erneut — auch bei von Hand oder per Opus kuratierten Büchern —, aber jedes vorhandene Diagramm bleibt genau so, wie es ist; nur Bretter an Stellen ohne Diagramm kommen dazu. Brettbilder mit unplausibler Lesung werden nicht mehr verworfen, sondern als „ungelesen“ aufgehoben (für Leser, Kurse, Lösungsprüfung und Zählung unsichtbar, bis sie korrigiert sind). EPUB-Diagramme erscheinen jetzt in der Reihenfolge des Kapitels." },
+  ] },
   { version: "0.810.0", date: "2026-10-19", changes: [
     { en: "Large repertoires open about three times faster: the lines are now read in parallel by several background workers instead of piece by piece on the page (measured with an 817-line Chessable repertoire: 2.3 s → 0.7 s), and the page stays responsive meanwhile. The repertoire trainer benefits as well. Older browsers without workers read as before.",
       de: "Große Repertoires öffnen etwa dreimal so schnell: die Linien werden jetzt von mehreren Hintergrund-Workern gleichzeitig gelesen statt Stück für Stück auf der Seite (gemessen an einem Chessable-Repertoire mit 817 Linien: 2,3 s → 0,7 s), und die Seite bleibt dabei bedienbar. Der Repertoire-Trainer profitiert ebenso. Ältere Browser ohne Worker lesen wie bisher." },

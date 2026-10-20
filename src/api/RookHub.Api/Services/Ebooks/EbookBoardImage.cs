@@ -450,6 +450,10 @@ public static class EbookBoardImage
     /// <summary>Stellung eines Bretts als FEN-Brettteil (a8 zuerst) — oder <c>null</c>, wenn sie nicht plausibel ist (je genau
     /// ein König, keine Bauern auf der 1./8. Reihe): dann war es kein Diagramm oder ein unbekannter Figurensatz.</summary>
     public static string? Recognise(float[][,] cells, float[][,] backgrounds, float[][,] blurredBackgrounds, EbookBoardClassifier model)
+        => GridToBoard(ReadGrid(cells, backgrounds, blurredBackgrounds, model));
+
+    /// <summary>Die rohe Lesung eines Bretts: 64 Felder (Reihe 8 zuerst, '.' leer) ohne Plausibilitätsprüfung.</summary>
+    public static char[] ReadGrid(float[][,] cells, float[][,] backgrounds, float[][,] blurredBackgrounds, EbookBoardClassifier model)
     {
         var grid = new char[64];
         for (var i = 0; i < 64; i++)
@@ -461,7 +465,7 @@ public static class EbookBoardImage
             if (!strong && model.EmptyProbability(Feature2(cells[i], backgrounds[i])) > 0.5) continue;
             grid[i] = Pieces[model.Piece(Feature1(cells[i], backgrounds[i]))];
         }
-        return GridToBoard(grid);
+        return grid;
     }
 
     /// <summary>64 Felder (Reihe 8 zuerst, '.' leer) → Brettteil der FEN, oder <c>null</c>, wenn die Stellung nicht sein
@@ -471,14 +475,22 @@ public static class EbookBoardImage
         if (grid.Count(c => c == 'K') != 1 || grid.Count(c => c == 'k') != 1) return null;
         for (var i = 0; i < 8; i++) if (grid[i] is 'P' or 'p' || grid[56 + i] is 'P' or 'p') return null;
         if (!PossibleMaterial(grid)) return null;
+        return GridToPlacement(grid);
+    }
+
+    /// <summary>64 Felder → Brettteil der FEN OHNE Plausibilitätsprüfung (0.811.0, „ergänzen“: unplausible Lesungen werden
+    /// als <c>unread</c> aufgehoben statt verworfen). Unbekannte Zeichen gelten als leer — das Ergebnis ist immer eine
+    /// syntaktisch gültige Platzierung (8 Reihen à 8 Felder).</summary>
+    public static string GridToPlacement(IReadOnlyList<char> grid)
+    {
         var rows = new List<string>();
         for (var r = 0; r < 8; r++)
         {
             var row = new System.Text.StringBuilder(); var e = 0;
             for (var c = 0; c < 8; c++)
             {
-                var ch = grid[r * 8 + c];
-                if (ch == '.') { e++; continue; }
+                var ch = r * 8 + c < grid.Count ? grid[r * 8 + c] : '.';
+                if (!"PNBRQKpnbrqk".Contains(ch)) { e++; continue; }
                 if (e > 0) { row.Append(e); e = 0; }
                 row.Append(ch);
             }

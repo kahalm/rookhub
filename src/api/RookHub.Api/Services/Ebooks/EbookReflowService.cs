@@ -49,7 +49,7 @@ public class EbookReflowService
         if (!File.Exists(pdfPath)) throw new NotFoundException("The PDF is missing on the server.") { Code = ApiErrorCodes.EbookFileMissing };
 
         // Nur Diagramme mit Lage im PDF (W > 0); reine EPUB-Diagramme gibt es hier nicht (kein echtes EPUB).
-        var diagrams = await _db.EbookDiagrams.Where(d => d.EbookId == ebookId && d.W > 0)
+        var diagrams = await _db.EbookDiagrams.Where(d => d.EbookId == ebookId && d.W > 0).Readable()
             .OrderBy(d => d.Page).ThenBy(d => d.Y).ThenBy(d => d.X).ToListAsync(ct);
         var input = diagrams.Select((d, i) => new ReflowDiagram(i, d.Page, d.X, d.Y, d.W, d.H, d.Fen, d.Label, d.SideKnown)).ToList();
 

@@ -26,7 +26,9 @@ public class EbookDiagramExtractor
     public sealed record Result(List<EbookDiagram> Diagrams, bool FontFound, int Pages, int Solutions = 0);
 
     /// <param name="scanPdfPath">PDF für die Scan-Erkennung (die leichte Lesefassung, falls es eine gibt); <c>null</c> = <paramref name="pdfPath"/>.</param>
-    public Result Extract(string pdfPath, int ebookId, CancellationToken ct, string? scanPdfPath = null)
+    /// <param name="keepUnread">Ergänzen-Modus (0.811.0): Scan-Bretter mit unplausibler Lesung als
+    /// <see cref="EbookDiagramVisibility.Unread"/> behalten statt verwerfen.</param>
+    public Result Extract(string pdfPath, int ebookId, CancellationToken ct, string? scanPdfPath = null, bool keepUnread = false)
     {
         var diagrams = new List<EbookDiagram>();
         var fontFound = false;
@@ -103,8 +105,20 @@ public class EbookDiagramExtractor
         if (!fontFound && _scanner != null && pages > 0)
         {
             scanned = true;
-            foreach (var b in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct))
+            foreach (var b in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct, keepUnread))
             {
+                if (b.Unread)
+                {
+                    // Ohne Lösungssuche: die Stellung ist unplausibel gelesen.
+                    diagrams.Add(new EbookDiagram
+                    {
+                        EbookId = ebookId, Page = b.Page,
+                        X = Clamp(b.X), Y = Clamp(b.Y), W = Clamp(b.W), H = Clamp(b.H),
+                        Fen = $"{b.Board} {b.Side ?? 'w'} - - 0 1", SideKnown = b.Side != null,
+                        FontFamily = EbookDiagramVisibility.Unread, Confidence = 0,
+                    });
+                    continue;
+                }
                 var (pw, ph) = sizes.GetValueOrDefault(b.Page, (1.0, 1.0));
                 var side = b.Side ?? 'w';
                 var fen = $"{b.Board} {side} {DiagramGridBuilder.GuessCastling(b.Board)} - 0 1";
