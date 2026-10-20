@@ -2157,13 +2157,10 @@ describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlun
     expect(toggle).toHaveBeenCalledTimes(1);
   });
 
-  it('der Kartenknopf nennt die Handlung (Ziel-Modus), nicht den Zustand', () => {
-    const training = render(c => { c.solveModeChoice = 'training'; }).el.querySelector('.ctx-mode-btn')!;
-    expect(training.textContent).toContain('solveMode.switchToEasy');
-    expect(training.textContent).not.toContain('solveMode.training');
-    TestBed.resetTestingModule();
-    const easy = render(c => { c.solveModeChoice = 'easy'; }).el.querySelector('.ctx-mode-btn')!;
-    expect(easy.textContent).toContain('solveMode.switchToTraining');
+  it('kein eigener Kartenknopf mehr — die Spielweise steht nur im ⋮-Menü (Wunsch 2026-10-20)', () => {
+    const { el } = render(c => { c.solveModeChoice = 'training'; });
+    expect(el.querySelector('.ctx-mode-btn')).toBeNull();
+    expect(bar(el).solveModeChoice).toBe('training');
   });
 
   it('per Link festgelegte Ansicht: weder Kartenknopf noch ⋮-Punkt', () => {
@@ -2196,6 +2193,7 @@ describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
       const stats = { total: 10, solvedCount: 3, attemptedCount: 0, progressPercent: 30, accuracyPercent: 0, totalSeconds: 0 };
       c.courseBookStats = stats; c.courseChapterStats = stats;
       spyOnProperty(c, 'courseChapterDisplay', 'get').and.returnValue('Kapitel 2');
+      c.statsOpen.set(true);                   // Fortschritt liegt hinter dem ⓘ (2026-10-20)
     }, '/courses/7/solve');
     // Seit der Dreiteilung (2026-10-15) eine eigene Leiste; ihr Name beginnt mit Buch bzw. Kapitel, dann die Zahlen.
     // (Der Helfer rendert Kindkomponenten nicht — geprüft wird der übergebene Name; die Leiste selbst testet
@@ -2207,6 +2205,7 @@ describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
   it('Kurs ohne Buchstatistik: der Sammelbalken hat ebenfalls einen Namen', () => {
     const { el } = renderBookPuzzle(c => {
       c.inCourse = true; c.courseTotal = 10; c.courseSolved = 3; c.courseBookStats = null;
+      c.statsOpen.set(true);
     }, '/courses/7/solve');
     expect(bars(el).length).toBe(1);
     expect(bars(el)[0].getAttribute('aria-label')).toBe('book.course.wholeBook');
@@ -2306,5 +2305,23 @@ describe('BookPuzzleComponent Im Buch', () => {
   it('ohne Verweis kein Knopf', () => {
     const { el } = renderBookPuzzle(c => { c.inCourse = true; c.courseTotal = 1; }, '/courses/7/solve');
     expect(el.querySelector('a.ctx-in-book')).toBeNull();
+  });
+});
+
+
+// Wunsch 2026-10-20: Kurs-Fortschritt (ganzes Buch + Kapitel) erst auf das ⓘ neben der Sprachwahl.
+describe('BookPuzzleComponent Kurs-Fortschritt hinter ⓘ', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+
+  it('zu: nur das ⓘ im Kopf; Klick klappt die Statistik auf (aria-expanded), zweiter Klick zu', () => {
+    const { el, c } = renderBookPuzzle(c => {
+      c.inCourse = true; c.courseTotal = 10; c.courseSolved = 3; c.courseBookStats = null;
+    }, '/courses/7/solve');
+    const btn = el.querySelector('.context-card .ctx-head .ctx-stats-btn') as HTMLButtonElement;
+    expect(btn).withContext('ⓘ im Kopf').not.toBeNull();
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    expect(el.querySelector('.course-stats')).toBeNull();
+    btn.click();
+    expect(c.statsOpen()).toBeTrue();
   });
 });

@@ -172,6 +172,14 @@
                                             [value]="courseLang.effective(langRef)"
                                             (picked)="pickLanguage($event)" />
                   }
+                  @if (inCourse && courseTotal > 0) {
+                    <button mat-icon-button class="ctx-stats-btn" (click)="statsOpen.set(!statsOpen())"
+                            [attr.aria-expanded]="statsOpen()" aria-controls="course-stats-panel"
+                            [class.on]="statsOpen()"
+                            [appIconLabel]="'book.course.progressInfo' | translate">
+                      <mat-icon>info_outline</mat-icon>
+                    </button>
+                  }
                   @if (currentEbookRef; as er) {
                     <!-- Kurslinie → Stelle im E-Book (neuer Tab, der Kurs bleibt offen). -->
                     <a mat-stroked-button class="ctx-switch ctx-in-book" target="_blank" rel="noopener"
@@ -192,19 +200,9 @@
 
                 <!-- Der Erklär-/Zug-Kommentar steht als eigener Block am Ende der Seitenspalte (s. u.). -->
 
-                <!-- Spielweise (Kurs/Tagespuzzle/Buch-Puzzle) umschalten: wirkt ab dem nächsten
-                     Puzzle (siehe toggleSolveMode). Der Wochenpost hat seinen eigenen Knopf.
-                     Beschriftet als HANDLUNG (Ziel-Modus), nicht als Zustand — sonst hält man ihn
-                     für eine Statusanzeige (UX-005); derselbe Punkt steht auch im ⋮-Menü. -->
-                @if (showSolveModeSwitch) {
-                  <div class="ctx-mode">
-                    <button mat-stroked-button class="ctx-mode-btn" (click)="toggleSolveMode()"
-                            [matTooltip]="'solveMode.switchNextHint' | translate">
-                      <mat-icon>{{ solveModeChoice === 'easy' ? 'psychology' : 'pan_tool' }}</mat-icon>
-                      {{ (solveModeChoice === 'easy' ? 'solveMode.switchToTraining' : 'solveMode.switchToEasy') | translate }}
-                    </button>
-                  </div>
-                }
+                <!-- Spielweise (Kurs/Tagespuzzle/Buch-Puzzle) umschalten steht NUR im ⋮-Menü der Aktionszeile (Wunsch
+                     2026-10-20: der Knopf in der Karte schob Fortschritt und Überspringen nach unten). Der Wochenpost
+                     behält seinen eigenen Knopf (wirkt auf alle Wochenpost-Puzzles, zählt die Aufteilung mit). -->
 
                 @if (inWeekly && weeklyTotal > 0) {
                   <div class="ctx-progress">
@@ -239,8 +237,9 @@
                     }
                   </div>
                 }
-                @if (inCourse && courseTotal > 0) {
-                  <div class="ctx-progress course-stats">
+                <!-- Fortschritt (ganzes Buch + Kapitel) erst auf das ⓘ neben der Sprachwahl (Wunsch 2026-10-20). -->
+                @if (inCourse && courseTotal > 0 && statsOpen()) {
+                  <div class="ctx-progress course-stats" id="course-stats-panel">
                     @if (courseBookStats; as bk) {
                       <!-- Ganzes Buch -->
                       <div class="cs-scope">
@@ -362,11 +361,7 @@
                   </div>
                   }
                 } @else if (inWeekly || inCourse) {
-                  <div class="ctx-nav">
-                    <button mat-button class="skip-quiet" (click)="inWeekly ? weeklyNext() : courseNext()">
-                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}
-                    </button>
-                  </div>
+                  <!-- „Überspringen“ steht neben „Aufgeben“ in der Status-Card (showSkip, Wunsch 2026-10-20). -->
                 } @else if (isDaily) {
                   <div class="ctx-nav">
                     <button mat-stroked-button (click)="prevDaily()">
@@ -422,6 +417,45 @@
             </mat-card>
           }
 
+          <!-- Info-/Kommentar-Block: zwischen Kontext-Karte (Fortschritt/„Überspringen“) und Status-Card mit der Uhr
+               (Wunsch 2026-10-20 — unten unter der Aktionszeile war er „rangefriemelt“). Lange Kommentare sind gekürzt
+               und öffnen sich im Dialog (commentIsLong), damit die Bedienung nicht unter die Falz rutscht
+               (a1-rk-kommentar-schiebt-aktionen). -->
+          @if (puzzle && (commentLines.length || offlineLangStale)) {
+            <section class="ctx-comment-block">
+              @if (commentLines.length) {
+                <div class="ctx-comment" [class.ctx-comment-long]="commentIsLong">
+                  <mat-icon>chat_bubble_outline</mat-icon>
+                  <div class="ctx-comment-body" (click)="onCommentBodyClick($event)">
+                    @for (block of commentBlocks; track $index) {
+                      <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+                    }
+                    @if (variationPreview) {
+                      <div class="cmt-variation-bar">
+                        <span>{{ 'book.variation.previewing' | translate }}</span>
+                        <button mat-stroked-button type="button" (click)="exitVariationPreview()">
+                          <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
+                        </button>
+                      </div>
+                    }
+                    @if (commentIsLong) {
+                      <button type="button" class="ctx-comment-expand" (click)="openCommentDialog()">
+                        <mat-icon>open_in_full</mat-icon> {{ 'book.commentDialog.open' | translate }}
+                      </button>
+                    }
+                    @if (langEnabled && puzzle.commentMachine) {
+                      <app-machine-note [clickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"
+                                        (original)="showOriginal()" />
+                    }
+                  </div>
+                </div>
+              }
+              @if (offlineLangStale) {
+                <p class="ctx-offline-lang"><mat-icon inline>cloud_off</mat-icon> {{ 'courses.lang.offlineStaleSolver' | translate }}</p>
+              }
+            </section>
+          }
+
           <!-- Status-Card: Interaktionszentrum -->
           @if (loadError && state === 'LOADING') {
             <mat-card>
@@ -473,6 +507,8 @@
               (resetClicked)="resetPuzzle()"
               (mouseslipClicked)="mouseslip()"
               (giveUpClicked)="giveUp()"
+              [showSkip]="inWeekly || inCourse"
+              (skipClicked)="inWeekly ? weeklyNext() : courseNext()"
               (retryClicked)="retry()"
               (nextClicked)="solvedAutoNextPublic()"
               (failedNextClicked)="failedNext()"
@@ -528,44 +564,6 @@
             </app-puzzle-action-bar>
           }
 
-          <!-- Info-/Kommentar-Block (a1-rk-kommentar-schiebt-aktionen): der Erklär-/Zug-Kommentar steht ungekürzt
-               (Wunsch 2026-10-07), aber HINTER Fortschritt/„Überspringen“, Status-Card und Aktionsleiste — sonst schob
-               ein langer Kommentar die ganze Bedienung unter die Falz. Im Review/Info-Modus der Kommentar zum
-               durchgespielten Zug, sonst die Einleitung des Puzzles. -->
-          @if (puzzle && (commentLines.length || offlineLangStale)) {
-            <section class="ctx-comment-block">
-              @if (commentLines.length) {
-                <div class="ctx-comment" [class.ctx-comment-long]="commentIsLong">
-                  <mat-icon>chat_bubble_outline</mat-icon>
-                  <div class="ctx-comment-body" (click)="onCommentBodyClick($event)">
-                    @for (block of commentBlocks; track $index) {
-                      <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
-                    }
-                    @if (variationPreview) {
-                      <div class="cmt-variation-bar">
-                        <span>{{ 'book.variation.previewing' | translate }}</span>
-                        <button mat-stroked-button type="button" (click)="exitVariationPreview()">
-                          <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
-                        </button>
-                      </div>
-                    }
-                    @if (commentIsLong) {
-                      <button type="button" class="ctx-comment-expand" (click)="openCommentDialog()">
-                        <mat-icon>open_in_full</mat-icon> {{ 'book.commentDialog.open' | translate }}
-                      </button>
-                    }
-                    @if (langEnabled && puzzle.commentMachine) {
-                      <app-machine-note [clickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"
-                                        (original)="showOriginal()" />
-                    }
-                  </div>
-                </div>
-              }
-              @if (offlineLangStale) {
-                <p class="ctx-offline-lang"><mat-icon inline>cloud_off</mat-icon> {{ 'courses.lang.offlineStaleSolver' | translate }}</p>
-              }
-            </section>
-          }
 
         </div>
       </div>

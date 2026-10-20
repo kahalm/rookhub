@@ -90,6 +90,13 @@ const ACTION_KEYS = SOLVER_ACTION_KEYS;
             {{ ak.mouseslip | translate }}
           </button>
         }
+        @if (showSkip) {
+          <!-- Überspringen neben Aufgeben (Wunsch 2026-10-20) statt allein in der Kontext-Karte. -->
+          <button mat-button class="ytp-skip" (click)="skipClicked.emit()">
+            <mat-icon>skip_next</mat-icon>
+            {{ 'book.actions.skip' | translate }}
+          </button>
+        }
         <button mat-button color="warn" (click)="giveUpClicked.emit()">
           <mat-icon>flag</mat-icon>
           {{ ak.giveUp | translate }}
@@ -134,6 +141,9 @@ export class PuzzleYourTurnComponent {
   @Output() evalToggled = new EventEmitter<void>();
   @Output() resetClicked = new EventEmitter<void>();
   @Output() mouseslipClicked = new EventEmitter<void>();
+  /** Kurs/Wochenpost: „Überspringen“ neben „Aufgeben“. */
+  @Input() showSkip = false;
+  @Output() skipClicked = new EventEmitter<void>();
   @Output() giveUpClicked = new EventEmitter<void>();
 
   /** Gleiche Regeln wie die Vollbild-Icon-Leiste (solver-actions.util). */

@@ -261,7 +261,9 @@ function renderBookPuzzle(setup: (c: any) => void, url = '/courses/7/solve'): HT
 describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-schiebt-aktionen)', () => {
   beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
 
-  it('Kommentar steht NACH Kontext-Card (Fortschritt, „Überspringen“), Status-Card und Aktionsleiste — ungekürzt', () => {
+  // Wunsch 2026-10-20: der Kommentar steht zwischen Kontext-Karte und Status-Card (Uhr, „Überspringen“/„Aufgeben“);
+  // lange Kommentare sind auf ~5 Zeilen gekürzt (ganzer Text im Dialog), damit die Bedienung über der Falz bleibt.
+  it('Kommentar steht ZWISCHEN Kontext-Card und Status-Card; lang = gekürzt mit Dialog', () => {
     const long = 'Sehr langer Kommentar. '.repeat(80);
     const el = renderBookPuzzle(c => {
       c.inCourse = true; c.courseTotal = 10; c.courseSolved = 0;
@@ -273,17 +275,16 @@ describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-sc
     const comment = info.querySelector('.ctx-comment') as HTMLElement;
     const card = info.querySelector('.context-card') as HTMLElement;
     const status = info.querySelector('app-puzzle-status-card') as HTMLElement;
-    const bar = info.querySelector('app-puzzle-action-bar') as HTMLElement;
-    const skip = info.querySelector('.skip-quiet') as HTMLElement;
     expect(comment).withContext('Kommentar gerendert').not.toBeNull();
-    expect(card.contains(comment)).withContext('nicht mehr in der Kontext-Card').toBeFalse();
-    expect(card.contains(skip)).toBeTrue();
-    expect(card.querySelector('.ctx-progress')).not.toBeNull();
+    expect(card.contains(comment)).withContext('nicht in der Kontext-Card').toBeFalse();
     const after = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(after(card, comment)).toBeTrue();
-    expect(after(status, comment)).toBeTrue();
-    expect(after(bar, comment)).toBeTrue();
-    expect(comment.textContent!.length).toBeGreaterThanOrEqual(long.trim().length);
+    expect(after(comment, status)).withContext('vor der Status-Card').toBeTrue();
+    expect(comment.classList).toContain('ctx-comment-long');
+    expect(comment.querySelector('.ctx-comment-expand')).withContext('„Ganz lesen“').not.toBeNull();
+    const body = comment.querySelector('.ctx-comment-body') as HTMLElement;
+    expect(getComputedStyle(body).maxHeight).withContext('auf ~5 Zeilen gekürzt').not.toBe('none');
+    expect(getComputedStyle(body).overflow).toBe('hidden');
   });
 
   it('ohne Kommentar kein leerer Block', () => {

@@ -2312,6 +2312,7 @@
       "restartFailed": "Reset failed",
       "unavailable": "This course is not available without signing in.",
       "wholeBook": "Whole book",
+      "progressInfo": "Progress",
       "noChapter": "No chapter",
       "accuracyHint": "First-try success rate",
       "timeHint": "Total time spent",
@@ -3881,7 +3882,6 @@
     "switch": "Playing style",
     "switchToEasy": "Switch to easy mode",
     "switchToTraining": "Switch to training mode",
-    "switchNextHint": "Takes effect from the next puzzle.",
     "awaitingChoice": "Choose how you want to play — the puzzle starts right after.",
     "scope": {
       "puzzles": "Puzzles",

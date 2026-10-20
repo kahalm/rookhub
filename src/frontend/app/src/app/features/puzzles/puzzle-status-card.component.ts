@@ -118,6 +118,8 @@ const CK = {
                 (resetClicked)="resetClicked.emit()"
                 (mouseslipClicked)="mouseslipClicked.emit()"
                 (giveUpClicked)="giveUpClicked.emit()"
+                [showSkip]="showSkip"
+                (skipClicked)="skipClicked.emit()"
               />
             }
             @case ('THINKING') {
@@ -135,6 +137,8 @@ const CK = {
                 (resetClicked)="resetClicked.emit()"
                 (mouseslipClicked)="mouseslipClicked.emit()"
                 (giveUpClicked)="giveUpClicked.emit()"
+                [showSkip]="showSkip"
+                (skipClicked)="skipClicked.emit()"
               />
             }
             @case ('PLAYING') {
@@ -154,6 +158,8 @@ const CK = {
                 (resetClicked)="resetClicked.emit()"
                 (mouseslipClicked)="mouseslipClicked.emit()"
                 (giveUpClicked)="giveUpClicked.emit()"
+                [showSkip]="showSkip"
+                (skipClicked)="skipClicked.emit()"
               />
             }
             @case ('SOLVED') {
@@ -300,6 +306,9 @@ export class PuzzleStatusCardComponent {
   @Output() resetClicked = new EventEmitter<void>();
   @Output() mouseslipClicked = new EventEmitter<void>();
   @Output() giveUpClicked = new EventEmitter<void>();
+  /** Kurs/Wochenpost: „Überspringen“ neben „Aufgeben“ (an app-puzzle-your-turn durchgereicht). */
+  @Input() showSkip = false;
+  @Output() skipClicked = new EventEmitter<void>();
   @Output() retryClicked = new EventEmitter<void>();
   @Output() nextClicked = new EventEmitter<void>();
   @Output() failedNextClicked = new EventEmitter<void>();

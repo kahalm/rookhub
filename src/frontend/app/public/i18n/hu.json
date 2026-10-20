@@ -1872,6 +1872,7 @@
       "toOverview": "Áttekintéshez",
       "toStart": "A kezdőlapra",
       "wholeBook": "Teljes könyv",
+      "progressInfo": "Haladás",
       "noChapter": "Nincs fejezet",
       "accuracyHint": "Első próbálkozásra siker",
       "timeHint": "Összes eltöltött idő",
@@ -4692,7 +4693,6 @@
     "switch": "Játékmód",
     "switchToEasy": "Váltás egyszerű módra",
     "switchToTraining": "Váltás edzésmódra",
-    "switchNextHint": "A következő feladványtól érvényes.",
     "awaitingChoice": "Válaszd ki, hogyan szeretnél játszani — utána rögtön indul a feladvány.",
     "scope": {
       "puzzles": "Feladványok",

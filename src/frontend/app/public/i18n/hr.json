@@ -2312,6 +2312,7 @@
       "restartFailed": "Resetiranje nije uspjelo",
       "unavailable": "Ovaj tečaj nije dostupan bez prijave.",
       "wholeBook": "Cijela knjiga",
+      "progressInfo": "Napredak",
       "noChapter": "Bez poglavlja",
       "accuracyHint": "Stopa pogodaka (1. pokušaj)",
       "timeHint": "Ukupno utrošeno vrijeme",
@@ -3881,7 +3882,6 @@
     "switch": "Način igre",
     "switchToEasy": "Prebaci na jednostavan način",
     "switchToTraining": "Prebaci na trening način",
-    "switchNextHint": "Vrijedi od sljedeće zagonetke.",
     "awaitingChoice": "Odaberi kako želiš igrati — odmah nakon toga zagonetka počinje.",
     "scope": {
       "puzzles": "Zagonetke",

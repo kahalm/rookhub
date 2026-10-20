@@ -61,3 +61,23 @@ describe('PuzzleYourTurnComponent', () => {
     expect(timer.getAttribute('aria-label')).toMatch(/^puzzles\.solveTime: \S+/);
   });
 });
+
+
+describe('PuzzleYourTurnComponent Überspringen neben Aufgeben (2026-10-20)', () => {
+  it('zeigt „Überspringen“ vor „Aufgeben“ nur mit showSkip und meldet den Klick', () => {
+    TestBed.configureTestingModule({ imports: [PuzzleYourTurnComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
+    const f = TestBed.createComponent(PuzzleYourTurnComponent);
+    f.componentRef.setInput('state', 'AWAITING_USER_MOVE');
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('.ytp-skip')).toBeNull();
+    f.componentRef.setInput('showSkip', true);
+    f.detectChanges();
+    const skip = f.nativeElement.querySelector('.ytp-skip') as HTMLButtonElement;
+    expect(skip).not.toBeNull();
+    const btns = [...f.nativeElement.querySelectorAll('.ytp-actions button')] as HTMLElement[];
+    expect(btns.indexOf(skip)).toBe(btns.length - 2);           // direkt vor „Aufgeben“
+    let n = 0; f.componentInstance.skipClicked.subscribe(() => n++);
+    skip.click();
+    expect(n).toBe(1);
+  });
+});

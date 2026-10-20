@@ -2312,6 +2312,7 @@
       "restartFailed": "Zurücksetzen fehlgeschlagen",
       "unavailable": "Dieser Kurs ist ohne Anmeldung nicht verfügbar.",
       "wholeBook": "Ganzes Buch",
+      "progressInfo": "Fortschritt",
       "noChapter": "Ohne Kapitel",
       "accuracyHint": "Trefferquote (1. Versuch)",
       "timeHint": "Gesamte aufgewendete Zeit",
@@ -3881,7 +3882,6 @@
     "switch": "Spielweise",
     "switchToEasy": "Zum Einfachmodus wechseln",
     "switchToTraining": "Zum Trainingsmodus wechseln",
-    "switchNextHint": "Gilt ab dem nächsten Puzzle.",
     "awaitingChoice": "Wähle, wie du spielen möchtest — danach startet das Puzzle.",
     "scope": {
       "puzzles": "Puzzles",

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.813.1", date: "2026-10-20", changes: [
+    { en: "Course solver: the comment now sits between the course card and the clock (long ones shortened, full text on tap); progress for the whole book and chapter opens with the ⓘ next to the language choice; “Skip” sits next to “Give up”; switching to easy mode is in the ⋮ menu.", de: "Kurs-Löser: Der Kommentar steht jetzt zwischen Kurskarte und Uhr (lange gekürzt, ganzer Text per Tipp); der Fortschritt für ganzes Buch und Kapitel öffnet das ⓘ neben der Sprachwahl; „Überspringen“ steht neben „Aufgeben“; der Wechsel zum einfachen Modus steht im ⋮-Menü." },
+  ]},
   { version: "0.813.0", date: "2026-10-20", changes: [
     { en: "Scanned e-books: diagrams are now also found on tinted paper (colour scans from Internet Archive and Google Books — the whole page was darker than the board search allowed), on physically tiny pages (Google preview excerpts, now rendered finer) and on boards with a thick frame (the board outline is narrowed until the square grid fits).",
       de: "Gescannte E-Books: Diagramme werden jetzt auch auf getöntem Papier gefunden (Farbscans von Internet Archive und Google Books — die ganze Seite war dunkler, als die Brettsuche zuließ), auf physisch winzigen Seiten (Google-Vorschau-Auszüge, jetzt feiner gerendert) und bei Brettern mit dickem Rahmen (der Brettumriss wird verengt, bis das Feldraster passt)." },

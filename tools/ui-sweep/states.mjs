@@ -77,7 +77,7 @@ export const STATES = [
   { of: 'rookhub__courses-bookId-sequential', name: 'aufgegeben',
     steps: [EASY, { click: 'app-puzzle-status-card .ytp-actions button[color="warn"]' }], expect: 'app-puzzle-status-card .psc-failed' },
   { of: 'rookhub__courses-bookId-sequential', name: 'uebersprungen',
-    steps: [EASY, { click: '.ctx-nav button.skip-quiet' }], expect: 'app-puzzle-status-card .psc-card' },
+    steps: [EASY, { click: 'app-puzzle-status-card button.ytp-skip' }], expect: 'app-puzzle-status-card .psc-card' },
   // Konten mit offenem Lauf (user aus seed-user.mjs) sehen statt „Starten" den Fortsetzen-Kasten (b1-rk-endless-fortsetzen-kasten).
   { of: 'rookhub__puzzles-endless', name: 'gestartet',
     steps: [{ click: '.config-screen button.start-btn-top, .config-screen .resume-banner button.start-btn' }, EASY],

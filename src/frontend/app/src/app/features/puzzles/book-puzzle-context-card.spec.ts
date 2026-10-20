@@ -113,9 +113,9 @@ describe('BookPuzzleComponent Kontext-Card: ein „Nächstes Puzzle" (b1)', () =
     expect(nav.querySelector('[mat-flat-button]')).toBeNull();
   });
 
-  it('während des Lösens bleibt „Überspringen" im Kurs', () => {
+  it('während des Lösens steht „Überspringen" neben „Aufgeben" in der Status-Card, nicht in der Kontext-Card (2026-10-20)', () => {
     const el = render(c => { c.inCourse = true; c.courseBookId = 7; c.state = 'AWAITING_USER_MOVE'; });
-    expect(el.querySelector('.context-card .skip-quiet')).not.toBeNull();
+    expect(el.querySelector('.context-card .skip-quiet')).toBeNull();
   });
 });
 

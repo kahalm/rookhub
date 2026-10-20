@@ -26,6 +26,19 @@ describe('PuzzleStatusCardComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  it('reicht „Überspringen“ an die Aktionszeile durch (neben Aufgeben, 2026-10-20)', async () => {
+    const fixture = await setup();
+    fixture.componentRef.setInput('mode', 'book');
+    fixture.componentRef.setInput('state', 'AWAITING_USER_MOVE');
+    fixture.componentRef.setInput('showSkip', true);
+    fixture.detectChanges();
+    const skip = fixture.nativeElement.querySelector('.ytp-skip') as HTMLButtonElement;
+    expect(skip).not.toBeNull();
+    let n = 0; fixture.componentInstance.skipClicked.subscribe(() => n++);
+    skip.click();
+    expect(n).toBe(1);
+  });
+
   it('exposes the solver state as data-state for the E2E specs', async () => {
     const fixture = await setup();
     const card = () => fixture.nativeElement.querySelector('.psc-card') as HTMLElement;

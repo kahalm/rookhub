@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -1056,6 +1056,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Langer Kommentar (Vorwort, Einleitung): steht weiter VOLLSTÄNDIG im Kasten, ein Klick öffnet ihn zusätzlich im
    *  Fenster (Wunsch 2026-10-07: „modal, damit mehr Platz … trotzdem alles anzeigen, damit ich nicht klicken muss"). */
+  /** Kurs-Fortschritt (ganzes Buch + Kapitel) aufgeklappt? Zu bis zum ⓘ neben der Sprachwahl (Wunsch 2026-10-20). */
+  readonly statsOpen = signal(false);
+
   get commentIsLong(): boolean { return commentLength(this.commentBlocks) >= LONG_COMMENT_CHARS; }
 
   /** Kommentar im Fenster; ein Zug darin schließt es und spielt die Variante am Brett vor wie im Kasten. */

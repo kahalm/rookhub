@@ -167,6 +167,14 @@
       display: flex; flex-direction: column; gap: 0.4rem;
     }
     .ctx-comment-long .ctx-comment-body { cursor: zoom-in; }
+    /* Seit 2026-10-20 steht der Kommentar ÜBER der Status-Card (zwischen „Überspringen“ und Uhr): ein langer würde die
+       Bedienung wieder unter die Falz schieben (a1-rk-kommentar-schiebt-aktionen) — daher auf ~5 Zeilen mit Verlauf,
+       der ganze Text im Dialog („Ganz lesen“, Klick auf den Text). */
+    .ctx-comment-long .ctx-comment-body {
+      max-height: 7.5em; overflow: hidden;
+      -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
+      mask-image: linear-gradient(to bottom, #000 65%, transparent);
+    }
     .ctx-comment .ctx-comment-expand {
       align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
       font: inherit; font-size: 0.85em; font-weight: 600; cursor: pointer;
