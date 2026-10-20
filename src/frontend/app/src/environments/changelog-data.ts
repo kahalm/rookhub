@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.813.0", date: "2026-10-20", changes: [
+    { en: "Scanned e-books: diagrams are now also found on tinted paper (colour scans from Internet Archive and Google Books — the whole page was darker than the board search allowed), on physically tiny pages (Google preview excerpts, now rendered finer) and on boards with a thick frame (the board outline is narrowed until the square grid fits).",
+      de: "Gescannte E-Books: Diagramme werden jetzt auch auf getöntem Papier gefunden (Farbscans von Internet Archive und Google Books — die ganze Seite war dunkler, als die Brettsuche zuließ), auf physisch winzigen Seiten (Google-Vorschau-Auszüge, jetzt feiner gerendert) und bei Brettern mit dickem Rahmen (der Brettumriss wird verengt, bis das Feldraster passt)." },
+  ] },
   { version: "0.812.0", date: "2026-10-20", changes: [
     { en: "E-book diagrams: boards without a frame whose dark squares only touch at the corners (e.g. “Liquidation on the Chess Board”) are now recognised. The image blur separated the squares, so recognition saw a single square instead of a board and found no diagram at all; if nothing is found, it now tries again with gaps of up to 2 pixels closed.",
       de: "E-Book-Diagramme: Bretter ohne Rahmen, deren dunkle Felder sich nur an den Ecken berühren (z. B. „Liquidation on the Chess Board“), werden jetzt erkannt. Die Unschärfe des Bilds trennte die Felder, die Erkennung sah ein einzelnes Feld statt eines Bretts und fand gar kein Diagramm; findet sie nichts, versucht sie es jetzt noch einmal mit geschlossenen Lücken bis 2 Pixel." },

@@ -159,6 +159,30 @@ public class EbookScanDiagramTests
         var dpi = EbookScanDiagramExtractor.RenderDpi(sizes[3]);                      // 61 × 45 Zoll: gedrosselt
         Assert.True(dpi < 300 && 4419 / 72.0 * dpi <= EbookScanDiagramExtractor.MaxPagePixels);
         Assert.Equal(300, EbookScanDiagramExtractor.RenderDpi(default));               // unbekannt: wie bisher
+        Assert.Equal(300, EbookScanDiagramExtractor.RenderDpi((432, 648)));            // 6 × 9 Zoll: wie bisher
+    }
+
+    [Fact]
+    public void RenderDpi_TinyPage_RenderedFinerUpToMinPagePixels()
+    {
+        // Google-Vorschau-Auszug: 2 × 3,3 Zoll — bei 300 dpi nur 300 px breit, Bretter unter 100 px Arbeitsgröße.
+        var dpi = EbookScanDiagramExtractor.RenderDpi((144, 239));
+        Assert.True(dpi > 300);
+        Assert.True(239 / 72.0 * dpi >= EbookScanDiagramExtractor.MinPagePixels);
+    }
+
+    [Fact]
+    public void NormalizePaper_TintedPageBecomesWhite_WhitePageUnchanged()
+    {
+        // Getöntes Papier (Grauwert 155) mit einem dunklen Strich: Papier wird weiß, der Strich bleibt dunkel.
+        var g = new float[40, 40];
+        for (var y = 0; y < 40; y++) for (var x = 0; x < 40; x++) g[y, x] = x < 4 ? 0.2f : 155f / 255f;
+        var n = EbookScanDiagramExtractor.NormalizePaper(g);
+        Assert.Equal(1f, n[20, 20], 3);
+        Assert.True(n[20, 1] < 0.4f);
+        var white = new float[40, 40];
+        for (var y = 0; y < 40; y++) for (var x = 0; x < 40; x++) white[y, x] = x < 4 ? 0.2f : 0.97f;
+        Assert.Same(white, EbookScanDiagramExtractor.NormalizePaper(white));
     }
 
     [Fact]

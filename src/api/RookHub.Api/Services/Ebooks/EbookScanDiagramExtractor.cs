@@ -70,6 +70,7 @@ public class EbookScanDiagramExtractor
                     try
                     {
                         var g = ReadPgm(File.ReadAllBytes(file));
+                        if (g != null) g = NormalizePaper(g);
                         if (g != null && page > 0) foreach (var c in ScanPage(PreparePage(g), page, model, alt, g, EbookBoardCnn.Instance, keepUnread)) found.Add(c);
                     }
                     finally { File.Delete(file); }
@@ -101,6 +102,31 @@ public class EbookScanDiagramExtractor
             .ToList();
     }
 
+    /// <summary>Papierton, ab dem eine Seite als getönt gilt und aufgehellt wird.</summary>
+    internal const float TintedPaper = 0.9f;
+
+    /// <summary>
+    /// Getöntes Papier (0.813.0): Farbscans aus Internet Archive / Google Books haben Papier mit Grauwert 155–190 — die ganze Seite
+    /// liegt dann unter der Schwelle der Brettsuche (235), und es entsteht keine eigene Brett-Fläche. Der häufigste Grauwert über
+    /// 0,3 gilt als Papier; liegt er unter <see cref="TintedPaper"/>, wird die Seite so geteilt, dass das Papier weiß wird.
+    /// Weißes Papier bleibt unverändert.
+    /// </summary>
+    internal static float[,] NormalizePaper(float[,] g)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        var hist = new int[256];
+        for (var y = 0; y < H; y += 2)
+            for (var x = 0; x < W; x += 2) hist[Math.Clamp((int)(g[y, x] * 255f + 0.5f), 0, 255)]++;
+        var paper = 77;
+        for (var k = 78; k < 256; k++) if (hist[k] > hist[paper]) paper = k;
+        var white = paper / 255f;
+        if (white >= TintedPaper) return g;
+        var o = new float[H, W];
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++) o[y, x] = Math.Min(1f, g[y, x] / white);
+        return o;
+    }
+
     /// <summary>300-dpi-Seite → Arbeitsbild: 2 × 2 mitteln, dann Gauß σ <see cref="PageBlur"/>.</summary>
     public static float[,] PreparePage(float[,] g)
     {
@@ -123,10 +149,21 @@ public class EbookScanDiagramExtractor
     {
         int H = g.GetLength(0), W = g.GetLength(1);
         var list = new List<ScanCandidate>();
-        foreach (var box in EbookBoardImage.FindBoards(g))
+        foreach (var found in EbookBoardImage.FindBoards(g))
         {
+            var box = found;
             var cells = EbookBoardImage.Cells(g, box);
-            if (EbookBoardImage.GridScore(cells) < MinGridScore) continue;
+            var score = EbookBoardImage.GridScore(cells);
+            // Dicker Rahmen (0.813.0, Stean „Simple Chess“): das Rechteck schließt ihn halb ein, das Feldraster ist verschoben —
+            // nach innen nehmen, bis zu 3 % der Brettbreite, und das beste Raster behalten.
+            for (var k = 1; score < MinGridScore && k <= Math.Max(2, (box.X1 - box.X0) * 3 / 100); k++)
+            {
+                var inner = (found.X0 + k, found.Y0 + k, found.X1 - k, found.Y1 - k);
+                var c = EbookBoardImage.Cells(g, inner);
+                var sc = EbookBoardImage.GridScore(c);
+                if (sc > score) { score = sc; box = inner; cells = c; }
+            }
+            if (score < MinGridScore) continue;
             var (light, dark) = EbookBoardImage.ParityBackgrounds(cells);
             var bg = Enumerable.Range(0, 64).Select(i => (i / 8 + i % 8) % 2 == 0 ? light : dark).ToArray();
             var bLight = BoardImageMath.Blur(light, 1.6); var bDark = BoardImageMath.Blur(dark, 1.6);
@@ -170,12 +207,18 @@ public class EbookScanDiagramExtractor
         return ok;
     }
 
-    /// <summary>dpi für eine Seite (Größe in Punkten): normal 300, höchstens so viel, dass die lange Seite <see cref="MaxPagePixels"/> nicht übersteigt.</summary>
+    /// <summary>Kürzeste lange Seite in Pixeln (0.813.0): physisch winzige Seiten (Google-Vorschau-Auszüge, 2 × 3 Zoll mit einem
+    /// 600-px-Bild) ergaben bei 300 dpi Bretter unter 100 px Arbeitsgröße, die die Brettsuche verwirft.</summary>
+    internal const int MinPagePixels = 2400;
+
+    /// <summary>dpi für eine Seite (Größe in Punkten): normal 300; kleine Seiten so fein, dass die lange Seite <see cref="MinPagePixels"/>
+    /// erreicht; höchstens so viel, dass sie <see cref="MaxPagePixels"/> nicht übersteigt.</summary>
     internal static int RenderDpi((double W, double H) size)
     {
         var longest = Math.Max(size.W, size.H);
         if (longest <= 0) return Dpi * 2;
-        return Math.Max(36, Math.Min(Dpi * 2, (int)(MaxPagePixels * 72.0 / longest)));
+        var dpi = Math.Max(Dpi * 2, (int)Math.Ceiling(MinPagePixels * 72.0 / longest));
+        return Math.Max(36, Math.Min(dpi, (int)(MaxPagePixels * 72.0 / longest)));
     }
 
     /// <summary>Seitengrößen (Punkte) aus <c>pdfinfo -f … -l …</c> („Page    3 size: 772.4 x 1210.35 pts“).</summary>

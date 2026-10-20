@@ -236,7 +236,12 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
 - **Bretter je Seite** (`EbookBoardImage.FindBoards`): jede dunkle Komponente ab 100 px, annähernd quadratisch, abgeschält;
   fehlt eine Rahmenlinie, wird auf ein Quadrat ergänzt — auf der Seite, deren Schachbrettmuster am besten passt (`GridFit`).
   Nur `GridScore` ≥ 52 (Randzone von ≥ 52 der 64 Felder näher am eigenen als am fremden Paritäts-Hintergrund) zählt — das
-  verwirft Ausschnitte aus 3 × 3 Feldern, Fotos, Tabellen.
+  verwirft Ausschnitte aus 3 × 3 Feldern, Fotos, Tabellen. Liegt der Wert darunter, wird das Rechteck schrittweise bis 3 % der
+  Brettbreite nach innen genommen (dicker Rahmen verschiebt sonst das Raster, 0.813.0).
+- **Kleine Seiten, getöntes Papier** (0.813.0): Seiten, deren lange Seite bei 300 dpi unter 2 400 px bliebe (Google-Vorschau-
+  Auszüge, 2 × 3 Zoll), werden feiner gerendert (`MinPagePixels`, gedeckelt durch `MaxPagePixels`). Ist der häufigste Grauwert
+  der Seite (Papier) dunkler als 0,9 (Farbscans von Internet Archive / Google Books, Papier 155–190), wird die Seite durch ihn
+  geteilt, bis das Papier weiß ist (`NormalizePaper`) — sonst liegt die ganze Seite unter der Schwelle der Brettsuche.
 - **Hintergrund je Brett** (Median der eigenen hellen/dunklen Felder), nicht je Buch: die Schraffur liegt in jedem Scan anders.
 - **Zwei Scan-Modelle**: `ebook-board-model-scan.bin` (`EbookBoardClassifier.Scan`, Font-Diagramme „gescannt“: weichgezeichnet,
   verrauscht, meist binarisiert — Gambit/Batsford-Figuren, Beim 95 % plausibel) und `ebook-board-model-scan2.bin` (`ScanAlt`,
