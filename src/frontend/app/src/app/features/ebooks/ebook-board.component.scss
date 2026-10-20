@@ -29,7 +29,6 @@
 .eb-again + .eb-sol-toggle { margin-left: 0; }
 .eb-maia-state { color: var(--mat-sys-on-surface-variant); margin-right: 6px; }
 .eb-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
-.eb-solve--failed { background: color-mix(in srgb, var(--rh-warn) 16%, transparent); mat-icon { color: var(--rh-warn); } }
 .eb-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
 .eb-solution-line { margin: 0 0 4px; font-weight: 500; }
 .eb-solution-text { margin: 0; font-size: .85rem; opacity: .85; white-space: pre-line; max-height: 14em; overflow-y: auto; }

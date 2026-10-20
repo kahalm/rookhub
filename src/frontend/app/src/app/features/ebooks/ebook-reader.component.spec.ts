@@ -11,6 +11,7 @@ import { PdfViewerComponent } from './pdf-viewer.component';
 import { setEinkActive } from '../../core/eink';
 import { SnackbarService } from '../../core/snackbar.service';
 import { By } from '@angular/platform-browser';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EbookReaderComponent } from './ebook-reader.component';
 import { EbookBoardComponent } from './ebook-board.component';
 import { Ebook, EbookDiagram, EbookService } from './ebook.service';
@@ -57,17 +58,17 @@ describe('EbookReaderComponent', () => {
     return fixture;
   }
 
-  it('Doppelklick ohne Diagramm: Ja/Nein wird gespeichert, Schließen ohne Antwort nicht (nur angemeldet)', async () => {
+  it('Doppelklick ohne Diagramm: „Fehlt ein Diagramm“/„Text falsch“ wird gespeichert, Abbrechen nicht (nur angemeldet)', async () => {
     const b = book();
     const fixture = await make(b);
     const c = fixture.componentInstance;
-    const answers: (boolean | undefined)[] = [true, false, undefined];
+    const answers: (string | undefined)[] = ['diagram', 'text', undefined];
     const dialog = TestBed.inject(MatDialog);
     spyOn(dialog, 'open').and.callFake(() => ({ afterClosed: () => of(answers.shift()) }) as never);
     service.reportMissedDiagram.and.returnValue(of(void 0));
     spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
     for (let i = 0; i < 3; i++) c.askMissedDiagram(b, { page: 4, x: 0.5, y: 0.25 });
-    expect(service.reportMissedDiagram.calls.allArgs()).toEqual([[b.id, 4, 0.5, 0.25, true], [b.id, 4, 0.5, 0.25, false]]);
+    expect(service.reportMissedDiagram.calls.allArgs()).toEqual([[b.id, 4, 0.5, 0.25, true, undefined], [b.id, 4, 0.5, 0.25, false, undefined]]);
   });
 
   it('EPUB: Doppelklick ohne erkanntes Diagramm fragt ebenso und speichert Bildpfad + Kapitel (Seite 0)', async () => {
@@ -75,12 +76,30 @@ describe('EbookReaderComponent', () => {
     const fixture = await make(b);
     const c = fixture.componentInstance;
     const dialog = TestBed.inject(MatDialog);
-    spyOn(dialog, 'open').and.returnValue({ afterClosed: () => of(true) } as never);
+    spyOn(dialog, 'open').and.returnValue({ afterClosed: () => of('diagram') } as never);
     service.reportMissedDiagram.and.returnValue(of(void 0));
     spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
     const spot = { ref: 'OEBPS/i/a.png', chapter: 'OEBPS/c3.xhtml' };
     c.askMissedEpub(b, spot);
     expect(service.reportMissedDiagram).toHaveBeenCalledWith(b.id, 0, 0, 0, true, spot);
+  });
+
+  it('EPUB „Text falsch“: fragt nach dem PDF und öffnet es an der Druckseite der Stelle', async () => {
+    const b = book();
+    const fixture = await make(b);
+    const c = fixture.componentInstance;
+    spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({ afterClosed: () => of('text') } as never);
+    const confirm = TestBed.inject(ConfirmService);
+    spyOn(confirm, 'ask').and.returnValue(of(true));
+    spyOnProperty(c, 'otherReadableFormats', 'get').and.returnValue(['pdf']);
+    const readAs = spyOn(c, 'readAs');
+    service.reportMissedDiagram.and.returnValue(of(void 0));
+    spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
+    c.askMissedEpub(b, { ref: null, chapter: 'OEBPS/text/c009.xhtml', page: 32 });
+    expect(service.reportMissedDiagram).toHaveBeenCalledWith(b.id, 0, 0, 0, false, jasmine.anything());
+    expect(confirm.ask).toHaveBeenCalled();
+    expect(c.initialPage).toBe(32);
+    expect(readAs).toHaveBeenCalledWith('pdf');
   });
 
   it('„Stellung korrigieren“: Editor-FEN wird gespeichert, Liste und Brett zeigen sofort die neue Stellung; Abbrechen speichert nichts', async () => {

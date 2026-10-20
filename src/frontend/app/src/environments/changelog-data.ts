@@ -8,6 +8,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.814.0", date: "2026-10-20", changes: [
+    { en: "E-book board, solve: a wrong move now only says “Wrong — keep looking” and is taken back; the board no longer plays out the solution. In training mode the mistake is remembered (“Solved (with a mistake)”). “Go to the next diagram automatically” is now on by default and waits 3 seconds after your own solution.",
+      de: "E-Book-Brett, Lösen: Ein falscher Zug sagt jetzt nur „Falsch — such weiter“ und wird zurückgenommen; das Brett spielt die Lösung nicht mehr vor. Im Trainingsmodus wird der Fehler gemerkt („Gelöst (mit Fehler)“). „Automatisch zum nächsten Diagramm“ ist jetzt standardmäßig an und wartet nach der eigenen Lösung 3 Sekunden." },
+    { en: "Puzzles and courses: revealing all three hints for one move now counts the puzzle as not solved.",
+      de: "Puzzles und Kurse: Wer zu einem Zug alle drei Tipps aufdeckt, hat das Rätsel nicht gelöst." },
+    { en: "E-book reader, double-click: the question now offers “A diagram is missing”, “Text is wrong” and “Cancel”. After “Text is wrong” in an EPUB converted from a PDF, the reader offers to open the PDF at roughly the same page.",
+      de: "E-Book-Leser, Doppelklick: Die Rückfrage bietet jetzt „Fehlt ein Diagramm“, „Text falsch“ und „Abbrechen“. Nach „Text falsch“ in einem aus einem PDF umgewandelten EPUB bietet der Leser an, das PDF ungefähr an derselben Seite zu öffnen." },
+  ] },
   { version: "0.813.1", date: "2026-10-20", changes: [
     { en: "Course solver: the comment now sits between the course card and the clock (long ones shortened, full text on tap); progress for the whole book and chapter opens with the ⓘ next to the language choice; “Skip” sits next to “Give up”; switching to easy mode is in the ⋮ menu.", de: "Kurs-Löser: Der Kommentar steht jetzt zwischen Kurskarte und Uhr (lange gekürzt, ganzer Text per Tipp); der Fortschritt für ganzes Buch und Kapitel öffnet das ⓘ neben der Sprachwahl; „Überspringen“ steht neben „Aufgeben“; der Wechsel zum einfachen Modus steht im ⋮-Menü." },
   ]},

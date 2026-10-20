@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EbookService, formatBytes } from './ebook.service';
+import { epubPageAt } from './ebook.service';
 
 describe('EbookService', () => {
   let service: EbookService;
@@ -142,5 +143,17 @@ describe('EbookService', () => {
     expect(formatBytes(1023)).toBe('1,023 B');
     expect(formatBytes(1_470_585_020)).toBe('1.4 GB');
     expect(formatBytes(-1)).toBe('');
+  });
+
+  it('epubPageAt: Druckseite aus dem letzten Seitenanker davor (Absatz-Id oder Seitenbild), echte EPUBs ohne Anker → null', () => {
+    const doc = document.implementation.createHTMLDocument('ch');
+    doc.body.innerHTML = '<p id="p14">a</p><p>b</p><figure><img id="i" src="../images/p0015-2.svg"></figure>'
+      + '<p id="x">c</p><p id="p16">d <b id="in">e</b></p>';
+    expect(epubPageAt(doc.querySelector('p:nth-child(2)')!)).toBe(14);
+    expect(epubPageAt(doc.getElementById('x')!)).toBe(15);
+    expect(epubPageAt(doc.getElementById('in')!)).toBe(16);
+    const plain = document.implementation.createHTMLDocument('ch');
+    plain.body.innerHTML = '<p id="t">Text</p>';
+    expect(epubPageAt(plain.getElementById('t')!)).toBeNull();
   });
 });

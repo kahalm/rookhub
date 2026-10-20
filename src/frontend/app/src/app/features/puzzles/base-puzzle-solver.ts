@@ -582,8 +582,13 @@ export abstract class BasePuzzleSolver {
     this.handleFailed();
   }
 
+  /** Ab so vielen aufgedeckten Tipps zu EINEM Zug zählt das Rätsel als nicht gelöst (Nutzerwunsch 20.10.2026). */
+  static readonly HINT_FAIL_LEVEL = 3;
+
   private solvedInternal(alternative: boolean): void {
     this.alternativeSolve = alternative;
+    // Zu einem Zug alle drei Tipps geholt: der Zug war vorgesagt — gewertet wie ein Fehlversuch (Lösung zeigen, nicht gelöst).
+    if (this.maxHintLevel >= BasePuzzleSolver.HINT_FAIL_LEVEL) { this.handleFailed(); return; }
     this.handleSolved(alternative);
   }
 

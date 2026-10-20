@@ -229,8 +229,8 @@ describe('EpubViewerComponent', () => {
     doc.getElementById('b')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     doc.getElementById('t')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(spots).toEqual([
-      { ref: 'OEBPS/Images/plain.png', chapter: 'OEBPS/Text/ch3.xhtml' },
-      { ref: null, chapter: 'OEBPS/Text/ch3.xhtml' },
+      { ref: 'OEBPS/Images/plain.png', chapter: 'OEBPS/Text/ch3.xhtml', page: null },
+      { ref: null, chapter: 'OEBPS/Text/ch3.xhtml', page: null },
     ]);
   });
 

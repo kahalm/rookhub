@@ -261,6 +261,34 @@ describe('BasePuzzleSolver maxHintLevel (Tipp-Nutzung über alle Züge)', () => 
   });
 });
 
+class ThreeHintSolver extends TestSolver {
+  override get availableHints(): string[] { return ['h1', 'h2', 'h3']; }
+}
+
+describe('BasePuzzleSolver drei Tipps zu einem Zug = nicht gelöst', () => {
+  const noStock = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+
+  it('wertet das Rätsel als Fehlversuch, wenn zu einem Zug alle drei Tipps aufgedeckt wurden', fakeAsync(() => {
+    const s = new ThreeHintSolver(noStock);
+    s.setup(START, 'e2e4 e7e5');   // 1.e4 spielt der Aufbau, der Löser zieht e7e5
+    tick(600);
+    s.showNextHint(); s.showNextHint(); s.showNextHint();
+    s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
+    tick(600);
+    expect(s.state).toBe('FAILED');
+  }));
+
+  it('zwei Tipps lassen das Rätsel gelöst', fakeAsync(() => {
+    const s = new ThreeHintSolver(noStock);
+    s.setup(START, 'e2e4 e7e5');
+    tick(600);
+    s.showNextHint(); s.showNextHint();
+    s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });
+    tick(600);
+    expect(s.state).toBe('SOLVED');
+  }));
+});
+
 class ArrowSolver extends TestSolver {
   protected override get opponentArrowMode(): 'off' | 'timed' | 'persist' { return 'persist'; }
 }

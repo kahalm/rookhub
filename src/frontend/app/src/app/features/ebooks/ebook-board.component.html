@@ -108,7 +108,7 @@
     <!-- Statuszeile: Zustand + „Nochmal“ + Lösung zeigen in EINER Zeile; der Hinweis „jeder Zug, der das Ergebnis hält“
          steht als Tooltip/Beschreibung daran statt als eigene Zeile. -->
     @if (solveState() !== 'idle' || !engineLineBusy()) {
-    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'" [class.eb-solve--failed]="solveState() === 'failed'"
+    <div class="eb-solve" role="status" [class.eb-solve--done]="solveState() === 'solved'"
          [class.eb-solve--idle]="solveState() === 'idle'" [attr.title]="solveState() === 'running' ? ('ebooks.board.anyMoveHint' | translate) : null">
       @switch (solveState()) {
         @case ('running') {
@@ -116,11 +116,7 @@
           <span class="eb-solve-text">{{ (checking() ? 'ebooks.board.checking' : 'ebooks.reader.yourMove') | translate }}<span class="sr-only"> {{ 'ebooks.board.anyMoveHint' | translate }}</span></span>
         }
         @case ('solved') {
-          <mat-icon>check_circle</mat-icon><span class="eb-solve-text">{{ 'ebooks.reader.solved' | translate }}</span>
-          <button mat-button type="button" class="eb-again" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
-        }
-        @case ('failed') {
-          <mat-icon>cancel</mat-icon><span class="eb-solve-text">{{ 'ebooks.board.trainingFailed' | translate }}</span>
+          <mat-icon>check_circle</mat-icon><span class="eb-solve-text">{{ (mistake() ? 'ebooks.board.solvedWithMistake' : 'ebooks.reader.solved') | translate }}</span>
           <button mat-button type="button" class="eb-again" (click)="reset()">{{ 'ebooks.reader.again' | translate }}</button>
         }
         @default {

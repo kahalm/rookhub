@@ -5,6 +5,7 @@ import {
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import type { EpubMissedSpot } from './ebook.service';
+import { epubPageAt } from './ebook.service';
 import { EINK_CLASS, isEinkActive } from '../../core/eink';
 
 /** Lesestelle im EPUB: Anteil (0–1) und CFI (genaue Stelle, wird gespeichert). */
@@ -270,7 +271,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
       const index = typeof c.sectionIndex === 'number' ? c.sectionIndex : this.chapter() - 1;
       const chapter = this.book?.spine.get(index)?.href ?? null;
       if (!ref && !chapter) return;
-      this.zone.run(() => this.missedPick.emit({ ref, chapter }));
+      this.zone.run(() => this.missedPick.emit({ ref, chapter, page: epubPageAt(target) }));
     });
   }
 

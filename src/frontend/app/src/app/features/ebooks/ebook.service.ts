@@ -60,7 +60,28 @@ export interface Ebook {
 
 /** Ein erkanntes Diagramm: Lage als Anteil der Seite (0–1, Ursprung links oben), FEN, Nummer, Überschrift. */
 /** EPUB-Stelle eines Doppelklicks ohne erkanntes Diagramm (0.798.0): Bildpfad im Buch (`null` = Text) und Kapitel (Spine-href). */
-export interface EpubMissedSpot { ref: string | null; chapter: string | null; }
+/** Doppelklick-Stelle im EPUB: Bildpfad (sonst Text), Kapitel und — im Fließtext-EPUB aus einem PDF — die Druckseite. */
+export interface EpubMissedSpot { ref: string | null; chapter: string | null; page?: number | null; }
+
+/**
+ * Druckseite einer Stelle im Fließtext-EPUB (aus einem PDF umgewandelt): der letzte Seitenanker davor — Absatz mit
+ * `id="p17"` oder Seitenbild `…/p0017-2.svg`. Echte EPUBs haben keine solchen Anker → `null`.
+ */
+export function epubPageAt(target: Element): number | null {
+  const doc = target.ownerDocument;
+  if (!doc) return null;
+  let page: number | null = null;
+  for (const el of Array.from(doc.querySelectorAll('[id^="p"], img, image'))) {
+    const pos = el.compareDocumentPosition(target);
+    const before = el === target || (pos & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 || (pos & Node.DOCUMENT_POSITION_CONTAINED_BY) !== 0;
+    if (!before) break;
+    const id = /^p(\d+)$/.exec(el.id ?? '');
+    const src = /(?:^|\/)p(\d{4})-\d+\.\w+$/.exec(el.getAttribute('src') ?? el.getAttribute('xlink:href') ?? el.getAttribute('href') ?? '');
+    const n = id ? +id[1] : src ? +src[1] : null;
+    if (n) page = n;
+  }
+  return page;
+}
 
 export interface EbookDiagram {
   id: number;

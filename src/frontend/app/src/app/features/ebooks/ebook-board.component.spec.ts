@@ -38,7 +38,7 @@ describe('EbookBoardComponent', () => {
       imports: [EbookBoardComponent],
       providers: [
         provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: SnackbarService, useValue: { warn: () => {}, quick: () => {} } },
+        { provide: SnackbarService, useValue: { warn: jasmine.createSpy('warn'), quick: jasmine.createSpy('quick') } },
         { provide: MaiaEngineService, useValue: maia },
         { provide: StockfishService, useValue: stockfish },
       ],
@@ -65,24 +65,24 @@ describe('EbookBoardComponent', () => {
     expect(EbookBoardComponent.loadSolveStyle()).toBe('training');
   });
 
-  it('„Automatisch weiter“: Standard aus; an → nach dem Lösen kurz warten, dann solvedNext; gemerkt auf dem Gerät', fakeAsync(() => {
+  it('„Automatisch weiter“: Standard an; nach dem Lösen 3 s warten, dann solvedNext; aus wird auf dem Gerät gemerkt', fakeAsync(() => {
     try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
     const c = make().componentInstance;
     const next = jasmine.createSpy('next');
     c.solvedNext.subscribe(next);
-    expect(c.autoNext()).toBeFalse();
-    (c as unknown as { markSolved(): void }).markSolved();
-    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS + 50);
-    expect(next).not.toHaveBeenCalled();
-
-    c.toggleAutoNext();
-    expect(localStorage.getItem(EbookBoardComponent.AUTO_NEXT_KEY)).toBe('1');
+    expect(c.autoNext()).toBeTrue();
+    expect(EbookBoardComponent.AUTO_NEXT_DELAY_MS).toBe(3000);
     (c as unknown as { markSolved(): void }).markSolved();
     tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS - 100);
-    expect(next).not.toHaveBeenCalled();             // der Haken bleibt kurz sichtbar
+    expect(next).not.toHaveBeenCalled();             // die eigene Lösung bleibt kurz sichtbar
     tick(200);
     expect(next).toHaveBeenCalledTimes(1);
+
     c.toggleAutoNext();
+    expect(localStorage.getItem(EbookBoardComponent.AUTO_NEXT_KEY)).toBe('0');
+    (c as unknown as { markSolved(): void }).markSolved();
+    tick(EbookBoardComponent.AUTO_NEXT_DELAY_MS + 50);
+    expect(next).toHaveBeenCalledTimes(1);
     try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
   }));
 
@@ -271,7 +271,7 @@ describe('EbookBoardComponent', () => {
     expect(EbookBoardComponent.scoreCp({ mate: -3 }, D.fen)).toBe(-9997);
   });
 
-  it('Lösen Training: der erste Fehler zählt, danach spielt das Brett die Lösung vor', fakeAsync(() => {
+  it('Lösen Training: ein falscher Zug sagt nur „falsch“, wird zurückgenommen, man sucht weiter; gelöst „mit Fehler“', fakeAsync(() => {
     const c = make().componentInstance;
     c.setMode('solve');
     c.setSolveStyle('training');
@@ -280,11 +280,11 @@ describe('EbookBoardComponent', () => {
     stockfish.getBestMove.and.callFake(() => Promise.resolve({ move: 'a1a2', eval: '0', score: { cp: n++ === 0 ? 0 : -900 } } as never));
     c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
     flushMicrotasks();
-    expect(c.solveState()).toBe('failed');
-    expect(c.playable()).toBeFalse();
-    tick(700 * 4);
-    expect(c.played().map(m => m.san)).toEqual(['Rxh2+', 'Kxh2', 'Rh8#']);
-    expect(c.solveState()).toBe('failed');
+    tick(700);
+    expect(c.solveState()).toBe('running');           // keine Lösung vorgespielt
+    expect(c.played()).toEqual([]);                    // falscher Zug zurückgenommen
+    expect(c.mistake()).toBeTrue();
+    expect(TestBed.inject(SnackbarService).quick).toHaveBeenCalledWith('ebooks.board.wrongMove');
   }));
 
   it('Lösen gegen Stockfish: Linie wird im Browser gerechnet, dann gelöst wie die Buchlinie', fakeAsync(() => {

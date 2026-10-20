@@ -6,7 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
-import { EbookMissedDiagramDialogComponent } from './ebook-missed-diagram-dialog.component';
+import { EbookMissedDiagramDialogComponent, MissedAnswer } from './ebook-missed-diagram-dialog.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EbookPositionDialogComponent, EbookPositionDialogData } from './ebook-position-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -90,6 +91,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private confirm = inject(ConfirmService);
   private ebooks = inject(EbookService);
   private snackbar = inject(SnackbarService);
   private auth = inject(AuthService);
@@ -536,28 +538,43 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     });
   }
 
-  /** Doppelklick auf eine Stelle ohne erkanntes Diagramm: nachfragen und die Antwort für die Auswertung speichern. */
+  /** Doppelklick auf eine Stelle ohne erkanntes Diagramm: „Fehlt ein Diagramm?“ / „Text falsch“ / Abbrechen — die Antwort
+   *  wird für die Auswertung gespeichert (Text falsch = kein fehlendes Diagramm). */
   askMissedDiagram(ebook: Ebook, at: { page: number; x: number; y: number }): void {
     if (!this.loggedIn) return;
-    this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '28rem' }).afterClosed().subscribe((isDiagram: boolean | undefined) => {
-      if (isDiagram === undefined) return;
-      this.ebooks.reportMissedDiagram(ebook.id, at.page, at.x, at.y, isDiagram).subscribe({
-        next: () => { if (isDiagram) this.snackbar.quick(this.translate.instant('ebooks.reader.missedThanks')); },
-        error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
-      });
+    this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '30rem' }).afterClosed().subscribe((answer: MissedAnswer) => {
+      if (!answer) return;
+      this.reportMissed(ebook, answer, at.page, at.x, at.y);
     });
   }
 
-  /** EPUB (0.798.0): Doppelklick auf ein Bild ohne erkanntes Diagramm oder auf Text — dieselbe Rückfrage, Stelle = Bildpfad + Kapitel. */
+  /** EPUB (0.798.0): dieselbe Rückfrage, Stelle = Bildpfad + Kapitel. „Text falsch“ bietet danach das PDF an der Stelle an
+   *  (Fließtext-EPUB aus einem PDF: Druckseite aus dem Seitenanker, {@link epubPageAt}). */
   askMissedEpub(ebook: Ebook, spot: EpubMissedSpot): void {
     if (!this.loggedIn) return;
-    this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '28rem' }).afterClosed().subscribe((isDiagram: boolean | undefined) => {
-      if (isDiagram === undefined) return;
-      this.ebooks.reportMissedDiagram(ebook.id, 0, 0, 0, isDiagram, spot).subscribe({
-        next: () => { if (isDiagram) this.snackbar.quick(this.translate.instant('ebooks.reader.missedThanks')); },
-        error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
-      });
+    this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '30rem' }).afterClosed().subscribe((answer: MissedAnswer) => {
+      if (!answer) return;
+      this.reportMissed(ebook, answer, 0, 0, 0, spot);
+      if (answer === 'text' && this.otherReadableFormats.includes('pdf')) this.offerPdfAt(spot.page ?? null);
     });
+  }
+
+  private reportMissed(ebook: Ebook, answer: 'diagram' | 'text', page: number, x: number, y: number, spot?: EpubMissedSpot): void {
+    const isDiagram = answer === 'diagram';
+    this.ebooks.reportMissedDiagram(ebook.id, page, x, y, isDiagram, spot).subscribe({
+      next: () => { if (isDiagram) this.snackbar.quick(this.translate.instant('ebooks.reader.missedThanks')); },
+      error: () => this.snackbar.warn(this.translate.instant('ebooks.reader.missedFailed')),
+    });
+  }
+
+  /** „Die Stelle im PDF nachsehen?“ → PDF öffnen, ungefähr an der Seite (ohne bekannte Seite am Anfang des Buchs). */
+  private offerPdfAt(page: number | null): void {
+    this.confirm.ask('ebooks.reader.checkPdfTitle', undefined, { confirm: this.translate.instant('ebooks.reader.checkPdfYes') })
+      .subscribe(ok => {
+        if (!ok) return;
+        if (page && page > 0) { this.initialPage = page; this.page.set(page); }
+        this.readAs('pdf');
+      });
   }
 
   /** „Stellung korrigieren“ (0.798.0, ⋮ des Bretts, nur Verwalter): Editor öffnen, speichern, das Brett zeigt sofort die neue Stellung. */

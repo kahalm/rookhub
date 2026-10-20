@@ -27,7 +27,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /** Was das Brett gerade tut (0.777.0). */
 export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia';
-/** Lösen: einfach (falscher Zug wird zurückgenommen, nochmal versuchen) oder Training (ein Versuch, dann zeigt das Brett die Lösung). */
+/** Lösen: in beiden Arten wird ein falscher Zug zurückgenommen und man sucht weiter (Nutzerwunsch 20.10.2026: keine Lösung
+ *  vorspielen); „Training“ merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. */
 export type EbookSolveStyle = 'easy' | 'training';
 /** Gegen welche Lösung gelöst wird: die gespeicherte (Buch bzw. bei der Prüfung gespeicherte Engine-Linie) oder Stockfish jetzt. */
 export type EbookSolveSource = 'stored' | 'engine';
@@ -42,7 +43,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
  * - **Kalkulieren** — wie der Kalkulations-Modus der Kurse: Varianten werden als Baum notiert (je Diagramm auf diesem Gerät
  *   gemerkt), jede Linie lässt sich später im Analysebrett prüfen; die Engine-Leiste rechnet die gerade gewählte Stellung.
  * - **Lösen** — gegen die gespeicherte Lösung (Buch bzw. Engine-Linie der Prüfung) oder eine jetzt im Browser gerechnete
- *   Stockfish-Lösung; „Einfach“ nimmt falsche Züge zurück, „Training“ wertet den ersten Versuch und spielt danach die Lösung vor.
+ *   Stockfish-Lösung; ein falscher Zug wird zurückgenommen, „Training“ merkt sich den Fehler.
  * - **Gegen Maia** — Sparring ab der Buchstellung; man spielt die Seite am Zug, Maia antwortet in der gewählten Stärke.
  * Die Engine (Stockfish im Browser, {@link LiveEngineSession}) ist in jedem Modus zuschaltbar.
  */
@@ -100,11 +101,14 @@ export class EbookBoardComponent implements OnChanges {
   readonly solveStyle = signal<EbookSolveStyle>(EbookBoardComponent.loadSolveStyle());
   static readonly SOLVE_STYLE_KEY = 'rh.ebooks.solveStyle';
   static readonly AUTO_NEXT_KEY = 'rh.ebooks.autoNext';
-  /** Nach dem Lösen automatisch zum nächsten Diagramm (0.787.1), auf dem Gerät gemerkt; Standard aus. */
-  readonly autoNext = signal(readRaw(localStore(), EbookBoardComponent.AUTO_NEXT_KEY) === '1');
-  static readonly AUTO_NEXT_DELAY_MS = 1200;
+  /** Nach dem Lösen automatisch zum nächsten Diagramm (0.787.1), auf dem Gerät gemerkt; Standard an (Nutzerwunsch 20.10.2026). */
+  readonly autoNext = signal(readRaw(localStore(), EbookBoardComponent.AUTO_NEXT_KEY) !== '0');
+  /** Pause vor dem Weiterspringen — Zeit, die eigene Lösung noch anzusehen. */
+  static readonly AUTO_NEXT_DELAY_MS = 3000;
+  /** Training: in diesem Lösen schon ein falscher Zug gespielt. */
+  readonly mistake = signal(false);
   readonly solveSource = signal<EbookSolveSource>('stored');
-  readonly solveState = signal<'idle' | 'running' | 'solved' | 'failed'>('idle');
+  readonly solveState = signal<'idle' | 'running' | 'solved'>('idle');
   /** Stockfish-Lösung (UCI), sobald gerechnet; `null` = noch nicht / läuft. */
   readonly engineLine = signal<string[] | null>(null);
   readonly engineLineBusy = signal(false);
@@ -336,6 +340,7 @@ export class EbookBoardComponent implements OnChanges {
   startSolving(): void {
     this.clearTimer();
     this.played.set([]);
+    this.mistake.set(false);
     this.deviated.set(false);
     this.checking.set(false);
     if (this.solveSource() === 'engine' && this.engineLine() == null) {
@@ -403,18 +408,11 @@ export class EbookBoardComponent implements OnChanges {
     });
   }
 
-  /** Falscher Zug: „Einfach“ nimmt ihn zurück, „Training“ wertet ihn als Fehler und spielt die Lösung vor. */
+  /** Falscher Zug: nur „falsch“ sagen und zurücknehmen — weitersuchen; „Training“ merkt sich den Fehler. */
   private rejectMove(): void {
-    if (this.solveStyle() === 'easy') {
-      this.snackbar.quick(this.translate.instant('ebooks.reader.notBookMove'));
-      this.timer = setTimeout(() => { this.played.update(l => l.slice(0, -1)); this.cdr.markForCheck(); }, 600);
-      return;
-    }
-    this.solveState.set('failed');
-    this.timer = setTimeout(() => {
-      this.played.update(l => l.slice(0, -1));
-      this.playOutSolution();
-    }, 700);
+    if (this.solveStyle() === 'training') this.mistake.set(true);
+    this.snackbar.quick(this.translate.instant('ebooks.board.wrongMove'));
+    this.timer = setTimeout(() => { this.played.update(l => l.slice(0, -1)); this.cdr.markForCheck(); }, 600);
   }
 
   /**
@@ -470,25 +468,6 @@ export class EbookBoardComponent implements OnChanges {
       if (!u || !this.pushUci(u) || this.played().length >= line.length) this.markSolved();
       this.cdr.markForCheck();
     }, 450);
-  }
-
-  /** Training nach einem Fehler: die restliche Lösung Zug für Zug vorspielen. */
-  private playOutSolution(): void {
-    const line = this.solutionLine;
-    if (this.played().length >= line.length) { this.cdr.markForCheck(); return; }
-    if (this.deviated()) {
-      // Nach einer gleichwertigen Abweichung passt die Buchlinie nicht mehr — Stockfish spielt vor.
-      const id = this.diagram.id;
-      void this.stockfish.getBestMove(this.boardFen(), EbookBoardComponent.CHECK_DEPTH).then(r => {
-        if (this.diagram.id !== id || this.mode() !== 'solve' || !r?.move || !this.pushUci(r.move)) return;
-        this.cdr.markForCheck();
-        this.timer = setTimeout(() => this.playOutSolution(), 700);
-      }).catch(() => {});
-      return;
-    }
-    this.pushUci(line[this.played().length]);
-    this.cdr.markForCheck();
-    this.timer = setTimeout(() => this.playOutSolution(), 700);
   }
 
   private pushUci(u: string): boolean {
