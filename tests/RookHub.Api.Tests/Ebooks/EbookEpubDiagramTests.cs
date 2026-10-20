@@ -106,6 +106,28 @@ public class EbookEpubDiagramTests
     }
 
     [Fact]
+    public void FindBoard_FramelessBoard_SquaresOnlyTouchAtBlurredCorners_StillFound()
+    {
+        // 330×285 wie „Liquidation on the Chess Board“: links ein Zugrecht-Kästchen, Brett 272×272 bei (55, 6) ohne Rahmen,
+        // helle Felder weiß, dunkle Felder grau — und je Feld ein heller 1-px-Saum, sodass sich die dunklen Felder nicht berühren.
+        var g = new float[285, 330];
+        for (var y = 0; y < 285; y++) for (var x = 0; x < 330; x++) g[y, x] = 1f;
+        for (var y = 10; y < 20; y++) for (var x = 2; x < 12; x++) g[y, x] = 0f;
+        for (var y = 0; y < 272; y++)
+            for (var x = 0; x < 272; x++)
+            {
+                int r = y / 34, c = x / 34, iy = y % 34, ix = x % 34;
+                var dark = (r + c) % 2 == 1 && iy > 0 && iy < 33 && ix > 0 && ix < 33;
+                g[6 + y, 55 + x] = dark ? 0.85f : 1f;
+            }
+        var box = EbookBoardImage.FindBoard(g);
+        Assert.NotNull(box);
+        var (x0, y0, x1, y1) = box!.Value;
+        Assert.InRange(x0, 55, 57); Assert.InRange(y0, 6, 8);
+        Assert.InRange(x1, 325, 327); Assert.InRange(y1, 276, 278);
+    }
+
+    [Fact]
     public void FindBoard_RejectsNonSquareImages()
     {
         var g = new float[100, 300];

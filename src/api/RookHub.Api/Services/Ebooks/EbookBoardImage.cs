@@ -47,18 +47,49 @@ public static class EbookBoardImage
     }
 
     /// <summary>Brett-Rechteck (x0, y0, x1, y1): größte dunkle Komponente (8er-Nachbarschaft, &lt; 235/255), annähernd
-    /// quadratisch, dann Rahmenlinien und weiße Ränder abschälen. <c>null</c> = kein Brett.</summary>
+    /// quadratisch, dann Rahmenlinien und weiße Ränder abschälen. <c>null</c> = kein Brett.
+    /// Bretter OHNE Rahmen mit weißen hellen Feldern (0.812.0, „Liquidation on the Chess Board“): die dunklen Felder berühren
+    /// sich nur an den Ecken, und die JPEG-Unschärfe trennt sie — die größte Komponente ist dann EIN Feld. Dann ein zweiter
+    /// Versuch mit geschlossenen Lücken bis <see cref="GapClose"/> px.</summary>
     public static (int X0, int Y0, int X1, int Y1)? FindBoard(float[,] g)
+        => BoardFrom(g, LargestDark(g, 0)) ?? BoardFrom(g, LargestDark(g, GapClose));
+
+    /// <summary>Lücken bis zu dieser Breite (px) zwischen dunklen Flächen zählen im zweiten Versuch als verbunden.</summary>
+    internal const int GapClose = 2;
+
+    private static (int X0, int Y0, int X1, int Y1)? BoardFrom(float[,] g, (int X0, int Y0, int X1, int Y1)? comp)
+    {
+        if (comp == null) return null;
+        var (x0, y0, x1, y1) = comp.Value;
+        int w = x1 - x0, h = y1 - y0;
+        if (w < 80 || h < 80 || !(0.85 < (double)w / h && (double)w / h < 1.18)) return null;
+        var peeled = Peel(g, x0, y0, x1, y1);
+        if (peeled == null) return null;
+        (x0, y0, x1, y1) = peeled.Value;
+        w = x1 - x0; h = y1 - y0;
+        if (w < 64 || h < 64 || !(0.9 < (double)w / h && (double)w / h < 1.1)) return null;
+        return (x0, y0, x1, y1);
+    }
+
+    /// <summary>Umriss der größten dunklen Komponente (&lt; 235/255, 8er-Nachbarschaft). Mit <paramref name="gap"/> &gt; 0 zählt
+    /// jedes Pixel als dunkel, das höchstens so weit (Quadrat) von einem dunklen entfernt liegt; der Umriss wird danach um
+    /// <paramref name="gap"/> zurückgenommen, sodass er wieder an den echten dunklen Pixeln liegt.</summary>
+    private static (int X0, int Y0, int X1, int Y1)? LargestDark(float[,] g, int gap)
     {
         int H = g.GetLength(0), W = g.GetLength(1);
         const float light = 235f / 255f;
+        var dark = new bool[H, W];
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++)
+                dark[y, x] = g[y, x] < light;
+        if (gap > 0) dark = Dilate(dark, gap);
         var lab = new bool[H, W];
         (long Area, int Y0, int Y1, int X0, int X1)? best = null;
         var stack = new Stack<(int, int)>();
         for (var y = 0; y < H; y++)
             for (var x = 0; x < W; x++)
             {
-                if (!(g[y, x] < light) || lab[y, x]) continue;
+                if (!dark[y, x] || lab[y, x]) continue;
                 lab[y, x] = true; stack.Push((y, x));
                 int ymin = y, ymax = y, xmin = x, xmax = x;
                 while (stack.Count > 0)
@@ -70,7 +101,7 @@ public static class EbookBoardImage
                         for (var dx = -1; dx <= 1; dx++)
                         {
                             int ny = cy + dy, nx = cx + dx;
-                            if (ny >= 0 && ny < H && nx >= 0 && nx < W && g[ny, nx] < light && !lab[ny, nx]) { lab[ny, nx] = true; stack.Push((ny, nx)); }
+                            if (ny >= 0 && ny < H && nx >= 0 && nx < W && dark[ny, nx] && !lab[ny, nx]) { lab[ny, nx] = true; stack.Push((ny, nx)); }
                         }
                 }
                 long area = (long)(ymax - ymin + 1) * (xmax - xmin + 1);
@@ -78,14 +109,25 @@ public static class EbookBoardImage
             }
         if (best == null) return null;
         var (_, y0, y1, x0, x1) = best.Value;
-        int w = x1 - x0, h = y1 - y0;
-        if (w < 80 || h < 80 || !(0.85 < (double)w / h && (double)w / h < 1.18)) return null;
-        var peeled = Peel(g, x0, y0, x1, y1);
-        if (peeled == null) return null;
-        (x0, y0, x1, y1) = peeled.Value;
-        w = x1 - x0; h = y1 - y0;
-        if (w < 64 || h < 64 || !(0.9 < (double)w / h && (double)w / h < 1.1)) return null;
+        if (gap > 0) { x0 = Math.Min(W, x0 + gap); y0 = Math.Min(H, y0 + gap); x1 = Math.Max(x0, x1 - gap); y1 = Math.Max(y0, y1 - gap); }
         return (x0, y0, x1, y1);
+    }
+
+    /// <summary>Quadratische Dilatation mit Radius <paramref name="r"/> (getrennt nach Zeilen und Spalten).</summary>
+    private static bool[,] Dilate(bool[,] m, int r)
+    {
+        int H = m.GetLength(0), W = m.GetLength(1);
+        var rows = new bool[H, W];
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++)
+                for (var k = Math.Max(0, x - r); k <= Math.Min(W - 1, x + r); k++)
+                    if (m[y, k]) { rows[y, x] = true; break; }
+        var outp = new bool[H, W];
+        for (var y = 0; y < H; y++)
+            for (var x = 0; x < W; x++)
+                for (var k = Math.Max(0, y - r); k <= Math.Min(H - 1, y + r); k++)
+                    if (rows[k, x]) { outp[y, x] = true; break; }
+        return outp;
     }
 
     /// <summary>Rahmenlinien (Zeile/Spalte zu &gt; 80 % schwarz) und weiße Ränder (&gt; 97 % weiß) abschälen.</summary>

@@ -199,7 +199,8 @@ ohne PDF die EPUB-Datei und ruft `EbookEpubDiagramExtractor`:
   „33.<span>♖</span>d1“ bleibt ein Zug) und Bilder (`<img src>`, SVG `<image href>`) als ZIP-Pfad, in Lesereihenfolge. Ohne
   XML-Parser für Kapitel (viele EPUBs sind kein wohlgeformtes XHTML).
 - **Brett finden + Felder** (`EbookBoardImage`): Grau (0,299 R + 0,587 G + 0,114 B, Alpha auf Weiß), größte dunkle Komponente
-  (&lt; 235/255, 8er-Nachbarschaft), annähernd quadratisch, Rahmen + weißen Rand abschälen; 8 × 8 Felder mit 6 % Rand,
+  (&lt; 235/255, 8er-Nachbarschaft), annähernd quadratisch, Rahmen + weißen Rand abschälen (scheitert das, zweiter Versuch mit
+  geschlossenen Lücken bis 2 px — rahmenlose Bretter, deren dunkle Felder sich nur an unscharfen Ecken berühren, 0.812.0); 8 × 8 Felder mit 6 % Rand,
   Flächenmittel auf 32 × 32 (`BoardImageMath`). Hintergrund je Feldposition = Median der LEEREN Felder des Buchs (höchstens
   240 Bretter, gleichmäßig verteilt) — ein Buch hat einen Brettstil, darum erst alle Bretter sammeln, dann erkennen.
 - **Besetzt?** Abweichung vom Hintergrund nach Gauß σ 1,6: &gt; 6 % der Innenpixel über 0,18 = sicher besetzt; sonst Spitze
