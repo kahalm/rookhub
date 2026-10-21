@@ -19,12 +19,14 @@ public class EbookReflowService
 {
     private readonly AppDbContext _db;
     private readonly EbookStorage _storage;
+    private readonly EbookScanDiagramExtractor _pages;
     private readonly ILogger<EbookReflowService> _logger;
 
-    public EbookReflowService(AppDbContext db, EbookStorage storage, ILogger<EbookReflowService> logger)
+    public EbookReflowService(AppDbContext db, EbookStorage storage, EbookScanDiagramExtractor pages, ILogger<EbookReflowService> logger)
     {
         _db = db;
         _storage = storage;
+        _pages = pages;
         _logger = logger;
     }
 
@@ -62,7 +64,8 @@ public class EbookReflowService
         {
             await using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
                 result = await Task.Run(() => EbookReflowConverter.Convert(pdfPath, ebook.Title, ebook.Author,
-                    $"urn:rookhub:ebook:{ebookId}:reflow", input, fs, ct), ct);
+                    $"urn:rookhub:ebook:{ebookId}:reflow", input, fs, ct,
+                    page => _pages.RenderPage(pdfPath, page, EbookFigurineRepair.Dpi, ct)), ct);
             File.Move(tmp, target, overwrite: true);
         }
         catch (ReflowNotPossibleException ex)

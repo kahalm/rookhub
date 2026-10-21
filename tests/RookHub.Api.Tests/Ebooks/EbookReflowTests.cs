@@ -273,7 +273,9 @@ public class EbookReflowTests : IDisposable
         return book;
     }
 
-    private EbookReflowService Reflow() => new(_kit.Db, _kit.Storage, NullLogger<EbookReflowService>.Instance);
+    private EbookReflowService Reflow() => new(_kit.Db, _kit.Storage,
+        new EbookScanDiagramExtractor(Microsoft.Extensions.Options.Options.Create(_kit.Options), NullLogger<EbookScanDiagramExtractor>.Instance),
+        NullLogger<EbookReflowService>.Instance);
 
     [Fact]
     public async Task Service_StoresDerivedEpub_LinksDiagrams_AndReplacesOnRerun()

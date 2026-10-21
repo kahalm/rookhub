@@ -11,11 +11,13 @@ public static class EbookReflowConverter
     /// <summary>So viele Textzeichen je Seite braucht ein PDF im Schnitt — darunter ist es ein Scan (ohne OCR).</summary>
     public const int MinCharsPerPage = 300;
 
-    /// <summary>Wandelt die PDF-Datei um und schreibt das EPUB nach <paramref name="output"/>.</summary>
+    /// <summary>Wandelt die PDF-Datei um und schreibt das EPUB nach <paramref name="output"/>. Mit <paramref name="render"/>
+    /// (Seite → Graubild in <see cref="EbookFigurineRepair.Dpi"/>) wird Figurensalat einer Scan-Textebene repariert (0.818.0).</summary>
     public static ReflowResult Convert(string pdfPath, string title, string author, string identifier,
-        IReadOnlyList<ReflowDiagram> diagrams, Stream output, CancellationToken ct)
+        IReadOnlyList<ReflowDiagram> diagrams, Stream output, CancellationToken ct, Func<int, float[,]?>? render = null)
     {
         var doc = EbookReflowPdfReader.Read(pdfPath, ct);
+        if (render != null) doc = EbookFigurineRepair.Repair(doc, render, out _);
         return Convert(doc, title, author, identifier, diagrams, output, ct);
     }
 

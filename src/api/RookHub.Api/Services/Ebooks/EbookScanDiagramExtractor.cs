@@ -253,6 +253,24 @@ public class EbookScanDiagramExtractor
         return result;
     }
 
+    /// <summary>Eine Seite als Graubild (0–1) in <paramref name="dpi"/> — für den Fließtext-Umwandler (Figurenzeichen, 0.818.0).
+    /// <c>null</c>, wenn pdftoppm fehlt oder scheitert.</summary>
+    public float[,]? RenderPage(string pdf, int page, int dpi, CancellationToken ct)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "rh-page-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            if (!RunPdftoppm(pdf, page, page, dpi, dir, ct)) return null;
+            var file = Directory.GetFiles(dir, "*.pgm").FirstOrDefault();
+            return file == null ? null : ReadPgm(File.ReadAllBytes(file));
+        }
+        finally
+        {
+            try { Directory.Delete(dir, true); } catch (IOException) { /* Zwischenordner, egal */ }
+        }
+    }
+
     private bool RunPdftoppm(string pdf, int first, int last, int dpi, string dir, CancellationToken ct)
     {
         var psi = new ProcessStartInfo(_options.PdftoppmPath) { RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false };

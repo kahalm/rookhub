@@ -459,6 +459,15 @@ für Bücher mit echtem EPUB lehnt der Dienst ohnehin ab.
 - **Zeichen**: Figurinen der Figurinen-Schriften (`EbookSolutionFinder.FigurinePiece`/`IsFigurineFont`, SP-Fonts `¢£¦¥¤`,
   U+F0xx, Unicode, RookHub U+E024…) → ♔♕♖♗♘ in einer Spanne mit Symbol-Schriften; „£“ in normaler Schrift bleibt „£“.
   SP-Bewertungszeichen (² ³ µ ÷ „ ©) → ⩲ ⩱ ∓ ∞ ⇆ =/∞; Wingdings-Häkchen → ✓; Zugrecht-Dreiecke (Wingdings3) weg.
+- **Figurensalat (0.818.0)**: Scan-PDFs mit Zeichenerkennungs-Textebene haben statt der Figurinen Salat vor dem Zugfeld
+  („lt:Jxc4“, „�h3“, „'§'b8“). `EbookFigurineRepair` sucht solche Zugwörter (Präfix vor `x?[a-h][1-8]`, ohne echte
+  Figurenbuchstaben, Bauernzüge, Striche, Zugnummern), und erst ab 40 im Buch rendert es die betroffenen Seiten
+  (`EbookScanDiagramExtractor.RenderPage`, 150 dpi, parallel), schneidet das Zeichen aus (32×32, Flächenmittel wie das
+  Brettnetz) und liest es mit `Assets/ebook-figurine-cnn.onnx` (K/Q/R/B/N/„keine Figur“). Nur Lesungen ≥ 0,9 ersetzen
+  den Salat durch ♔…♘. Training: `~/claude/ebook-board-training/figfix` (`glyphset.py` → `train_glyph.py`, 122 000
+  Zeichen aus 35 Büchern, Labels aus der Prod-Korrektur vom 20.10.); auf 5 zurückgehaltenen Büchern 94–99 % gegen die
+  Labels, die Restfehler sind fast alle falsche Labels. Gemessen: Pongó 9 972 ersetzt (31 s), NIC Yearbook 61 35 628,
+  Woodpecker (saubere Textebene) 0. Zugfelder mit verlesener Ziffer („dS“) und reine Buchstabenpräfixe bleiben stehen.
 - **Diagramme**: an der Stelle jedes `EbookDiagram` mit PDF-Lage (`W > 0`) ein Brettbild aus der FEN
   (`EbookBoardSvg`, cburnett-Figuren aus `Assets/pieces`, App-Farben, je Figur ein `<symbol>`; ~3–8 KB) unter
   `OEBPS/images/p<Seite:D4>-<n>.svg`, Bildunterschrift Nummer + △/▲ (Zugrecht, wenn bekannt). Text im Brett, Koordinaten

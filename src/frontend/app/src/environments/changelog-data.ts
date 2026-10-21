@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.818.0", date: "2026-10-21", changes: [
+    { en: "E-books: when a scanned PDF is converted to a flowing EPUB, the garbled piece symbols of its text layer (e.g. „lt:Jxc4“ instead of ♘xc4) are now read from the page image by a small neural network and replaced with the right figurine — only where it is sure.", de: "E-Books: Beim Umwandeln eines gescannten PDF in ein Fließtext-EPUB liest jetzt ein kleines neuronales Netz die verstümmelten Figurenzeichen der Textebene (z. B. „lt:Jxc4“ statt ♘xc4) aus dem Seitenbild und setzt die richtige Figurine ein — nur dort, wo es sich sicher ist." },
+  ] },
   { version: "0.817.1", date: "2026-10-21", changes: [
     { en: "Background analysis: deepening your own games now comes before the master, club and league games of the background queue, even if those were queued earlier.", de: "Analyse im Hintergrund: Die Vertiefung eigener Partien kommt jetzt vor den Meister-, Vereins- und Liga-Partien des Stapels, auch wenn die früher eingereiht wurden." },
   ] },

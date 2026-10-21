@@ -22,6 +22,7 @@
     <EmbeddedResource Include="Assets\ebook-board-model-scan.bin" />
     <EmbeddedResource Include="Assets\ebook-board-model-scan2.bin" />
     <EmbeddedResource Include="Assets\ebook-board-cnn.onnx" />
+    <EmbeddedResource Include="Assets\ebook-figurine-cnn.onnx" />
     <!-- Schrift für die Karte des Trainingslinks (0.745.0) — DejaVu, freie Lizenz (Assets/fonts/LICENSE-DejaVu.txt) -->
     <EmbeddedResource Include="Assets\fonts\*.ttf" />
     <EmbeddedResource Include="Assets\league-model-bayern.json" />
