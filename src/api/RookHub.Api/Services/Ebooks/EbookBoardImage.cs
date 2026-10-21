@@ -397,6 +397,42 @@ public static class EbookBoardImage
     }
 
     /// <summary>64 Felder (a8 zuerst, zeilenweise), je 6 % Rand weg und auf 32×32 gemittelt.</summary>
+    /// <summary>
+    /// Rechteck bis an den Brettrahmen kürzen (0.815.2): gedruckte Bretter sind nach dem Scannen oft nicht quadratisch, die
+    /// Brettsuche ergänzt sie aber zum Quadrat und nimmt einen Streifen Weiß oder Bildunterschrift mit — die Erkennung teilt
+    /// das in 8 Reihen und jede Stellung ist um eine Reihe verschoben (Flear „Open Ruy Lopez“: 7 von 40 richtig). Je Kante wird
+    /// nach innen (höchstens <see cref="TrimSpan"/> der Seitenlänge) die erste Linie gesucht, die über mindestens 70 % der
+    /// Breite dunkel ist (Rahmen); gekürzt wird nur, wenn der Streifen davor fast leer ist (höchstens 25 % dunkel) — eine echte
+    /// Brettreihe (Schraffur, Figuren) wird nie abgeschnitten.
+    /// </summary>
+    public static (int X0, int Y0, int X1, int Y1) TrimToFrame(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        int x0 = Math.Clamp(box.X0, 0, W - 1), x1 = Math.Clamp(box.X1, x0 + 1, W), y0 = Math.Clamp(box.Y0, 0, H - 1), y1 = Math.Clamp(box.Y1, y0 + 1, H);
+        double Row(int y) { var n = 0; for (var x = x0; x < x1; x++) if (g[y, x] < 0.5f) n++; return (double)n / (x1 - x0); }
+        double Col(int x) { var n = 0; for (var y = y0; y < y1; y++) if (g[y, x] < 0.5f) n++; return (double)n / (y1 - y0); }
+        int Edge(int from, int dir, int span, Func<int, double> line)
+        {
+            double band = 0;
+            for (var k = 0; k <= span; k++)
+            {
+                var i = from + dir * k; var v = line(i);
+                if (v >= 0.7) return k >= 2 && band / k <= 0.25 ? i : from;   // Rahmen gefunden: davor fast leer → bis hierher
+                band += v;
+            }
+            return from;
+        }
+        int sy = (int)((y1 - y0) * TrimSpan), sx = (int)((x1 - x0) * TrimSpan);
+        var ny0 = Edge(y0, 1, sy, Row); var ny1 = Edge(y1 - 1, -1, sy, Row) + 1;
+        var nx0 = Edge(x0, 1, sx, Col); var nx1 = Edge(x1 - 1, -1, sx, Col) + 1;
+        if (ny1 - ny0 < 64 || nx1 - nx0 < 64) return box;
+        var aspect = (double)(nx1 - nx0) / (ny1 - ny0);
+        return aspect is > 0.8 and < 1.25 ? (nx0, ny0, nx1, ny1) : box;
+    }
+
+    /// <summary>Wie weit <see cref="TrimToFrame"/> eine Kante höchstens nach innen nimmt (Anteil der Seitenlänge).</summary>
+    internal const double TrimSpan = 0.16;
+
     public static float[][,] Cells(float[,] g, (int X0, int Y0, int X1, int Y1) box)
     {
         var outp = new float[64][,];

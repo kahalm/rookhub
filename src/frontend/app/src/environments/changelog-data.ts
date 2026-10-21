@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.815.3", date: "2026-10-21", changes: [
+    { en: "Scanned e-books: boards that are not quite square after scanning are no longer padded with a strip of white or caption — that shifted every position by one rank (e.g. Flear “Open Ruy Lopez”: 35 of 40 sample boards now read correctly instead of 7). Already stored diagrams stay until a book is scanned again.",
+      de: "Gescannte E-Books: Bretter, die nach dem Scannen nicht ganz quadratisch sind, bekommen keinen Streifen Weiß oder Bildunterschrift mehr dazu — dadurch war jede Stellung um eine Reihe verschoben (z. B. Flear „Open Ruy Lopez“: 35 statt 7 von 40 Stichproben-Brettern richtig). Schon gespeicherte Diagramme bleiben, bis ein Buch neu gelesen wird." },
+  ] },
   { version: "0.815.2", date: "2026-10-21", changes: [
     { en: "Scoresheets: cleanup — the old reading-time estimate of 1–2 seconds per move is gone from the code and the developer notes; the pages have said “the reader checks every 5 minutes” since 0.689.0. No visible change.",
       de: "Partieformulare: aufgeräumt – die alte Schätzung „1–2 Sekunden pro Zug“ ist aus Code und Entwickler-Doku verschwunden; die Seiten sagen seit 0.689.0 „der Leser schaut alle 5 Minuten“. Keine sichtbare Änderung." },

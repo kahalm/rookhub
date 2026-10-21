@@ -238,6 +238,10 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
   Nur `GridScore` ≥ 52 (Randzone von ≥ 52 der 64 Felder näher am eigenen als am fremden Paritäts-Hintergrund) zählt — das
   verwirft Ausschnitte aus 3 × 3 Feldern, Fotos, Tabellen. Liegt der Wert darunter, wird das Rechteck schrittweise bis 3 % der
   Brettbreite nach innen genommen (dicker Rahmen verschiebt sonst das Raster, 0.813.0).
+- **Rechteck bis an den Rahmen** (0.815.3, `EbookBoardImage.TrimToFrame`): gescannte Bretter sind oft nicht quadratisch; die
+  Brettsuche ergänzt zum Quadrat und nahm einen Streifen Weiß/Bildunterschrift mit → jede Stellung eine Reihe verschoben
+  (Flear „Open Ruy Lopez“ 7 → 35 von 40). Je Kante nach innen (≤ 16 %) die erste über 70 % dunkle Linie suchen; gekürzt wird
+  nur, wenn der Streifen davor höchstens 25 % dunkel ist. Prüfsatz 19 Bücher: sonst keine Änderung.
 - **Kleine Seiten, getöntes Papier** (0.813.0): Seiten, deren lange Seite bei 300 dpi unter 2 400 px bliebe (Google-Vorschau-
   Auszüge, 2 × 3 Zoll), werden feiner gerendert (`MinPagePixels`, gedeckelt durch `MaxPagePixels`). Ist der häufigste Grauwert
   der Seite (Papier) dunkler als 0,9 (Farbscans von Internet Archive / Google Books, Papier 155–190), wird die Seite durch ihn

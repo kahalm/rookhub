@@ -164,6 +164,8 @@ public class EbookScanDiagramExtractor
                 if (sc > score) { score = sc; box = inner; cells = c; }
             }
             if (score < MinGridScore) continue;
+            var trimmed = EbookBoardImage.TrimToFrame(g, box);
+            if (trimmed != box) { box = trimmed; cells = EbookBoardImage.Cells(g, box); }
             var (light, dark) = EbookBoardImage.ParityBackgrounds(cells);
             var bg = Enumerable.Range(0, 64).Select(i => (i / 8 + i % 8) % 2 == 0 ? light : dark).ToArray();
             var bLight = BoardImageMath.Blur(light, 1.6); var bDark = BoardImageMath.Blur(dark, 1.6);
