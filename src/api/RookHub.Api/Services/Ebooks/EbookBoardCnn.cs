@@ -5,7 +5,9 @@ namespace RookHub.Api.Services.Ebooks;
 
 /// <summary>
 /// Faltungsnetz für Brett-Felder (0.794.0): ersetzt bei gescannten Büchern das kleine MLP. Trainiert auf ~3 400 von Opus
-/// gelesenen Diagrammen aus 7 Büchern mit 5 Figurensätzen (Skripte: <c>~/claude/ebook-board-training/hr</c>); in der
+/// gelesenen Diagrammen aus 7 Büchern mit 5 Figurensätzen (Skripte: <c>~/claude/ebook-board-training/hr</c>), nachtrainiert
+/// 0.815.1 mit ~5 000 weiteren Opus-geprüften Brettern aus 32 Büchern (<c>…/newlabels/train2.py</c>, zurückgehalten 82 → 92 %
+/// exakt); in der
 /// Gegenprobe (Buch nie gesehen) 82–100 % exakte Bretter bei ähnlichen Figurensätzen. Eingabe: das Brett aus der
 /// 300-dpi-Seite, flächengemittelt auf 256 × 256, je Feld 32 × 32 Grauwerte 0–1 (64 Felder als ein Stapel); Ausgabe je Feld
 /// 13 Werte in der Reihenfolge PNBRQKpnbrqk + leer. Modell als eingebettete Ressource <c>Assets/ebook-board-cnn.onnx</c>.

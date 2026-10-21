@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.815.1", date: "2026-10-21", changes: [
+    { en: "Scanned e-books: the board-square network was retrained on about 5,000 more Opus-checked diagrams from 32 books (dark-printed queens and bishops, black king's rooks drawn like white ones, boards printed from Black's side). On held-back boards it now reads 92% of positions exactly instead of 82%; already stored diagrams stay as they are until a book is scanned again.",
+      de: "Gescannte E-Books: Das Brettfeld-Netz ist mit rund 5 000 weiteren von Opus geprüften Diagrammen aus 32 Büchern nachtrainiert (dunkel gedruckte Damen und Läufer, schwarze Königstürme im Stil weißer, Bretter aus Sicht von Schwarz). Auf zurückgehaltenen Brettern liest es jetzt 92 % der Stellungen exakt statt 82 %; schon gespeicherte Diagramme bleiben, bis ein Buch neu gelesen wird." },
+  ] },
   { version: "0.815.0", date: "2026-10-20", changes: [
     { en: "Admin: new tab “Background jobs” with one switch that pauses all pausable background services (analyses, translations, e-book processing, tournament and league updates …) immediately and without a restart; running analyses stop and resume later where they left off. Health and retention jobs keep running.", de: "Admin: neuer Reiter „Hintergrundjobs“ mit einem Schalter, der alle pausierbaren Hintergrunddienste (Analysen, Übersetzungen, E-Book-Verarbeitung, Turnier- und Liga-Abgleich …) sofort und ohne Neustart anhält; laufende Analysen halten an und machen später dort weiter. Gesundheits- und Aufbewahrungsdienste laufen weiter." },
   ]},
