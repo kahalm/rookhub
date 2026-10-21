@@ -509,6 +509,37 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.Equal(refine.Id, (await _svc.PickNextForEngineAsync("e", now))!.Id);   // sonst die Vertiefung
     }
 
+    /// <summary>21.10.2026: die Vertiefung einer eigenen Partie stand hinter den früher angelegten Liga-Stellungen des
+    /// Stapels. Beide sind Hintergrundarbeit; die eigene geht vor, auch gegen älter und zuletzt gelaufen.</summary>
+    [Fact]
+    public async Task PickNextForEngine_EigeneVertiefungVorStapel_auchGegenAelterUndZuletztGelaufen()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var now = DateTime.UtcNow;
+        var league = new AnalysisJob { UserId = u, Fen = START, EngineId = "e", TargetDepth = 20, MultiPv = 5, Status = AnalysisJobStatus.Paused, CreatedAt = now.AddMinutes(-30), LastRunAt = now.AddMinutes(-1), Background = true, Batch = true };
+        var refine = new AnalysisJob { UserId = u, Fen = START, EngineId = "e", TargetDepth = 30, MultiPv = 5, Status = AnalysisJobStatus.Queued, CreatedAt = now, Background = true };
+        _db.AnalysisJobs.AddRange(league, refine);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(refine.Id, (await _svc.PickNextForEngineAsync("e", now))!.Id);
+
+        refine.Status = AnalysisJobStatus.Done; await _db.SaveChangesAsync();
+        Assert.Equal(league.Id, (await _svc.PickNextForEngineAsync("e", now))!.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BatchNurAlsHintergrund()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var bg = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1 },
+            remember: false, background: true, batch: true);
+        var fg = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 21, MultiPv = 1 },
+            remember: false, background: false, batch: true);
+
+        Assert.True((await _db.AnalysisJobs.FindAsync(bg.Id))!.Batch);
+        Assert.False((await _db.AnalysisJobs.FindAsync(fg.Id))!.Batch);
+    }
+
     [Fact]
     public async Task PickNextForEngine_PrefersLastRunJob_ThenOldest_SkipsBackoff()
     {

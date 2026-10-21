@@ -123,4 +123,12 @@ public class AnalysisJob
     /// stuende der schnelle erste Durchgang einer neuen Partie hinter der Vertiefung einer alten.
     /// </summary>
     public bool Background { get; set; }
+
+    /// <summary>
+    /// Hintergrundarbeit des STAPELS (Meister-, Vereins- und Liga-Partien, <c>GameAnalysisOrigins.IsBatch</c>; 0.817.1).
+    /// Innerhalb der Hintergrundarbeit kommt sie nach der Vertiefung eigener Partien — 21.10.2026: die Vertiefung von
+    /// Partie 117 stand sonst hinter rund hundert Liga-Stellungen, die früher angelegt waren. Am Auftrag selbst statt
+    /// über die Stellungen ermittelt: auf <c>GameAnalysisPositions.AnalysisJobId</c> liegt kein Index (1,2 Mio. Zeilen).
+    /// </summary>
+    public bool Batch { get; set; }
 }

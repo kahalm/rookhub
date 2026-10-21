@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.817.1", date: "2026-10-21", changes: [
+    { en: "Background analysis: deepening your own games now comes before the master, club and league games of the background queue, even if those were queued earlier.", de: "Analyse im Hintergrund: Die Vertiefung eigener Partien kommt jetzt vor den Meister-, Vereins- und Liga-Partien des Stapels, auch wenn die früher eingereiht wurden." },
+  ] },
   { version: "0.817.0", date: "2026-10-21", changes: [
     { en: "Scoresheets: while you wait, the page now shows two steps — “Waiting for the reader” with a clock from the upload, and once the reader has picked the scoresheet up a ✓ behind it and “Reading” with its own clock. The reader now checks every minute instead of every five. Same display in RookHub and LeagueHub.",
       de: "Partieformulare: beim Warten zeigt die Seite jetzt zwei Schritte – „Wartet auf den Leser“ mit einer Uhr ab dem Hochladen, und sobald der Leser das Formular abgeholt hat, ein ✓ dahinter und „Wird gelesen“ mit eigener Uhr. Der Leser schaut jetzt jede Minute nach statt alle fünf. Gleiche Anzeige in RookHub und LeagueHub." },

@@ -187,6 +187,9 @@ namespace RookHub.Api.Migrations
                     b.Property<bool>("Background")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("Batch")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 

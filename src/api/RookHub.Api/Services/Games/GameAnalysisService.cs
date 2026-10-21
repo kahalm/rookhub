@@ -1193,7 +1193,8 @@ public class GameAnalysisService
                     TargetDepth = analysis.RefineDepth!.Value,
                     MultiPv = analysis.RefineMultiPv ?? analysis.MultiPv,
                     EngineId = analysis.EngineId,
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: true);
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: true,
+                    batch: GameAnalysisOrigins.IsBatch(analysis.Origin));
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }
@@ -1255,7 +1256,7 @@ public class GameAnalysisService
                     EngineId = analysis.EngineId,
                     // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
                     // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: batch);
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: batch, batch: batch);
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }

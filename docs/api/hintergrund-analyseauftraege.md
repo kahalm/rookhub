@@ -135,3 +135,9 @@ Nachkommastellen) — vorher sprang die Einheit je nach Tempo zwischen N/s, kN/s
 | POST | `/api/game-analyses/{id}/restart` | Die ganze Partie neu anstossen: alles Ungerechnete kommt frisch in die Warteschlange, aufgegebene Stellungen (`CandidatesJson = "[]"`) kommen zurueck. Die alten Auftraege werden GELOESCHT und neu angelegt — erst dadurch waehlt `PickBackgroundEngineAsync` erneut. Der Ausweg aus „Auftrag haengt an einer Engine, die aus ist": ein Auftrag wechselt von sich aus nie die Engine (am 2026-09-11 hingen fuenf Partien an ihren letzten Halbzuegen fest, waehrend fuenf freie Engines danebenstanden). Eine gepinnte `EngineId` bleibt |
 | POST | `/api/analysis-jobs/{id}/restart` | Wieder einreihen (Fehlversuchs-Zähler + Backoff gelöscht, laufender Lauf abgebrochen); das ERGEBNIS bleibt — die Suche setzt bei `ReachedDepth` an. Ein Auftrag mit erreichtem Ziel bleibt `Done` |
 | DELETE | `/api/analysis-jobs/{id}` | Löschen (laufende Suche wird abgebrochen) |
+
+**Reihenfolge je Engine (0.817.1)**: `PickNextForEngineAsync` zieht in drei Stufen — erst normale Aufträge, dann die
+Hintergrundarbeit eigener Partien (Vertiefung), zuletzt die Hintergrundarbeit des Stapels (Meister-, Vereins- und
+Liga-Partien, `AnalysisJob.Batch`); innerhalb einer Stufe der zuletzt gelaufene (warme Hashtabelle), sonst der älteste.
+`Batch` setzt die Pumpe beim Anlegen (`GameAnalysisOrigins.IsBatch`), die Migration `AnalysisJobBatch` hat die offenen
+Aufträge einmal nachgetragen. Anlass 21.10.2026: die Vertiefung von Partie 117 stand hinter früher angelegten Liga-Stellungen.
