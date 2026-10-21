@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.821.0", date: "2026-10-21", changes: [
+    { en: "Link preview of a shared mistakes training: the number of mistakes now matches the training (inaccuracies count too — it said 4 where the training had 6), and the card is in English (“Improve your chess — replay your mistakes”).", de: "Link-Vorschau eines geteilten Fehler-Trainings: die Zahl der Fehler stimmt jetzt mit dem Training überein (auch Ungenauigkeiten zählen — sie sagte 4, wo das Training 6 hatte), und die Karte ist englisch („Improve your chess — replay your mistakes“)." },
+  ] },
   { version: "0.820.0", date: "2026-10-21", changes: [
     { en: "Game page: next to the computer lines and the best-move arrow, a new switch hides or shows the move symbols on the pieces (book, best, blunder …) — remembered per device.", de: "Partieseite: neben Computer-Linien und Pfeil für den besten Zug blendet ein neuer Schalter die Zug-Symbole an den Figuren (Buch, bester Zug, Patzer …) aus und ein — je Gerät gemerkt." },
   ] },

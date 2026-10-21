@@ -145,13 +145,16 @@ public class OgMetaService
                     // Überschrift „Verbessere dich" und den Fehlern dieser Seite in der Kurve.
                     if (QueryParam(path, "train") is "white" or "black" && QueryParam(path, "train") is { } side)
                     {
+                        // Englisch (Wunsch 2026-10-21: „mach das default englisch") — die Vorschau sieht jeder, gleich welche Sprache.
                         var who = side == "white" ? white : black;
                         var n = TrainMarks(evals, side == "white").Count;
                         var trainDesc = n > 0
-                            ? $"{n} Fehler von {who} in {white} – {black} — finde jetzt die besseren Züge."
-                            : $"{white} – {black}: spiele die Fehler von {who} neu und finde die besseren Züge.";
+                            ? $"{n} {(n == 1 ? "mistake" : "mistakes")} by {who} in {white} – {black} — find the better moves now."
+                            : $"{white} – {black}: replay the mistakes of {who} and find the better moves.";
                         var trainImg = $"{baseUrl}/api/og/img/train/{side}-{Uri.EscapeDataString(id)}.png";
-                        return new OgPage(TrainTitle, trainDesc, version == null ? trainImg : $"{trainImg}?v={version}", canonical, "article");
+                        // `l=en`: neue Adresse für die englische Karte — das Bild ist eine Woche „immutable" gecacht, Messenger
+                        // merken es sich nach der Adresse und zeigten sonst weiter die deutsche.
+                        return new OgPage(TrainTitle, trainDesc, version == null ? $"{trainImg}?l=en" : $"{trainImg}?v={version}&l=en", canonical, "article");
                     }
                     return new OgPage(title, description, version == null ? img : $"{img}?v={version}", canonical, "article");
                 }
@@ -234,8 +237,8 @@ public class OgMetaService
                     var evals = await _games.GetSharedEvalsAsync(token, null, ct);
                     var who = side == "white" ? (string.IsNullOrWhiteSpace(g.White) ? "Weiß" : g.White!) : (string.IsNullOrWhiteSpace(g.Black) ? "Schwarz" : g.Black!);
                     return new OgBoard(EndFenFromPgn(g.Pgn), Flip: side == "black", Curve: CurveOf(evals),
-                        Train: new OgImageService.TrainCard("Verbessere dich", "Spiele deine Fehler neu", TrainMarks(evals, side == "white"),
-                            $"Die Fehler von {who}"));
+                        Train: new OgImageService.TrainCard(TrainHeadline, TrainSubline, TrainMarks(evals, side == "white"),
+                            $"Mistakes by {who}"));
                 }
                 case "puzzle":
                 {
@@ -287,12 +290,20 @@ public class OgMetaService
     /// Bild wie das Ende der Partie aus. Weniger als zwei Punkte: keine Kurve.
     /// </summary>
     /// <summary>Überschrift der Trainingslink-Karte (Wunsch 2026-10-10).</summary>
-    internal const string TrainTitle = "Verbessere dich — spiele deine Fehler neu";
+    internal const string TrainTitle = "Improve your chess — replay your mistakes";
+    internal const string TrainHeadline = "Improve your chess";
+    internal const string TrainSubline = "Replay your mistakes";
+
+    /// <summary>Ab diesem Verlust (Prozentpunkte Gewinnchance, ausschließlich) trainiert die Seite einen Zug: Ungenauigkeit,
+    /// Fehler, grober Fehler — Spiegel von <c>CLASS_LIMITS.good</c> + <c>TRAINED_CLASSES</c> im Client.</summary>
+    internal const double TrainedLossAbove = 5;
 
     /// <summary>
-    /// Die Fehler einer Seite als Kurven-Index der Stellung NACH dem Zug: ein Zug, der aus Sicht des Ziehenden mindestens
-    /// 10 Prozentpunkte Gewinnchance kostet (Fehler und grober Fehler wie im Rückblick, <c>CLASS_LIMITS</c>). Weiß zieht die
-    /// geraden Halbzüge (Partie ab der Grundstellung); fehlt eine Bewertung, zählt der Zug nicht.
+    /// Die Fehler einer Seite als Kurven-Index der Stellung NACH dem Zug — dieselben, die das Fehler-Training der Seite
+    /// zeigt (<c>collectMistakes</c>, Fix 2026-10-21: die Vorschau sagte „4 Fehler", das Training hatte 6, weil hier nur
+    /// Fehler ab 10 Punkten zählten): mehr als <see cref="TrainedLossAbove"/> Prozentpunkte Gewinnchance verloren, nicht der
+    /// Bestzug der Engine. „Danach" ist die nächste Stellung, sonst die Bewertung des gespielten Kandidaten (wie
+    /// <c>reviewGame</c>). Weiß zieht die geraden Halbzüge (Partie ab der Grundstellung); ohne Bewertung zählt der Zug nicht.
     /// </summary>
     internal static List<int> TrainMarks(GameEvalsDto? evals, bool white)
     {
@@ -306,9 +317,11 @@ public class OgMetaService
         }
         for (var k = white ? 0 : 1; k < evals.Total; k += 2)
         {
-            if (Win(k) is not double before || Win(k + 1) is not double after) continue;
+            if (!byPly.TryGetValue(k, out var row) || Win(k) is not double before) continue;
+            if (!string.IsNullOrEmpty(row.BestUci) && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase)) continue;
+            if ((Win(k + 1) ?? WinPercent(row.PlayedCp, row.PlayedMate)) is not double after) continue;
             var drop = white ? before - after : after - before;
-            if (drop >= 10) marks.Add(k + 1);
+            if (drop > TrainedLossAbove) marks.Add(k + 1);
         }
         return marks;
     }

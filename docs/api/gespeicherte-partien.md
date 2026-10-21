@@ -167,7 +167,12 @@ spiele deine Fehler neu"): `/g/{token}?train=white|black` (Fehler-Training teile
 deine Fehler neu", eine Beschreibung mit der Zahl der Fehler und das Bild `/api/og/img/train/{side}-{token}.png` (`?v=` wie bei der
 Partie). `OgImageService.TrainCard`: Brett links (gedreht bei Schwarz), rechts „Verbessere dich" / „Spiele deine Fehler neu" /
 „Die Fehler von …" über der Kurve, die Fehler der Seite als rote Punkte (`OgMetaService.TrainMarks`: ≥ 10 Prozentpunkte
-Gewinnchance aus Sicht des Ziehenden, Lichess-Formel). **Das Bild ist damit nicht mehr schriftfrei**: die Schrift ist EINGEBETTET
+Gewinnchance aus Sicht des Ziehenden, Lichess-Formel). **Seit 0.821.0 (Wunsch 2026-10-21)** zählt `TrainMarks` wie das
+Training selbst (`collectMistakes`): mehr als 5 Punkte (`TrainedLossAbove`, also auch Ungenauigkeiten), nicht der Bestzug,
+fehlende nächste Stellung → Bewertung des gespielten Kandidaten — vorher „4 Fehler" in der Vorschau bei 6 im Training. Und
+die Karte ist ENGLISCH (og:title „Improve your chess — replay your mistakes", Beschreibung „n mistakes by … — find the better
+moves now.", Bild „Improve your chess" / „Replay your mistakes" / „Mistakes by …"); die Bild-Adresse trägt `l=en`, damit
+Messenger die alte deutsche Karte nicht weiter aus ihrem Zwischenspeicher zeigen. **Das Bild ist damit nicht mehr schriftfrei**: die Schrift ist EINGEBETTET
 (`Assets/fonts/DejaVuSans*.ttf`, Lizenz daneben) — das API-Image hat kein fontconfig. Neue Texte auf Bildern nur mit dieser Schrift.
 
 **Bewertungskurve aus der EIGENEN Analyse (0.512.0).** „Partie analysieren" (`/g/…`, Liste, Nachspiel-Dialog)

@@ -75,7 +75,7 @@ public class OgTests
         var curve = new double?[] { 50, 55, 48, 70, 30, 35, 60, 20 };
         var plain = svc.RenderBoard(StartFen, curve: curve);
         var train = svc.RenderBoard(StartFen, curve: curve,
-            train: new OgImageService.TrainCard("Verbessere dich", "Spiele deine Fehler neu", new[] { 4, 7 }, "Die Fehler von Hess, Max"));
+            train: new OgImageService.TrainCard("Improve your chess", "Replay your mistakes", new[] { 4, 7 }, "Mistakes by Hess, Max"));
         if (Environment.GetEnvironmentVariable("OG_DUMP") is { Length: > 0 } dump) File.WriteAllBytes(dump, train);
         Assert.Equal(PngSignature, train[..PngSignature.Length]);
         Assert.NotEqual(plain, train);
@@ -86,7 +86,26 @@ public class OgTests
     }
 
     [Fact]
-    public void TrainMarks_FehlerDerSeite_AbZehnProzentpunkten()
+    public void TrainMarks_FehlerDerSeite_wieDasTraining_abUngenauigkeit_ohneBestzug()
+    {
+        // Ungenauigkeit (gut 7 Punkte) zählt wie im Training; derselbe Verlust mit dem Bestzug der Engine nicht.
+        var inaccuracy = new GameEvalsDto { Status = "done", Total = 2, Plies = new()
+        {
+            new() { Ply = 0, Cp = 0, BestUci = "d2d4", PlayedUci = "e2e4" }, new() { Ply = 1, Cp = -80 },
+        }, Final = new() { Cp = -80 } };
+        Assert.Equal(new[] { 1 }, OgMetaService.TrainMarks(inaccuracy, white: true));
+        inaccuracy.Plies[0].BestUci = "e2e4";
+        Assert.Empty(OgMetaService.TrainMarks(inaccuracy, white: true));
+        // Fehlt die nächste Stellung, trägt die Bewertung des gespielten Kandidaten.
+        var fallback = new GameEvalsDto { Status = "done", Total = 2, Plies = new()
+        {
+            new() { Ply = 0, Cp = 0, BestUci = "d2d4", PlayedUci = "e2e4", PlayedCp = -200 },
+        } };
+        Assert.Equal(new[] { 1 }, OgMetaService.TrainMarks(fallback, white: true));
+    }
+
+    [Fact]
+    public void TrainMarks_FehlerDerSeite_GroberFehler()
     {
         // Stellungen (Weiß-Sicht): 20, 30, 40, −300, Ende +400
         var evals = new GameEvalsDto { Status = "done", Total = 4, Plies = new()
