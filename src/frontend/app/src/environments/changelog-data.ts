@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.822.0", date: "2026-10-21", changes: [
+    { en: "E-books: every book card shows its recommended minimum rating („from 1400 Elo“), and the filter row has an Elo range „from – to“. The switch „With diagrams“ is gone — almost every book has diagrams.", de: "E-Books: Jede Buchkarte zeigt die empfohlene Mindest-Elo („ab 1400 Elo“), und in der Filterzeile gibt es eine Elo-Spanne „von – bis“. Der Schalter „Mit Diagrammen“ ist weg — fast jedes Buch hat Diagramme." },
+  ] },
   { version: "0.821.0", date: "2026-10-21", changes: [
     { en: "Link preview of a shared mistakes training: the number of mistakes now matches the training (inaccuracies count too — it said 4 where the training had 6), and the card is in English (“Improve your chess — replay your mistakes”).", de: "Link-Vorschau eines geteilten Fehler-Trainings: die Zahl der Fehler stimmt jetzt mit dem Training überein (auch Ungenauigkeiten zählen — sie sagte 4, wo das Training 6 hatte), und die Karte ist englisch („Improve your chess — replay your mistakes“)." },
   ] },

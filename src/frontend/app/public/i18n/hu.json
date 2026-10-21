@@ -5392,14 +5392,17 @@
     },
     "filter": {
       "mine": "Saját feltöltéseim",
-      "withDiagrams": "Diagramokkal (100+)",
       "toggle": "Szűrő",
       "active": "Aktív szűrők",
       "allTags": "Összes címke ({{n}})",
       "fewerTags": "Kevesebb címke",
       "reset": "Szűrők törlése",
       "author": "Szerző: {{name}}",
-      "byAuthor": "{{name}} összes könyve"
+      "byAuthor": "{{name}} összes könyve",
+      "elo": "Élő-tartomány",
+      "eloFrom": "Élő-tól",
+      "eloTo": "-ig",
+      "eloRange": "Élő {{from}}–{{to}}"
     },
     "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
     "emptyFiltered": "Ehhez a szűrőhöz semmi sem illik.",
@@ -5553,7 +5556,9 @@
     "diagramsOne": "1 diagram",
     "uploadedProcessing": "„{{title}}” feltöltve. A feldolgozás (borító, diagramok, megoldások) néhány perctől kb. negyed óráig tart — értesítést kapsz, ha kész.",
     "processing": "Feldolgozás …",
-    "processingHint": "A diagramok felismerése folyamatban — értesítést kapsz."
+    "processingHint": "A diagramok felismerése folyamatban — értesítést kapsz.",
+    "eloBadge": "{{n}} Élőtől",
+    "eloHint": "Ajánlott minimális értékszám ehhez a könyvhöz"
   },
   "woodpecker": {
     "timeBar": "{{total}} napból {{used}} eltelt",

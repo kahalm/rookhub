@@ -152,8 +152,9 @@ export interface EbookQuery {
   /** Nur Bücher dieses Autors (Klick auf den Namen). */
   author?: string | null;
   mine?: boolean;
-  /** Nur Bücher mit erkannten Diagrammen. */
-  withDiagrams?: boolean;
+  /** Elo-Spanne (0.822.0): Mindest-Elo des Buchs von … bis …; mit einer Grenze fallen Bücher ohne Elo heraus. */
+  minElo?: number | null;
+  maxElo?: number | null;
   /** Nur die Bücher dieser Sammlung; ohne erscheinen Sammlungen als je ein Ordner. */
   collection?: number | null;
   sort?: EbookSort;
@@ -228,7 +229,8 @@ export class EbookService {
     if (q.tag) params = params.set('tag', q.tag);
     if (q.author) params = params.set('author', q.author);
     if (q.mine) params = params.set('mine', 'true');
-    if (q.withDiagrams) params = params.set('withDiagrams', 'true');
+    if (q.minElo != null) params = params.set('minElo', String(q.minElo));
+    if (q.maxElo != null) params = params.set('maxElo', String(q.maxElo));
     if (q.collection) params = params.set('collection', String(q.collection));
     if (q.sort) params = params.set('sort', q.sort);
     if (q.page) params = params.set('page', String(q.page));

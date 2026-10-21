@@ -23,6 +23,10 @@
    statt das Feld auf ≈ 317 px zu drücken („… Schlagwort such“); am Laptop passt weiter alles in eine Zeile. */
 .eb-search { flex: 1 1 360px; max-width: 640px; }
 .eb-sort { flex: 0 0 320px; max-width: 100%; }
+/* Elo-Spanne (0.822.0): zwei schmale Zahlenfelder „Elo von – bis“. */
+.eb-elo { display: inline-flex; align-items: center; gap: 4px; }
+.eb-elo-field { width: 104px; }
+.eb-elo-dash { opacity: .6; }
 /* Ab 600 px stehen Sortierung und Schalter direkt in der Zeile (die Hülle zählt nicht); „Filter ▾“ nur am Handy. */
 .eb-filter-more { display: contents; }
 .eb-chip.eb-filter-toggle { display: none; } /* vor .eb-chip gleich stark → sonst gewinnt dessen inline-flex */

@@ -9,7 +9,7 @@ import { of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { EBOOK_TAGS_COLLAPSED, EbookListComponent } from './ebook-list.component';
+import { EBOOK_TAGS_COLLAPSED, EbookListComponent, eloParam } from './ebook-list.component';
 import { Ebook, EbookList, EbookService } from './ebook.service';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
@@ -152,12 +152,26 @@ describe('EbookListComponent', () => {
     expect(warn).toHaveBeenCalledWith('apiErrors.ebooks_not_configured');
   });
 
-  it('„Mit Diagrammen" filtert und springt auf Seite 1', () => {
+  it('Elo von–bis filtert nach kurzer Pause und springt auf Seite 1; Unsinn = keine Grenze', fakeAsync(() => {
     const c = make([book()]);
     c.page = 2;
-    c.toggleWithDiagrams();
-    expect(calls[1]).toEqual(jasmine.objectContaining({ withDiagrams: true, page: 1 }));
+    c.setElo('min', '1400');
+    c.setElo('max', 1800);
+    expect(calls.length).toBe(1);   // erst nach der Pause, nicht je Ziffer
+    tick(400);
+    expect(calls[1]).toEqual(jasmine.objectContaining({ minElo: 1400, maxElo: 1800, page: 1 }));
     expect(c.filtered).toBeTrue();
+    expect(c.activeFilterCount).toBe(1);
+    c.setElo('max', 'abc');
+    tick(400);
+    expect(c.maxElo).toBeNull();
+    c.clearElo();
+    expect([c.minElo, c.maxElo]).toEqual([null, null]);
+    expect(calls[calls.length - 1]).toEqual(jasmine.objectContaining({ minElo: null, maxElo: null }));
+  }));
+
+  it('eloParam: ganze Zahl 0–3500, sonst null', () => {
+    expect([eloParam('1600'), eloParam(' '), eloParam(null), eloParam('-5'), eloParam('4000'), eloParam('0')]).toEqual([1600, null, null, null, null, 0]);
   });
 
   it('merkt sich Suche und Filter in der Sitzung und stellt sie beim nächsten Öffnen wieder her', () => {
@@ -165,12 +179,13 @@ describe('EbookListComponent', () => {
     const c = make([book()]);
     c.onSearch('woodpecker');
     c.setTag('Taktik');
-    c.toggleWithDiagrams();
+    c.minElo = 1500;
+    c.load();   // speichert den Stand mit Elo
     const again = make([book()]);
     expect(again.tag).toBe('Taktik');
-    expect(again.withDiagrams).toBeTrue();
+    expect(again.minElo).toBe(1500);
     expect(again.search).toBe('woodpecker');
-    expect(calls[0]).toEqual(jasmine.objectContaining({ tag: 'Taktik', withDiagrams: true, search: 'woodpecker' }));
+    expect(calls[0]).toEqual(jasmine.objectContaining({ tag: 'Taktik', minElo: 1500, search: 'woodpecker' }));
     sessionStorage.removeItem('rh.ebooks.listState');
   });
 
@@ -233,7 +248,7 @@ describe('EbookListComponent', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     const c = fixture.componentInstance;
     c.toggleMine();
-    c.toggleWithDiagrams();
+    c.minElo = 1400;
     expect(c.activeFilterCount).toBe(2);
     fixture.detectChanges();
     // Zugeklappt (Handy): die aktiven Filter stehen als Chips über der Liste.
@@ -274,15 +289,15 @@ describe('EbookListComponent', () => {
   });
 
   it('c1-eb-filter-empty-no-reset: gefiltert ohne Treffer → „Filter zurücksetzen“ leert alle Filter (Sortierung bleibt)', () => {
-    const fixture = render([], {}, { search: '', tag: 'Taktik', sort: 'newest', mine: true, withDiagrams: true, page: 2 });
+    const fixture = render([], {}, { search: '', tag: 'Taktik', sort: 'newest', mine: true, minElo: 1200, maxElo: 1600, page: 2 });
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('ebooks.emptyFiltered');
     const reset = el.querySelector<HTMLButtonElement>('.eb-reset')!;
     expect(reset).not.toBeNull();
     reset.click();
     const c = fixture.componentInstance;
-    expect([c.tag, c.mine, c.withDiagrams, c.page, c.sort]).toEqual([null, false, false, 1, 'newest']);
-    expect(service.list.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ tag: null, mine: false, withDiagrams: false, page: 1 }));
+    expect([c.tag, c.mine, c.minElo, c.maxElo, c.page, c.sort]).toEqual([null, false, null, null, 1, 'newest']);
+    expect(service.list.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ tag: null, mine: false, minElo: null, maxElo: null, page: 1 }));
     fixture.destroy();
     sessionStorage.removeItem('rh.ebooks.listState');
   });

@@ -241,6 +241,29 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_FiltersByEloRange_BooksWithoutEloDropOut_AndZeroIsBeginner()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var everyone = await _kit.GroupAsync("Everyone", everyone: true);
+        foreach (var (title, elo) in new (string, int?)[] { ("Anfänger", 0), ("Klub", 1400), ("Stark", 2100), ("Zeitschrift", null) })
+            (await _kit.BookAsync(title, owner.Id, "pdf", null, everyone.Id)).TargetMinElo = elo;
+        await _kit.Db.SaveChangesAsync();
+
+        async Task<string[]> Titles(int? min, int? max) => (await _kit.Service.ListAsync(owner.Id, false,
+            new EbookQuery { Sort = "title", MinElo = min, MaxElo = max })).Items.Select(i => i.Title).ToArray();
+        Assert.Equal(["Anfänger", "Klub", "Stark", "Zeitschrift"], await Titles(null, null));
+        Assert.Equal(["Klub", "Stark"], await Titles(1400, null));
+        Assert.Equal(["Anfänger", "Klub"], await Titles(null, 1800));
+        Assert.Equal(["Klub"], await Titles(1000, 2000));
+        Assert.Equal(["Anfänger"], await Titles(0, 0));
+
+        // 0 lässt sich jetzt setzen (Anfänger), vorher fiel alles unter 100 auf „keine Angabe“
+        var stark = _kit.Db.Ebooks.Single(b => b.Title == "Stark");
+        var dto = await _kit.Service.UpdateAsync(owner.Id, true, stark.Id, new EbookMetaDto { TargetMinElo = 0 });
+        Assert.Equal(0, dto.TargetMinElo);
+    }
+
+    [Fact]
     public async Task List_SortRecent_PutsLastReadFirst_AndCarriesProgress()
     {
         var owner = await _kit.UserAsync("owner");

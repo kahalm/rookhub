@@ -70,6 +70,8 @@ public class EbookService
                 ? query.Where(b => anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon)
                 : query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
         if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount >= MinDiagramsForFilter);
+        if (q.MinElo is int minElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo >= minElo);
+        if (q.MaxElo is int maxElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo <= maxElo);
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var term = q.Search.Trim().ToLowerInvariant();
@@ -364,7 +366,8 @@ public class EbookService
 
     /// <summary>Jahr 0 oder absurd → keine Angabe (Beiblätter der Bibliothek tragen auch <c>null</c>).</summary>
     private static int? ValidYear(int? year) => year is >= 1400 and <= 2200 ? year : null;
-    private static int? ValidElo(int? elo) => elo is >= 100 and <= 3500 ? elo : null;
+    /// <summary>0 = für Anfänger (0.822.0, vorher erst ab 100); außerhalb 0–3500 → keine Angabe.</summary>
+    private static int? ValidElo(int? elo) => elo is >= 0 and <= 3500 ? elo : null;
     private static string Clip(string s, int max) => s.Length <= max ? s : s[..max];
 
     public async Task DeleteAsync(EbookCaller caller, bool manageAll, int id, CancellationToken ct = default)

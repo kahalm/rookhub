@@ -5392,14 +5392,17 @@
     },
     "filter": {
       "mine": "My uploads",
-      "withDiagrams": "With diagrams (100+)",
       "toggle": "Filter",
       "active": "Active filters",
       "allTags": "All tags ({{n}})",
       "fewerTags": "Fewer tags",
       "reset": "Reset filters",
       "author": "Author: {{name}}",
-      "byAuthor": "All books by {{name}}"
+      "byAuthor": "All books by {{name}}",
+      "elo": "Elo range",
+      "eloFrom": "Elo from",
+      "eloTo": "to",
+      "eloRange": "Elo {{from}}–{{to}}"
     },
     "empty": "No e-books yet – upload the first one.",
     "emptyFiltered": "Nothing matches this filter.",
@@ -5553,7 +5556,9 @@
     "diagramsOne": "1 diagram",
     "uploadedProcessing": "“{{title}}” is uploaded. Processing (cover, diagrams, solutions) takes a few minutes up to about a quarter of an hour — you will get a notification when it is done.",
     "processing": "Processing …",
-    "processingHint": "Diagrams are being recognised — you will get a notification."
+    "processingHint": "Diagrams are being recognised — you will get a notification.",
+    "eloBadge": "from {{n}} Elo",
+    "eloHint": "Recommended minimum rating for this book"
   },
   "woodpecker": {
     "timeBar": "{{used}} of {{total}} days gone",

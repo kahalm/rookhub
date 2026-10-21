@@ -40,7 +40,14 @@ export const EBOOK_TAGS_COLLAPSED = 8;
 /** Sitzungs-Schlüssel der Listen-Ansicht (Suche, Filter, Seite) — „zurück" aus dem Leser landet wieder dort. */
 export const EBOOK_LIST_STATE_KEY = 'rh.ebooks.listState';
 
-export interface EbookListState { search: string; tag: string | null; author?: string | null; sort: EbookSort; mine: boolean; withDiagrams: boolean; page: number; collection?: number | null; }
+export interface EbookListState { search: string; tag: string | null; author?: string | null; sort: EbookSort; mine: boolean; minElo?: number | null; maxElo?: number | null; page: number; collection?: number | null; }
+
+/** Elo aus Feld/Adresse: ganze Zahl 0–3500, sonst keine Grenze. */
+export function eloParam(v: string | null | undefined): number | null {
+  if (v == null || v.trim() === '') return null;
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 0 && n <= 3500 ? n : null;
+}
 
 /**
  * Übersicht der E-Book-Bibliothek (`/ebooks`): Suche, Schlagwort-Filter, Sortierung, Seiten; je Buch eine Karte mit
@@ -72,7 +79,9 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Vorgabe „Neueste zuerst“ (0.775.4, Nutzerwunsch) — frisch hochgeladene/eingelesene Bücher stehen oben. */
   sort: EbookSort = 'newest';
   mine = false;
-  withDiagrams = false;
+  /** Elo-Spanne (0.822.0, ersetzt „Mit Diagrammen“ — das hatten fast alle Bücher): Mindest-Elo des Buchs von … bis …. */
+  minElo: number | null = null;
+  maxElo: number | null = null;
   page = 1;
   readonly pageSize = EBOOK_PAGE_SIZE;
   readonly sorts: EbookSort[] = ['title', 'newest', 'recent'];
@@ -93,6 +102,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   private groups: EbookGroupOption[] | null = null;
   private search$ = new Subject<string>();
+  private elo$ = new Subject<void>();
   private destroy$ = new Subject<void>();
   private ebooks = inject(EbookService);
   private auth = inject(AuthService);
@@ -107,6 +117,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(() => { this.page = 1; this.load(); });
+    this.elo$.pipe(debounceTime(400), takeUntil(this.destroy$)).subscribe(() => { this.page = 1; this.load(); });
     this.ebooks.accessToken().subscribe({ next: t => { this.token = t; this.cdr.markForCheck(); }, error: () => {} });
     this.restoreState();
     this.load();
@@ -126,7 +137,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     let st: Partial<EbookListState> | null = null;
     if (q && q.keys.length > 0) {
       st = { search: q.get('q') ?? '', tag: q.get('tag'), author: q.get('author'), sort: (q.get('sort') as EbookSort) ?? 'newest',
-        mine: q.get('mine') === '1', withDiagrams: q.get('diagrams') === '1', page: Number(q.get('page')) || 1,
+        mine: q.get('mine') === '1', minElo: eloParam(q.get('eloMin')), maxElo: eloParam(q.get('eloMax')), page: Number(q.get('page')) || 1,
         collection: Number(q.get('collection')) || null };
     } else {
       const store = sessionStore();
@@ -138,19 +149,20 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.author = st.author ?? null;
     this.sort = this.sorts.includes(st.sort as EbookSort) ? st.sort as EbookSort : 'newest';
     this.mine = !!st.mine;
-    this.withDiagrams = !!st.withDiagrams;
+    this.minElo = st.minElo ?? null;
+    this.maxElo = st.maxElo ?? null;
     this.page = Math.max(1, Math.floor(st.page ?? 1));
     this.collection = st.collection ?? null;
   }
 
   /** Aktuelle Ansicht in Sitzung + Adresse (replaceUrl: kein neuer Verlaufseintrag je Tastendruck). */
   private saveState(): void {
-    const st: EbookListState = { search: this.search.trim(), tag: this.tag, author: this.author, sort: this.sort, mine: this.mine, withDiagrams: this.withDiagrams, page: this.page, collection: this.collection };
+    const st: EbookListState = { search: this.search.trim(), tag: this.tag, author: this.author, sort: this.sort, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo, page: this.page, collection: this.collection };
     const store = sessionStore();
     if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
     const queryParams: Record<string, string | null> = {
       q: st.search || null, tag: st.tag, author: st.author || null, sort: st.sort !== 'newest' ? st.sort : null,
-      mine: st.mine ? '1' : null, diagrams: st.withDiagrams ? '1' : null, page: st.page > 1 ? String(st.page) : null,
+      mine: st.mine ? '1' : null, eloMin: st.minElo != null ? String(st.minElo) : null, eloMax: st.maxElo != null ? String(st.maxElo) : null, page: st.page > 1 ? String(st.page) : null,
       collection: st.collection ? String(st.collection) : null,
     };
     void this.router?.navigate([], { relativeTo: this.route ?? undefined, queryParams, replaceUrl: true });
@@ -160,7 +172,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.saveState();
     this.loading = this.list == null;
     this.error = false;
-    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, withDiagrams: this.withDiagrams, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
+    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
       .subscribe({
         next: list => {
           this.list = list;
@@ -175,7 +187,9 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   get items(): Ebook[] { return this.list?.items ?? []; }
-  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.author || this.mine || this.withDiagrams); }
+  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.author || this.mine || this.eloActive); }
+
+  get eloActive(): boolean { return this.minElo != null || this.maxElo != null; }
 
   /** Schlagwörter, die die Leiste gerade zeigt: aufgeklappt alle, sonst die häufigsten plus das aktive. */
   get visibleTags(): EbookTagFacet[] {
@@ -186,7 +200,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   /** Zahl der aktiven Filter hinter „Filter ▾“ (Handy). Die Suche steht sichtbar daneben und zählt nicht. */
   get activeFilterCount(): number {
-    return (this.tag ? 1 : 0) + (this.mine ? 1 : 0) + (this.withDiagrams ? 1 : 0);
+    return (this.tag ? 1 : 0) + (this.mine ? 1 : 0) + (this.eloActive ? 1 : 0);
   }
 
   /** Alle Filter weg (Leerzustand „Zu diesem Filter passt nichts.“, c1-eb-filter-empty-no-reset). Sortierung bleibt. */
@@ -195,7 +209,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.tag = null;
     this.author = null;
     this.mine = false;
-    this.withDiagrams = false;
+    this.minElo = null;
+    this.maxElo = null;
     this.page = 1;
     // Über den Such-Strom, damit distinctUntilChanged den alten Suchbegriff vergisst (sonst lädt dieselbe Suche nie wieder).
     if (hadSearch) this.onSearch(''); else this.load();
@@ -228,8 +243,17 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.load();
   }
 
-  toggleWithDiagrams(): void {
-    this.withDiagrams = !this.withDiagrams;
+  /** Elo-Feld getippt: leer = keine Grenze; geladen wird nach einer kurzen Pause (nicht je Ziffer). */
+  setElo(which: 'min' | 'max', value: string | number | null): void {
+    const elo = eloParam(value == null ? null : String(value));
+    if (which === 'min') this.minElo = elo; else this.maxElo = elo;
+    this.elo$.next();
+  }
+
+  /** ✕ am Elo-Chip: beide Grenzen weg, sofort laden. */
+  clearElo(): void {
+    this.minElo = null;
+    this.maxElo = null;
     this.page = 1;
     this.load();
   }

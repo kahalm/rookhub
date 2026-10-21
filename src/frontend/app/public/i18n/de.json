@@ -5392,14 +5392,17 @@
     },
     "filter": {
       "mine": "Meine Uploads",
-      "withDiagrams": "Mit Diagrammen (ab 100)",
       "toggle": "Filter",
       "active": "Aktive Filter",
       "allTags": "Alle Schlagwörter ({{n}})",
       "fewerTags": "Weniger Schlagwörter",
       "reset": "Filter zurücksetzen",
       "author": "Autor: {{name}}",
-      "byAuthor": "Alle Bücher von {{name}}"
+      "byAuthor": "Alle Bücher von {{name}}",
+      "elo": "Elo-Spanne",
+      "eloFrom": "Elo von",
+      "eloTo": "bis",
+      "eloRange": "Elo {{from}}–{{to}}"
     },
     "empty": "Noch keine E-Books – lade das erste hoch.",
     "emptyFiltered": "Zu diesem Filter passt nichts.",
@@ -5553,7 +5556,9 @@
     "diagramsOne": "1 Diagramm",
     "uploadedProcessing": "„{{title}}“ ist hochgeladen. Die Verarbeitung (Titelbild, Diagramme, Lösungen) dauert ein paar Minuten bis etwa eine Viertelstunde — du bekommst eine Benachrichtigung, sobald sie fertig ist.",
     "processing": "Wird verarbeitet …",
-    "processingHint": "Die Diagramme werden erkannt — du bekommst eine Benachrichtigung."
+    "processingHint": "Die Diagramme werden erkannt — du bekommst eine Benachrichtigung.",
+    "eloBadge": "ab {{n}} Elo",
+    "eloHint": "Empfohlene Mindest-Elo für dieses Buch"
   },
   "woodpecker": {
     "timeBar": "{{used}} von {{total}} Tagen vorbei",

@@ -107,6 +107,10 @@ public class EbookQuery
     /// <summary>Nur die Bücher dieser Sammlung (0.787.0). Ohne: Sammlungen erscheinen als je EIN Eintrag (Ordner),
     /// außer bei einer Suche — dann stehen die Treffer einzeln da.</summary>
     public int? Collection { get; set; }
+    /// <summary>Elo-Spanne (0.822.0): nur Bücher, deren Mindest-Elo (<c>TargetMinElo</c>) in [MinElo, MaxElo] liegt;
+    /// mit einer Grenze fallen Bücher ohne Elo heraus.</summary>
+    public int? MinElo { get; set; }
+    public int? MaxElo { get; set; }
     /// <summary><c>title</c> (Vorgabe), <c>newest</c>, <c>recent</c> (zuletzt gelesen zuerst).</summary>
     public string? Sort { get; set; }
     public int Page { get; set; } = 1;

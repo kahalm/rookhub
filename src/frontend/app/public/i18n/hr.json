@@ -5392,14 +5392,17 @@
     },
     "filter": {
       "mine": "Moji prijenosi",
-      "withDiagrams": "S dijagramima (100+)",
       "toggle": "Filtar",
       "active": "Aktivni filtri",
       "allTags": "Sve oznake ({{n}})",
       "fewerTags": "Manje oznaka",
       "reset": "Poništi filtre",
       "author": "Autor: {{name}}",
-      "byAuthor": "Sve knjige autora {{name}}"
+      "byAuthor": "Sve knjige autora {{name}}",
+      "elo": "Raspon Elo",
+      "eloFrom": "Elo od",
+      "eloTo": "do",
+      "eloRange": "Elo {{from}}–{{to}}"
     },
     "empty": "Još nema e-knjiga – prenesi prvu.",
     "emptyFiltered": "Ništa ne odgovara ovom filtru.",
@@ -5553,7 +5556,9 @@
     "diagramsOne": "1 dijagram",
     "uploadedProcessing": "»{{title}}« je preneseno. Obrada (naslovnica, dijagrami, rješenja) traje nekoliko minuta do otprilike četvrt sata — dobit ćeš obavijest kad bude gotova.",
     "processing": "Obrađuje se …",
-    "processingHint": "Dijagrami se prepoznaju — dobit ćeš obavijest."
+    "processingHint": "Dijagrami se prepoznaju — dobit ćeš obavijest.",
+    "eloBadge": "od {{n}} Elo",
+    "eloHint": "Preporučeni najmanji rejting za ovu knjigu"
   },
   "woodpecker": {
     "timeBar": "Prošlo {{used}} od {{total}} dana",
