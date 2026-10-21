@@ -1,0 +1,152 @@
+<div class="scan-wrap">
+  <div class="scan-layout" [class.with-photo]="!!ph().photoUrl()">
+    @if (ph().photoUrl(); as src) {
+      <section class="panel scan-photo" [class.open]="photoOpen()">
+        <p class="photo-toggle"><button type="button" class="btn-link" [attr.aria-expanded]="photoOpen()" (click)="photoOpen.set(!photoOpen())">
+          {{ (photoOpen() ? 'sheetEdit.hidePhoto' : 'sheetEdit.showPhoto') | translate }}</button></p>
+        <div class="photo-bar">
+          @if (ph().pageCount() > 1) {
+            <div class="seg pager" role="group" [attr.aria-label]="'sheetEdit.pagesLabel' | translate">
+              @for (n of ph().pageNumbers(); track n) {
+                <button type="button" [attr.aria-pressed]="ph().shownPage() === n" (click)="ph().showPage(n)">{{ 'sheetEdit.page' | translate: { n: n } }}</button>
+              }
+            </div>
+          }
+          @if (ph().viewNumbers().length > 1) {
+            <!-- 0.736.0: weitere Fotos derselben Seite (z. B. das Exemplar des Gegners) — Ausschnitt und Markierung gehören zum ersten -->
+            <div class="seg pager views" role="group" [attr.aria-label]="'sheetEdit.photosLabel' | translate">
+              @for (v of ph().viewNumbers(); track v) {
+                <button type="button" [attr.aria-pressed]="ph().shownView() === v" (click)="ph().showView(v)">{{ 'sheetEdit.photo' | translate: { n: v + 1 } }}</button>
+              }
+            </div>
+          }
+          <span class="spacer"></span>
+          <ng-content select="[sheetPhotoTools]" />
+        </div>
+        <div class="photo-scroll" [class.zoom]="zoom()">
+          <div class="photo-frame">
+            <img [src]="src" [alt]="'sheetEdit.photoAlt' | translate" (load)="onPhotoLoad($event)" />
+            @if (s().mark(); as m) { @if (m.page === ph().shownPage() && ph().shownView() === 0) {
+              <div class="photo-mark" [class.uncertain]="m.uncertain" [style.left.%]="m.left" [style.top.%]="m.top"
+                   [style.width.%]="m.width" [style.height.%]="m.height" aria-hidden="true"></div>
+            } }
+          </div>
+        </div>
+        <p class="photo-zoom"><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ (zoom() ? 'sheetEdit.smaller' : 'sheetEdit.bigger') | translate }}</button></p>
+      </section>
+    }
+
+    <section class="panel scan-board">
+      <app-chess-board [fen]="s().cursorFen()" [lastMove]="s().lastMove()" [arrows]="boardArrows()" [flipped]="flipped()"
+                       [playable]="!s().busy()" (userMove)="onBoardMove($event)" [boardTheme]="boardTheme()" [pieceSet]="pieceSet()" />
+      <div class="board-nav">
+        <button type="button" class="btn-sec" (click)="s().go(0)" [disabled]="s().cursor() === 0" [attr.aria-label]="'sheetEdit.first' | translate">⏮</button>
+        <button type="button" class="btn-sec" (click)="s().go(s().cursor() - 1)" [disabled]="s().cursor() === 0" [attr.aria-label]="'sheetEdit.back' | translate">◀</button>
+        <button type="button" class="btn-sec" (click)="s().go(s().cursor() + 1)" [disabled]="s().cursor() >= s().legalCount()" [attr.aria-label]="'sheetEdit.forward' | translate">▶</button>
+        <button type="button" class="btn-sec" (click)="s().go(s().legalCount())" [disabled]="s().cursor() >= s().legalCount()" [attr.aria-label]="'sheetEdit.last' | translate">⏭</button>
+        <button type="button" class="btn-sec flip" (click)="flipped.set(!flipped())" [attr.aria-label]="'sheetEdit.flip' | translate">⇅</button>
+      </div>
+      <div class="board-nav">
+        <div class="seg" role="group" [attr.aria-label]="'sheetEdit.boardMove' | translate">
+          <button type="button" [attr.aria-pressed]="s().mode() === 'replace'" (click)="s().mode.set('replace')">{{ 'sheetEdit.replace' | translate }}</button>
+          <button type="button" [attr.aria-pressed]="s().mode() === 'insert'" (click)="s().mode.set('insert')">{{ 'sheetEdit.insert' | translate }}</button>
+        </div>
+        @if (s().uncertainLeft() > 0) {
+          <button type="button" class="btn-sec warn next-uncertain" (click)="s().nextUncertain()">{{ 'sheetEdit.nextUncertain' | translate: { count: s().uncertainLeft() } }}</button>
+        }
+      </div>
+      @if (curve(); as c) {
+        <!-- Bewertungskurve der gespeicherten Partie (0.756.0): ein Zickzack zeigt fast immer einen falsch gelesenen Zug; ein Klick
+             springt zu diesem Zug. Ab der ersten Änderung bleibt sie leer (die Analyse gehört zur gespeicherten Partie). -->
+        <div class="eval-curve">
+          <app-eval-graph [series]="c.curve" [marks]="c.marks" [currentIndex]="s().cursor()" (moveClicked)="onCurveClick($event)" />
+          <p class="muted small">{{ 'sheetEdit.curveHint' | translate }}@if (c.same < s().plies().length) { {{ 'sheetEdit.curveChanged' | translate: { ply: s().plyLabel(c.same) } }}}</p>
+        </div>
+      }
+      <app-sheet-engine [fen]="s().cursorFen()" (arrowsChange)="engineArrows.set($event)" />
+    </section>
+
+    <!-- Am Handy steht dieser Teil OBEN (Wunsch 2026-09-28): die Zeile des Formulars, die Lesarten und „Stimmt so" auf einem
+         Bildschirm. -->
+    <section class="panel scan-check">
+      <div class="cursor-panel" aria-live="polite">
+        @if (ph().photoUrl(); as src) {
+          @if (s().crop(); as c) {
+            <div class="crop">
+              <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
+                <img [src]="ph().pageUrl(c.page) ?? src" [alt]="'sheetEdit.cropAlt' | translate" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
+                     [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
+                <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
+                     [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
+              </div>
+            </div>
+          }
+        }
+        @if (s().busy()) { <p class="muted small">{{ 'sheetEdit.rereading' | translate }}</p> }
+        @if (s().canUndoRemove()) {
+          <p class="undo-line small">{{ 'sheetEdit.deleted' | translate }}
+            <button type="button" class="btn-sec" [disabled]="s().busy()" (click)="s().undoRemove()">{{ 'common.undo' | translate }}</button></p>
+        }
+        @if (s().current(); as p) {
+          <p class="where">
+            <b>{{ s().plyLabel(s().cursor()) }}</b> <span class="san" [class.bad]="p.illegal">{{ p.san | san }}</span>
+            @if (p.written) { <span class="muted small">{{ 'sheetEdit.written' | translate: { text: p.written } }}</span> }
+            @if (p.match === 'inserted') { <span class="chip warn">{{ 'sheetEdit.notOnSheet' | translate }}</span> }
+            @if (p.uncertain && !p.confirmed) { <span class="chip warn">{{ 'sheetEdit.uncertain' | translate }}</span> }
+            @if (p.check && !p.confirmed) {
+              <span class="chip warn" [title]="'sheetEdit.engineCheckHint' | translate">{{ (p.check === 'replaced' ? 'sheetEdit.engineReplaced' : 'sheetEdit.engineSuggested') | translate }}</span>
+            }
+            @if (p.confirmed) { <span class="chip ok">{{ 'sheetEdit.confirmed' | translate }}</span> }
+            @if (p.illegal) { <span class="chip bad">{{ 'sheetEdit.illegal' | translate }}</span> }
+            <!-- z1-l-korrigieren-handy: „Stimmt so" und „Zug löschen" in der Zeile des Zugs. „Zug löschen" abgesetzt als roter Link
+                 ganz rechts (UX-070) — „Stimmt so" ist die häufigste Aktion, ein Fehlgriff daneben nahm den Zug heraus. -->
+            <span class="where-actions">
+              @if (!p.illegal && !p.confirmed && (p.uncertain || s().isScoresheet())) {
+                <button type="button" class="btn-sec confirm" (click)="s().confirm()">{{ 'sheetEdit.confirm' | translate }}</button>
+              }
+              <button type="button" class="btn-link del" [disabled]="s().busy()" (click)="s().remove()">{{ 'sheetEdit.delete' | translate }}</button>
+            </span>
+          </p>
+          @if (p.options?.length && !p.illegal) {
+            <div class="options">
+              <span class="muted small">{{ 'sheetEdit.options' | translate }}</span>
+              @for (o of p.options; track o.uci) {
+                <button type="button" class="option" [class.chosen]="o.uci === p.uci" [disabled]="s().busy()" (click)="s().choose(o)">
+                  <b>{{ o.san | san }}</b> <span class="small">{{ 'sheetEdit.reach' | translate: { count: o.reach } }}</span>
+                  @if (o.preview.length) { <span class="small muted">→ {{ o.preview.join(' ') | san:'text' }}</span> }
+                </button>
+              }
+            </div>
+          }
+          <ng-content select="[sheetPlyExtra]" />
+          <!-- „Ersetzen" ist die Vorgabe; nur der seltene Einfügen-Modus bekommt seine Zeile -->
+          @if (s().mode() === 'insert') { <p class="muted small">{{ 'sheetEdit.insertHint' | translate }}</p> }
+        } @else {
+          <p class="muted small">{{ 'sheetEdit.endHint' | translate }}</p>
+          @if (s().unresolved().length) { <p class="small">{{ 'sheetEdit.nextWritten' | translate }} <b>{{ s().unresolved()[0] }}</b></p> }
+          <ng-content select="[sheetEnd]" />
+        }
+      </div>
+    </section>
+
+    <section class="panel scan-moves">
+      <div class="moves">
+        @for (row of s().rows(); track row.no) {
+          <span class="no">{{ row.no }}.</span>
+          <button type="button" class="ply" [ngClass]="s().plyClass(row.white)" (click)="s().go(row.white)">{{ s().plies()[row.white].san | san }}</button>
+          @if (row.black !== null) {
+            <button type="button" class="ply" [ngClass]="s().plyClass(row.black)" (click)="s().go(row.black)">{{ s().plies()[row.black].san | san }}</button>
+          } @else { <span></span> }
+        }
+        <span class="no"></span>
+        <button type="button" class="ply end" [class.cursor]="s().cursor() === s().plies().length" (click)="s().go(s().legalCount())">{{ 'sheetEdit.end' | translate }}</button>
+      </div>
+      @if (s().unresolved().length) {
+        <p class="err small unresolved">{{ 'sheetEdit.unresolved' | translate: { count: s().unresolved().length } }} <span class="unresolved-list">{{ s().unresolved().join(' ') }}</span></p>
+      }
+      @if (s().illegalCount() > 0) {
+        <p class="err small">{{ 'sheetEdit.illegalHint' | translate: { count: s().illegalCount() } }}</p>
+      }
+    </section>
+  </div>
+</div>

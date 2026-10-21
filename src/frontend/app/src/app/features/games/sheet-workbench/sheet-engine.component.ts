@@ -1,13 +1,15 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { AuthService } from '@rh/core/auth.service';
-import { BoardArrow } from '@rh/shared/pgn-viewer/chess-board.component';
-import { ExternalEngineInfo, ExternalEngineService, isEngineOffline } from '@rh/features/analysis/external-engine.service';
-import { LiveEngineSession } from '@rh/features/games/live-engine-session';
-import { AnalysisEngineService } from '@rh/features/analysis/analysis-engine.service';
-import { de } from '../../core/league-format';
+import { TranslatePipe } from '@ngx-translate/core';
+import { AuthService } from '../../../core/auth.service';
+import { BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
+import { SanPipe } from '../../../shared/chess/san.pipe';
+import { ExternalEngineInfo, ExternalEngineService, isEngineOffline } from '../../analysis/external-engine.service';
+import { LiveEngineSession } from '../live-engine-session';
+import { AnalysisEngineService } from '../../analysis/analysis-engine.service';
 
-/** Gemerkte Wahl der Prüfseite (localStorage): an/aus und welche Engine (`wasm` = Stockfish im Browser). */
+/** Gemerkte Wahl der Prüfseite (localStorage): an/aus und welche Engine (`wasm` = Stockfish im Browser). Der Schlüssel
+ *  heißt noch nach LeagueHub, wo die Engine zuerst stand — umbenannt wäre die gemerkte Wahl weg. */
 export const SCAN_ENGINE_KEY = 'lh-scan-engine';
 export const SCAN_ENGINE_DEPTH = 20;
 /** Linien auf der Prüfseite (Wunsch 2026-10-10: „immer 5, 10 wäre besser") — 10 im Browser, externe Engines liefern 5. */
@@ -32,27 +34,29 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
  * Seite). Nur eine Hilfe beim Lesen: was auf dem Formular steht, entscheidet weiter der Mensch. Standardmäßig AUS — die
  * Wahl bleibt je Gerät gemerkt. Externe Engines (eigener Broker, Lichess) nur angemeldet; die Hintergrund-Engines der
  * Analyseaufträge stehen wie am Analysebrett nicht zur Wahl.
+ *
+ * <p>Seit 0.816.0 Teil der gemeinsamen Formular-Werkbank (`SheetWorkbenchComponent`) — RookHub und LeagueHub.</p>
  */
 @Component({
-  selector: 'lh-scan-engine',
+  selector: 'app-sheet-engine',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, TranslatePipe, SanPipe],
   template: `
     <div class="scan-engine">
       <div class="se-head">
-        <label class="se-toggle"><input type="checkbox" [checked]="on()" (change)="toggle($any($event.target).checked)" /> Engine</label>
-        <select class="se-pick" aria-label="Engine wählen" [value]="engine()" (change)="choose($any($event.target).value)">
-          <option value="wasm" [selected]="engine() === 'wasm'">Stockfish (im Browser)</option>
+        <label class="se-toggle"><input type="checkbox" [checked]="on()" (change)="toggle($any($event.target).checked)" /> {{ 'sheetEdit.engine.title' | translate }}</label>
+        <select class="se-pick" [attr.aria-label]="'sheetEdit.engine.pick' | translate" [value]="engine()" (change)="choose($any($event.target).value)">
+          <option value="wasm" [selected]="engine() === 'wasm'">{{ 'sheetEdit.engine.browser' | translate }}</option>
           @for (e of engines(); track e.id) {
-            <option [value]="e.id" [selected]="engine() === e.id" [disabled]="offline(e)">{{ e.name }}{{ offline(e) ? ' · offline' : '' }}</option>
+            <option [value]="e.id" [selected]="engine() === e.id" [disabled]="offline(e)">{{ e.name }}{{ offline(e) ? ' · ' + ('sheetEdit.engine.offline' | translate) : '' }}</option>
           }
         </select>
         @if (session(); as s) {
           @if (on()) {
-            @if (s.fallback()) { <span class="se-note warn">antwortet nicht — rechnet im Browser</span> }
-            @if (s.depth() > 0) { <span class="se-note">Tiefe {{ s.depth() }}</span> }
-            @if (s.isLc0() && s.nodes() > 0) { <span class="se-note">{{ s.nodes() | number:'1.0-0' }} Knoten</span> }
+            @if (s.fallback()) { <span class="se-note warn">{{ 'sheetEdit.engine.fallback' | translate }}</span> }
+            @if (s.depth() > 0) { <span class="se-note">{{ 'sheetEdit.engine.depth' | translate: { depth: s.depth() } }}</span> }
+            @if (s.isLc0() && s.nodes() > 0) { <span class="se-note">{{ 'sheetEdit.engine.nodes' | translate: { nodes: (s.nodes() | number:'1.0-0') } }}</span> }
           }
         }
       </div>
@@ -61,7 +65,7 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
           <ol class="se-lines">
             @for (i of slots(); track i) {
               @if (s.lines()[i]; as l) {
-                <li><span class="se-eval" [class.white]="l.positive">{{ l.evalText }}</span> <span class="se-san">{{ de(l.san) }}</span></li>
+                <li><span class="se-eval" [class.white]="l.positive">{{ l.evalText }}</span> <span class="se-san">{{ l.san | san:'text' }}</span></li>
               } @else {
                 <li class="empty" aria-hidden="true">&nbsp;</li>
               }
@@ -72,18 +76,21 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
     </div>
   `,
   styles: [`
-    :host { display: block; width: 100%; }
+    :host { display: block; width: 100%;
+      --se-ink: var(--ink, currentColor); --se-line: var(--line, color-mix(in srgb, currentColor 25%, transparent));
+      --se-surface: var(--surface, var(--mat-sys-surface-container, transparent)); --se-muted: var(--muted, color-mix(in srgb, currentColor 60%, transparent));
+      --se-warn: var(--warn, var(--rh-warn)); }
     .se-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .se-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; min-height: 44px; cursor: pointer; }
     /* z3-l-engine-haekchen: wie die übrigen LeagueHub-Häkchen (.anon-toggle input) statt des 13-px-Browserfelds. */
-    .se-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
+    .se-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--se-ink); }
     /* UI-Sweep 2026-10-11 (d2-l-korrigieren-engine-select): wie die Auswahlfelder von LeagueHub (.pick select) statt des hellen
        Browser-Felds im dunklen Brettblock. */
-    .se-pick { font: 500 15px/1.2 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+    .se-pick { font: 500 15px/1.2 var(--body, inherit); color: var(--se-ink); background: var(--se-surface); border: 1px solid var(--se-line);
       border-radius: 6px; padding: 8px 10px; min-height: 44px; max-width: 100%; }
-    .se-pick:hover { border-color: var(--muted); }
+    .se-pick:hover { border-color: var(--se-muted); }
     .se-note { font-size: .85em; opacity: .75; }
-    .se-note.warn { color: var(--warn); opacity: 1; }
+    .se-note.warn { color: var(--se-warn); opacity: 1; }
     .se-lines { list-style: none; margin: 6px 0 0; padding: 0; font-variant-numeric: tabular-nums; }
     .se-lines li { display: flex; gap: 8px; padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.4em; }
     .se-eval { flex: 0 0 auto; min-width: 3.6em; padding: 0 4px; border-radius: 4px; background: #333; color: #fff; text-align: center; font-weight: 600; }
@@ -91,7 +98,7 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
     .se-san { overflow: hidden; text-overflow: ellipsis; }
   `],
 })
-export class ScanEngineComponent implements OnDestroy {
+export class SheetEngineComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly external = inject(ExternalEngineService);
 
@@ -103,7 +110,6 @@ export class ScanEngineComponent implements OnDestroy {
   /** Immer so viele Zeilen wie die gewählte Engine liefert (leere als Platzhalter) — die Liste springt nicht. */
   readonly slots = computed(() => Array.from({ length: this.engine() === 'wasm' ? SCAN_ENGINE_LINES
     : Math.min(SCAN_ENGINE_LINES, AnalysisEngineService.MaxRemoteMultiPv) }, (_, i) => i));
-  readonly de = de;
   readonly on = signal(false);
   readonly engine = signal('wasm');
   readonly engines = signal<ExternalEngineInfo[]>([]);

@@ -9,9 +9,10 @@ export interface ScanPhotosOptions {
 }
 
 /**
- * Die Fotos eines Partieformulars auf der Prüfseite (`ClubScanPageComponent`): je Seite ein Hauptfoto (ein Formular kann
- * über bis zu drei Blätter gehen, 0.690.1), dazu weitere Fotos derselben Seite (0.736.0), die erst bei Bedarf geholt
- * werden. Hält die Objekt-Adressen und gibt sie mit `dispose()` wieder frei.
+ * Die Fotos eines Partieformulars in der Formular-Werkbank (`SheetWorkbenchComponent`, RookHub und LeagueHub): je Seite ein
+ * Hauptfoto (ein Formular kann über bis zu drei Blätter gehen, 0.690.1), dazu weitere Fotos derselben Seite (0.736.0), die
+ * erst bei Bedarf geholt werden. Hält die Objekt-Adressen und gibt sie mit `dispose()` wieder frei; die Dateien selbst bleiben
+ * je Seite greifbar (`blob`), für „Foto öffnen/herunterladen" in RookHub.
  */
 export class ScanPhotos {
   /** Die Fotos des Formulars je Seite (Objekt-Adressen). */
@@ -31,6 +32,7 @@ export class ScanPhotos {
     return (view > 0 ? this.viewUrls()[`${this.shownPage()}:${view}`] : null) ?? this.mainUrl();
   });
   private disposed = false;
+  private readonly blobs: (Blob | null)[] = [];
 
   constructor(private readonly opts: ScanPhotosOptions) {}
 
@@ -53,6 +55,11 @@ export class ScanPhotos {
     } catch { /* dann bleibt das Hauptfoto stehen */ }
   }
 
+  /** Die Datei des Hauptfotos einer Seite, sobald geladen. */
+  blob(page: number): Blob | null {
+    return this.blobs[page - 1] ?? null;
+  }
+
   pageUrl(page: number): string | null {
     return this.photoUrls()[page - 1] ?? null;
   }
@@ -64,6 +71,7 @@ export class ScanPhotos {
       try {
         const blob = await fetch(page);
         if (!still()) return;
+        this.blobs[page - 1] = blob;
         const url = URL.createObjectURL(blob);
         this.photoUrls.update(list => { const next = [...list]; next[page - 1] = url; return next; });
         if (page > 1) {

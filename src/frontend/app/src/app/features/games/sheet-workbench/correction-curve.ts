@@ -1,5 +1,5 @@
-import { EvalGraphMark } from '@rh/shared/pgn-viewer/eval-graph.component';
-import { GameEvals, MOVE_CLASS_COLORS, MoveClass, reviewGame } from '@rh/features/games/game-review.util';
+import { EvalGraphMark } from '../../../shared/pgn-viewer/eval-graph.component';
+import { GameEvals, MOVE_CLASS_COLORS, MoveClass, reviewGame } from '../game-review.util';
 
 /** Diese Zug-Klassen bekommen einen Punkt auf der Kurve — beim Korrigieren zählen nur die Stellen, an denen etwas kippt. */
 const MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>(['mistake', 'miss', 'blunder']);

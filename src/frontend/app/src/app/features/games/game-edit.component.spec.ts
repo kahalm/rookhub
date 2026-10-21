@@ -9,6 +9,9 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { GameEditComponent } from './game-edit.component';
 
 describe('GameEditComponent', () => {
+  /** Die Fotos lädt `ScanPhotos` nacheinander über Promises — kurz warten, bis die nächste Anfrage steht. */
+  const settle = () => new Promise(r => setTimeout(r));
+
   async function setup() {
     await TestBed.configureTestingModule({
       imports: [GameEditComponent],
@@ -122,20 +125,21 @@ describe('GameEditComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.where .san')!.textContent!.trim()).toBe('Sf3');
   });
 
-  it('shows the analysis (graph + computer lines) of the saved moves, and hides it once moves change', async () => {
+  it('shows the evaluation curve of the saved moves (shared sheet workbench), and stops it where the moves change', async () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail());
+    http.match(r => r.url.startsWith('/api/games/5/evals')).forEach(r => r.flush({ status: 'done', analyzed: 5, total: 5, targetDepth: 20,
+      final: { cp: 10, mate: null }, plies: [20, 15, 30, 900, 10].map((cp, ply) => ({ ply, cp, mate: null, depth: 20, playedUci: '' })) }));
     fixture.detectChanges();
-    expect(c.reviewUrl()).toBe('/api/games/5/evals');
-    http.match(r => r.url.startsWith('/api/games/5/evals')).forEach(r => r.flush({ status: 'none', plies: [], total: 0, analyzed: 0 }));
-    expect(c.playedMoves()[0]).toEqual({ san: 'e4', from: 'e2', to: 'e4', promotion: null });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-sheet-workbench .eval-curve app-eval-graph')).not.toBeNull();
 
     c.go(2);
     c.onBoardMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: '' });
     fixture.detectChanges();
     expect(c.movesChanged()).toBeTrue();
-    expect(c.reviewUrl()).toBeNull();
+    expect(el.querySelector('.eval-curve')?.textContent).toContain('sheetEdit.curveChanged');
   });
 
   // UX-070: „Zug löschen" ist von „Stimmt" abgesetzt (Textknopf in Warnfarbe) und lässt sich zurücknehmen.
@@ -148,7 +152,7 @@ describe('GameEditComponent', () => {
 
     c.go(2);
     fixture.detectChanges();
-    expect(el.querySelector('.ply-actions .del')?.getAttribute('color')).toBe('warn');
+    expect(el.querySelector('.where-actions .del')).not.toBeNull();
     expect(el.querySelector('.undo-line')).toBeNull();
     c.remove();
     fixture.detectChanges();
@@ -238,7 +242,6 @@ describe('GameEditComponent', () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
-    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
     http.expectOne('/api/games/5/scoresheet').flush({
       scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [], unresolvedFrom: null,
       plies: [
@@ -252,6 +255,8 @@ describe('GameEditComponent', () => {
         { w: 4, written: 'Lb5', san: 'Bb5', uci: 'f1b5', match: 'written', uncertain: false },
       ],
     });
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    await settle();
     fixture.detectChanges();
 
     expect(c.isScoresheet()).toBeTrue();
@@ -288,13 +293,14 @@ describe('GameEditComponent', () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
-    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])]));
     http.expectOne('/api/games/5/scoresheet').flush({
       scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [],
       plies: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'].map((san, i) => ({
         w: i, written: san, san, uci: '', match: i === 1 ? 'fuzzy' : 'written', uncertain: i === 1,
       })),
     });
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])]));
+    await settle();
     expect(c.cursor()).toBe(1);
     c.confirm();
     expect(c.uncertainLeft()).toBe(0);
@@ -305,7 +311,6 @@ describe('GameEditComponent', () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
-    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
     http.expectOne('/api/games/5/scoresheet').flush({
       scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [],
       boxes: [[100, 50, 180, 80], [400, 50, 470, 80], null, [400, 90, 480, 120], [100, 130, 190, 160]],
@@ -313,6 +318,8 @@ describe('GameEditComponent', () => {
         w: i, written: san, san, uci: '', match: i === 1 ? 'fuzzy' : 'written', uncertain: i === 1,
       })),
     });
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    await settle();
     // Das Foto hat im Test keine echten Pixel — die Maße meldet sonst das load-Ereignis.
     c.photoSize.set({ w: 1500, h: 2000 });
     fixture.detectChanges();
@@ -341,7 +348,6 @@ describe('GameEditComponent', () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
-    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
     http.expectOne('/api/games/5/scoresheet').flush({
       scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [],
       pageCount: 2, pages: [1, 1, 1, 2, 2],
@@ -350,25 +356,28 @@ describe('GameEditComponent', () => {
         w: i, written: san, san, uci: '', match: i === 3 ? 'fuzzy' : 'written', uncertain: i === 3,
       })),
     });
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    await settle();
     http.expectOne('/api/games/5/photo?page=2').flush(new Blob([new Uint8Array([2])], { type: 'image/jpeg' }));
+    await settle();
     // Keine echten Pixel im Test — die Maße melden sonst die geladenen Bilder.
     c.session.setPageSize(1, 1500, 2000);
     c.session.setPageSize(2, 1500, 1800);
     fixture.detectChanges();
 
-    expect(c.pageCount()).toBe(2);
+    expect(c.ph.pageCount()).toBe(2);
     expect(c.cursor()).toBe(3);                 // die unsichere Stelle steht auf Seite 2 …
     expect(c.crop()?.page).toBe(2);
-    expect(c.shownPage()).toBe(2);              // … also blättert die Seite oben dorthin
-    expect(c.photoUrl()).toBe(c.pageUrl(2));
+    expect(c.ph.shownPage()).toBe(2);              // … also blättert die Seite oben dorthin
+    expect(c.ph.photoUrl()).toBe(c.ph.pageUrl(2));
     const cropImg = fixture.nativeElement.querySelector('.crop-frame img') as HTMLImageElement;
-    expect(cropImg.getAttribute('src')).toBe(c.pageUrl(2));
+    expect(cropImg.getAttribute('src')).toBe(c.ph.pageUrl(2));
     expect(fixture.nativeElement.querySelector('.pager')).not.toBeNull();
 
     c.go(0);                                    // zurück auf Seite 1
     fixture.detectChanges();
     expect(c.crop()?.page).toBe(1);
-    expect(c.shownPage()).toBe(1);
+    expect(c.ph.shownPage()).toBe(1);
   });
 
   // Gewünscht 2026-09-27: nach dem Bestätigen/Wählen einer Lesart gleich zur nächsten unsicheren Stelle.
@@ -376,7 +385,6 @@ describe('GameEditComponent', () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
-    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
     const opts = [
       { san: 'Nf3', uci: 'g1f3', match: 'fuzzy', reach: 2, preview: [] },
       { san: 'Nc3', uci: 'b1c3', match: 'fuzzy', reach: 1, preview: [] },
@@ -391,6 +399,8 @@ describe('GameEditComponent', () => {
         { w: 4, written: 'Lb5', san: 'Bb5', uci: 'f1b5', match: 'fuzzy', uncertain: true },
       ],
     });
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    await settle();
     fixture.detectChanges();
     expect(c.cursor()).toBe(1);
 
@@ -419,7 +429,6 @@ describe('GameEditComponent', () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();
     http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
-    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
     http.expectOne('/api/games/5/scoresheet').flush({
       scanId: 9, notationLanguage: 'en', written: ['e4', 'e5', 'Nf3', 'Bb5'], unresolved: [], unresolvedFrom: null,
       plies: [
@@ -430,6 +439,8 @@ describe('GameEditComponent', () => {
         { w: 3, written: 'Bb5', san: 'Bb5', uci: 'f1b5', match: 'written', uncertain: false },
       ],
     });
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    await settle();
     fixture.detectChanges();
     expect(c.cursor()).toBe(3);
 
@@ -461,41 +472,4 @@ describe('GameEditComponent', () => {
     }
   });
 
-  // d3-rk-edit-tablet-leerraum: 769–1100 px ohne Foto — Zug-Karte unter dem Brett, Zugliste über die ganze rechte Spalte
-  // (vorher ~540 px leer unter dem Brett). Karma läuft breiter → die Regel als Text prüfen.
-  it('d3: am Tablet steht die Zug-Karte unter dem Brett und die Zugliste rechts über beide Zeilen', () => {
-    const css = ((GameEditComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
-      .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/\s+/g, ' ');
-    const at = css.indexOf('@media (min-width: 769px) and (max-width: 1100px)');
-    expect(at).withContext('Tablet-Block').toBeGreaterThan(-1);
-    const block = css.slice(at, css.indexOf('@media', at + 10));
-    expect(block).toContain('.layout:not(.with-photo) .side { display: contents; }');
-    expect(block).toMatch(/\.board-card \{ grid-column: 1; grid-row: 1; \}/);
-    expect(block).toMatch(/\.cursor-card \{ grid-column: 1; grid-row: 2; \}/);
-    expect(block).toMatch(/\.moves-card \{ grid-column: 2; grid-row: 1 ?\/ ?span 2; \}/);
-  });
-
-  // d4-rk-edit-luecke-brett-zugkarte: die überspannende, höhere Zugliste drückte Zeile 1 auf → ~85 px Loch zwischen
-  // Brett und Zug-Karte. „auto 1fr" gibt den Überhang nur der zweiten Zeile. Regel als Text + Wirkung am Nachbau.
-  it('d4: am Tablet folgt die Zug-Karte dem Brett ohne Loch (Zeilen auto 1fr)', () => {
-    const css = ((GameEditComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
-      .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/\s+/g, ' ');
-    const at = css.indexOf('@media (min-width: 769px) and (max-width: 1100px)');
-    const block = css.slice(at, css.indexOf('@media', at + 10));
-    expect(block).toContain('.layout:not(.with-photo) { grid-template-rows: auto 1fr; }');
-
-    const grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:12px;align-items:start;width:820px';
-    grid.innerHTML = '<div style="height:400px;grid-column:1;grid-row:1"></div>'
-      + '<div style="height:120px;grid-column:1;grid-row:2"></div>'
-      + '<div style="height:900px;grid-column:2;grid-row:1 / span 2"></div>';
-    document.body.appendChild(grid);
-    try {
-      const [board, cursor] = Array.from(grid.children) as HTMLElement[];
-      const gap = cursor.getBoundingClientRect().top - board.getBoundingClientRect().bottom;
-      expect(gap).toBeLessThanOrEqual(16);
-    } finally {
-      grid.remove();
-    }
-  });
 });

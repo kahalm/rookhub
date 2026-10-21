@@ -2,7 +2,7 @@ import { ExternalEngineService } from '@rh/features/analysis/external-engine.ser
 import { provideTestClub } from '../../core/club-context.testing';
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -35,6 +35,12 @@ const MATCH = (blackLeague: boolean): ClubMatch => ({
   black: blackLeague ? { league: true, ambiguous: false, name: 'Hengl, Philip', fide: '222', club: false, candidates: [] }
     : { league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [] },
 });
+
+/** Auszug aus `public/i18n/de.json` → `sheetEdit` (die Werkbank-Texte, die diese Specs prüfen). */
+const SHEET_DE = {
+  confirm: 'Stimmt so', delete: 'Zug löschen', deleted: 'Zug gelöscht.', options: 'Mögliche Lesarten',
+  showPhoto: 'Ganzes Foto zeigen', hidePhoto: 'Ganzes Foto ausblenden', photo: 'Foto {{n}}', page: 'Seite {{n}}',
+};
 
 describe('ClubScanPageComponent', () => {
   afterEach(() => localStorage.removeItem(AUTO_MINE_KEY));
@@ -75,6 +81,9 @@ describe('ClubScanPageComponent', () => {
         { provide: AuthService, useValue: { has: (p: string) => !perms || perms.includes(p), currentUser: { username: 'patrik' }, get isLoggedIn() { return loggedIn; } } },
       ],
     });
+    // Die Formular-Werkbank (0.816.0) ist geteilt und übersetzt — die Texte, auf die diese Specs schauen, wie in de.json.
+    TestBed.inject(TranslateService).setTranslation('de', { sheetEdit: SHEET_DE, common: { undo: 'Rückgängig' } }, true);
+    TestBed.inject(TranslateService).use('de');
     fixture = TestBed.createComponent(ClubScanPageComponent);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -129,8 +138,8 @@ describe('ClubScanPageComponent', () => {
     const c = fixture.componentInstance;
     expect(api.gameEvals).toHaveBeenCalledWith(12);
     expect(el.querySelector('.eval-curve app-eval-graph')).not.toBeNull();
-    expect(c.evalCurve()!.curve.length).toBe(5);
-    expect(c.evalCurve()!.marks.length).toBeGreaterThan(0);                   // das Zickzack ist markiert
+    expect(c.savedSans()).toEqual(['d4', 'Nf6', 'c4', 'e6']);
+    expect(el.querySelectorAll('.eval-curve .dot').length).toBeGreaterThan(0);  // das Zickzack ist markiert
   }));
 
   it('Korrigieren: fremde Partie (kein Recht) → „Partie nicht gefunden"', fakeAsync(() => {

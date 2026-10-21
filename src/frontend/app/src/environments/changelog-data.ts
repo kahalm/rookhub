@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.816.0", date: "2026-10-21", changes: [
+    { en: "Scoresheet correction: RookHub and LeagueHub now use one and the same workbench, laid out like LeagueHub — the photo with page and photo choice (“Photo 1 / Photo 2” for the second copy) and the selected move marked in it, the board with evaluation curve and engine in the middle, and on the right the detail of the sheet with “Correct”, the readings and the move list. In RookHub this adds the photo marking, the detail next to the move and the engine; the evaluation curve of the workbench replaces the game review on this page.",
+      de: "Partieformular korrigieren: RookHub und LeagueHub benutzen jetzt ein und dieselbe Werkbank, aufgeteilt wie in LeagueHub – links das Foto mit Seiten- und Fotowahl („Foto 1 / Foto 2“ für das zweite Exemplar) und markiertem Zug, in der Mitte das Brett mit Bewertungskurve und Engine, rechts der Ausschnitt des Formulars mit „Stimmt so“, den Lesarten und der Zugliste. RookHub bekommt dadurch die Markierung im Foto, den Ausschnitt beim Zug und die Engine; die Bewertungskurve der Werkbank ersetzt auf dieser Seite den Partie-Rückblick." },
+  ] },
   { version: "0.815.3", date: "2026-10-21", changes: [
     { en: "Scanned e-books: boards that are not quite square after scanning are no longer padded with a strip of white or caption — that shifted every position by one rank (e.g. Flear “Open Ruy Lopez”: 35 of 40 sample boards now read correctly instead of 7). Already stored diagrams stay until a book is scanned again.",
       de: "Gescannte E-Books: Bretter, die nach dem Scannen nicht ganz quadratisch sind, bekommen keinen Streifen Weiß oder Bildunterschrift mehr dazu — dadurch war jede Stellung um eine Reihe verschoben (z. B. Flear „Open Ruy Lopez“: 35 statt 7 von 40 Stichproben-Brettern richtig). Schon gespeicherte Diagramme bleiben, bis ein Buch neu gelesen wird." },

@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, of } from 'rxjs';
-import { AuthService } from '@rh/core/auth.service';
-import { AnalysisEngineService, AnalysisState } from '@rh/features/analysis/analysis-engine.service';
-import { ExternalEngineService } from '@rh/features/analysis/external-engine.service';
-import { LiveEngineSession } from '@rh/features/games/live-engine-session';
-import { BoardArrow } from '@rh/shared/pgn-viewer/chess-board.component';
-import { SCAN_ENGINE_KEY, ScanEngineComponent, readScanEngineChoice } from './scan-engine.component';
+import { AuthService } from '../../../core/auth.service';
+import { AnalysisEngineService, AnalysisState } from '../../analysis/analysis-engine.service';
+import { ExternalEngineService } from '../../analysis/external-engine.service';
+import { LiveEngineSession } from '../live-engine-session';
+import { BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
+import { SCAN_ENGINE_KEY, SheetEngineComponent, readScanEngineChoice } from './sheet-engine.component';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
@@ -25,7 +26,7 @@ function fakeEngine() {
   return { engine, state$ };
 }
 
-describe('ScanEngineComponent', () => {
+describe('SheetEngineComponent', () => {
   let fake: ReturnType<typeof fakeEngine>;
   let arrows: BoardArrow[][];
 
@@ -33,8 +34,9 @@ describe('ScanEngineComponent', () => {
     fake = fakeEngine();
     arrows = [];
     TestBed.configureTestingModule({
-      imports: [ScanEngineComponent],
+      imports: [SheetEngineComponent],
       providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: { get isLoggedIn() { return loggedIn; } } },
         { provide: ExternalEngineService, useValue: {
           listEngines: () => of({ hasCredentials: false, tokenInvalid: false, backgroundEngineIds: ['rhe_bg'], engines: [
@@ -47,9 +49,10 @@ describe('ScanEngineComponent', () => {
       ],
     });
     // Kein echter Stockfish: die Sitzung bekommt die Attrappe.
-    spyOn(ScanEngineComponent.prototype as unknown as { createSession(): LiveEngineSession }, 'createSession')
+    spyOn(SheetEngineComponent.prototype as unknown as { createSession(): LiveEngineSession }, 'createSession')
       .and.callFake(() => new LiveEngineSession(() => fake.engine as unknown as AnalysisEngineService, 20));
-    const f = TestBed.createComponent(ScanEngineComponent);
+    TestBed.inject(TranslateService).use('de');   // deutsche Figurenbuchstaben (SanPipe)
+    const f = TestBed.createComponent(SheetEngineComponent);
     f.componentRef.setInput('fen', START);
     f.componentInstance.arrowsChange.subscribe(a => arrows.push(a));
     f.detectChanges();

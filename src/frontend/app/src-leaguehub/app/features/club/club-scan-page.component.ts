@@ -2,17 +2,11 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal, effect, untracked, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NgClass } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
-import { BoardArrow, ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { scrollIntoContainer } from '@rh/shared/pgn-viewer/move-list.component';
-import { isBoardHotkey } from '@rh/shared/keyboard.util';
-import { ScanEngineComponent } from './scan-engine.component';
-import { EvalGraphComponent } from '@rh/shared/pgn-viewer/eval-graph.component';
 import { GameEvals } from '@rh/features/games/game-review.util';
-import { correctionCurve } from './scan-eval-curve';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -27,9 +21,9 @@ import { downloadBlob } from '@rh/shared/download.util';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
 import { ScanHeaderForm, SIDES } from './scan-header-form';
-import { ScanPhotos } from './scan-photos';
+import { ScanPhotos } from '@rh/features/games/sheet-workbench/scan-photos';
+import { SheetWorkbenchComponent } from '@rh/features/games/sheet-workbench/sheet-workbench.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
-import { de } from '../../core/league-format';
 
 const POLL_MS = 3000;
 /** So viele Abrufe hintereinander dürfen still scheitern (Neustart, Funkloch), bevor die Seite es sagt (UX-034). */
@@ -53,7 +47,7 @@ function readAutoMine(): boolean {
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent, AccessGateComponent, ScanEngineComponent, EvalGraphComponent],
+  imports: [RouterLink, PlayerSearchComponent, AccessGateComponent, SheetWorkbenchComponent],
   template: `
     @if (!allowed) {
       <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
@@ -138,152 +132,11 @@ function readAutoMine(): boolean {
       </section>
 
       @if (st.scan.status === 'done') {
-        <div class="scan-wrap"><div class="scan-layout" [class.with-photo]="!!ph.photoUrl()">
-          @if (ph.photoUrl(); as src) {
-            <section class="panel scan-photo" [class.open]="photoOpen()">
-              <p class="photo-toggle"><button type="button" class="btn-link" [attr.aria-expanded]="photoOpen()" (click)="photoOpen.set(!photoOpen())">
-                {{ photoOpen() ? 'Ganzes Foto ausblenden' : 'Ganzes Foto zeigen' }}</button></p>
-              @if (ph.pageCount() > 1) {
-                <div class="seg pager" role="group" aria-label="Seite des Formulars">
-                  @for (n of ph.pageNumbers(); track n) {
-                    <button type="button" [attr.aria-pressed]="ph.shownPage() === n" (click)="ph.showPage(n)">Seite {{ n }}</button>
-                  }
-                </div>
-              }
-              @if (ph.viewNumbers().length > 1) {
-                <!-- 0.736.0: weitere Fotos derselben Seite — Ausschnitt und Markierung gehören zum ersten -->
-                <div class="seg pager views" role="group" aria-label="Foto dieser Seite">
-                  @for (v of ph.viewNumbers(); track v) {
-                    <button type="button" [attr.aria-pressed]="ph.shownView() === v" (click)="ph.showView(v)">Foto {{ v + 1 }}</button>
-                  }
-                </div>
-              }
-              <div class="photo-scroll" [class.zoom]="zoom()">
-                <div class="photo-frame">
-                  <img [src]="src" alt="Foto des Partieformulars" (load)="onPhotoLoad($event)" />
-                  @if (s.mark(); as m) { @if (m.page === ph.shownPage() && ph.shownView() === 0) {
-                    <div class="photo-mark" [class.uncertain]="m.uncertain" [style.left.%]="m.left" [style.top.%]="m.top"
-                         [style.width.%]="m.width" [style.height.%]="m.height" aria-hidden="true"></div>
-                  } }
-                </div>
-              </div>
-              <p class="photo-zoom"><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ zoom() ? 'Kleiner' : 'Größer' }}</button></p>
-            </section>
-          }
-
-          <section class="panel scan-board">
-            <app-chess-board [fen]="s.cursorFen()" [lastMove]="s.lastMove()" [arrows]="boardArrows()" [flipped]="f.ownerSide() === 'black'"
-                             [playable]="!s.busy()" (userMove)="onBoardMove($event)" />
-            <div class="board-nav">
-              <button type="button" class="btn-sec" (click)="s.go(0)" [disabled]="s.cursor() === 0" aria-label="Zum Anfang">⏮</button>
-              <button type="button" class="btn-sec" (click)="s.go(s.cursor() - 1)" [disabled]="s.cursor() === 0" aria-label="Zug zurück">◀</button>
-              <button type="button" class="btn-sec" (click)="s.go(s.cursor() + 1)" [disabled]="s.cursor() >= s.legalCount()" aria-label="Zug vor">▶</button>
-              <button type="button" class="btn-sec" (click)="s.go(s.legalCount())" [disabled]="s.cursor() >= s.legalCount()" aria-label="Zum Ende">⏭</button>
-            </div>
-            <div class="board-nav">
-              <div class="seg" role="group" aria-label="Zug am Brett">
-                <button type="button" [attr.aria-pressed]="s.mode() === 'replace'" (click)="s.mode.set('replace')">Ersetzen</button>
-                <button type="button" [attr.aria-pressed]="s.mode() === 'insert'" (click)="s.mode.set('insert')">Davor einfügen</button>
-              </div>
-              @if (s.uncertainLeft() > 0) {
-                <button type="button" class="btn-sec warn" (click)="s.nextUncertain()">Nächste unsichere Stelle ({{ s.uncertainLeft() }})</button>
-              }
-            </div>
-            @if (evalCurve(); as c) {
-              <!-- Bewertungskurve der gespeicherten Partie (0.756.0): ein Zickzack zeigt fast immer einen falsch gelesenen Zug;
-                   ein Klick springt zu diesem Zug. Ab der ersten Änderung bleibt sie leer (die Analyse gehört zur gespeicherten Partie). -->
-              <div class="eval-curve">
-                <app-eval-graph [series]="c.curve" [marks]="c.marks" [currentIndex]="s.cursor()" (moveClicked)="s.go($event < 0 ? 0 : $event)" />
-                <p class="muted small">Bewertung der gespeicherten Partie — ein Zickzack (Punkt, und gleich danach wieder zurück) deutet auf
-                  einen falsch gelesenen Zug. Klick auf die Kurve springt hin.@if (c.same < s.plies().length) { Ab Zug {{ s.plyLabel(c.same) }}
-                  geändert — dort gibt es noch keine Bewertung.}</p>
-              </div>
-            }
-            <lh-scan-engine [fen]="s.cursorFen()" (arrowsChange)="engineArrows.set($event)" />
-          </section>
-
-          <!-- Am Handy steht dieser Teil OBEN (Wunsch 2026-09-28): die Zeile des Formulars, die Lesarten und „Stimmt so"
-               auf einem Bildschirm. -->
-          <section class="panel scan-check">
-            <div class="cursor-panel" aria-live="polite">
-              @if (ph.photoUrl(); as src) {
-                @if (s.crop(); as c) {
-                  <div class="crop">
-                    <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
-                      <img [src]="ph.pageUrl(c.page) ?? src" alt="Ausschnitt des Formulars" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
-                           [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
-                      <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
-                           [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
-                    </div>
-                  </div>
-                }
-              }
-              @if (s.busy()) { <p class="muted small">Lese den Rest neu …</p> }
-              @if (s.canUndoRemove()) {
-                <p class="undo-line small">Zug gelöscht.
-                  <button type="button" class="btn-sec" [disabled]="s.busy()" (click)="s.undoRemove()">Rückgängig</button></p>
-              }
-              @if (s.current(); as p) {
-                <p class="where">
-                  <b>{{ s.plyLabel(s.cursor()) }}</b> <span class="san" [class.bad]="p.illegal">{{ de(p.san) }}</span>
-                  @if (p.written) { <span class="muted small">auf dem Formular: {{ p.written }}</span> }
-                  @if (p.match === 'inserted') { <span class="chip warn">nicht auf dem Formular</span> }
-                  @if (p.uncertain && !p.confirmed) { <span class="chip warn">unsicher</span> }
-                  @if (p.check && !p.confirmed) {
-                    <span class="chip warn" title="Nach diesem Zug sprang die Bewertung hin und her — meist ein falsch gelesener Zug. Die Lesart ohne das Zickzack steht bei den Lesarten.">{{ p.check === 'replaced' ? 'von der Engine korrigiert' : 'Engine zweifelt' }}</span>
-                  }
-                  @if (p.confirmed) { <span class="chip ok">bestätigt</span> }
-                  @if (p.illegal) { <span class="chip bad">nicht legal</span> }
-                  <!-- z1-l-korrigieren-handy: „Stimmt so" und „Zug löschen" in der Zeile des Zugs statt in einer eigenen Zeile -->
-                  <span class="actions where-actions">
-                    @if (!p.illegal && !p.confirmed) { <button type="button" class="btn-sec" (click)="s.confirm()">Stimmt so</button> }
-                    <!-- Abgesetzt von „Stimmt so" (UX-070): Link-Optik in Rot, ganz rechts — „Stimmt so" ist die häufigste
-                         Aktion der Seite, ein Fehlgriff daneben nahm den Zug heraus. -->
-                    <button type="button" class="btn-link del" [disabled]="s.busy()" (click)="s.remove()">Zug löschen</button>
-                  </span>
-                </p>
-                @if (p.options?.length && !p.illegal) {
-                  <div class="options">
-                    <span class="muted small">Mögliche Lesarten</span>
-                    @for (o of p.options; track o.uci) {
-                      <button type="button" class="option" [class.chosen]="o.uci === p.uci" [disabled]="s.busy()" (click)="s.choose(o)">
-                        <b>{{ de(o.san) }}</b> <span class="small">passt zu {{ o.reach }} folgenden Einträgen</span>
-                        @if (o.preview.length) { <span class="small muted">→ {{ de(o.preview.join(' ')) }}</span> }
-                      </button>
-                    }
-                  </div>
-                }
-                <!-- „Ersetzen" ist die Vorgabe (steht im (i)); nur der seltene Einfügen-Modus bekommt seine Zeile -->
-                @if (s.mode() === 'insert') { <p class="muted small">Ein Zug am Brett wird VOR diesem eingefügt.</p> }
-              } @else {
-                <p class="muted small">Ende der Partie — ein Zug am Brett hängt einen an.</p>
-                @if (s.unresolved().length) { <p class="small">Als Nächstes auf dem Formular: <b>{{ s.unresolved()[0] }}</b></p> }
-                <!-- UX-036: ohne unsichere Stellen kommt der Abschlusshinweis nie — am Ende der Partie geht es hier weiter. -->
-                <div class="actions"><button type="button" class="btn-sec to-save" (click)="toSave()">Weiter zu den Namen</button></div>
-              }
-            </div>
-          </section>
-
-          <section class="panel scan-moves">
-            <div class="moves">
-              @for (row of s.rows(); track row.no) {
-                <span class="no">{{ row.no }}.</span>
-                <button type="button" class="ply" [ngClass]="s.plyClass(row.white)" (click)="s.go(row.white)">{{ de(s.plies()[row.white].san) }}</button>
-                @if (row.black !== null) {
-                  <button type="button" class="ply" [ngClass]="s.plyClass(row.black)" (click)="s.go(row.black)">{{ de(s.plies()[row.black].san) }}</button>
-                } @else { <span></span> }
-              }
-              <span class="no"></span>
-              <button type="button" class="ply end" [class.cursor]="s.cursor() === s.plies().length" (click)="s.go(s.legalCount())">Ende</button>
-            </div>
-            @if (s.unresolved().length) {
-              <p class="err small">{{ s.unresolved().length }} Einträge ließen sich nicht zuordnen: {{ s.unresolved().join(' ') }}</p>
-            }
-            @if (s.illegalCount() > 0) {
-              <p class="err small">{{ s.illegalCount() }} Züge am Ende sind nicht legal — sie fallen beim Übernehmen weg.</p>
-            }
-          </section>
-        </div></div>
+        <!-- Formular-Werkbank (0.816.0): dasselbe Bauteil wie in RookHub — Foto | Brett | Prüfen + Zugliste. -->
+        <app-sheet-workbench [session]="s" [photos]="ph" [flipped]="f.ownerSide() === 'black'" [evals]="savedEvals()" [savedSans]="savedSans()">
+          <!-- UX-036: ohne unsichere Stellen kommt der Abschlusshinweis nie — am Ende der Partie geht es hier weiter. -->
+          <div sheetEnd class="actions"><button type="button" class="btn-sec to-save" (click)="toSave()">Weiter zu den Namen</button></div>
+        </app-sheet-workbench>
 
         @if (gameId != null) {
           <section class="panel save-panel" #savePanel>
@@ -463,7 +316,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   /** Name anonymisierter Spieler und des Vereins — der angemeldete bzw. der des Teilen-Links (0.698.0). */
   get anon(): string { return this.clubCtx.anonName(); }
   readonly clubName = this.clubCtx.clubName;
-  readonly de = de;
 
   /** Nummer (angemeldet) bzw. geheimer Schlüssel (ohne Konto) der Einlesung. */
   scanRef = '';
@@ -471,11 +323,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly gameId: number | null = this.route.snapshot.data['game'] ? Number(this.route.snapshot.paramMap.get('id')) : null;
   /** „Weiß – Schwarz (Jahr) · Ergebnis" der Vereinspartie (Korrektur-Modus). */
   readonly gameTitle = signal('');
-  /** Analyse und Züge der gespeicherten Vereinspartie (Korrektur-Modus) — daraus die Bewertungskurve (0.756.0). */
-  private readonly savedEvals = signal<GameEvals | null>(null);
-  private readonly savedSans = signal<string[]>([]);
-  readonly evalCurve = computed(() =>
-    correctionCurve(this.savedEvals(), this.savedSans(), this.s.plies(), this.s.fens()));
+  /** Analyse und Züge der gespeicherten Vereinspartie (Korrektur-Modus) — daraus zeichnet die Werkbank die Bewertungskurve (0.756.0). */
+  readonly savedEvals = signal<GameEvals | null>(null);
+  readonly savedSans = signal<string[]>([]);
   readonly state = signal<LeagueScanState | null>(null);
   /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
   private readonly ticker = new SecondsTicker();
@@ -496,13 +346,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly mergeCandidates = signal<ScanRef[] | null>(null);
   readonly merging = signal(false);
   readonly mergeError = signal<string | null>(null);
-  private readonly followPage = effect(() => {
-    const page = this.s.currentPage();
-    if (page) untracked(() => { const p = Math.min(page, this.ph.pageCount()); if (p !== this.ph.shownPage()) this.ph.showPage(p); });
-  });
-  readonly zoom = signal(false);
-  /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
-  readonly photoOpen = signal(false);
   /** Hinweis zu den orangen Stellen hinter (i) (d2-l-korrigieren-layout). */
   readonly hintOpen = signal(false);
   readonly saving = signal(false);
@@ -546,9 +389,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     pairingsEnabled: this.gameId == null,
   });
 
-  /** Bester Zug der zugeschalteten Engine (blau) — zum gelben Pfeil des bisherigen Zugs dazu (0.722.0). */
-  readonly engineArrows = signal<BoardArrow[]>([]);
-  readonly boardArrows = computed<BoardArrow[]>(() => [...this.s.arrows(), ...this.engineArrows()]);
   readonly s = new SheetEditSession({
     resolve: (prefix, writtenFrom) => this.gameId != null
       ? this.api.clubResolve(this.gameId, prefix, writtenFrom)
@@ -626,13 +466,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     } finally {
       this.merging.set(false);
     }
-  }
-
-  onPhotoLoad(e: Event): void {
-    if (this.ph.shownView() > 0) return;   // die Maße für den Ausschnitt kommen nur vom Hauptfoto
-    const img = e.target as HTMLImageElement;
-    if (this.ph.shownPage() === 1) this.s.onPhotoLoad(e);
-    else this.s.setPageSize(this.ph.shownPage(), img.naturalWidth, img.naturalHeight);
   }
 
   /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt, ein laufender Abruf ist überholt. */
@@ -719,17 +552,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   num(v: string): number | null {
     const n = Number(v);
     return v.trim() && Number.isFinite(n) ? Math.round(n) : null;
-  }
-
-  onBoardMove(m: UserBoardMove): void {
-    this.s.play(m.san);
-  }
-
-  @HostListener('document:keydown', ['$event'])
-  onKey(e: KeyboardEvent): void {
-    if (!isBoardHotkey(e)) return;
-    if (e.key === 'ArrowLeft') { this.s.go(this.s.cursor() - 1); e.preventDefault(); }
-    if (e.key === 'ArrowRight') { this.s.go(this.s.cursor() + 1); e.preventDefault(); }
   }
 
   /** Den Zug in der Zugliste sichtbar machen — NUR in deren eigenem Rollbereich. `scrollIntoView` rollte auch die Seite,

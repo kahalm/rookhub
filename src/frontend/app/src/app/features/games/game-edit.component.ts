@@ -1,28 +1,27 @@
 import { scrollIntoContainer } from '../../shared/pgn-viewer/move-list.component';
-import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Observable, of } from 'rxjs';
+import { Observable, firstValueFrom, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GamesService, SavedGameDetail } from './games.service';
+import { GameEvals } from './game-review.util';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
@@ -30,14 +29,11 @@ import { distinctClassifiers, seasonOf } from './classifier.util';
 import { addTag, distinctTags, MAX_TAG_LENGTH, MAX_TAGS } from './tags.util';
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
-import { GameReviewComponent } from './game-review.component';
-import { PlayedMove } from './mistakes.util';
-import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
-import { isBoardHotkey } from '../../shared/keyboard.util';
-import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
+import { ScanPhotos } from './sheet-workbench/scan-photos';
+import { SheetWorkbenchComponent } from './sheet-workbench/sheet-workbench.component';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -53,8 +49,8 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
   selector: 'app-game-edit',
   standalone: true,
   imports: [IconLabelDirective,
-    CommonModule, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressBarModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, IsoDateFieldComponent, ChessBoardComponent, HelpHintComponent, GameReviewComponent, SanPipe,
+    CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
+    MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, IsoDateFieldComponent, HelpHintComponent, SheetWorkbenchComponent,
   ],
   template: `
     <div class="edit-page">
@@ -147,163 +143,19 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
           <datalist id="cls2-options">@for (v of options2(); track v) { <option [value]="v"></option> }</datalist>
         </mat-card>
 
-        <div class="layout" [class.with-photo]="!!photoUrl()">
-          @if (photoUrl(); as src) {
-            <mat-card class="photo">
-              <div class="photo-bar">
-                <strong>{{ 'games.edit.photo' | translate }}</strong>
-                <!-- Formular über mehrere Blätter (0.600.0): blättern; der gewählte Zug blättert von selbst mit. -->
-                @if (pageCount() > 1) {
-                  <mat-button-toggle-group class="pager" [value]="shownPage()" (change)="shownPage.set($event.value)" hideSingleSelectionIndicator>
-                    @for (n of pageNumbers(); track n) {
-                      <mat-button-toggle [value]="n">{{ n }}</mat-button-toggle>
-                    }
-                  </mat-button-toggle-group>
-                }
-                <span class="spacer"></span>
-                <button mat-icon-button (click)="zoom.set(!zoom())" [appIconLabel]="(zoom() ? 'games.edit.zoomOut' : 'games.edit.zoomIn') | translate">
-                  <mat-icon>{{ zoom() ? 'zoom_out' : 'zoom_in' }}</mat-icon>
-                </button>
-                <button mat-icon-button (click)="openPhoto(false)" [appIconLabel]="'games.photo.show' | translate"><mat-icon>open_in_full</mat-icon></button>
-                <button mat-icon-button (click)="openPhoto(true)" [appIconLabel]="'games.photo.download' | translate"><mat-icon>download</mat-icon></button>
-              </div>
-              <div class="photo-scroll" [class.zoom]="zoom()">
-                <img [src]="src" [alt]="'games.edit.photo' | translate" (load)="onPhotoLoad($event)" />
-              </div>
-              @if (crop(); as c) {
-                <div class="crop">
-                  <div class="crop-label">
-                    {{ 'games.edit.cropTitle' | translate }}
-                    @if (pageCount() > 1) { <span class="written">{{ 'scoresheet.page' | translate: { n: c.page } }}</span> }
-                    @if (c.written) { <span class="written">{{ 'games.edit.written' | translate: { text: c.written } }}</span> }
-                  </div>
-                  <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect" [style.--crop-aspect]="c.view.aspect">
-                    <img [src]="pageUrl(c.page) ?? src" alt="" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
-                         [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
-                    <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
-                         [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
-                  </div>
-                </div>
-              }
-            </mat-card>
-          }
-
-          <mat-card class="board-card">
-            <div class="board-wrap">
-              <app-chess-board [fen]="cursorFen()" [lastMove]="lastMove()" [arrows]="boardArrows()" [flipped]="flipped()"
-                               [playable]="!busy()" (userMove)="onBoardMove($event)"
-                               [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
-            </div>
-            <div class="nav">
-              <button mat-icon-button (click)="go(0)" [disabled]="cursor() === 0"><mat-icon>skip_previous</mat-icon></button>
-              <button mat-icon-button (click)="go(cursor() - 1)" [disabled]="cursor() === 0"><mat-icon>navigate_before</mat-icon></button>
-              <button mat-icon-button (click)="go(cursor() + 1)" [disabled]="cursor() >= legalCount()"><mat-icon>navigate_next</mat-icon></button>
-              <button mat-icon-button (click)="go(legalCount())" [disabled]="cursor() >= legalCount()"><mat-icon>skip_next</mat-icon></button>
-              <button mat-icon-button (click)="flipped.set(!flipped())"><mat-icon>swap_vert</mat-icon></button>
-              @if (uncertainLeft() > 0) {
-                <button mat-stroked-button class="next-uncertain" (click)="nextUncertain()">
-                  <mat-icon>priority_high</mat-icon> {{ 'games.edit.nextUncertain' | translate: { count: uncertainLeft() } }}
-                </button>
-              }
-            </div>
-            <mat-button-toggle-group class="mode" [value]="mode()" (change)="mode.set($event.value)" hideSingleSelectionIndicator>
-              <mat-button-toggle value="replace">{{ 'games.edit.modeReplace' | translate }}</mat-button-toggle>
-              <mat-button-toggle value="insert">{{ 'games.edit.modeInsert' | translate }}</mat-button-toggle>
-            </mat-button-toggle-group>
-            <!-- Bewertungskurve + Computer-Linien der schon gerechneten Analyse (0.672.5, Wunsch: „um etwaige Fehler zu
-                 sehen"). Nur solange die Züge die gespeicherten sind — die Analyse gehört zu ihnen, und nach dem Speichern
-                 geänderter Züge fällt sie ohnehin weg. Ohne Analyse zeigt der Block nichts. -->
-            @if (reviewUrl(); as url) {
-              <app-game-review [evalsUrl]="url" [fens]="session.fens()" [moves]="playedMoves()" [currentIndex]="cursor() - 1"
-                               [expanded]="true" (moveClicked)="go($event + 1)" (arrowsChange)="reviewArrows.set($event)" />
-            } @else if (movesChanged()) {
-              <p class="tip">{{ 'games.edit.reviewStale' | translate }}</p>
-            }
-
-          </mat-card>
-
-          <!-- Rechte Spalte: der gewählte Zug (Lesarten, Aktionen, Kommentar) über der Zugliste. Am PC füllt der
-               Arbeitsbereich genau die Fensterhöhe, jede Spalte scrollt für sich (0.554.1). -->
-          <div class="side">
-          <mat-card class="cursor-card">
-            <div class="cursor-panel">
-              @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
-              @if (session.canUndoRemove()) {
-                <div class="undo-line">
-                  <span>{{ 'games.edit.deleted' | translate }}</span>
-                  <button mat-button (click)="session.undoRemove()" [disabled]="busy()"><mat-icon>undo</mat-icon> {{ 'common.undo' | translate }}</button>
-                </div>
-              }
-              @if (current(); as p) {
-                <div class="where">
-                  <strong>{{ plyLabel(cursor()) }}</strong>
-                  <span class="san" [class.bad]="p.illegal">{{ p.san | san }}</span>
-                  @if (p.written) { <span class="written">{{ 'games.edit.written' | translate: { text: p.written } }}</span> }
-                  @if (p.match === 'inserted') { <span class="chip warn">{{ 'games.edit.notOnSheet' | translate }}</span> }
-                  @if (p.uncertain && !p.confirmed) { <span class="chip warn">{{ 'games.edit.uncertain' | translate }}</span> }
-                  @if (p.check && !p.confirmed) {
-                    <span class="chip warn" [title]="'games.edit.engineCheckHint' | translate">{{ (p.check === 'replaced' ? 'games.edit.engineReplaced' : 'games.edit.engineSuggested') | translate }}</span>
-                  }
-                  @if (p.confirmed) { <span class="chip ok">{{ 'games.edit.confirmed' | translate }}</span> }
-                  @if (p.illegal) { <span class="chip bad">{{ 'games.edit.illegal' | translate }}</span> }
-                </div>
-                @if (p.options?.length && !p.illegal) {
-                  <div class="options">
-                    <span class="label">{{ 'games.edit.options' | translate }}</span>
-                    @for (o of p.options; track o.uci) {
-                      <button mat-stroked-button class="option" [class.chosen]="o.uci === p.uci" (click)="choose(o)" [disabled]="busy()">
-                        <span class="o-san">{{ o.san | san }}</span>
-                        <span class="o-reach">{{ 'games.edit.reach' | translate: { count: o.reach } }}</span>
-                        @if (o.preview.length) { <span class="o-preview">→ {{ o.preview.join(' ') | san:'text' }}</span> }
-                      </button>
-                    }
-                  </div>
-                }
-                <div class="ply-actions">
-                  @if (!p.illegal && !p.confirmed && (p.uncertain || isScoresheet())) {
-                    <button mat-stroked-button (click)="confirm()"><mat-icon>check</mat-icon> {{ 'games.edit.confirm' | translate }}</button>
-                  }
-                  <!-- Abgesetzt von „Stimmt" (UX-070): Textknopf in Warnfarbe, ganz rechts. -->
-                  <button mat-button color="warn" class="del" (click)="remove()" [disabled]="busy()"><mat-icon>backspace</mat-icon> {{ 'games.edit.delete' | translate }}</button>
-                </div>
-                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="comment">
-                  <mat-label>{{ 'games.edit.comment' | translate }}</mat-label>
-                  <textarea matInput rows="2" maxlength="2000" [ngModel]="p.comment ?? ''" (ngModelChange)="setComment($event)"></textarea>
-                </mat-form-field>
-                <p class="tip">{{ (mode() === 'insert' ? 'games.edit.tipInsert' : 'games.edit.tipReplace') | translate }}</p>
-              } @else {
-                <p class="tip">{{ 'games.edit.tipAppend' | translate }}</p>
-                @if (unresolved().length) {
-                  <p class="tip">{{ 'games.edit.nextWritten' | translate: { text: unresolved()[0] } }}</p>
-                }
-              }
-            </div>
-          </mat-card>
-
-          <mat-card class="moves-card">
-            <div class="moves">
-              @for (row of rows(); track row.no) {
-                <span class="no">{{ row.no }}.</span>
-                <button class="ply" [ngClass]="plyClass(row.white)" (click)="go(row.white)">{{ plies()[row.white].san | san }}</button>
-                @if (row.black !== null) {
-                  <button class="ply" [ngClass]="plyClass(row.black)" (click)="go(row.black)">{{ plies()[row.black].san | san }}</button>
-                } @else { <span></span> }
-              }
-              <span class="no"></span>
-              <button class="ply end" [class.cursor]="cursor() === plies().length" (click)="go(legalCount())">{{ 'games.edit.end' | translate }}</button>
-            </div>
-            @if (unresolved().length) {
-              <div class="unresolved">
-                <strong>{{ 'games.edit.unresolvedTitle' | translate: { count: unresolved().length } }}</strong>
-                <span>{{ unresolved().join(' ') }}</span>
-              </div>
-            }
-            @if (illegalCount() > 0) {
-              <p class="warn-text">{{ 'games.edit.illegalHint' | translate: { count: illegalCount() } }}</p>
-            }
-          </mat-card>
-          </div>
-        </div>
+        <!-- Formular-Werkbank (0.816.0): dasselbe Bauteil wie in LeagueHub — Foto | Brett | Prüfen + Zugliste. -->
+        <app-sheet-workbench [session]="session" [photos]="ph" [(flipped)]="flipped" [evals]="evals()" [savedSans]="savedSans() ?? []"
+                             [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet">
+          <span sheetPhotoTools class="photo-tools">
+            <button mat-icon-button (click)="openPhoto(false)" [appIconLabel]="'games.photo.show' | translate"><mat-icon>open_in_full</mat-icon></button>
+            <button mat-icon-button (click)="openPhoto(true)" [appIconLabel]="'games.photo.download' | translate"><mat-icon>download</mat-icon></button>
+          </span>
+          <!-- Kommentar zum Zug — nur RookHub („Meine Partien"). -->
+          <mat-form-field sheetPlyExtra appearance="outline" subscriptSizing="dynamic" class="comment">
+            <mat-label>{{ 'games.edit.comment' | translate }}</mat-label>
+            <textarea matInput rows="2" maxlength="2000" [ngModel]="current()?.comment ?? ''" (ngModelChange)="setComment($event)"></textarea>
+          </mat-form-field>
+        </app-sheet-workbench>
       }
     </div>
   `,
@@ -331,27 +183,6 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
       .headers { grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(128px, 0.9fr) minmax(0, 1.4fr) minmax(0, 1fr)
         minmax(88px, 0.6fr) minmax(164px, 1fr) minmax(180px, 1.2fr); }
     }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
-    .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }
-    .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-    @media (max-width: 1100px) { .layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .photo { grid-column: 1 / -1; } }
-    @media (max-width: 768px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
-    /* d3-rk-edit-tablet-leerraum: am Tablet (769–1100 px, ohne Foto) stand das Brett allein links, rechts Zug-Karte +
-       Zugliste (~1 050 px hoch) — unter dem Brett blieben ~540 px leer. Jetzt Zug-Karte unter dem Brett, die Zugliste
-       nimmt die ganze rechte Spalte ein und schließt mit Brett + Zug-Karte ab. Handy (≤ 768 px) unverändert. */
-    @media (min-width: 769px) and (max-width: 1100px) {
-      .layout:not(.with-photo) .side { display: contents; }
-      /* d4-rk-edit-luecke-brett-zugkarte: bei zwei auto-Zeilen verteilte das Raster den Überhang der überspannenden,
-         höheren Zugliste auf BEIDE Zeilen — Zeile 1 wurde höher als das Brett, ~85 px Loch vor der Zug-Karte. Mit
-         „auto 1fr" nimmt die flexible zweite Zeile den Überhang allein auf (Grid-Spezifikation: Überhang über flexible
-         Spuren geht nur an diese), die Zug-Karte folgt dem Brett im 12-px-Rasterabstand. */
-      .layout:not(.with-photo) { grid-template-rows: auto 1fr; }
-      .layout:not(.with-photo) .board-card { grid-column: 1; grid-row: 1; }
-      .layout:not(.with-photo) .cursor-card { grid-column: 1; grid-row: 2; }
-      .layout:not(.with-photo) .moves-card { grid-column: 2; grid-row: 1 / span 2; }
-      .layout:not(.with-photo) .moves { max-height: calc(100dvh - 360px); }
-    }
-    .photo { padding: 8px; }
     /* Zweite Zeile: Seite/Liga, Modus/Jahrgang, Tags — ein gemeinsamer Hinweis darunter statt drei umbrechender. */
     .class-row { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(150px, 220px) minmax(150px, 220px) minmax(180px, 1fr);
       gap: 8px 12px; align-items: center; }
@@ -372,88 +203,8 @@ import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.co
     .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 14px; font-size: 0.85rem;
       background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
     .tag-chip button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0 6px; }
-    .photo-bar { display: flex; align-items: center; gap: 4px; padding: 0 4px 4px; }
-    .pager { margin-left: 8px; }
-    .pager .mat-button-toggle { font-size: 0.85rem; }
-    .photo-scroll { max-height: 72vh; overflow: auto; text-align: center; }
-    .photo-scroll img { max-width: 100%; max-height: 70vh; object-fit: contain; }
-    .photo-scroll.zoom img { max-width: none; max-height: none; width: 200%; }
-    .crop { margin-top: 8px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
-    .crop-label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; padding: 0 4px 6px; font-size: 0.9rem; }
-    .crop-frame { position: relative; overflow: hidden; width: 100%; max-width: 560px; margin: 0 auto;
-      border-radius: 4px; outline: 2px solid color-mix(in srgb, currentColor 20%, transparent); }
-    .crop-frame.uncertain { outline-color: var(--mat-sys-error, #c62828); }
-    .crop-frame img { position: absolute; max-width: none; max-height: none; }
-    .crop-mark { position: absolute; border: 2px solid var(--mat-sys-error, #c62828); border-radius: 3px; pointer-events: none;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.12); }
-    .board-card { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-    .board-wrap { width: min(100%, 62vh); align-self: center; }
-    .nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; }
-    .next-uncertain { margin-left: 8px; }
-    .mode { align-self: center; }
-    .cursor-card { padding: 12px; }
-    .cursor-panel { display: flex; flex-direction: column; gap: 8px; }
-    .where { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .san { font-family: monospace; font-size: 1.1rem; }
-    .san.bad { text-decoration: line-through; color: var(--mat-sys-error, #c62828); }
-    .written { font-size: 0.9rem; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .chip { font-size: 0.75rem; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; }
-    .chip.warn, .warn-text { color: var(--rh-warn); }
-    .chip.ok { color: var(--rh-success); }
-    .chip.bad { color: var(--mat-sys-error, #c62828); }
-    .options { display: flex; flex-direction: column; gap: 6px; }
-    .options .label { font-size: 0.85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
-    .option { justify-content: flex-start; text-align: left; height: auto; padding: 6px 12px; line-height: 1.3; }
-    .option.chosen { border-color: var(--rh-warn); border-width: 2px; }
-    .o-san { font-family: monospace; font-weight: 600; margin-right: 8px; }
-    .o-reach { font-size: 0.8rem; margin-right: 8px; }
-    .o-preview { font-family: monospace; font-size: 0.8rem; opacity: 0.7; }
-    .ply-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .ply-actions .del { margin-left: auto; }
-    .undo-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 0.9rem; }
     .comment { width: 100%; }
-    .tip { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; }
-    .moves-card { padding: 12px; }
-    /* UI-Sweep 2026-10-11 (r2-rg-edit-moves): Spalten wie die Zugliste der Partieseite (Nr. schmal, Züge je ~90 px) statt je
-       halber Kartenbreite; Textschrift mit Tabellenziffern statt Monospace — der Rahmen liegt nur noch um den Zug. */
-    .moves { display: grid; grid-template-columns: 32px 90px 90px; justify-content: start; align-content: start; gap: 2px 4px;
-      max-height: 70vh; overflow-y: auto; font-size: 14px; font-variant-numeric: tabular-nums; }
-    /* z1-rk-edit-zugspalten: breite Karte → mehrere Zugblöcke nebeneinander (zeilenweise „1. e4 e5 | 2. Sf3 Sc6 …");
-       die breitere Nummernspalte trennt die Blöcke. Unter 900 px bleibt die eine Spalte. */
-    @media (min-width: 900px) {
-      .moves { grid-template-columns: repeat(auto-fill, 48px 90px 90px); }
-    }
-    .no { text-align: right; padding-right: 4px; color: color-mix(in srgb, currentColor 55%, transparent); align-self: center; font-size: 0.85rem; }
-    .ply { font: inherit; font-weight: 500; text-align: left; padding: 3px 8px; border-radius: 4px; cursor: pointer;
-      border: 1px solid transparent; background: transparent; color: inherit; }
-    .ply:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-    .ply.uncertain { border-color: var(--rh-warn); background: color-mix(in srgb, var(--rh-warn) 12%, transparent); }
-    .ply.confirmed { color: var(--rh-success); }
-    .ply.user { font-style: italic; }
-    .ply.illegal { color: var(--mat-sys-error, #c62828); text-decoration: line-through; }
-    .ply.cursor { outline: 2px solid var(--mat-sys-primary); }
-    .ply.end { font-family: inherit; font-size: 0.8rem; opacity: 0.7; }
-    .unresolved { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; color: var(--mat-sys-error, #c62828); font-size: 0.9rem; }
-    .unresolved span { font-family: monospace; word-break: break-word; }
-    /* PC: der Arbeitsbereich füllt die Fensterhöhe (Navigationsleiste, Kopfzeile und Kopfdaten abgezogen), jede Spalte
-       scrollt für sich — Foto mit Ausschnitt, Brett und Zugliste sind zugleich sichtbar, ohne die Seite zu scrollen. */
-    @media (min-width: 1101px) {
-      .layout { --work-h: max(440px, calc(100dvh - 250px)); height: var(--work-h); align-items: stretch; }
-      .layout > * { min-height: 0; }
-      .photo { display: flex; flex-direction: column; overflow: hidden; }
-      .photo-scroll { flex: 1 1 auto; min-height: 0; max-height: none; display: flex; justify-content: center; align-items: flex-start; }
-      .photo-scroll img { max-height: 100%; }
-      .photo-scroll.zoom { display: block; }
-      .photo-scroll.zoom img { max-height: none; }
-      .crop { flex: none; }
-      .crop-frame { width: min(100%, calc(24vh * var(--crop-aspect, 3))); }
-      .board-card { overflow: auto; }
-      .board-wrap { width: min(100%, calc(var(--work-h) - 150px)); }
-      .side { overflow: hidden; }
-      .cursor-card { flex: none; max-height: 60%; overflow: auto; }
-      .moves-card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-      .moves { max-height: none; flex: 1 1 auto; min-height: 0; }
-    }
+    .photo-tools { display: inline-flex; }
   `],
 })
 export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
@@ -481,15 +232,12 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   /** Absatztrenner für zusammengesetzte Hilfetexte (app-help-hint: Absätze mit Leerzeile). */
   readonly paraSep = '\n\n';
   readonly flipped = signal(false);
-  readonly zoom = signal(false);
-  /** Formular-Fotos je Seite (Index = Seite − 1), sobald geladen. */
-  readonly photoUrls = signal<(string | null)[]>([]);
-  readonly pageCount = signal(1);
-  readonly pageNumbers = computed(() => Array.from({ length: this.pageCount() }, (_, i) => i + 1));
-  /** Welche Seite oben gezeigt wird. */
-  readonly shownPage = signal(1);
-  readonly photoUrl = computed(() => this.photoUrls()[this.shownPage() - 1] ?? this.photoUrls()[0] ?? null);
-  private photoBlobs: (Blob | null)[] = [];
+  /** Die Formular-Fotos (Seiten) — dieselbe Verwaltung wie in LeagueHub (Formular-Werkbank, 0.816.0). */
+  readonly ph = new ScanPhotos({
+    fetchView: () => Promise.reject(new Error('RookHub hat keine weiteren Fotos je Seite')),
+    setPageSize: (page, w, h) => this.session.setPageSize(page, w, h),
+  });
+  private destroyed = false;
 
   /** Der Arbeitsstand (geteilt mit der Formular-Korrektur in LeagueHub). */
   readonly session = new SheetEditSession({
@@ -517,19 +265,15 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   readonly crop = this.session.crop;
   readonly uncertainLeft = this.session.uncertainLeft;
   readonly rows = this.session.rows;
-  /** Die Züge, wie sie gespeichert sind — nur zu ihnen passt die Analyse der Partie. */
-  private readonly savedSans = signal<string[] | null>(null);
+  /** Die Züge, wie sie gespeichert sind — nur zu ihnen passt die Analyse der Partie (Bewertungskurve der Werkbank). */
+  readonly savedSans = signal<string[] | null>(null);
   readonly movesChanged = computed(() => {
     const saved = this.savedSans();
     const now = this.plies();
     return !!saved && (saved.length !== now.length || now.some((p, i) => p.illegal || p.san !== saved[i]));
   });
-  readonly reviewUrl = computed(() => this.savedSans() && !this.movesChanged() ? this.games.evalsUrl(this.gameId) : null);
-  readonly playedMoves = computed<PlayedMove[]>(() => this.plies().map(p =>
-    ({ san: p.san, from: p.uci.slice(0, 2), to: p.uci.slice(2, 4), promotion: p.uci.length > 4 ? p.uci[4] : null })));
-  /** Pfeil für den besten Zug der Analyse — neben dem gelben des gelesenen Zugs. */
-  readonly reviewArrows = signal<BoardArrow[]>([]);
-  readonly boardArrows = computed(() => this.reviewUrl() ? [...this.arrows(), ...this.reviewArrows()] : this.arrows());
+  /** Die Analyse der gespeicherten Partie (falls gerechnet) — die Werkbank zeichnet daraus die Kurve. */
+  readonly evals = signal<GameEvals | null>(null);
 
   header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '', classifier1: '', classifier2: '' };
 
@@ -582,16 +326,9 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
     });
   }
 
-  constructor() {
-    // Der gewählte Zug steht auf einer anderen Seite: dorthin blättern (von Hand blättern bleibt, bis der Zug wechselt).
-    effect(() => {
-      const page = this.session.currentPage();
-      if (page) untracked(() => this.shownPage.set(Math.min(page, this.pageCount())));
-    });
-  }
-
   ngOnDestroy(): void {
-    for (const url of this.photoUrls()) if (url) URL.revokeObjectURL(url);
+    this.destroyed = true;
+    this.ph.dispose();
   }
 
   /** Vor dem Verlassen fragen, solange es ungespeicherte Korrekturen gibt (`unsavedChangesGuard`). Speichern setzt
@@ -608,23 +345,6 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
     e.returnValue = true;   // ältere Browser fragen nur so
   }
 
-  /** Das Foto einer Seite, sobald es geladen ist. */
-  pageUrl(page: number): string | null {
-    return this.photoUrls()[page - 1] ?? null;
-  }
-
-  private loadPage(page: number): void {
-    this.sheets.photo(this.gameId, page).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(blob => {
-      if (!blob) return;
-      this.photoBlobs[page - 1] = blob;
-      const url = URL.createObjectURL(blob);
-      this.photoUrls.update(list => { const next = [...list]; next[page - 1] = url; return next; });
-      // Maße gleich messen — der Ausschnitt einer Seite braucht sie, auch wenn oben gerade eine andere steht.
-      const img = new Image();
-      img.onload = () => this.session.setPageSize(page, img.naturalWidth, img.naturalHeight);
-      img.src = url;
-    });
-  }
 
   private load(game: SavedGameDetail): void {
     const h = headersOf(game.pgn);
@@ -648,6 +368,8 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
     if (this.header.event === 'RepCheck saved game') this.header.event = '';
     const fromPgn = pliesOfPgn(game.pgn);
     this.savedSans.set(fromPgn.map(p => p.san));
+    this.games.evals(this.games.evalsUrl(this.gameId)).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef))
+      .subscribe(e => this.evals.set(e));
     this.session.startFen.set(startFenOf(game.pgn));   // Stellungspartie (FEN-Kopf): Brett und Legalität ab dort
     this.flipped.set(game.ownerSide === 'black');
 
@@ -659,11 +381,9 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       return;
     }
     this.isScoresheet.set(true);
-    this.loadPage(1);
     this.sheets.editState(this.gameId).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(state => {
       const pages = Math.max(1, state?.pageCount ?? 1);
-      this.pageCount.set(pages);
-      for (let p = 2; p <= pages; p++) this.loadPage(p);
+      void this.ph.load(pages, page => firstValueFrom(this.sheets.photo(this.gameId, page)), () => !this.destroyed);
       const comments = fromPgn.map(p => stripSheetNotes(p.comment));
       // Der gespeicherte Stand gilt nur, wenn er zu den Zügen der Partie passt (sie kann anderswo geändert worden sein).
       const matches = state && state.plies.length === fromPgn.length && state.plies.every((p, i) => p.san === fromPgn[i].san);
@@ -678,12 +398,6 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
       }
       this.loading.set(false);
     });
-  }
-
-  onPhotoLoad(e: Event): void {
-    const img = e.target as HTMLImageElement;
-    if (this.shownPage() === 1) this.session.onPhotoLoad(e);
-    else this.session.setPageSize(this.shownPage(), img.naturalWidth, img.naturalHeight);
   }
 
   onSide(side: string): void {
@@ -707,13 +421,6 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
 
   nextUncertain(): void {
     this.session.nextUncertain();
-  }
-
-  @HostListener('document:keydown', ['$event'])
-  onKey(e: KeyboardEvent): void {
-    if (!isBoardHotkey(e)) return;
-    if (e.key === 'ArrowLeft') { this.go(this.cursor() - 1); e.preventDefault(); }
-    if (e.key === 'ArrowRight') { this.go(this.cursor() + 1); e.preventDefault(); }
   }
 
   plyLabel(i: number): string {
@@ -746,8 +453,8 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   }
 
   openPhoto(download: boolean): void {
-    const page = this.shownPage();
-    const blob = this.photoBlobs[page - 1];
+    const page = this.ph.shownPage();
+    const blob = this.ph.blob(page);
     if (!blob) return;
     if (download) openPhotoBlob(blob, photoFileName(this.gameId, blob, page));
     else ScoresheetPhotoDialogComponent.open(this.dialog, this.gameId, page);

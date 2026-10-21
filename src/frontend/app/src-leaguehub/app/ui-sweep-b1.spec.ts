@@ -191,18 +191,8 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep b1', () => {
     expect(box(desk, 't').width).withContext('1920 px wie bisher').toBe(1208);
   });
 
-  // b1-l-korrigieren-zugliste-kasten: einspaltig läuft die Zugliste mit der Seite statt als Kasten mit 52vh
-  it('Formular-Korrektur: Zugliste einspaltig ohne eigenen Rollbereich, zweispaltig weiter als Kasten', async () => {
-    const list = (w: number) => `<div class="scan-wrap" style="width: ${w}px"><div class="moves" id="mv">
-      ${Array.from({ length: 60 }, (_, i) => `<span class="no">${i + 1}.</span><button class="ply">e4</button><button class="ply">e5</button>`).join('')}
-      </div></div>`;
-    const one = await render(800, list(390));
-    expect(style(one, 'mv').maxHeight).toBe('none');
-    expect(style(one, 'mv').overflowY).toBe('visible');
-    const two = await render(1400, list(1200));
-    expect(style(two, 'mv').overflowY).toBe('auto');
-    expect(style(two, 'mv').maxHeight).not.toBe('none');
-  });
+  // b1-l-korrigieren-zugliste-kasten: seit 0.816.0 in der gemeinsamen Formular-Werkbank geprüft
+  // (`sheet-workbench.component.spec.ts`, „Zugliste einspaltig ohne eigenen Rollbereich").
 
   // b1-l-partienzahl-format: „V(3115)“ — die Klammer klebte am Namen (2 px)
   it('Prognose-Bretter: Partienzahl mit Wortabstand hinter dem Namen', async () => {

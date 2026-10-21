@@ -1,17 +1,10 @@
-// LeagueHub — Formular prüfen / Formular-Korrektur (Foto | Brett | Prüfen + Zugliste, Partie-Daten speichern).
+// LeagueHub — Formular prüfen / Formular-Korrektur: Kopf der Seite und der Speicherteil (Namen, Übernehmen).
 // Aus leaguehub.scss herausgezogen (Datei > 1 000 Zeilen); wird dort an DERSELBEN Stelle per meta.load-css
 // eingebunden, damit Reihenfolge und Spezifität der Regeln gleich bleiben.
+// Foto | Brett | Prüfen + Zugliste stehen seit 0.816.0 in der gemeinsamen Formular-Werkbank (RookHub und LeagueHub):
+// `src/app/features/games/sheet-workbench/sheet-workbench.component.scss`.
 
-/* Formular-Korrektur: Foto | Brett | Zug + Zugliste — am PC nebeneinander, darunter die Partie-Daten */
-/* Formular prüfen: Foto | Brett | Prüfen + Zugliste. Am Handy zuerst „Prüfen" (Ausschnitt der Zeile, Lesarten, „Stimmt so"),
-   dann Brett, Zugliste, ganzes Foto (Wunsch 2026-09-28). */
-/* z1-l-korrigieren-luecke: erste Zeile so hoch wie die Zugkarte, die Zugliste schließt direkt an (sonst verteilt der Browser
-   die Brett-Höhe auf beide auto-Zeilen und es klafft eine Lücke). */
-.scan-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start;
-  grid-template-areas: "board check" "board moves"; grid-template-rows: auto 1fr; }
-.scan-layout.with-photo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .85fr);
-  grid-template-areas: "photo board check" "photo board moves"; }
-.scan-layout > .panel { margin-bottom: 0; min-width: 0; }
+app-sheet-workbench { display: block; }
 /* Kopf der Prüf-/Korrekturseite (UI-Sweep 2026-10-11, d2-l-korrigieren-layout): Überschrift, (i) und „Speichern ↓" in einer Zeile. */
 .scan-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .club-intro .scan-head h2 { margin: 6px 0 4px; }
@@ -44,94 +37,12 @@
      „Speichern ↓"; der Knopf selbst bricht nicht um. */
   .club-intro .scan-head .game-title { order: 4; flex: 1 1 10rem; min-width: 0; margin: 0; }
   .club-intro .back-row .to-save { order: 5; margin-left: auto; white-space: nowrap; }
-  .scan-layout .scan-check, .scan-layout .scan-board { padding: 10px 12px; }
-  .scan-layout { gap: 10px; }
 }
 .club-intro .scan-hint { margin: 4px 0 10px; }
-/* Am Handy steht der Prüfteil ÜBER dem Brett und ändert je Zug seine Höhe (Lesarten ja/nein, Ausschnitt). Er darf deshalb
-   kein Scroll-Anker sein — dann hält der Browser das BRETT an seiner Stelle, statt es mit jedem Zug zu verschieben
-   (gemeldet 2026-09-28: „das Brett wandert weiter nach oben"). */
-.scan-wrap { container-type: inline-size; }
-.scan-check { overflow-anchor: none; }
-.scan-photo { grid-area: photo; }
-.scan-board { grid-area: board; }
-.scan-check { grid-area: check; }
-.scan-moves { grid-area: moves; }
-@container (max-width: 1100px) {
-  .scan-layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "board check" "board moves" "photo photo"; }
-}
-@container (max-width: 720px) {
-  .scan-layout, .scan-layout.with-photo { grid-template-columns: minmax(0, 1fr); grid-template-areas: "check" "board" "moves" "photo"; }
-  .scan-check .option { padding: 6px 10px; }
-  .scan-check .crop-frame { max-width: none; }
-}
-.scan-photo .pager { margin: 0 0 8px; }
 .merge { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .merge-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 6px; }
 .merge-list .btn-sec { text-align: left; white-space: normal; }
 .extra-page { align-items: flex-end; }
-
-/* Am Handy steht das ganze Foto erst nach einem Tipp (UX-036): der Ausschnitt der Zeile steht schon im Prüfteil, und das ganze
-   Foto (bis 70vh, bei einem Hochformat-Foto ≈ 1 000 px) schob „Partie" mit Namen und Übernehmen-Knopf weit nach unten. */
-.scan-photo .photo-toggle { display: none; margin: 0; }
-@container (max-width: 720px) {
-  .scan-photo .photo-toggle { display: block; }
-  .scan-photo:not(.open) .photo-scroll, .scan-photo:not(.open) .photo-zoom { display: none; }
-}
-.photo-scroll { max-height: 70vh; overflow: auto; text-align: center; }
-.photo-scroll img { max-width: 100%; max-height: 68vh; object-fit: contain; }
-.photo-scroll.zoom img { max-width: none; max-height: none; }
-.scan-photo p { margin: 6px 0 0; }
-.crop { display: grid; gap: 4px; }
-.crop-frame { position: relative; overflow: hidden; width: 100%; max-width: 560px; margin: 4px auto 0; border-radius: 4px; outline: 2px solid var(--line); }
-.crop-frame.uncertain { outline-color: var(--warn); }
-.crop-frame img { position: absolute; max-width: none; max-height: none; }
-.crop-mark { position: absolute; border: 2px solid var(--red); border-radius: 3px; pointer-events: none; box-shadow: 0 0 0 9999px rgb(0 0 0 / .12); }
-/* Die Spalte des Bretts darf NICHT mit dem Brett wachsen: ein auto-Track nimmt die Pixelbreite, die Chessground einmal
-   gesetzt hat (z. B. solange das Foto noch fehlt und das Layout zweispaltig ist), und behält sie — am PC ragte das Brett
-   dann über die Prüf-Spalte (gemeldet 2026-09-28). */
-.scan-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; justify-items: center; }
-.scan-board app-chess-board { width: min(100%, 62vh); }
-.scan-board .eval-curve { width: min(100%, 62vh); }
-.scan-board .eval-curve p { margin: 4px 0 0; }
-.board-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.board-nav .btn-sec { min-width: 44px; }
-.cursor-panel { display: grid; gap: 8px; }
-.cursor-panel p { margin: 0; }
-.where { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
-/* z1-l-korrigieren-handy: „Stimmt so" und „Zug löschen" (rechts abgesetzt, UX-070) in der Zeile des Zugs */
-.panel .where .where-actions { flex: 1 1 auto; margin-top: 0; align-self: center; }
-.san { font: 600 20px/1 var(--cond); }
-.san.bad { color: var(--red); text-decoration: line-through; }
-.chip { font-size: 12px; line-height: 1.4; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; white-space: nowrap; }
-.chip.warn { color: var(--warn); }
-.chip.ok { color: var(--ok); }
-.chip.bad { color: var(--red); }
-.options { display: grid; gap: 6px; }
-.option {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; text-align: left; font: inherit; color: var(--ink); background: var(--paper);
-  border: 1.5px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer;
-}
-.option:hover { border-color: var(--ink); }
-.option.chosen { border-color: var(--warn); }
-.option .muted { flex-basis: 100%; }
-.moves { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) minmax(0, 1fr); gap: 2px 4px;
-  max-height: 52vh; overflow-y: auto; position: relative; }
-/* b1-l-korrigieren-zugliste-kasten: einspaltig läuft die Zugliste mit der Seite — kein Kasten im Kasten mit halb abgeschnittener
-   Zeile. Steht HINTER der Grundregel (gleiche Spezifität). revealCursor rollt nur echte Rollbereiche, nie die Seite. */
-@container (max-width: 720px) {
-  .moves { max-height: none; overflow-y: visible; }
-}
-.moves .no { text-align: right; padding-right: 4px; color: var(--muted); align-self: center; font-size: 14px; }
-.ply { font: 500 16px/1.2 var(--body); text-align: left; padding: 4px 6px; border-radius: 4px; cursor: pointer;
-  border: 1px solid transparent; background: transparent; color: inherit; }
-.ply:hover { background: var(--track); }
-.ply.uncertain { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
-.ply.confirmed { color: var(--ok); }
-.ply.user { font-style: italic; }
-.ply.illegal { color: var(--red); text-decoration: line-through; }
-.ply.cursor { outline: 2px solid var(--ink); }
-.ply.end { font-size: 13px; color: var(--muted); }
 
 .save-panel { margin-top: 14px; }
 .save-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, .7fr) minmax(0, 2fr) minmax(0, .7fr); gap: 0 12px; }

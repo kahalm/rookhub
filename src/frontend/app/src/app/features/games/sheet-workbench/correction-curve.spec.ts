@@ -1,6 +1,6 @@
-import { fensOf, pliesOfPgn } from '@rh/features/games/game-edit.util';
-import { GameEvals } from '@rh/features/games/game-review.util';
-import { correctionCurve } from './scan-eval-curve';
+import { fensOf, pliesOfPgn } from '../game-edit.util';
+import { GameEvals } from '../game-review.util';
+import { correctionCurve } from './correction-curve';
 
 describe('correctionCurve', () => {
   // 1.e4 e5 2.Qh5 Nc6 3.Qxf7#? — hier nur als Zickzack: 2…Nc6 verschenkt (+9), 3.Bc4 gibt es zurück (0).

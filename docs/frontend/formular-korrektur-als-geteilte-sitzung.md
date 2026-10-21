@@ -46,3 +46,26 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort
 `ref` — angemeldet die Nummer, ohne Konto der geheime Schlüssel. Die Übersicht vor dem PGN-Import rechnet
 `features/club/import-review.ts` (rein, Spiegel der Server-Regel `LeagueClubService.Build`).
+
+## Formular-Werkbank: auch die Oberfläche ist geteilt (0.816.0)
+
+Seit 0.816.0 teilen RookHub und LeagueHub nicht nur die Sitzung, sondern die ganze Oberfläche der Korrektur:
+`features/games/sheet-workbench/` (Wunsch 2026-10-21: „die beiden sollten ident sein und nicht doppelt programmiert",
+Aufteilung wie in LeagueHub).
+
+- `SheetWorkbenchComponent` (`app-sheet-workbench`): Foto | Brett | Prüfen + Zugliste, Tasten ←/→, Folgen der Seite.
+  Eingaben: `session` (die `SheetEditSession` der Seite), `photos` (`ScanPhotos`), `flipped` (zweiseitig), `evals` +
+  `savedSans` (Analyse der GESPEICHERTEN Partie → Bewertungskurve, `correctionCurve`), `boardTheme`/`pieceSet`.
+  Inhaltsplätze: `[sheetPhotoTools]` (RookHub: Foto öffnen/herunterladen), `[sheetPlyExtra]` (RookHub: Kommentar zum Zug),
+  `[sheetEnd]` (LeagueHub: „Weiter zu den Namen").
+- `ScanPhotos` (vorher LeagueHub): Seiten, weitere Fotos je Seite (`fetchView`), Objekt-Adressen und — neu — die Datei je
+  Seite (`blob`, für RookHubs Öffnen/Herunterladen). RookHub hat keine weiteren Fotos; `fetchView` lehnt dort ab.
+- `SheetEngineComponent` (`app-sheet-engine`, vorher `lh-scan-engine`): zuschaltbare Engine, gemerkt unter dem alten
+  Schlüssel `lh-scan-engine`.
+- Texte: `sheetEdit.*` (en/de/hr/hu); die alten `games.edit.*`-Texte der Korrektur sind entfernt. LeagueHub zeigt sie in der
+  Sprache der Oberfläche (wie die geteilte Spielerkarte).
+- Stile: `sheet-workbench.component.scss` — LeagueHub-Gestaltung mit Rückfall auf die RookHub-Tokens (`--sw-*`). Die
+  Breitbild-Regel ≥ 2 400 px von LeagueHub (`.wrap.wide .scan-layout …`) bleibt global in `leaguehub.scss` und greift weiter.
+- RookHub verliert dabei den Partie-Rückblick (Kurve + gespeicherte Computer-Linien) auf der Korrekturseite; dafür die
+  Kurve der Werkbank (Zickzack = falsch gelesener Zug) und die Live-Engine.
+

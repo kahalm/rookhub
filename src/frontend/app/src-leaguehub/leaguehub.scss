@@ -839,15 +839,7 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .scan-why::before { content: "\00a0–\00a0"; } /* Angular entfernt den Leerraum vor dem Span (Nachprüfung a1). */
 .scan-long { margin-top: -6px; }
 .club-table .pl.unknown { text-decoration: underline dotted; text-underline-offset: 3px; color: inherit; }
-/* Großes Foto: die Zeile des gewählten Halbzugs markiert (0.584.0) */
-.photo-frame { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
-.photo-scroll.zoom .photo-frame { width: 200%; max-width: none; }
-.photo-scroll.zoom .photo-frame img { width: 100%; }
-/* Der Kasten des Modells sitzt eng um die Tinte: gezeichnet wird deshalb eine dünne Linie mit Abstand AUSSEN
-   herum (outline-offset) — ein Rand im Kasten plus heller Saum deckte den Eintrag im kleinen Foto zu (0.584.2). */
-.photo-mark { position: absolute; border-radius: 4px; pointer-events: none;
-  outline: 1.5px solid var(--red); outline-offset: 2px; }
-.photo-mark.uncertain { outline-color: var(--warn); }
+/* Großes Foto mit markierter Zeile (0.584.0): seit 0.816.0 in der Formular-Werkbank (sheet-workbench.component.scss). */
 .done-dlg { max-width: min(520px, 94vw); }
 .done-dlg h3 { margin: 4px 0 8px; }
 

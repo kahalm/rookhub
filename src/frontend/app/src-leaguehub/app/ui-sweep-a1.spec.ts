@@ -87,7 +87,7 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep a1', () => {
     expect(board).toBeLessThanOrEqual(1300 - 240 + 1);        // höchstens bis zur Fensterhöhe
     const desk = await render(1920, body, false, 1300);
     expect(box(desk, 'm').width).toBe(1440);
-    expect(box(desk, 'b').width).toBeLessThanOrEqual(1300 * 0.62 + 1);
+    // Das Brett unter 2400 px (62vh) begrenzt seit 0.816.0 die Formular-Werkbank selbst (sheet-workbench.component.scss).
   });
 
   // a1-l-prognose-ultrawide-6-bretter: 6 Bretter ab 2400 px als 3 + 3, 8 Bretter weiter 4 + 4
