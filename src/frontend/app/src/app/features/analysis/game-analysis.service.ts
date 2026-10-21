@@ -175,6 +175,15 @@ export class GameAnalysisService {
     return this.http.post<GameAnalysisAlternative[]>('/api/game-analyses/same-game', { ucis });
   }
 
+  /** Die zweite Analyse (Lc0) des Besitzers am Teilen-Link (0.819.0) — ohne Anmeldung. */
+  sharedAlternatives(token: string): Observable<GameAnalysisAlternative[]> {
+    return this.http.get<GameAnalysisAlternative[]>(`/api/game-analyses/shared/${encodeURIComponent(token)}/alternatives`);
+  }
+
+  sharedAlternativeEvalsUrl(token: string, id: number): string {
+    return `/api/game-analyses/shared/${encodeURIComponent(token)}/alternatives/${id}/evals`;
+  }
+
   /** Bewertungen einer eigenen Analyse im Format der Partiekurve. */
   evalsUrl(id: number): string {
     return `/api/game-analyses/${id}/evals`;

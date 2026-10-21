@@ -752,6 +752,37 @@ describe('GameReviewComponent', () => {
       expect(el.querySelector('.engine-view')).toBeNull();
     });
 
+    // Wunsch 2026-10-21: am Teilen-Link Lc0 „gleich wie bei /games/117" — die zweite Analyse des Besitzers, ohne Anmeldung.
+    it('Teilen-Link ohne Anmeldung: holt die Lc0-Analyse des Besitzers über die Kennung', () => {
+      const ctx = setup({ moves });
+      ctx.fixture.componentRef.setInput('sharedToken', 'tok');
+      ctx.fixture.detectChanges();
+      flushEvals(ctx.http, stockfish());
+      ctx.http.expectNone('/api/game-analyses/same-game');
+      ctx.http.expectOne('/api/game-analyses/shared/tok/alternatives').flush([
+        { id: 8, title: 'x (lc0)', engineId: 'rhe_lc0', engineName: 'RookHub Spark Lc0', targetNodes: 50000, targetDepth: 30, multiPv: 3, status: 'done', analyzedPlies: 2, plyCount: 2 },
+      ]);
+      ctx.http.expectOne('/api/game-analyses/shared/tok/alternatives/8/evals').flush(lc0());
+      ctx.fixture.detectChanges();
+      const toggles = Array.from(ctx.el.querySelectorAll('.engine-view mat-button-toggle')).map(t => t.textContent!.trim());
+      expect(toggles).toEqual(['Stockfish', 'Lc0', 'games.review.engineBoth']);
+    });
+
+    it('Teilen-Link, Besitzer hat keine: angemeldet die eigene des Betrachters', () => {
+      const ctx = setup({ moves });
+      ctx.fixture.componentRef.setInput('sharedToken', 'tok');
+      ctx.fixture.componentRef.setInput('withAlternatives', true);
+      ctx.fixture.detectChanges();
+      flushEvals(ctx.http, stockfish());
+      ctx.http.expectOne('/api/game-analyses/shared/tok/alternatives').flush([]);
+      ctx.http.expectOne('/api/game-analyses/same-game').flush([
+        { id: 9, title: 'x (lc0)', engineId: 'rhe_lc0', engineName: 'RookHub Spark Lc0', targetNodes: 50000, targetDepth: 30, multiPv: 3, status: 'done', analyzedPlies: 2, plyCount: 2 },
+      ]);
+      ctx.http.expectOne('/api/game-analyses/9/evals').flush(lc0());
+      ctx.fixture.detectChanges();
+      expect(ctx.fixture.componentInstance.hasLc0()).toBeTrue();
+    });
+
     it('nur Analysen ohne ausdrückliche Engine: kein Umschalter (dasselbe wie die Kurve der Seite)', () => {
       const ctx = setup({ moves });
       ctx.fixture.componentRef.setInput('withAlternatives', true);

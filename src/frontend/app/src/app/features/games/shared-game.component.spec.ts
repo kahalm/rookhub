@@ -565,7 +565,8 @@ describe('SharedGameComponent', () => {
 
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
 
-    http.expectNone(req => req.url.startsWith('/api/game-analyses') || req.url.endsWith('/analyze'));
+    // (die Lc0-Analyse des Besitzers zu LESEN ist erlaubt — 0.819.0; gestartet wird nichts)
+    http.expectNone(req => (req.url.startsWith('/api/game-analyses') && !req.url.includes('/shared/')) || req.url.endsWith('/analyze'));
     expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: router.url } });
   });
 

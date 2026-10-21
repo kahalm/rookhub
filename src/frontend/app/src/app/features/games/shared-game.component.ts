@@ -205,6 +205,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   /** Der freigegebene Roast hinter `?roast=` (0.742.0) — null ohne Parameter oder wenn nicht (mehr) freigegeben. */
   readonly sharedRoast = signal<GameRoast | null>(null);
+  /** Teilen-Kennung aus der Adresse (nur `/g/:token`) — die Analyse-Leiste holt darüber die Lc0-Analyse des Besitzers. */
+  publicToken: string | null = null;
   private roastId: number | null = null;
 
   private loadSharedRoast(token: string | null | undefined): void {
@@ -543,6 +545,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       return;
     }
     const token = this.route.snapshot.paramMap.get('token') || '';
+    this.publicToken = token || null;
     this.markSource = { shareToken: token };
     this.evalsUrl = this.games.sharedEvalsUrl(token);
     this.similarUrl = this.games.sharedSimilarUrl(token);

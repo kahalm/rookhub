@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.819.0", date: "2026-10-21", changes: [
+    { en: "Shared game links now show the owner’s Lc0 analysis like the game page itself — the Stockfish | Lc0 | both switch, Lc0 accuracy and lines — for everyone, logged in or not.", de: "Geteilte Partien zeigen jetzt die Lc0-Analyse des Besitzers wie die Partieseite selbst — Umschalter Stockfish | Lc0 | beide, Lc0-Genauigkeit und -Linien — für jeden, angemeldet oder nicht." },
+    { en: "Entering or changing only the result of a game rewrites its short recap (“Kurz erzählt”) — it no longer says the result is open.", de: "Wer bei einer Partie nur das Ergebnis einträgt oder ändert, bekommt die Nacherzählung („Kurz erzählt“) neu geschrieben — sie spricht nicht mehr von einem offenen Ergebnis." },
+  ] },
   { version: "0.818.0", date: "2026-10-21", changes: [
     { en: "E-books: when a scanned PDF is converted to a flowing EPUB, the garbled piece symbols of its text layer (e.g. „lt:Jxc4“ instead of ♘xc4) are now read from the page image by a small neural network and replaced with the right figurine — only where it is sure.", de: "E-Books: Beim Umwandeln eines gescannten PDF in ein Fließtext-EPUB liest jetzt ein kleines neuronales Netz die verstümmelten Figurenzeichen der Textebene (z. B. „lt:Jxc4“ statt ♘xc4) aus dem Seitenbild und setzt die richtige Figurine ein — nur dort, wo es sich sicher ist." },
   ] },

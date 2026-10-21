@@ -99,6 +99,21 @@ public class GameAnalysisController : BaseApiController
     public async Task<ActionResult<List<GameAnalysisAlternativeDto>>> SameGame([FromBody] SameGameRequest? req, CancellationToken ct)
         => Ok(await _service.SameGameAsync(GetUserId(), req?.Ucis, ct, await ClubReaderAsync(ct)));
 
+    /// <summary>Die zweite Analyse (Lc0) des Besitzers am Teilen-Link (0.819.0) — ohne Anmeldung, nur zu GENAU dieser Partie.</summary>
+    [HttpGet("shared/{token}/alternatives")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<GameAnalysisAlternativeDto>>> SharedAlternatives(string token, CancellationToken ct)
+        => Ok(await _service.SharedAlternativesAsync(token, ct));
+
+    /// <summary>Ihre Bewertungen im Format der Partiekurve; 404, wenn sie nicht zur geteilten Partie gehört.</summary>
+    [HttpGet("shared/{token}/alternatives/{id:int}/evals")]
+    [AllowAnonymous]
+    public async Task<ActionResult<GameEvalsDto>> SharedAlternativeEvals(string token, int id, CancellationToken ct)
+    {
+        var dto = await _service.SharedAlternativeEvalsAsync(token, id, ct);
+        return dto is null ? NotFound(new { message = "Analysis not found." }) : Ok(dto);
+    }
+
     /// <summary>Bewertungen einer eigenen Analyse im Format der Partiekurve — nur die eigene.</summary>
     [HttpGet("{id:int}/evals")]
     public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct)

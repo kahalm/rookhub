@@ -952,6 +952,35 @@ public class GameAnalysisService
             .ToList();
     }
 
+    /// <summary>
+    /// Die zweite Analyse (Lc0 o. Ä.) am Teilen-Link (0.819.0, Wunsch 2026-10-21: „sollte gleich sein wie bei /games/117 —
+    /// Standard beim Teilen"): die Analysen des BESITZERS mit ausdrücklich gewählter Engine und genau den Zügen der geteilten
+    /// Partie. Die Zugfolge kommt aus der verknüpften Analyse der Partie, nicht vom Aufrufer — sonst ließen sich über den
+    /// Link beliebige andere Analysen des Besitzers erfragen. Ohne verknüpfte Analyse: keine.
+    /// </summary>
+    public async Task<List<GameAnalysisAlternativeDto>> SharedAlternativesAsync(string? token, CancellationToken ct = default)
+        => (await SharedAlternativesCoreAsync(token, ct)).List;
+
+    /// <summary>Bewertungen einer dieser Analysen; <c>null</c>, wenn sie nicht zur geteilten Partie gehört.</summary>
+    public async Task<GameEvalsDto?> SharedAlternativeEvalsAsync(string? token, int id, CancellationToken ct = default)
+    {
+        var (ownerId, list) = await SharedAlternativesCoreAsync(token, ct);
+        return ownerId is int owner && list.Any(a => a.Id == id) ? await EvalsOfAsync(owner, id, ct) : null;
+    }
+
+    private async Task<(int? OwnerId, List<GameAnalysisAlternativeDto> List)> SharedAlternativesCoreAsync(string? token, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return (null, []);
+        var game = await _db.SavedGames.AsNoTracking().Where(g => g.ShareToken == token)
+            .Select(g => new { g.UserId, g.GameAnalysisId }).FirstOrDefaultAsync(ct);
+        if (game?.GameAnalysisId is not int linked) return (null, []);
+        var ucis = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == linked && p.GameMoveUci != "")
+            .OrderBy(p => p.Ply).Select(p => p.GameMoveUci).ToListAsync(ct);
+        var list = (await SameGameAsync(game.UserId, ucis, ct)).Where(a => a.EngineId != null && a.Id != linked).ToList();
+        return (game.UserId, list);
+    }
+
     /// <summary>Die Bewertungen einer EIGENEN Analyse im Format der Partiekurve (Weiß-Sicht) — für den Umschalter auf
     /// der Partieseite. Ohne Buchzüge: die markiert schon die Kurve der Seite. <c>null</c> = gibt es nicht oder fremd.</summary>
     public async Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default, bool clubReader = false)

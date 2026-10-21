@@ -1721,4 +1721,28 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Null(await _svc.EvalsOfAsync(other.Id, dto.Id));
         Assert.Null(await _svc.EvalsOfAsync(user.Id, 999_999));
     }
+
+    [Fact]
+    public async Task SharedAlternatives_zweiteAnalyseDesBesitzers_nurZuDieserPartie_mitBewertungen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var linked = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var lc0 = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game.Replace("Testpartie", "Lc0") });
+        var plain = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game.Replace("Testpartie", "Ohne Engine") });
+        var otherGame = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = LongGame });
+        foreach (var id in new[] { lc0.Id, otherGame.Id })
+            (await _db.GameAnalyses.FindAsync(id))!.EngineId = "rhe_lc0";
+        (await _db.GameAnalyses.FindAsync(plain.Id))!.EngineId = null;     // Hintergrund-Engines = dasselbe wie die Kurve
+        _db.SavedGames.Add(new SavedGame { UserId = user.Id, Source = "pgn", Pgn = Game, ShareToken = "tok-lc0", GameAnalysisId = linked.Id });
+        _db.SavedGames.Add(new SavedGame { UserId = user.Id, Source = "pgn", Pgn = Game, ShareToken = "tok-ohne" });
+        await _db.SaveChangesAsync();
+
+        var found = await _svc.SharedAlternativesAsync("tok-lc0");
+        Assert.Equal([lc0.Id], found.Select(f => f.Id));
+        Assert.NotNull(await _svc.SharedAlternativeEvalsAsync("tok-lc0", lc0.Id));
+        Assert.Null(await _svc.SharedAlternativeEvalsAsync("tok-lc0", otherGame.Id));     // andere Partie des Besitzers
+        Assert.Null(await _svc.SharedAlternativeEvalsAsync("tok-lc0", linked.Id));        // die Kurve selbst gibt es schon
+        Assert.Empty(await _svc.SharedAlternativesAsync("tok-ohne"));                     // ohne verknüpfte Analyse
+        Assert.Empty(await _svc.SharedAlternativesAsync("unbekannt"));
+    }
 }

@@ -120,6 +120,8 @@ public class EndpointAuthInventoryTests
         "GET /api/guess-sessions/anonymous/{id:int}",                // GuessSessionAnonymousController.Get
         "GET /api/guess-sessions/anonymous/{id:int}/review",         // GuessSessionAnonymousController.Review
         "GET /api/games/shared/{token}",                             // GamesController.GetShared
+        "GET /api/game-analyses/shared/{token}/alternatives",        // GameAnalysisController.SharedAlternatives (Lc0 des Besitzers am Teilen-Link, 0.819.0)
+        "GET /api/game-analyses/shared/{token}/alternatives/{id:int}/evals", // GameAnalysisController.SharedAlternativeEvals
         // Die Bewertungskurve unter der geteilten Partie — anonym NUR die vom Besitzer verknuepfte
         // Analyse (der Teilende hat die Partie samt Kurve geteilt); ANLEGEN bleibt angemeldet.
         "GET /api/games/shared/{token}/evals",                       // GamesController.SharedEvals

@@ -575,6 +575,26 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Empty(_db.GameMistakeProgresses.Where(p => p.SavedGameId == game.Id));
     }
 
+    /// <summary>Nur das Ergebnis nachgetragen (Wunsch 2026-10-21): die Nacherzählung nennt es und wird neu geschrieben —
+    /// Analyse und Training bleiben (dieselben Züge).</summary>
+    [Fact]
+    public async Task Korrigieren_nurErgebnis_loeschtNurDieNacherzaehlung()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        var analysis = await _svc.AnalyzeAsync(owner.Id, game.Id);
+        await AddRecapAndTrainingAsync(owner.Id, game.Id);
+        var sameMoves = new List<GameMoveInputDto> { new() { San = "e4" }, new() { San = "c5" }, new() { San = "Nf3" }, new() { San = "d6" } };
+
+        await _svc.UpdateAsync(owner.Id, game.Id, new GameUpdateDto { Moves = sameMoves, White = "Anna", Black = "Bert", Result = "1-0" });
+        Assert.Single(_db.GameRecaps.Where(r => r.SavedGameId == game.Id));            // Ergebnis gleich → bleibt
+
+        await _svc.UpdateAsync(owner.Id, game.Id, new GameUpdateDto { Moves = sameMoves, White = "Anna", Black = "Bert", Result = "0-1" });
+        Assert.Empty(_db.GameRecaps.Where(r => r.SavedGameId == game.Id));
+        Assert.Equal(analysis!.Analysis!.Id, (await RowAsync(game.Id)).GameAnalysisId);
+        Assert.Single(_db.GameMistakeProgresses.Where(p => p.SavedGameId == game.Id));
+    }
+
     // ===== Nicht bei den Punktepartien ======================================
 
     /// <summary>Die Liste „Eigene Analysen" (Punktepartie-Seite und Partie-Analysen) zeigt die ueber

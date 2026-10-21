@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, interval, timer } from 'rxjs';
+import { Observable, Subscription, catchError, interval, map, of, switchMap, timer } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EvalGraphComponent, EvalGraphMark } from '../../shared/pgn-viewer/eval-graph.component';
 import { formatEta } from '../../shared/eta.util';
@@ -404,6 +404,9 @@ export class GameReviewComponent {
   /** Weitere eigene Analysen derselben Partie suchen und als Umschalter anbieten (0.682.0) — nur mit Anmeldung, die
    *  Suche fragt das eigene Konto. Gewünscht 2026-10-06: Lc0 neben Stockfish, auch beide zugleich. */
   withAlternatives = input<boolean>(false);
+  /** Teilen-Kennung der Partie (0.819.0, Wunsch 2026-10-21: Lc0 am Teilen-Link „gleich wie bei /games/117"): dann kommt
+   *  die zweite Analyse vom BESITZER — auch ohne Anmeldung; erst wenn er keine hat, die eigene des Betrachters. */
+  sharedToken = input<string | null>(null);
 
   /** Pfeil, Zugsymbol und Erklärung: weg im Training (verrieten die Lösung) und neben der Live-Engine. */
   private readonly boardMarksHidden = computed(() => this.engineHidden() || this.liveEngine());
@@ -665,8 +668,9 @@ export class GameReviewComponent {
     // Zweite Analyse derselben Partie suchen (0.682.0) — einmal je Zugfolge, nur mit Anmeldung.
     effect(() => {
       const enabled = this.withAlternatives();
+      const token = this.sharedToken();
       const ucis = this.ucis();
-      untracked(() => this.findAlternative(enabled, ucis));
+      untracked(() => this.findAlternative(enabled, ucis, token));
     });
     // Der Pfeil folgt Stellung, Schalter und Analyse — die Seite legt ihn auf ihr Brett.
     effect(() => {
@@ -723,11 +727,11 @@ export class GameReviewComponent {
   /** Nach „Mit Lc0 analysieren" (0.692.0): neu suchen, damit der Umschalter mit dem Fortschritt gleich erscheint. */
   refreshAlternatives(): void {
     this.altKey = null;
-    this.findAlternative(this.withAlternatives(), this.ucis());
+    this.findAlternative(this.withAlternatives(), this.ucis(), this.sharedToken());
   }
 
-  private findAlternative(enabled: boolean, ucis: string[]): void {
-    const key = enabled && ucis.length ? ucis.join(' ') : null;
+  private findAlternative(enabled: boolean, ucis: string[], token: string | null = null): void {
+    const key = (enabled || token) && ucis.length ? `${token ?? ''}|${ucis.join(' ')}` : null;
     if (key === this.altKey) return;
     this.altKey = key;
     this.altSub?.unsubscribe();
@@ -735,24 +739,38 @@ export class GameReviewComponent {
     this.alternative.set(null);
     this.altEvals.set(null);
     if (!key) return;
-    this.altSub = this.analyses.sameGame(ucis).subscribe({
-      next: list => {
-        const explicit = list.filter(a => a.engineId);
-        const pick = explicit.find(a => isLc0Engine(a.engineName)) ?? explicit[0] ?? null;
+    const own = (): Observable<GameAnalysisAlternative[]> => enabled ? this.analyses.sameGame(ucis) : of([]);
+    const pickOf = (list: GameAnalysisAlternative[]) => {
+      const explicit = list.filter(a => a.engineId);
+      return explicit.find(a => isLc0Engine(a.engineName)) ?? explicit[0] ?? null;
+    };
+    // Am Teilen-Link zuerst die des Besitzers (seine Kurve zeigt die Seite ja auch), sonst die eigene.
+    const source$: Observable<{ pick: GameAnalysisAlternative | null; url: (id: number) => string }> = token
+      ? this.analyses.sharedAlternatives(token).pipe(
+          catchError(() => of([] as GameAnalysisAlternative[])),
+          switchMap(list => {
+            const pick = pickOf(list);
+            return pick
+              ? of({ pick, url: (id: number) => this.analyses.sharedAlternativeEvalsUrl(token, id) })
+              : own().pipe(map(l => ({ pick: pickOf(l), url: (id: number) => this.analyses.evalsUrl(id) })));
+          }))
+      : own().pipe(map(l => ({ pick: pickOf(l), url: (id: number) => this.analyses.evalsUrl(id) })));
+    this.altSub = source$.subscribe({
+      next: ({ pick, url }) => {
         this.alternative.set(pick);
-        if (pick) this.loadAltEvals(pick.id);
+        if (pick) this.loadAltEvals(url(pick.id));
       },
       error: () => { /* still: ohne zweite Analyse bleibt es bei der Kurve der Seite */ },
     });
   }
 
-  private loadAltEvals(id: number): void {
+  private loadAltEvals(url: string): void {
     this.altPoll?.unsubscribe();
-    this.altSub = this.games.evals(this.analyses.evalsUrl(id)).subscribe({
+    this.altSub = this.games.evals(url).subscribe({
       next: e => {
         this.altEvals.set(e);
         if (e.status === 'pending' || e.status === 'running')
-          this.altPoll = timer(GameReviewComponent.PollMs).subscribe(() => this.loadAltEvals(id));
+          this.altPoll = timer(GameReviewComponent.PollMs).subscribe(() => this.loadAltEvals(url));
       },
       error: () => this.altEvals.set(null),
     });

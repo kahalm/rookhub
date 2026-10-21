@@ -153,6 +153,9 @@ geschrieben vom Modell auf eigener Hardware (`IsLocal`), im Muster des Roasts. R
   hat ihn schon), nach der Vertiefung in jeder vorhandenen Sprache neu (`replace`). Für ältere Analysen stößt
   `GET /api/games/{id}/recap` ihn an (`IGameReviewTextScheduler.ScheduleRecap` → `WriteRecapAsync`). Doppelt gleichzeitig
   verhindert `GameExplanationJobs` mit dem Schlüssel (Partie-Id, `recap:<lang>`). Kein Knopf, kein Tagesdeckel.
+* **Ergebnis nachgetragen** (0.819.0, Wunsch 2026-10-21): ändert „Korrigieren" (`UpdateAsync`) nur das Ergebnis, wird die
+  Nacherzählung gelöscht (sie nennt das Ergebnis, „…with an open result"); Analyse und Fehler-Training bleiben. Beim
+  nächsten Öffnen schreibt `GET …/recap` sie neu. Andere Züge löschen wie bisher alles (`MovesChangedAsync`).
 * **Vorschaubild mit Kurve** (`OgImageService.RenderBoard(fen, flip, curve)`): mit FERTIGER Analyse rückt das Brett nach
   links, rechts die Kurve wie `EvalGraphComponent` (Lichess-Fläche von der Mittellinie, monotone kubische Glättung,
   linear bis ±10 Bauern, Matt am Rand; Lücken übernehmen den Wert davor), weiter ohne Schrift. Weil das Bild

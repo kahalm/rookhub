@@ -937,6 +937,9 @@ public class SavedGameService
         if (pgn.Length > g.Pgn.Length
             && (await UsageAsync(userId)).Chars - g.Pgn.Length + pgn.Length > PgnCharsPerUserCap)
             throw new SavedGameQuotaException($"Saved game storage limit reached (max {PgnCharsPerUserCap} characters per account).");
+        // Ergebnis nachgetragen/geändert (Wunsch 2026-10-21): die Nacherzählung nennt es („…ended with an open result") —
+        // sie wird gelöscht und beim nächsten Öffnen neu geschrieben (GET …/recap stößt sie bei fertiger Analyse an).
+        var resultChanged = !string.Equals(g.Result ?? "*", result, StringComparison.Ordinal);
         g.Pgn = pgn;
         g.White = Clip(dto.White, 120);
         g.Black = Clip(dto.Black, 120);
@@ -950,6 +953,8 @@ public class SavedGameService
         if (dto.Classifier2 != null) g.Classifier2 = GameClassifier.Clean(dto.Classifier2);
         if (dto.Tags != null) g.Tags = GameTags.Join(dto.Tags);
         if (movesChanged) await OnMovesChangedAsync(g);
+        else if (resultChanged)
+            _db.GameRecaps.RemoveRange(await _db.GameRecaps.Where(r => r.SavedGameId == g.Id).ToListAsync());
         await _db.SaveChangesAsync();
         var dtoOut = MapDetail(g);
         var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
