@@ -38,6 +38,8 @@ public class EbookDiagramExtractor
         using var doc = PdfDocument.Open(pdfPath, new ParsingOptions { UseLenientParsing = true, SkipMissingFonts = true });
         var pages = 0;
         var sizes = new Dictionary<int, (double W, double H)>();
+        // Bildunterschriften „White/Black to move“ je Seite (0.823.0): Zugrecht für Scan-Bretter ohne Dreieck.
+        var captions = new Dictionary<int, List<(char Side, double Xc, double Yc)>>();
         foreach (var page in doc.GetPages())
         {
             ct.ThrowIfCancellationRequested();
@@ -70,15 +72,9 @@ public class EbookDiagramExtractor
                 glyphs.Add(new DiagramGlyph(cx, cy, adv, adv, sq.Value, family.Name));
             }
 
-            var words = new List<PageWord>();
-            foreach (var word in page.GetWords())
-            {
-                if (ChessDiagramFonts.Detect(word.FontName) != null) continue;
-                var b = word.BoundingBox;
-                var baseline = word.Letters.Count > 0 ? height - word.Letters[0].StartBaseLine.Y : height - b.Bottom;
-                words.Add(new PageWord(b.Left, height - b.Top, b.Right, height - b.Bottom, word.Text, word.FontName ?? string.Empty, baseline));
-            }
+            var words = PageWords(page);
             lines.AddRange(ToLines(page.Number, width, words));
+            captions[page.Number] = ScanCaptionSide.Captions(words);
             if (glyphs.Count < 32) continue;
 
             foreach (var d in DiagramGridBuilder.Build(glyphs, words))
@@ -105,8 +101,15 @@ public class EbookDiagramExtractor
         if (!fontFound && _scanner != null && pages > 0)
         {
             scanned = true;
-            foreach (var b in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct, keepUnread))
+            foreach (var scanned0 in _scanner.Scan(scanPdfPath ?? pdfPath, pages, ct, keepUnread))
             {
+                var b = scanned0;
+                if (b.Side == null && captions.TryGetValue(b.Page, out var caps) && caps.Count > 0)
+                {
+                    var (cw, ch) = sizes.GetValueOrDefault(b.Page, (1.0, 1.0));
+                    var fromCaption = ScanCaptionSide.Find(caps, b.X * cw, b.Y * ch, (b.X + b.W) * cw, (b.Y + b.H) * ch, cw, ch);
+                    if (fromCaption != null) b = b with { Side = fromCaption };
+                }
                 if (b.Unread)
                 {
                     // Ohne Lösungssuche: die Stellung ist unplausibel gelesen.
@@ -149,6 +152,45 @@ public class EbookDiagramExtractor
         _logger.LogInformation("E-Book {EbookId}: {Count} Diagramme auf {Pages} Seiten, {Solutions} mit Lösung (Schach-Font {Found})",
             ebookId, diagrams.Count, pages, solutions.Count, fontFound);
         return new Result(diagrams, fontFound || scanned, pages, solutions.Count);
+    }
+
+    /// <summary>Textwörter einer Seite (ohne Diagramm-Fonts), Koordinaten von links OBEN in Punkten.</summary>
+    internal static List<PageWord> PageWords(Page page)
+    {
+        var height = page.Height;
+        var words = new List<PageWord>();
+        foreach (var word in page.GetWords())
+        {
+            if (ChessDiagramFonts.Detect(word.FontName) != null) continue;
+            var b = word.BoundingBox;
+            var baseline = word.Letters.Count > 0 ? height - word.Letters[0].StartBaseLine.Y : height - b.Bottom;
+            words.Add(new PageWord(b.Left, height - b.Top, b.Right, height - b.Bottom, word.Text, word.FontName ?? string.Empty, baseline));
+        }
+        return words;
+    }
+
+    /// <summary>Nachtrag (0.823.0): Zugrecht vorhandener Diagramme ohne Zugrecht aus der Bildunterschrift der PDF-Textebene.
+    /// Liefert je Diagramm-Id die gefundene Seite; Diagramme ohne passende Unterschrift fehlen.</summary>
+    public static Dictionary<int, char> SidesFromCaptions(string pdfPath, IReadOnlyList<EbookDiagram> diagrams, CancellationToken ct)
+    {
+        var result = new Dictionary<int, char>();
+        var byPage = diagrams.Where(d => d.W > 0).GroupBy(d => d.Page).ToDictionary(g => g.Key, g => g.ToList());
+        if (byPage.Count == 0) return result;
+        using var doc = PdfDocument.Open(pdfPath, new ParsingOptions { UseLenientParsing = true, SkipMissingFonts = true });
+        foreach (var (pageNo, ds) in byPage)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (pageNo < 1 || pageNo > doc.NumberOfPages) continue;
+            var page = doc.GetPage(pageNo);
+            var caps = ScanCaptionSide.Captions(PageWords(page));
+            if (caps.Count == 0) continue;
+            foreach (var d in ds)
+            {
+                var side = ScanCaptionSide.Find(caps, d.X * page.Width, d.Y * page.Height, (d.X + d.W) * page.Width, (d.Y + d.H) * page.Height, page.Width, page.Height);
+                if (side != null) result[d.Id] = side.Value;
+            }
+        }
+        return result;
     }
 
     /// <summary>Wörter einer Seite → Zeilenabschnitte: gleiche Höhe (± halbe Schrifthöhe), getrennt an großen Lücken;

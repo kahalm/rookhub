@@ -51,6 +51,12 @@ public class EbooksAdminController : BaseApiController
         return Accepted(new { ebookId = id, queued = true });
     }
 
+    /// <summary>Zugrecht aus „White/Black to move“ unter den Brettern nachtragen (0.823.0) — nur Diagramme ohne Zugrecht,
+    /// das Buch gilt danach NICHT als kuratiert → <c>{ ebookId, checked, set, changed }</c>; unbekannt → 404.</summary>
+    [HttpPost("{id:int}/diagrams/side-from-captions")]
+    public async Task<ActionResult<EbookSideFromCaptions.Outcome>> SideFromCaptions(int id, CancellationToken ct)
+        => Ok(await EbookSideFromCaptions.ApplyAsync(_db, _storage, id, ct));
+
     /// <summary>
     /// Fließtext-EPUB aus dem Text-PDF des Buchs bauen (0.802.0, Prototyp; synchron, ~10–20 s für 400 Seiten): abgeleitete
     /// Datei <c>converted/{id}.epub</c>, Diagramme als Brettbilder, ein zweiter Aufruf ersetzt sie. 400

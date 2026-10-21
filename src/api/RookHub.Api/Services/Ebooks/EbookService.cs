@@ -701,7 +701,7 @@ public class EbookService
 
     /// <summary>Neue Stellung: Buchlösung ab ihr neu nachspielen (nicht spielbar → keine Linie, Text bleibt), Engine-Lösung
     /// verwerfen; Prüfung und Bewertung zurück auf „ungeprüft“.</summary>
-    private static void ResetSolutionForNewPosition(EbookDiagram d)
+    internal static void ResetSolutionForNewPosition(EbookDiagram d)
     {
         if (d.SolutionSource == "engine" || string.IsNullOrEmpty(d.SolutionText))
         {
