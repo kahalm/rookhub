@@ -21,3 +21,7 @@ linke Ecke des Felds). Eingebaut auf der Partieseite und im Nachspiel-Dialog (`P
 **Erst die Figur, dann das Symbol** (0.558.2): neue Stellung und neues Symbol kommen in ZWEI Prüfläufen an; das Brett nimmt
 das alte Symbol beim Stellungswechsel sofort weg und hält jedes Symbol, das in die Fahrzeit fällt
 (`AnimationMs` 200 + `BadgeSettleMs` 30), bis zu ihrem Ende zurück (`fenChangedAt`, `badgeTimer`).
+
+**Ein/aus-Schalter** (0.820.0, Wunsch 2026-10-21): neben „Computer-Linien" und „Pfeil für den besten Zug" blendet ein dritter
+Schalter (`button.badge-toggle`, Symbol `new_releases`) das Zug-Symbol an der Figur aus. Je Gerät gemerkt
+(`rookhub_game_badges`, Vorgabe an — nur ein ausdrückliches Aus bleibt); aus = `badge()` liefert `null`.

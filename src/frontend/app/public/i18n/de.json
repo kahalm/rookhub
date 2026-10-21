@@ -2988,6 +2988,7 @@
       "bookHint": "In deinem Repertoire (für Extension und Vorbereitung markiert)",
       "lines": "Computer-Linien",
       "arrow": "Pfeil für den besten Zug",
+      "badges": "Zug-Symbole an den Figuren",
       "refining": "Vertiefung läuft — {{done}} von {{total}} Stellungen"
     },
     "analyzing": "Analyse läuft: {{pct}} % ({{analyzed}} von {{total}} Stellungen) – die Kurve steht auf der Partie-Seite",

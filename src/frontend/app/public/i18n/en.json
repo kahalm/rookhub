@@ -2988,6 +2988,7 @@
       "bookHint": "In your repertoire (marked for extension and preparation)",
       "lines": "Computer lines",
       "arrow": "Best-move arrow",
+      "badges": "Move symbols on the pieces",
       "refining": "Deeper analysis — {{done}} of {{total}} positions"
     },
     "analyzing": "Analysis running: {{pct}}% ({{analyzed}} of {{total}} positions) – the graph appears on the game page",

@@ -251,6 +251,34 @@ describe('GameReviewComponent', () => {
     expect(badges[badges.length - 1]).toBeNull();
   });
 
+  // Gewünscht 2026-10-21: neben Linien und Pfeil ein Schalter für die Zug-Symbole an der Figur (Buch/bester Zug/Patzer …).
+  it('Symbol-Schalter: blendet das Zug-Symbol an der Figur aus und wieder ein, gemerkt je Gerät', () => {
+    localStorage.removeItem(GameReviewComponent.BadgesKey);
+    try {
+      const { fixture, http, el } = setup({ moves: [{ from: 'e2', to: 'e4' }, { from: 'c7', to: 'c5' }] });
+      const badges: ({ square: string; svg: string } | null)[] = [];
+      fixture.componentInstance.badgeChange.subscribe(b => badges.push(b));
+      flushEvals(http, evals('done'));
+      fixture.componentRef.setInput('currentIndex', 1);
+      fixture.detectChanges();
+      expect(badges[badges.length - 1]?.square).toBe('c5');
+
+      const toggle = el.querySelector('button.badge-toggle') as HTMLButtonElement;
+      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+      toggle.click();
+      fixture.detectChanges();
+      expect(badges[badges.length - 1]).toBeNull();
+      expect(localStorage.getItem(GameReviewComponent.BadgesKey)).toBe('0');
+
+      toggle.click();
+      fixture.detectChanges();
+      expect(badges[badges.length - 1]?.square).toBe('c5');
+      expect(localStorage.getItem(GameReviewComponent.BadgesKey)).toBe('1');
+    } finally {
+      localStorage.removeItem(GameReviewComponent.BadgesKey);
+    }
+  });
+
   // Gewünscht 2026-09-24: die Kurve standardmäßig eingeklappt, auf Wunsch aufklappen.
   it('die Kurve ist zu, bis man auf die Überschrift klickt — Zähler und Genauigkeit stehen trotzdem da', () => {
     const { fixture, http, el } = setup({ graphClosed: true });

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.820.0", date: "2026-10-21", changes: [
+    { en: "Game page: next to the computer lines and the best-move arrow, a new switch hides or shows the move symbols on the pieces (book, best, blunder …) — remembered per device.", de: "Partieseite: neben Computer-Linien und Pfeil für den besten Zug blendet ein neuer Schalter die Zug-Symbole an den Figuren (Buch, bester Zug, Patzer …) aus und ein — je Gerät gemerkt." },
+  ] },
   { version: "0.819.0", date: "2026-10-21", changes: [
     { en: "Shared game links now show the owner’s Lc0 analysis like the game page itself — the Stockfish | Lc0 | both switch, Lc0 accuracy and lines — for everyone, logged in or not.", de: "Geteilte Partien zeigen jetzt die Lc0-Analyse des Besitzers wie die Partieseite selbst — Umschalter Stockfish | Lc0 | beide, Lc0-Genauigkeit und -Linien — für jeden, angemeldet oder nicht." },
     { en: "Entering or changing only the result of a game rewrites its short recap (“Kurz erzählt”) — it no longer says the result is open.", de: "Wer bei einer Partie nur das Ergebnis einträgt oder ändert, bekommt die Nacherzählung („Kurz erzählt“) neu geschrieben — sie spricht nicht mehr von einem offenen Ergebnis." },

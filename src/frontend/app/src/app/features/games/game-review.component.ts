@@ -123,6 +123,12 @@ const MATE_GAP_PAWNS = 100;
                         [appIconLabel]="'games.review.arrow' | translate">
                   <mat-icon>north_east</mat-icon>
                 </button>
+                <!-- Zug-Symbole an der Figur (Buch/bester Zug/Patzer …, 0.820.0, Wunsch 2026-10-21) — je Gerät gemerkt. -->
+                <button mat-icon-button type="button" class="toggle badge-toggle" [class.on]="showBadges()"
+                        [attr.aria-pressed]="showBadges()" (click)="toggleBadges()"
+                        [appIconLabel]="'games.review.badges' | translate">
+                  <mat-icon>new_releases</mat-icon>
+                </button>
               }
             </span>
           }
@@ -443,6 +449,7 @@ export class GameReviewComponent {
   static readonly ExplainPollMs = 5_000;
   static readonly LinesKey = 'rookhub_game_lines';
   static readonly ArrowKey = 'rookhub_game_arrow';
+  static readonly BadgesKey = 'rookhub_game_badges';
   /** Gemerkte Ansicht des Umschalters (`primary` | `alt` | `both`), je Gerät. */
   static readonly ViewKey = 'rookhub_game_engine_view';
 
@@ -515,6 +522,8 @@ export class GameReviewComponent {
   //  bleiben Linien und Pfeil trotzdem weg (`engineHidden`/`boardMarksHidden`).
   readonly showLines = linkedSignal(() => this.expanded() || readRaw(localStore(), GameReviewComponent.LinesKey) !== '0');
   readonly showArrow = signal(readRaw(localStore(), GameReviewComponent.ArrowKey) !== '0');
+  /** Zug-Symbol an der Figur ein/aus — Vorgabe an, nur ein ausdrückliches Aus bleibt gemerkt. */
+  readonly showBadges = signal(readRaw(localStore(), GameReviewComponent.BadgesKey) !== '0');
   readonly lines = computed(() => {
     if (!this.showLines() || this.engineHidden() || this.offGame()) return [];
     const deep = this.view() === 'alt' ? this.deepLc0() : this.deepSf();
@@ -578,7 +587,7 @@ export class GameReviewComponent {
     return best ? [best] : [];
   });
   readonly badge = computed<BoardBadge | null>(() => {
-    if (this.boardMarksHidden()) return null;
+    if (!this.showBadges() || this.boardMarksHidden()) return null;
     const m = this.current();
     const move = this.moves()[this.currentIndex()];
     return m && move?.to ? { square: move.to, svg: moveBadgeSvg(m.cls) } : null;
@@ -866,6 +875,11 @@ export class GameReviewComponent {
   toggleArrow(): void {
     this.showArrow.update(v => !v);
     writeRaw(localStore(), GameReviewComponent.ArrowKey, this.showArrow() ? '1' : '0');
+  }
+
+  toggleBadges(): void {
+    this.showBadges.update(v => !v);
+    writeRaw(localStore(), GameReviewComponent.BadgesKey, this.showBadges() ? '1' : '0');
   }
 
   symbol(c: MoveClass): string { return SYMBOLS[c]; }
