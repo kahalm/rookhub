@@ -564,9 +564,12 @@ public class ScoresheetScanServiceTests : IDisposable
         var u = await UserAsync();
         var (scan, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
 
-        Assert.Null(await _service.StartExternalAsync(scan!.Id));
-        Assert.Null(await _service.StartExternalAsync(scan.Id));                 // zweimal schadet nicht
-        Assert.Equal("running", (await _service.GetAsync(u.Id, scan.Id))!.Status);
+        Assert.Null(scan!.StartedAt);                                             // wartet: noch keine Lesezeit (0.817.0)
+        Assert.Null(await _service.StartExternalAsync(scan.Id));
+        var started = (await _service.GetAsync(u.Id, scan.Id))!.StartedAt;
+        Assert.NotNull(started);
+        Assert.Null(await _service.StartExternalAsync(scan.Id));                 // zweimal schadet nicht — die Lesezeit bleibt
+        Assert.Equal(("running", started), ((await _service.GetAsync(u.Id, scan.Id))!.Status, (await _service.GetAsync(u.Id, scan.Id))!.StartedAt));
         Assert.Equal("notFound", await _service.StartExternalAsync(9999));
 
         var (done, reason) = await _service.ProcessReadingAsync(scan.Id, Answer(Written));

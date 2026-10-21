@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.817.0", date: "2026-10-21", changes: [
+    { en: "Scoresheets: while you wait, the page now shows two steps — “Waiting for the reader” with a clock from the upload, and once the reader has picked the scoresheet up a ✓ behind it and “Reading” with its own clock. The reader now checks every minute instead of every five. Same display in RookHub and LeagueHub.",
+      de: "Partieformulare: beim Warten zeigt die Seite jetzt zwei Schritte – „Wartet auf den Leser“ mit einer Uhr ab dem Hochladen, und sobald der Leser das Formular abgeholt hat, ein ✓ dahinter und „Wird gelesen“ mit eigener Uhr. Der Leser schaut jetzt jede Minute nach statt alle fünf. Gleiche Anzeige in RookHub und LeagueHub." },
+  ] },
   { version: "0.816.0", date: "2026-10-21", changes: [
     { en: "Scoresheet correction: RookHub and LeagueHub now use one and the same workbench, laid out like LeagueHub — the photo with page and photo choice (“Photo 1 / Photo 2” for the second copy) and the selected move marked in it, the board with evaluation curve and engine in the middle, and on the right the detail of the sheet with “Correct”, the readings and the move list. In RookHub this adds the photo marking, the detail next to the move and the engine; the evaluation curve of the workbench replaces the game review on this page.",
       de: "Partieformular korrigieren: RookHub und LeagueHub benutzen jetzt ein und dieselbe Werkbank, aufgeteilt wie in LeagueHub – links das Foto mit Seiten- und Fotowahl („Foto 1 / Foto 2“ für das zweite Exemplar) und markiertem Zug, in der Mitte das Brett mit Bewertungskurve und Engine, rechts der Ausschnitt des Formulars mit „Stimmt so“, den Lesarten und der Zugliste. RookHub bekommt dadurch die Markierung im Foto, den Ausschnitt beim Zug und die Engine; die Bewertungskurve der Werkbank ersetzt auf dieser Seite den Partie-Rückblick." },

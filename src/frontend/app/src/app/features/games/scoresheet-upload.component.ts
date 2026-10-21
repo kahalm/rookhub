@@ -16,7 +16,7 @@ import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap, takeWhile } from 'rxjs/operators';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
-import { formatClock, serverTime } from './scoresheet-timing';
+import { SheetReadingStatusComponent } from './sheet-workbench/sheet-reading-status.component';
 import { formatQuietUntil } from './quiet-hours.util';
 
 /** So oft fragt die Seite nach, solange Claude liest. */
@@ -40,7 +40,7 @@ export const MAX_PAGES = 3;
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-scoresheet-upload',
   standalone: true,
-  imports: [
+  imports: [SheetReadingStatusComponent, 
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatFormFieldModule,
     MatSelectModule, MatProgressSpinnerModule, MatButtonToggleModule, TranslatePipe, HelpHintComponent,
   ],
@@ -175,10 +175,10 @@ export const MAX_PAGES = 3;
             @default {
               <div class="running">
                 <mat-spinner diameter="28"></mat-spinner>
-                <div>
-                  <strong>{{ (scan.status === 'pending' ? 'scoresheet.pending' : 'scoresheet.running') | translate }}</strong>
-                  <div class="facts">{{ (scan.status === 'pending' ? 'scoresheet.pendingHint' : 'scoresheet.runningHint') | translate: { time: clock(elapsed()) } }}</div>
-                </div>
+                <!-- 0.817.0: „Wartet auf den Leser" → ✓ + „Wird gelesen", je mit Uhr (geteilt mit LeagueHub). -->
+                <app-sheet-reading-status [status]="scan.status" [createdAt]="scan.createdAt" [startedAt]="scan.startedAt">
+                  <div class="facts">{{ 'scoresheet.leaveHint' | translate }}</div>
+                </app-sheet-reading-status>
               </div>
             }
           }
@@ -267,8 +267,6 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly current = signal<ScoresheetScan | null>(null);
   readonly recent = signal<ScoresheetScan[]>([]);
-  readonly elapsed = signal(0);
-  readonly clock = formatClock;
   /** Darf gerade eingelesen werden? Kostenbudget und Tageszahl — Admins nur das Gesamtbudget. */
   readonly canRead = computed(() => {
     const st = this.status();
@@ -286,7 +284,6 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   language = 'auto';
   side: 'white' | 'black' | 'auto' = 'auto';
   private poll?: Subscription;
-  private tick?: Subscription;
 
   ngOnInit(): void {
     try {
@@ -354,13 +351,6 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   private follow(scan: ScoresheetScan): void {
     this.current.set(scan);
     this.poll?.unsubscribe();
-    this.tick?.unsubscribe();
-    // Ab dem Hochladen (Serverzeit), nicht ab dem Öffnen der Seite — wer zurückkommt, sieht die echte Dauer.
-    const up = serverTime(scan.createdAt);
-    const started = Number.isFinite(up) ? Math.min(up, Date.now()) : Date.now();
-    this.elapsed.set(Math.max(0, Math.round((Date.now() - started) / 1000)));
-    this.tick = timer(1000, 1000).pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.elapsed.set(Math.round((Date.now() - started) / 1000)));
     // Ein Abruf, der nicht durchkommt (Funkloch am Handy), wird ÜBERSPRUNGEN — er beendete vorher das ganze Nachfragen,
     // und die Seite zeigte „wird gelesen", obwohl die Partie längst fertig war (gemeldet 2026-09-28).
     this.poll = timer(SCAN_POLL_MS, SCAN_POLL_MS).pipe(
@@ -371,11 +361,10 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
       next: s => {
         this.current.set(s);
         if (s.status === 'done' || s.status === 'failed') {
-          this.tick?.unsubscribe();
           this.loadRecent();
         }
       },
-      error: () => this.tick?.unsubscribe(),
+      error: () => { /* der nächste Abruf versucht es wieder */ },
     });
   }
 

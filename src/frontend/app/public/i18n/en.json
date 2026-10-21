@@ -4867,8 +4867,6 @@
     "quota": "{{used}} of {{limit}} today",
     "pending": "Waiting to be read …",
     "running": "Reading the scoresheet …",
-    "pendingHint": "The reader checks for new scoresheets every 5 minutes — uploaded {{time}} ago. You can leave the page — the game will appear in your games.",
-    "runningHint": "Usually takes a few minutes — reading for {{time}}. You can leave the page — the game will appear in your games.",
     "doneTitle": "Read: {{moves}} half-moves",
     "uncertain": "{{count}} uncertain",
     "unresolved": "{{count}} not matched",
@@ -4906,7 +4904,8 @@
     "choosePage": "Choose page {{n}}",
     "page": "Page {{n}}",
     "removePage": "Remove photo",
-    "morePages": "Does the game continue on another sheet? Then add the next page — up to {{max}} pages, in the right order."
+    "morePages": "Does the game continue on another sheet? Then add the next page — up to {{max}} pages, in the right order.",
+    "leaveHint": "You can leave the page — the game will appear in your games."
   },
   "moveCompare": {
     "menu": "Compare moves",
@@ -5672,6 +5671,14 @@
       "fallback": "not responding — calculating in the browser",
       "depth": "Depth {{depth}}",
       "nodes": "{{nodes}} nodes"
+    },
+    "status": {
+      "waiting": "Waiting for the reader",
+      "picked": "picked up",
+      "waitingWhy": "the reader checks for new scoresheets every minute",
+      "reading": "Reading",
+      "readingWhy": "this usually takes a few minutes",
+      "longWait": "Longer than usual – the reader is probably not running right now. The scoresheet stays saved."
     }
   }
 }

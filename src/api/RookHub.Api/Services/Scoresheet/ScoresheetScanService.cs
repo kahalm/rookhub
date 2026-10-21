@@ -1609,6 +1609,7 @@ public class ScoresheetScanService
             OwnerSide = s.OwnerSide,
             FileName = s.FileName,
             CreatedAt = s.CreatedAt,
+            StartedAt = s.StartedAt,
             FinishedAt = s.FinishedAt,
             Rounds = s.Rounds,
             PageCount = Math.Max(1, s.PageCount),

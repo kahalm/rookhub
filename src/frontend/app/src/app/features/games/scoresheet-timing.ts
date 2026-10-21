@@ -3,8 +3,8 @@ import { signal } from '@angular/core';
 /**
  * Uhr für das Einlesen eines Partieformulars (Wunsch 2026-09-28: „ein Timer, der raufzählt, damit man eine Vorstellung
  * hat"). Die frühere Schätzung „1–2 Sekunden pro Zug" (`SECONDS_PER_MOVE`, gemessen mit Claude Opus 5.5) galt fürs Modell;
- * seit 0.687.0 liest der Watcher auf dem Server alle 5 min, die Seiten sagen „ein paar Minuten" — die Konstante ist weg
- * (0.815.2).
+ * seit 0.687.0 liest der Watcher auf dem Server (seit 21.10.2026 jede Minute, vorher alle 5); die Rückmeldung zeigt seit
+ * 0.817.0 „Wartet auf den Leser“ ✓ → „Wird gelesen“ mit Uhr (`SheetReadingStatusComponent`) — die Konstante ist weg (0.815.2).
  */
 
 /**
@@ -27,6 +27,14 @@ export function readingSeconds(createdAt: string | null | undefined, now = Date.
 export function formatClock(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** „0:07", „4:12", ab einer Stunde „1:02:05" — für die Rückmeldung des Lesers (0.817.0), die auch lange Wartezeiten zeigt. */
+export function formatLongClock(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
 }
 
 /** Eine Sekunden-Uhr, die nur läuft, solange etwas gelesen wird (ein Intervall ohne Grund hielte auch Tests auf). */

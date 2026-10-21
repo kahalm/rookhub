@@ -64,6 +64,9 @@ public class ScoresheetScanDto
     public string OwnerSide { get; set; } = "auto";
     public string? FileName { get; set; }
     public DateTime CreatedAt { get; set; }
+    /// <summary>Seit wann gelesen wird (0.817.0): der Leser hat die Einlesung abgeholt — die Seite zeigt „Wartet auf den Leser ✓“
+    /// und zählt „Wird gelesen“ ab hier. <c>null</c>, solange sie wartet.</summary>
+    public DateTime? StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
     /// <summary>Lese-Durchgänge beim Modell (1 = auf Anhieb).</summary>
     public int Rounds { get; set; }

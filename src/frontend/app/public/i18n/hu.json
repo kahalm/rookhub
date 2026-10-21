@@ -4867,8 +4867,6 @@
     "quota": "ma {{used}} / {{limit}}",
     "pending": "Beolvasásra vár …",
     "running": "A játszmalap olvasása folyik …",
-    "pendingHint": "Az olvasó 5 percenként keres új játszmalapokat — {{time}} óta feltöltve. Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
-    "runningHint": "Általában néhány percig tart — {{time}} óta olvassuk. Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
     "doneTitle": "Beolvasva: {{moves}} féllépés",
     "uncertain": "{{count}} bizonytalan",
     "unresolved": "{{count}} nincs hozzárendelve",
@@ -4906,7 +4904,8 @@
     "choosePage": "{{n}}. oldal kiválasztása",
     "page": "{{n}}. oldal",
     "removePage": "Fénykép eltávolítása",
-    "morePages": "Folytatódik a játszma egy másik lapon? Add hozzá a következő oldalt — legfeljebb {{max}} oldal, helyes sorrendben."
+    "morePages": "Folytatódik a játszma egy másik lapon? Add hozzá a következő oldalt — legfeljebb {{max}} oldal, helyes sorrendben.",
+    "leaveHint": "Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között."
   },
   "moveCompare": {
     "menu": "Lépések összehasonlítása",
@@ -5672,6 +5671,14 @@
       "fallback": "nem válaszol — a böngészőben számol",
       "depth": "Mélység {{depth}}",
       "nodes": "{{nodes}} csomópont"
+    },
+    "status": {
+      "waiting": "Az olvasóra vár",
+      "picked": "átvéve",
+      "waitingWhy": "az olvasó percenként keres új játszmalapokat",
+      "reading": "Olvasás folyamatban",
+      "readingWhy": "ez általában néhány percig tart",
+      "longWait": "A szokásosnál tovább tart – az olvasó most valószínűleg nem fut. A játszmalap mentve marad."
     }
   }
 }

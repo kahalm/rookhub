@@ -18,6 +18,8 @@ export interface ScoresheetScan {
   ownerSide?: string;
   fileName?: string | null;
   createdAt: string;
+  /** Seit wann der Leser die Einlesung hat (0.817.0) — `null`, solange sie wartet. */
+  startedAt?: string | null;
   finishedAt?: string | null;
   rounds: number;
   moveCount: number;

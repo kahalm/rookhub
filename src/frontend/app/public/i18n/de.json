@@ -4867,8 +4867,6 @@
     "quota": "{{used}} von {{limit}} heute",
     "pending": "Wartet aufs Einlesen …",
     "running": "Das Formular wird gelesen …",
-    "pendingHint": "Der Leser schaut alle 5 Minuten nach neuen Formularen — hochgeladen vor {{time}}. Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
-    "runningHint": "Dauert meist ein paar Minuten — läuft seit {{time}}. Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
     "doneTitle": "Eingelesen: {{moves}} Halbzüge",
     "uncertain": "{{count}} unsicher",
     "unresolved": "{{count}} nicht zugeordnet",
@@ -4906,7 +4904,8 @@
     "choosePage": "Seite {{n}} wählen",
     "page": "Seite {{n}}",
     "removePage": "Foto entfernen",
-    "morePages": "Geht die Partie über ein weiteres Blatt? Dann die nächste Seite dazunehmen — bis zu {{max}} Seiten, in der richtigen Reihenfolge."
+    "morePages": "Geht die Partie über ein weiteres Blatt? Dann die nächste Seite dazunehmen — bis zu {{max}} Seiten, in der richtigen Reihenfolge.",
+    "leaveHint": "Du kannst die Seite verlassen — die Partie erscheint in deinen Partien."
   },
   "moveCompare": {
     "menu": "Züge vergleichen",
@@ -5672,6 +5671,14 @@
       "fallback": "antwortet nicht — rechnet im Browser",
       "depth": "Tiefe {{depth}}",
       "nodes": "{{nodes}} Knoten"
+    },
+    "status": {
+      "waiting": "Wartet auf den Leser",
+      "picked": "abgeholt",
+      "waitingWhy": "der Leser schaut jede Minute nach neuen Formularen",
+      "reading": "Wird gelesen",
+      "readingWhy": "das dauert meist ein paar Minuten",
+      "longWait": "Länger als üblich – der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert."
     }
   }
 }

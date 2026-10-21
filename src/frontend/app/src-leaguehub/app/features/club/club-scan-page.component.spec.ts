@@ -40,6 +40,7 @@ const MATCH = (blackLeague: boolean): ClubMatch => ({
 const SHEET_DE = {
   confirm: 'Stimmt so', delete: 'Zug löschen', deleted: 'Zug gelöscht.', options: 'Mögliche Lesarten',
   showPhoto: 'Ganzes Foto zeigen', hidePhoto: 'Ganzes Foto ausblenden', photo: 'Foto {{n}}', page: 'Seite {{n}}',
+  status: { waiting: 'Wartet auf den Leser', reading: 'Wird gelesen', longWait: 'Länger als üblich – der Leser läuft gerade wohl nicht.' },
 };
 
 describe('ClubScanPageComponent', () => {
@@ -658,33 +659,35 @@ describe('ClubScanPageComponent', () => {
     expect(gate.textContent).toContain('Angemeldet als patrik.');
     expect(gate.textContent).not.toContain('Zu den Vereinspartien');
   });
-  // a1-l-formular-wartezeit: nach 42 Stunden stand „2549:18", der Nachsatz klein mit „ — " im Text (Strich allein am Zeilenende)
-  it('wartendes Formular: Uhr in Tagen und Stunden, Nachsatz ohne Strich im Text, nach langer Wartezeit ein Hinweis', fakeAsync(() => {
+  // 0.817.0 (Wunsch 2026-10-21): erst „Wartet auf den Leser" mit Uhr, nach dem Abholen ✓ dahinter und „Wird gelesen" mit Uhr
+  it('wartendes Formular: „Wartet auf den Leser" mit Uhr, nach langer Wartezeit ein Hinweis', fakeAsync(() => {
     const created = new Date(Date.now() - (42 * 3600 + 18 * 60 + 30) * 1000).toISOString();
     api.scan.and.callFake(async () => ({ ...structuredClone(STATE), scan: { ...structuredClone(STATE).scan, status: 'pending', createdAt: created } }));
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    expect(el.querySelector('.scan-clock')?.textContent?.trim()).toBe('seit\u00A01\u00A0Tag 18\u00A0Std.');
-    const why = el.querySelector('.scan-why')!;
-    expect(why.textContent?.trim()).toBe('der Leser schaut alle 5 Minuten nach neuen Formularen.');
-    expect(why.classList.contains('small')).toBeFalse();
-    expect(getComputedStyle(why, '::before').content).toContain('–');
-    expect(el.querySelector('.scan-long')?.textContent).toContain('Länger als üblich');
-    // b1-l-formular-wartezeit-umbruch: derselbe Halbgeviertstrich wie im Satz darüber (.scan-why::before)
-    expect(el.querySelector('.scan-long')?.textContent).toContain('Länger als üblich – der Leser');
+    const st = el.querySelector('app-sheet-reading-status')!;
+    expect(st.textContent).toContain('Wartet auf den Leser');
+    expect(st.querySelector('.rs-clock')?.textContent?.trim()).toBe('42:18:30');
+    expect(st.querySelector('.rs-check')).toBeNull();
+    expect(st.querySelector('.rs-long')?.textContent).toContain('Länger als üblich');
     fixture.destroy();
     discardPeriodicTasks();
   }));
 
-  it('wartendes Formular nach kurzer Zeit: Minuten-Uhr, kein Hinweis „Länger als üblich"', fakeAsync(() => {
-    const created = new Date(Date.now() - 7_000).toISOString();
-    api.scan.and.callFake(async () => ({ ...structuredClone(STATE), scan: { ...structuredClone(STATE).scan, status: 'pending', createdAt: created } }));
+  it('abgeholtes Formular: ✓ hinter „Wartet auf den Leser", darunter „Wird gelesen" mit eigener Uhr', fakeAsync(() => {
+    const created = new Date(Date.now() - 90_000).toISOString();
+    const started = new Date(Date.now() - 20_000).toISOString();
+    api.scan.and.callFake(async () => ({ ...structuredClone(STATE), scan: { ...structuredClone(STATE).scan, status: 'running', createdAt: created, startedAt: started } }));
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    expect(el.querySelector('.scan-clock')?.textContent?.trim()).toMatch(/^0:0\d$/);
-    expect(el.querySelector('.scan-long')).toBeNull();
+    const lines = Array.from(el.querySelectorAll('app-sheet-reading-status .rs-line')) as HTMLElement[];
+    expect(lines.length).toBe(2);
+    expect(lines[0].querySelector('.rs-check')?.textContent).toBe('✓');
+    expect(lines[0].querySelector('.rs-time')?.textContent?.trim()).toBe('1:10');          // so lange hat es gewartet
+    expect(lines[1].textContent).toContain('Wird gelesen');
+    expect(lines[1].querySelector('.rs-clock')?.textContent?.trim()).toMatch(/^0:2\d$/);
     fixture.destroy();
     discardPeriodicTasks();
   }));

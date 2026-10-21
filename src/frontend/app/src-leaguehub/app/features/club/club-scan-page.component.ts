@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal, effect, untracked, viewChild,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, inject, signal, effect, untracked, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,12 +8,12 @@ import { AuthService } from '@rh/core/auth.service';
 import { scrollIntoContainer } from '@rh/shared/pgn-viewer/move-list.component';
 import { GameEvals } from '@rh/features/games/game-review.util';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
-import { SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { SheetReadingStatusComponent } from '@rh/features/games/sheet-workbench/sheet-reading-status.component';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubGameDetail, ClubSheetState, LeagueScanState, ScanRef } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ClubContextService } from '../../core/club-context.service';
-import { LONG_WAIT_SECONDS, SheetPgnInput, isTransientError, loadErrorText, reasonText, sheetPgn, sheetPgnFileName, waitClock } from '../../core/club-format';
+import { SheetPgnInput, isTransientError, loadErrorText, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
@@ -47,7 +47,7 @@ function readAutoMine(): boolean {
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PlayerSearchComponent, AccessGateComponent, SheetWorkbenchComponent],
+  imports: [RouterLink, PlayerSearchComponent, AccessGateComponent, SheetWorkbenchComponent, SheetReadingStatusComponent],
   template: `
     @if (!allowed) {
       <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
@@ -106,18 +106,8 @@ function readAutoMine(): boolean {
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
           @else {
-            @if (st.scan.status === 'pending') {
-              <!-- a1-l-formular-wartezeit: der Nachsatz in Textgröße, der Strich als ::before (hängt nie allein am Zeilenende);
-                   wartet es ungewöhnlich lange, sagt eine Zeile, dass der Leser wohl gerade nicht läuft. -->
-              <p class="muted" role="status">Das Formular wartet aufs Einlesen … <b class="scan-clock">{{ clock() }}</b>
-                <span class="scan-why">der Leser schaut alle 5 Minuten nach neuen Formularen.</span></p>
-              @if (longWait()) {
-                <p class="muted small scan-long">Länger als üblich – der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert.</p>
-              }
-            } @else {
-              <p class="muted" role="status">Das Formular wird gelesen … <b class="scan-clock">{{ clock() }}</b>
-                <span class="scan-why">das dauert meist ein paar Minuten.</span></p>
-            }
+            <!-- 0.817.0 (Wunsch 2026-10-21): „Wartet auf den Leser" → ✓ + „Wird gelesen", je mit Uhr — geteilt mit RookHub. -->
+            <app-sheet-reading-status class="muted" [status]="st.scan.status" [createdAt]="st.scan.createdAt" [startedAt]="st.scan.startedAt" />
           }
         } @else {
           @if (hintOpen()) {
@@ -327,12 +317,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly savedEvals = signal<GameEvals | null>(null);
   readonly savedSans = signal<string[]>([]);
   readonly state = signal<LeagueScanState | null>(null);
-  /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
-  private readonly ticker = new SecondsTicker();
-  private readonly waited = computed(() => readingSeconds(this.state()?.scan.createdAt, this.ticker.now()));
-  /** a1-l-formular-wartezeit: „1:02:05" bzw. „seit 1 Tag 18 Std." statt „2549:18". */
-  readonly clock = computed(() => waitClock(this.waited()));
-  readonly longWait = computed(() => this.waited() >= LONG_WAIT_SECONDS);
   readonly notFound = signal(false);
   /** Der Abruf scheitert (anderer Code als 404, oder vorübergehend mehrmals hintereinander) — Klartext statt „Lade …". */
   readonly loadError = signal<string | null>(null);
@@ -423,7 +407,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.ticker.stop();
     this.destroyed = true;
     if (this.pollTimer) clearTimeout(this.pollTimer);
     this.f.dispose();
@@ -503,7 +486,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.state.set(st);
     this.ph.viewCounts.set(st.viewCounts ?? []);
     const reading = st.scan.status === 'pending' || st.scan.status === 'running';
-    this.ticker.run(reading);
     if (reading) {
       this.poll();
       return;

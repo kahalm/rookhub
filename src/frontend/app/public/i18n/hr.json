@@ -4867,8 +4867,6 @@
     "quota": "danas {{used}} od {{limit}}",
     "pending": "Čeka na čitanje …",
     "running": "Zapisnik se čita …",
-    "pendingHint": "Čitač svakih 5 minuta provjerava nove zapisnike — učitano prije {{time}}. Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama.",
-    "runningHint": "Obično traje nekoliko minuta — čita se već {{time}}. Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama.",
     "doneTitle": "Učitano: {{moves}} polupoteza",
     "uncertain": "nesigurno: {{count}}",
     "unresolved": "nepridruženo: {{count}}",
@@ -4906,7 +4904,8 @@
     "choosePage": "Odaberi stranicu {{n}}",
     "page": "Stranica {{n}}",
     "removePage": "Ukloni fotografiju",
-    "morePages": "Nastavlja li se partija na drugom listu? Dodaj sljedeću stranicu — do {{max}} stranice, pravilnim redoslijedom."
+    "morePages": "Nastavlja li se partija na drugom listu? Dodaj sljedeću stranicu — do {{max}} stranice, pravilnim redoslijedom.",
+    "leaveHint": "Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama."
   },
   "moveCompare": {
     "menu": "Usporedi poteze",
@@ -5672,6 +5671,14 @@
       "fallback": "ne odgovara — računa u pregledniku",
       "depth": "Dubina {{depth}}",
       "nodes": "{{nodes}} čvorova"
+    },
+    "status": {
+      "waiting": "Čeka čitača",
+      "picked": "preuzeto",
+      "waitingWhy": "čitač svake minute provjerava nove zapisnike",
+      "reading": "Čita se",
+      "readingWhy": "to obično traje nekoliko minuta",
+      "longWait": "Dulje nego obično – čitač trenutno vjerojatno ne radi. Zapisnik ostaje spremljen."
     }
   }
 }

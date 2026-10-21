@@ -118,8 +118,11 @@ die Lesung zurückgibt. `ProcessReadingAsync` nimmt sie in der Form der Modell-A
 auf 2000 px verkleinerten Fotos) und geht danach denselben Weg wie eine gelesene (`FinishAsync`: Auflösung,
 Engine-Prüfung, Liga → offen zum Prüfen, eigene → Partie + Glocke); `Model = "claude-manual"`. Der Schlüssel ist
 dabei nicht nötig (`Available` gilt auch ohne), und Tageszahl/Anzahl offener gelten weiter, die Kostenbremse nicht
-(keine Kosten). Die Seiten sagen deshalb seit 0.689.0 „der Leser schaut alle 5 Minuten" bzw. „dauert meist ein paar Minuten" statt
-der alten „1–2 Sekunden pro Zug" (die Konstante `SECONDS_PER_MOVE` ist seit 0.815.2 weg).
+(keine Kosten). Der Watcher läuft seit 21.10.2026 jede Minute (crontab, vorher alle 5) und meldet das Abholen über
+`POST /api/admin/scoresheets/{id}/start` (Status `running`, `StartedAt`). Die Seiten zeigen seit 0.817.0 zwei Schritte mit
+Uhr (`SheetReadingStatusComponent`, RookHub-Upload und LeagueHub „Formular prüfen“): „Wartet auf den Leser“ ab dem Hochladen,
+nach dem Abholen ✓ dahinter (mit der Wartezeit) und „Wird gelesen“ ab `ScoresheetScanDto.StartedAt`; nach 15 min Warten
+der Hinweis, dass der Leser wohl nicht läuft. (Die alte Schätzung „1–2 Sekunden pro Zug“ ist seit 0.815.2 weg.)
 
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT
