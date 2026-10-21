@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.815.2", date: "2026-10-21", changes: [
+    { en: "Scoresheets: cleanup — the old reading-time estimate of 1–2 seconds per move is gone from the code and the developer notes; the pages have said “the reader checks every 5 minutes” since 0.689.0. No visible change.",
+      de: "Partieformulare: aufgeräumt – die alte Schätzung „1–2 Sekunden pro Zug“ ist aus Code und Entwickler-Doku verschwunden; die Seiten sagen seit 0.689.0 „der Leser schaut alle 5 Minuten“. Keine sichtbare Änderung." },
+  ] },
   { version: "0.815.1", date: "2026-10-21", changes: [
     { en: "Scanned e-books: the board-square network was retrained on about 5,000 more Opus-checked diagrams from 32 books (dark-printed queens and bishops, black king's rooks drawn like white ones, boards printed from Black's side). On held-back boards it now reads 92% of positions exactly instead of 82%; already stored diagrams stay as they are until a book is scanned again.",
       de: "Gescannte E-Books: Das Brettfeld-Netz ist mit rund 5 000 weiteren von Opus geprüften Diagrammen aus 32 Büchern nachtrainiert (dunkel gedruckte Damen und Läufer, schwarze Königstürme im Stil weißer, Bretter aus Sicht von Schwarz). Auf zurückgehaltenen Brettern liest es jetzt 92 % der Stellungen exakt statt 82 %; schon gespeicherte Diagramme bleiben, bis ein Buch neu gelesen wird." },

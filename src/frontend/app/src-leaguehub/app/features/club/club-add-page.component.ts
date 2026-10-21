@@ -8,7 +8,7 @@ import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
 import { importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText, waitClock } from '../../core/club-format';
-import { SECONDS_PER_MOVE, SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubContextService } from '../../core/club-context.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
@@ -415,7 +415,6 @@ export class ClubAddPageComponent implements OnInit {
   readonly isManager = !this.share && this.auth.has('league.manage');
   readonly openScans = signal<OpenScan[]>([]);
   readonly othersOpen = computed(() => this.openScans().filter(o => !o.mine));
-  readonly perMove = SECONDS_PER_MOVE;
   /** Mitlaufende Uhr, solange ein Formular gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
   private readonly ticker = new SecondsTicker();
   readonly isOpen = (s: { status: string }) => s.status === 'pending' || s.status === 'running';

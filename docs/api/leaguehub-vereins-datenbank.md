@@ -166,7 +166,8 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 * **Nach dem Prüfen** (0.581.0): „PGN herunterladen" / „PGN kopieren" (`sheetPgn` in `core/club-format.ts`, Namen wie im
   Formular — die Datei bleibt beim Nutzer) und angemeldet „Zu meinen Partien hinzufügen" (`POST /api/games/import`,
   Link zurück nach RookHub über `rookHubUrlForLeagueHub`). Nach dem Übernehmen bleibt die Seite dafür offen.
-* **Dauer** (0.581.0): Hinweis „etwa 1–2 Sekunden pro Zug" und eine Uhr ab dem Hochladen (`scoresheet-timing.ts`:
+* **Dauer** (0.581.0, Wortlaut seit 0.689.0): Hinweis „der Leser schaut alle 5 Minuten" bzw. „dauert meist ein paar Minuten"
+  (seit 0.687.0 liest der Watcher auf dem Server; die alten „1–2 Sekunden pro Zug" galten fürs Modell) und eine Uhr ab dem Hochladen (`scoresheet-timing.ts`:
   `serverTime` liest Zeiten ohne Zone als UTC — aus der Datenbank kommen sie so —, `SecondsTicker` läuft nur, solange
   gelesen wird). Gemessen auf Prod: 43/59/104 Einträge in 22/31/73 s.
 * **Löschen**: `league.manage` alles, sonst nur eigene Partien ohne „Schwaz". Konto löschen setzt `UploadedByUserId` null.

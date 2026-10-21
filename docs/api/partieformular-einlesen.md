@@ -118,7 +118,8 @@ die Lesung zurückgibt. `ProcessReadingAsync` nimmt sie in der Form der Modell-A
 auf 2000 px verkleinerten Fotos) und geht danach denselben Weg wie eine gelesene (`FinishAsync`: Auflösung,
 Engine-Prüfung, Liga → offen zum Prüfen, eigene → Partie + Glocke); `Model = "claude-manual"`. Der Schlüssel ist
 dabei nicht nötig (`Available` gilt auch ohne), und Tageszahl/Anzahl offener gelten weiter, die Kostenbremse nicht
-(keine Kosten). Die Seite „etwa 1–2 Sekunden pro Zug" stimmt in diesem Modus nicht — der Watcher schaut alle 5 min.
+(keine Kosten). Die Seiten sagen deshalb seit 0.689.0 „der Leser schaut alle 5 Minuten" bzw. „dauert meist ein paar Minuten" statt
+der alten „1–2 Sekunden pro Zug" (die Konstante `SECONDS_PER_MOVE` ist seit 0.815.2 weg).
 
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT

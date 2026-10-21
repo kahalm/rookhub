@@ -14,7 +14,7 @@ import { EvalGraphComponent } from '@rh/shared/pgn-viewer/eval-graph.component';
 import { GameEvals } from '@rh/features/games/game-review.util';
 import { correctionCurve } from './scan-eval-curve';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
-import { SECONDS_PER_MOVE, SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubGameDetail, ClubSheetState, LeagueScanState, ScanRef } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
@@ -477,7 +477,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly evalCurve = computed(() =>
     correctionCurve(this.savedEvals(), this.savedSans(), this.s.plies(), this.s.fens()));
   readonly state = signal<LeagueScanState | null>(null);
-  readonly perMove = SECONDS_PER_MOVE;
   /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
   private readonly ticker = new SecondsTicker();
   private readonly waited = computed(() => readingSeconds(this.state()?.scan.createdAt, this.ticker.now()));

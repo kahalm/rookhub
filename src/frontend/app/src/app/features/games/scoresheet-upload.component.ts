@@ -16,7 +16,7 @@ import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap, takeWhile } from 'rxjs/operators';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
-import { SECONDS_PER_MOVE, formatClock, serverTime } from './scoresheet-timing';
+import { formatClock, serverTime } from './scoresheet-timing';
 import { formatQuietUntil } from './quiet-hours.util';
 
 /** So oft fragt die Seite nach, solange Claude liest. */
@@ -177,7 +177,7 @@ export const MAX_PAGES = 3;
                 <mat-spinner diameter="28"></mat-spinner>
                 <div>
                   <strong>{{ (scan.status === 'pending' ? 'scoresheet.pending' : 'scoresheet.running') | translate }}</strong>
-                  <div class="facts">{{ (scan.status === 'pending' ? 'scoresheet.pendingHint' : 'scoresheet.runningHint') | translate: { time: clock(elapsed()), perMove: perMove } }}</div>
+                  <div class="facts">{{ (scan.status === 'pending' ? 'scoresheet.pendingHint' : 'scoresheet.runningHint') | translate: { time: clock(elapsed()) } }}</div>
                 </div>
               </div>
             }
@@ -269,7 +269,6 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   readonly recent = signal<ScoresheetScan[]>([]);
   readonly elapsed = signal(0);
   readonly clock = formatClock;
-  readonly perMove = SECONDS_PER_MOVE;
   /** Darf gerade eingelesen werden? Kostenbudget und Tageszahl — Admins nur das Gesamtbudget. */
   readonly canRead = computed(() => {
     const st = this.status();
