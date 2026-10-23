@@ -7,6 +7,8 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
 import { LiveEngineSession } from '../games/live-engine-session';
 import { StockfishService } from '../puzzles/stockfish.service';
+import { By } from '@angular/platform-browser';
+import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { EbookBoardComponent } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
 
@@ -86,7 +88,7 @@ describe('EbookBoardComponent', () => {
     try { localStorage.removeItem(EbookBoardComponent.AUTO_NEXT_KEY); } catch { /* egal */ }
   }));
 
-  it('kompakte Brett-Leiste: fünf Modi als Symbolknöpfe (Name im aria-label, gewählter mit aria-pressed), ⚙ nur bei Lösen/Maia', () => {
+  it('kompakte Brett-Leiste: fünf Modi als Symbolknöpfe (Name im aria-label, gewählter mit aria-pressed), ⚙ nur bei Lösen/Kalkulieren/Maia', () => {
     const fixture = make();
     const el: HTMLElement = fixture.nativeElement;
     const modes = Array.from(el.querySelectorAll<HTMLButtonElement>('.eb-bar .eb-mode'));
@@ -102,6 +104,9 @@ describe('EbookBoardComponent', () => {
     fixture.componentInstance.setMode('free');
     fixture.detectChanges();
     expect(el.querySelector('.eb-bar .eb-settings')).toBeNull();
+    fixture.componentInstance.setMode('calc');      // Kalkulieren: Art (einfach/Training) wählbar, 0.825.0
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-bar .eb-settings')).not.toBeNull();
     fixture.componentInstance.setMode('maia');
     fixture.detectChanges();
     expect(el.querySelector('.eb-bar .eb-settings')).not.toBeNull();
@@ -285,6 +290,44 @@ describe('EbookBoardComponent', () => {
     expect(c.played()).toEqual([]);                    // falscher Zug zurückgenommen
     expect(c.mistake()).toBeTrue();
     expect(TestBed.inject(SnackbarService).quick).toHaveBeenCalledWith('ebooks.board.wrongMove');
+  }));
+
+  it('Training (0.825.0, „wie beim Kurs“): beim Lösen und Kalkulieren bleibt die Buchstellung stehen, Züge gehen über das Viz-Brett', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    expect(c.solveStyle()).toBe('training');
+    expect(c.frozen()).toBeTrue();
+    expect(el.querySelector('app-puzzle-board.eb-frozen')).not.toBeNull();
+    expect(el.querySelector('app-chess-board')).toBeNull();
+    // Txh2+ auf dem eingefrorenen Brett: angenommen, Weiß antwortet — angezeigt bleibt die Buchstellung.
+    c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
+    expect(c.played().map(m => m.san)).toEqual(['Rxh2+']);
+    tick(500);
+    expect(c.played().map(m => m.fen)).toEqual([AFTER_RXH2, AFTER_KXH2]);
+    fixture.detectChanges();
+    expect(c.opponentArrow()).toEqual(['h1' as never, 'h2' as never]);
+    const board = fixture.debugElement.query(By.directive(PuzzleBoardComponent)).componentInstance as PuzzleBoardComponent;
+    expect(board.fen).toBe(D.fen);              // Brett steht
+    expect(board.actualFen).toBe(AFTER_KXH2);   // geprüft wird gegen die echte Stellung
+    // Während der Antwort (Gegner am Zug) nimmt das Viz-Brett nichts an.
+    c.reset();
+    c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
+    c.onFrozenMove({ orig: 'h1' as never, dest: 'h2' as never });
+    expect(c.played().length).toBe(1);
+    tick(500);
+    // Kalkulieren: ebenfalls eingefroren, Züge beider Seiten werden Linie.
+    c.setMode('calc');
+    fixture.detectChanges();
+    expect(el.querySelector('app-puzzle-board.eb-frozen')).not.toBeNull();
+    c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
+    c.onFrozenMove({ orig: 'h1' as never, dest: 'h2' as never });
+    expect(c.boardFen()).toBe(AFTER_KXH2);
+    // Einfach: normales Brett, Figuren ziehen mit.
+    c.setSolveStyle('easy');
+    fixture.detectChanges();
+    expect(el.querySelector('app-puzzle-board')).toBeNull();
+    expect(el.querySelector('app-chess-board')).not.toBeNull();
   }));
 
   it('Lösen gegen Stockfish: Linie wird im Browser gerechnet, dann gelöst wie die Buchlinie', fakeAsync(() => {

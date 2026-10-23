@@ -9,7 +9,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
+import { Key } from 'chessground/types';
 import { SnackbarService } from '../../core/snackbar.service';
+import { PreferencesService } from '../../core/preferences.service';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
@@ -22,13 +24,16 @@ import { LiveEnginePanelComponent } from '../games/live-engine-panel.component';
 import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
 import { MAIA_DEFAULT_ELO, MAIA_ELO_OPTIONS } from '../analysis/maia/maia-model';
 import { StockfishService } from '../puzzles/stockfish.service';
+import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
+import { tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
 import { EbookDiagram } from './ebook.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /** Was das Brett gerade tut (0.777.0). */
 export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia';
 /** Lösen: in beiden Arten wird ein falscher Zug zurückgenommen und man sucht weiter (Nutzerwunsch 20.10.2026: keine Lösung
- *  vorspielen); „Training“ merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. */
+ *  vorspielen); „Training“ merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. Seit 0.825.0 bleibt im „Training“
+ *  beim Lösen und Kalkulieren außerdem die Buchstellung stehen — die Züge stehen nur als Text da, wie im Kurs-Training. */
 export type EbookSolveStyle = 'easy' | 'training';
 /** Gegen welche Lösung gelöst wird: die gespeicherte (Buch bzw. bei der Prüfung gespeicherte Engine-Linie) oder Stockfish jetzt. */
 export type EbookSolveSource = 'stored' | 'engine';
@@ -52,7 +57,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
   selector: 'app-ebook-board',
   standalone: true,
   imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
-    TranslatePipe, IconLabelDirective, ChessBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent],
+    TranslatePipe, IconLabelDirective, ChessBoardComponent, PuzzleBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
 })
@@ -81,6 +86,7 @@ export class EbookBoardComponent implements OnChanges {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly stockfish = inject(StockfishService);
   readonly maia = inject(MaiaEngineService);
+  readonly prefs = inject(PreferencesService);
 
   readonly modes: EbookBoardMode[] = ['view', 'free', 'calc', 'solve', 'maia'];
   readonly mode = signal<EbookBoardMode>('solve');
@@ -146,6 +152,21 @@ export class EbookBoardComponent implements OnChanges {
     }
     return this.played().at(-1)?.fen ?? d.fen;
   });
+
+  /** Training beim Lösen/Kalkulieren (0.825.0, Nutzerwunsch 23.10.2026 „wie beim Kurs“): das Brett bleibt auf der
+   *  Buchstellung eingefroren, gezogen wird auf dem Kurs-Brett im Visualisierungs-Modus gegen {@link boardFen}. */
+  readonly frozen = computed(() => this.legal() && this.solveStyle() === 'training' && (this.mode() === 'solve' || this.mode() === 'calc'));
+
+  /** Eingefrorenes Brett: der letzte Zug der Gegenseite als Pfeil (der eigene steht ja im Kopf). */
+  readonly opponentArrow = computed<[Key, Key] | undefined>(() => {
+    if (this.mode() !== 'solve') return undefined;
+    const l = this.played();
+    if (l.length === 0 || l.length % 2 === 1) return undefined;
+    const u = l[l.length - 1].uci;
+    return [u.slice(0, 2) as Key, u.slice(2, 4) as Key];
+  });
+
+  readonly noDests = new Map<Key, Key[]>();
 
   readonly playable = computed(() => {
     if (!this.legal()) return false;
@@ -228,6 +249,15 @@ export class EbookBoardComponent implements OnChanges {
         void this.maiaReply();
         break;
     }
+  }
+
+  /** Zug auf dem eingefrorenen Brett: gegen die tatsächliche Stellung prüfen, dann wie ein normaler Brettzug weiter. */
+  onFrozenMove(e: { orig: Key; dest: Key; promotion?: string }): void {
+    if (!this.playable()) return;   // das Viz-Brett nimmt auch während der Antwort Züge an
+    const chess = tryLoadFen(this.boardFen());
+    const mv = chess ? tryFreeMove(chess, e.orig, e.dest, e.promotion) : null;
+    if (!chess || !mv) return;
+    this.onBoardMove({ from: mv.from, to: mv.to, san: mv.san, fen: chess.fen(), ...(mv.promotion ? { promotion: mv.promotion as UserBoardMove['promotion'] } : {}) });
   }
 
   undo(): void {

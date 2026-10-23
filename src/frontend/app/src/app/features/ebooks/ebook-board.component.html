@@ -12,7 +12,7 @@
     }
   </div>
   <span class="eb-bar-spacer"></span>
-  @if (mode() === 'solve' || (mode() === 'maia' && maia.status() === 'ready')) {
+  @if (mode() === 'solve' || mode() === 'calc' || (mode() === 'maia' && maia.status() === 'ready')) {
     <button mat-icon-button type="button" class="eb-settings" [matMenuTriggerFor]="settingsMenu" [appIconLabel]="'ebooks.board.settings' | translate">
       <mat-icon>tune</mat-icon>
     </button>
@@ -23,7 +23,7 @@
 </div>
 
 <mat-menu #settingsMenu="matMenu" class="eb-settings-menu">
-  @if (mode() === 'solve') {
+  @if (mode() === 'solve' || mode() === 'calc') {
     <div class="eb-menu-label">{{ 'ebooks.board.solveStyle' | translate }}</div>
     @for (s of solveStyles; track s) {
       <button mat-menu-item role="menuitemradio" [attr.aria-checked]="solveStyle() === s" (click)="setSolveStyle(s)">
@@ -31,6 +31,8 @@
         <span>{{ (s === 'easy' ? 'ebooks.board.solveEasy' : 'ebooks.board.solveTraining') | translate }}</span>
       </button>
     }
+  }
+  @if (mode() === 'solve') {
     <div class="eb-menu-label">{{ 'ebooks.board.solveSource' | translate }}</div>
     <button mat-menu-item role="menuitemradio" [attr.aria-checked]="solveSource() === 'stored'" [disabled]="!hasStoredSolution" (click)="setSolveSource('stored')">
       <mat-icon>{{ solveSource() === 'stored' ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
@@ -45,7 +47,7 @@
       <mat-icon>{{ autoNext() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
       <span>{{ 'ebooks.board.autoNext' | translate }}</span>
     </button>
-  } @else {
+  } @else if (mode() === 'maia') {
     <div class="eb-menu-label">{{ 'ebooks.board.maiaStrength' | translate }}</div>
     @for (e of maiaEloOptions; track e) {
       <button mat-menu-item role="menuitemradio" [attr.aria-checked]="maiaElo() === e" (click)="setMaiaElo(e)">
@@ -76,8 +78,16 @@
 </mat-menu>
 
 <div class="eb-board">
-  <app-chess-board [fen]="boardFen()" [flipped]="flipped()" [playable]="playable()" [arrows]="engine()?.arrows() ?? []"
-                   (userMove)="onBoardMove($event)" />
+  @if (frozen()) {
+    <!-- Training (0.825.0): Buchstellung bleibt stehen, Züge nur im Kopf — dasselbe Viz-Brett wie Kurs-Training/Kalkulieren. -->
+    <app-puzzle-board class="eb-frozen" [fen]="diagram.fen" [actualFen]="boardFen()" [visualization]="1"
+                      [orientation]="flipped() ? 'black' : 'white'" [turnColor]="flipped() ? 'black' : 'white'" [dests]="noDests"
+                      [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" [allowFullscreen]="false"
+                      [vizOpponentArrow]="opponentArrow()" (moveMade)="onFrozenMove($event)" />
+  } @else {
+    <app-chess-board [fen]="boardFen()" [flipped]="flipped()" [playable]="playable()" [arrows]="engine()?.arrows() ?? []"
+                     (userMove)="onBoardMove($event)" />
+  }
 </div>
 
 @if (!legal() && mode() === 'view') {

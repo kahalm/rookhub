@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.825.0", date: "2026-10-23", changes: [
+    { en: "E-book board: in “Training” the book position now stays frozen while solving and calculating — like course training, the pieces don’t move, the moves are only listed (the opponent’s last move as an arrow). “Way of solving” is now also in ⚙ when calculating; “Easy” keeps moving the pieces.",
+      de: "E-Book-Brett: Im „Training“ bleibt beim Lösen und Kalkulieren jetzt die Buchstellung stehen — wie im Kurs-Training bewegen sich die Figuren nicht, die Züge stehen nur als Text da (der letzte Gegenzug als Pfeil). „Art des Lösens“ gibt es dafür auch beim Kalkulieren im ⚙; „Einfach“ zieht die Figuren wie bisher." },
+  ] },
   { version: "0.824.1", date: "2026-10-23", changes: [
     { en: "Puzzles and Endless: like courses, a mate in answer to a wrong move now stays on the board — „Retry“ or „Show solution“ (Endless still costs the life).",
       de: "Puzzles und Endless: Wie im Kurs bleibt ein Matt als Antwort auf einen Fehlzug jetzt auf dem Brett stehen — „Nochmal“ oder „Lösung zeigen“ (in Endless kostet es trotzdem das Leben)." },
