@@ -57,8 +57,9 @@ export interface CommentBranch { sans: string[]; startPly?: number; plies?: (num
 const DE_PIECE: Record<string, string> = { D: 'Q', T: 'R', L: 'B', S: 'N' };
 
 // SAN-Kern: Rochade (O oder 0) | Figurenzug (engl. KQRBN + dt. DTLS) | Bauernzug (+ Umwandlung / Schach-Matt).
+// Ein „+“ direkt vor „-“, „=“ oder „/“ ist eine Bewertung („5.Rxc1+-“, „+=“, „+/-“), kein Schach — bleibt Text (0.825.1).
 const SAN =
-  '(?:O-O-O|O-O|0-0-0|0-0|[KQRBNDTLS][a-h]?[1-8]?x?[a-h][1-8]|[a-h](?:x[a-h])?[1-8](?:=[QRBNDTLS])?)[+#]?';
+  '(?:O-O-O|O-O|0-0-0|0-0|[KQRBNDTLS][a-h]?[1-8]?x?[a-h][1-8]|[a-h](?:x[a-h])?[1-8](?:=[QRBNDTLS])?)(?:#|\\+(?![-=/]))?';
 // Optionale Zugnummer davor („2." = Weiß / „2…"/„2..." = Schwarz) + der SAN-Zug. `g` für globales Scannen.
 // Gruppen: 1=Zugnummer, 2=Punkte (>1 → Schwarzzug), 3=SAN.
 const TOKEN_RE = new RegExp(`(?:(\\d+)\\.(\\.\\.|\\u2026)?\\s?)?(${SAN})`, 'g');

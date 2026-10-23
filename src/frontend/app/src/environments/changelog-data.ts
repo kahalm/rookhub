@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.825.1", date: "2026-10-23", changes: [
+    { en: "Puzzle comments: a “+-”, “+=” or “+/-” right after a move (“5.Rxc1+-”) is read as an evaluation, no longer as a check belonging to the move.",
+      de: "Puzzle-Kommentare: Ein „+-“, „+=“ oder „+/-“ direkt hinter einem Zug („5.Rxc1+-“) gilt als Bewertung und nicht mehr als Schach des Zugs." },
+  ] },
   { version: "0.825.0", date: "2026-10-23", changes: [
     { en: "E-book board: in “Training” the book position now stays frozen while solving and calculating — like course training, the pieces don’t move, the moves are only listed (the opponent’s last move as an arrow). “Way of solving” is now also in ⚙ when calculating; “Easy” keeps moving the pieces.",
       de: "E-Book-Brett: Im „Training“ bleibt beim Lösen und Kalkulieren jetzt die Buchstellung stehen — wie im Kurs-Training bewegen sich die Figuren nicht, die Züge stehen nur als Text da (der letzte Gegenzug als Pfeil). „Art des Lösens“ gibt es dafür auch beim Kalkulieren im ⚙; „Einfach“ zieht die Figuren wie bisher." },

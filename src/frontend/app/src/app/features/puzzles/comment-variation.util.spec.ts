@@ -10,6 +10,16 @@ describe('comment-variation.util', () => {
     expect(extractSanTokens('kein Zug hier')).toEqual([]);
   });
 
+  it('„+-“ am Zugende ist eine Bewertung, kein Schach (Buch-Puzzle 35188, 0.825.1)', () => {
+    expect(extractSanTokens('But not 2...Qxf2+?? 3.Kxf2 Nd3+ 4.Ke3 Nxc1 5.Rxc1+- .'))
+      .toEqual(['Qxf2+', 'Kxf2', 'Nd3+', 'Ke3', 'Nxc1', 'Rxc1']);
+    expect(extractSanTokens('12.Nf3+= und 13.Bc4+/- sowie 14.Qh5+')).toEqual(['Nf3', 'Bc4', 'Qh5+']);
+    // Im Segment bleibt die Bewertung als Text hinter dem Zug.
+    const segs = buildCommentSegments('Danach 2.Nf3+- klar.', START, ['e2e4', 'e7e5']);
+    expect(segs.find(x => x.move)?.move).toBe('2.Nf3');
+    expect(segs.map(x => x.move ?? x.text).join('')).toBe('Danach 2.Nf3+- klar.');
+  });
+
   it('resolveVariation: findet die Hauptlinien-Stellung, aus der die Folge legal ist', () => {
     // Hauptlinie 1.e4 e5 → nach e5 (Weiß am Zug, Vollzug 2) sind Nf3 (Weiß) + Nc6 (Schwarz) legal.
     const steps = resolveVariation(START, ['e2e4', 'e7e5'], ['Nf3', 'Nc6']);
