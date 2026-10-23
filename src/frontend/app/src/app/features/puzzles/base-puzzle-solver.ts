@@ -359,6 +359,7 @@ export abstract class BasePuzzleSolver {
     this.vizMoves = [];
     this.clearVizOpponentArrow();
     this.endVisualizationHide();
+    this.solutionHidden = false;
     this.onSetupStart();
 
     for (let i = 0; i < this.startPly; i++) applyUci(this.chess, this.solutionMoves[i]);
@@ -893,6 +894,30 @@ export abstract class BasePuzzleSolver {
     this.isCheck = step.isCheck;
     this.dests = new Map();
     return true;
+  }
+
+  /**
+   * Fehlzug, und die Antwort setzt den Spieler MATT (Wunsch 2026-10-23, alle Modi gleich): das Matt bleibt auf dem Brett
+   * stehen statt in die Musterlösung zu springen — „Nochmal“ oder „Lösung zeigen“ entscheidet der Spieler selbst.
+   * Die Komponenten prüfen in ihrem `handleFailed` {@link userIsMated} statt sofort `enterSolutionReview()`.
+   */
+  solutionHidden = false;
+
+  /** Steht der Spieler auf dem Brett matt (die Antwort auf seinen Fehlzug)? */
+  protected get userIsMated(): boolean {
+    return this.chess.isCheckmate() && this.chess.turn() === (this.orientation === 'white' ? 'w' : 'b');
+  }
+
+  /** Nach `handleFailed`: Matt stehen lassen ODER wie bisher in die Lösungsansicht. */
+  protected showFailureOrHoldMate(): void {
+    if (this.userIsMated) this.solutionHidden = true;
+    else this.enterSolutionReview();
+  }
+
+  /** „Lösung zeigen“ nach einem Matt gegen den Spieler: Lösung wie beim Aufgeben vorspielen (ohne erneuten Versuch). */
+  revealSolution(): void {
+    this.solutionHidden = false;
+    this.playSolutionFromStart();
   }
 
   /** Aufgeben: Lösung ab dem ersten Zug automatisch durchspielen (alle Modi identisch). */

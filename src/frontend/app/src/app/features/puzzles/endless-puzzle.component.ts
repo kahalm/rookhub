@@ -1433,7 +1433,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.state = 'FAILED';
     this.favoriteTracker.refresh();
     this.updateBoard();
-    this.enterSolutionReview();
+    this.showFailureOrHoldMate();
   }
 
   // --- Buttons ---

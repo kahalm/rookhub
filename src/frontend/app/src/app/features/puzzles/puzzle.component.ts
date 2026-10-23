@@ -281,7 +281,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.updateBoard();
     this.recordAttempt(false);
     this.favoriteTracker.refresh();
-    this.enterSolutionReview();
+    this.showFailureOrHoldMate();
   }
 
   readonly boardThemes = BOARD_THEMES;

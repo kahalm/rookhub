@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.824.1", date: "2026-10-23", changes: [
+    { en: "Puzzles and Endless: like courses, a mate in answer to a wrong move now stays on the board — „Retry“ or „Show solution“ (Endless still costs the life).",
+      de: "Puzzles und Endless: Wie im Kurs bleibt ein Matt als Antwort auf einen Fehlzug jetzt auf dem Brett stehen — „Nochmal“ oder „Lösung zeigen“ (in Endless kostet es trotzdem das Leben)." },
+  ] },
   { version: "0.824.0", date: "2026-10-23", changes: [
     { en: "E-books: scanned books now also get diagrams whose boards have no frame and only faintly hatched dark squares, and pages with light-grey paper no longer hide every board (Kislik „Applying Logic in Chess“: from 2 to hundreds of diagrams after a new recognition).", de: "E-Books: Gescannte Bücher bekommen jetzt auch Diagramme, deren Bretter keinen Rahmen und nur blass schraffierte dunkle Felder haben, und hellgraues Papier verdeckt nicht mehr alle Bretter einer Seite (Kislik „Applying Logic in Chess“: nach einer Neuerkennung Hunderte statt 2 Diagramme)." },
   ] },

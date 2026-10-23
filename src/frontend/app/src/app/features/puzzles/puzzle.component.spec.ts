@@ -1,4 +1,5 @@
-import { fakeAsync, tick } from '@angular/core/testing';
+import { Chess } from 'chess.js';
+import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { Subject, of } from 'rxjs';
 import { PuzzleComponent } from './puzzle.component';
 
@@ -753,4 +754,25 @@ describe('PuzzleComponent hinter dem Spielweise-Dialog (UX-045)', () => {
     expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle);
     c.ngOnDestroy();
   });
+});
+
+// Fehlzug, die Antwort setzt matt (Wunsch 2026-10-23, alle Modi gleich): das Matt bleibt stehen.
+describe('PuzzleComponent Matt nach Fehlzug', () => {
+  it('bleibt in der Mattstellung; „Lösung zeigen“ spielt die Lösung vor', fakeAsync(() => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.attemptRecorded = true;
+    c.orientation = 'white';
+    c.chess = new Chess('rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3');
+    c.handleFailed();
+    expect(c.state).toBe('FAILED');
+    expect(c.solutionHidden).toBeTrue();
+    expect(c.reviewMode).toBeFalse();
+    c.revealSolution();
+    expect(c.solutionHidden).toBeFalse();
+    expect(c.reviewMode).toBeTrue();
+    expect(c.reviewIndex).toBe(0);
+    c.ngOnDestroy();
+    discardPeriodicTasks();
+  }));
 });

@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
@@ -1383,5 +1384,21 @@ describe('EndlessPuzzleComponent d4 (Kennzahlen-Leiste, Tiefen-Regler)', () => {
     expect(label.querySelector('.depth-label')!.textContent!.trim()).toBe('endless.config.stockfishDepth');
     expect(label.getAttribute('title')).toBe('endless.config.stockfishDepthHint');
     expect(label.querySelector('mat-icon')).toBeNull();
+  });
+});
+
+// Fehlzug, die Antwort setzt matt (Wunsch 2026-10-23, alle Modi gleich): das Matt bleibt stehen, das Leben ist trotzdem weg.
+describe('EndlessPuzzleComponent Matt nach Fehlzug', () => {
+  it('Leben weg, Matt bleibt stehen statt Lösungsansicht', () => {
+    const c = makeComponent();
+    c.startGame();
+    c.orientation = 'white';
+    c.chess = new Chess('rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3');
+    c.handleFailed();
+    expect(c.lives).toBe(2);
+    expect(c.state).toBe('FAILED');
+    expect(c.solutionHidden).toBeTrue();
+    expect(c.reviewMode).toBeFalse();
+    c.ngOnDestroy();
   });
 });
