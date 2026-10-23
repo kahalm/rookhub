@@ -16,6 +16,7 @@ import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CommentSegment } from './comment-variation.util';
+import { CourseEbookRefs } from './course-ebook-refs';
 import { CourseProgressSplitComponent } from '../courses/course-progress-split.component';
 import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
 import { CommentBlockCache, lineStepAt } from './line-step.util';
@@ -933,23 +934,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** Kurslinie → E-Book-Diagramm (Wunsch 2026-10-15), je Linie der erste Verweis. */
-  private courseEbookRefs = new Map<number, CourseLineEbookRef>();
+  readonly courseEbookRefs = new CourseEbookRefs();
   /** Verweis der aktuellen Linie ins E-Book (Knopf „Im Buch“), sonst null. */
   get currentEbookRef(): CourseLineEbookRef | null {
-    return this.inCourse && this.puzzle ? this.courseEbookRefs.get(this.puzzle.id) ?? null : null;
+    return this.inCourse ? this.courseEbookRefs.get(this.puzzle?.id) : null;
   }
 
   private loadCourseEbookRefs(): void {
-    this.courseEbookRefs = new Map();
-    if (this.courseBookId == null || this.isAnonCourse) return;
-    this.courseService.getEbookRefs(this.courseBookId).subscribe({
-      next: refs => {
-        const m = new Map<number, CourseLineEbookRef>();
-        for (const r of refs) if (!m.has(r.lineId)) m.set(r.lineId, r);
-        this.courseEbookRefs = m;
-      },
-      error: () => {},   // still: ohne Verweise fehlt nur der Knopf
-    });
+    const ok = this.courseBookId != null && !this.isAnonCourse;
+    this.courseEbookRefs.load(ok ? this.courseService.getEbookRefs(this.courseBookId!) : null);
   }
 
   /** Lädt den verknüpften Partner-Kurs (falls vorhanden) für den Schnellwechsel-Knopf. */

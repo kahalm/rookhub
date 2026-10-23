@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.823.1", date: "2026-10-23", changes: [
+    { en: "Internal: the e-book link lookup of the course solver moved into its own small class (no change in behaviour).",
+      de: "Intern: Die E-Book-Verweise des Kurs-Lösers liegen jetzt in einer eigenen kleinen Klasse (keine Verhaltensänderung)." },
+  ] },
   { version: "0.823.0", date: "2026-10-21", changes: [
     { en: "E-books: for scanned books the side to move now also comes from the line „White to move“ / „Black to move“ under the board (also when the OCR splits the words) — before, only the small triangle next to the board counted.", de: "E-Books: Bei gescannten Büchern kommt das Zugrecht jetzt auch aus der Zeile „White to move“ / „Black to move“ unter dem Brett (auch wenn die Texterkennung die Wörter zerreißt) — bisher zählte nur das kleine Dreieck neben dem Brett." },
   ] },

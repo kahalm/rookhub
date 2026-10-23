@@ -2295,7 +2295,7 @@ describe('BookPuzzleComponent Im Buch', () => {
   it('zeigt „Im Buch“ mit Seite, wenn die aktuelle Linie im E-Book steht', () => {
     const { el } = renderBookPuzzle(c => {
       c.inCourse = true; c.courseTotal = 1;
-      c.courseEbookRefs = new Map([[42, { lineId: 42, ebookId: 7, ebookTitle: 'WP', diagramId: 99, page: 123, label: '5' }]]);
+      c.courseEbookRefs.set([{ lineId: 42, ebookId: 7, ebookTitle: 'WP', diagramId: 99, page: 123, label: '5' }]);
     }, '/courses/7/solve');
     const a = el.querySelector('a.ctx-in-book');
     expect(a).not.toBeNull();
