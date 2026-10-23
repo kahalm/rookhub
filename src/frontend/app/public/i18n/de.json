@@ -1383,7 +1383,9 @@
       "checkmate": "Schachmatt!",
       "alternativeSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
       "correct": "Richtig!",
-      "incorrect": "Falsch"
+      "incorrect": "Falsch",
+      "matedHint": "Matt — versuch es nochmal oder schau dir die Lösung an.",
+      "showSolution": "Lösung zeigen"
     },
     "eval": {
       "start": "Start",

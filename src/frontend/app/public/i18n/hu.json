@@ -1122,7 +1122,9 @@
       "checkmate": "Matt!",
       "alternativeSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",
       "correct": "Helyes!",
-      "incorrect": "Helytelen"
+      "incorrect": "Helytelen",
+      "matedHint": "Mattot kaptál — próbáld újra, vagy nézd meg a megoldást.",
+      "showSolution": "Megoldás mutatása"
     },
     "eval": {
       "start": "Kezdet",

@@ -1383,7 +1383,9 @@
       "checkmate": "Checkmate!",
       "alternativeSolution": "Alternative solution — the puzzle had a different intended move sequence.",
       "correct": "Correct!",
-      "incorrect": "Incorrect"
+      "incorrect": "Incorrect",
+      "matedHint": "You were mated — try again or look at the solution.",
+      "showSolution": "Show solution"
     },
     "eval": {
       "start": "Start",

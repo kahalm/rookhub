@@ -21,6 +21,27 @@ describe('PuzzleStatusCardComponent', () => {
     return TestBed.createComponent(PuzzleStatusCardComponent);
   }
 
+  it('Matt nach Fehlzug (solutionHidden): statt Lösungs-Navigation Hinweis + „Lösung zeigen“ (2026-10-23)', async () => {
+    const fixture = await setup();
+    fixture.componentRef.setInput('mode', 'book');
+    fixture.componentRef.setInput('state', 'FAILED');
+    fixture.componentRef.setInput('solutionHidden', true);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('app-review-nav')).toBeNull();
+    const btn = el.querySelector('.psc-show-solution') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    let clicked = false;
+    fixture.componentInstance.showSolutionClicked.subscribe(() => clicked = true);
+    btn.click();
+    expect(clicked).toBeTrue();
+
+    fixture.componentRef.setInput('solutionHidden', false);
+    fixture.detectChanges();
+    expect(el.querySelector('app-review-nav')).not.toBeNull();
+    expect(el.querySelector('.psc-show-solution')).toBeNull();
+  });
+
   it('creates (template AOT-compiles + DI resolves)', async () => {
     const fixture = await setup();
     expect(fixture.componentInstance).toBeTruthy();

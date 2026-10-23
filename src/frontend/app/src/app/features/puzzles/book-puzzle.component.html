@@ -491,6 +491,8 @@
               [initialEval]="initialEval"
               [currentEval]="currentEval"
               [gaveUp]="gaveUp"
+              [solutionHidden]="solutionHidden"
+              (showSolutionClicked)="revealSolution()"
               [elapsedSeconds]="elapsedSeconds"
               [showMouseslip]="!mouseslipUsed && (!onSolutionPath || hasMadeFirstMove)"
               [hasMadeFirstMove]="hasMadeFirstMove"

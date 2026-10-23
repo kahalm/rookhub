@@ -573,6 +573,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override get stockfishErrorContinues(): boolean { return false; }  // Buch: Fehlzug → verloren
 
   protected override onSetupStart(): void {
+    this.solutionHidden = false;
     const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
     this.boardTheme = applied.boardTheme;
     this.pieceSet = applied.pieceSet;
@@ -742,12 +743,30 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   private todayUtc(): string { return formatUtcDate(new Date()); }
 
+  /**
+   * Fehlzug, und die Antwort setzt den Spieler MATT (Wunsch 2026-10-23): das Matt bleibt auf dem Brett stehen statt ans
+   * Ende der Musterlösung zu springen — „Nochmal“ oder „Lösung zeigen“ entscheidet der Spieler selbst.
+   */
+  solutionHidden = false;
+
+  /** „Lösung zeigen“ nach einem Matt gegen den Spieler: Lösung wie beim Aufgeben vorspielen (ohne erneuten Versuch). */
+  revealSolution(): void {
+    this.solutionHidden = false;
+    this.playSolutionFromStart();
+  }
+
+  /** Steht der Spieler auf dem Brett matt (die Antwort auf seinen Fehlzug)? */
+  private get userIsMated(): boolean {
+    return this.chess.isCheckmate() && this.chess.turn() === (this.orientation === 'white' ? 'w' : 'b');
+  }
+
   protected override handleFailed(): void {
     this.state = 'FAILED';
     this.stopTimer();
     this.updateBoard();
     this.favoriteTracker.refresh();
-    this.enterSolutionReview();
+    if (this.userIsMated) this.solutionHidden = true;
+    else this.enterSolutionReview();
     this.solveSeconds = this.elapsedSeconds;
     this.recordCourseAttempt(false);
     this.recordWeeklyAttempt(false);

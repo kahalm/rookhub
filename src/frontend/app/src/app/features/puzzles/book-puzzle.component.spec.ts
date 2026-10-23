@@ -1,3 +1,4 @@
+import { Chess } from 'chess.js';
 import { of, Subject, throwError } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline, getBookOfflineByBookId, getBookOfflineLanguageByBookId, isBookCacheComplete, markBookCacheComplete } from './book-offline.util';
@@ -2323,5 +2324,35 @@ describe('BookPuzzleComponent Kurs-Fortschritt hinter ⓘ', () => {
     expect(el.querySelector('.course-stats')).toBeNull();
     btn.click();
     expect(c.statsOpen()).toBeTrue();
+  });
+});
+
+// Fehlzug, die Antwort setzt matt (Wunsch 2026-10-23): das Matt bleibt stehen, die Lösung erst auf Wunsch.
+describe('BookPuzzleComponent Matt nach Fehlzug', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+
+  it('bleibt in der Mattstellung; „Lösung zeigen“ spielt sie vor', () => {
+    const { c } = renderBookPuzzle(() => {});
+    c.orientation = 'white';
+    c.chess = new Chess('rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3');   // Narrenmatt, Weiß matt
+    const mateFen = c.chess.fen();
+    c.handleFailed();
+    expect(c.state).toBe('FAILED');
+    expect(c.solutionHidden).toBeTrue();
+    expect(c.reviewMode).toBeFalse();
+    expect(c.boardFen.split(' ')[0]).toBe(mateFen.split(' ')[0]);
+    const play = spyOn(c, 'playSolutionFromStart');
+    c.revealSolution();
+    expect(c.solutionHidden).toBeFalse();
+    expect(play).toHaveBeenCalled();
+  });
+
+  it('ohne Matt (normaler Fehlzug) wie bisher in die Lösungsansicht', () => {
+    const { c } = renderBookPuzzle(() => {});
+    c.orientation = 'white';
+    c.chess = new Chess();
+    c.handleFailed();
+    expect(c.solutionHidden).toBeFalse();
+    expect(c.reviewMode).toBeTrue();
   });
 });

@@ -224,10 +224,20 @@ const CK = {
                 @if (lastEloChange != null) {
                   <span class="psc-elo psc-elo-down">{{ lastEloChange }}</span>
                 }
-                <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal"
-                  (prev)="reviewPrev.emit()" (next)="reviewNext.emit()" />
+                @if (solutionHidden) {
+                  <!-- Matt nach Fehlzug: das Matt bleibt stehen, die Lösung erst auf Wunsch (2026-10-23). -->
+                  <p class="psc-hint">{{ 'puzzles.result.matedHint' | translate }}</p>
+                } @else {
+                  <app-review-nav [currentIndex]="reviewIndex" [totalSteps]="reviewTotal"
+                    (prev)="reviewPrev.emit()" (next)="reviewNext.emit()" />
+                }
                 <div class="psc-actions">
                   <button mat-button (click)="retryClicked.emit()">{{ 'common.retry' | translate }}</button>
+                  @if (solutionHidden) {
+                    <button mat-button class="psc-show-solution" (click)="showSolutionClicked.emit()">
+                      <mat-icon>visibility</mat-icon> {{ 'puzzles.result.showSolution' | translate }}
+                    </button>
+                  }
                   <button mat-button (click)="analyzeClicked.emit()">
                     <mat-icon>biotech</mat-icon> {{ ck.analyze | translate }}
                   </button>
@@ -310,6 +320,9 @@ export class PuzzleStatusCardComponent {
   @Input() showSkip = false;
   @Output() skipClicked = new EventEmitter<void>();
   @Output() retryClicked = new EventEmitter<void>();
+  /** Fehlgeschlagen, aber die Lösung ist noch nicht gezeigt (Matt nach Fehlzug): statt der Lösungs-Navigation „Lösung zeigen“. */
+  @Input() solutionHidden = false;
+  @Output() showSolutionClicked = new EventEmitter<void>();
   @Output() nextClicked = new EventEmitter<void>();
   @Output() failedNextClicked = new EventEmitter<void>();
   @Output() analyzeClicked = new EventEmitter<void>();

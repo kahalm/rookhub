@@ -1383,7 +1383,9 @@
       "checkmate": "Šah-mat!",
       "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
       "correct": "Točno!",
-      "incorrect": "Netočno"
+      "incorrect": "Netočno",
+      "matedHint": "Dobio si mat — pokušaj ponovno ili pogledaj rješenje.",
+      "showSolution": "Prikaži rješenje"
     },
     "eval": {
       "start": "Početak",

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.823.2", date: "2026-10-23", changes: [
+    { en: "Courses, book and weekly puzzles: if a wrong move is answered with mate, the board now stays on the mate (marked as failed) instead of jumping to the end of the correct solution — choose „Retry“ or „Show solution“ yourself.",
+      de: "Kurse, Buch- und Wochenpost-Puzzles: Wird ein Fehlzug mit Matt beantwortet, bleibt das Matt jetzt auf dem Brett stehen (als falsch gewertet), statt ans Ende der richtigen Lösung zu springen — „Nochmal“ oder „Lösung zeigen“ entscheidest du selbst." },
+  ] },
   { version: "0.823.1", date: "2026-10-23", changes: [
     { en: "Internal: the e-book link lookup of the course solver moved into its own small class (no change in behaviour).",
       de: "Intern: Die E-Book-Verweise des Kurs-Lösers liegen jetzt in einer eigenen kleinen Klasse (keine Verhaltensänderung)." },
