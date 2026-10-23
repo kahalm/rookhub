@@ -184,10 +184,11 @@ async function expectDownloadedContentWorks(page: Page): Promise<void> {
   await test.step('Endless startet aus der vorab geladenen Kette', async () => {
     await page.goto('/puzzles/endless', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('.config-screen')).toBeVisible({ timeout: 20_000 });
-    // Der obere Knopf startet IMMER einen neuen Lauf — er heißt „Start" oder, wenn ein Lauf aus
-    // einem früheren Schritt noch offen ist, „New Game". Über den Text gesucht fand der zweite
-    // Durchgang ihn nicht mehr.
-    await page.locator('button.start-btn-top').click();
+    // Neuer Lauf: ohne offenen Lauf der Startknopf oben; ist aus dem ersten Durchgang noch ein Lauf
+    // offen, gibt es seit 0.765.0 (Gestaltungsrunde b1, DESIGN 5.4) nur „Fortsetzen“ als Hauptaktion und
+    // „Archivieren & neues Spiel“ — der Startknopf oben fehlt dann (14.–23.10. lief der Test deshalb in den
+    // Timeout). Über Klassen statt Text gesucht, der Text hängt an der Sprache.
+    await page.locator('button.start-btn-top, button.archive-new-btn').first().click();
     await expectBoardWithPieces(page);
   });
 
