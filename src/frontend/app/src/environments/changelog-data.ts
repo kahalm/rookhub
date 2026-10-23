@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.825.2", date: "2026-10-23", changes: [
+    { en: "E-books: saving the reading position no longer writes when nothing changed (same page within a minute). Several windows or devices kept sending the same position; two of those writes waited 32 s for the database row and failed with an error during the UI sweep.",
+      de: "E-Books: Der Lesestand wird nicht mehr gespeichert, wenn sich nichts geändert hat (gleiche Seite innerhalb einer Minute). Mehrere Fenster oder Geräte schickten immer wieder denselben Stand; zwei dieser Schreibvorgänge warteten im UI-Sweep 32 s auf die Datenbankzeile und endeten mit einem Fehler." },
+  ] },
   { version: "0.825.1", date: "2026-10-23", changes: [
     { en: "Puzzle comments: a “+-”, “+=” or “+/-” right after a move (“5.Rxc1+-”) is read as an evaluation, no longer as a check belonging to the move.",
       de: "Puzzle-Kommentare: Ein „+-“, „+=“ oder „+/-“ direkt hinter einem Zug („5.Rxc1+-“) gilt als Bewertung und nicht mehr als Schach des Zugs." },

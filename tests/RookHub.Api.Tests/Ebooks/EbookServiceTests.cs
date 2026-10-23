@@ -332,6 +332,34 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SetProgress_SameStateRecently_DoesNotWrite_ChangedOrStaleDoes()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var book = await _kit.BookAsync("A", owner.Id);
+        await _kit.Service.SetProgressAsync(owner.Id, false, book.Id, 4, 90, locator: "epubcfi(/6/2)");
+        var row = await _kit.Db.EbookProgresses.SingleAsync();
+        var stamp = row.UpdatedAt = DateTime.UtcNow.AddSeconds(-20);
+        await _kit.Db.SaveChangesAsync();
+
+        // Gleicher Stand (auch ohne Seitenzahl/Locator) → keine Schreibung, UpdatedAt bleibt.
+        await _kit.Service.SetProgressAsync(owner.Id, false, book.Id, 4, 90, locator: "epubcfi(/6/2)");
+        await _kit.Service.SetProgressAsync(owner.Id, false, book.Id, 4, null);
+        Assert.Equal(stamp, row.UpdatedAt);
+
+        // Andere Seite → geschrieben.
+        var moved = await _kit.Service.SetProgressAsync(owner.Id, false, book.Id, 5, null);
+        Assert.Equal(5, moved.Page);
+        Assert.True(row.UpdatedAt > stamp);
+
+        // Gleicher Stand, aber älter als ProgressTouchInterval → „zuletzt gelesen“ wird aufgefrischt.
+        row.UpdatedAt = DateTime.UtcNow - EbookService.ProgressTouchInterval - TimeSpan.FromSeconds(5);
+        await _kit.Db.SaveChangesAsync();
+        var old = row.UpdatedAt;
+        await _kit.Service.SetProgressAsync(owner.Id, false, book.Id, 5, null);
+        Assert.True(row.UpdatedAt > old);
+    }
+
+    [Fact]
     public async Task SetGroups_Bulk_SkipsForeignBooks_AndReportsCount()
     {
         var owner = await _kit.UserAsync("owner");

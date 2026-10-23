@@ -481,6 +481,9 @@ public class EbookService
         {
             if (caller.AnonId == null) throw new DomainValidationException("A visitor id is required to remember the reading position.");
             var a = await _db.EbookAnonymousProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.SessionId == caller.AnonId, ct);
+            var newLocator = locator == null ? a?.Locator : locator.Length > 300 ? null : locator;
+            if (a != null && IsUnchanged(a.Page, a.PageCount, a.Locator, a.UpdatedAt, page, pageCount, newLocator))
+                return new EbookProgressDto { Page = a.Page, PageCount = a.PageCount, Locator = a.Locator, UpdatedAt = a.UpdatedAt };
             if (a == null)
             {
                 a = new EbookAnonymousProgress { EbookId = id, SessionId = caller.AnonId };
@@ -488,12 +491,15 @@ public class EbookService
             }
             a.Page = page;
             if (pageCount is > 0) a.PageCount = pageCount;
-            if (locator != null) a.Locator = locator.Length > 300 ? null : locator;
+            a.Locator = newLocator;
             a.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
             return new EbookProgressDto { Page = a.Page, PageCount = a.PageCount, Locator = a.Locator, UpdatedAt = a.UpdatedAt };
         }
         var p = await _db.EbookProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.UserId == userId, ct);
+        var locatorToStore = locator == null ? p?.Locator : locator.Length > 300 ? null : locator;
+        if (p != null && IsUnchanged(p.Page, p.PageCount, p.Locator, p.UpdatedAt, page, pageCount, locatorToStore))
+            return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
         if (p == null)
         {
             p = new EbookProgress { EbookId = id, UserId = userId };
@@ -501,11 +507,23 @@ public class EbookService
         }
         p.Page = page;
         if (pageCount is > 0) p.PageCount = pageCount;
-        if (locator != null) p.Locator = locator.Length > 300 ? null : locator;
+        p.Locator = locatorToStore;
         p.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
     }
+
+    /// <summary>
+    /// Gleicher Lesestand, vor kurzem schon gespeichert → nicht schreiben. Mehrere Fenster/Geräte schicken beim Öffnen und
+    /// Wechseln denselben Stand immer wieder; jedes reine „UpdatedAt“-UPDATE nahm die Zeilensperre, und im UI-Sweep
+    /// 23.10.2026 hingen zwei davon 32 s bis zum Datenbank-Timeout (500). <see cref="ProgressTouchInterval"/> hält
+    /// „zuletzt gelesen“ trotzdem aktuell.
+    /// </summary>
+    private static bool IsUnchanged(int page, int? pageCount, string? locator, DateTime updatedAt, int newPage, int? newPageCount, string? newLocator)
+        => page == newPage && (newPageCount is not > 0 || pageCount == newPageCount) && locator == newLocator
+           && DateTime.UtcNow - updatedAt < ProgressTouchInterval;
+
+    internal static readonly TimeSpan ProgressTouchInterval = TimeSpan.FromMinutes(1);
 
     // ── Diagramme ──────────────────────────────────────────────────────────────────────────────
 
