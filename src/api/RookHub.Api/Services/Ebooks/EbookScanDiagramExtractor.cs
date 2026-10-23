@@ -102,8 +102,10 @@ public class EbookScanDiagramExtractor
             .ToList();
     }
 
-    /// <summary>Papierton, ab dem eine Seite als getönt gilt und aufgehellt wird.</summary>
-    internal const float TintedPaper = 0.9f;
+    /// <summary>Papierton, ab dem eine Seite als getönt gilt und aufgehellt wird. 0.96 (0.824.0, vorher 0.9): muss über der
+    /// Schwelle der Brettsuche liegen (235/255 ≈ 0.92) — Papier dazwischen (Internet-Archive-Scan Kislik, Papier 231–233)
+    /// galt als weiß, lag aber unter der Schwelle, und die ganze Seite wurde eine dunkle Fläche.</summary>
+    internal const float TintedPaper = 0.96f;
 
     /// <summary>
     /// Getöntes Papier (0.813.0): Farbscans aus Internet Archive / Google Books haben Papier mit Grauwert 155–190 — die ganze Seite

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.824.0", date: "2026-10-23", changes: [
+    { en: "E-books: scanned books now also get diagrams whose boards have no frame and only faintly hatched dark squares, and pages with light-grey paper no longer hide every board (Kislik „Applying Logic in Chess“: from 2 to hundreds of diagrams after a new recognition).", de: "E-Books: Gescannte Bücher bekommen jetzt auch Diagramme, deren Bretter keinen Rahmen und nur blass schraffierte dunkle Felder haben, und hellgraues Papier verdeckt nicht mehr alle Bretter einer Seite (Kislik „Applying Logic in Chess“: nach einer Neuerkennung Hunderte statt 2 Diagramme)." },
+  ] },
   { version: "0.823.3", date: "2026-10-23", changes: [
     { en: "Tests: the nightly end-to-end test for Endless offline was red since 14.10. — it still looked for the top start button, which a run left open now replaces with „Archive & new game“. The app itself was fine.", de: "Tests: Der nächtliche Ende-zu-Ende-Test für Endless offline war seit 14.10. rot — er suchte noch den Startknopf oben, den ein offener Lauf inzwischen durch „Archivieren & neues Spiel“ ersetzt. Die App selbst war in Ordnung." },
   ] },

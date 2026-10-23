@@ -245,8 +245,14 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
   nur, wenn der Streifen davor höchstens 25 % dunkel ist. Prüfsatz 19 Bücher: sonst keine Änderung.
 - **Kleine Seiten, getöntes Papier** (0.813.0): Seiten, deren lange Seite bei 300 dpi unter 2 400 px bliebe (Google-Vorschau-
   Auszüge, 2 × 3 Zoll), werden feiner gerendert (`MinPagePixels`, gedeckelt durch `MaxPagePixels`). Ist der häufigste Grauwert
-  der Seite (Papier) dunkler als 0,9 (Farbscans von Internet Archive / Google Books, Papier 155–190), wird die Seite durch ihn
-  geteilt, bis das Papier weiß ist (`NormalizePaper`) — sonst liegt die ganze Seite unter der Schwelle der Brettsuche.
+  der Seite (Papier) dunkler als 0,96 (bis 0.823 0,9; Farbscans von Internet Archive / Google Books, Papier 155–233), wird
+  die Seite durch ihn geteilt, bis das Papier weiß ist (`NormalizePaper`) — sonst liegt die ganze Seite unter der Schwelle der
+  Brettsuche (235/255 ≈ 0,92; Papier zwischen 0,9 und 0,92 fiel bis 0.824.0 durch die Lücke).
+- **Rahmenlose Bretter** (0.824.0, Gambit-Scan Kislik „Applying Logic in Chess“: 2 statt ~400 Bretter): ohne Rahmen und mit
+  hauchdünn schraffierten dunklen Feldern berühren sich die Felder nur an den Ecken, keine Komponente erreicht Brettgröße.
+  Findet `FindBoards` auf einer Seite nichts, verdickt ein dritter Durchgang die dunkle Maske um `FrameLessDilate` = 3 px
+  (Arbeitsbild ≈ 150 dpi; 4 px ließ Textblöcke verschmelzen) und schrumpft das Rechteck danach zurück; Textblöcke fallen über
+  `GridScore` heraus. Gegenprobe 18 Bücher mit Opus-Lesungen: unverändert; Kislik-Probe 48 Seiten: 0 → 23 Bretter (19 sicher).
 - **Hintergrund je Brett** (Median der eigenen hellen/dunklen Felder), nicht je Buch: die Schraffur liegt in jedem Scan anders.
 - **Zwei Scan-Modelle**: `ebook-board-model-scan.bin` (`EbookBoardClassifier.Scan`, Font-Diagramme „gescannt“: weichgezeichnet,
   verrauscht, meist binarisiert — Gambit/Batsford-Figuren, Beim 95 % plausibel) und `ebook-board-model-scan2.bin` (`ScanAlt`,

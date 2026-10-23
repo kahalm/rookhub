@@ -215,11 +215,81 @@ public static class EbookBoardImage
                 found.Add((best, bestScore));
             }
         }
+        // Rahmenlose Bretter (0.824.0, Gambit-Scan Kislik „Applying Logic in Chess“): ohne Rahmen und mit hauchdünn
+        // schraffierten dunklen Feldern zerfällt das Brett in Einzelfelder, die sich nur an den Ecken berühren — keine
+        // Komponente erreicht Brettgröße. Nur wenn die ersten Durchgänge auf der Seite NICHTS fanden: die dunkle Maske um
+        // FrameLessDilate px verdicken, dann verschmelzen Schraffur und Figuren zur Brettfläche (Textblöcke fallen später
+        // über GridScore heraus). Das Rechteck schrumpft danach um denselben Betrag zurück.
+        if (found.Count == 0)
+        {
+            var mask = Dilate(g, 235f / 255f, FrameLessDilate);
+            var seen = new bool[H, W];
+            for (var y = 0; y < H; y++)
+                for (var x = 0; x < W; x++)
+                {
+                    if (!mask[y, x] || seen[y, x]) continue;
+                    seen[y, x] = true; stack.Push((y, x));
+                    int ymin = y, ymax = y, xmin = x, xmax = x;
+                    while (stack.Count > 0)
+                    {
+                        var (cy, cx) = stack.Pop();
+                        if (cy < ymin) ymin = cy; if (cy > ymax) ymax = cy;
+                        if (cx < xmin) xmin = cx; if (cx > xmax) xmax = cx;
+                        for (var dy = -1; dy <= 1; dy++)
+                            for (var dx = -1; dx <= 1; dx++)
+                            {
+                                int ny = cy + dy, nx = cx + dx;
+                                if (ny >= 0 && ny < H && nx >= 0 && nx < W && mask[ny, nx] && !seen[ny, nx]) { seen[ny, nx] = true; stack.Push((ny, nx)); }
+                            }
+                    }
+                    int x0 = xmin + FrameLessDilate, y0 = ymin + FrameLessDilate, x1 = xmax + 1 - FrameLessDilate, y1 = ymax + 1 - FrameLessDilate;
+                    int w = x1 - x0, h = y1 - y0;
+                    if (w < 96 || h < 96 || !(0.85 < (double)w / h && (double)w / h < 1.18)) continue;
+                    var d = Math.Abs(w - h);
+                    var cands = new List<(int, int, int, int)> { (x0, y0, x1, y1) };
+                    if (w < h) cands = [(Math.Max(0, x0 - d), y0, x1, y1), (x0, y0, Math.Min(W, x1 + d), y1), (Math.Max(0, x0 - d / 2), y0, Math.Min(W, x1 + d - d / 2), y1)];
+                    else if (h < w) cands = [(x0, Math.Max(0, y0 - d), x1, y1), (x0, y0, x1, Math.Min(H, y1 + d)), (x0, Math.Max(0, y0 - d / 2), x1, Math.Min(H, y1 + d - d / 2))];
+                    var best = cands[0]; var bestScore = double.MinValue;
+                    foreach (var c in cands)
+                    {
+                        var sc = GridFit(Cells(g, c));
+                        if (sc > bestScore) { bestScore = sc; best = c; }
+                    }
+                    found.Add((best, bestScore));
+                }
+        }
         // Dasselbe Brett zweimal (doppelter Rahmen: äußere Linie + inneres Brett, 0.780.5): von überlappenden Treffern
         // bleibt der mit dem besseren Schachbrettmuster — der äußere liest sonst mit verschobenem Raster lauter Figuren.
         foreach (var (box, _) in found.OrderByDescending(f => f.Fit))
             if (!result.Any(r => Overlap(r, box) > 0.5)) result.Add(box);
         return result.OrderBy(b => b.Y0).ThenBy(b => b.X0).ToList();
+    }
+
+    /// <summary>Verdickung der dunklen Maske für rahmenlose Bretter (Arbeitsbild ≈ 150 dpi): 3 px verbinden die schraffierten
+    /// Felder; 4 px ließen in Kislik schon Textblöcke zu quadratischen Flächen verschmelzen.</summary>
+    internal const int FrameLessDilate = 3;
+
+    /// <summary>Dunkle Pixel (&lt; <paramref name="light"/>), um <paramref name="r"/> px verdickt (Quadrat, getrennt in x und y).</summary>
+    internal static bool[,] Dilate(float[,] g, float light, int r)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        var row = new bool[H, W];
+        for (var y = 0; y < H; y++)
+        {
+            var last = int.MinValue / 2;
+            for (var x = 0; x < W; x++) { if (g[y, x] < light) last = x; row[y, x] = x - last <= r; }
+            last = int.MaxValue / 2;
+            for (var x = W - 1; x >= 0; x--) { if (g[y, x] < light) last = x; if (last - x <= r) row[y, x] = true; }
+        }
+        var o = new bool[H, W];
+        for (var x = 0; x < W; x++)
+        {
+            var last = int.MinValue / 2;
+            for (var y = 0; y < H; y++) { if (row[y, x]) last = y; o[y, x] = y - last <= r; }
+            last = int.MaxValue / 2;
+            for (var y = H - 1; y >= 0; y--) { if (row[y, x]) last = y; if (last - y <= r) o[y, x] = true; }
+        }
+        return o;
     }
 
     /// <summary>Überdeckung zweier Rechtecke, bezogen auf das kleinere (0–1).</summary>
