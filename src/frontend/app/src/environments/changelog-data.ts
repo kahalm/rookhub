@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.825.4", date: "2026-10-23", changes: [
+    { en: "UI sweep (tool): the e-book check “with diagrams” is replaced by the Elo filter that took its place in 0.822.0.",
+      de: "UI-Sweep (Werkzeug): Der E-Book-Prüfschritt „mit Diagrammen“ ist durch den Elo-Filter ersetzt, der ihn in 0.822.0 abgelöst hat." },
+  ] },
   { version: "0.825.3", date: "2026-10-23", changes: [
     { en: "Puzzle board (KidHub stars and hints, RookHub puzzles): when the board briefly shrinks to nothing (hidden or while the layout changes), arrows and stars are now removed first and redrawn once it has a size again — no more “NaN” drawing errors.",
       de: "Puzzle-Brett (KidHub-Sterne und -Tipps, RookHub-Puzzles): Schrumpft das Brett kurz auf null (verborgen oder beim Umbau des Layouts), werden Pfeile und Sterne zuerst weggenommen und erst wieder gezeichnet, wenn es eine Größe hat. Keine „NaN“-Zeichenfehler mehr." },

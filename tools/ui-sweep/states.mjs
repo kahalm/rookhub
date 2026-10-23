@@ -122,9 +122,11 @@ export const STATES = [
     steps: [{ click: '.eb-page .header-actions button[mat-icon-button]' }], expect: MENU },
   // Seit c1 steht der Schalter in .eb-filter-more (am Handy hinter „Filter ▾“, ab 600 px offen in der Zeile). Die
   // Filterzeile gibt es nur, wenn die Rolle mindestens ein Buch sieht — seed.mjs gibt zwei für „Everyone" frei.
-  { of: 'rookhub__ebooks', name: 'mit-diagrammen',
-    steps: [{ clickIf: '.eb-filters button.eb-filter-toggle' }, { click: '.eb-filter-more button.eb-chip:has(mat-icon:text-is("grid_on"))' }],
-    expect: '.eb-filter-more button.eb-chip--on:has(mat-icon:text-is("grid_on"))' },
+  // 0.822.0: Elo-Spanne statt „Mit Diagrammen“ — ab 1800 filtern (Handy: erst die Filter aufklappen; breit steht
+  // das Feld offen da). Geprüft wird das ausgefüllte Feld, das in jeder Breite sichtbar bleibt.
+  { of: 'rookhub__ebooks', name: 'elo-filter',
+    steps: [{ clickIf: '.eb-filters button.eb-filter-toggle' }, { fill: '.eb-elo input >> nth=0', text: '1800' }],
+    expect: '.eb-elo input.ng-dirty' },
   { of: 'rookhub__ebooks-ebookId', name: 'menue', auth: ['admin'], steps: [{ click: '.rd-toolbar > button[mat-icon-button]' }], expect: MENU },
   // Brett im Leser (0.777.0 ff.): erstes Diagramm aufs Brett (am Handy erst den Brett-Knopf), dann die Modi.
   ...[['brett', null], ['frei', 1], ['kalkulieren', 2], ['loesen', 3], ['maia', 4]].map(([name, nth]) => ({
