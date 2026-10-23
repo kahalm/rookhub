@@ -176,6 +176,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
 
   private ground?: Api;
   private resizeObserver?: ResizeObserver;
+  private hideObserver?: ResizeObserver;
   private premoveTimer?: ReturnType<typeof setTimeout>;
   private destroyed = false;
   private initAttempts = 0;
@@ -390,7 +391,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     // `<line x1="NaN">` / `translate(NaN,NaN)` (KidHub Sternenjagd, Design-Runde d3). Wie chess-board.applyArrows:
     // alte Markierungen weg, merken, nach dem nächsten Messen (ResizeObserver/redrawAll) nachholen.
     const board = this.boardEl?.nativeElement?.querySelector?.('cg-board') as HTMLElement | null;
-    if (board && board.getBoundingClientRect().width === 0) {
+    const rect = board?.getBoundingClientRect();
+    if (rect && (rect.width === 0 || rect.height === 0)) {
       if (this.ground.state.drawable.autoShapes.length > 0) this.ground.setAutoShapes([]);
       this.shapesPending = true;
       return;
@@ -552,6 +554,18 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const size = hostWidth || 400;
     el.style.width = `${size}px`;
     el.style.height = `${size}px`;
+
+    // VOR Chessground() anlegen: ResizeObserver melden in Anlegereihenfolge, dieser also vor chessgrounds eigenem.
+    // Schrumpft das Brett auf 0 (verborgen, Umbau des Layouts beim Fensterwechsel), rechnet chessground `0 / 0` und
+    // malte vorhandene Markierungen mit `translate(NaN,NaN)` / `<line x1="NaN">` (KidHub, UI-Sweep 23.10.2026 trotz
+    // kidBoardSize). Darum die Markierungen hier zuerst wegnehmen; der zweite Observer unten holt sie nach dem Messen nach.
+    this.hideObserver = new ResizeObserver(entries => {
+      const r = entries[entries.length - 1]?.contentRect;
+      if (!this.ground || !r || (r.width > 0 && r.height > 0)) return;
+      if (this.ground.state.drawable.autoShapes.length > 0) this.ground.setAutoShapes([]);
+      this.shapesPending = true;
+    });
+    this.hideObserver.observe(el);
 
     // IMPORTANT: Never init with viewOnly:true - Chessground only binds
     // mouse/touch event listeners during init, and skips them when viewOnly=true.
@@ -770,6 +784,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.boardEl?.nativeElement?.removeEventListener('pointerup', this.onVizPointerUp, true);
     this.boardEl?.nativeElement?.removeEventListener('pointercancel', this.onVizPointerCancel, true);
     this.resizeObserver?.disconnect();
+    this.hideObserver?.disconnect();
     this.ground?.destroy();
   }
 }

@@ -544,3 +544,47 @@ describe('PuzzleBoardComponent Markierungen auf ungemessenem Brett (NaN-Koordina
     expect(comp.shapesPending).toBeFalse();
   });
 });
+
+describe('PuzzleBoardComponent Brett schrumpft auf 0 (NaN-Koordinaten, UI-Sweep 23.10.)', () => {
+  @Component({
+    standalone: true,
+    imports: [PuzzleBoardComponent],
+    template: `<div id="box" style="width:320px"><app-puzzle-board fen="8/8/8/8/8/8/8/R7 w - - 0 1" orientation="white"
+      turnColor="white" [reviewShapes]="shapes" [allowFullscreen]="false" /></div>`,
+  })
+  class HideHost {
+    shapes = [{ orig: 'a3' as Key, customSvg: { html: '<circle r="2"/>' } }, { orig: 'a1' as Key, dest: 'a4' as Key, brush: 'green' }];
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [HideHost],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+  });
+
+  const frames = (n: number) => new Promise<void>(r => { const f = () => (n-- <= 0 ? r() : requestAnimationFrame(f)); f(); });
+
+  it('nimmt Markierungen weg, bevor chessground mit 0 × 0 zeichnet, und holt sie danach nach', async () => {
+    const fixture = TestBed.createComponent(HideHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await frames(3);
+    const el = fixture.nativeElement as HTMLElement;
+    const ground = (fixture.debugElement.query(By.directive(PuzzleBoardComponent)).componentInstance as unknown as
+      { ground: { state: { drawable: { autoShapes: unknown[] } } } }).ground;
+    expect(ground.state.drawable.autoShapes.length).toBe(2);
+
+    (el.querySelector('#box') as HTMLElement).style.display = 'none';
+    await frames(4);
+    expect(ground.state.drawable.autoShapes.length).toBe(0);
+    expect(el.querySelector('.cg-wrap')!.innerHTML).not.toContain('NaN');
+
+    (el.querySelector('#box') as HTMLElement).style.display = '';
+    await frames(4);
+    expect(ground.state.drawable.autoShapes.length).toBe(2);
+    expect(el.querySelector('.cg-wrap')!.innerHTML).not.toContain('NaN');
+    fixture.destroy();
+    el.remove();
+  });
+});
