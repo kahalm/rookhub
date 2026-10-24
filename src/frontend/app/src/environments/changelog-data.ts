@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.2", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z4/Z16): the course services (list, solver, statistics, sharing, creation, detail page, translation) are split into smaller parts with characterisation tests — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z4/Z16): Die Kursdienste (Liste, Löser, Statistik, Teilen, Anlegen, Detailseite, Übersetzung) sind in kleinere Teile zerlegt und vorher je Feld mit Tests festgehalten — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.1", date: "2026-10-25", changes: [
     { en: "Maintenance: the security check of endpoints open without sign-in now knows the e-book game view from 0.831.0, so the build is green again.", de: "Wartung: Die Sicherheitsprüfung der ohne Anmeldung offenen Endpunkte kennt jetzt die Partie-Ansicht der E-Books aus 0.831.0, der Build ist wieder grün." },
   ] },
