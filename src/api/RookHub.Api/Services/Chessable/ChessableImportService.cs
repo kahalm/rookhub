@@ -57,13 +57,14 @@ public class ChessableImportService : ICourseReimporter
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _proxy;
-    private readonly RepertoireService _repertoires;
-    private readonly PgnImportService _pgnImport;
     private readonly IBackgroundTaskQueue _taskQueue;
-    private readonly NotificationService _notifications;
-    private readonly ChessableBearerBreaker _breaker;
     private readonly ChessableRateLimiter _rateLimiter;
     private readonly ILogger<ChessableImportService> _logger;
+
+    // Teildienste (Zerlegung Z3): je Fassaden-Instanz gebaut, teilen deren scoped DbContext.
+    private readonly ChessableImportOutcome _outcome;
+    private readonly ChessableTargetWriter _writer;
+    private readonly ChessableLiveAppend _liveAppend;
 
     public ChessableImportService(
         AppDbContext db,
@@ -80,13 +81,12 @@ public class ChessableImportService : ICourseReimporter
         _db = db;
         _encryption = encryption;
         _proxy = proxy;
-        _repertoires = repertoires;
-        _pgnImport = pgnImport;
         _taskQueue = taskQueue;
-        _notifications = notifications;
-        _breaker = breaker;
         _rateLimiter = rateLimiter;
         _logger = logger;
+        _outcome = new ChessableImportOutcome(db, breaker, notifications, logger);
+        _writer = new ChessableTargetWriter(db, repertoires, pgnImport);
+        _liveAppend = new ChessableLiveAppend(db, pgnImport, repertoires, proxy, logger);
     }
 
     /// <summary>Reiht ein Ticket ein, das den fair als Nächstes dran befindlichen wartenden Import
@@ -562,9 +562,9 @@ public class ChessableImportService : ICourseReimporter
             await _db.SaveChangesAsync(ct);
 
             if (import.Target == "repertoire")
-                await ImportAsRepertoireAsync(import, pgn, courseName, ct);
+                await _writer.ImportAsRepertoireAsync(import, pgn, courseName, ct);
             else
-                await ImportAsBookAsync(import, pgn, courseName, ct);
+                await _writer.ImportAsBookAsync(import, pgn, courseName, ct);
 
             import.Status = ChessableImportStatus.Completed;
             import.Phase = ChessableImportPhase.Done;
@@ -580,15 +580,7 @@ public class ChessableImportService : ICourseReimporter
             // Inkl. Dauer-Aufschlüsselung: Wartezeit (in der Queue) + reine Holzeit.
             var queueTime = FormatDuration(import.StartedAt - import.CreatedAt);
             var fetchTime = FormatDuration(import.CompletedAt - (import.StartedAt ?? import.CreatedAt));
-            await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
-                new Dictionary<string, string>
-                {
-                    ["courseName"] = courseName,
-                    ["target"] = import.Target,
-                    ["queueTime"] = queueTime,
-                    ["fetchTime"] = fetchTime,
-                },
-                import.Target == "book" ? "/courses" : "/repertoires");
+            await _outcome.NotifyCompletedAsync(import, courseName, queueTime, fetchTime);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -623,7 +615,7 @@ public class ChessableImportService : ICourseReimporter
     /// <summary>
     /// Importiert ein bereits FERTIGES Kurs-PGN (vom Browser über die RepCheck-Extension geholt und von
     /// piratechess fetch-frei geparst) direkt als Repertoire/Buch — OHNE piratechess-Fetch, Queue oder VPN.
-    /// Nutzt exakt dieselben Import-Primitive (<see cref="ImportAsBookAsync"/>/<see cref="ImportAsRepertoireAsync"/>)
+    /// Nutzt exakt dieselben Import-Primitive (<see cref="ChessableTargetWriter"/>)
     /// wie der Server-Fetch-Pfad und legt einen abgeschlossenen <see cref="ChessableImport"/>-Satz an
     /// (Verlauf/Anzeige, Benachrichtigung). Idempotent bei erneutem Senden desselben Kurses: Buch dedupliziert
     /// per LineId, Repertoire wird IN-PLACE ersetzt (Trainings-Fortschritt bleibt), wenn schon eins aus diesem
@@ -676,7 +668,7 @@ public class ChessableImportService : ICourseReimporter
         try
         {
             if (target == "book")
-                await ImportAsBookAsync(import, pgn, name, ct);
+                await _writer.ImportAsBookAsync(import, pgn, name, ct);
             else if (import.TargetRepertoireId is not null)
             {
                 // Vorhandenes Repertoire: ANHÄNGEN, nie ersetzen. Der Browser liefert oft nur einen Teil des Kurses
@@ -691,7 +683,7 @@ public class ChessableImportService : ICourseReimporter
                 import.Invalid = 0;
             }
             else
-                await ImportAsRepertoireAsync(import, pgn, name, ct);
+                await _writer.ImportAsRepertoireAsync(import, pgn, name, ct);
 
             // Kurs-Zuordnung (bid) explizit setzen, falls neu angelegt und noch leer (das Parser-PGN trägt
             // kein [Site]-Tag) → macht künftige Browser-Importe desselben Kurses idempotent (in-place).
@@ -715,15 +707,7 @@ public class ChessableImportService : ICourseReimporter
                     "Browser-Import {Id} fertig: {Target} '{Name}' (bid {Bid}), imported={Imported}",
                     import.Id, import.Target, name, import.Bid, import.Imported);
 
-            await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
-                new Dictionary<string, string>
-                {
-                    ["courseName"] = name,
-                    ["target"] = import.Target,
-                    ["queueTime"] = "0s",
-                    ["fetchTime"] = "0s",
-                },
-                import.Target == "book" ? "/courses" : "/repertoires");
+            await _outcome.NotifyCompletedAsync(import, name, "0s", "0s");
         }
         catch (Exception ex)
         {
@@ -748,31 +732,11 @@ public class ChessableImportService : ICourseReimporter
     public Task<LiveAppendResult> AppendLiveAsync(
         int userId, string bid, string pgn, string courseName, string target, CancellationToken ct = default,
         bool partial = false)
-    {
-        // FALLE: der Live-Append ist ein Read-Modify-Write auf demselben PgnContent (lesen → anhängen →
-        // zurückschreiben) OHNE Concurrency-Token. Klickt der Nutzer schnell durch oder feuert ein
-        // Netz-Retry parallel, lesen beide Requests denselben Stand und der zweite SaveChanges
-        // überschreibt die Linie des ersten — sie verschwindet still. Ebenso fänden zwei parallele
-        // ERSTE Linien beide kein Repertoire und legten zwei chessable-{bid}-Repertoires an. Darum je
-        // (User, bid) serialisieren.
-        return WithAppendLockAsync($"{userId}:{bid}", () => AppendLiveCoreAsync(userId, bid, pgn, courseName, target, partial, ct), ct);
-    }
+        => _liveAppend.AppendAsync(userId, bid, pgn, courseName, target, ct, partial);
 
-    /// <summary>Prozessweite Schlösser je (User, bid) für <see cref="AppendLiveAsync"/>. Bewusst nicht
-    /// aufgeräumt: pro durchgeklicktem Kurs genau ein Eintrag (vernachlässigbar), und ein Entfernen
-    /// bräuchte selbst wieder Synchronisation. Prozesslokal — bei mehreren API-Instanzen bräuchte es
-    /// zusätzlich ein DB-seitiges Schloss/Concurrency-Token.</summary>
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _appendGates = new();
-
-    internal static async Task<T> WithAppendLockAsync<T>(string key, Func<Task<T>> body, CancellationToken ct = default)
-    {
-        var gate = _appendGates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-        // Mit Token warten: hängt der Body (DB-Hänger im Read-Modify-Write), soll ein abgebrochener
-        // Request nicht unkündbar in der Schlange stehen bleiben.
-        await gate.WaitAsync(ct);
-        try { return await body(); }
-        finally { gate.Release(); }
-    }
+    /// <summary>Siehe <see cref="ChessableLiveAppend.WithAppendLockAsync"/> (prozessweite Schlösser je (User, bid)).</summary>
+    internal static Task<T> WithAppendLockAsync<T>(string key, Func<Task<T>> body, CancellationToken ct = default)
+        => ChessableLiveAppend.WithAppendLockAsync(key, body, ct);
 
     /// <summary>
     /// Ergebnis eines Live-Append. <c>Linked</c> zählt vorhandene Linien, die ihre Chessable-oid nachgetragen bekamen —
@@ -789,154 +753,6 @@ public class ChessableImportService : ICourseReimporter
         }
     }
 
-    private async Task<LiveAppendResult> AppendLiveCoreAsync(
-        int userId, string bid, string pgn, string courseName, string target, bool partial, CancellationToken ct)
-    {
-        target = target == "book" ? "book" : "repertoire";
-        var name = Trunc(string.IsNullOrWhiteSpace(courseName) ? $"Chessable {bid}" : courseName, 200);
-
-        if (target == "book")
-        {
-            var fileName = $"chessable-u{userId}-{bid}.pgn";
-            // Der Browser liefert nie den ganzen Kurs auf einmal (Kapitel-Chunk, Live-Append) — der Text wird je oid
-            // ins SourcePgn zusammengeführt statt es zu ersetzen (s. ImportFileAsync, mergeSourcePgn).
-            var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, partial: partial, mergeSourcePgn: true,
-                ownerUserId: userId);
-            var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
-            if (book is not null)
-            {
-                book.OwnerUserId = userId;
-                if (string.IsNullOrWhiteSpace(book.DisplayName)) book.DisplayName = name;
-                book.Tags = "chessable";
-                book.UpdatedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync(ct);
-            }
-            return new LiveAppendResult(res.Imported, res.BookId, target, 0);
-        }
-
-        var repFile = $"chessable-{bid}.pgn";
-        var rep = await _db.Repertoires.Include(r => r.Files)
-            .FirstOrDefaultAsync(r => r.UserId == userId && (r.ChessableCourseId == bid || r.Files.Any(f => f.FileName == repFile)), ct);
-
-        if (rep is null)
-        {
-            // Erste Linie → Repertoire anlegen, damit es sofort sichtbar ist und live mitwächst.
-            var created = await _repertoires.CreateAsync(userId, new CreateRepertoireDto
-            {
-                Name = name,
-                Description = $"Aus Chessable (bid {bid}) — live beim Durchklicken erfasst",
-                Kind = RepertoireKind.Opening,
-                IsPublic = false,
-                UseForExtension = false,
-            });
-            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
-            await _repertoires.UploadFileAsync(created.Id, userId, repFile, ms);
-            var r2 = await _db.Repertoires.FirstAsync(r => r.Id == created.Id, ct);
-            if (string.IsNullOrEmpty(r2.ChessableCourseId)) { r2.ChessableCourseId = bid; await _db.SaveChangesAsync(ct); }
-            return new LiveAppendResult(CountPgnGames(pgn), created.Id, target, 0);
-        }
-
-        var file = rep.Files.FirstOrDefault(f => f.FileName == repFile) ?? rep.Files.FirstOrDefault();
-        if (file is null)
-        {
-            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
-            await _repertoires.UploadFileAsync(rep.Id, userId, repFile, ms);
-            return new LiveAppendResult(CountPgnGames(pgn), rep.Id, target, 0);
-        }
-
-        // Nur die noch nicht vorhandenen Linien anhängen → erneutes Durchklicken derselben Linie erzeugt keine
-        // Dublette. Je eingehender Linie, in dieser Reihenfolge:
-        //  1. Ihre oid steht schon in der Datei → dieselbe Chessable-Linie, nichts zu tun.
-        //  2. Gleicher Zugtext wie eine Bestands-Linie OHNE oid (Import vor piratechess v1.29.0) → deren oid
-        //     NACHTRAGEN statt anzuhängen. Ohne oid erkennt das Fortschritts-Overlay die Linie nie als importiert,
-        //     und jedes „Kurs holen" hält sie für neu.
-        //  3. Ohne eigene oid: gleicher Zugtext → Dublette.
-        //  4. Sonst anhängen — auch bei gleichem Zugtext unter ANDERER oid: Chessable wiederholt Linien (z. B. im
-        //     Quick-Starter-Kapitel), das sind eigene Linien mit eigenem Fortschritt.
-        // Verglichen werden die EXAKTEN Zugtexte, keine Teilzeichenketten: `existing.Contains(moves)` ließ früher
-        // eine kürzere Linie, die Präfix einer längeren ist, still verschwinden — und war quadratisch in der
-        // PGN-Größe, im Request-Pfad des Live-Appends.
-        var existing = file.PgnContent ?? string.Empty;
-        var existingBlocks = SplitPgnGames(existing).ToList();
-        var knownOids = new HashSet<string>(StringComparer.Ordinal);
-        var seenMoves = new HashSet<string>(StringComparer.Ordinal);
-        var oidlessByMoves = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var i = 0; i < existingBlocks.Count; i++)
-        {
-            var blockOid = OidOf(existingBlocks[i]);
-            if (blockOid != null) knownOids.Add(blockOid);
-            var blockMoves = MovetextOf(existingBlocks[i]);
-            if (blockMoves.Length == 0) continue;
-            seenMoves.Add(blockMoves);
-            // Ausgeblendete Kopien bekommen keine oid nachgetragen — ihr Zugtext bleibt aber „gesehen", damit
-            // derselbe Inhalt nicht erneut angehängt wird.
-            if (blockOid == null && !RepertoirePgnCleanup.IsHiddenGame(existingBlocks[i])) oidlessByMoves.TryAdd(blockMoves, i);
-        }
-
-        var backfill = new Dictionary<int, string>();   // Bestands-Block (Index) → nachzutragende oid
-        var appended = new StringBuilder();
-        var added = 0;
-        foreach (var game in SplitPgnGames(pgn))
-        {
-            var moves = MovetextOf(game);
-            if (moves.Length == 0) continue;
-            var oid = OidOf(game);
-            if (oid != null)
-            {
-                if (knownOids.Contains(oid)) continue;
-                if (oidlessByMoves.Remove(moves, out var blockIndex))
-                {
-                    backfill[blockIndex] = oid;
-                    knownOids.Add(oid);
-                    continue;
-                }
-                knownOids.Add(oid);
-            }
-            else if (seenMoves.Contains(moves)) continue;
-            seenMoves.Add(moves);
-            appended.Append("\n\n\n").Append(game.Trim());
-            added++;
-        }
-        if (added > 0 || backfill.Count > 0)
-        {
-            var content = backfill.Count > 0 ? InsertChessableOids(existing, backfill) : existing;
-            file.PgnContent = content.TrimEnd() + appended + "\n";
-            // Bytes, nicht Zeichen: das PGN trägt Kommentare in de/hr, ein Zeichenzähler wies die
-            // Datei damit kleiner aus, als sie auf der Platte ist.
-            file.FileSize = Encoding.UTF8.GetByteCount(file.PgnContent);
-            rep.UpdatedAt = DateTime.UtcNow;
-            if (added > 0) rep.ImportVersion = ImportPipeline.CurrentVersion;
-            await _db.SaveChangesAsync(ct);
-        }
-        // Altlasten gleich mit bereinigen (nie löschen, nur ausblenden) — neu hinzugekommene Linien können eine alte
-        // Kopie erst erkennbar machen, und Dateien mit veraltetem Regelstand kommen so ohne Neustart dran.
-        if (added > 0 || backfill.Count > 0 || file.CleanupVersion < RepertoirePgnCleanup.CurrentVersion)
-        {
-            var cleanup = await RepertoireCleanupService.CleanupFileAsync(file, bid, _proxy, _logger, apply: true, ct);
-            if (cleanup != null)
-            {
-                if (cleanup.Count > 0)
-                {
-                    rep.UpdatedAt = DateTime.UtcNow;
-                    _logger.LogInformation("Repertoire-Bereinigung beim Live-Append: {Count} Änderungen in Datei {FileId} (bid {Bid})",
-                        cleanup.Count, file.Id, bid);
-                }
-                await _db.SaveChangesAsync(ct);
-            }
-        }
-        return new LiveAppendResult(added, rep.Id, target, backfill.Count);
-    }
-
-    // PGN-Block-Helfer: siehe ChessablePgnBlocks (Golden-Tests ChessablePgnBlocksTests).
-    internal static string? OidOf(string block) => ChessablePgnBlocks.OidOf(block);
-    internal static string InsertChessableOids(string pgn, IReadOnlyDictionary<int, string> oidByBlock)
-        => ChessablePgnBlocks.InsertChessableOids(pgn, oidByBlock);
-    internal static int HeaderEnd(string pgn, int start, int end) => ChessablePgnBlocks.HeaderEnd(pgn, start, end);
-    internal static IEnumerable<string> SplitPgnGames(string pgn) => ChessablePgnBlocks.Split(pgn);
-    internal static string MovetextOf(string block) => ChessablePgnBlocks.MovetextOf(block);
-    internal static int CountPgnGames(string pgn) => ChessablePgnBlocks.Count(pgn);
-    private static System.Text.RegularExpressions.Regex ChessableOidRegex => ChessablePgnBlocks.ChessableOidRegex;
-
     /// <summary>
     /// Import-Fortschritt eines Chessable-Kurses für die Overlays: liefert die Menge der Chessable-oids,
     /// die der User bereits importiert hat — als Buch (<c>BookPuzzle.ChessableOid</c> des Buchs
@@ -945,172 +761,9 @@ public class ChessableImportService : ICourseReimporter
     /// <c>book</c>/<c>repertoire</c> zeigen, ob das jeweilige Ziel überhaupt existiert (auch bei 0 oids,
     /// z. B. Alt-Import ohne oid).
     /// </summary>
-    public async Task<(HashSet<string> Oids, bool Book, bool Repertoire)> GetImportedOidsAsync(
+    public Task<(HashSet<string> Oids, bool Book, bool Repertoire)> GetImportedOidsAsync(
         int userId, string bid, CancellationToken ct = default)
-    {
-        var oids = new HashSet<string>();
-
-        var bookFile = $"chessable-u{userId}-{bid}.pgn";
-        // AUCH aus getReview vorbelegte Lücken-Füller (Source=="review") zählen als importiert/gecacht:
-        // getReview und getGame sind für die Linie inhaltlich gleichwertig (nur getGame trägt zusätzlich
-        // die „schwierigen Züge"), ein getGame-Re-Fetch bringt für die Linie also KEINEN Mehrwert. Darum
-        // im Overlay als „gecacht" (✓) UND vom (getGame-)Crawl NICHT erneut geholt.
-        var bookOids = await _db.BookPuzzles
-            .Where(bp => bp.BookFileName == bookFile && bp.ChessableOid != null)
-            .Select(bp => bp.ChessableOid!)
-            .ToListAsync(ct);
-        foreach (var o in bookOids) oids.Add(o);
-        var hasBook = bookOids.Count > 0
-            || await _db.Books.AnyAsync(b => b.FileName == bookFile && b.OwnerUserId == userId, ct);
-
-        var repFile = $"chessable-{bid}.pgn";
-        var repIds = await _db.Repertoires
-            .Where(r => r.UserId == userId && (r.ChessableCourseId == bid || r.Files.Any(f => f.FileName == repFile)))
-            .Select(r => r.Id).ToListAsync(ct);
-        var hasRep = repIds.Count > 0;
-        if (hasRep)
-        {
-            // Das PGN wird NUR fuer Dateien geholt, deren Kennungs-Zwischenspeicher fehlt oder
-            // veraltet ist. Vorher wanderte hier bei jedem Extension-Poll der komplette PGN-Text
-            // jedes passenden Repertoires ueber die Leitung, nur um ihn per Regex zu durchsuchen.
-            var files = await _db.RepertoireFiles
-                .Where(f => repIds.Contains(f.RepertoireId))
-                .Select(f => new
-                {
-                    f.Id,
-                    f.ChessableOidsCache,
-                    Stale = f.ChessableOidsCache == null || f.ChessableOidsPgnLength != f.PgnContent.Length,
-                    PgnIfStale = (f.ChessableOidsCache == null || f.ChessableOidsPgnLength != f.PgnContent.Length)
-                        ? f.PgnContent : null,
-                })
-                .ToListAsync(ct);
-
-            var rebuilt = new Dictionary<int, (string Cache, int Length)>();
-            foreach (var f in files)
-            {
-                if (!f.Stale)
-                {
-                    foreach (var o in f.ChessableOidsCache!.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-                        oids.Add(o);
-                    continue;
-                }
-                var content = f.PgnIfStale ?? string.Empty;
-                var found = new List<string>();
-                foreach (System.Text.RegularExpressions.Match m in ChessableOidRegex.Matches(content))
-                {
-                    oids.Add(m.Groups[1].Value);
-                    found.Add(m.Groups[1].Value);
-                }
-                rebuilt[f.Id] = (string.Join('\n', found.Distinct()), content.Length);
-            }
-
-            // Einmalig nachtragen; best-effort, denn die Antwort oben stimmt auch ohne den Nachtrag.
-            if (rebuilt.Count > 0)
-            {
-                try
-                {
-                    var ids = rebuilt.Keys.ToList();
-                    var tracked = await _db.RepertoireFiles.Where(f => ids.Contains(f.Id)).ToListAsync(ct);
-                    foreach (var f in tracked)
-                    {
-                        (f.ChessableOidsCache, var len) = rebuilt[f.Id];
-                        f.ChessableOidsPgnLength = len;
-                    }
-                    await _db.SaveChangesAsync(ct);
-                }
-                catch (DbUpdateException) { /* Antwort stimmt trotzdem */ }
-            }
-        }
-
-        return (oids, hasBook, hasRep);
-    }
-
-    private async Task ImportAsRepertoireAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
-    {
-        // In-place-Re-Import (Reprocess-Re-Fetch): das frische PGN ersetzt ein BESTEHENDES Repertoire,
-        // damit dessen Id und damit der Trainings-Fortschritt erhalten bleiben.
-        if (import.TargetRepertoireId is int target
-            && await _db.Repertoires.AnyAsync(r => r.Id == target && r.UserId == import.UserId, ct))
-        {
-            await ReplaceRepertoireFileAsync(target, import.UserId, $"chessable-{import.Bid}.pgn", pgn, ct);
-            import.ResultId = target;
-            import.Imported = import.LineCount;
-            import.Skipped = 0;
-            import.Invalid = 0;
-            // Mehrere Repertoires desselben Users können auf demselben Chessable-Kurs (bid) beruhen. Der
-            // (Owner,bid)-Dedup holt den Kurs aber nur EINMAL → die Geschwister blieben sonst veraltet.
-            // Darum das frische PGN auch in alle Geschwister-Repertoires desselben bid schreiben.
-            await BumpSiblingRepertoiresAsync(import, pgn, target, ct);
-            return;
-        }
-
-        // Resume: Repertoire evtl. in einem vorigen Versuch schon angelegt → nicht doppeln.
-        int repId;
-        if (import.ResultId is int existing
-            && await _db.Repertoires.AnyAsync(r => r.Id == existing && r.UserId == import.UserId, ct))
-        {
-            repId = existing;
-        }
-        else
-        {
-            var rep = await _repertoires.CreateAsync(import.UserId, new CreateRepertoireDto
-            {
-                Name = Trunc(courseName, 200),
-                Description = $"Aus Chessable importiert (bid {import.Bid})",
-                Kind = RepertoireKind.Opening,
-                IsPublic = false,
-                // Importierte Kurse standardmäßig NICHT von der RepCheck-Extension verwenden.
-                UseForExtension = false
-            });
-            repId = rep.Id;
-            import.ResultId = repId;
-            await _db.SaveChangesAsync(ct); // Checkpoint: Repertoire-Anlage
-        }
-
-        // Datei nur hochladen, wenn noch keine da ist (idempotent bei Resume).
-        if (!await _db.RepertoireFiles.AnyAsync(f => f.RepertoireId == repId, ct))
-        {
-            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn));
-            await _repertoires.UploadFileAsync(repId, import.UserId, $"chessable-{import.Bid}.pgn", ms);
-        }
-
-        import.Imported = import.LineCount;
-        import.Skipped = 0;
-        import.Invalid = 0;
-    }
-
-    /// <summary>Ersetzt das PGN eines bestehenden Repertoires IN-PLACE (Id/Trainings-Fortschritt
-    /// bleiben): erst die neue Datei hochladen, DANN die alten löschen — die Reihenfolge ist die
-    /// Invariante „nie ein Zeitfenster mit 0 Dateien" und lag vorher als Copy-Paste in Ziel- und
-    /// Geschwister-Pfad (eine Änderung an Ordnung/Fehlerbehandlung hätte nur einen Pfad erreicht).</summary>
-    private async Task ReplaceRepertoireFileAsync(int repId, int userId, string fileName, string pgn, CancellationToken ct)
-    {
-        var oldIds = await _db.RepertoireFiles.Where(f => f.RepertoireId == repId).Select(f => f.Id).ToListAsync(ct);
-        using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(pgn)))
-            await _repertoires.UploadFileAsync(repId, userId, fileName, ms); // hebt ImportVersion + ChessableCourseId
-        if (oldIds.Count > 0)
-        {
-            var olds = await _db.RepertoireFiles.Where(f => oldIds.Contains(f.Id)).ToListAsync(ct);
-            _db.RepertoireFiles.RemoveRange(olds);
-            await _db.SaveChangesAsync(ct);
-        }
-    }
-
-    /// <summary>Schreibt das frisch geholte PGN zusätzlich in alle WEITEREN Repertoires desselben Users, die
-    /// auf demselben Chessable-Kurs (bid) beruhen (per ChessableCourseId oder Dateiname), außer dem bereits
-    /// aktualisierten <paramref name="target"/>. In-place (Id/Fortschritt bleiben) → UploadFileAsync hebt die
-    /// ImportVersion. Ohne das blieben Kurs-Duplikate nach „Alle aktualisieren" veraltet (Dedup holt 1×).</summary>
-    private async Task BumpSiblingRepertoiresAsync(ChessableImport import, string pgn, int target, CancellationToken ct)
-    {
-        var fileName = $"chessable-{import.Bid}.pgn";
-        var siblingIds = await _db.Repertoires
-            .Where(r => r.UserId == import.UserId && r.Id != target
-                && (r.ChessableCourseId == import.Bid || r.Files.Any(f => f.FileName == fileName)))
-            .Select(r => r.Id).ToListAsync(ct);
-
-        foreach (var repId in siblingIds)
-            await ReplaceRepertoireFileAsync(repId, import.UserId, fileName, pgn, ct);
-    }
+        => _liveAppend.GetImportedOidsAsync(userId, bid, ct);
 
     // ===== Laufender Browser-Import (Kapitel für Kapitel) =====
     // Der Browser streamt einen Kurs in Chunks; jeder wird SOFORT geparst und angehängt, statt bis zum
@@ -1248,15 +901,7 @@ public class ChessableImportService : ICourseReimporter
                 "Browser-Import {Id} fertig (laufend): {Target} '{Name}' (bid {Bid}), Kapitel={Chapters}, imported={Imported}",
                 import.Id, import.Target, import.CourseName, import.Bid, import.ChaptersDone, import.Imported);
 
-        await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportCompleted,
-            new Dictionary<string, string>
-            {
-                ["courseName"] = import.CourseName,
-                ["target"] = import.Target,
-                ["queueTime"] = "0s",
-                ["fetchTime"] = "0s",
-            },
-            import.Target == "book" ? "/courses" : "/repertoires");
+        await _outcome.NotifyCompletedAsync(import, import.CourseName, "0s", "0s");
         return import;
     }
 
@@ -1270,32 +915,6 @@ public class ChessableImportService : ICourseReimporter
     {
         var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
         if (import is not null) await FailAsync(import, message);
-    }
-
-    private async Task ImportAsBookAsync(ChessableImport import, string pgn, string courseName, CancellationToken ct)
-    {
-        // Pro-User-eindeutiger Dateiname; PgnImportService dedupliziert per LineId → von Natur aus
-        // idempotent, ein Resume legt dieselben Puzzles nicht doppelt an.
-        var fileName = $"chessable-u{import.UserId}-{import.Bid}.pgn";
-        // Ein Browser-Import („Mitschnitt importieren") trägt oft nur einzelne Kapitel: zusammenführen statt ersetzen.
-        // Der Server-Abruf liefert dagegen immer den ganzen Kurs und ersetzt die Quelle wie bisher.
-        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, mergeSourcePgn: import.FromBrowser,
-            ownerUserId: import.UserId);
-
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
-        if (book is not null)
-        {
-            book.OwnerUserId = import.UserId;
-            book.DisplayName = Trunc(courseName, 200);
-            book.Tags = "chessable";
-            book.UpdatedAt = DateTime.UtcNow;
-        }
-
-        import.ResultId = res.BookId;
-        // Gesamtzahl der Puzzles im Buch (korrekt auch beim Resume, wo res.Imported nur die neuen zählt).
-        import.Imported = await _db.BookPuzzles.CountAsync(bp => bp.BookId == res.BookId, ct);
-        import.Skipped = res.Skipped;
-        import.Invalid = res.Invalid;
     }
 
     // Reine Verbindungsfehler zu piratechess (Container-Neustart/kurzer Ausfall) dürfen einen Import
@@ -1355,50 +974,7 @@ public class ChessableImportService : ICourseReimporter
     // Internal statt private: die Zombie-Haertung (Fangnetze unten) war der Ausloeser echter
     // Prod-Haenger und braucht direkte Tests — sie ist ueber die oeffentliche API nicht erreichbar,
     // ohne eine halbe Chessable-Session zu simulieren.
-    internal async Task FailAsync(ChessableImport import, string error)
-    {
-        import.Status = ChessableImportStatus.Failed;
-        import.Error = Trunc(error, 1000);
-        import.CompletedAt = DateTime.UtcNow;
-        // Terminalen Status mit CancellationToken.None festschreiben: scheitert ein Import WEGEN einer
-        // (Timeout-)Cancellation, muss er trotzdem als "failed" persistiert werden — sonst bliebe er als
-        // Zombie auf "running" haengen und wuerde beim Neustart endlos resumed.
-        try
-        {
-            await _db.SaveChangesAsync(CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            // FALLE: Ist die DB gerade weg (Ausfall/Timeout), scheitert AUCH dieses Fehler-Update — die
-            // Exception liefe sonst aus RunAsync bis in den Worker und der Import bliebe für immer auf
-            // "fetching"/"importing" stehen, also als Zombie im Lane-Slot (Drain steht bis zum Neustart).
-            // Darum hier schlucken: der Watchdog erkennt den verwaisten Inflight-Job und reiht ihn neu ein.
-            _logger.LogError(ex, "Chessable-Import {Id}: Fehlerstatus konnte nicht gespeichert werden", import.Id);
-            return;
-        }
-
-        // Circuit-Breaker: war der Fehlschlag fatal für den Bearer selbst (Account gesperrt/gelöscht
-        // bzw. Token tot), den Bearer sperren — danach pausieren weitere Importe sofort, statt mit dem
-        // toten Bearer immer wieder fehlzuschlagen (siehe ChessableBearerBreaker). IP-/VPN-Blocks lösen
-        // das bewusst NICHT aus.
-        // Nachgelagerte Nebenwirkungen dürfen den bereits festgeschriebenen Fehlerstatus nicht mehr
-        // gefährden: eine Exception von hier liefe erneut in den Worker (Fehlalarm im log-watcher),
-        // ohne dass am Import-Satz noch etwas zu retten wäre.
-        try
-        {
-            if (ChessableBearerBreaker.IsBearerFatal(error))
-                await _breaker.TripAsync(import.BearerUserId ?? import.UserId, error, CancellationToken.None);
-
-            // User benachrichtigen: Import fehlgeschlagen.
-            var name = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
-            await _notifications.CreateAsync(import.UserId, NotificationType.ChessableImportFailed,
-                new Dictionary<string, string> { ["courseName"] = name }, "/chessable");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Chessable-Import {Id}: Nachbereitung des Fehlschlags fehlgeschlagen", import.Id);
-        }
-    }
+    internal Task FailAsync(ChessableImport import, string error) => _outcome.FailAsync(import, error);
 
     private static string Trunc(string s, int max) => ChessableImportTargets.Trunc(s, max);
 
