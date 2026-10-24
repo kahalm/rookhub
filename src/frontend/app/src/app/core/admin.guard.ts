@@ -4,6 +4,10 @@ import { AuthService } from './auth.service';
 import { loginRedirect } from './auth.guard';
 import { blockedNotice } from './blocked-notice';
 
+/**
+ * Nur fürs Admin-Flag (Turnier-App `/admin`). Die Admin-Seite der Haupt-App öffnet sich je Recht — dort gilt
+ * `adminAreaGuard` (features/admin/admin-area.guard.ts, F5-005).
+ */
 export const adminGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);

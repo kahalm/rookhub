@@ -1,4 +1,9 @@
-import { ADMIN_TAB_KEYS, adminTabIndex } from './admin-tabs';
+import { ADMIN_TAB_KEYS, ADMIN_TAB_PERMISSIONS, AdminTabAccess, adminTabIndex, canOpenAdmin, canSeeAdminTab, visibleAdminTabs } from './admin-tabs';
+
+/** Zugriff wie AuthService: Admin erfüllt jedes Recht. */
+function access(perms: string[], isAdmin = false): AdminTabAccess {
+  return { has: p => isAdmin || perms.includes(p), isAdminLive: isAdmin };
+}
 
 describe('admin-tabs', () => {
   it('resolves known tab keys to their 0-based index', () => {
@@ -21,5 +26,51 @@ describe('admin-tabs', () => {
   it('keeps the expected canonical tab order (sync with admin.component.html)', () => {
     expect([...ADMIN_TAB_KEYS]).toEqual(
       ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'jobs']);
+  });
+
+  it('resolves the index over a given (visible) tab list', () => {
+    expect(adminTabIndex('messages', ['messages', 'uploads'])).toBe(0);
+    expect(adminTabIndex('uploads', ['messages', 'uploads'])).toBe(1);
+    expect(adminTabIndex('users', ['messages', 'uploads'])).toBe(-1);
+  });
+
+  // F5-005: jeder Tab hat genau einen Eintrag in der Rechte-Tabelle (null = nur Admins).
+  it('maps every tab key to a permission (complete, no extras)', () => {
+    expect(Object.keys(ADMIN_TAB_PERMISSIONS).sort()).toEqual([...ADMIN_TAB_KEYS].sort());
+    for (const k of ADMIN_TAB_KEYS) {
+      const p = ADMIN_TAB_PERMISSIONS[k];
+      expect(p === null || /^[a-z]+\.[a-z]+$/.test(p)).withContext(k).toBeTrue();
+    }
+  });
+
+  it('keeps the permissions the backend controllers require', () => {
+    expect(ADMIN_TAB_PERMISSIONS).toEqual({
+      users: 'users.manage', books: 'books.manage', daily: 'daily.manage', puzzles: 'puzzles.manage',
+      groups: 'groups.manage', menu: 'menu.manage', messages: 'messages.admin', courseDl: 'chessable.admin',
+      ci: 'ci.view', roles: 'roles.manage', uploads: 'messages.admin', jobs: null,
+    });
+  });
+
+  it('admins see every tab', () => {
+    expect(visibleAdminTabs(access([], true))).toEqual([...ADMIN_TAB_KEYS]);
+    expect(canOpenAdmin(access([], true))).toBeTrue();
+  });
+
+  it('a permission holder sees only the matching tabs, in canonical order', () => {
+    const a = access(['messages.admin']);
+    expect(visibleAdminTabs(a)).toEqual(['messages', 'uploads']);
+    expect(canSeeAdminTab(a, 'users')).toBeFalse();
+    expect(canOpenAdmin(a)).toBeTrue();
+  });
+
+  it('the jobs tab needs the admin flag — no permission opens it', () => {
+    const all = Object.values(ADMIN_TAB_PERMISSIONS).filter((p): p is string => !!p);
+    expect(canSeeAdminTab(access(all), 'jobs')).toBeFalse();
+    expect(canSeeAdminTab(access([], true), 'jobs')).toBeTrue();
+  });
+
+  it('without any admin-tab permission the area stays closed', () => {
+    expect(visibleAdminTabs(access(['league.view', 'catalog.manage']))).toEqual([]);
+    expect(canOpenAdmin(access([]))).toBeFalse();
   });
 });

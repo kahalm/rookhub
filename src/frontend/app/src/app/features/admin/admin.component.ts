@@ -1,4 +1,4 @@
-import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -37,7 +37,7 @@ import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { AdminLeagueUploadsComponent } from './tabs/admin-league-uploads.component';
 import { AdminBackgroundJobsComponent } from './tabs/admin-background-jobs.component';
-import { adminTabIndex, ADMIN_TAB_KEYS, AdminTabKey } from './admin-tabs';
+import { adminTabIndex, AdminTabKey, visibleAdminTabs } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 import { apiErrorText } from '../../core/api-error';
 import { MatDialog } from '@angular/material/dialog';
@@ -119,8 +119,22 @@ export class AdminComponent implements OnInit {
   /** Konto, für das gerade ein Reset-Link erzeugt wird (UX-002) — sein Knopf ist so lange gesperrt. */
   resetLinkBusyId: number | null = null;
 
-  /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
-  selectedTabIndex = 0;
+  /**
+   * Die Tabs, die der Nutzer sieht (F5-005: je Recht, Zuordnung in `admin-tabs.ts`). Nur sie werden gerendert, die
+   * mat-tab-Indizes zählen also über DIESE Liste — Deep-Links und `?tab=` gehen über den Key, nie über einen festen
+   * Index. Ein Signal-`computed`: `AuthService.has` liest den Live-Stand der Rechte, ein Nachladen zieht nach.
+   */
+  readonly visibleTabs = computed(() => visibleAdminTabs(this.auth));
+  /** Aktiver Tab als Key (für Deep-Links wie /admin?tab=messages); `null` = erster sichtbarer. */
+  private selectedTab: AdminTabKey | null = null;
+  /** Index des aktiven Tabs unter den SICHTBAREN Tabs (für `[selectedIndex]`). */
+  get selectedTabIndex(): number { return Math.max(0, adminTabIndex(this.selectedTab, this.visibleTabs())); }
+  /** Wird der Tab gerendert? */
+  show(key: AdminTabKey): boolean { return this.visibleTabs().includes(key); }
+  /** Nur Admins dürfen das Admin-Flag setzen und Admin-Konten anfassen (Server: „Only an admin may …", 403). */
+  get actorIsAdmin(): boolean { return this.auth.isAdminLive; }
+  /** Einsteigen/Reset-Link/Löschen: für Admin-Konten nur durch Admins — sonst gar nicht anbieten (Server: 403). */
+  canManageUser(u: AdminUser): boolean { return this.actorIsAdmin || !u.isAdmin; }
   /**
    * Tabs mit eigenem, erst per Knopf gespeichertem Formular (Menü-Sichtbarkeit, Rollen): einmal geöffnet, bleiben sie
    * bestehen (F5-020). Als `matTabContent` wurden sie beim Verlassen zerstört und beim Zurückkehren neu geladen — ein
@@ -195,30 +209,36 @@ export class AdminComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadUsers();
-    this.loadBooks();
-    this.loadGroups();
-    this.loadAllUsers();
+    // Nur laden, was der Nutzer sehen darf (F5-005) — sonst hagelte es 403-Meldungen für fremde Tabs.
+    const canUsers = this.auth.has('users.manage');
+    if (canUsers) this.loadUsers();
+    if (this.show('books')) this.loadBooks();
+    // Gruppenliste: für den Gruppen-Tab und als Auswahl in Menü/Rollen; der Endpunkt verlangt groups.manage.
+    if (this.auth.has('groups.manage')) this.loadGroups();
+    // Mitglieder-Auswahl im Gruppen-Tab: kommt aus der Nutzerliste (users.manage).
+    if (this.show('groups') && canUsers) this.loadAllUsers();
     // Deep-Link: /admin?tab=<key> — Tab aus der URL wählen (der `?thread=`-Teil wird vom
-    // Nachrichten-Tab selbst behandelt, siehe AdminMessagesComponent).
+    // Nachrichten-Tab selbst behandelt, siehe AdminMessagesComponent). Tabs ohne Recht fängt adminAreaGuard ab.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
-      const tabIdx = adminTabIndex(qp.get('tab'));   // beliebiger Tab-Key, Index aus admin-tabs.ts
-      if (tabIdx >= 0) this.selectTab(tabIdx);
+      const key = qp.get('tab') as AdminTabKey | null;
+      if (key && this.show(key)) this.selectTab(key);
     });
 
-    this.adminService.getConfig().subscribe({
-      next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
-      error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
-    });
+    if (canUsers) {
+      this.adminService.getConfig().subscribe({
+        next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
+        error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
+      });
+    }
   }
 
   /** Tab-Wechsel: Index übernehmen UND als ?tab=<key> in die URL schreiben, damit Reload/Back
    *  den Tab behält (queryParamsHandling 'merge' lässt ?thread=… o. Ä. unberührt; replaceUrl
    *  vermeidet eine zusätzliche History-Position je Klick). */
   onTabChange(index: number): void {
-    this.selectTab(index);
-    const tab = ADMIN_TAB_KEYS[index];
+    const tab = this.visibleTabs()[index];
     if (!tab) return;
+    this.selectTab(tab);
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab },
@@ -227,10 +247,9 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  private selectTab(index: number): void {
-    this.selectedTabIndex = index;
-    const key = ADMIN_TAB_KEYS[index];
-    if (key && AdminComponent.KeptTabKeys.includes(key)) this.keptTabs.add(key);
+  private selectTab(key: AdminTabKey): void {
+    this.selectedTab = key;
+    if (AdminComponent.KeptTabKeys.includes(key)) this.keptTabs.add(key);
   }
 
 

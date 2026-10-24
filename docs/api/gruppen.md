@@ -42,6 +42,14 @@ Rolle wirkte erst nach dem nächsten Anmelden, eine entzogene galt so lange weit
   `PermissionResolver.UserIdsWithPermissionAsync` an alle mit dem Recht (`messages.admin` / `users.manage` /
   `chessable.admin`); Katalog-Besitz = `catalog.manage`; unveröffentlichte Wochenposts sieht `weeklyposts.manage`;
   Push-Bereich „admin“ = `users.manage`. Teil-Freischaltungen im Action-Rumpf über `BaseApiController.HasPermissionAsync`.
+* **Admin-Bereich je Recht** (Codereview F5-005, Frontend-Rest): `/admin` öffnet sich für jeden, der mindestens einen
+  Admin-Tab sehen darf. Zuordnung Tab → Recht als Daten in `features/admin/admin-tabs.ts` (`ADMIN_TAB_PERMISSIONS`,
+  gleich den `[HasPermission]` der Controller): Nutzer `users.manage`, Bücher `books.manage`, Tagespuzzle `daily.manage`,
+  Puzzles `puzzles.manage`, Gruppen `groups.manage`, Menü `menu.manage`, Nachrichten `messages.admin`, Kurs-Download
+  `chessable.admin`, CI `ci.view`, Rollen `roles.manage`, Uploads `messages.admin` (wie `AdminLeagueUploadController`),
+  Hintergrundjobs nur Admin. Admin-Flag setzen und Admin-Konten anfassen (Einsteigen, Reset-Link, Löschen) bietet die
+  Nutzerliste nur Admins an (Server: 403). Die Dashboard-Kachel „Chessable-Queue" hängt an `chessable.admin`. Wer einen
+  Controller auf ein anderes Recht umstellt, zieht die Tabelle mit.
 
 ## Gruppe in Gruppe (2026-10-14)
 

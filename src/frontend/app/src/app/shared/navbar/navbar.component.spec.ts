@@ -116,7 +116,7 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: {
           currentUser$: of(opts.loggedIn ? { username: 'u' } : null),
-          isLoggedIn: !!opts.loggedIn, isAdmin: false, logout: () => {},
+          isLoggedIn: !!opts.loggedIn, isAdmin: false, isAdminLive: false, logout: () => {},
           has: (p: string) => (opts.perms ?? []).includes(p),
         } },
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
@@ -150,6 +150,15 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     const c = fixture.componentInstance;
     expect(c.anyTraining).toBeTrue();     // puzzles sichtbar
     expect(c.anyLibrary).toBeFalse();     // nichts aus Analyse & Sammlung freigegeben
+  });
+
+  // F5-005: der Admin-Eintrag folgt derselben Regel wie adminAreaGuard (canOpenAdmin) — Recht genügt, Flag nicht nötig.
+  it('Admin-Eintrag nur, wenn der Admin-Bereich sich öffnen würde (je Recht, ohne Admin-Flag)', () => {
+    expect(render({ loggedIn: true, keys: ['puzzles'], perms: ['messages.admin'] }).componentInstance.showAdmin).toBeTrue();
+    TestBed.resetTestingModule();
+    expect(render({ loggedIn: true, keys: ['puzzles'], perms: ['ci.view'] }).componentInstance.showAdmin).toBeTrue();
+    TestBed.resetTestingModule();
+    expect(render({ loggedIn: true, keys: ['puzzles'], perms: ['league.view', 'catalog.manage'] }).componentInstance.showAdmin).toBeFalse();
   });
 
   it('„Gegner vorbereiten" nur mit dem Recht prep.view — dann auch ohne andere Einträge in „Analyse & Sammlung"', () => {

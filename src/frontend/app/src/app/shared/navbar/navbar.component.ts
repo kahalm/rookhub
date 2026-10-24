@@ -25,6 +25,7 @@ import { EinkService } from '../../core/eink.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { canOpenAdmin } from '../../features/admin/admin-tabs';
 import { authLinkQuery, isAuthPage } from '../../core/return-url.util';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
@@ -131,7 +132,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           <button mat-menu-item [matMenuTriggerFor]="userMenu">
             <mat-icon>account_circle</mat-icon><span>{{ 'nav.account' | translate }}</span>
           </button>
-          @if (auth.isAdmin) {
+          @if (showAdmin) {
             <button mat-menu-item routerLink="/admin">
               <mat-icon>admin_panel_settings</mat-icon><span>{{ 'nav.admin' | translate }}</span>
             </button>
@@ -575,8 +576,11 @@ export class NavbarComponent implements OnInit {
     this.notifications = [];
   }
 
+  /** Admin-Eintrag: dieselbe Regel wie adminAreaGuard (F5-005) — wer irgendeinen Admin-Tab sehen darf. */
+  get showAdmin(): boolean { return canOpenAdmin(this.auth); }
+
   /** Klick auf eine Benachrichtigung → als gelesen markieren (verschwindet aus der Glocke)
-   * + zur hinterlegten Route navigieren. */
+   * + zur hinterlegten Route navigieren. Admin-Deep-Links (/admin?tab=…) prüft adminAreaGuard je Recht. */
   openNotification(n: AppNotification): void {
     if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); }
     this.notifications = this.notifications.filter(x => x.id !== n.id);

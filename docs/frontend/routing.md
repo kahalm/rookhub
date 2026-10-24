@@ -35,5 +35,18 @@
 | `/repertoires/:id/flashcards` | FlashcardsComponent (UMGEKEHRT: Endstellung+[%cal]-Pfeile vorn, Linie+Abschlusstext hinten; `?lines=<lineKeys>`) | `authGuard` |
 | `/courses/:bookId/calc` | CalculationComponent (Kalkulations-Modus; MUSS vor der `:mode`-Route stehen) | `coursePlayGuard` |
 | `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `coursePlayGuard` |
+| `/admin` | AdminComponent (Tabs je Recht, Deep-Link `?tab=<key>`, Keys in `features/admin/admin-tabs.ts`) | `adminAreaGuard` (je Recht, F5-005 — siehe unten) |
 | `/` | redirect -> `/dashboard`, Gäste -> `GUEST_START_URL` (nach einer Anmelde-Übernahme löst `HandoffService.leaveGuestStart` den Start neu auf, UX-025) | - |
 | `**` | `shared/not-found/NotFoundComponent` (guard-frei, auch in LeagueHub; Codereview UX-026) | - |
+
+## Admin-Bereich: `adminAreaGuard` (F5-005)
+
+`/admin` hängt nicht am Admin-Flag, sondern an den Rechten: `features/admin/admin-area.guard.ts` lässt durch, wer
+mindestens einen Admin-Tab sehen darf (`canOpenAdmin`/`visibleAdminTabs` aus `admin-tabs.ts`, Tabelle
+`ADMIN_TAB_PERMISSIONS`; Admins dürfen alles). Ein Deep-Link `?tab=<key>` auf einen Tab ohne Recht leitet MIT Hinweis
+(`blockedNotice`) auf `/admin?tab=<erster erlaubter>` um; ganz ohne Recht Hinweis + `/dashboard`, Gäste zur Anmeldung
+mit Rücksprung (`loginRedirect`). Damit funktionieren die Glockenlinks (`/admin?tab=messages&thread=…`,
+`/admin?tab=uploads`, `/admin`) für Rechteinhaber ohne Admin-Flag. Der Menüeintrag „Admin" (`NavbarComponent.showAdmin`)
+nutzt dieselbe Funktion. Die Admin-Seite rendert nur die erlaubten Tabs; die mat-tab-Indizes zählen daher über
+`visibleTabs()`, Auswahl und URL gehen immer über den Key (`adminTabIndex(key, tabs)`), nie über einen festen Index.
+`core/admin.guard.ts` (`adminGuard`, nur Admin-Flag) bleibt für die Turnier-App.

@@ -200,7 +200,7 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
         }
       </div>
 
-      @if (auth.isAdmin && chessableActive.length > 0) {
+      @if (auth.has('chessable.admin') && chessableActive.length > 0) {
         <h2>{{ 'dashboard.chessableQueue.heading' | translate }}</h2>
         <mat-list>
           @for (imp of chessableActive; track imp.id) {
@@ -462,7 +462,7 @@ export class DashboardComponent implements OnInit {
     },
     chessableQueue: {
       id: 'chessableQueue', icon: 'cloud_download', titleKey: 'dashboard.chessableQueue.title',
-      eligible: () => this.auth.isAdmin,
+      eligible: () => this.auth.has('chessable.admin'),
       subtitle: () => ({
         key: this.chessableActive.length === 1 ? 'dashboard.chessableQueue.countOne' : 'dashboard.chessableQueue.count',
         params: { count: this.chessableActive.length },
@@ -595,8 +595,8 @@ export class DashboardComponent implements OnInit {
     ).subscribe(() => this.dashboardService.getFriends().pipe(catchError(() => of([])))
       .subscribe(friends => this.friendCount = friends.length));
 
-    // Admin: aktive Chessable-Queue laufend anzeigen (sofort + alle 10 s).
-    if (this.auth.isAdmin) {
+    // Chessable-Admin (F5-005: Recht chessable.admin, wie der Server): aktive Queue laufend anzeigen (sofort + alle 10 s).
+    if (this.auth.has('chessable.admin')) {
       timer(0, 10000).pipe(
         switchMap(() => this.chessable.getActiveImportsAdmin().pipe(catchError(() => of([] as ChessableAdminImport[])))),
         takeUntilDestroyed(this.destroyRef),

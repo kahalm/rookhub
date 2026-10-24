@@ -4,7 +4,7 @@ import { AuthService } from './core/auth.service';
 import { GUEST_START_URL } from './core/handoff.service';
 import { authGuard } from './core/auth.guard';
 import { guestGuard } from './core/guest.guard';
-import { adminGuard } from './core/admin.guard';
+import { adminAreaGuard } from './features/admin/admin-area.guard';
 import { coursePlayGuard } from './core/course-play.guard';
 import { menuGuard } from './core/menu.guard';
 import { permissionGuard } from './core/permission.guard';
@@ -104,7 +104,7 @@ export const routes: Routes = [
   { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'chessable', loadComponent: () => import('./features/chessable/chessable.component').then(m => m.ChessableComponent), canActivate: [authGuard, menuGuard('chessable')] },
-  { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminGuard] },
+  { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminAreaGuard] },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
   // Geteilte Rekonstruktion: die ganze Partie samt ihrer Lücken, ohne Anmeldung — man verschickt

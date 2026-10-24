@@ -19,7 +19,7 @@ const MENU = new Set<string>([
   'courses', 'leaderboards', 'games', 'weekly', 'stats', 'analysis',
 ]);
 
-function setup(opts: { isAdmin?: boolean; friends?: unknown[]; courses?: unknown[]; arrived?: Subject<void> } = {}) {
+function setup(opts: { isAdmin?: boolean; perms?: string[]; friends?: unknown[]; courses?: unknown[]; arrived?: Subject<void> } = {}) {
   const arrived = opts.arrived ?? new Subject<void>();
   const dashboardService = {
     getRepertoires: () => of([]),
@@ -33,7 +33,7 @@ function setup(opts: { isAdmin?: boolean; friends?: unknown[]; courses?: unknown
     providers: [
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
       provideTranslateService({ fallbackLang: 'en' }),
-      { provide: AuthService, useValue: { isAdmin: opts.isAdmin ?? false, currentUser: { username: 'me' } } },
+      { provide: AuthService, useValue: { isAdmin: opts.isAdmin ?? false, has: (p: string) => (opts.isAdmin ?? false) || (opts.perms ?? []).includes(p), currentUser: { username: 'me' } } },
       { provide: DashboardService, useValue: dashboardService },
       { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
       { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
@@ -68,7 +68,7 @@ describe('DashboardComponent friend-count reactivity', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me' } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me' } } },
         { provide: DashboardService, useValue: { getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]), getFriends: () => of(friends), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
         { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
         { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
@@ -105,7 +105,7 @@ describe('DashboardComponent cached snapshot', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
         { provide: DashboardService, useValue: {
           getRepertoires: () => never, getCourses: () => never, getSubscriptions: () => never,
           getFriends: () => never, getPuzzleStats: () => never,
@@ -133,7 +133,7 @@ describe('DashboardComponent cached snapshot', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
         { provide: DashboardService, useValue: {
           getRepertoires: () => of([{}, {}]),
           getCourses: () => of([{ isPinned: false }, { isPinned: false }, { isPinned: false }]),
@@ -170,7 +170,7 @@ describe('DashboardComponent cached snapshot', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
         { provide: DashboardService, useValue: service },
         { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
         { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
@@ -246,6 +246,13 @@ describe('DashboardComponent tiles', () => {
     expect(component.visibleTiles.map(t => t.id)).not.toContain('chessableQueue'); // Standard: aus
     component.editing = true;
     expect(component.visibleTiles.map(t => t.id)).toContain('chessableQueue');     // im Edit zuschaltbar
+  });
+
+  // F5-005: die Queue hängt am Recht chessable.admin (wie der Server), nicht am Admin-Flag.
+  it('offers the chessable-queue tile to chessable.admin holders without the admin flag', () => {
+    const { component } = setup({ isAdmin: false, perms: ['chessable.admin'] });
+    component.editing = true;
+    expect(component.visibleTiles.map(t => t.id)).toContain('chessableQueue');
   });
 
   it('toggling a tile hides it (outside edit mode) and persists', () => {
@@ -334,7 +341,7 @@ describe('DashboardComponent pinned courses', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
         { provide: DashboardService, useValue: {
           getRepertoires: () => of([]), getCourses: () => of([pinned]), getSubscriptions: () => of([]),
           getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
@@ -367,7 +374,7 @@ describe('DashboardComponent Kachel-Aktionen', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
         { provide: DashboardService, useValue: {
           getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]),
           getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
@@ -411,7 +418,7 @@ describe('DashboardComponent angepinnte Kurse über die volle Breite', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me', userId: 7 } } },
         { provide: DashboardService, useValue: {
           getRepertoires: () => of([]), getCourses: () => of(pinned), getSubscriptions: () => of([]),
           getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }),
@@ -465,7 +472,7 @@ describe('DashboardComponent admin Chessable queue status line', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isAdmin: true, currentUser: { username: 'me' } } },
+        { provide: AuthService, useValue: { isAdmin: true, has: () => true, currentUser: { username: 'me' } } },
         { provide: DashboardService, useValue: { getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]), getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
         { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
         { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([fetching, queued]) } },
@@ -515,7 +522,7 @@ describe('DashboardComponent admin cancel of a stuck Chessable import', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
         // isAdmin=false: kein 10-s-Poll im Test, die Liste wird direkt gesetzt.
-        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me' } } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false, currentUser: { username: 'me' } } },
         { provide: DashboardService, useValue: { getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]), getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
         { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
         { provide: ChessableService, useValue: chessable },

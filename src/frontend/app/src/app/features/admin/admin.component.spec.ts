@@ -22,6 +22,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ResetLinkDialogComponent } from './reset-link-dialog.component';
+import { AdminLeagueUploadsComponent } from './tabs/admin-league-uploads.component';
 
 /** Rückfrage-Doppelgänger: `answer` legt fest, was der Dialog liefert (F5-013). */
 const confirmStub = { answer: true, ask: jasmine.createSpy('ask') };
@@ -46,8 +47,10 @@ function make(adminOverrides: any = {}, auth: any = {}) {
   const router = { navigate: jasmine.createSpy('navigate').and.returnValue(Promise.resolve(true)) };
   const route = {};
   const menu = { refresh: jasmine.createSpy('refresh') };
+  // Standard: Admin (alle Tabs); Tests überschreiben einzelne Felder.
+  const authStub = { has: () => true, isAdminLive: true, ...auth };
   const c = TestBed.runInInjectionContext(() => new AdminComponent(
-    adminService as any, menu as any, auth,
+    adminService as any, menu as any, authStub as any,
     router as any, route as any, snackbar as any, translate as any,
   ));
   return { c, adminService, snackbar, router, menu };
@@ -689,7 +692,7 @@ describe('AdminComponent – Tabs mit eigenem Formular (F5-020)', () => {
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
         { provide: AdminService, useValue: adminService },
         { provide: MenuService, useValue: { refresh: () => {} } },
-        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true } } },
+        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true }, has: () => true, isAdminLive: true } },
         { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap(queryParams)) } },
       ],
     });
@@ -785,7 +788,7 @@ describe('AdminComponent – Gruppenliste der behaltenen Tabs (F5-020)', () => {
         { provide: MenuService, useValue: { refresh: () => {} } },
         { provide: SnackbarService, useValue: { info: () => {} } },
         { provide: ConfirmService, useValue: { ask: () => of(true) } },
-        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true } } },
+        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true }, has: () => true, isAdminLive: true } },
         { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap({})) } },
       ],
     });
@@ -858,7 +861,7 @@ describe('AdminComponent – Kartenliste der Konten', () => {
           getUsers: () => of({ items: users, totalCount: 2 }), getBooks: () => of([]),
           getGroups: () => of([]), getConfig: () => of({ kibanaUrl: '' }) } },
         { provide: MenuService, useValue: { refresh: () => {} } },
-        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true } } },
+        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true }, has: () => true, isAdminLive: true } },
         { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap({})) } },
       ],
     });
@@ -909,5 +912,77 @@ describe('AdminComponent – Kartenliste der Konten', () => {
     const css = (((AdminComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? [])
       .join('\n').replace(/%NS%/g, '').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
     expect(css).toMatch(/@media \(max-width: ?899\.98px\) ?\{[^@]*\.user-cards ?\{[^}]*margin-bottom: ?12px/);
+  });
+});
+
+/**
+ * F5-005: der Admin-Bereich öffnet sich je Recht — nur die erlaubten Tabs werden gerendert, die Tab-Indizes zählen über
+ * die sichtbaren Tabs, und es wird nur geladen, was der Nutzer sehen darf.
+ */
+@Component({ selector: 'app-admin-league-uploads', standalone: true, template: 'uploads' }) class UploadsTabStub {}
+
+describe('AdminComponent – Tabs je Recht (F5-005)', () => {
+  async function render(perms: string[], queryParams: Record<string, string> = {}) {
+    const adminService = {
+      getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: [], totalCount: 0 })),
+      getBooks: jasmine.createSpy('getBooks').and.returnValue(of([])),
+      getGroups: jasmine.createSpy('getGroups').and.returnValue(of([])),
+      getConfig: jasmine.createSpy('getConfig').and.returnValue(of({ kibanaUrl: '' })),
+    };
+    TestBed.configureTestingModule({
+      imports: [AdminComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: AdminService, useValue: adminService },
+        { provide: MenuService, useValue: { refresh: () => {} } },
+        { provide: AuthService, useValue: { currentUser: { userId: 2, isAdmin: false }, isAdminLive: false, has: (p: string) => perms.includes(p) } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap(queryParams)) } },
+      ],
+    });
+    TestBed.overrideComponent(AdminComponent, {
+      remove: { imports: [AdminMessagesComponent, AdminLeagueUploadsComponent] },
+      add: { imports: [MessagesTabStub, UploadsTabStub] },
+    });
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const fixture = TestBed.createComponent(AdminComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const labels = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('[role="tab"]'))
+      .map(t => t.textContent!.trim());
+    return { fixture, adminService, labels };
+  }
+
+  it('messages.admin sieht nur Nachrichten und Uploads und lädt keine fremden Listen', async () => {
+    const { fixture, adminService, labels } = await render(['messages.admin']);
+    expect(labels().length).toBe(2);
+    expect(fixture.componentInstance.visibleTabs()).toEqual(['messages', 'uploads']);
+    expect(adminService.getUsers).not.toHaveBeenCalled();
+    expect(adminService.getBooks).not.toHaveBeenCalled();
+    expect(adminService.getGroups).not.toHaveBeenCalled();
+    expect(adminService.getConfig).not.toHaveBeenCalled();
+  });
+
+  it('der Glockenlink ?tab=uploads wählt den Tab über die SICHTBAREN Tabs (Index 1, nicht 10)', async () => {
+    const { fixture } = await render(['messages.admin'], { tab: 'uploads' });
+    expect(fixture.componentInstance.selectedTabIndex).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('uploads');
+  });
+
+  it('onTabChange schreibt den Key des sichtbaren Tabs in die URL', async () => {
+    const { fixture } = await render(['messages.admin']);
+    fixture.componentInstance.onTabChange(1);
+    const router = TestBed.inject(Router);
+    expect((router.navigate as jasmine.Spy).calls.mostRecent().args[1].queryParams).toEqual({ tab: 'uploads' });
+  });
+
+  it('users.manage ohne Admin-Flag: Nutzer-Tab ohne Admin-Umschalter, Admin-Konten ohne Aktionen', async () => {
+    const { fixture, adminService } = await render(['users.manage']);
+    expect(fixture.componentInstance.visibleTabs()).toEqual(['users']);
+    expect(adminService.getUsers).toHaveBeenCalled();
+    const c = fixture.componentInstance;
+    expect(c.actorIsAdmin).toBeFalse();
+    expect(c.canManageUser({ id: 5, isAdmin: false } as any)).toBeTrue();
+    expect(c.canManageUser({ id: 6, isAdmin: true } as any)).toBeFalse();
   });
 });
