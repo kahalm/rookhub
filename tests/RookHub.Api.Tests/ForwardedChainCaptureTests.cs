@@ -67,15 +67,20 @@ public class ForwardedChainCaptureTests
     [Fact]
     public void ProgramCs_CapturesBeforeForwardedHeaders_AndLogsTheRawChain()
     {
-        var src = StartupSource.All();
+        var src = StartupSource.Program();
         var capture = src.IndexOf("app.UseForwardedChainCapture();", StringComparison.Ordinal);
         var forwarded = src.IndexOf("app.UseForwardedHeaders();", StringComparison.Ordinal);
         Assert.True(capture >= 0, "app.UseForwardedChainCapture() fehlt in Program.cs");
         Assert.True(forwarded >= 0, "app.UseForwardedHeaders() fehlt in Program.cs");
         Assert.True(capture < forwarded, "Die Kette muss VOR UseForwardedHeaders gemerkt werden");
 
-        Assert.Contains("ForwardedChainCapture.Get(ctx)", src, StringComparison.Ordinal);
-        Assert.DoesNotContain("Headers[\"X-Original-For\"]", src, StringComparison.Ordinal);
-        Assert.DoesNotContain("\"XRealIp\"", src, StringComparison.Ordinal);
+        // Die Anreicherung je Anfrage steht in RequestLogContextMiddleware (früher Inline-Lambda in Program.cs).
+        var enrich = StartupSource.Read("Middleware/RequestLogContextMiddleware.cs");
+        Assert.Contains("ForwardedChainCapture.Get(context)", enrich, StringComparison.Ordinal);
+        foreach (var code in new[] { src, enrich })
+        {
+            Assert.DoesNotContain("Headers[\"X-Original-For\"]", code, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"XRealIp\"", code, StringComparison.Ordinal);
+        }
     }
 }

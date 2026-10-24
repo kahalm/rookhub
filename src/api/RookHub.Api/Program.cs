@@ -1,36 +1,13 @@
-using System.Security.Claims;
-using System.Text;
-using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using RookHub.Api.Data;
-using RookHub.Api.Logging;
 using RookHub.Api.Middleware;
 using RookHub.Api.Services;
-using Serilog;
-using Serilog.Context;
-using Serilog.Events;
-using Elastic.Serilog.Sinks;
-using RookHub.Api.Services.TournamentDirectory;
 using RookHub.Api.Services.Chessable;
-using RookHub.Api.Services.Courses;
-using RookHub.Api.Services.Puzzles;
-using RookHub.Api.Services.Repertoires;
-using RookHub.Api.Services.Engines;
-using RookHub.Api.Services.Games;
-using RookHub.Api.Services.Scoresheet;
-using RookHub.Api.Services.Library;
-using RookHub.Api.Services.Kids;
-using RookHub.Api.Services.Tournaments;
-using RookHub.Api.Services.Accounts;
-using RookHub.Api.Services.Social;
 using RookHub.Api.Startup;
+using Serilog;
 
+// Startup: nur noch die REIHENFOLGE der Aufrufe. Die Registrierungen je Belang stehen in Startup/ (Logging, Datenbank,
+// Auth, Fachdienste je Bereich, Hosted Services, HttpClients, CORS, Rate-Limiting, Controller, Health) — die
+// Middleware-Reihenfolge unten ist Verhalten und wird von PatScopeFenceTests/ForwardedChainCaptureTests bewacht.
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
@@ -90,21 +67,8 @@ try
     SecretConfigCheck.LogStartupFindings(app.Configuration,
         app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
 
-    // Auto-migrate on startup + seed admin
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.Migrate();
-        await AdminSeeder.SeedAsync(db, app.Configuration);
-        await RoleSeeder.SeedAsync(db);   // RBAC-Grundgerüst (System-Rollen + IsAdmin→admin-Rolle spiegeln)
-        // Ligamanager-Ligen ohne Tnr-Versatz (Altbestand vor dem Versatz; erwartet: keine) nur melden, nicht umschreiben.
-        await RookHub.Api.Services.League.LigamanagerSource.WarnLegacyTnrsAsync(db,
-            app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
-        // Feste Ligapaarungen der Vereinspartien heilen (0.716.1): Schlüssel nachtragen, tote Ids über den Schlüssel bzw. die
-        // Paarungssuche neu finden oder leeren. Idempotent, wirft nie.
-        await RookHub.Api.Services.League.LeagueGameLinks.HealOnStartupAsync(db,
-            app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
-    }
+    // Auto-Migration beim Start + Seeds (Startup/DatabaseSetup.cs).
+    await app.MigrateAndSeedAsync();
 
     // H-5: Global exception handler. Domänen-Ausnahmen kommen hier nicht an (DomainExceptionFilter);
     // was hier landet, ist ein echter Fehler → 500, die Middleware loggt ihn auf Error mit Stacktrace.
@@ -136,118 +100,17 @@ try
 
     app.UseRateLimiter();
 
-    // Reichert JEDES Log-Event innerhalb eines Requests mit UserId/UserName/IpAddress an
-    // (sofern vorhanden) — nicht nur die Request-Summary. Greift via Enrich.FromLogContext().
-    // Nach UseAuthentication, damit HttpContext.User bereits gesetzt ist.
-    app.Use(async (ctx, next) =>
-    {
-        var scopes = new List<IDisposable>(6);
-        var ip = ctx.Connection.RemoteIpAddress?.ToString();
-        if (!string.IsNullOrEmpty(ip))
-            scopes.Add(LogContext.PushProperty("IpAddress", ip));
-        // IpAddress oben ist die VERTRAUENSWUERDIGE, aufgeloeste Client-IP (Basis fuer
-        // Rate-Limiter). Zusaetzlich die ROHE Weiterleitungs-Kette, wie sie ankam — alle Hops
-        // inkl. vom Client vorangestellter Eintraege, die nicht als Client-IP gewaehlt wurden.
-        // Gemerkt VOR UseForwardedHeaders (ForwardedChainCapture, auf 256 Zeichen gekappt):
-        // X-Original-For traegt nur den Socket-Peer (frontend-nginx mit Port), nicht die Kette.
-        // X-Real-IP wird nicht mehr geloggt — frontend-nginx ueberschreibt es mit $remote_addr,
-        // dort stand also immer das Docker-Gateway (Codereview A10-008).
-        var fwd = ForwardedChainCapture.Get(ctx);
-        if (!string.IsNullOrEmpty(fwd))
-            scopes.Add(LogContext.PushProperty("ForwardedFor", fwd));
-        if (ctx.User?.Identity?.IsAuthenticated == true)
-        {
-            var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
-                scopes.Add(LogContext.PushProperty("UserId", userId));
-            if (!string.IsNullOrEmpty(ctx.User.Identity.Name))
-                scopes.Add(LogContext.PushProperty("UserName", ctx.User.Identity.Name));
-            // Admin-Impersonation: das Token trägt dann den `imp`-Claim (Id des impersonierenden Admins).
-            // Ohne Marker sehen impersonierte Requests im Log identisch zum echten User aus → hier als
-            // ImpersonatorId mitschreiben, damit jeder impersonierte Request in Kibana filterbar ist.
-            var imp = ctx.User.FindFirst("imp")?.Value;
-            if (!string.IsNullOrEmpty(imp))
-                scopes.Add(LogContext.PushProperty("ImpersonatorId", imp));
-        }
-        // VisitorId fuer Kibana „Unique Visits": Username (eingeloggt) sonst validierte Anon-Session-Id
-        // aus dem X-Visitor-Id-Header. So zaehlen eingeloggte UND anonyme Besucher in EINEM Feld.
-        var visitorId = RookHub.Api.Logging.VisitorIdResolver.Resolve(
-            ctx.User?.Identity?.IsAuthenticated == true,
-            ctx.User?.Identity?.Name,
-            ctx.Request.Headers[RookHub.Api.Logging.VisitorIdResolver.HeaderName].FirstOrDefault());
-        if (!string.IsNullOrEmpty(visitorId))
-            scopes.Add(LogContext.PushProperty("VisitorId", visitorId));
-        // Systemcall-Flag: automatische, nicht nutzer-initiierte Requests (Health/Swagger, Client-
-        // Heartbeat/-Diagnose, Menü-Check, Badge-/Zähler-Polls, Import-Status-Polls) als
-        // RequestKind="system" markieren — echter Nutzer-Traffic bekommt "user". In Kibana filterbar,
-        // um das automatische Grundrauschen vom echten Nutzerverhalten zu trennen.
-        scopes.Add(LogContext.PushProperty(
-            "RequestKind",
-            RookHub.Api.Logging.SystemCallClassifier.Classify(ctx.Request.Path.Value)));
-        // Geräteklasse (mobile/tablet/desktop/bot/unknown) aus dem User-Agent → in Kibana als
-        // Mobile-vs-PC-Anteil (gesamt + je Bereich über url.path) auswertbar. Roh-UA gekürzt
-        // mitschreiben (Diagnose), DeviceType immer (auch "unknown", damit die Terms-Agg vollständig ist).
-        var ua = ctx.Request.Headers.UserAgent.ToString();
-        if (!string.IsNullOrEmpty(ua))
-            scopes.Add(LogContext.PushProperty("UserAgent", ua.Length > 512 ? ua[..512] : ua));
-        scopes.Add(LogContext.PushProperty(
-            "DeviceType", RookHub.Api.Logging.DeviceClassifier.Classify(ua)));
-        try { await next(); }
-        finally { for (var i = scopes.Count - 1; i >= 0; i--) scopes[i].Dispose(); }
-    });
+    // Reichert JEDES Log-Event innerhalb eines Requests an (UserId/UserName/IpAddress/VisitorId/RequestKind/DeviceType,
+    // Middleware/RequestLogContextMiddleware). Nach UseAuthentication, damit HttpContext.User bereits gesetzt ist.
+    app.UseRequestLogContext();
 
-    app.UseSerilogRequestLogging(options =>
-    {
-        // UserId/UserName ans Request-Completion-Log hängen. Die LogContext-Anreicherungs-Middleware
-        // oben läuft VOR UseAuthorization — ApiToken-authentifizierte Requests (z. B. die RepCheck-
-        // Extension mit `rkh_`-Token) werden aber erst in der Autorisierung authentifiziert, sodass
-        // dort `HttpContext.User` noch anonym war und das Request-Log KEINE UserId trug. Diese
-        // Enrichment-Lambda läuft erst NACH dem Endpoint (Completion), da ist `User` gesetzt →
-        // z. B. die Extension-Nutzerzahl (distinct UserId über `/api/extension/*`) wird in Kibana
-        // zählbar. Für JWT-Requests ist es idempotent (gleicher Wert wie via LogContext).
-        options.EnrichDiagnosticContext = (diagCtx, httpCtx) =>
-        {
-            if (httpCtx.User?.Identity?.IsAuthenticated != true) return;
-            var uid = httpCtx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(uid)) diagCtx.Set("UserId", uid);
-            if (!string.IsNullOrEmpty(httpCtx.User.Identity.Name))
-                diagCtx.Set("UserName", httpCtx.User.Identity.Name);
-        };
-        options.GetLevel = (httpContext, elapsed, ex) =>
-        {
-            var path = httpContext.Request.Path.Value ?? "";
-            if (path.StartsWith("/health") || path.StartsWith("/swagger"))
-                return LogEventLevel.Debug;
-            // Long-Poll der Engine-Provider (eigener Broker): 13 Provider = 78 Zeilen je Minute ohne Aussage.
-            // Die abgeholten Auftraege protokolliert der Upload selbst (EngineBroker: Upload …).
-            if (path.Equals("/api/external-engine/work", StringComparison.OrdinalIgnoreCase)
-                && httpContext.Response.StatusCode < 400 && ex == null)
-                return LogEventLevel.Debug;
-            if (ex != null || httpContext.Response.StatusCode >= 500)
-                return LogEventLevel.Error;
-            return LogEventLevel.Information;
-        };
-    });
+    // Request-Completion-Log je Anfrage (Startup/LoggingSetup.cs) — UserId kommt dort auch für ApiToken-Anfragen dazu,
+    // die erst in der Autorisierung angemeldet werden.
+    app.UseRookHubRequestLogging();
     app.UseAuthorization();
     app.MapControllers();
 
-    app.MapGet("/health", async (AppDbContext db) =>
-    {
-        try
-        {
-            // FALLE: `CanConnectAsync` WIRFT bei einer toten Datenbank nicht, es liefert `false`. Der
-            // verworfene Rückgabewert machte /health zu einem „immer gesund" — und daran hängen der
-            // Docker-Healthcheck in Produktion und die service_healthy-Kette der e2e-Läufe.
-            var ok = await db.Database.CanConnectAsync();
-            return ok
-                ? Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow })
-                : Results.Json(new { status = "unhealthy", timestamp = DateTime.UtcNow }, statusCode: 503);
-        }
-        catch
-        {
-            return Results.Json(new { status = "unhealthy", timestamp = DateTime.UtcNow }, statusCode: 503);
-        }
-    });
+    app.MapRookHubHealth();
 
     await app.RunAsync();
 }
