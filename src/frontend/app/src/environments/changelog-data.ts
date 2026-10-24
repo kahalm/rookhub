@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.7", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z17/N9-008): the game-library maintenance tool is split into one class per command (17 commands, byte-identical output), CI now builds the tools too, and the training-goal service is split into goals, activity logs, per-source counters and a pure day/week projection — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z17/N9-008): Das Wartungswerkzeug für den Partie-Rohbestand ist in eine Klasse je Befehl zerlegt (17 Befehle, Ausgabe byte-gleich), die CI baut die Werkzeuge jetzt mit, und der Trainingsziel-Dienst ist in Ziele, Aktivitätsprotokolle, Zähler je Quelle und eine reine Tages-/Wochenrechnung zerlegt — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.6", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z14/Z15): the LeagueHub club database service is split into PGN text, side resolver, reader, writer and importer; account deletion runs as a fixed, ordered list of per-area erasers, and the deletion guard now also recognises foreign keys to the user — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z14/Z15): Der Vereins-Datenbank-Dienst von LeagueHub ist in PGN-Text, Seiten-Abgleich, Lesen, Schreiben und Einlesen zerlegt; die Kontolöschung läuft als feste, geordnete Liste von Löschern je Bereich, und der Löschpflicht-Wächter erkennt jetzt auch Fremdschlüssel auf den Nutzer — keine sichtbare Änderung." },
   ]},
