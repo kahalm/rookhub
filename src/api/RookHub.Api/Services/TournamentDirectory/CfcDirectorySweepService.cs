@@ -42,12 +42,11 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// <para><b>Was diese Quelle nicht liefert</b>: Bedenkzeit, Rundenzahl, Teilnehmerzahl. Die
 /// Turnier<b>art</b> bleibt wie bei allen Zusatzquellen <c>Unknown</c>.</para>
 /// </summary>
-public class CfcDirectorySweepService
+public class CfcDirectorySweepService : IDirectorySourceAdapter<CfcDirectorySweepService.CrawlerCfcEvent>
 {
     /// <summary>Die einzige Foederation, die diese Quelle je liefert.</summary>
     internal const string Federation = "CAN";
 
-    private const int SaveEvery = 25;
 
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -67,109 +66,50 @@ public class CfcDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        int added = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob wir sie lesen
-                // koennen, ist eine andere Frage — stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt. Ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(PublicIdOf(row.EventId));
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = PublicIdOf(row.EventId);
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, Federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.CanadianChessFederation, publicId, row.Place), ct);
-
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.CanadianChessFederation, publicId, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("cfc: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = HasVenue(row.Place) ? row.Place!.Trim() : null;
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = Federation;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.State = ExternalDirectorySource.Truncate(row.Province, 100);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.CanadianChessFederation, publicId, row.Url, now, ct);
-
-                if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
-                {
-                    var hit = await _geocoding.ResolveAsync(location, own.State, Federation, ct);
-                    if (hit is not null && hit.Source != GeoSource.Ambiguous)
-                    {
-                        own.Lat = hit.Lat;
-                        own.Lon = hit.Lon;
-                        own.GeoSource = hit.Source;
-                        own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
-                    }
-                }
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "cfc: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "CFC-Kalender: {Read} gelesen, {Added} neu, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.CanadianChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, 0, matched, retired);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerCfcEvent>.Kind => DirectorySourceKind.CanadianChessFederation;
+    string IDirectorySourceAdapter<CrawlerCfcEvent>.LogName => "cfc";
+    string? IDirectorySourceAdapter<CrawlerCfcEvent>.SourceKey(CrawlerCfcEvent row) => row.EventId.Length == 0 ? null : PublicIdOf(row.EventId);
+    DateOnly? IDirectorySourceAdapter<CrawlerCfcEvent>.Start(CrawlerCfcEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerCfcEvent>.Name(CrawlerCfcEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerCfcEvent>.PublicId(CrawlerCfcEvent row) => PublicIdOf(row.EventId);
+    string IDirectorySourceAdapter<CrawlerCfcEvent>.Federation(CrawlerCfcEvent row) => Federation;
+    string? IDirectorySourceAdapter<CrawlerCfcEvent>.MatchPlace(CrawlerCfcEvent row) => row.Place;
+    string? IDirectorySourceAdapter<CrawlerCfcEvent>.Url(CrawlerCfcEvent row) => row.Url;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerCfcEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerCfcEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var location = HasVenue(row.Place) ? row.Place!.Trim() : null;
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = Federation;
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        own.State = ExternalDirectorySource.Truncate(row.Province, 100);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.CanadianChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
+
+        // Verortet zaehlt hier nicht als „aktualisiert" (die Antwort meldet 0, wie bisher).
+        await ExternalSweepRunner.LocateAsync(_geocoding, own, location, own.State, Federation, locationChanged, ct);
+        return false;
+    }
+
+    void IDirectorySourceAdapter<CrawlerCfcEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "CFC-Kalender: {Read} gelesen, {Added} neu, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, matched, retired);
+
 
     /// <summary>
     /// Ob der Ortstext ein SPIELORT ist. Kanadische Veranstalter tragen bei noch offener
