@@ -3,7 +3,7 @@ using RookHub.Api.Models;
 namespace RookHub.Api.Services.Games;
 
 /// <summary>
-/// Die Reihenfolge-Regeln der Partie-Pumpe (<see cref="GameAnalysisService.PumpOneAsync"/>) als reine Funktionen:
+/// Die Reihenfolge-Regeln der Partie-Pumpe (<see cref="GameAnalysisPump.PumpOneAsync"/>) als reine Funktionen:
 /// wann eine Partie nachgefuettert werden darf, wie viele Vertiefungs-Auftraege offen stehen duerfen und welche
 /// Stellungen die Vertiefung zuerst rechnet. Die Abfragen (offene Stellungen, Engine-Zahl) macht der Dienst; hier
 /// steht nur, was er mit den Zahlen tut — so ist jede Regel ohne Datenbank und ohne Pumpe pruefbar.
@@ -30,7 +30,7 @@ internal static class GameAnalysisTurnRules
     /// Engine-Besitzer Hintergrund-Engines hat — mindestens <see cref="GameAnalysisDefaults.MaxOpenRefineJobsPerGame"/>,
     /// hoechstens <see cref="GameAnalysisDefaults.MaxOpenJobsPerGame"/>.
     ///
-    /// <para>Vorher galt fest 8. Vertieft wurde damals immer nur EINE Partie zur Zeit (<c>GameAnalysisService.IsOwnersRefineTurnAsync</c>,
+    /// <para>Vorher galt fest 8. Vertieft wurde damals immer nur EINE Partie zur Zeit (<c>GameAnalysisTurns.IsOwnersRefineTurnAsync</c>,
     /// erst 0.647.0 laesst am Schwanz die naechste anfangen), also hatte der ganze Engine-Park genau 8 Auftraege: am 27.09. auf Prod rechneten Hintergrund 1–8, waehrend
     /// Hintergrund 9–12 und die vier Server-Engines online in der Liste standen und nichts taten. Die Sorge hinter
     /// der kleinen Zahl — den Deckel je Nutzer (<see cref="AnalysisJobService.MaxOpenJobsPerUser"/>, 150) fuer den

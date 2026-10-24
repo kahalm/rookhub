@@ -27,15 +27,18 @@ namespace RookHub.Api.Services.Games;
 /// als König-schlägt-Turm — beides wird beim Einlesen begradigt (<see cref="BrokerCandidates"/>),
 /// damit spätere Auswertungen nicht jedes Mal daran denken müssen.</item>
 /// </list>
+///
+/// <para>Seit der Zerlegung Z5 (2026-10-24) eine Fassade mit unveränderter Oberfläche: Anlegen in
+/// <see cref="GameAnalysisIntake"/>, Lesen in <see cref="GameAnalysisQueries"/>, Löschen in
+/// <see cref="GameAnalysisDeletion"/>, die Pumpe in <see cref="GameAnalysisPump"/> (mit <see cref="GameAnalysisIngest"/>
+/// und <see cref="GameAnalysisTurns"/>; Regeln als reine Funktionen in <see cref="GameAnalysisTurnRules"/>).</para>
 /// </summary>
 public class GameAnalysisService
 {
-    private readonly AppDbContext _db;
-    private readonly AnalysisJobService _jobs;
-    private readonly CommentSetService _comments;
-    private readonly ILogger<GameAnalysisService> _logger;
-    private readonly IGameReviewTextScheduler? _reviewTexts;
-    private readonly QuietHours? _quiet;
+    private readonly GameAnalysisIntake _intake;
+    private readonly GameAnalysisQueries _queries;
+    private readonly GameAnalysisDeletion _deletion;
+    private readonly GameAnalysisPump _pump;
 
     /// <param name="reviewTexts">Schreibt nach dem Ende einer Analyse die Texte zur Partie (0.540.0); ohne (Tests,
     /// Werkzeuge) passiert nichts.</param>
@@ -44,1301 +47,126 @@ public class GameAnalysisService
     public GameAnalysisService(AppDbContext db, AnalysisJobService jobs, CommentSetService comments,
         ILogger<GameAnalysisService> logger, IGameReviewTextScheduler? reviewTexts = null, QuietHours? quiet = null)
     {
-        _db = db;
-        _jobs = jobs;
-        _comments = comments;
-        _logger = logger;
-        _reviewTexts = reviewTexts;
-        _quiet = quiet;
+        _queries = new GameAnalysisQueries(db);
+        _deletion = new GameAnalysisDeletion(db, jobs, logger);
+        _pump = new GameAnalysisPump(db, jobs, logger, reviewTexts, quiet);
+        _intake = new GameAnalysisIntake(db, jobs, comments, logger, _pump, _queries, _deletion);
     }
 
-    // ===== Anlegen ==========================================================
+    // ===== Anlegen (GameAnalysisIntake) =====================================
 
-    public async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
+    /// <inheritdoc cref="GameAnalysisIntake.CreateAsync"/>
+    public Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
         GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null,
         int? libraryGameId = null, int? leagueClubGameId = null, string? movesHash = null)
-    {
-        var depth = req.TargetDepth ?? GameAnalysisDefaults.TargetDepth;
-        if (depth is < 1 or > AnalysisJobService.MaxDepth)
-            throw new ArgumentException($"Depth must be 1..{AnalysisJobService.MaxDepth}");
-        var multiPv = req.MultiPv ?? GameAnalysisDefaults.MultiPv;
-        if (multiPv is < 1 or > AnalysisJobService.MaxMultiPv)
-            throw new ArgumentException($"Lines must be 1..{AnalysisJobService.MaxMultiPv}");
+        => _intake.CreateAsync(userId, req, ct, origin, engineOwnerUserId, libraryGameId, leagueClubGameId, movesHash);
 
-        var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
-        if (req.TargetNodes is not null)
-        {
-            // Knotenziel nur mit ausdrücklich gewählter Engine (sonst rechnete eine Tiefen-Engine mit Knotenlimit) und nur
-            // von Hand angelegt; die Engine muss dem Engine-Besitzer gehören (A4-003) — VOR dem Anlegen, nicht erst beim
-            // ersten Stellungs-Auftrag, damit der Nutzer die Absage liest.
-            if (engineId is null) throw new ArgumentException("Nodes need an engine");
-            // Vereinspartien bekommen ihre zweite Engine automatisch (ClubSecondEngineScheduler, 0.684.0).
-            if (origin is not (GameAnalysisOrigin.Manual or GameAnalysisOrigin.Club))
-                throw new ArgumentException("Nodes only for manual or club analyses");
-            if (req.TargetNodes is < AnalysisJobService.MinTargetNodes or > AnalysisJobService.MaxTargetNodes)
-                throw new ArgumentException(
-                    $"Nodes must be {AnalysisJobService.MinTargetNodes}..{AnalysisJobService.MaxTargetNodes}");
-            await _jobs.VerifyEngineAsync(engineOwnerUserId ?? userId, engineId, ct);
-        }
-
-        var parsed = GamePlies.Parse(req.Pgn, GameAnalysisDefaults.MaxPlies)
-            ?? throw new ArgumentException("PGN enthält keine spielbare Partie");
-        var (header, plies) = parsed;
-
-        var title = string.IsNullOrWhiteSpace(req.Title)
-            ? GameAnalysisText.BuildTitle(header)
-            : req.Title.Trim();
-        // Zwei Analysen DERSELBEN Partie (Tiefe auf Stockfish, Knoten auf lc0) sollen in der Liste unterscheidbar sein.
-        var suffix = req.TargetNodes is { } nodes ? $" ({GameAnalysisText.NodesLabel(nodes)} nodes)" : string.Empty;
-        if (title.Length + suffix.Length > 200) title = title[..(200 - suffix.Length)];
-        title += suffix;
-
-        var analysis = new GameAnalysis
-        {
-            UserId = userId,
-            Title = title,
-            Pgn = req.Pgn!,
-            White = header.White,
-            Black = header.Black,
-            Result = header.Result,
-            Event = header.Event,
-            StartFen = header.StartFen,
-            TargetDepth = depth,
-            MultiPv = multiPv,
-            EngineId = engineId,
-            TargetNodes = req.TargetNodes,
-            EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
-            Origin = origin,
-            LibraryGameId = libraryGameId,
-            LeagueClubGameId = leagueClubGameId,
-            MovesHash = movesHash,
-            // Nur aus der Grundstellung — sonst stuende der erste Zug der Partie als Fortsetzung
-            // an der Wurzel des Eroeffnungsbaums, wo es ihn gar nicht gibt (siehe LibraryGameReader).
-            OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen)
-                ? GameAnalysisText.OpeningLineOf(plies)
-                : null,
-            PlyCount = plies.Count,
-            Status = GameAnalysisStatus.Pending,
-        };
-        foreach (var p in plies)
-            analysis.Positions.Add(new GameAnalysisPosition
-            {
-                Ply = p.Index, Fen = p.Fen, GameMoveUci = p.Uci, GameMoveSan = p.San,
-            });
-        // Die Endstellung (0.689.0, Wunsch 2026-10-06: „die letzte Stellung hat keine Linien"): eine Zeile mehr mit
-        // Ply = PlyCount und OHNE Partiezug — nur wenn dort noch gezogen werden kann (Aufgabe, Remis-Angebot, Zeit).
-        // Leser, die je Zeile einen Partiezug brauchen, lassen sie weg (`GameMoveUci != ""` bzw. `Ply < PlyCount`).
-        if (plies.Count > 0 && GameAnalysisText.FinalPositionOf(plies[^1]) is { } finalFen)
-            analysis.Positions.Add(new GameAnalysisPosition { Ply = plies.Count, Fen = finalFen });
-
-        _db.GameAnalyses.Add(analysis);
-        await _db.SaveChangesAsync(ct);
-
-        // Die Kommentare in ihre Sprachen zerlegen — hier und nicht auf Vorrat: der Rohbestand hat
-        // 94 898 kommentierte Partien, und gespielt wird nur, was eingereiht wurde. Ein Fehlschlag
-        // darf das Einreihen nicht verhindern, der Rueckfall auf das PGN traegt weiter.
-        try { await _comments.EnsureSourceAsync(analysis.Id, ct); }
-        catch (Exception ex) { _logger.LogWarning(ex, "Kommentar-Saetze fuer {Id} nicht angelegt", analysis.Id); }
-
-        // Sofort die erste Fuhre einreihen, damit der Nutzer nicht auf den nächsten Pump-Lauf wartet.
-        await PumpOneAsync(analysis.Id, ct);
-        return await GetAsync(userId, analysis.Id, ct) ?? ToDto(analysis, 0);
-    }
-
-    // ===== Stapel: Meister- und Vereinspartien ================================
-
-    /// <summary>
-    /// Eine Meisterpartie fuer den Stapel anlegen (<see cref="GameAnalysisOrigin.Library"/>, angestossen vom
-    /// <see cref="MasterAnalysisScheduler"/>): dieselbe Tiefe und dieselben Linien wie eine vom Nutzer angeforderte
-    /// Bibliothekspartie (<see cref="GameAnalysisDefaults.GuessTargetDepth"/>, fuenf Linien) — wer dieselbe Partie
-    /// spaeter oeffnet, bekommt genau das, was er angefordert haette. Gerechnet wird auf den Hintergrund-Engines des
-    /// Besitzers, ausschliesslich als Hintergrundarbeit. Kein Deckel je Nutzer: der Stapel haelt selbst nur so viel
-    /// offen, wie Engines da sind. Wirft <see cref="ArgumentException"/> bei einem unspielbaren PGN.
-    /// </summary>
+    /// <inheritdoc cref="GameAnalysisIntake.CreateLibraryBatchAsync"/>
     public Task<GameAnalysisDto> CreateLibraryBatchAsync(int ownerUserId, int libraryGameId, string pgn, string title,
         CancellationToken ct = default)
-        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
-        {
-            Pgn = pgn,
-            Title = title,
-            TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
-            MultiPv = GameAnalysisDefaults.MultiPv,
-        }, ct, GameAnalysisOrigin.Library, engineOwnerUserId: ownerUserId, libraryGameId: libraryGameId);
+        => _intake.CreateLibraryBatchAsync(ownerUserId, libraryGameId, pgn, title, ct);
 
-    /// <summary>
-    /// Eine Vereinspartie fuer den Stapel anlegen (<see cref="GameAnalysisOrigin.Club"/>) — genau wie
-    /// <see cref="CreateLibraryBatchAsync"/>, nur mit dem Verweis auf die Partie der Vereins-Datenbank. Der Titel kommt
-    /// aus dem Kopf des PGN (Weiss – Schwarz). Wirft <see cref="ArgumentException"/> bei einem unspielbaren PGN.
-    /// </summary>
+    /// <inheritdoc cref="GameAnalysisIntake.CreateClubBatchAsync"/>
     public Task<GameAnalysisDto> CreateClubBatchAsync(int ownerUserId, int leagueClubGameId, string pgn,
         CancellationToken ct = default)
-        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
-        {
-            Pgn = pgn,
-            TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
-            MultiPv = GameAnalysisDefaults.MultiPv,
-        }, ct, GameAnalysisOrigin.Club, engineOwnerUserId: ownerUserId, leagueClubGameId: leagueClubGameId);
+        => _intake.CreateClubBatchAsync(ownerUserId, leagueClubGameId, pgn, ct);
 
-    /// <summary>Eine Liga-Partie aus einem Spielerprofil für den Stapel anlegen (<see cref="GameAnalysisOrigin.League"/>,
-    /// 0.665.0) — wie <see cref="CreateClubBatchAsync"/>, erkannt über den Zug-Schlüssel.</summary>
+    /// <inheritdoc cref="GameAnalysisIntake.CreateLeagueBatchAsync"/>
     public Task<GameAnalysisDto> CreateLeagueBatchAsync(int ownerUserId, string pgn, string movesHash, CancellationToken ct = default)
-        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
-        {
-            Pgn = pgn,
-            TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
-            MultiPv = GameAnalysisDefaults.MultiPv,
-        }, ct, GameAnalysisOrigin.League, engineOwnerUserId: ownerUserId, movesHash: movesHash);
+        => _intake.CreateLeagueBatchAsync(ownerUserId, pgn, movesHash, ct);
 
-    /// <summary>
-    /// Den Kopf der Analysen einer Vereinspartie nachziehen, nachdem sie korrigiert wurde (<c>LeagueClubService.UpdateAsync</c>):
-    /// Namen, Ergebnis, Veranstaltung, Titel und das PGN selbst. Die Zuege aendert eine Korrektur nie, die Stellungen
-    /// bleiben also gueltig — aber ein Name, der zu „Schwaz" wurde, darf in der Analyse nicht stehen bleiben.
-    /// </summary>
-    public async Task SyncClubGameAsync(LeagueClubGame game, CancellationToken ct = default)
-    {
-        var analyses = await _db.GameAnalyses.Where(g => g.LeagueClubGameId == game.Id).ToListAsync(ct);
-        if (analyses.Count == 0) return;
-        var header = GamePlies.Parse(game.Pgn, GameAnalysisDefaults.MaxPlies)?.Header;
-        foreach (var a in analyses)
-        {
-            a.Pgn = game.Pgn;
-            a.White = header?.White ?? game.White;
-            a.Black = header?.Black ?? game.Black;
-            a.Result = header?.Result ?? game.Result;
-            a.Event = header?.Event;
-            var title = header is { } h ? GameAnalysisText.BuildTitle(h) : GameAnalysisText.BuildTitle(game.White, game.Black, null);
-            if (a.TargetNodes is { } nodes) title += $" ({GameAnalysisText.NodesLabel(nodes)} nodes)";
-            a.Title = title.Length > 200 ? title[..200] : title;
-            a.UpdatedAt = DateTime.UtcNow;
-        }
-        await _db.SaveChangesAsync(ct);
-    }
+    /// <inheritdoc cref="GameAnalysisIntake.SyncClubGameAsync"/>
+    public Task SyncClubGameAsync(LeagueClubGame game, CancellationToken ct = default)
+        => _intake.SyncClubGameAsync(game, ct);
 
-    /// <summary>
-    /// Die Analysen einer Vereinspartie auf KORRIGIERTE Züge umbauen (0.694.1, Wunsch 2026-10-06: „er sollte nur die
-    /// geänderten Stellungen neu analysieren"). Vorher wurde jede Analyse gelöscht und die ganze Partie neu gerechnet —
-    /// auch die Stellungen vor der ersten Korrektur, die gleich geblieben sind. Jetzt bleibt die Analyse (gleiche Id, die
-    /// Kopien in „Meine Partien" bleiben verknüpft), ihre Stellungen werden durch die der neuen Zugfolge ersetzt, und jede
-    /// neue Stellung, die schon gerechnet ist (gleiche Stellung, ohne Zugzähler — auch durch Zugumstellung), übernimmt das
-    /// Ergebnis samt Vertiefung und Knotenstufen. Nur der Rest wird neu eingereiht (Status Pending, die Pumpe macht weiter).
-    /// Was an Halbzügen hängt, gilt nicht mehr: offene Aufträge, Fehler-Erklärungen, geerntete Taktiken, Genauigkeit.
-    /// → Zahl der übernommenen Stellungen über alle Analysen.
-    /// </summary>
-    public async Task<int> RebaseClubGameAsync(LeagueClubGame game, CancellationToken ct = default)
-    {
-        var parsed = GamePlies.Parse(game.Pgn, GameAnalysisDefaults.MaxPlies);
-        if (parsed is not { } ok) { await DeleteForClubGameAsync(game.Id, ct); return 0; }
-        var (header, plies) = ok;
-        var analyses = await _db.GameAnalyses.Include(g => g.Positions)
-            .Where(g => g.LeagueClubGameId == game.Id).ToListAsync(ct);
-        static string Key(string fen) => string.Join(' ', fen.Split(' ').Take(4));
-        var reused = 0;
-        foreach (var a in analyses)
-        {
-            foreach (var jobId in a.Positions.Where(p => p.AnalysisJobId != null).Select(p => p.AnalysisJobId!.Value).ToList())
-            {
-                try { await _jobs.DeleteAsync(a.UserId, jobId, ct); }
-                catch (Exception ex) { _logger.LogDebug(ex, "GameAnalysis: Auftrag {JobId} liess sich nicht loeschen", jobId); }
-            }
-            var done = a.Positions
-                .Where(p => p.CandidatesJson != null && p.CandidatesJson != "[]" && p.AnalysisJobId == null)
-                .GroupBy(p => Key(p.Fen)).ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Depth).First());
-            var fresh = plies.Select(p => new GameAnalysisPosition { Ply = p.Index, Fen = p.Fen, GameMoveUci = p.Uci, GameMoveSan = p.San })
-                .ToList();
-            if (plies.Count > 0 && GameAnalysisText.FinalPositionOf(plies[^1]) is { } finalFen)
-                fresh.Add(new GameAnalysisPosition { Ply = plies.Count, Fen = finalFen });
-            foreach (var n in fresh)
-            {
-                if (!done.TryGetValue(Key(n.Fen), out var o)) continue;
-                n.CandidatesJson = o.CandidatesJson; n.Depth = o.Depth; n.EvalText = o.EvalText; n.AnalyzedAt = o.AnalyzedAt;
-                n.Refined = o.Refined; n.NodeStepsJson = o.NodeStepsJson;
-                reused++;
-            }
-            _db.GameAnalysisPositions.RemoveRange(a.Positions);
-            a.Positions = fresh;
-            a.PlyCount = plies.Count;
-            a.OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen) ? GameAnalysisText.OpeningLineOf(plies) : null;
-            if (a.MovesHash != null) a.MovesHash = game.MovesHash;
-            a.Status = GameAnalysisStatus.Pending;
-            a.FinishedAt = null;
-            a.AccuracyWhite = null;
-            a.AccuracyBlack = null;
-            a.LastError = null;
-            a.TacticsScannedAt = null;
-            if (a.RefineDepth != null && fresh.Any(p => !p.Refined)) a.RefinedAt = null;
-            _db.GameMoveExplanations.RemoveRange(await _db.GameMoveExplanations.Where(x => x.GameAnalysisId == a.Id).ToListAsync(ct));
-            _db.TacticCandidates.RemoveRange(await _db.TacticCandidates.Where(x => x.GameAnalysisId == a.Id).ToListAsync(ct));
-            _logger.LogInformation("GameAnalysis {Id}: auf korrigierte Vereinspartie {ClubGameId} umgebaut — {Reused} von {Total} Stellungen übernommen",
-                a.Id, game.Id, fresh.Count(p => p.CandidatesJson != null), fresh.Count);
-        }
-        await _db.SaveChangesAsync(ct);
-        await SyncClubGameAsync(game, ct);
-        return reused;
-    }
+    /// <inheritdoc cref="GameAnalysisIntake.RebaseClubGameAsync"/>
+    public Task<int> RebaseClubGameAsync(LeagueClubGame game, CancellationToken ct = default)
+        => _intake.RebaseClubGameAsync(game, ct);
 
-    /// <summary>Die Analysen einer geloeschten Vereinspartie mitloeschen, samt ihrer offenen Auftraege
-    /// (<see cref="DeleteAsync"/>) — sie tragen die Namen der Partie.</summary>
-    public async Task<int> DeleteForClubGameAsync(int leagueClubGameId, CancellationToken ct = default)
-    {
-        var ids = await _db.GameAnalyses.AsNoTracking()
-            .Where(g => g.LeagueClubGameId == leagueClubGameId)
-            .Select(g => new { g.Id, g.UserId })
-            .ToListAsync(ct);
-        var deleted = 0;
-        foreach (var a in ids)
-            if (await DeleteAsync(a.UserId, a.Id, ct)) deleted++;
-        return deleted;
-    }
-
-    // ===== Einwurf auf der Punktepartie-Seite =================================
-
-    /// <summary>
-    /// Eine Partie, die auf der Punktepartie-Seite eingeworfen wurde. Unterschied zum Einreihen von
-    /// Hand: die Tiefe ist FEST (<see cref="GameAnalysisDefaults.GuessTargetDepth"/>) und steht in
-    /// keinem Formular, und wer keine eigene Hintergrund-Engine hinterlegt hat, rechnet auf der
-    /// Haus-Engine.
-    ///
-    /// <para>Beides haengt zusammen: einen Tiefenregler auf fremder Rechenzeit anzubieten hiesse,
-    /// Selbstbedienung an einer Maschine zu erlauben, die jemand anderem gehoert — Tiefe 40 kostet
-    /// grob das Zehnfache von 30. Die Punktepartie braucht die Tiefe ohnehin nicht: gewertet wird
-    /// gegen den tatsaechlich gespielten Zug, die Engine liefert nur die Rangfolge der Alternativen.</para>
-    ///
-    /// <para>Wirft NICHT: die drei Absagen (zu viele offene Partien, keine Engine, unbrauchbares
-    /// PGN) sind erwartete Antworten und keine Ausnahmen — der Aufrufer soll sie dem Nutzer
-    /// erklaeren koennen, und dafuer braucht er einen Grund, keinen Text.</para>
-    /// </summary>
-    /// <param name="libraryGameId">Aus welcher Zeile des Rohbestands die Partie angefordert wurde;
-    /// <c>null</c> = selbst eingeworfen.</param>
-    /// <param name="origin"><see cref="GameAnalysisOrigin.SavedGame"/> fuer „Partie analysieren" an
-    /// einer gespeicherten Partie: dort ist die Bewertung das Ergebnis, deshalb rechnet sie mit
-    /// <see cref="GameAnalysisDefaults.SavedGameTargetDepth"/> (30, fuenf Linien) in der Vertiefung statt 20. Gedeckelt wird gemeinsam;
-    /// das Etikett entscheidet ausserdem, in welcher Liste die Analyse erscheint.</param>
-    public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
+    /// <inheritdoc cref="GameAnalysisIntake.CreateForGuessAsync"/>
+    public Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
         CancellationToken ct = default, int? libraryGameId = null,
         GameAnalysisOrigin origin = GameAnalysisOrigin.Guess)
-    {
-        var open = await OpenGuessGamesAsync(userId, ct);
-        if (open >= GameAnalysisDefaults.MaxOpenGuessGamesPerUser)
-            return new GuessUploadResult(null, GuessUploadReason.TooManyOpen);
+        => _intake.CreateForGuessAsync(userId, req, ct, libraryGameId, origin);
 
-        var engineOwner = await ResolveGuessEngineOwnerAsync(userId, ct);
-        if (engineOwner is null)
-            return new GuessUploadResult(null, GuessUploadReason.NoEngine);
+    /// <inheritdoc cref="GameAnalysisIntake.GuessUploadStatusAsync"/>
+    public Task<GuessUploadStatusDto> GuessUploadStatusAsync(int userId, CancellationToken ct = default)
+        => _intake.GuessUploadStatusAsync(userId, ct);
 
-        try
-        {
-            // „Partie analysieren" rechnet ZWEIMAL (seit 0.523.0, gewuenscht 2026-09-24): erst schnell (Tiefe 20, eine
-            // Linie — Kurve, Genauigkeit und Fehler stehen nach wenigen Minuten), dann im Hintergrund die Vertiefung
-            // (Tiefe 30 seit 0.555.2, fuenf Linien — Zweitbester fuer Great/Brilliant, Computer-Linien, gleichwertige Zuege).
-            var savedGame = origin == GameAnalysisOrigin.SavedGame;
-            var dto = await CreateAsync(userId, new CreateGameAnalysisRequest
-            {
-                Pgn = req.Pgn,
-                Title = req.Title,
-                TargetDepth = savedGame ? GameAnalysisDefaults.SavedGameFastDepth : GameAnalysisDefaults.GuessTargetDepth,
-                MultiPv = savedGame ? GameAnalysisDefaults.SavedGameFastMultiPv : GameAnalysisDefaults.MultiPv,
-            }, ct, origin, engineOwner.Value, libraryGameId);
-            if (savedGame)
-            {
-                var entity = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id, ct);
-                entity.RefineDepth = GameAnalysisDefaults.SavedGameTargetDepth;
-                entity.RefineMultiPv = GameAnalysisDefaults.MultiPv;
-                await _db.SaveChangesAsync(ct);
-            }
-            return new GuessUploadResult(dto, null);
-        }
-        catch (ArgumentException)
-        {
-            // Kein spielbares PGN — die einzige Absage, die am eingeworfenen Text liegt.
-            return new GuessUploadResult(null, GuessUploadReason.InvalidPgn);
-        }
-    }
+    // ===== Lesen (GameAnalysisQueries) ======================================
 
-    /// <summary>Wie viele eingeworfene Partien dieses Nutzers noch rechnen — die von der
-    /// Punktepartie-Seite UND die aus den gespeicherten Partien: beide laufen auf fremder Rechenzeit,
-    /// und mit getrennten Deckeln kaeme man ueber den zweiten Weg am ersten vorbei. Gescheiterte
-    /// zaehlen NICHT mit: sonst sperrte eine tote Engine den Nutzer dauerhaft aus, obwohl nichts mehr
-    /// laeuft — er soll sie loeschen koennen und weitermachen.</summary>
-    private Task<int> OpenGuessGamesAsync(int userId, CancellationToken ct) =>
-        _db.GameAnalyses.CountAsync(g => g.UserId == userId
-            && (g.Origin == GameAnalysisOrigin.Guess || g.Origin == GameAnalysisOrigin.SavedGame)
-            && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running), ct);
+    /// <inheritdoc cref="GameAnalysisQueries.ListAsync"/>
+    public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default, bool includeSavedGames = false)
+        => _queries.ListAsync(userId, ct, includeSavedGames);
 
-    /// <summary>Wer rechnet: erst die EIGENE Hintergrund-Engine, sonst die Haus-Engine, sonst niemand
-    /// (<c>null</c>) — siehe <see cref="EngineOwnerResolver"/>.</summary>
-    private Task<int?> ResolveGuessEngineOwnerAsync(int userId, CancellationToken ct)
-        => EngineOwnerResolver.ResolveAsync(_db, userId, ct);
+    /// <inheritdoc cref="GameAnalysisQueries.GetHeadUncheckedAsync"/>
+    public Task<GameAnalysisDto?> GetHeadUncheckedAsync(int id, CancellationToken ct = default)
+        => _queries.GetHeadUncheckedAsync(id, ct);
 
-    /// <summary>Was die Punktepartie-Seite ueber das Einwerfen wissen muss, BEVOR jemand ein PGN
-    /// hineinkopiert: gibt es ueberhaupt eine Engine, und wie viele Partien sind noch frei.</summary>
-    public async Task<GuessUploadStatusDto> GuessUploadStatusAsync(int userId, CancellationToken ct = default)
-    {
-        var owner = await ResolveGuessEngineOwnerAsync(userId, ct);
-        var open = await OpenGuessGamesAsync(userId, ct);
-        return new GuessUploadStatusDto
-        {
-            EngineAvailable = owner is not null,
-            OwnEngine = owner == userId,
-            OpenGames = open,
-            MaxGames = GameAnalysisDefaults.MaxOpenGuessGamesPerUser,
-        };
-    }
+    /// <inheritdoc cref="GameAnalysisQueries.ListPublicAsync"/>
+    public Task<List<GameAnalysisDto>> ListPublicAsync(CancellationToken ct = default, string? line = null)
+        => _queries.ListPublicAsync(ct, line);
 
-    // ===== Lesen / Löschen ==================================================
+    /// <inheritdoc cref="GameAnalysisQueries.SetPublicAsync"/>
+    public Task<bool?> SetPublicAsync(int userId, bool isAdmin, int id, bool isPublic, CancellationToken ct = default)
+        => _queries.SetPublicAsync(userId, isAdmin, id, isPublic, ct);
 
-    /// <summary>
-    /// „Eigene Analysen" — dieselbe Liste auf der Punktepartie-Seite und auf „Partie-Analysen".
-    /// Die ueber eine gespeicherte Partie angestossenen (<see cref="GameAnalysisOrigin.SavedGame"/>) kommen
-    /// nur mit <paramref name="includeSavedGames"/> mit: auf „Partie-Analysen" gehoeren sie hin — dort steht
-    /// der Fortschritt jeder laufenden Rechnung (gewuenscht 2026-09-24) —, auf der Punktepartie-Seite nicht:
-    /// dort stuenden sie als Punktepartie, die niemand eingeworfen hat.
-    /// </summary>
-    public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default, bool includeSavedGames = false) =>
-        ProjectAsync(_db.GameAnalyses.AsNoTracking()
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
-                && (includeSavedGames || g.Origin != GameAnalysisOrigin.SavedGame)), ct);
+    /// <inheritdoc cref="GameAnalysisQueries.ThroughputAsync"/>
+    public Task<AnalysisThroughputDto> ThroughputAsync(int userId, CancellationToken ct = default)
+        => _queries.ThroughputAsync(userId, ct);
 
-    /// <summary>
-    /// Kopfdaten EINER Analyse ohne Stellungen — und OHNE Besitzer-Pruefung. Nur fuer Aufrufer, die
-    /// den Zugriff selbst geprueft haben: <see cref="SavedGameService"/> reicht so die an einer
-    /// geteilten Partie verknuepfte Analyse ihres Besitzers weiter, wenn ein Gast „Partie analysieren"
-    /// drueckt (er bekommt die vorhandene statt einer zweiten Rechnung).
-    /// </summary>
-    public async Task<GameAnalysisDto?> GetHeadUncheckedAsync(int id, CancellationToken ct = default)
-        => (await ProjectAsync(_db.GameAnalyses.AsNoTracking().Where(g => g.Id == id), ct)).FirstOrDefault();
+    /// <inheritdoc cref="GameAnalysisQueries.GetPlayableHeadAsync"/>
+    public Task<GameAnalysisDto?> GetPlayableHeadAsync(int userId, int id, CancellationToken ct = default)
+        => _queries.GetPlayableHeadAsync(userId, id, ct);
 
-    /// <summary>
-    /// Der kuratierte Bestand: Partien, die JEDER als Punktepartie spielen darf — auch ohne
-    /// Anmeldung. Geliefert werden nur VOLLSTAENDIG gerechnete: eine halb fertige Partie laesst sich
-    /// zwar anspielen, ueberspringt dann aber stillschweigend jede Stellung ohne Kandidatenliste —
-    /// man raet also eine Partie mit Loechern, ohne dass irgendwo steht, warum. Sortiert nach Titel,
-    /// nicht nach Anlagedatum: der Bestand ist eine Bibliothek und keine Zeitleiste.
-    /// </summary>
-    /// <param name="line">Eroeffnungszeile als Filter („e4 e5 Nf3"); leer = alles. Der
-    /// Stellungsfilter der Punktepartie-Seite reicht sie durch — gesucht wird ueber ein PRAEFIX,
-    /// und das trifft den Index auf <see cref="GameAnalysis.OpeningLine"/>.</param>
-    public async Task<List<GameAnalysisDto>> ListPublicAsync(CancellationToken ct = default,
-        string? line = null)
-    {
-        var query = _db.GameAnalyses.AsNoTracking()
-            .Where(g => g.IsPublic && g.Positions.Any() && !g.Positions.Any(p => p.CandidatesJson == null));
+    /// <inheritdoc cref="GameAnalysisQueries.ConvergenceAsync"/>
+    public Task<ConvergenceDto?> ConvergenceAsync(int userId, int id, CancellationToken ct = default)
+        => _queries.ConvergenceAsync(userId, id, ct);
 
-        var prefix = GuessOpeningTree.Normalize(line);
-        if (prefix.Length > 0)
-        {
-            // Dieselbe Menge wie der Baum (GuessOpeningTree): die Partie, die genau hier endet, plus
-            // alles, was danach weitergeht — Platzhalter aus der anonymen Eingabe maskiert.
-            var muster = OpeningLines.ContinuationPattern(prefix);
-            query = query.Where(g => g.OpeningLine != null && (g.OpeningLine == prefix
-                || EF.Functions.Like(g.OpeningLine, muster, OpeningLines.LikeEscape)));
-        }
-
-        var rows = await ProjectAsync(query, ct);
-        await FillGuessSideAsync(rows, ct);
-        return rows.OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    /// <summary>
-    /// Traegt in jede Zeile ein, welche Seite man dort uebernimmt — die des Gewinners.
-    ///
-    /// <para>Die Liste soll das VORHER sagen: im Bestand waehlt man die Seite nicht, und wer erst
-    /// nach dem Start sieht, dass er Schwarz spielt, hat die Partie schon offen.</para>
-    ///
-    /// <para>Bei entschiedenen Partien steht die Antwort im Ergebnis. Die uebrigen brauchen die
-    /// Bewertung der letzten gerechneten Stellung — dafuer genuegt die kurze Zeichenkette
-    /// (<c>EvalText</c>), nicht die Kandidatenliste: die ist LONGTEXT und wuerde hier je Partie
-    /// mitgelesen. Geholt wird sie in EINER Abfrage fuer alle betroffenen Partien; je Partie eine
-    /// waere bei einem wachsenden Bestand genau das N+1-Muster, das Listen langsam macht.</para>
-    /// </summary>
-    private async Task FillGuessSideAsync(List<GameAnalysisDto> rows, CancellationToken ct)
-    {
-        var undecided = rows
-            .Where(r => r.Result?.Trim() is not ("1-0" or "0-1"))
-            .Select(r => r.Id)
-            .ToList();
-
-        var lastByGame = new Dictionary<int, (int Ply, string? EvalText)>();
-        if (undecided.Count > 0)
-        {
-            var analysed = await _db.GameAnalysisPositions.AsNoTracking()
-                .Where(p => undecided.Contains(p.GameAnalysisId) && p.CandidatesJson != null)
-                .Select(p => new { p.GameAnalysisId, p.Ply, p.EvalText })
-                .ToListAsync(ct);
-            foreach (var group in analysed.GroupBy(p => p.GameAnalysisId))
-            {
-                var last = group.OrderByDescending(p => p.Ply).First();
-                lastByGame[group.Key] = (last.Ply, last.EvalText);
-            }
-        }
-
-        foreach (var row in rows)
-        {
-            lastByGame.TryGetValue(row.Id, out var last);
-            row.GuessWhite = GuessSides.WinnerWhite(row.Result,
-                last.Ply == 0 && last.EvalText is null ? null : last.Ply,
-                GuessSides.PawnsFromEvalText(last.EvalText));
-        }
-    }
-
-    /// <summary>Kuratierten Bestand ein-/ausschalten — Besitzer der Analyse oder Admin. Bewusst
-    /// beim Besitzer und nicht nur beim Admin: wer die Engine-Zeit gestiftet hat, entscheidet auch,
-    /// ob die Partie öffentlich spielbar ist (dieselbe Teilung wie beim Kalkulations-Schalter des
-    /// Kurses).</summary>
-    public async Task<bool?> SetPublicAsync(int userId, bool isAdmin, int id, bool isPublic,
-        CancellationToken ct = default)
-    {
-        var analysis = await _db.GameAnalyses.FirstOrDefaultAsync(g => g.Id == id, ct);
-        if (analysis is null || (!isAdmin && analysis.UserId != userId)) return null;
-        if (analysis.IsPublic != isPublic)
-        {
-            analysis.IsPublic = isPublic;
-            analysis.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-        }
-        return analysis.IsPublic;
-    }
-
-    /// <summary>Die Listen-Abbildung an EINER Stelle (eigene Partien und kuratierter Bestand
-    /// unterscheiden sich nur im Filter). Geholt werden nur die Spalten der Liste: `Pgn` ist
-    /// LONGTEXT und würde sonst für JEDE Partie mitgelesen, obwohl die Übersicht ihn nie anzeigt —
-    /// `Annotated` fragt ihn deshalb IN SQL (LIKE), die Spalte selbst bleibt draußen.</summary>
-    private async Task<List<GameAnalysisDto>> ProjectAsync(IQueryable<GameAnalysis> query, CancellationToken ct)
-    {
-        var rows = await query
-            .OrderByDescending(g => g.CreatedAt)
-            .Select(g => new
-            {
-                g.Id, g.Title, g.White, g.Black, g.Result, g.Event, g.TargetDepth, g.MultiPv,
-                g.EngineId, g.TargetNodes, g.Status, g.PlyCount, g.LastError, g.CreatedAt, g.FinishedAt, g.IsPublic,
-                Annotated = g.Pgn.Contains("{"),
-                Analyzed = g.Positions.Count(p => p.CandidatesJson != null && p.GameMoveUci != ""),
-            })
-            .ToListAsync(ct);
-        return rows.Select(r => new GameAnalysisDto
-        {
-            Id = r.Id, Title = r.Title, White = r.White, Black = r.Black, Result = r.Result,
-            Event = r.Event, TargetDepth = r.TargetDepth, MultiPv = r.MultiPv, EngineId = r.EngineId, TargetNodes = r.TargetNodes,
-            Status = r.Status.ToString().ToLowerInvariant(), PlyCount = r.PlyCount,
-            AnalyzedPlies = r.Analyzed, LastError = r.LastError, IsPublic = r.IsPublic,
-            Annotated = r.Annotated,
-            CreatedAt = r.CreatedAt, FinishedAt = r.FinishedAt,
-        }).ToList();
-    }
-
-    /// <summary>So weit wird fuer das Tempo zurueckgesehen — nach einer Nacht Pause ist das Tempo von gestern
-    /// die beste Schaetzung, die es gibt.</summary>
-    private const int ThroughputLookbackHours = 24;
-
-    /// <summary>Hoechstens so viele juengste Ergebnisse gehen ins Tempo ein — bei ein paar Stellungen je Minute
-    /// rund die letzte Stunde, bei vielen Engines entsprechend weniger.</summary>
-    private const int ThroughputMaxPositions = 200;
-
-    /// <summary>
-    /// Tempo und Restdauer aus den Zeitstempeln der gerechneten Stellungen — nach <see cref="AnalysisPace"/>:
-    /// nur der juengste zusammenhaengende Lauf zaehlt, eine Pause davor nicht (bis 0.521.2 mittelte das hier ueber
-    /// die letzte Stunde ab dem ersten Ergebnis darin, samt Pause).
-    /// </summary>
-    public async Task<AnalysisThroughputDto> ThroughputAsync(int userId, CancellationToken ct = default)
-    {
-        var remaining = await _db.GameAnalysisPositions
-            .CountAsync(p => p.CandidatesJson == null
-                && p.GameAnalysis!.UserId == userId
-                && (p.GameAnalysis.Status == GameAnalysisStatus.Pending
-                    || p.GameAnalysis.Status == GameAnalysisStatus.Running), ct);
-
-        var now = DateTime.UtcNow;
-        var since = now.AddHours(-ThroughputLookbackHours);
-        var stamps = await _db.GameAnalysisPositions
-            .Where(p => p.AnalyzedAt != null && p.AnalyzedAt >= since && p.GameAnalysis!.UserId == userId)
-            .OrderByDescending(p => p.AnalyzedAt)
-            .Select(p => p.AnalyzedAt!.Value)
-            .Take(ThroughputMaxPositions)
-            .ToListAsync(ct);
-
-        var result = new AnalysisThroughputDto { Remaining = remaining };
-        if (AnalysisPace.Measure(stamps, now, ThroughputMaxPositions) is { } run)
-        {
-            result.AnalyzedInWindow = run.Count;
-            result.WindowMinutes = (int)Math.Round(run.Seconds / 60);
-            result.PerMinute = Math.Round(run.PerMinute, 2);
-        }
-        result.EtaMinutes = result.PerMinute > 0 && remaining > 0
-            ? (int)Math.Max(1, Math.Round(remaining / result.PerMinute))
-            : null;
-        return result;
-    }
-
-    /// <summary>
-    /// Die Kopfdaten einer Partie, die dieser Nutzer SPIELEN darf — seine eigene oder eine des
-    /// kuratierten Bestands. Ohne die Zugliste.
-    ///
-    /// <para>Gebraucht, wenn jemand eine Partie aus dem Rohbestand anfordert, die schon im Bestand
-    /// liegt: die gehoert dann einem ANDEREN Konto, und <see cref="GetAsync"/> fragt ausdruecklich
-    /// nach dem Besitzer. Ohne diesen Weg haette die Anforderung „geht nicht" geantwortet, obwohl
-    /// die Partie danebenliegt und jeder sie spielen darf.</para>
-    /// </summary>
-    public async Task<GameAnalysisDto?> GetPlayableHeadAsync(int userId, int id, CancellationToken ct = default)
-    {
-        var rows = await ProjectAsync(
-            _db.GameAnalyses.AsNoTracking().Where(g => g.Id == id
-                && (g.UserId == userId || g.IsPublic || g.Origin == GameAnalysisOrigin.Library)), ct);
-        return rows.FirstOrDefault();
-    }
-
-    /// <summary>Konvergenz einer Knotenanalyse: wie schnell der beste Zug und die Bewertung gegen das Ziel konvergieren (nur eigene Analyse;
-    /// <c>null</c> = nicht gefunden). Ohne Zwischenstände (Tiefenanalyse, Altbestand) eine leere Auswertung.</summary>
-    public async Task<ConvergenceDto?> ConvergenceAsync(int userId, int id, CancellationToken ct = default)
-    {
-        var analysis = await _db.GameAnalyses.AsNoTracking()
-            .Where(g => g.Id == id && g.UserId == userId)
-            .Select(g => new { g.TargetNodes })
-            .FirstOrDefaultAsync(ct);
-        if (analysis is null) return null;
-
-        var raw = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == id && p.NodeStepsJson != null)
-            .Select(p => p.NodeStepsJson!)
-            .ToListAsync(ct);
-        var report = Convergence.Evaluate(raw.Select(NodeSteps.Parse).Where(l => l.Count > 0).Select(l => (IReadOnlyList<NodeStep>)l));
-        return new ConvergenceDto
-        {
-            TargetNodes = analysis.TargetNodes,
-            Positions = report.Positions,
-            Rows = report.Rows.Select(r => new ConvergenceRowDto
-            {
-                Threshold = r.Threshold, Positions = r.Positions, SameMovePercent = Math.Round(r.SameMoveShare * 100, 1),
-                MedianCp = r.MedianCp, P90Cp = r.P90Cp, MedianWinPct = Math.Round(r.MedianWinPct, 2), P90WinPct = Math.Round(r.P90WinPct, 2),
-                MoveChanges = r.MoveChanges, MateMismatch = r.MateMismatch, MeanNodes = Math.Round(r.MeanNodes),
-            }).ToList(),
-        };
-    }
-
-    public async Task<GameAnalysisDto?> GetAsync(int userId, int id, CancellationToken ct = default)
-    {
-        var analysis = await _db.GameAnalyses.AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, ct);
-        if (analysis is null) return null;
-
-        var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == id && p.GameMoveUci != "")   // Endstellung (0.689.0) hat keinen Zug
-            .OrderBy(p => p.Ply)
-            .Select(p => new GameAnalysisPositionDto
-            {
-                Ply = p.Ply,
-                MoveNumber = p.Ply / 2 + 1,
-                White = p.Ply % 2 == 0,
-                San = p.GameMoveSan,
-                Uci = p.GameMoveUci,
-                Fen = p.Fen,
-                EvalText = p.EvalText,
-                Depth = p.Depth,
-                Analyzed = p.CandidatesJson != null,
-            })
-            .ToListAsync(ct);
-
-        var dto = ToDto(analysis, positions.Count(p => p.Analyzed));
-        dto.Positions = positions;
-        return dto;
-    }
-
-    /// <summary>
-    /// Die Partie noch einmal anstossen: alles, was nicht gerechnet ist, kommt frisch in die
-    /// Warteschlange.
-    ///
-    /// <para><b>Warum das ein eigener Knopf sein muss.</b> Ein Auftrag klebt an DER Engine, die
-    /// beim Anlegen die kuerzeste Schlange hatte — und er wechselt nie wieder. Ist die Engine
-    /// danach aus (ein Rechner, den jemand abends ausmacht), versucht der Auftrag es ewig dort und
-    /// nirgends sonst; der Broker antwortet mit 503, der Auftrag pausiert eine Minute, und das
-    /// wiederholt sich bis in alle Ewigkeit. Am 2026-09-11 hingen so fuenf Partien an ihren letzten
-    /// Halbzuegen fest, waehrend fuenf freie Engines danebenstanden. Der Auftrag wird deshalb
-    /// GELOESCHT und neu angelegt — erst dadurch waehlt <c>PickBackgroundEngineAsync</c> erneut.</para>
-    ///
-    /// <para>Aufgegebene Stellungen kommen ebenfalls zurueck (<c>CandidatesJson = "[]"</c> nach
-    /// <see cref="GameAnalysisDefaults.MaxPositionAttempts"/> Anlaeufen). Sie zaehlen als
-    /// „gerechnet" und sind der Grund, warum eine Partie fertig aussehen kann und in der
-    /// Punktepartie trotzdem Loecher hat. Genau die soll ein Reset schliessen.</para>
-    ///
-    /// <para>Eine pinnte Engine (<see cref="GameAnalysis.EngineId"/>) bleibt, wo sie ist: wer eine
-    /// bestimmte Maschine gewaehlt hat, meint sie auch.</para>
-    /// </summary>
-    /// <returns>Die Partie mit neuem Stand, oder <c>null</c>, wenn es sie nicht (mehr) gibt.</returns>
-    public async Task<GameAnalysisDto?> RestartAsync(int userId, int id, CancellationToken ct = default)
-    {
-        var analysis = await _db.GameAnalyses
-            .Include(g => g.Positions)
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, ct);
-        if (analysis is null) return null;
-
-        // Steckengebliebene Auftraege weg — sonst behielte die Stellung ihren alten Auftrag auf der
-        // alten Engine, und der Reset aenderte genau gar nichts.
-        var stuck = analysis.Positions
-            .Where(p => p.CandidatesJson == null && p.AnalysisJobId != null)
-            .Select(p => p.AnalysisJobId!.Value)
-            .ToList();
-        foreach (var jobId in stuck)
-        {
-            try { await _jobs.DeleteAsync(userId, jobId, ct); }
-            catch (Exception ex) { _logger.LogDebug(ex, "GameAnalysis {Id}: Auftrag {JobId} liess sich nicht loeschen", id, jobId); }
-        }
-
-        var reopened = 0;
-        foreach (var pos in analysis.Positions)
-        {
-            if (pos.CandidatesJson == "[]")
-            {
-                pos.CandidatesJson = null;
-                pos.AnalyzedAt = null;
-                pos.EvalText = null;
-                pos.Depth = 0;
-            }
-            if (pos.CandidatesJson != null) continue;
-
-            pos.AnalysisJobId = null;
-            pos.FailedAttempts = 0;
-            reopened++;
-        }
-
-        analysis.Status = GameAnalysisStatus.Pending;
-        analysis.LastError = null;
-        analysis.FinishedAt = null;
-        analysis.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
-
-        _logger.LogInformation("GameAnalysis {Id}: neu angestossen ({Count} Stellungen, {Jobs} Auftraege verworfen)",
-            id, reopened, stuck.Count);
-
-        // Sofort nachfuettern, damit der Knopf etwas tut, das man sieht.
-        await PumpOneAsync(analysis.Id, ct);
-        return await GetAsync(userId, id, ct);
-    }
-
-    public async Task<bool> DeleteAsync(int userId, int id, CancellationToken ct = default)
-    {
-        var analysis = await _db.GameAnalyses
-            .Include(g => g.Positions)
-            .FirstOrDefaultAsync(g => g.Id == id && g.UserId == userId, ct);
-        if (analysis is null) return false;
-
-        // Noch laufende Aufträge dieser Partie mitnehmen — sonst rechnet die Engine für nichts weiter.
-        var openJobIds = analysis.Positions.Where(p => p.AnalysisJobId != null).Select(p => p.AnalysisJobId!.Value).ToList();
-        foreach (var jobId in openJobIds)
-        {
-            try { await _jobs.DeleteAsync(userId, jobId, ct); }
-            catch (Exception ex) { _logger.LogDebug(ex, "GameAnalysis: Auftrag {JobId} liess sich nicht loeschen", jobId); }
-        }
-
-        // Punktepartien auf dieser Analyse zuerst: die Sitzung zeigt per RESTRICT auf die Analyse
-        // (zwei Cascade-Pfade auf GuessMoves waeren sonst unzulaessig, siehe AppDbContext) — ohne
-        // dieses Aufraeumen scheitert das Loeschen in MySQL mit einem Fremdschluessel-Fehler (500).
-        var sessions = await _db.GuessSessions
-            .Where(s => s.GameAnalysisId == analysis.Id)
-            .Select(s => s.Id)
-            .ToListAsync(ct);
-        if (sessions.Count > 0)
-        {
-            _db.GuessMoves.RemoveRange(
-                await _db.GuessMoves.Where(m => sessions.Contains(m.GuessSessionId)).ToListAsync(ct));
-            _db.GuessSessions.RemoveRange(
-                await _db.GuessSessions.Where(s => sessions.Contains(s.Id)).ToListAsync(ct));
-        }
-
-        _db.GameAnalysisPositions.RemoveRange(analysis.Positions);
-        _db.GameAnalyses.Remove(analysis);
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
-
-    // ===== Pumpe ============================================================
-
-    /// <summary>Alle unfertigen Partien einen Schritt weiterbringen (Ergebnisse einsammeln, nachfüttern).</summary>
-    public async Task<int> PumpAllAsync(CancellationToken ct = default)
-    {
-        var ids = await _db.GameAnalyses
-            .Where(g => g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running
-                || (g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null))
-            .OrderBy(g => g.CreatedAt)
-            .Select(g => g.Id)
-            .ToListAsync(ct);
-        var moved = 0;
-        foreach (var id in ids)
-        {
-            ct.ThrowIfCancellationRequested();
-            // Je Partie abschirmen: eine einzige stolpernde Analyse darf nicht den ganzen Durchlauf
-            // abbrechen — sonst kaeme keine der dahinterliegenden Partien je an die Reihe.
-            try { if (await PumpOneAsync(id, ct)) moved++; }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-            catch (Exception ex) { _logger.LogWarning(ex, "GameAnalysis {Id}: Durchlauf uebersprungen", id); }
-        }
-        return moved;
-    }
-
-    /// <summary>Eine Partie: fertige Aufträge übernehmen, danach bis zum Block-Limit nachfüttern.</summary>
-    public async Task<bool> PumpOneAsync(int analysisId, CancellationToken ct = default)
-    {
-        var analysis = await _db.GameAnalyses
-            .Include(g => g.Positions)
-            .FirstOrDefaultAsync(g => g.Id == analysisId, ct);
-        if (analysis is null || analysis.Status == GameAnalysisStatus.Failed) return false;
-        if (analysis.Status == GameAnalysisStatus.Done)
-            return analysis.RefineDepth != null && analysis.RefinedAt == null && await RefineStepAsync(analysis, ct);
-
-        var changed = await IngestFinishedAsync(analysis, ct);
-        // Nachgefuettert wird nur die Partie, die gerade DRAN ist — siehe IsOwnersTurnAsync.
-        if (await IsOwnersTurnAsync(analysis, ct))
-            changed |= await EnqueueNextAsync(analysis, ct);
-
-        var analyzed = analysis.Positions.Count(p => p.CandidatesJson != null);
-        var finished = false;
-        if (analyzed >= analysis.Positions.Count && analysis.Positions.Count > 0)
-        {
-            finished = true;
-            analysis.Status = GameAnalysisStatus.Done;
-            analysis.FinishedAt = DateTime.UtcNow;
-            // Einmal gerechnet, an der Analyse abgelegt: die Partienliste zeigt die Genauigkeit beider
-            // Seiten, ohne die Stellungen je Partie zu laden.
-            var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
-            analysis.AccuracyWhite = accuracy.White;
-            analysis.AccuracyBlack = accuracy.Black;
-            changed = true;
-        }
-        else if (analysis.Status == GameAnalysisStatus.Pending && analysis.Positions.Any(p => p.AnalysisJobId != null))
-        {
-            analysis.Status = GameAnalysisStatus.Running;
-            changed = true;
-        }
-
-        if (changed)
-        {
-            analysis.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-        }
-        // Erst NACH dem Speichern: der Hintergrund-Lauf liest die Analyse aus einem eigenen Scope.
-        if (finished) _reviewTexts?.Schedule(analysis.Id, refined: false);
-        return changed;
-    }
-
-    /// <summary>
-    /// Ist DIESE Partie gerade dran? Je Nutzer wird immer nur EINE Partie weitergefuettert: die
-    /// aelteste, die noch ungerechnete Stellungen hat.
-    ///
-    /// <para><b>Warum nicht mehrere gleichzeitig.</b> Frueher fuetterte die Pumpe jede unfertige
-    /// Partie bis zum Block-Limit; bei fuenfzig offenen Auftraegen je Nutzer liefen damit vier bis
-    /// fuenf Partien nebeneinander, und alle wurden gleich langsam fertig. Das ist die schlechteste
-    /// aller Aufteilungen: die Engine-Zeit ist dieselbe, aber man wartet auf JEDE Partie das
-    /// Fuenffache, statt nach einem Fuenftel der Zeit die erste spielen zu koennen. Die Punktepartie
-    /// braucht eine FERTIGE Partie — eine halb gerechnete ist nichts wert.</para>
-    ///
-    /// <para>Gemessen wird an den STELLUNGEN und nicht am Status: eine Partie, deren Zeilen alle
-    /// eine Kandidatenliste haben, ist durch, auch wenn ihr Status noch nicht nachgezogen ist.
-    /// Gescheiterte Partien blockieren nicht — die Pumpe fasst sie gar nicht erst an.</para>
-    ///
-    /// <para>Je NUTZER, nicht global: zwei Leute sollen sich nicht gegenseitig ausbremsen. Die
-    /// Engine selbst serialisiert ohnehin, sie rechnet je Engine genau eine Suche.</para>
-    ///
-    /// <para>Laufende Auftraege einer anderen Partie werden NICHT abgebrochen. Sie sind bezahlte
-    /// Rechenzeit; sie laufen aus, und nachgelegt wird nur noch bei der Partie, die dran ist.</para>
-    /// </summary>
-    private async Task<bool> IsOwnersTurnAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        // Meisterpartien reihen sich nicht in die Partien des Besitzers ein: ihre Auftraege sind durchweg
-        // Hintergrundarbeit und weichen ohnehin — auf den Besitzer zu warten hiesse, dass eine einzige haengende
-        // eigene Partie den ganzen Stapel anhaelt.
-        if (GameAnalysisOrigins.IsBatch(analysis.Origin)) return true;
-        var olderOpen = await OpenPliesOfOlderGamesAsync(analysis, ct);
-        // Nichts Aelteres offen: dran, ohne die Engines zu zaehlen (TailMayAdvance gaebe dasselbe).
-        if (olderOpen == 0) return true;
-        // Der SCHWANZ (0.543.0) — Regel und Messung stehen an GameAnalysisTurnRules.TailMayAdvance.
-        return GameAnalysisTurnRules.TailMayAdvance(olderOpen, await EngineSlotsAsync(analysis, ct));
-    }
-
-    /// <summary>Offene (ungerechnete) Stellungen aller unfertigen Partien dieses Nutzers, die VOR
-    /// <paramref name="analysis"/> an der Reihe sind (aelter nach CreatedAt, dann Id). Knoten-Analysen (lc0 & Co.) laufen
-    /// auf ihrer eigenen Engine und bilden eine eigene Spur: sie warten nicht auf Tiefen-Partien und halten sie nicht auf —
-    /// sonst stuende die Stockfish-Analyse derselben Partie stundenlang hinter der langsamen lc0-Rechnung.</summary>
-    private Task<int> OpenPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        var nodesLane = analysis.TargetNodes != null;
-        return _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
-                && (g.TargetNodes != null) == nodesLane
-                && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
-                && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
-                && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
-            .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
-    }
-
-    /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
-    private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
-        => _db.GameAnalyses
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
-                && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
-            .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
-
-    /// <summary>Wie viele Suchen fuer diese Partie nebeneinander laufen koennen: die Hintergrund-Engines
-    /// des ENGINE-BESITZERS (Haus-Engine: das Haus-Konto), bei fest gewaehlter Engine genau eine.
-    /// Mindestens 1 — ohne Engine scheitert das Einreihen ohnehin mit eigener Meldung.</summary>
-    private async Task<int> EngineSlotsAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        if (!string.IsNullOrWhiteSpace(analysis.EngineId)) return 1;
-        // Nur die Engines, die gerade Arbeit nehmen (0.679.0): bei Teillast eines Clients stehen einige still, und
-        // Suchen fuer sie oeffneten Auftraege, die erst nach einem 503 woanders landen.
-        return Math.Max(1, (await UsableEnginesAsync(analysis, ct)).Count);
-    }
-
-    /// <summary>Die Hintergrund-Engines, die fuer diese Analyse JETZT Arbeit bekommen duerfen — nach dem Zeitplan, den
-    /// ihr Client meldet, sonst nach den Sperrzeiten von RookHub (nur fuer den Stapel). Siehe
-    /// <see cref="EngineAvailability"/>.</summary>
-    private async Task<List<string>> UsableEnginesAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        var ownerId = analysis.EngineOwnerUserId ?? analysis.UserId;
-        IReadOnlyList<string> engines;
-        if (!string.IsNullOrWhiteSpace(analysis.EngineId))
-        {
-            engines = [analysis.EngineId];
-        }
-        else
-        {
-            var cred = await _db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
-            engines = cred?.BackgroundEngines ?? [];
-        }
-        return await EngineAvailability.UsableAsync(_db, ownerId, engines, GameAnalysisOrigins.IsBatch(analysis.Origin),
-            _quiet, _quiet?.Now ?? DateTimeOffset.UtcNow, ct);
-    }
+    /// <summary>Eine eigene Analyse samt Stellungen (ohne Endstellung); <c>null</c> = gibt es nicht oder fremd.</summary>
+    public Task<GameAnalysisDto?> GetAsync(int userId, int id, CancellationToken ct = default)
+        => _queries.GetAsync(userId, id, ct);
 
     /// <summary>Höchstzahl Halbzüge, die als „dieselbe Partie" verglichen werden — wie die längste Analyse.</summary>
     public const int MaxSameGamePlies = 600;
 
-    /// <summary>
-    /// Alle eigenen Analysen DESSELBEN Spiels (0.682.0, gewünscht 2026-10-06: Lc0 neben Stockfish auf der Partieseite).
-    /// Erkannt an der Zugfolge: gleiche Länge, gleiche UCI-Züge in derselben Reihenfolge. Eine Spalte mit fertigem
-    /// Zug-Schlüssel gibt es nur für Liga-Partien; deshalb hier zuerst billig nach Länge vorgefiltert und erst für die
-    /// wenigen Kandidaten die Züge verglichen. Gescheiterte bleiben draußen, neueste zuerst.
-    /// </summary>
-    public async Task<List<GameAnalysisAlternativeDto>> SameGameAsync(int userId, IReadOnlyList<string>? ucis, CancellationToken ct = default,
+    /// <inheritdoc cref="GameAnalysisQueries.SameGameAsync"/>
+    public Task<List<GameAnalysisAlternativeDto>> SameGameAsync(int userId, IReadOnlyList<string>? ucis, CancellationToken ct = default,
         bool clubReader = false)
-    {
-        if (ucis is null || ucis.Count == 0 || ucis.Count > MaxSameGamePlies) return [];
-        var wanted = ucis.Select(u => (u ?? string.Empty).Trim().ToLowerInvariant()).ToList();
-        var candidates = await _db.GameAnalyses.AsNoTracking()
-            // Dazu die zweite Engine der Vereinspartien (0.684.0) für alle, die Vereinspartien sehen — sie gehört dem
-            // Engine-Konto, gezeigt wird sie wie die Stockfish-Analyse der Partie allen im Verein.
-            .Where(a => (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))
-                && a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
-            .Select(a => new { a.Id, a.Title, a.EngineId, a.TargetNodes, a.TargetDepth, a.MultiPv, a.Status, a.PlyCount, a.CreatedAt })
-            .ToListAsync(ct);
-        if (candidates.Count == 0) return [];
+        => _queries.SameGameAsync(userId, ucis, ct, clubReader);
 
-        var ids = candidates.Select(c => c.Id).ToList();
-        var positions = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => ids.Contains(p.GameAnalysisId))
-            .Select(p => new { p.GameAnalysisId, p.Ply, p.GameMoveUci, Done = p.CandidatesJson != null })
-            .ToListAsync(ct);
-        var byAnalysis = positions.GroupBy(p => p.GameAnalysisId).ToDictionary(g => g.Key, g => g.OrderBy(p => p.Ply).ToList());
+    /// <inheritdoc cref="GameAnalysisQueries.SharedAlternativesAsync"/>
+    public Task<List<GameAnalysisAlternativeDto>> SharedAlternativesAsync(string? token, CancellationToken ct = default)
+        => _queries.SharedAlternativesAsync(token, ct);
 
-        var matches = candidates.Where(c => byAnalysis.TryGetValue(c.Id, out var rows)
-            && rows.Where(r => !string.IsNullOrEmpty(r.GameMoveUci)).Select(r => r.GameMoveUci!.ToLowerInvariant()).SequenceEqual(wanted)).ToList();
-        if (matches.Count == 0) return [];
+    /// <inheritdoc cref="GameAnalysisQueries.SharedAlternativeEvalsAsync"/>
+    public Task<GameEvalsDto?> SharedAlternativeEvalsAsync(string? token, int id, CancellationToken ct = default)
+        => _queries.SharedAlternativeEvalsAsync(token, id, ct);
 
-        var engineIds = matches.Select(m => m.EngineId).OfType<string>().Distinct().ToList();
-        var names = engineIds.Count == 0 ? new Dictionary<string, string>()
-            : await _db.ExternalEngineRegistrations.AsNoTracking().Where(r => engineIds.Contains(r.Id))
-                .ToDictionaryAsync(r => r.Id, r => r.Name, ct);
+    /// <inheritdoc cref="GameAnalysisQueries.EvalsOfAsync"/>
+    public Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default, bool clubReader = false)
+        => _queries.EvalsOfAsync(userId, id, ct, clubReader);
 
-        return matches.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
-            .Select(m => new GameAnalysisAlternativeDto(m.Id, m.Title, m.EngineId,
-                m.EngineId is { } e && names.TryGetValue(e, out var n) ? n : null,
-                m.TargetNodes, m.TargetDepth, m.MultiPv, m.Status.ToString().ToLowerInvariant(),
-                Math.Min(m.PlyCount, byAnalysis[m.Id].Count(r => r.Done)), m.PlyCount))
-            .ToList();
-    }
+    // ===== Neustart / Löschen ===============================================
 
-    /// <summary>
-    /// Die zweite Analyse (Lc0 o. Ä.) am Teilen-Link (0.819.0, Wunsch 2026-10-21: „sollte gleich sein wie bei /games/117 —
-    /// Standard beim Teilen"): die Analysen des BESITZERS mit ausdrücklich gewählter Engine und genau den Zügen der geteilten
-    /// Partie. Die Zugfolge kommt aus der verknüpften Analyse der Partie, nicht vom Aufrufer — sonst ließen sich über den
-    /// Link beliebige andere Analysen des Besitzers erfragen. Ohne verknüpfte Analyse: keine.
-    /// </summary>
-    public async Task<List<GameAnalysisAlternativeDto>> SharedAlternativesAsync(string? token, CancellationToken ct = default)
-        => (await SharedAlternativesCoreAsync(token, ct)).List;
+    /// <inheritdoc cref="GameAnalysisPump.RestartAsync"/>
+    /// <returns>Die Partie mit neuem Stand, oder <c>null</c>, wenn es sie nicht (mehr) gibt.</returns>
+    public async Task<GameAnalysisDto?> RestartAsync(int userId, int id, CancellationToken ct = default)
+        => await _pump.RestartAsync(userId, id, ct) ? await _queries.GetAsync(userId, id, ct) : null;
 
-    /// <summary>Bewertungen einer dieser Analysen; <c>null</c>, wenn sie nicht zur geteilten Partie gehört.</summary>
-    public async Task<GameEvalsDto?> SharedAlternativeEvalsAsync(string? token, int id, CancellationToken ct = default)
-    {
-        var (ownerId, list) = await SharedAlternativesCoreAsync(token, ct);
-        return ownerId is int owner && list.Any(a => a.Id == id) ? await EvalsOfAsync(owner, id, ct) : null;
-    }
+    /// <inheritdoc cref="GameAnalysisDeletion.DeleteAsync"/>
+    public Task<bool> DeleteAsync(int userId, int id, CancellationToken ct = default)
+        => _deletion.DeleteAsync(userId, id, ct);
 
-    private async Task<(int? OwnerId, List<GameAnalysisAlternativeDto> List)> SharedAlternativesCoreAsync(string? token, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(token)) return (null, []);
-        var game = await _db.SavedGames.AsNoTracking().Where(g => g.ShareToken == token)
-            .Select(g => new { g.UserId, g.GameAnalysisId }).FirstOrDefaultAsync(ct);
-        if (game?.GameAnalysisId is not int linked) return (null, []);
-        var ucis = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == linked && p.GameMoveUci != "")
-            .OrderBy(p => p.Ply).Select(p => p.GameMoveUci).ToListAsync(ct);
-        var list = (await SameGameAsync(game.UserId, ucis, ct)).Where(a => a.EngineId != null && a.Id != linked).ToList();
-        return (game.UserId, list);
-    }
+    /// <inheritdoc cref="GameAnalysisDeletion.DeleteForClubGameAsync"/>
+    public Task<int> DeleteForClubGameAsync(int leagueClubGameId, CancellationToken ct = default)
+        => _deletion.DeleteForClubGameAsync(leagueClubGameId, ct);
 
-    /// <summary>Die Bewertungen einer EIGENEN Analyse im Format der Partiekurve (Weiß-Sicht) — für den Umschalter auf
-    /// der Partieseite. Ohne Buchzüge: die markiert schon die Kurve der Seite. <c>null</c> = gibt es nicht oder fremd.</summary>
-    public async Task<GameEvalsDto?> EvalsOfAsync(int userId, int id, CancellationToken ct = default, bool clubReader = false)
-    {
-        var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == id
-                && (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))))
-            .FirstOrDefaultAsync(ct);
-        return head is null ? null : await GameEvalsStore.ReadAsync(_db, head, null, ct);
-    }
+    // ===== Pumpe (GameAnalysisPump) =========================================
 
-    /// <summary>Fertige Aufträge in die Stellungen kopieren.</summary>
-    private async Task<bool> IngestFinishedAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        // Offene Auftraege BEIDER Durchgaenge: eine Stellung mit Kandidaten UND Auftrag wird gerade vertieft.
-        var pending = analysis.Positions.Where(p => p.AnalysisJobId != null).ToList();
-        if (pending.Count == 0) return false;
+    /// <inheritdoc cref="GameAnalysisPump.PumpAllAsync"/>
+    public Task<int> PumpAllAsync(CancellationToken ct = default) => _pump.PumpAllAsync(ct);
 
-        var jobIds = pending.Select(p => p.AnalysisJobId!.Value).ToList();
-        // Getrackt laden: uebernommene Auftraege werden gleich mitgeloescht (siehe unten).
-        var jobs = await _db.AnalysisJobs
-            .Where(j => jobIds.Contains(j.Id))
-            .ToDictionaryAsync(j => j.Id, ct);
-
-        // Ein uebernommener Auftrag hat seinen Zweck erfuellt: das Ergebnis liegt kopiert bei der
-        // Stellung. Bliebe er stehen, fuellte eine einzige Partie 80 der 200 Zeilen, die
-        // AnalysisJobService.MaxJobsPerUser je Nutzer haelt — nach drei Partien haette der Trimmer
-        // die von Hand eingereihten Auftraege des Nutzers verdraengt und die Auftragsliste
-        // bestuende nur noch aus Partie-Halbzuegen.
-        var consumed = new List<AnalysisJob>();
-
-        var changed = false;
-        foreach (var pos in pending)
-        {
-            if (!jobs.TryGetValue(pos.AnalysisJobId!.Value, out var job))
-            {
-                // Auftrag ist weg (gelöscht/getrimmt) → Stellung erneut einreihen.
-                pos.AnalysisJobId = null;
-                changed = true;
-                continue;
-            }
-
-            if (pos.CandidatesJson != null)
-            {
-                // Zweiter Durchgang: das Ergebnis ERSETZT das des ersten — ist es unbrauchbar oder scheitert der
-                // Auftrag endgueltig, bleibt das erste stehen (eine schwaechere Bewertung ist besser als keine).
-                if (job.Status == AnalysisJobStatus.Done)
-                {
-                    var refined = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
-                    if (refined is { Count: > 0 })
-                    {
-                        pos.CandidatesJson = BrokerCandidates.ToJson(refined);
-                        pos.EvalText = BrokerCandidates.EvalTextOf(refined);
-                        pos.Depth = job.ReachedDepth;
-                        pos.AnalyzedAt = DateTime.UtcNow;
-                        if (job.NodeStepsJson is not null) pos.NodeStepsJson = job.NodeStepsJson;
-                    }
-                    pos.Refined = true;
-                    pos.AnalysisJobId = null;
-                    consumed.Add(job);
-                    changed = true;
-                }
-                else if (job.Status == AnalysisJobStatus.Failed)
-                {
-                    pos.FailedAttempts++;
-                    pos.AnalysisJobId = null;
-                    if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts) pos.Refined = true;
-                    changed = true;
-                }
-                else if (job.SecondsSpent >= GameAnalysisDefaults.RefineMaxSecondsPerPosition)
-                {
-                    // Zeitgrenze (0.647.0): was erreicht ist, gilt — tiefer als der erste Durchgang ersetzt es ihn, sonst
-                    // bleibt der erste stehen. Der Lauf wird angehalten und der Auftrag entfernt (wie beim Loeschen).
-                    var partial = job.ReachedDepth > pos.Depth ? BrokerCandidates.Parse(job.ResultJson, pos.Fen) : null;
-                    if (partial is { Count: > 0 })
-                    {
-                        pos.CandidatesJson = BrokerCandidates.ToJson(partial);
-                        pos.EvalText = BrokerCandidates.EvalTextOf(partial);
-                        pos.Depth = job.ReachedDepth;
-                        pos.AnalyzedAt = DateTime.UtcNow;
-                    }
-                    pos.Refined = true;
-                    pos.AnalysisJobId = null;
-                    _jobs.Interrupt(job.Id);
-                    consumed.Add(job);
-                    changed = true;
-                    _logger.LogInformation(
-                        "GameAnalysis {Id}: Vertiefung von Stellung {Ply} nach {Seconds} s bei Tiefe {Depth}/{Target} beendet",
-                        analysis.Id, pos.Ply, job.SecondsSpent, job.ReachedDepth, job.TargetDepth);
-                }
-                continue;
-            }
-
-            if (job.Status == AnalysisJobStatus.Done && !string.IsNullOrEmpty(job.ResultJson))
-            {
-                var candidates = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
-                if (candidates is { Count: > 0 })
-                {
-                    pos.CandidatesJson = BrokerCandidates.ToJson(candidates);
-                    pos.EvalText = BrokerCandidates.EvalTextOf(candidates);
-                    pos.Depth = job.ReachedDepth;
-                    pos.AnalyzedAt = DateTime.UtcNow;
-                    pos.NodeStepsJson = job.NodeStepsJson;   // Zwischenstände der Knotenanalyse, bevor der Auftrag gelöscht wird
-                    changed = true;
-                }
-                else
-                {
-                    // Fertig, aber unlesbar → als analysiert MIT LEERER Liste ablegen, sonst hinge die
-                    // Partie ewig an dieser Stellung. Die Wertung überspringt solche Stellungen.
-                    pos.CandidatesJson = "[]";
-                    pos.AnalyzedAt = DateTime.UtcNow;
-                    changed = true;
-                    _logger.LogWarning("GameAnalysis {Id}: Ergebnis von Auftrag {JobId} unlesbar (Ply {Ply})",
-                        analysis.Id, job.Id, pos.Ply);
-                }
-                pos.AnalysisJobId = null;
-                consumed.Add(job);
-            }
-            else if (job.Status == AnalysisJobStatus.Failed)
-            {
-                // Der Auftrag gibt auf. Das heisst fast immer „die Engine war gerade nicht zu
-                // gebrauchen" und NICHT „diese Stellung geht nicht": eine Stellung der Partie hat
-                // immer einen legalen Zug, Matt oder Patt kann sie nicht sein. Frueher stand hier
-                // sofort die leere Liste — eine tote Engine loeschte damit stillschweigend
-                // Stellungen aus der Partie, die nie wieder gerechnet wurden. Also zaehlen und
-                // erneut einreihen; erst nach MaxPositionAttempts ist endgueltig Schluss, damit
-                // eine wirklich unloesbare Stellung nicht ewig im Kreis laeuft.
-                pos.FailedAttempts++;
-                pos.AnalysisJobId = null;
-                if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts)
-                {
-                    pos.CandidatesJson = "[]";
-                    pos.AnalyzedAt = DateTime.UtcNow;
-                    _logger.LogWarning("GameAnalysis {Id}: Stellung {Ply} nach {Tries} Anlaeufen aufgegeben",
-                        analysis.Id, pos.Ply, pos.FailedAttempts);
-                }
-                // Der gescheiterte Auftrag bleibt stehen — seine Fehlermeldung ist die einzige
-                // Erklaerung, warum es an dieser Stellung hakt.
-                changed = true;
-            }
-        }
-        if (consumed.Count > 0) _db.AnalysisJobs.RemoveRange(consumed);
-        return changed;
-    }
-
-    /// <summary>
-    /// Ein Schritt der Vertiefung (<see cref="GameAnalysis.RefineDepth"/>): fertige Auftraege uebernehmen, nachlegen,
-    /// wenn die Partie dran ist, und am Ende die Genauigkeit neu rechnen (sie haengt an den genaueren Zahlen).
-    /// </summary>
-    private async Task<bool> RefineStepAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        var changed = await IngestFinishedAsync(analysis, ct);
-        if (await IsOwnersRefineTurnAsync(analysis, ct))
-            changed |= await EnqueueRefineAsync(analysis, ct);
-
-        var refined = false;
-        if (analysis.Positions.Count > 0 && analysis.Positions.All(p => p.Refined))
-        {
-            refined = true;
-            analysis.RefinedAt = DateTime.UtcNow;
-            var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
-            analysis.AccuracyWhite = accuracy.White;
-            analysis.AccuracyBlack = accuracy.Black;
-            changed = true;
-        }
-        if (changed)
-        {
-            analysis.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-        }
-        // Die genauere Rechnung kann Bestzug und Klasse verschieben — die Erklärungen werden neu geschrieben.
-        if (refined) _reviewTexts?.Schedule(analysis.Id, refined: true);
-        return changed;
-    }
-
-    /// <summary>
-    /// Ist diese Partie mit der Vertiefung dran? Erst wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt —
-    /// der schnelle Durchgang einer neuen Partie geht immer vor —, und dann die aelteste, die noch vertieft wird
-    /// (dieselbe Regel „eine nach der anderen" wie bei <see cref="IsOwnersTurnAsync"/>), MIT demselben Schwanz.
-    /// </summary>
-    private async Task<bool> IsOwnersRefineTurnAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        // Dieselbe Schwanz-Regel wie im ersten Durchgang (0.543.0): solange der erste Durchgang mehr offene
-        // Stellungen hat als Engines da sind, wartet die Vertiefung; darunter darf sie die freien Engines
-        // nehmen — ihre Auftraege sind ohnehin Hintergrundarbeit, die der Worker nur ohne normalen Auftrag zieht.
-        var firstPassOpen = await OpenFirstPassPliesAsync(analysis.UserId, ct);
-        if (firstPassOpen > 0 && !GameAnalysisTurnRules.TailMayAdvance(firstPassOpen, await EngineSlotsAsync(analysis, ct)))
-            return false;
-        // Und der Schwanz unter den Vertiefungen selbst (0.647.0). Bis dahin war nur die aelteste dran — am 04.10.2026
-        // hing Analyse 5540 eine Stunde an ihrer LETZTEN Stellung (Tiefe 30, fuenf Linien), und die geteilte Partie
-        // dahinter bekam keinen einzigen Auftrag, waehrend 15 der 16 Engines Meisterpartien rechneten.
-        var olderUnrefined = await UnrefinedPliesOfOlderGamesAsync(analysis, ct);
-        return olderUnrefined == 0
-            || GameAnalysisTurnRules.TailMayAdvance(olderUnrefined, await EngineSlotsAsync(analysis, ct));
-    }
-
-    /// <summary>Noch nicht vertiefte Stellungen der AELTEREN Partien des Nutzers, die gerade vertieft werden —
-    /// dieselbe Reihenfolge (<c>CreatedAt</c>, dann <c>Id</c>) wie <see cref="OpenPliesOfOlderGamesAsync"/>.</summary>
-    private Task<int> UnrefinedPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
-        => _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
-                && g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null
-                && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
-            .SumAsync(g => g.Positions.Count(p => !p.Refined), ct);
-
-    /// <summary>Vertiefungs-Auftraege nachlegen — hoechstens <see cref="GameAnalysisTurnRules.RefineJobCap"/> offen, als
-    /// Hintergrundarbeit (<see cref="AnalysisJob.Background"/>): erst die Stellungen um Fehler und Patzer
-    /// (<see cref="GameAnalysisTurnRules.SuspectPlies"/>), dann der Rest, jeweils in Zugreihenfolge.</summary>
-    private async Task<bool> EnqueueRefineAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        var open = analysis.Positions.Count(p => !p.Refined && p.AnalysisJobId != null);
-        var room = GameAnalysisTurnRules.RefineJobCap(await EngineSlotsAsync(analysis, ct)) - open;
-        if (room <= 0) return false;
-        if (await HouseEngineWithdrawnAsync(analysis, ct))
-        {
-            // Die Vertiefung ist Zugabe: ohne Freigabe bleibt das Ergebnis des ersten Durchgangs stehen — wie bei einer
-            // Stellung, die die Engine nicht annimmt (unten). Noch offene Auftraege laesst der Worker scheitern.
-            var rest = analysis.Positions.Where(p => !p.Refined && p.AnalysisJobId == null).ToList();
-            foreach (var pos in rest) pos.Refined = true;
-            return rest.Count > 0;
-        }
-        var suspect = GameAnalysisTurnRules.SuspectPlies(analysis.Positions, analysis.PlyCount);
-        var next = analysis.Positions
-            .Where(p => !p.Refined && p.AnalysisJobId == null)
-            .OrderBy(p => suspect.Contains(p.Ply) ? 0 : 1)
-            .ThenBy(p => p.Ply)
-            .Take(room)
-            .ToList();
-
-        var changed = false;
-        foreach (var pos in next)
-        {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
-                {
-                    Fen = pos.Fen,
-                    Title = GameAnalysisText.JobTitle(analysis, pos),
-                    TargetDepth = analysis.RefineDepth!.Value,
-                    MultiPv = analysis.RefineMultiPv ?? analysis.MultiPv,
-                    EngineId = analysis.EngineId,
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: true,
-                    batch: GameAnalysisOrigins.IsBatch(analysis.Origin));
-                pos.AnalysisJobId = job.Id;
-                changed = true;
-            }
-            catch (InvalidOperationException)
-            {
-                // Deckel erreicht oder gerade keine Engine: die Vertiefung ist Hintergrundarbeit — naechster Lauf.
-                break;
-            }
-            catch (ArgumentException ex)
-            {
-                pos.Refined = true;   // diese Stellung nimmt die Engine nicht an — das erste Ergebnis bleibt
-                changed = true;
-                _logger.LogWarning(ex, "GameAnalysis {Id}: Stellung {Ply} nicht vertiefbar", analysis.Id, pos.Ply);
-            }
-        }
-        return changed;
-    }
-
-    /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge). Meister- und Vereinspartien des Stapels
-    /// (<see cref="GameAnalysisOrigins.IsBatch"/>) nur ausserhalb der Sperrzeiten und nur als Hintergrundarbeit.</summary>
-    private async Task<bool> EnqueueNextAsync(GameAnalysis analysis, CancellationToken ct)
-    {
-        var batch = GameAnalysisOrigins.IsBatch(analysis.Origin);
-        // In der Sperrzeit steht der Stapel still: schon eingereihte Stellungen laufen noch zu Ende (hoechstens
-        // ein Block), neue kommen erst, wenn das Fenster wieder offen ist.
-        // Seit 0.679.0 nicht mehr pauschal an den Sperrzeiten: eine Engine, deren Client einen Zeitplan meldet,
-        // rechnet nach diesem, nur Engines ohne Meldung halten sich an die Sperrzeiten von RookHub.
-        if (batch && (await UsableEnginesAsync(analysis, ct)).Count == 0) return false;
-        var open = analysis.Positions.Count(p => p.CandidatesJson == null && p.AnalysisJobId != null);
-        var room = GameAnalysisDefaults.MaxOpenJobsPerGame - open;
-        if (room <= 0) return false;
-
-        var next = analysis.Positions
-            .Where(p => p.CandidatesJson == null && p.AnalysisJobId == null)
-            .OrderBy(p => p.Ply)
-            .Take(room)
-            .ToList();
-        if (next.Count == 0) return false;
-        if (await HouseEngineWithdrawnAsync(analysis, ct))
-        {
-            analysis.Status = GameAnalysisStatus.Failed;
-            analysis.LastError = EngineOwnerResolver.HouseEngineWithdrawnError;
-            return true;
-        }
-
-        var changed = false;
-        foreach (var pos in next)
-        {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
-                {
-                    Fen = pos.Fen,
-                    Title = GameAnalysisText.JobTitle(analysis, pos),
-                    TargetDepth = analysis.TargetDepth,
-                    TargetNodes = analysis.TargetNodes,   // lc0-Analyse: Knoten statt Tiefe, auch nach Neustart
-                    MultiPv = analysis.MultiPv,
-                    EngineId = analysis.EngineId,
-                    // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
-                    // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: batch, batch: batch);
-                pos.AnalysisJobId = job.Id;
-                changed = true;
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Kein Platz mehr (globaler Deckel) oder keine Hintergrund-Engine.
-                if (ex.Message.Contains("engine", StringComparison.OrdinalIgnoreCase))
-                {
-                    analysis.Status = GameAnalysisStatus.Failed;
-                    analysis.LastError = "Keine Hintergrund-Engine konfiguriert";
-                    return true;
-                }
-                break;   // Deckel erreicht → beim nächsten Pump-Lauf weiter
-            }
-            catch (ArgumentException ex)
-            {
-                // Diese eine Stellung ist der Engine nicht zumutbar (z. B. unbrauchbare FEN).
-                pos.CandidatesJson = "[]";
-                pos.AnalyzedAt = DateTime.UtcNow;
-                changed = true;
-                _logger.LogWarning(ex, "GameAnalysis {Id}: Stellung {Ply} nicht einreihbar", analysis.Id, pos.Ply);
-            }
-        }
-        return changed;
-    }
-
-    /// <summary>Rechnet diese Analyse auf einer FREMDEN Haus-Engine, deren Freigabe inzwischen weg ist (Haekchen
-    /// zurueckgenommen, Admin-Rolle verloren, Hintergrund-Liste leer)? Geprueft wird vor JEDEM Nachlegen, nicht nur beim
-    /// Einwurf — sonst fuetterten Pumpe, Vertiefung und Neustart die Maschine weiter (Codereview 2026-09-29, A4-004).
-    /// Eigene Engine und Stapel (<see cref="GameAnalysis.EngineOwnerUserId"/> = <c>null</c>) fragen nichts ab.</summary>
-    private async Task<bool> HouseEngineWithdrawnAsync(GameAnalysis analysis, CancellationToken ct)
-        => analysis.EngineOwnerUserId is int owner
-           && !await EngineOwnerResolver.IsHouseEngineSharedAsync(_db, owner, ct);
-
-    // ===== Mapping ==========================================================
-
-    private static GameAnalysisDto ToDto(GameAnalysis g, int analyzed) => new()
-    {
-        Id = g.Id,
-        Title = g.Title,
-        White = g.White,
-        Black = g.Black,
-        Result = g.Result,
-        Event = g.Event,
-        TargetDepth = g.TargetDepth,
-        MultiPv = g.MultiPv,
-        EngineId = g.EngineId,
-        TargetNodes = g.TargetNodes,
-        Status = g.Status.ToString().ToLowerInvariant(),
-        PlyCount = g.PlyCount,
-        AnalyzedPlies = analyzed,
-        LastError = g.LastError,
-        CreatedAt = g.CreatedAt,
-        FinishedAt = g.FinishedAt,
-    };
+    /// <inheritdoc cref="GameAnalysisPump.PumpOneAsync"/>
+    public Task<bool> PumpOneAsync(int analysisId, CancellationToken ct = default) => _pump.PumpOneAsync(analysisId, ct);
 }

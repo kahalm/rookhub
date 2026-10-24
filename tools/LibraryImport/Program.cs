@@ -573,7 +573,7 @@ async Task<int> ScoreAsync()
 // Bewusst OHNE den Deckel von fuenf offenen Partien (GameAnalysisDefaults.MaxOpenGuessGamesPerUser):
 // der ist eine Fairness-Regel zwischen Nutzern an der Oberflaeche, hier fuellt der Betreiber seinen
 // eigenen Bestand vor. Die Reihenfolge bleibt trotzdem gewahrt — die Pumpe fuettert je Nutzer immer
-// nur EINE Partie weiter (GameAnalysisService.IsOwnersTurnAsync), zwanzig eingereihte Partien
+// nur EINE Partie weiter (GameAnalysisTurns.IsOwnersTurnAsync), zwanzig eingereihte Partien
 // laufen also nacheinander und nicht zwanzig gleichzeitig.
 //
 // Angelegt werden nur die Zeilen; die AUFTRAEGE macht die laufende API beim naechsten Pump-Durchgang
@@ -597,7 +597,7 @@ async Task<int> QueueAsync()
     var comments = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
 
     // Wer rechnet: erst die EIGENE Hintergrund-Engine des Nutzers, sonst die Haus-Engine eines
-    // Admins — dieselbe Reihenfolge wie GameAnalysisService.ResolveGuessEngineOwnerAsync.
+    // Admins — dieselbe Reihenfolge wie GameAnalysisIntake.ResolveGuessEngineOwnerAsync.
     var own = await db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId);
     int? engineOwner = own is not null && own.BackgroundEngines.Count > 0 ? userId : null;
     if (engineOwner is null)

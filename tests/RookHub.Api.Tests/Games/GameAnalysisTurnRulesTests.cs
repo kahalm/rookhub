@@ -27,7 +27,7 @@ public class GameAnalysisTurnRulesTests
 
     [Theory]
     [InlineData(1, 1)]      // Vertiefung wartet, solange der erste Durchgang mindestens so viele offene
-    [InlineData(16, 16)]    // Stellungen hat, wie Engines da sind (GameAnalysisService.IsOwnersRefineTurnAsync)
+    [InlineData(16, 16)]    // Stellungen hat, wie Engines da sind (GameAnalysisTurns.IsOwnersRefineTurnAsync)
     [InlineData(30, 16)]
     public void TailMayAdvance_ersterDurchgangMitMindestensSovielenOffenenWieEngines_haeltDieVertiefungAuf(
         int firstPassOpen, int engineSlots)
@@ -42,6 +42,12 @@ public class GameAnalysisTurnRulesTests
     /// </summary>
     [Theory]
     [InlineData("Services/Games/GameAnalysisService.cs")]
+    [InlineData("Services/Games/GameAnalysisIntake.cs")]
+    [InlineData("Services/Games/GameAnalysisQueries.cs")]
+    [InlineData("Services/Games/GameAnalysisDeletion.cs")]
+    [InlineData("Services/Games/GameAnalysisPump.cs")]
+    [InlineData("Services/Games/GameAnalysisIngest.cs")]
+    [InlineData("Services/Games/GameAnalysisTurns.cs")]
     [InlineData("Services/Games/GameAnalysisTurnRules.cs")]
     public void DokuBloecke_stehenNichtGestapelt(string file)
     {

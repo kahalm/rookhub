@@ -79,7 +79,7 @@ sich nichts.
 AUFTRAGGEBERS; ein normal registrierter Nutzer hat keine, sein PGN prallte an „No background engine
 configured" ab. Ein Admin kann seine Hintergrund-Engines deshalb freigeben
 (`LichessEngineCredential.ShareAsHouseEngine`, `PUT /api/engine/house`, Haekchen in der
-Engine-Karte des Profils). `GameAnalysisService.ResolveGuessEngineOwnerAsync` nimmt dann zuerst die
+Engine-Karte des Profils). `GameAnalysisIntake.ResolveGuessEngineOwnerAsync` nimmt dann zuerst die
 EIGENE Engine des Einwerfers und faellt sonst auf die Haus-Engine zurueck; die Freigabe gilt nur,
 solange das Konto Admin ist. Geprueft wird sie zusaetzlich vor jedem Nachlegen und im Worker
 (`EngineOwnerResolver.IsHouseEngineSharedAsync`, Codereview A4-004): ohne Freigabe scheitern Analyse und offene
@@ -92,7 +92,7 @@ in der Auftragsliste des Admins staenden fremde Partien. `PickBackgroundEngineAs
 kuerzeste Schlange entsprechend nach ENGINE-BESITZER (`EngineOwnerUserId ?? UserId`).
 
 **Eine Partie nach der anderen** (0.466.0): die Pumpe fuettert je NUTZER immer nur EINE Partie
-weiter — die aelteste mit ungerechneten Stellungen (`GameAnalysisService.IsOwnersTurnAsync`).
+weiter — die aelteste mit ungerechneten Stellungen (`GameAnalysisTurns.IsOwnersTurnAsync`).
 Vorher fuetterte sie jede unfertige Partie bis zum Block-Limit; bei fuenfzig offenen Auftraegen je
 Nutzer liefen damit vier bis fuenf nebeneinander und alle wurden gleich langsam fertig. Das ist die
 schlechteste Aufteilung: dieselbe Engine-Zeit, aber man wartet auf JEDE Partie das Fuenffache,
@@ -103,7 +103,7 @@ laufen aus. Je Nutzer und nicht global, damit sich zwei Leute nicht gegenseitig 
 
 **Der Schwanz einer Partie (0.543.0)**: die Regel „eine nach der anderen" hat eine Ausnahme — haben
 alle aelteren unfertigen Partien des Nutzers ZUSAMMEN weniger offene Stellungen, als Engines da sind
-(`GameAnalysisService.EngineSlotsAsync`: die Hintergrund-Engines des Engine-Besitzers, bei fest
+(`GameAnalysisTurns.EngineSlotsAsync`: die Hintergrund-Engines des Engine-Besitzers, bei fest
 gewaehlter Engine 1), bekommt die naechste Partie schon Auftraege. Sonst stuenden am Ende jeder Partie
 Engines still: gemessen am 2026-09-26 auf Prod mit 16 Engines endete jede Partie mit 20–30 s, in denen
 15 Engines nichts taten — bei Partien von drei Minuten ein Fuenftel der Zeit. Die aeltere Partie wird

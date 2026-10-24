@@ -14,7 +14,7 @@ namespace RookHub.Api.Services.Library;
 ///
 /// <para><b>Wann</b>: außerhalb der Sperrzeiten der Spark (<see cref="QuietHours"/>, dieselbe Angabe wie die
 /// Übersetzung — Mo–Do 08–17 und Fr 08–14 gesperrt). In der Sperrzeit legt der Takt keine Partie an, und die gerade
-/// laufende reiht keine Stellungen mehr ein (<c>GameAnalysisService.EnqueueNextAsync</c>); was schon eingereiht ist,
+/// laufende reiht keine Stellungen mehr ein (<c>GameAnalysisPump.EnqueueNextAsync</c>); was schon eingereiht ist,
 /// rechnet noch zu Ende — höchstens ein Block.</para>
 ///
 /// <para><b>Wo</b>: auf den Hintergrund-Engines des Besitzers. Vorgabe ist der Haus-Engine-Besitzer (Admin mit „als
