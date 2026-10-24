@@ -5,7 +5,7 @@ namespace RookHub.Api.Tests.Chessable;
 /// <summary>
 /// Charakterisierung (Golden) der PGN-Block-Helfer des Chessable-Imports: Zerlegen in [Event]-Blöcke, oid lesen,
 /// Zugtext-Signatur, oid nachtragen. Festgehalten VOR dem Herauslösen aus <c>ChessableImportService</c>
-/// (Zerlegung Z3) — die Erwartungen sind das, was der alte Code lieferte. Die Blöcke folgen den realen Formen aus
+/// (Zerlegung Z3, jetzt <see cref="ChessablePgnBlocks"/>) — die Erwartungen sind das, was der alte Code lieferte. Die Blöcke folgen den realen Formen aus
 /// den Import-Tests: heutiges piratechess-Format ([ChessableOid] + Leerzeichen-Zeile vor den Zügen), Alt-Import
 /// ohne oid mit echter Leerzeile, CRLF-Zeilenenden mit Kommentar.
 /// </summary>
@@ -23,9 +23,9 @@ public class ChessablePgnBlocksTests
     [Fact]
     public void Split_ThreeRealBlocks_TrimmedInOrder_PreambleDropped()
     {
-        var blocks = ChessableImportService.SplitPgnGames(Pgn).ToList();
+        var blocks = ChessablePgnBlocks.Split(Pgn).ToList();
         Assert.Equal(new[] { BlockA.Trim(), BlockB.Trim(), BlockC.Trim() }, blocks);
-        Assert.Equal(3, ChessableImportService.CountPgnGames(Pgn));
+        Assert.Equal(3, ChessablePgnBlocks.Count(Pgn));
     }
 
     [Theory]
@@ -34,32 +34,32 @@ public class ChessablePgnBlocksTests
     [InlineData("1. e4 e5 *")]
     public void Split_NoEventHeader_Empty(string pgn)
     {
-        Assert.Empty(ChessableImportService.SplitPgnGames(pgn));
-        Assert.Equal(0, ChessableImportService.CountPgnGames(pgn));
+        Assert.Empty(ChessablePgnBlocks.Split(pgn));
+        Assert.Equal(0, ChessablePgnBlocks.Count(pgn));
     }
 
     [Fact]
     public void OidOf_ReadsHeaderOrNull()
     {
-        var blocks = ChessableImportService.SplitPgnGames(Pgn).ToList();
-        Assert.Equal("501", ChessableImportService.OidOf(blocks[0]));
-        Assert.Null(ChessableImportService.OidOf(blocks[1]));
-        Assert.Equal("777", ChessableImportService.OidOf(blocks[2]));
+        var blocks = ChessablePgnBlocks.Split(Pgn).ToList();
+        Assert.Equal("501", ChessablePgnBlocks.OidOf(blocks[0]));
+        Assert.Null(ChessablePgnBlocks.OidOf(blocks[1]));
+        Assert.Equal("777", ChessablePgnBlocks.OidOf(blocks[2]));
     }
 
     [Fact]
     public void MovetextOf_IgnoresHeadersAndSpaceLine()
     {
-        var blocks = ChessableImportService.SplitPgnGames(Pgn).ToList();
-        Assert.Equal("1. e4 e5 2. Nf3 *", ChessableImportService.MovetextOf(blocks[0]));
-        Assert.Equal("1. d4 d5 *", ChessableImportService.MovetextOf(blocks[1]));
-        Assert.Equal("1. c4 {Englisch} c5 *", ChessableImportService.MovetextOf(blocks[2]));
+        var blocks = ChessablePgnBlocks.Split(Pgn).ToList();
+        Assert.Equal("1. e4 e5 2. Nf3 *", ChessablePgnBlocks.MovetextOf(blocks[0]));
+        Assert.Equal("1. d4 d5 *", ChessablePgnBlocks.MovetextOf(blocks[1]));
+        Assert.Equal("1. c4 {Englisch} c5 *", ChessablePgnBlocks.MovetextOf(blocks[2]));
     }
 
     [Fact]
     public void InsertOids_BehindLastHeader_RestUntouched()
     {
-        var result = ChessableImportService.InsertChessableOids(Pgn,
+        var result = ChessablePgnBlocks.InsertChessableOids(Pgn,
             new Dictionary<int, string> { [1] = "602", [2] = "778", [5] = "999" });
 
         var expected = "Vorspann\n" + BlockA + "\n\n"
@@ -71,17 +71,17 @@ public class ChessablePgnBlocksTests
     [Fact]
     public void InsertOids_NothingToDo_ReturnsInput()
     {
-        Assert.Same(Pgn, ChessableImportService.InsertChessableOids(Pgn, new Dictionary<int, string>()));
+        Assert.Same(Pgn, ChessablePgnBlocks.InsertChessableOids(Pgn, new Dictionary<int, string>()));
         const string noEvent = "1. e4 e5 *";
-        Assert.Same(noEvent, ChessableImportService.InsertChessableOids(noEvent, new Dictionary<int, string> { [0] = "1" }));
+        Assert.Same(noEvent, ChessablePgnBlocks.InsertChessableOids(noEvent, new Dictionary<int, string> { [0] = "1" }));
     }
 
     [Fact]
     public void HeaderEnd_PositionBeforeLineBreak_OrMinusOne()
     {
-        Assert.Equal(BlockB.IndexOf("\n\n", StringComparison.Ordinal), ChessableImportService.HeaderEnd(BlockB, 0, BlockB.Length));
-        Assert.Equal(BlockC.IndexOf("\r\n\r\n", StringComparison.Ordinal), ChessableImportService.HeaderEnd(BlockC, 0, BlockC.Length));
+        Assert.Equal(BlockB.IndexOf("\n\n", StringComparison.Ordinal), ChessablePgnBlocks.HeaderEnd(BlockB, 0, BlockB.Length));
+        Assert.Equal(BlockC.IndexOf("\r\n\r\n", StringComparison.Ordinal), ChessablePgnBlocks.HeaderEnd(BlockC, 0, BlockC.Length));
         const string noHeader = "1. e4 e5 *\n";
-        Assert.Equal(-1, ChessableImportService.HeaderEnd(noHeader, 0, noHeader.Length));
+        Assert.Equal(-1, ChessablePgnBlocks.HeaderEnd(noHeader, 0, noHeader.Length));
     }
 }

@@ -48,37 +48,11 @@ public class ChessableImportService : ICourseReimporter
     /// Die Fast-Lane (netzfrei, eigener serieller Loop) bleibt bewusst ungated und läuft NEBENLÄUFIG.</summary>
     private static readonly SemaphoreSlim _downloadLaneGate = new(1, 1);
 
-    /// <summary>Import-Ids, die in DIESEM Prozess GERADE von einem Treiber bearbeitet werden (Claim bis
-    /// Ende von <see cref="RunAsync"/>), mit Zähler wegen der verschachtelten Registrierung
-    /// Drain→RunAsync. Die DB-Phase allein reicht als „läuft"-Nachweis NICHT: verliert ein Job seinen
-    /// treibenden Task, ohne einen Terminal-Status zu schreiben (z. B. DB-Ausfall → auch das
-    /// Fehler-Update in <see cref="FailAsync"/> scheitert), bleibt er auf "claimed"/"fetching"/"importing"
-    /// stehen und belegt den Lane-Slot dauerhaft — der Drain steht bis zum API-Neustart. Der
-    /// <see cref="ChessableImportWatchdogService"/> vergleicht die DB-Inflight-Menge gegen diese Liste
-    /// und reiht verwaiste Jobs wieder ein. Prozesslokal (eine API-Instanz; nach einem Neustart räumt
-    /// der <see cref="ChessableImportResumeService"/> auf).</summary>
-    private static readonly ConcurrentDictionary<int, int> _localInflight = new();
+    /// <summary>Siehe <see cref="ChessableImportProgress.IsDrivenLocally"/> (prozessweite Treiber-Liste).</summary>
+    internal static bool IsDrivenLocally(int importId) => ChessableImportProgress.IsDrivenLocally(importId);
 
-    /// <summary>Wird dieser Import gerade von einem Treiber DIESES Prozesses bearbeitet?</summary>
-    internal static bool IsDrivenLocally(int importId) => _localInflight.ContainsKey(importId);
-
-    /// <summary>Markiert den Import für die Dauer des <c>using</c> als lokal getrieben.</summary>
-    internal static IDisposable TrackInflight(int importId) => new InflightToken(importId);
-
-    private sealed class InflightToken : IDisposable
-    {
-        private readonly int _id;
-        public InflightToken(int id)
-        {
-            _id = id;
-            _localInflight.AddOrUpdate(id, 1, (_, c) => c + 1);
-        }
-        public void Dispose()
-        {
-            var left = _localInflight.AddOrUpdate(_id, 0, (_, c) => c - 1);
-            if (left <= 0) _localInflight.TryRemove(new KeyValuePair<int, int>(_id, left));
-        }
-    }
+    /// <summary>Siehe <see cref="ChessableImportProgress.TrackInflight"/>.</summary>
+    internal static IDisposable TrackInflight(int importId) => ChessableImportProgress.TrackInflight(importId);
 
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
@@ -953,76 +927,15 @@ public class ChessableImportService : ICourseReimporter
         return new LiveAppendResult(added, rep.Id, target, backfill.Count);
     }
 
-    /// <summary>Chessable-oid eines PGN-Blocks (<c>[ChessableOid "…"]</c>), <c>null</c> ohne.</summary>
-    internal static string? OidOf(string block)
-    {
-        var m = ChessableOidRegex.Match(block);
-        return m.Success ? m.Groups[1].Value : null;
-    }
-
-    /// <summary>
-    /// Trägt je Block (Index wie <see cref="SplitPgnGames"/>) den Header <c>[ChessableOid "…"]</c> hinter dessen
-    /// letztem Header ein — in place, der übrige Text bleibt Zeichen für Zeichen erhalten. Blöcke ohne Header
-    /// bleiben unangetastet.
-    /// </summary>
+    // PGN-Block-Helfer: siehe ChessablePgnBlocks (Golden-Tests ChessablePgnBlocksTests).
+    internal static string? OidOf(string block) => ChessablePgnBlocks.OidOf(block);
     internal static string InsertChessableOids(string pgn, IReadOnlyDictionary<int, string> oidByBlock)
-    {
-        var first = pgn.IndexOf("[Event ", StringComparison.Ordinal);
-        if (first < 0 || oidByBlock.Count == 0) return pgn;
-        // Dieselben Schnittstellen wie SplitPgnGames: jedes „[Event " ab dem ersten beginnt einen Block.
-        var starts = System.Text.RegularExpressions.Regex.Matches(pgn[first..], @"\[Event ")
-            .Select(m => first + m.Index).ToList();
-        var sb = new StringBuilder(pgn);
-        foreach (var (blockIndex, oid) in oidByBlock.OrderByDescending(kv => kv.Key))   // von hinten: Positionen bleiben gültig
-        {
-            if (blockIndex < 0 || blockIndex >= starts.Count) continue;
-            var end = blockIndex + 1 < starts.Count ? starts[blockIndex + 1] : pgn.Length;
-            var at = HeaderEnd(pgn, starts[blockIndex], end);
-            if (at >= 0) sb.Insert(at, $"\n[ChessableOid \"{oid}\"]");
-        }
-        return sb.ToString();
-    }
-
-    /// <summary>Position direkt hinter dem letzten Header eines Blocks (vor dessen Zeilenumbruch), -1 ohne Header.</summary>
-    internal static int HeaderEnd(string pgn, int start, int end)
-    {
-        var at = -1;
-        for (var pos = start; pos < end;)
-        {
-            var nl = pgn.IndexOf('\n', pos, end - pos);
-            var lineEnd = nl < 0 ? end : nl;
-            var line = pgn.AsSpan(pos, lineEnd - pos).Trim();
-            if (line.Length == 0 || line[0] != '[') break;
-            at = lineEnd > pos && pgn[lineEnd - 1] == '\r' ? lineEnd - 1 : lineEnd;
-            if (nl < 0) break;
-            pos = nl + 1;
-        }
-        return at;
-    }
-
-    /// <summary>Zerlegt ein Mehr-Partien-PGN in einzelne [Event]-Blöcke.</summary>
-    internal static IEnumerable<string> SplitPgnGames(string pgn)
-    {
-        if (string.IsNullOrWhiteSpace(pgn)) yield break;
-        var idx = pgn.IndexOf("[Event ", StringComparison.Ordinal);
-        if (idx < 0) yield break;
-        foreach (var part in System.Text.RegularExpressions.Regex.Split(pgn[idx..], @"(?=\[Event )"))
-            if (!string.IsNullOrWhiteSpace(part)) yield return part.Trim();
-    }
-
-    /// <summary>
-    /// Zugtext eines PGN-Blocks — alles hinter den führenden Header- und Leerzeilen, whitespace-normiert — als
-    /// Dedup-Signatur einer Linie (Züge sind je Kurslinie praktisch eindeutig). Früher „alles nach der ersten
-    /// Leerzeile": piratechess trennt Header und Züge seit dem <c>[ChessableOid]</c>-Header aber durch eine Zeile
-    /// aus LEERZEICHEN. Dann gab es kein <c>\n\n</c>, die Signatur enthielt die Header, und eine neu geholte Linie
-    /// glich ihrem alten Gegenstück nie — in einem echten Kurs 0 von 175 (header-frei: 175 von 175).
-    /// </summary>
-    internal static string MovetextOf(string block) => RepertoirePgnCleanup.MovetextOf(block);
-
-    internal static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();
-
-    private static readonly System.Text.RegularExpressions.Regex ChessableOidRegex =
-        new("\\[ChessableOid \"([^\"]+)\"\\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+        => ChessablePgnBlocks.InsertChessableOids(pgn, oidByBlock);
+    internal static int HeaderEnd(string pgn, int start, int end) => ChessablePgnBlocks.HeaderEnd(pgn, start, end);
+    internal static IEnumerable<string> SplitPgnGames(string pgn) => ChessablePgnBlocks.Split(pgn);
+    internal static string MovetextOf(string block) => ChessablePgnBlocks.MovetextOf(block);
+    internal static int CountPgnGames(string pgn) => ChessablePgnBlocks.Count(pgn);
+    private static System.Text.RegularExpressions.Regex ChessableOidRegex => ChessablePgnBlocks.ChessableOidRegex;
 
     /// <summary>
     /// Import-Fortschritt eines Chessable-Kurses für die Overlays: liefert die Menge der Chessable-oids,
@@ -1347,16 +1260,9 @@ public class ChessableImportService : ICourseReimporter
         return import;
     }
 
-    /// <summary>Traegt ein Buch noch den automatisch aus dem Dateinamen abgeleiteten Anzeigenamen
-    /// (leer, der Dateiname selbst oder ohne Endung)? Dann darf der Kursname ihn ersetzen.</summary>
+    /// <summary>Siehe <see cref="ChessableImportTargets.IsFileNameDerived"/>.</summary>
     internal static bool IsFileNameDerived(string? displayName, string? fileName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName)) return true;
-        var file = fileName ?? string.Empty;
-        return displayName == file
-            || displayName == Path.GetFileNameWithoutExtension(file)
-            || displayName == PgnImportService.CleanDisplayName(file);
-    }
+        => ChessableImportTargets.IsFileNameDerived(displayName, fileName);
 
     /// <summary>Bricht den Import-Datensatz einer Sitzung ab. Das bereits Importierte BLEIBT — es liegt
     /// in der Datenbank und ist genau der Gewinn des laufenden Imports.</summary>
@@ -1494,15 +1400,8 @@ public class ChessableImportService : ICourseReimporter
         }
     }
 
-    private static string Trunc(string s, int max) => s.Length > max ? s[..max] : s;
+    private static string Trunc(string s, int max) => ChessableImportTargets.Trunc(s, max);
 
-    /// <summary>Kompakte, sprachneutrale Dauer für Meldungen: "1 h 5 min", "12 min", "45 s"; "—" wenn unbekannt.</summary>
-    internal static string FormatDuration(TimeSpan? span)
-    {
-        if (span is null || span.Value < TimeSpan.Zero) return "—";
-        var t = span.Value;
-        if (t.TotalHours >= 1) return $"{(int)t.TotalHours} h {t.Minutes} min";
-        if (t.TotalMinutes >= 1) return $"{(int)t.TotalMinutes} min";
-        return $"{(int)t.TotalSeconds} s";
-    }
+    /// <summary>Siehe <see cref="ChessableImportProgress.FormatDuration"/>.</summary>
+    internal static string FormatDuration(TimeSpan? span) => ChessableImportProgress.FormatDuration(span);
 }

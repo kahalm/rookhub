@@ -277,7 +277,7 @@ public static class CachedSourceRebuild
         {
             var start = starts[i];
             var end = i + 1 < starts.Count ? starts[i + 1] : pgn.Length;
-            var headerEnd = ChessableImportService.HeaderEnd(pgn, start, end);
+            var headerEnd = ChessablePgnBlocks.HeaderEnd(pgn, start, end);
             if (headerEnd < 0) headerEnd = start;
 
             // Header-Zeilen getrimmt: piratechess rückt die Zeilen hinter dem oid-Header um 24 Leerzeichen ein.

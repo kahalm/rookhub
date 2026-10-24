@@ -91,7 +91,7 @@ internal static class ChessableTrainingStart
             var oid = OidRegex.Match(block);
             if (!oid.Success || !colorByOid.TryGetValue(oid.Groups[1].Value, out var color)) continue;
             if (color is not ("white" or "black")) continue;   // nichts anderes in einen Header schreiben
-            var at = ChessableImportService.HeaderEnd(pgn, starts[i], end);
+            var at = ChessablePgnBlocks.HeaderEnd(pgn, starts[i], end);
             if (at >= 0) sb.Insert(at, $"\n{ColorHeaderPrefix}{color}\"]");
         }
         return sb.ToString();
