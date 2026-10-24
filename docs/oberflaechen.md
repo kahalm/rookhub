@@ -28,7 +28,7 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
      (`rookhub-shared-session`) — der JWT-Handler der API weist es ab, es öffnet also nur diesen
      einen Endpunkt; dazu `HttpOnly`, `SameSite=Lax`, `Path=/api/auth/rh-session` (bis N6-001
      `/api/auth` — das bedienen auch RCT, Lernkompass, Cal.com und die Dev-Stacks unter derselben
-     Elterndomäne; die alten Routen `session`/`session/end` bleiben eine Version als Übergang). **Leere Domäne = aus**
+     Elterndomäne; die alten Routen `session`/`session/end` sind seit 0.829.0 entfernt). **Leere Domäne = aus**
      (localhost/IP haben keine gemeinsame Domäne). Eine schon offene Seite der Gegenrichtung
      merkt eine Abmeldung erst beim nächsten Laden — sie hält ihr eigenes JWT.
 - **Link-Vorschau**: `/t/{id}` lebt jetzt auf der Turnierseite. Der nginx sagt der API über

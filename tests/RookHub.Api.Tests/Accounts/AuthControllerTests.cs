@@ -68,6 +68,9 @@ public class AuthControllerTests : IDisposable
     private static bool IsDeletion(string? setCookie) =>
         setCookie != null && setCookie.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Der Wert einer Set-Cookie-Zeile (bis zum ersten Semikolon).</summary>
+    private static string CookieValue(string setCookie) => setCookie.Split(';')[0].Split('=', 2)[1];
+
     public void Dispose() => _db.Dispose();
 
     private sealed class FakeEmailSender : IEmailSender
@@ -574,7 +577,7 @@ public class AuthControllerTests : IDisposable
         _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
         _http.Response.Headers.Remove("Set-Cookie");
 
-        var result = await _controller.LegacySharedSession(CancellationToken.None);
+        var result = await _controller.SharedSession(CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
@@ -654,204 +657,43 @@ public class AuthControllerTests : IDisposable
         Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
     }
 
-    [Fact]
-    public void LegacyEndSharedSession_DeletesBothCookies()
-    {
-        // Eine Oberflaeche aus dem Browser-Cache meldet sich ueber den alten Pfad ab — auch das neue Cookie muss
-        // dann weg, sonst meldete die naechste Seite den Nutzer gleich wieder an.
-        var result = _controller.LegacyEndSharedSession();
-
-        Assert.IsType<NoContentResult>(result);
-        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
-        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
-    }
-
-    // ---- Uebergang N6-001: Alt-Route /api/auth/session fuer Oberflaechen aus dem Browser-Cache ----
-
-    /// <summary>Der Wert einer Set-Cookie-Zeile (bis zum ersten Semikolon).</summary>
-    private static string CookieValue(string setCookie) => setCookie.Split(';')[0].Split('=', 2)[1];
+    // ---- N6-001: die Alt-Routen /api/auth/session(/end) samt Merk-Cookie und Umzug in /permissions sind seit 0.829.0 weg ----
 
     [Fact]
-    public async Task Login_WritesTheMovedMarker_OnTheOldRoutePath_AndItIsNoCredential()
+    public async Task Login_WritesNoMovedMarkerAnymore()
     {
-        // Merker fuer die Alt-Route: liegt genau unter /api/auth/session (dorthin kommt das neue Cookie nicht mehr),
-        // und er darf dort auch an andere Anwendungen gehen — deshalb kein Nachweis und nicht die Nutzer-Id.
+        // Das Merk-Cookie <name>_moved (Path=/api/auth/session) gehoerte zur Alt-Route — ohne sie wird es nicht mehr geschrieben.
         await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
         _http.Response.Headers.Remove("Set-Cookie");
 
         await _controller.Login(new LoginDto { Username = "u", Password = "Password1!" });
 
-        var marker = SetCookieHeader("rh_session_moved", "/api/auth/session");
-        Assert.NotNull(marker);
-        Assert.False(IsDeletion(marker));
-        Assert.Contains("domain=.example.test", marker, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("httponly", marker, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("secure", marker, StringComparison.OrdinalIgnoreCase);
-        var user = await _db.AppUsers.FirstAsync();
-        Assert.Equal(_shared.MovedMarkerFor(user.Id), CookieValue(marker));
-        Assert.Null(await _shared.RedeemAsync(CookieValue(marker)));
+        Assert.NotNull(SetCookieHeader("rh_session", "/api/auth/rh-session"));
+        Assert.DoesNotContain(_http.Response.Headers.SetCookie.ToArray(), h => h?.StartsWith("rh_session_moved=") == true);
     }
 
     [Fact]
-    public async Task LegacySharedSession_SecondCheckAfterTheMove_Answers410_AndKeepsAllCookies()
+    public void EndSharedSession_TouchesNoMovedMarkerAnymore()
     {
-        // Review N6-001 (2): die alte Fassung gleicht beim Start UND bei jedem Tab-Wechsel ueber /api/auth/session ab.
-        // Der erste Abgleich traegt das alte Cookie und zieht es um; beim zweiten schickt der Browser das neue Cookie
-        // (Path=/api/auth/rh-session) dorthin NICHT mehr. Mit 204 meldete sich die alte Fassung ab (Offline-Inhalte weg)
-        // und loeschte ueber session/end auch das neue Cookie — alle anderen uebernommenen Sitzungen gleich mit.
-        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
-        var user = await _db.AppUsers.FirstAsync();
-        SignIn(user.Id);                                       // die alte Fassung schickt ihr uebernommenes Token mit
-        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        var first = await _controller.LegacySharedSession(CancellationToken.None);
-        Assert.IsType<OkObjectResult>(first.Result);
-        var marker = SetCookieHeader("rh_session_moved", "/api/auth/session");
-        Assert.False(IsDeletion(marker));
-
-        // Zweiter Abgleich: was der Browser an /api/auth/session jetzt noch schickt, ist nur der Merker.
-        _http.Request.Headers.Cookie = $"rh_session_moved={CookieValue(marker!)}";
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        var second = await _controller.LegacySharedSession(CancellationToken.None);
-
-        var status = Assert.IsType<StatusCodeResult>(second.Result);
-        Assert.Equal(StatusCodes.Status410Gone, status.StatusCode);
-        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-    }
-
-    [Fact]
-    public async Task LegacySharedSession_AnonymousWithMarker_Answers410()
-    {
-        // Uebernahme beim Start (noch kein Token): hier ist nichts zu holen, die Anmeldung lebt am neuen Pfad. Fuer die
-        // alte Fassung ist 410 wie 204 ein „keine Uebernahme"; geloescht wird nichts.
-        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
-        var user = await _db.AppUsers.FirstAsync();
-        _http.Request.Headers.Cookie = $"rh_session_moved={_shared.MovedMarkerFor(user.Id)}";
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        var result = await _controller.LegacySharedSession(CancellationToken.None);
-
-        Assert.Equal(StatusCodes.Status410Gone, Assert.IsType<StatusCodeResult>(result.Result).StatusCode);
-        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-    }
-
-    [Fact]
-    public async Task LegacySharedSession_WithoutCookieAndMarker_StaysNoContent_SoALogoutStillReachesOldVersions()
-    {
-        // Abgemeldet heisst: Cookie UND Merker weg. Dann bleibt es bei 204 — die alte Fassung meldet sich ab, wie vor
-        // N6-001 (Vereins-PC: Abmelden in RookHub beendet auch die uebernommene Sitzung in KidHub).
-        SignIn(990101);
-
-        var result = await _controller.LegacySharedSession(CancellationToken.None);
-
-        Assert.IsType<NoContentResult>(result.Result);
-        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-    }
-
-    [Fact]
-    public async Task LegacySharedSession_MarkerOfAnotherAccount_IsNoContent()
-    {
-        // Am Geraet hat sich inzwischen jemand anderes angemeldet: die alte Fassung darf nicht im vorigen Konto
-        // weiterlaufen. Uebernehmen kann sie das andere Konto von hier aus nicht — also abmelden (204).
-        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
-        var user = await _db.AppUsers.FirstAsync();
-        SignIn(user.Id);
-        _http.Request.Headers.Cookie = $"rh_session_moved={_shared.MovedMarkerFor(user.Id + 1)}";
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        var result = await _controller.LegacySharedSession(CancellationToken.None);
-
-        Assert.IsType<NoContentResult>(result.Result);
-        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-    }
-
-    [Fact]
-    public async Task SharedSession_NewRouteIgnoresTheMarker_AndStaysNoContentWithoutCookie()
-    {
-        // Die neue Route bekommt den Merker im Browser nie (anderer Pfad) — und wertet ihn auch sonst nicht.
-        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
-        var user = await _db.AppUsers.FirstAsync();
-        SignIn(user.Id);
-        _http.Request.Headers.Cookie = $"rh_session_moved={_shared.MovedMarkerFor(user.Id)}";
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        var result = await _controller.SharedSession(CancellationToken.None);
-
-        Assert.IsType<NoContentResult>(result.Result);
-        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-    }
-
-    [Fact]
-    public void EndSharedSession_AlsoDeletesTheMarker()
-    {
-        // Sonst antwortete die Alt-Route nach dem Abmelden weiter 410, und eine alte Fassung bliebe angemeldet.
         _controller.EndSharedSession();
 
-        Assert.True(IsDeletion(SetCookieHeader("rh_session_moved", "/api/auth/session")));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+        Assert.DoesNotContain(_http.Response.Headers.SetCookie.ToArray(), h => h?.StartsWith("rh_session_moved=") == true);
     }
 
-    // ---- Uebergang N6-001: GET /api/auth/permissions zieht ein altes Cookie um ----
-
-    private Task<ActionResult<AuthPermissionsDto>> GetPermissions() =>
-        _controller.GetPermissions(new PermissionResolver(_db, TestServices.Cache()), CancellationToken.None);
-
     [Fact]
-    public async Task GetPermissions_MovesAnOldCookieOfTheSameAccount()
+    public async Task GetPermissions_LeavesTheSharedCookieAlone()
     {
-        // Wer nur selbst angemeldet ist, ruft den Tausch nie — das alte Cookie (Path=/api/auth) ginge sonst bis zu
-        // 30 Tage weiter an fremde Hosts. Die Rechte holt jede angemeldete Oberflaeche beim Start.
+        // Der Umzug alter Cookies in GET /api/auth/permissions ist weg: die Rechteabfrage schreibt und loescht keine Cookies.
         await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
         var user = await _db.AppUsers.FirstAsync();
         SignIn(user.Id);
         _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
         _http.Response.Headers.Remove("Set-Cookie");
 
-        var result = await GetPermissions();
-
-        Assert.IsType<OkObjectResult>(result.Result);
-        var moved = SetCookieHeader("rh_session", "/api/auth/rh-session");
-        Assert.False(IsDeletion(moved));
-        Assert.NotNull(await _shared.RedeemAsync(CookieValue(moved!)));
-        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
-        Assert.False(IsDeletion(SetCookieHeader("rh_session_moved", "/api/auth/session")));
-    }
-
-    [Fact]
-    public async Task GetPermissions_LeavesAnotherAccountsCookieAlone()
-    {
-        // Impersonation oder ein anderer Nutzer am Geraet: die geteilte Anmeldung des ANDEREN Kontos weder umziehen
-        // noch loeschen — das erledigt sein naechster Tausch.
-        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
-        await _controller.Register(new RegisterDto { Username = "v", Email = "v@t.com", Password = "Password1!" });
-        var u = await _db.AppUsers.SingleAsync(x => x.Username == "u");
-        var v = await _db.AppUsers.SingleAsync(x => x.Username == "v");
-        SignIn(u.Id);
-        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(v.Id)}";
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        var result = await GetPermissions();
+        var result = await _controller.GetPermissions(new PermissionResolver(_db, TestServices.Cache()), CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(result.Result);
         Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-    }
-
-    [Fact]
-    public async Task GetPermissions_DeletesAnOldCookieThatNoLongerWorks_AndWithoutCookieWritesNothing()
-    {
-        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
-        var user = await _db.AppUsers.FirstAsync();
-        SignIn(user.Id);
-        _http.Response.Headers.Remove("Set-Cookie");
-
-        await GetPermissions();
-        Assert.Empty(_http.Response.Headers.SetCookie.ToArray());
-
-        _http.Request.Headers.Cookie = "rh_session=voelliger.unsinn";
-        await GetPermissions();
-
-        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
-        Assert.Null(SetCookieHeader("rh_session", "/api/auth/rh-session"));
     }
 }

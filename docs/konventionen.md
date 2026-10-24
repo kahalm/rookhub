@@ -22,7 +22,7 @@
   Header nicht und darf den Nutzer nicht ausloggen (2026-09-09: ein Tippfehler beim Passwortwechsel warf den Nutzer
   raus, vier Fehlversuche später hielt er die App für vergesslich). Wer einen neuen 401-Grund einbaut, entscheidet
   damit über den Header — und vorher, ob es überhaupt ein 401 ist: ein ERWARTETES Nein, das schon ein anonymer Besuch
-  auslöst, wird mit 204 beantwortet (`POST /api/auth/session` seit 0.478.6, vorher 401). Die Log-Überwachung zählt
+  auslöst, wird mit 204 beantwortet (geteilte Anmeldung `POST /api/auth/rh-session`, bis N6-001 `session`; 204 seit 0.478.6, vorher 401). Die Log-Überwachung zählt
   jeden 401 unter `/api/auth` je IP als abgelehnten Anmeldeversuch; 25 frische Browser-Sitzungen reichten für einen
   Brute-Force-HIGH. Serverseitig loggt `Services/Accounts/JwtTokenGate.cs` JEDE Token-Ablehnung mit Grund und Pfad
   (Logger `RookHub.Api.JwtAuth`; Kibana: `message:JwtAuth*`) — vorher war ein abgelehntes Token in den Logs unsichtbar.
