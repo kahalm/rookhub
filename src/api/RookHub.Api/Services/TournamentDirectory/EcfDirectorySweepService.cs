@@ -28,9 +28,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// <para><b>Was sie NICHT liefert:</b> Bedenkzeit, Rundenzahl, System und Teilnehmerzahl. Die
 /// stehen nur im Fliesstext der Ausschreibung, und der ist Werbetext.</para>
 /// </summary>
-public class EcfDirectorySweepService
+public class EcfDirectorySweepService : IDirectorySourceAdapter<EcfDirectorySweepService.CrawlerEcfEvent>
 {
-    private const int SaveEvery = 25;
 
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -50,112 +49,50 @@ public class EcfDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        int added = 0, located = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = $"en{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-
-                // „Meeting" ist eine Sitzung des Verbands, kein Turnier.
-                if (row.IsMeeting)
-                {
-                    if (own is not null && own.RemovedAt is null)
-                    {
-                        own.RemovedAt = now;
-                        retired++;
-                    }
-                    continue;
-                }
-
-                var federation = FederationOf(row.Country);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.EnglishChessFederation, row.EventId, row.Place), ct);
-
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("ECF: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = row.Online ? null : row.Place?.Trim();
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = federation;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                ApplyYouthMark(own, row.YouthOnly);
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
-
-                if (await ApplyCoordinatesAsync(own, row, locationChanged, ct)) located++;
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "ECF: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "ECF-Kalender: {Read} gelesen, {Added} neu, {Located} verortet, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, located, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.EnglishChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, located, matched, retired);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerEcfEvent>.Kind => DirectorySourceKind.EnglishChessFederation;
+    string IDirectorySourceAdapter<CrawlerEcfEvent>.LogName => "ECF";
+    string? IDirectorySourceAdapter<CrawlerEcfEvent>.SourceKey(CrawlerEcfEvent row) => row.EventId.Length == 0 ? null : row.EventId;
+    DateOnly? IDirectorySourceAdapter<CrawlerEcfEvent>.Start(CrawlerEcfEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerEcfEvent>.Name(CrawlerEcfEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerEcfEvent>.PublicId(CrawlerEcfEvent row) => $"en{row.EventId}";
+    // „Meeting" ist eine Sitzung des Verbands, kein Turnier.
+    bool IDirectorySourceAdapter<CrawlerEcfEvent>.Withdrawn(CrawlerEcfEvent row) => row.IsMeeting;
+    string? IDirectorySourceAdapter<CrawlerEcfEvent>.Federation(CrawlerEcfEvent row) => FederationOf(row.Country);
+    string? IDirectorySourceAdapter<CrawlerEcfEvent>.MatchPlace(CrawlerEcfEvent row) => row.Place;
+    string? IDirectorySourceAdapter<CrawlerEcfEvent>.Url(CrawlerEcfEvent row) => row.Url;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerEcfEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerEcfEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var location = row.Online ? null : row.Place?.Trim();
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = FederationOf(row.Country);
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        ApplyYouthMark(own, row.YouthOnly);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.EnglishChessFederation, row.EventId, row.Url, now, ct);
+
+        return await ApplyCoordinatesAsync(own, row, locationChanged, ct);
+    }
+
+    void IDirectorySourceAdapter<CrawlerEcfEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "ECF-Kalender: {Read} gelesen, {Added} neu, {Located} verortet, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
 
     /// <summary>
     /// Die Koordinaten setzen — mit der Angabe der Quelle, wenn es eine gibt, sonst ueber das

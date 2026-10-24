@@ -42,7 +42,7 @@ internal interface IDirectorySourceAdapter<in TRow>
     bool Withdrawn(TRow row) => false;
 
     /// <summary>Die Foederation fuer den Abgleich und fuer einen neu angelegten Eintrag.</summary>
-    string Federation(TRow row);
+    string? Federation(TRow row);
 
     /// <summary>Der Ortstext fuer den Abgleich (<see cref="ExternalDirectorySource.MatchHint.Place"/>).</summary>
     string? MatchPlace(TRow row);
