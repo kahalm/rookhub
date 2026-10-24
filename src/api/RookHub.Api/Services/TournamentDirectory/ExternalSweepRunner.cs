@@ -181,7 +181,7 @@ internal static class ExternalSweepRunner
     }
 
     /// <summary>
-    /// Die Verortung von WCU und CFC (Quellen ohne eigene Koordinaten): nur mit Ortstext, nur wenn er
+    /// Die Verortung der Quellen ohne eigene Koordinaten (WCU, CFC, chess.hu …): nur mit Ortstext, nur wenn er
     /// sich geaendert hat oder noch kein Pin da ist, und ein mehrdeutiger Treffer setzt nichts.
     /// </summary>
     /// <returns>Ob ein Pin gesetzt wurde.</returns>
