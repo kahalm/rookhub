@@ -17,7 +17,7 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   Domain kann die andere nicht mitlesen. Zwei Wege überbrücken das, beide in
   `core/handoff.service.ts`:
   1. **Sprung über das Menü** — nimmt einen Einmal-Code mit (`POST /api/auth/handoff` →
-     `?h=<code>` → `POST /api/auth/handoff/exchange`, 60 s gültig, genau einmal einlösbar).
+     `?h=<code>` → `POST /api/auth/rh-session/handoff`, 60 s gültig, genau einmal einlösbar).
   2. **Geteilte Anmeldung** (seit v0.413.0, `Services/Accounts/SharedSessionService.cs`) — für den
      Normalfall „ich rufe die andere Seite direkt auf". Beim Anmelden legt die API ein Cookie auf
      der gemeinsamen Elterndomäne ab (`Auth:SharedSessionDomain`, z. B. `.oberschmid.homes`;

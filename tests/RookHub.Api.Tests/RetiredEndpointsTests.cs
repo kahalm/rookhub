@@ -28,6 +28,9 @@ public class RetiredEndpointsTests
         // alle Oberflächen nutzen POST /api/auth/rh-session und rh-session/end
         "POST /api/auth/session",
         "POST /api/auth/session/end",
+        // F1-008: alter Pfad des Übergabe-Tauschs (Übergang seit 0.640.0) — alle Oberflächen lösen den Einmal-Code
+        // über POST /api/auth/rh-session/handoff ein (nur dorthin geht das geteilte Cookie mit)
+        "POST /api/auth/handoff/exchange",
     ];
 
     [Fact]
