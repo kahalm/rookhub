@@ -10,7 +10,7 @@ namespace RookHub.Api.Services.Chessable;
 public static class ChessableImportTargets
 {
     /// <summary>„book" bleibt „book", alles andere ist „repertoire".</summary>
-    internal static string Normalize(string target) => target == "book" ? "book" : "repertoire";
+    internal static string Normalize(string? target) => target == "book" ? "book" : "repertoire";
 
     /// <summary>piratechess-Modus: Buch → erster Key-Zug trainierbar, Repertoire → reines PGN.</summary>
     internal static string ParseMode(string target) => target == "book" ? "FirstKeyMove" : "None";

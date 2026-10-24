@@ -79,31 +79,12 @@ public class ExtensionController : BaseApiController
 
     private static bool IsValidOid(string? oid) => ChessableIds.TryParseOid(oid, out _);
 
-    /// <summary>Form der <c>LineOids</c> prüfen — dieselben Regeln wie piratechess, aber hier mit klarer Meldung
-    /// statt eines durchgereichten 400. <c>null</c> = in Ordnung.</summary>
+    // Formregeln der Ingest-Anfragen: ChessableIngestRules (auch vom Chunk-Import im Dienst genutzt, A3-012).
     private static string? ValidateLineOids(IEnumerable<ChessableIngestChapter> chapters)
-    {
-        foreach (var ch in chapters)
-        {
-            var lines = ch.Lines ?? new List<string>();
-            if (ch.LineOids is null)
-            {
-                if (lines.Any(string.IsNullOrEmpty))
-                    return "A line without content needs lineOids (it is filled from the shared cache).";
-                continue;
-            }
-            if (ch.LineOids.Count != lines.Count)
-                return "lineOids must have exactly one entry per line.";
-            if (!ch.LineOids.All(IsValidOid))
-                return "Invalid oid in lineOids.";
-        }
-        return null;
-    }
+        => ChessableIngestRules.ValidateLineOids(chapters);
 
-    /// <summary>Soll piratechess Linien aus dem geteilten Cache einsetzen? Das sind genau die Linien ohne Inhalt
-    /// (nach <see cref="ValidateLineOids"/> tragen sie immer eine oid) — dieselbe Regel wie <c>OidsToFill</c> dort.</summary>
     private static bool WantsCacheFill(IEnumerable<ChessableIngestChapter> chapters)
-        => chapters.Any(ch => (ch.Lines ?? new List<string>()).Any(string.IsNullOrEmpty));
+        => ChessableIngestRules.WantsCacheFill(chapters);
 
     /// <summary>Meldung, wenn Linien aus dem geteilten Cache für einen Kurs verlangt werden, der nicht in der
     /// bestätigten Kursliste des Nutzers steht (siehe <see cref="ChessableImportService.HasVerifiedCourseAsync"/>).</summary>
@@ -585,115 +566,15 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = "sessionId and valid bid required." });
 
         var userId = GetUserId();
-        var target = dto.Target == "book" ? "book" : "repertoire";
-
-        // Abbruch aus dem Browser (Chessable-Sperre, Nutzer stoppt): Sitzung schliessen und den Datensatz
-        // mit der Bilanz des Erreichten als abgebrochen markieren — statt bis zum Ablauf der Sitzung
-        // (30 min) auf „laeuft" zu stehen. Die Linien selbst sind laengst importiert und bleiben.
-        if (dto.Aborted)
+        var outcome = await _chessableImport.HandleIngestChunkAsync(_ingestSessions, userId, dto, _logger, ct);
+        return outcome.Kind switch
         {
-            var dropped = _ingestSessions.Discard(userId, dto.SessionId);
-            if (dropped?.ImportId is int abortedId)
-                await _chessableImport.FailBrowserImportAsync(abortedId,
-                    $"Im Browser abgebrochen — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
-            return Ok(new ChessableIngestChunkAck(true, dropped?.ChaptersDone ?? 0, dropped?.LinesSeen ?? 0, dropped?.Imported ?? 0));
-        }
-
-        // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
-        var courseName = ChessableLineJson.ResolveCourseName(dto.CourseName, dto.Chapter?.Lines);
-        var (session, storeError) = _ingestSessions.GetOrCreate(userId, dto.SessionId, dto.Bid, target, courseName);
-        if (session is null)
-        {
-            // Abgelehnte Chunks waren bisher nur als nackter 400 im Zugriffslog zu sehen — der Grund stand
-            // ausschliesslich im Quelltext (am 2026-09-19 die halbe Fehlersuche gekostet).
-            _logger.LogWarning("Browser-Import abgelehnt (User {UserId}, bid {Bid}): {Reason}", userId, dto.Bid, storeError);
-            return BadRequest(new { message = storeError });
-        }
-
-        // Kapitel SOFORT parsen und anhängen (ein finaler Chunk darf leer sein, wenn das letzte Kapitel
-        // schon zuvor kam). Nichts wird zwischengelagert: was geholt ist, steht danach in der Datenbank.
-        if (dto.Chapter is { } chapter && (chapter.Lines?.Count ?? 0) > 0)
-        {
-            if (ValidateLineOids(new[] { chapter }) is { } shapeError)
-            {
-                var dropped = _ingestSessions.Discard(userId, dto.SessionId);
-                if (dropped?.ImportId is int brokenId)
-                    await _chessableImport.FailBrowserImportAsync(brokenId,
-                        $"Ungültiger Chunk ({shapeError}) — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
-                return BadRequest(new { message = shapeError });
-            }
-            if (WantsCacheFill(new[] { chapter }) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
-            {
-                var dropped = _ingestSessions.Discard(userId, dto.SessionId);
-                if (dropped?.ImportId is int refusedId)
-                    await _chessableImport.FailBrowserImportAsync(refusedId,
-                        $"Linien aus dem geteilten Cache für einen nicht bestätigten Kurs verlangt — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
-                return CacheFillForbidden(userId, dto.Bid);
-            }
-
-            ChessableCourseDataDto parsed;
-            try
-            {
-                parsed = await _chessableProxy.ParseCourseAsync(dto.Bid, target == "book" ? "FirstKeyMove" : "None",
-                    new[] { chapter }, dto.CourseJson, dto.Complete, ct);
-            }
-            catch (ChessableProxyException ex)
-            {
-                _logger.LogWarning(ex, "Browser-Import: Parser-Fehler (User {UserId}, bid {Bid})", userId, dto.Bid);
-                return ChessableProxyExceptionFilter.ResultFor(ex);
-            }
-
-            if (!string.IsNullOrWhiteSpace(parsed.Pgn))
-            {
-                if (session.ImportId is null)
-                {
-                    var (import, inflight) = await _chessableImport.StartBrowserImportAsync(
-                        userId, dto.Bid, courseName ?? parsed.Name, target, ct);
-                    _ingestSessions.AttachImport(session, import.Id, inflight);
-                }
-
-                // Kapitelnummern nahtlos hinter den bisherigen fortschreiben — sonst überschriebe Chunk 2 die
-                // Linien von Chunk 1 (LineId = Datei:Round). Siehe ChessableRoundOffset.
-                //
-                // Ein Kapitel, dessen Linien zusammen über dem Body-Limit liegen, kommt in MEHREREN Chunks mit
-                // demselben ChapterKey an (RepCheck ≥ 1.61.0). Eine solche Fortsetzung bleibt in derselben
-                // Kapitelnummer und setzt nur die Liniennummer fort: der Parser wirft die Einträge ohne Inhalt
-                // aus list.data und begänne sonst wieder bei .002 — also genau auf den Linien von Teil 1.
-                var continues = dto.ChapterKey is { Length: > 0 }
-                    && string.Equals(dto.ChapterKey, session.LastChapterKey, StringComparison.Ordinal)
-                    && session.CurrentChapter > 0;
-                // Erster Chunk einer Sitzung, die der Server nicht kennt — nach einem API-Neustart mitten im Import
-                // ist der Versatz im Arbeitsspeicher weg. Träfe der Chunk mit Versatz 0 auf schon importierte
-                // Kapitel, setzt er hinter dem Buch fort (ChessableImportService.ResumeChapterOffsetAsync). Nicht bei
-                // einem Teil-Import: dort bekommt eine kollidierende neue Linie ohnehin einen freien Platz.
-                var previousMaxChapter = session.ChapterOffset;
-                if (!continues && session.ChaptersDone == 0 && previousMaxChapter == 0 && target == "book" && !dto.Partial)
-                    previousMaxChapter = await _chessableImport.ResumeChapterOffsetAsync(userId, dto.Bid, parsed.Pgn!, ct);
-                var chapterShift = continues
-                    ? ChessableRoundOffset.SameChapterOffset(session.CurrentChapter, parsed.Pgn)
-                    : ChessableRoundOffset.NextOffset(previousMaxChapter, parsed.Pgn);
-                var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, chapterShift,
-                    continues ? ChessableRoundOffset.NextLineOffset(session.MaxLineInChapter, parsed.Pgn) : 0);
-                var res = await _chessableImport.AppendBrowserChunkAsync(
-                    session.ImportId!.Value, shifted, parsed.LineCount, dto.Partial, ct);
-                _ingestSessions.NoteChapter(session, ChessableRoundOffset.MaxChapter(shifted),
-                    parsed.LineCount, res.Imported, res.ResultId,
-                    dto.ChapterKey, continues, ChessableRoundOffset.MaxLine(shifted));
-            }
-        }
-
-        if (!dto.Final)
-            return Ok(new ChessableIngestChunkAck(false, session.ChaptersDone, session.LinesSeen, session.Imported));
-
-        // Final: Sitzung schliessen. Das Importierte steht laengst in der Datenbank.
-        var taken = _ingestSessions.Take(userId, dto.SessionId);
-        if (taken?.ImportId is not int importId)
-            return BadRequest(new { message = "No captured lines in session." });
-
-        var done = await _chessableImport.FinishBrowserImportAsync(importId, ct);
-        if (done is null) return BadRequest(new { message = "Import record vanished." });
-        return Ok(new ChessableIngestResultDto(done.Id, done.Target, done.ResultId, done.CourseName,
-            done.Imported, done.Skipped, done.Invalid, taken.LinesSeen));
+            ChessableChunkOutcomeKind.Ack => Ok(outcome.Ack),
+            ChessableChunkOutcomeKind.Done => Ok(outcome.Result),
+            ChessableChunkOutcomeKind.CacheFillForbidden => CacheFillForbidden(userId, dto.Bid),
+            ChessableChunkOutcomeKind.ProxyError => ChessableProxyExceptionFilter.ResultFor(outcome.ProxyError!),
+            _ => BadRequest(new { message = outcome.Message }),
+        };
     }
 
     /// <summary>

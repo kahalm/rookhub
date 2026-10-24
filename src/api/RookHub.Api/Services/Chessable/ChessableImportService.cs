@@ -1,4 +1,5 @@
 using RookHub.Api.Data;
+using RookHub.Api.DTOs.Chessable;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Repertoires;
@@ -41,6 +42,7 @@ public class ChessableImportService : ICourseReimporter
     private readonly ChessableCourseFetch _courseFetch;
     private readonly ChessableFetchLane _fetchLane;
     private readonly ChessableBrowserImport _browserImport;
+    private readonly ChessableBrowserIngest _browserIngest;
 
     public ChessableImportService(
         AppDbContext db,
@@ -62,6 +64,7 @@ public class ChessableImportService : ICourseReimporter
         _courseFetch = new ChessableCourseFetch(db, encryption, proxy, rateLimiter, _outcome, _reimportQueue, logger);
         _fetchLane = new ChessableFetchLane(db, proxy, _courseFetch, _writer, _outcome, logger);
         _browserImport = new ChessableBrowserImport(db, _writer, _liveAppend, _outcome, logger);
+        _browserIngest = new ChessableBrowserIngest(_browserImport, proxy);
     }
 
     /// <summary>Alle im piratechess-DB-Cache vorliegenden Kurs-Bids (Batch, 1 Aufruf) — für den
@@ -191,6 +194,15 @@ public class ChessableImportService : ICourseReimporter
     /// <summary>Bricht den Import-Datensatz einer Sitzung ab; das bereits Importierte bleibt.</summary>
     public Task FailBrowserImportAsync(int importId, string message, CancellationToken ct = default)
         => _browserImport.FailBrowserImportAsync(importId, message, ct);
+
+    /// <summary>
+    /// Ein Chunk des kapitelweisen Browser-Imports (Codereview A3-012: Ablauf aus dem <c>ExtensionController</c>).
+    /// <paramref name="sessions"/> (Singleton) und <paramref name="log"/> (Logquelle des Controllers) kommen vom
+    /// Aufrufer — so bleiben DI-Registrierung, Konstruktor und Logquelle der Meldungen unverändert.
+    /// </summary>
+    public Task<ChessableChunkOutcome> HandleIngestChunkAsync(ChessableIngestSessionStore sessions, int userId,
+        ChessableIngestChunkRequest dto, ILogger log, CancellationToken ct = default)
+        => _browserIngest.HandleChunkAsync(sessions, userId, dto, log, ct);
 
     /// <summary>True für reine Transport-/Verbindungsfehler (piratechess down/Neustart): SocketException,
     /// HttpRequestException oder typische „connection refused"/„timed out"-Meldungen. NICHT für
