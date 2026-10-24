@@ -42,6 +42,7 @@ import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -806,7 +807,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   get userColorName(): 'white' | 'black' { return this.color === 'w' ? 'white' : 'black'; }
 
   /** Seite am Zug laut der aktuell angezeigten Stellung. */
-  get boardTurn(): 'white' | 'black' { return this.fen.split(/\s+/)[1] === 'b' ? 'black' : 'white'; }
+  get boardTurn(): 'white' | 'black' { return whiteToMove(this.fen) ? 'white' : 'black'; }
 
   /** Premove erlauben, solange der GEGNER am Zug ist — also während des automatischen Gegnerzugs
    *  und im kurzen Feedback nach einem richtigen/geduldeten Zug. Nur im Abfragen-Modus. */

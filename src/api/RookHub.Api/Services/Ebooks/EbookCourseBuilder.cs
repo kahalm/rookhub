@@ -112,7 +112,7 @@ public class EbookCourseBuilder
         {
             var board = ChessBoard.LoadFromFen(fen);
             var parts = fen.Split(' ');
-            var white = parts.Length < 2 || parts[1] == "w";
+            var white = FenFields.WhiteToMove(fen);   // nach LoadFromFen: Feld ist w oder b
             var no = parts.Length >= 6 && int.TryParse(parts[5], out var f) && f > 0 ? f : 1;
             var sb = new StringBuilder();
             var first = true;

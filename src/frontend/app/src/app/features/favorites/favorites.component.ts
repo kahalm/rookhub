@@ -14,6 +14,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { PuzzleThemePipe } from '../puzzles/puzzle-theme.pipe';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -181,7 +182,7 @@ export class FavoritesComponent implements OnInit {
   /** Brett-Ausrichtung aus FEN + Quelle: Standard-/Lichess-Puzzles starten mit dem Gegnerzug
    *  (Spieler ist die andere Seite); Buch-Stellungen sind meist schon die Trainingsstellung. */
   private orientationFor(f: FavoritePuzzle): 'white' | 'black' {
-    const turn = f.fen.split(' ')[1] === 'b' ? 'black' : 'white';
+    const turn = whiteToMove(f.fen) ? 'white' : 'black';
     if (f.source === 'Book') return turn;
     return turn === 'white' ? 'black' : 'white';
   }

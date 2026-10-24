@@ -1,4 +1,5 @@
 import { ParsedGame, START_FEN } from '../../shared/pgn-viewer/pgn-parser';
+import { whiteToMove as fenWhiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Serialisiert eine geparste Repertoire-Linie (ein <see cref="ParsedGame"/>) zurück zu einem
@@ -33,7 +34,7 @@ export function parsedGameToPgn(game: ParsedGame, opts?: { title?: string }): st
   const seg = start.split(' ');
   let fullMoveNo = parseInt(seg[5], 10);
   if (!fullMoveNo || fullMoveNo < 1) fullMoveNo = 1;
-  let whiteToMove = (seg[1] || 'w') !== 'b';
+  let whiteToMove = fenWhiteToMove(start);
 
   for (let i = 0; i < moves.length; i++) {
     if (whiteToMove) parts.push(`${fullMoveNo}.`);

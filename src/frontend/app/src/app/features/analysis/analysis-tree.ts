@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Zugbaum des Analysebretts (0.604.0, Wunsch 2026-09-29 mit Screenshot des Lichess-Analysebretts: „so hätt ichs bei uns
@@ -206,7 +207,7 @@ function fenBefore(n: AnalysisNode): string {
 
 function moveNumberOf(fen: string): { number: number; white: boolean } {
   const parts = fen.split(' ');
-  return { number: parseInt(parts[5] ?? '1', 10) || 1, white: parts[1] !== 'b' };
+  return { number: parseInt(parts[5] ?? '1', 10) || 1, white: whiteToMove(fen) };
 }
 
 /** „12.Nf3" bzw. „12...Nf6". */

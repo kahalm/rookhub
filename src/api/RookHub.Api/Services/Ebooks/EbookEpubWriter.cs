@@ -89,7 +89,7 @@ public static class EbookEpubWriter
                         AddText(zip, "OEBPS/" + name, svg);
                         manifest.Append(CultureInfo.InvariantCulture, $"<item id=\"img{usedImages.Count}\" href=\"{name}\" media-type=\"image/svg+xml\"/>\n");
                         images[fig.Diagram.Key] = ("OEBPS/" + name, spineIndex);
-                        var side = fig.Diagram.SideKnown ? (fig.Diagram.Fen.Split(' ').ElementAtOrDefault(1) == "b" ? "▲" : "△") : null;
+                        var side = fig.Diagram.SideKnown ? (FenFields.WhiteToMove(fig.Diagram.Fen) ? "△" : "▲") : null;
                         var caption = string.Join(' ', new[] { fig.Diagram.Label != null ? $"<b>{E(fig.Diagram.Label)}</b>" : null, side }.Where(x => x != null));
                         var alt = fig.Diagram.Label != null ? $"Diagram {fig.Diagram.Label}" : "Diagram";
                         body.Append(CultureInfo.InvariantCulture, $"<figure class=\"diagram\"{anchor}><img src=\"../{name}\" alt=\"{E(alt)}\"/>");

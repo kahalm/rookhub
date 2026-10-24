@@ -27,7 +27,6 @@ internal static class ChessableTrainingStart
     internal const string ColorHeaderPrefix = "[ChessableColor \"";
 
     private static readonly Regex OidRegex = new("\\[ChessableOid \"([^\"]+)\"\\]", RegexOptions.Compiled);
-    private static readonly Regex FenRegex = new("\\[FEN \"([^\"]+)\"\\]", RegexOptions.Compiled);
     private static readonly Regex EventSplitRegex = new(@"(?=\[Event )", RegexOptions.Compiled);
 
     /// <summary>
@@ -59,13 +58,12 @@ internal static class ChessableTrainingStart
     internal static string? SolverColorOf(string? block)
     {
         if (string.IsNullOrWhiteSpace(block)) return null;
-        var fen = FenRegex.Match(block);
-        if (!fen.Success) return null;
+        var fen = PgnMoveTree.StartFenOf(block);
+        if (fen is null) return null;
         var k = PgnParser.FindTquMoveIndex(RepertoirePgnCleanup.MovetextOf(block));
         if (k is null) return null;
 
-        var parts = fen.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var whiteToMove = parts.Length < 2 || !parts[1].Equals("b", StringComparison.OrdinalIgnoreCase);
+        var whiteToMove = FenFields.WhiteToMove(fen);
         var solverIsWhite = (k.Value + 1) % 2 == 0 ? whiteToMove : !whiteToMove;
         return solverIsWhite ? "white" : "black";
     }

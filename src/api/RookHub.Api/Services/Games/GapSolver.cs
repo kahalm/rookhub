@@ -437,7 +437,7 @@ public static class GapSolver
         {
             var fields = fen.Split(' ');
             if (fields.Length < 2) return null;
-            var census = new Census { WhiteToMove = fields[1] == "w" };
+            var census = new Census { WhiteToMove = FenFields.WhiteToMove(fen) };
             if (fields.Length >= 3)
             {
                 census._whiteCastle = fields[2].Contains('K') || fields[2].Contains('Q');

@@ -187,11 +187,7 @@ public static partial class PermissiveSan
         return board;
     }
 
-    private static bool SideToMove(string fen)
-    {
-        var parts = fen.Split(' ');
-        return parts.Length < 2 || parts[1] != "b";  // Default Weiß
-    }
+    private static bool SideToMove(string fen) => FenFields.WhiteToMove(fen);  // Default Weiß
 
     private static string Clean(string token)
     {

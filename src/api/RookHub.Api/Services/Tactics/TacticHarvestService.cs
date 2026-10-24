@@ -126,7 +126,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         var c = new TacticCandidate
         {
             GameAnalysisId = a.Id, Ply = ply, Origin = a.Origin, PrevFen = prevFen, BlunderUci = blunderUci, Fen = fen,
-            SolverWhite = fen.Split(' ').ElementAtOrDefault(1) == "w", GameMoveUci = gameUci,
+            SolverWhite = FenFields.WhiteToMove(fen), GameMoveUci = gameUci,
             Found = played is not null && played.Value.Fen == first.Value.Fen, Kind = found.Kind, Moves = bestUci,
             EvalText = TacticHarvest.EvalText(found.Best), Status = TacticCandidateStatus.Verifying, CreatedAt = now, UpdatedAt = now,
             Variant = variant,

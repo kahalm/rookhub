@@ -115,7 +115,7 @@ public static class ScoresheetPlausibility
 
         var clock = Stopwatch.StartNew();
         var fen0 = startFen ?? GamePlies.StartFen();
-        var whiteFirst = fen0.Split(' ').ElementAtOrDefault(1) != "b";
+        var whiteFirst = FenFields.WhiteToMove(fen0);
         var plies = resolution.Plies.ToList();
         var unresolved = resolution.Unresolved;
         var stuckAt = resolution.StuckAt;
@@ -460,7 +460,7 @@ public sealed class StockfishScoresheetEngine : IScoresheetEngine
             if (_broken) return null;
             try
             {
-                var whiteToMove = startFen.Split(' ').ElementAtOrDefault(1) != "b";
+                var whiteToMove = FenFields.WhiteToMove(startFen);
                 var result = new List<int>(uciMoves.Count + 1);
                 for (var n = 0; n <= uciMoves.Count; n++)
                 {

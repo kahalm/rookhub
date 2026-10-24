@@ -76,7 +76,7 @@ public static class CommentChunks
     {
         if (string.IsNullOrWhiteSpace(fen)) return (1, false);
         var parts = fen.Split(' ');
-        var black = parts.Length > 1 && parts[1] == "b";
+        var black = !FenFields.WhiteToMove(fen);
         var move = parts.Length > 5 && int.TryParse(parts[5], out var n) && n > 0 ? n : 1;
         return (move, black);
     }

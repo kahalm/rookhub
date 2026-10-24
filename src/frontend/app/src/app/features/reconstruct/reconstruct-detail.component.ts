@@ -24,6 +24,7 @@ import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.c
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
@@ -198,7 +199,7 @@ export class ReconstructDetailComponent implements OnInit {
   // ----- Wer ist am Zug -----
 
   /** Steht in der Ausgangsstellung des Editors Schwarz am Zug? */
-  sideBlack(): boolean { return this.editStartFen().split(' ')[1] === 'b'; }
+  sideBlack(): boolean { return !whiteToMove(this.editStartFen()); }
 
   /**
    * Die Seite am Zug umstellen — jederzeit, auch mitten im Aufzeichnen („und dann schlug ER auf f7").
@@ -712,14 +713,14 @@ export class ReconstructDetailComponent implements OnInit {
    */
   positionLine(part: ReconstructionPart): string {
     const f = (part.fen ?? '').trim().split(/\s+/);
-    const side = this.translate.instant(f[1] === 'b' ? 'reconstruct.sideBlack' : 'reconstruct.sideWhite');
+    const side = this.translate.instant(whiteToMove(part.fen) ? 'reconstruct.sideWhite' : 'reconstruct.sideBlack');
     const move = Number(f[5]) > 0 ? Number(f[5]) : 1;
     return this.translate.instant('reconstruct.posToMove', { side, move });
   }
 
   /** Ausrichtung der Mini-Vorschau: aus Sicht der Seite am Zug. */
   positionOrientation(part: ReconstructionPart): 'white' | 'black' {
-    return (part.fen ?? '').trim().split(/\s+/)[1] === 'b' ? 'black' : 'white';
+    return whiteToMove(part.fen) ? 'white' : 'black';
   }
 
   // ----- Anzeige-Helfer -----

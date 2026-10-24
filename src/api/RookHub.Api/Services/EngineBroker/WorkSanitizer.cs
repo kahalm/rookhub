@@ -121,7 +121,7 @@ public static class WorkSanitizer
 
         var parts = fen.Split(' ');
         var rows = ExpandPlacement(parts[0]);
-        var whiteToMove = parts[1] == "w";
+        var whiteToMove = FenFields.WhiteToMove(fen);   // Load hat das Feld schon verlangt
 
         // Bauern auf der Grundreihe (shakmaty PAWNS_ON_BACKRANK).
         if (rows[0].Contains('P') || rows[0].Contains('p') || rows[7].Contains('P') || rows[7].Contains('p'))

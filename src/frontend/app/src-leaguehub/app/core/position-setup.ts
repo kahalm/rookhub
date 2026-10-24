@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Chess, Square } from 'chess.js';
+import { sideToMove } from '@rh/shared/chess/fen-side';
 
 /**
  * Stellung direkt eingeben (Zug-Editor, Modus „Stellung", 2026-10-08) und die häufigsten Zugfolgen dorthin aus dem LOKALEN
@@ -111,7 +112,7 @@ export function parseFenInput(text: string): { board: string[]; side: Side } | n
   if (!parts[0]) return null;
   const board = boardFromPlacement(parts[0]);
   if (!board) return null;
-  const side: Side = parts[1] === 'b' ? 'b' : 'w';
+  const side: Side = sideToMove(text);
   return { board, side };
 }
 

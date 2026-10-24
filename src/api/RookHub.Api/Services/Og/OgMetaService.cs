@@ -360,11 +360,7 @@ public class OgMetaService
     }
 
     /// <summary>Brett aus Sicht der am Zug befindlichen Seite (Schwarz → gedreht).</summary>
-    private static bool FlipFromFen(string fen)
-    {
-        var parts = fen.Split(' ');
-        return parts.Length >= 2 && parts[1] == "b";
-    }
+    private static bool FlipFromFen(string fen) => !FenFields.WhiteToMove(fen);
 
     private static bool TryParseDaily(string s, out DateOnly date)
     {

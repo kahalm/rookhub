@@ -1,4 +1,5 @@
 import { Sacrifice, inCheck, isPromotion, sacrificedPiece } from './move-tactics.util';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Partie-Rückblick aus RookHubs EIGENER Analyse: Gewinnchance je Stellung (Kurve), Genauigkeit je
@@ -146,10 +147,8 @@ export const ACCURACY_UNCERTAINTY_BONUS = 1;
  */
 export const CLASS_LIMITS = { excellent: 2, good: 5, inaccuracy: 10, mistake: 20 } as const;
 
-/** Wer ist in dieser FEN am Zug? Ohne lesbares zweites Feld: Weiß (wie der Server). */
-export function whiteToMove(fen: string | null | undefined): boolean {
-  return (fen ?? '').split(' ')[1] !== 'b';
-}
+/** Wer ist in dieser FEN am Zug? Ohne lesbares zweites Feld: Weiß (wie der Server) — der gemeinsame Helfer (N11-006). */
+export { whiteToMove };
 
 /**
  * Gewinnchance für WEISS in Prozent (0..100). `null`, wenn keine Bewertung da ist.

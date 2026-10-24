@@ -1,3 +1,4 @@
+import { whiteToMove } from '../../shared/chess/fen-side';
 /**
  * „Dummer" Brett-Replayer für ILLEGALE Diagramm-Stellungen (Chessable-Muster-/Info-Seiten ohne König
  * o. Ä.). chess.js verwirft solche FENs, daher können die Demonstrationszüge dort nicht nachgespielt
@@ -80,7 +81,7 @@ export interface IllegalReplay {
  */
 export function replayIllegalFen(fen: string, uciMoves: string[], count: number): IllegalReplay {
   const board = parseBoard(fen);
-  let white = fen.split(/\s+/)[1] !== 'b';
+  let white = whiteToMove(fen);
   let last: [string, string] | undefined;
   const n = Math.max(0, Math.min(count, uciMoves.length));
   for (let i = 0; i < n; i++) {

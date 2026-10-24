@@ -41,7 +41,7 @@ internal sealed class MainlineBoard
         try { board = ChessBoard.LoadFromFen(fen); }
         catch (Exception e) { throw new ChessBaseMoveException($"Startstellung ungültig ({e.Message})."); }
         var parts = fen.Split(' ');
-        var b = new MainlineBoard(board, parts.Length < 2 || parts[1] != "b");
+        var b = new MainlineBoard(board, FenFields.WhiteToMove(fen));
         var rank = 7;
         var file = 0;
         foreach (var c in parts[0])

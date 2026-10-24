@@ -218,8 +218,7 @@ public class HintGenerationService
 
     private static string SideToMoveAfterSetup(string fen, string setup)
     {
-        var parts = fen.Split(' ');
-        var whiteStart = parts.Length < 2 || parts[1] != "b";
+        var whiteStart = FenFields.WhiteToMove(fen);
         var setupCount = Tokens(setup).Length;
         var whiteToMove = setupCount % 2 == 0 ? whiteStart : !whiteStart;
         return whiteToMove ? "White" : "Black";

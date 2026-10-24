@@ -519,7 +519,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var agg = new Dictionary<string, (int W, int B, char Root)>(StringComparer.Ordinal);
         foreach (var s in sections)
         {
-            var root = s.StartFen?.Split(' ') is { Length: > 1 } p && p[1] == "b" ? 'b' : 'w';
+            var root = FenFields.WhiteToMove(s.StartFen ?? "") ? 'w' : 'b';
             var ch = Chapter(s);
             if (!agg.TryGetValue(ch, out var a)) a = (0, 0, root);
             if (s.Moves.Count > 0)

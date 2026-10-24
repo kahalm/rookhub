@@ -1,5 +1,6 @@
 import { Chess, Move, Square } from 'chess.js';
 import { Key } from 'chessground/types';
+import { sideToMove } from '../../shared/chess/fen-side';
 
 /**
  * Gemeinsame, reine Schach-/Brett-Helfer für die Puzzle-Modi (Normal, Endless, Buch).
@@ -38,7 +39,7 @@ export function tryLoadFen(fen: string): Chess | null {
 
 /** Farbe am Zug aus dem 2. FEN-Feld (roh, ohne chess.js). Fallback: Weiß. */
 export function fenSideToMove(fen: string): 'w' | 'b' {
-  return fen.split(/\s+/)[1] === 'b' ? 'b' : 'w';
+  return sideToMove(fen);
 }
 
 /**

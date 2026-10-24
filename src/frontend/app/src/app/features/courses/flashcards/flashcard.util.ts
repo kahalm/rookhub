@@ -5,6 +5,7 @@ import { applyUci, tryLoadFen } from '../../puzzles/puzzle-move.util';
 import { parseMoveShapes } from '../../puzzles/move-shapes.util';
 import { labelOr } from '../course-language.util';
 import { pgnHeaderText } from '../../../shared/pgn-viewer/pgn-header.util';
+import { whiteToMove } from '../../../shared/chess/fen-side';
 
 /**
  * Eine druckbare/lernbare Karteikarte. Zwei Spielarten:
@@ -156,7 +157,7 @@ export function buildRepertoireFlashcards(
     if (!game.moves.length || game.fens.length !== game.moves.length + 1) continue;
     const sans = game.moves.map(m => m.san);
     const startFen = game.fens[0];
-    const startWhite = (startFen.split(' ')[1] || 'w') === 'w';
+    const startWhite = whiteToMove(startFen);
     const startNum = Number(startFen.split(' ')[5]) || 1;
     // Abschlussbeschreibung = letzter kommentierter Zug (Marker sind vom Parser schon entfernt).
     const commentIdxs = Object.keys(game.comments).map(Number).filter(n => n >= 0);
@@ -198,5 +199,5 @@ export function formatNotation(sans: string[], startWhite: boolean, startNum: nu
 }
 
 function fenTurn(fen: string): 'white' | 'black' {
-  return (fen.split(' ')[1] || 'w') === 'b' ? 'black' : 'white';
+  return whiteToMove(fen) ? 'white' : 'black';
 }

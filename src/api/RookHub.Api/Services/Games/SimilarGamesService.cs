@@ -137,7 +137,7 @@ public sealed class SimilarGamesService
     {
         var fen = plies[ply].Fen.Split(' ');
         var number = fen.Length >= 6 ? fen[5] : "?";
-        return number + (fen.Length >= 2 && fen[1] == "b" ? "..." : ".") + san;
+        return number + (FenFields.WhiteToMove(plies[ply].Fen) ? "." : "...") + san;
     }
 
     /// <summary>Die gemeinsamen Züge wie man sie schreibt: „1.e4 c6 2.d4 d5 3.f3".</summary>
@@ -146,7 +146,7 @@ public sealed class SimilarGamesService
         var sb = new StringBuilder();
         for (var i = 0; i < count && i < plies.Count; i++)
         {
-            var white = plies[i].Fen.Split(' ') is { Length: >= 2 } f && f[1] == "w";
+            var white = FenFields.WhiteToMove(plies[i].Fen);   // GamePlies-FENs tragen das Feld immer
             if (sb.Length > 0) sb.Append(' ');
             sb.Append(white || i == 0 ? MoveLabel(plies, i, Normalized(plies[i].San)) : Normalized(plies[i].San));
         }

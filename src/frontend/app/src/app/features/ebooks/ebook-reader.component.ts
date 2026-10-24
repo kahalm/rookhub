@@ -25,6 +25,7 @@ import { EbookBoardComponent } from './ebook-board.component';
 import { nextZoom, parsePageInput } from './reader-progress.util';
 import { NAV_DOCKED_CLASS } from '../../shared/navbar/navbar.component';
 import { EinkService } from '../../core/eink.service';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Leser-Seite (`/ebooks/:id`): Werkzeugleiste (zurück, Titel, Seite x / N, Zoom, Download) und darunter der
@@ -423,7 +424,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
 
   sideKey(d: EbookDiagram): string {
     if (!d.sideKnown) return 'ebooks.reader.sideUnknown';
-    return d.fen.split(' ')[1] === 'b' ? 'common.blackToMove' : 'common.whiteToMove';
+    return whiteToMove(d.fen) ? 'common.whiteToMove' : 'common.blackToMove';
   }
 
   /** Hinweis zur Herkunft/Prüfung der Lösung (i18n-Schlüssel) oder `null`. */
@@ -581,7 +582,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   correctPosition(d: EbookDiagram): void {
     const ebook = this.ebook;
     if (!ebook?.canManage) return;
-    const data: EbookPositionDialogData = { fen: d.fen, flipped: d.fen.split(' ')[1] === 'b' };
+    const data: EbookPositionDialogData = { fen: d.fen, flipped: !whiteToMove(d.fen) };
     this.dialog.open(EbookPositionDialogComponent, { data, maxWidth: '32rem', width: '100%' }).afterClosed().subscribe((fen: string | undefined) => {
       if (!fen) return;
       this.ebooks.correctDiagramPosition(ebook.id, d.id, fen).subscribe({

@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { tryLoadFen } from './puzzle-move.util';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Macht Zugfolgen in Buch-/Kurs-Kommentaren anklickbar (Vorschau auf dem Brett).
@@ -224,7 +225,7 @@ function safeUci(c: Chess, uci: string): boolean {
 function baseStartPly(startFen: string): number {
   const parts = startFen.split(' ');
   const fullmove = parseInt(parts[5] || '1', 10) || 1;
-  const white = parts[1] !== 'b';
+  const white = whiteToMove(startFen);
   return (fullmove - 1) * 2 + (white ? 0 : 1);
 }
 

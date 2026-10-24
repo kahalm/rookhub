@@ -8,6 +8,7 @@ import { lineStepAt } from './line-step.util';
 import { formatPuzzleTime } from './puzzle-format.util';
 import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
 import { ExpectedMove, judgeMove } from '../../shared/chess/line-solver';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
@@ -401,7 +402,7 @@ export abstract class BasePuzzleSolver {
   protected beginSolving(): void {
     this.frozenFen = this.chess.fen();
     const f = this.frozenFen.split(' ');
-    this.vizStartWhite = f[1] !== 'b';
+    this.vizStartWhite = whiteToMove(this.frozenFen);
     this.vizStartNum = parseInt(f[5], 10) || 1;
     this.vizMoves = [];
     if (this.visualizationMode >= 2) this.startVizCountdown();

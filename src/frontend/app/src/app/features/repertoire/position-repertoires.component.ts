@@ -21,6 +21,7 @@ import { PositionTreeComponent } from './position-tree.component';
 import { SimilarPositionsComponent, SimilarRepertoireOption } from './similar-positions.component';
 import { localStore, readJson, readRaw, writeJson, writeRaw } from '../../core/local-json-store';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
@@ -320,7 +321,7 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
     const n = parseInt((this.fen || '').split(' ')[5], 10);
     return Number.isFinite(n) && n > 0 ? n : 1;
   }
-  get blackToMove(): boolean { return (this.fen || '').split(' ')[1] === 'b'; }
+  get blackToMove(): boolean { return !whiteToMove(this.fen); }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!changes['fen']) return;

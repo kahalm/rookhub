@@ -9,6 +9,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
+import { whiteToMove as fenWhiteToMove } from '../../shared/chess/fen-side';
 
 /** Eine Aufgabe auf dem Papier: Stellung, Nummer und die Worte des Erstellers — nie die Lösung. */
 export interface PrintTask {
@@ -131,7 +132,7 @@ export class WorksheetPrintComponent implements OnInit {
       no,
       fen: item.fen,
       orientation: item.orientation,
-      whiteToMove: item.fen.split(' ')[1] !== 'b',
+      whiteToMove: fenWhiteToMove(item.fen),
       heading: item.heading,
       text: item.text,
     };

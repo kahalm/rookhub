@@ -63,7 +63,7 @@ public static class PgnWriter
         IReadOnlyDictionary<int, string>? before = null)
     {
         var parts = (startFen ?? string.Empty).Split(' ');
-        bool white = parts.Length < 2 || parts[1] != "b";
+        bool white = FenFields.WhiteToMove(startFen ?? string.Empty);
         int no = parts.Length >= 6 && int.TryParse(parts[5], out var fm) && fm > 0 ? fm : 1;
 
         var sb = new StringBuilder();

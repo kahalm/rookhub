@@ -1,4 +1,5 @@
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Erste DREI FEN-Felder (Brett, Seite am Zug, Rochade) — Transpositions-Match unabhängig von
@@ -51,7 +52,7 @@ export function commonStartFen(startFens: readonly string[], fallback: string): 
 /** SAN-Folge mit Zugnummern („1. e4 e5 2. Nf3 …"); ab einer FEN mit deren Zugnummer, Schwarz am Zug „1… Kd8". */
 export function formatSansWithNumbers(sans: string[], startFen?: string): string {
   const f = (startFen ?? '').split(' ');
-  const blackFirst = f[1] === 'b';
+  const blackFirst = !whiteToMove(startFen);
   const firstNo = Math.max(1, parseInt(f[5] ?? '', 10) || 1);
   const parts: string[] = [];
   sans.forEach((san, i) => {

@@ -203,7 +203,7 @@ public static class MasterComments
 
     private static string MoveNumber(string fenBefore)
         => (fenBefore.Split(' ') is { Length: >= 6 } parts ? parts[5] : "?")
-           + (fenBefore.Split(' ') is { Length: >= 2 } s && s[1] == "b" ? "..." : ".");
+           + (FenFields.WhiteToMove(fenBefore) ? "." : "...");
 
     private static string Cut(string text) => text.Length <= MaxTextChars ? text : text[..(MaxTextChars - 1)].TrimEnd() + "…";
 

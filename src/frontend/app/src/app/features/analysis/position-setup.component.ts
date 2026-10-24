@@ -10,6 +10,7 @@ import { Api } from 'chessground/api';
 import { Color, Key, Role, Piece } from 'chessground/types';
 import { Chess } from 'chess.js';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { sideToMove } from '../../shared/chess/fen-side';
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const EMPTY_BOARD = '8/8/8/8/8/8/8/8';
@@ -163,15 +164,13 @@ export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
    */
   ngOnChanges(changes: SimpleChanges): void {
     if (!this.ground || !changes['initialFen'] || changes['initialFen'].firstChange) return;
-    const parts = this.initialFen.trim().split(/\s+/);
-    this.side = parts[1] === 'b' ? 'b' : 'w';
+    this.side = sideToMove(this.initialFen);
     this.error = '';
     this.ground.set({ fen: this.initialFen });
   }
 
   ngOnInit(): void {
-    const parts = this.initialFen.trim().split(/\s+/);
-    this.side = parts[1] === 'b' ? 'b' : 'w';
+    this.side = sideToMove(this.initialFen);
     this.ground = Chessground(this.boardEl.nativeElement, {
       fen: this.initialFen,
       orientation: this.orientation,

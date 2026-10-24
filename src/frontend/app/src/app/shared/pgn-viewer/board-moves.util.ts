@@ -1,4 +1,5 @@
 import { Chess, Square } from 'chess.js';
+import { whiteToMove } from '../chess/fen-side';
 
 /** Legale Ziele je Ausgangsfeld für die Seite am Zug — Chessground-`dests`-Format. */
 export function legalDests(fen: string): { color: 'white' | 'black'; dests: Map<string, string[]> } | null {
@@ -57,5 +58,5 @@ export function fenAfterUci(fen: string, uci: string): string | null {
  * dauerhaft falsch und `isMovable` weist ab dem ZWEITEN Zug jeden Zug ab.
  */
 export function turnColorOf(fen: string): 'white' | 'black' {
-  return fen?.split(' ')[1] === 'b' ? 'black' : 'white';
+  return whiteToMove(fen) ? 'white' : 'black';
 }

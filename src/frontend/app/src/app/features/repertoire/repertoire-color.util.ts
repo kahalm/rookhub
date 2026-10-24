@@ -16,12 +16,13 @@
  */
 
 import { localStore, readJson, writeJson } from '../../core/local-json-store';
+import { sideToMove } from '../../shared/chess/fen-side';
 
 export type TrainColor = 'w' | 'b';
 
 /** Seite am Zug in dieser (Start-)FEN. */
 export function rootSideOf(fen: string): TrainColor {
-  return fen.split(/\s+/)[1] === 'b' ? 'b' : 'w';
+  return sideToMove(fen);
 }
 
 /** Seite, die den LETZTEN Halbzug einer Linie zieht — null bei 0 Zügen. */

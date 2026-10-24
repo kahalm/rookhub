@@ -15,6 +15,11 @@ public static class FenFields
     /// SCHWARZ an und ist mit <c>BrokerCandidates</c> gekoppelt (siehe dort) — beide nur gemeinsam
     /// umstellen, sonst dreht sich eine Bewertung doppelt. Unschädlich, solange jede FEN vorher durch
     /// <c>ChessBoard.LoadFromFen</c> geht (das Muster verlangt das Feld).</para>
+    /// <para>Mehrfache Leerzeichen zählen als eines, „B" gilt wie „b" (so las schon
+    /// <c>ChessableTrainingStart</c> die Chessable-Köpfe). Inline-Auswertungen des Zugfelds wacht
+    /// <c>SharedChessHelpersTests.NoInlineSideToMove</c> ab (N11-006).</para>
     /// </summary>
-    public static bool WhiteToMove(string fen) => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
+    public static bool WhiteToMove(string fen) =>
+        !(fen.Split(' ', StringSplitOptions.RemoveEmptyEntries) is { Length: >= 2 } parts
+          && parts[1].Equals("b", StringComparison.OrdinalIgnoreCase));
 }

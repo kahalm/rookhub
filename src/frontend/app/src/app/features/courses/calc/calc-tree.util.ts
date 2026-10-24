@@ -1,3 +1,4 @@
+import { whiteToMove as fenWhiteToMove } from '../../../shared/chess/fen-side';
 /**
  * Analysebaum des Kalkulations-Modus — reine Datenlogik, kein Angular, keine chess.js-Abhängigkeit
  * (Züge werden von der Komponente validiert und fertig hereingegeben).
@@ -269,7 +270,7 @@ export function setComment(tree: CalcTree, id: number, comment: string): void {
 /** Zieht Seite am Zug + Zugnummer aus einer FEN (defensiv: Standardwerte bei kaputter FEN). */
 export function fenTurnInfo(fen: string): { whiteToMove: boolean; moveNumber: number } {
   const parts = (fen || '').trim().split(/\s+/);
-  const whiteToMove = parts[1] !== 'b';
+  const whiteToMove = fenWhiteToMove(fen);
   const parsed = parseInt(parts[5] ?? '1', 10);
   return { whiteToMove, moveNumber: Number.isFinite(parsed) && parsed > 0 ? parsed : 1 };
 }

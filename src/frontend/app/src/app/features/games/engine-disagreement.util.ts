@@ -1,4 +1,5 @@
 import { GameReview, MoveClass } from './game-review.util';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Wo zwei Analysen derselben Partie (Stockfish und Lc0) einen Zug WIRKLICH verschieden sehen (0.683.0, gewünscht
@@ -56,7 +57,7 @@ export function stepDisagreement(list: readonly EngineDisagreement[], current: n
 export function moveNumberLabel(fenBefore: string | undefined, ply: number): string {
   const parts = fenBefore?.split(' ') ?? [];
   const full = Number(parts[5]);
-  const black = parts[1] === 'b';
+  const black = !whiteToMove(fenBefore);
   if (Number.isFinite(full) && full > 0 && parts[1]) return black ? `${full}...` : `${full}.`;
   const n = Math.floor(ply / 2) + 1;
   return ply % 2 ? `${n}...` : `${n}.`;

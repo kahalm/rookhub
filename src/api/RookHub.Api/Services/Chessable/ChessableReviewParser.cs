@@ -257,7 +257,7 @@ public static partial class ChessableReviewParser
     private static (int fullMove, bool whiteToMove) FenMoveState(string fen)
     {
         var parts = fen.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var whiteToMove = parts.Length < 2 || parts[1] != "b";
+        var whiteToMove = FenFields.WhiteToMove(fen);
         var fullMove = parts.Length >= 6 && int.TryParse(parts[5], out var n) && n > 0 ? n : 1;
         return (fullMove, whiteToMove);
     }

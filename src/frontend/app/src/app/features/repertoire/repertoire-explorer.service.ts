@@ -7,6 +7,7 @@ import { startNumbering } from './repertoire-move-format.util';
 import { TrainColor } from './repertoire-color.util';
 import { localStore, readJson, writeJson } from '../../core/local-json-store';
 import { formatPct } from '../../shared/format/pct';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Lochfinder + Linien-Häufigkeiten aus dem Lichess-Explorer (`POST /api/repertoires/{id}/explorer-analysis`).
@@ -244,7 +245,7 @@ export function formatPercent(x: number, lang?: string | null): string {
 export function holeMoveLabel(hole: RepertoireHole): string {
   const parts = hole.fen.split(/\s+/);
   const num = parseInt(parts[5] || '1', 10) || 1;
-  return parts[1] === 'b' ? `${num}… ${hole.san}` : `${num}. ${hole.san}`;
+  return whiteToMove(hole.fen) ? `${num}. ${hole.san}` : `${num}… ${hole.san}`;
 }
 
 /** Stellung NACH dem fehlenden Zug samt Zugfeldern — fürs Brett. `null`, wenn der Zug nicht geht. */

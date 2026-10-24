@@ -21,6 +21,7 @@ import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.c
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { whiteToMove as fenWhiteToMove } from '../../shared/chess/fen-side';
 
 /**
  * Das AUFGABENBLATT in Arbeit (`/worksheets/:id`) — Zwischenablage wie benanntes Blatt.
@@ -117,7 +118,7 @@ export class WorksheetDetailComponent implements OnInit {
 
   /** Wer ist am Zug? Steht in der FEN — auf dem Blatt (und hier in der Vorschau) die halbe Aufgabe. */
   whiteToMove(item: WorksheetItem): boolean {
-    return item.fen.split(' ')[1] !== 'b';
+    return fenWhiteToMove(item.fen);
   }
 
   // ===== Reihenfolge =====
@@ -185,7 +186,7 @@ export class WorksheetDetailComponent implements OnInit {
     const fen = this.newFen.trim();
     if (!fen || !this.sheet || this.busy) return;
     this.busy = true;
-    const orientation = fen.split(' ')[1] === 'b' ? 'black' : 'white';
+    const orientation = fenWhiteToMove(fen) ? 'white' : 'black';
     this.worksheets.addItems(this.sheet.id, [{ fen, orientation }]).subscribe({
       next: res => {
         this.busy = false;

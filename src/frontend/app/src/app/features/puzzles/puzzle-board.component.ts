@@ -17,6 +17,7 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { parseKeyboardMove } from './keyboard-move.util';
 import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /** Rückmeldung der Zug-Eingabe per Tastatur (i18n-Schlüssel + Parameter). */
 interface KeyboardFeedback { key: string; params?: Record<string, string>; }
@@ -482,7 +483,7 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     if (this.pendingPromotion) return false;
     const viz = this.visualization > 0;
     const fen = viz ? (this.actualFen ?? this.fen) : this.fen;
-    const sideToMove: Color = fen.split(' ')[1] === 'b' ? 'black' : 'white';
+    const sideToMove: Color = whiteToMove(fen) ? 'white' : 'black';
     const myTurn = !this.viewOnly && (viz || this.turnColor === this.orientation);
     if (!myTurn) {
       this.kbdFeedback = { key: 'puzzles.keyboardMove.notYourTurn' };

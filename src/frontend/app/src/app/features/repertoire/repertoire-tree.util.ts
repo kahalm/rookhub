@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { sideToMove } from '../../shared/chess/fen-side';
 
 /**
  * Repertoire-PGN (inkl. Varianten + [%alt]-Annotationen) → Stellungs-Graph für den Trainer.
@@ -29,10 +30,8 @@ export function normFen(fen: string): string {
   return fen.split(' ').slice(0, 4).join(' ');
 }
 
-/** Welche Seite ist in dieser (norm)FEN am Zug? */
-export function sideToMove(fen: string): 'w' | 'b' {
-  return fen.split(' ')[1] === 'b' ? 'b' : 'w';
-}
+/** Welche Seite ist in dieser (norm)FEN am Zug? — der gemeinsame Helfer (N11-006). */
+export { sideToMove };
 
 const STARTFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 

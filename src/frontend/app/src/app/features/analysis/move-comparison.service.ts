@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 /** „Züge vergleichen" (0.602.0) — siehe `MoveComparisonService` in der API. Bewertungen aus Sicht der Seite am Zug
  *  der Ausgangsstellung (`whiteToMove`), wie die Begründung (d3; vorher Weiß-Sicht). */
@@ -67,7 +68,7 @@ export class MoveComparisonService {
 /** Nummerierte Zugfolge ab einer Stellung: „14.Nf3 Qb6 15.Qc2", mit Schwarz am Zug „14...Qb6 15.Qc2". */
 export function numberedLine(fen: string, sans: readonly string[], maxPlies = sans.length): string {
   const parts = fen.split(' ');
-  let white = parts[1] !== 'b';
+  let white = whiteToMove(fen);
   let n = parseInt(parts[5] ?? '1', 10) || 1;
   const out: string[] = [];
   for (const san of sans.slice(0, maxPlies)) {

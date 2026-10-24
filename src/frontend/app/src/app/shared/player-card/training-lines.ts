@@ -2,6 +2,7 @@ import { HttpParams } from '@angular/common/http';
 import { TreeFilter } from '@lh/core/league.models';
 import { cardFormatLocale, cardSan } from './card-lang';
 import { formatPct } from '@rh/shared/format/pct';
+import { whiteToMove } from '../chess/fen-side';
 
 /**
  * Trainingslinien gegen einen Gegner (2026-10-07): Antwort von `GET /api/prep/player/{id}/training-lines` bzw.
@@ -78,7 +79,7 @@ export function trainingRepertoireBody(q: TrainingLinesQuery, extra: Record<stri
 export function matchedUntil(l: Pick<TrainingLine, 'moves' | 'start' | 'matched'>, color: 'w' | 'b', lang = 'de'): string | null {
   if (l.matched <= 0) return null;
   const parts = (l.start ?? '').split(' ');
-  let black = parts[1] === 'b';
+  let black = !whiteToMove(l.start);
   let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
   let seen = 0;
   for (const m of l.moves) {
@@ -180,7 +181,7 @@ export function percent(p: number, lang = 'de'): string {
 /** Züge mit Zugnummern in der Notation von `lang` (Vorgabe deutsch: „1.e4 c5 2.Sf3"), ab einer eigenen Startstellung mit deren Zugnummer. */
 export function lineText(moves: string[], start: string | null, lang = 'de'): string {
   const parts = (start ?? '').split(' ');
-  let black = parts[1] === 'b';
+  let black = !whiteToMove(start);
   let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
   const out: string[] = [];
   moves.forEach((m, i) => {
@@ -194,7 +195,7 @@ export function lineText(moves: string[], start: string | null, lang = 'de'): st
 /** Ein Halbzug als Zugangabe („1…c6", „2.d4"), in der Notation von `lang` (Vorgabe deutsch) — für „ab 1…c6 geschätzt". */
 export function plyLabel(moves: string[], start: string | null, index: number, lang = 'de'): string {
   const parts = (start ?? '').split(' ');
-  let black = parts[1] === 'b';
+  let black = !whiteToMove(start);
   let no = Number(parts[5]) > 0 ? Number(parts[5]) : 1;
   for (let i = 0; i < moves.length; i++) {
     if (i === index) return black ? `${no}…${cardSan(moves[i], lang)}` : `${no}.${cardSan(moves[i], lang)}`;

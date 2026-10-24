@@ -2,6 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { EngineAnalyseLine, EngineAnalyseWork, isLc0Engine } from './external-engine.service';
 import { mapBrokerLine } from './engine-lines.util';
+import { sideToMove as fenSideToMove } from '../../shared/chess/fen-side';
 
 /** Vom User gewählte External Engine (Lichess-Anbindung); Maxima kommen von der Registrierung. */
 export interface RemoteEngine {
@@ -298,7 +299,7 @@ export class AnalysisEngineService implements OnDestroy {
     this.clearRemoteInterruption();
     this.gen++;
     this.currentFen = fen;
-    this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
+    this.sideToMove = fenSideToMove(fen);
     this.partial = new Map();
     this.lastNodes = 0;
     this.lastNps = 0;
@@ -359,7 +360,7 @@ export class AnalysisEngineService implements OnDestroy {
     this.gen++;
     const gen = this.gen;
     this.currentFen = fen;
-    this.sideToMove = (fen.split(' ')[1] === 'b') ? 'b' : 'w';
+    this.sideToMove = fenSideToMove(fen);
     this.partial = new Map();
     this.clearWatchdog();
     this.stopRemote();

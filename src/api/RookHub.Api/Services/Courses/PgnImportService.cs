@@ -731,8 +731,7 @@ public class PgnImportService
         else return -1;   // unbekannter Wert: nichts raten
 
         // Zugfarbe der FEN steht im zweiten Feld ("w"/"b"); fehlt es, gilt Weiss am Zug.
-        var parts = fen.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var whiteToMove = parts.Length < 2 || !parts[1].Equals("b", StringComparison.OrdinalIgnoreCase);
+        var whiteToMove = FenFields.WhiteToMove(fen);
         return whiteToMove == solverIsWhite ? -1 : 0;
     }
 

@@ -139,7 +139,7 @@ public static class RepertoireReach
         var fen = board.ToFen();
         var key = Key(fen);
         if (g.Nodes.TryGetValue(key, out var n)) return n;
-        var side = fen.Split(' ') is { Length: > 1 } p && p[1] == "b" ? 'b' : 'w';
+        var side = FenFields.WhiteToMove(fen) ? 'w' : 'b';
         n = new Node { Key = key, Fen = fen, UserToMove = side == g.Color };
         g.Nodes[key] = n;
         return n;

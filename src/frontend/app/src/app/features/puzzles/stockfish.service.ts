@@ -1,4 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
+import { whiteToMove } from '../../shared/chess/fen-side';
 
 export interface StockfishResult {
   move: string;
@@ -130,7 +131,7 @@ export class StockfishService implements OnDestroy {
   }
 
   private runSearch(fen: string, depth: number): Promise<StockfishResult> {
-    const sideToMove = fen.split(' ')[1];
+    const blackToMove = !whiteToMove(fen);
     const worker = this.worker;
     if (!worker) return Promise.reject('Stockfish not initialized');
 
@@ -160,7 +161,7 @@ export class StockfishService implements OnDestroy {
         const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
         if (scoreMatch) {
           let value = parseInt(scoreMatch[2], 10);
-          if (sideToMove === 'b') value = -value;
+          if (blackToMove) value = -value;
           if (scoreMatch[1] === 'cp') {
             const v = value / 100;
             lastEval = (v >= 0 ? '+' : '') + v.toFixed(1);

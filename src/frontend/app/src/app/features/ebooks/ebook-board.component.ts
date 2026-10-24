@@ -28,6 +28,7 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
 import { EbookDiagram } from './ebook.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { sideToMove, whiteToMove } from '../../shared/chess/fen-side';
 
 /** Was das Brett gerade tut (0.777.0). */
 export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia';
@@ -203,7 +204,7 @@ export class EbookBoardComponent implements OnChanges {
     this.showSolution.set(false);
     this.solveState.set('idle');
     this.maiaThinking.set(false);
-    this.flipped.set(this.diagram.fen.split(' ')[1] === 'b');
+    this.flipped.set(!whiteToMove(this.diagram.fen));
     if (!this.legal() && this.mode() !== 'view') this.mode.set('view');
     if (!this.hasStoredSolution) this.solveSource.set('engine');
     if (this.mode() === 'calc') this.loadCalc();
@@ -226,10 +227,10 @@ export class EbookBoardComponent implements OnChanges {
   }
 
   /** Seite am Zug in der Buchstellung — die spielt man beim Lösen und gegen Maia. */
-  get userColor(): 'w' | 'b' { return (this.diagram?.fen.split(' ')[1] === 'b' ? 'b' : 'w'); }
+  get userColor(): 'w' | 'b' { return sideToMove(this.diagram?.fen); }
 
   private isUserTurn(): boolean {
-    return (this.boardFen().split(' ')[1] ?? 'w') === this.userColor;
+    return sideToMove(this.boardFen()) === this.userColor;
   }
 
   onBoardMove(m: UserBoardMove): void {
@@ -451,7 +452,7 @@ export class EbookBoardComponent implements OnChanges {
    * höchstens 50 cp schlechter ist, ein Remis ein Remis bleibt (beide ±80 cp) oder ein Gewinn ein Gewinn (beide ≥ 300).
    */
   private async holdsResult(before: string, after: string, reference: string | null): Promise<boolean> {
-    const mover = before.split(' ')[1] === 'b' ? -1 : 1;
+    const mover = whiteToMove(before) ? 1 : -1;
     try {
       const mine = await this.stockfish.getBestMove(after, EbookBoardComponent.CHECK_DEPTH);
       const ref = await this.stockfish.getBestMove(reference ?? before, EbookBoardComponent.CHECK_DEPTH);
@@ -549,7 +550,7 @@ export class EbookBoardComponent implements OnChanges {
     if (sans.length === 0) return '';
     const parts = fen.split(' ');
     let n = Number(parts[5]) || 1;
-    let white = parts[1] !== 'b';
+    let white = whiteToMove(fen);
     const out: string[] = [];
     sans.forEach((san, i) => {
       if (white) out.push(`${n}. ${san}`);

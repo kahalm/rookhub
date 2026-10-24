@@ -5,6 +5,7 @@ import { Observable, Subject, debounceTime, map, of, switchMap } from 'rxjs';
 import {
   TABLEBASE_MAX_PIECES, TablebaseCategory, TablebaseMove, TablebaseResult, TablebaseService, tablebasePieceCount,
 } from './tablebase.service';
+import { whiteToMove as fenWhiteToMove } from '../../shared/chess/fen-side';
 
 /** Was die Tablebase für die Bewertungsleiste sagt — Weiß-Sicht; `fen` = für welche Stellung. */
 export interface TablebaseVerdict { fen: string; whiteHeight: number; text: string; }
@@ -139,7 +140,7 @@ export class TablebasePanelComponent implements OnChanges {
   }
 
   verdictParams(r: TablebaseResult): { side: string } {
-    const whiteToMove = this.fen().split(' ')[1] !== 'b';
+    const whiteToMove = fenWhiteToMove(this.fen());
     const moverWins = r.category === 'win' || r.category === 'cursed-win';
     const white = moverWins ? whiteToMove : !whiteToMove;
     return { side: this.translate.instant(white ? 'analysis.tablebase.white' : 'analysis.tablebase.black') };
@@ -161,7 +162,7 @@ export class TablebasePanelComponent implements OnChanges {
 /** Ergebnis → Bewertungsleiste (Weiß-Sicht). Verflucht/gesegnet = Remis nach der 50-Züge-Regel. */
 export function verdictOf(fen: string, r: TablebaseResult): TablebaseVerdict | null {
   if (r.status !== 'ok' || !r.category) return null;
-  const whiteToMove = fen.split(' ')[1] !== 'b';
+  const whiteToMove = fenWhiteToMove(fen);
   if (r.category === 'win' || r.category === 'loss') {
     const whiteWins = (r.category === 'win') === whiteToMove;
     return { fen, whiteHeight: whiteWins ? 100 : 0, text: whiteWins ? '1-0 (TB)' : '0-1 (TB)' };

@@ -16,6 +16,10 @@ public class SharedChessHelpersTests
     [InlineData("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", false)]
     [InlineData("8/8/8/8/8/8/8/K6k", true)]   // Feld fehlt → Weiß (anders als GameEvals, siehe FenFields)
     [InlineData("", true)]
+    [InlineData("8/8/8/8/8/8/8/K6k  b - - 0 1", false)]   // doppeltes Leerzeichen (Chessable-Köpfe)
+    [InlineData(" 8/8/8/8/8/8/8/K6k b", false)]
+    [InlineData("8/8/8/8/8/8/8/K6k B - - 0 1", false)]   // Großschreibung wie bisher ChessableTrainingStart
+    [InlineData("8/8/8/8/8/8/8/K6k - - - 0 1", true)]    // kein w/b → Weiß
     public void WhiteToMove_OnlyBMeansBlack(string fen, bool expected)
         => Assert.Equal(expected, FenFields.WhiteToMove(fen));
 
@@ -57,6 +61,42 @@ public class SharedChessHelpersTests
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
         Assert.True(hits.Count == 0, $"Kopie von „{needle}“ in: {string.Join(", ", hits)} — die gemeinsame Funktion benutzen.");
+    }
+
+    /// <summary>
+    /// Das Zugfeld (FEN-Feld 2) wird nirgends mehr von Hand verglichen (N11-006): weder
+    /// <c>parts[1] == "w"</c>/<c>!= "b"</c> noch <c>ElementAtOrDefault(1) == "b"</c> noch
+    /// <c>parts[1].Equals("b", …)</c>. Die Kopien unterschieden sich ausgerechnet am Rand (fehlendes Feld =
+    /// Weiß oder Schwarz, Groß-/Kleinschreibung, doppelte Leerzeichen). Ein Seitenwechsel
+    /// (<c>parts[1] == "w" ? "b" : "w"</c>) liest die Seite nicht und bleibt erlaubt.
+    /// </summary>
+    [Fact]
+    public void NoInlineSideToMove()
+    {
+        var allowed = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "src/api/RookHub.Api/Services/FenFields.cs",
+            // fehlendes Feld = Schwarz, nur gemeinsam umzustellen (siehe FenFields)
+            "src/api/RookHub.Api/Services/Games/GameEvals.cs",
+            "src/api/RookHub.Api/Services/Engines/BrokerCandidates.cs",
+            // Zerleger, der das Feld vorher auf genau w/b prüft und sonst null liefert
+            "src/api/RookHub.Api/Services/Engines/ExplorerPathFinder.cs",
+        };
+        var pattern = new System.Text.RegularExpressions.Regex(
+            @"(\[1\]|ElementAtOrDefault\(1\))\s*(==|!=)\s*""[wbWB]""(?!\s*\?\s*""[wb]""\s*:)|\[1\]\.Equals\(""[wbWB]""");
+        var repo = RepoRoot();
+        var roots = new[] { Path.Combine(repo, "src", "api", "RookHub.Api"), Path.Combine(repo, "tools") };
+        var hits = roots
+            .Where(Directory.Exists)
+            .SelectMany(r => Directory.EnumerateFiles(r, "*.cs", SearchOption.AllDirectories))
+            .Select(f => (Full: f, Rel: Path.GetRelativePath(repo, f).Replace('\\', '/')))
+            .Where(f => !f.Rel.Contains("/bin/", StringComparison.Ordinal) && !f.Rel.Contains("/obj/", StringComparison.Ordinal)
+                        && !f.Rel.Contains("/Migrations/", StringComparison.Ordinal) && !allowed.Contains(f.Rel))
+            .SelectMany(f => File.ReadLines(f.Full).Select((line, i) => (f.Rel, Line: i + 1, Text: line)))
+            .Where(l => pattern.IsMatch(l.Text))
+            .Select(l => $"{l.Rel}:{l.Line}")
+            .ToList();
+        Assert.True(hits.Count == 0, $"Zugfeld von Hand gelesen in: {string.Join(", ", hits)} — FenFields.WhiteToMove benutzen.");
     }
 
     private static string RepoRoot()
