@@ -554,7 +554,7 @@ public sealed partial class ZugspitzeSource
             row.Name = t.Name; row.Season = t.Season; row.Level = t.Level; row.League = t.League; row.Grp = t.Grp; row.Stage = t.Stage;
             row.Start = t.Start; row.End = t.End; row.Rounds = t.Rounds; row.Source = Source; row.SourceRef = t.SourceRef; row.Boards = t.Boards;
             row.UpdatedAt = _now();
-            await LeagueRefresh.ReplaceAsync(_db, parsed.Pages, _now(), ct);
+            await LeagueRefresh.ReplaceAsync(_db, parsed.Pages, _now(), ct, _log);
             fideFilled = await LeagueRegions.FillMissingFideAsync(_db, LeagueRegions.Bayern, ct);
         }, ct);
         _db.ChangeTracker.Clear();

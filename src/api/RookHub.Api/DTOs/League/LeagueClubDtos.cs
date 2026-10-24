@@ -52,11 +52,18 @@ public class LeagueClubPairingDto
     public bool BlackOwnClub { get; set; }
     /// <summary>Beide Spieler in ihren Farben und der Tag passen.</summary>
     public bool Exact { get; set; }
+    /// <summary>0.744.0: ein noch leeres Brett der laufenden Runde (Weiß/Schwarz = Mannschaften).</summary>
+    public bool Open { get; set; }
+    /// <summary>0.832.0: die vorläufige Zuordnung (wird ohne genauen Treffer vorgewählt, Etikett „vorläufig").</summary>
+    public bool Provisional { get; set; }
+    /// <summary>0.832.0: das Brett der vorläufigen Zuordnung ist nur geschätzt.</summary>
+    public bool Uncertain { get; set; }
 
     public static LeagueClubPairingDto Of(RookHub.Api.Services.League.LeaguePairingFinder.Option o) => new()
     {
         Id = o.Id, Label = o.Label, White = o.White, WhiteFide = o.WhiteFide, Black = o.Black, BlackFide = o.BlackFide,
-        Result = o.Result, WhiteOwnClub = o.WhiteOwnClub, BlackOwnClub = o.BlackOwnClub, Exact = o.Exact,
+        Result = o.Result, WhiteOwnClub = o.WhiteOwnClub, BlackOwnClub = o.BlackOwnClub, Exact = o.Exact, Open = o.Open,
+        Provisional = o.Provisional, Uncertain = o.Uncertain,
     };
 }
 
@@ -202,6 +209,9 @@ public class LeagueClubGameDto
     /// „Schwaz"-Seite für jeden Leser der Vereinsliste wieder auffindbar (wie <c>Classifier1</c>).</summary>
     public int? LeagueGameId { get; set; }
     public string? LeagueGameLabel { get; set; }
+    /// <summary>0.832.0: die Zuordnung ist vorläufig (Brett der laufenden Runde ohne Aufstellung) — Hinweis „vorläufig" +
+    /// Knopf „Bestätigen" (<c>POST …/club/games/{id}/pairing/confirm</c>). Nur zusammen mit <see cref="LeagueGameId"/>.</summary>
+    public bool LeaguePairingProvisional { get; set; }
     /// <summary>Die Züge als UCI mit Leerzeichen — für „Analyse" (RookHubs Analysebrett, <c>?moves=</c>).</summary>
     public string Uci { get; set; } = string.Empty;
     /// <summary>Die Partie als PGN, wie gespeichert (Hauptvariante, Kopfdaten; „Schwaz" statt des Namens) — „Analyse"

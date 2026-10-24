@@ -8,7 +8,7 @@ namespace RookHub.Api.Services.League;
 /// <summary>
 /// Die feste Ligapaarung einer Vereinspartie (<see cref="LeagueClubGame.LeagueGameId"/>) — stabil über jedes Aktualisieren
 /// (0.716.1, gemeldet 2026-10-07: „gefühlt zum dritten Mal zugewiesen, die Zuordnung verschwindet immer wieder").
-/// <para>Ursache: <see cref="LeagueRefresh.ReplaceAsync(AppDbContext, LeagueRefresh.Pages, DateTime, CancellationToken)"/>
+/// <para>Ursache: <see cref="LeagueRefresh.ReplaceAsync(AppDbContext, LeagueRefresh.Pages, DateTime, CancellationToken, ILogger)"/>
 /// löschte alle <see cref="LeagueGame"/>-Zeilen einer Liga und legte sie neu an — neue Ids, und jede Zuordnung zeigte ins
 /// Leere. Die Leser rieten nur unter Partien OHNE Zuordnung, die tote Id fand keine Paarung: die Partie verschwand ganz aus
 /// den Paarungen der Runde.</para>
@@ -31,13 +31,19 @@ public static class LeagueGameLinks
 
     public static Key KeyOf(LeagueGame g) => new(g.Tnr, g.Round, g.MatchNo, g.Board);
 
+    /// <summary>Ein Brett ohne Spieler (und nicht kampflos) — die Aufstellung fehlt noch.</summary>
+    public static bool IsOpen(LeagueGame g) => g.HomePlayer == null && g.AwayPlayer == null && g.Forfeit == 0;
+
     public static Key? KeyOf(LeagueClubGame c) =>
         c is { LeagueTnr: { } t, LeagueRound: { } r, LeagueMatchNo: { } m, LeagueBoard: { } b } ? new Key(t, r, m, b) : null;
 
-    /// <summary>Die Zuordnung setzen (<paramref name="g"/>) bzw. lösen (<c>null</c>) — Id und Schlüssel immer zusammen.</summary>
+    /// <summary>Die Zuordnung setzen (<paramref name="g"/>) bzw. lösen (<c>null</c>) — Id und Schlüssel immer zusammen. Ein Brett
+    /// ohne Spieler (laufende Runde, chess-results hat die Aufstellung noch nicht) macht sie VORLÄUFIG
+    /// (<see cref="LeagueClubGame.LeaguePairingProvisional"/>, 0.832.0).</summary>
     public static void Set(LeagueClubGame c, LeagueGame? g)
     {
         c.LeagueGameId = g?.Id;
+        c.LeaguePairingProvisional = g is not null && IsOpen(g);
         (c.LeagueTnr, c.LeagueRound, c.LeagueMatchNo, c.LeagueBoard) = g is null
             ? ((int?)null, (int?)null, (int?)null, (int?)null)
             : (g.Tnr, g.Round, g.MatchNo, g.Board);
@@ -101,7 +107,7 @@ public static class LeagueGameLinks
     public static async Task<LeagueGame?> FindAsync(AppDbContext db, LeagueClubGame c, CancellationToken ct, ILogger? log = null) =>
         (await ResolveAsync(db, new[] { c }, ct, log)).GetValueOrDefault(c.Id);
 
-    private static async Task<Dictionary<Key, LeagueGame>> ByKeysAsync(AppDbContext db, IReadOnlyCollection<Key> keys, CancellationToken ct)
+    internal static async Task<Dictionary<Key, LeagueGame>> ByKeysAsync(AppDbContext db, IReadOnlyCollection<Key> keys, CancellationToken ct)
     {
         var result = new Dictionary<Key, LeagueGame>();
         if (keys.Count == 0) return result;
@@ -120,6 +126,14 @@ public static class LeagueGameLinks
     /// (taucht sie wieder auf, findet der nächste Lauf sie). Speichert selbst. → geänderte Partien.
     /// </summary>
     public static async Task<int> RelinkAsync(AppDbContext db, int? tnr, CancellationToken ct, ILogger? log = null)
+    {
+        var changed = await RelinkKeysAsync(db, tnr, ct, log);
+        // vorläufige Zuordnungen (0.832.0): stehen am Brett jetzt Spieler, bestätigen, umhängen oder lösen
+        await LeagueProvisionalPairing.ConfirmAsync(db, tnr, ct, log);
+        return changed;
+    }
+
+    private static async Task<int> RelinkKeysAsync(AppDbContext db, int? tnr, CancellationToken ct, ILogger? log)
     {
         var rows = await db.LeagueClubGames.IgnoreQueryFilters()
             .Where(c => c.LeagueTnr != null && c.LeagueRound != null && c.LeagueMatchNo != null && c.LeagueBoard != null)

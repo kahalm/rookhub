@@ -345,6 +345,29 @@ public class LeagueClubController : BaseApiController
         };
     });
 
+    /// <summary>„Bestätigen" (0.832.0): die vorläufige Zuordnung der Partie zur laufenden Runde gilt als fest →
+    /// <c>{ changed }</c>; wer bearbeiten darf (Regel wie <c>PUT games/{id}</c>); 400 <c>notLinked</c>.</summary>
+    [HttpPost("games/{id:int}/pairing/confirm")]
+    public Task<IActionResult> ConfirmPairing(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+    {
+        var (changed, reason) = await _club.ConfirmPairingAsync(club, GetUserId(), await CanManageAsync(), id, ct);
+        return reason switch
+        {
+            null => Ok(new { changed }),
+            "notFound" => NotFound(),
+            "forbidden" => Forbid(),
+            _ => BadRequest(new { reason }),
+        };
+    });
+
+    /// <summary>Nachträglich zuordnen (0.832.0, Verwalter): eine Partie OHNE Zuordnung bekommt den eindeutigen genauen Treffer
+    /// bzw. die vorläufige Zuordnung zur laufenden Runde → <c>{ leagueGameId }</c> (<c>null</c> = nichts gefunden bzw. schon
+    /// zugeordnet — vorher mit <c>PUT games/{id}</c> und <c>leagueGameId: 0</c> lösen).</summary>
+    [HttpPost("games/{id:int}/pairing/auto")]
+    [HasPermission(Permissions.LeagueManage)]
+    public Task<IActionResult> AutoPairing(int id, CancellationToken ct) => WithClubAsync(ct, async club =>
+        await _club.AssignPairingIfUnlinkedAsync(id, ct, club.Id) is var r && r.Found ? Ok(new { leagueGameId = r.Id }) : NotFound());
+
     [HttpGet("scans")]
     [HasPermission(Permissions.LeagueContribute)]
     public Task<IActionResult> Scans(CancellationToken ct) => WithClubAsync(ct, async club =>

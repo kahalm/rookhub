@@ -24,12 +24,18 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     public const int MaxOptions = 8;
 
     /// <summary>Was über die Partie bekannt ist: je Seite Name + FIDE-ID (bei „Schwaz" die interne), dazu Tag bzw. Jahr.</summary>
-    public sealed record Query(string White, string? WhiteFide, string Black, string? BlackFide, DateOnly? Date, int? Year);
+    /// <param name="Id">Die Vereinspartie selbst, wenn sie schon gespeichert ist (zählt bei der vorläufigen Zuordnung nicht als
+    /// „schon vergeben").</param>
+    public sealed record Query(string White, string? WhiteFide, string Black, string? BlackFide, DateOnly? Date, int? Year, int? Id = null);
 
     /// <param name="Open">0.744.0: ein noch leeres Brett der eigenen Begegnung (laufende Runde, chess-results hat die Aufstellung
     /// noch nicht) — <see cref="White"/>/<see cref="Black"/> sind dann die MANNSCHAFTEN, die Spieler der Partie bleiben.</param>
+    /// <param name="Provisional">0.832.0: DAS leere Brett, das die vorläufige Zuordnung nimmt (<see cref="LeagueProvisionalPairing"/>:
+    /// Gegner-Mannschaft laut Meldeliste, Brett aus Farbe + Meldereihenfolge) — vorgewählt, wenn es keinen genauen Treffer gibt.</param>
+    /// <param name="Uncertain">Das Brett der vorläufigen Zuordnung ist nur geschätzt (mehr als eines kam in Frage).</param>
     public sealed record Option(int Id, string Label, string? Date, string White, string? WhiteFide, string Black, string? BlackFide,
-        string Result, bool WhiteOwnClub, bool BlackOwnClub, bool Exact, string League, string Season, bool Open = false);
+        string Result, bool WhiteOwnClub, bool BlackOwnClub, bool Exact, string League, string Season, bool Open = false,
+        bool Provisional = false, bool Uncertain = false);
 
     private sealed record Row(LeagueGame G, string Season, string League, DateOnly? Date, string? Source = null);
 
@@ -58,7 +64,22 @@ public sealed class LeaguePairingFinder(AppDbContext db)
         }
         rows = rows.DistinctBy(r => r.G.Id).ToList();
         var (open, ownFides) = await OpenBoardsAsync(club, ct);
-        return queries.Select(q => Options(q, rows, club).Concat(OpenOptions(q, open, ownFides, club)).Take(MaxOptions).ToList()).ToList();
+        // Wer von den Spielern der Anfragen gehört zum eigenen Verein (irgendeine Meldeliste)? — für die Regel „keine Paarung, an der
+        // der eigene Spieler nicht saß und keine eigene Mannschaft spielte" (Fehlgriff Vereinspartie 225, 2026-10-24).
+        var own = new HashSet<string>(ownFides);
+        if (club is not null)
+            foreach (var chunk in fides.Chunk(200))
+                foreach (var p in await db.LeaguePlayers.AsNoTracking().Where(p => chunk.Contains(p.FideId!)).Select(p => new { p.Team, p.FideId }).ToListAsync(ct))
+                    if (club.OwnsTeam(p.Team)) own.Add(p.FideId!);
+        var ctx = club is null || open.Count == 0 ? null
+            : await new LeagueProvisionalPairing(db).LoadAsync(club, open.Select(r => new LeagueProvisionalPairing.Open(r.G, r.Season, r.League, r.Date, r.Source)).ToList(),
+                ownFides, Today(), ct);
+        return queries.Select(q =>
+        {
+            var pick = ctx is null ? null : LeagueProvisionalPairing.Suggest(ctx, club!,
+                LeagueProvisionalPairing.Describe(club!, ctx.OwnFides, q.White, q.WhiteFide, q.Black, q.BlackFide, q.Date, q.Year, q.Id is > 0 ? q.Id : null));
+            return Options(q, rows, club, own).Concat(OpenOptions(q, open, ownFides, club, pick)).Take(MaxOptions).ToList();
+        }).ToList();
     }
 
     /// <summary>
@@ -92,7 +113,8 @@ public sealed class LeaguePairingFinder(AppDbContext db)
     internal static bool HomeWhiteByRule(string? source, int board) =>
         LeagueRegions.Of(source) == LeagueRegions.Bayern ? board % 2 == 0 : board % 2 == 1;
 
-    private static IEnumerable<Option> OpenOptions(Query q, List<Row> open, HashSet<string> ownFides, LeagueClub? club)
+    private static IEnumerable<Option> OpenOptions(Query q, List<Row> open, HashSet<string> ownFides, LeagueClub? club,
+        LeagueProvisionalPairing.Pick? pick)
     {
         if (club is null || open.Count == 0) return Enumerable.Empty<Option>();
         // Welche Farbe hatte der eigene Verein in der Partie? Die anonymisierte Seite ist die eigene, sonst die mit der FIDE-ID
@@ -113,10 +135,11 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             var date = r.Date?.ToString("dd.MM.yyyy");
             var label = $"{r.Season} · {r.League} · Runde {r.G.Round} · Brett {r.G.Board}" + (date is null ? "" : $" ({date})");
             var distance = q.Date is { } qd && r.Date is { } rdd ? Math.Abs(rdd.DayNumber - qd.DayNumber) : 0;
+            var chosen = pick?.Id == r.G.Id;
             list.Add((new Option(r.G.Id, label, date, wTeam, null, bTeam, null, "", club.OwnsTeam(wTeam), club.OwnsTeam(bTeam),
-                ownWhite != null && inTime, r.League, r.Season, Open: true), distance));
+                ownWhite != null && inTime, r.League, r.Season, Open: true, Provisional: chosen, Uncertain: chosen && pick!.Uncertain), distance));
         }
-        return list.OrderByDescending(x => x.O.Exact).ThenBy(x => x.Distance).ThenBy(x => x.O.Label).Select(x => x.O);
+        return list.OrderByDescending(x => x.O.Provisional).ThenByDescending(x => x.O.Exact).ThenBy(x => x.Distance).ThenBy(x => x.O.Label).Select(x => x.O);
     }
 
     public async Task<List<Option>> ForAsync(Query q, LeagueClub? club, CancellationToken ct) => (await ForManyAsync(new[] { q }, ct, club))[0];
@@ -134,9 +157,10 @@ public sealed class LeaguePairingFinder(AppDbContext db)
             : ToOption(new Row(x.g, x.Season, string.IsNullOrEmpty(x.Grp) ? x.League : $"{x.League} {x.Grp}", x.Date), false, club);
     }
 
-    /// <summary>Die vorgewählte Paarung: genau EIN genauer Vorschlag, sonst keine.</summary>
+    /// <summary>Die vorgewählte Paarung: genau EIN genauer Vorschlag, sonst die vorläufige Zuordnung zur laufenden Runde
+    /// (<see cref="Option.Provisional"/>, 0.832.0), sonst keine.</summary>
     public static int? AutoPick(IReadOnlyList<Option> options) =>
-        options.Count(o => o.Exact) == 1 ? options.First(o => o.Exact).Id : null;
+        options.Count(o => o.Exact) == 1 ? options.First(o => o.Exact).Id : options.FirstOrDefault(o => o.Provisional)?.Id;
 
     /// <summary>
     /// Die Wahl an der Partie festhalten: <paramref name="id"/> <c>0</c> = keine Ligapartie, sonst die Paarung — dann gilt das
@@ -157,14 +181,24 @@ public sealed class LeaguePairingFinder(AppDbContext db)
 
     /// <summary>Was über eine (gebaute) Vereinspartie bekannt ist — „Schwaz"-Seiten mit der internen FIDE-ID.</summary>
     public static Query QueryOf(LeagueClubGame g, DateOnly? date) =>
-        new(g.White, g.WhiteFide ?? g.WhiteRealFide, g.Black, g.BlackFide ?? g.BlackRealFide, date, g.Year);
+        new(g.White, g.WhiteFide ?? g.WhiteRealFide, g.Black, g.BlackFide ?? g.BlackRealFide, date, g.Year, g.Id > 0 ? g.Id : null);
 
-    private static List<Option> Options(Query q, List<Row> rows, LeagueClub? club)
+    /// <param name="own">FIDE-IDs der Spieler des eigenen Vereins (Meldelisten).</param>
+    private static List<Option> Options(Query q, List<Row> rows, LeagueClub? club, IReadOnlySet<string>? own = null)
     {
         var scored = new List<(Option O, int Sides, int Distance, Row R)>();
+        // Die Seiten der Partie, die für den eigenen Verein spielten: „Schwaz" bzw. die FIDE-ID eines eigenen Spielers.
+        bool OwnSide(string name, string? fide) => club is not null
+            && (club.IsAnon(name) || !string.IsNullOrEmpty(fide) && own?.Contains(fide) == true);
+        var ownSides = new[] { (q.White, q.WhiteFide), (q.Black, q.BlackFide) }.Where(x => OwnSide(x.Item1, x.Item2)).ToList();
         foreach (var r in rows)
         {
             var (wName, wFide, wTeam, bName, bFide, bTeam) = Colors(r.G);
+            // 0.832.0 (Fehlgriff Vereinspartie 225, 2026-10-24: Fercher in Runde 1 Jenbach 1 – Jenbach 2 statt Runde 3 gegen Schwaz):
+            // hat die Partie eine eigene Seite, deren Spieler an dieser Paarung nicht saß, und spielte keine eigene Mannschaft,
+            // ist es nicht diese Partie.
+            if (ownSides.Count > 0 && club is not null && !club.OwnsTeam(r.G.HomeTeam) && !club.OwnsTeam(r.G.AwayTeam)
+                && ownSides.All(x => string.IsNullOrEmpty(x.Item2) || (x.Item2 != wFide && x.Item2 != bFide))) continue;
             var ws = SideScore(q.White, q.WhiteFide, wFide, wTeam, club);
             var bs = SideScore(q.Black, q.BlackFide, bFide, bTeam, club);
             // mindestens eine Seite über die FIDE-ID — in den richtigen Farben oder vertauscht (dann nie genau)

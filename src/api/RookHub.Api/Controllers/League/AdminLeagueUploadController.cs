@@ -55,7 +55,7 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
     /// </summary>
     [HttpPost("manual-scan")]
     public async Task<IActionResult> ManualScan([FromBody] ManualScanRequest req, [FromServices] AppDbContext db,
-        [FromServices] ScoresheetScanService scans, CancellationToken ct)
+        [FromServices] ScoresheetScanService scans, [FromServices] LeagueClubService club, CancellationToken ct)
     {
         var sheets = req.Pages is { Count: > 0 } given ? given
             : req.FileIds is { Count: > 0 } plain ? plain.Select(id => new ManualScanPage(id)).ToList()
@@ -82,7 +82,11 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
             }
         var (scan, reason) = await scans.CreateManualAsync(req.UserId, pages, req.Transcription.GetRawText(), req.ClubGameId, ct,
             files[0].ClubId);
-        return scan == null ? BadRequest(new { reason }) : Ok(scan);
+        if (scan == null) return BadRequest(new { reason });
+        // 0.832.0: hängt die Einlesung an eine Vereinspartie OHNE Ligapaarung, gleich zuordnen (genauer Treffer, sonst vorläufig
+        // zur laufenden Runde)
+        if (req.ClubGameId is { } cg) await club.AssignPairingIfUnlinkedAsync(cg, ct);
+        return Ok(scan);
     }
 
     /// <summary>Das Bild wie verlangt gedreht/zugeschnitten; unverändert (dieselbe Instanz), wenn nichts verlangt ist,

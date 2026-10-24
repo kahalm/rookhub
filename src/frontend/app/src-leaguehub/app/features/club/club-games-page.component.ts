@@ -136,6 +136,15 @@ type Side = 'white' | 'black';
                     }
                   </td></tr>
                 }
+                @if (g.leaguePairingProvisional && g.leagueGameId) {
+                  <!-- 0.832.0: vorläufige Zuordnung zur laufenden Runde — wird nach dem Aktualisieren bestätigt, oder hier von Hand. -->
+                  <tr class="prov-row"><td colspan="9">
+                    <span class="prov-hint small" role="note">Ligapartie vorläufig — {{ g.leagueGameLabel ?? 'laufende Runde' }}
+                      (Aufstellung noch nicht auf chess-results)</span>
+                    <button type="button" class="btn-sec prov-confirm" [disabled]="confirming() === g.id" (click)="confirmPairing(g)">
+                      {{ confirming() === g.id ? 'Bestätige …' : 'Bestätigen' }}</button>
+                  </td></tr>
+                }
                 @if (viewing(); as v) {
                   @if (v.id === g.id) {
                     <tr class="edit-row"><td colspan="9">
@@ -489,6 +498,24 @@ export class ClubGamesPageComponent implements OnInit {
   /** Die jüngste Fassung (höchste Id) behält ihren Platz; „ältere archivieren“ steht nur dort. */
   isNewestVersion(g: ClubGame): boolean {
     return (g.duplicateIds ?? []).every(i => i < g.id);
+  }
+
+  /** 0.832.0: die Partie, deren vorläufige Ligapaarung gerade bestätigt wird. */
+  readonly confirming = signal<number | null>(null);
+
+  /** „Bestätigen": die vorläufige Zuordnung zur laufenden Runde gilt als fest (sonst bestätigt sie das nächste Aktualisieren). */
+  async confirmPairing(g: ClubGame): Promise<void> {
+    this.confirming.set(g.id);
+    this.error.set(null);
+    try {
+      await this.api.confirmPairing(g.id);
+      this.items.set(this.items().map(x => x.id === g.id ? { ...x, leaguePairingProvisional: false } : x));
+      this.notice.set('Ligapartie bestätigt.');
+    } catch {
+      this.error.set('Bestätigen hat nicht geklappt.');
+    } finally {
+      this.confirming.set(null);
+    }
   }
 
   async archiveOlder(g: ClubGame): Promise<void> {

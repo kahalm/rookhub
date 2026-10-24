@@ -205,6 +205,36 @@ Rollenverwaltung an).
   der Meldeliste — passt die Farbe nicht, kein Vorschlag; unbekannt → alle Bretter, nie „genau". `Option.Open` = true,
   `White`/`Black` = MANNSCHAFTEN; LeagueHub lässt bei der Wahl die Spieler stehen (`setPairing`, `choosePairing`), Text „…, noch
   nicht besetzt". Mehrere passende Bretter → keine Vorwahl.
+- **Vorläufige Zuordnung zur laufenden Runde** (0.832.0, Wunsch 2026-10-24: „er sollte direkt nach dem Einlesen, wenn er es
+  zuordnen kann, die Matchings für die aktuelle Runde schreiben — und später nur bestätigen"; Anlass: zehn Formulare vom Spieltag,
+  Runde 3 ohne Aufstellung auf chess-results, nur eine bekam eine — und die falsche, Runde 1 des Gegners).
+  `Services/League/LeaguePairingFinder` hängt an die leeren Bretter EINE vorläufige Wahl (`Option.Provisional`, im DTO
+  `provisional` + `uncertain`), gerechnet in `Services/League/LeagueProvisionalPairing.cs`:
+  (1) **Begegnung**: Gegner (FIDE-ID, sonst Namensschlüssel) in der Meldeliste der gegnerischen Mannschaft einer leeren eigenen
+  Begegnung, sonst der eigene Spieler in der Meldeliste der eigenen; mit Tag ±`DayTolerance`, ohne Tag die jüngste Runde ≤ heute
+  (Saison passt zum Jahr); mehrere gleich gute → keine. (2) **Brett**: Farbe nach `HomeWhiteByRule` — die TMM-Regel „Heim Weiß an
+  ungeraden Brettern" ist an allen gespielten Brettern der Saison 2026/27 belegt (`LeagueGames.HomeColor`: ungerade `w`, gerade
+  `s`, ausnahmslos; Bayern umgekehrt); dazu die Meldereihenfolge BEIDER Seiten gegenüber den schon zugeordneten Partien derselben
+  Begegnung (kleinere Meldenummer sitzt weiter vorn; Untergrenze 1 + Zahl der kleineren, Obergrenze n − Zahl der größeren, feste
+  Bretter grenzen direkt ein), belegte Bretter fallen weg; bleibt mehr als eines, das, das der Schätzung aus den bisherigen
+  Runden am nächsten liegt (1 + Schnitt der eingesetzten Mannschaftskollegen mit kleinerer Meldenummer, `HomeRb`/`AwayRb`; ohne
+  Verlauf die Meldenummer) → `uncertain`. (3) **Vorwahl**: `AutoPick` = genau EIN genauer Treffer, sonst die vorläufige; die
+  Prüfseite (`club-scan-page`, `ScanHeaderForm.loadPairings`) wählt dasselbe vor, Etikett „vorläufig (Aufstellung noch nicht auf
+  chess-results)" (+ „Brett geschätzt"; `pairingText`). (4) **Gespeichert** über `LeagueGameLinks.Set` — ein Brett ohne Spieler
+  setzt `LeagueClubGames.LeaguePairingProvisional` (auch bei Wahl von Hand). Nach jedem Speichern (`AddAsync`, PGN-Import)
+  verteilt `RebalanceAsync` ALLE vorläufigen Partien der Begegnung gemeinsam neu (die mit den wenigsten möglichen Brettern zuerst)
+  — mit jeder weiteren Partie wird die Brettfolge genauer; bestätigte bleiben stehen. Wege: Formular-Add ohne/mit Vorwahl,
+  PGN-Import (fehlt `leagueGameId`), manual-scan des Watchers mit `clubGameId` (`AssignPairingIfUnlinkedAsync`, nur ohne
+  Zuordnung) und `POST /api/league/club/games/{id}/pairing/auto` (league.manage; nur Partien OHNE Zuordnung — eine falsche erst
+  mit `PUT games/{id}` `leagueGameId: 0` lösen) → `{ leagueGameId }`. (5) **Bestätigen**: `LeagueGameLinks.RelinkAsync` (nach jedem
+  `LeagueRefresh.ReplaceAsync`, auch Ligamanager/Zugspitze/chess-results-Import, und beim Start) ruft
+  `LeagueProvisionalPairing.ConfirmAsync`: Brett jetzt besetzt und jede bekannte FIDE-ID der Partie (auch die interne hinter
+  „Schwaz") sitzt in ihrer Farbe → bestätigt (Info); sonst an einem anderen Brett derselben Begegnung → umgehängt + bestätigt
+  (Info); sonst Zuordnung gelöst (Warnung). Noch leere Bretter bleiben vorläufig. Von Hand: `POST …/club/games/{id}/pairing/confirm`
+  (wer bearbeiten darf) → `{ changed }`; die Vereinsliste zeigt unter der Partie „Ligapartie vorläufig — …" mit Knopf „Bestätigen"
+  (DTO `leaguePairingProvisional`, nur mit `leagueGameId`). (6) **Kein Fehlgriff mehr wie Partie 225**: hat die Partie eine eigene
+  Seite („Schwaz" bzw. FIDE-ID eines eigenen Spielers) und saß deren Spieler an einer Paarung ohne eigene Mannschaft nicht, ist
+  sie kein Vorschlag (also auch nie `AutoPick`).
 - **Ältere Fassungen archivieren** (0.691.0, Wunsch 2026-10-06: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon
   eingegeben ist, das alte archivieren"): `LeagueClubGames.ArchivedAt`/`ReplacedById`, gesetzt in `LeagueClubService.ArchiveOlderVersionsAsync`
   nach jedem Formular-Add (`AddAsync`, nicht beim PGN-Import). Dieselbe Partie = dieselbe feste Ligapaarung, oder (ohne zwei verschiedene

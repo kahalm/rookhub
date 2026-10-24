@@ -13,7 +13,7 @@ namespace RookHub.Api.Services.League;
 /// die höheren Ligen (Bundesliga 1 &amp; 2)") — spiegelbildlich zum Ligamanager-Import, aber ohne eigenen Leser: der Crawler liefert
 /// dieselben vier Seiten wie beim „Daten aktualisieren" (<c>GET {Crawler}/api/league/{tnr}</c>: Paarungen, Brettpaarungen, Meldeliste,
 /// Statistik). Die Turnier-Zeile (Saison, Stufe, Liga, Gruppe) kommt aus der Anfrage — chess-results nennt sie nicht maschinenlesbar.
-/// Ersetzt wird über <see cref="LeagueRefresh.ReplaceAsync(AppDbContext, LeagueRefresh.Pages, DateTime, CancellationToken)"/> (stabile
+/// Ersetzt wird über <see cref="LeagueRefresh.ReplaceAsync(AppDbContext, LeagueRefresh.Pages, DateTime, CancellationToken, ILogger)"/> (stabile
 /// Brettpaarungs-Ids, <see cref="LeagueGameLinks.RelinkAsync"/>) in EINER Transaktion mit der Turnier-Zeile. Damit lassen sich
 /// laufende Saison UND Vorsaisonen (Merkmale der Prognose) ohne Python-Bündel einspielen; danach holt „Daten aktualisieren" die Ligen
 /// der laufenden Saison wie jede Tiroler Liga.
@@ -114,7 +114,7 @@ public sealed partial class ChessResultsLeagueImport
                 row.Name = t.Name; row.Season = t.Season; row.Level = t.Level; row.League = t.League; row.Grp = t.Grp; row.Stage = t.Stage;
                 row.Start = t.Start; row.End = t.End; row.Rounds = t.Rounds; row.Source = null; row.SourceRef = null; row.UpdatedAt = _now();
                 await _db.SaveChangesAsync(ct);   // die Turnier-Zeile vor dem Ersetzen (ReplaceAsync setzt UpdatedAt über FindAsync)
-                await LeagueRefresh.ReplaceAsync(_db, pages, _now(), ct);
+                await LeagueRefresh.ReplaceAsync(_db, pages, _now(), ct, _log);
             }, ct);
         }
         catch (InvalidOperationException e) when (e.Message.Contains("leere Seite", StringComparison.Ordinal))

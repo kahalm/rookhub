@@ -138,13 +138,13 @@ public sealed class LeagueRefresh
     }
 
     /// <summary>Paarungen/Aufstellungen einer Liga ersetzen — samt Abgleich Brettpaarung ↔ Meldeliste (parse.py main).</summary>
-    public Task ReplaceAsync(Pages p, CancellationToken ct) => ReplaceAsync(_db, p, _now(), ct);
+    public Task ReplaceAsync(Pages p, CancellationToken ct) => ReplaceAsync(_db, p, _now(), ct, _log);
 
     /// <summary>Wie oben, ohne Dienst — auch für andere Quellen (<see cref="LigamanagerSource"/>), die dieselben Zwischenformen
     /// liefern. Speichert selbst (in einer offenen Transaktion des Aufrufers läuft es darin). Die Brettpaarungen behalten ihre
     /// Id je (Runde, Begegnung, Brett), danach werden die festen Ligapaarungen der Vereinspartien neu aufgelöst
     /// (<see cref="LeagueGameLinks"/>).</summary>
-    public static async Task ReplaceAsync(AppDbContext db, Pages p, DateTime now, CancellationToken ct)
+    public static async Task ReplaceAsync(AppDbContext db, Pages p, DateTime now, CancellationToken ct, ILogger? log = null)
     {
         var tnr = p.Tnr;
         // Vier leere Seiten sind keine Liga, sondern eine Fehl- oder Drosselseite von chess-results (200, aber ohne
@@ -215,8 +215,9 @@ public sealed class LeagueRefresh
         var t = await db.LeagueTournaments.FindAsync(new object[] { tnr }, ct);
         if (t is not null) t.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
-        // Sicherheitsnetz: Zuordnungen über ihren Schlüssel neu auflösen (eine Paarung, die es nicht mehr gibt, ruht).
-        await LeagueGameLinks.RelinkAsync(db, tnr, ct);
+        // Sicherheitsnetz: Zuordnungen über ihren Schlüssel neu auflösen (eine Paarung, die es nicht mehr gibt, ruht) — und
+        // vorläufige Zuordnungen der laufenden Runde bestätigen, umhängen oder lösen (0.832.0).
+        await LeagueGameLinks.RelinkAsync(db, tnr, ct, log);
     }
 
     /// <summary>FIDE-IDs der wahrscheinlichen Gegner in offenen Runden, deren chess-results-Partien veraltet sind —

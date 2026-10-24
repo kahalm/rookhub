@@ -672,6 +672,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
   background: color-mix(in srgb, var(--warn) 10%, transparent); }
 .dup-hint { color: var(--warn); margin-right: 12px; }
 .dup-archive { padding: 2px 10px; }
+/* 0.832.0: vorläufige Ligapaarung (Brett der laufenden Runde ohne Aufstellung) — dezenter Hinweis + „Bestätigen". */
+.club-table tr.prov-row td { padding: 2px 6px 8px; border-top: 0; }
+.prov-hint { color: var(--muted); margin-right: 12px; }
+.prov-confirm { padding: 2px 10px; }
 
 /* UI-Sweep 2026-10-11 (r2-l-same-account): dasselbe Konto ist mehreren Spielern vorgeschlagen. */
 .also-for { display: inline-block; margin: 4px 0 0; padding: 1px 8px; border-radius: 4px; font-size: .85rem;

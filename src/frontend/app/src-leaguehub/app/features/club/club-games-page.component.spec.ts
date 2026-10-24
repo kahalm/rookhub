@@ -358,6 +358,29 @@ describe('ClubGamesPageComponent', () => {
     flush();
   }));
 
+  // 0.832.0: vorläufige Zuordnung zur laufenden Runde — Hinweis „vorläufig" + „Bestätigen" (wer bearbeiten darf, also mit leagueGameId).
+  it('vorläufige Ligapartie: Hinweis mit Bezeichnung, „Bestätigen" ruft den Server und blendet den Hinweis aus', fakeAsync(() => {
+    (api as any).confirmPairing = jasmine.createSpy('confirmPairing').and.resolveTo({ changed: true });
+    api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [
+      G(225, { leagueGameId: 19015, leagueGameLabel: '2026/27 · Gebietsklasse · Runde 3 · Brett 2 (24.10.2026)', leaguePairingProvisional: true }),
+      G(7, { leagueGameId: 18000, leaguePairingProvisional: false }),
+    ] });
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const rows = Array.from(el.querySelectorAll('tr.prov-row'));
+    expect(rows.length).toBe(1);
+    expect(rows[0].textContent).toContain('vorläufig');
+    expect(rows[0].textContent).toContain('Runde 3 · Brett 2');
+    (rows[0].querySelector('.prov-confirm') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect((api as any).confirmPairing).toHaveBeenCalledWith(225);
+    expect(el.querySelector('tr.prov-row')).toBeNull();
+    expect((fixture.componentInstance as any).notice()).toContain('bestätigt');
+    flush();
+  }));
+
   // UI-Sweep 2026-10-11 (r2-l-dup-game): zwei Fassungen derselben Partie — Hinweis für Verwalter, „ältere archivieren" an der jüngeren.
   it('Dublette: Hinweis an beiden Fassungen, „ältere archivieren" nur an der jüngeren, danach eine Zeile', fakeAsync(() => {
     (api as any).archiveOlder = jasmine.createSpy('archiveOlder').and.resolveTo({ replaced: 1 });

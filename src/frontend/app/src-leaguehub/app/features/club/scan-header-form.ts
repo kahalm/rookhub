@@ -161,8 +161,9 @@ export class ScanHeaderForm {
       this.pairings.set(chosen && !list.some(p => p.id === chosen.id) ? [chosen, ...list] : list);
       this.pairingsLoaded = true;
       if (!this.pairingTouched) {
+        // genau ein genauer Treffer, sonst die vorläufige Zuordnung zur laufenden Runde (0.832.0) — wie der Server
         const exact = list.filter(p => p.exact);
-        this.pairingId.set(exact.length === 1 ? exact[0].id : null);
+        this.pairingId.set(exact.length === 1 ? exact[0].id : list.find(p => p.provisional)?.id ?? null);
       }
     } catch { /* ohne Vorschläge entscheidet der Server beim Übernehmen selbst */ }
   }

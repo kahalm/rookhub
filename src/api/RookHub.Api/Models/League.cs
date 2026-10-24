@@ -422,6 +422,12 @@ public class LeagueClubGame
     public int? LeagueRound { get; set; }
     public int? LeagueMatchNo { get; set; }
     public int? LeagueBoard { get; set; }
+    /// <summary>Die Zuordnung ist VORLÄUFIG (0.832.0, Wunsch 2026-10-24: „direkt nach dem Einlesen die Matchings für die aktuelle
+    /// Runde schreiben und später nur bestätigen"): gesetzt auf ein Brett der laufenden Runde, an dem chess-results noch keine
+    /// Spieler hat (Brett aus Farbe + Meldeliste geschätzt, <see cref="Services.League.LeagueProvisionalPairing"/>). Nach jedem
+    /// Aktualisieren bestätigt (<c>false</c>), umgehängt oder gelöst; von Hand bestätigen geht auch. Gesetzt nur über
+    /// <see cref="Services.League.LeagueGameLinks.Set"/>.</summary>
+    public bool LeaguePairingProvisional { get; set; }
 
     /// <summary>Archiviert (2026-10-06, Wunsch: „wenn eine 2. Partie über ein Scoresheet hinzugefügt wird, die schon eingegeben
     /// ist, das alte archivieren, damit es nicht mehr aufscheint"): eine neuere Fassung derselben Partie hat sie ersetzt.

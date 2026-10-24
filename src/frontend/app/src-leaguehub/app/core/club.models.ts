@@ -33,6 +33,8 @@ export interface ClubGame {
   leagueGameId?: number | null;
   /** „2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026)". */
   leagueGameLabel?: string | null;
+  /** 0.832.0: die Zuordnung ist vorläufig (Brett der laufenden Runde, Aufstellung noch nicht auf chess-results). */
+  leaguePairingProvisional?: boolean;
   /** UI-Sweep 2026-10-11 (r2-l-dup-game): andere lebende Fassungen DIESER Partie — nur für Verwalter, sonst fehlt es. */
   duplicateIds?: number[] | null;
 }
@@ -54,6 +56,11 @@ export interface ClubPairing {
   /** 0.744.0: noch leeres Brett der eigenen Begegnung (laufende Runde) — `white`/`black` sind dann die Mannschaften,
    *  die Spieler der Partie bleiben bei der Wahl, wie sie sind. */
   open?: boolean;
+  /** 0.832.0: die vorläufige Zuordnung zur laufenden Runde (Gegner-Mannschaft laut Meldeliste, Brett aus Farbe + Meldereihenfolge)
+   *  — vorgewählt, wenn es keinen genauen Treffer gibt. */
+  provisional?: boolean;
+  /** Das Brett der vorläufigen Zuordnung ist nur geschätzt. */
+  uncertain?: boolean;
 }
 
 /** Stand der Analyse einer Vereinspartie — dieselbe Form wie `analysis` in RookHubs Partienliste. */

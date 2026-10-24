@@ -437,6 +437,30 @@ describe('ClubScanPageComponent', () => {
     tick(1000);
   }));
 
+  it('vorläufige Ligapaarung (0.832.0): ohne genauen Treffer vorgewählt, mit Etikett „vorläufig“, geht beim Übernehmen mit', fakeAsync(() => {
+    localStorage.setItem(AUTO_MINE_KEY, '0');
+    const open = (id: number, extra: object) => ({ id, label: `2026/27 · Gebietsklasse · Runde 3 · Brett ${id - 70} (24.10.2026)`,
+      white: 'Sparkasse Jenbach 2', whiteFide: null, black: 'Schwaz', blackFide: null, result: '', whiteOwnClub: false,
+      blackOwnClub: true, exact: true, open: true, ...extra });
+    api.pairings.and.resolveTo([open(72, { provisional: true, uncertain: true }), open(74, {})]);
+    const el = create();
+    flushMicrotasks();
+    tick(1000); flushMicrotasks();
+    fixture.detectChanges();
+    const sel = el.querySelector('select.pairing-pick') as HTMLSelectElement;
+    expect(sel.value).toBe('72');                                       // zwei „genaue“ leere Bretter — die vorläufige gewinnt
+    const label = Array.from(sel.options).find(o => o.value === '72')!.textContent!;
+    expect(label).toContain('vorläufig (Aufstellung noch nicht auf chess-results)');
+    expect(label).toContain('Brett geschätzt');
+    expect(Array.from(sel.options).find(o => o.value === '74')!.textContent).not.toContain('vorläufig');
+
+    api.addGame.and.resolveTo({ id: 11, anonymized: true });
+    void fixture.componentInstance.save();
+    flushMicrotasks();
+    expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({ leagueGameId: 72 }), '7');
+    tick(1000);
+  }));
+
   it('„Automatisch zu meinen Partien": standardmäßig an, legt nach dem Übernehmen die Kopie an; Abwählen merkt sich das Gerät', fakeAsync(() => {
     localStorage.removeItem(AUTO_MINE_KEY);
     const el = create();

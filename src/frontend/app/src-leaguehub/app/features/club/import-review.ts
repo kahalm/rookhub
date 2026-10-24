@@ -286,7 +286,11 @@ interface ReviewSnapshot {
 
 /** Wie eine Paarung in der Auswahl steht: „2026/27 · Landesliga · Runde 2 · Brett 4 (04.10.2026) — Hengl – Muster". Die
  *  Namen sind die des öffentlichen Spielplans; „(?)" = Spieler oder Tag passen nicht ganz. */
+/** Etikett der vorläufigen Zuordnung (0.832.0). */
+export const PROVISIONAL_LABEL = 'vorläufig (Aufstellung noch nicht auf chess-results)';
+
 export function pairingText(p: ClubPairing): string {
+  if (p.provisional) return `${p.label} — ${p.white} – ${p.black}, ${PROVISIONAL_LABEL}${p.uncertain ? ', Brett geschätzt' : ''}`;
   if (p.open) return `${p.label} — ${p.white} – ${p.black}, noch nicht besetzt${p.exact ? '' : ' (?)'}`;
   return `${p.label} — ${p.white} – ${p.black}${p.exact ? '' : ' (?)'}`;
 }

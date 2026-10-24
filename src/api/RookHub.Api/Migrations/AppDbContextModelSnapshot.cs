@@ -4395,6 +4395,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("LeagueMatchNo")
                         .HasColumnType("int");
 
+                    b.Property<bool>("LeaguePairingProvisional")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int?>("LeagueRound")
                         .HasColumnType("int");
 

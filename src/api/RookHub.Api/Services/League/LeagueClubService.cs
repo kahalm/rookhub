@@ -77,7 +77,7 @@ public sealed class LeagueClubService
         _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow); _analyses = analyses;
         _shareQuota = shareQuota ?? new LeagueShareUploadQuota();
         _cache = cache;
-        _pairings = new LeaguePairingFinder(db);
+        _pairings = new LeaguePairingFinder(db) { Today = () => DateOnly.FromDateTime(_now()) };
     }
 
     private readonly LeaguePairingFinder _pairings;
@@ -121,6 +121,49 @@ public sealed class LeagueClubService
         if (await LeagueGameLinks.FindAsync(_db, g, ct, _log) is { Id: var cur } && options.All(o => o.Id != cur)
             && await _pairings.ByIdAsync(cur, ct, club) is { } o0) options.Insert(0, o0);
         return options.Select(LeagueClubPairingDto.Of).ToList();
+    }
+
+    /// <summary>Nach dem Speichern: die vorläufigen Zuordnungen (0.832.0) der Begegnungen dieser Partien gemeinsam neu verteilen —
+    /// mit jeder weiteren Partie derselben Begegnung wird die Brettfolge genauer.</summary>
+    private Task<int> RebalanceAsync(LeagueClub club, IEnumerable<LeagueClubGame> games, CancellationToken ct) =>
+        new LeagueProvisionalPairing(_db).RebalanceAsync(club, games, DateOnly.FromDateTime(_now()), ct, _log);
+
+    /// <summary>
+    /// Eine schon gespeicherte Vereinspartie OHNE Zuordnung nachträglich zuordnen (0.832.0) — wie beim Hinzufügen: der eindeutige
+    /// genaue Treffer, sonst die vorläufige Zuordnung zur laufenden Runde. Für den manual-scan-Weg des Watchers mit
+    /// <c>clubGameId</c> und den Nachtrag von Partien, die vor 0.832.0 eingelesen wurden. → ob es die Partie gibt, und die gesetzte Paarung.
+    /// </summary>
+    /// <param name="clubId">Nur eine Partie dieses Vereins (sonst <c>Found = false</c>).</param>
+    public async Task<(bool Found, int? Id)> AssignPairingIfUnlinkedAsync(int clubGameId, CancellationToken ct = default, int? clubId = null)
+    {
+        var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == clubGameId && (clubId == null || x.ClubId == clubId), ct);
+        if (g is null) return (false, null);
+        if (g.LeagueGameId != null || LeagueGameLinks.KeyOf(g) != null) return (true, null);
+        var club = await _db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == g.ClubId, ct);
+        if (club is null) return (true, null);
+        var date = FullDateOf(PgnParser.SplitGames(g.Pgn).FirstOrDefault().Headers?.GetValueOrDefault("Date"));
+        await ApplyPairingsAsync(club, new[] { (g, (int?)null, date, SansOf(g.Pgn)) }, ct);
+        if (g.LeagueGameId is null) return (true, null);
+        await _db.SaveChangesAsync(ct);
+        await RebalanceAsync(club, new[] { g }, ct);
+        _log.LogInformation("Vereins-Datenbank: Partie {Id} nachträglich zugeordnet — Brettpaarung {Pairing}{Provisional}", g.Id,
+            g.LeagueGameId, g.LeaguePairingProvisional ? " (vorläufig)" : "");
+        return (true, g.LeagueGameId);
+    }
+
+    /// <summary>„Bestätigen" von Hand (0.832.0): die vorläufige Zuordnung gilt als fest. Nur wer die Partie bearbeiten darf.
+    /// → <c>null</c> = unbekannt/anderer Verein, sonst ob sie vorher vorläufig war; <c>Reason</c> <c>forbidden</c>/<c>notLinked</c>.</summary>
+    public async Task<(bool? Changed, string? Reason)> ConfirmPairingAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct = default)
+    {
+        var g = await Games(club).FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g is null) return (null, "notFound");
+        if (!CanDelete(g, userId, canManage)) return (null, "forbidden");
+        if (g.LeagueGameId is null && LeagueGameLinks.KeyOf(g) is null) return (null, "notLinked");
+        if (!g.LeaguePairingProvisional) return (false, null);
+        g.LeaguePairingProvisional = false;
+        await _db.SaveChangesAsync(ct);
+        _log.LogInformation("Vereins-Datenbank: vorläufige Ligapaarung der Partie {Id} von Hand bestätigt", g.Id);
+        return (true, null);
     }
 
     /// <summary>Die Wahl der Paarung an die Partie: gewählt (<c>&gt; 0</c>), ausdrücklich keine (<c>0</c>) oder — fehlt die
@@ -629,6 +672,7 @@ public sealed class LeagueClubService
             .Select(x => (x.Game!, choices.GetValueOrDefault(x.Index), FullDateOf(x.P!.H("Date")), (IReadOnlyList<string>)x.P!.Sans!))
             .ToList(), ct);
         await SaveAsync(pending, ct);
+        await RebalanceAsync(club, pending, ct);
         if (shareHash != null && result.Failed.Count(f => f.Reason == ShareLimitReason) is > 0 and var refused)
             _log.LogWarning("Vereins-Datenbank: Teilen-Link {Link} am Deckel — {Refused} Partien nicht übernommen",
                 shareHash[..8], refused);
@@ -724,6 +768,7 @@ public sealed class LeagueClubService
         Stamp(game, userId, now, shareHash, claimHash);
         await ApplyPairingsAsync(club, new[] { (game, req.LeagueGameId, FullDateOf(req.Date), (IReadOnlyList<string>)sans) }, ct);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
+        await RebalanceAsync(club, new[] { game }, ct);
         game.Replaced = await ArchiveOlderVersionsAsync(game, sans, now, ct);
         _log.LogInformation("Vereins-Datenbank {Club}: eine Partie aus einem Partieformular ({Anon}{Via})",
             club.Id, game.Anonymized ? $"mit „{club.AnonName}“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
@@ -990,6 +1035,7 @@ public sealed class LeagueClubService
         WhiteElo = g.WhiteElo, BlackElo = g.BlackElo, Result = g.Result, Event = g.Event, Plies = g.Plies,
         Opening = OpeningOf(g.Pgn), Anonymized = g.Anonymized, CanDelete = CanDelete(g, userId, canManage), Uci = UciOf(g.Pgn), Pgn = g.Pgn,
         LeagueGameId = CanDelete(g, userId, canManage) ? g.LeagueGameId : null,
+        LeaguePairingProvisional = CanDelete(g, userId, canManage) && g.LeaguePairingProvisional,
     };
 
     /// <summary>Die Bezeichnung der zugeordneten Paarung („2026/27 · Landesliga · Runde 2 · Brett 4") — nur wo sie gezeigt werden

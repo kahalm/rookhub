@@ -142,6 +142,11 @@ export class ClubClient {
     return firstValueFrom(this.http.post<{ replaced: number }>(`${this.base}/games/${id}/archive-older`, {}));
   }
 
+  /** 0.832.0: die vorläufige Ligapaarung einer Partie bestätigen (wer bearbeiten darf). */
+  confirmPairing(id: number): Promise<{ changed: boolean }> {
+    return firstValueFrom(this.http.post<{ changed: boolean }>(`${this.base}/games/${id}/pairing/confirm`, {}));
+  }
+
   /** Namen und Ergebnis einer gespeicherten Partie korrigieren (angemeldet; wer löschen darf, darf korrigieren). */
   updateGame(id: number, body: ClubGameUpdate): Promise<ClubGame> {
     return firstValueFrom(this.http.put<ClubGame>(`${this.base}/games/${id}`, body));

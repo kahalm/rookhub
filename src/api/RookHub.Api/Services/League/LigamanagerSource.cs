@@ -19,7 +19,7 @@ namespace RookHub.Api.Services.League;
 /// <item><c>partien/download/alle.pgn</c> — alle Partien (Windows-1252; 404, solange keine Partie erfasst ist).</item>
 /// </list>
 /// Daraus entstehen dieselben Zwischenformen wie aus dem chess-results-Crawler (<see cref="LeagueRefresh.Pages"/>), geschrieben
-/// über <see cref="LeagueRefresh.ReplaceAsync(AppDbContext, LeagueRefresh.Pages, DateTime, CancellationToken)"/> — Verknüpfung
+/// über <see cref="LeagueRefresh.ReplaceAsync(AppDbContext, LeagueRefresh.Pages, DateTime, CancellationToken, ILogger)"/> — Verknüpfung
 /// Brett ↔ Meldeliste über (Team, NameKey), FIDE-ID/Meldebrett/Elo daraus. Die Partien gehen über
 /// <see cref="LeagueProfileStore.ImportGamesAsync"/> in die Spielerkarten (Quelle <see cref="PgnSource"/>), die FIDE-ID schreibt
 /// der Leser aus der Meldeliste in den Kopf.
@@ -584,7 +584,7 @@ public sealed partial class LigamanagerSource
             row.Name = t.Name; row.Season = t.Season; row.Level = t.Level; row.League = t.League; row.Grp = t.Grp; row.Stage = t.Stage;
             row.Start = t.Start; row.End = t.End; row.Rounds = t.Rounds; row.Source = Source; row.SourceRef = t.SourceRef; row.Boards = t.Boards;
             row.UpdatedAt = _now();
-            await LeagueRefresh.ReplaceAsync(_db, parsed.Pages, _now(), ct);
+            await LeagueRefresh.ReplaceAsync(_db, parsed.Pages, _now(), ct, _log);
             fideFilled = await FillMissingFideAsync(ct);
         }, ct);
         _db.ChangeTracker.Clear();
