@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CalcGrade, CalcReviewPatch, toReviewBody } from './calc-review.util';
+import { courseLangParams } from '../course-lang-params';
 
 /** Eine Stellung in der Sprungliste (leicht — ohne FEN/Kommentar, ohne Züge). */
 export interface CalcPositionListItem {
@@ -152,11 +153,6 @@ export interface CalcBackend {
   saveReview(bookPuzzleId: number, patch: CalcReviewPatch): Observable<CalcReviewSaved>;
 }
 
-/** `?lang=` nur mit Sprache — ohne liefert der Server exakt das Original. */
-function langParams(lang?: string | null): HttpParams {
-  return lang ? new HttpParams().set('lang', lang) : new HttpParams();
-}
-
 /** HTTP-Zugang zum Kalkulations-Modus (`/api/calculations`). */
 @Injectable({ providedIn: 'root' })
 export class CalculationService implements CalcBackend {
@@ -169,15 +165,15 @@ export class CalculationService implements CalcBackend {
    * anonym gar nichts (siehe `calc-local.util.ts`).
    */
   getPublicBook(bookId: number, lang?: string | null): Observable<CalcPublicBook> {
-    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`, { params: langParams(lang) });
+    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`, { params: courseLangParams(lang) });
   }
 
   getBook(bookId: number, lang?: string | null): Observable<CalcBook> {
-    return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`, { params: langParams(lang) });
+    return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`, { params: courseLangParams(lang) });
   }
 
   getPosition(bookPuzzleId: number, lang?: string | null): Observable<CalcPosition> {
-    return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`, { params: langParams(lang) });
+    return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`, { params: courseLangParams(lang) });
   }
 
   saveTree(bookPuzzleId: number, treeJson: string): Observable<CalcTreeSaved> {
