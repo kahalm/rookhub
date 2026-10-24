@@ -16,7 +16,11 @@
 
 **Nutzerverwaltung durch Admins** (Codereview 2026-09-29): `DELETE /api/admin/users/{id}` anonymisiert jetzt wie die
 Selbstlöschung (`ProfileService.EraseUserAsync`, kein 409 durch Restrict-FKs mehr), `GET /api/admin/users` listet keine
-gelöschten Konten (A9-004). **Admin-Recht setzen** (F5-013, `users.manage`): `PUT /api/admin/users/{id}/admin`
+gelöschten Konten (A9-004). Der Löschkern selbst liegt in `Services/Accounts/Erasure/` (Zerlegung Z15): `UserDataEraser.Steps` ist die
+feste Reihenfolge der Löscher je Bereich (`CourseDataEraser`, `SocialDataEraser`, … — ein Bereich darf mehrmals vorkommen,
+FK-/Speicher-Reihenfolge), danach anonymisiert `UserDataEraser` die Identität im selben Save. Neue nutzereigene Tabelle →
+in den passenden Löscher (oder mit Grund in `ProfileServiceTests.DeletionExempt`), sonst schlägt
+`DeleteAccount_CoversEveryUserOwnedTable` an. **Admin-Recht setzen** (F5-013, `users.manage`): `PUT /api/admin/users/{id}/admin`
 `{ isAdmin }` setzt einen Soll-Wert (idempotent; nur Admins, nie das eigene Konto; fehlender Wert → 400);
 `POST …/toggle-admin` ist veraltet und entfällt in einer späteren Version. **Sperren statt löschen** (F5-011, `users.manage`): `POST /api/admin/users/{id}/lock`
 `{ until: ISO-UTC | null }` (null = unbefristet, `AppUser.LockedIndefinitely`) bzw. `DELETE …/lock` → 200 `AdminUserDto`

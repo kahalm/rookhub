@@ -42,7 +42,7 @@ public class ProfileServiceTests : IDisposable
     }
 
     /// <summary>Entitäten mit Nutzerbezug, die die Kontolöschung ABSICHTLICH stehen lässt — jeweils
-    /// mit dem Grund. Alles andere MUSS in <c>DeleteAccountAsync</c> auftauchen.</summary>
+    /// mit dem Grund. Alles andere MUSS in einem Löscher unter <c>Services/Accounts/Erasure/</c> auftauchen.</summary>
     private static readonly Dictionary<string, string> DeletionExempt = new(StringComparer.Ordinal)
     {
         ["EndlessSessions"] = "anonyme Laufstatistik (bleibt unter der Id, ohne PII)",
@@ -94,35 +94,55 @@ public class ProfileServiceTests : IDisposable
             var ownsUser = entity.GetProperty("UserId") != null || entity.GetProperty("OwnerUserId") != null;
             if (!ownsUser || entity == typeof(Models.AppUser)) continue;
             if (DeletionExempt.ContainsKey(prop.Name)) continue;
-            if (!source.Contains($"_db.{prop.Name}", StringComparison.Ordinal)) missing.Add(prop.Name);
+            // Die Löscher bekommen den Kontext als „db" (UserErasureContext), nicht als Feld „_db".
+            if (!System.Text.RegularExpressions.Regex.IsMatch(source, $@"\bdb\.{prop.Name}\b")) missing.Add(prop.Name);
         }
 
         Assert.True(missing.Count == 0,
-            "Nutzereigene Tabelle(n) ohne Behandlung in DeleteAccountAsync (DSGVO-Löschung lässt die "
+            "Nutzereigene Tabelle(n) ohne Behandlung in den Löschern unter Services/Accounts/Erasure (DSGVO-Löschung lässt die "
             + "Daten dauerhaft liegen — aufräumen ODER mit Grund in DeletionExempt eintragen):\n  "
             + string.Join("\n  ", missing.OrderBy(m => m, StringComparer.Ordinal)));
     }
 
-    /// <summary>Quelltext des Löschkerns <c>ProfileService.EraseAsync</c> (Methodenrumpf). Der Pfad kommt
-    /// über <see cref="CallerFilePathAttribute"/>, ist also im normalen Lauf immer auflösbar — ein
-    /// stilles Überspringen gäbe es hier nicht, der Test scheitert stattdessen.</summary>
+    /// <summary>Quelltext des Löschkerns: alle Dateien unter <c>Services/Accounts/Erasure/</c> (Zerlegung Z15 — je Bereich
+    /// ein Löscher, die feste Reihenfolge in <c>UserDataEraser.Steps</c>; dass jeder Löscher-Schritt dort auch steht, prüft
+    /// <see cref="DeleteAccount_EveryEraserStepRuns"/>). Der Pfad kommt über <see cref="CallerFilePathAttribute"/>, ist also
+    /// im normalen Lauf immer auflösbar — ein stilles Überspringen gäbe es hier nicht, der Test scheitert stattdessen.</summary>
     private static string ReadDeleteAccountSource([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
     {
         var dir = Path.GetDirectoryName(thisFile);
-        string? file = null;
+        string? folder = null;
         while (!string.IsNullOrEmpty(dir))
         {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Services", "Accounts", "ProfileService.cs");
-            if (File.Exists(candidate)) { file = candidate; break; }
+            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Services", "Accounts", "Erasure");
+            if (Directory.Exists(candidate)) { folder = candidate; break; }
             dir = Path.GetDirectoryName(dir);
         }
-        Assert.NotNull(file);
-        var src = File.ReadAllText(file!);
-        // Der Löschkern, den Selbst- UND Admin-Löschung teilen (DeleteAccountAsync prüft nur das Passwort).
-        var start = src.IndexOf("private async Task EraseAsync(AppUser user)", StringComparison.Ordinal);
-        Assert.True(start >= 0, "Löschkern EraseAsync nicht gefunden — Methode umbenannt?");
-        var end = src.IndexOf("\n    }\n", start, StringComparison.Ordinal);
-        return end > start ? src[start..end] : src[start..];
+        Assert.NotNull(folder);
+        var files = Directory.GetFiles(folder!, "*.cs").OrderBy(f => f, StringComparer.Ordinal).ToList();
+        Assert.Contains(files, f => Path.GetFileName(f) == "UserDataEraser.cs");
+        return string.Join("\n", files.Select(File.ReadAllText));
+    }
+
+    /// <summary>Jeder Schritt eines Löschers (statische <c>Task …(UserErasureContext)</c>-Methode im Ordner Erasure) steht
+    /// in der festen Reihenfolge <c>UserDataEraser.Steps</c> — genau einmal. Sonst zählte der Wächter oben eine Tabelle als
+    /// behandelt, deren Schritt nie läuft.</summary>
+    [Fact]
+    public void DeleteAccount_EveryEraserStepRuns()
+    {
+        var ns = typeof(RookHub.Api.Services.Accounts.Erasure.UserDataEraser).Namespace;
+        var declared = typeof(RookHub.Api.Services.Accounts.Erasure.UserDataEraser).Assembly.GetTypes()
+            .Where(t => t.Namespace == ns && t.IsAbstract && t.IsSealed)   // statische Klassen
+            .SelectMany(t => t.GetMethods(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public
+                                          | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
+            .Where(m => m.ReturnType == typeof(Task) && m.GetParameters() is [{ } p]
+                        && p.ParameterType == typeof(RookHub.Api.Services.Accounts.Erasure.UserErasureContext))
+            .Select(m => $"{m.DeclaringType!.Name}.{m.Name}")
+            .OrderBy(n => n, StringComparer.Ordinal).ToList();
+        var steps = RookHub.Api.Services.Accounts.Erasure.UserDataEraser.Steps
+            .Select(s => $"{s.Method.DeclaringType!.Name}.{s.Method.Name}").ToList();
+        Assert.Equal(steps.Count, steps.Distinct().Count());
+        Assert.Equal(declared, steps.OrderBy(n => n, StringComparer.Ordinal).ToList());
     }
 
     [Fact]
