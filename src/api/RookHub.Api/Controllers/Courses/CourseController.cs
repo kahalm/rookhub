@@ -23,7 +23,7 @@ namespace RookHub.Api.Controllers.Courses;
 /// <see cref="CourseAccess.CanAccessAsync"/>; kein Zugriff → 404. Bearbeiten (Inhalte, Themen,
 /// Kalkulations-Serie) verlangt mehr: Besitzer oder Admin (<see cref="CourseAccess.LoadManageableAsync"/>).
 /// Kursliste und Menüeintrag (<c>GET /api/courses</c>, <c>GET /api/courses/access</c>) sind dagegen bewusst
-/// nur eine TEILMENGE des Zugriffs (<c>CourseService.ListedCourses</c>): ein öffentlicher Kurs steht dort nur
+/// nur eine TEILMENGE des Zugriffs (<c>CourseListQuery.ListedCourses</c>): ein öffentlicher Kurs steht dort nur
 /// für den, der ihn angepinnt hat — NICHT für jeden (Codereview A7-006). Kein <c>IsPublic</c>-Zweig dort.
 /// Fehlerfälle werfen die Dienste als Domänen-Ausnahme (404/403/400), der globale DomainExceptionFilter
 /// macht daraus <c>{ message }</c> — hier wird nichts gefangen (Codereview A7-011).

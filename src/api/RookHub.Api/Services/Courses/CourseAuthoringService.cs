@@ -523,7 +523,7 @@ public class CourseAuthoringService
         _db.CourseInfoViews.RemoveRange(views);
 
         // Statt die Versuche zu löschen: je Linie den Reset-Zeitpunkt merken. Der Kurs zählt einen Versuch
-        // nur, wenn er danach liegt (CourseService.AttemptsSinceReset) — sonst blieben die eben gespielten
+        // nur, wenn er danach liegt (CourseProgressRules.AttemptsSinceReset) — sonst blieben die eben gespielten
         // Linien aus dem Pool ausgeschlossen und der Kurs meldete „abgeschlossen" (gemeldet 2026-10-05).
         var now = DateTime.UtcNow;
         var resets = await _db.CourseLineResets

@@ -45,3 +45,12 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 | DELETE | `/api/courses/{bookId:int}/translations/{jobId:int}` | Auth | Auftrag zurückziehen: den eigenen WARTENDEN (Admin: jeden offenen, ein laufender bricht sofort ab) → 204; 403 fremder, 409 `not-waiting`, 404 unbekannt/kein Zugang |
 | PUT | `/api/courses/{bookId:int}/comment-language` | Besitzer/Admin | Quellsprache der Kommentare korrigieren `{ language }` (nur die Form geprüft, `und` = nicht bestimmbar) → `{ sourceLanguage }`; 403 nicht Besitzer, 400 `invalid-language`. Vorhandene Übersetzungen bleiben gültig |
 | GET | `/api/admin/course-translations` | `books.manage` | Warteschlange (laufender zuerst, dann in Dienst-Reihenfolge, mit `bookName`/`requestedByUsername`) + 50 jüngste erledigte, `quietUntil`, `available`, `autoLanguages` — nur Endpoint, keine Oberfläche |
+
+**Code-Aufteilung (Zerlegung Z4, Codereview 2026-09-29):** `CourseController` spricht weiter nur mit
+`Services/Courses/CourseService.cs` — der ist seit der Zerlegung eine Fassade und hält selbst nur noch Lesen
+(Kapitel, Puzzles, öffentliche Kurz-Links) und Themen-Tags. Dahinter: `CourseListQuery` (Kursliste +
+Menü-Sichtbarkeit aus EINER Buchmenge), `CourseSolverService` (next/results/info/reset, „Offene nochmal“,
+„Info-Linien überspringen“, ✓/✗-Stand), `CourseScopeStatistics` (Buch-/Kapitelstatistik, reines Zählen in
+`BuildScope`), `CoursePersonalService` (Pins, Verknüpfungen), `CourseSharingService` (Teilen),
+`CourseCreationService` (persönliche Kurse anlegen/löschen), gemeinsame Zählregeln in `CourseProgressRules`
+(`Percent`, `SolvedQuizResults`, `AttemptsSinceReset` …). PGN-Export: `CoursePgnExportService`.

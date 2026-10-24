@@ -1,4 +1,3 @@
-using RookHub.Api.Services.Accounts;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -6,7 +5,6 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.Puzzles;
-using RookHub.Api.Services.Repertoires;
 using RookHub.Api.Services.Social;
 using RookHub.Api.DTOs.Courses;
 
@@ -18,17 +16,24 @@ namespace RookHub.Api.Services.Courses;
 /// im CourseController. Sichtbarkeit/Zugriff wird je Buch erzwungen — kein Zugriff → 404 via
 /// <see cref="NotFoundException"/> (der globale DomainExceptionFilter bildet auf HTTP ab). `isAdmin` reicht der Controller
 /// herein (HTTP-Concern).
+/// <para><b>Aufteilung</b> (Codereview 2026-09-29, A7-010/Z4): hier liegen Lesen (Kapitel,
+/// Puzzles, öffentliche Kurz-Links) und die Themen-Tags. Der Rest steht in eigenen Klassen, die dieser
+/// Dienst als FASSADE durchreicht, damit Controller und Aufrufer unverändert bleiben:
+/// <see cref="CourseListQuery"/> (Kursliste + Menü-Sichtbarkeit),
+/// <see cref="CourseSolverService"/> (next/results/info/reset/Pool-Einstellungen/✓✗-Stand),
+/// <see cref="CoursePersonalService"/> (Pins, Verknüpfungen), <see cref="CourseSharingService"/> (Teilen),
+/// <see cref="CourseCreationService"/> (persönliche Kurse anlegen/löschen). PGN-Export:
+/// <see cref="CoursePgnExportService"/>; Kurs ⇄ Repertoire: <see cref="CourseRepertoireConversionService"/>.
+/// Gemeinsame Zählregeln: <see cref="CourseProgressRules"/>.</para>
 /// </summary>
 public class CourseService
 {
     private readonly AppDbContext _db;
-    private readonly ILogger<CourseService> _logger;
-    private readonly PgnImportService _pgnImport;
-    private readonly BookAdminService _bookAdmin;
-    private readonly FriendService _friends;
-    private readonly NotificationService _notifications;
-    /// <summary>Nur fürs Nachtragen des Chessable-Trainingsstarts beim Umwandeln; null = nicht verfügbar.</summary>
-    private readonly ChessableProxyService? _chessableProxy;
+    private readonly CourseListQuery _list;
+    private readonly CourseSolverService _solver;
+    private readonly CoursePersonalService _personal;
+    private readonly CourseSharingService _sharing;
+    private readonly CourseCreationService _creation;
 
     // Alle Abhängigkeiten verpflichtend. Früher waren friends/notifications optional und wurden
     // sonst hier selbst gebaut — bequem für Tests, aber der Dienst verdrahtete damit an der DI
@@ -39,42 +44,19 @@ public class CourseService
     // KEINE Abhängigkeit auf RepertoireService: seit das Umwandeln im
     // CourseRepertoireConversionService liegt, braucht dieser Dienst nur noch das STATISCHE
     // RepertoireService.LooksLikePgn — und eine Instanz weniger heisst eine Zyklus-Gefahr weniger.
-    /// <summary>Läuft der RookHub-EIGENE Chessable-Weg? Entscheidet mit, ob ein veralteter Kurs noch
-    /// holbar ist oder ein Showstopper (siehe <see cref="StaleContentRule"/>).</summary>
-    private readonly bool _chessableEnabled;
+    // Die Teildienste entstehen hier aus GENAU diesen Abhängigkeiten (kein Griff an der DI vorbei:
+    // alles, was sie brauchen, kommt über diesen Konstruktor herein); sie loggen unter der Quelle
+    // CourseService, damit Log-Filter unverändert greifen.
 
     public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null, IConfiguration? configuration = null)
     {
-        _chessableEnabled = ChessableSwitch.IsEnabled(configuration);
         _db = db;
-        _logger = logger;
-        _pgnImport = pgnImport;
-        _bookAdmin = bookAdmin;
-        _notifications = notifications;
-        _friends = friends;
-        _chessableProxy = chessableProxy;
+        _list = new CourseListQuery(db, ChessableSwitch.IsEnabled(configuration));
+        _solver = new CourseSolverService(db, logger);
+        _personal = new CoursePersonalService(db, logger);
+        _sharing = new CourseSharingService(db, friends, notifications);
+        _creation = new CourseCreationService(db, logger, pgnImport, bookAdmin, chessableProxy);
     }
-
-    /// <summary>Die REIHENFOLGE, in der ein Kurs seine Linien ausgibt („sequential"/„random").
-    /// <para>Hieß bis 0.499.11 <c>NormalizeMode</c> — direkt neben <see cref="SolveMode.Normalize"/>,
-    /// das die SPIELWEISE („training"/„easy") normalisiert. In <see cref="RecordResultAsync"/> stehen
-    /// beide Bedeutungen nebeneinander (<c>dto.Mode</c> gegen <c>dto.SolveMode</c>); zwei fast gleiche
-    /// Namen für zwei verschiedene Dinge sind dort eine Falle und keine Kürze.</para></summary>
-    private static string NormalizeOrderMode(string? mode) =>
-        (mode ?? string.Empty).Trim().ToLowerInvariant() == "random" ? "random" : "sequential";
-
-    private static int Percent(int solved, int total) =>
-        total <= 0 ? 0 : (int)Math.Round(100.0 * Math.Min(solved, total) / total);
-
-    /// <summary>Gelöste QUIZ-Linien des Users — die Zählbasis jedes Kurs-Fortschritts. Info-/Erklärlinien
-    /// sind kein Quiz und zählen nicht (wie in <see cref="GetChaptersAsync"/>, <see cref="BuildProgressAsync"/>
-    /// und auf der Detailseite). Ergebnisse an Info-Linien gibt es trotzdem: ein Re-Import stellt eine
-    /// gelöste Linie auf <see cref="BookPuzzle.IsInfoOnly"/> um und lässt das Ergebnis stehen. Ohne diesen
-    /// Filter zeigten Kursliste und Buch-Statistik dann mehr Gelöstes als Kapitel und Detailseite
-    /// (Codereview A7-009).</summary>
-    private IQueryable<CoursePuzzleResult> SolvedQuizResults(int userId) =>
-        _db.CoursePuzzleResults.Where(cr => cr.UserId == userId
-            && cr.BookPuzzle != null && !cr.BookPuzzle.IsInfoOnly);
 
     /// <summary>Darf der User dieses (existierende) Buch als Kurs SEHEN? Bearbeiten braucht zusätzlich
     /// Besitzer oder Admin (<see cref="CourseAccess.LoadManageableAsync"/>).</summary>
@@ -82,11 +64,8 @@ public class CourseService
     public Task<bool> CanAccessAsync(int userId, int bookId, bool isAdmin) =>
         CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin);
 
-    private async Task EnsureAccessAsync(int userId, int bookId, bool isAdmin)
-    {
-        if (!await CanAccessAsync(userId, bookId, isAdmin))
-            throw new NotFoundException("Book not found.");
-    }
+    private Task EnsureAccessAsync(int userId, int bookId, bool isAdmin) =>
+        CourseProgressRules.EnsureAccessAsync(_db, userId, bookId, isAdmin);
 
     /// <summary>Normalisiert einen rohen Kapitelwert: leer/Whitespace → <c>null</c> (Sammel-„ohne Kapitel").</summary>
     private static string? NormalizeChapter(string? raw) => ChapterOrder.NormalizeChapter(raw);
@@ -104,23 +83,6 @@ public class CourseService
     /// </summary>
     private Task<List<string?>> GetOrderedChapterNamesAsync(int bookId)
         => ChapterOrder.GetOrderedChapterNamesAsync(_db, bookId);
-
-    /// <summary>Schränkt eine Puzzle-Query auf ein Kapitel ein (null = Sammel-„ohne Kapitel").</summary>
-    private static IQueryable<BookPuzzle> FilterByChapter(IQueryable<BookPuzzle> q, string? chapterName) =>
-        chapterName == null
-            ? q.Where(bp => bp.Chapter == null || bp.Chapter == "")
-            : q.Where(bp => bp.Chapter == chapterName);
-
-    /// <summary>Löst einen Kapitel-Index in den (normalisierten) Kapitelnamen auf. Ungültiger/keiner
-    /// Index → <c>(null, false)</c> = buchweit (kein Kapitel-Scope).</summary>
-    private async Task<(string? Name, bool Scoped)> ResolveChapterAsync(int bookId, int? chapterIndex)
-    {
-        if (!chapterIndex.HasValue) return (null, false);
-        var names = await GetOrderedChapterNamesAsync(bookId);
-        return chapterIndex.Value >= 0 && chapterIndex.Value < names.Count
-            ? (names[chapterIndex.Value], true)
-            : (null, false);
-    }
 
     /// <summary>Die Kapitel eines (zugänglichen) Buchs in Lesereihenfolge inkl. nutzerbezogenem Fortschritt.</summary>
     public async Task<List<CourseChapterDto>> GetChaptersAsync(int userId, int bookId, bool isAdmin)
@@ -177,37 +139,9 @@ public class CourseService
             Name = g.Name,
             PuzzleCount = g.Count,
             SolvedCount = Math.Min(g.Solved, g.Count),
-            ProgressPercent = Percent(g.Solved, g.Count),
+            ProgressPercent = CourseProgressRules.Percent(g.Solved, g.Count),
             InfoCount = infoByKey.GetValueOrDefault(g.Name ?? noneKey),
         }).ToList();
-    }
-
-    /// <summary>Pro-Linien-Bearbeitungsstatus eines (zugänglichen) Buchs für die „Linien durchsehen"-Ansicht:
-    /// gelöste (✓) und versucht-aber-nicht-gelöste (✗) Linien des Users. Gelöst = aktueller
-    /// <see cref="CoursePuzzleResult"/>-Stand (respektiert Reset); „gescheitert" = mind. ein
-    /// <see cref="CourseAttempt"/> vorhanden, aber (aktuell) nicht in der Gelöst-Menge.</summary>
-    public async Task<CourseLineStatusDto> GetLineStatusAsync(int userId, int bookId, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        var solved = (await _db.CoursePuzzleResults
-            .Where(cr => cr.UserId == userId && cr.BookId == bookId)
-            .Select(cr => cr.BookPuzzleId)
-            .ToListAsync()).ToHashSet();
-        var resetAt = await _db.CourseProgresses
-            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => cp.ResetAt)
-            .FirstOrDefaultAsync() ?? DateTime.MinValue;
-        // Nur Versuche seit dem letzten Reset (Kurs oder Kapitel) — sonst stünde nach einem Reset jede
-        // vorher gespielte Linie als „gescheitert" da.
-        var attempted = (await AttemptsSinceReset(userId, bookId, resetAt)
-            .Select(ca => ca.BookPuzzleId)
-            .Distinct()
-            .ToListAsync()).ToHashSet();
-        return new CourseLineStatusDto
-        {
-            SolvedIds = solved.ToList(),
-            FailedIds = attempted.Where(id => !solved.Contains(id)).ToList(),
-        };
     }
 
     /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.
@@ -334,270 +268,9 @@ public class CourseService
     // „Kurs → Repertoire umwandeln" liegt seit v0.499.4 im CourseRepertoireConversionService —
     // zusammen mit der Gegenrichtung, die vorher im RepertoireController ausgeschrieben stand.
 
-    /// <summary>
-    /// Die Bücher, die in der Kursliste des Users stehen (Admin: alle) — EINE Quelle für
-    /// <see cref="GetCoursesAsync"/> und <see cref="HasAnyAccessAsync"/> (Menüeintrag „Kurse"), damit
-    /// der Menüeintrag genau dann erscheint, wenn die Liste etwas zeigt.
-    ///
-    /// <para>Immer eine TEILMENGE von <see cref="CourseAccess.CanAccessAsync"/>: dieselben Zweige
-    /// (eigen, geteilt, Verteiler, Gruppe inkl. „Everyone"), nur ein öffentlicher Kurs steht bewusst
-    /// NICHT für jeden in der Liste, sondern nur für den, der ihn angepinnt hat. Ein Pin allein öffnet
-    /// dagegen nichts: er wird nur beim Anpinnen geprüft, und Freigabe zurücknehmen, aus dem Verteiler
-    /// austragen oder die Serie privat schalten räumen ihn nicht ab — ohne die Bedingung
-    /// <c>IsPublic</c> listete die Kursliste den Kurs danach weiter (Name, Beschreibung, Fortschritt),
-    /// der Klick lief auf 404 (Codereview A7-006).</para>
-    /// </summary>
-    private IQueryable<Book> ListedCourses(int userId, bool isAdmin)
-    {
-        if (isAdmin) return _db.Books;
-        var everyoneIds = _db.Groups.Where(g => g.IsEveryone).Select(g => g.Id);
-        var myGroups = GroupMembership.GroupIdsOf(_db, userId);   // auch über enthaltene Gruppen
-        return _db.Books.Where(b => b.OwnerUserId == userId
-            || _db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == userId)
-            // Verteiler der Kalkulations-Serie: genau dieser Pfad TRÄGT das „privat" der Serie
-            // (sobald IsPublic aus ist, sehen nur noch Mitglieder den Kurs). Er fehlte hier —
-            // ein Mitglied fand den Kurs weder unter /courses noch im Dashboard, sondern nur
-            // über den Deep-Link aus der In-App-Ankündigung.
-            || _db.CalcSeriesMembers.Any(m => m.BookId == b.Id && m.UserId == userId)
-            // Selbst angepinnte öffentliche Kurse: anpinnen darf man JEDES zugängliche Buch (auch ein
-            // öffentliches über den Direkt-Link), angezeigt wurden Pins aber nur aus dieser
-            // Liste — der Pin blieb also unsichtbar. Alle anderen Zugänge stehen schon oben.
-            || (b.IsPublic && _db.CoursePins.Any(p => p.BookId == b.Id && p.UserId == userId))
-            || _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
-                (everyoneIds.Contains(a.GroupId) ||
-                 myGroups.Contains(a.GroupId))));
-    }
+    /// <inheritdoc cref="CourseListQuery.GetCoursesAsync"/>
+    public Task<List<CourseListItemDto>> GetCoursesAsync(int userId, bool isAdmin) => _list.GetCoursesAsync(userId, isAdmin);
 
-    /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle).</summary>
-    public async Task<List<CourseListItemDto>> GetCoursesAsync(int userId, bool isAdmin)
-    {
-        var books = await ListedCourses(userId, isAdmin)
-            .OrderBy(b => b.DisplayName)
-            .Select(b => new
-            {
-                b.Id, b.FileName, b.DisplayName, b.Difficulty, b.Rating, b.Tags, b.Description,
-                b.OwnerUserId, b.Themes, b.IsCalculation,
-            })
-            .ToListAsync();
-
-        // Puzzle-Anzahl (ohne Info-/Erklärlinien) je Buch in EINER gruppierten Query — statt einer
-        // korrelierten Unterabfrage pro Buch (bei Admins mit hunderten Büchern sonst mehrere Sekunden).
-        // Auf die SICHTBAREN Bücher gefiltert (Where mit IN-Liste VOR dem GroupBy — übersetzungssicher):
-        // ohne den Filter aggregierte jeder Aufruf der Kursliste die KOMPLETTE BookPuzzles-Tabelle,
-        // auch wenn der User nur eine Handvoll Bücher sieht (skaliert mit der Buchzahl, nicht der Userzahl).
-        var bookIds = books.Select(b => b.Id).ToList();
-
-        // (!)-Markierung: welche dieser Kurse sind veraltet UND hier nicht aufbereitbar? Eine eigene,
-        // auf die VERALTETEN eingeschränkte Abfrage — das LIKE läuft damit nicht über das (große)
-        // SourcePgn jedes sichtbaren Buchs. Dieselbe Regel wie der Aktualisieren-Lauf (StaleContentRule),
-        // sonst markiert die Liste etwas, das der Knopf längst erledigen würde.
-        // ZWEI Schritte, nicht einer (gemessen 2026-10-06 auf Prod): filtert MariaDB über `ImportVersion` und liest
-        // in DERSELBEN Abfrage `SourcePgn`, holt es die ausgelagerten Quelltexte JEDES durchsuchten Buchs (390 Bücher,
-        // 190 MB) — 1,1 s, auch für ein bloßes `IS NOT NULL`. Erst die Ids, dann gezielt per Primärschlüssel: 0,1 s.
-        var staleIds = await _db.Books
-            .Where(b => bookIds.Contains(b.Id) && b.ImportVersion < ImportPipeline.CurrentVersion)
-            .Select(b => b.Id).ToListAsync();
-        var needsReimportBookIds = (await _db.Books
-            .Where(b => staleIds.Contains(b.Id))
-            .Select(b => new
-            {
-                b.Id, b.Tags, b.FileName,
-                HasSource = b.Source.SourcePgn != null && b.Source.SourcePgn != "",
-                SourceModern = b.Source.SourcePgn != null && b.Source.SourcePgn.Contains(StaleContentRule.ModernMarker),
-                CacheMissed = b.CacheMissAt != null && b.CacheMissAt >= b.UpdatedAt,   // Book.CacheMissAt gilt, solange nicht älter als UpdatedAt
-            })
-            .ToListAsync())
-            .Where(b => StaleContentRule.ActionForBook(b.HasSource, b.SourceModern, b.Tags, b.FileName, _chessableEnabled,
-                    b.CacheMissed)
-                == StaleAction.Manual)
-            .Select(b => b.Id)
-            .ToHashSet();
-        var puzzleCountByBook = await _db.BookPuzzles
-            .Where(bp => bp.BookId != null && bookIds.Contains(bp.BookId.Value) && !bp.IsInfoOnly)
-            .GroupBy(bp => bp.BookId!.Value)
-            .Select(g => new { BookId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.BookId, x => x.Count);
-
-        // UI-Sweep 2026-10-11 (r2-rp-empty-course): Kurse OHNE Quiz-Linie zeigten nur „0 Puzzles" und graue
-        // Knöpfe. Für genau diese (meist wenige) zählen wir die Info-Linien nach — die Karte bietet dann
-        // „Partien durchsehen" an bzw. sagt, dass der Kurs leer ist.
-        var noQuizBookIds = books.Where(b => !b.IsCalculation && !puzzleCountByBook.ContainsKey(b.Id))
-            .Select(b => b.Id).ToList();
-        var infoCountByBook = noQuizBookIds.Count == 0 ? new Dictionary<int, int>()
-            : await _db.BookPuzzles
-                .Where(bp => bp.BookId != null && noQuizBookIds.Contains(bp.BookId.Value) && bp.IsInfoOnly)
-                .GroupBy(bp => bp.BookId!.Value)
-                .Select(g => new { BookId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.BookId, x => x.Count);
-
-        var solvedByBook = await SolvedQuizResults(userId)
-            .GroupBy(cr => cr.BookId)
-            .Select(g => new { BookId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.BookId, x => x.Count);
-
-        // Kalkulationsbücher zählen ANDERS: dort gibt es nichts zu „lösen". Gesamtzahl = ALLE Linien
-        // (auch die zug-losen — genau die sind im Kalkulationsbuch die reinen Stellungen, und die
-        // fehlen in puzzleCountByBook, das Info-Linien ausschließt); „erledigt" = Stellungen, zu denen
-        // der Nutzer einen eigenen Analysebaum gespeichert hat.
-        var calcBookIds = books.Where(b => b.IsCalculation).Select(b => b.Id).ToList();
-        var calcTotalByBook = new Dictionary<int, int>();
-        var calcDoneByBook = new Dictionary<int, int>();
-        var calcPointsByBook = new Dictionary<int, int>();
-        if (calcBookIds.Count > 0)
-        {
-            calcTotalByBook = await _db.BookPuzzles
-                .Where(bp => bp.BookId != null && calcBookIds.Contains(bp.BookId.Value))
-                .GroupBy(bp => bp.BookId!.Value)
-                .Select(g => new { BookId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.BookId, x => x.Count);
-            // „Bearbeitet" heißt: es gibt einen echten Analysebaum. Eine Zeile mit LEEREM TreeJson
-            // trägt nur Rechenzeit/Festlegung/Punkte (PATCH ohne Baum) und zählt hier NICHT mit.
-            calcDoneByBook = await _db.CalculationTrees
-                .Where(t => t.UserId == userId && calcBookIds.Contains(t.BookId) && t.TreeJson != "")
-                .GroupBy(t => t.BookId)
-                .Select(g => new { BookId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.BookId, x => x.Count);
-            // Gesamtpunkte der Selbstbewertung je Kalkulationsbuch (unbewertete Stellungen = null
-            // fließen nicht ein). Gespeichert ist die STUFE — die Punkte entstehen erst über
-            // CalculationGrades.PointsFor, deshalb wird je Buch nach Stufe gezählt und die
-            // Gewichtung hier angewandt statt in der DB summiert.
-            calcPointsByBook = (await _db.CalculationTrees
-                .Where(t => t.UserId == userId && calcBookIds.Contains(t.BookId) && t.Grade != null)
-                .GroupBy(t => new { t.BookId, t.Grade })
-                .Select(g => new { g.Key.BookId, g.Key.Grade, Count = g.Count() })
-                .ToListAsync())
-                .GroupBy(x => x.BookId)
-                .ToDictionary(g => g.Key,
-                    g => g.Sum(x => CalculationGrades.PointsFor(x.Grade!.Value) * x.Count));
-        }
-
-        var progressByBook = await _db.CourseProgresses
-            .Where(cp => cp.UserId == userId)
-            .ToDictionaryAsync(cp => cp.BookId, cp => new { cp.LastMode, cp.UpdatedAt });
-
-        var pinnedBookIds = (await _db.CoursePins
-            .Where(p => p.UserId == userId)
-            .Select(p => p.BookId)
-            .ToListAsync()).ToHashSet();
-
-        // Kurse, die ANDERE mit mir geteilt haben (bookId → Benutzername des Teilenden) — für die
-        // Sektion „Mit mir geteilt" + das „von X"-Badge.
-        var sharedByBook = (await _db.CourseShares
-            .Where(cs => cs.RecipientId == userId)
-            .Select(cs => new { cs.BookId, OwnerName = cs.Owner.Username })
-            .ToListAsync())
-            .GroupBy(x => x.BookId)
-            .ToDictionary(g => g.Key, g => g.First().OwnerName);
-
-        // Persönliche Kurs-Verknüpfungen (Buch↔Workbook): bookId → Partner-bookId + dessen Name.
-        var linkByBook = (await _db.CourseLinks
-            .Where(l => l.UserId == userId)
-            .Select(l => new { l.BookId, l.LinkedBookId })
-            .ToListAsync())
-            .GroupBy(x => x.BookId)
-            .ToDictionary(g => g.Key, g => g.First().LinkedBookId);
-        var linkedNameById = linkByBook.Count == 0 ? new Dictionary<int, string>()
-            : await _db.Books.Where(b => linkByBook.Values.Contains(b.Id))
-                .ToDictionaryAsync(b => b.Id, b => b.DisplayName);
-
-        // UI-Sweep 2026-10-11 (r2-rp-course-dupes): Besitzer-Namen nur für Admins — sie sehen fremde Bücher
-        // gleichen Titels und brauchen ein Unterscheidungsmerkmal. Einer Abfrage für alle Besitzer.
-        var ownerIds = isAdmin
-            ? books.Where(b => b.OwnerUserId != null).Select(b => b.OwnerUserId!.Value).Distinct().ToList()
-            : new List<int>();
-        var ownerNameById = ownerIds.Count == 0 ? new Dictionary<int, string>()
-            : await _db.AppUsers.Where(u => ownerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username);
-
-        return books.Select(b =>
-        {
-            var puzzleCount = b.IsCalculation
-                ? (calcTotalByBook.TryGetValue(b.Id, out var ct) ? ct : 0)
-                : (puzzleCountByBook.TryGetValue(b.Id, out var pc) ? pc : 0);
-            var solved = b.IsCalculation
-                ? (calcDoneByBook.TryGetValue(b.Id, out var cd) ? cd : 0)
-                : (solvedByBook.TryGetValue(b.Id, out var c) ? c : 0);
-            var progress = progressByBook.TryGetValue(b.Id, out var p) ? p : null;
-            return new CourseListItemDto
-            {
-                BookId = b.Id,
-                FileName = b.FileName,
-                DisplayName = b.DisplayName,
-                Difficulty = b.Difficulty,
-                Rating = b.Rating,
-                Tags = b.Tags,
-                Description = b.Description,
-                PuzzleCount = puzzleCount,
-                InfoLineCount = infoCountByBook.TryGetValue(b.Id, out var ic) ? ic : 0,
-                SolvedCount = Math.Min(solved, puzzleCount),
-                ProgressPercent = Percent(solved, puzzleCount),
-                LastMode = progress?.LastMode,
-                LastActivityAt = progress?.UpdatedAt,
-                NeedsReimport = needsReimportBookIds.Contains(b.Id),
-                IsOwned = b.OwnerUserId == userId,
-                IsPinned = pinnedBookIds.Contains(b.Id),
-                IsShared = sharedByBook.ContainsKey(b.Id),
-                SharedByUsername = sharedByBook.TryGetValue(b.Id, out var sharedBy) ? sharedBy : null,
-                LinkedBookId = linkByBook.TryGetValue(b.Id, out var linkedId) ? linkedId : null,
-                LinkedDisplayName = linkByBook.TryGetValue(b.Id, out var lid) && linkedNameById.TryGetValue(lid, out var ln) ? ln : null,
-                Themes = BookThemeTags.ParseKeys(b.Themes),
-                IsCalculation = b.IsCalculation,
-                CalcPoints = b.IsCalculation
-                    ? (calcPointsByBook.TryGetValue(b.Id, out var cp) ? cp : 0)
-                    : null,
-                // Summe immer MIT Maximum ausliefern: „14" allein ist ohne die Zahl der
-                // Stellungen nicht lesbar.
-                CalcMaxPoints = b.IsCalculation ? CalculationGrades.MaxPointsFor(puzzleCount) : null,
-                IsChessableImport = StaleContentRule.IsChessable(b.Tags, b.FileName),
-                OwnerUsername = b.OwnerUserId is int oid && ownerNameById.TryGetValue(oid, out var on) ? on : null,
-            };
-        }).ToList();
-    }
-
-    /// <summary>Pinnt einen (zugänglichen) Kurs fürs Dashboard des Users an. Idempotent —
-    /// ein zweiter Aufruf ändert nichts. Kein Zugriff → <see cref="NotFoundException"/> (404).</summary>
-    public async Task PinCourseAsync(int userId, int bookId, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        if (await _db.CoursePins.AnyAsync(p => p.UserId == userId && p.BookId == bookId)) return;
-        _db.CoursePins.Add(new CoursePin { UserId = userId, BookId = bookId, PinnedAt = DateTime.UtcNow });
-        // Race: paralleler Pin desselben (User,Buch) → Unique-Index, ignorieren. Andere DB-Fehler
-        // fliegen bewusst durch (siehe DbIdempotency).
-        await _db.SaveIgnoringUniqueRaceAsync(_logger);
-    }
-
-    /// <summary>Schaltet „Info-Linien überspringen" für (User, Kurs) — persönlich, legt den
-    /// <see cref="CourseProgress"/> bei Bedarf an. 404 wenn nicht zugänglich. Gibt den neuen Zustand zurück.</summary>
-    public async Task<bool> SetSkipInfoLinesAsync(int userId, int bookId, bool skip, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        await UpsertProgressAsync(userId, bookId, null);
-        var progress = _db.CourseProgresses.Local.FirstOrDefault(cp => cp.UserId == userId && cp.BookId == bookId)
-            ?? await _db.CourseProgresses.FirstAsync(cp => cp.UserId == userId && cp.BookId == bookId);
-        progress.SkipInfoLines = skip;
-        await _db.SaveChangesAsync();
-        return skip;
-    }
-
-    /// <summary>„Offene nochmal": gescheiterte, ungelöste Linien kommen wieder in den Topf (beide Modi),
-    /// gelöste bleiben gelöst. 404 wenn nicht zugänglich.</summary>
-    public async Task RetryFailedAsync(int userId, int bookId, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        await UpsertProgressAsync(userId, bookId, null);
-        var progress = _db.CourseProgresses.Local.FirstOrDefault(cp => cp.UserId == userId && cp.BookId == bookId)
-            ?? await _db.CourseProgresses.FirstAsync(cp => cp.UserId == userId && cp.BookId == bookId);
-        progress.RetryFailedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
-    }
-
-    /// <summary>Löst einen angepinnten Kurs wieder. Idempotent (kein Pin → No-op).</summary>
-    public async Task UnpinCourseAsync(int userId, int bookId)
-    {
-        var pin = await _db.CoursePins.FirstOrDefaultAsync(p => p.UserId == userId && p.BookId == bookId);
-        if (pin == null) return;
-        _db.CoursePins.Remove(pin);
-        await _db.SaveChangesAsync();
-    }
 
     /// <summary>Setzt die Themen-Tags eines Kurs-Buchs (gilt buch-global, für alle, die es trainieren).
     /// Nur der Admin (alle Bücher) bzw. der Besitzer eines persönlichen Kurses darf das — die Regel in
@@ -628,761 +301,82 @@ public class CourseService
         return BookThemeTags.ParseKeys(book.Themes);
     }
 
-    /// <summary>Hat der User mindestens einen Kurs in seiner Kursliste? (Basis für die Menü-Sichtbarkeit.)
-    /// Dieselbe Menge wie <see cref="GetCoursesAsync"/> — vorher fehlten hier Verteiler und Pins, und ein
-    /// Konto, das Kurse nur darüber sah, bekam keinen Menüeintrag „Kurse" (Codereview A7-006).</summary>
-    public Task<bool> HasAnyAccessAsync(int userId, bool isAdmin) =>
-        ListedCourses(userId, isAdmin).AnyAsync();
+    /// <inheritdoc cref="CourseListQuery.HasAnyAccessAsync"/>
+    public Task<bool> HasAnyAccessAsync(int userId, bool isAdmin) => _list.HasAnyAccessAsync(userId, isAdmin);
 
-    // --- Kurs mit ausgewählten Personen teilen -----------------------------------------------
-    // Nur der Besitzer eines PERSÖNLICHEN Kurses (Book.OwnerUserId == userId) darf ihn teilen; die
-    // Empfänger müssen befreundet sein (wie bei Puzzle-Challenges) — sonst wird der Empfänger mit
-    // Grund übersprungen. Gruppen-/globale Bücher werden über die Gruppen-Freigabe geteilt, nicht hier.
+    // --- Fassade: Solver (CourseSolverService) -----------------------------------------------
 
-    /// <summary>Wirft <see cref="NotFoundException"/> (→404), wenn das Buch fehlt, und
-    /// <see cref="ForbiddenException"/> (→403), wenn der User nicht der Besitzer ist.</summary>
-    private async Task<Book> EnsureOwnedBookAsync(int userId, int bookId)
-    {
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId)
-            ?? throw new NotFoundException("Book not found.");
-        if (book.OwnerUserId != userId)
-            throw new ForbiddenException("Only the owner can share this course.");
-        return book;
-    }
+    /// <inheritdoc cref="CourseSolverService.GetLineStatusAsync"/>
+    public Task<CourseLineStatusDto> GetLineStatusAsync(int userId, int bookId, bool isAdmin) =>
+        _solver.GetLineStatusAsync(userId, bookId, isAdmin);
 
-    /// <summary>Teilt einen eigenen Kurs mit mehreren (befreundeten) Nutzern. Idempotent: bereits
-    /// geteilte Empfänger werden übersprungen (Grund <c>duplicate</c>), Fremde als <c>not_friends</c>,
-    /// unbekannte als <c>not_found</c>, man selbst als <c>self</c>. Legt je neuem Empfänger eine
-    /// In-App-Benachrichtigung an. Die Mechanik (Skip-Gründe, Unique-Race) liegt gemeinsam mit dem
-    /// Repertoire-Teilen in <see cref="ShareServiceBatch"/> — hier nur das Kurs-Spezifische.</summary>
-    public async Task<CourseShareResultDto> ShareCourseAsync(int userId, int bookId, List<int> recipientUserIds, bool isAdmin)
-    {
-        var book = await EnsureOwnedBookAsync(userId, bookId);
+    /// <inheritdoc cref="CourseSolverService.SetSkipInfoLinesAsync"/>
+    public Task<bool> SetSkipInfoLinesAsync(int userId, int bookId, bool skip, bool isAdmin) =>
+        _solver.SetSkipInfoLinesAsync(userId, bookId, skip, isAdmin);
 
-        var outcome = await ShareServiceBatch.ShareAsync(_db, _friends, userId, recipientUserIds, isAdmin,
-            loadAlreadySharedAsync: async ids => (await _db.CourseShares
-                .Where(cs => cs.BookId == bookId && ids.Contains(cs.RecipientId))
-                .Select(cs => cs.RecipientId)
-                .ToListAsync()).ToHashSet(),
-            addShare: rid => _db.CourseShares.Add(new CourseShare
-            {
-                BookId = bookId, OwnerId = userId, RecipientId = rid, SharedAt = DateTime.UtcNow,
-            }),
-            onSharedAsync: async toNotify =>
-            {
-                var ownerName = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
-                await _notifications.CreateManyAsync(toNotify, NotificationType.CourseShared,
-                    new Dictionary<string, string> { ["username"] = ownerName, ["courseName"] = book.DisplayName }, "/courses");
-            });
+    /// <inheritdoc cref="CourseSolverService.RetryFailedAsync"/>
+    public Task RetryFailedAsync(int userId, int bookId, bool isAdmin) =>
+        _solver.RetryFailedAsync(userId, bookId, isAdmin);
 
-        return new CourseShareResultDto
-        {
-            Shared = outcome.Shared,
-            Skipped = outcome.Skipped.Select(s => new CourseShareSkipDto { UserId = s.UserId, Reason = s.Reason }).ToList(),
-        };
-    }
+    /// <inheritdoc cref="CourseSolverService.GetNextAsync"/>
+    public Task<CourseNextPuzzleDto> GetNextAsync(int userId, int bookId, string mode, int? after, int? exclude, bool isAdmin, int? chapterIndex = null) =>
+        _solver.GetNextAsync(userId, bookId, mode, after, exclude, isAdmin, chapterIndex);
 
-    /// <summary>Mit welchen Nutzern ist dieser eigene Kurs aktuell geteilt? (Für den Teilen-Dialog.)</summary>
-    public async Task<List<CourseShareRecipientDto>> GetShareRecipientsAsync(int userId, int bookId)
-    {
-        await EnsureOwnedBookAsync(userId, bookId);
-        return await _db.CourseShares
-            .Where(cs => cs.BookId == bookId && cs.OwnerId == userId)
-            .OrderBy(cs => cs.SharedAt)
-            .Select(cs => new CourseShareRecipientDto
-            {
-                UserId = cs.RecipientId,
-                Username = cs.Recipient.Username,
-                DisplayName = cs.Recipient.Profile != null ? cs.Recipient.Profile.DisplayName : null,
-                SharedAt = cs.SharedAt,
-            })
-            .ToListAsync();
-    }
+    /// <inheritdoc cref="CourseSolverService.RecordResultAsync"/>
+    public Task<CourseProgressDto> RecordResultAsync(int userId, int bookId, RecordCourseResultDto dto, bool isAdmin) =>
+        _solver.RecordResultAsync(userId, bookId, dto, isAdmin);
 
-    /// <summary>Nimmt die Freigabe eines eigenen Kurses für einen Empfänger zurück (idempotent).
-    /// Nur der Besitzer darf das; fremdes/nicht existierendes Buch → 403/404.</summary>
-    public async Task UnshareCourseAsync(int userId, int bookId, int recipientId)
-    {
-        await EnsureOwnedBookAsync(userId, bookId);
-        var share = await _db.CourseShares.FirstOrDefaultAsync(cs =>
-            cs.BookId == bookId && cs.OwnerId == userId && cs.RecipientId == recipientId);
-        if (share == null) return;
-        _db.CourseShares.Remove(share);
-        await _db.SaveChangesAsync();
-    }
+    /// <inheritdoc cref="CourseSolverService.MarkInfoSeenAsync"/>
+    public Task MarkInfoSeenAsync(int userId, int bookId, int bookPuzzleId, bool isAdmin) =>
+        _solver.MarkInfoSeenAsync(userId, bookId, bookPuzzleId, isAdmin);
 
-    // --- Kurse verknüpfen (Buch ↔ Workbook), persönlich, für den Schnellwechsel ---------------
+    /// <inheritdoc cref="CourseSolverService.ResetAsync"/>
+    public Task<CourseProgressDto> ResetAsync(int userId, int bookId, bool isAdmin) =>
+        _solver.ResetAsync(userId, bookId, isAdmin);
 
-    /// <summary>Verknüpft zwei (für den User zugängliche) Kurse symmetrisch. Ersetzt etwaige
-    /// bestehende Verknüpfungen BEIDER Bücher (je Buch max. ein Partner). 404 wenn ein Buch nicht
-    /// zugänglich ist, 400 wenn beide identisch sind.</summary>
-    public async Task LinkCoursesAsync(int userId, int bookId, int linkedBookId, bool isAdmin)
-    {
-        if (bookId == linkedBookId)
-            throw new DomainValidationException("Cannot link a course to itself.");
-        if (!await CanAccessAsync(userId, bookId, isAdmin) || !await CanAccessAsync(userId, linkedBookId, isAdmin))
-            throw new NotFoundException("Book not found.");
+    // --- Fassade: Pins + Verknüpfungen (CoursePersonalService) --------------------------------
 
-        // Alte Verknüpfungen entfernen, die eines der beiden Bücher betreffen (1:1 je Buch).
-        var stale = await _db.CourseLinks
-            .Where(l => l.UserId == userId &&
-                (l.BookId == bookId || l.LinkedBookId == bookId || l.BookId == linkedBookId || l.LinkedBookId == linkedBookId))
-            .ToListAsync();
-        if (stale.Count > 0) _db.CourseLinks.RemoveRange(stale);
+    /// <inheritdoc cref="CoursePersonalService.PinCourseAsync"/>
+    public Task PinCourseAsync(int userId, int bookId, bool isAdmin) => _personal.PinCourseAsync(userId, bookId, isAdmin);
 
-        var now = DateTime.UtcNow;
-        _db.CourseLinks.Add(new CourseLink { UserId = userId, BookId = bookId, LinkedBookId = linkedBookId, CreatedAt = now });
-        _db.CourseLinks.Add(new CourseLink { UserId = userId, BookId = linkedBookId, LinkedBookId = bookId, CreatedAt = now });
-        await _db.SaveChangesAsync();
-    }
+    /// <inheritdoc cref="CoursePersonalService.UnpinCourseAsync"/>
+    public Task UnpinCourseAsync(int userId, int bookId) => _personal.UnpinCourseAsync(userId, bookId);
 
-    /// <summary>Hebt die Verknüpfung eines Kurses auf (entfernt beide symmetrischen Zeilen). Idempotent.</summary>
-    public async Task UnlinkCourseAsync(int userId, int bookId)
-    {
-        var rows = await _db.CourseLinks
-            .Where(l => l.UserId == userId && (l.BookId == bookId || l.LinkedBookId == bookId))
-            .ToListAsync();
-        if (rows.Count == 0) return;
-        _db.CourseLinks.RemoveRange(rows);
-        await _db.SaveChangesAsync();
-    }
+    /// <inheritdoc cref="CoursePersonalService.LinkCoursesAsync"/>
+    public Task LinkCoursesAsync(int userId, int bookId, int linkedBookId, bool isAdmin) =>
+        _personal.LinkCoursesAsync(userId, bookId, linkedBookId, isAdmin);
 
-    /// <summary>Der aktuell verknüpfte Partner-Kurs eines (zugänglichen) Buchs — für den
-    /// Schnellwechsel im Solver. Liefert leere Felder, wenn keine Verknüpfung besteht.</summary>
-    public async Task<CourseLinkDto> GetLinkAsync(int userId, int bookId, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        var linkedId = await _db.CourseLinks
-            .Where(l => l.UserId == userId && l.BookId == bookId)
-            .Select(l => (int?)l.LinkedBookId)
-            .FirstOrDefaultAsync();
-        if (linkedId == null) return new CourseLinkDto();
-        var name = await _db.Books.Where(b => b.Id == linkedId.Value).Select(b => b.DisplayName).FirstOrDefaultAsync();
-        return new CourseLinkDto { LinkedBookId = linkedId, LinkedDisplayName = name };
-    }
+    /// <inheritdoc cref="CoursePersonalService.UnlinkCourseAsync"/>
+    public Task UnlinkCourseAsync(int userId, int bookId) => _personal.UnlinkCourseAsync(userId, bookId);
 
-    /// <summary>
-    /// Legt aus einem hochgeladenen PGN einen persönlichen Kurs des Users an (eigenes <see cref="Book"/>
-    /// mit <c>OwnerUserId</c>, sofort nur für diesen User als Kurs sichtbar). Wiederverwendet die
-    /// Import-Pipeline (<see cref="PgnImportService.ImportFileAsync"/>); der interne Dateiname ist
-    /// pro-User eindeutig und kollisionsfrei, der Anzeigename kommt vom User (oder dem Dateinamen).
-    /// Kind = Study → die Kurszeit zählt in die Trainingsziel-Kategorie „Buch/Kurs".
-    /// </summary>
-    /// <param name="chessableBid">Chessable-Kurs, aus dem das PGN stammt (beim Umwandeln eines Chessable-Repertoires);
-    /// nur damit lässt sich ein fehlender Trainingsstart aus dem Linien-Cache nachschlagen (siehe
-    /// <see cref="WithChessableTrainingStartsAsync"/>).</param>
-    public async Task<CourseListItemDto> UploadPersonalCourseAsync(int userId, string originalFileName, string pgn, string? displayName,
-        CancellationToken ct = default, string? chessableBid = null)
-    {
-        if (string.IsNullOrWhiteSpace(pgn) || !RepertoireService.LooksLikePgn(pgn))
-            throw new DomainValidationException("The file does not look like a valid PGN.");
+    /// <inheritdoc cref="CoursePersonalService.GetLinkAsync"/>
+    public Task<CourseLinkDto> GetLinkAsync(int userId, int bookId, bool isAdmin) => _personal.GetLinkAsync(userId, bookId, isAdmin);
 
-        // Pro-User-eindeutiger interner Dateiname (NICHT der Anzeigename) → kollisionsfrei mit
-        // globalen Büchern und Chessable-Importen (chessable-u{userId}-{bid}.pgn).
-        var fileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn";
-        // Chessable-Linien ohne Trainingsmarker: fehlenden Trainingsstart nachtragen, BEVOR importiert
-        // wird (ein Repertoire-PGN trägt keinen — sonst stünde im Kurs die falsche Seite am Zug).
-        pgn = await WithChessableTrainingStartsAsync(pgn, chessableBid, ct);
+    // --- Fassade: Teilen (CourseSharingService) ----------------------------------------------
 
-        // Eigener Kurs des Nutzers: ein Eroeffnungsrepertoire aus der Grundstellung IST hier
-        // spielbarer Inhalt (siehe PgnImportService.StartPlyForRepertoire).
-        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, playFromStartPosition: true, ownerUserId: userId);
+    /// <inheritdoc cref="CourseSharingService.ShareCourseAsync"/>
+    public Task<CourseShareResultDto> ShareCourseAsync(int userId, int bookId, List<int> recipientUserIds, bool isAdmin) =>
+        _sharing.ShareCourseAsync(userId, bookId, recipientUserIds, isAdmin);
 
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct)
-            ?? throw new InvalidOperationException("Import failed.");
+    /// <inheritdoc cref="CourseSharingService.GetShareRecipientsAsync"/>
+    public Task<List<CourseShareRecipientDto>> GetShareRecipientsAsync(int userId, int bookId) =>
+        _sharing.GetShareRecipientsAsync(userId, bookId);
 
-        // Nichts Quiz-bares importiert → leeres Buch wieder entfernen statt einen leeren Kurs anzulegen.
-        var puzzleCount = await _db.BookPuzzles.CountAsync(bp => bp.BookId == book.Id && !bp.IsInfoOnly, ct);
-        if (puzzleCount == 0)
-        {
-            // Frisch angelegtes Buch — Abhängige kann es noch keine geben; der Aufruf hält trotzdem die
-            // Regel „jeder Pfad, der BookPuzzles löscht, räumt ab, was daran hängt" (ein leerer Griff).
-            await BookPuzzleDependents.RemoveForLinesAsync(_db,
-                _db.BookPuzzles.Where(bp => bp.BookId == book.Id).Select(bp => bp.Id), ct);
-            _db.BookPuzzles.RemoveRange(_db.BookPuzzles.Where(bp => bp.BookId == book.Id));
-            _db.Books.Remove(book);
-            await _db.SaveChangesAsync(ct);
-            throw new DomainValidationException("No playable lines found in the PGN.") { Code = ApiErrorCodes.CourseNoLines };
-        }
+    /// <inheritdoc cref="CourseSharingService.UnshareCourseAsync"/>
+    public Task UnshareCourseAsync(int userId, int bookId, int recipientId) =>
+        _sharing.UnshareCourseAsync(userId, bookId, recipientId);
 
-        var name = string.IsNullOrWhiteSpace(displayName)
-            ? PgnImportService.CleanDisplayName(originalFileName)
-            : displayName.Trim();
-        if (name.Length > 200) name = name[..200];
+    // --- Fassade: persönliche Kurse anlegen/löschen (CourseCreationService) -------------------
 
-        ApplyPersonalCourseMetadata(book, userId, name, DateTime.UtcNow);
-        await _db.SaveChangesAsync(ct);
+    /// <inheritdoc cref="CourseCreationService.UploadPersonalCourseAsync"/>
+    public Task<CourseListItemDto> UploadPersonalCourseAsync(int userId, string originalFileName, string pgn, string? displayName,
+        CancellationToken ct = default, string? chessableBid = null) =>
+        _creation.UploadPersonalCourseAsync(userId, originalFileName, pgn, displayName, ct, chessableBid);
 
-        return new CourseListItemDto
-        {
-            BookId = book.Id,
-            FileName = book.FileName,
-            DisplayName = book.DisplayName,
-            Difficulty = book.Difficulty,
-            Rating = book.Rating,
-            Tags = book.Tags,
-            Description = book.Description,
-            PuzzleCount = puzzleCount,
-            SolvedCount = 0,
-            ProgressPercent = 0,
-            LastMode = null,
-            LastActivityAt = null,
-            IsOwned = true,
-        };
-    }
+    /// <inheritdoc cref="CourseCreationService.CreatePersonalCourseAsync"/>
+    public Task<CourseListItemDto> CreatePersonalCourseAsync(int userId, string displayName, CancellationToken ct = default) =>
+        _creation.CreatePersonalCourseAsync(userId, displayName, ct);
 
-    /// <summary>Legt einen LEEREN persönlichen Kurs an — die Stellungen kommen danach über die
-    /// Kurs-Detailseite dazu (Kapitel + „Stellungen einfügen"). Bewusst ohne PGN-Zwang: nicht jeder Kurs
-    /// entsteht aus einer Datei, viele werden Kapitel für Kapitel von Hand aufgebaut.
-    /// <c>ImportVersion</c> steht sofort auf der aktuellen Pipeline-Version — ein handgepflegtes Buch hat
-    /// kein Quell-PGN und soll nicht im „Aktualisieren"-Banner hängen (gleiche Regel wie beim Einfügen
-    /// von Linien in <see cref="CourseAuthoringService"/>).</summary>
-    public async Task<CourseListItemDto> CreatePersonalCourseAsync(int userId, string displayName, CancellationToken ct = default)
-    {
-        var name = displayName?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(name))
-            throw new DomainValidationException("A course name is required.");
-        if (name.Length > 200) name = name[..200];
-
-        var now = DateTime.UtcNow;
-        var book = new Book
-        {
-            // Interner Dateiname wie beim PGN-Weg: pro User eindeutig, kollisionsfrei mit globalen
-            // Büchern und Chessable-Importen. Er ist NICHT der Anzeigename.
-            FileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn",
-            ImportVersion = ImportPipeline.CurrentVersion,
-            CreatedAt = now,
-            Source = new BookSource(),   // Pflicht-Navigation (Tabellensplitting): kein Quell-PGN
-        };
-        ApplyPersonalCourseMetadata(book, userId, name, now);
-        _db.Books.Add(book);
-        await _db.SaveChangesAsync(ct);
-
-        return new CourseListItemDto
-        {
-            BookId = book.Id,
-            FileName = book.FileName,
-            DisplayName = book.DisplayName,
-            Difficulty = book.Difficulty,
-            Rating = book.Rating,
-            Tags = book.Tags,
-            Description = book.Description,
-            PuzzleCount = 0,
-            SolvedCount = 0,
-            ProgressPercent = 0,
-            LastMode = null,
-            LastActivityAt = null,
-            IsOwned = true,
-        };
-    }
-
-    /// <summary>
-    /// Trägt den fehlenden Trainingsstart Chessable-stämmiger Linien nach (siehe
-    /// <see cref="ChessableTrainingStart"/>): für Linien MIT <c>[ChessableOid]</c>, aber ohne
-    /// <c>[%tqu]</c> und ohne <c>[ChessableColor]</c> wird die Solverfarbe aus dem geteilten
-    /// piratechess-Linien-Cache geholt und als Header eingetragen.
-    /// <para>Ein gewöhnliches Nutzer-PGN hat keine oids und löst deshalb keinen Abruf aus. Ist
-    /// piratechess nicht erreichbar oder kennt es die Linien nicht, bleibt das PGN unverändert und der
-    /// Kurs entsteht wie bisher — die Umwandlung darf daran nicht scheitern.</para>
-    /// <para>Nachgeschlagen wird nur mit bekanntem Kurs (<paramref name="chessableBid"/>): der Linien-Cache gibt Linien
-    /// nur für den Kurs heraus, unter dem sie liegen. Ein hochgeladenes PGN ohne Kurs behält den bisherigen Start.</para>
-    /// </summary>
-    private async Task<string> WithChessableTrainingStartsAsync(string pgn, string? chessableBid, CancellationToken ct)
-    {
-        if (_chessableProxy is null) return pgn;
-        var oids = ChessableTrainingStart.OidsWithoutStart(pgn);
-        if (oids.Count == 0) return pgn;
-        if (string.IsNullOrWhiteSpace(chessableBid))
-        {
-            _logger.LogInformation(
-                "Kurs aus PGN: {Count} Chessable-Linien ohne Trainingsstart, aber ohne Kurs-Id — Linien behalten den bisherigen Start.",
-                oids.Count);
-            return pgn;
-        }
-
-        try
-        {
-            var cached = await _chessableProxy.GetCachedLinePgnsAsync(chessableBid, oids, ChessableTrainingStart.MarkerMode, ct);
-            var colors = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var (oid, block) in cached)
-            {
-                var color = ChessableTrainingStart.SolverColorOf(block);
-                if (color is not null) colors[oid] = color;
-            }
-            if (colors.Count == 0) return pgn;
-            _logger.LogInformation(
-                "Kurs aus PGN: Trainingsstart für {Found} von {Asked} Chessable-Linien aus dem Linien-Cache ergänzt.",
-                colors.Count, oids.Count);
-            return ChessableTrainingStart.InsertColors(pgn, colors);
-        }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex,
-                "Kurs aus PGN: Trainingsstart für {Count} Chessable-Linien nicht abrufbar — Linien behalten den bisherigen Start.",
-                oids.Count);
-            return pgn;
-        }
-    }
-
-    /// <summary>Die Merkmale, die ein Buch zum persönlichen Kurs EINES Users machen — an beiden
-    /// Entstehungswegen (PGN-Upload und leerer Kurs) identisch.</summary>
-    private static void ApplyPersonalCourseMetadata(Book book, int userId, string name, DateTime nowUtc)
-    {
-        book.OwnerUserId = userId;
-        book.DisplayName = name;
-        book.Kind = BookKind.Study;
-        book.Tags = "personal";
-        book.UpdatedAt = nowUtc;
-    }
-
-    /// <summary>Löscht einen eigenen (selbst hochgeladenen bzw. importierten) Kurs des Users samt
-    /// Fortschritt/Puzzles. Nur der Besitzer darf löschen; fremde/globale Bücher → 404.</summary>
-    public async Task DeletePersonalCourseAsync(int userId, int bookId)
-    {
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId);
-        if (book is null || book.OwnerUserId != userId)
-            throw new NotFoundException("Book not found.");
-        await _bookAdmin.DeleteBookAsync(bookId);
-    }
-
-    /// <summary>
-    /// Nächstes ungelöstes Puzzle des Kurses. sequential: Buchreihenfolge (Id), mit <paramref name="after"/>
-    /// das nächste danach; random: zufällig, <paramref name="exclude"/> vermeidet direkte Wiederholung.
-    /// Aktualisiert den zuletzt genutzten Modus.
-    /// <para>KALKULATIONSBÜCHER → <see cref="NotFoundException"/> (404): Solver-Weg, liefert über
-    /// <see cref="BookPuzzleService.MapToDto"/> die Züge (siehe <see cref="CourseAccess.IsCalculationBookAsync"/>).</para>
-    /// </summary>
-    public async Task<CourseNextPuzzleDto> GetNextAsync(int userId, int bookId, string mode, int? after, int? exclude, bool isAdmin, int? chapterIndex = null)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
-            throw new NotFoundException("Book not found.");
-
-        mode = NormalizeOrderMode(mode);
-        await UpsertProgressAsync(userId, bookId, mode);
-        // Race: zwei (fast) gleichzeitige .../next-Aufrufe legen den CourseProgress parallel an
-        // (Unique (UserId, BookId)). Der LastMode-Upsert ist nur Nebeneffekt → Konflikt verwerfen.
-        await _db.SaveIgnoringUniqueRaceAsync(_logger);
-
-        // Kapitel-Modus: Fortschritt + Pool auf das gewählte Kapitel beschränken; sonst buchweit.
-        var (chapterName, chapterScoped) = await ResolveChapterAsync(bookId, chapterIndex);
-        IQueryable<BookPuzzle> scope = _db.BookPuzzles.Where(bp => bp.BookId == bookId);
-        if (chapterScoped) scope = FilterByChapter(scope, chapterName);
-
-        // Fortschritt/Random beziehen sich NUR auf echte Quiz-Linien — Info-/Erklärlinien (IsInfoOnly)
-        // werden nicht abgefragt: sie zählen nicht zum Total, erscheinen in keinem Zufallstopf und
-        // sind im sequenziellen Modus nur zum Durchklicken da.
-        IQueryable<BookPuzzle> quizScope = scope.Where(bp => !bp.IsInfoOnly);
-        var total = await quizScope.CountAsync();
-        var solvedCount = await quizScope.CountAsync(bp =>
-            _db.CoursePuzzleResults.Any(cr => cr.UserId == userId && cr.BookPuzzleId == bp.Id));
-        // Kurs gilt als durch, wenn alle Quiz-Linien gelöst sind (etwaige Info-Reste bleiben unberücksichtigt).
-        bool completed = solvedCount >= total;
-
-        // Seit dem letzten Reset GESCHEITERTE (aufgegebene) Quiz-Linien fallen bis zum nächsten Reset aus
-        // dem Pool — in BEIDEN Modi. Erst nach `POST /reset` (ResetAt rückt vor + gelöste Menge geleert)
-        // tauchen sie wieder auf. ResetAt == null (nie zurückgesetzt) ⇒ jeder bisherige Versuch zählt.
-        var progressRow = await _db.CourseProgresses
-            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => new { cp.ResetAt, cp.SkipInfoLines, cp.RetryFailedAt })
-            .FirstOrDefaultAsync();
-        var resetAt = progressRow?.ResetAt ?? DateTime.MinValue;
-        // „Offene nochmal": gescheiterte Linien zählen für den Pool erst ab diesem Zeitpunkt wieder als erledigt.
-        var poolSince = progressRow?.RetryFailedAt is DateTime retry && retry > resetAt ? retry : resetAt;
-        // Persönliche Kurs-Einstellung „Info-Linien überspringen": der sequenzielle Pool zeigt nur Quiz-Linien.
-        var skipInfo = progressRow?.SkipInfoLines ?? false;
-
-        BookPuzzle? puzzle;
-        if (mode == "random")
-        {
-            // Ungelöste Quiz-Linien (NOT EXISTS statt großer IN-Liste); Info-Linien sind via quizScope raus.
-            IQueryable<BookPuzzle> unsolved = quizScope
-                .Include(bp => bp.Book)
-                .Where(bp => !_db.CoursePuzzleResults.Any(cr => cr.UserId == userId && cr.BookPuzzleId == bp.Id));
-            // Random-Pool: bis zum Reset jedes Puzzle nur EINMAL. Gelöste sind über CoursePuzzleResults
-            // ohnehin raus; zusätzlich auch GESCHEITERTE seit dem letzten Reset ausschließen (resetAt oben).
-            var fresh = unsolved.Where(bp =>
-                !AttemptsSinceReset(userId, bookId, poolSince).Any(a => a.BookPuzzleId == bp.Id));
-
-            var pool = exclude.HasValue ? fresh.Where(bp => bp.Id != exclude.Value) : fresh;
-            var count = await pool.CountAsync();
-            if (count == 0 && exclude.HasValue)
-            {
-                // Nur noch das ausgeschlossene Puzzle übrig — dann doch dieses zeigen.
-                pool = fresh;
-                count = await pool.CountAsync();
-            }
-            puzzle = count == 0
-                ? null
-                : await pool.OrderBy(bp => bp.Id).Skip(Random.Shared.Next(count)).FirstOrDefaultAsync();
-            completed = puzzle == null;   // Random: Topf leer = durch (ggf. erst nach Reset wieder voll)
-        }
-        else if (completed)
-        {
-            // Alle Quiz-Linien gelöst → fertig; trailing Info-Linien nicht endlos weiterzeigen.
-            puzzle = null;
-        }
-        else
-        {
-            // Sequenziell: noch ungelöste Quiz-Linien + noch NICHT durchgeklickte Info-Linien,
-            // in Buchreihenfolge. Gelöste Quiz-Linien fallen raus; eine bereits durchgeklickte
-            // Info-Linie (CourseInfoView) wird beim Wiedereinstieg übersprungen, sodass der Kurs
-            // hinter der zuletzt gesehenen Info-Linie fortsetzt statt sie erneut zu zeigen.
-            IQueryable<BookPuzzle> seqPool = (skipInfo ? quizScope : scope)
-                .Include(bp => bp.Book)
-                .Where(bp => bp.IsInfoOnly
-                    ? !_db.CourseInfoViews.Any(iv => iv.UserId == userId && iv.BookPuzzleId == bp.Id)
-                    // Quiz-Linien: gelöste UND seit dem letzten Reset gescheiterte (aufgegebene) raus, damit
-                    // ein aufgegebenes Puzzle beim Neustart/Wiedereinstieg nicht sofort wieder erscheint.
-                    : (!_db.CoursePuzzleResults.Any(cr => cr.UserId == userId && cr.BookPuzzleId == bp.Id)
-                       && !AttemptsSinceReset(userId, bookId, poolSince).Any(a => a.BookPuzzleId == bp.Id)));
-            // Lesereihenfolge = Round (Chessable-Zeilennummer), dann Id. Der „Weiter"-Cursor (after)
-            // ist die zuletzt gezeigte Puzzle-Id; sie kann selbst schon aus dem Pool raus sein (gelöst/
-            // gesehen), daher wird ihr (Round, Id) separat aufgelöst und die erste Pool-Linie danach
-            // gewählt. Nur die Schlüssel (Id, Round) laden — String-Vergleich passiert in-memory
-            // (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
-            var keys = await seqPool.InReadingOrder()
-                .Select(bp => new { bp.Id, bp.Round })
-                .ToListAsync();
-            int? pickId = null;
-            if (after.HasValue)
-            {
-                var cur = await _db.BookPuzzles.Where(bp => bp.Id == after.Value)
-                    .Select(bp => new { bp.Id, bp.Round })
-                    .FirstOrDefaultAsync();
-                if (cur != null)
-                    // Dieselbe Reihenfolge wie die Sortierung (inkl. Round.Length), siehe
-                    // ChapterOrder.Compare — sonst zeigte „Überspringen" bei Runden „9"/„10"
-                    // dieselbe Aufgabe endlos erneut.
-                    pickId = keys.FirstOrDefault(k => ChapterOrder.Compare(k.Round, k.Id, cur.Round, cur.Id) > 0)?.Id;
-            }
-            pickId ??= keys.Select(k => (int?)k.Id).FirstOrDefault();
-            puzzle = pickId.HasValue
-                ? await seqPool.FirstOrDefaultAsync(bp => bp.Id == pickId.Value)
-                : null;
-            // Pool leer, obwohl nicht alle gelöst (Rest nur aufgegeben) → Runde durch (wie Random);
-            // die UI zeigt dann „Runde durch, noch N übrig" mit „Von vorn" statt der Abschluss-Trophäe.
-            if (puzzle == null) completed = true;
-        }
-
-        // Kapitel des aktuellen Puzzles (im Ganz-Buch-Modus wechselt es mit dem Fortschritt);
-        // ist der Kurs abgeschlossen, fällt im Kapitel-Modus auf das gescopte Kapitel zurück.
-        var currentChapter = puzzle != null ? NormalizeChapter(puzzle.Chapter) : (chapterScoped ? chapterName : null);
-        var bundle = await ComputeStatsAsync(userId, bookId, currentChapter, puzzle != null || chapterScoped);
-
-        return new CourseNextPuzzleDto
-        {
-            Puzzle = puzzle == null ? null : BookPuzzleService.MapToDto(puzzle),
-            SolvedCount = solvedCount,
-            Total = total,
-            Completed = completed,
-            Book = bundle.Book,
-            Chapter = bundle.Chapter,
-            ChapterName = bundle.ChapterName,
-        };
-    }
-
-    /// <summary>Zeichnet einen Lösungsversuch auf. Bei Solved wird das Puzzle (idempotent) als gelöst markiert.</summary>
-    public async Task<CourseProgressDto> RecordResultAsync(int userId, int bookId, RecordCourseResultDto dto, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-
-        var puzzleChapter = await _db.BookPuzzles
-            .Where(bp => bp.Id == dto.BookPuzzleId && bp.BookId == bookId)
-            .Select(bp => new { bp.Chapter, bp.IsInfoOnly })
-            .FirstOrDefaultAsync();
-        if (puzzleChapter == null)
-            throw new NotFoundException("Puzzle does not belong to this book.");
-        // Eine Info-/Erklärlinie wird nicht gelöst, sondern durchgeklickt (MarkInfoSeenAsync, dort
-        // umgekehrt geprüft). Ein Ergebnis daran zählte nirgends mit und machte die Zählungen nur
-        // uneinheitlich (Codereview A7-009) — z. B. eine offline vorgemerkte Lösung, deren Linie ein
-        // Re-Import inzwischen auf Info umgestellt hat.
-        if (puzzleChapter.IsInfoOnly)
-            throw new NotFoundException("Info lines are not solved.");
-
-        // Zeit/Tipps/Spielweise/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording).
-        // dto.SolveMode ist die SPIELWEISE, NICHT dto.Mode (= sequential/random).
-        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.SolveMode);
-        _logger.LogInformation(
-            "CoursePuzzleAttempt: User {UserId} {Result} course-puzzle {PuzzleId} in book {BookId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
-            userId, core.Solved ? "solved" : "failed", dto.BookPuzzleId, bookId, core.StartedAt, core.AttemptedAt, core.TimeSeconds);
-
-        // JEDEN Versuch (gelöst/fehlgeschlagen/Wiederholung) ins append-only Zeit-Log schreiben —
-        // Grundlage für die akkumulierte Kurs-/Studienzeit im Trainingsziele-Tracker. Eigenes
-        // SaveChanges, damit ein späterer CourseProgress-Konflikt das Log nicht zurückrollt.
-        _db.CourseAttempts.Add(new CourseAttempt
-        {
-            UserId = userId,
-            BookId = bookId,
-            BookPuzzleId = dto.BookPuzzleId,
-            Solved = core.Solved,
-            TimeSeconds = core.TimeSeconds,
-            AttemptedAt = core.AttemptedAt,
-            HintsUsed = core.HintsUsed,
-            Mode = core.Mode,
-        });
-        await _db.SaveChangesAsync();
-
-        // Solve in EIGENEM SaveChanges aufzeichnen — damit ein späterer CourseProgress-Konflikt
-        // (paralleler Erstinsert) die gültige Lösung NICHT mit zurückrollt (sonst stiller Solve-Verlust).
-        if (dto.Solved)
-        {
-            var already = await _db.CoursePuzzleResults
-                .AnyAsync(cr => cr.UserId == userId && cr.BookPuzzleId == dto.BookPuzzleId);
-            if (!already)
-            {
-                _db.CoursePuzzleResults.Add(new CoursePuzzleResult
-                {
-                    UserId = userId,
-                    BookId = bookId,
-                    BookPuzzleId = dto.BookPuzzleId,
-                    SolvedAt = core.AttemptedAt,
-                    TimeSeconds = core.TimeSeconds,
-                });
-                // Race: paralleles Aufzeichnen desselben Puzzles → Unique (UserId, BookPuzzleId). Idempotent.
-                // Ein ANDERER Fehler darf hier nicht geschluckt werden — sonst geht der Solve still verloren.
-                await _db.SaveIgnoringUniqueRaceAsync(_logger);
-            }
-        }
-
-        // Fortschritt/LastMode getrennt upserten; ein paralleler Erstinsert (Unique (UserId, BookId)) ist hier unkritisch.
-        await UpsertProgressAsync(userId, bookId, dto.Mode);
-        await _db.SaveIgnoringUniqueRaceAsync(_logger);
-
-        // Im Kapitel-Modus den zurückgegebenen Fortschritt aufs Kapitel beschränken (sonst buchweit);
-        // die Kapitel-Statistik bezieht sich auf das gerade bearbeitete Puzzle.
-        return await BuildProgressAsync(userId, bookId, dto.ChapterIndex, NormalizeChapter(puzzleChapter.Chapter), true);
-    }
-
-    /// <summary>
-    /// Merkt eine sequenziell durchgeklickte Info-/Erklärlinie (idempotent), damit sie beim nächsten
-    /// Wiedereinstieg übersprungen wird. Validiert, dass das Puzzle zum Buch gehört UND tatsächlich
-    /// eine Info-Linie ist (Quiz-Linien werden über <see cref="CoursePuzzleResult"/> gemerkt, nicht hier).
-    /// </summary>
-    public async Task MarkInfoSeenAsync(int userId, int bookId, int bookPuzzleId, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-
-        var isInfo = await _db.BookPuzzles
-            .AnyAsync(bp => bp.Id == bookPuzzleId && bp.BookId == bookId && bp.IsInfoOnly);
-        if (!isInfo)
-            throw new NotFoundException("Info line does not belong to this book.");
-
-        var already = await _db.CourseInfoViews
-            .AnyAsync(iv => iv.UserId == userId && iv.BookPuzzleId == bookPuzzleId);
-        if (already) return;
-
-        _db.CourseInfoViews.Add(new CourseInfoView
-        {
-            UserId = userId,
-            BookId = bookId,
-            BookPuzzleId = bookPuzzleId,
-            SeenAt = DateTime.UtcNow,
-        });
-        // Race: paralleles Aufzeichnen derselben Info-Linie → Unique (UserId, BookPuzzleId). Idempotent.
-        await _db.SaveIgnoringUniqueRaceAsync(_logger);
-    }
-
-    /// <summary>Setzt den Fortschritt eines Kurses zurück (löscht alle gelösten Markierungen).</summary>
-    public async Task<CourseProgressDto> ResetAsync(int userId, int bookId, bool isAdmin)
-    {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-
-        _db.CoursePuzzleResults.RemoveRange(
-            _db.CoursePuzzleResults.Where(cr => cr.UserId == userId && cr.BookId == bookId));
-        // Auch die durchgeklickten Info-Linien vergessen — nach dem Reset wird der Kurs komplett
-        // von vorn durchgespielt (inkl. der Erklärlinien).
-        _db.CourseInfoViews.RemoveRange(
-            _db.CourseInfoViews.Where(iv => iv.UserId == userId && iv.BookId == bookId));
-        // Kapitel-Resets dieses Buchs sind vom buchweiten Reset überholt (er liegt später).
-        _db.CourseLineResets.RemoveRange(
-            _db.CourseLineResets.Where(r => r.UserId == userId && r.BookId == bookId));
-        await _db.SaveChangesAsync();
-
-        // Reset-Marker setzen: ab jetzt gilt jedes Puzzle wieder als „erster Versuch" — die im Kurs
-        // angezeigte Zeit + Trefferquote zählen nur noch Versuche ab jetzt. Die CourseAttempts selbst
-        // bleiben erhalten (sonst würde der Trainingsziel-Zeit-Tracker rückwirkend verfälscht).
-        var now = DateTime.UtcNow;
-        var progress = await _db.CourseProgresses.FirstOrDefaultAsync(cp => cp.UserId == userId && cp.BookId == bookId);
-        if (progress == null)
-            _db.CourseProgresses.Add(new CourseProgress { UserId = userId, BookId = bookId, CreatedAt = now, UpdatedAt = now, ResetAt = now });
-        else { progress.ResetAt = now; progress.UpdatedAt = now; }
-        await _db.SaveChangesAsync();
-
-        return await BuildProgressAsync(userId, bookId);
-    }
-
-    private async Task UpsertProgressAsync(int userId, int bookId, string? mode)
-    {
-        var progress = await _db.CourseProgresses
-            .FirstOrDefaultAsync(cp => cp.UserId == userId && cp.BookId == bookId);
-        var now = DateTime.UtcNow;
-        if (progress == null)
-        {
-            _db.CourseProgresses.Add(new CourseProgress
-            {
-                UserId = userId,
-                BookId = bookId,
-                LastMode = mode == null ? null : NormalizeOrderMode(mode),
-                CreatedAt = now,
-                UpdatedAt = now,
-            });
-        }
-        else
-        {
-            if (mode != null) progress.LastMode = NormalizeOrderMode(mode);
-            progress.UpdatedAt = now;
-        }
-    }
-
-    private async Task<CourseProgressDto> BuildProgressAsync(int userId, int bookId, int? chapterIndex = null, string? currentChapter = null, bool currentChapterKnown = false)
-    {
-        var (chapterName, chapterScoped) = await ResolveChapterAsync(bookId, chapterIndex);
-        // Info-/Erklärlinien zählen nicht zum Fortschritt (kein Quiz).
-        IQueryable<BookPuzzle> scope = _db.BookPuzzles.Where(bp => bp.BookId == bookId && !bp.IsInfoOnly);
-        if (chapterScoped) scope = FilterByChapter(scope, chapterName);
-
-        var total = await scope.CountAsync();
-        var solved = await scope.CountAsync(bp =>
-            _db.CoursePuzzleResults.Any(cr => cr.UserId == userId && cr.BookPuzzleId == bp.Id));
-        var lastMode = await _db.CourseProgresses
-            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => cp.LastMode)
-            .FirstOrDefaultAsync();
-
-        // Kontext-Kapitel: explizit übergeben (= Kapitel des bearbeiteten Puzzles), sonst das per Index gescopte.
-        var bundle = await ComputeStatsAsync(userId, bookId,
-            currentChapterKnown ? currentChapter : chapterName,
-            currentChapterKnown || chapterScoped);
-
-        return new CourseProgressDto
-        {
-            BookId = bookId,
-            SolvedCount = Math.Min(solved, total),
-            Total = total,
-            ProgressPercent = Percent(solved, total),
-            Completed = total > 0 && solved >= total,
-            LastMode = lastMode,
-            Book = bundle.Book,
-            Chapter = bundle.Chapter,
-            ChapterName = bundle.ChapterName,
-        };
-    }
-
-    /// <summary>
-    /// Die Versuche eines Users in einem Buch, die seit dem letzten Reset zählen: nach dem buchweiten
-    /// <see cref="CourseProgress.ResetAt"/> (<paramref name="bookResetAt"/>, <see cref="DateTime.MinValue"/> = nie)
-    /// UND nach dem Kapitel-Reset der jeweiligen Linie (<see cref="CourseLineReset"/>). Die EINE Regel für den
-    /// Aufgaben-Pool, die Statistik und den ✓/✗-Stand — der Kapitel-Reset lässt die Versuche als Zeit-Log stehen,
-    /// ohne diesen Filter blieben die zurückgesetzten Linien aus dem Pool ausgeschlossen.
-    /// </summary>
-    private IQueryable<CourseAttempt> AttemptsSinceReset(int userId, int bookId, DateTime bookResetAt)
-        => _db.CourseAttempts.Where(a => a.UserId == userId && a.BookId == bookId && a.AttemptedAt >= bookResetAt
-            && !_db.CourseLineResets.Any(r => r.UserId == userId && r.BookPuzzleId == a.BookPuzzleId && r.ResetAt > a.AttemptedAt));
-
-    private sealed record CourseStatsBundle(CourseScopeStatsDto Book, CourseScopeStatsDto? Chapter, string? ChapterName);
-
-    /// <summary>
-    /// Berechnet Buch- und (optional) Kapitel-Statistik für den User: Fortschritt (gelöst/gesamt),
-    /// akkumulierte Zeit und Erst-Versuch-Trefferquote. Zeit + Trefferquote zählen nur Versuche seit
-    /// dem letzten Reset (<see cref="CourseProgress.ResetAt"/>); die gelöste Menge wird beim Reset
-    /// physisch entfernt und braucht daher keinen Zeitfilter. Aggregation im Speicher (Versuchszahl je
-    /// User/Buch ist klein) — robust gegen Provider-Unterschiede (InMemory vs. MariaDB).
-    /// Ein Kapitel-Block wird nur geliefert, wenn das Buch tatsächlich mehrere Kapitel hat.
-    /// </summary>
-    private async Task<CourseStatsBundle> ComputeStatsAsync(int userId, int bookId, string? currentChapter, bool currentChapterKnown)
-    {
-        var resetAt = await _db.CourseProgresses
-            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => cp.ResetAt)
-            .FirstOrDefaultAsync();
-
-        // Info-/Erklärlinien zählen nicht zum Fortschritt (kein Quiz).
-        var puzzleQuery = _db.BookPuzzles.Where(bp => bp.BookId == bookId && !bp.IsInfoOnly);
-
-        // Frueher wurde hier die KOMPLETTE Puzzle-Liste des Buchs (Id + Kapitel) in den Speicher
-        // geladen - bei JEDEM /next und /results, obwohl buchweit nur zwei Zahlen gebraucht werden.
-        // Beide sind SQL-Aggregate. Die Normalisierung aus NormalizeChapter (leer/nur Leerzeichen
-        // -> null) MUSS im Ausdruck mitwandern, sonst zaehlten "", "  " und NULL in der Datenbank
-        // als drei Kapitel statt wie bisher als eines.
-        var bookTotal = await puzzleQuery.CountAsync();
-        var distinctChapters = await puzzleQuery
-            .Select(bp => bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter)
-            .Distinct()
-            .CountAsync();
-
-        // Kapitel-Block nur, wenn das Buch wirklich mehrere Kapitel hat (sonst dupliziert er das Buch).
-        var wantChapter = currentChapterKnown && distinctChapters > 1;
-        // Puzzle-Ids braucht nur der Kapitel-Block - und dann auch nur die des EINEN Kapitels.
-        var chapterPuzzleIds = wantChapter
-            ? (await puzzleQuery
-                .Where(bp => (bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter) == currentChapter)
-                .Select(bp => bp.Id)
-                .ToListAsync()).ToHashSet()
-            : new HashSet<int>();
-
-        var solvedIds = (await SolvedQuizResults(userId)
-            .Where(cr => cr.BookId == bookId)
-            .Select(cr => cr.BookPuzzleId)
-            .ToListAsync()).ToHashSet();
-
-        var attemptsQuery = AttemptsSinceReset(userId, bookId, resetAt ?? DateTime.MinValue);
-        // EINE Zeile je PUZZLE statt je VERSUCH. Vorher wurde jeder einzelne Versuch des Users in
-        // diesem Buch geladen — bei jedem /next und /results, und wachsend mit der Historie. Der
-        // „erste Versuch" kommt jetzt aus einer korrelierten Unterabfrage
-        // (ORDER BY AttemptedAt, Id LIMIT 1), also aus GENAU derselben Reihenfolge wie zuvor im
-        // Speicher. Der Reset-Filter wandert dabei nachweislich in die Unterabfrage mit — ohne das
-        // stammte der „erste Versuch" von VOR dem Zurücksetzen und die Trefferquote wäre falsch.
-        var perPuzzle = await attemptsQuery
-            .GroupBy(a => a.BookPuzzleId)
-            .Select(g => new
-            {
-                PuzzleId = g.Key,
-                Seconds = g.Sum(a => a.TimeSeconds),
-                FirstSolved = g.OrderBy(a => a.AttemptedAt).ThenBy(a => a.Id).First().Solved,
-                FirstHints = g.OrderBy(a => a.AttemptedAt).ThenBy(a => a.Id).First().HintsUsed,
-            })
-            .ToListAsync();
-
-        CourseScopeStatsDto BuildScope(Func<int, bool> inScope, int total)
-        {
-            var solved = solvedIds.Count(inScope);
-            var scoped = perPuzzle.Where(p => inScope(p.PuzzleId)).ToList();
-            var firstCorrect = scoped.Count(p => p.FirstSolved);
-            // Aufschlüsselung (Wunsch 2026-10-15): gelöst ohne Hilfe = erster Versuch seit Reset richtig und
-            // ohne Tipp (gelöst ohne Versuch seit Reset — Altbestand — zählt ebenfalls dazu); sonst „mit
-            // Tipp/Neustart". Aufgegeben = versucht, aber (noch) nicht gelöst.
-            var byId = scoped.ToDictionary(p => p.PuzzleId);
-            var solvedInScope = solvedIds.Where(inScope).ToList();
-            var clean = solvedInScope.Count(id => !byId.TryGetValue(id, out var p) || (p.FirstSolved && p.FirstHints == 0));
-            var gaveUp = scoped.Count(p => !solvedIds.Contains(p.PuzzleId));
-            return new CourseScopeStatsDto
-            {
-                CleanCount = Math.Min(clean, total),
-                HelpedCount = Math.Min(solvedInScope.Count - clean, total),
-                GaveUpCount = gaveUp,
-                SolvedCount = Math.Min(solved, total),
-                Total = total,
-                ProgressPercent = Percent(solved, total),
-                TotalSeconds = scoped.Sum(p => p.Seconds),
-                AttemptedCount = scoped.Count,
-                FirstTryCorrect = firstCorrect,
-                AccuracyPercent = Percent(firstCorrect, scoped.Count),
-            };
-        }
-
-        var book = BuildScope(_ => true, bookTotal);
-        CourseScopeStatsDto? chapter = null;
-        string? chapterName = null;
-        if (wantChapter)
-        {
-            chapterName = currentChapter;
-            // Gleichbedeutend mit dem frueheren chapterOf-Lookup: das Woerterbuch enthielt
-            // ausschliesslich die Nicht-Info-Puzzles des Buchs, der Treffer auf das aktuelle
-            // Kapitel ist genau die Mitgliedschaft in dieser Menge.
-            chapter = BuildScope(chapterPuzzleIds.Contains, chapterPuzzleIds.Count);
-        }
-        return new CourseStatsBundle(book, chapter, chapterName);
-    }
-
+    /// <inheritdoc cref="CourseCreationService.DeletePersonalCourseAsync"/>
+    public Task DeletePersonalCourseAsync(int userId, int bookId) => _creation.DeletePersonalCourseAsync(userId, bookId);
 }
