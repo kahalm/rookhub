@@ -24,7 +24,7 @@ public class RetiredEndpointsTests
         // Bündel-Import der Python-Fassung (export_bundle.py, entfernt 08.10.2026): leerte ALLE LeagueTournaments — seit Bayern und
         // der Bundesliga gefährlich; Ligen kommen je Saison über admin/chessresults|ligamanager|zugspitze/import
         "POST /api/league/admin/import",
-        // N6-001: Übergang der geteilten Anmeldung (0.624.0) — alte Pfade samt Merk-Cookie, seit 0.829.0 weg;
+        // N6-001: Übergang der geteilten Anmeldung (0.624.0) — alte Pfade samt Merk-Cookie, seit 0.828.1 weg;
         // alle Oberflächen nutzen POST /api/auth/rh-session und rh-session/end
         "POST /api/auth/session",
         "POST /api/auth/session/end",

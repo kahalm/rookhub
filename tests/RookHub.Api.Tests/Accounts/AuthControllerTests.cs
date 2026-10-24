@@ -644,7 +644,7 @@ public class AuthControllerTests : IDisposable
         Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
     }
 
-    // ---- N6-001: die Alt-Routen /api/auth/session(/end) samt Merk-Cookie und Umzug in /permissions sind seit 0.829.0 weg ----
+    // ---- N6-001: die Alt-Routen /api/auth/session(/end) samt Merk-Cookie und Umzug in /permissions sind seit 0.828.1 weg ----
 
     [Fact]
     public async Task Login_WritesNoMovedMarkerAnymore()

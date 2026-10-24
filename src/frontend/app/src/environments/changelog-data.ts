@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.828.3", date: "2026-10-24", changes: [
+    { en: "Sign-in hand-over: the transitional route „/api/auth/handoff/exchange“ (kept since 0.640.0 for cached app versions) is gone; one-time codes are redeemed only via „/api/auth/rh-session/handoff“ (code review F1-008).",
+      de: "Anmeldeübergabe: Die Übergangsroute „/api/auth/handoff/exchange“ (seit 0.640.0 für zwischengespeicherte App-Fassungen) ist entfernt; Einmal-Codes werden nur noch über „/api/auth/rh-session/handoff“ eingelöst (Codereview F1-008)." },
+  ] },
   { version: "0.828.2", date: "2026-10-24", changes: [
     { en: "CI: ESLint ratchet — a per-rule baseline („eslint-baseline.json“) turns the frontend build red as soon as any lint rule gains new findings; falling counts stay green and lower the baseline via „npm run lint:ratchet:update“ (code review F8-004, phase 2).",
       de: "CI: ESLint-Ratsche – eine Baseline je Regel („eslint-baseline.json“) macht den Frontend-Build rot, sobald eine Lint-Regel neue Treffer bekommt; sinkende Zahlen bleiben grün und senken die Baseline per „npm run lint:ratchet:update“ (Codereview F8-004, Phase 2)." },
