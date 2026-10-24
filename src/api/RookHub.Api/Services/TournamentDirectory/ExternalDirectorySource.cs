@@ -580,7 +580,7 @@ public static class ExternalDirectorySource
     /// Zusatzquellen sagt etwas darueber, und Raten waere schlechter als Schweigen.
     ///
     /// <para>Setzt auch Basisname und Gruppenschluessel neu
-    /// (<see cref="TournamentDirectoryService.ApplyGrouping"/>), deshalb erst NACH Name, Termin und
+    /// (<see cref="DirectoryKeys.ApplyGrouping"/>), deshalb erst NACH Name, Termin und
     /// Ort aufrufen. Vorher pflegten nur chess-results und FIDE den Schluessel: ein Verbandseintrag
     /// (ebenso ein eigener Eintrag aus dem Ankuendigungskalender, <see cref="TournamentCalendarSweepService"/>)
     /// stand bis zum naechsten API-Neustart ungruppiert und danach mit einem Schluessel aus dem
@@ -595,7 +595,7 @@ public static class ExternalDirectorySource
         entry.Gender = TournamentClassifier.GenderOf(entry.Name);
         entry.IsLeague = TournamentClassifier.LooksLikeLeague(
             entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
-        TournamentDirectoryService.ApplyGrouping(entry);
+        DirectoryKeys.ApplyGrouping(entry);
     }
 
     /// <summary>Dieselbe Kuerzung wie <see cref="DirectoryText.Truncate"/> — hier fuer die

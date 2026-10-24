@@ -236,7 +236,7 @@ public class ChessScotlandDirectorySweepService
         var locationChanged = entry.LocationText != venue;
         entry.LocationText = ExternalDirectorySource.Truncate(venue, 300);
         // Der Ort gehoert zum Gruppenschluessel — ApplyClassification lief schon vor dem Abruf.
-        TournamentDirectoryService.ApplyGrouping(entry);
+        DirectoryKeys.ApplyGrouping(entry);
 
         if ((locationChanged || entry.Lat is null) && entry.GeoSource != GeoSource.Manual)
         {

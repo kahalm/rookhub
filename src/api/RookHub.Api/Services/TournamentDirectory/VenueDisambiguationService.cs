@@ -186,7 +186,7 @@ public class VenueDisambiguationService
             entry.GeoPlaceName = name;
             entry.GeoSource = GeoSource.TeamHint;
             // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Gruppenschluessel liest den verorteten Ort.
-            TournamentDirectoryService.ApplyGrouping(entry);
+            DirectoryKeys.ApplyGrouping(entry);
         }
         entry.UpdatedAt = DateTime.UtcNow;
 

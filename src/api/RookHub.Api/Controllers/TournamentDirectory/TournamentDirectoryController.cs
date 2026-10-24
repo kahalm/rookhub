@@ -634,11 +634,11 @@ public class TournamentDirectoryController : BaseApiController
             // mehreren Foederationen/Bedenkzeiten beim Filtern uebergangen — die naechtliche
             // Meldung wertet sie aber vollstaendig aus (MatchesProfile). Ein Profil soll
             // reproduzierbar dasselbe liefern wie die Meldung, sonst ist es zwei Dinge.
-            if (fed is null) profileFeds = TournamentDirectoryService.SplitCsv(profile.Federations);
+            if (fed is null) profileFeds = DirectoryNotifier.SplitCsv(profile.Federations);
 
             if (parsedSpeed is null)
             {
-                profileSpeeds = TournamentDirectoryService.SplitCsv(profile.Speeds)
+                profileSpeeds = DirectoryNotifier.SplitCsv(profile.Speeds)
                     .Select(v => Enum.TryParse<TournamentSpeed>(v, ignoreCase: true, out var s) ? s : (TournamentSpeed?)null)
                     .Where(v => v is not null)
                     .Select(v => v!.Value)

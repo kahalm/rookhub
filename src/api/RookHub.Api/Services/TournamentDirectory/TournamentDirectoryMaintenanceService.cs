@@ -134,7 +134,7 @@ public class TournamentDirectoryMaintenanceService
         entry.GeoPlaceName = trimmed is { Length: > 200 } ? trimmed[..200] : trimmed;
         entry.UpdatedAt = DateTime.UtcNow;
         // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Gruppenschluessel liest den verorteten Ort.
-        TournamentDirectoryService.ApplyGrouping(entry);
+        DirectoryKeys.ApplyGrouping(entry);
         await _db.SaveChangesAsync(ct);
         return entry;
     }
@@ -298,7 +298,7 @@ public class TournamentDirectoryMaintenanceService
             entry.UpdatedAt = DateTime.UtcNow;
         }
         // UI-Sweep 2026-10-11 (r2-t-dup-cards): ohne Ort zaehlt wieder der Ortstext.
-        TournamentDirectoryService.ApplyGrouping(entry);
+        DirectoryKeys.ApplyGrouping(entry);
         return cleared;
     }
 
@@ -307,12 +307,12 @@ public class TournamentDirectoryMaintenanceService
         entry.Lat = primary.Lat;
         entry.Lon = primary.Lon;
         entry.GeoSource = primary.Source;
-        // Gekuerzt wie im Sweep (`TournamentDirectoryService.GeocodeAsync`): ein ueberlanger Teilort liesse
+        // Gekuerzt wie im Sweep (`DirectoryGeocoder.GeocodeAsync`): ein ueberlanger Teilort liesse
         // sonst das EINE SaveChanges am Ende des ganzen Laufs scheitern.
         entry.GeoPlaceName = ExternalDirectorySource.Truncate(primary.PlaceName, 200);
         entry.UpdatedAt = DateTime.UtcNow;
         // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Gruppenschluessel liest den verorteten Ort.
-        TournamentDirectoryService.ApplyGrouping(entry);
+        DirectoryKeys.ApplyGrouping(entry);
 
         if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
         entry.Venues = located.Count < 2 ? [] : located

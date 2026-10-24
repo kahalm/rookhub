@@ -181,7 +181,7 @@ public class FideDirectorySweepService
         entry.LocationText = Truncate(
             ev.City is null ? ev.Country : $"{ev.City}, {ev.Country}", 500);
         entry.Federation = Truncate(ev.Country, 3);
-        entry.ChangeHash = TournamentDirectoryService.ComputeChangeHash(ev.Start, ev.End, entry.LocationText);
+        entry.ChangeHash = DirectoryKeys.ComputeChangeHash(ev.Start, ev.End, entry.LocationText);
 
         // FIDE nennt weder Bedenkzeit noch Turnierart. Publikum und Format stehen wie ueberall im
         // NAMEN („FIDE World Youth U14, U16 & U18 Championships", „Norway Chess Women").
@@ -190,7 +190,7 @@ public class FideDirectorySweepService
         entry.IsLeague = TournamentClassifier.LooksLikeLeague(
             entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
 
-        TournamentDirectoryService.ApplyGrouping(entry);
+        DirectoryKeys.ApplyGrouping(entry);
         entry.LastSeenAt = now;
         entry.UpdatedAt = now;
         // Wieder aufgetaucht: ein Eintrag, den FIDE erneut fuehrt, ist nicht abgesagt.

@@ -80,7 +80,7 @@ Vermerk fuer die Arbeitsliste. Gemessen am Dev-Stand vor der Aenderung: 171 Eint
 Kandidaten > 50 km auseinander, davon 29 mit nachweislich falschem Pin (bis 489 km, „Muenster"
 gibt es 19-mal).
 
-**Gruppen eines Turniers = EINE Karte** (`TournamentDirectoryEntry.GroupKey`, `TournamentDirectoryService.ComputeGroupKey`):
+**Gruppen eines Turniers = EINE Karte** (`TournamentDirectoryEntry.GroupKey`, `DirectoryKeys.ComputeGroupKey`):
 Hash aus Basisname, Föderation, Beginn, Ende und ORT. Der Ort ist seit UI-Sweep 2026-10-11 (r2-t-dup-cards) der VERORTETE
 (`GroupPlace`: normalisierter `GeoPlaceName` bei PLZ/Ort/von Hand/Nominatim/Vereinsnamen/Quelle), sonst der normalisierte
 Ortstext (Region, mehrdeutig, unverortet) — vorher der rohe Text, und „Otáhalova 1260 Varnsdorf" gegen „Varnsdorf Otáhalova 1260"
