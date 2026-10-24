@@ -378,6 +378,11 @@ internal sealed class GameAnalysisPositionConfiguration : IEntityTypeConfigurati
     {
         // Je Partie gibt es jeden Halbzug genau einmal.
         e.HasIndex(p => new { p.GameAnalysisId, p.Ply }).IsUnique();
+        // Laufender Auftrag → Stellung (A4-016): AnalysisJobService.ListAsync blendet Stapel-Auftraege per Semijoin
+        // g.Positions.Any(p => p.AnalysisJobId == j.Id) aus. Zusammengesetzt mit GameAnalysisId, damit der Index die
+        // Verknuepfung zur Analyse gleich mitliefert (deckend, kein Zeilenzugriff); NULL-Zeilen (fertige Stellungen,
+        // die grosse Mehrheit) stehen gebuendelt am Anfang und kosten die Suche nichts.
+        e.HasIndex(p => new { p.AnalysisJobId, p.GameAnalysisId });
         e.HasOne(p => p.GameAnalysis)
          .WithMany(g => g.Positions)
          .HasForeignKey(p => p.GameAnalysisId)

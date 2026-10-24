@@ -72,8 +72,9 @@ public class AnalysisJobService
         // Ebenso die Teilrechnungen eines Zugvergleichs (0.602.0): sie gehören zum Vergleich, nicht in die Liste.
         // Nur die Stapel-Analysen DIESES Kontos: ihre Auftraege legt die Pumpe mit analysis.UserId an, eine fremde
         // Stapel-Analyse kann also keinen Auftrag dieser Liste tragen. Ohne die Einschraenkung pruefte jeder Aufruf —
-        // die Seite fragt alle 5–10 s — per Semijoin ueber ALLE Stapel-Stellungen (kein Index auf AnalysisJobId),
-        // auch fuer Nutzer ohne eine einzige; mit ihr traegt der Index (UserId, CreatedAt) auf GameAnalyses.
+        // die Seite fragt alle 5–10 s — per Semijoin ueber ALLE Stapel-Stellungen, auch fuer Nutzer ohne eine einzige;
+        // mit ihr traegt der Index (UserId, CreatedAt) auf GameAnalyses, den Semijoin selbst (AnalysisJobId, GameAnalysisId)
+        // auf GameAnalysisPositions (A4-016).
         var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
                 && !_db.GameAnalyses.Any(g => g.UserId == userId
                     && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club || g.Origin == GameAnalysisOrigin.League)

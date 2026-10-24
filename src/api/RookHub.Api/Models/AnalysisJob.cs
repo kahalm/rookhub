@@ -128,7 +128,8 @@ public class AnalysisJob
     /// Hintergrundarbeit des STAPELS (Meister-, Vereins- und Liga-Partien, <c>GameAnalysisOrigins.IsBatch</c>; 0.817.1).
     /// Innerhalb der Hintergrundarbeit kommt sie nach der Vertiefung eigener Partien — 21.10.2026: die Vertiefung von
     /// Partie 117 stand sonst hinter rund hundert Liga-Stellungen, die früher angelegt waren. Am Auftrag selbst statt
-    /// über die Stellungen ermittelt: auf <c>GameAnalysisPositions.AnalysisJobId</c> liegt kein Index (1,2 Mio. Zeilen).
+    /// über die Stellungen ermittelt: auf <c>GameAnalysisPositions.AnalysisJobId</c> lag damals kein Index (1,2 Mio. Zeilen;
+    /// seit A4-016 gibt es ihn, das Merkmal am Auftrag erspart die Verknüpfung trotzdem).
     /// </summary>
     public bool Batch { get; set; }
 }
