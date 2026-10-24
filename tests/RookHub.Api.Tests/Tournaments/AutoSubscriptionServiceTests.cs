@@ -68,7 +68,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         });
         var proxy = CreateMockProxy(tournaments);
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -97,7 +97,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         });
         var proxy = CreateMockProxy(tournaments);
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -115,7 +115,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         });
         var proxy = CreateMockProxy(tournaments);
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -129,7 +129,7 @@ public class AutoSubscriptionServiceTests : IDisposable
 
         var proxy = CreateMockProxy("[]");
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -148,7 +148,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         });
         var proxy = CreateMockProxy(tournaments);
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -162,7 +162,7 @@ public class AutoSubscriptionServiceTests : IDisposable
 
         var proxy = CreateMockProxy("[]");
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -180,7 +180,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         });
         var proxy = CreateMockProxy(tournaments);
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var sub = await _db.TournamentSubscriptions.SingleAsync(s => s.UserId == userId);
@@ -202,7 +202,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var handler = new RoutingHttpMessageHandler().Map("/api/crawl", "{}");
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
 
         Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/crawl"));
@@ -218,7 +218,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var handler = new RoutingHttpMessageHandler().Map("/api/crawl", "{}");
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
 
         Assert.False(handler.Hits.ContainsKey("/api/crawl"));
@@ -236,7 +236,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var handler = new RoutingHttpMessageHandler()
             .Map("/api/crawl", "{}")
             .Map("/api/tournaments/T1", $$"""{"date":"{{todayStr}}","location":"Y"}""");
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
 
         var sub = await _db.TournamentSubscriptions.SingleAsync();
@@ -256,7 +256,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var handler = new RoutingHttpMessageHandler().Map("/api/crawl", "{}");
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
 
         Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/crawl"));
@@ -283,7 +283,7 @@ public class AutoSubscriptionServiceTests : IDisposable
             .Map("/api/tournaments/57", detail)
             .Map("/api/tournaments/1234567", detail)
             .Map("/api/crawl", "{}");
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
 
         var crawls = handler.Requests.Where(r => r.Method == HttpMethod.Post && r.Path == "/api/crawl").ToList();
@@ -309,7 +309,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var proxy = CreateMockProxy(PlayersJson((1, "Mustermann, Max", "1234567"), (2, "Other, Player", "9999999")));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T1", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -323,7 +323,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Schmidt", firstName: "Anna");
 
         var proxy = CreateMockProxy(PlayersJson((5, "Schmidt, Anna", null), (6, "Mueller, Hans", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T2", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -349,7 +349,7 @@ public class AutoSubscriptionServiceTests : IDisposable
             (10, "Berger, Lisa", "7777777"),
             (11, "Huber, Karl", null),
             (12, "Unknown, Person", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T3", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).OrderBy(f => f.PlayerSnr).ToListAsync();
@@ -368,7 +368,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var proxy = CreateMockProxy(PlayersJson((3, "Huber, Karl", "5555555")));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T4", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId && f.CrawlerTournamentId == "T4").ToListAsync();
@@ -381,7 +381,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl");
 
         var proxy = CreateMockProxy("[]");
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T5", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -394,7 +394,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl");
 
         var proxy = CreateMockProxy(PlayersJson((1, "Completely, Different", null), (2, "Another, Person", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "T6", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -408,7 +408,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Ott", firstName: "Hans");
 
         var proxy = CreateMockProxy(PlayersJson((1, "Ottenweller, Hans-Peter", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TF1", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -422,7 +422,7 @@ public class AutoSubscriptionServiceTests : IDisposable
 
         // Substring-Treffer (1) darf NICHT matchen, exakter (2) schon.
         var proxy = CreateMockProxy(PlayersJson((1, "Ottenweller, Hans", null), (2, "Ott, Hans", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TF2", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -437,7 +437,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Li", firstName: null);
 
         var proxy = CreateMockProxy(PlayersJson((1, "Li, Wei", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TF3", CancellationToken.None);
 
         var favs = await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync();
@@ -457,7 +457,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var proxy = CreateMockProxy(PlayersJson((7, "Martinovic, Sasa", "14502828"), (8, "Huber, Karl", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TT1", CancellationToken.None);
 
         var snrs = await _db.TournamentFavorites.Where(f => f.UserId == userId).Select(f => f.PlayerSnr).OrderBy(x => x).ToListAsync();
@@ -474,7 +474,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var proxy = CreateMockProxy(PlayersJson((3, "Huber, Karl", null), (4, "Huber, Karl", null)));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TD1", CancellationToken.None);
 
         Assert.Empty(await _db.TournamentFavorites.ToListAsync());
@@ -490,7 +490,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl", fideId: "1111111");
 
         var proxy = CreateMockProxy(PlayersJson((1, "Huber, Karl", "2222222")));
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TD2", CancellationToken.None);
 
         Assert.Empty(await _db.TournamentFavorites.ToListAsync());
@@ -502,7 +502,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
         var proxy = CreateMockProxy("", HttpStatusCode.InternalServerError);
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         // Should not throw — errors are caught and logged
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
@@ -516,7 +516,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
         var proxy = CreateMockProxy("[]");
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -529,7 +529,7 @@ public class AutoSubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync(lastName: "Test", firstName: "User", chessResultsId: "12345");
         var proxy = CreateMockProxy("""{"error":"not found"}""");
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         await service.CheckUserAsync(_db, proxy, userId, CancellationToken.None);
 
         var subs = await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync();
@@ -552,7 +552,7 @@ public class AutoSubscriptionServiceTests : IDisposable
             failPathContains: "/api/players/tournaments");
         var proxy = new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://gluetun:8080") });
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance)
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance)
         {
             CrawlerRetryBackoff = TimeSpan.Zero // Test nicht künstlich verlangsamen
         };
@@ -574,7 +574,7 @@ public class AutoSubscriptionServiceTests : IDisposable
             failPathContains: "/api/players/tournaments");
         var proxy = new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://gluetun:8080") });
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance)
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance)
         {
             CrawlerRetryBackoff = TimeSpan.Zero,
             MaxCrawlerAttempts = 3
@@ -596,7 +596,7 @@ public class AutoSubscriptionServiceTests : IDisposable
             successStatus: HttpStatusCode.InternalServerError, failPathContains: "/api/players/tournaments");
         var proxy = new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://gluetun:8080") });
 
-        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance)
+        var service = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance)
         {
             CrawlerRetryBackoff = TimeSpan.Zero
         };

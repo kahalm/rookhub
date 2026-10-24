@@ -33,9 +33,11 @@ public class AutoSubscriptionLoopTests
         }
     }
 
-    private static ServiceProvider Provider(string dbName, PathHandler handler, bool withDb = true)
+    private static ServiceProvider Provider(string dbName, PathHandler handler, ILogger<AutoSubscriptionService> log,
+        bool withDb = true)
     {
         var services = new ServiceCollection();
+        services.AddScoped(_ => new AutoSubscriptionService(log));
         if (withDb)
             services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(dbName));
         services.AddScoped(_ => new CrawlerProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://crawler:8080") }));
@@ -44,7 +46,7 @@ public class AutoSubscriptionLoopTests
 
     /// <summary>Die Schleife mit sofortigem ersten Lauf (statt 60 s).</summary>
     private static BackgroundService Loop(IServiceProvider sp, ILogger<AutoSubscriptionService> log) =>
-        new AutoSubscriptionService(sp.GetRequiredService<IServiceScopeFactory>(), log) { InitialDelay = TimeSpan.Zero };
+        new AutoSubscriptionScheduler(sp.GetRequiredService<IServiceScopeFactory>(), log) { FirstRunDelay = TimeSpan.Zero };
 
     private static async Task WaitUntilAsync(Func<bool> done)
     {
@@ -55,8 +57,8 @@ public class AutoSubscriptionLoopTests
     [Fact]
     public void Timing_FirstRunAfterOneMinute()
     {
-        var service = new AutoSubscriptionService(null!, new CapturingLogger<AutoSubscriptionService>());
-        Assert.Equal(TimeSpan.FromSeconds(60), service.InitialDelay);
+        var scheduler = new AutoSubscriptionScheduler(null!, new CapturingLogger<AutoSubscriptionService>());
+        Assert.Equal(TimeSpan.FromSeconds(60), scheduler.InitialDelay(DateTime.UtcNow));
     }
 
     [Fact]
@@ -64,7 +66,8 @@ public class AutoSubscriptionLoopTests
     {
         var dbName = Guid.NewGuid().ToString();
         var handler = new PathHandler("""[{"tournamentId":"T1","tournamentName":"Open","endDate":"25.12.2099"}]""");
-        await using var sp = Provider(dbName, handler);
+        var log = new CapturingLogger<AutoSubscriptionService>();
+        await using var sp = Provider(dbName, handler, log);
         using (var scope = sp.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -75,7 +78,6 @@ public class AutoSubscriptionLoopTests
             });
             await db.SaveChangesAsync();
         }
-        var log = new CapturingLogger<AutoSubscriptionService>();
         var loop = Loop(sp, log);
 
         await loop.StartAsync(CancellationToken.None);
@@ -96,8 +98,8 @@ public class AutoSubscriptionLoopTests
     public async Task FailingPhases_AreLoggedSeparately_AndTheLoopSurvives()
     {
         // Ohne DbContext scheitern beide Phasen schon beim Auflösen — jede mit ihrer eigenen Zeile.
-        await using var sp = Provider("egal", new PathHandler("[]"), withDb: false);
         var log = new CapturingLogger<AutoSubscriptionService>();
+        await using var sp = Provider("egal", new PathHandler("[]"), log, withDb: false);
         var loop = Loop(sp, log);
 
         await loop.StartAsync(CancellationToken.None);

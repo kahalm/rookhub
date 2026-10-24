@@ -50,7 +50,7 @@ public class TournamentFavoriteTests : IDisposable
         {
             BaseAddress = new Uri("http://localhost:8080"),
         });
-        var autoFavorites = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var autoFavorites = new AutoSubscriptionService(NullLogger<AutoSubscriptionService>.Instance);
         var controller = new TournamentFavoriteController(_db, autoFavorites, crawler);
         controller.ControllerContext = new ControllerContext
         {

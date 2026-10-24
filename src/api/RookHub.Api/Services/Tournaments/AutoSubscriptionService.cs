@@ -7,26 +7,14 @@ using RookHub.Api.Models;
 
 namespace RookHub.Api.Services.Tournaments;
 
-public class AutoSubscriptionService : BackgroundService, IBackgroundJobInfo
+/// <summary>
+/// Turnier-Abos und Auto-Favoriten (Fachlogik): Abos aus den Turnieren eines Nutzers anlegen, laufende Abos neu crawlen
+/// lassen, Favoriten (man selbst, Freunde, Verfolgte) setzen. Aufgerufen vom Profil (nach Änderung der Schach-Identität),
+/// vom Favoriten-Controller und täglich von <see cref="AutoSubscriptionScheduler"/> (Schleife getrennt, Zerlegung Z10).
+/// </summary>
+public class AutoSubscriptionService
 {
-    // ── Admin-Schalter „Hintergrundjobs pausieren" (BackgroundPause): der Tageslauf wartet, bis fortgesetzt wird.
-    private PauseGate? _pauseGate;
-    private PauseGate Pause => _pauseGate ??= new PauseGate(nameof(AutoSubscriptionService), _logger);
-    /// <inheritdoc/>
-    public bool PausableByAdmin => true;
-    /// <inheritdoc/>
-    public DateTime? LastTickUtc => _pauseGate?.LastTickUtc;
-
-    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AutoSubscriptionService> _logger;
-
-    /// <summary>
-    /// Initiale Pause vor dem ersten Lauf. Beim Deploy startet die API regelmaessig ein paar
-    /// Sekunden vor dem Crawler (gluetun:8080); ohne diese Pause liefe der erste Check sofort
-    /// ins "Connection refused". Da der Service ohnehin nur alle 24 h laeuft, kostet die Pause nichts.
-    /// (internal settable nur fuer Tests.)
-    /// </summary>
-    internal TimeSpan InitialDelay { get; set; } = TimeSpan.FromSeconds(60);
 
     /// <summary>Anzahl Versuche fuer Crawler-GETs (transiente Verbindungsfehler).</summary>
     internal int MaxCrawlerAttempts { get; set; } = 3;
@@ -41,92 +29,9 @@ public class AutoSubscriptionService : BackgroundService, IBackgroundJobInfo
     /// <summary>Ab so viele Tage VOR dem Turniertermin wird schon refresht (frühe Paarungen abgreifen).</summary>
     internal int RefreshDaysBefore { get; set; } = 3;
 
-    public AutoSubscriptionService(IServiceScopeFactory scopeFactory, ILogger<AutoSubscriptionService> logger)
+    public AutoSubscriptionService(ILogger<AutoSubscriptionService> logger)
     {
-        _scopeFactory = scopeFactory;
         _logger = logger;
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("AutoSubscriptionService started");
-
-        // Crawler beim Deploy erst hochfahren lassen, bevor der erste Check ihn anspricht.
-        try
-        {
-            await Task.Delay(InitialDelay, stoppingToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            if (await Pause.SkipAndWaitAsync(_scopeFactory, PauseGate.Recheck, stoppingToken)) continue;
-            try
-            {
-                await CheckAllUsersAsync(stoppingToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(ex, "Unexpected error in AutoSubscriptionService loop");
-            }
-
-            try
-            {
-                await RefreshActiveSubscriptionsAsync(stoppingToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(ex, "Unexpected error in AutoSubscriptionService refresh");
-            }
-
-            Pause.MarkTick();
-            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
-        }
-    }
-
-    private async Task CheckAllUsersAsync(CancellationToken ct)
-    {
-        // Kandidaten-User einmal mit einem kurzlebigen Scope laden …
-        List<int> userIds;
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            userIds = await db.UserProfiles
-                .Where(p => p.ChessResultsId != null && p.LastName != null)
-                .Select(p => p.UserId)
-                .ToListAsync(ct);
-        }
-
-        _logger.LogInformation("AutoSubscriptionService checking {Count} users", userIds.Count);
-
-        // … dann pro User einen FRISCHEN Scope/DbContext. Vorher teilte sich der ganze Lauf einen Context:
-        // der ChangeTracker wuchs über alle User unbeschränkt (jedes spätere SaveChanges langsamer) und ein
-        // Teilfehler konnte getrackte Entitäten zwischen Usern verschleppen. Jetzt ist jeder User isoliert.
-        foreach (var userId in userIds)
-        {
-            try
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
-                await CheckUserAsync(db, proxy, userId, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogWarning(ex, "AutoSubscription check failed for user {UserId}", userId);
-            }
-        }
-    }
-
-    private async Task RefreshActiveSubscriptionsAsync(CancellationToken ct)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
-        await RefreshActiveSubscriptionsAsync(db, proxy, ct);
     }
 
     /// <summary>

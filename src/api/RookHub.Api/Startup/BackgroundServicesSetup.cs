@@ -55,7 +55,7 @@ namespace RookHub.Api.Startup;
 /// ChessableImportWatchdogService      immer (Lanes intern per Schalter)     Extension-Pflichten + Lane-Netz
 /// ChessableImportFastLaneService      immer                                 voll gecachte Importe (netzfrei)
 /// ChessableImportResumeService        Chessable:Enabled                     unterbrochene Importe fortsetzen
-/// AutoSubscriptionService             immer                                 Turnier-Abos + Auto-Favoriten (24 h)
+/// AutoSubscriptionScheduler           immer                                 Turnier-Abos + Auto-Favoriten (24 h)
 /// RoundMonitorService                 immer                                 Rundenmonitor
 /// HeartbeatService                    immer                                 Lebenszeichen für den log-watcher
 /// DailyPuzzleScheduler                immer                                 Tagespuzzle 00:00 UTC
@@ -144,7 +144,7 @@ public static class BackgroundServicesSetup
             // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
             services.AddHostedService<ChessableImportResumeService>();
         }
-        services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
+        services.AddHostedService<AutoSubscriptionScheduler>();
         services.AddHostedService<RoundMonitorService>();
         // Periodisches Lebenszeichen nach ES (Standard 60 s) → log-watcher erkennt toten Dienst.
         services.AddHostedService<HeartbeatService>();

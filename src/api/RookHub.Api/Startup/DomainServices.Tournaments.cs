@@ -12,7 +12,7 @@ public static partial class DomainServicesSetup
         services.AddScoped<FideEventDetailService>();
         services.AddScoped<TournamentHistoryService>();
         services.AddScoped<PlayerSearchService>();
-        services.AddSingleton<AutoSubscriptionService>();
+        services.AddScoped<AutoSubscriptionService>();
     }
 
     /// <summary>Turnierverzeichnis: Sweeps je Quelle, Umkreis-Auflösung, Abfrage.</summary>
