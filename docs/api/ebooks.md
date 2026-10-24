@@ -70,7 +70,9 @@ letzten Seitenwechsel an den Server und wird beim nächsten Öffnen angesprungen
 ## Diagramm-Erkennung (Stufe 1, 0.766.0)
 
 Digital gesetzte Bücher zeichnen Diagramme als TEXT in einem Schach-Font — jedes Feld ein Buchstabe. `EbookDiagramWorker`
-(alle 30 s, 2 Bücher je Durchlauf) liest jedes PDF mit **PdfPig** (`EbookDiagramExtractor`): Buchstaben eines bekannten
+(alle 30 s, 2 Bücher je Durchlauf; Reihenfolge `QueueOrder`: Uploads von Nutzern zuerst, dann erstmals eingelesene
+Bibliotheksbücher ohne Diagramme, zuletzt Ergänzungen/Neuerkennungen, je Gruppe Riesenbände > 1 000 Seiten ans Ende — vorher
+strikt nach Id, ein Upload wartete am 23.10. 10 h hinter 92 Neuerkennungen) liest jedes PDF mit **PdfPig** (`EbookDiagramExtractor`): Buchstaben eines bekannten
 Diagramm-Fonts (`ChessDiagramFonts`) werden Felder, `DiagramGridBuilder` macht daraus Bretter (Gruppen, die genau 8 × 8 Zellen
 überspannen; fehlende Zellen = leer, weil PDF-Bibliotheken Leerzeichen unterschlagen; Lage über Grundlinie + Vorschub, nicht
 über das je Figur verschiedene Tintenrechteck). Ergebnis in `EbookDiagrams` (Seite, Lage als Seitenanteil 0–1, FEN, Nummer,

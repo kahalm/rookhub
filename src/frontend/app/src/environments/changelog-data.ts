@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.826.1", date: "2026-10-24", changes: [
+    { en: "E-books: an uploaded book now gets its diagrams recognised before library maintenance runs — uploads first, then newly imported books, re-recognitions last, huge reference volumes at the very end. Before, an upload could wait hours behind a re-scan of the whole library.", de: "E-Books: Ein hochgeladenes Buch bekommt seine Diagramme jetzt vor Wartungsläufen der Bibliothek — zuerst Uploads, dann neu eingelesene Bücher, Neuerkennungen zuletzt, riesige Nachschlagewerke ganz am Ende. Vorher konnte ein Upload stundenlang hinter einer Neuerkennung der ganzen Bibliothek warten." },
+  ] },
   { version: "0.825.4", date: "2026-10-23", changes: [
     { en: "UI sweep (tool): the e-book check “with diagrams” is replaced by the Elo filter that took its place in 0.822.0.",
       de: "UI-Sweep (Werkzeug): Der E-Book-Prüfschritt „mit Diagrammen“ ist durch den Elo-Filter ersetzt, der ihn in 0.822.0 abgelöst hat." },

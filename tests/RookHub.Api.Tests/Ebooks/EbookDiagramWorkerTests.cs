@@ -23,6 +23,30 @@ public class EbookDiagramWorkerTests : IDisposable
     }
 
     [Fact]
+    public async Task QueueOrder_UploadsFirst_ThenNewLibraryBooks_ThenRescans_HugeBooksLastInEachGroup()
+    {
+        Ebook B(string t, EbookSource src, bool supplement = false, int count = 0, int? pages = 200) => new()
+        {
+            Title = t, Source = src, DiagramSupplement = supplement, DiagramCount = count, PageCount = pages,
+            DiagramState = EbookDiagramState.Pending, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        };
+        // In Id-Reihenfolge angelegt wie am 23.10.: Riesenband + Neuerkennungen zuerst, der Upload zuletzt
+        _kit.Db.Ebooks.AddRange(
+            B("ECO B00-B99", EbookSource.Library, supplement: true, count: 1, pages: 6789),
+            B("Neuerkennung", EbookSource.Library, supplement: true, count: 30),
+            B("Neu eingelesen, riesig", EbookSource.Library, pages: 3891),
+            B("Neu eingelesen", EbookSource.Library),
+            B("Upload ohne Seitenzahl", EbookSource.Upload, pages: null),
+            B("Upload", EbookSource.Upload));
+        await _kit.Db.SaveChangesAsync();
+
+        var order = await EbookDiagramWorker.QueueOrder(_kit.Db.Ebooks.Where(b => b.DiagramState == EbookDiagramState.Pending))
+            .Select(b => b.Title).ToListAsync();
+
+        Assert.Equal(["Upload ohne Seitenzahl", "Upload", "Neu eingelesen", "Neu eingelesen, riesig", "Neuerkennung", "ECO B00-B99"], order);
+    }
+
+    [Fact]
     public async Task CuratedDiagrams_SurviveARescan()
     {
         var admin = await _kit.UserAsync("admin", admin: true);

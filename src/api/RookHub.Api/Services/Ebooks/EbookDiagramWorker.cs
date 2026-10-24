@@ -18,14 +18,27 @@ public class EbookDiagramWorker : PeriodicWorker
     protected override WorkerStart Start => WorkerStart.After(TimeSpan.FromSeconds(60));
     protected override void LogFailure(Exception ex) => Logger.LogError(ex, "E-Book-Diagramme: Durchlauf fehlgeschlagen");
 
+    /// <summary>Riesenbände (Nachschlagewerke wie „Chess Publishing ECO“, 3 891–6 789 Seiten) brauchen Stunden.</summary>
+    internal const int HugeBookPages = 1000;
+
+    /// <summary>
+    /// Reihenfolge der Warteschlange (0.826.x): ein Nutzer, der gerade hochgeladen hat, wartet nicht hinter Admin-Läufen —
+    /// am 23.10. stand ein Upload 10 h hinter 92 Neuerkennungen und einem 6 789-Seiten-Band. Zuerst Uploads, dann erstmals
+    /// eingelesene Bibliotheksbücher (noch keine Diagramme), zuletzt Ergänzungen/Neuerkennungen; je Gruppe Riesenbände
+    /// (&gt; <see cref="HugeBookPages"/> Seiten) ans Ende, sonst nach Id.
+    /// </summary>
+    internal static IQueryable<Ebook> QueueOrder(IQueryable<Ebook> pending) => pending
+        .OrderBy(b => b.Source == EbookSource.Upload && !b.DiagramSupplement ? 0 : !b.DiagramSupplement && b.DiagramCount == 0 ? 1 : 2)
+        .ThenBy(b => b.PageCount != null && b.PageCount > HugeBookPages ? 1 : 0)
+        .ThenBy(b => b.Id);
+
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
         var db = services.GetRequiredService<AppDbContext>();
         var storage = services.GetRequiredService<EbookStorage>();
         var extractor = services.GetRequiredService<EbookDiagramExtractor>();
-        var batch = await db.Ebooks.Include(b => b.Files)
-            .Where(b => b.DiagramState == EbookDiagramState.Pending)
-            .OrderBy(b => b.Id).Take(2).ToListAsync(ct);
+        var batch = await QueueOrder(db.Ebooks.Include(b => b.Files).Where(b => b.DiagramState == EbookDiagramState.Pending))
+            .Take(2).ToListAsync(ct);
         foreach (var ebook in batch)
         {
             ct.ThrowIfCancellationRequested();
