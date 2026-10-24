@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.1", date: "2026-10-25", changes: [
+    { en: "Maintenance: the security check of endpoints open without sign-in now knows the e-book game view from 0.831.0, so the build is green again.", de: "Wartung: Die Sicherheitsprüfung der ohne Anmeldung offenen Endpunkte kennt jetzt die Partie-Ansicht der E-Books aus 0.831.0, der Build ist wieder grün." },
+  ] },
   { version: "0.832.0", date: "2026-10-24", changes: [
     { en: "LeagueHub: a scoresheet from the current round is now assigned to its board right away, even before chess-results has the line-up — the opponent’s team from the roster gives the match, the colours (home has White on odd boards in Tyrol) and the roster order of both sides give the board. The check page preselects it, labelled „provisional (line-up not yet on chess-results)“; every further sheet of the same match re-sorts the boards. After each „Refresh“ a provisional assignment is confirmed, moved to the board where the players actually sat, or released with a warning; the club list shows „provisional“ with a „Confirm“ button.",
       de: "LeagueHub: Ein Formular der laufenden Runde wird jetzt sofort seinem Brett zugeordnet, auch wenn chess-results die Aufstellung noch nicht hat — die Mannschaft des Gegners laut Meldeliste ergibt die Begegnung, Farbe (in Tirol Heim Weiß an den ungeraden Brettern) und Meldereihenfolge beider Seiten das Brett. Die Prüfseite wählt sie vor, mit dem Etikett „vorläufig (Aufstellung noch nicht auf chess-results)“; jedes weitere Formular derselben Begegnung verteilt die Bretter neu. Nach jedem „Aktualisieren“ wird eine vorläufige Zuordnung bestätigt, an das tatsächliche Brett umgehängt oder mit Warnung gelöst; die Vereinsliste zeigt „vorläufig“ mit Knopf „Bestätigen“." },
