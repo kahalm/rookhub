@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
-using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Engines;
@@ -26,115 +23,51 @@ namespace RookHub.Api.Controllers.EngineBroker;
 /// </list>
 /// Der ndjson-Stream geht in beiden Fällen gleich an den Browser, ohne CSP-/CORS-Aufweichung; das
 /// clientSecret bleibt serverseitig. Welche Quelle, entscheidet <see cref="EngineRegistry"/>, welcher
-/// Broker, <see cref="IEngineBroker"/>.
+/// Broker, <see cref="IEngineBroker"/>. Die Einstellungen (Token, Hintergrund-Liste, Haus-Engine) liegen in
+/// <see cref="EngineSettingsService"/>, Prüfen/Klemmen der Arbeit und das Durchreichen des Streams in
+/// <see cref="EngineStreamProxy"/> (Zerlegung Z12); hier bleiben Bindung, Aufruf und Statuscode.
 /// </summary>
 [ApiController]
 [Route("api/engine")]
 [Authorize]
 public class EngineController : BaseApiController
 {
-    /// <summary>Obergrenzen der durchgereichten Work-Parameter — schützt Provider (und unser
-    /// Proxy-Streaming) vor absurden Anfragen; die Engine-Maxima klemmen zusätzlich.</summary>
-    private const int MaxDepth = EngineProtocol.MaxDepth;
-    private const int MaxMovetimeMs = 300_000;
-    private const long MaxNodes = 5_000_000_000;
-    private const int MaxMoves = EngineProtocol.MaxMoves;
-
-    /// <summary>Absolute Obergrenze für EINEN Analyse-Stream. Keines der Work-Limits begrenzt die
-    /// Laufzeit (Tiefe 60 rechnet auf echter Hardware Stunden), und der einzige andere Abbruchgrund
-    /// wäre der Browser selbst — ohne diese Schranke hielte ein Client Verbindungen beliebig lange.</summary>
-    private static readonly TimeSpan MaxStreamDuration = TimeSpan.FromMinutes(10);
-
-    /// <summary>Gleichzeitige Analyse-Streams je User (mehrere Tabs sind legitim, hundert nicht).
-    /// Der globale Limiter begrenzt nur die RATE neuer Anfragen, nicht die Zahl offener Ströme.
-    /// Gezählt wird im <see cref="EngineActivityTracker"/> — der auch dem Hintergrund-Worker sagt,
-    /// wann Live rechnet (Hintergrund pausieren) und seit wann Ruhe ist.</summary>
-    private const int MaxConcurrentStreamsPerUser = 4;
-
-    /// <summary>Abstand der Leerzeilen-Lebenszeichen im Analyse-Stream (siehe <see cref="NdjsonHeartbeatPump"/>).</summary>
-    private static readonly TimeSpan HeartbeatInterval = NdjsonHeartbeatPump.DefaultInterval;
-
-    private readonly AppDbContext _db;
-    private readonly EncryptionService _encryption;
     private readonly EngineRegistry _registry;
     private readonly IEngineBroker _broker;
     private readonly EngineActivityTracker _activity;
     private readonly ILogger<EngineController> _logger;
+    private readonly EngineSettingsService _settings;
 
     public EngineController(AppDbContext db, EncryptionService encryption, EngineRegistry registry,
         IEngineBroker broker, EngineActivityTracker activity, ILogger<EngineController> logger)
     {
-        _db = db;
-        _encryption = encryption;
         _registry = registry;
         _broker = broker;
         _activity = activity;
         _logger = logger;
+        _settings = new EngineSettingsService(db, encryption, registry);
     }
 
-    /// <summary>Ein Lichess-Token ist hinterlegt (die Zeile gibt es seit dem eigenen Broker auch OHNE Token:
-    /// sie trägt die Hintergrund-Liste und die Haus-Engine-Freigabe).</summary>
-    private static bool HasToken(LichessEngineCredential? cred) => !string.IsNullOrEmpty(cred?.EncryptedToken);
+    /// <summary>Absage einer Einstellung als 400 bzw. 404 mit <c>{ message }</c>.</summary>
+    private IActionResult Rejected(EngineSettingsRejection r)
+        => r.NotFound ? NotFound(new { message = r.Message }) : BadRequest(new { message = r.Message });
 
     [HttpGet("credentials")]
     public async Task<IActionResult> GetCredentials()
-    {
-        var userId = GetUserId();
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
-        if (!HasToken(cred))
-            return Ok(new LichessEngineCredentialResponse(false, null));
-
-        // Robust gegen Key-Rotation/korrupte Daten: kein 500, nur keine Maske (Re-Eingabe nötig).
-        var plain = _encryption.TryDecrypt(cred!.EncryptedToken);
-        return Ok(new LichessEngineCredentialResponse(true, plain is null ? null : Mask(plain)));
-    }
+        => Ok(await _settings.GetCredentialsAsync(GetUserId()));
 
     [HttpPost("credentials")]
     public async Task<IActionResult> SaveCredentials([FromBody] SaveLichessTokenRequest request)
     {
-        var token = request?.Token?.Trim();
-        if (string.IsNullOrWhiteSpace(token))
-            return BadRequest(new { message = "Token is required" });
-        if (token.Length > 200)
-            return BadRequest(new { message = "Token too long" });
-
-        var userId = GetUserId();
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
-        var now = DateTime.UtcNow;
-        if (cred is null)
-        {
-            cred = new LichessEngineCredential { UserId = userId, CreatedAt = now };
-            _db.LichessEngineCredentials.Add(cred);
-        }
-        cred.EncryptedToken = _encryption.Encrypt(token);
-        cred.UpdatedAt = now;
-        await _db.SaveChangesAsync();
-        return Ok(new LichessEngineCredentialResponse(true, Mask(token)));
+        var (saved, rejection) = await _settings.SaveTokenAsync(GetUserId(), request?.Token);
+        return rejection is not null ? Rejected(rejection) : Ok(saved);
     }
 
-    /// <summary>Lichess-Token löschen. Die Zeile verschwindet ganz, wenn danach nichts mehr an ihr hängt;
-    /// stehen „RookHub direkt"-Engines in der Hintergrund-Liste, bleibt sie (ohne Token) mit genau diesen —
-    /// die Lichess-Engines fallen heraus, ohne Token rechnet dort niemand.</summary>
+    /// <summary>Lichess-Token löschen (siehe <see cref="EngineSettingsService.DeleteTokenAsync"/>).</summary>
     [HttpDelete("credentials")]
     public async Task<IActionResult> DeleteCredentials()
     {
-        var userId = GetUserId();
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId);
-        if (cred is not null)
-        {
-            var local = cred.BackgroundEngines.Where(EngineRegistry.IsLocal).ToList();
-            if (local.Count == 0)
-            {
-                _db.LichessEngineCredentials.Remove(cred);
-            }
-            else
-            {
-                cred.EncryptedToken = string.Empty;
-                cred.SetBackgroundEngines(local);
-                cred.UpdatedAt = DateTime.UtcNow;
-            }
-            await _db.SaveChangesAsync();
-        }
+        await _settings.DeleteTokenAsync(GetUserId());
         return NoContent();
     }
 
@@ -153,78 +86,24 @@ public class EngineController : BaseApiController
             return listFailed;
         if (listing.LichessUnreachable)
             _logger.LogWarning("Lichess-Engine-Liste fehlgeschlagen (User {UserId}) — nur eigene Engines", userId);
-
-        var cred = listing.Credential;
-        var engines = listing.Engines.Select(ToDto).ToList();
-        return Ok(new ExternalEnginesResponse(HasToken(cred), listing.TokenInvalid, engines, cred?.BackgroundEngines ?? [],
-            cred?.ShareAsHouseEngine ?? false, IsAdmin, listing.LichessUnreachable));
+        return Ok(EngineSettingsService.ToResponse(listing, IsAdmin));
     }
 
-    private static ExternalEngineDto ToDto(EngineRef e) => new(e.Id, e.Name, e.MaxThreads, e.MaxHash,
-        e.Source == EngineSource.Local ? ExternalEngineDto.SourceRookHub : ExternalEngineDto.SourceLichess, e.Online);
-
-    /// <summary>Hoechstzahl hinterlegbarer Hintergrund-Engines. Nicht die Welt begrenzen, aber auch
-    /// nicht unbegrenzt: die Liste steht als CSV in einer Spalte, und jede Engine kostet den Worker
-    /// einen eigenen Broker-Stream.
-    ///
-    /// <para>Seit 2026-09-11 sechzehn statt acht: ein Provider auf einer 40-Kern-Maschine meldet
-    /// eine Live-Engine und zwoelf Hintergrund-Engines an, und mit acht blieb die Haelfte davon
-    /// unbenutzbar, sobald die vier einer zweiten Maschine noch in der Liste standen. Sechzehn
-    /// passen in die Spalte: <see cref="LichessEngineCredential.BackgroundEngineIds"/> fasst 600
-    /// Zeichen, eine Kennung ist rund 17 lang (<c>eei_</c> + 12 + Komma) — 16 belegen also etwa
-    /// 272. Der Worker rechnet je Engine EINEN Auftrag; der Deckel von vier gleichzeitigen Stroemen
-    /// (<see cref="MaxConcurrentStreamsPerUser"/>) gilt nur dem Live-Proxy, nicht ihm.</para>
-    ///
-    /// <para>Seit 2026-10-05 zweiunddreissig: ein zweiter Rechner („RookHub PC") meldet sechzehn
-    /// Hintergrund-Engines an, neben den zwoelf der grossen Maschine und den vier von Lichess — mit
-    /// sechzehn blieb er ganz aussen vor. 32 Kennungen belegen rund 32 × 17 − 1 = 543 der 600 Zeichen,
-    /// mehr passt ohne breitere Spalte nicht.</para></summary>
-    internal const int MaxBackgroundEngines = 32;
-
-    /// <summary>
-    /// Hintergrund-Engines fuer Analyseauftraege festlegen (leere Liste = keine). Jede muss eine der
-    /// registrierten Engines sein — sonst liefe der Worker gegen eine Wand.
-    ///
-    /// <para>MEHRERE sind der Sinn: der Worker rechnet je Engine genau einen Auftrag, also laufen so
-    /// viele Auftraege nebeneinander, wie hier stehen. Mit einer einzigen ist die Warteschlange
-    /// strikt seriell, und ein einzelner zaeher Auftrag legt alles still.</para>
-    /// </summary>
+    /// <summary>Hintergrund-Engines fuer Analyseauftraege festlegen (leere Liste = keine) — siehe
+    /// <see cref="EngineSettingsService.PlanBackgroundAsync"/>. Jede muss registriert sein, sonst 404.</summary>
     [HttpPut("background")]
     public async Task<IActionResult> SetBackgroundEngine([FromBody] SetBackgroundEngineRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-
-        var ids = (request?.EngineIds ?? [])
-            .Select(i => i?.Trim() ?? string.Empty)
-            .Where(i => i.Length > 0)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (ids.Count > MaxBackgroundEngines)
-            return BadRequest(new { message = $"At most {MaxBackgroundEngines} background engines" });
-        if (ids.Any(i => i.Length > 64))
-            return BadRequest(new { message = "Invalid engine id" });
-
-        // Lichess-Engines brauchen den Token (Meldungen wie bisher); „RookHub direkt" nicht — ein Nutzer ohne
-        // Lichess-Konto bekommt die Zeile dann eben ohne Token.
-        var needsLichess = ids.Any(i => !EngineRegistry.IsLocal(i));
-        if (needsLichess && cred is null)
-            return BadRequest(new { message = "No Lichess token stored" });
-        if (needsLichess && _encryption.TryDecrypt(cred!.EncryptedToken) is null)
-            return BadRequest(new { message = "Stored token unreadable" });
-        if (cred is null && ids.Count == 0)
+        var (plan, rejection) = await _settings.PlanBackgroundAsync(userId, request?.EngineIds, ct);
+        if (rejection is not null) return Rejected(rejection);
+        if (plan!.NothingToStore)
             return Ok(new { backgroundEngineIds = Array.Empty<string>() });
 
-        if (ids.Count > 0)
+        if (plan.Ids.Count > 0)
         {
-            // JEDE pruefen: eine nicht registrierte Engine in der Liste hiesse, dass ein Teil der
-            // Auftraege still in einer Warteschlange landet, die niemand abarbeitet.
             var missing = false;
-            if (await TryUpstreamAsync(async () =>
-                    {
-                        foreach (var id in ids)
-                            if ((await _registry.ResolveAsync(userId, id, ct)).Engine is null) { missing = true; return; }
-                    },
+            if (await TryUpstreamAsync(async () => missing = !await _settings.AllRegisteredAsync(userId, plan.Ids, ct),
                     ex => _logger.LogWarning(ex, "Lichess nicht erreichbar beim Setzen der Hintergrund-Engines (User {UserId})", userId),
                     ct) is { } resolveFailed)
                 return resolveFailed;
@@ -232,64 +111,33 @@ public class EngineController : BaseApiController
                 return NotFound(new { message = "Engine not found" });
         }
 
-        if (cred is null)
-        {
-            cred = new LichessEngineCredential { UserId = userId, EncryptedToken = string.Empty, CreatedAt = DateTime.UtcNow };
-            _db.LichessEngineCredentials.Add(cred);
-        }
-        cred.SetBackgroundEngines(ids);
-        cred.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
-        return Ok(new { backgroundEngineIds = cred.BackgroundEngines });
+        return Ok(new { backgroundEngineIds = await _settings.SaveBackgroundAsync(userId, plan, ct) });
     }
 
     /// <summary>
-    /// Die eigenen Hintergrund-Engines auch fremden Partien oeffnen, die jemand auf der
-    /// Punktepartie-Seite einwirft („Haus-Engine"). NUR ein Admin darf das setzen: hier verschenkt
-    /// jemand Rechenzeit seiner Maschine an alle registrierten Nutzer, und diese Entscheidung
-    /// gehoert nicht in die Hand eines beliebigen Kontos.
-    ///
-    /// <para>Freigegeben sind immer ALLE hinterlegten Hintergrund-Engines. Eine Auswahl davon waere
-    /// eine zweite Liste neben der ersten — und zwei Listen, die dasselbe meinen, laufen
-    /// auseinander. Wer weniger teilen will, hinterlegt weniger.</para>
+    /// Die eigenen Hintergrund-Engines als „Haus-Engine" freigeben (<see cref="EngineSettingsService.SetHouseEngineAsync"/>).
+    /// NUR ein Admin darf das setzen: hier verschenkt jemand Rechenzeit seiner Maschine an alle registrierten Nutzer,
+    /// und diese Entscheidung gehoert nicht in die Hand eines beliebigen Kontos.
     /// </summary>
     [HttpPut("house")]
     public async Task<IActionResult> SetHouseEngine([FromBody] SetHouseEngineRequest request, CancellationToken ct)
     {
         if (!IsAdmin) return Forbid();
-
-        var userId = GetUserId();
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-        var share = request?.Share ?? false;
-        // Ohne Zeile gibt es keine Hintergrund-Engine (weder Token noch „RookHub direkt"): wie bisher abweisen.
-        if (cred is null)
-            return BadRequest(new { message = share ? "No background engine configured" : "No Lichess token stored" });
-
-        // Ohne hinterlegte Hintergrund-Engine gaebe die Freigabe nichts her: die Partien der anderen
-        // landeten in einer Warteschlange, die niemand abarbeitet.
-        if (share && cred.BackgroundEngines.Count == 0)
-            return BadRequest(new { message = "No background engine configured" });
-
-        if (cred.ShareAsHouseEngine != share)
-        {
-            cred.ShareAsHouseEngine = share;
-            cred.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-        }
-        return Ok(new { shareAsHouseEngine = cred.ShareAsHouseEngine });
+        var (shared, rejection) = await _settings.SetHouseEngineAsync(GetUserId(), request?.Share ?? false, ct);
+        return rejection is not null ? Rejected(rejection) : Ok(new { shareAsHouseEngine = shared });
     }
 
     /// <summary>
     /// Analyse über eine External Engine des Users — beim eigenen Broker (<c>rhe_</c>, in-Prozess) oder beim
-    /// Lichess-Broker (<c>eei_</c>); der ndjson-Stream geht in beiden Fällen gleich an den Browser. Die Suche
-    /// endet, wenn das Limit erreicht ist oder der Browser die Verbindung schließt (der Abbruch wandert über
-    /// <c>RequestAborted</c> zum Broker → Provider stoppt).
+    /// Lichess-Broker (<c>eei_</c>); der ndjson-Stream geht in beiden Fällen gleich an den Browser
+    /// (<see cref="EngineStreamProxy.PumpToClientAsync"/>). Die Suche endet, wenn das Limit erreicht ist oder der
+    /// Browser die Verbindung schließt (der Abbruch wandert über <c>RequestAborted</c> zum Broker → Provider stoppt).
     /// </summary>
     [HttpPost("external/{id}/analyse")]
     public async Task<IActionResult> Analyse(string id, [FromBody] EngineAnalyseRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
-        var error = ValidateWork(request);
+        var error = EngineStreamProxy.ValidateWork(request);
         if (error is not null)
             return BadRequest(new { message = error });
 
@@ -302,17 +150,11 @@ public class EngineController : BaseApiController
         if (lookup.Engine is not { } engine)
             return NotFound(new { message = "Engine not found" });
 
-        // Threads/Hash IMMER auf die gemeldeten Engine-Maxima klemmen
-        // (Maxima defensiv auf ≥1, sonst wirft Clamp bei kaputten Upstream-Daten).
-        var maxThreads = Math.Max(1, engine.MaxThreads);
-        var maxHash = Math.Max(1, engine.MaxHash);
-        var threads = Math.Clamp(request.Threads ?? maxThreads, 1, maxThreads);
-        var hash = Math.Clamp(request.Hash ?? maxHash, 1, maxHash);
-        var work = BuildWork(request, threads, hash);
+        var work = EngineStreamProxy.WorkFor(request, engine);
 
         // Ein Stream hält eine Verbindung, solange die Engine rechnet — deshalb ein Deckel je User.
         // Begin() meldet dem Hintergrund-Worker zugleich „Live rechnet" → dessen Auftrag pausiert.
-        if (_activity.Begin(userId, engine.Id) > MaxConcurrentStreamsPerUser)
+        if (_activity.Begin(userId, engine.Id) > EngineStreamProxy.MaxConcurrentStreamsPerUser)
         {
             _activity.End(userId, engine.Id);
             return StatusCode(429, new { message = "Too many concurrent analysis streams" });
@@ -320,7 +162,7 @@ public class EngineController : BaseApiController
 
         // Absolute Laufzeitschranke ZUSÄTZLICH zum Browser-Abbruch (RequestAborted).
         using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        streamCts.CancelAfter(MaxStreamDuration);
+        streamCts.CancelAfter(EngineStreamProxy.MaxStreamDuration);
         var streamCt = streamCts.Token;
 
         try
@@ -339,33 +181,7 @@ public class EngineController : BaseApiController
                         upstream.StatusCode, id);
                     return StatusCode(502, new { message = "Engine broker rejected the request" });
                 }
-
-                Response.StatusCode = StatusCodes.Status200OK;
-                Response.ContentType = "application/x-ndjson";
-                Response.Headers.CacheControl = "no-cache";
-                // nginx: diese Antwort NICHT puffern — die info-Zeilen müssen live beim Browser ankommen.
-                Response.Headers["X-Accel-Buffering"] = "no";
-                HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
-
-                try
-                {
-                    var stream = upstream.Ndjson!;
-                    // Kein nacktes CopyToAsync: bei Funkstille des Brokers (MultiPV 5 ab Tiefe ~27
-                    // vergehen Minuten zwischen zwei Zeilen) schreibt der Pump Leerzeilen, damit kein
-                    // Proxy davor (NPM 60 s!) die Verbindung als tot kappt — siehe NdjsonHeartbeatPump.
-                    await NdjsonHeartbeatPump.PumpAsync(stream, Response.Body, HeartbeatInterval, streamCt);
-                }
-                catch (OperationCanceledException)
-                {
-                    // Browser hat abgebrochen (Stellungswechsel/Seite zu) ODER die Laufzeitschranke
-                    // hat gegriffen — beides sind reguläre Stopp-Wege, der Client hat seine Zeilen.
-                }
-                catch (IOException ex)
-                {
-                    // Upstream mitten im Stream weg (Provider offline): Stream endet einfach; der
-                    // Client wertet aus, was er hat. Status ist längst gesendet.
-                    _logger.LogWarning(ex, "External-Engine-Stream abgerissen (Engine {EngineId})", id);
-                }
+                await EngineStreamProxy.PumpToClientAsync(HttpContext, upstream, id, _logger, streamCt);
             }
         }
         finally
@@ -399,34 +215,5 @@ public class EngineController : BaseApiController
             logFailure(ex);
             return StatusCode(502, new { message = failureMessage });
         }
-    }
-
-    /// <summary>Baut das Work-Objekt (oneOf depth/movetime/nodes + gemeinsame Felder; <c>variant</c> fest
-    /// <c>chess</c>) — dasselbe für beide Broker.</summary>
-    private static EngineWork BuildWork(EngineAnalyseRequest r, int threads, int hash) =>
-        new(r.SessionId!, threads, hash, Math.Clamp(r.MultiPv, 1, EngineProtocol.MaxMultiPv), r.InitialFen!, r.Moves ?? [],
-            r.Depth, r.Depth is null ? r.Movetime : null, r.Depth is null && r.Movetime is null ? r.Nodes : null);
-
-    private static string? ValidateWork(EngineAnalyseRequest? r)
-    {
-        if (r is null) return "Request body is required";
-        if (string.IsNullOrWhiteSpace(r.SessionId) || r.SessionId.Length > 64) return "Invalid sessionId";
-        if (string.IsNullOrWhiteSpace(r.InitialFen) || r.InitialFen.Length > 120) return "Invalid initialFen";
-        if (r.Moves is { Count: > MaxMoves }) return "Too many moves";
-        if (r.Moves is not null && r.Moves.Any(m => string.IsNullOrWhiteSpace(m) || m.Length > 5)) return "Invalid move";
-
-        var limits = new[] { r.Depth.HasValue, r.Movetime.HasValue, r.Nodes.HasValue }.Count(x => x);
-        if (limits != 1) return "Exactly one of depth/movetime/nodes is required";
-        if (r.Depth is < 1 or > MaxDepth) return "Invalid depth";
-        if (r.Movetime is < 1 or > MaxMovetimeMs) return "Invalid movetime";
-        if (r.Nodes is < 1 or > MaxNodes) return "Invalid nodes";
-        return null;
-    }
-
-    private static string Mask(string value)
-    {
-        // Nur die letzten 4 Zeichen zur Wiedererkennung zeigen (wie beim Chessable-Bearer).
-        if (value.Length <= 4) return new string('*', value.Length);
-        return new string('*', Math.Min(20, value.Length - 4)) + value[^4..];
     }
 }

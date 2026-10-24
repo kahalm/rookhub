@@ -19,6 +19,11 @@ Dauer-Geheimnis (wer es hat, kann fremde Rechenzeit verbrauchen) und bleibt desh
 Logik in `Services/Engines/LichessEngineService.cs`; URLs konfigurierbar (`Lichess:ApiUrl`/`Lichess:BrokerUrl`) —
 zugleich die Vorbereitung auf den RookHub-EIGENEN Broker (seit 0.537.0, gleiche Endpoints, siehe unten).
 
+**Code (seit Zerlegung Z12, 2026-10-24):** `Controllers/EngineBroker/EngineController.cs` bindet nur und setzt den Status;
+Token, Hintergrund-Liste und Haus-Engine liegen in `Services/EngineBroker/EngineSettingsService.cs`, Prüfen/Klemmen der
+Work-Parameter, die Deckel (`MaxConcurrentStreamsPerUser` 4, `MaxStreamDuration` 10 min) und das Durchreichen des
+ndjson-Streams in `Services/EngineBroker/EngineStreamProxy.cs`.
+
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/engine/credentials` | Status + maskierter Token (`{ hasCredentials, maskedToken }`) |

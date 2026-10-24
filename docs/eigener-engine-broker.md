@@ -229,7 +229,7 @@ Ausgabezeile `{ "time": ms, "depth": n, "nodes": n, "pvs": [ { "moves": [uci…]
    (selten) und `token/test` bleiben limitiert.
 4. **log-watcher**: Polls antworten 204, ungültiger Selector 204, `token/test` 200 — kein 401/404 im
    Takt, kein Fehlalarm `api_scan`/`auth_bruteforce`.
-5. **`MaxConcurrentStreamsPerUser` (4)** und `MaxStreamDuration` (10 min) im Live-Proxy bleiben.
+5. **`MaxConcurrentStreamsPerUser` (4)** und `MaxStreamDuration` (10 min) im Live-Proxy bleiben (seit Zerlegung Z12 in `EngineStreamProxy`).
 
 ## 7. Tests und Abnahme
 
