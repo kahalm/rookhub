@@ -52,9 +52,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// („Seriesjakkens/Eliteseriens N. helg") ihre ueber das Land verteilten Spielstaetten. Ein Pin
 /// darauf waere frei erfunden.</para>
 /// </summary>
-public class SjakkDirectorySweepService
+public class SjakkDirectorySweepService : IDirectorySourceAdapter<SjakkDirectorySweepService.CrawlerSjakkEvent>
 {
-    private const int SaveEvery = 25;
 
     /// <summary>
     /// Pause zwischen zwei Detailabrufen. Die robots.txt der Quelle nennt keine — der Crawler
@@ -67,6 +66,9 @@ public class SjakkDirectorySweepService
     private readonly GeocodingService _geocoding;
     private readonly ILogger<SjakkDirectorySweepService> _log;
     private readonly int _detailBatchSize;
+
+    /// <summary>Wie viele Detailseiten der LAUFENDE Durchgang noch holen darf (je <see cref="RunAsync"/> neu gesetzt).</summary>
+    private int _detailBudget;
 
     public SjakkDirectorySweepService(AppDbContext db, IHttpClientFactory httpClientFactory,
         GeocodingService geocoding, IConfiguration configuration,
@@ -87,113 +89,61 @@ public class SjakkDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = PublicIdOf(row.EventId);
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(
-                    _db, Federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.NorwegianChessFederation, row.EventId, null), ct);
-
-                // Hat die Turniersuche dieselbe Veranstaltung inzwischen? Dann gehoert ihr der
-                // Eintrag — hier wird nur der Herkunftsvermerk gesetzt. Heute der seltene Fall
-                // (chess-results fuehrt fuer NOR nichts), aber genau dafuer ist er da.
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.NorwegianChessFederation, row.EventId, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("sjakk.no: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = Federation;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-
-                // Der Detailabruf lohnt nur einmal je Turnier. „Schon geholt" steht in der
-                // Adresse des Herkunftsvermerks — vermerkt wird sie erst, wenn die Seite da war.
-                var hasDetail = HasDetail(own, row.EventId);
-                if (!hasDetail && budget > 0)
-                {
-                    budget--;
-                    if (await LoadDetailAsync(own, row.EventId, ct))
-                    {
-                        updated++;
-                        hasDetail = true;
-                    }
-                    await Task.Delay(DetailDelay, ct);
-                }
-
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.NorwegianChessFederation, row.EventId,
-                    hasDetail ? row.Url : null, now, ct);
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "sjakk.no: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "sjakk.no-Aktivitaeten: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.NorwegianChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        _detailBudget = Math.Max(0, detailLimit ?? _detailBatchSize);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerSjakkEvent>.Kind => DirectorySourceKind.NorwegianChessFederation;
+    string IDirectorySourceAdapter<CrawlerSjakkEvent>.LogName => "sjakk.no";
+    string? IDirectorySourceAdapter<CrawlerSjakkEvent>.SourceKey(CrawlerSjakkEvent row) => row.EventId.Length == 0 ? null : row.EventId;
+    DateOnly? IDirectorySourceAdapter<CrawlerSjakkEvent>.Start(CrawlerSjakkEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerSjakkEvent>.Name(CrawlerSjakkEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerSjakkEvent>.PublicId(CrawlerSjakkEvent row) => PublicIdOf(row.EventId);
+    string? IDirectorySourceAdapter<CrawlerSjakkEvent>.Federation(CrawlerSjakkEvent row) => Federation;
+    string? IDirectorySourceAdapter<CrawlerSjakkEvent>.MatchPlace(CrawlerSjakkEvent row) => null;
+    string? IDirectorySourceAdapter<CrawlerSjakkEvent>.Url(CrawlerSjakkEvent row) => row.Url;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerSjakkEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerSjakkEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = Federation;
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+
+        // Der Detailabruf lohnt nur einmal je Turnier. „Schon geholt" steht in der
+        // Adresse des Herkunftsvermerks — vermerkt wird sie erst, wenn die Seite da war.
+        // „Aktualisiert" heisst hier: die Detailseite war lesbar.
+        var loaded = false;
+        var hasDetail = HasDetail(own, row.EventId);
+        if (!hasDetail && _detailBudget > 0)
+        {
+            _detailBudget--;
+            if (await LoadDetailAsync(own, row.EventId, ct))
+            {
+                loaded = true;
+                hasDetail = true;
+            }
+            await Task.Delay(DetailDelay, ct);
+        }
+
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.NorwegianChessFederation, row.EventId,
+            hasDetail ? row.Url : null, now, ct);
+        return loaded;
+    }
+
+    void IDirectorySourceAdapter<CrawlerSjakkEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "sjakk.no-Aktivitaeten: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
 
     /// <summary>
     /// Ob die Detailseite dieses Turniers schon gelesen wurde — erkennbar an der Adresse im
