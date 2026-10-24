@@ -5,70 +5,6 @@ using RookHub.Api.Services.Library;
 
 namespace RookHub.Api.Services.Courses;
 
-/// <summary>Ein uebersetzbarer Text einer Kurs-Linie: Stelle (<see cref="CourseTextSlots"/>), der
-/// normalisierte Text und sein Fingerabdruck (<see cref="CourseTextHash"/>).</summary>
-public sealed record CourseLineSlot(int Slot, string Text, string Hash);
-
-/// <summary>Was bei EINER Linie passiert ist.</summary>
-public enum LineTranslationStatus
-{
-    /// <summary>Alles schon da und aktuell — kein Modellaufruf, nichts geschrieben.</summary>
-    NothingToDo,
-    /// <summary>Etwas geschrieben (uebersetzt, kopiert oder veraltete Reste entfernt).</summary>
-    Written,
-    /// <summary>Modell abgebrochen/verworfen oder Schreibkonflikt — fuer diese Linie wurde NICHTS geschrieben.</summary>
-    Failed,
-    NotFound,
-    /// <summary>Es waere ein Modellaufruf noetig, aber kein Text-Modell konfiguriert.</summary>
-    NotConfigured,
-    /// <summary>Zielsprache = Quellsprache des Kurses.</summary>
-    SameLanguage,
-}
-
-/// <param name="Kept">Stellen, deren Uebersetzung aktuell war.</param>
-/// <param name="Reused">Stellen, deren Uebersetzung per Fingerabdruck kopiert wurde (anderer Kurs, andere
-/// Stelle, Kapitel-Woerterbuch).</param>
-/// <param name="Translated">Stellen, die ans Modell gingen (gleiche Texte zaehlen je Stelle).</param>
-/// <param name="Removed">Uebersetzungen, deren Vorlage verschwunden ist.</param>
-/// <param name="Pending">Kapitelname offen, weil das Kapitel-Woerterbuch ihn nicht hatte.</param>
-/// <param name="Deferred">Stellen, die in diesem Durchgang einer ANDEREN Linie gehoerten (Phase 1 des Kurs-Laufs) und
-/// deshalb offen blieben — sie kommen in Phase 2 per Wiederverwendung.</param>
-public sealed record LineTranslationResult(LineTranslationStatus Status, int Kept = 0, int Reused = 0,
-    int Translated = 0, int Removed = 0, int Pending = 0, int Deferred = 0)
-{
-    /// <summary>Stellen, die nach diesem Aufruf noch offen sind.</summary>
-    public int Remaining => Pending + Deferred;
-}
-
-/// <summary>Eine Linie mit offener Arbeit und den Fingerabdruecken ihrer offenen Stellen (ohne Kapitel — das kommt
-/// aus dem Kapitel-Woerterbuch des Laufs).</summary>
-internal sealed record OpenLine(int Id, IReadOnlyList<string> OpenHashes);
-
-/// <summary>Zwischenstand eines Kurs-Laufs — zu Beginn und alle <see cref="CourseTranslationService.ProgressEvery"/> Linien
-/// (der Auftrag schreibt ihn mit, <see cref="CourseTranslationJobService.RunAsync"/>).</summary>
-public sealed record CourseTranslationProgress(int LinesTotal, int LinesDone, int LinesFailed);
-
-public enum CourseTranslationRunStatus
-{
-    /// <summary>Gelaufen (auch wenn einzelne Linien scheiterten — siehe <see cref="CourseTranslationRun.LinesFailed"/>).</summary>
-    Done,
-    /// <summary>Keine offene Arbeit — kein Modellaufruf.</summary>
-    NothingToDo,
-    SameLanguage,
-    NotConfigured,
-    NotFound,
-    InvalidLanguage,
-    /// <summary>Das Modell antwortete nicht (<see cref="IClaudeJsonClient.IsUnreachable"/>) — der Lauf hat angehalten,
-    /// statt Linien als gescheitert zu verbuchen. Fertiges bleibt, der naechste Lauf macht weiter.</summary>
-    Unreachable,
-}
-
-/// <param name="LinesTotal">Linien mit offener Arbeit zu Beginn des Laufs.</param>
-/// <param name="ChaptersMissing">Kapitelnamen, fuer die es nach dem Lauf keine Uebersetzung gibt
-/// (Kapitel-Fuhre gescheitert) — die Linien behalten dort einen offenen Kapitel-Slot.</param>
-public sealed record CourseTranslationRun(CourseTranslationRunStatus Status, string? SourceLanguage,
-    int LinesTotal = 0, int LinesDone = 0, int LinesFailed = 0, int ChaptersTotal = 0, int ChaptersMissing = 0);
-
 /// <summary>
 /// Uebersetzt die Texte eines KURSES (Zug-Kommentare, Linien-Einleitung, Linien-Titel, Kapitelnamen) in
 /// eine weitere Sprache — je Linie ein <see cref="CommentSet"/> mit <see cref="CommentSet.BookPuzzleId"/>.
@@ -239,52 +175,117 @@ public class CourseTranslationService
         IReadOnlyDictionary<string, string>? chapterByHash, CancellationToken ct,
         IReadOnlySet<string>? ownedHashes = null)
     {
+        // Schritt 1: Linie und vorhandenen Satz laden, offene Stellen und Reste bestimmen.
+        var work = await LoadLineWorkAsync(lineId, target, ct);
+        if (work is null) return new LineTranslationResult(LineTranslationStatus.NotFound);
+        var kept = work.Slots.Count - work.Open.Count;
+        if (work.Open.Count == 0 && work.Orphans.Count == 0)
+            return new LineTranslationResult(LineTranslationStatus.NothingToDo, Kept: kept);
+
+        // Schritt 2: nachschlagen — Kapitel-Woerterbuch, Besitz in Phase 1, Wiederverwendung per Fingerabdruck.
+        var assigned = new Dictionary<int, string>();
+        var open = work.Open;
+        var (reused, pending) = TakeChapterFromDictionary(open, chapterByHash, assigned);
+        var deferred = 0;
+        if (ownedHashes is not null) (open, deferred) = SplitOwned(open, ownedHashes);
+        var (reusedTexts, toModel) = await AssignReusableAsync(open, target, assigned, ct);
+        reused += reusedTexts;
+
+        // Schritt 3: der Rest geht ans Modell.
+        var translated = 0;
+        if (toModel.Count > 0)
+        {
+            if (!_translator.IsAvailable) return new LineTranslationResult(LineTranslationStatus.NotConfigured);
+            var modelCount = await TranslateGroupsAsync(toModel, source, target, lineId, assigned, ct);
+            if (modelCount is null) return new LineTranslationResult(LineTranslationStatus.Failed);
+            translated = modelCount.Value;
+        }
+
+        // Abgebrochen (Sperrzeit, Dienst stoppt)? Dann wird nichts mehr geschrieben — der naechste Lauf
+        // ueberspringt ohnehin alles, was schon fertig ist.
+        ct.ThrowIfCancellationRequested();
+
+        // Nichts zu schreiben (etwa nur ein Kapitelname offen, den das Woerterbuch des Laufs nicht hat).
+        if (assigned.Count == 0 && work.Orphans.Count == 0)
+            return new LineTranslationResult(LineTranslationStatus.NothingToDo, kept, reused, translated, 0, pending,
+                deferred);
+
+        // Schritt 4: schreiben.
+        if (!await WriteLineAsync(work, lineId, target, source, assigned, translated, ct))
+            return new LineTranslationResult(LineTranslationStatus.Failed);
+        return new LineTranslationResult(LineTranslationStatus.Written, kept, reused, translated, work.Orphans.Count,
+            pending, deferred);
+    }
+
+    /// <summary>Eine Linie im Uebersetzungs-Kern: ihre Quell-Stellen, der vorhandene Satz in der Zielsprache
+    /// (getrackt) mit seinen Texten je Stelle, die offenen Stellen (fehlend/veraltet) und die Reste
+    /// verschwundener Vorlagen.</summary>
+    internal sealed record LineWork(Dictionary<int, CourseLineSlot> Slots, CommentSet? Set,
+        Dictionary<int, CommentText> Existing, List<CourseLineSlot> Open, List<CommentText> Orphans);
+
+    /// <summary>Schritt 1: Linie (nur die Textfelder, ohne <c>Book.Source</c>) und vorhandenen Satz laden.
+    /// <c>null</c> = die Linie gibt es nicht.</summary>
+    private async Task<LineWork?> LoadLineWorkAsync(int lineId, string target, CancellationToken ct)
+    {
         var line = await _db.BookPuzzles.AsNoTracking()
             .Where(bp => bp.Id == lineId)
             .Select(bp => new { bp.Title, bp.Chapter, bp.Comment, bp.MoveComments })
             .FirstOrDefaultAsync(ct);
-        if (line is null) return new LineTranslationResult(LineTranslationStatus.NotFound);
+        if (line is null) return null;
         var slots = SourceSlots(line.Title, line.Chapter, line.Comment, line.MoveComments);
 
         var set = await _db.CommentSets.Include(s => s.Texts)
             .FirstOrDefaultAsync(s => s.BookPuzzleId == lineId && s.Language == target, ct);
         var existing = set?.Texts.GroupBy(t => t.Ply).ToDictionary(g => g.Key, g => g.First())
                        ?? new Dictionary<int, CommentText>();
+        var (open, orphans) = OpenSlots(slots, existing);
+        return new LineWork(slots, set, existing, open, orphans);
+    }
 
+    /// <summary>Offen = Stellen ohne Uebersetzung oder mit veraltetem Fingerabdruck; Reste = vorhandene Texte,
+    /// deren Stelle es in der Quelle nicht mehr gibt. Rein.</summary>
+    internal static (List<CourseLineSlot> Open, List<CommentText> Orphans) OpenSlots(
+        IReadOnlyDictionary<int, CourseLineSlot> slots, IReadOnlyDictionary<int, CommentText> existing)
+    {
         var open = slots.Values
             .Where(s => !(existing.TryGetValue(s.Slot, out var have) && have.SourceHash == s.Hash))
             .ToList();
         var orphans = existing.Values.Where(t => !slots.ContainsKey(t.Ply)).ToList();
-        var kept = slots.Count - open.Count;
-        if (open.Count == 0 && orphans.Count == 0)
-            return new LineTranslationResult(LineTranslationStatus.NothingToDo, Kept: kept);
+        return (open, orphans);
+    }
 
-        var assigned = new Dictionary<int, string>();
-        int reused = 0, translated = 0, pending = 0, deferred = 0;
+    /// <summary>
+    /// Kapitelname aus dem Woerterbuch des Laufs — dort ist er fuer den ganzen Kurs EINMAL uebersetzt. Nimmt
+    /// die offene Kapitel-Stelle aus <paramref name="open"/> heraus (nur mit Woerterbuch) und traegt den Treffer
+    /// in <paramref name="assigned"/> ein; fehlt er im Woerterbuch, bleibt sie offen (<c>Pending</c>). Rein.
+    /// </summary>
+    internal static (int Reused, int Pending) TakeChapterFromDictionary(List<CourseLineSlot> open,
+        IReadOnlyDictionary<string, string>? chapterByHash, Dictionary<int, string> assigned)
+    {
+        if (chapterByHash is null || open.FirstOrDefault(s => s.Slot == CourseTextSlots.Chapter) is not { } chapter)
+            return (0, 0);
+        open.Remove(chapter);
+        if (!chapterByHash.TryGetValue(chapter.Hash, out var label)) return (0, 1);
+        assigned[chapter.Slot] = label;
+        return (1, 0);
+    }
 
-        // (1) Kapitelname aus dem Woerterbuch des Laufs — dort ist er fuer den ganzen Kurs EINMAL uebersetzt.
-        if (chapterByHash is not null && open.FirstOrDefault(s => s.Slot == CourseTextSlots.Chapter) is { } chapter)
-        {
-            open.Remove(chapter);
-            if (chapterByHash.TryGetValue(chapter.Hash, out var label))
-            {
-                assigned[chapter.Slot] = label;
-                reused++;
-            }
-            else pending++;
-        }
+    /// <summary>
+    /// Phase 1 des Kurs-Laufs: was einer anderen Linie gehoert, bleibt fuer Phase 2 offen — so geht jeder
+    /// verschiedene Text je Lauf genau EINMAL ans Modell, auch wenn Nachbarlinien gleichzeitig laufen. Rein.
+    /// </summary>
+    internal static (List<CourseLineSlot> Open, int Deferred) SplitOwned(List<CourseLineSlot> open,
+        IReadOnlySet<string> ownedHashes)
+        => (open.Where(s => ownedHashes.Contains(s.Hash)).ToList(), open.Count(s => !ownedHashes.Contains(s.Hash)));
 
-        // Phase 1 des Kurs-Laufs: was einer anderen Linie gehoert, bleibt fuer Phase 2 offen — so geht jeder
-        // verschiedene Text je Lauf genau EINMAL ans Modell, auch wenn Nachbarlinien gleichzeitig laufen.
-        if (ownedHashes is not null)
-        {
-            deferred = open.Count(s => !ownedHashes.Contains(s.Hash));
-            open = open.Where(s => ownedHashes.Contains(s.Hash)).ToList();
-        }
-
-        // (2) Gleiche Texte zusammenfassen, (3) Vorhandenes per Fingerabdruck wiederverwenden.
+    /// <summary>Gleiche Texte zusammenfassen und Vorhandenes per Fingerabdruck wiederverwenden. Gibt die Zahl der
+    /// so belegten Stellen und die Gruppen zurueck, die ans Modell muessen.</summary>
+    private async Task<(int Reused, List<IGrouping<string, CourseLineSlot>> ToModel)> AssignReusableAsync(
+        List<CourseLineSlot> open, string target, Dictionary<int, string> assigned, CancellationToken ct)
+    {
         var groups = open.GroupBy(s => s.Hash).ToList();
         var reusable = await ReusableAsync(groups.Select(g => g.Key).ToList(), target, ct);
+        var reused = 0;
         var toModel = new List<IGrouping<string, CourseLineSlot>>();
         foreach (var g in groups)
         {
@@ -295,32 +296,34 @@ public class CourseTranslationService
             }
             else toModel.Add(g);
         }
+        return (reused, toModel);
+    }
 
-        // (4) Der Rest geht ans Modell — je gleichem Text EIN Eintrag.
-        if (toModel.Count > 0)
+    /// <summary>Schritt 3: je gleichem Text EIN Eintrag ans Modell; die Antwort gilt fuer alle Stellen der Gruppe.
+    /// <c>null</c> = das Modell hat abgebrochen/verworfen.</summary>
+    private async Task<int?> TranslateGroupsAsync(List<IGrouping<string, CourseLineSlot>> toModel, string source,
+        string target, int lineId, Dictionary<int, string> assigned, CancellationToken ct)
+    {
+        var items = toModel.Select(g => (Key: g.Max(s => s.Slot), g.First().Text)).OrderBy(i => i.Key).ToList();
+        var result = await _translator.TranslateAsync(items, source, target, TranslationSubject.CourseLine,
+            lineId, ct);
+        if (result is null) return null;
+        var translated = 0;
+        foreach (var g in toModel)
         {
-            if (!_translator.IsAvailable) return new LineTranslationResult(LineTranslationStatus.NotConfigured);
-            var items = toModel.Select(g => (Key: g.Max(s => s.Slot), g.First().Text)).OrderBy(i => i.Key).ToList();
-            var result = await _translator.TranslateAsync(items, source, target, TranslationSubject.CourseLine,
-                lineId, ct);
-            if (result is null) return new LineTranslationResult(LineTranslationStatus.Failed);
-            foreach (var g in toModel)
-            {
-                var text = result[g.Max(s => s.Slot)];
-                foreach (var s in g) assigned[s.Slot] = text;
-                translated += g.Count();
-            }
+            var text = result[g.Max(s => s.Slot)];
+            foreach (var s in g) assigned[s.Slot] = text;
+            translated += g.Count();
         }
+        return translated;
+    }
 
-        // Abgebrochen (Sperrzeit, Dienst stoppt)? Dann wird nichts mehr geschrieben — der naechste Lauf
-        // ueberspringt ohnehin alles, was schon fertig ist.
-        ct.ThrowIfCancellationRequested();
-
-        // Nichts zu schreiben (etwa nur ein Kapitelname offen, den das Woerterbuch des Laufs nicht hat).
-        if (assigned.Count == 0 && orphans.Count == 0)
-            return new LineTranslationResult(LineTranslationStatus.NothingToDo, kept, reused, translated, 0, pending,
-                deferred);
-
+    /// <summary>Schritt 4: Satz anlegen bzw. Texte aktualisieren, Reste entfernen, speichern. <c>false</c> =
+    /// Schreibkonflikt, nichts geschrieben.</summary>
+    private async Task<bool> WriteLineAsync(LineWork work, int lineId, string target, string source,
+        Dictionary<int, string> assigned, int translated, CancellationToken ct)
+    {
+        var (slots, set) = (work.Slots, work.Set);
         var now = DateTime.UtcNow;
         if (set is null)
         {
@@ -339,32 +342,7 @@ public class CourseTranslationService
                 set.Texts.Add(new CommentText { Ply = slot, Text = text, SourceHash = slots[slot].Hash });
             _db.CommentSets.Add(set);
         }
-        else
-        {
-            foreach (var (slot, text) in assigned)
-            {
-                if (existing.TryGetValue(slot, out var row))
-                {
-                    row.Text = text;
-                    row.SourceHash = slots[slot].Hash;
-                }
-                else
-                    _db.CommentTexts.Add(new CommentText
-                    {
-                        CommentSetId = set.Id, Ply = slot, Text = text, SourceHash = slots[slot].Hash,
-                    });
-            }
-            // Vorlage verschwunden → Uebersetzung weg. Bleibt vom Satz nichts uebrig, geht er ganz.
-            _db.CommentTexts.RemoveRange(orphans);
-            var remaining = existing.Count - orphans.Count + assigned.Keys.Count(k => !existing.ContainsKey(k));
-            if (remaining == 0) _db.CommentSets.Remove(set);
-            else
-            {
-                set.UpdatedAt = now;
-                set.TranslatedFrom = source;
-                if (translated > 0) set.Model = ModelName;
-            }
-        }
+        else UpdateSet(set, work, source, assigned, translated, now);
 
         // Ausdruecklich: laeuft der Kontext ohne automatische Aenderungserkennung, saehe SaveChanges die
         // geaenderten Texte sonst nicht.
@@ -372,16 +350,46 @@ public class CourseTranslationService
         try
         {
             await _db.SaveChangesAsync(ct);
+            return true;
         }
         catch (DbUpdateException ex)
         {
             // Zwei Laeufe auf derselben Linie (eindeutiger Index (BookPuzzleId, Language)) — der Verlierer
             // schreibt nichts; der naechste Lauf sieht den Satz des Gewinners.
             _logger.LogWarning(ex, "Kurs-Linie {Id} nach {Lang}: Schreibkonflikt, nichts geschrieben.", lineId, target);
-            return new LineTranslationResult(LineTranslationStatus.Failed);
+            return false;
         }
-        return new LineTranslationResult(LineTranslationStatus.Written, kept, reused, translated, orphans.Count, pending,
-            deferred);
+    }
+
+    /// <summary>Vorhandenen Satz nachziehen: Texte aktualisieren/ergaenzen, Reste entfernen; bleibt nichts uebrig,
+    /// geht der Satz ganz. Nur im Change-Tracker — gespeichert wird in <see cref="WriteLineAsync"/>.</summary>
+    private void UpdateSet(CommentSet set, LineWork work, string source, Dictionary<int, string> assigned,
+        int translated, DateTime now)
+    {
+        var (slots, existing, orphans) = (work.Slots, work.Existing, work.Orphans);
+        foreach (var (slot, text) in assigned)
+        {
+            if (existing.TryGetValue(slot, out var row))
+            {
+                row.Text = text;
+                row.SourceHash = slots[slot].Hash;
+            }
+            else
+                _db.CommentTexts.Add(new CommentText
+                {
+                    CommentSetId = set.Id, Ply = slot, Text = text, SourceHash = slots[slot].Hash,
+                });
+        }
+        // Vorlage verschwunden → Uebersetzung weg. Bleibt vom Satz nichts uebrig, geht er ganz.
+        _db.CommentTexts.RemoveRange(orphans);
+        var remaining = existing.Count - orphans.Count + assigned.Keys.Count(k => !existing.ContainsKey(k));
+        if (remaining == 0) _db.CommentSets.Remove(set);
+        else
+        {
+            set.UpdatedAt = now;
+            set.TranslatedFrom = source;
+            if (translated > 0) set.Model = ModelName;
+        }
     }
 
     /// <summary>
@@ -479,36 +487,9 @@ public class CourseTranslationService
         // Gleich zu Beginn ein Zwischenstand: der Auftrag nennt die Zahl der offenen Linien, bevor die erste fertig ist.
         await tally.ReportAsync(ct);
 
-        // Phase 1: jeder offene Fingerabdruck gehoert der ERSTEN Linie (Kursreihenfolge), in der er offen ist.
-        var owners = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var line in open)
-            foreach (var hash in line.OpenHashes)
-                owners.TryAdd(hash, line.Id);
-        var phase1 = open
-            .Select(l => (l.Id, Owned: (IReadOnlySet<string>)l.OpenHashes.Where(h => owners[h] == l.Id)
-                .ToHashSet(StringComparer.Ordinal)))
-            .Where(x => x.Owned.Count > 0)
-            .ToList();
         try
         {
-            await Parallel.ForEachAsync(phase1, options, async (item, token) =>
-            {
-                var result = await RunLineAsync(item.Id, to, source, chapters, item.Owned, token);
-                if (await ModelGoneAsync(result)) return;
-                // Fertig ist die Linie nur, wenn nichts mehr offen ist; gescheiterte und halbe gehen in Phase 2.
-                if (!IsFailure(result) && result.Remaining == 0) await tally.CountAsync(item.Id, ok: true, token);
-            });
-
-            // Phase 2: was noch offen ist — nach Phase 1 fast nur noch Wiederverwendung.
-            var initial = open.Select(l => l.Id).ToHashSet();
-            var (stillOpen, _) = await OpenWorkAsync(bookId, to, reach.Token);
-            var phase2 = stillOpen.Select(l => l.Id).Where(id => initial.Contains(id) && !tally.IsCounted(id)).ToList();
-            await Parallel.ForEachAsync(phase2, options, async (lineId, token) =>
-            {
-                var result = await RunLineAsync(lineId, to, source, chapters, null, token);
-                if (await ModelGoneAsync(result)) return;
-                await tally.CountAsync(lineId, ok: !IsFailure(result), token);
-            });
+            await RunPhasesAsync(bookId, to, source, open, chapters, options, tally, ModelGoneAsync);
         }
         catch (OperationCanceledException) when (unreachable && !ct.IsCancellationRequested)
         {
@@ -532,6 +513,51 @@ public class CourseTranslationService
             bookId, to, tally.Done, tally.Failed);
         return new CourseTranslationRun(CourseTranslationRunStatus.Done, source, open.Count, tally.Done, tally.Failed,
             neededChapters.Count, chaptersMissing);
+    }
+
+    /// <summary>
+    /// Phase 1: jeder offene Fingerabdruck gehoert der ERSTEN Linie (Kursreihenfolge), in der er offen ist; je
+    /// Linie die Fingerabdruecke, die ihr gehoeren (Linien ohne eigenen fallen weg). Rein.
+    /// </summary>
+    internal static List<(int Id, IReadOnlySet<string> Owned)> PlanPhase1(IReadOnlyList<OpenLine> open)
+    {
+        var owners = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var line in open)
+            foreach (var hash in line.OpenHashes)
+                owners.TryAdd(hash, line.Id);
+        return open
+            .Select(l => (l.Id, Owned: (IReadOnlySet<string>)l.OpenHashes.Where(h => owners[h] == l.Id)
+                .ToHashSet(StringComparer.Ordinal)))
+            .Where(x => x.Owned.Count > 0)
+            .ToList();
+    }
+
+    /// <summary>Die beiden Phasen eines Kurs-Laufs (siehe <see cref="TranslateCourseAsync"/>), parallel nach
+    /// <paramref name="options"/>. <paramref name="modelGoneAsync"/> meldet, ob das Modell weg ist (dann bricht er den
+    /// Lauf ueber das Token der Optionen ab und die Linie zaehlt nicht).</summary>
+    private async Task RunPhasesAsync(int bookId, string to, string source, List<OpenLine> open,
+        IReadOnlyDictionary<string, string> chapters, ParallelOptions options, RunTally tally,
+        Func<LineTranslationResult, Task<bool>> modelGoneAsync)
+    {
+        var phase1 = PlanPhase1(open);
+        await Parallel.ForEachAsync(phase1, options, async (item, token) =>
+        {
+            var result = await RunLineAsync(item.Id, to, source, chapters, item.Owned, token);
+            if (await modelGoneAsync(result)) return;
+            // Fertig ist die Linie nur, wenn nichts mehr offen ist; gescheiterte und halbe gehen in Phase 2.
+            if (!IsFailure(result) && result.Remaining == 0) await tally.CountAsync(item.Id, ok: true, token);
+        });
+
+        // Phase 2: was noch offen ist — nach Phase 1 fast nur noch Wiederverwendung.
+        var initial = open.Select(l => l.Id).ToHashSet();
+        var (stillOpen, _) = await OpenWorkAsync(bookId, to, options.CancellationToken);
+        var phase2 = stillOpen.Select(l => l.Id).Where(id => initial.Contains(id) && !tally.IsCounted(id)).ToList();
+        await Parallel.ForEachAsync(phase2, options, async (lineId, token) =>
+        {
+            var result = await RunLineAsync(lineId, to, source, chapters, null, token);
+            if (await modelGoneAsync(result)) return;
+            await tally.CountAsync(lineId, ok: !IsFailure(result), token);
+        });
     }
 
     private static bool IsFailure(LineTranslationResult r)
