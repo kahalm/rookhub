@@ -28,25 +28,10 @@ public class ChessableImportService : ICourseReimporter
 {
     public const int MaxAttempts = 3;
 
-    // Poll-Tuning (intern überschreibbar für Tests). piratechess holt bewusst LANGSAM
-    // (Inter-Request-Delay 2–5 s + Linien-Retries + VPN-Rotation) → ein großer Kurs dauert
-    // leicht >15 min. Der Abruf darf daher NICHT an einem festen Zeit-Limit scheitern, solange
-    // er Fortschritt macht. Nur echter Stillstand (FetchStallPolls Polls ohne Fortschritt) bzw.
-    // der großzügige Absolut-Backstop beenden das Polling.
-    internal int PollDelayMs = 2500;
-    internal int FetchStallPolls = 240;   // aufeinanderfolgende Polls OHNE Fortschritt → Stillstand (≈10 min)
-    internal int FetchMaxPolls = 2160;    // Absolut-Backstop (≈90 min) gegen echte Endlosschleifen
-
-    /// <summary>Prozessweites Gate für die DOWNLOAD-Lane: höchstens EIN gleichzeitiger Download-Import.
-    /// Die Lane wird von zwei unabhängigen Treibern bedient — dem einzelnen <c>BackgroundTaskWorker</c>
-    /// (Queue-Tickets) UND dem <see cref="ChessableImportWatchdogService"/> (ruft <see cref="RunNextAsync"/>
-    /// an der bounded Queue VORBEI direkt auf). Der atomare Claim (<see cref="TryClaimAsync"/>) verhindert
-    /// nur, dass zwei Treiber DENSELBEN Job greifen — NICHT, dass jeder einen ANDEREN wartenden Job claimt
-    /// und parallel herunterlädt (beobachtet 2026-06-29: Watchdog-Drive + Queue-Worker zogen zwei Kurse
-    /// gleichzeitig). Dieses Gate erzwingt die „seriell"-Annahme der Download-Lane prozessweit. Statisch,
-    /// weil <see cref="ChessableImportService"/> scoped ist (eine Instanz je Scope/Request).
-    /// Die Fast-Lane (netzfrei, eigener serieller Loop) bleibt bewusst ungated und läuft NEBENLÄUFIG.</summary>
-    private static readonly SemaphoreSlim _downloadLaneGate = new(1, 1);
+    // Poll-Tuning der Abruf-Lane (intern überschreibbar für Tests), siehe ChessableCourseFetch.
+    internal int PollDelayMs { get => _courseFetch.PollDelayMs; set => _courseFetch.PollDelayMs = value; }
+    internal int FetchStallPolls { get => _courseFetch.FetchStallPolls; set => _courseFetch.FetchStallPolls = value; }
+    internal int FetchMaxPolls { get => _courseFetch.FetchMaxPolls; set => _courseFetch.FetchMaxPolls = value; }
 
     /// <summary>Siehe <see cref="ChessableImportProgress.IsDrivenLocally"/> (prozessweite Treiber-Liste).</summary>
     internal static bool IsDrivenLocally(int importId) => ChessableImportProgress.IsDrivenLocally(importId);
@@ -57,14 +42,15 @@ public class ChessableImportService : ICourseReimporter
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly ChessableProxyService _proxy;
-    private readonly IBackgroundTaskQueue _taskQueue;
-    private readonly ChessableRateLimiter _rateLimiter;
     private readonly ILogger<ChessableImportService> _logger;
 
     // Teildienste (Zerlegung Z3): je Fassaden-Instanz gebaut, teilen deren scoped DbContext.
     private readonly ChessableImportOutcome _outcome;
     private readonly ChessableTargetWriter _writer;
     private readonly ChessableLiveAppend _liveAppend;
+    private readonly ChessableReimportQueue _reimportQueue;
+    private readonly ChessableCourseFetch _courseFetch;
+    private readonly ChessableFetchLane _fetchLane;
 
     public ChessableImportService(
         AppDbContext db,
@@ -81,33 +67,15 @@ public class ChessableImportService : ICourseReimporter
         _db = db;
         _encryption = encryption;
         _proxy = proxy;
-        _taskQueue = taskQueue;
-        _rateLimiter = rateLimiter;
         _logger = logger;
         _outcome = new ChessableImportOutcome(db, breaker, notifications, logger);
         _writer = new ChessableTargetWriter(db, repertoires, pgnImport);
         _liveAppend = new ChessableLiveAppend(db, pgnImport, repertoires, proxy, logger);
+        _reimportQueue = new ChessableReimportQueue(db, proxy, encryption, taskQueue);
+        _courseFetch = new ChessableCourseFetch(db, encryption, proxy, rateLimiter, _outcome, _reimportQueue, logger);
+        _fetchLane = new ChessableFetchLane(db, proxy, _courseFetch, _writer, _outcome, logger);
     }
 
-    /// <summary>Reiht ein Ticket ein, das den fair als Nächstes dran befindlichen wartenden Import
-    /// verarbeitet (nicht einen festen). So bestimmt die faire Reihenfolge — nicht die FIFO-Position
-    /// in der geteilten Background-Queue —, welcher Import als Nächstes läuft.</summary>
-    private async Task EnqueueNextAsync()
-    {
-        await _taskQueue.EnqueueAsync(async (sp, ct) =>
-        {
-            var svc = sp.GetRequiredService<ChessableImportService>();
-            await svc.RunNextAsync(ct);
-        });
-    }
-
-    /// <summary>
-    /// Reiht einen Re-Import eines bereits importierten Chessable-Kurses ein (für die Neu-Aufbereitung
-    /// veralteter Bücher OHNE gespeichertes Roh-PGN). Holt den Kurs erneut (oder aus dem Rohdaten-Cache)
-    /// und lässt ihn durch die aktuelle Pipeline laufen — <see cref="ImportFileAsync"/> aktualisiert
-    /// veraltete Bücher dabei in-place. Liefert die Import-Id, oder <c>null</c>, wenn für
-    /// <paramref name="ownerUserId"/> kein Chessable-Bearer hinterlegt ist (kein Re-Fetch möglich).
-    /// </summary>
     /// <summary>Alle im piratechess-DB-Cache vorliegenden Kurs-Bids (Batch, 1 Aufruf) — für den
     /// Massen-Reprocess, damit nicht je Kurs der teure Einzel-Cache-Check laufen muss.</summary>
     public Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default)
@@ -131,58 +99,15 @@ public class ChessableImportService : ICourseReimporter
         return ChessableReviewLineService.OwnedBids(json).Contains(bid);
     }
 
-    public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
-    {
-        var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == ownerUserId, ct);
-        // Cache-Status vorab (Batch-Wert bevorzugt) — bestimmt auch, ob ein Owner OHNE Bearer bedient
-        // werden kann: ein voll-gecachter Kurs kommt aus dem piratechess-Rohdaten-Cache, ganz ohne
-        // Chessable-Kontakt/Bearer.
-        var fullyCached = knownCached ?? await _proxy.IsCourseCachedAsync(bid, ct);
-        // Kein Bearer des Owners: nur zulässig, wenn der Kurs gecacht ist (Re-Fetch aus dem Cache
-        // ohne Bearer) UND der Aufrufer vertrauenswürdig ist (Admin-Massen-Reprocess). Sonst kein
-        // Weg, den Kurs zu holen → null (der Reprocess markiert das Repertoire dann nur als aktuell).
-        if (cred is null && !(trustOwnership && fullyCached)) return null;
-        // SICHERHEIT: nur Kurse re-fetchen, die WIRKLICH in der Chessable-Bibliothek des Owners liegen.
-        // Sonst ließe sich der Eigentums-Check von StartImport umgehen — ein User kann ein eigenes
-        // Repertoire mit beliebigem ChessableCourseId bzw. Dateinamen `chessable-{bid}.pgn` anlegen
-        // (ImportVersion 0 = sofort „stale") und es per /reprocess re-fetchen; für gecachte Kurse liefert
-        // piratechess den Inhalt ohne Eigentumsprüfung. Der Check hier schließt diese zweite Tür.
-        // Ausnahme: trustOwnership (Admin-Massen-Reprocess) — Chessables getHomeData listet nur einen Teil
-        // der Bibliothek, daher würde der Check eigene, längst importierte Kurse fälschlich abweisen; Admins
-        // dürfen ohnehin jeden Kurs holen.
-        // Dieselbe Prüfung samt Drossel wie StartImport (CourseListRefreshCooldown) — ohne sie holte „Aktualisieren"
-        // über N Repertoires mit unbekannter bid die Kursliste N-mal live von Chessable (A3-014).
-        if (!trustOwnership && !await ChessableImportQueueService.OwnsCourseAsync(_db, _proxy, _encryption, cred!, bid, ct)) return null;
-        // Dedup: läuft/pausiert für diesen (Owner, bid) bereits ein Import, KEINEN zweiten anlegen.
-        // Verhindert, dass ein erneuter „Update all"-Klick (oder ein Resume/Retry) denselben Kurs ein
-        // zweites Mal komplett von Chessable holt — genau die beobachtete N-fache Flut (bid 116242 4×).
-        if (await _db.ChessableImports.AnyAsync(
-                x => x.UserId == ownerUserId && x.Bid == bid && (x.Status == ChessableImportStatus.Running || x.Status == ChessableImportStatus.Paused), ct))
-            return null;
-        var queueRound = await _db.ChessableImports.CountAsync(x => x.UserId == ownerUserId && x.Status == ChessableImportStatus.Running, ct);
-        var import = new ChessableImport
-        {
-            UserId = ownerUserId,
-            Bid = bid,
-            CourseName = courseName ?? string.Empty,
-            Target = target,
-            TargetRepertoireId = targetRepertoireId,
-            Status = ChessableImportStatus.Running,
-            QueueRound = queueRound,
-            CreatedAt = DateTime.UtcNow,
-            // Lane-Klassifikation: voll-gecachte Kurse → schnelle, netzfreie Lane (kein Warten hinter
-            // den seriellen Downloads). Cache-Check ist piratechess-DB-lokal (kein Chessable-Abruf).
-            // Beim Massen-Reprocess kommt der Status vorab aus einem Batch-Abruf (knownCached) → spart
-            // je Kurs einen teuren Einzel-Check, der den ganzen Cache-Blob lädt. (Oben bereits ermittelt.)
-            FullyCached = fullyCached,
-        };
-        _db.ChessableImports.Add(import);
-        await _db.SaveChangesAsync(ct);
-        // Nur die Download-Lane braucht ein Queue-Ticket; die Fast-Lane treibt ihr eigener Drain-Service.
-        if (import.FullyCached != true)
-            await EnqueueNextAsync();
-        return import.Id;
-    }
+    /// <summary>
+    /// Reiht einen Re-Import eines bereits importierten Chessable-Kurses ein (für die Neu-Aufbereitung
+    /// veralteter Bücher OHNE gespeichertes Roh-PGN). Holt den Kurs erneut (oder aus dem Rohdaten-Cache)
+    /// und lässt ihn durch die aktuelle Pipeline laufen — <see cref="PgnImportService.ImportFileAsync"/> aktualisiert
+    /// veraltete Bücher dabei in-place. Liefert die Import-Id, oder <c>null</c>, wenn für
+    /// <paramref name="ownerUserId"/> kein Chessable-Bearer hinterlegt ist (kein Re-Fetch möglich).
+    /// </summary>
+    public Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
+        => _reimportQueue.EnqueueReimportAsync(ownerUserId, bid, target, courseName, targetRepertoireId, knownCached, trustOwnership, ct);
 
     /// <summary>
     /// Faire Reihenfolge wartender Importe: nach der bei Anlage eingefrorenen
@@ -192,10 +117,7 @@ public class ChessableImportService : ICourseReimporter
     /// Da <see cref="ChessableImport.QueueRound"/> eingefroren ist, bleibt die Reihenfolge auch dann
     /// stabil, wenn frühere Jobs fertig werden. Rein/testbar.
     /// </summary>
-    public static List<ChessableImport> FairOrder(IEnumerable<ChessableImport> queued) =>
-        queued
-            .OrderBy(i => i.QueueRound).ThenBy(i => i.CreatedAt).ThenBy(i => i.Id)
-            .ToList();
+    public static List<ChessableImport> FairOrder(IEnumerable<ChessableImport> queued) => ChessableFetchLane.FairOrder(queued);
 
     /// <summary>Verarbeitet den fair als Nächstes dran befindlichen wartenden Import (Phase "queued").
     /// No-op, wenn keiner wartet (z. B. Ticket-Überschuss nach einem Abbruch).
@@ -210,407 +132,10 @@ public class ChessableImportService : ICourseReimporter
     /// schnellen Lane greifen; false (Default) = die Download-Lane, also alles ANDERE
     /// (<c>FullyCached==false</c> ODER noch null/unklassifiziert → läuft sicher als Download statt zu
     /// hängen).</param>
-    public async Task RunNextAsync(CancellationToken ct = default, bool fastLane = false)
-    {
-        // Fast-Lane: ungated (eigener serieller Loop, netzfrei) → bewusst nebenläufig zur Download-Lane.
-        if (fastLane)
-        {
-            await DrainNextAsync(ct, fastLane: true);
-            return;
-        }
-
-        // Download-Lane: prozessweit auf höchstens EINEN gleichzeitigen Lauf begrenzen. Greift bereits
-        // ein Download (Gate belegt), kehrt dieser Aufruf SOFORT zurück (WaitAsync(0)) statt einen
-        // zweiten Kurs parallel zu ziehen — der laufende Treiber (Queue-Worker bzw. Watchdog) draint
-        // den Rest weiter, der Watchdog holt verpasste Jobs ohnehin periodisch nach.
-        if (!await _downloadLaneGate.WaitAsync(0, ct))
-            return;
-        try
-        {
-            await DrainNextAsync(ct, fastLane: false);
-        }
-        finally
-        {
-            _downloadLaneGate.Release();
-        }
-    }
-
-    /// <summary>Claimt + verarbeitet GENAU einen fair als Nächstes dran befindlichen wartenden Import
-    /// der gewählten Lane. Erwartet, dass der Aufrufer ggf. die Lane-Begrenzung (Download-Gate) hält.</summary>
-    private async Task DrainNextAsync(CancellationToken ct, bool fastLane)
-    {
-        // Browser-Importe nie: ihre Daten kommen aus dem Browser, ein Server-Abruf holte den Kurs mit dem Bearer
-        // bzw. aus dem Kurs-Cache — an der Eigentumsprüfung vorbei (siehe ChessableImport.FromBrowser).
-        var queued = await _db.ChessableImports
-            .Where(i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued
-                && !i.FromBrowser
-                && (fastLane ? i.FullyCached == true : i.FullyCached != true))
-            .ToListAsync(ct);
-
-        foreach (var next in FairOrder(queued))
-        {
-            // Schon VOR dem Claim als lokal getrieben markieren: sonst gäbe es ein Fenster, in dem die
-            // DB-Phase bereits "claimed" ist, aber noch kein Treiber registriert — der Watchdog hielte
-            // den Job für verwaist. Wird am Ende jedes Schleifendurchlaufs (auch bei continue/return)
-            // wieder freigegeben.
-            using var tracked = TrackInflight(next.Id);
-
-            if (!await TryClaimAsync(next.Id, ct))
-                continue; // jemand anderes war schneller → nächsten wartenden Job probieren
-
-            // Fast-Lane-Klassifikation gilt nur zum ENQUEUE-Zeitpunkt — Jobs können tagelang liegen
-            // (z. B. bearer-blocked) und der piratechess-Cache kann inzwischen invalidiert sein. Ohne
-            // Re-Check würde der Job hier netzfrei-gedacht, aber tatsächlich mit echtem Chessable-Abruf
-            // laufen: parallel (MaxParallel Fast-Lane-Runner), am _downloadLaneGate vorbei UND am
-            // Bearer-Breaker vorbei (der FullyCached==true ausnimmt) → IP-Block-Risiko. Nur nötig,
-            // solange noch kein FetchedPgn-Checkpoint existiert (danach ist der Job wirklich netzfrei).
-            if (fastLane && string.IsNullOrEmpty(next.FetchedPgn)
-                && !await _proxy.IsCourseCachedAsync(next.Bid, ct))
-            {
-                _db.ChangeTracker.Clear();
-                var stale = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == next.Id, ct);
-                if (stale is not null && stale.Status == ChessableImportStatus.Running)
-                {
-                    stale.FullyCached = false;
-                    stale.Phase = ChessableImportPhase.Queued;
-                    await _db.SaveChangesAsync(ct);
-                    _logger.LogWarning(
-                        "Chessable-Import {Id} (bid {Bid}) ist nicht mehr voll gecacht — zurückgestuft in die Download-Lane",
-                        stale.Id, stale.Bid);
-                }
-                continue; // nächsten Fast-Lane-Kandidaten probieren; der Job läuft künftig gedrosselt als Download
-            }
-
-            // Der lokal getrackte Entity-Stand ist nach dem Claim veraltet → frisch laden lassen.
-            _db.ChangeTracker.Clear();
-            await RunAsync(next.Id, ct);
-            return;
-        }
-    }
-
-    /// <summary>Übernimmt den Job atomar, indem die Phase "queued" → "claimed" gesetzt wird —
-    /// GEFILTERT auf die noch unveränderte Phase. Auf relationalen Providern via einzelnem
-    /// <c>UPDATE … WHERE Phase='queued'</c> (echte Atomarität: nur ein Worker trifft die Zeile).
-    /// Liefert <c>true</c>, wenn DIESER Aufruf den Job übernommen hat. Der InMemory-Test-Provider
-    /// kann <c>ExecuteUpdate</c> nicht übersetzen → dort getrackter Re-Check-Fallback (gleiche Logik,
-    /// nur ohne echte DB-Nebenläufigkeitsgarantie).</summary>
-    private async Task<bool> TryClaimAsync(int importId, CancellationToken ct)
-    {
-        if (_db.Database.IsRelational())
-        {
-            var rows = await _db.ChessableImports
-                .Where(i => i.Id == importId && i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued)
-                .ExecuteUpdateAsync(s => s.SetProperty(i => i.Phase, ChessableImportPhase.Claimed), ct);
-            return rows == 1;
-        }
-
-        // InMemory-Fallback: nur claimen, wenn die Phase noch "queued" ist.
-        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
-        if (import is null || import.Status != ChessableImportStatus.Running || import.Phase != ChessableImportPhase.Queued)
-            return false;
-        import.Phase = ChessableImportPhase.Claimed;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task RunNextAsync(CancellationToken ct = default, bool fastLane = false) => _fetchLane.RunNextAsync(ct, fastLane);
 
     /// <summary>Verarbeitet (oder resumt) den Import-Job <paramref name="importId"/>.</summary>
-    public async Task RunAsync(int importId, CancellationToken ct = default)
-    {
-        // Auch hier (nicht nur im Drain) registrieren, damit ein DIREKTER Aufruf nicht vom Watchdog als
-        // verwaister Inflight-Job zurückgeholt wird. Verschachtelung ist über den Zähler abgedeckt.
-        using var tracked = TrackInflight(importId);
-
-        var import = await _db.ChessableImports.FirstOrDefaultAsync(i => i.Id == importId, ct);
-        if (import is null)
-        {
-            _logger.LogWarning("ChessableImport {Id} nicht gefunden", importId);
-            return;
-        }
-        if (import.Status != ChessableImportStatus.Running)
-            return; // bereits abgeschlossen oder fehlgeschlagen — nichts zu tun
-        if (import.FromBrowser)
-        {
-            // Zweite Schranke hinter dem Drain-Filter: ein Browser-Import wird nie serverseitig geholt.
-            _logger.LogWarning("Chessable-Import {Id} (bid {Bid}) ist ein Browser-Import — kein Server-Abruf", import.Id, import.Bid);
-            return;
-        }
-
-        // Hol-Beginn festhalten (erste Bearbeitung aus der Queue) — trennt Wartezeit von Holzeit.
-        import.StartedAt ??= DateTime.UtcNow;
-        import.Attempts++;
-        if (import.Attempts > MaxAttempts)
-        {
-            await FailAsync(import, $"Abgebrochen nach {MaxAttempts} Versuchen");
-            return;
-        }
-        await _db.SaveChangesAsync(ct);
-
-        // Lifecycle-Start: mit Domänen-Tags (ECS `tags`-Filter in Kibana) markieren.
-        using (LogContext.PushProperty("LogTags", "import,chessable"))
-            _logger.LogInformation(
-                "Chessable-Import {Id} gestartet: {Target} (bid {Bid}, Versuch {Attempt}/{Max})",
-                import.Id, import.Target, import.Bid, import.Attempts, MaxAttempts);
-
-        try
-        {
-            // --- Phase 1: Kurs holen (Checkpoint: PGN wird persistiert) ---
-            var pgn = import.FetchedPgn;
-            if (string.IsNullOrEmpty(pgn))
-            {
-                // Bearer-Quelle: i.d.R. der Besitzer; beim Admin-Download „im Namen eines Users" der Ziel-User.
-                var bearerUserId = import.BearerUserId ?? import.UserId;
-                var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == bearerUserId, ct);
-                string bearer;
-                if (cred is null)
-                {
-                    // Kein Bearer: NUR möglich, wenn der Kurs voll gecacht ist — dann liefert piratechess
-                    // den Kurs ohne Chessable-Kontakt/Bearer aus dem Rohdaten-Cache (leerer Bearer-String).
-                    // Sonst gibt es keinen Weg, den Kurs zu holen → echter Fehler.
-                    if (import.FullyCached != true)
-                    {
-                        await FailAsync(import, "Kein Chessable-Bearer gespeichert");
-                        return;
-                    }
-                    bearer = string.Empty;
-                }
-                else
-                {
-                    // Circuit-Breaker: ist der Bearer als unbrauchbar markiert (Account gesperrt/gelöscht
-                    // bzw. Token tot), KEINE weitere Chessable-Anfrage damit machen. Statt zu scheitern
-                    // pausieren (Phase "bearer-blocked") — ein erfolgreicher „Testen“-Klick nimmt den
-                    // Import via ChessableBearerBreaker.ClearAndResumeAsync automatisch wieder auf.
-                    // AUSNAHME: voll-gecachte Kurse (FullyCached) kommen ohne Chessable-Abruf aus dem
-                    // piratechess-DB-Cache → ein toter Bearer blockt sie nicht, der Import läuft durch.
-                    if (cred.BlockedAt is not null && import.FullyCached != true)
-                    {
-                        import.Status = ChessableImportStatus.Paused;
-                        import.Phase = ChessableImportPhase.BearerBlocked;
-                        import.Attempts = 0;
-                        await _db.SaveChangesAsync(ct);
-                        await CancelFetchJobAsync(import, ct);
-                        _logger.LogInformation(
-                            "Chessable-Import {Id} pausiert: Bearer von User {UserId} gesperrt (Circuit-Breaker) — wartet auf „Testen“",
-                            import.Id, bearerUserId);
-                        return;
-                    }
-
-                    // Tageslimit (Standard 2000 Zeilen/24h, Chessable:DailyLineLimitPerUser): wie der
-                    // Bearer-Breaker AUSGENOMMEN bei voll-gecachten Kursen (kostet Chessable nichts).
-                    // Bei Überschreitung 24h pausieren (Phase "rate-limited") — der
-                    // ChessableImportWatchdogService gibt den Import danach automatisch wieder frei
-                    // und diese Prüfung läuft dann erneut (das Fenster ist bis dahin ohnehin abgelaufen).
-                    if (import.FullyCached != true)
-                    {
-                        var now = DateTime.UtcNow;
-                        _rateLimiter.EnsureFreshWindow(cred, now);
-                        if (_rateLimiter.IsOverLimit(cred))
-                        {
-                            import.Status = ChessableImportStatus.Paused;
-                            import.Phase = ChessableImportPhase.RateLimited;
-                            import.Attempts = 0;
-                            import.RateLimitedAt = now;
-                            await _db.SaveChangesAsync(ct);
-                            await CancelFetchJobAsync(import, ct);
-                            _logger.LogInformation(
-                                "Chessable-Import {Id} pausiert: Tageslimit ({Limit} Zeilen/24h) für User {UserId} erreicht — Re-Check in 24h",
-                                import.Id, _rateLimiter.DailyLimit, bearerUserId);
-                            return;
-                        }
-                        await _db.SaveChangesAsync(ct); // ggf. frisch zurückgesetztes Fenster persistieren
-                    }
-
-                    var decrypted = _encryption.TryDecrypt(cred.EncryptedBearer);
-                    if (decrypted is null)
-                    {
-                        await FailAsync(import, "Chessable-Bearer konnte nicht entschlüsselt werden (bitte neu hinterlegen)");
-                        return;
-                    }
-                    bearer = decrypted;
-                }
-                var mode = import.Target == "book" ? "FirstKeyMove" : "None";
-
-                import.Phase = ChessableImportPhase.Fetching;
-                await _db.SaveChangesAsync(ct);
-
-                // Async Job bei piratechess starten (oder bei Resume den gemerkten weiterpollen).
-                if (string.IsNullOrEmpty(import.FetchJobId))
-                {
-                    var start = await WithConnectionRetryAsync(
-                        () => _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct), import.Id, ct);
-                    import.FetchJobId = start.JobId;
-                    await _db.SaveChangesAsync(ct);
-                }
-
-                // Poll-Schleife — FORTSCHRITTS-bewusst statt festem Zeit-Limit (der frühere
-                // 360×2,5s≈15min-Deckel killte langsame, aber gesunde Abrufe großer Kurse).
-                // Solange ChaptersDone/LinesDone steigen, läuft der Abruf weiter; nur echter
-                // Stillstand (FetchStallPolls) bzw. der Absolut-Backstop (FetchMaxPolls) beendet ihn.
-                int lastMarker = import.ChaptersDone + import.LinesDone;
-                int noProgressPolls = 0;
-                int totalPolls = 0;
-
-                while (string.IsNullOrEmpty(pgn))
-                {
-                    // Externen Abbruch/Pause erkennen (anderer Request setzt Status) — Checkpoint bleibt erhalten.
-                    await _db.Entry(import).ReloadAsync(ct);
-                    if (import.Status != ChessableImportStatus.Running)
-                    {
-                        _logger.LogInformation("Chessable-Import {Id} während Hol-Phase {Status}", import.Id, import.Status);
-                        // Abgebrochen/pausiert: piratechess mit anhalten (S2-008). Das macht die Schleife selbst und
-                        // nicht der Controller — dessen Abbruch kreuzte sich sonst mit dem nächsten Poll (Job weg →
-                        // null → hier startete ein neuer Job).
-                        await CancelFetchJobAsync(import, ct);
-                        return;
-                    }
-
-                    var prog = await WithConnectionRetryAsync(
-                        () => _proxy.GetCourseProgressAsync(import.FetchJobId!, ct), import.Id, ct);
-                    // Abgebrochen, während dieser Import weiterläuft (Wettlauf mit dem eigenen Abbruch nach Stillstand,
-                    // oder ein piratechess, der abgebrochene Jobs aufbewahrt): dasselbe wie ein verschwundener Job.
-                    if (prog?.Status == ChessableCourseJobStatus.Cancelled)
-                        prog = null;
-                    if (prog is null)
-                    {
-                        // Job weg (piratechess-Neustart) → neu starten und weiter pollen.
-                        var start = await WithConnectionRetryAsync(
-                            () => _proxy.StartCourseFetchAsync(bearer, import.Bid, mode, ct), import.Id, ct);
-                        import.FetchJobId = start.JobId;
-                        await _db.SaveChangesAsync(ct);
-                        await Task.Delay(PollDelayMs, ct);
-                        continue;
-                    }
-
-                    import.ChaptersDone = prog.ChaptersDone;
-                    import.ChaptersTotal = prog.ChaptersTotal;
-                    import.LinesDone = prog.LinesDone;
-                    if (prog.LinesTotal > 0) import.LinesTotal = prog.LinesTotal;
-
-                    if (prog.Status == ChessableCourseJobStatus.Completed)
-                    {
-                        pgn = prog.Pgn ?? "";
-                        import.LineCount = prog.LineCount;
-                        if (string.IsNullOrWhiteSpace(import.CourseName))
-                            import.CourseName = !string.IsNullOrWhiteSpace(prog.CourseName) ? prog.CourseName! : $"Chessable {import.Bid}";
-                        import.FetchedPgn = pgn;
-                        await _db.SaveChangesAsync(ct); // Checkpoint: ab hier kein erneuter Fetch nötig
-                        if (import.FullyCached != true)
-                        {
-                            var linesFetched = import.LineCount > 0 ? import.LineCount : import.LinesDone;
-                            await _rateLimiter.RecordUsageAsync(bearerUserId, linesFetched, ct);
-                        }
-                        break;
-                    }
-                    if (prog.Status == ChessableCourseJobStatus.Failed)
-                        throw new InvalidOperationException(prog.Error ?? "Kurs-Abruf fehlgeschlagen");
-                    if (prog.Status != ChessableCourseJobStatus.Running)
-                    {
-                        // Ein Status, den dieser Stand nicht kennt (piratechess neuer als rookhub): sofort scheitern,
-                        // statt FetchStallPolls lang (≈ 10 min je Versuch, bis MaxAttempts) einen Stillstand abzuwarten.
-                        // Den Job vorher anhalten — er könnte bei piratechess noch über die VPN-IP holen.
-                        await CancelFetchJobAsync(import, ct);
-                        throw new InvalidOperationException($"Unbekannter Status des Kurs-Abrufs von piratechess: \"{prog.Status}\"");
-                    }
-
-                    // Stillstand erkennen: Stall-Zähler NUR bei echtem Fortschritt zurücksetzen.
-                    int marker = prog.ChaptersDone + prog.LinesDone;
-                    if (marker > lastMarker)
-                    {
-                        lastMarker = marker;
-                        noProgressPolls = 0;
-                    }
-                    else
-                    {
-                        noProgressPolls++;
-                    }
-
-                    await _db.SaveChangesAsync(ct); // Fortschritt fürs Frontend sichtbar machen
-
-                    if (noProgressPolls >= FetchStallPolls || ++totalPolls >= FetchMaxPolls)
-                        break; // Stillstand / Absolut-Grenze → unten Resume oder (nach MaxAttempts) Fehler
-
-                    await Task.Delay(PollDelayMs, ct);
-                }
-
-                if (string.IsNullOrEmpty(pgn))
-                {
-                    // Abruf kam nicht durch (Stillstand/Absolut-Grenze). Resume-fähig → bis MaxAttempts
-                    // AUTOMATISCH neu einreihen statt hart zu scheitern: FetchJobId/FetchedPgn-Checkpoint
-                    // bleibt erhalten. Nach der Absolut-Grenze (Job macht noch Fortschritt) läuft der
-                    // piratechess-Job weiter und der nächste Versuch pollt ihn wieder; bei echtem Stillstand
-                    // wird er abgebrochen (S2-008), der nächste Versuch bekommt 404 und startet einen neuen.
-                    // Ein älterer piratechess ohne Abbruch lässt ihn laufen — dann wie bisher weiterpollen.
-                    if (noProgressPolls >= FetchStallPolls)
-                        await CancelFetchJobAsync(import, ct);
-                    if (import.Attempts < MaxAttempts)
-                    {
-                        import.Phase = ChessableImportPhase.Queued;
-                        await _db.SaveChangesAsync(ct);
-                        _logger.LogWarning(
-                            "Chessable-Import {Id} Hol-Phase ohne Fortschritt (Versuch {Attempt}/{Max}) — wird automatisch neu eingereiht",
-                            import.Id, import.Attempts, MaxAttempts);
-                        await EnqueueNextAsync();
-                        return;
-                    }
-                    throw new TimeoutException("Zeitüberschreitung beim Kurs-Abruf (kein Fortschritt)");
-                }
-            }
-
-            var courseName = !string.IsNullOrWhiteSpace(import.CourseName) ? import.CourseName : $"Chessable {import.Bid}";
-
-            // --- Phase 2: Import (idempotent) ---
-            import.Phase = ChessableImportPhase.Importing;
-            await _db.SaveChangesAsync(ct);
-
-            if (import.Target == "repertoire")
-                await _writer.ImportAsRepertoireAsync(import, pgn, courseName, ct);
-            else
-                await _writer.ImportAsBookAsync(import, pgn, courseName, ct);
-
-            import.Status = ChessableImportStatus.Completed;
-            import.Phase = ChessableImportPhase.Done;
-            import.FetchedPgn = null; // Checkpoint nicht mehr nötig → Platz freigeben
-            import.CompletedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-            using (LogContext.PushProperty("LogTags", "import,chessable"))
-                _logger.LogInformation(
-                    "Chessable-Import {Id} fertig: {Target} '{Name}' (bid {Bid}), imported={Imported}",
-                    import.Id, import.Target, courseName, import.Bid, import.Imported);
-
-            // User benachrichtigen: Kurs ist fertig importiert → direkt zur passenden Ansicht.
-            // Inkl. Dauer-Aufschlüsselung: Wartezeit (in der Queue) + reine Holzeit.
-            var queueTime = FormatDuration(import.StartedAt - import.CreatedAt);
-            var fetchTime = FormatDuration(import.CompletedAt - (import.StartedAt ?? import.CreatedAt));
-            await _outcome.NotifyCompletedAsync(import, courseName, queueTime, fetchTime);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // App faehrt herunter (BackgroundTaskWorker-stoppingToken) — das ist KEIN Import-Fehler.
-            // Der Job bleibt auf "running" (Checkpoint FetchedPgn/FetchJobId bleibt erhalten) und wird
-            // vom ChessableImportResumeService beim naechsten Start automatisch fortgesetzt. Nicht als
-            // "failed" markieren und nicht als Fehler loggen (sonst Fehlalarm im log-watcher).
-            _logger.LogInformation(
-                "Chessable-Import {Id} durch Shutdown unterbrochen — wird beim Neustart fortgesetzt", import.Id);
-        }
-        catch (ChessableProxyException ex)
-        {
-            // Fehler aus dem piratechess-Proxy (z. B. „PGN generation failed …", „Course has no
-            // chapters", Bearer/IP-Block). Bisher landete nur die knappe Message im DB-Error-Feld —
-            // in Kibana war NICHTS sichtbar. Jetzt strukturiert mit Status + Kontext nach ES loggen,
-            // damit Import-Ausfälle nachvollziehbar sind (der volle Parser-Stacktrace liegt auf der
-            // piratechess-Seite, hier die rookhub-seitige Zuordnung bid/Import/Status).
-            using (LogContext.PushProperty("LogTags", "import,chessable"))
-                _logger.LogWarning(ex,
-                    "Chessable-Import {Id} (bid {Bid}, Ziel {Target}) via Proxy fehlgeschlagen: HTTP {Status} — {Message}",
-                    import.Id, import.Bid, import.Target, (int)ex.Status, ex.Message);
-            await FailAsync(import, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            using (LogContext.PushProperty("LogTags", "import,chessable"))
-                _logger.LogWarning(ex, "Chessable-Import {Id} fehlgeschlagen (Versuch {Attempt})", import.Id, import.Attempts);
-            await FailAsync(import, ex.Message);
-        }
-    }
+    public Task RunAsync(int importId, CancellationToken ct = default) => _fetchLane.RunAsync(importId, ct);
 
     /// <summary>
     /// Importiert ein bereits FERTIGES Kurs-PGN (vom Browser über die RepCheck-Extension geholt und von
@@ -917,59 +442,10 @@ public class ChessableImportService : ICourseReimporter
         if (import is not null) await FailAsync(import, message);
     }
 
-    // Reine Verbindungsfehler zu piratechess (Container-Neustart/kurzer Ausfall) dürfen einen Import
-    // NICHT sofort scheitern lassen — sonst killt ein 5-Sekunden-Recreate die ganze Queue kaskadierend.
-    // Daher mit Backoff erneut versuchen (summiert ~2,5 min), bis piratechess wieder erreichbar ist;
-    // erst danach propagiert der Fehler und der Import scheitert. Echte Antwort-Fehler von piratechess
-    // (ChessableProxyException, kein Transportfehler) werden NICHT erneut versucht.
-    private static readonly int[] ConnRetryBackoffMs = { 3000, 5000, 10000, 15000, 20000, 30000, 30000, 30000 };
-
-    /// <summary>Codereview S2-008: den piratechess-Kurs-Job des Imports best effort abbrechen (Abbruch, Pause,
-    /// erkannter Stillstand), damit piratechess den Kurs nicht trotzdem ganz über die VPN-IP holt. Blockiert nie:
-    /// kurzer Timeout, 404/405 (älterer piratechess) still, andere Fehler nur geloggt. Die JobId bleibt stehen — ein
-    /// späteres Pollen eines abgebrochenen Jobs liefert 404, dann startet der Import einen neuen.</summary>
-    private async Task CancelFetchJobAsync(ChessableImport import, CancellationToken ct)
-    {
-        if (!string.IsNullOrEmpty(import.FetchJobId))
-            await _proxy.CancelCourseJobAsync(import.FetchJobId, ct);
-    }
-
-    private async Task<T> WithConnectionRetryAsync<T>(Func<Task<T>> op, int importId, CancellationToken ct)
-    {
-        for (int attempt = 0; ; attempt++)
-        {
-            try { return await op(); }
-            // Bei Shutdown (ct abgebrochen) NICHT erneut versuchen → Abbruch sauber durchreichen.
-            catch (Exception ex) when (attempt < ConnRetryBackoffMs.Length && !ct.IsCancellationRequested && IsTransientConnectionError(ex))
-            {
-                var delay = ConnRetryBackoffMs[attempt];
-                _logger.LogWarning(
-                    "Chessable-Import {Id}: piratechess nicht erreichbar ({Msg}) — Verbindungs-Retry {Attempt}/{Max} in {Delay}s",
-                    importId, ex.Message, attempt + 1, ConnRetryBackoffMs.Length, delay / 1000);
-                await Task.Delay(delay, ct);
-            }
-        }
-    }
-
     /// <summary>True für reine Transport-/Verbindungsfehler (piratechess down/Neustart): SocketException,
     /// HttpRequestException oder typische „connection refused"/„timed out"-Meldungen. NICHT für
     /// <see cref="ChessableProxyException"/> (= piratechess hat geantwortet, aber mit Fehler).</summary>
-    internal static bool IsTransientConnectionError(Exception ex)
-    {
-        for (var e = ex; e is not null; e = e.InnerException)
-        {
-            if (e is ChessableProxyException) return false;
-            if (e is System.Net.Sockets.SocketException or HttpRequestException or TaskCanceledException) return true;
-            var m = e.Message;
-            if (m.Contains("Connection refused", StringComparison.OrdinalIgnoreCase)
-                || m.Contains("actively refused", StringComparison.OrdinalIgnoreCase)
-                || m.Contains("No route to host", StringComparison.OrdinalIgnoreCase)
-                || m.Contains("Name or service not known", StringComparison.OrdinalIgnoreCase)
-                || m.Contains("timed out", StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
-    }
+    internal static bool IsTransientConnectionError(Exception ex) => ChessableCourseFetch.IsTransientConnectionError(ex);
 
     // Internal statt private: die Zombie-Haertung (Fangnetze unten) war der Ausloeser echter
     // Prod-Haenger und braucht direkte Tests — sie ist ueber die oeffentliche API nicht erreichbar,
