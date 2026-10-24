@@ -923,5 +923,1154 @@ internal static class ExternalSweepGolden
               Vermerk SlovenianChessFederation 2009 url=- erst=ja zuletzt=ja
             
             """,
+        ["Ecf"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 1, Matched = 0, Retired = 0 }
+            Log Information: ECF-Kalender: 13 gelesen, 12 neu, 1 verortet, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 0, Matched = 1, Retired = 1 }
+            Log Information: ECF: en1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: ECF-Kalender: 13 gelesen, 0 neu, 0 verortet, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: ECF-Kalender: 11 gelesen, 0 neu, 0 verortet, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: ECF-Kalender: 11 gelesen, 0 neu, 0 verortet, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: ECF-Kalender: 1 gelesen, 0 neu, 0 verortet, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung EnglishChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Log Warning: ECF: Zwischenstand konnte nicht gespeichert werden
+            Log Information: ECF-Kalender: 2 gelesen, 1 neu, 1 verortet, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung EnglishChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Log Warning: ECF: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk EnglishChessFederation 1001 url=https://www.englishchess.org.uk/event/1001/ erst=ja zuletzt=ja
+            Eintrag en1001 cr=- name=Danubius Kronstadt Memorial fed=ENG state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag en1002 cr=- name=Cup Beta Rapid fed=ENG state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1002 url=https://www.englishchess.org.uk/event/1002/ erst=ja zuletzt=ja
+            Eintrag en1003 cr=- name=Verschwindibus Pokal fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk EnglishChessFederation 1003 url=https://www.englishchess.org.uk/event/1003/ erst=ja zuletzt=ja
+            Eintrag en2001 cr=- name=Serienturnier Nummer1 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2001 url=https://www.englishchess.org.uk/event/2001/ erst=ja zuletzt=ja
+            Eintrag en2002 cr=- name=Serienturnier Nummer2 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2002 url=https://www.englishchess.org.uk/event/2002/ erst=ja zuletzt=ja
+            Eintrag en2003 cr=- name=Serienturnier Nummer3 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2003 url=https://www.englishchess.org.uk/event/2003/ erst=ja zuletzt=ja
+            Eintrag en2004 cr=- name=Serienturnier Nummer4 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2004 url=https://www.englishchess.org.uk/event/2004/ erst=ja zuletzt=ja
+            Eintrag en2005 cr=- name=Serienturnier Nummer5 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2005 url=https://www.englishchess.org.uk/event/2005/ erst=ja zuletzt=ja
+            Eintrag en2006 cr=- name=Serienturnier Nummer6 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2006 url=https://www.englishchess.org.uk/event/2006/ erst=ja zuletzt=ja
+            Eintrag en2007 cr=- name=Serienturnier Nummer7 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2007 url=https://www.englishchess.org.uk/event/2007/ erst=ja zuletzt=ja
+            Eintrag en2008 cr=- name=Serienturnier Nummer8 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2008 url=https://www.englishchess.org.uk/event/2008/ erst=ja zuletzt=ja
+            Eintrag en2009 cr=- name=Serienturnier Nummer9 fed=ENG state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk EnglishChessFederation 2009 url=https://www.englishchess.org.uk/event/2009/ erst=ja zuletzt=ja
+            
+            """,
+        ["ChessHu"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.hu-Kalender: 13 gelesen, 12 neu, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 0, Matched = 1, Retired = 1 }
+            Log Information: chess.hu: hu1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: chess.hu-Kalender: 13 gelesen, 0 neu, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.hu-Kalender: 11 gelesen, 0 neu, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.hu-Kalender: 11 gelesen, 0 neu, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.hu-Kalender: 1 gelesen, 0 neu, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung HungarianChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 1, Retired = 0 }
+            Log Warning: chess.hu: Zwischenstand konnte nicht gespeichert werden
+            Log Information: chess.hu-Kalender: 2 gelesen, 1 neu, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung HungarianChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: ExternalSweepResult { Read = 30, Added = 30, Updated = 0, Matched = 0, Retired = 0 }
+            Log Warning: chess.hu: Zwischenstand konnte nicht gespeichert werden
+            Log Information: chess.hu-Kalender: 30 gelesen, 30 neu, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung HungarianChessFederation uebersprungen: der Lauf lieferte 30 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag hu2001 cr=- name=Serienturnier Nummer1 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag hu2002 cr=- name=Serienturnier Nummer2 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag hu2003 cr=- name=Serienturnier Nummer3 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag hu2004 cr=- name=Serienturnier Nummer4 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag hu2005 cr=- name=Serienturnier Nummer5 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag hu2006 cr=- name=Serienturnier Nummer6 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag hu2007 cr=- name=Serienturnier Nummer7 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag hu2008 cr=- name=Serienturnier Nummer8 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
+            
+            """,
+        ["Knsb"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 12, Added = 12, Updated = 12, Matched = 0, Retired = 0 }
+            Log Information: KNSB-Kalender: 12 gelesen, 12 neu, 12 mit neu bekannter Bedenkzeit, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 12, Added = 0, Updated = 0, Matched = 1, Retired = 1 }
+            Log Information: KNSB: nlc52806197c2d geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: KNSB-Kalender: 12 gelesen, 0 neu, 0 mit neu bekannter Bedenkzeit, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 10, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: KNSB-Kalender: 10 gelesen, 0 neu, 0 mit neu bekannter Bedenkzeit, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 10, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: KNSB-Kalender: 10 gelesen, 0 neu, 0 mit neu bekannter Bedenkzeit, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: KNSB-Kalender: 1 gelesen, 0 neu, 0 mit neu bekannter Bedenkzeit, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung DutchChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Log Warning: KNSB: Zwischenstand konnte nicht gespeichert werden
+            Log Information: KNSB-Kalender: 2 gelesen, 1 neu, 1 mit neu bekannter Bedenkzeit, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung DutchChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Log Warning: KNSB: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk DutchChessFederation c52806197c2d url=https://schaakbond.nl/event/toernooi-1001/ erst=ja zuletzt=ja
+            Eintrag nl1f53671d33a7 cr=- name=Serienturnier Nummer1 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 1f53671d33a7 url=https://schaakbond.nl/event/toernooi-2001/ erst=ja zuletzt=ja
+            Eintrag nl35d5cdace202 cr=- name=Serienturnier Nummer5 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 35d5cdace202 url=https://schaakbond.nl/event/toernooi-2005/ erst=ja zuletzt=ja
+            Eintrag nl514ae2538e52 cr=- name=Cup Beta Rapid fed=NED state=- start=S+7 ende=S+7 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 514ae2538e52 url=https://schaakbond.nl/event/toernooi-1002/ erst=ja zuletzt=ja
+            Eintrag nl748034dace19 cr=- name=Verschwindibus Pokal fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk DutchChessFederation 748034dace19 url=https://schaakbond.nl/event/toernooi-1003/ erst=ja zuletzt=ja
+            Eintrag nl76526a957db0 cr=- name=Serienturnier Nummer7 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 76526a957db0 url=https://schaakbond.nl/event/toernooi-2007/ erst=ja zuletzt=ja
+            Eintrag nl81bdef797f9c cr=- name=Serienturnier Nummer4 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 81bdef797f9c url=https://schaakbond.nl/event/toernooi-2004/ erst=ja zuletzt=ja
+            Eintrag nl8d68a0f08fe3 cr=- name=Serienturnier Nummer6 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 8d68a0f08fe3 url=https://schaakbond.nl/event/toernooi-2006/ erst=ja zuletzt=ja
+            Eintrag nl9905514496e5 cr=- name=Serienturnier Nummer9 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation 9905514496e5 url=https://schaakbond.nl/event/toernooi-2009/ erst=ja zuletzt=ja
+            Eintrag nlbbb998e3b01d cr=- name=Serienturnier Nummer8 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation bbb998e3b01d url=https://schaakbond.nl/event/toernooi-2008/ erst=ja zuletzt=ja
+            Eintrag nlbe227e5cbd7a cr=- name=Serienturnier Nummer3 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation be227e5cbd7a url=https://schaakbond.nl/event/toernooi-2003/ erst=ja zuletzt=ja
+            Eintrag nlc52806197c2d cr=- name=Danubius Kronstadt Memorial fed=NED state=- start=S+0 ende=S+0 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag nlea3da42d0a32 cr=- name=Serienturnier Nummer2 fed=NED state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk DutchChessFederation ea3da42d0a32 url=https://schaakbond.nl/event/toernooi-2002/ erst=ja zuletzt=ja
+            
+            """,
+        ["Fsi"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: FSI-Kalender: 13 gelesen, 12 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 1, Matched = 1, Retired = 1 }
+            Log Information: FSI: it1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: FSI-Kalender: 13 gelesen, 0 neu, 1 ergaenzt, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: FSI-Kalender: 11 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: FSI-Kalender: 11 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: FSI-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung ItalianChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 1, Retired = 0 }
+            Log Warning: FSI: Zwischenstand konnte nicht gespeichert werden
+            Log Information: FSI-Kalender: 2 gelesen, 1 neu, 0 ergaenzt, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung ItalianChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: ExternalSweepResult { Read = 30, Added = 30, Updated = 0, Matched = 0, Retired = 0 }
+            Log Warning: FSI: Zwischenstand konnte nicht gespeichert werden
+            Log Information: FSI-Kalender: 30 gelesen, 30 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung ItalianChessFederation uebersprungen: der Lauf lieferte 30 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
+            Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
+            Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
+            Eintrag it2001 cr=- name=Serienturnier Nummer1 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2001 url=- erst=ja zuletzt=ja
+            Eintrag it2002 cr=- name=Serienturnier Nummer2 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2002 url=- erst=ja zuletzt=ja
+            Eintrag it2003 cr=- name=Serienturnier Nummer3 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag it2004 cr=- name=Serienturnier Nummer4 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag it2005 cr=- name=Serienturnier Nummer5 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag it2006 cr=- name=Serienturnier Nummer6 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag it2007 cr=- name=Serienturnier Nummer7 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag it2008 cr=- name=Serienturnier Nummer8 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag it2009 cr=- name=Serienturnier Nummer9 fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ItalianChessFederation 2009 url=- erst=ja zuletzt=ja
+            
+            """,
+        ["Schachbund"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: schachbund-Turnierdatenbank: 13 gelesen, 12 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 1, Matched = 1, Retired = 1 }
+            Log Information: schachbund: defe675fe7aaee geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: schachbund-Turnierdatenbank: 13 gelesen, 0 neu, 1 ergaenzt, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: schachbund-Turnierdatenbank: 11 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: schachbund-Turnierdatenbank: 11 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: schachbund-Turnierdatenbank: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung GermanChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 1, Retired = 0 }
+            Log Warning: schachbund: Zwischenstand konnte nicht gespeichert werden
+            Log Information: schachbund-Turnierdatenbank: 2 gelesen, 1 neu, 0 ergaenzt, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung GermanChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Log Warning: schachbund: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk GermanChessFederation defe675fe7aaee url=https://www.schachbund.de/turnierdetails/1001.html erst=ja zuletzt=ja
+            Eintrag de483029d52621 cr=- name=Serienturnier Nummer4 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de483029d52621 url=https://www.schachbund.de/turnierdetails/2004.html erst=ja zuletzt=ja
+            Eintrag de6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6c94e35ccc35 url=https://www.schachbund.de/turnierdetails/2002.html erst=ja zuletzt=ja
+            Eintrag de6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de6f6a4e56098c url=https://www.schachbund.de/turnierdetails/2006.html erst=ja zuletzt=ja
+            Eintrag de77459b9b941b cr=- name=Serienturnier Nummer3 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de77459b9b941b url=https://www.schachbund.de/turnierdetails/2003.html erst=ja zuletzt=ja
+            Eintrag de85d6385b945c cr=- name=Serienturnier Nummer1 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation de85d6385b945c url=https://www.schachbund.de/turnierdetails/2001.html erst=ja zuletzt=ja
+            Eintrag de8c9a013ab70c cr=- name=Verschwindibus Pokal fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
+            Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
+            Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
+            Eintrag def1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def1cfa5ebb149 url=https://www.schachbund.de/turnierdetails/2007.html erst=ja zuletzt=ja
+            Eintrag def37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk GermanChessFederation def37f3f2b0dc5 url=https://www.schachbund.de/turnierdetails/2009.html erst=ja zuletzt=ja
+            Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            
+            """,
     };
 }

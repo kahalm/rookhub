@@ -80,6 +80,46 @@ public class ExternalSweepGoldenTests
                 return Wrap(log, () => svc.RunAsync());
             },
             r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","date":{{D(r.Start)}},"postalCode":null,"place":{{J(r.Place)}},"cancelled":false}"""),
+        ["Ecf"] = new("Ecf", "ENG", "GB",
+            (db, http) =>
+            {
+                var log = new TestLogger<EcfDirectorySweepService>();
+                var svc = new EcfDirectorySweepService(db, http, new GeocodingService(db), log);
+                return Wrap(log, () => svc.RunAsync());
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"url":"https://www.englishchess.org.uk/event/{{r.Id}}/","place":{{J(r.Place)}},"city":{{J(r.Place)}},"postalCode":null,"country":null,"lat":null,"lon":null,"categories":["ECF Rated"],"website":null}"""),
+        ["ChessHu"] = new("ChessHu", "HUN", "HU",
+            (db, http) =>
+            {
+                var log = new TestLogger<ChessHuDirectorySweepService>();
+                var svc = new ChessHuDirectorySweepService(db, http, new GeocodingService(db), log);
+                return Wrap(log, () => svc.RunAsync());
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"place":{{J(r.Place)}},"hasVenue":{{(r.Place is null ? "false" : "true")}},"fideRated":true}"""),
+        ["Knsb"] = new("Knsb", "NED", "NL",
+            (db, http) =>
+            {
+                var log = new TestLogger<KnsbDirectorySweepService>();
+                var svc = new KnsbDirectorySweepService(db, http, log);
+                return Wrap(log, () => svc.RunAsync());
+            },
+            r => $$"""{"slug":"toernooi-{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"url":"https://schaakbond.nl/event/toernooi-{{r.Id}}/","speed":"Rapidschaak","online":false}"""),
+        ["Fsi"] = new("Fsi", "ITA", "IT",
+            (db, http) =>
+            {
+                var log = new TestLogger<FsiDirectorySweepService>();
+                var svc = new FsiDirectorySweepService(db, http, new GeocodingService(db), log);
+                return Wrap(log, () => svc.RunAsync(18));
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"region":"LAZIO","province":"Roma","place":{{J(r.Place)}},"eventType":"Torneo Elo Italia/FIDE","timeControl":"90 minuti + 30 secondi","rounds":7,"note":null}"""),
+        ["Schachbund"] = new("Schachbund", "GER", "DE",
+            (db, http) =>
+            {
+                var log = new TestLogger<SchachbundDirectorySweepService>();
+                var svc = new SchachbundDirectorySweepService(db, http, new GeocodingService(db), log);
+                return Wrap(log, () => svc.RunAsync());
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"region":"bayern","place":{{J(r.Place)}},"timeControl":"12 Minuten + 3 Sekunden/Zug","rounds":5,"system":"swiss","url":"https://www.schachbund.de/turnierdetails/{{r.Id}}.html"}"""),
     };
 
     public static TheoryData<string> SourceNames() => [.. Sources.Keys];
