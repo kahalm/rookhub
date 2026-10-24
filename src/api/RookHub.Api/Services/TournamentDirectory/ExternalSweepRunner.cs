@@ -78,15 +78,21 @@ internal static class ExternalSweepRunner
     /// <summary>Zwischenstand je so viele verarbeitete Zeilen, wenn die Quelle nichts anderes sagt.</summary>
     internal const int DefaultSaveEvery = 25;
 
+    /// <param name="unreadable">
+    /// Kennungen von Zeilen, die schon der Abruf nicht lesen konnte (KNSB: kein lesbarer Termin
+    /// im Zeilentyp). Sie gelten als GELIEFERT, laufen aber nicht durch die Schleife.
+    /// </param>
     public static async Task<ExternalSweepResult> RunAsync<TRow>(AppDbContext db, ILogger log,
-        IDirectorySourceAdapter<TRow> source, IReadOnlyCollection<TRow> rows, CancellationToken ct)
+        IDirectorySourceAdapter<TRow> source, IReadOnlyCollection<TRow> rows, CancellationToken ct,
+        IReadOnlyCollection<string>? unreadable = null)
     {
-        if (rows.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
+        unreadable ??= [];
+        if (rows.Count == 0 && unreadable.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
 
         var now = DateTime.UtcNow;
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
         // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
+        var delivered = new List<string>(unreadable);
 
         try
         {

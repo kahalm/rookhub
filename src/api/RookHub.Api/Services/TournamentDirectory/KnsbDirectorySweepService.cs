@@ -52,9 +52,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// Geschlecht und Liga-Merkmal kommen deshalb wie bei jeder anderen Quelle allein aus dem Namen
 /// (<see cref="ExternalDirectorySource.ApplyClassification"/>).</para>
 /// </summary>
-public class KnsbDirectorySweepService
+public class KnsbDirectorySweepService : IDirectorySourceAdapter<KnsbDirectorySweepService.CrawlerKnsbEvent>
 {
-    private const int SaveEvery = 25;
 
     /// <summary>Es ist der niederlaendische Verbandskalender — jedes Turnier gehoert zu NED.</summary>
     private const string Federation = "NED";
@@ -75,113 +74,61 @@ public class KnsbDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var fetch = await FetchAsync(today, ct);
-        var events = fetch.Rows;
-        if (events.Count == 0 && fetch.Unreadable.Count == 0)
-            return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        int added = 0, speedResolved = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten. Die
-        // unlesbaren Zeilen zaehlen mit: geliefert ist geliefert.
-        var delivered = new List<string>();
-        delivered.AddRange(fetch.Unreadable.Select(ShortHash));
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.Slug.Length == 0) continue;
-                var externalId = ShortHash(row.Slug);
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(externalId);
-                if (row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = PublicIdOf(row.Slug);
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-
-                // Ohne Ort: diese Quelle nennt nie einen Spielort.
-                var match = await ExternalDirectorySource.FindMatchAsync(
-                    _db, Federation, row.StartDate, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.DutchChessFederation, externalId, null), ct);
-
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, 
-                        match, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("KNSB: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = Federation;
-                own.StartDate = row.StartDate;
-                // Kein Enddatum verfuegbar (siehe Klassen-Kommentar) - Start=Ende ist der Fallback
-                // fuer eine unbekannte Dauer, wie ueberall im Projekt.
-                own.EndDate = row.StartDate;
-                own.StartsOnWeekend = row.StartDate.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                // Bewusst KEIN own.LocationText = null hier: diese Quelle kennt nie einen Ort, aber
-                // ein bereits gesetzter (von Hand, oder von chess-results uebernommen, bevor dieser
-                // Eintrag zurueckgezogen wurde) soll nicht geloescht werden.
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-
-                var speed = SpeedOf(row.Speed);
-                if (speed != TournamentSpeed.Unknown)
-                {
-                    if (own.Speed == TournamentSpeed.Unknown) speedResolved++;
-                    own.Speed = speed;
-                }
-
-                await ExternalDirectorySource.NoteSourceAsync(_db, 
-                    own, DirectorySourceKind.DutchChessFederation, externalId, row.Url, now, ct);
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "KNSB: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "KNSB-Kalender: {Read} gelesen, {Added} neu, {SpeedResolved} mit neu bekannter Bedenkzeit, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, speedResolved, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.DutchChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, speedResolved, matched, retired);
+        // Die unlesbaren Zeilen zaehlen mit: geliefert ist geliefert.
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, fetch.Rows, ct,
+            unreadable: [.. fetch.Unreadable.Select(ShortHash)]);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerKnsbEvent>.Kind => DirectorySourceKind.DutchChessFederation;
+    string IDirectorySourceAdapter<CrawlerKnsbEvent>.LogName => "KNSB";
+    string? IDirectorySourceAdapter<CrawlerKnsbEvent>.SourceKey(CrawlerKnsbEvent row) => row.Slug.Length == 0 ? null : ShortHash(row.Slug);
+    // Der Termin ist im Zeilentyp Pflicht: unlesbare Zeilen meldet schon der Abruf (KnsbFetch.Unreadable).
+    DateOnly? IDirectorySourceAdapter<CrawlerKnsbEvent>.Start(CrawlerKnsbEvent row) => row.StartDate;
+    string IDirectorySourceAdapter<CrawlerKnsbEvent>.Name(CrawlerKnsbEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerKnsbEvent>.PublicId(CrawlerKnsbEvent row) => PublicIdOf(row.Slug);
+    string? IDirectorySourceAdapter<CrawlerKnsbEvent>.Federation(CrawlerKnsbEvent row) => Federation;
+    // Ohne Ort: diese Quelle nennt nie einen Spielort.
+    string? IDirectorySourceAdapter<CrawlerKnsbEvent>.MatchPlace(CrawlerKnsbEvent row) => null;
+    string? IDirectorySourceAdapter<CrawlerKnsbEvent>.Url(CrawlerKnsbEvent row) => row.Url;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerKnsbEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerKnsbEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = Federation;
+        own.StartDate = row.StartDate;
+        // Kein Enddatum verfuegbar (siehe Klassen-Kommentar) - Start=Ende ist der Fallback
+        // fuer eine unbekannte Dauer, wie ueberall im Projekt.
+        own.EndDate = row.StartDate;
+        own.StartsOnWeekend = row.StartDate.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        // Bewusst KEIN own.LocationText = null hier: diese Quelle kennt nie einen Ort, aber
+        // ein bereits gesetzter (von Hand, oder von chess-results uebernommen, bevor dieser
+        // Eintrag zurueckgezogen wurde) soll nicht geloescht werden.
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+
+        // „Aktualisiert" heisst hier: die Bedenkzeit ist neu bekannt.
+        var speedResolved = false;
+        var speed = SpeedOf(row.Speed);
+        if (speed != TournamentSpeed.Unknown)
+        {
+            if (own.Speed == TournamentSpeed.Unknown) speedResolved = true;
+            own.Speed = speed;
+        }
+
+        await ExternalDirectorySource.NoteSourceAsync(_db,
+            own, DirectorySourceKind.DutchChessFederation, ShortHash(row.Slug), row.Url, now, ct);
+        return speedResolved;
+    }
+
+    void IDirectorySourceAdapter<CrawlerKnsbEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "KNSB-Kalender: {Read} gelesen, {Added} neu, {SpeedResolved} mit neu bekannter Bedenkzeit, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
 
     /// <summary>Die "speed"-Taxonomie kommt vom Crawler schon als Klartext - hier nur noch die Abbildung auf den Enum-Wert.</summary>
     internal static TournamentSpeed SpeedOf(string? speed) => speed switch
