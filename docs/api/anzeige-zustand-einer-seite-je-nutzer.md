@@ -20,7 +20,9 @@ fuer beliebige Inhalte.
 Frontend (`core/view-state.service.ts` + `TournamentDirectoryComponent`): beim Oeffnen gilt ZUERST
 die lokale Kopie (ohne Abruf, damit die Vorgabefilter nicht aufblitzen), danach der Server-Stand —
 weicht er ab, gewinnt ER (ihn schrieb das Geraet, an dem zuletzt gefiltert wurde) und NUR dann wird
-neu geladen. Hat der Server nichts, wird der lokale Zustand hinaufgeschoben. Geschrieben wird
+neu geladen. Hat der Server nichts, wird der lokale Zustand hinaufgeschoben — nur bei 204; scheitert der Abruf, geht
+erst die erste Aenderung nach dem fertigen ersten Aufbau hinauf (danach wie im Normalfall), vor der Antwort gar
+nichts (`DirectoryViewSync`, Codereview F6-015). Geschrieben wird
 gedrosselt (`PersistDebounceMs` 1200), weil `storeView()` bei jeder Aenderung der Leiste laeuft.
 Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 

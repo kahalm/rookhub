@@ -8,7 +8,9 @@ Formular-Leser, geprüft in LeagueHub) —, angemeldet ODER ohne Konto über ein
 Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubService.cs`, alle vom Nutzer vorgegeben,
 2026-09-28):
 
-* **Beide Namen gegen die Meldelisten** (`LeagueRosterIndex`, alle Saisonen): FIDE-ID aus der Partie zuerst, dann der
+* **Beide Namen gegen die Meldelisten** (`LeagueRosterIndex`, alle Saisonen; gecacht im allgemeinen `IMemoryCache`,
+  Schlüssel Verein + COUNT/MAX(Id) `LeaguePlayers` + COUNT `LeagueTournaments`, 10 min — `LeagueClubService.RosterAsync`,
+  Codereview F7-007): FIDE-ID aus der Partie zuerst, dann der
   Name in drei Stufen (alle Namensteile in beliebiger Reihenfolge → Nachname + erster Vorname → Nachname +
   Anfangsbuchstabe), ohne Groß/klein, Akzente, akad. Titel, Umlaute in beiden Schreibweisen. Nennt die Partie NUR einen
   Nachnamen („Kostic", 0.576.0), gilt als vierte Stufe der Nachname allein — eindeutig nur bei genau einem Ligaspieler
@@ -212,7 +214,7 @@ Der Teilen-Link muss gültig sein (`LeagueService.ShareValidAsync`, sonst 404); 
 der Vereinspartien gibt es über den Link NICHT.
 
 **Megabase + andere Sammlungen** (0.574.0): `POST /api/league/admin/games?source=Mega` (`league.manage`, PGN, gern
-gzip) spielt eine fremde Partiesammlung in die Karten ein — zugeordnet NUR über `WhiteFideId`/`BlackFideId` im Kopf,
+gzip — entpackt höchstens 400 MB wie unkomprimiert, darüber 413, Codereview F7-021) spielt eine fremde Partiesammlung in die Karten ein — zugeordnet NUR über `WhiteFideId`/`BlackFideId` im Kopf,
 zusammengeführt wie ein chess-results-Abruf, die Quelle steht als Kopfzeile `[LeagueSource "Mega"]` im gespeicherten PGN
 (`LeagueProfileBuilder.StoredSource` liest sie VOR der FIDE-Regel, sonst sähe die Megabase wie Lumbra aus). Den Filter
 auf die TMM-Spieler macht `mega_decide.py` im league-analyzer (Stand 28.09.: 11,5 Mio. Partien, 46 642 übernommen für
@@ -236,7 +238,7 @@ reine Zahl (4–12 Ziffern) sucht die FIDE-ID, und Titel vor/hinter dem Namen fa
 (`LeagueNames.StripTitles`: Schachtitel nur in Großschreibung — „Im, Seong" bleibt ein Name —, akademische vorn; NICHT in
 `NameKey`, der Brettpaarung und Meldeliste beim Aktualisieren verknüpft). Eine
 gewählte FIDE-ID ohne Ligaspieler bleibt an der Partie stehen (`Side.Fide`). Eingespielt über
-`POST /api/league/admin/mega-players` (TSV, gern gzip; ersetzt alles) aus `scan_mega_players.py` im league-analyzer.
+`POST /api/league/admin/mega-players` (TSV, gern gzip, entpackt höchstens 400 MB, sonst 413; ersetzt alles) aus `scan_mega_players.py` im league-analyzer.
 
 **Lichess-Studien** (0.575.0): `POST …/club/games/lichess { url }` (angemeldet und über den Teilen-Link) holt das PGN
 einer ÖFFENTLICHEN Studie bzw. eines Kapitels (`LichessStudySource`, nur `lichess.org/study/{8}` bzw. `…/{8}/{8}` —

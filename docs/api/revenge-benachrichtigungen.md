@@ -8,5 +8,4 @@ Geht ein Freund (Avenger) eines gescheiterten Puzzles eines Users (Target) im Re
 |---------|----------|-------|
 | POST | `/api/revenge/result` | Revanche-Ergebnis melden `{ targetUserId, puzzleId, solved }` — legt Benachrichtigung an (still ignoriert, wenn keine Freunde / Target nie gescheitert) |
 | GET | `/api/revenge/notifications` | Eigene Revanche-Benachrichtigungen (neueste zuerst) |
-| GET | `/api/revenge/notifications/count` | Anzahl ungelesener (Navbar-Badge, kombiniert mit Challenges) |
 | POST | `/api/revenge/notifications/seen` | Alle als gelesen markieren |

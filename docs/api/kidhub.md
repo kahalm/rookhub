@@ -4,7 +4,7 @@
 
 Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, siehe „Drei Oberflächen"). Spielen geht
 **ohne Anmeldung** — der Fortschritt liegt dann nur auf dem Gerät; angemeldet gleicht KidHub ihn mit dem Konto ab
-(0.563.0, `/api/kids/progress`). `KidsController` + `KidsPuzzleService` + `KidsProgressService`.
+(0.563.0, `PUT /api/kids/progress`). `KidsController` + `KidsPuzzleService` + `KidsProgressService`.
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -12,7 +12,6 @@ Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, si
 | GET | `/api/kids/levels/{level}` | AllowAnonymous | Eine Stufe am Stück `{ level, theme, puzzles[{ id, fen, moves }] }` (Lichess-Form: `moves[0]` stellt die Aufgabe), leichteste zuerst; 404 unbekannt |
 | GET | `/api/kids/courses?lang=` | AllowAnonymous | Kinderkurse, die GERADE gezeigt werden `[{ bookId, title, description, puzzleCount }]` — freigegeben (`Book.ForKids`), ohne Kalkulationsbücher, ohne leere, und seit 0.565.0 erst, wenn sie in jeder Sprache aus `Kids:RequiredCourseLanguages` (Vorgabe `de`) vorliegen: Quelle in der Sprache ODER ein fertiger Übersetzungsauftrag (`Done`, auch „nichts zu tun"). `title` = Kindertitel in `lang` → `en` → `de` → Buchname (`KidsTitles.Pick`), sortiert nach diesem Titel; `puzzleCount` ohne Info-Linien
 | GET | `/api/kids/courses/{bookId}/puzzles?lang=` | AllowAnonymous | Aufgaben eines Kinderkurses in Lesereihenfolge (`BookPuzzleDto`, OHNE `IsInfoOnly`); `lang` wie bei den Kursen. 404 wenn nicht `ForKids`/Kalkulationsbuch/noch nicht in der geforderten Sprache; `bookTitle` = Kindertitel wie oben |
-| GET | `/api/kids/progress` | Auth | Fortschritt im Konto `{ levels[{ level, stars, runIndex, runMistakes, runAt }], courses[{ bookId, resetAt, solved[{ id, at }] }] }` — Zeiten in ms seit 1970 (0.563.0) |
 | PUT | `/api/kids/progress` | Auth | Den GANZEN Stand des Browsers schicken → zusammengeführt gespeichert, Antwort = gemeinsamer Stand (`KidsProgressMerge`, Regeln unten). 400 über den Deckeln (`MaxLevels` 1000, `MaxCourses` 500, `MaxLinesPerCourse` 10 000); Zeiten über jetzt + 1 Tag werden gekappt. Je KONTO gedeckelt (Codereview F7-001): der eingehende Stand behält nur Kinderkurse (`Book.ForKids`, kein Kalkulationsbuch) und nur deren eigene Linien-Ids, Stufen nur 1..1000 (Gespeichertes bleibt); Rumpf höchstens 1 MB (`RequestSizeLimit`) |
 | GET | `/api/kids/language-hint` | AllowAnonymous | Land der Besucher-IP und passende Kindersprache `{ country, language }` (0.560.0) — lokal nachgeschlagen; ein bekanntes Land ohne eigene Kindersprache → `en` (0.560.1); beides `null` bei LAN-Adresse, unbekanntem Land oder ohne Länderliste |
 | POST | `/api/kids/endless/batch` | AllowAnonymous (`anonymous-read`) | Endlos-Modus (0.566.0): `{ windows[{ minRating, maxRating }] (≤ 40), exclude[] (≤ 1000) }` → je Fenster ein kindgerechtes Lichess-Puzzle `[{ id, fen, moves, rating }]` in Fensterreihenfolge, im Lauf keins doppelt; Fenster ohne Treffer fehlen. 400 über den Deckeln |

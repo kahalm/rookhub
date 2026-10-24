@@ -24,7 +24,12 @@ Rollenverwaltung an).
   zusätzlich von Verwaltern gepflegte, seit 0.610.0 auch Minderjähriger — deren Konto bleibt verborgen, siehe „Online-Konten +
   Online-Partien"), `LeagueOnlineGames` (deren geholte Partien),
   `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab — frühestens 7 Tage nach dem Anlegen; ein abgelaufener, noch nicht aufgeräumter Link wird beim erneuten Teilen durch einen frischen ersetzt), `LeagueViews`
-  (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf).
+  (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf; `Json` ist Concurrency-Token:
+  Ansichten nur über `LeagueService.PatchViewsAsync` bzw. `RebuildViewsAsync` schreiben (Kollision → neu laden), nie
+  direkt laden-ändern-speichern — Codereview N4-007).
+  **Caches** (Codereview N4-003): zerlegte Profil-Partien und geteilte Meldelisten liegen im Keyed-Cache
+  `league-profile-games` (`LeagueProfileStore.CacheServiceKey`, SizeLimit 10 000 Partien, 10 min ungenutzt), Schlüssel
+  FIDE-ID + `UpdatedAt` bzw. Tnr/Runde/Team + `GeneratedAt`.
 - **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
   Merkmale NUR aus Wissen vor der Runde, logistische Regression mit den eingebetteten Gewichten
   `Assets/league-model.json` (trainiert in Python, `export_weights.py`; Bayern seit 0.708.0 eigenes Modell, siehe „Modell je Region"), Normierung je Match auf B Bretter,
@@ -208,7 +213,7 @@ Rollenverwaltung an).
   archivierte sind überall unsichtbar; `IgnoreQueryFilters()` nur in Konto löschen (`ProfileService`), Rückbau eines Teilen-Links
   (`DeleteByShareAsync`) und Zuordnen nach dem Anmelden (Claims). Antwort von `POST …/club/games`: `replaced` = Zahl archivierter.
 - **Endpunkte** (`Controllers/League/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
-  `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
+  `GET /api/league/player/{fide}` (+`/pgn`), `POST/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/rebuild`, `POST /api/league/admin/chessresults/import` (eine chess-results-Liga je Saison über den Crawler,
   Bundesliga, siehe „Österreichische Bundesliga"), `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten),

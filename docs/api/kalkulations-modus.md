@@ -93,3 +93,5 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 |---------|----------|------|-------|
 | GET | `/api/admin/books/{id}/groups` | Admin | Gruppen-Ids mit Kurs-Zugriff auf das Buch |
 | PUT | `/api/admin/books/{id}/groups` | Admin | Vollständige Gruppen-Freigabe setzen (ersetzt; ungültige Ids ignoriert) |
+| GET | `/api/admin/books` | `books.manage` | Bücherverwaltung: alle Bücher, mit `ownerUserId`/`ownerName` (`null` = globales Buch); Pool-/Öffentlich-/Kinder-Schalter an fremden privaten Büchern fragen in der Oberfläche nach und nennen den Besitzer (Codereview N9-010) |
+| PUT | `/api/admin/books/{id}` | `books.manage` | Buch ändern — jedes Feld `null` = unverändert; `minElo`/`maxElo` 0 = Grenze entfernen, sonst 0..3500 (Codereview N9-009) |

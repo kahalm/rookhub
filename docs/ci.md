@@ -46,6 +46,25 @@
   Release an, Text = Changelog-Einträge seit dem vorigen Versions-Tag (`scripts/release-notes.mjs`, Test in
   `scripts/tests/test_release_notes.sh`). APK + AAB wandern vom bisherigen Latest-Release mit — `/install` lädt
   `releases/latest/download/app-release-signed.apk`, ein Latest ohne die Datei wäre ein toter Link.
+  **Form aller Workflows** (Codereview I1-018, `CiWorkflowTests` hält sie fest): oben `permissions: {}`, Rechte nur je
+  Job; jede Action per Commit-SHA mit Versionskommentar, eine Action = ein SHA in allen Dateien (beim Anheben alle
+  gemeinsam); `node-version` = Major aus `src/frontend/Dockerfile`.
+  **Skript-Tests** (Codereview I1-015): Job `test-scripts` in `test.yml` führt jeden Test unter `scripts/tests/` aus
+  (bash bzw. python3, ohne Container/Netz, `timeout-minutes: 5`). Ein neuer Skript-Test braucht dort eine eigene
+  `- run:`-Zeile — `CiWorkflowTests.EveryScriptTest_RunsInTheTestWorkflow` prüft das.
+  **Crawler-Vertrag** (Codereview I2-010): Job `test-crawler-contract` (zuletzt getaggter Crawler,
+  `CrawlerContractTests` mit `CRAWLER_REPO`) ersetzt `test-crawler`; der Filter `crawler` = die Leser des Vertrags.
+  **Melden statt still** (Codereview I1-014): der nächtliche E2E-Lauf und der Montags-Audit melden sich über
+  `.github/scripts/ci_alert.sh` in Discord (Secret `DISCORD_CI_WEBHOOK`). Die Audit-Scans werden bei Befund rot (der
+  Job bleibt dank `continue-on-error` grün), der Job `melden` läuft nur beim `schedule`-Lauf. Geprüft wird jede
+  `requirements*.txt` im Repo (pip-audit): die aiohttp-Fassung des Engine-Providers steht in
+  `engine-provider/requirements.txt` (Image, CI und Audit lesen sie dort, nicht mehr im Dockerfile), die der
+  Wartungs-Skripte in `scripts/requirements.txt` (Codereview I1-011).
+  **Laufende API-Fassung** (Codereview I1-017): das API-Image trägt `BUILD_GIT_SHA`/`BUILD_GIT_REF` (Build-Args aus
+  `prebuild-api`); `GithubActionsService` meldet für rookhub `ApiSha`/`ApiRef` getrennt vom Frontend (`RunningSha`).
+  **Frontend-Linter** (Codereview F8-004): `npm run lint` in `src/frontend/app` (`eslint.config.mjs`, alle Regeln
+  `'warn'`; die CI hält die Zahl je Regel mit der Ratsche unten). Worktrees mit `node_modules`-Symlink auf eine andere
+  Kopie brauchen dafür erst `npm ci`.
 
 ## ESLint-Ratsche (Frontend, Codereview F8-004 Phase 2)
 

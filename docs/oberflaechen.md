@@ -17,7 +17,9 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   Domain kann die andere nicht mitlesen. Zwei Wege überbrücken das, beide in
   `core/handoff.service.ts`:
   1. **Sprung über das Menü** — nimmt einen Einmal-Code mit (`POST /api/auth/handoff` →
-     `?h=<code>` → `POST /api/auth/rh-session/handoff`, 60 s gültig, genau einmal einlösbar).
+     `?h=<code>` → `POST /api/auth/rh-session/handoff` (der alte Pfad `handoff/exchange` ist seit 0.828.3 entfernt),
+     60 s gültig, genau einmal einlösbar). Bei eingerichteter Elterndomäne nur mit dem geteilten Cookie DESSELBEN
+     Kontos (`POST /api/auth/handoff` legt es an) — sonst Login-CSRF über fremde Codes (Codereview F1-008).
   2. **Geteilte Anmeldung** (seit v0.413.0, `Services/Accounts/SharedSessionService.cs`) — für den
      Normalfall „ich rufe die andere Seite direkt auf". Beim Anmelden legt die API ein Cookie auf
      der gemeinsamen Elterndomäne ab (`Auth:SharedSessionDomain`, z. B. `.oberschmid.homes`;
@@ -34,7 +36,9 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
 - **Link-Vorschau**: `/t/{id}` lebt jetzt auf der Turnierseite. Der nginx sagt der API über
   `X-Og-Site` (aus `$host` abgeleitet), welche SPA-Shell sie anreichern soll und welche Domain in
   `og:url` gehört (`App:TurnierBaseUrl`) — sonst bekäme der Besucher die RookHub-Shell serviert
-  und landete auf dem Dashboard.
+  und landete auf dem Dashboard. KidHub-, LeagueHub- und ClubHub-Hosts setzen `X-Og-Site` auf `none`: der nginx
+  liefert dort die EIGENE `index.html` (keine Vorschau); OG-Antworten tragen nur noch das Cache-Control der nginx-map,
+  das der API wird verborgen (Codereview F8-012).
 - **Ohne Konto benutzbar** (0.643.0, Wunsch „vor allem Turniersuche und Turnier-Detailseiten; Speichern von Filtern und
   Turnieren braucht natuerlich einen Account"): `tournaments/calendar`, `tournaments/calendar/:id` und `tournaments/:id`
   tragen keinen `authGuard` mehr; `/tournaments` (Gemerkt), `/tournaments/history`, `/profile` und `/admin` schon. Jede
@@ -178,7 +182,8 @@ Kinderseite" unter REST API.
   ein Fehler kostet eins, ein Tipp erst ab dem ZWEITEN in derselben Aufgabe (`ENDLESS_FREE_HINTS` = 1, Wunsch 2026-09-27 —
   der erste lässt nur die Figur leuchten), höchstens eins je Aufgabe, und das Kind löst die Aufgabe trotzdem zu Ende
   (dafür meldet `KidsPuzzleComponent` jeden falschen Zug sofort per `mistake` und jeden Tipp per `hinted` mit seiner Zahl
-  in der Aufgabe; für die Sterne der Stufen zählt weiter jeder Tipp). Das letzte Herz beendet den Lauf nach
+  in der Aufgabe; für die Sterne der Stufen zählt weiter jeder Tipp; den Preis des nächsten Tipps bekommt sie als Eingabe
+  `hintCost` vom Modus — Endlos `free`/`heart`, Stufen `star`, Kurse keiner, Codereview UX-061). Das letzte Herz beendet den Lauf nach
   `WRONG_HOLD_MS`. Läufe + Rekord liegen NUR im Browser (`KidsEndlessStore`, `rh-kids-endless-v1`, letzte 20) — nicht im
   Konto. Die PUZZLES holt `KidsEndlessService` in Blöcken zu 20 (Nachladen bei < 5): je Fenster Zufalls-Sprung in den
   Id-Raum, die nächsten 12 des Fensters, das erste kindgerechte (≤ 3 eigene Züge, Qualitätsgrenzen der Leiter, ohne

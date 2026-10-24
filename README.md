@@ -217,7 +217,7 @@ npx ng serve    # http://localhost:4200 — braucht API auf :5001
 
 ```bash
 cd src/api/RookHub.Api
-dotnet run
+Encryption__Key="$(openssl rand -base64 48)" dotnet run   # ENCRYPTION_KEY: Pflicht, solange Chessable:Enabled (Vorgabe)
 ```
 
 ### Tests

@@ -242,7 +242,7 @@ Einlesung bleibt fürs Kontingent), das Konto ebenso. **Frontend-nginx**: eigene
 (die generische /api/-Regel deckelt auf 15 MB, drei Handyfotos kämen nicht durch; `DeploymentConfigTests` hält sie über dem
 `[RequestSizeLimit]` des Uploads). **LeagueHub seit 0.690.1** (Wunsch 2026-10-06): `POST …/club/scans` und
 `POST /api/league/s/{token}/club/scans` nehmen ebenfalls bis zu drei Teile `file` (`ClubUpload.ReadPagesAsync`, 64 MB, die
-verschachtelte nginx-Location dafür auf 64M), `GET …/scans/{id|key}/photo?page=n`; die Seite bietet nach dem ersten Foto
+verschachtelte nginx-Location in `/api/` dafür auf 64M — `DeploymentConfigTests` hält sie über dem `[RequestSizeLimit]`, Codereview A6-020; eine nginx-413 kommt als HTML ohne `reason`, RookHub und LeagueHub zeigen sie als „Foto zu groß“), `GET …/scans/{id|key}/photo?page=n`; die Seite bietet nach dem ersten Foto
 „+ Seite 2/3“, die Prüfseite blättert zwischen den Seiten (folgt dem gewählten Zug).
 
 **Mehrere Fotos DERSELBEN Seite + zusammenführen** (0.736.0, Wunsch 2026-10-10: „zwei Fotos einer Partie, beide die gleiche

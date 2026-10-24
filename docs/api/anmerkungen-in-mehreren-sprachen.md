@@ -243,7 +243,8 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   Kurs→Repertoire. `/{id}/flashcards` liefert nur Linien-Ids (nichts zu uebersetzen).
 * **Loeschen**: jeder Pfad, der `BookPuzzles` loescht (`CourseAuthoringService.RemoveLinesAsync` = Linie/Kapitel,
   `BookAdminService.DeleteBookAsync` = Buch/eigener Kurs/Kurs→Repertoire/Konto, der Rueckbau in
-  `CourseService.UploadPersonalCourseAsync`), raeumt die Kurs-Saetze AUSDRUECKLICH mit ab
+  `CourseService.UploadPersonalCourseAsync`), laeuft ueber `BookPuzzleDependents` (Codereview A9-007) und raeumt damit
+  neben den Restrict-Abhaengigen, Track-Solves und Buch-Favoriten die Kurs-Saetze AUSDRUECKLICH mit ab
   (`CourseTranslationCleanup`), das Buch zusaetzlich seine `CourseTranslationJobs`. Die TEXTE uebernimmt in MariaDB
   der Fremdschluessel (sie zu laden hiesse, jede Uebersetzung zu lesen und einzeln zu loeschen), unter InMemory
   werden sie ausdruecklich geloescht.

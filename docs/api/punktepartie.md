@@ -20,7 +20,9 @@ den anonymen Puzzle-Versuchen). Spielbar ist dort ausschliesslich der **kuratier
 (`GameAnalysis.IsPublic`): an einer fremden privaten Analyse kommt niemand vorbei, weil
 `StartAsync` anonym gar nicht erst nach einem Besitzer fragt. Die Kennung kommt aus
 `core/anon-session.ts` und muss `ValidationConstants.SessionIdPattern` erfuellen (Hex, 32–36) — die
-Mindestlaenge ist die einzige Schranke zwischen zwei anonymen Durchlaeufen.
+Mindestlaenge ist die einzige Schranke zwischen zwei anonymen Durchlaeufen. Nach Login/Registrierung
+uebernimmt `POST /api/guess-sessions/claim-session` `{ sessionId }` → `{ claimed }` die anonymen Durchlaeufe des
+Browsers ins Konto (wie Puzzle, Buch-Puzzle, Endless); danach gilt der Deckel je Besitzer (Codereview N11-003).
 
 **Der erste relevante Zug** (0.467.0, `GuessStartPly`): wo das Raten anfaengt, war bis dahin eine
 KONSTANTE (`DefaultSkipPlies` = 8, im Code als „grober Platzhalter" vermerkt) — bei einem scharfen
@@ -58,7 +60,7 @@ Unterschied) — und faellt sonst auf Weiss zurueck. Der Umweg ueber die Bewertu
 die zehn Meisterpartien aus Capablancas *Chess Fundamentals* tragen in der Kopfzeile nur `*`, weil
 das Buch die Ergebnisse allein im Fliesstext nennt. Bei den EIGENEN Analysen bleibt die Wahl.
 
-**Ein Deckel je Besitzer** (`MaxSessionsPerOwner` = 50, raeumt nur BEENDETE Durchlaeufe weg): `POST`
+**Ein Deckel je Besitzer** (`MaxSessionsPerOwner` = 50, raeumt zuerst beendete, dann die aeltesten laufenden Durchlaeufe weg — Codereview A6-015): `POST`
 legt auch ohne Anmeldung Zeilen an, und ohne Deckel waechst die Tabelle mit allem, was der
 Rate-Limiter durchlaesst.
 
@@ -79,11 +81,13 @@ configured" ab. Ein Admin kann seine Hintergrund-Engines deshalb freigeben
 (`LichessEngineCredential.ShareAsHouseEngine`, `PUT /api/engine/house`, Haekchen in der
 Engine-Karte des Profils). `GameAnalysisService.ResolveGuessEngineOwnerAsync` nimmt dann zuerst die
 EIGENE Engine des Einwerfers und faellt sonst auf die Haus-Engine zurueck; die Freigabe gilt nur,
-solange das Konto Admin ist. Der Auftrag BLEIBT dabei beim Einwerfer — nur `EngineOwnerUserId`
+solange das Konto Admin ist. Geprueft wird sie zusaetzlich vor jedem Nachlegen und im Worker
+(`EngineOwnerResolver.IsHouseEngineSharedAsync`, Codereview A4-004): ohne Freigabe scheitern Analyse und offene
+Auftraege mit „Haus-Engine nicht mehr freigegeben“, die Vertiefung endet mit dem Ergebnis des ersten Durchgangs. Der Auftrag BLEIBT dabei beim Einwerfer — nur `EngineOwnerUserId`
 (neu an `GameAnalysis` UND `AnalysisJob`, `null` = Besitzer) sagt dem Worker, wessen Token und
 Engine er benutzt. Den Auftrag stattdessen dem Haus-Konto zu geben waere einfacher gewesen und
-falsch: Deckel (`MaxOpenJobsPerUser` = 50), Trimmer, Auftragsliste und Sekundenanzeige haengen alle
-am Besitzer — alle Einwerfer teilten sich dann fuenfzig Plaetze, einer koennte alle aussperren, und
+falsch: Deckel (`MaxOpenJobsPerUser` = 150), Trimmer, Auftragsliste und Sekundenanzeige haengen alle
+am Besitzer — alle Einwerfer teilten sich dann hundertfuenfzig Plaetze, einer koennte alle aussperren, und
 in der Auftragsliste des Admins staenden fremde Partien. `PickBackgroundEngineAsync` zaehlt die
 kuerzeste Schlange entsprechend nach ENGINE-BESITZER (`EngineOwnerUserId ?? UserId`).
 
@@ -148,14 +152,14 @@ die Aufträge einer Partie auf den 16 Engines eines seit einem Tag ausgeschaltet
 wanderten nach jedem 503 mit 15 s Pause zur nächsten ausgeschalteten. Lichess-Engines (`eei_`) kennen keinen Poll und
 bleiben; ist gar keine Engine brauchbar, gilt wie bisher die ganze Liste (der Auftrag wartet).
 
-**Wie viele Engines wirklich rechnen, entscheidet `MaxOpenJobsPerGame`** (96 seit 0.475.9, davor 32,
-davor 12) —
+**Wie viele Engines wirklich rechnen, entscheidet `MaxOpenJobsPerGame`** (32 seit 0.475.10 — die gemessene
+Bestkonfiguration; 0.475.9 kurz 96, davor 32, davor 12) —
 nicht die Zahl der hinterlegten Hintergrund-Engines. Der Worker nimmt je Engine EINE Suche; jede Engine
 ueber die Zahl der offenen Auftraege hinaus steht still. Am 2026-09-12 auf Prod nachgemessen: sechzehn
 Engines hinterlegt, zwoelf Auftraege auf zwoelf Engines, vier dauerhaft untaetig. Der Ueberhang ueber die
 Engine-Zahl ist Absicht: laeuft eine Suche aus, nimmt die Engine sofort den naechsten Auftrag statt bis zu
-einen Pump-Durchgang (20 s) zu warten. Der Deckel bleibt unter `MaxOpenJobsPerUser` (50), damit daneben
-von Hand eingereiht werden kann — jetzt mit 18 statt 38 freien Plaetzen.
+einen Pump-Durchgang (20 s) zu warten. Der Block bleibt unter `MaxOpenJobsPerUser` (150), damit daneben
+von Hand eingereiht werden kann.
 
 **Der Deckel des Einwurfs** (`MaxOpenGuessGamesPerUser` = 5) zaehlt `Origin = Guess` UND (seit 0.512.0)
 `Origin = SavedGame` zusammen — beide rechnen auf fremder Rechenzeit, getrennte Deckel waeren doppelt so viele

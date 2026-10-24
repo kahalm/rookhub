@@ -6,4 +6,4 @@ Ranglisten über vier Kategorien je Periode (`weekly`/`monthly`/`alltime`, UTC-G
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/leaderboards?period=&top=&around=` | Auth | Alle vier Bestenlisten für die Periode (`{ period, puzzles[], dailyPuzzles[], endlessRuns[], courseLines[] }`, je Eintrag `{ name, discordId?, discordUsername?, count, rank, isMe }`). Je Kategorie nur Top-`top` (Default 5) + Fenster ±`around` (Default 2) um den eigenen Platz |
+| GET | `/api/leaderboards?period=&top=&around=` | Auth | Alle vier Bestenlisten für die Periode (`{ period, puzzles[], dailyPuzzles[], endlessRuns[], courseLines[] }`, je Eintrag `{ name, count, rank, isMe }` — ohne Discord-Felder, Codereview N9-007). Je Kategorie nur Top-`top` (1–50, Default 5; vorher 1–500) + Fenster ±`around` (0–25, Default 2) um den eigenen Platz |

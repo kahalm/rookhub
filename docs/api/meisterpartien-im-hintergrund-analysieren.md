@@ -14,7 +14,7 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   Partie keine Stellungen ein (`EnqueueNextAsync`); was schon eingereiht ist, läuft zu Ende.
 - **Vorrang**: jeder Auftrag einer `Library`-Analyse ist `Background`. Neu seit diesem Stand: ein normaler Auftrag
   VERDRÄNGT einen laufenden Hintergrund-Auftrag auf seiner Engine (`IAnalysisJobControl.PreemptBackground`, aufgerufen in
-  `AnalysisJobService.CreateAsync`) — wie der Live-Vorrang auf `Paused`, ohne Fehlversuch; vorher wartete er, bis die
+  `AnalysisJobService.CreateAsync` und `CreateManyAsync`, Codereview A4-007) — wie der Live-Vorrang auf `Paused`, ohne Fehlversuch; vorher wartete er, bis die
   Vertiefung/Meisterpartie auf dieser Engine fertig war. Gilt auch für die Vertiefung eigener Partien.
 - **Sichtbarkeit**: `Library`-Analysen gehören dem Besitzer, sind aber für ALLE lesbar (`GetPlayableHeadAsync`,
   Punktepartie starten, Bibliothek: `InPool`/`RequestAsync` nimmt sie statt neu zu rechnen) — und bewusst NICHT

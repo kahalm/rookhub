@@ -41,9 +41,11 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 ### Kritische Abhängigkeiten zwischen den Projekten
 - `Services/Tournaments/CrawlerProxyService.cs` – HTTP-Client zum Crawler, muss Crawler-Routen kennen
 - `Controllers/Tournaments/TournamentProxyController.cs` – Mappt RookHub-Routen auf Crawler-Routen (RookHub-`/api/tournaments/crawl*` → Crawler-`/api/crawl*`)
-- `Services/Social/SchachBotWebhookService.cs` – HMAC-signierte Webhooks an den Bot (Tagespuzzle + Wochenpost-Progress)
+- `Services/Social/SchachBotWebhookService.cs` – HMAC-signierte Webhooks an den Bot (Tagespuzzle + Wochenpost-Progress);
+  der Rumpf ist der Ergebnis-DTO in MVC-Form (`WireJson`), Golden-Vektoren der Bot-Signaturen in `BotSignatureVectorTests` (I2-008)
 - Crawler-Endpoint-Änderungen müssen in den beiden ersten Dateien nachgezogen werden
-- Crawler-Response-Strukturen werden als `JsonElement` durchgereicht (kein festes DTO-Mapping)
+- Crawler-Response-Strukturen werden als `JsonElement` durchgereicht (kein festes DTO-Mapping); die gelesenen Felder hält
+  `tests/RookHub.Api.Tests/Fixtures/CrawlerContract` fest (`CrawlerContractTests`) — Endpoint-/Feldänderungen im Crawler dort nachziehen (I2-006)
 
 ## Tech Stack
 
@@ -63,7 +65,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Log-Visualisierung | Kibana | 8.17.0 |
 | Tests | xUnit + InMemory DB | - |
 
-**Hinweis (DB-Provider)**: Das originale `Pomelo.EntityFrameworkCore.MySql` hat kein EF-Core-10-Release (Issue seit Aug 2025 offen, kein ETA). Alle .NET-Repos (rookhub/crawler/piratechess) nutzen daher den gepflegten **Microting-Fork** `Microting.EntityFrameworkCore.MySql` (MIT, EF Core 10, MySQL/MariaDB) — reiner Kompatibilitäts-Fork, `MySql:`-Annotation-Keys unverändert (bestehende Migrations kompatibel), `UseMySql`/`MariaDbServerVersion` bleiben im `Microsoft.EntityFrameworkCore`-Namespace (kein Code-Change). Sobald das originale Pomelo EF 10 liefert (offizielle WIP-PR #2019), zurückwechseln erwägen. **Swashbuckle** ist auf 10.2.3 (net10 zieht `Microsoft.OpenApi` 2.0 → API-Änderung: `OpenApiSecuritySchemeReference` statt `OpenApiReference`, `AddSecurityRequirement`-Factory-Overload; siehe `Program.cs`).
+**Hinweis (DB-Provider)**: Das originale `Pomelo.EntityFrameworkCore.MySql` hat kein EF-Core-10-Release (Issue seit Aug 2025 offen, kein ETA). Alle .NET-Repos (rookhub/crawler/piratechess) nutzen daher den gepflegten **Microting-Fork** `Microting.EntityFrameworkCore.MySql` (MIT, EF Core 10, MySQL/MariaDB) — reiner Kompatibilitäts-Fork, `MySql:`-Annotation-Keys unverändert (bestehende Migrations kompatibel), `UseMySql`/`MariaDbServerVersion` bleiben im `Microsoft.EntityFrameworkCore`-Namespace (kein Code-Change). Sobald das originale Pomelo EF 10 liefert (offizielle WIP-PR #2019), zurückwechseln erwägen. Die Server-Fassung steht fest in `Data/DbServerVersion.cs` (MariaDB 11.8, kein `AutoDetect` mehr) — beim Heben des DB-Images dort mitziehen, `DbServerVersionTests` prüft es (A9-010). **Swashbuckle** ist auf 10.2.3 (net10 zieht `Microsoft.OpenApi` 2.0 → API-Änderung: `OpenApiSecuritySchemeReference` statt `OpenApiReference`, `AddSecurityRequirement`-Factory-Overload; siehe `Program.cs`).
 
 ## Doku-Wegweiser (Detail-Doku liegt in `docs/`, NICHT hier)
 
@@ -163,7 +165,7 @@ src/
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
     Program.cs              Startup: DB, JWT+ApiToken Policy-Scheme, CORS, Swagger,
                             Auto-Migration, Health-Endpoint, BackgroundServices,
-                            ForwardedHeaders (private Peers only)
+                            ForwardedHeaders (Docker-Netze, 2 Hops — Middleware/ForwardedHeadersSetup)
     Dockerfile              Multi-stage .NET Build
   frontend/
     app/                    Angular-Workspace mit ZWEI Projekten (siehe src/frontend/CLAUDE.md):
@@ -244,6 +246,9 @@ cd src/frontend/app && npx ng test app --watch=false --include='src/app/features
 - **Controller-Tests** instanziieren den Controller direkt; `BaseApiController.GetUserId()` wird via `ControllerContext` mit `ClaimsPrincipal` + `ClaimTypes.NameIdentifier` gemockt
 - **Helper-Methode** `CreateUserAsync()` pro Testklasse für Test-Daten
 - **InMemory cascaded nicht** — Admin-Delete-Pfade räumen abhängige Daten explizit ab; Tests entsprechend prüfen
+- **`ROOKHUB_TEST_MYSQL` zeigt auf einen Wegwerf-Container** (Codereview N11-005): ein Server mit Schema
+  `rookhub`/`piratechess`/`chessresults` wird abgelehnt (Ausnahme `ROOKHUB_TEST_MYSQL_ALLOW_SHARED=1`); verwaiste
+  `rh_it_*`-Schemata älter als 6 h räumt der Lauf selbst weg
 - **Integrationstests: Aufbau je KLASSE, nicht je Test** (seit 0.496.1) — xUnit legt je Testmethode eine neue Instanz der Testklasse an. Stand `MariaDbSchema.CreateAsync` + `MigrateAsync` + `new ApiFactory` direkt in deren `InitializeAsync`, lief das je TEST: gemessen 21 vollständige Durchläufe aller 139 Migrationen und 13 Anwendungsstarts für 22 Tests, von denen 18 zwischen 14 ms und 945 ms dauern. Der Aufbau gehört deshalb in eine `MariaDbClassFixture` (`IClassFixture<…>`); je Test ruft die Klasse nur `fixture.ResetAsync()` (leert jede Tabelle, Fremdschlüssel währenddessen aus) und holt sich einen frischen DI-Scope. **Die Isolation bleibt** — jeder Test beginnt auf einer leeren Datenbank —, aber die AUTO_INCREMENT-Zähler laufen über die Tests hinweg weiter: ein Test, der sich auf „die erste Id ist 1" verlässt, fällt damit sofort auf. Eine neue Testklasse braucht eine eigene Fixture-Unterklasse (`IClassFixture<T>` unterscheidet nach TYP); wer die Anwendung hochfährt, gehört zusätzlich in `ApiFactoryCollection`. Lokal gemessen: 9:45 → 1:54
 
 ## EF Core Migrations
@@ -349,7 +354,11 @@ Vor Arbeit an einem dieser Punkte den Volltext lesen.
 - Buch-/Kurs-FENs sind nicht immer legal
 - Platzhalter-Geheimnisse gelten nirgends als Schlüssel
 - Erwartete Fehler als Domänen-Ausnahme, nicht als BCL-catch im Controller
+- Fehlerrumpf `{ message }` + optional `code`
+- „Wer ist am Zug“ und UCI je an EINER Stelle
+- Hintergrund-Lesezugriffe auf den Crawler über `DirectoryCrawlerClient.GetCrawlerJsonAsync`
 - Periodische Hintergrunddienste erben von `PeriodicWorker`
+- Serilog-Stufen je Quelle stehen in `Logging/SerilogLevels.cs`
 - Fluent-Konfiguration neuer Entitäten gehört in `Data/Configurations/`
 - Literal-Routen vor Parameter-Routen
 - Scanner-Pfade bekommen 404, nicht die Startseite
