@@ -85,7 +85,7 @@ laufende/pausierte Browser-Saetze nach: Phase `importing` mit `Attempts = 0`). S
 voll gecachter Server-Import (`FullyCached=true`, kein `FetchedPgn`); drei Wege stellten sie auf `queued` —
 Neustart (`ChessableImportResumeService`), verwaiste Sitzung (Watchdog mit Lanes an) und Pausieren/Fortsetzen —,
 und die Download-Lane holte den Kurs dann mit dem Bearer des Nutzers bzw. piratechess ihn ganz aus dem Kurs-Cache,
-an der Eigentumspruefung vorbei. Jetzt: `DrainNextAsync` und `RunAsync` nehmen sie nie, der Resume-Dienst laesst sie
+an der Eigentumspruefung vorbei. Jetzt: `DrainNextAsync` und `RunAsync` (`ChessableFetchLane`) nehmen sie nie, der Resume-Dienst laesst sie
 liegen, der Watchdog SCHLIESST einen verwaisten Browser-Import auch mit Lanes, Pausieren/Fortsetzen bleiben ohne
 Wirkung, und `GetOrCreate` uebergibt beim Aufraeumen abgelaufene Sitzungen an den Watchdog, statt sie zu verwerfen.
 
@@ -101,7 +101,8 @@ vollstaendiges „Kurs holen" (Daten-Nacharbeit).
 
 **Nach einem API-Neustart mitten im Import geht der Kapitel-Versatz nicht verloren (Codereview 2026-09-29, A3-006).**
 Der Versatz lebt nur im `ChessableIngestSessionStore` (Arbeitsspeicher). Der erste Chunk einer Sitzung, die der Server
-nicht kennt, fragt deshalb `ChessableImportService.ResumeChapterOffsetAsync`: trifft er mit Versatz 0 auf belegte
+nicht kennt, fragt deshalb `ChessableImportService.ResumeChapterOffsetAsync` (`ChessableBrowserImport`; den Chunk-Ablauf fuehrt
+`ChessableBrowserIngest`): trifft er mit Versatz 0 auf belegte
 LineIds UND keine seiner oids steht im Buch, setzt er hinter der hoechsten Kapitelnummer des Buchs fort — vorher fiel
 jede seiner Linien auf „uebersprungen" (unbekannte oid, kein Teil-Import), und alle folgenden Kapitel fehlten still.
 Bekannte oids (erneutes Holen) behalten ihre Nummern, ein Teil-Import (`partial`) ist ausgenommen (dort bekommt eine

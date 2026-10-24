@@ -3,6 +3,19 @@
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Chessable-Integration (auth, leitet an piratechess-API weiter)“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
 
+**Code-Aufteilung (Zerlegung Z3, Codereview 2026-09-29):** Controller, Hintergrunddienste (Watchdog, Resume,
+Fast-Lane, Kurslisten-Refresh) und der `ImportReprocessService` (`ICourseReimporter`) sprechen weiter nur mit
+`Services/Chessable/ChessableImportService.cs` — seit der Zerlegung eine Fassade, die ihre Teile aus den eigenen
+(scoped) Abhängigkeiten baut: `ChessableFetchLane` (Lane-Wahl, atomarer Claim, Lauf; prozessweites Download-Gate),
+`ChessableCourseFetch` (Bearer/Breaker/Tageslimit, Poll-Schleife, Verbindungs-Retry), `ChessableReimportQueue`
+(Re-Import anlegen, Queue-Ticket), `ChessableBrowserImport` (Direktimport, laufender Kapitel-Import, Cache-Schranke),
+`ChessableBrowserIngest` (Ablauf eines `ingest/chunk`, vorher im `ExtensionController`, A3-012), `ChessableLiveAppend`
+(Live-Anhängen, Import-Stand je oid; Schloss je (User, bid)), `ChessableTargetWriter` (Buch/Repertoire schreiben),
+`ChessableImportOutcome` (Fehlschlag/Fertig-Meldung). Reine Helfer: `ChessablePgnBlocks` (PGN-Blöcke, oids),
+`ChessableImportTargets` (Ziel, Modus, Dateinamen), `ChessableImportProgress` (prozessweite Treiber-Liste,
+Dauer-Format), `ChessableIngestRules` (Formregeln der Ingest-Anfragen). Alle Teile loggen unter der Quelle
+`ChessableImportService` (Chunk-Meldungen weiter unter `ExtensionController`).
+
 > **Abschaltbar: `Chessable:Enabled=false`** (`CHESSABLE_ENABLED=false`, Vorgabe an). Dann antwortet
 > `/api/chessable/*` mit **404** (ausser `/api/chessable/admin/*`), und es fallen weg: der Drain des Watchdogs,
 > der Resume-Dienst und der naechtliche Kurslisten-Refresh. **Die Download-Lane selbst laeuft weiter**, bewusst:
