@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.829.2", date: "2026-10-24", changes: [
+    { en: "Discord link: a Discord ID that was freed up (unlinked, switched or account deleted) stays reserved for its previous account even after a server restart — the note now lives in the table „DiscordLinkReleases“ instead of memory, so an older forwarded puzzle link can no longer link it to someone else (code review A1-011).",
+      de: "Discord-Verknüpfung: Eine frei gewordene Discord-ID (getrennt, gewechselt oder Konto gelöscht) bleibt auch nach einem Neustart dem bisherigen Konto vorbehalten – der Vermerk steht jetzt in der Tabelle „DiscordLinkReleases“ statt im Speicher, ein älterer weitergeleiteter Rätsellink verknüpft sie nicht mehr mit einem fremden Konto (Codereview A1-011)." },
+  ] },
   { version: "0.829.1", date: "2026-10-24", changes: [
     { en: "Analysis jobs: the job list of the house-engine account no longer scans every batch position — a new database index on the running job id turns the check into a lookup (code review A4-016; MariaDB builds the index at the first start after the update, a few seconds for 1.2 million rows).",
       de: "Analyseaufträge: Die Auftragsliste des Haus-Engine-Kontos durchsucht nicht mehr jede Stapel-Stellung – ein neuer Datenbank-Index auf die laufende Auftragsnummer macht die Prüfung zum Nachschlagen (Codereview A4-016; MariaDB legt den Index beim ersten Start nach dem Update an, bei 1,2 Mio. Zeilen einige Sekunden)." },
