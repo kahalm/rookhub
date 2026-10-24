@@ -5347,14 +5347,16 @@
         "free": "Move",
         "calc": "Calculate",
         "solve": "Solve",
-        "maia": "Maia"
+        "maia": "Maia",
+        "game": "Game"
       },
       "modeHint": {
         "view": "Only the position from the book",
         "free": "Move the pieces freely",
         "calc": "Write down variations without moving the pieces for good – check them later",
         "solve": "Play the solution: stored (book or engine) or Stockfish now",
-        "maia": "Play the position out against Maia"
+        "maia": "Play the position out against Maia",
+        "game": "play through the game this diagram comes from"
       },
       "calcHint": "Play variations – they are noted as lines.",
       "calcSaveFailed": "Variations could not be saved on this device.",
@@ -5388,7 +5390,15 @@
       "correctFailed": "The position could not be saved.",
       "calcHelp": "The lines are kept on this device. Check a line in the analysis board or switch on the engine.",
       "wrongMove": "Wrong — keep looking.",
-      "solvedWithMistake": "Solved (with a mistake)"
+      "solvedWithMistake": "Solved (with a mistake)",
+      "gameLoading": "Loading game …",
+      "gameMissing": "No game found for this diagram.",
+      "gameNav": "Step through the game",
+      "gameStart": "Start of game",
+      "gameEnd": "End of game",
+      "gameToDiagram": "Diagram",
+      "gameHint": "Click a move to jump there; your own moves start a side line.",
+      "gameBack": "Back to the game"
     },
     "title": "E-books",
     "intro": "Chess books to read in the browser or download; each book is shared with the groups its uploader chose.",

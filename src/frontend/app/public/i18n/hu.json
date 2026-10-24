@@ -5347,14 +5347,16 @@
         "free": "Lépés",
         "calc": "Számolás",
         "solve": "Megoldás",
-        "maia": "Maia"
+        "maia": "Maia",
+        "game": "Játszma"
       },
       "modeHint": {
         "view": "Csak a könyv állása",
         "free": "Szabadon lépni a bábukkal",
         "calc": "Változatok lejegyzése a bábuk végleges mozgatása nélkül – később ellenőrizhető",
         "solve": "A megoldás lejátszása: mentett (könyv vagy motor) vagy most a Stockfish",
-        "maia": "Az állás lejátszása Maia ellen"
+        "maia": "Az állás lejátszása Maia ellen",
+        "game": "a játszma végigjátszása, amelyből az ábra származik"
       },
       "calcHint": "Játssz változatokat – vonalakként jegyzi fel őket.",
       "calcSaveFailed": "A változatokat nem sikerült ezen az eszközön menteni.",
@@ -5388,7 +5390,15 @@
       "correctFailed": "Az állást nem sikerült menteni.",
       "calcHelp": "A vonalak ezen az eszközön maradnak. Egy vonalat ellenőrizhetsz az elemzőtáblán, vagy bekapcsolhatod a motort.",
       "wrongMove": "Rossz — keress tovább.",
-      "solvedWithMistake": "Megoldva (egy hibával)"
+      "solvedWithMistake": "Megoldva (egy hibával)",
+      "gameLoading": "Játszma betöltése …",
+      "gameMissing": "Ehhez az ábrához nincs játszma.",
+      "gameNav": "Lépkedés a játszmában",
+      "gameStart": "Játszma eleje",
+      "gameEnd": "Játszma vége",
+      "gameToDiagram": "Ábra",
+      "gameHint": "Egy lépésre kattintva oda ugrik; a saját lépések mellékváltozatot nyitnak.",
+      "gameBack": "Vissza a játszmához"
     },
     "title": "E-könyvek",
     "intro": "Sakk-könyvek böngészőben olvasásra vagy letöltésre; minden könyv azokkal a csoportokkal van megosztva, amelyeket a feltöltője választott.",

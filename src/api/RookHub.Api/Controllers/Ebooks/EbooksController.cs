@@ -140,6 +140,13 @@ public class EbooksController : BaseApiController
     public async Task<ActionResult<EbookDiagramListDto>> GetDiagrams(int id, CancellationToken ct)
         => Ok(await _service.GetDiagramsAsync(Caller, await ManageAllAsync(), id, ct));
 
+    /// <summary>Partiensammlungen (0.831.0): die Partie zu einem Diagramm (Kopf, Hauptlinie als SAN, Halbzug der
+    /// Diagrammstellung) für den Brett-Modus „Partie“; ohne hinterlegte Partie 404.</summary>
+    [HttpGet("{id:int}/diagrams/{diagramId:int}/game")]
+    [AllowAnonymous]
+    public async Task<ActionResult<EbookGameDto>> GetDiagramGame(int id, int diagramId, [FromServices] EbookGameService games, CancellationToken ct)
+        => Ok(await games.GetForDiagramAsync(Caller, await ManageAllAsync(), id, diagramId, ct));
+
     // ── Sammlungen (0.787.0) — Literal-Routen, verwalten nur mit ebooks.manage ─────────────────────────
 
     [HttpGet("collections")]

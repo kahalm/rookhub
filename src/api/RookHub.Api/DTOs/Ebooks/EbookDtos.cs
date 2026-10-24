@@ -243,6 +243,60 @@ public class EbookDiagramDto
     public bool ReportedByMe { get; set; }
     /// <summary>Meldungen insgesamt — nur für Verwalter gefüllt, sonst 0.</summary>
     public int ReportCount { get; set; }
+    /// <summary>Partiensammlungen (0.831.0): zu diesem Diagramm ist eine Partie hinterlegt (Modus „Partie“).</summary>
+    public bool HasGame { get; set; }
+}
+
+/// <summary>Die Partie zu einem Diagramm (0.831.0): Kopf, Hauptlinie (SAN) und der Halbzug der Diagrammstellung.</summary>
+public class EbookGameDto
+{
+    public int Id { get; set; }
+    public string? White { get; set; }
+    public string? Black { get; set; }
+    public string? Event { get; set; }
+    public string? Date { get; set; }
+    public string? Result { get; set; }
+    public List<string> Moves { get; set; } = [];
+    /// <summary>Halbzüge bis zur Diagrammstellung (0 = Grundstellung).</summary>
+    public int Ply { get; set; }
+}
+
+/// <summary>Partien eines Buchs setzen (Verwalter, 0.831.0): <see cref="Games"/> mit frei gewähltem <c>Key</c>, dazu die
+/// Zuordnung Diagramm → Partie + Halbzug. <see cref="Replace"/> = vorher alle Partien des Buchs entfernen.</summary>
+public class EbookGamesImportDto
+{
+    public bool Replace { get; set; }
+    [MaxLength(5000)] public List<EbookGameImportItem> Games { get; set; } = [];
+    [MaxLength(20000)] public List<EbookGameLinkItem> Links { get; set; } = [];
+}
+
+public class EbookGameImportItem
+{
+    [Required, MaxLength(60)] public string Key { get; set; } = string.Empty;
+    [MaxLength(120)] public string? White { get; set; }
+    [MaxLength(120)] public string? Black { get; set; }
+    [MaxLength(200)] public string? Event { get; set; }
+    [MaxLength(20)] public string? Date { get; set; }
+    [MaxLength(10)] public string? Result { get; set; }
+    /// <summary>Hauptlinie als SAN, leerzeichengetrennt.</summary>
+    [Required] public string Moves { get; set; } = string.Empty;
+    [MaxLength(40)] public string? Source { get; set; }
+}
+
+public class EbookGameLinkItem
+{
+    public int DiagramId { get; set; }
+    [Required, MaxLength(60)] public string GameKey { get; set; } = string.Empty;
+    public int Ply { get; set; }
+}
+
+/// <summary>Ergebnis von <see cref="EbookGamesImportDto"/>.</summary>
+public class EbookGamesImportResultDto
+{
+    public int Games { get; set; }
+    public int Linked { get; set; }
+    /// <summary>Verknüpfungen, die nicht passten (Diagramm fremd/unbekannt, Partie unbekannt, Halbzug außerhalb).</summary>
+    public int Skipped { get; set; }
 }
 
 public class EbookDiagramReportRequest

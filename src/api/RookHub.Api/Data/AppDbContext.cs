@@ -127,6 +127,7 @@ public partial class AppDbContext : DbContext
     public DbSet<EbookProgress> EbookProgresses => Set<EbookProgress>();
     public DbSet<EbookAnonymousProgress> EbookAnonymousProgresses => Set<EbookAnonymousProgress>();
     public DbSet<EbookDiagram> EbookDiagrams => Set<EbookDiagram>();
+    public DbSet<EbookGame> EbookGames => Set<EbookGame>();
     public DbSet<EbookCollection> EbookCollections => Set<EbookCollection>();
     public DbSet<EbookMissedDiagram> EbookMissedDiagrams => Set<EbookMissedDiagram>();
     public DbSet<EbookDiagramCorrection> EbookDiagramCorrections => Set<EbookDiagramCorrection>();

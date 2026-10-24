@@ -47,3 +47,22 @@
 @media (max-width: 899.98px) {
   .eb-board { width: min(100%, 62dvh); margin: 0 auto; }
 }
+
+/* Partie (0.831.0): Kopf, Schritt-Leiste, Zugliste mit eigenem Scroll-Kasten (nie die Seite), aktueller Zug getönt,
+   Diagrammzug unterstrichen. */
+.eb-game-head { margin: 0; font-size: .85rem; color: var(--mat-sys-on-surface-variant); overflow-wrap: anywhere; }
+.eb-game-nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.eb-game-diagram { margin-left: auto; }
+.eb-game-moves { border-top: 1px solid var(--mat-sys-outline-variant); padding-top: 4px; }
+.eb-gm-row { display: grid; grid-template-columns: 2.6em 1fr 1fr; align-items: baseline; }
+.eb-gm {
+  font: inherit; font-size: .9rem; color: inherit; background: none; border: 0; border-radius: 4px; padding: 2px 4px; cursor: pointer;
+  justify-self: start; text-align: left;
+  &:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+  &:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
+}
+.eb-gm-no { font-size: .9rem; color: var(--mat-sys-on-surface-variant); }
+.eb-gm--diagram { text-decoration: underline; text-decoration-color: var(--mat-sys-primary); text-underline-offset: 3px; }
+.eb-gm--on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 16%, transparent); font-weight: 600; }
+.eb-gm-result { font-size: .9rem; font-weight: 600; padding: 2px 4px; }
+.eb-game-side { border-left: 3px solid var(--mat-sys-primary); padding-left: 6px; }

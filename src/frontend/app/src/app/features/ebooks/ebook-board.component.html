@@ -3,7 +3,7 @@
      (Analysieren, Engine, Drehen, FEN, Stellung korrigieren, Melden). -->
 <div class="eb-bar">
   <div class="eb-modes" role="group" [attr.aria-label]="'ebooks.board.modes' | translate">
-    @for (m of modes; track m) {
+    @for (m of visibleModes; track m) {
       <button mat-icon-button type="button" class="eb-mode" [class.eb-mode--on]="mode() === m" [attr.aria-pressed]="mode() === m"
               [disabled]="m !== 'view' && !legal()" (click)="setMode(m)"
               [appIconLabel]="(('ebooks.board.mode.' + m) | translate) + ': ' + (('ebooks.board.modeHint.' + m) | translate)">
@@ -154,6 +154,48 @@
             </button>
           }
         </div>
+      }
+    }
+  }
+  @case ('game') {
+    <!-- Partie (0.831.0, Partiensammlungen): Kopf, Schritt-Leiste, Zugliste der ganzen Partie (aktueller Zug getönt, Klick
+         springt), darunter eine eigene Nebenlinie mit „Zurück zur Partie“. -->
+    @switch (gameState()) {
+      @case ('loading') { <div class="eb-busy"><mat-progress-bar mode="indeterminate" /><span>{{ 'ebooks.board.gameLoading' | translate }}</span></div> }
+      @case ('missing') { <p class="eb-note">{{ 'ebooks.board.gameMissing' | translate }}</p> }
+      @case ('ready') {
+        @if (gameHead) { <p class="eb-game-head">{{ gameHead }}</p> }
+        <div class="eb-game-nav" role="group" [attr.aria-label]="'ebooks.board.gameNav' | translate">
+          <button mat-icon-button type="button" (click)="gameGo(0)" [disabled]="gamePly() === 0 && played().length === 0" [appIconLabel]="'ebooks.board.gameStart' | translate"><mat-icon>first_page</mat-icon></button>
+          <button mat-icon-button type="button" (click)="gameStep(-1)" [disabled]="gamePly() === 0 && played().length === 0" [appIconLabel]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
+          <button mat-icon-button type="button" (click)="gameStep(1)" [disabled]="played().length > 0 || gamePly() >= (gameLine()?.sans?.length ?? 0)" [appIconLabel]="'common.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+          <button mat-icon-button type="button" (click)="gameGo(gameLine()?.sans?.length ?? 0)" [disabled]="played().length === 0 && gamePly() >= (gameLine()?.sans?.length ?? 0)" [appIconLabel]="'ebooks.board.gameEnd' | translate"><mat-icon>last_page</mat-icon></button>
+          <button mat-button type="button" class="eb-game-diagram" (click)="gameGo(gameLine()?.game?.ply ?? 0)" [disabled]="played().length === 0 && gamePly() === (gameLine()?.game?.ply ?? 0)">{{ 'ebooks.board.gameToDiagram' | translate }}</button>
+        </div>
+        <!-- Zugliste: eine Zeile je Vollzug (DESIGN „Zuglisten“), läuft mit der Brett-Spalte (kein Kasten im Kasten). -->
+        <div class="eb-game-moves" role="list">
+          @for (r of gameRows(); track r.no) {
+            <div class="eb-gm-row" role="listitem">
+              <span class="eb-gm-no">{{ r.no }}.</span>
+              <button type="button" class="eb-gm" [class.eb-gm--on]="r.white.ply === gamePly()" [class.eb-gm--diagram]="r.white.ply === gameLine()?.game?.ply"
+                      [attr.aria-current]="r.white.ply === gamePly() ? 'step' : null" (click)="gameGo(r.white.ply)">{{ r.white.san }}</button>
+              @if (r.black; as b) {
+                <button type="button" class="eb-gm" [class.eb-gm--on]="b.ply === gamePly()" [class.eb-gm--diagram]="b.ply === gameLine()?.game?.ply"
+                        [attr.aria-current]="b.ply === gamePly() ? 'step' : null" (click)="gameGo(b.ply)">{{ b.san }}</button>
+              }
+            </div>
+          }
+          @if (gameLine()?.game?.result; as r) { <div class="eb-gm-result">{{ r }}</div> }
+        </div>
+        @if (played().length > 0) {
+          <div class="eb-moves eb-game-side">
+            <span class="eb-moves-text">{{ sideLineText }}</span>
+            <button mat-icon-button (click)="undo()" [appIconLabel]="'ebooks.reader.undo' | translate"><mat-icon>undo</mat-icon></button>
+            <button mat-icon-button (click)="reset()" [appIconLabel]="'ebooks.board.gameBack' | translate"><mat-icon>keyboard_return</mat-icon></button>
+          </div>
+        } @else {
+          <p class="eb-note eb-game-hint">{{ 'ebooks.board.gameHint' | translate }}</p>
+        }
       }
     }
   }

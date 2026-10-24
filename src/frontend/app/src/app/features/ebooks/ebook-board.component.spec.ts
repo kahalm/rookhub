@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@an
 import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { SnackbarService } from '../../core/snackbar.service';
 import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
@@ -9,7 +11,7 @@ import { LiveEngineSession } from '../games/live-engine-session';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { By } from '@angular/platform-browser';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { EbookBoardComponent } from './ebook-board.component';
+import { EbookBoardComponent, EbookBoardMode } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
 
 /** Woodpecker Nr. 1 (Hamppe – Steinitz): Schwarz am Zug, Lösung 17… Txh2+ 18. Kxh2 Th8+. */
@@ -27,7 +29,7 @@ describe('EbookBoardComponent', () => {
   let maia: { status: () => string; progress: () => number; prepare: jasmine.Spy; download: jasmine.Spy; chooseMove: jasmine.Spy };
   let stockfish: jasmine.SpyObj<StockfishService>;
 
-  function make(d: EbookDiagram = D, defaultMode?: 'view' | 'free' | 'calc' | 'solve' | 'maia'): ComponentFixture<EbookBoardComponent> {
+  function make(d: EbookDiagram = D, defaultMode?: EbookBoardMode): ComponentFixture<EbookBoardComponent> {
     maiaStatus = signal('ready');
     maia = {
       status: () => maiaStatus(), progress: () => 0,
@@ -39,7 +41,7 @@ describe('EbookBoardComponent', () => {
     TestBed.configureTestingModule({
       imports: [EbookBoardComponent],
       providers: [
-        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting(),
         { provide: SnackbarService, useValue: { warn: jasmine.createSpy('warn'), quick: jasmine.createSpy('quick') } },
         { provide: MaiaEngineService, useValue: maia },
         { provide: StockfishService, useValue: stockfish },
@@ -472,6 +474,81 @@ describe('EbookBoardComponent', () => {
       expect(json.ebooks.board.calcHelp).withContext(code).toBeTruthy();
     }
   });
+  // ---------------------------------------------------------------- Partie (0.831.0)
+
+  /** Spanisch nach 3… a6; das Diagramm zeigt die Stellung nach 3. Lb5 (Halbzug 5). */
+  const GAME = { id: 5, white: 'Spassky, Boris', black: 'Tal, Mikhail', event: 'Riga', date: '1958', result: '1/2-1/2',
+    moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6'], ply: 5 };
+  const G_DIAGRAM: EbookDiagram = { ...D, id: 21, fen: 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3', hasGame: true,
+    solutionUci: null, solutionSan: null, solutionText: null, solutionPage: null, solutionSource: null };
+
+  function makeGame(d: EbookDiagram = G_DIAGRAM): { fixture: ComponentFixture<EbookBoardComponent>; http: HttpTestingController } {
+    const fixture = make(d, 'game');
+    const http = TestBed.inject(HttpTestingController);
+    return { fixture, http };
+  }
+
+  it('Partie: lädt die Partie, steht auf dem Diagrammzug und klickt sich durch die Hauptlinie', () => {
+    const { fixture, http } = makeGame();
+    http.expectOne('/api/ebooks/9/diagrams/21/game').flush(GAME);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.gameState()).toBe('ready');
+    expect(c.gamePly()).toBe(5);
+    expect(c.boardFen()).toBe(G_DIAGRAM.fen);
+    expect(c.gameHead).toBe('Spassky, Boris – Tal, Mikhail · Riga · 1958 · 1/2-1/2');
+    c.gameStep(1);
+    expect(c.boardFen()).toBe('r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4');
+    c.gameGo(0);
+    expect(c.boardFen()).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    fixture.detectChanges();
+    const moves = fixture.nativeElement.querySelectorAll('.eb-gm');
+    expect(moves.length).toBe(6);
+    (moves[2] as HTMLButtonElement).click();
+    expect(c.gamePly()).toBe(3);
+    http.verify();
+  });
+
+  it('Partie: der nächste Partiezug bleibt in der Partie, ein anderer Zug beginnt eine Nebenlinie; „Zurück“ führt zurück', () => {
+    const { fixture, http } = makeGame();
+    http.expectOne('/api/ebooks/9/diagrams/21/game').flush(GAME);
+    const c = fixture.componentInstance;
+    c.onBoardMove({ from: 'a7', to: 'a6', san: 'a6', fen: 'r1bqkbnr/1ppp1ppp/p1n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4' });
+    expect(c.gamePly()).toBe(6);
+    expect(c.played().length).toBe(0);
+    c.gameGo(5);
+    c.onBoardMove({ from: 'g8', to: 'f6', san: 'Nf6', fen: 'r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4' });
+    expect(c.played().length).toBe(1);
+    expect(c.sideLineText).toBe('3… Nf6');
+    c.reset();
+    expect(c.played().length).toBe(0);
+    expect(c.boardFen()).toBe(G_DIAGRAM.fen);
+  });
+
+  it('Partie: Diagramm ohne Partie zeigt den Hinweis und fragt nicht nach', () => {
+    const { fixture, http } = makeGame({ ...G_DIAGRAM, hasGame: false });
+    fixture.detectChanges();
+    http.expectNone('/api/ebooks/9/diagrams/21/game');
+    expect(fixture.componentInstance.gameState()).toBe('missing');
+    expect(fixture.componentInstance.playable()).toBeFalse();
+  });
+
+  it('Partie: der Modus-Knopf erscheint nur bei Diagrammen mit Partie', () => {
+    const plain = make();
+    expect(plain.nativeElement.querySelectorAll('.eb-mode').length).toBe(5);
+    TestBed.resetTestingModule();
+    const { fixture, http } = makeGame();
+    http.expectOne('/api/ebooks/9/diagrams/21/game').flush(GAME);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.eb-mode').length).toBe(6);
+  });
+
+  it('Partie: eine unspielbare Zugfolge wird beim ersten falschen Zug abgeschnitten', () => {
+    const line = EbookBoardComponent.replay({ ...GAME, moves: ['e4', 'e5', 'Qxf7', 'Nc6'] });
+    expect(line.sans).toEqual(['e4', 'e5']);
+    expect(line.fens.length).toBe(3);
+  });
+
 });
 
 describe('Maia-Hinweis hält „etwa 46 MB“ zusammen (c2-eb-maia-46mb-umbruch)', () => {

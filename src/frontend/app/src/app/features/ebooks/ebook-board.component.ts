@@ -26,12 +26,19 @@ import { MAIA_DEFAULT_ELO, MAIA_ELO_OPTIONS } from '../analysis/maia/maia-model'
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
-import { EbookDiagram } from './ebook.service';
+import { EbookDiagram, EbookGame, EbookService } from './ebook.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { sideToMove, whiteToMove } from '../../shared/chess/fen-side';
 
 /** Was das Brett gerade tut (0.777.0). */
-export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia';
+export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia' | 'game';
+
+/** Partie im Modus „Partie“ (0.831.0): Kopf, Hauptlinie und die Stellung nach jedem Halbzug (Index 0 = Grundstellung). */
+export interface EbookGameLine {
+  game: EbookGame;
+  sans: string[];
+  fens: string[];
+}
 /** Lösen: in beiden Arten wird ein falscher Zug zurückgenommen und man sucht weiter (Nutzerwunsch 20.10.2026: keine Lösung
  *  vorspielen); „Training“ merkt sich den Fehler und meldet am Ende „gelöst mit Fehler“. Seit 0.825.0 bleibt im „Training“
  *  beim Lösen und Kalkulieren außerdem die Buchstellung stehen — die Züge stehen nur als Text da, wie im Kurs-Training. */
@@ -51,6 +58,8 @@ export const ENGINE_SOLUTION_PLIES = 7;
  * - **Lösen** — gegen die gespeicherte Lösung (Buch bzw. Engine-Linie der Prüfung) oder eine jetzt im Browser gerechnete
  *   Stockfish-Lösung; ein falscher Zug wird zurückgenommen, „Training“ merkt sich den Fehler.
  * - **Gegen Maia** — Sparring ab der Buchstellung; man spielt die Seite am Zug, Maia antwortet in der gewählten Stärke.
+ * - **Partie** (0.831.0, Partiensammlungen) — die ganze Partie, aus der das Diagramm stammt, ab der Diagrammstellung zum
+ *   Durchklicken; eigene Züge werden zur Nebenlinie (Zurück führt in die Partie). Nur mit hinterlegter Partie.
  * Die Engine (Stockfish im Browser, {@link LiveEngineSession}) ist in jedem Modus zuschaltbar.
  */
 @Component({
@@ -89,7 +98,13 @@ export class EbookBoardComponent implements OnChanges {
   readonly maia = inject(MaiaEngineService);
   readonly prefs = inject(PreferencesService);
 
-  readonly modes: EbookBoardMode[] = ['view', 'free', 'calc', 'solve', 'maia'];
+  readonly modes: EbookBoardMode[] = ['view', 'free', 'calc', 'solve', 'maia', 'game'];
+  /** Sichtbare Modi: „Partie“ nur, wenn das Diagramm eine Partie hat oder das Buch auf „Partie“ steht (Partiensammlung). */
+  get visibleModes(): EbookBoardMode[] {
+    return this.diagram?.hasGame || this.defaultMode === 'game' || this.mode() === 'game' ? this.modes : this.modes.filter(m => m !== 'game');
+  }
+  private readonly ebooks = inject(EbookService);
+
   readonly mode = signal<EbookBoardMode>('solve');
   readonly flipped = signal(false);
   /** Die Buchstellung als Signal (für computed/effect). */
@@ -131,6 +146,12 @@ export class EbookBoardComponent implements OnChanges {
   readonly maiaEloOptions = MAIA_ELO_OPTIONS;
   readonly maiaThinking = signal(false);
 
+  /** Partie (0.831.0): geladene Partie, Lade-Zustand und der Halbzug in der Hauptlinie; eigene Züge ab dort in {@link played}. */
+  readonly gameLine = signal<EbookGameLine | null>(null);
+  readonly gameState = signal<'idle' | 'loading' | 'ready' | 'missing'>('idle');
+  readonly gamePly = signal(0);
+  private gameRequest = 0;
+
   /** Engine-Leiste (zuschaltbar in jedem Modus). */
   readonly engine = signal<LiveEngineSession | null>(null);
   private engineIndex = 0;
@@ -146,6 +167,10 @@ export class EbookBoardComponent implements OnChanges {
   readonly boardFen = computed(() => {
     const d = this.start();
     if (!d) return '';
+    if (this.mode() === 'game') {
+      const g = this.gameLine();
+      return this.played().at(-1)?.fen ?? (g ? g.fens[this.gamePly()] : d.fen);
+    }
     if (this.mode() === 'calc') {
       this.calcRevision();
       const node = this.calcTree ? findNode(this.calcTree, this.calcCursor()) : undefined;
@@ -175,6 +200,7 @@ export class EbookBoardComponent implements OnChanges {
       case 'view': return false;
       case 'solve': return this.solveState() === 'running' && !this.checking() && this.isUserTurn();
       case 'maia': return !this.maiaThinking() && this.isUserTurn() && this.maia.status() === 'ready';
+      case 'game': return this.gameState() === 'ready';
       default: return true;
     }
   });
@@ -188,6 +214,7 @@ export class EbookBoardComponent implements OnChanges {
       const fen = this.boardFen();
       if (s && fen) untracked(() => s.sync(++this.engineIndex, fen));
     });
+
     inject(DestroyRef).onDestroy(() => { this.clearTimer(); this.engine()?.destroy(); });
   }
 
@@ -210,6 +237,7 @@ export class EbookBoardComponent implements OnChanges {
     if (this.mode() === 'calc') this.loadCalc();
     if (this.mode() === 'solve') this.startSolving();
     if (this.mode() === 'maia') void this.maia.prepare();
+    if (this.mode() === 'game') this.loadGame();
   }
 
   // ---------------------------------------------------------------- Modus
@@ -224,6 +252,7 @@ export class EbookBoardComponent implements OnChanges {
     if (m === 'calc') this.loadCalc();
     if (m === 'solve') this.startSolving();
     if (m === 'maia') void this.maia.prepare();
+    if (m === 'game') this.loadGame();
   }
 
   /** Seite am Zug in der Buchstellung — die spielt man beim Lösen und gegen Maia. */
@@ -248,6 +277,9 @@ export class EbookBoardComponent implements OnChanges {
       case 'maia':
         this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
         void this.maiaReply();
+        break;
+      case 'game':
+        this.gameMove(m, uci);
         break;
     }
   }
@@ -512,6 +544,95 @@ export class EbookBoardComponent implements OnChanges {
     }
   }
 
+  // ---------------------------------------------------------------- Partie
+
+  /** Partie zum Diagramm laden (bei jedem neuen Diagramm im Modus „Partie“); ohne hinterlegte Partie „missing“. */
+  private loadGame(): void {
+    const d = this.diagram;
+    const req = ++this.gameRequest;
+    this.played.set([]);
+    if (!d?.hasGame || !this.ebookId) { this.gameLine.set(null); this.gameState.set('missing'); return; }
+    const cur = this.gameLine();
+    this.gameState.set('loading');
+    this.ebooks.diagramGame(this.ebookId, d.id).subscribe({
+      next: g => {
+        if (req !== this.gameRequest) return;
+        // Gleiche Partie wie beim vorigen Diagramm: nur zum neuen Halbzug springen.
+        const line = cur && cur.game.id === g.id ? { ...cur, game: g } : EbookBoardComponent.replay(g);
+        this.gameLine.set(line);
+        this.gamePly.set(Math.min(g.ply, line.sans.length));
+        this.gameState.set('ready');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        if (req !== this.gameRequest) return;
+        this.gameLine.set(null);
+        this.gameState.set('missing');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /** Hauptlinie nachspielen; ab einem unspielbaren Zug wird abgeschnitten (kaputte Quelle soll den Leser nicht sprengen). */
+  static replay(game: EbookGame): EbookGameLine {
+    const chess = new Chess();
+    const sans: string[] = [];
+    const fens = [chess.fen()];
+    for (const san of game.moves) {
+      try { sans.push(chess.move(san).san); fens.push(chess.fen()); } catch { break; }
+    }
+    return { game, sans, fens };
+  }
+
+  /** Brettzug in der Partie: ist es der nächste Partiezug, geht es in der Partie weiter, sonst beginnt (bzw. wächst) die Nebenlinie. */
+  private gameMove(m: UserBoardMove, uci: string): void {
+    const g = this.gameLine();
+    if (!g) return;
+    if (this.played().length === 0 && g.fens[this.gamePly() + 1] === m.fen) { this.gamePly.update(p => p + 1); return; }
+    this.played.update(l => [...l, { san: m.san, fen: m.fen, uci }]);
+  }
+
+  /** In der Partie springen (Halbzug 0 … Partieende); verlässt eine Nebenlinie. */
+  gameGo(ply: number): void {
+    const g = this.gameLine();
+    if (!g) return;
+    this.played.set([]);
+    this.gamePly.set(Math.max(0, Math.min(ply, g.sans.length)));
+  }
+
+  /** ◀/▶: in einer Nebenlinie nimmt ◀ deren letzten Zug zurück; sonst einen Halbzug in der Partie. */
+  gameStep(delta: number): void {
+    if (this.played().length > 0) { if (delta < 0) this.played.update(l => l.slice(0, -1)); return; }
+    this.gameGo(this.gamePly() + delta);
+  }
+
+  /** Zugliste der Partie als eine Zeile je Vollzug (DESIGN „Zuglisten“): Nummer, Weiß, Schwarz — je mit dem Halbzug,
+   *  auf den ein Klick springt (1 = nach 1. Zug von Weiß). */
+  readonly gameRows = computed(() => {
+    const sans = this.gameLine()?.sans ?? [];
+    const rows: { no: number; white: { san: string; ply: number }; black?: { san: string; ply: number } }[] = [];
+    for (let i = 0; i < sans.length; i += 2) {
+      rows.push({ no: i / 2 + 1, white: { san: sans[i], ply: i + 1 }, ...(i + 1 < sans.length ? { black: { san: sans[i + 1], ply: i + 2 } } : {}) });
+    }
+    return rows;
+  });
+
+  get gameHead(): string {
+    const g = this.gameLine()?.game;
+    if (!g) return '';
+    return [[g.white, g.black].filter(Boolean).join(' – '), g.event, g.date, g.result].filter(Boolean).join(' · ');
+  }
+
+  /** Die Nebenlinie mit Zugnummern ab der Partiestellung, von der sie abzweigt. */
+  get sideLineText(): string {
+    const g = this.gameLine();
+    if (!g || this.played().length === 0) return '';
+    const fen = g.fens[this.gamePly()];
+    const parts = fen.split(' ');
+    parts[5] = String(Math.floor(this.gamePly() / 2) + 1);
+    return EbookBoardComponent.numbered(parts.join(' '), this.played().map(p => p.san));
+  }
+
   // ---------------------------------------------------------------- Maia
 
   setMaiaElo(elo: number): void { this.maiaElo.set(elo); }
@@ -597,7 +718,7 @@ export class EbookBoardComponent implements OnChanges {
   }
 
   modeIcon(m: EbookBoardMode): string {
-    return { view: 'visibility', free: 'pan_tool_alt', calc: 'account_tree', solve: 'extension', maia: 'smart_toy' }[m];
+    return { view: 'visibility', free: 'pan_tool_alt', calc: 'account_tree', solve: 'extension', maia: 'smart_toy', game: 'replay' }[m];
   }
 
   private clearTimer(): void {

@@ -2431,6 +2431,12 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("varchar(60)");
 
+                    b.Property<int?>("GameId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("GamePly")
+                        .HasColumnType("int");
+
                     b.Property<double>("H")
                         .HasColumnType("double");
 
@@ -2480,6 +2486,8 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("double");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GameId");
 
                     b.HasIndex("EbookId", "Page", "Y");
 
@@ -2628,6 +2636,52 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("Sha256");
 
                     b.ToTable("EbookFiles");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookGame", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Black")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("Date")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Event")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Moves")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Result")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("White")
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookId");
+
+                    b.ToTable("EbookGames");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookGroupAccess", b =>
@@ -9307,7 +9361,14 @@ namespace RookHub.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("RookHub.Api.Models.EbookGame", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Ebook");
+
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagramCorrection", b =>
@@ -9344,6 +9405,17 @@ namespace RookHub.Api.Migrations
                 {
                     b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
                         .WithMany("Files")
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookGame", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
                         .HasForeignKey("EbookId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

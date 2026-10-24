@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.831.0", date: "2026-10-24", changes: [
+    { en: "E-book reader: new board mode „Game“ for game collections — the diagram opens the whole game it comes from (header, move list one row per move, step buttons, jump to start/end/diagram); your own moves start a side line, the engine stays switchable via ⋮. The button only appears for diagrams with a linked game; books can use „Game“ as their default mode. Games are stored per book (new table „EbookGames“) and linked by admins via „PUT /api/admin/ebooks/{id}/games“.",
+      de: "E-Book-Leser: neuer Brett-Modus „Partie“ für Partiensammlungen — das Diagramm öffnet die ganze Partie, aus der es stammt (Kopf, Zugliste je Vollzug, Schritt-Knöpfe, Sprung zu Anfang/Ende/Diagramm); eigene Züge werden zur Nebenlinie, die Engine bleibt über ⋮ zuschaltbar. Der Knopf erscheint nur bei Diagrammen mit hinterlegter Partie; Bücher können „Partie“ als Standardmodus haben. Die Partien liegen je Buch in der neuen Tabelle „EbookGames“ und werden von Verwaltern über „PUT /api/admin/ebooks/{id}/games“ verknüpft." },
+  ] },
   { version: "0.830.0", date: "2026-10-24", changes: [
     { en: "Admin notifications open the right tab (registration → users, Chessable → course download), and roles that only assign groups (catalog, menu, roles, books) now get the group picker via the new „GET /api/admin/groups/options“ without needing group management; „[HasPermission(a, b)]“ can now require any one of several permissions (code review F5-005 follow-up).",
       de: "Admin-Glocken öffnen den passenden Tab (Registrierung → Nutzer, Chessable → Kurs-Download), und Rollen, die Gruppen nur zuordnen (Katalog, Menü, Rollen, Bücher), bekommen die Gruppenauswahl über das neue „GET /api/admin/groups/options“ auch ohne Gruppenverwaltung; „[HasPermission(a, b)]“ kann jetzt eines von mehreren Rechten verlangen (Codereview F5-005 Nachlauf)." },

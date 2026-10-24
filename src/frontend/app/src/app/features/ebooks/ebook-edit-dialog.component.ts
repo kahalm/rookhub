@@ -155,7 +155,7 @@ export class EbookEditDialogComponent {
   selected = new Set<number>(this.data.ebook?.groupIds ?? []);
   /** Startmodus des Bretts (0.781.0), Standard „Lösen“. */
   boardMode: string = this.data.ebook?.defaultBoardMode ?? 'solve';
-  readonly boardModes = ['solve', 'view', 'free', 'calc', 'maia'];
+  readonly boardModes = ['solve', 'view', 'free', 'calc', 'maia', 'game'];
   readonly busy = signal(false);
   readonly progress = signal<number | null>(null);
 

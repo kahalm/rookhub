@@ -5347,14 +5347,16 @@
         "free": "Ziehen",
         "calc": "Kalkulieren",
         "solve": "Lösen",
-        "maia": "Maia"
+        "maia": "Maia",
+        "game": "Partie"
       },
       "modeHint": {
         "view": "Nur die Stellung aus dem Buch",
         "free": "Figuren frei ziehen",
         "calc": "Varianten notieren, ohne die Figuren endgültig zu ziehen – später prüfen",
         "solve": "Die Lösung ziehen: gespeichert (Buch oder Engine) oder Stockfish jetzt",
-        "maia": "Die Stellung gegen Maia ausspielen"
+        "maia": "Die Stellung gegen Maia ausspielen",
+        "game": "die Partie nachspielen, aus der das Diagramm stammt"
       },
       "calcHint": "Zieh Varianten – sie werden als Linien notiert.",
       "calcSaveFailed": "Varianten ließen sich auf diesem Gerät nicht speichern.",
@@ -5388,7 +5390,15 @@
       "correctFailed": "Die Stellung konnte nicht gespeichert werden.",
       "calcHelp": "Die Linien bleiben auf diesem Gerät gespeichert. Eine Linie kannst du im Analysebrett prüfen oder die Engine zuschalten.",
       "wrongMove": "Falsch — such weiter.",
-      "solvedWithMistake": "Gelöst (mit Fehler)"
+      "solvedWithMistake": "Gelöst (mit Fehler)",
+      "gameLoading": "Partie wird geladen …",
+      "gameMissing": "Zu diesem Diagramm ist keine Partie hinterlegt.",
+      "gameNav": "Durch die Partie gehen",
+      "gameStart": "Partieanfang",
+      "gameEnd": "Partieende",
+      "gameToDiagram": "Diagramm",
+      "gameHint": "Klick auf einen Zug springt dorthin; eigene Züge werden zur Nebenlinie.",
+      "gameBack": "Zurück zur Partie"
     },
     "title": "E-Books",
     "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",

@@ -310,6 +310,39 @@ public class EbookDiagram
 
     /// <summary>Engine-Bewertung der Diagrammstellung für die Seite am Zug in Centipawns (Matt in n = ±(10000 − n)).</summary>
     public int? EngineEval { get; set; }
+
+    /// <summary>Partiensammlungen (0.831.0): die Partie, aus der das Diagramm stammt — der Leser spielt sie im Modus „Partie“
+    /// nach. <c>null</c> = keine gefunden. Wird beim Löschen der Partie geleert.</summary>
+    public int? GameId { get; set; }
+    public EbookGame? Game { get; set; }
+
+    /// <summary>Halbzüge der Partie bis zur Diagrammstellung (0 = Grundstellung); nur mit <see cref="GameId"/>.</summary>
+    public int? GamePly { get; set; }
+}
+
+/// <summary>
+/// Eine Partie zu einem Buch (0.831.0, Partiensammlungen): Kopf + Hauptlinie als SAN. Mehrere Diagramme derselben Partie
+/// zeigen per <see cref="EbookDiagram.GameId"/> darauf. Gefüllt von außen (Abgleich der Diagrammstellungen mit der
+/// Partiedatenbank bzw. der PGN des Buchs, <c>PUT /api/admin/ebooks/{id}/games</c>).
+/// </summary>
+public class EbookGame
+{
+    public int Id { get; set; }
+    public int EbookId { get; set; }
+    public Ebook Ebook { get; set; } = null!;
+
+    [MaxLength(120)] public string? White { get; set; }
+    [MaxLength(120)] public string? Black { get; set; }
+    [MaxLength(200)] public string? Event { get; set; }
+    /// <summary>Datum wie in der Quelle („1960.02.03“, „1960“).</summary>
+    [MaxLength(20)] public string? Date { get; set; }
+    [MaxLength(10)] public string? Result { get; set; }
+
+    /// <summary>Hauptlinie ab der Grundstellung als SAN, leerzeichengetrennt.</summary>
+    [Required] public string Moves { get; set; } = string.Empty;
+
+    /// <summary>Herkunft (<c>prep:&lt;PrepGameId&gt;</c>, <c>pgn</c> …) — zum Nachvollziehen.</summary>
+    [MaxLength(40)] public string? Source { get; set; }
 }
 
 /// <summary>

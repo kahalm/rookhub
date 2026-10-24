@@ -29,6 +29,12 @@ public class EbooksAdminController : BaseApiController
         _reflow = reflow;
     }
 
+    /// <summary>Partiensammlungen (0.831.0): Partien eines Buchs setzen und Diagramme darauf zeigen lassen
+    /// (<see cref="EbookGamesImportDto"/>) → Zähler. Unbekanntes Buch → 404.</summary>
+    [HttpPut("{id:int}/games")]
+    public async Task<ActionResult<EbookGamesImportResultDto>> ImportGames(int id, [FromBody] EbookGamesImportDto dto, [FromServices] EbookGameService games, CancellationToken ct)
+        => Ok(await games.ImportAsync(id, dto, ct));
+
     /// <summary>Gemeldete falsche Diagramme (neueste zuerst, höchstens 500) — Grundlage für Font-Korrekturen.</summary>
     [HttpGet("diagram-reports")]
     public async Task<ActionResult<List<EbookDiagramReportDto>>> DiagramReports(CancellationToken ct)

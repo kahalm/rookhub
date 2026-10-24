@@ -35,7 +35,7 @@ public static class EbookFormats
         files.Where(f => f.Format == "pdf").OrderByDescending(f => f.Derived).FirstOrDefault();
 
     /// <summary>Brett-Modi im Leser (0.781.0) und der Standard, wenn das Buch keinen festlegt.</summary>
-    public static readonly IReadOnlyList<string> BoardModes = ["view", "free", "calc", "solve", "maia"];
+    public static readonly IReadOnlyList<string> BoardModes = ["view", "free", "calc", "solve", "maia", "game"];
     public const string DefaultBoardMode = "solve";
 
     /// <summary>Gültiger Modus oder <c>null</c> (leer/unbekannt = Standard).</summary>

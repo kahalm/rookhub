@@ -111,6 +111,20 @@ export interface EbookDiagram {
   reportedByMe: boolean;
   /** Nur für Verwalter gefüllt. */
   reportCount: number;
+  /** Partiensammlungen (0.831.0): zu diesem Diagramm ist eine Partie hinterlegt (Modus „Partie“). Fehlt bei alten Antworten. */
+  hasGame?: boolean;
+}
+
+/** Die Partie zu einem Diagramm (0.831.0): Kopf, Hauptlinie (SAN) und der Halbzug der Diagrammstellung. */
+export interface EbookGame {
+  id: number;
+  white?: string | null;
+  black?: string | null;
+  event?: string | null;
+  date?: string | null;
+  result?: string | null;
+  moves: string[];
+  ply: number;
 }
 
 export interface EbookDiagramList {
@@ -263,6 +277,11 @@ export class EbookService {
 
   diagrams(id: number): Observable<EbookDiagramList> {
     return this.http.get<EbookDiagramList>(`/api/ebooks/${id}/diagrams`);
+  }
+
+  /** Die Partie zu einem Diagramm (0.831.0); 404 = keine hinterlegt. */
+  diagramGame(id: number, diagramId: number): Observable<EbookGame> {
+    return this.http.get<EbookGame>(`/api/ebooks/${id}/diagrams/${diagramId}/game`);
   }
 
   /** „Ist hier ein Diagramm, das nicht erkannt wurde?“ — Antwort zur späteren Auswertung (0.788.0). */

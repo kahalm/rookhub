@@ -5347,14 +5347,16 @@
         "free": "Potezi",
         "calc": "Računanje",
         "solve": "Rješavanje",
-        "maia": "Maia"
+        "maia": "Maia",
+        "game": "Partija"
       },
       "modeHint": {
         "view": "Samo pozicija iz knjige",
         "free": "Slobodno pomiči figure",
         "calc": "Zapiši varijante bez konačnog pomicanja figura – provjeri ih kasnije",
         "solve": "Odigraj rješenje: spremljeno (knjiga ili engine) ili Stockfish sada",
-        "maia": "Odigraj poziciju protiv Maie"
+        "maia": "Odigraj poziciju protiv Maie",
+        "game": "odigraj partiju iz koje potječe dijagram"
       },
       "calcHint": "Igraj varijante – bilježe se kao linije.",
       "calcSaveFailed": "Varijante se nisu mogle spremiti na ovom uređaju.",
@@ -5388,7 +5390,15 @@
       "correctFailed": "Poziciju nije bilo moguće spremiti.",
       "calcHelp": "Linije ostaju spremljene na ovom uređaju. Liniju možeš provjeriti na ploči za analizu ili uključiti engine.",
       "wrongMove": "Pogrešno — traži dalje.",
-      "solvedWithMistake": "Riješeno (uz grešku)"
+      "solvedWithMistake": "Riješeno (uz grešku)",
+      "gameLoading": "Učitavanje partije …",
+      "gameMissing": "Za ovaj dijagram nema spremljene partije.",
+      "gameNav": "Prolazak kroz partiju",
+      "gameStart": "Početak partije",
+      "gameEnd": "Kraj partije",
+      "gameToDiagram": "Dijagram",
+      "gameHint": "Klik na potez skače na njega; vlastiti potezi postaju sporedna varijanta.",
+      "gameBack": "Natrag na partiju"
     },
     "title": "E-knjige",
     "intro": "Šahovske knjige za čitanje u pregledniku ili preuzimanje; svaka je knjiga podijeljena s grupama koje je odabrao onaj tko ju je prenio.",

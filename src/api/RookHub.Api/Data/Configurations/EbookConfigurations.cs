@@ -103,6 +103,18 @@ internal sealed class EbookDiagramConfiguration : IEntityTypeConfiguration<Ebook
          .OnDelete(DeleteBehavior.Cascade);
         // „Alle Diagramme eines Buchs in Lesereihenfolge" — die Abfrage des Lesers.
         e.HasIndex(d => new { d.EbookId, d.Page, d.Y });
+        // Partie zum Diagramm (0.831.0): fällt die Partie weg, bleibt das Diagramm (nur ohne Partie).
+        e.HasOne(d => d.Game).WithMany().HasForeignKey(d => d.GameId).OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+internal sealed class EbookGameConfiguration : IEntityTypeConfiguration<EbookGame>
+{
+    public void Configure(EntityTypeBuilder<EbookGame> e)
+    {
+        e.HasOne(g => g.Ebook).WithMany().HasForeignKey(g => g.EbookId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(g => g.Moves).HasColumnType("text");
+        e.HasIndex(g => g.EbookId);
     }
 }
 

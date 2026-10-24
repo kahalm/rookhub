@@ -388,6 +388,7 @@ public class EbookService
         _db.EbookProgresses.RemoveRange(_db.EbookProgresses.Where(p => p.EbookId == id));
         _db.EbookAnonymousProgresses.RemoveRange(_db.EbookAnonymousProgresses.Where(p => p.EbookId == id));
         _db.EbookDiagrams.RemoveRange(_db.EbookDiagrams.Where(d => d.EbookId == id));
+        _db.EbookGames.RemoveRange(_db.EbookGames.Where(g => g.EbookId == id));
         _db.CourseLineEbookRefs.RemoveRange(_db.CourseLineEbookRefs.Where(r => r.EbookId == id));
         _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
         _db.EbookMissedDiagrams.RemoveRange(_db.EbookMissedDiagrams.Where(m => m.EbookId == id));
@@ -542,6 +543,7 @@ public class EbookService
                     Id = d.Id, Page = d.Page, X = d.X, Y = d.Y, W = d.W, H = d.H, Fen = d.Fen, Label = d.Label, Caption = d.Caption, SideKnown = d.SideKnown, ImageRef = d.ImageRef, EpubChapter = d.EpubChapter,
                     SolutionUci = d.SolutionUci, SolutionSan = d.SolutionSan, SolutionText = d.SolutionText, SolutionPage = d.SolutionPage,
                     SolutionSource = d.SolutionSource, SolutionCheck = d.SolutionCheck.ToString().ToLower(), EngineEval = d.EngineEval,
+                    HasGame = d.GameId != null,
                 }).ToListAsync(ct)
             : [];
         if (items.Count > 0)

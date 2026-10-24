@@ -313,6 +313,28 @@ voreingestellt); **Maia** (man spielt die Seite am Zug, Maia antwortet über `Ma
 Stärke; Modell wird erst auf Knopfdruck geladen, ~46 MB). Engine-Knopf: `LiveEngineSession` + `app-live-engine-panel`
 rechnet jede Brettstellung, in jedem Modus. Der Modus bleibt beim Blättern zu anderen Diagrammen.
 
+## Partiensammlungen: Modus „Partie“ (0.831.0)
+
+Für Bücher, deren Diagramme aus Partien stammen (Partiensammlungen, Turnier- und Wettkampfbücher, Engine-Partiensammlungen
+wie die „Chess Notes“), zeigt das Brett die GANZE Partie ab der Diagrammstellung statt einer Aufgabe. Daten: Tabelle
+`EbookGames` (je Buch, Kopf + Hauptlinie als SAN in `Moves`, Herkunft `Source` z. B. `prep:<PrepGameId>`/`pgn`) und je
+Diagramm `EbookDiagrams.GameId` + `GamePly` (Halbzüge bis zur Diagrammstellung; FK `SetNull`, mehrere Diagramme teilen
+sich eine Partie). Gelöscht wird mit dem Buch.
+
+- `GET /api/ebooks/{id}/diagrams/{diagramId}/game` (ohne Anmeldung wie die Diagrammliste) → `{ id, white, black, event,
+  date, result, moves[], ply }`; ohne Partie 404. Die Diagrammliste trägt `hasGame`.
+- `PUT /api/admin/ebooks/{id}/games` (`ebooks.manage`) `{ replace, games: [{ key, white, black, event, date, result, moves,
+  source }], links: [{ diagramId, gameKey, ply }] }` → `{ games, linked, skipped }`. Eine Verknüpfung zählt nur bei
+  buch-eigenem Diagramm, mitgelieferter Partie und Halbzug innerhalb der Partie; unbenutzte Partien werden nicht
+  gespeichert; `replace` entfernt vorher alle Partien des Buchs. Die Zuordnung selbst entsteht außerhalb (Diagramm-FENs
+  gegen `PrepGames` der Hauptspieler bzw. die PGN des Buchs nachspielen).
+- Brett-Modus `game` („Partie“, auch als `DefaultBoardMode` des Buchs wählbar): der Knopf erscheint nur bei Diagrammen
+  mit Partie oder bei Büchern auf „Partie“. Kopf (Weiß – Schwarz · Turnier · Datum · Ergebnis), Schritt-Leiste (Anfang,
+  ◀, ▶, Ende, „Diagramm“), Zugliste je Vollzug (aktueller Zug getönt, Diagrammzug unterstrichen, Klick springt). Ein
+  Brettzug, der dem nächsten Partiezug entspricht, geht in der Partie weiter; jeder andere beginnt eine Nebenlinie
+  (Zurücknehmen, „Zurück zur Partie“). Die Engine-Leiste ist wie in allen Modi über ⋮ zuschaltbar. Eine unspielbare
+  Zugfolge wird beim ersten falschen Zug abgeschnitten (`EbookBoardComponent.replay`).
+
 ## Ohne Anmeldung (0.778.0)
 
 Bibliothek und Leser gehen auch ohne Konto (Routen ohne `authGuard`, Menüpunkt `ebooks` steht standardmäßig auf `All` —
