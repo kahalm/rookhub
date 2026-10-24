@@ -15,6 +15,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { provideTranslateService, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PuzzleService } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
@@ -1207,10 +1208,13 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
   translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
   translate.use('en');
   const fixture = TestBed.createComponent(EndlessPuzzleComponent);
+  lastFixture = fixture;
   setup(fixture.componentInstance);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
+/** Fixture des letzten renderEndless-Aufrufs (für erneutes detectChanges nach einem Klick). */
+let lastFixture: any = null;
 
 // Codereview UX-047: „Auto: …" (Schwelle zurücksetzen) war ein <span (click)> ohne Tastaturzugang, und die drei
 // Herzen (Leben) waren reine mat-icons (aria-hidden) ohne Textalternative. Gerendert (Template), Kinder ausgeblendet.
@@ -1435,5 +1439,254 @@ describe('EndlessPuzzleComponent Matt nach Fehlzug', () => {
     expect(c.solutionHidden).toBeTrue();
     expect(c.reviewMode).toBeFalse();
     c.ngOnDestroy();
+  });
+});
+
+/**
+ * Charakterisierung vor der Zerlegung Z19 (Konfig → Start → Ergebnis): was die Bildschirme zeigen und welche
+ * Methode ein Klick auslöst. Bleibt beim Herausziehen der Kind-Komponenten unverändert grün.
+ */
+describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
+
+  const PUZZLES = [
+    { puzzleNumber: 1, puzzleId: 501, lichessId: 'x1', rating: 1500, solved: true, startedAt: 0, endedAt: 0 },
+    { puzzleNumber: 2, puzzleId: 502, lichessId: 'x2', rating: 1600, solved: false, startedAt: 0, endedAt: 0 },
+  ];
+  const finished = (c: any) => {
+    c.state = 'GAME_OVER';
+    c.maxRatingReached = 1650; c.solved = 4; c.level = 6; c.lives = 0; c.sessionSeconds = 125;
+    c.currentSessionMistakes = [1500, 1600];
+    c.currentSessionPuzzles = PUZZLES.map(p => ({ ...p }));
+  };
+  const texts = (el: Element, sel: string) => Array.from(el.querySelectorAll(sel)).map(e => e.textContent!.trim());
+
+  it('Game Over: Kennzahlen, Fehler-Ratings, Puzzle-Liste und Knöpfe', () => {
+    let c: any;
+    const el = renderEndless(x => { c = x; finished(c); spyOn(c, 'playAgain'); spyOn(c, 'backToPuzzles'); spyOn(c, 'openPuzzle'); });
+    const card = el.querySelector('.gameover-card')!;
+    expect(card.classList).not.toContain('exhausted-card');
+    expect(card.querySelector('mat-card-title')!.textContent!.trim()).toBe('endless.gameOver.title');
+    expect(texts(card, '.go-value')).toEqual(['1650', '4', '6', c.formatTime(125)]);
+    expect(texts(card, '.go-label')).toEqual(['endless.gameOver.maxRating', 'endless.gameOver.puzzlesSolved',
+      'endless.gameOver.levelReached', 'endless.gameOver.time']);
+    expect(card.querySelector('.mistake-ratings')!.textContent).toContain('endless.gameOver.livesLostAt');
+    const items = card.querySelectorAll('.review-item');
+    expect(items.length).toBe(2);
+    expect(items[0].classList).not.toContain('review-failed');
+    expect(items[1].classList).toContain('review-failed');
+    expect(texts(card, '.review-number')).toEqual(['#1', '#2']);
+    expect(texts(card, '.review-rating')).toEqual(['1500', '1600']);
+    expect(texts(card, '.review-icon')).toEqual(['check_circle', 'cancel']);
+    (items[1] as HTMLElement).click();
+    expect(c.openPuzzle).toHaveBeenCalledWith(502);
+    expect(card.querySelector('.new-highscore')).toBeNull();
+    expect(card.querySelector('.archive-btn')).toBeNull();
+    const buttons = card.querySelectorAll('.gameover-actions button');
+    expect(buttons.length).toBe(2);
+    (buttons[0] as HTMLButtonElement).click();
+    (buttons[1] as HTMLButtonElement).click();
+    expect(c.playAgain).toHaveBeenCalled();
+    expect(c.backToPuzzles).toHaveBeenCalled();
+  });
+
+  it('Game Over ohne Fehler/Puzzles: keine Fehlerzeile, keine Liste; neuer Rekord wird genannt', () => {
+    const el = renderEndless(c => { finished(c); c.currentSessionMistakes = []; c.currentSessionPuzzles = []; c.isNewHighscore = true; });
+    expect(el.querySelector('.mistake-ratings')).toBeNull();
+    expect(el.querySelector('.puzzle-review')).toBeNull();
+    expect(el.querySelector('.new-highscore')!.textContent).toContain('endless.gameOver.newHighscore');
+  });
+
+  it('Game Over aus der History: nur „Zurück zur History“', () => {
+    let c: any;
+    const el = renderEndless(x => { c = x; finished(c); c.historyView = true; spyOn(c, 'backToHistory'); });
+    const buttons = el.querySelectorAll('.gameover-actions button');
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('endless.gameOver.backToHistory');
+    (buttons[0] as HTMLButtonElement).click();
+    expect(c.backToHistory).toHaveBeenCalled();
+  });
+
+  it('Archivieren: Knopf nur angemeldet mit Lauf-Id, gesperrt während des Archivierens, danach Hinweis', () => {
+    let c: any;
+    let el = renderEndless(x => { c = x; finished(c); c.authService.isLoggedIn = true; c.lastSessionId = 77; spyOn(c, 'archiveLastSession'); });
+    const btn = el.querySelector('.archive-btn') as HTMLButtonElement;
+    expect(btn.textContent).toContain('endless.gameOver.archiveRun');
+    btn.click();
+    expect(c.archiveLastSession).toHaveBeenCalled();
+    c.archiving = true;
+    lastFixture.detectChanges();
+    expect((el.querySelector('.archive-btn') as HTMLButtonElement).disabled).toBeTrue();
+    expect(el.querySelector('.archive-btn')!.textContent).toContain('endless.gameOver.archiving');
+    c.archiving = false; c.lastSessionArchived = true;
+    lastFixture.detectChanges();
+    expect(el.querySelector('.archive-btn')).toBeNull();
+    expect(el.querySelector('.archived-hint')!.textContent).toContain('endless.gameOver.archived');
+    TestBed.resetTestingModule();
+    el = renderEndless(x => { finished(x); x.lastSessionId = 77; });   // abgemeldet → kein Knopf
+    expect(el.querySelector('.archive-btn')).toBeNull();
+  });
+
+  it('Sieg: Pokal, Kennzahlen mit Leben, keine Puzzle-Liste, Nochmal/Zurück', () => {
+    let c: any;
+    const el = renderEndless(x => { c = x; finished(c); c.state = 'WON'; c.lives = 2; spyOn(c, 'playAgain'); spyOn(c, 'backToPuzzles'); });
+    const card = el.querySelector('.gameover-card')!;
+    expect(card.classList).toContain('exhausted-card');
+    expect(card.querySelector('mat-card-title')!.textContent!.trim()).toBe('endless.gameOver.wonTitle');
+    expect(card.querySelector('mat-card-subtitle')!.textContent!.trim()).toBe('endless.gameOver.wonSubtitle');
+    expect(card.querySelector('.stockfish-text')!.textContent!.trim()).toBe('endless.gameOver.wonText');
+    expect(texts(card, '.go-value')).toEqual(['1650', '4', '2', c.formatTime(125)]);
+    expect(card.querySelector('.puzzle-review')).toBeNull();
+    expect(card.querySelector('.mistake-ratings')).toBeNull();
+    const buttons = card.querySelectorAll('.gameover-actions button');
+    (buttons[0] as HTMLButtonElement).click();
+    (buttons[1] as HTMLButtonElement).click();
+    expect(c.playAgain).toHaveBeenCalled();
+    expect(c.backToPuzzles).toHaveBeenCalled();
+  });
+
+  it('History-Detail lädt: Ladekreis statt Brett', () => {
+    const el = renderEndless(c => { c.historyView = true; c.state = 'LOADING'; });
+    expect(el.querySelector('.history-loading')).not.toBeNull();
+    expect(el.querySelector('.play-screen')).toBeNull();
+    expect(el.querySelector('.config-card')).toBeNull();
+  });
+
+  it('Startbildschirm: Start, Hilfe, Einstellungen, Feineinstellungen, Rekord und Verlauf', () => {
+    let c: any;
+    const el = renderEndless(x => {
+      c = x;
+      c.highscore = 1800;
+      c.sessionHistory = [{}, {}];
+      c.authService.isLoggedIn = true;
+      spyOn(c, 'startGame'); spyOn(c, 'openHelp'); spyOn(c, 'openSettingsDialog');
+    }, { imports: [MatSlideToggleModule] });   // Schalter „schwächste Themen“ (ngModel braucht seinen Value-Accessor)
+    expect(el.querySelector('.start-btn-top')!.textContent).toContain('endless.config.start');
+    (el.querySelector('.start-btn-top') as HTMLButtonElement).click();
+    expect(c.startGame).toHaveBeenCalled();
+    (el.querySelector('.help-btn') as HTMLButtonElement).click();
+    expect(c.openHelp).toHaveBeenCalled();
+    (el.querySelector('.settings-gear') as HTMLButtonElement).click();
+    expect(c.openSettingsDialog).toHaveBeenCalled();
+    expect(el.querySelector('.highscore-badge')!.textContent).toContain('endless.config.highscore');
+    expect(el.querySelector('.session-count')!.textContent).toContain('endless.config.sessionsPlayed');
+    (el.querySelector('.history-link') as HTMLButtonElement).click();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/puzzles/endless/history']);
+    expect(el.querySelector('.worst-tags-row')).not.toBeNull();
+    // Feineinstellungen zu → auf
+    expect(el.querySelector('.adv-fields')).toBeNull();
+    const toggle = el.querySelector('.adv-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    lastFixture.detectChanges();
+    expect(el.querySelector('.adv-fields')).not.toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('Startbildschirm abgemeldet, ohne Lauf und Rekord: kein Verlauf-Link, kein Schwächste-Themen-Schalter', () => {
+    const el = renderEndless(c => { c.sessionHistory = [{}]; });
+    expect(el.querySelector('.highscore-badge')).toBeNull();
+    expect(el.querySelector('.session-count')!.textContent).toContain('endless.config.sessionsPlayedOne');
+    expect(el.querySelector('.history-link')).toBeNull();
+    expect(el.querySelector('.worst-tags-row')).toBeNull();
+  });
+
+  it('Startbildschirm mit offenem Lauf: Fortsetzen und Archivieren rufen die Lauf-Methoden', () => {
+    let c: any;
+    const el = renderEndless(x => {
+      c = x;
+      c.activeGameState = { level: 2, solved: 3, lives: 2, maxRatingReached: 1400 };
+      spyOn(c, 'resumeGame'); spyOn(c, 'archiveAndStartNew');
+    });
+    expect(el.querySelector('.resume-info')!.textContent).toContain('endless.config.unfinishedRun');
+    const [resume, archive] = Array.from(el.querySelectorAll('.resume-actions button')) as HTMLButtonElement[];
+    resume.click();
+    archive.click();
+    expect(c.resumeGame).toHaveBeenCalled();
+    expect(c.archiveAndStartNew).toHaveBeenCalled();
+  });
+
+  it('Startbildschirm mit beendetem Lauf (0 Leben): Startknopf heißt „Neues Spiel“', () => {
+    const el = renderEndless(c => { c.activeGameState = { level: 2, solved: 3, lives: 0, maxRatingReached: 1400 }; });
+    expect(el.querySelector('.resume-banner')).toBeNull();
+    expect(el.querySelector('.start-btn-top')!.textContent).toContain('endless.config.newGame');
+  });
+
+  it('Feineinstellungen mit Schwellen: Kurvenvorschau mit Puzzle-Nummern und Ratings', () => {
+    let c: any;
+    const el = renderEndless(x => {
+      c = x;
+      c.showAdvanced = true;
+      c.config.startElo = 700;
+      Object.assign(c.fasttrack, { phase1Step: 50, avgFirst: 1200, autoFirst: 1200, avgSecond: 1500, autoSecond: 1500 });
+    });
+    expect(el.querySelector('.threshold-fields')).not.toBeNull();
+    expect(el.querySelectorAll('.auto-hint').length).toBe(0);   // beide Schwellen auf Auto
+    const ratings = texts(el, '.fasttrack-phase .phase-detail');
+    expect(ratings).toEqual(c.chainPreview.map((p: any) => String(p.rating)));
+    expect(texts(el, '.fasttrack-phase .phase-label').length).toBe(c.chainPreview.length);
+  });
+});
+
+/**
+ * Golden-Rümpfe (Zerlegungs-Karte Z19): Spielstand an den Server und Lauf-Aufzeichnung für einen gescripteten Lauf
+ * (gelöst → Fehler → Fehler → Fehler = Game Over). Zeit und Seed sind festgenagelt, damit die Rümpfe wörtlich stehen.
+ * Startzeit = Ende des Setup-Zugs (600 ms nach dem Laden). Puzzle 4 scheitert ohne Uhr-Tick, also vor dem Setup-Zug —
+ * dann trägt es die Startzeit des vorigen Puzzles (festgehaltenes Ist-Verhalten, kein Soll).
+ */
+describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)', () => {
+  const T0 = Date.UTC(2026, 9, 25, 10, 0, 0);
+  beforeEach(() => { jasmine.clock().install(); jasmine.clock().mockDate(new Date(T0)); });
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('liefert die erwarteten Rümpfe', () => {
+    const c = makeComponent();
+    const progress: any[] = [];
+    const immediate: any[] = [];
+    const records: { session: any; puzzles: any[] }[] = [];
+    c['storage'].saveProgressToServer = (cfg: any, hs: number, g: any) => progress.push({ cfg: { ...cfg }, hs, g: g && JSON.parse(JSON.stringify(g)) });
+    c['storage'].saveProgressImmediate = (cfg: any, hs: number, g: any) => immediate.push({ hs, g });
+    c['storage'].recordSessionToServer = (session: any, puzzles: any[] = []) => { records.push({ session: JSON.parse(JSON.stringify(session)), puzzles: JSON.parse(JSON.stringify(puzzles)) }); return sub(55); };
+    spyOn(c as any, 'newSeed').and.returnValue('seed-golden');
+    c['stockfish'].getBestMove = () => new Promise(() => {});   // Start-Bewertung bleibt offen (nicht Teil der Rümpfe)
+    c.config.startElo = 700;
+
+    c.startGame();                                   // Kette 100/101/102 → Puzzle 100 (700)
+    jasmine.clock().tick(4000);
+    c['puzzleSolved'](false);                        // gelöst
+    c.continueAfterSolve();                          // → 101
+    jasmine.clock().tick(2000);
+    c['loseLife']();                                 // Fehler 1
+    c.continueAfterWrong();                          // → 102
+    jasmine.clock().tick(3000);
+    c['loseLife']();                                 // Fehler 2
+    const synced = progress.map(p => p.g).filter(Boolean);
+    expect(synced[synced.length - 1]).toEqual({
+      lives: 1, solved: 1, level: 3, chainIndex: 3, seed: 'seed-golden', currentMinRating: 1100, maxRatingReached: 1100,
+      sessionSeconds: 9, mistakes: [900, 1100],
+      puzzleAttempts: [
+        { puzzleNumber: 1, puzzleId: 100, lichessId: 'a', rating: 700, solved: true, startedAt: T0 + 600, endedAt: T0 + 4000 },
+        { puzzleNumber: 2, puzzleId: 101, lichessId: 'b', rating: 900, solved: false, startedAt: T0 + 4600, endedAt: T0 + 6000 },
+        { puzzleNumber: 3, puzzleId: 102, lichessId: 'c', rating: 1100, solved: false, startedAt: T0 + 6600, endedAt: T0 + 9000 },
+      ],
+    });
+    c.continueAfterWrong();                          // Kettenende → nachladen liefert dieselbe 3er-Kette erneut
+    c['loseLife']();                                 // Fehler 3 → 0 Leben
+    c.continueAfterWrong();                          // Game Over → Aufzeichnung
+    expect(c.state).toBe('GAME_OVER');
+    expect(records.length).toBe(1);
+    expect(records[0].session).toEqual({
+      timestamp: T0 + 9000,
+      config: { ...c.config },
+      totalSolved: 1, maxRating: 1100, durationSeconds: 9, mistakeAtRatings: [900, 1100, 700],
+      seed: 'seed-golden', chainPuzzleIds: '100,101,102,100,101,102',
+    });
+    expect(records[0].puzzles.map((p: any) => [p.puzzleNumber, p.puzzleId, p.solved, p.startedAt, p.endedAt]))
+      .toEqual([[1, 100, true, T0 + 600, T0 + 4000], [2, 101, false, T0 + 4600, T0 + 6000],
+        [3, 102, false, T0 + 6600, T0 + 9000], [4, 100, false, T0 + 6600, T0 + 9000]]);
+    expect(c.lastSessionId).toBe(55);
+    expect(immediate[immediate.length - 1].g).toBeNull();
+    c.ngOnDestroy();
+    expect(records.length).toBe(1);                  // Verlassen nach Game Over zeichnet nicht doppelt auf
   });
 });
