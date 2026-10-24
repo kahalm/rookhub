@@ -195,7 +195,7 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
     /// <summary>
     /// Die Züge sind eine Teilpartie beider Spieler (<see cref="LeaguePartialGames"/>, 0.725.0): nach jedem Speichern/Löschen ihre
     /// Karten neu rechnen und die Partienzahl <c>g</c> in den fertigen Ansichten nachziehen — derselbe Weg wie nach einem
-    /// Vereinspartien-Upload (<c>LeagueClubService.RefreshCardsAsync</c>), synchron wie dort (zwei Karten).
+    /// Vereinspartien-Upload (<c>ClubGameWriter.RefreshCardsAsync</c>), synchron wie dort (zwei Karten).
     /// </summary>
     private async Task RefreshCardsAsync(LeagueGame game, CancellationToken ct)
     {

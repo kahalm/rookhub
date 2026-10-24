@@ -67,7 +67,7 @@ export class ScanHeaderForm {
       .join(' · ');
   });
 
-  /** Was die Partie unübernehmbar macht — dieselbe Regel wie am Server (`LeagueClubService.Build`): bekannt ist, wer in
+  /** Was die Partie unübernehmbar macht — dieselbe Regel wie am Server (`ClubSideResolver.Build`): bekannt ist, wer in
    * der Liga ODER im Megabase-Verzeichnis steht. */
   readonly problem = computed(() => {
     const w = this.match('white')(), b = this.match('black')();

@@ -47,7 +47,7 @@ export type ReviewFilter = 'all' | 'skipped' | 'new' | 'unknown';
 /** Bekannt = Ligaspieler oder im Megabase-Verzeichnis (Wunsch 2026-09-28: „wenn in Tirol kein Treffer"). */
 export const known = (s: ReviewSide): boolean => s.league || s.mega;
 
-/** Wird die Partie übernommen — und wenn nicht, warum? DIESELBE Regel wie am Server (`LeagueClubService.Build`). */
+/** Wird die Partie übernommen — und wenn nicht, warum? DIESELBE Regel wie am Server (`ClubSideResolver.Build`). */
 export function reviewStatus(r: ReviewGame): { importable: boolean; reason: string | null } {
   if (r.game.error) return { importable: false, reason: r.game.error };
   if (r.game.duplicate) return { importable: false, reason: 'duplicate' };

@@ -5,7 +5,8 @@
 
 Mitglieder von SK Schwaz laden Partien hoch — viele auf einmal als PGN oder EIN Partieformular (Foto, gelesen vom
 Formular-Leser, geprüft in LeagueHub) —, angemeldet ODER ohne Konto über einen Teilen-Link, und die Spielerkarten der
-Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubService.cs`, alle vom Nutzer vorgegeben,
+Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubService.cs` = Fassade über `ClubPgnReader` (Einlesen, PGN in `ClubPgnText`),
+`ClubSideResolver` (wer ist welche Seite), `ClubGameReader` (Lesen), `ClubGameWriter` (Schreiben); alle vom Nutzer vorgegeben,
 2026-09-28):
 
 * **Beide Namen gegen die Meldelisten** (`LeagueRosterIndex`, alle Saisonen; gecacht im allgemeinen `IMemoryCache`,
@@ -44,7 +45,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 * **Gemerkte Zuordnungen** (0.579.0, Wunsch „wenn ich einen Spieler umbenenne, merk dir das zum Original und matche das
   zukünftig bei allen selbst"; `LeagueNameAliases`, Tabelle `LeagueNameAliases`): landet beim Import eine Korrektur (Spieler
   gewählt oder Name getippt) bei jemand ANDEREM als die Vorgabe, merkt `ImportPgnAsync` den PGN-Namen (`KeyOf`: klein, ohne
-  Akzente und Titel) → FIDE-ID + Name; die jüngste Korrektur gewinnt. Abgleich-Reihenfolge (`LeagueClubService.Resolve`):
+  Akzente und Titel) → FIDE-ID + Name; die jüngste Korrektur gewinnt. Abgleich-Reihenfolge (`ClubSideResolver.Resolve`):
   FIDE-ID der Partie, die ein Ligaspieler trägt → gemerkte Zuordnung → Meldelisten → Megabase; eine vom Nutzer gewählte
   FIDE-ID schlägt die Zuordnung. Gilt in Übersicht, Import, Formular-Abgleich (`match`) — für ALLE, auch über Teilen-Links,
   gemerkt wird aber nur mit Konto (ein Teilen-Link soll nicht festlegen, wer ein Name für alle ist). Die Zeile verweist

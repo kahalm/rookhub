@@ -54,7 +54,7 @@ public static class PgnTokens
     /// danach <c>dedupe</c>.</para>
     ///
     /// <para>Bewusst NICHT hier: die Listen, die den <c>[Result]</c>-HEADER pruefen
-    /// (<c>SavedGamePgn.AllowedResults</c>, <c>LeagueClubService.Results</c>) — dort ist „1/2"
+    /// (<c>SavedGamePgn.AllowedResults</c>, <c>ClubPgnText.Results</c>) — dort ist „1/2"
     /// kein gueltiger Wert: beim Einlesen setzen beide ihn auf „*" zurueck, eine Korrektur ueber
     /// <c>LeagueClubService.UpdateAsync</c> wird mit „invalidResult" abgelehnt.</para>
     /// </summary>

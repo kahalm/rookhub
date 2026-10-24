@@ -39,7 +39,7 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   Verein kommt aus `LeagueShares.ClubId` (`LeagueService.ShareContextAsync`), nie aus der Anfrage.
 * **Kein zweiter globaler Query-Filter** für `ClubId` (Kommentar in `LeagueClubGameConfiguration`): EF Core kennt je Typ EINEN
   Filter, ein Filter auf einen Wert der Anfrage hinge am DbContext (Hintergrund-Dienste lesen alle Vereine), und ein
-  `IgnoreQueryFilters` würde den Archiv-Filter mit abschalten. `LeagueClubService.Games(club)` ist der Einstieg jedes Wegs;
+  `IgnoreQueryFilters` würde den Archiv-Filter mit abschalten. `ClubGameReader.GamesOf(db, club)` ist der Einstieg jedes Wegs;
   `IgnoreQueryFilters` (Rückbau eines Links) hält den Verein ausdrücklich in der Bedingung. Trennung geprüft in
   `LeagueClubTenancyTests`.
 * **Hintergrund über alle Vereine**: `MasterAnalysisScheduler`/`ClubSecondEngineScheduler` (alle Vereinspartien),

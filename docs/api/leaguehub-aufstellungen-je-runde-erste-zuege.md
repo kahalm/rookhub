@@ -70,7 +70,7 @@ Möglichkeit, die ersten paar Züge einzugeben."
   Grenzfall: dieselben zwei Spieler zweimal im selben Jahr mit einer Vereinspartie nur mit Jahr → Teilpartie weg. Prep zusätzlich:
   hat der Bestand (Mega/Lumbra) die Partie (gleiche Farbe, ±3 Tage, gleicher Gegner-Nachname), fällt die Teilpartie weg.
   **Nachrechnen**: `SaveAsync` (Speichern und Löschen) ruft `RefreshCardsAsync` — `RebuildAsync` beider FIDE-Spieler +
-  `PatchViewCountsAsync`, synchron wie `LeagueClubService.RefreshCardsAsync` nach einem Upload (zwei Karten; kein Hintergrundlauf).
+  `PatchViewCountsAsync`, synchron wie `ClubGameWriter.RefreshCardsAsync` nach einem Upload (zwei Karten; kein Hintergrundlauf).
   Die Prep-Karte bleibt bis zu 15 min im Speicher. Kosten je Lesen ohne Teilpartie: eine Abfrage; mit: zusätzlich Rundentermine,
   Ligen und eine Vereinspartien-Abfrage ohne PGN.
 

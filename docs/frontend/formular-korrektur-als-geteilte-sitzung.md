@@ -45,7 +45,7 @@ Zugspitze)", Rückfrage beim Umstellen, Absage `invalidRegion`); Kopf-Text (`app
 LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: ohne `share` angemeldet
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort
 `ref` — angemeldet die Nummer, ohne Konto der geheime Schlüssel. Die Übersicht vor dem PGN-Import rechnet
-`features/club/import-review.ts` (rein, Spiegel der Server-Regel `LeagueClubService.Build`).
+`features/club/import-review.ts` (rein, Spiegel der Server-Regel `ClubSideResolver.Build`).
 
 ## Formular-Werkbank: auch die Oberfläche ist geteilt (0.816.0)
 
