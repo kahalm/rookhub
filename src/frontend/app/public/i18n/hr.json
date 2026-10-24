@@ -2419,7 +2419,18 @@
       },
       "impersonate": "Prijavi se kao ovaj korisnik",
       "impersonateStarted": "Sada si prijavljen kao {{name}}.",
-      "impersonateFailed": "Prijava kao ovaj korisnik nije uspjela."
+      "impersonateFailed": "Prijava kao ovaj korisnik nije uspjela.",
+      "resetLink": {
+        "action": "Izradi poveznicu za poništavanje",
+        "title": "Poveznica za poništavanje lozinke za {{username}}",
+        "validity": "Poveznica vrijedi do {{date}} i može se upotrijebiti samo jednom.",
+        "selfService": "Proslijedi je osobi — ona sama postavlja novu lozinku; ti je ne vidiš.",
+        "hasEmail": "Ovaj račun ima adresu e-pošte, pa bi i „Zaboravljena lozinka” radila.",
+        "noEmail": "Ovaj račun nema adresu e-pošte.",
+        "copied": "Poveznica kopirana",
+        "copyFailed": "Kopiranje nije uspjelo — označi poveznicu i kopiraj je ručno.",
+        "error": "Izrada poveznice za poništavanje nije uspjela"
+      }
     },
     "books": {
       "uploadPgn": "Učitaj PGN-ove",

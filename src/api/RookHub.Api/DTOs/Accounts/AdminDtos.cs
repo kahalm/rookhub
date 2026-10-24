@@ -26,3 +26,10 @@ public class LockUserDto
 {
     public DateTime? Until { get; set; }
 }
+
+/// <summary>Antwort von <c>POST /api/admin/users/{id}/password-reset-link</c>: einmaliger Reset-Link und sein Ablauf (UTC).</summary>
+public class PasswordResetLinkDto
+{
+    public string Link { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+}

@@ -40,6 +40,8 @@ import { AdminBackgroundJobsComponent } from './tabs/admin-background-jobs.compo
 import { adminTabIndex, ADMIN_TAB_KEYS, AdminTabKey } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 import { apiErrorText } from '../../core/api-error';
+import { MatDialog } from '@angular/material/dialog';
+import { ResetLinkDialogComponent, ResetLinkDialogData } from './reset-link-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -114,6 +116,8 @@ export class AdminComponent implements OnInit {
   impersonatingId: number | null = null;
   /** Konto, dessen Admin-Recht gerade gespeichert wird — sein Knopf ist so lange gesperrt (F5-013). */
   adminBusyId: number | null = null;
+  /** Konto, für das gerade ein Reset-Link erzeugt wird (UX-002) — sein Knopf ist so lange gesperrt. */
+  resetLinkBusyId: number | null = null;
 
   /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
   selectedTabIndex = 0;
@@ -136,6 +140,7 @@ export class AdminComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
   private prompts = inject(PromptService);
+  private dialog = inject(MatDialog);
 
   constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen 500).
@@ -168,6 +173,24 @@ export class AdminComponent implements OnInit {
         this.impersonatingId = null;
         this.snackbar.info(this.translate.instant('admin.users.impersonateFailed'));
       }
+    });
+  }
+
+  /** Einmaligen Reset-Link (24 h) erzeugen und im Dialog zum Weitergeben zeigen (UX-002 / P-2): für Konten ohne
+   *  E-Mail, deren „Passwort vergessen“ ins Leere läuft. Der Admin sieht und setzt kein Passwort. */
+  createResetLink(u: AdminUser): void {
+    if (this.resetLinkBusyId !== null) return;
+    this.resetLinkBusyId = u.id;
+    this.adminService.createPasswordResetLink(u.id).subscribe({
+      next: res => {
+        this.resetLinkBusyId = null;
+        const data: ResetLinkDialogData = { username: u.username, link: res.link, expiresAt: res.expiresAt, hasEmail: !!u.email };
+        this.dialog.open(ResetLinkDialogComponent, { data, autoFocus: false });
+      },
+      error: err => {
+        this.resetLinkBusyId = null;
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.resetLink.error'));
+      },
     });
   }
 

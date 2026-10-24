@@ -153,6 +153,22 @@ public class AdminController : BaseApiController
         catch (KeyNotFoundException) { return NotFound(); }
     }
 
+    /// <summary>Einmaliger Reset-Link (24 h) für Konten ohne E-Mail (UX-002 / P-2): der Admin gibt ihn weiter, die
+    /// Person setzt selbst ein neues Passwort. Admin-Konten nur durch Admins (403). Der Dienst kommt per
+    /// <c>[FromServices]</c>, damit der Konstruktor nicht wächst.</summary>
+    [HttpPost("users/{id}/password-reset-link")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> CreatePasswordResetLink(int id, [FromServices] PasswordResetService resets, CancellationToken ct)
+    {
+        try
+        {
+            var (link, expiresAt) = await resets.IssueAdminResetLinkAsync(id, GetUserId(), IsAdmin, ct);
+            return Ok(new PasswordResetLinkDto { Link = link, ExpiresAt = expiresAt });
+        }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (KeyNotFoundException) { return NotFound(); }
+    }
+
     // ---- Puzzles ----------------------------------------------------------
 
     [HttpPost("puzzles/import")]

@@ -2419,7 +2419,18 @@
       },
       "impersonate": "Als dieser Nutzer einsteigen",
       "impersonateStarted": "Du bist jetzt als {{name}} eingestiegen.",
-      "impersonateFailed": "Einstieg als dieser Nutzer fehlgeschlagen."
+      "impersonateFailed": "Einstieg als dieser Nutzer fehlgeschlagen.",
+      "resetLink": {
+        "action": "Reset-Link erzeugen",
+        "title": "Link zum Zurücksetzen für {{username}}",
+        "validity": "Der Link gilt bis {{date}} und nur einmal.",
+        "selfService": "Gib ihn der Person weiter — sie setzt damit selbst ein neues Passwort; du siehst es nicht.",
+        "hasEmail": "Das Konto hat eine E-Mail-Adresse, „Passwort vergessen“ ginge also auch.",
+        "noEmail": "Das Konto hat keine E-Mail-Adresse.",
+        "copied": "Link kopiert",
+        "copyFailed": "Kopieren fehlgeschlagen — markiere den Link und kopiere ihn von Hand.",
+        "error": "Reset-Link konnte nicht erzeugt werden"
+      }
     },
     "books": {
       "uploadPgn": "PGN-Dateien hochladen",

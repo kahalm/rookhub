@@ -20,11 +20,15 @@ import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download
 import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+import { ResetLinkDialogComponent } from './reset-link-dialog.component';
 
 /** Rückfrage-Doppelgänger: `answer` legt fest, was der Dialog liefert (F5-013). */
 const confirmStub = { answer: true, ask: jasmine.createSpy('ask') };
 /** Eingabe-Doppelgänger (F5-016): `answer` = Werte je Feld-Key, `null` = abgebrochen. */
 const promptStub: { answer: Record<string, string> | null; ask: jasmine.Spy } = { answer: null, ask: jasmine.createSpy('ask') };
+/** MatDialog-Doppelgänger für den Reset-Link-Dialog (UX-002). */
+const dialogStub = { open: jasmine.createSpy('open') };
 
 /** Ohne Template/ngOnInit — testet die Komponenten-Logik. Instanziierung läuft im
  *  TestBed-Injection-Context, weil die Komponente `inject(DestroyRef)` als Feld nutzt. */
@@ -57,13 +61,56 @@ describe('AdminComponent', () => {
     confirmStub.ask = jasmine.createSpy('ask').and.callFake(() => of(confirmStub.answer));
     promptStub.answer = null;
     promptStub.ask = jasmine.createSpy('ask').and.callFake(() => of(promptStub.answer));
+    dialogStub.open = jasmine.createSpy('open');
     TestBed.configureTestingModule({
       providers: [
         { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
         { provide: ConfirmService, useValue: confirmStub },
         { provide: PromptService, useValue: promptStub },
+        { provide: MatDialog, useValue: dialogStub },
       ],
     });
+  });
+
+  // UX-002 / P-2: Konten ohne E-Mail bekommen vom Admin einen einmaligen Reset-Link.
+  it('createResetLink ruft den Dienst und zeigt den Link im Dialog (mit E-Mail-Hinweis)', () => {
+    const res = { link: 'https://rookhub.example/reset-password?token=abc', expiresAt: '2026-10-25T08:00:00Z' };
+    const createPasswordResetLink = jasmine.createSpy('createPasswordResetLink').and.returnValue(of(res));
+    const { c, snackbar } = make({ createPasswordResetLink });
+
+    c.createResetLink({ id: 7, username: 'spieler', email: '' } as any);
+
+    expect(createPasswordResetLink).toHaveBeenCalledWith(7);
+    expect(dialogStub.open).toHaveBeenCalledTimes(1);
+    const [cmp, cfg] = dialogStub.open.calls.mostRecent().args;
+    expect(cmp).toBe(ResetLinkDialogComponent);
+    expect(cfg.data).toEqual({ username: 'spieler', link: res.link, expiresAt: res.expiresAt, hasEmail: false });
+    expect(c.resetLinkBusyId).toBeNull();
+    expect(snackbar.info).not.toHaveBeenCalled();
+  });
+
+  it('createResetLink meldet einen Fehler per Snackbar und öffnet keinen Dialog', () => {
+    const createPasswordResetLink = jasmine.createSpy('createPasswordResetLink')
+      .and.returnValue(throwError(() => ({ status: 403, error: {} })));
+    const { c, snackbar } = make({ createPasswordResetLink });
+
+    c.createResetLink({ id: 3, username: 'boss', email: 'b@x' } as any);
+
+    expect(dialogStub.open).not.toHaveBeenCalled();
+    expect(snackbar.info).toHaveBeenCalledWith('admin.users.resetLink.error');
+    expect(c.resetLinkBusyId).toBeNull();
+  });
+
+  it('createResetLink sperrt Doppelklicks, solange ein Link entsteht', () => {
+    const pending = new Subject<any>();
+    const createPasswordResetLink = jasmine.createSpy('createPasswordResetLink').and.returnValue(pending);
+    const { c } = make({ createPasswordResetLink });
+
+    c.createResetLink({ id: 7, username: 'a' } as any);
+    c.createResetLink({ id: 7, username: 'a' } as any);
+
+    expect(createPasswordResetLink).toHaveBeenCalledTimes(1);
+    expect(c.resetLinkBusyId).toBe(7);
   });
 
   it('onTabChange sets the index and writes ?tab=<key> to the URL (merge, replaceUrl)', () => {

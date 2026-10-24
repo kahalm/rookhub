@@ -1981,7 +1981,18 @@
       },
       "impersonate": "Belépés ezzel a felhasználóval",
       "impersonateStarted": "Most {{name}} néven vagy bejelentkezve.",
-      "impersonateFailed": "Nem sikerült belépni ezzel a felhasználóval."
+      "impersonateFailed": "Nem sikerült belépni ezzel a felhasználóval.",
+      "resetLink": {
+        "action": "Visszaállító link létrehozása",
+        "title": "Jelszó-visszaállító link: {{username}}",
+        "validity": "A link eddig érvényes: {{date}}. Csak egyszer használható.",
+        "selfService": "Add tovább a személynek — ő maga állít be új jelszót; te nem látod.",
+        "hasEmail": "Ennek a fióknak van e-mail-címe, így az „Elfelejtett jelszó” is működne.",
+        "noEmail": "Ennek a fióknak nincs e-mail-címe.",
+        "copied": "Link másolva",
+        "copyFailed": "A másolás nem sikerült — jelöld ki a linket, és másold kézzel.",
+        "error": "Nem sikerült létrehozni a visszaállító linket"
+      }
     },
     "books": {
       "uploadPgn": "PGN-fájlok feltöltése",

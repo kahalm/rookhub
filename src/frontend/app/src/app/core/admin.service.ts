@@ -12,6 +12,12 @@ export interface AdminUser {
   groups: string[];
 }
 
+/** Antwort von `POST /api/admin/users/{id}/password-reset-link`. */
+export interface PasswordResetLink {
+  link: string;
+  expiresAt: string;
+}
+
 /** RBAC: eine Rolle mit ihren Permission-Schlüsseln + Mitgliederzahl. */
 export interface Role {
   id: number;
@@ -192,6 +198,12 @@ export class AdminService {
   /** „Als Nutzer einsteigen": liefert ein Impersonation-Token für den Zielnutzer. */
   impersonate(id: number): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`/api/admin/users/${id}/impersonate`, {});
+  }
+
+  /** Einmaliger Reset-Link (24 h) für Konten ohne E-Mail (UX-002): der Admin gibt ihn weiter, die Person setzt
+   *  selbst ein neues Passwort. `expiresAt` ist ISO-UTC. */
+  createPasswordResetLink(id: number): Observable<PasswordResetLink> {
+    return this.http.post<PasswordResetLink>(`/api/admin/users/${id}/password-reset-link`, {});
   }
 
   // --- Rollen & Berechtigungen (RBAC) ----------------------------------

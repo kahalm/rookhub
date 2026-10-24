@@ -2419,7 +2419,18 @@
       },
       "impersonate": "Log in as this user",
       "impersonateStarted": "You are now logged in as {{name}}.",
-      "impersonateFailed": "Could not log in as this user."
+      "impersonateFailed": "Could not log in as this user.",
+      "resetLink": {
+        "action": "Create reset link",
+        "title": "Password reset link for {{username}}",
+        "validity": "The link is valid until {{date}} and works only once.",
+        "selfService": "Pass it on to the person — they set a new password themselves; you never see it.",
+        "hasEmail": "This account has an email address, so “Forgot password” would work too.",
+        "noEmail": "This account has no email address.",
+        "copied": "Link copied",
+        "copyFailed": "Copying failed — select the link and copy it by hand.",
+        "error": "Failed to create the reset link"
+      }
     },
     "books": {
       "uploadPgn": "Upload PGN files",

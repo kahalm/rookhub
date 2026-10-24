@@ -22,3 +22,11 @@ gelöschten Konten (A9-004). **Sperren statt löschen** (F5-011, `users.manage`)
 und verwirft den Auth-Cache; Konto, Daten und API-Tokens bleiben. `AuthUserValidation` zählt eine laufende Sperre als
 inaktiv, API-Token- und Engine-Token-Prüfung weisen gesperrte Besitzer ab, Impersonation eines gesperrten Kontos → 400.
 Guards: nicht sich selbst (400), Ende in der Zukunft (400), Admin-Konten nur durch Admins (403).
+**Reset-Link für Konten ohne E-Mail** (UX-002 / P-2, `users.manage`, 0.828.0): `POST /api/admin/users/{id}/password-reset-link`
+→ 200 `{ link, expiresAt }` (ISO-UTC). `PasswordResetService.IssueAdminResetLinkAsync` legt wie „Passwort vergessen“ einen
+einmaligen Token an (nur SHA-256 in `PasswordResetTokens`, offene ältere Tokens entwertet), schickt aber keine Mail — der
+Admin gibt den Link über den Kanal der Person weiter, sie setzt selbst ein neues Passwort (`/api/auth/reset-password`,
+entwertet wie jeder Reset Sitzungen und API-Tokens). Gültig 24 h (`AdminLinkTtl`; Mail-Link 1 h). Der Admin setzt und sieht
+kein Passwort. 404 unbekannt/gelöscht; Admin-Konten nur durch Admins (403, sonst übernähme eine delegierte Rolle mit
+`users.manage` ein Admin-Konto). Oberfläche: Schlüssel-Knopf bzw. ⋮-Eintrag „Reset-Link erzeugen“ in der Nutzerliste,
+Dialog mit Kopieren-Knopf (`reset-link-dialog.component.ts`).

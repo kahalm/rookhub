@@ -11,3 +11,7 @@
 | POST | `/api/auth/rh-session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`, `Path=/api/auth/rh-session`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
 | POST | `/api/auth/rh-session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
 | POST | `/api/auth/session`, `/api/auth/session/end` | **Übergang (Codereview N6-001), eine Version, danach entfernen**: alte Pfade für Oberflächen aus dem Browser-Cache, sonst wie oben. Jedes Schreiben/Löschen des Cookies löscht zusätzlich das alte mit `Path=/api/auth` — das ging an JEDEN Host der Elterndomäne mit eigener `/api/auth`-Anmeldung (Dev-Stacks, RCT, Lernkompass, Cal.com) |
+
+**Konten ohne E-Mail:** „Passwort vergessen“ erreicht sie nicht — ein Admin erzeugt mit `POST /api/admin/users/{id}/password-reset-link`
+einen einmaligen Link (24 h), den er der Person weitergibt; eingelöst wird er wie ein Mail-Link über `reset-password`
+(Details in `profil.md`).

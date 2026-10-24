@@ -71,6 +71,9 @@
                     <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId === u.id" [attr.title]="'admin.users.impersonate' | translate">
                       <mat-icon>login</mat-icon>
                     </button>
+                    <button mat-icon-button (click)="createResetLink(u)" [disabled]="resetLinkBusyId === u.id" [attr.title]="'admin.users.resetLink.action' | translate">
+                      <mat-icon>key</mat-icon>
+                    </button>
                     <button mat-icon-button (click)="toggleAdmin(u)" [disabled]="adminBusyId === u.id" [attr.title]="'admin.users.toggleAdmin' | translate">
                       <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
                     </button>
@@ -113,6 +116,10 @@
                           <mat-icon>more_vert</mat-icon>
                         </button>
                         <mat-menu #userMenu="matMenu">
+                          <button mat-menu-item (click)="createResetLink(u)" [disabled]="resetLinkBusyId === u.id">
+                            <mat-icon>key</mat-icon>
+                            <span>{{ 'admin.users.resetLink.action' | translate }}</span>
+                          </button>
                           <button mat-menu-item (click)="toggleAdmin(u)" [disabled]="adminBusyId === u.id">
                             <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
                             <span>{{ 'admin.users.toggleAdmin' | translate }}</span>

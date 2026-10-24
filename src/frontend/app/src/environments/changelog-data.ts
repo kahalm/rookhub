@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.828.0", date: "2026-10-24", changes: [
+    { en: "Admin: for accounts without an email address, the user list can now create a one-time password reset link (key button, or “⋮” on mobile). The admin passes it on; the person sets a new password themselves — the admin never sets or sees it. The link is valid for 24 hours and works once; admin accounts get such a link only from an admin.",
+      de: "Admin: Für Konten ohne E-Mail-Adresse erzeugt die Nutzerliste jetzt einen einmaligen Link zum Zurücksetzen des Passworts (Schlüssel-Knopf, am Handy unter „⋮“). Der Admin gibt ihn weiter, die Person setzt selbst ein neues Passwort — der Admin setzt und sieht keins. Der Link gilt 24 Stunden und nur einmal; Admin-Konten bekommen ihn nur von einem Admin." },
+  ] },
   { version: "0.827.0", date: "2026-10-24", changes: [
     { en: "Design round d5 (37 findings): long course comments keep their “Read in full” link visible; E-ink: one clear focus frame in form fields, white hint button and toggles, /guess list no longer touches the frame; numbered engine arrows; larger tap targets (course lines, leaderboard period); tidier mobile layouts (trainer menu, lock card, replay button, stats rating), fewer duplicate actions (reconstruction, endless “Clear all”), plus text fixes in LeagueHub, ClubHub, KidHub and the tournament profile.",
       de: "Design-Runde d5 (37 Funde): Lange Kurskommentare zeigen „Ganz lesen“ wieder; E-Ink: ein klarer Fokusrahmen in Formularfeldern, Tipp-Knopf und Umschalter weiß, /guess-Liste klebt nicht mehr am Rahmen; nummerierte Engine-Pfeile; größere Tippziele (Kurslinien, Bestenlisten-Zeitraum); aufgeräumte Handy-Ansichten (Trainer-Menü, Sperrkarte, Nachspielen-Knopf, Statistik-Wertung), weniger doppelte Aktionen (Rekonstruktion, Endlos „Alle löschen“) sowie Textkorrekturen in LeagueHub, ClubHub, KidHub und im Turnier-Profil." },

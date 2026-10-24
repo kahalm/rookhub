@@ -209,6 +209,105 @@ public class PasswordResetServiceTests : IDisposable
             () => _service.ResetPasswordAsync("totally-made-up", "BrandNew1!"));
     }
 
+    // ---- Admin-Link (UX-002 / P-2): Konten ohne E-Mail -----------------------------------------
+
+    private async Task<AppUser> CreateUserWithoutEmailAsync(bool isAdmin = false)
+    {
+        var user = new AppUser
+        {
+            Username = "nomail",
+            Email = null,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("OldPassword1!"),
+            IsAdmin = isAdmin,
+        };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    [Fact]
+    public async Task AdminLink_StoresOnlyTheHash_ExpiresIn24h_SendsNoMail()
+    {
+        var user = await CreateUserWithoutEmailAsync();
+
+        var before = DateTime.UtcNow;
+        var (link, expiresAt) = await _service.IssueAdminResetLinkAsync(user.Id, actorId: 1, actorIsAdmin: true);
+
+        Assert.StartsWith("https://rookhub.example/reset-password?token=", link);
+        var raw = ExtractToken(link);
+        var token = Assert.Single(_db.PasswordResetTokens);
+        Assert.Equal(user.Id, token.UserId);
+        Assert.Null(token.UsedAt);
+        Assert.Equal(SecretTokens.Sha256Hex(raw), token.TokenHash);
+        Assert.NotEqual(raw, token.TokenHash);
+        Assert.Equal(TimeSpan.FromHours(24), PasswordResetService.AdminLinkTtl);
+        Assert.InRange(token.ExpiresAt, before.AddHours(24).AddSeconds(-1), DateTime.UtcNow.AddHours(24).AddSeconds(1));
+        Assert.Equal(token.ExpiresAt, expiresAt);
+        Assert.Equal(0, _email.Sends); // kein Versand
+    }
+
+    [Fact]
+    public async Task AdminLink_InvalidatesOpenTokens()
+    {
+        var user = await CreateUserAsync("known@test.com");
+        await _service.RequestResetAsync("known@test.com");
+        var mailToken = ExtractToken(_email.LastText!);
+        _email.Reset();
+
+        await _service.IssueAdminResetLinkAsync(user.Id, actorId: 1, actorIsAdmin: true);
+
+        Assert.Equal(2, _db.PasswordResetTokens.Count());
+        Assert.Single(_db.PasswordResetTokens.Where(t => t.UsedAt == null));
+        Assert.Equal(0, _email.Sends);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _service.ResetPasswordAsync(mailToken, "BrandNew1!"));
+    }
+
+    [Fact]
+    public async Task AdminLink_CanBeRedeemedOnce()
+    {
+        var user = await CreateUserWithoutEmailAsync();
+        _db.UserApiTokens.Add(new UserApiToken { UserId = user.Id, Name = "ext", TokenHash = "h", Prefix = "rkh_x" });
+        await _db.SaveChangesAsync();
+        var (link, _) = await _service.IssueAdminResetLinkAsync(user.Id, actorId: 1, actorIsAdmin: true);
+        var raw = ExtractToken(link);
+
+        await _service.ResetPasswordAsync(raw, "BrandNew1!");
+
+        var reloaded = await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id);
+        Assert.True(BCrypt.Net.BCrypt.Verify("BrandNew1!", reloaded.PasswordHash));
+        Assert.Empty(_db.UserApiTokens.Where(t => t.UserId == user.Id));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _service.ResetPasswordAsync(raw, "Another1!"));
+    }
+
+    [Fact]
+    public async Task AdminLink_DeletedOrUnknownUser_Throws()
+    {
+        var user = await CreateUserWithoutEmailAsync();
+        user.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _service.IssueAdminResetLinkAsync(user.Id, actorId: 1, actorIsAdmin: true));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _service.IssueAdminResetLinkAsync(9999, actorId: 1, actorIsAdmin: true));
+        Assert.Empty(_db.PasswordResetTokens);
+    }
+
+    [Fact]
+    public async Task AdminLink_ForAdminAccount_OnlyByAdmin()
+    {
+        var admin = await CreateUserWithoutEmailAsync(isAdmin: true);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _service.IssueAdminResetLinkAsync(admin.Id, actorId: 1, actorIsAdmin: false));
+        Assert.Empty(_db.PasswordResetTokens);
+
+        await _service.IssueAdminResetLinkAsync(admin.Id, actorId: 1, actorIsAdmin: true);
+        Assert.Single(_db.PasswordResetTokens);
+    }
+
     private sealed class FailingEmailSender : IEmailSender
     {
         public bool IsEnabled => true;
@@ -223,7 +322,14 @@ public class PasswordResetServiceTests : IDisposable
         public string? LastHtml { get; private set; }
         public string? LastText { get; private set; }
         public string? LastFromName { get; private set; }
+        public int Sends { get; private set; }
         public bool IsEnabled => true;
+
+        public void Reset()
+        {
+            LastTo = LastSubject = LastHtml = LastText = LastFromName = null;
+            Sends = 0;
+        }
 
         public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
             => SendAsync(to, subject, html, text, null, ct);
@@ -235,6 +341,7 @@ public class PasswordResetServiceTests : IDisposable
             LastHtml = html;
             LastText = text;
             LastFromName = fromName;
+            Sends++;
             return Task.CompletedTask;
         }
     }

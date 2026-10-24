@@ -20,6 +20,9 @@ namespace RookHub.Api.Services.Accounts;
 public class PasswordResetService
 {
     public static readonly TimeSpan TokenTtl = TimeSpan.FromHours(1);
+    /// <summary>Laufzeit eines vom Admin erzeugten Links (<see cref="IssueAdminResetLinkAsync"/>): länger als der
+    /// Mail-Link, weil der Admin ihn erst über den Kanal der Person weitergibt (Nachricht, Telefon, persönlich).</summary>
+    public static readonly TimeSpan AdminLinkTtl = TimeSpan.FromHours(24);
     private const int TokenBytes = 32;            // → ~43 Char Base64URL
 
     private readonly AppDbContext _db;
@@ -100,6 +103,45 @@ public class PasswordResetService
         });
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("PasswordReset: token issued + mail dispatched for user {UserId}", user.Id);
+    }
+
+    /// <summary>
+    /// Reset-Link für Konten ohne (erreichbare) E-Mail (Codereview UX-002 / P-2): legt wie
+    /// <see cref="RequestResetAsync"/> einen einmaligen Token an (nur der Hash landet in der DB) und entwertet
+    /// offene ältere Tokens, schickt aber KEINE Mail, sondern gibt den Link an den Admin zurück, der ihn der Person
+    /// weitergibt. Der Admin setzt und sieht kein Passwort; eingelöst wird der Link wie jeder andere über
+    /// <see cref="ResetPasswordAsync"/>. Gültig <see cref="AdminLinkTtl"/>.
+    /// Ein Admin-Konto bekommt einen Link nur von einem Admin (<paramref name="actorIsAdmin"/>) — dieselbe Grenze wie
+    /// bei Löschen/Sperren, sonst übernähme eine delegierte Rolle mit <c>users.manage</c> ein Admin-Konto.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">Unbekanntes oder gelöschtes Konto.</exception>
+    /// <exception cref="UnauthorizedAccessException">Nicht-Admin gegen ein Admin-Konto.</exception>
+    public async Task<(string Link, DateTime ExpiresAt)> IssueAdminResetLinkAsync(int userId, int actorId, bool actorIsAdmin,
+        CancellationToken ct = default)
+    {
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null, ct)
+            ?? throw new KeyNotFoundException();
+        if (user.IsAdmin && !actorIsAdmin)
+            throw new UnauthorizedAccessException("Only an admin may create a reset link for an admin account.");
+
+        var open = await _db.PasswordResetTokens
+            .Where(t => t.UserId == user.Id && t.UsedAt == null)
+            .ToListAsync(ct);
+        var now = DateTime.UtcNow;
+        foreach (var t in open) t.UsedAt = now;
+
+        var rawToken = SecretTokens.NewRaw(TokenBytes);
+        var expiresAt = now.Add(AdminLinkTtl);
+        _db.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = user.Id,
+            TokenHash = SecretTokens.Sha256Hex(rawToken),
+            CreatedAt = now,
+            ExpiresAt = expiresAt,
+        });
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("PasswordReset: admin link issued for user {UserId} by {ActorId}", user.Id, actorId);
+        return (BuildResetLink(rawToken, null), expiresAt);
     }
 
     /// <summary>

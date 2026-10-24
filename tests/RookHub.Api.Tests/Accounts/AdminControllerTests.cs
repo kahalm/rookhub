@@ -636,4 +636,55 @@ public class AdminControllerTests : IDisposable
         Assert.Null(await _db.Books.FindAsync(book.Id));
         Assert.Equal(0, await _db.BookPuzzles.CountAsync());
     }
+
+    // ---- Reset-Link für Konten ohne E-Mail (UX-002 / P-2) ----------------------------------------
+
+    private PasswordResetService ResetService() => new(_db, new NoMailSender(),
+        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["App:BaseUrl"] = "https://rookhub.example",
+        }).Build(), NullLogger<PasswordResetService>.Instance);
+
+    [Fact]
+    public async Task CreatePasswordResetLink_ReturnsLinkAndExpiry()
+    {
+        var user = await CreateUserAsync("nomail");
+        SetUser(99);
+
+        var ok = Assert.IsType<OkObjectResult>(await _controller.CreatePasswordResetLink(user.Id, ResetService(), default));
+        var dto = Assert.IsType<PasswordResetLinkDto>(ok.Value);
+        Assert.StartsWith("https://rookhub.example/reset-password?token=", dto.Link);
+        Assert.True(dto.ExpiresAt > DateTime.UtcNow.AddHours(23));
+        Assert.Single(_db.PasswordResetTokens.Where(t => t.UserId == user.Id && t.UsedAt == null));
+    }
+
+    [Fact]
+    public async Task CreatePasswordResetLink_Unknown_ReturnsNotFound()
+    {
+        SetUser(99);
+        Assert.IsType<NotFoundResult>(await _controller.CreatePasswordResetLink(9999, ResetService(), default));
+    }
+
+    [Fact]
+    public async Task CreatePasswordResetLink_DelegatedActorAgainstAdmin_ReturnsForbidden()
+    {
+        // Eine delegierte Rolle mit users.manage (kein Admin-Claim) übernähme sonst über den Link ein Admin-Konto.
+        var admin = await CreateUserAsync("boss", isAdmin: true);
+        var plain = await CreateUserAsync("plain");
+        SetUser(99, isAdmin: false);
+
+        var status = Assert.IsType<ObjectResult>(await _controller.CreatePasswordResetLink(admin.Id, ResetService(), default));
+        Assert.Equal(403, status.StatusCode);
+        Assert.Empty(_db.PasswordResetTokens.Where(t => t.UserId == admin.Id));
+
+        // Gegen ein normales Konto darf die delegierte Rolle.
+        Assert.IsType<OkObjectResult>(await _controller.CreatePasswordResetLink(plain.Id, ResetService(), default));
+    }
+
+    private sealed class NoMailSender : IEmailSender
+    {
+        public bool IsEnabled => true;
+        public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
+            => throw new InvalidOperationException("The admin link must not send mail.");
+    }
 }
