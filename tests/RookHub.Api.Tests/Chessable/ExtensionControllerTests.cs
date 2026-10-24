@@ -54,6 +54,8 @@ public class ExtensionControllerTests : IDisposable
         /// <summary>Optional: PGN je Parse-Aufruf (1-basiert) statt der festen Linie; <c>null</c> = die feste Linie
         /// (ohne oid, wie vor piratechess v1.29.0).</summary>
         public Func<int, string?>? PgnFor;
+        /// <summary>Optional: piratechess beantwortet den Parse-Aufruf mit diesem Fehlerstatus.</summary>
+        public System.Net.HttpStatusCode? ParseFails;
         /// <summary>Dieselbe Linie mit Chessable-oid — so, wie piratechess seit v1.29.0 jede Linie liefert.</summary>
         public static string WithOid(string oid) => Pgn.Replace("[SetUp", $"[ChessableOid \"{oid}\"]\n[SetUp");
 
@@ -71,6 +73,11 @@ public class ExtensionControllerTests : IDisposable
                 throw new HttpRequestException("Connection refused");
             Calls++;
             LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
+            if (ParseFails is { } failure)
+                return new HttpResponseMessage(failure)
+                {
+                    Content = new StringContent("{\"message\":\"parse failed\"}", System.Text.Encoding.UTF8, "application/json"),
+                };
             var json = System.Text.Json.JsonSerializer.Serialize(new { pgn = PgnFor?.Invoke(Calls) ?? Pgn, name = "Course", lineCount = 1 });
             return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
@@ -851,6 +858,29 @@ public class ExtensionControllerTests : IDisposable
         var res = await _controller.ChessableIngestChunk(
             new ChessableIngestChunkRequest("sess-3", "424242", "book", "Course", null, true), default);
         Assert.IsType<BadRequestObjectResult>(res);
+    }
+
+    [Theory]
+    [InlineData(System.Net.HttpStatusCode.BadRequest, StatusCodes.Status400BadRequest)]
+    [InlineData(System.Net.HttpStatusCode.InternalServerError, StatusCodes.Status502BadGateway)]
+    public async Task ChessableIngestChunk_ParserError_MapsLikeTheFilter_AndKeepsTheSessionWithoutImport(
+        System.Net.HttpStatusCode upstream, int expected)
+    {
+        SetUser(7, scope: "extension");
+        _parse.ParseFails = upstream;
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-parse", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+        var obj = Assert.IsAssignableFrom<ObjectResult>(res);
+        Assert.Equal(expected, obj.StatusCode ?? StatusCodes.Status200OK);
+        Assert.Equal(1, _parse.Calls);
+        Assert.Empty(await _db.ChessableImports.ToListAsync());
+
+        // Die Sitzung blieb bestehen (kein Discard), aber ohne Import-Datensatz: der finale Chunk ist 400.
+        _parse.ParseFails = null;
+        var final = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-parse", "424242", "book", "Course", null, true), default);
+        var bad = Assert.IsType<BadRequestObjectResult>(final);
+        Assert.Contains("No captured lines in session.", System.Text.Json.JsonSerializer.Serialize(bad.Value));
     }
 
     [Fact]
