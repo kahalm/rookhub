@@ -19,9 +19,8 @@ import { CommentSegment } from './comment-variation.util';
 import { CourseEbookRefs } from './course-ebook-refs';
 import { CourseProgressSplitComponent } from '../courses/course-progress-split.component';
 import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
-import { CommentBlockCache, lineStepAt } from './line-step.util';
+import { CommentBlockCache } from './line-step.util';
 import {
-  latestCommentUpTo as latestCommentUpToUtil,
   displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
 } from './book-comment.util';
 import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
@@ -36,13 +35,11 @@ import { PuzzleService, BookPuzzleDto, SharedPuzzleCounts } from './puzzle.servi
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
-import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
-import { parseMoveShapes } from './move-shapes.util';
 import { parseAltMoves } from './alt-moves.util';
-import { applyUci, tryLoadFen, fenSideToMove } from './puzzle-move.util';
-import { replayIllegalFen } from './illegal-board.util';
+import { tryLoadFen, fenSideToMove } from './puzzle-move.util';
+import { BookReviewController, ReviewFrame } from './book-review';
 import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService, CourseMode, CourseScopeStats, CourseLineEbookRef } from '../courses/course.service';
@@ -244,8 +241,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   moveComment: string | null = null;
   /** Board-Annotationen (Chessable-Pfeile/Feld-Markierungen) zum aktuellen Review-Zug — ans Brett gebunden. */
   reviewShapes: DrawShape[] = [];
-  /** Ply → Shapes des aktuellen Puzzles (aus `puzzle.moveShapes` geparst; -1 = Einleitung). */
-  private moveShapesByPly: Record<number, DrawShape[]> = {};
+  /** Durchsicht (Ganze Partie / Lösung) und Brett-Annotationen je Halbzug — reine Logik in `book-review.ts`. */
+  private readonly review = new BookReviewController();
 
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
   get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
@@ -1789,7 +1786,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.solutionReview = false;
     this.moveComment = null;
     this.reviewShapes = [];
-    this.moveShapesByPly = parseMoveShapes(puzzle.moveShapes);
+    this.review.setShapes(puzzle.moveShapes);
     this.showEval = false;
     this.initialEval = '';
     this.currentEval = '';
@@ -1822,28 +1819,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.reviewGoTo(0);   // setzt boardFen/turnColor/Kommentar für die Ausgangsstellung
   }
 
-  /** Illegale (Chessable-Diagramm-)FEN ohne chess.js anzeigen. Hat die Info-Linie Demozüge, kann man
-   *  sie trotzdem durchklicken: die Stellung nach `index` Halbzügen wird rein per Koordinaten (kein
-   *  Legalitätscheck) berechnet — sonst nur die Ausgangsstellung. */
-  private renderStaticInfo(index: number): void {
-    if (!this.puzzle) return;
-    this.chess = new Chess();               // sicherer Platzhalter (nie angezeigt; boardFen zeigt das Diagramm)
-    const moves = this.puzzle.moves.split(' ').filter(m => m);
-    const idx = Math.max(0, Math.min(index, moves.length));
-    this.reviewIndex = idx;
-    const replay = replayIllegalFen(this.puzzle.fen, moves, idx);
-    this.boardFen = replay.fen;             // chessground rendert die Brettstellung ohne Legalitätsprüfung
-    this.turnColor = replay.whiteToMove ? 'white' : 'black';
-    this.lastMove = replay.lastMove as [Key, Key] | undefined;
-    this.isCheck = false;
+  /** Brettstand einer Durchsicht-Stelle übernehmen (Brett nur lesend, Kommentar + Pfeile dazu). */
+  private applyReviewFrame(f: ReviewFrame): void {
+    this.reviewIndex = f.index;
+    this.chess = f.chess;
+    this.lastMove = f.lastMove;
+    this.boardFen = f.fen;
+    this.turnColor = f.turnColor;
+    this.isCheck = f.isCheck;
     this.dests = new Map();
-    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, 0, idx - 1);
-    this.reviewShapes = this.shapesForPlyPlayed(idx - 1);
-  }
-
-  /** Zug aufs Brett anwenden ohne lastMove-Highlight (Vorspiel/Review-Aufbau). */
-  private applyUci(uci: string): void {
-    applyUci(this.chess, uci);
+    this.moveComment = f.moveComment;
+    this.reviewShapes = f.shapes;
   }
 
   giveUp(): void {
@@ -1900,37 +1886,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private solutionReviewGoTo(index: number): void {
     if (!this.puzzle) return;
     this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
-    const allMoves = this.puzzle.moves.split(' ').filter(m => m);
-    const start = Math.max(0, this.startPly);
-    const solutionMoves = allMoves.slice(start);
-    index = Math.max(0, Math.min(index, solutionMoves.length));
-    this.reviewIndex = index;
-    const chess = tryLoadFen(this.puzzle.fen);
-    if (!chess) { this.renderStaticInfo(start + index); return; }   // illegale Diagramm-FEN → per Koordinaten
-    this.chess = chess;
-    // Vorspiel still aufs Brett
-    for (let i = 0; i < start; i++) this.applyUci(allMoves[i]);
-    // Loesungszuege bis index
-    let last: [Key, Key] | undefined;
-    for (let i = 0; i < index; i++) {
-      this.applyUci(solutionMoves[i]);
-      last = [solutionMoves[i].substring(0, 2) as Key, solutionMoves[i].substring(2, 4) as Key];
-    }
-    this.lastMove = last;
-    this.boardFen = this.chess.fen();
-    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
-    this.isCheck = this.chess.isCheck();
-    this.dests = new Map();
-    // Lösungs-Review: index = Anzahl Lösungszüge ab Trainingsstart; absoluter Halbzug = start + index.
-    // Fällt der aktuelle Zug ohne Kommentar aus, den zuletzt vorher gesehenen behalten (statt zurück
-    // auf die Einleitung zu fallen — das wirkte für den User wie ein „Sprung nach hinten").
-    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, start, start + index - 1);
-    this.reviewShapes = this.shapesForPlyPlayed(start + index - 1);
-  }
-
-  /** Board-Annotationen (Pfeile/Feld-Markierungen) zum zuletzt gespielten Halbzug (gleiche Ply-Konvention). */
-  private shapesForPlyPlayed(plyPlayed: number): DrawShape[] {
-    return this.moveShapesByPly[plyPlayed] ?? [];
+    this.applyReviewFrame(this.review.solutionFrame(this.puzzle, this.startPly, index));
   }
 
   protected override enterSolutionReview(): void {
@@ -1957,9 +1913,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   override get reviewTotal(): number {
-    if (!this.puzzle) return 0;
-    const allMoves = this.puzzle.moves.split(' ').filter(m => m);
-    return this.solutionReview ? allMoves.length - Math.max(0, this.startPly) : allMoves.length;
+    return this.review.total(this.puzzle, this.solutionReview, this.startPly);
   }
 
   reviewNext(): void {
@@ -1979,22 +1933,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
-    const moves = this.puzzle.moves.split(' ').filter(m => m);
-    // Dieselbe Regel wie die Kurs-Durchsicht (`lineStepAt`): illegale Diagramm-FEN → per Koordinaten
-    // nachgespielt (vorher `renderStaticInfo`), chess.js bekommt dann einen nie angezeigten Platzhalter.
-    const step = lineStepAt(this.puzzle.fen, moves, index);
-    index = step.index;
-    this.reviewIndex = index;
-    this.chess = step.chess ?? new Chess();
-    this.lastMove = step.lastMove;
-    this.boardFen = step.fen;
-    this.turnColor = step.turnColor;
-    this.isCheck = step.isCheck;
-    this.dests = new Map();
-    // Ganze-Partie-Review: index = Anzahl gespielter Halbzüge ab FEN; letzter Zug = moves[index-1].
-    // Bei Zügen ohne Kommentar den zuletzt gesehenen behalten (statt bis zur Einleitung zurückzufallen).
-    this.moveComment = latestCommentUpToUtil(this.puzzle.moveComments, 0, index - 1);
-    this.reviewShapes = this.shapesForPlyPlayed(index - 1);
+    this.applyReviewFrame(this.review.fullGameFrame(this.puzzle, index));
   }
 
   exitReview(): void {
