@@ -28,6 +28,13 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
+/** Ein Abschnitt der Kursliste („In Arbeit", „Mit mir geteilt", „Öffentlich", „Eigene"). */
+export interface CourseSection {
+  titleKey: string;
+  hintKey: string;
+  items: CourseListItem[];
+}
+
 @Component({
   selector: 'app-course-list',
   changeDetection: ChangeDetectionStrategy.Default,
@@ -122,137 +129,40 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
         @if (filtered.length === 0) {
           <p class="empty-state">{{ 'courses.noMatch' | translate:{ query: search } }}</p>
         }
-        @if (inProgressCourses.length > 0) {
-          <section class="course-section">
-            <div class="section-head">
-              <h2>{{ 'courses.sectionInProgress' | translate }}</h2>
-              <app-help-hint icon="info_outline" [text]="'courses.sectionInProgressHint' | translate" />
-            </div>
-            <div class="course-grid">
-              @for (c of inProgressCourses; track c.bookId) {
-                <app-course-card [course]="c" [origin]="originOf(c)"
-                  [pinning]="pinning === c.bookId"
-                  [savingOffline]="savingOffline === c.bookId"
-                  [downloadingPgn]="downloadingPgn === c.bookId"
-                  [converting]="converting === c.bookId"
-                  [deleting]="deleting === c.bookId"
-                  [offline]="isOffline(c)"
-                  [canManageThemes]="canManageThemes(c)"
-                  [expanded]="expandedBook === c.bookId"
-                  [loadingChapters]="loadingChapters === c.bookId"
-                  [chapters]="chaptersByBook[c.bookId]"
-                  (pinToggle)="togglePin(c)"
-                  (offlineToggle)="toggleOffline(c)"
-                  (pgnDownload)="downloadPgn(c)"
-                  (progressReset)="reset(c)"
-                  (convertRepertoire)="convertToRepertoire(c)"
-                  (linkEdit)="openLinkDialog(c)"
-                  (themesEdit)="openThemesDialog(c)"
-                  (shareCourse)="openShareDialog(c)"
-                  (deleteCourse)="deleteCourse(c)"
-                  (chaptersToggle)="toggleChapters(c)"></app-course-card>
-              }
-            </div>
-          </section>
-        }
-        @if (sharedCourses.length > 0) {
-          <section class="course-section">
-            <div class="section-head">
-              <h2>{{ 'courses.sectionSharedWithMe' | translate }}</h2>
-              <app-help-hint icon="info_outline" [text]="'courses.sectionSharedWithMeHint' | translate" />
-            </div>
-            <div class="course-grid">
-              @for (c of sharedCourses; track c.bookId) {
-                <app-course-card [course]="c" [origin]="originOf(c)"
-                  [pinning]="pinning === c.bookId"
-                  [savingOffline]="savingOffline === c.bookId"
-                  [downloadingPgn]="downloadingPgn === c.bookId"
-                  [converting]="converting === c.bookId"
-                  [deleting]="deleting === c.bookId"
-                  [offline]="isOffline(c)"
-                  [canManageThemes]="canManageThemes(c)"
-                  [expanded]="expandedBook === c.bookId"
-                  [loadingChapters]="loadingChapters === c.bookId"
-                  [chapters]="chaptersByBook[c.bookId]"
-                  (pinToggle)="togglePin(c)"
-                  (offlineToggle)="toggleOffline(c)"
-                  (pgnDownload)="downloadPgn(c)"
-                  (progressReset)="reset(c)"
-                  (convertRepertoire)="convertToRepertoire(c)"
-                  (linkEdit)="openLinkDialog(c)"
-                  (themesEdit)="openThemesDialog(c)"
-                  (shareCourse)="openShareDialog(c)"
-                  (deleteCourse)="deleteCourse(c)"
-                  (chaptersToggle)="toggleChapters(c)"></app-course-card>
-              }
-            </div>
-          </section>
-        }
-        @if (publicCourses.length > 0) {
-          <section class="course-section">
-            <div class="section-head">
-              <h2>{{ 'courses.sectionPublic' | translate }}</h2>
-              <app-help-hint icon="info_outline" [text]="'courses.sectionPublicHint' | translate" />
-            </div>
-            <div class="course-grid">
-              @for (c of publicCourses; track c.bookId) {
-                <app-course-card [course]="c" [origin]="originOf(c)"
-                  [pinning]="pinning === c.bookId"
-                  [savingOffline]="savingOffline === c.bookId"
-                  [downloadingPgn]="downloadingPgn === c.bookId"
-                  [converting]="converting === c.bookId"
-                  [deleting]="deleting === c.bookId"
-                  [offline]="isOffline(c)"
-                  [canManageThemes]="canManageThemes(c)"
-                  [expanded]="expandedBook === c.bookId"
-                  [loadingChapters]="loadingChapters === c.bookId"
-                  [chapters]="chaptersByBook[c.bookId]"
-                  (pinToggle)="togglePin(c)"
-                  (offlineToggle)="toggleOffline(c)"
-                  (pgnDownload)="downloadPgn(c)"
-                  (progressReset)="reset(c)"
-                  (convertRepertoire)="convertToRepertoire(c)"
-                  (linkEdit)="openLinkDialog(c)"
-                  (themesEdit)="openThemesDialog(c)"
-                  (shareCourse)="openShareDialog(c)"
-                  (deleteCourse)="deleteCourse(c)"
-                  (chaptersToggle)="toggleChapters(c)"></app-course-card>
-              }
-            </div>
-          </section>
-        }
-        @if (ownCourses.length > 0) {
-          <section class="course-section">
-            <div class="section-head">
-              <h2>{{ 'courses.sectionOwn' | translate }}</h2>
-              <app-help-hint icon="info_outline" [text]="'courses.sectionOwnHint' | translate" />
-            </div>
-            <div class="course-grid">
-              @for (c of ownCourses; track c.bookId) {
-                <app-course-card [course]="c" [origin]="originOf(c)"
-                  [pinning]="pinning === c.bookId"
-                  [savingOffline]="savingOffline === c.bookId"
-                  [downloadingPgn]="downloadingPgn === c.bookId"
-                  [converting]="converting === c.bookId"
-                  [deleting]="deleting === c.bookId"
-                  [offline]="isOffline(c)"
-                  [canManageThemes]="canManageThemes(c)"
-                  [expanded]="expandedBook === c.bookId"
-                  [loadingChapters]="loadingChapters === c.bookId"
-                  [chapters]="chaptersByBook[c.bookId]"
-                  (pinToggle)="togglePin(c)"
-                  (offlineToggle)="toggleOffline(c)"
-                  (pgnDownload)="downloadPgn(c)"
-                  (progressReset)="reset(c)"
-                  (convertRepertoire)="convertToRepertoire(c)"
-                  (linkEdit)="openLinkDialog(c)"
-                  (themesEdit)="openThemesDialog(c)"
-                  (shareCourse)="openShareDialog(c)"
-                  (deleteCourse)="deleteCourse(c)"
-                  (chaptersToggle)="toggleChapters(c)"></app-course-card>
-              }
-            </div>
-          </section>
+        @for (s of sections; track s.titleKey) {
+          @if (s.items.length > 0) {
+            <section class="course-section">
+              <div class="section-head">
+                <h2>{{ s.titleKey | translate }}</h2>
+                <app-help-hint icon="info_outline" [text]="s.hintKey | translate" />
+              </div>
+              <div class="course-grid">
+                @for (c of s.items; track c.bookId) {
+                  <app-course-card [course]="c" [origin]="originOf(c)"
+                    [pinning]="pinning === c.bookId"
+                    [savingOffline]="savingOffline === c.bookId"
+                    [downloadingPgn]="downloadingPgn === c.bookId"
+                    [converting]="converting === c.bookId"
+                    [deleting]="deleting === c.bookId"
+                    [offline]="isOffline(c)"
+                    [canManageThemes]="canManageThemes(c)"
+                    [expanded]="expandedBook === c.bookId"
+                    [loadingChapters]="loadingChapters === c.bookId"
+                    [chapters]="chaptersByBook[c.bookId]"
+                    (pinToggle)="togglePin(c)"
+                    (offlineToggle)="toggleOffline(c)"
+                    (pgnDownload)="downloadPgn(c)"
+                    (progressReset)="reset(c)"
+                    (convertRepertoire)="convertToRepertoire(c)"
+                    (linkEdit)="openLinkDialog(c)"
+                    (themesEdit)="openThemesDialog(c)"
+                    (shareCourse)="openShareDialog(c)"
+                    (deleteCourse)="deleteCourse(c)"
+                    (chaptersToggle)="toggleChapters(c)"></app-course-card>
+                }
+              </div>
+            </section>
+          }
         }
       }
     </div>
@@ -427,6 +337,9 @@ export class CourseListComponent implements OnInit {
    *  angelegt, per „Partien importieren" oder aus einem Repertoire umgewandelt — deshalb heißt die
    *  Sektion „Eigene Kurse" und nicht „Chessable-Kurse". */
   ownCourses: CourseListItem[] = [];
+  /** Die vier Abschnitte in Anzeige-Reihenfolge (Überschrift, ⓘ-Text, Karten) — EIN Kartenblock im Template
+   *  statt vier gleicher (Codereview F3-023); leere Abschnitte blendet das Template aus. */
+  sections: CourseSection[] = [];
 
   /** Sektionen aus Liste + Suche neu ableiten. MUSS nach jeder Änderung an `courses`
    *  (Zuweisung ODER Mutation von isPinned/solvedCount/puzzleCount/isShared/isOwned) laufen —
@@ -456,6 +369,12 @@ export class CourseListComponent implements OnInit {
     this.sharedCourses = rest.filter(c => c.isShared);
     this.publicCourses = rest.filter(c => !c.isOwned && !c.isShared);
     this.ownCourses = rest.filter(c => c.isOwned);
+    this.sections = [
+      { titleKey: 'courses.sectionInProgress', hintKey: 'courses.sectionInProgressHint', items: this.inProgressCourses },
+      { titleKey: 'courses.sectionSharedWithMe', hintKey: 'courses.sectionSharedWithMeHint', items: this.sharedCourses },
+      { titleKey: 'courses.sectionPublic', hintKey: 'courses.sectionPublicHint', items: this.publicCourses },
+      { titleKey: 'courses.sectionOwn', hintKey: 'courses.sectionOwnHint', items: this.ownCourses },
+    ];
     // Gleichnamige Kurse (über die GANZE Liste, nicht nur die Suche) bekommen ihre Herkunft als Untertitel.
     const byTitle = new Map<string, number>();
     for (const c of this.courses) {
