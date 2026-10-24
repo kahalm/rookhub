@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.8", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z3): the Chessable import is split into smaller parts (server fetch lane, re-import queue, browser import, live append, PGN blocks with golden tests) and the chunk flow moved out of the extension controller — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z3): Der Chessable-Import ist in kleinere Bausteine zerlegt (Server-Abruf, Re-Import-Warteschlange, Browser-Import, Live-Anhängen, PGN-Blöcke mit Golden-Tests) und der Chunk-Ablauf aus dem Erweiterungs-Controller gezogen — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.7", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z17/N9-008): the game-library maintenance tool is split into one class per command (17 commands, byte-identical output), CI now builds the tools too, and the training-goal service is split into goals, activity logs, per-source counters and a pure day/week projection — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z17/N9-008): Das Wartungswerkzeug für den Partie-Rohbestand ist in eine Klasse je Befehl zerlegt (17 Befehle, Ausgabe byte-gleich), die CI baut die Werkzeuge jetzt mit, und der Trainingsziel-Dienst ist in Ziele, Aktivitätsprotokolle, Zähler je Quelle und eine reine Tages-/Wochenrechnung zerlegt — keine sichtbare Änderung." },
   ]},
