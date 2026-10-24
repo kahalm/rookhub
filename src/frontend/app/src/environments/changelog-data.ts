@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.829.0", date: "2026-10-24", changes: [
+    { en: "Admin area per permission: someone who only handles messages, for example, now sees „Admin“ in the menu with exactly their tabs, and the bell links („/admin?tab=messages“, „…uploads“) lead straight there instead of bouncing off the admin flag. Only what the user may see is loaded; the dashboard’s Chessable queue follows the chessable.admin permission (code review F5-005).",
+      de: "Admin-Bereich je Recht: Wer zum Beispiel nur Nachrichten betreut, sieht jetzt im Menü „Admin“ mit genau seinen Tabs, und die Links aus der Glocke („/admin?tab=messages“, „…uploads“) führen direkt hin statt am Admin-Flag abzuprallen. Geladen wird nur, was der Nutzer sehen darf; die Chessable-Queue auf dem Dashboard folgt dem Recht chessable.admin (Codereview F5-005)." },
+  ] },
   { version: "0.828.4", date: "2026-10-24", changes: [
     { en: "Documentation: 99 follow-ups announced in the code-review fix commits of waves W4/W5 are now in „docs/“ (endpoint limits, conventions, schema notes), the frontend rules file and the TODO list; the TODO „Code Review“ line now records the 2026-09-29 review.",
       de: "Doku: 99 in den Codereview-Fix-Commits der Wellen W4/W5 angekündigte Nachträge stehen jetzt in „docs/“ (Endpunkt-Grenzen, Konventionen, Schema-Hinweise), in den Frontend-Regeln und in der TODO-Liste; die TODO-Zeile „Code Review“ führt den Review vom 29.09.2026." },
