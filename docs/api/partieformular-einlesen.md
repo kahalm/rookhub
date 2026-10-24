@@ -57,7 +57,10 @@ keinen Aufräumlauf — das Foto geht nur beim Übernehmen oder Verwerfen.
   wenn der Zug zurechtgebogen ist, das Modell zweifelte oder eine andere Lesart gleich weit trägt, ohne teurer zu
   sein; eine Zugumstellung (17. Sbd4/Sfd4 Sxd4 18. Sxd4) gilt als ebenbürtig. Anlass-Partie als Test:
   `ScoresheetResolverTests` rekonstruiert alle 66 Halbzüge allein aus den deutschen Einträgen.
-* **Ablauf** (`ScoresheetScanService` + `ScoresheetScanWorker`): der Upload legt einen `ScoresheetScan` an
+* **Ablauf** (`ScoresheetScanService` + `ScoresheetScanWorker`; die Fassade verteilt seit der Zerlegung Z6 auf
+  `ScoresheetQuota` (Kontingent), `ScoresheetIntake` (Annahme), `ScoresheetProcessor` (Lesen, Engine-Prüfung, Partie),
+  `ScoresheetCorrection` (Korrekturseite, Vereinspartie aus dem Archiv), `LeagueScoresheetScans` (LeagueHub) und
+  `ScoresheetScanRows` (Zeile → DTO, Löschen ohne Foto)): der Upload legt einen `ScoresheetScan` an
   (Foto in der DB, `LONGBLOB`, über 12 MB auf 3000 px verkleinert), der Worker liest im Hintergrund — DB-gestützt,
   eigener Weckruf (`ScoresheetScanSignal`), NICHT die Arbeitsspeicher-Queue (Watchtower-Neustart, Chessable-Import).
   Beim Start kommen `Running` zurück auf `Pending`, nach `MaxAttempts` (3) ist Schluss. Geht die Lesung irgendwo
@@ -143,7 +146,7 @@ geprüft (`reason == "max_tokens"`), NICHT über `ToString()` — das meldete ei
 einer Nachfrage entfallen nur die Nachfragen (die Lesung bis dahin bleibt). Admins: keine Nutzerbudgets und keine
 Tageszahl, das Gesamtbudget gilt auch für sie. Dazu weiter `Scoresheet:DailyLimit` — seit 0.568.1 **EINE Einlesung je
 24 h** (Wunsch 2026-09-27, vorher 20; rollendes Fenster) — und 3 offene je Nutzer. Mit einer am Tag hängt viel an der
-Zählregel (`ScoresheetScanService.CountingSince`): eine GESCHEITERTE Einlesung ohne Kosten zählt nicht (sonst sperrte
+Zählregel (`ScoresheetQuota.CountingSince`): eine GESCHEITERTE Einlesung ohne Kosten zählt nicht (sonst sperrte
 ein Ausfall auf unserer Seite 24 h), eine bezahlte schon. **Partie löschen ist kein zweiter Versuch**: die Einlesung
 bleibt als Zeile stehen, nur Foto, Dateiname, Modell-Antwort und Stand gehen mit der Partie
 (`DetachWithoutLoading`; vorher ging die Zeile samt Verbrauch — löschen + neu hochladen umging Tageszahl UND Budget).
