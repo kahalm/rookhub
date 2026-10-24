@@ -2,6 +2,13 @@
 
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist"“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
+**Aufbau (seit Zerlegung Z11, 2026-10-24):** `AnalysisJobWorker` = Schleife, Takt und die Schritte eines Laufs
+(`RunJobAsync`: Engine auflösen → Broker anfragen → Stream → einordnen); der Stream-Lauf selbst (Stand, Sichern,
+Stillstands-Wächter, Knotenziel) ist `JobStreamRun`; WELCHER Status am Ende gilt, entscheiden reine Funktionen —
+`AnalysisJobRunEnd.ClassifyRunEnd(RunFacts)` / `ClassifyStall` und `BrokerFailurePolicy.OnStatus` (Golden-Tabelle
+`AnalysisJobRunEndTests`); geschrieben wird er über `AnalysisJobTransitions`, der Engine-Wechsel reihum ist
+`BackgroundEngineRotation`. Zeilen-Bausteine: `AnalysisJobStream`, `StreamTally` (je eigene Datei).
+
 `AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
 Service, Singleton) über denselben Broker-Pfad wie live — **je ENGINE ein laufender Auftrag** (`_running`
 ist nach `EngineId` verschlüsselt: ein Stockfish-Prozess kann nur EINE Suche; Aufträge auf verschiedenen
@@ -80,7 +87,7 @@ KANN sich nicht wiederholen, `time` und `nodes` wandern mit jeder Zeile), und de
 weiter: er wird bei jeder FRISCHEN Zeile neu gestellt, mit `AnalysisJobs:StallTimeoutSeconds`
 (300..86400, Vorgabe 1800). Die Frist ist bewusst weit — sie faengt nicht die langsame, sondern die
 haengende Engine; eine tiefe Iteration mit fuenf Linien darf Minuten dauern. Faellt sie, wandert der
-Auftrag REIHUM auf die naechste hinterlegte Hintergrund-Engine (`AnalysisJobWorker.NextEngineAfter`):
+Auftrag REIHUM auf die naechste hinterlegte Hintergrund-Engine (`BackgroundEngineRotation.NextEngineAfter`):
 ueber die kuerzeste Schlange gewaenne ausgerechnet die haengende, sie hat ja gerade nichts zu tun. Eine
 Engine, die NICHT in der Hintergrund-Liste steht, wurde von Hand gewaehlt und bleibt. Ein Stillstand
 zaehlt als Fehlversuch — anders als ein abgerissener Stream ist er eine Aussage ueber die Engine; der

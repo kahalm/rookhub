@@ -272,7 +272,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         // zum Abbrechen) — ohne diese zweite Prüfung rechnete der Hintergrund daneben weiter.
         if (_tracker.IsEngineBusy(run.EngineId))
         {
-            await PauseAsync(db, job, null);
+            await AnalysisJobTransitions.PauseAsync(db, job, null);
             return null;
         }
 
@@ -282,7 +282,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         if (job.EngineOwnerUserId is int houseOwner
             && !await EngineOwnerResolver.IsHouseEngineSharedAsync(db, houseOwner, ct))
         {
-            await FailAsync(db, job, EngineOwnerResolver.HouseEngineWithdrawnError);
+            await AnalysisJobTransitions.FailAsync(db, job, EngineOwnerResolver.HouseEngineWithdrawnError);
             return null;
         }
         var registry = scope.ServiceProvider.GetRequiredService<EngineRegistry>();
@@ -292,22 +292,22 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         {
             // Live hat begonnen / gelöscht / Shutdown — MUSS vor dem Filter darunter stehen, sonst wäre
             // der eigene Abbruch als „Lichess nicht erreichbar" mit 60 s Backoff im Auftrag gelandet.
-            await PauseAsync(db, job, null);
+            await AnalysisJobTransitions.PauseAsync(db, job, null);
             return null;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            await ApplyAsync(db, job, BrokerFailurePolicy.LichessUnreachable);
+            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.LichessUnreachable);
             return null;
         }
         if (lookup.Failure == EngineLookupFailure.NoToken)
         {
-            await FailAsync(db, job, "Kein Lichess-Token hinterlegt");
+            await AnalysisJobTransitions.FailAsync(db, job, "Kein Lichess-Token hinterlegt");
             return null;
         }
         if (lookup.Engine is not { } engine)
         {
-            await FailAsync(db, job, "Engine nicht (mehr) registriert");
+            await AnalysisJobTransitions.FailAsync(db, job, "Engine nicht (mehr) registriert");
             return null;
         }
         return engine;
@@ -340,18 +340,18 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     {
         var work = WorkOf(job, engine);
         try { return await _broker.AnalyseAsync(engine, work, headerCt); }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { await PauseAsync(db, job, null); return null; }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { await AnalysisJobTransitions.PauseAsync(db, job, null); return null; }
         catch (OperationCanceledException)
         {
             // Nur die Kopfzeilen-Frist ist abgelaufen (der Job-Token ist nicht abgebrochen).
             _logger.LogWarning("AnalysisJob {JobId}: Broker antwortete nicht binnen {Timeout} (keine Kopfzeilen) — pausiert",
                 job.Id, _firstLineTimeout);
-            await ApplyAsync(db, job, BrokerFailurePolicy.NoHeaders);
+            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.NoHeaders);
             return null;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            await ApplyAsync(db, job, BrokerFailurePolicy.Unreachable);
+            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.Unreachable);
             return null;
         }
     }
@@ -367,15 +367,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             job.FruitlessAttempts, upstream.Error);
         var alt = job.EngineId;
         if (decision.TryOtherEngine
-            && await SwitchEngineAsync(db, job, EngineOwnerOf(job), CancellationToken.None))
+            && await BackgroundEngineRotation.SwitchAsync(db, job, EngineOwnerOf(job), _explicitOnly, CancellationToken.None))
         {
-            await ApplyAsync(db, job, BrokerFailurePolicy.SwitchedEngine(code, _engineSwitchBackoff));
+            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.SwitchedEngine(code, _engineSwitchBackoff));
             _logger.LogInformation(
                 "AnalysisJob {JobId}: Broker antwortete {Code} fuer {Old} — weiter auf {New}",
                 job.Id, code, alt, job.EngineId);
             return;
         }
-        await ApplyAsync(db, job, decision.Outcome);
+        await AnalysisJobTransitions.ApplyAsync(db, job, decision.Outcome);
     }
 
     /// <summary>Den Stream lesen (<see cref="JobStreamRun"/>) und den Auftrag danach einordnen
@@ -398,7 +398,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
                 "AnalysisJob {JobId}: Engine beendet die Suche selbst vor dem Ziel ({Nodes} von {Target} Knoten, z. B. Lc0 "
                 + "Smart Pruning) — Ergebnis gilt", job.Id, stream.CurrentNodes, job.TargetNodes);
         var outcome = AnalysisJobRunEnd.ClassifyRunEnd(facts);
-        await ApplyAsync(db, job, outcome);
+        await AnalysisJobTransitions.ApplyAsync(db, job, outcome);
         if (outcome.Kind == RunEndKind.Done)
             _logger.LogInformation("AnalysisJob {JobId}: fertig bei Tiefe {Depth} ({Nodes} Knoten)", job.Id, job.ReachedDepth, stream.CurrentNodes);
     }
@@ -408,7 +408,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     {
         if (!stream.GotData)
         {
-            await ApplyAsync(db, job, AnalysisJobRunEnd.ClassifyStall(stream.GotData, job.FruitlessAttempts, stream.CurrentDepth));
+            await AnalysisJobTransitions.ApplyAsync(db, job, AnalysisJobRunEnd.ClassifyStall(stream.GotData, job.FruitlessAttempts, stream.CurrentDepth));
             _logger.LogWarning("AnalysisJob {JobId}: keine Datenzeile binnen {Timeout} — pausiert",
                 job.Id, _firstLineTimeout);
             return;
@@ -417,7 +417,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         // ENGINE, nicht über die Stellung — die kürzeste Schlange wählte ausgerechnet sie erneut
         // (sie hat ja nichts zu tun), deshalb wird hier auf die nächste hinterlegte umgehängt.
         var stalled = job.EngineId;
-        var moved = await SwitchEngineAsync(db, job, EngineOwnerOf(job), CancellationToken.None);
+        var moved = await BackgroundEngineRotation.SwitchAsync(db, job, EngineOwnerOf(job), _explicitOnly, CancellationToken.None);
         // Der Fehlversuchs-Zähler (ClassifyStall) ist nötig, damit ein durchweg unbrauchbarer Auftrag nicht
         // ewig im Kreis läuft; er wird bei jedem Lauf MIT Tiefenfortschritt wieder auf 0 gesetzt, eine bloß
         // langsame tiefe Suche kann also nicht daran scheitern.
@@ -427,7 +427,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             + "Engine {Stalled} → {Next}",
             job.Id, _stallTimeout, stream.Tally.DataLines, stream.Tally.Heartbeats, stream.CurrentDepth, job.TargetDepth,
             stalled, moved ? job.EngineId : "(keine andere hinterlegt)");
-        await ApplyAsync(db, job, AnalysisJobRunEnd.ClassifyStall(stream.GotData, job.FruitlessAttempts, stream.CurrentDepth));
+        await AnalysisJobTransitions.ApplyAsync(db, job, AnalysisJobRunEnd.ClassifyStall(stream.GotData, job.FruitlessAttempts, stream.CurrentDepth));
     }
 
     /// <summary>Unerwarteter Fehler im Lauf: der Auftrag steht jetzt auf „Running", ohne dass etwas läuft — und Running
@@ -442,7 +442,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var job = await db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId, CancellationToken.None);
             if (job is { Status: AnalysisJobStatus.Running })
-                await PauseAsync(db, job, "Unerwarteter Fehler im Lauf", TimeSpan.FromMinutes(1));
+                await AnalysisJobTransitions.PauseAsync(db, job, "Unerwarteter Fehler im Lauf", TimeSpan.FromMinutes(1));
         }
         catch (Exception cleanupEx)
         {
@@ -456,94 +456,6 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         if (AnalysisJobStream.NodesOf(line) is not { } nodes) return;
         if (BrokerCandidates.Parse(line, fen) is not { Count: > 0 } cands) return;
         recorder.Observe(nodes, cands[0].Uci, cands[0].Cp, cands[0].Mate);
-    }
-
-    /// <summary>Den Auftrag auf die NAECHSTE hinterlegte Hintergrund-Engine umhaengen, nachdem die
-    /// bisherige stehen geblieben ist. Gibt zurueck, ob gewechselt wurde (gespeichert wird erst vom
-    /// aufrufenden Pause/Fail).
-    /// <para>Bewusst REIHUM und nicht ueber die kuerzeste Schlange: eine haengende Engine hat gerade gar
-    /// nichts zu tun und gewaenne jeden Schlangenvergleich — der Auftrag liefe ihr sofort wieder in die
-    /// Arme. Bewusst nur, wenn die aktuelle Engine ueberhaupt in der Liste steht: eine von Hand
-    /// festgelegte Engine ist eine Entscheidung des Nutzers und bleibt.</para></summary>
-    private async Task<bool> SwitchEngineAsync(AppDbContext db, AnalysisJob job, int engineOwnerId, CancellationToken ct)
-    {
-        var cred = await db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == engineOwnerId, ct);
-        var engines = cred?.BackgroundEngines ?? [];
-        // Reihum, aber nur über Engines, die gerade Arbeit nehmen (0.711.0): sonst wanderte ein Auftrag nach einem 503
-        // über alle ausgeschalteten Engines einer Maschine, je 15 s Pause, bevor er eine laufende traf.
-        var usable = await EngineAvailability.UsableAsync(db, engineOwnerId, engines, job.Background, quiet: null,
-            DateTimeOffset.UtcNow, ct);
-        if (NextEngineAfter(engines, job.EngineId, _explicitOnly, usable.ToHashSet(StringComparer.Ordinal)) is not { } next)
-            return false;
-        job.EngineId = next;
-        return true;
-    }
-
-    /// <summary>Die naechste Engine REIHUM nach <paramref name="current"/>; <c>null</c>, wenn es keinen
-    /// Wechsel gibt — weil nur eine hinterlegt ist oder weil die aktuelle gar nicht in der Liste steht
-    /// (dann hat der Nutzer sie von Hand gewaehlt, und das bleibt seine Entscheidung).</summary>
-    /// <param name="usable">Engines, die gerade Arbeit nehmen: reihum wird die nächste DAVON gewählt. Ist keine andere
-    /// brauchbar (oder fehlt die Angabe), bleibt es bei der nächsten in der Liste — der Auftrag wartet dann dort.</param>
-    internal static string? NextEngineAfter(IReadOnlyList<string> engines, string current,
-        IReadOnlySet<string>? explicitOnly = null, IReadOnlySet<string>? usable = null)
-    {
-        // Eine Nur-auf-Anforderung-Engine rotiert weder hinein noch heraus: ein Auftrag, der sie nannte, bleibt dort,
-        // und ein Stockfish-Auftrag landet nicht bei Lc0.
-        if (explicitOnly is { Count: > 0 })
-        {
-            if (explicitOnly.Contains(current)) return null;
-            engines = ExplicitOnlyEngines.Automatic(engines, explicitOnly);
-        }
-        if (engines.Count < 2) return null;
-        for (var i = 0; i < engines.Count; i++)
-        {
-            if (engines[i] != current) continue;
-            if (usable is { Count: > 0 })
-                for (var k = 1; k < engines.Count; k++)
-                    if (usable.Contains(engines[(i + k) % engines.Count])) return engines[(i + k) % engines.Count];
-            return engines[(i + 1) % engines.Count];
-        }
-        return null;
-    }
-
-    /// <summary>Einen Übergang (<see cref="RunOutcome"/>) anwenden: erst der Fehlversuchs-Zähler, dann der Status —
-    /// fertig (laufender Stand auf 0), pausiert (<see cref="PauseAsync"/>) oder gescheitert (<see cref="FailAsync"/>).</summary>
-    internal static async Task ApplyAsync(AppDbContext db, AnalysisJob job, RunOutcome outcome)
-    {
-        if (outcome.Fruitless == FruitlessChange.Reset) job.FruitlessAttempts = 0;
-        else if (outcome.Fruitless == FruitlessChange.Increment) job.FruitlessAttempts++;
-        switch (outcome.Kind)
-        {
-            case RunEndKind.Done:
-                job.Status = AnalysisJobStatus.Done; job.FinishedAt = DateTime.UtcNow; job.UpdatedAt = job.FinishedAt.Value;
-                job.CurrentDepth = 0; job.CurrentNps = 0;   // es rechnet nichts mehr
-                await db.SaveChangesAsync(CancellationToken.None);
-                break;
-            case RunEndKind.Paused:
-                await PauseAsync(db, job, outcome.Error, outcome.Backoff);
-                break;
-            default:
-                await FailAsync(db, job, outcome.Error!);
-                break;
-        }
-    }
-
-    private static async Task PauseAsync(AppDbContext db, AnalysisJob job, string? error, TimeSpan? backoff = null)
-    {
-        job.Status = AnalysisJobStatus.Paused;
-        job.CurrentDepth = 0; job.CurrentNps = 0;   // der laufende Stand gehört zum Lauf, nicht zum Auftrag
-        job.LastError = error;
-        job.NextAttemptAt = backoff is null ? null : DateTime.UtcNow + backoff;
-        job.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(CancellationToken.None);
-    }
-
-    private static async Task FailAsync(AppDbContext db, AnalysisJob job, string error)
-    {
-        job.Status = AnalysisJobStatus.Failed;
-        job.LastError = error;
-        job.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(CancellationToken.None);
     }
 
     public override void Dispose()

@@ -169,7 +169,7 @@ public class AnalysisJobStreamTests
     public void NextEngineAfter_RotatesWithinTheConfiguredList(string current, string list, string? expected)
     {
         var engines = list.Split(',');
-        Assert.Equal(expected, AnalysisJobWorker.NextEngineAfter(engines, current));
+        Assert.Equal(expected, BackgroundEngineRotation.NextEngineAfter(engines, current));
     }
 
     /// <summary>
@@ -186,7 +186,7 @@ public class AnalysisJobStreamTests
     [InlineData("a", "a", null)]
     [InlineData("fremd", "a,b,c,d", null)]
     public void NextEngineAfter_traegtAuchDenEngineWechselNachEinem503(string current, string list, string? expected)
-        => Assert.Equal(expected, AnalysisJobWorker.NextEngineAfter(list.Split(','), current));
+        => Assert.Equal(expected, BackgroundEngineRotation.NextEngineAfter(list.Split(','), current));
 
     /// <summary>0.711.0: nach einem 503 reihum zur nächsten Engine, die gerade Arbeit nimmt — nicht über alle ausgeschalteten.
     /// Ist keine andere brauchbar, bleibt es bei der nächsten in der Liste.</summary>
@@ -196,6 +196,6 @@ public class AnalysisJobStreamTests
     [InlineData("pc1", "pc1,pc2,g1", "", "pc2")]               // nichts brauchbar: wie bisher
     [InlineData("g1", "pc1,g1", "g1", "pc1")]                  // nur die eigene brauchbar: wie bisher
     public void NextEngineAfter_springtUeberNichtLaufendeEngines(string current, string list, string usable, string expected)
-        => Assert.Equal(expected, AnalysisJobWorker.NextEngineAfter(list.Split(','), current, null,
+        => Assert.Equal(expected, BackgroundEngineRotation.NextEngineAfter(list.Split(','), current, null,
             usable.Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet()));
 }

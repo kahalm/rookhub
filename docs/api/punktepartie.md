@@ -147,7 +147,7 @@ dort, sie klopft also dreimal so oft an.
 **Wer nicht pollt, bekommt keine Arbeit** (0.711.0, gemeldet 2026-10-07 an /games/61): `EngineAvailability.UsableAsync`
 lässt direkt angemeldete Engines (`rhe_`) weg, deren `LastSeenAt` älter als `OfflineAfter` (3 min) oder leer ist — gilt
 für neue Aufträge (`PickBackgroundEngineAsync`), Slots/Stapel (`GameAnalysisService`, `MasterAnalysisScheduler`) UND den
-Wechsel nach einem 503 (`SwitchEngineAsync` → `NextEngineAfter(…, usable)`: reihum zur nächsten LAUFENDEN). Vorher lagen
+Wechsel nach einem 503 (`BackgroundEngineRotation.SwitchAsync` → `NextEngineAfter(…, usable)`: reihum zur nächsten LAUFENDEN). Vorher lagen
 die Aufträge einer Partie auf den 16 Engines eines seit einem Tag ausgeschalteten PCs (leerste Schlange gewinnt) und
 wanderten nach jedem 503 mit 15 s Pause zur nächsten ausgeschalteten. Lichess-Engines (`eei_`) kennen keinen Poll und
 bleiben; ist gar keine Engine brauchbar, gilt wie bisher die ganze Liste (der Auftrag wartet).

@@ -145,11 +145,11 @@ public class AnalysisJobTargetNodesTests : IDisposable
     {
         var set = ExplicitOnlyEngines.From(Config("rhe_lc0"));
         string[] engines = ["rhe_a", "rhe_lc0", "rhe_b"];
-        Assert.Equal("rhe_b", AnalysisJobWorker.NextEngineAfter(engines, "rhe_a", set));   // überspringt lc0
-        Assert.Equal("rhe_a", AnalysisJobWorker.NextEngineAfter(engines, "rhe_b", set));
-        Assert.Null(AnalysisJobWorker.NextEngineAfter(engines, "rhe_lc0", set));           // bleibt dort
-        Assert.Null(AnalysisJobWorker.NextEngineAfter(["rhe_a", "rhe_lc0"], "rhe_a", set)); // nur noch EINE automatische
-        Assert.Equal("rhe_lc0", AnalysisJobWorker.NextEngineAfter(engines, "rhe_a"));        // ohne Liste wie bisher
+        Assert.Equal("rhe_b", BackgroundEngineRotation.NextEngineAfter(engines, "rhe_a", set));   // überspringt lc0
+        Assert.Equal("rhe_a", BackgroundEngineRotation.NextEngineAfter(engines, "rhe_b", set));
+        Assert.Null(BackgroundEngineRotation.NextEngineAfter(engines, "rhe_lc0", set));           // bleibt dort
+        Assert.Null(BackgroundEngineRotation.NextEngineAfter(["rhe_a", "rhe_lc0"], "rhe_a", set)); // nur noch EINE automatische
+        Assert.Equal("rhe_lc0", BackgroundEngineRotation.NextEngineAfter(engines, "rhe_a"));        // ohne Liste wie bisher
     }
 
     /// <summary>16 Engines, 14 davon nur auf Anforderung → 2 Plätze statt 16: bei je 10 offenen Halbzügen je Partie legt
