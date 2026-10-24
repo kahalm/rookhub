@@ -1,0 +1,54 @@
+/* Ergebnis-Bildschirme (Sieg, Game Over, History-Detail) — aus endless-puzzle.component.scss (Zerlegung Z19). */
+:host { display: block; }
+
+.archive-btn { margin-bottom: 0.5rem; }
+.archived-hint {
+  display: flex; align-items: center; gap: 0.25rem; justify-content: center;
+  color: #4caf50; font-size: 0.9em; margin-bottom: 0.5rem;
+}
+
+.gameover-screen { display: flex; justify-content: center; padding-top: 2rem; }
+.gameover-card { max-width: 500px; width: 100%; text-align: center; }
+.gameover-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin: 1.5rem 0; }
+.gameover-stat { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+.gameover-stat mat-icon { color: color-mix(in srgb, currentColor 50%, transparent); }
+.go-value { font-size: 1.5em; font-weight: bold; }
+.go-label { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
+.mistake-ratings {
+  display: flex; align-items: center; gap: 0.5rem; justify-content: center;
+  color: var(--rh-error); font-size: 0.9em; margin-bottom: 1rem;
+}
+.new-highscore {
+  display: flex; align-items: center; gap: 0.5rem; justify-content: center;
+  color: #ff9800; font-size: 1.2em; font-weight: bold; margin-bottom: 1rem;
+}
+.gameover-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+.stockfish-question { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin: 1.5rem 0; }
+.stockfish-fish { font-size: 4rem; }
+.stockfish-text { font-size: 1.3em; font-weight: bold; color: var(--rh-accent); margin: 0; }
+
+.puzzle-review { margin: 1rem 0; text-align: left; }
+.review-title { margin: 0 0 0.5rem; font-size: 0.95em; color: color-mix(in srgb, currentColor 60%, transparent); }
+.review-list {
+  max-height: 240px; overflow-y: auto; border: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+  border-radius: 8px;
+}
+.review-item {
+  display: flex; align-items: center; gap: 0.75rem; padding: 8px 12px;
+  cursor: pointer; transition: background 0.15s;
+  font-variant-numeric: tabular-nums;
+}
+.review-item:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
+.review-item:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, currentColor 6%, transparent); }
+.review-failed { background: rgba(244,67,54,0.06); }
+.review-failed:hover { background: rgba(244,67,54,0.12); }
+.review-number { font-weight: 500; min-width: 32px; color: color-mix(in srgb, currentColor 60%, transparent); }
+.review-rating { flex: 1; font-weight: bold; }
+.review-icon { font-size: 20px; width: 20px; height: 20px; }
+.review-icon.solved { color: var(--rh-success); }
+.review-icon.failed { color: var(--rh-error); }
+
+@media (max-width: 768px) {
+  .gameover-stats { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .gameover-card { text-align: center; }
+}

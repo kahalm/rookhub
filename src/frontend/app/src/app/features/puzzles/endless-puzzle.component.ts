@@ -23,6 +23,7 @@ import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
+import { EndlessResultComponent } from './endless-result.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
@@ -89,7 +90,8 @@ function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAtte
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
     MatChipsModule, MatAutocompleteModule, IconLabelDirective,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
-    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleThemePipe
+    PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleThemePipe,
+    EndlessResultComponent,
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],

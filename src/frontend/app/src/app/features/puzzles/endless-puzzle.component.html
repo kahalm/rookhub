@@ -476,150 +476,18 @@
         }
 
         @case ('won') {
-          <div class="gameover-screen">
-            <mat-card class="gameover-card exhausted-card">
-              <mat-card-header>
-                <mat-card-title>{{ 'endless.gameOver.wonTitle' | translate }}</mat-card-title>
-                <mat-card-subtitle>{{ 'endless.gameOver.wonSubtitle' | translate }}</mat-card-subtitle>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="stockfish-question">
-                  <span class="stockfish-fish">&#x1F3C6;</span>
-                  <p class="stockfish-text">{{ 'endless.gameOver.wonText' | translate }}</p>
-                </div>
-                <div class="gameover-stats">
-                  <div class="gameover-stat">
-                    <mat-icon>trending_up</mat-icon>
-                    <span class="go-value">{{ maxRatingReached }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.maxRating' | translate }}</span>
-                  </div>
-                  <div class="gameover-stat">
-                    <mat-icon>extension</mat-icon>
-                    <span class="go-value">{{ solved }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.puzzlesSolved' | translate }}</span>
-                  </div>
-                  <div class="gameover-stat">
-                    <mat-icon>favorite</mat-icon>
-                    <span class="go-value">{{ lives }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.livesLeft' | translate }}</span>
-                  </div>
-                  <div class="gameover-stat">
-                    <mat-icon>timer</mat-icon>
-                    <span class="go-value">{{ formatTime(sessionSeconds) }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.time' | translate }}</span>
-                  </div>
-                </div>
-                @if (isNewHighscore) {
-                  <div class="new-highscore">
-                    <mat-icon>emoji_events</mat-icon>
-                    {{ 'endless.gameOver.newHighscore' | translate }}
-                  </div>
-                }
-                <div class="gameover-actions">
-                  <button mat-flat-button color="primary" (click)="playAgain()">
-                    <mat-icon>replay</mat-icon>
-                    {{ 'endless.gameOver.playAgain' | translate }}
-                  </button>
-                  <button mat-button (click)="backToPuzzles()">
-                    <mat-icon>arrow_back</mat-icon>
-                    {{ 'endless.gameOver.backToPuzzles' | translate }}
-                  </button>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
+          <app-endless-result kind="won" [maxRating]="maxRatingReached" [solved]="solved" [lives]="lives" [level]="level"
+            [sessionSeconds]="sessionSeconds" [mistakes]="currentSessionMistakes" [puzzles]="currentSessionPuzzles"
+            [isNewHighscore]="isNewHighscore" (playAgain)="playAgain()" (backToPuzzles)="backToPuzzles()" />
         }
 
         @case ('gameover') {
-          <div class="gameover-screen">
-            <mat-card class="gameover-card">
-              <mat-card-header>
-                <mat-card-title>{{ 'endless.gameOver.title' | translate }}</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="gameover-stats">
-                  <div class="gameover-stat">
-                    <mat-icon>trending_up</mat-icon>
-                    <span class="go-value">{{ maxRatingReached }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.maxRating' | translate }}</span>
-                  </div>
-                  <div class="gameover-stat">
-                    <mat-icon>extension</mat-icon>
-                    <span class="go-value">{{ solved }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.puzzlesSolved' | translate }}</span>
-                  </div>
-                  <div class="gameover-stat">
-                    <mat-icon>stacked_line_chart</mat-icon>
-                    <span class="go-value">{{ level }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.levelReached' | translate }}</span>
-                  </div>
-                  <div class="gameover-stat">
-                    <mat-icon>timer</mat-icon>
-                    <span class="go-value">{{ formatTime(sessionSeconds) }}</span>
-                    <span class="go-label">{{ 'endless.gameOver.time' | translate }}</span>
-                  </div>
-                </div>
-                @if (currentSessionMistakes.length > 0) {
-                  <div class="mistake-ratings">
-                    <mat-icon>heart_broken</mat-icon>
-                    <span>{{ 'endless.gameOver.livesLostAt' | translate:{ ratings: currentSessionMistakes.join(', ') } }}</span>
-                  </div>
-                }
-                @if (currentSessionPuzzles.length > 0) {
-                  <div class="puzzle-review">
-                    <h4 class="review-title">{{ 'endless.gameOver.puzzleReview' | translate }}</h4>
-                    <div class="review-list">
-                      @for (attempt of currentSessionPuzzles; track attempt.puzzleNumber) {
-                        <div class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle(attempt.puzzleId)">
-                          <span class="review-number">#{{ attempt.puzzleNumber }}</span>
-                          <span class="review-rating">{{ attempt.rating }}</span>
-                          <mat-icon [class]="attempt.solved ? 'review-icon solved' : 'review-icon failed'">
-                            {{ attempt.solved ? 'check_circle' : 'cancel' }}
-                          </mat-icon>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-                @if (isNewHighscore) {
-                  <div class="new-highscore">
-                    <mat-icon>emoji_events</mat-icon>
-                    {{ 'endless.gameOver.newHighscore' | translate }}
-                  </div>
-                }
-                @if (authService.isLoggedIn && lastSessionId && !lastSessionArchived) {
-                  <button mat-stroked-button color="warn" class="archive-btn" (click)="archiveLastSession()" [disabled]="archiving">
-                    <mat-icon>archive</mat-icon>
-                    {{ (archiving ? 'endless.gameOver.archiving' : 'endless.gameOver.archiveRun') | translate }}
-                  </button>
-                }
-                @if (lastSessionArchived) {
-                  <div class="archived-hint">
-                    <mat-icon>check</mat-icon> {{ 'endless.gameOver.archived' | translate }}
-                  </div>
-                }
-                <div class="gameover-actions">
-                  @if (historyView) {
-                    <button mat-flat-button color="primary" (click)="backToHistory()">
-                      <mat-icon>arrow_back</mat-icon>
-                      {{ 'endless.gameOver.backToHistory' | translate }}
-                    </button>
-                  } @else {
-                    <button mat-flat-button color="primary" (click)="playAgain()">
-                      <mat-icon>replay</mat-icon>
-                      {{ 'endless.gameOver.playAgain' | translate }}
-                    </button>
-                  }
-                  @if (!historyView) {
-                    <button mat-button (click)="backToPuzzles()">
-                      <mat-icon>arrow_back</mat-icon>
-                      {{ 'endless.gameOver.backToPuzzles' | translate }}
-                    </button>
-                  }
-                </div>
-              </mat-card-content>
-            </mat-card>
-          </div>
+          <app-endless-result kind="gameover" [maxRating]="maxRatingReached" [solved]="solved" [lives]="lives" [level]="level"
+            [sessionSeconds]="sessionSeconds" [mistakes]="currentSessionMistakes" [puzzles]="currentSessionPuzzles"
+            [isNewHighscore]="isNewHighscore" [isLoggedIn]="authService.isLoggedIn" [lastSessionId]="lastSessionId"
+            [lastSessionArchived]="lastSessionArchived" [archiving]="archiving" [historyView]="historyView"
+            (playAgain)="playAgain()" (backToPuzzles)="backToPuzzles()" (backToHistory)="backToHistory()"
+            (archive)="archiveLastSession()" (openPuzzle)="openPuzzle($event)" />
         }
       }
     </div>

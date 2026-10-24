@@ -3,6 +3,7 @@ import { Chess } from 'chess.js';
 import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
+import { EndlessResultComponent } from './endless-result.component';
 import { ThemePreset } from './puzzle-theme-presets';
 import { chainRatingAt, CHAIN_FLAT_STEP, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
@@ -1203,7 +1204,9 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
       ...(extra.providers ?? []),
     ],
   });
-  TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
+  TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe, ...CHILD_SCREENS, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
+  // Die herausgezogenen Bildschirme (Z19) rendern mit — mit denselben ausgeblendeten Material-Bausteinen wie vorher.
+  TestBed.overrideComponent(EndlessResultComponent, { set: { imports: [TranslatePipe, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
   const translate = TestBed.inject(TranslateService);
   translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
   translate.use('en');
@@ -1213,6 +1216,8 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
+/** Bildschirm-Komponenten, die der Container einbindet (Zerlegung Z19). */
+const CHILD_SCREENS: any[] = [EndlessResultComponent];
 /** Fixture des letzten renderEndless-Aufrufs (für erneutes detectChanges nach einem Klick). */
 let lastFixture: any = null;
 
