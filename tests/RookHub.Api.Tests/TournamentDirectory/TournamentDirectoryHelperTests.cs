@@ -545,7 +545,7 @@ public class TournamentDirectorySchedulerTests : IDisposable
     public void NightlyRun_AlsoFetchesTheFideEventDetails()
     {
         var scheduler = ReadSource("src/api/RookHub.Api/Services/TournamentDirectory/TournamentDirectoryScheduler.cs");
-        var program = ReadSource("src/api/RookHub.Api/Program.cs");
+        var program = StartupSource.All();
 
         Assert.Contains("GetRequiredService<FideEventDetailService>()", scheduler);
         Assert.Contains("FideDetailBatchSize", scheduler);
