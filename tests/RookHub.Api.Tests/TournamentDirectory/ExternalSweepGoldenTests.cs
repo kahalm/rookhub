@@ -28,11 +28,14 @@ public class ExternalSweepGoldenTests
     /// <summary>Eine Zeile des Szenarios; <see cref="Start"/> null = unlesbarer Termin.</summary>
     public sealed record RowSpec(string Id, string Name, DateOnly? Start, string? Place);
 
-    /// <summary>Eine Quelle im Test: wie man sie baut und wie ihre Crawler-Zeile aussieht.</summary>
+    /// <summary>
+    /// Eine Quelle im Test: wie man sie baut und wie ihre Crawler-Zeile aussieht. <c>DetailJson</c>
+    /// ist die Antwort auf jeden Detailabruf (Pfad endet auf <c>/detail</c>); ohne ihn 404.
+    /// </summary>
     public sealed record SourceSpec(
         string Name, string Federation, string GeoCountry,
         Func<AppDbContext, IHttpClientFactory, (Func<Task<ExternalSweepResult>> Run, Func<List<string>> Log)> Create,
-        Func<RowSpec, string> RowJson);
+        Func<RowSpec, string> RowJson, string? DetailJson = null);
 
     /// <summary>Ein Samstag in rund fuenf Wochen — fester Wochentag, damit „Wochenende" nicht vom Testtag abhaengt.</summary>
     private static readonly DateOnly Soon = NextSaturday(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30));
@@ -120,7 +123,29 @@ public class ExternalSweepGoldenTests
                 return Wrap(log, () => svc.RunAsync());
             },
             r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"region":"bayern","place":{{J(r.Place)}},"timeControl":"12 Minuten + 3 Sekunden/Zug","rounds":5,"system":"swiss","url":"https://www.schachbund.de/turnierdetails/{{r.Id}}.html"}"""),
+        ["Sjakk"] = new("Sjakk", "NOR", "NO",
+            (db, http) =>
+            {
+                var log = new TestLogger<SjakkDirectorySweepService>();
+                var svc = new SjakkDirectorySweepService(db, http, new GeocodingService(db), Config(), log);
+                // Fuenf Detailseiten je Lauf: weniger als Zeilen, damit der Deckel mitspielt.
+                return Wrap(log, () => svc.RunAsync(5));
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"url":"https://www.sjakk.no/aktiviteter/{{r.Id}}"}""",
+            """{"venue":"Testhausen","organizer":"Testhausen Sjakklubb","timeControl":"3 min pluss 2 sekunder","rounds":12,"system":"swiss","website":null}"""),
+        ["ChessScotland"] = new("ChessScotland", "SCO", "GB",
+            (db, http) =>
+            {
+                var log = new TestLogger<ChessScotlandDirectorySweepService>();
+                var svc = new ChessScotlandDirectorySweepService(db, http, new GeocodingService(db), Config(), log);
+                return Wrap(log, () => svc.RunAsync(5));
+            },
+            r => $$"""{"slug":"slug-{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"url":"https://www.chessscotland.com/calendar/slug-{{r.Id}}","categories":["Adult","Junior"],"timeControls":["Standard","Fide"]}""",
+            """{"venue":"Community Hall, Testhausen"}"""),
     };
+
+    private static Microsoft.Extensions.Configuration.IConfiguration Config() =>
+        new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
 
     public static TheoryData<string> SourceNames() => [.. Sources.Keys];
 
@@ -155,7 +180,7 @@ public class ExternalSweepGoldenTests
             .UseInMemoryDatabase(dbName)
             .AddInterceptors(new RejectAddedInterceptor(e => poison.On && e is TournamentDirectorySource)).Options);
 
-        var handler = new MutableHandler();
+        var handler = new MutableHandler { DetailBody = spec.DetailJson };
         var http = new StubClientFactory(handler);
         var sb = new StringBuilder();
 
@@ -233,12 +258,19 @@ public class ExternalSweepGoldenTests
     private sealed class MutableHandler : HttpMessageHandler
     {
         public string Body { get; set; } = "[]";
+        public string? DetailBody { get; init; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(Body, Encoding.UTF8, "application/json"),
-            });
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var detail = request.RequestUri?.AbsolutePath.EndsWith("/detail", StringComparison.Ordinal) == true;
+            var body = detail ? DetailBody : Body;
+            return Task.FromResult(body is null
+                ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json"),
+                });
+        }
     }
 
     private sealed class StubClientFactory(HttpMessageHandler handler) : IHttpClientFactory

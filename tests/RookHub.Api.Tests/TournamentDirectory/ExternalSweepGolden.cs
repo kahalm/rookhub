@@ -2072,5 +2072,463 @@ internal static class ExternalSweepGolden
             Eintrag defe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=GER state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
             
             """,
+        ["Sjakk"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 5, Matched = 0, Retired = 0 }
+            Log Information: sjakk.no-Aktivitaeten: 13 gelesen, 12 neu, 5 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=- erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 5, Matched = 1, Retired = 1 }
+            Log Information: sjakk.no: nofe675fe7aaee geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: sjakk.no-Aktivitaeten: 13 gelesen, 0 neu, 5 mit Detailseite, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=- erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 2, Matched = 0, Retired = 0 }
+            Log Information: sjakk.no-Aktivitaeten: 11 gelesen, 0 neu, 2 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=https://www.sjakk.no/aktiviteter/2008 erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=https://www.sjakk.no/aktiviteter/2009 erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: sjakk.no-Aktivitaeten: 11 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=https://www.sjakk.no/aktiviteter/2008 erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=https://www.sjakk.no/aktiviteter/2009 erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: sjakk.no-Aktivitaeten: 1 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung NorwegianChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=https://www.sjakk.no/aktiviteter/2008 erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=https://www.sjakk.no/aktiviteter/2009 erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=https://www.sjakk.no/aktiviteter/2008 erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=https://www.sjakk.no/aktiviteter/2009 erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Log Warning: sjakk.no: Zwischenstand konnte nicht gespeichert werden
+            Log Information: sjakk.no-Aktivitaeten: 2 gelesen, 1 neu, 1 mit Detailseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung NorwegianChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=https://www.sjakk.no/aktiviteter/2008 erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=https://www.sjakk.no/aktiviteter/2009 erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Log Warning: sjakk.no: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk NorwegianChessFederation 1001 url=https://www.sjakk.no/aktiviteter/1001 erst=ja zuletzt=ja
+            Eintrag no483029d52621 cr=- name=Serienturnier Nummer4 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2004 url=https://www.sjakk.no/aktiviteter/2004 erst=ja zuletzt=ja
+            Eintrag no6c94e35ccc35 cr=- name=Serienturnier Nummer2 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2002 url=https://www.sjakk.no/aktiviteter/2002 erst=ja zuletzt=ja
+            Eintrag no6f6a4e56098c cr=- name=Serienturnier Nummer6 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2006 url=https://www.sjakk.no/aktiviteter/2006 erst=ja zuletzt=ja
+            Eintrag no77459b9b941b cr=- name=Serienturnier Nummer3 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2003 url=https://www.sjakk.no/aktiviteter/2003 erst=ja zuletzt=ja
+            Eintrag no85d6385b945c cr=- name=Serienturnier Nummer1 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2001 url=https://www.sjakk.no/aktiviteter/2001 erst=ja zuletzt=ja
+            Eintrag no8c9a013ab70c cr=- name=Verschwindibus Pokal fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1003 url=https://www.sjakk.no/aktiviteter/1003 erst=ja zuletzt=ja
+            Eintrag noa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2005 url=https://www.sjakk.no/aktiviteter/2005 erst=ja zuletzt=ja
+            Eintrag nob281bc2c616c cr=- name=Cup Beta Rapid fed=NOR state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 1002 url=https://www.sjakk.no/aktiviteter/1002 erst=ja zuletzt=ja
+            Eintrag noe5e53c784d5d cr=- name=Serienturnier Nummer8 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2008 url=https://www.sjakk.no/aktiviteter/2008 erst=ja zuletzt=ja
+            Eintrag nof1cfa5ebb149 cr=- name=Serienturnier Nummer7 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2007 url=https://www.sjakk.no/aktiviteter/2007 erst=ja zuletzt=ja
+            Eintrag nof37f3f2b0dc5 cr=- name=Serienturnier Nummer9 fed=NOR state=- start=S+1 ende=S+1 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk NorwegianChessFederation 2009 url=https://www.sjakk.no/aktiviteter/2009 erst=ja zuletzt=ja
+            Eintrag nofe675fe7aaee cr=- name=Danubius Kronstadt Memorial fed=NOR state=- start=S+0 ende=S+0 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            
+            """,
+        ["ChessScotland"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 5, Matched = 0, Retired = 0 }
+            Log Information: Chess-Scotland-Kalender: 13 gelesen, 12 neu, 5 mit Spielort, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=- erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=- erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=- erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=- erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=- erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=- erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=- erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 5, Matched = 1, Retired = 1 }
+            Log Information: Chess Scotland: sc42c58c843294 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: Chess-Scotland-Kalender: 13 gelesen, 0 neu, 5 mit Spielort, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=- erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=- erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 2, Matched = 0, Retired = 0 }
+            Log Information: Chess-Scotland-Kalender: 11 gelesen, 0 neu, 2 mit Spielort, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=https://www.chessscotland.com/calendar/slug-2009 erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=https://www.chessscotland.com/calendar/slug-2008 erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: Chess-Scotland-Kalender: 11 gelesen, 0 neu, 0 mit Spielort, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=https://www.chessscotland.com/calendar/slug-2009 erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=https://www.chessscotland.com/calendar/slug-2008 erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: Chess-Scotland-Kalender: 1 gelesen, 0 neu, 0 mit Spielort, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung ScottishChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=https://www.chessscotland.com/calendar/slug-2009 erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=https://www.chessscotland.com/calendar/slug-2008 erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=https://www.chessscotland.com/calendar/slug-2009 erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=https://www.chessscotland.com/calendar/slug-2008 erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Log Warning: Chess Scotland: Zwischenstand konnte nicht gespeichert werden
+            Log Information: Chess-Scotland-Kalender: 2 gelesen, 1 neu, 1 mit Spielort, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung ScottishChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=https://www.chessscotland.com/calendar/slug-2009 erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=https://www.chessscotland.com/calendar/slug-2008 erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Log Warning: Chess Scotland: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk ScottishChessFederation sc42c58c843294 url=https://www.chessscotland.com/calendar/slug-1001 erst=ja zuletzt=ja
+            Eintrag sc2b03ef8e3803 cr=- name=Cup Beta Rapid fed=SCO state=- start=S+7 ende=S+7 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc2b03ef8e3803 url=https://www.chessscotland.com/calendar/slug-1002 erst=ja zuletzt=ja
+            Eintrag sc3174baf6ef26 cr=- name=Serienturnier Nummer2 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc3174baf6ef26 url=https://www.chessscotland.com/calendar/slug-2002 erst=ja zuletzt=ja
+            Eintrag sc40d9dbb3ce50 cr=- name=Serienturnier Nummer6 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc40d9dbb3ce50 url=https://www.chessscotland.com/calendar/slug-2006 erst=ja zuletzt=ja
+            Eintrag sc42c58c843294 cr=- name=Danubius Kronstadt Memorial fed=SCO state=- start=S+0 ende=S+0 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sc504be4ea82e6 cr=- name=Serienturnier Nummer7 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc504be4ea82e6 url=https://www.chessscotland.com/calendar/slug-2007 erst=ja zuletzt=ja
+            Eintrag sc531f157c995f cr=- name=Serienturnier Nummer4 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc531f157c995f url=https://www.chessscotland.com/calendar/slug-2004 erst=ja zuletzt=ja
+            Eintrag sc54264c71ef51 cr=- name=Verschwindibus Pokal fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc54264c71ef51 url=https://www.chessscotland.com/calendar/slug-1003 erst=ja zuletzt=ja
+            Eintrag sc73c2dbcb605f cr=- name=Serienturnier Nummer9 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc73c2dbcb605f url=https://www.chessscotland.com/calendar/slug-2009 erst=ja zuletzt=ja
+            Eintrag sc7bf70e0a8c01 cr=- name=Serienturnier Nummer1 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc7bf70e0a8c01 url=https://www.chessscotland.com/calendar/slug-2001 erst=ja zuletzt=ja
+            Eintrag sc9d0f3a82decc cr=- name=Serienturnier Nummer3 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation sc9d0f3a82decc url=https://www.chessscotland.com/calendar/slug-2003 erst=ja zuletzt=ja
+            Eintrag scaef6113cb9ab cr=- name=Serienturnier Nummer8 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scaef6113cb9ab url=https://www.chessscotland.com/calendar/slug-2008 erst=ja zuletzt=ja
+            Eintrag scc804b4cdc621 cr=- name=Serienturnier Nummer5 fed=SCO state=- start=S+1 ende=S+1 we=True ort=Community Hall, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
+            
+            """,
     };
 }
