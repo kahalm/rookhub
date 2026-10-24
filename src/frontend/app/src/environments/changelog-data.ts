@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.5", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z2/Z10): the API start-up configuration is split by concern into Startup/ (Program.cs 1,194 → 126 lines), all background services are registered in one table, and the daily tournament-subscription loop is separated from its domain service — no functional change; the admin job list shows it as „AutoSubscriptionScheduler“.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z2/Z10): Die Startkonfiguration der API ist nach Belangen in Startup/ aufgeteilt (Program.cs 1 194 → 126 Zeilen), alle Hintergrunddienste stehen in einer Tabelle, und die tägliche Turnier-Abo-Schleife ist vom Fachdienst getrennt — keine Funktionsänderung; in der Admin-Jobliste heißt sie jetzt „AutoSubscriptionScheduler“." },
+  ]},
   { version: "0.832.4", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z6/Z13): scoresheet scanning (quota, intake, pipeline, correction, LeagueHub batches) and saved games (PGN building, import, correction, analysis link, sharing) are split into smaller building blocks; the PGN output is pinned by golden tests — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z6/Z13): Partieformular-Einlesung (Kontingent, Annahme, Pipeline, Korrektur, LeagueHub-Stapel) und gespeicherte Partien (PGN-Bau, Import, Korrektur, Analyse-Verknüpfung, Teilen) sind in kleinere Bausteine zerlegt; die PGN-Ausgabe ist mit Golden-Tests festgehalten — keine sichtbare Änderung." },
   ]},
