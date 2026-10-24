@@ -450,6 +450,56 @@ describe('CourseListComponent Sektion „Eigene Kurse"', () => {
     expect(headings).not.toContain('courses.sectionChessable');
   });
 
+  it('zeigt die vier Abschnitte in fester Reihenfolge mit je ihren Karten und ⓘ (Charakterisierung F3-023)', async () => {
+    const list = [
+      own({ bookId: 1, displayName: 'Angefangen', isOwned: false, puzzleCount: 10, solvedCount: 3 }),
+      own({ bookId: 2, displayName: 'Geteilt', isOwned: false, isShared: true, puzzleCount: 5 }),
+      own({ bookId: 3, displayName: 'Öffentlich', isOwned: false, puzzleCount: 5 }),
+      own({ bookId: 4, displayName: 'Eigen A', puzzleCount: 5 }),
+      own({ bookId: 6, displayName: 'Eigen B', puzzleCount: 5 }),
+    ];
+    await TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getCourses: () => of(list) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseListComponent);
+    fixture.detectChanges();
+
+    const sections = Array.from(fixture.nativeElement.querySelectorAll('section.course-section') as NodeListOf<HTMLElement>);
+    expect(sections.map(s => s.querySelector('.section-head h2')!.textContent!.trim())).toEqual([
+      'courses.sectionInProgress', 'courses.sectionSharedWithMe', 'courses.sectionPublic', 'courses.sectionOwn',
+    ]);
+    expect(sections.map(s => s.querySelectorAll('.course-grid app-course-card').length)).toEqual([1, 1, 1, 2]);
+    expect(sections.every(s => !!s.querySelector('.section-head app-help-hint'))).toBeTrue();
+  });
+
+  it('blendet leere Abschnitte ganz aus (Charakterisierung F3-023)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getCourses: () => of([own({ isOwned: false, puzzleCount: 5 })]) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseListComponent);
+    fixture.detectChanges();
+
+    const headings = Array.from(fixture.nativeElement.querySelectorAll('section.course-section h2') as NodeListOf<HTMLElement>)
+      .map(h => h.textContent!.trim());
+    expect(headings).toEqual(['courses.sectionPublic']);
+  });
+
   it('beschriftet die Sektion in jeder Sprache ohne „Chessable"', async () => {
     for (const lang of ['en', 'de', 'hr']) {
       let json: { courses: Record<string, unknown> } | undefined;
