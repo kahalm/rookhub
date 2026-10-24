@@ -248,7 +248,7 @@ public class AuthController : BaseApiController
     /// <summary>Uebergang (N6-001): das Cookie mit dem alten Pfad <c>/api/auth</c> ging an jeden Host der
     /// Elterndomaene mit einer eigenen Anmeldung — bei jedem Schreiben und Loeschen mit wegraeumen, statt es bis
     /// zu 30 Tage liegen zu lassen. Die Alt-Routen, ihr Merk-Cookie und der Umzug in <c>permissions</c> sind seit
-    /// 0.829.0 weg; dieses Aufraeumen bleibt, bis auch das letzte vor 0.624.0 ausgegebene Cookie (30 Tage) abgelaufen
+    /// 0.828.1 weg; dieses Aufraeumen bleibt, bis auch das letzte vor 0.624.0 ausgegebene Cookie (30 Tage) abgelaufen
     /// ist — danach samt <see cref="SharedSessionService.LegacyCookiePath"/> entfernen.</summary>
     private void DeleteLegacySharedSessionCookie()
     {

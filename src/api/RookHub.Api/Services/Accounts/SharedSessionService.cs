@@ -52,7 +52,7 @@ public class SharedSessionService
     /// <summary>
     /// Pfad der Cookies, die vor N6-001 ausgegeben wurden. Wird nur noch GELOESCHT, bei jedem Schreiben
     /// und Loeschen des Cookies, bis auch die letzten alten Cookies (30 Tage) abgelaufen sind; danach entfernen.
-    /// Die Alt-Routen <c>session</c>/<c>session/end</c> samt Merk-Cookie sind seit 0.829.0 weg (N6-001).
+    /// Die Alt-Routen <c>session</c>/<c>session/end</c> samt Merk-Cookie sind seit 0.828.1 weg (N6-001).
     /// </summary>
     public const string LegacyCookiePath = "/api/auth";
 

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.828.1", date: "2026-10-24", changes: [
+    { en: "Shared sign-in: the old routes „/api/auth/session“ and „session/end“, kept as a temporary fallback for cached app versions since 0.624.0, are gone; sign-in sharing uses „rh-session“ only (code review N6-001).",
+      de: "Geteilte Anmeldung: Die alten Routen „/api/auth/session“ und „session/end“, die seit 0.624.0 als Übergang für zwischengespeicherte App-Fassungen bestanden, sind entfernt; die geteilte Anmeldung läuft nur noch über „rh-session“ (Codereview N6-001)." },
+  ] },
   { version: "0.828.0", date: "2026-10-24", changes: [
     { en: "Admin: for accounts without an email address, the user list can now create a one-time password reset link (key button, or “⋮” on mobile). The admin passes it on; the person sets a new password themselves — the admin never sets or sees it. The link is valid for 24 hours and works once; admin accounts get such a link only from an admin.",
       de: "Admin: Für Konten ohne E-Mail-Adresse erzeugt die Nutzerliste jetzt einen einmaligen Link zum Zurücksetzen des Passworts (Schlüssel-Knopf, am Handy unter „⋮“). Der Admin gibt ihn weiter, die Person setzt selbst ein neues Passwort — der Admin setzt und sieht keins. Der Link gilt 24 Stunden und nur einmal; Admin-Konten bekommen ihn nur von einem Admin." },
