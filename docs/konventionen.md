@@ -82,11 +82,15 @@
   `{ type, title, status, message, traceId }` (`Activity.Current?.Id`). Ausnahme: der PAT-Zaun
   (`PatScopeFenceMiddleware`) antwortet `{ error, detail, code, message }` — `error`/`detail` sind der Vertrag mit RepCheck.
 - **„Wer ist am Zug“ und UCI je an EINER Stelle** (Codereview 2026-09-29, N11-006) – im Backend nur
-  `FenFields.WhiteToMove` (nur Zugfeld „b“ = Schwarz, fehlendes Feld = Weiß). `GameEvals.WhiteToMove` und
+  `FenFields.WhiteToMove` (nur Zugfeld „b“/„B“ = Schwarz, fehlendes Feld = Weiß, mehrfache Leerzeichen egal); im
+  Frontend `shared/chess/fen-side.ts` (`sideToMove`/`whiteToMove`, gleiche Regel, ohne chess.js) — die älteren Helfer
+  (`game-review.util`, `repertoire-tree.util`, `puzzle-move.util`, `repertoire-color.util`, `calc-tree.util`) delegieren
+  dorthin. `GameEvals.WhiteToMove` und
   `BrokerCandidates` nehmen bei fehlendem Feld BEWUSST Schwarz an; die beiden sind gekoppelt und werden nur gemeinsam
   umgestellt, sonst dreht sich eine Bewertung doppelt. Die einzige UCI-Schreibweise eines Zugs ist `PgnParser.ToUci`,
-  keine eigenen Kopien. Die Wache `SharedChessHelpersTests.NoPrivateCopiesLeft` prüft `src/api/RookHub.Api` und
-  `tools/` — NICHT das Frontend und nicht die Inline-Stellen „am Zug“ ohne eigene Funktion.
+  keine eigenen Kopien. Die Wachen `SharedChessHelpersTests.NoPrivateCopiesLeft` (Kopien) und `NoInlineSideToMove`
+  (Inline-Auswertungen des Zugfelds, Erlaubt-Liste: GameEvals, BrokerCandidates, ExplorerPathFinder, FenFields) prüfen
+  `src/api/RookHub.Api` und `tools/` — NICHT das Frontend.
 - **Hintergrund-Lesezugriffe auf den Crawler über `DirectoryCrawlerClient.GetCrawlerJsonAsync`** (Codereview
   2026-09-29, A5-013) – Fehler kommen als `CrawlerRequestException`; Kürzen/Datum aus `DirectoryText`, fehlende Texte
   bleiben `NULL` (kein Leerstring).

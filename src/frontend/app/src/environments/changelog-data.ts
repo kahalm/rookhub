@@ -8,6 +8,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.829.1", date: "2026-10-24", changes: [
+    { en: "Analysis jobs: the job list of the house-engine account no longer scans every batch position — a new database index on the running job id turns the check into a lookup (code review A4-016; MariaDB builds the index at the first start after the update, a few seconds for 1.2 million rows).",
+      de: "Analyseaufträge: Die Auftragsliste des Haus-Engine-Kontos durchsucht nicht mehr jede Stapel-Stellung – ein neuer Datenbank-Index auf die laufende Auftragsnummer macht die Prüfung zum Nachschlagen (Codereview A4-016; MariaDB legt den Index beim ersten Start nach dem Update an, bei 1,2 Mio. Zeilen einige Sekunden)." },
+    { en: "Internal: the side to move is read from a FEN in one place on the server („FenFields.WhiteToMove“, 21 call sites) and one in the app („shared/chess/fen-side.ts“, 45 call sites), with the same rule everywhere — missing field = White, extra spaces ignored (code review N11-006).",
+      de: "Intern: Die Seite am Zug wird im Server („FenFields.WhiteToMove“, 21 Stellen) und in der App („shared/chess/fen-side.ts“, 45 Stellen) an je einer Stelle aus der FEN gelesen, überall mit derselben Regel – fehlendes Feld = Weiß, zusätzliche Leerzeichen egal (Codereview N11-006)." },
+    { en: "Crawler: when a tournament is already being fetched, the crawler now returns the running job id, so „Refresh“ follows that job and shows the result instead of only reporting „already running“ (code review I2-009; takes effect with the next crawler release).",
+      de: "Crawler: Läuft für ein Turnier schon ein Abruf, nennt der Crawler jetzt die laufende Auftragsnummer – „Aktualisieren“ verfolgt diesen Auftrag und zeigt das Ergebnis, statt nur „läuft schon“ zu melden (Codereview I2-009; wirksam mit dem nächsten Crawler-Release)." },
+  ] },
   { version: "0.829.0", date: "2026-10-24", changes: [
     { en: "Admin area per permission: someone who only handles messages, for example, now sees „Admin“ in the menu with exactly their tabs, and the bell links („/admin?tab=messages“, „…uploads“) lead straight there instead of bouncing off the admin flag. Only what the user may see is loaded; the dashboard’s Chessable queue follows the chessable.admin permission (code review F5-005).",
       de: "Admin-Bereich je Recht: Wer zum Beispiel nur Nachrichten betreut, sieht jetzt im Menü „Admin“ mit genau seinen Tabs, und die Links aus der Glocke („/admin?tab=messages“, „…uploads“) führen direkt hin statt am Admin-Flag abzuprallen. Geladen wird nur, was der Nutzer sehen darf; die Chessable-Queue auf dem Dashboard folgt dem Recht chessable.admin (Codereview F5-005)." },
