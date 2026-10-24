@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.828.4", date: "2026-10-24", changes: [
+    { en: "Documentation: 99 follow-ups announced in the code-review fix commits of waves W4/W5 are now in „docs/“ (endpoint limits, conventions, schema notes), the frontend rules file and the TODO list; the TODO „Code Review“ line now records the 2026-09-29 review.",
+      de: "Doku: 99 in den Codereview-Fix-Commits der Wellen W4/W5 angekündigte Nachträge stehen jetzt in „docs/“ (Endpunkt-Grenzen, Konventionen, Schema-Hinweise), in den Frontend-Regeln und in der TODO-Liste; die TODO-Zeile „Code Review“ führt den Review vom 29.09.2026." },
+  ] },
   { version: "0.828.3", date: "2026-10-24", changes: [
     { en: "Sign-in hand-over: the transitional route „/api/auth/handoff/exchange“ (kept since 0.640.0 for cached app versions) is gone; one-time codes are redeemed only via „/api/auth/rh-session/handoff“ (code review F1-008).",
       de: "Anmeldeübergabe: Die Übergangsroute „/api/auth/handoff/exchange“ (seit 0.640.0 für zwischengespeicherte App-Fassungen) ist entfernt; Einmal-Codes werden nur noch über „/api/auth/rh-session/handoff“ eingelöst (Codereview F1-008)." },
