@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.3", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z5/Z11/Z12): game analysis, background analysis jobs and the engine settings endpoint are split into smaller building blocks; the worker's status decisions are now pure functions with a golden table — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z5/Z11/Z12): Partie-Analyse, Hintergrund-Analyseaufträge und der Engine-Einstellungs-Endpunkt sind in kleinere Bausteine zerlegt; die Statusentscheidungen des Auftrags-Workers sind jetzt reine Funktionen mit Golden-Tabelle — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.2", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z4/Z16): the course services (list, solver, statistics, sharing, creation, detail page, translation) are split into smaller parts with characterisation tests — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z4/Z16): Die Kursdienste (Liste, Löser, Statistik, Teilen, Anlegen, Detailseite, Übersetzung) sind in kleinere Teile zerlegt und vorher je Feld mit Tests festgehalten — keine sichtbare Änderung." },
   ]},
