@@ -16,22 +16,19 @@ import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CommentSegment } from './comment-variation.util';
-import { CourseEbookRefs } from './course-ebook-refs';
 import { CourseProgressSplitComponent } from '../courses/course-progress-split.component';
 import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
 import { CommentBlockCache } from './line-step.util';
 import {
   displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
 } from './book-comment.util';
-import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
-import { formatSecondsClock } from '../../shared/clock-format.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { ChallengeService } from '../../core/challenge.service';
-import { PuzzleService, BookPuzzleDto, SharedPuzzleCounts } from './puzzle.service';
+import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
@@ -42,32 +39,30 @@ import { tryLoadFen, fenSideToMove } from './puzzle-move.util';
 import { BookReviewController, ReviewFrame } from './book-review';
 import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
-import { CourseService, CourseMode, CourseScopeStats, CourseLineEbookRef } from '../courses/course.service';
+import { CourseService } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
 import { isElementFullscreen } from '../../shared/fullscreen/fullscreen.util';
 import { AuthService } from '../../core/auth.service';
-import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, getBookOfflineLanguageByBookId, isBookCacheComplete, markBookCacheComplete, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
 import { CourseLanguageService, CourseRef } from '../courses/course-language.service';
-import { labelOr, offlineLanguageStale } from '../courses/course-language.util';
+import { labelOr } from '../courses/course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../courses/course-lang-picker.component';
-import { loadDailyElapsed, saveDailyElapsed, clearDailyElapsed } from './daily-elapsed.util';
-import { loadSolveElapsed, saveSolveElapsed, clearSolveElapsed } from './solve-elapsed.util';
+import { loadDailyElapsed, saveDailyElapsed } from './daily-elapsed.util';
+import { loadSolveElapsed, saveSolveElapsed } from './solve-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
-import { WeeklyMode, WeeklyService, weeklyTitleLabel } from '../weekly/weekly.service';
+import { WeeklyService } from '../weekly/weekly.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isBoardHotkey } from '../../shared/keyboard.util';
-
-// 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
-type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE' | 'INFO';
-
-// Seitengröße fürs anonyme öffentliche Kurs-Laden: erste Seite → sofort spielbar, Rest im Hintergrund.
-const ANON_COURSE_PAGE_SIZE = 300;
+import { BookModeHost, BookModeStrategy } from './book-mode-host';
+import { BookCourseMode, courseTime, courseEta } from './book-course-mode';
+import { BookWeeklyMode } from './book-weekly-mode';
+import { BookDailyMode } from './book-daily-mode';
+import { BookStandaloneMode } from './book-standalone-mode';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -83,54 +78,25 @@ const ANON_COURSE_PAGE_SIZE = 300;
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
 })
-export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestroy {
+export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestroy, BookModeHost {
   // state, boardFen, orientation, turnColor, dests, lastMove, isCheck, chess, solutionMoves,
   // moveIndex, startPly, autoAdvanceTimer, aborted, onSolutionPath, alternativeSolve,
   // mouseslipUsed, visualizationMode, vizMoves → BasePuzzleSolver
   puzzle: BookPuzzleDto | null = null;
 
   // Kursmodus: Komponente wird über /courses/:bookId/:mode aufgerufen und arbeitet ein
-  // Buch puzzleweise durch; Fortschritt liegt user-bezogen in der DB.
+  // Buch puzzleweise durch; Fortschritt liegt user-bezogen in der DB (Zustand + Logik: BookCourseMode).
   inCourse = false;
-  courseBookId: number | null = null;
-  courseModeKind: CourseMode = 'sequential';
-  /** Im Kapitel-Modus gesetzt: 0-basierter Kapitel-Index → Pool + Fortschritt aufs Kapitel beschränkt. */
-  courseChapterIndex: number | null = null;
-  courseSolved = 0;
-  courseTotal = 0;
-  courseCompleted = false;
-  /** Fortschritt/Zeit/Trefferquote fürs ganze Buch bzw. das aktuelle Kapitel (vom Backend). */
-  courseBookStats: CourseScopeStats | null = null;
-  courseChapterStats: CourseScopeStats | null = null;
-  courseChapterName: string | null = null;
-  /** Offline gelöste/übersprungene Kurs-Puzzles dieser Sitzung — vermeidet Dauerschleife auf
-   *  demselben Puzzle, solange der Server-Fortschritt nicht erreichbar ist. */
-  private offlineCourseSolvedIds = new Set<number>();
-
-  // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen.
-  // Per-User-Fortschritt wird serverseitig gemerkt: jedes gespielte Puzzle (gelöst oder nicht)
-  // zählt; erledigt = alle gespielt.
+  // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen (BookWeeklyMode).
   inWeekly = false;
-  weeklyId: number | null = null;
-  weeklyTitle = '';
-  weeklyPuzzles: BookPuzzleDto[] = [];
-  weeklyIndex = 0;
-  weeklyCompleted = false;
-  /** Spielweise dieses Wochenposts: 'training' = Brett eingefroren (bisheriges Verhalten),
-   *  'easy' = Figuren normal ziehen. Wird beim Start abgefragt und gilt für den ganzen Post;
-   *  umschaltbar über die Aktionszeile (wirkt ab dem nächsten Puzzle-Start). */
-  weeklyMode: WeeklyMode = 'training';
-  /** Aufteilung der bereits gespielten Puzzles (Serverstand, für die Anzeige). */
-  weeklyTrainingCount = 0;
-  weeklyEasyCount = 0;
-  /** Wurde in DIESEM Puzzle das Auge benutzt, nachdem der erste Zug gemacht war? Dann zählt das
-   *  ganze Puzzle als „einfach" — aufgedeckte Figuren sind kein Trainingsmodus mehr. */
-  private weeklyRevealedAfterMove = false;
-
-  weeklyPlayed = 0;                       // gespielte Puzzles (serverseitiger Stand)
-  weeklySolved = 0;                       // davon gelöst
-  weeklySeconds = 0;                      // Gesamtzeit über alle gespielten Puzzles (serverseitiger Stand)
-  private weeklyAttemptRecorded = false;  // pro Puzzle nur einmal aufzeichnen
+  /** Modus-Strategien (Zerlegung Z18): Laden der nächsten Aufgabe, Ergebnis melden, Navigation je Modus. */
+  readonly course: BookCourseMode;
+  readonly weekly: BookWeeklyMode;
+  readonly daily: BookDailyMode;
+  readonly book: BookStandaloneMode;
+  /** Zeit-/Restzeit-Anzeige der Kurs-Statistik. */
+  readonly courseTime = courseTime;
+  readonly courseEta = courseEta;
 
   // ===== Spielweise (Kurs / Tagespuzzle / einzelnes Buch-Puzzle) =====
   // Der Wochenpost-Modus hat seine EIGENE Abfrage (weeklyMode, s. o.) und bleibt davon unberührt:
@@ -146,13 +112,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  schon getroffen, und es ist kein Trainingsbereich. Dann bleibt es beim bisherigen Verhalten. */
   private solveModeSuppressed = false;
 
-  // Tagespuzzle-Modus: /puzzles/daily/:date — Datums-Navigation (zurück/vor) statt Buch-Nav.
-  dailyDate: string | null = null;
   private dailySub?: Subscription;
   private courseSub?: Subscription;
-  /** Verknüpfter Partner-Kurs (Buch↔Workbook) für den Schnellwechsel; null = keiner. */
-  linkedCourseBookId: number | null = null;
-  linkedCourseName: string | null = null;
 
   stockfishDepth = 16;
   boardTheme = 'brown';
@@ -164,7 +125,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   // elapsedSeconds / Stoppuhr / start-/stopTimer / formatTime: jetzt in BasePuzzleSolver (geteilt).
 
   /** Die zu wertende Lösezeit — i.d.R. = elapsedSeconds, bei „war weg" auf den Schwellwert gekappt. */
-  private solveSeconds = 0;
+  solveSeconds = 0;
   /** alternative-Flag des aktuellen Solves (durchgereicht an finalizeSolve nach der Nachfrage). */
   private solveAlternative = false;
 
@@ -249,29 +210,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Buch-Navigation (nächstes/zufälliges im selben Buch) anbieten — entfällt für ein direkt
    *  geteiltes Einzel-Puzzle (`?single=1`) und im Tagespuzzle (Datums-Navigation). */
   get browseInBook(): boolean { return this.standalone && !this.isDaily && !this.singlePuzzle; }
-  bookNavLoading = false;
   loadError = false;
   /** Monotone Epoche je Ladevorgang (Buch/Kurs/Daily/Wochenpost). Schnelle Navigation kann
    *  mehrere Lade-Requests gleichzeitig in der Luft haben; eine ältere, langsamer auflösende
    *  Antwort darf das inzwischen geladene Puzzle nicht überschreiben → wird per Epoche verworfen. */
-  private loadEpoch = 0;
-  private retryFn: (() => void) | null = null;
-  private bookSolveRecorded = false;     // Solve nur einmal je Puzzle-Durchgang melden (Tagespuzzle-Statistik)
-  private bookChallengeResolved = false; // Challenge-Ergebnis nur mit dem ERSTEN gemeldeten Versuch aufloesen
-  private courseAttemptRecorded = false; // pro Puzzle-Durchgang nur ein Kurs-Versuch melden (Zeit-Inflation vermeiden)
-  /** Gesetzt, wenn dieses Buch-Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
-  private challengeId: number | null = null;
-  private challengeResolved = false;
+  loadEpoch = 0;
+  retryFn: (() => void) | null = null;
   /** Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`): nach dem Lösen am Puzzle stehen
    *  bleiben statt automatisch weiterzuspringen, und keine Buch-Navigation anbieten. */
   singlePuzzle = false;
-  /** „Track solves": für jedes direkt geteilte Einzel-Puzzle (= `singlePuzzle`) aktiv — Erstversuche
-   *  der Besucher zählen + unter dem Puzzle anzeigen (solved/failed). Failed = alles inkl. Reset/Aufgeben;
-   *  nur der erste Versuch zählt. */
-  trackSolves = false;
-  sharedCounts: SharedPuzzleCounts | null = null;
-  private trackRecorded = false;
-
   // Zuletzt gelöstes Puzzle merken (überlebt den Auto-Advance) — analog Standard/Endless:
   // ermöglicht „Letztes Puzzle analysieren" + „Letztes teilen" im Share-Dialog.
   lastSolvedPuzzleId: number | null = null;
@@ -290,14 +237,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
 
-  /** Anonymer (nicht eingeloggter) Nutzer in einem öffentlichen Kurs: der Kurs wird rein
-   *  clientseitig aus den öffentlichen Puzzles bedient, Fortschritt bleibt lokal im Browser
-   *  (keine auth-pflichtigen Kurs-Endpoints aufrufen). */
-  get isAnonCourse(): boolean { return this.inCourse && !this.isLoggedIn; }
-
-  /** Wohin Anmelden/Registrieren zurückführen soll: genau diese Wochenpost. Ohne das landet
-   *  ein Gast nach dem Login auf dem Dashboard und muss den geteilten Link neu suchen. */
-  get weeklyReturnUrl(): string { return this.weeklyId != null ? `/weekly/${this.weeklyId}` : '/weekly'; }
+  // ===== Wirt der Modus-Strategien (BookModeHost) =====
+  /** Höchste aufgedeckte Tipp-Stufe des aktuellen Versuchs (gemeldet als hintsUsed). */
+  get hintsUsed(): number { return this.maxHintLevel; }
+  /** Frischer Ladevorgang: Uhr anhalten und auf 0, Alternativ-/Aufgeben-Marker zurück. */
+  resetForLoad(): void {
+    this.stopTimer();
+    this.elapsedSeconds = 0;
+    this.alternativeSolve = false;
+    this.gaveUp = false;
+  }
+  override clearSolutionPlay(): void { super.clearSolutionPlay(); }
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -310,26 +260,30 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   constructor(
-    private puzzleService: PuzzleService,
+    readonly puzzleService: PuzzleService,
     stockfish: StockfishService,
     private prefs: PreferencesService,
     private route: ActivatedRoute,
     private dialog: MatDialog,
-    private courseService: CourseService,
-    private weeklyService: WeeklyService,
-    private router: Router,
-    private translate: TranslateService,
-    private auth: AuthService,
-    private snackbar: SnackbarService,
-    private offlineQueue: OfflineQueueService,
-    private challengeService: ChallengeService,
+    readonly courseService: CourseService,
+    readonly weeklyService: WeeklyService,
+    readonly router: Router,
+    readonly translate: TranslateService,
+    readonly auth: AuthService,
+    readonly snackbar: SnackbarService,
+    readonly offlineQueue: OfflineQueueService,
+    readonly challengeService: ChallengeService,
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
-    private solveMode: SolveModeService,
+    readonly solveMode: SolveModeService,
     private worksheets: WorksheetService,
     readonly courseLang: CourseLanguageService,
   ) {
     super(stockfish);
+    this.course = new BookCourseMode(this);
+    this.weekly = new BookWeeklyMode(this);
+    this.daily = new BookDailyMode(this);
+    this.book = new BookStandaloneMode(this);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'book',
@@ -353,11 +307,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  Dateinamen der Linie (`BookPuzzleDto` trägt keine Kurs-Id). */
   get langRef(): CourseRef | null {
     if (!this.langEnabled) return null;
-    return { bookId: this.inCourse ? this.courseBookId : null, fileName: this.puzzle?.bookFileName ?? null };
+    return { bookId: this.inCourse ? this.course.bookId : null, fileName: this.puzzle?.bookFileName ?? null };
   }
 
   /** `?lang=` für die nächste Anfrage — `null` außerhalb von Kurs/Buch (Tagespuzzle, Wochenpost). */
-  private get requestLang(): string | null {
+  get requestLang(): string | null {
     return this.langEnabled ? this.courseLang.requestLang(this.langRef) : null;
   }
 
@@ -370,19 +324,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   get titleDisplay(): string | null { return labelOr(this.puzzle?.titleLabel, this.puzzle?.title); }
   get chapterDisplay(): string | null { return labelOr(this.puzzle?.chapterLabel, this.puzzle?.chapter); }
 
-  /** Kapitel-Statistik: `courseChapterName` ist der Original-Schlüssel — gehört er zum aktuellen Puzzle,
-   *  zeigt die Anzeige dessen Übersetzung. */
-  get courseChapterDisplay(): string | null {
-    const name = this.courseChapterName;
-    if (name && this.puzzle && (this.puzzle.chapter ?? null) === name) return labelOr(this.puzzle.chapterLabel, name);
-    return name;
-  }
-
-  /** Die Offline-Kopie, aus der gerade serviert wird, hat eine andere Sprache als die gewählte. */
-  offlineLangStale = false;
-  /** Kurs, dessen anonyme Kopie gerade in der neuen Sprache nachgeladen wird (nur EINE Kette zugleich). */
-  private anonRefreshBook: number | null = null;
-
   /** Sprache gewählt: merken, die Texte der aktuellen Linie tauschen (ohne den Versuch neu zu
    *  starten) und die Offline-Kopie in der neuen Sprache nachziehen. */
   pickLanguage(lang: string): void {
@@ -390,9 +331,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!ref) return;
     this.courseLang.setChoice(ref, lang);
     this.refreshTexts();
-    if (this.inCourse && this.courseBookId != null) {
-      if (this.isAnonCourse) this.refreshAnonCache(this.courseBookId);
-      else this.autoCacheCourse();
+    if (this.inCourse && this.course.bookId != null) {
+      if (this.course.isAnon) this.course.refreshAnonCache(this.course.bookId);
+      else this.course.autoCache();
     }
   }
 
@@ -432,9 +373,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Nach dem Laden einer Linie: Sprachen merken; kam sie in einer anderen als der gewählten
    *  (Einzel-Puzzle: Wahl erst mit dem Dateinamen bekannt), die Texte nachholen. */
-  private afterLineLoaded(p: BookPuzzleDto, sentLang: string | null): void {
+  afterLineLoaded(p: BookPuzzleDto, sentLang: string | null): void {
     if (!this.langEnabled) return;
-    if (this.inCourse) this.courseLang.rememberFile(this.courseBookId, p.bookFileName);
+    if (this.inCourse) this.courseLang.rememberFile(this.course.bookId, p.bookFileName);
     this.courseLang.noteLines(this.langRef, [p]);
     const want = this.requestLang;
     if (want && sentLang && want !== sentLang && (p.commentLanguages?.length ?? 0) > 1) this.refreshTexts();
@@ -448,7 +389,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // „single=1" markiert den Link als direkt geteiltes Einzel-Puzzle → Empfänger bleibt nach
     // dem Lösen auf dem Puzzle stehen (kein Auto-Advance, keine Buch-Navigation).
     const url = weekly
-      ? `${window.location.origin}/weekly/${this.weeklyId}`
+      ? `${window.location.origin}/weekly/${this.weekly.id}`
       : `${window.location.origin}/puzzles/book/${this.puzzle.id}?single=1`;
     // Nach dem Auto-Advance kann zusätzlich das zuletzt gelöste Puzzle geteilt werden.
     const hasPrevious = !weekly && this.lastSolvedPuzzleId != null && this.lastSolvedPuzzleId !== this.puzzle.id;
@@ -483,7 +424,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         orientation: this.lastSolvedOrientation, startPly: this.lastSolvedStartPly,
         themes: this.lastSolvedThemes,
       },
-      'Book', { sourceId: this.lastSolvedPuzzleId, bookId: this.courseBookId },
+      'Book', { sourceId: this.lastSolvedPuzzleId, bookId: this.course.bookId },
     );
     this.worksheets.sendAndNotify(target, item ? [item] : []);
   }
@@ -514,57 +455,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     });
   }
 
-  /** Nächstes Puzzle aus demselben Buch laden (nur Standalone-Buch-Modus). */
-  nextInBook(): void {
-    if (!this.puzzle || this.bookNavLoading) return;
-    if (!navigator.onLine) { this.navOfflineInBook(false); return; }
-    this.bookNavLoading = true;
-    this.puzzleService.getNextBookPuzzle(this.puzzle.id, this.requestLang).subscribe({
-      next: p => this.goToBookPuzzle(p),
-      error: () => { this.bookNavLoading = false; }
-    });
-  }
-
-  /** Zufälliges Puzzle aus demselben Buch laden (nur Standalone-Buch-Modus). */
-  randomInBook(): void {
-    if (!this.puzzle || this.bookNavLoading) return;
-    if (!navigator.onLine) { this.navOfflineInBook(true); return; }
-    this.bookNavLoading = true;
-    this.puzzleService.getRandomBookPuzzle(this.puzzle.id, this.requestLang).subscribe({
-      next: p => this.goToBookPuzzle(p),
-      error: () => { this.bookNavLoading = false; }
-    });
-  }
-
-  /** Offline: nächstes/zufälliges Puzzle aus dem lokal gespeicherten Buch. */
-  private navOfflineInBook(random: boolean): void {
-    if (!this.puzzle) return;
-    const book = getBookOffline(this.puzzle.bookFileName);
-    if (!book || !book.length) {
-      this.snackbar.info(this.translate.instant('book.offlineUnavailable'), { action: 'common.ok', duration: 2500 });
-      return;
-    }
-    let next: BookPuzzleDto;
-    if (random) {
-      const others = book.filter(p => p.id !== this.puzzle!.id);
-      next = (others.length ? others : book)[Math.floor(Math.random() * (others.length || book.length))];
-    } else {
-      const i = book.findIndex(p => p.id === this.puzzle!.id);
-      next = book[((i < 0 ? -1 : i) + 1 + book.length) % book.length];   // Loop am Ende
-    }
-    this.goToBookPuzzle(next);
-  }
-
-  private goToBookPuzzle(p: BookPuzzleDto): void {
-    ++this.loadEpoch;   // evtl. noch laufenden Ladevorgang entwerten
-    this.bookNavLoading = false;
-    this.clearSolutionPlay();
-    this.router.navigate(['/puzzles/book', p.id]);   // URL aktualisieren (Komponente wird wiederverwendet)
-    this.puzzle = p;
-    this.courseLang.noteLines(this.langRef, [p]);
-    this.setupPuzzle(p);
-  }
-
   // ===== Hooks für BasePuzzleSolver =====
   protected override get depth(): number { return this.stockfishDepth; }
   protected override get stockfishErrorContinues(): boolean { return false; }  // Buch: Fehlzug → verloren
@@ -581,19 +471,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Tagespuzzle/Kurs: früher verbrachte (aktive) Zeit fortführen — wer die Seite mitten im Lösen
     // verlässt oder neu lädt, zählt kumuliert weiter statt bei 0 (Daily: fair für die „schnellster
     // Löser"-Wertung; Kurs: ehrliche Kurs-/Trainingszeit-Statistik).
-    this.startTimer(this.isDaily && this.dailyDate ? loadDailyElapsed(this.dailyDate)
-      : this.courseElapsedKey ? loadSolveElapsed(this.courseElapsedKey) : 0);
-  }
-
-  /** localStorage-Schlüssel der gemerkten Kurs-Zwischenzeit des aktuellen Puzzles (nur Kursmodus). */
-  private get courseElapsedKey(): string | null {
-    return this.inCourse && this.puzzle ? `course:${this.puzzle.id}` : null;
+    const courseKey = this.course.elapsedKey;
+    this.startTimer(this.isDaily && this.daily.date ? loadDailyElapsed(this.daily.date)
+      : courseKey ? loadSolveElapsed(courseKey) : 0);
   }
 
   /** Zwischenstand der Lösezeit im Sekunden-Tick persistieren (für den Wiederbesuch/Refresh). */
   protected override onTimerTick(): void {
-    if (this.isDaily && this.dailyDate) { saveDailyElapsed(this.dailyDate, this.elapsedSeconds); return; }
-    if (this.courseElapsedKey) saveSolveElapsed(this.courseElapsedKey, this.elapsedSeconds);
+    if (this.isDaily && this.daily.date) { saveDailyElapsed(this.daily.date, this.elapsedSeconds); return; }
+    const courseKey = this.course.elapsedKey;
+    if (courseKey) saveSolveElapsed(courseKey, this.elapsedSeconds);
   }
 
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
@@ -677,10 +564,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   /** Aufzeichnung + Auto-Advance nach dem Lösen (ggf. nach der Lange-Lösezeit-Nachfrage). */
   private finalizeSolve(): void {
-    this.recordCourseAttempt(true);
-    this.recordWeeklyAttempt(true);
-    this.recordBookAttempt(true);
-    this.recordTrack(true);   // „Track solves": Erstversuch gelöst
+    this.recordAttempt(true);
+    this.book.recordTrack(true);   // „Track solves": Erstversuch gelöst
     // Im BRETT-Vollbild gibt es die „Weiter"-Knöpfe (im Panel unter dem Brett) nicht — dort würde der
     // Spieler bei den „stehen bleiben"-Fällen (alternative Lösung / Abschlusstext) festhängen. Deshalb
     // im Brett-Vollbild IMMER auto-weiterspringen; außerhalb bleibt das bewusste Stehenbleiben erhalten.
@@ -714,30 +599,23 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private solvedAutoNext(): void {
     if (this.singlePuzzle) return;       // Direkt geteiltes Einzel-Puzzle: stehen bleiben
     if (this.isDaily) return;            // Tagespuzzle: kein Auto-Advance, Navigation via Datum
-    if (this.inCourse) this.courseNext();
-    else if (this.inWeekly) this.weeklyNext();
-    else this.nextInBook();
+    this.modeStrategy.next();
   }
 
-  // ===== Tagespuzzle-Navigation (Datum statt Buch) =====
-  get isDaily(): boolean { return this.dailyDate != null; }
-  /** Tag des Tagespuzzles als Datum (UTC-Mitternacht) für die DatePipe; `dailyDate` ist „YYYYMMDD“. */
-  get dailyDateValue(): Date | null {
-    const m = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(this.dailyDate ?? '');
-    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
-  }
-  /** „Vor" nur erlaubt, solange das angezeigte Datum vor heute (UTC) liegt — keine Zukunft. */
-  get canGoForwardDaily(): boolean { return !!this.dailyDate && this.dailyDate < this.todayUtc(); }
-
-  prevDaily(): void { this.goDaily(-1); }
-  nextDaily(): void { if (this.canGoForwardDaily) this.goDaily(1); }
-
-  private goDaily(delta: number): void {
-    if (!this.dailyDate) return;
-    this.router.navigate(['/puzzles/daily', shiftDailyDate(this.dailyDate, delta)]);
+  /** Strategie des aktiven Modus mit eigener Puzzle-Folge (Tagespuzzle läuft über `book`, navigiert aber per Datum). */
+  private get modeStrategy(): BookModeStrategy {
+    return this.inCourse ? this.course : this.inWeekly ? this.weekly : this.book;
   }
 
-  private todayUtc(): string { return formatUtcDate(new Date()); }
+  /** Versuch an alle Modi melden — jede Strategie prüft selbst, ob sie zuständig ist (Reihenfolge wie bisher). */
+  private recordAttempt(solved: boolean): void {
+    this.course.recordAttempt(solved);
+    this.weekly.recordAttempt(solved);
+    this.book.recordAttempt(solved);
+  }
+
+  // ===== Tagespuzzle (Datum statt Buch, BookDailyMode) =====
+  get isDaily(): boolean { return this.daily.date != null; }
 
   protected override handleFailed(): void {
     this.state = 'FAILED';
@@ -746,78 +624,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.favoriteTracker.refresh();
     this.showFailureOrHoldMate();
     this.solveSeconds = this.elapsedSeconds;
-    this.recordCourseAttempt(false);
-    this.recordWeeklyAttempt(false);
-    this.recordBookAttempt(false);
-    this.recordTrack(false);   // „Track solves": Erstversuch nicht gelöst (Fehlzug)
-  }
-
-  /**
-   * Meldet einen Lösungsversuch ans Backend — nur im Standalone-Buch-Modus und nur eingeloggt
-   * (Basis für die Tagespuzzle-Visualisierung auf Discord). Pro Puzzle nur einmal.
-   */
-  private recordBookAttempt(solved: boolean): void {
-    if (!this.standalone || !this.puzzle) return;
-    // Seit v0.309.0 wird JEDER Fehlversuch gemeldet (Fehlzug/Mouseslip/Restart → je ein rotes ✗
-    // in der Löser-Anzeige); nur der Solve bleibt einmalig je Durchgang. Die Aufrufer stellen
-    // sicher, dass ein Fehler nicht doppelt zählt (State-Guards in resetPuzzle/mouseslip).
-    if (solved) {
-      if (this.bookSolveRecorded) return;
-      this.bookSolveRecorded = true;
-    }
-    // Ergebnis an eine ggf. offene Freundes-Challenge zurückmelden (nur Standalone; der ERSTE
-    // gemeldete Versuch entscheidet — wie die bisherige Erstversuch-Semantik der Challenge).
-    // Gemeldet wird erst NACH dem gespeicherten Versuch (Codereview N9-001): vorher ging /resolve
-    // sogar VOR dem Versuch hinaus, der Server fand keinen gelösten Versuch und buchte echte Lösungen
-    // als „nicht gelöst". Offline oder bei Fehler schließt der Server die Challenge beim Nachsenden.
-    let challengeId: number | null = null;
-    if (!this.bookChallengeResolved) {
-      this.bookChallengeResolved = true;
-      challengeId = this.claimChallenge();
-    }
-    if (this.auth.isLoggedIn) {
-      // Versuch wird erfasst → gemerkte Tagespuzzle-Zwischenzeit verfällt (Erstversuch ist gewertet).
-      if (this.isDaily && this.dailyDate) clearDailyElapsed(this.dailyDate);
-      const url = `/api/book-puzzles/${this.puzzle.id}/attempt`;
-      // `mode` = Spielweise: hier wird KEINE Visualisierungsstufe gespeichert, der Server müsste
-      // sonst auf „training" raten. Offline-Body identisch zum Online-Body, sonst geht die
-      // Spielweise beim Nachsenden verloren.
-      const mode = this.attemptSolveMode;
-      const seconds = this.solveSeconds;
-      const body = { solved, timeSeconds: seconds, hintsUsed: this.maxHintLevel, mode };
-      if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, seconds, this.maxHintLevel, mode)
-        .subscribe({
-          next: () => {
-            if (challengeId != null) this.challengeService.resolve(challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });
-          },
-          error: () => this.offlineQueue.enqueue('POST', url, body),
-        });
-    } else if (solved) {
-      // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos) — die
-      // gemerkte Zwischenzeit kumuliert daher bis zum ersten SOLVE weiter.
-      if (this.isDaily && this.dailyDate) clearDailyElapsed(this.dailyDate);
-      const url = `/api/book-puzzles/${this.puzzle.id}/attempt/anonymous`;
-      const mode = this.attemptSolveMode;
-      const body = { solved, timeSeconds: this.solveSeconds, sessionId: this.puzzleService.ensureSessionId(), mode };
-      if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttemptAnonymous(this.puzzle.id, solved, this.solveSeconds, mode)
-        .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
-    }
-  }
-
-  /** „Track solves": meldet den ERSTEN Versuch des Besuchers (solved/failed) und aktualisiert die
-   *  angezeigten Zähler. Nur einmal pro geöffnetem Puzzle (serverseitig zusätzlich erstversuch-dedupliziert).
-   *  `solved=false` deckt Fehlzug, Aufgeben und Reset ab. */
-  private recordTrack(solved: boolean): void {
-    if (!this.trackSolves || this.trackRecorded || !this.puzzle) return;
-    this.trackRecorded = true;
-    // Genutzte Tipp-Stufe (0–3) mitschicken; serverseitig geklemmt. So zeigt der Zähler künftig auch,
-    // wie viele Löser ohne/mit 1/2/3 Tipps gelöst haben.
-    this.puzzleService.trackSharedAttempt(this.puzzle.id, solved, this.maxHintLevel).subscribe({
-      next: c => this.sharedCounts = c,
-      error: () => { this.trackRecorded = false; }   // bei Fehler erneut versuchbar
-    });
+    this.recordAttempt(false);
+    this.book.recordTrack(false);   // „Track solves": Erstversuch nicht gelöst (Fehlzug)
   }
 
   ngOnInit(): void {
@@ -842,8 +650,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
     if (weeklyIdParam) {
       this.inWeekly = true;
-      this.weeklyId = Number(weeklyIdParam);
-      this.loadWeekly();
+      this.weekly.id = Number(weeklyIdParam);
+      this.weekly.load();
       return;
     }
 
@@ -854,23 +662,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // Reaktiv auf die Kurs-Params hören → der Schnellwechsel zum verknüpften Kurs (Buch↔Workbook)
       // und Browser zurück/vor laden neu, ohne die Komponente neu aufzubauen (Snapshot würde nicht
       // erneut feuern). paramMap emittiert den aktuellen Stand synchron → Erst-Load wie bisher.
-      this.courseSub = this.route.paramMap.subscribe(pm => {
-        const bid = Number(pm.get('bookId'));
-        if (!bid) return;
-        this.courseBookId = bid;
-        this.courseModeKind = pm.get('mode') === 'random' ? 'random' : 'sequential';
-        const ch = pm.get('chapterIndex');
-        this.courseChapterIndex = ch != null ? Number(ch) : null;
-        // Anonym: lokal gemerkten Fortschritt DIESES Buchs übernehmen (übersteht Reload; ersetzt den
-        // Set-Inhalt, damit beim Wechsel auf ein anderes Kurs-Buch keine fremden Ids stehen bleiben).
-        if (this.isAnonCourse) this.offlineCourseSolvedIds = new Set(loadCourseLocalSolved(bid));
-        // Welche Sprachen der Kurs hat (für die Auswahl) — still, die Linien nennen sie ohnehin mit.
-        this.courseLang.ensureLanguages(bid, () => this.courseService.getTranslations(bid));
-        this.loadCourseNext();
-        this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
-        this.loadCourseLink();    // verknüpften Partner-Kurs für den Schnellwechsel laden
-        this.loadCourseEbookRefs();   // wo die Linien im E-Book stehen („Im Buch“)
-      });
+      this.courseSub = this.route.paramMap.subscribe(pm => this.course.start(pm));
       return;
     }
 
@@ -879,7 +671,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // nur den Param, ohne die Komponente neu aufzubauen → Snapshot würde nicht neu laden.
       this.dailySub = this.route.paramMap.subscribe(pm => {
         const d = pm.get('date');
-        if (d) this.loadDaily(d);
+        if (d) this.daily.load(d);
       });
       return;
     }
@@ -888,17 +680,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (idParam) {
       // Aus einer Freundes-Challenge geöffnet (nur Standalone-Buch-Modus) → Ergebnis zurückmelden.
       const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
-      if (challengeParam) this.challengeId = Number(challengeParam) || null;
+      if (challengeParam) this.book.challengeId = Number(challengeParam) || null;
       // Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`) → am Ende stehen bleiben, nicht
       // weiterspringen UND Erstversuche immer mitzählen + anzeigen (kein separates Opt-in mehr).
       this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
-      this.trackSolves = this.singlePuzzle;
+      this.book.trackSolves = this.singlePuzzle;
       // Direkt geteiltes Einzel-Puzzle: kein Trainingsbereich → keine Spielweisen-Abfrage.
       if (this.singlePuzzle) this.solveModeSuppressed = true;
-      if (this.trackSolves) {
-        this.puzzleService.getSharedCounts(Number(idParam)).subscribe({ next: c => this.sharedCounts = c, error: () => {} });
-      }
-      this.loadPuzzle(Number(idParam));
+      if (this.book.trackSolves) this.book.loadSharedCounts(Number(idParam));
+      this.book.load(Number(idParam));
     }
   }
 
@@ -922,43 +712,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
   }
 
-  /** Beansprucht genau einmal die offene Buch-Challenge für diesen Versuch; die Meldung folgt erst nach dem
-   *  gespeicherten Versuch (fire-and-forget). `null` = nichts zu melden. */
-  private claimChallenge(): number | null {
-    if (this.challengeId == null || this.challengeResolved) return null;
-    this.challengeResolved = true;
-    return this.challengeId;
-  }
-
-  /** Kurslinie → E-Book-Diagramm (Wunsch 2026-10-15), je Linie der erste Verweis. */
-  readonly courseEbookRefs = new CourseEbookRefs();
-  /** Verweis der aktuellen Linie ins E-Book (Knopf „Im Buch“), sonst null. */
-  get currentEbookRef(): CourseLineEbookRef | null {
-    return this.inCourse ? this.courseEbookRefs.get(this.puzzle?.id) : null;
-  }
-
-  private loadCourseEbookRefs(): void {
-    const ok = this.courseBookId != null && !this.isAnonCourse;
-    this.courseEbookRefs.load(ok ? this.courseService.getEbookRefs(this.courseBookId!) : null);
-  }
-
-  /** Lädt den verknüpften Partner-Kurs (falls vorhanden) für den Schnellwechsel-Knopf. */
-  private loadCourseLink(): void {
-    this.linkedCourseBookId = null;
-    this.linkedCourseName = null;
-    if (this.courseBookId == null || this.isAnonCourse) return;   // Verknüpfung ist auth-only
-    this.courseService.getLink(this.courseBookId).subscribe({
-      next: l => { this.linkedCourseBookId = l.linkedBookId; this.linkedCourseName = l.linkedDisplayName; },
-      error: () => {}
-    });
-  }
-
-  /** Wechselt zum verknüpften Kurs (Buch↔Workbook) im selben Modus; die Param-Subscription lädt neu. */
-  switchToLinkedCourse(): void {
-    if (this.linkedCourseBookId == null) return;
-    this.router.navigate(['/courses', this.linkedCourseBookId, this.courseModeKind]);
-  }
-
   ngOnDestroy(): void {
     this.destroyed = true;
     this.dailySub?.unsubscribe();
@@ -968,33 +721,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // NUR bei offenem Lauf (isSolving): nach SOLVED/FAILED ist der Versuch erfasst und der Eintrag
     // gelöscht — ein Speichern hier würde ihn wieder aufleben lassen.
     if (this.isSolving) {
-      if (this.isDaily && this.dailyDate) saveDailyElapsed(this.dailyDate, this.elapsedSeconds);
-      else if (this.courseElapsedKey) saveSolveElapsed(this.courseElapsedKey, this.elapsedSeconds);
+      const courseKey = this.course.elapsedKey;
+      if (this.isDaily && this.daily.date) saveDailyElapsed(this.daily.date, this.elapsedSeconds);
+      else if (courseKey) saveSolveElapsed(courseKey, this.elapsedSeconds);
     }
     this.clearSolutionPlay();
     this.abortSolver();
     clearCrazyStyles();
     clearVisualizationHide();
-  }
-
-  // ===== Kursmodus =====
-  get coursePercent(): number {
-    return this.courseTotal > 0
-      ? Math.round(100 * Math.min(this.courseSolved, this.courseTotal) / this.courseTotal)
-      : 0;
-  }
-
-  /** Wirklich alle Kurs-Puzzles gelöst (nicht nur „Random-Pool leer"). Im Random-Modus signalisiert
-   *  `courseCompleted` lediglich, dass der aktuelle Durchgang vorbei ist — gescheiterte/ungelöste
-   *  Puzzles bleiben übrig, bis ein Reset den Pool wieder auffüllt. Erst wenn solved == total ist
-   *  das Buch tatsächlich durch. */
-  get courseFullyDone(): boolean {
-    return this.courseTotal > 0 && this.courseSolved >= this.courseTotal;
-  }
-
-  /** Im Random-Modus übrige (nicht gelöste) Puzzles, wenn der Pool des aktuellen Durchgangs leer ist. */
-  get courseRemaining(): number {
-    return Math.max(0, this.courseTotal - this.courseSolved);
   }
 
   /** Einzel-Kommentar für Review-/Info-Modus (Kommentar zum aktuell durchgespielten Zug, Fallback
@@ -1071,611 +805,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Vorschau beenden → zurück zur Puzzle-/Review-Stellung. */
   exitVariationPreview(): void { this.variationPreview = null; }
 
-  /** Holt das nächste Puzzle des Kurses (sequential: after=, random: exclude=). */
-  private loadCourseNext(after?: number, exclude?: number): void {
-    if (this.courseBookId == null) return;
-    const epoch = ++this.loadEpoch;
-    const hadPuzzle = this.puzzle != null;
-    this.loadError = false;
-    this.retryFn = () => this.loadCourseNext(after, exclude);
-    if (!hadPuzzle) this.state = 'LOADING';
-
-    // Anonym (öffentlicher Kurs): rein clientseitig aus den öffentlichen Puzzles bedienen.
-    if (this.isAnonCourse) { this.loadAnonCourseNext(after, exclude, hadPuzzle); return; }
-
-    // Offline → direkt aus dem lokal gespeicherten Buch bedienen (kein Netz-Roundtrip).
-    // Kein Cache vorhanden → Fehlerzustand (mit „Erneut versuchen") statt endlosem Spinner.
-    if (!navigator.onLine) {
-      if (!this.loadCourseOffline(after, exclude, hadPuzzle)) {
-        this.state = 'LOADING'; this.loadError = true;
-        this.snackbar.info(this.translate.instant('book.offlineUnavailable'), { action: 'common.ok', duration: 3500 });
-      }
-      return;
-    }
-
-    const lang = this.requestLang;
-    this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude, this.courseChapterIndex ?? undefined, lang).subscribe({
-      next: res => {
-        if (epoch !== this.loadEpoch) return;
-        this.offlineLangStale = false;
-        this.courseSolved = res.solvedCount;
-        this.courseTotal = res.total;
-        this.applyCourseStats(res.book, res.chapter, res.chapterName);
-        if (res.completed || !res.puzzle) {
-          this.courseCompleted = true;
-          // Letztes Puzzle gerade gelöst: gelöstes Brett stehen lassen; sonst leeres Done-Panel.
-          if (!hadPuzzle) { this.puzzle = null; this.state = 'COURSE_DONE'; }
-          return;
-        }
-        this.courseCompleted = false;
-        this.gaveUp = false;
-        this.puzzle = res.puzzle;
-        this.afterLineLoaded(res.puzzle, lang);
-        this.setupPuzzle(res.puzzle);
-      },
-      error: () => {
-        if (epoch !== this.loadEpoch) return;
-        // Netzfehler trotz onLine → letzter Versuch aus dem Offline-Cache.
-        if (this.loadCourseOffline(after, exclude, hadPuzzle)) return;
-        this.state = 'LOADING'; this.loadError = true;
-      }
-    });
-  }
-
-  /**
-   * Anonymer öffentlicher Kurs: die öffentlichen Puzzles einmal laden + lokal vorhalten, dann rein
-   * clientseitig (wie offline) bedienen. Fortschritt lebt in {@link offlineCourseSolvedIds} und wird
-   * pro Buch im localStorage persistiert. Nicht öffentlich / kein Cache → „nicht verfügbar".
-   */
-  private loadAnonCourseNext(after: number | undefined, exclude: number | undefined, hadPuzzle: boolean): void {
-    if (this.courseBookId == null) return;
-    const cached = getBookOfflineByBookId(this.courseBookId);
-    if (cached?.length) {
-      if (!this.loadCourseOffline(after, exclude, hadPuzzle)) { this.showCourseUnavailable(); return; }
-      const online = typeof navigator === 'undefined' || navigator.onLine;
-      const meta = getBookOfflineLanguageByBookId(this.courseBookId);
-      // Die lokale Kopie ist hier der ARBEITSBESTAND: weicht ihre Sprache von der Wahl ab, wird sie
-      // online im Hintergrund in der neuen Sprache ersetzt (die alte bleibt spielbar, bis die neue da ist).
-      if (online && this.offlineLangStale) { this.refreshAnonCache(this.courseBookId); return; }
-      // TORSO nachladen: brach die Seiten-Kette beim ersten Besuch ab (Netzfehler auf einer
-      // Folgeseite, Tab geschlossen), lag hier nur die erste Seite — und der Kurs galt mit 300 von
-      // 3000 Linien als „abgeschlossen". Der Marker unterscheidet beides; ist er nicht gesetzt,
-      // wird die Kette im Hintergrund ab der gecachten Länge fortgesetzt (spielbar bleibt es sofort) —
-      // in der Sprache der Kopie, sonst stünden zwei Sprachen in einem Bestand.
-      if (!isBookCacheComplete(this.courseBookId) && online)
-        this.fetchAnonCoursePages(this.courseBookId, [...cached], cached.length, undefined, undefined, false,
-          false, meta?.lang ?? this.requestLang);
-      return;
-    }
-    // Kein lokaler Cache + offline → nicht ins Netz laufen, sondern „nicht verfügbar" zeigen.
-    if (typeof navigator !== 'undefined' && !navigator.onLine) { this.showCourseUnavailable(); return; }
-    // Seitenweise laden: erste (kleine) Seite → sofort spielbar; restliche Seiten im Hintergrund in
-    // den Offline-Cache nachladen. Große öffentliche Kurse (Tausende Puzzles) starten so in ~1 s
-    // statt erst nach dem kompletten (mehrere MB großen) Download.
-    this.fetchAnonCoursePages(this.courseBookId, [], 0, after, exclude, hadPuzzle, true);
-  }
-
-  /**
-   * Seiten-Kette des anonymen Kurses (auch zum FORTSETZEN eines Torsos aufrufbar: `acc` mit dem
-   * gecachten Stand vorbelegen und `skip` auf dessen Länge setzen).
-   *
-   * Cache-Schreiben ist teuer (JSON.stringify über den GANZEN bisherigen Stand): nach JEDER Seite
-   * geschrieben wüchse der Aufwand quadratisch (300+600+…+3000 statt 3000 serialisierte Puzzles —
-   * mehrere MB Main-Thread-Blockade auf Mobilgeräten). Deshalb wird nur EINMAL nach der ersten
-   * Seite geschrieben (sofort spielbar) und dann erst am ENDE der Kette (letzte Seite bzw. Fehler
-   * einer Folgeseite, damit das Geladene einen Reload übersteht).
-   */
-  private fetchAnonCoursePages(bookId: number, acc: BookPuzzleDto[], skip: number,
-    after: number | undefined, exclude: number | undefined, hadPuzzle: boolean,
-    serveFirstPage = false, lang: string | null = this.requestLang, replace = false): void {
-    const flushCache = (): boolean => {
-      const fileName = acc[0]?.bookFileName;
-      return fileName ? saveBookOffline(fileName, acc, bookId, lang) : false;
-    };
-    const fetchPage = (pageSkip: number, first: boolean): void => {
-      this.courseService.getPublicCourse(bookId, pageSkip, ANON_COURSE_PAGE_SIZE, lang).subscribe({
-        next: page => {
-          if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
-          if (page?.length) acc.push(...page);
-          if (page?.length) this.courseLang.noteLines({ bookId }, page);
-          // Volle Seite → es gibt vermutlich mehr; sonst ist die Kette hier zu Ende.
-          const hasMore = !!page && page.length === ANON_COURSE_PAGE_SIZE;
-          // ERSETZT die Kette eine vollständige Kopie (Sprachwechsel), wird erst am Ende geschrieben —
-          // eine halb neue Kopie mit dem alten „vollständig"-Marker meldete sonst nach 300 Linien „fertig".
-          if ((first && !replace) || !hasMore) {
-            const written = flushCache();
-            // Vollständig NUR melden, wenn der letzte Stand auch wirklich im Speicher liegt — und ein
-            // Zwischenstand (es kommt noch mehr) nimmt einen alten Marker zurück: blieb der nach dem
-            // Räumen des Caches stehen, galt ein Abbruch nach Seite 1 sonst als ganzer Kurs (F1-009).
-            markBookCacheComplete(bookId, !hasMore && written);
-            if (!hasMore && written) this.offlineLangStale = false;
-            if (!hasMore && replace) this.anonRefreshBook = null;
-          }
-          if (first && serveFirstPage) {
-            // Cache-Schreiben kann fehlschlagen (Quota/Privatmodus) — der anonyme Kurs wird NUR
-            // aus dem Cache bedient: dann ehrlich „nicht verfügbar" statt endlosem Spinner.
-            if (!acc.length || !this.loadCourseOffline(after, exclude, hadPuzzle)) {
-              this.showCourseUnavailable();
-              return;
-            }
-          }
-          if (hasMore) fetchPage(pageSkip + ANON_COURSE_PAGE_SIZE, false);
-        },
-        error: () => {
-          if (this.courseBookId !== bookId) return;
-          // Nur wenn schon die erste Seite scheitert (nichts geladen) → „nicht verfügbar".
-          // Ein Fehler bei einer Folgeseite lässt das bereits Geladene spielbar — dazu den
-          // aufgelaufenen Stand festschreiben (die Zwischenseiten werden nicht mehr geschrieben);
-          // der Marker bleibt AUS, damit der nächste Besuch die Kette fortsetzt.
-          if (first && serveFirstPage && !acc.length) { this.showCourseUnavailable(); return; }
-          // Beim Ersetzen bleibt die alte (vollständige) Kopie liegen, statt einen Torso zu schreiben.
-          if (!replace) flushCache();
-          else this.anonRefreshBook = null;
-        },
-      });
-    };
-    fetchPage(skip, skip === 0);
-  }
-
-  /** Anonymer Kurs: die lokale Kopie in der gewählten Sprache neu holen (nur online, im Hintergrund). */
-  private refreshAnonCache(bookId: number): void {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-    if (this.anonRefreshBook === bookId) return;   // läuft schon — jede weitere Linie würde sonst eine Kette starten
-    this.anonRefreshBook = bookId;
-    this.fetchAnonCoursePages(bookId, [], 0, undefined, undefined, true, false, this.requestLang, true);
-  }
-
-  /** Öffentlicher Kurs anonym nicht (mehr) verfügbar (nicht public / gelöscht). */
-  private showCourseUnavailable(): void {
-    this.state = 'LOADING';
-    this.loadError = true;
-    this.snackbar.info(this.translate.instant('book.course.unavailable'), { action: 'common.ok', duration: 4000 });
-  }
-
-  /**
-   * Offline-Fallback fürs Kurs-Laden: serviert Puzzles aus dem lokal gespeicherten Buch
-   * (über die bookId aufgelöst). Versuche werden via Offline-Queue nachgemeldet; der
-   * Server-Fortschritt („nächstes ungelöstes") lässt sich offline nicht exakt nachbilden,
-   * darum meiden wir nur die in DIESER Sitzung schon gelösten Puzzles. Liefert true, wenn
-   * ein Puzzle (oder das „fertig"-Panel) gesetzt wurde, sonst false (kein Cache vorhanden).
-   */
-  private loadCourseOffline(after: number | undefined, exclude: number | undefined, hadPuzzle: boolean): boolean {
-    if (this.courseBookId == null) return false;
-    const book = getBookOfflineByBookId(this.courseBookId);
-    if (!book || !book.length) return false;
-    // Weicht die Sprache der Kopie von der Wahl ab, sagt die Ansicht es („neu herunterladen").
-    this.offlineLangStale = offlineLanguageStale(getBookOfflineLanguageByBookId(this.courseBookId),
-      this.requestLang ?? '', this.courseLang.languages(this.langRef));
-
-    // Fortschritt/Zähler nur über echte Quiz-Linien (Info-/Erklärlinien zählen nicht) — wie serverseitig.
-    const quiz = book.filter(p => !p.isInfoOnly);
-    this.courseTotal = quiz.length;
-    this.courseSolved = quiz.filter(p => this.offlineCourseSolvedIds.has(p.id)).length;
-    const cur = after ?? exclude;
-    let next: BookPuzzleDto | undefined;
-
-    if (this.courseModeKind === 'random') {
-      // Zufallstopf = QUIZ-Linien, wie serverseitig (CourseService: `quizScope`). Zog er aus dem
-      // ungefilterten Buch, bekam der Spieler reine Info-/Erklärseiten als „Zufallsaufgabe": die
-      // zählen nie als gelöst, der Fortschritt stand still und derselbe Block konnte beliebig oft
-      // kommen — der Kurs erreichte 100 % nie. Betraf offline UND jeden anonymen Aufruf.
-      const fresh = quiz.filter(p => p.id !== cur && !this.offlineCourseSolvedIds.has(p.id));
-      const pick = fresh.length ? fresh : quiz.filter(p => p.id !== cur);
-      const pool = pick.length ? pick : quiz;
-      next = pool.length ? pool[Math.floor(Math.random() * pool.length)] : undefined;
-    } else {
-      // sequenziell: ab Position nach `after` das erste in dieser Sitzung noch nicht gelöste.
-      const start = after != null ? book.findIndex(p => p.id === after) : -1;
-      for (let j = 1; j <= book.length; j++) {
-        const cand = book[(Math.max(start, -1) + j + book.length) % book.length];
-        if (!this.offlineCourseSolvedIds.has(cand.id)) { next = cand; break; }
-      }
-    }
-
-    if (!next) {
-      // Alle (lokal) gelöst → fertig-Panel.
-      this.courseCompleted = true;
-      if (!hadPuzzle) { this.puzzle = null; this.state = 'COURSE_DONE'; }
-      return true;
-    }
-    this.courseCompleted = false;
-    this.gaveUp = false;
-    this.loadError = false;
-    this.puzzle = next;
-    this.setupPuzzle(next);
-    return true;
-  }
-
-  /**
-   * Lädt beim Öffnen eines Kurses (online) im Hintergrund alle Puzzles des Buchs und legt sie
-   * offline ab — damit der Kurs offline weiterläuft, ohne dass man vorher manuell auf ☁ tippen
-   * muss. Fire-and-forget, nur online, idempotent (überspringt, wenn schon gecacht).
-   */
-  private autoCacheCourse(): void {
-    if (this.courseBookId == null || this.isAnonCourse) return;   // anonym cacht loadAnonCourseNext über den public-Endpoint
-    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-    const bookId = this.courseBookId;
-    const lang = this.requestLang;
-    // Schon offline vorhanden — außer in einer anderen Sprache als der gewählten: dann neu holen.
-    const meta = getBookOfflineLanguageByBookId(bookId);
-    if (meta && !offlineLanguageStale(meta, lang ?? '', this.courseLang.languages(this.langRef))) return;
-    this.courseService.getBookPuzzles(bookId, lang).subscribe({
-      next: puzzles => {
-        const fileName = puzzles?.[0]?.bookFileName;
-        if (fileName && puzzles.length) saveBookOffline(fileName, puzzles, bookId, lang);
-      },
-      error: () => { /* offline/Fehler: ignorieren, ☁ bleibt als manueller Weg */ },
-    });
-  }
-
-  /** „Nächstes Puzzle" / „Überspringen": eins weiter im jeweiligen Modus. */
-  courseNext(): void {
-    const cur = this.puzzle?.id;
-    // Sequenziell durchgeklickte Info-/Erklärlinie merken → beim nächsten Wiedereinstieg wird sie
-    // übersprungen (der Kurs setzt dahinter fort statt sie erneut zu zeigen).
-    if (cur != null && this.puzzle?.isInfoOnly && this.inCourse && this.courseBookId != null) {
-      this.offlineCourseSolvedIds.add(cur);   // (offline/anonym) dieselbe Info-Linie nicht erneut zeigen
-      if (this.isAnonCourse) {
-        saveCourseLocalSolved(this.courseBookId, this.offlineCourseSolvedIds);   // anonym: lokal persistieren
-      } else if (typeof navigator === 'undefined' || navigator.onLine) {
-        this.courseService.markInfoSeen(this.courseBookId, cur).subscribe({ next: () => {}, error: () => {} });
-      }
-    }
-    if (this.courseModeKind === 'random') this.loadCourseNext(undefined, cur);
-    else this.loadCourseNext(cur, undefined);
-  }
-
   retryLoad(): void {
     this.loadError = false;
     this.retryFn?.();
-  }
-
-  /** Rückweg aus dem Kurs: angemeldet zur Kursübersicht. Gäste spielen nur öffentliche Kurse (Kurz-URL /{slug}) — für
-   *  sie hat /courses keine Seite, nur die Anmeldemaske (UX-024); sie gehen zur Startseite. */
-  backToCourses(): void {
-    this.router.navigate([this.isLoggedIn ? '/courses' : '/']);
-  }
-
-  /** Beschriftung des Rückpfeils und der „Zur Übersicht“-Knöpfe im Kurs — für Gäste „Zur Startseite“ (s. o.). */
-  courseBackKey(overview: 'book.course.backToCourses' | 'book.course.toOverview'): string {
-    return this.isLoggedIn ? overview : 'book.course.toStart';
-  }
-
-  /** Kurs zurücksetzen und von vorn beginnen — bringt im Random-Modus auch die falsch gelösten
-   * Puzzles wieder in den Pool. Direkt vom „abgeschlossen"-Panel aus erreichbar. */
-  /** „Mit den restlichen weiter": gescheiterte, ungelöste Linien wieder in den Topf, OHNE die gelösten
-   *  zurückzusetzen. Anonym gibt es keine serverseitige Sperre → einfach weiterladen. */
-  retryFailedCourse(): void {
-    if (this.courseBookId == null) return;
-    if (this.isAnonCourse) { this.courseCompleted = false; this.loadCourseNext(); return; }
-    this.courseService.retryFailed(this.courseBookId).subscribe({
-      next: () => { this.courseCompleted = false; this.loadCourseNext(); },
-      error: () => this.snackbar.warn(this.translate.instant('book.course.restartFailed'), { duration: 3000 }),
-    });
-  }
-
-  restartCourse(): void {
-    if (this.courseBookId == null) return;
-    // Anonym: nur den lokalen Fortschritt verwerfen, kein Server-Reset.
-    if (this.isAnonCourse) {
-      this.offlineCourseSolvedIds.clear();
-      clearCourseLocalSolved(this.courseBookId);
-      this.courseCompleted = false;
-      this.snackbar.success(this.translate.instant('book.course.restarted'), { duration: 2500 });
-      this.loadCourseNext();
-      return;
-    }
-    this.courseService.reset(this.courseBookId).subscribe({
-      next: () => {
-        this.courseCompleted = false;
-        this.snackbar.success(this.translate.instant('book.course.restarted'), { duration: 2500 });
-        this.loadCourseNext();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('book.course.restartFailed'), { duration: 3000 }),
-    });
-  }
-
-  // ===== Wochenpost-Modus =====
-  get weeklyTotal(): number { return this.weeklyPuzzles.length; }
-  /** „Wochenpost 3" — ein rein numerischer Titel stand sonst als nackte Zahl unter dem Kapitel. */
-  get weeklyChipLabel(): string { return weeklyTitleLabel(this.weeklyTitle, this.translate); }
-  get weeklyDisplayIndex(): number {
-    return this.weeklyTotal === 0 ? 0 : Math.min(this.weeklyIndex + 1, this.weeklyTotal);
-  }
-  get weeklyPercent(): number {
-    if (this.weeklyTotal === 0) return 0;
-    return this.weeklyCompleted ? 100 : Math.round(100 * this.weeklyIndex / this.weeklyTotal);
-  }
-  /** Gesamtzeit über alle gespielten Puzzles als m:ss bzw. h:mm:ss. */
-  get weeklyTimeDisplay(): string { return formatSecondsClock(this.weeklySeconds); }
-
-  private loadWeekly(): void {
-    if (this.weeklyId == null) return;
-    const epoch = ++this.loadEpoch;
-    this.state = 'LOADING';
-    this.weeklyService.getPlay(this.weeklyId).subscribe({
-      next: play => {
-        if (epoch !== this.loadEpoch) return;
-        this.weeklyTitle = play.title;
-        this.weeklyPuzzles = play.puzzles ?? [];
-        this.weeklyIndex = 0;
-        this.askWeeklyMode();
-        if (this.weeklyPuzzles.length === 0) {
-          this.weeklyCompleted = false;
-          this.puzzle = null;
-          this.state = 'COURSE_DONE';   // Done-Panel; weekly-Card zeigt „keine Puzzles"
-          return;
-        }
-        // Fortschritt laden → Anzeige + Einstieg beim ersten NEUEN Puzzle (bei 100% von vorne).
-        if (this.auth.isLoggedIn && this.weeklyId != null) {
-          this.weeklyService.getProgress(this.weeklyId).subscribe({
-            next: p => {
-              if (epoch !== this.loadEpoch) return;
-              this.weeklyPlayed = p.playedCount;
-              this.weeklySolved = p.solvedCount;
-              this.weeklyTrainingCount = p.trainingCount ?? 0;
-              this.weeklyEasyCount = p.easyCount ?? 0;
-              this.weeklySeconds = p.totalSeconds;
-              this.loadWeeklyAt(computeWeeklyStartIndex(this.weeklyPuzzles, p));
-            },
-            error: () => { if (epoch === this.loadEpoch) this.loadWeeklyAt(0); },
-          });
-        } else {
-          this.loadWeeklyAt(0);
-        }
-      },
-      error: () => { if (epoch !== this.loadEpoch) return; this.state = 'COURSE_DONE'; this.puzzle = null; }
-    });
-  }
-
-  /** Spielweise beim Start erfragen. Einmal je Wochenpost und Sitzung: die Wahl steckt in
-   *  sessionStorage, damit ein Reload mitten im Post nicht erneut fragt (und die Wertung
-   *  konsistent bleibt). Anonyme Besucher werden nicht gefragt — für sie wird nichts gewertet. */
-  private askWeeklyMode(): void {
-    if (!this.inWeekly || this.weeklyId == null) return;
-    const key = `rookhub_weekly_mode_${this.weeklyId}`;
-    let gemerkt: string | null = null;
-    try { gemerkt = sessionStorage.getItem(key); } catch { /* Privatmodus */ }
-    if (gemerkt === 'easy' || gemerkt === 'training') {
-      this.weeklyMode = gemerkt;
-      this.applyWeeklyMode();
-      return;
-    }
-    if (!this.auth.isLoggedIn) { this.applyWeeklyMode(); return; }
-    // UI-Sweep 2026-10-11 (r2-rk-weekly-mode-dialog): dieselbe Modus-Frage wie bei den Puzzles (Kacheln, Erklärtexte),
-    // nur Titel/Hinweis „gilt für diesen Wochenpost"; vorher ein eigener Dialog mit Entwicklertext.
-    this.solveMode.openDialog({
-      title: this.translate.instant('weekly.mode.title'),
-      intro: this.translate.instant('weekly.mode.intro'),
-      hint: this.translate.instant('weekly.mode.switchHint'),
-    }).subscribe(r => {
-        this.weeklyMode = r?.mode === 'easy' ? 'easy' : 'training';
-        try { sessionStorage.setItem(key, this.weeklyMode); } catch { /* Privatmodus */ }
-        this.applyWeeklyMode();
-        // Das erste Puzzle steht schon — mit der frisch gewählten Spielweise neu aufsetzen.
-        if (this.puzzle) this.setupPuzzle(this.puzzle);
-      });
-  }
-
-  /** Visualisierung nach der gewählten Spielweise setzen: Training = eingefroren (Level 1),
-   *  Einfach = normal ziehbar (0). Überschreibt für den Wochenpost bewusst die globale
-   *  Einstellung — die Wertung hängt daran. */
-  private applyWeeklyMode(): void {
-    this.visualizationMode = this.weeklyMode === 'easy' ? 0 : 1;
-    this.weeklyRevealedAfterMove = false;
-  }
-
-  private loadWeeklyAt(index: number): void {
-    if (index >= this.weeklyPuzzles.length) {
-      this.weeklyCompleted = true;
-      // letztes Puzzle bleibt sichtbar (state SOLVED) — Card zeigt „abgeschlossen"
-      return;
-    }
-    this.weeklyCompleted = false;
-    this.gaveUp = false;
-    this.weeklyAttemptRecorded = false;   // neues Puzzle → wieder aufzeichenbar
-    this.weeklyIndex = index;
-    this.puzzle = this.weeklyPuzzles[index];
-    this.applyWeeklyMode();               // Spielweise gilt je Puzzle neu (auch nach dem Umschalten)
-    this.setupPuzzle(this.puzzle);
-  }
-
-  /**
-   * Zeichnet das aktuelle Wochenpost-Puzzle als gespielt auf (gelöst oder nicht), pro Puzzle einmal.
-   * Offline-fähig via Queue; nur eingeloggt (die Route ist authGuard — defensiv geprüft).
-   */
-  private recordWeeklyAttempt(solved: boolean): void {
-    if (!this.inWeekly || this.weeklyId == null || !this.puzzle || this.weeklyAttemptRecorded) return;
-    if (!this.auth.isLoggedIn) return;
-    this.weeklyAttemptRecorded = true;
-    const puzzleIndex = this.puzzle.id;   // = Parser-Index der Wochenpost-Sequenz
-    const wrongAttempts = this.wrongMoveCount;
-    const mouseslips = this.mouseslipUsed ? 1 : 0;
-    const url = `/api/weekly-posts/${this.weeklyId}/attempt`;
-    // Auge nach dem ersten Zug benutzt → das ganze Puzzle zählt als „einfach", egal welcher
-    // Modus eingestellt war: wer die Stellung aufdeckt, hat sie nicht mehr blind gerechnet.
-    const mode: WeeklyMode = this.weeklyRevealedAfterMove ? 'easy' : this.weeklyMode;
-    const body = { puzzleIndex, solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel, wrongAttempts, mouseslips, mode };
-    if (!navigator.onLine) {
-      this.offlineQueue.enqueue('POST', url, body);
-      this.weeklyPlayed = Math.min(this.weeklyPlayed + 1, this.weeklyTotal || this.weeklyPlayed + 1);
-      if (solved) this.weeklySolved += 1;
-      this.weeklySeconds += this.solveSeconds;
-      if (mode === 'easy') this.weeklyEasyCount += 1; else this.weeklyTrainingCount += 1;
-      return;
-    }
-    this.weeklyService.recordAttempt(this.weeklyId, puzzleIndex, solved, this.solveSeconds, this.maxHintLevel, wrongAttempts, mouseslips, mode).subscribe({
-      next: p => {
-        this.weeklyPlayed = p.playedCount;
-        this.weeklySolved = p.solvedCount;
-        this.weeklySeconds = p.totalSeconds;
-        this.weeklyTrainingCount = p.trainingCount ?? this.weeklyTrainingCount;
-        this.weeklyEasyCount = p.easyCount ?? this.weeklyEasyCount;
-      },
-      error: () => this.offlineQueue.enqueue('POST', url, body),
-    });
   }
 
   /** Auge im Wochenpost: NACH dem ersten Zug aufgedeckt → dieses Puzzle zählt als „einfach".
    *  Vor dem ersten Zug ist das Aufdecken die normale Vorbereitung (Stellung einprägen). */
   override onVizShow(): void {
     super.onVizShow();
-    if (this.inWeekly && this.vizShowPressed && this.hasMadeFirstMove) this.weeklyRevealedAfterMove = true;
-  }
-
-  /** Spielweise umschalten — wirkt ab dem NÄCHSTEN Puzzle, damit ein laufender Versuch nicht
-   *  mitten im Rechnen die Regeln wechselt. Bereits gemeldete Puzzles bleiben, wie sie gewertet
-   *  wurden. */
-  toggleWeeklyMode(): void {
-    this.weeklyMode = this.weeklyMode === 'training' ? 'easy' : 'training';
-    try { sessionStorage.setItem(`rookhub_weekly_mode_${this.weeklyId}`, this.weeklyMode); } catch { /* Privatmodus */ }
-    this.snackbar.info(this.translate.instant(
-      this.weeklyMode === 'easy' ? 'weekly.mode.switchedEasy' : 'weekly.mode.switchedTraining'),
-      { duration: 3000 });
-  }
-
-  weeklyNext(): void {
-    this.loadWeeklyAt(this.weeklyIndex + 1);
-  }
-
-  /** Die Übersicht /weekly steht hinter authGuard; ein Gast (geteilter Link auf /weekly/:id) landete über
-   *  Pfeil und „Zur Übersicht" ungefragt auf der Anmeldeseite → für Gäste keine Übersichts-Knöpfe. Anmelden
-   *  bietet ihnen der Gast-Hinweis der Kontext-Karte an. */
-  get canOpenWeeklyOverview(): boolean { return this.isLoggedIn; }
-
-  backToWeekly(): void {
-    this.router.navigate(['/weekly']);
-  }
-
-  /** Meldet jeden Kurs-Versuch (gelöst/fehlgeschlagen) ans Backend — Grundlage für die akkumulierte
-   *  Kurs-/Studienzeit im Trainingsziele-Tracker. Pro Puzzle-Durchgang nur einmal (Zeit-Inflation
-   *  durch Online+Offline-Retry vermeiden); Fortschritt wird nur bei `solved` hochgezählt. */
-  private recordCourseAttempt(solved: boolean): void {
-    if (!this.inCourse || this.courseAttemptRecorded || this.courseBookId == null || !this.puzzle) return;
-    this.courseAttemptRecorded = true;
-    // Versuch ist entschieden → gemerkte Zwischenzeit verfällt (ein Retry startet wieder bei 0).
-    clearSolveElapsed(`course:${this.puzzle.id}`);
-
-    // Anonym: Fortschritt nur lokal (localStorage). Kein Server-Call/Queue — Kurs-Endpoints sind
-    // auth-pflichtig, und anonyme Versuche zählen bewusst nicht in Bestenlisten/Trainingsziele.
-    if (this.isAnonCourse) {
-      if (solved && !this.offlineCourseSolvedIds.has(this.puzzle.id)) {
-        this.offlineCourseSolvedIds.add(this.puzzle.id);
-        saveCourseLocalSolved(this.courseBookId, this.offlineCourseSolvedIds);
-        this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
-      }
-      return;
-    }
-
-    const url = `/api/courses/${this.courseBookId}/results`;
-    // `mode` ist hier seit jeher die Durchlaufart (sequential/random); die Spielweise heißt
-    // deshalb `solveMode`. Offline-Body identisch zum Online-Body (sonst geht sie beim
-    // Nachsenden verloren).
-    const solveMode = this.attemptSolveMode;
-    const body = { bookPuzzleId: this.puzzle.id, solved, mode: this.courseModeKind, timeSeconds: this.solveSeconds, chapterIndex: this.courseChapterIndex ?? undefined, hintsUsed: this.maxHintLevel, solveMode };
-    if (!navigator.onLine) {
-      // Offline → Server-Aufzeichnung vormerken; bei Solve zusätzlich lokalen Fortschritt hochzählen.
-      this.offlineQueue.enqueue('POST', url, body);
-      if (solved) {
-        this.offlineCourseSolvedIds.add(this.puzzle.id);   // beim nächsten Laden überspringen
-        this.courseSolved = Math.min(this.courseSolved + 1, this.courseTotal || this.courseSolved + 1);
-      }
-      return;
-    }
-    this.courseService.recordResult(this.courseBookId, this.puzzle.id, solved, this.courseModeKind, this.solveSeconds, this.courseChapterIndex ?? undefined, this.maxHintLevel, solveMode).subscribe({
-      next: p => { this.courseSolved = p.solvedCount; this.courseTotal = p.total; this.applyCourseStats(p.book, p.chapter, p.chapterName); },
-      error: () => this.offlineQueue.enqueue('POST', url, body),
-    });
-  }
-
-  /** Übernimmt die vom Backend gelieferte Buch-/Kapitel-Statistik (Fortschritt/Zeit/Trefferquote). */
-  private applyCourseStats(book?: CourseScopeStats | null, chapter?: CourseScopeStats | null, chapterName?: string | null): void {
-    this.courseBookStats = book ?? null;
-    this.courseChapterStats = chapter ?? null;
-    this.courseChapterName = chapterName ?? null;
-  }
-
-  /** mm:ss bzw. h:mm:ss aus Sekunden (für die Kurs-Zeitanzeige). */
-  courseTime(seconds: number): string { return formatSecondsClock(seconds); }
-
-  /** Geschätzte Restzeit für das ganze Buch/Kapitel bei bisherigem Tempo (z. B. „~1 h 20 min").
-   *  `null`, solange nichts abschätzbar ist (nichts versucht bzw. alles gelöst). */
-  courseEta(stats: CourseScopeStats): string | null {
-    const secs = estimateRemainingSeconds(stats);
-    return secs == null ? null : formatEtaShort(secs);
-  }
-
-  /** Tagespuzzle eines Datums laden (Route /puzzles/daily/:date) — danach wie ein Buch-Puzzle. */
-  private loadDaily(dateParam: string): void {
-    const date = dateParam === 'today' ? this.todayUtc() : dateParam;
-    this.dailyDate = date;
-    this.loadError = false;
-    this.retryFn = () => this.loadDaily(dateParam);
-    this.state = 'LOADING';
-    this.stopTimer();
-    this.elapsedSeconds = 0;
-    this.alternativeSolve = false;
-    this.gaveUp = false;
-    const epoch = ++this.loadEpoch;
-
-    // Offline → aus dem auto-gecachten Tagespuzzle bedienen (kein endloser Spinner).
-    if (!navigator.onLine) {
-      const cached = getDailyOffline(date);
-      if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
-    }
-
-    this.puzzleService.getDailyPuzzle(date).subscribe({
-      next: puzzle => {
-        if (epoch !== this.loadEpoch) return;
-        this.puzzle = puzzle;
-        saveDailyOffline(date, puzzle);   // automatisch für Offline vorhalten
-        this.setupPuzzle(puzzle);
-      },
-      error: () => {
-        if (epoch !== this.loadEpoch) return;
-        // Netzfehler trotz onLine → letzter Versuch aus dem Offline-Cache.
-        const cached = getDailyOffline(date);
-        if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
-        this.state = 'LOADING';
-        this.puzzle = null;
-        this.loadError = true;
-      }
-    });
-  }
-
-  private loadPuzzle(id: number): void {
-    const epoch = ++this.loadEpoch;
-    this.loadError = false;
-    this.retryFn = () => this.loadPuzzle(id);
-    this.state = 'LOADING';
-    this.stopTimer();
-    this.elapsedSeconds = 0;
-    this.alternativeSolve = false;
-    this.gaveUp = false;
-
-    // Offline: aus einem lokal gespeicherten Buch bedienen.
-    if (!navigator.onLine) {
-      const cached = findCachedBookPuzzle(id);
-      if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
-    }
-
-    // Die Wahl hängt am Kurs der Linie — vor dem ersten Abruf ist nur der bekannt, von dem aus
-    // weitergeblättert wurde; sonst gilt die Oberflächensprache und `afterLineLoaded` holt nach.
-    const lang = this.requestLang;
-    this.puzzleService.getBookPuzzleById(id, lang).subscribe({
-      next: puzzle => {
-        if (epoch !== this.loadEpoch) return;
-        this.puzzle = puzzle;
-        this.afterLineLoaded(puzzle, lang);
-        this.setupPuzzle(puzzle);
-      },
-      error: () => {
-        if (epoch !== this.loadEpoch) return;
-        this.state = 'LOADING';
-        this.puzzle = null;
-        this.loadError = true;
-      }
-    });
+    if (this.inWeekly && this.vizShowPressed && this.hasMadeFirstMove) this.weekly.revealedAfterMove = true;
   }
 
   // ===== Spielweise: Kurs / Tagespuzzle / einzelnes Buch-Puzzle =====
@@ -1687,7 +826,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    */
   get solveModeScope(): string | null {
     if (this.inWeekly) return null;
-    if (this.inCourse) return this.courseBookId != null ? SolveModeService.scopeCourse(this.courseBookId) : null;
+    if (this.inCourse) return this.course.bookId != null ? SolveModeService.scopeCourse(this.course.bookId) : null;
     return this.isDaily ? 'daily' : 'book';
   }
 
@@ -1764,11 +903,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    *  Visualisierungsstufe abgeleitet) — das ist der Wert, der gemeldet wird. Bewusst nicht
    *  `solveModeChoice`: ein Umschalten mitten im Versuch gilt erst fürs nächste Puzzle, und
    *  per Link festgelegte Ansichten sollen ehrlich gewertet werden. */
-  private get attemptSolveMode(): SolveMode {
+  get attemptSolveMode(): SolveMode {
     return this.solveMode.modeForLevel(this.visualizationMode);
   }
 
-  private setupPuzzle(puzzle: BookPuzzleDto): void {
+  setupPuzzle(puzzle: BookPuzzleDto): void {
     // Info-/Erklärlinien werden nicht gelöst → keine Spielweise nötig (weder fragen noch anwenden).
     if (!puzzle.isInfoOnly) {
       if (this.askSolveModeIfNeeded(puzzle)) return;
@@ -1776,9 +915,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     }
     this.clearSolutionPlay();
     this.variationPreview = null;   // etwaige Kommentar-Varianten-Vorschau aus dem Vorgänger-Puzzle beenden
-    this.bookSolveRecorded = false;
-    this.bookChallengeResolved = false;
-    this.courseAttemptRecorded = false;
+    this.book.resetAttempt();
+    this.course.attemptRecorded = false;
     this.hintLevel = 0;
     // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint) —
     // kein vorab-klassifizierter erster Zug mehr nötig.
@@ -1839,10 +977,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.gaveUp = true;
     this.state = 'FAILED';
     this.solveSeconds = this.elapsedSeconds;
-    this.recordCourseAttempt(false);   // Aufgeben = Versuch mit verbrachter Zeit (zählt fürs Trainingsziel)
-    this.recordWeeklyAttempt(false);   // Aufgeben zählt im Wochenpost als ✗ (gespielt, nicht gelöst)
-    this.recordBookAttempt(false);
-    this.recordTrack(false);   // „Track solves": Aufgeben zählt als failed
+    // Aufgeben = Versuch mit verbrachter Zeit (zählt fürs Trainingsziel), im Wochenpost als ✗ (gespielt, nicht gelöst).
+    this.recordAttempt(false);
+    this.book.recordTrack(false);   // „Track solves": Aufgeben zählt als failed
     // Auf die Anfangsstellung wechseln und die Lösung automatisch durchspielen.
     this.playSolutionFromStart();
   }
@@ -1868,9 +1005,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   failedNext(): void {
     this.stopCountdown();
     if (this.isDaily) return;
-    if (this.inCourse) this.courseNext();
-    else if (this.inWeekly) this.weeklyNext();
-    else this.nextInBook();
+    this.modeStrategy.next();
   }
 
   showSolution(): void {
@@ -1961,9 +1096,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Löst die primäre „Weiter/nächstes Puzzle"-Aktion des aktuellen Kontexts aus (Kurs/Wochenpost/
    *  Buch-Blättern), passend zum jeweils angezeigten Primär-Knopf. Liefert true, wenn etwas passierte. */
   private advanceKeyAction(): boolean {
-    if (this.inWeekly) { this.weeklyNext(); return true; }
-    if (this.inCourse) { this.courseNext(); return true; }
-    if (this.browseInBook) { if (!this.bookNavLoading) this.nextInBook(); return true; }
+    if (this.inWeekly) { this.weekly.next(); return true; }
+    if (this.inCourse) { this.course.next(); return true; }
+    if (this.browseInBook) { if (!this.book.navLoading) this.book.next(); return true; }
     return false;
   }
 
@@ -1972,11 +1107,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Daily: ein Reset mitten im Lauf (mind. ein Zug gespielt) zählt als Fehlversuch (rotes ✗).
     // Nach FAILED/SOLVED nicht erneut melden — der Fehlzug bzw. Solve wurde bereits erfasst.
     if (this.isDaily && this.moveLog.length > 0 && this.state !== 'FAILED' && this.state !== 'SOLVED')
-      this.recordBookAttempt(false);
+      this.book.recordAttempt(false);
     // Wochenpost: Reset nach mind. einem Zug zählt als ✗ (gespielt, nicht gelöst).
-    if (this.inWeekly && this.moveLog.length > 0) this.recordWeeklyAttempt(false);
+    if (this.inWeekly && this.moveLog.length > 0) this.weekly.recordAttempt(false);
     // „Track solves": Reset zählt als failed (alles mit Reset gilt als nicht gelöst).
-    this.recordTrack(false);
+    this.book.recordTrack(false);
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.setupPuzzle(this.puzzle);
@@ -1985,7 +1120,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   override mouseslip(): void {
     // Im Tagespuzzle ist der „Mausrutscher" kein straffreier Undo: jede Off-Path-Zurücknahme
     // zählt als Fehlversuch (rotes ✗). Nach FAILED nicht erneut melden (Fehlzug schon erfasst).
-    if (this.isDaily && !this.onSolutionPath && this.state !== 'FAILED') this.recordBookAttempt(false);
+    if (this.isDaily && !this.onSolutionPath && this.state !== 'FAILED') this.book.recordAttempt(false);
     super.mouseslip();
   }
 

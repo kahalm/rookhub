@@ -119,10 +119,10 @@
             <mat-card class="context-card">
               <mat-card-content>
                 <div class="ctx-head">
-                  @if ((inWeekly && canOpenWeeklyOverview) || inCourse) {
+                  @if ((inWeekly && weekly.canOpenOverview) || inCourse) {
                     <button mat-icon-button class="ctx-back"
-                            (click)="inWeekly ? backToWeekly() : backToCourses()"
-                            [appIconLabel]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate">
+                            (click)="inWeekly ? weekly.backToOverview() : course.backToCourses()"
+                            [appIconLabel]="(inWeekly ? 'book.weekly.backToWeekly' : course.backKey('book.course.backToCourses')) | translate">
                       <mat-icon>arrow_back</mat-icon>
                     </button>
                   }
@@ -130,15 +130,15 @@
                     <!-- Wochenpost: Titel als Chip mit Beschriftung („Wochenpost 3") statt der nackten Zahl als Buchname. -->
                     @if (inWeekly) {
                       <div class="weekly-chip-row">
-                        <span class="weekly-chip">{{ weeklyChipLabel }}</span>
-                        @if (weeklyTotal > 0) {
-                          <span class="weekly-pos">{{ 'book.weekly.position' | translate:{n: weeklyDisplayIndex, total: weeklyTotal} }}</span>
+                        <span class="weekly-chip">{{ weekly.chipLabel }}</span>
+                        @if (weekly.total > 0) {
+                          <span class="weekly-pos">{{ 'book.weekly.position' | translate:{n: weekly.displayIndex, total: weekly.total} }}</span>
                         }
                       </div>
                     }
                     <!-- d4-rk-daily-puzzle-ohne-tagesbezug: das Tagespuzzle sagt, dass es eins ist und für welchen Tag
                          (sonst hing „Voriger Tag“ ohne Bezug) — gleiche Form wie der Wochenpost-Chip. -->
-                    @if (isDaily && dailyDateValue; as day) {
+                    @if (isDaily && daily.dateValue; as day) {
                       <div class="weekly-chip-row daily-chip-row">
                         <span class="weekly-chip">{{ 'book.dailyChip' | translate }}</span>
                         <span class="weekly-pos daily-date">{{ day | date:'mediumDate':'UTC' }}</span>
@@ -172,7 +172,7 @@
                                             [value]="courseLang.effective(langRef)"
                                             (picked)="pickLanguage($event)" />
                   }
-                  @if (inCourse && courseTotal > 0) {
+                  @if (inCourse && course.total > 0) {
                     <button mat-icon-button class="ctx-stats-btn" (click)="statsOpen.set(!statsOpen())"
                             [attr.aria-expanded]="statsOpen()" aria-controls="course-stats-panel"
                             [class.on]="statsOpen()"
@@ -180,7 +180,7 @@
                       <mat-icon>info_outline</mat-icon>
                     </button>
                   }
-                  @if (currentEbookRef; as er) {
+                  @if (course.currentEbookRef; as er) {
                     <!-- Kurslinie → Stelle im E-Book (neuer Tab, der Kurs bleibt offen). -->
                     <a mat-stroked-button class="ctx-switch ctx-in-book" target="_blank" rel="noopener"
                        [routerLink]="['/ebooks', er.ebookId]" [queryParams]="{ diagram: er.diagramId, page: er.page }"
@@ -189,11 +189,11 @@
                       <span class="ctx-switch-label">{{ 'book.course.inBook' | translate:{ page: er.page } }}</span>
                     </a>
                   }
-                  @if (inCourse && linkedCourseBookId) {
-                    <button mat-stroked-button class="ctx-switch" (click)="switchToLinkedCourse()"
-                            [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName }">
+                  @if (inCourse && course.linkedBookId) {
+                    <button mat-stroked-button class="ctx-switch" (click)="course.switchToLinked()"
+                            [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: course.linkedName }">
                       <mat-icon>swap_horiz</mat-icon>
-                      <span class="ctx-switch-label">{{ linkedCourseName }}</span>
+                      <span class="ctx-switch-label">{{ course.linkedName }}</span>
                     </button>
                   }
                 </div>
@@ -204,33 +204,33 @@
                      2026-10-20: der Knopf in der Karte schob Fortschritt und Überspringen nach unten). Der Wochenpost
                      behält seinen eigenen Knopf (wirkt auf alle Wochenpost-Puzzles, zählt die Aufteilung mit). -->
 
-                @if (inWeekly && weeklyTotal > 0) {
+                @if (inWeekly && weekly.total > 0) {
                   <div class="ctx-progress">
-                    <mat-progress-bar mode="determinate" [value]="weeklyPercent"
-                                      [attr.aria-label]="'book.weekly.progress' | translate:{played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved}"></mat-progress-bar>
+                    <mat-progress-bar mode="determinate" [value]="weekly.percent"
+                                      [attr.aria-label]="'book.weekly.progress' | translate:{played: weekly.played, total: weekly.total, solved: weekly.solved}"></mat-progress-bar>
                     <p class="ctx-stats">
-                      {{ 'book.weekly.progress' | translate:{played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved} }}
-                      @if (weeklySeconds > 0) {<span> · ⏱ {{ weeklyTimeDisplay }}</span>}
-                      @if (weeklyTrainingCount + weeklyEasyCount > 0) {
-                        <span> · {{ 'weekly.mode.split' | translate:{training: weeklyTrainingCount, easy: weeklyEasyCount} }}</span>
+                      {{ 'book.weekly.progress' | translate:{played: weekly.played, total: weekly.total, solved: weekly.solved} }}
+                      @if (weekly.seconds > 0) {<span> · ⏱ {{ weekly.timeDisplay }}</span>}
+                      @if (weekly.trainingCount + weekly.easyCount > 0) {
+                        <span> · {{ 'weekly.mode.split' | translate:{training: weekly.trainingCount, easy: weekly.easyCount} }}</span>
                       }
                     </p>
                     @if (isLoggedIn) {
-                      <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe toggleWeeklyMode). -->
-                      <button mat-stroked-button class="ctx-mode-btn" (click)="toggleWeeklyMode()"
+                      <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe weekly.toggleMode). -->
+                      <button mat-stroked-button class="ctx-mode-btn" (click)="weekly.toggleMode()"
                               [matTooltip]="'weekly.mode.switchHint' | translate">
-                        <mat-icon>{{ weeklyMode === 'easy' ? 'psychology' : 'pan_tool' }}</mat-icon>
-                        {{ (weeklyMode === 'easy' ? 'solveMode.switchToTraining' : 'solveMode.switchToEasy') | translate }}
+                        <mat-icon>{{ weekly.mode === 'easy' ? 'psychology' : 'pan_tool' }}</mat-icon>
+                        {{ (weekly.mode === 'easy' ? 'solveMode.switchToTraining' : 'solveMode.switchToEasy') | translate }}
                       </button>
                     } @else {
                       <!-- Gast: durchspielen geht, gewertet wird nur eingeloggt. Der Rücksprung
                            führt genau hierher zurück, damit man nicht neu suchen muss. -->
                       <p class="ctx-guest">
                         {{ 'book.weekly.guestHint' | translate }}
-                        <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: weeklyReturnUrl }">
+                        <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: weekly.returnUrl }">
                           {{ 'auth.login.title' | translate }}
                         </a>
-                        <a mat-button routerLink="/register" [queryParams]="{ returnUrl: weeklyReturnUrl }">
+                        <a mat-button routerLink="/register" [queryParams]="{ returnUrl: weekly.returnUrl }">
                           {{ 'auth.register.title' | translate }}
                         </a>
                       </p>
@@ -238,9 +238,9 @@
                   </div>
                 }
                 <!-- Fortschritt (ganzes Buch + Kapitel) erst auf das ⓘ neben der Sprachwahl (Wunsch 2026-10-20). -->
-                @if (inCourse && courseTotal > 0 && statsOpen()) {
+                @if (inCourse && course.total > 0 && statsOpen()) {
                   <div class="ctx-progress course-stats" id="course-stats-panel">
-                    @if (courseBookStats; as bk) {
+                    @if (course.bookStats; as bk) {
                       <!-- Ganzes Buch -->
                       <div class="cs-scope">
                         <span class="cs-label">{{ 'book.course.wholeBook' | translate }}</span>
@@ -263,11 +263,11 @@
                         </div>
                       </div>
                       <!-- Aktuelles Kapitel (nur wenn das Buch mehrere Kapitel hat) -->
-                      @if (courseChapterStats; as ch) {
+                      @if (course.chapterStats; as ch) {
                         <div class="cs-scope cs-chapter">
-                          <span class="cs-label">{{ courseChapterDisplay || ('book.course.noChapter' | translate) }}</span>
+                          <span class="cs-label">{{ course.chapterDisplay || ('book.course.noChapter' | translate) }}</span>
                           <div class="cs-stats">
-                            <app-course-progress-split [stats]="ch" [ariaPrefix]="courseChapterDisplay || ('book.course.noChapter' | translate)" />
+                            <app-course-progress-split [stats]="ch" [ariaPrefix]="course.chapterDisplay || ('book.course.noChapter' | translate)" />
                             @if (ch.attemptedCount > 0) {
                               <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
                                 <mat-icon>check_circle</mat-icon>{{ ch.accuracyPercent }}%
@@ -285,52 +285,52 @@
                         </div>
                       }
                     } @else {
-                      <mat-progress-bar mode="determinate" [value]="coursePercent"
+                      <mat-progress-bar mode="determinate" [value]="course.percent"
                                         [attr.aria-label]="'book.course.wholeBook' | translate"></mat-progress-bar>
-                      <p class="ctx-stats">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</p>
+                      <p class="ctx-stats">{{ course.solved }}/{{ course.total }} ({{ course.percent }}%)</p>
                     }
                   </div>
                 }
 
-                @if (weeklyCompleted) {
+                @if (weekly.completed) {
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
-                  @if (canOpenWeeklyOverview) {
+                  @if (weekly.canOpenOverview) {
                     <div class="ctx-nav">
-                      <button mat-flat-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                      <button mat-flat-button color="primary" (click)="weekly.backToOverview()">{{ 'book.course.toOverview' | translate }}</button>
                     </div>
                   }
-                } @else if (courseCompleted) {
-                  @if (courseFullyDone) {
+                } @else if (course.completed) {
+                  @if (course.fullyDone) {
                     <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
                   } @else {
-                    <p class="ctx-done"><mat-icon>replay</mat-icon> {{ 'book.course.roundFinished' | translate:{remaining: courseRemaining} }}</p>
+                    <p class="ctx-done"><mat-icon>replay</mat-icon> {{ 'book.course.roundFinished' | translate:{remaining: course.remaining} }}</p>
                   }
                   <div class="ctx-nav">
-                    @if (!courseFullyDone) {
+                    @if (!course.fullyDone) {
                       <!-- „Offene nochmal": nur die gescheiterten Linien zurück in den Topf — gelöste bleiben gelöst
                            (vorher setzte dieser Knopf den ganzen Kurs zurück). In beiden Modi. -->
-                      <button mat-flat-button color="primary" class="retry-failed" (click)="retryFailedCourse()">
+                      <button mat-flat-button color="primary" class="retry-failed" (click)="course.retryFailed()">
                         <mat-icon>replay</mat-icon> {{ 'book.course.continueRemaining' | translate }}
                       </button>
-                    } @else if (courseModeKind === 'random') {
-                      <button mat-flat-button color="primary" (click)="restartCourse()">
+                    } @else if (course.modeKind === 'random') {
+                      <button mat-flat-button color="primary" (click)="course.restart()">
                         <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
                       </button>
                     }
-                    <button mat-stroked-button (click)="backToCourses()">{{ courseBackKey('book.course.toOverview') | translate }}</button>
+                    <button mat-stroked-button (click)="course.backToCourses()">{{ course.backKey('book.course.toOverview') | translate }}</button>
                   </div>
                 } @else if (state === 'INFO') {
                   <div class="ctx-nav">
                     @if (inCourse) {
-                      <button mat-flat-button color="primary" (click)="courseNext()">
+                      <button mat-flat-button color="primary" (click)="course.next()">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
                       </button>
                     }
                     @if (browseInBook) {
-                      <button mat-flat-button color="primary" (click)="nextInBook()" [disabled]="bookNavLoading">
+                      <button mat-flat-button color="primary" (click)="book.next()" [disabled]="book.navLoading">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
                       </button>
-                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                      <button mat-stroked-button (click)="book.random()" [disabled]="book.navLoading">
                         <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
                       </button>
                     }
@@ -341,20 +341,20 @@
                   @if (isDaily || browseInBook) {
                   <div class="ctx-nav">
                     @if (isDaily) {
-                      <button mat-stroked-button (click)="prevDaily()">
+                      <button mat-stroked-button (click)="daily.prev()">
                         <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
                       </button>
-                      @if (canGoForwardDaily) {
-                        <button mat-stroked-button (click)="nextDaily()">
+                      @if (daily.canGoForward) {
+                        <button mat-stroked-button (click)="daily.next()">
                           {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
                         </button>
                       }
                     }
                     @if (browseInBook) {
-                      <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
+                      <button mat-stroked-button (click)="book.next()" [disabled]="book.navLoading">
                         <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
                       </button>
-                      <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                      <button mat-stroked-button (click)="book.random()" [disabled]="book.navLoading">
                         <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
                       </button>
                     }
@@ -364,21 +364,21 @@
                   <!-- „Überspringen“ steht neben „Aufgeben“ in der Status-Card (showSkip, Wunsch 2026-10-20). -->
                 } @else if (isDaily) {
                   <div class="ctx-nav">
-                    <button mat-stroked-button (click)="prevDaily()">
+                    <button mat-stroked-button (click)="daily.prev()">
                       <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
                     </button>
-                    @if (canGoForwardDaily) {
-                      <button mat-stroked-button (click)="nextDaily()">
+                    @if (daily.canGoForward) {
+                      <button mat-stroked-button (click)="daily.next()">
                         {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
                       </button>
                     }
                   </div>
                 } @else if (browseInBook) {
                   <div class="ctx-nav">
-                    <button mat-stroked-button (click)="nextInBook()" [disabled]="bookNavLoading">
+                    <button mat-stroked-button (click)="book.next()" [disabled]="book.navLoading">
                       <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
                     </button>
-                    <button mat-stroked-button (click)="randomInBook()" [disabled]="bookNavLoading">
+                    <button mat-stroked-button (click)="book.random()" [disabled]="book.navLoading">
                       <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
                     </button>
                   </div>
@@ -393,24 +393,24 @@
               <mat-card-content>
                 @if (inWeekly) {
                   <p class="ctx-done">
-                    <mat-icon>{{ weeklyTotal === 0 ? 'info' : 'emoji_events' }}</mat-icon>
-                    {{ (weeklyTotal === 0 ? 'book.weekly.noPuzzles' : 'book.weekly.allSolved') | translate }}
+                    <mat-icon>{{ weekly.total === 0 ? 'info' : 'emoji_events' }}</mat-icon>
+                    {{ (weekly.total === 0 ? 'book.weekly.noPuzzles' : 'book.weekly.allSolved') | translate }}
                   </p>
-                  @if (canOpenWeeklyOverview) {
+                  @if (weekly.canOpenOverview) {
                     <div class="ctx-nav">
-                      <button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                      <button mat-stroked-button (click)="weekly.backToOverview()">{{ 'book.course.toOverview' | translate }}</button>
                     </div>
                   }
                 }
-                @if (inCourse && courseCompleted) {
+                @if (inCourse && course.completed) {
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
                   <div class="ctx-nav">
-                    @if (courseModeKind === 'random') {
-                      <button mat-flat-button color="primary" (click)="restartCourse()">
+                    @if (course.modeKind === 'random') {
+                      <button mat-flat-button color="primary" (click)="course.restart()">
                         <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
                       </button>
                     }
-                    <button mat-stroked-button (click)="backToCourses()">{{ courseBackKey('book.course.toOverview') | translate }}</button>
+                    <button mat-stroked-button (click)="course.backToCourses()">{{ course.backKey('book.course.toOverview') | translate }}</button>
                   </div>
                 }
               </mat-card-content>
@@ -421,7 +421,7 @@
                (Wunsch 2026-10-20 — unten unter der Aktionszeile war er „rangefriemelt“). Lange Kommentare sind gekürzt
                und öffnen sich im Dialog (commentIsLong), damit die Bedienung nicht unter die Falz rutscht
                (a1-rk-kommentar-schiebt-aktionen). -->
-          @if (puzzle && (commentLines.length || offlineLangStale)) {
+          @if (puzzle && (commentLines.length || course.offlineLangStale)) {
             <section class="ctx-comment-block">
               @if (commentLines.length) {
                 <div class="ctx-comment" [class.ctx-comment-long]="commentIsLong">
@@ -455,7 +455,7 @@
                   </div>
                 </div>
               }
-              @if (offlineLangStale) {
+              @if (course.offlineLangStale) {
                 <p class="ctx-offline-lang"><mat-icon inline>cloud_off</mat-icon> {{ 'courses.lang.offlineStaleSolver' | translate }}</p>
               }
             </section>
@@ -515,7 +515,7 @@
               (mouseslipClicked)="mouseslip()"
               (giveUpClicked)="giveUp()"
               [showSkip]="inWeekly || inCourse"
-              (skipClicked)="inWeekly ? weeklyNext() : courseNext()"
+              (skipClicked)="inWeekly ? weekly.next() : course.next()"
               (retryClicked)="retry()"
               (nextClicked)="solvedAutoNextPublic()"
               (failedNextClicked)="failedNext()"
@@ -533,10 +533,10 @@
           }
 
           <!-- „Track solves": Erstversuch-Zähler unter dem geteilten Puzzle -->
-          @if (trackSolves && sharedCounts) {
+          @if (book.trackSolves && book.sharedCounts) {
             <div class="track-counts">
-              <span class="track-solved"><mat-icon>check_circle</mat-icon> {{ 'book.track.solved' | translate }}: {{ sharedCounts.solved }}</span>
-              <span class="track-failed"><mat-icon>cancel</mat-icon> {{ 'book.track.failed' | translate }}: {{ sharedCounts.failed }}</span>
+              <span class="track-solved"><mat-icon>check_circle</mat-icon> {{ 'book.track.solved' | translate }}: {{ book.sharedCounts.solved }}</span>
+              <span class="track-failed"><mat-icon>cancel</mat-icon> {{ 'book.track.failed' | translate }}: {{ book.sharedCounts.failed }}</span>
             </div>
           }
 
@@ -556,7 +556,7 @@
               (reviewLastClicked)="reviewLastPuzzle()"
               (loveLastClicked)="favoriteTracker.toggleLast()"
               [canWorksheetLast]="isLoggedIn"
-              [translateBookId]="inCourse && isLoggedIn ? courseBookId : null"
+              [translateBookId]="inCourse && isLoggedIn ? course.bookId : null"
               (worksheetLastPicked)="sendLastToWorksheet($event)"
               [solveModeChoice]="showSolveModeSwitch ? solveModeChoice : null"
               (solveModeToggle)="toggleSolveMode()">

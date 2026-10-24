@@ -82,7 +82,7 @@ describe('BookPuzzleComponent Kontext-Card: ein „Nächstes Puzzle" (b1)', () =
 
   for (const state of ['SOLVED', 'FAILED'] as const) {
     it(`Kurs ${state}: kein zweiter „Nächstes Puzzle" in der Kontext-Card, die Statuskarte bringt ihn`, () => {
-      const el = render(c => { c.inCourse = true; c.courseBookId = 7; c.state = state; });
+      const el = render(c => { c.inCourse = true; c.course.bookId = 7; c.state = state; });
       const card = el.querySelector('.context-card')!;
       expect(card).not.toBeNull();
       expect(nextButtons(card).length).toBe(0);
@@ -100,7 +100,7 @@ describe('BookPuzzleComponent Kontext-Card: ein „Nächstes Puzzle" (b1)', () =
   }
 
   it('Tagespuzzle gelöst: Datums-Navigation bleibt in der Kontext-Card', () => {
-    const el = render(c => { c.dailyDate = '20260714'; c.state = 'SOLVED'; });
+    const el = render(c => { c.daily.date = '20260714'; c.state = 'SOLVED'; });
     const nav = el.querySelector('.context-card .ctx-nav');
     expect(nav).not.toBeNull();
     expect(nav!.textContent).toContain('book.actions.prevDaily');
@@ -114,7 +114,7 @@ describe('BookPuzzleComponent Kontext-Card: ein „Nächstes Puzzle" (b1)', () =
   });
 
   it('während des Lösens steht „Überspringen" neben „Aufgeben" in der Status-Card, nicht in der Kontext-Card (2026-10-20)', () => {
-    const el = render(c => { c.inCourse = true; c.courseBookId = 7; c.state = 'AWAITING_USER_MOVE'; });
+    const el = render(c => { c.inCourse = true; c.course.bookId = 7; c.state = 'AWAITING_USER_MOVE'; });
     expect(el.querySelector('.context-card .skip-quiet')).toBeNull();
   });
 });
@@ -127,7 +127,7 @@ describe('BookPuzzleComponent Kontext-Card: Abzeichen in der Textspalte (b1)', (
 
   it('setzt .ctx-badges in .ctx-text', () => {
     const el = render(c => {
-      c.inCourse = true; c.courseBookId = 7; c.state = 'AWAITING_USER_MOVE';
+      c.inCourse = true; c.course.bookId = 7; c.state = 'AWAITING_USER_MOVE';
       c.puzzle = { ...c.puzzle, difficulty: 'Medium', tags: 'endgame' };
     });
     const badges = el.querySelector('.context-card .ctx-badges');
@@ -185,7 +185,7 @@ describe('BookPuzzleComponent Kontext-Card: Tagespuzzle nennt sich und den Tag (
   afterEach(() => TestBed.resetTestingModule());
 
   it('isDaily: Chip „book.dailyChip“ und das Datum des Tages', () => {
-    const el = render(c => { c.dailyDate = '20260714'; c.state = 'AWAITING_USER_MOVE'; });
+    const el = render(c => { c.daily.date = '20260714'; c.state = 'AWAITING_USER_MOVE'; });
     const row = el.querySelector('.context-card .daily-chip-row');
     expect(row).not.toBeNull();
     expect(row!.querySelector('.weekly-chip')!.textContent!.trim()).toBe('book.dailyChip');

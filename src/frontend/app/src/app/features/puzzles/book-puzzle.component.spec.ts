@@ -103,8 +103,8 @@ describe('BookPuzzleComponent load race (loadEpoch)', () => {
       subscribe: (h: any) => { emits.push((v: any) => (typeof h === 'function' ? h : h.next)(v)); return { unsubscribe() {} }; }
     });
 
-    (c as any).loadPuzzle(1);   // Epoch 1 → emits[0]
-    (c as any).loadPuzzle(2);   // Epoch 2 → emits[1]
+    (c as any).book.load(1);   // Epoch 1 → emits[0]
+    (c as any).book.load(2);   // Epoch 2 → emits[1]
 
     emits[1]({ id: 222, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' });   // neuere zuerst
     expect(c.puzzle.id).toBe(222);
@@ -117,7 +117,7 @@ describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
   function makeDaily(): any {
     const c: any = makeComponent();
     c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
-    c.dailyDate = '20260714';           // isDaily = true; standalone-Getter: kein Kurs/Weekly-Kontext
+    c.daily.date = '20260714';           // isDaily = true; standalone-Getter: kein Kurs/Weekly-Kontext
     return c;
   }
 
@@ -126,15 +126,15 @@ describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
     const calls: boolean[] = [];
     c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return { subscribe: () => {} }; };
     c.auth = { isLoggedIn: true };
-    (c as any).recordBookAttempt(false);   // Fehlzug
-    (c as any).recordBookAttempt(true);    // späterer Solve — darf nicht mehr blockiert sein
-    (c as any).recordBookAttempt(true);    // zweiter Solve: einmalig
+    (c as any).book.recordAttempt(false);   // Fehlzug
+    (c as any).book.recordAttempt(true);    // späterer Solve — darf nicht mehr blockiert sein
+    (c as any).book.recordAttempt(true);    // zweiter Solve: einmalig
     expect(calls).toEqual([false, true]);
   });
 
   it('jeder Fehlversuch wird einzeln gemeldet, Reset nach FAILED aber nicht doppelt', () => {
     const c = makeDaily();
-    const spy = spyOn(c as any, 'recordBookAttempt');
+    const spy = spyOn(c.book as any, 'recordAttempt');
     // Reset mitten im Lauf (Zug gespielt, nicht FAILED) → Fehlversuch
     c.moveLog = [{ ok: true }];
     c.state = 'PLAYING';
@@ -150,7 +150,7 @@ describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
 
   it('Off-Path-Mouseslip meldet Fehlversuch, aus FAILED heraus nicht', () => {
     const c = makeDaily();
-    const spy = spyOn(c as any, 'recordBookAttempt');
+    const spy = spyOn(c.book as any, 'recordAttempt');
     spyOn(Object.getPrototypeOf(Object.getPrototypeOf(c)), 'mouseslip');
     (c as any).onSolutionPath = false;
     c.state = 'PLAYING';
@@ -170,9 +170,9 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     spyOn(c as any, 'startSolvedCountdown');
     spyOn(c as any, 'updateBoard');
     spyOn(c as any, 'stopTimer');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
     c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     (c as any).orientation = 'black';
 
@@ -246,7 +246,7 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
   function makeWeekly(): any {
     const c = makeComponent();
     c.inWeekly = true;
-    c.weeklyId = 12;
+    c.weekly.id = 12;
     return c;
   }
 
@@ -293,7 +293,7 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
     saveLastSolved('book', COURSE_LAST);
     const c = makeComponent();
     c.route.snapshot.paramMap = { get: (k: string) => (k === 'weeklyId' ? '12' : null), has: () => false };
-    spyOn(c as any, 'loadWeekly');
+    spyOn(c.weekly as any, 'load');
 
     c.ngOnInit();
 
@@ -306,7 +306,7 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
     saveLastSolved('book', COURSE_LAST);
     const c = makeComponent();
     c.route.snapshot.paramMap = { get: (k: string) => (k === 'id' ? '77' : null), has: () => false };
-    spyOn(c as any, 'loadPuzzle');
+    spyOn(c.book as any, 'load');
 
     c.ngOnInit();
 
@@ -321,9 +321,9 @@ describe('BookPuzzleComponent direkt geteiltes Einzel-Puzzle (single)', () => {
     spyOn(c as any, 'enterSolutionReview');
     spyOn(c as any, 'updateBoard');
     spyOn(c as any, 'stopTimer');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
     const countdown = spyOn(c as any, 'startSolvedCountdown');
     c.singlePuzzle = true;
     c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
@@ -335,7 +335,7 @@ describe('BookPuzzleComponent direkt geteiltes Einzel-Puzzle (single)', () => {
 
   it('singlePuzzle: solvedAutoNext springt nicht ins Buch', () => {
     const c = makeComponent();
-    const next = spyOn(c as any, 'nextInBook');
+    const next = spyOn(c.book as any, 'next');
     c.singlePuzzle = true;
     c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
 
@@ -358,25 +358,25 @@ describe('BookPuzzleComponent track solves', () => {
     const c = makeComponent();
     const spy = jasmine.createSpy('track').and.returnValue(of({ solved: 3, failed: 2 }));
     c.puzzleService.trackSharedAttempt = spy;
-    c.trackSolves = true;
+    c.book.trackSolves = true;
     c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
 
-    (c as any).recordTrack(true);
-    (c as any).recordTrack(false);   // zweiter Aufruf wird vom Guard verschluckt
+    (c as any).book.recordTrack(true);
+    (c as any).book.recordTrack(false);   // zweiter Aufruf wird vom Guard verschluckt
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith(9, true, 0);   // 3. Arg = genutzte Tipp-Stufe (seit v0.202.0)
-    expect(c.sharedCounts).toEqual({ solved: 3, failed: 2 });
+    expect(c.book.sharedCounts).toEqual({ solved: 3, failed: 2 });
   });
 
   it('recordTrack tut nichts ohne trackSolves', () => {
     const c = makeComponent();
     const spy = jasmine.createSpy('track').and.returnValue(of({ solved: 0, failed: 0 }));
     c.puzzleService.trackSharedAttempt = spy;
-    c.trackSolves = false;
+    c.book.trackSolves = false;
     c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
 
-    (c as any).recordTrack(false);
+    (c as any).book.recordTrack(false);
 
     expect(spy).not.toHaveBeenCalled();
   });
@@ -386,7 +386,7 @@ describe('BookPuzzleComponent track solves', () => {
     const spy = jasmine.createSpy('track').and.returnValue(of({ solved: 0, failed: 1 }));
     c.puzzleService.trackSharedAttempt = spy;
     spyOn(c as any, 'setupPuzzle');
-    c.trackSolves = true;
+    c.book.trackSolves = true;
     c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
 
     c.resetPuzzle();
@@ -402,9 +402,9 @@ describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
     spyOn(c as any, 'updateBoard');
     spyOn(c as any, 'stopTimer');
     spyOn(c as any, 'startSolvedCountdown');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
     c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.elapsedSeconds = elapsed;
     // LongSolveService kapselt Schwellwert/Nachfrage — hier nur das Ergebnis simulieren.
@@ -418,7 +418,7 @@ describe('BookPuzzleComponent lange Lösezeit-Nachfrage', () => {
     (c as any).handleSolved(false);
     expect(resolve).toHaveBeenCalledWith(900);
     expect((c as any).solveSeconds).toBe(300);
-    expect((c as any).recordCourseAttempt).toHaveBeenCalled();
+    expect((c as any).course.recordAttempt).toHaveBeenCalled();
     expect((c as any).startSolvedCountdown).toHaveBeenCalled();
   });
 
@@ -530,9 +530,9 @@ describe('BookPuzzleComponent alternative Lösung (kein Auto-Advance)', () => {
     spyOn(c as any, 'enterSolutionReview');
     spyOn(c as any, 'updateBoard');
     spyOn(c as any, 'stopTimer');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
     spyOn(c as any, 'startSolvedCountdown');
     c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     return c;
@@ -659,8 +659,8 @@ describe('BookPuzzleComponent Offline-Kursmodus', () => {
     const c = makeComponent();
     spyOn(c as any, 'setupPuzzle');
     c.inCourse = true;
-    c.courseBookId = BOOK_ID;
-    c.courseModeKind = mode;
+    c.course.bookId = BOOK_ID;
+    c.course.modeKind = mode;
     return c;
   }
 
@@ -668,9 +668,9 @@ describe('BookPuzzleComponent Offline-Kursmodus', () => {
     const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
     try {
       const c = offlineCourse('sequential');
-      (c as any).loadCourseNext();
+      (c as any).course.loadNext();
       expect(c.puzzle?.id).toBe(1);
-      expect(c.courseTotal).toBe(3);
+      expect(c.course.total).toBe(3);
       expect(c.loadError).toBeFalse();
     } finally { spy.and.callThrough(); }
   });
@@ -679,8 +679,8 @@ describe('BookPuzzleComponent Offline-Kursmodus', () => {
     const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
     try {
       const c = offlineCourse('sequential');
-      (c as any).offlineCourseSolvedIds.add(1);
-      (c as any).loadCourseNext(1);   // nach Puzzle 1
+      (c as any).course.offlineSolvedIds.add(1);
+      (c as any).course.loadNext(1);   // nach Puzzle 1
       expect(c.puzzle?.id).toBe(2);
     } finally { spy.and.callThrough(); }
   });
@@ -691,8 +691,8 @@ describe('BookPuzzleComponent Offline-Kursmodus', () => {
       const c = makeComponent();
       spyOn(c as any, 'setupPuzzle');
       c.inCourse = true;
-      c.courseBookId = 999;   // nicht gecacht
-      (c as any).loadCourseNext();
+      c.course.bookId = 999;   // nicht gecacht
+      (c as any).course.loadNext();
       expect(c.loadError).toBeTrue();
       expect(c.puzzle).toBeNull();
     } finally { spy.and.callThrough(); }
@@ -710,8 +710,8 @@ describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
     spyOn(c as any, 'setupPuzzle');
     c.auth.isLoggedIn = false;   // anonym
     c.inCourse = true;
-    c.courseBookId = BOOK_ID;
-    c.courseModeKind = mode;
+    c.course.bookId = BOOK_ID;
+    c.course.modeKind = mode;
     c.courseService.getPublicCourse = jasmine.createSpy('getPublicCourse').and.returnValue(of([
       { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE },
       { id: 2, fen: FEN, moves: 'd2d4', bookFileName: FILE },
@@ -721,26 +721,26 @@ describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
 
   it('lädt die öffentlichen Puzzles und serviert das erste (ohne Login)', () => {
     const c = anonCourse('sequential');
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     // Seitenweises Laden: erste Seite ab skip 0 mit einer Seitengröße — in der gewählten Sprache
     // (ohne Wahl die der Oberfläche; der Stub kennt keine, also 'en').
     expect(c.courseService.getPublicCourse).toHaveBeenCalledWith(BOOK_ID, 0, jasmine.any(Number), 'en');
     expect(c.puzzle?.id).toBe(1);
-    expect(c.courseTotal).toBe(2);
+    expect(c.course.total).toBe(2);
     expect(c.loadError).toBeFalse();
   });
 
   it('merkt gelöste Puzzles lokal (persistiert, kein Server-Call)', () => {
     const c = anonCourse('sequential');
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE };
-    (c as any).recordCourseAttempt(true);
-    expect((c as any).offlineCourseSolvedIds.has(1)).toBeTrue();
-    expect(c.courseSolved).toBe(1);
+    (c as any).course.recordAttempt(true);
+    expect((c as any).course.offlineSolvedIds.has(1)).toBeTrue();
+    expect(c.course.solved).toBe(1);
     // Frisch aufgesetzte Komponente übernimmt den lokal gemerkten Fortschritt.
     const c2 = anonCourse('sequential');
-    c2.courseBookId = BOOK_ID;
-    (c2 as any).offlineCourseSolvedIds = new Set<number>();
+    c2.course.bookId = BOOK_ID;
+    (c2 as any).course.offlineSolvedIds = new Set<number>();
     // Re-Hydration wie im courseSub-Handler:
     const solved = JSON.parse(localStorage.getItem('rookhub_course_local_solved_' + BOOK_ID) || '[]');
     expect(solved).toContain(1);
@@ -750,7 +750,7 @@ describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
     const c = anonCourse('sequential');
     c.courseService.getPublicCourse = jasmine.createSpy('getPublicCourse')
       .and.returnValue({ subscribe: (h: any) => { (h.error ?? (() => {}))(new Error('404')); return { unsubscribe() {} }; } });
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(c.loadError).toBeTrue();
   });
 });
@@ -761,20 +761,20 @@ describe('BookPuzzleComponent Rückweg aus dem Kurs (UX-024)', () => {
     const c = makeComponent();
     c.auth.isLoggedIn = false;
     c.inCourse = true;
-    c.backToCourses();
+    c.course.backToCourses();
     expect(c.router.navigate).toHaveBeenCalledWith(['/']);
-    expect(c.courseBackKey('book.course.backToCourses')).toBe('book.course.toStart');
-    expect(c.courseBackKey('book.course.toOverview')).toBe('book.course.toStart');
+    expect(c.course.backKey('book.course.backToCourses')).toBe('book.course.toStart');
+    expect(c.course.backKey('book.course.toOverview')).toBe('book.course.toStart');
   });
 
   it('führt Angemeldete wie bisher zur Kursübersicht', () => {
     const c = makeComponent();
     c.auth.isLoggedIn = true;
     c.inCourse = true;
-    c.backToCourses();
+    c.course.backToCourses();
     expect(c.router.navigate).toHaveBeenCalledWith(['/courses']);
-    expect(c.courseBackKey('book.course.backToCourses')).toBe('book.course.backToCourses');
-    expect(c.courseBackKey('book.course.toOverview')).toBe('book.course.toOverview');
+    expect(c.course.backKey('book.course.backToCourses')).toBe('book.course.backToCourses');
+    expect(c.course.backKey('book.course.toOverview')).toBe('book.course.toOverview');
   });
 });
 
@@ -867,31 +867,31 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
   it('courseNext auf einer Info-Linie merkt sie serverseitig + offline (überspringen beim Wiedereinstieg)', () => {
     const c = makeComponent();
     c.auth.isLoggedIn = true;   // serverseitiges Merken (markInfoSeen) ist ein eingeloggtes Verhalten
-    spyOn(c as any, 'loadCourseNext');   // eigentliches Nachladen unterbinden
+    spyOn(c.course as any, 'loadNext');   // eigentliches Nachladen unterbinden
     const seen = jasmine.createSpy('markInfoSeen').and.returnValue(of(undefined));
     c.courseService.markInfoSeen = seen;
     c.inCourse = true;
-    c.courseBookId = 5;
-    c.courseModeKind = 'sequential';
+    c.course.bookId = 5;
+    c.course.modeKind = 'sequential';
     c.puzzle = { id: 7, fen: FEN, moves: 'e2e4', bookFileName: 'b', isInfoOnly: true };
 
-    c.courseNext();
+    c.course.next();
 
     expect(seen).toHaveBeenCalledWith(5, 7);
-    expect((c as any).offlineCourseSolvedIds.has(7)).toBeTrue();
+    expect((c as any).course.offlineSolvedIds.has(7)).toBeTrue();
   });
 
   it('courseNext auf einer Quiz-Linie merkt NICHT als Info-View', () => {
     const c = makeComponent();
-    spyOn(c as any, 'loadCourseNext');
+    spyOn(c.course as any, 'loadNext');
     const seen = jasmine.createSpy('markInfoSeen').and.returnValue(of(undefined));
     c.courseService.markInfoSeen = seen;
     c.inCourse = true;
-    c.courseBookId = 5;
-    c.courseModeKind = 'sequential';
+    c.course.bookId = 5;
+    c.course.modeKind = 'sequential';
     c.puzzle = { id: 9, fen: FEN, moves: 'e2e4', bookFileName: 'b' };   // kein isInfoOnly
 
-    c.courseNext();
+    c.course.next();
     expect(seen).not.toHaveBeenCalled();
   });
 });
@@ -1029,10 +1029,10 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
   it('finalizeSolve springt bei Abschlusstext NICHT automatisch weiter (kein Countdown)', () => {
     const c = makeComponent();
     const countdown = spyOn(c as any, 'startSolvedCountdown');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordTrack');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordTrack');
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', moveComments: { '0': 'Abschlusstext' } };
     (c as any).finalizeSolve();
     expect(countdown).not.toHaveBeenCalled();
@@ -1041,10 +1041,10 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
   it('finalizeSolve springt ohne Abschlusstext wie bisher automatisch weiter (Countdown)', () => {
     const c = makeComponent();
     const countdown = spyOn(c as any, 'startSolvedCountdown');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordTrack');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordTrack');
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b' };   // keine moveComments
     (c as any).finalizeSolve();
     expect(countdown).toHaveBeenCalled();
@@ -1054,10 +1054,10 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
   function finalizeWithTrailingCommentIn(fsElement: Element | null): jasmine.Spy {
     const c = makeComponent();
     const countdown = spyOn(c as any, 'startSolvedCountdown');
-    spyOn(c as any, 'recordCourseAttempt');
-    spyOn(c as any, 'recordWeeklyAttempt');
-    spyOn(c as any, 'recordBookAttempt');
-    spyOn(c as any, 'recordTrack');
+    spyOn(c.course as any, 'recordAttempt');
+    spyOn(c.weekly as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordAttempt');
+    spyOn(c.book as any, 'recordTrack');
     spyOnProperty(document, 'fullscreenElement', 'get').and.returnValue(fsElement);
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', moveComments: { '0': 'Abschlusstext' } };
     (c as any).finalizeSolve();
@@ -1085,7 +1085,7 @@ describe('BookPuzzleComponent Daily kumulierte Lösezeit', () => {
   function makeDaily(): any {
     const c: any = makeComponent();
     c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
-    c.dailyDate = DATE;
+    c.daily.date = DATE;
     return c;
   }
 
@@ -1122,7 +1122,7 @@ describe('BookPuzzleComponent Daily kumulierte Lösezeit', () => {
     const c = makeDaily();
     c.auth = { isLoggedIn: true };
     c.puzzleService.recordBookAttempt = () => ({ subscribe: () => {} });
-    (c as any).recordBookAttempt(false);
+    (c as any).book.recordAttempt(false);
     expect(loadDailyElapsed(DATE)).toBe(0);
   });
 
@@ -1131,9 +1131,9 @@ describe('BookPuzzleComponent Daily kumulierte Lösezeit', () => {
     const c = makeDaily();                      // auth.isLoggedIn = false
     c.puzzleService.ensureSessionId = () => 's1';
     c.puzzleService.recordBookAttemptAnonymous = () => ({ subscribe: () => {} });
-    (c as any).recordBookAttempt(false);        // anon-Fail wird nicht gemeldet
+    (c as any).book.recordAttempt(false);        // anon-Fail wird nicht gemeldet
     expect(loadDailyElapsed(DATE)).toBe(99);
-    (c as any).recordBookAttempt(true);         // anon-Solve wird gemeldet → Ende der Kumulation
+    (c as any).book.recordAttempt(true);         // anon-Solve wird gemeldet → Ende der Kumulation
     expect(loadDailyElapsed(DATE)).toBe(0);
   });
 
@@ -1161,7 +1161,7 @@ describe('BookPuzzleComponent Kurs kumulierte Lösezeit', () => {
     const c: any = makeComponent();
     c.puzzle = { id: 77, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.inCourse = true;
-    c.courseBookId = 5;
+    c.course.bookId = 5;
     return c;
   }
 
@@ -1203,14 +1203,14 @@ describe('BookPuzzleComponent Kurs kumulierte Lösezeit', () => {
     const c = makeCourse();
     c.auth = { isLoggedIn: true };
     c.courseService.recordResult = () => ({ subscribe: () => {} });
-    (c as any).recordCourseAttempt(false);
+    (c as any).course.recordAttempt(false);
     expect(loadSolveElapsed(KEY)).toBe(0);
   });
 
   it('an anonymous course attempt clears too (retry starts fresh)', () => {
     saveSolveElapsed(KEY, 99);
     const c = makeCourse();                    // auth.isLoggedIn = false → isAnonCourse
-    (c as any).recordCourseAttempt(false);
+    (c as any).course.recordAttempt(false);
     expect(loadSolveElapsed(KEY)).toBe(0);
   });
 
@@ -1240,7 +1240,7 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
   function makeWeekly(): any {
     const c = makeComponent();
     c.inWeekly = true;
-    c.weeklyId = 7;
+    c.weekly.id = 7;
     c.auth.isLoggedIn = true;
     c.puzzle = { id: 2, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.weeklyService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(of({
@@ -1254,66 +1254,66 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
 
   it('Trainingsmodus friert das Brett ein, Einfachmodus nicht', () => {
     const c = makeWeekly();
-    c.weeklyMode = 'training';
-    c.applyWeeklyMode();
+    c.weekly.mode = 'training';
+    c.weekly.applyMode();
     expect(c.visualizationMode).toBe(1);
 
-    c.weeklyMode = 'easy';
-    c.applyWeeklyMode();
+    c.weekly.mode = 'easy';
+    c.weekly.applyMode();
     expect(c.visualizationMode).toBe(0);
   });
 
   it('gemeldet wird der eingestellte Modus', () => {
     const c = makeWeekly();
-    c.weeklyMode = 'easy';
-    c.applyWeeklyMode();
-    c.recordWeeklyAttempt(true);
+    c.weekly.mode = 'easy';
+    c.weekly.applyMode();
+    c.weekly.recordAttempt(true);
     expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
       7, 2, true, jasmine.any(Number), 0, 0, 0, 'easy');
   });
 
   it('Auge NACH dem ersten Zug kippt das Puzzle auf „einfach"', () => {
     const c = makeWeekly();
-    c.weeklyMode = 'training';
-    c.applyWeeklyMode();
+    c.weekly.mode = 'training';
+    c.weekly.applyMode();
     c.moveLog = ['e2e4'];        // erster Zug ist gespielt
     c.onVizShow();               // aufgedeckt
-    c.recordWeeklyAttempt(false);
+    c.weekly.recordAttempt(false);
     expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
       7, 2, false, jasmine.any(Number), 0, 0, 0, 'easy');
   });
 
   it('Auge VOR dem ersten Zug ist normale Vorbereitung und kippt nichts', () => {
     const c = makeWeekly();
-    c.weeklyMode = 'training';
-    c.applyWeeklyMode();
+    c.weekly.mode = 'training';
+    c.weekly.applyMode();
     c.moveLog = [];              // noch kein Zug
     c.onVizShow();
-    c.recordWeeklyAttempt(true);
+    c.weekly.recordAttempt(true);
     expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
       7, 2, true, jasmine.any(Number), 0, 0, 0, 'training');
   });
 
   it('das nächste Puzzle startet wieder unaufgedeckt (Kipp-Marke gilt je Puzzle)', () => {
     const c = makeWeekly();
-    c.weeklyMode = 'training';
+    c.weekly.mode = 'training';
     c.moveLog = ['e2e4'];
     c.onVizShow();
-    c.applyWeeklyMode();         // neues Puzzle setzt die Spielweise frisch
-    c.recordWeeklyAttempt(true);
+    c.weekly.applyMode();         // neues Puzzle setzt die Spielweise frisch
+    c.weekly.recordAttempt(true);
     expect(c.weeklyService.recordAttempt).toHaveBeenCalledWith(
       7, 2, true, jasmine.any(Number), 0, 0, 0, 'training');
   });
 
   it('Umschalten wechselt den Modus und merkt ihn für diesen Wochenpost', () => {
     const c = makeWeekly();
-    c.weeklyMode = 'training';
-    c.toggleWeeklyMode();
-    expect(c.weeklyMode).toBe('easy');
+    c.weekly.mode = 'training';
+    c.weekly.toggleMode();
+    expect(c.weekly.mode).toBe('easy');
     expect(sessionStorage.getItem(KEY)).toBe('easy');
 
-    c.toggleWeeklyMode();
-    expect(c.weeklyMode).toBe('training');
+    c.weekly.toggleMode();
+    expect(c.weekly.mode).toBe('training');
     expect(sessionStorage.getItem(KEY)).toBe('training');
   });
 
@@ -1321,9 +1321,9 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
     sessionStorage.setItem(KEY, 'easy');
     const c = makeWeekly();
     c.dialog.open = jasmine.createSpy('open');
-    c.askWeeklyMode();
+    c.weekly.askMode();
     expect(c.dialog.open).not.toHaveBeenCalled();
-    expect(c.weeklyMode).toBe('easy');
+    expect(c.weekly.mode).toBe('easy');
     expect(c.visualizationMode).toBe(0);
   });
 
@@ -1334,13 +1334,13 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
     c.dialog.open = jasmine.createSpy('open');
     c.solveMode.openDialog = jasmine.createSpy('openDialog').and.returnValue(of({ mode: 'easy', applyAll: false }));
     const setup = spyOn(c, 'setupPuzzle');   // das erste Puzzle wird mit der Wahl neu aufgesetzt (ohne Engine im Test)
-    c.askWeeklyMode();
+    c.weekly.askMode();
     expect(setup).toHaveBeenCalledWith(c.puzzle);
     expect(c.dialog.open).not.toHaveBeenCalled();
     const data = c.solveMode.openDialog.calls.mostRecent().args[0];
     expect(data).toEqual({ title: 'weekly.mode.title', intro: 'weekly.mode.intro', hint: 'weekly.mode.switchHint' });
     expect(data.trainingDesc).toBeUndefined();   // gleiche Beschreibung wie bei den Puzzles
-    expect(c.weeklyMode).toBe('easy');
+    expect(c.weekly.mode).toBe('easy');
     expect(sessionStorage.getItem(KEY)).toBe('easy');
     expect(c.visualizationMode).toBe(0);
   });
@@ -1349,9 +1349,9 @@ describe('BookPuzzleComponent Wochenpost-Spielweise', () => {
     const c = makeWeekly();
     c.auth.isLoggedIn = false;
     c.dialog.open = jasmine.createSpy('open');
-    c.askWeeklyMode();
+    c.weekly.askMode();
     expect(c.dialog.open).not.toHaveBeenCalled();
-    expect(c.weeklyMode).toBe('training');
+    expect(c.weekly.mode).toBe('training');
   });
 });
 
@@ -1374,7 +1374,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
   function makeCourse(): any {
     const c = makeSolver();
     c.inCourse = true;
-    c.courseBookId = 12;
+    c.course.bookId = 12;
     c.puzzle = P;
     return c;
   }
@@ -1401,7 +1401,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
   it('Kurs: ein anderer Kurs wird eigens gefragt', () => {
     const c = makeCourse();
     c.setupPuzzle(P);
-    c.courseBookId = 13;
+    c.course.bookId = 13;
     c.setupPuzzle(P);
     expect(c.solveMode.asked.map((a: any) => a.scope)).toEqual(['course:12', 'course:13']);
   });
@@ -1489,7 +1489,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
 
   it('Tagespuzzle nutzt den Bereich „daily", das Einzel-Buch-Puzzle „book"', () => {
     const daily = makeSolver();
-    daily.dailyDate = '20260808';
+    daily.daily.date = '20260808';
     daily.puzzle = P;
     daily.setupPuzzle(P);
     expect(daily.solveMode.asked[0].scope).toBe('daily');
@@ -1538,7 +1538,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
   it('Wochenpost bleibt unberührt: kein eigener Bereich, keine Abfrage', () => {
     const c = makeSolver();
     c.inWeekly = true;
-    c.weeklyId = 7;
+    c.weekly.id = 7;
     c.puzzle = P;
     c.visualizationMode = 1;                 // von applyWeeklyMode gesetzt
     c.setupPuzzle(P);
@@ -1588,37 +1588,37 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
 
   it('Buch-Versuch meldet die Spielweise mit — online und offline derselbe Body', () => {
     const c = makeSolver();
-    c.dailyDate = '20260808';
+    c.daily.date = '20260808';
     c.puzzle = P;
     c.auth = { isLoggedIn: true };
     c.solveMode.answer = 'easy';
     c.setupPuzzle(P);
     c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(of(null));
-    c.recordBookAttempt(true);
+    c.book.recordAttempt(true);
     expect(c.puzzleService.recordBookAttempt).toHaveBeenCalledWith(5, true, jasmine.any(Number), 0, 'easy');
 
     const off = makeSolver();
-    off.dailyDate = '20260808';
+    off.daily.date = '20260808';
     off.puzzle = P;
     off.auth = { isLoggedIn: true };
     off.solveMode.answer = 'easy';
     off.setupPuzzle(P);
     const enqueue = spyOn(off.offlineQueue, 'enqueue');
     const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
-    try { off.recordBookAttempt(true); } finally { spy.and.callThrough(); }
+    try { off.book.recordAttempt(true); } finally { spy.and.callThrough(); }
     expect(enqueue).toHaveBeenCalledWith('POST', '/api/book-puzzles/5/attempt',
       jasmine.objectContaining({ solved: true, mode: 'easy' }));
   });
 
   it('anonymer Buch-Versuch meldet die Spielweise ebenfalls mit', () => {
     const c = makeSolver();
-    c.dailyDate = '20260808';
+    c.daily.date = '20260808';
     c.puzzle = P;
     c.auth = { isLoggedIn: false };
     c.puzzleService.ensureSessionId = () => 's1';
     c.puzzleService.recordBookAttemptAnonymous = jasmine.createSpy('anon').and.returnValue(of(null));
     c.setupPuzzle(P);                          // Antwort: 'training' (Standard)
-    c.recordBookAttempt(true);
+    c.book.recordAttempt(true);
     expect(c.puzzleService.recordBookAttemptAnonymous)
       .toHaveBeenCalledWith(5, true, jasmine.any(Number), 'training');
   });
@@ -1629,7 +1629,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     c.solveMode.answer = 'easy';
     c.setupPuzzle(P);
     c.courseService.recordResult = jasmine.createSpy('recordResult').and.returnValue(of({ solvedCount: 1, total: 3 }));
-    c.recordCourseAttempt(true);
+    c.course.recordAttempt(true);
     expect(c.courseService.recordResult).toHaveBeenCalledWith(
       12, 5, true, 'sequential', jasmine.any(Number), undefined, 0, 'easy');
 
@@ -1639,7 +1639,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     off.setupPuzzle(P);
     const enqueue = spyOn(off.offlineQueue, 'enqueue');
     const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
-    try { off.recordCourseAttempt(true); } finally { spy.and.callThrough(); }
+    try { off.course.recordAttempt(true); } finally { spy.and.callThrough(); }
     expect(enqueue).toHaveBeenCalledWith('POST', '/api/courses/12/results',
       jasmine.objectContaining({ bookPuzzleId: 5, mode: 'sequential', solveMode: 'easy' }));
   });
@@ -1653,7 +1653,7 @@ describe('BookPuzzleComponent Wochenpost als Gast', () => {
   function makeGast(): any {
     const c = makeComponent();
     c.inWeekly = true;
-    c.weeklyId = 42;
+    c.weekly.id = 42;
     c.auth.isLoggedIn = false;
     c.puzzle = { id: 0, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.weeklyService.getProgress = jasmine.createSpy('getProgress');
@@ -1664,26 +1664,26 @@ describe('BookPuzzleComponent Wochenpost als Gast', () => {
 
   it('fragt Gäste nicht nach der Spielweise (für sie wird nichts gewertet)', () => {
     const c = makeGast();
-    c.askWeeklyMode();
+    c.weekly.askMode();
     expect(c.dialog.open).not.toHaveBeenCalled();
   });
 
   it('meldet keinen Versuch und ruft den Server nicht', () => {
     const c = makeGast();
-    c.recordWeeklyAttempt(true);
+    c.weekly.recordAttempt(true);
     expect(c.weeklyService.recordAttempt).not.toHaveBeenCalled();
     expect(c.weeklyService.getProgress).not.toHaveBeenCalled();
   });
 
   it('führt Anmelden/Registrieren auf genau diese Wochenpost zurück', () => {
     const c = makeGast();
-    expect(c.weeklyReturnUrl).toBe('/weekly/42');
+    expect(c.weekly.returnUrl).toBe('/weekly/42');
   });
 
   it('fällt ohne Wochenpost-Id auf die Übersicht zurück', () => {
     const c = makeGast();
-    c.weeklyId = null;
-    expect(c.weeklyReturnUrl).toBe('/weekly');
+    c.weekly.id = null;
+    expect(c.weekly.returnUrl).toBe('/weekly');
   });
 });
 
@@ -1708,8 +1708,8 @@ describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', (
     spyOn(c as any, 'setupPuzzle');
     c.auth.isLoggedIn = false;   // anonym
     c.inCourse = true;
-    c.courseBookId = BOOK_ID;
-    c.courseModeKind = 'sequential';
+    c.course.bookId = BOOK_ID;
+    c.course.modeKind = 'sequential';
     let call = 0;
     c.courseService.getPublicCourse = jasmine.createSpy('getPublicCourse').and.callFake(() => {
       const p = pages[Math.min(call++, pages.length - 1)];
@@ -1721,7 +1721,7 @@ describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', (
   it('schreibt den Buch-Cache nur nach der ersten Seite und am Ende (nicht je Seite)', () => {
     const setItem = spyOn(localStorage, 'setItem').and.callThrough();
     const c = anonPagedCourse([pageOf(1, PAGE), pageOf(1 + PAGE, PAGE), pageOf(1 + 2 * PAGE, 5)]);
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     const bookWrites = setItem.calls.allArgs().filter(([k]) => String(k).startsWith('rookhub_book_offline_'));
     expect(bookWrites.length).toBe(2);   // 1× erste Seite (sofort spielbar) + 1× letzte Seite
     expect(getBookOfflineByBookId(BOOK_ID)?.length).toBe(2 * PAGE + 5);   // am Ende vollständig
@@ -1731,7 +1731,7 @@ describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', (
 
   it('schreibt beim Fehler einer Folgeseite den aufgelaufenen Stand fest (bleibt spielbar)', () => {
     const c = anonPagedCourse([pageOf(1, PAGE), pageOf(1 + PAGE, PAGE), 'error']);
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(getBookOfflineByBookId(BOOK_ID)?.length).toBe(2 * PAGE);   // beide geladenen Seiten persistiert
     expect(c.puzzle?.id).toBe(1);
     expect(c.loadError).toBeFalse();
@@ -1743,21 +1743,21 @@ describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', (
     // ab — und die 300 Linien galten dauerhaft als ganzer Kurs (nie mehr fortgesetzt, „Kurs abgeschlossen").
     markBookCacheComplete(BOOK_ID, true);
     const c = anonPagedCourse([pageOf(1, PAGE), 'error']);
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(getBookOfflineByBookId(BOOK_ID)?.length).toBe(PAGE);   // Torso liegt (spielbar) ...
     expect(isBookCacheComplete(BOOK_ID)).toBeFalse();             // ... gilt aber nicht als vollständig
   });
 
   it('meldet den Kurs am Ende der Kette weiterhin vollständig', () => {
     const c = anonPagedCourse([pageOf(1, PAGE), pageOf(1 + PAGE, 5)]);
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(isBookCacheComplete(BOOK_ID)).toBeTrue();
   });
 
   it('zeigt „nicht verfügbar", wenn der Cache der ersten Seite nicht geschrieben werden kann', () => {
     spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
     const c = anonPagedCourse([pageOf(1, 5)]);
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(c.loadError).toBeTrue();   // anonym wird NUR aus dem Cache bedient — ehrlich melden
   });
 });
@@ -1774,8 +1774,8 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
     spyOn(c as any, 'setupPuzzle');
     c.auth.isLoggedIn = true;
     c.inCourse = true;
-    c.courseBookId = BOOK_ID;
-    c.courseModeKind = 'sequential';
+    c.course.bookId = BOOK_ID;
+    c.course.modeKind = 'sequential';
     return c;
   }
 
@@ -1787,10 +1787,10 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
       return of({ puzzle: { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE, commentLanguages: ['en', 'de'] },
         solvedCount: 0, total: 1, completed: false });
     };
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(calls[0][5]).toBe('en');   // Oberflächensprache des Stubs (keine gesetzt → en)
     c.courseLang.setChoice({ bookId: BOOK_ID }, 'de');
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(calls[1][5]).toBe('de');
     // Die Linie meldet ihre Sprachen an die Auswahl, und Kurs-Id ↔ Dateiname werden verknüpft.
     expect(c.courseLang.languages({ bookId: BOOK_ID })).toEqual(['en', 'de']);
@@ -1799,7 +1799,7 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
 
   it('Tagespuzzle und Wochenpost bleiben im Original (keine Sprachwahl)', () => {
     const daily = makeComponent();
-    daily.dailyDate = '20260926';
+    daily.daily.date = '20260926';
     expect(daily.langEnabled).toBeFalse();
     expect((daily as any).requestLang).toBeNull();
     const weekly = makeComponent();
@@ -1815,10 +1815,10 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
       title: 'Main line', titleLabel: 'Hauptvariante', chapter: 'Openings', chapterLabel: 'Eröffnungen' };
     expect(c.titleDisplay).toBe('Hauptvariante');
     expect(c.chapterDisplay).toBe('Eröffnungen');
-    c.courseChapterName = 'Openings';        // Original-Schlüssel vom Server
-    expect(c.courseChapterDisplay).toBe('Eröffnungen');
-    c.courseChapterName = 'Endgames';        // anderes Kapitel → Original stehen lassen
-    expect(c.courseChapterDisplay).toBe('Endgames');
+    c.course.chapterName = 'Openings';        // Original-Schlüssel vom Server
+    expect(c.course.chapterDisplay).toBe('Eröffnungen');
+    c.course.chapterName = 'Endgames';        // anderes Kapitel → Original stehen lassen
+    expect(c.course.chapterDisplay).toBe('Endgames');
     c.puzzle.titleLabel = null;
     expect(c.titleDisplay).toBe('Main line');
   });
@@ -1865,7 +1865,7 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
       return of({ id, fen: FEN, moves: 'e2e4', bookFileName: FILE, comment: lang === 'fr' ? 'français' : 'english',
         commentLanguages: ['en', 'fr'] });
     };
-    (c as any).loadPuzzle(3);
+    (c as any).book.load(3);
     expect(requested).toEqual(['en', 'fr']);   // erst ohne Kurs-Wissen, dann in der gemerkten Wahl
     expect(c.puzzle.comment).toBe('français');
   });
@@ -1877,11 +1877,11 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
     try {
       const c = course();
       c.courseLang.setChoice({ bookId: BOOK_ID }, 'de');
-      (c as any).loadCourseNext();
-      expect(c.offlineLangStale).toBeFalse();
+      (c as any).course.loadNext();
+      expect(c.course.offlineLangStale).toBeFalse();
       c.courseLang.setChoice({ bookId: BOOK_ID }, 'en');
-      (c as any).loadCourseNext();
-      expect(c.offlineLangStale).toBeTrue();
+      (c as any).course.loadNext();
+      expect(c.course.offlineLangStale).toBeTrue();
     } finally { spy.and.callThrough(); }
   });
 
@@ -1897,13 +1897,13 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
       calls.push(args);
       return of([{ id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE, comment: 'de', commentLanguages: ['en', 'de'] }]);
     };
-    (c as any).loadCourseNext();
+    (c as any).course.loadNext();
     expect(c.puzzle?.id).toBe(1);             // sofort aus der alten Kopie spielbar
     expect(calls.length).toBe(1);
     expect(calls[0][3]).toBe('de');           // neu geholt in der gewählten Sprache
     expect(getBookOfflineLanguageByBookId(BOOK_ID)?.lang).toBe('de');
     expect(isBookCacheComplete(BOOK_ID)).toBeTrue();
-    expect(c.offlineLangStale).toBeFalse();
+    expect(c.course.offlineLangStale).toBeFalse();
   });
 });
 
@@ -1914,7 +1914,7 @@ describe('BookPuzzleComponent Challenge erst nach dem gespeicherten Versuch', ()
     const c: any = makeComponent();
     c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
     c.auth = { isLoggedIn: true };
-    c.challengeId = 7;
+    c.book.challengeId = 7;
     c.solveSeconds = 21;
     const attempt$ = new Subject<unknown>();
     c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(attempt$);
@@ -1926,7 +1926,7 @@ describe('BookPuzzleComponent Challenge erst nach dem gespeicherten Versuch', ()
 
   it('meldet die Challenge erst, wenn der Versuchs-POST geantwortet hat', () => {
     const { c, attempt$, resolve } = challengeComponent();
-    (c as any).recordBookAttempt(true);
+    (c as any).book.recordAttempt(true);
 
     expect(c.puzzleService.recordBookAttempt).toHaveBeenCalled();
     expect(resolve).not.toHaveBeenCalled();
@@ -1937,7 +1937,7 @@ describe('BookPuzzleComponent Challenge erst nach dem gespeicherten Versuch', ()
 
   it('scheitert der Versuch, geht nur er in die Schlange — kein /resolve', () => {
     const { c, attempt$, resolve } = challengeComponent();
-    (c as any).recordBookAttempt(true);
+    (c as any).book.recordAttempt(true);
     attempt$.error(new Error('500'));
 
     expect(resolve).not.toHaveBeenCalled();
@@ -1948,8 +1948,8 @@ describe('BookPuzzleComponent Challenge erst nach dem gespeicherten Versuch', ()
     const { c, resolve } = challengeComponent();
     // je Versuch eine eigene, einmal antwortende Anfrage (wie HttpClient)
     c.puzzleService.recordBookAttempt.and.callFake(() => of({}));
-    (c as any).recordBookAttempt(false);   // Fehlzug zuerst
-    (c as any).recordBookAttempt(true);    // Spätlöser
+    (c as any).book.recordAttempt(false);   // Fehlzug zuerst
+    (c as any).book.recordAttempt(true);    // Spätlöser
 
     expect(resolve).toHaveBeenCalledOnceWith(7, false, 21);
   });
@@ -2066,11 +2066,11 @@ describe('BookPuzzleComponent Wochenpost als Gast: keine Knöpfe zur Übersicht 
     const fixture = TestBed.createComponent(BookPuzzleComponent);
     const c: any = fixture.componentInstance;
     c.inWeekly = true;
-    c.weeklyId = 5;
+    c.weekly.id = 5;
     const pz = (id: number, moves: string) => ({ id, lineId: `l${id}`, bookFileName: 'wochenpost.pgn', bookTitle: 'Wochenpost', round: '1', fen: FEN, moves });
-    c.weeklyPuzzles = [pz(0, 'e2e4 e7e5'), pz(1, 'd2d4 d7d5')];
-    c.puzzle = { ...c.weeklyPuzzles[0] };
-    c.weeklyCompleted = completed;
+    c.weekly.puzzles = [pz(0, 'e2e4 e7e5'), pz(1, 'd2d4 d7d5')];
+    c.puzzle = { ...c.weekly.puzzles[0] };
+    c.weekly.completed = completed;
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -2143,7 +2143,7 @@ describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlun
 
   // Tagespuzzle: eigener Bereich „daily"
   const render = (setup: (c: any) => void) =>
-    renderBookPuzzle(c => { c.dailyDate = '20260714'; setup(c); }, '/puzzles/daily/20260714');
+    renderBookPuzzle(c => { c.daily.date = '20260714'; setup(c); }, '/puzzles/daily/20260714');
   const bar = (el: HTMLElement) => el.querySelector('app-puzzle-action-bar') as any;
 
   it('Tagespuzzle: die Aktionsleiste bekommt die Spielweise (Punkt im ⋮-Menü)', () => {
@@ -2180,9 +2180,9 @@ describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
 
   it('Wochenpost: der Balken trägt den Fortschrittstext als Namen', () => {
     const { el } = renderBookPuzzle(c => {
-      c.inWeekly = true; c.weeklyId = 5;
-      c.weeklyPuzzles = [{ ...c.puzzle }, { ...c.puzzle, id: 43 }];
-      c.weeklyPlayed = 1; c.weeklySolved = 1;
+      c.inWeekly = true; c.weekly.id = 5;
+      c.weekly.puzzles = [{ ...c.puzzle }, { ...c.puzzle, id: 43 }];
+      c.weekly.played = 1; c.weekly.solved = 1;
     }, '/weekly/5');
     expect(bars(el).length).toBe(1);
     expect(bars(el)[0].getAttribute('aria-label')).toBe('book.weekly.progress');
@@ -2190,10 +2190,10 @@ describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
 
   it('Kurs: Buch- und Kapitelbalken tragen „Ganzes Buch" bzw. den Kapitelnamen', () => {
     const { el } = renderBookPuzzle(c => {
-      c.inCourse = true; c.courseTotal = 10;
+      c.inCourse = true; c.course.total = 10;
       const stats = { total: 10, solvedCount: 3, attemptedCount: 0, progressPercent: 30, accuracyPercent: 0, totalSeconds: 0 };
-      c.courseBookStats = stats; c.courseChapterStats = stats;
-      spyOnProperty(c, 'courseChapterDisplay', 'get').and.returnValue('Kapitel 2');
+      c.course.bookStats = stats; c.course.chapterStats = stats;
+      spyOnProperty(c.course as any, 'chapterDisplay', 'get').and.returnValue('Kapitel 2');
       c.statsOpen.set(true);                   // Fortschritt liegt hinter dem ⓘ (2026-10-20)
     }, '/courses/7/solve');
     // Seit der Dreiteilung (2026-10-15) eine eigene Leiste; ihr Name beginnt mit Buch bzw. Kapitel, dann die Zahlen.
@@ -2205,7 +2205,7 @@ describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
 
   it('Kurs ohne Buchstatistik: der Sammelbalken hat ebenfalls einen Namen', () => {
     const { el } = renderBookPuzzle(c => {
-      c.inCourse = true; c.courseTotal = 10; c.courseSolved = 3; c.courseBookStats = null;
+      c.inCourse = true; c.course.total = 10; c.course.solved = 3; c.course.bookStats = null;
       c.statsOpen.set(true);
     }, '/courses/7/solve');
     expect(bars(el).length).toBe(1);
@@ -2226,7 +2226,7 @@ describe('BookPuzzleComponent Tastatur hinter offenem Dialog', () => {
     c.state = 'SOLVED';
     c.inCourse = true;
     spyOn(c, 'reviewNext');
-    spyOn(c, 'courseNext');
+    spyOn(c.course as any, 'next');
     return c;
   }
 
@@ -2255,7 +2255,7 @@ describe('BookPuzzleComponent Tastatur hinter offenem Dialog', () => {
     press(c, 'ArrowRight', document.body);
     press(c, 'Enter', document.body);
     expect(c.reviewNext).toHaveBeenCalledTimes(1);
-    expect(c.courseNext).toHaveBeenCalledTimes(1);
+    expect(c.course.next).toHaveBeenCalledTimes(1);
   });
 
   it('im offenen Dialog: weder Blaettern noch naechstes Puzzle', () => {
@@ -2264,7 +2264,7 @@ describe('BookPuzzleComponent Tastatur hinter offenem Dialog', () => {
     press(c, 'ArrowRight', option);
     press(c, 'Enter', option);
     expect(c.reviewNext).not.toHaveBeenCalled();
-    expect(c.courseNext).not.toHaveBeenCalled();
+    expect(c.course.next).not.toHaveBeenCalled();
   });
 
   it('schon verarbeitete Taste (mat-select ruft preventDefault) blaettert nicht noch einmal', () => {
@@ -2278,15 +2278,15 @@ describe('BookPuzzleComponent Tastatur hinter offenem Dialog', () => {
 describe('BookPuzzleComponent Wochenpost-Chip', () => {
   it('beschriftet einen rein numerischen Titel', () => {
     const c = makeComponent();
-    c.weeklyTitle = '3';
-    expect(c.weeklyChipLabel).toBe('weekly.titleLabel {"title":"3"}');
+    c.weekly.title = '3';
+    expect(c.weekly.chipLabel).toBe('weekly.titleLabel {"title":"3"}');
   });
 
   it('lässt einen Titel, der schon mit dem Wort beginnt, unverändert', () => {
     const c = makeComponent();
     c.translate.instant = (k: string, p?: object) => (k === 'weekly.title' ? 'Wochenpost' : k + JSON.stringify(p ?? {}));
-    c.weeklyTitle = 'Wochenpost 3';
-    expect(c.weeklyChipLabel).toBe('Wochenpost 3');
+    c.weekly.title = 'Wochenpost 3';
+    expect(c.weekly.chipLabel).toBe('Wochenpost 3');
   });
 });
 
@@ -2295,8 +2295,8 @@ describe('BookPuzzleComponent Im Buch', () => {
   beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
   it('zeigt „Im Buch“ mit Seite, wenn die aktuelle Linie im E-Book steht', () => {
     const { el } = renderBookPuzzle(c => {
-      c.inCourse = true; c.courseTotal = 1;
-      c.courseEbookRefs.set([{ lineId: 42, ebookId: 7, ebookTitle: 'WP', diagramId: 99, page: 123, label: '5' }]);
+      c.inCourse = true; c.course.total = 1;
+      c.course.ebookRefs.set([{ lineId: 42, ebookId: 7, ebookTitle: 'WP', diagramId: 99, page: 123, label: '5' }]);
     }, '/courses/7/solve');
     const a = el.querySelector('a.ctx-in-book');
     expect(a).not.toBeNull();
@@ -2304,7 +2304,7 @@ describe('BookPuzzleComponent Im Buch', () => {
   });
 
   it('ohne Verweis kein Knopf', () => {
-    const { el } = renderBookPuzzle(c => { c.inCourse = true; c.courseTotal = 1; }, '/courses/7/solve');
+    const { el } = renderBookPuzzle(c => { c.inCourse = true; c.course.total = 1; }, '/courses/7/solve');
     expect(el.querySelector('a.ctx-in-book')).toBeNull();
   });
 });
@@ -2316,7 +2316,7 @@ describe('BookPuzzleComponent Kurs-Fortschritt hinter ⓘ', () => {
 
   it('zu: nur das ⓘ im Kopf; Klick klappt die Statistik auf (aria-expanded), zweiter Klick zu', () => {
     const { el, c } = renderBookPuzzle(c => {
-      c.inCourse = true; c.courseTotal = 10; c.courseSolved = 3; c.courseBookStats = null;
+      c.inCourse = true; c.course.total = 10; c.course.solved = 3; c.course.bookStats = null;
     }, '/courses/7/solve');
     const btn = el.querySelector('.context-card .ctx-head .ctx-stats-btn') as HTMLButtonElement;
     expect(btn).withContext('ⓘ im Kopf').not.toBeNull();
