@@ -30,6 +30,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\api\RookHub.Api\RookHub.Api.csproj" />
+    <!-- Nur fuer die reinen Helfer des Werkzeugs (ToolOptions, CommandTable); das Werkzeug selbst laeuft hier nie. -->
+    <ProjectReference Include="..\..\tools\LibraryImport\LibraryImport.csproj" />
   </ItemGroup>
 
 </Project>
