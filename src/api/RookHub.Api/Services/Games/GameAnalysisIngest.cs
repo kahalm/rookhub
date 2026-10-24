@@ -59,106 +59,118 @@ internal sealed class GameAnalysisIngest
                 continue;
             }
 
-            if (pos.CandidatesJson != null)
-            {
-                // Zweiter Durchgang: das Ergebnis ERSETZT das des ersten — ist es unbrauchbar oder scheitert der
-                // Auftrag endgueltig, bleibt das erste stehen (eine schwaechere Bewertung ist besser als keine).
-                if (job.Status == AnalysisJobStatus.Done)
-                {
-                    var refined = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
-                    if (refined is { Count: > 0 })
-                    {
-                        pos.CandidatesJson = BrokerCandidates.ToJson(refined);
-                        pos.EvalText = BrokerCandidates.EvalTextOf(refined);
-                        pos.Depth = job.ReachedDepth;
-                        pos.AnalyzedAt = DateTime.UtcNow;
-                        if (job.NodeStepsJson is not null) pos.NodeStepsJson = job.NodeStepsJson;
-                    }
-                    pos.Refined = true;
-                    pos.AnalysisJobId = null;
-                    consumed.Add(job);
-                    changed = true;
-                }
-                else if (job.Status == AnalysisJobStatus.Failed)
-                {
-                    pos.FailedAttempts++;
-                    pos.AnalysisJobId = null;
-                    if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts) pos.Refined = true;
-                    changed = true;
-                }
-                else if (job.SecondsSpent >= GameAnalysisDefaults.RefineMaxSecondsPerPosition)
-                {
-                    // Zeitgrenze (0.647.0): was erreicht ist, gilt — tiefer als der erste Durchgang ersetzt es ihn, sonst
-                    // bleibt der erste stehen. Der Lauf wird angehalten und der Auftrag entfernt (wie beim Loeschen).
-                    var partial = job.ReachedDepth > pos.Depth ? BrokerCandidates.Parse(job.ResultJson, pos.Fen) : null;
-                    if (partial is { Count: > 0 })
-                    {
-                        pos.CandidatesJson = BrokerCandidates.ToJson(partial);
-                        pos.EvalText = BrokerCandidates.EvalTextOf(partial);
-                        pos.Depth = job.ReachedDepth;
-                        pos.AnalyzedAt = DateTime.UtcNow;
-                    }
-                    pos.Refined = true;
-                    pos.AnalysisJobId = null;
-                    _jobs.Interrupt(job.Id);
-                    consumed.Add(job);
-                    changed = true;
-                    _logger.LogInformation(
-                        "GameAnalysis {Id}: Vertiefung von Stellung {Ply} nach {Seconds} s bei Tiefe {Depth}/{Target} beendet",
-                        analysis.Id, pos.Ply, job.SecondsSpent, job.ReachedDepth, job.TargetDepth);
-                }
-                continue;
-            }
-
-            if (job.Status == AnalysisJobStatus.Done && !string.IsNullOrEmpty(job.ResultJson))
-            {
-                var candidates = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
-                if (candidates is { Count: > 0 })
-                {
-                    pos.CandidatesJson = BrokerCandidates.ToJson(candidates);
-                    pos.EvalText = BrokerCandidates.EvalTextOf(candidates);
-                    pos.Depth = job.ReachedDepth;
-                    pos.AnalyzedAt = DateTime.UtcNow;
-                    pos.NodeStepsJson = job.NodeStepsJson;   // Zwischenstände der Knotenanalyse, bevor der Auftrag gelöscht wird
-                    changed = true;
-                }
-                else
-                {
-                    // Fertig, aber unlesbar → als analysiert MIT LEERER Liste ablegen, sonst hinge die
-                    // Partie ewig an dieser Stellung. Die Wertung überspringt solche Stellungen.
-                    pos.CandidatesJson = "[]";
-                    pos.AnalyzedAt = DateTime.UtcNow;
-                    changed = true;
-                    _logger.LogWarning("GameAnalysis {Id}: Ergebnis von Auftrag {JobId} unlesbar (Ply {Ply})",
-                        analysis.Id, job.Id, pos.Ply);
-                }
-                pos.AnalysisJobId = null;
-                consumed.Add(job);
-            }
-            else if (job.Status == AnalysisJobStatus.Failed)
-            {
-                // Der Auftrag gibt auf. Das heisst fast immer „die Engine war gerade nicht zu
-                // gebrauchen" und NICHT „diese Stellung geht nicht": eine Stellung der Partie hat
-                // immer einen legalen Zug, Matt oder Patt kann sie nicht sein. Frueher stand hier
-                // sofort die leere Liste — eine tote Engine loeschte damit stillschweigend
-                // Stellungen aus der Partie, die nie wieder gerechnet wurden. Also zaehlen und
-                // erneut einreihen; erst nach MaxPositionAttempts ist endgueltig Schluss, damit
-                // eine wirklich unloesbare Stellung nicht ewig im Kreis laeuft.
-                pos.FailedAttempts++;
-                pos.AnalysisJobId = null;
-                if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts)
-                {
-                    pos.CandidatesJson = "[]";
-                    pos.AnalyzedAt = DateTime.UtcNow;
-                    _logger.LogWarning("GameAnalysis {Id}: Stellung {Ply} nach {Tries} Anlaeufen aufgegeben",
-                        analysis.Id, pos.Ply, pos.FailedAttempts);
-                }
-                // Der gescheiterte Auftrag bleibt stehen — seine Fehlermeldung ist die einzige
-                // Erklaerung, warum es an dieser Stellung hakt.
-                changed = true;
-            }
+            changed |= pos.CandidatesJson != null
+                ? TakeRefinement(analysis, pos, job, consumed)
+                : TakeFirstPass(analysis, pos, job, consumed);
         }
         if (consumed.Count > 0) _db.AnalysisJobs.RemoveRange(consumed);
+        return changed;
+    }
+
+    /// <summary>Zweiter Durchgang (Vertiefung) einer Stellung, die schon Kandidaten hat. → ob sich etwas geändert hat.</summary>
+    private bool TakeRefinement(GameAnalysis analysis, GameAnalysisPosition pos, AnalysisJob job, List<AnalysisJob> consumed)
+    {
+        var changed = false;
+        // Zweiter Durchgang: das Ergebnis ERSETZT das des ersten — ist es unbrauchbar oder scheitert der
+        // Auftrag endgueltig, bleibt das erste stehen (eine schwaechere Bewertung ist besser als keine).
+        if (job.Status == AnalysisJobStatus.Done)
+        {
+            var refined = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
+            if (refined is { Count: > 0 })
+            {
+                pos.CandidatesJson = BrokerCandidates.ToJson(refined);
+                pos.EvalText = BrokerCandidates.EvalTextOf(refined);
+                pos.Depth = job.ReachedDepth;
+                pos.AnalyzedAt = DateTime.UtcNow;
+                if (job.NodeStepsJson is not null) pos.NodeStepsJson = job.NodeStepsJson;
+            }
+            pos.Refined = true;
+            pos.AnalysisJobId = null;
+            consumed.Add(job);
+            changed = true;
+        }
+        else if (job.Status == AnalysisJobStatus.Failed)
+        {
+            pos.FailedAttempts++;
+            pos.AnalysisJobId = null;
+            if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts) pos.Refined = true;
+            changed = true;
+        }
+        else if (job.SecondsSpent >= GameAnalysisDefaults.RefineMaxSecondsPerPosition)
+        {
+            // Zeitgrenze (0.647.0): was erreicht ist, gilt — tiefer als der erste Durchgang ersetzt es ihn, sonst
+            // bleibt der erste stehen. Der Lauf wird angehalten und der Auftrag entfernt (wie beim Loeschen).
+            var partial = job.ReachedDepth > pos.Depth ? BrokerCandidates.Parse(job.ResultJson, pos.Fen) : null;
+            if (partial is { Count: > 0 })
+            {
+                pos.CandidatesJson = BrokerCandidates.ToJson(partial);
+                pos.EvalText = BrokerCandidates.EvalTextOf(partial);
+                pos.Depth = job.ReachedDepth;
+                pos.AnalyzedAt = DateTime.UtcNow;
+            }
+            pos.Refined = true;
+            pos.AnalysisJobId = null;
+            _jobs.Interrupt(job.Id);
+            consumed.Add(job);
+            changed = true;
+            _logger.LogInformation(
+                "GameAnalysis {Id}: Vertiefung von Stellung {Ply} nach {Seconds} s bei Tiefe {Depth}/{Target} beendet",
+                analysis.Id, pos.Ply, job.SecondsSpent, job.ReachedDepth, job.TargetDepth);
+        }
+        return changed;
+    }
+
+    /// <summary>Erster Durchgang einer Stellung ohne Kandidaten. → ob sich etwas geändert hat.</summary>
+    private bool TakeFirstPass(GameAnalysis analysis, GameAnalysisPosition pos, AnalysisJob job, List<AnalysisJob> consumed)
+    {
+        var changed = false;
+        if (job.Status == AnalysisJobStatus.Done && !string.IsNullOrEmpty(job.ResultJson))
+        {
+            var candidates = BrokerCandidates.Parse(job.ResultJson, pos.Fen);
+            if (candidates is { Count: > 0 })
+            {
+                pos.CandidatesJson = BrokerCandidates.ToJson(candidates);
+                pos.EvalText = BrokerCandidates.EvalTextOf(candidates);
+                pos.Depth = job.ReachedDepth;
+                pos.AnalyzedAt = DateTime.UtcNow;
+                pos.NodeStepsJson = job.NodeStepsJson;   // Zwischenstände der Knotenanalyse, bevor der Auftrag gelöscht wird
+                changed = true;
+            }
+            else
+            {
+                // Fertig, aber unlesbar → als analysiert MIT LEERER Liste ablegen, sonst hinge die
+                // Partie ewig an dieser Stellung. Die Wertung überspringt solche Stellungen.
+                pos.CandidatesJson = "[]";
+                pos.AnalyzedAt = DateTime.UtcNow;
+                changed = true;
+                _logger.LogWarning("GameAnalysis {Id}: Ergebnis von Auftrag {JobId} unlesbar (Ply {Ply})",
+                    analysis.Id, job.Id, pos.Ply);
+            }
+            pos.AnalysisJobId = null;
+            consumed.Add(job);
+        }
+        else if (job.Status == AnalysisJobStatus.Failed)
+        {
+            // Der Auftrag gibt auf. Das heisst fast immer „die Engine war gerade nicht zu
+            // gebrauchen" und NICHT „diese Stellung geht nicht": eine Stellung der Partie hat
+            // immer einen legalen Zug, Matt oder Patt kann sie nicht sein. Frueher stand hier
+            // sofort die leere Liste — eine tote Engine loeschte damit stillschweigend
+            // Stellungen aus der Partie, die nie wieder gerechnet wurden. Also zaehlen und
+            // erneut einreihen; erst nach MaxPositionAttempts ist endgueltig Schluss, damit
+            // eine wirklich unloesbare Stellung nicht ewig im Kreis laeuft.
+            pos.FailedAttempts++;
+            pos.AnalysisJobId = null;
+            if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts)
+            {
+                pos.CandidatesJson = "[]";
+                pos.AnalyzedAt = DateTime.UtcNow;
+                _logger.LogWarning("GameAnalysis {Id}: Stellung {Ply} nach {Tries} Anlaeufen aufgegeben",
+                    analysis.Id, pos.Ply, pos.FailedAttempts);
+            }
+            // Der gescheiterte Auftrag bleibt stehen — seine Fehlermeldung ist die einzige
+            // Erklaerung, warum es an dieser Stellung hakt.
+            changed = true;
+        }
         return changed;
     }
 }
