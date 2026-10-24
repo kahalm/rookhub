@@ -52,6 +52,12 @@ internal interface IDirectorySourceAdapter<in TRow>
     string? Url(TRow row);
 
     /// <summary>
+    /// Laeuft einmal je Lauf, NACHDEM feststeht, dass es Zeilen gibt, und VOR der ersten Zeile
+    /// (Chess Scotland stellt dort Altbestand-Vermerke um).
+    /// </summary>
+    Task BeforeLoopAsync(CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
     /// Kennt chess-results das Turnier schon, darf die Quelle dort LUECKEN fuellen (Bedenkzeit,
     /// Rundenzahl …), nie vorhandene Werte ueberschreiben. Laeuft vor dem Herkunftsvermerk.
     /// </summary>
@@ -101,6 +107,7 @@ internal static class ExternalSweepRunner
         int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
         // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
         var delivered = new List<string>(unreadable);
+        await source.BeforeLoopAsync(ct);
 
         try
         {

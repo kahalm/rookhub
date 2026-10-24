@@ -51,9 +51,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// <para><b>Rechtslage (2026-09-09 geprueft).</b> <c>/robots.txt</c> antwortet 404 (RFC 9309: keine
 /// Einschraenkung), keine Nutzungsbedingungen gefunden.</para>
 /// </summary>
-public class ChessScotlandDirectorySweepService
+public class ChessScotlandDirectorySweepService : IDirectorySourceAdapter<ChessScotlandDirectorySweepService.CrawlerChessScotlandEvent>
 {
-    private const int SaveEvery = 25;
 
     /// <summary>Wartezeit vor einem Detailabruf. Die Quelle nennt keine — Selbstbeschraenkung.</summary>
     private static readonly TimeSpan DetailDelay = TimeSpan.FromMilliseconds(300);
@@ -66,6 +65,9 @@ public class ChessScotlandDirectorySweepService
     private readonly GeocodingService _geocoding;
     private readonly ILogger<ChessScotlandDirectorySweepService> _log;
     private readonly int _detailBatchSize;
+
+    /// <summary>Wie viele Detailseiten der LAUFENDE Durchgang noch holen darf (je <see cref="RunAsync"/> neu gesetzt).</summary>
+    private int _detailBudget;
 
     public ChessScotlandDirectorySweepService(AppDbContext db, IHttpClientFactory httpClientFactory,
         GeocodingService geocoding, IConfiguration configuration,
@@ -84,123 +86,74 @@ public class ChessScotlandDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-        // Altbestand: bis 2026-09-15 trug jeder Vermerk dieser Quelle den ROHEN Slug. Umstellen,
-        // BEVOR ein Vermerk gesucht wird — sonst legte der Lauf je Turnier einen zweiten an, und
-        // HasOtherNoteOfSameKind blockierte danach jede Zuordnung zu chess-results.
-        await MigrateLegacyNotesAsync(ct);
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.Slug.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(PublicIdOf(row.Slug));
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = PublicIdOf(row.Slug);
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                // Ohne Ort: diese Liste nennt den Spielort nicht, er steht erst auf der
-                // Detailseite. Dann entscheidet allein der Namensvergleich.
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, Federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug), null), ct);
-
-                // Hat die Turniersuche dieselbe Veranstaltung inzwischen? Dann gehoert ihr der
-                // Eintrag — hier wird nur der Herkunftsvermerk gesetzt.
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug), row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("Chess Scotland: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = Federation;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                ApplyYouthMark(own, row.Categories);
-
-                own.TimeControlText = ExternalDirectorySource.Truncate(TimeControlTextOf(row.TimeControls), 300);
-                if (own.Speed == TournamentSpeed.Unknown)
-                    own.Speed = SpeedOf(row.TimeControls);
-
-                // Ein Online-Turnier hat keinen Spielort — kein Detailabruf, kein Pin.
-                var isOnline = Has(row.Categories, "Online");
-
-                var hasDetail = HasDetail(own, row.Slug);
-                if (!isOnline && !hasDetail && budget > 0)
-                {
-                    budget--;
-                    if (await LoadDetailAsync(own, row.Slug, ct))
-                    {
-                        updated++;
-                        hasDetail = true;
-                    }
-                    await Task.Delay(DetailDelay, ct);
-                }
-
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug),
-                    hasDetail ? row.Url : null, now, ct);
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "Chess Scotland: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "Chess-Scotland-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Spielort, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.ScottishChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        _detailBudget = Math.Max(0, detailLimit ?? _detailBatchSize);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerChessScotlandEvent>.Kind => DirectorySourceKind.ScottishChessFederation;
+    string IDirectorySourceAdapter<CrawlerChessScotlandEvent>.LogName => "Chess Scotland";
+    string? IDirectorySourceAdapter<CrawlerChessScotlandEvent>.SourceKey(CrawlerChessScotlandEvent row) => row.Slug.Length == 0 ? null : PublicIdOf(row.Slug);
+    DateOnly? IDirectorySourceAdapter<CrawlerChessScotlandEvent>.Start(CrawlerChessScotlandEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerChessScotlandEvent>.Name(CrawlerChessScotlandEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerChessScotlandEvent>.PublicId(CrawlerChessScotlandEvent row) => PublicIdOf(row.Slug);
+    string? IDirectorySourceAdapter<CrawlerChessScotlandEvent>.Federation(CrawlerChessScotlandEvent row) => Federation;
+    // Ohne Ort: diese Liste nennt den Spielort nicht, er steht erst auf der Detailseite. Dann
+    // entscheidet allein der Namensvergleich.
+    string? IDirectorySourceAdapter<CrawlerChessScotlandEvent>.MatchPlace(CrawlerChessScotlandEvent row) => null;
+    string? IDirectorySourceAdapter<CrawlerChessScotlandEvent>.Url(CrawlerChessScotlandEvent row) => row.Url;
+
+    // Altbestand: bis 2026-09-15 trug jeder Vermerk dieser Quelle den ROHEN Slug. Umstellen, BEVOR
+    // ein Vermerk gesucht wird — sonst legte der Lauf je Turnier einen zweiten an, und
+    // HasOtherNoteOfSameKind blockierte danach jede Zuordnung zu chess-results.
+    Task IDirectorySourceAdapter<CrawlerChessScotlandEvent>.BeforeLoopAsync(CancellationToken ct) => MigrateLegacyNotesAsync(ct);
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerChessScotlandEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerChessScotlandEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = Federation;
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        ApplyYouthMark(own, row.Categories);
+
+        own.TimeControlText = ExternalDirectorySource.Truncate(TimeControlTextOf(row.TimeControls), 300);
+        if (own.Speed == TournamentSpeed.Unknown)
+            own.Speed = SpeedOf(row.TimeControls);
+
+        // Ein Online-Turnier hat keinen Spielort — kein Detailabruf, kein Pin.
+        var isOnline = Has(row.Categories, "Online");
+
+        // „Aktualisiert" heisst hier: die Detailseite war lesbar (Spielort).
+        var loaded = false;
+        var hasDetail = HasDetail(own, row.Slug);
+        if (!isOnline && !hasDetail && _detailBudget > 0)
+        {
+            _detailBudget--;
+            if (await LoadDetailAsync(own, row.Slug, ct))
+            {
+                loaded = true;
+                hasDetail = true;
+            }
+            await Task.Delay(DetailDelay, ct);
+        }
+
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.ScottishChessFederation, PublicIdOf(row.Slug),
+            hasDetail ? row.Url : null, now, ct);
+        return loaded;
+    }
+
+    void IDirectorySourceAdapter<CrawlerChessScotlandEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "Chess-Scotland-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Spielort, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
 
     /// <summary>
     /// Ob die Detailseite dieses Turniers schon gelesen wurde — erkennbar an der Adresse im
