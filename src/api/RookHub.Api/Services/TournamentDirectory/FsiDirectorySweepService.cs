@@ -26,7 +26,7 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// mehrfach, „Marino" in der Provinz Roma nicht. Uebergeben wird deshalb „Ort, Provinz" — dieselbe
 /// Form, die der Geocoder bei chess-results-Ortstexten schon sieht.</para>
 /// </summary>
-public class FsiDirectorySweepService
+public class FsiDirectorySweepService : IDirectorySourceAdapter<FsiDirectorySweepService.CrawlerFsiEvent>
 {
     /// <summary>
     /// Zwischenstand alle 50 Turniere. Der Abruf ist einer, die VERORTUNG aber laeuft je neuem
@@ -53,126 +53,70 @@ public class FsiDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, today.AddMonths(months), ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
+    }
 
-        var now = DateTime.UtcNow;
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
 
-        try
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerFsiEvent>.Kind => DirectorySourceKind.ItalianChessFederation;
+    string IDirectorySourceAdapter<CrawlerFsiEvent>.LogName => "FSI";
+    int IDirectorySourceAdapter<CrawlerFsiEvent>.SaveEvery => SaveEvery;
+    string? IDirectorySourceAdapter<CrawlerFsiEvent>.SourceKey(CrawlerFsiEvent row) => row.EventId.Length == 0 ? null : row.EventId;
+    DateOnly? IDirectorySourceAdapter<CrawlerFsiEvent>.Start(CrawlerFsiEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerFsiEvent>.Name(CrawlerFsiEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerFsiEvent>.PublicId(CrawlerFsiEvent row) => $"it{row.EventId}";
+    // Die FSI kennt keine chess-results-Nummer. Alles, was dort gebraucht wird (Rundenplan,
+    // Vereins-Aufloesung, Abo), bleibt fuer die eigenen Eintraege deshalb aus.
+    string? IDirectorySourceAdapter<CrawlerFsiEvent>.Federation(CrawlerFsiEvent row) => "ITA";
+    string? IDirectorySourceAdapter<CrawlerFsiEvent>.MatchPlace(CrawlerFsiEvent row) => LocationOf(row);
+    string? IDirectorySourceAdapter<CrawlerFsiEvent>.Url(CrawlerFsiEvent row) => null;
+
+    // chess-results kennt das Turnier. Die FSI fuellt nur Luecken — Bedenkzeit und Rundenzahl
+    // fehlen dort oefter, als man denkt.
+    bool IDirectorySourceAdapter<CrawlerFsiEvent>.FillMatch(TournamentDirectoryEntry match, CrawlerFsiEvent row) =>
+        ExternalSweepRunner.FillTimeControlGaps(match, row.TimeControl, row.Rounds);
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerFsiEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerFsiEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var locationChanged = own.LocationText != LocationOf(row);
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.State = ExternalDirectorySource.Truncate(Titlecase(row.Region), 100);
+        own.LocationText = ExternalDirectorySource.Truncate(LocationOf(row), 300);
+        own.TimeControlText = ExternalDirectorySource.Truncate(row.TimeControl, 300);
+        own.Speed = TournamentSpeedClassifier.Classify(row.TimeControl);
+        own.Rounds = row.Rounds;
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
+
+        // Verortet wird nur, wenn der Ortstext neu ist oder noch kein Pin steht — sonst
+        // liefe das Lexikon jede Nacht fuer 283 unveraenderte Eintraege.
+        if (locationChanged || own.Lat is null)
         {
-            foreach (var row in events)
+            var hit = await _geocoding.ResolveAsync(own.LocationText, own.State, "ITA", ct);
+            if (hit is not null && hit.Source != GeoSource.Ambiguous)
             {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = $"it{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, "ITA", start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.ItalianChessFederation, row.EventId, LocationOf(row)), ct);
-
-                if (match is not null)
-                {
-                    // chess-results kennt das Turnier. Die FSI fuellt nur Luecken — Bedenkzeit und
-                    // Rundenzahl fehlen dort oefter, als man denkt.
-                    var text = match.TimeControlText;
-                    var rounds = match.Rounds;
-                    var changed = ExternalDirectorySource.FillIfEmpty(row.TimeControl, ref text, 300);
-                    changed |= ExternalDirectorySource.FillIfEmpty(row.Rounds, ref rounds);
-                    match.TimeControlText = text;
-                    match.Rounds = rounds;
-                    if (changed && match.Speed == TournamentSpeed.Unknown)
-                        match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
-
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
-                    matched++;
-                    if (changed) updated++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("FSI: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        // Die FSI kennt keine chess-results-Nummer. Alles, was dort gebraucht wird
-                        // (Rundenplan, Vereins-Aufloesung, Abo), bleibt deshalb aus.
-                        ChessResultsId = null,
-                        Federation = "ITA",
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var locationChanged = own.LocationText != LocationOf(row);
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.State = ExternalDirectorySource.Truncate(Titlecase(row.Region), 100);
-                own.LocationText = ExternalDirectorySource.Truncate(LocationOf(row), 300);
-                own.TimeControlText = ExternalDirectorySource.Truncate(row.TimeControl, 300);
-                own.Speed = TournamentSpeedClassifier.Classify(row.TimeControl);
-                own.Rounds = row.Rounds;
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.ItalianChessFederation, row.EventId, null, now, ct);
-
-                // Verortet wird nur, wenn der Ortstext neu ist oder noch kein Pin steht — sonst
-                // liefe das Lexikon jede Nacht fuer 283 unveraenderte Eintraege.
-                if (locationChanged || own.Lat is null)
-                {
-                    var hit = await _geocoding.ResolveAsync(own.LocationText, own.State, "ITA", ct);
-                    if (hit is not null && hit.Source != GeoSource.Ambiguous)
-                    {
-                        own.Lat = hit.Lat;
-                        own.Lon = hit.Lon;
-                        own.GeoSource = hit.Source;
-                        own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
-                    }
-                }
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
+                own.Lat = hit.Lat;
+                own.Lon = hit.Lon;
+                own.GeoSource = hit.Source;
+                own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
             }
         }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "FSI: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "FSI-Kalender: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.ItalianChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        // „Ergaenzt" zaehlt nur an chess-results-Eintraegen (FillMatch).
+        return false;
     }
+
+    void IDirectorySourceAdapter<CrawlerFsiEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "FSI-Kalender: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
 
     /// <summary>
     /// „Ort, Provinz" — die Provinz ist der einzige Unterscheider, den diese Quelle mitbringt, und

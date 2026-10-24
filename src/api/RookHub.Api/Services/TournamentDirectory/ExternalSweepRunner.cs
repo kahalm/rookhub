@@ -1,5 +1,6 @@
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Tournaments;
 
 namespace RookHub.Api.Services.TournamentDirectory;
 
@@ -49,6 +50,13 @@ internal interface IDirectorySourceAdapter<in TRow>
 
     /// <summary>Die Seite des Turniers bei der Quelle (Herkunftsvermerk).</summary>
     string? Url(TRow row);
+
+    /// <summary>
+    /// Kennt chess-results das Turnier schon, darf die Quelle dort LUECKEN fuellen (Bedenkzeit,
+    /// Rundenzahl …), nie vorhandene Werte ueberschreiben. Laeuft vor dem Herkunftsvermerk.
+    /// </summary>
+    /// <returns>Ob etwas ergaenzt wurde — zaehlt als „aktualisiert".</returns>
+    bool FillMatch(TournamentDirectoryEntry match, TRow row) => false;
 
     /// <summary>
     /// Die Zeile auf den eigenen Eintrag abbilden — Felder, „gesehen", Klassifizierung,
@@ -127,9 +135,11 @@ internal static class ExternalSweepRunner
 
                 if (match is not null)
                 {
+                    var filled = source.FillMatch(match, row);
                     await ExternalDirectorySource.NoteSourceAsync(db, match,
                         source.Kind, key, source.Url(row), now, ct);
                     matched++;
+                    if (filled) updated++;
 
                     if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
                     {
@@ -204,5 +214,24 @@ internal static class ExternalSweepRunner
         own.GeoSource = hit.Source;
         own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
         return true;
+    }
+
+    /// <summary>
+    /// Bedenkzeit und Rundenzahl an einem chess-results-Eintrag ergaenzen, wo sie FEHLEN (FSI,
+    /// schachbund) — beides fehlt dort oefter, als man denkt. Die Bedenkzeit-Klasse wird nur
+    /// nachgezogen, wenn sie noch unbekannt ist.
+    /// </summary>
+    /// <returns>Ob etwas ergaenzt wurde.</returns>
+    public static bool FillTimeControlGaps(TournamentDirectoryEntry match, string? timeControl, int? rounds)
+    {
+        var text = match.TimeControlText;
+        var known = match.Rounds;
+        var changed = ExternalDirectorySource.FillIfEmpty(timeControl, ref text, 300);
+        changed |= ExternalDirectorySource.FillIfEmpty(rounds, ref known);
+        match.TimeControlText = text;
+        match.Rounds = known;
+        if (changed && match.Speed == TournamentSpeed.Unknown)
+            match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
+        return changed;
     }
 }
