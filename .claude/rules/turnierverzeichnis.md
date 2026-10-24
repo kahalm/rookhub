@@ -77,6 +77,16 @@ paths:
   ihn fest. Gilt fuer BEIDE Besitzer (Turniersuche und Zusatzquellen). Ohne die Sperre genuegten zwei Durchgaenge im
   Abstand von Minuten: der Aufhol-Lauf nach einem Deploy (auf Dev mehrmals am Tag) und `scripts/directory-runs.sh` mit
   bis zu elf Durchgaengen haetten abgesagt, was eine Quelle kurz nicht auswies.
+- **Die Abgleichschleife der Zusatzquellen steht EINMAL, in `ExternalSweepRunner`** (Zerlegung Z7, 2026-10-25) – Eine
+  Quelle implementiert `IDirectorySourceAdapter<TRow>` (Kennung, Termin, Name, `PublicId`, Foederation, Abbildung auf den
+  eigenen Eintrag, Abschlusszeile) und ruft `ExternalSweepRunner.RunAsync`; Sonderfaelle sind Haken mit Vorgabe
+  (`Withdrawn` = Absage/Sitzung, `FillMatch` = Luecken am chess-results-Eintrag, `SaveEvery`, `BeforeLoopAsync`,
+  `unreadable` = beim Abruf unlesbare Kennungen). „Geliefert vor lesbar", Zwischenstand, Speichern im `finally` und
+  `RetireVanishedAsync` gelten damit fuer alle umgestellten Quellen an EINER Stelle. Die Log-Vorlagen beginnen mit
+  `LogName` wie vorher von Hand. Jede Quelle hat einen Golden-Test (`ExternalSweepGoldenTests`, acht Laeufe); wer
+  den Runner oder einen Adapter aendert, sieht dort jede Abweichung. Noch von Hand: ICU (Detailseite VOR der Zuordnung,
+  exakte chess-results-Nummer), FFE (`EnsureSourcesLoadedAsync`), chess.sk (exakte Nummer, eigener Eintrag mit Nummer),
+  chessarbiter (Detail-Fassung); ChessCz, FIDE und der Ankuendigungskalender haben eine andere Schleife.
 - **Eine Zeile, die wir nicht lesen koennen, gilt als GELIEFERT** (seit 0.455.0) – In allen 15 Quellen steht
   `delivered.Add(...)` VOR der Pruefung auf Termin und Namen, und die Abruf-Methoden sieben Zeilen ohne lesbaren Termin
   nicht mehr aus (KNSB traegt einen festen Termin im Zeilentyp und meldet sie ueber `KnsbFetch.Unreadable`). Vorher

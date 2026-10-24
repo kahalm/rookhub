@@ -229,7 +229,10 @@ ueber `TournamentDirectory:FideYears` (Vorgabe 3 Jahre) nach dem naechtlichen Sw
 `POST /api/admin/tournament-directory/fide`.
 
 **Die VERBANDSKALENDER sind die dritte Quellenart** (`Services/TournamentDirectory/ExternalDirectorySource.cs` traegt
-das Gemeinsame, je Land ein `…DirectorySweepService`). Jede stellt dieselben vier Fragen: kenne ich
+das Gemeinsame, je Land ein `…DirectorySweepService`; die Abgleichschleife selbst steht seit der Zerlegung Z7 EINMAL in
+`ExternalSweepRunner`, die Quelle liefert nur ihre Abbildung als `IDirectorySourceAdapter<TRow>` — umgestellt sind
+FRSah, WCU, CFC, SZS, ECF, chess.hu, KNSB, FSI, schachbund, Chess Scotland und sjakk.no; ICU, FFE, chess.sk und
+chessarbiter haben ihre Schleife noch von Hand). Jede stellt dieselben vier Fragen: kenne ich
 das Turnier schon (Termin ±1 Tag + zwei unterscheidende Woerter, ODER — nur chess.sk — die
 mitgelieferte chess-results-Nummer, dann exakt), habe ich es selbst schon angelegt
 (`<praefix><fremde-id>`), hat die Turniersuche es eingeholt (dann eigenen Eintrag zurueckziehen),
