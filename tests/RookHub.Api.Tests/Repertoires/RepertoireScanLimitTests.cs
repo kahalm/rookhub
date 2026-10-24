@@ -1,6 +1,5 @@
 using System.Net;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Chess;
@@ -69,7 +68,7 @@ public class RepertoireScanLimitTests : IDisposable
     [Fact]
     public void ScanPolicy_IsRegisteredInProgram()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains($@"AddPolicy(""{RateLimitPartitions.RepertoireScanPolicy}"", ctx => RookHub.Api.Services.RateLimitPartitions.RepertoireScan(ctx, permitScale))", src);
     }
 
@@ -352,18 +351,5 @@ public class RepertoireScanLimitTests : IDisposable
             if (lease.IsAcquired) ok++;
         }
         return ok;
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -141,13 +140,8 @@ public class AnonymousDataRetentionServiceTests : IDisposable
     [Fact]
     public void ProgramCs_RegistersTheRetentionIndependentOfTheChessableSwitch()
     {
-        // Verdrahtung: registriert, bevor der Schalter überhaupt gelesen wird — also nie hinter if (chessableEnabled).
-        var src = File.ReadAllText(ProgramCs());
-        var registration = src.IndexOf("AddHostedService<AnonymousDataRetentionService>()", StringComparison.Ordinal);
-        var chessableSwitch = src.IndexOf("var chessableEnabled", StringComparison.Ordinal);
-        Assert.True(registration > 0, "AnonymousDataRetentionService nicht registriert");
-        Assert.True(chessableSwitch > 0, "Chessable-Schalter nicht gefunden");
-        Assert.True(registration < chessableSwitch, "Retention hängt am Chessable-Schalter");
+        // Verdrahtung: registriert, auch wenn der Schalter aus ist — also nie hinter if (chessableEnabled).
+        Assert.Contains(typeof(AnonymousDataRetentionService), StartupSource.HostedServices(chessableEnabled: false));
     }
 
     // ---- Guard (A8-001): nichts hinter dem Chessable-Schalter trägt Pflichten des Extension-Wegs ----
@@ -166,8 +160,8 @@ public class AnonymousDataRetentionServiceTests : IDisposable
     [Fact]
     public void ChessableGatedHostedServices_CarryNoDutyOfTheExtensionPath()
     {
-        var gated = ChessableGatedHostedServices(File.ReadAllText(ProgramCs()));
-        Assert.NotEmpty(gated);   // sonst fände der Parser den Schalter-Block nicht mehr und prüfte nichts
+        var gated = ChessableGatedHostedServices();
+        Assert.NotEmpty(gated);   // sonst hinge nichts mehr am Schalter, und der Guard prüfte nichts
 
         foreach (var service in gated)
         {
@@ -190,39 +184,17 @@ public class AnonymousDataRetentionServiceTests : IDisposable
         }
     }
 
-    /// <summary>Die Hosted Services unter <c>if (chessableEnabled)</c> — als Block oder als einzelne Anweisung.</summary>
-    private static List<string> ChessableGatedHostedServices(string programCs)
+    /// <summary>Die Hosted Services, die nur mit <c>Chessable:Enabled=true</c> registriert werden.</summary>
+    private static List<string> ChessableGatedHostedServices()
     {
-        var src = StripLineComments(programCs);
-        var names = new List<string>();
-        const string condition = "if (chessableEnabled)";
-        for (var at = src.IndexOf(condition, StringComparison.Ordinal); at >= 0;
-             at = src.IndexOf(condition, at + condition.Length, StringComparison.Ordinal))
-        {
-            var start = at + condition.Length;
-            while (start < src.Length && char.IsWhiteSpace(src[start])) start++;
-            int end;
-            if (src[start] == '{')
-            {
-                var depth = 0;
-                for (end = start; end < src.Length; end++)
-                {
-                    if (src[end] == '{') depth++;
-                    else if (src[end] == '}' && --depth == 0) break;
-                }
-            }
-            else end = src.IndexOf(';', start);
-            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(
-                         src[start..end], @"AddHostedService<([\w.]+)>"))
-                names.Add(m.Groups[1].Value.Split('.')[^1]);
-        }
-        return names;
+        var always = StartupSource.HostedServices(chessableEnabled: false);
+        return StartupSource.HostedServices(chessableEnabled: true).Except(always).Select(t => t.Name).ToList();
     }
 
     /// <summary>Quelltext der Klasse <paramref name="className"/> (alle Dateien, die sie deklarieren), ohne Kommentare.</summary>
     private static string SourceOf(string className)
     {
-        var apiDir = Path.GetDirectoryName(ProgramCs())!;
+        var apiDir = StartupSource.ApiDir();
         var declaration = new System.Text.RegularExpressions.Regex($@"\bclass\s+{className}\b");
         var files = Directory.EnumerateFiles(apiDir, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
@@ -240,17 +212,4 @@ public class AnonymousDataRetentionServiceTests : IDisposable
             var c = l.IndexOf("//", StringComparison.Ordinal);
             return c >= 0 ? l[..c] : l;
         }));
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
-    }
 }

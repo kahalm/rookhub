@@ -1,5 +1,4 @@
 using System.Net;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -68,7 +67,7 @@ public class ForwardedChainCaptureTests
     [Fact]
     public void ProgramCs_CapturesBeforeForwardedHeaders_AndLogsTheRawChain()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         var capture = src.IndexOf("app.UseForwardedChainCapture();", StringComparison.Ordinal);
         var forwarded = src.IndexOf("app.UseForwardedHeaders();", StringComparison.Ordinal);
         Assert.True(capture >= 0, "app.UseForwardedChainCapture() fehlt in Program.cs");
@@ -78,18 +77,5 @@ public class ForwardedChainCaptureTests
         Assert.Contains("ForwardedChainCapture.Get(ctx)", src, StringComparison.Ordinal);
         Assert.DoesNotContain("Headers[\"X-Original-For\"]", src, StringComparison.Ordinal);
         Assert.DoesNotContain("\"XRealIp\"", src, StringComparison.Ordinal);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

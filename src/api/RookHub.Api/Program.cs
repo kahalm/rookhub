@@ -29,6 +29,7 @@ using RookHub.Api.Services.Kids;
 using RookHub.Api.Services.Tournaments;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Startup;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -215,7 +216,6 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookGameService>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookLibraryImporter>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookCoverRenderer>();
-    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookCoverWorker>();
     // Diagramme aus Schach-Font-PDFs (0.766.0): Text-Diagramme → FEN je Diagramm, im Hintergrund je Buch.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.Ebooks.EbookDiagramExtractor(
         sp.GetRequiredService<ILogger<RookHub.Api.Services.Ebooks.EbookDiagramExtractor>>(),
@@ -225,11 +225,6 @@ try
     // Fließtext-EPUB aus Text-PDFs (0.802.0, Prototyp): POST /api/admin/ebooks/{id}/reflow; nach der Erkennung nur mit Ebooks__ReflowAfterDiagrams.
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookReflowService>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.EbookScanDiagramExtractor>();
-    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDiagramWorker>();
-    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookAnonymousCleanupWorker>();
-    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookDjvuConverter>();
-    // Stockfish prüft die Buchlösungen und löst Aufgaben ohne Buchlösung (0.772.0); Ebooks__EngineCheck=false schaltet ab.
-    builder.Services.AddHostedService<RookHub.Api.Services.Ebooks.EbookSolutionCheckWorker>();
     builder.Services.AddScoped<RevengeNotificationService>();
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();
@@ -320,11 +315,8 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubAdminService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubGameCorrectionService>();   // Vereinspartie + Kopien korrigieren (0.660.0)
-    builder.Services.AddHostedService<RookHub.Api.Services.Club.ClubCopyLinkScheduler>();
-    builder.Services.AddHostedService<RookHub.Api.Services.Club.ClubSecondEngineScheduler>();
     // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen
     builder.Services.AddScoped<RookHub.Api.Services.Tactics.TacticHarvestService>();
-    builder.Services.AddHostedService<RookHub.Api.Services.Tactics.TacticHarvestScheduler>();
     // ClubHub (Kartei der Kinder und Jugendlichen): Regeln + Sichtbarkeit, Lernstand aus dem verknüpften Konto
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubService>();
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubProgressService>();
@@ -387,7 +379,6 @@ try
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
         sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
         sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueTeamScout>>(), sp.GetRequiredService<IConfiguration>()));
-    builder.Services.AddHostedService<RookHub.Api.Services.League.LeagueOnlineSyncScheduler>();
     // ChessBase-Datenbanken (.cbh/.2cbh) → PGN für die Vereins-Datenbank (0.598.0).
     builder.Services.AddSingleton<RookHub.Api.Services.ChessBase.ChessBaseImportService>();
     // Öffentliche Lichess-Studien für den Import in die Vereins-Datenbank (nur die feste API, siehe LichessStudySource).
@@ -435,19 +426,6 @@ try
         tracker.OnNotifyFailed += ex => log.LogError(ex, "Benachrichtigung über Live-Analyse fehlgeschlagen");
         return tracker;
     });
-    // Was aus dem ExecuteAsync eines Hintergrunddienstes fliegt, beendet den GANZEN Host. Das ist der .NET-Default,
-    // hier ausdrücklich und bewusst: ein still toter Worker bliebe bis zum nächsten Deploy tot, der Container dagegen
-    // startet neu (restart: unless-stopped). Deshalb darf ein Dienst nur beim ECHTEN Shutdown werfen — genau diese
-    // eine Fehlerpolitik setzt PeriodicWorker um (Codereview 2026-09-29, A8-008).
-    builder.Services.Configure<HostOptions>(o =>
-        o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost);
-    // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
-    // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension
-    // (90 bzw. 14 Tage). IMMER registriert, unabhängig von `Chessable:Enabled`: der Extension-Endpunkt nimmt
-    // auch mit Schalter aus an — hinter dem Schalter (im Kurslisten-Refresh) lief die Retention auf PROD nie.
-    builder.Services.AddHostedService<AnonymousDataRetentionService>();
-    // Benachrichtigungen: gelesene nach 180 Tagen weg, Namen gelöschter Konten in fremden Glocken ersetzen (A9-003).
-    builder.Services.AddHostedService<NotificationRetentionScheduler>();
     // Eigener Engine-Broker (Provider auf dem Rechner des Nutzers spricht direkt mit RookHub, ohne Lichess):
     // Registrierung (rhe_…), Selector-Verzeichnis, Engine-Auflösung beider Quellen.
     builder.Services.AddSingleton(RookHub.Api.Services.EngineBroker.LocalBrokerOptions.FromConfig(builder.Configuration));
@@ -463,11 +441,9 @@ try
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.LocalEngineBroker>();
     builder.Services.AddTransient<RookHub.Api.Services.EngineBroker.LichessEngineBroker>();
     builder.Services.AddTransient<RookHub.Api.Services.EngineBroker.IEngineBroker, RookHub.Api.Services.EngineBroker.EngineBrokerRouter>();
-    builder.Services.AddHostedService<RookHub.Api.Services.EngineBroker.EngineBrokerMaintenanceService>();
     builder.Services.AddSingleton<AnalysisJobLive>();
     builder.Services.AddSingleton<AnalysisJobWorker>();
     builder.Services.AddSingleton<IAnalysisJobControl>(sp => sp.GetRequiredService<AnalysisJobWorker>());
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<AnalysisJobWorker>());
     builder.Services.AddScoped<AnalysisJobService>();
     builder.Services.AddScoped<DeepAnalysisService>();
     builder.Services.AddScoped<GameAnalysisService>();
@@ -483,20 +459,13 @@ try
     // Sperrzeiten der Spark (QuietHours unten), Automatik über CourseTranslation:AutoLanguages (leer = aus).
     builder.Services.AddScoped<CourseTranslationJobService>();
     builder.Services.AddSingleton<CourseTranslationSignal>();
-    builder.Services.AddHostedService<CourseTranslationWorker>();
     builder.Services.AddScoped<GuessSessionService>();
-    // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
-    builder.Services.AddHostedService<GameAnalysisPumpService>();
     // Züge vergleichen (0.602.0): Kandidatenzüge über Hintergrund-Aufträge durchrechnen, Begründung vom Modell.
     // Analyse-Verlauf (0.603.0): die letzten 20 Analysen des Analysebretts je Nutzer.
     builder.Services.AddScoped<AnalysisHistoryService>();
     builder.Services.AddSingleton<MoveComparisonExplainJobs>();
     builder.Services.AddScoped<MoveComparisonService>();
-    builder.Services.AddHostedService<MoveComparisonPumpService>();
-    // Meisterpartien im Hintergrund analysieren — zu den Zeiten der Uebersetzung (QuietHours), auf den Engines der
-    // Haus-Engine, jeder andere Auftrag hat Vorrang (MasterAnalysis:Enabled=false schaltet ab).
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueAnalysisQueue>();   // Liga-Partien für den Stapel (0.665.0)
-    builder.Services.AddHostedService<MasterAnalysisScheduler>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<RookHub.Api.Services.Ebooks.CourseEbookLinker>();
     builder.Services.AddScoped<CatalogService>();
@@ -517,7 +486,6 @@ try
     // Engine-Prüfung der Lesung (0.646.0): Stockfish aus dem API-Image (/usr/games/stockfish), ein Prozess je Prüfung.
     builder.Services.AddSingleton<IScoresheetEngine, StockfishScoresheetEngine>();
     builder.Services.AddSingleton<ScoresheetScanSignal>();
-    builder.Services.AddHostedService<ScoresheetScanWorker>();
     builder.Services.AddScoped<GameMistakeProgressService>();
     builder.Services.AddScoped<MarkedPositionService>();
     builder.Services.AddScoped<GameReconstructionService>();
@@ -564,72 +532,21 @@ try
     builder.Services.AddSingleton<RookHub.Api.Services.Og.OgIndexHtmlProvider>();
     builder.Services.AddHttpClient("og-frontend");
     builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-    builder.Services.AddHostedService<BackgroundTaskWorker>();
-    // Eigene Queue + Consumer NUR für schach-bot-Webhooks, damit Solver-Updates nicht
+    // Eigene Queue NUR für schach-bot-Webhooks, damit Solver-Updates nicht
     // hinter/unter einem Chessable-Import-Schwung in der allgemeinen Queue verhungern.
-    // Schalter fuer den RookHub-eigenen Chessable-Weg (siehe unten). Vorgabe AN, damit eine
-    // Installation ohne die Variable sich wie bisher verhaelt.
-    var chessableEnabled = ChessableSwitch.IsEnabled(builder.Configuration);
     builder.Services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
-    builder.Services.AddHostedService<WebhookTaskWorker>();
-    // Eigene Queue + Consumer fuer die Tipp-Generierung (Stockfish + LLM je Linie): ein grosser Kurs-Upload hielt den
+    // Eigene Queue fuer die Tipp-Generierung (Stockfish + LLM je Linie): ein grosser Kurs-Upload hielt den
     // einzigen allgemeinen Consumer sonst stundenlang fest; persoenliche Kurse sind dort gedeckelt (A4-002).
     builder.Services.AddSingleton<IHintTaskQueue, HintTaskQueue>();
-    builder.Services.AddHostedService<HintTaskWorker>();
     // Anonyme Buch-Puzzle-Solves melden hoechstens einmal je Puzzle und 30 s an den Bot (A2-003).
     builder.Services.AddSingleton<AnonymousSolveNotifyThrottle>();
-    // Der RookHub-EIGENE Chessable-Weg (Bearer hinterlegen, Kurse ueber piratechess holen) laesst
-    // sich abschalten: `Chessable:Enabled=false`. Dann fallen der Drain des Watchdogs, der Resume-Dienst und
-    // der naechtliche Kurslisten-Refresh weg, und `/api/chessable/*` antwortet 404 (ausser `/api/chessable/admin/*`,
-    // siehe Fast-Lane unten). Die Download-Lane laeuft BEWUSST weiter: ein nicht gecachter Admin-Import („Kurse
-    // von Usern holen") reiht per `EnqueueNextAsync` ein Ticket ein, der BackgroundTaskWorker ruft `RunNextAsync`
-    // ohne Schalterpruefung, und der Kurs wird dabei echt von Chessable geholt. Der Weg ueber die
-    // RepCheck-EXTENSION (`/api/extension/*`) ist davon UNBERUEHRT — genau darum geht es beim
-    // Abschalten: alle sollen vorerst die Extension benutzen (Entscheidung 2026-09-09).
-    // Der Watchdog laeuft IMMER: neben dem Lane-Sicherheitsnetz (beim Neustart verworfene Tickets /
-    // fehlende Nachreihung nach Abschluss) erledigt er die Pflichten des EXTENSION-Wegs — abgelaufene
-    // Browser-Sitzungen und verwaiste Browser-Importe schliessen. Genau die fielen aus, solange er hinter
-    // `Chessable:Enabled` stand: auf PROD (Flag seit 2026-09-09 aus) blieb jeder abgebrochene Browser-Import
-    // fuer immer auf „laeuft". Was zu den eigenen Lanes gehoert, schaltet er selbst ab (LanesEnabled).
-    builder.Services.AddHostedService<ChessableImportWatchdogService>();
-    // Schnelle Lane: treibt voll-gecachte Importe sofort, parallel zur Download-Lane. Laeuft IMMER: sie ist
-    // netzfrei (kein Chessable-Abruf, der Kurs kommt aus dem piratechess-Cache), und der Admin-Tab „Kurse von
-    // Usern holen" bleibt auch mit `Chessable:Enabled=false` bewusst in Betrieb — ein voll gecachter
-    // Admin-Import bekommt kein Queue-Ticket und stand ohne sie fuer immer auf „wartend" (Codereview 2026-09-29).
-    builder.Services.AddHostedService<ChessableImportFastLaneService>();
-    if (chessableEnabled)
-    {
-        // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
-        builder.Services.AddHostedService<ChessableImportResumeService>();
-    }
     builder.Services.AddSingleton<AutoSubscriptionService>();
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());
-    builder.Services.AddHostedService<RoundMonitorService>();
-    // Periodisches Lebenszeichen nach ES (Standard 60 s) → log-watcher erkennt toten Dienst.
-    builder.Services.AddHostedService<HeartbeatService>();
-    // Taegliche Tagespuzzle-Zuordnung um 00:00 UTC (siehe DailyPuzzles-Tabelle).
-    builder.Services.AddHostedService<DailyPuzzleScheduler>();
-    // Taeglicher Chessable-Kurslisten-Refresh (04:00 UTC): aktualisiert alle hinterlegten Bearer,
-    // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen. Nur wenn der eigene
-    // Chessable-Weg ueberhaupt an ist — sonst liefe er jede Nacht gegen eine abgeschaltete
-    // Funktion und sperrte dabei womoeglich Bearer. (Die Retention der anonymen getReview-Senke gehoert
-    // deshalb NICHT hierher, sondern in den immer laufenden AnonymousDataRetentionService.)
-    if (chessableEnabled)
-        builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
-    // Kalkulations-Serie: kündigt freigegebene Wochen an den Verteiler an (Standard alle 5 min).
-    builder.Services.AddHostedService<CalcSeriesAnnounceScheduler>();
-    // Turnierverzeichnis: naechtlicher Sweep der chess-results-Turniersuche (03:00 UTC),
-    // Nachbarlaender taeglich, alle uebrigen Foederationen rotierend ueber die Woche.
-    builder.Services.AddHostedService<TournamentDirectoryScheduler>();
-    // „Meine Turniere": frischt Trefferlisten und Spielerkarten taeglich (04:30 UTC) im
-    // Hintergrund auf, damit der Verlauf nicht erst beim Ansehen entsteht.
-    builder.Services.AddHostedService<PlayerHistoryScheduler>();
-    // Traegt Basisname/Gruppenschluessel im Altbestand nach (einmalig, idempotent) — ohne das
-    // bleibt die Gruppen-Zusammenfassung bis zum naechsten Sweep unsichtbar.
-    builder.Services.AddHostedService<TournamentGroupingBackfillService>();
-    builder.Services.AddHostedService<RepertoireCleanupBackfillService>();
-    // Baut die Kinder-Leiter, wenn sie fehlt oder aus einem aelteren Lehrplan stammt.
-    builder.Services.AddHostedService<KidsPuzzleSeeder>();
+
+    // Alle Hosted Services an EINER Stelle (Startup/BackgroundServicesSetup.cs: Dienst · Schalter · Grund).
+    // Schalter fuer den RookHub-eigenen Chessable-Weg — hier EINMAL gelesen und hineingereicht. Vorgabe AN, damit eine
+    // Installation ohne die Variable sich wie bisher verhaelt.
+    var chessableEnabled = ChessableSwitch.IsEnabled(builder.Configuration);
+    builder.Services.AddRookHubBackgroundServices(chessableEnabled);
 
     // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
     builder.Services.AddHttpClient<GithubActionsService>(client =>
@@ -648,7 +565,6 @@ try
         client.Timeout = TimeSpan.FromSeconds(20);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub/1.0 (+https://rookhub; training-goals)");
     });
-    builder.Services.AddHostedService<PlayTimeSyncService>();
 
     // SchachBot-Webhook (Solver-Updates fuer Daily-Puzzle live an den Bot pushen).
     // URL + Secret optional → ohne Konfig stillschweigend deaktiviert.

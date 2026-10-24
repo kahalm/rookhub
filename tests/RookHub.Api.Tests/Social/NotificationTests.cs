@@ -391,18 +391,10 @@ public class NotificationTests : IDisposable
     }
 
     [Fact]
-    public void ProgramCs_RegistersTheNotificationRetention() => AssertRegistered();
-
-    private static void AssertRegistered([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
+    public void ProgramCs_RegistersTheNotificationRetention()
     {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (dir != null && !File.Exists(Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs")))
-            dir = Path.GetDirectoryName(dir);
-        Assert.NotNull(dir);
-        var src = File.ReadAllText(Path.Combine(dir!, "src", "api", "RookHub.Api", "Program.cs"));
-        var registration = src.IndexOf("AddHostedService<NotificationRetentionScheduler>()", StringComparison.Ordinal);
-        Assert.True(registration > 0, "NotificationRetentionScheduler nicht registriert");
-        Assert.True(registration < src.IndexOf("var chessableEnabled", StringComparison.Ordinal),
-            "Retention hängt am Chessable-Schalter");
+        // Registriert, unabhängig vom Chessable-Schalter.
+        Assert.Contains(typeof(NotificationRetentionScheduler), StartupSource.HostedServices(chessableEnabled: false));
+        Assert.Contains(typeof(NotificationRetentionScheduler), StartupSource.HostedServices(chessableEnabled: true));
     }
 }

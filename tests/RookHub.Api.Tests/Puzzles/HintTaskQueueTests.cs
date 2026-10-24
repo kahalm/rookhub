@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -271,7 +270,7 @@ public class HintTaskQueueTests : IDisposable
     [Fact]
     public void ProgramCs_RunsHintsOnTheirOwnQueueAndConsumer()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("AddSingleton<IHintTaskQueue, HintTaskQueue>()", src);
         Assert.Contains("AddHostedService<HintTaskWorker>()", src);
     }
@@ -283,18 +282,5 @@ public class HintTaskQueueTests : IDisposable
         var ctor = Assert.Single(typeof(PgnImportService).GetConstructors());
         Assert.DoesNotContain(ctor.GetParameters(), p => p.ParameterType == typeof(IBackgroundTaskQueue));
         Assert.Contains(ctor.GetParameters(), p => p.ParameterType == typeof(IHintTaskQueue));
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

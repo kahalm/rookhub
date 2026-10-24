@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -62,7 +61,7 @@ public class AuthRateLimitTests
     [Fact]
     public void EveryRateLimitPolicyUsedByAController_IsRegisteredInProgramCs()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         var registered = Regex.Matches(src, @"AddPolicy\(""([^""]+)""").Select(m => m.Groups[1].Value).ToHashSet();
 
         var used = typeof(AuthController).Assembly.GetTypes()
@@ -83,24 +82,11 @@ public class AuthRateLimitTests
     [Fact]
     public void PermissionPolicy_IsPartitionedPerUser()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         var start = src.IndexOf(@"AddPolicy(""auth-permissions""", StringComparison.Ordinal);
         Assert.True(start >= 0, "Policy auth-permissions fehlt in Program.cs");
         var next = src.IndexOf("AddPolicy(", start + 1, StringComparison.Ordinal);
         var block = src[start..(next < 0 ? src.Length : next)];
         Assert.Contains("ClaimTypes.NameIdentifier", block);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

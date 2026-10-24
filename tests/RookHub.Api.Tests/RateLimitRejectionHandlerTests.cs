@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
@@ -159,7 +158,7 @@ public class RateLimitRejectionHandlerTests
     [Fact]
     public void ProgramCs_WiresTheRejectionHandler()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("builder.Services.AddSingleton<RateLimitRejectionHandler>();", src, StringComparison.Ordinal);
         Assert.Contains("options.OnRejected = RateLimitRejectionHandler.OnRejectedAsync;", src, StringComparison.Ordinal);
     }
@@ -173,18 +172,5 @@ public class RateLimitRejectionHandlerTests
             metadata = null;
             return false;
         }
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

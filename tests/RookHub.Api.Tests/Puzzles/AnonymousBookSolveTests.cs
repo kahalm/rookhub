@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -168,20 +167,7 @@ public class AnonymousBookSolveTests : IDisposable
     public void ProgramCs_RegistersTheThrottleAsSingleton()
     {
         // Ohne Registrierung bekäme BookPuzzleService null — und meldete still wieder jeden anonymen Solve.
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("AddSingleton<AnonymousSolveNotifyThrottle>()", src);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

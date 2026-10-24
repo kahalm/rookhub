@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
@@ -129,22 +128,9 @@ public class EncryptionServiceTests
     public void ProgramCs_RunsTheStartCheck()
     {
         // Der Host kommt im Testlauf nicht hoch (echte MariaDB nötig), also hier am Quelltext.
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         var blank = src.IndexOf("Encryption:Key ist gesetzt, aber leer", StringComparison.Ordinal);
         var check = src.IndexOf("EncryptionService.ThrowIfKeyRequiredButMissing(builder.Configuration)", StringComparison.Ordinal);
         Assert.True(blank >= 0 && check > blank, "Startprüfung auf fehlenden Encryption:Key fehlt in Program.cs");
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

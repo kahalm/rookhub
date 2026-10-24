@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Controllers;
@@ -33,25 +32,12 @@ public class ExtensionSinkLimitTests
     [Fact]
     public void ExtensionSinkPolicy_IsPartitionedPerUser()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         var start = src.IndexOf(@"AddPolicy(""extension-sink""", StringComparison.Ordinal);
         Assert.True(start >= 0, "Policy extension-sink fehlt in Program.cs");
         var next = src.IndexOf("AddPolicy(", start + 1, StringComparison.Ordinal);
         var block = src[start..(next < 0 ? src.Length : next)];
         Assert.Contains("ClaimTypes.NameIdentifier", block);
         Assert.Contains("PermitLimit = 60 * permitScale", block);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

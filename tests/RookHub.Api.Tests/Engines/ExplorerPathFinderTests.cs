@@ -461,20 +461,7 @@ public class ExplorerPathFinderTests
         var limit = typeof(ExplorerController).GetMethod(nameof(ExplorerController.Paths))!
             .GetCustomAttributes(typeof(EnableRateLimitingAttribute), false).Cast<EnableRateLimitingAttribute>().Single();
         Assert.Equal(RateLimitPartitions.ExplorerPathsPolicy, limit.PolicyName);
-        Assert.Contains($@"AddPolicy(""{RateLimitPartitions.ExplorerPathsPolicy}""", File.ReadAllText(ProgramCs()));
-    }
-
-    private static string ProgramCs([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
+        Assert.Contains($@"AddPolicy(""{RateLimitPartitions.ExplorerPathsPolicy}""", StartupSource.All());
     }
 }
 

@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -252,20 +251,7 @@ public class PeriodicWorkerTests
     public void ProgramCs_SetsTheBackgroundServiceExceptionBehaviorExplicitly()
     {
         // Vorher stand er nirgends — der Kommentar im RoundMonitorService musste den .NET-Default erklären.
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.", src);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

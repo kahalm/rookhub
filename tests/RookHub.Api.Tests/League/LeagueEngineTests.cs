@@ -407,22 +407,9 @@ public class LeagueEngineTests
         Assert.Equal(1, tree!["total"]!.GetValue<int>());
         Assert.Equal(1, ((MemoryCache)provider.GetRequiredKeyedService<IMemoryCache>(LeagueProfileStore.CacheServiceKey)).Count);
         Assert.Equal(0, ((MemoryCache)provider.GetRequiredService<IMemoryCache>()).Count);
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RookHub.Api.Services.League.LeagueProfileStore.CacheServiceKey", src);
         Assert.Contains("SizeLimit = RookHub.Api.Services.League.LeagueProfileStore.CacheSizeLimit", src);
-    }
-
-    private static string ProgramCs([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 
     [Fact]

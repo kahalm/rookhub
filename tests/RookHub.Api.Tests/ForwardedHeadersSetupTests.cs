@@ -1,5 +1,4 @@
 using System.Net;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -134,22 +133,9 @@ public class ForwardedHeadersSetupTests
     [Fact]
     public void ProgramCs_UsesTheSharedSetup()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("Configure<ForwardedHeadersOptions>(ForwardedHeadersSetup.Configure)", src, StringComparison.Ordinal);
         Assert.DoesNotContain("ForwardLimit", src, StringComparison.Ordinal);
         Assert.DoesNotContain("KnownNetworks", src, StringComparison.Ordinal);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

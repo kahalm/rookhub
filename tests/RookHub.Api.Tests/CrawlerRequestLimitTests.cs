@@ -1,6 +1,5 @@
 using System.Net;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http;
@@ -35,7 +34,7 @@ public class CrawlerRequestLimitTests
     public void CrawlerPolicy_IsRegisteredInProgram()
     {
         // Program.cs registriert mit dem Literal (AuthRateLimitTests liest die Namen aus dem Quelltext).
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains($@"AddPolicy(""{RateLimitPartitions.CrawlerRequestPolicy}"", ctx => RookHub.Api.Services.RateLimitPartitions.CrawlerRequest(ctx, permitScale))", src);
     }
 
@@ -69,18 +68,5 @@ public class CrawlerRequestLimitTests
             if (lease.IsAcquired) ok++;
         }
         return ok;
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

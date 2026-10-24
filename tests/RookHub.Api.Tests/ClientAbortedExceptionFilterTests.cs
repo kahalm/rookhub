@@ -68,20 +68,7 @@ public class ClientAbortedExceptionFilterTests
     [Fact]
     public void Filter_IsRegisteredGlobally()
     {
-        var program = File.ReadAllText(ProgramCs());
+        var program = StartupSource.All();
         Assert.Contains("o.Filters.Add<RookHub.Api.Filters.ClientAbortedExceptionFilter>()", program);
-    }
-
-    private static string ProgramCs([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }

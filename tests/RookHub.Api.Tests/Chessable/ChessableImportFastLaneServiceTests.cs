@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -81,34 +80,7 @@ public class ChessableImportFastLaneServiceTests : IDisposable
     [Fact]
     public void ProgramCs_RegistersTheFastLane_IndependentOfTheChessableSwitch()
     {
-        var src = File.ReadAllText(ProgramCs());
-        const string registration = "AddHostedService<ChessableImportFastLaneService>()";
-        var at = src.IndexOf(registration, StringComparison.Ordinal);
-        Assert.True(at > 0, "Fast-Lane nicht registriert");
-        Assert.Equal(at, src.LastIndexOf(registration, StringComparison.Ordinal));
-
-        // Nicht im Block um den Resume-Dienst (der bleibt hinter dem Schalter) …
-        var resume = src.IndexOf("AddHostedService<ChessableImportResumeService>()", StringComparison.Ordinal);
-        var blockStart = src.LastIndexOf("if (chessableEnabled)", resume, StringComparison.Ordinal);
-        var blockEnd = src.IndexOf('}', resume);
-        Assert.True(blockStart > 0 && blockEnd > resume, "Resume-Block nicht gefunden");
-        Assert.False(at > blockStart && at < blockEnd, "Fast-Lane hängt am Chessable-Schalter");
-        // … und auch nicht als einzelne Anweisung direkt dahinter.
-        var statementStart = src.LastIndexOfAny(new[] { ';', '{', '}' }, at) + 1;
-        var code = string.Concat(src[statementStart..at].Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
-        Assert.DoesNotContain("if (", code);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
+        Assert.Single(StartupSource.HostedServices(chessableEnabled: false), t => t == typeof(ChessableImportFastLaneService));
+        Assert.Single(StartupSource.HostedServices(chessableEnabled: true), t => t == typeof(ChessableImportFastLaneService));
     }
 }

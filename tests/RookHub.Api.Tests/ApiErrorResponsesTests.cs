@@ -102,7 +102,7 @@ public class ApiErrorResponsesTests
     [Fact]
     public void ProgramCs_HaengtBeideAntwortenEin()
     {
-        var program = File.ReadAllText(Path.Combine(RepoRoot(), "src", "api", "RookHub.Api", "Program.cs"));
+        var program = StartupSource.All();
         Assert.Contains("InvalidModelStateResponseFactory = ApiErrorResponses.InvalidModelState", program);
         Assert.Contains("error.Run(ApiErrorResponses.WriteUnhandledAsync)", program);
     }

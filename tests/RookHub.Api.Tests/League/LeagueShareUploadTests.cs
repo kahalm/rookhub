@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -193,21 +192,8 @@ public class LeagueShareUploadTests : IDisposable
     public void ProgramCs_RegistersTheShareQuotaAsSingleton()
     {
         // Ohne Registrierung bekäme jeder LeagueClubService seinen eigenen Zähler — der Deckel je Link und Tag wäre wirkungslos.
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("AddSingleton<RookHub.Api.Services.League.LeagueShareUploadQuota>()", src);
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 
     private sealed class ManualTime(DateTimeOffset now) : TimeProvider

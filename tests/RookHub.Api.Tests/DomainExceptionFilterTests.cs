@@ -131,11 +131,7 @@ public class DomainExceptionFilterTests
     [Fact]
     public void ProgramCs_RegistriertDenFilterGlobal()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "compose.dev.yml")))
-            dir = dir.Parent;
-        Assert.NotNull(dir);
-        var program = File.ReadAllText(Path.Combine(dir!.FullName, "src", "api", "RookHub.Api", "Program.cs"));
+        var program = StartupSource.All();
         Assert.Contains("o.Filters.Add<RookHub.Api.Filters.DomainExceptionFilter>()", program);
     }
 }

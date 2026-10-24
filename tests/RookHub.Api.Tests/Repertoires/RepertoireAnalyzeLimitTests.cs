@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Chess;
@@ -411,7 +410,7 @@ public class RepertoireAnalyzeLimitTests : IDisposable
     [Fact]
     public void KeyedCache_IsRegisteredInProgram_WithTheSizeLimit()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains("AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RepertoireAnalyzeService.CacheServiceKey", src);
         Assert.Contains("SizeLimit = RepertoireAnalyzeService.CacheSizeLimit", src);
     }
@@ -429,7 +428,7 @@ public class RepertoireAnalyzeLimitTests : IDisposable
     [Fact]
     public void ExtensionAnalyzePolicy_IsRegisteredInProgram()
     {
-        var src = File.ReadAllText(ProgramCs());
+        var src = StartupSource.All();
         Assert.Contains($@"AddPolicy(""{RateLimitPartitions.ExtensionAnalyzePolicy}"", ctx => RookHub.Api.Services.RateLimitPartitions.ExtensionAnalyze(ctx, permitScale))", src);
     }
 
@@ -473,18 +472,5 @@ public class RepertoireAnalyzeLimitTests : IDisposable
         for (var i = 0; moves.Count < plies; i++) moves.Add(cycle[i % 4]);
         var text = string.Join(' ', moves.Select((m, i) => i % 2 == 0 ? $"{i / 2 + 1}. {m}" : m));
         return $"[Event \"{first}\"]\n\n{text} *";
-    }
-
-    private static string ProgramCs([CallerFilePath] string thisFile = "")
-    {
-        var dir = Path.GetDirectoryName(thisFile);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
-            if (File.Exists(candidate)) return candidate;
-            dir = Path.GetDirectoryName(dir);
-        }
-        Assert.Fail("Program.cs nicht gefunden");
-        return "";
     }
 }
