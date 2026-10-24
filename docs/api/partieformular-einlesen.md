@@ -310,7 +310,7 @@ Prod-Partie 27 (36…Bd5 vergessen, Rb4 eingefügt) fiel beim Nachspielen von Rb
 verrutschte. Gespeichert wird über `PUT /api/games/{id}`: Züge werden nachgespielt
 (illegal → 400, nichts geschrieben), nicht bearbeitete Header (Elo, Bedenkzeit, FEN) bleiben, und **ändern sich die
 Züge, fallen `GameAnalysisId`, der Stand des Fehler-Trainings und die Nacherzählung weg** — sie gehörten zu einer
-anderen Partie (`SavedGameService.OnMovesChangedAsync`, gilt seit Codereview N8-002 auch für den längeren Re-Save aus der
+anderen Partie (`SavedGameCorrection.OnMovesChangedAsync`, gilt seit Codereview N8-002 auch für den längeren Re-Save aus der
 Erweiterung, `POST /api/extension/games`). Der
 Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt als `ResolutionJson` an der Einlesung.
 

@@ -50,7 +50,7 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   `data.mode = 'club'`: Partie aus `GET /api/league/club/games/{id}`, Kurve aus `…/evals`, kein „Partie analysieren", keine
   Erklärungen, Jahr statt Datum. Das Recht prüft nur der Server (`league.view`, sonst „konnte nicht geladen werden").
 - **Eine kopierte Vereinspartie wird NICHT ein zweites Mal gerechnet** (0.653.0, Wunsch: „wenn jemand das Game lokal kopiert,
-  soll es nur einmal analysiert werden"): `SavedGameService.ClubAnalysisForMovesAsync` findet die nicht gescheiterte
+  soll es nur einmal analysiert werden"): `SavedGameAnalysisLink.ClubAnalysisForMovesAsync` findet die nicht gescheiterte
   Club-Analyse einer Vereinspartie mit GENAU denselben Zügen ab der Grundstellung (`LeagueClubService.HashOf` über die SAN,
   dieselbe Schreibweise wie beim Upload). Der PGN-Import (`POST /api/games/import`, also auch „Zu meinen Partien" aus
   LeagueHub) verknüpft sie gleich beim Anlegen, „Partie analysieren" nimmt sie als dritte Stufe vor dem Neu-Einwerfen.

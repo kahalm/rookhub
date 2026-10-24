@@ -46,7 +46,7 @@ Online-Konten, Übertragungen, Megabase) sind für alle Vereine dieselben.
   `LeagueAnalysisQueue` (Gegner der nächsten Runde JEDES Vereins zuerst), `LeagueRefresh.StalePlayersAsync` (ebenso),
   `TacticHarvestService` (je Partie der Kurs ihres Vereins; Umbenennen alter Titel je Verein).
 * **RookHub**: eine Kopie in „Meine Partien" wird nur mit einer Vereinspartie aus einem Verein ihres Besitzers verbunden und
-  übernimmt nur deren Analyse (`SavedGameService.ClubGameForMovesAsync`/`ClubAnalysisForMovesAsync`/`LinkClubCopiesAsync`,
+  übernimmt nur deren Analyse (`SavedGameAnalysisLink.ClubGameForMovesAsync`/`ClubAnalysisForMovesAsync`/`LinkClubCopiesAsync`,
   `LeagueClubResolver.ClubIdsOfAsync`); korrigieren über die Kopie darf der Hochladende oder ein Verwalter DES Vereins der Partie
   (`LeagueClubResolver.CanManageAsync`). Stapel-Uploads zeigen im Admin-Tab den Verein (`club`), die manuelle Einlesung
   (`manual-scan`) gehört dem Verein des Stapels (Bilder zweier Vereine → 400 `mixedClubs`).
