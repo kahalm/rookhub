@@ -202,7 +202,7 @@ internal static class ExternalSweepRunner
     /// </summary>
     /// <returns>Ob ein Pin gesetzt wurde.</returns>
     public static async Task<bool> LocateAsync(GeocodingService geocoding, TournamentDirectoryEntry own,
-        string? location, string? state, string federation, bool locationChanged, CancellationToken ct)
+        string? location, string? state, string? federation, bool locationChanged, CancellationToken ct)
     {
         if (location is not { Length: > 0 } || !(locationChanged || own.Lat is null)) return false;
 

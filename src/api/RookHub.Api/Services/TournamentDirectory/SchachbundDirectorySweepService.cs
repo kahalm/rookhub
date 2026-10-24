@@ -30,9 +30,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// <para><b>Fernschach hat keinen Spielort</b>, und „Online" oder „BdF-Server" im Ortsfeld ist
 /// keiner. Solche Eintraege bekommen keinen Pin.</para>
 /// </summary>
-public class SchachbundDirectorySweepService
+public class SchachbundDirectorySweepService : IDirectorySourceAdapter<SchachbundDirectorySweepService.CrawlerSchachbundEvent>
 {
-    private const int SaveEvery = 25;
 
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -52,128 +51,61 @@ public class SchachbundDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(PublicIdOf(row.EventId));
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = PublicIdOf(row.EventId);
-                var federation = FederationOf(row.Region);
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Place), ct);
-
-                if (match is not null)
-                {
-                    var text = match.TimeControlText;
-                    var rounds = match.Rounds;
-                    var changed = ExternalDirectorySource.FillIfEmpty(row.TimeControl, ref text, 300);
-                    changed |= ExternalDirectorySource.FillIfEmpty(row.Rounds, ref rounds);
-                    match.TimeControlText = text;
-                    match.Rounds = rounds;
-                    if (changed && match.Speed == TournamentSpeed.Unknown)
-                        match.Speed = TournamentSpeedClassifier.Classify(match.TimeControlText);
-
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
-                    matched++;
-                    if (changed) updated++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("schachbund: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = HasVenue(row.Place) ? row.Place!.Trim() : null;
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = federation;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.TimeControlText = ExternalDirectorySource.Truncate(row.TimeControl, 300);
-                own.Rounds = row.Rounds;
-                own.Speed = TournamentSpeedClassifier.Classify(row.TimeControl);
-                own.System = row.System switch
-                {
-                    "swiss" => TournamentSystem.Swiss,
-                    "roundRobin" => TournamentSystem.RoundRobin,
-                    _ => TournamentSystem.Unknown,
-                };
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
-
-                if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
-                {
-                    var hit = await _geocoding.ResolveAsync(location, null, federation, ct);
-                    if (hit is not null && hit.Source != GeoSource.Ambiguous)
-                    {
-                        own.Lat = hit.Lat;
-                        own.Lon = hit.Lon;
-                        own.GeoSource = hit.Source;
-                        own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
-                    }
-                }
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "schachbund: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "schachbund-Turnierdatenbank: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.GermanChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerSchachbundEvent>.Kind => DirectorySourceKind.GermanChessFederation;
+    string IDirectorySourceAdapter<CrawlerSchachbundEvent>.LogName => "schachbund";
+    string? IDirectorySourceAdapter<CrawlerSchachbundEvent>.SourceKey(CrawlerSchachbundEvent row) => row.EventId.Length == 0 ? null : PublicIdOf(row.EventId);
+    DateOnly? IDirectorySourceAdapter<CrawlerSchachbundEvent>.Start(CrawlerSchachbundEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerSchachbundEvent>.Name(CrawlerSchachbundEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerSchachbundEvent>.PublicId(CrawlerSchachbundEvent row) => PublicIdOf(row.EventId);
+    string? IDirectorySourceAdapter<CrawlerSchachbundEvent>.Federation(CrawlerSchachbundEvent row) => FederationOf(row.Region);
+    string? IDirectorySourceAdapter<CrawlerSchachbundEvent>.MatchPlace(CrawlerSchachbundEvent row) => row.Place;
+    string? IDirectorySourceAdapter<CrawlerSchachbundEvent>.Url(CrawlerSchachbundEvent row) => row.Url;
+    bool IDirectorySourceAdapter<CrawlerSchachbundEvent>.FillMatch(TournamentDirectoryEntry match, CrawlerSchachbundEvent row) =>
+        ExternalSweepRunner.FillTimeControlGaps(match, row.TimeControl, row.Rounds);
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerSchachbundEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerSchachbundEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var federation = FederationOf(row.Region);
+        var location = HasVenue(row.Place) ? row.Place!.Trim() : null;
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = federation;
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        own.TimeControlText = ExternalDirectorySource.Truncate(row.TimeControl, 300);
+        own.Rounds = row.Rounds;
+        own.Speed = TournamentSpeedClassifier.Classify(row.TimeControl);
+        own.System = row.System switch
+        {
+            "swiss" => TournamentSystem.Swiss,
+            "roundRobin" => TournamentSystem.RoundRobin,
+            _ => TournamentSystem.Unknown,
+        };
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.GermanChessFederation, PublicIdOf(row.EventId), row.Url, now, ct);
+
+        // „Ergaenzt" zaehlt nur an chess-results-Eintraegen (FillMatch).
+        await ExternalSweepRunner.LocateAsync(_geocoding, own, location, null, federation, locationChanged, ct);
+        return false;
+    }
+
+    void IDirectorySourceAdapter<CrawlerSchachbundEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "schachbund-Turnierdatenbank: {Read} gelesen, {Added} neu, {Updated} ergaenzt, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
 
     /// <summary>
     /// Die Foederation aus der Region. „europa" und „welt" bekommen KEINE — dort standen zuletzt
