@@ -32,68 +32,7 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    /// <summary>
-    /// Nur `_db` und der Geocoder werden hier gebraucht — die uebrigen Abhaengigkeiten des
-    /// Controllers gehoeren zu anderen Endpunkten und bekommen deshalb Attrappen, die nie
-    /// angesprochen werden.
-    /// </summary>
-    private AdminTournamentDirectoryController Controller()
-    {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(
-            new Dictionary<string, string?> { ["Crawler:BaseUrl"] = "http://crawler" }).Build();
-        var geocoding = new GeocodingService(_db);
-        var factory = new UnusedClientFactory();
-        return new AdminTournamentDirectoryController(
-            _db,
-            new TournamentDirectoryService(_db, factory, geocoding,
-                new NotificationService(_db, new NoOpTaskQueue()),
-                new TestLogger<TournamentDirectoryService>()),
-            new GazetteerImportService(new HttpClient(new UnusedHandler()), _db,
-                new TestLogger<GazetteerImportService>(), config),
-            geocoding,
-            new VenueDisambiguationService(_db, factory,
-                new TestLogger<VenueDisambiguationService>()),
-            new TournamentRoundPlanService(_db, factory,
-                new TestLogger<TournamentRoundPlanService>()),
-            new FideDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<FideDirectorySweepService>()),
-            new FideEventDetailService(_db, factory, geocoding,
-                new TestLogger<FideEventDetailService>()),
-            new TournamentCalendarSweepService(_db, factory,
-                new TestLogger<TournamentCalendarSweepService>()),
-            new FsiDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<FsiDirectorySweepService>()),
-            new SzsDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<SzsDirectorySweepService>()),
-            new ChessSkDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<ChessSkDirectorySweepService>()),
-            new ChessHuDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<ChessHuDirectorySweepService>()),
-            new ChessCzDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<ChessCzDirectorySweepService>()),
-            new ChessArbiterDirectorySweepService(_db, factory, geocoding, config,
-                new TestLogger<ChessArbiterDirectorySweepService>()),
-            new SchachbundDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<SchachbundDirectorySweepService>()),
-            new EcfDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<EcfDirectorySweepService>()),
-            new IcuDirectorySweepService(_db, factory, geocoding, config,
-                new TestLogger<IcuDirectorySweepService>()),
-            new FfeDirectorySweepService(_db, factory, geocoding, config,
-                new TestLogger<FfeDirectorySweepService>()),
-            new SjakkDirectorySweepService(_db, factory, geocoding, config,
-                new TestLogger<SjakkDirectorySweepService>()),
-            new ChessScotlandDirectorySweepService(_db, factory, geocoding, config,
-                new TestLogger<ChessScotlandDirectorySweepService>()),
-            new FrsahDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<FrsahDirectorySweepService>()),
-            new WcuDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<WcuDirectorySweepService>()),
-            new CfcDirectorySweepService(_db, factory, geocoding,
-                new TestLogger<CfcDirectorySweepService>()),
-            new KnsbDirectorySweepService(_db, factory,
-                new TestLogger<KnsbDirectorySweepService>()));
-    }
+    private AdminTournamentDirectoryController Controller() => AdminTournamentDirectoryTestKit.Controller(_db);
 
     /// <summary>
     /// Der Nachtrag fuer den Altbestand. Publikum und Format stehen im NAMEN, der schon in der
@@ -197,18 +136,6 @@ public class AdminTournamentDirectoryGeocodeTests : IDisposable
         await Controller().BackfillSources();
 
         Assert.Single(await _db.TournamentDirectorySources.ToListAsync());
-    }
-
-    /// <summary>Wird in diesen Tests nie benutzt — ein Aufruf ist ein Fehler, kein Zufall.</summary>
-    private sealed class UnusedHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
-            throw new InvalidOperationException("Diese Tests erwarten keinen HTTP-Aufruf.");
-    }
-
-    private sealed class UnusedClientFactory : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => new(new UnusedHandler());
     }
 
     private async Task<TournamentDirectoryEntry> EntryAsync(
