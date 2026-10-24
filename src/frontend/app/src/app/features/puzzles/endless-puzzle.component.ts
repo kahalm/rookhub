@@ -46,14 +46,7 @@ import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle
 import { PuzzleThemePipe, humanizeThemeKey } from './puzzle-theme.pipe';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
-import { Key } from 'chessground/types';
 import { isBoardHotkey } from '../../shared/keyboard.util';
-
-// AWAITING_USER_MOVE = first move only (no buttons)
-// THINKING = opponent responding (buttons visible, board locked)
-// PLAYING = user's turn after first move (buttons visible, board active)
-type EndlessState = 'CONFIG' | 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE'
-  | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'EXHAUSTED' | 'WON';
 
 /** Bereichs-Schlüssel der Spielweise (SolveModeService) für den Endless-Modus. */
 const SOLVE_SCOPE = 'endless';
@@ -102,11 +95,12 @@ function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAtte
   styleUrls: ['./endless-puzzle.component.scss'],
 })
 export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestroy, OnInit {
-  get screen(): 'config' | 'play' | 'gameover' | 'exhausted' | 'won' | 'loading' {
+  // Zustände (state, String aus BasePuzzleSolver): CONFIG, LOADING, SETUP, AWAITING_USER_MOVE (erster Zug, keine
+  // Knöpfe), THINKING (Gegner antwortet, Brett gesperrt), PLAYING (Löser am Zug), SOLVED, FAILED, GAME_OVER, WON.
+  get screen(): 'config' | 'play' | 'gameover' | 'won' | 'loading' {
     // History-Detail wird geladen → Spinner statt leerem Brett (kein gültiges Puzzle vorhanden).
     if (this.historyView && this.state === 'LOADING') return 'loading';
     if (this.state === 'WON') return 'won';
-    if (this.state === 'EXHAUSTED') return 'exhausted';
     if (this.state === 'GAME_OVER') return 'gameover';
     if (this.state === 'CONFIG') return 'config';
     return 'play';

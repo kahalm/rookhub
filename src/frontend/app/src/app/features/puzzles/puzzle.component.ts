@@ -44,8 +44,6 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 import { PctPipe } from '../../shared/format/pct';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
-type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
-
 /** Bereichs-Schlüssel der Spielweise (SolveModeService) für die Standard-Puzzles. */
 const SOLVE_SCOPE = 'puzzles';
 
