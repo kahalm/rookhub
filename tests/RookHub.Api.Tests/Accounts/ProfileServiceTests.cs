@@ -75,6 +75,25 @@ public class ProfileServiceTests : IDisposable
                            + "die Statistik-Tabellen zeigen weiter auf die UserId",
     };
 
+    /// <summary>
+    /// Tabellen mit Fremdschlüssel auf AppUser unter einem ANDEREN Namen als UserId/OwnerUserId, die die Kontolöschung
+    /// heute weder abräumt noch begründet stehen lässt (Codereview 2026-09-29, A1-018). Bewusst NICHT nachgerüstet — das
+    /// wäre eine Verhaltensänderung der Löschung (Produktentscheidung, mit V21/P-4). Bis dahin offen und hier sichtbar:
+    /// jede WEITERE solche Tabelle schlägt im Wächter an. Wer eine davon in einen Löscher aufnimmt, streicht sie hier.
+    /// </summary>
+    private static readonly Dictionary<string, string> KnownGapsA1018 = new(StringComparer.Ordinal)
+    {
+        ["CourseShares"] = "OwnerId/RecipientId: Freigaben EIGENER Bücher gehen mit dem Buch (CourseDataEraser.OwnedBooksAsync → "
+                           + "DeleteBookAsync), die als EMPFÄNGER erhaltenen bleiben heute stehen — offen",
+        ["RepertoireShares"] = "OwnerId/RecipientId: Freigaben eigener Repertoires hängen am Repertoire (FK-Cascade relational), "
+                               + "die als Empfänger erhaltenen bleiben heute stehen — offen",
+        ["PuzzleChallenges"] = "FromUserId/ToUserId: gesendete und empfangene Puzzle-Challenges bleiben heute stehen — offen",
+        ["RevengeNotifications"] = "AvengerUserId/TargetUserId: Revanche-Vermerke bleiben heute stehen — offen",
+        // LeagueShares.CreatedByUserId hat keinen FK und keinen Heuristik-Namen, der Wächter sähe die Tabelle nicht —
+        // der Vollständigkeit halber (die fünfte Tabelle aus A1-018): der Vermerk, wer den Link angelegt hat, bleibt.
+        ["LeagueShares"] = "CreatedByUserId (ohne FK): wer einen LeagueHub-Teilen-Link angelegt hat, bleibt heute stehen — offen",
+    };
+
     [Fact]
     public void DeleteAccount_CoversEveryUserOwnedTable()
     {
@@ -85,15 +104,22 @@ public class ProfileServiceTests : IDisposable
         // Verteiler-Mitgliedschaften nach der ersten Fassung liegen).
         var source = ReadDeleteAccountSource();
         var missing = new List<string>();
+        var appUser = _db.Model.FindEntityType(typeof(Models.AppUser))!;
+        var userFkTables = _db.Model.GetEntityTypes()
+            .Where(e => e.GetForeignKeys().Any(fk => fk.PrincipalEntityType == appUser))
+            .Select(e => e.ClrType).ToHashSet();
 
         foreach (var prop in typeof(AppDbContext).GetProperties()
                      .Where(p => p.PropertyType.IsGenericType
                                  && p.PropertyType.GetGenericTypeDefinition() == typeof(Microsoft.EntityFrameworkCore.DbSet<>)))
         {
             var entity = prop.PropertyType.GetGenericArguments()[0];
-            var ownsUser = entity.GetProperty("UserId") != null || entity.GetProperty("OwnerUserId") != null;
+            // Nutzerbezug: die Namens-Heuristik (auch Spalten OHNE FK, z. B. RequestedByUserId) ODER ein Fremdschlüssel
+            // auf AppUser im EF-Modell (A1-018: CourseShares.RecipientId, PuzzleChallenges.ToUserId … fielen durch).
+            var ownsUser = entity.GetProperty("UserId") != null || entity.GetProperty("OwnerUserId") != null
+                           || userFkTables.Contains(entity);
             if (!ownsUser || entity == typeof(Models.AppUser)) continue;
-            if (DeletionExempt.ContainsKey(prop.Name)) continue;
+            if (DeletionExempt.ContainsKey(prop.Name) || KnownGapsA1018.ContainsKey(prop.Name)) continue;
             // Die Löscher bekommen den Kontext als „db" (UserErasureContext), nicht als Feld „_db".
             if (!System.Text.RegularExpressions.Regex.IsMatch(source, $@"\bdb\.{prop.Name}\b")) missing.Add(prop.Name);
         }
