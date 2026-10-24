@@ -8,7 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
-import { AdminService, Group, MenuItemConfig, MenuVisibilityLevel } from '../../../core/admin.service';
+import { AdminService, GroupOption, MenuItemConfig, MenuVisibilityLevel } from '../../../core/admin.service';
 import { MenuService } from '../../../core/menu.service';
 
 /**
@@ -37,7 +37,7 @@ export class AdminMenuVisibilityComponent implements OnInit {
    * bestehen; eine einmal selbst geladene Liste veraltete, sobald im Gruppen-Tab Gruppen angelegt oder gelöscht
    * wurden. `null` = noch nie geladen.
    */
-  @Input() groups: Group[] | null = null;
+  @Input() groups: GroupOption[] | null = null;
 
   constructor(
     private adminService: AdminService,

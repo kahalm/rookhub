@@ -3,6 +3,7 @@
  * Deep-Link-Indizes (`/admin?tab=<key>`). Wird ein Tab im HTML umsortiert/hinzugefügt, NUR diese
  * Liste mitziehen — sonst öffnet ein Deep-Link den falschen Tab. Der Guard-Test in
  * `admin-tabs.spec.ts` hält die Liste mit der HTML-Reihenfolge konsistent.
+ * Der Server verlinkt einzelne Keys in Glocken (`Services/Accounts/AdminLinks.cs`, Spiegeltest `AdminLinksTests`) — Keys nicht umbenennen, ohne dort mitzuziehen.
  */
 export const ADMIN_TAB_KEYS = [
   'users',     // 0

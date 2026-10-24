@@ -14,7 +14,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
-import { AdminService, AdminUser, Group, Role } from '../../../core/admin.service';
+import { AdminService, AdminUser, GroupOption, Role } from '../../../core/admin.service';
 import { apiErrorText } from '../../../core/api-error';
 
 /**
@@ -76,7 +76,7 @@ export class AdminRolesComponent implements OnInit {
    * wurden (neue nicht zuweisbar, gelöschte noch wählbar → 404). `null` = noch nie geladen. Verschwindet die gewählte
    * Gruppe, wird die Auswahl aufgehoben; bei einer Änderung kommen auch die Rollen neu (die Karten nennen ihre Gruppen).
    */
-  @Input() set groups(value: Group[] | null) {
+  @Input() set groups(value: GroupOption[] | null) {
     const changed = this.groupList !== null && value !== null;
     this.groupList = value;
     if (!value) return;
@@ -87,9 +87,9 @@ export class AdminRolesComponent implements OnInit {
     }
     if (changed) this.refreshRolesQuietly();
   }
-  get groups(): Group[] { return this.groupList ?? []; }
-  private groupList: Group[] | null = null;
-  selectedGroup: Group | null = null;
+  get groups(): GroupOption[] { return this.groupList ?? []; }
+  private groupList: GroupOption[] | null = null;
+  selectedGroup: GroupOption | null = null;
   groupRoleIds = new Set<number>();
   /** Wie {@link userRolesLoaded}: Speichern erst, wenn der Ist-Stand der gewählten Gruppe geladen ist. */
   groupRolesLoaded = false;
@@ -210,9 +210,9 @@ export class AdminRolesComponent implements OnInit {
 
   // --- Gruppen-Zuweisung (0.589.0) ------------------------------------
   /** „Everyone" hat keine Mitgliedszeilen — eine Rolle dort wirkte nirgends (der Server lehnt sie ab). */
-  get assignableGroups(): Group[] { return this.groups.filter(g => !g.isEveryone); }
+  get assignableGroups(): GroupOption[] { return this.groups.filter(g => !g.isEveryone); }
 
-  selectGroup(group: Group): void {
+  selectGroup(group: GroupOption): void {
     this.selectedGroup = group;
     this.groupRoleIds = new Set();
     this.groupRolesLoaded = false;

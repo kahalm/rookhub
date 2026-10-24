@@ -183,7 +183,7 @@ public class ChessableController : BaseApiController, IActionFilter
                 var username = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
                 var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.ChessableAdmin);
                 await _notifications.CreateManyAsync(adminIds, NotificationType.ChessableTokenAdded,
-                    new Dictionary<string, string> { ["username"] = username }, "/admin");
+                    new Dictionary<string, string> { ["username"] = username }, AdminLinks.CourseDl);
             }
             catch (Exception ex) { _logger.LogWarning(ex, "Admin-Benachrichtigung für neuen Chessable-Bearer fehlgeschlagen"); }
         }

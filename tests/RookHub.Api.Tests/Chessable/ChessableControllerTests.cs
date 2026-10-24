@@ -246,6 +246,7 @@ public class ChessableControllerTests : IDisposable
 
         var notif = await _db.Notifications.SingleAsync(n => n.UserId == 1);
         Assert.Equal(NotificationType.ChessableTokenAdded, notif.Type);
+        Assert.Equal("/admin?tab=courseDl", notif.Link);   // F5-005: direkt in den Chessable-Tab
         Assert.Contains("u42", notif.DataJson!);
     }
 

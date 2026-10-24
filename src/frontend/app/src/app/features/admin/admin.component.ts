@@ -20,7 +20,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, Book, Group, GroupMember, GroupTrainingGoal } from '../../core/admin.service';
+import { AdminService, AdminUser, Book, Group, GroupMember, GroupOption, GroupTrainingGoal } from '../../core/admin.service';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -83,6 +83,13 @@ export class AdminComponent implements OnInit {
   groupsLoading = false;
   /** Gruppenliste mindestens einmal erfolgreich geladen — siehe {@link keptTabGroups}. */
   groupsLoaded = false;
+  /**
+   * Gruppen als AUSWAHL (Bücher-Freigaben, Menü, Rollen): mit groups.manage dieselbe Liste wie {@link groups}, sonst die
+   * schlanke `GET /api/admin/groups/options` (F5-005-Nachlauf) — eine Rolle mit nur menu.manage sah sonst keine Gruppen.
+   */
+  groupOptions: GroupOption[] = [];
+  /** Auswahl mindestens einmal erfolgreich geladen — siehe {@link keptTabGroups}. */
+  groupOptionsLoaded = false;
   groupColumns = ['name', 'memberCount', 'actions'];
   newGroupName = '';
   newGroupDescription = '';
@@ -150,7 +157,7 @@ export class AdminComponent implements OnInit {
    * `groupIds` stehen. `null`, solange die Liste nie geladen wurde: dann kürzt der Menü-Tab beim Speichern nichts
    * (eine leere Liste hieße sonst „alle Gruppen gelöscht").
    */
-  get keptTabGroups(): Group[] | null { return this.groupsLoaded ? this.groups : null; }
+  get keptTabGroups(): GroupOption[] | null { return this.groupOptionsLoaded ? this.groupOptions : null; }
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
   private prompts = inject(PromptService);
@@ -213,8 +220,9 @@ export class AdminComponent implements OnInit {
     const canUsers = this.auth.has('users.manage');
     if (canUsers) this.loadUsers();
     if (this.show('books')) this.loadBooks();
-    // Gruppenliste: für den Gruppen-Tab und als Auswahl in Menü/Rollen; der Endpunkt verlangt groups.manage.
+    // Gruppenliste: mit groups.manage die volle (Gruppen-Tab + Auswahl), sonst nur die Auswahl für Bücher/Menü/Rollen.
     if (this.auth.has('groups.manage')) this.loadGroups();
+    else if (AdminComponent.GroupChoiceTabs.some(k => this.show(k))) this.loadGroupOptions();
     // Mitglieder-Auswahl im Gruppen-Tab: kommt aus der Nutzerliste (users.manage).
     if (this.show('groups') && canUsers) this.loadAllUsers();
     // Deep-Link: /admin?tab=<key> — Tab aus der URL wählen (der `?thread=`-Teil wird vom
@@ -526,12 +534,28 @@ export class AdminComponent implements OnInit {
 
 
   // --- Gruppen ----------------------------------------------------------
+  /** Tabs, die Gruppen nur zur Auswahl brauchen (ohne groups.manage aus {@link loadGroupOptions}). */
+  private static readonly GroupChoiceTabs: readonly AdminTabKey[] = ['books', 'menu', 'roles'];
+
+  /** Nur Id + Name je Gruppe — für Rechteinhaber ohne groups.manage (F5-005-Nachlauf). */
+  loadGroupOptions(): void {
+    this.adminService.getGroupOptions().subscribe({
+      next: options => {
+        this.groupOptions = options;
+        this.groupOptionsLoaded = true;
+      },
+      error: () => this.snackbar.info(this.translate.instant('admin.groups.errors.load')),
+    });
+  }
+
   loadGroups(): void {
     this.groupsLoading = true;
     this.adminService.getGroups().subscribe({
       next: groups => {
         this.groups = groups;
         this.groupsLoaded = true;
+        this.groupOptions = groups;
+        this.groupOptionsLoaded = true;
         this.groupsLoading = false;
         // Auswahl aktualisieren, falls die gewählte Gruppe noch existiert
         if (this.selectedGroup) {

@@ -88,6 +88,7 @@ public class ChessableCourseRefreshServiceTests : IDisposable
         var notif = await _db.Notifications.SingleAsync(n => n.UserId == 1);
         Assert.Equal(NotificationType.ChessableNewCourse, notif.Type);
         Assert.Contains("Course B", notif.DataJson!);
+        Assert.Equal("/admin?tab=courseDl", notif.Link);   // F5-005: direkt in den Chessable-Tab
         var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
         Assert.Contains("200", cred.CachedCoursesJson!);   // Cache aktualisiert
     }

@@ -46,7 +46,7 @@ public static class NotificationType
     public const string ChallengeResolved = "challenge_resolved";
     /// <summary>Admin hat dem User eine Direktnachricht geschickt (→ User-Glocke, Link „/messages").</summary>
     public const string AdminMessageReceived = "admin_message_received";
-    /// <summary>User hat im Thread geantwortet (→ Glocke aller Admins, Link „/admin").</summary>
+    /// <summary>User hat im Thread geantwortet (→ Glocke aller mit messages.admin, Link <see cref="Services.Accounts.AdminLinks.MessagesThread"/>).</summary>
     public const string UserMessageReceived = "user_message_received";
     /// <summary>Neue Runde/Paarungen in einem abonnierten Turnier (→ Glocke der Abonnenten,
     /// Link auf die Turnier-Detailseite). Daten: tournamentName, round.</summary>
@@ -62,7 +62,7 @@ public static class NotificationType
     /// <summary>Ein gemerktes Turnier ist aus der chess-results-Suche verschwunden — vermutlich
     /// abgesagt (→ Glocke der Abonnenten). Daten: tournamentName, date.</summary>
     public const string TournamentCancelled = "tournament_cancelled";
-    /// <summary>Ein neuer Benutzer hat sich registriert (→ Glocke aller Admins, Link „/admin").
+    /// <summary>Ein neuer Benutzer hat sich registriert (→ Glocke aller mit users.manage, Link „/admin?tab=users").
     /// Daten: username.</summary>
     public const string NewUserRegistered = "new_user_registered";
     /// <summary>LeagueHub-Stapel-Upload über einen Teilen-Link ohne Konto abgeschlossen (0.651.0) → Glocke aller Admins
@@ -71,11 +71,11 @@ public static class NotificationType
     /// <summary>Jemand OHNE E-Book-Verwaltung (Nutzer oder anonym) hat ein E-Book hochgeladen (0.788.0, Wunsch 15.10.2026)
     /// → Glocke aller Admins (messages.admin), Link „/ebooks/{id}". Daten: title, username (leer = ohne Anmeldung).</summary>
     public const string EbookUploaded = "ebook_uploaded";
-    /// <summary>Ein User hat (erstmals) einen Chessable-Bearer hinterlegt (→ Glocke aller Admins,
-    /// Link „/admin"). Daten: username.</summary>
+    /// <summary>Ein User hat (erstmals) einen Chessable-Bearer hinterlegt (→ Glocke aller mit chessable.admin,
+    /// Link „/admin?tab=courseDl"). Daten: username.</summary>
     public const string ChessableTokenAdded = "chessable_token_added";
     /// <summary>Beim täglichen Kurslisten-Refresh wurde bei einem User ein neuer Chessable-Kurs
-    /// entdeckt (→ Glocke aller Admins, Link „/admin"). Daten: username, courseName.</summary>
+    /// entdeckt (→ Glocke aller mit chessable.admin, Link „/admin?tab=courseDl"). Daten: username, courseName.</summary>
     public const string ChessableNewCourse = "chessable_new_course";
     /// <summary>Ein Nutzer hat einen Kurs mit dem Empfänger geteilt (→ Glocke des Empfängers,
     /// Link „/courses"). Daten: username (Teilender), courseName.</summary>

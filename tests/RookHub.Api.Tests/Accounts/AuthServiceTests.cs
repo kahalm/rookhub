@@ -89,7 +89,7 @@ public class AuthServiceTests : IDisposable
             .Where(n => n.Type == RookHub.Api.Models.NotificationType.NewUserRegistered).ToList();
         Assert.Equal(2, notifs.Count);
         Assert.All(notifs, n => Assert.Contains(n.UserId, adminIds));
-        Assert.All(notifs, n => Assert.Equal("/admin", n.Link));
+        Assert.All(notifs, n => Assert.Equal("/admin?tab=users", n.Link));
         Assert.All(notifs, n => Assert.Contains("newbie", n.DataJson));
     }
 

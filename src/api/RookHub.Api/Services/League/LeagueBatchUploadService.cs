@@ -31,7 +31,7 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
     public const long AnonDailyBytes = 3L * 1024 * 1024 * 1024;
     public const int MaxStoredBytes = ScoresheetScanService.MaxStoredBytes;
     public const int MaxCommentLength = 1000;
-    public const string AdminLink = "/admin?tab=uploads";
+    public const string AdminLink = AdminLinks.Uploads;
 
     /// <summary>Wer hochlädt: ein Konto oder ein Teilen-Link (Hash) samt IP-Hash — und für welchen Verein (Mandanten-Schritt
     /// 2026-10-07: angemeldet der Verein der Anfrage, über einen Link dessen Verein). Ein Stapel gehört genau einem Verein.</summary>

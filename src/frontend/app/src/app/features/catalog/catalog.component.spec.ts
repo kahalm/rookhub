@@ -40,6 +40,11 @@ describe('CatalogComponent', () => {
         setGrants: jasmine.createSpy('setGrants').and.returnValue(of({ userIds: [], groupIds: [] })),
       };
       const snackbar = { info: jasmine.createSpy('info') };
+      const admin = {
+        getUsers: () => of({ items: [], totalCount: 0 }),
+        getGroups: jasmine.createSpy('getGroups').and.returnValue(of([])),
+        getGroupOptions: jasmine.createSpy('getGroupOptions').and.returnValue(of([{ id: 1, name: 'Verein', memberCount: 2 }])),
+      };
       TestBed.configureTestingModule({
         imports: [CatalogComponent],
         providers: [
@@ -48,8 +53,7 @@ describe('CatalogComponent', () => {
           provideTranslateService({ fallbackLang: 'en' }),
           { provide: CatalogService, useValue: svc },
           { provide: AuthService, useValue: { isAdmin: false, has } },
-          { provide: AdminService, useValue: {
-            getUsers: () => of({ items: [], totalCount: 0 }), getGroups: () => of([]) } },
+          { provide: AdminService, useValue: admin },
           { provide: SnackbarService, useValue: snackbar },
           { provide: FriendsService, useValue: { search } },
         ],
@@ -57,7 +61,7 @@ describe('CatalogComponent', () => {
       const fixture = TestBed.createComponent(CatalogComponent);
       fixture.detectChanges();
       if (open) { fixture.componentInstance.adminOpen = true; fixture.detectChanges(); }
-      return { fixture, c: fixture.componentInstance, svc, snackbar, search };
+      return { fixture, c: fixture.componentInstance, svc, snackbar, search, admin };
     }
 
     it('Ladefehler → Hinweis, Speichern-Knopf gesperrt, kein setGrants', () => {
@@ -107,6 +111,14 @@ describe('CatalogComponent', () => {
       expect(svc.setGrants).toHaveBeenCalledWith({ userIds: [5], groupIds: [] });
     });
 
+    // F5-005-Nachlauf: die volle Gruppenliste verlangt groups.manage — der Katalog-Besitzer holt nur die Auswahl.
+    it('catalog.manage ohne groups.manage: Gruppenauswahl aus getGroupOptions, nicht getGroups', () => {
+      const { c, admin } = setup(jasmine.createSpy('getGrants').and.returnValue(of({ userIds: [], groupIds: [] })));
+      expect(admin.getGroupOptions).toHaveBeenCalled();
+      expect(admin.getGroups).not.toHaveBeenCalled();
+      expect(c.groups).toEqual([{ id: 1, name: 'Verein', memberCount: 2 }]);
+    });
+
     it('ohne catalog.manage: keine Besitzer-Karte, keine Besitzer-Abfragen', () => {
       const getGrants = jasmine.createSpy('getGrants').and.returnValue(of({ userIds: [], groupIds: [] }));
       const { fixture, svc } = setup(getGrants, () => false);
@@ -130,7 +142,7 @@ describe('CatalogComponent', () => {
           provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
           { provide: CatalogService, useValue: svc },
           { provide: AuthService, useValue: { isAdmin: true, has: () => true } },
-          { provide: AdminService, useValue: { getGroups: () => of([]) } },
+          { provide: AdminService, useValue: { getGroupOptions: () => of([]) } },
           { provide: SnackbarService, useValue: { info: () => {} } },
           { provide: FriendsService, useValue: { search: () => of([]) } },
         ],

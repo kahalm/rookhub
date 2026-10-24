@@ -27,9 +27,10 @@ public sealed class PermissionAuthorizationHandler(PermissionResolver? resolver 
         if (resolver != null && user.Identity?.IsAuthenticated == true
             && int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
         {
-            if ((await resolver.GetAsync(userId)).Has(requirement.Permission)) context.Succeed(requirement);
+            var granted = await resolver.GetAsync(userId);
+            if (requirement.AnyOf.Any(granted.Has)) context.Succeed(requirement);
             return;
         }
-        if (user.HasClaim(PermissionClaimType, requirement.Permission)) context.Succeed(requirement);
+        if (requirement.AnyOf.Any(p => user.HasClaim(PermissionClaimType, p))) context.Succeed(requirement);
     }
 }

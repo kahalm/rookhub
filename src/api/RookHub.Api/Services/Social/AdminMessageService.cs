@@ -221,7 +221,7 @@ public class AdminMessageService
         var senderName = (await _db.AppUsers.FindAsync(userId))?.Username ?? "user";
         var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.MessagesAdmin);
         // Deep-Link: öffnet im Admin-Bereich direkt den Nachrichten-Tab + diese Konversation.
-        var link = $"/admin?tab=messages&thread={userId}";
+        var link = AdminLinks.MessagesThread(userId);
         // Entprellt wird nur eine SERIE: Liegt im Thread schon eine ANDERE ungelesene User-Nachricht, bekommt ein Admin,
         // der zu DIESEM Thread noch eine ungesehene Glocke hat, keine weitere (und keinen weiteren Web-Push) — sonst
         // klingelte jede Nachricht einer Serie bei allen Admins. Hat ein Admin den Thread dagegen gelesen, klingelt die

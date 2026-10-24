@@ -14,7 +14,7 @@
 | `/repertoires/:id` | RepertoireDetailComponent | `authGuard` (alle eingeloggten Nutzer) |
 | `/tournaments` | TournamentListComponent | ja |
 | `/tournaments/:id` | TournamentDetailComponent | ja |
-| `/weekly` | WeeklyListComponent | `adminGuard` (vorerst nur Admin; Lese-API bleibt offen) |
+| `/weekly` | WeeklyListComponent | `authGuard` + `menuGuard('weekly')` (Lese-API bleibt offen) |
 | `/analysis/compare/:id` | MoveComparisonComponent („Züge vergleichen“: Kandidaten nach Stärke, je schwächerem die besten Antworten gegen den besten Zug + Begründung; fragt alle 3 s nach, solange gerechnet wird) | `authGuard` |
 | `/analysis/jobs` | AnalysisJobsComponent (Hintergrund-Analyseaufträge: Liste + gespeicherte Linien + Tiefe/Linien anpassen; steht VOR `/analysis`) | `authGuard` |
 | `/reconstruct` | ReconstructListComponent („Partie rekonstruieren": Liste anlegen/öffnen/löschen) | `authGuard` + `menuGuard('reconstruct')` |
@@ -26,7 +26,7 @@
 | `/install` | InstallComponent | nein (öffentlich; APK-Download + PWA-Install, plattformabhängig via `PwaInstallService`) |
 | `/stats` | StatsComponent | ja (Puzzle-Elo-Kurve + Stats; `GET /api/puzzles/elo-history`) |
 | `/training-goals` | TrainingGoalsComponent | `authGuard` (Tagesziele setzen, Heute-Fortschritt + Ziele-Heatmap; `/api/training-goals/*`) |
-| `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | `adminGuard` (vorerst nur Admin) |
+| `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | kein Guard (öffentlich lesbar; noch nicht fällige Posts liefert die API nur mit `weeklyposts.manage`) |
 | `/ebooks` | EbookListComponent (E-Book-Bibliothek, 0.764.0: Suche, Schlagwort-Chips, Sortierung, Karten mit Titelbild und Lesestand; Hochladen für jeden Angemeldeten, Sichtbarkeit je Buch über Gruppen) | `authGuard` + `menuGuard('ebooks')` |
 | `/ebooks/:id` | EbookReaderComponent (PDF-Leser mit pdf.js aus `/assets/pdfjs/`, Seite x / N, Zoom, gemerkter Lesestand; andere Formate: Download-Karte) | `authGuard` + `menuGuard('ebooks')` |
 | `/courses` | CourseListComponent | `authGuard` + `menuGuard('courses')` (`course-access.guard.ts` gibt es nicht mehr, Codereview F1-017; was lesbar ist, entscheidet die API) |

@@ -177,7 +177,7 @@ public class AuthService
                 var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.UsersManage);
                 if (adminIds.Count > 0)
                     await _notifications.CreateManyAsync(adminIds, NotificationType.NewUserRegistered,
-                        new Dictionary<string, string> { ["username"] = user.Username }, "/admin");
+                        new Dictionary<string, string> { ["username"] = user.Username }, AdminLinks.Users);
             }
             catch (Exception ex)
             {

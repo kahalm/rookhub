@@ -1,4 +1,7 @@
+using System.Reflection;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using RookHub.Api.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +24,8 @@ using RookHub.Api.Controllers.Puzzles;
 using RookHub.Api.DTOs.Courses;
 using RookHub.Api.DTOs.Social;
 using RookHub.Api.Controllers.Courses;
+using RookHub.Api.Controllers.Accounts;
+using RookHub.Api.DTOs.Accounts;
 
 namespace RookHub.Api.Tests.Social;
 
@@ -153,6 +158,53 @@ public class RbacWiringTests : IDisposable
 
         Assert.Equal("admin", (await _db.NotificationPushSettings.SingleAsync(s => s.UserId == SupportId)).EnabledCategories);
         Assert.Equal("courses", (await _db.NotificationPushSettings.SingleAsync(s => s.UserId == PlainId)).EnabledCategories);
+    }
+
+    /// <summary>Wertet die <c>[HasPermission]</c>-Policy eines Controllers so aus wie die Pipeline (Provider + Handler mit
+    /// Live-Resolver) — ein direkt instanziierter Controller prüft Attribute nie.</summary>
+    private async Task<bool> PolicyAllowsAsync(Type controller, int userId, bool admin = false)
+    {
+        var attr = controller.GetCustomAttribute<HasPermissionAttribute>()!;
+        var policy = await new PermissionPolicyProvider(Options.Create(new AuthorizationOptions())).GetPolicyAsync(attr.Policy!);
+        var reqs = policy!.Requirements.OfType<PermissionRequirement>().ToList();
+        Assert.NotEmpty(reqs);
+        var ctx = new AuthorizationHandlerContext(reqs, Ctx(userId, admin).HttpContext.User, null);
+        await new PermissionAuthorizationHandler(Resolver()).HandleAsync(ctx);
+        return ctx.HasSucceeded;
+    }
+
+    /// <summary>F5-005-Nachlauf: die Gruppen-Auswahlliste bekommt, wer Gruppen nur ZUORDNET (Katalog, Menü, Rollen,
+    /// Bücher), nicht nur groups.manage — auch über eine Gruppenrolle; und sie verrät keine Mitglieder (nur deren Zahl).</summary>
+    [Theory]
+    [InlineData("catalog.manage")]
+    [InlineData("menu.manage")]
+    [InlineData("roles.manage")]
+    [InlineData("books.manage")]
+    [InlineData("groups.manage")]
+    public async Task GroupOptions_AnyGroupAssigningPermission_Allowed_NoMembers(string permission)
+    {
+        await SeedAsync(permission);
+        Assert.True(await PolicyAllowsAsync(typeof(GroupOptionsController), SupportId));
+        Assert.True(await PolicyAllowsAsync(typeof(GroupOptionsController), GroupSupportId));
+        Assert.False(await PolicyAllowsAsync(typeof(GroupOptionsController), PlainId));
+        // Der volle Gruppen-Endpunkt bleibt bei groups.manage.
+        Assert.Equal(permission == "groups.manage", await PolicyAllowsAsync(typeof(GroupController), SupportId));
+
+        var res = await new GroupOptionsController(_db) { ControllerContext = Ctx(SupportId) }.Get(default);
+        var g = Assert.Single(Assert.IsType<List<GroupOptionDto>>(Assert.IsType<OkObjectResult>(res.Result).Value));
+        Assert.Equal("Support-Team", g.Name);
+        Assert.False(g.IsEveryone);
+        Assert.Equal(1, g.MemberCount);   // groupsupport — gezählt, nicht genannt
+        Assert.Equal(["Id", "IsEveryone", "MemberCount", "Name"], typeof(GroupOptionDto).GetProperties().Select(p => p.Name).OrderBy(n => n));
+    }
+
+    [Fact]
+    public async Task GroupOptions_WithoutAnyAssigningPermission_Denied_AdminAllowed()
+    {
+        await SeedAsync(Permissions.MessagesAdmin, Permissions.UsersManage);
+        Assert.False(await PolicyAllowsAsync(typeof(GroupOptionsController), SupportId));
+        Assert.False(await PolicyAllowsAsync(typeof(GroupOptionsController), PlainId));
+        Assert.True(await PolicyAllowsAsync(typeof(GroupOptionsController), AdminId, admin: true));
     }
 
     private sealed class NoopSender : IWebPushSender

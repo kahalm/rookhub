@@ -4,18 +4,19 @@
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/admin/groups` | Admin | Alle Gruppen inkl. MemberCount (direkt + geerbt, jedes Konto einmal) und `includedGroupIds` |
-| POST | `/api/admin/groups` | Admin | Gruppe anlegen (name, description) |
-| PUT | `/api/admin/groups/{id}` | Admin | Gruppe umbenennen / Beschreibung |
-| DELETE | `/api/admin/groups/{id}` | Admin | Gruppe + Mitgliedschaften löschen |
-| GET | `/api/admin/groups/{id}/members` | Admin | Mitglieder einer Gruppe, auch geerbte: `{ userId, username, direct, via[] }` (`direct=false` = nur über die Gruppen in `via`) |
-| POST | `/api/admin/groups/{id}/includes/{includedId}` | Admin | Gruppe `includedId` in Gruppe `id` aufnehmen (idempotent); 400 bei „Everyone“ oder Kreis (`code: group_inclusion_cycle`) |
-| DELETE | `/api/admin/groups/{id}/includes/{includedId}` | Admin | Aufnahme wieder lösen (404, wenn keine) |
-| POST | `/api/admin/groups/{id}/members/{userId}` | Admin | User zur Gruppe hinzufügen (idempotent) |
-| DELETE | `/api/admin/groups/{id}/members/{userId}` | Admin | User aus Gruppe entfernen |
-| GET | `/api/admin/groups/{id}/training-goal` | Admin | Trainingsziel-Vorlage der Gruppe (Source "none" wenn keine) |
-| PUT | `/api/admin/groups/{id}/training-goal` | Admin | Vorlage setzen/aktualisieren (PuzzleMinutes/BookMinutes 0–600, PlayGames 0–200 Partien/Woche, WeeklyDaysTarget 0–7) |
-| DELETE | `/api/admin/groups/{id}/training-goal` | Admin | Vorlage entfernen |
+| GET | `/api/admin/groups` | `groups.manage` | Alle Gruppen inkl. MemberCount (direkt + geerbt, jedes Konto einmal) und `includedGroupIds` |
+| GET | `/api/admin/groups/options` | eines von `groups.manage`, `catalog.manage`, `menu.manage`, `roles.manage`, `books.manage` | Gruppen als Auswahl `[{ id, name, isEveryone, memberCount }]` („Everyone“ zuerst, dann nach Name; Zahl wie oben) — keine Mitglieder selbst, keine Beschreibung, keine Verschachtelung (F5-005-Nachlauf, `GroupOptionsController`) |
+| POST | `/api/admin/groups` | `groups.manage` | Gruppe anlegen (name, description) |
+| PUT | `/api/admin/groups/{id}` | `groups.manage` | Gruppe umbenennen / Beschreibung |
+| DELETE | `/api/admin/groups/{id}` | `groups.manage` | Gruppe + Mitgliedschaften löschen |
+| GET | `/api/admin/groups/{id}/members` | `groups.manage` | Mitglieder einer Gruppe, auch geerbte: `{ userId, username, direct, via[] }` (`direct=false` = nur über die Gruppen in `via`) |
+| POST | `/api/admin/groups/{id}/includes/{includedId}` | `groups.manage` | Gruppe `includedId` in Gruppe `id` aufnehmen (idempotent); 400 bei „Everyone“ oder Kreis (`code: group_inclusion_cycle`) |
+| DELETE | `/api/admin/groups/{id}/includes/{includedId}` | `groups.manage` | Aufnahme wieder lösen (404, wenn keine) |
+| POST | `/api/admin/groups/{id}/members/{userId}` | `groups.manage` | User zur Gruppe hinzufügen (idempotent) |
+| DELETE | `/api/admin/groups/{id}/members/{userId}` | `groups.manage` | User aus Gruppe entfernen |
+| GET | `/api/admin/groups/{id}/training-goal` | `groups.manage` | Trainingsziel-Vorlage der Gruppe (Source "none" wenn keine) |
+| PUT | `/api/admin/groups/{id}/training-goal` | `groups.manage` | Vorlage setzen/aktualisieren (PuzzleMinutes/BookMinutes 0–600, PlayGames 0–200 Partien/Woche, WeeklyDaysTarget 0–7) |
+| DELETE | `/api/admin/groups/{id}/training-goal` | `groups.manage` | Vorlage entfernen |
 | GET/PUT | `/api/admin/groups/{id}/roles` | `roles.manage` | Rollen einer Gruppe `{ roleIds }` (0.589.0) — jedes Mitglied hat sie, live. Die admin-Rolle geht nie an eine Gruppe (still verworfen), „Everyone" nimmt keine (400) |
 
 Admin-Oberfläche „Gruppen“: Mitglieder hinzufügen über ein Suchfeld mit Liste statt Dropdown (0.591.0, Wunsch „die Dropdown ist dafür nicht geeignet“) — ohne Suche die neuesten Konten zuerst (aus den vorab geladenen 500), ab zwei Zeichen die Server-Suche (`GET /api/admin/users?search=`, auch jenseits der 500), je Zeile ein „Hinzufügen“-Knopf; Mitglieder stehen nicht in der Liste.
@@ -50,6 +51,15 @@ Rolle wirkte erst nach dem nächsten Anmelden, eine entzogene galt so lange weit
   Hintergrundjobs nur Admin. Admin-Flag setzen und Admin-Konten anfassen (Einsteigen, Reset-Link, Löschen) bietet die
   Nutzerliste nur Admins an (Server: 403). Die Dashboard-Kachel „Chessable-Queue" hängt an `chessable.admin`. Wer einen
   Controller auf ein anderes Recht umstellt, zieht die Tabelle mit.
+* **Nachlauf F5-005**: Glockenlinks zeigen auf den passenden Tab — `/admin?tab=users` (Neu-Registrierung),
+  `/admin?tab=courseDl` (Chessable-Bearer, neuer Chessable-Kurs), `/admin?tab=messages&thread=…`, `/admin?tab=uploads`;
+  ohne `?tab=` öffnete `adminAreaGuard` nur den ersten erlaubten Tab. Die Links stehen an EINER Stelle
+  (`Services/Accounts/AdminLinks.cs`), `AdminLinksTests` liest `ADMIN_TAB_KEYS` aus `admin-tabs.ts` gegen.
+  Gruppenauswahl ohne `groups.manage`: Menü, Rollen, Bücher-Freigaben (Admin-Seite) und die Katalog-Freigaben holen
+  `GET /api/admin/groups/options`; mit `groups.manage` lädt die Admin-Seite wie bisher die volle Liste und nutzt sie
+  auch als Auswahl. „Eines von" mehreren Rechten: `[HasPermission(a, b, …)]` (Policy `perm:a|b|…`,
+  `PermissionRequirement.AnyOf`). **Bewusst offen** (Produktentscheidung): der Hinweis „zu den Konversationen“ in
+  `features/messages/messages.component` erscheint weiterhin nur Admins, nicht allen mit `messages.admin`.
 
 ## Gruppe in Gruppe (2026-10-14)
 

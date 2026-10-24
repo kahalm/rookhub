@@ -116,11 +116,21 @@ export interface BookImportResult {
   totalInvalid: number;
 }
 
-export interface Group {
+/**
+ * Eine Gruppe als Auswahl (`GET /api/admin/groups/options`, F5-005-Nachlauf): für alle, die Gruppen nur ZUORDNEN
+ * (catalog.manage, menu.manage, roles.manage, books.manage) — ohne Mitglieder, Beschreibung, Verschachtelung.
+ */
+export interface GroupOption {
   id: number;
   name: string;
-  description: string | null;
+  /** System-Gruppe „Everyone". */
+  isEveryone?: boolean;
+  /** Mitgliederzahl inkl. geerbter (der Rollen-Tab zeigt sie). */
   memberCount: number;
+}
+
+export interface Group extends GroupOption {
+  description: string | null;
   createdAt: string;
   /** System-Gruppe „Everyone": jeder implizit Mitglied; nicht löschbar/mitgliedsänderbar. */
   isEveryone?: boolean;
@@ -296,6 +306,11 @@ export class AdminService {
   // --- Gruppen ----------------------------------------------------------
   getGroups(): Observable<Group[]> {
     return this.http.get<Group[]>('/api/admin/groups');
+  }
+
+  /** Nur Id, Name, isEveryone, memberCount je Gruppe — erreichbar mit groups/catalog/menu/roles/books.manage (die volle Liste braucht groups.manage). */
+  getGroupOptions(): Observable<GroupOption[]> {
+    return this.http.get<GroupOption[]>('/api/admin/groups/options');
   }
 
   createGroup(name: string, description: string | null): Observable<Group> {

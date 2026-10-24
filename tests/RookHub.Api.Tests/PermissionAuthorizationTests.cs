@@ -40,6 +40,21 @@ public class PermissionAuthorizationTests
         => Assert.False(await Evaluate(User(new Claim(ClaimTypes.Name, "bob")), "ci.view"));
 
     [Fact]
+    public async Task AnyOf_OnePermClaimSuffices_NoneDenies()
+    {
+        // F5-005-Nachlauf: [HasPermission(a, b, …)] = „eines von".
+        var user = User(new Claim(PermissionAuthorizationHandler.PermissionClaimType, "menu.manage"));
+        Assert.True(await Evaluate(user, "groups.manage|menu.manage"));
+        Assert.False(await Evaluate(user, "groups.manage|catalog.manage"));
+        Assert.Equal(["groups.manage", "menu.manage"], new PermissionRequirement("groups.manage|menu.manage").AnyOf);
+    }
+
+    [Fact]
+    public void HasPermission_SeveralRights_JoinsIntoOnePolicy()
+        => Assert.Equal("perm:groups.manage|menu.manage|roles.manage",
+            new HasPermissionAttribute("groups.manage", "menu.manage", "roles.manage").Policy);
+
+    [Fact]
     public async Task PolicyProvider_BuildsPermPolicy_AndDelegatesOthers()
     {
         var opts = Microsoft.Extensions.Options.Options.Create(new AuthorizationOptions());

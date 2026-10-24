@@ -42,24 +42,13 @@ public class GroupController : BaseApiController
                 IsEveryone = g.IsEveryone,
             })
             .ToListAsync();
-        // Mitglieder zählen MIT den geerbten aus enthaltenen Gruppen (jedes Konto einmal) — die Tabellen sind klein.
-        var rows = await _db.UserGroups.AsNoTracking().Select(ug => new { ug.GroupId, ug.UserId }).ToListAsync();
-        var closure = await _db.GroupClosures.AsNoTracking().ToListAsync();
+        // Mitglieder zählen MIT den geerbten aus enthaltenen Gruppen (jedes Konto einmal; „Everyone" = alle Konten).
+        var counts = await GroupMemberCounts.ComputeAsync(_db);
         var links = await _db.GroupInclusions.AsNoTracking().ToListAsync();
-        var usersOf = rows.GroupBy(r => r.GroupId).ToDictionary(g => g.Key, g => g.Select(r => r.UserId).ToList());
         foreach (var g in groups)
         {
-            var ids = new HashSet<int>(usersOf.GetValueOrDefault(g.Id) ?? []);
-            foreach (var c in closure.Where(c => c.AncestorId == g.Id))
-                ids.UnionWith(usersOf.GetValueOrDefault(c.DescendantId) ?? []);
-            g.MemberCount = ids.Count;
+            g.MemberCount = counts.GetValueOrDefault(g.Id);
             g.IncludedGroupIds = links.Where(l => l.GroupId == g.Id).Select(l => l.IncludedGroupId).OrderBy(i => i).ToList();
-        }
-        // „Everyone" hat keine expliziten Mitgliedszeilen — jeder ist implizit Mitglied.
-        if (groups.Any(g => g.IsEveryone))
-        {
-            var totalUsers = await _db.AppUsers.CountAsync();
-            foreach (var g in groups.Where(g => g.IsEveryone)) g.MemberCount = totalUsers;
         }
         return Ok(groups);
     }

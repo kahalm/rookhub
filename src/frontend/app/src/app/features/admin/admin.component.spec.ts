@@ -927,7 +927,9 @@ describe('AdminComponent – Tabs je Recht (F5-005)', () => {
       getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: [], totalCount: 0 })),
       getBooks: jasmine.createSpy('getBooks').and.returnValue(of([])),
       getGroups: jasmine.createSpy('getGroups').and.returnValue(of([])),
+      getGroupOptions: jasmine.createSpy('getGroupOptions').and.returnValue(of([{ id: 3, name: 'Verein', isEveryone: false, memberCount: 4 }])),
       getConfig: jasmine.createSpy('getConfig').and.returnValue(of({ kibanaUrl: '' })),
+      getMenuConfig: jasmine.createSpy('getMenuConfig').and.returnValue(of([])),
     };
     TestBed.configureTestingModule({
       imports: [AdminComponent],
@@ -960,7 +962,29 @@ describe('AdminComponent – Tabs je Recht (F5-005)', () => {
     expect(adminService.getUsers).not.toHaveBeenCalled();
     expect(adminService.getBooks).not.toHaveBeenCalled();
     expect(adminService.getGroups).not.toHaveBeenCalled();
+    expect(adminService.getGroupOptions).not.toHaveBeenCalled();
     expect(adminService.getConfig).not.toHaveBeenCalled();
+  });
+
+  // F5-005-Nachlauf: GET /api/admin/groups verlangt groups.manage; Menü/Bücher/Rollen brauchen nur die Auswahl.
+  it('menu.manage ohne groups.manage: Gruppenauswahl aus getGroupOptions, nicht getGroups', async () => {
+    const { fixture, adminService } = await render(['menu.manage']);
+    expect(adminService.getGroups).not.toHaveBeenCalled();
+    expect(adminService.getGroupOptions).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.keptTabGroups).toEqual([{ id: 3, name: 'Verein', isEveryone: false, memberCount: 4 }]);
+  });
+
+  it('books.manage ohne groups.manage: Bücher-Freigaben wählen aus den Optionen', async () => {
+    const { fixture, adminService } = await render(['books.manage']);
+    expect(adminService.getGroups).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.groupOptions.map(g => g.name)).toEqual(['Verein']);
+  });
+
+  it('groups.manage: volle Liste, keine zweite Anfrage für die Optionen', async () => {
+    const { fixture, adminService } = await render(['groups.manage', 'menu.manage']);
+    expect(adminService.getGroups).toHaveBeenCalled();
+    expect(adminService.getGroupOptions).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.keptTabGroups).toEqual([]);
   });
 
   it('der Glockenlink ?tab=uploads wählt den Tab über die SICHTBAREN Tabs (Index 1, nicht 10)', async () => {

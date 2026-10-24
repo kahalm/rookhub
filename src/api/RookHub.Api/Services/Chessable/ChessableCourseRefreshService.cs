@@ -131,7 +131,7 @@ public class ChessableCourseRefreshService
                 foreach (var c in newCourses)
                 {
                     await _notifications.CreateManyAsync(adminIds, NotificationType.ChessableNewCourse,
-                        new Dictionary<string, string> { ["username"] = username, ["courseName"] = c.Name }, "/admin");
+                        new Dictionary<string, string> { ["username"] = username, ["courseName"] = c.Name }, AdminLinks.CourseDl);
                 }
                 summary.NewCourses += newCourses.Count;
                 _logger.LogInformation("Chessable-Refresh: {Count} neue(r) Kurs(e) bei User {UserId} — Admins benachrichtigt",

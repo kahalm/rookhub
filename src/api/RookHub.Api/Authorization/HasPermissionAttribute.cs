@@ -11,4 +11,10 @@ namespace RookHub.Api.Authorization;
 public sealed class HasPermissionAttribute : AuthorizeAttribute
 {
     public HasPermissionAttribute(string permission) => Policy = PermissionPolicyProvider.Prefix + permission;
+
+    /// <summary>„Eines von" (F5-005-Nachlauf): erfüllt, wenn der Nutzer mindestens eines der Rechte hat — für Endpunkte,
+    /// die mehrere Oberflächen mit verschiedenen Rechten bedienen (z. B. die Gruppen-Auswahlliste).</summary>
+    public HasPermissionAttribute(string permission, string orPermission, params string[] orMore)
+        => Policy = PermissionPolicyProvider.Prefix
+            + string.Join(PermissionRequirement.Separator, new[] { permission, orPermission }.Concat(orMore));
 }

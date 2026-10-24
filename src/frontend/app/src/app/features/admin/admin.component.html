@@ -276,7 +276,7 @@
                     <mat-select [(ngModel)]="bookFilters.group" (selectionChange)="applyBookFilter()">
                       <mat-option value="">{{ 'admin.books.filters.all' | translate }}</mat-option>
                       <mat-option value="none">{{ 'admin.books.adminOnly' | translate }}</mat-option>
-                      @for (g of groups; track g.id) {
+                      @for (g of groupOptions; track g.id) {
                         <mat-option [value]="g.id">{{ g.name }}</mat-option>
                       }
                     </mat-select>
@@ -387,7 +387,7 @@
                     <mat-form-field appearance="outline" class="groups-select" subscriptSizing="dynamic">
                       <mat-select multiple [(ngModel)]="b.accessGroupIds" (selectionChange)="saveBookGroups(b)"
                                   [placeholder]="'admin.books.adminOnly' | translate">
-                        @for (g of groups; track g.id) {
+                        @for (g of groupOptions; track g.id) {
                           <mat-option [value]="g.id">{{ g.name }}</mat-option>
                         }
                       </mat-select>

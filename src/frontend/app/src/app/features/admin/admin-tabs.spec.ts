@@ -23,6 +23,7 @@ describe('admin-tabs', () => {
 
   // Guard: hält die Key-Liste mit der mat-tab-Reihenfolge in admin.component.html konsistent.
   // Wird ein Tab im HTML verschoben/ergänzt, MUSS dieser erwartete Stand mitgezogen werden.
+  // Umbenennen bricht außerdem die Glockenlinks des Servers: `AdminLinks` (Services/Accounts) liest diese Liste im Test `AdminLinksTests`.
   it('keeps the expected canonical tab order (sync with admin.component.html)', () => {
     expect([...ADMIN_TAB_KEYS]).toEqual(
       ['users', 'books', 'daily', 'puzzles', 'groups', 'menu', 'messages', 'courseDl', 'ci', 'roles', 'uploads', 'jobs']);

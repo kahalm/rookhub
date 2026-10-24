@@ -15,7 +15,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CatalogService, CatalogItem, CatalogRequest, CatalogGrants, CatalogGrantUser } from './catalog.service';
 import { AuthService } from '../../core/auth.service';
-import { AdminService, Group } from '../../core/admin.service';
+import { AdminService, GroupOption } from '../../core/admin.service';
 import { FriendsService } from '../../core/friends.service';
 import { UserSearchResult } from '../../core/models';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -244,7 +244,7 @@ export class CatalogComponent implements OnInit {
   loadError = false;
   items: CatalogItem[] = [];
   requests: CatalogRequest[] = [];
-  groups: Group[] = [];
+  groups: GroupOption[] = [];
   /** Freigegebene User mit Namen — Quelle der Wahrheit fürs Speichern (userIds werden daraus gebildet). */
   grantUsers: CatalogGrantUser[] = [];
   grantGroupIds: number[] = [];
@@ -272,7 +272,8 @@ export class CatalogComponent implements OnInit {
       });
       // Offene Anforderungen sind eine Aufgabe → dann die Verwaltung gleich aufgeklappt zeigen.
       this.svc.getRequests().subscribe(r => { this.requests = r; if (r.length > 0) this.adminOpen = true; });
-      this.adminService.getGroups().subscribe(g => this.groups = g);
+      // Nur die Auswahl (Id + Name) — die volle Liste verlangt groups.manage, Katalog-Besitzer haben catalog.manage.
+      this.adminService.getGroupOptions().subscribe(g => this.groups = g);
       // Tippen sucht nach kurzer Pause, Enter/Knopf sofort; switchMap verwirft überholte Antworten.
       this.searchInput.pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
         .subscribe(q => this.searchNow.next(q));

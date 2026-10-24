@@ -41,3 +41,8 @@ public class GroupMemberDto
     /// <summary>Die enthaltenen Gruppen, über die das Konto (auch) dazugehört.</summary>
     public List<string> Via { get; set; } = new();
 }
+
+/// <summary><c>GET /api/admin/groups/options</c> — eine Gruppe als Auswahl (F5-005-Nachlauf): Kennung, Name, ob es
+/// „Everyone" ist, und die Mitgliederzahl (direkt + geerbt). Keine Mitglieder, keine Beschreibung, keine Verschachtelung —
+/// die bleiben bei groups.manage.</summary>
+public sealed record GroupOptionDto(int Id, string Name, bool IsEveryone, int MemberCount);
