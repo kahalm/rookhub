@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Authorization;
-using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.TournamentDirectory;
@@ -24,86 +22,24 @@ namespace RookHub.Api.Controllers.TournamentDirectory;
 [HasPermission(Permissions.TournamentsManage)]
 public class AdminTournamentDirectoryController : BaseApiController
 {
-    private readonly AppDbContext _db;
     private readonly TournamentDirectoryService _directory;
+    private readonly TournamentDirectoryMaintenanceService _maintenance;
     private readonly GazetteerImportService _gazetteer;
-    private readonly GeocodingService _geocoding;
 
+    /// <summary>
+    /// Nur die Dienste, die mehrere Endpunkte brauchen. Die Quellen-Ausloeser holen ihren Dienst
+    /// je Aufruf ueber <c>[FromServices]</c> — vorher standen hier 25 Konstruktor-Abhaengigkeiten,
+    /// und jede Anfrage baute alle Quellen-Dienste, um einen davon zu benutzen (Codereview Z8).
+    /// </summary>
     public AdminTournamentDirectoryController(
-        AppDbContext db,
         TournamentDirectoryService directory,
-        GazetteerImportService gazetteer,
-        GeocodingService geocoding,
-        VenueDisambiguationService disambiguation,
-        TournamentRoundPlanService roundPlans,
-        FideDirectorySweepService fide,
-        FideEventDetailService fideDetails,
-        TournamentCalendarSweepService calendar,
-        FsiDirectorySweepService fsi2,
-        SzsDirectorySweepService szs,
-        ChessSkDirectorySweepService chessSk,
-        ChessHuDirectorySweepService chessHu,
-        ChessCzDirectorySweepService chessCz,
-        ChessArbiterDirectorySweepService chessArbiter,
-        SchachbundDirectorySweepService schachbund,
-        EcfDirectorySweepService ecf,
-        IcuDirectorySweepService icu,
-        FfeDirectorySweepService ffe,
-        SjakkDirectorySweepService sjakk,
-        ChessScotlandDirectorySweepService chessScotland,
-        FrsahDirectorySweepService frsah,
-        WcuDirectorySweepService wcu,
-        CfcDirectorySweepService cfc,
-        KnsbDirectorySweepService knsb)
+        TournamentDirectoryMaintenanceService maintenance,
+        GazetteerImportService gazetteer)
     {
-        _db = db;
         _directory = directory;
+        _maintenance = maintenance;
         _gazetteer = gazetteer;
-        _geocoding = geocoding;
-        _disambiguation = disambiguation;
-        _roundPlans = roundPlans;
-        _fide = fide;
-        _fideDetails = fideDetails;
-        _calendar = calendar;
-        _fsi2 = fsi2;
-        _szs = szs;
-        _chessSk = chessSk;
-        _chessHu = chessHu;
-        _chessCz = chessCz;
-        _chessArbiter = chessArbiter;
-        _schachbund = schachbund;
-        _ecf = ecf;
-        _icu = icu;
-        _ffe = ffe;
-        _sjakk = sjakk;
-        _chessScotland = chessScotland;
-        _frsah = frsah;
-        _wcu = wcu;
-        _cfc = cfc;
-        _knsb = knsb;
     }
-
-    private readonly VenueDisambiguationService _disambiguation;
-    private readonly TournamentRoundPlanService _roundPlans;
-    private readonly FideDirectorySweepService _fide;
-    private readonly FideEventDetailService _fideDetails;
-    private readonly TournamentCalendarSweepService _calendar;
-    private readonly FsiDirectorySweepService _fsi2;
-    private readonly SzsDirectorySweepService _szs;
-    private readonly ChessSkDirectorySweepService _chessSk;
-    private readonly ChessHuDirectorySweepService _chessHu;
-    private readonly ChessCzDirectorySweepService _chessCz;
-    private readonly ChessArbiterDirectorySweepService _chessArbiter;
-    private readonly SchachbundDirectorySweepService _schachbund;
-    private readonly EcfDirectorySweepService _ecf;
-    private readonly IcuDirectorySweepService _icu;
-    private readonly FfeDirectorySweepService _ffe;
-    private readonly SjakkDirectorySweepService _sjakk;
-    private readonly ChessScotlandDirectorySweepService _chessScotland;
-    private readonly FrsahDirectorySweepService _frsah;
-    private readonly WcuDirectorySweepService _wcu;
-    private readonly CfcDirectorySweepService _cfc;
-    private readonly KnsbDirectorySweepService _knsb;
 
     /// <summary>
     /// Nimmt die naechsten Turniere vor, deren Spielort ueber die VEREINSNAMEN aufzuloesen ist —
@@ -112,9 +48,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// wird nur einmal versucht (`TeamHintCheckedAt`).
     /// </summary>
     [HttpPost("disambiguate")]
-    public async Task<IActionResult> Disambiguate([FromQuery] int limit = 50, CancellationToken ct = default)
+    public async Task<IActionResult> Disambiguate([FromServices] VenueDisambiguationService disambiguation,
+        [FromQuery] int limit = 50, CancellationToken ct = default)
     {
-        var result = await _disambiguation.RunAsync(limit, ct);
+        var result = await disambiguation.RunAsync(limit, ct);
         return Ok(new { result.Checked, result.Resolved, result.Failed });
     }
 
@@ -122,24 +59,14 @@ public class AdminTournamentDirectoryController : BaseApiController
     [HttpGet("status")]
     public async Task<IActionResult> Status(CancellationToken ct)
     {
-        var sweeps = await _db.TournamentDirectorySweeps.AsNoTracking()
-            .OrderByDescending(s => s.LastAttemptedAt)
-            .ToListAsync(ct);
-
-        var entries = _db.TournamentDirectoryEntries.AsNoTracking().Where(e => e.RemovedAt == null);
-        var total = await entries.CountAsync(ct);
-        var bySource = await entries
-            .GroupBy(e => e.GeoSource)
-            .Select(g => new { Source = g.Key, Count = g.Count() })
-            .ToListAsync(ct);
-
+        var status = await _maintenance.StatusAsync(ct);
         return Ok(new
         {
-            totalEntries = total,
-            geocoded = bySource.Where(b => b.Source != GeoSource.None).Sum(b => b.Count),
-            byGeoSource = bySource.ToDictionary(b => b.Source.ToString(), b => b.Count),
-            gazetteerPlaces = await _db.GeoPlaces.CountAsync(ct),
-            sweeps = sweeps.Select(s => new
+            totalEntries = status.TotalEntries,
+            geocoded = status.Geocoded,
+            byGeoSource = status.ByGeoSource,
+            gazetteerPlaces = status.GazetteerPlaces,
+            sweeps = status.Sweeps.Select(s => new
             {
                 s.Federation, s.LastSweptAt, s.LastAttemptedAt, s.LastRowCount,
                 s.LastError, s.ConsecutiveFailures
@@ -200,36 +127,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     [HttpPost("gazetteer/transcribe")]
     public async Task<IActionResult> Transcribe(CancellationToken ct)
     {
-        const int batch = 5000;
-        var written = 0;
-        var lastId = 0;
-
-        // Durchgezaehlt wird ueber die Id, NICHT ueber „Spalte noch leer". Eine Zeile, deren Name
-        // in einer Schrift steht, die die Umschrift nicht abdeckt (Georgisch, Armenisch,
-        // Hebraeisch), bleibt naemlich zu Recht leer — genau das heisst „nichts Vergleichbares",
-        // und eine Schleife ueber die leeren Zeilen kaeme nie zum Ende.
-        while (!ct.IsCancellationRequested)
-        {
-            var rows = await _db.GeoPlaces
-                .Where(g => g.Id > lastId)
-                .OrderBy(g => g.Id)
-                .Take(batch)
-                .ToListAsync(ct);
-            if (rows.Count == 0) break;
-            lastId = rows[^1].Id;
-
-            foreach (var row in rows)
-            {
-                var transcribed = GeoTextNormalizer.NormalizeTranscribed(row.Name, row.Country);
-                if (transcribed.Length > 200) transcribed = transcribed[..200];
-                if (transcribed == row.NameTranscribed) continue;
-                row.NameTranscribed = transcribed;
-                written++;
-            }
-            await _db.SaveChangesAsync(ct);
-            _db.ChangeTracker.Clear();
-        }
-
+        var written = await _maintenance.TranscribeGazetteerAsync(ct);
         return Ok(new { written });
     }
 
@@ -237,14 +135,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     [HttpGet("ungeocoded")]
     public async Task<IActionResult> Ungeocoded([FromQuery] int limit = 100, CancellationToken ct = default)
     {
-        var entries = await _db.TournamentDirectoryEntries.AsNoTracking()
-            .Where(e => e.RemovedAt == null && e.Lat == null)
-            .OrderBy(e => e.StartDate)
-            .Take(Math.Clamp(limit, 1, 500))
-            .Select(e => new { e.PublicId, e.ChessResultsId, e.Name, e.Federation, e.State, e.LocationText, e.StartDate })
-            .ToListAsync(ct);
-
-        return Ok(entries);
+        return Ok(await _maintenance.UngeocodedAsync(limit, ct));
     }
 
     /// <summary>
@@ -258,21 +149,8 @@ public class AdminTournamentDirectoryController : BaseApiController
         if (input.Lat is < -90 or > 90 || input.Lon is < -180 or > 180)
             return BadRequest(new { message = "Coordinates out of range." });
 
-        var entry = await _db.TournamentDirectoryEntries
-            .FirstOrDefaultAsync(e => e.PublicId == id, ct);
+        var entry = await _maintenance.SetCoordinatesAsync(id, input.Lat, input.Lon, input.PlaceName, ct);
         if (entry is null) return NotFound();
-
-        entry.Lat = input.Lat;
-        entry.Lon = input.Lon;
-        entry.GeoSource = GeoSource.Manual;
-        // Gekappt: die Spalte ist varchar(200), und eine zu lange Eingabe waere sonst ein 500er
-        // statt einer gespeicherten Korrektur.
-        var placeName = input.PlaceName?.Trim();
-        entry.GeoPlaceName = placeName is { Length: > 200 } ? placeName[..200] : placeName;
-        entry.UpdatedAt = DateTime.UtcNow;
-        // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Gruppenschluessel liest den verorteten Ort.
-        TournamentDirectoryService.ApplyGrouping(entry);
-        await _db.SaveChangesAsync(ct);
 
         return Ok(new { entry.PublicId, entry.ChessResultsId, entry.Lat, entry.Lon, GeoSource = entry.GeoSource.ToString() });
     }
@@ -284,7 +162,8 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// Jahres-Zuordnung eines Ereignisses ueber den Jahreswechsel daran haengt.</para>
     /// </summary>
     [HttpPost("fide")]
-    public async Task<IActionResult> Fide(
+    public async Task<IActionResult> Fide([FromServices] FideDirectorySweepService fide,
+        
         [FromQuery] string? years = null, CancellationToken ct = default)
     {
         var list = new List<int>();
@@ -298,7 +177,7 @@ public class AdminTournamentDirectoryController : BaseApiController
         // praktisch nichts.
         if (list.Count == 0) list = [.. Enumerable.Range(DateTime.UtcNow.Year, 3)];
 
-        var result = await _fide.RunAsync(list, ct);
+        var result = await fide.RunAsync(list, ct);
         return result.Succeeded
             ? Ok(new { result.Fetched, result.Added, result.Updated, result.MergedIntoExisting })
             : StatusCode(502, new { message = result.Error, result.Fetched, result.Added });
@@ -314,28 +193,7 @@ public class AdminTournamentDirectoryController : BaseApiController
     [HttpPost("backfill-sources")]
     public async Task<IActionResult> BackfillSources(CancellationToken ct = default)
     {
-        // Nur Eintraege, die WIRKLICH von chess-results kommen — ein FIDE-Eintrag hat dort
-        // keine Nummer und bekommt seinen Vermerk von seinem eigenen Durchgang.
-        var entries = await _db.TournamentDirectoryEntries
-            .Include(e => e.Sources)
-            .Where(e => e.ChessResultsId != null
-                        && !e.Sources.Any(s => s.Kind == DirectorySourceKind.ChessResults))
-            .ToListAsync(ct);
-
-        var now = DateTime.UtcNow;
-        foreach (var entry in entries)
-        {
-            // FirstSeenAt des Eintrags, nicht „jetzt": der Vermerk soll sagen, seit wann die
-            // Quelle das Turnier fuehrt, und das ist bekannt.
-            await TournamentDirectoryService.NoteSourceAsync(_db, 
-                entry, DirectorySourceKind.ChessResults, entry.ChessResultsId!, now);
-            var source = entry.Sources[^1];
-            source.FirstSeenAt = entry.FirstSeenAt;
-            source.LastSeenAt = entry.LastSeenAt;
-        }
-
-        if (entries.Count > 0) await _db.SaveChangesAsync(ct);
-        return Ok(new { added = entries.Count });
+        return Ok(new { added = await _maintenance.BackfillSourcesAsync(ct) });
     }
 
     /// <summary>
@@ -353,10 +211,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// ohne das bliebe die Behebung fuer den bestehenden Bestand wirkungslos.
     /// </param>
     [HttpPost("round-plans")]
-    public async Task<IActionResult> RoundPlans([FromQuery] int limit = 100,
+    public async Task<IActionResult> RoundPlans([FromServices] TournamentRoundPlanService roundPlans,
+        [FromQuery] int limit = 100,
         [FromQuery] bool retryEmpty = false, CancellationToken ct = default)
     {
-        var result = await _roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
+        var result = await roundPlans.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithPlan, result.Failed });
     }
 
@@ -372,9 +231,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// und bestehende zurueckgezogen.</para>
     /// </summary>
     [HttpPost("szs")]
-    public async Task<IActionResult> Szs(CancellationToken ct = default)
+    public async Task<IActionResult> Szs([FromServices] SzsDirectorySweepService szs,
+        CancellationToken ct = default)
     {
-        var result = await _szs.RunAsync(ct);
+        var result = await szs.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
     }
 
@@ -387,9 +247,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// Meldezahl, keine weiteren Koordinaten. Mit 0 bleibt sie ganz aus.</para>
     /// </summary>
     [HttpPost("icu")]
-    public async Task<IActionResult> Icu([FromQuery] int? details = null, CancellationToken ct = default)
+    public async Task<IActionResult> Icu([FromServices] IcuDirectorySweepService icu,
+        [FromQuery] int? details = null, CancellationToken ct = default)
     {
-        var result = await _icu.RunAsync(Clamp(details), ct);
+        var result = await icu.RunAsync(Clamp(details), ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -402,10 +263,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// gebraucht: Enddatum, Bedenkzeit und Postleitzahl gibt es nur dort.</para>
     /// </summary>
     [HttpPost("ffe")]
-    public async Task<IActionResult> Ffe([FromQuery] int months = 12,
+    public async Task<IActionResult> Ffe([FromServices] FfeDirectorySweepService ffe,
+        [FromQuery] int months = 12,
         [FromQuery] int? details = null, CancellationToken ct = default)
     {
-        var result = await _ffe.RunAsync(Math.Clamp(months, 1, 24), Clamp(details), ct);
+        var result = await ffe.RunAsync(Math.Clamp(months, 1, 24), Clamp(details), ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -418,9 +280,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// 25 % verortbar — nach einem norwegischen Postleitzahl-Import etwa ein Drittel.</para>
     /// </summary>
     [HttpPost("sjakk")]
-    public async Task<IActionResult> Sjakk([FromQuery] int? details = null, CancellationToken ct = default)
+    public async Task<IActionResult> Sjakk([FromServices] SjakkDirectorySweepService sjakk,
+        [FromQuery] int? details = null, CancellationToken ct = default)
     {
-        var result = await _sjakk.RunAsync(Clamp(details), ct);
+        var result = await sjakk.RunAsync(Clamp(details), ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -434,10 +297,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// selben Satz.</para>
     /// </summary>
     [HttpPost("chess-scotland")]
-    public async Task<IActionResult> ChessScotland([FromQuery] int? details = null,
+    public async Task<IActionResult> ChessScotland([FromServices] ChessScotlandDirectorySweepService chessScotland,
+        [FromQuery] int? details = null,
         CancellationToken ct = default)
     {
-        var result = await _chessScotland.RunAsync(Clamp(details), ct);
+        var result = await chessScotland.RunAsync(Clamp(details), ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -449,9 +313,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// die nationalen Mannschaftsligen — und genau die fehlen auf chess-results.</para>
     /// </summary>
     [HttpPost("frsah")]
-    public async Task<IActionResult> Frsah(CancellationToken ct = default)
+    public async Task<IActionResult> Frsah([FromServices] FrsahDirectorySweepService frsah,
+        CancellationToken ct = default)
     {
-        var result = await _frsah.RunAsync(ct);
+        var result = await frsah.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -463,9 +328,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// wird dort nachweislich nachtraeglich korrigiert).</para>
     /// </summary>
     [HttpPost("wcu")]
-    public async Task<IActionResult> Wcu(CancellationToken ct = default)
+    public async Task<IActionResult> Wcu([FromServices] WcuDirectorySweepService wcu,
+        CancellationToken ct = default)
     {
-        var result = await _wcu.RunAsync(ct);
+        var result = await wcu.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -482,9 +348,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// verraet es.</para>
     /// </summary>
     [HttpPost("cfc")]
-    public async Task<IActionResult> Cfc(CancellationToken ct = default)
+    public async Task<IActionResult> Cfc([FromServices] CfcDirectorySweepService cfc,
+        CancellationToken ct = default)
     {
-        var result = await _cfc.RunAsync(ct);
+        var result = await cfc.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -499,9 +366,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// kommt dafuer strukturiert aus der Quelle.</para>
     /// </summary>
     [HttpPost("knsb")]
-    public async Task<IActionResult> Knsb(CancellationToken ct = default)
+    public async Task<IActionResult> Knsb([FromServices] KnsbDirectorySweepService knsb,
+        CancellationToken ct = default)
     {
-        var result = await _knsb.RunAsync(ct);
+        var result = await knsb.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -523,9 +391,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// <para><c>Updated</c> in der Antwort zaehlt die VERORTETEN Eintraege.</para>
     /// </summary>
     [HttpPost("ecf")]
-    public async Task<IActionResult> Ecf(CancellationToken ct = default)
+    public async Task<IActionResult> Ecf([FromServices] EcfDirectorySweepService ecf,
+        CancellationToken ct = default)
     {
-        var result = await _ecf.RunAsync(ct);
+        var result = await ecf.RunAsync(ct);
         return Ok(new
         {
             result.Read, result.Added, result.Matched, result.Retired, Located = result.Updated,
@@ -544,9 +413,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// die Quelle in ihrer robots.txt nennt.</para>
     /// </summary>
     [HttpPost("schachbund")]
-    public async Task<IActionResult> Schachbund(CancellationToken ct = default)
+    public async Task<IActionResult> Schachbund([FromServices] SchachbundDirectorySweepService schachbund,
+        CancellationToken ct = default)
     {
-        var result = await _schachbund.RunAsync(ct);
+        var result = await schachbund.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -561,10 +431,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// Antwort zaehlt die gelesenen Detailseiten.</para>
     /// </summary>
     [HttpPost("chess-arbiter")]
-    public async Task<IActionResult> ChessArbiter([FromQuery] int? details = null,
+    public async Task<IActionResult> ChessArbiter([FromServices] ChessArbiterDirectorySweepService chessArbiter,
+        [FromQuery] int? details = null,
         CancellationToken ct = default)
     {
-        var result = await _chessArbiter.RunAsync(
+        var result = await chessArbiter.RunAsync(
             details is { } limit ? Math.Clamp(limit, 0, 1000) : null, ct);
         return Ok(new
         {
@@ -583,9 +454,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// <para><c>Updated</c> in der Antwort zaehlt hier die ergaenzten SPIELTERMINE.</para>
     /// </summary>
     [HttpPost("chess-cz")]
-    public async Task<IActionResult> ChessCz(CancellationToken ct = default)
+    public async Task<IActionResult> ChessCz([FromServices] ChessCzDirectorySweepService chessCz,
+        CancellationToken ct = default)
     {
-        var result = await _chessCz.RunAsync(ct);
+        var result = await chessCz.RunAsync(ct);
         return Ok(new
         {
             result.Read, result.Added, result.Matched, result.Retired, RoundDates = result.Updated,
@@ -600,9 +472,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// braucht fuer ihre 31 kB rund 75 Sekunden.</para>
     /// </summary>
     [HttpPost("chess-hu")]
-    public async Task<IActionResult> ChessHu(CancellationToken ct = default)
+    public async Task<IActionResult> ChessHu([FromServices] ChessHuDirectorySweepService chessHu,
+        CancellationToken ct = default)
     {
-        var result = await _chessHu.RunAsync(ct);
+        var result = await chessHu.RunAsync(ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Retired });
     }
 
@@ -618,10 +491,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// dem EINEN Abruf der Schnittstelle (Name, Termin, Ort), ohne Anschrift und Bedenkzeit.</para>
     /// </summary>
     [HttpPost("chess-sk")]
-    public async Task<IActionResult> ChessSk([FromQuery] bool details = true,
+    public async Task<IActionResult> ChessSk([FromServices] ChessSkDirectorySweepService chessSk,
+        [FromQuery] bool details = true,
         CancellationToken ct = default)
     {
-        var result = await _chessSk.RunAsync(details, ct);
+        var result = await chessSk.RunAsync(details, ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -637,9 +511,10 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// ueberschreibt keinen vorhandenen Wert.</para>
     /// </summary>
     [HttpPost("fsi")]
-    public async Task<IActionResult> Fsi([FromQuery] int months = 18, CancellationToken ct = default)
+    public async Task<IActionResult> Fsi([FromServices] FsiDirectorySweepService fsi,
+        [FromQuery] int months = 18, CancellationToken ct = default)
     {
-        var result = await _fsi2.RunAsync(Math.Clamp(months, 1, 36), ct);
+        var result = await fsi.RunAsync(Math.Clamp(months, 1, 36), ct);
         return Ok(new { result.Read, result.Added, result.Updated, result.Matched, result.Retired });
     }
 
@@ -655,10 +530,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// <para><c>fed</c> leer oder <c>-</c> nimmt alle auf einmal.</para>
     /// </summary>
     [HttpPost("calendar")]
-    public async Task<IActionResult> Calendar([FromQuery] string? fed = null, CancellationToken ct = default)
+    public async Task<IActionResult> Calendar([FromServices] TournamentCalendarSweepService calendar,
+        [FromQuery] string? fed = null, CancellationToken ct = default)
     {
         var federation = string.IsNullOrWhiteSpace(fed) ? "-" : fed.Trim().ToUpperInvariant();
-        var result = await _calendar.RunAsync(federation, ct);
+        var result = await calendar.RunAsync(federation, ct);
         return Ok(new { result.Read, result.Added, result.Matched, result.Merged });
     }
 
@@ -676,10 +552,11 @@ public class AdminTournamentDirectoryController : BaseApiController
     /// haeufige Fall ist und jeder erneute Versuch wieder einen Abruf kostet.</para>
     /// </summary>
     [HttpPost("fide-details")]
-    public async Task<IActionResult> FideDetails([FromQuery] int limit = 100,
+    public async Task<IActionResult> FideDetails([FromServices] FideEventDetailService fideDetails,
+        [FromQuery] int limit = 100,
         [FromQuery] bool retryEmpty = false, CancellationToken ct = default)
     {
-        var result = await _fideDetails.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
+        var result = await fideDetails.RunAsync(Math.Clamp(limit, 1, 1000), retryEmpty, ct);
         return Ok(new { result.Checked, result.WithDetails, result.Geocoded });
     }
 
@@ -700,36 +577,16 @@ public class AdminTournamentDirectoryController : BaseApiController
     [HttpPost("classify")]
     public async Task<IActionResult> Classify(CancellationToken ct = default)
     {
-        var entries = await _db.TournamentDirectoryEntries.ToListAsync(ct);
-        var changed = 0;
-
-        foreach (var entry in entries)
-        {
-            var ageGroups = TournamentClassifier.AgeGroupsOf(entry.Name);
-            var gender = TournamentClassifier.GenderOf(entry.Name);
-            var isLeague = TournamentClassifier.LooksLikeLeague(
-                entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
-
-            if (entry.AgeGroups == ageGroups && entry.Gender == gender && entry.IsLeague == isLeague)
-                continue;
-
-            entry.AgeGroups = ageGroups;
-            entry.Gender = gender;
-            entry.IsLeague = isLeague;
-            changed++;
-        }
-
-        if (changed > 0) await _db.SaveChangesAsync(ct);
-
+        var result = await _maintenance.ClassifyAsync(ct);
         return Ok(new
         {
-            examined = entries.Count,
-            changed,
-            youth = entries.Count(e => (e.AgeGroups & TournamentClassifier.YouthMask) != TournamentAgeGroups.None),
-            female = entries.Count(e => e.Gender == TournamentGender.Female),
-            male = entries.Count(e => e.Gender == TournamentGender.Male),
-            leagues = entries.Count(e => e.IsLeague),
-            teams = entries.Count(e => e.Kind == TournamentKind.Team),
+            examined = result.Examined,
+            changed = result.Changed,
+            youth = result.Youth,
+            female = result.Female,
+            male = result.Male,
+            leagues = result.Leagues,
+            teams = result.Teams,
         });
     }
 
@@ -746,100 +603,8 @@ public class AdminTournamentDirectoryController : BaseApiController
     public async Task<IActionResult> GeocodeMissing(
         [FromQuery] int limit = 0, [FromQuery] bool force = false, CancellationToken ct = default)
     {
-        // `force` nimmt auch SCHON verortete Eintraege vor. Gebraucht wird das, wenn sich die
-        // Verortungs-REGELN aendern: der naechtliche Sweep verortet einen bestehenden Eintrag nur
-        // neu, wenn sich sein Ortstext geaendert hat (sonst liefe jede Nacht der ganze Bestand
-        // durch den Gazetteer). Ein falscher Pin aus einer alten Regel bliebe damit fuer immer
-        // stehen. Von Hand gesetzte Koordinaten bleiben in JEDEM Fall unberuehrt.
-        var entries = await _db.TournamentDirectoryEntries
-            .Include(e => e.Venues)
-            .Where(e => e.RemovedAt == null
-                        && e.GeoSource != GeoSource.Manual
-                        // Von der Quelle mitgelieferte Koordinaten sind genauer als alles, was das
-                        // Ortslexikon daraus machen kann — sie bleiben wie die von Hand gesetzten.
-                        && e.GeoSource != GeoSource.SourceProvided
-                        // Ebenso der ueber die VEREINSNAMEN aufgeloeste Spielort: dort hat ein
-                        // Seitenabruf BEWIESEN, welcher von mehreren gleichnamigen Orten gemeint
-                        // ist (`VenueDisambiguationService`) — genau der Fall, den die Namensregel
-                        // per Definition nicht loesen kann. Am 2026-09-09 auf Dev vorgefuehrt: ein
-                        // `force`-Lauf machte aus allen 17 solchen Pins wieder „mehrdeutig, kein
-                        // Pin", und weil `TeamHintCheckedAt` einen zweiten Abruf verhindert, waere
-                        // die Arbeit fuer immer weg gewesen.
-                        && e.GeoSource != GeoSource.TeamHint
-                        && (force || e.Lat == null))
-            .OrderBy(e => e.StartDate)
-            // KEIN Deckel als Vorgabe: dieser Lauf braucht kein Netz. Der Geocoder rechnet gegen
-            // das lokale Ortslexikon, der ganze Bestand (6598 Eintraege) war in 14 Sekunden durch.
-            // Ein Deckel taeuschte hier Portionen vor, die es nicht gibt: die Auswahl hat keine
-            // Fortschrittsmarke, ein zweiter Aufruf saehe also WIEDER dieselben ersten N. Am
-            // 2026-09-09 live vorgefuehrt — sieben Aufrufe mit `limit=1000` meldeten je „1000
-            // geprueft, 0 verortet", waehrend 1876 Eintraege dahinter nie an die Reihe kamen.
-            // `limit > 0` bleibt als Notbremse fuer den Fall, dass ein Lauf doch einmal zu lange
-            // dauert; dann gilt aber dieselbe Einschraenkung, und der Aufrufer muss es wissen.
-            .Take(limit > 0 ? Math.Min(limit, 100_000) : int.MaxValue)
-            .ToListAsync(ct);
-
-        var resolved = 0;
-        var cleared = 0;
-        foreach (var entry in entries)
-        {
-            // Alle Spielorte, nicht nur einen: bei Ligen nennt der Ortstext mehrere.
-            var results = await _geocoding.ResolveManyAsync(
-                entry.LocationText, entry.State, entry.Federation, ct);
-            var located = results.Where(r => r.Source != GeoSource.Ambiguous).ToList();
-            var primary = located.FirstOrDefault();
-
-            if (primary is null)
-            {
-                // Mehrdeutig bleibt ohne Pin — aber als solches vermerkt, damit die Arbeitsliste
-                // „gefunden, aber unklar" von „nichts gefunden" unterscheiden kann. Bei `force`
-                // wird ein bestehender Pin dabei ENTFERNT: er stammt aus einer Regel, die wir
-                // gerade als unzuverlaessig erkannt haben.
-                var ambiguous = results.Any(r => r.Source == GeoSource.Ambiguous);
-                var target = ambiguous ? GeoSource.Ambiguous : GeoSource.None;
-                if (force && entry.Lat != null)
-                {
-                    entry.Lat = null;
-                    entry.Lon = null;
-                    entry.GeoPlaceName = null;
-                    if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
-                    entry.Venues = [];
-                    cleared++;
-                }
-                if (entry.GeoSource != target)
-                {
-                    entry.GeoSource = target;
-                    entry.UpdatedAt = DateTime.UtcNow;
-                }
-                // UI-Sweep 2026-10-11 (r2-t-dup-cards): ohne Ort zaehlt wieder der Ortstext.
-                TournamentDirectoryService.ApplyGrouping(entry);
-                continue;
-            }
-
-            entry.Lat = primary.Lat;
-            entry.Lon = primary.Lon;
-            entry.GeoSource = primary.Source;
-            // Gekuerzt wie im Sweep (`TournamentDirectoryService.GeocodeAsync`): ein ueberlanger
-            // Teilort liesse sonst das EINE SaveChanges am Ende des ganzen Laufs scheitern.
-            entry.GeoPlaceName = ExternalDirectorySource.Truncate(primary.PlaceName, 200);
-            entry.UpdatedAt = DateTime.UtcNow;
-            // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Gruppenschluessel liest den verorteten Ort.
-            TournamentDirectoryService.ApplyGrouping(entry);
-
-            if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
-            entry.Venues = located.Count < 2 ? [] : located
-                .Select((r, i) => new TournamentDirectoryVenue
-                {
-                    Ordinal = i, Name = ExternalDirectorySource.Truncate(r.PlaceName, 200)!,
-                    SourceText = ExternalDirectorySource.Truncate(r.SourceText, 300),
-                    Lat = r.Lat, Lon = r.Lon, GeoSource = r.Source,
-                })
-                .ToList();
-            resolved++;
-        }
-        await _db.SaveChangesAsync(ct);
-
-        return Ok(new { examined = entries.Count, resolved, cleared });
+        var result = await _maintenance.GeocodeMissingAsync(limit, force, ct);
+        return Ok(new { examined = result.Examined, resolved = result.Resolved, cleared = result.Cleared });
     }
 
     public class SweepRequest

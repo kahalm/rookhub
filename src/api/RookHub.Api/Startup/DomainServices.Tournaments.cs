@@ -42,5 +42,7 @@ public static partial class DomainServicesSetup
         services.AddScoped<GeocodingService>();
         services.AddScoped<TournamentDirectoryService>();
         services.AddScoped<TournamentDirectoryQueryService>();
+        // Die Pflege-Aktionen hinter dem Admin-Controller (Status, Umschrift, Nachverortung …).
+        services.AddScoped<TournamentDirectoryMaintenanceService>();
     }
 }
