@@ -833,34 +833,50 @@ public class CiWorkflowTests
     private const string FrontendApp = "src/frontend/app";
 
     /// <summary>
-    /// Der Frontend-Linter (Codereview F8-004) laeuft im Gate — und blockiert in PHASE 1 nichts. Vorher
-    /// gab es weder Linter noch Formatter; Default- neben OnPush-CD, Konstruktor-DI neben inject(),
-    /// @Input() neben input() wuchsen ungezaehlt weiter. Der Schritt zaehlt die Warnungen je Regel in
-    /// die Job-Summary; solange er per continue-on-error nicht blockiert, darf eslint.config.mjs keine
-    /// Regel auf 'error' stellen (sonst waere ein roter Lint-Schritt Alltag und niemand saehe hin).
-    /// Phase 2 (Ratsche) aendert diesen Test bewusst mit.
+    /// Der Frontend-Linter (Codereview F8-004) laeuft im Gate, PHASE 2 = Ratsche. Vorher gab es weder Linter
+    /// noch Formatter; Default- neben OnPush-CD, Konstruktor-DI neben inject(), @Input() neben input() wuchsen
+    /// ungezaehlt weiter. Phase 1 zaehlte nur (continue-on-error). Jetzt haelt eslint-baseline.json je Regel die
+    /// erlaubte Anzahl, und scripts/eslint-ratchet.mjs macht den Job ROT, sobald eine Regel darueber liegt —
+    /// deshalb darf der Schritt KEIN continue-on-error tragen (sonst waere die Ratsche wieder nur ein Zaehler).
+    /// Die Regeln bleiben 'warn'; 'error' (Phase 3) ist nur fuer eine Regel erlaubt, deren Baseline 0 ist —
+    /// ein 'error' auf eine Regel mit Bestand machte `npm run lint` dauerhaft rot.
     /// </summary>
     [Fact]
-    public void FrontendLint_RunsInTheGate_AndOnlyWarns()
+    public void FrontendLint_RatchetBlocksTheGate()
     {
         var job = TestJob("build-frontend");
-        var step = Step(job, Regex.Escape("name: ESLint (nur Warnungen, Zaehler in der Job-Summary)"));
+        var step = Step(job, Regex.Escape("name: ESLint-Ratsche (keine Regel ueber eslint-baseline.json)"));
         Assert.Contains("working-directory: src/frontend/app", step);
-        Assert.Contains("continue-on-error: true", step);
-        Assert.Contains("npx eslint . --format json", step);
-        Assert.Contains("GITHUB_STEP_SUMMARY", step);
+        Assert.DoesNotContain("continue-on-error", step);
+        Assert.Contains("node scripts/eslint-ratchet.mjs --summary \"$GITHUB_STEP_SUMMARY\"", step);
+        var logic = Step(job, Regex.Escape("name: ESLint-Ratschen-Logik (node --test)"));
+        Assert.Contains("working-directory: src/frontend/app", logic);
+        Assert.DoesNotContain("continue-on-error", logic);
+        Assert.Contains("node --test scripts/eslint-ratchet.test.mjs", logic);
         Assert.True(job.IndexOf("run: npm ci", StringComparison.Ordinal)
-                    < job.IndexOf("name: ESLint", StringComparison.Ordinal),
-            "der Lint-Schritt braucht node_modules — er muss NACH npm ci stehen");
+                    < job.IndexOf("name: ESLint-Ratsche", StringComparison.Ordinal),
+            "die Ratsche braucht node_modules (eslint) — sie muss NACH npm ci stehen");
 
         var package = ReadRepoFile($"{FrontendApp}/package.json");
         Assert.Contains("\"lint\": \"eslint .\"", package);
+        Assert.Contains("\"lint:ratchet\": \"node scripts/eslint-ratchet.mjs\"", package);
+        Assert.Contains("\"lint:ratchet:update\": \"node scripts/eslint-ratchet.mjs --update\"", package);
         var lockfile = ReadRepoFile($"{FrontendApp}/package-lock.json");
         foreach (var pkg in new[] { "eslint", "angular-eslint", "typescript-eslint" })
         {
             Assert.Matches($@"""devDependencies"":\s*\{{[^}}]*""{Regex.Escape(pkg)}"":", package);
             Assert.Contains($"\"node_modules/{pkg}\": {{", lockfile);
         }
+        ReadRepoFile($"{FrontendApp}/scripts/eslint-ratchet.mjs");
+        ReadRepoFile($"{FrontendApp}/scripts/eslint-ratchet.test.mjs");
+
+        // Eine Aenderung nur an Konfiguration, Baseline oder Skript muss den Job selbst starten.
+        var filters = ReadRepoFile(Filters);
+        foreach (var path in new[] { "eslint.config.mjs", "eslint-baseline.json", "scripts/**" })
+            Assert.Contains($"- '{FrontendApp}/{path}'", filters);
+
+        var baseline = EslintBaseline();
+        Assert.NotEmpty(baseline);
 
         var config = ReadRepoFile($"{FrontendApp}/eslint.config.mjs");
         Assert.Contains("files: ['src*/**/*.ts']", config);
@@ -870,11 +886,56 @@ public class CiWorkflowTests
                      "@angular-eslint/prefer-inject",
                      "@angular-eslint/prefer-signals",
                      "@typescript-eslint/no-explicit-any",
-                     "'no-console'",
-                     "'no-empty'",
+                     "no-console",
+                     "no-empty",
                  })
-            Assert.Contains(rule, config);
-        Assert.DoesNotMatch(@"(?m)^\s*'[^']+':\s*\[?\s*(?:'error'|2\b)", config);
+        {
+            Assert.Contains($"'{rule}'", config);
+            Assert.True(baseline.ContainsKey(rule), $"eslint-baseline.json fehlt die Regel {rule}");
+        }
+        foreach (Match m in Regex.Matches(config, @"(?m)^\s*'(?<rule>[^']+)':\s*\[?\s*(?:'error'|2\b)"))
+        {
+            var rule = m.Groups["rule"].Value;
+            Assert.True(baseline.TryGetValue(rule, out var n) && n == 0,
+                $"'{rule}' steht auf 'error', hat aber Baseline {(baseline.TryGetValue(rule, out var b) ? b : -1)} — erst abbauen (Baseline 0), dann 'error'");
+        }
+    }
+
+    /// <summary>
+    /// eslint-baseline.json ist ein flaches JSON-Objekt Regel → Anzahl (ganzzahlig, ≥ 0), sortiert und so formatiert,
+    /// wie scripts/eslint-ratchet.mjs sie schreibt (`--update` ohne Aenderung bleibt byte-gleich, Diffs bleiben klein).
+    /// </summary>
+    [Fact]
+    public void EslintBaseline_IsValidSortedCountsPerRule()
+    {
+        var text = ReadRepoFile($"{FrontendApp}/eslint-baseline.json");
+        var baseline = EslintBaselineEntries();
+        var keys = baseline.Select(kv => kv.Key).ToList();
+        Assert.Equal(keys.OrderBy(k => k, StringComparer.Ordinal).ToList(), keys);
+        var expected = "{\n" + string.Join(",\n", baseline.Select(kv => $"  \"{kv.Key}\": {kv.Value}")) + "\n}\n";
+        Assert.Equal(expected, text.Replace("\r\n", "\n"));
+    }
+
+    private static List<KeyValuePair<string, int>> EslintBaselineEntries()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(ReadRepoFile($"{FrontendApp}/eslint-baseline.json"));
+        Assert.Equal(System.Text.Json.JsonValueKind.Object, doc.RootElement.ValueKind);
+        var entries = new List<KeyValuePair<string, int>>();
+        foreach (var prop in doc.RootElement.EnumerateObject())
+        {
+            Assert.True(prop.Value.ValueKind == System.Text.Json.JsonValueKind.Number && prop.Value.TryGetInt32(out var n) && n >= 0,
+                $"eslint-baseline.json: '{prop.Name}' ist keine ganze Zahl >= 0 ({prop.Value.GetRawText()})");
+            entries.Add(new(prop.Name, prop.Value.GetInt32()));
+        }
+        return entries;
+    }
+
+    private static Dictionary<string, int> EslintBaseline()
+    {
+        var dict = new Dictionary<string, int>();
+        foreach (var kv in EslintBaselineEntries())
+            Assert.True(dict.TryAdd(kv.Key, kv.Value), $"eslint-baseline.json: Regel '{kv.Key}' doppelt");
+        return dict;
     }
 
     /// <summary>

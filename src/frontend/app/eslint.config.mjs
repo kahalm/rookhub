@@ -8,10 +8,13 @@
 // (nach HTTP ohne View-Mark kein Neuzeichnen, siehe render-after-http.interceptor) ist der CD-Stil
 // keine Geschmacksfrage.
 //
-// PHASE 1 = NUR WARNUNGEN. Jede Regel steht auf 'warn': `npm run lint` endet gruen, die CI zaehlt die
-// Warnungen je Regel in die Job-Summary (test.yml, build-frontend) und blockiert nichts. Phase 2 ist die
-// Ratsche (Zahl darf nur sinken, z. B. per --max-warnings); erst danach einzelne Regeln auf 'error'.
-// CiWorkflowTests haelt fest, dass hier nichts auf 'error' steht, solange der CI-Schritt nicht blockiert.
+// PHASE 1 (erledigt) zaehlte nur. PHASE 2 = RATSCHE (aktiv): jede Regel bleibt 'warn', `npm run lint` endet
+// gruen, aber eslint-baseline.json haelt je Regel die erlaubte Anzahl, und scripts/eslint-ratchet.mjs
+// (`npm run lint:ratchet`, CI-Schritt in test.yml, build-frontend) macht den Job ROT, sobald eine Regel
+// darueber liegt — der Bestand darf nur sinken. Nach dem Abbau von Warnungen `npm run lint:ratchet:update`
+// (senkt die Baseline, hebt nie ohne --force). Eine neue Regel hier startet mit Baseline 0.
+// PHASE 3: eine Regel, deren Baseline 0 ist, darf auf 'error'; CiWorkflowTests verbietet 'error' fuer jede
+// Regel mit Bestand (sonst waere `npm run lint` dauerhaft rot). Ablauf und Abhilfe: docs/ci.md.
 //
 // Bewusst NUR die gemessenen Stilachsen, keine kompletten recommended-Saetze: jede Warnung soll eine
 // bekannte Luecke sein, kein Rauschen. Ohne Typinformation (kein parserOptions.project) — schnell und

@@ -39,6 +39,11 @@ frontend: &frontend
   - 'src/frontend/app/tsconfig*.json'
   - 'src/frontend/app/karma.conf.js'
   - 'src/frontend/app/ngsw-config.json'
+  # Die ESLint-Ratsche (build-frontend): eine Aenderung NUR an Konfiguration, Baseline oder Skript
+  # muss sich selbst pruefen — sonst wuerde erst der naechste fremde Frontend-Push rot.
+  - 'src/frontend/app/eslint.config.mjs'
+  - 'src/frontend/app/eslint-baseline.json'
+  - 'src/frontend/app/scripts/**'
   # Der Pin des Maia-Modells (fetch.sh): ein geaenderter Pin muss das Image neu bauen.
   - 'src/frontend/app/maia-model/**'
   - 'src/frontend/Dockerfile'

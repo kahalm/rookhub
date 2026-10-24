@@ -46,3 +46,24 @@
   Release an, Text = Changelog-Einträge seit dem vorigen Versions-Tag (`scripts/release-notes.mjs`, Test in
   `scripts/tests/test_release_notes.sh`). APK + AAB wandern vom bisherigen Latest-Release mit — `/install` lädt
   `releases/latest/download/app-release-signed.apk`, ein Latest ohne die Datei wäre ein toter Link.
+
+## ESLint-Ratsche (Frontend, Codereview F8-004 Phase 2)
+
+`build-frontend` in `test.yml` prüft nach `npm ci` mit `node scripts/eslint-ratchet.mjs` (aus `src/frontend/app`),
+dass **keine ESLint-Regel mehr Meldungen hat als in `src/frontend/app/eslint-baseline.json`** steht. Die Regeln selbst
+bleiben `'warn'` (`eslint.config.mjs`), der Bestand (Stand 24.10.2026: 1 222 Meldungen, davon 522 `prefer-inject`,
+383 `prefer-signals`, 137 `prefer-on-push`) bleibt stehen — er darf nur nicht wachsen. Der Schritt hat bewusst KEIN
+`continue-on-error`; die Tabelle Regel | Baseline | jetzt | Δ landet in der Job-Summary. Davor läuft
+`node --test scripts/eslint-ratchet.test.mjs` (die Vergleichslogik, Sekunden). `CiWorkflowTests` hält fest: Schritt
+ohne `continue-on-error`, Baseline gültig (ganze Zahlen ≥ 0, sortiert, im Skript-Format), Konfiguration, Baseline und
+`scripts/**` im `frontend`-Filter, und `'error'` nur für Regeln mit Baseline 0.
+
+- **Rot?** Die Ausgabe nennt Regel, Baseline → jetzt und alle Dateien mit Treffern dieser Regel (die neue Stelle ist
+  meist die eigene geänderte Datei). **Die Stelle fixen, nicht die Baseline heben.** Lokal: `npm run lint:ratchet`.
+- **Warnungen abgebaut?** `npm run lint:ratchet:update` schreibt die kleineren Zahlen in die Baseline (senkt nur; eine
+  gestiegene Regel bleibt stehen, das Skript endet dann mit 1) und gehört in denselben Commit — sonst kann der nächste
+  den Abbau unbemerkt wieder auffüllen. Gesunkene Zahlen ohne Update bleiben grün (Hinweis „Baseline kann gesenkt werden").
+- **Anheben** nur mit `node scripts/eslint-ratchet.mjs --update --force` und Begründung im Commit (z. B. eine neue
+  Regel mit Bestand bewusst aufgenommen). Eine Regel ohne Baseline-Eintrag zählt wie Baseline 0; Meldungen ohne Regel
+  (Parse-Fehler) laufen unter `(Parse-Fehler)` und sind damit immer rot.
+- **Phase 3:** erreicht eine Regel Baseline 0, darf sie in `eslint.config.mjs` auf `'error'`.
