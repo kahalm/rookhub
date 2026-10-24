@@ -23,7 +23,7 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// zurueckgezogen: die Quelle kennzeichnet Absagen nur im Namen („ODPADE; …"), und ein abgesagtes
 /// Turnier im Kalender ist schlechter als keins — man faehrt hin.</para>
 /// </summary>
-public class SzsDirectorySweepService
+public class SzsDirectorySweepService : IDirectorySourceAdapter<SzsDirectorySweepService.CrawlerSzsEvent>
 {
     private const int SaveEvery = 50;
 
@@ -45,122 +45,64 @@ public class SzsDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
+    }
 
-        var now = DateTime.UtcNow;
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
 
-        try
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerSzsEvent>.Kind => DirectorySourceKind.SlovenianChessFederation;
+    string IDirectorySourceAdapter<CrawlerSzsEvent>.LogName => "SZS";
+    int IDirectorySourceAdapter<CrawlerSzsEvent>.SaveEvery => SaveEvery;
+    string? IDirectorySourceAdapter<CrawlerSzsEvent>.SourceKey(CrawlerSzsEvent row) => row.EventId.Length == 0 ? null : row.EventId;
+    DateOnly? IDirectorySourceAdapter<CrawlerSzsEvent>.Start(CrawlerSzsEvent row) => row.Date;
+    string IDirectorySourceAdapter<CrawlerSzsEvent>.Name(CrawlerSzsEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerSzsEvent>.PublicId(CrawlerSzsEvent row) => $"sl{row.EventId}";
+    // Abgesagt: nichts anlegen, und einen bestehenden Eintrag zurueckziehen. Ein abgesagtes
+    // Turnier im Kalender ist schlechter als keins — man faehrt hin.
+    bool IDirectorySourceAdapter<CrawlerSzsEvent>.Withdrawn(CrawlerSzsEvent row) => row.Cancelled;
+    string IDirectorySourceAdapter<CrawlerSzsEvent>.Federation(CrawlerSzsEvent row) => "SLO";
+    string? IDirectorySourceAdapter<CrawlerSzsEvent>.MatchPlace(CrawlerSzsEvent row) => LocationOf(row);
+    string? IDirectorySourceAdapter<CrawlerSzsEvent>.Url(CrawlerSzsEvent row) => null;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerSzsEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerSzsEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var location = LocationOf(row);
+        var locationChanged = own.LocationText != location;
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        // Die Liste nennt EINEN Tag. Mehrtaegige Turniere stehen dort als eigene Zeile je
+        // Tag — Beginn und Ende sind hier also derselbe Tag, und das ist die Wahrheit
+        // dieser Quelle, kein fehlendes Feld.
+        own.StartDate = start;
+        own.EndDate = start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now, ct);
+
+        if (locationChanged || own.Lat is null)
         {
-            foreach (var row in events)
+            var hit = await _geocoding.ResolveAsync(own.LocationText, null, "SLO", ct);
+            if (hit is not null && hit.Source != GeoSource.Ambiguous)
             {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Date is not { } date || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = $"sl{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-
-                // Abgesagt: nichts anlegen, und einen bestehenden Eintrag zurueckziehen. Ein
-                // abgesagtes Turnier im Kalender ist schlechter als keins — man faehrt hin.
-                if (row.Cancelled)
-                {
-                    if (own is not null && own.RemovedAt is null)
-                    {
-                        own.RemovedAt = now;
-                        retired++;
-                    }
-                    continue;
-                }
-
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, "SLO", date, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.SlovenianChessFederation, row.EventId, LocationOf(row)), ct);
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("SZS: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        Federation = "SLO",
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = LocationOf(row);
-                var locationChanged = own.LocationText != location;
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                // Die Liste nennt EINEN Tag. Mehrtaegige Turniere stehen dort als eigene Zeile je
-                // Tag — Beginn und Ende sind hier also derselbe Tag, und das ist die Wahrheit
-                // dieser Quelle, kein fehlendes Feld.
-                own.StartDate = date;
-                own.EndDate = date;
-                own.StartsOnWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now, ct);
-
-                if (locationChanged || own.Lat is null)
-                {
-                    var hit = await _geocoding.ResolveAsync(own.LocationText, null, "SLO", ct);
-                    if (hit is not null && hit.Source != GeoSource.Ambiguous)
-                    {
-                        own.Lat = hit.Lat;
-                        own.Lon = hit.Lon;
-                        own.GeoSource = hit.Source;
-                        own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
-                    }
-                }
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
+                own.Lat = hit.Lat;
+                own.Lon = hit.Lon;
+                own.GeoSource = hit.Source;
+                own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
             }
         }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "SZS: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "SZS-Kalender: {Read} gelesen, {Added} neu, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.SlovenianChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        // Die Antwort meldet unter „Updated" 0, wie bisher.
+        return false;
     }
+
+    void IDirectorySourceAdapter<CrawlerSzsEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "SZS-Kalender: {Read} gelesen, {Added} neu, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, matched, retired);
+
 
     /// <summary>
     /// „PLZ Ort" — dieselbe Form, in der chess-results seine Ortstexte schreibt („5020 Salzburg").

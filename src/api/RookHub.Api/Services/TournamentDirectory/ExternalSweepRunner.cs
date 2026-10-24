@@ -18,6 +18,9 @@ internal interface IDirectorySourceAdapter<in TRow>
     /// <summary>Kurzname im Log („FRSah", „wcu") — Zuordnungs- und Zwischenstand-Meldung.</summary>
     string LogName { get; }
 
+    /// <summary>Zwischenstand je so viele verarbeitete Zeilen (je Quelle, meist 25).</summary>
+    int SaveEvery => ExternalSweepRunner.DefaultSaveEvery;
+
     /// <summary>
     /// Die Kennung der Zeile bei der Quelle, so wie sie in den Herkunftsvermerk und in die
     /// Verschwunden-Erkennung geht; <c>null</c> = Zeile ohne Kennung (wird ganz uebergangen).
@@ -67,13 +70,13 @@ internal interface IDirectorySourceAdapter<in TRow>
 /// <para>Je Zeile: Kennung pruefen, als GELIEFERT vermerken, Termin und Namen pruefen, eigenen
 /// Eintrag suchen, Absage/Sitzung zurueckziehen, sonst einem chess-results-Eintrag zuordnen (und den
 /// eigenen dann zurueckziehen) oder den eigenen anlegen bzw. aktualisieren. Alle
-/// <see cref="SaveEvery"/> Zeilen ein Zwischenstand; am Ende wird IMMER gespeichert, ein Fehler dabei
+/// <see cref="IDirectorySourceAdapter{TRow}.SaveEvery"/> Zeilen ein Zwischenstand; am Ende wird IMMER gespeichert, ein Fehler dabei
 /// nur gewarnt. Danach die Abschlusszeile und die Verschwunden-Erkennung.</para>
 /// </summary>
 internal static class ExternalSweepRunner
 {
-    /// <summary>Zwischenstand je so viele verarbeitete Zeilen.</summary>
-    internal const int SaveEvery = 25;
+    /// <summary>Zwischenstand je so viele verarbeitete Zeilen, wenn die Quelle nichts anderes sagt.</summary>
+    internal const int DefaultSaveEvery = 25;
 
     public static async Task<ExternalSweepResult> RunAsync<TRow>(AppDbContext db, ILogger log,
         IDirectorySourceAdapter<TRow> source, IReadOnlyCollection<TRow> rows, CancellationToken ct)
@@ -130,7 +133,7 @@ internal static class ExternalSweepRunner
                         log.LogInformation(source.LogName + ": {PublicId} geht in {Target} auf ({Name})",
                             own!.PublicId, match.PublicId, match.Name);
                     }
-                    if (processed % SaveEvery == 0) await db.SaveChangesAsync(ct);
+                    if (processed % source.SaveEvery == 0) await db.SaveChangesAsync(ct);
                     continue;
                 }
 
@@ -149,7 +152,7 @@ internal static class ExternalSweepRunner
 
                 if (await source.ApplyAsync(own, row, start, now, ct)) updated++;
 
-                if (processed % SaveEvery == 0) await db.SaveChangesAsync(ct);
+                if (processed % source.SaveEvery == 0) await db.SaveChangesAsync(ct);
             }
         }
         finally
