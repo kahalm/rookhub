@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.4", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z6/Z13): scoresheet scanning (quota, intake, pipeline, correction, LeagueHub batches) and saved games (PGN building, import, correction, analysis link, sharing) are split into smaller building blocks; the PGN output is pinned by golden tests — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z6/Z13): Partieformular-Einlesung (Kontingent, Annahme, Pipeline, Korrektur, LeagueHub-Stapel) und gespeicherte Partien (PGN-Bau, Import, Korrektur, Analyse-Verknüpfung, Teilen) sind in kleinere Bausteine zerlegt; die PGN-Ausgabe ist mit Golden-Tests festgehalten — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.3", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z5/Z11/Z12): game analysis, background analysis jobs and the engine settings endpoint are split into smaller building blocks; the worker's status decisions are now pure functions with a golden table — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z5/Z11/Z12): Partie-Analyse, Hintergrund-Analyseaufträge und der Engine-Einstellungs-Endpunkt sind in kleinere Bausteine zerlegt; die Statusentscheidungen des Auftrags-Workers sind jetzt reine Funktionen mit Golden-Tabelle — keine sichtbare Änderung." },
   ]},
