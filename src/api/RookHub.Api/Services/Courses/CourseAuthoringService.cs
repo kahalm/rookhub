@@ -45,9 +45,6 @@ public class CourseAuthoringService
     private static bool IsHidden(HashSet<string> hidden, string? chapter)
         => hidden.Count > 0 && Normalize(chapter) is string name && hidden.Contains(name);
 
-    private static int Percent(int done, int total) =>
-        total <= 0 ? 0 : (int)Math.Round(100.0 * Math.Min(done, total) / total);
-
     /// <summary>Buch laden + Lese-Zugriff erzwingen (kein Zugriff → 404).</summary>
     private async Task<Book> LoadReadableAsync(int userId, int bookId, bool isAdmin, CancellationToken ct)
     {
@@ -63,111 +60,42 @@ public class CourseAuthoringService
 
     // ===== Detailseite =======================================================
 
+    /// <summary>Eine Linie, wie die Detailseite sie zählt (ohne Stellung/Züge).</summary>
+    internal sealed class DetailLine
+    {
+        public int Id { get; init; }
+        public string? Chapter { get; init; }
+        public bool IsInfoOnly { get; init; }
+    }
+
+    /// <summary>Was an (User, Kurs) persönlich hängt: Modus/Zeitpunkt/„Info überspringen", „geteilt von",
+    /// Verknüpfung, Pin.</summary>
+    private sealed record DetailPersonal(string? LastMode, DateTime? UpdatedAt, bool SkipInfoLines,
+        string? SharedBy, int LinkedBookId, string? LinkedName, bool IsPinned);
+
     public async Task<CourseDetailDto> GetDetailAsync(int userId, int bookId, bool isAdmin,
         CancellationToken ct = default)
     {
         var book = await LoadReadableAsync(userId, bookId, isAdmin, ct);
-
-        var lines = await _db.BookPuzzles
-            .Where(bp => bp.BookId == bookId)
-            .InReadingOrder()
-            .Select(bp => new { bp.Id, bp.Chapter, bp.IsInfoOnly })
-            .ToListAsync(ct);
-
-        // Kalkulations-Serie: eine terminierte, für diesen Betrachter noch nicht freigegebene Woche gibt
-        // es auf der Detailseite nicht — weder in der Kapitelliste noch in den Zählern (dieselbe Regel wie
-        // im Kalkulations-Modus; Besitzer/Admin sehen alles).
-        var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct);
-        if (hidden.Count > 0)
-            lines = lines.Where(l => !IsHidden(hidden, l.Chapter)).ToList();
-
-        var solvedIds = (await _db.CoursePuzzleResults
-            .Where(cr => cr.UserId == userId && cr.BookId == bookId)
-            .Select(cr => cr.BookPuzzleId)
-            .ToListAsync(ct)).ToHashSet();
-        // Nur Zeilen mit ECHTEM Baum zählen als bearbeitet — eine Zeile mit leerem TreeJson trägt
-        // bloß die Trainings-Werte (Zeit/Festlegung/Punkte, per PATCH ohne Baum gesetzt).
-        var treeIds = (await _db.CalculationTrees
-            .Where(t => t.UserId == userId && t.BookId == bookId && t.TreeJson != "")
-            .Select(t => t.BookPuzzleId)
-            .ToListAsync(ct)).ToHashSet();
+        var lines = await LoadVisibleLinesAsync(userId, bookId, isAdmin, ct);
 
         // Beim Kalkulationsbuch gibt es kein „gelöst": Fortschritt = Stellungen mit eigenem Baum,
         // Gesamtzahl = alle für DIESEN Betrachter sichtbaren Linien (gesperrte Wochen sind oben schon
         // herausgefiltert). Die Kursübersicht (CourseService.GetCourses) zählt dagegen weiter ALLE Linien
         // des Buchs — bei einem Betrachter mit gesperrten Wochen liegt ihre Zahl deshalb höher.
         var isCalc = book.IsCalculation;
-        var doneIds = isCalc ? treeIds : solvedIds;
-
-        // Kapitel in Lesereihenfolge — hier ALLE (auch reine Stellungs-/Info-Kapitel).
-        var order = new List<string?>();
-        var seen = new HashSet<string>();
-        var byKey = new Dictionary<string, (int Lines, int Quiz, int Done, int FirstId)>();
-        foreach (var line in lines)
-        {
-            var name = Normalize(line.Chapter);
-            var key = name ?? NoChapterKey;
-            if (seen.Add(key)) { order.Add(name); byKey[key] = (0, 0, 0, line.Id); }
-            var cur = byKey[key];
-            var counts = isCalc || !line.IsInfoOnly;      // was im Kapitel als „zählbar" gilt
-            byKey[key] = (
-                cur.Lines + 1,
-                cur.Quiz + (line.IsInfoOnly ? 0 : 1),
-                cur.Done + (counts && doneIds.Contains(line.Id) ? 1 : 0),
-                cur.FirstId);
-        }
+        var doneIds = await LoadDoneIdsAsync(userId, bookId, isCalc, ct);
 
         // Solver-Kapitelindex (nur Quiz-Linien) — für „Kapitel starten" im Solver.
         var solverNames = await ChapterOrder.GetOrderedChapterNamesAsync(_db, bookId);
-        var solverIndexByKey = solverNames
-            .Select((name, index) => (Key: name ?? NoChapterKey, Index: index))
-            .ToDictionary(x => x.Key, x => x.Index);
+        var chapters = BuildChapters(lines, doneIds, isCalc, solverNames);
 
-        var chapters = order.Select(name =>
-        {
-            var key = name ?? NoChapterKey;
-            var c = byKey[key];
-            var total = isCalc ? c.Lines : c.Quiz;
-            return new CourseManageChapterDto
-            {
-                Name = name,
-                LineCount = c.Lines,
-                QuizCount = c.Quiz,
-                SolvedCount = Math.Min(c.Done, total),
-                ProgressPercent = Percent(c.Done, total),
-                SolverIndex = solverIndexByKey.TryGetValue(key, out var si) ? si : null,
-                FirstLineId = c.FirstId,
-            };
-        }).ToList();
-
-        var progress = await _db.CourseProgresses
-            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
-            .Select(cp => new { cp.LastMode, cp.UpdatedAt, cp.SkipInfoLines })
-            .FirstOrDefaultAsync(ct);
-        var sharedBy = await _db.CourseShares
-            .Where(cs => cs.BookId == bookId && cs.RecipientId == userId)
-            .Select(cs => cs.Owner!.Username)
-            .FirstOrDefaultAsync(ct);
-        var link = await _db.CourseLinks
-            .Where(l => l.UserId == userId && l.BookId == bookId)
-            .Select(l => l.LinkedBookId)
-            .FirstOrDefaultAsync(ct);
-        var linkedName = link == 0 ? null : await _db.Books
-            .Where(b => b.Id == link).Select(b => b.DisplayName).FirstOrDefaultAsync(ct);
+        var personal = await LoadDetailPersonalAsync(userId, bookId, ct);
 
         var quizCount = lines.Count(l => !l.IsInfoOnly);
         var total = isCalc ? lines.Count : quizCount;
         var done = lines.Count(l => (isCalc || !l.IsInfoOnly) && doneIds.Contains(l.Id));
-
-        var calcPoints = 0;
-        if (isCalc)
-        {
-            var grades = await _db.CalculationTrees
-                .Where(t => t.UserId == userId && t.BookId == bookId && t.Grade != null)
-                .Select(t => t.Grade!.Value)
-                .ToListAsync(ct);
-            calcPoints = grades.Sum(CalculationGrades.PointsFor);
-        }
+        var calcPoints = isCalc ? await LoadCalcPointsAsync(userId, bookId, ct) : 0;
 
         return new CourseDetailDto
         {
@@ -186,13 +114,13 @@ public class CourseAuthoringService
             IsPublic = book.IsPublic,
             PublicSlug = book.PublicSlug,
             IsOwned = book.OwnerUserId == userId,
-            IsShared = sharedBy != null,
-            SharedByUsername = sharedBy,
-            IsPinned = await _db.CoursePins.AnyAsync(p => p.UserId == userId && p.BookId == bookId, ct),
+            IsShared = personal.SharedBy != null,
+            SharedByUsername = personal.SharedBy,
+            IsPinned = personal.IsPinned,
             CanManage = isAdmin || book.OwnerUserId == userId,
             PuzzleCount = total,
             SolvedCount = Math.Min(done, total),
-            ProgressPercent = Percent(done, total),
+            ProgressPercent = CourseProgressRules.Percent(done, total),
             TotalLines = lines.Count,
             InfoLineCount = lines.Count - quizCount,
             // Selbstbewertung nur beim Kalkulationsbuch — bei einem normalen Kurs gäbe es nichts
@@ -201,15 +129,129 @@ public class CourseAuthoringService
             CalcPoints = isCalc ? calcPoints : null,
             // Summe immer MIT Maximum: 4 Punkte × ALLE Stellungen des Kurses.
             CalcMaxPoints = isCalc ? CalculationGrades.MaxPointsFor(total) : null,
-            LastMode = progress?.LastMode,
-            SkipInfoLines = progress?.SkipInfoLines ?? false,
-            LastActivityAt = progress?.UpdatedAt,
-            LinkedBookId = link == 0 ? null : link,
-            LinkedDisplayName = linkedName,
+            LastMode = personal.LastMode,
+            SkipInfoLines = personal.SkipInfoLines,
+            LastActivityAt = personal.UpdatedAt,
+            LinkedBookId = personal.LinkedBookId == 0 ? null : personal.LinkedBookId,
+            LinkedDisplayName = personal.LinkedName,
             Chapters = chapters,
             CreatedAt = book.CreatedAt,
             UpdatedAt = book.UpdatedAt,
         };
+    }
+
+    /// <summary>Alle Linien des Buchs in Lesereihenfolge, OHNE die für diesen Betrachter gesperrten Wochen:
+    /// Kalkulations-Serie — eine terminierte, für diesen Betrachter noch nicht freigegebene Woche gibt
+    /// es auf der Detailseite nicht, weder in der Kapitelliste noch in den Zählern (dieselbe Regel wie
+    /// im Kalkulations-Modus; Besitzer/Admin sehen alles).</summary>
+    private async Task<List<DetailLine>> LoadVisibleLinesAsync(int userId, int bookId, bool isAdmin, CancellationToken ct)
+    {
+        var lines = await _db.BookPuzzles
+            .Where(bp => bp.BookId == bookId)
+            .InReadingOrder()
+            .Select(bp => new DetailLine { Id = bp.Id, Chapter = bp.Chapter, IsInfoOnly = bp.IsInfoOnly })
+            .ToListAsync(ct);
+        var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct);
+        if (hidden.Count > 0)
+            lines = lines.Where(l => !IsHidden(hidden, l.Chapter)).ToList();
+        return lines;
+    }
+
+    /// <summary>Die als „erledigt" zählenden Linien: gelöste (normaler Kurs) bzw. Stellungen mit eigenem
+    /// Analysebaum (Kalkulationsbuch).</summary>
+    private async Task<HashSet<int>> LoadDoneIdsAsync(int userId, int bookId, bool isCalc, CancellationToken ct)
+    {
+        var solvedIds = (await _db.CoursePuzzleResults
+            .Where(cr => cr.UserId == userId && cr.BookId == bookId)
+            .Select(cr => cr.BookPuzzleId)
+            .ToListAsync(ct)).ToHashSet();
+        // Nur Zeilen mit ECHTEM Baum zählen als bearbeitet — eine Zeile mit leerem TreeJson trägt
+        // bloß die Trainings-Werte (Zeit/Festlegung/Punkte, per PATCH ohne Baum gesetzt).
+        var treeIds = (await _db.CalculationTrees
+            .Where(t => t.UserId == userId && t.BookId == bookId && t.TreeJson != "")
+            .Select(t => t.BookPuzzleId)
+            .ToListAsync(ct)).ToHashSet();
+        return isCalc ? treeIds : solvedIds;
+    }
+
+    /// <summary>
+    /// Die Kapitel der Detailseite in Lesereihenfolge — hier ALLE (auch reine Stellungs-/Info-Kapitel) —
+    /// mit Linien-, Quiz- und Erledigt-Zahl, erster Linie und dem Solver-Index (<paramref name="solverNames"/>
+    /// aus <see cref="ChapterOrder.GetOrderedChapterNamesAsync"/>; reine Info-Kapitel haben keinen). Rein,
+    /// ohne Datenbank. Im Kalkulationsbuch zählt jede Linie, sonst nur Quiz-Linien.
+    /// </summary>
+    internal static List<CourseManageChapterDto> BuildChapters(IReadOnlyList<DetailLine> lines,
+        IReadOnlySet<int> doneIds, bool isCalc, IReadOnlyList<string?> solverNames)
+    {
+        var order = new List<string?>();
+        var seen = new HashSet<string>();
+        var byKey = new Dictionary<string, (int Lines, int Quiz, int Done, int FirstId)>();
+        foreach (var line in lines)
+        {
+            var name = Normalize(line.Chapter);
+            var key = name ?? NoChapterKey;
+            if (seen.Add(key)) { order.Add(name); byKey[key] = (0, 0, 0, line.Id); }
+            var cur = byKey[key];
+            var counts = isCalc || !line.IsInfoOnly;      // was im Kapitel als „zählbar" gilt
+            byKey[key] = (
+                cur.Lines + 1,
+                cur.Quiz + (line.IsInfoOnly ? 0 : 1),
+                cur.Done + (counts && doneIds.Contains(line.Id) ? 1 : 0),
+                cur.FirstId);
+        }
+
+        var solverIndexByKey = solverNames
+            .Select((name, index) => (Key: name ?? NoChapterKey, Index: index))
+            .ToDictionary(x => x.Key, x => x.Index);
+
+        return order.Select(name =>
+        {
+            var key = name ?? NoChapterKey;
+            var c = byKey[key];
+            var total = isCalc ? c.Lines : c.Quiz;
+            return new CourseManageChapterDto
+            {
+                Name = name,
+                LineCount = c.Lines,
+                QuizCount = c.Quiz,
+                SolvedCount = Math.Min(c.Done, total),
+                ProgressPercent = CourseProgressRules.Percent(c.Done, total),
+                SolverIndex = solverIndexByKey.TryGetValue(key, out var si) ? si : null,
+                FirstLineId = c.FirstId,
+            };
+        }).ToList();
+    }
+
+    /// <summary>Modus/Zeitpunkt, „geteilt von", Verknüpfung und Pin des Betrachters an diesem Kurs.</summary>
+    private async Task<DetailPersonal> LoadDetailPersonalAsync(int userId, int bookId, CancellationToken ct)
+    {
+        var progress = await _db.CourseProgresses
+            .Where(cp => cp.UserId == userId && cp.BookId == bookId)
+            .Select(cp => new { cp.LastMode, cp.UpdatedAt, cp.SkipInfoLines })
+            .FirstOrDefaultAsync(ct);
+        var sharedBy = await _db.CourseShares
+            .Where(cs => cs.BookId == bookId && cs.RecipientId == userId)
+            .Select(cs => cs.Owner!.Username)
+            .FirstOrDefaultAsync(ct);
+        var link = await _db.CourseLinks
+            .Where(l => l.UserId == userId && l.BookId == bookId)
+            .Select(l => l.LinkedBookId)
+            .FirstOrDefaultAsync(ct);
+        var linkedName = link == 0 ? null : await _db.Books
+            .Where(b => b.Id == link).Select(b => b.DisplayName).FirstOrDefaultAsync(ct);
+        var isPinned = await _db.CoursePins.AnyAsync(p => p.UserId == userId && p.BookId == bookId, ct);
+        return new DetailPersonal(progress?.LastMode, progress?.UpdatedAt, progress?.SkipInfoLines ?? false,
+            sharedBy, link, linkedName, isPinned);
+    }
+
+    /// <summary>Summe der Selbstbewertung (Punkte aus den gespeicherten STUFEN) im Kalkulationsbuch.</summary>
+    private async Task<int> LoadCalcPointsAsync(int userId, int bookId, CancellationToken ct)
+    {
+        var grades = await _db.CalculationTrees
+            .Where(t => t.UserId == userId && t.BookId == bookId && t.Grade != null)
+            .Select(t => t.Grade!.Value)
+            .ToListAsync(ct);
+        return grades.Sum(CalculationGrades.PointsFor);
     }
 
     /// <summary>Linien EINES Kapitels (Verwaltungssicht). Liefert bewusst keine Zugfolge, nur deren Länge.</summary>
@@ -297,9 +339,39 @@ public class CourseAuthoringService
         var existingFens = existing.Select(e => e.Fen).ToHashSet(StringComparer.Ordinal);
         var existingLineIds = existing.Select(e => e.LineId).ToHashSet(StringComparer.Ordinal);
 
-        var (nextRound, width, afterForeign) = NextRound(existing.Select(e => e.Round));
+        var added = StagePositions(book, chapter, parsed.Positions, existing.Select(e => e.Round),
+            existingFens, existingLineIds, issues);
+
+        if (added > 0)
+        {
+            book.UpdatedAt = DateTime.UtcNow;
+            // Handgepflegte Bücher haben kein Quell-PGN — sie sollen nicht als „veraltet"
+            // im Aufbereitungs-Banner auftauchen (dort wären sie ohnehin nicht reprozessierbar).
+            book.ImportVersion = ImportPipeline.CurrentVersion;
+            await _db.SaveChangesAsync(ct);
+            if (_translationJobs is not null) await _translationJobs.NotifyCourseChangedAsync(bookId, ct);
+        }
+
+        return new AddCourseLinesResultDto
+        {
+            Added = added,
+            Chapter = chapter,
+            Issues = issues,
+            TotalLines = existing.Count + added,
+        };
+    }
+
+    /// <summary>Legt die neuen Stellungen als Linien ohne Lösung im Change-Tracker an (gespeichert wird beim
+    /// Aufrufer) und meldet schon vorhandene Stellungen als <c>duplicate</c> in <paramref name="issues"/>.
+    /// <paramref name="existingFens"/>/<paramref name="existingLineIds"/> wachsen mit. Gibt die Zahl der
+    /// angelegten Linien zurück.</summary>
+    private int StagePositions(Book book, string? chapter, IEnumerable<FenListParser.ParsedFen> positions,
+        IEnumerable<string> existingRounds, HashSet<string> existingFens, HashSet<string> existingLineIds,
+        List<CourseLineIssueDto> issues)
+    {
+        var (nextRound, width, afterForeign) = NextRound(existingRounds);
         var added = 0;
-        foreach (var pos in parsed.Positions)
+        foreach (var pos in positions)
         {
             if (!existingFens.Add(pos.Fen))
             {
@@ -334,24 +406,7 @@ public class CourseAuthoringService
             });
             added++;
         }
-
-        if (added > 0)
-        {
-            book.UpdatedAt = DateTime.UtcNow;
-            // Handgepflegte Bücher haben kein Quell-PGN — sie sollen nicht als „veraltet"
-            // im Aufbereitungs-Banner auftauchen (dort wären sie ohnehin nicht reprozessierbar).
-            book.ImportVersion = ImportPipeline.CurrentVersion;
-            await _db.SaveChangesAsync(ct);
-            if (_translationJobs is not null) await _translationJobs.NotifyCourseChangedAsync(bookId, ct);
-        }
-
-        return new AddCourseLinesResultDto
-        {
-            Added = added,
-            Chapter = chapter,
-            Issues = issues,
-            TotalLines = existing.Count + added,
-        };
+        return added;
     }
 
     /// <summary>
