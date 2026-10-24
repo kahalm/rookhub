@@ -64,13 +64,16 @@ public class DirectoryPublicIdTests
     }
 
     /// <summary>
-    /// Die Quellen mit eigener Nummer bauen die Kennung inline (<c>$"ie{row.EventId}"</c>). Ihre
+    /// Die Quellen mit eigener Nummer bauen die Kennung inline (<c>$"ie{row.EventId}"</c>, als
+    /// Zuweisung oder als Adapter-Methode <c>PublicId(row) =&gt; $"…"</c>). Ihre
     /// Nummern sind laut Crawler Ziffern; eingesetzt wird fuer jedes Loch eine.
     /// </summary>
     [Fact]
     public void JedeInlineKennungDerQuellen_bestehtDiePruefung()
     {
-        var assignment = new Regex(@"(?i)publicId\s*=.*?\$""(?<fmt>[^""]*\{[^""]*)""");
+        // Zuweisung (`publicId = $"…"`) ODER Adapter-Methode (`PublicId(Row row) => $"…"`, seit
+        // dem gemeinsamen ExternalSweepRunner).
+        var assignment = new Regex(@"(?i)publicId(?:\([^)]*\))?\s*=>?.*?\$""(?<fmt>[^""]*\{[^""]*)""");
         var formats = new List<(string File, string Format)>();
         foreach (var file in Directory.GetFiles(Path.Combine(ApiSourceRoot(), "Services"), "*.cs", SearchOption.AllDirectories))
         {

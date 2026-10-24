@@ -29,9 +29,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// <para><b>Was sie NICHT liefert:</b> Bedenkzeit, Rundenzahl, System und Teilnehmerzahl stehen
 /// nur im Fliesstext der Ausschreibung (PDF-Einladungen), nicht strukturiert.</para>
 /// </summary>
-public class FrsahDirectorySweepService
+public class FrsahDirectorySweepService : IDirectorySourceAdapter<FrsahDirectorySweepService.CrawlerFrsahEvent>
 {
-    private const int SaveEvery = 25;
     private const string Federation = "ROU";
 
     private readonly AppDbContext _db;
@@ -52,99 +51,46 @@ public class FrsahDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var now = DateTime.UtcNow;
-        int added = 0, located = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = $"ro{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, Federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.RomanianChessFederation, row.EventId, row.Place), ct);
-
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("FRSah: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        Federation = Federation,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = row.Place?.Trim();
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = Federation;
-                own.StartDate = start;
-                own.EndDate = row.End ?? start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                await ExternalDirectorySource.NoteSourceAsync(_db, own,
-                    DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now, ct);
-
-                if (await ApplyCoordinatesAsync(own, locationChanged, ct)) located++;
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "FRSah: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "FRSah-Kalender: {Read} gelesen, {Added} neu, {Located} verortet, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, located, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.RomanianChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, located, matched, retired);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
     }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerFrsahEvent>.Kind => DirectorySourceKind.RomanianChessFederation;
+    string IDirectorySourceAdapter<CrawlerFrsahEvent>.LogName => "FRSah";
+    string? IDirectorySourceAdapter<CrawlerFrsahEvent>.SourceKey(CrawlerFrsahEvent row) => row.EventId;
+    DateOnly? IDirectorySourceAdapter<CrawlerFrsahEvent>.Start(CrawlerFrsahEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerFrsahEvent>.Name(CrawlerFrsahEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerFrsahEvent>.PublicId(CrawlerFrsahEvent row) => $"ro{row.EventId}";
+    string IDirectorySourceAdapter<CrawlerFrsahEvent>.Federation(CrawlerFrsahEvent row) => Federation;
+    string? IDirectorySourceAdapter<CrawlerFrsahEvent>.MatchPlace(CrawlerFrsahEvent row) => row.Place;
+    string? IDirectorySourceAdapter<CrawlerFrsahEvent>.Url(CrawlerFrsahEvent row) => row.Url;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerFrsahEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerFrsahEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var location = row.Place?.Trim();
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = Federation;
+        own.StartDate = start;
+        own.EndDate = row.End ?? start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own,
+            DirectorySourceKind.RomanianChessFederation, row.EventId, row.Url, now, ct);
+
+        return await ApplyCoordinatesAsync(own, locationChanged, ct);
+    }
+
+    void IDirectorySourceAdapter<CrawlerFrsahEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "FRSah-Kalender: {Read} gelesen, {Added} neu, {Located} verortet, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
 
     /// <summary>
     /// Die Koordinaten ausschliesslich ueber das Ortslexikon setzen — diese Quelle liefert (anders
