@@ -17,6 +17,8 @@
 # `test-scripts`), gehoeren zu diesem Filter. Ohne diese Zeile startet eine Aenderung, die NUR ein
 # Skript beruehrt, gar nichts — und ausgerechnet ihr Test bliebe stehen. `init-db.sh` liegt im
 # Repo-Root, sein Test (`scripts/tests/test_init_db.sh`) aber hier.
+# Die .NET-Werkzeuge unter `tools/` (LibraryImport, ScoresheetBench) baut `test-rookhub` mit — eine Aenderung NUR
+# dort muss diesen Bau ausloesen (CiWorkflowTests.EveryDotnetTool_IsBuiltInTheTestGate).
 api:
   - '.github/workflows/**'
   - '.github/filters.yml'
@@ -24,6 +26,8 @@ api:
   - 'tests/**'
   - 'scripts/**'
   - 'init-db.sh'
+  - 'tools/LibraryImport/**'
+  - 'tools/ScoresheetBench/**'
 
 # Der geteilte Teil der Angular-Projekte. `src-turnier/` importiert per Alias @rh/* aus
 # `src/app/` — eine Aenderung DORT trifft BEIDE Bundles, deshalb steht dieser Block auch im

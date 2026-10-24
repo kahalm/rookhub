@@ -52,6 +52,12 @@
   **Skript-Tests** (Codereview I1-015): Job `test-scripts` in `test.yml` führt jeden Test unter `scripts/tests/` aus
   (bash bzw. python3, ohne Container/Netz, `timeout-minutes: 5`). Ein neuer Skript-Test braucht dort eine eigene
   `- run:`-Zeile — `CiWorkflowTests.EveryScriptTest_RunsInTheTestWorkflow` prüft das.
+  **Werkzeuge mitbauen** (Codereview A6-011, Zerlegung Z17): `test-rookhub` baut in der Hälfte `rest` nach den
+  Tests `tools/LibraryImport` und `tools/ScoresheetBench` (`dotnet build`, Sekunden — die API ist dort schon gebaut).
+  Beide referenzieren die API, gehen aber in kein Image; vorher fiel ein Bruch erst beim nächsten Lauf von Hand auf.
+  Ihre Ordner stehen im `api`-Filter (eine Änderung NUR am Werkzeug startet damit Tests und `prebuild-api` — das Image
+  bleibt inhaltlich gleich). `CiWorkflowTests.EveryDotnetTool_IsBuiltInTheTestGate`: jedes `tools/<Name>/*.csproj`
+  braucht eine `- run: dotnet build tools/<Name>`-Zeile im Job und `'tools/<Name>/**'` im `api`-Filter.
   **Crawler-Vertrag** (Codereview I2-010): Job `test-crawler-contract` (zuletzt getaggter Crawler,
   `CrawlerContractTests` mit `CRAWLER_REPO`) ersetzt `test-crawler`; der Filter `crawler` = die Leser des Vertrags.
   **Melden statt still** (Codereview I1-014): der nächtliche E2E-Lauf und der Montags-Audit melden sich über

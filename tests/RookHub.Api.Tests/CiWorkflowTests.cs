@@ -203,6 +203,36 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// Die .NET-Werkzeuge unter <c>tools/</c> (LibraryImport, ScoresheetBench) referenzieren die API, gehen aber in kein
+    /// Image und hatten keinen CI-Build (Codereview A6-011): eine API-Aenderung, die sie bricht, fiel erst beim naechsten
+    /// Lauf von Hand auf. Jedes <c>tools/&lt;Name&gt;/*.csproj</c> wird deshalb in <c>test-rookhub</c> gebaut, und der
+    /// <c>api</c>-Filter enthaelt seinen Ordner — sonst startete eine Aenderung NUR am Werkzeug den Bau gar nicht.
+    /// </summary>
+    [Fact]
+    public void EveryDotnetTool_IsBuiltInTheTestGate()
+    {
+        var job = TestJob("test-rookhub");
+        var filters = ReadRepoFile(Filters);
+        var apiFilter = Regex.Match(filters, @"(?ms)^api:\s*$(.*?)(?=^\S|\z)").Groups[1].Value;
+
+        var tools = Directory.GetDirectories(Path.Combine(RepoRoot(), "tools"))
+            .Where(d => Directory.GetFiles(d, "*.csproj").Length > 0)
+            .Select(Path.GetFileName)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        Assert.Contains("LibraryImport", tools);
+        Assert.Contains("ScoresheetBench", tools);
+
+        foreach (var tool in tools)
+        {
+            // Zeilengenau: ein auskommentiertes "# - run: ..." zaehlt NICHT als eingetragen.
+            Assert.True(Regex.IsMatch(job, $@"(?m)^      - run: dotnet build {Regex.Escape($"tools/{tool}")}\b"),
+                $"tools/{tool} wird in test.yml/test-rookhub nicht gebaut");
+            Assert.Contains($"- 'tools/{tool}/**'", apiFilter);
+        }
+    }
+
+    /// <summary>
     /// Die Tests der Betriebs-Skripte (<c>scripts/tests/</c>) liefen in keinem Workflow (Codereview
     /// I1-015) — darunter der, der „kein Passwort im argv" fuer das Backup festhaelt. Jede Datei dort
     /// muss im Job <c>test-scripts</c> aufgerufen werden; ein neuer Test, den niemand eintraegt,

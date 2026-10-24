@@ -75,6 +75,14 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test tests/RookHub.Api.Tests --filter "${{ matrix.filter }}" --verbosity normal
+      # Die Wartungswerkzeuge unter tools/ referenzieren die API, gehen aber in kein Image und in keinen Test —
+      # ohne diesen Schritt fiel eine API-Aenderung, die sie bricht, erst beim naechsten Lauf von Hand auf
+      # (Codereview A6-011). Nur in einer Haelfte: die API ist dort schon gebaut, der Schritt kostet Sekunden.
+      # CiWorkflowTests haelt fest, dass jedes tools/<Name>/<Name>.csproj hier gebaut wird.
+      - run: dotnet build tools/LibraryImport --verbosity minimal
+        if: matrix.shard == 'rest'
+      - run: dotnet build tools/ScoresheetBench --verbosity minimal
+        if: matrix.shard == 'rest'
 
   # Zweite API-Suite gegen eine ECHTE MariaDB. Grund: test-rookhub laeuft gegen EF InMemory,
   # das jede LINQ-Abfrage im Speicher auswertet - auch eine, die MySQL nicht uebersetzen kann.
