@@ -954,7 +954,7 @@ public class ChessableImportService : ICourseReimporter
     }
 
     /// <summary>Chessable-oid eines PGN-Blocks (<c>[ChessableOid "…"]</c>), <c>null</c> ohne.</summary>
-    private static string? OidOf(string block)
+    internal static string? OidOf(string block)
     {
         var m = ChessableOidRegex.Match(block);
         return m.Success ? m.Groups[1].Value : null;
@@ -1001,7 +1001,7 @@ public class ChessableImportService : ICourseReimporter
     }
 
     /// <summary>Zerlegt ein Mehr-Partien-PGN in einzelne [Event]-Blöcke.</summary>
-    private static IEnumerable<string> SplitPgnGames(string pgn)
+    internal static IEnumerable<string> SplitPgnGames(string pgn)
     {
         if (string.IsNullOrWhiteSpace(pgn)) yield break;
         var idx = pgn.IndexOf("[Event ", StringComparison.Ordinal);
@@ -1017,9 +1017,9 @@ public class ChessableImportService : ICourseReimporter
     /// aus LEERZEICHEN. Dann gab es kein <c>\n\n</c>, die Signatur enthielt die Header, und eine neu geholte Linie
     /// glich ihrem alten Gegenstück nie — in einem echten Kurs 0 von 175 (header-frei: 175 von 175).
     /// </summary>
-    private static string MovetextOf(string block) => RepertoirePgnCleanup.MovetextOf(block);
+    internal static string MovetextOf(string block) => RepertoirePgnCleanup.MovetextOf(block);
 
-    private static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();
+    internal static int CountPgnGames(string pgn) => SplitPgnGames(pgn).Count();
 
     private static readonly System.Text.RegularExpressions.Regex ChessableOidRegex =
         new("\\[ChessableOid \"([^\"]+)\"\\]", System.Text.RegularExpressions.RegexOptions.Compiled);
