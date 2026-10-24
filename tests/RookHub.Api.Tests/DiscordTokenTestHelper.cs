@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using RookHub.Api.Data;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Social;
 
@@ -25,14 +27,18 @@ internal static class DiscordTokenTestHelper
     /// <see cref="DiscordLinkService.DefaultTokenMaxAgeDays"/>; mehr steht für „erst später ausgestellt").</summary>
     public static long FromNow(TimeSpan remaining) => DateTimeOffset.UtcNow.Add(remaining).ToUnixTimeSeconds();
 
-    public static DiscordLinkService Service(string? secret = Secret, double? tokenMaxAgeDays = null)
+    /// <summary><paramref name="db"/>: Kontext, in dem die Freiwerde-Vermerke (<c>DiscordLinkReleases</c>) liegen — ohne
+    /// eine frische InMemory-DB (reicht für die reinen Signaturtests).</summary>
+    public static DiscordLinkService Service(string? secret = Secret, double? tokenMaxAgeDays = null, AppDbContext? db = null)
     {
         var dict = new Dictionary<string, string?>();
         if (secret != null) dict["Discord:LinkSecret"] = secret;
         if (tokenMaxAgeDays != null)
             dict["Discord:LinkTokenMaxAgeDays"] = tokenMaxAgeDays.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var config = new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
-        return new DiscordLinkService(config);
+        db ??= new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        return new DiscordLinkService(config, db);
     }
 
     public static string Make(string id, string? username, long expUnix, string? secret = Secret)

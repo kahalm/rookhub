@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Xunit;
 using RookHub.Api.Services.Social;
@@ -118,12 +121,24 @@ public class DiscordLinkServiceTests
         Assert.Null(svc.Verify(token));
     }
 
+    /// <summary>Neuer Kontext auf einer benannten InMemory-DB — zwei Kontexte auf demselben Namen stehen für
+    /// „vor und nach dem Neustart".</summary>
+    private static AppDbContext Db(string name)
+        => new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
+
+    private static async Task ReleaseAsync(DiscordLinkService svc, AppDbContext db, string discordId, int userId)
+    {
+        await svc.MarkReleasedAsync(discordId, userId);
+        await db.SaveChangesAsync();   // wie im ProfileService: im Save des Aufrufers
+    }
+
     [Fact]
-    public void ReleasedId_TokensIssuedBeforeRelease_BelongToThePreviousAccount()
+    public async Task ReleasedId_TokensIssuedBeforeRelease_BelongToThePreviousAccount()
     {
         // A1-011: Der Bot hängt an JEDEN DM-Link ein neues Token (30 Tage gültig). Nach dem Freiwerden der ID
         // galt jedes davon für jedes Konto — ein Vermerk nur für das zuerst eingelöste Token reichte nicht.
-        var svc = DiscordTokenTestHelper.Service();
+        using var db = Db(Guid.NewGuid().ToString());
+        var svc = DiscordTokenTestHelper.Service(db: db);
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(DiscordTokenTestHelper.FarFuture),
             svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FarFuture))!.ExpiresAt);
         DiscordLinkService.DiscordIdentity Identity(string id, string name, TimeSpan remaining)
@@ -133,30 +148,97 @@ public class DiscordLinkServiceTests
         var fresh = Identity("42", "x", TimeSpan.FromDays(31));     // erst NACH dem Freiwerden ausgestellt
         var otherId = Identity("43", "z", TimeSpan.FromDays(30));
 
-        Assert.False(svc.IsReservedForOther(later, userId: 2));     // ohne Freiwerden kein Vermerk
-        svc.MarkReleased("42", userId: 1);
+        Assert.False(await svc.IsReservedForOtherAsync(later, userId: 2));     // ohne Freiwerden kein Vermerk
+        await ReleaseAsync(svc, db, "42", userId: 1);
 
-        Assert.True(svc.IsReservedForOther(first, userId: 2));
-        Assert.True(svc.IsReservedForOther(later, userId: 2));      // auch ein ANDERES Token derselben ID
-        Assert.False(svc.IsReservedForOther(later, userId: 1));     // der bisherige Inhaber darf wieder
-        Assert.False(svc.IsReservedForOther(fresh, userId: 2));     // frisches /link: für jedes Konto
-        Assert.False(svc.IsReservedForOther(otherId, userId: 2));
+        Assert.True(await svc.IsReservedForOtherAsync(first, userId: 2));
+        Assert.True(await svc.IsReservedForOtherAsync(later, userId: 2));      // auch ein ANDERES Token derselben ID
+        Assert.False(await svc.IsReservedForOtherAsync(later, userId: 1));     // der bisherige Inhaber darf wieder
+        Assert.False(await svc.IsReservedForOtherAsync(fresh, userId: 2));     // frisches /link: für jedes Konto
+        Assert.False(await svc.IsReservedForOtherAsync(otherId, userId: 2));
 
-        svc.MarkReleased("42", userId: 2);                          // ein neueres Freiwerden ersetzt den Vermerk
-        Assert.True(svc.IsReservedForOther(later, userId: 1));
-        Assert.False(svc.IsReservedForOther(later, userId: 2));
+        await ReleaseAsync(svc, db, "42", userId: 2);                          // ein neueres Freiwerden ersetzt den Vermerk
+        Assert.True(await svc.IsReservedForOtherAsync(later, userId: 1));
+        Assert.False(await svc.IsReservedForOtherAsync(later, userId: 2));
+        Assert.Equal(2, (await db.DiscordLinkReleases.AsNoTracking().SingleAsync()).UserId);   // eine Zeile je ID
     }
 
     [Fact]
-    public void ReleasedId_TokenMaxAge_IsConfigurable()
+    public async Task ReleasedId_TokenMaxAge_IsConfigurable()
     {
         // Discord:LinkTokenMaxAgeDays folgt der TTL im Bot (z. B. 1 nach dem Wechsel auf 24 h).
-        var svc = DiscordTokenTestHelper.Service(tokenMaxAgeDays: 1);
-        svc.MarkReleased("42", userId: 1);
+        using var db = Db(Guid.NewGuid().ToString());
+        var svc = DiscordTokenTestHelper.Service(tokenMaxAgeDays: 1, db: db);
+        await ReleaseAsync(svc, db, "42", userId: 1);
 
         var before = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromHours(23))))!;
         var after = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(2))))!;
-        Assert.True(svc.IsReservedForOther(before, userId: 2));
-        Assert.False(svc.IsReservedForOther(after, userId: 2));
+        Assert.True(await svc.IsReservedForOtherAsync(before, userId: 2));
+        Assert.False(await svc.IsReservedForOtherAsync(after, userId: 2));
+    }
+
+    [Fact]
+    public async Task ReleasedId_SurvivesRestart()
+    {
+        // Bis 0.829 lebte der Vermerk im Speicher des Dienstes: nach einem Neustart galt das weitergeleitete
+        // Rätsel-Token wieder für jedes Konto. Jetzt steht er in DiscordLinkReleases.
+        var name = Guid.NewGuid().ToString();
+        using (var db = Db(name))
+            await ReleaseAsync(DiscordTokenTestHelper.Service(db: db), db, "42", userId: 1);
+
+        using var restarted = Db(name);
+        var svc = DiscordTokenTestHelper.Service(db: restarted);   // neue Dienst-Instanz, neuer Kontext
+        var old = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30))))!;
+        Assert.True(await svc.IsReservedForOtherAsync(old, userId: 2));
+        Assert.False(await svc.IsReservedForOtherAsync(old, userId: 1));
+    }
+
+    [Fact]
+    public async Task ReleasedId_ExpiredRelease_NoLongerProtects_AndIsCleanedUpOnNextRelease()
+    {
+        using var db = Db(Guid.NewGuid().ToString());
+        var svc = DiscordTokenTestHelper.Service(db: db);
+        // Vor 31 Tagen frei geworden: jedes damals ausgestellte Token (≤ 30 Tage) ist längst abgelaufen.
+        db.DiscordLinkReleases.Add(new DiscordLinkRelease { DiscordId = "42", UserId = 1, ReleasedAt = DateTime.UtcNow.AddDays(-31) });
+        db.DiscordLinkReleases.Add(new DiscordLinkRelease { DiscordId = "44", UserId = 1, ReleasedAt = DateTime.UtcNow.AddDays(-5) });
+        await db.SaveChangesAsync();
+
+        var token = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(1))))!;
+        Assert.False(await svc.IsReservedForOtherAsync(token, userId: 2));
+
+        await ReleaseAsync(svc, db, "43", userId: 3);   // ein neues Freiwerden räumt die abgelaufenen ab
+        Assert.Equal(new[] { "43", "44" },
+            (await db.DiscordLinkReleases.AsNoTracking().Select(r => r.DiscordId).ToListAsync()).OrderBy(x => x));
+    }
+
+    [Fact]
+    public async Task ReleasedId_Upsert_KeepsTheYoungerRelease()
+    {
+        // Der jüngere Freiwerde-Zeitpunkt gewinnt: ein (z. B. durch Uhrversatz) jüngerer Vermerk wird nicht von
+        // einem älteren überschrieben.
+        using var db = Db(Guid.NewGuid().ToString());
+        var svc = DiscordTokenTestHelper.Service(db: db);
+        var younger = DateTime.UtcNow.AddMinutes(10);
+        db.DiscordLinkReleases.Add(new DiscordLinkRelease { DiscordId = "42", UserId = 5, ReleasedAt = younger });
+        await db.SaveChangesAsync();
+
+        await ReleaseAsync(svc, db, "42", userId: 1);
+        var row = await db.DiscordLinkReleases.AsNoTracking().SingleAsync();
+        Assert.Equal(5, row.UserId);
+        Assert.Equal(younger, row.ReleasedAt);
+    }
+
+    [Fact]
+    public async Task ReleasedId_WithoutAccount_ProtectsAgainstEveryAccount()
+    {
+        // FK SetNull: verschwindet das Konto hart, bleibt der Vermerk und sperrt die alten Tokens für alle.
+        using var db = Db(Guid.NewGuid().ToString());
+        var svc = DiscordTokenTestHelper.Service(db: db);
+        db.DiscordLinkReleases.Add(new DiscordLinkRelease { DiscordId = "42", UserId = null, ReleasedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        var old = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30))))!;
+        Assert.True(await svc.IsReservedForOtherAsync(old, userId: 1));
+        Assert.True(await svc.IsReservedForOtherAsync(old, userId: 2));
     }
 }

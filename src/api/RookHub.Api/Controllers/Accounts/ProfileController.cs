@@ -129,7 +129,7 @@ public class ProfileController : BaseApiController
         var identity = _discordLink.Verify(dto.Token);
         // Ein Token aus der Zeit, als die Discord-ID noch einem ANDEREN Konto gehörte (weitergeleiteter
         // Rätsellink nach dessen Trennung), gilt wie ein ungültiges (A1-011).
-        if (identity == null || _discordLink.IsReservedForOther(identity, userId))
+        if (identity == null || await _discordLink.IsReservedForOtherAsync(identity, userId))
             return BadRequest(new { message = "Invalid or expired Discord link token." });
 
         try

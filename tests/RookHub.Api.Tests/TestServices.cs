@@ -95,7 +95,7 @@ internal static class TestServices
         AppDbContext db, IBackgroundTaskQueue queue, ILogger<ProfileService>? logger = null,
         IEmailSender? email = null, DiscordLinkService? discordLink = null)
         => new(db, queue, logger ?? NullLogger<ProfileService>.Instance, new BookAdminService(db),
-            email ?? new RecordingEmailSender(), discordLink ?? DiscordTokenTestHelper.Service());
+            email ?? new RecordingEmailSender(), discordLink ?? DiscordTokenTestHelper.Service(db: db));
 
     /// <summary>Admin-Dienst mit dem echten Löschkern (<see cref="ProfileService.EraseUserAsync"/>).</summary>
     public static AdminService Admin(AppDbContext db, IMemoryCache? authCache = null)

@@ -2221,6 +2221,27 @@ namespace RookHub.Api.Migrations
                     b.ToTable("DailyPuzzles");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.DiscordLinkRelease", b =>
+                {
+                    b.Property<string>("DiscordId")
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTime>("ReleasedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DiscordId");
+
+                    b.HasIndex("ReleasedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DiscordLinkReleases");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>
                 {
                     b.Property<int>("Id")
@@ -9238,6 +9259,16 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("BookPuzzle");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.DiscordLinkRelease", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>

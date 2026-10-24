@@ -20,17 +20,18 @@ public class ProfileControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly ProfileService _profileService;
     private readonly ProfileController _controller;
+    private readonly string _dbName = Guid.NewGuid().ToString();
 
     public ProfileControllerTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(_dbName)
             .Options;
         _db = new AppDbContext(options);
 
-        // Ein Discord-Dienst für Controller UND ProfileService: der eine merkt sich das Freiwerden einer ID,
-        // der andere prüft es beim Verknüpfen (A1-011) — wie das Singleton in Prod.
-        var discordLink = DiscordTokenTestHelper.Service();
+        // Ein Discord-Dienst für Controller UND ProfileService auf derselben DB: der eine vermerkt das Freiwerden
+        // einer ID, der andere prüft es beim Verknüpfen (A1-011) — wie der scoped Dienst einer Anfrage in Prod.
+        var discordLink = DiscordTokenTestHelper.Service(db: _db);
         _profileService = TestServices.Profile(_db, new NoOpTaskQueue(), discordLink: discordLink);
 
         // PlayerSearchService is needed but we test SearchPlayers validation separately
@@ -402,6 +403,28 @@ public class ProfileControllerTests : IDisposable
         SetUser(a.Id);
         var again = Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = t2 })).Result);
         Assert.Equal("4242", ((ProfileDto)again.Value!).DiscordId);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_OldTokenRejectedForAnotherAccount_AlsoAfterRestart()
+    {
+        // A1-011 dauerhaft: bis 0.829 vergaß ein Neustart den Vermerk, und B verknüpfte danach mit dem
+        // weitergeleiteten Rätsel-Token die fremde Discord-ID. Neuer Kontext + neue Dienste = Neustart.
+        var a = await CreateUserAsync("alice");
+        var b = await CreateUserAsync("bob");
+        var token = DiscordTokenTestHelper.Make("4444", "AliceDisco", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30)));
+        SetUser(a.Id);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.IsType<OkObjectResult>((await _controller.UnlinkDiscord()).Result);
+
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(_dbName).Options);
+        var discordLink = DiscordTokenTestHelper.Service(db: db);
+        var controller = new ProfileController(TestServices.Profile(db, new NoOpTaskQueue(), discordLink: discordLink),
+            null!, discordLink, new ApiTokenService(db, NullLogger<ApiTokenService>.Instance));
+        SetUser(b.Id);
+        controller.ControllerContext = _controller.ControllerContext;   // dieselbe Anfrage-Hülle (Nutzer B)
+        Assert.IsType<BadRequestObjectResult>((await controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.Null((await db.UserProfiles.AsNoTracking().SingleAsync(p => p.UserId == b.Id)).DiscordId);
     }
 
     [Fact]

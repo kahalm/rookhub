@@ -30,6 +30,22 @@ internal sealed class UserProfileConfiguration : IEntityTypeConfiguration<UserPr
     }
 }
 
+/// <summary>Freigewordene Discord-IDs (A1-011). Bewusst KEIN Cascade auf das Konto: ein gelöschtes Konto ist genau der
+/// Fall, den der Vermerk schützt — er muss es überleben (SetNull → gilt dann für jedes Konto).</summary>
+internal sealed class DiscordLinkReleaseConfiguration : IEntityTypeConfiguration<DiscordLinkRelease>
+{
+    public void Configure(EntityTypeBuilder<DiscordLinkRelease> e)
+    {
+        e.HasKey(r => r.DiscordId);
+        e.HasOne(r => r.User)
+         .WithMany()
+         .HasForeignKey(r => r.UserId)
+         .OnDelete(DeleteBehavior.SetNull);
+        // Aufräumen der abgelaufenen Vermerke (ReleasedAt < jetzt − Höchstalter).
+        e.HasIndex(r => r.ReleasedAt);
+    }
+}
+
 internal sealed class GroupConfiguration : IEntityTypeConfiguration<Group>
 {
     public void Configure(EntityTypeBuilder<Group> e)

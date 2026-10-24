@@ -13,6 +13,7 @@ public partial class AppDbContext : DbContext
 {
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
+    public DbSet<DiscordLinkRelease> DiscordLinkReleases => Set<DiscordLinkRelease>();
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<PuzzleChallenge> PuzzleChallenges => Set<PuzzleChallenge>();
     public DbSet<FavoritePuzzle> FavoritePuzzles => Set<FavoritePuzzle>();

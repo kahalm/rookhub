@@ -69,6 +69,8 @@ public class ProfileServiceTests : IDisposable
         ["AdminMessages"] = "Konversation mit dem Admin-Team (Nachweis; wird beim Löschen des Threads entfernt)",
         ["MessageThreads"] = "Metadaten der Admin-Konversation",
         ["CiBuildReports"] = "kein Nutzerbezug (Repo-Zeile)",
+        ["DiscordLinkReleases"] = "Sicherheitsvermerk A1-011: die Löschung SCHREIBT ihn (Discord-ID wird frei), er muss "
+                                  + "sie überleben; nur Discord-ID + Konto-Id, läuft nach Bot-Token-TTL ab",
         ["UserProfiles"] = "wird IN PLACE anonymisiert (über user.Profile), nicht gelöscht — "
                            + "die Statistik-Tabellen zeigen weiter auf die UserId",
     };
@@ -150,6 +152,22 @@ public class ProfileServiceTests : IDisposable
         Assert.Equal("Caro-Kann", data[1]["courseName"]);
         Assert.Equal("Jürgen.Mx", data[2]["username"]);
         Assert.DoesNotContain(rows, n => n.DataJson!.Contains("J\\u00FCrgen.M\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DeleteAccount_LeavesTheDiscordReleaseNote()
+    {
+        // A1-011: Die Kontolöschung macht die Discord-ID frei. Der Vermerk geht im selben Save wie die
+        // Anonymisierung in DiscordLinkReleases und bleibt danach stehen — sonst bekäme ein anderes Konto mit
+        // einem alten Rätsellink die ID des gelöschten Kontos.
+        var id = await CreateUserWithPasswordAsync("discordgone", "secret123");
+
+        await _profileService.DeleteAccountAsync(id, "secret123");
+
+        var release = await _db.DiscordLinkReleases.AsNoTracking().SingleAsync();
+        Assert.Equal("d1", release.DiscordId);
+        Assert.Equal(id, release.UserId);
+        Assert.True(release.ReleasedAt > DateTime.UtcNow.AddMinutes(-1));
     }
 
     [Fact]

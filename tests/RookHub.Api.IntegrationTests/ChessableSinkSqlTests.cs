@@ -134,7 +134,7 @@ public class ChessableSinkSqlTests(ChessableSinkSqlFixture fixture)
         var recorder = new CommandTextRecorder();
         await using (var db = Recorded(recorder))
             await new ProfileService(db, new BackgroundTaskQueue(), NullLogger<ProfileService>.Instance,
-                new BookAdminService(db), new NoEmail(), new DiscordLinkService(new ConfigurationBuilder().Build()))
+                new BookAdminService(db), new NoEmail(), new DiscordLinkService(new ConfigurationBuilder().Build(), db))
                 .DeleteAccountAsync(userId, "pw");
 
         Assert.Empty(Reads(recorder, "ChessableReviewLines", "Json"));

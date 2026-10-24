@@ -189,7 +189,7 @@ try
     builder.Services.AddScoped<TournamentHistoryService>();
     builder.Services.AddScoped<FideDirectorySweepService>();
     builder.Services.AddScoped<ProfileService>();
-    builder.Services.AddSingleton<DiscordLinkService>();
+    builder.Services.AddScoped<DiscordLinkService>();   // Vermerke in DiscordLinkReleases (DbContext der Anfrage)
     builder.Services.AddScoped<NotificationService>();
     // Web-Push: VAPID-Konfig aus dem Abschnitt „WebPush" (ENV WebPush__Subject/PublicKey/PrivateKey);
     // ohne Schlüssel bleibt Push serverseitig deaktiviert (No-op).
