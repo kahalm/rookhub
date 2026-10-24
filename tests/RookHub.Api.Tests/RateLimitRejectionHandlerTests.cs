@@ -159,7 +159,7 @@ public class RateLimitRejectionHandlerTests
     public void ProgramCs_WiresTheRejectionHandler()
     {
         var src = StartupSource.All();
-        Assert.Contains("builder.Services.AddSingleton<RateLimitRejectionHandler>();", src, StringComparison.Ordinal);
+        Assert.Contains("services.AddSingleton<RateLimitRejectionHandler>();", src, StringComparison.Ordinal);
         Assert.Contains("options.OnRejected = RateLimitRejectionHandler.OnRejectedAsync;", src, StringComparison.Ordinal);
     }
 

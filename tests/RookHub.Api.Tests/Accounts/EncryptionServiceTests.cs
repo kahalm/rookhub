@@ -130,7 +130,7 @@ public class EncryptionServiceTests
         // Der Host kommt im Testlauf nicht hoch (echte MariaDB nötig), also hier am Quelltext.
         var src = StartupSource.All();
         var blank = src.IndexOf("Encryption:Key ist gesetzt, aber leer", StringComparison.Ordinal);
-        var check = src.IndexOf("EncryptionService.ThrowIfKeyRequiredButMissing(builder.Configuration)", StringComparison.Ordinal);
-        Assert.True(blank >= 0 && check > blank, "Startprüfung auf fehlenden Encryption:Key fehlt in Program.cs");
+        var check = src.IndexOf("EncryptionService.ThrowIfKeyRequiredButMissing(configuration)", StringComparison.Ordinal);
+        Assert.True(blank >= 0 && check > blank, "Startprüfung auf fehlenden Encryption:Key fehlt (Program.cs/Startup)");
     }
 }

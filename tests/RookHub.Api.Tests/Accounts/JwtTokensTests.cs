@@ -67,7 +67,7 @@ public class JwtTokensTests : IDisposable
         Assert.Equal("TestIssuer", jwt.Issuer);
         Assert.Equal(["TestAudience"], jwt.Audiences);
 
-        // Genau die Parameter, die Program.cs dem JWT-Handler gibt.
+        // Genau die Parameter, die Startup/AuthSetup.cs dem JWT-Handler gibt.
         new JwtSecurityTokenHandler().ValidateToken(raw,
             JwtTokens.ValidationParameters(_config, _config["Jwt:Audience"]), out _);
         // Und der Cookie-Tausch nimmt es NICHT (anderer Adressat).
@@ -114,13 +114,13 @@ public class JwtTokensTests : IDisposable
     }
 
     /// <summary>Wachhund: Pruefregeln entstehen nur in JwtTokens — ein zweiter Satz <c>TokenValidationParameters</c>
-    /// ist genau die Kopie, die bei einer Haertung zurueckbleibt. Program.cs nennt den Typ nur als Ziel der Zuweisung
+    /// ist genau die Kopie, die bei einer Haertung zurueckbleibt. Startup/AuthSetup.cs nennt den Typ nur als Ziel der Zuweisung
     /// an den JWT-Handler und holt die Werte aus JwtTokens.</summary>
     [Fact]
     public void Pruefparameter_NurInJwtTokens()
     {
-        Assert.Equal(["Program.cs", "Services/Accounts/JwtTokens.cs"], DateienMit(new Regex(@"\bTokenValidationParameters\b")));
-        var program = File.ReadAllText(Path.Combine(ApiRoot(), "Program.cs"));
+        Assert.Equal(["Services/Accounts/JwtTokens.cs", "Startup/AuthSetup.cs"], DateienMit(new Regex(@"\bTokenValidationParameters\b")));
+        var program = File.ReadAllText(Path.Combine(ApiRoot(), "Startup", "AuthSetup.cs"));
         Assert.Contains("JwtTokens.ValidationParameters(", program);
         Assert.DoesNotMatch(new Regex(@"new\s+TokenValidationParameters\b"), program);
     }
