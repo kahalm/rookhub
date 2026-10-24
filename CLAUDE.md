@@ -65,7 +65,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Log-Visualisierung | Kibana | 8.17.0 |
 | Tests | xUnit + InMemory DB | - |
 
-**Hinweis (DB-Provider)**: Das originale `Pomelo.EntityFrameworkCore.MySql` hat kein EF-Core-10-Release (Issue seit Aug 2025 offen, kein ETA). Alle .NET-Repos (rookhub/crawler/piratechess) nutzen daher den gepflegten **Microting-Fork** `Microting.EntityFrameworkCore.MySql` (MIT, EF Core 10, MySQL/MariaDB) — reiner Kompatibilitäts-Fork, `MySql:`-Annotation-Keys unverändert (bestehende Migrations kompatibel), `UseMySql`/`MariaDbServerVersion` bleiben im `Microsoft.EntityFrameworkCore`-Namespace (kein Code-Change). Sobald das originale Pomelo EF 10 liefert (offizielle WIP-PR #2019), zurückwechseln erwägen. Die Server-Fassung steht fest in `Data/DbServerVersion.cs` (MariaDB 11.8, kein `AutoDetect` mehr) — beim Heben des DB-Images dort mitziehen, `DbServerVersionTests` prüft es (A9-010). **Swashbuckle** ist auf 10.2.3 (net10 zieht `Microsoft.OpenApi` 2.0 → API-Änderung: `OpenApiSecuritySchemeReference` statt `OpenApiReference`, `AddSecurityRequirement`-Factory-Overload; siehe `Program.cs`).
+**Hinweis (DB-Provider)**: Das originale `Pomelo.EntityFrameworkCore.MySql` hat kein EF-Core-10-Release (Issue seit Aug 2025 offen, kein ETA). Alle .NET-Repos (rookhub/crawler/piratechess) nutzen daher den gepflegten **Microting-Fork** `Microting.EntityFrameworkCore.MySql` (MIT, EF Core 10, MySQL/MariaDB) — reiner Kompatibilitäts-Fork, `MySql:`-Annotation-Keys unverändert (bestehende Migrations kompatibel), `UseMySql`/`MariaDbServerVersion` bleiben im `Microsoft.EntityFrameworkCore`-Namespace (kein Code-Change). Sobald das originale Pomelo EF 10 liefert (offizielle WIP-PR #2019), zurückwechseln erwägen. Die Server-Fassung steht fest in `Data/DbServerVersion.cs` (MariaDB 11.8, kein `AutoDetect` mehr) — beim Heben des DB-Images dort mitziehen, `DbServerVersionTests` prüft es (A9-010). **Swashbuckle** ist auf 10.2.3 (net10 zieht `Microsoft.OpenApi` 2.0 → API-Änderung: `OpenApiSecuritySchemeReference` statt `OpenApiReference`, `AddSecurityRequirement`-Factory-Overload; siehe `Startup/ControllersSetup.cs`).
 
 ## Doku-Wegweiser (Detail-Doku liegt in `docs/`, NICHT hier)
 
@@ -78,6 +78,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
   `grep -rl "^# X" docs/` findet sie.
 - Datenbank-Schema: `docs/datenbank-schema.md` · Oberflächen (RookHub/Turnier/KidHub, Filterleiste): `docs/oberflaechen.md`
 - Konventionen im Volltext (mit Begründung und Fallen): `docs/konventionen.md` · CI/CD im Detail: `docs/ci.md`
+- Startup-Konfiguration (DI je Bereich, ALLE Hosted Services als Tabelle, HttpClients, Pipeline-Bausteine): `src/api/RookHub.Api/Startup/` — `Program.cs` hält nur die Reihenfolge
 - Frontend-Regeln: `src/frontend/CLAUDE.md` (lädt automatisch, sobald man dort arbeitet); Frontend-Feature-Doku: `docs/frontend/` · Gestaltung: `docs/DESIGN.md` (verbindlich)
 
 ### Endpunkte und Features je Bereich (`docs/api/`)
@@ -163,9 +164,11 @@ src/
     Models/                 EF-Entities (1:1 zum Schema oben)
     DTOs/                   <Bereich>/ Request/Response-Typen je Endpoint-Familie
     Data/                   AppDbContext, DesignTimeDbContextFactory, Migrations/
-    Program.cs              Startup: DB, JWT+ApiToken Policy-Scheme, CORS, Swagger,
-                            Auto-Migration, Health-Endpoint, BackgroundServices,
-                            ForwardedHeaders (Docker-Netze, 2 Hops — Middleware/ForwardedHeadersSetup)
+    Program.cs              Startup: nur die Reihenfolge der Aufrufe (Registrierungen + Middleware-Pipeline)
+    Startup/                je Belang eine Datei: Logging, Database (+ Auto-Migration), Auth, StartupChecks,
+                            DomainServices.<Bereich> (Fachdienste), BackgroundServicesSetup (ALLE Hosted
+                            Services als Tabelle), HttpClients, DataProtection, Cors, RateLimiting,
+                            Controllers/Swagger, HealthEndpoints; ForwardedHeaders → Middleware/ForwardedHeadersSetup
     Dockerfile              Multi-stage .NET Build
   frontend/
     app/                    Angular-Workspace mit ZWEI Projekten (siehe src/frontend/CLAUDE.md):
@@ -258,7 +261,7 @@ cd src/api/RookHub.Api
 dotnet ef migrations add <MigrationName>    # Nutzt DesignTimeDbContextFactory
 dotnet ef database update                   # Braucht laufende MariaDB
 ```
-Auto-Migration ist in `Program.cs` aktiv – beim Start werden Migrations automatisch angewendet.
+Auto-Migration ist aktiv (`Startup/DatabaseSetup.cs`, aus `Program.cs` aufgerufen) – beim Start werden Migrations automatisch angewendet.
 
 ## UI-Sweep (Screenshots aller Seiten, `tools/ui-sweep`)
 

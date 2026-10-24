@@ -194,7 +194,7 @@ Rollenverwaltung an).
   verschwindet nie wegen einer toten Id), `TacticHarvestService.LeagueRoundAsync`, `PairingsForGameAsync`, die Bezeichnung im DTO
   (`FillPairingLabelsAsync` gibt die aufgelöste Id aus) und `ArchiveOlderVersionsAsync` (gleiche Paarung = gleiche aufgelöste Id
   bzw. gleicher Schlüssel; eine tote Id ist keine „andere feste Paarung"). Wer einen neuen Leser baut, nimmt `ResolveAsync`, nie
-  `LeagueGameId` roh. (3) **Heilung beim Start** (`LeagueGameLinks.HealOnStartupAsync` in `Program.cs`, idempotent, wirft nie):
+  `LeagueGameId` roh. (3) **Heilung beim Start** (`LeagueGameLinks.HealOnStartupAsync` in `Startup/DatabaseSetup.cs`, idempotent, wirft nie):
   alle mit Schlüssel neu auflösen; gültige Ids ohne Schlüssel bekommen ihn; tote Ids ohne Schlüssel werden über
   `LeaguePairingFinder` neu gefunden (`AutoPick`, genau EIN genauer Treffer; PGN-Datum, sonst das Jahr) oder geleert (Warnung).
 - **Leere Bretter der laufenden Runde** (0.744.0, Wunsch 2026-10-10: „wie kann ich eine Partie der aktuellen Runde zuweisen?"):

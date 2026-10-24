@@ -95,7 +95,7 @@
   2026-09-29, A5-013) – Fehler kommen als `CrawlerRequestException`; Kürzen/Datum aus `DirectoryText`, fehlende Texte
   bleiben `NULL` (kein Leerstring).
 - **Periodische Hintergrunddienste erben von `PeriodicWorker`** (`Services/PeriodicWorker.cs`, Codereview 2026-09-29,
-  A8-008) – `BackgroundServiceExceptionBehavior` steht in `Program.cs` ausdrücklich auf `StopHost`. Jeder Worker
+  A8-008), registriert werden sie in der Tabelle `Startup/BackgroundServicesSetup.cs` (Dienst · Schalter · Grund) – `BackgroundServiceExceptionBehavior` steht in `Startup/BackgroundServicesSetup.cs` ausdrücklich auf `StopHost`. Jeder Worker
   implementiert `LogFailure` mit einem EIGENEN wörtlichen Template (kein `{Text}`-Parameter, kein gemeinsames
   Template), weil log-watcher/Kibana nach `labels.MessageTemplate` gruppieren; ein umgezogener Dienst behält sein
   altes Template wortgleich. Vor jedem Takt fragt der Rumpf den Admin-Schalter „Hintergrundjobs pausieren“

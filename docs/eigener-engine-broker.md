@@ -223,7 +223,7 @@ Ausgabezeile `{ "time": ms, "depth": n, "nodes": n, "pvs": [ { "moves": [uci…]
    Direktiven je Host. Das ist ein Deploy-Schritt außerhalb des Repos (NPM-Oberfläche oder
    `/yacht/AppData/Config/Nginx-Proxy/nginx/proxy_host/30.conf`), nur auf Zuruf; bis dahin erkennt die
    Abnahme-Messung (7.) es, weil die erste Zeile erst mit der letzten käme.
-3. **Globaler Rate-Limiter der API** (`Program.cs`: 100 Anfragen/min je IP): 13 Provider = 78
+3. **Globaler Rate-Limiter der API** (`Startup/RateLimitingSetup.cs`: 100 Anfragen/min je IP): 13 Provider = 78
    Polls/min plus Uploads — die Provider-Endpunkte müssen davon **ausgenommen** sein
    (`[DisableRateLimiting]`), sonst bauen wir die Lichess-Drosselung nach. Die Registrierung
    (selten) und `token/test` bleiben limitiert.
