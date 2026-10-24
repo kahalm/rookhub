@@ -58,6 +58,9 @@ export const SHARED_GAME_STYLES = `
     .header-actions:has(.analyze-no-engine) { align-items: flex-start; }
     /* „Kurz erzählt“ samt Handy-Kürzung: game-recap.component.ts. */
     .original, .analyze { white-space: nowrap; }
+    /* d5-rk-nachspielen-knopf-handy-umbruch: „Fehler von … nachspielen (5)“ bricht am Handy ausgewogen um; der Zähler
+       hängt per geschütztem Leerzeichen (i18n) am letzten Wort statt allein in Zeile 2 zu stehen. */
+    .mistakes { text-wrap: balance; }
     /* Am Handy wandern „Originalpartie öffnen" und „Teilen-Link kopieren" ins ⋮ (v1-rk-first-view-lead-long-mobile). */
     .narrow-only { display: none; }
     /* UI-Sweep 2026-10-11 (r2-rg-analyze-disabled): der Grund leise unter dem gesperrten Knopf. Seit a1-rk-shared-kopf-grund
@@ -78,12 +81,12 @@ export const SHARED_GAME_STYLES = `
       .header:not(:has(.header-actions > :not(.game-menu, mat-menu))) { grid-template-columns: auto minmax(0, 1fr) auto; }
       .header:not(:has(.back)):not(:has(.header-actions > :not(.game-menu, mat-menu))) { grid-template-columns: minmax(0, 1fr) auto; }
       .header-actions:not(:has(> :not(.game-menu, mat-menu))) { grid-column: auto; }
-      /* b1-rk-partie-grund-unter-knopf (Nachprüfung): die Mindestbreite 220 px machte die Hülle breiter als den Knopf —
-         das ⋮ stand ~65 px rechts der Knopfkante. Hier so breit wie der Knopf, der Grund bricht darunter in seiner
-         Breite; das ⋮ rückt auf 4 px an den Knopf heran. */
-      .analyze-wrap { align-items: flex-start; width: max-content; min-width: 0; }
-      .analyze-wrap + .game-menu { margin-left: -4px; }
-      .analyze-no-engine { text-align: left; }
+      /* d5-rk-game-disabled-reason-narrow-wrap: in Knopfbreite (~180 px) brach der Grund dreizeilig um, obwohl rechts
+         ~350 px frei waren. Die Hülle löst sich auf: „Partie analysieren“, „Teilen-Link kopieren“ und ⋮ stehen in einer
+         Fluchtlinie, der Grund als eigene Zeile darunter (höchstens 60 Zeichen breit). */
+      .analyze-wrap { display: contents; }
+      .header-actions:has(.analyze-no-engine) { align-items: center; }
+      .analyze-no-engine { order: 99; flex: 1 1 100%; width: auto; min-width: 0; max-width: 60ch; text-align: left; margin-top: -4px; }
     }
     .body { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
     .side-section { display: flex; flex-direction: column; gap: 12px; flex: 1 1 100%; min-width: 0; }
@@ -177,6 +180,9 @@ export const SHARED_GAME_STYLES = `
     .moves-section > app-move-list { display: block; }
     @media (max-width: 768px) {
       .shared-page { padding: 0; }
+      /* d5-rk-mobile-karte-randabstand: das randlose Polster gilt nur der Partieansicht — die Sperr-/Fehlerkarte behält
+         16 px Seitenpolster und Abstand zur Kopfleiste (DESIGN 3.2). */
+      .shared-page:has(> .empty-state, > .load-card) { max-width: none; padding: 16px; }
       .viewer { width: auto; padding: 0; border-radius: 0; }
       .header { position: relative; grid-template-columns: auto minmax(0, 1fr); padding: 12px 52px 12px 16px; margin-bottom: 4px; }
       /* Eine Zeile statt einer 48-px-Zeile je Knopf (v1-rk-first-view-lead-long-mobile, DESIGN 4.6 Regel 3): das

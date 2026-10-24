@@ -339,6 +339,15 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     return /chessable|_firstkey\.pgn$/i.test(d.fileName) || /chessable/i.test(d.tags ?? '');
   }
 
+  /** Zeile „Quelldatei“ nur für Besitzer/Admin (r2-rp-sourcefile) — und nicht, wenn der Name vom Server erzeugt ist
+   *  (`user-u{Id}-{Guid}.pgn` bei selbst angelegten Kursen): Konto-Id + GUID sagen dem Besitzer nichts, DESIGN 2 Nr. 7
+   *  (d5-rk-quelldatei-interner-dateiname). Admins sehen ihn weiter. */
+  get showFileName(): boolean {
+    const d = this.detail;
+    if (!d?.canManage || !d.fileName) return false;
+    return this.auth.isAdmin || !/^user-u\d+-[0-9a-f]{32}\.pgn$/i.test(d.fileName);
+  }
+
   /** Kurs ohne lösbare Aufgaben (Studienbuch: nur kommentierte Partien) — kein „0/0"-Fortschritt, „Linien
    *  durchsehen" wird der Hauptknopf (b1-rk-studienbuch-fortschritt-0-0). Kalkulationsbücher zählen Stellungen. */
   get isEmptyQuiz(): boolean {

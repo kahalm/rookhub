@@ -238,6 +238,8 @@ ch-root > .foot { flex: none; width: 100%; }
 .chip-btn:hover { border-color: var(--ink); }
 .chip-btn[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
 .chip-btn .n { font-weight: 400; opacity: .75; }
+/* Archiv-Chip und Zahl im Chip „Alle" nur am Handy (d5-c-kartei-filterchip-hinter-archiv, siehe @media ≤ 640 px). */
+.filter-chips .chip-btn.archive, .chip-btn .n.handy { display: none; }
 .count { margin: 0 0 6px; color: var(--muted); font-size: 15px; }
 /* Zähler der Kartei am Ende der Werkzeugzeile (z1-c-kartei-lead: spart am Handy eine Zeile vor der Liste). */
 .tools .count { margin: 0 0 0 auto; flex: none; }
@@ -660,9 +662,15 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { fo
   }
   .kartei-top .search { order: 1; flex: 1 1 6rem; min-width: 0; }
   .kartei-top .actions { order: 2; }
-  .kartei-top .tools .filter-chips { order: 3; flex: 1 1 55%; min-width: 0; }   /* 55 % erzwingt Zeile 2 */
+  .kartei-top .tools .filter-chips { order: 3; flex: 1 1 100%; min-width: 0; }
   .kartei-top .check { order: 4; gap: 6px; }
   .kartei-top .tools .count { order: 5; font-size: 14px; margin: 0; }
+  /* d5-c-kartei-filterchip-hinter-archiv: Häkchen „Archiv" und Zähler teilten sich Zeile 2 mit den Chips (≈ 210 px, der
+     dritte Chip nur als „F" sichtbar). Mit Gruppen bekommt die Chipzeile die volle Breite, der Verlauf liegt am
+     Zeilenrand; „Archiv" wird zum letzten Chip, die Kinderzahl steht im Chip „Alle". Ohne Gruppen bleibt alles wie war. */
+  .tools.with-chips .check, .tools.with-chips .count { display: none; }
+  .filter-chips .chip-btn.archive { display: inline-flex; }
+  .chip-btn .n.handy { display: inline; }
   .register { grid-template-columns: 1.75rem minmax(0, 1fr); gap: 0 6px; margin-bottom: 10px; }
   .register > .letter { font-size: 24px; padding: 10px 0 0; }
   .today { padding: 6px 12px; gap: 6px 10px; margin-bottom: 8px; }

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.827.0", date: "2026-10-24", changes: [
+    { en: "Design round d5 (37 findings): long course comments keep their “Read in full” link visible; E-ink: one clear focus frame in form fields, white hint button and toggles, /guess list no longer touches the frame; numbered engine arrows; larger tap targets (course lines, leaderboard period); tidier mobile layouts (trainer menu, lock card, replay button, stats rating), fewer duplicate actions (reconstruction, endless “Clear all”), plus text fixes in LeagueHub, ClubHub, KidHub and the tournament profile.",
+      de: "Design-Runde d5 (37 Funde): Lange Kurskommentare zeigen „Ganz lesen“ wieder; E-Ink: ein klarer Fokusrahmen in Formularfeldern, Tipp-Knopf und Umschalter weiß, /guess-Liste klebt nicht mehr am Rahmen; nummerierte Engine-Pfeile; größere Tippziele (Kurslinien, Bestenlisten-Zeitraum); aufgeräumte Handy-Ansichten (Trainer-Menü, Sperrkarte, Nachspielen-Knopf, Statistik-Wertung), weniger doppelte Aktionen (Rekonstruktion, Endlos „Alle löschen“) sowie Textkorrekturen in LeagueHub, ClubHub, KidHub und im Turnier-Profil." },
+  ] },
   { version: "0.826.1", date: "2026-10-24", changes: [
     { en: "E-books: an uploaded book now gets its diagrams recognised before library maintenance runs — uploads first, then newly imported books, re-recognitions last, huge reference volumes at the very end. Before, an upload could wait hours behind a re-scan of the whole library.", de: "E-Books: Ein hochgeladenes Buch bekommt seine Diagramme jetzt vor Wartungsläufen der Bibliothek — zuerst Uploads, dann neu eingelesene Bücher, Neuerkennungen zuletzt, riesige Nachschlagewerke ganz am Ende. Vorher konnte ein Upload stundenlang hinter einer Neuerkennung der ganzen Bibliothek warten." },
   ] },

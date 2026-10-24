@@ -37,13 +37,13 @@ describe('FriendRevengeComponent (UI-Sweep 2026-10-11)', () => {
     ],
   };
 
-  function render(): HTMLElement {
+  function render(list: RevengeList = data): HTMLElement {
     TestBed.configureTestingModule({
       imports: [FriendRevengeComponent],
       providers: [
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: FriendsService, useValue: { getRevenge: () => of(data) } },
+        { provide: FriendsService, useValue: { getRevenge: () => of(list) } },
         { provide: SnackbarService, useValue: { info: () => {} } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ userId: '7' }) } } },
       ],
@@ -96,5 +96,31 @@ describe('FriendRevengeComponent (UI-Sweep 2026-10-11)', () => {
     expect(cs.textOverflow).toBe('clip');
     expect(cs.overflow).toBe('visible');
     el.remove();
+  });
+
+  // d5-rk-revanche-leerzustand-text
+  it('Auftrag „knack sie“ nur bei offenen Puzzles; ohne offene erklärt der Leerzustand allein', () => {
+    expect(render().querySelector('.hint')).not.toBeNull();
+    TestBed.resetTestingModule();
+    const none = render({ ...data, puzzles: data.puzzles.filter(p => p.solvedByViewer) });
+    expect(none.querySelector('.hint')).toBeNull();
+    expect(none.querySelector('.empty-state')).not.toBeNull();
+  });
+});
+
+/** Sprachdatei wie im Browser laden (Karma liefert public/ unter / oder /base/). */
+async function loadLang(lang: string): Promise<any> {
+  for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+    const res = await fetch(url).catch(() => null);
+    if (res?.ok) return res.json();
+  }
+  throw new Error('i18n ' + lang + ' nicht gefunden');
+}
+
+// d5-rk-revanche-leerzustand-text: eindeutiger Satz ohne „sie … sie“.
+describe('friends.revenge.hint (d5)', () => {
+  it('deutsch: „Puzzles, die {{name}} noch nicht lösen konnte …“', async () => {
+    expect((await loadLang('de')).friends.revenge.hint)
+      .toBe('Puzzles, die {{name}} noch nicht lösen konnte — knack sie und mach es besser!');
   });
 });

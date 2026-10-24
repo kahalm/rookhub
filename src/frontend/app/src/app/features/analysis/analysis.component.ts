@@ -529,7 +529,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.engineCandidates = lines.filter(l => !!l.pvUci[0]).map(l => ({ uci: l.pvUci[0], evalText: l.evalText }));
       this.shapes = lines.map((l, i) => {
         const u = l.pvUci[0];
-        return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: arrowBrush(i) } as DrawShape : null;
+        return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: arrowBrush(i),
+          // d5-rk-analyse-pfeile-nur-farbe: Nummer auf dem Pfeil = Marke in der Linienliste (nicht nur über Farbe).
+          label: { text: String(i + 1) } } as DrawShape : null;
       }).filter((s): s is DrawShape => !!s);
     }
     // Bewertungsleiste HALTEN, bis die neue Suche etwas Belastbares liefert. Jede Suche beginnt mit

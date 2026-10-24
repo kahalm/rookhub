@@ -114,7 +114,11 @@
               <mat-icon class="gap-icon">more_horiz</mat-icon>
               <span class="muted">{{ 'reconstruct.gap.here' | translate }}</span>
               @if (gapTarget.kind === Kind.Position) {
-                <button mat-stroked-button [disabled]="gapSearching() || busy()" (click)="closeGap(gapTarget)">
+                <!-- d5-rk-reconstruct-doppelte-aktionen: steht dieselbe Lücke ab 900 px rechts als Hauptknopf, entfällt
+                     der Umriss-Knopf hier (gap-close-dup, nur ab 900 px ausgeblendet — darunter fehlt der Ruhe-Block). -->
+                <button mat-stroked-button class="gap-close"
+                        [class.gap-close-dup]="editingId() === null && gapTarget === firstGap()"
+                        [disabled]="gapSearching() || busy()" (click)="closeGap(gapTarget)">
                   <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
                 </button>
                 <!-- Suchtiefe als Umschalter: wählt nur die Tiefe, gesucht wird allein über „Lücke schließen"
@@ -248,24 +252,20 @@
         @if (editingId() === null) {
           <!-- d3-rk-recon-detail-leere-rechte-spalte: ohne gewähltes Teil stand rechts nur ein Satz über der leeren Spalte.
                Jetzt die Stellung am Ende des letzten Teils als Vorschau, der Satz leise darunter und die nächsten Schritte.
-               Unter 900 px entfällt der Block (die Knöpfe stehen dort schon über der Teileliste). -->
+               Unter 900 px entfällt der Block (die Knöpfe stehen dort schon über der Teileliste).
+               d5-rk-reconstruct-doppelte-aktionen: „Züge/Stellung hinzufügen“ stehen nur noch über der Teileliste; hier
+               allein der nächste Schritt „Lücke schließen“, wenn es eine Lücke gibt. -->
           @if (previewFen(); as fen) {
             <app-chess-board class="preview-board" [fen]="fen" [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
           }
           <p class="muted small">{{ 'reconstruct.editorHint' | translate }}</p>
-          <div class="editor-actions idle-actions">
-            @if (firstGap(); as gap) {
+          @if (firstGap(); as gap) {
+            <div class="editor-actions idle-actions">
               <button mat-flat-button color="primary" [disabled]="gapSearching() || busy()" (click)="closeGap(gap)">
                 <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
               </button>
-            }
-            <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Moves)">
-              <mat-icon>timeline</mat-icon> {{ 'reconstruct.addMoves' | translate }}
-            </button>
-            <button mat-stroked-button [disabled]="busy()" (click)="startNew(Kind.Position)">
-              <mat-icon>grid_on</mat-icon> {{ 'reconstruct.addPosition' | translate }}
-            </button>
-          </div>
+            </div>
+          }
         } @else {
           @if (hasPrevious()) {
             <mat-checkbox [(ngModel)]="editContinues">{{ 'reconstruct.continuesLabel' | translate }}</mat-checkbox>

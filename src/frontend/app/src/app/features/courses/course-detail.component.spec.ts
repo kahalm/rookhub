@@ -9,6 +9,7 @@ import { CourseDetailComponent } from './course-detail.component';
 import { CourseDetail, CourseLine, CourseManageChapter, CourseService } from './course.service';
 import { CourseLanguageService } from './course-language.service';
 import { saveBookOffline } from '../puzzles/book-offline.util';
+import { AuthService } from '../../core/auth.service';
 
 /** Echte Sprachwahl mit fester Oberflächensprache — `getDetail` bekommt damit ein `lang`. */
 function courseLang(ui = 'de'): CourseLanguageService {
@@ -686,6 +687,36 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     // Kapitel ohne Aufgaben: leerer Platzhalter statt „0/0"
     expect(el.querySelectorAll('.chapter-progress mat-progress-bar').length).toBe(1);
     expect(el.querySelectorAll('.chapter-progress--none').length).toBe(1);
+  });
+
+  // d5-rk-stellungen-ohne-loesung-widerspruch: im Studienbuch keine Kennzahl „Stellungen ohne Lösung“ (= „Linien“).
+  it('Studienbuch: keine Kennzahl „Stellungen ohne Lösung“; Kurs mit Aufgaben + Infolinien zeigt sie', async () => {
+    const { el } = await render({ puzzleCount: 0, solvedCount: 0, progressPercent: 0, totalLines: 10, infoLineCount: 10 });
+    const dts = Array.from(el.querySelectorAll('.head-card dl.meta dt')).map(d => d.textContent!.trim());
+    expect(dts).toContain('courses.detail.lines');
+    expect(dts).not.toContain('courses.detail.positionLines');
+    TestBed.resetTestingModule();
+    document.querySelectorAll('app-course-detail').forEach(e => e.remove());
+    const { el: el2 } = await render({ puzzleCount: 3, infoLineCount: 2, totalLines: 5 });
+    const dts2 = Array.from(el2.querySelectorAll('.head-card dl.meta dt')).map(d => d.textContent!.trim());
+    expect(dts2).toContain('courses.detail.positionLines');
+  });
+
+  // d5-rk-quelldatei-interner-dateiname: erzeugter Name „user-u24-<GUID>.pgn“ nur für Admins.
+  it('eigener Kurs mit erzeugtem Dateinamen zeigt keine Quelldatei, Admin und echter Name schon', async () => {
+    const gen = 'user-u24-75272c3384724883b04eb98463bbd310.pgn';
+    const fileDd = (el: HTMLElement) => el.querySelector('.head-card dl.meta dd.mono');
+    const { el } = await render({ fileName: gen, canManage: true });
+    expect(fileDd(el)).withContext('Besitzer: kein erzeugter Name').toBeNull();
+    TestBed.resetTestingModule();
+    document.querySelectorAll('app-course-detail').forEach(e => e.remove());
+    const { el: named } = await render({ fileName: 'capablanca.pgn', canManage: true });
+    expect(fileDd(named)!.textContent).toContain('capablanca.pgn');
+    TestBed.resetTestingModule();
+    document.querySelectorAll('app-course-detail').forEach(e => e.remove());
+    spyOnProperty(AuthService.prototype, 'isAdmin', 'get').and.returnValue(true);
+    const { el: admin } = await render({ fileName: gen, canManage: true });
+    expect(fileDd(admin)!.textContent).withContext('Admin sieht ihn').toContain(gen);
   });
 
   it('Kapitelbalken sind gleich lang, egal wie breit der Zähler ist (b1-rk-kapitel-balken-versatz)', async () => {

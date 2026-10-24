@@ -533,7 +533,7 @@ describe('ClubAddPageComponent', () => {
   }));
 
   // UX-071: axe meldete aria-allowed-attr (critical) — role="tab" mit aria-pressed, ohne tabpanel und Pfeiltasten.
-  it('„PGN-Datei | Partieformular" ist ein Umschalter wie die übrigen: role=group, nur aria-pressed, keine tab-Rollen (UX-071)', fakeAsync(() => {
+  it('„Partiedaten | Partieformular" ist ein Umschalter wie die übrigen: role=group, nur aria-pressed, keine tab-Rollen (UX-071)', fakeAsync(() => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
@@ -542,6 +542,8 @@ describe('ClubAddPageComponent', () => {
     expect(group.getAttribute('aria-label')).toBe('Art');
     expect(el.querySelector('[role="tablist"], [role="tab"], [aria-selected]')).toBeNull();
     const [pgn, sheet] = Array.from(group.querySelectorAll('button')) as HTMLButtonElement[];
+    // d5-l-upload-tab-label-too-narrow: der Reiter deckt Datei, ChessBase-Datenbank, Lichess-Studie und Text ab.
+    expect([pgn.textContent!.trim(), sheet.textContent!.trim()]).toEqual(['Partiedaten', 'Partieformular']);
     expect([pgn.getAttribute('aria-pressed'), sheet.getAttribute('aria-pressed')]).toEqual(['true', 'false']);
     sheet.click();
     flushMicrotasks();

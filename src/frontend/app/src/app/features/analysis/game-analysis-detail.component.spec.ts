@@ -265,6 +265,46 @@ describe('GameAnalysisDetailComponent', () => {
       expect(b).toMatch(/\.board-col(\[[^\]]*\])?\{max-width:min\(760px,(calc\()?100vh-240px\)?\)/);
       expect(b).toMatch(/\.moves(\[[^\]]*\])?\{max-height:calc\(100vh-260px\)/);
     });
+
+    it('d5-rk-analysis-detail-laptop-leerraum: ab 1200 px füllt die Zugliste den Rest der Zeile, Ultrawide bleibt bei 640 px', () => {
+      expect(block('@media(min-width:1200px)')).toMatch(/\.moves-col(\[[^\]]*\])?\{flex:11420px;max-width:none;?\}/);
+      expect(block('@media(min-width:2400px)')).toMatch(/\.moves-col(\[[^\]]*\])?\{max-width:640px;?\}/);
+    });
+
+    it('d5-rk-analysis-detail-laptop-leerraum: bei 1366 px endet die Zugliste höchstens 24 px vor dem Seitenrand', () => {
+      // Rohtext (mit Leerzeichen): Grundregeln + Inhalt des 1200-px-Blocks, ohne die übrigen Media-Blöcke.
+      const raw = (((GameAnalysisDetailComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n')
+        .replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\[_nghost-%COMP%\]/g, '');
+      const media: string[] = [];
+      for (let i = raw.indexOf('@media'); i >= 0; i = raw.indexOf('@media', i + 1)) {
+        let depth = 0;
+        for (let j = raw.indexOf('{', i); j < raw.length; j++) {
+          if (raw[j] === '{') depth++;
+          if (raw[j] === '}' && --depth === 0) { media.push(raw.slice(i, j + 1)); break; }
+        }
+      }
+      const wide = media.find(m => /^@media \(min-width: 1200px\)/.test(m))!;
+      const base = media.reduce((acc, m) => acc.replace(m, ''), raw);
+      const style = document.createElement('style');
+      style.textContent = base + wide.slice(wide.indexOf('{') + 1, -1);
+      const host = document.createElement('div');
+      host.style.width = '1366px';
+      host.innerHTML = '<div class="gad-container" style="max-width:1240px"><div class="body">'
+        + '<div class="board-col" style="max-width:528px;flex-basis:528px;height:100px"></div>'
+        + '<div class="moves-col" style="height:100px"></div></div></div>';
+      document.head.appendChild(style);
+      document.body.appendChild(host);
+      const box = (host.querySelector('.gad-container') as HTMLElement).getBoundingClientRect();
+      const col = (host.querySelector('.moves-col') as HTMLElement).getBoundingClientRect();
+      // Rechter Rand des Inhalts = Container minus 12 px Polster.
+      expect(box.right - 12 - col.right).toBeLessThanOrEqual(24);
+      expect(col.top).toBeLessThan((host.querySelector('.board-col') as HTMLElement).getBoundingClientRect().bottom);
+      host.remove(); style.remove();
+    });
+
+    it('d5-rk-analyse-zugliste-karte-schmaler-als-brett: einspaltig sind Brett und Zugliste gleich breit', () => {
+      expect(block('@media(max-width:768.98px)')).toMatch(/\.board-col(\[[^\]]*\])?,\.moves-col(\[[^\]]*\])?\{flex-basis:100%;max-width:520px;?\}/);
+    });
   });
 
   it('setzt .more nur, solange unter dem sichtbaren Rand noch Züge liegen', () => {

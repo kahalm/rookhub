@@ -37,6 +37,16 @@ describe('_eink.scss (E-Ink-Modus)', () => {
     return out.join('\n');
   }
 
+  it('d5-rk-analyse-pfeile-nur-farbe: Linienmarke schwarz umrandet mit schwarzer Ziffer, Pfeil-Nummern schwarz', () => {
+    const host = mount('<span class="line-mark" style="background: rgb(255, 152, 0); color: #fff">1</span>');
+    setEinkActive(true);
+    const mark = host.querySelector('.line-mark') as HTMLElement;
+    expect(getComputedStyle(mark).backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(getComputedStyle(mark).color).toBe('rgb(0, 0, 0)');
+    expect(getComputedStyle(mark).boxShadow).toContain('rgb(0, 0, 0)');
+    expect(einkRuleText()).toMatch(/\.cg-custom-svgs circle\[stroke="white"\] \{ fill: rgb\(0, 0, 0\) !important; fill-opacity: 1 !important; \}/);
+  });
+
   it('Regeltext: Animationen, Übergänge und Smooth-Scroll für alle Elemente aus', () => {
     const css = einkRuleText();
     let all: CSSStyleRule | undefined;
@@ -168,6 +178,68 @@ describe('_eink.scss (E-Ink-Modus)', () => {
   it('d4-rk-progress-bulb-light-red: „mit Tipp“-Farbe im Modus dunkelgrau (Bedeutung trägt das Symbol)', () => {
     setEinkActive(true);
     expect(getComputedStyle(document.documentElement).getPropertyValue('--rh-hint').trim()).toBe('#4d4d4d');
+  });
+
+  it('d5-rk-eink-fokus-doppelrahmen: im Formularfeld ist der Feldrahmen der eine Fokusrahmen (3 px schwarz), kein Innenrahmen', () => {
+    const css = einkRuleText();
+    expect(css).toMatch(/html\.eink \.mat-mdc-form-field :is\(input, textarea, select, \.mat-mdc-select\):focus-visible \{ outline: none !important; \}/);
+    setEinkActive(true);
+    const root = getComputedStyle(document.documentElement);
+    expect(root.getPropertyValue('--mat-form-field-outlined-focus-outline-width').trim()).toBe('3px');
+    expect(root.getPropertyValue('--mat-form-field-outlined-focus-outline-color').trim()).toBe('#000');
+    expect(root.getPropertyValue('--mat-form-field-outlined-focus-label-text-color').trim()).toBe('#000');
+  });
+
+  it('d5-rk-eink-fokus-doppelrahmen: fokussiertes Eingabefeld im Formularfeld ohne Umriss, Knopf daneben behält ihn', () => {
+    const host = mount('<div class="mat-mdc-form-field"><input id="eink-ff-in"><button id="eink-ff-btn">x</button></div>'
+      + '<input id="eink-plain-in">');
+    setEinkActive(true);
+    const inField = host.querySelector('#eink-ff-in') as HTMLInputElement;
+    inField.focus();   // Textfelder sind bei Fokus immer :focus-visible
+    expect(inField.matches(':focus-visible')).toBeTrue();
+    expect(getComputedStyle(inField).outlineStyle).toBe('none');
+    const plain = host.querySelector('#eink-plain-in') as HTMLInputElement;
+    plain.focus();
+    expect(getComputedStyle(plain).outlineWidth).toBe('3px');
+  });
+
+  it('d5-rk-edit-umschalter-schwarz-gefuellt: gewähltes Werkbank-Segment weiß mit Innenrahmen statt schwarz gefüllt', () => {
+    componentStyle('.seg[x] button[aria-pressed="true"][x] { background: rgb(20, 20, 20); color: rgb(250, 250, 250); }');
+    const host = mount('<app-sheet-workbench><div x class="seg"><button x aria-pressed="false">Ersetzen</button>'
+      + '<button x aria-pressed="true">Davor einfügen</button></div></app-sheet-workbench>');
+    const on = host.querySelectorAll('button')[1];
+    expect(getComputedStyle(on).backgroundColor).toBe('rgb(20, 20, 20)');
+    setEinkActive(true);
+    const cs = getComputedStyle(on);
+    expect(cs.backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(cs.color).toBe('rgb(0, 0, 0)');
+    expect(cs.boxShadow).toContain('inset');
+  });
+
+  it('d5-rk-guess-anon-liste-ohne-innenabstand: die rahmenlose Listenkarte von /guess bleibt ohne Kartenrahmen', () => {
+    const host = mount('<app-guess-list><div class="lists single"><div class="mat-mdc-card start-card">Liste</div></div>'
+      + '<div class="mat-mdc-card other">Karte</div></app-guess-list>');
+    setEinkActive(true);
+    expect(getComputedStyle(host.querySelector('.start-card')!).borderTopStyle).toBe('none');
+    // Jede andere Karte behält den 2-px-Rahmen.
+    expect(getComputedStyle(host.querySelector('.other')!).borderTopWidth).toBe('2px');
+  });
+
+  it('d5-rk-eink-tipp-farbe: Tipp-Knopf weiß mit schwarzem Rahmen, Glühbirne in --rh-hint statt Bernstein', () => {
+    componentStyle(`.board-hint-tip[x] { border: 1px solid rgb(224, 169, 58); background: rgb(251, 241, 222); }
+      .board-hint-tip[x]:active { background: rgb(247, 228, 191); }
+      .board-hint-tip[x] mat-icon[x] { color: rgb(200, 136, 31); }`);
+    const host = mount('<button x class="board-hint-tip"><mat-icon x>lightbulb</mat-icon> Tipp (1/3)</button>');
+    const btn = host.querySelector('button')!;
+    expect(getComputedStyle(btn).backgroundColor).toBe('rgb(251, 241, 222)');
+    setEinkActive(true);
+    const cs = getComputedStyle(btn);
+    expect(cs.backgroundColor).toBe('rgb(255, 255, 255)');
+    expect(cs.borderTopWidth).toBe('2px');
+    expect(cs.borderTopColor).toBe('rgb(0, 0, 0)');
+    expect(cs.color).toBe('rgb(0, 0, 0)');
+    expect(getComputedStyle(host.querySelector('mat-icon')!).color).toBe('rgb(77, 77, 77)');
+    expect(einkRuleText()).toContain('.board-hint-tip:active');
   });
 
   @Component({ standalone: true, imports: [FlashcardBoardComponent],

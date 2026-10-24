@@ -571,8 +571,48 @@ describe('ReconstructDetailComponent', () => {
     expect(editor.querySelector('app-chess-board.preview-board')).not.toBeNull();
     const labels = Array.from(editor.querySelectorAll('.idle-actions button')).map(b => b.textContent!.trim());
     expect(labels.some(l => l.includes('reconstruct.gap.close'))).toBeTrue();
-    expect(labels.some(l => l.includes('reconstruct.addMoves'))).toBeTrue();
-    expect(labels.some(l => l.includes('reconstruct.addPosition'))).toBeTrue();
+    // d5-rk-reconstruct-doppelte-aktionen: „Züge/Stellung hinzufügen“ stehen nur über der Teileliste.
+    expect(labels.some(l => l.includes('reconstruct.addMoves'))).toBeFalse();
+    expect(labels.some(l => l.includes('reconstruct.addPosition'))).toBeFalse();
+  });
+
+  // d5-rk-reconstruct-doppelte-aktionen: im Ruhezustand jede Aktion nur einmal sichtbar (Karma läuft ≥ 900 px breit).
+  it('Ruhezustand: „Züge/Stellung hinzufügen“ und „Lücke schließen“ je nur einmal sichtbar', () => {
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    const moves = part({ id: 1, endFen: MIDDLE });
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null, endFen: MIDDLE });
+    http.expectOne('/api/reconstructions/5').flush(data([moves, position]));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(el);
+    try {
+      expect(window.innerWidth).toBeGreaterThanOrEqual(900);
+      const visible = (key: string) => Array.from(el.querySelectorAll('button'))
+        .filter(b => b.textContent!.includes(key) && getComputedStyle(b).display !== 'none'
+          && getComputedStyle(b.closest('section')!).display !== 'none');
+      expect(visible('reconstruct.addMoves').length).toBe(1);
+      expect(visible('reconstruct.addPosition').length).toBe(1);
+      const close = visible('reconstruct.gap.close');
+      expect(close.length).toBe(1);
+      expect(close[0].closest('.idle-actions')).not.toBeNull();   // der gefüllte Hauptknopf rechts
+      // Die Lückenzeile behält ihren Knopf im Code (unter 900 px fehlt der Ruhe-Block) — nur als Duplikat markiert.
+      expect(el.querySelector('.gap-row .gap-close')!.classList).toContain('gap-close-dup');
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('beim Bearbeiten eines Teils bleibt „Lücke schließen“ in der Lückenzeile', () => {
+    const moves = part({ id: 1, endFen: MIDDLE });
+    const position = part({ id: 2, ordinal: 1, kind: PartKind.Position, fen: MIDDLE, moves: null, endFen: MIDDLE });
+    const fixture = TestBed.createComponent(ReconstructDetailComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/reconstructions/5').flush(data([moves, position]));
+    fixture.detectChanges();
+    fixture.componentInstance.edit(fixture.componentInstance.data()!.parts[0]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.gap-row .gap-close')!.classList).not.toContain('gap-close-dup');
   });
 });
 

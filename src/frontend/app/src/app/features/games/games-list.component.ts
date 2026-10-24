@@ -32,6 +32,7 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { PctPipe, formatPct } from '../../shared/format/pct';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
 
@@ -48,14 +49,17 @@ export type AnalysisState = 'none' | 'running' | 'done';
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
-    TranslatePipe, PctPipe,
+    TranslatePipe, PctPipe, HelpHintComponent,
   ],
   template: `
     <div class="games-page">
       <div class="page-head">
         <!-- Seitenkopf nach DESIGN 5.1: Titel links, Aktionen gruppiert rechts (d2-rk-games-kopfaktionen). -->
         <div class="header">
-          <h1>{{ 'games.title' | translate }}</h1>
+          <!-- d5-rk-games-erster-blick-vorlauf: in niedrigen Fenstern (Boox 200 %) steht der Erklärsatz im ⓘ am Titel
+               (DESIGN 4.6 „Erklärsatz im ⓘ am Titel“) — nur bei gefüllter Liste; im Leerzustand bleibt er sichtbar
+               (er nennt den RepCheck-Weg). -->
+          <h1>{{ 'games.title' | translate }}@if (games.length > 0) { <app-help-hint class="hint-i" icon="info_outline" [text]="'games.hint' | translate" />}</h1>
           <div class="header-actions">
             <!-- d3-rk-games-leer-pgn-doppelt: im Leerzustand steht die eine Aktion in der Leerkarte (DESIGN 5.10). -->
             @if (loading || games.length > 0) {
@@ -76,7 +80,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
             }
           </div>
         </div>
-        <p class="hint">{{ 'games.hint' | translate }}</p>
+        <p class="hint" [class.has-games]="games.length > 0">{{ 'games.hint' | translate }}</p>
         <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
              wenn es überhaupt welche gibt, sonst stünde ein Schalter da, der nichts tut. -->
         @if (withOpenMistakes() > 0) {
@@ -297,6 +301,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .games-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
     .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
     .header h1 { margin: 0; }
+    /* ⓘ mit dem Erklärsatz nur in niedrigen Fenstern (Block unten), sonst steht der Satz darunter. */
+    .hint-i { display: none; }
     .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; text-wrap: pretty; }
     .center { display: flex; justify-content: center; padding: 40px; }
@@ -324,6 +330,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
       .games-page { padding-top: 8px; }
       .hint { margin-bottom: 8px; }
       .filters-bar { margin: 4px 0 8px; }
+      /* d5-rk-games-erster-blick-vorlauf: erste Partie bei 44 % — Erklärsatz ins ⓘ am Titel, Engine-Zeile knapper. */
+      .hint.has-games { display: none; }
+      .hint-i { display: inline-flex; }
     }
     .classifiers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
     .chip.tag { background: color-mix(in srgb, var(--rh-info, #1976d2) 14%, transparent); }
@@ -375,6 +384,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .no-engine { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; font-size: 0.875rem;
       color: var(--mat-sys-on-surface-variant); }
     .no-engine mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; }
+    @media (max-width: 768px) and (max-height: 720px) {
+      .no-engine { margin: 4px 0; font-size: .8125rem; }
+    }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: 0.82rem; }
     .no-analysis { color: color-mix(in srgb, currentColor 45%, transparent); }

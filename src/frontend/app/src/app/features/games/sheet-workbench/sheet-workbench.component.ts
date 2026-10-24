@@ -47,6 +47,8 @@ export class SheetWorkbenchComponent {
   readonly savedSans = input<string[]>([]);
   readonly boardTheme = input('brown');
   readonly pieceSet = input('cburnett');
+  /** Engine-Häkchen und -Auswahl als Material-Felder (RookHub, d5-rk-edit-native-engine-select); LeagueHub bleibt nativ. */
+  readonly materialControls = input(false);
 
   readonly zoom = signal(false);
   /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */

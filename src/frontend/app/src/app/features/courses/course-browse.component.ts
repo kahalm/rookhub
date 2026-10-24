@@ -145,10 +145,13 @@ interface ChapterGroup {
               @for (line of (chapterLinesShown(g)); track line.id) {
                 <div class="line-row" [class.active]="selected?.id === line.id">
                   <!-- Persistente Flashcard-Markierung (Server, geräteübergreifend). -->
-                  <input type="checkbox" class="line-pick" [checked]="marked.has(line.id)"
-                         (click)="toggleMark(line, $event)"
-                         [matTooltip]="'courses.flashcards.pick' | translate"
-                         [attr.aria-label]="'courses.flashcards.pick' | translate" />
+                  <!-- Das Label ist die Trefferfläche (am Handy 44 × 44 px, d5-rk-browse-linienzeile-tippziel-klein). -->
+                  <label class="line-pick-hit">
+                    <input type="checkbox" class="line-pick" [checked]="marked.has(line.id)"
+                           (click)="toggleMark(line, $event)"
+                           [matTooltip]="'courses.flashcards.pick' | translate"
+                           [attr.aria-label]="'courses.flashcards.pick' | translate" />
+                  </label>
                   <button class="line-item" role="option"
                           [attr.aria-selected]="selected?.id === line.id"
                           (click)="selectLine(line)">
@@ -279,7 +282,9 @@ interface ChapterGroup {
     .browse-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 16px; }
     .browse-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .head-spacer { flex: 1; }
-    .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary); }
+    .line-pick-hit { display: inline-flex; align-items: center; justify-content: center; flex: none;
+      align-self: stretch; padding: 0 2px 0 6px; cursor: pointer; }
+    .line-pick { margin: 0; cursor: pointer; accent-color: var(--mat-sys-primary); }
     .head-text { min-width: 0; }
     .head-text h1 { margin: 0; font-size: 1.25rem; }
     .sub { margin: 2px 0 0; color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; }
@@ -339,6 +344,14 @@ interface ChapterGroup {
     .line-action mat-icon { font-size: 17px; width: 17px; height: 17px; }
     .line-action.faved { opacity: 1; }
     .line-action.faved mat-icon { color: #e53935; }
+    /* d5-rk-browse-linienzeile-tippziel-klein (DESIGN: Tippziele ≥ 44 px): am Handy/Touch waren Linienzeilen ~31 px
+       hoch, Kästchen 13 px und Herz/Teilen 30 px — jetzt 44-px-Zeile, Kästchen in 44 × 44 Trefferfläche, Knöpfe 44 px. */
+    @media (pointer: coarse), (max-width: 599.98px) {
+      .line-row { min-height: 44px; }
+      .line-pick-hit { min-width: 44px; min-height: 44px; padding: 0; }
+      .line-pick { width: 20px; height: 20px; }
+      .line-action { width: 44px; height: 44px; line-height: 44px; --mdc-icon-button-state-layer-size: 44px; }
+    }
 
     .board-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     /* UI-Sweep 2026-10-11 (d2-rk-browse-gross-brett-klein): am großen Bildschirm wächst das Brett mit der Höhe

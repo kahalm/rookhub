@@ -137,9 +137,24 @@ describe('RepertoireTrainerComponent Kopf + Leerzustand (d3)', () => {
     expect(menu!.textContent).toContain('srConfig.title');
   });
 
+  // d5-rk-trainer-mobil-menue-eigene-zeile + d5-rk-trainer-mobile-menue-eigene-zeile
+  it('Leerzustand am Handy: das ⋮ steht in der Titelzeile, nicht allein in einer dritten Zeile', async () => {
+    const el = await renderQuiz('Leer');
+    expect(el.querySelector('.bar > button.more')!.classList).toContain('more-solo');
+    const css = ((RepertoireTrainerComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
+      .join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
+    const at = css.indexOf('@media(max-width:599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const media = css.slice(at, css.indexOf('}}', at));
+    const rule = media.slice(media.indexOf('.more-solo'));
+    expect(rule).toContain('order:0');
+    expect(rule).toContain('margin-left:0');
+  });
+
   it('mit Linien im Pool sind Umschalter und „Fortschritt zurücksetzen“ da', async () => {
     const el = await renderQuiz('Voll', DUE);
     expect(el.querySelector('.bar .freq-toggle')).not.toBeNull();
+    expect(el.querySelector('.bar > button.more')!.classList).not.toContain('more-solo');
     (el.querySelector('.bar > button.more') as HTMLButtonElement).click();
     lastFixture.detectChanges();
     await lastFixture.whenStable();

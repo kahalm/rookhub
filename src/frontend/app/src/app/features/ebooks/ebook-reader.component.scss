@@ -109,9 +109,11 @@
 .rd-side-part.rd-eval { white-space: nowrap; }
 .rd-sol-icon { margin-left: 4px; vertical-align: -3px; font-size: 15px; width: 15px; height: 15px; cursor: help; }
 .rd-panel-close { display: none; }
-.rd-caption { margin: 0; font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* d5-rk-ebook-titelzeile-fehlt-in-modi: Kopfzeilen schrumpfen in der Flex-Spalte .rd-panel nicht (overflow:hidden machte
+   ihre Mindesthöhe 0 — je nach Modus war die Buchzeile halb oder ganz weg); das Panel scrollt stattdessen. */
+.rd-caption { flex: none; margin: 0; font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .rd-eval { font-variant-numeric: tabular-nums; }
-.rd-sol-note { display: flex; align-items: center; gap: 4px; margin: 0; font-size: .82rem; opacity: .8;
+.rd-sol-note { flex: none; display: flex; align-items: center; gap: 4px; margin: 0; font-size: .82rem; opacity: .8;
   mat-icon { font-size: 16px; width: 16px; height: 16px; } }
 .rd-sol-note--warn { color: var(--rh-warn); opacity: 1; }
 .rd-panel-empty { text-align: center; padding: 2rem 1rem; }

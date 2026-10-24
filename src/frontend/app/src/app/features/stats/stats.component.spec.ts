@@ -197,6 +197,15 @@ describe('StatsComponent', () => {
     // z2 (z2-rk-stats-letzte-liste): die Zahl ist als Puzzle-Wertung beschriftet, ein Pfeil zeigt die antippbare Zeile.
     expect(item.textContent).toContain('stats.puzzleRating');
     expect(item.querySelector('mat-icon.ri-go')?.textContent?.trim()).toBe('chevron_right');
+    // d5-rk-stats-mobile-puzzle-label: die Wertung steht allein vorn (nichts davor, das sie zu „…“ kürzt),
+    // Datum und Zeit in der zweiten Zeile.
+    const title = item.querySelector('.ri-title') as HTMLElement;
+    expect(title.textContent!.trim()).toBe('stats.puzzleRating');
+    expect(title.scrollWidth).toBeLessThanOrEqual(title.clientWidth + 1);
+    const sub = item.querySelector('.ri-sub')!.textContent!;
+    expect(sub).toContain('64 s');
+    expect(sub).toContain('·');
+    expect(sub).toMatch(/26/);   // Kurzdatum (10/11/26 …)
   });
 });
 
@@ -474,5 +483,25 @@ describe('StatsComponent d4', () => {
     const css = ((StatsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
       .replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
     expect(css).toMatch(/@media \(max-width: 599\.98px\) \{ ?\.chart-card \.level-field \{ ?width: 100%/);
+  });
+});
+
+/** Sprachdatei wie im Browser laden (Karma liefert public/ unter / oder /base/). */
+async function loadLang(lang: string): Promise<any> {
+  for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+    const res = await fetch(url).catch(() => null);
+    if (res?.ok) return res.json();
+  }
+  throw new Error('i18n ' + lang + ' nicht gefunden');
+}
+
+// d5-rk-stats-mobile-puzzle-label: „Puzzle 1049“ las sich wie eine Puzzle-Nummer — beschriftet ist die Wertung.
+describe('stats.puzzleRating (d5)', () => {
+  it('nennt die Wertung, nicht „Puzzle“', async () => {
+    expect((await loadLang('en')).stats.puzzleRating).toBe('Rated {{rating}}');
+    expect((await loadLang('de')).stats.puzzleRating).toBe('Wertung {{rating}}');
+    for (const l of ['en', 'de', 'hr', 'hu']) {
+      expect((await loadLang(l)).stats.puzzleRating).not.toMatch(/^(Puzzle|Zagonetka|Feladvány)/);
+    }
   });
 });

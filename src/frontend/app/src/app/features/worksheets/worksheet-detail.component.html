@@ -191,8 +191,10 @@
               <span class="wd-no">{{ i + 1 }}</span>
             </div>
 
+            <!-- Ohne Koordinaten: bei 140–168 px Brett wären a–h/1–8 nur ~5–6 px groß (d5-rk-blattbrett-koordinaten-winzig);
+                 auf dem Ausdruck (worksheet-print) bleiben sie. -->
             <app-flashcard-board class="wd-board" [fen]="item.fen" [orientation]="item.orientation"
-                                 [pieceSet]="pieceSet" [coordinates]="true" />
+                                 [pieceSet]="pieceSet" />
 
             <div class="wd-fields">
               <span class="wd-turn">

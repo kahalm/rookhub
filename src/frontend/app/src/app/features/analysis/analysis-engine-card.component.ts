@@ -122,7 +122,7 @@ export interface EngineChoice { id: string; name: string; tag: string | null }
             <div class="lines">
               @for (l of displayLines; track $index; let i = $index) {
                 <div class="line-row">
-                  <span class="line-mark" [style.background]="lineColor(i)" aria-hidden="true"></span>
+                  <span class="line-mark" [style.background]="lineColor(i)" aria-hidden="true">{{ i + 1 }}</span>
                   <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
                   <span class="line-san">{{ l.san | san:'text' }}</span>
                 </div>
@@ -195,8 +195,11 @@ export interface EngineChoice { id: string; name: string; tag: string | null }
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
     .line-row { display: flex; gap: 8px; font-size: .9rem; }
-    .line-mark { flex: 0 0 auto; align-self: center; width: 10px; height: 10px; border-radius: 50%;
-      box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent); }
+    /* d5-rk-analyse-pfeile-nur-farbe (DESIGN 3.6): die Marke trägt die Nummer der Linie — derselbe Text steht als
+       Beschriftung auf ihrem Pfeil, Zuordnung also auch ohne Farbe (E-Ink: _eink.scss). */
+    .line-mark { flex: 0 0 auto; align-self: center; display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%; font-size: 11px; font-weight: 700; line-height: 1; color: #fff;
+      font-variant-numeric: tabular-nums; box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent); }
     /* Bewertung aus den Zustands-Tokens (UX-015): die festen Hellthema-Toene #1b5e20/#b71c1c hatten auf der dunklen
        Karte 2,2:1 bzw. 2,6:1. */
     .line-eval { font-weight: 700; min-width: 48px; font-variant-numeric: tabular-nums; color: var(--rh-success); }

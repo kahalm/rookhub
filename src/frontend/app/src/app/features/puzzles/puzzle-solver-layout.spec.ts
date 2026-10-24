@@ -282,9 +282,23 @@ describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-sc
     expect(after(comment, status)).withContext('vor der Status-Card').toBeTrue();
     expect(comment.classList).toContain('ctx-comment-long');
     expect(comment.querySelector('.ctx-comment-expand')).withContext('„Ganz lesen“').not.toBeNull();
-    const body = comment.querySelector('.ctx-comment-body') as HTMLElement;
-    expect(getComputedStyle(body).maxHeight).withContext('auf ~5 Zeilen gekürzt').not.toBe('none');
-    expect(getComputedStyle(body).overflow).toBe('hidden');
+    // Gekürzt werden nur die Absätze (.ctx-comment-text); „Ganz lesen“ liegt NICHT im gekappten Element
+    // (d5-rk-kommentar-abgeschnitten-ohne-link / -fenster-link-verblasst / -kasten-abgeschnitten).
+    const text = comment.querySelector('.ctx-comment-text') as HTMLElement;
+    expect(getComputedStyle(text).maxHeight).withContext('auf ~5 Zeilen gekürzt').not.toBe('none');
+    expect(getComputedStyle(text).overflow).toBe('hidden');
+    const expand = comment.querySelector('.ctx-comment-expand') as HTMLElement;
+    expect(text.contains(expand)).withContext('„Ganz lesen“ außerhalb der Kappung').toBeFalse();
+    for (let a = expand.parentElement; a && a !== comment; a = a.parentElement) {
+      expect(getComputedStyle(a).overflow).withContext('kein kappender Vorfahr').not.toBe('hidden');
+      expect(getComputedStyle(a).maxHeight).withContext('kein gekappter Vorfahr').toBe('none');
+    }
+    const box = comment.getBoundingClientRect();
+    const btn = expand.getBoundingClientRect();
+    expect(btn.height).toBeGreaterThan(0);
+    expect(btn.top).toBeGreaterThanOrEqual(box.top);
+    expect(btn.bottom).withContext('Knopf ganz im Kasten').toBeLessThanOrEqual(box.bottom + 0.5);
+    expect(btn.top).withContext('Knopf unter dem gekürzten Text').toBeGreaterThanOrEqual(text.getBoundingClientRect().bottom - 0.5);
   });
 
   it('ohne Kommentar kein leerer Block', () => {

@@ -94,6 +94,38 @@ describe('SheetEngineComponent', () => {
     expect(cs.accentColor).not.toBe('auto');
   });
 
+  // d5-rk-edit-native-engine-select: in RookHub (material) Häkchen und Auswahl als Material-Felder, kein natives select
+  it('material: mat-checkbox + mat-select (outline) statt nativer Felder, Schalten und Wählen wirken wie nativ', async () => {
+    const f = create();
+    f.componentRef.setInput('material', true);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('select')).toBeNull();
+    expect(el.querySelector('input[type=checkbox]:not(.mdc-checkbox__native-control)')).toBeNull();
+    expect(el.querySelector('mat-form-field.mat-form-field-appearance-outline mat-select')).toBeTruthy();
+    expect(el.querySelector('mat-form-field mat-label')!.textContent).toContain('sheetEdit.engine.pick');
+    (el.querySelector('mat-checkbox input') as HTMLInputElement).click();
+    f.detectChanges();
+    expect(f.componentInstance.on()).toBeTrue();
+    // Auswahl öffnen: Browser-Stockfish + Engines ohne Hintergrund, offline gesperrt
+    (el.querySelector('.mat-mdc-select-trigger') as HTMLElement).click();
+    f.detectChanges();
+    await f.whenStable();
+    const opts = Array.from(document.querySelectorAll('mat-option')) as HTMLElement[];
+    expect(opts.length).toBe(3);
+    expect(opts[2].getAttribute('aria-disabled')).toBe('true');
+    opts[1].click();
+    f.detectChanges();
+    expect(f.componentInstance.engine()).toBe('rhe_lc0');
+    expect(readScanEngineChoice()).toEqual({ on: true, engine: 'rhe_lc0' });
+  });
+
+  it('ohne material (LeagueHub) bleiben die nativen Felder', () => {
+    const el = create().nativeElement as HTMLElement;
+    expect(el.querySelector('select.se-pick')).toBeTruthy();
+    expect(el.querySelector('mat-select')).toBeNull();
+  });
+
   it('ist standardmäßig aus und rechnet nichts', () => {
     const f = create();
     expect(f.componentInstance.on()).toBeFalse();

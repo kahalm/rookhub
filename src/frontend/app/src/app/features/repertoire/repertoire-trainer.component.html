@@ -37,8 +37,10 @@
           <mat-icon>{{ freqOrder ? 'check' : 'sort' }}</mat-icon>{{ 'repertoireTrainer.freqOrder' | translate }}
         </button>
       }
-      <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet. -->
-      <button mat-icon-button class="more" [matMenuTriggerFor]="trainerMenu" [appIconLabel]="'common.moreActions' | translate">
+      <!-- Config/Reset verwalten Server-Zustand → in einer Offline-Session ausgeblendet.
+           d5-rk-trainer-mobil-menue-eigene-zeile: im Leerzustand fehlt der Umschalter — dann steht das ⋮ am Handy
+           in der Titelzeile statt allein in einer dritten Zeile (DESIGN 5.5). -->
+      <button mat-icon-button class="more" [class.more-solo]="phase === 'EMPTY'" [matMenuTriggerFor]="trainerMenu" [appIconLabel]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #trainerMenu="matMenu">

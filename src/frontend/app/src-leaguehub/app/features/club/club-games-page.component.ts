@@ -55,7 +55,7 @@ type Side = 'white' | 'black';
                   title="Mehr zu den Vereinspartien" (click)="infoOpen.set(!infoOpen())">i</button></p>
         @if (infoOpen()) {
           <div class="info-panel"><p class="note">Partien, die Mitglieder von {{ clubName() }} hochgeladen haben — sie stehen auch auf den
-            Spielerkarten der Gegner. Vom Datum bleibt nur das Jahr; „{{ anon }}“ steht für ein Mitglied, das seinen Namen nicht zeigt.</p></div>
+            Spielerkarten der Gegner. Vom Datum bleibt nur das Jahr.</p></div>
         }
       </section>
 

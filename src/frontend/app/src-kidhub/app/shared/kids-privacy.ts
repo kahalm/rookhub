@@ -219,5 +219,13 @@ export const KID_PRIVACY_STYLES = `
     --mat-button-filled-label-text-weight: 800;
     box-shadow: 0 5px 0 var(--kid-shadow);
   }
+  /* d5-k-konto-loeschen-aufklapper-leer: zugeklappt war ein Eltern-Aufklapper nur eine ▸-Zeile unter einer Trennlinie —
+     als geschlossene Flaeche (Rahmen + Tönung, auch aufgeklappt) sieht man, dass er Inhalt birgt und wo er endet.
+     Der Ruecklink unten entfaellt hier: „← Start" steht ueber der Karte (DESIGN 2 Nr. 9/10, ein Weg zurueck). Die
+     geteilte Komponente bleibt unveraendert; die Datenschutzseite behaelt ihren Ruecklink. */
+  :host ::ng-deep app-account-deletion details.kid-parent {
+    border: 1px solid #dbe5f0; border-radius: 14px; background: #f4f8fc; padding: 0 14px; margin: 10px 0 18px;
+  }
+  :host ::ng-deep app-account-deletion p.back { display: none; }
   :host ::ng-deep app-account-deletion .delete-now:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--kid-shadow); }
 `;

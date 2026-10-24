@@ -2997,8 +2997,8 @@
     "accuracyHint": "Accuracy white · black (from the game analysis)",
     "movesCount": "{{count}} moves",
     "mistakes": {
-      "button": "Replay your mistakes ({{count}})",
-      "buttonSide": "Replay {{player}}’s mistakes ({{count}})",
+      "button": "Replay your mistakes ({{count}})",
+      "buttonSide": "Replay {{player}}’s mistakes ({{count}})",
       "title": "Replay your mistakes",
       "titleSide": "Replay {{player}}’s mistakes",
       "none": "Nothing to replay for this side.",
@@ -3303,7 +3303,7 @@
     }
   },
   "stats": {
-    "puzzleRating": "Puzzle {{rating}}",
+    "puzzleRating": "Rated {{rating}}",
     "title": "Statistics",
     "modeStandard": "Standard",
     "modeCourse": "Courses",
@@ -4483,7 +4483,7 @@
     },
     "profile": {
       "title": "My profile",
-      "person": "Name and email",
+      "person": "Name, email and player IDs",
       "nameHelp": "The tournament history looks you up on chess-results, and it searches by NAME — there is no lookup by number there. Without a last name this site cannot show you a history.\n\nThe display name is what other people see. Your login name is never shown.",
       "identityHelp": "Two people can share a name, and the search by name returns both. A FIDE ID or a chess-results ID decides which of them is you.\n\nWithout one, the history shows every tournament of everyone with your name — and you will notice, because there will be tournaments in it you never played.\n\nBoth numbers are on your own chess-results player page.",
       "saveError": "Could not be saved. Please try again.",

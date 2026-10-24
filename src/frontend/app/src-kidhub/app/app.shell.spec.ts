@@ -120,6 +120,8 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
     expect(el.querySelector('details.kid-parent[open]')).toBeNull();
     expect(getComputedStyle(el.querySelector<HTMLElement>('app-privacy .toc')!).display).toBe('none');
     expect(getComputedStyle(el.querySelector<HTMLElement>('app-privacy mat-card-content')!).fontSize).toBe('16px');
+    // d5-k-konto-loeschen-aufklapper-leer blendet den Rücklink nur auf der kurzen Löschseite aus — die lange Datenschutzseite behält ihn.
+    expect(el.querySelector<HTMLElement>('app-privacy p.back')!.checkVisibility()).toBeTrue();
 
     // Auf anderen Seiten kein zweiter Ruecklink in der Huelle.
     await TestBed.inject(Router).navigateByUrl('/levels');
@@ -155,6 +157,16 @@ describe('KidHub-Huelle (UI-Sweep 2026-10-10)', () => {
     expect(details).not.toBeNull();
     expect(details.hasAttribute('open')).toBeFalse();
     expect(el.querySelector('app-account-deletion .kid-short')).not.toBeNull();
+    // d5-k-konto-loeschen-aufklapper-leer: Eltern-Aufklapper als geschlossene Fläche (Rahmen, Tönung, Radius), auch zu.
+    for (const d of Array.from(el.querySelectorAll<HTMLElement>('app-account-deletion details.kid-parent'))) {
+      const ds = getComputedStyle(d);
+      expect(ds.borderLeftWidth).withContext('Rahmen rundum').toBe('1px');
+      expect(ds.borderBottomStyle).toBe('solid');
+      expect(ds.borderTopLeftRadius).toBe('14px');
+      expect(ds.backgroundColor).toBe('rgb(244, 248, 252)');
+    }
+    // … und nur EIN Weg zurück: „← Start" oben, der Rücklink der geteilten Seite ist hier ausgeblendet.
+    expect(el.querySelector<HTMLElement>('app-account-deletion p.back')!.checkVisibility()).withContext('kein zweiter Rücklink').toBeFalse();
 
     // a1-k-deletion-fachjargon: auch die Anleitung (☰ → Konto → Profil, PGN, Repertoires) ist für Eltern zugeklappt,
     // der Kindersatz steht direkt unter der Einleitung, der Knopf bleibt sichtbar.

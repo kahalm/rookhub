@@ -84,7 +84,7 @@ const SAVE_DEBOUNCE_MS = 1500;
       <!-- UX-071: ein Umschalter wie die übrigen von LeagueHub (role=group + aria-pressed). Vorher role=tab MIT aria-pressed
            (axe: aria-allowed-attr, critical), ohne tabpanel und ohne Pfeiltasten. -->
       <div class="seg club-kind" role="group" aria-label="Art">
-        <button type="button" [attr.aria-pressed]="kind() === 'pgn'" (click)="setKind('pgn')">PGN-Datei</button>
+        <button type="button" [attr.aria-pressed]="kind() === 'pgn'" (click)="setKind('pgn')">Partiedaten</button>
         <button type="button" [attr.aria-pressed]="kind() === 'formular'" (click)="setKind('formular')">Partieformular</button>
       </div>
 

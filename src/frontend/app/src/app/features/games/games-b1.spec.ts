@@ -79,10 +79,10 @@ describe('UI-Sweep b1 — Partie-Seite (SharedGameComponent)', () => {
     expect(all).toMatch(/\.moves-section \{[^}]*overflow: auto/);
   });
 
-  it('b1-rk-partie-grund-unter-knopf (Nachprüfung): am Tablet Hülle so breit wie der Knopf, ⋮ direkt daneben', () => {
+  it('b1-rk-partie-grund-unter-knopf (Nachprüfung, seit d5 abgelöst): am Tablet keine Hülle mehr, ⋮ ohne Sonderabstand', () => {
     const tablet = block(all, '@media (min-width: 769px) and (max-width: 1279.98px)');
-    expect(tablet).toContain('.analyze-wrap { align-items: flex-start; width: max-content; min-width: 0; }');
-    expect(tablet).toContain('.analyze-wrap + .game-menu { margin-left: -4px; }');
+    expect(tablet).toContain('.analyze-wrap { display: contents; }');
+    expect(tablet).not.toContain('.analyze-wrap + .game-menu');
   });
 });
 

@@ -89,6 +89,12 @@ interface CategoryDef {
     .lb-page { max-width: 1100px; margin: 0 auto; padding: 1rem; }
     .lb-title { display: flex; align-items: center; gap: 0.5rem; }
     .lb-period { margin-bottom: 1rem; flex-wrap: wrap; }
+    /* d5-rk-bestenlisten-zeitraum-hoehe: am Handy 44 px hohe Segmente (DESIGN 2 Grundsatz 5; Muster wie die
+       Halbzüge der Rekonstruktion, d3-rk-recon-halbzuege-tippziel-klein). */
+    @media (max-width: 599.98px) {
+      .lb-period { --mat-button-toggle-height: 44px; }
+      .lb-period ::ng-deep .mat-button-toggle-label-content { line-height: 44px; }
+    }
     .lb-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
     /* UI-Sweep a1 (a1-rk-bestenlisten-raster): vier Kategorien als 1 / 2 / 4 Spalten — mit auto-fit stand am PC die
        vierte Karte allein in der zweiten Zeile (3 + 1). */

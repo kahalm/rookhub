@@ -151,6 +151,9 @@ describe('ClubScanPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(el.textContent).toContain('Partie nicht gefunden');
+    // d5-l-partie-nicht-gefunden-satzbau: kein bezugloses „Sie" neben dem „du", keine schiefe Klammer.
+    const gate = el.querySelector('section.gate p')!.textContent!.trim();
+    expect(gate).toBe('Die Partie ist gelöscht, oder du darfst sie nicht korrigieren — das dürfen nur, wer sie hochgeladen hat, und die Verwalter.');
   }));
 
   it('übernimmt Kopfdaten und springt auf die unsichere Stelle; die Vorschau zeigt „Testdorf" statt meines Namens', fakeAsync(() => {

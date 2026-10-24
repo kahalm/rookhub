@@ -82,6 +82,9 @@ html.eink .mat-mdc-snack-bar-container .mdc-snackbar__surface {
   box-shadow: none !important;
   border: var(--eink-line) solid #000;
 }
+// d5-rk-guess-anon-liste-ohne-innenabstand: die Listenkarte von /guess ist sonst rahmenlos (im Reiter bzw. ohne Konto
+// bündig zur Seite, ohne Seitenpolster) — mit dem Kartenrahmen oben klebten Suchfeld, Titel und „Spielen“ am Rand.
+html.eink app-guess-list .lists .start-card { border: none; }
 html.eink .mat-mdc-snack-bar-container .mdc-snackbar__surface { background: #fff !important; color: #000 !important; }
 html.eink .mat-mdc-snack-bar-container .mat-mdc-snack-bar-label { color: #000 !important; }
 // Aktion („Schließen“ …): Material färbt sie inverse-primary (blasses Hellblau für die dunkle Fläche) — auf der weißen
@@ -107,12 +110,28 @@ html.eink :focus-visible {
   outline: 3px solid #000 !important;
   outline-offset: 2px;
 }
+// d5-rk-eink-fokus-doppelrahmen / d5-rk-eink-login-feld-schwarzer-block: im Material-Formularfeld traf die Regel darüber
+// auch das Eingabeelement — innen ein 3-px-Balken, außen der blaue Feldrahmen, die schwebende Beschriftung angeschnitten.
+// Dort ist der Feldrahmen selbst der EINE Fokusrahmen: 3 px schwarz, Beschriftung schwarz. Knöpfe im Feld (Passwort
+// zeigen …) behalten den Fokusrahmen oben.
+html.eink .mat-mdc-form-field :is(input, textarea, select, .mat-mdc-select):focus-visible { outline: none !important; }
+html.eink {
+  --mat-form-field-outlined-focus-outline-width: 3px;
+  --mat-form-field-outlined-focus-outline-color: #000;
+  --mat-form-field-outlined-focus-label-text-color: #000;
+}
 html.eink .mat-button-toggle-checked,
 html.eink [aria-pressed='true'],
 html.eink [aria-current='page'],
 html.eink [aria-selected='true'] {
   box-shadow: inset 0 0 0 3px #000;
   font-weight: 700;
+}
+// d5-rk-edit-umschalter-schwarz-gefuellt: die Segmente der Formular-Werkbank („Ersetzen | Davor einfügen“, Seiten, Fotos)
+// füllen „gewählt“ schwarz — im Modus wie jeder Umschalter weiß mit dem Innenrahmen darüber.
+html.eink app-sheet-workbench .seg button[aria-pressed='true'] {
+  background: #fff !important;
+  color: #000 !important;
 }
 // d4-rk-segment-innenrahmen-abgeschnitten: die Gruppe ist eine Pille mit overflow hidden, die einzelnen Segmente sind
 // eckig — der Innenrahmen des gewählten End-Segments wurde in der Rundung abgeschnitten. Die End-Segmente übernehmen die
@@ -189,6 +208,10 @@ html.eink .cg-wrap .cg-shapes,
 html.eink .cg-wrap .cg-shapes g,
 html.eink .cg-wrap .cg-shapes line,
 html.eink .cg-wrap .cg-shapes circle { opacity: 1 !important; }
+// d5-rk-analyse-pfeile-nur-farbe: Pfeil-Nummern (chessground-Beschriftung, weißer Rand) schwarz statt farbig getönt —
+// die weiße Ziffer bleibt auf jedem Pfeil lesbar. Die Marken der Linienliste schwarz umrandet mit schwarzer Ziffer.
+html.eink .cg-wrap .cg-custom-svgs circle[stroke="white"] { fill: #000 !important; fill-opacity: 1 !important; }
+html.eink .line-mark { background: #fff !important; color: #000 !important; box-shadow: 0 0 0 2px #000 !important; }
 // Gezogene Figur ohne halbe Deckkraft am Startfeld (Geisterbild).
 html.eink .cg-wrap piece.ghost { opacity: 0 !important; }
 // Koordinaten: schwarz mit weißem Hof auf beiden Feldfarben (≈ 8:1 auf dem Grau).
@@ -215,3 +238,14 @@ html.eink .pv-zone--active { animation: none !important; border-color: transpare
 // Komponentenregeln (puzzle/book-puzzle/endless-puzzle).
 html.eink .board-hint,
 html.eink .board-hint-tomove { color: var(--mat-sys-on-surface-variant); }
+
+// ── Tipp-Knopf unter dem Puzzle-Brett ────────────────────────────────────────────────────────────────────────────
+// d5-rk-eink-tipp-farbe: Fläche, Rand und Glühbirne sind in den drei Lösern (puzzle/book-puzzle/endless-puzzle) fest
+// bernsteinfarben — im Modus weiß mit schwarzem Rahmen, die Glühbirne in `--rh-hint` (die Bedeutung trägt das Symbol).
+html.eink .board-hint-tip,
+html.eink .board-hint-tip:active {
+  background: #fff !important;
+  border: var(--eink-line) solid #000 !important;
+  color: #000 !important;
+}
+html.eink .board-hint-tip mat-icon { color: var(--rh-hint) !important; }

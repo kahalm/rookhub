@@ -279,6 +279,23 @@ describe('GamesListComponent', () => {
     expect(upload).toHaveBeenCalled();
   });
 
+  // d5-rk-games-erster-blick-vorlauf: das ⓘ am Titel trägt den Erklärsatz (sichtbar nur in niedrigen Fenstern) — nur bei
+  // gefüllter Liste; im Leerzustand bleibt der Satz stehen und es gibt kein ⓘ.
+  it('gefüllt: ⓘ am Titel mit dem Erklärsatz, der Satz darunter ist als „has-games“ markiert', async () => {
+    const { fixture } = await setupMitPartien([partie(1)]);
+    const el = fixture.nativeElement as HTMLElement;
+    const info = el.querySelector('.header h1 app-help-hint.hint-i');
+    expect(info).toBeTruthy();
+    expect(info!.querySelector('button')!.getAttribute('aria-label')).toBe('games.hint');
+    expect(el.querySelector('p.hint')!.classList).toContain('has-games');
+  });
+
+  it('leer: kein ⓘ am Titel, der Erklärsatz bleibt sichtbar (nennt den RepCheck-Weg)', async () => {
+    const leer = (await setupMitPartien([])).fixture.nativeElement as HTMLElement;
+    expect(leer.querySelector('app-help-hint.hint-i')).toBeNull();
+    expect(leer.querySelector('p.hint')!.classList).not.toContain('has-games');
+  });
+
   // d3-rk-games-leer-pgn-doppelt: im Leerzustand stand „PGN hochladen“ oben UND in der Karte — jetzt nur in der Karte.
   it('leer: genau ein Knopf „PGN hochladen“ auf der Seite (kein Kopfknopf)', async () => {
     const { fixture } = await setupMitPartien([]);

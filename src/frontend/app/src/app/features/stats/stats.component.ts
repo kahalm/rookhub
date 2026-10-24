@@ -435,10 +435,12 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
                     <span class="ri-main">
                       <!-- UI-Sweep z2 (z2-rk-stats-letzte-liste): Zahl beschriftet, Pfeil zeigt die antippbare Zeile. -->
                       <!-- b1-rk-stats-kurse-wertung-leer: Kurs-Zeilen nennen die Aufgabe statt „Puzzle –“. -->
-                      <span class="ri-title">{{ a.attemptedAt | date:'short' }} · {{ mode === 'course'
+                      <!-- d5-rk-stats-mobile-puzzle-label: vorn die Wertung (bzw. die Kurs-Aufgabe), Datum + Zeit in der
+                           zweiten Zeile — das lange Kurzdatum schnitt die Zahl sonst zu „Puzzle 14…“ ab. -->
+                      <span class="ri-title">{{ mode === 'course'
                         ? (a.label || (a.rating ? ('stats.puzzleRating' | translate: { rating: a.rating }) : ('stats.courseTask' | translate)))
                         : ('stats.puzzleRating' | translate: { rating: a.rating || '–' }) }}</span>
-                      <span class="ri-sub">{{ a.time }} s</span>
+                      <span class="ri-sub">{{ a.attemptedAt | date:'short' }} · {{ a.time }} s</span>
                     </span>
                     <span class="ri-res" [class.res-ok]="a.solved" [class.res-fail]="!a.solved">
                       <mat-icon [attr.aria-label]="'stats.result' | translate">{{ a.solved ? 'check_circle' : 'cancel' }}</mat-icon>

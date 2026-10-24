@@ -75,10 +75,14 @@
 
         <dl class="meta">
           <div><dt>{{ 'courses.detail.lines' | translate }}</dt><dd>{{ d.totalLines }}</dd></div>
-          <div>
-            <dt>{{ 'courses.detail.positionLines' | translate }}</dt>
-            <dd>{{ d.infoLineCount }}</dd>
-          </div>
+          <!-- Studienbuch (nur kommentierte Partien): „Stellungen ohne Lösung“ wäre dieselbe Zahl wie „Linien“ und läse
+               sich wie ein Defekt — dort und bei 0 entfällt die Kennzahl (d5-rk-stellungen-ohne-loesung-widerspruch). -->
+          @if (!isEmptyQuiz && (d.infoLineCount ?? 0) > 0) {
+            <div>
+              <dt>{{ 'courses.detail.positionLines' | translate }}</dt>
+              <dd>{{ d.infoLineCount }}</dd>
+            </div>
+          }
           <div><dt>{{ 'courses.detail.chapters' | translate }}</dt><dd>{{ d.chapters.length }}</dd></div>
           <!-- Punkte der Selbstbewertung — nur bei Kalkulationsbüchern sinnvoll, und immer
                zusammen mit dem erreichbaren Maximum („14 / 24"). -->
@@ -114,8 +118,8 @@
             </div>
           }
           <!-- UI-Sweep 2026-10-11 (r2-rp-sourcefile): der interne Dateiname (mit Konto-Id) nur für Besitzer/Admin;
-               Lernende sehen höchstens die Quelle. -->
-          @if (d.canManage) {
+               Lernende sehen höchstens die Quelle. Vom Server erzeugte Namen nur für Admins (showFileName). -->
+          @if (showFileName) {
             <div><dt>{{ 'courses.detail.file' | translate }}</dt><dd class="mono">{{ d.fileName }}</dd></div>
           } @else if (isChessableSource(d)) {
             <div><dt>{{ 'courses.detail.source' | translate }}</dt><dd>Chessable</dd></div>

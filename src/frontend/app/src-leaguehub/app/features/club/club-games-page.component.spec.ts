@@ -134,6 +134,9 @@ describe('ClubGamesPageComponent', () => {
     (el.querySelector('.club-intro .chk-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.club-intro .info-panel')?.textContent).toContain('Vom Datum bleibt nur das Jahr');
+    // d5-l-verein-info-doppelt: der Kasten wiederholt den Satz darüber nicht („… steht für ein Mitglied …").
+    expect(el.querySelector('.club-intro .info-panel')?.textContent).not.toContain('steht für ein Mitglied');
+    expect(el.querySelector('.club-intro .info-line')?.textContent).toContain('steht für ein Mitglied ohne Namen');
   }));
 
   // Wunsch 2026-09-28: „die Spieler sollen alle klickbar sein (Kinsiz, Atlas ist nicht klickbar), Ergebnis anpassbar".

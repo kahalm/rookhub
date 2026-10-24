@@ -220,8 +220,8 @@ describe('clubhub.scss', () => {
           <a class="btn primary"><span class="long">Kind anlegen</span><span class="short">+ Kind</span></a>
           <a class="btn"><span class="long">Trainer anlegen</span><span class="short">+ Trainer</span></a></div></div>
         <div class="tools with-chips"><label class="field search"><span class="sr-only">Suchen</span><input type="search" placeholder="Name suchen"></label>
-          <div class="filter-chips"><button class="chip-btn all">Alle</button><button class="chip-btn">Anfänger <span class="n">2</span></button>
-            <button class="chip-btn">Fortgeschrittene <span class="n">0</span></button></div>
+          <div class="filter-chips"><button class="chip-btn all">Alle<span class="n handy"> 3</span></button><button class="chip-btn">Anfänger <span class="n">2</span></button>
+            <button class="chip-btn">Fortgeschrittene <span class="n">0</span></button><button class="chip-btn archive">Archiv</button></div>
           <label class="check"><input type="checkbox"> Archiv</label><p class="count">3 Kinder</p></div></div>
         <section class="register"><h2 class="letter">F</h2><ul class="cards"><li class="kid"><a class="kid-main">Felix</a></li></ul></section></main>`);
       await fontsLoaded();
@@ -232,7 +232,7 @@ describe('clubhub.scss', () => {
       const r = (sel: string) => host.querySelector(sel)!.getBoundingClientRect();
       expect(Math.abs(r('.search input').top - r('.kartei-head .actions').top)).withContext('Suche + Knöpfe in Zeile 1').toBeLessThan(10);
       expect(r('.kartei-top h1').height).withContext('Titel nur für Vorleser').toBeLessThanOrEqual(1);
-      expect(r('.check').top).withContext('Archiv in Zeile 2').toBeGreaterThan(r('.search input').bottom - 2);
+      expect(r('.chip-btn.archive').top).withContext('Archiv in Zeile 2').toBeGreaterThan(r('.search input').bottom - 2);
       expect(r('.filter-chips').top).withContext('Chips in Zeile 2').toBeGreaterThan(r('.search input').bottom - 2);
       expect(r('.filter-chips').width).withContext('Chips nicht zusammengequetscht').toBeGreaterThan(150);
       expect(r('.today').height).withContext('ein schlanker Streifen').toBeLessThan(100);
@@ -261,6 +261,55 @@ describe('clubhub.scss', () => {
       chips.scrollLeft = chips.scrollWidth;
       const last = host.querySelector<HTMLElement>('.filter-chips .chip-btn:last-child')!.getBoundingClientRect();
       expect(last.right).withContext('am Ende steht der letzte Chip vor dem Verlauf').toBeLessThanOrEqual(chips.getBoundingClientRect().right - 27);
+    } finally {
+      restore();
+    }
+  });
+
+  // d5-c-kartei-filterchip-hinter-archiv: Häkchen „Archiv" und Zähler teilten sich Zeile 2 mit den Chips — für die wischbare
+  // Chipzeile blieben ≈ 210 px, vom dritten Chip nur ein „F". Jetzt nimmt sie die ganze Zeile; „Archiv" ist der letzte Chip,
+  // die Kinderzahl steht im Chip „Alle".
+  it('Kartei am Handy: Chipzeile über die volle Breite, „Archiv" als Chip, Zahl im Chip „Alle"', async () => {
+    const restore = await narrow(390);
+    try {
+      mount(`<main class="wrap"><div class="kartei-top"><div class="page-head kartei-head"><h1>Kartei</h1><div class="actions">
+          <a class="btn primary"><span class="long">Kind anlegen</span><span class="short">+ Kind</span></a>
+          <a class="btn"><span class="long">Trainer anlegen</span><span class="short">+ Trainer</span></a></div></div>
+        <div class="tools with-chips"><label class="field search"><input type="search" placeholder="Name suchen"></label>
+          <div class="filter-chips"><button class="chip-btn all">Alle<span class="n handy"> 3</span></button>
+            <button class="chip-btn">Anfänger <span class="n">2</span></button>
+            <button class="chip-btn fort">Fortgeschrittene <span class="n">0</span></button><button class="chip-btn archive">Archiv</button></div>
+          <label class="check"><input type="checkbox"> Archiv</label><p class="count">3 Kinder</p></div></div></main>`);
+      await fontsLoaded();
+      const r = (sel: string) => host.querySelector(sel)!.getBoundingClientRect();
+      const chips = r('.filter-chips');
+      // rechter Zeilenrand = Inhaltskante von .wrap (bei 390 px ohne Scrollleiste 374 px; Karma-iframe zieht ggf. eine ab)
+      const wrap = host.querySelector<HTMLElement>('main.wrap')!;
+      const edge = wrap.getBoundingClientRect().right - parseFloat(getComputedStyle(wrap).paddingRight);
+      expect(chips.right).withContext('Chipzeile endet am Zeilenrand').toBeCloseTo(edge, -0.5);
+      const fort = r('.chip-btn.fort');
+      const visible = Math.min(fort.right, chips.right - 28) - fort.left;
+      expect(visible).withContext('„Fortgeschrittene" mindestens zur Hälfte vor dem Verlauf').toBeGreaterThanOrEqual(fort.width / 2);
+      expect(getComputedStyle(host.querySelector('.check')!).display).withContext('Häkchen am Handy weg').toBe('none');
+      expect(getComputedStyle(host.querySelector('.tools .count')!).display).withContext('Zähler am Handy weg').toBe('none');
+      expect(getComputedStyle(host.querySelector('.chip-btn.archive')!).display).withContext('Archiv-Chip sichtbar').not.toBe('none');
+      expect(getComputedStyle(host.querySelector('.chip-btn.all .n')!).display).not.toBe('none');
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('Kartei ab 641 px: Häkchen „Archiv" und Zähler wie bisher, kein Archiv-Chip, keine Zahl im Chip „Alle"', async () => {
+    const restore = await narrow(1366);
+    try {
+      mount(`<main class="wrap"><div class="tools with-chips"><label class="field search"><input type="search"></label>
+        <div class="filter-chips"><button class="chip-btn all">Alle<span class="n handy"> 3</span></button><button class="chip-btn archive">Archiv</button></div>
+        <label class="check"><input type="checkbox"> Archiv</label><p class="count">3 Kinder</p></div></main>`);
+      expect(getComputedStyle(host.querySelector('.chip-btn.archive')!).display).toBe('none');
+      expect(getComputedStyle(host.querySelector('.chip-btn.all .n')!).display).toBe('none');
+      expect(getComputedStyle(host.querySelector('.check')!).display).toBe('flex');
+      expect(getComputedStyle(host.querySelector('.count')!).display).not.toBe('none');
     } finally {
       restore();
     }

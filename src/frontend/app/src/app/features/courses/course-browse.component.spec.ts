@@ -1,11 +1,21 @@
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { TestBed } from '@angular/core/testing';
-import { provideTranslateService, TranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { CourseLanguageService } from './course-language.service';
 import { of, throwError } from 'rxjs';
 import { CourseBrowseComponent } from './course-browse.component';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
+import { CourseService } from './course.service';
+import { PreferencesService } from '../../core/preferences.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { WorksheetService } from '../worksheets/worksheet.service';
 
 /**
  * Durchsehen-Ansicht: Gruppierung nach Kapitel, Kapitel-Filter, Zug-Durchsicht (goTo) inkl.
@@ -363,6 +373,48 @@ describe('CourseBrowseComponent Layout', () => {
     const desk = css.slice(0, css.indexOf('@media (max-width: 599.98px)'));
     expect(desk).toMatch(/\.fc-menu-btn[^{]*\{ ?display: none/);
   });
+  // d5-rk-browse-linienzeile-tippziel-klein: am Handy/Touch Linienzeile, Kästchen-Trefferfläche und Herz/Teilen ≥ 44 px.
+  it('gibt Linienzeilen am Handy/Touch 44-px-Tippziele', () => {
+    const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '').replace(/%NS%/g, '');
+    const at = plain.indexOf('@media (pointer: coarse), (max-width: 599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const block = plain.slice(at, plain.indexOf('@media', at + 10) > 0 ? plain.indexOf('@media', at + 10) : undefined);
+    expect(block).toMatch(/\.line-row \{ ?min-height: 44px/);
+    expect(block).toMatch(/\.line-pick-hit \{[^}]*min-width: 44px;[^}]*min-height: 44px/);
+    expect(block).toMatch(/\.line-action \{[^}]*width: 44px;[^}]*height: 44px;[^}]*--mdc-icon-button-state-layer-size: 44px/);
+  });
+  it('legt das Markier-Kästchen in ein Label als Trefferfläche (Tippen aufs Label markiert)', () => {
+    TestBed.resetTestingModule();
+    const setMark = jasmine.createSpy('setMark').and.returnValue(of({ marked: true }));
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => k === 'bookId' ? '5' : null } } } },
+        { provide: Router, useValue: {} },
+        { provide: CourseService, useValue: {
+          getBookPuzzles: () => of([{ id: 7, lineId: 'l', bookFileName: 'b.pgn', round: '1', fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4' }]),
+          getChapters: () => of([]), getLineStatus: () => of({ solvedIds: [], failedIds: [] }),
+          getFlashcardMarks: () => of({ lineIds: [] }), setFlashcardMark: setMark } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+        { provide: FavoritesService, useValue: { list: () => of([]) } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: WorksheetService, useValue: {} },
+      ],
+    });
+    TestBed.overrideComponent(CourseBrowseComponent, { set: { imports: [CommonModule, TranslatePipe, MatMenuModule, SanPipe], schemas: [NO_ERRORS_SCHEMA] } });
+    const fixture = TestBed.createComponent(CourseBrowseComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const hit = el.querySelector('.line-row label.line-pick-hit') as HTMLLabelElement;
+    expect(hit).withContext('Label um das Kästchen').not.toBeNull();
+    expect(hit.querySelector('input.line-pick')).not.toBeNull();
+    hit.click();
+    expect(setMark).toHaveBeenCalledTimes(1);
+    TestBed.resetTestingModule();
+  });
+
   // UI-Sweep v1 (v1-rk-browse-zugliste-handy-abgeschnitten): Zugleiste ohne eigenen Scrollkasten (DESIGN 5.11).
   it('sperrt die Zugleiste nicht in einen Scrollkasten', () => {
     const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '');

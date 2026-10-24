@@ -45,7 +45,11 @@ export interface RevengeList {
         <app-loading-spinner />
       } @else if (data) {
         <h1>{{ 'friends.revenge.title' | translate:{ name: data.displayName || data.username } }}</h1>
-        <p class="hint">{{ 'friends.revenge.hint' | translate:{ name: data.displayName || data.username } }}</p>
+        <!-- d5-rk-revanche-leerzustand-text: der Auftrag „knack sie“ nur, wenn es offene Puzzles gibt — sonst erklärt
+             der Leerzustand allein (DESIGN 5.10). -->
+        @if (open.length > 0) {
+          <p class="hint">{{ 'friends.revenge.hint' | translate:{ name: data.displayName || data.username } }}</p>
+        }
 
         <mat-card>
           <mat-list>

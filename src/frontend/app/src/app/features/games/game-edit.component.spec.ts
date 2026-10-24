@@ -134,6 +134,10 @@ describe('GameEditComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('app-sheet-workbench .eval-curve app-eval-graph')).not.toBeNull();
+    // d5-rk-edit-native-engine-select: in RookHub Engine-Häkchen + -Auswahl als Material-Felder, kein natives select.
+    expect(el.querySelector('app-sheet-engine mat-checkbox')).not.toBeNull();
+    expect(el.querySelector('app-sheet-engine mat-select')).not.toBeNull();
+    expect(el.querySelector('app-sheet-engine select')).toBeNull();
 
     c.go(2);
     c.onBoardMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: '' });

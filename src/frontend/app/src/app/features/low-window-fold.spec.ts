@@ -117,6 +117,15 @@ describe('Niedrige Fenster (Boox 200 %): Seiten', () => {
     expect(lowAfterBase(GamesListComponent, '.hint')).toBeTrue();
   });
 
+  it('d5-rk-games-erster-blick-vorlauf: Erklärsatz ins ⓘ am Titel (nur gefüllte Liste), Engine-Zeile knapper', () => {
+    const b = lowBlocks(GamesListComponent);
+    expect(b).toMatch(/\.hint\.has-games \{ ?display: none/);
+    expect(b).toMatch(/\.hint-i \{ ?display: inline-flex/);
+    expect(b).toMatch(/\.no-engine \{ ?margin: 4px 0; font-size: 0?\.8125rem/);
+    expect(lowAfterBase(GamesListComponent, '.hint-i')).toBeTrue();
+    expect(lowAfterBase(GamesListComponent, '.no-engine')).toBeTrue();
+  });
+
   it('Partieseite: Kopf 8 px Polster, „Kurz erzählt“ 0,875 rem mit 6 px Polster', () => {
     expect(lowBlocks(SharedGameComponent)).toMatch(/\.header \{ ?padding-block: 8px/);
     expect(lowAfterBase(SharedGameComponent, '.header')).toBeTrue();

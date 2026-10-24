@@ -10,6 +10,9 @@
       .bar > button { order: 2; }
       /* d3-rk-trainer-symbolknoepfe-ohne-text: Umschalter links, ⋮ rechts in derselben Zeile (DESIGN 5.5). */
       .bar > .more { margin-left: auto; }
+      /* d5-rk-trainer-mobil-menue-eigene-zeile: ohne Umschalter (Leerzustand) rückt das ⋮ in die Titelzeile —
+         nie ein Knopf allein in einer eigenen Zeile (DESIGN 5.2/5.5); der Titel (flex 1, min-width 0) kürzt sich. */
+      .bar > .more-solo { order: 0; margin-left: 0; }
     }
     /* d3-rk-trainer-leer-zwei-aktionen: Repertoirename als Titel (einzeilig mit „…“), „Repertoire-Trainer“ leise. */
     .bar .title { min-width: 0; }

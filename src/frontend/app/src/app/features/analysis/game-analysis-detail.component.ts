@@ -191,14 +191,20 @@ import { PctPipe } from '../../shared/format/pct';
     .san { font-weight: 600; white-space: nowrap; }
     .ev { min-width: 5ch; padding-left: 8px; text-align: right; font-size: .8rem; white-space: nowrap;
           color: color-mix(in srgb, currentColor 70%, transparent); }
-    /* Einspaltig (Liste unter dem Brett) läuft die Zugliste mit der Seite — kein Kasten im Kasten. */
+    /* Einspaltig (Liste unter dem Brett) läuft die Zugliste mit der Seite — kein Kasten im Kasten.
+       d5-rk-analyse-zugliste-karte-schmaler-als-brett: untereinander so breit wie das Brett (beide höchstens 520 px),
+       die Karte endete sonst ~40 px vor dem Brettrand. */
     @media (max-width: 768.98px) {
       .moves { max-height: none; overflow: visible; }
+      .board-col, .moves-col { flex-basis: 100%; max-width: 520px; }
     }
     /* b1-rk-analyse-unterseiten-brett-1920: ab 1200 px wächst das Brett bis 760 px, höchstens bis zur Fensterhöhe; die
        Zugliste ist so hoch wie Brett + Leiste darunter (Seite bleibt in --page-max-width). */
+    /* d5-rk-analysis-detail-laptop-leerraum: die Zugliste füllt den Rest der Zeile statt bei 420 px zu enden — am Laptop
+       blieben rechts ~275 px leer (Ultrawide begrenzt sie weiter auf 640 px). */
     @media (min-width: 1200px) {
       .board-col { max-width: min(760px, calc(100vh - 240px)); flex-basis: min(760px, calc(100vh - 240px)); }
+      .moves-col { flex: 1 1 420px; max-width: none; }
       .moves { max-height: calc(100vh - 260px); }
     }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }

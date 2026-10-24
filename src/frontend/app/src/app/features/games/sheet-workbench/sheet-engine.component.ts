@@ -1,5 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth.service';
 import { BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
@@ -41,17 +44,31 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
   selector: 'app-sheet-engine',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, TranslatePipe, SanPipe],
+  imports: [DecimalPipe, TranslatePipe, SanPipe, MatCheckboxModule, MatFormFieldModule, MatSelectModule],
   template: `
     <div class="scan-engine">
       <div class="se-head">
-        <label class="se-toggle"><input type="checkbox" [checked]="on()" (change)="toggle($any($event.target).checked)" /> {{ 'sheetEdit.engine.title' | translate }}</label>
-        <select class="se-pick" [attr.aria-label]="'sheetEdit.engine.pick' | translate" [value]="engine()" (change)="choose($any($event.target).value)">
-          <option value="wasm" [selected]="engine() === 'wasm'">{{ 'sheetEdit.engine.browser' | translate }}</option>
-          @for (e of engines(); track e.id) {
-            <option [value]="e.id" [selected]="engine() === e.id" [disabled]="offline(e)">{{ e.name }}{{ offline(e) ? ' · ' + ('sheetEdit.engine.offline' | translate) : '' }}</option>
-          }
-        </select>
+        @if (material()) {
+          <!-- d5-rk-edit-native-engine-select: in RookHub Material wie die Felder darüber (DESIGN 2 Grundsatz 9, 5.8). -->
+          <mat-checkbox class="se-check" [checked]="on()" (change)="toggle($event.checked)">{{ 'sheetEdit.engine.title' | translate }}</mat-checkbox>
+          <mat-form-field class="se-field" appearance="outline" subscriptSizing="dynamic">
+            <mat-label>{{ 'sheetEdit.engine.pick' | translate }}</mat-label>
+            <mat-select [value]="engine()" (selectionChange)="choose($event.value)">
+              <mat-option value="wasm">{{ 'sheetEdit.engine.browser' | translate }}</mat-option>
+              @for (e of engines(); track e.id) {
+                <mat-option [value]="e.id" [disabled]="offline(e)">{{ e.name }}{{ offline(e) ? ' · ' + ('sheetEdit.engine.offline' | translate) : '' }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <label class="se-toggle"><input type="checkbox" [checked]="on()" (change)="toggle($any($event.target).checked)" /> {{ 'sheetEdit.engine.title' | translate }}</label>
+          <select class="se-pick" [attr.aria-label]="'sheetEdit.engine.pick' | translate" [value]="engine()" (change)="choose($any($event.target).value)">
+            <option value="wasm" [selected]="engine() === 'wasm'">{{ 'sheetEdit.engine.browser' | translate }}</option>
+            @for (e of engines(); track e.id) {
+              <option [value]="e.id" [selected]="engine() === e.id" [disabled]="offline(e)">{{ e.name }}{{ offline(e) ? ' · ' + ('sheetEdit.engine.offline' | translate) : '' }}</option>
+            }
+          </select>
+        }
         @if (session(); as s) {
           @if (on()) {
             @if (s.fallback()) { <span class="se-note warn">{{ 'sheetEdit.engine.fallback' | translate }}</span> }
@@ -89,6 +106,7 @@ function writeScanEngineChoice(c: ScanEngineChoice): void {
     .se-pick { font: 500 15px/1.2 var(--body, inherit); color: var(--se-ink); background: var(--se-surface); border: 1px solid var(--se-line);
       border-radius: 6px; padding: 8px 10px; min-height: 44px; max-width: 100%; }
     .se-pick:hover { border-color: var(--se-muted); }
+    .se-field { min-width: 14rem; max-width: 100%; }
     .se-note { font-size: .85em; opacity: .75; }
     .se-note.warn { color: var(--se-warn); opacity: 1; }
     .se-lines { list-style: none; margin: 6px 0 0; padding: 0; font-variant-numeric: tabular-nums; }
@@ -104,6 +122,8 @@ export class SheetEngineComponent implements OnDestroy {
 
   /** Stellung, die gerechnet wird (Cursor der Prüfseite). */
   readonly fen = input.required<string>();
+  /** Material-Häkchen + mat-select statt der nativen Felder (RookHub; LeagueHub bleibt nativ im eigenen Stil). */
+  readonly material = input(false);
   /** Bester Zug als Pfeil — die Seite legt ihn zu ihren eigenen auf das Brett. */
   readonly arrowsChange = output<BoardArrow[]>();
 

@@ -129,4 +129,13 @@ describe('LeaderboardsComponent', () => {
     expect(css).not.toMatch(/@media \(min-width: ?1400px\) ?\{ ?\.lb-page/);
     expect(css).toMatch(/@media \(min-width: ?1100px\) and \(max-width: ?1399\.98px\) ?\{ ?\.lb-count small ?\{ ?display: none/);
   });
+
+  it('d5-rk-bestenlisten-zeitraum-hoehe: am Handy ist jedes Zeitraum-Segment 44 px hoch', () => {
+    const css = (((LeaderboardsComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ').replace(/%NS%/g, '');
+    const at = css.indexOf('@media (max-width: 599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const media = css.slice(at, css.indexOf('} }', at) + 3);
+    expect(media).toMatch(/\.lb-period ?\{ ?--mat-button-toggle-height: 44px/);
+    expect(media).toMatch(/\.lb-period \.mat-button-toggle-label-content ?\{ ?line-height: 44px/);
+  });
 });

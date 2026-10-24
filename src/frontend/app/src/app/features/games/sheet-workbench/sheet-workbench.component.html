@@ -63,7 +63,7 @@
           <p class="muted small">{{ 'sheetEdit.curveHint' | translate }}@if (c.same < s().plies().length) { {{ 'sheetEdit.curveChanged' | translate: { ply: s().plyLabel(c.same) } }}}</p>
         </div>
       }
-      <app-sheet-engine [fen]="s().cursorFen()" (arrowsChange)="engineArrows.set($event)" />
+      <app-sheet-engine [fen]="s().cursorFen()" [material]="materialControls()" (arrowsChange)="engineArrows.set($event)" />
     </section>
 
     <!-- Am Handy steht dieser Teil OBEN (Wunsch 2026-09-28): die Zeile des Formulars, die Lesarten und „Stimmt so" auf einem

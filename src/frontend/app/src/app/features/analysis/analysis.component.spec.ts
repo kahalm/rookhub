@@ -2051,6 +2051,8 @@ describe('AnalysisComponent Linienliste trägt die Pfeilfarbe (UX-049)', () => {
     const brushes: string[] = c.shapes.map((s: { brush: string }) => s.brush);
     expect(brushes.length).toBe(5);
     expect(new Set(brushes).size).withContext(brushes.join(',')).toBe(5);
+    // d5-rk-analyse-pfeile-nur-farbe: jeder Pfeil trägt die Nummer seiner Linie, gleich der Marke in der Liste.
+    expect(c.shapes.map((s: { label?: { text: string } }) => s.label?.text)).toEqual(['1', '2', '3', '4', '5']);
 
     const marks = Array.from(fixture.nativeElement.querySelectorAll('.lines .line-row .line-mark')) as HTMLElement[];
     expect(marks.length).toBe(5);

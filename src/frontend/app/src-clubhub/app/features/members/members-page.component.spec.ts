@@ -140,13 +140,15 @@ describe('MembersPageComponent (Kartei)', () => {
 
   it('Gruppenfilter als Knöpfe: je Gruppe mit der Zahl ihrer Kinder, ein Tipp filtert, ein zweiter zeigt wieder alle', async () => {
     await create();
-    const chips = () => Array.from(el().querySelectorAll<HTMLButtonElement>('.chip-btn'));
+    const chips = () => Array.from(el().querySelectorAll<HTMLButtonElement>('.chip-btn:not(.archive)'));
     expect(el().querySelector('.tools select')).toBeNull();                               // keine Auswahlliste mehr
     // d2-c-kartei-lead: die Chips stehen in der Werkzeugzeile neben Suche und Archiv, das Label „Suchen" nur für Vorleser
     expect(el().querySelector('.tools > .filter-chips')).not.toBeNull();
     expect(el().querySelector('.tools .search > span')!.classList).toContain('sr-only');
     expect(el().querySelector<HTMLInputElement>('.tools .search input')!.placeholder).toBe('Name suchen');
-    expect(chips().map(c => c.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Alle', 'Anfänger 2', 'Turnier 1']);
+    expect(chips().map(c => c.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Alle 3', 'Anfänger 2', 'Turnier 1']);
+    // d5-c-kartei-filterchip-hinter-archiv: die Zahl im Chip „Alle" gilt nur am Handy (Zähler „3 Kinder" ab 641 px)
+    expect(el().querySelector('.chip-btn.all .n')!.classList).toContain('handy');
     expect(chips().map(c => c.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
 
     chips()[1].click();
@@ -233,6 +235,21 @@ describe('MembersPageComponent (Kartei)', () => {
     fixture.detectChanges();
     expect(api.members.calls.mostRecent().args).toEqual([true]);
     expect(el().textContent).toContain('Im Archiv liegt kein Blatt.');
+  });
+
+  // d5-c-kartei-filterchip-hinter-archiv: am Handy ist „Archiv" der letzte Chip der Gruppenzeile und schaltet wie das Häkchen.
+  it('der Chip „Archiv" am Ende der Gruppenchips schaltet das Archiv um und zeigt den Zustand', async () => {
+    await create();
+    const archive = () => el().querySelector<HTMLButtonElement>('.filter-chips .chip-btn.archive')!;
+    expect(el().querySelector('.filter-chips .chip-btn:last-child')).toBe(archive());
+    expect(archive().getAttribute('aria-pressed')).toBe('false');
+    api.members.and.resolveTo([]);
+    archive().click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.members.calls.mostRecent().args).toEqual([true]);
+    expect(archive().getAttribute('aria-pressed')).toBe('true');
+    expect(el().querySelector<HTMLInputElement>('.check input')!.checked).toBeTrue();
   });
 
   it('leere Kartei lädt zum Anlegen ein; ein Fehler beim Laden steht da', async () => {

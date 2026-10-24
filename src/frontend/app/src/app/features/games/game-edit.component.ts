@@ -145,7 +145,7 @@ import { SheetWorkbenchComponent } from './sheet-workbench/sheet-workbench.compo
 
         <!-- Formular-Werkbank (0.816.0): dasselbe Bauteil wie in LeagueHub — Foto | Brett | Prüfen + Zugliste. -->
         <app-sheet-workbench [session]="session" [photos]="ph" [(flipped)]="flipped" [evals]="evals()" [savedSans]="savedSans() ?? []"
-                             [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet">
+                             [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" [materialControls]="true">
           <span sheetPhotoTools class="photo-tools">
             <button mat-icon-button (click)="openPhoto(false)" [appIconLabel]="'games.photo.show' | translate"><mat-icon>open_in_full</mat-icon></button>
             <button mat-icon-button (click)="openPhoto(true)" [appIconLabel]="'games.photo.download' | translate"><mat-icon>download</mat-icon></button>

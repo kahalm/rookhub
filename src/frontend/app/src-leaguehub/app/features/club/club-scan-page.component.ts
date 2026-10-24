@@ -59,7 +59,7 @@ function readAutoMine(): boolean {
       }
     } @else if (notFound() && gameId != null) {
       <section class="gate"><h2>Partie nicht gefunden</h2>
-        <p>Sie ist gelöscht oder du darfst sie nicht korrigieren (das dürfen, wer sie hochgeladen hat, und die Verwalter).</p>
+        <p>Die Partie ist gelöscht, oder du darfst sie nicht korrigieren — das dürfen nur, wer sie hochgeladen hat, und die Verwalter.</p>
         <div class="actions"><a class="btn-sec" routerLink="/verein">← Zu den Vereinspartien</a></div></section>
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>

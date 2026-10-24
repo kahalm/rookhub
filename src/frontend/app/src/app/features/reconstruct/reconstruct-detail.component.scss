@@ -73,6 +73,11 @@
   .editor.idle { display: none; }
 }
 .idle-actions { margin-top: 0.5rem; }
+/* d5-rk-reconstruct-doppelte-aktionen: ab 900 px steht „Lücke schließen“ für die erste Lücke als Hauptknopf im
+   Ruhe-Block rechts — der Umriss-Knopf derselben Lücke in der Teileliste entfällt dann (nie dieselbe Aktion doppelt). */
+@media (min-width: 900px) {
+  .gap-row .gap-close-dup { display: none; }
+}
 
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
 /* Handy (d2-rk-recon-detail-actions): kurze Beschriftungen, beide Knöpfe in einer Zeile. */

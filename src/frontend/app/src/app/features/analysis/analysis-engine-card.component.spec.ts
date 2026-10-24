@@ -28,6 +28,9 @@ describe('AnalysisEngineCardComponent', () => {
     const marks = el.querySelectorAll<HTMLElement>('.line-mark');
     expect(marks.length).toBe(2);                                   // nur die Haupt-Engine hat Pfeile
     expect(marks[0].style.background).not.toBe('');
+    // d5-rk-analyse-pfeile-nur-farbe: die Marke trägt die Liniennummer (wie die Beschriftung des Pfeils).
+    expect(Array.from(marks).map(m => m.textContent!.trim())).toEqual(['1', '2']);
+    expect(getComputedStyle(marks[0]).width).toBe('16px');
     expect(el.querySelector('.line-eval.neg')?.textContent).toBe('-1.20');
     expect(el.querySelector('.cmp-block')?.textContent).toContain('RookHub PC');
     expect(fixture.componentInstance.lineColor(4)).toMatch(/^rgba\(/);   // 'purple' deckt nur teilweise

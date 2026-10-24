@@ -333,6 +333,14 @@ describe('WorksheetDetailComponent Themen + Teilen als eine Zeile', () => {
     }
   });
 
+  it('d5-rk-blattbrett-koordinaten-winzig: Vorschaubretter im Editor ohne (winzige) Koordinaten', async () => {
+    const fixture = await render(sheet());
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('app-flashcard-board.wd-board').length).toBe(3);
+    expect(el.querySelector('app-flashcard-board.wd-board text.fb-coord')).toBeNull();
+    expect(el.querySelector('app-flashcard-board.wd-board svg')!.getAttribute('viewBox')).toBe('0 0 8 8');
+  });
+
   it('ungeteilt: kein Kopieren, kein QR, keine Warnung', async () => {
     const fixture = await render(sheet());
     const el = fixture.nativeElement as HTMLElement;

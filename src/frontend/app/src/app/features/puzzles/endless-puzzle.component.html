@@ -138,13 +138,17 @@
                     </mat-autocomplete>
                     <mat-hint>{{ 'endless.config.themesHint' | translate }}</mat-hint>
                   </mat-form-field>
-                  <button mat-stroked-button type="button" class="themes-clear"
-                          [disabled]="!!config.worstTags || selectedThemes.length === 0"
-                          (click)="clearThemes()"
-                          [attr.aria-label]="'endless.config.clearThemes' | translate">
-                    <mat-icon>backspace</mat-icon>
-                    {{ 'endless.config.clearThemes' | translate }}
-                  </button>
+                  <!-- d5-rk-endless-alle-loeschen-gesperrt-ohne-grund / d5-rk-endless-gesperrt-ohne-grund: nur zeigen, wenn
+                       es etwas zu löschen gibt, statt gesperrt ohne Grund (DESIGN 2 Nr. 8); bei „5 schwächste Themen“
+                       ist das Feld gesperrt und der Schalter darunter nennt den Grund. -->
+                  @if (selectedThemes.length > 0 && !config.worstTags) {
+                    <button mat-stroked-button type="button" class="themes-clear"
+                            (click)="clearThemes()"
+                            [attr.aria-label]="'endless.config.clearThemes' | translate">
+                      <mat-icon>backspace</mat-icon>
+                      {{ 'endless.config.clearThemes' | translate }}
+                    </button>
+                  }
                   </div>
                   @if (isLoggedIn) {
                     <div class="worst-tags-row">

@@ -75,6 +75,47 @@ describe('SharedGameComponent Layout (UI-Sweep a1)', () => {
     expect(baseOf(css.replace(wide, ''))).not.toContain('grid-template-rows: min-content 1fr');
   });
 
+  it('d5-rk-game-disabled-reason-narrow-wrap: am Tablet löst sich die Hülle, der Grund steht als eigene Zeile unter der Knopfreihe', () => {
+    const tablet = blockOf(css, '@media (min-width: 769px) and (max-width: 1279.98px)');
+    expect(tablet).toContain('.analyze-wrap { display: contents; }');
+    expect(tablet).toMatch(/\.analyze-no-engine \{ ?order: 99; flex: 1 1 100%; width: auto; min-width: 0; max-width: 60ch;/);
+    expect(tablet).toContain('.header-actions:has(.analyze-no-engine) { align-items: center; }');
+    expect(tablet).not.toContain('width: max-content');
+    // Außerhalb des Tablets bleibt die schmale Hülle (Laptop/PC rechts, Handy volle Breite).
+    expect(base).toMatch(/\.analyze-wrap \{ ?display: flex;/);
+  });
+
+  it('d5-rk-game-disabled-reason-narrow-wrap: bei 820 px bricht der Grund höchstens zweizeilig um', async () => {
+    const tablet = blockOf(css, '@media (min-width: 769px) and (max-width: 1279.98px)');
+    const inner = tablet.slice(tablet.indexOf('{') + 1, -1);
+    const style = document.createElement('style');
+    style.textContent = base + inner;
+    const host = document.createElement('div');
+    host.style.width = '820px';
+    host.innerHTML = `<div class="header-actions" style="font-size:14px">
+        <div class="analyze-wrap"><button class="analyze" style="width:180px">Partie analysieren</button>
+          <p class="analyze-no-engine">Gerade steht keine Engine bereit — versuch es später noch einmal.</p></div>
+        <button class="share" style="width:180px">Teilen-Link kopieren</button><button class="game-menu" style="width:40px">⋮</button></div>`;
+    document.head.appendChild(style);
+    document.body.appendChild(host);
+    const reason = host.querySelector('.analyze-no-engine') as HTMLElement;
+    const lh = parseFloat(getComputedStyle(reason).lineHeight) || 12 * 1.4;
+    expect(reason.offsetHeight).toBeLessThanOrEqual(2 * lh + 1);
+    const btn = (host.querySelector('.analyze') as HTMLElement).getBoundingClientRect();
+    const menu = (host.querySelector('.game-menu') as HTMLElement).getBoundingClientRect();
+    expect(reason.getBoundingClientRect().top).toBeGreaterThanOrEqual(btn.bottom - 4);
+    expect(Math.abs(menu.top - btn.top)).toBeLessThanOrEqual(2);
+    host.remove(); style.remove();
+  });
+
+  it('d5-rk-mobile-karte-randabstand: am Handy behält die Sperr-/Fehlerkarte 16 px Polster, die Partieansicht bleibt randlos', () => {
+    const mobile = blockOf(css, '@media (max-width: 768px)');
+    expect(mobile).toContain('.shared-page { padding: 0; }');
+    expect(mobile).toMatch(/\.shared-page:has\(> ?\.empty-state, ?> ?\.load-card\) \{ ?max-width: none; padding: 16px; ?\}/);
+    // Nach der randlosen Regel, damit sie gewinnt.
+    expect(mobile.indexOf('.shared-page:has(')).toBeGreaterThan(mobile.indexOf('.shared-page { padding: 0; }'));
+  });
+
   it('a1-rk-recap-zeilenlaenge: „Kurz erzählt" bricht nach ~75 Zeichen um', () => {
     expect(cssOf(GameRecapComponent)).toMatch(/\.recap-text \{ ?flex: 1 1 auto; min-width: 0; max-width: 75ch/);
   });

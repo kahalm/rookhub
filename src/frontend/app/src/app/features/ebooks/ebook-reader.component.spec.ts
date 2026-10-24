@@ -512,6 +512,12 @@ describe('EbookReaderComponent', () => {
     return (((cmp as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/%NS%/g, '').replace(/\s/g, '');
   }
 
+  it('d5-rk-ebook-titelzeile-fehlt-in-modi: Buchzeile und Lösungshinweis schrumpfen im Brett-Panel nicht', () => {
+    const css = compactCss(EbookReaderComponent);
+    expect(css).toMatch(/\.rd-caption(\[[^\]]*\])?\{flex:none/);
+    expect(css).toMatch(/\.rd-sol-note(\[[^\]]*\])?\{flex:none/);
+  });
+
   it('c1-eb-reader-404-misleading: 404/403 = „gibt es nicht“ mit Weg zur Bibliothek, kein „Wiederholen“', async () => {
     for (const status of [404, 403]) {
       TestBed.resetTestingModule();

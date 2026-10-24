@@ -194,10 +194,9 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           <!-- Eingeloggt der einzige Weg zu den Rechtsseiten am Handy (die Fusszeile ist dort aus, UX-017). -->
           <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</button>
           @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
-          <button mat-menu-item [matMenuTriggerFor]="langMenu">
-            <mat-icon>language</mat-icon>
-            <span>{{ 'nav.language' | translate }}</span>
-          </button>
+          <!-- d5-rk-konto-menue-sprache-icon: ohne Globus wie alle Nachbarn im Konto-Menü (fluchtet mit Profil, Statistik …);
+               das Untermenü zeigt der Pfeil ▸. Im Gast-Menü bleibt der Globus — dort tragen die Nachbarn Symbole. -->
+          <button mat-menu-item class="lang-item" [matMenuTriggerFor]="langMenu">{{ 'nav.language' | translate }}</button>
           <button mat-menu-item class="changelog-item" (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }} <span class="menu-version">v{{ version }}</span></button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>

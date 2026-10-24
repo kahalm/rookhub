@@ -2465,7 +2465,7 @@
     }
   },
   "stats": {
-    "puzzleRating": "Feladvány {{rating}}",
+    "puzzleRating": "Értékelés {{rating}}",
     "title": "Statisztikák",
     "currentElo": "Feladvány Elo",
     "totalSolved": "Megoldva",
@@ -3359,8 +3359,8 @@
     "accuracyHint": "Pontosság világos · sötét (a játszmaelemzésből)",
     "movesCount": "{{count}} lépés",
     "mistakes": {
-      "button": "Saját hibák újrajátszása ({{count}})",
-      "buttonSide": "{{player}} hibáinak újrajátszása ({{count}})",
+      "button": "Saját hibák újrajátszása ({{count}})",
+      "buttonSide": "{{player}} hibáinak újrajátszása ({{count}})",
       "title": "Saját hibák újrajátszása",
       "titleSide": "{{player}} hibáinak újrajátszása",
       "none": "Ezen az oldalon nincs mit újrajátszani.",
@@ -4108,7 +4108,7 @@
     },
     "profile": {
       "title": "A profilom",
-      "person": "Név és e-mail",
+      "person": "Név, e-mail és játékosazonosítók",
       "nameHelp": "A versenytörténet a chess-resultson keres rád, és ott a NÉV alapján megy a keresés — szám szerinti keresés nincs. Vezetéknév nélkül ez az oldal nem tud versenytörténetet mutatni.\n\nA megjelenített név az, amit mások látnak. A bejelentkezési neved sosem látszik.",
       "identityHelp": "Két embert is hívhatnak ugyanúgy, és a névkeresés mindkettőt hozza. Egy FIDE-azonosító vagy egy chess-results-azonosító dönti el, melyikük vagy te.\n\nEnélkül a versenytörténet az összes névrokonod összes versenyét mutatja — és ez fel is tűnik, mert olyan versenyek lesznek benne, amelyeket sosem játszottál.\n\nMindkét szám ott áll a saját chess-results-játékosoldaladon.",
       "saveError": "Nem sikerült menteni. Próbáld meg még egyszer.",

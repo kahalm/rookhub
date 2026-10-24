@@ -315,4 +315,20 @@ describe('TurnierProfileComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.failed')).toBeNull();
     http.verify();
   });
+
+  // d5-t-profil-karte-name-email-ids: die Karte heißt nicht mehr nur „Name und E-Mail" — sie trägt auch FIDE- und
+  // ChessResults-ID (daran hängt „Meine Turniere"); der Titel nennt sie mit.
+  it('Kartentitel turnier.profile.person nennt Name, E-Mail und die Spieler-IDs', async () => {
+    const want: Record<string, string> = {
+      de: 'Name, E-Mail und Spieler-IDs', en: 'Name, email and player IDs',
+      hu: 'Név, e-mail és játékosazonosítók', hr: 'Ime, e-pošta i ID-ovi igrača',
+    };
+    for (const [lang, text] of Object.entries(want)) {
+      let res = await fetch(`/i18n/${lang}.json`);
+      if (!res.ok) res = await fetch(`/base/i18n/${lang}.json`);
+      expect(res.ok).withContext(`${lang}.json`).toBeTrue();
+      const json = await res.json();
+      expect(json.turnier.profile.person).withContext(lang).toBe(text);
+    }
+  });
 });

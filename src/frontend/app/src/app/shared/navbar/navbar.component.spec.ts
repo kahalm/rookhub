@@ -284,6 +284,25 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     fixture.detectChanges();
   });
 
+  // d5-rk-konto-menue-sprache-icon: im Konto-Menü trägt kein Eintrag ein Symbol — auch „Sprache“ nicht (fluchtet).
+  it('eingeloggt: ☰ → Konto — „Sprache“ ohne Globus, kein Eintrag mit Symbol', () => {
+    const fixture = render({ loggedIn: true, keys: ['dashboard'] });
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const account = Array.from(document.querySelectorAll('.cdk-overlay-container button'))
+      .find(b => b.textContent?.includes('nav.account')) as HTMLButtonElement;
+    account.click();
+    fixture.detectChanges();
+    const lang = overlayItem('lang-item')!;
+    expect(lang).not.toBeNull();
+    expect(lang.textContent).toContain('nav.language');
+    const panel = lang.closest('.mat-mdc-menu-panel')!;
+    expect(panel.querySelectorAll('[mat-menu-item] mat-icon:not(.mat-mdc-menu-submenu-icon)').length).toBe(0);
+    trigger.click();
+    fixture.detectChanges();
+  });
+
   it('eingeloggt: ☰ → Konto führt zu Datenschutz und Impressum', () => {
     const fixture = render({ loggedIn: true, keys: ['dashboard'] });
     const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail') as HTMLButtonElement;

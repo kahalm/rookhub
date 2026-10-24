@@ -80,6 +80,24 @@ describe('SharedGameComponent (Design-Runde d3)', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('button.mistakes')!.textContent).toContain('games.mistakes.button');
   });
 
+  // d5-rk-nachspielen-knopf-handy-umbruch: am Handy stand „(5)“ allein in Zeile 2 — der Zähler hängt per U+00A0 am
+  // letzten Wort, der Knopf bricht ausgewogen um.
+  it('d5: the mistakes button keeps its count with the last word (no-break space, balanced wrap)', async () => {
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      let json: { games: { mistakes: Record<string, string> } } | null = null;
+      for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { json = await res.json(); break; }
+      }
+      expect(json).withContext(lang).not.toBeNull();
+      for (const key of ['button', 'buttonSide']) {
+        expect(json!.games.mistakes[key]).withContext(`${lang} ${key}`).toMatch(/\u00a0\(\{\{count\}\}\)$/);
+      }
+    }
+    const css = ((SharedGameComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\[_ngcontent-%COMP%\]/g, '');
+    expect(css).toMatch(/\.mistakes \{ ?text-wrap: balance; ?\}/);
+  });
+
   // d3-rk-partie-grund-neben-knopf-versetzt: mit dem Grund unter dem gesperrten Knopf stand der Knopf ~15 px höher als
   // „Teilen-Link kopieren“ und das ⋮ (Hülle mittig ausgerichtet). Karma läuft 1 400 px breit = PC-Regel.
   it('with the no-engine reason, the analyze button stands level with its neighbours', async () => {

@@ -426,10 +426,15 @@
               @if (commentLines.length) {
                 <div class="ctx-comment" [class.ctx-comment-long]="commentIsLong">
                   <mat-icon>chat_bubble_outline</mat-icon>
-                  <div class="ctx-comment-body" (click)="onCommentBodyClick($event)">
-                    @for (block of commentBlocks; track $index) {
-                      <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
-                    }
+                  <div class="ctx-comment-body">
+                    <!-- Nur die Absätze werden gekürzt (Höhengrenze + Verlauf auf .ctx-comment-text); Variantenleiste,
+                         „Ganz lesen“ und Maschinen-Hinweis stehen als Geschwister darunter und bleiben immer sichtbar
+                         (d5-rk-kommentar-abgeschnitten-ohne-link). -->
+                    <div class="ctx-comment-text" (click)="onCommentBodyClick($event)">
+                      @for (block of commentBlocks; track $index) {
+                        <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="previewVariationMove(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+                      }
+                    </div>
                     @if (variationPreview) {
                       <div class="cmt-variation-bar">
                         <span>{{ 'book.variation.previewing' | translate }}</span>

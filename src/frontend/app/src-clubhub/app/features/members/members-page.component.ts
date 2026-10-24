@@ -80,10 +80,13 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
           <input type="search" placeholder="Name suchen" aria-label="Suchen" [value]="q()" (input)="q.set($any($event.target).value)"></label>
         @if (chips().length) {
           <div class="filter-chips" role="group" aria-label="Nach Gruppe filtern">
-            <button type="button" class="chip-btn all" [attr.aria-pressed]="groupId() === null" (click)="groupId.set(null)">Alle</button>
+            <!-- d5-c-kartei-filterchip-hinter-archiv: am Handy (≤ 640 px) trägt „Alle" die Kinderzahl und „Archiv" steht als
+                 Umschalt-Chip am Ende — die Chipzeile bekommt so die volle Breite; ab 641 px Häkchen + Zähler wie bisher. -->
+            <button type="button" class="chip-btn all" [attr.aria-pressed]="groupId() === null" (click)="groupId.set(null)">Alle<span class="n handy"> {{ kidCount() }}</span></button>
             @for (g of chips(); track g.id) {
               <button type="button" class="chip-btn" [attr.aria-pressed]="groupId() === g.id" (click)="pickGroup(g.id)">{{ g.name }} <span class="n">{{ g.count }}</span></button>
             }
+            <button type="button" class="chip-btn archive" [attr.aria-pressed]="archived()" (click)="toggleArchived(!archived())">Archiv</button>
           </div>
         }
         <label class="check"><input type="checkbox" [checked]="archived()" (change)="toggleArchived($any($event.target).checked)"> Archiv</label>
@@ -192,8 +195,10 @@ export class MembersPageComponent implements OnInit {
   });
   /** Porträts nur, wenn es überhaupt ein Bild gibt — sonst stünde vor jeder Zeile bloß ein Buchstabe. */
   readonly hasPhotos = computed(() => this.rows().some(m => m.photoVersion != null));
+  /** Alle Kinder (ohne Trainer) der geladenen Kartei — Zahl im Chip „Alle" am Handy. */
+  readonly kidCount = computed(() => this.rows().filter(m => !m.isTrainer).length);
   readonly countText = computed(() => {
-    const kids = this.rows().filter(m => !m.isTrainer).length;
+    const kids = this.kidCount();
     const n = this.shown().length;
     const head = n === kids ? `${kids} ${kids === 1 ? 'Kind' : 'Kinder'}` : `${n} von ${kids} ${kids === 1 ? 'Kind' : 'Kindern'}`;
     const t = this.rows().length - kids;

@@ -2997,8 +2997,8 @@
     "accuracyHint": "Preciznost bijeli · crni (iz analize partije)",
     "movesCount": "Potezi: {{count}}",
     "mistakes": {
-      "button": "Ponovi vlastite pogreške ({{count}})",
-      "buttonSide": "Ponovi pogreške igrača {{player}} ({{count}})",
+      "button": "Ponovi vlastite pogreške ({{count}})",
+      "buttonSide": "Ponovi pogreške igrača {{player}} ({{count}})",
       "title": "Ponovi vlastite pogreške",
       "titleSide": "Ponovi pogreške igrača {{player}}",
       "none": "Za ovu stranu nema ničega za ponavljanje.",
@@ -3303,7 +3303,7 @@
     }
   },
   "stats": {
-    "puzzleRating": "Zagonetka {{rating}}",
+    "puzzleRating": "Rejting {{rating}}",
     "title": "Statistika",
     "modeStandard": "Standard",
     "modeCourse": "Tečajevi",
@@ -4483,7 +4483,7 @@
     },
     "profile": {
       "title": "Moj profil",
-      "person": "Ime i e-pošta",
+      "person": "Ime, e-pošta i ID-ovi igrača",
       "nameHelp": "Povijest turnira traži te na chess-resultsu, a tamo se traži po IMENU — pretraga po broju ne postoji. Bez prezimena ova stranica ne može prikazati povijest.\n\nPrikazano ime je ono koje drugi vide. Tvoje ime za prijavu nikada se ne prikazuje.",
       "identityHelp": "Dvije osobe mogu nositi isto ime, a pretraga po imenu vraća obje. FIDE ID ili chess-results ID odlučuje koja si od njih.\n\nBez njega povijest prikazuje sve turnire svih imenjaka — i to ćeš primijetiti, jer će u njoj biti turniri koje nikada nisi igrao.\n\nOba broja nalaze se na tvojoj chess-results stranici igrača.",
       "saveError": "Nije se moglo spremiti. Pokušaj ponovno.",

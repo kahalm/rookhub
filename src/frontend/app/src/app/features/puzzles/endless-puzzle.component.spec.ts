@@ -1,3 +1,4 @@
+import { PuzzleThemePipe } from './puzzle-theme.pipe';
 import { Chess } from 'chess.js';
 import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
@@ -1345,6 +1346,40 @@ describe('EndlessPuzzleComponent b1 (Fortsetzen, Phase)', () => {
     expect(el.querySelector('.stats-card')).not.toBeNull();
     expect(el.querySelector('.phase-indicator')).toBeNull();
     expect(el.textContent).not.toContain('endless.game.phaseLabel');
+  });
+});
+
+// Design-Runde d5 (Endlos): „Alle löschen“ nie gesperrt ohne Grund, Lauf-Symbol nicht gequetscht.
+describe('EndlessPuzzleComponent d5 (Themen löschen, Lauf-Symbol)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
+
+  // d5-rk-endless-alle-loeschen-gesperrt-ohne-grund + d5-rk-endless-gesperrt-ohne-grund
+  it('ohne gewählte Themen kein „Alle löschen“ (statt gesperrt ohne Grund)', () => {
+    const el = renderEndless(c => { c.config.themes = ''; c.config.worstTags = false; });
+    expect(el.querySelector('.themes-row')).not.toBeNull();
+    expect(el.querySelector('.themes-clear')).toBeNull();
+  });
+
+  it('mit Thema steht „Alle löschen“ da und ist aktiv', () => {
+    const el = renderEndless(c => { c.config.themes = 'fork'; c.config.worstTags = false; }, { imports: [PuzzleThemePipe] });
+    const btn = el.querySelector('.themes-clear') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.disabled).toBeFalse();
+    expect(btn.hasAttribute('disabled')).toBeFalse();
+  });
+
+  it('bei „5 schwächste Themen“ kein „Alle löschen“ (Feld gesperrt, der Schalter nennt den Grund)', () => {
+    const el = renderEndless(c => { c.config.themes = 'fork'; c.config.worstTags = true; }, { imports: [PuzzleThemePipe] });
+    expect(el.querySelector('.themes-clear')).toBeNull();
+  });
+
+  // d5-rk-lauf-icon-gequetscht-mobile
+  it('Pause-Symbol im Kasten „Unbeendeter Lauf“ schrumpft nicht und steht an der ersten Zeile', () => {
+    const css = ((EndlessPuzzleComponent as any).ɵcmp.styles as string[]).join('\n')
+      .replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.resume-info ?\{[^}]*align-items: flex-start/);
+    const icon = /\.resume-info mat-icon[^{]*\{([^}]*)\}/.exec(css)![1];
+    expect(icon).toContain('flex-shrink: 0');
   });
 });
 
