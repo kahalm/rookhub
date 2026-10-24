@@ -109,7 +109,31 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Standalone Components** – kein NgModule, jede Component deklariert eigene Imports
 - **Lazy Loading** – alle Feature-Routes werden per `loadComponent()` geladen
 - **Functional Guards** – `authGuard` als `CanActivateFn`
-- **Functional Interceptors** – `authInterceptor` als `HttpInterceptorFn`
+- **Functional Interceptors** – `authInterceptor` als `HttpInterceptorFn`. Die HTTP-Kette ALLER Oberflächen kommt aus
+  `provideRhHttpClient(extra)` / `rhInterceptors(extra)` in `core/http-chain.ts`: connectivity, retry, (extra — RookHub:
+  `visitorInterceptor`), auth, renderAfterHttp. Oberflächeneigene Interceptoren gehören in `extra`, zwischen retry und
+  auth (Codereview F8-014)
+- **Rückfragen und Texteingaben nie nativ** (Codereview F8-005/F5-016) – Rückfragen nur über `ConfirmService.ask`
+  (`shared/confirm-dialog`), nie `window.confirm`; Texteingaben über `PromptService.ask` (`shared/prompt-dialog`), nie
+  `window.prompt`; Verlustaktionen ohne Rückgängig fragen nach. LeagueHub/ClubHub geben die Knopftexte über
+  `CONFIRM_LABELS`. Wache: `NativeConfirmGuardTests` (deckt `prompt` mit ab)
+- **Auswahl- und Such-Requests** (Codereview F5-004) – Auswahl-Requests über `shared/latest-request.util` (`LatestRequest`:
+  nur die jüngste Antwort zählt), Suchfelder als `Subject` + `switchMap` mit `catchError` INNEN (sonst endet der Strom
+  beim ersten Fehler)
+- **Globale Brett-Tastenkürzel** (Codereview F8-007) – `isBoardHotkey(e, host?)` aus `shared/keyboard.util.ts` ist die
+  eine Regel für `window`/`document:keydown`; neue Handler nutzen sie, Komponenten in einem Dialog übergeben ihr
+  `ElementRef` als `host`. `PuzzleBoardComponent` nimmt Züge auch per Tastatur (`features/puzzles/keyboard-move.util.ts`;
+  Figurenbuchstaben über `<html lang>`, nur de/hr/hu zusätzlich zu Englisch, Codereview F2-004)
+- **Primärknöpfe im M3-Thema** (Codereview UX-052) – `mat-raised-button color="primary"/"warn"` ist per `styles.scss`
+  gefüllt; neue Primärknöpfe `mat-flat-button` oder raised + primary, raised ohne Farbe = M3-„protected“. Auth-Formulare:
+  Knopf immer aktiv, Validierung beim Absenden (`markAllAsTouched` + `mat-error`)
+- **Neuer Menüpunkt** (Codereview UX-011) – Eintrag in `MenuRegistry` → Eintrag in `MENU_HELP`
+  (`features/help/help.component.ts`) und Hilfe-Abschnitt in en/de/hr/hu; Wache
+  `MenuRegistryTests.EveryMenuItem_HasHelpSection`
+- **Unbekannte Adressen** (Codereview UX-026) – `'**'` (RookHub, LeagueHub) und unbekannte Kurz-URLs zeigen
+  `shared/not-found/NotFoundComponent` (guard-frei). Guards, die Angemeldete umleiten, melden das über `blockedNotice()`
+  (`core/blocked-notice.ts`) — übersetzt mit `get()`, nicht `instant()` (Kaltstart: Sprachdatei noch unterwegs).
+  `PublicSlugComponent` zeigt „nicht gefunden“ nur bei 404, sonst `LoadErrorComponent` mit Wiederholen
 - **provideHttpClient / provideRouter** – keine Module-basierte Konfiguration
 - **Angular Material** – fuer alle UI-Komponenten (Toolbar, Cards, Lists, Tables, Dialogs, Tabs, etc.)
 - **i18n via ngx-translate** – Laufzeit-Lokalisierung (siehe unten)
@@ -123,7 +147,13 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Rechtsseiten** (`features/legal/`, Betreiber-Entscheidung 2026-09-30, UX-001) – `environments/operator.ts`
   (`OPERATOR`) enthaelt NUR die Kontaktadresse (`rookhub@oberschm.id`); das Impressum zeigt nur den Kontakt, kein
   Diensteanbieter-Block mit Name/Anschrift. Je Oberflaeche steuert `LEGAL_SITE` (`legal-site.ts`) Impressum ja/nein,
-  Kontaktadresse, `kind`, Ruecklink und `accountHome` (Details im Haupt-CLAUDE.md, KidHub „Kein Impressum")
+  Kontaktadresse, `kind`, Ruecklink und `accountHome` (Details im Haupt-CLAUDE.md, KidHub „Kein Impressum"). Daneben
+  `AUTH_INTRO` (`features/auth/auth-intro.ts`) als app-eigene Zeile der Anmelde-/Registriermaske (Turnierseite setzt es
+  in `turnierConfig`, ClubHub `AUTH_INTRO.login` in `clubhubConfig` — Freischaltung durch den Verein statt
+  Kostenlos-Satz; UX-027). Aufbau der Rechtsseiten: Titel als `<h1 mat-card-title>`, Abschnitte `h2`, Datenschutz mit
+  Inhaltsverzeichnis per Klick-Sprung (kein Router-Fragment wegen `scrollPositionRestoration: 'top'`; UX-057)
+- **Brett-Koordinaten** (UX-057/UX-060) – die Rangziffern-Farben in `styles.scss` sind gegenüber chessground getauscht
+  (die Ränge stehen auf der a- bzw. h-Linie), für ALLE Brett-Themen; KidHub-Koordinaten 11 px deckend
 
 ## Lokalisierung (ngx-translate)
 
@@ -133,12 +163,21 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
   `{{Platzhaltern}}` und ohne leere Werte. Die übrigen 21 `SUPPORTED_LANGS` sind Teilübersetzungen und
   fallen Key für Key auf `en` zurück. Alle Dateien liegen in `public/i18n/<code>.json` (statisch unter
   `/i18n/*.json` ausgeliefert); für `FORMAT_LOCALES` werden zusätzlich die Angular-Locale-Daten
-  registriert (`registerLocaleData` in BEIDEN `app.config.ts`) — ohne das formatieren Datums- und
-  Zahlen-Pipes über `en`.
+  registriert, an EINER Stelle: `FORMAT_LOCALE_DATA` in `core/locale-data.ts`, die `app.config.ts` von RookHub,
+  Turnierseite und KidHub rufen `registerFormatLocaleData()` (LeagueHub/ClubHub: feste `LOCALE_ID` 'de', nur
+  `localeDe`). `locale-data.spec.ts` bindet die Schlüssel an `FORMAT_LOCALES`: wer dort eine Sprache einträgt, ohne
+  sie hier zu ergänzen, bekommt einen roten Test statt NG0701 „Missing locale data“ in jeder Datums-/Zahlen-Pipe
+  (Codereview F8-014).
 - **Setup**: `provideTranslateService({ fallbackLang: 'en', loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }) })` in `app.config.ts`. `@ngx-translate/core` + `@ngx-translate/http-loader` **v18** (voll standalone: **kein `TranslateModule` mehr** → `TranslatePipe` importieren; `currentLang`/`fallbackLang` sind **Signals** → `currentLang()`; `defaultLang`/`getDefaultLang()` → `getFallbackLang()`; in Specs statt `TranslateModule.forRoot()` → `provideTranslateService({ fallbackLang: 'en' })` in `providers`).
 - **`core/locale.service.ts`**: ermittelt Startsprache (localStorage `rookhub_lang` → Browser → `en`), `use(lang)` persistiert. Wird in `AppComponent`-Konstruktor via `init()` gestartet. Sprachumschalter (Globus-Icon) in der Navbar.
 - **Verwendung**: Templates `{{ 'ns.key' | translate }}` bzw. Attribute via Binding (`[attr.title]="'ns.key' | translate"`); dynamische Strings im TS via `TranslateService.instant('ns.key', { param })` mit `{{param}}`-Platzhaltern. Jede Standalone-Component, die übersetzt, importiert `TranslatePipe` (ngx-translate 18 — `TranslateModule` gibt es nicht mehr).
-- **Key-Namespaces**: `common`, `nav`, `app`, `auth`, `dashboard`, `profile`, `friends`, `repertoire`, `tournaments`, `puzzles`, `endless`, `book`, `courses`, `weekly`, `trainingGoals`, `admin`, `pgnViewer`. Generische Begriffe (Speichern/Abbrechen/…) unter `common.*`.
+- **Key-Namespaces**: `common`, `nav`, `app`, `auth`, `dashboard`, `profile`, `friends`, `repertoire`, `tournaments`, `puzzles`, `endless`, `book`, `courses`, `weekly`, `trainingGoals`, `admin`, `pgnViewer`. Generische Begriffe (Speichern/Abbrechen/…) unter `common.*` — gleiche Knopftexte (Speichern, Abbrechen, Weiter,
+  Zurück, Weitere Aktionen, Kopieren, Weiß/Schwarz am Zug …) IMMER über `common.*`; die Parity-Spec lehnt neue
+  wortgleiche Doppel ab. `common.next`/`common.previous` sind in den 21 nicht gepflegten Sprachen noch englische
+  Platzhalter (Codereview F8-010).
+- **Kein toter Schlüssel** (Codereview F8-011): `src/app/i18n-usage.spec.ts` verlangt, dass jeder `en.json`-Schlüssel im
+  Quelltext vorkommt (Literal, `'ns.' + x`, `` `ns.${x}` ``, Namensraum-Literal, `x + '.suffix'`); wer einen Schlüssel
+  nicht mehr benutzt, löscht ihn aus allen 25 Dateien. `karma.conf.js` liefert dafür `src*/**/*.ts|html` aus.
 - **Nicht übersetzt**: Schach-Notation/FEN/PGN, Eigennamen, „RookHub"/„Stockfish", gecrawlte Daten, HTTP-Methoden.
 
 ## Offline / PWA (Service Worker)
@@ -215,6 +254,10 @@ Default-Browser ist `ChromeHeadlessNoSandbox` (`--no-sandbox --disable-gpu --dis
 
 - Ist keine Cache-Shell da: `npx puppeteer browsers install chrome-headless-shell` (lädt nach `~/.cache/puppeteer`, kein root).
 - Lokal mit installiertem Chrome: einfach `CHROME_BIN` setzen oder `--browsers=Chrome` übergeben.
+- **Kontrast-Specs** messen berechnete Farben über `src/app/testing/contrast.ts` (`textContrast`/`effectiveBackground`;
+  `mountWithComponentStyles` wendet gekapselte Komponenten-Stile ohne Zustand an) und `testing/board-coords.ts`
+  (Brett-Koordinaten gegen ihr Feld); `body` malt `var(--mat-sys-surface)`, die Textfarbe bleibt bewusst die des
+  Browsers (Codereview UX-057).
 
 ## Fehlerbehandlung (wann `error: () => {}` legitim ist)
 
@@ -226,6 +269,11 @@ Der Bestand enthält ~80 bewusst stille Fehler-Handler. Die Grenze:
 - **Still ist NICHT OK**, wenn der Nutzer gerade eine Aktion ausgeführt hat (Speichern, Senden,
   Löschen, Download) oder wenn Daten verloren gehen könnten — dann Snackbar mit konkreter Aussage
   (`saveFailed`-Muster) und, wo sinnvoll, die Änderung als „offen" behalten statt sie zu verwerfen.
+- **Ladefehler nie als Leerzustand zeigen** (Codereview F5-017) — `shared/load-error` (`app-load-error`, Standardtext
+  `common.loadFailed`) mit Wiederholen-Knopf.
+- **Fehlertexte aus HTTP-Fehlern** über `core/api-error.ts` `apiErrorText(err, translate, fallbackKey)` (übersetzt den
+  `code` der API über `apiErrors.<code>`, sonst `message`, sonst der Schlüssel) statt `err.error?.message ||
+  translate(...)` (Codereview F5-019).
 - Offline-Schreibwege melden Fehlschläge IMMER (writeCalcLocal*/saveBookOffline/Offline-Queue geben
   null/false zurück und die Aufrufer zeigen es an) — ein vorgetäuschtes „gespeichert" ist der
   teuerste Fehler dieser Kategorie.

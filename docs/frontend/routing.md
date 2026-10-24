@@ -29,11 +29,11 @@
 | `/weekly/:weeklyId` | BookPuzzleComponent (Wochenpost-Modus) | `adminGuard` (vorerst nur Admin) |
 | `/ebooks` | EbookListComponent (E-Book-Bibliothek, 0.764.0: Suche, Schlagwort-Chips, Sortierung, Karten mit Titelbild und Lesestand; Hochladen für jeden Angemeldeten, Sichtbarkeit je Buch über Gruppen) | `authGuard` + `menuGuard('ebooks')` |
 | `/ebooks/:id` | EbookReaderComponent (PDF-Leser mit pdf.js aus `/assets/pdfjs/`, Seite x / N, Zoom, gemerkter Lesestand; andere Formate: Download-Karte) | `authGuard` + `menuGuard('ebooks')` |
-| `/courses` | CourseListComponent | `courseAccessGuard` (Admin oder Gruppe mit Buch-Freigabe) |
-| `/courses/:bookId` | CourseDetailComponent (Detailseite: Metadaten + Kapitel-Verwaltung, Stellungen per Memo einfügen) | `courseAccessGuard` |
-| `/courses/:bookId/flashcards` | FlashcardsComponent (Lern-/Druckansicht: AUSGANGSSTELLUNG vorn [Aufgabe], Lösung+Abschlusstext hinten; `?lines=<ids>`/`?chapter=`; MUSS vor der `:mode`-Route stehen) | `courseAccessGuard` |
+| `/courses` | CourseListComponent | `authGuard` + `menuGuard('courses')` (`course-access.guard.ts` gibt es nicht mehr, Codereview F1-017; was lesbar ist, entscheidet die API) |
+| `/courses/:bookId` | CourseDetailComponent (Detailseite: Metadaten + Kapitel-Verwaltung, Stellungen per Memo einfügen) | `authGuard` + `menuGuard('courses')` |
+| `/courses/:bookId/flashcards` | FlashcardsComponent (Lern-/Druckansicht: AUSGANGSSTELLUNG vorn [Aufgabe], Lösung+Abschlusstext hinten; `?lines=<ids>`/`?chapter=`; MUSS vor der `:mode`-Route stehen) | `authGuard` + `menuGuard('courses')` |
 | `/repertoires/:id/flashcards` | FlashcardsComponent (UMGEKEHRT: Endstellung+[%cal]-Pfeile vorn, Linie+Abschlusstext hinten; `?lines=<lineKeys>`) | `authGuard` |
 | `/courses/:bookId/calc` | CalculationComponent (Kalkulations-Modus; MUSS vor der `:mode`-Route stehen) | `coursePlayGuard` |
-| `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `courseAccessGuard` |
-| `/` | redirect -> `/dashboard` | - |
-| `**` | redirect -> `/dashboard` | - |
+| `/courses/:bookId/:mode` | BookPuzzleComponent (Kursmodus) | `coursePlayGuard` |
+| `/` | redirect -> `/dashboard`, Gäste -> `GUEST_START_URL` (nach einer Anmelde-Übernahme löst `HandoffService.leaveGuestStart` den Start neu auf, UX-025) | - |
+| `**` | `shared/not-found/NotFoundComponent` (guard-frei, auch in LeagueHub; Codereview UX-026) | - |
