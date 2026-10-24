@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.828.2", date: "2026-10-24", changes: [
+    { en: "CI: ESLint ratchet — a per-rule baseline („eslint-baseline.json“) turns the frontend build red as soon as any lint rule gains new findings; falling counts stay green and lower the baseline via „npm run lint:ratchet:update“ (code review F8-004, phase 2).",
+      de: "CI: ESLint-Ratsche – eine Baseline je Regel („eslint-baseline.json“) macht den Frontend-Build rot, sobald eine Lint-Regel neue Treffer bekommt; sinkende Zahlen bleiben grün und senken die Baseline per „npm run lint:ratchet:update“ (Codereview F8-004, Phase 2)." },
+  ] },
   { version: "0.828.1", date: "2026-10-24", changes: [
     { en: "Shared sign-in: the old routes „/api/auth/session“ and „session/end“, kept as a temporary fallback for cached app versions since 0.624.0, are gone; sign-in sharing uses „rh-session“ only (code review N6-001).",
       de: "Geteilte Anmeldung: Die alten Routen „/api/auth/session“ und „session/end“, die seit 0.624.0 als Übergang für zwischengespeicherte App-Fassungen bestanden, sind entfernt; die geteilte Anmeldung läuft nur noch über „rh-session“ (Codereview N6-001)." },
