@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.6", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z14/Z15): the LeagueHub club database service is split into PGN text, side resolver, reader, writer and importer; account deletion runs as a fixed, ordered list of per-area erasers, and the deletion guard now also recognises foreign keys to the user — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z14/Z15): Der Vereins-Datenbank-Dienst von LeagueHub ist in PGN-Text, Seiten-Abgleich, Lesen, Schreiben und Einlesen zerlegt; die Kontolöschung läuft als feste, geordnete Liste von Löschern je Bereich, und der Löschpflicht-Wächter erkennt jetzt auch Fremdschlüssel auf den Nutzer — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.5", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z2/Z10): the API start-up configuration is split by concern into Startup/ (Program.cs 1,194 → 126 lines), all background services are registered in one table, and the daily tournament-subscription loop is separated from its domain service — no functional change; the admin job list shows it as „AutoSubscriptionScheduler“.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z2/Z10): Die Startkonfiguration der API ist nach Belangen in Startup/ aufgeteilt (Program.cs 1 194 → 126 Zeilen), alle Hintergrunddienste stehen in einer Tabelle, und die tägliche Turnier-Abo-Schleife ist vom Fachdienst getrennt — keine Funktionsänderung; in der Admin-Jobliste heißt sie jetzt „AutoSubscriptionScheduler“." },
   ]},
