@@ -1173,7 +1173,7 @@ eine spaetere „laeuft gerade"-Ansicht dagegen die Hauptquelle.
   in RepCheck anpassen und die betroffenen Nutzer warnen; **harmlos** (geänderte Feldnamen, eine gesperrte Linie in
   einem Vorschau-Kurs) → `checkChessableResponse` in `repcheck/extension/lib/chessable-crawl.js` erweitern und dem
   Nutzer grünes Licht geben. Gilt nur für die Extension — das Userscript prüft nicht.
-- [ ] Code Review — letzter: **2026-08-25** → Review über `rookhub` (~1800 Quelldateien). 15 Funde, alle verifiziert (kein Fehlalarm), **14 behoben in v0.376.2**: WQL-Wildcard `*` statt `%` im Waisen-Aufräumer (`reap_orphans.ps1` traf NIE etwas und meldete 15-minütlich „ohne Befund“), PID-Recycling bei der Elternprüfung, README-Stopp-Prozedur killte jeden `python.exe`, `init()`-Fehler ohne `fatalError$` (Karte log dauerhaft „Berechne…“), `destroy()` ließ das Init-Promise ungelöst hängen, Selbstvergleich zweier WASM-Kerne, doppeltes `startCompare()`, fehlender Telemetrie-Hook, `compareCrashed` überlebte den Stellungswechsel. **Offen: 1 Fund** (EngineSlot-Umbau, siehe „Bewusste Entscheidung“). +4 Regressionstests (gegengeprüft: fallen ohne die Fixes um). **Einschränkung: faktisch Delta auf die jüngste Arbeit** — im .NET-Teil (1283 Dateien) kam kein einziger Fund heraus, für einen Vollscan unplausibel; API separat nachholen. (vorher 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
+- [ ] Code Review — letzter: **2026-09-29** → Vollreview Stack-weit (rookhub + Satelliten). **634 Roh-Funde → 622 nach Dedupe, 531 CONFIRMED** (dazu 79 plausibel, 12 widerlegt); in fünf Wellen umgesetzt: W1–W5 = rookhub v0.601.0, v0.606.0, v0.623.0, v0.624.0, v0.635.0. Bericht: `rookhubstack/CODE_REVIEW_2026-09-29.md` (Plan `CODE_REVIEW_PLAN_2026-09-29.md`). Die `Doku:`-Aufträge der Fix-Commits sind seit 2026-10-24 in `docs/` nachgetragen; offene Nacharbeiten unten unter „Code-Review 2026-09-29“. **Offen:** Zerlegungs-Welle (Zerlegungs-Karte, 49 Zeilen), Linter-Ratsche (Phase 2 seit 0.828.2 aktiv — `docs/ci.md`; offen Phase 3: Regeln beim Nullstand auf `'error'`), Restarbeit (Teil-Fixe, Folgepunkte in anderen Repos). (vorher 2026-08-25 Review über `rookhub`: 15 Funde, 14 behoben in v0.376.2, offen EngineSlot-Umbau, faktisch Delta; 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-08-26** → alle 25 Sprachdateien JSON-valide; en/de/hr je **2217 Keys** in voller Parität (Platzhalter identisch, keine leeren Werte außer dem gewollten `weekly.oClock`-Suffix) — seit v0.376.4 als Karma-Spec `i18n-parity.spec.ts` dauerhaft erzwungen. Qualitäts-Review per 30 Reviewer + 10 adversariale Verifizierer (je Chunk × en/de/hr): 389 Roh-Funde → **~260 bestätigt und übernommen** (hr ~150: Sie→Du-Form, Chessable-Bereich war englisch, kurs→tečaj, izračun→računanje; de ~75: gemischte „…"-Paare, englisch gebliebene Wörter, Genus/Präpositionen, Ein-Topf-Semantik der Trainingsziele; en ~35: US-Schreibung, Tippfehler). Echte Bugs für ALLE Sprachen: `{score}`-Platzhalter (einfache Klammern), `admin.ci.watchStop` „2 Minuten" (Code: 20 s), literale `\u2019`, `chessable.throughputHint` 15–20/min (Drossel ist ~4/min). Aufräumen: 704 veraltete Keys aus den 22 Weltsprachen, 68 tote Keys überall (31 unter ThemePicker-/VizCard-Namespaces bewusst behalten). Die 22 Weltsprachen hängen weiter ~1360 Keys hinter en (Fallback greift). (vorher 2026-08-25: Registercheck `nav.support` el+hr → v0.376.1; 2026-07-12: hr 2 Lücken → v0.291.34)
 - [ ] Security Review — letzter: **2026-08-10** (im Delta-Review mitgelaufen: Auth-/Injection-/Contract-Blickwinkel). Einziger echter Fund = das Kalk-Lösungs-Leck (behoben). Keine CRIT/HIGH offen. (vorher 2026-07-18 6-Wege-Fan-out)
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-08-26** → ES :9200, 7-Tage-Fenster.
@@ -1500,6 +1500,29 @@ leere Karte auf /analysis).
   (Wichtige Konventionen, vor „Puzzle-Modi konsistent halten"): 1 primäre Aktion, ≤3 sekundäre,
   Rest ⋮; HelpHint statt Absatz-Stapeln; Container an `--page-max-width`; neue Dashboard-Kacheln
   nicht in `DEFAULT_VISIBLE`.
+
+## Code-Review 2026-09-29 — offene Nacharbeiten aus den Fix-Commits (eingetragen 2026-10-24)
+- [ ] **Ops, NPM glaubt `X-Real-IP`** (A10-002): `set_real_ip_from` in NPMs `custom/server_proxy.conf` auf `127.0.0.1`
+  (bzw. die Bereiche eines vorgeschalteten CDN) einschränken; Docker-Peers an veröffentlichten Ports schließen
+  (`API_BIND=127.0.0.1`, Oberflächen-Ports nur mit NPM in den Stack-Netzen oder wg-easy ohne Masquerade). Prod-Konfig —
+  nur der User bzw. auf ausdrückliche Anweisung. Hintergrund: `Middleware/ForwardedHeadersSetup.cs`.
+- [ ] **Spiegeltest aller localStorage-Schlüssel** gegen die Abmelde-/Behalten-Liste (F1-010) — braucht vorher eine
+  Einordnung je Schlüssel (räumen beim Abmelden oder behalten).
+- [ ] **Changelog als Daten statt Code** (F8-008): lazy Asset-Gruppe + `HttpClient`, damit der Service Worker den
+  ~1,7-MB-Changelog-Chunk nicht nach jedem Release neu prefetcht; betrifft die Pflege von `changelog-data.ts` und
+  `changelog_discord.py`. Dabei die Größenkommentare in `changelog.ts`/`changelog-data.ts` (~0,9 MB) auf ~1,7 MB berichtigen.
+- [ ] **Remis-Ergebnis „1/2“ im Rohbestand** (N11-004) — Datencheck für den User (erst Dev, dann Prod; teurer Volltext,
+  nur lesend): `SELECT COUNT(*) FROM LibraryGames WHERE Pgn REGEXP '[[:space:]]1/2[[:space:]]*$';`. Ist das 0, reicht die
+  Doku-Korrektur; sonst `LibraryImport rehash-results --dry-run`, dann `rehash-results`, dann `dedupe` — auf Prod NUR auf
+  ausdrückliche Anweisung. Dazu offen im Frontend: `reconstruct-detail.component.ts` (Ergebnis-Filter) kennt „1/2“ nicht.
+- [ ] **Ladefehler über `shared/load-error` vereinheitlichen** (UX-040/UX-074): die Fehlerblöcke der Turnierseite
+  (Kalender, Merkliste, Verlauf, Profil) auf `app-load-error` umstellen.
+- [ ] **Zugliste mit Roving tabindex** (F8-018): heute ist jeder Zug ein eigener Tab-Stopp — gehört in die
+  Barrierefreiheits-Runde (axe-Lauf).
+- [ ] **Folgepunkte in anderen Repos** (nur die rookhub-Seite ist umgesetzt): chessresults_crawler
+  `src/ChessResultsCrawler/Program.cs` braucht denselben HttpClient-Log-Override wie rookhub (A10-014,
+  `Logging/SerilogLevels.cs`); chessresults_crawler `CLAUDE.md` (DTOs) bekommt den Spiegel-Hinweis auf
+  `tests/RookHub.Api.Tests/Fixtures/CrawlerContract` (I2-006).
 
 ## Code-Review 2026-09-03/04 (rookhub komplett, 7 Bereiche — GEFIXT in v0.388.0–0.394.0)
 
