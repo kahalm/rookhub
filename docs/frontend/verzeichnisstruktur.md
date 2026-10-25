@@ -28,9 +28,12 @@ app/src/app/
       tournament-detail.component.ts        Tabs: Players (Table), Teams (Table), Pairings (Table + Round-Select)
     puzzles/
       book-puzzle.component.ts              Buch-Löser (Kurs/Wochenpost/Tagespuzzle/Buch): Container, siehe unten
+  shell/
+    navbar.component.ts     Material Toolbar, Navigation, User-Menu mit Logout (RookHub-Kopfleiste; App-Schicht,
+                            darf Features kennen — seit Codereview F8-013 nicht mehr in shared/)
   shared/
     navbar/
-      navbar.component.ts   Material Toolbar, Navigation, User-Menu mit Logout
+      nav-edge.ts           Kante der Kopfleiste messen (RookHub + Turnierseite)
     loading-spinner/
       loading-spinner.component.ts  Zentrierter MatSpinner
     lines/

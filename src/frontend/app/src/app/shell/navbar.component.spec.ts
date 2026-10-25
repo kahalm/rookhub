@@ -7,20 +7,20 @@ import { of } from 'rxjs';
 import { Router, RouterLink, provideRouter } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { NAV_DOCKED_CLASS, NAV_WIDTH_VAR, NavbarComponent } from './navbar.component';
-import { AuthService } from '../../core/auth.service';
-import { CourseService } from '../../features/courses/course.service';
-import { CatalogService } from '../../features/catalog/catalog.service';
-import { MenuService } from '../../core/menu.service';
-import { InAppNotificationService } from '../../core/in-app-notification.service';
-import { MessageService } from '../../core/message.service';
-import { LocaleService } from '../../core/locale.service';
-import { ThemeService } from '../../core/theme.service';
-import { EinkService } from '../../core/eink.service';
-import { HandoffService } from '../../core/handoff.service';
+import { AuthService } from '../core/auth.service';
+import { CourseService } from '../features/courses/course.service';
+import { CatalogService } from '../features/catalog/catalog.service';
+import { MenuService } from '../core/menu.service';
+import { InAppNotificationService } from '../core/in-app-notification.service';
+import { MessageService } from '../core/message.service';
+import { LocaleService } from '../core/locale.service';
+import { ThemeService } from '../core/theme.service';
+import { EinkService } from '../core/eink.service';
+import { HandoffService } from '../core/handoff.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
-import { FEEDBACK_URL } from '../../core/community';
-import { environment } from '../../../environments/environment';
+import { FEEDBACK_URL } from '../core/community';
+import { environment } from '../../environments/environment';
 
 describe('NavbarComponent', () => {
   // Über TestBed in einem Injection-Context bauen: NavbarComponent nutzt

@@ -10,7 +10,7 @@ import { ReconstructListComponent } from './reconstruct/reconstruct-list.compone
 import { CourseListComponent } from './courses/course-list.component';
 import { CourseDetailComponent } from './courses/course-detail.component';
 import { FlashcardsComponent } from './courses/flashcards/flashcards.component';
-import { NavbarComponent } from '../shared/navbar/navbar.component';
+import { NavbarComponent } from '../shell/navbar.component';
 import { RepertoireDetailComponent } from './repertoire/repertoire-detail.component';
 
 /**

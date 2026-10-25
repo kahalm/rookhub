@@ -770,7 +770,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 ### 8.1 RookHub (`src/`)
 
-- Material 22 (M3, Azure), dunkel als Vorgabe, `ThemeService` (3.1). Navbar (`shared/navbar/`): ≤ 768 px
+- Material 22 (M3, Azure), dunkel als Vorgabe, `ThemeService` (3.1). Navbar (`shell/navbar.component.ts`, Messung in `shared/navbar/nav-edge.ts`): ≤ 768 px
   Hamburger; abgemeldet ≤ 480 px nur „Anmelden“ und ☰ (0.740.0). Fußzeile (`shared/app-footer/`) bleibt auf
   kurzen Seiten unten; Links ≥ 44 px.
 - Dashboard: neue Kacheln nicht in `DEFAULT_VISIBLE`; angepinnte Kurse in eigener breiter Zeile (r2-rk-dash-stretch).

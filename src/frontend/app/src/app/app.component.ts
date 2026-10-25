@@ -6,7 +6,7 @@ import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
-import { NavbarComponent } from './shared/navbar/navbar.component';
+import { NavbarComponent } from './shell/navbar.component';
 import { DISCORD_SVG } from './core/community';
 import { ImpersonationBannerComponent } from './shared/impersonation-banner/impersonation-banner.component';
 import { AppFooterComponent } from './shared/app-footer/app-footer.component';

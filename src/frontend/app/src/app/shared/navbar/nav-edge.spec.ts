@@ -1,7 +1,7 @@
 import { DestroyRef, NgZone } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { NavbarComponent } from './navbar.component';
+import { NavbarComponent } from '../../shell/navbar.component';
 import { measureContentEdge, trackNavEdge } from './nav-edge';
 
 /**

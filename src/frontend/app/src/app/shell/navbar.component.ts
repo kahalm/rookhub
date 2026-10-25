@@ -1,4 +1,4 @@
-import { HandoffService } from '../../core/handoff.service';
+import { HandoffService } from '../core/handoff.service';
 import { Component, EventEmitter, Output, OnInit, DestroyRef, ElementRef, NgZone, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { of, switchMap, catchError, merge, map, timer } from 'rxjs';
@@ -9,28 +9,28 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MatMenuModule } from '@angular/material/menu';
-import { IconLabelDirective } from '../icon-label/icon-label.directive';
+import { IconLabelDirective } from '../shared/icon-label/icon-label.directive';
 import { MatBadgeModule } from '@angular/material/badge';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { AuthService } from '../../core/auth.service';
-import { CourseService } from '../../features/courses/course.service';
-import { CatalogService } from '../../features/catalog/catalog.service';
-import { MenuService } from '../../core/menu.service';
-import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
-import { MessageService } from '../../core/message.service';
-import { notificationText, notificationIcon } from '../../core/notification-text';
-import { LocaleService } from '../../core/locale.service';
-import { ThemeService, AppTheme } from '../../core/theme.service';
-import { EinkService } from '../../core/eink.service';
-import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
-import { environment } from '../../../environments/environment';
-import { LEGAL_SITE } from '../../core/legal-site';
-import { canOpenAdmin } from '../../features/admin/admin-tabs';
-import { authLinkQuery, isAuthPage } from '../../core/return-url.util';
+import { AuthService } from '../core/auth.service';
+import { CourseService } from '../features/courses/course.service';
+import { CatalogService } from '../features/catalog/catalog.service';
+import { MenuService } from '../core/menu.service';
+import { InAppNotificationService, AppNotification } from '../core/in-app-notification.service';
+import { MessageService } from '../core/message.service';
+import { notificationText, notificationIcon } from '../core/notification-text';
+import { LocaleService } from '../core/locale.service';
+import { ThemeService, AppTheme } from '../core/theme.service';
+import { EinkService } from '../core/eink.service';
+import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../core/community';
+import { environment } from '../../environments/environment';
+import { LEGAL_SITE } from '../core/legal-site';
+import { canOpenAdmin } from '../features/admin/admin-tabs';
+import { authLinkQuery, isAuthPage } from '../core/return-url.util';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
-} from '../fullscreen/fullscreen.util';
-import { trackNavEdge } from './nav-edge';
+} from '../shared/fullscreen/fullscreen.util';
+import { trackNavEdge } from '../shared/navbar/nav-edge';
 
 /** Body-Klasse: die Seite hat eine eigene Werkzeugleiste, die Kopfleiste dockt oben rechts darauf an (0.785.x). */
 export const NAV_DOCKED_CLASS = 'nav-docked';

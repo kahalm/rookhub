@@ -23,7 +23,7 @@ import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerCom
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
 import { EbookBoardComponent } from './ebook-board.component';
 import { nextZoom, parsePageInput } from './reader-progress.util';
-import { NAV_DOCKED_CLASS } from '../../shared/navbar/navbar.component';
+import { NAV_DOCKED_CLASS } from '../../shell/navbar.component';
 import { EinkService } from '../../core/eink.service';
 import { whiteToMove } from '../../shared/chess/fen-side';
 
