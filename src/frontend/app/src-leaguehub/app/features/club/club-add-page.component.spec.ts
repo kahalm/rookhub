@@ -7,6 +7,8 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubPreview, ScoresheetScan } from '../../core/club.models';
 import { ClubAddPageComponent } from './club-add-page.component';
 import { anonKeys } from './club-anon-keys';
+import { PgnSourcePanelComponent } from './pgn-source-panel.component';
+import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
@@ -62,6 +64,11 @@ describe('ClubAddPageComponent', () => {
     fixture = TestBed.createComponent(ClubAddPageComponent);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
+  }
+
+  /** Die PGN-Quelle (Datei, ChessBase, Lichess, Text) — eigene Kind-Komponente seit der Zerlegung Z31. */
+  function source(): PgnSourcePanelComponent {
+    return fixture.debugElement.query(By.directive(PgnSourcePanelComponent)).componentInstance as PgnSourcePanelComponent;
   }
 
   // d3-l-info-icon-allein-handy: am Handy brach das ⓘ allein in Zeile 2 — jetzt steht es immer mit „Gegner." auf einer Zeile.
@@ -397,7 +404,7 @@ describe('ClubAddPageComponent', () => {
     api.lichess.and.resolveTo('[Event "Studie: Kapitel 1"]\n1. e4 *');
     api.preview.and.resolveTo(PREVIEW);
     fixture.componentInstance.store.studyUrl.set('https://lichess.org/study/AbCdEf12');
-    void fixture.componentInstance.loadStudy();
+    void source().loadStudy();
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.lichess).toHaveBeenCalledWith('https://lichess.org/study/AbCdEf12');
@@ -406,8 +413,9 @@ describe('ClubAddPageComponent', () => {
     expect(el.querySelector('.review-table')).not.toBeNull();
 
     fixture.componentInstance.store.review.set(null);
+    fixture.detectChanges();                                                 // die Quelle steht wieder da
     api.lichess.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'lichessNotFound' } }));
-    void fixture.componentInstance.loadStudy();
+    void source().loadStudy();
     flushMicrotasks();
     fixture.detectChanges();
     expect(el.textContent).toContain('nicht öffentlich');
@@ -421,7 +429,7 @@ describe('ClubAddPageComponent', () => {
     api.preview.and.resolveTo(PREVIEW);
     const files = ['Verein.2cbh', 'Verein.2cbg', 'Verein.2lid', 'Verein.2cba', 'Verein.ini'].map(n => new File(['abc'], n));
     const input = { files, value: 'C:\\fakepath\\Verein.2cbh' };
-    await fixture.componentInstance.pickChessBase({ target: input } as unknown as Event);
+    await source().pickChessBase({ target: input } as unknown as Event);
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     fixture.detectChanges();
 
@@ -443,7 +451,7 @@ describe('ClubAddPageComponent', () => {
     const game = (i: number) => `[White "W${i}"]\n[Black "B${i}"]\n[Result "1-0"]\n\n1. e4 {Kommentar\n[%clk 0:01:00]} e5 1-0`;
     const pgn = Array.from({ length: 1001 }, (_, i) => game(i + 1)).join('\n\n');
     api.preview.and.resolveTo(PREVIEW);
-    await fixture.componentInstance.pickFile({ target: { files: [new File([pgn], 'Verein.pgn')] } } as unknown as Event);
+    await source().pickFile({ target: { files: [new File([pgn], 'Verein.pgn')] } } as unknown as Event);
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     fixture.detectChanges();
 
@@ -461,7 +469,7 @@ describe('ClubAddPageComponent', () => {
     const el = create();
     api.preview.and.resolveTo(PREVIEW);
     const input = { files: [new File(['[White "x"]\n1. e4 *'], 'Mannschaft.pgn')], value: 'C:\\fakepath\\Mannschaft.pgn' };
-    await fixture.componentInstance.pickFile({ target: input } as unknown as Event);
+    await source().pickFile({ target: input } as unknown as Event);
     fixture.detectChanges();
     expect(input.value).toBe('');
     expect(api.createDraft).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 'datei', 'Mannschaft.pgn');
@@ -478,7 +486,7 @@ describe('ClubAddPageComponent', () => {
     const file = new File([Array.from({ length: 1001 }, (_, i) => game(i + 1)).join('\n\n')], 'Verein.pgn');
     let answer!: (p: ClubPreview) => void;
     api.preview.and.returnValue(new Promise<ClubPreview>(r => answer = r));
-    const first = fixture.componentInstance.pickFile({ target: { files: [file], value: 'C:\\fakepath\\Verein.pgn' } } as unknown as Event);
+    const first = source().pickFile({ target: { files: [file], value: 'C:\\fakepath\\Verein.pgn' } } as unknown as Event);
     for (let i = 0; i < 50 && !api.preview.calls.count(); i++) await new Promise(r => setTimeout(r));
     fixture.detectChanges();
     expect(api.preview).toHaveBeenCalledTimes(1);                           // die Vorschau läuft noch
@@ -489,9 +497,9 @@ describe('ClubAddPageComponent', () => {
     expect((el.querySelector('.btn-pri') as HTMLButtonElement).disabled).toBeTrue();
 
     const again = { files: [file], value: 'C:\\fakepath\\Verein.pgn' };
-    void fixture.componentInstance.pickFile({ target: again } as unknown as Event);    // kommt trotzdem eine Wahl durch …
+    void source().pickFile({ target: again } as unknown as Event);    // kommt trotzdem eine Wahl durch …
     fixture.componentInstance.store.studyUrl.set('https://lichess.org/study/AbCdEf12');
-    void fixture.componentInstance.loadStudy();                             // … oder Enter im Studien-Feld
+    void source().loadStudy();                             // … oder Enter im Studien-Feld
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     expect(again.value).toBe('');
     expect(api.lichess).not.toHaveBeenCalled();
@@ -575,13 +583,13 @@ describe('ClubAddPageComponent', () => {
 
   it('ChessBase: ohne Kopfdatei wird gar nicht erst hochgeladen, Absagen des Servers stehen als Satz da', async () => {
     const el = create();
-    await fixture.componentInstance.pickChessBase({ target: { files: [new File(['x'], 'a.2cbg')], value: '' } } as unknown as Event);
+    await source().pickChessBase({ target: { files: [new File(['x'], 'a.2cbg')], value: '' } } as unknown as Event);
     fixture.detectChanges();
     expect(api.chessBase).not.toHaveBeenCalled();
     expect(el.querySelector('.update-msg')?.textContent).toContain('.cbh oder .2cbh');
 
     api.chessBase.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'missingFile', message: 'Es fehlt: a.2lid.' } }));
-    await fixture.componentInstance.pickChessBase({ target: { files: [new File(['x'], 'a.2cbh')], value: '' } } as unknown as Event);
+    await source().pickChessBase({ target: { files: [new File(['x'], 'a.2cbh')], value: '' } } as unknown as Event);
     fixture.detectChanges();
     expect(el.querySelector('.update-msg')?.textContent).toContain('Es fehlt: a.2lid.');
     expect(api.preview).not.toHaveBeenCalled();

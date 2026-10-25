@@ -61,39 +61,7 @@
             Partie einer Ligarunde zugeordnet ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je
             Partie ändern.</p></div>
         }
-        <label class="field">PGN-Datei
-          <input type="file" lhFilePick accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="store.busy()" (change)="pickFile($event)" />
-          @if (store.readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
-        </label>
-        <label class="field">… oder eine ChessBase-Datenbank
-          <input type="file" lhFilePick multiple [disabled]="store.busy()" (change)="pickChessBase($event)" />
-          <span class="small muted">Alle Dateien der Datenbank auswählen (z. B. MeineSpiele.2cbh, .2cbg, .2lid … bzw. .cbh,
-            .cbg, .cbp …) oder ein ZIP davon. Gelesen wird die Hauptvariante, ohne Kommentare.
-            @if (store.readingDb()) { <b>Lese die Datenbank …</b> }</span>
-        </label>
-        <div class="field">… oder eine öffentliche Lichess-Studie
-          <div class="linkrow">
-            <input type="url" inputmode="url" placeholder="https://lichess.org/study/…" [value]="store.studyUrl()"
-                   (input)="store.studyUrl.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); loadStudy()" />
-            <button type="button" class="btn-sec" [disabled]="store.busy() || !store.studyUrl().trim()" (click)="loadStudy()">
-              {{ store.loadingStudy() ? 'Lade …' : 'Laden' }}</button>
-          </div>
-        </div>
-        <label class="field">… oder hier einfügen
-          <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="store.pgn()"
-                    (input)="store.pgn.set($any($event.target).value)"></textarea>
-        </label>
-        <div class="actions">
-          <button type="button" class="btn-pri" [disabled]="store.busy() || !store.pgn().trim()" (click)="store.startPreview()">
-            {{ store.previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
-          <!-- a1-l-partien-pruefen-gesperrt: solange nichts da ist, sagt die Zeile, WARUM der Knopf gesperrt ist (DESIGN 5.4). -->
-          @if (!store.busy() && !store.pgn().trim()) {
-            <span class="muted small pick-reason">Erst eine PGN-Datei wählen, eine Studie laden oder Partien einfügen.</span>
-          } @else {
-            <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
-          }
-          <span class="update-msg" [class.err]="!!store.importError()" role="status">{{ store.importError() ?? '' }}</span>
-        </div>
+        <lh-pgn-source-panel [store]="store" />
       }
       @if (!store.review() && store.drafts().length) {
         <h3 class="club-h3">Deine offenen Listen</h3>

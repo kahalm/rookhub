@@ -2,7 +2,6 @@ import { FilePickDirective } from '../../shared/file-pick.directive';
 import { BatchUploadComponent } from '../../shared/batch-upload.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { anonKeys, rememberAnonKey } from './club-anon-keys';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -12,9 +11,9 @@ import { SecondsTicker, readingSeconds } from '@rh/features/games/scoresheet-tim
 import { ClubContextService } from '../../core/club-context.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
-import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload } from '../../core/chessbase-upload';
 import { ClubImportReviewComponent } from './club-import-review.component';
 import { ClubDraftStore } from './club-draft-store';
+import { PgnSourcePanelComponent } from './pgn-source-panel.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 
 const POLL_MS = 3000;
@@ -30,7 +29,7 @@ type Kind = 'pgn' | 'formular';
   selector: 'lh-club-add-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FilePickDirective, RouterLink, ClubImportReviewComponent, AccessGateComponent, BatchUploadComponent],
+  imports: [FilePickDirective, RouterLink, ClubImportReviewComponent, AccessGateComponent, BatchUploadComponent, PgnSourcePanelComponent],
   templateUrl: './club-add-page.component.html',
 })
 export class ClubAddPageComponent implements OnInit {
@@ -166,95 +165,6 @@ export class ClubAddPageComponent implements OnInit {
 
   scanLink(sc: ScanRef): unknown[] {
     return this.share ? ['/s', this.share, 'formular', sc.ref] : ['/verein/formular', sc.ref];
-  }
-
-  /** Eine PGN-Datei: lesen und gleich in die Übersicht — wie ChessBase-Datenbank und Lichess-Studie (UX-037). Vorher füllte
-   *  die Wahl nur das Textfeld, das am Handy unter dem Rand lag: sichtbar passierte nichts, und dieselbe Datei noch einmal
-   *  zu wählen löste kein `change` aus. */
-  async pickFile(ev: Event): Promise<void> {
-    const input = ev.target as HTMLInputElement;
-    const f = input.files?.[0];
-    input.value = '';                                                  // dieselbe Auswahl darf noch einmal kommen
-    // Läuft schon eine Liste, ist das Feld gesperrt — kommt trotzdem eine Wahl durch, keine zweite Vorschau daneben.
-    if (!f || this.store.busy()) return;
-    this.store.readingFile.set(true);
-    try {
-      this.store.dbNote.set(null);
-      this.store.portionNote.set(null);
-      this.store.importError.set(null);
-      try {
-        this.store.pgn.set(await f.text());
-      } catch {
-        this.store.importError.set('Die Datei ließ sich nicht lesen.');
-        return;
-      }
-      this.store.loaded(this.store.pgn(), 'datei', f.name);
-      this.store.result.set(null);
-      await this.store.startPreview();                                       // teilt in Pakete wie jede andere Liste
-    } finally {
-      this.store.readingFile.set(false);
-    }
-  }
-
-  /**
-   * Eine ChessBase-Datenbank (0.598.0): die nötigen Dateien gepackt hochladen, der Server liefert das PGN — ab dort wie
-   * jede andere Liste, auch das Aufteilen in Pakete (`startPreview`).
-   */
-  async pickChessBase(ev: Event): Promise<void> {
-    const input = ev.target as HTMLInputElement;
-    const picked = Array.from(input.files ?? []);
-    input.value = '';                                                  // dieselbe Auswahl darf noch einmal kommen
-    if (!picked.length || this.store.busy()) return;
-    this.store.importError.set(null);
-    this.store.dbNote.set(null);
-    this.store.portionNote.set(null);
-    this.store.result.set(null);
-    const { send, hasDatabase } = chessBaseSelection(picked);
-    if (!hasDatabase) {
-      this.store.importError.set('Keine ChessBase-Datenbank dabei — die Datei mit der Endung .cbh oder .2cbh muss mit (oder ein ZIP).');
-      return;
-    }
-    this.store.readingDb.set(true);
-    try {
-      const packed = await Promise.all(send.map(packForUpload));
-      if (packed.reduce((sum, p) => sum + p.blob.size, 0) > CHESSBASE_MAX_UPLOAD_BYTES) {
-        this.store.importError.set('Die Datenbank ist zu groß für einen Upload (gepackt höchstens 15 MB).');
-        return;
-      }
-      const r = await this.client.chessBase(packed);
-      if (!r.converted) {
-        this.store.importError.set(r.games ? chessBaseNote(r) + ' Nichts zu importieren.' : `${r.name}: keine Partien in der Datenbank.`);
-        return;
-      }
-      this.store.dbNote.set(chessBaseNote(r));
-      this.store.pgn.set(r.pgn);
-      this.store.loaded(r.pgn, 'chessbase', `${r.name}.${r.format}`);
-      await this.store.startPreview();                                       // teilt in Pakete wie jede andere Liste
-    } catch (err) {
-      this.store.importError.set(chessBaseErrorText(err));
-    } finally {
-      this.store.readingDb.set(false);
-    }
-  }
-
-  /** Eine öffentliche Lichess-Studie holen (der Server ruft Lichess) — danach geht es weiter wie mit einer Datei. */
-  async loadStudy(): Promise<void> {
-    if (this.store.busy()) return;                                           // Enter im Feld umgeht den gesperrten Knopf
-    this.store.loadingStudy.set(true);
-    this.store.importError.set(null);
-    this.store.dbNote.set(null);
-    this.store.portionNote.set(null);
-    try {
-      this.store.pgn.set(await this.client.lichess(this.store.studyUrl().trim()));
-      this.store.loaded(this.store.pgn(), 'lichess', this.store.studyUrl().trim());
-      this.store.result.set(null);
-      await this.store.startPreview();
-    } catch (err) {
-      const e = err instanceof HttpErrorResponse ? err : null;
-      this.store.importError.set(e?.error?.reason ? reasonText(e.error.reason) : 'Die Studie ließ sich nicht laden.');
-    } finally {
-      this.store.loadingStudy.set(false);
-    }
   }
 
   private async loadStatus(): Promise<void> {

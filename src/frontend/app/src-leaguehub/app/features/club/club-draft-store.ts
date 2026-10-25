@@ -29,7 +29,7 @@ export const SAVE_DEBOUNCE_MS = 1500;
  * die Seite — der Wechsel auf „Partieformular" und zurück verliert nichts.
  */
 export class ClubDraftStore {
-  private readonly client: ClubClient;
+  readonly client: ClubClient;
   private readonly share: string | null;
 
   readonly replaceClub = signal(true);
