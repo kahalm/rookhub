@@ -23,6 +23,7 @@ import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.c
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
+import { GapProposalsComponent } from './gap-proposals.component';
 import {
   canCloseGap, firstGap, gapMessageKey, gapTargetAt, hasProposalsBefore, moveNo, moveTokens, partState, partSummary,
   plyCountOf, positionOrientation, previewFen, recordedEndBefore, recordedParts, replayMoves, targetAfter, tokensUpTo,
@@ -49,7 +50,8 @@ import { whiteToMove } from '../../shared/chess/fen-side';
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule, MatMenuModule,
-    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe, IsoDateFieldComponent],
+    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe, IsoDateFieldComponent,
+    GapProposalsComponent],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',
 })

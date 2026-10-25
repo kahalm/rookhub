@@ -73,12 +73,6 @@
   .editor.idle { display: none; }
 }
 .idle-actions { margin-top: 0.5rem; }
-/* d5-rk-reconstruct-doppelte-aktionen: ab 900 px steht „Lücke schließen“ für die erste Lücke als Hauptknopf im
-   Ruhe-Block rechts — der Umriss-Knopf derselben Lücke in der Teileliste entfällt dann (nie dieselbe Aktion doppelt). */
-@media (min-width: 900px) {
-  .gap-row .gap-close-dup { display: none; }
-}
-
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
 /* Handy (d2-rk-recon-detail-actions): kurze Beschriftungen, beide Knöpfe in einer Zeile. */
 .add-row .lbl-short { display: none; }
@@ -104,8 +98,6 @@
 }
 
 .chip.gen { background: color-mix(in srgb, #5c6bc0 32%, transparent); }
-
-.gap-note { margin: -0.2rem 0 0.5rem 1rem; }
 
 .proposal-actions {
   display: flex;
@@ -201,24 +193,6 @@
 
 .bad-hint { color: var(--rh-error); margin: 0 0 0.5rem; }
 
-/* Eine Lücke ist etwas ZWISCHEN zwei Teilen — deshalb steht sie auch dort und nicht in einer
-   Karte. Vorher war sie nirgends zu sehen: man musste wissen, dass der Knopf an der Stellung
-   DANACH hängt. */
-.gap-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0.15rem 0 0.4rem 0.5rem;
-  padding-left: 0.5rem;
-  border-left: 3px dashed color-mix(in srgb, var(--rh-warn) 60%, transparent);
-
-  .gap-icon { opacity: 0.6; }
-  /* Etikett „Halbzüge" + Auswahl als ein Eintrag — brechen gemeinsam um (z2-rk-recon-halbzuege-label). */
-  .gap-depth-pick { display: inline-flex; align-items: center; gap: 6px; }
-  .small { font-size: 0.85rem; }
-}
-
 /* „Lücke schließen": die Suche sitzt an der Lücke, dort, wo man sie sieht. */
 .gap {
   margin: 0 0 0.6rem 0.5rem;
@@ -246,21 +220,6 @@
 
   p { margin: 0.25rem 0; }
   .small { font-size: 0.85rem; }
-}
-
-/* Suchtiefe als kompakte Umschaltgruppe (2 · 4 · … · 12), passt mit „Lücke schließen" in eine Zeile. */
-.depth-toggle {
-  --mat-button-toggle-height: 32px;
-  font-size: 0.85rem;
-  ::ng-deep .mat-button-toggle-label-content { padding: 0 9px; line-height: 32px; }
-}
-/* d3-rk-recon-halbzuege-tippziel-klein: am Handy 44 px hohe Segmente (DESIGN 2 Grundsatz 5) — sechs zu je ~44 px plus
-   „Halbzüge" passen in 390 px. */
-@media (max-width: 599.98px) {
-  .depth-toggle {
-    --mat-button-toggle-height: 44px;
-    ::ng-deep .mat-button-toggle-label-content { padding: 0 12px; line-height: 44px; min-width: 20px; }
-  }
 }
 
 /* b1-rk-recon-breitstufe: Breitbild-Stufe (DESIGN 4.1) — Seite in --page-max-width-wide, Brett-Editor bis 900 px breit

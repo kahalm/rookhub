@@ -109,49 +109,12 @@
 
         @for (part of visibleParts(); track part.id; let i = $index) {
           @if (gapTargetAt(i); as gapTarget) {
-            <!-- Eine Lücke ist etwas ZWISCHEN zwei Teilen — hier steht sie und hier wird gesucht. -->
-            <div class="gap-row">
-              <mat-icon class="gap-icon">more_horiz</mat-icon>
-              <span class="muted">{{ 'reconstruct.gap.here' | translate }}</span>
-              @if (gapTarget.kind === Kind.Position) {
-                <!-- d5-rk-reconstruct-doppelte-aktionen: steht dieselbe Lücke ab 900 px rechts als Hauptknopf, entfällt
-                     der Umriss-Knopf hier (gap-close-dup, nur ab 900 px ausgeblendet — darunter fehlt der Ruhe-Block). -->
-                <button mat-stroked-button class="gap-close"
-                        [class.gap-close-dup]="editingId() === null && gapTarget === firstGap()"
-                        [disabled]="gapSearching() || busy()" (click)="closeGap(gapTarget)">
-                  <mat-icon>link</mat-icon> {{ 'reconstruct.gap.close' | translate }}
-                </button>
-                <!-- Suchtiefe als Umschalter: wählt nur die Tiefe, gesucht wird allein über „Lücke schließen"
-                     (z1-rk-recon-lueckentiefe). -->
-                <!-- Etikett und Auswahl in EINER Hülle: am Handy brechen sie zusammen um (z2-rk-recon-halbzuege-label). -->
-                <span class="gap-depth-pick">
-                <span class="depth-label muted small">{{ 'reconstruct.gap.pliesLabel' | translate }}</span>
-                <mat-button-toggle-group class="depth-toggle" hideSingleSelectionIndicator
-                                         [value]="gapPlies" (change)="gapPlies = $event.value"
-                                         [disabled]="gapSearching() || busy()"
-                                         [attr.aria-label]="'reconstruct.gap.depth' | translate">
-                  @for (choice of gapPlyChoices; track choice) {
-                    <mat-button-toggle [value]="choice" [attr.aria-label]="'reconstruct.gap.plies' | translate:{ count: choice }"
-                                       [matTooltip]="'reconstruct.gap.plies' | translate:{ count: choice }">{{ choice }}</mat-button-toggle>
-                  }
-                </mat-button-toggle-group>
-                </span>
-                @if (hasProposalsBefore(gapTarget)) {
-                  <button mat-button [disabled]="busy()" (click)="discardProposals(gapTarget)">
-                    <mat-icon>close</mat-icon> {{ 'reconstruct.gap.discard' | translate }}
-                  </button>
-                }
-              } @else {
-                <span class="muted small">{{ 'reconstruct.gap.needPosition' | translate }}</span>
-              }
-            </div>
-            @if (gapSearching() && gapFor() === gapTarget.id) {
-              <p class="muted small gap-note">{{ 'reconstruct.gap.searching' | translate }}</p>
-            } @else if (gapFor() === gapTarget.id && gapMessageKey(); as key) {
-              <p class="muted small gap-note">
-                {{ key | translate:{ count: gapResult()!.maxPlies, depth: gapResult()!.deepestSearched } }}
-              </p>
-            }
+            <app-gap-proposals [target]="gapTarget" [duplicate]="editingId() === null && gapTarget === firstGap()"
+                               [searching]="gapSearching()" [searchingHere]="gapSearching() && gapFor() === gapTarget.id"
+                               [busy]="busy()" [(plies)]="gapPlies" [plyChoices]="gapPlyChoices"
+                               [hasProposals]="hasProposalsBefore(gapTarget)"
+                               [messageKey]="gapFor() === gapTarget.id ? gapMessageKey() : null" [result]="gapResult()"
+                               (closeGap)="closeGap(gapTarget)" (discard)="discardProposals(gapTarget)" />
           }
 
           <!-- Die Teile sind direkt anklickbar: Bearbeiten ist immer an, kein Stift nötig. -->

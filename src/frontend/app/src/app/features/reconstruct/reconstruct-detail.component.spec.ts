@@ -7,6 +7,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ReconstructDetailComponent } from './reconstruct-detail.component';
+import { GapProposalsComponent } from './gap-proposals.component';
 import { PartKind, Reconstruction, ReconstructionPart } from './reconstruct.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -622,8 +623,11 @@ describe('ReconstructDetailComponent Layout (d3)', () => {
     .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/--%NS%/g, '--').replace(/\s+/g, ' ');
 
   // d3-rk-recon-halbzuege-tippziel-klein: am Handy waren die Segmente 32 × 26 px (DESIGN 2 Grundsatz 5: ≥ 44 px).
+  // Seit der Zerlegung (Z25) stehen die Stile der Lückenzeile in GapProposalsComponent.
   it('macht die Halbzüge-Segmente am Handy 44 px hoch', () => {
-    expect(css).toMatch(/@media \(max-width: 599\.98px\) \{ \.depth-toggle \{ --mat-button-toggle-height: 44px;/);
+    const gapCss = ((GapProposalsComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+      .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/--%NS%/g, '--').replace(/\s+/g, ' ');
+    expect(gapCss).toMatch(/@media \(max-width: 599\.98px\) \{ \.depth-toggle \{ --mat-button-toggle-height: 44px;/);
   });
 
   it('blendet die Vorschau einspaltig aus', () => {
