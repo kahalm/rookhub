@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.12", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z20/Z29/Z33/F3-023): calculation mode (one keyed request queue instead of two, timer, tree cursor, review controller, three display children), course detail page (chapter row, calc-series controller), course list (sections array) and the course API (split by topic behind a thin facade, 47 URLs unchanged) are split into smaller parts — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z20/Z29/Z33/F3-023): Kalkulations-Modus (eine Anfrage-Warteschlange statt zwei, Stoppuhr, Baum-Cursor, Durchsicht-Controller, drei Anzeige-Kinder), Kursdetailseite (Kapitelzeile, Kalk-Serie-Controller), Kursliste (Abschnitte als Array) und Kurs-Schnittstelle (nach Thema aufgeteilt hinter dünner Fassade, 47 URLs unverändert) sind in kleinere Bausteine zerlegt — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.11", date: "2026-10-25", changes: [
     { en: "Technical rework (code review 2026-09-29, decomposition Z18): the book/course solver is split into mode building blocks (course, weekly post, daily puzzle, book), a pure review controller and smaller display parts (context card, course stats, comment block, board hint); 30 characterisation specs per mode were written first — behaviour unchanged.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z18): Der Buch-/Kurs-Löser ist in Modus-Bausteine (Kurs, Wochenpost, Tagespuzzle, Buch), einen reinen Durchsicht-Controller und kleinere Anzeige-Teile (Kontextkarte, Kurs-Statistik, Kommentarblock, Brett-Hinweis) zerlegt; vorher 30 Charakterisierungs-Specs je Modus — Verhalten unverändert." },
   ]},
