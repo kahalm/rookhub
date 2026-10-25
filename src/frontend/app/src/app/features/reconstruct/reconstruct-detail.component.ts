@@ -12,7 +12,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Chess } from 'chess.js';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { PositionSetupComponent, START_FEN } from '../analysis/position-setup.component';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -24,19 +23,12 @@ import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.c
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
+import {
+  canCloseGap, firstGap, gapMessageKey, gapTargetAt, hasProposalsBefore, moveNo, moveTokens, partState, partSummary,
+  plyCountOf, positionOrientation, previewFen, recordedEndBefore, recordedParts, replayMoves, targetAfter, tokensUpTo,
+  withSideToMove, fenMoveNumber,
+} from './reconstruct-moves.util';
 import { whiteToMove } from '../../shared/chess/fen-side';
-
-/**
- * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
- * DAVOR, und der gehört nach dem Wechsel der anderen Seite.
- */
-export function withSideToMove(fen: string, black: boolean): string {
-  const f = fen.trim().split(/\s+/);
-  if (f.length < 4) return fen;
-  f[1] = black ? 'b' : 'w';
-  f[3] = '-';
-  return f.join(' ');
-}
 
 /**
  * Der Arbeitsplatz für EINE zu rekonstruierende Partie: Bruchstücke aufzeichnen, ordnen, ergänzen.
@@ -123,15 +115,13 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Stellung nach den gezeigten Zügen — das Brett zeigt sie und spielt darauf weiter. */
   readonly editBoardFen = computed(() =>
-    this.replay(this.editStartFen(), this.shownTokens()).fen);
+    replayMoves(this.editStartFen(), this.shownTokens()).fen);
   readonly editBadMove = signal<string | null>(null);
   private readonly movesSignal = signal('');
 
   /** Die Züge bis zum Blätter-Stand (alle, solange nicht geblättert wird). */
   private shownTokens(): string[] {
-    const tokens = this.editMovesTokens();
-    const ply = this.editPly();
-    return ply === null ? tokens : tokens.slice(0, Math.max(0, Math.min(ply, tokens.length)));
+    return tokensUpTo(this.editMovesTokens(), this.editPly());
   }
 
   /** Zahl der eingetippten Halbzüge. */
@@ -269,7 +259,7 @@ export class ReconstructDetailComponent implements OnInit {
     this.waypointFor.set(null);
     // Angehängt wird an das letzte AUFGEZEICHNETE Teil; ein Vorschlag ist keine Stellung, an der
     // man weiterschreibt.
-    const parts = (this.data()?.parts ?? []).filter(p => !p.generated);
+    const parts = recordedParts(this.data()?.parts ?? []);
     const last = parts.length ? parts[parts.length - 1] : null;
     this.editingId.set(0);
     this.editKind.set(kind);
@@ -481,9 +471,7 @@ export class ReconstructDetailComponent implements OnInit {
    * STELLUNG ist: eine Zugfolge nach einer Lücke hat selbst keine bekannte Ausgangsstellung, und
    * genau die wäre das Ziel der Suche.
    */
-  canCloseGap(part: ReconstructionPart, index: number): boolean {
-    return index > 0 && !part.continuesPrevious && part.kind === PartKind.Position;
-  }
+  canCloseGap(part: ReconstructionPart, index: number): boolean { return canCloseGap(part, index); }
 
   /**
    * „Lücke schließen": sucht die Wege und setzt sie als VORSCHLÄGE in die Liste — dort lassen sie
@@ -605,24 +593,7 @@ export class ReconstructDetailComponent implements OnInit {
    * und die Antwort trennt sie — deshalb hat jeder Grund einen eigenen Text statt eines
    * gemeinsamen „keine Lösung".
    */
-  gapMessageKey(): string | null {
-    const result = this.gapResult();
-    // Kein Grund = es hat geklappt; die Wege stehen dann als Vorschläge in der Liste.
-    if (!result || result.reason == null || result.solutions.length > 0) return null;
-    switch (result.reason) {
-      case 'unreachable': return 'reconstruct.gap.unreachable';
-      case 'too-far': return 'reconstruct.gap.tooFar';
-      case 'same-position': return 'reconstruct.gap.samePosition';
-      case 'budget': return 'reconstruct.gap.budget';
-      case 'no-anchor': return 'reconstruct.gap.noAnchor';
-      case 'no-gap': return 'reconstruct.gap.noGap';
-      case 'no-previous': return 'reconstruct.gap.noPrevious';
-      case 'target-not-a-position': return 'reconstruct.gap.targetNotAPosition';
-      case 'invalid-from':
-      case 'invalid-to': return 'reconstruct.gap.invalidPosition';
-      default: return 'reconstruct.gap.none';
-    }
-  }
+  gapMessageKey(): string | null { return gapMessageKey(this.gapResult()); }
 
   // ----- Teilen -----
 
@@ -712,25 +683,22 @@ export class ReconstructDetailComponent implements OnInit {
    * der Zugnummer der FEN; die FEN selbst steht nur noch eingeklappt darunter.
    */
   positionLine(part: ReconstructionPart): string {
-    const f = (part.fen ?? '').trim().split(/\s+/);
     const side = this.translate.instant(whiteToMove(part.fen) ? 'reconstruct.sideWhite' : 'reconstruct.sideBlack');
-    const move = Number(f[5]) > 0 ? Number(f[5]) : 1;
+    const move = fenMoveNumber(part.fen);
     return this.translate.instant('reconstruct.posToMove', { side, move });
   }
 
   /** Ausrichtung der Mini-Vorschau: aus Sicht der Seite am Zug. */
-  positionOrientation(part: ReconstructionPart): 'white' | 'black' {
-    return whiteToMove(part.fen) ? 'white' : 'black';
-  }
+  positionOrientation(part: ReconstructionPart): 'white' | 'black' { return positionOrientation(part); }
 
   // ----- Anzeige-Helfer -----
 
   /** Zugnummer aus dem Halbzug (0 → Zug 1). */
-  moveNo(ply: number): number { return Math.floor(ply / 2) + 1; }
+  moveNo(ply: number): number { return moveNo(ply); }
 
   /** Gibt es überhaupt ein Teil davor, an das man anschließen könnte? */
   hasPrevious(): boolean {
-    const parts = (this.data()?.parts ?? []).filter(p => !p.generated);
+    const parts = recordedParts(this.data()?.parts ?? []);
     const editingId = this.editingId();
     if (editingId === 0) return parts.length > 0;
     return parts.findIndex(p => p.id === editingId) > 0;
@@ -743,20 +711,10 @@ export class ReconstructDetailComponent implements OnInit {
   }
 
   /** Vorschau ohne gewähltes Teil (d3): die Stellung am Ende des letzten aufgezeichneten Teils; ohne Teile keine. */
-  previewFen(): string | null {
-    const recorded = (this.data()?.parts ?? []).filter(p => !p.generated);
-    return recorded.length ? (recorded[recorded.length - 1].endFen ?? null) : null;
-  }
+  previewFen(): string | null { return previewFen(this.data()?.parts ?? []); }
 
   /** Die erste Lücke, die sich schließen lässt (Ziel ist eine Stellung) — für „Lücke schließen" in der Vorschau. */
-  firstGap(): ReconstructionPart | null {
-    const parts = this.visibleParts();
-    for (let i = 1; i < parts.length; i++) {
-      const target = this.gapTargetAt(i);
-      if (target?.kind === PartKind.Position) return target;
-    }
-    return null;
-  }
+  firstGap(): ReconstructionPart | null { return firstGap(this.visibleParts(), this.data()?.parts ?? []); }
 
   /** Wie viele Vorschläge liegen gerade in der Liste? (Für den Schalter oben.) */
   generatedCount(): number { return (this.data()?.parts ?? []).filter(p => p.generated).length; }
@@ -776,77 +734,34 @@ export class ReconstructDetailComponent implements OnInit {
    * Vorschlägen der erste Vorschlag: sie liegen ja IN der Lücke, nicht davor.
    */
   gapTargetAt(index: number): ReconstructionPart | null {
-    const parts = this.visibleParts();
-    const part = parts[index];
-    if (!part || index === 0) return null;
-    if (parts[index - 1]?.generated) return null;          // mitten in den Vorschlägen derselben Lücke
-    if (part.generated) return this.targetAfter(part);     // erster Vorschlag → die Lücke gehört dem Teil danach
-    return part.continuesPrevious ? null : part;
+    return gapTargetAt(this.visibleParts(), this.data()?.parts ?? [], index);
   }
 
   /** Die Stellung, an der ein Vorschlag hängt: das Ende des letzten AUFGEZEICHNETEN Teils davor. */
   private recordedEndBefore(part: ReconstructionPart): string | null {
-    const parts = this.data()?.parts ?? [];
-    for (let i = parts.findIndex(p => p.id === part.id) - 1; i >= 0; i--)
-      if (!parts[i].generated) return parts[i].endFen ?? null;
-    return null;
+    return recordedEndBefore(this.data()?.parts ?? [], part);
   }
 
   /** Halbzüge eines Teils — bei Vorschlägen rechnet sie der Server nicht mit (sie zählen nicht zur Partie). */
-  plyCountOf(part: ReconstructionPart): number {
-    if (!part.generated) return part.plyCount;
-    return (part.moves ?? '').split(/\s+/).filter(t => t).length;
-  }
+  plyCountOf(part: ReconstructionPart): number { return plyCountOf(part); }
 
   /** Stehen vor diesem Teil Vorschläge? (Dann gibt es an der Lücke ein „Verwerfen".) */
-  hasProposalsBefore(part: ReconstructionPart): boolean {
-    const parts = this.data()?.parts ?? [];
-    const index = parts.findIndex(p => p.id === part.id);
-    return index > 0 && parts[index - 1].generated;
-  }
+  hasProposalsBefore(part: ReconstructionPart): boolean { return hasProposalsBefore(this.data()?.parts ?? [], part); }
 
   /** Das aufgezeichnete Teil NACH diesem Vorschlag — darauf beziehen sich Übernehmen und Verwerfen. */
-  targetAfter(part: ReconstructionPart): ReconstructionPart | null {
-    return (this.data()?.parts ?? []).find(p => p.ordinal > part.ordinal && !p.generated) ?? null;
-  }
+  targetAfter(part: ReconstructionPart): ReconstructionPart | null { return targetAfter(this.data()?.parts ?? [], part); }
 
   /** Kurzfassung eines Teils für die Liste. */
-  summary(part: ReconstructionPart): string {
-    if (part.kind === PartKind.Position) return part.fen ?? '';
-    const moves = (part.moves ?? '').split(' ').filter(m => m);
-    return moves.length > 12 ? `${moves.slice(0, 12).join(' ')} …` : moves.join(' ');
-  }
+  summary(part: ReconstructionPart): string { return partSummary(part); }
 
   /** Der Zustand eines Teils als Schlüssel für Text und Farbe. */
-  state(part: ReconstructionPart): 'ok' | 'floating' | 'broken' | 'mismatch' {
-    if (part.mismatch) return 'mismatch';
-    if (!part.anchored) return 'floating';
-    return part.valid ? 'ok' : 'broken';
-  }
+  state(part: ReconstructionPart): 'ok' | 'floating' | 'broken' | 'mismatch' { return partState(part); }
 
   private setMoves(text: string): void {
     this.movesSignal.set(text);
-    const replayed = this.replay(this.editStartFen(), this.editMovesTokens());
+    const replayed = replayMoves(this.editStartFen(), this.editMovesTokens());
     this.editBadMove.set(replayed.bad);
   }
 
-  private editMovesTokens(): string[] {
-    return this.movesSignal()
-      .split(/\s+/)
-      .map(t => t.trim())
-      .filter(t => t && !/^\d+\.*$/.test(t) && !['1-0', '0-1', '1/2-1/2', '*'].includes(t))
-      .map(t => t.replace(/^\d+\.+/, ''));
-  }
-
-  /** Züge lokal nachspielen — für Brettanzeige und Sofort-Hinweis; die Wahrheit sagt der Server. */
-  private replay(startFen: string, moves: string[]): { fen: string; bad: string | null } {
-    let chess: Chess;
-    try { chess = new Chess(startFen); } catch { return { fen: START_FEN, bad: null }; }
-    for (const san of moves) {
-      try {
-        if (!chess.move(san)) return { fen: chess.fen(), bad: san };
-      } catch { return { fen: chess.fen(), bad: san }; }
-    }
-    return { fen: chess.fen(), bad: null };
-  }
+  private editMovesTokens(): string[] { return moveTokens(this.movesSignal()); }
 }

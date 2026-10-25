@@ -10,7 +10,7 @@ import { Chess } from 'chess.js';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { START_FEN } from '../analysis/position-setup.component';
 import { PreferencesService } from '../../core/preferences.service';
-import { withSideToMove } from './reconstruct-detail.component';
+import { withSideToMove } from './reconstruct-moves.util';
 import { PartKind, ReconstructService, SharedReconstruction, SharedReconstructionPart } from './reconstruct.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { localizeSan } from '../puzzles/keyboard-move.util';
