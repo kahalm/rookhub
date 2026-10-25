@@ -632,12 +632,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  reviewNext(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex - 1); }
-
-  /** Nach alternativem (eigenem) Mattweg die vom Puzzle vorgesehene Lösung von vorne durchspielen. */
-  showOriginalSolution(): void { this.stopCountdown(); this.playSolutionFromStart(); }
-
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     // Gemeinsamer Review-Aufbau der Basisklasse (mit FEN-Guard) statt eigener Kopie — Rumpf war
@@ -645,17 +639,11 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.reviewGoToCore(this.puzzle.fen, this.puzzle.moves.split(' ').filter(m => m), index);
   }
 
-  exitReview(): void {
-    this.reviewMode = false;
-  }
-
-  /** Zug aufs Brett anwenden ohne lastMove-Highlight (Review-Aufbau). */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
     if (!isBoardHotkey(e)) return;
-    if (e.key === 'ArrowLeft') this.reviewPrev();
-    if (e.key === 'ArrowRight') this.reviewNext();
+    this.reviewArrowKey(e);
   }
 
 

@@ -968,6 +968,23 @@ export abstract class BasePuzzleSolver {
     }, 900);
   }
 
+  /** Durchsicht einen Schritt vor (manuell: Countdown und Auto-Wiedergabe stoppen). Endless/Buch überschreiben. */
+  reviewNext(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex + 1); }
+  /** Durchsicht einen Schritt zurück. */
+  reviewPrev(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex - 1); }
+  /** Durchsicht verlassen. */
+  exitReview(): void { this.reviewMode = false; }
+  /** Nach alternativem (eigenem) Mattweg die vom Puzzle vorgesehene Lösung von vorne durchspielen. */
+  showOriginalSolution(): void { this.stopCountdown(); this.playSolutionFromStart(); }
+
+  /** Pfeil links/rechts → {@link reviewPrev}/{@link reviewNext}; liefert true, wenn die Taste eine davon war.
+   *  Den `window:keydown`-Listener und die Bedingung, wann geblättert wird, hält die Komponente. */
+  protected reviewArrowKey(e: KeyboardEvent): boolean {
+    if (e.key === 'ArrowLeft') { this.reviewPrev(); return true; }
+    if (e.key === 'ArrowRight') { this.reviewNext(); return true; }
+    return false;
+  }
+
   protected clearSolutionPlay(): void {
     if (this.solutionPlayTimer) {
       clearInterval(this.solutionPlayTimer);

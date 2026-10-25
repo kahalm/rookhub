@@ -337,11 +337,6 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
     this.retry();
   }
 
-  reviewNext(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.stopCountdown(); this.clearSolutionPlay(); this.reviewGoTo(this.reviewIndex - 1); }
-  exitReview(): void { this.reviewMode = false; }
-  showOriginalSolution(): void { this.stopCountdown(); this.playSolutionFromStart(); }
-
   analyze(): void {
     if (!this.puzzle) return;
     const moves = (this.puzzle.moves || '').split(' ').filter(m => m);

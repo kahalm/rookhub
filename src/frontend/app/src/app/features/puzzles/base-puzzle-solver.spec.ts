@@ -581,3 +581,33 @@ describe('BasePuzzleSolver previewSetup (Aufgabe zeigen, nichts starten)', () =>
     expect(s.orientation).toBe('white');      // FEN ist die Trainingsstellung, Weiß am Zug löst
   });
 });
+
+describe('BasePuzzleSolver Durchsicht blättern (geteilte Vorgabe)', () => {
+  const rejecting = () => ({ getBestMove: () => Promise.reject('x') } as unknown as StockfishService);
+  class KeySolver extends TestSolver {
+    arrow(e: KeyboardEvent): boolean { return this.reviewArrowKey(e); }
+  }
+
+  it('Pfeiltasten blättern, andere Tasten nicht; reviewNext stoppt die Auto-Wiedergabe', fakeAsync(() => {
+    const solver = new KeySolver(rejecting());
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    solver.reviewIndex = 2;
+    expect(solver.arrow(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))).toBeTrue();
+    expect(solver.reviewIndex).toBe(1);
+    expect(solver.arrow(new KeyboardEvent('keydown', { key: 'ArrowRight' }))).toBeTrue();
+    expect(solver.reviewIndex).toBe(2);
+    expect(solver.arrow(new KeyboardEvent('keydown', { key: 'Enter' }))).toBeFalse();
+    expect(solver.reviewIndex).toBe(2);
+
+    solver.revealSolution();          // startet die Auto-Wiedergabe ab 0
+    expect(solver.reviewIndex).toBe(0);
+    solver.reviewNext();              // manuell → Wiedergabe stoppt
+    tick(5000);
+    expect(solver.reviewIndex).toBe(1);
+    solver.reviewMode = true;
+    solver.exitReview();
+    expect(solver.reviewMode).toBeFalse();
+    discardPeriodicTasks();
+  }));
+});

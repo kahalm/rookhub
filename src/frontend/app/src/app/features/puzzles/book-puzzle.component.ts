@@ -675,19 +675,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     return this.review.total(this.puzzle, this.solutionReview, this.startPly);
   }
 
-  reviewNext(): void {
+  override reviewNext(): void {
     this.clearSolutionPlay();   // manuelles Klicken stoppt die Auto-Wiedergabe
     if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex + 1);
     else this.reviewGoTo(this.reviewIndex + 1);
   }
-  reviewPrev(): void {
+  override reviewPrev(): void {
     this.clearSolutionPlay();
     if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex - 1);
     else this.reviewGoTo(this.reviewIndex - 1);
   }
-
-  /** Nach alternativem (eigenem) Mattweg die vom Puzzle vorgesehene Lösung von vorne durchspielen. */
-  showOriginalSolution(): void { this.stopCountdown(); this.playSolutionFromStart(); }
 
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
@@ -695,7 +692,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.applyReviewFrame(this.review.fullGameFrame(this.puzzle, index));
   }
 
-  exitReview(): void {
+  override exitReview(): void {
     this.reviewMode = false;
     this.solutionReview = false;
     this.moveComment = null;
@@ -708,8 +705,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.state !== 'SOLVED' && this.state !== 'FAILED' && !this.reviewMode) return;
     // Auch nicht im offenen Einstellungsdialog/Menue: Enter auf einer Auswahl luede sonst das naechste Puzzle.
     if (!isBoardHotkey(e)) return;
-    if (e.key === 'ArrowLeft') { this.reviewPrev(); return; }
-    if (e.key === 'ArrowRight') { this.reviewNext(); return; }
+    if (this.reviewArrowKey(e)) return;
     // Leertaste/Enter = „nächstes Puzzle" (wie ein Klick auf den primären Weiter-Knopf) im
     // Kurs-/Wochenpost-/Buch-Blätter-Modus.
     if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {

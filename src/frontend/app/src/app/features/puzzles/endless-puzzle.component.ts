@@ -1210,11 +1210,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  reviewNext(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
-  reviewPrev(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
+  override reviewNext(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
+  override reviewPrev(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
 
   /** Nach alternativem (eigenem) Mattweg die vom Puzzle vorgesehene Lösung von vorne durchspielen. */
-  showOriginalSolution(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.playSolutionFromStart(); }
+  override showOriginalSolution(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.playSolutionFromStart(); }
 
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
@@ -1222,17 +1222,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.reviewGoToCore(this.puzzle.fen, this.puzzle.moves.split(' ').filter(m => m), index);
   }
 
-  exitReview(): void {
-    this.reviewMode = false;
-  }
-
-  /** Zug aufs Brett anwenden ohne lastMove-Highlight (Review-Aufbau). */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
     if (!isBoardHotkey(e)) return;
-    if (e.key === 'ArrowLeft') this.reviewPrev();
-    if (e.key === 'ArrowRight') this.reviewNext();
+    this.reviewArrowKey(e);
   }
 
   private loseLife(): void {
