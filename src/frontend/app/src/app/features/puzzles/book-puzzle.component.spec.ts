@@ -179,18 +179,18 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
 
     (c as any).handleSolved();
 
-    expect(c.lastSolvedPuzzleId).toBe(42);
-    expect((c as any).lastSolvedFen).toBe(FEN);
-    expect((c as any).lastSolvedMoves).toBe('e2e4 e7e5');
-    expect((c as any).lastSolvedOrientation).toBe('black');
+    expect(c.lastSolved.id).toBe(42);
+    expect((c as any).lastSolved.fen).toBe(FEN);
+    expect((c as any).lastSolved.moves).toBe('e2e4 e7e5');
+    expect((c as any).lastSolved.orientation).toBe('black');
   });
 
   it('reviewLastPuzzle öffnet die Analyse mit dem zuletzt gelösten Puzzle', () => {
     const c = makeComponent();
     spyOn(c as any, 'stopCountdown');
-    (c as any).lastSolvedFen = FEN;
-    (c as any).lastSolvedMoves = 'e2e4 e7e5';
-    (c as any).lastSolvedOrientation = 'white';
+    (c as any).lastSolved.fen = FEN;
+    (c as any).lastSolved.moves = 'e2e4 e7e5';
+    (c as any).lastSolved.orientation = 'white';
 
     c.reviewLastPuzzle();
 
@@ -212,7 +212,7 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     const c = makeComponent();
     (c as any).dialog = { open: jasmine.createSpy('open') };
     c.puzzle = { id: 200, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
-    c.lastSolvedPuzzleId = 100;
+    c.lastSolved.id = 100;
 
     c.sharePuzzle();
 
@@ -227,7 +227,7 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     const c = makeComponent();
     (c as any).dialog = { open: jasmine.createSpy('open') };
     c.puzzle = { id: 200, fen: FEN, moves: 'e2e4', bookFileName: 'b' };
-    c.lastSolvedPuzzleId = 200;   // = aktuelles Puzzle (z.B. Tagespuzzle, kein Auto-Advance)
+    c.lastSolved.id = 200;   // = aktuelles Puzzle (z.B. Tagespuzzle, kein Auto-Advance)
 
     c.sharePuzzle();
 
@@ -262,10 +262,10 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
 
     (c as any).handleSolved(false);
 
-    expect(c.lastSolvedPuzzleId).toBeNull();
+    expect(c.lastSolved.id).toBeNull();
     expect(loadLastSolved('book')?.id).toBe(1234);
     // Ansehen/aufs Blatt bleiben im Post möglich — nur ohne (falsche) Quell-Id.
-    expect(c.hasLastSolved).toBeTrue();
+    expect(c.lastSolved.has).toBeTrue();
     c.sendLastToWorksheet(null);
     const items = c.worksheets.sendAndNotify.calls.mostRecent().args[1];
     expect(items.length).toBe(1);
@@ -277,7 +277,7 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
     (c as any).auth.isLoggedIn = true;
     (c as any).dialog = { open: jasmine.createSpy('open') };
     c.puzzle = { id: 3, fen: FEN, moves: 'e2e4', bookFileName: '' };
-    c.lastSolvedPuzzleId = 2;   // Altlast aus einer früheren Fassung
+    c.lastSolved.id = 2;   // Altlast aus einer früheren Fassung
 
     c.sharePuzzle();
 
@@ -299,8 +299,8 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
     c.ngOnInit();
 
     expect(c.inWeekly).toBeTrue();
-    expect(c.lastSolvedPuzzleId).toBeNull();
-    expect(c.hasLastSolved).toBeFalse();
+    expect(c.lastSolved.id).toBeNull();
+    expect(c.lastSolved.has).toBeFalse();
   });
 
   it('ngOnInit außerhalb des Wochenposts stellt das „Letzte" weiterhin wieder her', () => {
@@ -311,8 +311,8 @@ describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id'
 
     c.ngOnInit();
 
-    expect(c.lastSolvedPuzzleId).toBe(1234);
-    expect(c.hasLastSolved).toBeTrue();
+    expect(c.lastSolved.id).toBe(1234);
+    expect(c.lastSolved.has).toBeTrue();
   });
 });
 
@@ -1412,7 +1412,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     easy.solveMode.answer = 'easy';
     easy.setupPuzzle(P);
     expect(easy.visualizationMode).toBe(0);
-    expect(easy.solveModeChoice).toBe('easy');
+    expect(easy.solveModes.choice).toBe('easy');
 
     const training = makeCourse();
     training.prefs.visualization = 3;      // Blind/Unsichtbar bleibt erhalten
@@ -1511,7 +1511,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     c.setupPuzzle(P);
     expect(c.solveMode.asked.length).toBe(0);
     expect(c.visualizationMode).toBe(2);      // Stufe aus dem Link bleibt
-    expect(c.showSolveModeSwitch).toBeFalse();
+    expect(c.solveModes.showSwitch).toBeFalse();
   });
 
   it('fragt NICHT bei Challenge/Revanche', () => {
@@ -1543,10 +1543,10 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     c.puzzle = P;
     c.visualizationMode = 1;                 // von applyWeeklyMode gesetzt
     c.setupPuzzle(P);
-    expect(c.solveModeScope).toBeNull();
+    expect(c.solveModes.scope).toBeNull();
     expect(c.solveMode.asked.length).toBe(0);
     expect(c.visualizationMode).toBe(1);
-    expect(c.showSolveModeSwitch).toBeFalse();
+    expect(c.solveModes.showSwitch).toBeFalse();
   });
 
   it('Info-/Erklärlinien fragen nicht (dort gibt es nichts zu lösen)', () => {
@@ -1563,8 +1563,8 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     expect(c.visualizationMode).toBe(2);
     const snack = spyOn(c.snackbar, 'info');
 
-    c.toggleSolveMode();
-    expect(c.solveModeChoice).toBe('easy');
+    c.solveModes.toggle();
+    expect(c.solveModes.choice).toBe('easy');
     expect(c.solveMode.get('course:12')).toBe('easy');
     expect(snack).toHaveBeenCalledWith('solveMode.switchedEasy', jasmine.any(Object));
     expect(c.visualizationMode).toBe(2);      // laufender Versuch bleibt, wie er ist
@@ -1572,7 +1572,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     c.setupPuzzle({ ...P, id: 6 });
     expect(c.visualizationMode).toBe(0);      // erst das nächste Puzzle spielt einfach
 
-    c.toggleSolveMode();
+    c.solveModes.toggle();
     expect(c.solveMode.get('course:12')).toBe('training');
   });
 
@@ -1581,10 +1581,10 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     c.setupPuzzle(P);
     c.setVisualizationLevel(0);
     expect(c.solveMode.get('course:12')).toBe('easy');
-    expect(c.solveModeChoice).toBe('easy');
+    expect(c.solveModes.choice).toBe('easy');
     c.setVisualizationLevel(2);
     expect(c.solveMode.get('course:12')).toBe('training');
-    expect(c.solveModeChoice).toBe('training');
+    expect(c.solveModes.choice).toBe('training');
   });
 
   it('Buch-Versuch meldet die Spielweise mit — online und offline derselbe Body', () => {
@@ -1801,13 +1801,13 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
   it('Tagespuzzle und Wochenpost bleiben im Original (keine Sprachwahl)', () => {
     const daily = makeComponent();
     daily.daily.date = '20260926';
-    expect(daily.langEnabled).toBeFalse();
+    expect(daily.lang.enabled).toBeFalse();
     expect((daily as any).requestLang).toBeNull();
     const weekly = makeComponent();
     weekly.inWeekly = true;
-    expect(weekly.langEnabled).toBeFalse();
+    expect(weekly.lang.enabled).toBeFalse();
     const book = makeComponent();   // Einzel-Linie im Buch
-    expect(book.langEnabled).toBeTrue();
+    expect(book.lang.enabled).toBeTrue();
   });
 
   it('zeigt Titel und Kapitel mit Label; Kapitel-Statistik nur, wenn sie zum Puzzle gehört', () => {
@@ -1837,7 +1837,7 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
     };
     c.courseService.getBookPuzzles = () => of([]);   // Offline-Kopie in der neuen Sprache (autoCache)
     (c as any).setupPuzzle.calls.reset();
-    c.pickLanguage('de');
+    c.lang.pick('de');
     expect(requested).toEqual([[7, 'de']]);
     expect(c.puzzle.comment).toBe('Übersetzt');
     expect(c.puzzle.moveComments['0']).toBe('übersetzt');
@@ -1851,7 +1851,7 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
       return of({ id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: FILE, comment: 'Original',
         commentLanguages: ['en', 'de'], commentMachine: false });
     };
-    c.showOriginal();
+    c.lang.showOriginal();
     expect(requested[1]).toEqual([7, 'en']);
     expect(c.puzzle.comment).toBe('Original');
   });
@@ -2148,25 +2148,25 @@ describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlun
   const bar = (el: HTMLElement) => el.querySelector('app-puzzle-action-bar') as any;
 
   it('Tagespuzzle: die Aktionsleiste bekommt die Spielweise (Punkt im ⋮-Menü)', () => {
-    const { el } = render(c => { c.solveModeChoice = 'training'; });
+    const { el } = render(c => { c.solveModes.choice = 'training'; });
     expect(bar(el).solveModeChoice).toBe('training');
   });
 
   it('der ⋮-Punkt schaltet die Spielweise um', () => {
-    const { el, c } = render(c => { c.solveModeChoice = 'training'; });
-    const toggle = spyOn(c, 'toggleSolveMode');
+    const { el, c } = render(c => { c.solveModes.choice = 'training'; });
+    const toggle = spyOn(c.solveModes as any, 'toggle');
     bar(el).dispatchEvent(new CustomEvent('solveModeToggle'));
     expect(toggle).toHaveBeenCalledTimes(1);
   });
 
   it('kein eigener Kartenknopf mehr — die Spielweise steht nur im ⋮-Menü (Wunsch 2026-10-20)', () => {
-    const { el } = render(c => { c.solveModeChoice = 'training'; });
+    const { el } = render(c => { c.solveModes.choice = 'training'; });
     expect(el.querySelector('.ctx-mode-btn')).toBeNull();
     expect(bar(el).solveModeChoice).toBe('training');
   });
 
   it('per Link festgelegte Ansicht: weder Kartenknopf noch ⋮-Punkt', () => {
-    const { el } = render(c => { c.solveModeChoice = 'training'; c.solveModeSuppressed = true; });
+    const { el } = render(c => { c.solveModes.choice = 'training'; c.solveModes.suppressed = true; });
     expect(el.querySelector('.ctx-mode-btn')).toBeNull();
     expect(bar(el).solveModeChoice).toBeNull();
   });

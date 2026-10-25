@@ -86,7 +86,7 @@
             [titleDisplay]="titleDisplay" [chapterDisplay]="chapterDisplay" [bookName]="displayBookName"
             [sourceGame]="puzzle?.sourceGame ?? null" [difficulty]="puzzle?.difficulty" [bookRating]="puzzle?.bookRating"
             [tags]="puzzle?.tags" [dailyDate]="daily.date"
-            [langEnabled]="langEnabled" [languages]="courseLang.languages(langRef)" [langValue]="courseLang.effective(langRef)"
+            [langEnabled]="lang.enabled" [languages]="courseLang.languages(langRef)" [langValue]="courseLang.effective(langRef)"
             [weeklyChipLabel]="weekly.chipLabel" [weeklyTotal]="weekly.total" [weeklyDisplayIndex]="weekly.displayIndex"
             [weeklyPercent]="weekly.percent" [weeklyPlayed]="weekly.played" [weeklySolved]="weekly.solved"
             [weeklySeconds]="weekly.seconds" [weeklyTimeDisplay]="weekly.timeDisplay"
@@ -99,7 +99,7 @@
             [linkedCourseBookId]="course.linkedBookId" [linkedCourseName]="course.linkedName"
             [courseBackLabel]="course.backKey('book.course.backToCourses')" [courseOverviewLabel]="course.backKey('book.course.toOverview')"
             [bookNavLoading]="book.navLoading" [canGoForwardDaily]="daily.canGoForward"
-            (back)="inWeekly ? weekly.backToOverview() : course.backToCourses()" (languagePicked)="pickLanguage($event)"
+            (back)="inWeekly ? weekly.backToOverview() : course.backToCourses()" (languagePicked)="lang.pick($event)"
             (statsToggled)="statsOpen.set(!statsOpen())" (switchLinked)="course.switchToLinked()"
             (weeklyModeToggled)="weekly.toggleMode()" (weeklyOverview)="weekly.backToOverview()"
             (courseOverview)="course.backToCourses()" (retryFailed)="course.retryFailed()" (restartCourse)="course.restart()"
@@ -112,11 +112,11 @@
                (a1-rk-kommentar-schiebt-aktionen). -->
           @if (puzzle && (commentLines.length || course.offlineLangStale)) {
             <app-book-comment-block [hasLines]="commentLines.length > 0" [blocks]="commentBlocks" [long]="commentIsLong"
-              [previewing]="!!variationPreview" [machineNote]="langEnabled && !!puzzle.commentMachine"
+              [previewing]="!!variationPreview" [machineNote]="lang.enabled && !!puzzle.commentMachine"
               [machineClickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"
               [offlineLangStale]="course.offlineLangStale"
               (bodyClicked)="onCommentBodyClick($event)" (movePicked)="previewVariationMove($event)"
-              (previewExited)="exitVariationPreview()" (dialogOpened)="openCommentDialog()" (originalPicked)="showOriginal()" />
+              (previewExited)="exitVariationPreview()" (dialogOpened)="openCommentDialog()" (originalPicked)="lang.showOriginal()" />
           }
 
           <!-- Status-Card: Interaktionszentrum -->
@@ -204,7 +204,7 @@
                nach dem Lösen, Teilen immer; Letztes ansehen/lieben + Einstellungen im ⋮-Menü. -->
           @if (puzzle) {
             <app-puzzle-action-bar
-              [hasLast]="hasLastSolved"
+              [hasLast]="lastSolved.has"
               [canLoveLast]="isLoggedIn && !inWeekly"
               [lastLoved]="favoriteTracker.lastIsFavorite"
               shareLabelKey="book.actions.sharePuzzle"
@@ -216,8 +216,8 @@
               [canWorksheetLast]="isLoggedIn"
               [translateBookId]="inCourse && isLoggedIn ? course.bookId : null"
               (worksheetLastPicked)="sendLastToWorksheet($event)"
-              [solveModeChoice]="showSolveModeSwitch ? solveModeChoice : null"
-              (solveModeToggle)="toggleSolveMode()">
+              [solveModeChoice]="solveModes.showSwitch ? solveModes.choice : null"
+              (solveModeToggle)="solveModes.toggle()">
               @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
                 <button mat-stroked-button (click)="enterReview()">
                   <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}

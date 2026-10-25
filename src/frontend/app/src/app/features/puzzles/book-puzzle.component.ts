@@ -42,9 +42,7 @@ import { loadDailyElapsed, saveDailyElapsed } from './daily-elapsed.util';
 import { loadSolveElapsed, saveSolveElapsed } from './solve-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
-import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { WorksheetService } from '../worksheets/worksheet.service';
-import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { WeeklyService } from '../weekly/weekly.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
@@ -58,6 +56,9 @@ import { BookBoardHintComponent } from './book-board-hint.component';
 import { BookWeeklyMode } from './book-weekly-mode';
 import { BookDailyMode } from './book-daily-mode';
 import { BookStandaloneMode } from './book-standalone-mode';
+import { BookSolveModeController } from './book-solve-mode';
+import { BookLanguageController } from './book-language';
+import { BookLastSolved, bookShareData } from './book-last-solved';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -89,19 +90,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   readonly daily: BookDailyMode;
   readonly book: BookStandaloneMode;
 
-  // ===== Spielweise (Kurs / Tagespuzzle / einzelnes Buch-Puzzle) =====
-  // Der Wochenpost-Modus hat seine EIGENE Abfrage (weeklyMode, s. o.) und bleibt davon unberührt:
-  // dort wird gewertet, es gilt zwingend Stufe 1 und die „Auge nach dem ersten Zug"-Regel.
-  /** Gewählte Spielweise des aktuellen Bereichs. Wirkt über {@link applySolveMode} beim Aufsetzen
-   *  eines Puzzles — ein Umschalten mitten im Versuch ändert das laufende Puzzle NICHT. */
-  solveModeChoice: SolveMode = 'training';
-  /** Bereichs-Schlüssel, für den die Spielweise schon geholt wurde (verhindert erneutes Fragen
-   *  bei jedem Puzzle; beim Wechsel des Bereichs/Kurses wird wieder geholt). */
-  private solveModeScopeAsked: string | null = null;
-  /** Kein Dialog: die Ansicht ist per Link festgelegt (`?visualmode=`) bzw. es ist ein direkt
-   *  geteiltes Einzel-Puzzle / eine Challenge / eine Revanche — dort hat der Öffnende die Wahl
-   *  schon getroffen, und es ist kein Trainingsbereich. Dann bleibt es beim bisherigen Verhalten. */
-  private solveModeSuppressed = false;
+  /** Spielweise (Training/Einfach) für Kurs, Tagespuzzle und Buch-Puzzle — der Wochenpost hat seine eigene Abfrage. */
+  readonly solveModes: BookSolveModeController;
+  /** Sprache der Kurs-Kommentare (Kurs-Übersetzung, Stufe C). */
+  readonly lang: BookLanguageController;
+  /** Zuletzt gelöstes Puzzle (analysieren / ♥ / teilen / Aufgabenblatt), überlebt den Auto-Advance. */
+  readonly lastSolved = new BookLastSolved();
 
   private dailySub?: Subscription;
   private courseSub?: Subscription;
@@ -210,19 +204,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** Direkt geteiltes Einzel-Puzzle (Teilen-Link `?single=1`): nach dem Lösen am Puzzle stehen
    *  bleiben statt automatisch weiterzuspringen, und keine Buch-Navigation anbieten. */
   singlePuzzle = false;
-  // Zuletzt gelöstes Puzzle merken (überlebt den Auto-Advance) — analog Standard/Endless:
-  // ermöglicht „Letztes Puzzle analysieren" + „Letztes teilen" im Share-Dialog.
-  lastSolvedPuzzleId: number | null = null;
-  private lastSolvedFen: string | null = null;
-  private lastSolvedMoves = '';
-  private lastSolvedOrientation: 'white' | 'black' = 'white';
-  /** Vorspiel-Halbzug der letzten Linie — ohne ihn liefe die Aufgaben-Stellung fürs Blatt falsch. */
-  private lastSolvedStartPly = 0;
-  /** Themen der letzten Linie — Vorschlagsquelle für die Themen eines Aufgabenblatts. */
-  private lastSolvedThemes = '';
-  /** Gibt es ein „letztes Puzzle" (⋮-Menü: ansehen/♥/Blatt)? Hängt an der Stellung, nicht an der Id:
-   *  im Wochenpost bleibt `lastSolvedPuzzleId` leer (Index statt BookPuzzle-Id), ansehen geht trotzdem. */
-  get hasLastSolved(): boolean { return !!this.lastSolvedFen; }
   /** „Geliebtes Puzzle"-Zustand (Herz). In Wochenpost-Modus deaktiviert (keine echte Id). */
   readonly favoriteTracker: FavoriteTracker;
 
@@ -275,10 +256,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.weekly = new BookWeeklyMode(this);
     this.daily = new BookDailyMode(this);
     this.book = new BookStandaloneMode(this);
+    this.solveModes = new BookSolveModeController(this);
+    this.lang = new BookLanguageController(this);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'book',
-      () => this.puzzle?.id, () => this.lastSolvedPuzzleId,
+      () => this.puzzle?.id, () => this.lastSolved.id,
       () => this.isLoggedIn && !this.inWeekly,
     );
     this.loadConfig();
@@ -286,147 +269,45 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.stockfish.init().catch(() => {});
   }
 
-  // ===== Sprache der Kommentare (Kurs-Übersetzung, Stufe C) =====
-
-  /** Gibt es hier eine Sprachwahl? Kurs und Einzel-Linie im Buch — nicht Tagespuzzle/Wochenpost
-   *  (die bleiben bewusst im Original). */
-  get langEnabled(): boolean {
-    return (this.inCourse || this.standalone) && !this.isDaily && !this.inWeekly;
-  }
-
-  /** Der Kurs dieser Ansicht für die Sprachwahl: im Kurs über die bookId, beim Einzel-Puzzle über den
-   *  Dateinamen der Linie (`BookPuzzleDto` trägt keine Kurs-Id). */
-  get langRef(): CourseRef | null {
-    if (!this.langEnabled) return null;
-    return { bookId: this.inCourse ? this.course.bookId : null, fileName: this.puzzle?.bookFileName ?? null };
-  }
-
-  /** `?lang=` für die nächste Anfrage — `null` außerhalb von Kurs/Buch (Tagespuzzle, Wochenpost). */
-  get requestLang(): string | null {
-    return this.langEnabled ? this.courseLang.requestLang(this.langRef) : null;
+  // ===== Sprache der Kommentare (BookLanguageController) — für die Modus-Strategien =====
+  get langRef(): CourseRef | null { return this.lang.ref; }
+  get requestLang(): string | null { return this.lang.requestLang; }
+  afterLineLoaded(p: BookPuzzleDto, sentLang: string | null): void { this.lang.afterLineLoaded(p, sentLang); }
+  /** Im Durchklicken die angezeigte Stelle neu ziehen (Kommentar nach einem Sprachwechsel). */
+  redrawReview(): void {
+    if (!this.reviewMode) return;
+    if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex);
+    else this.reviewGoTo(this.reviewIndex);
   }
 
   /** Angezeigter Titel/Kapitel der Linie: die Übersetzung, sonst das Original (Schlüssel bleiben). */
   get titleDisplay(): string | null { return labelOr(this.puzzle?.titleLabel, this.puzzle?.title); }
   get chapterDisplay(): string | null { return labelOr(this.puzzle?.chapterLabel, this.puzzle?.chapter); }
 
-  /** Sprache gewählt: merken, die Texte der aktuellen Linie tauschen (ohne den Versuch neu zu
-   *  starten) und die Offline-Kopie in der neuen Sprache nachziehen. */
-  pickLanguage(lang: string): void {
-    const ref = this.langRef;
-    if (!ref) return;
-    this.courseLang.setChoice(ref, lang);
-    this.refreshTexts();
-    if (this.inCourse && this.course.bookId != null) {
-      if (this.course.isAnon) this.course.refreshAnonCache(this.course.bookId);
-      else this.course.autoCache();
-    }
-  }
-
-  /** „maschinell übersetzt" angeklickt → aufs Original (die Quelle ist die erste Sprache der Linie). */
-  showOriginal(): void {
-    const source = this.courseLang.source(this.langRef) ?? this.puzzle?.commentLanguages?.[0] ?? null;
-    if (source) this.pickLanguage(source);
-  }
-
-  /** Nur die TEXTE der aktuellen Linie in der gewählten Sprache holen — der laufende Versuch bleibt. */
-  private refreshTexts(): void {
-    const p = this.puzzle;
-    const lang = this.requestLang;
-    if (!p || !lang || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
-    this.puzzleService.getBookPuzzleById(p.id, lang).subscribe({
-      next: fresh => { if (this.puzzle?.id === fresh?.id) this.applyTexts(this.puzzle, fresh); },
-      error: () => { /* Texte bleiben, wie sie sind — die nächste Linie kommt in der neuen Sprache */ },
-    });
-  }
-
-  /** Texte einer frisch geholten Fassung übernehmen und die gerade angezeigte Stelle neu ziehen. */
-  private applyTexts(target: BookPuzzleDto, fresh: BookPuzzleDto): void {
-    target.comment = fresh.comment;
-    target.moveComments = fresh.moveComments;
-    target.titleLabel = fresh.titleLabel ?? null;
-    target.chapterLabel = fresh.chapterLabel ?? null;
-    target.commentLanguage = fresh.commentLanguage ?? null;
-    target.commentLanguages = fresh.commentLanguages ?? null;
-    target.commentMachine = !!fresh.commentMachine;
-    this.courseLang.noteLines(this.langRef, [fresh]);
-    // Im Durchklicken steht der Kommentar schon als `moveComment` fest — an derselben Stelle neu holen.
-    if (this.reviewMode) {
-      if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex);
-      else this.reviewGoTo(this.reviewIndex);
-    }
-  }
-
-  /** Nach dem Laden einer Linie: Sprachen merken; kam sie in einer anderen als der gewählten
-   *  (Einzel-Puzzle: Wahl erst mit dem Dateinamen bekannt), die Texte nachholen. */
-  afterLineLoaded(p: BookPuzzleDto, sentLang: string | null): void {
-    if (!this.langEnabled) return;
-    if (this.inCourse) this.courseLang.rememberFile(this.course.bookId, p.bookFileName);
-    this.courseLang.noteLines(this.langRef, [p]);
-    const want = this.requestLang;
-    if (want && sentLang && want !== sentLang && (p.commentLanguages?.length ?? 0) > 1) this.refreshTexts();
-  }
-
   sharePuzzle(): void {
     if (!this.puzzle) return;
-    // Wochenpost: puzzle.id ist nur der Sequenz-Index, keine BookPuzzle-Id — /puzzles/book/<index>
-    // zeigte ein fremdes Puzzle. Geteilt wird deshalb der Post selbst, ohne „vorheriges Puzzle".
-    const weekly = this.inWeekly;
-    // „single=1" markiert den Link als direkt geteiltes Einzel-Puzzle → Empfänger bleibt nach
-    // dem Lösen auf dem Puzzle stehen (kein Auto-Advance, keine Buch-Navigation).
-    const url = weekly
-      ? `${window.location.origin}/weekly/${this.weekly.id}`
-      : `${window.location.origin}/puzzles/book/${this.puzzle.id}?single=1`;
-    // Nach dem Auto-Advance kann zusätzlich das zuletzt gelöste Puzzle geteilt werden.
-    const hasPrevious = !weekly && this.lastSolvedPuzzleId != null && this.lastSolvedPuzzleId !== this.puzzle.id;
-    const previousUrl = hasPrevious
-      ? `${window.location.origin}/puzzles/book/${this.lastSolvedPuzzleId}?single=1`
-      : undefined;
     this.dialog.open(SharePuzzleDialogComponent, {
-      data: {
-        url, previousUrl,
-        puzzleId: weekly ? undefined : this.puzzle.id,
-        previousPuzzleId: hasPrevious ? (this.lastSolvedPuzzleId ?? undefined) : undefined,
-        source: 'book',
-        // Wochenpost-Puzzles haben keine dauerhafte ID → dort keine Challenge.
-        canChallenge: this.isLoggedIn && !this.inWeekly,
-      },
+      data: bookShareData(window.location.origin, this.puzzle.id, this.lastSolved.id, this.weekly.id,
+        this.inWeekly, this.isLoggedIn),
       width: '400px',
       maxWidth: '95vw',
     });
   }
 
-  /**
-   * Die zuletzt gelöste Linie aufs AUFGABENBLATT — dieselbe Auswahl wie „♥ letztes Puzzle".
-   * Geschickt wird die AUFGABEN-Stellung: Vorspielzüge bis `startPly` sind eingespielt, sonst
-   * stünde auf dem Blatt die Stellung vor dem Vorspiel und die Frage wäre eine andere.
-   */
+  /** Die zuletzt gelöste Linie aufs AUFGABENBLATT — dieselbe Auswahl wie „♥ letztes Puzzle". */
   sendLastToWorksheet(target: number | null): void {
     this.stopCountdown();
-    if (!this.lastSolvedFen) return;
-    const item = taskItemFromPuzzle(
-      {
-        fen: this.lastSolvedFen, moves: this.lastSolvedMoves,
-        orientation: this.lastSolvedOrientation, startPly: this.lastSolvedStartPly,
-        themes: this.lastSolvedThemes,
-      },
-      'Book', { sourceId: this.lastSolvedPuzzleId, bookId: this.course.bookId },
-    );
+    if (!this.lastSolved.fen) return;
+    const item = this.lastSolved.worksheetItem(this.course.bookId);
     this.worksheets.sendAndNotify(target, item ? [item] : []);
   }
 
   /** Zuletzt gelöstes Puzzle im Analysemodus öffnen (auch nach dem Auto-Advance verfügbar). */
   reviewLastPuzzle(): void {
     this.stopCountdown();
-    if (!this.lastSolvedFen) return;
-    this.router.navigate(['/analysis'], {
-      queryParams: {
-        fen: this.lastSolvedFen,
-        moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
-        orientation: this.lastSolvedOrientation,
-        from: this.router.url.split('?')[0],   // zurück zum aktuellen Buch-/Kurs-/Wochenpost-Puzzle
-      },
-    });
+    // zurück zum aktuellen Buch-/Kurs-/Wochenpost-Puzzle
+    const queryParams = this.lastSolved.analysisQuery(this.router.url.split('?')[0]);
+    if (queryParams) this.router.navigate(['/analysis'], { queryParams });
   }
 
   /** Aktuelle Stellung + komplette Zugfolge des Puzzles im Analysemodus öffnen. */
@@ -516,26 +397,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.state = 'SOLVED';
     this.stopTimer();
     this.updateBoard();
-    // Für „Letztes Puzzle analysieren"/„Letztes teilen" merken (überlebt den Auto-Advance).
-    // Zusätzlich in sessionStorage persistieren, damit die Info eine Navigation zu /analysis
-    // und zurück übersteht (sonst wird der Component-Destroy den Zustand wegwerfen).
-    // Wochenpost: puzzle.id ist der Sequenz-Index, keine BookPuzzle-Id → keine Id merken und nichts
-    // persistieren; sonst favorisierte, teilte oder legte ein späterer Kurs das fremde BookPuzzle <index> aufs Blatt.
-    if (this.puzzle) {
-      this.lastSolvedPuzzleId = this.inWeekly ? null : this.puzzle.id;
-      this.lastSolvedFen = this.puzzle.fen;
-      this.lastSolvedMoves = this.puzzle.moves ?? '';
-      this.lastSolvedOrientation = this.orientation;
-      this.lastSolvedStartPly = this.startPly;
-      this.lastSolvedThemes = this.puzzle.tags ?? '';
-      if (!this.inWeekly) {
-        saveLastSolved('book', {
-          id: this.puzzle.id, fen: this.puzzle.fen,
-          moves: this.puzzle.moves ?? '', orientation: this.orientation, startPly: this.startPly,
-          themes: this.puzzle.tags ?? '',
-        });
-      }
-    }
+    // Für „Letztes Puzzle analysieren"/„Letztes teilen" merken (überlebt den Auto-Advance, per sessionStorage
+    // auch die Navigation zu /analysis und zurück; Wochenpost ohne Id und ohne Persistenz).
+    if (this.puzzle) this.lastSolved.remember(this.puzzle, this.orientation, this.startPly, this.inWeekly);
     this.favoriteTracker.refresh();
     this.enterSolutionReview();
     this.solveAlternative = alternative;
@@ -623,16 +487,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // ohne Persistenz wird `lastSolvedPuzzleId` beim Component-Destroy null und die Knöpfe verschwinden.
     // Nicht im Wochenpost: der Eintrag gehört zu Buch/Kurs, dort wäre er nicht das „letzte Puzzle".
     const weeklyIdParam = this.route.snapshot.paramMap.get('weeklyId');
-    const restored = weeklyIdParam ? null : loadLastSolved('book');
-    if (restored) {
-      this.lastSolvedPuzzleId = restored.id;
-      this.lastSolvedFen = restored.fen;
-      this.lastSolvedMoves = restored.moves;
-      this.lastSolvedOrientation = restored.orientation;
-      this.lastSolvedStartPly = restored.startPly ?? 0;
-      this.lastSolvedThemes = restored.themes ?? '';
-      this.favoriteTracker.refresh();
-    }
+    if (!weeklyIdParam && this.lastSolved.restore()) this.favoriteTracker.refresh();
 
     if (weeklyIdParam) {
       this.inWeekly = true;
@@ -672,7 +527,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.singlePuzzle = this.route.snapshot.queryParamMap.get('single') === '1';
       this.book.trackSolves = this.singlePuzzle;
       // Direkt geteiltes Einzel-Puzzle: kein Trainingsbereich → keine Spielweisen-Abfrage.
-      if (this.singlePuzzle) this.solveModeSuppressed = true;
+      if (this.singlePuzzle) this.solveModes.suppressed = true;
       if (this.book.trackSolves) this.book.loadSharedCounts(Number(idParam));
       this.book.load(Number(idParam));
     }
@@ -689,11 +544,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (ov.visualization != null) {
       this.visualizationMode = ov.visualization;
       // Ansicht per Link festgelegt → nicht nach der Spielweise fragen (die Wahl steckt im Link).
-      this.solveModeSuppressed = true;
+      this.solveModes.suppressed = true;
     }
     // Challenge/Revanche: „schau dir das an"-Kontext aus einem Link, kein Trainingsbereich.
     const q = this.route.snapshot.queryParamMap;
-    if (q.get('challengeId') || q.get('revengeUserId')) this.solveModeSuppressed = true;
+    if (q.get('challengeId') || q.get('revengeUserId')) this.solveModes.suppressed = true;
     this.anarchyForcedByUrl = !!ov.enPassantForced;   // Anarchy per URL: e.p. immer forciert (sonst folgt es der Einstellung)
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
   }
@@ -803,42 +658,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.inWeekly && this.vizShowPressed && this.hasMadeFirstMove) this.weekly.revealedAfterMove = true;
   }
 
-  // ===== Spielweise: Kurs / Tagespuzzle / einzelnes Buch-Puzzle =====
-
-  /**
-   * Bereichs-Schlüssel der Spielweise. Je Kurs ein eigener (ein Taktikbuch trainiert man anders
-   * als einen Eröffnungskurs), sonst „daily" bzw. „book". `null` = kein eigener Bereich:
-   * Wochenpost (eigene Abfrage) bzw. Kurs ohne bekannte Buch-Id.
-   */
-  get solveModeScope(): string | null {
-    if (this.inWeekly) return null;
-    if (this.inCourse) return this.course.bookId != null ? SolveModeService.scopeCourse(this.course.bookId) : null;
-    return this.isDaily ? 'daily' : 'book';
-  }
-
-  /** Wird der Umschalt-Knopf angeboten? (Nicht im Wochenpost und nicht in per Link festgelegten Ansichten.) */
-  get showSolveModeSwitch(): boolean {
-    return !!this.solveModeScope && !this.solveModeSuppressed;
-  }
-
-  /** Was im Dialog benannt wird (außerhalb von Kursen): der Bereichsname. */
-  private get solveModeLabel(): string {
-    return this.translate.instant(this.isDaily ? 'solveMode.scope.daily' : 'solveMode.scope.book');
-  }
-
-  /**
-   * Klärt die Spielweise des Bereichs, BEVOR das erste Puzzle aufgesetzt wird — sonst liefe die
-   * Stoppuhr hinter dem (blockierenden) Dialog mit. Gefragt wird nur beim ersten Mal je Bereich;
-   * danach liefert der Service die gemerkte Wahl ohne Dialog.
-   * Liefert true, wenn das Aufsetzen zurückgestellt wurde (läuft im Callback weiter).
-   */
-  private askSolveModeIfNeeded(puzzle: BookPuzzleDto): boolean {
-    const scope = this.solveModeScope;
-    if (!scope || this.solveModeSuppressed || this.solveModeScopeAsked === scope) return false;
-    this.solveModeScopeAsked = scope;
-    // Kommt der Dialog nach einer Info-Linie (Kurs-Einführung, „Weiter im Buch"), steht noch deren
-    // Review-/INFO-Zustand: Pfeile, Kommentar, Varianten-Vorschau und die INFO-Karte würden über bzw.
-    // statt der neuen Aufgabe stehen. Darum hier verlassen; LOADING lässt die Karte um die Wahl bitten.
+  /** Vor der Spielweisen-Frage: Kommt der Dialog nach einer Info-Linie (Kurs-Einführung, „Weiter im Buch"), steht
+   *  noch deren Review-/INFO-Zustand: Pfeile, Kommentar, Varianten-Vorschau und die INFO-Karte würden über bzw. statt
+   *  der neuen Aufgabe stehen. Darum hier verlassen; LOADING lässt die Karte um die Wahl bitten. */
+  holdForSolveMode(puzzle: BookPuzzleDto): void {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.stopTimer();
     this.reviewMode = false;
@@ -850,54 +673,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Bis zur Antwort die Aufgabe schon zeigen (ohne Uhr/Setup-Zug) statt Grundstellung + „lädt…".
     this.awaitingSolveMode = true;
     this.previewSetup(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
-    // UI-Sweep 2026-10-11 (r2-rp-mode-title): im Kurs „Wie möchtest du Kurse spielen?", der Buchtitel nur als Unterzeile.
-    const courseDialog = this.inCourse
-      ? { title: this.translate.instant('solveMode.titleCourses'), subtitle: this.displayBookName || undefined }
-      : { scopeLabel: this.solveModeLabel };
-    this.solveMode.ensure(scope, courseDialog).subscribe(mode => {
-      this.awaitingSolveMode = false;
-      this.solveModeChoice = mode;
-      // Jetzt mit der gewählten Spielweise aufsetzen (der Guard oben greift nicht mehr).
-      this.setupPuzzle(puzzle);
-    });
-    return true;
   }
 
-  /** Visualisierungsstufe aus der gewählten Spielweise setzen — je Puzzle neu, damit ein
-   *  Umschalten ab dem nächsten Puzzle greift. Per Link festgelegte Ansichten bleiben unberührt. */
-  private applySolveMode(): void {
-    if (this.solveModeSuppressed || !this.solveModeScope) return;
-    this.visualizationMode = this.solveMode.levelFor(this.solveModeChoice);
-  }
-
-  /**
-   * Spielweise umschalten — wirkt ab dem NÄCHSTEN Puzzle, damit ein laufender Versuch nicht
-   * mitten im Rechnen die Regeln wechselt (die Stufe kommt beim nächsten Aufsetzen über
-   * {@link applySolveMode}). Bereits gemeldete Versuche bleiben, wie sie gewertet wurden.
-   */
-  toggleSolveMode(): void {
-    const scope = this.solveModeScope;
-    if (!scope || this.solveModeSuppressed) return;
-    this.solveModeChoice = this.solveModeChoice === 'training' ? 'easy' : 'training';
-    this.solveMode.set(scope, this.solveModeChoice);
-    this.snackbar.info(this.translate.instant(
-      this.solveModeChoice === 'easy' ? 'solveMode.switchedEasy' : 'solveMode.switchedTraining'),
-      { duration: 3000 });
-  }
-
-  /** Spielweise, unter der das AKTUELLE Puzzle tatsächlich läuft (aus der wirksamen
-   *  Visualisierungsstufe abgeleitet) — das ist der Wert, der gemeldet wird. Bewusst nicht
-   *  `solveModeChoice`: ein Umschalten mitten im Versuch gilt erst fürs nächste Puzzle, und
-   *  per Link festgelegte Ansichten sollen ehrlich gewertet werden. */
-  get attemptSolveMode(): SolveMode {
-    return this.solveMode.modeForLevel(this.visualizationMode);
-  }
+  /** Spielweise des laufenden Puzzles (gemeldeter Wert, siehe BookSolveModeController.attemptMode). */
+  get attemptSolveMode(): SolveMode { return this.solveModes.attemptMode; }
 
   setupPuzzle(puzzle: BookPuzzleDto): void {
     // Info-/Erklärlinien werden nicht gelöst → keine Spielweise nötig (weder fragen noch anwenden).
     if (!puzzle.isInfoOnly) {
-      if (this.askSolveModeIfNeeded(puzzle)) return;
-      this.applySolveMode();
+      if (this.solveModes.askIfNeeded(puzzle)) return;
+      this.solveModes.apply();
     }
     this.clearSolutionPlay();
     this.variationPreview = null;   // etwaige Kommentar-Varianten-Vorschau aus dem Vorgänger-Puzzle beenden
@@ -1123,13 +908,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   setVisualizationLevel(level: number): void {
     this.visualizationMode = level;
     this.prefs.setVisualization(level);
-    // Gemerkte Spielweise mitziehen, sonst widersprechen sich Wahl und tatsächliche Stufe
-    // (Stufe 0 = Einfachmodus, alles darüber = Trainingsmodus).
-    const scope = this.solveModeScope;
-    if (scope && !this.solveModeSuppressed) {
-      this.solveModeChoice = this.solveMode.modeForLevel(level);
-      this.solveMode.set(scope, this.solveModeChoice);
-    }
+    this.solveModes.followLevel(level);   // gemerkte Spielweise mitziehen
     // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
     // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
     if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);
