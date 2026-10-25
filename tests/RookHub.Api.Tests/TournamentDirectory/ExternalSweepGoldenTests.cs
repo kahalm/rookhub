@@ -252,6 +252,10 @@ public class ExternalSweepGoldenTests
             [new RowSpec("5003", "Leere Nummer Turnier", Soon.AddDays(6), null, Cr: "")]);
         await s.Step("12 Nummer nachgereicht", [C with { Cr = "9200003" }]);
         await s.Step("13 Schulung", [B with { NonTournament = true }]);
+        // sk5002 traegt seit Lauf 10 die Nummer 9200002 selbst. Die Nummernsuche findet den EIGENEN
+        // Eintrag — das ist keine Zuordnung, der neue Termin und Ort muessen ankommen.
+        await s.Step("14 eigener Eintrag mit Nummer, zweite Nacht mit neuem Termin",
+            [new RowSpec("5002", "Nummer Unbekannt Turnier", Soon.AddDays(8), "Testhausen", Cr: "9200002")]);
     }
 
     /// <summary>chessarbiter: leere Detailseite (204) ist endgueltig, 404 wird wiederholt, Altbestand ueber die Adresse.</summary>

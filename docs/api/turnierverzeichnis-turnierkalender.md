@@ -255,7 +255,12 @@ Nummer weiter als exakter Schluessel. Gespeichert wird dafuer nichts Neues — d
 chess-results-Eintrag, an dem der Vermerk haengt. Eine LEERE Nummer der Quelle (chess.sk) wird seitdem als `null`
 gespeichert, nicht als `""`: mit `""` zaehlte der Eintrag als „mit Nummer" (Kandidat im Namensvergleich,
 ausserhalb der Verschwunden-Erkennung), und der eindeutige Index auf `ChessResultsId` liess nur EINEN
-solchen Eintrag zu.
+solchen Eintrag zu. Und ein EIGENER Eintrag, der die Nummer selbst traegt (chess.sk nennt sie, die Turniersuche
+kennt das Turnier noch nicht), wird von der Nummernsuche wiedergefunden — das ist keine Zuordnung:
+`ExternalSweepRunner` laesst einen Treffer auf den eigenen Eintrag fallen, der Eintrag nimmt den
+normalen Weg (`ApplyAsync`), und Termin- und Ortsaenderungen der Quelle kommen an. Vorher zaehlte er
+als „zugeordnet" und blieb auf dem Stand der ersten Nacht. ICU ist davon nicht betroffen: ihre
+eigenen Eintraege tragen nie eine Nummer.
 
 | Land | Praefix | Kosten | Was sie kann, was die anderen nicht koennen |
 |---|---|---|---|
