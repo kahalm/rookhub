@@ -7,6 +7,10 @@ import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ANALYSIS_POLL_MS, GamesListComponent } from './games-list.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+import { SnackbarService } from '../../core/snackbar.service';
+import { GameRoastDialogComponent } from './game-roast-dialog.component';
+import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 
 describe('GamesListComponent', () => {
   async function setup() {
@@ -373,6 +377,98 @@ describe('GamesListComponent', () => {
     http.expectOne({ method: 'DELETE', url: '/api/games/4' }).flush(null);
     expect(c.games.length).toBe(0);
     expect(native).not.toHaveBeenCalled();
+  });
+
+  /** Charakterisierung der ⋮-Aktionen der Liste (V33): die Liste hat das PGN nicht und lädt es je Aktion nach;
+   *  scheitert das Nachladen, meldet sie „games.loadError". Texte, Dialoge und Ziele wie auf der Partieseite. */
+  describe('⋮-Aktionen (V33)', () => {
+    async function loaded() {
+      const env = await setup();
+      env.fixture.detectChanges();
+      env.http.expectOne(listRequest).flush([{ ...game(null), white: 'Weiss', black: 'Schwarz', playedAt: '2026-07-16T10:00:00Z' }]);
+      env.http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+      const snack = TestBed.inject(SnackbarService);
+      return { ...env, c: env.fixture.componentInstance, copy: spyOn(snack, 'copy'), warn: spyOn(snack, 'warn') };
+    }
+    const detail = { ...game(null), white: 'Weiss', black: 'Schwarz', playedAt: '2026-07-16T10:00:00Z', pgn: '1. e4 e5' };
+
+    it('PGN kopieren: lädt die Partie nach und schreibt ihr PGN in die Zwischenablage', async () => {
+      const { c, http, copy, warn } = await loaded();
+      const write = spyOn(navigator.clipboard, 'writeText').and.resolveTo();
+      c.copyPgn(c.games[0]);
+      http.expectOne({ method: 'GET', url: '/api/games/4' }).flush(detail);
+      await Promise.resolve();
+      expect(write).toHaveBeenCalledOnceWith('1. e4 e5');
+      expect(copy).toHaveBeenCalledOnceWith('games.pgnCopied');
+      c.copyPgn(c.games[0]);
+      http.expectOne('/api/games/4').flush('x', { status: 500, statusText: 'err' });
+      expect(warn).toHaveBeenCalledOnceWith('games.loadError');
+    });
+
+    it('PGN herunterladen: lädt nach und speichert „Weiss_Schwarz_Datum.pgn" mit Zeilenende', async () => {
+      const { c, http, warn } = await loaded();
+      const names: string[] = [];
+      let blob: Blob | null = null;
+      spyOn(HTMLAnchorElement.prototype, 'click').and.callFake(function (this: HTMLAnchorElement) { names.push(this.download); });
+      spyOn(URL, 'createObjectURL').and.callFake((b: Blob | MediaSource) => { blob = b as Blob; return 'blob:x'; });
+      c.downloadPgn(c.games[0]);
+      http.expectOne({ method: 'GET', url: '/api/games/4' }).flush(detail);
+      expect(names).toEqual(['Weiss_Schwarz_2026_07_16.pgn']);
+      expect(blob!.size).toBe('1. e4 e5\n'.length);
+      c.downloadPgn(c.games[0]);
+      http.expectOne('/api/games/4').flush('x', { status: 500, statusText: 'err' });
+      expect(warn).toHaveBeenCalledOnceWith('games.loadError');
+    });
+
+    it('Im Analysebrett öffnen: lädt nach, übergibt das PGN im Router-State, „Zurück" führt nach /games', async () => {
+      const { c, http, warn } = await loaded();
+      const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      c.openInAnalysis(c.games[0]);
+      http.expectOne({ method: 'GET', url: '/api/games/4' }).flush(detail);
+      expect(nav).toHaveBeenCalledOnceWith(['/analysis'], { state: { pgn: '1. e4 e5' }, queryParams: { from: '/games' } });
+      c.openInAnalysis(c.games[0]);
+      http.expectOne('/api/games/4').flush('x', { status: 500, statusText: 'err' });
+      expect(warn).toHaveBeenCalledOnceWith('games.loadError');
+      expect(nav).toHaveBeenCalledTimes(1);
+    });
+
+    it('Teilen kopiert den Teilen-Link; scheitert die Zwischenablage, steht der Link in der Meldung', async () => {
+      const { c, copy, warn } = await loaded();
+      const write = spyOn(navigator.clipboard, 'writeText').and.resolveTo();
+      c.share(c.games[0]);
+      await Promise.resolve();
+      expect(write).toHaveBeenCalledOnceWith(`${window.location.origin}/g/t`);
+      expect(copy).toHaveBeenCalledOnceWith('games.shareCopied');
+      write.and.rejectWith(new Error('x'));
+      c.share(c.games[0]);
+      await Promise.resolve(); await Promise.resolve();
+      expect(warn).toHaveBeenCalledOnceWith(`${window.location.origin}/g/t`);
+    });
+
+    it('Roast und Formular-Foto öffnen ihre Dialoge; Foto herunterladen meldet einen Ladefehler', async () => {
+      const { c, http, fixture, warn } = await loaded();
+      const open = spyOn(fixture.debugElement.injector.get(MatDialog), 'open').and.returnValue({} as never);
+      c.roast(c.games[0]);
+      expect(open.calls.mostRecent().args[0]).toBe(GameRoastDialogComponent);
+      expect(open.calls.mostRecent().args[1]).toEqual({
+        data: { gameId: 4, shareUrl: `${window.location.origin}/g/t`, shareToken: 't' }, maxWidth: '96vw' });
+      c.photo(c.games[0], false);
+      expect(open.calls.mostRecent().args[0]).toBe(ScoresheetPhotoDialogComponent);
+      expect(open.calls.mostRecent().args[1]!.data).toEqual({ gameId: 4, page: 1 });
+      c.photo(c.games[0], true);
+      http.expectOne(r => r.method === 'GET' && r.url.includes('/4/') && r.responseType === 'blob')
+        .flush(new Blob(['x']), { status: 500, statusText: 'err' });
+      expect(warn).toHaveBeenCalledOnceWith('games.photo.loadError');
+    });
+
+    it('Löschen-Fehler meldet „games.deleteError" und lässt die Zeile stehen', async () => {
+      const { c, http, warn } = await loaded();
+      spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
+      c.remove(c.games[0]);
+      http.expectOne({ method: 'DELETE', url: '/api/games/4' }).flush('x', { status: 500, statusText: 'err' });
+      expect(warn).toHaveBeenCalledOnceWith('games.deleteError');
+      expect(c.games.length).toBe(1);
+    });
   });
 });
 
