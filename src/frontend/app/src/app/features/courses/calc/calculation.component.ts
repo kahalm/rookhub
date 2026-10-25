@@ -38,6 +38,7 @@ import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
+import { KeyedSingleFlightQueue, SingleFlight } from './keyed-single-flight-queue';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
 import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
@@ -422,8 +423,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private dirty = false;
   /** Noch nicht bestätigte Speicherungen JE STELLUNG (BookPuzzleId → serialisierter Baum, `null` =
    *  löschen). Der Snapshot muss an der Stellung hängen, zu der er gehört: `this.tree` ist nach
-   *  einem Stellungswechsel schon ersetzt, ein gescheiterter Save wäre sonst unwiederbringlich weg. */
-  private outbox = new Map<number, string | null>();
+   *  einem Stellungswechsel schon ersetzt, ein gescheiterter Save wäre sonst unwiederbringlich weg.
+   *  Je Stellung immer nur EINE Anfrage unterwegs: der Server-Upsert ist ein reines „last write wins"
+   *  ohne Versions-Token, zwei parallele Saves derselben Stellung könnten in umgekehrter Reihenfolge
+   *  ankommen (Autosave alle 1,2 s, eine langsame Verbindung genügt) — siehe {@link KeyedSingleFlightQueue}. */
+  private readonly outbox = new KeyedSingleFlightQueue<number, string | null>(flight =>
+    flight.value === null ? this.sendDelete(flight) : this.sendSave(flight, flight.value));
   private hadStoredTree = false;
   private saveTimer?: ReturnType<typeof setTimeout>;
   private static readonly AUTOSAVE_MS = 1200;
@@ -1114,8 +1119,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Senden (eigener Endpoint neben dem Baum) ===========================
 
-  private reviewOutbox = new Map<number, CalcReviewPatch>();
-  private reviewInFlight = new Set<number>();
+  /** Je Stellung immer nur EINE Anfrage unterwegs — wie beim Baum-Speichern: der Server-Upsert
+   *  kennt kein Versions-Token, zwei parallele Anfragen könnten vertauscht ankommen (und ein
+   *  Zeit-Delta doppelt zählen, wenn eine davon wiederholt werden muss). */
+  private readonly reviewOutbox = new KeyedSingleFlightQueue<number, CalcReviewPatch>(flight => this.sendReview(flight));
 
   private queueReview(bookPuzzleId: number, patch: CalcReviewPatch): void {
     const merged = mergeReviewPatch(this.reviewOutbox.get(bookPuzzleId) ?? {}, patch);
@@ -1124,40 +1131,37 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.sendReviews();
   }
 
-  /** Je Stellung immer nur EINE Anfrage unterwegs — wie beim Baum-Speichern: der Server-Upsert
-   *  kennt kein Versions-Token, zwei parallele Anfragen könnten vertauscht ankommen (und ein
-   *  Zeit-Delta doppelt zählen, wenn eine davon wiederholt werden muss). */
   private sendReviews(): void {
-    for (const [bookPuzzleId, patch] of [...this.reviewOutbox]) {
-      if (this.reviewInFlight.has(bookPuzzleId)) continue;
-      this.reviewOutbox.delete(bookPuzzleId);
-      this.reviewInFlight.add(bookPuzzleId);
-      this.backend.saveReview(bookPuzzleId, patch).subscribe({
-        next: res => {
-          this.reviewInFlight.delete(bookPuzzleId);
-          this.setLocalSaveFailed(false);
-          this.applyServerReview(bookPuzzleId, res);
-          if (this.reviewOutbox.has(bookPuzzleId)) this.sendReviews();
-        },
-        error: () => {
-          this.reviewInFlight.delete(bookPuzzleId);
-          // Genau diesen Stand wieder einreihen: ein inzwischen aufgelaufener neuerer gewinnt bei
-          // Wahl/Punkten, die Zeit-Deltas addieren sich (gemessene Zeit geht nie verloren).
-          // WICHTIG: `patch` steht vorn, damit SEINE Zeit-Marke erhalten bleibt — der Fehler kann
-          // ein Timeout sein, die Anfrage also angekommen. Mit einer neuen Marke würde der Server
-          // die schon verbuchte Zeit ein zweites Mal addieren.
-          const merged = mergeReviewPatch(patch, this.reviewOutbox.get(bookPuzzleId) ?? {});
-          if (!isNoopPatch(merged)) this.reviewOutbox.set(bookPuzzleId, merged);
-          // Bewusst kein sofortiger Neuversuch (sonst heiße Schleife bei totem Server) —
-          // der nächste Stellungswechsel/Verlassen schickt es mit.
-          // Anonym ist der „Server" der Gerätespeicher: dann ist der Hinweis „liegt nur auf diesem
-          // Gerät" falsch — es liegt gerade nirgends, und das muss stehen bleiben (der Snackbar-
-          // Hinweis ist nach ein paar Sekunden weg).
-          this.setLocalSaveFailed(this.localOnly);
-          this.snackbar.warn(this.translate.instant('calc.review.saveFailed'));
-        },
-      });
-    }
+    this.reviewOutbox.flush();
+  }
+
+  private sendReview(flight: SingleFlight<number, CalcReviewPatch>): void {
+    const { key: bookPuzzleId, value: patch } = flight;
+    this.backend.saveReview(bookPuzzleId, patch).subscribe({
+      next: res => {
+        this.setLocalSaveFailed(false);
+        this.applyServerReview(bookPuzzleId, res);
+        this.reviewOutbox.succeeded(flight);
+      },
+      error: () => {
+        // Genau diesen Stand wieder einreihen: ein inzwischen aufgelaufener neuerer gewinnt bei
+        // Wahl/Punkten, die Zeit-Deltas addieren sich (gemessene Zeit geht nie verloren).
+        // WICHTIG: `patch` steht vorn, damit SEINE Zeit-Marke erhalten bleibt — der Fehler kann
+        // ein Timeout sein, die Anfrage also angekommen. Mit einer neuen Marke würde der Server
+        // die schon verbuchte Zeit ein zweites Mal addieren.
+        this.reviewOutbox.failed(flight, waiting => {
+          const merged = mergeReviewPatch(patch, waiting ?? {});
+          return isNoopPatch(merged) ? undefined : merged;
+        });
+        // Bewusst kein sofortiger Neuversuch (sonst heiße Schleife bei totem Server) —
+        // der nächste Stellungswechsel/Verlassen schickt es mit.
+        // Anonym ist der „Server" der Gerätespeicher: dann ist der Hinweis „liegt nur auf diesem
+        // Gerät" falsch — es liegt gerade nirgends, und das muss stehen bleiben (der Snackbar-
+        // Hinweis ist nach ein paar Sekunden weg).
+        this.setLocalSaveFailed(this.localOnly);
+        this.snackbar.warn(this.translate.instant('calc.review.saveFailed'));
+      },
+    });
   }
 
   /** Antwort des Servers ist die Wahrheit — vor allem bei `secondsSpent` (dort wird addiert). */
@@ -1447,52 +1451,20 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.sendOutbox();
   }
 
-  /** Laufende Nummer je Stellung: ein spät scheiternder ALTER Save darf einen inzwischen
-   *  erfolgreich gespeicherten neueren Stand nicht per Requeue zurückrollen. */
-  private sendSeq = new Map<number, number>();
-
-  private nextSeq(bookPuzzleId: number): number {
-    const n = (this.sendSeq.get(bookPuzzleId) ?? 0) + 1;
-    this.sendSeq.set(bookPuzzleId, n);
-    return n;
-  }
-
-  /** Nur re-queuen, wenn seit dem Absenden kein neuerer Stand derselben Stellung losgeschickt wurde. */
-  private requeueIfLatest(bookPuzzleId: number, seq: number, json: string | null): void {
-    if (this.sendSeq.get(bookPuzzleId) !== seq) return;
-    this.outbox.set(bookPuzzleId, json);
-  }
-
-  /** Stellungen mit einer JETZT laufenden Anfrage. Je Stellung darf immer nur EINE unterwegs sein:
-   *  der Server-Upsert ist ein reines „last write wins" ohne Versions-Token, zwei parallele Saves
-   *  derselben Stellung könnten also in umgekehrter Reihenfolge ankommen — der ältere Baum bliebe
-   *  gespeichert, ohne dass die Oberfläche etwas davon merkt (Autosave alle 1,2 s, eine langsame
-   *  Verbindung genügt). Der jüngere Stand wartet stattdessen in der Outbox und geht raus, sobald
-   *  die laufende Anfrage durch ist. */
-  private inFlight = new Set<number>();
-
   /** Alles Offene rausschicken — auch Stände von Stellungen, die inzwischen verlassen wurden.
-   *  Stellungen mit laufender Anfrage bleiben in der Outbox (siehe {@link inFlight}). */
+   *  Stellungen mit laufender Anfrage bleiben in der Outbox (siehe {@link outbox}). */
   private sendOutbox(): void {
-    if (this.outbox.size === 0) return;
-    const pending = [...this.outbox].filter(([bookPuzzleId]) => !this.inFlight.has(bookPuzzleId));
-    for (const [bookPuzzleId, json] of pending) {
-      this.outbox.delete(bookPuzzleId);
-      this.inFlight.add(bookPuzzleId);
-      const seq = this.nextSeq(bookPuzzleId);
-      if (json === null) this.sendDelete(bookPuzzleId, seq); else this.sendSave(bookPuzzleId, json, seq);
-    }
+    this.outbox.flush();
   }
 
-  /** Antwort da: Slot freigeben. Nach ERFOLG einen inzwischen aufgelaufenen neueren Stand direkt
-   *  nachschicken; nach einem FEHLER nicht (sonst dreht sich bei totem Server eine heiße Schleife) —
-   *  der wartet dann auf den nächsten Autosave/Flush. */
-  private finishSend(bookPuzzleId: number, drain: boolean): void {
-    this.inFlight.delete(bookPuzzleId);
-    if (drain && this.outbox.has(bookPuzzleId)) this.sendOutbox();
+  /** GENAU diesen Stand nach einem Fehlschlag erneut einreihen — aber nur, wenn er noch der jüngste ist: weder ein
+   *  inzwischen aufgelaufener neuerer Stand in der Outbox noch ein bereits gesendeter (die Warteschlange prüft das). */
+  private static keepUnlessNewer(json: string | null): (waiting: string | null | undefined) => string | null | undefined {
+    return waiting => (waiting === undefined ? json : undefined);
   }
 
-  private sendSave(bookPuzzleId: number, json: string, seq: number): void {
+  private sendSave(flight: SingleFlight<number, string | null>, json: string): void {
+    const bookPuzzleId = flight.key;
     if (this.isCurrent(bookPuzzleId)) this.saving = true;
     this.backend.saveTree(bookPuzzleId, json).subscribe({
       next: res => {
@@ -1503,28 +1475,25 @@ export class CalculationComponent implements OnInit, OnDestroy {
           this.savedAt = new Date(res.updatedAt);
         }
         this.markPositionDone(bookPuzzleId, true);
-        this.finishSend(bookPuzzleId, true);
+        this.outbox.succeeded(flight);
       },
       error: () => {
         if (this.isCurrent(bookPuzzleId)) this.saving = false;
-        // GENAU diesen Stand erneut einreihen — aber nur, wenn er noch der jüngste ist: weder ein
-        // inzwischen aufgelaufener neuerer Stand in der Outbox noch ein bereits gesendeter (seq).
-        if (!this.outbox.has(bookPuzzleId)) this.requeueIfLatest(bookPuzzleId, seq, json);
-        this.finishSend(bookPuzzleId, false);
+        this.outbox.failed(flight, CalculationComponent.keepUnlessNewer(json));
         this.reportSaveError();
       },
     });
   }
 
-  private sendDelete(bookPuzzleId: number, seq: number): void {
+  private sendDelete(flight: SingleFlight<number, string | null>): void {
+    const bookPuzzleId = flight.key;
     this.backend.deleteTree(bookPuzzleId).subscribe({
       next: () => {
         if (this.isCurrent(bookPuzzleId)) this.savedAt = null;
-        this.finishSend(bookPuzzleId, true);
+        this.outbox.succeeded(flight);
       },
       error: () => {
-        if (!this.outbox.has(bookPuzzleId)) this.requeueIfLatest(bookPuzzleId, seq, null);
-        this.finishSend(bookPuzzleId, false);
+        this.outbox.failed(flight, CalculationComponent.keepUnlessNewer(null));
         this.reportSaveError();
       },
     });
