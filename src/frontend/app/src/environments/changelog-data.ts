@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.10", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z19): Endless mode is split into start, result and help screens plus a pure run log; the unreachable „played out“ screen and dead styles are removed (component style budget warning gone) — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z19): Der Endlos-Modus ist in Start-, Ergebnis- und Hilfe-Bildschirm sowie ein reines Lauf-Protokoll aufgeteilt; der unerreichbare „Ausgespielt“-Bildschirm und tote Stile sind entfernt (Budget-Warnung der Komponentenstile weg) — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.9", date: "2026-10-25", changes: [
     { en: "Technical rework of the tournament directory (code review 2026-09-29, decomposition Z7/Z8): maintenance actions and helpers are split out of the admin controller and the sweep service, and eleven federation calendars share one matching loop with golden tests — no visible change.", de: "Technischer Umbau des Turnierverzeichnisses (Codereview 2026-09-29, Zerlegung Z7/Z8): Pflege-Aktionen und Hilfsdienste sind aus Admin-Controller und Sweep-Dienst gelöst, elf Verbandskalender nutzen eine gemeinsame Abgleichschleife mit Golden-Tests — keine sichtbare Änderung." },
     { en: "Maintenance: a round-plan test with a fixed league end date (2026-10-24) was permanently red from 25 October; it now uses dates relative to today.", de: "Wartung: Ein Rundenplan-Test mit festem Ligaende (24.10.2026) war seit dem 25.10. dauerhaft rot; er rechnet jetzt relativ zu heute." },
