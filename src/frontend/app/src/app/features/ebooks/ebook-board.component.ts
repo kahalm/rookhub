@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnChanges, Output, SimpleChanges,
   computed, effect, inject, signal, untracked,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -66,7 +67,7 @@ export const ENGINE_SOLUTION_PLIES = 7;
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-ebook-board',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
+  imports: [RouterLink, NgTemplateOutlet, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
     TranslatePipe, IconLabelDirective, ChessBoardComponent, PuzzleBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
@@ -135,6 +136,9 @@ export class EbookBoardComponent implements OnChanges {
   readonly engineLine = signal<string[] | null>(null);
   readonly engineLineBusy = signal(false);
   readonly showSolution = signal(false);
+  /** Training: das eingefrorene Brett kurz auf die aktuelle Stellung umschalten (Auge, Nutzerwunsch 25.10.2026) —
+   *  die Lösung hat dafür die Glühbirne. Nur Ansehen; gezogen wird weiter auf dem Viz-Brett. */
+  readonly peek = signal(false);
   /** Stockfish prüft gerade einen abweichenden Zug. */
   readonly checking = signal(false);
   /** Vom Buch (bzw. der gespeicherten Linie) abgewichen, aber gleichwertig — Antworten kommen jetzt von Stockfish. */
@@ -229,6 +233,7 @@ export class EbookBoardComponent implements OnChanges {
     this.played.set([]);
     this.engineLine.set(null);
     this.showSolution.set(false);
+    this.peek.set(false);
     this.solveState.set('idle');
     this.maiaThinking.set(false);
     this.flipped.set(!whiteToMove(this.diagram.fen));
@@ -306,6 +311,7 @@ export class EbookBoardComponent implements OnChanges {
     this.clearTimer();
     this.played.set([]);
     this.maiaThinking.set(false);
+    this.peek.set(false);
     if (this.mode() === 'solve') this.startSolving();
   }
 

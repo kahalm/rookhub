@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.837.0", date: "2026-10-25", changes: [
+    { en: "E-book board, Training: the eye now shows the current position on the board (look only — you keep moving on the frozen book position), click again for the book position. The solution has its own lightbulb button.",
+      de: "E-Book-Brett, Training: das Auge zeigt jetzt die aktuelle Stellung am Brett (nur ansehen — gezogen wird weiter auf der stehenden Buchstellung), noch ein Klick zeigt wieder die Buchstellung. Die Lösung hat einen eigenen Glühbirnen-Knopf." },
+  ] },
   { version: "0.836.0", date: "2026-10-25", changes: [
     { en: "Game page: in an analysed game the move list now shows the engine’s marks right after the moves — !!, !, ?!, ?, ?? and ✗ for a missed win — so you can jump straight to the mistakes without clicking through the whole game. The “Move symbols” switch above the evaluation turns them off together with the symbol on the board.", de: "Partieseite: Bei einer analysierten Partie stehen die Zeichen der Engine jetzt direkt hinter den Zügen der Zugliste — !!, !, ?!, ?, ?? und ✗ für einen verpassten Gewinn —, so kommt man ohne Durchklicken direkt zu den Fehlern. Der Schalter „Zug-Symbole“ über der Auswertung blendet sie zusammen mit dem Symbol am Brett aus." },
   ] },

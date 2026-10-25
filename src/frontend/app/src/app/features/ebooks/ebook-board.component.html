@@ -78,14 +78,14 @@
 </mat-menu>
 
 <div class="eb-board">
-  @if (frozen()) {
+  @if (frozen() && !peek()) {
     <!-- Training (0.825.0): Buchstellung bleibt stehen, Züge nur im Kopf — dasselbe Viz-Brett wie Kurs-Training/Kalkulieren. -->
     <app-puzzle-board class="eb-frozen" [fen]="diagram.fen" [actualFen]="boardFen()" [visualization]="1"
                       [orientation]="flipped() ? 'black' : 'white'" [turnColor]="flipped() ? 'black' : 'white'" [dests]="noDests"
                       [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet" [allowFullscreen]="false"
                       [vizOpponentArrow]="opponentArrow()" (moveMade)="onFrozenMove($event)" />
   } @else {
-    <app-chess-board [fen]="boardFen()" [flipped]="flipped()" [playable]="playable()" [arrows]="engine()?.arrows() ?? []"
+    <app-chess-board [fen]="boardFen()" [flipped]="flipped()" [playable]="playable() && !peek()" [arrows]="engine()?.arrows() ?? []"
                      (userMove)="onBoardMove($event)" />
   }
 </div>
@@ -104,7 +104,8 @@
   }
   @case ('calc') {
     <!-- d4-rk-kalk-hilfetext-lang: ein Satz sichtbar, der Rest hinter ? (DESIGN 2 Nr. 2). -->
-    <p class="eb-note">{{ 'ebooks.board.calcHint' | translate }} <app-help-hint [text]="'ebooks.board.calcHelp' | translate" /></p>
+    <p class="eb-note">{{ 'ebooks.board.calcHint' | translate }} <app-help-hint [text]="'ebooks.board.calcHelp' | translate" />
+      @if (frozen()) { <ng-container [ngTemplateOutlet]="peekToggle" /> }</p>
     @if (calcTree) {
       <app-calc-lines [tree]="calcTree" [cursorId]="calcCursor()" [startFen]="diagram.fen" [revision]="calcRevision()"
                       (selectNode)="calcSelect($event)" (newLine)="calcNewLine()" (deleteLine)="calcDelete($event)"
@@ -133,10 +134,13 @@
           @if (solutionLine.length === 0) { <span class="eb-solve-text">{{ 'ebooks.board.noSolution' | translate }}</span> }
         }
       }
+      @if (frozen()) { <ng-container [ngTemplateOutlet]="peekToggle" /> }
       @if (solutionLine.length > 0) {
+        <!-- Lösung = Glühbirne; das Auge gehört der aktuellen Stellung (Nutzerwunsch 25.10.2026). -->
         <button mat-icon-button type="button" class="eb-sol-toggle" (click)="showSolution.set(!showSolution())" [attr.aria-expanded]="showSolution()"
+                [class.eb-on]="showSolution()"
                 [appIconLabel]="(showSolution() ? 'ebooks.reader.hideSolution' : 'ebooks.reader.showSolution') | translate">
-          <mat-icon>{{ showSolution() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          <mat-icon>lightbulb</mat-icon>
         </button>
       }
     </div>
@@ -234,3 +238,11 @@
   <app-live-engine-panel class="eb-engine" [session]="s" [gameFen]="boardFen()" [steps]="false" (closed)="toggleEngine()" />
 }
 
+
+<!-- Training: Auge schaltet das eingefrorene Brett auf die aktuelle Stellung und zurück. -->
+<ng-template #peekToggle>
+  <button mat-icon-button type="button" class="eb-peek" (click)="peek.set(!peek())" [attr.aria-pressed]="peek()" [class.eb-on]="peek()"
+          [appIconLabel]="(peek() ? 'ebooks.reader.hidePosition' : 'ebooks.reader.showPosition') | translate">
+    <mat-icon>{{ peek() ? 'visibility_off' : 'visibility' }}</mat-icon>
+  </button>
+</ng-template>

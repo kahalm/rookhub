@@ -25,8 +25,8 @@
   > mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
 }
 .eb-solve--idle { background: transparent; color: var(--mat-sys-on-surface-variant); }
-.eb-sol-toggle, .eb-again { flex: none; margin-left: auto; }
-.eb-again + .eb-sol-toggle { margin-left: 0; }
+.eb-sol-toggle, .eb-again, .eb-peek { flex: none; margin-left: auto; }
+.eb-again + .eb-sol-toggle, .eb-again + .eb-peek, .eb-peek + .eb-sol-toggle { margin-left: 0; }
 .eb-maia-state { color: var(--mat-sys-on-surface-variant); margin-right: 6px; }
 .eb-solve--done { background: color-mix(in srgb, var(--rh-success) 18%, transparent); mat-icon { color: var(--rh-success); } }
 .eb-solution { padding: 6px 10px; border-left: 3px solid var(--mat-sys-primary); }
@@ -40,7 +40,7 @@
    (7 × 44 = 308 px ≤ 336 px Inhaltsbreite bei 360 px). */
 @media (max-width: 599.98px) {
   .eb-bar .mat-mdc-icon-button { --mat-icon-button-state-layer-size: 44px; width: 44px; height: 44px; padding: 10px; }
-  .eb-sol-toggle { --mat-icon-button-state-layer-size: 44px; width: 44px; height: 44px; padding: 10px; }
+  .eb-sol-toggle, .eb-peek { --mat-icon-button-state-layer-size: 44px; width: 44px; height: 44px; padding: 10px; }
 }
 
 /* Schmal (Brett als Vollbild, 0.780.2): Brett so breit wie möglich, aber Platz für Modi und Knöpfe darunter lassen. */

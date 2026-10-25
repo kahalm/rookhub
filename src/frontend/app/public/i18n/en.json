@@ -5556,6 +5556,8 @@
       "again": "Again",
       "showSolution": "Show solution",
       "hideSolution": "Hide solution",
+      "showPosition": "Show current position",
+      "hidePosition": "Show book position",
       "toSolutionPage": "To the solution (page {{page}})",
       "solutionEngine": "Solution by Stockfish — the book has none.",
       "solutionDoubtful": "Solution doubtful: Stockfish rates the book’s first move clearly worse.",

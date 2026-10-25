@@ -5556,6 +5556,8 @@
       "again": "Újra",
       "showSolution": "Megoldás mutatása",
       "hideSolution": "Megoldás elrejtése",
+      "showPosition": "Aktuális állás mutatása",
+      "hidePosition": "Könyvbeli állás mutatása",
       "toSolutionPage": "A megoldáshoz ({{page}}. oldal)",
       "solutionEngine": "A megoldás a Stockfishtől — a könyvben nincs.",
       "solutionDoubtful": "Kétes megoldás: a Stockfish a könyv első lépését jóval gyengébbnek értékeli.",

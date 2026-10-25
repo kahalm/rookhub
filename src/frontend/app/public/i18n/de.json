@@ -5556,6 +5556,8 @@
       "again": "Nochmal",
       "showSolution": "Lösung zeigen",
       "hideSolution": "Lösung ausblenden",
+      "showPosition": "Aktuelle Stellung zeigen",
+      "hidePosition": "Buchstellung zeigen",
       "toSolutionPage": "Zur Lösung (Seite {{page}})",
       "solutionEngine": "Lösung von Stockfish — das Buch hat keine.",
       "solutionDoubtful": "Lösung fraglich: Stockfish bewertet den ersten Buchzug deutlich schlechter.",

@@ -5556,6 +5556,8 @@
       "again": "Ponovno",
       "showSolution": "Prikaži rješenje",
       "hideSolution": "Sakrij rješenje",
+      "showPosition": "Prikaži trenutnu poziciju",
+      "hidePosition": "Prikaži poziciju iz knjige",
       "toSolutionPage": "Na rješenje (stranica {{page}})",
       "solutionEngine": "Rješenje od Stockfisha — knjiga ga nema.",
       "solutionDoubtful": "Rješenje upitno: Stockfish prvi potez iz knjige ocjenjuje znatno lošije.",

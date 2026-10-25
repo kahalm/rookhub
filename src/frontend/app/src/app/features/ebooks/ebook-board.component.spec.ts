@@ -11,6 +11,7 @@ import { LiveEngineSession } from '../games/live-engine-session';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { By } from '@angular/platform-browser';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
+import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { EbookBoardComponent, EbookBoardMode } from './ebook-board.component';
 import { EbookDiagram } from './ebook.service';
 
@@ -180,6 +181,32 @@ describe('EbookBoardComponent', () => {
     expect(el.querySelector('.eb-solution')).not.toBeNull();
     expect(el.querySelectorAll('.eb-note').length).toBe(0);   // kein eigener Hinweis-Absatz mehr
   });
+
+  it('Training: Auge zeigt die aktuelle Stellung (nur ansehen), die Lösung hat die Glühbirne (Nutzerwunsch 25.10.2026)', fakeAsync(() => {
+    const fixture = make();
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.eb-sol-toggle mat-icon')!.textContent!.trim()).toBe('lightbulb');
+    c.onFrozenMove({ orig: 'h8' as never, dest: 'h2' as never });
+    tick(500);
+    fixture.detectChanges();
+    const eye = el.querySelector<HTMLButtonElement>('.eb-solve .eb-peek')!;
+    expect(eye.querySelector('mat-icon')!.textContent!.trim()).toBe('visibility');
+    eye.click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-puzzle-board.eb-frozen')).toBeNull();
+    const board = fixture.debugElement.query(By.directive(ChessBoardComponent)).componentInstance as ChessBoardComponent;
+    expect(board.fen).toBe(AFTER_KXH2);         // aktuelle Stellung
+    expect(board.playable).toBeFalse();         // nur ansehen
+    expect(el.querySelector('.eb-solution')).toBeNull();   // Lösung bleibt verdeckt
+    eye.click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-puzzle-board.eb-frozen')).not.toBeNull();
+    // Neu anfangen deckt wieder zu.
+    eye.click();
+    c.reset();
+    expect(c.peek()).toBeFalse();
+  }));
 
   it('startet standardmäßig im Lösen-Modus; Schwarz am Zug dreht das Brett', () => {
     const c = make().componentInstance;
