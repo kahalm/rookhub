@@ -45,6 +45,13 @@ public class EngineClientScheduleTests : IDisposable
     [InlineData(Plan, 6, "03:00", 16)]    // Kurzform ohne Uhrzeit = ganzer Tag
     [InlineData("* 22:00-06:00 100%; * 06:00-22:00 0%", 3, "02:00", 16)]   // ueber Mitternacht
     [InlineData("mon-fri 08:00-17:00 50%", 1, "09:00", 9)]                // englische Tage
+    [InlineData("Fr 22:00-06:00 0%", 6, "02:00", 0)]                     // Mitternacht mit Tag: Sa frueh gehoert zum Fr
+    [InlineData("Fr 22:00-06:00 0%", 6, "00:00", 0)]                     // … Sa 00:00 noch drin
+    [InlineData("Fr 22:00-06:00 0%", 6, "06:00", 16)]                    // … Sa 06:00 nicht mehr
+    [InlineData("Fr 22:00-06:00 0%", 5, "21:59", 16)]                    // … Fr 21:59 noch nicht
+    [InlineData("Fr 22:00-06:00 0%", 5, "02:00", 16)]                    // … Fr frueh gehoert zum Do
+    [InlineData("So 22:00-06:00 0%", 1, "03:00", 0)]                     // Wochenwechsel So -> Mo
+    [InlineData("Sa 00:00-06:00 0%", 6, "02:00", 0)]                     // ohne Ueberlauf unveraendert
     [InlineData("fr-mo 50%", 7, "12:00", 9)]                              // Bereich uebers Wochenende
     [InlineData("fr-mo 50%", 3, "12:00", 16)]                             // … Mittwoch liegt nicht drin
     public void Regeln_rechnenWieDerClient(string plan, int day, string time, int expected)

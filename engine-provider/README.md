@@ -233,8 +233,9 @@ ENGINE_SCHEDULE=Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%
 - **Tage**: `mo di mi do fr sa so` (auch `mon tue wed thu fri sat sun`), Bereiche (`mo-do`, auch über
   das Wochenende: `fr-mo`), Listen (`sa,so`) oder `*` für jeden Tag.
 - **Zeiten**: `HH:MM-HH:MM`. Das Ende zählt nicht mehr dazu, `08:00-17:00` und `17:00-22:00`
-  überschneiden sich also nicht. Die Spanne darf über Mitternacht gehen (`22:00-06:00`). Ohne
-  Uhrzeit gilt die Regel den ganzen Tag (`Sa,So 100%`).
+  überschneiden sich also nicht. Die Spanne darf über Mitternacht gehen (`22:00-06:00`) und gehört
+  dann zu dem Tag, an dem sie beginnt: `Fr 22:00-06:00 0%` gilt von Freitag 22:00 bis Samstag 06:00
+  (nicht am Freitagmorgen). Ohne Uhrzeit gilt die Regel den ganzen Tag (`Sa,So 100%`).
 - **Prozent**: 0 bis 100. Die **erste passende** Regel gilt; passt keine, wird mit 100 % gerechnet.
 
 Was der Prozentsatz bedeutet:

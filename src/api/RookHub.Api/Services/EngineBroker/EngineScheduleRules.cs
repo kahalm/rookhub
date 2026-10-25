@@ -10,7 +10,7 @@ namespace RookHub.Api.Services.EngineBroker;
 /// <para><b>Regeln</b>, mit <c>;</c> getrennt, je Regel <c>&lt;Tage&gt; &lt;von&gt;-&lt;bis&gt; &lt;Prozent&gt;</c> —
 /// „Mo-Do 08:00-17:00 0%; Fr 08:00-14:00 25%; Sa,So 100%". Tage deutsch oder englisch, Bereiche (auch über das
 /// Wochenende: fr-mo), Listen, <c>*</c>. Das Ende einer Spanne zählt nicht mehr dazu, eine Spanne darf über
-/// Mitternacht gehen, ohne Uhrzeit gilt die Regel den ganzen Tag. Erste passende Regel gewinnt, keine = 100 %.</para>
+/// Mitternacht gehen (und gehört dann zu dem Tag, an dem sie beginnt: „Fr 22:00-06:00" = Fr 22:00 bis Sa 06:00), ohne Uhrzeit gilt die Regel den ganzen Tag. Erste passende Regel gewinnt, keine = 100 %.</para>
 ///
 /// <para><b>Was läuft:</b> 0 % = nichts, 100 % = alles. Dazwischen entscheidet der Scope: <c>background</c> (Vorgabe)
 /// lässt die Live-Engine (Platz 1) an und teilt die Hintergrund-Engines, <c>all</c> teilt alle zusammen. Gerundet
@@ -75,11 +75,13 @@ public static class EngineScheduleRules
     {
         foreach (var r in rules)
         {
-            if (!r.Days.Contains(isoDay)) continue;
             var hit = r.From == r.To                                  // „00:00-00:00" bzw. Kurzform = ganzer Tag
                 || (r.From < r.To ? minute >= r.From && minute < r.To
                                   : minute >= r.From || minute < r.To); // über Mitternacht
-            if (hit) return r.Percent;
+            // Eine Spanne über Mitternacht gehört zu dem Tag, an dem sie BEGINNT: „Fr 22:00-06:00" gilt
+            // Fr 22:00 bis Sa 06:00 — der Teil nach Mitternacht fragt nach dem Vortag (wie entrypoint.sh).
+            var day = r.From > r.To && minute < r.To ? (isoDay == 1 ? 7 : isoDay - 1) : isoDay;
+            if (hit && r.Days.Contains(day)) return r.Percent;
         }
         return 100;
     }

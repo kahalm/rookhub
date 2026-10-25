@@ -179,7 +179,8 @@ fi
 #
 # Je Regel "<Tage> <von>-<bis> <Prozent>". Tage als mo di mi do fr sa so (oder mon tue wed thu
 # fri sat sun), als Bereich (mo-do), als Liste (sa,so) oder "*" für jeden Tag. Zeiten HH:MM; die
-# Spanne darf über Mitternacht gehen (22:00-06:00). Ohne Uhrzeit meint eine Regel den ganzen Tag
+# Spanne darf über Mitternacht gehen (22:00-06:00) und gehört dann zu dem Tag, an dem sie beginnt
+# ("Fr 22:00-06:00" = Fr 22:00 bis Sa 06:00). Ohne Uhrzeit meint eine Regel den ganzen Tag
 # ("Sa,So 100%"). Die ERSTE passende Regel gilt, passt keine, wird mit 100 % gerechnet.
 #
 # Was der Prozentsatz bedeutet: 0 = alle Provider aus — die Engines verschwinden aus RookHub wie
@@ -332,9 +333,15 @@ schedule_percent_at() {
         [ -z "${days:-}" ] && continue
         # Kurzform ohne Uhrzeit: "Sa,So 100%" meint den ganzen Tag.
         if [ -z "${pct:-}" ] && [[ "${span:-}" =~ ^[0-9]+%?$ ]]; then pct="$span"; span="00:00-24:00"; fi
-        schedule_days_match "$days" "$day" || continue
         from=$(schedule_minutes "${span%%-*}"); to=$(schedule_minutes "${span##*-}")
         schedule_time_match "$from" "$to" "$min" || continue
+        # Eine Spanne über Mitternacht gehört zu dem Tag, an dem sie BEGINNT: "Fr 22:00-06:00"
+        # gilt Fr 22:00 bis Sa 06:00 — der Teil nach Mitternacht fragt also nach dem Vortag.
+        if [ "$from" -gt "$to" ] && [ "$min" -lt "$to" ]; then
+            schedule_days_match "$days" $(( day == 1 ? 7 : day - 1 )) || continue
+        else
+            schedule_days_match "$days" "$day" || continue
+        fi
         printf '%s\n' "${pct%\%}"
         return
     done

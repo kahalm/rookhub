@@ -90,7 +90,8 @@ $startDelay = 2
 #
 # Tage als mo di mi do fr sa so (oder mon tue wed thu fri sat sun), als Bereich (mo-do), als Liste
 # (sa,so) oder "*" fuer jeden Tag. Zeiten HH:MM, die Spanne darf ueber Mitternacht gehen
-# (22:00-06:00); ohne Uhrzeit meint eine Regel den ganzen Tag ("Sa,So 100%"). Die ERSTE passende
+# (22:00-06:00) und gehoert dann zu dem Tag, an dem sie beginnt ("Fr 22:00-06:00" = Fr 22:00 bis
+# Sa 06:00); ohne Uhrzeit meint eine Regel den ganzen Tag ("Sa,So 100%"). Die ERSTE passende
 # Regel gilt, passt keine, wird mit 100 % gerechnet.
 #
 # Was der Prozentsatz bedeutet: 0 = alle Provider aus. Die Engines verschwinden dann aus RookHub
@@ -189,12 +190,15 @@ function Get-SchedulePercent([int]$day, [int]$minute) {
         $f = $r -split '\s+'
         if ($f.Count -eq 2 -and $f[1] -match '^\d+%?$') { $f = @($f[0], '00:00-24:00', $f[1]) }
         if ($f.Count -ne 3) { continue }
-        if ((Test-DayMatch $f[0] $day) -ne $true) { continue }
         $span = $f[1].Split('-')
         $from = Get-Minutes $span[0]; $to = Get-Minutes $span[1]
         $hit = if ($from -eq $to) { $true }                                  # ganzer Tag
                elseif ($from -lt $to) { $minute -ge $from -and $minute -lt $to }
                else { $minute -ge $from -or $minute -lt $to }                # ueber Mitternacht
+        # Eine Spanne ueber Mitternacht gehoert zu dem Tag, an dem sie BEGINNT: "Fr 22:00-06:00"
+        # gilt Fr 22:00 bis Sa 06:00 - der Teil nach Mitternacht fragt nach dem Vortag.
+        $ruleDay = if ($from -gt $to -and $minute -lt $to) { if ($day -eq 1) { 7 } else { $day - 1 } } else { $day }
+        if ((Test-DayMatch $f[0] $ruleDay) -ne $true) { continue }
         if ($hit) { return [int]($f[2].TrimEnd('%')) }
     }
     return 100
