@@ -22,7 +22,7 @@ import {
 } from './move-comparison.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SanPipe } from '../../shared/chess/san.pipe';
-import { localizeSanText } from '../puzzles/keyboard-move.util';
+import { localizeSanText } from '../../shared/chess/keyboard-move.util';
 
 /** Was das Brett gerade zeigt: eine Stellung des Vergleichs samt Pfeil für den nächsten Zug. */
 interface BoardView { key: string; fen: string; arrows: BoardArrow[]; lastMove?: [string, string]; caption: string; }

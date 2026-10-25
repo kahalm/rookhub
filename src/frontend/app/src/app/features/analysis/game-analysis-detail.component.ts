@@ -16,7 +16,7 @@ import { GameAnalysis, GameAnalysisPosition, GameAnalysisService, GameConvergenc
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SanPipe } from '../../shared/chess/san.pipe';
-import { localizeSan } from '../puzzles/keyboard-move.util';
+import { localizeSan } from '../../shared/chess/keyboard-move.util';
 import { analysisTitle } from './analysis-title.util';
 import { PctPipe } from '../../shared/format/pct';
 

@@ -33,8 +33,6 @@ const KNOWN_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = {
   ],
   'shared/pgn-viewer/pgn-viewer.component.spec.ts': ['features/games/game-review.component'],
   'shared/player-card/game-replay.component.ts': ['features/games/game-review.component', 'features/games/move-badge.util'],
-  'shared/player-card/card-lang.ts': ['features/puzzles/keyboard-move.util'],
-  'shared/chess/san.pipe.ts': ['features/puzzles/keyboard-move.util'],
   'shared/chess/line-solver.ts': ['features/puzzles/puzzle-move.util'],
 };
 

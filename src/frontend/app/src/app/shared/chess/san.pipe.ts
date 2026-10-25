@@ -1,6 +1,6 @@
 import { Pipe, PipeTransform, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { localizeSan, localizeSanText } from '../../features/puzzles/keyboard-move.util';
+import { localizeSan, localizeSanText } from './keyboard-move.util';
 
 /**
  * UI-Sweep 2026-10-11 (r2-rg-notation): ein englischer SAN-Zug (bzw. mit `text` eine ganze Zugfolge)

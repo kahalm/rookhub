@@ -123,7 +123,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
   beim ersten Fehler)
 - **Globale Brett-Tastenkürzel** (Codereview F8-007) – `isBoardHotkey(e, host?)` aus `shared/keyboard.util.ts` ist die
   eine Regel für `window`/`document:keydown`; neue Handler nutzen sie, Komponenten in einem Dialog übergeben ihr
-  `ElementRef` als `host`. `PuzzleBoardComponent` nimmt Züge auch per Tastatur (`features/puzzles/keyboard-move.util.ts`;
+  `ElementRef` als `host`. `PuzzleBoardComponent` nimmt Züge auch per Tastatur (`shared/chess/keyboard-move.util.ts`;
   Figurenbuchstaben über `<html lang>`, nur de/hr/hu zusätzlich zu Englisch, Codereview F2-004)
 - **Primärknöpfe im M3-Thema** (Codereview UX-052) – `mat-raised-button color="primary"/"warn"` ist per `styles.scss`
   gefüllt; neue Primärknöpfe `mat-flat-button` oder raised + primary, raised ohne Farbe = M3-„protected“. Auth-Formulare:

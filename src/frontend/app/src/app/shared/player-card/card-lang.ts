@@ -2,7 +2,7 @@ import { formatDate } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import { FORMAT_LOCALES } from '@rh/core/locale.service';
 import { formatPct } from '@rh/shared/format/pct';
-import { localizeSan, localizeSanText } from '@rh/features/puzzles/keyboard-move.util';
+import { localizeSan, localizeSanText } from '@rh/shared/chess/keyboard-move.util';
 
 /**
  * Sprache der Spielerkarte (e1-rk-prep-card-german): in RookHub (Spielervorbereitung) die der Oberfläche, in LeagueHub
