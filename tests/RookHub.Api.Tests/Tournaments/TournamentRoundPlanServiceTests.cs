@@ -195,13 +195,24 @@ public class TournamentRoundPlanServiceTests : IDisposable
     [Fact]
     public async Task RunAsync_RoundOutsideTheOwnSpan_IsDropped()
     {
-        await AddLeagueAsync(end: new DateOnly(2026, 10, 24));
+        // Termine relativ zu heute: der Durchgang nimmt nur Turniere vor, deren Ende noch nicht vorbei ist
+        // (EndDate >= heute). Ein festes Enddatum wurde am 25.10.2026 zur Datumsbombe (Test dauerhaft rot).
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var end = today.AddDays(100);
+        var rounds = $$"""
+            [{"round":1,"date":"{{today.AddDays(-30):yyyy-MM-dd}}","time":"14:00 Uhr"},
+             {"round":2,"date":"{{today.AddDays(-16):yyyy-MM-dd}}","time":"14:00 Uhr"},
+             {"round":3,"date":"{{today.AddDays(-2):yyyy-MM-dd}}","time":"14:00 Uhr"},
+             {"round":4,"date":"{{end:yyyy-MM-dd}}","time":"14:00 Uhr"},
+             {"round":11,"date":"{{today.AddDays(200):yyyy-MM-dd}}","time":"14:00 Uhr"}]
+            """;
+        await AddLeagueAsync(start: today.AddDays(-30), end: end);
 
-        await CreateService(ElevenRounds).RunAsync(10);
+        await CreateService(rounds).RunAsync(10);
 
         var entry = await _db.TournamentDirectoryEntries.Include(e => e.RoundDates).SingleAsync();
-        Assert.Equal(3, entry.RoundDates.Count);
-        Assert.DoesNotContain(entry.RoundDates, r => r.Date > new DateOnly(2026, 10, 24));
+        Assert.Equal(4, entry.RoundDates.Count);
+        Assert.DoesNotContain(entry.RoundDates, r => r.Date > end);
     }
 
     /// <summary>
