@@ -12,16 +12,14 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, forkJoin } from 'rxjs';
-import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { applyUci, tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { RepertoireTrainingService, LineStateDto, LineReviewRequest } from './repertoire-training.service';
+import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
 import { TrainerSrSync } from './repertoire-trainer-sr-sync';
-import { buildRepertoireGraph, normFen, RepertoireGraph } from './repertoire-tree.util';
+import { buildRepertoireGraph } from './repertoire-tree.util';
 import { chapterColorsOf, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
@@ -33,17 +31,15 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EvalCompare } from './repertoire-trainer-eval-compare';
-import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { TrainerFrequencyLoader } from './repertoire-trainer-frequency-loader';
-import { destsAt } from './repertoire-trainer.util';
-import { TrainerLineSet, byRank, countUserMoves, extendQueue, lineKeyOf, opponentLines, playableLines } from './repertoire-trainer-queue.util';
-import { LineMoveToken, commentParagraphs, lineChapterTitle, lineLabel, lineMoveTokens, plyComment, plyPrettyLabel } from './repertoire-trainer-line-view.util';
+import { TrainerLineSet, byRank, extendQueue, lineKeyOf, opponentLines, playableLines } from './repertoire-trainer-queue.util';
+import { BoardMove, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSession } from './repertoire-trainer-session';
+import { LineMoveToken } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
-import { whiteToMove } from '../../shared/chess/fen-side';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -56,35 +52,17 @@ function saveFreqOrder(on: boolean): void {
   writeRaw(localStore(), FREQ_ORDER_KEY, on ? '1' : '0');   // gesperrt/voll → nur diese Sitzung
 }
 
-type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW' | 'COMMENT';
-type Outcome = 'correct' | 'tolerated' | 'wrong';
-type Mode = 'quiz' | 'learn';
-
-// Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
-// weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct: 1,5 s → 600 →
-// 300 ms (der grüne Haken blitzt kurz, dann kommt zügig der Gegnerzug). Geduldet bleibt länger
-// stehen (der Alternativzug soll wirken).
-const ADVANCE_MS: Record<Outcome, number> = { correct: 300, tolerated: 1500, wrong: 0 };
-const OPP_MOVE_DELAY_MS = 250;   // kurze Pause vor jedem automatischen Gegnerzug
-const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
-const LEARN_GAP_MS = 400;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs (fühlte sich beim Wiederholen zu lang an, halbiert von 800)
-// Learn-Modus: wie oft eine Linie durchgespielt werden muss, bevor sie in den Übungspool wandert
-// (1× geführt lernen + 2× „durchklicken").
-const LEARN_REPEATS = 3;
-
 /**
  * Line-basiertes Repertoire-Training: eine ganze PGN-Linie wird vom Startzug an durchgespielt,
  * Gegnerzüge automatisch, an jedem eigenen Zug pausiert der Trainer und wertet den User-Zug gegen
  * die Linie (erwarteter Zug + [%alt]-tolerierte Alternativen). Nach dem letzten Zug: nächste Linie.
  * Ein `?chapter=Name`-Query beschränkt die Sitzung auf ein Kapitel (Black-Header). SM-2-Reviews
- * werden je Position (normFen als Card-Key) weiterhin ans Backend gesendet.
+ * werden je Linie ans Backend gesendet.
  *
- * <p><b>Das Urteil „ist das der erwartete Zug?" kommt aus shared/chess/line-solver</b> — denselben
- * reinen Funktionen wie im Puzzle-Löser, nicht der Klasse `LineSolver`: dieser Trainer führt sein
- * Brett (`this.chess`) selbst und WEIST es neu zu (jede Linie, `showSolution`, der Offline-Pfad).
- * Verglichen werden damit FELDER statt Zug-TEXT; `normSan` braucht es hier nicht mehr. Bei der
- * ANZEIGE (`expectedDisplay`, `movesInLine`, `currentMovePrettyLabel`) und beim Eval-Vergleich
- * bleibt es bei der SAN — dort ist sie Text für Menschen, kein Urteil.</p>
+ * <p>Aufbau (Zerlegung Z21): die Komponente lädt (PGN, Zustände, Gegner-Reihung), baut die Warteschlange
+ * (`repertoire-trainer-queue.util`) und verdrahtet; das Abspielen samt Phasen, Timern und Zugurteil ist
+ * {@link TrainerSession}, der SR-Abgleich {@link TrainerSrSync}, „Häufigste zuerst" {@link TrainerFrequencyLoader},
+ * der Stockfish-Vergleich nach einem Fehlzug {@link EvalCompare}. Die Felder fürs Template reicht sie durch.</p>
  */
 @Component({
   selector: 'app-repertoire-trainer',
@@ -99,96 +77,46 @@ const LEARN_REPEATS = 3;
 })
 export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   repertoireId = 0;
-  phase: Phase = 'LOADING';
-  /** Trainingsfarbe der AKTUELL laufenden Linie (Brett-Orientierung / „X am Zug" / Eval-Vorzeichen).
-   *  Wird pro Linie aus `chapterColors` gesetzt — es gibt keinen globalen Farb-Umschalter mehr, weil
-   *  ein Repertoire Kapitel beider Farben mischen kann. Siehe repertoire-color.util. */
-  color: TrainColor = 'w';
-  /** Effektive Trainingsfarbe je Kapitel (Auto-Erkennung + manuelle Overrides). */
+  /** Effektive Trainingsfarbe je Kapitel (Auto-Erkennung + manuelle Overrides, siehe repertoire-color.util). */
   private chapterColors = new Map<string, TrainColor>();
   /** Kapitel-Filter aus ?chapter=…. Null = alle Kapitel. */
   chapterFilter: string | null = null;
-  /** 'quiz' = fällige Pool-Linien abfragen; 'learn' = neue Linien durchspielen → in Pool (?mode=learn). */
-  mode: Mode = 'quiz';
   /** Optional nur EINE Linie (?line=<lineKey>) — für „Diese Linie lernen/üben". */
   private singleLineKey: string | null = null;
-  /** Learn-Modus: Kommentar des gerade gezeigten Zugs (hält die Anzeige, bis der User weitertippt). */
-  learnComment = '';
-  /** COMMENT-Phase: Kommentar eines gerade gespielten Gegnerzugs, hält bis der User „Weiter" bestätigt. */
-  holdComment = '';
-  private learnTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Learn-Modus: wie oft die AKTUELLE Linie schon komplett durchgespielt wurde (0-basiert bis
-   *  <see cref="LEARN_REPEATS"/>); erst danach wandert sie in den Übungspool. */
-  private learnPass = 0;
-  /** LINE_DONE: true = beim „Weiter" wird DIESELBE Linie erneut gestartet (Learn-Wiederholung),
-   *  false = es geht zur nächsten Linie. Steuert Button-Label + Verhalten. */
-  pendingRepeat = false;
-
-  fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-  dests = new Map<Key, Key[]>();
-  lastMove?: [Key, Key];
   resetting = false;
   poolBusy = false;
-
-  // Session state
   private allLines: ParsedGame[] = [];
-  queue: ParsedGame[] = [];
-  qIndex = 0;
-  private chess = new Chess();
-  private currentPly = 0;
-  correct = 0;
-  wrong = 0;
-  currentStreak = 0;   // fortlaufende ✓/geduldet-Zug-Serie; echter Fehler setzt zurück (Mausrutscher nicht).
-  bestStreak = 0;      // Session-Rekord.
-  sessionUserMoves = 0;   // Zähler für Progress-Balken (grob geschätzt)
-
-  outcome: Outcome = 'correct';
-  expectedDisplay = '';
-  wrongRevealed = false;
-  /** Bewertungsvergleich nach einem Fehlzug (Stockfish, Spielerzug ↔ Repertoirezug). */
-  private readonly evalCmp = new EvalCompare(
-    { getEval: (fen, depth) => this.stockfish.getEval(fen, depth) }, () => this.cdr.markForCheck());
-  get evalLoading(): boolean { return this.evalCmp.loading; }
-  get evalDeltaPawns(): number | null { return this.evalCmp.deltaPawns; }
-  get evalMateNote(): 'missed' | 'allowed' | null { return this.evalCmp.mateNote; }
-
-  /** SR-Zustände je Linie + Abgleich mit dem Server (Offline-Kopie, Offline-Queue). */
-  private readonly sr = new TrainerSrSync({
-    repertoireId: () => this.repertoireId, training: () => this.training, queue: () => this.offlineQueue,
-  });
-  /** Ergebnis der AKTUELLEN Linie: true, sobald ein NICHT als Mausrutscher verziehener Fehler
-   * passiert ist (geduldet zählt neutral). */
-  private lineHadWrong = false;
-  /** Ein offener Fehler an der aktuellen Stellung, der noch als Mausrutscher verziehen werden kann
-   * (zählt erst als echter Fehler, wenn der User ohne „Mausrutscher" weitermacht/„Lösung zeigen"). */
-  private pendingWrong = false;
   /** Für die EMPTY-Ansicht: wann die nächste Pool-Linie fällig wird (ISO) — null = nichts im Pool. */
   nextDueAt: string | null = null;
-  /** LINE_DONE (Abfragen): wann die gerade beendete Linie erneut fällig wird (ISO, aus der
-   *  SR-Bewertung) — null solange die Antwort aussteht bzw. im Lern-Modus. */
-  nextRepeatAt: string | null = null;
-  /** true, während der Gegnerzug automatisch gespielt wird — erlaubt in dieser Phase einen
-   *  Premove (chessground). */
-  oppMoving = false;
-  private graph: RepertoireGraph | null = null;
-  private advanceTimer: ReturnType<typeof setTimeout> | null = null;
-  private oppTimer: ReturnType<typeof setTimeout> | null = null;
-  private startFen = '';
   /** true = Session läuft aus der Offline-Kopie (Server unerreichbar); Bewertungen werden lokal
    *  berechnet und via Offline-Queue nachgereicht, Pool-/Config-Verwaltung ist ausgeblendet. */
   offlineSession = false;
   /** Name des Repertoires für den Kopf (d3-rk-trainer-leer-zwei-aktionen); null = noch nicht da → „Repertoire-Trainer“. */
   repertoireName: string | null = null;
 
+  /** Bewertungsvergleich nach einem Fehlzug (Stockfish, Spielerzug ↔ Repertoirezug). */
+  private readonly evalCmp = new EvalCompare(
+    { getEval: (fen, depth) => this.stockfish.getEval(fen, depth) }, () => this.cdr.markForCheck());
+  /** SR-Zustände je Linie + Abgleich mit dem Server (Offline-Kopie, Offline-Queue). */
+  private readonly sr = new TrainerSrSync({
+    repertoireId: () => this.repertoireId, training: () => this.training, queue: () => this.offlineQueue,
+  });
+  /** Das Abspielen der Linien (Phasen, Timer, Zugurteil). */
+  readonly session = new TrainerSession({
+    changed: () => this.cdr.markForCheck(),
+    colorOf: line => this.colorOf(line),
+    lineLearned: key => this.sr.promoteLearned(key),
+    lineReviewed: req => this.sr.review(req, dueAt => this.session.showNextRepeat(dueAt)),
+    wrongMove: (startFen, fenAfterPlayer, san, color) => this.evalCmp.start(startFen, fenAfterPlayer, san, color),
+    retryAfterWrong: () => this.evalCmp.reset(),
+  });
+  private get s(): TrainerSession { return this.session; }
+
   /** Modus „Häufigste zuerst": Linien, die man in echten Partien öfter erreicht, kommen zuerst
    *  (Lichess-Explorer, gerechnet am Server wie der Lochfinder). Aus = bisherige Reihenfolge. */
   freqOrder = readFreqOrder();
   /** Häufigkeiten über den Explorer (Fortschritt, Hinweis, Sortierung). */
   private readonly freq = new TrainerFrequencyLoader(() => this.explorer, () => this.cdr.markForCheck(), () => this.buildQueue());
-  get freqLoading(): ExplorerAnalysisResult | null { return this.freq.progress; }
-  get freqRunning(): boolean { return this.freq.running; }
-  /** Hinweis unter der Leiste, wenn die Häufigkeiten fehlen oder unvollständig sind (i18n-Key). */
-  get freqNotice(): string | null { return this.freq.notice; }
 
   /** Reihenfolge nach einem Gegner (`?opponent=prep:<id>|league:<fide>`, „Alle in dieser Reihenfolge trainieren" der
    *  Spielerkarte, 2026-10-07): dieselben Trainingslinien wie dort, wahrscheinlichste zuerst; nur die Kapitel der Farbe
@@ -209,6 +137,52 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Abbruch-Token: nach ngOnDestroy baut keine verspätete Antwort mehr eine Sitzung (und startet keinen Explorer-Lauf). */
   private destroyed = false;
 
+  // ===== Durchreicher fürs Template (Zustand liegt in Session, Häufigkeiten, Bewertungsvergleich) =====
+  get phase(): TrainerPhase { return this.s.phase; }
+  get mode(): TrainerMode { return this.s.mode; }
+  get color(): TrainColor { return this.s.color; }
+  get queue(): ParsedGame[] { return this.s.queue; }
+  get qIndex(): number { return this.s.qIndex; }
+  get fen(): string { return this.s.fen; }
+  get dests(): Map<Key, Key[]> { return this.s.dests; }
+  get lastMove(): [Key, Key] | undefined { return this.s.lastMove; }
+  get correct(): number { return this.s.correct; }
+  get wrong(): number { return this.s.wrong; }
+  get currentStreak(): number { return this.s.currentStreak; }
+  get bestStreak(): number { return this.s.bestStreak; }
+  get sessionUserMoves(): number { return this.s.sessionUserMoves; }
+  get outcome(): TrainerOutcome { return this.s.outcome; }
+  get expectedDisplay(): string { return this.s.expectedDisplay; }
+  get wrongRevealed(): boolean { return this.s.wrongRevealed; }
+  get learnComment(): string { return this.s.learnComment; }
+  get holdComment(): string { return this.s.holdComment; }
+  get pendingRepeat(): boolean { return this.s.pendingRepeat; }
+  get nextRepeatAt(): string | null { return this.s.nextRepeatAt; }
+  get oppMoving(): boolean { return this.s.oppMoving; }
+  get isPlayable(): boolean { return this.s.isPlayable; }
+  get premovable(): boolean { return this.s.premovable; }
+  get progressPct(): number { return this.s.progressPct; }
+  get currentLineLabel(): string { return this.s.currentLineLabel; }
+  get currentLineChapter(): string { return this.s.currentLineChapter; }
+  get movesInLine(): LineMoveToken[] { return this.s.movesInLine; }
+  get currentComment(): string { return this.s.currentComment; }
+  get currentCommentParagraphs(): string[] { return this.s.currentCommentParagraphs; }
+  get currentMovePrettyLabel(): string { return this.s.currentMovePrettyLabel; }
+  get userColorName(): 'white' | 'black' { return this.s.userColorName; }
+  get boardTurn(): 'white' | 'black' { return this.s.boardTurn; }
+  /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
+  get nextDueLabel(): string { return relDueLabel(this.nextDueAt); }
+  /** LINE_DONE: „in X" bis die gerade beendete Linie erneut abgefragt wird (Abfragen-Modus). */
+  get nextRepeatLabel(): string { return relDueLabel(this.s.nextRepeatAt); }
+  get freqLoading(): ExplorerAnalysisResult | null { return this.freq.progress; }
+  get freqRunning(): boolean { return this.freq.running; }
+  /** Hinweis unter der Leiste, wenn die Häufigkeiten fehlen oder unvollständig sind (i18n-Key). */
+  get freqNotice(): string | null { return this.freq.notice; }
+  get evalLoading(): boolean { return this.evalCmp.loading; }
+  get evalDeltaPawns(): number | null { return this.evalCmp.deltaPawns; }
+  get evalMateNote(): 'missed' | 'allowed' | null { return this.evalCmp.mateNote; }
+  get evalDeltaAbsDisplay(): string { return this.evalCmp.deltaAbsDisplay; }
+
   constructor(
     private route: ActivatedRoute,
     private training: RepertoireTrainingService,
@@ -228,7 +202,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.repertoireId = Number(this.route.snapshot.paramMap.get('id')) || 0;
     this.chapterFilter = this.route.snapshot.queryParamMap.get('chapter');
-    this.mode = this.route.snapshot.queryParamMap.get('mode') === 'learn' ? 'learn' : 'quiz';
+    this.s.mode = this.route.snapshot.queryParamMap.get('mode') === 'learn' ? 'learn' : 'quiz';
     this.singleLineKey = this.route.snapshot.queryParamMap.get('line');
     this.opponent = trainingLinesUrl(this.route.snapshot.queryParamMap.get('opponent')) ? this.route.snapshot.queryParamMap.get('opponent') : null;
     const oc = this.route.snapshot.queryParamMap.get('color');
@@ -260,7 +234,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
           this.sr.setSrLevels(cached.config);
           void this.initSession(cached.pgn, cached.states);
         } else {
-          this.phase = 'EMPTY';
+          this.s.phase = 'EMPTY';
           this.cdr.markForCheck();
         }
       },
@@ -269,7 +243,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Session aus PGN + SR-Zuständen aufbauen (frisch vom Server oder aus der Offline-Kopie). */
   private async initSession(pgn: string, states: LineStateDto[]): Promise<void> {
-    this.graph = buildRepertoireGraph(pgn);
+    this.s.graph = buildRepertoireGraph(pgn);
     // Info-Linien (Erklärungen, siehe isInfoLineGame) werden nicht abgefragt — weder im Quiz noch im
     // Lern-Modus, und „Alle in den Pool" nimmt sie nicht auf. Ansehen kann man sie in der Linienliste.
     // Das GANZE Repertoire, in Portionen (0.712.0) — vorher fragte der Trainer nur die ersten 2 MB/500 Partien ab.
@@ -295,7 +269,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.loadSub?.unsubscribe();
-    this.clearLineTimers(); this.freq.dispose(); this.opponentSub?.unsubscribe();
+    this.s.clearTimers(); this.freq.dispose(); this.opponentSub?.unsubscribe();
   }
 
   /** Die Trainingslinien gegen den Gegner holen (alle, nicht nur die ersten 50). <paramref name="wait"/>: bis dahin „Lädt";
@@ -303,7 +277,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private loadOpponentOrder(wait: boolean): void {
     const url = trainingLinesUrl(this.opponent);
     if (!url || !this.http) { this.opponent = null; if (wait) this.buildQueue(); return; }
-    if (wait) this.phase = 'LOADING';
+    if (wait) this.s.phase = 'LOADING';
     let params = new HttpParams().set('repertoire', this.repertoireId).set('take', TRAINING_LINES_ALL)
       .set('chapterColors', JSON.stringify(Object.fromEntries(this.chapterColors)));
     if (this.opponentColor) params = params.set('color', this.opponentColor);
@@ -339,10 +313,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Die Reihung kam, während die Einstiegslinie läuft: die weiteren Linien hinten anhängen, die laufende bleibt. */
   private extendOpponentQueue(): void {
-    this.queue = extendQueue(this.queue, this.qIndex, this.opponentLines());
-    this.opponentTotal = this.queue.length;
-    this.sessionUserMoves = countUserMoves(this.lineSet, this.queue);
-    this.cdr.markForCheck();
+    const queue = extendQueue(this.s.queue, this.s.qIndex, this.opponentLines());
+    this.opponentTotal = queue.length;
+    this.s.extend(queue);
   }
 
   /** Reihenfolge der Warteschlange: nach dem Gegner, sonst „Häufigste zuerst" (wenn an). */
@@ -361,8 +334,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Häufigkeiten holen — Runde um Runde, bis alles ausgewertet ist; dann die Sitzung aufbauen. */
   private loadFrequencies(): void {
-    this.clearLineTimers();
-    this.phase = 'LOADING';
+    this.s.clearTimers();
+    this.s.phase = 'LOADING';
     this.freq.load(this.repertoireId, Object.fromEntries(this.chapterColors));
   }
 
@@ -372,7 +345,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Häufigkeit der aktuellen Linie für die Anzeige, `null` = aus/unbekannt. */
   get currentLineFrequency(): number | null {
     if (!this.freqOrder || !this.freq.lineFreq) return null;
-    const line = this.queue[this.qIndex];
+    const line = this.s.currentLine;
     const f = line ? this.freq.freqOf(line) : -1;
     return f >= 0 ? f : null;
   }
@@ -384,10 +357,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return this.chapterColors.get((line.headers['Black'] || '').trim()) ?? 'w';
   }
 
-  setMode(m: Mode): void {
+  setMode(m: TrainerMode): void {
     if (m === this.mode) return;
-    this.clearLineTimers();
-    this.mode = m;
+    this.s.clearTimers();
+    this.s.mode = m;
     this.singleLineKey = null;   // Moduswechsel hebt die Einzellinien-Beschränkung auf
     this.buildQueue();
   }
@@ -409,30 +382,18 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien (gemischt), learn = ungelernte
    * Linien der Reihe nach. Chapter-/Einzellinien-Filter greifen in beiden Modi. */
   private buildQueue(): void {
-    this.clearLineTimers();
+    this.s.clearTimers();
     const now = Date.now();
     const usable = playableLines(this.lineSet, this.singleLineKey);
     const againstOpponent = !!this.opponent && !this.offlineSession;
-    this.queue = againstOpponent
+    const queue = againstOpponent
       ? this.opponentLines()                                       // der Reihe nach, unabhängig von Fälligkeit und Modus
       : this.mode === 'learn'
         ? this.ordered(usable.filter(l => this.isLearnable(l)))   // sonst PGN-Reihenfolge
         : this.ordered(shuffle(usable.filter(l => this.isDue(l, now))));
-    this.opponentTotal = againstOpponent ? this.queue.length : 0;
-    this.qIndex = 0;
-    this.learnPass = 0;
-    this.correct = 0;
-    this.wrong = 0;
-    this.currentStreak = 0;
-    this.bestStreak = 0;
-    this.sessionUserMoves = countUserMoves(this.lineSet, this.queue);
-    if (this.queue.length === 0) {
-      this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
-      this.phase = 'EMPTY';
-      this.cdr.markForCheck();
-      return;
-    }
-    this.startCurrentLine();
+    this.opponentTotal = againstOpponent ? queue.length : 0;
+    if (queue.length === 0) this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
+    this.s.start(queue);   // leer → EMPTY
   }
 
   /** Früheste künftige Fälligkeit einer Pool-Linie (für die EMPTY-Ansicht); null = nichts im Pool. */
@@ -514,513 +475,21 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     });
   }
 
-  private startCurrentLine(): void {
-    const line = this.queue[this.qIndex];
-    if (!line) { this.phase = 'DONE'; this.cdr.markForCheck(); return; }
-    // Timer der VORHERIGEN Linie unbedingt wegräumen — sonst kann ein spät feuernder
-    // advance/opp/learn-Timer die neue Linie desynchronisieren (currentPly-Overshoot).
-    this.clearAdvance();
-    this.clearOppTimer();
-    this.clearLearn();
-    // Brett-Orientierung / „am Zug"-Text / Eval-Vorzeichen richten sich nach der Farbe DIESER Linie.
-    this.color = this.colorOf(line);
-    this.chess = new Chess(line.fens[0]);
-    this.currentPly = 0;
-    this.lineHadWrong = false;
-    this.pendingWrong = false;
-    this.oppMoving = false;
-    this.nextRepeatAt = null;
-    this.holdComment = '';
-    this.fen = this.chess.fen();
-    this.lastMove = undefined;
-    this.advanceToUserMove();
-  }
+  // ===== Bedienung (an die Session) =====
+  onMove(ev: BoardMove): void { this.s.onMove(ev); }
+  continueLine(): void { this.s.continueLine(); }
+  continueFromComment(): void { this.s.continueFromComment(); }
+  showSolution(): void { this.s.showSolution(); }
+  mouseslip(): void { this.s.mouseslip(); }
+  continueAfterWrong(): void { this.s.continueAfterWrong(); }
+  /** Klick/Tippen aufs Brett = „Weiter" (Linie fertig, Kommentar, Vorzeigen mit Kommentar, Feedback überspringen). */
+  onPlayClick(): void { this.s.tap(); }
 
-  /** Spielt Gegnerzüge nacheinander, bis der User dran ist — oder die Linie zu Ende ist. */
-  private advanceToUserMove(): void {
-    const line = this.queue[this.qIndex];
-    if (!line) { this.phase = 'DONE'; this.cdr.markForCheck(); return; }
-    if (this.currentPly >= line.moves.length) { this.finishLine(); return; }
-
-    const nextSide = this.chess.turn();
-    if (nextSide === this.color) {
-      // User ist am Zug.
-      this.oppMoving = false;
-      this.startFen = this.fen;
-      if (this.mode === 'learn') {
-        // Nur der ERSTE Durchlauf (learnPass 0) zeigt den erwarteten Zug vor (geführtes Lernen);
-        // die Wiederholungs-Durchläufe (Pass 2/3) verlangen ihn aus dem Gedächtnis. Ein falscher
-        // Zug blendet ihn dann via onLearnMove → enterLearnShow als Erinnerung ein.
-        if (this.learnPass === 0) { this.enterLearnShow(); }
-        else { this.enterLearnPlay(); }
-        return;
-      }
-      this.dests = destsAt(this.fen);
-      this.phase = 'PLAYING';
-      this.cdr.markForCheck();
-      return;
-    }
-
-    // Gegnerzug automatisch spielen (mit kleiner Verzögerung, damit man ihn wahrnimmt).
-    // oppMoving=true erlaubt dem User in diesem Fenster einen Premove.
-    this.oppMoving = true;
-    this.phase = 'PLAYING';   // Zwischenzustand: view-only, kein Feedback-Kasten
-    this.dests = new Map();
-    this.cdr.markForCheck();
-    this.oppTimer = setTimeout(() => {
-      this.oppTimer = null;
-      const m = line.moves[this.currentPly];
-      try {
-        const mv = this.chess.move(m.san);
-        if (!mv) { this.finishLine(); return; }
-        this.fen = this.chess.fen();
-        this.lastMove = [mv.from as Key, mv.to as Key];
-      } catch { this.finishLine(); return; }
-      this.currentPly++;
-      this.cdr.markForCheck();
-      // Learn: hat der gerade gespielte Gegnerzug einen Kommentar, halten wir an und zeigen ihn
-      // dauerhaft (bis der User „Weiter" bestätigt) — sonst würde er nur für die kurze
-      // LEARN_GAP-Spanne aufblitzen. Ohne Kommentar nur die kurze Pause bis zum nächsten Zug.
-      if (this.mode === 'learn') {
-        const playedComment = (line.comments?.[this.currentPly - 1] || '').trim();
-        if (playedComment) { this.enterCommentHold(playedComment); return; }
-        this.oppTimer = setTimeout(() => { this.oppTimer = null; this.advanceToUserMove(); }, LEARN_GAP_MS);
-      } else {
-        this.advanceToUserMove();
-      }
-    }, OPP_MOVE_DELAY_MS);
-  }
-
-  private finishLine(): void {
-    const line = this.queue[this.qIndex];
-    this.oppMoving = false;
-    this.nextRepeatAt = null;
-
-    // Learn-Modus: eine Linie muss LEARN_REPEATS-mal durchgespielt werden (1× geführt + 2× „durch-
-    // klicken"), bevor sie in den Pool wandert.
-    if (this.mode === 'learn' && line) {
-      this.learnPass++;
-      if (this.learnPass < LEARN_REPEATS) {
-        // Noch nicht oft genug → beim „Weiter" dieselbe Linie erneut (noch nicht in den Pool).
-        this.pendingRepeat = true;
-        this.phase = 'LINE_DONE';
-        this.cdr.markForCheck();
-        return;
-      }
-      // Oft genug gelernt → in den Pool aufnehmen (sofort fällig für die 1. Abfrage). Den Zustand
-      // IMMER auch lokal nachziehen (Moduswechsel zu „Abfragen" sieht die Linie sofort als fällig);
-      // offline wird der Request via Offline-Queue nachgereicht.
-      this.sr.promoteLearned(this.lineKeyOf(line));
-    } else if (line) {
-      // Quiz: SR-Bewertung PRO LINIE: fehlerfrei → +1 Stufe, sonst zurück auf Stufe 1.
-      // Erst in den „Linie fertig"-Zustand wechseln, DANN bewerten — die Offline-Bewertung (und
-      // eine synchron eintreffende Antwort) darf nextRepeatAt sofort in den offenen Kasten schreiben.
-      this.pendingRepeat = false;
-      this.phase = 'LINE_DONE';
-      const label = (line.headers['White'] || '').trim().slice(0, 120);
-      const req: LineReviewRequest = { lineKey: this.lineKeyOf(line), label, correct: !this.lineHadWrong };
-      // Nächste Fälligkeit im „Linie fertig"-Kasten anzeigen (nur solange diese Linie noch offen ist).
-      this.sr.review(req, dueAt => { if (this.phase === 'LINE_DONE') { this.nextRepeatAt = dueAt; this.cdr.markForCheck(); } });
-    }
-    // Nicht mehr automatisch weiter — der User rückt per „Weiter"-Knopf (bzw. Klick/Leertaste) vor.
-    // Timer werden BEWUSST hier NICHT geräumt: `startCurrentLine` cleart sie beim Übergang zur
-    // nächsten Linie. In manchen Test-/Race-Pfaden hilft ein spät feuernder Timer, phase aus
-    // einem Fehl-Zustand zurück zu PLAYING zu setzen — den ziehen wir nicht vorzeitig weg.
-    this.pendingRepeat = false;
-    this.phase = 'LINE_DONE';
-    this.cdr.markForCheck();
-  }
-
-  /** „Weiter" nach einer fertig gespielten Linie: entweder dieselbe Linie erneut (Learn-Wiederholung)
-   *  oder die nächste Linie. Wird vom Knopf, Klick aufs Brett und Leertaste/Enter ausgelöst. */
-  continueLine(): void {
-    if (this.phase !== 'LINE_DONE') return;
-    this.clearOppTimer();
-    if (this.pendingRepeat) {
-      this.pendingRepeat = false;
-      this.startCurrentLine();          // dieselbe Linie (qIndex unverändert), learnPass bleibt
-    } else {
-      this.qIndex++;
-      this.learnPass = 0;
-      this.startCurrentLine();
-    }
-  }
-
-  get isPlayable(): boolean {
-    if (this.phase === 'PLAYING') return true;
-    // Nach falschem Zug UND vor „Lösung zeigen": weiter spielbar (sofortiger Retry).
-    return this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
-  }
-
-  get progressPct(): number {
-    if (this.sessionUserMoves === 0) return 0;
-    return Math.round(((this.correct + this.wrong) / this.sessionUserMoves) * 100);
-  }
-
-  get currentLineLabel(): string { return lineLabel(this.queue[this.qIndex]); }
-
-  get currentLineChapter(): string { return lineChapterTitle(this.queue[this.qIndex]); }
-
-  /** Züge der aktuellen Linie als flache Tokens fürs Template (`lineMoveTokens`). Im Abfragen-Modus, solange der
-   * User seinen Zug noch SUCHT (PLAYING), erscheint der aktuelle Halbzug NICHT — sonst stünde die Lösung in der
-   * Zugliste; im Lern-Modus und nach dem Zug (FEEDBACK/…) wird er gezeigt. */
-  get movesInLine(): LineMoveToken[] {
-    const revealCurrent = this.mode === 'learn' || this.phase !== 'PLAYING';
-    return lineMoveTokens(this.queue[this.qIndex], this.currentPly, revealCurrent);
-  }
-
-  private bumpStreak(): void {
-    this.currentStreak++;
-    if (this.currentStreak > this.bestStreak) this.bestStreak = this.currentStreak;
-  }
-
-  /** PGN-Kommentar zum AKTUELL zu spielenden Halbzug (nur relevant für Lern-Modus, wo wir dem
-   * User Kontext geben — im Review-Modus bewusst nicht, weil er den Zug SELBST finden soll). */
-  get currentComment(): string { return plyComment(this.queue[this.qIndex], this.currentPly); }
-
-  /** Kommentar in Absätze gesplittet (leere Zeile trennt) — für die Prosa-Anzeige im Lern-Modus. */
-  get currentCommentParagraphs(): string[] { return commentParagraphs(this.currentComment); }
-
-  /** Menschenlesbares Label des aktuellen Halbzugs, z. B. „3. exd5" (Weiß) oder „2… d6" (Schwarz). */
-  get currentMovePrettyLabel(): string { return plyPrettyLabel(this.queue[this.qIndex], this.currentPly); }
-
-  /** Kompakte Restzeit bis zur nächsten Fälligkeit, z. B. „4 h", „3 d", „2 w". */
-  get nextDueLabel(): string { return relDueLabel(this.nextDueAt); }
-
-  /** LINE_DONE: „in X" bis die gerade beendete Linie erneut abgefragt wird (Abfragen-Modus). */
-  get nextRepeatLabel(): string { return relDueLabel(this.nextRepeatAt); }
-
-  /** Farbe (chessground-Notation), die der User in dieser Linie spielt. */
-  get userColorName(): 'white' | 'black' { return this.color === 'w' ? 'white' : 'black'; }
-
-  /** Seite am Zug laut der aktuell angezeigten Stellung. */
-  get boardTurn(): 'white' | 'black' { return whiteToMove(this.fen) ? 'white' : 'black'; }
-
-  /** Premove erlauben, solange der GEGNER am Zug ist — also während des automatischen Gegnerzugs
-   *  und im kurzen Feedback nach einem richtigen/geduldeten Zug. Nur im Abfragen-Modus. */
-  get premovable(): boolean {
-    if (this.mode !== 'quiz') return false;
-    if (this.boardTurn === this.userColorName) return false;
-    if (this.oppMoving) return true;
-    return this.phase === 'FEEDBACK' && this.outcome !== 'wrong';
-  }
-
-  get evalDeltaAbsDisplay(): string { return this.evalCmp.deltaAbsDisplay; }
-
-  /** Die geduldeten Alternativen ([%alt]) DIESER Stellung in der Form des gemeinsamen Kerns.
-   *
-   *  <p>Sie stehen im Repertoire-Graph als SAN und werden dort schon über das Brett kanonisiert;
-   *  aufgelöst wird trotzdem hier erneut — gegen die Stellung, in der der Zug fallen soll.</p>
-   *
-   *  <p>Der Hauptzug wird bewusst NICHT ausgesiebt: die alte Zeile `accepted.delete(expectedSan)`
-   *  steckt im Kern. {@link judgeMove} prüft den ERWARTETEN Zug zuerst und antwortet dann
-   *  `correct` — als `alternative` kann er gar nicht mehr herauskommen.</p> */
-  private altsAt(cardKey: string): ExpectedMove[] {
-    const list = this.graph?.moves.get(cardKey);
-    if (!list) return [];
-    const out: ExpectedMove[] = [];
-    const seen = new Set<string>();
-    for (const m of list) {
-      for (const a of m.alts) {
-        if (seen.has(a)) continue;
-        seen.add(a);
-        out.push({ san: a });
-      }
-    }
-    return out;
-  }
-
-  onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
-    const line = this.queue[this.qIndex];
-    if (!line || this.currentPly >= line.moves.length) return;
-    if (this.mode === 'learn') { this.onLearnMove(ev); return; }
-    const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
-    if (this.phase !== 'PLAYING' && !wrongRetry) return;
-    if (wrongRetry) {
-      this.evalCmp.reset();
-    }
-
-    // Geurteilt wird gegen GENAU diese Stellung — `this.fen`, nicht `this.chess`: im Wiederhol-Fall
-    // nach einem Fehlzug ist `this.fen` bereits auf die Ausgangsstellung des Halbzugs zurückgesetzt.
-    this.startFen = this.fen;
-    const board = tryLoadFen(this.fen);
-    if (!board) return;
-
-    const expectedMove = line.moves[this.currentPly];
-    const expected: ExpectedMove = { san: expectedMove.san };
-    const cardKey = normFen(this.fen);
-
-    // EIN Urteil aus dem gemeinsamen Kern (shared/chess/line-solver): erwarteter Zug UND geduldete
-    // Alternativen in einem Schritt, verglichen werden FELDER statt Zug-TEXT. `illegal` und
-    // `not-your-turn` gehen dorthin, wo früher der catch-Zweig hinführte: kein Feedback, nichts
-    // passiert (über das Brett-Component kommen ohnehin nur legale Züge herein).
-    const verdict = judgeMove(board, expected, this.altsAt(cardKey), ev.orig, ev.dest, ev.promotion);
-    if (verdict === 'illegal' || verdict === 'not-your-turn') return;
-    const expectedUci = resolveExpectedUci(board, expected);
-
-    // Den Nutzerzug auf der KOPIE anwenden: seine Folgestellung braucht der Eval-Vergleich, und ein
-    // geduldeter Zug bleibt kurz auf dem Brett stehen.
-    if (!tryFreeMove(board, ev.orig, ev.dest, ev.promotion)) return;
-    const fenAfterPlayer = board.fen();
-    this.lastMove = [ev.orig, ev.dest];
-
-    // SR wird PRO LINIE bewertet (finishLine); hier nur Feedback + Merken, ob die Linie schon
-    // einen Fehler hatte. Geduldete Züge zählen neutral.
-    if (verdict === 'correct') {
-      this.outcome = 'correct'; this.correct++;
-      // Ein an dieser Stellung offener Fehler, den der User NICHT als Mausrutscher deklariert hat,
-      // zählt jetzt (er macht ohne „Mausrutscher" weiter). Streak wird durch den echten Fehler
-      // unterbrochen — dieser Zug startet eine neue Serie bei 1.
-      if (this.pendingWrong) {
-        this.lineHadWrong = true; this.wrong++; this.pendingWrong = false;
-        this.currentStreak = 0;
-      }
-      this.bumpStreak();
-      // Nachgeführt wird der ERWARTETE Zug, nicht der rohe Nutzerzug: nennt der Nutzer bei einer
-      // Umwandlung keine Figur, gehört die der LINIE aufs Brett (dieselbe Regel wie im
-      // Puzzle-Löser). Die Felder sind ohnehin dieselben — sonst wäre das Urteil nicht `correct`.
-      // Ohne das Nachführen hängt eine Linie mit mehreren eigenen Zügen (advanceToUserMove spielt
-      // die Gegnerzüge aus `this.chess`).
-      if (expectedUci) { try { applyUci(this.chess, expectedUci); } catch { /* Brett steht woanders */ } }
-      this.fen = this.chess.fen();
-    } else if (verdict === 'alternative') {
-      this.outcome = 'tolerated';
-      if (this.pendingWrong) {
-        this.lineHadWrong = true; this.wrong++; this.pendingWrong = false;
-        this.currentStreak = 0;
-      }
-      this.bumpStreak();
-      this.fen = fenAfterPlayer;
-    } else {
-      // Falscher Zug: NOCH nicht als Fehler zählen — der User kann „Mausrutscher" sagen. Erst beim
-      // Weitermachen ohne Mausrutscher bzw. „Lösung zeigen" wird daraus ein echter Fehler.
-      this.outcome = 'wrong'; this.pendingWrong = true;
-      this.fen = this.startFen;
-      this.lastMove = [ev.orig, ev.dest];
-    }
-
-    this.expectedDisplay = expectedMove.san;
-    this.wrongRevealed = false;
-    this.phase = 'FEEDBACK';
-
-    if (this.outcome === 'wrong') {
-      this.evalCmp.start(this.startFen, fenAfterPlayer, expectedMove.san, this.color);
-      this.dests = destsAt(this.startFen);
-    } else {
-      this.scheduleAdvance(ADVANCE_MS[this.outcome]);
-    }
-
-    this.cdr.markForCheck();
-  }
-
-  onPlayClick(): void {
-    if (this.phase === 'LINE_DONE') { this.continueLine(); return; }
-    if (this.phase === 'COMMENT') { this.continueFromComment(); return; }
-    if (this.phase === 'LEARN_SHOW' && this.learnComment) { this.learnRetract(); return; }
-    if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
-  }
-
-  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen): Kommentar im Learn-Show wegtippen, Feedback
-   *  überspringen oder nach einer fertigen Linie fortfahren. */
+  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen). */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return;
     if (!isBoardHotkey(e)) return;
-    let acted = true;
-    if (this.phase === 'LINE_DONE') this.continueLine();
-    else if (this.phase === 'COMMENT') this.continueFromComment();
-    else if (this.phase === 'LEARN_SHOW' && this.learnComment) this.learnRetract();
-    else if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
-    else acted = false;
-    if (acted) e.preventDefault();
-  }
-
-  /** „Lösung zeigen": zählt als falsch (Server-Review), spielt den erwarteten Zug + weiter mit der Linie. */
-  showSolution(): void {
-    if (this.wrongRevealed) return;
-    this.wrongRevealed = true;
-    this.wrong++;
-    this.currentStreak = 0;   // „Lösung zeigen" bricht die Serie (Mausrutscher tut das NICHT).
-    this.lineHadWrong = true;   // Lösung zeigen = echter Fehler für die Linie
-    this.pendingWrong = false;
-    const line = this.queue[this.qIndex];
-    const expected = line?.moves[this.currentPly];
-    const board = expected ? tryLoadFen(this.startFen) : null;
-    // Der erwartete Zug wird über das BRETT auf Felder aufgelöst (gemeinsamer Kern) statt als Text
-    // gespielt. `null` = in dieser Stellung nicht auflösbar (mehrdeutige SAN, kaputte Linie) — dann
-    // bleibt es beim Text-Reveal, genau wie vorher.
-    const uci = board && expected ? resolveExpectedUci(board, { san: expected.san }) : null;
-    if (uci) {
-      try {
-        this.chess.load(this.startFen);
-        const mv = applyUci(this.chess, uci);
-        this.fen = this.chess.fen();
-        this.lastMove = [mv.from as Key, mv.to as Key];
-        this.dests = new Map();
-      } catch { /* Stellung nicht ladbar → nur Text-Reveal */ }
-    }
-    this.cdr.markForCheck();
-  }
-
-  /** „Mausrutscher": den offenen Fehler NICHT zählen und dieselbe Stellung wieder spielbar machen —
-   * beliebig oft wiederholbar. */
-  mouseslip(): void {
-    if (this.phase !== 'FEEDBACK' || this.outcome !== 'wrong' || this.wrongRevealed) return;
-    this.pendingWrong = false;
-    this.outcome = 'correct';   // Feedback-Kasten schließen
-    this.wrongRevealed = false;
-    this.fen = this.startFen;
-    this.lastMove = undefined;
-    this.dests = destsAt(this.startFen);
-    this.phase = 'PLAYING';
-    this.cdr.markForCheck();
-  }
-
-  /** Nach „Lösung zeigen": erwarteten Zug ist gespielt → mit der Linie fortfahren. */
-  continueAfterWrong(): void {
-    this.currentPly++;
-    this.wrongRevealed = false;
-    this.advanceToUserMove();
-  }
-
-  private scheduleAdvance(ms: number): void {
-    this.clearAdvance();
-    this.advanceTimer = setTimeout(() => { this.advanceTimer = null; this.runAdvance(); }, ms);
-  }
-
-  /** Nach richtigem/geduldetem Zug → im PGN weiterrücken und Gegnerzug spielen.
-   * WICHTIG: Timer räumen wir zuerst weg, damit der scheduleAdvance-Timer nicht später NOCHMAL
-   * runAdvance triggert, wenn der User schon per Klick/Leertaste manuell weitergeschaltet hat —
-   * das würde `currentPly` doppelt hochzählen (der Gegnerzug wird nicht gespielt, weil der
-   * Timer nur einen currentPly++ macht) und verschiebt „user turn" auf einen Opp-Zug. */
-  private runAdvance(): void {
-    this.clearAdvance();
-    if (this.outcome === 'tolerated') {
-      // Geduldeten Zug NICHT für den User zu Ende spielen: zurücknehmen und dieselbe Stellung
-      // wieder spielbar machen, damit der User den erwarteten Hauptzug SELBST zieht (nicht
-      // automatisch für ihn). currentPly bleibt stehen.
-      this.retryCurrentPly();
-      return;
-    }
-    this.currentPly++;
-    this.advanceToUserMove();
-  }
-
-  // ===== Learn-Modus =====
-
-  /** Kommentar eines gerade gespielten Gegnerzugs dauerhaft anzeigen (COMMENT-Phase), bis der User
-   * „Weiter" bestätigt (Tap/Leertaste/Enter). Brett bleibt in der aktuellen Stellung, view-only. */
-  private enterCommentHold(comment: string): void {
-    this.clearLearn();
-    this.clearOppTimer();
-    this.holdComment = comment;
-    this.dests = new Map();
-    this.phase = 'COMMENT';
-    this.cdr.markForCheck();
-  }
-
-  /** „Weiter" aus der COMMENT-Phase: Kommentar wegräumen und mit der Linie fortfahren. */
-  continueFromComment(): void {
-    if (this.phase !== 'COMMENT') return;
-    this.holdComment = '';
-    this.advanceToUserMove();
-  }
-
-  /** Wiederholungs-Durchläufe (learnPass ≥ 1): den erwarteten Zug NICHT vorzeigen — der User spielt
-   * ihn aus dem Gedächtnis. Ein falscher Zug blendet ihn via onLearnMove → enterLearnShow als
-   * Erinnerung ein. Brett bleibt in der Startstellung des Halbzugs und ist sofort spielbar. */
-  private enterLearnPlay(): void {
-    this.clearLearn();
-    this.fen = this.startFen;
-    this.lastMove = undefined;
-    this.dests = destsAt(this.startFen);
-    this.learnComment = '';
-    this.phase = 'PLAYING';
-    this.cdr.markForCheck();
-  }
-
-  /** Zeigt den erwarteten Zug auf dem Brett (view-only). Ohne Kommentar nach 2s automatisch
-   * zurücknehmen; MIT Kommentar stehen lassen, bis der User weitertippt (zum Lesen). */
-  private enterLearnShow(): void {
-    this.clearLearn();
-    const line = this.queue[this.qIndex];
-    const expected = line?.moves[this.currentPly];
-    if (!expected) { this.finishLine(); return; }
-    let fenAfter = this.startFen;
-    try {
-      const c = new Chess(this.startFen);
-      const mv = c.move(expected.san);
-      if (mv) { fenAfter = c.fen(); this.lastMove = [mv.from as Key, mv.to as Key]; }
-    } catch { /* nicht spielbar → nur Text */ }
-    this.fen = fenAfter;
-    this.dests = new Map();
-    this.expectedDisplay = expected.san;
-    // Kommentar nur beim ERSTEN Durchlauf zeigen (hält bis zum Weitertippen); die Wiederholungs-
-    // Durchläufe („durchklicken") laufen ohne Kommentar-Halt schnell durch.
-    this.learnComment = this.learnPass === 0 ? (line.comments?.[this.currentPly] || '').trim() : '';
-    this.phase = 'LEARN_SHOW';
-    this.cdr.markForCheck();
-    if (!this.learnComment) {
-      this.learnTimer = setTimeout(() => { this.learnTimer = null; this.learnRetract(); }, LEARN_SHOW_MS);
-    }
-  }
-
-  /** Gezeigten Zug zurücknehmen → der User spielt ihn selbst. */
-  private learnRetract(): void {
-    this.clearLearn();
-    this.fen = this.startFen;
-    this.lastMove = undefined;
-    this.dests = destsAt(this.startFen);
-    this.learnComment = '';
-    this.phase = 'PLAYING';
-    this.cdr.markForCheck();
-  }
-
-  private clearLearn(): void {
-    if (this.learnTimer !== null) { clearTimeout(this.learnTimer); this.learnTimer = null; }
-  }
-
-  /** Learn-Zug: nur der gezeigte (erwartete) Zug führt weiter; falsch → Zug erneut zeigen.
-   *
-   *  <p>Der Lern-Modus duldet ausdrücklich KEINE Alternativen — der Kern bekommt deshalb eine leere
-   *  Alternativen-Liste, während der Abfragen-Modus {@link altsAt} mitgibt.</p> */
-  private onLearnMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
-    const line = this.queue[this.qIndex];
-    if (!line || this.phase !== 'PLAYING' || this.currentPly >= line.moves.length) return;
-    const board = tryLoadFen(this.startFen);
-    if (!board) return;
-    const expected: ExpectedMove = { san: line.moves[this.currentPly].san };
-    const verdict = judgeMove(board, expected, [], ev.orig, ev.dest, ev.promotion);
-    if (verdict === 'illegal' || verdict === 'not-your-turn') return;
-    if (verdict !== 'correct') { this.enterLearnShow(); return; }   // nicht der Zug → nochmal vormachen
-    const uci = resolveExpectedUci(board, expected);
-    if (uci) { try { applyUci(this.chess, uci); } catch { /* Brett steht woanders */ } }
-    this.fen = this.chess.fen();
-    this.lastMove = [ev.orig, ev.dest];
-    this.currentPly++;
-    this.advanceToUserMove();
-  }
-
-  /** Geduldeten Zug zurücknehmen und die aktuelle Stellung erneut spielbar machen. */
-  private retryCurrentPly(): void {
-    // this.chess steht noch auf startFen (der geduldete Zug wurde nur auf einer Kopie geprüft).
-    this.fen = this.startFen;
-    this.lastMove = undefined;
-    this.dests = destsAt(this.startFen);
-    this.phase = 'PLAYING';
-    this.cdr.markForCheck();
-  }
-
-  /** Alle Timer der laufenden Linie wegräumen (Weiter, Gegnerzug, Lern-Anzeige). */
-  private clearLineTimers(): void {
-    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
-  }
-
-  private clearAdvance(): void {
-    if (this.advanceTimer !== null) { clearTimeout(this.advanceTimer); this.advanceTimer = null; }
-  }
-
-  private clearOppTimer(): void {
-    if (this.oppTimer !== null) { clearTimeout(this.oppTimer); this.oppTimer = null; }
+    if (this.s.tap()) e.preventDefault();
   }
 }

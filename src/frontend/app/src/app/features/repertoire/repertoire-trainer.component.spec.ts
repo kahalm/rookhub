@@ -133,7 +133,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
   it('filters lines by chapter query param', () => {
     const c = make('w', 'Chapter B');
     expect(c.queue.length).toBe(1);
-    expect((c as any).queue[0].headers.Black).toBe('Chapter B');
+    expect((c as any).session.queue[0].headers.Black).toBe('Chapter B');
   });
 
   it('info lines ([%info] or „Info | " in White) are neither quizzed nor learned nor promoted', () => {
@@ -423,8 +423,8 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     );
     c.ngOnInit();
     // In einen Wiederholungs-Durchlauf versetzen: der 2. Durchlauf zeigt NICHT vor → direkt PLAYING.
-    (c as any).learnPass = 1;
-    (c as any).startCurrentLine();
+    (c as any).session.learnPass = 1;
+    (c as any).session.startCurrentLine();
     expect(c.phase).toBe('PLAYING');                      // kein LEARN_SHOW im Wiederholungs-Durchlauf
     c.onMove({ orig: 'e2' as any, dest: 'e3' as any });   // falscher Zug (erwartet e4)
     expect(c.phase).toBe('LEARN_SHOW');                   // → Zug wird als Erinnerung eingeblendet
@@ -439,8 +439,8 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     c.continueLine();
     expect(c.phase).toBe('PLAYING');
     // Aus LINE_DONE rückt continueLine zur nächsten Linie vor.
-    (c as any).phase = 'LINE_DONE';
-    c.pendingRepeat = false;
+    (c as any).session.phase = 'LINE_DONE';
+    (c as any).session.pendingRepeat = false;
     c.continueLine();
     expect(c.phase).not.toBe('LINE_DONE');
   });
@@ -452,13 +452,13 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).toBe('PLAYING');
     expect(c.movesInLine.length).toBe(0);
     // Cursor auf 2 (zwei bereits gespielte Halbzüge) → beide 'past', der aktuelle bleibt verborgen.
-    (c as any).currentPly = 2;
+    (c as any).session.currentPly = 2;
     let m = c.movesInLine;
     expect(m.length).toBe(2);
     expect(m[0].state).toBe('past');
     expect(m[1].state).toBe('past');
     // Außerhalb von PLAYING (Feedback nach dem Zug) wird der aktuelle Halbzug gezeigt.
-    (c as any).phase = 'FEEDBACK';
+    (c as any).session.phase = 'FEEDBACK';
     m = c.movesInLine;
     expect(m.length).toBe(3);
     expect(m[2].state).toBe('current');
@@ -471,8 +471,8 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).toBe('PLAYING');
     expect(c.premovable).toBe(false);
     // Gegnerzug-Fenster: oppMoving + Brett zeigt Schwarz am Zug → Premove erlaubt.
-    (c as any).oppMoving = true;
-    (c as any).fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+    (c as any).session.oppMoving = true;
+    (c as any).session.fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
     expect(c.premovable).toBe(true);
   });
 
@@ -489,12 +489,12 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       state(lineKeyFromSans(['e4', 'e5', 'Nf3', 'd6', 'd4', 'exd4']), PAST()),
     ]);
     // currentPly=3 = Schwarz-Halbzug d6, an dem der Kommentar hängt.
-    (c as any).currentPly = 3;
+    (c as any).session.currentPly = 3;
     expect(c.currentComment).toContain('Philidor Defence');
     expect(c.currentCommentParagraphs.length).toBe(1);
     expect(c.currentMovePrettyLabel).toBe('2… d6');
     // Am nächsten Halbzug (d4, Ply 4) gibt es keinen Kommentar mehr.
-    (c as any).currentPly = 4;
+    (c as any).session.currentPly = 4;
     expect(c.currentComment).toBe('');
     expect(c.currentCommentParagraphs).toEqual([]);
     expect(c.currentMovePrettyLabel).toBe('3. d4');
@@ -509,12 +509,12 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.bestStreak).toBe(1);
     // Falscher Zug OHNE Zwischen-Advance: Guard verhindert onMove-Verarbeitung (phase=FEEDBACK).
     // Wir simulieren daher direkt einen pendingWrong-Zustand und lassen showSolution die Serie brechen.
-    (c as any).currentStreak = 5;
-    (c as any).bestStreak = 5;
-    (c as any).phase = 'FEEDBACK';
-    (c as any).outcome = 'wrong';
-    (c as any).pendingWrong = true;
-    (c as any).wrongRevealed = false;
+    (c as any).session.currentStreak = 5;
+    (c as any).session.bestStreak = 5;
+    (c as any).session.phase = 'FEEDBACK';
+    (c as any).session.outcome = 'wrong';
+    (c as any).session.pendingWrong = true;
+    (c as any).session.wrongRevealed = false;
     c.showSolution();
     expect(c.currentStreak).toBe(0);                          // Serie gebrochen
     expect(c.bestStreak).toBe(5);                             // Session-Best bleibt
@@ -542,12 +542,12 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     // Direkt und race-frei: manuell scheduleAdvance simulieren, dann runAdvance aufrufen —
     // advanceTimer muss danach null sein (der scheduled setTimeout kann nicht mehr feuern).
     const c = make('w', 'Chapter A');
-    (c as any).outcome = 'correct';
-    (c as any).phase = 'FEEDBACK';
-    (c as any).scheduleAdvance(3000);
-    expect((c as any).advanceTimer).not.toBeNull();
-    (c as any).runAdvance();
-    expect((c as any).advanceTimer).toBeNull();
+    (c as any).session.outcome = 'correct';
+    (c as any).session.phase = 'FEEDBACK';
+    (c as any).session.scheduleAdvance(3000);
+    expect((c as any).session.advanceTimer).not.toBeNull();
+    (c as any).session.runAdvance();
+    expect((c as any).session.advanceTimer).toBeNull();
   });
 
   it('LOADING failure sets phase to EMPTY', () => {
@@ -672,7 +672,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
 
   /** Schreibt die SAN eines Halbzugs der laufenden Linie um (siehe Kommentar oben). */
   const writeSan = (c: RepertoireTrainerComponent, ply: number, san: string) => {
-    (c as any).queue[(c as any).qIndex].moves[ply].san = san;
+    (c as any).session.queue[(c as any).session.qIndex].moves[ply].san = san;
   };
 
   const game = (white: string, moves: string, fen?: string) => [
@@ -775,7 +775,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
       '1. e4 {[%alt e4 d4]} e5 2. Nf3 Nc6 *', '',
     ].join('\n');
     const c = make('w', null, pgn, [state(KEY_A, PAST())]);
-    expect((c as any).altsAt((c as any).fen.split(' ').slice(0, 4).join(' ')).length).toBe(2);
+    expect((c as any).session.altsAt((c as any).session.fen.split(' ').slice(0, 4).join(' ')).length).toBe(2);
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
     expect(c.outcome).toBe('correct');                    // NICHT 'tolerated'
   });
@@ -837,10 +837,10 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
     expect(c.phase).toBe('PLAYING');
     c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // die im Abfragen-Modus GEDULDETE Alternative
     expect(c.phase).toBe('LEARN_SHOW');                   // → im Lernen nicht akzeptiert, nochmal vorzeigen
-    expect((c as any).currentPly).toBe(0);
+    expect((c as any).session.currentPly).toBe(0);
     tick(1000);
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // nur der erwartete Zug führt weiter
-    expect((c as any).currentPly).toBe(1);
+    expect((c as any).session.currentPly).toBe(1);
     tick(400); tick(800);
   }));
 
@@ -868,12 +868,12 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
       {} as any,
     );
     c.ngOnInit();
-    (c as any).learnPass = 1;                             // Wiederholungs-Durchlauf: kein Vorzeigen
-    (c as any).startCurrentLine();
+    (c as any).session.learnPass = 1;                             // Wiederholungs-Durchlauf: kein Vorzeigen
+    (c as any).session.startCurrentLine();
     expect(c.phase).toBe('PLAYING');
-    (c as any).queue[(c as any).qIndex].moves[0].san = 'e2e4';
+    (c as any).session.queue[(c as any).session.qIndex].moves[0].san = 'e2e4';
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-    expect((c as any).currentPly).toBe(1);                // akzeptiert, kein erneutes Vorzeigen
+    expect((c as any).session.currentPly).toBe(1);                // akzeptiert, kein erneutes Vorzeigen
     tick(400); tick(800);
   }));
 });
@@ -1070,8 +1070,8 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
       const c = make5({ opponent: 'prep:42', color: 'w', line: keys[2] }, { get });
       expect(c.queue.map(l => l.headers['White'])).toEqual(['L3', 'L4', 'L5']);
       expect(c.opponentTotal).toBe(3);
-      (c as any).qIndex = 3;
-      (c as any).startCurrentLine();
+      (c as any).session.qIndex = 3;
+      (c as any).session.startCurrentLine();
       expect(c.phase).toBe('DONE');
       // „Von vorn": die ganze Reihung ab Linie 1
       c.restart();

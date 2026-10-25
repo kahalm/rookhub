@@ -88,9 +88,9 @@ describe('RepertoireTrainerComponent — Phasenfolge (Charakterisierung Z21)', (
     expect(c.oppMoving).toBeTrue();
     tick(250);                                  // Gegner e5
     expect(c.oppMoving).toBeFalse();
-    expect((c as any).currentPly).toBe(2);
+    expect((c as any).session.currentPly).toBe(2);
     tick(1000);                                 // kein zweites Vorrücken
-    expect((c as any).currentPly).toBe(2);
+    expect((c as any).session.currentPly).toBe(2);
     expect(c.phase).toBe('PLAYING');
   }));
 
@@ -171,7 +171,7 @@ describe('RepertoireTrainerComponent — Phasenfolge (Charakterisierung Z21)', (
     c.ngOnDestroy();
     tick(1000);
     expect(c.fen).toBe(START);
-    expect((c as any).currentPly).toBe(0);
+    expect((c as any).session.currentPly).toBe(0);
   }));
 
   it('Moduswechsel baut neu auf: Lernen nimmt nur Linien außerhalb des Pools, zeigt vor (LEARN_SHOW)', fakeAsync(() => {
