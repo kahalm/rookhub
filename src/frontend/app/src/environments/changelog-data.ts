@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.17", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z31): the LeagueHub pages „Add games“ and „Check scoresheet“ are split into pure stores (draft, scoresheet upload), panels (PGN source, scoresheet, side form, export actions) and helpers (merge, export) — no visible change; inputs survive switching between game data and scoresheet as before.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z31): Die LeagueHub-Seiten „Partien hinzufügen“ und „Partieformular prüfen“ sind in reine Stores (Entwurf, Formular-Upload), Panels (PGN-Quelle, Formular, Seiten-Formular, Export-Aktionen) und Helfer (Zusammenführen, Export) zerlegt — keine sichtbare Änderung; Eingaben bleiben beim Wechsel Partiedaten ↔ Partieformular wie bisher erhalten." },
+  ]},
   { version: "0.832.16", date: "2026-10-25", changes: [
     { en: "Technical rework of the tournament site (code review 2026-09-29, decomposition Z27/Z28/F6-025/F6-026): the map (pin groups, popup builder, legend, popup content, gestures), the tournament calendar (view-state sync, place field, search-profile menu and actions, filter panel, loaders) and the tournament history (sections as computed signals) are split into smaller building blocks; 58 dead style lines removed — no visible change.", de: "Technischer Umbau der Turnierseite (Codereview 2026-09-29, Zerlegung Z27/Z28/F6-025/F6-026): Turnierkarte (Pin-Bündelung, Popup-Bau, Legende, Popup-Inhalt, Gesten), Turnierkalender (Anzeigezustand, Ortsfeld, Suchprofil-Menü und -Aktionen, Filterfeld, Lader) und Turnierverlauf (Abschnitte als computed-Signale) sind in kleinere Bausteine zerlegt; 58 tote Stilzeilen entfernt — keine sichtbare Änderung." },
   ]},
