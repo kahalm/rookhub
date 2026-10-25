@@ -200,6 +200,30 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAccount_RemovesOtherUsersChallengeAndRevengeNotificationsOfTheAccount()
+    {
+        // Folge 0.833.1: Challenges/Revanchen gehen mit dem Konto — die Glocken-Einträge der ANDEREN dazu (Name + Link
+        // „/friends", keine Id) führten danach ins Leere. Sie gehen mit; andere Typen und fremde Namen bleiben.
+        var id = await CreateUserWithPasswordAsync("gone", "secret123");
+        var a = await CreateUserWithPasswordAsync("alice", "x");
+        var notifications = new NotificationService(_db);
+        Dictionary<string, string> By(string name) => new() { ["username"] = name, ["solved"] = "true" };
+        await notifications.CreateAsync(a, Models.NotificationType.ChallengeReceived, By("gone"), "/friends");
+        await notifications.CreateAsync(a, Models.NotificationType.ChallengeResolved, By("gone"), "/friends");
+        await notifications.CreateAsync(a, Models.NotificationType.RevengePerformed, By("gone"), "/friends");
+        await notifications.CreateAsync(a, Models.NotificationType.FriendRequestAccepted, By("gone"), "/friends");
+        await notifications.CreateAsync(a, Models.NotificationType.ChallengeReceived, By("bob"), "/friends");
+
+        await _profileService.DeleteAccountAsync(id, "secret123");
+
+        var rows = await _db.Notifications.AsNoTracking().OrderBy(n => n.Id).ToListAsync();
+        Assert.Equal(new[] { Models.NotificationType.FriendRequestAccepted, Models.NotificationType.ChallengeReceived },
+            rows.Select(n => n.Type));
+        Assert.Contains($"deleted_{id}", rows[0].DataJson);              // bleibt, nur anonymisiert (A9-003)
+        Assert.Contains("bob", rows[1].DataJson);
+    }
+
+    [Fact]
     public async Task DeleteAccount_ReplacesTheNameInOtherUsersNotifications()
     {
         // A9-003: zwölf Auslöser legen den Namen des Auslösers als data.username beim EMPFÄNGER ab — die Löschung

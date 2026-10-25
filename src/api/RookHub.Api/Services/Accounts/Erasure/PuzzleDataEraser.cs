@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Models;
+using RookHub.Api.Services.Social;
 
 namespace RookHub.Api.Services.Accounts.Erasure;
 
@@ -13,6 +15,7 @@ internal static class PuzzleDataEraser
         var (db, userId) = (ctx.Db, ctx.UserId);
         db.PuzzleChallenges.RemoveRange(
             await db.PuzzleChallenges.Where(c => c.FromUserId == userId || c.ToUserId == userId).ToListAsync());
+        await RemoveDeadNotificationsAsync(ctx, NotificationType.ChallengeReceived, NotificationType.ChallengeResolved);
     }
 
     /// <summary>Revanche-Vermerke, in denen der Nutzer Rächer (Avenger) ODER Ziel (Target) ist. Die Zeile ist das
@@ -22,5 +25,22 @@ internal static class PuzzleDataEraser
         var (db, userId) = (ctx.Db, ctx.UserId);
         db.RevengeNotifications.RemoveRange(
             await db.RevengeNotifications.Where(n => n.AvengerUserId == userId || n.TargetUserId == userId).ToListAsync());
+        await RemoveDeadNotificationsAsync(ctx, NotificationType.RevengePerformed);
+    }
+
+    /// <summary>
+    /// Glocken-Einträge ANDERER Nutzer, die auf eine eben gelöschte Challenge bzw. Revanche des Kontos zeigen (Folge von
+    /// A1-018, 0.833.1). Sie verweisen nicht per Id, sondern tragen nur den Namen des Auslösers (<c>data.username</c>) und
+    /// den Link „/friends" — dort fehlt die Zeile danach, der Eintrag führte ins Leere. Da ALLE Challenges und Revanchen des
+    /// Kontos in beiden Rollen gehen, ist jeder solche Eintrag mit seinem Namen tot: weg damit (statt ihn nur zu
+    /// anonymisieren wie die übrigen Typen in <see cref="UserDataEraser"/>). Andere Typen (Freundschaft, Teilen …) bleiben.
+    /// </summary>
+    private static async Task RemoveDeadNotificationsAsync(UserErasureContext ctx, params string[] types)
+    {
+        var username = await ctx.Db.AppUsers.Where(u => u.Id == ctx.UserId).Select(u => u.Username).FirstOrDefaultAsync();
+        if (username is null) return;
+        var dead = (await NotificationService.MentioningUsernameAsync(ctx.Db, username, ctx.UserId))
+            .Where(n => types.Contains(n.Type)).ToList();
+        ctx.Db.Notifications.RemoveRange(dead);
     }
 }
