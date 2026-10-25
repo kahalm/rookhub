@@ -8,6 +8,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.837.2", date: "2026-10-25", changes: [
+    { en: "PGN upload: quotation marks in header fields (e.g. event name „Landesliga \"A\"“) are kept correctly instead of turning into apostrophes.", de: "PGN-Upload: Anführungszeichen in Kopfangaben (z. B. Turniername „Landesliga \"A\"“) bleiben korrekt erhalten statt zu Apostrophen zu werden." },
+    { en: "Calculation training: chapters differing only by leading or trailing spaces are shown and totalled as one chapter, like the rest of the course pages.", de: "Kalkulationstraining: Kapitel, die sich nur durch Leerzeichen am Rand unterscheiden, werden wie im Rest der Kursseiten als ein Kapitel angezeigt und summiert." },
+    { en: "Reconstruct game: a trailing „1/2“ in typed moves is recognised as a draw result, not as a move.", de: "Partie rekonstruieren: „1/2“ am Ende des eingetippten Zugtexts wird als Remis erkannt statt als Zug." },
+    { en: "LeagueHub: shared match links load faster thanks to a short-lived (60 s) cache of the view; the link itself is still checked on every call.", de: "LeagueHub: Geteilte Begegnungs-Links laden schneller, weil die Ansicht 60 s zwischengespeichert wird; der Link selbst wird weiter bei jedem Aufruf geprüft." },
+    { en: "Account deletion: other users’ challenge and revenge notifications about the deleted account are removed as well instead of leading nowhere.", de: "Kontolöschung: Challenge- und Revanche-Benachrichtigungen anderer Nutzer zum gelöschten Konto verschwinden mit, statt ins Leere zu führen." },
+    { en: "Technical cleanup (code review I2-011): an unused Chessable course fetch path towards piratechess is removed; piratechess drops the endpoint in v1.0.52.", de: "Technische Bereinigung (Codereview I2-011): Ein nicht mehr genutzter Abrufweg für Chessable-Kurse zu piratechess ist entfernt; piratechess entfernt den Endpunkt in v1.0.52." },
+  ]},
   { version: "0.837.1", date: "2026-10-25", changes: [
     { en: "Repertoire tree arrows: for your own moves (the side of the repertoire) the arrow size now shows how many lines of your repertoire follow that move; for the opponent's moves it still shows how often the move is played on Lichess.",
       de: "Pfeile im Repertoire-Baum: bei deinen eigenen Zügen (Seite des Repertoires) zeigt die Pfeilgröße jetzt, wie viele Linien deines Repertoires diesem Zug folgen; bei den Zügen des Gegners weiterhin, wie oft der Zug auf Lichess gespielt wird." },
