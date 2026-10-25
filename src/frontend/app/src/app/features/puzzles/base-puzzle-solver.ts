@@ -3,6 +3,7 @@ import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearCrazyStyles, clearVisualizationHide, ThemeMode } from './board-theme.util';
+import { OpponentArrowMode, opponentArrowModeFor, VizController } from './viz-controller';
 import { SecondsCountdown, SolverTimer } from './solver-timer';
 import { lineStepAt } from './line-step.util';
 import { formatPuzzleTime } from './puzzle-format.util';
@@ -118,22 +119,22 @@ export abstract class BasePuzzleSolver {
   protected frozenFen = '';
   protected vizStartWhite = true;
   protected vizStartNum = 1;
+  /** Verdeck-Countdown, „Anzeigen"-Knopf und Gegnerzug-Pfeil (verdeckt wird mit der Stufe beim Ablauf). */
+  private readonly viz = new VizController(() => applyVisualizationHide(this.visualizationMode));
   /** Level 2-4: Figuren versteckt (nach Countdown). */
-  vizPiecesHidden = false;
+  get vizPiecesHidden(): boolean { return this.viz.piecesHidden; }
   /** Show-Button aktiv (deckt Figuren/Steine auf — Toggle, läuft NICHT automatisch ab). */
-  vizShowPressed = false;
+  get vizShowPressed(): boolean { return this.viz.showPressed; }
   /** Wie oft der Show-Button in diesem Versuch zum Aufdecken gedrückt wurde. */
-  vizShowCount = 0;
+  get vizShowCount(): number { return this.viz.showCount; }
+  /** Countdown-Sekunden bis Figuren verschwinden (Level 2-4). */
+  get vizCountdownSeconds(): number { return this.viz.countdownSeconds; }
+  /** Letzter Gegnerzug als Pfeil (Viz-Modus 1-4: immer nur der zuletzt gespielte Gegnerzug). */
+  get vizOpponentLastMove(): [Key, Key] | undefined { return this.viz.opponentLastMove; }
   /** Eval wurde in diesem Versuch mindestens einmal eingeblendet. */
   evalShown = false;
-  /** Countdown-Sekunden bis Figuren verschwinden (Level 2-4). */
-  vizCountdownSeconds = 0;
-  protected vizCountdownInterval?: ReturnType<typeof setInterval>;
-  /** Letzter Gegnerzug als Pfeil (Viz-Modus 1-4: immer nur der zuletzt gespielte Gegnerzug). */
-  vizOpponentLastMove?: [Key, Key];
   /** Pfeil-Anzeige ein/aus (Nutzer-Einstellung, aus Prefs geladen). */
   vizArrowEnabled = true;
-  private vizOpponentArrowTimer?: ReturnType<typeof setTimeout>;
 
   // ---- Tipps (gestuft 1→3). Wie viele Stufen aktuell aufgedeckt sind. ----
   hintLevel = 0;
@@ -345,7 +346,7 @@ export abstract class BasePuzzleSolver {
     this.startEvalPawns = null;
     this.moveLog = [];
     this.evalShown = false;
-    this.vizShowCount = 0;
+    this.viz.showCount = 0;
     this.frozenFen = fen;
     this.vizMoves = [];
     this.clearVizOpponentArrow();
@@ -401,7 +402,7 @@ export abstract class BasePuzzleSolver {
     this.vizStartWhite = whiteToMove(this.frozenFen);
     this.vizStartNum = parseInt(f[5], 10) || 1;
     this.vizMoves = [];
-    if (this.visualizationMode >= 2) this.startVizCountdown();
+    if (this.visualizationMode >= 2) this.viz.startCountdown();
     this.captureStartEval();
   }
 
@@ -692,35 +693,11 @@ export abstract class BasePuzzleSolver {
     this.dests = interactive ? calcDests(this.chess, this.enPassantForced) : new Map();
   }
 
-  // ===== Visualization Level 2-4: Countdown + Hide =====
-  protected startVizCountdown(): void {
-    this.clearVizCountdown();
-    this.vizPiecesHidden = false;
-    this.vizShowPressed = false;
-    this.vizCountdownSeconds = 3;
-    this.vizCountdownInterval = setInterval(() => {
-      this.vizCountdownSeconds--;
-      if (this.vizCountdownSeconds <= 0) {
-        this.clearVizCountdown();
-        this.vizPiecesHidden = true;
-        applyVisualizationHide(this.visualizationMode);
-      }
-    }, 1000);
-  }
-
-  protected clearVizCountdown(): void {
-    if (this.vizCountdownInterval) {
-      clearInterval(this.vizCountdownInterval);
-      this.vizCountdownInterval = undefined;
-    }
-    this.vizCountdownSeconds = 0;
-  }
-
+  // ===== Visualization Level 2-4: Countdown + Hide (VizController) =====
   /** Toggle: deckt die Figuren auf bzw. blendet sie wieder aus. Läuft bewusst NICHT automatisch
    *  ab — der Spieler entscheidet selbst, wann wieder verdeckt wird. */
   onVizShow(): void {
-    this.vizShowPressed = !this.vizShowPressed;
-    if (this.vizShowPressed) this.vizShowCount++;   // nur das Aufdecken zählen
+    this.viz.toggleShow();   // nur das Aufdecken zählt
     // Level 1: Brett auf die tatsächliche Stellung umstellen bzw. wieder einfrieren
     // (Level 2–4 decken über die CSS-Klasse `.viz-hidden` auf, kein Board-Wechsel nötig).
     if (this.visualizationMode === 1) this.updateBoard();
@@ -857,41 +834,23 @@ export abstract class BasePuzzleSolver {
   }
 
   protected endVisualizationHide(): void {
-    this.clearVizCountdown();
-    this.vizPiecesHidden = false;
-    this.vizShowPressed = false;
-    clearVisualizationHide();
+    this.viz.endHide();
   }
 
-  /** Wann der Gegnerzug-Pfeil gezeigt wird und wie lange:
-   *  'off' = gar nicht, 'timed' = 1s einblenden (Viz-Modus), 'persist' = stehen lassen bis zum
-   *  nächsten User-Zug (Crazy-Modus, da der Gegnerzug auf dem Crazy-Brett schlecht erkennbar ist).
-   *  Crazy-Modus → bleibender Pfeil ('persist'); sonst richtet er sich nach dem Viz-Modus. */
-  protected get opponentArrowMode(): 'off' | 'timed' | 'persist' {
-    return this.themeMode === 'crazy' ? 'persist' : (this.visualizationMode > 0 ? 'timed' : 'off');
+  /** Wann der Gegnerzug-Pfeil gezeigt wird und wie lange (siehe {@link opponentArrowModeFor}). */
+  protected get opponentArrowMode(): OpponentArrowMode {
+    return opponentArrowModeFor(this.themeMode, this.visualizationMode);
   }
 
   /** Zeigt den letzten Gegnerzug als Pfeil — je nach {@link opponentArrowMode} zeitlich begrenzt
-   *  (Viz) oder bleibend bis zum nächsten User-Zug (Crazy). */
+   *  (Viz, respektiert die Pfeil-Einstellung) oder bleibend bis zum nächsten User-Zug (Crazy). */
   private showVizOpponentArrow(): void {
-    const mode = this.opponentArrowMode;
-    if (mode === 'off') return;
-    if (mode === 'timed' && !this.vizArrowEnabled) return;   // Viz-Pfeil respektiert die Einstellung
-    if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
-    this.vizOpponentLastMove = this.lastMove;
-    if (mode === 'timed') {
-      this.vizOpponentArrowTimer = setTimeout(() => {
-        this.vizOpponentLastMove = undefined;
-        this.vizOpponentArrowTimer = undefined;
-      }, 1000);
-    }
-    // 'persist': kein Timer → der Pfeil bleibt, bis der User zieht (clear in onMoveMade).
+    this.viz.showOpponentArrow(this.opponentArrowMode, this.vizArrowEnabled, this.lastMove);
   }
 
   /** Gegnerzug-Pfeil sofort entfernen. */
   clearVizOpponentArrow(): void {
-    if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
-    this.vizOpponentLastMove = undefined;
+    this.viz.clearOpponentArrow();
   }
 
   // ===== Lösungs-Durchsicht (geteilt) =====
