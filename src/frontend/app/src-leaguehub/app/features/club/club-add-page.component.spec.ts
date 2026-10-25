@@ -8,6 +8,7 @@ import { ClubPreview, ScoresheetScan } from '../../core/club.models';
 import { ClubAddPageComponent } from './club-add-page.component';
 import { anonKeys } from './club-anon-keys';
 import { PgnSourcePanelComponent } from './pgn-source-panel.component';
+import { ClubScoresheetPanelComponent } from './club-scoresheet-panel.component';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
@@ -69,6 +70,11 @@ describe('ClubAddPageComponent', () => {
   /** Die PGN-Quelle (Datei, ChessBase, Lichess, Text) — eigene Kind-Komponente seit der Zerlegung Z31. */
   function source(): PgnSourcePanelComponent {
     return fixture.debugElement.query(By.directive(PgnSourcePanelComponent)).componentInstance as PgnSourcePanelComponent;
+  }
+
+  /** Die Art „Partieformular" (Fotos, Hochladen, Formular-Listen) — eigene Kind-Komponente seit der Zerlegung Z31. */
+  function sheetPanel(): ClubScoresheetPanelComponent {
+    return fixture.debugElement.query(By.directive(ClubScoresheetPanelComponent)).componentInstance as ClubScoresheetPanelComponent;
   }
 
   // d3-l-info-icon-allein-handy: am Handy brach das ⓘ allein in Zeile 2 — jetzt steht es immer mit „Gegner." auf einer Zeile.
@@ -248,9 +254,9 @@ describe('ClubAddPageComponent', () => {
     api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
     api.scans.and.resolveTo([{ ref: '7', scan: SCAN('done') }]);
     const file = new File(['x'], 'bogen.jpg', { type: 'image/jpeg' });
-    fixture.componentInstance.photo.set(file);
-    fixture.componentInstance.side.set('white');
-    void fixture.componentInstance.upload();
+    fixture.componentInstance.sheets.photo.set(file);
+    fixture.componentInstance.sheets.side.set('white');
+    void sheetPanel().upload();
     flushMicrotasks();
     expect(api.upload).toHaveBeenCalledWith([file], 'auto', 'white', [1]);
     tick(3000);
@@ -289,7 +295,7 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(el.querySelector('.add-page')).toBeNull();                       // erst nach dem ersten Foto
-    const c = fixture.componentInstance;
+    const c = fixture.componentInstance.sheets;
     const p1 = new File(['1'], 's1.jpg', { type: 'image/jpeg' });
     const p2 = new File(['2'], 's2.jpg', { type: 'image/jpeg' });
     const p3 = new File(['3'], 's3.jpg', { type: 'image/jpeg' });
@@ -320,7 +326,7 @@ describe('ClubAddPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    const c = fixture.componentInstance;
+    const c = fixture.componentInstance.sheets;
     const files = [1, 2, 3, 4, 5].map(n => new File([String(n)], `f${n}.jpg`, { type: 'image/jpeg' }));
     const input = el.querySelector('.multi-photo') as HTMLInputElement;
     expect(input.multiple).toBeTrue();
@@ -348,7 +354,7 @@ describe('ClubAddPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    const c = fixture.componentInstance;
+    const c = fixture.componentInstance.sheets;
     const p1 = new File(['1'], 'a.jpg', { type: 'image/jpeg' });
     const p2 = new File(['2'], 'b.jpg', { type: 'image/jpeg' });
     c.photo.set(p1);
@@ -379,8 +385,8 @@ describe('ClubAddPageComponent', () => {
     expect(intro.textContent).toContain('Ohne Anmeldung.');
     expect(intro.querySelector('.chk-btn')).not.toBeNull();
     api.upload.and.resolveTo({ ref: 'geheim', scan: SCAN('done') });
-    fixture.componentInstance.photo.set(new File(['x'], 'b.jpg', { type: 'image/jpeg' }));
-    void fixture.componentInstance.upload();
+    fixture.componentInstance.sheets.photo.set(new File(['x'], 'b.jpg', { type: 'image/jpeg' }));
+    void sheetPanel().upload();
     flushMicrotasks();
     fixture.detectChanges();
     expect(anonKeys('TOK')).toEqual(['geheim']);
@@ -529,14 +535,14 @@ describe('ClubAddPageComponent', () => {
     input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
     expect(input.value).toContain('bogen.jpg');
-    expect(fixture.componentInstance.photo()).toBe(file);
+    expect(fixture.componentInstance.sheets.photo()).toBe(file);
     api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
-    void fixture.componentInstance.upload();
+    void sheetPanel().upload();
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.upload).toHaveBeenCalled();
     expect(input.value).toBe('');
-    expect(fixture.componentInstance.photo()).toBeNull();
+    expect(fixture.componentInstance.sheets.photo()).toBeNull();
     fixture.destroy();
     flush();
   }));
