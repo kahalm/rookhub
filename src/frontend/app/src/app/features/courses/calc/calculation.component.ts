@@ -30,16 +30,16 @@ import {
 } from './calc-tree.util';
 import {
   CALC_GRADE_OPTIONS, CALC_MAX_POINTS_PER_POSITION, CalcGrade, CalcReview, CalcReviewPatch,
-  applyReviewPatch, emptyReview, formatScore, gradePoints, isNoopPatch, maxPoints,
-  mergeReviewPatch, newSecondsToken, normalizeGrade, sumPoints,
+  formatScore, gradePoints, maxPoints, newSecondsToken, normalizeGrade, sumPoints,
 } from './calc-review.util';
 import {
-  CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
+  CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalculationService,
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
 import { CalcTrainingTimer } from './calc-training-timer';
 import { CalcTreeCursor } from './calc-tree-cursor';
 import { KeyedSingleFlightQueue, SingleFlight } from './keyed-single-flight-queue';
+import { CalcReviewController } from './calc-review.controller';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
 import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
@@ -239,7 +239,23 @@ export class CalculationComponent implements OnInit, OnDestroy {
   // auswertbar) und hängen an der Zeile (UserId, BookPuzzleId).
 
   /** Stand der ANGEZEIGTEN Stellung (Spiegel der Sprunglisten-Zeile). */
-  review: CalcReview = emptyReview();
+  get review(): CalcReview { return this.reviews.review; }
+
+  /** Festlegung/Zeit/Stufe samt Sende-Warteschlange — siehe {@link CalcReviewController}. */
+  private readonly reviews = new CalcReviewController({
+    items: () => this.positions,
+    currentId: () => this.position?.id ?? null,
+    send: (bookPuzzleId, patch) => this.backend.saveReview(bookPuzzleId, patch),
+    onChanged: () => this.dropServerSums(),
+    onSaved: () => this.setLocalSaveFailed(false),
+    // Anonym ist der „Server" der Gerätespeicher: dann ist der Hinweis „liegt nur auf diesem
+    // Gerät" falsch — es liegt gerade nirgends, und das muss stehen bleiben (der Snackbar-
+    // Hinweis ist nach ein paar Sekunden weg).
+    onSaveFailed: () => {
+      this.setLocalSaveFailed(this.localOnly);
+      this.snackbar.warn(this.translate.instant('calc.review.saveFailed'));
+    },
+  });
   /** Die fünf Stufen der Selbstbewertung in Anzeige-Reihenfolge. */
   readonly gradeOptions = CALC_GRADE_OPTIONS;
   /** Höchstpunktzahl einer einzelnen Stellung (für „2 / 4"). */
@@ -593,7 +609,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private applyPosition(pos: CalcPosition): void {
     this.timer.syncChapter(pos.chapter);
     this.beginWatch(pos.id);
-    this.loadReview(pos);
+    this.reviews.load(pos);
     const startFen = this.buildStartFen(pos);
     this.orientation = whiteToMove(startFen) ? 'white' : 'black';
     const stored = deserializeTree(pos.treeJson, startFen);
@@ -861,19 +877,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Festlegung / Bewertung / Rechenzeit ================================
 
-  /** Stand der Stellung übernehmen: aus der Sprunglisten-Zeile, ergänzt um das, was die
-   *  Einzelstellung mitliefert (falls der Server die Werte auch dort führt). */
-  private loadReview(pos: CalcPosition): void {
-    const item = this.positions.find(p => p.id === pos.id);
-    this.review = {
-      chosenSan: pos.chosenSan !== undefined ? pos.chosenSan : (item?.chosenSan ?? null),
-      chosenUci: pos.chosenUci !== undefined ? pos.chosenUci : (item?.chosenUci ?? null),
-      secondsSpent: pos.secondsSpent !== undefined ? pos.secondsSpent : (item?.secondsSpent ?? 0),
-      grade: normalizeGrade(pos.grade !== undefined ? pos.grade : (item?.grade ?? null)),
-    };
-    this.writeReviewToList(pos.id);
-  }
-
   /**
    * Stern an einem ERSTEN Zug: legt sich darauf fest. Genau eine Festlegung je Stellung —
    * ein anderer Zug verschiebt sie, derselbe Zug nimmt sie zurück (null).
@@ -936,22 +939,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   /** Optimistisch anzeigen + an den Server einreihen. */
   private setReview(patch: CalcReviewPatch): void {
-    const bookPuzzleId = this.position?.id;
-    if (bookPuzzleId == null) return;
-    this.review = applyReviewPatch(this.review, patch);
-    this.writeReviewToList(bookPuzzleId);
-    this.dropServerSums();
-    this.queueReview(bookPuzzleId, patch);
-  }
-
-  /** Sprunglisten-Zeile nachziehen (Zeit/Stufe/Wahl stehen dort in der Übersicht). */
-  private writeReviewToList(bookPuzzleId: number): void {
-    const item = this.positions.find(p => p.id === bookPuzzleId);
-    if (!item) return;
-    item.chosenSan = this.review.chosenSan;
-    item.chosenUci = this.review.chosenUci;
-    item.secondsSpent = this.review.secondsSpent;
-    item.grade = this.review.grade;
+    this.reviews.set(patch);
   }
 
   /**
@@ -990,19 +978,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.liveSeconds = 0;
     const seconds = this.watch.stop();
     if (seconds <= 0) return;
-    // Auch lokal sofort gutschreiben: die Sprungliste soll die Zeit nicht erst nach der
-    // Server-Antwort zeigen (die Antwort korrigiert die Zahl gleich darauf).
-    if (this.isCurrent(bookPuzzleId)) {
-      this.review = applyReviewPatch(this.review, { secondsDelta: seconds });
-    } else {
-      const item = this.positions.find(p => p.id === bookPuzzleId);
-      if (item) item.secondsSpent = (item.secondsSpent ?? 0) + seconds;
-    }
-    this.writeReviewToList(bookPuzzleId);
-    this.dropServerSums();
     // Jedes gemessene Delta bekommt seine eigene Marke: der Server ADDIERT die Zeit, und ein
     // Wiederholversuch (Antwort verloren, Anfrage angekommen) darf sie nicht doppelt buchen.
-    this.queueReview(bookPuzzleId, { secondsDelta: seconds, secondsToken: newSecondsToken() });
+    this.reviews.creditSeconds(bookPuzzleId, seconds, newSecondsToken());
   }
 
   private currentWatchSeconds(): number {
@@ -1011,79 +989,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Senden (eigener Endpoint neben dem Baum) ===========================
 
-  /** Je Stellung immer nur EINE Anfrage unterwegs — wie beim Baum-Speichern: der Server-Upsert
-   *  kennt kein Versions-Token, zwei parallele Anfragen könnten vertauscht ankommen (und ein
-   *  Zeit-Delta doppelt zählen, wenn eine davon wiederholt werden muss). */
-  private readonly reviewOutbox = new KeyedSingleFlightQueue<number, CalcReviewPatch>(flight => this.sendReview(flight));
-
-  private queueReview(bookPuzzleId: number, patch: CalcReviewPatch): void {
-    const merged = mergeReviewPatch(this.reviewOutbox.get(bookPuzzleId) ?? {}, patch);
-    if (isNoopPatch(merged)) this.reviewOutbox.delete(bookPuzzleId);
-    else this.reviewOutbox.set(bookPuzzleId, merged);
-    this.sendReviews();
-  }
-
   private sendReviews(): void {
-    this.reviewOutbox.flush();
-  }
-
-  private sendReview(flight: SingleFlight<number, CalcReviewPatch>): void {
-    const { key: bookPuzzleId, value: patch } = flight;
-    this.backend.saveReview(bookPuzzleId, patch).subscribe({
-      next: res => {
-        this.setLocalSaveFailed(false);
-        this.applyServerReview(bookPuzzleId, res);
-        this.reviewOutbox.succeeded(flight);
-      },
-      error: () => {
-        // Genau diesen Stand wieder einreihen: ein inzwischen aufgelaufener neuerer gewinnt bei
-        // Wahl/Punkten, die Zeit-Deltas addieren sich (gemessene Zeit geht nie verloren).
-        // WICHTIG: `patch` steht vorn, damit SEINE Zeit-Marke erhalten bleibt — der Fehler kann
-        // ein Timeout sein, die Anfrage also angekommen. Mit einer neuen Marke würde der Server
-        // die schon verbuchte Zeit ein zweites Mal addieren.
-        this.reviewOutbox.failed(flight, waiting => {
-          const merged = mergeReviewPatch(patch, waiting ?? {});
-          return isNoopPatch(merged) ? undefined : merged;
-        });
-        // Bewusst kein sofortiger Neuversuch (sonst heiße Schleife bei totem Server) —
-        // der nächste Stellungswechsel/Verlassen schickt es mit.
-        // Anonym ist der „Server" der Gerätespeicher: dann ist der Hinweis „liegt nur auf diesem
-        // Gerät" falsch — es liegt gerade nirgends, und das muss stehen bleiben (der Snackbar-
-        // Hinweis ist nach ein paar Sekunden weg).
-        this.setLocalSaveFailed(this.localOnly);
-        this.snackbar.warn(this.translate.instant('calc.review.saveFailed'));
-      },
-    });
-  }
-
-  /** Antwort des Servers ist die Wahrheit — vor allem bei `secondsSpent` (dort wird addiert). */
-  private applyServerReview(bookPuzzleId: number, res: Partial<CalcReviewSaved> | null | undefined): void {
-    if (!res) return;
-    // Ein noch offener Änderungswunsch derselben Stellung gehört NICHT überschrieben — die
-    // Server-Antwort kennt ihn noch nicht.
-    const pending = this.reviewOutbox.get(bookPuzzleId);
-    const item = this.positions.find(p => p.id === bookPuzzleId);
-    if (item) {
-      if (res.chosenSan !== undefined) item.chosenSan = res.chosenSan;
-      if (res.chosenUci !== undefined) item.chosenUci = res.chosenUci;
-      // Liegt schon ein neueres Zeit-Delta in der Warteschlange, ist die Server-Zahl überholt:
-      // die Zeile würde sonst kurz zu klein anzeigen und erst nach der nächsten Antwort springen.
-      if (typeof res.secondsSpent === 'number' && !pending?.secondsDelta) {
-        item.secondsSpent = res.secondsSpent;
-      }
-      if (res.grade !== undefined) item.grade = normalizeGrade(res.grade);
-    }
-    if (this.isCurrent(bookPuzzleId)) {
-      if (!pending) {
-        this.review = {
-          chosenSan: res.chosenSan ?? null,
-          chosenUci: res.chosenUci ?? null,
-          secondsSpent: res.secondsSpent ?? this.review.secondsSpent,
-          grade: normalizeGrade(res.grade),
-        };
-      }
-    }
-    this.dropServerSums();
+    this.reviews.flush();
   }
 
   // ===== Anzeige-Helfer =====================================================
