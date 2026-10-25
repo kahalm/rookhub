@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.838.3", date: "2026-10-25", changes: [
+    { en: "LeagueHub: shared match links now offer „Analysis“ next to „Replay“ for the games of the shared match — RookHub’s game page with evaluation curve, mistakes and move classes, without logging in (s/{token}/club-games/{id}). Editing and correcting stay reserved for logged-in members.", de: "LeagueHub: Geteilte Begegnungs-Links bieten bei den Partien der geteilten Begegnung neben „Nachspielen“ jetzt auch „Analyse“ — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen, ohne Anmeldung (s/{token}/club-games/{id}). Bearbeiten und Korrigieren bleiben Angemeldeten vorbehalten." },
+  ]},
   { version: "0.838.2", date: "2026-10-25", changes: [
     { en: "LeagueHub: the upload prompt on shared match links now reads „Played in this round? Upload your games“ instead of „Played against the league?“.", de: "LeagueHub: Die Aufforderung auf geteilten Begegnungs-Links heißt jetzt „In der Runde gespielt? Partien hochladen“ statt „Gegen die Liga gespielt?“." },
     { en: "LeagueHub: shared match links now also show the provisional board pairings of the current round (from the uploaded games, own side anonymised) before chess-results publishes the round — previously only played rounds were shown without logging in.", de: "LeagueHub: Geteilte Begegnungs-Links zeigen jetzt auch die vorläufigen Brettpaarungen der laufenden Runde (aus den hochgeladenen Partien, eigene Seite anonymisiert), bevor chess-results die Runde bringt — ohne Anmeldung gab es sie bisher nur für gespielte Runden." },

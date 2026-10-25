@@ -62,8 +62,9 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                   <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
-                         dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link nur „Nachspielen". -->
-                    @if (p.clubGameId && !shareToken() && rookHub) {
+                         dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link seit 0.838.3 auch „Analyse"
+                         (RookHubs Partieseite über den Link, Wunsch 2026-10-25), Bearbeiten/Korrigieren bleiben angemeldet. -->
+                    @if (p.clubGameId && rookHub) {
                       <button type="button" class="icon-btn" (click)="openInRookHub(p.clubGameId)"
                               title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen"
                               [attr.aria-label]="'Analyse Brett ' + p.board">
@@ -468,8 +469,10 @@ export class FixtureViewComponent {
   private readonly handoff = inject(HandoffService);
 
   /** Die Vereinspartie auf RookHubs Partieseite (wie „Analyse" in der Vereinsliste), mit Einmal-Code angemeldet. */
+  /** Angemeldet RookHubs `club-games/{id}` (Einmal-Code), über den Teilen-Link `s/{token}/club-games/{id}` ohne Anmeldung (0.838.3). */
   openInRookHub(id: number): void {
-    void this.handoff.jumpToRookHub(`club-games/${id}`);
+    const token = this.shareToken();
+    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}`);
   }
 
   colorName(b: Board): string {

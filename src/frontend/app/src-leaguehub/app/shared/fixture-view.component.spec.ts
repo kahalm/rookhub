@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthService } from '@rh/core/auth.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
+import { HandoffService } from '@rh/core/handoff.service';
 import { LeagueApiService } from '../core/league-api.service';
 import { LineupsApiService } from '../core/lineups';
 import { Fixture } from '../core/league.models';
@@ -61,6 +62,7 @@ describe('FixtureViewComponent', () => {
     TestBed.configureTestingModule({
       imports: [FixtureViewComponent],
       providers: [{ provide: LeagueApiService, useValue: api }, { provide: LineupsApiService, useValue: lineupsApi }, { provide: AuthService, useValue: { has: () => false } },
+        { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub', 'jumpToLeagueHub']) },
         provideTranslateService({ fallbackLang: 'de' }), provideRouter([])],
     });
     fixture = TestBed.createComponent(FixtureViewComponent);
@@ -191,14 +193,19 @@ describe('FixtureViewComponent', () => {
       { board: 1, white: 'Kobold, Jonathan', whiteElo: 1935, black: 'Schwaz', blackElo: null, result: '1 - 0', forfeit: false,
         pgn: '1. e4 1-0', source: 'club', clubGameId: 171, provisional: true },
     ]);
+    // RookHub-Adresse VOR dem ersten Rendern (OnPush: ein nacktes Feld markiert die Ansicht nicht)
+    (fixture.componentInstance as { rookHub: string | null }).rookHub = 'https://rookhub.example';
     const el = render(OPEN, { token: 'TOK' });
     await fixture.whenStable();
     fixture.detectChanges();
     expect(api.fixtureGames).toHaveBeenCalledWith(null, 1, 'Schwaz', 'TOK');
     expect(el.querySelector('.provisional-note')?.textContent).toContain('hochgeladenen Partien');
     expect(el.querySelector('.pairings tbody tr')?.textContent).toContain('Kobold, Jonathan');
-    expect(el.querySelector('.pairings .icon-btn')).toBeNull();
     expect(lineupsApi.lineups).not.toHaveBeenCalled();
+    // 0.838.3: „Analyse" auch über den Link — RookHubs Partieseite über den Link, ohne Einmal-Code
+    const handoff = TestBed.inject(HandoffService) as jasmine.SpyObj<HandoffService>;
+    (el.querySelector('.pairings .icon-btn') as HTMLButtonElement).click();
+    expect(handoff.jumpToRookHub).toHaveBeenCalledWith('s/TOK/club-games/171');
   });
 
   // UI-Sweep 2026-10-10 (l-fixture-head, l-names-mobile)

@@ -59,7 +59,10 @@ describe('BoardGameComponent', () => {
     fixture.componentRef.setInput('shareToken', 'TOK');
     fixture.componentRef.setInput('shared', true);
     fixture.detectChanges();
-    expect(Array.from(el.querySelectorAll('.bg-actions > *')).map(a => a.textContent?.trim())).toEqual(['Nachspielen']);
+    // 0.838.3: „Analyse" auch über den Link (RookHubs Partieseite über den Link), Bearbeiten/Korrigieren nicht
+    expect(Array.from(el.querySelectorAll('.bg-actions > *')).map(a => a.textContent?.trim())).toEqual(['Nachspielen', 'Analyse']);
+    (el.querySelector('.bg-analysis') as HTMLButtonElement).click();
+    expect((TestBed.inject(HandoffService) as jasmine.SpyObj<HandoffService>).jumpToRookHub).toHaveBeenCalledWith('s/TOK/club-games/168');
     (el.querySelector('.bg-replay') as HTMLButtonElement).click();
     await fixture.whenStable();
     fixture.detectChanges();

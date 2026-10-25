@@ -104,6 +104,37 @@ describe('SharedGameComponent', () => {
     expect(cmp.lc0Waiting()).toBeNull();                 // fertig = Umschalter, kein Wartehinweis
   });
 
+  // 0.838.3, Wunsch 2026-10-25: „Analyse" auch über den LeagueHub-Teilen-Link, ohne Anmeldung — Partie und Bewertungen
+  // über den Link (s/:token/club-games/:id), kein Bearbeiten/Korrigieren (der Server gibt canDelete nie her).
+  it('shows a club game via a LeagueHub share link without login, loading game and evals through the link', async () => {
+    await TestBed.configureTestingModule({
+      imports: [SharedGameComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: false, has: () => false } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOK', id: '12' }), data: { mode: 'club-share' } } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SharedGameComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/league/s/TOK/club/games/12').flush({
+      id: 12, year: 2026, white: 'Schwaz', black: 'Hengl, Philip', whiteElo: null, blackElo: 1850, result: '1-0',
+      event: 'Landesliga', pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n\n1. e4 c5 1-0', canDelete: false,
+    });
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.club).toBeTrue();
+    expect(c.evalsUrl).toBe('/api/league/s/TOK/club/games/12/evals');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.players')!.textContent).toContain('Hengl, Philip');
+    expect(el.querySelector('button.analyze')).toBeNull();
+    expect(el.querySelector('a[href*="korrigieren"]')).toBeNull();
+    // die Kurve holt die Bewertungen von selbst — ebenfalls über den Link
+    expect(http.match(r => r.url.startsWith('/api/league/s/TOK/club/games/12/evals')).length).toBe(1);
+  });
+
   // Wunsch 2026-10-04: „Analyse" in LeagueHub öffnet die Vereinspartie wie eine aus „Meine Partien" — mit den
   // vorberechneten Bewertungen, ohne „Partie analysieren" (der Hintergrund rechnet sie von selbst).
   it('shows a club game from LeagueHub with the club analysis and without the analyze button', async () => {

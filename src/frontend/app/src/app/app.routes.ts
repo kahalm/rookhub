@@ -106,6 +106,9 @@ export const routes: Routes = [
   { path: 'chessable', loadComponent: () => import('./features/chessable/chessable.component').then(m => m.ChessableComponent), canActivate: [authGuard, menuGuard('chessable')] },
   { path: 'admin', loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent), canActivate: [adminAreaGuard] },
   { path: 'g/:token', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent) },
+  // Vereinspartie über einen LeagueHub-Teilen-Link (0.838.3): ohne Anmeldung, nur Partien der geteilten Begegnung — der Server
+  // entscheidet; kein Guard, sonst landete der Gast vor der Anmeldemaske.
+  { path: 's/:token/club-games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), data: { mode: 'club-share' } },
   { path: 'l/:token', loadComponent: () => import('./features/repertoire/shared-line.component').then(m => m.SharedLineComponent) },
   // Geteilte Rekonstruktion: die ganze Partie samt ihrer Lücken, ohne Anmeldung — man verschickt
   // den Link ja gerade, um jemanden auf die offenen Stellen schauen zu lassen.

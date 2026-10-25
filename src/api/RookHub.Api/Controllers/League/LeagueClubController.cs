@@ -474,7 +474,8 @@ public class LeagueClubController : BaseApiController
 /// 2026-09-29, A2-009);
 /// Partieformulare zusätzlich höchstens <see cref="ScoresheetScanService.AnonPerIpDailyLimit"/> je IP und
 /// <see cref="ScoresheetScanService.AnonDailyLimit"/> je Tag für alle zusammen. Eine Einlesung gehört dem Browser, der den
-/// beim Hochladen ausgegebenen Schlüssel hat. Lesen der Vereinspartien gibt es hier NICHT.
+/// beim Hochladen ausgegebenen Schlüssel hat. Lesen der Vereinspartien gibt es hier nur für die Partien, die der Link
+/// ohnehin zeigt — die Brettpaarungen SEINER Begegnung (<see cref="Game"/>, 0.838.3); die Vereinsliste bleibt zu.
 /// </summary>
 [ApiController]
 [Route("api/league/s/{token}/club")]
@@ -496,6 +497,30 @@ public class LeagueShareClubController : ControllerBase
     /// was über den Link hereinkommt, gehört diesem Verein. <c>null</c> = kein gültiger Link (404).</summary>
     private Task<(string Token, LeagueClub Club)?> LinkAsync(string token, CancellationToken ct) => _league.ShareContextAsync(token, ct);
     private string IpHash => _scans.AnonIpHash(HttpContext.Connection.RemoteIpAddress);
+
+    /// <summary>Der Verein des Links, wenn die Vereinspartie <paramref name="id"/> an einem Brett SEINER Begegnung hängt
+    /// (<see cref="LeagueFixtureGames.FixtureHasClubGameAsync"/>) — sonst <c>null</c> (404): der Link zeigt diese Partien
+    /// ohnehin mit PGN, jede andere Vereinspartie bleibt ohne Anmeldung unsichtbar.</summary>
+    private async Task<LeagueClub?> ClubOfLinkedGameAsync(string token, int id, LeagueFixtureGames fixtures, CancellationToken ct)
+    {
+        if (await _league.ShareFixtureAsync(token, ct) is not { } s || await LinkAsync(token, ct) is not { } link) return null;
+        return await fixtures.FixtureHasClubGameAsync(link.Club, s.Tnr, s.Round, s.Team, id, ct) ? link.Club : null;
+    }
+
+    /// <summary>EINE Vereinspartie der geteilten Begegnung zum Nachspielen und für RookHubs Partieseite (0.838.3, Wunsch
+    /// 2026-10-25: „Analyse auch über den Link, wie angemeldet — ohne Bearbeiten/Korrigieren"): dieselbe Antwort wie
+    /// <c>GET /api/league/club/games/{id}</c> für einen Leser ohne Rechte (<c>canDelete</c> false, eigene Seite anonymisiert,
+    /// keine Paarungs-Id); 404 für jede Partie, die nicht an einem Brett der Begegnung des Links hängt.</summary>
+    [HttpGet("games/{id:int}")]
+    public async Task<IActionResult> Game(string token, int id, [FromServices] LeagueFixtureGames fixtures, CancellationToken ct) =>
+        await ClubOfLinkedGameAsync(token, id, fixtures, ct) is { } club && await _club.GetAsync(club, userId: 0, canManage: false, id, ct) is { } g
+            ? Ok(g) : NotFound();
+
+    /// <summary>Bewertungen der Hintergrund-Analyse derselben Partie (Kurve, Genauigkeit, Zug-Klassen), Regel wie <see cref="Game"/>.</summary>
+    [HttpGet("games/{id:int}/evals")]
+    public async Task<IActionResult> GameEvals(string token, int id, [FromServices] LeagueFixtureGames fixtures, CancellationToken ct) =>
+        await ClubOfLinkedGameAsync(token, id, fixtures, ct) is { } club && await _club.EvalsAsync(club, id, ct) is { } e
+            ? Ok(e) : NotFound();
 
     [HttpPost("games/preview")]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]

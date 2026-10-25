@@ -334,13 +334,17 @@ export class SharedGameComponent implements OnInit, DoCheck {
     if (train === 'white' || train === 'black') this.trainer.startFromLink(train);
     const roast = Number(this.route.snapshot.queryParamMap?.get('roast'));
     this.roastId = Number.isInteger(roast) && roast > 0 ? roast : null;
-    this.own = this.route.snapshot.data?.['mode'] === 'own';
-    this.club = this.route.snapshot.data?.['mode'] === 'club';
+    const mode = this.route.snapshot.data?.['mode'];
+    this.own = mode === 'own';
+    this.club = mode === 'club' || mode === 'club-share';
     if (this.club) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
+      // 0.838.3: über einen LeagueHub-Teilen-Link (`s/:token/club-games/:id`) ohne Anmeldung — Partie und Bewertungen kommen
+      // über den Link, der Server gibt nur Partien der geteilten Begegnung her und nie das Bearbeitungsrecht.
+      const shareToken = mode === 'club-share' ? (this.route.snapshot.paramMap.get('token') || '') : null;
       this.markSource = { clubGameId: id };
-      this.evalsUrl = this.games.clubEvalsUrl(id);
-      this.games.clubGame(id).subscribe({
+      this.evalsUrl = shareToken !== null ? this.games.sharedClubEvalsUrl(shareToken, id) : this.games.clubEvalsUrl(id);
+      (shareToken !== null ? this.games.sharedClubGame(shareToken, id) : this.games.clubGame(id)).subscribe({
         next: g => this.show(g),
         error: e => this.loadFailed(e),
       });

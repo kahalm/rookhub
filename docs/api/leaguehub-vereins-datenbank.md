@@ -206,6 +206,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/s/{token}/club/games/lichess` | Teilen-Link | Lichess-Studie laden, wie oben |
 | POST | `/api/league/s/{token}/club/games/chessbase` | Teilen-Link | ChessBase-Datenbank → PGN, wie oben |
 | GET | `/api/league/s/{token}/club/players`, `POST …/match`, `GET …/scoresheet/status` | Teilen-Link | wie oben (Status: je IP) |
+| GET | `/api/league/s/{token}/club/games/{id}`, `…/evals` | Teilen-Link | EINE Vereinspartie der geteilten Begegnung (0.838.3, RookHubs Partieseite `s/{token}/club-games/{id}`): wie angemeldet, aber `canDelete` false, keine Paarungs-Id; jede Partie, die nicht an einem Brett der Begegnung des Links hängt, 404 |
 | POST | `/api/league/s/{token}/club/scans` | Teilen-Link | Foto hochladen → `{ key, scan }` |
 | POST | `/api/league/s/{token}/club/scans/lookup` | Teilen-Link | `{ keys[] }` → die offenen Einlesungen dazu |
 | POST | `/api/league/s/{token}/club/drafts` (+`/lookup`), GET/PUT/DELETE `…/drafts/{key}` | Teilen-Link | Entwürfe ohne Konto, über den Schlüssel (0.595.0) |

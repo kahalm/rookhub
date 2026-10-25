@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
+using RookHub.Api.DTOs.League;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
 using RookHub.Api.Controllers.League;
@@ -370,6 +371,26 @@ public class LeagueGameMovesTests : IDisposable
 
         Assert.IsType<NotFoundResult>(await share.Lineups("ALT", Service(), default));
         Assert.IsType<NotFoundResult>(await share.Lineups("nix", Service(), default));
+
+        // 0.838.3, Wunsch 2026-10-25: „Analyse auch über den Link" — EINE Vereinspartie lesen, aber nur die der Begegnung des
+        // Links (die zeigt er ohnehin mit PGN), ohne Bearbeitungsrecht; fremde Partien und ungültige Links 404.
+        var fixtures = new LeagueFixtureGames(_db);
+        Assert.True(await fixtures.FixtureHasClubGameAsync(TestClubs.Home, Tnr, Round, "Testdorf", c.Id, default));
+        Assert.False(await fixtures.FixtureHasClubGameAsync(TestClubs.Home, Tnr, Round, "Talhausen", c.Id, default));
+        Assert.False(await fixtures.FixtureHasClubGameAsync(TestClubs.Home, Tnr, Round, "Testdorf", c.Id + 1000, default));
+        var other = new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "Ober, Olga", Black = "Testdorf", Result = "1-0",
+            Plies = 2, Pgn = GamePgn, MovesHash = "h5", UploadedByUserId = HomeMember };
+        _db.LeagueClubGames.Add(other);
+        await _db.SaveChangesAsync();
+        var shareClub = new LeagueShareClubController(new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance),
+            new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, () => Now), null!, null!);
+        var dto = (LeagueClubGameDto)((OkObjectResult)await shareClub.Game("LINK1", c.Id, fixtures, default)).Value!;
+        Assert.Equal((c.Id, "Testdorf", false, (int?)null), (dto.Id, dto.Black, dto.CanDelete, dto.LeagueGameId));
+        Assert.Equal(GamePgn, dto.Pgn);
+        Assert.IsType<OkObjectResult>(await shareClub.GameEvals("LINK1", c.Id, fixtures, default));
+        Assert.IsType<NotFoundResult>(await shareClub.Game("LINK1", other.Id, fixtures, default));   // nicht an einem Brett des Links
+        Assert.IsType<NotFoundResult>(await shareClub.GameEvals("LINK1", other.Id, fixtures, default));
+        Assert.IsType<NotFoundResult>(await shareClub.Game("ALT", c.Id, fixtures, default));
     }
 
     [Fact]

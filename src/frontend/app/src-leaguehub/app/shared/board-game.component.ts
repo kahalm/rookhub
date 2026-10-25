@@ -28,12 +28,12 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
           <button type="button" class="btn-link bg-replay" [attr.aria-expanded]="open()" (click)="toggle()"
                   [attr.aria-label]="(open() ? 'Nachspielen schließen' : 'Nachspielen') + ', ' + title()">{{ open() ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
         }
-        @if (g.source === 'club' && g.clubGameId && !shareToken()) {
+        @if (g.source === 'club' && g.clubGameId && (!shareToken() || shared())) {
           @if (rookHub) {
             <button type="button" class="btn-link bg-analysis" (click)="analyse(g.clubGameId)"
                     title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen">Analyse</button>
           }
-          @if (g.canEdit) {
+          @if (g.canEdit && !shareToken()) {
             <a class="btn-link bg-edit" [routerLink]="['/verein']" [queryParams]="{ bearbeiten: g.clubGameId }">Bearbeiten</a>
             <a class="btn-link bg-fix" [routerLink]="['/verein/partie', g.clubGameId, 'korrigieren']">Korrigieren</a>
           }
@@ -115,7 +115,9 @@ export class BoardGameComponent {
     }
   }
 
+  /** Angemeldet RookHubs `club-games/{id}` (Einmal-Code), über den Teilen-Link `s/{token}/club-games/{id}` ohne Anmeldung (0.838.3). */
   analyse(id: number): void {
-    void this.handoff.jumpToRookHub(`club-games/${id}`);
+    const token = this.shareToken();
+    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}`);
   }
 }

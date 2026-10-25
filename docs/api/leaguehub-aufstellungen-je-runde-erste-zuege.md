@@ -64,7 +64,8 @@ Möglichkeit, die ersten paar Züge einzugeben."
   (Zustand `?aufstellungen=1`), `lh-round-lineups` mit `shareToken` (lädt über den Link), `shareTeam` (die geteilte Begegnung = „wir"
   fürs Drehen des Bretts; nur dort „Nachspielen", PGN über `/s/{token}/games`, weil der Link nur deren Partien kennt) und
   `coveredFides` (FIDE-IDs/Schlüssel der Meldeliste des Links — nur diese Namen öffnen die Spielerkarte, mit Token; der Server
-  antwortet für andere 404). `lh-board-game` zeigt über den Link weder „Analyse" noch „Bearbeiten/Korrigieren".
+  antwortet für andere 404). `lh-board-game` zeigt über den Link kein „Bearbeiten/Korrigieren"; „Analyse" seit 0.838.3 an der
+  geteilten Begegnung (RookHub `s/{token}/club-games/{id}`, siehe Prognosen-Doku).
 * **Teilpartien** (0.725.0, Frage 2026-10-08: „fließen die [ersten Züge] in die Eröffnungsbäume bei der Vorbereitung ein?" — „ja mach
   das so"): jeder Eintrag in `LeagueGameMoves` ist eine TEILPARTIE beider Spieler (`Services/League/LeaguePartialGames.cs`), gerechnet
   bei jedem Lesen (Join der kleinen Zug-Tabelle auf `LeagueGames`, nur gespielte Bretter), nicht gespeichert: Kopf aus der Paarung —

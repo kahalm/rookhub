@@ -167,7 +167,11 @@ Rollenverwaltung an).
   für den eigenen Verein, mindestens eine Seite über ID/Namen; mehrere: die jüngste), sonst aus den Spielerkarten (Datum ±3 Tage
   um den Rundentermin, beide Nachnamen auf ihrer Farbe). Ausgegeben wird nur das PGN der Quelle. Oberfläche: Tabelle unter dem
   Ergebnis in `fixture-view.component.ts` (Eingabe `leagueTnr`), „Nachspielen" klappt `lh-game-replay` auf (Vereinspartie mit Kurve,
-  nur angemeldet). Seit 0.675.0 an einer Vereinspartie (angemeldet, nicht über den Link) dazu „Analyse" (RookHub `club-games/{id}`)
+  nur angemeldet). Seit 0.675.0 an einer Vereinspartie (angemeldet) dazu „Analyse" (RookHub `club-games/{id}`) — seit 0.838.3 auch
+  über den Teilen-Link (Wunsch 2026-10-25: „Analyse sollte gleich sein wie angemeldet, ohne Bearbeiten + Korrigieren"): RookHub-Route
+  `s/{token}/club-games/{id}` ohne Guard, `SharedGameComponent` im Modus `club-share` lädt Partie und Bewertungen über
+  `GET /api/league/s/{token}/club/games/{id}` bzw. `…/evals` (`LeagueShareClubController.Game`/`GameEvals`: nur Partien, die an einem
+  Brett der Begegnung des Links hängen — `LeagueFixtureGames.FixtureHasClubGameAsync` —, `canDelete` immer false, sonst 404)
   und mit `canEdit` (Verwalter oder Hochladender, Regel wie `CanDelete`) „Bearbeiten" → `/verein?bearbeiten={id}` (die Liste klappt
   die Partie auf, holt sie nach, wenn sie nicht auf Seite 1 steht) und „Korrigieren" → `/verein/partie/{id}/korrigieren`.
 - **Feste Ligapaarung einer Vereinspartie** (0.678.0, Wunsch 2026-10-05: „wenn ich eine Partie von meinen Spielen in die

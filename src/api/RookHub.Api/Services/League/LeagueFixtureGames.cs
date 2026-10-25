@@ -43,6 +43,12 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
         return games.Select(g => byId[g.Id]).ToList();
     }
 
+    /// <summary>Hängt die Vereinspartie <paramref name="clubGameId"/> an einem Brett dieser Begegnung (fest zugeordnet, geraten
+    /// oder vorläufig — genau die Partien, die <see cref="ForFixtureAsync"/> mit PGN ausgibt)? Grundlage für das Lesen EINER
+    /// Vereinspartie über den Teilen-Link (0.838.3): sichtbar ist dort nur, was der Link ohnehin zeigt.</summary>
+    public async Task<bool> FixtureHasClubGameAsync(LeagueClub club, int tnr, int round, string team, int clubGameId, CancellationToken ct) =>
+        (await ForFixtureAsync(club, tnr, round, team, ct)).Any(p => p.ClubGameId == clubGameId);
+
     /// <summary>
     /// Dieselbe Regel für beliebig viele Brettpaarungen EINER Runde auf einmal (0.724.0, Aufstellungen je Runde: „wenn ich die
     /// Partie hab, soll er nicht Züge eingeben lassen, sondern die Partie ausweisen") — Schlüssel ist <see cref="LeagueGame.Id"/>.

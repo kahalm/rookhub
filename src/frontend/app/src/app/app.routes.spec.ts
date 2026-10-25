@@ -69,6 +69,7 @@ describe('app.routes', () => {
     expect(await matchedPath('/puzzles/12')).toBe('puzzles/:id');
     expect(await matchedPath('/weekly/5')).toBe('weekly/:weeklyId');
     expect(await matchedPath('/g/abc')).toBe('g/:token');
+    expect(await matchedPath('/s/abc/club-games/12')).toBe('s/:token/club-games/:id');   // 0.838.3: Vereinspartie über den LeagueHub-Link
     expect(await matchedPath('/l/abc')).toBe('l/:token');
     expect(await matchedPath('/friends/3/stats')).toBe('friends/:userId/stats');
     expect(await matchedPath('/courses/403/calc')).toBe('courses/:bookId/calc');

@@ -212,6 +212,15 @@ export interface SimilarGames {
   items: SimilarGame[];
 }
 
+/** Vereinspartie (LeagueHub-DTO) in der Form der Partieseite — angemeldet (`clubGame`) wie über den Teilen-Link (`sharedClubGame`). */
+function toClubGame(g: ClubGameDto): SharedGame {
+  return {
+    source: g.event || 'LeagueHub', white: g.white, black: g.black, result: g.result, pgn: g.pgn,
+    clubId: g.id, clubCanCorrect: !!g.canDelete,
+    whiteElo: g.whiteElo, blackElo: g.blackElo, year: g.year, createdAt: '', playedAt: null,
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
@@ -270,15 +279,18 @@ export class GamesService {
 
   /** Vereinspartie aus LeagueHub (0.653.0) in der Form der Partieseite — braucht `league.view`, sonst 403/404. */
   clubGame(id: number): Observable<SharedGame> {
-    return this.http.get<ClubGameDto>(`/api/league/club/games/${id}`).pipe(map(g => ({
-      source: g.event || 'LeagueHub', white: g.white, black: g.black, result: g.result, pgn: g.pgn,
-      clubId: g.id, clubCanCorrect: !!g.canDelete,
-      whiteElo: g.whiteElo, blackElo: g.blackElo, year: g.year, createdAt: '', playedAt: null,
-    })));
+    return this.http.get<ClubGameDto>(`/api/league/club/games/${id}`).pipe(map(toClubGame));
   }
 
   /** Bewertungen der Hintergrund-Analyse einer Vereinspartie (dieselbe Form wie bei der eigenen Partie). */
   clubEvalsUrl(id: number): string { return `/api/league/club/games/${id}/evals`; }
+
+  /** Dieselbe Vereinspartie über einen LeagueHub-Teilen-Link (0.838.3), ohne Anmeldung — der Server gibt nur Partien der
+   *  geteilten Begegnung her (sonst 404) und nie `canDelete`. */
+  sharedClubGame(token: string, id: number): Observable<SharedGame> {
+    return this.http.get<ClubGameDto>(`/api/league/s/${encodeURIComponent(token)}/club/games/${id}`).pipe(map(toClubGame));
+  }
+  sharedClubEvalsUrl(token: string, id: number): string { return `/api/league/s/${encodeURIComponent(token)}/club/games/${id}/evals`; }
   /** „Partie analysieren" auf der geteilten Partie — jeder Angemeldete. */
   sharedAnalyzeUrl(token: string): string { return `/api/games/shared/${encodeURIComponent(token)}/analyze`; }
   /** Bewertungen der geteilten Partie — auch ohne Anmeldung (dann nur die des Teilenden). */
