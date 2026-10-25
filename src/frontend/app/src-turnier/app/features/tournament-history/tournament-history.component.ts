@@ -439,6 +439,26 @@ export class TournamentHistoryComponent implements OnInit {
 
   // ----- Aufteilung -------------------------------------------------------
 
+  /*
+   * Die Aufteilung des OFFENEN Reiters, einmal je Aenderung von Verlauf oder Bedenkzeit-Filter
+   * berechnet (Codereview F6-025): das Template rief die Methoden darunter je Aenderungslauf
+   * neunmal auf, jede filterte und sortierte die ganze Liste neu. Die Methoden bleiben fuer
+   * beliebige Verlaeufe (und die Specs) bestehen.
+   *
+   * „Heute" steckt in der Rechnung, ist aber kein Signal: steht die Seite ueber Mitternacht offen,
+   * wandert ein Turnier erst mit dem naechsten Laden/Nachfragen von „laeuft" nach „gespielt".
+   */
+  readonly currentUpcoming = computed(() => this.forCurrent(h => this.upcoming(h), []));
+  readonly currentRunning = computed(() => this.forCurrent(h => this.running(h), []));
+  readonly currentPast = computed(() => this.forCurrent(h => this.past(h), []));
+  readonly currentYears = computed(() => this.forCurrent(h => this.years(h), []));
+  readonly currentSummary = computed(() => this.forCurrent(h => this.summary(h), { played: 0, speeds: [] }));
+
+  private forCurrent<T>(pick: (history: PlayerHistory) => T, none: T): T {
+    const history = this.current();
+    return history ? pick(history) : none;
+  }
+
   /**
    * Laufende zuerst, dann kuenftige, danach die gespielten. Alles in EINER Tabelle waere unlesbar:
    * „Platz 56 von 56" und „noch nicht gespielt" sind verschiedene Arten von Zeile.

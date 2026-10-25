@@ -110,13 +110,13 @@
             }
           }
 
-          @if (history.status === 'ok' && summary(history).played > 0) {
+          @if (history.status === 'ok' && currentSummary().played > 0) {
             <!-- Statt einer Gesamtpunktzahl (die Blitz zu Turnierschach addierte und nur mit der
                  Zeit wuchs) die Performance JE Bedenkzeit-Klasse — getrennt, weil 1900 im Blitz
                  und 1900 im Turnierschach nicht dieselbe Leistung sind. -->
             <span class="summary">
-              {{ 'turnier.history.playedCount' | translate: { count: summary(history).played } }}
-              @for (s of summary(history).speeds; track s.speed) {
+              {{ 'turnier.history.playedCount' | translate: { count: currentSummary().played } }}
+              @for (s of currentSummary().speeds; track s.speed) {
                 <span class="speed-sum">
                   · {{ ('turnier.history.speed.' + s.speed) | translate }}
                   @if (s.performance !== null) {
@@ -144,11 +144,11 @@
 
         <!-- Laufende mit Zwischenstand: dieselben Spalten wie die gespielten, der Stand kommt alle
              zwei Stunden neu von der Spielerkarte. -->
-        @if (running(history).length > 0) {
+        @if (currentRunning().length > 0) {
           <h3>{{ 'turnier.history.running' | translate }}</h3>
           <div class="rows-scroll">
             <div class="rows">
-              @for (entry of running(history); track trackById($index, entry)) {
+              @for (entry of currentRunning(); track trackById($index, entry)) {
                 <button type="button" class="row running" (click)="open(entry)"
                         [disabled]="opening() !== null"
                         [class.busy]="opening() === entry.chessResultsId">
@@ -166,10 +166,10 @@
           </div>
         }
 
-        @if (upcoming(history).length > 0) {
+        @if (currentUpcoming().length > 0) {
           <h3>{{ 'turnier.history.upcoming' | translate }}</h3>
           <div class="rows">
-            @for (entry of upcoming(history); track trackById($index, entry)) {
+            @for (entry of currentUpcoming(); track trackById($index, entry)) {
               <button type="button" class="row upcoming" (click)="open(entry)"
                       [disabled]="opening() !== null"
                       [class.busy]="opening() === entry.chessResultsId">
@@ -185,12 +185,12 @@
           </div>
         }
 
-        @if (past(history).length > 0) {
+        @if (currentPast().length > 0) {
           <h3>{{ 'turnier.history.played' | translate }}</h3>
 
           <!-- Nach JAHREN: eine durchlaufende Liste beantwortet die Frage nicht, um die es hier
                geht („wie lief die Saison"), und je Jahr steht dieselbe Auswertung wie oben. -->
-          @for (group of years(history); track group.year) {
+          @for (group of currentYears(); track group.year) {
             <div class="year-head">
               <h4>{{ group.year || ('turnier.history.withoutDate' | translate) }}</h4>
               <span class="summary">
