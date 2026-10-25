@@ -71,7 +71,7 @@ sah der Browser 274: Linienliste, Zugbaum und Trainer endeten dort, der Server (
 „Ansehen" aus „Stellung in meinen Repertoires" trug `line=` leer. Jetzt: `exceedsSyncLimits` → `parsePgnTextWithSourceAsync`
 (ganzes PGN, gibt den Browser alle 30 ms frei; am Stück wären es ~7 s), sonst wie bisher synchron (Aufrufer/Specs bleiben
 synchron — eine async-Funktion läuft bis zum ersten `await` synchron). Repertoire-Seite (mit Fortschrittszeile, Zugbaum aus
-denselben Partien statt zweitem Parse) und Trainer; der Link sucht nur den EINEN Abschnitt (`splitPgnGames` + `findSection`).
+denselben Partien statt zweitem Parse) und Trainer; der Link sucht nur den EINEN Abschnitt (`splitPgnGames` + `findSection`, `features/repertoire/repertoire-line-link.ts`).
 
 **Partieseite am PC: drei Spalten** (0.714.0, gemeldet 2026-10-07 mit Screenshot: „viel vergeudeter Platz, sehr kleines
 Brett"): ab 1280 px stehen Brett | Zugliste (300 px) | Auswertung (`.side-section`: Rückblick, Repertoire, ähnliche Partien,

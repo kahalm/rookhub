@@ -80,15 +80,15 @@ app/src/app/
   (`WorksheetTask` ist seither eine dünne Hülle um `LineSolver` — sie urteilt bewusst OHNE die
   Umwandlungsfigur des Dialogs, weil auf dem Blatt die Lösung die Figur setzt),
   `features/puzzles/base-puzzle-solver.ts` (seit 0.499.9: `onMoveMade` holt sein Urteil von
-  `judgeMove` auf `this.chess`) und `features/repertoire/repertoire-trainer.component.ts` (seit
+  `judgeMove` auf `this.chess`) und der Repertoire-Trainer (`features/repertoire/repertoire-trainer-session.ts`, seit
   0.499.10, siehe unten). Die letzten beiden benutzen die reinen FUNKTIONEN, nicht die Klasse: beide
   führen ihr Brett schon selbst und WEISEN es neu zu (`reviewGoToCore` im Puzzle-Löser,
-  `startCurrentLine`/`showSolution` im Trainer) — ein zweites Brett daneben wäre die Quelle fürs
+  `startCurrentLine`/`showSolution` in `TrainerSession`) — ein zweites Brett daneben wäre die Quelle fürs
   Auseinanderlaufen. **Bewusst NICHT im Kern und weiterhin in Base**: moveLog samt `thinkMs`,
   `wrongMoveCount`, Off-Path-Zählung und -Warnung, der `ALT_HOLD_MS`-Timer des Alternativzugs, die
   Timer von `advanceAfterCorrectMove`, die Stockfish-Antwort (`opponentRespond`), `handleGameOver`,
   `mouseslip`, viz/Tipps/Eval. Der Kalkulations-Modus ist **kein Löser** und bleibt außen vor.
-- **Repertoire-Trainer am Kern** (0.499.10): `onMove`, `onLearnMove` und `showSolution` urteilen
+- **Repertoire-Trainer am Kern** (0.499.10; seit Zerlegung Z21 in `TrainerSession`): `onMove`, `onLearnMove` und `showSolution` urteilen
   über `judgeMove`/`resolveExpectedUci` statt über `normSan`-Textvergleich. Geurteilt wird gegen
   `this.fen` (NICHT `this.chess`): im Wiederhol-Fall nach einem Fehlzug ist `this.fen` bereits auf
   die Ausgangsstellung des Halbzugs zurückgesetzt. `altsAt(cardKey)` bringt die `[%alt]` des
@@ -109,3 +109,4 @@ app/src/app/
   eine nicht kanonische Form um — ein Test, der nur ein PGN hineingibt, prüft den PARSER.
 - **Endlos-Modus `features/puzzles/endless-*`** (Zerlegung Z19, 2026-10-25): `endless-puzzle.component` ist der Container (Lauf, Kette, Löser-Hooks, Spielbildschirm); daneben `endless-config.component` (Start-Bildschirm, Themen-Auswahl), `endless-result.component` (Sieg/Game Over/History-Detail), `endless-help-dialog.component` (Hilfe) und `endless-session-recorder.ts` (reine Klasse: Fehler, gespielte Puzzles, Spielstand-Rumpf, einmalige Aufzeichnung); vorhanden waren schon `endless-chain.service`, `endless-storage.service`, `endless-fasttrack-state`, `endless-prefetch.util`, `endless-history.component`.
 - **Kurse (Zerlegung 2026-10, Z20/Z29/Z33/F3-023):** `features/courses/` — HTTP nach Thema in `course-api.ts`/`course-authoring-api.ts`/`course-share-api.ts`/`course-translation-api.ts` + `course.types.ts` (`course.service.ts` = Fassade), Kursdetail mit `chapter-row.component` + `calc-series.controller`, Kalkulations-Modus `calc/` als Container + reine Klassen (`calc-chapter-model`, `calc-tree-cursor`, `calc-tree-saver`, `calc-review.controller`, `keyed-single-flight-queue`, `calc-training-timer`, `calc-page-mode`) + OnPush-Kinder (`calc-result-card`, `calc-annotate-card`, `calc-status-panel`); Aufstellung in `docs/api/kalkulations-modus.md`.
+- **Repertoire-Trainer + Stellungssuche zerlegt** (Codereview Z21/Z32): `repertoire-trainer.component.ts` lädt und verdrahtet nur; das Abspielen (8 Phasen, Timer über `TrainerClock`, Zugurteil) ist `repertoire-trainer-session.ts`, dazu `-sr-sync` (SR-Abgleich + Offline-Queue), `-frequency-loader` („Häufigste zuerst“), `-eval-compare` (Stockfish-Vergleich), `-queue.util` (Warteschlange/Gegner-Reihung); in `position-repertoires.component.ts` liegt die Sicht „Ähnlich“ als `similar-positions-panel.component.ts` + `similar-positions-search.ts`, der Linien-Link in `repertoire-line-link.ts`.
