@@ -230,10 +230,15 @@ ueber `TournamentDirectory:FideYears` (Vorgabe 3 Jahre) nach dem naechtlichen Sw
 
 **Die VERBANDSKALENDER sind die dritte Quellenart** (`Services/TournamentDirectory/ExternalDirectorySource.cs` traegt
 das Gemeinsame, je Land ein `…DirectorySweepService`; die Abgleichschleife selbst steht seit der Zerlegung Z7 EINMAL in
-`ExternalSweepRunner`, die Quelle liefert nur ihre Abbildung als `IDirectorySourceAdapter<TRow>` — umgestellt sind
-FRSah, WCU, CFC, SZS, ECF, chess.hu, KNSB, FSI, schachbund, Chess Scotland und sjakk.no; ICU, FFE, chess.sk und
-chessarbiter haben ihre Schleife noch von Hand). Jede stellt dieselben vier Fragen: kenne ich
-das Turnier schon (Termin ±1 Tag + zwei unterscheidende Woerter, ODER — nur chess.sk — die
+`ExternalSweepRunner`, die Quelle liefert nur ihre Abbildung als `IDirectorySourceAdapter<TRow>` — alle fuenfzehn
+Verbandskalender laufen darueber: FRSah, WCU, CFC, SZS, ECF, chess.hu, KNSB, FSI, schachbund, Chess Scotland,
+sjakk.no, ICU, chess.sk, chessarbiter und FFE. Sonderfaelle sind Haken mit Vorgabe: `BeforeMatchAsync` (ICU holt die
+Detailseite VOR der Zuordnung), `ChessResultsId` (exakter Treffer ueber die Nummer der Quelle: chess.sk aus der
+Liste, ICU von der Detailseite), `OnCreated` (chess.sk: Nummer am neuen Eintrag), `AfterLookupAsync` (FFE laedt die
+Vermerke nach); Detailseite samt Budget und Fassung (chessarbiter, FFE, sjakk.no) bleiben in `ApplyAsync`. ChessCz,
+FIDE und der Ankuendigungskalender haben eine andere Schleife. Golden-Tests: `ExternalSweepGoldenTests`). Jede
+stellt dieselben vier Fragen: kenne ich
+das Turnier schon (Termin ±1 Tag + zwei unterscheidende Woerter, ODER — chess.sk und ICU — die
 mitgelieferte chess-results-Nummer, dann exakt), habe ich es selbst schon angelegt
 (`<praefix><fremde-id>`), hat die Turniersuche es eingeholt (dann eigenen Eintrag zurueckziehen),
 und woher kommt die Angabe (`TournamentDirectorySources`). **Eine Zusatzquelle fuellt nur

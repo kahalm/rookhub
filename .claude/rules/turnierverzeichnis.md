@@ -81,12 +81,15 @@ paths:
   Quelle implementiert `IDirectorySourceAdapter<TRow>` (Kennung, Termin, Name, `PublicId`, Foederation, Abbildung auf den
   eigenen Eintrag, Abschlusszeile) und ruft `ExternalSweepRunner.RunAsync`; Sonderfaelle sind Haken mit Vorgabe
   (`Withdrawn` = Absage/Sitzung, `FillMatch` = Luecken am chess-results-Eintrag, `SaveEvery`, `BeforeLoopAsync`,
-  `unreadable` = beim Abruf unlesbare Kennungen). „Geliefert vor lesbar", Zwischenstand, Speichern im `finally` und
+  `unreadable` = beim Abruf unlesbare Kennungen, `BeforeMatchAsync` = Zeile VOR der Zuordnung anreichern und am
+  Zeilenobjekt ablegen (ICU-Detailseite, `IcuSweepRow`), `ChessResultsId` = exakter Treffer ueber die Nummer der
+  Quelle vor dem Namensvergleich, `OnCreated` = Felder nur fuer einen neuen Eintrag, `AfterLookupAsync` = nach
+  beiden Suchen). Detailseiten mit Budget/Fassung gehoeren in `ApplyAsync`, nicht in einen neuen Haken. „Geliefert vor lesbar", Zwischenstand, Speichern im `finally` und
   `RetireVanishedAsync` gelten damit fuer alle umgestellten Quellen an EINER Stelle. Die Log-Vorlagen beginnen mit
   `LogName` wie vorher von Hand. Jede Quelle hat einen Golden-Test (`ExternalSweepGoldenTests`, acht Laeufe); wer
-  den Runner oder einen Adapter aendert, sieht dort jede Abweichung. Noch von Hand: ICU (Detailseite VOR der Zuordnung,
-  exakte chess-results-Nummer), FFE (`EnsureSourcesLoadedAsync`), chess.sk (exakte Nummer, eigener Eintrag mit Nummer),
-  chessarbiter (Detail-Fassung); ChessCz, FIDE und der Ankuendigungskalender haben eine andere Schleife.
+  den Runner oder einen Adapter aendert, sieht dort jede Abweichung (ICU, chess.sk, chessarbiter und FFE zusaetzlich
+  mit Sonderfall-Laeufen 9 ff.). Alle fuenfzehn Verbandskalender laufen darueber; ChessCz, FIDE und der
+  Ankuendigungskalender haben eine andere Schleife.
 - **Eine Zeile, die wir nicht lesen koennen, gilt als GELIEFERT** (seit 0.455.0) – In allen 15 Quellen steht
   `delivered.Add(...)` VOR der Pruefung auf Termin und Namen, und die Abruf-Methoden sieben Zeilen ohne lesbaren Termin
   nicht mehr aus (KNSB traegt einen festen Termin im Zeilentyp und meldet sie ueber `KnsbFetch.Unreadable`). Vorher
