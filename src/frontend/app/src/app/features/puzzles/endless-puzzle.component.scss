@@ -10,94 +10,12 @@
     .help-body p { margin: 0.25rem 0; line-height: 1.5; }
     .help-body ul { margin: 0.25rem 0; padding-left: 1.5rem; }
     .help-body li { margin: 0.25rem 0; line-height: 1.5; }
-    .help-btn { margin-left: 0.5rem; vertical-align: middle; }
-
-    .config-screen { display: flex; justify-content: center; padding-top: 2rem; }
-    .config-card { max-width: 500px; width: 100%; }
-    /* Immer EINE Spalte (UX-044): in der 500-px-Karte drückte „Alle löschen" (nowrap) die Schnellauswahl links
-       auf ~100 px, die Chips brachen mitten im Wort um und das Raster ragte über den Kartenrand. */
-    .config-fields { display: grid; grid-template-columns: 1fr; gap: 0.5rem 1rem; margin-top: 1rem; }
-    .config-fields .worst-tags-row { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: 8px; } /* z2-rk-endless-schwaechste-eng: eigener Block, nicht Anhängsel des Themenfelds */
-    .config-fields .worst-tags-hint { font-size: 0.8rem; opacity: 0.65; }
-    .threshold-explain { font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent); margin: 0 0 0.5rem; }
-    .threshold-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
-    .threshold-field-wrap { position: relative; }
-    .auto-hint {
-      display: inline-block; font-size: 0.75em; color: var(--rh-accent); cursor: pointer;   /* war #1976d2 (UX-008) */
-      margin-top: -0.75rem; margin-bottom: 0.25rem; padding: 2px 8px;
-      border: 0; font-family: inherit;
-      border-radius: 8px; background: rgba(25,118,210,0.08);
-    }
-    .auto-hint:hover { background: rgba(25,118,210,0.16); }
-    .fasttrack-preview { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
-    .curve-points { display: flex; flex-direction: column; gap: 0.25rem; }
-    .fasttrack-phase { display: flex; justify-content: space-between; font-size: 0.85em; }
-    .phase-label { font-weight: 500; }
-    .phase-detail { color: color-mix(in srgb, currentColor 60%, transparent); font-variant-numeric: tabular-nums; }
-    .level-preview { margin-bottom: 1rem; }
     .theme-chip {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent;
       transition: border-color 0.15s;
     }
     .theme-chip:hover { background: color-mix(in srgb, currentColor 4%, transparent); }
-    /* Aufklapper für die Feineinstellungen — gleiche Optik wie der Kapitel-Aufklapper der Kurs-Karte. */
-    /* Aufklapper links, Zahnrad rechts — eine Zeile mit gemeinsamer Trennlinie. */
-    .adv-row {
-      display: flex; align-items: center; gap: 4px; margin: 16px 0 0.6rem; /* z2: 16 px Luft über der Trennlinie */
-      border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-    }
-    .adv-toggle {
-      display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0;
-      padding: 8px 4px; background: none; border: none;
-      color: color-mix(in srgb, currentColor 70%, transparent); font: inherit; font-size: 0.9em;
-      cursor: pointer; text-align: left;
-    }
-    .adv-toggle:hover { color: inherit; }
-    .adv-toggle mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .adv-fields { margin-bottom: 0.4rem; }
-    .theme-presets { margin-bottom: 0.6rem; }
-    .theme-presets-label {
-      display: block; font-size: 0.8em; margin-bottom: 0.35rem;
-      color: color-mix(in srgb, currentColor 65%, transparent);
-    }
-    .theme-presets-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .theme-preset-chip {
-      padding: 5px 11px; border-radius: 16px; cursor: pointer;
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-      background: var(--mat-sys-surface-container, #fff); color: inherit;
-      font-family: inherit; /* a1-rk-endless-chips-schrift: <button> erbt sonst die Systemschrift */
-      font-size: 0.85em; line-height: 1.2; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
-    }
-    .theme-preset-chip:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    .theme-preset-chip.active {
-      border-color: var(--mat-sys-primary); background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); font-weight: 600;
-    }
-    .highscore-badge {
-      display: flex; align-items: center; gap: 0.5rem; justify-content: center;
-      color: #ff9800; font-weight: 500; margin-bottom: 1rem;
-    }
-    .session-count { text-align: center; font-size: 0.85em; color: color-mix(in srgb, currentColor 65%, transparent); margin: 0 0 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
-    /* a1-rk-endless-verlauf-link-klein: Tippfläche des mat-button (≥ 40 px + Touch-Ziel 48 px) statt 28 px, lesbare Größe. */
-    .history-link { font-size: 0.9rem; padding: 0 8px; }
-    .history-link mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 2px; }
-    .start-btn { width: 100%; height: 48px; font-size: 1.1em; }
-    // Wenn der Start-Button OBEN steht (statt am Ende der Card): visueller Abstand
-    // nach unten, damit er sich klar von den Config-Feldern abhebt.
-    // UI-Sweep 2026-10-11 (d2-rk-endless-start-gap): auch oben Luft — der Knopf klebte am Untertitel.
-    .start-btn-top { margin: 12px 0 1.25rem; }
-    .resume-banner {
-      background: rgba(25,118,210,0.06); border: 1px solid rgba(25,118,210,0.2);
-      border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
-    }
-    .resume-info {
-      display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem;
-      font-size: 0.9em; color: color-mix(in srgb, currentColor 70%, transparent);
-    }
-    /* d5-rk-lauf-icon-gequetscht-mobile: bricht der Text am Handy um, schrumpfte das Symbol mit (halb so breit wie
-       hoch) — es behält seine Breite und steht an der ersten Zeile. */
-    .resume-info mat-icon { color: var(--rh-accent); flex-shrink: 0; margin-top: 1px; }
-    .resume-actions { display: flex; flex-direction: column; gap: 0.5rem; }
 
     .play-screen { display: flex; gap: 1.5rem; align-items: flex-start; }
     /* Brett wächst bis knapp Viewport-Höhe (Chessable-artig) — chess-board's aspect-ratio 1/1
@@ -189,11 +107,6 @@
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; text-align: center; }
     .stat-value { font-size: 1.3em; font-weight: bold; display: block; }
     .stat-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .lives-display { display: flex; gap: 0.25rem; justify-content: center; margin-top: 0.75rem; }
-    .heart { font-size: 28px; width: 28px; height: 28px; }
-    .heart.full { color: #f44336; }
-    .config-lives { align-items: center; flex-wrap: wrap; }
-    .config-lives-label { margin-left: 0.5rem; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .depth-control {
       display: flex; align-items: center; justify-content: center; gap: 0.4rem;
       margin-top: 0.5rem; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent);
@@ -219,20 +132,6 @@
       // min-content). Ohne diese Regel sah die Status-Karte mit „Gelöst"
       // unter dem Brett nur so breit aus wie ihr Inhalt.
       .board-section, .info-section { width: 100%; }
-      .config-screen { padding-top: 0.5rem; }
-      .threshold-fields { grid-template-columns: 1fr; }
-      .themes-row { flex-direction: column; align-items: stretch; }
-    }
-
-    /* Themen-Chip-Feld + „Alle löschen"-Knopf nebeneinander. */
-    .themes-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-
-      .themes-field { flex: 1; min-width: 0; }
-      /* Mittig zur (einzeiligen) Feldhöhe: Outline-Feld 56 px, Knopf 40 px → 8 px oben. */
-      .themes-clear { align-self: flex-start; margin-top: 8px; white-space: nowrap; }
     }
 
     /* ===== App-Vollbild (Host-Klasse auf app-root) =====

@@ -1,5 +1,6 @@
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
+import { EndlessConfigComponent } from './endless-config.component';
 import { PuzzleComponent } from './puzzle.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { mountWithComponentStyles, parseColor, setDarkTheme, textContrast } from '../../testing/contrast';
@@ -26,7 +27,7 @@ describe('Puzzle-Seiten: Kontrast von Tipp-Knopf, „Tags anzeigen", „Auto: �
     { name: 'Endless: Tipp-Knopf', cmp: EndlessPuzzleComponent, html: TIP, target: '.board-hint-tip' },
     { name: 'Buch: Buchname', cmp: BookPuzzleComponent, card: true, target: '.book-name',
       html: '<div class="ctx-text"><p class="meta-chapter">Kapitel 1</p><span class="book-name">Buch</span></div>' },
-    { name: 'Endless: „Auto: …"', cmp: EndlessPuzzleComponent, card: true, target: '.auto-hint',
+    { name: 'Endless: „Auto: …"', cmp: EndlessConfigComponent, card: true, target: '.auto-hint',
       html: '<button type="button" class="auto-hint">Auto: 1000</button>' },
     { name: '„Tags anzeigen"', cmp: PuzzleTagsComponent, card: true, target: '.puzzle-tags-toggle',
       html: '<span class="puzzle-tags-toggle" role="button" tabindex="0">Show tags</span>' },

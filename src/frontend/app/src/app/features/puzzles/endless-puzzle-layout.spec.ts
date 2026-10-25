@@ -1,22 +1,24 @@
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
+import { EndlessConfigComponent } from './endless-config.component';
 import { EndlessHistoryComponent } from './endless-history.component';
 
-/** Abstände im Endlos-Bereich (UI-Sweep z2) — geprüft an den kompilierten Stilen, ohne die große Komponente zu rendern. */
+/** Abstände im Endlos-Bereich (UI-Sweep z2) — geprüft an den kompilierten Stilen, ohne die große Komponente zu rendern.
+ *  Die Regeln des Start-Bildschirms liegen seit der Zerlegung Z19 in EndlessConfigComponent. */
 describe('Endlos-Abstände (UI-Sweep z2)', () => {
   const css = (cmp: unknown) => (((cmp as any).ɵcmp.styles as string[]).join('\n')).replace(/\s+/g, ' ');
 
   it('der Schalter „5 schwächste Themen" hat Luft zum Themenfeld und zur Trennlinie (z2-rk-endless-schwaechste-eng)', () => {
-    const s = css(EndlessPuzzleComponent);
+    const s = css(EndlessConfigComponent);
     expect(s).toMatch(/\.worst-tags-row[^{]*\{[^}]*margin-top: 8px/);
     expect(s).toMatch(/\.adv-row[^{]*\{[^}]*margin: 16px 0/);
   });
 
   it('Themen-Schnellwahl-Chips erben die App-Schrift (a1-rk-endless-chips-schrift)', () => {
-    expect(css(EndlessPuzzleComponent)).toMatch(/\.theme-preset-chip[^{:]*\{[^}]*font-family: inherit/);
+    expect(css(EndlessConfigComponent)).toMatch(/\.theme-preset-chip[^{:]*\{[^}]*font-family: inherit/);
   });
 
   it('Sitzungszähler lesbar, Verlauf-Link mit voller Tippfläche (a1-rk-endless-verlauf-link-klein)', () => {
-    const s = css(EndlessPuzzleComponent);
+    const s = css(EndlessConfigComponent);
     expect(s).toMatch(/\.session-count[^{]*\{[^}]*color: color-mix\(in srgb, currentColor 65%, transparent\)/);
     const link = /\.history-link[^{ ]*\s?\{([^}]*)\}/.exec(s)![1];
     expect(link).toContain('font-size: 0.9rem');

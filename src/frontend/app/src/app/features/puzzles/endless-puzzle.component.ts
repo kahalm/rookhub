@@ -5,13 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatChipsModule, MatChipInputEvent } from '@angular/material/chips';
-import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
-import { COMMA, ENTER, SPACE } from '@angular/cdk/keycodes';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -24,6 +18,7 @@ import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettings
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { EndlessResultComponent } from './endless-result.component';
+import { EndlessConfigComponent } from './endless-config.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
@@ -43,8 +38,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, 
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
-import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle-theme-presets';
-import { PuzzleThemePipe, humanizeThemeKey } from './puzzle-theme.pipe';
+import { PuzzleThemePipe } from './puzzle-theme.pipe';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
@@ -86,12 +80,10 @@ function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAtte
   selector: 'app-endless-puzzle',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatChipsModule, MatAutocompleteModule, IconLabelDirective,
-    MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
+    CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
+    IconLabelDirective, MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
     PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleThemePipe,
-    EndlessResultComponent,
+    EndlessConfigComponent, EndlessResultComponent,
   ],
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
@@ -141,71 +133,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     }
   }
 
-  /** Feineinstellungen des Start-Bildschirms aufgeklappt (Stockfish-Tiefe, Schwellen, Kurvenvorschau).
-   *  Standardmäßig zu: vor dem Start zählen Start-Rating und Themen, alles andere ist Nachjustierung. */
+  /** Feineinstellungen des Start-Bildschirms aufgeklappt (Stockfish-Tiefe, Schwellen, Kurvenvorschau; zwei-Wege an
+   *  EndlessConfigComponent). Standardmäßig zu: vor dem Start zählen Start-Rating und Themen, alles andere ist Nachjustierung. */
   showAdvanced = false;
 
-  // ── Themen-Auswahl (durchsuchbare Multiselect-Dropdown) ───────────────────────────
-  /** Alle verfügbaren Themen (vom Backend, alphabetisch) — Optionen des Autocomplete-Dropdowns. */
+  /** Alle verfügbaren Themen (vom Backend, alphabetisch) — Optionen des Autocomplete-Dropdowns im Start-Bildschirm. */
   allThemes: string[] = [];
-  /** Freitext im Sucheingabefeld der Themen-Auswahl (filtert das Dropdown). */
-  themeInput = '';
-  /** Mit diesen Tasten wird der getippte Text als Chip übernommen (erlaubt freie Themen). */
-  readonly themeSeparatorKeys: number[] = [ENTER, COMMA, SPACE];
-
-  /** Aktuell gewählte Themen als Liste (Backing-Store bleibt der leerzeichengetrennte `config.themes`-String). */
-  get selectedThemes(): string[] {
-    return (this.config.themes || '').trim().split(/\s+/).filter(Boolean);
-  }
-  private setSelectedThemes(themes: string[]): void {
-    // Duplikate raus, Reihenfolge erhalten.
-    this.config.themes = [...new Set(themes)].join(' ');
-    this.saveConfig();
-  }
-
-  // ── Themen-Schnellauswahl (kuratierte Preset-Chips) ───────────────────────────────
-  /** Kuratierte Themen-Bündel; ein Klick setzt `config.themes` (Endless filtert mit ODER). */
-  readonly themePresets = PUZZLE_THEME_PRESETS;
-
-  /** Preset anwenden: überschreibt die Themen. „Schwächste Themen" wird dabei deaktiviert
-   *  (es überschriebe sonst die Themen-Auswahl). Erneuter Klick auf einen bereits aktiven Preset
-   *  löscht die Auswahl wieder (Toggle-off — der User kann so alles freischalten). */
-  applyThemePreset(preset: ThemePreset): void {
-    if (this.config.worstTags) this.config.worstTags = false;
-    if (this.isThemePresetActive(preset)) {
-      this.setSelectedThemes([]);
-    } else {
-      this.setSelectedThemes(preset.themes);
-    }
-  }
-
-  /** Löscht die gesamte Themen-Auswahl (Endless zeigt danach ALLE Themen). */
-  clearThemes(): void {
-    if (this.config.worstTags) this.config.worstTags = false;
-    this.setSelectedThemes([]);
-  }
-
-  /** True, wenn der Preset gerade exakt aktiv ist (für die Chip-Hervorhebung). */
-  isThemePresetActive(preset: ThemePreset): boolean {
-    return !this.config.worstTags && isThemePresetActive(preset, this.selectedThemes);
-  }
-
-  /** Optionen fürs Dropdown: noch nicht gewählte Themen, nach dem Suchtext gefiltert. */
-  get filteredThemes(): string[] {
-    const q = this.themeInput.trim().toLowerCase();
-    const selected = new Set(this.selectedThemes);
-    return this.allThemes
-      .filter(t => !selected.has(t))
-      .filter(t => !q || t.toLowerCase().includes(q) || this.themeLabel(t).toLowerCase().includes(q));
-  }
-
-  /** UI-Sweep 2026-10-11 (r2-rp-themes-en): angezeigter (übersetzter) Name eines Themen-Schlüssels —
-   *  die Suche im Dropdown findet „Gabel" genauso wie „fork". */
-  private themeLabel(key: string): string {
-    const path = 'puzzleThemes.' + key;
-    const t = this.translate.instant(path);
-    return typeof t === 'string' && t && t !== path ? t : humanizeThemeKey(key);
-  }
 
   /** Lädt die verfügbaren Themen einmalig (best effort; Freitext bleibt auch ohne Liste möglich). */
   private loadAllThemes(): void {
@@ -214,33 +147,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       next: t => this.allThemes = t,
       error: () => {},   // Liste optional — manuelles Tippen funktioniert weiterhin
     });
-  }
-
-  /** Thema aus dem Dropdown übernommen. */
-  onThemeSelected(event: MatAutocompleteSelectedEvent): void {
-    this.addThemeValue(event.option.value);
-    this.themeInput = '';
-  }
-
-  /** Frei getipptes Thema per Enter/Komma/Leertaste übernehmen (nicht in der Vorschlagsliste). */
-  onThemeInputTokenEnd(event: MatChipInputEvent): void {
-    const value = (event.value || '').trim();
-    // Getippter übersetzter Name („Matt in 2") → Schlüssel („mateIn2"), sonst Freitext wie bisher.
-    const byLabel = value ? this.allThemes.find(t => this.themeLabel(t).toLowerCase() === value.toLowerCase()) : undefined;
-    if (value) this.addThemeValue(byLabel ?? value);
-    event.chipInput?.clear();
-    this.themeInput = '';
-  }
-
-  private addThemeValue(theme: string): void {
-    const normalized = theme.trim();
-    if (!normalized || this.selectedThemes.includes(normalized)) return;
-    this.setSelectedThemes([...this.selectedThemes, normalized]);
-  }
-
-  /** Thema-Chip entfernen. */
-  removeTheme(theme: string): void {
-    this.setSelectedThemes(this.selectedThemes.filter(t => t !== theme));
   }
 
   lives = 3;
@@ -289,17 +195,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private previousPuzzleId: number | null = null;
 
   // Fasttrack-State (in eigene Klasse ausgelagert); Template/interne Reads gehen über die Getter/Setter.
-  private readonly fasttrack = new EndlessFasttrackState();
+  protected readonly fasttrack = new EndlessFasttrackState();
   /** T1-Mittelwert (ngModel, zwei-Wege). */
   get fasttrackAvgFirst(): number { return this.fasttrack.avgFirst; }
   set fasttrackAvgFirst(v: number) { this.fasttrack.avgFirst = v; }
   /** T2-Mittelwert (ngModel, zwei-Wege). */
   get fasttrackAvgSecond(): number { return this.fasttrack.avgSecond; }
   set fasttrackAvgSecond(v: number) { this.fasttrack.avgSecond = v; }
-  get fasttrackAutoFirst(): number { return this.fasttrack.autoFirst; }
-  get fasttrackAutoSecond(): number { return this.fasttrack.autoSecond; }
-  get fasttrackPhase1Step(): number { return this.fasttrack.phase1Step; }
-  get fasttrackPhase2Step(): number { return this.fasttrack.phase2Step; }
 
   // Dynamic rating
   _currentMinRating = 0;
@@ -633,21 +535,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    * adaptive Kurve vorliegen.
    */
   get isFirstRun(): boolean { return this.sessionHistory.length === 0; }
-
-  /** Vorschau der Ketten-Kurve: Rating an markanten Stellen (Start, T1 ≈ Puzzle 6, T2 ≈ Puzzle 21, Block-Ende).
-   *  Marken werden auf den Block geklemmt, aufsteigend sortiert und dedupliziert — sonst zeigte der
-   *  erste Lauf „Puzzle 1 / 16 / 31 / 30": Anker 2 liegt bei Index 30 und damit AUSSERHALB des
-   *  30er-Blocks (0–29), landete vor dem Block-Ende und mit höherem Rating als die Zeile darunter. */
-  get chainPreview(): { puzzle: number; rating: number }[] {
-    const s = this.config.startElo, t1 = this.fasttrackAvgFirst, t2 = this.fasttrackAvgSecond;
-    const fr = this.isFirstRun;
-    const last = ENDLESS_CHAIN_BLOCK - 1;
-    const raw = fr
-      ? [0, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX, last]
-      : [0, CHAIN_T1_INDEX, CHAIN_T2_INDEX, last];
-    const marks = [...new Set(raw.map(i => Math.min(Math.max(i, 0), last)))].sort((a, b) => a - b);
-    return marks.map(i => ({ puzzle: i + 1, rating: chainRatingAt(i, s, t1, t2, fr) }));
-  }
 
   private clampConfig(): void {
     this.config.startElo = Math.max(this.puzzleRange.min, Math.min(this.puzzleRange.max, this.config.startElo));
@@ -1608,7 +1495,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // --- localStorage ---
 
-  private saveConfig(): void {
+  protected saveConfig(): void {
     this.storage.saveConfig(this.config);
     // Während eines Laufs (Tiefen-Regler im Spielbildschirm) den zuletzt gesicherten Spielstand
     // mitschicken: null heißt für den Server „kein offener Lauf" und löschte das geräteübergreifende

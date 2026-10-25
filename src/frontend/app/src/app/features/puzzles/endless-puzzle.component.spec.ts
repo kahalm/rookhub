@@ -4,7 +4,8 @@ import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
 import { EndlessResultComponent } from './endless-result.component';
-import { ThemePreset } from './puzzle-theme-presets';
+import { EndlessConfigComponent } from './endless-config.component';
+import { By } from '@angular/platform-browser';
 import { chainRatingAt, CHAIN_FLAT_STEP, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
@@ -345,66 +346,7 @@ describe('EndlessPuzzleComponent on-the-fly Tipps', () => {
   });
 });
 
-describe('EndlessPuzzleComponent Themen-Multiselect', () => {
-  it('selectedThemes liest die leerzeichengetrennten Themen aus der Config', () => {
-    const c = makeComponent();
-    c.config.themes = 'fork pin';
-    expect(c.selectedThemes).toEqual(['fork', 'pin']);
-  });
-
-  it('addThemeValue hängt ein Thema an und schreibt es als String zurück (keine Duplikate)', () => {
-    const c = makeComponent();
-    c.config.themes = 'fork';
-    (c as any).addThemeValue('pin');
-    expect(c.config.themes).toBe('fork pin');
-    (c as any).addThemeValue('pin');   // Duplikat ignoriert
-    expect(c.config.themes).toBe('fork pin');
-  });
-
-  it('removeTheme entfernt das Thema aus dem String', () => {
-    const c = makeComponent();
-    c.config.themes = 'fork pin endgame';
-    c.removeTheme('pin');
-    expect(c.config.themes).toBe('fork endgame');
-  });
-
-  it('filteredThemes blendet bereits gewählte aus und filtert nach dem Suchtext', () => {
-    const c = makeComponent();
-    c.allThemes = ['advancedPawn', 'backRankMate', 'endgame', 'fork', 'pin'];
-    c.config.themes = 'fork';        // fork ist gewählt → raus aus Vorschlägen
-    c.themeInput = 'ba';             // Suchtext
-    expect(c.filteredThemes).toEqual(['backRankMate']);
-  });
-
-  it('onThemeInputTokenEnd übernimmt frei getippte Themen und leert das Eingabefeld', () => {
-    const c = makeComponent();
-    c.config.themes = '';
-    const clear = jasmine.createSpy('clear');
-    (c as any).onThemeInputTokenEnd({ value: 'zwischenzug', chipInput: { clear } });
-    expect(c.config.themes).toBe('zwischenzug');
-    expect(clear).toHaveBeenCalled();
-    expect(c.themeInput).toBe('');
-  });
-
-  it('applyThemePreset setzt das Bündel und deaktiviert „schwächste Themen"', () => {
-    const c = makeComponent();
-    c.config.worstTags = true;
-    const preset = c.themePresets.find((p: ThemePreset) => p.labelKey === 'endless.themePreset.basicTactics')!;
-    c.applyThemePreset(preset);
-    expect(c.config.worstTags).toBe(false);
-    expect(c.selectedThemes).toEqual(preset.themes);
-    expect(c.isThemePresetActive(preset)).toBe(true);
-  });
-
-  it('isThemePresetActive ist false, sobald die Themen abweichen oder worstTags aktiv ist', () => {
-    const c = makeComponent();
-    const preset = c.themePresets[0];
-    c.applyThemePreset(preset);
-    expect(c.isThemePresetActive(preset)).toBe(true);
-    (c as any).addThemeValue('fork');               // Auswahl weicht ab
-    expect(c.isThemePresetActive(preset)).toBe(false);
-  });
-});
+// Themen-Multiselect: umgezogen nach endless-config.component.spec.ts (Zerlegung Z19).
 
 /** Tijdelijk navigator.onLine = false innerhalb von fn(). */
 function withOffline(fn: () => void): void {
@@ -903,16 +845,6 @@ describe('EndlessPuzzleComponent Live-Zeitstand (Refresh mitten im Puzzle)', () 
     (c as any).saveLiveElapsedNow();                      // ohne Lauf-Seed wird nichts geschrieben
     expect(saved.length).toBe(1);
   });
-  it('chainPreview: Marken sortiert, dedupliziert und auf den 30er-Block geklemmt', () => {
-    const c = makeComponent();
-    c.config.startElo = 700;
-    (c as any).sessionHistory = [];                       // erster Lauf → Anker 15/30
-    const first = c.chainPreview;
-    expect(first.map((p: any) => p.puzzle)).toEqual([1, 16, 30]);   // vorher: 1, 16, 31, 30
-    // Puzzle-Nummern streng aufsteigend, letzte = Blockende
-    expect(first[first.length - 1].puzzle).toBe(30);
-    for (let i = 1; i < first.length; i++) expect(first[i].puzzle).toBeGreaterThan(first[i - 1].puzzle);
-  });
 });
 
 
@@ -1146,7 +1078,7 @@ describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
       expect(c.currentPhaseLabel).withContext(`chainIndex ${i}`).toBe(label(phase, stepAt(c, i)));
     }
     c.chainIndex = 0;
-    expect(stepAt(c, 0)).not.toBe(c.fasttrackPhase1Step);   // die alte „/5"-Anzeige lag daneben
+    expect(stepAt(c, 0)).not.toBe(c.fasttrack.phase1Step);   // die alte „/5"-Anzeige lag daneben
   });
 
   it('Hilfe-Parameter decken sich mit den Phasengrenzen (1-basierte Puzzle-Nummern)', () => {
@@ -1207,6 +1139,7 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
   TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe, ...CHILD_SCREENS, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
   // Die herausgezogenen Bildschirme (Z19) rendern mit — mit denselben ausgeblendeten Material-Bausteinen wie vorher.
   TestBed.overrideComponent(EndlessResultComponent, { set: { imports: [TranslatePipe, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
+  TestBed.overrideComponent(EndlessConfigComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
   const translate = TestBed.inject(TranslateService);
   translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
   translate.use('en');
@@ -1217,7 +1150,7 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
   return fixture.nativeElement as HTMLElement;
 }
 /** Bildschirm-Komponenten, die der Container einbindet (Zerlegung Z19). */
-const CHILD_SCREENS: any[] = [EndlessResultComponent];
+const CHILD_SCREENS: any[] = [EndlessConfigComponent, EndlessResultComponent];
 /** Fixture des letzten renderEndless-Aufrufs (für erneutes detectChanges nach einem Klick). */
 let lastFixture: any = null;
 
@@ -1327,7 +1260,7 @@ describe('EndlessPuzzleComponent Hilfe als Dialog (UX-010)', () => {
 /** UI-Sweep 2026-10-11 (d2-rk-endless-start-gap): Start-Knopf hat oben Luft zum Untertitel. */
 describe('EndlessPuzzleComponent Start-Knopf-Abstand', () => {
   it('setzt oben 12 px Abstand', () => {
-    const css = ((EndlessPuzzleComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    const css = ((EndlessConfigComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
     expect(css).toMatch(/\.start-btn-top[^{]*\{ ?margin: 12px 0 1\.25rem/);
   });
 });
@@ -1384,7 +1317,7 @@ describe('EndlessPuzzleComponent d5 (Themen löschen, Lauf-Symbol)', () => {
 
   // d5-rk-lauf-icon-gequetscht-mobile
   it('Pause-Symbol im Kasten „Unbeendeter Lauf“ schrumpft nicht und steht an der ersten Zeile', () => {
-    const css = ((EndlessPuzzleComponent as any).ɵcmp.styles as string[]).join('\n')
+    const css = ((EndlessConfigComponent as any).ɵcmp.styles as string[]).join('\n')
       .replace(/\[_ngcontent-%COMP%\]/g, '').replace(/\s+/g, ' ');
     expect(css).toMatch(/\.resume-info ?\{[^}]*align-items: flex-start/);
     const icon = /\.resume-info mat-icon[^{]*\{([^}]*)\}/.exec(css)![1];
@@ -1627,9 +1560,10 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
     });
     expect(el.querySelector('.threshold-fields')).not.toBeNull();
     expect(el.querySelectorAll('.auto-hint').length).toBe(0);   // beide Schwellen auf Auto
+    const preview = lastFixture.debugElement.query(By.directive(EndlessConfigComponent)).componentInstance.chainPreview;
     const ratings = texts(el, '.fasttrack-phase .phase-detail');
-    expect(ratings).toEqual(c.chainPreview.map((p: any) => String(p.rating)));
-    expect(texts(el, '.fasttrack-phase .phase-label').length).toBe(c.chainPreview.length);
+    expect(ratings).toEqual(preview.map((p: any) => String(p.rating)));
+    expect(texts(el, '.fasttrack-phase .phase-label').length).toBe(preview.length);
   });
 });
 
