@@ -83,7 +83,7 @@ paths:
   (`Withdrawn` = Absage/Sitzung, `FillMatch` = Luecken am chess-results-Eintrag, `SaveEvery`, `BeforeLoopAsync`,
   `unreadable` = beim Abruf unlesbare Kennungen, `BeforeMatchAsync` = Zeile VOR der Zuordnung anreichern und am
   Zeilenobjekt ablegen (ICU-Detailseite, `IcuSweepRow`), `ChessResultsId` = exakter Treffer ueber die Nummer der
-  Quelle vor dem Namensvergleich (ein Treffer auf den EIGENEN Eintrag zaehlt nicht, er nimmt `ApplyAsync`), `OnCreated` = Felder nur fuer einen neuen Eintrag, `AfterLookupAsync` = nach
+  Quelle vor dem Namensvergleich (ein Treffer auf den EIGENEN Eintrag zaehlt nicht, er nimmt `ApplyAsync` — ausser die Turniersuche hat ihn ueber die Nummer uebernommen, Vermerk `ChessResults`: dann nur Luecken ueber `FillMatch`, seit 0.836.x), `OnCreated` = Felder nur fuer einen neuen Eintrag, `AfterLookupAsync` = nach
   beiden Suchen). Detailseiten mit Budget/Fassung gehoeren in `ApplyAsync`, nicht in einen neuen Haken. „Geliefert vor lesbar", Zwischenstand, Speichern im `finally` und
   `RetireVanishedAsync` gelten damit fuer alle umgestellten Quellen an EINER Stelle. Die Log-Vorlagen beginnen mit
   `LogName` wie vorher von Hand. Jede Quelle hat einen Golden-Test (`ExternalSweepGoldenTests`, acht Laeufe); wer

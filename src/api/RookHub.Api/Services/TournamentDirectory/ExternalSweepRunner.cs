@@ -113,7 +113,7 @@ internal interface IDirectorySourceAdapter<in TRow>
 /// <para>Je Zeile: Kennung pruefen, als GELIEFERT vermerken, Termin und Namen pruefen, eigenen
 /// Eintrag suchen, Absage/Sitzung zurueckziehen, sonst (nach <c>BeforeMatchAsync</c>) einem
 /// chess-results-Eintrag zuordnen — per Nummer der Quelle, sonst per Namensvergleich; ein Treffer auf
-/// den eigenen Eintrag selbst zaehlt nicht — und den eigenen dann zurueckziehen, oder den eigenen anlegen bzw. aktualisieren. Alle
+/// den eigenen Eintrag selbst zaehlt nicht, solange die Turniersuche ihn nicht uebernommen hat — und den eigenen dann zurueckziehen, oder den eigenen anlegen bzw. aktualisieren. Alle
 /// <see cref="IDirectorySourceAdapter{TRow}.SaveEvery"/> Zeilen ein Zwischenstand; am Ende wird IMMER gespeichert, ein Fehler dabei
 /// nur gewarnt. Danach die Abschlusszeile und die Verschwunden-Erkennung.</para>
 /// </summary>
@@ -177,8 +177,11 @@ internal static class ExternalSweepRunner
                 // Ein eigener Eintrag, der die chess-results-Nummer selbst traegt (chess.sk: Nummer
                 // genannt, Turniersuche kennt sie noch nicht), wird von beiden Suchen wiedergefunden.
                 // Das ist keine Zuordnung: er nimmt den normalen Weg, sonst kaemen Termin- und
-                // Ortsaenderungen der Quelle nie mehr an.
-                if (IsSelf(own, match)) match = null;
+                // Ortsaenderungen der Quelle nie mehr an. AUSSER die Turniersuche hat ihn inzwischen
+                // ueber die Nummer uebernommen (Vermerk ChessResults): dann ist er ein
+                // chess-results-Eintrag wie jeder andere und die Quelle fuellt nur Luecken — sonst
+                // ueberschrieben sich Turniersuche und Quelle jede Nacht gegenseitig.
+                if (IsSelf(own, match) && !HasChessResultsNote(own!)) match = null;
                 await source.AfterLookupAsync(own, match, ct);
 
                 if (match is not null)
@@ -237,6 +240,10 @@ internal static class ExternalSweepRunner
     /// <summary>Ob der Treffer der eigene Eintrag selbst ist.</summary>
     private static bool IsSelf(TournamentDirectoryEntry? own, TournamentDirectoryEntry? match) =>
         own is not null && match is not null && (ReferenceEquals(own, match) || (own.Id != 0 && own.Id == match.Id));
+
+    /// <summary>Ob die chess-results-Turniersuche den Eintrag fuehrt (Herkunftsvermerk <c>ChessResults</c>).</summary>
+    private static bool HasChessResultsNote(TournamentDirectoryEntry entry) =>
+        entry.Sources.Any(s => s.Kind == DirectorySourceKind.ChessResults);
 
     /// <summary>
     /// Ein Eintrag wurde in diesem Lauf von seiner Quelle geliefert: zuletzt gesehen jetzt, kein

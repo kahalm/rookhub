@@ -258,7 +258,9 @@ public class ExternalSweepGoldenTests
             [new RowSpec("5002", "Nummer Unbekannt Turnier", Soon.AddDays(8), "Testhausen", Cr: "9200002")]);
 
         // Die Turniersuche findet 9200002 jetzt selbst und uebernimmt sk5002 ueber die Nummer: ihre
-        // Werte, ihr Herkunftsvermerk. Bedenkzeit und Runden kennt sie (noch) nicht.
+        // Werte, ihr Herkunftsvermerk. Bedenkzeit und Runden kennt sie (noch) nicht. Ab jetzt ist
+        // sk5002 ein chess-results-Eintrag: chess.sk fuellt nur noch Luecken, Name/Termin/Ort der
+        // Turniersuche bleiben (vorher ueberschrieben sich beide jede Nacht).
         await using (var db = s.NewDb())
         {
             var taken = await db.TournamentDirectoryEntries.Include(e => e.Sources).SingleAsync(e => e.PublicId == "sk5002");

@@ -3336,8 +3336,8 @@ internal static class ExternalSweepGolden
               Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
             Felder sk5002 name=Turniersuche Name Open start=S+10 ort=Suchort bedenkzeit=- runden=- klasse=Unknown system=Unknown vermerke=ChessResults,SlovakChessFederation
             == 15 von der Turniersuche uebernommen, dritte Nacht mit neuem Termin
-            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
-            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 1, Matched = 1, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 1 ergaenzt, 1 zugeordnet, 0 zurueckgezogen
             Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 10 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
@@ -3366,12 +3366,12 @@ internal static class ExternalSweepGolden
               Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
             Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
-            Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+12 ende=S+12 we=False ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk5002 cr=9200002 name=Turniersuche Name Open fed=SVK state=- start=S+10 ende=S+11 we=True ort=Suchort geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk ChessResults 9200002 url=https://chess-results.com/tnr9200002.aspx?lan=1 erst=ja zuletzt=ja
               Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
             Eintrag sk5003 cr=- name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
-            Felder sk5002 name=Nummer Unbekannt Turnier start=S+12 ort=Testhausen bedenkzeit=90 min + 30 s runden=7 klasse=Standard system=Swiss vermerke=ChessResults,SlovakChessFederation
+            Felder sk5002 name=Turniersuche Name Open start=S+10 ort=Suchort bedenkzeit=90 min + 30 s runden=7 klasse=Standard system=Swiss vermerke=ChessResults,SlovakChessFederation
             
             """,
         ["ChessArbiter"] = """
