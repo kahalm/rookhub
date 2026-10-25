@@ -666,6 +666,61 @@ describe('CalculationComponent Speichern', () => {
     expect(sent[1].grade).toBe(4);               // die JÜNGSTE Stufe, nicht die mittlere
   });
 
+  it('lässt verschiedene Stellungen nicht aufeinander warten — Reihenfolge wie eingereiht (Charakterisierung Z20)', () => {
+    const first = new Subject<{ bookPuzzleId: number; updatedAt: string }>();
+    const sent: number[] = [];
+    const { component } = make({
+      saveTree: (id: number) => {
+        sent.push(id);
+        return id === 7 ? first : of({ bookPuzzleId: id, updatedAt: '2026-07-28T10:00:00Z' });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // 7 bleibt offen
+    load(component, position({ id: 8 }));
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    component.flushSave();                       // 8 geht trotzdem sofort raus
+    expect(sent).toEqual([7, 8]);
+    first.next({ bookPuzzleId: 7, updatedAt: '2026-07-28T10:00:00Z' });
+    first.complete();
+    expect(sent).toEqual([7, 8]);                // nichts nachzuschicken
+  });
+
+  it('fasst einen gescheiterten Bewertungs-Patch mit dem inzwischen wartenden zusammen — alte Zeit-Marke bleibt (Charakterisierung Z20)', () => {
+    const first = new Subject<CalcReviewSaved>();
+    const sent: CalcReviewPatch[] = [];
+    let call = 0;
+    const { component, warnings } = make({
+      saveReview: (id: number, patch: CalcReviewPatch) => {
+        call++; sent.push({ ...patch });
+        if (call === 1) return first;
+        return of({ bookPuzzleId: id, chosenSan: null, chosenUci: null, secondsSpent: 0, grade: patch.grade ?? null });
+      },
+    });
+    load(component, position({ id: 7 }));
+    component.startTraining();
+    const inner = component as unknown as { watch: { stop(): number }; harvestWatch(): void; sendReviews(): void };
+    spyOn(inner.watch, 'stop').and.returnValues(30, 12);
+    inner.harvestWatch();                        // Anfrage 1 (30 s, Marke A) unterwegs
+    (component as unknown as { beginWatch(id: number): void }).beginWatch(7);
+    component.applyGrade(3);                     // wartet
+    inner.harvestWatch();                        // + 12 s mit Marke B, wartet ebenfalls
+    expect(sent.length).toBe(1);
+    const tokenA = sent[0].secondsToken;
+
+    first.error(new Error('timeout'));           // gescheitert: kein sofortiger Neuversuch
+    expect(sent.length).toBe(1);
+    expect(warnings).toContain('calc.review.saveFailed');
+
+    inner.sendReviews();                         // nächster Anlauf: EIN zusammengefasster Patch
+    expect(sent.length).toBe(2);
+    expect(sent[1].grade).toBe(3);
+    expect(sent[1].secondsDelta).toBe(42);
+    expect(sent[1].secondsToken).toBe(tokenA);
+    component.ngOnDestroy();
+  });
+
   it('serialisiert auch Löschen gegen einen danach neu angelegten Baum', () => {
     // Sonst könnte das DELETE nach dem PUT beim Server ankommen und den neuen Baum wegräumen.
     const del = new Subject<void>();
