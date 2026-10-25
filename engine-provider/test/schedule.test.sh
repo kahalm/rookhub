@@ -98,16 +98,32 @@ cp "$ROOT/entrypoint.sh" "$work/entrypoint.sh"
 mkdir -p "$work/opt"; : > "$work/opt/provider.py"; : > "$work/opt/preflight.py"
 sed -i "s#/opt/preflight.py#$work/opt/preflight.py#; s#/opt/provider.py#$work/opt/provider.py#" "$work/entrypoint.sh"
 
-# Regel, die GENAU JETZT gilt — der Test soll zu jeder Tages- und Nachtzeit dasselbe pruefen.
-today=$(date +%u); case "$today" in 1) d=Mo;; 2) d=Di;; 3) d=Mi;; 4) d=Do;; 5) d=Fr;; 6) d=Sa;; 7) d=So;; esac
+# Stub-„date": die Aufsicht fragt die Uhr (`date +%u/+%H/+%M`). Mit SCHEDULE_NOW antwortet sie fuer
+# diesen festen Zeitpunkt (GNU `date -d`, in der Zeitzone, die das Skript setzt), ohne die echte.
+# Frueher rechnete der Test den Wochentag mit der Uhr des Runners (UTC) aus, das Skript aber in
+# Europe/Vienna — zwischen 22:00/23:00 UTC und Mitternacht lag Wien schon auf dem naechsten Tag,
+# die Regel griff nicht, und 0 %/50 % liefen mit allen vier Engines (CI 24.10.2026, 23:29 UTC).
+real_date=$(command -v date)
+cat > "$work/date" << DATE
+#!/bin/bash
+if [ -n "\${SCHEDULE_NOW:-}" ]; then exec "$real_date" -d "\$SCHEDULE_NOW" "\$@"; fi
+exec "$real_date" "\$@"
+DATE
+chmod +x "$work/date"
 
-run_plan() {   # run_plan "<Prozentregel>" "<Sekunden>"; Ausgabe: Zahl der gestarteten Provider
+# Feste Zeitpunkte (Wiener Ortszeit bzw. UTC), damit der Test zu jeder Tages- und Nachtzeit dasselbe prueft.
+FR_10="2026-10-23T10:00:00+02:00"    # Freitag 10:00 in Wien
+NACHT="2026-10-24T23:29:00Z"         # Samstag 23:29 UTC = Sonntag 01:29 in Wien (der CI-Fehlschlag)
+MI_2330="2026-10-21T23:30:00+02:00"  # Mittwoch 23:30 in Wien
+DO_0030="2026-10-22T00:30:00+02:00"  # Donnerstag 00:30 in Wien
+
+run_plan() {   # run_plan "<Zeitplan>" "<Sekunden>" "<SCHEDULE_NOW>"; Ausgabe: Zahl der gestarteten Provider
     : > "$work/starts"
     # setsid: die Aufsicht bekommt eine EIGENE Prozessgruppe, und am Ende geht die ganze Gruppe weg.
     # Ein `pkill -f sleep` traefe sonst auch Prozesse ausserhalb des Tests — und den Test selbst.
     ( cd "$work" && exec setsid env -i PATH="$work:$PATH" LICHESS_API_TOKEN=x ENGINE_PATH="$fake_engine" \
-        ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=3 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 \
-        ENGINE_SCHEDULE="$d 00:00-24:00 $1" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
+        ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=3 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 SCHEDULE_NOW="$3" \
+        ENGINE_SCHEDULE="$1" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
     local sup=$!
     sleep "$2"
     kill -TERM -"$sup" 2>/dev/null || kill -TERM "$sup" 2>/dev/null
@@ -129,7 +145,7 @@ CURL
 sed -i "s#__REPORTS__#$work/reports#" "$work/curl"; chmod +x "$work/curl"; : > "$work/reports"
 ( cd "$work" && exec setsid env -i PATH="$work:$PATH" ROOKHUB_URL=https://rh.example ROOKHUB_API_TOKEN=rkh_x \
     ENGINE_PATH="$fake_engine" ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=1 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 \
-    ENGINE_SCHEDULE="$d 00:00-24:00 100%" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
+    SCHEDULE_NOW="$FR_10" ENGINE_SCHEDULE="Fr 08:00-17:00 100%" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
 sup=$!; sleep 3; kill -TERM -"$sup" 2>/dev/null || kill -TERM "$sup" 2>/dev/null; wait "$sup" 2>/dev/null
 if grep -q '^PUT https://rh.example/api/external-engine/schedule {' "$work/reports"; then ok "Zeitplan per PUT an RookHub gemeldet"
 else fail "keine Meldung an RookHub — gesehen: $(cat "$work/reports")"; fi
@@ -137,9 +153,16 @@ grep -q 'Zeitplan aktiv (Europe/Vienna)' "$work/log" && ok "Container rechnet in
     || fail "Zeitzone nicht gesetzt — Log: $(head -3 "$work/log")"
 rm -f "$work/curl"
 
-expect "100 %: alle vier Engines laufen" "4" "$(run_plan "100%" 3)"
-expect "0 %: keine einzige laeuft"       "0" "$(run_plan "0%" 3)"
-expect "50 %: Live + zwei Hintergrund"   "3" "$(run_plan "50%" 3)"
+# Jede Regel hat einen Gegenwert ausserhalb der Spanne — ein Treffer ist also nie Zufall der Vorgabe (100 %).
+expect "100 %: alle vier Engines laufen" "4" "$(run_plan "Fr 08:00-17:00 100%; * 0%" 3 "$FR_10")"
+expect "0 %: keine einzige laeuft"       "0" "$(run_plan "Fr 08:00-17:00 0%" 3 "$FR_10")"
+expect "50 %: Live + zwei Hintergrund"   "3" "$(run_plan "Fr 08:00-17:00 50%; * 0%" 3 "$FR_10")"
+# 23:29 UTC am Samstag ist in Wien schon Sonntag: die Sonntagsregel gilt, die Samstagsregel nicht mehr.
+expect "Wiener Tag statt UTC-Tag (So-Regel greift)"   "0" "$(run_plan "So 00:00-06:00 0%" 3 "$NACHT")"
+expect "Wiener Tag statt UTC-Tag (Sa-Regel vorbei)"   "4" "$(run_plan "Sa 00:00-24:00 0%" 3 "$NACHT")"
+# Spanne ueber Mitternacht: vor und nach 00:00 dieselbe Regel.
+expect "ueber Mitternacht: 23:30 in der Spanne" "3" "$(run_plan "* 22:00-06:00 50%; * 0%" 3 "$MI_2330")"
+expect "ueber Mitternacht: 00:30 in der Spanne" "3" "$(run_plan "* 22:00-06:00 50%; * 0%" 3 "$DO_0030")"
 
 echo
 if [ "$fails" -eq 0 ]; then echo "ALLE TESTS OK"; else echo "$fails FEHLER"; fi
