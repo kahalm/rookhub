@@ -2530,5 +2530,1481 @@ internal static class ExternalSweepGolden
               Vermerk ScottishChessFederation scc804b4cdc621 url=https://www.chessscotland.com/calendar/slug-2005 erst=ja zuletzt=ja
             
             """,
+        ["Icu"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 5, Matched = 0, Retired = 0 }
+            Detailabrufe: id=1001 id=1002 id=1003 id=2001 id=2002
+            Log Information: ICU-Kalender: 13 gelesen, 12 neu, 5 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=- erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=- erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=- erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=- erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=- erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=- erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=- erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 5, Matched = 1, Retired = 1 }
+            Detailabrufe: id=2003 id=2004 id=2005 id=2006 id=2007
+            Log Information: ICU: ie1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: ICU-Kalender: 13 gelesen, 0 neu, 5 mit Detailseite, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=- erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=- erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 2, Matched = 0, Retired = 0 }
+            Detailabrufe: id=2008 id=2009
+            Log Information: ICU-Kalender: 11 gelesen, 0 neu, 2 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Log Information: ICU-Kalender: 11 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Log Information: ICU-Kalender: 1 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Detailabrufe: id=1004
+            Log Warning: ICU: Zwischenstand konnte nicht gespeichert werden
+            Log Information: ICU-Kalender: 2 gelesen, 1 neu, 1 mit Detailseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Detailabrufe: id=3001 id=3002 id=3003 id=3004 id=3005
+            Log Warning: ICU: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            == 9 exakter Treffer per Nummer, Detailseite fehlt
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Detailabrufe: id=4001 id=4002
+            Log Information: ICU-Kalender: 2 gelesen, 1 neu, 1 mit Detailseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4002 url=- erst=ja zuletzt=ja
+            == 10 schon geholt: kein zweiter Abruf, die fehlende wird wiederholt
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: id=4002
+            Log Information: ICU-Kalender: 2 gelesen, 1 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            Eintrag ie4001 cr=- name=Irish Exact Open fed=IRL state=- start=S+3 ende=S+3 we=False ort=Galway geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
+            Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4002 url=- erst=ja zuletzt=ja
+            == 11 Detailseite wieder da
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 0, Updated = 1, Matched = 0, Retired = 0 }
+            Detailabrufe: id=4002
+            Log Information: ICU-Kalender: 2 gelesen, 0 neu, 1 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            Eintrag ie4001 cr=- name=Irish Exact Open fed=IRL state=- start=S+3 ende=S+3 we=False ort=Galway geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
+            Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4002 url=https://www.icu.ie/events/4002 erst=ja zuletzt=ja
+            == 12 kein Turnier (Unterricht)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 1 }
+            Detailabrufe: 
+            Log Information: ICU-Kalender: 1 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 1 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 12 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
+            Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+            Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
+            Eintrag ie1003 cr=- name=Verschwindibus Pokal fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk IrishChessUnion 1003 url=https://www.icu.ie/events/1003 erst=ja zuletzt=ja
+            Eintrag ie2001 cr=- name=Serienturnier Nummer1 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2001 url=https://www.icu.ie/events/2001 erst=ja zuletzt=ja
+            Eintrag ie2002 cr=- name=Serienturnier Nummer2 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2002 url=https://www.icu.ie/events/2002 erst=ja zuletzt=ja
+            Eintrag ie2003 cr=- name=Serienturnier Nummer3 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2003 url=https://www.icu.ie/events/2003 erst=ja zuletzt=ja
+            Eintrag ie2004 cr=- name=Serienturnier Nummer4 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2004 url=https://www.icu.ie/events/2004 erst=ja zuletzt=ja
+            Eintrag ie2005 cr=- name=Serienturnier Nummer5 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2005 url=https://www.icu.ie/events/2005 erst=ja zuletzt=ja
+            Eintrag ie2006 cr=- name=Serienturnier Nummer6 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2006 url=https://www.icu.ie/events/2006 erst=ja zuletzt=ja
+            Eintrag ie2007 cr=- name=Serienturnier Nummer7 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2007 url=https://www.icu.ie/events/2007 erst=ja zuletzt=ja
+            Eintrag ie2008 cr=- name=Serienturnier Nummer8 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
+            Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
+            Eintrag ie4001 cr=- name=Irish Exact Open fed=IRL state=- start=S+3 ende=S+3 we=False ort=Galway geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
+            Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk IrishChessUnion 4002 url=https://www.icu.ie/events/4002 erst=ja zuletzt=ja
+            
+            """,
+        ["ChessSk"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 13 gelesen, 12 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 1, Matched = 1, Retired = 1 }
+            Log Information: chess.sk: sk1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: chess.sk-Kalender: 13 gelesen, 0 neu, 1 ergaenzt, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 11 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 11 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 1, Retired = 0 }
+            Log Warning: chess.sk: Zwischenstand konnte nicht gespeichert werden
+            Log Information: chess.sk-Kalender: 2 gelesen, 1 neu, 0 ergaenzt, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Log Warning: chess.sk: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 9 exakter Treffer per Nummer
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 1, Matched = 1, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 1 ergaenzt, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            == 10 Nummer noch nicht im Bestand
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 1, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 1 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
+            == 11 leere Nummer
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 1, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 1 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=- name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
+            Eintrag sk5003 cr= name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
+            == 12 Nummer nachgereicht
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 10 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=9200003 name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
+            Eintrag sk5003 cr= name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
+            == 13 Schulung
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 1 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 1 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 9 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=9200003 name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
+            Eintrag sk5003 cr= name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
+            
+            """,
+        ["ChessArbiter"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 5, Matched = 0, Retired = 0 }
+            Detailabrufe: year=2026&id=1001 year=2026&id=1002 year=2026&id=1003 year=2026&id=2001 year=2026&id=2002
+            Log Information: chessarbiter-Kalender: 13 gelesen, 12 neu, 5 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=- erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 5, Matched = 1, Retired = 1 }
+            Detailabrufe: year=2026&id=2003 year=2026&id=2004 year=2026&id=2005 year=2026&id=2006 year=2026&id=2007
+            Log Information: chessarbiter: pl2026-1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: chessarbiter-Kalender: 13 gelesen, 0 neu, 5 mit Detailseite, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=- erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 2, Matched = 0, Retired = 0 }
+            Detailabrufe: year=2026&id=2008 year=2026&id=2009
+            Log Information: chessarbiter-Kalender: 11 gelesen, 0 neu, 2 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Log Information: chessarbiter-Kalender: 11 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Log Information: chessarbiter-Kalender: 1 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung PolishChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Detailabrufe: year=2026&id=1004
+            Log Warning: chessarbiter: Zwischenstand konnte nicht gespeichert werden
+            Log Information: chessarbiter-Kalender: 2 gelesen, 1 neu, 1 mit Detailseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung PolishChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Detailabrufe: year=2026&id=3001 year=2026&id=3002 year=2026&id=3003 year=2026&id=3004 year=2026&id=3005
+            Log Warning: chessarbiter: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            == 9 Detailseite leer, nicht erreichbar, Altbestand
+            Ergebnis: ExternalSweepResult { Read = 4, Added = 2, Updated = 1, Matched = 0, Retired = 0 }
+            Detailabrufe: year=2026&id=6001 year=2026&id=6002 year=2026&id=6004
+            Log Information: chessarbiter-Kalender: 4 gelesen, 2 neu, 1 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung PolishChessFederation uebersprungen: nur 4 von 15 eigenen Eintraegen wiedergesehen (26 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            Eintrag pl2026-6001 cr=- name=Leere Seite Turniej fed=POL state=mazowieckie start=S+3 ende=S+3 we=False ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6001 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-6002 cr=- name=Nicht Erreichbar Turniej fed=POL state=mazowieckie start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6002 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-6003 cr=- name=Altbestand Mit Adresse fed=POL state=mazowieckie start=S+8 ende=S+8 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6003 url=https://www.chessarbiter.com/turnieje/2026/ti_6003/ erst=ja zuletzt=ja
+            Eintrag pl2026-6004 cr=- name=Altbestand Ohne Adresse fed=POL state=mazowieckie start=S+9 ende=S+9 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6004 url=https://www.chessarbiter.com/turnieje/2026/ti_6004/ erst=ja zuletzt=ja
+            Fassung pl2026-6001=1
+            Fassung pl2026-6002=0
+            Fassung pl2026-6003=0
+            Fassung pl2026-6004=1
+            == 10 nochmal: nur die nicht erreichbare wird wiederholt
+            Ergebnis: ExternalSweepResult { Read = 4, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: year=2026&id=6002
+            Log Information: chessarbiter-Kalender: 4 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung PolishChessFederation uebersprungen: nur 4 von 15 eigenen Eintraegen wiedergesehen (26 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            Eintrag pl2026-6001 cr=- name=Leere Seite Turniej fed=POL state=mazowieckie start=S+3 ende=S+3 we=False ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6001 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-6002 cr=- name=Nicht Erreichbar Turniej fed=POL state=mazowieckie start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6002 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-6003 cr=- name=Altbestand Mit Adresse fed=POL state=mazowieckie start=S+8 ende=S+8 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6003 url=https://www.chessarbiter.com/turnieje/2026/ti_6003/ erst=ja zuletzt=ja
+            Eintrag pl2026-6004 cr=- name=Altbestand Ohne Adresse fed=POL state=mazowieckie start=S+9 ende=S+9 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6004 url=https://www.chessarbiter.com/turnieje/2026/ti_6004/ erst=ja zuletzt=ja
+            Fassung pl2026-6001=1
+            Fassung pl2026-6002=0
+            Fassung pl2026-6003=0
+            Fassung pl2026-6004=1
+            == 11 Detailseite wieder erreichbar
+            Ergebnis: ExternalSweepResult { Read = 4, Added = 0, Updated = 1, Matched = 0, Retired = 0 }
+            Detailabrufe: year=2026&id=6002
+            Log Information: chessarbiter-Kalender: 4 gelesen, 0 neu, 1 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung PolishChessFederation uebersprungen: nur 4 von 15 eigenen Eintraegen wiedergesehen (26 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
+            Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
+            Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2001 cr=- name=Serienturnier Nummer1 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2001 url=https://www.chessarbiter.com/turnieje/2026/ti_2001/ erst=ja zuletzt=ja
+            Eintrag pl2026-2002 cr=- name=Serienturnier Nummer2 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2002 url=https://www.chessarbiter.com/turnieje/2026/ti_2002/ erst=ja zuletzt=ja
+            Eintrag pl2026-2003 cr=- name=Serienturnier Nummer3 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2003 url=https://www.chessarbiter.com/turnieje/2026/ti_2003/ erst=ja zuletzt=ja
+            Eintrag pl2026-2004 cr=- name=Serienturnier Nummer4 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2004 url=https://www.chessarbiter.com/turnieje/2026/ti_2004/ erst=ja zuletzt=ja
+            Eintrag pl2026-2005 cr=- name=Serienturnier Nummer5 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2005 url=https://www.chessarbiter.com/turnieje/2026/ti_2005/ erst=ja zuletzt=ja
+            Eintrag pl2026-2006 cr=- name=Serienturnier Nummer6 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2006 url=https://www.chessarbiter.com/turnieje/2026/ti_2006/ erst=ja zuletzt=ja
+            Eintrag pl2026-2007 cr=- name=Serienturnier Nummer7 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2007 url=https://www.chessarbiter.com/turnieje/2026/ti_2007/ erst=ja zuletzt=ja
+            Eintrag pl2026-2008 cr=- name=Serienturnier Nummer8 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2008 url=https://www.chessarbiter.com/turnieje/2026/ti_2008/ erst=ja zuletzt=ja
+            Eintrag pl2026-2009 cr=- name=Serienturnier Nummer9 fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_2009 url=https://www.chessarbiter.com/turnieje/2026/ti_2009/ erst=ja zuletzt=ja
+            Eintrag pl2026-6001 cr=- name=Leere Seite Turniej fed=POL state=mazowieckie start=S+3 ende=S+3 we=False ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6001 url=- erst=ja zuletzt=ja
+            Eintrag pl2026-6002 cr=- name=Nicht Erreichbar Turniej fed=POL state=mazowieckie start=S+4 ende=S+4 we=False ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6002 url=https://www.chessarbiter.com/turnieje/2026/ti_6002/ erst=ja zuletzt=ja
+            Eintrag pl2026-6003 cr=- name=Altbestand Mit Adresse fed=POL state=mazowieckie start=S+8 ende=S+8 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6003 url=https://www.chessarbiter.com/turnieje/2026/ti_6003/ erst=ja zuletzt=ja
+            Eintrag pl2026-6004 cr=- name=Altbestand Ohne Adresse fed=POL state=mazowieckie start=S+9 ende=S+9 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk PolishChessFederation 2026/ti_6004 url=https://www.chessarbiter.com/turnieje/2026/ti_6004/ erst=ja zuletzt=ja
+            Fassung pl2026-6001=1
+            Fassung pl2026-6002=1
+            Fassung pl2026-6003=0
+            Fassung pl2026-6004=1
+            
+            """,
+        ["Ffe"] = """
+            == 1 Erstlauf
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 5, Matched = 0, Retired = 0 }
+            Detailabrufe: id=1001 id=1002 id=1003 id=2001 id=2002
+            Log Information: FFE-Kalender: 13 gelesen, 12 neu, 5 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=1 rue de la Paix, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=- erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=- erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=- erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=- erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=- erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 2 chess-results fuehrt A
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 0, Updated = 5, Matched = 1, Retired = 1 }
+            Detailabrufe: id=2003 id=2004 id=2005 id=2006 id=2007
+            Log Information: FFE: fr1001 geht in 9000001 auf (Danubius Kronstadt Memorial)
+            Log Information: FFE-Kalender: 13 gelesen, 0 neu, 5 mit Turnierseite, 1 zugeordnet, 1 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=- erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=- erst=ja zuletzt=ja
+            == 3 C fehlt
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 2, Matched = 0, Retired = 0 }
+            Detailabrufe: id=2008 id=2009
+            Log Information: FFE-Kalender: 11 gelesen, 0 neu, 2 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=1 rue de la Paix geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            == 4 C fehlt wieder (Karenz)
+            Ergebnis: ExternalSweepResult { Read = 11, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Log Information: FFE-Kalender: 11 gelesen, 0 neu, 0 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            == 5 nur B (Bremse)
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Log Information: FFE-Kalender: 1 gelesen, 0 neu, 0 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung FrenchChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            == 6 leer
+            Ergebnis: ExternalSweepResult { Read = 0, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: 
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            == 7 Speichern scheitert
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
+            Detailabrufe: id=1004
+            Log Warning: FFE: Zwischenstand konnte nicht gespeichert werden
+            Log Information: FFE-Kalender: 2 gelesen, 1 neu, 1 mit Turnierseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung FrenchChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            == 8 Speichern scheitert mitten im Lauf
+            Ergebnis: WIRFT DbUpdateException: Duplicate entry 'poison' for key 'PublicId'
+            Detailabrufe: id=3001 id=3002 id=3003 id=3004 id=3005
+            Log Warning: FFE: Zwischenstand konnte nicht gespeichert werden
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            == 9 Turnierseite fehlt bei einer
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 2, Updated = 1, Matched = 0, Retired = 0 }
+            Detailabrufe: id=7001 id=7002
+            Log Information: FFE-Kalender: 2 gelesen, 2 neu, 1 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung FrenchChessFederation uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            Eintrag fr7001 cr=- name=Tournoi Sans Fiche fed=FRA state=Dept. 58 start=S+3 ende=S+3 we=False ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 7001 url=- erst=ja zuletzt=ja
+            Eintrag fr7002 cr=- name=Tournoi Avec Fiche fed=FRA state=Dept. 58 start=S+4 ende=S+4 we=False ort=2 place du Marche, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 7002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=7002 erst=ja zuletzt=ja
+            == 10 nochmal: nur die fehlende wird wiederholt
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Detailabrufe: id=7001
+            Log Information: FFE-Kalender: 2 gelesen, 0 neu, 0 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung FrenchChessFederation uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            Eintrag fr7001 cr=- name=Tournoi Sans Fiche fed=FRA state=Dept. 58 start=S+3 ende=S+3 we=False ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 7001 url=- erst=ja zuletzt=ja
+            Eintrag fr7002 cr=- name=Tournoi Avec Fiche fed=FRA state=Dept. 58 start=S+4 ende=S+4 we=False ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 7002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=7002 erst=ja zuletzt=ja
+            == 11 Turnierseite wieder da
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 0, Updated = 1, Matched = 0, Retired = 0 }
+            Detailabrufe: id=7001
+            Log Information: FFE-Kalender: 2 gelesen, 0 neu, 1 mit Turnierseite, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung FrenchChessFederation uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
+            Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
+            Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
+              Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
+            Eintrag fr2001 cr=- name=Serienturnier Nummer1 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2001 erst=ja zuletzt=ja
+            Eintrag fr2002 cr=- name=Serienturnier Nummer2 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2002 erst=ja zuletzt=ja
+            Eintrag fr2003 cr=- name=Serienturnier Nummer3 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2003 erst=ja zuletzt=ja
+            Eintrag fr2004 cr=- name=Serienturnier Nummer4 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2004 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2004 erst=ja zuletzt=ja
+            Eintrag fr2005 cr=- name=Serienturnier Nummer5 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2005 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2005 erst=ja zuletzt=ja
+            Eintrag fr2006 cr=- name=Serienturnier Nummer6 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2006 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2006 erst=ja zuletzt=ja
+            Eintrag fr2007 cr=- name=Serienturnier Nummer7 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2007 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2007 erst=ja zuletzt=ja
+            Eintrag fr2008 cr=- name=Serienturnier Nummer8 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2008 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2008 erst=ja zuletzt=ja
+            Eintrag fr2009 cr=- name=Serienturnier Nummer9 fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 2009 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=2009 erst=ja zuletzt=ja
+            Eintrag fr7001 cr=- name=Tournoi Sans Fiche fed=FRA state=Dept. 58 start=S+3 ende=S+3 we=False ort=1 rue de la Paix, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 7001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=7001 erst=ja zuletzt=ja
+            Eintrag fr7002 cr=- name=Tournoi Avec Fiche fed=FRA state=Dept. 58 start=S+4 ende=S+4 we=False ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk FrenchChessFederation 7002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=7002 erst=ja zuletzt=ja
+            
+            """,
     };
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -25,17 +26,34 @@ namespace RookHub.Api.Tests.TournamentDirectory;
 /// </summary>
 public class ExternalSweepGoldenTests
 {
-    /// <summary>Eine Zeile des Szenarios; <see cref="Start"/> null = unlesbarer Termin.</summary>
-    public sealed record RowSpec(string Id, string Name, DateOnly? Start, string? Place);
+    /// <summary>
+    /// Eine Zeile des Szenarios; <see cref="Start"/> null = unlesbarer Termin. <see cref="Cr"/> ist
+    /// eine von der Quelle selbst genannte chess-results-Nummer, <see cref="NonTournament"/> eine
+    /// Zeile, die kein Turnier ist (beides nur fuer Quellen, die das kennen).
+    /// </summary>
+    public sealed record RowSpec(string Id, string Name, DateOnly? Start, string? Place,
+        string? Cr = null, bool NonTournament = false);
+
+    /// <summary>
+    /// Was die Sonderfall-Laeufe einer Quelle (<see cref="SourceSpec.Extra"/>) nach den acht
+    /// gemeinsamen Laeufen tun duerfen: weitere Laeufe, Bestand anlegen, Detailantworten je Kennung
+    /// setzen, eigene Zeilen in die Aufnahme schreiben.
+    /// </summary>
+    public sealed record ScenarioSteps(
+        Func<string, RowSpec[], Task> Step, Func<AppDbContext> NewDb, MutableHandler Handler,
+        Action<string> Note);
 
     /// <summary>
     /// Eine Quelle im Test: wie man sie baut und wie ihre Crawler-Zeile aussieht. <c>DetailJson</c>
     /// ist die Antwort auf jeden Detailabruf (Pfad endet auf <c>/detail</c>); ohne ihn 404.
+    /// <c>ShowDetailCalls</c> schreibt je Lauf die abgerufenen Detailseiten mit; <c>Extra</c> sind
+    /// die Sonderfall-Laeufe der Quelle nach den acht gemeinsamen.
     /// </summary>
     public sealed record SourceSpec(
         string Name, string Federation, string GeoCountry,
         Func<AppDbContext, IHttpClientFactory, (Func<Task<ExternalSweepResult>> Run, Func<List<string>> Log)> Create,
-        Func<RowSpec, string> RowJson, string? DetailJson = null);
+        Func<RowSpec, string> RowJson, string? DetailJson = null,
+        bool ShowDetailCalls = false, Func<ScenarioSteps, Task>? Extra = null);
 
     /// <summary>Ein Samstag in rund fuenf Wochen — fester Wochentag, damit „Wochenende" nicht vom Testtag abhaengt.</summary>
     private static readonly DateOnly Soon = NextSaturday(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30));
@@ -142,10 +160,170 @@ public class ExternalSweepGoldenTests
             },
             r => $$"""{"slug":"slug-{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"url":"https://www.chessscotland.com/calendar/slug-{{r.Id}}","categories":["Adult","Junior"],"timeControls":["Standard","Fide"]}""",
             """{"venue":"Community Hall, Testhausen"}"""),
+        ["Icu"] = new("Icu", "IRL", "IE",
+            (db, http) =>
+            {
+                var log = new TestLogger<IcuDirectorySweepService>();
+                var svc = new IcuDirectorySweepService(db, http, new GeocodingService(db),
+                    Config(("TournamentDirectory:IcuDetailDelaySeconds", "0")), log);
+                return Wrap(log, () => svc.RunAsync(5));
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"url":"https://www.icu.ie/events/{{r.Id}}","place":{{J(r.Place)}},"lat":null,"lon":null,"categories":["Classical"],"nonTournament":{{(r.NonTournament ? "true" : "false")}}}""",
+            """{"chessResultsId":null,"playerCount":12,"website":null}""",
+            ShowDetailCalls: true, Extra: IcuExtraAsync),
+        ["ChessSk"] = new("ChessSk", "SVK", "SK",
+            (db, http) =>
+            {
+                var log = new TestLogger<ChessSkDirectorySweepService>();
+                var svc = new ChessSkDirectorySweepService(db, http, new GeocodingService(db), log);
+                return Wrap(log, () => svc.RunAsync());
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"endDate":{{D(r.Start)}},"city":{{J(r.Place)}},"address":null,"country":"SVK","chessResultsId":{{J(r.Cr)}},"website":null,"url":"https://chess.sk/turnaj/{{r.Id}}","systemText":null,"timeControl":"90 min + 30 s","system":"swiss","rounds":7,"type":"Standard","nonTournament":{{(r.NonTournament ? "true" : "false")}}}""",
+            Extra: ChessSkExtraAsync),
+        ["ChessArbiter"] = new("ChessArbiter", "POL", "PL",
+            (db, http) =>
+            {
+                var log = new TestLogger<ChessArbiterDirectorySweepService>();
+                var svc = new ChessArbiterDirectorySweepService(db, http, new GeocodingService(db), Config(), log);
+                return Wrap(log, () => svc.RunAsync(5));
+            },
+            r => $$"""{"year":"2026","eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"place":{{J(r.Place)}},"region":"mazowieckie","speedText":"klasyczne","url":"https://www.chessarbiter.com/turnieje/2026/ti_{{r.Id}}/"}""",
+            """{"startDate":null,"endDate":null,"place":"ul. Testowa 1, Testhausen","timeControl":"90 min + 30 s","rounds":9,"system":"swiss","playerCount":40,"organizer":null}""",
+            ShowDetailCalls: true, Extra: ChessArbiterExtraAsync),
+        ["Ffe"] = new("Ffe", "FRA", "FR",
+            (db, http) =>
+            {
+                var log = new TestLogger<FfeDirectorySweepService>();
+                var svc = new FfeDirectorySweepService(db, http, new GeocodingService(db), Config(), log);
+                return Wrap(log, () => svc.RunAsync(detailLimit: 5));
+            },
+            r => $$"""{"eventId":"{{r.Id}}","name":"{{r.Name}}","startDate":{{D(r.Start)}},"city":{{J(r.Place)}},"department":"58","homologatedBy":"FFE","url":"https://www.echecs.asso.fr/FicheTournoi.aspx?Ref={{r.Id}}"}""",
+            """{"startDate":null,"endDate":null,"city":null,"department":null,"address":"1 rue de la Paix","timeControl":"60' + [30'']","rounds":7,"pairingSystem":"Suisse"}""",
+            ShowDetailCalls: true, Extra: FfeExtraAsync),
     };
 
-    private static Microsoft.Extensions.Configuration.IConfiguration Config() =>
-        new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+    // ----- Sonderfaelle der Quellen mit eigener Detail-/Nummernlogik ---------------------------
+
+    /// <summary>Ein chess-results-Eintrag im Bestand, dem die Quelle zugeordnet werden kann.</summary>
+    private static async Task SeedChessResultsAsync(ScenarioSteps s, string id, string name, string federation,
+        DateOnly start)
+    {
+        await using var db = s.NewDb();
+        db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = id, ChessResultsId = id, Name = name, Federation = federation, StartDate = start, EndDate = start,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>ICU: die Detailseite traegt die chess-results-Nummer — exakter Treffer VOR dem Namensvergleich.</summary>
+    private static async Task IcuExtraAsync(ScenarioSteps s)
+    {
+        await SeedChessResultsAsync(s, "9100001", "Ganz anderer Name", "IRL", Soon.AddDays(20));
+        s.Handler.DetailFor = q => q.Contains("id=4001")
+            ? """{"chessResultsId":"9100001","playerCount":30,"website":null}"""
+            : q.Contains("id=4002") ? null
+            : """{"chessResultsId":null,"playerCount":12,"website":null}""";
+        var exact = new RowSpec("4001", "Irish Exact Open", Soon.AddDays(3), "Galway");
+        var missing = new RowSpec("4002", "Detailseite Fehlt Cup", Soon.AddDays(4), null);
+        await s.Step("9 exakter Treffer per Nummer, Detailseite fehlt", [exact, missing]);
+        await s.Step("10 schon geholt: kein zweiter Abruf, die fehlende wird wiederholt", [exact, missing]);
+        s.Handler.DetailFor = null;
+        await s.Step("11 Detailseite wieder da", [exact, missing]);
+        await s.Step("12 kein Turnier (Unterricht)", [B with { NonTournament = true }]);
+    }
+
+    /// <summary>chess.sk: Nummer der Quelle — exakter Treffer, eigener Eintrag mit Nummer, leere Nummer, nachgereicht.</summary>
+    private static async Task ChessSkExtraAsync(ScenarioSteps s)
+    {
+        await SeedChessResultsAsync(s, "9200001", "Ganz anderer Name", "SVK", Soon.AddDays(20));
+        await s.Step("9 exakter Treffer per Nummer",
+            [new RowSpec("5001", "Slovak Exact Open", Soon.AddDays(3), "Testhausen", Cr: "9200001")]);
+        await s.Step("10 Nummer noch nicht im Bestand",
+            [new RowSpec("5002", "Nummer Unbekannt Turnier", Soon.AddDays(5), null, Cr: "9200002")]);
+        await s.Step("11 leere Nummer",
+            [new RowSpec("5003", "Leere Nummer Turnier", Soon.AddDays(6), null, Cr: "")]);
+        await s.Step("12 Nummer nachgereicht", [C with { Cr = "9200003" }]);
+        await s.Step("13 Schulung", [B with { NonTournament = true }]);
+    }
+
+    /// <summary>chessarbiter: leere Detailseite (204) ist endgueltig, 404 wird wiederholt, Altbestand ueber die Adresse.</summary>
+    private static async Task ChessArbiterExtraAsync(ScenarioSteps s)
+    {
+        await using (var db = s.NewDb())
+        {
+            // Altbestand: Adresse im Vermerk, aber noch keine Fassung — gilt als geholt.
+            var old = new TournamentDirectoryEntry
+            {
+                PublicId = "pl2026-6003", Name = "Altbestand Mit Adresse", Federation = "POL",
+                StartDate = Soon.AddDays(8), EndDate = Soon.AddDays(8), ChessArbiterDetailVersion = 0,
+            };
+            old.Sources.Add(new TournamentDirectorySource
+            {
+                Kind = DirectorySourceKind.PolishChessFederation, ExternalId = "2026/ti_6003",
+                Url = "https://www.chessarbiter.com/turnieje/2026/ti_6003/",
+            });
+            // Fassung alt, keine Adresse: wird genau einmal nachgefragt.
+            var stale = new TournamentDirectoryEntry
+            {
+                PublicId = "pl2026-6004", Name = "Altbestand Ohne Adresse", Federation = "POL",
+                StartDate = Soon.AddDays(9), EndDate = Soon.AddDays(9), ChessArbiterDetailVersion = 0,
+            };
+            stale.Sources.Add(new TournamentDirectorySource
+            {
+                Kind = DirectorySourceKind.PolishChessFederation, ExternalId = "2026/ti_6004",
+            });
+            db.TournamentDirectoryEntries.AddRange(old, stale);
+            await db.SaveChangesAsync();
+        }
+
+        async Task Versions()
+        {
+            await using var db = s.NewDb();
+            foreach (var e in await db.TournamentDirectoryEntries.AsNoTracking()
+                         .Where(e => e.PublicId.StartsWith("pl2026-6")).OrderBy(e => e.PublicId).ToListAsync())
+                s.Note($"Fassung {e.PublicId}={e.ChessArbiterDetailVersion}");
+        }
+
+        s.Handler.DetailFor = q => q.Contains("id=6001") ? MutableHandler.NoContent
+            : q.Contains("id=6002") ? null
+            : """{"startDate":null,"endDate":null,"place":null,"timeControl":"3 min + 2 s","rounds":9,"system":"roundRobin","playerCount":10,"organizer":null}""";
+        RowSpec[] rows =
+        [
+            new("6001", "Leere Seite Turniej", Soon.AddDays(3), "Testhausen"),
+            new("6002", "Nicht Erreichbar Turniej", Soon.AddDays(4), null),
+            new("6003", "Altbestand Mit Adresse", Soon.AddDays(8), null),
+            new("6004", "Altbestand Ohne Adresse", Soon.AddDays(9), null),
+        ];
+        await s.Step("9 Detailseite leer, nicht erreichbar, Altbestand", rows);
+        await Versions();
+        await s.Step("10 nochmal: nur die nicht erreichbare wird wiederholt", rows);
+        await Versions();
+        s.Handler.DetailFor = null;
+        await s.Step("11 Detailseite wieder erreichbar", rows);
+        await Versions();
+    }
+
+    /// <summary>FFE: eine fehlende Turnierseite wird wiederholt, eine gelesene nicht.</summary>
+    private static async Task FfeExtraAsync(ScenarioSteps s)
+    {
+        s.Handler.DetailFor = q => q.Contains("id=7001") ? null
+            : """{"startDate":null,"endDate":null,"city":null,"department":null,"address":"2 place du Marche","timeControl":"1h30 + [30'']","rounds":5,"pairingSystem":"Berger"}""";
+        RowSpec[] rows =
+        [
+            new("7001", "Tournoi Sans Fiche", Soon.AddDays(3), "Testhausen"),
+            new("7002", "Tournoi Avec Fiche", Soon.AddDays(4), "Testhausen"),
+        ];
+        await s.Step("9 Turnierseite fehlt bei einer", rows);
+        await s.Step("10 nochmal: nur die fehlende wird wiederholt", rows);
+        s.Handler.DetailFor = null;
+        await s.Step("11 Turnierseite wieder da", rows);
+    }
+
+    private static Microsoft.Extensions.Configuration.IConfiguration Config(params (string Key, string Value)[] values) =>
+        new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(values.Select(v => new KeyValuePair<string, string?>(v.Key, v.Value))).Build();
+
 
     public static TheoryData<string> SourceNames() => [.. Sources.Keys];
 
@@ -204,6 +382,8 @@ public class ExternalSweepGoldenTests
             catch (Exception ex) { result = "WIRFT " + ex.GetType().Name + ": " + ex.GetBaseException().Message; }
             sb.AppendLine("== " + title);
             sb.AppendLine("Ergebnis: " + result);
+            if (spec.ShowDetailCalls) sb.AppendLine("Detailabrufe: " + string.Join(" ", handler.DetailCalls));
+            handler.DetailCalls.Clear();
             foreach (var line in log()) sb.AppendLine("Log " + line);
             await using var check = NewDb();
             await DumpAsync(check, sb);
@@ -231,6 +411,12 @@ public class ExternalSweepGoldenTests
         // Mehr als SaveEvery (25) Zeilen: der Zwischenstand-Speicher MITTEN im Lauf scheitert.
         await Step("8 Speichern scheitert mitten im Lauf", [.. Enumerable.Range(1, 30)
             .Select(i => new RowSpec($"30{i:00}", $"Massenturnier Nummer{i}", Soon.AddDays(2), null))]);
+
+        if (spec.Extra is not null)
+        {
+            poison.On = false;
+            await spec.Extra(new ScenarioSteps((t, r) => Step(t, r), NewDb, handler, l => sb.AppendLine(l)));
+        }
         return sb.ToString().Replace("\r\n", "\n");
     }
 
@@ -255,15 +441,29 @@ public class ExternalSweepGoldenTests
 
     private sealed class PoisonSwitch { public bool On; }
 
-    private sealed class MutableHandler : HttpMessageHandler
+    public sealed class MutableHandler : HttpMessageHandler
     {
         public string Body { get; set; } = "[]";
         public string? DetailBody { get; init; }
 
+        /// <summary>
+        /// Detailantwort je Abfrage (<c>?id=…</c>), wenn gesetzt — statt <see cref="DetailBody"/>.
+        /// <c>null</c> = 404, <see cref="NoContent"/> = 204.
+        /// </summary>
+        public Func<string, string?>? DetailFor { get; set; }
+
+        public const string NoContent = "<204>";
+
+        /// <summary>Die Abfragen der Detailabrufe seit dem letzten Lauf.</summary>
+        public List<string> DetailCalls { get; } = [];
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var detail = request.RequestUri?.AbsolutePath.EndsWith("/detail", StringComparison.Ordinal) == true;
-            var body = detail ? DetailBody : Body;
+            var query = request.RequestUri?.Query ?? "";
+            if (detail) DetailCalls.Add(query.TrimStart('?'));
+            var body = detail ? (DetailFor is { } f ? f(query) : DetailBody) : Body;
+            if (body == NoContent) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
             return Task.FromResult(body is null
                 ? new HttpResponseMessage(HttpStatusCode.NotFound)
                 : new HttpResponseMessage(HttpStatusCode.OK)
