@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.19", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z30/Z34/F8-013): the admin page is split into separate user, book and group tabs (dead styles removed), the sign-in service is divided into session store, permission, impersonation and login follow-up behind an unchanged facade, and shared building blocks no longer import from features (guard spec) — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z30/Z34/F8-013): Die Admin-Seite ist in eigene Nutzer-, Bücher- und Gruppen-Tabs zerlegt (tote Stile entfernt), der Anmeldedienst in Sitzungsspeicher, Rechte, Impersonation und Login-Nachlauf hinter unveränderter Fassade aufgeteilt, und geteilte Bausteine importieren nichts mehr aus Features (Wächter-Spec) — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.18", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z7 follow-up): the last four federation calendars (Ireland, Slovakia, Poland, France) now run through the shared sync loop with golden tests, so all fifteen use one loop — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Nachlauf Zerlegung Z7): Die letzten vier Verbandskalender (Irland, Slowakei, Polen, Frankreich) laufen über die gemeinsame Abgleichschleife mit Golden-Tests, damit alle fünfzehn über eine Schleife — keine sichtbare Änderung." },
   ]},
