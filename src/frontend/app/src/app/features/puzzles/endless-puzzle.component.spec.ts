@@ -3,6 +3,7 @@ import { Chess } from 'chess.js';
 import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
+import { makeEndlessRunStore } from '../../testing/endless-run-store';
 import { EndlessResultComponent } from './endless-result.component';
 import { EndlessConfigComponent } from './endless-config.component';
 import { By } from '@angular/platform-browser';
@@ -119,7 +120,6 @@ function makeComponent(params: Record<string, string> = {}, solveMode: any = mak
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
   const dialog: any = {};
   const translate: any = { instant: (k: string) => k };
-  const offline: any = { puzzleCount: 0, endlessRuns: 0 };
   const snackBar: any = { info: jasmine.createSpy('info') };
   const offlineQueue: any = { enqueue: jasmine.createSpy('enqueue') };
   const longSolve: any = { resolve: (s: number) => sub(s) };
@@ -128,8 +128,9 @@ function makeComponent(params: Record<string, string> = {}, solveMode: any = mak
   // Neuzuweisungen (c.puzzleService.getRandomBatch = …) wirken durch den Service hindurch.
   const chainService = new EndlessChainService(puzzleService);
   const worksheets: any = { sendAndNotify: jasmine.createSpy('sendAndNotify') };
+  const run = makeEndlessRunStore({ storage, puzzleService, auth, chainService });
   return new EndlessPuzzleComponent(
-    puzzleService, stockfish, storage, auth, prefs, router, route, dialog, translate, offline, snackBar, offlineQueue, longSolve, favorites, chainService, solveMode, worksheets
+    puzzleService, stockfish, auth, prefs, router, route, dialog, translate, snackBar, offlineQueue, longSolve, favorites, solveMode, worksheets, run
   );
 }
 
@@ -176,13 +177,13 @@ describe('EndlessPuzzleComponent analyse', () => {
   // war genullt). Der Config-Screen zeigte dann wieder den Resume-Banner.
   it('playAgain clears the finished run so it cannot be resumed again', () => {
     const c = makeComponent();
-    c.activeGameState = { lives: 1, solved: 5, level: 3, currentMinRating: 1800, maxRatingReached: 1800 };
+    c.run.activeGameState.set({ lives: 1, solved: 5, level: 3, currentMinRating: 1800, maxRatingReached: 1800 });
     c.state = 'GAME_OVER';
 
     c.playAgain();
 
     expect(c.state).toBe('CONFIG');
-    expect(c.activeGameState).toBeNull();
+    expect(c.run.activeGameState()).toBeNull();
   });
 });
 
@@ -261,7 +262,7 @@ describe('EndlessPuzzleComponent Server-Abgleich nach dem Start', () => {
     expect(c.config.startElo).toBe(1500);
     expect(c.config.worstTags).toBeFalse();
     expect(c.config.stockfishDepth).toBe(12);   // nicht per Link gesetzt → Server-Stand
-    expect(c.highscore).toBe(1800);
+    expect(c.run.profile.highscore()).toBe(1800);
   });
 
   it('Abgleich-Basis ist der gespeicherte Stand, nicht die Link-Werte („schwächste Themen" bleibt gespeichert)', () => {
@@ -271,7 +272,7 @@ describe('EndlessPuzzleComponent Server-Abgleich nach dem Start', () => {
       { ...sync.overrides, loadConfig: (d: any) => ({ ...d, ...stored }) });
     c.ngOnInit();
     sync.respond();
-    expect(c.storage.mergeServerData.calls.mostRecent().args[0].worstTags).toBeTrue();
+    expect(c.run['storage'].mergeServerData.calls.mostRecent().args[0].worstTags).toBeTrue();
     expect(c.config.worstTags).toBeFalse();     // in diesem Aufruf gilt weiter der Link
     expect(c.config.themes).toBe('fork');
   });
@@ -280,12 +281,12 @@ describe('EndlessPuzzleComponent Server-Abgleich nach dem Start', () => {
     const sync = delayedServerSync();
     const c = makeComponent({}, makeSolveMode(), sync.overrides);
     c.ngOnInit();
-    c.config = { startElo: 1500, themes: 'fork', stockfishDepth: 20 };
+    c.run.profile.config = { startElo: 1500, themes: 'fork', stockfishDepth: 20 };
     c.state = 'PLAYING';                        // z. B. ?start=1 mit schnellerer Rating-Range-Antwort
     sync.respond();
     expect(c.config.themes).toBe('fork');
     expect(c.config.stockfishDepth).toBe(20);
-    expect(c.highscore).toBe(1800);
+    expect(c.run.profile.highscore()).toBe(1800);
   });
 });
 
@@ -359,8 +360,8 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     const c = makeComponent();
     c.startGame();
     expect(c['puzzleService'].getRandomBatch).toHaveBeenCalled();
-    expect(c['chain'].length).toBe(3);
-    expect(c.chainIndex).toBe(0);
+    expect(c.run.chain.length).toBe(3);
+    expect(c.run.chainIndex()).toBe(0);
     expect(c.puzzle.id).toBe(100);   // chain[0]
     c.ngOnDestroy();
   });
@@ -369,7 +370,7 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
     const c = makeComponent();
     c.startGame();
     c.continueAfterSolve();
-    expect(c.chainIndex).toBe(1);
+    expect(c.run.chainIndex()).toBe(1);
     expect(c.puzzle.id).toBe(101);   // chain[1]
     c.ngOnDestroy();
   });
@@ -377,12 +378,12 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
   it('Ein Fehler kostet ein Leben UND rückt weiter (Gauntlet)', () => {
     const c = makeComponent();
     c.startGame();
-    expect(c.lives).toBe(3);
+    expect(c.run.lives()).toBe(3);
     c['loseLife']();                 // Fehler: Leben -1, Status FAILED
-    expect(c.lives).toBe(2);
+    expect(c.run.lives()).toBe(2);
     expect(c.state).toBe('FAILED');
     c.continueAfterWrong();          // weiter zum nächsten (höheren) Puzzle
-    expect(c.chainIndex).toBe(1);
+    expect(c.run.chainIndex()).toBe(1);
     expect(c.puzzle.id).toBe(101);
     c.ngOnDestroy();
   });
@@ -390,46 +391,46 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
   it('continueAfterWrong bei 0 Leben beendet das Spiel (Game Over)', () => {
     const c = makeComponent();
     c.startGame();
-    c.lives = 0;
+    c.run.lives.set(0);
     c.continueAfterWrong();
     expect(c.state).toBe('GAME_OVER');
-    expect(c.chainIndex).toBe(0);    // kein Weiterrücken mehr
+    expect(c.run.chainIndex()).toBe(0);    // kein Weiterrücken mehr
     c.ngOnDestroy();
   });
 
   it('retry erlaubt auch beim letzten verlorenen Leben einen Neuversuch desselben Puzzles', () => {
     const c = makeComponent();
     c.startGame();
-    c.lives = 1;
+    c.run.lives.set(1);
     c['loseLife']();                 // letztes Leben weg → lives 0, Status FAILED
-    expect(c.lives).toBe(0);
+    expect(c.run.lives()).toBe(0);
     expect(c.state).toBe('FAILED');
 
     c.retry();                       // früher: no-op bei 0 Leben; jetzt: Puzzle erneut aufsetzen
     expect(c.state).not.toBe('FAILED');   // wieder spielbar (SETUP/AWAITING)
-    expect(c.chainIndex).toBe(0);    // kein Weiterrücken
+    expect(c.run.chainIndex()).toBe(0);    // kein Weiterrücken
     expect(c.puzzle.id).toBe(100);   // dasselbe Puzzle, an dem der Run scheiterte
-    expect(c.lives).toBe(0);         // Retry kostet kein weiteres Leben
+    expect(c.run.lives()).toBe(0);         // Retry kostet kein weiteres Leben
     c.ngOnDestroy();
   });
 
   it('Lösen eines Retry bei 0 Leben belebt den Lauf NICHT (Game Over statt Weiterspielen mit 0 Herzen)', () => {
     const c = makeComponent();
     c.startGame();
-    c.lives = 1;
+    c.run.lives.set(1);
     c['loseLife']();                 // letztes Leben weg → lives 0, Status FAILED
     c.retry();                       // tödliches Puzzle erneut spielbar, lives bleibt 0
-    expect(c.lives).toBe(0);
+    expect(c.run.lives()).toBe(0);
     c.continueAfterSolve();          // Retry gelöst → „Weiter"
     expect(c.state).toBe('GAME_OVER');
-    expect(c.chainIndex).toBe(0);    // kein Weiterrücken trotz gelöstem Retry
+    expect(c.run.chainIndex()).toBe(0);    // kein Weiterrücken trotz gelöstem Retry
     c.ngOnDestroy();
   });
 
   it('Kette offline durchgespielt → „You win"', () => {
     const c = makeComponent();
-    c['chain'] = [{ ...CHAIN[0] }];
-    c.chainIndex = 1;                // hinter dem Kettenende
+    c.run.chain = [{ ...CHAIN[0] }];
+    c.run.chainIndex.set(1);                // hinter dem Kettenende
     withOffline(() => c['loadCurrent']());
     expect(c.state).toBe('WON');
     c.ngOnDestroy();
@@ -439,11 +440,11 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
   // brach der Start mit „keine neuen Puzzles" ab, obwohl die Kette vorab geladen im Speicher lag.
   it('Server nicht erreichbar beim Start → Lauf startet aus der vorab geladenen Kette', () => {
     const c = makeComponent();
-    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c.run.offlinePool = CHAIN.map(p => ({ ...p }));
     c['puzzleService'].getRandomBatch = jasmine.createSpy('getRandomBatch')
       .and.returnValue(throwError(() => new Error('server down')));
     c.startGame();
-    expect(c['chain'].length).toBe(3);
+    expect(c.run.chain.length).toBe(3);
     expect(c.puzzle.id).toBe(100);
     expect(c.state).not.toBe('CONFIG');
     expect(c['snackbar'].info).not.toHaveBeenCalledWith('endless.loadFailed', jasmine.anything());
@@ -452,7 +453,7 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
 
   it('Server nicht erreichbar beim Start und KEINE vorab geladene Kette → ehrlicher Abbruch', () => {
     const c = makeComponent();
-    c['offlinePool'] = [];
+    c.run.offlinePool = [];
     c['puzzleService'].getRandomBatch = jasmine.createSpy('getRandomBatch')
       .and.returnValue(throwError(() => new Error('server down')));
     c.startGame();
@@ -463,11 +464,11 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
 
   it('Fortsetzen stellt bei passendem Seed das aktuelle Ketten-Puzzle wieder her', () => {
     const c = makeComponent();
-    c['storage'].loadChainSeed = () => 'seed-xyz';
-    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100 };
+    c.run['storage'].loadChainSeed = () => 'seed-xyz';
+    c.run.offlinePool = CHAIN.map(p => ({ ...p }));
+    c.run.activeGameState.set({ lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100 });
     c.resumeGame();
-    expect(c.chainIndex).toBe(2);
+    expect(c.run.chainIndex()).toBe(2);
     expect(c.puzzle.id).toBe(102);   // exakt dasselbe Puzzle wie vor dem Refresh
     c.ngOnDestroy();
   });
@@ -475,12 +476,12 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
   it('startGame vergibt einen eindeutigen Seed und schreibt Seed + Ketten-IDs in den Session-Record', () => {
     const c = makeComponent();
     const sessions: any[] = [];
-    c['storage'].recordSessionToServer = (s: any) => { sessions.push(s); return sub(null); };
+    c.run['storage'].recordSessionToServer = (s: any) => { sessions.push(s); return sub(null); };
     c.startGame();
-    expect(c['seed']).toBeTruthy();
-    const seed = c['seed'];
+    expect(c.run.seed).toBeTruthy();
+    const seed = c.run.seed;
     // Lauf beenden (Game Over) → Session wird mit Seed + Ketten-IDs aufgezeichnet.
-    c.lives = 0;
+    c.run.lives.set(0);
     c.continueAfterWrong();
     expect(c.state).toBe('GAME_OVER');
     expect(sessions.length).toBe(1);
@@ -493,7 +494,7 @@ describe('EndlessPuzzleComponent gauntlet (Kette)', () => {
 describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
   function trackSessions(c: any): any[] {
     const sessions: any[] = [];
-    c['storage'].recordSessionToServer = (s: any) => { sessions.push(s); return sub(null); };
+    c.run['storage'].recordSessionToServer = (s: any) => { sessions.push(s); return sub(null); };
     return sessions;
   }
 
@@ -501,7 +502,7 @@ describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
     const c = makeComponent();
     const sessions = trackSessions(c);
     c.startGame();
-    c.lives = 1;
+    c.run.lives.set(1);
     c['loseLife']();                 // letztes Leben weg → lives 0, FAILED, kein „Weiter"
     expect(c.state).toBe('FAILED');
     expect(sessions.length).toBe(0);   // wartet normalerweise auf den Continue-Klick (endGame)
@@ -513,7 +514,7 @@ describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
     const c = makeComponent();
     const sessions = trackSessions(c);
     c.startGame();
-    c.lives = 0;
+    c.run.lives.set(0);
     c.continueAfterWrong();          // endGame → 1 Aufzeichnung
     expect(sessions.length).toBe(1);
     c.ngOnDestroy();                 // Verlassen darf KEINEN zweiten Post auslösen
@@ -523,8 +524,8 @@ describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
   it('zeichnet nichts auf, wenn nur ein Lauf aus der History angesehen wird', () => {
     const c = makeComponent();
     const sessions = trackSessions(c);
-    c.historyView = true;
-    c.lives = 0;                     // History-Detail zeigt einen abgeschlossenen (0-Leben-)Lauf
+    c.run.historyView.set(true);
+    c.run.lives.set(0);                     // History-Detail zeigt einen abgeschlossenen (0-Leben-)Lauf
     c.ngOnDestroy();
     expect(sessions.length).toBe(0);
   });
@@ -533,7 +534,7 @@ describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
     const c = makeComponent();
     const sessions = trackSessions(c);
     c.startGame();
-    c.lives = 1;
+    c.run.lives.set(1);
     c['loseLife']();
     c.onPageHide();
     expect(sessions.length).toBe(1);
@@ -563,17 +564,17 @@ describe('EndlessPuzzleComponent gespeicherter Lauf nach dem Fortsetzen', () => 
 
   function trackRecords(c: any): { session: any; puzzles: any[] }[] {
     const calls: { session: any; puzzles: any[] }[] = [];
-    c['storage'].recordSessionToServer = (session: any, puzzles: any[] = []) => { calls.push({ session, puzzles }); return sub(null); };
+    c.run['storage'].recordSessionToServer = (session: any, puzzles: any[] = []) => { calls.push({ session, puzzles }); return sub(null); };
     return calls;
   }
 
   it('schickt beim Lauf-Ende ALLE Puzzles mit, auch die vor dem Fortsetzen gespielten', () => {
     const c = makeComponent();
     const calls = trackRecords(c);
-    c['storage'].loadChainSeed = () => 'seed-xyz';
-    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
-    c.activeGameState = { lives: 1, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100,
-      puzzleAttempts: OLD_ATTEMPTS.map(p => ({ ...p })) };
+    c.run['storage'].loadChainSeed = () => 'seed-xyz';
+    c.run.offlinePool = CHAIN.map(p => ({ ...p }));
+    c.run.activeGameState.set({ lives: 1, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100,
+      puzzleAttempts: OLD_ATTEMPTS.map(p => ({ ...p })) });
 
     c.resumeGame();
     expect(c.puzzle.id).toBe(102);
@@ -592,7 +593,7 @@ describe('EndlessPuzzleComponent gespeicherter Lauf nach dem Fortsetzen', () => 
   it('der Spielstand trägt Start-/Endzeit je Puzzle mit', () => {
     const c = makeComponent();
     const states: any[] = [];
-    c['storage'].saveActiveGameLocal = (g: any) => states.push(g);
+    c.run['storage'].saveActiveGameLocal = (g: any) => states.push(g);
     c.startGame();
 
     c['loseLife']();                 // Fehler bei 3 Leben → Spielstand wird gesichert
@@ -607,8 +608,8 @@ describe('EndlessPuzzleComponent gespeicherter Lauf nach dem Fortsetzen', () => 
   it('Archivieren eines offenen Laufs nimmt dessen Puzzles in den gespeicherten Lauf mit', () => {
     const c = makeComponent();
     const calls = trackRecords(c);
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100,
-      puzzleAttempts: OLD_ATTEMPTS.map(p => ({ ...p })) };
+    c.run.activeGameState.set({ lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100,
+      puzzleAttempts: OLD_ATTEMPTS.map(p => ({ ...p })) });
 
     c.archiveAndStartNew();
 
@@ -628,7 +629,7 @@ describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
   function started(): { c: any; states: any[] } {
     const c = makeComponent();
     const states: any[] = [];
-    c['storage'].saveActiveGameLocal = (g: any) => states.push(g);
+    c.run['storage'].saveActiveGameLocal = (g: any) => states.push(g);
     c.startGame();                   // Kette 100/101/102, Puzzle 100
     return { c, states };
   }
@@ -636,10 +637,10 @@ describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
   /** Neue Instanz wie nach Neuladen bzw. ?resume=1, mit dem zuletzt gesicherten Spielstand. */
   function resumed(state: any, live: any = null): any {
     const d = makeComponent();
-    d['storage'].loadChainSeed = () => state.seed;
-    d['storage'].loadLiveElapsed = () => live;
-    d['offlinePool'] = CHAIN.map(p => ({ ...p }));
-    d.activeGameState = state;
+    d.run['storage'].loadChainSeed = () => state.seed;
+    d.run['storage'].loadLiveElapsed = () => live;
+    d.run.offlinePool = CHAIN.map(p => ({ ...p }));
+    d.run.activeGameState.set(state);
     d.resumeGame();
     return d;
   }
@@ -655,9 +656,9 @@ describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
     expect(state.chainIndex).toBe(1);
     expect(state.solved).toBe(1);
     const d = resumed(state);
-    expect(d.chainIndex).toBe(1);
+    expect(d.run.chainIndex()).toBe(1);
     expect(d.puzzle.id).toBe(101);
-    expect(d.solved).toBe(1);
+    expect(d.run.solved()).toBe(1);
     d.ngOnDestroy();
   });
 
@@ -668,9 +669,9 @@ describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
     c.ngOnDestroy();
 
     const d = resumed(state);
-    expect(d.chainIndex).toBe(1);
+    expect(d.run.chainIndex()).toBe(1);
     expect(d.puzzle.id).toBe(101);
-    expect(d.lives).toBe(2);
+    expect(d.run.lives()).toBe(2);
     d.ngOnDestroy();
   });
 
@@ -698,10 +699,10 @@ describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
   it('Analyse nach einem Fehler: Rückkehr beim nächsten Puzzle, dessen Zeit bei 0 beginnt', () => {
     const { c, states } = started();
     const lives: any[] = [];
-    c['storage'].saveLiveElapsed = (e: any) => lives.push(e);
+    c.run['storage'].saveLiveElapsed = (e: any) => lives.push(e);
     c['loseLife']();
-    c['puzzleStopwatch'].start(40);  // 40 s am gescheiterten Puzzle
-    c['puzzleStartTime'] = Date.now();
+    c.run.timer.puzzleStopwatch.start(40);  // 40 s am gescheiterten Puzzle
+    c.run.timer.puzzleStartTime = Date.now();
     c.analyzeCurrentPuzzle();
     c.ngOnDestroy();                 // sichert den Live-Zeitstand
     const state = states.filter(Boolean).pop();
@@ -709,20 +710,20 @@ describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
     expect(state.chainIndex).toBe(1);                   // nicht 2: Zeiger rückte schon beim Fehler vor
     const d = resumed(state, lives[lives.length - 1]);
     expect(d.puzzle.id).toBe(101);
-    expect(d['resumePuzzleSeconds']).toBe(0);           // die 40 s gehören zum alten Puzzle
+    expect(d.run.timer.resumePuzzleSeconds).toBe(0);           // die 40 s gehören zum alten Puzzle
     d.ngOnDestroy();
   });
 
   it('Ergebnis am letzten Puzzle der lokalen Kette: Fortsetzen verlängert sie statt neu zu würfeln', () => {
     const d = makeComponent();
     const pool = CHAIN.map(p => ({ ...p }));
-    d['storage'].loadChainSeed = () => 'seed-xyz';
-    d['offlinePool'] = pool;
-    d.activeGameState = { lives: 2, solved: 3, chainIndex: 3, seed: 'seed-xyz', maxRatingReached: 1100 };
+    d.run['storage'].loadChainSeed = () => 'seed-xyz';
+    d.run.offlinePool = pool;
+    d.run.activeGameState.set({ lives: 2, solved: 3, chainIndex: 3, seed: 'seed-xyz', maxRatingReached: 1100 });
     d.resumeGame();
-    expect(d['chain'][0]).toBe(pool[0]);                // gespielte Kette bleibt (kein Neuaufbau ab 0)
-    expect(d['chain'].length).toBe(6);                  // um einen Block verlängert
-    expect(d.chainIndex).toBe(3);
+    expect(d.run.chain[0]).toBe(pool[0]);                // gespielte Kette bleibt (kein Neuaufbau ab 0)
+    expect(d.run.chain.length).toBe(6);                  // um einen Block verlängert
+    expect(d.run.chainIndex()).toBe(3);
     d.ngOnDestroy();
   });
 });
@@ -737,29 +738,29 @@ describe('EndlessPuzzleComponent prefetch race (runGeneration)', () => {
 
   it('does NOT overwrite the pool once a run has started', () => {
     const c = makeComponent();
-    c.ensureWorstThemes = (cb: any) => cb();
+    c.run.profile.ensureWorstThemes = (cb: any) => cb();
     const ctrl = controllable();
     c.puzzleService.getRandomBatch = () => ctrl.obs;
-    c.offlinePool = [];
+    c.run.offlinePool = [];
 
-    c.prefetchRun();        // merkt sich runGeneration
-    c.runGeneration++;      // inzwischen ist ein Run gestartet
+    c.run.prefetchRun();        // merkt sich runGeneration
+    c.run.runGeneration++;      // inzwischen ist ein Run gestartet
     ctrl.emit([{ id: 1 }]); // späte Prefetch-Antwort
 
-    expect(c.offlinePool).toEqual([]);   // Pool des Runs bleibt unangetastet
+    expect(c.run.offlinePool).toEqual([]);   // Pool des Runs bleibt unangetastet
   });
 
   it('fills the pool when no run started in the meantime', () => {
     const c = makeComponent();
-    c.ensureWorstThemes = (cb: any) => cb();
+    c.run.profile.ensureWorstThemes = (cb: any) => cb();
     const ctrl = controllable();
     c.puzzleService.getRandomBatch = () => ctrl.obs;
-    c.offlinePool = [];
+    c.run.offlinePool = [];
 
-    c.prefetchRun();
+    c.run.prefetchRun();
     ctrl.emit([{ id: 9 }]);
 
-    expect(c.offlinePool.length).toBe(1);
+    expect(c.run.offlinePool.length).toBe(1);
   });
 });
 
@@ -782,7 +783,7 @@ describe('EndlessPuzzleComponent recordAttempt', () => {
 describe('EndlessPuzzleComponent Live-Zeitstand (Refresh mitten im Puzzle)', () => {
   it('onSolvingBegins setzt eine fortzusetzende Puzzle-Zeit genau einmal fort', () => {
     const c = makeComponent();
-    (c as any).resumePuzzleSeconds = 12;
+    (c as any).run.timer.resumePuzzleSeconds = 12;
     (c as any).onSolvingBegins();
     expect(c.elapsedSeconds).toBe(12);          // Zwischenzeit fortgesetzt
     (c as any).onSolvingBegins();
@@ -793,56 +794,56 @@ describe('EndlessPuzzleComponent Live-Zeitstand (Refresh mitten im Puzzle)', () 
   it('resumeGame übernimmt den Live-Stand desselben Laufs (Session-Maximum + Puzzle-Zeit)', () => {
     const c = makeComponent();
     spyOn(c as any, 'loadCurrent');             // Kettenaufbau hier irrelevant
-    c['storage'].loadChainSeed = () => 'seed-xyz';
-    c['offlinePool'] = CHAIN.map((p: any) => ({ ...p }));
-    c['storage'].loadLiveElapsed = () => ({ seed: 'seed-xyz', chainIndex: 2, session: 95, puzzle: 12 });
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 };
+    c.run['storage'].loadChainSeed = () => 'seed-xyz';
+    c.run.offlinePool = CHAIN.map((p: any) => ({ ...p }));
+    c.run['storage'].loadLiveElapsed = () => ({ seed: 'seed-xyz', chainIndex: 2, session: 95, puzzle: 12 });
+    c.run.activeGameState.set({ lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 });
     c.resumeGame();
-    expect(c.sessionSeconds).toBe(95);                    // Live-Stand (jünger) schlägt Sync-Punkt (80)
-    expect((c as any).resumePuzzleSeconds).toBe(12);      // gleiches Puzzle → Zwischenzeit wird fortgesetzt
+    expect(c.run.sessionSeconds()).toBe(95);                    // Live-Stand (jünger) schlägt Sync-Punkt (80)
+    expect((c as any).run.timer.resumePuzzleSeconds).toBe(12);      // gleiches Puzzle → Zwischenzeit wird fortgesetzt
     c.ngOnDestroy();
   });
 
   it('Live-Stand eines anderen Laufs (Seed) wird ignoriert', () => {
     const c = makeComponent();
     spyOn(c as any, 'loadCurrent');
-    c['storage'].loadChainSeed = () => 'seed-xyz';
-    c['offlinePool'] = CHAIN.map((p: any) => ({ ...p }));
-    c['storage'].loadLiveElapsed = () => ({ seed: 'anderer-lauf', chainIndex: 2, session: 999, puzzle: 50 });
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 };
+    c.run['storage'].loadChainSeed = () => 'seed-xyz';
+    c.run.offlinePool = CHAIN.map((p: any) => ({ ...p }));
+    c.run['storage'].loadLiveElapsed = () => ({ seed: 'anderer-lauf', chainIndex: 2, session: 999, puzzle: 50 });
+    c.run.activeGameState.set({ lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 });
     c.resumeGame();
-    expect(c.sessionSeconds).toBe(80);
-    expect((c as any).resumePuzzleSeconds).toBe(0);
+    expect(c.run.sessionSeconds()).toBe(80);
+    expect((c as any).run.timer.resumePuzzleSeconds).toBe(0);
     c.ngOnDestroy();
   });
 
   it('bei anderer Ketten-Position wird nur die Session-Zeit angehoben, nicht die Puzzle-Zeit', () => {
     const c = makeComponent();
     spyOn(c as any, 'loadCurrent');
-    c['storage'].loadChainSeed = () => 'seed-xyz';
-    c['offlinePool'] = CHAIN.map((p: any) => ({ ...p }));
-    c['storage'].loadLiveElapsed = () => ({ seed: 'seed-xyz', chainIndex: 1, session: 95, puzzle: 12 });
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 };
+    c.run['storage'].loadChainSeed = () => 'seed-xyz';
+    c.run.offlinePool = CHAIN.map((p: any) => ({ ...p }));
+    c.run['storage'].loadLiveElapsed = () => ({ seed: 'seed-xyz', chainIndex: 1, session: 95, puzzle: 12 });
+    c.run.activeGameState.set({ lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', sessionSeconds: 80, maxRatingReached: 1100 });
     c.resumeGame();
-    expect(c.sessionSeconds).toBe(95);
-    expect((c as any).resumePuzzleSeconds).toBe(0);       // anderes Puzzle → nicht fortsetzen
+    expect(c.run.sessionSeconds()).toBe(95);
+    expect((c as any).run.timer.resumePuzzleSeconds).toBe(0);       // anderes Puzzle → nicht fortsetzen
     c.ngOnDestroy();
   });
 
   it('der Sekunden-Tick persistiert den Live-Stand über den Storage', () => {
     const c = makeComponent();
     const saved: any[] = [];
-    c['storage'].saveLiveElapsed = (e: any) => saved.push(e);
-    (c as any).seed = 'seed-abc';
-    (c as any).chainIndex = 3;
-    c.sessionSeconds = 41;
-    (c as any).saveLiveElapsedNow();
+    c.run['storage'].saveLiveElapsed = (e: any) => saved.push(e);
+    (c as any).run.seed = 'seed-abc';
+    (c as any).run.chainIndex.set(3);
+    c.run.sessionSeconds.set(41);
+    (c as any).run.saveLiveElapsedNow();
     expect(saved.length).toBe(1);
     expect(saved[0].seed).toBe('seed-abc');
     expect(saved[0].chainIndex).toBe(3);
     expect(saved[0].session).toBe(41);
-    (c as any).seed = '';
-    (c as any).saveLiveElapsedNow();                      // ohne Lauf-Seed wird nichts geschrieben
+    (c as any).run.seed = '';
+    (c as any).run.saveLiveElapsedNow();                      // ohne Lauf-Seed wird nichts geschrieben
     expect(saved.length).toBe(1);
   });
 });
@@ -1002,9 +1003,9 @@ describe('EndlessPuzzleComponent Tiefen-Regler im Lauf (F2-011)', () => {
   it('schickt während des Laufs den gesicherten Spielstand mit statt null', () => {
     const c = makeComponent();
     c.state = 'AWAITING_USER_MOVE';
-    c.lives = 2;
-    c.storage.loadActiveGameLocal = () => ({ ...GAME });
-    const save = spyOn(c.storage, 'saveProgressToServer');
+    c.run.lives.set(2);
+    c.run['storage'].loadActiveGameLocal = () => ({ ...GAME });
+    const save = spyOn(c.run['storage'], 'saveProgressToServer');
 
     c.config.stockfishDepth = 20;
     c.onDepthChange();
@@ -1016,8 +1017,8 @@ describe('EndlessPuzzleComponent Tiefen-Regler im Lauf (F2-011)', () => {
   it('außerhalb eines Laufs bleibt es bei null (startGame räumt so den alten Lauf ab)', () => {
     const c = makeComponent();
     c.state = 'CONFIG';
-    c.storage.loadActiveGameLocal = () => ({ ...GAME });
-    const save = spyOn(c.storage, 'saveProgressToServer');
+    c.run['storage'].loadActiveGameLocal = () => ({ ...GAME });
+    const save = spyOn(c.run['storage'], 'saveProgressToServer');
 
     c.onDepthChange();
 
@@ -1032,14 +1033,14 @@ describe('EndlessPuzzleComponent Tiefen-Regler im Lauf (F2-011)', () => {
       saveActiveGameLocal: (s: any) => { local = s ? { ...s } : null; },
       loadChainSeed: () => 'S',
     });
-    c['offlinePool'] = Array.from({ length: 30 }, (_, i) => ({
+    c.run.offlinePool = Array.from({ length: 30 }, (_, i) => ({
       id: 200 + i, lichessId: 'p' + i, fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 700 + i * 10,
     }));
-    c.activeGameState = { lives: 1, solved: 9, level: 10, chainIndex: 10, seed: 'S', maxRatingReached: 1100 };
-    const save = spyOn(c.storage, 'saveProgressToServer');
+    c.run.activeGameState.set({ lives: 1, solved: 9, level: 10, chainIndex: 10, seed: 'S', maxRatingReached: 1100 });
+    const save = spyOn(c.run['storage'], 'saveProgressToServer');
 
     c.resumeGame();
-    expect(c.chainIndex).toBe(10);
+    expect(c.run.chainIndex()).toBe(10);
     c.onDepthChange();
 
     const sent: any = save.calls.mostRecent().args[2];
@@ -1055,29 +1056,29 @@ describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
   /** Kein Erst-Lauf (eine Session in der Historie) → adaptive Kurve; translate gibt die Parameter mit aus. */
   function adaptive(): any {
     const c = makeComponent();
-    c.sessionHistory = [{ timestamp: 1, config: { ...c.config }, totalSolved: 5, maxRating: 1200, durationSeconds: 60, mistakeAtRatings: [1000] }];
+    c.run.profile.sessionHistory.set([{ timestamp: 1, config: { ...c.config }, totalSolved: 5, maxRating: 1200, durationSeconds: 60, mistakeAtRatings: [1000] }]);
     c.translate.instant = (k: string, p?: object) => (p ? `${k} ${JSON.stringify(p)}` : k);
     return c;
   }
   const label = (phase: number, step: number) => `endless.game.phaseLabel ${JSON.stringify({ phase, step })}`;
   const stepAt = (c: any, i: number) => {
-    const s = c.config.startElo, t1 = c.fasttrackAvgFirst, t2 = c.fasttrackAvgSecond;
+    const s = c.config.startElo, t1 = c.fasttrack.avgFirst, t2 = c.fasttrack.avgSecond;
     return chainRatingAt(i + 1, s, t1, t2) - chainRatingAt(i, s, t1, t2);
   };
 
   it('nennt ab Phase 3 den echten Schritt der Kette (CHAIN_FLAT_STEP, nicht 20)', () => {
     const c = adaptive();
-    c.chainIndex = 30;
+    c.run.chainIndex.set(30);
     expect(c.currentPhaseLabel).toBe(label(3, CHAIN_FLAT_STEP));
   });
 
   it('Phase 1/2: Schritt = Anstieg der Kette zum nächsten Puzzle, Grenzen bei CHAIN_T1_INDEX/CHAIN_T2_INDEX', () => {
     const c = adaptive();
     for (const [i, phase] of [[0, 1], [CHAIN_T1_INDEX - 1, 1], [CHAIN_T1_INDEX, 2], [CHAIN_T2_INDEX - 1, 2], [CHAIN_T2_INDEX, 3]]) {
-      c.chainIndex = i;
+      c.run.chainIndex.set(i);
       expect(c.currentPhaseLabel).withContext(`chainIndex ${i}`).toBe(label(phase, stepAt(c, i)));
     }
-    c.chainIndex = 0;
+    c.run.chainIndex.set(0);
     expect(stepAt(c, 0)).not.toBe(c.fasttrack.phase1Step);   // die alte „/5"-Anzeige lag daneben
   });
 
@@ -1087,9 +1088,9 @@ describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
       p1End: CHAIN_T1_INDEX, p2Start: CHAIN_T1_INDEX + 1, p2End: CHAIN_T2_INDEX,
       p3Start: CHAIN_T2_INDEX + 1, flatStep: CHAIN_FLAT_STEP,
     });
-    c.chainIndex = c.phaseHelp.p1End - 1;      // letztes Puzzle von Phase 1 laut Hilfe
+    c.run.chainIndex.set(c.phaseHelp.p1End - 1);      // letztes Puzzle von Phase 1 laut Hilfe
     expect(c.currentPhaseLabel).toContain('"phase":1');
-    c.chainIndex = c.phaseHelp.p3Start - 1;    // erstes Puzzle von Phase 3 laut Hilfe
+    c.run.chainIndex.set(c.phaseHelp.p3Start - 1);    // erstes Puzzle von Phase 3 laut Hilfe
     expect(c.currentPhaseLabel).toContain('"phase":3');
   });
 
@@ -1119,7 +1120,7 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
       provideTranslateService({ fallbackLang: 'en' }),
       { provide: PuzzleService, useValue: fake.puzzleService },
       { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
-      { provide: EndlessStorageService, useValue: fake.storage },
+      { provide: EndlessStorageService, useValue: fake.run['storage'] },
       { provide: AuthService, useValue: { isLoggedIn: false } },
       { provide: PreferencesService, useValue: fake.prefs },
       { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/puzzles/endless' } },
@@ -1130,7 +1131,7 @@ function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; impo
       { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
       { provide: LongSolveService, useValue: { resolve: (x: number) => sub(x) } },
       { provide: FavoritesService, useValue: { contains: () => sub(false), add: () => sub(true), remove: () => sub(false), count: () => sub(0), list: () => sub([]) } },
-      { provide: EndlessChainService, useValue: fake.chainService },
+      { provide: EndlessChainService, useValue: fake.run['chainService'] },
       { provide: SolveModeService, useValue: makeSolveMode() },
       { provide: WorksheetService, useValue: {} },
       ...(extra.providers ?? []),
@@ -1193,7 +1194,7 @@ describe('EndlessPuzzleComponent a11y: Auto-Knopf und Leben (UX-047)', () => {
   });
 
   it('im Lauf: die Herzen nennen die verbleibenden Leben', () => {
-    const el = render(c => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.lives = 2; });
+    const el = render(c => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.run.lives.set(2); });
     const hearts = el.querySelector('.qs-hearts')!;
     expect(hearts.getAttribute('role')).toBe('img');
     expect(hearts.getAttribute('aria-label')).toBe('2 of 3 lives');
@@ -1270,7 +1271,7 @@ describe('EndlessPuzzleComponent b1 (Fortsetzen, Phase)', () => {
   beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
 
   it('b1-rk-endless-fortsetzen-kasten: bei offenem Lauf kein zweiter gefüllter Startknopf', () => {
-    const el = renderEndless(c => { c.activeGameState = { level: 0, solved: 4, lives: 2, maxRatingReached: 1720 }; });
+    const el = renderEndless(c => { c.run.activeGameState.set({ level: 0, solved: 4, lives: 2, maxRatingReached: 1720 }); });
     expect(el.querySelector('.resume-banner')).not.toBeNull();
     expect(el.querySelector('.start-btn-top')).withContext('„Neues Spiel“ nur über „Archivieren & neues Spiel“').toBeNull();
     expect(el.querySelectorAll('.resume-actions button').length).toBe(2);
@@ -1279,12 +1280,12 @@ describe('EndlessPuzzleComponent b1 (Fortsetzen, Phase)', () => {
   it('b1-rk-endless-fortsetzen-kasten: ohne offenen Lauf (oder ohne Leben) bleibt der Startknopf', () => {
     expect(renderEndless(() => {}).querySelector('.start-btn-top')).not.toBeNull();
     TestBed.resetTestingModule();
-    expect(renderEndless(c => { c.activeGameState = { level: 3, solved: 9, lives: 0, maxRatingReached: 1800 }; })
+    expect(renderEndless(c => { c.run.activeGameState.set({ level: 3, solved: 9, lives: 0, maxRatingReached: 1800 }); })
       .querySelector('.start-btn-top')).not.toBeNull();
   });
 
   it('b1-rk-endless-phase-jargon: im Lauf keine Zeile „Phase 1 (Schritt 63)“', () => {
-    const el = renderEndless(c => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.lives = 3; });
+    const el = renderEndless(c => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.run.lives.set(3); });
     expect(el.querySelector('.stats-card')).not.toBeNull();
     expect(el.querySelector('.phase-indicator')).toBeNull();
     expect(el.textContent).not.toContain('endless.game.phaseLabel');
@@ -1329,7 +1330,7 @@ describe('EndlessPuzzleComponent d5 (Themen löschen, Lauf-Symbol)', () => {
 describe('EndlessPuzzleComponent d4 (Kennzahlen-Leiste, Tiefen-Regler)', () => {
   beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
 
-  const running = (c: any) => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.lives = 3; c.level = 0; };
+  const running = (c: any) => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.run.lives.set(3); c.run.level.set(0); };
 
   // d4-rk-endless-level-flagge-doppelt
   it('Stufen-Pille ohne Fähnchen (gehört „Aufgeben“) und ohne englisches „Lv“', () => {
@@ -1372,7 +1373,7 @@ describe('EndlessPuzzleComponent Matt nach Fehlzug', () => {
     c.orientation = 'white';
     c.chess = new Chess('rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3');
     c.handleFailed();
-    expect(c.lives).toBe(2);
+    expect(c.run.lives()).toBe(2);
     expect(c.state).toBe('FAILED');
     expect(c.solutionHidden).toBeTrue();
     expect(c.reviewMode).toBeFalse();
@@ -1393,9 +1394,9 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
   ];
   const finished = (c: any) => {
     c.state = 'GAME_OVER';
-    c.maxRatingReached = 1650; c.solved = 4; c.level = 6; c.lives = 0; c.sessionSeconds = 125;
-    c.currentSessionMistakes = [1500, 1600];
-    c.currentSessionPuzzles = PUZZLES.map(p => ({ ...p }));
+    c.run.maxRatingReached.set(1650); c.run.solved.set(4); c.run.level.set(6); c.run.lives.set(0); c.run.sessionSeconds.set(125);
+    c.run.recorder.mistakes = [1500, 1600];
+    c.run.recorder.puzzles = PUZZLES.map(p => ({ ...p }));
   };
   const texts = (el: Element, sel: string) => Array.from(el.querySelectorAll(sel)).map(e => e.textContent!.trim());
 
@@ -1429,7 +1430,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
   });
 
   it('Game Over ohne Fehler/Puzzles: keine Fehlerzeile, keine Liste; neuer Rekord wird genannt', () => {
-    const el = renderEndless(c => { finished(c); c.currentSessionMistakes = []; c.currentSessionPuzzles = []; c.isNewHighscore = true; });
+    const el = renderEndless(c => { finished(c); c.run.recorder.mistakes = []; c.run.recorder.puzzles = []; c.run.isNewHighscore.set(true); });
     expect(el.querySelector('.mistake-ratings')).toBeNull();
     expect(el.querySelector('.puzzle-review')).toBeNull();
     expect(el.querySelector('.new-highscore')!.textContent).toContain('endless.gameOver.newHighscore');
@@ -1437,7 +1438,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
 
   it('Game Over aus der History: nur „Zurück zur History“', () => {
     let c: any;
-    const el = renderEndless(x => { c = x; finished(c); c.historyView = true; spyOn(c, 'backToHistory'); });
+    const el = renderEndless(x => { c = x; finished(c); c.run.historyView.set(true); spyOn(c, 'backToHistory'); });
     const buttons = el.querySelectorAll('.gameover-actions button');
     expect(buttons.length).toBe(1);
     expect(buttons[0].textContent).toContain('endless.gameOver.backToHistory');
@@ -1447,27 +1448,27 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
 
   it('Archivieren: Knopf nur angemeldet mit Lauf-Id, gesperrt während des Archivierens, danach Hinweis', () => {
     let c: any;
-    let el = renderEndless(x => { c = x; finished(c); c.authService.isLoggedIn = true; c.lastSessionId = 77; spyOn(c, 'archiveLastSession'); });
+    let el = renderEndless(x => { c = x; finished(c); c.authService.isLoggedIn = true; c.run.lastSessionId.set(77); spyOn(c, 'archiveLastSession'); });
     const btn = el.querySelector('.archive-btn') as HTMLButtonElement;
     expect(btn.textContent).toContain('endless.gameOver.archiveRun');
     btn.click();
     expect(c.archiveLastSession).toHaveBeenCalled();
-    c.archiving = true;
+    c.run.archiving.set(true);
     lastFixture.detectChanges();
     expect((el.querySelector('.archive-btn') as HTMLButtonElement).disabled).toBeTrue();
     expect(el.querySelector('.archive-btn')!.textContent).toContain('endless.gameOver.archiving');
-    c.archiving = false; c.lastSessionArchived = true;
+    c.run.archiving.set(false); c.run.lastSessionArchived.set(true);
     lastFixture.detectChanges();
     expect(el.querySelector('.archive-btn')).toBeNull();
     expect(el.querySelector('.archived-hint')!.textContent).toContain('endless.gameOver.archived');
     TestBed.resetTestingModule();
-    el = renderEndless(x => { finished(x); x.lastSessionId = 77; });   // abgemeldet → kein Knopf
+    el = renderEndless(x => { finished(x); x.run.lastSessionId.set(77); });   // abgemeldet → kein Knopf
     expect(el.querySelector('.archive-btn')).toBeNull();
   });
 
   it('Sieg: Pokal, Kennzahlen mit Leben, keine Puzzle-Liste, Nochmal/Zurück', () => {
     let c: any;
-    const el = renderEndless(x => { c = x; finished(c); c.state = 'WON'; c.lives = 2; spyOn(c, 'playAgain'); spyOn(c, 'backToPuzzles'); });
+    const el = renderEndless(x => { c = x; finished(c); c.state = 'WON'; c.run.lives.set(2); spyOn(c, 'playAgain'); spyOn(c, 'backToPuzzles'); });
     const card = el.querySelector('.gameover-card')!;
     expect(card.classList).toContain('exhausted-card');
     expect(card.querySelector('mat-card-title')!.textContent!.trim()).toBe('endless.gameOver.wonTitle');
@@ -1484,7 +1485,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
   });
 
   it('History-Detail lädt: Ladekreis statt Brett', () => {
-    const el = renderEndless(c => { c.historyView = true; c.state = 'LOADING'; });
+    const el = renderEndless(c => { c.run.historyView.set(true); c.state = 'LOADING'; });
     expect(el.querySelector('.history-loading')).not.toBeNull();
     expect(el.querySelector('.play-screen')).toBeNull();
     expect(el.querySelector('.config-card')).toBeNull();
@@ -1494,8 +1495,8 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
     let c: any;
     const el = renderEndless(x => {
       c = x;
-      c.highscore = 1800;
-      c.sessionHistory = [{}, {}];
+      c.run.profile.highscore.set(1800);
+      c.run.profile.sessionHistory.set([{}, {}]);
       c.authService.isLoggedIn = true;
       spyOn(c, 'startGame'); spyOn(c, 'openHelp'); spyOn(c, 'openSettingsDialog');
     }, { imports: [MatSlideToggleModule] });   // Schalter „schwächste Themen“ (ngModel braucht seinen Value-Accessor)
@@ -1522,7 +1523,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
   });
 
   it('Startbildschirm abgemeldet, ohne Lauf und Rekord: kein Verlauf-Link, kein Schwächste-Themen-Schalter', () => {
-    const el = renderEndless(c => { c.sessionHistory = [{}]; });
+    const el = renderEndless(c => { c.run.profile.sessionHistory.set([{}]); });
     expect(el.querySelector('.highscore-badge')).toBeNull();
     expect(el.querySelector('.session-count')!.textContent).toContain('endless.config.sessionsPlayedOne');
     expect(el.querySelector('.history-link')).toBeNull();
@@ -1533,7 +1534,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
     let c: any;
     const el = renderEndless(x => {
       c = x;
-      c.activeGameState = { level: 2, solved: 3, lives: 2, maxRatingReached: 1400 };
+      c.run.activeGameState.set({ level: 2, solved: 3, lives: 2, maxRatingReached: 1400 });
       spyOn(c, 'resumeGame'); spyOn(c, 'archiveAndStartNew');
     });
     expect(el.querySelector('.resume-info')!.textContent).toContain('endless.config.unfinishedRun');
@@ -1545,7 +1546,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
   });
 
   it('Startbildschirm mit beendetem Lauf (0 Leben): Startknopf heißt „Neues Spiel“', () => {
-    const el = renderEndless(c => { c.activeGameState = { level: 2, solved: 3, lives: 0, maxRatingReached: 1400 }; });
+    const el = renderEndless(c => { c.run.activeGameState.set({ level: 2, solved: 3, lives: 0, maxRatingReached: 1400 }); });
     expect(el.querySelector('.resume-banner')).toBeNull();
     expect(el.querySelector('.start-btn-top')!.textContent).toContain('endless.config.newGame');
   });
@@ -1577,9 +1578,9 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
 describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () => {
   function tracked(c: any): { sessions: any[]; local: any[]; immediate: any[] } {
     const t = { sessions: [] as any[], local: [] as any[], immediate: [] as any[] };
-    c['storage'].recordSessionToServer = (s: any) => { t.sessions.push(s); return sub(77); };
-    c['storage'].saveActiveGameLocal = (g: any) => t.local.push(g);
-    c['storage'].saveProgressImmediate = (_c: any, _h: number, g: any) => t.immediate.push(g);
+    c.run['storage'].recordSessionToServer = (s: any) => { t.sessions.push(s); return sub(77); };
+    c.run['storage'].saveActiveGameLocal = (g: any) => t.local.push(g);
+    c.run['storage'].saveProgressImmediate = (_c: any, _h: number, g: any) => t.immediate.push(g);
     return t;
   }
 
@@ -1589,21 +1590,21 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
     c.startGame();
     c['loseLife'](); c.continueAfterWrong();
     c['loseLife'](); c.continueAfterWrong();
-    expect(c.lives).toBe(1);
+    expect(c.run.lives()).toBe(1);
     c['loseLife']();
-    expect(c.lives).toBe(0);
+    expect(c.run.lives()).toBe(0);
     expect(c.state).toBe('FAILED');
     expect(t.local[t.local.length - 1]).toBeNull();      // kein 0-Leben-Spielstand
     expect(t.immediate[t.immediate.length - 1]).toBeNull();
     expect(t.sessions.length).toBe(0);
     c.continueAfterWrong();
     expect(c.state).toBe('GAME_OVER');
-    expect(c.chainIndex).toBe(2);
-    expect(c.isNewHighscore).toBeTrue();
-    expect(c.highscore).toBe(1100);
+    expect(c.run.chainIndex()).toBe(2);
+    expect(c.run.isNewHighscore()).toBeTrue();
+    expect(c.run.profile.highscore()).toBe(1100);
     expect(t.sessions.length).toBe(1);
     expect(t.sessions[0].mistakeAtRatings).toEqual([700, 900, 1100]);
-    expect(c.lastSessionId).toBe(77);
+    expect(c.run.lastSessionId()).toBe(77);
     c.ngOnDestroy();
     expect(t.sessions.length).toBe(1);
   });
@@ -1613,9 +1614,9 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
     c.startGame();
     c.continueAfterSolve(); c.continueAfterSolve(); c.continueAfterSolve();
     expect(c['puzzleService'].getRandomBatch).toHaveBeenCalledTimes(2);
-    expect(c['chain'].map((p: any) => p.id)).toEqual([100, 101, 102, 100, 101, 102]);
-    expect(c.chainIndex).toBe(3);
-    expect(c.level).toBe(3);
+    expect(c.run.chain.map((p: any) => p.id)).toEqual([100, 101, 102, 100, 101, 102]);
+    expect(c.run.chainIndex()).toBe(3);
+    expect(c.run.level()).toBe(3);
     expect(c.puzzle.id).toBe(100);
     expect(c.state).not.toBe('WON');
     c.ngOnDestroy();
@@ -1649,12 +1650,12 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
   it('offline: Start aus der vorab geladenen Kette, Seed wird zur Kette gemerkt', () => {
     const c = makeComponent();
     const seeds: string[] = [];
-    c['storage'].saveChainSeed = (s: string) => seeds.push(s);
-    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c.run['storage'].saveChainSeed = (s: string) => seeds.push(s);
+    c.run.offlinePool = CHAIN.map(p => ({ ...p }));
     withOffline(() => c.startGame());
     expect(c['puzzleService'].getRandomBatch).not.toHaveBeenCalled();
     expect(c.puzzle.id).toBe(100);
-    expect(seeds).toEqual([c['seed']]);
+    expect(seeds).toEqual([c.run.seed]);
     expect(c.state).not.toBe('CONFIG');
     c.ngOnDestroy();
   });
@@ -1669,7 +1670,7 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
 
   it('offline: Fehler wird für die Nachreichung vorgemerkt', () => {
     const c = makeComponent();
-    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c.run.offlinePool = CHAIN.map(p => ({ ...p }));
     withOffline(() => { c.startGame(); c['loseLife'](); });
     expect(c['offlineQueue'].enqueue).toHaveBeenCalledWith('POST', '/api/puzzles/100/attempt/anonymous', jasmine.objectContaining({ solved: false }));
     c.ngOnDestroy();
@@ -1677,18 +1678,18 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
 
   it('Fortsetzen offline ohne passenden Seed, aber genug Kette → bestmöglich an derselben Position', () => {
     const c = makeComponent();
-    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
-    c.activeGameState = { lives: 2, solved: 1, chainIndex: 1, seed: 'anderer', maxRatingReached: 900 };
+    c.run.offlinePool = CHAIN.map(p => ({ ...p }));
+    c.run.activeGameState.set({ lives: 2, solved: 1, chainIndex: 1, seed: 'anderer', maxRatingReached: 900 });
     withOffline(() => c.resumeGame());
-    expect(c.chainIndex).toBe(1);
+    expect(c.run.chainIndex()).toBe(1);
     expect(c.puzzle.id).toBe(101);
-    expect(c.lives).toBe(2);
+    expect(c.run.lives()).toBe(2);
     c.ngOnDestroy();
   });
 
   it('Fortsetzen offline ohne passende Kette → Hinweis und zurück zur Konfiguration', () => {
     const c = makeComponent();
-    c.activeGameState = { lives: 2, solved: 1, chainIndex: 5, seed: 'anderer', maxRatingReached: 900 };
+    c.run.activeGameState.set({ lives: 2, solved: 1, chainIndex: 5, seed: 'anderer', maxRatingReached: 900 });
     withOffline(() => c.resumeGame());
     expect(c.state).toBe('CONFIG');
     expect(c['snackbar'].info).toHaveBeenCalledWith('endless.offlineNoCache', jasmine.anything());
@@ -1697,14 +1698,14 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
 
   it('Fortsetzen online ohne passende lokale Kette → Kette bis über die Position neu erzeugt', () => {
     const c = makeComponent();
-    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'S', maxRatingReached: 1100, sessionSeconds: 30 };
+    c.run.activeGameState.set({ lives: 2, solved: 2, chainIndex: 2, seed: 'S', maxRatingReached: 1100, sessionSeconds: 30 });
     c.resumeGame();
     const windows = c['puzzleService'].getRandomBatch.calls.mostRecent().args[0];
     expect(windows.length).toBe(2 + 30);   // chainIndex + ENDLESS_CHAIN_BLOCK
-    expect(c['seed']).toBe('S');
-    expect(c.chainIndex).toBe(2);
+    expect(c.run.seed).toBe('S');
+    expect(c.run.chainIndex()).toBe(2);
     expect(c.puzzle.id).toBe(102);
-    expect(c.sessionSeconds).toBe(30);
+    expect(c.run.sessionSeconds()).toBe(30);
     c.ngOnDestroy();
   });
 
@@ -1714,19 +1715,19 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
       loadActiveGameLocal: () => ({ lives: 0, solved: 4, chainIndex: 4, seed: 'Z' }),
       saveActiveGameLocal: (g: any) => cleared.push(g),
     });
-    expect(c.activeGameState).toBeNull();
+    expect(c.run.activeGameState()).toBeNull();
     expect(cleared).toEqual([null]);
   });
 
   it('Archivieren des letzten Laufs: einmal anstoßen, danach als archiviert markiert', () => {
     const c = makeComponent();
     const ids: number[] = [];
-    c['storage'].archiveSession = (id: number) => { ids.push(id); return sub(null); };
-    c.lastSessionId = 12;
+    c.run['storage'].archiveSession = (id: number) => { ids.push(id); return sub(null); };
+    c.run.lastSessionId.set(12);
     c.archiveLastSession();
     expect(ids).toEqual([12]);
-    expect(c.lastSessionArchived).toBeTrue();
-    expect(c.archiving).toBeFalse();
+    expect(c.run.lastSessionArchived()).toBeTrue();
+    expect(c.run.archiving()).toBeFalse();
   });
 });
 
@@ -1740,10 +1741,10 @@ describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)'
     const progress: any[] = [];
     const immediate: any[] = [];
     const records: { session: any; puzzles: any[] }[] = [];
-    c['storage'].saveProgressToServer = (cfg: any, hs: number, g: any) => progress.push({ cfg: { ...cfg }, hs, g: g && JSON.parse(JSON.stringify(g)) });
-    c['storage'].saveProgressImmediate = (cfg: any, hs: number, g: any) => immediate.push({ hs, g });
-    c['storage'].recordSessionToServer = (session: any, puzzles: any[] = []) => { records.push({ session: JSON.parse(JSON.stringify(session)), puzzles: JSON.parse(JSON.stringify(puzzles)) }); return sub(55); };
-    spyOn(c as any, 'newSeed').and.returnValue('seed-golden');
+    c.run['storage'].saveProgressToServer = (cfg: any, hs: number, g: any) => progress.push({ cfg: { ...cfg }, hs, g: g && JSON.parse(JSON.stringify(g)) });
+    c.run['storage'].saveProgressImmediate = (cfg: any, hs: number, g: any) => immediate.push({ hs, g });
+    c.run['storage'].recordSessionToServer = (session: any, puzzles: any[] = []) => { records.push({ session: JSON.parse(JSON.stringify(session)), puzzles: JSON.parse(JSON.stringify(puzzles)) }); return sub(55); };
+    spyOn(c.run as any, 'newSeed').and.returnValue('seed-golden');
     c['stockfish'].getBestMove = () => new Promise(() => {});   // Start-Bewertung bleibt offen (nicht Teil der Rümpfe)
     c.config.startElo = 700;
 
@@ -1780,7 +1781,7 @@ describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)'
     expect(records[0].puzzles.map((p: any) => [p.puzzleNumber, p.puzzleId, p.solved, p.startedAt, p.endedAt]))
       .toEqual([[1, 100, true, T0 + 600, T0 + 4000], [2, 101, false, T0 + 4600, T0 + 6000],
         [3, 102, false, T0 + 6600, T0 + 9000], [4, 100, false, T0 + 6600, T0 + 9000]]);
-    expect(c.lastSessionId).toBe(55);
+    expect(c.run.lastSessionId()).toBe(55);
     expect(immediate[immediate.length - 1].g).toBeNull();
     c.ngOnDestroy();
     expect(records.length).toBe(1);                  // Verlassen nach Game Over zeichnet nicht doppelt auf
