@@ -131,6 +131,11 @@ Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne Kön
   (liegt immer unter der beschreibbaren Wurzel, wird mit dem Buch gelöscht; `EbookStorage.ResolveFile` wählt die Wurzel).
   Stand am Buch `ConversionState` (NotNeeded/Pending/Done/Failed); Upload/Import/Migration setzen Pending. Gemessen: 227
   Seiten in 13 s, ~6× die DJVU-Größe (Bibliothek: 66 Bücher nur als DJVU). Danach Titelbild + Diagramme neu vorgemerkt.
+  Seit 0.837.5 mit `-scale=150 -quality=60` (`ReadingDpi`/`DjvuQuality`): vorher schrieb `ddjvu` die Scan-Auflösung fast
+  unkomprimiert (Euwe's Best Games 28 MB DJVU → 622 MB PDF, bis 1,3 GB; der Leser lud minutenlang), jetzt ~1/7. `-mode=black`
+  wäre noch kleiner, verliert aber die Diagramme (liegen in der Hintergrundebene). Hat ein Buch schon eine Lesefassung aus
+  der DJVU und steht wieder auf Pending, wird sie am selben Pfad neu erzeugt (nur Datei + Größe; Titelbild/Diagramme
+  bleiben). Migration `EbookDjvuReadingPdfSmaller` stellt alle so umgewandelten Bücher einmal auf Pending (Prod: 88).
 - **Lesefassung übergroßer Scans** (0.775.4): ein PDF mit mehr als 1,5 MB je Seite (`EbookFormats.IsHeavyPdf`, z. B. tiff2pdf
   mit 600-dpi-Farb-JPEGs, ~30 MP je Seite — pdf.js scheitert daran) bekommt eine abgeleitete Lesefassung: aus der beiliegenden
   DJVU (`ddjvu`), sonst neu gerendert (`pdftoppm` 150 dpi JPEG q80, `ImagePdfWriter` bettet die JPEGs unverändert ein).

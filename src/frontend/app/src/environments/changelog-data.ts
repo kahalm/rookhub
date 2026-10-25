@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.837.5", date: "2026-10-25", changes: [
+    { en: "E-books: books that exist only as DJVU open much faster in the reader. The PDF reading copy is now written at 150 dpi with compressed images (about a seventh of the size; e.g. 622 MB → about 90 MB). Existing reading copies are regenerated once in the background; pages, diagrams and reading positions are kept.", de: "E-Books: Bücher, die nur als DJVU vorliegen, öffnen im Leser deutlich schneller. Die PDF-Lesefassung wird jetzt in 150 dpi mit komprimierten Bildern geschrieben (etwa ein Siebtel der Größe, z. B. 622 MB → rund 90 MB). Vorhandene Lesefassungen werden einmal im Hintergrund neu erzeugt; Seiten, Diagramme und Lesestände bleiben erhalten." },
+  ]},
   { version: "0.837.4", date: "2026-10-25", changes: [
     { en: "Tournament calendar: a manually set tournament location is kept by every federation calendar (all 15 sources plus chess.cz), even when the source changes the place.", de: "Turnierkalender: Ein von Hand gesetzter Turnierstandort bleibt bei allen Verbandskalendern stehen (alle 15 Quellen plus chess.cz), auch wenn sich der Ort in der Quelle ändert." },
     { en: "Tournament calendar: chess.sk no longer overwrites a tournament taken over by the tournament search; it only fills in missing details. The Slovenian and Hungarian calendars count newly located tournaments as „updated“.", de: "Turnierkalender: chess.sk überschreibt ein von der Turniersuche übernommenes Turnier nicht mehr, sondern ergänzt nur fehlende Angaben. Der slowenische und der ungarische Kalender zählen neu verortete Turniere als „aktualisiert“." },

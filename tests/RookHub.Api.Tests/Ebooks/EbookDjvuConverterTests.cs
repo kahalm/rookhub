@@ -150,6 +150,43 @@ public class EbookDjvuConverterTests : IDisposable
     }
 
     [Fact]
+    public async Task ExistingDjvuReadingPdf_IsRegeneratedInPlace_WithoutTouchingCoverOrDiagrams()
+    {
+        if (!Tool("c44") || !Tool("ddjvu")) return;   // CI ohne djvulibre
+        var dir = Path.Combine(_kit.LibraryRoot, "Autor");
+        Directory.CreateDirectory(dir);
+        var pgm = Path.Combine(dir, "seite.pgm");
+        await File.WriteAllBytesAsync(pgm, System.Text.Encoding.ASCII.GetBytes("P5 64 64 255\n").Concat(Enumerable.Repeat((byte)128, 64 * 64)).ToArray());
+        using (var p = Process.Start(new ProcessStartInfo("c44", $"\"{pgm}\" \"{Path.Combine(dir, "Buch.djvu")}\"") { RedirectStandardError = true }))
+            await p!.WaitForExitAsync();
+
+        var admin = await _kit.UserAsync("admin", admin: true);
+        var book = new Ebook { Title = "Buch", OwnerUserId = admin.Id, Source = EbookSource.Library, ConversionState = EbookConversionState.Pending,
+            CoverState = EbookCoverState.Done, DiagramState = EbookDiagramState.Done, PageCount = 1 };
+        book.Files.Add(new EbookFile { Format = "djvu", RelativePath = "Autor/Buch.djvu", FileName = "Buch.djvu", SizeBytes = 1 });
+        _kit.Db.Ebooks.Add(book);
+        await _kit.Db.SaveChangesAsync();
+        // alte, übergroße Lesefassung wie vor 0.837.5
+        var old = Path.Combine(_kit.Root, "converted", book.Id + ".pdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(old)!);
+        await File.WriteAllBytesAsync(old, new byte[500_000]);
+        book.Files.Add(new EbookFile { Format = "pdf", RelativePath = "converted/" + book.Id + ".pdf", FileName = "Buch.pdf", Derived = true, SizeBytes = 500_000 });
+        await _kit.Db.SaveChangesAsync();
+
+        Assert.True(await Converter().RunStepAsync(CancellationToken.None));
+
+        var reloaded = await _kit.Db.Ebooks.Include(b => b.Files).SingleAsync();
+        Assert.Equal(EbookConversionState.Done, reloaded.ConversionState);
+        var pdf = Assert.Single(reloaded.Files, f => f.Format == "pdf");   // keine zweite Lesefassung
+        Assert.Equal(new FileInfo(old).Length, pdf.SizeBytes);
+        Assert.True(pdf.SizeBytes < 500_000);
+        Assert.Equal(EbookCoverState.Done, reloaded.CoverState);
+        Assert.Equal(EbookDiagramState.Done, reloaded.DiagramState);
+        using var doc = UglyToad.PdfPig.PdfDocument.Open(old);
+        Assert.Equal(1, doc.NumberOfPages);
+    }
+
+    [Fact]
     public async Task Upload_OfDjvu_IsQueuedForConversion()
     {
         var user = await _kit.UserAsync("u");

@@ -10,7 +10,11 @@ namespace RookHub.Api.Services.Ebooks;
 /// Wandelt Bücher, die NUR als DJVU vorliegen, in ein PDF um (<c>ddjvu -format=pdf</c>, djvulibre im API-Image), damit der
 /// Browser-Leser sie zeigt (0.770.0). Seit 0.775.4 auch übergroße Scan-PDFs (<see cref="EbookFormats.IsHeavyPdf"/>): aus
 /// der beiliegenden DJVU oder neu gerendert in 150 dpi — der Leser nimmt dann diese Lesefassung (<see cref="EbookFormats.Primary"/>). Ziel: <c>&lt;Root&gt;/converted/&lt;id&gt;.pdf</c>, eingetragen als zusätzliche
-/// <see cref="EbookFile"/> mit <see cref="EbookFile.Derived"/>. Gemessen: 227 Seiten in 13 s, ~6× die DJVU-Größe.
+/// <see cref="EbookFile"/> mit <see cref="EbookFile.Derived"/>. Seit 0.837.5 mit <see cref="ReadingDpi"/> und JPEG-Qualität
+/// <see cref="DjvuQuality"/>: ohne diese Angaben schrieb <c>ddjvu</c> die Scan-Auflösung fast unkomprimiert (Euwe's Best
+/// Games: 28-MB-DJVU → 622-MB-PDF, der Leser lud minutenlang), jetzt etwa ein Siebtel. Ein Buch, das schon eine
+/// Lesefassung aus der DJVU hat und wieder <see cref="EbookConversionState.Pending"/> ist, bekommt sie neu (gleicher Pfad,
+/// gleiche Seiten — Diagramme und Lesestände bleiben).
 /// Ein Buch je Durchlauf, Zeitdeckel 30 min; danach Titelbild/Diagramme neu vormerken.
 /// </summary>
 public class EbookDjvuConverter : PeriodicWorker
@@ -36,7 +40,9 @@ public class EbookDjvuConverter : PeriodicWorker
         if (ebook == null) return;
         var djvu = ebook.Files.FirstOrDefault(f => f.Format == "djvu");
         var heavy = ebook.Files.FirstOrDefault(f => EbookFormats.IsHeavyPdf(f, ebook.PageCount));
-        if (!EbookFormats.NeedsReadingPdf(ebook.Files, ebook.PageCount))
+        // Neu erzeugen (0.837.5): vorhandene Lesefassung aus der DJVU, das Buch steht wieder auf „ausstehend“
+        var redo = djvu != null ? ebook.Files.FirstOrDefault(f => f.Format == "pdf" && f.Derived) : null;
+        if (redo == null && !EbookFormats.NeedsReadingPdf(ebook.Files, ebook.PageCount))
         {
             ebook.ConversionState = EbookConversionState.NotNeeded;
             await db.SaveChangesAsync(ct);
@@ -48,7 +54,7 @@ public class EbookDjvuConverter : PeriodicWorker
         var tmp = target + ".part";
         // DJVU (klein, verlustarm) vor dem Neu-Rendern des übergroßen PDFs.
         var ok = djvu != null
-            ? await RunAsync(options.DdjvuPath, ["-format=pdf", _storage.ResolveFile(ebook, djvu), tmp], ct)
+            ? await RunAsync(options.DdjvuPath, ["-format=pdf", $"-scale={ReadingDpi}", $"-quality={DjvuQuality}", _storage.ResolveFile(ebook, djvu), tmp], ct)
             : heavy != null && await RasterizeAsync(options, _storage.ResolveFile(ebook, heavy), tmp, ct);
         if (!ok || !File.Exists(tmp) || new FileInfo(tmp).Length == 0)
         {
@@ -61,6 +67,16 @@ public class EbookDjvuConverter : PeriodicWorker
         }
         var source = djvu ?? heavy!;
         File.Move(tmp, target, overwrite: true);
+        if (redo != null)
+        {
+            // Nur die Datei ist neu: Seiten, Titelbild und Diagramme bleiben gültig
+            redo.SizeBytes = new FileInfo(target).Length;
+            ebook.ConversionState = EbookConversionState.Done;
+            ebook.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            Logger.LogInformation("E-Book {EbookId}: Lesefassung aus DJVU neu erzeugt ({Bytes} Bytes)", ebook.Id, redo.SizeBytes);
+            return;
+        }
         ebook.Files.Add(new EbookFile
         {
             Format = "pdf", RelativePath = relative, Derived = true,
@@ -109,8 +125,11 @@ public class EbookDjvuConverter : PeriodicWorker
         }
     }
 
-    /// <summary>Auflösung der Lesefassung übergroßer Scans.</summary>
+    /// <summary>Auflösung der Lesefassung übergroßer Scans und (seit 0.837.5) der DJVU-Umwandlung.</summary>
     public const int ReadingDpi = 150;
+
+    /// <summary>JPEG-Qualität der Hintergrundebene bei der DJVU-Umwandlung (Diagramme bleiben bei 150 dpi gut lesbar).</summary>
+    public const int DjvuQuality = 60;
 
     private async Task<bool> RunAsync(string exe, string[] args, CancellationToken ct)
     {
