@@ -52,7 +52,8 @@ let linkResult: { ebookId: number | null; ebookTitle: string | null; linked: num
   { ebookId: 5, ebookTitle: 'Woodpecker', linked: 1118, lines: 1128 };
 
 function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
-              detailOver: Partial<CourseDetail> = {}) {
+              detailOver: Partial<CourseDetail> = {},
+              series: { calc?: Record<string, unknown>; calcEditions?: Record<string, unknown> } = {}) {
   const calls: string[] = [];
   const warnings: string[] = [];
   /** Rückfrage (ConfirmService): antwortet sofort; Vorgabe „ja", ein Test stellt `answer` um. */
@@ -77,8 +78,10 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
   const dialog = {
     open: () => { calls.push('dialog'); return { afterClosed: () => of(dialogResult) }; },
   };
-  const calc = { getBook: () => of({ chapters: [] }) };
-  const calcEditions = { visible: () => of([]), manage: () => of([]), upsert: () => of({}), remove: () => of(undefined) };
+  const calc = { getBook: () => of({ chapters: [] }), ...series.calc };
+  const calcEditions = {
+    visible: () => of([]), manage: () => of([]), upsert: () => of({}), remove: () => of(undefined), ...series.calcEditions,
+  };
   const component = new CourseDetailComponent(
     { snapshot: { paramMap: { get: () => '58' } } } as never,
     { navigate: () => Promise.resolve(true) } as never,
@@ -725,6 +728,100 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     expect(bars.length).toBe(2);
     expect(Math.round(bars[0].width)).toBe(Math.round(bars[1].width));
     expect(Math.round(bars[0].right)).toBe(Math.round(bars[1].right));
+  });
+});
+
+/** Kalk-Serie und Kapitelpunkte (Charakterisierung vor Zerlegung Z29: Serien-Verwaltung aus der Seite heraus). */
+describe('CourseDetailComponent Kalk-Serie', () => {
+  const ed = (over: Record<string, unknown> = {}) => ({
+    id: 4, chapter: 'Kapitel 1', publishAt: '2026-11-01T18:00:00Z', videoUrl: null, released: false, ...over,
+  });
+
+  function series(log: string[], list: unknown[] = [ed()]) {
+    return {
+      calc: { getBook: () => { log.push('getBook'); return of({ chapters: [
+        { chapter: 'Kapitel 1', points: 6, maxPoints: 12, ratedCount: 2 },
+        { chapter: 'Kapitel 2', points: 0, maxPoints: 8, ratedCount: 0 },
+        { chapter: null, points: 1, maxPoints: 4, ratedCount: 1 },
+      ] }); } },
+      calcEditions: {
+        manage: () => { log.push('manage'); return of(list); },
+        visible: () => { log.push('visible'); return of(list); },
+        upsert: (_b: number, save: unknown) => { log.push('upsert:' + JSON.stringify(save)); return of({}); },
+        remove: (_b: number, id: number) => { log.push('remove:' + id); return of(undefined); },
+      },
+    };
+  }
+
+  it('Kalkulationsbuch: Kapitelpunkte nur für bewertete Kapitel, Ausgaben je Kapitelname (Verwalter: manage)', () => {
+    const log: string[] = [];
+    const { component } = make({}, false, {}, series(log));
+    component.ngOnInit();
+    expect(log).toEqual(['getBook', 'manage']);
+    expect(component.calcChapterScore(chapter({ name: 'Kapitel 1' }))).toBe('6 / 12');
+    expect(component.calcChapterScore(chapter({ name: 'Kapitel 2' }))).toBe('');
+    expect(component.calcChapterScore(chapter({ name: null }))).toBe('1 / 4');
+    expect(component.edition(chapter({ name: 'Kapitel 1' }))?.id).toBe(4);
+    expect(component.edition(chapter({ name: 'Kapitel 2' }))).toBeNull();
+  });
+
+  it('Betrachter laden nur freigegebene Ausgaben; Nicht-Kalkulationsbuch lädt nichts', () => {
+    const log: string[] = [];
+    const viewer = make({}, false, { canManage: false }, series(log));
+    viewer.component.ngOnInit();
+    expect(log).toEqual(['getBook', 'visible']);
+    const log2: string[] = [];
+    const plain = make({}, false, { isCalculation: false }, series(log2));
+    plain.component.ngOnInit();
+    expect(log2).toEqual([]);
+    expect(plain.component.edition(chapter())).toBeNull();
+    expect(plain.component.calcChapterScore(chapter())).toBe('');
+  });
+
+  it('Ausgabe speichern bzw. löschen lädt die Ausgaben neu; „ohne Kapitel" und Nicht-Verwalter öffnen nichts', () => {
+    const log: string[] = [];
+    const save = { chapter: 'Kapitel 1', publishAt: '2026-11-08T18:00:00Z', videoUrl: null };
+    const saving = make({}, { save }, {}, series(log));
+    saving.component.ngOnInit();
+    log.length = 0;
+    saving.component.openEdition(chapter({ name: 'Kapitel 1' }));
+    expect(saving.calls).toContain('dialog');
+    expect(log).toEqual(['upsert:' + JSON.stringify(save), 'manage']);
+    expect(saving.component.busy).toBeFalse();
+
+    const delLog: string[] = [];
+    const deleting = make({}, { delete: true }, {}, series(delLog));
+    deleting.component.ngOnInit();
+    delLog.length = 0;
+    deleting.component.openEdition(chapter({ name: 'Kapitel 1' }));
+    expect(delLog).toEqual(['remove:4', 'manage']);
+
+    const before = deleting.calls.filter(c => c === 'dialog').length;
+    deleting.component.openEdition(chapter({ name: null }));
+    expect(deleting.calls.filter(c => c === 'dialog').length).toBe(before);
+    const viewer = make({}, { save }, { canManage: false }, series([]));
+    viewer.component.ngOnInit();
+    viewer.component.openEdition(chapter());
+    viewer.component.openMembers();
+    expect(viewer.calls).not.toContain('dialog');
+  });
+
+  it('Speichern scheitert: Warnung, busy wieder frei', () => {
+    const log: string[] = [];
+    const s = series(log);
+    (s.calcEditions as Record<string, unknown>)['upsert'] = () => throwError(() => new Error('x'));
+    const { component, warnings } = make({}, { save: { chapter: 'Kapitel 1' } }, {}, s);
+    component.ngOnInit();
+    component.openEdition(chapter({ name: 'Kapitel 1' }));
+    expect(warnings).toContain('calc.series.saveFailed');
+    expect(component.busy).toBeFalse();
+  });
+
+  it('Verteiler öffnet den Mitglieder-Dialog nur für Verwalter', () => {
+    const { component, calls } = make({}, undefined, {}, series([]));
+    component.ngOnInit();
+    component.openMembers();
+    expect(calls).toContain('dialog');
   });
 });
 
