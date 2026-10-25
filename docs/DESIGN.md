@@ -412,6 +412,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - **Zuglisten** stehen als eine Zeile je Vollzug: Nr. | Weiß + Bewertung | Schwarz + Bewertung
   (`2.6em 1fr 1fr`, Bewertung rechtsbündig mit ≥ 5ch), nie als Raster aus Halbzügen, das Weiß und Schwarz in wechselnde
   Spalten wirft (Zugbaum im Analysebrett, Partie-Analyse; b1-rk-analyse-zugliste-halbzuege).
+  **Zug-Klassen** der Engine-Auswertung stehen als kleines Schild direkt hinter dem Zug (Radius 8 px, 11 px fett,
+  Fläche = Klassenfarbe, Schrift Schwarz oder Weiß nach Kontrast) — nur die Notationszeichen `!! ! ?! ? ??` und `✗`,
+  nie ★/👍/✓/📖 an jedem Zug; ein- und ausblendbar mit dem Schalter der Brett-Symbole (Partieseite, 0.836.0).
 - `matListItemMeta` nie direkt auf einen Text-Knopf (`mat-flat-button`/`mat-stroked-button`), sondern auf ein
   umschließendes `<div>` — sonst übernimmt der Knopf Schrift, Farbe und Ausrichtung des Listen-Endbereichs
   (Beschriftung winzig und fast unsichtbar, d1-rk-revenge-loesen-knopf-kaputt).
@@ -1193,3 +1196,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-24 | 0.831.0 | RookHub, E-Book-Brett: Modus „Partie“ (Partiensammlungen) — Zugliste der ganzen Partie nach der Regel „Zuglisten“ (eine Zeile je Vollzug, `2.6em 1fr 1fr`, ohne Bewertung), läuft mit der Brett-Spalte ohne eigenen Scrollkasten; aktueller Zug getönt, Diagrammzug unterstrichen; Modus-Knopf nur bei Diagrammen mit Partie | Zuglisten; kein Kasten im Kasten | Nutzer |
 | 2026-10-25 | 0.834.0 | RookHub, Repertoire-Baum: Knopf „Pfeile“ unter dem Brett (gemerkt je Gerät) zeigt alle Fortsetzungen der Stellung als grüne Pfeile, Strichstärke 3–18 nach Lichess-Häufigkeit (Wurzel des Anteils am häufigsten Zug, ohne Daten alle 9); im Brett-Vollbild immer an; Figuren ziehen folgt der Fortsetzung, ein Zug außerhalb des Repertoires springt zurück mit kurzer Meldung | Im Vollbild fehlt die Liste — die Pfeile ersetzen sie | Nutzer |
 | 2026-10-25 | 0.835.0 | RookHub, Repertoire-Baum im Brett-Vollbild: „Einen Zug zurück“ links oben im schwarzen Balken (Gegenstück zum Vollbild-Knopf rechts oben, 44 px, halbtransparent, an der Wurzel ausgegraut); Pfeil links geht im Baum einen Zug zurück. Brett-Komponente nimmt eigene Vollbild-Bedienelemente über `[boardFsOverlay]` auf | Im Vollbild fehlen Brotkrumen — ohne Knopf gab es keinen Weg zurück | Nutzer |
+| 2026-10-25 | 0.836.0 | RookHub, Partieseite: Zug-Klassen als Schild hinter den Zügen der Zugliste (`!! ! ?! ? ??`, `✗`), Schrift nach Kontrast, am Schalter der Brett-Symbole | Zuglisten (Abschnitt 5) |

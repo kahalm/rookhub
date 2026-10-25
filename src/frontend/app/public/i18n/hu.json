@@ -3373,7 +3373,7 @@
       "bookHint": "A repertoárodban (a bővítményhez és a felkészüléshez megjelölve)",
       "lines": "Gépi változatok",
       "arrow": "Nyíl a legjobb lépéshez",
-      "badges": "Lépésjelek a bábukon",
+      "badges": "Lépésjelek (tábla és lépéslista)",
       "refining": "Mélyebb elemzés — {{done}} / {{total}} állás"
     },
     "analyzing": "Elemzés folyamatban: {{pct}}% ({{analyzed}} / {{total}} állás) – a görbe a játszma oldalán jelenik meg",

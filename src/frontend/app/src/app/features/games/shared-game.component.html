@@ -301,7 +301,7 @@
         </div>
         <div class="moves-section">
           @if (service.currentGame; as g) {
-            <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" (moveClicked)="service.goToMove($event)" />
+            <app-move-list [moves]="g.moves" [currentMoveIndex]="service.currentMoveIndex" [comments]="g.comments" [marks]="moveMarks()" (moveClicked)="service.goToMove($event)" />
           }
         </div>
         <!-- Auswertung, Repertoire, ähnliche Partien: am breiten Bildschirm eine eigene dritte Spalte (0.714.0) — vorher
@@ -311,7 +311,7 @@
           @if (service.currentGame; as g) {
             <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [withExplanations]="!club" [fens]="g.fens" [moves]="g.moves"
                              [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training()" [liveEngine]="!!live()" [offGame]="!!live()?.variation()?.length" [withAlternatives]="loggedIn" [sharedToken]="publicToken"
-                             (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)"
+                             (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)" (moveMarksChange)="moveMarks.set($event)"
                              (moveClicked)="service.goToMove($event)"
                              (statusChange)="reviewStatus.set($event)"
                              (mistakesChange)="mistakes.set($event)"

@@ -253,3 +253,31 @@ describe('MoveListComponent Fokus folgt dem aktiven Zug (F8-018)', () => {
     expect(document.activeElement).toBe(moves()[2]);
   }));
 });
+
+// 0.836.0: Zeichen der Engine-Auswertung hinter den Zügen — anklickbar ist weiter der ganze Zug.
+describe('MoveListComponent Zeichen', () => {
+  it('zeigt das Zeichen hinter genau dem markierten Zug, mit Farbe und Tooltip', () => {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    const chess = new Chess();
+    ['e4', 'e5', 'Qh5', 'Nc6'].forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('marks', { 2: { symbol: '?!', color: 'rgb(1, 2, 3)', label: 'Inaccuracy' } });
+    fixture.detectChanges();
+    const moves = Array.from(fixture.nativeElement.querySelectorAll('button.move')) as HTMLElement[];
+    const marks = fixture.nativeElement.querySelectorAll('.mark') as NodeListOf<HTMLElement>;
+    expect(marks.length).toBe(1);
+    expect(moves[2].querySelector('.mark')).toBe(marks[0]);
+    expect(marks[0].textContent!.trim()).toBe('?!');
+    expect(marks[0].style.background).toContain('rgb(1, 2, 3)');
+    expect(marks[0].getAttribute('title')).toBe('Inaccuracy');
+
+    // Schrift je Schildfarbe: Gelb (Ungenauigkeit) schwarz, Rot (grober Fehler) weiß
+    expect(fixture.componentInstance.markText('#f7c631')).toBe('#000');
+    expect(fixture.componentInstance.markText('#ca3431')).toBe('#fff');
+
+    fixture.componentRef.setInput('marks', {});
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.mark').length).toBe(0);
+  });
+});

@@ -3011,7 +3011,7 @@
       "bookHint": "U tvom repertoaru (označenom za ekstenziju i pripremu)",
       "lines": "Računalne varijante",
       "arrow": "Strelica za najbolji potez",
-      "badges": "Simboli poteza na figurama",
+      "badges": "Simboli poteza (ploča i popis poteza)",
       "refining": "Dublja analiza — {{done}} od {{total}} pozicija"
     },
     "analyzing": "Analiza u tijeku: {{pct}} % ({{analyzed}} od {{total}} pozicija) – graf je na stranici partije",

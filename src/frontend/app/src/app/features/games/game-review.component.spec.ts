@@ -279,6 +279,36 @@ describe('GameReviewComponent', () => {
     }
   });
 
+  // 0.836.0 (Wunsch 2026-10-25): „!!, !, ?!, ?, ??" direkt an den Zügen der Zugliste — am selben Schalter wie das
+  // Symbol an der Figur, im Fehler-Training aus.
+  it('Zugliste: Zeichen der Auswertung je Zug, am Symbol-Schalter und im Training aus', () => {
+    localStorage.removeItem(GameReviewComponent.BadgesKey);
+    try {
+      const { fixture, http, el } = setup();
+      let marks: Record<number, { symbol: string; color: string }> = {};
+      fixture.componentInstance.moveMarksChange.subscribe(m => marks = m);
+      flushEvals(http, evals('done'));
+      fixture.detectChanges();
+      const blunder = fixture.componentInstance.review().moves.find(m => m?.cls === 'blunder')!;
+      expect(marks[blunder.ply].symbol).toBe('??');
+      // nur Notationszeichen — kein ★/✓ an den guten Zügen
+      expect(Object.values(marks).every(m => ['!!', '!', '?!', '?', '??', '✗'].includes(m.symbol))).toBeTrue();
+
+      (el.querySelector('button.badge-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(marks).toEqual({});
+      (el.querySelector('button.badge-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(marks[blunder.ply]).toBeDefined();
+
+      fixture.componentRef.setInput('engineHidden', true);
+      fixture.detectChanges();
+      expect(marks).toEqual({});
+    } finally {
+      localStorage.removeItem(GameReviewComponent.BadgesKey);
+    }
+  });
+
   // Gewünscht 2026-09-24: die Kurve standardmäßig eingeklappt, auf Wunsch aufklappen.
   it('die Kurve ist zu, bis man auf die Überschrift klickt — Zähler und Genauigkeit stehen trotzdem da', () => {
     const { fixture, http, el } = setup({ graphClosed: true });

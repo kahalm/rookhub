@@ -11,7 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
-import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
+import { MoveListComponent, MoveListMark } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { HandoffService } from '../../core/handoff.service';
@@ -187,6 +187,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   readonly bestArrows = signal<BoardArrow[]>([]);
   /** Klasse des aktuellen Zugs als Symbol am Zielfeld (vom Rückblick; im Training und mit Live-Engine leer). */
   readonly moveBadge = signal<BoardBadge | null>(null);
+  /** Zeichen der Auswertung hinter den Zügen der Zugliste (0.836.0) — kommen vom Rückblick, der den Schalter hält. */
+  readonly moveMarks = signal<Record<number, MoveListMark>>({});
 
   /** Der freigegebene Roast hinter `?roast=` (0.742.0) — null ohne Parameter oder wenn nicht (mehr) freigegeben. */
   readonly sharedRoast = signal<GameRoast | null>(null);

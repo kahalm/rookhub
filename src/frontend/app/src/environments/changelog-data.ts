@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.836.0", date: "2026-10-25", changes: [
+    { en: "Game page: in an analysed game the move list now shows the engine’s marks right after the moves — !!, !, ?!, ?, ?? and ✗ for a missed win — so you can jump straight to the mistakes without clicking through the whole game. The “Move symbols” switch above the evaluation turns them off together with the symbol on the board.", de: "Partieseite: Bei einer analysierten Partie stehen die Zeichen der Engine jetzt direkt hinter den Zügen der Zugliste — !!, !, ?!, ?, ?? und ✗ für einen verpassten Gewinn —, so kommt man ohne Durchklicken direkt zu den Fehlern. Der Schalter „Zug-Symbole“ über der Auswertung blendet sie zusammen mit dem Symbol am Brett aus." },
+  ] },
   { version: "0.835.0", date: "2026-10-25", changes: [
     { en: "Repertoire tree in board fullscreen: a back button in the top-left corner takes you one move back, so you can follow and leave lines without exiting fullscreen. The left arrow key does the same in the tree.",
       de: "Repertoire-Baum im Brett-Vollbild: ein Zurück-Knopf links oben geht einen Zug zurück — so kann man Linien folgen und wieder verlassen, ohne das Vollbild zu beenden. Die Pfeiltaste links macht im Baum dasselbe." },

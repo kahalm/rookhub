@@ -1,4 +1,5 @@
 import { BoardBadge, MOVE_CLASS_SYMBOLS, moveBadgeSvg } from './move-badge.util';
+import { MoveListMark } from '../../shared/pgn-viewer/move-list.component';
 import { linkedSignal,
   ChangeDetectionStrategy, Component, DestroyRef, LOCALE_ID, computed, effect, inject, input, output, signal,
   untracked,
@@ -49,6 +50,8 @@ function readView(): EngineView {
 
 /** Diese Klassen bekommen einen Punkt in der Kurve — die Züge, bei denen man hinsehen will. */
 const MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>(['brilliant', 'great', 'miss', 'mistake', 'blunder']);
+/** In der Zugliste (0.836.0) dazu die Ungenauigkeit „?!" — die Notationszeichen, nicht ★/👍/✓/📖 an jedem Zug. */
+const LIST_MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>([...MARKED, 'inaccuracy']);
 
 /** Diese Grundklassen sind Fehler — nur zu ihnen gibt es Erklärungen (Spiegel von `GameMistakes` am Server). */
 const ERROR_CLASSES: ReadonlySet<MoveClass> = new Set<MoveClass>(['inaccuracy', 'mistake', 'blunder']);
@@ -439,6 +442,8 @@ export class GameReviewComponent {
   /** Die Klasse des aktuellen Zugs als Symbol am Zielfeld (seit 0.557.0, wie chess.com beim Durchsehen) — die Seite
    *  legt es auf ihr Brett. Leer im Fehler-Training und mit der Live-Engine: dort zeigt das Brett etwas anderes. */
   badgeChange = output<BoardBadge | null>();
+  /** Zeichen je Zug für die Zugliste der Seite (0.836.0) — leer, wenn die Symbole aus sind oder das Training läuft. */
+  moveMarksChange = output<Record<number, MoveListMark>>();
   /** Was die Analysen zur Stellung auf dem Brett hinterlegt haben — Ausgangspunkt der „Tiefen Analyse" (0.686.0). */
   storedChange = output<DeepStored>();
 
@@ -592,6 +597,21 @@ export class GameReviewComponent {
     const move = this.moves()[this.currentIndex()];
     return m && move?.to ? { square: move.to, svg: moveBadgeSvg(m.cls) } : null;
   });
+  /**
+   * Zeichen hinter den Zügen der Zugliste (0.836.0, Wunsch 2026-10-25: „die !!, !, ?!, ? und ?? direkt bei den Zügen,
+   * damit man ohne Durchklicken zu den Fehlern kommt — mit Schalter"): derselbe Schalter wie das Symbol an der Figur.
+   * Im Fehler-Training aus (verriete die Aufgaben); beim Erkunden eigener Züge bleibt die Hauptlinie markiert.
+   */
+  readonly moveMarks = computed<Record<number, MoveListMark>>(() => {
+    if (!this.showBadges() || this.engineHidden()) return {};
+    const marks: Record<number, MoveListMark> = {};
+    for (const m of this.review().moves) {
+      if (!m || !LIST_MARKED.has(m.cls)) continue;
+      marks[m.ply] = { symbol: SYMBOLS[m.cls], color: MOVE_CLASS_COLORS[m.cls],
+        label: this.translate.instant('games.review.class.' + m.cls) };
+    }
+    return marks;
+  });
   /** `altAccuracy` nur bei „Beide": die Genauigkeit der zweiten Analyse als eigene Spalte (Variante A, 0.683.0). */
   readonly rows = computed(() => [
     { key: 'white', summary: this.review().white, altAccuracy: this.altReview()?.white.accuracy },
@@ -689,6 +709,10 @@ export class GameReviewComponent {
     effect(() => {
       const b = this.badge();
       untracked(() => this.badgeChange.emit(b));
+    });
+    effect(() => {
+      const m = this.moveMarks();
+      untracked(() => this.moveMarksChange.emit(m));
     });
     effect(() => {
       const s = this.storedHere();

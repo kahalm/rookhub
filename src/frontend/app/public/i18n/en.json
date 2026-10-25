@@ -3011,7 +3011,7 @@
       "bookHint": "In your repertoire (marked for extension and preparation)",
       "lines": "Computer lines",
       "arrow": "Best-move arrow",
-      "badges": "Move symbols on the pieces",
+      "badges": "Move symbols (board and move list)",
       "refining": "Deeper analysis — {{done}} of {{total}} positions"
     },
     "analyzing": "Analysis running: {{pct}}% ({{analyzed}} of {{total}} positions) – the graph appears on the game page",

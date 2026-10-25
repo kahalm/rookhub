@@ -25,3 +25,10 @@ das alte Symbol beim Stellungswechsel sofort weg und hält jedes Symbol, das in 
 **Ein/aus-Schalter** (0.820.0, Wunsch 2026-10-21): neben „Computer-Linien" und „Pfeil für den besten Zug" blendet ein dritter
 Schalter (`button.badge-toggle`, Symbol `new_releases`) das Zug-Symbol an der Figur aus. Je Gerät gemerkt
 (`rookhub_game_badges`, Vorgabe an — nur ein ausdrückliches Aus bleibt); aus = `badge()` liefert `null`.
+
+**Auch in der Zugliste** (0.836.0, Wunsch 2026-10-25: „die !!, !, !?, ?!, ? und ?? direkt bei den angezeigten Zügen, damit man
+direkt zu den Fehlern kommt — mit Schalter"): `GameReviewComponent.moveMarks` gibt je Halbzug ein Zeichen aus (`moveMarksChange`),
+die Partieseite reicht es an `app-move-list [marks]` weiter (Schild hinter dem Zug, Klick springt wie bisher). Nur die
+Klassen mit Notationszeichen (Brillant, Great, Ungenauigkeit, Fehler, verpasster Gewinn, grober Fehler) — „!?" kennt die
+Auswertung nicht. Derselbe Schalter wie das Symbol an der Figur (Beschriftung jetzt „Zug-Symbole (Brett und Zugliste)");
+im Fehler-Training (`engineHidden`) leer, beim Erkunden eigener Züge bleibt die Hauptlinie markiert.

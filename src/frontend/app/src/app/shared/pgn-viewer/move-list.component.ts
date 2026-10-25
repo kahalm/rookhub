@@ -1,12 +1,19 @@
 import {
   Component, Input, Output, EventEmitter, OnChanges,
-  SimpleChanges, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+  SimpleChanges, ElementRef, ViewChild, ChangeDetectionStrategy, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Move } from 'chess.js';
 import { SanPipe } from '../chess/san.pipe';
 
 /** Ein Stück Kommentartext; mit `move` ein anklickbarer Zug, dessen Stellung `fen` ist. */
 export interface MoveListCommentSegment { text?: string; move?: string; fen?: string; from?: string; to?: string; }
+
+/** Ein Zeichen hinter einem Zug der Liste: Symbol, Farbe des Schilds, Klartext für den Tooltip. */
+export interface MoveListMark {
+  symbol: string;
+  color: string;
+  label?: string;
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -24,6 +31,11 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
         }
       }
     </ng-template>
+    <ng-template #markTpl let-i>
+      @if (marks()?.[i]; as m) {
+        <span class="mark" [style.background]="m.color" [style.color]="markText(m.color)" [attr.title]="m.label ?? null">{{ m.symbol }}</span>
+      }
+    </ng-template>
     <div class="move-list" #moveListEl>
       @if (comments[-1]) {
         <div class="comment-row comment-intro">
@@ -36,14 +48,14 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
           @if (pair.white !== undefined) {
             <button type="button" class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
                     [attr.aria-current]="pair.whiteIndex === currentMoveIndex ? 'true' : null"
-                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white | san }}</button>
+                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.whiteIndex }"></ng-container></button>
           } @else {
             <span class="move-empty"></span>
           }
           @if (pair.black) {
             <button type="button" class="move" [class.active]="pair.blackIndex === currentMoveIndex"
                     [attr.aria-current]="pair.blackIndex === currentMoveIndex ? 'true' : null"
-                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black | san }}</button>
+                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.blackIndex }"></ng-container></button>
           } @else {
             <span class="move-empty"></span>
           }
@@ -96,6 +108,12 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
     .move:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .move.active { background: var(--rh-accent, #1976d2); color: var(--mat-sys-on-primary, #fff); }
     .move-empty { display: block; }
+    /* Zug-Klasse aus der Engine-Auswertung (0.836.0): kleines farbiges Schild hinter dem Zug, die Schrift schwarz oder
+       weiß je nach Schildfarbe (markText) — lesbar auf hellem, dunklem und dem farbigen aktiven Grund. */
+    .mark {
+      display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 8px;
+      font-size: 11px; font-weight: 700; line-height: 16px; vertical-align: 1px;
+    }
     .comment-intro { padding: 6px; }
     .cmt-move {
       font: inherit; font-style: normal; font-weight: 600; cursor: pointer;
@@ -122,6 +140,8 @@ export class MoveListComponent implements OnChanges {
   @Input() comments: { [moveIndex: number]: string } = {};
   /** Optional: Kommentare in Stücken mit anklickbaren Zügen (Schlüssel wie `comments`). Ohne → reiner Text. */
   @Input() commentSegments: { [moveIndex: number]: MoveListCommentSegment[] } | null = null;
+  /** Optional (0.836.0): Zeichen der Engine-Auswertung je Zug („??", „!" …), Schlüssel = Zugindex. */
+  readonly marks = input<Readonly<Record<number, MoveListMark>> | null>(null);
   @Output() moveClicked = new EventEmitter<number>();
   /** Ein anklickbarer Zug in einem Kommentar wurde gewählt (Vorschau seiner Stellung). */
   @Output() commentMoveClicked = new EventEmitter<MoveListCommentSegment>();
@@ -129,6 +149,15 @@ export class MoveListComponent implements OnChanges {
   @ViewChild('moveListEl') moveListEl!: ElementRef<HTMLElement>;
 
   movePairs: { number: number; white?: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
+
+  /** Schrift fürs Zeichen-Schild: Schwarz oder Weiß, was auf `color` (#rrggbb) mehr Kontrast hat (Gelb → Schwarz). */
+  markText(color: string): string {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
+    if (!m) return '#fff';
+    const lin = (h: string) => { const c = parseInt(h, 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    const l = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+    return 1.05 / (l + 0.05) >= (l + 0.05) / 0.05 ? '#fff' : '#000';
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['moves'] || changes['comments']) {
