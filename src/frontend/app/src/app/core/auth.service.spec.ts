@@ -737,3 +737,146 @@ describe('AuthService: gesperrter Browser-Speicher (F1-013)', () => {
     expect(claim[0].request.body).toEqual({ sessionId: anon });
   });
 });
+
+/**
+ * Charakterisierung vor der Zerlegung Z34 (SessionStore / ImpersonationService / PermissionService hinter der Fassade
+ * AuthService): Anmelden, Abmelden, Ablauf, Impersonation an/aus und `has` über die öffentliche Oberfläche.
+ */
+describe('AuthService: Fassade (Charakterisierung Z34)', () => {
+  let svc: AuthService;
+  let http: HttpTestingController;
+  let router: Router;
+  const admin = { token: jwt(7200), username: 'admin', userId: 1, isAdmin: true };
+  const target = { token: jwt(3600), username: 'opfer', userId: 2, isAdmin: false, impersonatorUsername: 'admin' };
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    svc = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('Anmelden: speichert die Sitzung, meldet sie über currentUser$ und gilt sofort', () => {
+    const seen: (string | null)[] = [];
+    svc.currentUser$.subscribe(u => seen.push(u?.username ?? null));
+
+    let answered: unknown = null;
+    svc.login('u', 'p', true).subscribe(res => answered = res);
+    const req = http.expectOne('/api/auth/login');
+    expect(req.request.body).toEqual({ username: 'u', password: 'p', rememberMe: true });
+    req.flush({ token: jwt(3600), username: 'u', userId: 5, isAdmin: false });
+
+    expect(answered).toEqual(jasmine.objectContaining({ username: 'u' }));
+    expect(seen).toEqual([null, 'u']);
+    expect(svc.isLoggedIn).toBeTrue();
+    expect(svc.currentUser?.userId).toBe(5);
+    expect(JSON.parse(localStorage.getItem('rookhub_user')!).username).toBe('u');
+    expect(svc.isImpersonating).toBeFalse();
+  });
+
+  it('Registrieren meldet ebenso an', () => {
+    svc.register('neu', null, 'pw').subscribe();
+    const req = http.expectOne('/api/auth/register');
+    expect(req.request.body).toEqual({ username: 'neu', email: null, password: 'pw' });
+    req.flush({ token: jwt(3600), username: 'neu', userId: 8, isAdmin: false });
+    expect(svc.currentUser?.username).toBe('neu');
+  });
+
+  it('Abmelden: Sitzung und Admin-Sicherung weg, currentUser$ null, Merker bis zur Server-Antwort, zur Anmeldung', async () => {
+    svc.adoptSession(admin);
+    localStorage.setItem('rookhub_admin_user', JSON.stringify(admin));
+    const nav = spyOn(router, 'navigate').and.resolveTo(true);
+    let last: unknown = 'unset';
+    svc.currentUser$.subscribe(u => last = u);
+
+    svc.logout();
+
+    expect(last).toBeNull();
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(svc.token).toBeNull();
+    expect(localStorage.getItem('rookhub_user')).toBeNull();
+    expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+    expect(svc.sessionEndPending).toBeTrue();
+    expect(nav).toHaveBeenCalledWith(['/login']);
+    http.expectOne({ method: 'POST', url: '/api/auth/rh-session/end' }).flush(null, { status: 204, statusText: 'No Content' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(svc.sessionEndPending).toBeFalse();
+  });
+
+  it('Ablauf mitten in der Sitzung: currentUser$ meldet null beim nächsten Zugriff', () => {
+    svc.adoptSession({ ...admin, token: jwt(-5) });
+    let last: unknown = 'unset';
+    svc.currentUser$.subscribe(u => last = u);
+    expect(svc.currentUser).toBeNull();
+    expect(last).toBeNull();
+    expect(svc.isAdmin).toBeFalse();
+    expect(svc.isAdminLive).toBeFalse();
+  });
+
+  it('Impersonation an: Admin gesichert, fremdes Token aktiv, Banner-Daten aus dem Token', () => {
+    svc.adoptSession(admin);
+    expect(svc.impersonate(target)).toBeTrue();
+
+    expect(svc.currentUser?.username).toBe('opfer');
+    expect(svc.isImpersonating).toBeTrue();
+    expect(svc.impersonatorUsername).toBe('admin');
+    expect(svc.isAdmin).toBeFalse();
+    expect(JSON.parse(localStorage.getItem('rookhub_user')!).impersonating).toBeTrue();
+    expect(JSON.parse(localStorage.getItem('rookhub_admin_user')!).username).toBe('admin');
+  });
+
+  it('Impersonation in der Impersonation überschreibt die Admin-Sicherung nicht', () => {
+    svc.adoptSession(admin);
+    svc.impersonate(target);
+    svc.impersonate({ ...target, username: 'zweiter', userId: 3 });
+    expect(svc.currentUser?.username).toBe('zweiter');
+    expect(JSON.parse(localStorage.getItem('rookhub_admin_user')!).username).toBe('admin');
+  });
+
+  it('Impersonation aus: zurück zum Admin, Sicherung weg, kein Banner mehr', () => {
+    svc.adoptSession(admin);
+    svc.impersonate(target);
+
+    svc.stopImpersonation();
+
+    expect(svc.currentUser?.username).toBe('admin');
+    expect(svc.isImpersonating).toBeFalse();
+    expect(svc.impersonatorUsername).toBeNull();
+    expect(svc.isAdmin).toBeTrue();
+    expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+    expect(JSON.parse(localStorage.getItem('rookhub_user')!).username).toBe('admin');
+  });
+
+  it('has: Live-Stand eines ANDEREN Kontos zählt nicht (nach dem Einsteigen gelten die Claims des neuen Tokens)', async () => {
+    svc.adoptSession({ token: jwtWithPerms(['books.manage']), username: 'a', userId: 1, isAdmin: false });
+    const done = svc.refreshPermissions();
+    http.expectOne('/api/auth/permissions').flush({ isAdmin: true, permissions: [] });
+    await done;
+    expect(svc.isAdminLive).toBeTrue();
+    expect(svc.has('ci.view')).toBeTrue();                     // Live: Admin
+
+    svc.impersonate({ token: jwtWithPerms(['ci.view']), username: 'b', userId: 2, isAdmin: false });
+    expect(svc.isAdminLive).toBeFalse();                       // Live-Stand gehört Konto 1
+    expect(svc.has('ci.view')).toBeTrue();                     // Claim des neuen Tokens
+    expect(svc.has('books.manage')).toBeFalse();
+  });
+
+  it('refreshPermissions ohne Anmeldung fragt nicht und setzt den Live-Stand zurück', async () => {
+    await svc.refreshPermissions();
+    http.expectNone('/api/auth/permissions');
+    expect(svc.has('x')).toBeFalse();
+  });
+
+  it('übernommene Anmeldung (adoptSession): normale Sitzung ohne Sicherung', () => {
+    svc.adoptSession({ ...admin, adopted: true });
+    expect(svc.currentUser?.adopted).toBeTrue();
+    expect(svc.isImpersonating).toBeFalse();
+    expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+  });
+});
