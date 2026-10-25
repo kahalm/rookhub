@@ -32,21 +32,21 @@
 
   @if (kind() === 'pgn') {
     <section class="panel">
-      @if (review(); as rv) {
-        @if (dbNote(); as note) { <p class="small db-note" role="status">{{ note }}</p> }
-        @if (portionNote(); as note) { <p class="small portion-note" role="status">{{ note }}</p> }
-        @if (draft(); as d) {
+      @if (store.review(); as rv) {
+        @if (store.dbNote(); as note) { <p class="small db-note" role="status">{{ note }}</p> }
+        @if (store.portionNote(); as note) { <p class="small portion-note" role="status">{{ note }}</p> }
+        @if (store.draft(); as d) {
           <p class="small muted draft-note">Die Liste liegt online als Entwurf — brichst du ab, machst du später unter „Deine offenen Listen" weiter@if (!share) {, und ein Verwalter kann den Import fertigstellen}.
-            @if (resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
+            @if (store.resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
         }
-        <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" [draftId]="share ? null : (draft()?.id ?? null)"
-                               (imported)="done($event)" (cancel)="closeCurrent()" (savedChange)="onSaved($event)" />
+        <lh-club-import-review [review]="rv" [client]="client" [pgn]="store.pgn()" [remembers]="!share" [draftId]="share ? null : (store.draft()?.id ?? null)"
+                               (imported)="store.done($event)" (cancel)="store.closeCurrent()" (savedChange)="store.onSaved($event)" />
       } @else {
         <!-- d2-l-hinzufuegen-anon-text: am Schalter nur Beschriftung + ein Satz; der Rest hinter (i) — der Knopf steht NEBEN dem
              label, sonst schaltete ein Tipp darauf das Häkchen um. -->
         <div class="anon-box">
           <label class="anon-toggle">
-            <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
+            <input type="checkbox" [checked]="store.replaceClub()" (change)="store.replaceClub.set($any($event.target).checked)" />
             <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
               <span class="muted">Nach außen erscheint nur „{{ anon }}“.</span></span>
           </label>
@@ -62,69 +62,69 @@
             Partie ändern.</p></div>
         }
         <label class="field">PGN-Datei
-          <input type="file" lhFilePick accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
-          @if (readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
+          <input type="file" lhFilePick accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="store.busy()" (change)="pickFile($event)" />
+          @if (store.readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
         </label>
         <label class="field">… oder eine ChessBase-Datenbank
-          <input type="file" lhFilePick multiple [disabled]="busy()" (change)="pickChessBase($event)" />
+          <input type="file" lhFilePick multiple [disabled]="store.busy()" (change)="pickChessBase($event)" />
           <span class="small muted">Alle Dateien der Datenbank auswählen (z. B. MeineSpiele.2cbh, .2cbg, .2lid … bzw. .cbh,
             .cbg, .cbp …) oder ein ZIP davon. Gelesen wird die Hauptvariante, ohne Kommentare.
-            @if (readingDb()) { <b>Lese die Datenbank …</b> }</span>
+            @if (store.readingDb()) { <b>Lese die Datenbank …</b> }</span>
         </label>
         <div class="field">… oder eine öffentliche Lichess-Studie
           <div class="linkrow">
-            <input type="url" inputmode="url" placeholder="https://lichess.org/study/…" [value]="studyUrl()"
-                   (input)="studyUrl.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); loadStudy()" />
-            <button type="button" class="btn-sec" [disabled]="busy() || !studyUrl().trim()" (click)="loadStudy()">
-              {{ loadingStudy() ? 'Lade …' : 'Laden' }}</button>
+            <input type="url" inputmode="url" placeholder="https://lichess.org/study/…" [value]="store.studyUrl()"
+                   (input)="store.studyUrl.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); loadStudy()" />
+            <button type="button" class="btn-sec" [disabled]="store.busy() || !store.studyUrl().trim()" (click)="loadStudy()">
+              {{ store.loadingStudy() ? 'Lade …' : 'Laden' }}</button>
           </div>
         </div>
         <label class="field">… oder hier einfügen
-          <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="pgn()"
-                    (input)="pgn.set($any($event.target).value)"></textarea>
+          <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="store.pgn()"
+                    (input)="store.pgn.set($any($event.target).value)"></textarea>
         </label>
         <div class="actions">
-          <button type="button" class="btn-pri" [disabled]="busy() || !pgn().trim()" (click)="startPreview()">
-            {{ previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
+          <button type="button" class="btn-pri" [disabled]="store.busy() || !store.pgn().trim()" (click)="store.startPreview()">
+            {{ store.previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
           <!-- a1-l-partien-pruefen-gesperrt: solange nichts da ist, sagt die Zeile, WARUM der Knopf gesperrt ist (DESIGN 5.4). -->
-          @if (!busy() && !pgn().trim()) {
+          @if (!store.busy() && !store.pgn().trim()) {
             <span class="muted small pick-reason">Erst eine PGN-Datei wählen, eine Studie laden oder Partien einfügen.</span>
           } @else {
             <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
           }
-          <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
+          <span class="update-msg" [class.err]="!!store.importError()" role="status">{{ store.importError() ?? '' }}</span>
         </div>
       }
-      @if (!review() && drafts().length) {
+      @if (!store.review() && store.drafts().length) {
         <h3 class="club-h3">Deine offenen Listen</h3>
         <p class="small muted">Eingelesen, aber noch nicht (ganz) importiert — mit deinen Korrekturen gespeichert.</p>
         <ul class="scan-list">
-          @for (d of drafts(); track d.ref) {
+          @for (d of store.drafts(); track d.ref) {
             <li>
-              <span>{{ draftTitle(d) }}</span>
-              <span class="muted">{{ draftState(d) }} · {{ when(d.updatedAt) }}</span>
-              <button type="button" class="btn-sec" [disabled]="resuming()" (click)="resume(d)">Weiter</button>
-              <button type="button" class="btn-link" (click)="discardDraft(d)">Verwerfen</button>
+              <span>{{ store.draftTitle(d) }}</span>
+              <span class="muted">{{ store.draftState(d) }} · {{ when(d.updatedAt) }}</span>
+              <button type="button" class="btn-sec" [disabled]="store.resuming()" (click)="store.resume(d)">Weiter</button>
+              <button type="button" class="btn-link" (click)="store.discardDraft(d)">Verwerfen</button>
             </li>
           }
         </ul>
       }
-      @if (!review() && isManager && othersDrafts().length) {
+      @if (!store.review() && isManager && store.othersDrafts().length) {
         <h3 class="club-h3">Offene Listen anderer <span class="muted small">(nur Verwalter)</span></h3>
         <p class="small muted">Eingereicht, aber nicht fertig importiert — auch über Teilen-Links. Du kannst den Import
           fertigstellen (mit den Korrekturen und Vorgaben des Einreichers) oder die Liste verwerfen.</p>
         <ul class="scan-list">
-          @for (d of othersDrafts(); track d.ref) {
+          @for (d of store.othersDrafts(); track d.ref) {
             <li>
-              <span>{{ draftTitle(d) }}</span>
-              <span class="muted">{{ draftState(d) }} · {{ d.viaShareLink ? 'über Teilen-Link' : (d.owner ?? 'mit Konto') }} · {{ when(d.updatedAt) }}</span>
-              <button type="button" class="btn-sec" [disabled]="resuming()" (click)="resume(d)">Fertigstellen</button>
-              <button type="button" class="btn-link" (click)="discardDraft(d)">Verwerfen</button>
+              <span>{{ store.draftTitle(d) }}</span>
+              <span class="muted">{{ store.draftState(d) }} · {{ d.viaShareLink ? 'über Teilen-Link' : (d.owner ?? 'mit Konto') }} · {{ when(d.updatedAt) }}</span>
+              <button type="button" class="btn-sec" [disabled]="store.resuming()" (click)="store.resume(d)">Fertigstellen</button>
+              <button type="button" class="btn-link" (click)="store.discardDraft(d)">Verwerfen</button>
             </li>
           }
         </ul>
       }
-      @if (result(); as r) {
+      @if (store.result(); as r) {
         <p class="result" role="status"><b>{{ summary(r) }}</b>
           @if (r.added && !share) { <a routerLink="/verein">Zu den Vereinspartien</a> }</p>
         @if (r.failed.length) {

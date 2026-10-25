@@ -107,7 +107,7 @@ describe('ClubAddPageComponent', () => {
     expect(service.client).toHaveBeenCalledWith(null);
     expect((el.querySelector('.anon-toggle input') as HTMLInputElement).checked).toBeTrue();
     api.preview.and.resolveTo(PREVIEW);
-    fixture.componentInstance.pgn.set('[White "x"]\n1. e4 *');
+    fixture.componentInstance.store.pgn.set('[White "x"]\n1. e4 *');
     fixture.detectChanges();
     (el.querySelector('.btn-pri') as HTMLButtonElement).click();
     flushMicrotasks();
@@ -149,11 +149,11 @@ describe('ClubAddPageComponent', () => {
     expect(api.createDraft).not.toHaveBeenCalled();                         // derselbe Entwurf, kein neuer
     expect(el.querySelector('.draft-note')).not.toBeNull();
 
-    fixture.componentInstance.review()!.toggleInclude(1);                   // eine Korrektur …
+    fixture.componentInstance.store.review()!.toggleInclude(1);                   // eine Korrektur …
     fixture.detectChanges();
     tick(1600);                                                              // … gedrosselt gespeichert
     expect(api.saveDraft).toHaveBeenCalledWith('9', { state: jasmine.any(String) });
-    fixture.componentInstance.onSaved([2]);
+    fixture.componentInstance.store.onSaved([2]);
     expect(api.saveDraft).toHaveBeenCalledWith('9', { imported: [1, 2] }); // frühere + neue Portion
     flush();
   }));
@@ -168,14 +168,14 @@ describe('ClubAddPageComponent', () => {
     const el = create();
     flushMicrotasks();
     api.preview.and.resolveTo(PREVIEW);
-    fixture.componentInstance.pgn.set('[White "x"]\n1. e4 *');
+    fixture.componentInstance.store.pgn.set('[White "x"]\n1. e4 *');
     fixture.detectChanges();
     (el.querySelector('.btn-pri') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();
     expect(Array.from(el.querySelectorAll('lh-club-import-review button')).some(b => b.textContent?.trim() === 'Verwerfen')).toBeFalse();
 
-    fixture.componentInstance.review()!.toggleInclude(1);                   // Korrektur, Drossel läuft noch …
+    fixture.componentInstance.store.review()!.toggleInclude(1);                   // Korrektur, Drossel läuft noch …
     fixture.detectChanges();
     api.drafts.calls.reset();
     const confirmSpy = confirmAsk;
@@ -186,8 +186,8 @@ describe('ClubAddPageComponent', () => {
     expect(api.deleteDraft).not.toHaveBeenCalled();
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(api.saveDraft).toHaveBeenCalledWith('7', { state: jasmine.any(String) });
-    expect(fixture.componentInstance.review()).toBeNull();
-    expect(fixture.componentInstance.pgn()).withContext('Text liegt im Entwurf, kein zweiter beim erneuten Prüfen').toBe('');
+    expect(fixture.componentInstance.store.review()).toBeNull();
+    expect(fixture.componentInstance.store.pgn()).withContext('Text liegt im Entwurf, kein zweiter beim erneuten Prüfen').toBe('');
     expect(api.drafts).toHaveBeenCalled();                                  // Liste neu geladen — dort steht der Entwurf
     tick(2000);
     expect(api.saveDraft).toHaveBeenCalledTimes(1);                        // keine zweite, verspätete Speicherung
@@ -198,7 +198,7 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     api.preview.and.resolveTo(PREVIEW);
     api.createDraft.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'tooManyDrafts' } }));
-    fixture.componentInstance.pgn.set('[White "x"]\n1. e4 *');
+    fixture.componentInstance.store.pgn.set('[White "x"]\n1. e4 *');
     fixture.detectChanges();
     (el.querySelector('.btn-pri') as HTMLButtonElement).click();
     flushMicrotasks();
@@ -208,14 +208,14 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(confirmSpy).toHaveBeenCalled();
-    expect(fixture.componentInstance.review()).not.toBeNull();              // abgelehnt → Übersicht bleibt offen
+    expect(fixture.componentInstance.store.review()).not.toBeNull();              // abgelehnt → Übersicht bleibt offen
     expect(api.deleteDraft).not.toHaveBeenCalled();
 
     confirmSpy.and.returnValue(of(true));
     closeButton(el).click();
     flushMicrotasks();
-    expect(fixture.componentInstance.review()).toBeNull();
-    expect(fixture.componentInstance.pgn()).withContext('ohne Entwurf bleibt wenigstens der Text im Feld').toBe('[White "x"]\n1. e4 *');
+    expect(fixture.componentInstance.store.review()).toBeNull();
+    expect(fixture.componentInstance.store.pgn()).withContext('ohne Entwurf bleibt wenigstens der Text im Feld').toBe('[White "x"]\n1. e4 *');
   }));
 
   it('Verwerfen einer fremden Liste nennt in der Rückfrage, von wem sie ist', fakeAsync(() => {
@@ -396,7 +396,7 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     api.lichess.and.resolveTo('[Event "Studie: Kapitel 1"]\n1. e4 *');
     api.preview.and.resolveTo(PREVIEW);
-    fixture.componentInstance.studyUrl.set('https://lichess.org/study/AbCdEf12');
+    fixture.componentInstance.store.studyUrl.set('https://lichess.org/study/AbCdEf12');
     void fixture.componentInstance.loadStudy();
     flushMicrotasks();
     fixture.detectChanges();
@@ -405,7 +405,7 @@ describe('ClubAddPageComponent', () => {
     expect(api.createDraft).toHaveBeenCalledWith('[Event "Studie: Kapitel 1"]\n1. e4 *', 'lichess', jasmine.stringContaining('lichess.org'));
     expect(el.querySelector('.review-table')).not.toBeNull();
 
-    fixture.componentInstance.review.set(null);
+    fixture.componentInstance.store.review.set(null);
     api.lichess.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'lichessNotFound' } }));
     void fixture.componentInstance.loadStudy();
     flushMicrotasks();
@@ -490,7 +490,7 @@ describe('ClubAddPageComponent', () => {
 
     const again = { files: [file], value: 'C:\\fakepath\\Verein.pgn' };
     void fixture.componentInstance.pickFile({ target: again } as unknown as Event);    // kommt trotzdem eine Wahl durch …
-    fixture.componentInstance.studyUrl.set('https://lichess.org/study/AbCdEf12');
+    fixture.componentInstance.store.studyUrl.set('https://lichess.org/study/AbCdEf12');
     void fixture.componentInstance.loadStudy();                             // … oder Enter im Studien-Feld
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     expect(again.value).toBe('');
@@ -504,7 +504,7 @@ describe('ClubAddPageComponent', () => {
     expect(api.preview).toHaveBeenCalledTimes(1);
     expect(api.createDraft.calls.allArgs().map(a => [a[1], a[2]])).toEqual([
       ['datei', 'Verein.pgn (Teil 1 von 3)'], ['datei', 'Verein.pgn (Teil 2 von 3)'], ['datei', 'Verein.pgn (Teil 3 von 3)']]);
-    expect(fixture.componentInstance.busy()).toBeFalse();
+    expect(fixture.componentInstance.store.busy()).toBeFalse();
     expect(el.querySelector('.review-table')).not.toBeNull();
   });
 
@@ -564,9 +564,9 @@ describe('ClubAddPageComponent', () => {
       return { ref: String(n), id: n, source: 'text', label: null, gameCount: 500, importedCount: 0,
         createdAt: '2026-09-29T10:00:00', updatedAt: '2026-09-29T10:00:00', viaShareLink: false, mine: true };
     });
-    fixture.componentInstance.pgn.set(pgn);
+    fixture.componentInstance.store.pgn.set(pgn);
     fixture.detectChanges();
-    await fixture.componentInstance.startPreview();
+    await fixture.componentInstance.store.startPreview();
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     fixture.detectChanges();
     expect(api.createDraft.calls.argsFor(0)[2]).toBe('Teil 1 von 4');
@@ -731,7 +731,7 @@ describe('ClubAddPageComponent', () => {
     expect(btn.disabled).toBeTrue();
     expect(el.querySelector('.pick-reason')?.textContent).toContain('Erst eine PGN-Datei wählen, eine Studie laden oder Partien einfügen.');
     expect(el.textContent).not.toContain('Erst kommt eine Übersicht');
-    fixture.componentInstance.pgn.set('1. e4 e5 *');
+    fixture.componentInstance.store.pgn.set('1. e4 e5 *');
     fixture.detectChanges();
     expect(btn.disabled).toBeFalse();
     expect(el.querySelector('.pick-reason')).toBeNull();
