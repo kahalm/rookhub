@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, ViewChild, ElementRef, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -24,6 +24,7 @@ import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
 import { GapProposalsComponent } from './gap-proposals.component';
+import { PartEditorComponent } from './part-editor.component';
 import {
   canCloseGap, firstGap, gapMessageKey, gapTargetAt, hasProposalsBefore, moveNo, moveTokens, partState, partSummary,
   plyCountOf, positionOrientation, previewFen, recordedEndBefore, recordedParts, replayMoves, targetAfter, tokensUpTo,
@@ -51,7 +52,7 @@ import { whiteToMove } from '../../shared/chess/fen-side';
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
     MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule, MatMenuModule,
     TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe, IsoDateFieldComponent,
-    GapProposalsComponent],
+    GapProposalsComponent, PartEditorComponent],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',
 })
@@ -96,8 +97,12 @@ export class ReconstructDetailComponent implements OnInit {
   /** Gesetzt, solange der Stellungs-Editor eine Stellung AUS einem Vorschlag bestätigt/korrigiert. */
   readonly waypointFor = signal<number | null>(null);
 
-  /** Der Kasten um das Brett — er bekommt den Fokus, damit die Pfeiltasten sofort blättern. */
-  @ViewChild('boardWrap') boardWrap?: ElementRef<HTMLElement>;
+  /**
+   * Der Zug-Editor — sein Brett-Kasten bekommt den Fokus, damit die Pfeiltasten sofort blättern.
+   * Bewusst die Dekorator-Abfrage: der Fokus kommt per `setTimeout` und darf nach dem Verlassen
+   * der Seite nicht werfen (eine Signal-Abfrage wirft dann NG0205).
+   */
+  @ViewChild(PartEditorComponent) private movesEditor?: PartEditorComponent;
 
   private id = 0;
 
@@ -316,7 +321,7 @@ export class ReconstructDetailComponent implements OnInit {
    * Klick aufs Brett holt das Blättern zurück.
    */
   private focusBoard(): void {
-    setTimeout(() => this.boardWrap?.nativeElement?.focus({ preventScroll: true }), 0);
+    setTimeout(() => this.movesEditor?.focusBoard(), 0);
   }
 
   /** Der Zugtext hat sich geändert (Tippen oder Einfügen) — Brett und Fehlerhinweis nachziehen. */

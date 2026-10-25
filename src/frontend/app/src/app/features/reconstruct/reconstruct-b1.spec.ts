@@ -7,6 +7,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ReconstructListComponent } from './reconstruct-list.component';
 import { ReconstructDetailComponent } from './reconstruct-detail.component';
+import { PartEditorComponent } from './part-editor.component';
 
 function compactCss(cmp: Type<unknown>): string {
   return (((cmp as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n')
@@ -56,8 +57,14 @@ describe('UI-Sweep b1 — Partie rekonstruieren', () => {
     expect(at).toBeGreaterThan(-1);
     const wide = css.slice(at);
     expect(wide).toContain('.columns{grid-template-columns:minmax(420px,1fr)minmax(600px,900px)');
-    expect(wide).toMatch(/\.editorapp-chess-board,\.editorapp-position-setup,\.arrow-hint,\.ply-nav\{max-width:min\(100%,(calc\()?100vh-360px\)?\)/);
+    expect(wide).toMatch(/\.editorapp-chess-board,\.editorapp-position-setup\{max-width:min\(100%,(calc\()?100vh-360px\)?\)/);
     // Darunter bleibt die 56vh-Schranke.
     expect(css.slice(0, at)).toContain('max-width:min(100%,56vh)');
+    // Brett, Pfeil-Hinweis und Blätterleiste des Zug-Editors stehen seit der Zerlegung (Z25) in PartEditorComponent.
+    const editorCss = compactCss(PartEditorComponent);
+    const editorAt = editorCss.indexOf('@media(min-width:2400px)');
+    expect(editorAt).toBeGreaterThan(-1);
+    expect(editorCss.slice(editorAt)).toMatch(/app-chess-board,\.arrow-hint,\.ply-nav\{max-width:min\(100%,(calc\()?100vh-360px\)?\)/);
+    expect(editorCss.slice(0, editorAt)).toContain('max-width:min(100%,56vh)');
   });
 });

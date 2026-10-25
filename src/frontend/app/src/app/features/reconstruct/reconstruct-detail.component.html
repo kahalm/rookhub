@@ -274,76 +274,13 @@
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
           } @else {
-            <div class="side-row" [hidden]="editingGenerated()">
-              <span class="muted">{{ 'reconstruct.sideToMove' | translate }}</span>
-              <mat-button-toggle-group [value]="sideBlack() ? 'b' : 'w'" hideSingleSelectionIndicator="true"
-                                       (change)="setSideBlack($event.value === 'b')">
-                <mat-button-toggle value="w">{{ 'reconstruct.sideWhite' | translate }}</mat-button-toggle>
-                <mat-button-toggle value="b">{{ 'reconstruct.sideBlack' | translate }}</mat-button-toggle>
-              </mat-button-toggle-group>
-            </div>
-
-            <div #boardWrap class="board-wrap" tabindex="0">
-              <app-chess-board [fen]="editBoardFen()" [playable]="boardPlayable()" (userMove)="onBoardMove($event)"
-                               [boardTheme]="boardTheme" [pieceSet]="pieceSet"></app-chess-board>
-            </div>
-
-            <!-- Blättern durch die eingetippten Züge (am PC auch mit den Pfeiltasten). -->
-            <div class="ply-nav">
-              <button mat-icon-button [disabled]="plyShown() === 0" (click)="goPly('start')"
-                      [appIconLabel]="'reconstruct.plyFirst' | translate">
-                <mat-icon>first_page</mat-icon>
-              </button>
-              <button mat-icon-button [disabled]="plyShown() === 0" (click)="goPly(-1)"
-                      [appIconLabel]="'reconstruct.plyPrev' | translate">
-                <mat-icon>chevron_left</mat-icon>
-              </button>
-              <span class="muted ply-count">{{ 'reconstruct.plyPosition' | translate:{ shown: plyShown(), total: plyTotal() } }}</span>
-              <button mat-icon-button [disabled]="atEnd()" (click)="goPly(1)"
-                      [appIconLabel]="'reconstruct.plyNext' | translate">
-                <mat-icon>chevron_right</mat-icon>
-              </button>
-              <button mat-icon-button [disabled]="atEnd()" (click)="goPly('end')"
-                      [appIconLabel]="'reconstruct.plyLast' | translate">
-                <mat-icon>last_page</mat-icon>
-              </button>
-              @if (!atEnd()) {
-                <button mat-stroked-button (click)="truncateHere()">
-                  <mat-icon>content_cut</mat-icon> {{ 'reconstruct.continueHere' | translate }}
-                </button>
-              }
-            </div>
-            <p class="muted small arrow-hint">{{ 'reconstruct.arrowHint' | translate }}</p>
-            <mat-form-field appearance="outline" class="wide">
-              <mat-label>{{ 'reconstruct.movesLabel' | translate }}</mat-label>
-              <textarea matInput rows="3" [ngModel]="editMoves" (ngModelChange)="onMovesInput($event)"
-                        [placeholder]="'reconstruct.movesPlaceholder' | translate"></textarea>
-              <mat-hint>{{ 'reconstruct.movesHint' | translate }}</mat-hint>
-            </mat-form-field>
-            @if (editBadMove()) {
-              <p class="bad-hint">{{ 'reconstruct.badMove' | translate:{ move: editBadMove() } }}</p>
-              <p class="muted small">{{ 'reconstruct.boardLocked' | translate }}</p>
-            }
-            <mat-form-field appearance="outline" class="wide">
-              <mat-label>{{ 'reconstruct.partNote' | translate }}</mat-label>
-              <input matInput [(ngModel)]="editNote" maxlength="500">
-            </mat-form-field>
-            <div class="editor-actions">
-              <button mat-flat-button color="primary" [disabled]="busy() || editingGenerated()" (click)="savePart()">
-                {{ 'common.save' | translate }}
-              </button>
-              @if (editingId() === 0) {
-                <!-- „Hier komme ich mit Zügen nicht weiter": speichert das Getippte und macht mit
-                     der nächsten erinnerten Stellung weiter (leerer Editor wechselt nur die Art). -->
-                <button mat-stroked-button [disabled]="busy()" (click)="toPosition()">
-                  <mat-icon>grid_on</mat-icon> {{ 'reconstruct.enterPosition' | translate }}
-                </button>
-              }
-              <button mat-button (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
-              <button mat-button [disabled]="!editMoves.trim()" (click)="undoMove()">
-                <mat-icon>undo</mat-icon> {{ 'reconstruct.undoMove' | translate }}
-              </button>
-            </div>
+            <app-part-editor [fen]="editBoardFen()" [playable]="boardPlayable()" [boardTheme]="boardTheme"
+                             [pieceSet]="pieceSet" [plyShown]="plyShown()" [plyTotal]="plyTotal()" [atEnd]="atEnd()"
+                             [moves]="editMoves" [badMove]="editBadMove()" [(note)]="editNote" [sideBlack]="sideBlack()"
+                             [generated]="editingGenerated()" [isNew]="editingId() === 0" [busy]="busy()"
+                             (boardMove)="onBoardMove($event)" (goPly)="goPly($event)" (truncate)="truncateHere()"
+                             (movesInput)="onMovesInput($event)" (sideChange)="setSideBlack($event)"
+                             (save)="savePart()" (toPosition)="toPosition()" (cancel)="cancelEdit()" (undo)="undoMove()" />
           }
         }
       </section>
