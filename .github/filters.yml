@@ -21,6 +21,7 @@
 # dort muss diesen Bau ausloesen (CiWorkflowTests.EveryDotnetTool_IsBuiltInTheTestGate).
 api:
   - '.github/workflows/**'
+  - '.github/actions/**'
   - '.github/filters.yml'
   - 'src/api/**'
   - 'tests/**'
@@ -34,6 +35,7 @@ api:
 # turnier-Filter. Ohne das bliebe das Turnier-Image nach einer Aenderung an geteiltem Code alt.
 frontend: &frontend
   - '.github/workflows/**'
+  - '.github/actions/**'
   - '.github/filters.yml'
   - 'src/frontend/app/src/**'
   - 'src/frontend/app/public/**'
@@ -88,6 +90,7 @@ clubhub:
 
 engine-provider:
   - '.github/workflows/**'
+  - '.github/actions/**'
   - '.github/filters.yml'
   - 'engine-provider/**'
 
@@ -97,6 +100,7 @@ engine-provider:
 # Frontend-Interfaces, die der Test gegen die goldenen Dateien haelt (`core/models.ts`).
 crawler:
   - '.github/workflows/**'
+  - '.github/actions/**'
   - '.github/filters.yml'
   - 'src/api/**'
   - 'tests/RookHub.Api.Tests/**'

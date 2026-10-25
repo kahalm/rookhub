@@ -251,8 +251,21 @@ public class DeploymentConfigTests
     {
         var text = ReadRepoFile(".github/workflows/test.yml");
 
-        Assert.DoesNotContain("dotnet-version: '9.", text);
-        Assert.Contains("dotnet-version: '10.0.x'", text);
+        // 0.838.1: das SDK kommt aus der eigenen Aktion (Build-Feed statt aka.ms — der Kurzlink antwortete am 25.10.2026
+        // mit 409 und riss alle Test-Jobs vor dem ersten Test um); actions/setup-dotnet darf nirgends zurueckkommen.
+        Assert.DoesNotContain("uses: actions/setup-dotnet", text);   // der Name darf im Kommentar stehen, nie als Schritt
+        Assert.DoesNotContain("channel: '9.", text);
+        Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(text,
+            @"uses: \./\.github/actions/dotnet-sdk\s*\n\s*with:\s*\n\s*channel: '10\.0'").Count);
+        var audit = ReadRepoFile(".github/workflows/audit.yml");
+        Assert.DoesNotContain("uses: actions/setup-dotnet", audit);
+        Assert.Contains("uses: ./.github/actions/dotnet-sdk", audit);
+        var action = ReadRepoFile(".github/actions/dotnet-sdk/action.yml");
+        Assert.Contains("default: '10.0'", action);
+        var script = action[action.IndexOf("run: |", StringComparison.Ordinal)..];
+        Assert.Contains("FEED: https://builds.dotnet.microsoft.com/dotnet", action);
+        Assert.DoesNotContain("aka.ms", script);                       // der Kurzlink nur in der Begruendung, nie als Quelle
+        Assert.Contains("--version \"$version\"", script);             // ausdrueckliche Version = das Skript nimmt den Feed, nicht aka.ms
         // Ohne diesen Schritt liefe im Image-Gate kein einziger Frontend-Spec.
         Assert.Contains("ng test", text);
         // Die engine-provider-Tests liefen zuvor in KEINEM Workflow — ein Bump von PROVIDER_SHA oder

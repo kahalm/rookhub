@@ -49,6 +49,15 @@
   **Form aller Workflows** (Codereview I1-018, `CiWorkflowTests` hält sie fest): oben `permissions: {}`, Rechte nur je
   Job; jede Action per Commit-SHA mit Versionskommentar, eine Action = ein SHA in allen Dateien (beim Anheben alle
   gemeinsam); `node-version` = Major aus `src/frontend/Dockerfile`.
+  **.NET-SDK aus dem Build-Feed** (0.838.1): die Test- und Audit-Jobs holen das SDK über die eigene Composite-Action
+  `.github/actions/dotnet-sdk` (Eingabe `channel`, Vorgabe `10.0`) statt über `actions/setup-dotnet`. Dessen Skript löst
+  `10.0.x` über den Kurzlink `aka.ms/dotnet/10.0/…` auf, und der zeigte am 25.10.2026 auf `dotnetorigin.blob.core.windows.net`
+  mit „409 Public access is not permitted“ — vier Test-Jobs rot, bevor ein Test lief, Tag v0.838.0 ohne Images. Die Action
+  nimmt ein vorinstalliertes SDK des Kanals, sonst liest sie `Sdk/<Kanal>/latest.version` von `builds.dotnet.microsoft.com`
+  und ruft `dotnet-install.sh --version <genau>` auf — mit genannter Version steht aka.ms nicht mehr in dessen Quellenliste
+  (Feed + `ci.dot.net/public`). Framework-Bump = `channel` in `test.yml` (3×) und `audit.yml` heben;
+  `DeploymentConfigTests.TestWorkflow_PinsDotnet10_AndRunsFrontendSpecs` hält Action, Kanal und Quelle fest; `.github/actions/**`
+  steht in jedem Pfadfilter mit CI-Dateien.
   **Skript-Tests** (Codereview I1-015): Job `test-scripts` in `test.yml` führt jeden Test unter `scripts/tests/` aus
   (bash bzw. python3, ohne Container/Netz, `timeout-minutes: 5`). Ein neuer Skript-Test braucht dort eine eigene
   `- run:`-Zeile — `CiWorkflowTests.EveryScriptTest_RunsInTheTestWorkflow` prüft das.

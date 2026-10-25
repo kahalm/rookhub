@@ -1,0 +1,34 @@
+name: .NET-SDK aus dem Build-Feed
+description: >
+  Stellt das .NET-SDK eines Kanals bereit — vorinstalliert auf dem Runner, sonst direkt von builds.dotnet.microsoft.com.
+  Ersetzt actions/setup-dotnet (0.838.1): dessen Skript löst „10.0.x“ über den Kurzlink aka.ms/dotnet/10.0/… auf, und der
+  zeigt seit dem 25.10.2026 auf dotnetorigin.blob.core.windows.net, das jede Anfrage mit „409 Public access is not
+  permitted“ abweist — alle Test-Jobs fielen damit schon bei der Installation um, ohne einen Test zu starten. Der
+  Build-Feed liefert dieselben Dateien, das Installationsskript nimmt ihn, sobald die Version ausdrücklich genannt ist
+  (dann steht aka.ms gar nicht mehr in seiner Liste; Ausweichquelle ci.dot.net/public bleibt).
+inputs:
+  channel:
+    description: Der Kanal, z. B. „10.0“ — das SDK ist dann die jüngste Fassung dieses Kanals laut Feed.
+    required: false
+    default: '10.0'
+runs:
+  using: composite
+  steps:
+    - name: .NET ${{ inputs.channel }} SDK
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+        FEED: https://builds.dotnet.microsoft.com/dotnet
+      run: |
+        set -euo pipefail
+        if command -v dotnet >/dev/null && dotnet --list-sdks 2>/dev/null | grep -q "^${CHANNEL//./\\.}\."; then
+          echo "SDK $CHANNEL ist auf dem Runner vorinstalliert:"; dotnet --list-sdks | grep "^${CHANNEL//./\\.}\."
+          exit 0
+        fi
+        version=$(curl -fsSL "$FEED/Sdk/$CHANNEL/latest.version" | tr -d '[:space:]')
+        echo "Installiere .NET SDK $version aus $FEED"
+        curl -fsSL "$FEED/scripts/v1/dotnet-install.sh" -o "$RUNNER_TEMP/dotnet-install.sh"
+        bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet" --skip-non-versioned-files
+        echo "$HOME/.dotnet" >> "$GITHUB_PATH"
+        echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
+        "$HOME/.dotnet/dotnet" --list-sdks

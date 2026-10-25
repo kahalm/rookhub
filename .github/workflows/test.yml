@@ -68,12 +68,14 @@ jobs:
             filter: "FullyQualifiedName!~RookHub.Api.Tests.Scoresheet.&FullyQualifiedName!~RookHub.Api.Tests.Accounts."
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      # FALLE: Die Projekte targeten net10.0. Ein 9.0.x-Pin baut sie NICHT — dass es
+      # FALLE: Die Projekte targeten net10.0. Ein 9.0-Kanal baut sie NICHT — dass es
       # trotzdem lief, lag nur am vorinstallierten SDK des Runner-Images. Beim naechsten
-      # Framework-Bump muss diese Version hier mitwandern (Checkliste in TODO.md).
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+      # Framework-Bump muss der Kanal hier (und in audit.yml) mitwandern (Checkliste in TODO.md).
+      # Seit 0.838.1 die eigene Aktion statt actions/setup-dotnet: dessen aka.ms-Download antwortet 409
+      # (Begruendung in .github/actions/dotnet-sdk/action.yml).
+      - uses: ./.github/actions/dotnet-sdk
         with:
-          dotnet-version: '10.0.x'
+          channel: '10.0'
       - run: dotnet test tests/RookHub.Api.Tests --filter "${{ matrix.filter }}" --verbosity normal
       # Die Wartungswerkzeuge unter tools/ referenzieren die API, gehen aber in kein Image und in keinen Test —
       # ohne diesen Schritt fiel eine API-Aenderung, die sie bricht, erst beim naechsten Lauf von Hand auf
@@ -123,9 +125,9 @@ jobs:
           --health-start-period=5s
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+      - uses: ./.github/actions/dotnet-sdk
         with:
-          dotnet-version: '10.0.x'
+          channel: '10.0'
       # OHNE database= - jeder Test legt sein eigenes Wegwerf-Schema an und raeumt es weg.
       # Fehlt die Variable, ueberspringen sich die Tests (siehe MySqlFactAttribute), damit
       # `dotnet test` ohne Docker lokal gruen bleibt statt rot.
@@ -168,9 +170,9 @@ jobs:
           fi
           git checkout --quiet "$tag"
           echo "Vertrag gegen chessresults_crawler $tag"
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+      - uses: ./.github/actions/dotnet-sdk
         with:
-          dotnet-version: '10.0.x'
+          channel: '10.0'
       # CRAWLER_REPO gesetzt = der Abgleich gegen die Crawler-DTOs ueberspringt sich NICHT
       # (CrawlerSourceTheoryAttribute) — ein falscher Pfad waere sonst ein stilles Gruen.
       - run: dotnet test tests/RookHub.Api.Tests --filter "FullyQualifiedName~CrawlerContractTests" --verbosity normal

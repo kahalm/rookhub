@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.838.1", date: "2026-10-25", changes: [
+    { en: "CI: the test and audit jobs install the .NET SDK straight from builds.dotnet.microsoft.com (own action instead of actions/setup-dotnet). Its aka.ms short link pointed to a storage account that rejected every download with HTTP 409 since 25 Oct 2026, so no release build could pass its tests. No change to the app itself.", de: "CI: Die Test- und Audit-Jobs holen das .NET-SDK direkt von builds.dotnet.microsoft.com (eigene Aktion statt actions/setup-dotnet). Dessen aka.ms-Kurzlink zeigte seit dem 25.10.2026 auf einen Speicher, der jeden Download mit HTTP 409 abwies, sodass kein Release-Build seine Tests bestehen konnte. An der App selbst ändert sich nichts." },
+  ]},
   { version: "0.838.0", date: "2026-10-25", changes: [
     { en: "LeagueHub: shared match links now also show „All line-ups of round N“ — every match of the round with boards, results, first moves and existing games, read-only. Replaying a game works for the shared match; player cards open for the link’s roster. Nothing can be edited without logging in.", de: "LeagueHub: Geteilte Begegnungs-Links zeigen jetzt auch „Alle Aufstellungen der Runde N“ — jede Begegnung der Runde mit Brettern, Ergebnissen, ersten Zügen und vorhandenen Partien, nur zum Ansehen. Nachspielen geht an der geteilten Begegnung, Spielerkarten öffnen für die Meldeliste des Links. Ohne Anmeldung lässt sich nichts ändern." },
   ]},
