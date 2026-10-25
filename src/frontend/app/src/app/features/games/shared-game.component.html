@@ -138,7 +138,7 @@
                 <button mat-menu-item class="lc0-waiting" disabled>
                   @if (lc0.engineOnline === false) {
                     <mat-icon>cloud_off</mat-icon>
-                    <span>{{ (lc0.engineLastSeenAt ? 'games.lc0.waitingOfflineSince' : 'games.lc0.waitingOffline') | translate:{ since: (lc0.engineLastSeenAt | date:'d.M. HH:mm') } }}</span>
+                    <span>{{ (lc0.engineLastSeenAt ? 'games.lc0.waitingOfflineSince' : 'games.lc0.waitingOffline') | translate:{ since: (lc0.engineLastSeenAt | date:'short') } }}</span>
                   } @else {
                     <mat-icon>hourglass_top</mat-icon>
                     <span>{{ 'games.lc0.running' | translate:lc0Progress(lc0) }}</span>
