@@ -6,9 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
@@ -19,6 +16,8 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { GuessAccept, GuessHistoryMove, GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { GuessPlayback } from './guess-playback';
+import { GuessHistoryPanelComponent, GuessNote } from './guess-history-panel.component';
+import { GuessSettingsMenuComponent } from './guess-settings-menu.component';
 import { SanPipe } from '../../shared/chess/san.pipe';
 
 /** Umwandlungsfigur aus dem SAN („e8=Q+" → „q"); leer, wenn der Zug keine Umwandlung ist. */
@@ -44,20 +43,16 @@ interface PendingGuess {
  * (siehe `GuessSessionService`). Deshalb setzt das Brett den geratenen Zug auch nicht selbst um:
  * gezeigt wird, was der Server zurückmeldet.</p>
  */
-/** Eine Zeile der Zugliste: Weiss und Schwarz nebeneinander, je mit Index und Kommentar-Marke. */
-interface HistoryRow {
-  no: number;
-  w: string; wIdx: number; wNoted: boolean; wSkipped: string | null;
-  b: string | null; bIdx: number; bNoted: boolean; bSkipped: string | null;
-}
+/** Stabil leer — eine neue Liste je Durchlauf waere fuer das OnPush-Kind eine neue Eingabe. */
+const NO_LANGUAGES: string[] = [];
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-guess-board',
   standalone: true,
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressBarModule, MatMenuModule, MatCheckboxModule, FormsModule,
-    TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent, SanPipe],
+    MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent, SanPipe,
+    GuessHistoryPanelComponent, GuessSettingsMenuComponent],
   template: `
     <div class="gb-container">
       @if (loading) {
@@ -83,22 +78,7 @@ interface HistoryRow {
             </p>
           </div>
           <div class="head-actions">
-            <button mat-icon-button [matMenuTriggerFor]="settings"
-                    [attr.title]="'guess.settings.title' | translate">
-              <mat-icon>settings</mat-icon>
-            </button>
-            <mat-menu #settings="matMenu" class="guess-settings">
-              <div class="set-box" (click)="$event.stopPropagation()">
-                <p class="set-head">{{ 'guess.settings.title' | translate }}</p>
-                <mat-checkbox [(ngModel)]="accept.better" (change)="saveAccept()">
-                  {{ 'guess.settings.acceptBetter' | translate }}
-                </mat-checkbox>
-                <mat-checkbox [(ngModel)]="accept.similar" (change)="saveAccept()">
-                  {{ 'guess.settings.acceptSimilar' | translate }}
-                </mat-checkbox>
-                <p class="set-hint muted small">{{ 'guess.settings.hint' | translate }}</p>
-              </div>
-            </mat-menu>
+            <app-guess-settings-menu [accept]="accept" (changed)="saveAccept()" />
             <a mat-stroked-button routerLink="/guess"><mat-icon>arrow_back</mat-icon> {{ 'guess.back' | translate }}</a>
           </div>
         </div>
@@ -213,60 +193,12 @@ interface HistoryRow {
             }
 
             @if (session.history.length) {
-              <div class="opening">
-                <div class="onav">
-                  <button mat-icon-button (click)="browse(-1)" [disabled]="atStart"
-                          [attr.title]="'guess.startPosition' | translate"><mat-icon>first_page</mat-icon></button>
-                  <button mat-icon-button (click)="step(-1)" [disabled]="atStart"
-                          [attr.title]="'guess.prevMove' | translate"><mat-icon>chevron_left</mat-icon></button>
-                  <button mat-icon-button (click)="step(1)" [disabled]="atTask"
-                          [attr.title]="'guess.nextMove' | translate"><mat-icon>chevron_right</mat-icon></button>
-                  <!-- UI-Sweep 2026-10-11: kein zweites „Zur Aufgabe" hier — der Hauptknopf steht beim Durchsehen unter dem Brett. -->
-                  <!-- Umschalten nur, wenn es etwas umzuschalten gibt. -->
-                  @if (commentLanguages.length > 1) {
-                    <span class="onav-spacer"></span>
-                    <mat-icon class="lang-icon"
-                              [attr.title]="'guess.commentLanguage' | translate">translate</mat-icon>
-                    @for (l of commentLanguages; track l) {
-                      <button type="button" class="lang" [class.on]="l === session.commentLanguage"
-                              (click)="chooseLanguage(l)">{{ langLabel(l) }}</button>
-                    }
-                  }
-                </div>
-                @if (browsedSkip; as why) {
-                  <div class="note skip-note">{{ why }}</div>
-                }
-                @if (browsedComment; as note) {
-                  <div class="note">
-                    <span class="note-move">{{ note.move | san:'text' }}</span>
-                    <span>{{ note.text }}</span>
-                    <!-- Steht der Kommentar nur in einer anderen Sprache da, wird das gesagt statt
-                         eine Luecke zu lassen. -->
-                    @if (note.language) {
-                      <span class="lang-tag">{{ langLabel(note.language) }}</span>
-                    }
-                  </div>
-                }
-                <div class="omoves">
-                  @for (row of historyRows; track row.no) {
-                    <div class="orow">
-                      <span class="no">{{ row.no }}.</span>
-                      @if (row.wIdx >= 0) {
-                        <button type="button" class="mv" [class.on]="browseIndex === row.wIdx"
-                                [class.noted]="row.wNoted" [class.skipped]="row.wSkipped"
-                                [attr.title]="hintFor(row.wNoted, row.wSkipped)"
-                                (click)="browse(row.wIdx)">{{ row.w | san }}</button>
-                      } @else { <span class="mv muted">…</span> }
-                      @if (row.b !== null) {
-                        <button type="button" class="mv" [class.on]="browseIndex === row.bIdx"
-                                [class.noted]="row.bNoted" [class.skipped]="row.bSkipped"
-                                [attr.title]="hintFor(row.bNoted, row.bSkipped)"
-                                (click)="browse(row.bIdx)">{{ row.b | san }}</button>
-                      } @else { <span></span> }
-                    </div>
-                  }
-                </div>
-              </div>
+              <app-guess-history-panel [history]="session.history" [browseIndex]="browseIndex"
+                                       [atStart]="atStart" [atTask]="atTask" [note]="browsedComment"
+                                       [commentLanguages]="commentLanguages"
+                                       [commentLanguage]="session.commentLanguage"
+                                       (browse)="browse($event)" (step)="step($event)"
+                                       (chooseLanguage)="chooseLanguage($event)" />
             }
           </div>
         </div>
@@ -298,22 +230,6 @@ interface HistoryRow {
     /* UI-Sweep 2026-10-11 (r2-rg-guess-start): Hinweis + Hauptknopf zur Aufgabe direkt unter dem Brett. */
     .browse-actions .to-task { margin-left: auto; }
     .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-    /* Eröffnung: Navigation oben, darunter die Züge UNTEREINANDER (Nr. · Weiß · Schwarz). */
-    .opening { margin-top: 8px; }
-    .onav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
-    .onav button[mat-stroked-button] { margin-left: 8px; }
-    /* Die Zugliste steht NEBEN dem Brett und darf deshalb so hoch werden wie das Brett. Breit
-       wird sie trotzdem nicht: feste, schmale Spalten halten Weiss und Schwarz beieinander —
-       gedehnt ueber die halbe Seite liest sich eine Zugliste schlecht. */
-    .omoves { margin-top: 4px; max-height: 52vh; overflow-y: auto; }
-    .orow { display: grid; grid-template-columns: 34px 96px 96px; gap: 4px; align-items: baseline;
-            padding: 1px 2px; }
-    .orow .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem;
-                text-align: right; font-variant-numeric: tabular-nums; }
-    .orow .mv { text-align: left; background: none; border: 0; color: inherit; font: inherit;
-                padding: 1px 6px; border-radius: 3px; cursor: pointer; }
-    .orow .mv:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
-    .orow .mv.on { background: color-mix(in srgb, currentColor 22%, transparent); font-weight: 600; }
     .held .hg { font-weight: 600; }
     .held .hd { font-variant-numeric: tabular-nums; }
     .held.g-worse .hd, .held.g-muchWorse .hd { color: var(--rh-error); }
@@ -339,25 +255,6 @@ interface HistoryRow {
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .small { font-size: .8rem; }
     .head-actions { display: flex; align-items: center; gap: 6px; }
-    .set-box { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; max-width: 300px; }
-    .set-head { margin: 0; font-weight: 600; }
-    .set-hint { margin: 2px 0 0; line-height: 1.4; }
-    /* Kommentierte Zuege tragen einen Punkt — Farbe allein traegt die Auskunft nicht. */
-    .mv.noted { font-weight: 600; }
-    .mv.noted::after { content: '\\2022'; margin-left: 2px; color: var(--mat-sys-primary); }
-    /* Uebersprungen: durchgestrichen und blass — die Zeile war nie eine Aufgabe. */
-    .mv.skipped { text-decoration: line-through; opacity: .6; }
-    .skip-note { font-size: .82rem; }
-    .note { margin: 8px 0 4px; padding: 8px 10px; border-radius: 6px; line-height: 1.45;
-            border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-            background: color-mix(in srgb, currentColor 5%, transparent); }
-    .note-move { font-weight: 600; margin-right: 6px; }
-    .onav-spacer { flex: 1 1 auto; }
-    .lang-icon { font-size: 18px; width: 18px; height: 18px; opacity: .6; }
-    .lang { border: none; background: none; cursor: pointer; font: inherit; font-size: .8rem;
-            padding: 2px 6px; border-radius: 4px; color: inherit; opacity: .6; }
-    .lang.on { opacity: 1; font-weight: 600; background: color-mix(in srgb, currentColor 12%, transparent); }
-    .lang-tag { margin-left: 6px; font-size: .7rem; opacity: .6; text-transform: uppercase; }
     /* a1-rk-guess-brett-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Seite breiter, Brett bis zur Fensterhöhe statt 820 px;
        die 560-px-Seitenspalte steht daneben. Unter 2400 px unverändert. */
     @media (min-width: 2400px) {
@@ -430,42 +327,8 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   get atTask(): boolean { return !this.browsing; }
   get atStart(): boolean { return this.browseIndex === -1; }
 
-  /** Der Verlauf als Zeilen „Nr. · Weiss · Schwarz" — je Halbzug der Index fuers Anklicken. */
-  get historyRows(): HistoryRow[] {
-    const rows: HistoryRow[] = [];
-    const history = this.session?.history ?? [];
-    for (let i = 0; i < history.length; i++) {
-      const m = history[i];
-      const noted = !!m.comment;
-      const skipped = m.skipped ?? null;
-      if (m.white) {
-        rows.push({ no: m.moveNumber, w: m.san, wIdx: i, wNoted: noted, wSkipped: skipped,
-                    b: null, bIdx: -1, bNoted: false, bSkipped: null });
-      } else if (rows.length && rows[rows.length - 1].b === null) {
-        rows[rows.length - 1].b = m.san;
-        rows[rows.length - 1].bIdx = i;
-        rows[rows.length - 1].bNoted = noted;
-        rows[rows.length - 1].bSkipped = skipped;
-      } else {
-        rows.push({ no: m.moveNumber, w: '…', wIdx: -1, wNoted: false, wSkipped: null,
-                    b: m.san, bIdx: i, bNoted: noted, bSkipped: skipped });
-      }
-    }
-    return rows;
-  }
-
-  /**
-   * Der Kommentar des gerade angesehenen Zuges. Nur beim Durchblaettern — auf der Aufgabe selbst
-   * (`browseIndex === null`) gibt es keinen: der Kommentar zum zu ratenden Zug waere die Loesung.
-   */
   /** Die Sprachen, in denen die Anmerkungen dieser Partie vorliegen. */
-  get commentLanguages(): string[] { return this.session?.commentLanguages ?? []; }
-
-  /** „DE", „EN" — und fuer eine Partie, deren Sprache sich nicht bestimmen liess, das Wort
-   *  „Original" statt des nichtssagenden Kuerzels „und". */
-  langLabel(code: string): string {
-    return code === 'und' ? this.translate.instant('guess.commentOriginal') : code.toUpperCase();
-  }
+  get commentLanguages(): string[] { return this.session?.commentLanguages ?? NO_LANGUAGES; }
 
   /**
    * Sprache der Anmerkungen umschalten. Geholt wird die SITZUNG neu — die Kommentare haengen am
@@ -490,7 +353,12 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  get browsedComment(): { move: string; text: string; language?: string | null } | null {
+  /**
+   * Der Kommentar des gerade angesehenen Zuges. Nur beim Durchblaettern — auf der Aufgabe selbst
+   * (`browseIndex === null`) gibt es keinen: der Kommentar zum zu ratenden Zug waere die Loesung.
+   * Gemerkt je Verlaufseintrag, damit das Kind (OnPush) eine STABILE Eingabe bekommt.
+   */
+  get browsedComment(): GuessNote | null {
     const i = this.browseIndex;
     // Wer blaettert, will DEN Zug lesen, den er angeklickt hat — sonst gilt der Kommentar aus dem
     // Spielverlauf (zum eben gespielten Partiezug bzw. zur Antwort des Gegners).
@@ -498,27 +366,15 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     if (i < 0) return null;
     const m = this.session?.history[i];
     if (!m?.comment) return null;
-    const dots = m.white ? '.' : '…';
-    return { move: `${m.moveNumber}${dots}${m.san}`, text: m.comment, language: m.commentLanguage };
+    if (m !== this.browsedNoteOf) {
+      const dots = m.white ? '.' : '…';
+      this.browsedNoteOf = m;
+      this.browsedNote = { move: `${m.moveNumber}${dots}${m.san}`, text: m.comment, language: m.commentLanguage };
+    }
+    return this.browsedNote;
   }
-
-  /** Titel der markierten Zuege — beim Zeiger darueber und fuer Vorlesegeraete. */
-  get noteHint(): string { return this.translate.instant('guess.hasComment'); }
-
-  hintFor(noted: boolean, skipped: string | null): string | null {
-    const parts = [];
-    if (skipped) parts.push(this.translate.instant('guess.skipped.' + skipped));
-    if (noted) parts.push(this.noteHint);
-    return parts.length ? parts.join(' · ') : null;
-  }
-
-  /** Warum der gerade angesehene Zug nicht abgefragt wurde — sonst bleibt es ein Raetsel. */
-  get browsedSkip(): string | null {
-    const i = this.browseIndex;
-    if (i === null || i < 0) return null;
-    const why = this.session?.history[i]?.skipped;
-    return why ? this.translate.instant('guess.skipped.' + why) : null;
-  }
+  private browsedNoteOf?: GuessHistoryMove;
+  private browsedNote: GuessNote | null = null;
 
   /**
    * Einen Halbzug vor (+1) oder zurueck (-1). Das ENDE ist der letzte Eintrag des Verlaufs, also die
@@ -689,7 +545,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   rejected: string | null = null;
 
   /** Der Kommentar zum gerade gezeigten Schritt (nicht zum Durchblaettern). */
-  stepNote: { move: string; text: string; language?: string | null } | null = null;
+  stepNote: GuessNote | null = null;
 
   /** Die zuletzt gewaehlte Sprache der Anmerkungen — geraetelokal, wie die Brett-Einstellungen. */
   private language: string | null = null;

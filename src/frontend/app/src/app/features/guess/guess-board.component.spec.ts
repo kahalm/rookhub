@@ -6,6 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { GuessBoardComponent } from './guess-board.component';
 import { GuessHistoryMove, GuessSession } from './guess.service';
+import { guessHistoryRows, skipReason } from './guess-history.util';
 import { AuthService } from '../../core/auth.service';
 
 function session(over: Partial<GuessSession> = {}): GuessSession {
@@ -488,12 +489,12 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
 
   it('die Zugliste steht untereinander, je Zeile Weiss und Schwarz', () => {
     const c = loadAtStart();
-    expect(c.historyRows.length).toBe(1);              // 4.dxe5 Bxf3 = eine Zeile
-    expect(c.historyRows[0].no).toBe(4);
-    expect(c.historyRows[0].w).toBe('dxe5');
-    expect(c.historyRows[0].b).toBe('Bxf3');
-    expect(c.historyRows[0].wIdx).toBe(0);
-    expect(c.historyRows[0].bIdx).toBe(1);
+    expect(guessHistoryRows(c.session!.history).length).toBe(1);              // 4.dxe5 Bxf3 = eine Zeile
+    expect(guessHistoryRows(c.session!.history)[0].no).toBe(4);
+    expect(guessHistoryRows(c.session!.history)[0].w).toBe('dxe5');
+    expect(guessHistoryRows(c.session!.history)[0].b).toBe('Bxf3');
+    expect(guessHistoryRows(c.session!.history)[0].wIdx).toBe(0);
+    expect(guessHistoryRows(c.session!.history)[0].bIdx).toBe(1);
   });
 
   /**
@@ -508,7 +509,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
       ],
     });
 
-    const rows = c.historyRows;
+    const rows = guessHistoryRows(c.session!.history);
     expect(rows[0].wNoted).withContext('4.dxe5 ist kommentiert').toBeTrue();
     expect(rows[0].bNoted).withContext('4...Bxf3 nicht').toBeFalse();
 
@@ -608,10 +609,11 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     expect(c.canGuess).withContext('erst jetzt ist der Nutzer dran').toBeTrue();
 
     // In der Zugliste ist der uebersprungene Zug als solcher erkennbar — samt Begruendung.
-    const row = c.historyRows.find(r => r.w === 'Qf4')!;
+    const row = guessHistoryRows(c.session!.history).find(r => r.w === 'Qf4')!;
     expect(row.wSkipped).toBe('notScorable');
     c.browse(c.session!.history.findIndex((h: GuessHistoryMove) => h.ply === 10));
-    expect(c.browsedSkip).withContext('sagt, warum nicht gefragt wurde').toBeTruthy();
+    // Den Text dazu zeigt seit der Zerlegung (Z24) die Zugliste (guess-history-panel.component.spec.ts).
+    expect(skipReason(c.session!.history, c.browseIndex)).withContext('sagt, warum nicht gefragt wurde').toBeTruthy();
   }));
 
   /**
@@ -700,13 +702,7 @@ describe('GuessBoardComponent Zug stehen lassen', () => {
     http.expectNone(r => r.url === '/api/guess-sessions/3');
   });
 
-  /** „und" heisst „Sprache nicht bestimmbar" — als Beschriftung taugt das Kuerzel nicht. */
-  it('nennt die unbestimmte Sprache Original', () => {
-    const c = load();
-
-    expect(c.langLabel('de')).toBe('DE');
-    expect(c.langLabel('und')).not.toBe('UND');
-  });
+  // „nennt die unbestimmte Sprache Original“ steht seit der Zerlegung (Z24) in guess-history-panel.component.spec.ts.
 });
 
 /** a1-rk-guess-brett-ultrawide: ab 2400 px wächst das Brett bis zur Fensterhöhe (darunter höchstens 820 px). */
