@@ -38,9 +38,10 @@ import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.compon
 import { AnalysisHistorySaver } from './analysis-history-saver';
 import { AnalysisCompare } from './analysis-compare';
 import {
-  AnalysisNode, addMove, createRoot, fromDto, isWithin, lineThrough, mainline, makeMainline, numberedSan, parsePgnTree, pathTo,
-  playSan, playUci, promote, removeNode, starredNodes,
+  AnalysisNode, addMove, createRoot, fromDto, isWithin, mainline, makeMainline, numberedSan, parsePgnTree, playSan, playUci, promote,
+  removeNode,
 } from './analysis-tree';
+import { AnalysisLineModel, boardMove, playLine } from './analysis-line-model';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MaiaSparring } from './maia/maia-sparring';
@@ -70,16 +71,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   readonly wideLayout = mediaSignal();
   /** Herkunft für den „+"-Knopf (0.749.0): das Analysebrett kennt keine Partie. */
   readonly boardMarkOrigin: MarkOrigin = { context: 'board' };
-  /** Zugbaum der Analyse (0.604.0): die Wurzel ist die Ausgangsstellung, `children[0]` jeweils die Fortsetzung. */
-  root: AnalysisNode = createRoot(START_FEN);
-  /** Die Linie durch den aktuellen Knoten: der Weg dorthin und seine Fortsetzung — Pfeiltasten laufen auf ihr. */
-  line: AnalysisNode[] = [];
-  /** Wie weit man auf `line` steht (0 = Ausgangsstellung). */
-  ply = 0;
+  /** Zugbaum, Linie und Stelle darauf ({@link AnalysisLineModel}); `root`/`line`/`ply`/`treeVersion` reichen durch. */
+  private readonly model = new AnalysisLineModel(START_FEN);
+  get root(): AnalysisNode { return this.model.root; }
+  get line(): AnalysisNode[] { return this.model.line; }
+  get ply(): number { return this.model.ply; }
+  /** Zählt Änderungen am Baum (Zug, Variante, Stern, Bewertung) — die Zugliste baut danach neu auf. */
+  get treeVersion(): number { return this.model.treeVersion; }
+  set treeVersion(v: number) { this.model.treeVersion = v; }
   /** Ergebnis der Endspiel-Datenbank für die aktuelle Stellung (0.729.0) — schlägt die Engine-Bewertung in der Leiste. */
   tbVerdict: TablebaseVerdict | null = null;
-  /** Zählt Änderungen am Baum (Zug, Variante, Stern, Bewertung) — die Zugliste baut danach neu auf. */
-  treeVersion = 0;
 
   orientation: Color = 'white';
   boardFen = START_FEN;
@@ -203,7 +204,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  WEITERgerechnet wird statt neu zu beginnen (gleiche Engine = warmer Hash) — nur für diesen Aufruf, bewusst
    *  NICHT als Dauereinstellung gespeichert. */
   private applyRouteParams(p: AnalysisRouteParams): void {
-    this.root = createRoot(p.fen ?? START_FEN);
+    this.model.root = createRoot(p.fen ?? START_FEN);
     if (p.orientation) this.orientation = p.orientation;
     if (p.returnTo) this.returnTo = p.returnTo;
     if (p.engine) this.requestedEngineId = p.engine;
@@ -286,13 +287,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private loadFromUci(fromFen: string, uciMoves: string[]): void {
     if (!this.isValidFen(fromFen)) { this.resetToStart(START_FEN); return; }
     const root = createRoot(fromFen);
-    let node = root;
-    for (const u of uciMoves) {
-      const next = playUci(node, u);
-      if (!next) break;
-      node = next;
-    }
-    this.setTree(root, node);
+    this.setTree(root, playLine(root, uciMoves, playUci));
   }
 
   ngOnDestroy(): void {
@@ -312,28 +307,26 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   // ---- Navigation ----
   get startFen(): string { return this.root.fen; }
   /** Der Knoten, dessen Stellung auf dem Brett steht (die Wurzel = Ausgangsstellung). */
-  get currentNode(): AnalysisNode { return this.ply === 0 ? this.root : this.line[this.ply - 1]; }
+  get currentNode(): AnalysisNode { return this.model.currentNode; }
   get currentFen(): string { return this.currentNode.fen; }
 
   goTo(ply: number): void {
     this.spar.abortMaia();
-    this.ply = Math.max(0, Math.min(ply, this.line.length));
+    this.model.goTo(ply);
     this.refresh();
   }
 
   /** Auf einen beliebigen Knoten springen (Klick in Zugliste, Variante, Sternliste) — die Linie läuft dann durch ihn. */
   goToNode(node: AnalysisNode): void {
     this.spar.abortMaia();
-    this.line = lineThrough(node);
-    this.ply = pathTo(node).length;
+    this.model.goToNode(node);
     this.refresh();
   }
 
   /** Einen neuen Baum aufs Brett (Laden, Zurücksetzen) und dort auf `current` stehen. */
   private setTree(root: AnalysisNode, current: AnalysisNode = root): void {
     this.spar.onNewTree();   // beendet ein Sparring (Maia-Regel 9), „Partie analysieren" verfällt
-    this.root = root;
-    this.treeVersion++;
+    this.model.setRoot(root);
     this.goToNode(current);
   }
   prev(): void { this.goTo(this.ply - 1); }
@@ -351,23 +344,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- User move ----
   onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
-    let c: Chess;
-    try { c = new Chess(this.currentFen); } catch { return; }
-    const mover: Color = c.turn() === 'w' ? 'white' : 'black';
-    const piece = c.get(ev.orig as any);
-    const isPromo = piece?.type === 'p' && (ev.dest[1] === '8' || ev.dest[1] === '1');
-    // Umwandlungsfigur kommt jetzt aus dem Picker; Dame nur als Fallback.
-    const promotion = isPromo ? (ev.promotion ?? 'q') : undefined;
-    let mv;
-    try {
-      mv = c.move({ from: ev.orig, to: ev.dest, promotion });
-    } catch { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
-    if (!mv) { this.refresh(); return; }
-
+    const r = boardMove(this.currentFen, ev);
+    if (r.kind === 'bad-fen') return;
+    if (r.kind === 'illegal') { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
+    const mover = r.mover;
     // „Schlechte Züge melden": die Stellung davor samt ihrer Bewertungs-Spur merken, BEVOR goToNode sie verlässt.
     this.spar.beforeBoardMove(this.currentNode, mover);
     // Zugbaum (0.604.0): ein anderer Zug als die Fortsetzung wird eine VARIANTE, derselbe Zug geht in die vorhandene.
-    const node = addMove(this.currentNode, { san: mv.san, uci: mv.from + mv.to + (mv.promotion ?? ''), fen: c.fen() });
+    const node = addMove(this.currentNode, r.move);
     this.treeVersion++;
     this.goToNode(node);
     this.spar.afterBoardMove(node, mover);   // Sparring: auf den EIGENEN Zug antwortet Maia
@@ -378,12 +362,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    * SAN brechen still ab, statt die Linie halb zu zerschießen. */
   playRepertoireMoves(sans: string[]): void {
     if (!sans?.length) return;
-    let node = this.currentNode;
-    for (const san of sans) {
-      const next = playSan(node, san);
-      if (!next) break;
-      node = next;
-    }
+    const node = playLine(this.currentNode, sans, playSan);
     if (node === this.currentNode) return;
     this.treeVersion++;
     this.goToNode(node);
@@ -645,22 +624,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Sterne + Zugbaum ----
 
-  private starCache: { version: number; root: AnalysisNode | null; list: AnalysisNode[] } = { version: -1, root: null, list: [] };
   /** Markierte Stellungen, Hauptlinie zuerst (template-gebunden, deshalb je Baumstand nur einmal gesucht). */
-  get starredList(): AnalysisNode[] {
-    const c = this.starCache;
-    if (c.version !== this.treeVersion || c.root !== this.root) {
-      this.starCache = { version: this.treeVersion, root: this.root, list: starredNodes(this.root) };
-    }
-    return this.starCache.list;
-  }
+  get starredList(): AnalysisNode[] { return this.model.starred; }
 
   /** Stern auf der Stellung, die gerade auf dem Brett steht (Taste S). */
   toggleStar(): void { this.toggleStarOn(this.currentNode); }
 
   private toggleStarOn(node: AnalysisNode): void {
-    if (node.starred) delete node.starred; else node.starred = true;
-    this.treeVersion++;
+    this.model.toggleStar(node);
     this.historySaver.schedule();
   }
 
@@ -688,7 +659,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         if (within) { this.goToNode(parent); return; }
         if (endsSparring) {
           this.treeVersion++;
-          this.line = lineThrough(current);
+          this.model.relineThrough(current);
           this.refresh();   // die Engine läuft wieder (falls sie vorher an war)
           return;
         }
@@ -697,7 +668,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
     // Brett und Engine bleiben, nur die Reihenfolge änderte sich: die Linie durch den aktuellen Zug neu ziehen.
     this.treeVersion++;
-    this.line = lineThrough(current);
+    this.model.relineThrough(current);
     this.historySaver.schedule();
   }
 
