@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { catchError, of } from 'rxjs';
 
-import { ThemeMode } from '../features/puzzles/board-theme.util';
+import { ThemeMode } from './theme-mode';
 
 const BOARD_THEME_KEY = 'rookhub_board_theme';
 const PIECE_SET_KEY = 'rookhub_piece_set';

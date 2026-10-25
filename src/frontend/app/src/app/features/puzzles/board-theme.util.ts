@@ -1,4 +1,6 @@
-export type ThemeMode = 'fixed' | 'random' | 'crazy';
+import type { ThemeMode } from '../../core/theme-mode';
+
+export type { ThemeMode };
 
 export const BOARD_THEMES: { key: string; name: string; light: string; dark: string; img?: string }[] = [
   { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },

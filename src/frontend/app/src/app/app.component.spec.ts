@@ -9,7 +9,7 @@ import { AuthService } from './core/auth.service';
 import { MenuService } from './core/menu.service';
 import { DiscordLinkService } from './core/discord-link.service';
 import { OfflineQueueService } from './core/offline-queue.service';
-import { OfflinePrefetchService } from './core/offline-prefetch.service';
+import { OfflinePrefetchService } from './shell/offline-prefetch.service';
 import { PwaInstallService } from './core/pwa-install.service';
 import { ClientLogService } from './core/client-log.service';
 import { AppUpdateService } from './core/app-update.service';

@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { forkJoin, of, catchError } from 'rxjs';
 import { PuzzleService, PuzzleDto } from '../features/puzzles/puzzle.service';
-import { PreferencesService } from './preferences.service';
-import { AuthService } from './auth.service';
-import { OfflineService, PUZZLE_POOL_KEY } from './offline.service';
+import { PreferencesService } from '../core/preferences.service';
+import { AuthService } from '../core/auth.service';
+import { OfflineService, PUZZLE_POOL_KEY } from '../core/offline.service';
 import { EndlessStorageService, EndlessConfig } from '../features/puzzles/endless-storage.service';
 import { puzzleWindow } from '../features/puzzles/puzzle-window.util';
 import { buildChainWindows, autoFasttrackThresholds, ENDLESS_CHAIN_BLOCK } from '../features/puzzles/endless-prefetch.util';
@@ -14,6 +14,9 @@ const ENDLESS_DEFAULT_CONFIG: EndlessConfig = { startElo: 700, themes: '', stock
  * Füllt die Offline-Pools (Standard-Puzzle + Endless) bereits beim App-Start, sobald online —
  * nicht erst beim ersten Öffnen des jeweiligen Modus. Greift nur, wenn noch nicht genug gecacht
  * ist; nutzt dieselbe Fenster-Logik wie die Live-Modi (puzzle-window.util / endless-prefetch.util).
+ *
+ * Liegt in `shell/` (App-Schicht, darf Features kennen), nicht in `core/`: sie bedient die Puzzle- und Endless-Pools
+ * und braucht deren Dienste (Codereview F8-013).
  */
 @Injectable({ providedIn: 'root' })
 export class OfflinePrefetchService {

@@ -1,6 +1,6 @@
 import { of } from 'rxjs';
 import { OfflinePrefetchService } from './offline-prefetch.service';
-import { PUZZLE_POOL_KEY } from './offline.service';
+import { PUZZLE_POOL_KEY } from '../core/offline.service';
 import { ENDLESS_CHAIN_BLOCK } from '../features/puzzles/endless-prefetch.util';
 
 function make(opts: { loggedIn?: boolean; puzzleCount?: number; endlessCached?: number } = {}) {

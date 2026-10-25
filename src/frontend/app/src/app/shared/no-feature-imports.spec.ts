@@ -95,4 +95,19 @@ describe('shared/ importiert nichts aus features/ (Codereview F8-013)', () => {
       .flatMap(([file, allowed]) => allowed.filter(h => !(found[file] ?? []).includes(h)).map(h => `${file} → ${h}`));
     expect(stale).withContext('Ausnahme wird nicht mehr gebraucht — aus KNOWN_EXCEPTIONS streichen').toEqual([]);
   });
+
+  // core/ liegt noch unter shared/ (Specs dürfen Feature-Komponenten rendern). Einzige Ausnahme: die bewusst dynamischen
+  // import() des Nachlaufs nach der Anmeldung (login-follow-up.service, dort begründet). Der Offline-Vorabruf der
+  // Puzzle-Pools liegt deshalb in shell/, ThemeMode in core/theme-mode.ts.
+  it('core/ (ohne Specs) importiert nichts aus features/', async () => {
+    const served = (globalThis as Served).__karma__?.files ?? {};
+    const urls = Object.keys(served).filter(u => /^\/base\/src\/app\/core\/.+\.ts$/.test(u) && !u.endsWith('.spec.ts'));
+    expect(urls.length).withContext('karma.conf.js liefert die Quelltexte nicht aus').toBeGreaterThan(20);
+    const hits = (await Promise.all(urls.map(async url => {
+      const file = url.slice('/base/src/app/'.length);
+      if (file === 'core/login-follow-up.service.ts') return [];
+      return featureImports(file, await (await fetch(url)).text()).map(h => `${file} → ${h}`);
+    }))).flat();
+    expect(hits).toEqual([]);
+  });
 });
