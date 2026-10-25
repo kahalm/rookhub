@@ -13,7 +13,8 @@ import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Subscription, interval } from 'rxjs';
-import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
+import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines } from './engine-lines.util';
+import { engineArrows, engineCandidates, evalBar, legalDests, SearchClock, TerminalState, terminalStateOf } from './analysis-readout';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { AnalysisEngineCardComponent, EngineChoice, arrowBrush } from './analysis-engine-card.component';
 import { PositionSetupComponent } from './position-setup.component';
@@ -134,21 +135,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Lebenszeichen: läuft die Suche, und wie viele Sekunden kam keine neue Engine-Zeile? (nur Anzeige) */
   running = false;
   sinceUpdateSec = 0;
-  private lastUpdateAt = Date.now();
   private tickSub?: Subscription;
-  /** Suchzeit der aktuellen Stellung — startet mit dem ersten „läuft" einer Stellung, läuft über eine
-   *  Fortsetzung nach Abriss weiter und friert beim Ende ein. Permanent im Kopf neben „Tiefe x/y". */
+  /** Suchzeit der aktuellen Stellung (siehe {@link SearchClock}). Permanent im Kopf neben „Tiefe x/y". */
   searchElapsedSec = 0;
-  private searchStartedAt = Date.now();
-  private searchEndedAt: number | null = null;
-  private searchFen = '';
+  private readonly searchClock = new SearchClock();
   /** Uhrquelle (in Tests überschreibbar). */
   private nowFn: () => number = () => Date.now();
   /** Suchleistung der laufenden Analyse (0 = noch kein Messwert). */
   nodes = 0;
   nps = 0;
   /** Partie-Ende in der aktuellen Stellung (keine legalen Züge) — dort rechnet keine Engine. */
-  terminal: 'mate-white-wins' | 'mate-black-wins' | 'stalemate' | null = null;
+  terminal: TerminalState = null;
 
   /** Vergleichsmodus: eine ZWEITE Engine rechnet dieselbe Stellung (Zustand + zweite Instanz in AnalysisCompare). */
   readonly compare: AnalysisCompare;
@@ -218,15 +215,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => {
-      const wasRunning = this.running;
-      const now = this.nowFn();
+      this.searchClock.onStatus(s.running, s.fen, this.nowFn());
       this.running = s.running;
-      this.lastUpdateAt = now;
-      if (s.running && (!wasRunning || s.fen !== this.searchFen)) {
-        this.searchStartedAt = now; this.searchEndedAt = null; this.searchFen = s.fen;
-      } else if (!s.running && wasRunning) {
-        this.searchEndedAt = now;
-      }
       this.onEngineUpdate(s.fen, s.depth, s.lines, s.nodes, s.nps);
     });
     this.errorSub = this.engine.engineFatalError$.subscribe(e => { this.engineCrashed = e !== null; this.cdr.markForCheck(); });
@@ -421,7 +411,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.boardFen = fen;
     this.turnColor = c.turn() === 'w' ? 'white' : 'black';
     this.isCheck = c.isCheck();
-    this.dests = this.computeDests(c);
+    this.dests = legalDests(c);
     const lm = this.ply > 0 ? this.currentNode.uci : undefined;
     this.lastMove = lm ? [lm.substring(0, 2) as Key, lm.substring(2, 4) as Key] : undefined;
     this.shapes = [];
@@ -434,7 +424,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Suchlauf ohne legale Züge ist sinnlos und ein vermeidbarer Sonderfall im WASM-Kern.
     // Das Ergebnis MUSS dann aber benannt werden: sonst stünde dort dauerhaft „Berechne…",
     // obwohl nichts mehr gerechnet wird und auch nichts mehr zu rechnen ist.
-    this.terminal = this.dests.size > 0 ? null : this.terminalStateOf(c);
+    this.terminal = this.dests.size > 0 ? null : terminalStateOf(c);
     this.compare.clearResults();
     // Die Bewertungs-Spur gehört zur Stellung — die der alten hat ein eigener Zug vorher übernommen (pendingBefore).
     this.spar.evalTrack = { fen, points: [] };
@@ -453,18 +443,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Matt oder Patt? Nur aufrufen, wenn es keine legalen Züge gibt. Wirft nicht: bei einer
-   *  illegalen Stellung (Buch-Diagramme ohne König) liefert chess.js keinen Zustand — dann
-   *  lieber gar keine Aussage als eine falsche. */
-  private terminalStateOf(c: Chess): 'mate-white-wins' | 'mate-black-wins' | 'stalemate' | null {
-    try {
-      if (c.isStalemate()) return 'stalemate';
-      // Matt heißt: die Seite AM ZUG hat verloren.
-      if (c.isCheckmate()) return c.turn() === 'w' ? 'mate-black-wins' : 'mate-white-wins';
-    } catch { /* illegale Stellung */ }
-    return null;
-  }
-
   /** Übersetzter Satz für das Partie-Ende (leer, wenn die Stellung nicht terminal ist). */
   get terminalText(): string {
     switch (this.terminal) {
@@ -473,16 +451,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       case 'stalemate': return this.translate.instant('analysis.stalemate');
       default: return '';
     }
-  }
-
-  private computeDests(c: Chess): Map<Key, Key[]> {
-    const map = new Map<Key, Key[]>();
-    for (const m of c.moves({ verbose: true }) as any[]) {
-      const arr = map.get(m.from) || [];
-      arr.push(m.to);
-      map.set(m.from, arr);
-    }
-    return map;
   }
 
   // ---- Engine updates ----
@@ -501,14 +469,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (best) this.spar.trackEval(fen, best);
     // Stille Engine im Sparring: Linien, Kandidaten und Pfeile verrieten den besten Zug — sie bleiben leer.
     if (!quiet) {
-      this.displayLines = this.toDisplayLines(fen, lines);
-      this.engineCandidates = lines.filter(l => !!l.pvUci[0]).map(l => ({ uci: l.pvUci[0], evalText: l.evalText }));
-      this.shapes = lines.map((l, i) => {
-        const u = l.pvUci[0];
-        return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: arrowBrush(i),
-          // d5-rk-analyse-pfeile-nur-farbe: Nummer auf dem Pfeil = Marke in der Linienliste (nicht nur über Farbe).
-          label: { text: String(i + 1) } } as DrawShape : null;
-      }).filter((s): s is DrawShape => !!s);
+      // Beide Engine-Seiten laufen durch toDisplayLines — dieselbe Bewertung darf links nicht anders eingefärbt sein
+      // als rechts (früher lag die Abbildung zweimal im Code).
+      this.displayLines = toDisplayLines(fen, lines, 12);
+      this.engineCandidates = engineCandidates(lines);
+      this.shapes = engineArrows(lines, arrowBrush);
     }
     // Bewertungsleiste HALTEN, bis die neue Suche etwas Belastbares liefert. Jede Suche beginnt mit
     // einem Zwischenstand ohne Linien; früher sprang die Leiste darauf auf 0.00 und erst Sekunden
@@ -530,14 +495,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       }
     }
     this.spar.serveMoveCheck(fen);
-  }
-
-  /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
-   *  Nebeneinander-Ansicht, die dieselbe Bewertung links anders einfaerbt als rechts, waere
-   *  schlimmer als gar kein Vergleich. Frueher lag die Abbildung zweimal im Code, inklusive der
-   *  feinen Unterscheidung `score > 0` (Matt) gegen `score >= 0` (Zentibauern). */
-  private toDisplayLines(fen: string, lines: AnalysisLine[]): EngineDisplayLine[] {
-    return toDisplayLinesUtil(fen, lines, 12);
   }
 
   /** Gemeinsame Tempo-Formatierung. `nodes === null` = Kurzform (Vergleichs-Engine). */
@@ -563,11 +520,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
   /** Beide Uhren nachziehen (Sekundentakt): Funkstille seit der letzten Zeile + Suchzeit der Stellung. */
   private updateClocks(): void {
-    const now = this.nowFn();
-    const v = this.running ? Math.floor((now - this.lastUpdateAt) / 1000) : 0;
-    const e = Math.max(0, Math.floor(((this.searchEndedAt ?? now) - this.searchStartedAt) / 1000));
-    if (v !== this.sinceUpdateSec || e !== this.searchElapsedSec) {
-      this.sinceUpdateSec = v; this.searchElapsedSec = e; this.cdr.markForCheck();
+    const { sinceUpdateSec, searchElapsedSec } = this.searchClock.read(this.nowFn());
+    if (sinceUpdateSec !== this.sinceUpdateSec || searchElapsedSec !== this.searchElapsedSec) {
+      this.sinceUpdateSec = sinceUpdateSec; this.searchElapsedSec = searchElapsedSec; this.cdr.markForCheck();
     }
   }
 
@@ -578,29 +533,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Erwartung setzen: 4+ Linien × Tiefe ≥ 27 braucht auf einem PC je Iteration Minuten. */
   get slowConfigHint(): boolean { return this.linesCount >= 4 && this.depthSetting >= 27; }
 
-  /** 8234567 → „8,2 MN/s" (Tausender/Millionen wie in Schach-Oberflächen üblich). */
-
+  /** Bewertungsleiste setzen ({@link evalBar}). */
   private updateEval(best: AnalysisLine | null): void {
-    if (!best) {
-      // Partie-Ende: die Leiste zeigt das ERGEBNIS, nicht eine ausgeglichene Stellung.
-      switch (this.terminal) {
-        case 'mate-white-wins': this.evalText = '1-0'; this.whiteHeight = 100; return;
-        case 'mate-black-wins': this.evalText = '0-1'; this.whiteHeight = 0; return;
-        case 'stalemate': this.evalText = '½-½'; this.whiteHeight = 50; return;
-      }
-      this.evalText = '0.00'; this.whiteHeight = 50; return;
-    }
-    this.evalText = best.evalText;
-    if (best.scoreType === 'mate') {
-      this.whiteHeight = best.score > 0 ? 100 : 0;
-    } else {
-      const cp = best.score;
-      this.whiteHeight = Math.max(2, Math.min(98, 50 + 50 * (2 / (1 + Math.exp(-0.004 * cp)) - 1)));
-    }
-  }
-
-  private uciLineToSan(fromFen: string, uci: string[], maxPlies: number): string {
-    return uciLineToSanUtil(fromFen, uci, maxPlies);
+    ({ evalText: this.evalText, whiteHeight: this.whiteHeight } = evalBar(best, this.terminal));
   }
 
   // ---- Controls / IO ----

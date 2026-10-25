@@ -2,6 +2,7 @@ import { AnalysisSettings, ANALYSIS_ENGINE_ON_KEY, ANALYSIS_LINES_KEY, ANALYSIS_
 
 describe('AnalysisSettings', () => {
   const KEYS = [ANALYSIS_LINES_KEY, ANALYSIS_ENGINE_ON_KEY, ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY];
+  beforeEach(() => KEYS.forEach(k => localStorage.removeItem(k)));
   afterEach(() => KEYS.forEach(k => localStorage.removeItem(k)));
   const DEF = { linesCount: 3, engineOn: true, depthSetting: 22 };
 

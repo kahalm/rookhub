@@ -2341,7 +2341,9 @@ describe('AnalysisComponent Brettspalte (d2-rk-analysis-brettspalte)', () => {
 // gemerkte Werte, ihre Grenzen und der Vorrang der Adresse vor dem Gemerkten.
 describe('AnalysisComponent gemerkte Einstellungen + Adresse (Charakterisierung Z22)', () => {
   const KEYS = ['rookhub_analysis_lines', 'rookhub_analysis_engine', 'rookhub_analysis_depth'];
-  afterEach(() => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } });
+  const clear = () => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } };
+  beforeEach(clear);   // andere Specs lassen Werte liegen (Zufallsreihenfolge)
+  afterEach(clear);
 
   it('liest Linien, Engine an/aus und Tiefe; ungültige Werte bleiben bei der Vorgabe', () => {
     localStorage.setItem('rookhub_analysis_lines', '5');
