@@ -10,7 +10,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { PositionSetupComponent, START_FEN } from '../analysis/position-setup.component';
@@ -22,9 +21,10 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { SanPipe } from '../../shared/chess/san.pipe';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
-import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
 import { GapProposalsComponent } from './gap-proposals.component';
 import { PartEditorComponent } from './part-editor.component';
+import { ReconstructHead, ReconstructHeadFormComponent } from './reconstruct-head-form.component';
+import { ReconstructShareMenuComponent } from './reconstruct-share-menu.component';
 import {
   canCloseGap, firstGap, gapMessageKey, gapTargetAt, hasProposalsBefore, moveNo, moveTokens, partState, partSummary,
   plyCountOf, positionOrientation, previewFen, recordedEndBefore, recordedParts, replayMoves, targetAfter, tokensUpTo,
@@ -50,9 +50,9 @@ import { whiteToMove } from '../../shared/chess/fen-side';
   selector: 'app-reconstruct-detail',
   standalone: true,
   imports: [IconLabelDirective, CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatButtonToggleModule, MatMenuModule,
-    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe, IsoDateFieldComponent,
-    GapProposalsComponent, PartEditorComponent],
+    MatIconModule, MatInputModule, MatCheckboxModule, MatTooltipModule, MatMenuModule,
+    TranslatePipe, ChessBoardComponent, PositionSetupComponent, FlashcardBoardComponent, SanPipe,
+    GapProposalsComponent, PartEditorComponent, ReconstructHeadFormComponent, ReconstructShareMenuComponent],
   templateUrl: './reconstruct-detail.component.html',
   styleUrl: './reconstruct-detail.component.scss',
 })
@@ -82,7 +82,7 @@ export class ReconstructDetailComponent implements OnInit {
   editCertain = true;
   /** Kopfdaten-Formular (eingeklappt, bis jemand es aufmacht). */
   showHead = false;
-  head = { title: '', white: '', black: '', event: '', playedOn: '', result: '', note: '' };
+  head: ReconstructHead = { title: '', white: '', black: '', event: '', playedOn: '', result: '', note: '' };
 
   /** Lückensuche: für welches Teil läuft/lief sie, was kam heraus, wie weit darf sie suchen. */
   readonly gapFor = signal<number | null>(null);

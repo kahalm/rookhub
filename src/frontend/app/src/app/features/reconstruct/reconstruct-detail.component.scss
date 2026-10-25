@@ -29,24 +29,6 @@
   &.bad { background: color-mix(in srgb, var(--rh-error) 30%, transparent); }
 }
 
-/* Die Angaben zur Partie. Feste DREI Spalten statt „auto-fit": mit auto-fit standen auf einem
-   breiten Bildschirm Titel, Weiß, Schwarz, Turnier, Datum und Ergebnis in EINER Reihe, jedes Feld
-   200 px schmal — der Titel, das mit Abstand längste Feld, war das schmalste. Titel und Notiz
-   bekommen deshalb die ganze Breite, die kurzen Felder teilen sich die Reihen darunter. */
-.head-form {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0 0.75rem;
-  padding: 1rem;
-  margin-bottom: 1rem;
-
-  @media (min-width: 700px) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-
-  .form-head { grid-column: 1 / -1; margin: 0 0 0.75rem; font-size: 1.05rem; font-weight: 600; }
-  .wide { grid-column: 1 / -1; }
-  .form-actions { grid-column: 1 / -1; display: flex; gap: 0.5rem; justify-content: flex-end; }
-}
-
 /* Zwei Spalten ab Tablet: links die Teile (die Partie), rechts der Editor mit Brett.
    Darunter einspaltig — das Brett braucht die ganze Breite.
 
