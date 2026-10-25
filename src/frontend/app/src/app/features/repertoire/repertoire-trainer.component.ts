@@ -65,7 +65,6 @@ type Mode = 'quiz' | 'learn';
 // stehen (der Alternativzug soll wirken).
 const ADVANCE_MS: Record<Outcome, number> = { correct: 300, tolerated: 1500, wrong: 0 };
 const OPP_MOVE_DELAY_MS = 250;   // kurze Pause vor jedem automatischen Gegnerzug
-const WRONG_HOLD_MS = 1000;
 const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
 const LEARN_GAP_MS = 400;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs (fühlte sich beim Wiederholen zu lang an, halbiert von 800)
 // Learn-Modus: wie oft eine Linie durchgespielt werden muss, bevor sie in den Übungspool wandert
@@ -167,7 +166,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   oppMoving = false;
   private graph: RepertoireGraph | null = null;
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
-  private wrongRevertTimer: ReturnType<typeof setTimeout> | null = null;
   private oppTimer: ReturnType<typeof setTimeout> | null = null;
   private startFen = '';
   /** true = Session läuft aus der Offline-Kopie (Server unerreichbar); Bewertungen werden lokal
@@ -853,7 +851,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
     if (this.phase !== 'PLAYING' && !wrongRetry) return;
     if (wrongRetry) {
-      this.clearWrongRevert();
       this.evalLoading = false; this.evalDeltaPawns = null; this.evalMateNote = null; this.evalEpoch++;
     }
 
@@ -955,7 +952,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** „Lösung zeigen": zählt als falsch (Server-Review), spielt den erwarteten Zug + weiter mit der Linie. */
   showSolution(): void {
     if (this.wrongRevealed) return;
-    this.clearWrongRevert();
     this.wrongRevealed = true;
     this.wrong++;
     this.currentStreak = 0;   // „Lösung zeigen" bricht die Serie (Mausrutscher tut das NICHT).
@@ -984,7 +980,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
    * beliebig oft wiederholbar. */
   mouseslip(): void {
     if (this.phase !== 'FEEDBACK' || this.outcome !== 'wrong' || this.wrongRevealed) return;
-    this.clearWrongRevert();
     this.pendingWrong = false;
     this.outcome = 'correct';   // Feedback-Kasten schließen
     this.wrongRevealed = false;
@@ -1137,20 +1132,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   private clearAdvance(): void {
     if (this.advanceTimer !== null) { clearTimeout(this.advanceTimer); this.advanceTimer = null; }
-    this.clearWrongRevert();
   }
 
   private clearOppTimer(): void {
     if (this.oppTimer !== null) { clearTimeout(this.oppTimer); this.oppTimer = null; }
-  }
-
-  private scheduleWrongRevert(): void {
-    this.clearWrongRevert();
-    this.wrongRevertTimer = setTimeout(() => { this.wrongRevertTimer = null; }, WRONG_HOLD_MS);
-  }
-
-  private clearWrongRevert(): void {
-    if (this.wrongRevertTimer !== null) { clearTimeout(this.wrongRevertTimer); this.wrongRevertTimer = null; }
   }
 
   private kickOffEvalCompare(fenAfterPlayer: string, expectedSan: string): void {

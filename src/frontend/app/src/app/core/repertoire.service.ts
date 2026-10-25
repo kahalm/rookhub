@@ -309,11 +309,6 @@ export class RepertoireService {
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
-  /** Kombinierter PGN-Download (Blob). */
-  downloadPgn(id: number): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/${id}/pgn`, { responseType: 'blob' });
-  }
-
   /** Wandelt ein Repertoire in einen persönlichen Kurs um (nur Puzzle-PGN im Chessable-Stil). */
   convertToCourse(id: number): Observable<{ bookId: number; displayName: string }> {
     return this.http.post<{ bookId: number; displayName: string }>(`${this.apiUrl}/${id}/convert-to-course`, {});

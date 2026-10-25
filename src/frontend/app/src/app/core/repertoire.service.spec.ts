@@ -46,14 +46,6 @@ describe('RepertoireService', () => {
     req.flush(null);
   });
 
-  it('downloadPgn requests a blob from the pgn route', () => {
-    service.downloadPgn(3).subscribe();
-    const req = httpMock.expectOne('/api/repertoires/3/pgn');
-    expect(req.request.method).toBe('GET');
-    expect(req.request.responseType).toBe('blob');
-    req.flush(new Blob(['1. e4 *']));
-  });
-
   it('getDetail GETs the repertoire route', () => {
     service.getDetail<unknown>(5).subscribe();
     expect(httpMock.expectOne('/api/repertoires/5').request.method).toBe('GET');

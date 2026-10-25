@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
+import { RepertoireService } from '../../core/repertoire.service';
 
 /** Ein Intervall-Eintrag der 9-Stufen-Leiter. */
 export interface SrLevel {
@@ -36,11 +37,13 @@ export interface LineReviewRequest {
 
 @Injectable({ providedIn: 'root' })
 export class RepertoireTrainingService {
+  private readonly repertoires = inject(RepertoireService);
+
   constructor(private http: HttpClient) {}
 
-  /** Kombiniertes Repertoire-PGN (alle Dateien). */
+  /** Kombiniertes Repertoire-PGN (alle Dateien) — derselbe Abruf wie `RepertoireService.getPgnText` (Codereview F3-024). */
   getPgn(repertoireId: number): Observable<string> {
-    return this.http.get(`/api/repertoires/${repertoireId}/pgn`, { responseType: 'text' });
+    return this.repertoires.getPgnText(repertoireId);
   }
 
   /** Nur der Name des Repertoires (Kopf des Trainers, d3-rk-trainer-leer-zwei-aktionen). */
