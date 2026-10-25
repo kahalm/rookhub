@@ -3,7 +3,7 @@ import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearCrazyStyles, clearVisualizationHide, ThemeMode } from './board-theme.util';
-import { VisibilityStopwatch } from './visibility-stopwatch';
+import { SecondsCountdown, SolverTimer } from './solver-timer';
 import { lineStepAt } from './line-step.util';
 import { formatPuzzleTime } from './puzzle-format.util';
 import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
@@ -107,8 +107,9 @@ export abstract class BasePuzzleSolver {
   private static readonly SETTINGS_OPEN_KEY = 'rookhub_puzzle_settings_open';
 
   // ---- Auto-Advance nach dem Lösen: kurzer, sichtbarer, überspringbarer Countdown ----
-  solvedCountdown = 0;
-  private countdownInterval?: ReturnType<typeof setInterval>;
+  private readonly solvedTicker = new SecondsCountdown();
+  /** Sekunden bis zum Auto-Weiter (0 = kein Countdown). */
+  get solvedCountdown(): number { return this.solvedTicker.remaining; }
   protected static readonly SOLVED_COUNTDOWN_SECONDS = 2;
 
   // ---- Visualisierungs-/Blindfold-Modus (0 = aus, 1-4 = aktiv) ----
@@ -223,9 +224,11 @@ export abstract class BasePuzzleSolver {
   // teilt sich aber das `elapsedSeconds`-Feld (für die Anzeige) mit der Basis.
   /** Aktuelle (aktive) Lösezeit in Sekunden — Anzeige im Status-/Du-bist-dran-Card. */
   elapsedSeconds = 0;
-  private timerInterval?: ReturnType<typeof setInterval>;
-  /** Pausiert bei verstecktem Tab (zählt nur aktive Zeit). */
-  protected readonly stopwatch = new VisibilityStopwatch();
+  /** Zählt nur aktive Tab-Zeit; meldet sich jede Sekunde ({@link onTimerTick}). */
+  private readonly timer = new SolverTimer(seconds => {
+    this.elapsedSeconds = seconds;
+    this.onTimerTick();
+  });
 
   constructor(protected stockfish: StockfishService) {}
 
@@ -234,22 +237,11 @@ export abstract class BasePuzzleSolver {
     return formatPuzzleTime(seconds);
   }
 
-  /** Lösezeit-Timer starten (Standard-/Buch-Modus): Stoppuhr nullen + 1-s-Anzeige-Tick.
+  /** Lösezeit-Timer starten (Standard-/Buch-Modus), idempotent (siehe {@link SolverTimer.start}).
    * `initialSeconds` setzt eine frühere (persistierte) Lösezeit fort — Tagespuzzle-Wiederbesuch. */
   protected startTimer(initialSeconds = 0): void {
-    // IDEMPOTENT: mehrere Wege setzen ein neues Puzzle auf, ohne vorher stopTimer() zu rufen
-    // („Überspringen" ist im Kurs/Wochenpost MITTEN im Lösen klickbar, dazu Zurücksetzen, Retry,
-    // Kapitel-/Wochen-Navigation). Ohne dieses clearInterval blieb je Aufruf ein Waisen-Intervall
-    // zurück: es überlebte ngOnDestroy (das nur das jüngste Handle kennt) und schrieb sekündlich
-    // weiter die Zwischenzeit — es belebte damit genau den Eintrag wieder, den die
-    // Versuchs-Erfassung gelöscht hatte, und dasselbe Puzzle startete später mit aufgeblähter Zeit.
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.stopwatch.start(initialSeconds);
+    this.timer.start(initialSeconds);
     this.elapsedSeconds = initialSeconds;
-    this.timerInterval = setInterval(() => {
-      this.elapsedSeconds = this.stopwatch.elapsedSeconds;
-      this.onTimerTick();
-    }, 1000);
   }
 
   /** Hook je 1-s-Anzeige-Tick des laufenden Lösezeit-Timers (Default: nichts) — z. B. um den
@@ -258,12 +250,7 @@ export abstract class BasePuzzleSolver {
 
   /** Lösezeit-Timer stoppen + finalen aktiven Stand festhalten. */
   protected stopTimer(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = undefined;
-    }
-    this.elapsedSeconds = this.stopwatch.elapsedSeconds;
-    this.stopwatch.stop();
+    this.elapsedSeconds = this.timer.stop();
   }
 
   // ===== Hooks (von den Komponenten überschrieben) =====
@@ -1014,23 +1001,11 @@ export abstract class BasePuzzleSolver {
   /** Kurzen Countdown bis zum nächsten Puzzle starten; `onElapsed` läuft bei 0. Jederzeit
    *  per {@link stopCountdown} (z.B. „Weiter"-Klick oder Review-Interaktion) überspringbar. */
   protected startSolvedCountdown(onElapsed: () => void): void {
-    this.stopCountdown();
-    this.solvedCountdown = BasePuzzleSolver.SOLVED_COUNTDOWN_SECONDS;
-    this.countdownInterval = setInterval(() => {
-      this.solvedCountdown--;
-      if (this.solvedCountdown <= 0) {
-        this.stopCountdown();
-        onElapsed();
-      }
-    }, 1000);
+    this.solvedTicker.start(BasePuzzleSolver.SOLVED_COUNTDOWN_SECONDS, onElapsed);
   }
 
   protected stopCountdown(): void {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = undefined;
-    }
-    this.solvedCountdown = 0;
+    this.solvedTicker.stop();
   }
 
   /** Aufräumen (Timer) — Komponente ruft dies in ngOnDestroy/reset. */
