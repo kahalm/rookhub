@@ -11,7 +11,6 @@ import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { hasTrailingSolutionComment as computeHasTrailingComment } from './book-comment.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
-import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
@@ -19,7 +18,7 @@ import { ChallengeService } from '../../core/challenge.service';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
+import { clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
 import { DrawShape } from 'chessground/draw';
 import { parseAltMoves } from './alt-moves.util';
 import { tryLoadFen, fenSideToMove } from './puzzle-move.util';
@@ -54,6 +53,7 @@ import { BookSolveModeController } from './book-solve-mode';
 import { BookLanguageController } from './book-language';
 import { BookLastSolved, bookShareData } from './book-last-solved';
 import { BookCommentView, VariationPreview } from './book-comment-view';
+import { BookSettingsController } from './book-settings';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -99,10 +99,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   stockfishDepth = 16;
   boardTheme = 'brown';
-  readonly boardThemes = BOARD_THEMES;
-
   pieceSet = 'cburnett';
-  readonly pieceSets = PIECE_SETS;
+  /** Einstellungen (Startwerte, Dialog, Speichern je Wert). */
+  readonly settings: BookSettingsController;
 
   // elapsedSeconds / Stoppuhr / start-/stopTimer / formatTime: jetzt in BasePuzzleSolver (geteilt).
 
@@ -217,6 +216,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.gaveUp = false;
   }
   override clearSolutionPlay(): void { super.clearSolutionPlay(); }
+  // Für BookSettingsController: Lös-Automat-Teile der Basis (dort geschützt).
+  get solving(): boolean { return this.isSolving; }
+  get urlForcesEnPassant(): boolean { return this.anarchyForcedByUrl; }
+  dropVizArrow(): void { this.clearVizOpponentArrow(); }
+  refreshBoard(): void { this.updateBoard(); }
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -231,7 +235,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   constructor(
     readonly puzzleService: PuzzleService,
     stockfish: StockfishService,
-    private prefs: PreferencesService,
+    readonly prefs: PreferencesService,
     private route: ActivatedRoute,
     readonly dialog: MatDialog,
     readonly courseService: CourseService,
@@ -262,7 +266,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       () => this.puzzle?.id, () => this.lastSolved.id,
       () => this.isLoggedIn && !this.inWeekly,
     );
-    this.loadConfig();
+    this.settings = new BookSettingsController(this);
+    this.settings.load();
     this.loadSettingsOpen();
     this.stockfish.init().catch(() => {});
   }
@@ -324,12 +329,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override get depth(): number { return this.stockfishDepth; }
   protected override get stockfishErrorContinues(): boolean { return false; }  // Buch: Fehlzug → verloren
 
-  protected override onSetupStart(): void {
-    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-    this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && this.prefs.enPassantForced);
-  }
+  protected override onSetupStart(): void { this.settings.applyThemeForSetup(); }
 
   protected override onSolvingBegins(): void {
     this.initialFen = this.chess.fen();
@@ -825,90 +825,5 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // zählt als Fehlversuch (rotes ✗). Nach FAILED nicht erneut melden (Fehlzug schon erfasst).
     if (this.isDaily && !this.onSolutionPath && this.state !== 'FAILED') this.book.recordAttempt(false);
     super.mouseslip();
-  }
-
-
-  private loadConfig(): void {
-    this.boardTheme = this.prefs.boardTheme;
-    this.pieceSet = this.prefs.pieceSet;
-    this.themeMode = this.prefs.themeMode;
-    this.stockfishDepth = this.prefs.bookStockfishDepth;
-    this.visualizationMode = this.prefs.visualization;
-    this.vizArrowEnabled = this.prefs.vizArrow;
-  }
-
-  setVisualizationLevel(level: number): void {
-    this.visualizationMode = level;
-    this.prefs.setVisualization(level);
-    this.solveModes.followLevel(level);   // gemerkte Spielweise mitziehen
-    // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
-    // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
-    if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);
-  }
-
-  setVizArrowEnabled(val: boolean): void {
-    this.vizArrowEnabled = val;
-    if (!val) this.clearVizOpponentArrow();
-    this.prefs.setVizArrow(val);
-  }
-
-  saveConfig(): void {
-    this.prefs.setBookStockfishDepth(this.stockfishDepth);
-  }
-
-  setBoardTheme(theme: string): void {
-    this.boardTheme = theme;
-    this.prefs.setBoardTheme(theme);
-  }
-
-  setPieceSet(set: string): void {
-    this.pieceSet = set;
-    this.prefs.setPieceSet(set);
-  }
-
-  setThemeMode(mode: ThemeMode): void {
-    this.themeMode = mode;
-    this.prefs.setThemeMode(mode);
-    const applied = applyThemeMode(mode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-  }
-
-  openSettingsDialog(): void {
-    const ref = this.dialog.open(PuzzleSettingsDialogComponent, {
-      data: {
-        mode: 'book',
-        boardTheme: this.prefs.boardTheme,
-        pieceSet: this.prefs.pieceSet,
-        themeMode: this.themeMode,
-        visualizationMode: this.visualizationMode,
-        vizArrowEnabled: this.vizArrowEnabled,
-        stockfishDepth: this.stockfishDepth,
-        offPathWarnMoves: this.prefs.offPathWarnMoves,
-        enPassantForced: this.prefs.enPassantForced,
-      } as PuzzleSettingsDialogData,
-      width: '360px',
-      maxWidth: '95vw',
-    });
-    ref.afterClosed().subscribe((result: PuzzleSettingsDialogResult | null) => {
-      if (!result) return;
-      this.setBoardTheme(result.boardTheme);
-      this.setPieceSet(result.pieceSet);
-      this.setThemeMode(result.themeMode);
-      // Nur eine GEÄNDERTE Stufe setzt neu auf — Brett/Figuren speichern darf den Versuch nicht neu starten.
-      if (result.visualizationMode !== this.visualizationMode) this.setVisualizationLevel(result.visualizationMode);
-      this.setVizArrowEnabled(result.vizArrowEnabled);
-      if (result.stockfishDepth !== undefined) {
-        this.stockfishDepth = result.stockfishDepth;
-        this.prefs.setBookStockfishDepth(this.stockfishDepth);
-      }
-      if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
-      if (result.enPassantForced !== undefined) {
-        this.prefs.setEnPassantForced(result.enPassantForced);
-        // Der Link-Zwang (?anarchy=max) gilt unabhängig von der Einstellung (wie in onSetupStart).
-        this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && result.enPassantForced);
-        if (this.isSolving) this.updateBoard();   // Zugziele des laufenden Versuchs nachziehen
-      }
-    });
   }
 }

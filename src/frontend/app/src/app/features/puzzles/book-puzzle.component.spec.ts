@@ -1579,10 +1579,10 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
   it('eine direkt gesetzte Visualisierungsstufe zieht die gemerkte Spielweise mit', () => {
     const c = makeCourse();
     c.setupPuzzle(P);
-    c.setVisualizationLevel(0);
+    c.settings.setVisualizationLevel(0);
     expect(c.solveMode.get('course:12')).toBe('easy');
     expect(c.solveModes.choice).toBe('easy');
-    c.setVisualizationLevel(2);
+    c.settings.setVisualizationLevel(2);
     expect(c.solveMode.get('course:12')).toBe('training');
     expect(c.solveModes.choice).toBe('training');
   });
@@ -1984,7 +1984,7 @@ describe('BookPuzzleComponent Einstellungen speichern (F2-009)', () => {
     spyOn(c as any, 'setupPuzzle');
     stubSettingsDialog(c);
 
-    c.openSettingsDialog();
+    c.settings.openDialog();
 
     expect((c as any).setupPuzzle).not.toHaveBeenCalled();
     expect(c.boardTheme).toBe('blue');
@@ -1997,7 +1997,7 @@ describe('BookPuzzleComponent Einstellungen speichern (F2-009)', () => {
     spyOn(c as any, 'setupPuzzle');
     stubSettingsDialog(c, { visualizationMode: 2 });
 
-    c.openSettingsDialog();
+    c.settings.openDialog();
 
     expect(c.visualizationMode).toBe(2);
     expect((c as any).setupPuzzle).not.toHaveBeenCalled();
@@ -2010,7 +2010,7 @@ describe('BookPuzzleComponent Einstellungen speichern (F2-009)', () => {
     spyOn(c as any, 'setupPuzzle');
     stubSettingsDialog(c, { visualizationMode: 2 });
 
-    c.openSettingsDialog();
+    c.settings.openDialog();
 
     expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle);
   });
@@ -2021,7 +2021,7 @@ describe('BookPuzzleComponent Einstellungen speichern (F2-009)', () => {
     c.enPassantForced = true;                  // wie nach onSetupStart
     stubSettingsDialog(c, { enPassantForced: false });
 
-    c.openSettingsDialog();
+    c.settings.openDialog();
 
     expect(c.enPassantForced).toBeTrue();
   });
