@@ -1,5 +1,5 @@
 import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
-import { EMPTY, of, throwError } from 'rxjs';
+import { EMPTY, Subject, of, throwError } from 'rxjs';
 import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { LineStateDto } from './repertoire-training.service';
@@ -271,5 +271,45 @@ describe('RepertoireTrainerComponent — Phasenfolge (Charakterisierung Z21)', (
       expect(c.evalDeltaPawns).toBeNull();
       tick(300); tick(250);
     }));
+  });
+});
+
+/** Codereview F3-025: das erste Laden wird beim Verlassen abbestellt — keine Explorer-Läufe ohne Abnehmer. */
+describe('RepertoireTrainerComponent — Abbau vor der ersten Antwort (F3-025)', () => {
+  afterEach(() => {
+    localStorage.removeItem('rookhub_rep_train_chaptercolor_1');
+    localStorage.removeItem('rookhub_rep_train_freq_order');
+  });
+
+  function makeSlow(pgn: Subject<string>, run: jasmine.Spy): RepertoireTrainerComponent {
+    localStorage.setItem('rookhub_rep_train_freq_order', '1');   // „Häufigste zuerst" an
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } } };
+    const training: any = { getPgn: () => pgn, getLineStates: () => of([state(KEY_A, PAST())]) };
+    const c = new RepertoireTrainerComponent(route, training, {} as any, { instant: (k: string) => k } as any,
+      { markForCheck: () => {} } as any, { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any,
+      {} as any, { enqueue: () => {} } as any,
+      { run, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) } as any, { warn: () => ({}) } as any, {} as any);
+    c.ngOnInit();
+    return c;
+  }
+
+  it('Verlassen, bevor das PGN da ist: die Antwort startet keinen Explorer-Lauf', () => {
+    const pgn = new Subject<string>();
+    const run = jasmine.createSpy('run').and.returnValue(EMPTY);
+    const c = makeSlow(pgn, run);
+    c.ngOnDestroy();
+    expect(pgn.observed).toBeFalse();           // Abruf abbestellt
+    pgn.next(PGN); pgn.complete();
+    expect(run).not.toHaveBeenCalled();
+    expect(c.phase).toBe('LOADING');
+  });
+
+  it('ohne Verlassen läuft der Explorer wie bisher', () => {
+    const pgn = new Subject<string>();
+    const run = jasmine.createSpy('run').and.returnValue(EMPTY);
+    makeSlow(pgn, run);
+    pgn.next(PGN); pgn.complete();
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });

@@ -202,6 +202,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** So viele Linien umfasst die Gegner-Sitzung (für „Alle N Linien … durch"). */
   opponentTotal = 0;
   private opponentSub: Subscription | null = null;
+  /** Erstes Laden (PGN + Zustände); wird beim Verlassen abbestellt (Codereview F3-025). */
+  private loadSub: Subscription | null = null;
+  /** Abbruch-Token: nach ngOnDestroy baut keine verspätete Antwort mehr eine Sitzung (und startet keinen Explorer-Lauf). */
+  private destroyed = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -235,7 +239,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       error: () => {},
     });
 
-    forkJoin({
+    this.loadSub = forkJoin({
       pgn: this.training.getPgn(this.repertoireId),
       states: this.training.getLineStates(this.repertoireId),
     }).subscribe({
@@ -268,6 +272,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     // Lern-Modus, und „Alle in den Pool" nimmt sie nicht auf. Ansehen kann man sie in der Linienliste.
     // Das GANZE Repertoire, in Portionen (0.712.0) — vorher fragte der Trainer nur die ersten 2 MB/500 Partien ab.
     const parsed = exceedsSyncLimits(pgn) ? await parsePgnTextParallel(pgn) : parsePgnTextWithSource(pgn);
+    if (this.destroyed) return;   // während des Zerlegens verlassen (F3-025)
     this.allLines = parsed.filter(p => !isInfoLineGame(p.raw)).map(p => p.game);
     // Trainingsfarbe je Kapitel automatisch erkennen + manuelle Overrides drüberlegen. Dadurch
     // wird jede Linie aus der RICHTIGEN Seite abgefragt, auch wenn das Repertoire Kapitel beider
@@ -285,7 +290,11 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     else this.buildQueue();
   }
 
-  ngOnDestroy(): void { this.clearLineTimers(); this.freqSub?.unsubscribe(); this.opponentSub?.unsubscribe(); }
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.loadSub?.unsubscribe();
+    this.clearLineTimers(); this.freqSub?.unsubscribe(); this.opponentSub?.unsubscribe();
+  }
 
   /** Die Trainingslinien gegen den Gegner holen (alle, nicht nur die ersten 50). <paramref name="wait"/>: bis dahin „Lädt";
    *  sonst läuft schon die Einstiegslinie, und die Reihung hängt die weiteren Linien an. */
