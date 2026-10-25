@@ -5,7 +5,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubPreview, ScoresheetScan } from '../../core/club.models';
-import { ClubAddPageComponent, anonKeys } from './club-add-page.component';
+import { ClubAddPageComponent } from './club-add-page.component';
+import { anonKeys } from './club-anon-keys';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 

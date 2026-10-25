@@ -1,0 +1,259 @@
+@if (!allowed) {
+  <!-- UX-033: wer schon lesen darf, gehört zur Lesegruppe — ihm fehlt nur das Beitragsrecht. -->
+  @if (canRead) {
+    <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Hinzufügen fehlt dir noch die Freigabe — frag einen Verwalter."
+                    purpose="das Hinzufügen von Vereinspartien" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
+  } @else {
+    <lh-access-gate text="Partien hinzufügen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
+  }
+} @else {
+  <section class="club-intro">
+    @if (share) { <p><a class="back-link" [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
+    <h2>Partien hinzufügen</h2>
+    <!-- UI-Sweep 2026-10-11 (d2-l-hinzufuegen-anon-text): eine Zeile + (i) statt drei Zeilen über Umschalter und Dateiauswahl. -->
+    <!-- d3-l-info-icon-allein-handy: letztes Wort + ⓘ umbrechen nur gemeinsam (.info-tail), sonst hing das ⓘ am Handy
+         allein in Zeile 2. -->
+    <p class="muted info-line info-inline">Angenommen wird jede Partie mit bekanntem <span class="info-tail">Gegner.@if (share) { Ohne Anmeldung.}
+      <button type="button" class="chk-btn" [attr.aria-expanded]="introInfo()" aria-label="Was angenommen wird"
+              title="Was angenommen wird" (click)="introInfo.set(!introInfo())">i</button></span></p>
+    @if (introInfo()) {
+      <div class="info-panel intro-info"><p class="note">Angenommen wird jede Partie mit einem bekannten Gegner — geprüft an den
+        Meldelisten aller Saisonen, sonst am Spielerverzeichnis der Megabase. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung —
+        gespeichert wird nicht, wer hochgeladen hat.}</p></div>
+    }
+  </section>
+
+  <!-- UX-071: ein Umschalter wie die übrigen von LeagueHub (role=group + aria-pressed). Vorher role=tab MIT aria-pressed
+       (axe: aria-allowed-attr, critical), ohne tabpanel und ohne Pfeiltasten. -->
+  <div class="seg club-kind" role="group" aria-label="Art">
+    <button type="button" [attr.aria-pressed]="kind() === 'pgn'" (click)="setKind('pgn')">Partiedaten</button>
+    <button type="button" [attr.aria-pressed]="kind() === 'formular'" (click)="setKind('formular')">Partieformular</button>
+  </div>
+
+  @if (kind() === 'pgn') {
+    <section class="panel">
+      @if (review(); as rv) {
+        @if (dbNote(); as note) { <p class="small db-note" role="status">{{ note }}</p> }
+        @if (portionNote(); as note) { <p class="small portion-note" role="status">{{ note }}</p> }
+        @if (draft(); as d) {
+          <p class="small muted draft-note">Die Liste liegt online als Entwurf — brichst du ab, machst du später unter „Deine offenen Listen" weiter@if (!share) {, und ein Verwalter kann den Import fertigstellen}.
+            @if (resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
+        }
+        <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" [draftId]="share ? null : (draft()?.id ?? null)"
+                               (imported)="done($event)" (cancel)="closeCurrent()" (savedChange)="onSaved($event)" />
+      } @else {
+        <!-- d2-l-hinzufuegen-anon-text: am Schalter nur Beschriftung + ein Satz; der Rest hinter (i) — der Knopf steht NEBEN dem
+             label, sonst schaltete ein Tipp darauf das Häkchen um. -->
+        <div class="anon-box">
+          <label class="anon-toggle">
+            <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
+            <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
+              <span class="muted">Nach außen erscheint nur „{{ anon }}“.</span></span>
+          </label>
+          <button type="button" class="chk-btn" [attr.aria-expanded]="anonInfo()" aria-label="Was das Ersetzen bewirkt"
+                  title="Was das Ersetzen bewirkt" (click)="anonInfo.set(!anonInfo())">i</button>
+        </div>
+        @if (anonInfo()) {
+          <div class="info-panel anon-info"><p class="note">Ersetzt wird jeder, der in seiner jüngsten Saison für {{ clubName() }} gemeldet
+            ist@if (!share) {, und du selbst}. Dann zeigt LeagueHub nach außen nirgends, wer dahinter steht (der echte Name bleibt nur
+            intern für Auswertungen des Vereins), und es wird nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns
+            vorbereiten. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der eigene Spieler mit Namen, wenn die
+            Partie einer Ligarunde zugeordnet ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je
+            Partie ändern.</p></div>
+        }
+        <label class="field">PGN-Datei
+          <input type="file" lhFilePick accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
+          @if (readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
+        </label>
+        <label class="field">… oder eine ChessBase-Datenbank
+          <input type="file" lhFilePick multiple [disabled]="busy()" (change)="pickChessBase($event)" />
+          <span class="small muted">Alle Dateien der Datenbank auswählen (z. B. MeineSpiele.2cbh, .2cbg, .2lid … bzw. .cbh,
+            .cbg, .cbp …) oder ein ZIP davon. Gelesen wird die Hauptvariante, ohne Kommentare.
+            @if (readingDb()) { <b>Lese die Datenbank …</b> }</span>
+        </label>
+        <div class="field">… oder eine öffentliche Lichess-Studie
+          <div class="linkrow">
+            <input type="url" inputmode="url" placeholder="https://lichess.org/study/…" [value]="studyUrl()"
+                   (input)="studyUrl.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); loadStudy()" />
+            <button type="button" class="btn-sec" [disabled]="busy() || !studyUrl().trim()" (click)="loadStudy()">
+              {{ loadingStudy() ? 'Lade …' : 'Laden' }}</button>
+          </div>
+        </div>
+        <label class="field">… oder hier einfügen
+          <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="pgn()"
+                    (input)="pgn.set($any($event.target).value)"></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn-pri" [disabled]="busy() || !pgn().trim()" (click)="startPreview()">
+            {{ previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
+          <!-- a1-l-partien-pruefen-gesperrt: solange nichts da ist, sagt die Zeile, WARUM der Knopf gesperrt ist (DESIGN 5.4). -->
+          @if (!busy() && !pgn().trim()) {
+            <span class="muted small pick-reason">Erst eine PGN-Datei wählen, eine Studie laden oder Partien einfügen.</span>
+          } @else {
+            <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
+          }
+          <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
+        </div>
+      }
+      @if (!review() && drafts().length) {
+        <h3 class="club-h3">Deine offenen Listen</h3>
+        <p class="small muted">Eingelesen, aber noch nicht (ganz) importiert — mit deinen Korrekturen gespeichert.</p>
+        <ul class="scan-list">
+          @for (d of drafts(); track d.ref) {
+            <li>
+              <span>{{ draftTitle(d) }}</span>
+              <span class="muted">{{ draftState(d) }} · {{ when(d.updatedAt) }}</span>
+              <button type="button" class="btn-sec" [disabled]="resuming()" (click)="resume(d)">Weiter</button>
+              <button type="button" class="btn-link" (click)="discardDraft(d)">Verwerfen</button>
+            </li>
+          }
+        </ul>
+      }
+      @if (!review() && isManager && othersDrafts().length) {
+        <h3 class="club-h3">Offene Listen anderer <span class="muted small">(nur Verwalter)</span></h3>
+        <p class="small muted">Eingereicht, aber nicht fertig importiert — auch über Teilen-Links. Du kannst den Import
+          fertigstellen (mit den Korrekturen und Vorgaben des Einreichers) oder die Liste verwerfen.</p>
+        <ul class="scan-list">
+          @for (d of othersDrafts(); track d.ref) {
+            <li>
+              <span>{{ draftTitle(d) }}</span>
+              <span class="muted">{{ draftState(d) }} · {{ d.viaShareLink ? 'über Teilen-Link' : (d.owner ?? 'mit Konto') }} · {{ when(d.updatedAt) }}</span>
+              <button type="button" class="btn-sec" [disabled]="resuming()" (click)="resume(d)">Fertigstellen</button>
+              <button type="button" class="btn-link" (click)="discardDraft(d)">Verwerfen</button>
+            </li>
+          }
+        </ul>
+      }
+      @if (result(); as r) {
+        <p class="result" role="status"><b>{{ summary(r) }}</b>
+          @if (r.added && !share) { <a routerLink="/verein">Zu den Vereinspartien</a> }</p>
+        @if (r.failed.length) {
+          <div class="roster-scroll">
+            <table class="rtable">
+              <thead><tr><th class="num">Nr.</th><th>Weiß</th><th>Schwarz</th><th>Warum nicht</th></tr></thead>
+              <tbody>
+                @for (f of r.failed; track f.index) {
+                  <tr><td class="num">{{ f.index }}</td><td>{{ f.white ?? '?' }}</td><td>{{ f.black ?? '?' }}</td>
+                    <td class="small">{{ reason(f.reason) }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </section>
+  } @else {
+    <section class="panel">
+      @if (status(); as s) {
+        <!-- Anbieter und Übermittlung nennen: das Foto (Namen, Unterschriften) geht an Anthropic in den USA (A6-008). -->
+        <p class="muted">{{ availability()!.text }} Das Foto liest Claude, ein KI-Modell von Anthropic (USA) — dafür wird
+          es dorthin übertragen (<a routerLink="/privacy">Datenschutz</a>). Das dauert meist ein paar
+          Minuten; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
+        @if (availability()!.ok) {
+          <label class="field">Foto des Formulars{{ extraPhotos().length ? ' (Seite 1)' : '' }}
+            <input #photoInput type="file" lhFilePick accept="image/*" capture="environment" (change)="pickPhoto($event)" />
+          </label>
+          <!-- 0.738.0, Wunsch 2026-10-10: „gleich mehrere Fotos hochladen, um die Erkennung zu verbessern" — ohne capture,
+               sonst öffnet das Handy die Kamera (ein Foto) statt der Galerie -->
+          @if (photosOfLastPage() < maxPhotosPerPage) {
+            <label class="field multi-pick small">Mehrere Fotos derselben Seite auf einmal (Galerie, höchstens {{ maxPhotosPerPage }})
+              <input #multiInput class="multi-photo" type="file" lhFilePick accept="image/*" multiple (change)="pickMany($event)" />
+            </label>
+          }
+          @if (multiNote(); as n) { <p class="muted small">{{ n }}</p> }
+          @if (photo(); as f) { <p class="muted small chosen">Seite 1: {{ f.name }}</p> }
+          <!-- Wunsch 2026-10-06: eine lange Partie geht über zwei oder drei Blätter — EINE Einlesung mit allen Seiten. -->
+          @for (p of extraPhotos(); track $index; let i = $index) {
+            <div class="field-row extra-page">
+              @if (p) {
+                <span class="field">{{ extraLabels()[i] }}: <span class="muted">{{ p.name }}</span></span>
+              } @else {
+                <label class="field">{{ extraLabels()[i] }}
+                  <input class="extra-photo" type="file" lhFilePick accept="image/*" capture="environment" (change)="pickExtra(i, $event)" />
+                </label>
+              }
+              <button type="button" class="btn-sec" (click)="removeExtra(i)" [attr.aria-label]="extraLabels()[i] + ' entfernen'">✕</button>
+            </div>
+          }
+          @if (photo() && !extraPhotos().includes(null)) {
+            <div class="actions">
+              @if (layout().at(-1)! < maxPages) {
+                <button type="button" class="btn-sec add-page" (click)="addExtra()">
+                  + Seite {{ layout().at(-1)! + 1 }} (Formular geht weiter)</button>
+              }
+              <!-- 0.736.0, Wunsch 2026-10-10: dieselbe Seite noch einmal fotografiert — der Leser vergleicht beide -->
+              @if (photosOfLastPage() < maxPhotosPerPage) {
+                <button type="button" class="btn-sec add-view" (click)="addExtra(true)">+ weiteres Foto dieser Seite</button>
+              }
+            </div>
+          }
+          <div class="field-row">
+            <label class="field">Notation
+              <select (change)="language.set($any($event.target).value)">
+                <option value="auto" [selected]="language() === 'auto'">automatisch erkennen</option>
+                @for (l of s.languages; track l.code) {
+                  <option [value]="l.code" [selected]="language() === l.code">{{ l.name }} ({{ l.pieces }})</option>
+                }
+              </select>
+            </label>
+            <label class="field">Ich spiele
+              <select (change)="side.set($any($event.target).value)">
+                <option value="auto" [selected]="side() === 'auto'">{{ share ? 'wähle ich danach' : 'automatisch (Name im Profil)' }}</option>
+                <option value="white" [selected]="side() === 'white'">Weiß</option>
+                <option value="black" [selected]="side() === 'black'">Schwarz</option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn-pri" [disabled]="uploading() || !photo()" (click)="upload()">
+              {{ uploading() ? 'Lade hoch …' : 'Formular einlesen' }}</button>
+          </div>
+        }
+      } @else if (statusError(); as e) {
+        <!-- UX-034: früher „Lade …" für immer und darunter „Hochladen hat nicht geklappt", obwohl nichts hochgeladen war. -->
+        <p class="err">Ob Einlesen gerade geht, ließ sich nicht prüfen. {{ e }}</p>
+        <div class="actions"><button type="button" class="btn-sec" (click)="retryStatus()">Neu laden</button></div>
+      } @else {
+        <p class="muted">Lade …</p>
+      }
+      <span class="update-msg" [class.err]="!!scanError()" role="status">{{ scanError() ?? '' }}</span>
+
+      @if (scans().length) {
+        <h3 class="club-h3">Deine Formulare</h3>
+        <ul class="scan-list">
+          @for (sc of scans(); track sc.ref) {
+            <li>
+              <span>{{ sc.scan.white || '?' }} – {{ sc.scan.black || '?' }}</span>
+              <span class="muted">{{ stateText(sc.scan) }}@if (isOpen(sc.scan)) {
+                <span class="scan-clock" [attr.aria-label]="'läuft seit ' + clockOf(sc.scan)"> · {{ clockOf(sc.scan) }}</span> }</span>
+              @if (sc.scan.status === 'done') { <a class="btn-sec" [routerLink]="scanLink(sc)">Prüfen und übernehmen</a> }
+              <!-- 0.659.2: auch ein fertig gelesenes Formular lässt sich verwerfen (mit Rückfrage), nicht nur ein gescheitertes -->
+              @if (sc.scan.status === 'done' || sc.scan.status === 'failed') {
+                <button type="button" class="btn-link" (click)="discard(sc)"
+                        [attr.aria-label]="'Formular ' + (sc.scan.white || '?') + ' – ' + (sc.scan.black || '?') + ' verwerfen'">Verwerfen</button>
+              }
+            </li>
+          }
+        </ul>
+      }
+
+      @if (isManager && othersOpen().length) {
+        <h3 class="club-h3">Offene Formulare anderer <span class="muted small">(nur Verwalter)</span></h3>
+        <p class="small muted">Hochgeladen, aber noch nicht geprüft — auch über Teilen-Links. Du kannst sie prüfen und
+          übernehmen oder verwerfen, damit nichts liegen bleibt.</p>
+        <ul class="scan-list">
+          @for (o of othersOpen(); track o.scan.id) {
+            <li>
+              <span>{{ o.scan.white || '?' }} – {{ o.scan.black || '?' }}</span>
+              <span class="muted">{{ stateText(o.scan) }}@if (isOpen(o.scan)) { <span class="scan-clock"> · {{ clockOf(o.scan) }}</span> }
+                · {{ o.viaShareLink ? 'über Teilen-Link' : 'mit Konto' }} · {{ when(o.scan.createdAt) }}</span>
+              @if (o.scan.status === 'done') { <a class="btn-sec" [routerLink]="['/verein/formular', o.scan.id]">Prüfen und übernehmen</a> }
+              <button type="button" class="btn-link" (click)="discardOther(o)">Verwerfen</button>
+            </li>
+          }
+        </ul>
+      }
+      <lh-batch-upload [client]="client" />
+    </section>
+  }
+}

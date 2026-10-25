@@ -18,7 +18,7 @@ import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
-import { rememberAnonKey } from './club-add-page.component';
+import { rememberAnonKey } from './club-anon-keys';
 import { PlayerSearchComponent } from './player-search.component';
 import { ScanHeaderForm, SIDES } from './scan-header-form';
 import { ScanPhotos } from '@rh/features/games/sheet-workbench/scan-photos';
