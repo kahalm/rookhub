@@ -105,9 +105,9 @@ public static class HttpClientsSetup
         services.AddHttpClient<ChessableProxyService>(client =>
         {
             client.BaseAddress = chessableUri;
-            // /direct/test + /direct/courses sind schnell; der tiefe /direct/course-Abruf
-            // (ganzer Kurs, viele sequentielle curl-impersonate-Calls über VPN) kann je nach
-            // Kursgröße viele Minuten dauern → großzügiger Timeout (Import läuft im Hintergrund).
+            // /direct/test + /direct/courses sind schnell; der Kurs-Abruf läuft als Job (/direct/course/start
+            // + Polling), der fetch-freie Parse (/direct/course/parse) eines großen Kurses kann aber
+            // dauern → großzügiger Timeout (Import läuft im Hintergrund).
             client.Timeout = TimeSpan.FromMinutes(15);
             if (!string.IsNullOrEmpty(chessableServiceKey))
                 client.DefaultRequestHeaders.Add("X-Service-Key", chessableServiceKey);

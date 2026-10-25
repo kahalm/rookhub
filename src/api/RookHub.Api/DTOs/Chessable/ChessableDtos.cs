@@ -42,8 +42,8 @@ public record ChessableCoursesDto(List<ChessableCourseDto> Courses, DateTime? Ca
 /// <summary>Test-Ergebnis: gibt die uid des Bearers und die Anzahl der Kurse zurueck.</summary>
 public record ChessableTestResultDto(string Uid, int CourseCount);
 
-/// <summary>Antwort des piratechess /api/chessable/direct/course-Endpoints (tiefer Kurs-Abruf, synchron).
-/// Dieselbe Form liefert auch der fetch-freie /course/parse-Endpoint (Browser-Import).</summary>
+/// <summary>Antwort des fetch-freien piratechess /api/chessable/direct/course/parse-Endpoints (Browser-Import).
+/// Der frühere synchrone Abruf /direct/course mit derselben Form ist entfallen (Codereview I2-011).</summary>
 public record ChessableCourseDataDto(string Bid, string Name, string Mode, int ChapterCount, int LineCount, string Pgn);
 
 /// <summary>Browser-Import („Über meinen Browser holen"): die RepCheck-Extension hat die rohen Chessable-

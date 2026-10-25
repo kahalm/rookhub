@@ -56,24 +56,11 @@ public class ChessableProxyService : ICachedLineSource
     }
 
     /// <summary>
-    /// Tiefer Kurs-Abruf: holt die komplette Kursstruktur als ein PGN. <paramref name="mode"/>
-    /// steuert die Trainingsannotation: "None" = Repertoire, "FirstKeyMove" = Buch (erster Key
-    /// trainierbar), "AllKeyMoves". Kann je nach Kursgröße lange dauern (langer Client-Timeout).
-    /// </summary>
-    public async Task<ChessableCourseDataDto> FetchCourseAsync(string bearer, string bid, string mode, CancellationToken ct = default)
-    {
-        var response = await _httpClient.PostAsJsonAsync(
-            "/api/chessable/direct/course", new { Bearer = bearer, Bid = bid, Mode = mode }, ct);
-        await EnsureSuccessOrThrowAsync(response, ct);
-        return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
-    }
-
-    /// <summary>
     /// Fetch-freier Parse: schickt bereits (vom Browser über die RepCheck-Extension) erfasstes rohes
     /// Chessable-JSON — je Kapitel die getList-Antwort + geordnete getGame-Antworten — an piratechess und
-    /// bekommt dasselbe PGN wie der Live-Abruf zurück, OHNE dass piratechess Chessable kontaktiert (kein
-    /// Bearer/VPN). Für den Browser-Import („Über meinen Browser holen"). <paramref name="mode"/> wie bei
-    /// <see cref="FetchCourseAsync"/> ("None"=Repertoire, "FirstKeyMove"=Buch).
+    /// bekommt dasselbe PGN wie beim Kurs-Abruf-Job (<see cref="StartCourseFetchAsync"/>) zurück, OHNE dass
+    /// piratechess Chessable kontaktiert (kein Bearer/VPN). Für den Browser-Import („Über meinen Browser holen").
+    /// <paramref name="mode"/> wie beim Kurs-Abruf-Job ("None"=Repertoire, "FirstKeyMove"=Buch).
     /// </summary>
     /// <param name="courseJson">Echte getCourse-Antwort — nur zusammen mit <paramref name="complete"/> relevant.</param>
     /// <param name="complete">Die Extension hat den Kurs vollständig geholt → piratechess darf ihn als Ganzes cachen.</param>
