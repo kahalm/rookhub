@@ -38,6 +38,7 @@ import { WeeklyService, nextWeeklySlot } from '../weekly/weekly.service';
 import { courseTagList } from './course-detail-text.util';
 import { setThemeKeys } from './course-themes.util';
 import { ClampMoreDirective } from '../../shared/clamp-more/clamp-more.directive';
+import { ChapterRowComponent } from './chapter-row.component';
 
 /**
  * Kurs-Detailseite (`/courses/:bookId`): Metadaten, eigener Fortschritt und — neu — die
@@ -56,7 +57,7 @@ import { ClampMoreDirective } from '../../shared/clamp-more/clamp-more.directive
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule,
     MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatSlideToggleModule,
     MatTooltipModule, IconLabelDirective, MatDialogModule, TranslatePipe, SendToWorksheetComponent,
-    CourseLangPickerComponent, CourseTranslationsComponent, ClampMoreDirective,
+    CourseLangPickerComponent, CourseTranslationsComponent, ClampMoreDirective, ChapterRowComponent,
   ],
   templateUrl: './course-detail.component.html',
   styleUrls: ['./course-detail.component.scss'],

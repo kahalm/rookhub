@@ -247,170 +247,19 @@
           <ul class="chapter-list">
             @for (ch of d.chapters; track key(ch)) {
               <li class="chapter">
-                <div class="chapter-row">
-                  <button class="expander" (click)="toggleChapter(ch)"
-                          [attr.aria-expanded]="expanded[key(ch)] === true">
-                    <mat-icon>{{ expanded[key(ch)] ? 'expand_less' : 'expand_more' }}</mat-icon>
-                  </button>
-
-                  @if (renamingKey === key(ch)) {
-                    <input class="rename-input" [(ngModel)]="renameDraft" maxlength="200"
-                           (keydown.enter)="commitRename(ch)" (keydown.escape)="cancelRename()" />
-                    <button mat-button (click)="commitRename(ch)" [disabled]="busy">{{ 'common.save' | translate }}</button>
-                    <button mat-button (click)="cancelRename()">{{ 'common.cancel' | translate }}</button>
-                  } @else {
-                    <span class="chapter-name" [class.chapter-name--none]="!ch.name">{{ chapterLabel(ch) }}</span>
-                    <span class="chapter-counts">
-                      {{ (ch.lineCount === 1 ? 'courses.detail.lineCountOne' : 'courses.detail.lineCount') | translate:{ count: ch.lineCount } }}
-                      @if (ch.quizCount > 0 && ch.quizCount !== ch.lineCount) {
-                        <span class="quiz-count">· {{ 'courses.detail.quizCount' | translate:{ count: ch.quizCount } }}</span>
-                      }
-                      <!-- Kalkulationsbuch: erreichte Punkte der Selbstbewertung, nur für bewertete Kapitel. -->
-                      @if (d.isCalculation && calcChapterScore(ch); as score) {
-                        <span class="calc-chapter-points">· {{ 'courses.detail.chapterPoints' | translate:{ score } }}</span>
-                      }
-                      <!-- Calc-Serie: freigegebene Ausgabe → Video-Link, künftige (nur Verwalter sichtbar) → Datum. -->
-                      @if (d.isCalculation && edition(ch); as ed) {
-                        @if (ed.released && ed.videoUrl) {
-                          <a class="calc-series-video" [href]="ed.videoUrl" target="_blank" rel="noopener"
-                             (click)="$event.stopPropagation()">· <mat-icon inline>smart_display</mat-icon> {{ 'calc.series.watchVideo' | translate }}</a>
-                        } @else if (!ed.released) {
-                          <span class="calc-series-upcoming">· {{ 'calc.series.releasesOn' | translate:{ date: (ed.publishAt | date:'short') } }}</span>
-                        }
-                      }
-                    </span>
-                    <!-- Ohne Aufgaben im ganzen Kurs kein Balken; ein Kapitel ohne Aufgaben in einem Kurs mit Aufgaben
-                         behält den leeren Platz, damit ▶ ⋮ in einer Spalte bleiben (b1-rk-studienbuch-fortschritt-0-0). -->
-                    @if (!isEmptyQuiz) {
-                      @if (d.isCalculation || ch.quizCount > 0) {
-                        <span class="chapter-progress">
-                          <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
-                          <span class="chapter-label">{{ ch.solvedCount }}/{{ d.isCalculation ? ch.lineCount : ch.quizCount }}</span>
-                        </span>
-                      } @else {
-                        <span class="chapter-progress chapter-progress--none" aria-hidden="true"></span>
-                      }
-                    }
-
-                    <span class="chapter-actions">
-                      @if (chapterStartLink(ch); as link) {
-                        <button mat-icon-button color="primary" [routerLink]="link"
-                                [queryParams]="chapterStartParams(ch)"
-                                [appIconLabel]="'courses.detail.startChapter' | translate">
-                          <mat-icon>play_arrow</mat-icon>
-                        </button>
-                      }
-                      <button mat-icon-button [matMenuTriggerFor]="chapterMenu"
-                              [appIconLabel]="'common.moreActions' | translate">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                      <mat-menu #chapterMenu="matMenu">
-                        @if (d.canManage) {
-                          <button mat-menu-item (click)="addLines(ch)">
-                            <mat-icon>playlist_add</mat-icon>
-                            <span>{{ 'courses.detail.addLines' | translate }}</span>
-                          </button>
-                          <button mat-menu-item (click)="startRename(ch)">
-                            <mat-icon>edit</mat-icon>
-                            <span>{{ 'courses.detail.renameChapter' | translate }}</span>
-                          </button>
-                          @if (d.isCalculation && ch.name) {
-                            <button mat-menu-item (click)="openEdition(ch)">
-                              <mat-icon>event</mat-icon>
-                              <span>{{ (edition(ch) ? 'calc.series.editEdition' : 'calc.series.planEdition') | translate }}</span>
-                            </button>
-                          }
-                        }
-                        @if (!d.isCalculation) {
-                          <button mat-menu-item
-                                  [routerLink]="['/courses', bookId, 'flashcards']"
-                                  [queryParams]="{ chapter: ch.name ?? '' }">
-                            <mat-icon>style</mat-icon>
-                            <span>{{ 'courses.flashcards.chapterMenu' | translate }}</span>
-                          </button>
-                          <app-send-to-worksheet labelKey="worksheets.send.chapter"
-                                                 [disabled]="ch.quizCount === 0"
-                                                 (pick)="sendChapterToWorksheet(ch, $event)" />
-                        }
-                        @if (canCreateWeekly && !d.isCalculation && ch.solverIndex != null) {
-                          <button mat-menu-item class="weekly-from-chapter" (click)="createWeeklyFromChapter(ch)">
-                            <mat-icon>event</mat-icon>
-                            <span>{{ 'courses.detail.createWeekly' | translate }}</span>
-                          </button>
-                        }
-                        @if (!d.isCalculation) {
-                          <button mat-menu-item (click)="downloadChapterPgn(ch)" [disabled]="ch.lineCount === 0">
-                            <mat-icon>download</mat-icon>
-                            <span>{{ 'courses.detail.downloadChapterPgn' | translate }}</span>
-                          </button>
-                        }
-                        <button mat-menu-item (click)="resetChapter(ch)">
-                          <mat-icon>restart_alt</mat-icon>
-                          <span>{{ 'courses.detail.resetChapter' | translate }}</span>
-                        </button>
-                        @if (d.canManage) {
-                          <button mat-menu-item class="danger" (click)="deleteChapter(ch)">
-                            <mat-icon>delete</mat-icon>
-                            <span>{{ 'courses.detail.deleteChapter' | translate }}</span>
-                          </button>
-                        }
-                      </mat-menu>
-                    </span>
-                  }
-                </div>
-
-                @if (expanded[key(ch)]) {
-                  <div class="lines">
-                    @if (loadingLines[key(ch)]) {
-                      <mat-spinner diameter="22"></mat-spinner>
-                    } @else if ((linesByChapter[key(ch)] || []).length === 0) {
-                      <p class="empty">{{ 'courses.detail.noLines' | translate }}</p>
-                    } @else {
-                      <table class="line-table">
-                        <tbody>
-                          @for (line of linesByChapter[key(ch)]; track line.id) {
-                            <tr>
-                              <td class="round">{{ line.round }}</td>
-                              <td class="fen mono">{{ line.fen }}</td>
-                              <td class="comment">{{ line.comment }}</td>
-                              <td class="kind">
-                                @if (line.moveCount > 0) {
-                                  <span class="pill" [matTooltip]="'courses.detail.hasSolution' | translate">
-                                    {{ 'courses.detail.plies' | translate:{ count: line.moveCount } }}
-                                  </span>
-                                } @else {
-                                  <span class="pill pill--position">{{ 'courses.detail.positionOnly' | translate }}</span>
-                                }
-                              </td>
-                              <td class="row-actions">
-                                @if (!d.isCalculation) {
-                                  <button mat-icon-button (click)="downloadLinePgn(line)"
-                                          [appIconLabel]="'courses.detail.downloadLinePgn' | translate">
-                                    <mat-icon>download</mat-icon>
-                                  </button>
-                                }
-                                @if (d.isCalculation) {
-                                  <a mat-icon-button [routerLink]="['/courses', bookId, 'calc']"
-                                     [queryParams]="{ pos: line.id }"
-                                     [appIconLabel]="'courses.calculate' | translate">
-                                    <mat-icon>calculate</mat-icon>
-                                  </a>
-                                }
-                                @if (d.canManage) {
-                                  <button mat-icon-button class="danger" [disabled]="busy"
-                                          (click)="deleteLine(ch, line)"
-                                          [appIconLabel]="'courses.detail.deleteLine' | translate">
-                                    <mat-icon>delete_outline</mat-icon>
-                                  </button>
-                                }
-                              </td>
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
-                    }
-                  </div>
-                }
+                <app-chapter-row [chapter]="ch" [bookId]="bookId" [label]="chapterLabel(ch)"
+                  [isCalculation]="d.isCalculation" [canManage]="d.canManage" [isEmptyQuiz]="isEmptyQuiz"
+                  [canCreateWeekly]="canCreateWeekly" [busy]="busy"
+                  [expanded]="expanded[key(ch)] === true" [loadingLines]="loadingLines[key(ch)] === true"
+                  [lines]="linesByChapter[key(ch)]" [renaming]="renamingKey === key(ch)" [(renameDraft)]="renameDraft"
+                  [calcScore]="calcChapterScore(ch)" [edition]="edition(ch)"
+                  [startLink]="chapterStartLink(ch)" [startParams]="chapterStartParams(ch)"
+                  (expandToggle)="toggleChapter(ch)" (addLines)="addLines(ch)" (startRename)="startRename(ch)"
+                  (commitRename)="commitRename(ch)" (cancelRename)="cancelRename()" (openEdition)="openEdition(ch)"
+                  (sendToWorksheet)="sendChapterToWorksheet(ch, $event)" (createWeekly)="createWeeklyFromChapter(ch)"
+                  (downloadChapterPgn)="downloadChapterPgn(ch)" (resetChapter)="resetChapter(ch)"
+                  (deleteChapter)="deleteChapter(ch)" (downloadLinePgn)="downloadLinePgn($event)"
+                  (deleteLine)="deleteLine(ch, $event)" />
               </li>
             }
           </ul>

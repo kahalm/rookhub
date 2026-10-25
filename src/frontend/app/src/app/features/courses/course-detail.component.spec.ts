@@ -534,9 +534,7 @@ describe('CourseDetailComponent Layout Kopf', () => {
     expect(beforeMedia).toMatch(/\.head-card[^{]* \.meta[^{]*\{ ?order: 1/);
   });
 
-  it('Kapitelzähler in fester, rechtsbündiger Breite (b1-rk-kapitel-balken-versatz)', () => {
-    expect(css).toMatch(/\.chapter-label[^{]*\{[^}]*min-width: 7ch;[^}]*text-align: right/);
-  });
+  // „Kapitelzähler in fester, rechtsbündiger Breite“ prüft seit Zerlegung Z29 chapter-row.component.spec.ts.
 });
 
 /** UI-Sweep v1: lange Beschreibung mit „Mehr" im Satz (v1-rk-kursseite-beschreibung-vorlauf-handy),

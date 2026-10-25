@@ -1,0 +1,144 @@
+:host { display: block; }
+
+/* Zeile eines Kapitels auf der Kurs-Detailseite (aus course-detail.component.scss herausgelöst, Zerlegung Z29). */
+
+.empty {
+  margin: 0.4rem 0;
+  font-style: italic;
+  color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82em; }
+
+.chapter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0;
+  flex-wrap: wrap;
+}
+
+.expander {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.chapter-name {
+  font-weight: 500;
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  word-break: break-word;
+}
+
+.chapter-name--none {
+  font-style: italic;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.chapter-counts {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  white-space: nowrap;
+}
+
+.quiz-count { margin-left: 2px; }
+
+/* Calc-Serie (Noel): Ausgabe-Marker im Kapitel-Kopf. */
+.calc-series-video {
+  margin-left: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--rh-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.calc-series-video:hover { text-decoration: underline; }
+.calc-series-video mat-icon { font-size: 16px; width: 16px; height: 16px; }
+.calc-series-upcoming { margin-left: 4px; opacity: 0.7; white-space: nowrap; }
+
+.chapter-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 9rem;
+
+  mat-progress-bar { flex: 1; }
+}
+
+/* Zähler in fester Breite, rechtsbündig: alle Balken gleich lang, Balkenenden und Zähler in einer Spalte
+   (b1-rk-kapitel-balken-versatz, DESIGN 5.3) — „0/6" und „12/119" verschoben sie sonst je Zeile. */
+.chapter-label {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: none;
+  min-width: 7ch;
+  text-align: right;
+}
+
+.chapter-actions { display: flex; align-items: center; }
+
+/* UI-Sweep 2026-10-11 (r2-rp-chapter-mobile): am Handy erste Zeile Name + ▶ ⋮ rechts, zweite Zeile Balken
+   (flexibel) + Zähler, eingerückt unter den Namen — statt einer linksbündigen Restzeile mit Leere rechts. */
+@media (max-width: 599.98px) {
+  .chapter-row > .chapter-name { order: 1; flex: 1 1 calc(100% - 9rem); }
+  .chapter-row > .chapter-actions { order: 2; margin-left: auto; }
+  .chapter-row > .chapter-progress { order: 3; flex: 1 1 0; min-width: 6rem; margin-left: 1.9rem; }
+  .chapter-row > .chapter-counts { order: 4; }
+  .chapter-row > .chapter-progress--none { display: none; }
+}
+
+.rename-input {
+  flex: 1 1 10rem;
+  padding: 5px 7px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.lines {
+  padding: 0.25rem 0 0.6rem 1.6rem;
+  overflow-x: auto;
+}
+
+.line-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+
+  td {
+    padding: 3px 6px;
+    border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+    vertical-align: middle;
+  }
+}
+
+.line-table .round {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.line-table .fen { word-break: break-all; }
+.line-table .comment { color: color-mix(in srgb, currentColor 70%, transparent); }
+.line-table .row-actions { white-space: nowrap; text-align: right; }
+
+.pill {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  white-space: nowrap;
+}
+
+.pill--position { background: color-mix(in srgb, var(--rh-info) 18%, transparent); color: var(--rh-info); }
+
+.danger { color: var(--rh-error); }
