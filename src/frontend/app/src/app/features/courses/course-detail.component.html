@@ -61,7 +61,7 @@
         <!-- Ohne Aufgaben (Studienbuch: nur kommentierte Partien) sagt „0/0" nichts — stattdessen, was der Kurs ist,
              wie auf der Kurskarte (b1-rk-studienbuch-fortschritt-0-0, DESIGN 2 Nr. 6). -->
         @if (isEmptyQuiz) {
-          <p class="empty-note">{{ ((d.infoLineCount ?? 0) > 0 ? 'courses.emptyCourse.gamesOnly'
+          <p class="empty-note">{{ (d.infoLineCount > 0 ? 'courses.emptyCourse.gamesOnly'
             : d.canManage ? 'courses.emptyCourse.noLinesOwner' : 'courses.emptyCourse.noLines') | translate }}</p>
         } @else {
           <div class="progress-row">
@@ -77,7 +77,7 @@
           <div><dt>{{ 'courses.detail.lines' | translate }}</dt><dd>{{ d.totalLines }}</dd></div>
           <!-- Studienbuch (nur kommentierte Partien): „Stellungen ohne Lösung“ wäre dieselbe Zahl wie „Linien“ und läse
                sich wie ein Defekt — dort und bei 0 entfällt die Kennzahl (d5-rk-stellungen-ohne-loesung-widerspruch). -->
-          @if (!isEmptyQuiz && (d.infoLineCount ?? 0) > 0) {
+          @if (!isEmptyQuiz && d.infoLineCount > 0) {
             <div>
               <dt>{{ 'courses.detail.positionLines' | translate }}</dt>
               <dd>{{ d.infoLineCount }}</dd>
