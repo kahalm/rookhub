@@ -85,9 +85,9 @@ app/src/app/
   führen ihr Brett schon selbst und WEISEN es neu zu (`reviewGoToCore` im Puzzle-Löser,
   `startCurrentLine`/`showSolution` in `TrainerSession`) — ein zweites Brett daneben wäre die Quelle fürs
   Auseinanderlaufen. **Bewusst NICHT im Kern und weiterhin in Base**: moveLog samt `thinkMs`,
-  `wrongMoveCount`, Off-Path-Zählung und -Warnung, der `ALT_HOLD_MS`-Timer des Alternativzugs, die
-  Timer von `advanceAfterCorrectMove`, die Stockfish-Antwort (`opponentRespond`), `handleGameOver`,
-  `mouseslip`, viz/Tipps/Eval. Der Kalkulations-Modus ist **kein Löser** und bleibt außen vor.
+  `wrongMoveCount`, Off-Path-Zählung und -Warnung (Regeln in `off-path-policy.ts`), der `ALT_HOLD_MS`-Timer des
+  Alternativzugs, die Timer von `advanceAfterCorrectMove`, die Stockfish-Antwort (`opponentRespond`), `handleGameOver`,
+  `mouseslip`, viz/Tipps/Eval (Bausteine siehe „Basis-Löser“ unten). Der Kalkulations-Modus ist **kein Löser** und bleibt außen vor.
 - **Repertoire-Trainer am Kern** (0.499.10; seit Zerlegung Z21 in `TrainerSession`): `onMove`, `onLearnMove` und `showSolution` urteilen
   über `judgeMove`/`resolveExpectedUci` statt über `normSan`-Textvergleich. Geurteilt wird gegen
   `this.fen` (NICHT `this.chess`): im Wiederhol-Fall nach einem Fehlzug ist `this.fen` bereits auf
@@ -111,3 +111,19 @@ app/src/app/
 - **Kurse (Zerlegung 2026-10, Z20/Z29/Z33/F3-023):** `features/courses/` — HTTP nach Thema in `course-api.ts`/`course-authoring-api.ts`/`course-share-api.ts`/`course-translation-api.ts` + `course.types.ts` (`course.service.ts` = Fassade), Kursdetail mit `chapter-row.component` + `calc-series.controller`, Kalkulations-Modus `calc/` als Container + reine Klassen (`calc-chapter-model`, `calc-tree-cursor`, `calc-tree-saver`, `calc-review.controller`, `keyed-single-flight-queue`, `calc-training-timer`, `calc-page-mode`) + OnPush-Kinder (`calc-result-card`, `calc-annotate-card`, `calc-status-panel`); Aufstellung in `docs/api/kalkulations-modus.md`.
 - **Repertoire-Trainer + Stellungssuche zerlegt** (Codereview Z21/Z32): `repertoire-trainer.component.ts` lädt und verdrahtet nur; das Abspielen (8 Phasen, Timer über `TrainerClock`, Zugurteil) ist `repertoire-trainer-session.ts`, dazu `-sr-sync` (SR-Abgleich + Offline-Queue), `-frequency-loader` („Häufigste zuerst“), `-eval-compare` (Stockfish-Vergleich), `-queue.util` (Warteschlange/Gegner-Reihung); in `position-repertoires.component.ts` liegt die Sicht „Ähnlich“ als `similar-positions-panel.component.ts` + `similar-positions-search.ts`, der Linien-Link in `repertoire-line-link.ts`.
 - **Partie-Seiten `features/guess`, `features/reconstruct`, `features/games/shared-game*`** (Zerlegung Z24–Z26, 2026-10-25): Punktepartie = `guess-board.component` (.html/.scss) + `guess-playback.ts` (reine Abspielsteuerung, Uhr injizierbar) + `guess-history-panel.component` (Zugliste) + `guess-settings-menu.component` + `guess-history.util.ts`; Rekonstruktion = `reconstruct-detail.component` + `part-editor.component` (Zug-Editor) + `gap-proposals.component` (Lückenzeile) + `reconstruct-share-menu.component` + `reconstruct-head-form.component` + `reconstruct-moves.util.ts`; Partieseite = `shared-game.component` + `game-actions.service` (Aktionen an der Partie, je Seite bereitgestellt, V33) + `game-engine-controller.ts` (Live-Engine, Training-Analyse) + `game-training-controller.ts` (Fehler-Training).
+- **Basis-Löser `features/puzzles/base-puzzle-solver.ts`** (Zerlegung Z23, 2026-10-25): `BasePuzzleSolver<S>` ist der
+  Lös-Automat aller vier Löser (Standard, Endless, Buch/Kurs, Woodpecker); `S` = die Endzustände der Komponente
+  (`PuzzleEndState`, `EndlessEndState`, `BookEndState` in `book-mode-host.ts`, `WoodpeckerEndState`), die Basis setzt
+  `SolverCoreState`. Gemeinsam in der Basis: Eval-Anzeige (`toggleEval`/`refreshEval`, Tiefe über `depth`), Blättern
+  der Durchsicht (`reviewNext/Prev`, `exitReview`, `showOriginalSolution`, `reviewArrowKey`), `releaseSolver()` fürs
+  ngOnDestroy. Bausteine (rein bzw. mit austauschbarer `SolverClock`, je eigene Spec): `solver-timer.ts`
+  (`SolverTimer` Lösezeit, `SecondsCountdown` Auto-Weiter/Viz-Countdown), `hint-ladder.ts` (`HintLadder`),
+  `off-path-policy.ts` (`OffPathPolicy`, `whiteEvalToPlayerPawns`, `playerEvalText`), `viz-controller.ts`
+  (`VizController`, `opponentArrowModeFor`), `solver-setup.util.ts` (Vorspiel klemmen, Blickrichtung, Vorschau),
+  `solver-texts.ts` (Anarchy-/Off-Path-Texte); Test-Uhr `testing/manual-clock.ts`.
+- **Analysebrett `features/analysis/analysis.component`** (Zerlegung Z22, 2026-10-25): Container; daneben rein
+  `analysis-settings.ts` (`AnalysisSettings`, `DEPTH_OPTIONS`, Schlüssel), `analysis-route.ts` (`readAnalysisParams`),
+  `analysis-readout.ts` (Partie-Ende, Zugziele, Bewertungsleiste, Pfeile, `SearchClock`), `analysis-engine-choice.ts`
+  (`pickEngineAfterLoad`, `EngineChoiceList`, `speedHintText`), `analysis-line-model.ts` (`AnalysisLineModel`,
+  `playLine`, `boardMove`), `analysis-title.util.ts` (`pgnTitle`); vorhanden waren `analysis-tree.ts`,
+  `engine-lines.util.ts`, `analysis-compare.ts` (Vergleichs-Engine), `analysis-history-saver.ts`, `maia/maia-sparring.ts`.
