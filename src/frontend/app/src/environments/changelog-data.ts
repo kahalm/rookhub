@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.838.2", date: "2026-10-25", changes: [
+    { en: "LeagueHub: the upload prompt on shared match links now reads „Played in this round? Upload your games“ instead of „Played against the league?“.", de: "LeagueHub: Die Aufforderung auf geteilten Begegnungs-Links heißt jetzt „In der Runde gespielt? Partien hochladen“ statt „Gegen die Liga gespielt?“." },
+    { en: "LeagueHub: shared match links now also show the provisional board pairings of the current round (from the uploaded games, own side anonymised) before chess-results publishes the round — previously only played rounds were shown without logging in.", de: "LeagueHub: Geteilte Begegnungs-Links zeigen jetzt auch die vorläufigen Brettpaarungen der laufenden Runde (aus den hochgeladenen Partien, eigene Seite anonymisiert), bevor chess-results die Runde bringt — ohne Anmeldung gab es sie bisher nur für gespielte Runden." },
+  ]},
   { version: "0.838.1", date: "2026-10-25", changes: [
     { en: "CI: the test and audit jobs install the .NET SDK straight from builds.dotnet.microsoft.com (own action instead of actions/setup-dotnet). Its aka.ms short link pointed to a storage account that rejected every download with HTTP 409 since 25 Oct 2026, so no release build could pass its tests. No change to the app itself.", de: "CI: Die Test- und Audit-Jobs holen das .NET-SDK direkt von builds.dotnet.microsoft.com (eigene Aktion statt actions/setup-dotnet). Dessen aka.ms-Kurzlink zeigte seit dem 25.10.2026 auf einen Speicher, der jeden Download mit HTTP 409 abwies, sodass kein Release-Build seine Tests bestehen konnte. An der App selbst ändert sich nichts." },
   ]},

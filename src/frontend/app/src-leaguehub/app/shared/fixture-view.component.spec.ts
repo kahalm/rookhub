@@ -184,6 +184,23 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.pairings')!.textContent).toContain('offen');
   });
 
+  // 0.838.2, Wunsch 2026-10-25: „seh ich die Paarungen von Runde 3 nicht im shared link" — die vorläufige Aufstellung
+  // einer offenen Runde kommt auch über den Teilen-Link (Server anonymisiert die eigene Seite), ohne Analyse-Wege.
+  it('offene Runde über den Teilen-Link: vorläufige Aufstellung wird geladen und gezeigt', async () => {
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Kobold, Jonathan', whiteElo: 1935, black: 'Schwaz', blackElo: null, result: '1 - 0', forfeit: false,
+        pgn: '1. e4 1-0', source: 'club', clubGameId: 171, provisional: true },
+    ]);
+    const el = render(OPEN, { token: 'TOK' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.fixtureGames).toHaveBeenCalledWith(null, 1, 'Schwaz', 'TOK');
+    expect(el.querySelector('.provisional-note')?.textContent).toContain('hochgeladenen Partien');
+    expect(el.querySelector('.pairings tbody tr')?.textContent).toContain('Kobold, Jonathan');
+    expect(el.querySelector('.pairings .icon-btn')).toBeNull();
+    expect(lineupsApi.lineups).not.toHaveBeenCalled();
+  });
+
   // UI-Sweep 2026-10-10 (l-fixture-head, l-names-mobile)
   it('Kopf: Paarung zuerst, dann Runde · Datum, das Spiellokal vollständig in eigener Zeile; Kandidaten mit Elo · Partien', () => {
     const el = render(OPEN);
@@ -198,12 +215,6 @@ describe('FixtureViewComponent', () => {
     expect(fixture.componentInstance.candMeta({ n: 'X', elo: 2302, rb: 1, p: 0.4, fide: null, g: 1259 })).toBe('2302 · 1.259 Partien');
     render({ ...OPEN, venue: null as unknown as string });
     expect(el.querySelector('.venue')).toBeNull();
-  });
-
-  it('offene Runde über einen Teilen-Link: keine Abfrage', () => {
-    fixture.componentRef.setInput('leagueTnr', 1479345);
-    render(OPEN, { token: 'abc' });
-    expect(api.fixtureGames).not.toHaveBeenCalled();
   });
 
   it('zeigt je Brett die Kandidaten, den ersten hervorgehoben, Balken nach Prozent', () => {

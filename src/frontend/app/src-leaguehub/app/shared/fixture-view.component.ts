@@ -49,7 +49,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
         @if (pairings().length && (e.status === 'played' || provisional())) {
           @if (e.status !== 'played') {
             <!-- 0.739.0, Wunsch 2026-10-10: die laufende Runde aus den zugeordneten Vereinspartien -->
-            <p class="muted small provisional-note">Aufstellung laut euren Partien — vorläufig, bis chess-results die Runde bringt.</p>
+            <p class="muted small provisional-note">Aufstellung laut {{ shareToken() ? 'den hochgeladenen' : 'euren' }} Partien — vorläufig, bis chess-results die Runde bringt.</p>
           }
           <table class="pairings">
             <caption class="sr-only">Brettpaarungen</caption>
@@ -387,9 +387,10 @@ export class FixtureViewComponent {
       this.pairings.set([]);
       this.ownMatch.set(null);
       this.openBoard.set(null);
-      // 0.739.0: auch die laufende Runde — gezeigt wird sie nur, wenn ein Brett aus einer zugeordneten Partie kommt
-      // (angemeldet; über einen Teilen-Link nur gespielte Runden wie bisher)
-      if (!f || (!token && tnr == null) || (f.status !== 'played' && token)) return;
+      // 0.739.0: auch die laufende Runde — gezeigt wird sie nur, wenn ein Brett aus einer zugeordneten Partie kommt.
+      // Seit 0.838.2 (Wunsch 2026-10-25: „seh ich die Paarungen von Runde 3 nicht im shared link") auch über den
+      // Teilen-Link: der Server liefert dort dieselben vorläufigen Bretter, die eigene Seite anonymisiert.
+      if (!f || (!token && tnr == null)) return;
       this.api.fixtureGames(tnr, round, team, token).then(
         p => { if (this.pairingsFor === key) this.pairings.set(p); },
         () => { if (this.pairingsFor === key) this.pairings.set([]); });

@@ -28,7 +28,9 @@ describe('SharePageComponent', () => {
 
   beforeEach(() => {
     lineups = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'fixturePgn', 'sharedPgn']);
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats', 'fixtureGames']);
+    // 0.838.2: auch eine offene Runde holt über den Link die (vorläufigen) Paarungen
+    api.fixtureGames.and.resolveTo([]);
     api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, top1: 0, top2: 0, top3: 0, of: 0 }, rounds: [], leagues: [] });
     api.sources.and.resolveTo({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }], boardTotal: 34838,
@@ -56,7 +58,7 @@ describe('SharePageComponent', () => {
     const cta = el.querySelector('section.cta')!;
     expect(el.firstElementChild).toBe(cta);
     // UI-Sweep 2026-10-11 (d2-l-teilen-cta): kurzer Titel, Erklärtext hinter (i)
-    expect(cta.querySelector('h2')?.textContent).toBe('Gegen die Liga gespielt? Partien hochladen');
+    expect(cta.querySelector('h2')?.textContent).toBe('In der Runde gespielt? Partien hochladen');
     expect(cta.textContent).not.toContain('ohne Anmeldung');
     (cta.querySelector('.chk-btn') as HTMLButtonElement).click();
     f.detectChanges();

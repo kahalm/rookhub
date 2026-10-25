@@ -394,7 +394,7 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
   });
 
   it('Teilen-Link am Handy: Aufforderung höchstens 160 px, Knöpfe nebeneinander', async () => {
-    const doc = await render(390, `<main class="wrap"><section class="cta" id="cta"><div class="cta-head"><h2>Gegen die Liga gespielt? Partien hochladen</h2>
+    const doc = await render(390, `<main class="wrap"><section class="cta" id="cta"><div class="cta-head"><h2>In der Runde gespielt? Partien hochladen</h2>
       <button class="chk-btn">i</button></div><div class="cta-actions"><a class="btn-pri" id="a1">Formular fotografieren</a><a class="btn-sec" id="a2">PGN</a></div></section>
       <p class="stand share-stand" id="st">Nur zum Ansehen<span class="desk-only"> · Stand der Daten: 27.09.2026 21:00</span> · <span class="desk-only">Link </span>gültig bis 14.11.2026</p></main>`);
     expect(box(doc, 'cta').height).toBeLessThanOrEqual(160);

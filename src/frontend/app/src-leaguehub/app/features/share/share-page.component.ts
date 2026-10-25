@@ -40,7 +40,8 @@ import { ClubContextService } from '../../core/club-context.service';
            hinter (i). Die Stand-Zeile am Handy einzeilig (Datenstand erst ab 641 px). -->
       <section class="cta" aria-labelledby="cta-title">
         <div class="cta-head">
-          <h2 id="cta-title">Gegen die Liga gespielt? Partien hochladen</h2>
+          <!-- 0.838.2, Wunsch 2026-10-25: „Gegen die Liga gespielt?“ klang schief — es geht um die Partien dieser Runde. -->
+          <h2 id="cta-title">In der Runde gespielt? Partien hochladen</h2>
           <button type="button" class="chk-btn" [attr.aria-expanded]="ctaInfo()" aria-label="Wie das Hochladen funktioniert"
                   title="Wie das Hochladen funktioniert" (click)="ctaInfo.set(!ctaInfo())">i</button>
         </div>

@@ -50,8 +50,10 @@ Möglichkeit, die ersten paar Züge einzugeben."
   der weißen FIDE-ID), Ergebnis aus der Partie. **Die eigene Seite („Schwaz") zeigt den internen echten Spieler NUR mit
   `revealOwn`** — gesetzt von `GET /api/league/{tnr}/round/{r}/games` und den Aufstellungen (angemeldete Vereinsmitglieder; bewusste
   Ausnahme von „Real-Namen nie ausgeben", Entscheidung des Users 10.10.), nie über `/api/league/s/{token}/games`. `LineupBoard.Provisional`;
-  `lh-fixture` lädt die Paarungen angemeldet auch für eine offene Runde und zeigt sie mit Hinweis „vorläufig", sobald ein Brett
-  vorläufig ist (leere Bretter „offen"). Sobald chess-results die Runde bringt, gilt wieder die öffentliche Paarung.
+  `lh-fixture` lädt die Paarungen auch für eine offene Runde und zeigt sie mit Hinweis „vorläufig", sobald ein Brett
+  vorläufig ist (leere Bretter „offen") — angemeldet seit 0.739.0, über den Teilen-Link seit 0.838.2 (Wunsch 2026-10-25: „seh ich
+  die Paarungen von Runde 3 nicht im shared link"; der Server liefert dort über `/s/{token}/games` dieselben vorläufigen Bretter mit
+  anonymisierter eigener Seite). Sobald chess-results die Runde bringt, gilt wieder die öffentliche Paarung.
 * **Auch über den Teilen-Link** (0.838.0, Wunsch 2026-10-25: „die Aufstellung für die Runden (das mit den Partien) soll auch bei
   den anonymen Links verfügbar sein"): `GET /api/league/s/{token}/lineups` (`LeagueShareController.Lineups`, ohne Anmeldung,
   Rate-Limit `anonymous-tournament`) liefert dieselbe Antwort wie der angemeldete Endpunkt für Liga, Runde und Verein DES LINKS —
