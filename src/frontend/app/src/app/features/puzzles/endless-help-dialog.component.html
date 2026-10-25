@@ -1,0 +1,45 @@
+<!-- Hilfe zu Endless als MatDialog (UX-010; Zerlegung Z19 aus endless-puzzle.component.html): bringt role="dialog",
+     Fokusfang, Esc und die Fokus-Rückgabe mit und blendet die Seite dahinter für Screenreader aus. [aria-label] ist
+     der Eingang von mat-dialog-close (dessen Host-Bindung überschriebe ein [attr.aria-label]). -->
+<div class="help-header">
+  <h2 mat-dialog-title>{{ 'endless.help.title' | translate }}</h2>
+  <button mat-icon-button mat-dialog-close [aria-label]="'common.close' | translate"><mat-icon>close</mat-icon></button>
+</div>
+<mat-dialog-content class="help-body">
+  <h3>{{ 'endless.help.gameplayHeading' | translate }}</h3>
+  <p>{{ 'endless.help.gameplayP1' | translate }}</p>
+  <p [innerHTML]="'endless.help.gameplayP2' | translate"></p>
+
+  <h3>{{ 'endless.help.movesHeading' | translate }}</h3>
+  <p [innerHTML]="'endless.help.movesP1' | translate"></p>
+  <p [innerHTML]="'endless.help.movesP2' | translate"></p>
+  <ul>
+    <li [innerHTML]="'endless.help.movesItem1' | translate"></li>
+    <li [innerHTML]="'endless.help.movesItem2' | translate"></li>
+    <li>{{ 'endless.help.movesItem3' | translate }}</li>
+  </ul>
+
+  <h3>{{ 'endless.help.buttonsHeading' | translate }}</h3>
+  <ul>
+    <li [innerHTML]="'endless.help.buttonsShowEval' | translate"></li>
+    <li [innerHTML]="'endless.help.buttonsReset' | translate"></li>
+    <li [innerHTML]="'endless.help.buttonsMouseslip' | translate"></li>
+    <li [innerHTML]="'endless.help.buttonsGiveUp' | translate"></li>
+  </ul>
+
+  <h3>{{ 'endless.help.settingsHeading' | translate }}</h3>
+  <ul>
+    <li [innerHTML]="'endless.help.settingsStartRating' | translate"></li>
+    <li [innerHTML]="'endless.help.settingsStockfishDepth' | translate"></li>
+    <li [innerHTML]="'endless.help.settingsThemes' | translate"></li>
+  </ul>
+
+  <h3>{{ 'endless.help.fasttrackHeading' | translate }}</h3>
+  <p>{{ 'endless.help.fasttrackP1' | translate }}</p>
+  <ul>
+    <li [innerHTML]="'endless.help.fasttrackPhase1' | translate:phase"></li>
+    <li [innerHTML]="'endless.help.fasttrackPhase2' | translate:phase"></li>
+    <li [innerHTML]="'endless.help.fasttrackPhase3' | translate:phase"></li>
+  </ul>
+  <p>{{ 'endless.help.fasttrackP2' | translate }}</p>
+</mat-dialog-content>

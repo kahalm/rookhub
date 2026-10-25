@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy, TemplateRef, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -19,6 +19,7 @@ import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { EndlessResultComponent } from './endless-result.component';
 import { EndlessConfigComponent } from './endless-config.component';
+import { EndlessHelpDialogComponent, EndlessHelpPhases } from './endless-help-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-storage.service';
@@ -53,7 +54,7 @@ const SOLVE_SCOPE = 'endless';
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    IconLabelDirective, MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
+    IconLabelDirective, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
     PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleThemePipe,
     EndlessConfigComponent, EndlessResultComponent,
   ],
@@ -142,8 +143,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    *  asynchronen Server-Abgleich erneut angewendet, statt vom gespeicherten Server-Stand überschrieben zu werden. */
   private urlConfigOverrides: Partial<EndlessConfig> = {};
 
-  // Help — ein MatDialog aus dem Template (UX-010: vorher ein eigenes div-Overlay ohne Dialogrolle, Esc und Fokusführung)
-  @ViewChild('helpDialog', { static: true }) private helpDialog!: TemplateRef<unknown>;
 
   // Eval
   showEval = false;
@@ -493,7 +492,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   /** Phasengrenzen der Hilfe (1-basierte Puzzle-Nummern) aus denselben Konstanten wie die Kette. */
-  readonly phaseHelp = {
+  readonly phaseHelp: EndlessHelpPhases = {
     p1End: CHAIN_T1_INDEX, p2Start: CHAIN_T1_INDEX + 1, p2End: CHAIN_T2_INDEX,
     p3Start: CHAIN_T2_INDEX + 1, flatStep: CHAIN_FLAT_STEP,
   };
@@ -580,7 +579,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** Hilfe zu Endless als Dialog: Rolle, Fokusfang, Esc und die Rückgabe des Fokus an den Hilfe-Knopf
    *  bringt MatDialog mit; der Titel (mat-dialog-title) benennt den Dialog. */
   openHelp(): void {
-    this.dialog.open(this.helpDialog, { width: '600px', maxWidth: '95vw' });
+    this.dialog.open(EndlessHelpDialogComponent, { data: this.phaseHelp, width: '600px', maxWidth: '95vw' });
   }
 
   openSettingsDialog(): void {
