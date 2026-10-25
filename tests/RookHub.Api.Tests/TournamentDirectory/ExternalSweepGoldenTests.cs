@@ -466,6 +466,27 @@ public class ExternalSweepGoldenTests
             poison.On = false;
             await spec.Extra(new ScenarioSteps((t, r) => Step(t, r), NewDb, handler, l => sb.AppendLine(l)));
         }
+
+        // Ein von Hand gesetzter Standort (GeoSource.Manual) an B; der Ortstext weicht ab, die
+        // Quelle liefert B wieder mit verortbarem Ort — der Pin muss stehen bleiben.
+        poison.On = false;
+        handler.DetailFor = null;
+        await using (var db = NewDb())
+        {
+            var b = await db.TournamentDirectoryEntries
+                .Where(e => e.Name == B.Name && e.ChessResultsId == null).OrderBy(e => e.PublicId).FirstOrDefaultAsync();
+            if (b is null) sb.AppendLine("Kein eigener Eintrag fuer B");
+            else
+            {
+                b.Lat = 47.25;
+                b.Lon = 11.5;
+                b.GeoSource = GeoSource.Manual;
+                b.GeoPlaceName = "Von Hand";
+                b.LocationText = "Alter Ort";
+                await db.SaveChangesAsync();
+            }
+        }
+        await Step("M Standort von Hand, Quelle liefert B mit anderem Ort", B);
         return sb.ToString().Replace("\r\n", "\n");
     }
 
