@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.9", date: "2026-10-25", changes: [
+    { en: "Technical rework of the tournament directory (code review 2026-09-29, decomposition Z7/Z8): maintenance actions and helpers are split out of the admin controller and the sweep service, and eleven federation calendars share one matching loop with golden tests — no visible change.", de: "Technischer Umbau des Turnierverzeichnisses (Codereview 2026-09-29, Zerlegung Z7/Z8): Pflege-Aktionen und Hilfsdienste sind aus Admin-Controller und Sweep-Dienst gelöst, elf Verbandskalender nutzen eine gemeinsame Abgleichschleife mit Golden-Tests — keine sichtbare Änderung." },
+    { en: "Maintenance: a round-plan test with a fixed league end date (2026-10-24) was permanently red from 25 October; it now uses dates relative to today.", de: "Wartung: Ein Rundenplan-Test mit festem Ligaende (24.10.2026) war seit dem 25.10. dauerhaft rot; er rechnet jetzt relativ zu heute." },
+  ]},
   { version: "0.832.8", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z3): the Chessable import is split into smaller parts (server fetch lane, re-import queue, browser import, live append, PGN blocks with golden tests) and the chunk flow moved out of the extension controller — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z3): Der Chessable-Import ist in kleinere Bausteine zerlegt (Server-Abruf, Re-Import-Warteschlange, Browser-Import, Live-Anhängen, PGN-Blöcke mit Golden-Tests) und der Chunk-Ablauf aus dem Erweiterungs-Controller gezogen — keine sichtbare Änderung." },
   ]},
