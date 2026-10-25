@@ -8,6 +8,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.21", date: "2026-10-25", changes: [
+    { en: "Tournament map: the „Colour by“ picker shows the remembered choice again after reloading instead of „Time control“.", de: "Turnierkarte: Die Auswahl „Einfärben nach“ zeigt nach dem Neuladen wieder das gemerkte Merkmal statt „Bedenkzeit“." },
+    { en: "Tournament map: grouped pins no longer show the placeholder „various“ as the place name.", de: "Turnierkarte: Mehrere Turniere auf einem Punkt nennen den Platzhalter „various“ nicht mehr als Ort." },
+    { en: "Maintenance: the engine provider schedule test no longer depends on the clock and time zone of the test machine (it failed in CI at night).", de: "Wartung: Der Zeitplan-Test des Engine-Providers hängt nicht mehr an Uhrzeit und Zeitzone des Testrechners (fiel in der CI nachts aus)." },
+  ]},
   { version: "0.832.20", date: "2026-10-25", changes: [
     { en: "LeagueHub: the provisional board of the current round is no longer pushed out of the suggestions by many older games of the same player, and a game that only states the year no longer lands on a rematch from last season.", de: "LeagueHub: Die vorläufige Zuordnung zur laufenden Runde fällt nicht mehr hinter viele ältere Partien desselben Spielers aus der Vorschlagsliste, und eine Partie mit nur der Jahreszahl landet nicht mehr auf einem Wiedersehen aus der Vorsaison." },
   ] },
