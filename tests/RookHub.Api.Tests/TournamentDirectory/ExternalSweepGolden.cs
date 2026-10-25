@@ -3334,6 +3334,44 @@ internal static class ExternalSweepGolden
               Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
             Eintrag sk5003 cr=- name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
+            Felder sk5002 name=Turniersuche Name Open start=S+10 ort=Suchort bedenkzeit=- runden=- klasse=Unknown system=Unknown vermerke=ChessResults,SlovakChessFederation
+            == 15 von der Turniersuche uebernommen, dritte Nacht mit neuem Termin
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
+            Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 10 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
+            Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
+            Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
+            Eintrag sk1003 cr=9200003 name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=ja alter=None gruppe=ja
+              Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
+            Eintrag sk2001 cr=- name=Serienturnier Nummer1 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2001 url=https://chess.sk/turnaj/2001 erst=ja zuletzt=ja
+            Eintrag sk2002 cr=- name=Serienturnier Nummer2 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2002 url=https://chess.sk/turnaj/2002 erst=ja zuletzt=ja
+            Eintrag sk2003 cr=- name=Serienturnier Nummer3 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2003 url=https://chess.sk/turnaj/2003 erst=ja zuletzt=ja
+            Eintrag sk2004 cr=- name=Serienturnier Nummer4 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2004 url=https://chess.sk/turnaj/2004 erst=ja zuletzt=ja
+            Eintrag sk2005 cr=- name=Serienturnier Nummer5 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2005 url=https://chess.sk/turnaj/2005 erst=ja zuletzt=ja
+            Eintrag sk2006 cr=- name=Serienturnier Nummer6 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2006 url=https://chess.sk/turnaj/2006 erst=ja zuletzt=ja
+            Eintrag sk2007 cr=- name=Serienturnier Nummer7 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2007 url=https://chess.sk/turnaj/2007 erst=ja zuletzt=ja
+            Eintrag sk2008 cr=- name=Serienturnier Nummer8 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2008 url=https://chess.sk/turnaj/2008 erst=ja zuletzt=ja
+            Eintrag sk2009 cr=- name=Serienturnier Nummer9 fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
+            Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+12 ende=S+12 we=False ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk ChessResults 9200002 url=https://chess-results.com/tnr9200002.aspx?lan=1 erst=ja zuletzt=ja
+              Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
+            Eintrag sk5003 cr=- name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+              Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
+            Felder sk5002 name=Nummer Unbekannt Turnier start=S+12 ort=Testhausen bedenkzeit=90 min + 30 s runden=7 klasse=Standard system=Swiss vermerke=ChessResults,SlovakChessFederation
             
             """,
         ["ChessArbiter"] = """

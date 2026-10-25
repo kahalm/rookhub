@@ -256,6 +256,42 @@ public class ExternalSweepGoldenTests
         // Eintrag — das ist keine Zuordnung, der neue Termin und Ort muessen ankommen.
         await s.Step("14 eigener Eintrag mit Nummer, zweite Nacht mit neuem Termin",
             [new RowSpec("5002", "Nummer Unbekannt Turnier", Soon.AddDays(8), "Testhausen", Cr: "9200002")]);
+
+        // Die Turniersuche findet 9200002 jetzt selbst und uebernimmt sk5002 ueber die Nummer: ihre
+        // Werte, ihr Herkunftsvermerk. Bedenkzeit und Runden kennt sie (noch) nicht.
+        await using (var db = s.NewDb())
+        {
+            var taken = await db.TournamentDirectoryEntries.Include(e => e.Sources).SingleAsync(e => e.PublicId == "sk5002");
+            taken.Name = "Turniersuche Name Open";
+            taken.StartDate = Soon.AddDays(10);
+            taken.EndDate = Soon.AddDays(11);
+            taken.LocationText = "Suchort";
+            taken.TimeControlText = null;
+            taken.Rounds = null;
+            taken.Speed = TournamentSpeed.Unknown;
+            taken.System = TournamentSystem.Unknown;
+            taken.Sources.Add(new TournamentDirectorySource
+            {
+                Kind = DirectorySourceKind.ChessResults, ExternalId = "9200002",
+                Url = "https://chess-results.com/tnr9200002.aspx?lan=1",
+            });
+            await db.SaveChangesAsync();
+        }
+
+        async Task Details()
+        {
+            await using var db = s.NewDb();
+            var e = await db.TournamentDirectoryEntries.AsNoTracking().Include(x => x.Sources)
+                .SingleAsync(x => x.PublicId == "sk5002");
+            s.Note($"Felder sk5002 name={e.Name} start=S{e.StartDate!.Value.DayNumber - Soon.DayNumber:+0;-0;+0} " +
+                   $"ort={e.LocationText ?? "-"} bedenkzeit={e.TimeControlText ?? "-"} runden={e.Rounds?.ToString() ?? "-"} " +
+                   $"klasse={e.Speed} system={e.System} vermerke={string.Join(",", e.Sources.Select(v => v.Kind).Order())}");
+        }
+
+        await Details();
+        await s.Step("15 von der Turniersuche uebernommen, dritte Nacht mit neuem Termin",
+            [new RowSpec("5002", "Nummer Unbekannt Turnier", Soon.AddDays(12), "Testhausen", Cr: "9200002")]);
+        await Details();
     }
 
     /// <summary>chessarbiter: leere Detailseite (204) ist endgueltig, 404 wird wiederholt, Altbestand ueber die Adresse.</summary>
