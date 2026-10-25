@@ -612,3 +612,8 @@ Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzuf
 `/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite
 (`features/games/sheet-edit-session.ts`, siehe `src/frontend/CLAUDE.md`).
+Aufbau im Frontend (Zerlegung Z31, 2026-10-25): `/verein/neu` = `club-add-page.component` (Container) mit
+`club-draft-store.ts` (PGN-Liste samt Online-Entwurf), `pgn-source-panel.component` (Datei, ChessBase, Lichess, Text),
+`scoresheet-upload-store.ts` + `club-scoresheet-panel.component` (Art „Partieformular"); `/verein/formular/:id` =
+`club-scan-page.component` mit `club-side-form.component` (Kopfdaten), `scan-export.ts` + `scan-export-actions.component`
+(PGN, „Meine Partien") und `scan-merge.ts` (Zusammenführen); gemerkte Teilen-Link-Schlüssel in `club-anon-keys.ts`.

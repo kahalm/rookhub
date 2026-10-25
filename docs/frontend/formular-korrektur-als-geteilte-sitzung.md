@@ -7,7 +7,8 @@
 Halbzüge mit Formular-Einträgen und Lesarten, Cursor, Ersetzen/Einfügen/Löschen/Bestätigen, Ausschnitt des Fotos und
 das Neu-Aufbereiten des Rests nach jeder Änderung (die Regeln selbst stehen rein in `game-edit.util.ts`). Benutzt von
 RookHubs `GameEditComponent` (`/games/:id/edit`, die Felder dort sind Aliase auf die Sitzung) UND der
-Formular-Korrektur der Vereins-Datenbank in LeagueHub (`src-leaguehub/app/features/club/club-scan-page.component.ts`).
+Formular-Korrektur der Vereins-Datenbank in LeagueHub (`src-leaguehub/app/features/club/club-scan-page.component.ts`; Kopfdaten
+in `club-side-form.component.ts`, Ausgabe in `scan-export.ts`, Zusammenführen in `scan-merge.ts` — Zerlegung Z31).
 Die Seite gibt nur mit, woher der Rest kommt (`resolve`), und hängt das Abonnement an ihre Lebensdauer (`bind`). Wer an
 der Korrektur etwas ändert, ändert es hier — sonst laufen die beiden Seiten auseinander.
 
