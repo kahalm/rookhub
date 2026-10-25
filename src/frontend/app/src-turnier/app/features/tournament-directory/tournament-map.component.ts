@@ -1,15 +1,16 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component, ComponentRef, ElementRef, EventEmitter,
+  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter,
   Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, ViewContainerRef, inject,
   signal,
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { MapPinMarker, pinRadiusFor } from './map-pin-marker';
-import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry } from './tournament-directory.model';
-import { PinGroup, PinMember, groupByPoint, groupStyle } from './map-pin-groups';
+import { MapGestureHint, wireMapGestures } from './map-gestures';
+import { PinGroup, groupByPoint, groupStyle } from './map-pin-groups';
 import { MapPopupBuilder, MapText } from './map-popup-builder';
+import { MapPopupContent } from './map-popup-content';
 import { MIXED, PinColourBy, commonCategory } from './pin-palette';
 import { MapLegendComponent } from './map-legend.component';
 
@@ -102,6 +103,17 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * Templates, die Kurzansicht muss dort also von Hand erzeugt und wieder abgeraeumt werden.
    */
   private readonly viewContainer = inject(ViewContainerRef);
+  /** `instant` genuegt hier: ein Popup gibt es erst nach einem Klick, die Texte stehen laengst. */
+  private readonly text: MapText = (key, params) => this.translate.instant(key, params);
+
+  /** Inhalt und Lebenszyklus des Popups (Kurzansicht bzw. Buendel-Liste). */
+  private readonly popupContent = new MapPopupContent(
+    this.viewContainer, this.text, () => this.translate.currentLang(), {
+      selected: entry => this.entrySelected.emit(entry),
+      ignored: change => this.entryIgnored.emit(change),
+      subscribed: (entry, subscribed) => this.applySubscribed(entry, subscribed),
+    });
+
 
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
@@ -179,7 +191,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * Welcher Gesten-Hinweis gerade ueber der Karte steht: `wheel` (Mausrad, bevor jemand in die
    * Karte geklickt hat) oder `touch` (ein Finger, der die Seite scrollt statt die Karte).
    */
-  readonly gestureHint = signal<'wheel' | 'touch' | null>(null);
+  readonly gestureHint = signal<MapGestureHint | null>(null);
   private gestureHintTimer?: ReturnType<typeof setTimeout>;
 
   pickColourBy(chosen: PinColourBy): void {
@@ -217,7 +229,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     // Der gemerkte Ausschnitt gehoert zu DIESEM Umkreis: dann gilt er als eingepasst, sonst
     // zoege `applyCentre` die Ansicht sofort wieder auf den ganzen Kreis zurueck.
     if (start && start.centre !== null && start.centre === this.centreKey()) this.lastFitted = start.centre;
-    this.wireGestures(coarse);
+    wireMapGestures(this.map, this.mapEl.nativeElement, coarse, kind => this.showGestureHint(kind));
 
     // Gleiche Herkunft: nginx holt die Kachel bei OpenStreetMap und legt sie in seinen Cache.
     // Direkt aus dem Browser zu laden setzt voraus, dass JEDER Betrachter selbst ins offene Netz
@@ -242,8 +254,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.map.on('autopanstart', () => (this.autoPanning = true));
     // Beim Umschalten Liste <-> Einzelansicht aendert sich die Groesse des Inhalts; ohne ein
     // `update()` behaelt Leaflet die alte Kachelgroesse und der Inhalt haengt heraus.
-    this.map.on('popupopen', e => (this.openPopup = (e as L.PopupEvent).popup));
-    this.map.on('popupclose', () => { this.openPopup = undefined; this.forgetPopup(); });
+    this.map.on('popupopen', e => this.popupContent.opened((e as L.PopupEvent).popup));
+    this.map.on('popupclose', () => this.popupContent.closed());
 
     // Die Karte wird in einem mat-tab gerendert und startet deshalb oft mit Hoehe 0.
     // Ohne invalidateSize bleibt sie danach grau.
@@ -275,42 +287,13 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
   ngOnDestroy(): void {
     clearTimeout(this.gestureHintTimer);
-    this.forgetPopup();
+    this.popupContent.forget();
     this.resizeObserver?.disconnect();
     this.map?.remove();
     this.map = undefined;
   }
 
-  /**
-   * Schaltet das Mausrad-Zoomen mit dem Klick in die Karte ein und beim Verlassen wieder aus;
-   * zeigt den Hinweis, wenn eine Geste die Karte nicht bewegt. `mouseleave` und nicht Leaflets
-   * `mouseout`: Letzteres feuert auch beim Verlassen eines Punktes und schaltete das Rad mitten
-   * auf der Karte wieder ab. Die beiden Hinweis-Lauscher sind `passive` — sie duerfen das
-   * Scrollen der Seite, das sie begleiten, nicht aufhalten.
-   */
-  private wireGestures(coarse: boolean): void {
-    const map = this.map!;
-    const host = this.mapEl.nativeElement;
-    // In einem Popup (Turnierliste eines Punktes) oder auf Leaflets Knoepfen ist ein Finger
-    // richtig — dort scrollt bzw. tippt man, die Karte soll sich gar nicht bewegen.
-    const onMapItself = (e: Event) =>
-      !(e.target as Element | null)?.closest?.('.leaflet-popup, .leaflet-control');
-    if (coarse) {
-      host.addEventListener('touchmove', e => {
-        if (e.touches.length === 1 && onMapItself(e)) this.showGestureHint('touch');
-      }, { passive: true });
-      return;
-    }
-    const enableWheel = () => map.scrollWheelZoom.enable();
-    host.addEventListener('mousedown', enableWheel);
-    map.on('focus', enableWheel);   // auch per Tab in die Karte
-    host.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
-    host.addEventListener('wheel', e => {
-      if (!map.scrollWheelZoom.enabled() && onMapItself(e)) this.showGestureHint('wheel');
-    }, { passive: true });
-  }
-
-  private showGestureHint(kind: 'wheel' | 'touch'): void {
+  private showGestureHint(kind: MapGestureHint): void {
     this.gestureHint.set(kind);
     clearTimeout(this.gestureHintTimer);
     this.gestureHintTimer = setTimeout(() => this.gestureHint.set(null), 1500);
@@ -320,7 +303,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     if (!this.markerLayer) return;
     // Die Marker verschwinden — mit ihnen das offene Popup, dessen Komponente sonst haengen
     // bleibt.
-    this.forgetPopup();
+    this.popupContent.forget();
     this.markerLayer.clearLayers();
     this.groupsByEntry.clear();
 
@@ -357,7 +340,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
         () => MapPopupBuilder.tooltipHtml(group, this.text, this.translate.currentLang()),
         { direction: 'top', offset: [0, -above] });
       // Klick = Popup (siehe Klassenkommentar), NICHT der Sprung auf die Detailseite.
-      marker.bindPopup(() => this.buildPopup(group), {
+      marker.bindPopup(() => this.popupContent.build(group), {
         offset: [0, -above + 4], minWidth: Math.min(220, avail), maxWidth: Math.min(300, avail),
       });
       // Beim geoeffneten Popup stuende der Hover-Hinweis mit demselben Inhalt daneben.
@@ -396,111 +379,6 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     for (const group of this.groupsByEntry.get(entry.id) ?? [])
       group.marker?.setStyle(groupStyle(group));
   }
-
-  /**
-   * Der Popup-Inhalt. Steht der Punkt fuer EIN Turnier, ist es unveraendert die gemeinsame
-   * Kurzansicht (`TournamentCardComponent`) — dieselbe wie in Liste und Kalender, mit denselben
-   * vier Aktionen. Liegen mehrere Turniere auf derselben Koordinate, kommt eine Ebene davor: die
-   * LISTE aller, denn sonst waere alles ausser dem obersten unerreichbar.
-   *
-   * <para>Bewusst zwei Ebenen statt gestapelter Kurzansichten: an einem Punkt koennen ueber
-   * hundert Turniere liegen — so viele Komponenten samt Abonnements auf einen Klick hin zu
-   * erzeugen waere fuer eine Liste, von der man eines ansieht, nicht zu rechtfertigen. Es gibt
-   * darum immer nur EINE Kurzansicht auf einmal.</para>
-   *
-   * <para>Gebaut wird von Hand, weil Leaflet den Popup-Inhalt in einem eigenen Container
-   * ausserhalb dieses Templates haelt. Die Kurzansicht entsteht ueber den ViewContainerRef und
-   * bleibt damit Teil der Aenderungserkennung dieser Komponente — nur so aktualisieren sich ihre
-   * Symbole nach einem Klick.</para>
-   */
-  private buildPopup(group: PinGroup): HTMLElement {
-    // Leaflet ruft diese Funktion nicht nur beim Oeffnen auf, sondern bei JEDEM `update()` erneut
-    // — und `update()` ist genau das, was nach einem Wechsel Liste <-> Kurzansicht noetig ist.
-    // Sie muss deshalb den BESTEHENDEN Knoten zurueckgeben: baute sie einen neuen, fiele die
-    // Ansicht beim Nachmessen auf die Liste zurueck und riefe sich ueber `resizePopup` endlos
-    // selbst auf (im Test als „Maximum call stack size exceeded" aufgeschlagen).
-    if (this.popupGroup === group && this.popupHost) return this.popupHost;
-
-    const host = document.createElement('div');
-    host.className = 'tm-group';
-    this.popupGroup = group;
-    this.popupHost = host;
-
-    if (group.members.length === 1) {
-      this.destroyPopup();
-      host.appendChild(this.buildCard(group.members[0]));
-    } else {
-      this.renderGroupList(host, group);
-    }
-    return host;
-  }
-
-  /** Die Liste aller Turniere eines Punktes; ein Klick fuehrt zur Kurzansicht des einzelnen. */
-  private renderGroupList(host: HTMLElement, group: PinGroup): void {
-    // Zurueck aus der Einzelansicht: die dort erzeugte Kurzansicht wird nicht mehr gebraucht.
-    this.destroyPopup();
-    host.replaceChildren(...MapPopupBuilder.groupList(group, this.text, this.translate.currentLang(),
-      member => this.renderGroupCard(host, group, member)));
-    this.resizePopup();
-  }
-
-  /** Die Kurzansicht EINES Turniers des Buendels, mit dem Weg zurueck zur Liste. */
-  private renderGroupCard(host: HTMLElement, group: PinGroup, member: PinMember): void {
-    host.replaceChildren(MapPopupBuilder.backButton(group, this.text, () => this.renderGroupList(host, group)));
-    host.appendChild(this.buildCard(member));
-    this.resizePopup();
-  }
-
-  /** Die gemeinsame Kurzansicht als DOM-Element; es gibt immer nur eine offene. */
-  private buildCard(member: PinMember): HTMLElement {
-    this.destroyPopup();
-
-    const card = this.viewContainer.createComponent(TournamentCardComponent);
-    card.setInput('entry', member.entry);
-    card.setInput('overview', true);
-    card.setInput('venueName', member.spot.name);
-    card.instance.selected.subscribe(selected => this.entrySelected.emit(selected));
-    card.instance.ignoredChanged.subscribe(change => this.entryIgnored.emit(change));
-    // Nur umfaerben, nicht neu laden — sonst schlaegt das gerade offene Popup zu.
-    card.instance.subscribedChanged.subscribe(
-      change => this.applySubscribed(change.entry, change.subscribed));
-    // Sofort rendern: Leaflet erwartet ein FERTIGES Element und misst danach die Popup-Groesse.
-    card.changeDetectorRef.detectChanges();
-
-    this.popup = card;
-    return card.location.nativeElement as HTMLElement;
-  }
-
-  private popup?: ComponentRef<TournamentCardComponent>;
-  /** Das offene Leaflet-Popup — nur, um es nach einem Inhaltswechsel neu vermessen zu lassen. */
-  private openPopup?: L.Popup;
-  /** Der Knoten des offenen Popups und das Buendel, zu dem er gehoert (siehe `buildPopup`). */
-  private popupHost?: HTMLElement;
-  private popupGroup?: PinGroup;
-
-  /**
-   * Nach dem Umschalten Liste <-> Kurzansicht neu vermessen. Ohne das behaelt Leaflet die
-   * Groesse des vorigen Inhalts, und die Kurzansicht steht halb ausserhalb ihrer Kachel.
-   * Beim ERSTEN Aufbau ist noch nichts offen — `update()` ist dort ein No-op.
-   */
-  private resizePopup(): void {
-    this.openPopup?.update();
-  }
-
-  private destroyPopup(): void {
-    this.popup?.destroy();
-    this.popup = undefined;
-  }
-
-  /** Das Popup ist zu: Knoten und Kurzansicht freigeben, das naechste Oeffnen faengt neu an. */
-  private forgetPopup(): void {
-    this.destroyPopup();
-    this.popupHost = undefined;
-    this.popupGroup = undefined;
-  }
-
-  /** `instant` genuegt hier: ein Popup gibt es erst nach einem Klick, die Texte stehen laengst. */
-  private readonly text: MapText = (key, params) => this.translate.instant(key, params);
 
   /** Schluessel des Umkreises — `null` ohne Mittelpunkt. Dieselbe Form in `MapView.centre`. */
   private centreKey(): string | null {
