@@ -21,9 +21,9 @@ describe('calc-chapters.util', () => {
       expect(NO_CHAPTER_KEY).toBe('\u0000');
     });
 
-    it('ordinal über den ROHEN Namen: kein Trimmen, keine Groß-/Kleinschreibung', () => {
+    it('ordinal über den GETRIMMTEN Namen (wie NormalizeChapter), Groß-/Kleinschreibung zählt', () => {
       expect(chapterKey('Taktik')).toBe('Taktik');
-      expect(chapterKey(' Taktik ')).toBe(' Taktik ');
+      expect(chapterKey(' Taktik ')).toBe('Taktik');
       expect(chapterKey('taktik')).not.toBe(chapterKey('Taktik'));
     });
   });
@@ -55,6 +55,14 @@ describe('calc-chapters.util', () => {
       expect(groups.map(g => g.items.map(i => i.id))).toEqual([[10, 12], [11, 13], [14]]);
       expect([...numbers.entries()]).toEqual([[10, 1], [11, 1], [12, 2], [13, 2], [14, 1]]);
       expect(groups.every(g => g.points === 0 && g.maxPoints === 0 && g.seconds === 0)).toBeTrue();
+    });
+
+    it('„ Woche 3 " und „Woche 3" sind EIN Kapitel (bis 0.836.0 zwei Gruppen)', () => {
+      const { groups } = groupByChapter([item(1, ' Woche 3 '), item(2, 'Woche 3')]);
+      expect(groups.length).toBe(1);
+      expect(groups[0].chapter).toBe('Woche 3');
+      expect(groups[0].key).toBe('Woche 3');
+      expect(groups[0].items.map(i => i.id)).toEqual([1, 2]);
     });
 
     it('leere Liste ergibt keine Gruppen', () => {

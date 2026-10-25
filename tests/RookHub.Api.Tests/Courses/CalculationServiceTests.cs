@@ -846,6 +846,27 @@ public class CalculationServiceTests : IDisposable
         Assert.Equal(ohne.Id, dto.Positions.Last().Id);
     }
 
+    /// <summary>Kapitelnamen werden wie überall (<c>ChapterOrder.NormalizeChapter</c>) getrimmt: „ Woche 3 " und
+    /// „Woche 3" sind EIN Kapitel — in den Summen, in der Stellungsliste und in der Einzelstellung. Bis 0.836.0
+    /// lieferte der Kalk-Modus roh und zählte zwei Kapitel gleichen Namens.</summary>
+    [Fact]
+    public async Task GetBook_TrimsChapterNames_LikeTheRestOfTheCourse()
+    {
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(ownerUserId: user.Id);
+        var a = await SeedPositionAsync(book, round: "1", chapter: " Woche 3 ");
+        await SeedPositionAsync(book, round: "2", chapter: "Woche 3");
+        await SeedPositionAsync(book, round: "3", chapter: "   ");
+
+        var dto = await _svc.GetBookAsync(user.Id, book.Id, isAdmin: false);
+
+        Assert.Equal(new string?[] { "Woche 3", null }, dto.Chapters.Select(c => c.Chapter));
+        Assert.Equal(2, dto.Chapters[0].PositionCount);
+        Assert.Equal(8, dto.Chapters[0].MaxPoints);
+        Assert.Equal(new string?[] { "Woche 3", "Woche 3", null }, dto.Positions.Select(p => p.Chapter));
+        Assert.Equal("Woche 3", (await _svc.GetPositionAsync(user.Id, a.Id, isAdmin: false)).Chapter);
+    }
+
     [Fact]
     public async Task GetBook_ListsTheThreeValuesPerPosition()
     {

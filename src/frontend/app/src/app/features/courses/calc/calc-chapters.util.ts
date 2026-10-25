@@ -15,9 +15,9 @@ export interface CalcPositionGroup {
   /** Angezeigter Name (Kurs-Übersetzung, sonst das Original); `null` = ohne Kapitel. */
   label?: string | null;
   /**
-   * Schlüssel des Kapitels — EXAKT der des Servers ({@link chapterKey}): ordinal über den ROHEN
-   * Namen. Gruppenbildung und das Nachschlagen der Server-Summen benutzen ihn gemeinsam, sonst
-   * zeigt die Ansicht die Zeilen des einen und die Summe eines anderen Kapitels.
+   * Schlüssel des Kapitels — EXAKT der des Servers ({@link chapterKey}): ordinal über den
+   * GETRIMMTEN Namen. Gruppenbildung und das Nachschlagen der Server-Summen benutzen ihn gemeinsam,
+   * sonst zeigt die Ansicht die Zeilen des einen und die Summe eines anderen Kapitels.
    */
   key: string;
   items: CalcPositionListItem[];
@@ -41,21 +41,28 @@ export interface CalcChapterSums {
 export const NO_CHAPTER_KEY = '\u0000';
 
 /**
- * Schlüssel eines Kapitels — GENAU wie serverseitig: ordinal über den ROHEN Namen, nur
- * leer/whitespace zählt als „ohne Kapitel".
+ * Schlüssel eines Kapitels — GENAU wie serverseitig: ordinal über den GETRIMMTEN Namen
+ * (`ChapterOrder.NormalizeChapter`), leer/whitespace zählt als „ohne Kapitel".
  *
  * Die Strenge ist Absicht. Der Server gruppiert in `CalculationService.SummarizeChapters` mit
- * `StringComparer.Ordinal` und liefert die Kapitel-SUMMEN fertig aus (`chapters[]`); die Ansicht
- * schlägt sie hier nach. Faßte der Client zwei Kapitel zusammen, die sich nur in Groß-/Klein-
- * schreibung oder Leerzeichen unterscheiden (bei `PUT /chapters/rename` erlaubt, die Duplikat-
- * Prüfung ist ebenfalls ordinal), zeigte er die Zeilen BEIDER mit der Summe EINER — die Map-
- * Kollision überschreibt still die erste. Der Server ist die Wahrheit für die Summen, der Client
- * richtet sich danach.
+ * `StringComparer.Ordinal` über den getrimmten Namen und liefert die Kapitel-SUMMEN fertig aus
+ * (`chapters[]`); die Ansicht schlägt sie hier nach. Faßte der Client zwei Kapitel zusammen, die
+ * sich nur in Groß-/Kleinschreibung unterscheiden (bei `PUT /chapters/rename` erlaubt, die
+ * Duplikat-Prüfung ist ebenfalls ordinal), zeigte er die Zeilen BEIDER mit der Summe EINER — die
+ * Map-Kollision überschreibt still die erste. Der Server ist die Wahrheit für die Summen, der
+ * Client richtet sich danach. Seit 0.836.x trimmen beide (vorher roh: „ Woche 3 " und „Woche 3"
+ * waren zwei Kapitel).
  *
  * Nachsichtig verglichen wird bewusst NUR beim Auflösen von `?chapter=` (siehe {@link normChapter}).
  */
 export function chapterKey(chapter: string | null | undefined): string {
-  return chapter?.trim() ? chapter : NO_CHAPTER_KEY;
+  return normalizeChapter(chapter) ?? NO_CHAPTER_KEY;
+}
+
+/** Kapitelname wie der Server ihn liefert (`ChapterOrder.NormalizeChapter`): getrimmt, leer → `null`. */
+export function normalizeChapter(chapter: string | null | undefined): string | null {
+  const trimmed = chapter?.trim();
+  return trimmed ? trimmed : null;
 }
 
 /**
@@ -87,7 +94,7 @@ export function groupByChapter(positions: readonly CalcPositionListItem[]): {
   const groups: CalcPositionGroup[] = [];
   const numbers = new Map<number, number>();
   for (const p of positions) {
-    const chapter = p.chapter?.trim() ? p.chapter : null;
+    const chapter = normalizeChapter(p.chapter);
     const key = chapterKey(chapter);
     let group = byKey.get(key);
     if (!group) {

@@ -1851,17 +1851,17 @@ describe('CalculationComponent kapitelweises Arbeiten', () => {
     expect(c.positionCount).toBe(2);
   });
 
-  it('hält auch Kapitel auseinander, die sich nur in Leerzeichen unterscheiden', () => {
+  it('faßt Kapitel zusammen, die sich nur in Leerzeichen unterscheiden (getrimmt wie der Server)', () => {
     const { component: c } = makeWithBook({
       positions: [item(1, { chapter: 'Endspiel' }), item(2, { chapter: 'Endspiel ' })],
       chapters: [
-        { chapter: 'Endspiel', points: 4, maxPoints: 4, secondsSum: 0 },
-        { chapter: 'Endspiel ', points: 0, maxPoints: 4, secondsSum: 0 },
+        { chapter: 'Endspiel', points: 4, maxPoints: 8, secondsSum: 0 },
       ],
     });
 
-    expect(c.groups.length).toBe(2);
-    expect(c.groups.map(g => g.points)).toEqual([4, 0]);
+    expect(c.groups.length).toBe(1);
+    expect(c.groups.map(g => [g.points, g.maxPoints])).toEqual([[4, 8]]);
+    expect(c.groups[0].items.length).toBe(2);
   });
 
   it('behandelt Stellungen ohne Kapitel als eigene Gruppe', () => {

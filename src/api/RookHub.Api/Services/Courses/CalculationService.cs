@@ -97,6 +97,9 @@ public class CalculationService
                 Chapter = bp.Chapter,
             })
             .ToListAsync(ct);
+        // Kapitelnamen getrimmt wie überall in der Kursverwaltung (ChapterOrder.NormalizeChapter): „ Woche 3 " und
+        // „Woche 3" sind ein Kapitel — in der Liste, in den Summen und in der Gruppierung des Frontends.
+        foreach (var p in positions) p.Chapter = ChapterOrder.NormalizeChapter(p.Chapter);
 
         // Terminierte Ausgaben (Kalkulations-Serie): Wochen, deren Ausgabe noch nicht freigegeben ist,
         // ausblenden — außer für Besitzer/Admin. Kapitel ohne Ausgabe bleiben ungegatet.
@@ -148,8 +151,8 @@ public class CalculationService
     /// <summary>
     /// Kapitelsummen über die VOLLSTÄNDIGE Stellungsliste — bewusst auf dem Server, damit eine im
     /// Frontend gefilterte/gekürzte Anzeige die Summen nicht verfälscht. Reihenfolge = erstes
-    /// Auftreten des Kapitels in der Liste; leerer/whitespace-Kapitelname zählt als „ohne Kapitel"
-    /// (<c>null</c>), wie überall sonst in der Kursverwaltung.
+    /// Auftreten des Kapitels in der Liste; Namen getrimmt (<see cref="ChapterOrder.NormalizeChapter"/>),
+    /// leerer/whitespace-Kapitelname zählt als „ohne Kapitel" (<c>null</c>), wie überall sonst in der Kursverwaltung.
     /// </summary>
     private static List<CalcChapterSummaryDto> SummarizeChapters(List<CalcPositionListItemDto> positions)
     {
@@ -159,7 +162,7 @@ public class CalculationService
 
         foreach (var p in positions)
         {
-            var chapter = string.IsNullOrWhiteSpace(p.Chapter) ? null : p.Chapter;
+            var chapter = ChapterOrder.NormalizeChapter(p.Chapter);
             var key = chapter ?? NoChapterKey;
             if (!byChapter.TryGetValue(key, out var sum))
             {
@@ -271,7 +274,7 @@ public class CalculationService
             BookId = bookId,
             Round = puzzle.Round,
             Title = puzzle.Title,
-            Chapter = puzzle.Chapter,
+            Chapter = ChapterOrder.NormalizeChapter(puzzle.Chapter),
             Fen = puzzle.Fen,
             SetupMoves = SetupMoves(puzzle),
             Comment = puzzle.Comment,
