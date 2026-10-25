@@ -98,3 +98,4 @@ app/src/app/
   Robustheit: ein Tag, an dem die Linie nicht mehr über ein Brett kanonisiert ankommt, kostet
   kein „falsch" mehr. Tests, die das trennen, schreiben die SAN der Linie deshalb absichtlich auf
   eine nicht kanonische Form um — ein Test, der nur ein PGN hineingibt, prüft den PARSER.
+- **Endlos-Modus `features/puzzles/endless-*`** (Zerlegung Z19, 2026-10-25): `endless-puzzle.component` ist der Container (Lauf, Kette, Löser-Hooks, Spielbildschirm); daneben `endless-config.component` (Start-Bildschirm, Themen-Auswahl), `endless-result.component` (Sieg/Game Over/History-Detail), `endless-help-dialog.component` (Hilfe) und `endless-session-recorder.ts` (reine Klasse: Fehler, gespielte Puzzles, Spielstand-Rumpf, einmalige Aufzeichnung); vorhanden waren schon `endless-chain.service`, `endless-storage.service`, `endless-fasttrack-state`, `endless-prefetch.util`, `endless-history.component`.
