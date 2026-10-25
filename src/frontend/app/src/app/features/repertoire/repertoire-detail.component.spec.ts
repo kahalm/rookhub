@@ -665,6 +665,40 @@ describe('RepertoireDetailComponent Baum: Pfeile + Ziehen', () => {
     expect(comp.boardArrows).toEqual([]);
   });
 
+  it('Zurück: Knopf nur im Brett-Vollbild des Baums, geht einen Zug zurück; Pfeil links ebenso', async () => {
+    const comp = await make();
+    const fixture = TestBed.createComponent(RepertoireDetailComponent);
+    const c = fixture.componentInstance;
+    fixture.detectChanges();                                 // ngOnInit (lädt ohne Route nichts, setzt loading)
+    c.viewerService.loadPgn(PGN);
+    c.treeService.buildTreeFromGames(c.viewerService.games);
+    c.repertoire = { id: 1, name: 'R', files: [], isOwner: true } as any;
+    c.loading = false;
+    c.mode = 'tree';
+    spyOn(c, 'loadTreePopularity');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.tree-fs-back')).toBeNull();
+    c.boardFullscreen = true;
+    c.treeService.selectChild('e4');
+    c.treeService.selectChild('c5');
+    fixture.componentRef.changeDetectorRef.markForCheck();   // OnPush: im echten Ablauf markiert das Output-Ereignis
+    fixture.detectChanges();
+    const back = el.querySelector<HTMLButtonElement>('.tree-fs-back')!;
+    expect(back).not.toBeNull();
+    expect(back.closest('.cb-fs-host')).withContext('liegt im Vollbild-Teilbaum des Bretts').not.toBeNull();
+    back.click();
+    expect(c.treeService.breadcrumbs.map(b => b.san)).toEqual(['e4']);
+    c.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    expect(c.treeService.breadcrumbs.length).toBe(0);
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(el.querySelector<HTMLButtonElement>('.tree-fs-back')!.disabled).toBeTrue();
+    c.treeBack();
+    expect(c.treeService.breadcrumbs.length).toBe(0);
+    void comp;
+  });
+
   it('Zug auf dem Brett folgt der Fortsetzung; ein fremder Zug springt zurück', async () => {
     const comp = await make();
     const resync = jasmine.createSpy('resync');

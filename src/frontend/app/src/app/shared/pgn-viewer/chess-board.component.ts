@@ -32,6 +32,9 @@ export interface BoardArrow {
   template: `
     <div #fsHost class="cb-fs-host">
       <app-board-fullscreen-button [target]="fsHost" />
+      <!-- Bedienelemente des Aufrufers, die auch im Brett-Vollbild sichtbar sein müssen (dort ist nur dieser Teilbaum
+           zu sehen), z. B. „Zurück" im Repertoire-Baum. Platzierung macht der Aufrufer. -->
+      <ng-content select="[boardFsOverlay]" />
       <div class="cb-wrap">
         <div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>
         @if (pendingPromotion(); as p) {

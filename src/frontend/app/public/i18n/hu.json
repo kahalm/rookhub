@@ -884,7 +884,8 @@
       "lichess": "Lichess",
       "arrows": "Nyilak",
       "dragHint": "Húzd a bábukat a változatok követéséhez",
-      "notInRepertoire": "{{san}} itt nincs a repertoárban."
+      "notInRepertoire": "{{san}} itt nincs a repertoárban.",
+      "back": "Egy lépés vissza"
     },
     "edit": {
       "uploadHint": "Húzd ide a PGN fájlokat, vagy kattints a feltöltéshez",

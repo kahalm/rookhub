@@ -62,3 +62,4 @@ Figuren ziehen folgt den Linien. Rein Frontend: `repertoire-tree-arrows.util.ts`
 `ChessBoardComponent` meldet `fullscreenChange` (nur eigenes Brett-Vollbild) und hat `resync()` für abgewiesene Züge.
 Detailseite: Brett im Baum spielbar, `onTreeBoardMove` → `treeService.selectChild`; Schalter in localStorage
 `rh.repertoire.treeArrows`.
+Zurück (0.835.0): im Brett-Vollbild Knopf `.tree-fs-back` (über `ng-content select="[boardFsOverlay]"` der Brett-Komponente in deren Vollbild-Teilbaum), dazu Pfeil links im Baum → `treeBack()` = `treeService.goUp()`.

@@ -1151,7 +1151,8 @@
       "lichess": "Lichess",
       "arrows": "Arrows",
       "dragHint": "Drag pieces to follow the lines",
-      "notInRepertoire": "{{san}} is not in the repertoire here."
+      "notInRepertoire": "{{san}} is not in the repertoire here.",
+      "back": "Back one move"
     },
     "edit": {
       "uploadHint": "Drag & drop PGN files here or click to upload",

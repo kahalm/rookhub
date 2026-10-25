@@ -1151,7 +1151,8 @@
       "lichess": "Lichess",
       "arrows": "Strelice",
       "dragHint": "Povucite figure da pratite linije",
-      "notInRepertoire": "{{san}} ovdje nije u repertoaru."
+      "notInRepertoire": "{{san}} ovdje nije u repertoaru.",
+      "back": "Jedan potez natrag"
     },
     "edit": {
       "uploadHint": "Povuci PGN datoteke ovdje ili klikni za prijenos",

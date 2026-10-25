@@ -1151,7 +1151,8 @@
       "lichess": "Lichess",
       "arrows": "Pfeile",
       "dragHint": "Figuren ziehen, um den Linien zu folgen",
-      "notInRepertoire": "{{san}} steht hier nicht im Repertoire."
+      "notInRepertoire": "{{san}} steht hier nicht im Repertoire.",
+      "back": "Einen Zug zurück"
     },
     "edit": {
       "uploadHint": "PGN-Dateien hierher ziehen oder zum Hochladen klicken",

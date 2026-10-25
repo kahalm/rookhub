@@ -136,7 +136,16 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
                 [playable]="filterBoardActive || mode === 'tree'"
                 [arrows]="boardArrows"
                 (fullscreenChange)="boardFullscreen = $event"
-                (userMove)="onBoardMove($event)" />
+                (userMove)="onBoardMove($event)">
+                @if (mode === 'tree' && boardFullscreen) {
+                  <!-- Im Brett-Vollbild fehlen Brotkrumen und Liste: „Zurück" einen Zug im Baum (auch Pfeil links). -->
+                  <button boardFsOverlay mat-icon-button type="button" class="tree-fs-back"
+                          [disabled]="treeService.breadcrumbs.length === 0" (click)="treeBack()"
+                          [appIconLabel]="'repertoire.tree.back' | translate">
+                    <mat-icon>arrow_back</mat-icon>
+                  </button>
+                }
+              </app-chess-board>
               @if (mode === 'tree') {
                 <!-- Baum: alle Fortsetzungen als Pfeile, Breite = Häufigkeit auf Lichess; im Brett-Vollbild immer an. -->
                 <div class="tree-board-bar">
@@ -284,6 +293,14 @@ const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
       display: flex; align-items: center; gap: 8px; margin-top: 6px;
       font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
     }
+    /* Im Brett-Vollbild links oben im schwarzen Balken, Gegenstück zum Vollbild-Knopf rechts oben (fixed löst gegen das
+       Vollbild-Element auf); 44-px-Tippziel. */
+    .tree-fs-back {
+      position: fixed; top: 8px; left: 8px; z-index: 90;
+      width: 44px; height: 44px;
+      background: rgba(0, 0, 0, 0.35); color: #fff;
+    }
+    .tree-fs-back:disabled { opacity: 0.35; color: #fff; }
     .tree-board-bar { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; }
     .tree-arrows-toggle.on { border-color: currentColor; }
     .tree-board-hint { font-size: 12px; color: color-mix(in srgb, currentColor 55%, transparent); }
@@ -514,6 +531,13 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     return this.arrowsCache;
   }
 
+  /** Baum einen Zug zurück (Vollbild-Knopf, Pfeil links). */
+  treeBack(): void {
+    if (this.treeService.breadcrumbs.length === 0) return;
+    this.treeService.goUp();
+    this.loadTreePopularity();
+  }
+
   onBoardMove(move: UserBoardMove): void {
     if (this.mode === 'tree') this.onTreeBoardMove(move);
     else this.onFilterMove(move);
@@ -733,6 +757,11 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    if (this.mode === 'tree' && event.key === 'ArrowLeft' && isBoardHotkey(event)) {
+      event.preventDefault();
+      this.treeBack();
+      return;
+    }
     if (this.mode !== 'lines' || this.viewerService.selectedLineIndex < 0) return;
     if (!isBoardHotkey(event)) return;
     switch (event.key) {

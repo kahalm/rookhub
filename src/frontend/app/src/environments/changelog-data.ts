@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.835.0", date: "2026-10-25", changes: [
+    { en: "Repertoire tree in board fullscreen: a back button in the top-left corner takes you one move back, so you can follow and leave lines without exiting fullscreen. The left arrow key does the same in the tree.",
+      de: "Repertoire-Baum im Brett-Vollbild: ein Zurück-Knopf links oben geht einen Zug zurück — so kann man Linien folgen und wieder verlassen, ohne das Vollbild zu beenden. Die Pfeiltaste links macht im Baum dasselbe." },
+  ] },
   { version: "0.834.1", date: "2026-10-25", changes: [
     { en: "Internal: the repertoire page and the board find the board and its fullscreen frame without the old decorator queries, so the build's lint ratchet passes again (no visible change).",
       de: "Intern: Repertoire-Seite und Brett finden das Brett bzw. dessen Vollbild-Rahmen ohne die alten Decorator-Abfragen, damit die Lint-Ratsche des Builds wieder durchgeht (keine sichtbare Änderung)." },
