@@ -29,7 +29,7 @@ public class CalculationService
 
     /// <summary>Deckel für EINE Zeit-Übertragung (Sekunden). Der Client schickt Deltas seit dem
     /// letzten Speichern; ein hängender/schlafender Client soll die Summe nicht sprengen. Analog
-    /// zum Pro-Stellung-Deckel des Solvers (<c>TrainingGoalService.PerChessableFlushCapSeconds</c>).</summary>
+    /// zum Pro-Stellung-Deckel des Solvers (<c>TrainingCaps.PerChessableFlushCapSeconds</c>).</summary>
     public const int MaxSecondsPerFlush = 3_600;
 
     /// <summary>Absolute Obergrenze der aufsummierten Rechenzeit EINER Stellung (~277 h). Verhindert,
