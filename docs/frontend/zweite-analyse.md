@@ -17,3 +17,13 @@ gibt `GameReviewComponent` die Kennung (`[sharedToken]`), und die zweite Analyse
 nimmt der Server aus der verknüpften Analyse der Partie, nicht vom Aufrufer (sonst ließen sich andere Analysen des
 Besitzers erfragen); gezeigt werden nur seine Analysen mit ausdrücklich gewählter Engine. Hat der Besitzer keine, sucht
 die Leiste für einen angemeldeten Betrachter wie bisher dessen eigene (`same-game`).
+
+**Wartende Lc0-Analyse im ⋮** (0.833.0, Wunsch 2026-10-25: „mir fehlt der Menüeintrag für Partie mit Lc0 analysieren"):
+„Mit Lc0 analysieren" fehlt, sobald die Partie eine Lc0-Analyse hat — auch eine, die noch wartet. Hing die Spark-Engine
+(pollte nicht mehr), sah man davon nichts. Jetzt steht an der Stelle ein deaktivierter Eintrag mit dem Stand:
+„Lc0 wartet — Engine offline seit …" (`engineOnline === false`, Zeitpunkt aus `engineLastSeenAt`) bzw. „Lc0 rechnet —
+n/m Züge"; bei der EIGENEN Analyse (`mine`) dazu „Lc0-Analyse abbrechen" (`DELETE /api/game-analyses/{id}`, danach bietet
+das ⋮ wieder „Mit Lc0 analysieren" an) und, solange die Engine erreichbar ist, „Neu starten" (`POST …/{id}/restart`).
+Die drei Felder liefert `POST /api/game-analyses/same-game` (bzw. die Teilen-Link-Liste, dort `mine` immer `false`):
+`engineOnline` = die direkt angemeldete Engine (`rhe_`) hat binnen `EngineAvailability.OfflineAfter` (3 min) abgefragt,
+`null` für Lichess-Engines (unbekannt).

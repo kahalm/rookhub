@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.833.0", date: "2026-10-25", changes: [
+    { en: "Game page: while a Lc0 analysis is waiting or running, the ⋮ menu shows its state instead of silently dropping “Analyse with Lc0” — “Lc0 is waiting — engine offline since …” or “Lc0 is analysing — 12/80 moves”, with “Cancel Lc0 analysis” (and “Restart” while the engine is online) for your own analysis.", de: "Partieseite: Solange eine Lc0-Analyse wartet oder rechnet, zeigt das ⋮-Menü ihren Stand, statt „Mit Lc0 analysieren“ still wegzulassen — „Lc0 wartet — Engine offline seit …“ oder „Lc0 rechnet — 12/80 Züge“, bei der eigenen Analyse mit „Lc0-Analyse abbrechen“ (und „Neu starten“, solange die Engine erreichbar ist)." },
+  ] },
   { version: "0.832.21", date: "2026-10-25", changes: [
     { en: "Tournament map: the „Colour by“ picker shows the remembered choice again after reloading instead of „Time control“.", de: "Turnierkarte: Die Auswahl „Einfärben nach“ zeigt nach dem Neuladen wieder das gemerkte Merkmal statt „Bedenkzeit“." },
     { en: "Tournament map: grouped pins no longer show the placeholder „various“ as the place name.", de: "Turnierkarte: Mehrere Turniere auf einem Punkt nennen den Platzhalter „various“ nicht mehr als Ort." },

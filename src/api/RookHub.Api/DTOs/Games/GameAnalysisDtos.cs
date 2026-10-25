@@ -181,9 +181,13 @@ public class ConvergenceRowDto
 
 /// <summary>Eine weitere Analyse DESSELBEN Spiels im eigenen Konto (0.682.0) — die Partieseite bietet sie als Umschalter
 /// neben ihrer eigenen Kurve an, z. B. Lc0 neben Stockfish. <see cref="EngineId"/> <c>null</c> = die Hintergrund-Engines
-/// (Stockfish), sonst eine ausdrücklich gewählte Engine samt Namen.</summary>
+/// (Stockfish), sonst eine ausdrücklich gewählte Engine samt Namen.
+/// <para><see cref="Mine"/>: gehört dem Aufrufer (darf er neu starten/löschen). <see cref="EngineOnline"/> /
+/// <see cref="EngineLastSeenAt"/> (0.833.0, Wunsch 2026-10-25): ob die direkt angemeldete Engine (<c>rhe_</c>) gerade
+/// abfragt — sonst wartet die Analyse, ohne dass man es sieht; <c>null</c> = unbekannt (keine direkte Engine).</para></summary>
 public record GameAnalysisAlternativeDto(int Id, string? Title, string? EngineId, string? EngineName, long? TargetNodes,
-    int TargetDepth, int MultiPv, string Status, int AnalyzedPlies, int PlyCount);
+    int TargetDepth, int MultiPv, string Status, int AnalyzedPlies, int PlyCount,
+    bool Mine = false, bool? EngineOnline = null, DateTime? EngineLastSeenAt = null);
 
 /// <summary>Die Züge der Partie als UCI (<c>e2e4</c>, Umwandlung klein: <c>e7e8q</c>) — Kennung „dasselbe Spiel".</summary>
 public class SameGameRequest

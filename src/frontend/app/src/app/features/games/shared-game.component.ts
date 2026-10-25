@@ -17,7 +17,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { HandoffService } from '../../core/handoff.service';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { GuessUploadStatus } from '../analysis/game-analysis.service';
+import { GameAnalysisAlternative, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GameRoast, GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
@@ -419,6 +419,28 @@ export class SharedGameComponent implements OnInit, DoCheck {
   }
 
   analyzeLc0(): void { this.actions.startLc0(this.game?.pgn, () => this.review()?.refreshAlternatives()); }
+
+  /**
+   * Die Lc0-Analyse der Partie, solange sie wartet oder rechnet (0.833.0, Wunsch 2026-10-25: „mir fehlt der Menüeintrag"):
+   * statt „Mit Lc0 analysieren" still wegzulassen, zeigt das ⋮ ihren Stand — und ob die Engine überhaupt abfragt.
+   */
+  lc0Waiting(): GameAnalysisAlternative | null {
+    const review = this.review();
+    const alt = review?.alternative();
+    if (!this.loggedIn || !alt || !review!.hasLc0()) return null;
+    const status = review!.altEvals()?.status ?? alt.status;
+    return status === 'pending' || status === 'running' ? alt : null;
+  }
+
+  /** Fortschritt der wartenden Lc0-Analyse: aus den mitgeladenen Bewertungen, sonst aus der Liste. */
+  lc0Progress(alt: GameAnalysisAlternative): { done: number; total: number } {
+    const evals = this.review()?.altEvals();
+    return evals ? { done: evals.analyzed, total: evals.total } : { done: alt.analyzedPlies, total: alt.plyCount };
+  }
+
+  cancelLc0(alt: GameAnalysisAlternative): void { this.actions.cancelLc0(alt.id, () => this.review()?.refreshAlternatives()); }
+
+  restartLc0(alt: GameAnalysisAlternative): void { this.actions.restartLc0(alt.id, () => this.review()?.refreshAlternatives()); }
 
   /** Das PGN der Partie in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */
   copyPgn(): void { this.actions.copyPgn(this.game?.pgn); }

@@ -1711,6 +1711,34 @@ public class GameAnalysisServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SameGame_meldetObDieDirekteEngineAbfragt_undWemDieAnalyseGehoert()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var on = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game.Replace("Testpartie", "An") });
+        var off = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game.Replace("Testpartie", "Aus") });
+        var plain = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        (await _db.GameAnalyses.FindAsync(on.Id))!.EngineId = "rhe_an";
+        (await _db.GameAnalyses.FindAsync(off.Id))!.EngineId = "rhe_aus";
+        (await _db.GameAnalyses.FindAsync(plain.Id))!.EngineId = null;
+        var seenOff = DateTime.UtcNow.AddHours(-17);
+        _db.ExternalEngineRegistrations.AddRange(
+            new ExternalEngineRegistration { Id = "rhe_an", UserId = user.Id, Name = "Spark Lc0", ClientSecret = "s1", ProviderSelector = "p1", LastSeenAt = DateTime.UtcNow },
+            new ExternalEngineRegistration { Id = "rhe_aus", UserId = user.Id, Name = "PC Lc0", ClientSecret = "s2", ProviderSelector = "p2", LastSeenAt = seenOff });
+        _db.SavedGames.Add(new SavedGame { UserId = user.Id, Source = "pgn", Pgn = Game, ShareToken = "tok-st", GameAnalysisId = plain.Id });
+        await _db.SaveChangesAsync();
+
+        var found = (await _svc.SameGameAsync(user.Id, GameUcis)).ToDictionary(f => f.Id);
+
+        Assert.True(found[on.Id].EngineOnline);
+        Assert.False(found[off.Id].EngineOnline);
+        Assert.Equal(seenOff, found[off.Id].EngineLastSeenAt);
+        Assert.Null(found[plain.Id].EngineOnline);                       // keine direkte Engine = unbekannt
+        Assert.All(found.Values, f => Assert.True(f.Mine));
+        // Am Teilen-Link gehört sie dem Besitzer, nicht dem Betrachter — dort kein Abbrechen/Neu starten
+        Assert.All(await _svc.SharedAlternativesAsync("tok-st"), f => Assert.False(f.Mine));
+    }
+
+    [Fact]
     public async Task EvalsOf_nurDieEigeneAnalyse()
     {
         var user = await CreateUserWithEngineAsync();

@@ -2952,7 +2952,16 @@
     "lc0": {
       "menu": "Analiziraj s Lc0",
       "started": "Lc0 analizira partiju — prekidač Stockfish | Lc0 | Oba pojavljuje se iznad ocjene.",
-      "failed": "Lc0 analizu nije bilo moguće pokrenuti."
+      "failed": "Lc0 analizu nije bilo moguće pokrenuti.",
+      "running": "Lc0 analizira — {{done}}/{{total}} poteza",
+      "waitingOffline": "Lc0 čeka — engine nije na mreži",
+      "waitingOfflineSince": "Lc0 čeka — engine nije na mreži od {{since}}",
+      "restart": "Ponovno pokreni Lc0 analizu",
+      "cancel": "Otkaži Lc0 analizu",
+      "cancelled": "Lc0 analiza otkazana.",
+      "cancelFailed": "Lc0 analizu nije bilo moguće otkazati.",
+      "restarted": "Lc0 analiza ponovno pokrenuta.",
+      "restartFailed": "Lc0 analizu nije bilo moguće ponovno pokrenuti."
     },
     "review": {
       "title": "Pregled partije",

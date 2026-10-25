@@ -2952,7 +2952,16 @@
     "lc0": {
       "menu": "Mit Lc0 analysieren",
       "started": "Lc0 analysiert die Partie — der Umschalter Stockfish | Lc0 | Beide erscheint über der Auswertung.",
-      "failed": "Die Lc0-Analyse ließ sich nicht starten."
+      "failed": "Die Lc0-Analyse ließ sich nicht starten.",
+      "running": "Lc0 rechnet — {{done}}/{{total}} Züge",
+      "waitingOffline": "Lc0 wartet — Engine offline",
+      "waitingOfflineSince": "Lc0 wartet — Engine offline seit {{since}}",
+      "restart": "Lc0-Analyse neu starten",
+      "cancel": "Lc0-Analyse abbrechen",
+      "cancelled": "Lc0-Analyse abgebrochen.",
+      "cancelFailed": "Die Lc0-Analyse ließ sich nicht abbrechen.",
+      "restarted": "Lc0-Analyse neu gestartet.",
+      "restartFailed": "Die Lc0-Analyse ließ sich nicht neu starten."
     },
     "review": {
       "title": "Auswertung",

@@ -2952,7 +2952,16 @@
     "lc0": {
       "menu": "Analyse with Lc0",
       "started": "Lc0 is analysing the game — the Stockfish | Lc0 | Both switch appears above the evaluation.",
-      "failed": "Lc0 analysis could not be started."
+      "failed": "Lc0 analysis could not be started.",
+      "running": "Lc0 is analysing — {{done}}/{{total}} moves",
+      "waitingOffline": "Lc0 is waiting — engine offline",
+      "waitingOfflineSince": "Lc0 is waiting — engine offline since {{since}}",
+      "restart": "Restart Lc0 analysis",
+      "cancel": "Cancel Lc0 analysis",
+      "cancelled": "Lc0 analysis cancelled.",
+      "cancelFailed": "The Lc0 analysis could not be cancelled.",
+      "restarted": "Lc0 analysis restarted.",
+      "restartFailed": "The Lc0 analysis could not be restarted."
     },
     "review": {
       "title": "Game review",

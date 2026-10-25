@@ -293,7 +293,7 @@ internal sealed class GameAnalysisQueries
             // Engine-Konto, gezeigt wird sie wie die Stockfish-Analyse der Partie allen im Verein.
             .Where(a => (a.UserId == userId || (clubReader && a.Origin == GameAnalysisOrigin.Club && a.EngineId != null))
                 && a.PlyCount == wanted.Count && a.Status != GameAnalysisStatus.Failed)
-            .Select(a => new { a.Id, a.Title, a.EngineId, a.TargetNodes, a.TargetDepth, a.MultiPv, a.Status, a.PlyCount, a.CreatedAt })
+            .Select(a => new { a.Id, a.UserId, a.Title, a.EngineId, a.TargetNodes, a.TargetDepth, a.MultiPv, a.Status, a.PlyCount, a.CreatedAt })
             .ToListAsync(ct);
         if (candidates.Count == 0) return [];
 
@@ -309,15 +309,23 @@ internal sealed class GameAnalysisQueries
         if (matches.Count == 0) return [];
 
         var engineIds = matches.Select(m => m.EngineId).OfType<string>().Distinct().ToList();
-        var names = engineIds.Count == 0 ? new Dictionary<string, string>()
-            : await _db.ExternalEngineRegistrations.AsNoTracking().Where(r => engineIds.Contains(r.Id))
-                .ToDictionaryAsync(r => r.Id, r => r.Name, ct);
+        var regs = engineIds.Count == 0 ? new Dictionary<string, (string Name, DateTime? LastSeenAt)>()
+            : (await _db.ExternalEngineRegistrations.AsNoTracking().Where(r => engineIds.Contains(r.Id))
+                .Select(r => new { r.Id, r.Name, r.LastSeenAt }).ToListAsync(ct))
+                .ToDictionary(r => r.Id, r => (r.Name, r.LastSeenAt));
+        var cutoff = DateTime.UtcNow - EngineAvailability.OfflineAfter;
 
         return matches.OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.Id)
-            .Select(m => new GameAnalysisAlternativeDto(m.Id, m.Title, m.EngineId,
-                m.EngineId is { } e && names.TryGetValue(e, out var n) ? n : null,
-                m.TargetNodes, m.TargetDepth, m.MultiPv, m.Status.ToString().ToLowerInvariant(),
-                Math.Min(m.PlyCount, byAnalysis[m.Id].Count(r => r.Done)), m.PlyCount))
+            .Select(m =>
+            {
+                var reg = m.EngineId is { } e && regs.TryGetValue(e, out var found) ? found : ((string Name, DateTime? LastSeenAt)?)null;
+                return new GameAnalysisAlternativeDto(m.Id, m.Title, m.EngineId, reg?.Name,
+                    m.TargetNodes, m.TargetDepth, m.MultiPv, m.Status.ToString().ToLowerInvariant(),
+                    Math.Min(m.PlyCount, byAnalysis[m.Id].Count(r => r.Done)), m.PlyCount,
+                    Mine: m.UserId == userId,
+                    EngineOnline: reg is { } g ? g.LastSeenAt >= cutoff : (bool?)null,
+                    EngineLastSeenAt: reg?.LastSeenAt);
+            })
             .ToList();
     }
 
@@ -346,7 +354,8 @@ internal sealed class GameAnalysisQueries
         var ucis = await _db.GameAnalysisPositions.AsNoTracking()
             .Where(p => p.GameAnalysisId == linked && p.GameMoveUci != "")
             .OrderBy(p => p.Ply).Select(p => p.GameMoveUci).ToListAsync(ct);
-        var list = (await SameGameAsync(game.UserId, ucis, ct)).Where(a => a.EngineId != null && a.Id != linked).ToList();
+        var list = (await SameGameAsync(game.UserId, ucis, ct)).Where(a => a.EngineId != null && a.Id != linked)
+            .Select(a => a with { Mine = false }).ToList();
         return (game.UserId, list);
     }
 

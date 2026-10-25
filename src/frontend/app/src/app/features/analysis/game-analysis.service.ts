@@ -88,6 +88,11 @@ export interface GameAnalysisAlternative {
   status: string;
   analyzedPlies: number;
   plyCount: number;
+  /** Gehört dem Aufrufer — nur dann Abbrechen/Neu starten (0.833.0). */
+  mine?: boolean;
+  /** Fragt die direkt angemeldete Engine gerade ab? `null` = unbekannt (keine direkte Engine). */
+  engineOnline?: boolean | null;
+  engineLastSeenAt?: string | null;
 }
 
 export interface CreateGameAnalysisRequest {

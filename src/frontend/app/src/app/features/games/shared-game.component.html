@@ -133,6 +133,27 @@
                 <button mat-menu-item class="lc0-game" (click)="analyzeLc0()">
                   <mat-icon>psychology</mat-icon><span>{{ 'games.lc0.menu' | translate }}</span>
                 </button>
+              } @else if (lc0Waiting(); as lc0) {
+                <!-- Wartende Lc0-Analyse (0.833.0): Stand statt fehlendem Eintrag — offline sieht man so sofort. -->
+                <button mat-menu-item class="lc0-waiting" disabled>
+                  @if (lc0.engineOnline === false) {
+                    <mat-icon>cloud_off</mat-icon>
+                    <span>{{ (lc0.engineLastSeenAt ? 'games.lc0.waitingOfflineSince' : 'games.lc0.waitingOffline') | translate:{ since: (lc0.engineLastSeenAt | date:'d.M. HH:mm') } }}</span>
+                  } @else {
+                    <mat-icon>hourglass_top</mat-icon>
+                    <span>{{ 'games.lc0.running' | translate:lc0Progress(lc0) }}</span>
+                  }
+                </button>
+                @if (lc0.mine) {
+                  @if (lc0.engineOnline !== false) {
+                    <button mat-menu-item class="lc0-restart" (click)="restartLc0(lc0)">
+                      <mat-icon>restart_alt</mat-icon><span>{{ 'games.lc0.restart' | translate }}</span>
+                    </button>
+                  }
+                  <button mat-menu-item class="lc0-cancel" (click)="cancelLc0(lc0)">
+                    <mat-icon>cancel</mat-icon><span>{{ 'games.lc0.cancel' | translate }}</span>
+                  </button>
+                }
               }
               @if (own && gameId) {
                 <button mat-menu-item (click)="roast()">

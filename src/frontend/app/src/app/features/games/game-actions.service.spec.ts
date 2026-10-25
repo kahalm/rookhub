@@ -100,4 +100,17 @@ describe('GameActionsService', () => {
     expect(started).toBe(1);
     expect(snack.success).toHaveBeenCalled();
   });
+
+  it('Lc0: abbrechen löscht, neu starten reiht ein — Erfolg ruft zurück, Fehler meldet', () => {
+    let done = 0;
+    actions.cancelLc0(7, () => done++);
+    http.expectOne(r => r.method === 'DELETE' && r.url.endsWith('/7')).flush(null);
+    actions.restartLc0(7, () => done++);
+    http.expectOne(r => r.method === 'POST' && r.url.endsWith('/7/restart')).flush({});
+    expect(done).toBe(2);
+    actions.cancelLc0(8, () => done++);
+    http.expectOne(r => r.url.endsWith('/8')).flush('x', { status: 500, statusText: 'err' });
+    expect(done).toBe(2);
+    expect(snack.warn).toHaveBeenCalled();
+  });
 });

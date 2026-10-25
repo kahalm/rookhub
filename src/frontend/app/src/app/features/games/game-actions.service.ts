@@ -132,4 +132,20 @@ export class GameActionsService {
       error: () => this.snackbar.warn(this.translate.instant('games.lc0.failed')),
     });
   }
+
+  /** Wartende/hängende Lc0-Analyse abbrechen (0.833.0) — danach bietet das ⋮ „Mit Lc0 analysieren" wieder an. */
+  cancelLc0(id: number, done: () => void): void {
+    this.gameAnalyses.delete(id).subscribe({
+      next: () => { this.snackbar.success(this.translate.instant('games.lc0.cancelled')); done(); },
+      error: () => this.snackbar.warn(this.translate.instant('games.lc0.cancelFailed')),
+    });
+  }
+
+  /** Hängende Lc0-Analyse neu einreihen (0.833.0). */
+  restartLc0(id: number, done: () => void): void {
+    this.gameAnalyses.restart(id).subscribe({
+      next: () => { this.snackbar.success(this.translate.instant('games.lc0.restarted')); done(); },
+      error: () => this.snackbar.warn(this.translate.instant('games.lc0.restartFailed')),
+    });
+  }
 }

@@ -3314,7 +3314,16 @@
     "lc0": {
       "menu": "Elemzés Lc0-val",
       "started": "Az Lc0 elemzi a játszmát — a Stockfish | Lc0 | Mindkettő kapcsoló az értékelés fölött jelenik meg.",
-      "failed": "Az Lc0 elemzést nem sikerült elindítani."
+      "failed": "Az Lc0 elemzést nem sikerült elindítani.",
+      "running": "Az Lc0 elemez — {{done}}/{{total}} lépés",
+      "waitingOffline": "Az Lc0 vár — a motor offline",
+      "waitingOfflineSince": "Az Lc0 vár — a motor offline ekkor óta: {{since}}",
+      "restart": "Lc0-elemzés újraindítása",
+      "cancel": "Lc0-elemzés megszakítása",
+      "cancelled": "Lc0-elemzés megszakítva.",
+      "cancelFailed": "Az Lc0-elemzést nem sikerült megszakítani.",
+      "restarted": "Lc0-elemzés újraindítva.",
+      "restartFailed": "Az Lc0-elemzést nem sikerült újraindítani."
     },
     "review": {
       "title": "Játszmaértékelés",

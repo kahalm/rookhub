@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { AnalysisEngineService, AnalysisState } from '../analysis/analysis-engine.service';
@@ -77,6 +78,30 @@ describe('SharedGameComponent', () => {
     const other = await setup(true, true, [], []);
     other.fixture.componentInstance.game = sharedGame('white') as never;
     expect(other.fixture.componentInstance.canLc0()).toBeFalse();
+  });
+
+  // 0.833.0 (Wunsch 2026-10-25: „mir fehlt der Menüeintrag"): wartet die Lc0-Analyse, zeigt das ⋮ ihren Stand statt nichts —
+  // und ob die Engine abfragt; abbrechen löscht sie, danach sucht der Rückblick neu.
+  it('shows a waiting Lc0 analysis with offline engine and lets the owner cancel it', async () => {
+    const { fixture, http } = await setup(true, true, [], ['league.view']);
+    const cmp = fixture.componentInstance;
+    cmp.game = sharedGame('white') as never;
+    const alt = { id: 15306, engineName: 'RookHub Spark Lc0', engineId: 'rhe_x', status: 'pending', analyzedPlies: 0, plyCount: 80,
+      mine: true, engineOnline: false, engineLastSeenAt: '2026-10-24T14:54:22Z' };
+    const refresh = jasmine.createSpy('refresh');
+    const status = signal<string>('pending');
+    (cmp as unknown as { review: () => unknown }).review = () => ({
+      alternative: () => alt, hasLc0: () => true, refreshAlternatives: refresh,
+      altEvals: () => ({ status: status(), analyzed: 3, total: 80 }),
+    });
+    expect(cmp.canLc0()).toBeFalse();
+    expect(cmp.lc0Waiting()).toBe(alt as never);
+    expect(cmp.lc0Progress(alt as never)).toEqual({ done: 3, total: 80 });
+    cmp.cancelLc0(alt as never);
+    http.expectOne(r => r.method === 'DELETE' && r.url.endsWith('/15306')).flush(null);
+    expect(refresh).toHaveBeenCalled();
+    status.set('done');
+    expect(cmp.lc0Waiting()).toBeNull();                 // fertig = Umschalter, kein Wartehinweis
   });
 
   // Wunsch 2026-10-04: „Analyse" in LeagueHub öffnet die Vereinspartie wie eine aus „Meine Partien" — mit den
