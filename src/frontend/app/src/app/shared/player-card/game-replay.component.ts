@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BoardArrow, ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
 import { GameReviewComponent } from '@rh/features/games/game-review.component';
-import { BoardBadge } from '@rh/features/games/move-badge.util';
+import { BoardBadge } from '@rh/shared/pgn-viewer/board-badge';
 import { ParsedGame, START_FEN, parsePgnText } from '@rh/shared/pgn-viewer/pgn-parser';
 import { cardDate, cardLang, cardSan } from './card-lang';
 

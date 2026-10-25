@@ -10,13 +10,8 @@ export const MOVE_CLASS_SYMBOLS: Readonly<Record<MoveClass, string>> = {
   blunder: '??',
 };
 
-/** Ein Symbol auf dem Brett: die Klasse des aktuellen Zugs am Zielfeld (seit 0.557.0, wie chess.com beim Durchsehen). */
-export interface BoardBadge {
-  /** Zielfeld des Zugs („d5"; bei der Rochade das Feld des Königs). */
-  square: string;
-  /** Inhalt für Chessgrounds `customSvg` — Koordinaten 0..100 über dem Feld. */
-  svg: string;
-}
+/** Ein Symbol auf dem Brett — der Typ liegt neben dem Brett in `shared/pgn-viewer/board-badge.ts`. */
+export type { BoardBadge } from '../../shared/pgn-viewer/board-badge';
 
 /** Mittelpunkt und Radius des Kreises in Feld-Koordinaten (0..100). Seit 0.559.0 Variante „D" aus dem
  *  Vergleich vom 2026-09-27 (gewählt vom Nutzer): groß (⌀ knapp die Hälfte des Felds) und nahe der Ecke, mit weißem

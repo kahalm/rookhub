@@ -15,14 +15,15 @@ type Served = { __karma__?: { files?: Record<string, unknown> } };
 /**
  * Datei unter `src/app/shared/` → die Feature-Module (Pfad ab `src/app/`, ohne Endung), die sie heute noch importiert.
  * Seit dem F8-013-Nachlauf (2026-10-25) liegt der Partie-Betrachter `PgnViewerComponent` in `features/games/` (nur
- * Features benutzen ihn), die Zug-Helfer `keyboard-move.util`/`puzzle-move.util` in `shared/chess/`. Übrig ist eine
- * begründete Ausnahme: `game-replay` (Spielerkarte, auch in LeagueHub) bettet den Partie-Rückblick
- * `GameReviewComponent` ein — ihn nach `shared/` zu ziehen hieße, seine Abhängigkeiten in `features/games` und
- * `features/analysis` (Dienste, Lc0-/Tiefe-Analyse) mitzunehmen, also mehr als ein Umzug. `BoardBadge` hängt an
- * `MOVE_CLASS_COLORS` in `game-review.util` und folgt mit.
+ * Features benutzen ihn), die Zug-Helfer `keyboard-move.util`/`puzzle-move.util` in `shared/chess/`, der Typ
+ * `BoardBadge` neben dem Brett in `shared/pgn-viewer/board-badge.ts` und `langParams` in `shared/lang-params.ts`.
+ * Übrig ist EINE begründete Ausnahme: `game-replay` (Nachspielen in der Spielerkarte, auch in LeagueHub) bettet den
+ * Partie-Rückblick `GameReviewComponent` ein. Ihn nach `shared/` zu ziehen hieße, seine Abhängigkeiten in
+ * `features/games` und `features/analysis` (Dienste, Lc0-/Tiefe-Analyse, Klassen-Tabellen) mitzunehmen; `game-replay`
+ * nach `features/` zu ziehen ginge nicht, weil die geteilte `player-card` ihn einbettet. Beides ist mehr als ein Umzug.
  */
 const KNOWN_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = {
-  'shared/player-card/game-replay.component.ts': ['features/games/game-review.component', 'features/games/move-badge.util'],
+  'shared/player-card/game-replay.component.ts': ['features/games/game-review.component'],
 };
 
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(['"])([^'"]+)\1/g;

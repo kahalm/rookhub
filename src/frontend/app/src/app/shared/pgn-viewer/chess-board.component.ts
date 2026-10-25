@@ -8,6 +8,7 @@ import { Config } from 'chessground/config';
 import { Key } from 'chessground/types';
 import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
 import { PromotionPickerComponent, PromotionPiece } from '../promotion-picker/promotion-picker.component';
+import { BoardBadge } from './board-badge';
 import { applyUserMove, isPromotionMove, legalDests, turnColorOf } from './board-moves.util';
 import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
 import { isFullscreen, onFullscreenChange } from '../fullscreen/fullscreen.util';
@@ -100,7 +101,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
    * Ein Symbol an einem Feld (seit 0.557.0: die Klasse des aktuellen Zugs am Zielfeld, wie chess.com beim Durchsehen) —
    * gezeichnet als Chessground-`customSvg` zusammen mit den Pfeilen, Inhalt im Raster 0..100 über dem Feld.
    */
-  @Input() badge: { square: string; svg: string } | null = null;
+  @Input() badge: BoardBadge | null = null;
   /** Fahrzeit der Figuren (Chessground-Animation). */
   static readonly AnimationMs = 200;
   /** Kurz nach der Ankunft, damit das Symbol nicht auf die letzten Pixel der Fahrt trifft. */
