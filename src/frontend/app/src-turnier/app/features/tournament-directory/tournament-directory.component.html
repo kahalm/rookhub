@@ -47,44 +47,9 @@
       {{ 'tournamentDirectory.moreFilters' | translate }}@if (activeExtraFilters) { <span> ({{ activeExtraFilters }})</span> }
     </button>
 
-    <button mat-icon-button [matMenuTriggerFor]="profileMenu"
-            [attr.aria-label]="'tournamentDirectory.profile.manage' | translate">
-      <mat-icon>more_vert</mat-icon>
-    </button>
-    <mat-menu #profileMenu="matMenu">
-      <!-- Ohne Anmeldung fuehrt „Neues Suchprofil" zur Anmeldung (requireAccount) — Filter speichern braucht ein Konto. -->
-      @if (profiles().length > 0) {
-        <button mat-menu-item [matMenuTriggerFor]="profilePick">
-          <mat-icon>bookmarks</mat-icon>
-          <span>{{ 'tournamentDirectory.profile.label' | translate }}</span>
-        </button>
-      }
-      <button mat-menu-item (click)="newProfile()">
-        <mat-icon>add_location_alt</mat-icon>
-        <span>{{ 'tournamentDirectory.profile.new' | translate }}</span>
-      </button>
-      @if (activeProfile) {
-        <button mat-menu-item (click)="editProfile(activeProfile!)">
-          <mat-icon>edit</mat-icon>
-          <span>{{ 'common.edit' | translate }}</span>
-        </button>
-        <button mat-menu-item (click)="deleteProfile(activeProfile!)">
-          <mat-icon>delete</mat-icon>
-          <span>{{ 'tournamentDirectory.profile.delete' | translate }}</span>
-        </button>
-      }
-    </mat-menu>
-
-    <mat-menu #profilePick="matMenu">
-      <button mat-menu-item (click)="onProfileChange(null)">
-        {{ 'tournamentDirectory.profile.none' | translate }}
-      </button>
-      @for (profile of profiles(); track profile.id) {
-        <button mat-menu-item (click)="onProfileChange(profile.id)">
-          {{ profile.name }} · {{ profile.radiusKm }} km
-        </button>
-      }
-    </mat-menu>
+    <app-search-profile-menu [profiles]="profiles()" [activeProfile]="activeProfile"
+                             (pick)="onProfileChange($event)" (create)="newProfile()"
+                             (edit)="editProfile($event)" (remove)="deleteProfile($event)" />
   </div>
 
   <!-- Handy: die aktuell gueltigen Werte von Zeitraum und Umkreis; ein Tipp oeffnet die Filter. Nur bei zugeklapptem

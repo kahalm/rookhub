@@ -9,7 +9,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -31,6 +30,7 @@ import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-
 import { PinColourBy } from './pin-palette';
 import { ViewTab, applyStoredView, snapshotView } from './directory-view-state';
 import { DirectoryViewStateSync } from './directory-view-state-sync';
+import { SearchProfileMenuComponent } from './search-profile-menu.component';
 import { SearchProfileService } from './search-profile.service';
 import { TournamentCalendarComponent } from './tournament-calendar.component';
 import { TournamentCardComponent } from './tournament-card.component';
@@ -70,10 +70,10 @@ import {
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatCardModule,
     MatChipsModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule,
-    MatMenuModule, MatSelectModule, MatSlideToggleModule, MatTabsModule,
+    MatSelectModule, MatSlideToggleModule, MatTabsModule,
     MatTooltipModule, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
-    TournamentMapComponent, PlaceFieldComponent,
+    TournamentMapComponent, PlaceFieldComponent, SearchProfileMenuComponent,
   ],
   templateUrl: './tournament-directory.component.html',
   styleUrls: ['./tournament-directory.component.scss'],
