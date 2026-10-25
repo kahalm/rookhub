@@ -58,6 +58,35 @@ internal interface IDirectorySourceAdapter<in TRow>
     Task BeforeLoopAsync(CancellationToken ct) => Task.CompletedTask;
 
     /// <summary>
+    /// Laeuft je Zeile VOR der Zuordnung (nach der Absage-Pruefung) — fuer eine Detailseite, die
+    /// den exakten Zuordnungsschluessel traegt (ICU). Was dabei anfaellt, legt die Quelle an ihrer
+    /// Zeile ab; ein Schluessel, der erst nach der Entscheidung eintrifft, waere wertlos.
+    /// </summary>
+    /// <returns>Ob die Zeile damit als „aktualisiert" zaehlt (ICU: Detailseite gelesen).</returns>
+    Task<bool> BeforeMatchAsync(TRow row, CancellationToken ct) => Task.FromResult(false);
+
+    /// <summary>
+    /// Die chess-results-Nummer, die die Quelle SELBST nennt (chess.sk in der Liste, ICU auf der
+    /// Detailseite). Gibt es dazu einen Eintrag, ist das ein exakter Treffer und der
+    /// Namensvergleich entfaellt; <c>null</c>/leer = nur der Namensvergleich.
+    /// </summary>
+    string? ChessResultsId(TRow row) => null;
+
+    /// <summary>
+    /// Laeuft nach beiden Suchen (eigener Eintrag, Zuordnung) und vor jeder Entscheidung — FFE laedt
+    /// dort die Herkunftsvermerke der Funde nach.
+    /// </summary>
+    Task AfterLookupAsync(TournamentDirectoryEntry? own, TournamentDirectoryEntry? match, CancellationToken ct) =>
+        Task.CompletedTask;
+
+    /// <summary>
+    /// Laeuft einmal, wenn der Runner den eigenen Eintrag NEU angelegt hat, vor
+    /// <see cref="ApplyAsync"/> — fuer Felder, die nur ein neuer Eintrag bekommt (chess.sk: die
+    /// chess-results-Nummer der Quelle, auch eine leere).
+    /// </summary>
+    void OnCreated(TournamentDirectoryEntry own, TRow row) { }
+
+    /// <summary>
     /// Kennt chess-results das Turnier schon, darf die Quelle dort LUECKEN fuellen (Bedenkzeit,
     /// Rundenzahl …), nie vorhandene Werte ueberschreiben. Laeuft vor dem Herkunftsvermerk.
     /// </summary>
@@ -82,8 +111,9 @@ internal interface IDirectorySourceAdapter<in TRow>
 /// Verschwunden-Erkennung mit Bremse) gelten damit an einer Stelle.
 ///
 /// <para>Je Zeile: Kennung pruefen, als GELIEFERT vermerken, Termin und Namen pruefen, eigenen
-/// Eintrag suchen, Absage/Sitzung zurueckziehen, sonst einem chess-results-Eintrag zuordnen (und den
-/// eigenen dann zurueckziehen) oder den eigenen anlegen bzw. aktualisieren. Alle
+/// Eintrag suchen, Absage/Sitzung zurueckziehen, sonst (nach <c>BeforeMatchAsync</c>) einem
+/// chess-results-Eintrag zuordnen — per Nummer der Quelle, sonst per Namensvergleich — und den
+/// eigenen dann zurueckziehen, oder den eigenen anlegen bzw. aktualisieren. Alle
 /// <see cref="IDirectorySourceAdapter{TRow}.SaveEvery"/> Zeilen ein Zwischenstand; am Ende wird IMMER gespeichert, ein Fehler dabei
 /// nur gewarnt. Danach die Abschlusszeile und die Verschwunden-Erkennung.</para>
 /// </summary>
@@ -136,9 +166,15 @@ internal static class ExternalSweepRunner
                     continue;
                 }
 
+                if (await source.BeforeMatchAsync(row, ct)) updated++;
+
                 var federation = source.Federation(row);
-                var match = await ExternalDirectorySource.FindMatchAsync(db, federation, start, source.Name(row),
-                    new ExternalDirectorySource.MatchHint(source.Kind, key, source.MatchPlace(row)), ct);
+                // Erst die Nummer, die die Quelle selbst nennt, dann der Name: nur die Nummer muss
+                // nicht raten. Ohne Nummer stellt FindByChessResultsIdAsync keine Abfrage.
+                var match = await ExternalDirectorySource.FindByChessResultsIdAsync(db, source.ChessResultsId(row), ct)
+                            ?? await ExternalDirectorySource.FindMatchAsync(db, federation, start, source.Name(row),
+                                new ExternalDirectorySource.MatchHint(source.Kind, key, source.MatchPlace(row)), ct);
+                await source.AfterLookupAsync(own, match, ct);
 
                 if (match is not null)
                 {
@@ -170,6 +206,7 @@ internal static class ExternalSweepRunner
                         FirstSeenAt = now,
                     };
                     db.TournamentDirectoryEntries.Add(own);
+                    source.OnCreated(own, row);
                     added++;
                 }
 

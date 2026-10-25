@@ -40,16 +40,17 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// diese Zeilen <c>ENG</c> (→ <c>GB</c>) mit. Heute faellt das nicht auf — alle 11 kommen mit
 /// Koordinaten der Quelle —, aber es faellt eben auch nicht auf, wenn es kippt.</para>
 /// </summary>
-public class IcuDirectorySweepService
+public class IcuDirectorySweepService : IDirectorySourceAdapter<IcuDirectorySweepService.IcuSweepRow>
 {
-    private const int SaveEvery = 25;
-
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly GeocodingService _geocoding;
     private readonly int _detailBatchSize;
     private readonly TimeSpan _detailDelay;
     private readonly ILogger<IcuDirectorySweepService> _log;
+
+    /// <summary>Wie viele Detailseiten dieser Lauf noch holen darf.</summary>
+    private int _detailBudget;
 
     public IcuDirectorySweepService(AppDbContext db, IHttpClientFactory httpClientFactory,
         GeocodingService geocoding, IConfiguration configuration,
@@ -73,133 +74,94 @@ public class IcuDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchListAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
-
-        var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
-        var now = DateTime.UtcNow;
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
-
-        try
-        {
-            foreach (var row in events)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
-
-                processed++;
-                var publicId = $"ie{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-
-                // Unterricht, Lehrgang, Jahreshauptversammlung: kein Turnier.
-                if (row.NonTournament)
-                {
-                    if (own is not null && own.RemovedAt is null)
-                    {
-                        own.RemovedAt = now;
-                        retired++;
-                    }
-                    continue;
-                }
-
-                // Die Detailseite kommt VOR der Zuordnung — anders als bei chessarbiter, wo sie
-                // nur den eigenen Eintrag anreichert. Hier traegt sie den einzigen EXAKTEN
-                // Zuordnungsschluessel dieser Quelle, und ein Schluessel, der erst nach der
-                // Entscheidung eintrifft, ist wertlos.
-                ParsedIcuDetail? detail = null;
-                if (budget > 0 && !await HasDetailAsync(row.EventId, ct))
-                {
-                    budget--;
-                    detail = await FetchDetailAsync(row.EventId, ct);
-                    if (detail is not null) updated++;
-                    if (_detailDelay > TimeSpan.Zero) await Task.Delay(_detailDelay, ct);
-                }
-
-                var federation = row.Foreign ? null : "IRL";
-                var match = await ExternalDirectorySource.FindByChessResultsIdAsync(
-                                _db, detail?.ChessResultsId, ct)
-                            ?? await ExternalDirectorySource.FindMatchAsync(
-                                _db, federation, start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.IrishChessUnion, row.EventId, row.Place), ct);
-
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match, DirectorySourceKind.IrishChessUnion,
-                        row.EventId, DetailUrl(row, detail), now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("ICU: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = row.Place?.Trim();
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.Federation = federation;
-                own.StartDate = start;
-                own.EndDate = row.End is { } end && end >= start ? end : start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.Speed = SpeedOf(row.Categories);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-                ApplyAudienceMarks(own, row);
-
-                if (detail?.PlayerCount is > 0) own.PlayerCount = detail.PlayerCount;
-
-                await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.IrishChessUnion,
-                    row.EventId, DetailUrl(row, detail), now, ct);
-
-                await ApplyCoordinatesAsync(own, row, locationChanged, ct);
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-            }
-        }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "ICU: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "ICU-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.IrishChessUnion, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        _detailBudget = Math.Max(0, detailLimit ?? _detailBatchSize);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this,
+            events.Select(e => new IcuSweepRow(e)).ToList(), ct);
     }
+
+    /// <summary>
+    /// Eine Zeile im Lauf: die Listenzeile und — falls in DIESEM Lauf geholt — ihre Detailseite.
+    /// Die Detailseite haengt an der Zeile, weil sie VOR der Zuordnung geholt wird
+    /// (<see cref="IDirectorySourceAdapter{TRow}.BeforeMatchAsync"/>) und danach Zuordnung,
+    /// Herkunftsvermerk und Teilnehmerzahl bestimmt.
+    /// </summary>
+    public sealed class IcuSweepRow(CrawlerIcuEvent row)
+    {
+        public CrawlerIcuEvent Row { get; } = row;
+        public ParsedIcuDetail? Detail { get; set; }
+    }
+
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
+
+    DirectorySourceKind IDirectorySourceAdapter<IcuSweepRow>.Kind => DirectorySourceKind.IrishChessUnion;
+    string IDirectorySourceAdapter<IcuSweepRow>.LogName => "ICU";
+    string? IDirectorySourceAdapter<IcuSweepRow>.SourceKey(IcuSweepRow row) => row.Row.EventId.Length == 0 ? null : row.Row.EventId;
+    DateOnly? IDirectorySourceAdapter<IcuSweepRow>.Start(IcuSweepRow row) => row.Row.Start;
+    string IDirectorySourceAdapter<IcuSweepRow>.Name(IcuSweepRow row) => row.Row.Name;
+    string IDirectorySourceAdapter<IcuSweepRow>.PublicId(IcuSweepRow row) => $"ie{row.Row.EventId}";
+
+    /// <summary>Unterricht, Lehrgang, Jahreshauptversammlung: kein Turnier.</summary>
+    bool IDirectorySourceAdapter<IcuSweepRow>.Withdrawn(IcuSweepRow row) => row.Row.NonTournament;
+
+    string? IDirectorySourceAdapter<IcuSweepRow>.Federation(IcuSweepRow row) => FederationOf(row.Row);
+    string? IDirectorySourceAdapter<IcuSweepRow>.MatchPlace(IcuSweepRow row) => row.Row.Place;
+    string? IDirectorySourceAdapter<IcuSweepRow>.Url(IcuSweepRow row) => DetailUrl(row.Row, row.Detail);
+
+    /// <summary>Die Nummer steht nur auf der Detailseite — und nur, wenn sie in DIESEM Lauf geholt wurde.</summary>
+    string? IDirectorySourceAdapter<IcuSweepRow>.ChessResultsId(IcuSweepRow row) => row.Detail?.ChessResultsId;
+
+    /// <summary>
+    /// Die Detailseite kommt VOR der Zuordnung — anders als bei chessarbiter, wo sie nur den
+    /// eigenen Eintrag anreichert. Hier traegt sie den einzigen EXAKTEN Zuordnungsschluessel dieser
+    /// Quelle, und ein Schluessel, der erst nach der Entscheidung eintrifft, ist wertlos.
+    /// „Aktualisiert" heisst hier: die Detailseite war lesbar.
+    /// </summary>
+    async Task<bool> IDirectorySourceAdapter<IcuSweepRow>.BeforeMatchAsync(IcuSweepRow row, CancellationToken ct)
+    {
+        if (_detailBudget <= 0 || await HasDetailAsync(row.Row.EventId, ct)) return false;
+
+        _detailBudget--;
+        row.Detail = await FetchDetailAsync(row.Row.EventId, ct);
+        if (_detailDelay > TimeSpan.Zero) await Task.Delay(_detailDelay, ct);
+        return row.Detail is not null;
+    }
+
+    async Task<bool> IDirectorySourceAdapter<IcuSweepRow>.ApplyAsync(
+        TournamentDirectoryEntry own, IcuSweepRow sweepRow, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var (row, detail) = (sweepRow.Row, sweepRow.Detail);
+        var location = row.Place?.Trim();
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.Federation = FederationOf(row);
+        own.StartDate = start;
+        own.EndDate = row.End is { } end && end >= start ? end : start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        own.Speed = SpeedOf(row.Categories);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+        ApplyAudienceMarks(own, row);
+
+        if (detail?.PlayerCount is > 0) own.PlayerCount = detail.PlayerCount;
+
+        await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.IrishChessUnion,
+            row.EventId, DetailUrl(row, detail), now, ct);
+
+        await ApplyCoordinatesAsync(own, row, locationChanged, ct);
+        // „Aktualisiert" zaehlt bei dieser Quelle nur die gelesene Detailseite (BeforeMatchAsync).
+        return false;
+    }
+
+    void IDirectorySourceAdapter<IcuSweepRow>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "ICU-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
+
+    /// <summary>Ein Auslandsturnier bekommt keine Foederation, alles andere ist <c>IRL</c>.</summary>
+    private static string? FederationOf(CrawlerIcuEvent row) => row.Foreign ? null : "IRL";
 
     /// <summary>
     /// Ob die Detailseite dieses Turniers schon gelesen wurde — erkennbar an der Adresse im
