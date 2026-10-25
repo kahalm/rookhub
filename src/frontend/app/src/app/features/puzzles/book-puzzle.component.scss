@@ -18,10 +18,6 @@
       .hint-list--side { display: block; }
     }
 
-    /* Zurückhaltend über die Farbrolle statt Deckkraft — 0,7 Deckkraft ergab hell 3,35:1 und wirkte gesperrt
-       (a1-rk-skip-kontrast-hell, DESIGN 7). */
-    .skip-quiet { color: var(--mat-sys-on-surface-variant) !important; font-size: 0.85em !important; }
-
     /* Einspaltig bis 899.98 px (a1-rk-tablet-seitenspalte-eng): am Tablet (769–899 px) blieb neben dem Brett nur eine
        ~270 px schmale Seitenkarte (Titel 4 Zeilen, Knopf zweizeilig, Kommentar Wort für Wort). Dort steht das Brett
        mittig bis zur Fensterhöhe, die Seitenkarten in voller Breite darunter (DESIGN 4.2, Stufe 900 px). */

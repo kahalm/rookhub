@@ -13,6 +13,7 @@ import { shallowBookPuzzle } from '../../testing/book-puzzle-shallow';
 import { PuzzleComponent } from './puzzle.component';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
+import { PuzzleYourTurnComponent } from './puzzle-your-turn.component';
 import { PuzzleService } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -86,11 +87,13 @@ describe('Löser-Layout (UI-Sweep a1)', () => {
     for (const [, cmp] of SOLVERS) expect(css(cmp)).not.toContain('.tomove-dot.black');
   });
 
-  it('„Überspringen“ ohne Deckkraft, Farbe aus der Rolle on-surface-variant (a1-rk-skip-kontrast-hell)', () => {
-    const m = /\.skip-quiet\s*\{([^}]*)\}/.exec(css(BookPuzzleComponent));
-    expect(m).not.toBeNull();
-    expect(m![1]).not.toContain('opacity');
-    expect(m![1].replace(/\s/g, '')).toContain('color:var(--mat-sys-on-surface-variant)');
+  // „Überspringen“ steht seit 2026-10-20 als `.ytp-skip` neben „Aufgeben“ in der Status-Card (PuzzleYourTurnComponent);
+  // die alte `.skip-quiet`-Regel der Kontext-Karte ist weg. Geprüft wird am echten Ort: keine Deckkraft (a1-rk-skip-kontrast-hell).
+  it('„Überspringen“ in der Status-Card ohne Deckkraft, keine tote .skip-quiet-Regel mehr (a1-rk-skip-kontrast-hell)', () => {
+    const rules = css(PuzzleYourTurnComponent).match(/[^{}]*\.ytp-skip[^{}]*\{[^}]*\}/g) ?? [];
+    for (const r of rules) expect(r).not.toContain('opacity');
+    expect(css(PuzzleYourTurnComponent)).not.toMatch(/\.ytp-actions[^{]*\{[^}]*opacity/);
+    expect(css(BookPuzzleComponent)).not.toContain('skip-quiet');
   });
 
   it('Wochenpost: 8 px zwischen Fortschrittszeile und Umschaltknopf (a1-rk-wochenpost-fortschritt-klebt)', () => {
