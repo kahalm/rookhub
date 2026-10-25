@@ -11,7 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, forkJoin, switchMap } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
@@ -35,7 +35,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { EvalCompare } from './repertoire-trainer-eval-compare';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
-import { normalizeFen } from './position-filter.util';
+import { TrainerFrequencyLoader } from './repertoire-trainer-frequency-loader';
 import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
 import { LineMoveToken, commentParagraphs, lineChapterTitle, lineLabel, lineMoveTokens, plyComment, plyPrettyLabel } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
@@ -181,14 +181,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Modus „Häufigste zuerst": Linien, die man in echten Partien öfter erreicht, kommen zuerst
    *  (Lichess-Explorer, gerechnet am Server wie der Lochfinder). Aus = bisherige Reihenfolge. */
   freqOrder = readFreqOrder();
-  /** Endstellung einer Linie (erste drei FEN-Felder) → wie oft man sie erreicht; null = nicht geladen. */
-  private lineFreq: Map<string, number> | null = null;
-  /** Laufender Abruf der Häufigkeiten (Fortschritt für die LOADING-Ansicht). */
-  freqLoading: ExplorerAnalysisResult | null = null;
-  freqRunning = false;
+  /** Häufigkeiten über den Explorer (Fortschritt, Hinweis, Sortierung). */
+  private readonly freq = new TrainerFrequencyLoader(() => this.explorer, () => this.cdr.markForCheck(), () => this.buildQueue());
+  get freqLoading(): ExplorerAnalysisResult | null { return this.freq.progress; }
+  get freqRunning(): boolean { return this.freq.running; }
   /** Hinweis unter der Leiste, wenn die Häufigkeiten fehlen oder unvollständig sind (i18n-Key). */
-  freqNotice: string | null = null;
-  private freqSub: Subscription | null = null;
+  get freqNotice(): string | null { return this.freq.notice; }
 
   /** Reihenfolge nach einem Gegner (`?opponent=prep:<id>|league:<fide>`, „Alle in dieser Reihenfolge trainieren" der
    *  Spielerkarte, 2026-10-07): dieselben Trainingslinien wie dort, wahrscheinlichste zuerst; nur die Kapitel der Farbe
@@ -295,7 +293,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.loadSub?.unsubscribe();
-    this.clearLineTimers(); this.freqSub?.unsubscribe(); this.opponentSub?.unsubscribe();
+    this.clearLineTimers(); this.freq.dispose(); this.opponentSub?.unsubscribe();
   }
 
   /** Die Trainingslinien gegen den Gegner holen (alle, nicht nur die ersten 50). <paramref name="wait"/>: bis dahin „Lädt";
@@ -360,7 +358,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Reihenfolge der Warteschlange: nach dem Gegner, sonst „Häufigste zuerst" (wenn an). */
   private ordered(lines: ParsedGame[]): ParsedGame[] {
-    return this.opponentRank ? this.byOpponent(lines) : this.byFrequency(lines);
+    return this.opponentRank ? this.byOpponent(lines) : this.freq.order(lines, this.freqOrder);
   }
 
   /** „Häufigste zuerst" an/aus. Baut die Sitzung neu auf (wie ein Moduswechsel). */
@@ -368,71 +366,25 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (this.offlineSession) return;
     this.freqOrder = !this.freqOrder;
     saveFreqOrder(this.freqOrder);
-    if (this.freqOrder && !this.lineFreq) this.loadFrequencies();
-    else { this.freqNotice = null; this.buildQueue(); }
+    if (this.freqOrder && !this.freq.lineFreq) this.loadFrequencies();
+    else { this.freq.notice = null; this.buildQueue(); }
   }
 
   /** Häufigkeiten holen — Runde um Runde, bis alles ausgewertet ist; dann die Sitzung aufbauen. */
   private loadFrequencies(): void {
-    this.freqSub?.unsubscribe();
     this.clearLineTimers();
     this.phase = 'LOADING';
-    this.freqRunning = true;
-    this.freqLoading = null;
-    this.freqNotice = null;
-    this.freqSub = this.explorer.effectiveSettings().pipe(
-      switchMap(s => this.explorer.run(this.repertoireId, {
-        color: null,
-        chapterColors: Object.fromEntries(this.chapterColors),
-        source: s.source,
-        database: s.database,
-        ratings: s.ratings,
-        speeds: s.speeds,
-        thresholdPercent: s.thresholdPercent,
-        includeHoles: false,
-        includeLineFrequencies: true,
-      })),
-    ).subscribe({
-      next: r => { this.freqLoading = r; this.cdr.markForCheck(); },
-      error: () => { this.freqNotice = 'repertoireTrainer.freqFailed'; this.finishFrequencies(); },
-      complete: () => this.finishFrequencies(),
-    });
+    this.freq.load(this.repertoireId, Object.fromEntries(this.chapterColors));
   }
 
   /** Abruf beendet ODER übersprungen: mit dem, was da ist, weiter. */
-  finishFrequencies(): void {
-    this.freqSub?.unsubscribe();
-    this.freqSub = null;
-    this.freqRunning = false;
-    const r = this.freqLoading;
-    this.lineFreq = new Map(Object.entries(r?.lineFrequencies ?? {}));
-    if (!this.freqNotice && r) {
-      if (r.tokenMissing || r.tokenInvalid) this.freqNotice = 'repertoireTrainer.freqToken';
-      else if (r.fetchFailed) this.freqNotice = 'repertoireTrainer.freqFailed';
-      else if (!r.complete) this.freqNotice = 'repertoireTrainer.freqIncomplete';
-    }
-    this.buildQueue();
-  }
-
-  /** Wie oft man diese Linie erreicht (0…1), -1 = unbekannt. */
-  private freqOf(line: ParsedGame): number {
-    const end = line.fens[line.fens.length - 1];
-    if (!end || !this.lineFreq) return -1;
-    return this.lineFreq.get(normalizeFen(end)) ?? -1;
-  }
-
-  /** Bei „Häufigste zuerst" absteigend nach Häufigkeit; unbekannte hinten, sonst Reihenfolge wie gehabt
-   *  (die Sortierung ist stabil — gleich häufige bleiben gemischt bzw. in PGN-Reihenfolge). */
-  private byFrequency(lines: ParsedGame[]): ParsedGame[] {
-    if (!this.freqOrder || !this.lineFreq) return lines;
-    return [...lines].sort((a, b) => this.freqOf(b) - this.freqOf(a));
-  }
+  finishFrequencies(): void { this.freq.finish(); }
 
   /** Häufigkeit der aktuellen Linie für die Anzeige, `null` = aus/unbekannt. */
   get currentLineFrequency(): number | null {
-    if (!this.freqOrder || !this.lineFreq) return null;
+    if (!this.freqOrder || !this.freq.lineFreq) return null;
     const line = this.queue[this.qIndex];
-    const f = line ? this.freqOf(line) : -1;
+    const f = line ? this.freq.freqOf(line) : -1;
     return f >= 0 ? f : null;
   }
 
