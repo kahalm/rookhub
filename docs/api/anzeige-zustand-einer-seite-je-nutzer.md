@@ -17,13 +17,14 @@ Spalte ist `text`, nicht `varchar(8192)`: letzteres zaehlt in utf8mb4 mit 32 KB 
 `turnier.directory`) — ohne diese Liste waere der Endpunkt ein Schluessel-Wert-Speicher je Nutzer
 fuer beliebige Inhalte.
 
-Frontend (`core/view-state.service.ts` + `TournamentDirectoryComponent`): beim Oeffnen gilt ZUERST
+Frontend (`core/view-state.service.ts` + `TournamentDirectoryComponent`, Ablauf seit der Zerlegung Z28 in
+`directory-view-state-sync.ts` — `DirectoryViewStateSync`): beim Oeffnen gilt ZUERST
 die lokale Kopie (ohne Abruf, damit die Vorgabefilter nicht aufblitzen), danach der Server-Stand —
 weicht er ab, gewinnt ER (ihn schrieb das Geraet, an dem zuletzt gefiltert wurde) und NUR dann wird
 neu geladen. Hat der Server nichts, wird der lokale Zustand hinaufgeschoben — nur bei 204; scheitert der Abruf, geht
 erst die erste Aenderung nach dem fertigen ersten Aufbau hinauf (danach wie im Normalfall), vor der Antwort gar
 nichts (`DirectoryViewSync`, Codereview F6-015). Geschrieben wird
-gedrosselt (`PersistDebounceMs` 1200), weil `storeView()` bei jeder Aenderung der Leiste laeuft.
+gedrosselt (`PersistDebounceMs` 1200), weil `storeView()` (→ `DirectoryViewStateSync.store`) bei jeder Aenderung der Leiste laeuft.
 Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 
 | Methode | Endpoint | Zweck |

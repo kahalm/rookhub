@@ -343,7 +343,7 @@ Eltern, auf deren Importe darf sie sich nicht verlassen.
 Fehler, die zusammengehoerten: ein zweiter Klick tat gar nichts (`if (subscribed) return`), und
 der Pin unterschied gemerkt/nicht gemerkt ueberhaupt nicht — die Auskunft stand nur in der
 Kurzansicht, also erst nach dem Klick auf den richtigen Punkt, den man ohne die Auskunft nicht
-kennt. `pinStyle()` in `tournament-map.component.ts` faerbt gemerkte Punkte in einem eigenen
+kennt. `pinStyle()` in `map-pin-groups.ts` (bis zur Zerlegung Z27 in `tournament-map.component.ts`) faerbt gemerkte Punkte in einem eigenen
 Farbton UND mit dickerem Ring (**zwei Kanaele** — Farbe allein trennt nicht fuer jeden), die
 Abschwaechung fuer „nur ungefaehr verortet" bleibt darunter erhalten. Gemerkte werden ZULETZT
 gezeichnet und liegen damit oben. Nach einem Klick faerbt `applySubscribed()` nur die Punkte
