@@ -1573,6 +1573,163 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
  * Startzeit = Ende des Setup-Zugs (600 ms nach dem Laden). Puzzle 4 scheitert ohne Uhr-Tick, also vor dem Setup-Zug —
  * dann trägt es die Startzeit des vorigen Puzzles (festgehaltenes Ist-Verhalten, kein Soll).
  */
+/** Charakterisierung A4 (vor dem Run-Store): Lauf-Übergänge, die bisher nur indirekt abgedeckt waren. */
+describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () => {
+  function tracked(c: any): { sessions: any[]; local: any[]; immediate: any[] } {
+    const t = { sessions: [] as any[], local: [] as any[], immediate: [] as any[] };
+    c['storage'].recordSessionToServer = (s: any) => { t.sessions.push(s); return sub(77); };
+    c['storage'].saveActiveGameLocal = (g: any) => t.local.push(g);
+    c['storage'].saveProgressImmediate = (_c: any, _h: number, g: any) => t.immediate.push(g);
+    return t;
+  }
+
+  it('drei Fehler → 0 Leben → „Weiter" führt ins Game Over, Lauf genau einmal aufgezeichnet', () => {
+    const c = makeComponent();
+    const t = tracked(c);
+    c.startGame();
+    c['loseLife'](); c.continueAfterWrong();
+    c['loseLife'](); c.continueAfterWrong();
+    expect(c.lives).toBe(1);
+    c['loseLife']();
+    expect(c.lives).toBe(0);
+    expect(c.state).toBe('FAILED');
+    expect(t.local[t.local.length - 1]).toBeNull();      // kein 0-Leben-Spielstand
+    expect(t.immediate[t.immediate.length - 1]).toBeNull();
+    expect(t.sessions.length).toBe(0);
+    c.continueAfterWrong();
+    expect(c.state).toBe('GAME_OVER');
+    expect(c.chainIndex).toBe(2);
+    expect(c.isNewHighscore).toBeTrue();
+    expect(c.highscore).toBe(1100);
+    expect(t.sessions.length).toBe(1);
+    expect(t.sessions[0].mistakeAtRatings).toEqual([700, 900, 1100]);
+    expect(c.lastSessionId).toBe(77);
+    c.ngOnDestroy();
+    expect(t.sessions.length).toBe(1);
+  });
+
+  it('Kette durch (online) → nächster Block wird nachgeladen und angehängt', () => {
+    const c = makeComponent();
+    c.startGame();
+    c.continueAfterSolve(); c.continueAfterSolve(); c.continueAfterSolve();
+    expect(c['puzzleService'].getRandomBatch).toHaveBeenCalledTimes(2);
+    expect(c['chain'].map((p: any) => p.id)).toEqual([100, 101, 102, 100, 101, 102]);
+    expect(c.chainIndex).toBe(3);
+    expect(c.level).toBe(3);
+    expect(c.puzzle.id).toBe(100);
+    expect(c.state).not.toBe('WON');
+    c.ngOnDestroy();
+  });
+
+  it('Nachladen liefert keinen Block mehr → „You win", Lauf aufgezeichnet, Spielstand geräumt', () => {
+    const c = makeComponent();
+    const t = tracked(c);
+    c.startGame();
+    c['puzzleService'].getRandomBatch = jasmine.createSpy('getRandomBatch').and.returnValue(sub([]));
+    c.continueAfterSolve(); c.continueAfterSolve(); c.continueAfterSolve();
+    expect(c.state).toBe('WON');
+    expect(t.sessions.length).toBe(1);
+    expect(t.local[t.local.length - 1]).toBeNull();
+    expect(t.immediate[t.immediate.length - 1]).toBeNull();
+    c.ngOnDestroy();
+    expect(t.sessions.length).toBe(1);
+  });
+
+  it('Nachladen scheitert online mitten im Lauf → ehrlicher Abbruch zur Konfiguration', () => {
+    const c = makeComponent();
+    c.startGame();
+    c['puzzleService'].getRandomBatch = jasmine.createSpy('getRandomBatch')
+      .and.returnValue(throwError(() => new Error('server down')));
+    c.continueAfterSolve(); c.continueAfterSolve(); c.continueAfterSolve();
+    expect(c.state).toBe('CONFIG');
+    expect(c['snackbar'].info).toHaveBeenCalledWith('endless.loadFailed', jasmine.anything());
+    c.ngOnDestroy();
+  });
+
+  it('offline: Start aus der vorab geladenen Kette, Seed wird zur Kette gemerkt', () => {
+    const c = makeComponent();
+    const seeds: string[] = [];
+    c['storage'].saveChainSeed = (s: string) => seeds.push(s);
+    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    withOffline(() => c.startGame());
+    expect(c['puzzleService'].getRandomBatch).not.toHaveBeenCalled();
+    expect(c.puzzle.id).toBe(100);
+    expect(seeds).toEqual([c['seed']]);
+    expect(c.state).not.toBe('CONFIG');
+    c.ngOnDestroy();
+  });
+
+  it('offline ohne vorab geladene Kette → Hinweis und zurück zur Konfiguration', () => {
+    const c = makeComponent();
+    withOffline(() => c.startGame());
+    expect(c.state).toBe('CONFIG');
+    expect(c['snackbar'].info).toHaveBeenCalledWith('endless.offlineNoCache', jasmine.anything());
+    c.ngOnDestroy();
+  });
+
+  it('offline: Fehler wird für die Nachreichung vorgemerkt', () => {
+    const c = makeComponent();
+    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    withOffline(() => { c.startGame(); c['loseLife'](); });
+    expect(c['offlineQueue'].enqueue).toHaveBeenCalledWith('POST', '/api/puzzles/100/attempt/anonymous', jasmine.objectContaining({ solved: false }));
+    c.ngOnDestroy();
+  });
+
+  it('Fortsetzen offline ohne passenden Seed, aber genug Kette → bestmöglich an derselben Position', () => {
+    const c = makeComponent();
+    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c.activeGameState = { lives: 2, solved: 1, chainIndex: 1, seed: 'anderer', maxRatingReached: 900 };
+    withOffline(() => c.resumeGame());
+    expect(c.chainIndex).toBe(1);
+    expect(c.puzzle.id).toBe(101);
+    expect(c.lives).toBe(2);
+    c.ngOnDestroy();
+  });
+
+  it('Fortsetzen offline ohne passende Kette → Hinweis und zurück zur Konfiguration', () => {
+    const c = makeComponent();
+    c.activeGameState = { lives: 2, solved: 1, chainIndex: 5, seed: 'anderer', maxRatingReached: 900 };
+    withOffline(() => c.resumeGame());
+    expect(c.state).toBe('CONFIG');
+    expect(c['snackbar'].info).toHaveBeenCalledWith('endless.offlineNoCache', jasmine.anything());
+    c.ngOnDestroy();
+  });
+
+  it('Fortsetzen online ohne passende lokale Kette → Kette bis über die Position neu erzeugt', () => {
+    const c = makeComponent();
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'S', maxRatingReached: 1100, sessionSeconds: 30 };
+    c.resumeGame();
+    const windows = c['puzzleService'].getRandomBatch.calls.mostRecent().args[0];
+    expect(windows.length).toBe(2 + 30);   // chainIndex + ENDLESS_CHAIN_BLOCK
+    expect(c['seed']).toBe('S');
+    expect(c.chainIndex).toBe(2);
+    expect(c.puzzle.id).toBe(102);
+    expect(c.sessionSeconds).toBe(30);
+    c.ngOnDestroy();
+  });
+
+  it('ein lokaler Spielstand mit 0 Leben wird beim Öffnen verworfen (kein Zombie-Fortsetzen)', () => {
+    const cleared: any[] = [];
+    const c = makeComponent({}, makeSolveMode(), {
+      loadActiveGameLocal: () => ({ lives: 0, solved: 4, chainIndex: 4, seed: 'Z' }),
+      saveActiveGameLocal: (g: any) => cleared.push(g),
+    });
+    expect(c.activeGameState).toBeNull();
+    expect(cleared).toEqual([null]);
+  });
+
+  it('Archivieren des letzten Laufs: einmal anstoßen, danach als archiviert markiert', () => {
+    const c = makeComponent();
+    const ids: number[] = [];
+    c['storage'].archiveSession = (id: number) => { ids.push(id); return sub(null); };
+    c.lastSessionId = 12;
+    c.archiveLastSession();
+    expect(ids).toEqual([12]);
+    expect(c.lastSessionArchived).toBeTrue();
+    expect(c.archiving).toBeFalse();
+  });
+});
+
 describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)', () => {
   const T0 = Date.UTC(2026, 9, 25, 10, 0, 0);
   beforeEach(() => { jasmine.clock().install(); jasmine.clock().mockDate(new Date(T0)); });
