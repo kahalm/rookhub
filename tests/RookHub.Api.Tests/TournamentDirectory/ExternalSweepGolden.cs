@@ -694,7 +694,7 @@ internal static class ExternalSweepGolden
             """,
         ["Szs"] = """
             == 1 Erstlauf
-            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 0, Matched = 0, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 1, Matched = 0, Retired = 0 }
             Log Information: SZS-Kalender: 13 gelesen, 12 neu, 0 zugeordnet, 0 zurueckgezogen
             Eintrag sl1001 cr=- name=Danubius Kronstadt Memorial fed=SLO state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovenianChessFederation 1001 url=- erst=ja zuletzt=ja
@@ -862,7 +862,7 @@ internal static class ExternalSweepGolden
             Eintrag sl2009 cr=- name=Serienturnier Nummer9 fed=SLO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovenianChessFederation 2009 url=- erst=ja zuletzt=ja
             == 7 Speichern scheitert
-            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 1, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
             Log Warning: SZS: Zwischenstand konnte nicht gespeichert werden
             Log Information: SZS-Kalender: 2 gelesen, 1 neu, 1 zugeordnet, 0 zurueckgezogen
             Log Warning: Verschwunden-Erkennung SlovenianChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
@@ -1154,7 +1154,7 @@ internal static class ExternalSweepGolden
             """,
         ["ChessHu"] = """
             == 1 Erstlauf
-            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 0, Matched = 0, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 13, Added = 12, Updated = 1, Matched = 0, Retired = 0 }
             Log Information: chess.hu-Kalender: 13 gelesen, 12 neu, 0 zugeordnet, 0 zurueckgezogen
             Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
@@ -1322,7 +1322,7 @@ internal static class ExternalSweepGolden
             Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
             == 7 Speichern scheitert
-            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 1, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 1, Matched = 1, Retired = 0 }
             Log Warning: chess.hu: Zwischenstand konnte nicht gespeichert werden
             Log Information: chess.hu-Kalender: 2 gelesen, 1 neu, 1 zugeordnet, 0 zurueckgezogen
             Log Warning: Verschwunden-Erkennung HungarianChessFederation uebersprungen: der Lauf lieferte 2 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage

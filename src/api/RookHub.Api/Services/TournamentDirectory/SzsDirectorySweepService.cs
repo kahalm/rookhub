@@ -82,6 +82,8 @@ public class SzsDirectorySweepService : IDirectorySourceAdapter<SzsDirectorySwee
         await ExternalDirectorySource.NoteSourceAsync(_db, own,
             DirectorySourceKind.SlovenianChessFederation, row.EventId, null, now, ct);
 
+        // „Aktualisiert" heisst hier: verortet (wie FRSah/ECF).
+        var located = false;
         if (locationChanged || own.Lat is null)
         {
             var hit = await _geocoding.ResolveAsync(own.LocationText, null, "SLO", ct);
@@ -91,10 +93,10 @@ public class SzsDirectorySweepService : IDirectorySourceAdapter<SzsDirectorySwee
                 own.Lon = hit.Lon;
                 own.GeoSource = hit.Source;
                 own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
+                located = true;
             }
         }
-        // Die Antwort meldet unter „Updated" 0, wie bisher.
-        return false;
+        return located;
     }
 
     void IDirectorySourceAdapter<CrawlerSzsEvent>.LogSummary(

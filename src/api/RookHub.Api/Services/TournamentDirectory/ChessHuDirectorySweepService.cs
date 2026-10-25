@@ -81,9 +81,8 @@ public class ChessHuDirectorySweepService : IDirectorySourceAdapter<ChessHuDirec
             DirectorySourceKind.HungarianChessFederation, row.EventId, null, now, ct);
 
         // Ohne Spielort keine Koordinaten: „Online" und „Helyszín később" stehen im
-        // Orts-Feld, sind aber keine Orte. Verortet zaehlt nicht als „aktualisiert" (0, wie bisher).
-        await ExternalSweepRunner.LocateAsync(_geocoding, own, location, null, "HUN", locationChanged, ct);
-        return false;
+        // Orts-Feld, sind aber keine Orte. „Aktualisiert" heisst hier: verortet (wie FRSah/ECF).
+        return await ExternalSweepRunner.LocateAsync(_geocoding, own, location, null, "HUN", locationChanged, ct);
     }
 
     void IDirectorySourceAdapter<CrawlerChessHuEvent>.LogSummary(
