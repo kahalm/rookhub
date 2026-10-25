@@ -5,7 +5,7 @@ import { StockfishService } from './stockfish.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-class TestSolver extends BasePuzzleSolver {
+class TestSolver extends BasePuzzleSolver<'SOLVED' | 'FAILED'> {
   tickCount = 0;
   protected override onTimerTick(): void { this.tickCount++; }
   startTimerPublic(initial = 0): void { this.startTimer(initial); }

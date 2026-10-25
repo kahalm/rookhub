@@ -41,7 +41,7 @@ import { WeeklyService } from '../weekly/weekly.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isBoardHotkey } from '../../shared/keyboard.util';
-import { BookModeHost, BookModeStrategy } from './book-mode-host';
+import { BookEndState, BookModeHost, BookModeStrategy } from './book-mode-host';
 import { BookCourseMode } from './book-course-mode';
 import { BookContextCardComponent } from './book-context-card.component';
 import { BookCommentBlockComponent } from './book-comment-block.component';
@@ -69,7 +69,7 @@ import { BookHints } from './book-hints';
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
 })
-export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestroy, BookModeHost {
+export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implements OnInit, OnDestroy, BookModeHost {
   // state, boardFen, orientation, turnColor, dests, lastMove, isCheck, chess, solutionMoves,
   // moveIndex, startPly, autoAdvanceTimer, aborted, onSolutionPath, alternativeSolve,
   // mouseslipUsed, visualizationMode, vizMoves → BasePuzzleSolver

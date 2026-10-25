@@ -49,6 +49,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 /** Bereichs-Schlüssel der Spielweise (SolveModeService) für den Endless-Modus. */
 const SOLVE_SCOPE = 'endless';
 
+/** Endzustände dieses Lösers (die übrigen setzt {@link BasePuzzleSolver}). */
+export type EndlessEndState = 'CONFIG' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'WON';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-endless-puzzle',
@@ -62,7 +65,7 @@ const SOLVE_SCOPE = 'endless';
   templateUrl: './endless-puzzle.component.html',
   styleUrls: ['./endless-puzzle.component.scss'],
 })
-export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestroy, OnInit {
+export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> implements OnDestroy, OnInit {
   // Zustände (state, String aus BasePuzzleSolver): CONFIG, LOADING, SETUP, AWAITING_USER_MOVE (erster Zug, keine
   // Knöpfe), THINKING (Gegner antwortet, Brett gesperrt), PLAYING (Löser am Zug), SOLVED, FAILED, GAME_OVER, WON.
   get screen(): 'config' | 'play' | 'gameover' | 'won' | 'loading' {

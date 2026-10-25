@@ -16,6 +16,10 @@ import { whiteToMove } from '../../shared/chess/fen-side';
 
 export interface MoveLogEntry { i: number; uci: string; exp: string; ms: number; ok: boolean; }
 
+/** Zustände, die der Lös-Automat selbst setzt; die Endzustände (SOLVED/FAILED/…) bringt jede Komponente als
+ *  Typ-Parameter mit ({@link BasePuzzleSolver}). */
+export type SolverCoreState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING';
+
 /** Wie lange ein gespielter (geduldeter) Alternativzug auf dem Brett stehen bleibt, bevor er
  *  zurückgenommen wird und der Hauptzug weiter erwartet wird. */
 const ALT_HOLD_MS = 1400;
@@ -28,9 +32,10 @@ const ALT_HOLD_MS = 1400;
  *
  * Modus-Unterschiede laufen über Hooks: {@link handleSolved}/{@link handleFailed} (Pflicht),
  * {@link depth}, {@link stockfishErrorContinues}, {@link onSetupStart}, {@link onSolvingBegins}.
- * Die konkrete Komponente setzt am Ende ihren eigenen `state` (SOLVED/CORRECT/WRONG/...).
+ * Die konkrete Komponente setzt am Ende ihren eigenen `state` (SOLVED/FAILED/...) — die erlaubten Endzustände
+ * gibt sie als Typ-Parameter an (`extends BasePuzzleSolver<'SOLVED' | 'FAILED'>`).
  */
-export abstract class BasePuzzleSolver {
+export abstract class BasePuzzleSolver<S extends string = never> {
   // ---- Brett-Präsentation (von Templates gelesen) ----
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   /**
@@ -53,8 +58,8 @@ export abstract class BasePuzzleSolver {
   lastMove?: [Key, Key];
   isCheck = false;
 
-  /** Gemeinsamer Zustand; Endzustände (SOLVED/FAILED/CORRECT/WRONG/...) setzt die Komponente. */
-  state = 'LOADING';
+  /** Gemeinsamer Zustand; Endzustände (SOLVED/FAILED/...) setzt die Komponente (Typ-Parameter `S`). */
+  state: SolverCoreState | S = 'LOADING';
   /** Die Komponente wartet auf die Spielweise-Wahl (blockierender Dialog vor dem ersten Puzzle eines
    *  Bereichs): die Aufgabe steht schon auf dem Brett ({@link previewSetup}), aber ohne Uhr und Setup-Zug,
    *  und die Status-Karte bittet um die Wahl statt „lädt…" zu zeigen. */

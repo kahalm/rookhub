@@ -32,6 +32,9 @@ const STOCKFISH_DEPTH = 12;
  *
  * <p>Default-Change-Detection wie die übrigen Löser: der Automat der Basisklasse schreibt in gewöhnliche Felder.</p>
  */
+/** Endzustände dieses Lösers (die übrigen setzt {@link BasePuzzleSolver}). */
+export type WoodpeckerEndState = 'SOLVED' | 'FAILED';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-woodpecker-solve',
@@ -175,7 +178,7 @@ const STOCKFISH_DEPTH = 12;
     }
   `],
 })
-export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit, OnDestroy {
+export class WoodpeckerSolveComponent extends BasePuzzleSolver<WoodpeckerEndState> implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private service = inject(WoodpeckerService);

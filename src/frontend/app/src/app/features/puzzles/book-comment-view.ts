@@ -1,6 +1,7 @@
 import { MatDialog } from '@angular/material/dialog';
 import { Key } from 'chessground/types';
 import { BookPuzzleDto } from './puzzle.service';
+import type { BookState } from './book-mode-host';
 import { CommentSegment } from './comment-variation.util';
 import { CommentBlockCache } from './line-step.util';
 import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
@@ -12,7 +13,7 @@ export interface VariationPreview { fen: string; lastMove: [Key, Key] }
 /** Was die Kommentar-Anzeige vom Buch-Löser braucht. */
 export interface BookCommentHost {
   readonly puzzle: BookPuzzleDto | null;
-  readonly state: string;
+  readonly state: BookState;
   readonly reviewMode: boolean;
   readonly reviewIndex: number;
   readonly moveComment: string | null;

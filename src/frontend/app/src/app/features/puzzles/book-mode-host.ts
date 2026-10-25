@@ -1,6 +1,7 @@
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { BookPuzzleDto, PuzzleService } from './puzzle.service';
+import type { SolverCoreState } from './base-puzzle-solver';
 import { CourseService } from '../courses/course.service';
 import { CourseLanguageService, CourseRef } from '../courses/course-language.service';
 import { WeeklyService } from '../weekly/weekly.service';
@@ -18,11 +19,16 @@ import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
  * Dienste werden LIVE über den Wirt gelesen (nicht beim Bau kopiert) — so bleibt ein im Test ausgetauschter Dienst
  * auch für die Strategie gültig.
  */
+/** Endzustände des Buch-/Kurs-Lösers: 'INFO' = Info-/Erklärlinie (kein Quiz, nur Durchklicken), 'COURSE_DONE' =
+ *  nichts mehr zu tun (Kurs/Kapitel fertig, Woche leer). Die übrigen setzt der Lös-Automat. */
+export type BookEndState = 'SOLVED' | 'FAILED' | 'INFO' | 'COURSE_DONE';
+/** Alle Zustände des Buch-/Kurs-Lösers. */
+export type BookState = SolverCoreState | BookEndState;
+
 export interface BookModeHost {
   puzzle: BookPuzzleDto | null;
-  /** Zustand des Lösers: 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' |
-   *  'COURSE_DONE' | 'INFO' (Info-/Erklärlinie: kein Quiz, nur Durchklicken). */
-  state: string;
+  /** Zustand des Lösers ({@link BookState}). */
+  state: BookState;
   loadError: boolean;
   gaveUp: boolean;
   /** Monotone Epoche je Ladevorgang — eine ältere, langsamer auflösende Antwort wird verworfen. */

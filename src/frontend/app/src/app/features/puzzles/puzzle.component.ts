@@ -49,6 +49,9 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 const SOLVE_SCOPE = 'puzzles';
 
 
+/** Endzustände dieses Lösers (die übrigen setzt {@link BasePuzzleSolver}). */
+export type PuzzleEndState = 'SOLVED' | 'FAILED' | 'ERROR';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-puzzle',
@@ -61,7 +64,7 @@ const SOLVE_SCOPE = 'puzzles';
   templateUrl: './puzzle.component.html',
   styleUrls: ['./puzzle.component.scss'],
 })
-export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestroy {
+export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements OnInit, OnDestroy {
   // state, boardFen, orientation, turnColor, dests, lastMove, isCheck, onSolutionPath,
   // alternativeSolve, mouseslipUsed, currentEval, visualizationMode, vizMoves, chess,
   // solutionMoves, moveIndex, autoAdvanceTimer, aborted, moveLog, moveStartTime → BasePuzzleSolver
