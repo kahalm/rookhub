@@ -38,6 +38,7 @@ import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
+import { CalcTrainingTimer } from './calc-training-timer';
 import { KeyedSingleFlightQueue, SingleFlight } from './keyed-single-flight-queue';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
@@ -46,7 +47,6 @@ import {
   CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult,
 } from './calc-timer-dialog.component';
 import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
-import { localStore, readJson, writeJson } from '../../../core/local-json-store';
 import { AuthService } from '../../../core/auth.service';
 import { formatSecondsClock } from '../../../shared/clock-format.util';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
@@ -217,28 +217,20 @@ export class CalculationComponent implements OnInit, OnDestroy {
   orientation: Color = 'white';
 
   // ===== Kapitel-Training (Timer) ==========================================
-  // Kumuliert die Rechenzeit JE KAPITEL (nicht je Stellung): beim Stellungswechsel innerhalb
-  // desselben Kapitels läuft derselbe Zähler weiter, beim Kapitelwechsel wird der Topf des
-  // neuen Kapitels geladen. Die AKKUMULIERTE Zeit liegt je Gerät im localStorage
-  // (`rookhub_calc_timer_<bookId>`, Map Kapitelname→Sekunden) — bewusst ohne Server-Anteil:
-  // sie ist ein Trainingswerkzeug, kein Wertungsbestandteil.
-  //
-  // Der LAUFZUSTAND dagegen lebt NUR hier im Speicher und wird nirgends persistiert: ein
-  // Zustand, der ein Neuladen überlebt, fängt sich irgendwann eine vergessene Stunde ein.
+  // Kumuliert die Rechenzeit JE KAPITEL — Uhr, Topf und Besitzer stehen in {@link CalcTrainingTimer}.
   // Solange nicht gestartet wurde, misst auch die Stellungs-Uhr nichts (siehe `beginWatch`)
   // und es geht kein `addSeconds` an den Server.
-  timerRunning = false;
-  timerSeconds = 0;
-  /** Kapitel-Schlüssel des laufenden Zählers ('' = „ohne Kapitel"); null = noch nicht geladen. */
-  private timerChapterKey: string | null = null;
-  /** Ist der LETZTE Schreibversuch der Kapitel-Uhr gescheitert? Gemeldet wird nur der Übergang in den
-   *  Fehlschlag (siehe {@link persistTimer}). */
-  private timerPersistFailed = false;
-  /** Wessen Speicherstand gerade in {@link timerSeconds} steht: die Nutzer-Id beim Laden des
-   *  Kapitel-Topfs ({@link syncTimerChapter}), null = anonym. Meldet sich jemand ab oder wechselt das
-   *  Konto, während die Seite offen ist, schreibt {@link persistTimer} nicht mehr (siehe dort). */
-  private timerOwner: number | null = null;
-  private timerHandle?: ReturnType<typeof setInterval>;
+  private readonly timer = new CalcTrainingTimer({
+    storageKey: () => `rookhub_calc_timer_${this.bookId}`,
+    userId: () => this.auth?.currentUser?.userId ?? null,
+    // Anonym meldet die Warnung „kann gerade nichts speichern" die Zeit ausdrücklich mit; zurückgenommen wird sie
+    // hier nicht — das bleibt dem Baum-Speicher.
+    onPersistFailed: () => this.setLocalSaveFailed(this.localOnly),
+  });
+
+  get timerRunning(): boolean { return this.timer.running; }
+  get timerSeconds(): number { return this.timer.seconds; }
+  set timerSeconds(seconds: number) { this.timer.seconds = seconds; }
   readonly noDests = new Map<Key, Key[]>();
 
   // ===== Festlegung / Rechenzeit / Bewertung je STELLUNG ====================
@@ -280,13 +272,13 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   /**
    * Darf JETZT gemessen werden? Nur mit geladener Stellung: der Kapitel-Topf
-   * ({@link timerChapterKey}) entsteht erst in {@link applyPosition} — ohne ihn speichert
-   * `persistTimer()` nichts und `beginWatch` hätte keine Stellung, der die Zeit gehört. Scheitert
+   * (`CalcTrainingTimer.hasChapter`) entsteht erst in {@link applyPosition} — ohne ihn speichert
+   * die Uhr nichts und `beginWatch` hätte keine Stellung, der die Zeit gehört. Scheitert
    * das Laden (`loadError`), tickte die Anzeige also vor sich hin, ohne irgendetwas zu messen oder
    * zu sichern: eine Uhr, die lügt. Dann lieber gar nicht erst starten (und sagen, warum).
    */
   get canTrain(): boolean {
-    return !this.loadError && this.position !== null && this.timerChapterKey !== null;
+    return !this.loadError && this.position !== null && this.timer.hasChapter;
   }
 
   /** Stoppen muss immer gehen — gesperrt wird nur das STARTEN ohne geladene Stellung. */
@@ -319,14 +311,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
       this.snackbar.warn(this.translate.instant('calc.timer.unavailable'));
       return;
     }
-    this.timerRunning = true;
+    this.timer.start();
     // Die Stellungs-Uhr wird erst hier aufgezogen (`beginWatch` misst nur bei laufendem Training).
     if (this.position) this.beginWatch(this.position.id);
-    this.timerHandle = setInterval(() => {
-      this.timerSeconds++;
-      // Jede Sekunde persistieren: übersteht Tab-Schließen/Navigieren ohne eigenen Flush-Pfad.
-      this.persistTimer();
-    }, 1000);
   }
 
   /**
@@ -335,67 +322,13 @@ export class CalculationComponent implements OnInit, OnDestroy {
    */
   stopTraining(): void {
     if (!this.timerRunning) return;
-    this.timerRunning = false;
-    if (this.timerHandle !== undefined) { clearInterval(this.timerHandle); this.timerHandle = undefined; }
-    this.persistTimer();
+    this.timer.stop();
     this.harvestWatch();
   }
 
   /** Angezeigte kumulierte Kapitel-Zeit (m:ss bzw. h:mm:ss). */
   get timerDisplay(): string {
-    return formatSecondsClock(this.timerSeconds);
-  }
-
-  /**
-   * Beim Stellungswechsel den Zähler-Topf des Kapitels nachziehen: gleiches Kapitel → weiterzählen
-   * (die Zeit AKKUMULIERT über mehrere Durchgänge), anderes Kapitel → alten Stand sichern und den
-   * des neuen Kapitels laden. Ein Kapitelwechsel stoppt das Training ohnehin vorher.
-   */
-  private syncTimerChapter(chapter: string | null): void {
-    const key = chapter ?? '';
-    if (key === this.timerChapterKey) return;
-    if (this.timerChapterKey !== null) this.persistTimer();
-    this.timerChapterKey = key;
-    // Besitzer VOR dem Lesen festhalten: die Abfrage kann einen Sitzungsablauf auslösen, der den
-    // Speicher räumt — gelesen wird dann schon der geräumte Stand.
-    this.timerOwner = this.timerUserId();
-    this.timerSeconds = this.readTimerStore()[key] ?? 0;
-  }
-
-  private timerUserId(): number | null {
-    return this.auth?.currentUser?.userId ?? null;
-  }
-
-  private timerStorageKey(): string {
-    return `rookhub_calc_timer_${this.bookId}`;
-  }
-
-  private readTimerStore(): Record<string, number> {
-    const parsed = readJson<Record<string, number>>(localStore(), this.timerStorageKey());
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  }
-
-  /**
-   * Speicher voll/gesperrt wird GEMELDET wie beim Baum-Speicher (anonym: die Warnung „kann gerade
-   * nichts speichern" — sie nennt die Zeit ausdrücklich mit), statt still verschluckt: sonst war die
-   * Kapitel-Uhr nach dem Neuladen weg, während dieselbe Seite für den Baum warnte. Gemeldet wird nur
-   * der ÜBERGANG in den Fehlschlag: die Uhr schreibt jede Sekunde, eine weggeklickte Warnung stünde
-   * sonst sekündlich wieder da. Zurückgenommen wird sie hier nicht — das bleibt dem Baum-Speicher.
-   */
-  private persistTimer(): void {
-    if (this.timerChapterKey === null) return;
-    // Die Zeit gehört dem, aus dessen Speicherstand sie geladen wurde. Abmelden auf offener Seite
-    // (die Navbar schwebt auch im Kalkulations-Modus): AuthService.logout() räumt den Speicher
-    // (OfflineService.clearOnLogout) und navigiert ERST DANACH — ngOnDestroy → stopTraining schrieb
-    // die Kapitelzeit des Vorgängers zurück, und der nächste Nutzer am Gerät zählte darauf weiter.
-    // Ebenso der Sekundentakt nach einem Sitzungsablauf (dort ohne Navigation) und ein Ab- oder
-    // Ummelden in einem anderen Tab. Die eigene Zeit geht damit beim Abmelden verloren — gewollt (F3-019).
-    if (this.timerUserId() !== this.timerOwner) return;
-    const store = this.readTimerStore();
-    store[this.timerChapterKey] = this.timerSeconds;
-    const ok = writeJson(localStore(), this.timerStorageKey(), store);
-    if (!ok && !this.timerPersistFailed) this.setLocalSaveFailed(this.localOnly);
-    this.timerPersistFailed = !ok;
+    return this.timer.display;
   }
 
   /**
@@ -656,7 +589,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   private applyPosition(pos: CalcPosition): void {
-    this.syncTimerChapter(pos.chapter);
+    this.timer.syncChapter(pos.chapter);
     this.beginWatch(pos.id);
     this.loadReview(pos);
     this.startFen = this.buildStartFen(pos);
@@ -1250,8 +1183,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     ref.afterClosed().subscribe(result => {
       // Nur eine echte Zahl zählt: ein Fremdwert (leerer String vom Framework) ist „weggeklickt".
       if (typeof result !== 'number' || !Number.isFinite(result)) return;
-      this.timerSeconds = Math.max(0, Math.floor(result));
-      this.persistTimer();
+      this.timer.setSeconds(Math.max(0, Math.floor(result)));
     });
   }
 
