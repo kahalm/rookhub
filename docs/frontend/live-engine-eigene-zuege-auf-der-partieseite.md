@@ -10,11 +10,13 @@ Engine per Fabrik — in Tests ein Fake), Leiste in `live-engine-panel.component
 „Zug zurück"/„Zurück zur Partie", Linien).
 - **Eigene Engine-Instanz je Seite** (`new AnalysisEngineService()` — geht, weil der Service weder Konstruktor noch
   `inject()` hat); `stopLive()`/Seitenende beenden sie. Die Seite erzeugt sie über `createLiveSession()` — Tests
-  überschreiben die Methode, statt einen echten Stockfish zu starten.
+  überschreiben die Methode, statt einen echten Stockfish zu starten. Steuerung (Ein/Aus, Engine-Wahl, gemerkte
+  externe Engine, „Analysieren" im Training, Abgleich) seit der Zerlegung Z26 in `features/games/game-engine-controller.ts`
+  (`GameEngineController`, Signale; die Seite reicht Stellung, Training und die Fabrik herein).
 - **Welche Engine**: angemeldet und am Analysebrett eine externe gewählt (`ANALYSIS_PROVIDER_KEY`) → dieselbe (ohne
   Hintergrund-Engines), sonst Stockfish im Browser; Tiefe = `ANALYSIS_DEPTH_KEY` (Vorgabe 22). Die Schlüssel stehen in
   `features/analysis/analysis-settings.ts`, damit die Partieseite nicht das ganze Analysebrett ins Bündel zieht.
-- **Abgleich per `ngDoCheck`** (`session.sync`): der PgnViewerService hat keine Signale; geblättert (Pfeile, Zugliste,
+- **Abgleich per `ngDoCheck`** (`GameEngineController.sync` → `session.sync`): der PgnViewerService hat keine Signale; geblättert (Pfeile, Zugliste,
   Kurve) → Nebenvariante weg, neue Stellung → rechnen. In der Nebenvariante nimmt ← den letzten eigenen Zug zurück.
 - **Pfeiltasten in der eigenen Variante** (0.526.2): ← zurück, → wieder vor (`LiveEngineSession` hält alle Züge +
   `cursor`, `canRedo`); am Variantenende tut → nichts, an ihrem Anfang blättert ← in der Partie. Gemeldet als „die

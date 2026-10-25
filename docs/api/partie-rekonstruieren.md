@@ -147,7 +147,8 @@ deshalb vom vorigen, wenn die gewählte Seite der Stellung davor widerspricht. B
 heißt der Haken: das ist nicht die Eröffnung — `ReconstructionChain` verankert es dann nicht an der
 Grundstellung, sondern behandelt es wie jedes andere freie Bruchstück.
 
-**Aufgezeichnet wird im FLUSS** (`reconstruct-detail.component.ts`): eine leere Rekonstruktion
+**Aufgezeichnet wird im FLUSS** (`reconstruct-detail.component.ts`; Zug-Editor `part-editor.component.ts`, Lückenzeile
+`gap-proposals.component.ts`, reine Zug-/Lücken-Hilfen `reconstruct-moves.util.ts` — Zerlegung Z25): eine leere Rekonstruktion
 öffnet gleich den Zug-Editor, „Stellung eingeben" speichert das Getippte und führt in den
 Stellungs-Editor, und eine übernommene Stellung öffnet wieder den Zug-Editor (mit Anschluss an sie).
 Ein LEERER Zug-Editor wechselt dabei nur die Art und legt nichts an — das ist der Weg „direkt zur
