@@ -23,8 +23,11 @@ import { VisibilityStopwatch } from '../../puzzles/visibility-stopwatch';
 import { PreferencesService } from '../../../core/preferences.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { CalcLinesComponent } from './calc-lines.component';
+import { CalcResultCardComponent } from './calc-result-card.component';
+import { CalcAnnotateCardComponent } from './calc-annotate-card.component';
+import { CalcStatusPanelComponent } from './calc-status-panel.component';
 import {
-  CALC_EVALS, CALC_GLYPHS, CalcEval, CalcGlyph, CalcNode, CalcTree, evalNameKey, glyphNameKey,
+  CalcEval, CalcGlyph, CalcNode, CalcTree,
   createTree, deserializeTree, findNode, isEmpty, rootNode, serializeTree, setEvaluation, setGlyph,
   whiteToMove,
 } from './calc-tree.util';
@@ -87,6 +90,7 @@ export type { CalcPositionGroup } from './calc-chapters.util';
     RouterLink,
     PuzzleBoardComponent, CalcLinesComponent, BoardFullscreenButtonComponent,
     CourseLangPickerComponent, MachineNoteComponent,
+    CalcResultCardComponent, CalcAnnotateCardComponent, CalcStatusPanelComponent,
   ],
   templateUrl: './calculation.component.html',
   styleUrls: ['./calculation.component.scss'],
@@ -278,8 +282,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private serverSums = new Map<string, CalcChapterSums>();
   private serverTotals: { points: number; maxPoints: number } | null = null;
 
-  readonly glyphs = CALC_GLYPHS;
-  readonly evals = CALC_EVALS;
 
   // ===== Kapitel-Training starten/stoppen ==================================
 
@@ -346,23 +348,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /** Angezeigte kumulierte Kapitel-Zeit (m:ss bzw. h:mm:ss). */
   get timerDisplay(): string {
     return this.timer.display;
-  }
-
-  /**
-   * Erklärung eines Symbols fürs Mouseover: erst was es bedeutet („Weiß gewinnt"), dann der
-   * Bedienhinweis. Der Übersetzungs-Schlüssel kommt aus `calc-tree.util` — dieselbe Quelle wie
-   * die Symbolliste, damit kein Symbol ohne Erklärung bleibt.
-   */
-  glyphTooltip(glyph: CalcGlyph): string {
-    return this.symbolTooltip(glyphNameKey(glyph));
-  }
-
-  evalTooltip(evaluation: CalcEval): string {
-    return this.symbolTooltip(evalNameKey(evaluation));
-  }
-
-  private symbolTooltip(nameKey: string): string {
-    return `${this.translate.instant(nameKey)} (${this.translate.instant('calc.symbolToggleHint')})`;
   }
 
   /** Kommentar-Entwurf zum ausgewählten Zug. */

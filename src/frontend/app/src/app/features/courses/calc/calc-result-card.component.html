@@ -1,0 +1,44 @@
+<!-- Festlegung · Rechenzeit · Ergebnis. Die fünf Stufen stehen NICHT mehr hier, sondern
+     hinter dem Knopf „Ergebnis" (Dialog): der Modus soll ein Brett bleiben, kein
+     Formular. Die Festlegung selbst wird am Stern in der Linienliste gesetzt. -->
+<mat-card class="calc-review">
+  <mat-card-content>
+    <div class="calc-review-row">
+      <span class="calc-review-chip" [class.calc-review-chip--set]="chosenSan()"
+            [matTooltip]="'calc.review.choiceHint' | translate">
+        <mat-icon>{{ chosenSan() ? 'star' : 'star_border' }}</mat-icon>
+        <span>{{ chosenSan() || ('calc.review.noChoice' | translate) }}</span>
+      </span>
+      <!-- ZWEITE Uhr auf dem Schirm (die andere in der Befehlszeile misst das KAPITEL).
+           Beide zeigten „0:00" ohne Beschriftung — welche welche ist, muss dastehen. -->
+      <span class="calc-review-chip" [matTooltip]="'calc.review.timeHint' | translate">
+        <mat-icon>hourglass_bottom</mat-icon>
+        <span class="calc-review-label">{{ 'calc.review.positionTime' | translate }}</span>
+        <span class="calc-review-time">{{ positionTime() }}</span>
+      </span>
+      <span class="calc-spacer"></span>
+      <!-- Unbewertet heißt der Knopf „Ergebnis", bewertet zeigt er die gewählte Stufe. -->
+      <button type="button" mat-stroked-button class="calc-result-btn"
+              [class.calc-result-btn--set]="graded()"
+              [matTooltip]="'calc.review.resultHint' | translate"
+              (click)="openGrade.emit()">
+        <mat-icon>rule</mat-icon>
+        <span class="calc-result-label">{{ gradeLabel() }}</span>
+        @if (graded()) {
+          <span class="calc-review-score">{{ score() }}</span>
+        }
+      </button>
+      <!-- Nach dem Bewerten: die eigene Linie im Analyse-Modus mit der Engine prüfen. -->
+      @if (graded()) {
+        <button type="button" mat-stroked-button class="calc-analyze-btn"
+                (click)="analyze.emit()"
+                [matTooltip]="'calc.analyze.hint' | translate">
+          <mat-icon>insights</mat-icon>
+          <span>{{ 'calc.analyze.open' | translate }}</span>
+        </button>
+      }
+    </div>
+    <!-- Der Satz „Prüf die Lösung im Buch …" stand hier dauerhaft. Er gehört dorthin, wo
+         man ihn braucht: in den Ergebnis-Dialog, unmittelbar vor der Auswahl. -->
+  </mat-card-content>
+</mat-card>

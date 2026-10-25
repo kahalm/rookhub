@@ -1,0 +1,68 @@
+/* Zug-Anmerkungen: Symbole, Einschätzung, Kommentar (aus calculation.component.scss, Zerlegung Z20). */
+:host { display: contents; }
+
+.calc-annotate-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.calc-annotate-target {
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 0.8rem;
+}
+
+.calc-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.3rem;
+}
+
+.calc-sym {
+  min-width: 2.1rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.2;
+  cursor: pointer;
+
+  &:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; }
+}
+
+.calc-sym--on {
+  background: var(--mat-sys-primary);
+  border-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-weight: 700;
+}
+
+.calc-comment-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  margin-top: 0.35rem;
+
+  input {
+    flex: 1;
+    min-width: 6rem;
+    padding: 5px 7px;
+    border-radius: 4px;
+    border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+}

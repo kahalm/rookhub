@@ -79,54 +79,6 @@
   white-space: nowrap;
 }
 
-/* ד am Hinweis: klein und rechts, damit es die Zeile nicht dominiert. */
-.calc-note-close {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  mat-icon { font-size: 17px; width: 17px; height: 17px; }
-}
-
-/* „Nur auf diesem Gerät"-Hinweis für nicht angemeldete Nutzer. Bewusst eine ruhige Zeile:
-   kein Dialog, keine Farbe, die nach Fehler aussieht — es ist eine Auskunft, keine Warnung. */
-.calc-local-note {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin: 0 0 0.6rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  opacity: 0.85;
-  background: rgba(128, 128, 128, 0.12);
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    opacity: 0.8;
-  }
-}
-
-/* Ausnahme von der Ruhe oben: konnte GAR NICHT gespeichert werden (Privatmodus, Quota voll),
-   ist es eben doch ein Fehler — und der darf nicht wie eine Auskunft aussehen. */
-.calc-local-note--failed {
-  opacity: 1;
-  background: rgba(211, 47, 47, 0.14);
-  color: var(--mat-sys-error, #d32f2f);
-
-  mat-icon { opacity: 1; }
-}
-
-.calc-local-text { flex: 1 1 12rem; }
-
 .calc-loading {
   display: flex;
   justify-content: center;
@@ -142,10 +94,6 @@
 
 @media (max-width: 899.98px) {
   .calc-layout { grid-template-columns: 1fr; }
-
-  /* Schmal soll das × neben dem Anmelde-Link stehen und nicht auf einer eigenen Zeile darunter. */
-  .calc-local-note { flex-wrap: nowrap; }
-  .calc-local-text { flex: 1 1 auto; min-width: 0; }
 }
 
 /* Ab hier steht die App-Kopfzeile rechts (Modus-Klasse) und über dem Brett nur die Befehlszeile.
@@ -200,13 +148,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-}
-
-.calc-board-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 /* „Eingefroren" ist eine Eigenschaft des MODUS und ändert sich nie — als Dauertext war das
@@ -293,218 +234,10 @@
   align-items: center;
 }
 
-.calc-keys-on { color: var(--mat-sys-primary, #1565c0); }
-
 .calc-keys {
   margin: 0.4rem 0 0;
   font-size: 0.78rem;
   color: color-mix(in srgb, currentColor 50%, transparent);
-}
-
-.calc-annotate-head {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 600;
-  margin-bottom: 0.35rem;
-}
-
-.calc-annotate-target {
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  font-size: 0.8rem;
-}
-
-.calc-symbols {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-bottom: 0.3rem;
-}
-
-.calc-sym {
-  min-width: 2.1rem;
-  padding: 0.25rem 0.4rem;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 1rem;
-  line-height: 1.2;
-  cursor: pointer;
-
-  &:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
-
-  mat-icon { font-size: 16px; width: 16px; height: 16px; vertical-align: middle; }
-}
-
-.calc-sym--on {
-  background: var(--mat-sys-primary);
-  border-color: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  font-weight: 700;
-}
-
-.calc-comment-row {
-  display: flex;
-  gap: 0.3rem;
-  align-items: center;
-  margin-top: 0.35rem;
-
-  input {
-    flex: 1;
-    min-width: 6rem;
-    padding: 5px 7px;
-    border-radius: 4px;
-    border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-  }
-}
-
-.calc-hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: color-mix(in srgb, currentColor 50%, transparent);
-}
-
-/* Fußzeile: Bearbeitungs- und Speicherstand. Auskunft, keine Bedienung — deshalb ruhig, klein
-   und ganz unten. */
-.calc-foot {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin: 0;
-  font-size: 0.78rem;
-  color: color-mix(in srgb, currentColor 55%, transparent);
-}
-
-.calc-done {
-  font-size: 0.8rem;
-  opacity: 0.75;
-}
-
-/* ===== Kapitelende ===== */
-.calc-chapter-done {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-top: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--rh-success) 12%, transparent);
-  font-size: 0.85rem;
-
-  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--rh-success); }
-}
-
-.calc-chapter-done-text { flex: 1 1 10rem; font-weight: 600; }
-/* Nur der WEG ins nächste Kapitel, ohne die Behauptung „durch": dieselbe Zeile, aber ohne die
-   Erledigt-Färbung — Grün ist hier eine Aussage und keine Dekoration. */
-.calc-chapter-done--onward {
-  background: color-mix(in srgb, currentColor 7%, transparent);
-}
-
-/* Der Knopf „Ergebnis": eine Aktion statt fünf Schaltern (UI-Dichte-Regel). */
-.calc-result-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.calc-result-btn--set {
-  color: #f57f17;
-  font-weight: 600;
-}
-
-.calc-result-label {
-  max-width: 12rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ===== Festlegung · Rechenzeit · Selbstbewertung ===== */
-.calc-review-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.calc-review-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  color: color-mix(in srgb, currentColor 65%, transparent);
-
-  mat-icon { font-size: 16px; width: 16px; height: 16px; }
-}
-
-.calc-review-chip--set {
-  color: #f57f17;
-  font-weight: 600;
-}
-
-.calc-review-time,
-.calc-review-score { font-variant-numeric: tabular-nums; }
-
-/* Im Ergebnis-Knopf klebte die Punktzahl am Text („Gelöst4 / 4"). Das `gap` des Knopfes hilft
-   dort nicht: Material projiziert den Inhalt in EINEN `mdc-button__label`, die Lücke entsteht
-   also nur zwischen Icon und Label, nie zwischen zwei Spans DARIN. Angular entfernt den
-   Zeilenumbruch aus der Vorlage (preserveWhitespaces), es bleibt kein Leerzeichen übrig. */
-.calc-result-label + .calc-review-score { margin-left: 0.35rem; }
-
-/* Die fünf Stufen: eine Spalte von Schaltflächen, gewählt wird die BEDEUTUNG (die Punkte
-   stehen nur als kleine Zahl daneben). Kein Zahlenfeld — die Stufe ist die Eingabe. */
-.calc-grades {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  margin-top: 0.4rem;
-}
-
-.calc-grade {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 0.85rem;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-}
-
-.calc-grade--on {
-  border-color: #f9a825;
-  background: color-mix(in srgb, #f9a825 16%, transparent);
-  font-weight: 600;
-}
-
-.calc-grade-label { flex: 1; }
-
-.calc-grade-points {
-  flex: 0 0 auto;
-  min-width: 1.2rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.7;
 }
 
 /* Zusatzangaben in der Sprungliste (Wahl · Zeit · Stufe/Punkte) */
@@ -578,8 +311,6 @@
    Breite = Viewport minus Seitenspalte), Rest rechts daneben; die „Du bist hier"-Zugzeile
    wechselt vom Brett in die Seitenspalte. Nur ab 900px — darunter bleibt die Einspalten-
    Ansicht (dort gewinnt das Brett durch eine Seitenspalte nichts). */
-.calc-board-head--side { display: none; }
-
 @media (min-width: 900px) {
   :host-context(.app-fullscreen) {
     .calc-page { max-width: none; padding: 0.5rem; }

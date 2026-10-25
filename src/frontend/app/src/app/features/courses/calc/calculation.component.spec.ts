@@ -846,20 +846,7 @@ describe('CalculationComponent Tastatur', () => {
   });
 });
 
-describe('CalculationComponent Symbol-Erklärungen', () => {
-  it('erklärt jedes Symbol im Mouseover — Bedeutung plus Bedienhinweis', () => {
-    const { component } = make();          // Translate-Stub liefert den Schlüssel zurück
-    expect(component.evalTooltip('+−')).toBe('calc.eval.whiteWinning (calc.symbolToggleHint)');
-    expect(component.evalTooltip('−+')).toBe('calc.eval.blackWinning (calc.symbolToggleHint)');
-    expect(component.glyphTooltip('??')).toBe('calc.glyph.blunder (calc.symbolToggleHint)');
-  });
-
-  it('lässt keines der angebotenen Symbole ohne Erklärung', () => {
-    const { component } = make();
-    for (const g of component.glyphs) expect(component.glyphTooltip(g)).toContain('calc.glyph.');
-    for (const e of component.evals) expect(component.evalTooltip(e)).toContain('calc.eval.');
-  });
-});
+// Symbol-Erklärungen (Mouseover) prüft seit Zerlegung Z20 calc-annotate-card.component.spec.ts.
 
 describe('CalculationComponent Kapitel-Training (Timer)', () => {
   beforeEach(() => {

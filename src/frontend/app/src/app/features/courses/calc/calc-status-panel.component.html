@@ -1,0 +1,75 @@
+<!-- Kapitelende: NICHT von selbst weiterspringen (das mischte die Kapitel-Zeit still über
+     Kapitelgrenzen), sondern deutlich sagen und den Weg anbieten. Erscheint ohnehin nur am
+     Ende — deshalb bleibt es als eigener Block stehen. -->
+@if (atChapterEnd() || (atLastPosition() && hasNextChapter())) {
+  <div class="calc-chapter-done" [class.calc-chapter-done--onward]="!atChapterEnd()">
+    <!-- „Durchgearbeitet" wird nur BEHAUPTET, wenn man am Ende angekommen ist — wer hier
+         einsteigt (Deep-Link, Kapitel mit einer Stellung), hat nichts durch. Der WEG ins
+         nächste Kapitel steht trotzdem offen. -->
+    @if (atChapterEnd()) {
+      <mat-icon>flag</mat-icon>
+      <span class="calc-chapter-done-text">
+        {{ 'calc.chapter.done' | translate: { chapter: chapterName() } }}
+      </span>
+    }
+    @if (hasNextChapter()) {
+      <button mat-flat-button color="primary" class="calc-next-chapter"
+              (click)="nextChapter.emit()">
+        {{ 'calc.chapter.next' | translate: { chapter: nextChapterName() } }}
+      </button>
+    } @else {
+      <span class="calc-hint">{{ 'calc.chapter.lastDone' | translate }}</span>
+    }
+  </div>
+}
+
+<!-- Fußzeile: Bearbeitungsstand und Speicherstand — beides Auskunft, keine Bedienung.
+     Kapitel-Auswahl, Stellungs-Sprung, Weiter/Zurück und der zweite Start/Stopp-Knopf
+     sind in die Befehlszeile gewandert bzw. entfallen; die Kapitelpunkte standen hier ein
+     zweites Mal (dieselbe Zahl wie im Kapitel-Menü). -->
+<p class="calc-foot">
+  <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount(), total: positionCount() } }}</span>
+  <span class="calc-spacer"></span>
+  @if (saving()) {
+    <span>{{ 'calc.saving' | translate }}</span>
+  } @else if (savedAt()) {
+    <span>{{ 'calc.savedAt' | translate: { time: savedAt() | date: 'short' } }}</span>
+  } @else {
+    <span class="calc-hint">{{ 'calc.notSavedYet' | translate }}</span>
+  }
+</p>
+
+<!-- Anonym: alles bleibt auf diesem Gerät. Bewusst als EINE ruhige Zeile unter der Arbeit —
+     es ist eine Auskunft, keine Warnung. Ganz ans SEITENENDE gehört sie trotzdem nicht:
+     unter einem quadratischen Brett stünde sie außerhalb des Sichtfelds.
+     Der Anmelde-Link führt über returnUrl genau hierher zurück (inkl. Stellung/Kapitel). -->
+@if (showLocalNotice()) {
+  <p class="calc-local-note">
+    <mat-icon>devices</mat-icon>
+    <span class="calc-local-text">{{ 'calc.local.notice' | translate }}</span>
+    <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">
+      {{ 'calc.local.signIn' | translate }}
+    </a>
+    <!-- Ein Vorschlag darf man abstellen: einmal weggeklickt bleibt er für diesen Kurs weg. -->
+    <button mat-icon-button class="calc-note-close" (click)="dismissNotice.emit()"
+            [appIconLabel]="'calc.local.dismiss' | translate">
+      <mat-icon>close</mat-icon>
+    </button>
+  </p>
+}
+<!-- Spielt der Gerätespeicher NICHT mit (Privatmodus, Quota), wäre „liegt auf diesem
+     Gerät" eine Lüge. Diese Zeile meldet DATENVERLUST, keinen Vorschlag: sie lässt sich
+     nur für die laufende Sitzung wegklicken und steht beim nächsten Fehlschlag wieder da. -->
+@if (showLocalWarning()) {
+  <p class="calc-local-note calc-local-note--failed">
+    <mat-icon>warning</mat-icon>
+    <span class="calc-local-text">{{ 'calc.local.unavailable' | translate }}</span>
+    <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">
+      {{ 'calc.local.signIn' | translate }}
+    </a>
+    <button mat-icon-button class="calc-note-close" (click)="dismissWarning.emit()"
+            [appIconLabel]="'calc.local.hideForNow' | translate">
+      <mat-icon>close</mat-icon>
+    </button>
+  </p>
+}

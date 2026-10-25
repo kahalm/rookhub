@@ -1,0 +1,34 @@
+<mat-card class="calc-annotate">
+  <mat-card-content>
+    <div class="calc-annotate-head">
+      <span>{{ 'calc.annotate' | translate }}</span>
+      <span class="calc-annotate-target">{{ san() }}</span>
+    </div>
+    <div class="calc-symbols">
+      @for (g of glyphs; track g) {
+        <button type="button" class="calc-sym"
+                [class.calc-sym--on]="glyph() === g"
+                [matTooltip]="glyphTooltip(g)"
+                (click)="glyphPicked.emit(g)">{{ g }}</button>
+      }
+    </div>
+    <div class="calc-symbols">
+      @for (e of evals; track e) {
+        <button type="button" class="calc-sym"
+                [class.calc-sym--on]="evaluation() === e"
+                [matTooltip]="evalTooltip(e)"
+                (click)="evalPicked.emit(e)">{{ e }}</button>
+      }
+      <button type="button" class="calc-sym calc-sym--clear"
+              [matTooltip]="'calc.clearAnnotations' | translate" (click)="cleared.emit()">
+        <mat-icon>backspace</mat-icon>
+      </button>
+    </div>
+    <div class="calc-comment-row">
+      <input type="text" [ngModel]="comment()" (ngModelChange)="comment.set($event)" maxlength="500"
+             [placeholder]="'calc.commentPlaceholder' | translate"
+             (blur)="commentSaved.emit()" (keydown.enter)="commentSaved.emit()" />
+      <button mat-button (click)="commentSaved.emit()">{{ 'common.save' | translate }}</button>
+    </div>
+  </mat-card-content>
+</mat-card>

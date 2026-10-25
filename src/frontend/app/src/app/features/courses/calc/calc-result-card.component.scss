@@ -1,0 +1,56 @@
+/* Festlegung · Rechenzeit · Ergebnis (aus calculation.component.scss, Zerlegung Z20). */
+:host { display: contents; }
+
+.calc-spacer { flex: 1; }
+
+/* Der Knopf „Ergebnis": eine Aktion statt fünf Schaltern (UI-Dichte-Regel). */
+.calc-result-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.calc-result-btn--set {
+  color: #f57f17;
+  font-weight: 600;
+}
+
+.calc-result-label {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== Festlegung · Rechenzeit · Selbstbewertung ===== */
+.calc-review-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.calc-review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  color: color-mix(in srgb, currentColor 65%, transparent);
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.calc-review-chip--set {
+  color: #f57f17;
+  font-weight: 600;
+}
+
+.calc-review-time,
+.calc-review-score { font-variant-numeric: tabular-nums; }
+
+/* Im Ergebnis-Knopf klebte die Punktzahl am Text („Gelöst4 / 4"). Das `gap` des Knopfes hilft
+   dort nicht: Material projiziert den Inhalt in EINEN `mdc-button__label`, die Lücke entsteht
+   also nur zwischen Icon und Label, nie zwischen zwei Spans DARIN. Angular entfernt den
+   Zeilenumbruch aus der Vorlage (preserveWhitespaces), es bleibt kein Leerzeichen übrig. */
+.calc-result-label + .calc-review-score { margin-left: 0.35rem; }

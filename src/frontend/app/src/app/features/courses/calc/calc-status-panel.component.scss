@@ -1,0 +1,104 @@
+/* Kapitelende, Fußzeile und Geräte-Hinweis der Seitenspalte (aus calculation.component.scss, Zerlegung Z20).
+   `display: contents`: die drei Blöcke bleiben eigene Glieder der Seitenspalte (deren `gap`). */
+:host { display: contents; }
+
+.calc-spacer { flex: 1; }
+
+/* ד am Hinweis: klein und rechts, damit es die Zeile nicht dominiert. */
+.calc-note-close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+}
+
+/* „Nur auf diesem Gerät"-Hinweis für nicht angemeldete Nutzer. Bewusst eine ruhige Zeile:
+   kein Dialog, keine Farbe, die nach Fehler aussieht — es ist eine Auskunft, keine Warnung. */
+.calc-local-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.6rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  background: rgba(128, 128, 128, 0.12);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+  }
+}
+
+/* Ausnahme von der Ruhe oben: konnte GAR NICHT gespeichert werden (Privatmodus, Quota voll),
+   ist es eben doch ein Fehler — und der darf nicht wie eine Auskunft aussehen. */
+.calc-local-note--failed {
+  opacity: 1;
+  background: rgba(211, 47, 47, 0.14);
+  color: var(--mat-sys-error, #d32f2f);
+
+  mat-icon { opacity: 1; }
+}
+
+.calc-local-text { flex: 1 1 12rem; }
+
+.calc-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: color-mix(in srgb, currentColor 50%, transparent);
+}
+
+/* Fußzeile: Bearbeitungs- und Speicherstand. Auskunft, keine Bedienung — deshalb ruhig, klein
+   und ganz unten. */
+.calc-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, currentColor 55%, transparent);
+}
+
+.calc-done {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+/* ===== Kapitelende ===== */
+.calc-chapter-done {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--rh-success) 12%, transparent);
+  font-size: 0.85rem;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: var(--rh-success); }
+}
+
+.calc-chapter-done-text { flex: 1 1 10rem; font-weight: 600; }
+/* Nur der WEG ins nächste Kapitel, ohne die Behauptung „durch": dieselbe Zeile, aber ohne die
+   Erledigt-Färbung — Grün ist hier eine Aussage und keine Dekoration. */
+.calc-chapter-done--onward {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+@media (max-width: 899.98px) {
+  /* Schmal soll das × neben dem Anmelde-Link stehen und nicht auf einer eigenen Zeile darunter. */
+  .calc-local-note { flex-wrap: nowrap; }
+  .calc-local-text { flex: 1 1 auto; min-width: 0; }
+}

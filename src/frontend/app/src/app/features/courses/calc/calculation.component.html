@@ -237,166 +237,29 @@
           </mat-card-content>
         </mat-card>
 
-        <!-- Festlegung · Rechenzeit · Ergebnis. Die fünf Stufen stehen NICHT mehr hier, sondern
-             hinter dem Knopf „Ergebnis" (Dialog): der Modus soll ein Brett bleiben, kein
-             Formular. Die Festlegung selbst wird am Stern in der Linienliste gesetzt. -->
-        <mat-card class="calc-review">
-          <mat-card-content>
-            <div class="calc-review-row">
-              <span class="calc-review-chip" [class.calc-review-chip--set]="review.chosenSan"
-                    [matTooltip]="'calc.review.choiceHint' | translate">
-                <mat-icon>{{ review.chosenSan ? 'star' : 'star_border' }}</mat-icon>
-                <span>{{ review.chosenSan || ('calc.review.noChoice' | translate) }}</span>
-              </span>
-              <!-- ZWEITE Uhr auf dem Schirm (die andere in der Befehlszeile misst das KAPITEL).
-                   Beide zeigten „0:00" ohne Beschriftung — welche welche ist, muss dastehen. -->
-              <span class="calc-review-chip" [matTooltip]="'calc.review.timeHint' | translate">
-                <mat-icon>hourglass_bottom</mat-icon>
-                <span class="calc-review-label">{{ 'calc.review.positionTime' | translate }}</span>
-                <span class="calc-review-time">{{ positionTimeDisplay }}</span>
-              </span>
-              <span class="calc-spacer"></span>
-              <!-- Unbewertet heißt der Knopf „Ergebnis", bewertet zeigt er die gewählte Stufe. -->
-              <button type="button" mat-stroked-button class="calc-result-btn"
-                      [class.calc-result-btn--set]="review.grade !== null"
-                      [matTooltip]="'calc.review.resultHint' | translate"
-                      (click)="openGradeDialog()">
-                <mat-icon>rule</mat-icon>
-                <span class="calc-result-label">{{ gradeButtonLabel }}</span>
-                @if (review.grade !== null) {
-                  <span class="calc-review-score">{{ scoreDisplay(positionPoints, maxPointsPerPosition) }}</span>
-                }
-              </button>
-              <!-- Nach dem Bewerten: die eigene Linie im Analyse-Modus mit der Engine prüfen. -->
-              @if (review.grade !== null) {
-                <button type="button" mat-stroked-button class="calc-analyze-btn"
-                        (click)="analyzeCurrentLine()"
-                        [matTooltip]="'calc.analyze.hint' | translate">
-                  <mat-icon>insights</mat-icon>
-                  <span>{{ 'calc.analyze.open' | translate }}</span>
-                </button>
-              }
-            </div>
-            <!-- Der Satz „Prüf die Lösung im Buch …" stand hier dauerhaft. Er gehört dorthin, wo
-                 man ihn braucht: in den Ergebnis-Dialog, unmittelbar vor der Auswahl. -->
-          </mat-card-content>
-        </mat-card>
+        <!-- Festlegung · Rechenzeit · Ergebnis — Darstellung in CalcResultCardComponent. -->
+        <app-calc-result-card [chosenSan]="review.chosenSan" [positionTime]="positionTimeDisplay"
+          [graded]="review.grade !== null" [gradeLabel]="gradeButtonLabel"
+          [score]="scoreDisplay(positionPoints, maxPointsPerPosition)"
+          (openGrade)="openGradeDialog()" (analyze)="analyzeCurrentLine()" />
 
         <!-- Werkzeug erscheint am Werkstück: die Symbole wirken auf EINEN ausgewählten Zug.
              Solange keiner gewählt ist, bestand die Karte aus einer Überschrift und der
              Aufforderung, etwas anderes zu tun — sie erscheint jetzt erst mit der Auswahl. -->
         @if (!atStart && showAnnotations) {
-          <mat-card class="calc-annotate">
-            <mat-card-content>
-              <div class="calc-annotate-head">
-                <span>{{ 'calc.annotate' | translate }}</span>
-                <span class="calc-annotate-target">{{ cursorNode?.san }}</span>
-              </div>
-              <div class="calc-symbols">
-                @for (g of glyphs; track g) {
-                  <button type="button" class="calc-sym"
-                          [class.calc-sym--on]="cursorNode?.glyph === g"
-                          [matTooltip]="glyphTooltip(g)"
-                          (click)="applyGlyph(g)">{{ g }}</button>
-                }
-              </div>
-              <div class="calc-symbols">
-                @for (e of evals; track e) {
-                  <button type="button" class="calc-sym"
-                          [class.calc-sym--on]="cursorNode?.evaluation === e"
-                          [matTooltip]="evalTooltip(e)"
-                          (click)="applyEval(e)">{{ e }}</button>
-                }
-                <button type="button" class="calc-sym calc-sym--clear"
-                        [matTooltip]="'calc.clearAnnotations' | translate" (click)="clearAnnotations()">
-                  <mat-icon>backspace</mat-icon>
-                </button>
-              </div>
-              <div class="calc-comment-row">
-                <input type="text" [(ngModel)]="cursorComment" maxlength="500"
-                       [placeholder]="'calc.commentPlaceholder' | translate"
-                       (blur)="saveCursorComment()" (keydown.enter)="saveCursorComment()" />
-                <button mat-button (click)="saveCursorComment()">{{ 'common.save' | translate }}</button>
-              </div>
-            </mat-card-content>
-          </mat-card>
+          <app-calc-annotate-card [san]="cursorNode?.san ?? ''" [glyph]="cursorNode?.glyph ?? null"
+            [evaluation]="cursorNode?.evaluation ?? null" [(comment)]="cursorComment"
+            (glyphPicked)="applyGlyph($event)" (evalPicked)="applyEval($event)" (cleared)="clearAnnotations()"
+            (commentSaved)="saveCursorComment()" />
         }
 
-        <!-- Kapitelende: NICHT von selbst weiterspringen (das mischte die Kapitel-Zeit still über
-             Kapitelgrenzen), sondern deutlich sagen und den Weg anbieten. Erscheint ohnehin nur am
-             Ende — deshalb bleibt es als eigener Block stehen. -->
-        @if (atChapterEnd || (atLastPosition && hasNextChapter)) {
-          <div class="calc-chapter-done" [class.calc-chapter-done--onward]="!atChapterEnd">
-            <!-- „Durchgearbeitet" wird nur BEHAUPTET, wenn man am Ende angekommen ist — wer hier
-                 einsteigt (Deep-Link, Kapitel mit einer Stellung), hat nichts durch. Der WEG ins
-                 nächste Kapitel steht trotzdem offen. -->
-            @if (atChapterEnd) {
-              <mat-icon>flag</mat-icon>
-              <span class="calc-chapter-done-text">
-                {{ 'calc.chapter.done' | translate: { chapter: chapterName } }}
-              </span>
-            }
-            @if (hasNextChapter) {
-              <button mat-flat-button color="primary" class="calc-next-chapter"
-                      (click)="goToNextChapter()">
-                {{ 'calc.chapter.next' | translate: { chapter: nextChapterName } }}
-              </button>
-            } @else {
-              <span class="calc-hint">{{ 'calc.chapter.lastDone' | translate }}</span>
-            }
-          </div>
-        }
-
-        <!-- Fußzeile: Bearbeitungsstand und Speicherstand — beides Auskunft, keine Bedienung.
-             Kapitel-Auswahl, Stellungs-Sprung, Weiter/Zurück und der zweite Start/Stopp-Knopf
-             sind in die Befehlszeile gewandert bzw. entfallen; die Kapitelpunkte standen hier ein
-             zweites Mal (dieselbe Zahl wie im Kapitel-Menü). -->
-        <p class="calc-foot">
-          <span class="calc-done">{{ 'calc.doneCount' | translate: { done: doneCount, total: positionCount } }}</span>
-          <span class="calc-spacer"></span>
-          @if (saving) {
-            <span>{{ 'calc.saving' | translate }}</span>
-          } @else if (savedAt) {
-            <span>{{ 'calc.savedAt' | translate: { time: savedAt | date: 'short' } }}</span>
-          } @else {
-            <span class="calc-hint">{{ 'calc.notSavedYet' | translate }}</span>
-          }
-        </p>
-
-        <!-- Anonym: alles bleibt auf diesem Gerät. Bewusst als EINE ruhige Zeile unter der Arbeit —
-             es ist eine Auskunft, keine Warnung. Ganz ans SEITENENDE gehört sie trotzdem nicht:
-             unter einem quadratischen Brett stünde sie außerhalb des Sichtfelds.
-             Der Anmelde-Link führt über returnUrl genau hierher zurück (inkl. Stellung/Kapitel). -->
-        @if (showLocalNotice) {
-          <p class="calc-local-note">
-            <mat-icon>devices</mat-icon>
-            <span class="calc-local-text">{{ 'calc.local.notice' | translate }}</span>
-            <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
-              {{ 'calc.local.signIn' | translate }}
-            </a>
-            <!-- Ein Vorschlag darf man abstellen: einmal weggeklickt bleibt er für diesen Kurs weg. -->
-            <button mat-icon-button class="calc-note-close" (click)="dismissLocalNotice()"
-                    [appIconLabel]="'calc.local.dismiss' | translate">
-              <mat-icon>close</mat-icon>
-            </button>
-          </p>
-        }
-        <!-- Spielt der Gerätespeicher NICHT mit (Privatmodus, Quota), wäre „liegt auf diesem
-             Gerät" eine Lüge. Diese Zeile meldet DATENVERLUST, keinen Vorschlag: sie lässt sich
-             nur für die laufende Sitzung wegklicken und steht beim nächsten Fehlschlag wieder da. -->
-        @if (showLocalWarning) {
-          <p class="calc-local-note calc-local-note--failed">
-            <mat-icon>warning</mat-icon>
-            <span class="calc-local-text">{{ 'calc.local.unavailable' | translate }}</span>
-            <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl }">
-              {{ 'calc.local.signIn' | translate }}
-            </a>
-            <button mat-icon-button class="calc-note-close" (click)="dismissLocalWarning()"
-                    [appIconLabel]="'calc.local.hideForNow' | translate">
-              <mat-icon>close</mat-icon>
-            </button>
-          </p>
-        }
+        <!-- Kapitelende · Bearbeitungs-/Speicherstand · Geräte-Hinweis — Darstellung in CalcStatusPanelComponent. -->
+        <app-calc-status-panel [atChapterEnd]="atChapterEnd" [atLastPosition]="atLastPosition"
+          [hasNextChapter]="hasNextChapter" [chapterName]="chapterName" [nextChapterName]="nextChapterName"
+          [doneCount]="doneCount" [positionCount]="positionCount" [saving]="saving" [savedAt]="savedAt"
+          [showLocalNotice]="showLocalNotice" [showLocalWarning]="showLocalWarning" [loginReturnUrl]="loginReturnUrl"
+          (nextChapter)="goToNextChapter()" (dismissNotice)="dismissLocalNotice()"
+          (dismissWarning)="dismissLocalWarning()" />
 
       </div>
     </div>
