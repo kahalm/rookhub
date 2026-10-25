@@ -1,0 +1,41 @@
+<div class="board-hint">
+  @if (countdownSeconds() > 0) {
+    <span class="board-hint-countdown">{{ 'book.viz.countdown' | translate:{ seconds: countdownSeconds() } }}</span>
+  }
+  @if (moveHtml()) {
+    <span [innerHTML]="moveHtml()"></span>
+  } @else {
+    <span class="board-hint-tomove">
+      <span class="tomove-dot" [class.black]="turnColor() === 'black'"></span>
+      {{ (turnColor() === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
+    </span>
+  }
+  @if (showEye()) {
+    <button class="board-hint-show board-hint-eye" (click)="eyeClicked.emit()"
+            [attr.title]="(eyeShowing() ? 'book.viz.showing' : 'book.viz.show') | translate"
+            [attr.aria-label]="(eyeShowing() ? 'book.viz.showing' : 'book.viz.show') | translate">
+      <mat-icon>{{ eyeShowing() ? 'visibility' : 'visibility_off' }}</mat-icon>
+    </button>
+  }
+  @if (showTip()) {
+    <!-- d4-rk-tipp-zaehler-beschriftung: die Klammer nennt die Stufe, die der Klick aufdeckt (vorher „Nächster Tipp (1/3)“
+         mit Tipp 1 schon sichtbar). -->
+    <button class="board-hint-tip" (click)="tipClicked.emit()"
+            [attr.title]="'book.hints.show' | translate">
+      <mat-icon>lightbulb</mat-icon>
+      {{ (hintLevel() === 0 ? 'book.hints.show' : 'book.hints.next') | translate }}
+      ({{ hintLevel() + 1 }}/{{ totalHints() }})
+    </button>
+  }
+  @if (canFlag()) {
+    <!-- b1-rk-puzzle-dumme-tipps-knopf: „Tipps melden“ leise, aber nicht gedimmt; am Handy nur das Fähnchen. -->
+    <!-- d3-rk-flaggen-symbol-doppelt: Daumen statt Fähnchen — die Flagge gehört „Aufgeben“; Name per appIconLabel
+         (Tooltip + aria-label, am Handy steht nur das Symbol). -->
+    <button class="board-hint-flag" [class.flagged]="flagged()"
+            [disabled]="flagSaving()" (click)="flagClicked.emit()"
+            [appIconLabel]="(flagged() ? 'book.hints.flagged' : 'book.hints.flagTitle') | translate">
+      <mat-icon>{{ flagged() ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
+      <span class="board-hint-flag-label">{{ (flagged() ? 'book.hints.flagged' : 'book.hints.flag') | translate }}</span>
+    </button>
+  }
+</div>

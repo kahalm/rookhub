@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { of, Subject, throwError } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
+import { shallowBookPuzzle } from '../../testing/book-puzzle-shallow';
 import { saveBookOffline, getBookOfflineByBookId, getBookOfflineLanguageByBookId, isBookCacheComplete, markBookCacheComplete } from './book-offline.util';
 import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
 import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
@@ -2062,7 +2063,7 @@ describe('BookPuzzleComponent Wochenpost als Gast: keine Knöpfe zur Übersicht 
         { provide: WorksheetService, useValue: {} },
       ],
     });
-    TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+    shallowBookPuzzle();
     const fixture = TestBed.createComponent(BookPuzzleComponent);
     const c: any = fixture.componentInstance;
     c.inWeekly = true;
@@ -2127,7 +2128,7 @@ function renderBookPuzzle(setup: (c: any) => void, url = '/puzzles/book/1'): { e
       { provide: WorksheetService, useValue: {} },
     ],
   });
-  TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+  shallowBookPuzzle();
   const fixture = TestBed.createComponent(BookPuzzleComponent);
   const c: any = fixture.componentInstance;
   c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };

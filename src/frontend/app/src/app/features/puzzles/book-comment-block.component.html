@@ -1,0 +1,36 @@
+<section class="ctx-comment-block">
+  @if (hasLines()) {
+    <div class="ctx-comment" [class.ctx-comment-long]="long()">
+      <mat-icon>chat_bubble_outline</mat-icon>
+      <div class="ctx-comment-body">
+        <!-- Nur die Absätze werden gekürzt (Höhengrenze + Verlauf auf .ctx-comment-text); Variantenleiste,
+             „Ganz lesen“ und Maschinen-Hinweis stehen als Geschwister darunter und bleiben immer sichtbar
+             (d5-rk-kommentar-abgeschnitten-ohne-link). -->
+        <div class="ctx-comment-text" (click)="bodyClicked.emit($event)">
+          @for (block of blocks(); track $index) {
+            <p [class.cmt-heading]="block[0]?.heading">@for (seg of block; track $index) {@if (seg.move) {<button type="button" class="cmt-move" (click)="movePicked.emit(seg)">{{ seg.move }}</button>} @else {<span>{{ seg.text }}</span>}}</p>
+          }
+        </div>
+        @if (previewing()) {
+          <div class="cmt-variation-bar">
+            <span>{{ 'book.variation.previewing' | translate }}</span>
+            <button mat-stroked-button type="button" (click)="previewExited.emit()">
+              <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
+            </button>
+          </div>
+        }
+        @if (long()) {
+          <button type="button" class="ctx-comment-expand" (click)="dialogOpened.emit()">
+            <mat-icon>open_in_full</mat-icon> {{ 'book.commentDialog.open' | translate }}
+          </button>
+        }
+        @if (machineNote()) {
+          <app-machine-note [clickable]="machineClickable()" (original)="originalPicked.emit()" />
+        }
+      </div>
+    </div>
+  }
+  @if (offlineLangStale()) {
+    <p class="ctx-offline-lang"><mat-icon inline>cloud_off</mat-icon> {{ 'courses.lang.offlineStaleSolver' | translate }}</p>
+  }
+</section>

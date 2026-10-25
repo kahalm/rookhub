@@ -5,72 +5,7 @@
      * .info-section daneben bleibt. */
     .board-section { flex: 0 0 auto; width: min(60vw, 820px, calc(100vh - 180px)); min-width: 280px; }
     .info-section { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 1rem; }
-    .status-card { min-height: 120px; position: relative; }
-    .status-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
-    .status-text { font-size: 1.1em; font-weight: 500; margin: 0; }
-    .timer { font-size: 1.5em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
-    .result-icon { font-size: 48px; width: 48px; height: 48px; }
-    .solved .result-icon { color: var(--rh-success); }
-    .failed .result-icon { color: var(--rh-error); }
-    .fail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
-    .play-actions { display: flex; gap: 0.25rem; flex-wrap: wrap; justify-content: center; margin-top: 0.25rem; }
-    .eval-compare { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95em; }
-    .eval-item { display: flex; align-items: center; gap: 0.25rem; }
-    .eval-label { font-size: 0.8em; color: color-mix(in srgb, currentColor 50%, transparent); }
-    .eval-value { font-weight: bold; font-variant-numeric: tabular-nums; }
-    .eval-arrow { color: color-mix(in srgb, currentColor 40%, transparent); }
-    .countdown-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; color: color-mix(in srgb, currentColor 50%, transparent); }
-    .alt-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
-    .settings-gear { position: absolute; top: 4px; right: 4px; z-index: 2; }
-    .settings-gear.active { color: var(--rh-accent); }
-    .give-up-btn { color: var(--mat-sys-on-surface-variant) !important; font-size: 0.85em !important; }
 
-    /* Hinweiszeile unter dem Brett: Grundregel `.board-hint` global in styles.scss (d4-rk-hint-chip-schriftgroesse-buchmodus). */
-    .board-hint-countdown { color: var(--rh-warn); font-weight: 500; }
-    .board-hint-tomove { display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500; color: color-mix(in srgb, currentColor 85%, transparent); }
-    .tomove-dot {
-      width: 0.8em; height: 0.8em; border-radius: 50%; flex: 0 0 auto;
-      background: #fff; border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
-    }
-    .board-hint-show {
-      padding: 0.2rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-      border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer; font-size: 0.9em;
-      user-select: none; touch-action: manipulation; color: inherit;
-    }
-    .board-hint-show:active { background: color-mix(in srgb, currentColor 10%, transparent); }
-    .board-hint-eye { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; }
-    .board-hint-eye mat-icon { font-size: 20px; width: 20px; height: 20px; }
-
-    /* Kernbedienung: volle Textfarbe statt der gedimmten 60 % der Hinweiszeile (sah aus wie deaktiviert, UX-008). */
-    .board-hint-tip {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.7rem; border: 1px solid color-mix(in srgb, #e0a93a 55%, transparent);
-      border-radius: 6px; background: color-mix(in srgb, #e0a93a 12%, transparent); cursor: pointer;
-      font-size: 0.9em; user-select: none; touch-action: manipulation; color: var(--mat-sys-on-surface);
-    }
-    .board-hint-tip:active { background: color-mix(in srgb, #e0a93a 22%, transparent); }
-    .board-hint-tip mat-icon { font-size: 18px; width: 18px; height: 18px; color: #c8881f; }
-
-    /* b1-rk-puzzle-dumme-tipps-knopf: leiser Knopf über --mat-sys-on-surface-variant und durchgezogenen Rahmen in
-       --mat-sys-outline (≥ 3:1), nie über Deckkraft — gedimmt (≈ 45 %) wirkte er gesperrt (hell ≈ 3,5:1, DESIGN 5.12/7). */
-    .board-hint-flag {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.7rem; border: 1px solid var(--mat-sys-outline);
-      border-radius: 6px; background: var(--mat-sys-surface-container, #fff); cursor: pointer;
-      font-size: 0.9em; user-select: none; touch-action: manipulation; color: var(--mat-sys-on-surface-variant);
-    }
-    .board-hint-flag:disabled { cursor: progress; }
-    .board-hint-flag mat-icon { font-size: 18px; width: 18px; height: 18px; }
-    @media (max-width: 599.98px) {
-      .board-hint-flag { padding: 0.2rem 0.45rem; }
-      .board-hint-flag-label { display: none; }
-    }
-    .board-hint-flag.flagged {
-      border-color: color-mix(in srgb, var(--rh-error) 55%, transparent);
-      background: color-mix(in srgb, var(--rh-error) 12%, transparent); color: var(--mat-sys-on-surface);
-    }
-    .board-hint-flag.flagged mat-icon { color: var(--rh-error); }
     .hint-list {
       margin: 0.5rem 0 0; padding-left: 1.3rem; text-align: left; max-width: 32rem;
       font-size: 0.92em; line-height: 1.45;
@@ -83,150 +18,9 @@
       .hint-list--side { display: block; }
     }
 
-    /* Kontext-Card (Puzzle-Info + Fortschritt + Navigation) */
-    .context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
-    .context-card .ctx-back { flex-shrink: 0; margin: -4px -4px 0 -8px; }
-    .context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
-    /* Schnellwechsel Buch↔Workbook: kompakter Knopf rechts im Kopf, Label gekürzt. */
-    .context-card .ctx-switch { flex-shrink: 0; align-self: flex-start; max-width: 45%; height: 30px; line-height: 30px; padding: 0 8px; }
-    .context-card .ctx-switch .ctx-switch-label { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; font-size: 0.8rem; }
-    .context-card .ctx-switch mat-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
-    /* Sprachwahl der Kurs-Kommentare (nur sichtbar mit mehr als einer Sprache). */
-    .context-card .ctx-lang { flex-shrink: 0; align-self: flex-start; }
-    .ctx-offline-lang { margin: 0.2rem 0 0; font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
-    /* steht in .ctx-text (fluchtet mit dem Titel, b1-rk-loeser-tags-link-versatz) */
-    .context-card .ctx-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 4px; }
-    .context-card .ctx-progress { margin-top: 0.6rem; }
-    /* Spielweisen-Umschalter (Kurs/Tagespuzzle/Buch) — gleiche Optik wie der Wochenpost-Knopf. */
-    .context-card .ctx-mode { margin-top: 0.6rem; }
-    .context-card .ctx-stats { font-size: 0.85em; color: color-mix(in srgb, currentColor 55%, transparent); margin: 8px 0 0; font-variant-numeric: tabular-nums; }
-    /* Wochenpost: Umschaltknopf unter der Fortschrittszeile mit Luft (a1-rk-wochenpost-fortschritt-klebt, Raster 8 px). */
-    .context-card .ctx-progress .ctx-mode-btn { margin-top: 8px; }
-    .context-card .course-stats { display: flex; flex-direction: column; gap: 0.55rem; }
-    .context-card .course-stats .cs-scope.cs-chapter { padding-top: 0.5rem; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
-    .context-card .course-stats .cs-label { display: block; font-size: 0.8em; font-weight: 600; margin-bottom: 0.2rem; }
-    .context-card .course-stats .cs-chapter .cs-label { color: color-mix(in srgb, currentColor 70%, transparent); font-weight: 500; }
-    .context-card .course-stats .cs-stats {
-      display: flex; flex-wrap: wrap; gap: 0.25rem 0.85rem; margin-top: 0.25rem;
-      font-size: 0.82em; color: color-mix(in srgb, currentColor 60%, transparent); font-variant-numeric: tabular-nums;
-    }
-    .context-card .course-stats .cs-stats > span { display: inline-flex; align-items: center; gap: 0.2rem; }
-    .context-card .course-stats .cs-stats mat-icon { font-size: 1.05em; width: 1.05em; height: 1.05em; }
-    .context-card .course-stats .cs-acc mat-icon { color: var(--rh-success); }
-    .context-card .course-stats .cs-eta { color: color-mix(in srgb, currentColor 65%, transparent); }
-    .context-card .course-stats .cs-eta mat-icon { color: #6a5acd; }
-    .context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: var(--rh-success); font-weight: 600; margin: 0.5rem 0 0; }
-    .context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
-    .context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
     /* Zurückhaltend über die Farbrolle statt Deckkraft — 0,7 Deckkraft ergab hell 3,35:1 und wirkte gesperrt
        (a1-rk-skip-kontrast-hell, DESIGN 7). */
     .skip-quiet { color: var(--mat-sys-on-surface-variant) !important; font-size: 0.85em !important; }
-
-    /* Puzzle-Metadaten */
-    .meta-title { font-weight: bold; font-size: 1.05em; margin: 0; }
-    .meta-chapter { color: color-mix(in srgb, currentColor 70%, transparent); margin: 0; font-size: 0.95em; }
-    /* Theme-Rolle statt 45 % der Textfarbe (UX-008: 3,3:1 hell, 4,46:1 dunkel auf der Karte). */
-    .source-game { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82em; margin-left: 8px; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
-    .book-name { font-size: 0.82em; color: var(--mat-sys-on-surface-variant); }
-    .weekly-chip-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
-    .weekly-chip {
-      display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.82em; font-weight: 600;
-      color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 14%, transparent);
-    }
-    .weekly-pos { font-size: 0.82em; color: var(--mat-sys-on-surface-variant); }
-    .difficulty-badge {
-      font-size: 0.8em; padding: 2px 8px; border-radius: 12px; font-weight: 500;
-    }
-    .diff-anfänger, .diff-anfaenger { background: #c8e6c9; color: #2e7d32; }
-    .diff-fortgeschritten { background: #fff3e0; color: #e65100; }
-    .diff-meister { background: #ffcdd2; color: #c62828; }
-    .rating-badge { font-weight: bold; font-size: 0.9em; }
-
-    /* Untere Aktionen */
-
-    /* Info-/Zug-Kommentar-Block: eigener Block in der Seitenspalte HINTER Kontext-Card (Fortschritt, „Überspringen“),
-       Status-Card (Zeit, „Bewertung anzeigen“, „Aufgeben“) und Aktionsleiste — ein langer, ungekürzter Kommentar
-       schiebt die Bedienung nicht mehr unter die Falz (a1-rk-kommentar-schiebt-aktionen, DESIGN 4.6 Regel 2). */
-    .ctx-comment-block { display: flex; flex-direction: column; gap: 0.5rem; }
-    .ctx-comment {
-      display: flex; align-items: flex-start; gap: 0.5rem;
-      padding: 0.6rem 0.75rem;
-      border-radius: 8px;
-      background: color-mix(in srgb, currentColor 6%, transparent);
-      border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-    }
-    .ctx-comment mat-icon {
-      flex-shrink: 0; font-size: 20px; width: 20px; height: 20px;
-      color: color-mix(in srgb, currentColor 45%, transparent); margin-top: 1px;
-    }
-    /* Kommentar-Absätze gestapelt (mehrere Zug-Kommentare untereinander). Der Wrapper ist das
-       Flex-Kind neben dem Icon; lange Texte umbrechen (min-width:0). Seit 0.693.4 OHNE Höhengrenze: der ganze
-       Kommentar steht da (Wunsch 2026-10-07), ein langer lässt sich zusätzlich im Fenster lesen. */
-    .ctx-comment .ctx-comment-body {
-      flex: 1; min-width: 0;
-      display: flex; flex-direction: column; gap: 0.4rem;
-    }
-    .ctx-comment .ctx-comment-text { display: flex; flex-direction: column; gap: 0.4rem; }
-    .ctx-comment-long .ctx-comment-text { cursor: zoom-in; }
-    /* Seit 2026-10-20 steht der Kommentar ÜBER der Status-Card (zwischen „Überspringen“ und Uhr): ein langer würde die
-       Bedienung wieder unter die Falz schieben (a1-rk-kommentar-schiebt-aktionen) — daher auf ~5 Zeilen mit Verlauf,
-       der ganze Text im Dialog („Ganz lesen“, Klick auf den Text). Gekürzt werden NUR die Absätze (.ctx-comment-text):
-       „Ganz lesen“, Variantenleiste und Maschinen-Hinweis stehen darunter und bleiben sichtbar
-       (d5-rk-kommentar-abgeschnitten-ohne-link). */
-    .ctx-comment-long .ctx-comment-text {
-      max-height: 7.5em; overflow: hidden;
-      -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
-      mask-image: linear-gradient(to bottom, #000 65%, transparent);
-    }
-    .ctx-comment .ctx-comment-expand {
-      align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
-      font: inherit; font-size: 0.85em; font-weight: 600; cursor: pointer;
-      color: var(--mat-sys-primary, #1565c0); background: none; border: none; padding: 2px 0;
-    }
-    @media (pointer: coarse) {
-      .ctx-comment .ctx-comment-expand { min-height: 44px; }
-    }
-    .ctx-comment .ctx-comment-expand mat-icon { font-size: 16px; width: 16px; height: 16px; margin: 0; color: inherit; }
-    .ctx-comment p {
-      margin: 0; font-size: 0.92em; line-height: 1.4; white-space: pre-wrap; overflow-wrap: break-word;
-    }
-    /* Beim Import angeklebte Kapitelüberschrift, abgesetzt (v1-rk-course-comment-ueberschrift-angeklebt). */
-    .ctx-comment p.cmt-heading { font-weight: 700; }
-    /* Klickbarer Zug-Chip in einem Kommentar (spielt die Variante als Brett-Vorschau vor). */
-    .ctx-comment .cmt-move {
-      font: inherit; font-weight: 600; cursor: pointer;
-      color: var(--mat-sys-primary, #1565c0);
-      background: color-mix(in srgb, currentColor 10%, transparent);
-      border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
-      border-radius: 4px; padding: 0 4px; margin: 0 1px; white-space: nowrap;
-    }
-    .ctx-comment .cmt-move:hover { background: color-mix(in srgb, currentColor 22%, transparent); }
-    .cmt-variation-bar {
-      display: flex; align-items: center; gap: 8px; margin-top: 6px;
-      font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
-    }
-
-    /* Einstellungen */
-    .viz-radios { margin-bottom: 0.75rem; }
-    .viz-radios-title { font-size: 0.9em; font-weight: 500; display: block; margin-bottom: 0.35rem; }
-    .viz-radio-group { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.35rem; }
-    .viz-radio-item {
-      display: flex; align-items: center; padding: 0.2rem 0.65rem;
-      border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 16px;
-      cursor: pointer; font-size: 0.85em; user-select: none;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-      input[type=radio] { display: none; }
-      &.selected { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-color: var(--mat-sys-primary); }
-      &:not(.selected):hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    }
-    .viz-level-desc { font-size: 0.8em; color: color-mix(in srgb, currentColor 55%, transparent); }
-    .viz-arrow-toggle {
-      display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem;
-      font-size: 0.85em; cursor: pointer; user-select: none;
-    }
-    .depth-field { width: 100%; }
-    .config-card mat-card-content { padding-bottom: 0; }
-    .theme-section { margin-top: 0.75rem; }
 
     /* Einspaltig bis 899.98 px (a1-rk-tablet-seitenspalte-eng): am Tablet (769–899 px) blieb neben dem Brett nur eine
        ~270 px schmale Seitenkarte (Titel 4 Zeilen, Knopf zweizeilig, Kommentar Wort für Wort). Dort steht das Brett
@@ -271,7 +65,7 @@
 
     /* ===== App-Vollbild (Host-Klasse auf app-root) =====
        Brett auf das größtmögliche Quadrat (nur die Seitenränder gehen von der Höhe ab); die
-       Unter-Brett-Leiste (boardHintTpl) rendert dann im Seiten-Slot RECHTS statt unter dem
+       Unter-Brett-Leiste (boardHintTpl → app-book-board-hint) rendert dann im Seiten-Slot RECHTS statt unter dem
        Brett. Nur ab 900px — darunter bleibt das Einspalten-Layout. */
     .board-hint-slot--side { display: none; }
 
@@ -283,17 +77,6 @@
         .board-hint-slot--side { display: block; }
       }
     }
-
-/* Gast-Hinweis im Wochenpost: durchspielen geht, gewertet wird nur eingeloggt. */
-.ctx-guest {
-  margin: 6px 0 0;
-  font-size: .85rem;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  color: color-mix(in srgb, currentColor 70%, transparent);
-}
 
 /* Vollbild-Tipp-Texte im schwarzen Balken (b-4): sichtbar nur im Brett-Vollbild (globale
    [data-fs-only]-Regel schaltet display), positioniert im freien Balken — quer rechts, hoch oben. */
@@ -327,8 +110,5 @@
 @media (min-width: 2400px) {
   .puzzle-page { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
   .board-section { width: min(calc(100vh - 200px), calc(100% - 360px - 1.5rem)); }
-  /* Kurs-Kommentar in der breiten Seitenspalte: größere Schrift passend zum Brett, Zeile ≤ ~70 Zeichen
-     (DESIGN 4.6 Regel 4, b1-rk-loeser-kommentar-zeilenlaenge-ultrawide). */
-  .ctx-comment p { font-size: 1rem; line-height: 1.5; }
-  .ctx-comment .ctx-comment-body { max-width: 68ch; }
+  /* Kurs-Kommentar ab 2400 px: in BookCommentBlockComponent. */
 }

@@ -1,4 +1,5 @@
-import { BookPuzzleComponent } from './book-puzzle.component';
+import { BookBoardHintComponent } from './book-board-hint.component';
+import { BookContextCardComponent } from './book-context-card.component';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessConfigComponent } from './endless-config.component';
 import { PuzzleComponent } from './puzzle.component';
@@ -23,9 +24,9 @@ describe('Puzzle-Seiten: Kontrast von Tipp-Knopf, „Tags anzeigen", „Auto: �
   const TIP = '<div class="board-hint"><button class="board-hint-tip"><span>Tipp (0/3)</span></button></div>';
   const cases: { name: string; cmp: unknown; html: string; target: string; card?: boolean }[] = [
     { name: 'Standard-Puzzle: Tipp-Knopf', cmp: PuzzleComponent, html: TIP, target: '.board-hint-tip' },
-    { name: 'Buch/Tages/Wochenpost: Tipp-Knopf', cmp: BookPuzzleComponent, html: TIP, target: '.board-hint-tip' },
+    { name: 'Buch/Tages/Wochenpost: Tipp-Knopf', cmp: BookBoardHintComponent, html: TIP, target: '.board-hint-tip' },
     { name: 'Endless: Tipp-Knopf', cmp: EndlessPuzzleComponent, html: TIP, target: '.board-hint-tip' },
-    { name: 'Buch: Buchname', cmp: BookPuzzleComponent, card: true, target: '.book-name',
+    { name: 'Buch: Buchname', cmp: BookContextCardComponent, card: true, target: '.book-name',
       html: '<div class="ctx-text"><p class="meta-chapter">Kapitel 1</p><span class="book-name">Buch</span></div>' },
     { name: 'Endless: „Auto: …"', cmp: EndlessConfigComponent, card: true, target: '.auto-hint',
       html: '<button type="button" class="auto-hint">Auto: 1000</button>' },
@@ -33,7 +34,8 @@ describe('Puzzle-Seiten: Kontrast von Tipp-Knopf, „Tags anzeigen", „Auto: �
       html: '<span class="puzzle-tags-toggle" role="button" tabindex="0">Show tags</span>' },
   ];
 
-  for (const cmp of [PuzzleComponent, BookPuzzleComponent, EndlessPuzzleComponent]) {
+  // Buch-Löser: die Hinweiszeile ist seit Z18 die Kindkomponente BookBoardHintComponent.
+  for (const cmp of [PuzzleComponent, BookBoardHintComponent, EndlessPuzzleComponent]) {
     it(`${(cmp as { name: string }).name}: der Tipp-Knopf erbt nicht die gedimmte Farbe der Hinweiszeile`, () => {
       dispose = mountWithComponentStyles(cmp, TIP);
       expect(parseColor(getComputedStyle(document.querySelector('.board-hint-tip')!).color)[3]).toBe(1);

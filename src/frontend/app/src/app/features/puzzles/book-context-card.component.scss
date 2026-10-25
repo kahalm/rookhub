@@ -1,0 +1,53 @@
+/* Host transparent: die Karte bleibt wie vorher direktes Flex-Kind der Seitenspalte (.info-section). */
+:host { display: contents; }
+
+/* Kontext-Card (Puzzle-Info + Fortschritt + Navigation) */
+.context-card .ctx-head { display: flex; align-items: flex-start; gap: 0.4rem; }
+.context-card .ctx-back { flex-shrink: 0; margin: -4px -4px 0 -8px; }
+.context-card .ctx-text { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+/* Schnellwechsel Buch↔Workbook: kompakter Knopf rechts im Kopf, Label gekürzt. */
+.context-card .ctx-switch { flex-shrink: 0; align-self: flex-start; max-width: 45%; height: 30px; line-height: 30px; padding: 0 8px; }
+.context-card .ctx-switch .ctx-switch-label { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; font-size: 0.8rem; }
+.context-card .ctx-switch mat-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
+/* Sprachwahl der Kurs-Kommentare (nur sichtbar mit mehr als einer Sprache). */
+.context-card .ctx-lang { flex-shrink: 0; align-self: flex-start; }
+/* steht in .ctx-text (fluchtet mit dem Titel, b1-rk-loeser-tags-link-versatz) */
+.context-card .ctx-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 4px; }
+.context-card .ctx-progress { margin-top: 0.6rem; }
+.context-card .ctx-stats { font-size: 0.85em; color: color-mix(in srgb, currentColor 55%, transparent); margin: 8px 0 0; font-variant-numeric: tabular-nums; }
+/* Wochenpost: Umschaltknopf unter der Fortschrittszeile mit Luft (a1-rk-wochenpost-fortschritt-klebt, Raster 8 px). */
+.context-card .ctx-progress .ctx-mode-btn { margin-top: 8px; }
+.context-card .ctx-done { display: flex; align-items: center; gap: 4px; color: var(--rh-success); font-weight: 600; margin: 0.5rem 0 0; }
+.context-card .ctx-done mat-icon { font-size: 20px; width: 20px; height: 20px; }
+.context-card .ctx-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+
+/* Puzzle-Metadaten */
+.meta-title { font-weight: bold; font-size: 1.05em; margin: 0; }
+.meta-chapter { color: color-mix(in srgb, currentColor 70%, transparent); margin: 0; font-size: 0.95em; }
+/* Theme-Rolle statt 45 % der Textfarbe (UX-008: 3,3:1 hell, 4,46:1 dunkel auf der Karte). */
+.source-game { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82em; margin-left: 8px; mat-icon { font-size: 14px; width: 14px; height: 14px; } }
+.book-name { font-size: 0.82em; color: var(--mat-sys-on-surface-variant); }
+.weekly-chip-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
+.weekly-chip {
+  display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.82em; font-weight: 600;
+  color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 14%, transparent);
+}
+.weekly-pos { font-size: 0.82em; color: var(--mat-sys-on-surface-variant); }
+.difficulty-badge {
+  font-size: 0.8em; padding: 2px 8px; border-radius: 12px; font-weight: 500;
+}
+.diff-anfänger, .diff-anfaenger { background: #c8e6c9; color: #2e7d32; }
+.diff-fortgeschritten { background: #fff3e0; color: #e65100; }
+.diff-meister { background: #ffcdd2; color: #c62828; }
+.rating-badge { font-weight: bold; font-size: 0.9em; }
+
+/* Gast-Hinweis im Wochenpost: durchspielen geht, gewertet wird nur eingeloggt. */
+.ctx-guest {
+  margin: 6px 0 0;
+  font-size: .85rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}

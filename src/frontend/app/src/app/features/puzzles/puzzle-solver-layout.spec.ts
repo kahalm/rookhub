@@ -7,6 +7,9 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService, TranslatePipe } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
+import { BookContextCardComponent } from './book-context-card.component';
+import { BookBoardHintComponent } from './book-board-hint.component';
+import { shallowBookPuzzle } from '../../testing/book-puzzle-shallow';
 import { PuzzleComponent } from './puzzle.component';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
@@ -91,7 +94,7 @@ describe('Löser-Layout (UI-Sweep a1)', () => {
   });
 
   it('Wochenpost: 8 px zwischen Fortschrittszeile und Umschaltknopf (a1-rk-wochenpost-fortschritt-klebt)', () => {
-    const s = css(BookPuzzleComponent).replace(/\s/g, '');
+    const s = css(BookContextCardComponent).replace(/\s/g, '');   // Kontext-Karte seit Z18 eigene Komponente
     expect(s).toContain('.context-card.ctx-progress.ctx-mode-btn{margin-top:8px');
     expect(s).toMatch(/\.context-card\.ctx-stats\{[^}]*margin:8px00/);
   });
@@ -172,13 +175,15 @@ describe('Statistik-Karte: Kennzahlen nach Inhaltsbreite (b1-rk-puzzle-kennzahle
 describe('Hinweiszeile der Löser (UI-Sweep b1)', () => {
   for (const [name, cmp] of SOLVERS.map(([n, c]) => [n, c] as const)) {
     it(`${name}: „Tipps melden“ ohne Deckkraft, leise Farbe, durchgezogener Rahmen; am Handy nur Symbol`, () => {
-      const s = css(cmp).replace(/\s/g, '');
+      // Buch-Löser: die Hinweiszeile ist seit Z18 die Kindkomponente BookBoardHintComponent.
+      const hint = cmp === BookPuzzleComponent ? BookBoardHintComponent : cmp;
+      const s = css(hint).replace(/\s/g, '');
       const flag = s.match(/\.board-hint-flag\{([^}]*)\}/)?.[1] ?? '';
       expect(flag).toContain('color:var(--mat-sys-on-surface-variant)');
       expect(flag).toContain('border:1pxsolidvar(--mat-sys-outline)');
       expect(s).not.toMatch(/\.board-hint-flag[^{]*\{[^}]*opacity/);
       expect(s).not.toContain('dashed');
-      expect(css(cmp)).toMatch(/@media \(max-width: 599\.98px\) ?\{ ?\.board-hint-flag ?\{[^}]*\} ?\.board-hint-flag-label ?\{ ?display: none;? ?\}/);
+      expect(css(hint)).toMatch(/@media \(max-width: 599\.98px\) ?\{ ?\.board-hint-flag ?\{[^}]*\} ?\.board-hint-flag-label ?\{ ?display: none;? ?\}/);
     });
     it(`${name}: Tipp-Text ab 900 px in der Seitenspalte, darunter unter dem Brett`, () => {
       const s = css(cmp).replace(/\s/g, '');
@@ -249,7 +254,7 @@ function renderBookPuzzle(setup: (c: any) => void, url = '/courses/7/solve'): HT
       { provide: WorksheetService, useValue: {} },
     ],
   });
-  TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+  shallowBookPuzzle();
   const fixture = TestBed.createComponent(BookPuzzleComponent);
   const c: any = fixture.componentInstance;
   c.puzzle = { id: 42, fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4 e7e5', bookFileName: 'b' };

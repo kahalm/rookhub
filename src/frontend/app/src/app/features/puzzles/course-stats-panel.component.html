@@ -1,0 +1,51 @@
+<div class="ctx-progress course-stats" id="course-stats-panel">
+  @if (bookStats(); as bk) {
+    <!-- Ganzes Buch -->
+    <div class="cs-scope">
+      <span class="cs-label">{{ 'book.course.wholeBook' | translate }}</span>
+      <div class="cs-stats">
+        <!-- Dreigeteilt statt „x/y (n %)": ohne Hilfe / mit Tipp oder Neustart / aufgegeben. -->
+        <app-course-progress-split [stats]="bk" [ariaPrefix]="'book.course.wholeBook' | translate" />
+        @if (bk.attemptedCount > 0) {
+          <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
+            <mat-icon>check_circle</mat-icon>{{ bk.accuracyPercent }}%
+          </span>
+        }
+        <span class="cs-time" [matTooltip]="'book.course.timeHint' | translate">
+          <mat-icon>schedule</mat-icon>{{ courseTime(bk.totalSeconds) }}
+        </span>
+        @if (courseEta(bk); as eta) {
+          <span class="cs-eta" [matTooltip]="'book.course.etaHint' | translate">
+            <mat-icon>hourglass_bottom</mat-icon>~{{ eta }}
+          </span>
+        }
+      </div>
+    </div>
+    <!-- Aktuelles Kapitel (nur wenn das Buch mehrere Kapitel hat) -->
+    @if (chapterStats(); as ch) {
+      <div class="cs-scope cs-chapter">
+        <span class="cs-label">{{ chapterLabel() || ('book.course.noChapter' | translate) }}</span>
+        <div class="cs-stats">
+          <app-course-progress-split [stats]="ch" [ariaPrefix]="chapterLabel() || ('book.course.noChapter' | translate)" />
+          @if (ch.attemptedCount > 0) {
+            <span class="cs-acc" [matTooltip]="'book.course.accuracyHint' | translate">
+              <mat-icon>check_circle</mat-icon>{{ ch.accuracyPercent }}%
+            </span>
+          }
+          <span class="cs-time" [matTooltip]="'book.course.timeHint' | translate">
+            <mat-icon>schedule</mat-icon>{{ courseTime(ch.totalSeconds) }}
+          </span>
+          @if (courseEta(ch); as eta) {
+            <span class="cs-eta" [matTooltip]="'book.course.etaHint' | translate">
+              <mat-icon>hourglass_bottom</mat-icon>~{{ eta }}
+            </span>
+          }
+        </div>
+      </div>
+    }
+  } @else {
+    <mat-progress-bar mode="determinate" [value]="percent()"
+                      [attr.aria-label]="'book.course.wholeBook' | translate"></mat-progress-bar>
+    <p class="ctx-stats">{{ solved() }}/{{ total() }} ({{ percent() }}%)</p>
+  }
+</div>

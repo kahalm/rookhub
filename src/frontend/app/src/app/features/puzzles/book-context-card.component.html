@@ -1,0 +1,251 @@
+@if (hasPuzzle()) {
+  <mat-card class="context-card">
+    <mat-card-content>
+      <div class="ctx-head">
+        @if ((inWeekly() && canOpenWeeklyOverview()) || inCourse()) {
+          <button mat-icon-button class="ctx-back"
+                  (click)="back.emit()"
+                  [appIconLabel]="(inWeekly() ? 'book.weekly.backToWeekly' : courseBackLabel()) | translate">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+        }
+        <div class="ctx-text">
+          <!-- Wochenpost: Titel als Chip mit Beschriftung („Wochenpost 3") statt der nackten Zahl als Buchname. -->
+          @if (inWeekly()) {
+            <div class="weekly-chip-row">
+              <span class="weekly-chip">{{ weeklyChipLabel() }}</span>
+              @if (weeklyTotal() > 0) {
+                <span class="weekly-pos">{{ 'book.weekly.position' | translate:{n: weeklyDisplayIndex(), total: weeklyTotal()} }}</span>
+              }
+            </div>
+          }
+          <!-- d4-rk-daily-puzzle-ohne-tagesbezug: das Tagespuzzle sagt, dass es eins ist und für welchen Tag
+               (sonst hing „Voriger Tag“ ohne Bezug) — gleiche Form wie der Wochenpost-Chip. -->
+          @if (day(); as day) {
+            <div class="weekly-chip-row daily-chip-row">
+              <span class="weekly-chip">{{ 'book.dailyChip' | translate }}</span>
+              <span class="weekly-pos daily-date">{{ day | date:'mediumDate':'UTC' }}</span>
+            </div>
+          }
+          <!-- Angezeigt wird die Kurs-Übersetzung (Label), wo es eine gibt — Schlüssel bleiben das Original. -->
+          @if (titleDisplay(); as t) { <p class="meta-title">{{ t }}</p> }
+          @if (chapterDisplay(); as ch) { <p class="meta-chapter">{{ ch }}</p> }
+          @if (!inWeekly()) { <span class="book-name">{{ bookName() }}</span> }
+          @if (sourceGameLink(); as link) {
+            <a class="source-game" [routerLink]="link" [queryParams]="{ ply: sourceGame()?.ply }">
+              <mat-icon>open_in_new</mat-icon> {{ 'book.sourceGame' | translate }}
+            </a>
+          }
+          <!-- Abzeichen + „Tags anzeigen" in der Textspalte, fluchtend mit Titel/Kapitel neben dem Pfeil
+               (b1-rk-loeser-tags-link-versatz) — nicht am Kartenrand unter dem Pfeil. -->
+          @if (difficulty() || bookRating() || tags()) {
+            <div class="ctx-badges">
+              @if (difficulty(); as diff) {
+                <span class="difficulty-badge" [class]="'diff-' + diff.toLowerCase()">{{ diff }}</span>
+              }
+              @if (bookRating()) {
+                <span class="rating-badge">{{ 'book.difficulty' | translate }}: {{ bookRating() }}/10</span>
+              }
+              <app-puzzle-tags [tags]="tags()" />
+            </div>
+          }
+        </div>
+        @if (langEnabled()) {
+          <app-course-lang-picker class="ctx-lang" [languages]="languages()"
+                                  [value]="langValue()"
+                                  (picked)="languagePicked.emit($event)" />
+        }
+        @if (inCourse() && courseTotal() > 0) {
+          <button mat-icon-button class="ctx-stats-btn" (click)="statsToggled.emit()"
+                  [attr.aria-expanded]="statsOpen()" aria-controls="course-stats-panel"
+                  [class.on]="statsOpen()"
+                  [appIconLabel]="'book.course.progressInfo' | translate">
+            <mat-icon>info_outline</mat-icon>
+          </button>
+        }
+        @if (ebookRef(); as er) {
+          <!-- Kurslinie → Stelle im E-Book (neuer Tab, der Kurs bleibt offen). -->
+          <a mat-stroked-button class="ctx-switch ctx-in-book" target="_blank" rel="noopener"
+             [routerLink]="['/ebooks', er.ebookId]" [queryParams]="{ diagram: er.diagramId, page: er.page }"
+             [matTooltip]="'book.course.inBookTooltip' | translate:{ title: er.ebookTitle, page: er.page }">
+            <mat-icon>menu_book</mat-icon>
+            <span class="ctx-switch-label">{{ 'book.course.inBook' | translate:{ page: er.page } }}</span>
+          </a>
+        }
+        @if (inCourse() && linkedCourseBookId()) {
+          <button mat-stroked-button class="ctx-switch" (click)="switchLinked.emit()"
+                  [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName() }">
+            <mat-icon>swap_horiz</mat-icon>
+            <span class="ctx-switch-label">{{ linkedCourseName() }}</span>
+          </button>
+        }
+      </div>
+
+      <!-- Der Erklär-/Zug-Kommentar steht als eigener Block am Ende der Seitenspalte (s. u.). -->
+
+      <!-- Spielweise (Kurs/Tagespuzzle/Buch-Puzzle) umschalten steht NUR im ⋮-Menü der Aktionszeile (Wunsch
+           2026-10-20: der Knopf in der Karte schob Fortschritt und Überspringen nach unten). Der Wochenpost
+           behält seinen eigenen Knopf (wirkt auf alle Wochenpost-Puzzles, zählt die Aufteilung mit). -->
+
+      @if (inWeekly() && weeklyTotal() > 0) {
+        <div class="ctx-progress">
+          <mat-progress-bar mode="determinate" [value]="weeklyPercent()"
+                            [attr.aria-label]="'book.weekly.progress' | translate:{played: weeklyPlayed(), total: weeklyTotal(), solved: weeklySolved()}"></mat-progress-bar>
+          <p class="ctx-stats">
+            {{ 'book.weekly.progress' | translate:{played: weeklyPlayed(), total: weeklyTotal(), solved: weeklySolved()} }}
+            @if (weeklySeconds() > 0) {<span> · ⏱ {{ weeklyTimeDisplay() }}</span>}
+            @if (weeklyTrainingCount() + weeklyEasyCount() > 0) {
+              <span> · {{ 'weekly.mode.split' | translate:{training: weeklyTrainingCount(), easy: weeklyEasyCount()} }}</span>
+            }
+          </p>
+          @if (isLoggedIn()) {
+            <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe weekly.toggleMode). -->
+            <button mat-stroked-button class="ctx-mode-btn" (click)="weeklyModeToggled.emit()"
+                    [matTooltip]="'weekly.mode.switchHint' | translate">
+              <mat-icon>{{ weeklyMode() === 'easy' ? 'psychology' : 'pan_tool' }}</mat-icon>
+              {{ (weeklyMode() === 'easy' ? 'solveMode.switchToTraining' : 'solveMode.switchToEasy') | translate }}
+            </button>
+          } @else {
+            <!-- Gast: durchspielen geht, gewertet wird nur eingeloggt. Der Rücksprung
+                 führt genau hierher zurück, damit man nicht neu suchen muss. -->
+            <p class="ctx-guest">
+              {{ 'book.weekly.guestHint' | translate }}
+              <a mat-button color="primary" routerLink="/login" [queryParams]="{ returnUrl: weeklyReturnUrl() }">
+                {{ 'auth.login.title' | translate }}
+              </a>
+              <a mat-button routerLink="/register" [queryParams]="{ returnUrl: weeklyReturnUrl() }">
+                {{ 'auth.register.title' | translate }}
+              </a>
+            </p>
+          }
+        </div>
+      }
+      <!-- Fortschritt (ganzes Buch + Kapitel) erst auf das ⓘ neben der Sprachwahl (Wunsch 2026-10-20). -->
+      @if (inCourse() && courseTotal() > 0 && statsOpen()) {
+        <app-course-stats-panel [bookStats]="courseBookStats()" [chapterStats]="courseChapterStats()"
+                                [chapterLabel]="courseChapterDisplay()" [solved]="courseSolved()"
+                                [total]="courseTotal()" [percent]="coursePercent()" />
+      }
+
+      @if (weeklyCompleted()) {
+        <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
+        @if (canOpenWeeklyOverview()) {
+          <div class="ctx-nav">
+            <button mat-flat-button color="primary" (click)="weeklyOverview.emit()">{{ 'book.course.toOverview' | translate }}</button>
+          </div>
+        }
+      } @else if (courseCompleted()) {
+        @if (courseFullyDone()) {
+          <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
+        } @else {
+          <p class="ctx-done"><mat-icon>replay</mat-icon> {{ 'book.course.roundFinished' | translate:{remaining: courseRemaining()} }}</p>
+        }
+        <div class="ctx-nav">
+          @if (!courseFullyDone()) {
+            <!-- „Offene nochmal": nur die gescheiterten Linien zurück in den Topf — gelöste bleiben gelöst
+                 (vorher setzte dieser Knopf den ganzen Kurs zurück). In beiden Modi. -->
+            <button mat-flat-button color="primary" class="retry-failed" (click)="retryFailed.emit()">
+              <mat-icon>replay</mat-icon> {{ 'book.course.continueRemaining' | translate }}
+            </button>
+          } @else if (courseModeKind() === 'random') {
+            <button mat-flat-button color="primary" (click)="restartCourse.emit()">
+              <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
+            </button>
+          }
+          <button mat-stroked-button (click)="courseOverview.emit()">{{ courseOverviewLabel() | translate }}</button>
+        </div>
+      } @else if (state() === 'INFO') {
+        <div class="ctx-nav">
+          @if (inCourse()) {
+            <button mat-flat-button color="primary" (click)="courseNext.emit()">
+              <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextPuzzle' | translate }}
+            </button>
+          }
+          @if (browseInBook()) {
+            <button mat-flat-button color="primary" (click)="nextInBook.emit()" [disabled]="bookNavLoading()">
+              <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+            </button>
+            <button mat-stroked-button (click)="randomInBook.emit()" [disabled]="bookNavLoading()">
+              <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+            </button>
+          }
+        </div>
+      } @else if (state() === 'SOLVED' || state() === 'FAILED') {
+        <!-- Gelöst/aufgegeben: „Nächstes Puzzle" (Kurs/Wochenpost) bringt die Statuskarte als EINEN
+             Hauptknopf mit (DESIGN 5.4, b1-rk-seq-doppelt-naechstes-puzzle) — hier nur Tages-/Buch-Navigation. -->
+        @if (isDaily() || browseInBook()) {
+        <div class="ctx-nav">
+          @if (isDaily()) {
+            <button mat-stroked-button (click)="prevDaily.emit()">
+              <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
+            </button>
+            @if (canGoForwardDaily()) {
+              <button mat-stroked-button (click)="nextDaily.emit()">
+                {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
+              </button>
+            }
+          }
+          @if (browseInBook()) {
+            <button mat-stroked-button (click)="nextInBook.emit()" [disabled]="bookNavLoading()">
+              <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+            </button>
+            <button mat-stroked-button (click)="randomInBook.emit()" [disabled]="bookNavLoading()">
+              <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+            </button>
+          }
+        </div>
+        }
+      } @else if (inWeekly() || inCourse()) {
+        <!-- „Überspringen“ steht neben „Aufgeben“ in der Status-Card (showSkip, Wunsch 2026-10-20). -->
+      } @else if (isDaily()) {
+        <div class="ctx-nav">
+          <button mat-stroked-button (click)="prevDaily.emit()">
+            <mat-icon>chevron_left</mat-icon> {{ 'book.actions.prevDaily' | translate }}
+          </button>
+          @if (canGoForwardDaily()) {
+            <button mat-stroked-button (click)="nextDaily.emit()">
+              {{ 'book.actions.nextDaily' | translate }} <mat-icon>chevron_right</mat-icon>
+            </button>
+          }
+        </div>
+      } @else if (browseInBook()) {
+        <div class="ctx-nav">
+          <button mat-stroked-button (click)="nextInBook.emit()" [disabled]="bookNavLoading()">
+            <mat-icon>skip_next</mat-icon> {{ 'book.actions.nextInBook' | translate }}
+          </button>
+          <button mat-stroked-button (click)="randomInBook.emit()" [disabled]="bookNavLoading()">
+            <mat-icon>shuffle</mat-icon> {{ 'book.actions.randomInBook' | translate }}
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+} @else if ((inWeekly() || inCourse()) && state() !== 'LOADING') {
+  <!-- Kein Puzzle: Weekly ohne Puzzles oder Kurs bereits abgeschlossen -->
+  <mat-card class="context-card">
+    <mat-card-content>
+      @if (inWeekly()) {
+        <p class="ctx-done">
+          <mat-icon>{{ weeklyTotal() === 0 ? 'info' : 'emoji_events' }}</mat-icon>
+          {{ (weeklyTotal() === 0 ? 'book.weekly.noPuzzles' : 'book.weekly.allSolved') | translate }}
+        </p>
+        @if (canOpenWeeklyOverview()) {
+          <div class="ctx-nav">
+            <button mat-stroked-button (click)="weeklyOverview.emit()">{{ 'book.course.toOverview' | translate }}</button>
+          </div>
+        }
+      }
+      @if (inCourse() && courseCompleted()) {
+        <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
+        <div class="ctx-nav">
+          @if (courseModeKind() === 'random') {
+            <button mat-flat-button color="primary" (click)="restartCourse.emit()">
+              <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
+            </button>
+          }
+          <button mat-stroked-button (click)="courseOverview.emit()">{{ courseOverviewLabel() | translate }}</button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}

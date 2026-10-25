@@ -6,6 +6,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { provideTranslateService, TranslatePipe } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
+import { BookCommentBlockComponent } from './book-comment-block.component';
+import { shallowBookPuzzle } from '../../testing/book-puzzle-shallow';
 import { PuzzleService } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -62,7 +64,7 @@ function render(setup: (c: any) => void): HTMLElement {
       { provide: WorksheetService, useValue: {} },
     ],
   });
-  TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+  shallowBookPuzzle();
   const fixture = TestBed.createComponent(BookPuzzleComponent);
   const c: any = fixture.componentInstance;
   c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
@@ -144,7 +146,7 @@ const css = (cmp: Type<unknown>) =>
 // b1-rk-loeser-kommentar-zeilenlaenge-ultrawide (DESIGN 4.6 Regel 4): ab 2400 px Kommentar 1 rem, Zeile ≤ 68 Zeichen.
 describe('BookPuzzleComponent Kurs-Kommentar ab 2400 px (b1)', () => {
   it('größere Schrift und begrenzte Zeilenlänge nur in der Breitbild-Stufe', () => {
-    const s = css(BookPuzzleComponent);
+    const s = css(BookCommentBlockComponent);   // Kommentar-Block ist seit Z18 eine eigene Komponente
     const at = s.indexOf('@media(min-width:2400px)');
     expect(at).toBeGreaterThan(-1);
     const wide = s.slice(at);

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { BookPuzzleComponent } from '../features/puzzles/book-puzzle.component';
+import { BookBoardHintComponent } from '../features/puzzles/book-board-hint.component';
 import { EndlessPuzzleComponent } from '../features/puzzles/endless-puzzle.component';
 import { PuzzleComponent } from '../features/puzzles/puzzle.component';
 import { contrast, effectiveBackground, mountWithComponentStyles, parseColor, setDarkTheme } from '../testing/contrast';
@@ -42,7 +42,8 @@ describe('styles.scss: Fortschrittsspur und „am Zug“-Punkt (UI-Sweep a1)', (
   // a1-rk-am-zug-punkt-dunkel: #2b2b2b mit schwachem Rand ≈ 1,4:1 im dunklen Design. Jetzt schwarz mit Ring aus der
   // Textfarbe — die globale Regel muss die gleichnamigen gekapselten Regeln der drei Puzzle-Seiten schlagen.
   const DOT = '<span class="board-hint-tomove"><span class="tomove-dot black"></span>Schwarz am Zug</span>';
-  for (const cmp of [PuzzleComponent, BookPuzzleComponent, EndlessPuzzleComponent]) {
+  // Buch-Löser: der Punkt sitzt seit Z18 in der Kindkomponente BookBoardHintComponent.
+  for (const cmp of [PuzzleComponent, BookBoardHintComponent, EndlessPuzzleComponent]) {
     for (const dark of [false, true]) {
       it(`${(cmp as { name: string }).name}: schwarzer Punkt mit sichtbarem Ring (${dark ? 'dunkel' : 'hell'})`, () => {
         setDarkTheme(dark);

@@ -1,22 +1,15 @@
 import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CommentSegment } from './comment-variation.util';
-import { CourseProgressSplitComponent } from '../courses/course-progress-split.component';
 import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
 import { CommentBlockCache } from './line-step.util';
 import {
@@ -45,7 +38,6 @@ import { isElementFullscreen } from '../../shared/fullscreen/fullscreen.util';
 import { AuthService } from '../../core/auth.service';
 import { CourseLanguageService, CourseRef } from '../courses/course-language.service';
 import { labelOr } from '../courses/course-language.util';
-import { CourseLangPickerComponent, MachineNoteComponent } from '../courses/course-lang-picker.component';
 import { loadDailyElapsed, saveDailyElapsed } from './daily-elapsed.util';
 import { loadSolveElapsed, saveSolveElapsed } from './solve-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -59,7 +51,10 @@ import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { BookModeHost, BookModeStrategy } from './book-mode-host';
-import { BookCourseMode, courseTime, courseEta } from './book-course-mode';
+import { BookCourseMode } from './book-course-mode';
+import { BookContextCardComponent } from './book-context-card.component';
+import { BookCommentBlockComponent } from './book-comment-block.component';
+import { BookBoardHintComponent } from './book-board-hint.component';
 import { BookWeeklyMode } from './book-weekly-mode';
 import { BookDailyMode } from './book-daily-mode';
 import { BookStandaloneMode } from './book-standalone-mode';
@@ -69,11 +64,10 @@ import { BookStandaloneMode } from './book-standalone-mode';
   selector: 'app-book-puzzle',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, IconLabelDirective, MatDialogModule,
-    PuzzleBoardComponent, BoardFsActionsComponent, PuzzleTagsComponent,
+    CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatDialogModule,
+    PuzzleBoardComponent, BoardFsActionsComponent,
     TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent,
-    RouterLink, CourseLangPickerComponent, MachineNoteComponent, CourseProgressSplitComponent,
+    BookContextCardComponent, BookCommentBlockComponent, BookBoardHintComponent,
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -94,9 +88,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   readonly weekly: BookWeeklyMode;
   readonly daily: BookDailyMode;
   readonly book: BookStandaloneMode;
-  /** Zeit-/Restzeit-Anzeige der Kurs-Statistik. */
-  readonly courseTime = courseTime;
-  readonly courseEta = courseEta;
 
   // ===== Spielweise (Kurs / Tagespuzzle / einzelnes Buch-Puzzle) =====
   // Der Wochenpost-Modus hat seine EIGENE Abfrage (weeklyMode, s. o.) und bleibt davon unberührt:
@@ -316,11 +307,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** Angezeigter Titel/Kapitel der Linie: die Übersetzung, sonst das Original (Schlüssel bleiben). */
-  /** Router-Ziel der Partie, aus der die Aufgabe geerntet wurde (Taktik-Ernte); `null` = keine. */
-  get sourceGameLink(): unknown[] | null {
-    const g = this.puzzle?.sourceGame;
-    return g ? [g.kind === 'club' ? '/club-games' : '/games', g.id] : null;
-  }
   get titleDisplay(): string | null { return labelOr(this.puzzle?.titleLabel, this.puzzle?.title); }
   get chapterDisplay(): string | null { return labelOr(this.puzzle?.chapterLabel, this.puzzle?.chapter); }
 

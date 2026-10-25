@@ -1,0 +1,73 @@
+/* Host transparent: die <section> bleibt wie vorher direktes Flex-Kind der Seitenspalte (.info-section). */
+:host { display: contents; }
+
+/* Info-/Zug-Kommentar-Block: eigener Block in der Seitenspalte HINTER Kontext-Card (Fortschritt, „Überspringen“),
+   Status-Card (Zeit, „Bewertung anzeigen“, „Aufgeben“) und Aktionsleiste — ein langer, ungekürzter Kommentar
+   schiebt die Bedienung nicht mehr unter die Falz (a1-rk-kommentar-schiebt-aktionen, DESIGN 4.6 Regel 2). */
+.ctx-comment-block { display: flex; flex-direction: column; gap: 0.5rem; }
+.ctx-comment {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+.ctx-comment mat-icon {
+  flex-shrink: 0; font-size: 20px; width: 20px; height: 20px;
+  color: color-mix(in srgb, currentColor 45%, transparent); margin-top: 1px;
+}
+/* Kommentar-Absätze gestapelt (mehrere Zug-Kommentare untereinander). Der Wrapper ist das
+   Flex-Kind neben dem Icon; lange Texte umbrechen (min-width:0). Seit 0.693.4 OHNE Höhengrenze: der ganze
+   Kommentar steht da (Wunsch 2026-10-07), ein langer lässt sich zusätzlich im Fenster lesen. */
+.ctx-comment .ctx-comment-body {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.ctx-comment .ctx-comment-text { display: flex; flex-direction: column; gap: 0.4rem; }
+.ctx-comment-long .ctx-comment-text { cursor: zoom-in; }
+/* Seit 2026-10-20 steht der Kommentar ÜBER der Status-Card (zwischen „Überspringen“ und Uhr): ein langer würde die
+   Bedienung wieder unter die Falz schieben (a1-rk-kommentar-schiebt-aktionen) — daher auf ~5 Zeilen mit Verlauf,
+   der ganze Text im Dialog („Ganz lesen“, Klick auf den Text). Gekürzt werden NUR die Absätze (.ctx-comment-text):
+   „Ganz lesen“, Variantenleiste und Maschinen-Hinweis stehen darunter und bleiben sichtbar
+   (d5-rk-kommentar-abgeschnitten-ohne-link). */
+.ctx-comment-long .ctx-comment-text {
+  max-height: 7.5em; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  mask-image: linear-gradient(to bottom, #000 65%, transparent);
+}
+.ctx-comment .ctx-comment-expand {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
+  font: inherit; font-size: 0.85em; font-weight: 600; cursor: pointer;
+  color: var(--mat-sys-primary, #1565c0); background: none; border: none; padding: 2px 0;
+}
+@media (pointer: coarse) {
+  .ctx-comment .ctx-comment-expand { min-height: 44px; }
+}
+.ctx-comment .ctx-comment-expand mat-icon { font-size: 16px; width: 16px; height: 16px; margin: 0; color: inherit; }
+.ctx-comment p {
+  margin: 0; font-size: 0.92em; line-height: 1.4; white-space: pre-wrap; overflow-wrap: break-word;
+}
+/* Beim Import angeklebte Kapitelüberschrift, abgesetzt (v1-rk-course-comment-ueberschrift-angeklebt). */
+.ctx-comment p.cmt-heading { font-weight: 700; }
+/* Klickbarer Zug-Chip in einem Kommentar (spielt die Variante als Brett-Vorschau vor). */
+.ctx-comment .cmt-move {
+  font: inherit; font-weight: 600; cursor: pointer;
+  color: var(--mat-sys-primary, #1565c0);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 4px; padding: 0 4px; margin: 0 1px; white-space: nowrap;
+}
+.ctx-comment .cmt-move:hover { background: color-mix(in srgb, currentColor 22%, transparent); }
+.cmt-variation-bar {
+  display: flex; align-items: center; gap: 8px; margin-top: 6px;
+  font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+.ctx-offline-lang { margin: 0.2rem 0 0; font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+
+/* Breitbild-Stufe ≥ 2400 px: Kurs-Kommentar in der breiten Seitenspalte — größere Schrift passend zum Brett,
+   Zeile ≤ ~70 Zeichen (DESIGN 4.6 Regel 4, b1-rk-loeser-kommentar-zeilenlaenge-ultrawide). */
+@media (min-width: 2400px) {
+  .ctx-comment p { font-size: 1rem; line-height: 1.5; }
+  .ctx-comment .ctx-comment-body { max-width: 68ch; }
+}

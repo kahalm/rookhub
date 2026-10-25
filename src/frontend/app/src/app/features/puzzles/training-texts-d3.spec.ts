@@ -70,8 +70,8 @@ describe('Design-Runde d3 · Training (Texte und Vorlagen)', () => {
     expect((await lang('en'))['endless.game.statTime']).toBe('Session');
   });
 
-  // d3-rk-flaggen-symbol-doppelt (alle drei Puzzle-Modi)
-  for (const file of ['puzzle', 'book-puzzle', 'endless-puzzle']) {
+  // d3-rk-flaggen-symbol-doppelt (alle drei Puzzle-Modi; im Buch-Löser steht die Hinweiszeile seit Z18 in book-board-hint)
+  for (const file of ['puzzle', 'book-board-hint', 'endless-puzzle']) {
     it(`${file}: „Tipps melden“ trägt kein Fähnchen (das gehört „Aufgeben“) und einen Namen per appIconLabel`, async () => {
       const html = await source(`src/app/features/puzzles/${file}.component.html`);
       const at = html.indexOf('<button class="board-hint-flag"');

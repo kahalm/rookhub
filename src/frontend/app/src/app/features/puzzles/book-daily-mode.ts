@@ -2,6 +2,12 @@ import { formatUtcDate, shiftDailyDate } from './book-nav.util';
 import { getDailyOffline, saveDailyOffline } from './book-offline.util';
 import { BookModeHost } from './book-mode-host';
 
+/** Tag eines Tagespuzzles („YYYYMMDD“ bzw. „YYYY-MM-DD“) als Datum (UTC-Mitternacht) für die DatePipe. */
+export function dailyDateValue(date: string | null | undefined): Date | null {
+  const m = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(date ?? '');
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+}
+
 /**
  * Tagespuzzle-Modus des Buch-Lösers (/puzzles/daily/:date, Zerlegung Z18): Datums-Navigation (zurück/vor) statt
  * Buch-Navigation, kein Auto-Weiter. Gemeldet wird wie beim einzelnen Buch-Puzzle (`BookStandaloneMode`).
@@ -13,10 +19,7 @@ export class BookDailyMode {
   constructor(private readonly h: BookModeHost) {}
 
   /** Tag des Tagespuzzles als Datum (UTC-Mitternacht) für die DatePipe; `date` ist „YYYYMMDD“. */
-  get dateValue(): Date | null {
-    const m = /^(\d{4})-?(\d{2})-?(\d{2})$/.exec(this.date ?? '');
-    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
-  }
+  get dateValue(): Date | null { return dailyDateValue(this.date); }
 
   /** „Vor" nur erlaubt, solange das angezeigte Datum vor heute (UTC) liegt — keine Zukunft. */
   get canGoForward(): boolean { return !!this.date && this.date < this.todayUtc(); }
