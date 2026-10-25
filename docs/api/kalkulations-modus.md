@@ -95,3 +95,20 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 | PUT | `/api/admin/books/{id}/groups` | Admin | Vollständige Gruppen-Freigabe setzen (ersetzt; ungültige Ids ignoriert) |
 | GET | `/api/admin/books` | `books.manage` | Bücherverwaltung: alle Bücher, mit `ownerUserId`/`ownerName` (`null` = globales Buch); Pool-/Öffentlich-/Kinder-Schalter an fremden privaten Büchern fragen in der Oberfläche nach und nennen den Besitzer (Codereview N9-010) |
 | PUT | `/api/admin/books/{id}` | `books.manage` | Buch ändern — jedes Feld `null` = unverändert; `minElo`/`maxElo` 0 = Grenze entfernen, sonst 0..3500 (Codereview N9-009) |
+
+## Code-Aufteilung im Frontend (Zerlegung Z20, Codereview F3-001)
+
+`features/courses/calc/calculation.component.ts` ist nur noch der Container (Laden, URL, Dialoge, Stoppuhr,
+Tastatur, `pagehide`); die Teile daneben:
+
+| Datei | Inhalt |
+|-------|--------|
+| `calc-chapter-model.ts` | Stellungen, Kapitel-Gruppen, Standort (Kapitel + Stellung, „am Ende angekommen"), Summen |
+| `calc-chapters.util.ts` | reine Kapitel-Funktionen (Schlüssel, Gruppen, Einstiegskapitel, Summen) |
+| `calc-tree-cursor.ts` | Position im Analysebaum (Cursor, aktive Linie, Cursor-FEN, Kommentar-Entwurf) |
+| `calc-tree-saver.ts` | Baum speichern: Autosave (1,2 s), Speicherstand, Warteschlange je Stellung |
+| `calc-review.controller.ts` | Festlegung/Zeit/Stufe je Stellung, Spiegel in der Sprungliste, Server-Antwort, Warteschlange |
+| `keyed-single-flight-queue.ts` | EINE Sende-Warteschlange für Baum und Bewertung: je Stellung höchstens eine Anfrage, jüngerer Stand wartet, Fehlschlag reiht nach eigener Regel wieder ein (kein sofortiger Neuversuch) |
+| `calc-training-timer.ts` | Kapitel-Uhr (Topf je Kapitel im localStorage, Besitzer-Prüfung F3-019, Fehlschlag-Übergang F3-011; Takt austauschbar) |
+| `calc-page-mode.ts` | `<body>`-Klasse `calc-mode`, gemessene Navbar-Breite, Vollbild-Ziel |
+| `calc-result-card` / `calc-annotate-card` / `calc-status-panel` (`.component.*`) | OnPush-Darstellung: Ergebnisfeld, Editor-Leiste (Symbole + Kommentar), Kapitelende + Fußzeile + Geräte-Hinweis |

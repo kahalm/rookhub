@@ -28,3 +28,11 @@ sollen nicht im „Aktualisieren"-Banner hängen).
 | PUT | `/api/courses/{bookId:int}/chapters/rename` | Besitzer/Admin | Kapitel umbenennen `{ chapter, newName }` (leerer Name = „ohne Kapitel"); 400 wenn Zielname existiert. Eine Ausgabe der Kalkulations-Serie wird in derselben Speicherung mit umbenannt; Ziel „ohne Kapitel" bzw. ein Ziel mit schon vorhandener Ausgabe → 400, bevor etwas geändert wird (Codereview A7-003) |
 | POST | `/api/courses/{bookId:int}/chapters/delete` | Besitzer/Admin | Ganzes Kapitel = alle seine Linien löschen `{ chapter }` — löscht die Ausgabe der Kalkulations-Serie mit (A7-003) |
 | POST | `/api/courses/{bookId:int}/chapters/reset` | Auth | **Einzel-Kapitel-Reset des EIGENEN Fortschritts** `{ chapter }` — leert CoursePuzzleResults/CourseInfoViews dieses Kapitels; die `CourseAttempts` bleiben als Zeit-Log stehen, statt dessen merkt sich `CourseLineResets` je Linie den Reset-Zeitpunkt (0.672.3). Pool, Statistik und ✓/✗ zählen nur Versuche nach BEIDEN Zeitpunkten (`CourseProgressRules.AttemptsSinceReset`) — vorher fielen die zurückgesetzten Linien weiter aus dem Pool und der Kurs meldete „abgeschlossen". Buchweites `CourseProgress.ResetAt` bleibt (ist buchweit, löscht beim Kurs-Reset die `CourseLineResets` des Buchs), eigene `CalculationTrees` bleiben ebenfalls (Nutzerarbeit) |
+
+**Frontend-Aufbau** (Zerlegung Z29, Codereview F3-021): `features/courses/course-detail.component.ts` ist der Container
+(Laden, Rückfragen, Speichern); jede Kapitelzeile samt Menü und Linien-Tabelle rendert `chapter-row.component.ts`
+(OnPush, Aktionen als Ereignisse), Kalk-Serie (Ausgaben, Verteiler) und Kapitelpunkte hält `calc-series.controller.ts`.
+Die HTTP-Zugriffe stehen seit Z33 thematisch in `course-api.ts` (lesen/lösen), `course-authoring-api.ts` (anlegen/
+pflegen), `course-share-api.ts` (teilen/öffentlich) und `course-translation-api.ts`, Typen in `course.types.ts`;
+`course.service.ts` bleibt als Fassade für die bestehenden Aufrufer, die `?lang=`-Regel steht einmal in
+`course-lang-params.ts`.
