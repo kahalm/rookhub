@@ -1,0 +1,220 @@
+.map-wrap { position: relative; }
+
+.map-host {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container);
+}
+
+/* Am Handy hoechstens gut die Haelfte des Bildschirms: mit 70vh (591 von 844 px) fuellte die
+   Kalenderkarte nach dem Scrollen fast alles, Filter und „Dein Turnier fehlt?" lagen
+   ausserhalb. max-height und nicht height, damit die Hoehe von aussen (Detailseite: 320px)
+   gilt, solange sie darunter bleibt. vh als Rueckfall fuer Browser ohne svh. */
+@media (max-width: 768px) {
+  .map-host { max-height: 55vh; max-height: 55svh; }
+}
+
+/* Mitten auf der Karte, ueber den Punkten und unter Leaflets Popups (700); faengt keine
+   Ereignisse ab, damit die Geste, die ihn ausgeloest hat, ungestoert weiterlaeuft. */
+.gesture-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 650;
+  max-width: 80%;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(32, 33, 36, 0.82);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Unten links: Leaflets eigene Bedienelemente sitzen oben links (Zoom) und unten rechts
+   (Quellenangabe) — dazwischen ist der einzige freie Platz, der beides nicht verdeckt. */
+.map-chrome {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 500;                 /* ueber den Kacheln, unter Leaflets Popups (700) */
+  max-width: min(42%, 240px);
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-surface) 92%, transparent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  /* 0.75rem = 12 px, dieselbe Stufe wie Leaflets Quellenangabe (leaflet.css): 11,5 px
+     halbtransparent auf Kartenkacheln war auf dem Handy schwer lesbar. */
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.colour-by { display: flex; flex-direction: column; gap: 2px; }
+.colour-by > span { font-weight: 600; }
+
+.colour-by select {
+  max-width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 4px;
+  background: var(--mat-sys-surface);
+  color: inherit;
+  font: inherit;
+}
+
+/* iOS Safari zoomt die ganze Seite auf ~1,4x, sobald ein Formularfeld unter 16 px den Fokus
+   bekommt — und laesst sie so stehen; der Zurueck-Pinch landet dann auf der Karte. Nur fuer
+   Touch: am Desktop bleibt die Legende so kompakt wie bisher. */
+@media (pointer: coarse) {
+  .colour-by select { font-size: 16px; min-height: 32px; }
+}
+
+.legend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Auf dem Handy ein 36-px-Ziel: mit 16 px Hoehe traf man den Knopf selten beim ersten Tipp,
+   Fehltipps landeten im Select darueber. Der negative Rand unten verrechnet das neue
+   Button-Padding mit dem Chrome-Padding, sonst stuende zugeklappt ein Streifen Leerraum. */
+@media (max-width: 768px) {
+  .legend-toggle { min-height: 36px; padding: 6px 0; margin-top: 0; margin-bottom: -6px; }
+}
+
+.chevron { display: inline-block; transition: transform 120ms; }
+.chevron.open { transform: rotate(90deg); }
+
+.legend { margin: 4px 0 0; padding: 0; list-style: none; }
+.legend li { display: flex; align-items: center; gap: 5px; }
+
+.legend i {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+}
+
+/* „Gemerkt" und „nur ungefaehr" sind KEINE Klassen des gewaehlten Merkmals, sondern liegen
+   darueber — deshalb zeigen sie keine Farbe, sondern nur ihren eigenen Kanal: den dicken
+   dunklen Ring bzw. die Abschwaechung. */
+.legend i.marked { background: transparent; border-color: #202124; }
+.legend i.vague { background: color-mix(in srgb, currentColor 25%, transparent); }
+
+/* Leaflet haengt den Popup-Inhalt in einen EIGENEN Container ausserhalb dieses Templates —
+   die View-Encapsulation erreicht ihn nicht. Deshalb ::ng-deep, auf den Host beschraenkt. */
+:host ::ng-deep .tm-popup { display: flex; flex-direction: column; gap: 4px; }
+
+:host ::ng-deep .tm-popup-title {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: left;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:host ::ng-deep .tm-popup-line { margin: 0; font-size: 0.82rem; }
+
+:host ::ng-deep .tm-popup-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+
+:host ::ng-deep .tm-badge {
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+:host ::ng-deep .tm-badge-warn {
+  background: color-mix(in srgb, var(--mat-sys-error) 22%, transparent);
+}
+
+:host ::ng-deep .tm-popup-hint {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+/* Der gebuendelte Punkt: erst die Liste aller Turniere dieses Ortes, dann auf Klick die
+   gewohnte Kurzansicht des einzelnen. */
+:host ::ng-deep .tm-group-head { margin: 0; font-size: 0.9rem; font-weight: 600; }
+
+:host ::ng-deep .tm-group-place,
+:host ::ng-deep .tm-group-vague { margin: 2px 0 0; font-size: 0.78rem; opacity: 0.75; }
+
+:host ::ng-deep .tm-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  /* Ein Punkt kann ueber hundert Turniere tragen — das Popup darf davon nicht zerrissen
+     werden. */
+  max-height: 38vh;
+  overflow-y: auto;
+}
+
+:host ::ng-deep .tm-group-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+:host ::ng-deep .tm-group-row:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+
+/* Gemerkte sind auch in der Liste zu erkennen — derselbe Farbton wie beim Pin. */
+:host ::ng-deep .tm-group-row.is-marked { border-left-color: #f9ab00; }
+
+:host ::ng-deep .tm-group-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--mat-sys-primary);
+}
+
+:host ::ng-deep .tm-group-when { font-size: 0.75rem; opacity: 0.75; }
+
+/* Popupbreites 36-px-Ziel: mit 16 px Hoehe und nur Textbreite landete der Tipp auf dem
+   Handy oft auf dem Turniernamen darunter — Sprung zur Detailseite, Kartenausschnitt weg.
+   text-align, weil ein display:block-Knopf seinen Text zentriert, sobald er breiter ist. */
+:host ::ng-deep .tm-group-back {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 0;
+  padding: 8px 0;
+  min-height: 36px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+}
