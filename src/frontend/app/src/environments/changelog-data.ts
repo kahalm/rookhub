@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.15", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z23/Z22): code shared by the four puzzle solvers (eval display, review paging, cleanup on leave) now lives once in the typed base solver with pure building blocks (timer, hint ladder, off-path policy, viz controller); the analysis board is split into pure modules (settings, route params, readout, engine choice, line model) — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z23/Z22): Gemeinsamer Code der vier Puzzle-Löser (Bewertungsanzeige, Blättern der Durchsicht, Aufräumen beim Verlassen) liegt jetzt einmal im typisierten Basis-Löser mit reinen Bausteinen (Timer, Tipp-Leiter, Off-Path-Regeln, Viz-Controller); das Analysebrett ist in reine Module zerlegt (Einstellungen, Routen-Parameter, Anzeige, Engine-Wahl, Linien-Modell) — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.14", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z24/Z25/Z26): guess-the-move (pure playback with injectable clock, history panel, settings menu), game reconstruction (pure move/gap helpers, gap proposals, part editor, share menu, head form) and the game page (game actions service, engine controller, training controller) are split into smaller building blocks — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z24/Z25/Z26): Punktepartie (reine Abspielsteuerung mit injizierbarer Uhr, Verlaufs-Panel, Einstellungsmenü), Partie rekonstruieren (reine Zug-/Lücken-Helfer, Lückenvorschläge, Teil-Editor, Teilen-Menü, Kopfdaten) und die Partieseite (Aktionen-Dienst, Engine-Controller, Trainings-Controller) sind in kleinere Bausteine zerlegt — keine sichtbare Änderung." },
   ]},
