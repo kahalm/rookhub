@@ -1,0 +1,55 @@
+.gb-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 1.4rem; }
+h2 { margin: 0 0 4px; font-size: 1.1rem; }
+h3 { margin: 0 0 8px; font-size: 1rem; }
+.body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; }
+/* Brett an die Fensterhöhe gebunden (d2-rk-guess-brett-gross-klein): groß bis 820 px statt fest 520 px. */
+.board-col { flex: 1 1 320px; max-width: min(calc(100vh - 250px), 820px); }
+/* Breiter als das Brett-Feld: hier stehen die Zugliste UND die Kommentare, und Prosa braucht
+   Zeilenlaenge. Zusammen mit der Brett-Spalte fuellt das den Container, statt rechts ein
+   leeres Drittel zu lassen (auf dem Desktop gemeldet, 2026-09-10). */
+.side-col { flex: 1 1 320px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
+/* b1-rk-guess-brett-tablet: zweispaltig erst ab 900 px (DESIGN 5.12) — am Tablet standen Brett (~384 px) und Zugliste
+   nebeneinander, die halbe Seite blieb leer. Einspaltig: Brett mittig bis Fensterhöhe (Platz für Kopf + Knöpfe
+   darunter), Zugliste/Fortschritt in voller Breite darunter. */
+@media (min-width: 600px) and (max-width: 899.98px) {
+  .body { flex-direction: column; align-items: center; flex-wrap: nowrap; }
+  .board-col { flex: none; width: min(100%, max(320px, calc(100vh - 300px))); max-width: none; }
+  .side-col { flex: none; width: 100%; max-width: none; }
+}
+.actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+/* UI-Sweep 2026-10-11 (r2-rg-guess-start): Hinweis + Hauptknopf zur Aufgabe direkt unter dem Brett. */
+.browse-actions .to-task { margin-left: auto; }
+.held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.held .hg { font-weight: 600; }
+.held .hd { font-variant-numeric: tabular-nums; }
+.held.g-worse .hd, .held.g-muchWorse .hd { color: var(--rh-error); }
+.held.g-clearlyBetter .hd { color: var(--rh-success); }
+.feedback .fb-head { display: flex; align-items: baseline; gap: 10px; }
+.feedback .pts { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.feedback .grade { font-weight: 600; }
+.fb-line { margin: 6px 0 0; }
+.final { font-size: 1.4rem; font-weight: 700; margin: 0; }
+/* Farbe nach Güte — dieselbe Ordnung wie die Punkte. */
+.g-clearlyBetter .pts, .g-better .pts, .g-onlyMove .pts, .g-gameMove .pts { color: var(--rh-success); }
+.g-similar .pts { color: #558b2f; }
+.g-worse .pts, .g-skipped .pts { color: color-mix(in srgb, currentColor 60%, transparent); }
+.g-muchWorse .pts { color: var(--rh-error); }
+/* Der Rückblick kann lang sein — er scrollt IN SICH, nicht die Seite. */
+.review { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
+.rev-row { display: grid; grid-template-columns: 44px 1fr 1fr 44px 22px; gap: 8px; align-items: baseline;
+           padding: 2px 4px; border-radius: 3px; }
+.rev-row .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem; }
+.rev-row .game { font-weight: 600; }
+.rev-row .yours { color: color-mix(in srgb, currentColor 75%, transparent); }
+.rev-row .pts { text-align: right; font-variant-numeric: tabular-nums; }
+.muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+.small { font-size: .8rem; }
+.head-actions { display: flex; align-items: center; gap: 6px; }
+/* a1-rk-guess-brett-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Seite breiter, Brett bis zur Fensterhöhe statt 820 px;
+   die 560-px-Seitenspalte steht daneben. Unter 2400 px unverändert. */
+@media (min-width: 2400px) {
+  .gb-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
+  .board-col { flex: 0 1 calc(100vh - 250px); max-width: calc(100vh - 250px); }
+}

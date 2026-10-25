@@ -35,6 +35,9 @@ interface PendingGuess {
   plyGuessed: number;
 }
 
+/** Stabil leer — eine neue Liste je Durchlauf waere fuer das OnPush-Kind eine neue Eingabe. */
+const NO_LANGUAGES: string[] = [];
+
 /**
  * Punktepartie (`/guess/:id`): Zug für Zug raten, sofort eine Rückmeldung samt Punkten, dann rückt
  * die Partie zwei Halbzüge weiter (eigener Zug + Antwort des Gegners).
@@ -43,9 +46,6 @@ interface PendingGuess {
  * (siehe `GuessSessionService`). Deshalb setzt das Brett den geratenen Zug auch nicht selbst um:
  * gezeigt wird, was der Server zurückmeldet.</p>
  */
-/** Stabil leer — eine neue Liste je Durchlauf waere fuer das OnPush-Kind eine neue Eingabe. */
-const NO_LANGUAGES: string[] = [];
-
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-guess-board',
@@ -53,215 +53,8 @@ const NO_LANGUAGES: string[] = [];
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent, SanPipe,
     GuessHistoryPanelComponent, GuessSettingsMenuComponent],
-  template: `
-    <div class="gb-container">
-      @if (loading) {
-        <app-loading-spinner />
-      } @else if (!session) {
-        <mat-card><mat-card-content>
-          <p>{{ 'guess.notFound' | translate }}</p>
-          <a mat-stroked-button routerLink="/guess">{{ 'guess.back' | translate }}</a>
-        </mat-card-content></mat-card>
-      } @else {
-        <div class="header">
-          <div>
-            <h1>{{ session.title || ('guess.untitled' | translate) }}</h1>
-            <p class="muted small">
-              {{ (session.guessWhite ? 'guess.playingWhite' : 'guess.playingBlack') | translate }}
-              <!-- d3-rk-punktepartie-null-von-null: vor dem ersten Zug kein „0 von 0 Punkten“ (DESIGN 5.10). -->
-              @if (session.maxPoints > 0) {
-                · {{ 'guess.score' | translate:{ points: session.points, max: session.maxPoints } }}
-              }
-              @if (session.movesPlayed > 0) {
-                · {{ 'guess.hits' | translate:{ hits: session.gameMoveHits, moves: session.movesPlayed } }}
-              }
-            </p>
-          </div>
-          <div class="head-actions">
-            <app-guess-settings-menu [accept]="accept" (changed)="saveAccept()" />
-            <a mat-stroked-button routerLink="/guess"><mat-icon>arrow_back</mat-icon> {{ 'guess.back' | translate }}</a>
-          </div>
-        </div>
-
-        <div class="body">
-          <div class="board-col">
-            <app-chess-board [fen]="viewFen" [lastMove]="viewLastMove" [flipped]="!session.guessWhite"
-                             [boardTheme]="boardTheme" [pieceSet]="pieceSet"
-                             [playable]="canGuess" (userMove)="onMove($event)" />
-
-            @if (session.status === 'running' && !holding) {
-              <!-- UI-Sweep 2026-10-11 (r2-rg-guess-start): beim Durchsehen der Eroeffnung NICHT „Du bist am Zug"
-                   unter einer fremden Stellung, sondern was gerade zu sehen ist + der Weg zur Aufgabe direkt
-                   unter dem Brett (am Handy stand „Zur Aufgabe" erst weit unten unter dem Fortschritt). -->
-              @if (browsing) {
-                <div class="actions browse-actions">
-                  <span class="muted small">{{ 'guess.browsingHint' | translate:{ count: preMoves } }}</span>
-                  <button mat-flat-button color="primary" class="to-task" (click)="browse(null)">
-                    {{ 'guess.toTaskMove' | translate:{ move: moveLabel } }} <mat-icon iconPositionEnd>arrow_forward</mat-icon>
-                  </button>
-                </div>
-              } @else {
-                <div class="actions">
-                  <button mat-stroked-button (click)="skip()" [disabled]="busy">
-                    <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
-                  </button>
-                  <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
-                </div>
-              }
-            }
-            @if (rejected) {
-              <div class="held g-similar">
-                <span class="hg">{{ 'guess.notTheGameMove' | translate:{ move: (rejected | san) } }}</span>
-              </div>
-            }
-            <!-- Dein Zug steht auf dem Brett; DARUNTER, was die Partie gespielt hat. -->
-            @if (holding && last) {
-              <div class="held" [class]="'g-' + (last.grade || 'skipped')">
-                <!-- Beim Halt WEGEN eines Kommentars steht der Partiezug schon auf dem Brett; ihn
-                     danebenzuschreiben waere doppelt. Dann zaehlt nur noch der Weg zurueck ins Spiel. -->
-                @if (!holdingNote) {
-                  <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: (last.gameMoveSan | san) } }}</span>
-                  @if (evalDelta) {
-                    <span class="hd">{{ 'guess.evalDelta' | translate:{ delta: evalDelta } }}</span>
-                  }
-                } @else {
-                  <span class="hg">{{ 'guess.gamePlayed' | translate:{ move: (last.gameMoveSan | san) } }}</span>
-                }
-                <button mat-flat-button color="primary" (click)="continueGame()">
-                  {{ 'guess.continue' | translate }} <mat-icon>arrow_forward</mat-icon>
-                </button>
-              </div>
-            }
-            @if (last) {
-              <mat-card class="feedback" [class]="'g-' + (last.grade || 'skipped')">
-                <mat-card-content>
-                  <div class="fb-head">
-                    <span class="pts">{{ last.points > 0 ? '+' : '' }}{{ last.points }}</span>
-                    <span class="grade">{{ ('guess.grade.' + (last.grade || 'skipped')) | translate }}</span>
-                  </div>
-                  <p class="fb-line">
-                    @if (last.playedSan) {
-                      <span>{{ 'guess.youPlayed' | translate:{ move: (last.playedSan | san) } }}</span> ·
-                    }
-                    <span>{{ 'guess.gamePlayed' | translate:{ move: (last.gameMoveSan | san) } }}</span>
-                    @if (last.replySan) { · <span>{{ 'guess.reply' | translate:{ move: (last.replySan | san) } }}</span> }
-                  </p>
-                  @if (last.evalText) {
-                    <p class="muted small">{{ 'guess.evalAfter' | translate:{ eval: last.evalText } }}</p>
-                  }
-                </mat-card-content>
-              </mat-card>
-            }
-
-            <!-- Die Partie bis hierhin (Eröffnung + gelöste Züge): blättern oder direkt anklicken. -->
-          </div>
-
-          <div class="side-col">
-            @if (session.status === 'done') {
-              <mat-card class="done">
-                <mat-card-content>
-                  <h2>{{ 'guess.finished' | translate }}</h2>
-                  <p class="final">{{ 'guess.score' | translate:{ points: session.points, max: session.maxPoints } }}</p>
-                  <p class="muted small">{{ 'guess.hits' | translate:{ hits: session.gameMoveHits, moves: session.movesPlayed } }}</p>
-                </mat-card-content>
-              </mat-card>
-
-              @if (review.length) {
-                <mat-card>
-                  <mat-card-content>
-                    <h3>{{ 'guess.review' | translate }}</h3>
-                    <div class="review">
-                      @for (r of review; track r.ply) {
-                        <div class="rev-row" [class]="'g-' + (r.grade || 'skipped')">
-                          <span class="no">{{ r.moveNumber }}{{ r.white ? '.' : '…' }}</span>
-                          <span class="game">{{ r.gameSan | san }}</span>
-                          <span class="yours">{{ (r.playedSan | san) || '–' }}</span>
-                          <span class="pts">{{ r.points > 0 ? '+' : '' }}{{ r.points }}</span>
-                          <!-- Nur wo es etwas Besseres gab als den Partiezug. -->
-                          @if (hasBetter(r)) {
-                            <app-help-hint [text]="infoText(r)" icon="info_outline" />
-                          } @else { <span></span> }
-                        </div>
-                      }
-                    </div>
-                  </mat-card-content>
-                </mat-card>
-              }
-            } @else {
-              <mat-progress-bar mode="determinate" [value]="progress"></mat-progress-bar>
-              <p class="muted small">{{ 'guess.progress' | translate:{ done: session.movesPlayed, total: session.totalGuesses } }}</p>
-            }
-
-            @if (session.history.length) {
-              <app-guess-history-panel [history]="session.history" [browseIndex]="browseIndex"
-                                       [atStart]="atStart" [atTask]="atTask" [note]="browsedComment"
-                                       [commentLanguages]="commentLanguages"
-                                       [commentLanguage]="session.commentLanguage"
-                                       (browse)="browse($event)" (step)="step($event)"
-                                       (chooseLanguage)="chooseLanguage($event)" />
-            }
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  styles: [`
-    .gb-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 12px; }
-    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    h1 { margin: 0; font-size: 1.4rem; }
-    h2 { margin: 0 0 4px; font-size: 1.1rem; }
-    h3 { margin: 0 0 8px; font-size: 1rem; }
-    .body { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 12px; }
-    /* Brett an die Fensterhöhe gebunden (d2-rk-guess-brett-gross-klein): groß bis 820 px statt fest 520 px. */
-    .board-col { flex: 1 1 320px; max-width: min(calc(100vh - 250px), 820px); }
-    /* Breiter als das Brett-Feld: hier stehen die Zugliste UND die Kommentare, und Prosa braucht
-       Zeilenlaenge. Zusammen mit der Brett-Spalte fuellt das den Container, statt rechts ein
-       leeres Drittel zu lassen (auf dem Desktop gemeldet, 2026-09-10). */
-    .side-col { flex: 1 1 320px; max-width: 560px; display: flex; flex-direction: column; gap: 10px; }
-    /* b1-rk-guess-brett-tablet: zweispaltig erst ab 900 px (DESIGN 5.12) — am Tablet standen Brett (~384 px) und Zugliste
-       nebeneinander, die halbe Seite blieb leer. Einspaltig: Brett mittig bis Fensterhöhe (Platz für Kopf + Knöpfe
-       darunter), Zugliste/Fortschritt in voller Breite darunter. */
-    @media (min-width: 600px) and (max-width: 899.98px) {
-      .body { flex-direction: column; align-items: center; flex-wrap: nowrap; }
-      .board-col { flex: none; width: min(100%, max(320px, calc(100vh - 300px))); max-width: none; }
-      .side-col { flex: none; width: 100%; max-width: none; }
-    }
-    .actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-    /* UI-Sweep 2026-10-11 (r2-rg-guess-start): Hinweis + Hauptknopf zur Aufgabe direkt unter dem Brett. */
-    .browse-actions .to-task { margin-left: auto; }
-    .held { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
-    .held .hg { font-weight: 600; }
-    .held .hd { font-variant-numeric: tabular-nums; }
-    .held.g-worse .hd, .held.g-muchWorse .hd { color: var(--rh-error); }
-    .held.g-clearlyBetter .hd { color: var(--rh-success); }
-    .feedback .fb-head { display: flex; align-items: baseline; gap: 10px; }
-    .feedback .pts { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .feedback .grade { font-weight: 600; }
-    .fb-line { margin: 6px 0 0; }
-    .final { font-size: 1.4rem; font-weight: 700; margin: 0; }
-    /* Farbe nach Güte — dieselbe Ordnung wie die Punkte. */
-    .g-clearlyBetter .pts, .g-better .pts, .g-onlyMove .pts, .g-gameMove .pts { color: var(--rh-success); }
-    .g-similar .pts { color: #558b2f; }
-    .g-worse .pts, .g-skipped .pts { color: color-mix(in srgb, currentColor 60%, transparent); }
-    .g-muchWorse .pts { color: var(--rh-error); }
-    /* Der Rückblick kann lang sein — er scrollt IN SICH, nicht die Seite. */
-    .review { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
-    .rev-row { display: grid; grid-template-columns: 44px 1fr 1fr 44px 22px; gap: 8px; align-items: baseline;
-               padding: 2px 4px; border-radius: 3px; }
-    .rev-row .no { color: color-mix(in srgb, currentColor 55%, transparent); font-size: .8rem; }
-    .rev-row .game { font-weight: 600; }
-    .rev-row .yours { color: color-mix(in srgb, currentColor 75%, transparent); }
-    .rev-row .pts { text-align: right; font-variant-numeric: tabular-nums; }
-    .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
-    .small { font-size: .8rem; }
-    .head-actions { display: flex; align-items: center; gap: 6px; }
-    /* a1-rk-guess-brett-ultrawide: Breitbild-Stufe (DESIGN 4.1) — Seite breiter, Brett bis zur Fensterhöhe statt 820 px;
-       die 560-px-Seitenspalte steht daneben. Unter 2400 px unverändert. */
-    @media (min-width: 2400px) {
-      .gb-container { max-width: min(var(--page-max-width-wide, 1880px), 96vw); }
-      .board-col { flex: 0 1 calc(100vh - 250px); max-width: calc(100vh - 250px); }
-    }
-  `],
+  templateUrl: './guess-board.component.html',
+  styleUrl: './guess-board.component.scss',
 })
 export class GuessBoardComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);

@@ -1,0 +1,150 @@
+<div class="gb-container">
+  @if (loading) {
+    <app-loading-spinner />
+  } @else if (!session) {
+    <mat-card><mat-card-content>
+      <p>{{ 'guess.notFound' | translate }}</p>
+      <a mat-stroked-button routerLink="/guess">{{ 'guess.back' | translate }}</a>
+    </mat-card-content></mat-card>
+  } @else {
+    <div class="header">
+      <div>
+        <h1>{{ session.title || ('guess.untitled' | translate) }}</h1>
+        <p class="muted small">
+          {{ (session.guessWhite ? 'guess.playingWhite' : 'guess.playingBlack') | translate }}
+          <!-- d3-rk-punktepartie-null-von-null: vor dem ersten Zug kein „0 von 0 Punkten“ (DESIGN 5.10). -->
+          @if (session.maxPoints > 0) {
+            · {{ 'guess.score' | translate:{ points: session.points, max: session.maxPoints } }}
+          }
+          @if (session.movesPlayed > 0) {
+            · {{ 'guess.hits' | translate:{ hits: session.gameMoveHits, moves: session.movesPlayed } }}
+          }
+        </p>
+      </div>
+      <div class="head-actions">
+        <app-guess-settings-menu [accept]="accept" (changed)="saveAccept()" />
+        <a mat-stroked-button routerLink="/guess"><mat-icon>arrow_back</mat-icon> {{ 'guess.back' | translate }}</a>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="board-col">
+        <app-chess-board [fen]="viewFen" [lastMove]="viewLastMove" [flipped]="!session.guessWhite"
+                         [boardTheme]="boardTheme" [pieceSet]="pieceSet"
+                         [playable]="canGuess" (userMove)="onMove($event)" />
+
+        @if (session.status === 'running' && !holding) {
+          <!-- UI-Sweep 2026-10-11 (r2-rg-guess-start): beim Durchsehen der Eroeffnung NICHT „Du bist am Zug"
+               unter einer fremden Stellung, sondern was gerade zu sehen ist + der Weg zur Aufgabe direkt
+               unter dem Brett (am Handy stand „Zur Aufgabe" erst weit unten unter dem Fortschritt). -->
+          @if (browsing) {
+            <div class="actions browse-actions">
+              <span class="muted small">{{ 'guess.browsingHint' | translate:{ count: preMoves } }}</span>
+              <button mat-flat-button color="primary" class="to-task" (click)="browse(null)">
+                {{ 'guess.toTaskMove' | translate:{ move: moveLabel } }} <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+              </button>
+            </div>
+          } @else {
+            <div class="actions">
+              <button mat-stroked-button (click)="skip()" [disabled]="busy">
+                <mat-icon>skip_next</mat-icon> {{ 'guess.skip' | translate }}
+              </button>
+              <span class="muted small">{{ 'guess.yourTurn' | translate:{ move: moveLabel } }}</span>
+            </div>
+          }
+        }
+        @if (rejected) {
+          <div class="held g-similar">
+            <span class="hg">{{ 'guess.notTheGameMove' | translate:{ move: (rejected | san) } }}</span>
+          </div>
+        }
+        <!-- Dein Zug steht auf dem Brett; DARUNTER, was die Partie gespielt hat. -->
+        @if (holding && last) {
+          <div class="held" [class]="'g-' + (last.grade || 'skipped')">
+            <!-- Beim Halt WEGEN eines Kommentars steht der Partiezug schon auf dem Brett; ihn
+                 danebenzuschreiben waere doppelt. Dann zaehlt nur noch der Weg zurueck ins Spiel. -->
+            @if (!holdingNote) {
+              <span class="hg">{{ 'guess.gameMoveWouldBe' | translate:{ move: (last.gameMoveSan | san) } }}</span>
+              @if (evalDelta) {
+                <span class="hd">{{ 'guess.evalDelta' | translate:{ delta: evalDelta } }}</span>
+              }
+            } @else {
+              <span class="hg">{{ 'guess.gamePlayed' | translate:{ move: (last.gameMoveSan | san) } }}</span>
+            }
+            <button mat-flat-button color="primary" (click)="continueGame()">
+              {{ 'guess.continue' | translate }} <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        }
+        @if (last) {
+          <mat-card class="feedback" [class]="'g-' + (last.grade || 'skipped')">
+            <mat-card-content>
+              <div class="fb-head">
+                <span class="pts">{{ last.points > 0 ? '+' : '' }}{{ last.points }}</span>
+                <span class="grade">{{ ('guess.grade.' + (last.grade || 'skipped')) | translate }}</span>
+              </div>
+              <p class="fb-line">
+                @if (last.playedSan) {
+                  <span>{{ 'guess.youPlayed' | translate:{ move: (last.playedSan | san) } }}</span> ·
+                }
+                <span>{{ 'guess.gamePlayed' | translate:{ move: (last.gameMoveSan | san) } }}</span>
+                @if (last.replySan) { · <span>{{ 'guess.reply' | translate:{ move: (last.replySan | san) } }}</span> }
+              </p>
+              @if (last.evalText) {
+                <p class="muted small">{{ 'guess.evalAfter' | translate:{ eval: last.evalText } }}</p>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Die Partie bis hierhin (Eröffnung + gelöste Züge): blättern oder direkt anklicken. -->
+      </div>
+
+      <div class="side-col">
+        @if (session.status === 'done') {
+          <mat-card class="done">
+            <mat-card-content>
+              <h2>{{ 'guess.finished' | translate }}</h2>
+              <p class="final">{{ 'guess.score' | translate:{ points: session.points, max: session.maxPoints } }}</p>
+              <p class="muted small">{{ 'guess.hits' | translate:{ hits: session.gameMoveHits, moves: session.movesPlayed } }}</p>
+            </mat-card-content>
+          </mat-card>
+
+          @if (review.length) {
+            <mat-card>
+              <mat-card-content>
+                <h3>{{ 'guess.review' | translate }}</h3>
+                <div class="review">
+                  @for (r of review; track r.ply) {
+                    <div class="rev-row" [class]="'g-' + (r.grade || 'skipped')">
+                      <span class="no">{{ r.moveNumber }}{{ r.white ? '.' : '…' }}</span>
+                      <span class="game">{{ r.gameSan | san }}</span>
+                      <span class="yours">{{ (r.playedSan | san) || '–' }}</span>
+                      <span class="pts">{{ r.points > 0 ? '+' : '' }}{{ r.points }}</span>
+                      <!-- Nur wo es etwas Besseres gab als den Partiezug. -->
+                      @if (hasBetter(r)) {
+                        <app-help-hint [text]="infoText(r)" icon="info_outline" />
+                      } @else { <span></span> }
+                    </div>
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+        } @else {
+          <mat-progress-bar mode="determinate" [value]="progress"></mat-progress-bar>
+          <p class="muted small">{{ 'guess.progress' | translate:{ done: session.movesPlayed, total: session.totalGuesses } }}</p>
+        }
+
+        @if (session.history.length) {
+          <app-guess-history-panel [history]="session.history" [browseIndex]="browseIndex"
+                                   [atStart]="atStart" [atTask]="atTask" [note]="browsedComment"
+                                   [commentLanguages]="commentLanguages"
+                                   [commentLanguage]="session.commentLanguage"
+                                   (browse)="browse($event)" (step)="step($event)"
+                                   (chooseLanguage)="chooseLanguage($event)" />
+        }
+      </div>
+    </div>
+  }
+</div>
