@@ -135,19 +135,7 @@
           </div>
         }
       }
-      <div class="actions pgn-actions">
-        <span class="muted small">Die geprüfte Partie:</span>
-        <button type="button" class="btn-sec" (click)="downloadPgn()">PGN herunterladen</button>
-        <button type="button" class="btn-sec" (click)="copyPgn()">PGN kopieren</button>
-        @if (loggedIn) {
-          <button type="button" class="btn-sec" [disabled]="adding() || !!myGameId()" (click)="addToMyGames()">
-            {{ adding() ? 'Speichere …' : 'Zu meinen Partien hinzufügen' }}</button>
-        }
-        @if (myGameId(); as id) {
-          @if (rookHub) { <a class="small" [href]="rookHub + '/games/' + id" target="_blank" rel="noopener">In RookHub öffnen</a> }
-        }
-        <span class="update-msg" [class.err]="pgnMsg()?.err" role="status">{{ pgnMsg()?.text ?? '' }}</span>
-      </div>
+      <lh-scan-export-actions [exp]="exporter" [loggedIn]="loggedIn" [rookHub]="rookHub" />
     </section>
     }
 

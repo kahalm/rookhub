@@ -474,7 +474,7 @@ describe('ClubScanPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(clubApi.addToMyGames).toHaveBeenCalledTimes(1);
-    expect(fixture.componentInstance.myGameId()).toBe(42);
+    expect(fixture.componentInstance.exporter.myGameId()).toBe(42);
 
     fixture.componentInstance.setAutoMine(false);
     expect(localStorage.getItem(AUTO_MINE_KEY)).toBe('0');

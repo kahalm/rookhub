@@ -13,14 +13,15 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubGameDetail, ClubSheetState, LeagueScanState, ScanRef } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ClubContextService } from '../../core/club-context.service';
-import { SheetPgnInput, isTransientError, loadErrorText, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
+import { SheetPgnInput, isTransientError, loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
-import { downloadBlob } from '@rh/shared/download.util';
 import { rememberAnonKey } from './club-anon-keys';
 import { ScanHeaderForm } from './scan-header-form';
 import { ClubSideFormComponent } from './club-side-form.component';
+import { ScanExport } from './scan-export';
+import { ScanExportActionsComponent } from './scan-export-actions.component';
 import { ScanPhotos } from '@rh/features/games/sheet-workbench/scan-photos';
 import { SheetWorkbenchComponent } from '@rh/features/games/sheet-workbench/sheet-workbench.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
@@ -47,7 +48,7 @@ function readAutoMine(): boolean {
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ClubSideFormComponent, AccessGateComponent, SheetWorkbenchComponent, SheetReadingStatusComponent],
+  imports: [RouterLink, ClubSideFormComponent, ScanExportActionsComponent, AccessGateComponent, SheetWorkbenchComponent, SheetReadingStatusComponent],
   templateUrl: './club-scan-page.component.html',
 })
 export class ClubScanPageComponent implements OnInit, OnDestroy {
@@ -117,9 +118,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   });
   /** Übernommen — die Seite bleibt stehen, damit PGN und „Meine Partien" noch gehen. */
   readonly saved = signal(false);
-  readonly adding = signal(false);
-  readonly myGameId = signal<number | null>(null);
-  readonly pgnMsg = signal<{ text: string; err: boolean } | null>(null);
   get loggedIn(): boolean { return this.auth.isLoggedIn; }
   /** „Automatisch zu meinen Partien hinzufügen": an, solange auf diesem Gerät nicht abgewählt. */
   readonly autoMine = signal(readAutoMine());
@@ -144,6 +142,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     moved: () => this.revealCursor(),
     resolveFailed: () => this.saveError.set('Den Rest neu zu lesen hat nicht geklappt — der bisherige Stand bleibt.'),
     bind: o => o.pipe(takeUntilDestroyed(this.destroyRef)),
+  });
+
+  /** PGN herunterladen/kopieren und „Zu meinen Partien" — mit den Namen wie im Formular. */
+  readonly exporter = new ScanExport({
+    input: () => this.pgnInput(),
+    addToMyGames: pgn => this.clubApi.addToMyGames(pgn),
   });
 
   /** Wartendes Nachfragen — `null`, sobald der Takt abgelaufen ist (dann läuft der Abruf schon). */
@@ -349,7 +353,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
       this.replacedOld.set(added?.replaced ?? 0);
       this.saved.set(true);
-      if (this.loggedIn && this.autoMine() && !this.myGameId()) void this.addToMyGames();
+      if (this.loggedIn && this.autoMine() && !this.exporter.myGameId()) void this.exporter.addToMyGames();
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.saveError.set(e?.error?.reason === 'illegal' ? `Ein Zug ist nicht legal: ${e.error.message}`
@@ -374,35 +378,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       white: this.f.name('white')().trim() || null, black: this.f.name('black')().trim() || null,
       result: this.f.result(), event: this.f.event().trim() || null, year: this.f.year(),
     };
-  }
-
-  downloadPgn(): void {
-    const g = this.pgnInput();
-    downloadBlob(new Blob([sheetPgn(g)], { type: 'application/x-chess-pgn' }), sheetPgnFileName(g));
-  }
-
-  async copyPgn(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(sheetPgn(this.pgnInput()));
-      this.pgnMsg.set({ text: 'PGN kopiert.', err: false });
-    } catch {
-      this.pgnMsg.set({ text: 'Kopieren ging nicht — bitte „PGN herunterladen".', err: true });
-    }
-  }
-
-  /** In RookHubs „Meine Partien" (nur angemeldet) — mit den Namen wie im Formular, ohne „Schwaz". */
-  async addToMyGames(): Promise<void> {
-    this.adding.set(true);
-    this.pgnMsg.set(null);
-    try {
-      const r = await this.clubApi.addToMyGames(sheetPgn(this.pgnInput()));
-      this.myGameId.set(r.ids[0] ?? null);
-      this.pgnMsg.set({ text: r.imported ? 'In deinen Partien gespeichert.' : 'Die Partie war schon in deinen Partien.', err: false });
-    } catch {
-      this.pgnMsg.set({ text: 'Speichern in deinen Partien hat nicht geklappt.', err: true });
-    } finally {
-      this.adding.set(false);
-    }
   }
 
   async discard(): Promise<void> {
