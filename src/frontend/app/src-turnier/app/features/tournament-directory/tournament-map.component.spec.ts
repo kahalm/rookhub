@@ -519,6 +519,44 @@ describe('TournamentMapComponent', () => {
     expect(popup.querySelector('.tc')).withContext('Kurzansicht nicht abgeräumt').toBeNull();
   });
 
+  it('nennt im Hover-Hinweis Name, Termin und Ort — maskiert, weil der Text von außen kommt', () => {
+    component.entries = [{ ...entry('1', 47.8, 13.04), name: 'Open <b>&</b> "A"' }];
+    fixture.detectChanges();
+
+    const [html] = tooltipHtml(component);
+    expect(html.replace(/\s/g, ' ')).toBe(
+      '<strong>Open &lt;b&gt;&amp;&lt;/b&gt; &quot;A&quot;</strong><br>Oct 10 – 12, 2026<br>Salzburg');
+  });
+
+  it('nennt im Hover-Hinweis eines Bündels die Anzahl statt eines der Turniere', () => {
+    component.entries = [entry('1', 47.2178, 11.6411), entry('2', 47.2178, 11.6411)];
+    fixture.detectChanges();
+
+    expect(tooltipHtml(component)).toEqual(['<strong>tournamentDirectory.map.samePoint</strong><br>Salzburg']);
+  });
+
+  it('nennt über der Liste eines Bündels Kopf, Ort und — bei Regionsmitten — den Grund', () => {
+    centredOn(entry('1', 47.2178, 11.6411, 'Region'),
+              entry('2', 47.2178, 11.6411, 'Region'));
+    const popup = openGroupAtCentre();
+
+    expect(popup.querySelector('.tm-group-head')?.textContent).toBe('tournamentDirectory.map.samePoint');
+    expect(popup.querySelector('.tm-group-place')?.textContent).toBe('Salzburg');
+    expect(popup.querySelector('.tm-group-vague')?.textContent).toBe('tournamentDirectory.map.samePointVague');
+    expect([...popup.querySelectorAll('.tm-group-when')].map(n => n.textContent?.replace(/\s/g, ' ')))
+      .toEqual(['Oct 10 – 12, 2026', 'Oct 10 – 12, 2026']);
+  });
+
+  it('lässt den Grund weg, wenn ein Spielort des Bündels genau verortet ist', () => {
+    centredOn(entry('1', 47.2178, 11.6411, 'Region'),
+              { ...entry('2', 47.2178, 11.6411, 'City'), subscribed: true });
+    const popup = openGroupAtCentre();
+
+    expect(popup.querySelector('.tm-group-vague')).toBeNull();
+    const rows = [...popup.querySelectorAll('.tm-group-row')];
+    expect(rows.map(r => r.classList.contains('is-marked'))).toEqual([false, true]);
+  });
+
   it('hebt den gebündelten Punkt hervor, sobald EINES seiner Turniere gemerkt ist', () => {
     const a = entry('1', 47.2178, 11.6411, 'Region');
     const b = entry('2', 47.2178, 11.6411, 'Region');
@@ -729,4 +767,12 @@ function markerStyles(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (component as any).markerLayer?.eachLayer((l: any) => styles.push(l.options));
   return styles;
+}
+
+/** Der Hover-Hinweis jedes Markers — gebunden als Funktion (die Texte werden übersetzt). */
+function tooltipHtml(component: TournamentMapComponent): string[] {
+  const html: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (component as any).markerLayer?.eachLayer((l: any) => html.push(l.getTooltip().getContent()(l)));
+  return html;
 }
