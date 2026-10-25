@@ -3197,7 +3197,7 @@ internal static class ExternalSweepGolden
             == 11 leere Nummer
             Ergebnis: ExternalSweepResult { Read = 1, Added = 1, Updated = 0, Matched = 0, Retired = 0 }
             Log Information: chess.sk-Kalender: 1 gelesen, 1 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
-            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
             Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
@@ -3227,12 +3227,12 @@ internal static class ExternalSweepGolden
               Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
             Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
-            Eintrag sk5003 cr= name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk5003 cr=- name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
             == 12 Nummer nachgereicht
             Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
             Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 0 zurueckgezogen
-            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 10 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
             Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
@@ -3262,12 +3262,12 @@ internal static class ExternalSweepGolden
               Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
             Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
-            Eintrag sk5003 cr= name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk5003 cr=- name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
             == 13 Schulung
             Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 1 }
             Log Information: chess.sk-Kalender: 1 gelesen, 0 neu, 0 ergaenzt, 0 zugeordnet, 1 zurueckgezogen
-            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 9 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Log Warning: Verschwunden-Erkennung SlovakChessFederation uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 10 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk SlovakChessFederation 1001 url=https://chess.sk/turnaj/1001 erst=ja zuletzt=ja
             Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
@@ -3297,7 +3297,7 @@ internal static class ExternalSweepGolden
               Vermerk SlovakChessFederation 2009 url=https://chess.sk/turnaj/2009 erst=ja zuletzt=ja
             Eintrag sk5002 cr=9200002 name=Nummer Unbekannt Turnier fed=SVK state=- start=S+5 ende=S+5 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5002 url=https://chess.sk/turnaj/5002 erst=ja zuletzt=ja
-            Eintrag sk5003 cr= name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk5003 cr=- name=Leere Nummer Turnier fed=SVK state=- start=S+6 ende=S+6 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 5003 url=https://chess.sk/turnaj/5003 erst=ja zuletzt=ja
             
             """,

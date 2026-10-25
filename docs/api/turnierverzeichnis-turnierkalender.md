@@ -252,7 +252,10 @@ Namensvergleich schlug fehl, es entstand ein eigener Eintrag `ie<nr>` und der He
 wanderte dorthin — das Turnier stand doppelt im Kalender. Seitdem liest ICU in `BeforeMatchAsync` den
 bestehenden Vermerk: haengt er an einem Eintrag MIT Nummer (also einem frueheren Treffer), gilt diese
 Nummer weiter als exakter Schluessel. Gespeichert wird dafuer nichts Neues — die Nummer steht ja am
-chess-results-Eintrag, an dem der Vermerk haengt.
+chess-results-Eintrag, an dem der Vermerk haengt. Eine LEERE Nummer der Quelle (chess.sk) wird seitdem als `null`
+gespeichert, nicht als `""`: mit `""` zaehlte der Eintrag als „mit Nummer" (Kandidat im Namensvergleich,
+ausserhalb der Verschwunden-Erkennung), und der eindeutige Index auf `ChessResultsId` liess nur EINEN
+solchen Eintrag zu.
 
 | Land | Praefix | Kosten | Was sie kann, was die anderen nicht koennen |
 |---|---|---|---|

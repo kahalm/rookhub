@@ -82,7 +82,7 @@ internal interface IDirectorySourceAdapter<in TRow>
     /// <summary>
     /// Laeuft einmal, wenn der Runner den eigenen Eintrag NEU angelegt hat, vor
     /// <see cref="ApplyAsync"/> — fuer Felder, die nur ein neuer Eintrag bekommt (chess.sk: die
-    /// chess-results-Nummer der Quelle, auch eine leere).
+    /// chess-results-Nummer der Quelle, eine leere als <c>null</c>).
     /// </summary>
     void OnCreated(TournamentDirectoryEntry own, TRow row) { }
 

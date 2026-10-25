@@ -247,6 +247,7 @@ public class ExternalSweepGoldenTests
             [new RowSpec("5001", "Slovak Exact Open", Soon.AddDays(3), "Testhausen", Cr: "9200001")]);
         await s.Step("10 Nummer noch nicht im Bestand",
             [new RowSpec("5002", "Nummer Unbekannt Turnier", Soon.AddDays(5), null, Cr: "9200002")]);
+        // Eine leere Nummer bleibt null (cr=-), nicht "" — sonst zaehlte der Eintrag als „mit Nummer".
         await s.Step("11 leere Nummer",
             [new RowSpec("5003", "Leere Nummer Turnier", Soon.AddDays(6), null, Cr: "")]);
         await s.Step("12 Nummer nachgereicht", [C with { Cr = "9200003" }]);

@@ -72,7 +72,17 @@ public class ChessSkDirectorySweepService : IDirectorySourceAdapter<ChessSkDirec
     /// Erst die Nummer, dann der Name: die Quelle nennt die chess-results-Nummer bei einem Drittel
     /// der Eintraege selbst, und das ist der einzige Weg, der nicht raten muss.
     /// </summary>
-    string? IDirectorySourceAdapter<CrawlerChessSkEvent>.ChessResultsId(CrawlerChessSkEvent row) => row.ChessResultsId;
+    string? IDirectorySourceAdapter<CrawlerChessSkEvent>.ChessResultsId(CrawlerChessSkEvent row) => NumberOf(row);
+
+    /// <summary>
+    /// Die chess-results-Nummer der Zeile, <c>null</c> wenn sie fehlt oder leer ist. Eine LEERE
+    /// Nummer am Eintrag (<c>ChessResultsId = ""</c>) zaehlte als „mit Nummer": der Eintrag war
+    /// Kandidat im Namensvergleich anderer Quellen, fiel aus der Verschwunden-Erkennung heraus,
+    /// und auf der Spalte liegt ein eindeutiger Index — ein zweiter solcher Eintrag haette das
+    /// Speichern des ganzen Laufs abgebrochen.
+    /// </summary>
+    private static string? NumberOf(CrawlerChessSkEvent row) =>
+        string.IsNullOrWhiteSpace(row.ChessResultsId) ? null : row.ChessResultsId;
 
     bool IDirectorySourceAdapter<CrawlerChessSkEvent>.FillMatch(TournamentDirectoryEntry match, CrawlerChessSkEvent row) => FillGaps(match, row);
 
@@ -81,17 +91,17 @@ public class ChessSkDirectorySweepService : IDirectorySourceAdapter<ChessSkDirec
     /// KEINEN Eintrag gefunden — dann ist das Turnier dort ausgeschrieben, aber der Sweep hat es
     /// noch nicht gesehen (er liest die Turniersuche, die sich erst mit dem Datei-Upload fuellt).
     /// Die Nummer gehoert an den Eintrag: daran haengen Rundenplan, Abo und der Verweis. Ein neuer
-    /// Eintrag uebernimmt sie so, wie die Quelle sie liefert (auch leer).
+    /// Eintrag uebernimmt sie; eine leere bleibt <c>null</c> (<see cref="NumberOf"/>).
     /// </summary>
-    void IDirectorySourceAdapter<CrawlerChessSkEvent>.OnCreated(TournamentDirectoryEntry own, CrawlerChessSkEvent row) => own.ChessResultsId = row.ChessResultsId;
+    void IDirectorySourceAdapter<CrawlerChessSkEvent>.OnCreated(TournamentDirectoryEntry own, CrawlerChessSkEvent row) => own.ChessResultsId = NumberOf(row);
 
     async Task<bool> IDirectorySourceAdapter<CrawlerChessSkEvent>.ApplyAsync(
         TournamentDirectoryEntry own, CrawlerChessSkEvent row, DateOnly start, DateTime now, CancellationToken ct)
     {
         // Nachgereicht: der Veranstalter traegt die Swiss-Manager-Adresse oft erst spaeter nach.
         // (Ein neuer Eintrag hat die Nummer der Zeile schon aus OnCreated.)
-        if (own.ChessResultsId is null && row.ChessResultsId is { Length: > 0 })
-            own.ChessResultsId = row.ChessResultsId;
+        if (own.ChessResultsId is null && NumberOf(row) is { } number)
+            own.ChessResultsId = number;
 
         var location = LocationOf(row);
         var locationChanged = own.LocationText != location;
