@@ -26,7 +26,7 @@ describe('BoardGameComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [BoardGameComponent], providers: [
-      { provide: LineupsApiService, useValue: jasmine.createSpyObj('LineupsApiService', ['clubGame', 'fixturePgn']) },
+      { provide: LineupsApiService, useValue: jasmine.createSpyObj('LineupsApiService', ['clubGame', 'fixturePgn', 'sharedPgn']) },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
       provideRouter([]), provideTranslateService({ fallbackLang: 'de' })] });
   });
@@ -48,5 +48,29 @@ describe('BoardGameComponent', () => {
     const acts = Array.from(el.querySelectorAll('.bg-actions > *'));
     expect(acts.map(a => a.textContent?.trim())).toEqual(['Nachspielen']);
     expect(el.querySelector('.bg-what')?.textContent).toContain('Partie vorhanden · 61 Halbzüge · 1.d4 Sf6 2.c4 e6 …');
+  });
+
+  // 0.838.0: über einen Teilen-Link gibt es ohne Anmeldung weder Analyse noch Bearbeiten; das PGN kennt der Link nur für
+  // die geteilte Begegnung (`/s/{token}/games`), an anderen Brettern der Runde bleibt es bei „Partie vorhanden".
+  it('über einen Teilen-Link: Nachspielen nur an der geteilten Begegnung, PGN über den Link, sonst keine Aktion', async () => {
+    const api = TestBed.inject(LineupsApiService) as jasmine.SpyObj<LineupsApiService>;
+    api.sharedPgn.and.resolveTo('1. d4 Nf6 2. c4 e6 1/2-1/2');
+    const el = render(GAME, 'https://rookhub.example');
+    fixture.componentRef.setInput('shareToken', 'TOK');
+    fixture.componentRef.setInput('shared', true);
+    fixture.detectChanges();
+    expect(Array.from(el.querySelectorAll('.bg-actions > *')).map(a => a.textContent?.trim())).toEqual(['Nachspielen']);
+    (el.querySelector('.bg-replay') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.sharedPgn).toHaveBeenCalledWith('TOK', 1);
+    expect(api.clubGame).not.toHaveBeenCalled();
+    expect(el.querySelector('lh-game-replay')).not.toBeNull();
+    expect(fixture.componentInstance.evalsUrl()).toBeNull();
+
+    fixture.componentRef.setInput('shared', false);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.bg-actions > *').length).toBe(0);
+    expect(el.querySelector('.bg-what')?.textContent).toContain('Partie vorhanden');
   });
 });

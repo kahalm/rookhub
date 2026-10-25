@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.838.0", date: "2026-10-25", changes: [
+    { en: "LeagueHub: shared match links now also show „All line-ups of round N“ — every match of the round with boards, results, first moves and existing games, read-only. Replaying a game works for the shared match; player cards open for the link’s roster. Nothing can be edited without logging in.", de: "LeagueHub: Geteilte Begegnungs-Links zeigen jetzt auch „Alle Aufstellungen der Runde N“ — jede Begegnung der Runde mit Brettern, Ergebnissen, ersten Zügen und vorhandenen Partien, nur zum Ansehen. Nachspielen geht an der geteilten Begegnung, Spielerkarten öffnen für die Meldeliste des Links. Ohne Anmeldung lässt sich nichts ändern." },
+  ]},
   { version: "0.837.5", date: "2026-10-25", changes: [
     { en: "E-books: books that exist only as DJVU open much faster in the reader. The PDF reading copy is now written at 150 dpi with compressed images (about a seventh of the size; e.g. 622 MB → about 90 MB). Existing reading copies are regenerated once in the background; pages, diagrams and reading positions are kept.", de: "E-Books: Bücher, die nur als DJVU vorliegen, öffnen im Leser deutlich schneller. Die PDF-Lesefassung wird jetzt in 150 dpi mit komprimierten Bildern geschrieben (etwa ein Siebtel der Größe, z. B. 622 MB → rund 90 MB). Vorhandene Lesefassungen werden einmal im Hintergrund neu erzeugt; Seiten, Diagramme und Lesestände bleiben erhalten." },
   ]},

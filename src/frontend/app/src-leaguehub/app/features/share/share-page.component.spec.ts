@@ -4,10 +4,12 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { Title } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../../core/league-api.service';
+import { LineupsApiService } from '../../core/lineups';
 import { SharePageComponent } from './share-page.component';
 
 describe('SharePageComponent', () => {
   let api: jasmine.SpyObj<LeagueApiService>;
+  let lineups: jasmine.SpyObj<LineupsApiService>;
 
   function create() {
     TestBed.configureTestingModule({
@@ -15,7 +17,8 @@ describe('SharePageComponent', () => {
       providers: [
         provideRouter([]), provideTranslateService({ fallbackLang: 'de' }),
         { provide: LeagueApiService, useValue: api },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }) } } },
+        { provide: LineupsApiService, useValue: lineups },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }), queryParamMap: convertToParamMap({}) } } },
       ],
     });
     const f = TestBed.createComponent(SharePageComponent);
@@ -24,6 +27,7 @@ describe('SharePageComponent', () => {
   }
 
   beforeEach(() => {
+    lineups = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'fixturePgn', 'sharedPgn']);
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats']);
     api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, top1: 0, top2: 0, top3: 0, of: 0 }, rounds: [], leagues: [] });
     api.sources.and.resolveTo({
@@ -75,6 +79,34 @@ describe('SharePageComponent', () => {
     const head = el.querySelector('.src-tbl thead')!.textContent!;
     expect(head).toContain('Landesliga · 226 Spieler');
     expect(head).toContain('Wörgl · 11 Spieler');
+  });
+
+  // 0.838.0, Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein".
+  it('„Alle Aufstellungen der Runde" klappt die Aufstellungen über den Link auf (nur lesen)', async () => {
+    api.shared.and.resolveTo({
+      league: 'Landesliga', season: '2026/27', round: 2, team: 'Schwaz/', generated: '27.09.2026 21:00', expires: '2026-10-11',
+      fixture: { opp: 'Wörgl', home: true, status: 'open', boards: [], roster: [] },
+    });
+    lineups.lineups.and.resolveTo({ tnr: 4711, round: 2, date: '2026-10-11', canEdit: false, matches: [
+      { matchNo: 1, home: 'Schwaz/', away: 'Wörgl', homePts: null, awayPts: null, own: true, boards: [
+        { board: 1, homePlayer: 'Ackermann, Anna', homeTitle: null, homeElo: 2001, awayPlayer: 'Brunner, Bert', awayTitle: null, awayElo: 1950,
+          homeColor: 'w', result: '', forfeit: 0, moves: 'e4 c5', canEditMoves: false } ] } ] });
+    const f = create();
+    await f.whenStable();
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('lh-round-lineups')).toBeNull();
+    const toggle = el.querySelector('.share-lineups button') as HTMLButtonElement;
+    expect(toggle.textContent).toContain('Alle Aufstellungen der Runde 2');
+    toggle.click();
+    f.detectChanges();
+    await f.whenStable();
+    f.detectChanges();
+    expect(lineups.lineups).toHaveBeenCalledWith(null, null, 'TOKEN123');
+    expect(el.querySelector('lh-round-lineups .lu-match')?.textContent).toContain('Ackermann, Anna');
+    expect(el.querySelector('.bm-moves')?.textContent).toContain('1.e4 c5');
+    expect(el.querySelector('.bm-edit')).toBeNull();
+    expect(toggle.textContent).toContain('Aufstellungen ausblenden');
   });
 
   it('abgelaufen oder widerrufen (404): „Link ungültig"', async () => {

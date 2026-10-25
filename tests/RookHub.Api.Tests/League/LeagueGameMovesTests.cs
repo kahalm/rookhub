@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -334,6 +335,41 @@ public class LeagueGameMovesTests : IDisposable
         var member = (await fixtures.ForFixtureAsync(TestClubs.Home, Tnr, Round, "Testdorf", default, HomeMember, revealOwn: true))
             .Single(p => p.Board == 4);
         Assert.Equal("Hess, Max", member.Black);
+    }
+
+    // 0.838.0, Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein" — über den
+    // Teilen-Link dieselben Aufstellungen samt Zügen und Partie, aber nichts beschreibbar, die eigene Seite einer vorläufigen
+    // Aufstellung bleibt „Testdorf" (wie bei /s/{token}/games), abgelaufene und unbekannte Links 404.
+    [Fact]
+    public async Task Lineups_ViaShareLink_ReadOnly_OwnSideStaysAnonymous_InvalidLink404()
+    {
+        await SeedAsync();
+        await Controller(HomeMember, perms: Permissions.LeagueContribute).SaveMoves(Tnr, Round, 1, 1, new() { Moves = "e4" }, default);
+        var lg = new LeagueGame { Tnr = Tnr, Round = Round, MatchNo = 1, Board = 4, HomeTeam = "Testdorf", AwayTeam = "Bergheim",
+            HomeColor = "w", Result = "" };
+        _db.LeagueGames.Add(lg);
+        var c = new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "Ober, Olga", WhiteFide = "222", Black = "Testdorf",
+            BlackRealName = "Hess, Max", BlackRealFide = "111", Anonymized = true, Result = "0-1", Plies = 22, Pgn = GamePgn,
+            MovesHash = "h4", UploadedByUserId = HomeMember };
+        LeagueGameLinks.Set(c, lg);
+        _db.LeagueClubGames.Add(c);
+        _db.LeagueShares.AddRange(
+            new LeagueShare { Token = "LINK1", ClubId = TestClubs.HomeId, Tnr = Tnr, Round = Round, Team = "Testdorf", Expires = new DateOnly(2099, 1, 1), CreatedAt = Now },
+            new LeagueShare { Token = "ALT", ClubId = TestClubs.HomeId, Tnr = Tnr, Round = Round, Team = "Testdorf", Expires = new DateOnly(2026, 1, 1), CreatedAt = Now });
+        await _db.SaveChangesAsync();
+        var share = new LeagueShareController(new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance));
+
+        var l = (LeagueGameMoves.Lineups)((OkObjectResult)await share.Lineups("LINK1", Service(), default)).Value!;
+        Assert.Equal((Tnr, Round, false, 2), (l.Tnr, l.Round, l.CanEdit, l.Matches.Count));
+        Assert.True(l.Matches[0].Own);
+        Assert.Equal("e4", l.Matches[0].Boards[0].Moves);
+        Assert.All(l.Matches.SelectMany(m => m.Boards), b => Assert.False(b.CanEditMoves || b.CanDeleteMoves));
+        var b4 = l.Matches[0].Boards.Single(b => b.Board == 4);
+        Assert.Equal(("Testdorf", null, "Ober, Olga", "222", true), (b4.HomePlayer, b4.HomeFide, b4.AwayPlayer, b4.AwayFide, b4.Provisional));
+        Assert.Equal((c.Id, false), (b4.Game!.ClubGameId, b4.Game.CanEdit));
+
+        Assert.IsType<NotFoundResult>(await share.Lineups("ALT", Service(), default));
+        Assert.IsType<NotFoundResult>(await share.Lineups("nix", Service(), default));
     }
 
     [Fact]

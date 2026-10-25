@@ -52,6 +52,17 @@ Möglichkeit, die ersten paar Züge einzugeben."
   Ausnahme von „Real-Namen nie ausgeben", Entscheidung des Users 10.10.), nie über `/api/league/s/{token}/games`. `LineupBoard.Provisional`;
   `lh-fixture` lädt die Paarungen angemeldet auch für eine offene Runde und zeigt sie mit Hinweis „vorläufig", sobald ein Brett
   vorläufig ist (leere Bretter „offen"). Sobald chess-results die Runde bringt, gilt wieder die öffentliche Paarung.
+* **Auch über den Teilen-Link** (0.838.0, Wunsch 2026-10-25: „die Aufstellung für die Runden (das mit den Partien) soll auch bei
+  den anonymen Links verfügbar sein"): `GET /api/league/s/{token}/lineups` (`LeagueShareController.Lineups`, ohne Anmeldung,
+  Rate-Limit `anonymous-tournament`) liefert dieselbe Antwort wie der angemeldete Endpunkt für Liga, Runde und Verein DES LINKS —
+  nur lesend: `canEdit`, `canEditMoves`, `canDeleteMoves` und `game.canEdit` immer `false` (`LineupsAsync` mit `userId 0`,
+  `canContribute`/`canManage` aus), die eigene Seite einer vorläufigen Aufstellung bleibt anonymisiert (`revealOwn: false`, wie
+  `/s/{token}/games`), Vereinspartien nur des Vereins des Links; 404 = Link ungültig oder Runde unbekannt. Oberfläche: auf der
+  Teilen-Seite (`share-page`) unter der Begegnung derselbe Textknopf „Alle Aufstellungen der Runde N" wie auf der Ligaseite
+  (Zustand `?aufstellungen=1`), `lh-round-lineups` mit `shareToken` (lädt über den Link), `shareTeam` (die geteilte Begegnung = „wir"
+  fürs Drehen des Bretts; nur dort „Nachspielen", PGN über `/s/{token}/games`, weil der Link nur deren Partien kennt) und
+  `coveredFides` (FIDE-IDs/Schlüssel der Meldeliste des Links — nur diese Namen öffnen die Spielerkarte, mit Token; der Server
+  antwortet für andere 404). `lh-board-game` zeigt über den Link weder „Analyse" noch „Bearbeiten/Korrigieren".
 * **Teilpartien** (0.725.0, Frage 2026-10-08: „fließen die [ersten Züge] in die Eröffnungsbäume bei der Vorbereitung ein?" — „ja mach
   das so"): jeder Eintrag in `LeagueGameMoves` ist eine TEILPARTIE beider Spieler (`Services/League/LeaguePartialGames.cs`), gerechnet
   bei jedem Lesen (Join der kleinen Zug-Tabelle auf `LeagueGames`, nur gespielte Bretter), nicht gespeichert: Kopf aus der Paarung —
@@ -77,11 +88,13 @@ Möglichkeit, die ersten paar Züge einzugeben."
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
 | GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves, game?, canDeleteMoves, homeFide, awayFide }] }] }` — `homeFide`/`awayFide` (0.727.2) = FIDE-IDs der Paarung oder `null`; `game` (0.724.0) = vorhandene Partie des Bretts `{ source, clubGameId, plies, result, white, black, firstMoves, canEdit }` oder `null`, dann `canEditMoves = false`; 404 ohne Runde |
+| GET | `/api/league/s/{token}/lineups` | – (Teilen-Link) | Dieselbe Antwort für die Runde des Links (0.838.0), nur lesend (`canEdit`/`canEditMoves`/`canDeleteMoves`/`game.canEdit` = `false`), eigene Seite anonymisiert; 404 Link ungültig/Runde unbekannt |
 | PUT | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | `{ moves }` (leer = löschen) → `{ moves }` (englische SAN); 404 ohne Paarung, 403 `foreignMatch`/`notYours`, 400 `noGame`/`tooLong`/`illegal` (+ `move`, `ply`) |
 | DELETE | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | → 204; 404/403 wie oben |
 
 Tests: `LeagueGameMovesTests` (Parse, Rechte, 404, Lesen, Schlüssel überlebt neue Ids; seit 0.724.0 Partie je Brett: fest zugeordnete
-Vereinspartie, anderer Verein sieht sie nicht, archivierte zählt nicht, Spielerkarte, geratene Partie nur einmal; 0.727.2 FIDE-IDs), `LeagueGameMovesSqlTests` (Migration + eindeutiger
+Vereinspartie, anderer Verein sieht sie nicht, archivierte zählt nicht, Spielerkarte, geratene Partie nur einmal; 0.727.2 FIDE-IDs;
+0.838.0 über den Teilen-Link nur lesen, eigene Seite anonym, ungültiger Link 404), `EndpointAuthInventoryTests` (Whitelist), `LeagueGameMovesSqlTests` (Migration + eindeutiger
 Schlüssel gegen MariaDB), `LeaguePartialGamesTests` (0.725.0: Teilpartie bei beiden Spielern mit Kopf, Karte/Profil/Baum ohne `recent`,
 Löschen rechnet nach + Ansicht, zugeordnete/gleichnamige Vereinspartie und Kartenpartie ±3 Tage schlagen sie, Quellen-Zeile, Trainingslinien,
 Prep-Karte samt Bestands-Ausschluss); Frontend `round-lineups`/`board-game`/`moves-editor`/`league-page`/`fixture-view`-Specs.

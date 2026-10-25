@@ -11,6 +11,8 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
  * (klappt `lh-game-replay` auf; das PGN kommt erst dann — Vereinspartie über `club/games/{id}` samt Bewertungen, Spielerkarte
  * über `…/round/{r}/games?team=` wie in `lh-fixture`), an einer Vereinspartie „Analyse" (RookHub per Einmal-Code) und mit
  * `canEdit` „Bearbeiten"/„Korrigieren" wie in `lh-fixture`. Alle vier als `.btn-link` (0.727.2: gleiche Farbe und Grundlinie).
+ * Über einen Teilen-Link (0.838.0, `shareToken`): „Nachspielen" nur an der geteilten Begegnung (`shared`, PGN über
+ * `/s/{token}/games`), keine Analyse, kein Bearbeiten — ohne Anmeldung gibt es dafür keine Wege.
  */
 @Component({
   selector: 'lh-board-game',
@@ -22,9 +24,11 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
     <span class="bg">
       <span class="bg-what">Partie vorhanden · {{ g.plies }} Halbzüge@if (g.firstMoves.length) { · <span class="bg-moves">{{ shown() }}</span>}</span>
       <span class="bg-actions">
-        <button type="button" class="btn-link bg-replay" [attr.aria-expanded]="open()" (click)="toggle()"
-                [attr.aria-label]="(open() ? 'Nachspielen schließen' : 'Nachspielen') + ', ' + title()">{{ open() ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
-        @if (g.source === 'club' && g.clubGameId) {
+        @if (!shareToken() || shared()) {
+          <button type="button" class="btn-link bg-replay" [attr.aria-expanded]="open()" (click)="toggle()"
+                  [attr.aria-label]="(open() ? 'Nachspielen schließen' : 'Nachspielen') + ', ' + title()">{{ open() ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
+        }
+        @if (g.source === 'club' && g.clubGameId && !shareToken()) {
           @if (rookHub) {
             <button type="button" class="btn-link bg-analysis" (click)="analyse(g.clubGameId)"
                     title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen">Analyse</button>
@@ -68,6 +72,10 @@ export class BoardGameComponent {
   readonly board = input.required<number>();
   readonly title = input('');
   readonly flipped = input(false);
+  /** 0.838.0: über einen Teilen-Link (ohne Anmeldung) — PGN nur über `/s/{token}/games`, keine Analyse, kein Bearbeiten. */
+  readonly shareToken = input<string | null>(null);
+  /** 0.838.0: das Brett gehört zur GETEILTEN Begegnung — nur deren Partien kennt der Link. */
+  readonly shared = input(false);
 
   readonly open = signal(false);
   readonly pgn = signal<string | null>(null);
@@ -81,7 +89,7 @@ export class BoardGameComponent {
   });
   readonly evalsUrl = computed(() => {
     const g = this.game();
-    return g.source === 'club' && g.clubGameId && this.hasEvals() ? `/api/league/club/games/${g.clubGameId}/evals` : null;
+    return g.source === 'club' && g.clubGameId && this.hasEvals() && !this.shareToken() ? `/api/league/club/games/${g.clubGameId}/evals` : null;
   });
 
   async toggle(): Promise<void> {
@@ -89,9 +97,12 @@ export class BoardGameComponent {
     this.open.set(true);
     if (this.pgn()) return;
     this.error.set(null);
-    const g = this.game();
+    const g = this.game(), token = this.shareToken();
     try {
-      if (g.source === 'club' && g.clubGameId) {
+      if (token) {
+        const p = await this.api.sharedPgn(token, this.board());
+        if (p) this.pgn.set(p); else this.error.set('Die Partie ist nicht mehr da — bitte neu laden.');
+      } else if (g.source === 'club' && g.clubGameId) {
         const d = await this.api.clubGame(g.clubGameId);
         this.hasEvals.set(!!d.analysis);
         this.pgn.set(d.pgn);

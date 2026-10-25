@@ -63,8 +63,10 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
     /// <summary>Alle Begegnungen der Runde samt Aufstellung und Zügen. <c>null</c> = die Runde gibt es in der Liga nicht.</summary>
     /// <param name="canContribute"><c>league.contribute</c> (live) — ohne darf er nur lesen.</param>
     /// <param name="canManage"><c>league.manage</c> (live) — Verwalter dürfen jede Paarung und fremde Einträge ändern.</param>
+    /// <param name="revealOwn">Angemeldetes Vereinsmitglied: in einer vorläufigen Aufstellung steht für die eigene Seite der echte
+    /// Spieler (0.739.0). Über einen Teilen-Link (0.838.0) <c>false</c> — dort bleibt sie anonymisiert wie bei <c>/s/{token}/games</c>.</param>
     public async Task<Lineups?> LineupsAsync(LeagueClub club, int tnr, int round, int userId, bool canContribute, bool canManage,
-        CancellationToken ct = default)
+        bool revealOwn = true, CancellationToken ct = default)
     {
         var matches = await db.LeagueMatches.AsNoTracking().Where(m => m.Tnr == tnr && m.Round == round)
             .OrderBy(m => m.MatchNo).ThenBy(m => m.Id).ToListAsync(ct);
@@ -76,9 +78,9 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
         var byKey = moves.GroupBy(m => (m.MatchNo, m.Board)).ToDictionary(x => x.Key, x => x.First());
         // Partien der ganzen Runde in EINEM Durchgang; doppelte Zeilen desselben Bretts zählen zusammen (die Zuordnung einer
         // Vereinspartie kann auf jede von ihnen zeigen).
-        // Nur angemeldete Vereinsmitglieder kommen hierher (league.view + Verein) — sie sehen in einer vorläufigen Aufstellung
-        // auch die eigene Seite (0.739.0).
-        var found = await _fixtures.ForGamesAsync(club, tnr, round, games, ct, userId, canManage, revealOwn: true);
+        // Angemeldete Vereinsmitglieder (league.view + Verein) sehen in einer vorläufigen Aufstellung auch die eigene Seite
+        // (0.739.0); über einen Teilen-Link (0.838.0, userId 0, nichts beschreibbar) bleibt sie anonymisiert.
+        var found = await _fixtures.ForGamesAsync(club, tnr, round, games, ct, userId, canManage, revealOwn);
         var gameByKey = games.Where(g => found.TryGetValue(g.Id, out var p) && p.Source is not null && p.Pgn is not null)
             .GroupBy(g => (g.MatchNo, g.Board))
             .ToDictionary(x => x.Key, x => ToGame(found[x.OrderBy(g => g.Id).First().Id]));

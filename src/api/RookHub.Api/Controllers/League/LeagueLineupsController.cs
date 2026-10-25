@@ -42,7 +42,7 @@ public class LeagueLineupsController(LeagueGameMoves moves, LeagueClubResolver c
     {
         var contribute = await HasPermissionAsync(permissions, Permissions.LeagueContribute);
         var manage = await HasPermissionAsync(permissions, Permissions.LeagueManage);
-        return await moves.LineupsAsync(club, tnr, round, GetUserId(), contribute, manage, ct) is { } l ? Ok(l) : NotFound();
+        return await moves.LineupsAsync(club, tnr, round, GetUserId(), contribute, manage, ct: ct) is { } l ? Ok(l) : NotFound();
     });
 
     /// <summary>Die ersten Züge einer Partie speichern (leer = löschen) → <c>{ moves }</c> (englische SAN). 404 ohne Paarung,

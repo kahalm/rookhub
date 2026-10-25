@@ -14,6 +14,9 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
  * „noch keine Aufstellung". Kein Tabellen-Layout: am Handy stehen die Spieler eines Bretts untereinander.
  * Seit 0.727.2 (Wunsch 2026-10-09: „namen sollten klickbar sein, selbe info wie bei der prognose") öffnen die Namen mit FIDE-ID
  * dieselbe Spielerkarte wie `lh-fixture` (`button.pl`, Vorgabe = Farbe des Spielers an diesem Brett); ohne FIDE-ID bloßer Text.
+ * Seit 0.838.0 (Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein") auch OHNE
+ * Anmeldung über einen Teilen-Link (`shareToken`): Liga und Runde bestimmt der Server, nichts ist beschreibbar, die Spielerkarte
+ * öffnet nur für die Meldeliste des Links (`coveredFides`), „Nachspielen" nur an der geteilten Begegnung (`shareTeam`).
  */
 @Component({
   selector: 'lh-round-lineups',
@@ -44,13 +47,13 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
                     <span class="lu-home">
                       <span class="sq" [class.w]="b.homeColor !== 's'" [class.s]="b.homeColor === 's'" role="img"
                             [attr.aria-label]="b.homeColor === 's' ? 'Heim hat Schwarz' : 'Heim hat Weiß'"></span>
-                      @if (b.homeFide && b.homePlayer) {
+                      @if (b.homeFide && b.homePlayer && clickable(b.homeFide)) {
                         <button type="button" class="pl" (click)="openCard(b.homeFide, homeColor(b), b.board)">{{ player(b.homePlayer, b.homeTitle) }}</button>
                       } @else { {{ player(b.homePlayer, b.homeTitle) }} }@if (b.homeElo) { <span class="muted lu-elo">{{ b.homeElo }}</span>}
                     </span>
                     <span class="lu-res">{{ b.result || '–' }}</span>
                     <span class="lu-away">
-                      @if (b.awayFide && b.awayPlayer) {
+                      @if (b.awayFide && b.awayPlayer && clickable(b.awayFide)) {
                         <button type="button" class="pl" (click)="openCard(b.awayFide, awayColor(b), b.board)">{{ player(b.awayPlayer, b.awayTitle) }}</button>
                       } @else { {{ player(b.awayPlayer, b.awayTitle) }} }@if (b.awayElo) { <span class="muted lu-elo">{{ b.awayElo }}</span>}
                     </span>
@@ -58,16 +61,16 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
                          steht nur noch grau als „ersetzt durch die Partie" da. -->
                     @if (b.game; as g) {
                       <span class="lu-moves">
-                        <lh-board-game [game]="g" [tnr]="tnr()" [round]="round()" [team]="m.home" [board]="b.board"
-                                       [title]="boardTitle(b)" [flipped]="ownIsBlack(m, b)" />
+                        <lh-board-game [game]="g" [tnr]="d.tnr" [round]="d.round" [team]="m.home" [board]="b.board"
+                                       [title]="boardTitle(b)" [flipped]="ownIsBlack(m, b)" [shareToken]="shareToken()" [shared]="isShared(m)" />
                         @if (b.moves) {
-                          <lh-board-moves [key]="key(m, b)" [title]="boardTitle(b)" [initial]="b.moves" [replaced]="true"
+                          <lh-board-moves [key]="key(d, m, b)" [title]="boardTitle(b)" [initial]="b.moves" [replaced]="true"
                                           [canDelete]="!!b.canDeleteMoves" />
                         }
                       </span>
                     } @else if (b.moves || b.canEditMoves) {
                       <span class="lu-moves">
-                        <lh-board-moves [key]="key(m, b)" [title]="boardTitle(b)" [initial]="b.moves" [canEdit]="b.canEditMoves"
+                        <lh-board-moves [key]="key(d, m, b)" [title]="boardTitle(b)" [initial]="b.moves" [canEdit]="b.canEditMoves"
                                         [flipped]="ownIsBlack(m, b)" />
                       </span>
                     }
@@ -112,8 +115,15 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
 export class RoundLineupsComponent {
   private readonly api = inject(LineupsApiService);
   private readonly card = viewChild.required(PlayerCardComponent);
-  readonly tnr = input.required<number>();
-  readonly round = input.required<number>();
+  /** Angemeldet: Liga und Runde; über einen Teilen-Link (`shareToken`) bestimmt sie der Server, beide bleiben `null`. */
+  readonly tnr = input<number | null>(null);
+  readonly round = input<number | null>(null);
+  /** 0.838.0: der Teilen-Link — Laden über `/api/league/s/{token}/lineups`, ohne Anmeldung, nur lesen. */
+  readonly shareToken = input<string | null>(null);
+  /** 0.838.0: die Mannschaft der geteilten Begegnung — nur dort kennt der Link die PGNs („Nachspielen") und „wir" fürs Brett. */
+  readonly shareTeam = input<string | null>(null);
+  /** 0.838.0: FIDE-IDs (bzw. Schlüssel) der Meldeliste des Links — nur für sie öffnet die Spielerkarte ohne Anmeldung. */
+  readonly coveredFides = input<readonly string[] | null>(null);
 
   readonly data = signal<RoundLineups | null>(null);
   readonly error = signal<string | null>(null);
@@ -123,25 +133,42 @@ export class RoundLineupsComponent {
 
   constructor() {
     effect(() => {
-      const key = `${this.tnr()}|${this.round()}`;
+      const key = this.loadKey();
       if (key !== this.loadedFor) void this.load();
     });
   }
 
+  private loadKey(): string {
+    return `${this.shareToken() ?? ''}|${this.tnr()}|${this.round()}`;
+  }
+
   /** Späte Antworten einer anderen Runde fallen weg. */
   async load(): Promise<void> {
-    const tnr = this.tnr(), round = this.round(), key = `${tnr}|${round}`;
+    const tnr = this.tnr(), round = this.round(), token = this.shareToken(), key = this.loadKey();
     this.loadedFor = key;
     this.data.set(null);
     this.error.set(null);
+    if (!token && (tnr == null || round == null)) return;
     try {
-      const d = await this.api.lineups(tnr, round);
+      const d = token ? await this.api.lineups(null, null, token) : await this.api.lineups(tnr, round);
       if (this.loadedFor === key) this.data.set(d);
     } catch (err) {
       if (this.loadedFor !== key) return;
       const s = err instanceof HttpErrorResponse ? err.status : 0;
-      this.error.set(s === 404 ? 'Diese Runde gibt es in der Liga nicht.' : `Aufstellungen nicht geladen (${s ? `HTTP ${s}` : 'keine Verbindung'}).`);
+      this.error.set(s === 404 ? (token ? 'Dieser Link ist abgelaufen oder wurde widerrufen.' : 'Diese Runde gibt es in der Liga nicht.')
+        : `Aufstellungen nicht geladen (${s ? `HTTP ${s}` : 'keine Verbindung'}).`);
     }
+  }
+
+  /** Angemeldet jeder Name mit FIDE-ID; über den Link nur die Meldeliste des Links (sonst antwortet der Server 404). */
+  clickable(fide: string): boolean {
+    return !this.shareToken() || (this.coveredFides()?.includes(fide) ?? false);
+  }
+
+  /** Die geteilte Begegnung des Links — nur dort kennt `/s/{token}/games` die Partien. */
+  isShared(m: LineupMatch): boolean {
+    const team = this.shareTeam();
+    return !!team && (m.home === team || m.away === team);
   }
 
   player(name: string | null, title: string | null): string {
@@ -159,13 +186,13 @@ export class RoundLineupsComponent {
     return h === 'w' ? 's' : h === 's' ? 'w' : null;
   }
 
-  /** Dieselbe Spielerkarte wie in der Prognose (`lh-fixture`); die Aufstellungen gibt es nur angemeldet, also ohne Teilen-Link. */
+  /** Dieselbe Spielerkarte wie in der Prognose (`lh-fixture`); über einen Teilen-Link mit dessen Token (ohne Anmeldung). */
   openCard(fide: string, color: 'w' | 's' | null, board: number): void {
-    void this.card().open(fide, color, board, null);
+    void this.card().open(fide, color, board, this.shareToken());
   }
 
-  key(m: LineupMatch, b: LineupBoard): MovesKey {
-    return { tnr: this.tnr(), round: this.round(), matchNo: m.matchNo ?? 0, board: b.board };
+  key(d: RoundLineups, m: LineupMatch, b: LineupBoard): MovesKey {
+    return { tnr: d.tnr, round: d.round, matchNo: m.matchNo ?? 0, board: b.board };
   }
 
   boardTitle(b: LineupBoard): string {
@@ -180,9 +207,12 @@ export class RoundLineupsComponent {
     return ownIsAway ? !homeBlack : homeBlack;
   }
 
-  /** Anfang der Mannschaftsnamen des Vereins (`teamPrefix`) — entscheidet, welche Seite einer eigenen Begegnung „wir" sind. */
+  /** Anfang der Mannschaftsnamen des Vereins (`teamPrefix`) — entscheidet, welche Seite einer eigenen Begegnung „wir" sind;
+   *  über einen Teilen-Link ist „wir" die geteilte Mannschaft (`shareTeam`). */
   readonly teamPrefix = input<string | null | undefined>(null);
   private ownSide(m: LineupMatch): 'home' | 'away' {
+    const shared = this.shareTeam();
+    if (shared) return m.away === shared && m.home !== shared ? 'away' : 'home';
     return ownsTeam(this.teamPrefix(), m.away) && !ownsTeam(this.teamPrefix(), m.home) ? 'away' : 'home';
   }
 }

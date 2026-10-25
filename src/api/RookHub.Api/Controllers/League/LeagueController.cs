@@ -611,6 +611,17 @@ public class LeagueShareController : ControllerBase
         await _league.ShareFixtureAsync(token, ct) is { } s && await _league.ShareContextAsync(token, ct) is { } link
             ? Ok(await games.ForFixtureAsync(link.Club, s.Tnr, s.Round, s.Team, ct)) : NotFound();
 
+    /// <summary>Alle Aufstellungen der Runde des Links samt ersten Zügen und Partie je Brett (0.838.0, Wunsch 2026-10-25: „die
+    /// Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein") — dieselbe Antwort wie
+    /// <c>GET /api/league/{tnr}/round/{round}/lineups</c>, nur lesend (<c>canEdit</c>/<c>canEditMoves</c>/<c>canDeleteMoves</c> immer
+    /// <c>false</c>); die eigene Seite einer vorläufigen Aufstellung bleibt anonymisiert wie bei <c>/games</c>; Vereinspartien nur
+    /// des Vereins des Links. 404 = Link ungültig oder Runde unbekannt.</summary>
+    [HttpGet("{token}/lineups")]
+    public async Task<IActionResult> Lineups(string token, [FromServices] LeagueGameMoves moves, CancellationToken ct) =>
+        await _league.ShareFixtureAsync(token, ct) is { } s && await _league.ShareContextAsync(token, ct) is { } link
+            && await moves.LineupsAsync(link.Club, s.Tnr, s.Round, userId: 0, canContribute: false, canManage: false, revealOwn: false, ct) is { } l
+            ? Ok(l) : NotFound();
+
     /// <summary>Dieselbe Treffer-Statistik über den Teilen-Link (0.650.0) — nur Zahlen und Liga-Namen der Quelle seines Vereins.</summary>
     [HttpGet("{token}/forecast-stats")]
     public async Task<IActionResult> ForecastStats(string token, CancellationToken ct) =>

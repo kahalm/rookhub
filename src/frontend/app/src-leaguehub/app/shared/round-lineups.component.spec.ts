@@ -164,6 +164,45 @@ describe('RoundLineupsComponent', () => {
     expect(api.deleteMoves).toHaveBeenCalledWith({ tnr: 4711, round: 2, matchNo: 1, board: 1 });
     expect(el.querySelector('.bm-replaced')).toBeNull();
   });
+
+  // 0.838.0, Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein" — über den
+  // Teilen-Link lädt der Server Liga und Runde selbst, nichts ist beschreibbar, die Spielerkarte öffnet nur für die
+  // Meldeliste des Links (mit Token), „Nachspielen" nur an der geteilten Begegnung.
+  it('über einen Teilen-Link: lädt mit Token, nur lesen, Karte nur für die Meldeliste des Links, Nachspielen nur an der geteilten Begegnung', async () => {
+    const game = { source: 'club' as const, clubGameId: 77, plies: 40, result: '1-0', white: 'Fink, Franz', black: 'Gruber, Gerd', firstMoves: ['e4'], canEdit: false };
+    api.lineups.and.resolveTo({
+      ...DATA, canEdit: false,
+      matches: DATA.matches.map(m => ({ ...m, boards: m.boards.map(b => ({ ...b, canEditMoves: false, canDeleteMoves: false,
+        game: m.matchNo === 2 || b.board === 1 ? { ...game, clubGameId: m.matchNo } : null })) })),
+    });
+    fixture.componentRef.setInput('shareToken', 'TOK');
+    fixture.componentRef.setInput('shareTeam', 'Testdorf 1');
+    fixture.componentRef.setInput('coveredFides', ['1610002']);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(api.lineups).toHaveBeenCalledWith(null, null, 'TOK');
+    expect(el.querySelectorAll('.lu-match').length).toBe(3);
+    expect(el.querySelector('.bm-edit')).toBeNull();
+    expect(el.querySelector('.bm-del')).toBeNull();
+    expect(el.querySelector('.bg-analysis')).toBeNull();
+    expect(el.querySelector('.bg-edit')).toBeNull();
+    // nur Dorn (Meldeliste des Links) ist klickbar, Ackermann (FIDE-ID, aber nicht im Link) bloßer Text
+    const names = Array.from(el.querySelectorAll('button.pl')).map(b => b.textContent?.trim());
+    expect(names).toEqual(['Dorn, Dora']);
+    const card = fixture.debugElement.query(By.directive(PlayerCardComponent)).componentInstance as PlayerCardComponent;
+    const open = spyOn(card, 'open').and.resolveTo();
+    (el.querySelector('button.pl') as HTMLButtonElement).click();
+    expect(open).toHaveBeenCalledWith('1610002', 'w', 2, 'TOK');
+    // Nachspielen nur an der geteilten Begegnung (Bergheim – Testdorf 1), nicht bei Talhausen – Seewinkel
+    const matches = el.querySelectorAll('.lu-match');
+    expect(matches[0].querySelector('.bg-replay')).not.toBeNull();
+    expect(matches[1].querySelector('.bg-what')?.textContent).toContain('Partie vorhanden');
+    expect(matches[1].querySelector('.bg-replay')).toBeNull();
+    // das Brett der eigenen (geteilten) Mannschaft als Gast: Heim hat Weiß → wir Schwarz → Brett gedreht
+    expect(fixture.componentInstance.ownIsBlack(DATA.matches[0], DATA.matches[0].boards[0])).toBeTrue();
+  });
 });
 
 describe('lineups (Züge lesen/schreiben)', () => {

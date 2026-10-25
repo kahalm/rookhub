@@ -1,23 +1,27 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
 import { GameSources, SharedFixture } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
+import { RoundLineupsComponent } from '../../shared/round-lineups.component';
 import { ClubContextService } from '../../core/club-context.service';
 
 /**
  * Geteilte Begegnung (`/s/:token`) — OHNE Anmeldung. Zeigt genau die geteilte Begegnung samt Meldeliste
  * und Spielerkarten; Online-Konten nur „sicher" (entscheidet der Server). Abgelaufen/widerrufen (404) → „Link ungültig";
  * jeder andere Fehler (429 aus demselben Vereins-WLAN, Funkloch, 5xx) sagt das und bietet „Neu laden" — F7-009.
+ * Seit 0.838.0 (Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein") darunter
+ * derselbe Knopf wie auf der Ligaseite, „Alle Aufstellungen der Runde N" (`lh-round-lineups` über den Link, nur lesen;
+ * Zustand in der Adresse `?aufstellungen=1`).
  */
 @Component({
   selector: 'lh-share-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, RouterLink],
+  imports: [FixtureViewComponent, RoundLineupsComponent, RouterLink],
   template: `
     @if (invalid()) {
       <section class="gate">
@@ -52,6 +56,17 @@ import { ClubContextService } from '../../core/club-context.service';
       </section>
       <p class="stand share-stand">Nur zum Ansehen<span class="desk-only"> · Stand der Daten: {{ d.generated }}</span> · <span class="desk-only">Link </span>gültig bis {{ until(d.expires) }}</p>
       <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" [sources]="sources()" />
+      <!-- 0.838.0: alle Aufstellungen der Runde auch über den Link — derselbe Textknopf wie auf der Ligaseite, nur lesen. -->
+      <div class="lineups-toggle share-lineups">
+        <button type="button" class="btn-link" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16M9 4v16"/></svg>
+          {{ showLineups() ? 'Aufstellungen ausblenden' : 'Alle Aufstellungen der Runde ' + d.round }}
+        </button>
+      </div>
+      @if (showLineups()) {
+        <div id="round-lineups"><lh-round-lineups [shareToken]="token" [shareTeam]="d.team" [coveredFides]="covered()" /></div>
+      }
       <div class="foot-note">
         <p>Quelle: Paarungen und Meldelisten von chess-results.com bzw. dem Ligamanager des Bayerischen Schachbunds; Partien aus Lumbra's
           GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien{{ d.club ? ' von ' + d.club.name : '' }}.</p>
@@ -61,14 +76,24 @@ import { ClubContextService } from '../../core/club-context.service';
       <p class="muted">Lade …</p>
     }
   `,
+  styles: [`
+    .share-lineups { margin: 14px 0 6px; }
+    .share-lineups .btn-link { display: inline-flex; align-items: center; gap: 6px; }
+  `],
 })
 export class SharePageComponent implements OnInit {
   private readonly api = inject(LeagueApiService);
   private readonly title = inject(Title);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   /** Der Verein des Links gilt auf dieser Seite (Karten, Paarungen): 0.698.0. */
   private readonly clubs = inject(ClubContextService);
-  readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
+  readonly token = this.route.snapshot.paramMap.get('token') ?? '';
   readonly data = signal<SharedFixture | null>(null);
+  /** Alle Aufstellungen der Runde aufgeklappt (0.838.0) — in der Adresse `?aufstellungen=1`. */
+  readonly showLineups = signal(this.route.snapshot.queryParamMap?.get('aufstellungen') === '1');
+  /** FIDE-IDs bzw. Schlüssel der Meldeliste des Links — nur für sie öffnet die Spielerkarte ohne Anmeldung. */
+  readonly covered = computed(() => (this.data()?.fixture.roster ?? []).map(r => r.fide ?? r.key ?? '').filter(Boolean));
   readonly invalid = signal(false);
   /** Partien je Quelle wie auf der Startseite (0.627.0; als Tabelle mit Gegner seit 0.628.0); fehlt die Zählung, fehlt nur die Tabelle. */
   readonly sources = signal<GameSources | null>(null);
@@ -107,5 +132,10 @@ export class SharePageComponent implements OnInit {
 
   until(iso: string): string {
     return (iso || '').split('-').reverse().join('.');
+  }
+
+  toggleLineups(): void {
+    this.showLineups.update(v => !v);
+    void this.router.navigate([], { queryParams: { aufstellungen: this.showLineups() ? 1 : null }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 }

@@ -67,8 +67,18 @@ export interface MovesKey { tnr: number; round: number; matchNo: number; board: 
 export class LineupsApiService {
   private readonly http = inject(HttpClient);
 
-  lineups(tnr: number, round: number): Promise<RoundLineups> {
-    return firstValueFrom(this.http.get<RoundLineups>(`/api/league/${tnr}/round/${round}/lineups`));
+  /** Angemeldet über Liga und Runde — oder OHNE Anmeldung über einen Teilen-Link (0.838.0): dann bestimmt der Server
+   *  Liga, Runde und Verein, und nichts ist beschreibbar. */
+  lineups(tnr: number | null, round: number | null, token: string | null = null): Promise<RoundLineups> {
+    const url = token ? `/api/league/s/${encodeURIComponent(token)}/lineups` : `/api/league/${tnr}/round/${round}/lineups`;
+    return firstValueFrom(this.http.get<RoundLineups>(url));
+  }
+
+  /** PGN einer Partie der GETEILTEN Begegnung über den Link (`…/s/{token}/games`, 0.838.0) — nur deren Bretter kennt der Server. */
+  async sharedPgn(token: string, board: number): Promise<string | null> {
+    const list = await firstValueFrom(this.http.get<{ board: number; pgn: string | null }[]>(
+      `/api/league/s/${encodeURIComponent(token)}/games`));
+    return list.find(p => p.board === board)?.pgn ?? null;
   }
 
   /** Speichern (leer = löschen) → die gespeicherten Züge (englische SAN) oder `null`. */
