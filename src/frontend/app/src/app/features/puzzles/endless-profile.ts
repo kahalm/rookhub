@@ -118,3 +118,20 @@ export class EndlessProfile {
     };
   }
 }
+
+/** Konfigurationswerte aus einem Deep-Link (z. B. geteilter Endless-Link): `?themes=fork,pin` (oder `?tags=…`) belegt den
+ *  Themenfilter vor (Komma/Leerzeichen, schaltet „schwächste Themen" für diesen Aufruf aus), `?elo=1500` das Start-Rating. */
+export function configOverridesFromQuery(get: (key: string) => string | null): Partial<EndlessConfig> {
+  const overrides: Partial<EndlessConfig> = {};
+  const themesParam = get('themes') ?? get('tags');
+  if (themesParam) {
+    const themes = themesParam.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
+    if (themes.length) {
+      overrides.worstTags = false;
+      overrides.themes = [...new Set(themes)].join(' ');
+    }
+  }
+  const eloParam = parseInt(get('elo') ?? '', 10);
+  if (Number.isFinite(eloParam) && eloParam > 0) overrides.startElo = eloParam;
+  return overrides;
+}

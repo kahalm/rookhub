@@ -1,7 +1,7 @@
 import {
   takeFromPool, takeNearestFromPool, autoFasttrackThresholds, fasttrackSteps, buildBatchThemes,
   chainRatingAt, firstRunRatingAt, buildChainWindows, CHAIN_T1_INDEX, CHAIN_T2_INDEX, ENDLESS_CHAIN_BLOCK,
-  FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX
+  FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR1_RATING, CHAIN_FLAT_STEP, chainPhaseAt
 } from './endless-prefetch.util';
 import { PuzzleDto } from './puzzle.service';
 
@@ -154,5 +154,20 @@ describe('buildChainWindows', () => {
 
     const capped = buildChainWindows(2950, 3200, 3500, 3000);
     expect(capped.every(x => x.minRating <= 3000)).toBeTrue();             // auf ratingMax geklemmt
+  });
+});
+
+describe('chainPhaseAt (Phasenanzeige, Zerlegung A4)', () => {
+  it('erster Lauf: Phasen an den Ankern 15/30, Schritt = Ø-Zuwachs der Phase', () => {
+    expect(chainPhaseAt(0, 700, 0, 0, true)).toEqual({ phase: 1, step: Math.round((FIRST_RUN_ANCHOR1_RATING - 700) / FIRST_RUN_ANCHOR1_INDEX) });
+    expect(chainPhaseAt(FIRST_RUN_ANCHOR1_INDEX, 700, 0, 0, true).phase).toBe(2);
+    expect(chainPhaseAt(FIRST_RUN_ANCHOR2_INDEX, 700, 0, 0, true)).toEqual({ phase: 3, step: CHAIN_FLAT_STEP });
+  });
+
+  it('adaptiv: Grenzen bei CHAIN_T1_INDEX/CHAIN_T2_INDEX, Schritt = Anstieg der Kette', () => {
+    const at = (i: number) => chainPhaseAt(i, 800, 1200, 1500, false);
+    expect(at(CHAIN_T1_INDEX - 1).phase).toBe(1);
+    expect(at(CHAIN_T1_INDEX).phase).toBe(2);
+    expect(at(CHAIN_T2_INDEX)).toEqual({ phase: 3, step: chainRatingAt(CHAIN_T2_INDEX + 1, 800, 1200, 1500) - chainRatingAt(CHAIN_T2_INDEX, 800, 1200, 1500) });
   });
 });

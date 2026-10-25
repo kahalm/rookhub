@@ -90,6 +90,25 @@ export function chainRatingAt(n: number, startElo: number, t1: number, t2: numbe
 }
 
 /**
+ * Phase (1–3) und Rating-Schritt zum nächsten Puzzle an Kettenposition `index` — für die Phasenanzeige im Lauf.
+ * Erster Lauf: Grenzen der steilen Erst-Lauf-Kurve (Anker 15/30), Schritt = durchschnittlicher Zuwachs je Puzzle der
+ * Phase. Sonst aus derselben Kurve, die die Kette erzeugt ({@link chainRatingAt}) — früher fest „/5" bzw. „20" aus
+ * einem älteren linearen Modell, während die Kette bis Puzzle 10/25 log-förmig und danach um 15 stieg.
+ */
+export function chainPhaseAt(index: number, startElo: number, t1: number, t2: number, firstRun: boolean): { phase: number; step: number } {
+  if (firstRun) {
+    if (index < FIRST_RUN_ANCHOR1_INDEX)
+      return { phase: 1, step: Math.round((FIRST_RUN_ANCHOR1_RATING - startElo) / FIRST_RUN_ANCHOR1_INDEX) };
+    if (index < FIRST_RUN_ANCHOR2_INDEX)
+      return { phase: 2, step: Math.round((FIRST_RUN_ANCHOR2_RATING - FIRST_RUN_ANCHOR1_RATING) / (FIRST_RUN_ANCHOR2_INDEX - FIRST_RUN_ANCHOR1_INDEX)) };
+    return { phase: 3, step: CHAIN_FLAT_STEP };
+  }
+  const step = chainRatingAt(index + 1, startElo, t1, t2) - chainRatingAt(index, startElo, t1, t2);
+  const phase = index < CHAIN_T1_INDEX ? 1 : index < CHAIN_T2_INDEX ? 2 : 3;
+  return { phase, step };
+}
+
+/**
  * Baut die Rating-Fenster eines Ketten-Blocks (Gauntlet) für die absoluten Puzzle-Indizes
  * [startIndex, startIndex+count). Jedes Fenster ist um die Kurven-Stelle zentriert (±Window/2),
  * auf [0, ratingMax] geklemmt. Wird an getRandomBatch übergeben.

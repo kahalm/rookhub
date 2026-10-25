@@ -14,7 +14,6 @@ import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
-import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { EndlessResultComponent } from './endless-result.component';
@@ -23,29 +22,27 @@ import { EndlessHelpDialogComponent, EndlessHelpPhases } from './endless-help-di
 import { PuzzleService, PuzzleDto, PuzzleRatingRange } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { EndlessConfig, EndlessSession } from './endless-storage.service';
-import { chainRatingAt, ENDLESS_RATING_WINDOW, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
+import { chainPhaseAt, ENDLESS_RATING_WINDOW, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP } from './endless-prefetch.util';
 import { EndlessFasttrackState } from './endless-fasttrack-state';
 import { EndlessPuzzleAttempt, EndlessSessionRecorder } from './endless-session-recorder';
 import { EndlessRunStore } from './endless-run.store';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
-import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { WorksheetService } from '../worksheets/worksheet.service';
-import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, parseShareViewParams } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, parseShareViewParams } from './board-theme.util';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { epForcedHintTexts, offPathHintTexts, offPathWarningText } from './solver-texts';
 import { PuzzleThemePipe } from './puzzle-theme.pipe';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
+import { EndlessViewSettings } from './endless-view-settings';
+import { EndlessLastSolved, endlessAnalysisQuery } from './endless-last-solved';
+import { configOverridesFromQuery } from './endless-profile';
 import { isBoardHotkey } from '../../shared/keyboard.util';
-
-/** Bereichs-Schlüssel der Spielweise (SolveModeService) für den Endless-Modus. */
-const SOLVE_SCOPE = 'endless';
 
 /** Endzustände dieses Lösers (die übrigen setzt {@link BasePuzzleSolver}). */
 export type EndlessEndState = 'CONFIG' | 'SOLVED' | 'FAILED' | 'GAME_OVER' | 'WON';
@@ -153,38 +150,30 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   // elapsedSeconds + formatTime: aus BasePuzzleSolver geerbt (Endless setzt elapsedSeconds aus der
   // eigenen Puzzle-Stoppuhr und nutzt start/stopTimer der Basis NICHT).
 
-  // Zuletzt gelöstes Puzzle — für „Letztes Puzzle analysieren" (bleibt auch nach dem
-  // Auto-Advance auf das nächste Puzzle erhalten, da der SOLVED-Status nur kurz sichtbar ist).
-  lastSolvedPuzzleId: number | null = null;
-  private lastSolvedFen: string | null = null;
-  private lastSolvedMoves = '';
-  private lastSolvedOrientation: 'white' | 'black' = 'white';
-  /** Themen des letzten Puzzles — Vorschlagsquelle für die Themen eines Aufgabenblatts. */
-  private lastSolvedThemes = '';
+  /** Zuletzt gelöstes Puzzle — „Letztes Puzzle analysieren", ♥, Aufgabenblatt (überlebt den Auto-Advance). */
+  readonly last = new EndlessLastSolved();
+  get lastSolvedPuzzleId(): number | null { return this.last.id; }
   /** „Geliebtes Puzzle"-Zustand (Herz) für aktuelles + zuletzt gelöstes Puzzle. */
   readonly favoriteTracker: FavoriteTracker;
 
-  /** Gewählte Spielweise für den Bereich „Endless" (Training/Einfach). `null` = es wurde bewusst
-   *  nicht gefragt (fester Ansichts-Link ?visualmode=) — dann bleibt es bei der Stufe aus den
-   *  Einstellungen bzw. aus der URL, und das ⋮-Menü zeigt keinen Umschalter. */
-  solveModeChoice: SolveMode | null = null;
-  /** True, wenn in diesem Aufruf nicht nach der Spielweise gefragt werden darf (siehe oben). */
-  private solveModeAskSuppressed = false;
+  /** Ansicht (Brett, Figuren, Visualisierung, Einstellungs-Dialog) und Spielweise (Training/Einfach). */
+  readonly view = new EndlessViewSettings(this);
+  get solveModeChoice(): SolveMode | null { return this.view.solveModeChoice; }
 
   constructor(
     private puzzleService: PuzzleService,
     stockfish: StockfishService,
     public authService: AuthService,
-    private prefs: PreferencesService,
+    readonly prefs: PreferencesService,
     public router: Router,
     private route: ActivatedRoute,
-    private dialog: MatDialog,
-    private translate: TranslateService,
-    private snackbar: SnackbarService,
+    readonly dialog: MatDialog,
+    readonly translate: TranslateService,
+    readonly snackbar: SnackbarService,
     private offlineQueue: OfflineQueueService,
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
-    private solveMode: SolveModeService,
+    readonly solveMode: SolveModeService,
     private worksheets: WorksheetService,
     /** Lauf-Zustand und -Übergänge (je Seite, siehe `providers`). */
     readonly run: EndlessRunStore,
@@ -198,7 +187,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     });
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'standard',
-      () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
+      () => this.puzzle?.id, () => this.last.id, () => this.isLoggedIn,
     );
     this.state = 'CONFIG';
     this.loadSettingsOpen();
@@ -219,17 +208,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     // Verfügbare Themen fürs Auswahl-Dropdown laden (unabhängig vom Einstiegs-Modus).
     this.loadAllThemes();
 
-    // „Letztes Puzzle" (analysieren / ♥ / teilen) über Navigation zu /analysis hinweg wiederherstellen —
-    // ohne Persistenz wird `lastSolvedPuzzleId` beim Component-Destroy null und die Knöpfe verschwinden.
-    const restored = loadLastSolved('endless');
-    if (restored) {
-      this.lastSolvedPuzzleId = restored.id;
-      this.lastSolvedFen = restored.fen;
-      this.lastSolvedMoves = restored.moves;
-      this.lastSolvedOrientation = restored.orientation;
-      this.lastSolvedThemes = restored.themes ?? '';
-      this.favoriteTracker.refresh();
-    }
+    // „Letztes Puzzle" (analysieren / ♥ / teilen) über Navigation zu /analysis hinweg wiederherstellen.
+    if (this.last.restore()) this.favoriteTracker.refresh();
 
     // History-Detail (?session=ID): abgeschlossenen Lauf wie den Game-Over-Screen anzeigen.
     // Stats + Puzzle-Review werden aus dem persistierten Lauf rekonstruiert.
@@ -255,18 +235,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     //  ?anarchy=max | max+1            → Crazy-Brett + erzwungenes en passant (max+1: Feld bestimmt Figurenstil)
     //  ?start=1 / ?autostart=1         → Lauf sofort starten (sobald Rating-Range geladen), ohne Config-Screen
     const qp = this.route.snapshot.queryParamMap;
-    const overrides: Partial<EndlessConfig> = {};
-    const themesParam = qp.get('themes') ?? qp.get('tags');
-    if (themesParam) {
-      const themes = themesParam.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
-      if (themes.length) {
-        overrides.worstTags = false;
-        overrides.themes = [...new Set(themes)].join(' ');
-      }
-    }
-    const eloParam = parseInt(qp.get('elo') ?? '', 10);
-    if (Number.isFinite(eloParam) && eloParam > 0) overrides.startElo = eloParam;
-    this.run.profile.applyUrlOverrides(overrides);
+    this.run.profile.applyUrlOverrides(configOverridesFromQuery(k => qp.get(k)));
 
     const ov = parseShareViewParams(qp);
     if (ov.themeMode) this.themeMode = ov.themeMode;
@@ -275,7 +244,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;  // ?anarchy=max+1 → Feld bestimmt Stil
     // Feste Ansicht aus dem Link (?visualmode=) → nicht nach der Spielweise fragen: wer einen Link
     // mit vorgegebener Ansicht öffnet, hat die Wahl schon getroffen.
-    this.solveModeAskSuppressed = ov.visualization != null;
+    this.view.askSuppressed = ov.visualization != null;
 
     this.autoStartRequested = qp.get('start') === '1' || qp.get('autostart') === '1';
 
@@ -319,23 +288,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   get currentRating(): number { return this.run.currentMinRating(); }
 
   get currentPhaseLabel(): string {
-    if (this.isFirstRun) {
-      // Erster Lauf: Phasengrenzen folgen der steilen Erst-Lauf-Kurve (Anker 15/30),
-      // step = durchschnittlicher Rating-Zuwachs je Puzzle in dieser Phase.
-      const s = this.config.startElo, i = this.run.chainIndex();
-      if (i < FIRST_RUN_ANCHOR1_INDEX)
-        return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: Math.round((FIRST_RUN_ANCHOR1_RATING - s) / FIRST_RUN_ANCHOR1_INDEX) });
-      if (i < FIRST_RUN_ANCHOR2_INDEX)
-        return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: Math.round((FIRST_RUN_ANCHOR2_RATING - FIRST_RUN_ANCHOR1_RATING) / (FIRST_RUN_ANCHOR2_INDEX - FIRST_RUN_ANCHOR1_INDEX)) });
-      return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: CHAIN_FLAT_STEP });
-    }
-    // Adaptive Kurve: Phasengrenzen und Schritt aus derselben Kurve, die die Kette erzeugt
-    // (chainRatingAt) — step = Anstieg zum nächsten Puzzle. Früher fest „/5" bzw. „20" aus einem
-    // älteren linearen Modell, während die Kette bis Puzzle 10/25 log-förmig und danach um 15 stieg.
-    const i = this.run.chainIndex(), s = this.config.startElo, t1 = this.fasttrack.avgFirst, t2 = this.fasttrack.avgSecond;
-    const step = chainRatingAt(i + 1, s, t1, t2) - chainRatingAt(i, s, t1, t2);
-    const phase = i < CHAIN_T1_INDEX ? 1 : i < CHAIN_T2_INDEX ? 2 : 3;
-    return this.translate.instant('endless.game.phaseLabel', { phase, step });
+    return this.translate.instant('endless.game.phaseLabel', chainPhaseAt(this.run.chainIndex(), this.config.startElo,
+      this.fasttrack.avgFirst, this.fasttrack.avgSecond, this.isFirstRun));
   }
 
   /** Phasengrenzen der Hilfe (1-basierte Puzzle-Nummern) aus denselben Konstanten wie die Kette. */
@@ -351,73 +305,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
    */
   get isFirstRun(): boolean { return this.run.profile.isFirstRun(); }
 
-  setBoardTheme(theme: string): void {
-    this.boardTheme = theme;
-    this.prefs.setBoardTheme(theme);
-  }
-
-  setPieceSet(set: string): void {
-    this.pieceSet = set;
-    this.prefs.setPieceSet(set);
-  }
-
-  setThemeMode(mode: ThemeMode): void {
-    this.themeMode = mode;
-    this.prefs.setThemeMode(mode);
-    const applied = applyThemeMode(mode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-  }
-
-  setVisualizationLevel(level: number): void {
-    this.visualizationMode = level;
-    this.prefs.setVisualization(level);
-    // Stufe direkt gewählt → gemerkte Spielweise mitziehen, sonst widersprechen sich beide.
-    this.solveModeChoice = this.solveMode.modeForLevel(level);
-    this.solveMode.set(SOLVE_SCOPE, this.solveModeChoice);
-    if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);  // laufendes Puzzle neu starten
-  }
-
-  // ===== Spielweise (Training/Einfach) =====
-
-  /** Fragt beim ERSTEN Lauf nach der Spielweise; danach gilt die gemerkte Wahl ohne Dialog
-   *  (SolveModeService). Ein Endless-Lauf ist eine Einheit → gefragt wird beim Start/Fortsetzen
-   *  eines Laufs, nicht bei jedem Puzzle darin. Steht das erste Puzzle schon, wird es mit der
-   *  frisch gewählten Spielweise neu aufgesetzt. */
-  private askSolveMode(): void {
-    if (this.solveModeAskSuppressed) return;
-    this.solveMode.ensure(SOLVE_SCOPE, { scopeLabel: this.translate.instant('solveMode.scope.endless') })
-      .subscribe(mode => {
-        this.solveModeChoice = mode;
-        this.applySolveModeLevel();
-        if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);
-      });
-  }
-
-  /** Visualisierungsstufe zur gemerkten Spielweise setzen. Wird bei jedem Puzzle-Start
-   *  aufgerufen, damit ein Umschalten ab dem NÄCHSTEN Puzzle greift. Ohne gemerkte Wahl
-   *  (nicht gefragt) bleibt die Stufe unangetastet. */
-  private applySolveModeLevel(): void {
-    if (!this.solveModeChoice) return;
-    this.visualizationMode = this.solveMode.levelFor(this.solveModeChoice);
-  }
-
-  /** Spielweise umschalten (⋮-Menü). Wirkt ab dem NÄCHSTEN Puzzle — ein laufender Versuch darf
-   *  nicht mitten im Rechnen die Regeln wechseln. */
-  toggleSolveMode(): void {
-    const neu: SolveMode = this.solveModeChoice === 'training' ? 'easy' : 'training';
-    this.solveModeChoice = neu;
-    this.solveMode.set(SOLVE_SCOPE, neu);
-    this.snackbar.info(
-      this.translate.instant(neu === 'easy' ? 'solveMode.switchedEasy' : 'solveMode.switchedTraining'),
-      { duration: 3000 });
-  }
-
-  setVizArrowEnabled(val: boolean): void {
-    this.vizArrowEnabled = val;
-    if (!val) this.clearVizOpponentArrow();
-    this.prefs.setVizArrow(val);
-  }
+  /** Visualisierungsstufe direkt wählen (zieht die gemerkte Spielweise mit). */
+  setVisualizationLevel(level: number): void { this.view.setVisualizationLevel(level); }
+  toggleSolveMode(): void { this.view.toggleSolveMode(); }
 
   /** Hilfe zu Endless als Dialog: Rolle, Fokusfang, Esc und die Rückgabe des Fokus an den Hilfe-Knopf
    *  bringt MatDialog mit; der Titel (mat-dialog-title) benennt den Dialog. */
@@ -425,48 +315,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     this.dialog.open(EndlessHelpDialogComponent, { data: this.phaseHelp, width: '600px', maxWidth: '95vw' });
   }
 
-  openSettingsDialog(): void {
-    const ref = this.dialog.open(PuzzleSettingsDialogComponent, {
-      data: {
-        mode: 'endless',
-        boardTheme: this.prefs.boardTheme,
-        pieceSet: this.prefs.pieceSet,
-        themeMode: this.themeMode,
-        visualizationMode: this.visualizationMode,
-        vizArrowEnabled: this.vizArrowEnabled,
-        offPathWarnMoves: this.prefs.offPathWarnMoves,
-        enPassantForced: this.prefs.enPassantForced,
-      } as PuzzleSettingsDialogData,
-      width: '360px',
-      maxWidth: '95vw',
-    });
-    ref.afterClosed().subscribe((result: PuzzleSettingsDialogResult | null) => {
-      if (!result) return;
-      this.setBoardTheme(result.boardTheme);
-      this.setPieceSet(result.pieceSet);
-      this.setThemeMode(result.themeMode);
-      // Nur eine GEÄNDERTE Stufe setzt neu auf — Brett/Figuren speichern darf den Versuch nicht neu starten.
-      if (result.visualizationMode !== this.visualizationMode) this.setVisualizationLevel(result.visualizationMode);
-      this.setVizArrowEnabled(result.vizArrowEnabled);
-      if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
-      if (result.enPassantForced !== undefined) {
-        this.prefs.setEnPassantForced(result.enPassantForced);
-        // Der Link-Zwang (?anarchy=max) gilt unabhängig von der Einstellung (wie in onSetupStart).
-        this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && result.enPassantForced);
-        if (this.isSolving) this.updateBoard();   // Zugziele des laufenden Versuchs nachziehen
-      }
-    });
-  }
+  openSettingsDialog(): void { this.view.openDialog(); }
 
   // ===== Hooks für BasePuzzleSolver =====
   protected override get depth(): number { return this.config.stockfishDepth; }
 
-  protected override onSetupStart(): void {
-    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-    this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && this.prefs.enPassantForced);
-  }
+  protected override onSetupStart(): void { this.view.applyLook(); }
 
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
   protected override onOffPathWarning(): void {
@@ -509,7 +363,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
 
   startGame(): void {
     ++this.run.runGeneration;   // laufenden Hintergrund-Prefetch für diesen Run entwerten
-    this.askSolveMode();        // Spielweise gilt für den ganzen LAUF, nicht je Puzzle
+    this.view.askSolveMode();   // Spielweise gilt für den ganzen LAUF, nicht je Puzzle
     this.run.profile.clampConfig();
     this.saveConfig();
     this.previousPuzzleId = null;
@@ -519,7 +373,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   resumeGame(): void {
     if (!this.run.activeGameState()) return;
     ++this.run.runGeneration;   // laufenden Hintergrund-Prefetch entwerten
-    this.askSolveMode();        // fortgesetzter Lauf ist derselbe Bereich → nach der ersten Wahl stumm
+    this.view.askSolveMode();   // fortgesetzter Lauf ist derselbe Bereich → nach der ersten Wahl stumm
     this.run.resume();
   }
 
@@ -555,7 +409,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
 
   /** Lädt das aktuelle Ketten-Puzzle; am Kettenende wird verlängert/gewonnen (EndlessRunStore). */
   private loadCurrent(): void {
-    this.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
+    this.view.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
     this.state = 'LOADING';
     this.alternativeSolve = false;
     this.showEval = false;
@@ -607,7 +461,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     });
   }
 
-  private setupPuzzle(puzzle: PuzzleDto): void {
+  setupPuzzle(puzzle: PuzzleDto): void {
     this.reviewingWrongPuzzle = false;
     this.gaveUp = false;
     this.reviewMode = false;
@@ -623,19 +477,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     this.run.markSolved(this.puzzle);   // Serie + Lauf-Protokoll
     // Pro-Puzzle-Lösezeit JETZT festhalten (vor einer evtl. Nachfrage, die Zeit kosten würde).
     const perPuzzleSeconds = this.run.timer.puzzleSeconds();
-    if (this.puzzle) {
-      // Für „Letztes Puzzle analysieren" merken (überlebt den Auto-Advance).
-      this.lastSolvedPuzzleId = this.puzzle.id;
-      this.lastSolvedFen = this.puzzle.fen;
-      this.lastSolvedMoves = this.puzzle.moves;
-      this.lastSolvedOrientation = this.orientation;
-      this.lastSolvedThemes = this.puzzle.themes ?? '';
-      saveLastSolved('endless', {
-        id: this.puzzle.id, fen: this.puzzle.fen,
-        moves: this.puzzle.moves, orientation: this.orientation,
-        themes: this.puzzle.themes ?? '',
-      });
-    }
+    if (this.puzzle) this.last.remember(this.puzzle, this.orientation);   // überlebt den Auto-Advance
     this.favoriteTracker.refresh();
     this.run.syncActiveGame(this.run.chainIndex() + 1);   // Ergebnis steht → Fortsetzen beim NÄCHSTEN Puzzle
     this.updateBoard();
@@ -684,7 +526,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
 
   /** Aktuelles Puzzle (z.B. nach dem Aufgeben) im Analysemodus öffnen. */
   analyzeCurrentPuzzle(): void {
-    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
+    this.cancelAutoAdvance();
     if (!this.puzzle) return;
 
     if ((this.state === 'FAILED' || this.reviewingWrongPuzzle) && this.run.lives() <= 0) {
@@ -693,12 +535,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
       this.run.finish('GAME_OVER');
       EndlessSessionRecorder.saveGameOverSnapshot(this.run.gameOverSnapshot());
       this.router.navigate(['/analysis'], {
-        queryParams: {
-          fen: this.puzzle.fen,
-          moves: this.puzzle.moves.split(' ').filter(m => m).join(','),
-          orientation: this.orientation,
-          from: '/puzzles/endless?gameover=1',
-        },
+        queryParams: endlessAnalysisQuery(this.puzzle.fen, this.puzzle.moves, this.orientation, '/puzzles/endless?gameover=1'),
       });
       return;
     }
@@ -708,13 +545,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     // lädt nicht dasselbe Puzzle erneut. Früher rückte nur dieser Weg vor — und nur für FAILED; ein
     // gelöstes Puzzle kam nach der Analyse ein zweites Mal (doppelt gezählt), und der hier im
     // Speicher vorgerückte Index nahm die Lösezeit des alten Puzzles ins nächste mit.
-    this.router.navigate(['/analysis'], {
-      queryParams: {
-        fen: this.puzzle.fen,
-        moves: this.puzzle.moves.split(' ').filter(m => m).join(','),
-        orientation: this.orientation,
-        from: '/puzzles/endless?resume=1',   // Rückkehr setzt den laufenden Run fort (siehe ngOnInit)
-      },
+    this.router.navigate(['/analysis'], {   // Rückkehr (?resume=1) setzt den laufenden Run fort (siehe ngOnInit)
+      queryParams: endlessAnalysisQuery(this.puzzle.fen, this.puzzle.moves, this.orientation, '/puzzles/endless?resume=1'),
     });
   }
 
@@ -723,41 +555,35 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
    * Geschickt wird die AUFGABEN-Stellung (der Gegnerzug ist eingespielt), nicht die rohe FEN.
    */
   sendLastToWorksheet(target: number | null): void {
-    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
-    if (!this.lastSolvedFen) return;
-    const item = taskItemFromPuzzle(
-      {
-        fen: this.lastSolvedFen, moves: this.lastSolvedMoves,
-        orientation: this.lastSolvedOrientation, themes: this.lastSolvedThemes,
-      },
-      'Standard', { sourceId: this.lastSolvedPuzzleId },
-    );
+    this.cancelAutoAdvance();
+    if (!this.last.fen) return;
+    const item = this.last.worksheetItem();
     this.worksheets.sendAndNotify(target, item ? [item] : []);
   }
 
   /** Zuletzt gelöstes Puzzle im Analysemodus öffnen (auch nach dem Auto-Advance verfügbar). */
   reviewLastPuzzle(): void {
-    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
-    if (!this.lastSolvedFen) return;
-    this.router.navigate(['/analysis'], {
-      queryParams: {
-        fen: this.lastSolvedFen,
-        moves: this.lastSolvedMoves.split(' ').filter(m => m).join(','),
-        orientation: this.lastSolvedOrientation,
-        from: '/puzzles/endless?resume=1',   // Rückkehr setzt den laufenden Run fort (siehe ngOnInit)
-      },
+    this.cancelAutoAdvance();
+    if (!this.last.fen) return;
+    this.router.navigate(['/analysis'], {   // Rückkehr (?resume=1) setzt den laufenden Run fort (siehe ngOnInit)
+      queryParams: endlessAnalysisQuery(this.last.fen, this.last.moves, this.last.orientation, '/puzzles/endless?resume=1'),
     });
+  }
+
+  /** Geplanten Auto-Advance verwerfen (Analyse, Aufgabenblatt, Durchsicht). */
+  private cancelAutoAdvance(): void {
+    if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
   }
 
   override get reviewTotal(): number {
     return this.puzzle ? this.puzzle.moves.split(' ').filter(m => m).length : 0;
   }
 
-  override reviewNext(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex + 1); }
-  override reviewPrev(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.reviewGoTo(this.reviewIndex - 1); }
+  override reviewNext(): void { this.stopCountdown(); this.cancelAutoAdvance(); this.reviewGoTo(this.reviewIndex + 1); }
+  override reviewPrev(): void { this.stopCountdown(); this.cancelAutoAdvance(); this.reviewGoTo(this.reviewIndex - 1); }
 
   /** Nach alternativem (eigenem) Mattweg die vom Puzzle vorgesehene Lösung von vorne durchspielen. */
-  override showOriginalSolution(): void { this.stopCountdown(); if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; } this.playSolutionFromStart(); }
+  override showOriginalSolution(): void { this.stopCountdown(); this.cancelAutoAdvance(); this.playSolutionFromStart(); }
 
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;

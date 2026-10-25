@@ -37,7 +37,7 @@ import { WorksheetService } from '../worksheets/worksheet.service';
  * Fokussierter Test der Analyse-Navigation im Endless-Modus (ohne TestBed/Template):
  * - „Analysieren" beim Aufgeben öffnet das AKTUELLE Puzzle im Analysemodus.
  * - „Letztes Puzzle analysieren" öffnet das zuletzt GELÖSTE Puzzle (bleibt nach dem
- *   Auto-Advance verfügbar, da die lastSolved*-Felder dort gemerkt werden).
+ *   Auto-Advance verfügbar, da die Felder von `last` (EndlessLastSolved) dort gemerkt werden).
  * Rücksprungziel ist jeweils der Endless-Modus.
  */
 /** Synchroner Observable-Stub: ruft next sofort auf (für getRandomBatch/recordSessionToServer). */
@@ -150,10 +150,10 @@ describe('EndlessPuzzleComponent analyse', () => {
   it('reviewLastPuzzle opens the last solved puzzle (survives auto-advance)', () => {
     const c = makeComponent();
     // Zustand wie nach einem gelösten Puzzle (puzzleSolved merkt sich id/fen/moves/orientation):
-    c.lastSolvedPuzzleId = 7;
-    c.lastSolvedFen = PUZZLE.fen;
-    c.lastSolvedMoves = PUZZLE.moves;
-    c.lastSolvedOrientation = 'white';
+    c.last.id = 7;
+    c.last.fen = PUZZLE.fen;
+    c.last.moves = PUZZLE.moves;
+    c.last.orientation = 'white';
 
     c.reviewLastPuzzle();
 
@@ -164,8 +164,8 @@ describe('EndlessPuzzleComponent analyse', () => {
 
   it('reviewLastPuzzle does nothing when no puzzle has been solved yet', () => {
     const c = makeComponent();
-    c.lastSolvedPuzzleId = null;
-    c.lastSolvedFen = null;
+    c.last.id = null;
+    c.last.fen = null;
 
     c.reviewLastPuzzle();
 
