@@ -100,6 +100,24 @@ describe('TournamentHistoryComponent', () => {
     return own;
   }
 
+  // Codereview F6-021: die Beschriftung des eigenen Reiters kommt per instant() aus einem computed und blieb damals beim
+  // Sprachwechsel in der alten Sprache stehen. Seit ngx-translate 18 hält der Übersetzer Sprache und Texte in Signals,
+  // instant() im computed läuft also mit — diese Spec hält das fest (rot, falls das computed wieder hängen bleibt).
+  it('Reiter „Ich“ folgt dem Sprachwechsel (F6-021)', async () => {
+    const req = await setup();
+    req.flush([history()]);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { turnier: { history: { onlyMe: 'Only me' } } }, true);
+    translate.setTranslation('de', { turnier: { history: { onlyMe: 'Nur ich' } } }, true);
+
+    translate.use('en');
+    expect(component.tabs()[0].label).toBe('Only me');
+    translate.use('de');
+    expect(component.tabs()[0].label).toBe('Nur ich');
+    translate.use('en');
+    expect(component.tabs()[0].label).toBe('Only me');
+  });
+
   it('lädt zuerst nur den eigenen Verlauf', async () => {
     const req = await setup();
 
