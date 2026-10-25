@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.16", date: "2026-10-25", changes: [
+    { en: "Technical rework of the tournament site (code review 2026-09-29, decomposition Z27/Z28/F6-025/F6-026): the map (pin groups, popup builder, legend, popup content, gestures), the tournament calendar (view-state sync, place field, search-profile menu and actions, filter panel, loaders) and the tournament history (sections as computed signals) are split into smaller building blocks; 58 dead style lines removed — no visible change.", de: "Technischer Umbau der Turnierseite (Codereview 2026-09-29, Zerlegung Z27/Z28/F6-025/F6-026): Turnierkarte (Pin-Bündelung, Popup-Bau, Legende, Popup-Inhalt, Gesten), Turnierkalender (Anzeigezustand, Ortsfeld, Suchprofil-Menü und -Aktionen, Filterfeld, Lader) und Turnierverlauf (Abschnitte als computed-Signale) sind in kleinere Bausteine zerlegt; 58 tote Stilzeilen entfernt — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.15", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z23/Z22): code shared by the four puzzle solvers (eval display, review paging, cleanup on leave) now lives once in the typed base solver with pure building blocks (timer, hint ladder, off-path policy, viz controller); the analysis board is split into pure modules (settings, route params, readout, engine choice, line model) — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z23/Z22): Gemeinsamer Code der vier Puzzle-Löser (Bewertungsanzeige, Blättern der Durchsicht, Aufräumen beim Verlassen) liegt jetzt einmal im typisierten Basis-Löser mit reinen Bausteinen (Timer, Tipp-Leiter, Off-Path-Regeln, Viz-Controller); das Analysebrett ist in reine Module zerlegt (Einstellungen, Routen-Parameter, Anzeige, Engine-Wahl, Linien-Modell) — keine sichtbare Änderung." },
   ]},
