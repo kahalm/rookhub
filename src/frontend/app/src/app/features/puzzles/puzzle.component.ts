@@ -37,6 +37,7 @@ import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, parseShareViewPara
 import { Key } from 'chessground/types';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
+import { epForcedHintTexts, offPathHintTexts, offPathWarningText } from './solver-texts';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { of } from 'rxjs';
@@ -218,20 +219,12 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   protected override get offPathWarnThreshold(): number { return this.prefs.offPathWarnMoves; }
   protected override onOffPathWarning(): void {
-    const evalStr = this.playerEvalDisplay();
-    const base = this.translate.instant(
-      this.startWasBalanced() ? 'puzzles.offPathWarningEqual' : 'puzzles.offPathWarning');
-    this.snackbar.info(evalStr ? `${base} (${evalStr})` : base, { action: 'common.ok', duration: 7000 });
+    this.snackbar.info(offPathWarningText(this.t, this.startWasBalanced(), this.playerEvalDisplay()),
+      { action: 'common.ok', duration: 7000 });
   }
-  protected override get epForcedHints(): string[] {
-    return [1, 2, 3].map(i => this.translate.instant('puzzles.anarchyHint' + i));
-  }
-  protected override get offPathHints(): string[] {
-    const t = (k: string, p?: object) => this.translate.instant(k, p) as string;
-    const n = this.offPathUserMoveNumber;
-    return [t('puzzles.offPath.h1'), t('puzzles.offPath.h2'),
-      n != null ? t('puzzles.offPath.h3', { n }) : t('puzzles.offPath.h3any')];
-  }
+  private readonly t = (k: string, p?: object) => this.translate.instant(k, p) as string;
+  protected override get epForcedHints(): string[] { return epForcedHintTexts(this.t); }
+  protected override get offPathHints(): string[] { return offPathHintTexts(this.t, this.offPathUserMoveNumber); }
 
   protected override handleSolved(alternative: boolean): void {
     this.state = 'SOLVED';
