@@ -10,43 +10,12 @@
        zwei Datumsfelder, drei Bedenkzeit-Chips, ein Schalter und „Zuruecksetzen" nebeneinander —
        das war die halbe Seite, bevor ein einziges Turnier zu sehen war. -->
   <div class="filter-bar">
-    <!-- Ort: der Mittelpunkt der Umkreissuche. Er kommt entweder aus einem gespeicherten
-         Suchprofil, aus der Ortsliste oder vom Browser — das Feld zeigt in JEDEM Fall, was
-         gerade gilt, sonst behauptet die Leiste etwas anderes als die Liste darunter. -->
-    <!-- subscriptSizing=dynamic auf den drei Feldern: keines zeigt Hint oder Fehler, der
-         reservierte Streifen darunter kostete auf dem Handy ~22 px je Feldzeile. -->
-    <mat-form-field appearance="outline" class="place-field" subscriptSizing="dynamic">
-      <mat-icon matPrefix>place</mat-icon>
-      <mat-label>{{ 'tournamentDirectory.place.label' | translate }}</mat-label>
-      <input matInput [ngModel]="placeLabel" (ngModelChange)="onPlaceInput($event)"
-             [matAutocomplete]="placeAuto" [placeholder]="'tournamentDirectory.place.hint' | translate" />
-      <mat-autocomplete #placeAuto (optionSelected)="choosePlace($event.option.value)">
-        @for (place of placeSuggestions(); track place.label) {
-          <mat-option [value]="place">{{ place.label }}</mat-option>
-        }
-        <!-- Leer und kaputt sehen sonst gleich aus: nach der Sanduhr stand einfach nichts da. -->
-        @if (placeNoMatch()) {
-          <mat-option disabled class="place-note">{{ 'tournamentDirectory.place.noMatch' | translate }}</mat-option>
-        } @else if (placeSearchFailed()) {
-          <mat-option disabled class="place-note">{{ 'tournamentDirectory.place.searchFailed' | translate }}</mat-option>
-        }
-      </mat-autocomplete>
-
-      @if (placeSearching()) {
-        <mat-spinner matSuffix diameter="18" />
-      } @else if (placeLabel) {
-        <button matSuffix mat-icon-button (click)="clearPlace()"
-                [attr.aria-label]="'common.clear' | translate">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-      @if (geolocationSupported) {
-        <button matSuffix mat-icon-button (click)="useCurrentLocation()" [disabled]="locating()"
-                [appIconLabel]="'tournamentDirectory.place.useCurrent' | translate">
-          <mat-icon>{{ locating() ? 'hourglass_top' : 'my_location' }}</mat-icon>
-        </button>
-      }
-    </mat-form-field>
+    <!-- Ort: der Mittelpunkt der Umkreissuche (Aufbau und Gruende in PlaceFieldComponent). -->
+    <app-place-field class="place-field" [label]="placeLabel" [suggestions]="placeSuggestions()"
+                     [searching]="placeSearching()" [noMatch]="placeNoMatch()" [searchFailed]="placeSearchFailed()"
+                     [locating]="locating()" [geolocationSupported]="geolocationSupported"
+                     (labelChange)="onPlaceInput($event)" (chosen)="choosePlace($event)"
+                     (cleared)="clearPlace()" (locate)="useCurrentLocation()" />
 
     <!-- Umkreis und Zeitraum stehen am Handy NICHT in der Leiste, sondern im ausklappbaren Filterfeld; ihre Werte
          zeigen die Chips unter der Leiste (d2-t-calendar-filter-mobile: vorher drei offene Filterzeilen, die erste

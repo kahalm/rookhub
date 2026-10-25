@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -11,15 +10,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -29,6 +25,8 @@ import { requireAccount } from '../../core/require-account';
 import { wideScreen } from '../../core/wide-screen';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
+import { PlaceFieldComponent } from './place-field.component';
+import { PlaceSearch } from './place-search';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
 import { PinColourBy } from './pin-palette';
 import { ViewTab, applyStoredView, snapshotView } from './directory-view-state';
@@ -70,12 +68,12 @@ import {
   selector: 'app-tournament-directory',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatAutocompleteModule, MatButtonModule, MatCardModule,
+    CommonModule, FormsModule, MatButtonModule, MatCardModule,
     MatChipsModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule,
-    MatMenuModule, MatProgressSpinnerModule, MatSelectModule, MatSlideToggleModule, MatTabsModule,
-    MatTooltipModule, IconLabelDirective, TranslatePipe,
+    MatMenuModule, MatSelectModule, MatSlideToggleModule, MatTabsModule,
+    MatTooltipModule, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
-    TournamentMapComponent,
+    TournamentMapComponent, PlaceFieldComponent,
   ],
   templateUrl: './tournament-directory.component.html',
   styleUrls: ['./tournament-directory.component.scss'],
@@ -207,7 +205,7 @@ export class TournamentDirectoryComponent implements OnInit {
   ngOnInit(): void {
     this.applyRangePreset('quarter', false);
     this.viewSync.restore();
-    this.watchPlaceInput();
+    this.placeSearch.start();
     this.viewSync.start();
 
     // Ohne Anmeldung (seit 0.643.0): kein Server-Stand und keine Suchprofile — beide gehoeren einem Konto, und die
@@ -232,50 +230,17 @@ export class TournamentDirectoryComponent implements OnInit {
 
   /** Was im Ortsfeld steht — Beschriftung eines Gazetteer-Treffers oder Profilname. */
   placeLabel = '';
-  readonly placeSuggestions = signal<GeoPlaceSuggestion[]>([]);
-  readonly placeSearching = signal(false);
-  /**
-   * Die Ortssuche lief, fand aber nichts bzw. scheiterte. Ohne diese beiden stand nach der Sanduhr
-   * einfach nichts da — unbekannter Ort und kaputte Suche sahen gleich aus (Codereview F6-007).
-   */
-  readonly placeNoMatch = signal(false);
-  readonly placeSearchFailed = signal(false);
+  /** Die Ortssuche (Vorschlaege, Sanduhr, „kein Ort gefunden", Fehler — Codereview F6-007). */
+  private readonly placeSearch = new PlaceSearch(term => this.directory.places(term), this.destroyRef);
+  readonly placeSuggestions = this.placeSearch.suggestions;
+  readonly placeSearching = this.placeSearch.searching;
+  readonly placeNoMatch = this.placeSearch.noMatch;
+  readonly placeSearchFailed = this.placeSearch.failed;
   readonly locating = signal(false);
   readonly locationError = signal<GeolocationFailure | null>(null);
 
-  private readonly placeTerm$ = new Subject<string>();
   /** Die Beschriftung, zu der die aktuell gehaltenen Koordinaten gehoeren. */
   private chosenPlaceLabel: string | null = null;
-
-  private watchPlaceInput(): void {
-    // switchMap: bei schnellem Tippen darf nicht die Antwort einer aelteren Anfrage die neuere
-    // ueberschreiben.
-    this.placeTerm$.pipe(
-      debounceTime(250),
-      // Der Vergleich muss die ANGEZEIGTEN Vorschlaege einbeziehen: „ab" tippen, auf „a" loeschen
-      // (Liste geleert), wieder „b" — derselbe Begriff, aber die Liste ist leer und die Sanduhr
-      // steht. Ohne diese Bedingung verwirft distinctUntilChanged die Anfrage und die Sanduhr
-      // bleibt fuer immer.
-      distinctUntilChanged((a, b) => a === b && this.placeSuggestions().length > 0),
-      // Der Fehler wird INNEN abgefangen: draussen beendete er den ganzen Strom, danach setzte
-      // jede Eingabe nur noch die Sanduhr, und sie blieb bis zum Neuladen stehen.
-      switchMap(term => this.directory.places(term).pipe(
-        map(results => ({ results, failed: false })),
-        catchError(() => of({ results: [] as GeoPlaceSuggestion[], failed: true })),
-      )),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(({ results, failed }) => {
-      this.placeSuggestions.set(results);
-      this.placeSearching.set(false);
-      this.placeSearchFailed.set(failed);
-      this.placeNoMatch.set(!failed && results.length === 0);
-    });
-  }
-
-  private resetPlaceSearchState(): void {
-    this.placeNoMatch.set(false);
-    this.placeSearchFailed.set(false);
-  }
 
   onPlaceInput(value: string): void {
     this.placeLabel = value;
@@ -285,15 +250,7 @@ export class TournamentDirectoryComponent implements OnInit {
     // mehr. Sonst sucht die Seite im Umkreis von Wien weiter, waehrend „Berlin" im Feld steht.
     if (value.trim() !== (this.chosenPlaceLabel ?? '').trim()) this.clearCentre();
 
-    const term = value.trim();
-    this.resetPlaceSearchState();
-    if (term.length < 2) {
-      this.placeSuggestions.set([]);
-      this.placeSearching.set(false);
-      return;
-    }
-    this.placeSearching.set(true);
-    this.placeTerm$.next(term);
+    this.placeSearch.input(value);
   }
 
   choosePlace(place: GeoPlaceSuggestion): void {
@@ -305,15 +262,13 @@ export class TournamentDirectoryComponent implements OnInit {
     // Ein selbst gewaehlter Ort ERSETZT das Suchprofil: liefe beides mit, gewaenne serverseitig
     // das Profil und das Feld behauptete etwas anderes als die Liste zeigt.
     this.filter.profileId = null;
-    this.placeSuggestions.set([]);
-    this.resetPlaceSearchState();
+    this.placeSearch.clear();
     this.reload();
   }
 
   clearPlace(): void {
     this.placeLabel = '';
-    this.placeSuggestions.set([]);
-    this.resetPlaceSearchState();
+    this.placeSearch.clear();
     this.locationError.set(null);
     this.clearCentre();
     this.filter.profileId = null;
@@ -347,8 +302,7 @@ export class TournamentDirectoryComponent implements OnInit {
         this.placeLabel = fallback;
         this.chosenPlaceLabel = fallback;
         // Ein stehengebliebenes „Kein Ort gefunden" widerspraeche dem Ort, der jetzt im Feld steht.
-        this.placeSuggestions.set([]);
-        this.resetPlaceSearchState();
+        this.placeSearch.clear();
         this.reload();
 
         // Der Name ist Beiwerk: die Suche laeuft schon mit den Koordinaten, und ein Fehlschlag
@@ -449,8 +403,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.placeLabel = profile?.placeQuery ?? profile?.name ?? '';
     this.chosenPlaceLabel = this.placeLabel || null;
     this.filter.radiusKm = profile?.radiusKm ?? null;
-    this.placeSuggestions.set([]);
-    this.resetPlaceSearchState();
+    this.placeSearch.clear();
 
     this.reload();
   }
@@ -517,8 +470,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.filter = { ...EMPTY_FILTER };
     this.placeLabel = '';
     this.chosenPlaceLabel = null;
-    this.placeSuggestions.set([]);
-    this.resetPlaceSearchState();
+    this.placeSearch.clear();
     this.locationError.set(null);
     this.applyRangePreset('quarter');
   }
