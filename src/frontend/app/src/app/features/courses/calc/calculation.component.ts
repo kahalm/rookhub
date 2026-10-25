@@ -42,6 +42,7 @@ import { LocalCalculationBackend } from './calc-local.backend';
 import { CalcTrainingTimer } from './calc-training-timer';
 import { CalcTreeCursor } from './calc-tree-cursor';
 import { CalcTreeSaver } from './calc-tree-saver';
+import { CalcPageMode } from './calc-page-mode';
 import { CalcReviewController } from './calc-review.controller';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
@@ -442,7 +443,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.enterMode();
+    this.pageMode.enter();
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
     this.requestedChapter = (this.route.snapshot.queryParamMap.get('chapter') || '').trim() || null;
     // Niemand angemeldet → Stellungen lesend vom öffentlichen Endpoint, alles Selbstgemachte
@@ -459,73 +460,20 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.liveHandle = setInterval(() => { this.liveSeconds = this.currentWatchSeconds(); }, 1000);
   }
 
-  /**
-   * Klasse am <body>, solange dieser Modus offen ist: die App-Kopfzeile rückt nach rechts, damit
-   * die Befehlszeile dieselbe Zeile mitbenutzt (Regeln in `styles.scss`). Bewusst so eng
-   * gefasst — `<app-navbar>` ist EINE Instanz in der App-Hülle und damit auf allen Routen
-   * dieselbe; ohne die Eingrenzung baute man jede Seite um.
-   */
-  /** Gemerkte Vollbild-Hülle des Bretts (siehe {@link fsTarget}). */
-  private fsHost: HTMLElement | null = null;
+  /** `<body>`-Klasse, Navbar-Breite und Vollbild-Ziel — siehe {@link CalcPageMode}. */
+  private readonly pageMode = new CalcPageMode();
 
-  /**
-   * Element, das der Vollbild-Knopf in der Leiste ins Vollbild schickt. Der Knopf sitzt dort
-   * statt im Brett (`allowFullscreen=false`), weil er im Brett eine eigene Zeile DARÜBER belegte
-   * und damit Bretthöhe kostete. Die Hülle heißt seit jeher `.board-fs-host` und ist als
-   * Vollbild-Element dokumentiert.
-   *
-   * Bewusst über das Dokument gesucht statt über einen eingespritzten `ElementRef`: die Tests
-   * bauen diese Komponente direkt mit `new` und haben damit keinen Injektionskontext. Auf der
-   * Seite gibt es genau ein Brett, die Suche ist also eindeutig; das Ergebnis wird gemerkt.
-   */
-  get fsTarget(): HTMLElement | null {
-    // `isConnected`: nach einem Ladefehler ersetzt die Zustandsweiche das ganze Layout samt
-    // Brett — der Cache zeigte dann auf ein aus dem DOM entferntes Element, requestFullscreen
-    // darauf wird still abgelehnt, und der Knopf wäre für den Rest des Besuchs tot.
-    if ((!this.fsHost || !this.fsHost.isConnected) && typeof document !== 'undefined') {
-      this.fsHost = document.querySelector('app-puzzle-board .board-fs-host');
-    }
-    return this.fsHost;
-  }
+  /** Element, das der Vollbild-Knopf in der Leiste ins Vollbild schickt (siehe {@link CalcPageMode.fsTarget}). */
+  get fsTarget(): HTMLElement | null { return this.pageMode.fsTarget; }
 
   /** Brett- und Figurenart — alles, was in DIESEM Modus etwas bewirkt. */
   openSettings(): void {
     this.dialog.open(CalcSettingsDialogComponent, { autoFocus: false });
   }
 
-  private static readonly MODE_CLASS = 'calc-mode';
-
-  /** Beobachtet die Breite der Navigationsleiste — die Befehlszeile hält genau so viel frei. */
-  private navResize?: ResizeObserver;
-
-  private enterMode(): void {
-    if (typeof document === 'undefined') return;
-    document.body.classList.add(CalculationComponent.MODE_CLASS);
-    const nav = document.querySelector('app-navbar');
-    if (!nav || typeof ResizeObserver === 'undefined') return;
-    // GEMESSEN statt geraten: die Breite hängt an Sprache, Anmeldezustand und Schriftgröße —
-    // ein fester Wert läge in der Hälfte der Fälle daneben und die Zeile liefe unter die Leiste.
-    this.navResize = new ResizeObserver(() => this.syncNavWidth(nav));
-    this.navResize.observe(nav);
-    this.syncNavWidth(nav);
-  }
-
-  private syncNavWidth(nav: Element): void {
-    const breite = Math.ceil(nav.getBoundingClientRect().width);
-    document.body.style.setProperty('--calc-nav-w', `${breite}px`);
-  }
-
-  private leaveMode(): void {
-    if (typeof document === 'undefined') return;
-    this.navResize?.disconnect();
-    this.navResize = undefined;
-    document.body.classList.remove(CalculationComponent.MODE_CLASS);
-    document.body.style.removeProperty('--calc-nav-w');
-  }
-
   ngOnDestroy(): void {
     this.stopTraining();     // stoppt UND schöpft die gemessene Zeit ab
-    this.leaveMode();
+    this.pageMode.leave();
     if (this.liveHandle !== undefined) { clearInterval(this.liveHandle); this.liveHandle = undefined; }
     this.clearSaveTimer();
     this.flushSave();
