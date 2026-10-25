@@ -56,8 +56,6 @@ describe('MapLegendComponent', () => {
   it('zeigt die Wahl in der Auswahl und meldet eine neue nach draußen', () => {
     const picked: PinColourBy[] = [];
     fixture.componentInstance.colourPicked.subscribe(c => picked.push(c));
-    // Erst zeichnen, dann umstellen: beim ERSTEN Durchlauf setzt [value] die Auswahl, bevor die
-    // Optionen stehen, und der Browser zeigt die erste — so schon vor der Zerlegung (offener Punkt).
     fixture.detectChanges();
     fixture.componentRef.setInput('colourBy', 'gender');
     fixture.detectChanges();
@@ -68,5 +66,16 @@ describe('MapLegendComponent', () => {
     select.dispatchEvent(new Event('change'));
 
     expect(picked).toEqual(['kind']);
+  });
+
+  // P15/4e: der gemerkte Zustand kommt VOR dem ersten Zeichnen an. [value] am <select> griff, bevor
+  // die @for-Optionen standen — die Auswahl zeigte „Bedenkzeit", die Pins waren nach 'gender' gefärbt.
+  it('zeigt eine schon beim ersten Zeichnen gesetzte Wahl in der Auswahl', () => {
+    fixture.componentRef.setInput('colourBy', 'gender');
+    fixture.detectChanges();
+
+    const select = host.querySelector<HTMLSelectElement>('.colour-by select')!;
+    expect(select.value).toBe('gender');
+    expect(select.selectedOptions[0].value).toBe('gender');
   });
 });

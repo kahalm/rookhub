@@ -581,6 +581,17 @@ describe('TournamentMapComponent', () => {
     expect(standard.fillColor).not.toBe(rapid.fillColor);
   });
 
+  // P15/4e: der gemerkte Zustand (Einfärben nach Geschlechtsklasse) kommt vor dem ersten Zeichnen.
+  // Die Pins waren richtig gefärbt, die Auswahl zeigte aber „Bedenkzeit".
+  it('zeigt ein gemerktes Merkmal schon beim Aufbau in der Auswahl', () => {
+    component.colourBy = 'gender';
+    component.entries = [entry('1', 47.8, 13.04)];
+    fixture.detectChanges();
+
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('.colour-by select');
+    expect(select.value).toBe('gender');
+  });
+
   it('schaltet auf ein anderes Merkmal um und meldet die Wahl nach draußen', () => {
     const gewaehlt: string[] = [];
     component.colourByChange.subscribe(c => gewaehlt.push(c));

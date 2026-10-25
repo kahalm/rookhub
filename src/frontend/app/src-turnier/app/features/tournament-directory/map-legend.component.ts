@@ -16,9 +16,11 @@ import { MIXED, PIN_COLOUR_SCHEMES, PinColourBy, legendOf } from './pin-palette'
   template: `
     <label class="colour-by">
       <span>{{ 'tournamentDirectory.map.colourBy' | translate }}</span>
+      <!-- [selected] je Option: [value] am <select> greift beim ersten Zeichnen, bevor die
+           @for-Optionen stehen — ein gemerktes Merkmal zeigte dann „Bedenkzeit" (P15/4e). -->
       <select [value]="colourBy()" (change)="pick($event)">
         @for (scheme of schemes; track scheme) {
-          <option [value]="scheme">
+          <option [value]="scheme" [selected]="scheme === colourBy()">
             {{ 'tournamentDirectory.map.colourScheme.' + scheme | translate }}
           </option>
         }
