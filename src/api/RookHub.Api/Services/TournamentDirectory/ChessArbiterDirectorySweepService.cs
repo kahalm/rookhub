@@ -41,10 +41,8 @@ internal enum ChessArbiterDetailOutcome
     Unavailable,
 }
 
-public class ChessArbiterDirectorySweepService
+public class ChessArbiterDirectorySweepService : IDirectorySourceAdapter<ChessArbiterDirectorySweepService.CrawlerChessArbiterEvent>
 {
-    private const int SaveEvery = 25;
-
     /// <summary>Fassung des Detailabrufs — erhoehen, wenn <c>ParseDetail</c> im Crawler mehr oder
     /// anderes liest. Eintraege mit kleinerer Fassung werden genau einmal nachgefragt.</summary>
     public const int CurrentDetailVersion = 1;
@@ -61,6 +59,9 @@ public class ChessArbiterDirectorySweepService
     private readonly int _detailBatchSize;
     private readonly ILogger<ChessArbiterDirectorySweepService> _log;
 
+    /// <summary>Wie viele Detailseiten dieser Lauf noch holen darf.</summary>
+    private int _detailBudget;
+
     public ChessArbiterDirectorySweepService(AppDbContext db, IHttpClientFactory httpClientFactory,
         GeocodingService geocoding, IConfiguration configuration,
         ILogger<ChessArbiterDirectorySweepService> log)
@@ -76,143 +77,96 @@ public class ChessArbiterDirectorySweepService
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var events = await FetchListAsync(today, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
+        _detailBudget = Math.Max(0, detailLimit ?? _detailBatchSize);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
+    }
 
-        var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
-        var now = DateTime.UtcNow;
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
 
-        try
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerChessArbiterEvent>.Kind => DirectorySourceKind.PolishChessFederation;
+    string IDirectorySourceAdapter<CrawlerChessArbiterEvent>.LogName => "chessarbiter";
+
+    /// <summary>Jahr und Nummer — <see cref="CrawlerChessArbiterEvent.Key"/>; leer, wenn die Nummer fehlt.</summary>
+    string? IDirectorySourceAdapter<CrawlerChessArbiterEvent>.SourceKey(CrawlerChessArbiterEvent row) => row.EventId.Length == 0 ? null : row.Key;
+
+    DateOnly? IDirectorySourceAdapter<CrawlerChessArbiterEvent>.Start(CrawlerChessArbiterEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerChessArbiterEvent>.Name(CrawlerChessArbiterEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerChessArbiterEvent>.PublicId(CrawlerChessArbiterEvent row) => $"pl{row.Year}-{row.EventId}";
+    string? IDirectorySourceAdapter<CrawlerChessArbiterEvent>.Federation(CrawlerChessArbiterEvent row) => "POL";
+    string? IDirectorySourceAdapter<CrawlerChessArbiterEvent>.MatchPlace(CrawlerChessArbiterEvent row) => row.Place;
+    string? IDirectorySourceAdapter<CrawlerChessArbiterEvent>.Url(CrawlerChessArbiterEvent row) => row.Url;
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerChessArbiterEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerChessArbiterEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        var location = row.Place?.Trim();
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.StartDate = start;
+        // Ein schon geholtes Ende bleibt stehen — es kam von der Detailseite. (Ein neuer Eintrag
+        // hat noch kein Ende; vorher stand hier zusaetzlich „und nicht neu", was dasselbe sagt.)
+        own.EndDate = own.EndDate is { } end && end > start ? end : start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.State = ExternalDirectorySource.Truncate(row.Region, 100);
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        own.Speed = SpeedOf(row.SpeedText);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+
+        // Der Detailabruf lohnt nur einmal je Turnier — und „schon gefragt" heisst hier
+        // ausdruecklich AUCH „gefragt, die Seite traegt nichts". Vorher stand das nur in
+        // der Adresse des Herkunftsvermerks, und die wird ausschliesslich bei ERFOLG
+        // gesetzt: die rund 480 polnischen Turniere ohne Datenseite blieben damit fuer
+        // immer Kandidat und verbrauchten jede Nacht das ganze Budget an sich selbst.
+        var hasDetail = HasDetail(own, row.Key);
+        // Traegt der Vermerk schon eine Adresse, wurde die Seite frueher GELESEN (nicht
+        // bloss gefragt) — dann bleibt sie stehen.
+        var detailRead = HasReadDetail(own, row.Key);
+        // „Aktualisiert" heisst hier: die Detailseite war lesbar.
+        var parsed = false;
+        if (!hasDetail && _detailBudget > 0)
         {
-            foreach (var row in events)
+            _detailBudget--;
+            var outcome = await LoadDetailAsync(own, row, ct);
+            if (outcome != ChessArbiterDetailOutcome.Unavailable)
             {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.Key);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
+                // Auch die leere Seite ist eine Auskunft: Fassung setzen, nicht wiederholen.
+                own.ChessArbiterDetailVersion = CurrentDetailVersion;
+            }
+            if (outcome == ChessArbiterDetailOutcome.Parsed)
+            {
+                parsed = true;
+                detailRead = true;
+                locationChanged = true;   // die Anschrift ist genauer als der Listenort
+            }
+            await Task.Delay(DetailDelay, ct);
+        }
 
-                processed++;
-                var publicId = $"pl{row.Year}-{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, "POL", start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.PolishChessFederation, row.Key, row.Place), ct);
+        // Die Adresse im Vermerk bleibt der Herkunftsbeleg — sie steht nur da, wenn die
+        // Seite auch etwas hergab (`ChessArbiterDetailVersion` sagt, dass gefragt wurde).
+        await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.PolishChessFederation,
+            row.Key, detailRead ? row.Url : null, now, ct);
 
-                if (match is not null)
-                {
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.PolishChessFederation, row.Key, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("chessarbiter: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                var isNew = own is null;
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        ChessResultsId = null,
-                        Federation = "POL",
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = row.Place?.Trim();
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.StartDate = start;
-                own.EndDate = own.EndDate is { } end && end > start && !isNew ? end : start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.State = ExternalDirectorySource.Truncate(row.Region, 100);
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.Speed = SpeedOf(row.SpeedText);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-
-                // Der Detailabruf lohnt nur einmal je Turnier — und „schon gefragt" heisst hier
-                // ausdruecklich AUCH „gefragt, die Seite traegt nichts". Vorher stand das nur in
-                // der Adresse des Herkunftsvermerks, und die wird ausschliesslich bei ERFOLG
-                // gesetzt: die rund 480 polnischen Turniere ohne Datenseite blieben damit fuer
-                // immer Kandidat und verbrauchten jede Nacht das ganze Budget an sich selbst.
-                var hasDetail = HasDetail(own, row.Key);
-                // Traegt der Vermerk schon eine Adresse, wurde die Seite frueher GELESEN (nicht
-                // bloss gefragt) — dann bleibt sie stehen.
-                var detailRead = HasReadDetail(own, row.Key);
-                if (!hasDetail && budget > 0)
-                {
-                    budget--;
-                    var outcome = await LoadDetailAsync(own, row, ct);
-                    if (outcome != ChessArbiterDetailOutcome.Unavailable)
-                    {
-                        // Auch die leere Seite ist eine Auskunft: Fassung setzen, nicht wiederholen.
-                        own.ChessArbiterDetailVersion = CurrentDetailVersion;
-                        hasDetail = true;
-                    }
-                    if (outcome == ChessArbiterDetailOutcome.Parsed)
-                    {
-                        updated++;
-                        detailRead = true;
-                        locationChanged = true;   // die Anschrift ist genauer als der Listenort
-                    }
-                    await Task.Delay(DetailDelay, ct);
-                }
-
-                // Die Adresse im Vermerk bleibt der Herkunftsbeleg — sie steht nur da, wenn die
-                // Seite auch etwas hergab (`ChessArbiterDetailVersion` sagt, dass gefragt wurde).
-                await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.PolishChessFederation,
-                    row.Key, detailRead ? row.Url : null, now, ct);
-
-                if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
-                {
-                    var hit = await _geocoding.ResolveAsync(own.LocationText, own.State, "POL", ct);
-                    if (hit is not null && hit.Source != GeoSource.Ambiguous)
-                    {
-                        own.Lat = hit.Lat;
-                        own.Lon = hit.Lon;
-                        own.GeoSource = hit.Source;
-                        own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
-                    }
-                }
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
+        if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
+        {
+            var hit = await _geocoding.ResolveAsync(own.LocationText, own.State, "POL", ct);
+            if (hit is not null && hit.Source != GeoSource.Ambiguous)
+            {
+                own.Lat = hit.Lat;
+                own.Lon = hit.Lon;
+                own.GeoSource = hit.Source;
+                own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
             }
         }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "chessarbiter: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "chessarbiter-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.PolishChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        return parsed;
     }
+
+    void IDirectorySourceAdapter<CrawlerChessArbiterEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "chessarbiter-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Detailseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
 
     /// <summary>Wurde die Detailseite dieses Turniers schon mit der AKTUELLEN Fassung gefragt?
     /// Die Adresse im Herkunftsvermerk zaehlt weiter mit — Eintraege aus der Zeit vor der Spalte
