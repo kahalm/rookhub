@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.833.3", date: "2026-10-25", changes: [
+    { en: "Game page: the “engine offline since …” time in the ⋮ menu uses the date format of the app language.", de: "Partieseite: Die Zeit bei „Engine offline seit …“ im ⋮-Menü steht im Datumsformat der App-Sprache." },
+  ] },
   { version: "0.833.2", date: "2026-10-25", changes: [
     { en: "Tournament calendar: Irish tournaments matched to a chess-results tournament no longer show up twice after the first night.", de: "Turnierkalender: Irische Turniere, die einem chess-results-Turnier zugeordnet sind, erscheinen nach der ersten Nacht nicht mehr doppelt." },
     { en: "Tournament calendar: Slovak tournaments without a chess-results number no longer get an empty number stored (which could break the nightly sync on the unique index).", de: "Turnierkalender: Slowakische Turniere ohne chess-results-Nummer bekommen keine leere Nummer mehr gespeichert (die den nächtlichen Abgleich am eindeutigen Index abbrechen konnte)." },
