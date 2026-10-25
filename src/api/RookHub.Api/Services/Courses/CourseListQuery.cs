@@ -209,7 +209,10 @@ internal sealed class CourseListQuery
             .Select(g => new { BookId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.BookId, x => x.Count);
         // Gesamtpunkte der Selbstbewertung je Kalkulationsbuch (unbewertete Stellungen = null
-        // fließen nicht ein). Gespeichert ist die STUFE — die Punkte entstehen erst über
+        // fließen nicht ein). BEWUSST ohne den TreeJson-Filter von „bearbeitet" oben: auch eine Zeile
+        // OHNE Baum (nur Zeit/Festlegung/Bewertung per PATCH) zählt mit ihrer Bewertung — die Punkte
+        // messen die Selbstbewertung, nicht die Bäume (Entscheidung User 25.10.; Detailseite und
+        // Kapitel-Summe im Kalk-Modus zählen genauso). Gespeichert ist die STUFE — die Punkte entstehen erst über
         // CalculationGrades.PointsFor, deshalb wird je Buch nach Stufe gezählt und die
         // Gewichtung hier angewandt statt in der DB summiert.
         calcPointsByBook = (await _db.CalculationTrees

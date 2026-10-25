@@ -243,7 +243,9 @@ public class CourseAuthoringService
             sharedBy, link, linkedName, isPinned);
     }
 
-    /// <summary>Summe der Selbstbewertung (Punkte aus den gespeicherten STUFEN) im Kalkulationsbuch.</summary>
+    /// <summary>Summe der Selbstbewertung (Punkte aus den gespeicherten STUFEN) im Kalkulationsbuch. Bewusst auch
+    /// Zeilen mit LEEREM TreeJson: anders als beim Fortschritt („bearbeitet" = echter Baum) zählt jede Bewertung,
+    /// mit oder ohne Baum (Entscheidung User 25.10., gleich wie die Kursliste in <c>CourseListQuery</c>).</summary>
     private async Task<int> LoadCalcPointsAsync(int userId, int bookId, CancellationToken ct)
     {
         var grades = await _db.CalculationTrees
