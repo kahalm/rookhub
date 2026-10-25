@@ -22,7 +22,6 @@ import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto, LineReviewRequest } from './repertoire-training.service';
 import { TrainerSrSync } from './repertoire-trainer-sr-sync';
 import { buildRepertoireGraph, normFen, RepertoireGraph } from './repertoire-tree.util';
-import { lineKeyFromSans } from './repertoire-line-key.util';
 import { chapterColorsOf, TrainColor } from './repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
@@ -37,7 +36,8 @@ import { EvalCompare } from './repertoire-trainer-eval-compare';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { TrainerFrequencyLoader } from './repertoire-trainer-frequency-loader';
-import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
+import { destsAt } from './repertoire-trainer.util';
+import { TrainerLineSet, byRank, countUserMoves, extendQueue, lineKeyOf, opponentLines, playableLines } from './repertoire-trainer-queue.util';
 import { LineMoveToken, commentParagraphs, lineChapterTitle, lineLabel, lineMoveTokens, plyComment, plyPrettyLabel } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
@@ -327,40 +327,27 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** In der Reihenfolge des Gegners; Linien, die er nicht kennt (Schlüssel nicht in der Antwort), dahinter wie gehabt. */
-  private byOpponent(lines: ParsedGame[]): ParsedGame[] {
-    const rank = this.opponentRank!;
-    const at = (l: ParsedGame) => rank.get(this.lineKeyOf(l)) ?? Number.MAX_SAFE_INTEGER;
-    return [...lines].sort((a, b) => at(a) - at(b));
+  /** Linien dieser Sitzung (Kapitel-Filter, Farbe je Kapitel). */
+  private get lineSet(): TrainerLineSet {
+    return { lines: this.allLines, chapter: this.chapterFilter, colorOf: l => this.colorOf(l) };
   }
 
-  /** Die Linien der Gegner-Sitzung: alle der Farbe (Kapitel-Filter gilt), in seiner Reihenfolge — OHNE Fälligkeit und ohne
-   *  Modus-Wechsel; mit Einstieg nur die Einstiegslinie und die nach ihr. */
+  /** Die Linien der Gegner-Sitzung (Farbe, Reihung, Einstieg). */
   private opponentLines(): ParsedGame[] {
-    let lines = linesInChapter(this.allLines, this.chapterFilter).filter(l => this.hasUserMove(l));
-    if (this.opponentColor) lines = lines.filter(l => this.colorOf(l) === this.opponentColor);
-    const start = this.opponentStart;
-    if (!this.opponentRank) return start ? lines.filter(l => this.lineKeyOf(l) === start) : lines;
-    const ordered = this.byOpponent(lines);
-    if (!start) return ordered;
-    const at = ordered.findIndex(l => this.lineKeyOf(l) === start);
-    return at < 0 ? ordered : ordered.slice(at);
+    return opponentLines(this.lineSet, { color: this.opponentColor, rank: this.opponentRank, start: this.opponentStart });
   }
 
   /** Die Reihung kam, während die Einstiegslinie läuft: die weiteren Linien hinten anhängen, die laufende bleibt. */
   private extendOpponentQueue(): void {
-    const current = this.queue[this.qIndex];
-    const lines = this.opponentLines();
-    const at = current ? lines.findIndex(l => l === current) : -1;
-    this.queue = [...this.queue.slice(0, this.qIndex + 1), ...(at < 0 ? lines.filter(l => l !== current) : lines.slice(at + 1))];
+    this.queue = extendQueue(this.queue, this.qIndex, this.opponentLines());
     this.opponentTotal = this.queue.length;
-    this.sessionUserMoves = this.queue.reduce((sum, l) => sum + this.countUserMoves(l), 0);
+    this.sessionUserMoves = countUserMoves(this.lineSet, this.queue);
     this.cdr.markForCheck();
   }
 
   /** Reihenfolge der Warteschlange: nach dem Gegner, sonst „Häufigste zuerst" (wenn an). */
   private ordered(lines: ParsedGame[]): ParsedGame[] {
-    return this.opponentRank ? this.byOpponent(lines) : this.freq.order(lines, this.freqOrder);
+    return this.opponentRank ? byRank(lines, this.opponentRank) : this.freq.order(lines, this.freqOrder);
   }
 
   /** „Häufigste zuerst" an/aus. Baut die Sitzung neu auf (wie ein Moduswechsel). */
@@ -406,9 +393,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   /** Stabiler Linien-Schlüssel (identisch zur Linienliste) aus der SAN-Zugfolge. */
-  lineKeyOf(line: ParsedGame): string {
-    return lineKeyFromSans(line.moves.map(m => m.san));
-  }
+  lineKeyOf(line: ParsedGame): string { return lineKeyOf(line); }
 
   /** Fällig = im Pool, nicht pausiert und DueAt ≤ jetzt. Noch nicht gelernte Linien (kein Zustand)
    * sind NICHT im Pool und werden nicht abgefragt. */
@@ -426,9 +411,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private buildQueue(): void {
     this.clearLineTimers();
     const now = Date.now();
-    let filtered = linesInChapter(this.allLines, this.chapterFilter);
-    if (this.singleLineKey) filtered = filtered.filter(l => this.lineKeyOf(l) === this.singleLineKey);
-    const usable = filtered.filter(l => this.hasUserMove(l));
+    const usable = playableLines(this.lineSet, this.singleLineKey);
     const againstOpponent = !!this.opponent && !this.offlineSession;
     this.queue = againstOpponent
       ? this.opponentLines()                                       // der Reihe nach, unabhängig von Fälligkeit und Modus
@@ -442,7 +425,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.wrong = 0;
     this.currentStreak = 0;
     this.bestStreak = 0;
-    this.sessionUserMoves = this.queue.reduce((sum, l) => sum + this.countUserMoves(l), 0);
+    this.sessionUserMoves = countUserMoves(this.lineSet, this.queue);
     if (this.queue.length === 0) {
       this.nextDueAt = this.mode === 'quiz' ? this.computeNextDue(usable) : null;
       this.phase = 'EMPTY';
@@ -466,8 +449,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Alle (Chapter-gefilterten) übbaren Linien mit ≥1 eigenen Zug — deren stabile Schlüssel. */
   private usableLineKeys(): string[] {
-    return linesInChapter(this.allLines, this.chapterFilter)
-      .filter(l => this.hasUserMove(l)).map(l => this.lineKeyOf(l));
+    return playableLines(this.lineSet).map(l => this.lineKeyOf(l));
   }
 
   private reloadStatesAndRebuild(): void {
@@ -530,15 +512,6 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         error: () => { this.resetting = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.resetFailed'); },
       });
     });
-  }
-
-  /** Hat die Linie mindestens einen Zug der Kapitelfarbe? Sonst gibt es an ihr nichts zu üben. */
-  private hasUserMove(line: ParsedGame): boolean {
-    return userMoveCount(line, this.colorOf(line)) > 0;
-  }
-
-  private countUserMoves(line: ParsedGame): number {
-    return userMoveCount(line, this.colorOf(line));
   }
 
   private startCurrentLine(): void {
