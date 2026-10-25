@@ -168,6 +168,9 @@ public class GroupController : BaseApiController
             return NotFound(new { message = "User not found." });
         if (!await _db.UserGroups.AnyAsync(ug => ug.GroupId == id && ug.UserId == userId))
         {
+            // N9-004: das Mitglied bekommt sofort die Rollen der Gruppe (und der umfassenden) — nur wer diese Rechte
+            // selbst hat (oder Admin ist), darf es eintragen; sonst 403 permission_not_held.
+            await PermissionGrantGuard.EnsureCanGrantAsync(_db, GetUserIdOrNull(), await PermissionGrantGuard.PermissionsGrantedByGroupAsync(_db, id));
             _db.UserGroups.Add(new UserGroup { GroupId = id, UserId = userId });
             await _db.SaveChangesAsync();
             PermissionResolver.InvalidateAll();   // Rollen der Gruppe gelten sofort
@@ -203,6 +206,8 @@ public class GroupController : BaseApiController
             return BadRequest(new { message = "This would make the groups contain each other.", code = ApiErrorCodes.GroupInclusionCycle });
         if (!await _db.GroupInclusions.AnyAsync(l => l.GroupId == id && l.IncludedGroupId == includedId))
         {
+            // N9-004: alle Mitglieder der enthaltenen Gruppe bekommen die Rollen von „id“ (und der umfassenden).
+            await PermissionGrantGuard.EnsureCanGrantAsync(_db, GetUserIdOrNull(), await PermissionGrantGuard.PermissionsGrantedByGroupAsync(_db, id));
             _db.GroupInclusions.Add(new GroupInclusion { GroupId = id, IncludedGroupId = includedId });
             await _db.SaveChangesAsync();
             await GroupMembership.RebuildClosureAsync(_db);

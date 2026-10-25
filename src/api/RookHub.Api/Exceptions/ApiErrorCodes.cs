@@ -44,6 +44,8 @@ public static class ApiErrorCodes
 
     public const string RoleKeyTaken = "role_key_taken";
     public const string RoleSystemProtected = "role_system_protected";
+    /// <summary>Rolle/Gruppe würde Rechte vergeben, die der Verwalter selbst nicht hat (N9-004) → 403.</summary>
+    public const string PermissionNotHeld = "permission_not_held";
     public const string GroupNameTaken = "group_name_taken";
     /// <summary>Gruppe-in-Gruppe würde einen Kreis schließen (A in B in A).</summary>
     public const string GroupInclusionCycle = "group_inclusion_cycle";

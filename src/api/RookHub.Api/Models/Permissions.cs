@@ -26,7 +26,8 @@ public static class Permissions
     /// <summary>Wochenposts (Admin): Anlegen/Ändern/Löschen, Aus-Kapitel, Spieler-Breakdown.</summary>
     public const string WeeklyPostsManage = "weeklyposts.manage";
 
-    /// <summary>Gruppen (Admin): CRUD, Mitglieder, Trainingsziel-Vorlagen.</summary>
+    /// <summary>Gruppen (Admin): CRUD, Mitglieder, Trainingsziel-Vorlagen. Mitglieder erben die Rollen der Gruppe — ein
+    /// Nicht-Admin darf deshalb nur in Gruppen aufnehmen, deren Rechte er selbst hat (N9-004, <c>PermissionGrantGuard</c>).</summary>
     public const string GroupsManage = "groups.manage";
 
     /// <summary>Direktnachrichten Admin-Seite: Threads sehen/beantworten/übernehmen.</summary>
@@ -48,8 +49,8 @@ public static class Permissions
     /// Koordinaten korrigieren.</summary>
     public const string TournamentsManage = "tournaments.manage";
 
-    /// <summary>Rollen &amp; Berechtigungen verwalten (Rollen anlegen/bearbeiten/zuweisen). Sensibel —
-    /// wer das hat, kann sich effektiv beliebige weitere Rechte geben; standardmäßig nur die admin-Rolle.</summary>
+    /// <summary>Rollen &amp; Berechtigungen verwalten (Rollen anlegen/bearbeiten/zuweisen). Sensibel, standardmäßig nur die
+    /// admin-Rolle. Seit N9-004 vergibt ein Nicht-Admin damit nur Rechte, die er selbst hat (<c>PermissionGrantGuard</c>).</summary>
     public const string RolesManage = "roles.manage";
     /// <summary>LeagueHub: Aufstellungs-Prognosen der Tiroler Ligen ansehen (vorerst nur Admins, Wunsch 2026-09-27).</summary>
     public const string LeagueView = "league.view";

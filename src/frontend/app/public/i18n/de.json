@@ -93,6 +93,7 @@
     "user_delete_references": "Der Benutzer konnte nicht gelöscht werden: es bestehen noch abhängige Verweise.",
     "role_key_taken": "Eine Rolle mit diesem Key existiert bereits.",
     "role_system_protected": "System-Rollen können nicht gelöscht werden.",
+    "permission_not_held": "Du kannst nur Rechte vergeben, die du selbst hast.",
     "group_name_taken": "Eine Gruppe mit diesem Namen existiert bereits.",
     "group_inclusion_cycle": "Eine Gruppe kann keine Gruppe enthalten, in der sie selbst steckt.",
     "book_alias_invalid": "Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.",

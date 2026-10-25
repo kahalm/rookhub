@@ -93,6 +93,7 @@
     "user_delete_references": "The user could not be deleted: other records still refer to this account.",
     "role_key_taken": "A role with this key already exists.",
     "role_system_protected": "System roles cannot be deleted.",
+    "permission_not_held": "You can only grant permissions you hold yourself.",
     "group_name_taken": "A group with this name already exists.",
     "group_inclusion_cycle": "A group cannot contain a group it is itself part of.",
     "book_alias_invalid": "Invalid alias: only lowercase letters, digits and hyphens, 2–40 characters, starting with a letter.",

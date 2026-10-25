@@ -11,7 +11,8 @@ namespace RookHub.Api.Controllers.Accounts;
 /// <summary>Admin-Rollenverwaltung (RBAC): Rollen + Permissions CRUD und Rollen-Zuweisung an Nutzer.
 /// Gated über <see cref="Permissions.RolesManage"/> (standardmäßig nur die admin-Rolle).
 /// Fehlerfälle (404/400 mit <c>{ message }</c>) wirft der Dienst als Domänen-Ausnahmen, der globale
-/// DomainExceptionFilter übersetzt sie — hier wird nichts gefangen.</summary>
+/// DomainExceptionFilter übersetzt sie — hier wird nichts gefangen. „Nur vergeben, was man selbst hat“ (N9-004): jede
+/// vergebende Aktion reicht den angemeldeten Nutzer als Verwalter durch → 403 <c>permission_not_held</c>.</summary>
 [ApiController]
 [Route("api/admin/roles")]
 [HasPermission(Permissions.RolesManage)]
@@ -30,11 +31,11 @@ public class RolesAdminController : BaseApiController
 
     [HttpPost]
     public async Task<ActionResult<RoleDto>> Create([FromBody] CreateRoleDto dto)
-        => Ok(await _roles.CreateAsync(dto));
+        => Ok(await _roles.CreateAsync(dto, GetUserIdOrNull()));
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<RoleDto>> Update(int id, [FromBody] UpdateRoleDto dto)
-        => Ok(await _roles.UpdateAsync(id, dto));
+        => Ok(await _roles.UpdateAsync(id, dto, GetUserIdOrNull()));
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
@@ -57,7 +58,7 @@ public class RolesAdminController : BaseApiController
     [HttpPut("/api/admin/groups/{groupId:int}/roles")]
     public async Task<IActionResult> SetGroupRoles(int groupId, [FromBody] SetUserRolesDto dto)
     {
-        await _roles.SetGroupRolesAsync(groupId, dto);
+        await _roles.SetGroupRolesAsync(groupId, dto, GetUserIdOrNull());
         return NoContent();
     }
 
@@ -65,7 +66,7 @@ public class RolesAdminController : BaseApiController
     [HttpPut("/api/admin/users/{userId:int}/roles")]
     public async Task<IActionResult> SetUserRoles(int userId, [FromBody] SetUserRolesDto dto)
     {
-        await _roles.SetUserRolesAsync(userId, dto);
+        await _roles.SetUserRolesAsync(userId, dto, GetUserIdOrNull());
         return NoContent();
     }
 }

@@ -19,6 +19,19 @@
 | DELETE | `/api/admin/groups/{id}/training-goal` | `groups.manage` | Vorlage entfernen |
 | GET/PUT | `/api/admin/groups/{id}/roles` | `roles.manage` | Rollen einer Gruppe `{ roleIds }` (0.589.0) — jedes Mitglied hat sie, live. Die admin-Rolle geht nie an eine Gruppe (still verworfen), „Everyone" nimmt keine (400) |
 
+**Nur vergeben, was man selbst hat** (Codereview N9-004, entschieden 25.10.2026): Wer nicht Admin ist, darf über Rollen
+und Gruppen keine Rechte weitergeben, die er selbst nicht hat — auch nicht an sich selbst. Geprüft in
+`Services/Accounts/PermissionGrantGuard.cs` gegen die frischen eigenen Rechte (`PermissionResolver.LoadAsync`), Antwort
+403 `code: permission_not_held` (Meldung nennt die fehlenden Rechte):
+* `roles.manage`: Rolle anlegen (`POST /api/admin/roles`), einer Rolle Rechte HINZUFÜGEN (`PUT …/roles/{id}`; Umbenennen
+  oder Streichen bleibt frei), Rollen an Nutzer (`PUT /api/admin/users/{id}/roles`) oder Gruppe
+  (`PUT /api/admin/groups/{id}/roles`) hängen — geprüft werden nur die NEU dazukommenden Rollen.
+* `groups.manage`: Konto in eine Gruppe aufnehmen (`POST …/members/{userId}`) bzw. eine Gruppe in eine andere
+  (`POST …/includes/{includedId}`) — geprüft werden die Rechte aller Rollen der Zielgruppe UND der Gruppen, die sie
+  (auch mittelbar) enthalten. Austragen und Lösen bleiben frei.
+Vorher konnte ein Trainer mit `groups.manage` sich in eine Gruppe mit `users.manage` eintragen und ein
+`roles.manage`-Inhaber eine Rolle mit allen Rechten bauen und sich geben (Tests: `PermissionGrantGuardTests`).
+
 Admin-Oberfläche „Gruppen“: Mitglieder hinzufügen über ein Suchfeld mit Liste statt Dropdown (0.591.0, Wunsch „die Dropdown ist dafür nicht geeignet“) — ohne Suche die neuesten Konten zuerst (aus den vorab geladenen 500), ab zwei Zeichen die Server-Suche (`GET /api/admin/users?search=`, auch jenseits der 500), je Zeile ein „Hinzufügen“-Knopf; Mitglieder stehen nicht in der Liste.
 
 **Rechte gelten LIVE, nicht ab dem nächsten Anmelden** (0.589.0, Wunsch 2026-09-28: „das ist doch scheiße — sollte

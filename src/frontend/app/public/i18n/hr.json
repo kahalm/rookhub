@@ -93,6 +93,7 @@
     "user_delete_references": "Korisnika nije moguće izbrisati: drugi zapisi još upućuju na ovaj račun.",
     "role_key_taken": "Uloga s tim ključem već postoji.",
     "role_system_protected": "Sustavske uloge ne mogu se izbrisati.",
+    "permission_not_held": "Možete dodijeliti samo ovlasti koje i sami imate.",
     "group_name_taken": "Grupa s tim imenom već postoji.",
     "group_inclusion_cycle": "Grupa ne može sadržavati grupu u kojoj se i sama nalazi.",
     "book_alias_invalid": "Neispravan alias: samo mala slova, znamenke i crtice, 2–40 znakova, na početku slovo.",

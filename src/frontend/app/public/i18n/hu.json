@@ -13,6 +13,7 @@
     "user_delete_references": "A felhasználót nem sikerült törölni: más rekordok még hivatkoznak erre a fiókra.",
     "role_key_taken": "Már létezik szerepkör ezzel a kulccsal.",
     "role_system_protected": "A rendszerszerepkörök nem törölhetők.",
+    "permission_not_held": "Csak olyan jogosultságot adhatsz, amellyel te magad is rendelkezel.",
     "group_name_taken": "Már létezik csoport ezzel a névvel.",
     "group_inclusion_cycle": "Egy csoport nem tartalmazhat olyan csoportot, amelynek maga is része.",
     "book_alias_invalid": "Érvénytelen alias: csak kisbetűk, számjegyek és kötőjelek, 2–40 karakter, betűvel kezdődik.",

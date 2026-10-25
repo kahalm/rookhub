@@ -17,6 +17,9 @@ namespace RookHub.Api.Services.Accounts;
 /// editierbar (bleibt „alle") und sie ist nicht löschbar; <c>member</c> ist ebenfalls nicht löschbar.
 /// Die admin-Rollenmitgliedschaft folgt weiterhin dem <see cref="AppUser.IsAdmin"/>-Flag (Sync-Quelle,
 /// via <c>toggle-admin</c> + <see cref="RoleSeeder"/>) → die Rollen-Zuweisung hier fasst sie NICHT an.
+/// <para>„Nur vergeben, was man selbst hat“ (N9-004): <c>actorId</c> ist der angemeldete Verwalter — wer nicht Admin ist,
+/// darf keiner Rolle ein Recht hinzufügen und keine Rolle an Nutzer/Gruppe hängen, deren Rechte er selbst nicht hat
+/// (<see cref="PermissionGrantGuard"/>). <c>null</c> nur für interne Aufrufe ohne Nutzer.</para>
 /// </summary>
 public class RoleAdminService
 {
@@ -51,13 +54,14 @@ public class RoleAdminService
     /// <summary>Alle im Code definierten Permission-Schlüssel (für die Checkbox-Auswahl in der UI).</summary>
     public IReadOnlyList<string> AllPermissions() => Permissions.All;
 
-    public async Task<RoleDto> CreateAsync(CreateRoleDto dto)
+    public async Task<RoleDto> CreateAsync(CreateRoleDto dto, int? actorId = null)
     {
         var key = dto.Key.Trim().ToLowerInvariant();
         if (await _db.Roles.AnyAsync(r => r.Key == key))
             throw new DomainValidationException("Eine Rolle mit diesem Key existiert bereits.") { Code = ApiErrorCodes.RoleKeyTaken };
 
         var perms = ValidatePermissions(dto.Permissions);
+        await PermissionGrantGuard.EnsureCanGrantAsync(_db, actorId, perms);
         var role = new Role { Key = key, Name = dto.Name.Trim(), IsSystem = false };
         role.Permissions = perms.Select(p => new RolePermission { Permission = p }).ToList();
         _db.Roles.Add(role);
@@ -65,7 +69,7 @@ public class RoleAdminService
         return (await ListAsync()).First(r => r.Id == role.Id);
     }
 
-    public async Task<RoleDto> UpdateAsync(int id, UpdateRoleDto dto)
+    public async Task<RoleDto> UpdateAsync(int id, UpdateRoleDto dto, int? actorId = null)
     {
         var role = await _db.Roles.Include(r => r.Permissions).FirstOrDefaultAsync(r => r.Id == id)
             ?? throw new NotFoundException("Rolle nicht gefunden.");
@@ -76,6 +80,10 @@ public class RoleAdminService
         if (role.Key != RoleSeeder.AdminKey)
         {
             var perms = ValidatePermissions(dto.Permissions);
+            // Nur HINZUGEFÜGTE Rechte prüfen: wer eine Rolle mit einem Recht, das er nicht hat, nur umbenennt oder kürzt,
+            // vergibt nichts Neues.
+            var had = role.Permissions.Select(p => p.Permission).ToHashSet();
+            await PermissionGrantGuard.EnsureCanGrantAsync(_db, actorId, perms.Where(p => !had.Contains(p)));
             _db.RolePermissions.RemoveRange(role.Permissions);
             role.Permissions = perms.Select(p => new RolePermission { RoleId = role.Id, Permission = p }).ToList();
         }
@@ -106,7 +114,7 @@ public class RoleAdminService
 
     /// <summary>Setzt die Rollen des Users auf genau <paramref name="dto"/> — die admin-Rolle bleibt
     /// dabei UNANGETASTET (sie folgt dem IsAdmin-Flag), auch wenn sie in der Liste fehlt/steht.</summary>
-    public async Task SetUserRolesAsync(int userId, SetUserRolesDto dto)
+    public async Task SetUserRolesAsync(int userId, SetUserRolesDto dto, int? actorId = null)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
             throw new NotFoundException("User nicht gefunden.") { Code = ApiErrorCodes.UserNotFound };
@@ -127,6 +135,8 @@ public class RoleAdminService
         var toRemove = currentNonAdmin.Where(ur => !validSet.Contains(ur.RoleId)).ToList();
         if (toRemove.Count > 0) _db.UserRoles.RemoveRange(toRemove);
         var haveIds = currentNonAdmin.Select(ur => ur.RoleId).ToHashSet();
+        var added = validSet.Where(rid => !haveIds.Contains(rid)).ToList();
+        await PermissionGrantGuard.EnsureCanGrantAsync(_db, actorId, await PermissionGrantGuard.PermissionsOfRolesAsync(_db, added));
         foreach (var rid in validSet.Where(rid => !haveIds.Contains(rid)))
             _db.UserRoles.Add(new UserRole { UserId = userId, RoleId = rid });
         await _db.SaveChangesAsync();
@@ -145,7 +155,7 @@ public class RoleAdminService
     /// <summary>Setzt die Rollen einer Gruppe auf genau diese Menge. Die admin-Rolle geht NIE an eine Gruppe (sie folgt dem
     /// IsAdmin-Flag einzelner Konten), und „Everyone" nimmt keine Rolle an: sie hat keine Mitgliedszeilen, die Rolle wirkte
     /// nirgends — oder, wenn man sie mitdächte, für jedes Konto, auch jedes neu registrierte.</summary>
-    public async Task SetGroupRolesAsync(int groupId, SetUserRolesDto dto)
+    public async Task SetGroupRolesAsync(int groupId, SetUserRolesDto dto, int? actorId = null)
     {
         var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId)
             ?? throw new NotFoundException("Gruppe nicht gefunden.");
@@ -155,8 +165,10 @@ public class RoleAdminService
         var valid = (await _db.Roles.Where(r => target.Contains(r.Id) && r.Key != RoleSeeder.AdminKey)
             .Select(r => r.Id).ToListAsync()).ToHashSet();
         var current = await _db.GroupRoles.Where(gr => gr.GroupId == groupId).ToListAsync();
-        _db.GroupRoles.RemoveRange(current.Where(gr => !valid.Contains(gr.RoleId)));
         var have = current.Select(gr => gr.RoleId).ToHashSet();
+        var added = valid.Where(rid => !have.Contains(rid)).ToList();
+        await PermissionGrantGuard.EnsureCanGrantAsync(_db, actorId, await PermissionGrantGuard.PermissionsOfRolesAsync(_db, added));
+        _db.GroupRoles.RemoveRange(current.Where(gr => !valid.Contains(gr.RoleId)));
         foreach (var rid in valid.Where(rid => !have.Contains(rid)))
             _db.GroupRoles.Add(new GroupRole { GroupId = groupId, RoleId = rid });
         await _db.SaveChangesAsync();
