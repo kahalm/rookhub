@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.837.3", date: "2026-10-25", changes: [
+    { en: "Games list: the ⋮ actions (PGN, share link, delete, analysis board, photo, Lc0) now use the same service as the game page; behaviour unchanged.", de: "Partienliste: Die ⋮-Aktionen (PGN, Teilen-Link, Löschen, Analysebrett, Foto, Lc0) laufen über denselben Dienst wie die Partieseite; Verhalten unverändert." },
+    { en: "Technical refactoring (code review F8-013 follow-up): shared building blocks (game viewer, move helpers, ?lang= rule, board badge type, legal-site switch) moved to the right layer; shared/ imports from features/ in only one documented place; course detail build warning removed; the tournament history „Me“ tab is covered by a language-switch test.", de: "Technischer Umbau (Codereview F8-013-Nachlauf): Geteilte Bausteine (Partie-Betrachter, Zug-Helfer, ?lang=-Regel, Brett-Symbol-Typ, Impressum-Schalter) liegen in der richtigen Schicht; shared/ importiert nur noch an einer begründeten Stelle aus features/; Build-Warnung im Kursdetail beseitigt; der Turnierverlauf-Reiter „Ich“ ist mit einem Sprachwechsel-Test abgesichert." },
+  ]},
   { version: "0.837.2", date: "2026-10-25", changes: [
     { en: "PGN upload: quotation marks in header fields (e.g. event name „Landesliga \"A\"“) are kept correctly instead of turning into apostrophes.", de: "PGN-Upload: Anführungszeichen in Kopfangaben (z. B. Turniername „Landesliga \"A\"“) bleiben korrekt erhalten statt zu Apostrophen zu werden." },
     { en: "Calculation training: chapters differing only by leading or trailing spaces are shown and totalled as one chapter, like the rest of the course pages.", de: "Kalkulationstraining: Kapitel, die sich nur durch Leerzeichen am Rand unterscheiden, werden wie im Rest der Kursseiten als ein Kapitel angezeigt und summiert." },
