@@ -736,4 +736,74 @@ describe('ClubAddPageComponent', () => {
     expect(el.querySelector('.pick-reason')).toBeNull();
     expect(el.textContent).toContain('Erst kommt eine Übersicht');
   }));
+
+  // Charakterisierung vor der Zerlegung Z31: Entwurf eines anderen → Zuordnung → Speichern (Verwalter stellt fertig).
+  it('Verwalter stellt die Liste eines anderen fertig: Hinweis mit Namen, Zuordnung, Import über den Entwurf, Entwurf weg', fakeAsync(() => {
+    const D = { ref: '12', id: 12, source: 'datei', label: 'liga.pgn', gameCount: 1, importedCount: 0,
+      createdAt: '2026-09-28T17:00:00', updatedAt: '2026-09-28T17:30:00', owner: 'hans', viaShareLink: false, mine: false };
+    service.allDrafts.and.resolveTo([D]);
+    api.draft.and.resolveTo({ ...D, pgn: '[White "x"]\n1. e4 *', imported: [],
+      state: JSON.stringify({ v: 1, replaceClub: true, games: [] }) });
+    api.preview.and.resolveTo(PREVIEW);
+    const el = create(['league.contribute', 'league.manage']);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Offene Listen anderer');
+    expect(el.textContent).toContain('liga.pgn (1 Partie)');
+    (Array.from(el.querySelectorAll('.scan-list button')).find(b => b.textContent?.trim() === 'Fertigstellen') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.preview).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 12);
+    expect(el.querySelector('.draft-note')?.textContent).toContain('Du stellst die Liste von hans fertig.');
+    expect(el.querySelector('.draft-note')?.textContent).toContain('ein Verwalter kann den Import fertigstellen');
+    expect(el.querySelector('.review-table')?.textContent).toContain('Hengl, Philip');
+
+    api.importPgn.and.resolveTo({ added: 1, anonymized: 1, duplicates: 0, truncated: false, ids: [5], failed: [] });
+    (el.querySelector('lh-club-import-review .btn-pri') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.importPgn).toHaveBeenCalledWith('[White "x"]\n1. e4 *', jasmine.any(Array), 12);
+    expect(api.deleteDraft).toHaveBeenCalledWith('12');
+    expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen');
+    expect(el.querySelector('.result a')?.getAttribute('href')).toBe('/verein');
+    expect(el.querySelector('.draft-note')).toBeNull();
+    flush();
+  }));
+
+  // Charakterisierung vor der Zerlegung Z31: der Wechsel der Art verliert nichts (Text, Studienadresse, gewähltes Foto).
+  it('Wechsel „Partiedaten“ ↔ „Partieformular“ behält Text, Studienadresse und das gewählte Foto', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const textarea = () => el.querySelector('textarea') as HTMLTextAreaElement;
+    textarea().value = '1. e4 e5 *';
+    textarea().dispatchEvent(new Event('input'));
+    const url = el.querySelector('input[type=url]') as HTMLInputElement;
+    url.value = 'https://lichess.org/study/AbCdEf12';
+    url.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const [pgnBtn, sheetBtn] = Array.from(el.querySelectorAll('.club-kind button')) as HTMLButtonElement[];
+    sheetBtn.click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const input = el.querySelector('input[type=file][accept^="image"]') as HTMLInputElement;
+    const dt = new DataTransfer();
+    dt.items.add(new File(['x'], 'bogen.jpg', { type: 'image/jpeg' }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(el.querySelector('.chosen')?.textContent).toContain('bogen.jpg');
+    pgnBtn.click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(textarea().value).toBe('1. e4 e5 *');
+    expect((el.querySelector('input[type=url]') as HTMLInputElement).value).toBe('https://lichess.org/study/AbCdEf12');
+    sheetBtn.click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.chosen')?.textContent).toContain('Seite 1: bogen.jpg');
+    expect((el.querySelector('.actions .btn-pri') as HTMLButtonElement).disabled).toBeFalse();
+    fixture.destroy();
+    flush();
+  }));
 });

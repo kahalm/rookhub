@@ -718,4 +718,39 @@ describe('ClubScanPageComponent', () => {
     fixture.destroy();
     discardPeriodicTasks();
   }));
+
+  // Charakterisierung vor der Zerlegung Z31: hochgeladen → gelesen (nachgefragt) → korrigiert → übernommen.
+  it('Ablauf: wartet, wird nach dem Lesen geladen, eine Korrektur geht beim Übernehmen mit', fakeAsync(() => {
+    localStorage.setItem(AUTO_MINE_KEY, '0');
+    const pending = { ...structuredClone(STATE), scan: { ...structuredClone(STATE).scan, status: 'pending' as const, createdAt: new Date().toISOString() } };
+    api.scan.and.resolveTo(pending);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('app-sheet-reading-status')).not.toBeNull();
+    expect(el.querySelector('.save-panel')).toBeNull();
+    api.scan.and.resolveTo(structuredClone(STATE));
+    tick(3000);                                                                   // nächster Abruf
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.scan).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('app-sheet-reading-status')).toBeNull();
+    expect(el.querySelector('h2')?.textContent).toContain('Partieformular prüfen');
+    expect(el.querySelector('.club-intro .back-row button.to-save')?.textContent).toContain('Namen & Übernehmen ↓');
+    const c = fixture.componentInstance;
+    expect(c.s.cursor()).toBe(2);                                                 // auf der unsicheren Stelle
+    api.resolve.and.returnValue(of({ plies: [PLY(3, 'Sc6', 'Nc6', 'b8c6')], unresolved: [] }));
+    c.s.choose(STATE.plies[2].options![1]);
+    fixture.detectChanges();
+    api.addGame.and.resolveTo({ id: 11, anonymized: true });
+    (el.querySelector('.save-panel .btn-pri') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({ moves: ['e4', 'e5', 'Nh3', 'Nc6'], scanId: null }), '7');
+    expect(el.textContent).toContain('In die Vereins-Datenbank übernommen.');
+    expect(el.querySelector('.save-panel a')?.getAttribute('href')).toBe('/verein/neu?art=formular');
+    tick(1000);
+    fixture.destroy();
+    discardPeriodicTasks();
+  }));
 });
