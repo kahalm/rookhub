@@ -198,7 +198,6 @@
         "name": "Nom",
         "nameHint": "ex. « Extension Chess.com (ordinateur portable) »",
         "expires": "Expire",
-        "never": "jamais",
         "create": "Créer"
       },
       "show": {

@@ -65,7 +65,7 @@ public class ApiTokenServiceTests : IDisposable
         Assert.Equal(47, created.RawToken.Length);
         Assert.Equal("Chess.com Extension", created.Name);
         Assert.Equal("extension", created.Scope);
-        Assert.Null(created.ExpiresAt);
+        Assert.NotNull(created.ExpiresAt);   // ohne Angabe: Hoechstdauer (P-14), nie mehr „laeuft nie ab"
         Assert.Null(created.LastUsedAt);
         Assert.Equal(created.RawToken[..12], created.Prefix);
 
@@ -83,6 +83,65 @@ public class ApiTokenServiceTests : IDisposable
         var created = await _svc.CreateAsync(uid, "name", null, expiresInDays: 30);
         Assert.NotNull(created.ExpiresAt);
         Assert.InRange((created.ExpiresAt!.Value - before).TotalDays, 29.9, 30.1);
+    }
+
+    /// <summary>P-14/S1-007: kein Token laeuft mehr nie ab — ohne Angabe oder laenger als Auth:PatMaxDays (Vorgabe 365)
+    /// gilt genau die Hoechstdauer.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData(366)]
+    [InlineData(36500)]
+    public async Task CreateAsync_CapsMissingOrTooLongExpiryAt365Days(int? days)
+    {
+        var uid = await CreateUserAsync();
+        var before = DateTime.UtcNow;
+        var created = await _svc.CreateAsync(uid, "name", null, expiresInDays: days);
+        Assert.InRange((created.ExpiresAt!.Value - before).TotalDays, 364.9, 365.1);
+        Assert.Equal(created.ExpiresAt, (await _db.UserApiTokens.SingleAsync()).ExpiresAt);
+    }
+
+    [Fact]
+    public async Task CreateAsync_PatMaxDays_IsConfigurable()
+    {
+        var cfg = Microsoft.Extensions.Configuration.MemoryConfigurationBuilderExtensions.AddInMemoryCollection(new Microsoft.Extensions.Configuration.ConfigurationBuilder(),
+            new Dictionary<string, string?> { ["Auth:PatMaxDays"] = "90" }).Build();
+        var svc = new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance, cfg);
+        var uid = await CreateUserAsync();
+        var before = DateTime.UtcNow;
+
+        Assert.InRange((((await svc.CreateAsync(uid, "a", null, null)).ExpiresAt!.Value) - before).TotalDays, 89.9, 90.1);
+        Assert.InRange((((await svc.CreateAsync(uid, "b", null, 365)).ExpiresAt!.Value) - before).TotalDays, 89.9, 90.1);
+        Assert.InRange((((await svc.CreateAsync(uid, "c", null, 30)).ExpiresAt!.Value) - before).TotalDays, 29.9, 30.1);
+    }
+
+    /// <summary>Altbestand (P-14): <c>pat-cap</c> befristet nur Tokens ohne Ablauf, Probelauf schreibt nichts,
+    /// ein zweiter Lauf findet nichts mehr.</summary>
+    [Fact]
+    public async Task CapUnlimited_SetsExpiryOnlyForUnlimitedTokens_DryRunWritesNothing()
+    {
+        var alice = await CreateUserAsync("alice");
+        var bob = await CreateUserAsync("bob");
+        var limited = DateTime.UtcNow.AddDays(10);
+        _db.UserApiTokens.AddRange(
+            new UserApiToken { UserId = alice, Name = "a1", TokenHash = "h1", Prefix = "rkh_a1", Scope = "extension" },
+            new UserApiToken { UserId = alice, Name = "a2", TokenHash = "h2", Prefix = "rkh_a2", Scope = "extension" },
+            new UserApiToken { UserId = bob, Name = "b1", TokenHash = "h3", Prefix = "rkh_b1", Scope = "engine" },
+            new UserApiToken { UserId = bob, Name = "b2", TokenHash = "h4", Prefix = "rkh_b2", Scope = "extension", ExpiresAt = limited });
+        await _db.SaveChangesAsync();
+        var now = new DateTime(2026, 10, 25, 12, 0, 0, DateTimeKind.Utc);
+
+        var dry = await ApiTokenService.CapUnlimitedAsync(_db, now, 365, dryRun: true);
+        Assert.Equal(3, dry.Tokens);
+        Assert.Equal(2, dry.PerUser[alice]);
+        Assert.Equal(3, await _db.UserApiTokens.AsNoTracking().CountAsync(t => t.ExpiresAt == null));
+
+        var run = await ApiTokenService.CapUnlimitedAsync(_db, now, 365, dryRun: false);
+        Assert.Equal(3, run.Tokens);
+        var all = await _db.UserApiTokens.AsNoTracking().ToListAsync();
+        Assert.All(all.Where(t => t.Name != "b2"), t => Assert.Equal(now.AddDays(365), t.ExpiresAt));
+        Assert.Equal(limited, all.Single(t => t.Name == "b2").ExpiresAt);   // vorhandener Ablauf bleibt
+
+        Assert.Equal(0, (await ApiTokenService.CapUnlimitedAsync(_db, now, 365, dryRun: false)).Tokens);
     }
 
     [Fact]

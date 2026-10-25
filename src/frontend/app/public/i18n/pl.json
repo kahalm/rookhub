@@ -198,7 +198,6 @@
         "name": "Nazwa",
         "nameHint": "np. \"Rozszerzenie Chess.com (laptop)\"",
         "expires": "Wygasa",
-        "never": "nigdy",
         "create": "Utwórz"
       },
       "show": {

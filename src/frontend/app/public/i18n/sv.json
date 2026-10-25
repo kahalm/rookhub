@@ -198,7 +198,6 @@
         "name": "Namn",
         "nameHint": "t.ex. \"Chess.com-utökning (laptop)\"",
         "expires": "Går ut",
-        "never": "aldrig",
         "create": "Skapa"
       },
       "show": {

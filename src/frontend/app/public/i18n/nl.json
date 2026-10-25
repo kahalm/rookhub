@@ -188,7 +188,6 @@
         "name": "Naam",
         "nameHint": "bijv. \"Chess.com-extensie (laptop)\"",
         "expires": "Verloopt",
-        "never": "nooit",
         "create": "Aanmaken"
       },
       "show": {

@@ -198,7 +198,6 @@
         "name": "Název",
         "nameHint": "např. \"Rozšíření Chess.com (notebook)\"",
         "expires": "Vyprší",
-        "never": "nikdy",
         "create": "Vytvořit"
       },
       "show": {

@@ -198,7 +198,6 @@
         "name": "名称",
         "nameHint": "例如：「Chess.com 扩展（笔记本）」",
         "expires": "到期时间",
-        "never": "永不",
         "create": "创建"
       },
       "show": {

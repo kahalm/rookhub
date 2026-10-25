@@ -188,7 +188,6 @@
         "name": "名前",
         "nameHint": "例: 「Chess.com 拡張機能（ノートPC）」",
         "expires": "有効期限",
-        "never": "なし",
         "create": "作成"
       },
       "show": {

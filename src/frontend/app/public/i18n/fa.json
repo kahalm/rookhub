@@ -188,7 +188,6 @@
         "name": "نام",
         "nameHint": "مثلاً «افزونه Chess.com (لپ‌تاپ)»",
         "expires": "انقضا",
-        "never": "هرگز",
         "create": "ایجاد"
       },
       "show": {

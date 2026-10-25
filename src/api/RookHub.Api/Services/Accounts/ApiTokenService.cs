@@ -27,18 +27,29 @@ public class ApiTokenService
     /// <summary>LastUsedAt wird höchstens einmal pro diesem Fenster persistiert (Auth-Hot-Path-Drossel).</summary>
     public static readonly TimeSpan LastUsedThrottle = TimeSpan.FromMinutes(5);
 
+    /// <summary>Vorgabe fuer <c>Auth:PatMaxDays</c> (P-14/S1-007, entschieden 25.10.2026).</summary>
+    public const int DefaultMaxDays = 365;
+
     private readonly AppDbContext _db;
     private readonly ILogger<ApiTokenService> _logger;
+    private readonly int _maxDays;
 
-    public ApiTokenService(AppDbContext db, ILogger<ApiTokenService> logger)
+    public ApiTokenService(AppDbContext db, ILogger<ApiTokenService> logger, IConfiguration? config = null)
     {
         _db = db;
         _logger = logger;
+        _maxDays = MaxDays(config);
     }
 
+    /// <summary>Hoechstdauer eines API-Tokens in Tagen (<c>Auth:PatMaxDays</c>, ungesetzt/ungueltig = 365).</summary>
+    public static int MaxDays(IConfiguration? config) =>
+        int.TryParse(config?["Auth:PatMaxDays"], out var d) && d > 0 ? d : DefaultMaxDays;
+
     /// <summary>
-    /// Legt einen neuen Token an. <paramref name="expiresInDays"/> <c>null</c> = nie ablaufen.
-    /// Wirft <see cref="InvalidOperationException"/> bei ungueltigem Scope oder ueber Limit.
+    /// Legt einen neuen Token an. <paramref name="expiresInDays"/> <c>null</c> oder laenger als <c>Auth:PatMaxDays</c>
+    /// (Vorgabe 365) → genau diese Hoechstdauer: seit P-14 laeuft kein Token mehr nie ab (Server-Deckel, vorher
+    /// lebten Extension-Tokens bis zum Widerruf — 30 von 35 auf Prod). Altbestand ohne Ablauf: LibraryImport
+    /// <c>pat-cap</c>. Wirft <see cref="InvalidOperationException"/> bei ungueltigem Scope oder ueber Limit.
     /// </summary>
     public async Task<ApiTokenCreatedDto> CreateAsync(int userId, string name, string? scope, int? expiresInDays)
     {
@@ -70,7 +81,7 @@ public class ApiTokenService
             Prefix = prefix,
             Scope = effectiveScope,
             CreatedAt = DateTime.UtcNow,
-            ExpiresAt = expiresInDays.HasValue ? DateTime.UtcNow.AddDays(expiresInDays.Value) : null,
+            ExpiresAt = now.AddDays(expiresInDays is int days && days > 0 && days < _maxDays ? days : _maxDays),
         };
         _db.UserApiTokens.Add(entity);
         await _db.SaveChangesAsync();
@@ -160,6 +171,28 @@ public class ApiTokenService
         }
 
         return token;
+    }
+
+    /// <summary>Ergebnis von <see cref="CapUnlimitedAsync"/>: wie viele Tokens ohne Ablauf es gab (je Konto gezaehlt in
+    /// <paramref name="PerUser"/>) und das gesetzte Ablaufdatum.</summary>
+    public sealed record CapResult(int Tokens, IReadOnlyDictionary<int, int> PerUser, DateTime ExpiresAt, bool DryRun);
+
+    /// <summary>
+    /// Altbestand (P-14): setzt jedem Token OHNE Ablauf <c>ExpiresAt = now + maxDays</c> — keine Migration, ein
+    /// Datenlauf (<c>LibraryImport pat-cap [--dry-run]</c>), auf Prod nur auf Zuruf nach einem Dump. Wiederholbar: ein
+    /// zweiter Lauf findet nichts mehr. Bei <paramref name="dryRun"/> wird nur gezaehlt.
+    /// </summary>
+    public static async Task<CapResult> CapUnlimitedAsync(AppDbContext db, DateTime now, int maxDays, bool dryRun, CancellationToken ct = default)
+    {
+        var expires = now.AddDays(maxDays);
+        var rows = await db.UserApiTokens.Where(t => t.ExpiresAt == null).OrderBy(t => t.Id).ToListAsync(ct);
+        var perUser = rows.GroupBy(t => t.UserId).ToDictionary(g => g.Key, g => g.Count());
+        if (!dryRun && rows.Count > 0)
+        {
+            foreach (var t in rows) t.ExpiresAt = expires;
+            await db.SaveChangesAsync(ct);
+        }
+        return new CapResult(rows.Count, perUser, expires, dryRun);
     }
 
     /// <summary>Generiert einen neuen Raw-Token im Format <c>rkh_&lt;43-char-base64url&gt;</c>.</summary>

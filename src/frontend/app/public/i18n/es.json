@@ -188,7 +188,6 @@
         "name": "Nombre",
         "nameHint": "p. ej. \"Extensión de Chess.com (portátil)\"",
         "expires": "Caduca",
-        "never": "nunca",
         "create": "Crear"
       },
       "show": {

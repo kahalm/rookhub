@@ -53,12 +53,12 @@ public class LibraryImportToolOptionsTests
     }
 
     [Fact]
-    public void CommandTable_KnowsExactlyTheSeventeenCommands()
+    public void CommandTable_KnowsExactlyTheEighteenCommands()
     {
         string[] expected =
         [
             "analysis-openings", "comments", "dedupe", "embed", "import", "languages", "league-import", "league-train",
-            "migrate", "openings", "queue", "rehash-results", "resplit", "score", "stats", "translate", "tree",
+            "migrate", "openings", "pat-cap", "queue", "rehash-results", "resplit", "score", "stats", "translate", "tree",
         ];
         Assert.Equal(expected, CommandTable.All.Keys.Order(StringComparer.Ordinal));
         Assert.Equal("stats", CommandTable.Default);

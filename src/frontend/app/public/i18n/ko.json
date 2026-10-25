@@ -188,7 +188,6 @@
         "name": "이름",
         "nameHint": "예: \"Chess.com 확장 (노트북)\"",
         "expires": "만료",
-        "never": "없음",
         "create": "생성"
       },
       "show": {

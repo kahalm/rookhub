@@ -198,7 +198,6 @@
         "name": "Tên",
         "nameHint": "ví dụ: \"Tiện ích Chess.com (laptop)\"",
         "expires": "Hết hạn",
-        "never": "không bao giờ",
         "create": "Tạo"
       },
       "show": {

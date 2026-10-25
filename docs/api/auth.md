@@ -22,6 +22,14 @@ Altbestand ohne Claim gilt beim nächsten Einlösen als „jetzt angemeldet" (ke
 `Services/Accounts/SessionLifetime.cs`; Impersonations-Tokens (2 h) tragen ihren eigenen Zeitpunkt. Eine gesenkte
 Konfiguration wirkt auf bereits ausgegebene JWTs erst mit deren Ablauf.
 
+**API-Tokens (PATs, `rkh_…`) laufen ab** (Codereview S1-007/P-14, entschieden 25.10.2026): `POST /api/profile/tokens`
+befristet jeden neuen Token auf höchstens `Auth:PatMaxDays` (Vorgabe 365) — `expiresInDays` fehlt/`null` oder ist länger →
+genau die Höchstdauer (`ApiTokenService.CreateAsync`); die Oberfläche bietet „Nie" nicht mehr an. Abgelaufene Tokens lehnt
+die Prüfung ab (`ApiTokenService.FindValidAsync`, 401) und sie zählen nicht ins Limit von 20. **Altbestand** ohne Ablauf
+(25.10.: 30 von 35 auf Prod) bekommt KEINE Migration, sondern den Datenlauf `LibraryImport pat-cap [--dry-run] [--days n]`
+(`ExpiresAt = heute + 365` für Zeilen ohne Ablauf, wiederholbar) — auf Prod nur auf Zuruf, nach einem Dump, zuerst `--dry-run`.
+RepCheck verbindet sich nach Ablauf neu (Ein-Klick-Verbindung).
+
 Die alten Pfade `POST /api/auth/session` und `session/end` (samt Merk-Cookie `<name>_moved` und Cookie-Umzug in `GET /api/auth/permissions`) sind seit 0.828.1 entfernt (N6-001). Jedes Schreiben/Löschen des Cookies löscht weiterhin ein altes mit `Path=/api/auth` (ging an JEDEN Host der Elterndomäne mit eigener `/api/auth`-Anmeldung), bis die letzten vor 0.624.0 ausgegebenen Cookies abgelaufen sind.
 
 Der alte Tauschpfad des Übergabe-Codes `POST /api/auth/handoff/exchange` ist seit 0.828.3 entfernt (F1-008); eingelöst wird nur noch über `POST /api/auth/rh-session/handoff`.

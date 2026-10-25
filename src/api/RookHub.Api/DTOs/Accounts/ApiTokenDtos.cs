@@ -26,7 +26,8 @@ public class CreateApiTokenDto
 {
     [Required, MaxLength(100)]
     public string Name { get; set; } = string.Empty;
-    /// <summary>Optionaler Ablauf in Tagen ab jetzt (NULL = laeuft nie ab).</summary>
+    /// <summary>Ablauf in Tagen ab jetzt. NULL oder mehr als <c>Auth:PatMaxDays</c> (Vorgabe 365) = diese Hoechstdauer —
+    /// kein Token laeuft mehr nie ab (P-14).</summary>
     [Range(1, 36500)]
     public int? ExpiresInDays { get; set; }
     /// <summary>Unterstuetzt: <c>extension</c> (Vorgabe; nur /api/extension/*) und <c>engine</c> (nur

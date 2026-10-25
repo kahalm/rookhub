@@ -702,7 +702,6 @@
         "name": "Naziv",
         "nameHint": "npr. \"Chess.com proširenje (laptop)\"",
         "expires": "Istječe",
-        "never": "nikada",
         "create": "Stvori",
         "scope": "Opseg",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",

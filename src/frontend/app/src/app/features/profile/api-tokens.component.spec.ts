@@ -140,11 +140,9 @@ describe('ApiTokensComponent', () => {
     expect(el.querySelector('.tokens-section > button.tokens-create')).not.toBeNull();
   });
 
-  // Die Ablauf-Auswahl trug fuer "Nie" den Wert null — und ein MatSelect zeigt eine Option mit dem
-  // Wert null nie als gewaehlt an (`option.value != null` in _selectOptionByValue). Das Feld stand
-  // deshalb leer da, auch nachdem man "Nie" angeklickt hatte. Jetzt ist "Nie" die 0; nach aussen
-  // muss trotzdem null gehen, denn so heisst "kein Ablauf" in der API.
-  it('closes with expiresInDays null for "never" and with the number otherwise', async () => {
+  // P-14 (25.10.2026): kein „Nie" mehr — der Server befristet jeden Token auf höchstens 365 Tage, die Auswahl
+  // beginnt deshalb bei der Höchstdauer und schickt immer eine Zahl.
+  it('starts at 365 days, offers no "never" and always sends a number', async () => {
     await TestBed.configureTestingModule({
       imports: [CreateTokenDialogComponent],
       providers: [
@@ -158,11 +156,11 @@ describe('ApiTokensComponent', () => {
     const closed: unknown[] = [];
     spyOn(dialog.dialogRef, 'close').and.callFake((r?: unknown) => { closed.push(r); });
 
-    expect(dialog.expiresIn).toBe(0);            // Vorgabe "Nie" — und sie ist waehlbar, nicht null
+    expect(dialog.expiresIn).toBe(365);
     dialog.name = 'devrechner';
     dialog.scope = 'engine';
     dialog.submit();
-    expect(closed[0]).toEqual({ name: 'devrechner', expiresInDays: null, scope: 'engine' });
+    expect(closed[0]).toEqual({ name: 'devrechner', expiresInDays: 365, scope: 'engine' });
 
     dialog.expiresIn = 30;
     dialog.submit();

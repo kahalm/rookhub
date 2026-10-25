@@ -702,7 +702,6 @@
         "name": "Name",
         "nameHint": "z. B. „Chess.com-Extension (Laptop)“",
         "expires": "Ablauf",
-        "never": "nie",
         "create": "Erstellen",
         "scope": "Bereich",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",

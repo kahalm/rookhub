@@ -23,6 +23,7 @@ using RookHub.Tools.LibraryImport.Infrastructure;
 //   league-import    eine Liga aus dem SBV-Ligamanager oder dem Schachkreis Zugspitze einspielen (ohne Ansichten;
 //                    --profiles = auch Spielerkarten) — siehe Commands/LeagueImportCommand
 //   league-train     Prognose-Modell einer Region trainieren + Backtest (--region bayern --out league-model-bayern.json)
+//   pat-cap          API-Tokens ohne Ablauf auf heute + 365 Tage befristen [--dry-run] [--days n] (P-14; Prod nur auf Zuruf)
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
 // ein zweiter RookHub.Api gegen dieselbe Datenbank streitet sich mit dem Auftrags-Worker

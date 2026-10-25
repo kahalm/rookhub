@@ -28,6 +28,7 @@ public static class CommandTable
             ["migrate"] = MigrateCommand.RunAsync,
             ["league-import"] = LeagueImportCommand.RunAsync,
             ["league-train"] = LeagueTrainCommand.RunAsync,
+            ["pat-cap"] = PatCapCommand.RunAsync,
         };
 
     /// <summary>Ohne Argument: <c>stats</c>.</summary>

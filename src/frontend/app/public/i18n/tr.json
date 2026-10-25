@@ -188,7 +188,6 @@
         "name": "Ad",
         "nameHint": "örn. \"Chess.com uzantısı (dizüstü)\"",
         "expires": "Son kullanma",
-        "never": "hiçbir zaman",
         "create": "Oluştur"
       },
       "show": {

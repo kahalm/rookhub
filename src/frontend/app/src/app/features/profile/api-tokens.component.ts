@@ -60,12 +60,9 @@ export type ApiTokenScope = 'extension' | 'engine';
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>{{ 'profile.tokens.dialog.expires' | translate }}</mat-label>
-          <!-- 0 statt null fuer "Nie": MatSelect uebergeht beim Abgleich jede Option mit dem Wert
-               null (option.value != null in _selectOptionByValue), das Feld blieb deshalb leer —
-               auch nachdem man "Nie" ausdruecklich angeklickt hatte. submit() macht daraus wieder
-               null, denn so heisst "kein Ablauf" in der API. -->
+          <!-- Kein „Nie" mehr (P-14, 25.10.2026): der Server befristet jeden Token auf höchstens 365 Tage
+               (Auth:PatMaxDays); Vorgabe ist deshalb die Höchstdauer. -->
           <mat-select [(ngModel)]="expiresIn" name="expiresIn">
-            <mat-option [value]="0">{{ 'profile.tokens.dialog.never' | translate }}</mat-option>
             <mat-option [value]="30">30 {{ 'common.days' | translate }}</mat-option>
             <mat-option [value]="90">90 {{ 'common.days' | translate }}</mat-option>
             <mat-option [value]="365">365 {{ 'common.days' | translate }}</mat-option>
@@ -84,13 +81,13 @@ export type ApiTokenScope = 'extension' | 'engine';
 })
 export class CreateTokenDialogComponent {
   name = '';
-  /** Tage bis zum Ablauf, 0 = nie (siehe Kommentar im Formular). */
-  expiresIn = 0;
+  /** Tage bis zum Ablauf — Vorgabe die Höchstdauer, die der Server zulässt (P-14). */
+  expiresIn = 365;
   scope: ApiTokenScope = 'extension';
   constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>) {}
 
   submit(): void {
-    this.dialogRef.close({ name: this.name, expiresInDays: this.expiresIn || null, scope: this.scope });
+    this.dialogRef.close({ name: this.name, expiresInDays: this.expiresIn, scope: this.scope });
   }
 }
 

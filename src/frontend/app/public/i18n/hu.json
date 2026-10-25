@@ -441,7 +441,6 @@
         "name": "Név",
         "nameHint": "pl. \"Chess.com kiterjesztés (laptop)\"",
         "expires": "Lejárat",
-        "never": "soha",
         "create": "Létrehozás",
         "scope": "Hatókör",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
