@@ -107,7 +107,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 ## Architektur-Entscheidungen
 
 - **Standalone Components** – kein NgModule, jede Component deklariert eigene Imports
-- **Schichten** (Codereview F8-013) – `shared/` importiert nichts aus `features/` (nur `core/`, `shared/`, Pakete); Wache `shared/no-feature-imports.spec.ts` mit abschließender Ausnahmeliste; `core/` ebenso (einzige Ausnahme: die dynamischen `import()` in `core/login-follow-up.service.ts`). App-eigene Rahmenteile, die Features kennen (RookHub-Kopfleiste, Offline-Vorabruf der Puzzle-Pools), liegen in `shell/`
+- **Schichten** (Codereview F8-013) – `shared/` importiert nichts aus `features/` (nur `core/`, `shared/`, Pakete); Wache `shared/no-feature-imports.spec.ts` mit abschließender Ausnahmeliste (nur noch `game-replay` → `GameReviewComponent`); `core/` ebenso (einzige Ausnahme: die dynamischen `import()` in `core/login-follow-up.service.ts`). App-eigene Rahmenteile, die Features kennen (RookHub-Kopfleiste, Offline-Vorabruf der Puzzle-Pools), liegen in `shell/`
 - **Lazy Loading** – alle Feature-Routes werden per `loadComponent()` geladen
 - **Functional Guards** – `authGuard` als `CanActivateFn`
 - **Functional Interceptors** – `authInterceptor` als `HttpInterceptorFn`. Die HTTP-Kette ALLER Oberflächen kommt aus
