@@ -50,3 +50,11 @@ mit Rücksprung (`loginRedirect`). Damit funktionieren die Glockenlinks (`/admin
 nutzt dieselbe Funktion. Die Admin-Seite rendert nur die erlaubten Tabs; die mat-tab-Indizes zählen daher über
 `visibleTabs()`, Auswahl und URL gehen immer über den Key (`adminTabIndex(key, tabs)`), nie über einen festen Index.
 `core/admin.guard.ts` (`adminGuard`, nur Admin-Flag) bleibt für die Turnier-App.
+
+Aufbau der Seite (Zerlegung Z30, 2026-10-25): `AdminComponent` hält nur Kopf, Tab-Leiste, Deep-Link und die behaltenen
+Tabs (OnPush). Jeder Tab ist eine eigene Komponente in `features/admin/tabs/` — Nutzer, Bücher und Gruppen als
+`admin-users-tab`, `admin-books-tab` (Filter rein in `admin-book-filter.ts`) und `admin-groups-tab`. Diese drei hängen
+OHNE `matTabContent` im `mat-tab` und laden daher wie vorher beim Seitenaufruf, soweit der Tab sichtbar ist; die
+übrigen bleiben lazy bzw. (Menü, Rollen) nach dem ersten Öffnen behalten (F5-020). Die Gruppenliste, die Gruppen-,
+Bücher-, Menü- und Rollen-Tab teilen, liegt in `admin-groups.store.ts` (je Seite bereitgestellt): mit `groups.manage`
+die volle Liste, sonst nur die Auswahl (`groups/options`).

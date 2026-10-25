@@ -18,3 +18,18 @@ Der alte Tauschpfad des Übergabe-Codes `POST /api/auth/handoff/exchange` ist se
 **Konten ohne E-Mail:** „Passwort vergessen“ erreicht sie nicht — ein Admin erzeugt mit `POST /api/admin/users/{id}/password-reset-link`
 einen einmaligen Link (24 h), den er der Person weitergibt; eingelöst wird er wie ein Mail-Link über `reset-password`
 (Details in `profil.md`).
+
+## Frontend (alle fünf Oberflächen)
+
+`core/auth.service.ts` ist die EINE Fassade (`AuthService`: `login`/`register`/`logout`, `currentUser$`, `has`,
+`isAdminLive`, `impersonate`/`stopImpersonation`, `adoptSession`, `flushSessionEnd` …), dahinter seit der Zerlegung Z34:
+
+| Datei | Aufgabe |
+|---|---|
+| `core/session-store.ts` | Token im Speicher (`rookhub_user`), Ablauf (`validUser`), `persist` bei vollem Speicher, lokales Aufräumen beim Nutzerwechsel, Merker `rookhub_session_end_pending` |
+| `core/permission.service.ts` | Rechte: `perm`-Claims des Tokens, Live-Stand aus `GET /api/auth/permissions` (`PermissionRefresher`), `has`/`isAdminLive` |
+| `core/impersonation.service.ts` | „Als Nutzer einsteigen": Admin-Sicherung `rookhub_admin_user`, Ein- und Ausstieg (ohne Sicherung meldet die Fassade ab) |
+| `core/login-follow-up.service.ts` | Nachlauf nach dem Anmelden: anonyme Sitzungen (Punktepartie, Puzzles, Endless, E-Books), Discord-Link, Präferenzen — per dynamischem `import()` (Zyklus-Brecher, hält die Feature-Dienste aus dem Start-Bündel) |
+| `core/auth-response.ts` | `AuthResponse`, JWT-Payload/Ablauf |
+
+Aufrufer nutzen nur `AuthService`; die Teile sind `providedIn: 'root'` und ohne Rückbezug auf die Fassade.
