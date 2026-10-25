@@ -1,0 +1,232 @@
+@if (!allowed) {
+  <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
+  @if (canRead) {
+    <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Einlesen von Partieformularen fehlt dir noch die Freigabe — frag einen Verwalter."
+                    purpose="das Einlesen von Partieformularen" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
+  } @else {
+    <lh-access-gate text="Partieformulare einlesen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
+  }
+} @else if (notFound() && gameId != null) {
+  <section class="gate"><h2>Partie nicht gefunden</h2>
+    <p>Die Partie ist gelöscht, oder du darfst sie nicht korrigieren — das dürfen nur, wer sie hochgeladen hat, und die Verwalter.</p>
+    <div class="actions"><a class="btn-sec" routerLink="/verein">← Zu den Vereinspartien</a></div></section>
+} @else if (notFound()) {
+  <section class="gate"><h2>Formular nicht gefunden</h2>
+    <p>Es wurde schon übernommen oder verworfen.</p>
+    <div class="actions"><a class="btn-sec" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Zu deinen Formularen</a></div></section>
+} @else if (loadError(); as e) {
+  <!-- UX-034: früher stand hier minutenlang „Lade …", während die Seite still alle 3 s nachfragte. -->
+  <section class="gate" role="alert"><h2>Das Formular lässt sich gerade nicht laden</h2>
+    <p>{{ e }} Dein Formular geht dadurch nicht verloren.</p>
+    <div class="actions">
+      <button type="button" class="btn-sec" (click)="reload()">Neu laden</button>
+      <a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a>
+    </div></section>
+} @else if (state(); as st) {
+  <section class="club-intro">
+    <!-- UI-Sweep 2026-10-11 (d2-l-korrigieren-layout): Überschrift, (i) und „Speichern ↓" in einer Zeile; der Hinweis zu den
+         orangen Stellen hinter (i) — am Handy begann das Brett sonst erst bei ~770 px. -->
+    <!-- z1-l-korrigieren-handy: „Speichern ↓" rechts in der Zeile des Rücklinks — neben der Überschrift brach er am Handy
+         in eine eigene Zeile um. -->
+    <!-- Falz-Runde 16.10. (Handy: Brett erst bei 50 %): bis 720 px EIN Kopfblock — „←" vor der Überschrift (Ziel nur für
+         Vorleser), „Speichern ↓" rechts in der Zeile des Partietitels; die Rücklink-Zeile entfällt. -->
+    <p class="back-row">
+      @if (gameId != null) {
+        <a class="back-link" routerLink="/verein">← <span class="back-lbl">Vereinspartien</span></a>
+      } @else {
+        <a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← <span class="back-lbl">Deine Formulare</span></a>
+      }
+      @if (st.scan.status === 'done') {
+        <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
+        <button type="button" class="btn-link to-save" (click)="toSave()">{{ gameId != null ? 'Speichern ↓' : 'Namen & Übernehmen ↓' }}</button>
+      }
+    </p>
+    <div class="scan-head">
+      <h2>{{ gameId != null ? 'Vereinspartie korrigieren' : 'Partieformular prüfen' }}</h2>
+      @if (st.scan.status === 'done') {
+        <button type="button" class="chk-btn" [attr.aria-expanded]="hintOpen()" aria-label="Wie geprüft wird"
+                title="Wie geprüft wird" (click)="hintOpen.set(!hintOpen())">i</button>
+      }
+      <!-- z2-l-korrigieren-kopfzeile: der Partietitel in der Zeile der Überschrift (am Handy bricht er darunter um). -->
+      @if (gameId != null) {
+        <p class="muted game-title">{{ gameTitle() }}</p>
+      }
+    </div>
+    @if (st.scan.status !== 'done') {
+      @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
+      @else {
+        <!-- 0.817.0 (Wunsch 2026-10-21): „Wartet auf den Leser" → ✓ + „Wird gelesen", je mit Uhr — geteilt mit RookHub. -->
+        <app-sheet-reading-status class="muted" [status]="st.scan.status" [createdAt]="st.scan.createdAt" [startedAt]="st.scan.startedAt" />
+      }
+    } @else {
+      @if (hintOpen()) {
+        <!-- z1-l-korrigieren-handy: die Zusätze unter Titel und Zugkarte stehen hier statt über dem Brett -->
+        <div class="info-panel scan-hint">
+          @if (gameId != null && !ph.photoUrl()) { <p class="note">Das Formular ist nicht mehr aufbewahrt, korrigiert wird am Brett.</p> }
+          <p class="note">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den
+          Zug am Brett spielen — danach wird der Rest neu gelesen. Ein Zug am Brett ersetzt den gewählten Zug, mit „Davor einfügen“
+          kommt er davor. Pfeiltasten blättern.</p></div>
+      }
+    }
+  </section>
+
+  @if (st.scan.status === 'done') {
+    <!-- Formular-Werkbank (0.816.0): dasselbe Bauteil wie in RookHub — Foto | Brett | Prüfen + Zugliste. -->
+    <app-sheet-workbench [session]="s" [photos]="ph" [flipped]="f.ownerSide() === 'black'" [evals]="savedEvals()" [savedSans]="savedSans()">
+      <!-- UX-036: ohne unsichere Stellen kommt der Abschlusshinweis nie — am Ende der Partie geht es hier weiter. -->
+      <div sheetEnd class="actions"><button type="button" class="btn-sec to-save" (click)="toSave()">Weiter zu den Namen</button></div>
+    </app-sheet-workbench>
+
+    @if (gameId != null) {
+      <section class="panel save-panel" #savePanel>
+        <h3 class="club-h3">Korrektur speichern</h3>
+        <p>{{ gameTitle() }}</p>
+        <p class="muted small">Die Züge werden in der Vereins-Datenbank ersetzt — und in jeder Kopie in „Meine Partien“. Die
+          Analyse wird danach neu gerechnet. Namen und Ergebnis änderst du in der Liste unter „Bearbeiten“.</p>
+        @if (saved()) {
+          <p class="ok-text" role="status"><b>Korrektur gespeichert.</b> <a routerLink="/verein">Zu den Vereinspartien</a></p>
+        } @else {
+          <div class="actions">
+            <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
+              {{ saving() ? 'Speichere …' : 'Korrektur speichern' }}</button>
+            <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
+          </div>
+        }
+      </section>
+    } @else {
+    <section class="panel save-panel" #savePanel>
+      <h3 class="club-h3">Partie</h3>
+      <div class="save-grid">
+        @for (k of sides; track k) {
+          <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
+            <lh-player-search [client]="client" [text]="f.name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'" [searchMega]="false"
+                              (textChange)="f.setName(k, $event)" (picked)="f.pickPerson(k, $event)" />
+            <span class="match" [class.ok]="(f.match(k)()?.league || f.match(k)()?.mega) && !f.replace(k)()">{{ f.matchText(k) }}</span>
+            @if (f.similarOf(k).length) {
+              <span class="quick-pick small"><span class="muted">Meintest du</span>
+                @for (c of f.similarOf(k); track c.name + (c.fide ?? '')) {
+                  <button type="button" class="btn-chip" (click)="f.pickPerson(k, c)" [attr.title]="c.teams.join(', ')"
+                          [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ': ' + c.name + ' übernehmen'">{{ c.name }}</button>
+                }
+              </span>
+            }
+            <label class="replace-row" [attr.title]="'Nach außen steht dann „' + anon + '“. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der Name aus der öffentlichen Paarung der Ligarunde.'">
+              <input type="checkbox" [checked]="f.replace(k)()" (change)="f.setReplace(k, $any($event.target).checked)" />
+              durch „{{ anon }}“ ersetzen</label>
+          </div>
+          <label class="field narrow">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="f.elo(k)() ?? ''"
+                                           (input)="f.elo(k).set(num($any($event.target).value))" [disabled]="f.replace(k)()" /></label>
+        }
+        <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="f.year() ?? ''"
+                                          (input)="f.year.set(num($any($event.target).value)); f.yearRead.set(null); f.schedulePairings()" />
+          @if (f.yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
+        </label>
+        <label class="field narrow">Ergebnis
+          <select (change)="f.result.set($any($event.target).value)">
+            @for (r of results; track r) { <option [value]="r" [selected]="f.result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
+          </select>
+        </label>
+        <label class="field wide">Veranstaltung <span class="muted small">(fällt weg, sobald jemand „{{ anon }}“ heißt)</span>
+          <input [value]="f.event()" (input)="f.event.set($any($event.target).value)" maxlength="200" [disabled]="f.anyReplaced()" />
+        </label>
+        @if (f.pairings().length) {
+          <label class="field wide">Ligapartie <span class="muted small">(Brett einer Ligarunde — Spieler und Jahr kommen dann aus dem Spielplan)</span>
+            <select class="pairing-pick" (change)="f.choosePairing($any($event.target).value)">
+              <option value="" [selected]="f.pairingId() == null">keine Ligapartie</option>
+              @for (p of f.pairings(); track p.id) {
+                <option [value]="p.id" [selected]="f.pairingId() === p.id">{{ f.pairingText(p) }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+
+      <div class="field-row">
+        <span class="muted small">Ich spiele</span>
+        <div class="seg" role="group" aria-label="Ich spiele">
+          <button type="button" [attr.aria-pressed]="f.ownerSide() === 'white'" (click)="f.setOwner('white')">Weiß</button>
+          <button type="button" [attr.aria-pressed]="f.ownerSide() === 'black'" (click)="f.setOwner('black')">Schwarz</button>
+        </div>
+        <span class="muted small">Spieler von {{ clubName() }} und deine Seite werden standardmäßig durch „{{ anon }}“ ersetzt — dann wird weder
+          gespeichert, wer dahinter steht, noch wer hochgeladen hat.</span>
+      </div>
+
+      <p class="preview"><span class="muted">Gespeichert wird:</span> <b>{{ f.preview() }}</b></p>
+      @if (f.problem(); as pr) { <p class="err small">{{ pr }}</p> }
+
+      @if (saved()) {
+        <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b>@if (replacedOld()) { Die schon vorhandene Fassung dieser Partie ist archiviert und erscheint nicht mehr. } Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
+          <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p>
+      } @else {
+        @if (loggedIn && gameId == null) {
+          <!-- 0.672.7, Wunsch 2026-10-05: standardmäßig an, ein Abwählen merkt sich das Gerät. -->
+          <label class="auto-mine small"><input type="checkbox" [checked]="autoMine()" (change)="setAutoMine($any($event.target).checked)" />
+            Automatisch zu meinen Partien hinzufügen</label>
+        }
+        <div class="actions">
+          <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
+            {{ saving() ? 'Übernehme …' : 'In die Vereins-Datenbank übernehmen' }}</button>
+          <button type="button" class="btn-link" [disabled]="saving()" (click)="discard()">Formular verwerfen</button>
+          <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
+        </div>
+        @if (canMerge) {
+          <!-- 0.736.0, Wunsch 2026-10-10: zwei Fotos derselben Seite getrennt eingelesen → zu einer Einlesung vereinen -->
+          <div class="merge small">
+            @if (mergeCandidates(); as list) {
+              @if (list.length === 0) {
+                <span class="muted">Keine andere offene Einlesung zum Zusammenführen.</span>
+              } @else {
+                <span class="muted">Welche Einlesung zeigt dieselbe Partie? Ihre Fotos kommen hierher, die Partie wird neu gelesen.</span>
+                <ul class="merge-list">
+                  @for (c of list; track c.ref) {
+                    <li><button type="button" class="btn-sec" [disabled]="merging()" (click)="merge(c)">{{ candidateLabel(c) }}</button></li>
+                  }
+                </ul>
+              }
+              <button type="button" class="btn-link" (click)="mergeCandidates.set(null)">Abbrechen</button>
+            } @else {
+              <button type="button" class="btn-link merge-open" (click)="openMerge()">Mit anderem Foto derselben Seite zusammenführen …</button>
+            }
+            @if (mergeError(); as e) { <span class="err" role="status">{{ e }}</span> }
+          </div>
+        }
+      }
+      <div class="actions pgn-actions">
+        <span class="muted small">Die geprüfte Partie:</span>
+        <button type="button" class="btn-sec" (click)="downloadPgn()">PGN herunterladen</button>
+        <button type="button" class="btn-sec" (click)="copyPgn()">PGN kopieren</button>
+        @if (loggedIn) {
+          <button type="button" class="btn-sec" [disabled]="adding() || !!myGameId()" (click)="addToMyGames()">
+            {{ adding() ? 'Speichere …' : 'Zu meinen Partien hinzufügen' }}</button>
+        }
+        @if (myGameId(); as id) {
+          @if (rookHub) { <a class="small" [href]="rookHub + '/games/' + id" target="_blank" rel="noopener">In RookHub öffnen</a> }
+        }
+        <span class="update-msg" [class.err]="pgnMsg()?.err" role="status">{{ pgnMsg()?.text ?? '' }}</span>
+      </div>
+    </section>
+    }
+
+    <!-- Wunsch 2026-09-28: nach der letzten unsicheren Stelle darauf hinweisen und gleich Speichern anbieten. -->
+    <dialog #doneDlg class="card done-dlg" aria-labelledby="done-title">
+      <div class="card-body">
+        <h3 id="done-title">Alle unsicheren Stellen geprüft</h3>
+        @if (f.problem(); as pr) {
+          <p class="err small">{{ pr }}</p>
+          <div class="actions">
+            <button type="button" class="btn-pri" (click)="closeDone(); toSave()">Zu den Namen</button>
+            <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
+          </div>
+        } @else {
+          <p>Gespeichert wird: <b>{{ gameId != null ? gameTitle() : f.preview() }}</b></p>
+          <div class="actions">
+            <button type="button" class="btn-pri" [disabled]="saving()" (click)="closeDone(); save()">{{ gameId != null ? 'Korrektur speichern' : 'In die Vereins-Datenbank übernehmen' }}</button>
+            <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
+          </div>
+        }
+      </div>
+    </dialog>
+  }
+} @else {
+  <p class="muted">Lade …</p>
+}
