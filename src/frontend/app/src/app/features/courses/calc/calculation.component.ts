@@ -25,8 +25,7 @@ import { SnackbarService } from '../../../core/snackbar.service';
 import { CalcLinesComponent } from './calc-lines.component';
 import {
   CALC_EVALS, CALC_GLYPHS, CalcEval, CalcGlyph, CalcNode, CalcTree, evalNameKey, glyphNameKey,
-  addMove, createTree, deserializeTree, findNode, isEmpty, lines, pathToRoot,
-  removeLine, removeSubtree, rootNode, serializeTree, setComment, setEvaluation, setGlyph,
+  createTree, deserializeTree, findNode, isEmpty, rootNode, serializeTree, setEvaluation, setGlyph,
   whiteToMove,
 } from './calc-tree.util';
 import {
@@ -39,6 +38,7 @@ import {
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
 import { CalcTrainingTimer } from './calc-training-timer';
+import { CalcTreeCursor } from './calc-tree-cursor';
 import { KeyedSingleFlightQueue, SingleFlight } from './keyed-single-flight-queue';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
@@ -200,17 +200,18 @@ export class CalculationComponent implements OnInit, OnDestroy {
   loading = true;
   loadError = false;
 
+  /** Position im Baum (Cursor, aktive Linie, Kommentar-Entwurf) — siehe {@link CalcTreeCursor}. */
+  private readonly cursor = new CalcTreeCursor();
+
   /** Ausgangsstellung (nach dem Vorlauf) — das Brett zeigt IMMER nur diese. */
-  startFen = '';
+  get startFen(): string { return this.cursor.startFen; }
   /** FEN am aktuellen Cursor — nur für die Legalitätsprüfung der Klicks, nie sichtbar. */
-  cursorFen = '';
+  get cursorFen(): string { return this.cursor.cursorFen; }
   /** Stellung ist für chess.js nicht ladbar (Chessable-Muster-Diagramm) → keine Zug-Eingabe. */
   illegalPosition = false;
 
-  tree: CalcTree = createTree('');
-  cursorId = 0;
-  /** Linie, auf der man sich „bewegt" (für →/↑/↓). */
-  private activeLeafId = 0;
+  get tree(): CalcTree { return this.cursor.tree; }
+  get cursorId(): number { return this.cursor.cursorId; }
   /** Zähler für das Neuzeichnen des Panels nach In-place-Änderungen am Baum. */
   revision = 0;
 
@@ -349,7 +350,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   /** Kommentar-Entwurf zum ausgewählten Zug. */
-  cursorComment = '';
+  get cursorComment(): string { return this.cursor.comment; }
+  set cursorComment(text: string) { this.cursor.comment = text; }
 
   saving = false;
   savedAt: Date | null = null;
@@ -592,15 +594,11 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.timer.syncChapter(pos.chapter);
     this.beginWatch(pos.id);
     this.loadReview(pos);
-    this.startFen = this.buildStartFen(pos);
-    this.orientation = whiteToMove(this.startFen) ? 'white' : 'black';
-    const stored = deserializeTree(pos.treeJson, this.startFen);
+    const startFen = this.buildStartFen(pos);
+    this.orientation = whiteToMove(startFen) ? 'white' : 'black';
+    const stored = deserializeTree(pos.treeJson, startFen);
     this.hadStoredTree = !!pos.treeJson;
-    this.tree = stored ?? createTree(this.startFen);
-    this.cursorId = this.tree.rootId;
-    this.activeLeafId = this.tree.rootId;
-    this.cursorFen = this.startFen;
-    this.cursorComment = '';
+    this.cursor.reset(stored ?? createTree(startFen), startFen);
     this.dirty = false;
     // Ein noch laufender Save gehört zur ALTEN Stellung — sein Spinner darf hier nicht weiterlaufen.
     this.saving = false;
@@ -774,12 +772,11 @@ export class CalculationComponent implements OnInit, OnDestroy {
     const move = tryFreeMove(chess, event.orig, event.dest, event.promotion);
     if (!move) return;                          // illegal → stillschweigend ignorieren
 
-    const added = addMove(this.tree, this.cursorId, {
+    this.cursor.addMove({
       san: move.san,
       uci: move.from + move.to + (move.promotion ?? ''),
       fen: chess.fen(),
     });
-    this.setCursor(added.id);
     this.markDirty();
     this.offerTrainingStart();
   }
@@ -802,66 +799,29 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Navigation im Baum =================================================
 
-  setCursor(nodeId: number): void {
-    const node = findNode(this.tree, nodeId);
-    if (!node) return;
-    this.cursorId = node.id;
-    this.cursorFen = node.fen || this.startFen;
-    this.cursorComment = node.comment ?? '';
-    // „Aktive Linie" mitziehen: liegt der Cursor nicht mehr auf ihr, die erste Fortsetzung nehmen.
-    const onActiveLine = pathToRoot(this.tree, this.activeLeafId).some(n => n.id === node.id);
-    if (!onActiveLine) this.activeLeafId = this.leafUnder(node.id);
-  }
+  setCursor(nodeId: number): void { this.cursor.setCursor(nodeId); }
 
   /** Neue Linie ab der Ausgangsstellung: (+) setzt den Cursor auf die Wurzel. */
-  startNewLine(): void {
-    this.setCursor(this.tree.rootId);
-  }
+  startNewLine(): void { this.cursor.startNewLine(); }
 
-  goBack(): void {
-    const node = findNode(this.tree, this.cursorId);
-    if (node?.parentId != null) this.setCursor(node.parentId);
-  }
+  goBack(): void { this.cursor.goBack(); }
 
-  goForward(): void {
-    const node = findNode(this.tree, this.cursorId);
-    if (!node || node.childIds.length === 0) return;
-    const path = pathToRoot(this.tree, this.activeLeafId).map(n => n.id);
-    this.setCursor(node.childIds.find(id => path.includes(id)) ?? node.childIds[0]);
-  }
+  goForward(): void { this.cursor.goForward(); }
 
   /** Linie wechseln (↑/↓): Cursor auf das Blatt der vorherigen/nächsten Linie. */
-  switchLine(delta: number): void {
-    const all = lines(this.tree);
-    if (all.length === 0) return;
-    const current = all.findIndex(l => l.leafId === this.activeLeafId);
-    const next = ((current < 0 ? 0 : current) + delta + all.length) % all.length;
-    this.activeLeafId = all[next].leafId;
-    this.setCursor(all[next].leafId);
-  }
-
-  private leafUnder(nodeId: number): number {
-    let node = findNode(this.tree, nodeId);
-    while (node && node.childIds.length > 0) node = findNode(this.tree, node.childIds[0]);
-    return node?.id ?? nodeId;
-  }
+  switchLine(delta: number): void { this.cursor.switchLine(delta); }
 
   // ===== Bearbeiten =========================================================
 
   /** Ausgewählten Zug samt Fortsetzung löschen (= „Zug zurück", wenn er der letzte ist). */
   deleteFromCursor(): void {
-    if (this.cursorId === this.tree.rootId) return;
-    const parentId = removeSubtree(this.tree, this.cursorId);
-    this.activeLeafId = this.leafUnder(parentId);
-    this.setCursor(parentId);
+    if (!this.cursor.deleteFromCursor()) return;
     this.markDirty();
     this.syncChoiceWithTree();
   }
 
   deleteLine(leafId: number): void {
-    const cursor = removeLine(this.tree, leafId);
-    this.activeLeafId = this.leafUnder(cursor);
-    this.setCursor(cursor);
+    this.cursor.deleteLine(leafId);
     this.markDirty();
     this.syncChoiceWithTree();
   }
@@ -886,13 +846,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   saveCursorComment(): void {
-    setComment(this.tree, this.cursorId, this.cursorComment);
+    this.cursor.saveComment();
     this.markDirty();
   }
 
   onLineComment(event: { nodeId: number; text: string }): void {
-    setComment(this.tree, event.nodeId, event.text);
-    if (event.nodeId === this.cursorId) this.cursorComment = event.text.trim();
+    this.cursor.setComment(event.nodeId, event.text);
     this.markDirty();
   }
 
@@ -1129,14 +1088,14 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Anzeige-Helfer =====================================================
 
-  get cursorNode(): CalcNode | undefined { return findNode(this.tree, this.cursorId); }
-  get atStart(): boolean { return this.cursorId === this.tree.rootId; }
-  get lineCount(): number { return lines(this.tree).length; }
+  get cursorNode(): CalcNode | undefined { return this.cursor.node; }
+  get atStart(): boolean { return this.cursor.atStart; }
+  get lineCount(): number { return this.cursor.lineCount; }
   /** Bearbeitete Stellungen des KAPITELS (alle Zahlen dieser Ansicht meinen das Kapitel). */
   get doneCount(): number { return this.chapterPositions.filter(p => p.hasTree).length; }
   /** Stellungen des Kapitels — Nenner von „3 / 6" und „bearbeitet". */
   get positionCount(): number { return this.chapterPositions.length; }
-  get whiteToMoveAtCursor(): boolean { return whiteToMove(this.cursorFen || this.startFen); }
+  get whiteToMoveAtCursor(): boolean { return this.cursor.whiteToMove; }
 
   /**
    * Ist der Tastatur-Hinweis aufgeklappt? Bewusst NUR im Speicher: er klappt bei jedem Besuch
@@ -1269,12 +1228,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /** Öffnet den Analyse-Modus mit den Zügen EINER Linie (Wurzel → <c>leafId</c>). Jede Linie ist
    *  linear und passt damit in den (einlinigen) Analyse-Modus; ein „from" führt zurück hierher. */
   analyzeLine(leafId: number): void {
-    this.openAnalysis(pathToRoot(this.tree, leafId).slice(1).map(n => n.uci).filter(Boolean));
+    this.openAnalysis(this.cursor.movesTo(leafId));
   }
 
   /** Analyse der aktuell im Baum stehenden Linie (Wurzel → Cursor) — Knopf nach dem Bewerten. */
   analyzeCurrentLine(): void {
-    this.openAnalysis(pathToRoot(this.tree, this.cursorId).slice(1).map(n => n.uci).filter(Boolean));
+    this.openAnalysis(this.cursor.movesTo(this.cursorId));
   }
 
   private openAnalysis(uci: string[]): void {
