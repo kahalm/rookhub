@@ -25,6 +25,7 @@ import { EndlessStorageService, EndlessConfig, EndlessSession } from './endless-
 import { buildBatchThemes, chainRatingAt, ENDLESS_RATING_WINDOW, ENDLESS_CHAIN_BLOCK, CHAIN_T1_INDEX, CHAIN_T2_INDEX, CHAIN_FLAT_STEP, FIRST_RUN_ANCHOR1_INDEX, FIRST_RUN_ANCHOR1_RATING, FIRST_RUN_ANCHOR2_INDEX, FIRST_RUN_ANCHOR2_RATING } from './endless-prefetch.util';
 import { EndlessChainService } from './endless-chain.service';
 import { EndlessFasttrackState } from './endless-fasttrack-state';
+import { EndlessPuzzleAttempt, EndlessRunSnapshot, EndlessSessionRecorder, restoreSessionPuzzles } from './endless-session-recorder';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { FavoritesService } from '../../core/favorites.service';
@@ -45,35 +46,6 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /** Bereichs-Schlüssel der Spielweise (SolveModeService) für den Endless-Modus. */
 const SOLVE_SCOPE = 'endless';
-
-interface EndlessPuzzleAttempt {
-  puzzleNumber: number;
-  puzzleId: number;
-  lichessId: string;
-  rating: number;
-  solved: boolean;
-  themes?: string;
-  /** Start-/Endzeit dieses Puzzles als Unix-Millis (fürs serverseitige Logging; reist im Spielstand
-   *  mit, damit ein fortgesetzter Lauf sie behält). 0 = unbekannt (Spielstand aus älterem Build) —
-   *  dann speichert der Server das Puzzle mit dem Lauf, loggt es aber nicht. */
-  startedAt: number;
-  endedAt: number;
-}
-
-/** Puzzle-Liste aus einem gespeicherten Spielstand (`puzzleAttempts`) wieder aufbauen — für das
- *  Fortsetzen UND das Archivieren eines offenen Laufs. Fehlende Zeiten (älterer Build) → 0. */
-function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAttempt[] {
-  return (raw ?? []).map((p: any) => ({
-    puzzleNumber: p.puzzleNumber,
-    puzzleId: p.puzzleId,
-    lichessId: p.lichessId ?? '',
-    rating: p.rating,
-    solved: p.solved,
-    themes: undefined,
-    startedAt: Number(p.startedAt) || 0,
-    endedAt: Number(p.endedAt) || 0,
-  }));
-}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -189,8 +161,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // Session history
   sessionHistory: EndlessSession[] = [];
-  currentSessionMistakes: number[] = [];
-  currentSessionPuzzles: EndlessPuzzleAttempt[] = [];
+  /** Lauf-Protokoll (Fehler-Ratings, gespielte Puzzles, einmalige Aufzeichnung) — Zerlegung Z19. */
+  private readonly recorder: EndlessSessionRecorder;
+  get currentSessionMistakes(): number[] { return this.recorder.mistakes; }
+  set currentSessionMistakes(v: number[]) { this.recorder.mistakes = v; }
+  get currentSessionPuzzles(): EndlessPuzzleAttempt[] { return this.recorder.puzzles; }
+  set currentSessionPuzzles(v: EndlessPuzzleAttempt[]) { this.recorder.puzzles = v; }
   /** ID des zuvor gespielten Puzzles (für „vorheriges Puzzle teilen"). */
   private previousPuzzleId: number | null = null;
 
@@ -217,10 +193,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   historyView = false;
   archiving = false;
 
-  /** Der laufende/zuletzt beendete Run wurde bereits als Session aufgezeichnet. Verhindert
-   *  Doppel-Posts, wenn mehrere Pfade (Game-Over → „Weiter", Analyse-Absprung, Verlassen der
-   *  Seite) dieselbe Session aufzeichnen wollen. Wird beim Start/Resume eines Runs zurückgesetzt. */
-  private sessionRecorded = false;
+  /** Der laufende/zuletzt beendete Run wurde bereits als Session aufgezeichnet (siehe EndlessSessionRecorder). */
+  private get sessionRecorded(): boolean { return this.recorder.recorded; }
+  private set sessionRecorded(v: boolean) { this.recorder.recorded = v; }
 
   // Puzzle DB range
   puzzleRange: PuzzleRatingRange = { min: 100, max: 3000 };
@@ -291,6 +266,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     private worksheets: WorksheetService
   ) {
     super(stockfish);
+    this.recorder = new EndlessSessionRecorder(this.storage);
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'standard',
       () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
@@ -396,27 +372,20 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Rückkehr aus dem Analysemodus nach verlorenstem letzten Herz (?gameover=1):
     // Gameover-Snapshot aus sessionStorage wiederherstellen und Zusammenfassungs-Screen zeigen.
     if (this.route.snapshot.queryParamMap.get('gameover') === '1') {
-      const raw = sessionStorage.getItem('rookhub_endless_gameover');
-      if (raw) {
-        try {
-          const s = JSON.parse(raw);
-          sessionStorage.removeItem('rookhub_endless_gameover');
-          this.maxRatingReached = s.maxRatingReached ?? 0;
-          this.solved = s.solved ?? 0;
-          this.level = s.level ?? 0;
-          this.lives = s.lives ?? 0;
-          this.sessionSeconds = s.sessionSeconds ?? 0;
-          this.isNewHighscore = s.isNewHighscore ?? false;
-          this.currentSessionMistakes = s.currentSessionMistakes ?? [];
-          this.currentSessionPuzzles = s.currentSessionPuzzles ?? [];
-        } catch {}
+      const s = EndlessSessionRecorder.takeGameOverSnapshot();
+      if (s) {
+        this.maxRatingReached = s.maxRatingReached ?? 0;
+        this.solved = s.solved ?? 0;
+        this.level = s.level ?? 0;
+        this.lives = s.lives ?? 0;
+        this.sessionSeconds = s.sessionSeconds ?? 0;
+        this.isNewHighscore = s.isNewHighscore ?? false;
+        this.currentSessionMistakes = s.currentSessionMistakes ?? [];
+        this.currentSessionPuzzles = s.currentSessionPuzzles ?? [];
       }
       // lastSessionId könnte inzwischen asynchron eingetroffen sein (recordSession-Subscribe)
-      const pendingSid = sessionStorage.getItem('rookhub_endless_pending_sid');
-      if (pendingSid) {
-        this.lastSessionId = parseInt(pendingSid, 10) || null;
-        sessionStorage.removeItem('rookhub_endless_pending_sid');
-      }
+      const pendingSid = EndlessSessionRecorder.takePendingSessionId();
+      if (pendingSid !== undefined) this.lastSessionId = pendingSid;
       // Dieser Run wurde vor dem Absprung in die Analyse bereits via endGame() aufgezeichnet
       // → nicht erneut posten (sonst Doppel-Eintrag durch das ngOnDestroy-Sicherheitsnetz).
       this.sessionRecorded = true;
@@ -723,13 +692,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.isNewHighscore = false;
     this.sessionSeconds = 0;
     this.resumePuzzleSeconds = 0;   // frischer Run → keine fortzusetzende Puzzle-Zeit
-    this.currentSessionMistakes = [];
-    this.currentSessionPuzzles = [];
+    this.recorder.startFresh();     // leeres Protokoll, noch nicht aufgezeichnet
     this.previousPuzzleId = null;
     this.activeGameState = null;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
-    this.sessionRecorded = false;   // frischer Run → noch nicht aufgezeichnet
     this.computeFasttrackSteps();   // fasttrackAvgFirst/Second = T1/T2 für die Ketten-Kurve
     this.startSessionTimer();
 
@@ -897,12 +864,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       if (live.chainIndex === this.chainIndex && live.puzzle > 0)
         this.resumePuzzleSeconds = Math.floor(live.puzzle);
     }
-    this.currentSessionMistakes = g.mistakes ?? [];
-    this.currentSessionPuzzles = restoreSessionPuzzles(g.puzzleAttempts);
+    this.recorder.resumeFrom(g);   // fortgesetzter Run läuft weiter → noch nicht aufgezeichnet
     this.isNewHighscore = false;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
-    this.sessionRecorded = false;   // fortgesetzter Run läuft weiter → noch nicht aufgezeichnet
     this.computeFasttrackSteps();
     // Timer dort fortsetzen, wo er aufgehört hat (gewertet wird ab jetzt nur aktive Tab-Zeit).
     this.startSessionTimer(this.sessionSeconds);
@@ -937,18 +902,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   archiveAndStartNew(): void {
     if (!this.activeGameState) { this.startGame(); return; }
     const g = this.activeGameState;
-    const session: EndlessSession = {
-      timestamp: Date.now(),
-      config: { ...this.config },
-      totalSolved: g.solved ?? 0,
-      maxRating: g.maxRatingReached ?? 0,
-      durationSeconds: g.sessionSeconds ?? 0,
-      mistakeAtRatings: g.mistakes ?? [],
-      // Seed aus dem Spielstand; die Kette liegt hier nur lokal (offlinePool), falls Token passt.
-      seed: g.seed ?? this.seed,
-      chainPuzzleIds: this.offlinePool.length && this.storage.loadChainSeed() === (g.seed ?? this.seed)
-        ? this.offlinePool.map(p => p.id).join(',') : undefined
-    };
+    // Seed aus dem Spielstand; die Kette liegt hier nur lokal (offlinePool), falls Token passt.
+    const session = EndlessSessionRecorder.session(this.config, g.solved ?? 0, g.maxRatingReached ?? 0,
+      g.sessionSeconds ?? 0, g.mistakes ?? [], g.seed ?? this.seed,
+      this.offlinePool.length && this.storage.loadChainSeed() === (g.seed ?? this.seed)
+        ? this.offlinePool.map(p => p.id).join(',') : undefined);
     // Die bisher gespielten Puzzles gehören mit in den gespeicherten Lauf (Detail-Ansicht der History).
     this.storage.recordSessionToServer(session, restoreSessionPuzzles(g.puzzleAttempts)).subscribe(id => {
       if (id && this.authService.isLoggedIn) {
@@ -1001,24 +959,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.maxRatingReached = detail.maxRating;
       this.solved = detail.totalSolved;
       this.sessionSeconds = detail.durationSeconds;
-      this.currentSessionMistakes = (detail.mistakeAtRatings || '')
-        .split(',').map(Number).filter(n => !isNaN(n));
-      this.currentSessionPuzzles = (detail.puzzles ?? []).map((p, i) => ({
-        puzzleNumber: i + 1,
-        puzzleId: p.puzzleId,
-        lichessId: p.lichessId ?? '',
-        rating: p.rating,
-        solved: p.solved,
-        startedAt: 0,
-        endedAt: 0,
-      }));
+      this.recorder.showDetail(detail);   // reine History-Ansicht → nie (neu) aufzeichnen
       // „Level" = Anzahl gespielter Puzzles (Kettenposition); fällt auf TotalSolved zurück,
       // falls für einen Altlauf keine Einzel-Puzzles persistiert sind.
       this.level = this.currentSessionPuzzles.length || detail.totalSolved;
       this.isNewHighscore = false;
       this.lastSessionId = detail.id;
       this.lastSessionArchived = detail.isArchived;
-      this.sessionRecorded = true;   // reine History-Ansicht → nie (neu) aufzeichnen
       this.state = 'GAME_OVER';
     });
   }
@@ -1209,7 +1156,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         currentSessionMistakes: [...this.currentSessionMistakes],
         currentSessionPuzzles: [...this.currentSessionPuzzles],
       };
-      try { sessionStorage.setItem('rookhub_endless_gameover', JSON.stringify(snap)); } catch {}
+      EndlessSessionRecorder.saveGameOverSnapshot(snap);
       this.router.navigate(['/analysis'], {
         queryParams: {
           fen: this.puzzle.fen,
@@ -1299,7 +1246,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private loseLife(): void {
     if (!this.puzzleLifeLost) {
       this.puzzleLifeLost = true;
-      this.currentSessionMistakes.push(this._currentMinRating);
+      this.recorder.addMistake(this._currentMinRating);
       this.pushSessionPuzzle(false);
       this.lives--;
       this.recordAttempt(false);
@@ -1365,7 +1312,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       // beim Server ankam, also gab ein simples Neuladen es zurück (die Strafe war beliebig
       // wiederholbar). Ohne die Sitzungs-Einträge stimmte außerdem die Statistik des Laufs nicht,
       // und die fehlenden Fehler-Ratings verschoben die automatisch berechnete Schwelle.
-      this.currentSessionMistakes.push(this._currentMinRating);
+      this.recorder.addMistake(this._currentMinRating);
       this.pushSessionPuzzle(false);
       this.lives--;
       this.recordAttempt(false);
@@ -1513,33 +1460,17 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (result.isNew) this.isNewHighscore = true;
   }
 
-  /** Sichert den Spielstand (lokal + Server). `resumeAt` = Kettenposition, an der ein Fortsetzen
-   *  beginnt: sobald das aktuelle Puzzle ein Ergebnis hat (gelöst, Fehler, Zurücksetzen), rufen die
-   *  Aufrufer mit `chainIndex + 1` — sonst spielte ein Neuladen/Analyse-Rückkehr dasselbe Puzzle
-   *  erneut (doppelt gezählt bzw. ein zweites Leben am selben Puzzle). */
+  /** Sichert den Spielstand (lokal + Server); `resumeAt` siehe {@link EndlessSessionRecorder.activeGame}. */
   private syncActiveGameToServer(resumeAt = this.chainIndex): void {
-    const gameState = {
-      lives: this.lives,
-      solved: this.solved,
-      level: this.level + (resumeAt - this.chainIndex),
-      chainIndex: resumeAt,
-      seed: this.seed,
-      currentMinRating: this._currentMinRating,
-      maxRatingReached: this.maxRatingReached,
-      sessionSeconds: this.sessionSeconds,
-      mistakes: this.currentSessionMistakes,
-      puzzleAttempts: this.currentSessionPuzzles.map(p => ({
-        puzzleNumber: p.puzzleNumber,
-        puzzleId: p.puzzleId,
-        lichessId: p.lichessId,
-        rating: p.rating,
-        solved: p.solved,
-        startedAt: p.startedAt,
-        endedAt: p.endedAt,
-      })),
+    this.recorder.sync(this.runSnapshot(), this.config, this.highscore, resumeAt);
+  }
+
+  /** Kennzahlen des laufenden Laufs für den Spielstand. */
+  private runSnapshot(): EndlessRunSnapshot {
+    return {
+      lives: this.lives, solved: this.solved, level: this.level, chainIndex: this.chainIndex, seed: this.seed,
+      currentMinRating: this._currentMinRating, maxRatingReached: this.maxRatingReached, sessionSeconds: this.sessionSeconds,
     };
-    this.storage.saveActiveGameLocal(gameState);
-    this.storage.saveProgressToServer(this.config, this.highscore, gameState);
   }
 
   /** Zeichnet den beendeten Lauf genau EINMAL auf (idempotent). Egal über welchen Pfad der Run
@@ -1547,52 +1478,18 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    *  landet so garantiert in der History (statt verloren zu gehen, wenn der aktive Lauf bei 0 Leben
    *  schon vom Server gelöscht wurde und endGame() nie aufgerufen wird). */
   private ensureSessionRecorded(): void {
-    if (this.sessionRecorded) return;
-    this.sessionRecorded = true;
-    this.recordSession();
-  }
-
-  private recordSession(): void {
-    const session: EndlessSession = {
-      timestamp: Date.now(),
-      config: { ...this.config },
-      totalSolved: this.solved,
-      maxRating: this.maxRatingReached,
-      durationSeconds: this.sessionSeconds,
-      mistakeAtRatings: [...this.currentSessionMistakes],
-      // Seed + geordnete Ketten-IDs am Server persistieren → späteres Replay des Laufs.
-      seed: this.seed,
-      chainPuzzleIds: this.chain.map(p => p.id).join(',')
-    };
-    this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
-    // Per-Puzzle-Daten (mit Start-/Lösungszeit) nur an den Server mitgeben, nicht in die lokale
-    // History (würde localStorage aufblähen). Der Server speichert die Liste als Detail des Laufs —
-    // deshalb ALLE Puzzles, auch die vor einem Fortsetzen gespielten (vorher fielen sie hier weg, und
-    // die History zeigte nach jedem Neuladen/Analyse-Absprung nur noch den Rest). Einträge ohne
-    // Startzeit (Spielstand aus älterem Build) speichert der Server, loggt sie aber nicht.
-    this.storage.recordSessionToServer(session, this.currentSessionPuzzles).subscribe(id => {
-      if (id) {
-        this.lastSessionId = id;
-        // Für Rückkehr aus der Analyse nach 0-Leben-Situation (gameover=1): ID sichern,
-        // damit der neue Component-Instanz-Konstruktor sie noch auslesen kann.
-        try { sessionStorage.setItem('rookhub_endless_pending_sid', String(id)); } catch {}
-      }
-    });
+    const history = this.recorder.recordOnce(
+      () => EndlessSessionRecorder.session(this.config, this.solved, this.maxRatingReached, this.sessionSeconds,
+        [...this.currentSessionMistakes], this.seed, this.chain.map(p => p.id).join(',')),
+      this.sessionHistory,
+      id => this.lastSessionId = id,
+    );
+    if (history) this.sessionHistory = history;
   }
 
   /** Hängt das aktuelle Puzzle (mit Start-/Endzeit) an die Session-Liste an. */
   private pushSessionPuzzle(solved: boolean): void {
     if (!this.puzzle) return;
-    const now = Date.now();
-    this.currentSessionPuzzles.push({
-      puzzleNumber: this.currentSessionPuzzles.length + 1,
-      puzzleId: this.puzzle.id,
-      lichessId: this.puzzle.lichessId,
-      rating: this.puzzle.rating,
-      solved,
-      themes: this.puzzle.themes,
-      startedAt: this.puzzleStartTime > 0 ? this.puzzleStartTime : now,
-      endedAt: now,
-    });
+    this.recorder.pushPuzzle(this.puzzle, solved, this.puzzleStartTime);
   }
 }
