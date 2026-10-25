@@ -89,6 +89,38 @@ public class AdminSeedTests : IDisposable
         Assert.False(user!.IsAdmin);
     }
 
+    /// <summary>
+    /// Codereview I1-008: der Betreiber löscht das Seed-Konto (Löschung benennt es in deleted_{id} um),
+    /// ein anderes Admin-Konto ist aktiv → der Neustart legt KEIN neues „admin“ mit dem .env-Passwort an.
+    /// </summary>
+    [Fact]
+    public async Task SeedAsync_DeletedSeedAdminPlusOtherActiveAdmin_DoesNotResurrect()
+    {
+        _db.AppUsers.Add(new AppUser { Username = "deleted_1", Email = "deleted_1@deleted.invalid", PasswordHash = "x", IsAdmin = false, DeletedAt = DateTime.UtcNow });
+        _db.AppUsers.Add(new AppUser { Username = "patrik", Email = "p@example.org", PasswordHash = "x", IsAdmin = true });
+        await _db.SaveChangesAsync();
+
+        await AdminSeeder.SeedAsync(_db, BuildConfig("admin", "secret"));
+
+        Assert.Null(await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin"));
+        Assert.Equal(2, await _db.AppUsers.CountAsync());
+    }
+
+    /// <summary>Nur gelöschte Admins (DeletedAt gesetzt) zählen nicht — dann wird wie bei leerer DB angelegt.</summary>
+    [Fact]
+    public async Task SeedAsync_OnlyDeletedAdmins_SeedsBootstrapAdmin()
+    {
+        _db.AppUsers.Add(new AppUser { Username = "deleted_1", Email = "deleted_1@deleted.invalid", PasswordHash = "x", IsAdmin = true, DeletedAt = DateTime.UtcNow });
+        _db.AppUsers.Add(new AppUser { Username = "normal", Email = "n@example.org", PasswordHash = "x", IsAdmin = false });
+        await _db.SaveChangesAsync();
+
+        await AdminSeeder.SeedAsync(_db, BuildConfig("admin", "secret"));
+
+        var admin = await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin");
+        Assert.NotNull(admin);
+        Assert.True(admin.IsAdmin);
+    }
+
     [Fact]
     public async Task SeedAsync_RefusesWellKnownPlaceholder()
     {
