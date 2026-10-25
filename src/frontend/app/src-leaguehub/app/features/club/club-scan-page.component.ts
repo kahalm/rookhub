@@ -19,8 +19,8 @@ import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.compone
 import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
 import { rememberAnonKey } from './club-anon-keys';
-import { PlayerSearchComponent } from './player-search.component';
-import { ScanHeaderForm, SIDES } from './scan-header-form';
+import { ScanHeaderForm } from './scan-header-form';
+import { ClubSideFormComponent } from './club-side-form.component';
 import { ScanPhotos } from '@rh/features/games/sheet-workbench/scan-photos';
 import { SheetWorkbenchComponent } from '@rh/features/games/sheet-workbench/sheet-workbench.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
@@ -47,7 +47,7 @@ function readAutoMine(): boolean {
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PlayerSearchComponent, AccessGateComponent, SheetWorkbenchComponent, SheetReadingStatusComponent],
+  imports: [RouterLink, ClubSideFormComponent, AccessGateComponent, SheetWorkbenchComponent, SheetReadingStatusComponent],
   templateUrl: './club-scan-page.component.html',
 })
 export class ClubScanPageComponent implements OnInit, OnDestroy {
@@ -66,9 +66,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   readonly canRead = this.auth.has('league.view');
   readonly backLink: unknown[] = this.share ? ['/s', this.share, 'hochladen'] : ['/verein/neu'];
-  readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
-  readonly sides = SIDES;
-  readonly maxYear = new Date().getFullYear() + 1;
   private readonly clubCtx = inject(ClubContextService);
   /** Name anonymisierter Spieler und des Vereins — der angemeldete bzw. der des Teilen-Links (0.698.0). */
   get anon(): string { return this.clubCtx.anonName(); }
@@ -296,11 +293,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.state.set({ scan: { id, status: 'done' } } as unknown as LeagueScanState);
     if (sheet) this.ph.viewCounts.set(sheet.viewCounts ?? []);   // das zweite Exemplar derselben Seite (0.756.0)
     if (sheet) await this.ph.load(sheet.pageCount ?? 1, page => this.api.clubSheetPhoto(id, page), () => !this.destroyed);
-  }
-
-  num(v: string): number | null {
-    const n = Number(v);
-    return v.trim() && Number.isFinite(n) ? Math.round(n) : null;
   }
 
   /** Den Zug in der Zugliste sichtbar machen — NUR in deren eigenem Rollbereich. `scrollIntoView` rollte auch die Seite,

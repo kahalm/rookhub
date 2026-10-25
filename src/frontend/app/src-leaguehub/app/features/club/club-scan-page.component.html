@@ -96,63 +96,7 @@
     } @else {
     <section class="panel save-panel" #savePanel>
       <h3 class="club-h3">Partie</h3>
-      <div class="save-grid">
-        @for (k of sides; track k) {
-          <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
-            <lh-player-search [client]="client" [text]="f.name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'" [searchMega]="false"
-                              (textChange)="f.setName(k, $event)" (picked)="f.pickPerson(k, $event)" />
-            <span class="match" [class.ok]="(f.match(k)()?.league || f.match(k)()?.mega) && !f.replace(k)()">{{ f.matchText(k) }}</span>
-            @if (f.similarOf(k).length) {
-              <span class="quick-pick small"><span class="muted">Meintest du</span>
-                @for (c of f.similarOf(k); track c.name + (c.fide ?? '')) {
-                  <button type="button" class="btn-chip" (click)="f.pickPerson(k, c)" [attr.title]="c.teams.join(', ')"
-                          [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ': ' + c.name + ' übernehmen'">{{ c.name }}</button>
-                }
-              </span>
-            }
-            <label class="replace-row" [attr.title]="'Nach außen steht dann „' + anon + '“. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der Name aus der öffentlichen Paarung der Ligarunde.'">
-              <input type="checkbox" [checked]="f.replace(k)()" (change)="f.setReplace(k, $any($event.target).checked)" />
-              durch „{{ anon }}“ ersetzen</label>
-          </div>
-          <label class="field narrow">Elo<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" [value]="f.elo(k)() ?? ''"
-                                           (input)="f.elo(k).set(num($any($event.target).value))" [disabled]="f.replace(k)()" /></label>
-        }
-        <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="f.year() ?? ''"
-                                          (input)="f.year.set(num($any($event.target).value)); f.yearRead.set(null); f.schedulePairings()" />
-          @if (f.yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
-        </label>
-        <label class="field narrow">Ergebnis
-          <select (change)="f.result.set($any($event.target).value)">
-            @for (r of results; track r) { <option [value]="r" [selected]="f.result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
-          </select>
-        </label>
-        <label class="field wide">Veranstaltung <span class="muted small">(fällt weg, sobald jemand „{{ anon }}“ heißt)</span>
-          <input [value]="f.event()" (input)="f.event.set($any($event.target).value)" maxlength="200" [disabled]="f.anyReplaced()" />
-        </label>
-        @if (f.pairings().length) {
-          <label class="field wide">Ligapartie <span class="muted small">(Brett einer Ligarunde — Spieler und Jahr kommen dann aus dem Spielplan)</span>
-            <select class="pairing-pick" (change)="f.choosePairing($any($event.target).value)">
-              <option value="" [selected]="f.pairingId() == null">keine Ligapartie</option>
-              @for (p of f.pairings(); track p.id) {
-                <option [value]="p.id" [selected]="f.pairingId() === p.id">{{ f.pairingText(p) }}</option>
-              }
-            </select>
-          </label>
-        }
-      </div>
-
-      <div class="field-row">
-        <span class="muted small">Ich spiele</span>
-        <div class="seg" role="group" aria-label="Ich spiele">
-          <button type="button" [attr.aria-pressed]="f.ownerSide() === 'white'" (click)="f.setOwner('white')">Weiß</button>
-          <button type="button" [attr.aria-pressed]="f.ownerSide() === 'black'" (click)="f.setOwner('black')">Schwarz</button>
-        </div>
-        <span class="muted small">Spieler von {{ clubName() }} und deine Seite werden standardmäßig durch „{{ anon }}“ ersetzt — dann wird weder
-          gespeichert, wer dahinter steht, noch wer hochgeladen hat.</span>
-      </div>
-
-      <p class="preview"><span class="muted">Gespeichert wird:</span> <b>{{ f.preview() }}</b></p>
-      @if (f.problem(); as pr) { <p class="err small">{{ pr }}</p> }
+      <lh-club-side-form [form]="f" [client]="client" [anon]="anon" [clubName]="clubName()" />
 
       @if (saved()) {
         <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b>@if (replacedOld()) { Die schon vorhandene Fassung dieser Partie ist archiviert und erscheint nicht mehr. } Foto und Lesung bleiben 365 Tage aufbewahrt — so kannst du die Züge später unter „Korrigieren“ noch nachbessern, und wir verbessern damit das Einlesen.
