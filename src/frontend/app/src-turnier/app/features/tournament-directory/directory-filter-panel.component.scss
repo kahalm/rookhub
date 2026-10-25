@@ -1,0 +1,56 @@
+:host { display: block; }
+
+.filter-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-low);
+}
+/* Zeilen nach Sinn (b1-t-filter-feldbreiten), jede bricht in sich um. Die Suche hat ihre eigene Zeile — neben den
+   Chips wurde sie auf 220 px gedrueckt („Search name, venue, organi…“). */
+.extra-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.radius-field { width: 140px; }
+.range-field { min-width: 170px; }
+/* „Mind. Teilnehmer“ / „Najmanje prijavljenih“ passen ganz hinein (b1-t-filter-feldbreiten: 150 px zeigten „Mind. Teilneh…“,
+   in WebKit lag der Zahlen-Zaehler zusaetzlich ueber dem Rest). */
+.players-field { width: 14rem; }
+.search-field { flex: 1 1 18rem; min-width: 0; }
+/* Zeitraum und Umkreis stehen ab 769 px in der Leiste; die Zeile bleibt dort nur fuer die Datumsfelder. */
+@media (min-width: 769px) {
+  .period-row:not(:has(.date-field)) { display: none; }
+}
+.date-field { width: 165px; }
+
+/* Eigenes overflow-x: sonst verbreitert die Chip-Reihe auf schmalen Geraeten das ganze
+   Dokument, und die CDK-Overlays (Menues) positionieren sich daneben. */
+.speed-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Die Handy-Fassungen von Zeitraum/Umkreis im Filterfeld: nur am Handy (dort stehen sie nicht in der Leiste). */
+.extra-narrow { display: none; }
+
+@media (max-width: 768px) {
+  .range-field,
+  .search-field,
+  .players-field,
+  .date-field { width: 100%; min-width: 0; }
+
+  /* Nebeneinander nur, wenn beide Werte ganz hineinpassen (b1-t-filter-feldbreiten: hälftig zeigte 390 px „Nächste
+     drei M…“ neben viel Luft bei „Überall“) — sonst je eine volle Zeile. */
+  .period-row > .extra-narrow { display: inline-flex; min-width: 0; }
+  .period-row > .range-field { flex: 1 1 13rem; }
+  .period-row > .radius-field { flex: 1 1 8rem; }
+}

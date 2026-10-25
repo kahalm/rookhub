@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
+import { DirectoryFilterPanelComponent } from './directory-filter-panel.component';
 import { TournamentDirectoryComponent } from './tournament-directory.component';
 import { TournamentMapComponent } from './tournament-map.component';
 
@@ -64,7 +65,9 @@ describe('TournamentDirectoryComponent Filterfeld (UI-Sweep b1)', () => {
   });
 
   const el = () => fixture.nativeElement as HTMLElement;
-  const css = () => ((TournamentDirectoryComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
+  // Seit der Zerlegung Z28 stehen die Regeln des Filterfelds in DirectoryFilterPanelComponent — gelesen werden beide.
+  const css = () => [TournamentDirectoryComponent, DirectoryFilterPanelComponent]
+    .flatMap(c => (c as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles)
     .join('\n').replace(/%NS%/g, '').replace(/\s+/g, ' ');
   const mobileCss = () => { const all = css(); return all.slice(all.indexOf('@media (max-width: 768px)')); };
 

@@ -4,15 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
@@ -23,6 +19,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { requireAccount } from '../../core/require-account';
 import { wideScreen } from '../../core/wide-screen';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
+import { DirectoryFilterPanelComponent } from './directory-filter-panel.component';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { PlaceFieldComponent } from './place-field.component';
 import { PlaceSearch } from './place-search';
@@ -40,7 +37,7 @@ import {
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { MapView, TournamentMapComponent } from './tournament-map.component';
 import {
-  DEFAULT_RADIUS_KM, DIRECTORY_AGE_GROUPS, DIRECTORY_GENDERS, DIRECTORY_KINDS, DIRECTORY_RADII,
+  DEFAULT_RADIUS_KM, DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
   TournamentGender, TournamentKind, TournamentSpeed, directoryPageSize, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
@@ -68,12 +65,10 @@ import {
   selector: 'app-tournament-directory',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatButtonModule, MatCardModule,
-    MatChipsModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule,
-    MatSelectModule, MatSlideToggleModule, MatTabsModule,
-    MatTooltipModule, TranslatePipe,
+    CommonModule, FormsModule, MatButtonModule, MatCardModule, MatDialogModule, MatFormFieldModule,
+    MatIconModule, MatSelectModule, MatTabsModule, TranslatePipe,
     LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
-    TournamentMapComponent, PlaceFieldComponent, SearchProfileMenuComponent,
+    TournamentMapComponent, PlaceFieldComponent, SearchProfileMenuComponent, DirectoryFilterPanelComponent,
   ],
   templateUrl: './tournament-directory.component.html',
   styleUrls: ['./tournament-directory.component.scss'],
@@ -96,9 +91,6 @@ export class TournamentDirectoryComponent implements OnInit {
   readonly speeds: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
   readonly rangePresets = DIRECTORY_RANGE_PRESETS;
   readonly radii = DIRECTORY_RADII;
-  readonly ageGroups = DIRECTORY_AGE_GROUPS;
-  readonly genders = DIRECTORY_GENDERS;
-  readonly kinds = DIRECTORY_KINDS;
   readonly pageSize = directoryPageSize();
 
   /** Vorgabe: die naechsten drei Monate (siehe rangeFor). */
