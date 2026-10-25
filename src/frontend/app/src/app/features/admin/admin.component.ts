@@ -1,33 +1,13 @@
-import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy, computed, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { SnackbarService } from '../../core/snackbar.service';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatSelectModule } from '@angular/material/select';
-import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { AdminService, AdminUser, Book, Group, GroupMember, GroupOption, GroupTrainingGoal } from '../../core/admin.service';
-import { MenuService } from '../../core/menu.service';
-import { AuthService } from '../../core/auth.service';
+import { TranslatePipe } from '@ngx-translate/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
-import { LatestRequest } from '../../shared/latest-request.util';
+import { AdminService } from '../../core/admin.service';
+import { AuthService } from '../../core/auth.service';
 import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download.component';
 import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
@@ -37,94 +17,44 @@ import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { AdminLeagueUploadsComponent } from './tabs/admin-league-uploads.component';
 import { AdminBackgroundJobsComponent } from './tabs/admin-background-jobs.component';
+import { AdminUsersTabComponent } from './tabs/admin-users-tab.component';
+import { AdminBooksTabComponent } from './tabs/admin-books-tab.component';
+import { AdminGroupsTabComponent } from './tabs/admin-groups-tab.component';
+import { AdminGroupsStore } from './admin-groups.store';
 import { adminTabIndex, AdminTabKey, visibleAdminTabs } from './admin-tabs';
-import { clampGoal } from '../training-goals/goal.util';
-import { apiErrorText } from '../../core/api-error';
-import { MatDialog } from '@angular/material/dialog';
-import { ResetLinkDialogComponent, ResetLinkDialogData } from './reset-link-dialog.component';
 
+/**
+ * Admin-Seite: Kopf (Kibana-Link), Tab-Leiste je Recht (F5-005) und Deep-Links `?tab=<key>`. Jeder Tab ist eine eigene
+ * Komponente in `tabs/` (Nutzer, Bücher, Gruppen seit der Zerlegung Z30); die Gruppenliste, die Gruppen-, Bücher-,
+ * Menü- und Rollen-Tab teilen, hält der seiteneigene {@link AdminGroupsStore}.
+ */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatCardModule, MatTableModule, MatPaginatorModule,
-    MatButtonModule, MatIconModule, MatTabsModule, MatFormFieldModule, MatInputModule,
-    MatChipsModule, MatSelectModule, IconLabelDirective, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
+    CommonModule, MatButtonModule, MatIconModule, MatTabsModule, TranslatePipe,
+    AdminUsersTabComponent, AdminBooksTabComponent, AdminGroupsTabComponent,
     AdminGithubActionsComponent, AdminChessableDownloadComponent,
     AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent,
     AdminRolesComponent,
     AdminLeagueUploadsComponent,
     AdminBackgroundJobsComponent,
   ],
+  providers: [AdminGroupsStore],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],
 })
 export class AdminComponent implements OnInit {
-  users: AdminUser[] = [];
-  userSearch = '';
-  usersPage = 1;
-  usersPageSize = 20;
-  usersTotalCount = 0;
-  usersLoading = false;
-  userColumns = ['id', 'username', 'email', 'isAdmin', 'groups', 'createdAt', 'actions'];
-
-  books: Book[] = [];
-  filteredBooks: Book[] = [];
-  bookSearch = '';
-  booksLoading = false;
-  booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isPublic', 'forKids', 'groups', 'actions'];
-
-  /** Per-Spalten-Filter über dem Bücher-Grid (UND-verknüpft, zusätzlich zur globalen Suche). */
-  bookFilters = this.emptyBookFilters();
-
-  groups: Group[] = [];
-  groupsLoading = false;
-  /** Gruppenliste mindestens einmal erfolgreich geladen — siehe {@link keptTabGroups}. */
-  groupsLoaded = false;
-  /**
-   * Gruppen als AUSWAHL (Bücher-Freigaben, Menü, Rollen): mit groups.manage dieselbe Liste wie {@link groups}, sonst die
-   * schlanke `GET /api/admin/groups/options` (F5-005-Nachlauf) — eine Rolle mit nur menu.manage sah sonst keine Gruppen.
-   */
-  groupOptions: GroupOption[] = [];
-  /** Auswahl mindestens einmal erfolgreich geladen — siehe {@link keptTabGroups}. */
-  groupOptionsLoaded = false;
-  groupColumns = ['name', 'memberCount', 'actions'];
-  newGroupName = '';
-  newGroupDescription = '';
-  selectedGroup: Group | null = null;
-  groupMembers: GroupMember[] = [];
-  membersLoading = false;
-  /** Mitgliederliste der GEWÄHLTEN Gruppe: ein Gruppenwechsel bricht das Laden der vorigen ab. */
-  private membersRequest = new LatestRequest();
-  allUsers: AdminUser[] = [];
-  /** Suche beim Hinzufügen (0.591.0): leer = die neuesten Konten aus {@link allUsers}, sonst Server-Suche. */
-  memberSearch = '';
-  memberCandidates: AdminUser[] = [];
-  addingUserId: number | null = null;
-  private searchResults: AdminUser[] | null = null;
-  private readonly memberSearch$ = new Subject<string>();
-  /** Höchstens so viele Treffer in der Liste — mehr liest niemand, die Suche grenzt weiter ein. */
-  static readonly CandidateLimit = 30;
-
-  /** Trainingsziel-Vorlage der ausgewählten Gruppe (ein Tageszeit-Ziel + Wochenziele). */
-  goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
-  goalHasTemplate = false;
-  goalLoading = false;
-  /** Erst nach erfolgreichem Laden der GEWÄHLTEN Gruppe true — sonst stünde nach einem Ladefehler noch die
-   *  Vorlage der vorher gewählten Gruppe im Formular, und Speichern schriebe sie auf die neue. */
-  goalLoaded = false;
+  private readonly adminService = inject(AdminService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly groupsStore = inject(AdminGroupsStore);
 
   /** Kibana-URL aus dem Server-Env (leer = nicht konfiguriert → Link wird nicht angezeigt). */
-  kibanaUrl = '';
-
-
-  impersonatingId: number | null = null;
-  /** Konto, dessen Admin-Recht gerade gespeichert wird — sein Knopf ist so lange gesperrt (F5-013). */
-  adminBusyId: number | null = null;
-  /** Konto, für das gerade ein Reset-Link erzeugt wird (UX-002) — sein Knopf ist so lange gesperrt. */
-  resetLinkBusyId: number | null = null;
+  readonly kibanaUrl = signal('');
 
   /**
    * Die Tabs, die der Nutzer sieht (F5-005: je Recht, Zuordnung in `admin-tabs.ts`). Nur sie werden gerendert, die
@@ -133,98 +63,34 @@ export class AdminComponent implements OnInit {
    */
   readonly visibleTabs = computed(() => visibleAdminTabs(this.auth));
   /** Aktiver Tab als Key (für Deep-Links wie /admin?tab=messages); `null` = erster sichtbarer. */
-  private selectedTab: AdminTabKey | null = null;
+  private readonly selectedTab = signal<AdminTabKey | null>(null);
   /** Index des aktiven Tabs unter den SICHTBAREN Tabs (für `[selectedIndex]`). */
-  get selectedTabIndex(): number { return Math.max(0, adminTabIndex(this.selectedTab, this.visibleTabs())); }
+  readonly selectedTabIndex = computed(() => Math.max(0, adminTabIndex(this.selectedTab(), this.visibleTabs())));
   /** Wird der Tab gerendert? */
   show(key: AdminTabKey): boolean { return this.visibleTabs().includes(key); }
-  /** Nur Admins dürfen das Admin-Flag setzen und Admin-Konten anfassen (Server: „Only an admin may …", 403). */
-  get actorIsAdmin(): boolean { return this.auth.isAdminLive; }
-  /** Einsteigen/Reset-Link/Löschen: für Admin-Konten nur durch Admins — sonst gar nicht anbieten (Server: 403). */
-  canManageUser(u: AdminUser): boolean { return this.actorIsAdmin || !u.isAdmin; }
   /**
    * Tabs mit eigenem, erst per Knopf gespeichertem Formular (Menü-Sichtbarkeit, Rollen): einmal geöffnet, bleiben sie
    * bestehen (F5-020). Als `matTabContent` wurden sie beim Verlassen zerstört und beim Zurückkehren neu geladen — ein
    * kurzer Blick in einen anderen Tab verwarf alle ungespeicherten Änderungen ohne Hinweis. Erst beim ersten Öffnen
    * gerendert (kein Laden beim Seitenaufruf), danach hält das `@if` im eigenen Template die Komponente am Leben.
    */
-  readonly keptTabs = new Set<AdminTabKey>();
+  readonly keptTabs = signal<ReadonlySet<AdminTabKey>>(new Set());
   private static readonly KeptTabKeys: readonly AdminTabKey[] = ['menu', 'roles'];
   /**
-   * Gruppenliste für die behaltenen Tabs Menü und Rollen (F5-020): EINE Quelle, die {@link loadGroups} nach jedem
-   * Anlegen/Löschen im Gruppen-Tab erneuert. Eine eigene, einmal beim Öffnen geladene Liste veraltete, weil die Tabs
-   * nicht mehr neu entstehen — eine neue Gruppe war nicht wählbar, eine gelöschte blieb auswählbar bzw. in den
-   * `groupIds` stehen. `null`, solange die Liste nie geladen wurde: dann kürzt der Menü-Tab beim Speichern nichts
-   * (eine leere Liste hieße sonst „alle Gruppen gelöscht").
+   * Gruppenliste für die behaltenen Tabs Menü und Rollen (F5-020): EINE Quelle ({@link AdminGroupsStore}), die der
+   * Gruppen-Tab nach jedem Anlegen/Löschen erneuert. `null`, solange die Liste nie geladen wurde (siehe Store).
    */
-  get keptTabGroups(): GroupOption[] | null { return this.groupOptionsLoaded ? this.groupOptions : null; }
-  private destroyRef = inject(DestroyRef);
-  private confirm = inject(ConfirmService);
-  private prompts = inject(PromptService);
-  private dialog = inject(MatDialog);
+  readonly keptTabGroups = this.groupsStore.keptTabGroups;
 
-  constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
-    // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen 500).
-    this.memberSearch$.pipe(
-      debounceTime(250),
-      distinctUntilChanged(),
-      // catchError INNEN: ein Fehler fällt auf die vorab geladenen Konten zurück, ohne den Strom zu beenden
-      // (sonst reagierte die Suche bis zum Neuladen nicht mehr).
-      switchMap(q => q.trim().length < 2 ? of(null) : this.adminService.getUsers(q.trim(), 1, 50).pipe(catchError(() => of(null)))),
-      takeUntilDestroyed(),
-    ).subscribe(res => { this.searchResults = res?.items ?? null; this.recomputeAvailableUsers(); });
-  }
-
-  /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
-  impersonate(u: AdminUser): void {
-    this.impersonatingId = u.id;
-    this.adminService.impersonate(u.id).subscribe({
-      next: res => {
-        this.impersonatingId = null;
-        // Admin-Sicherung nicht schreibbar (Speicher voll/gesperrt): nicht einsteigen — ohne sie gäbe es keinen Rücksprung.
-        if (!this.auth.impersonate(res)) {
-          this.snackbar.info(this.translate.instant('admin.users.impersonateFailed'));
-          return;
-        }
-        this.menu.refresh();
-        this.snackbar.info(this.translate.instant('admin.users.impersonateStarted', { name: u.username }));
-        this.router.navigate(['/dashboard']);
-      },
-      error: () => {
-        this.impersonatingId = null;
-        this.snackbar.info(this.translate.instant('admin.users.impersonateFailed'));
-      }
-    });
-  }
-
-  /** Einmaligen Reset-Link (24 h) erzeugen und im Dialog zum Weitergeben zeigen (UX-002 / P-2): für Konten ohne
-   *  E-Mail, deren „Passwort vergessen“ ins Leere läuft. Der Admin sieht und setzt kein Passwort. */
-  createResetLink(u: AdminUser): void {
-    if (this.resetLinkBusyId !== null) return;
-    this.resetLinkBusyId = u.id;
-    this.adminService.createPasswordResetLink(u.id).subscribe({
-      next: res => {
-        this.resetLinkBusyId = null;
-        const data: ResetLinkDialogData = { username: u.username, link: res.link, expiresAt: res.expiresAt, hasEmail: !!u.email };
-        this.dialog.open(ResetLinkDialogComponent, { data, autoFocus: false });
-      },
-      error: err => {
-        this.resetLinkBusyId = null;
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.resetLink.error'));
-      },
-    });
-  }
+  /** Tabs, die Gruppen nur zur Auswahl brauchen (ohne groups.manage aus `loadGroupOptions`). */
+  private static readonly GroupChoiceTabs: readonly AdminTabKey[] = ['books', 'menu', 'roles'];
 
   ngOnInit(): void {
-    // Nur laden, was der Nutzer sehen darf (F5-005) — sonst hagelte es 403-Meldungen für fremde Tabs.
-    const canUsers = this.auth.has('users.manage');
-    if (canUsers) this.loadUsers();
-    if (this.show('books')) this.loadBooks();
+    // Nur laden, was der Nutzer sehen darf (F5-005) — sonst hagelte es 403-Meldungen für fremde Tabs. Nutzer- und
+    // Bücher-Tab laden selbst (sie werden nur mit ihrem Recht gerendert).
     // Gruppenliste: mit groups.manage die volle (Gruppen-Tab + Auswahl), sonst nur die Auswahl für Bücher/Menü/Rollen.
-    if (this.auth.has('groups.manage')) this.loadGroups();
-    else if (AdminComponent.GroupChoiceTabs.some(k => this.show(k))) this.loadGroupOptions();
-    // Mitglieder-Auswahl im Gruppen-Tab: kommt aus der Nutzerliste (users.manage).
-    if (this.show('groups') && canUsers) this.loadAllUsers();
+    if (this.auth.has('groups.manage')) this.groupsStore.loadGroups();
+    else if (AdminComponent.GroupChoiceTabs.some(k => this.show(k))) this.groupsStore.loadGroupOptions();
     // Deep-Link: /admin?tab=<key> — Tab aus der URL wählen (der `?thread=`-Teil wird vom
     // Nachrichten-Tab selbst behandelt, siehe AdminMessagesComponent). Tabs ohne Recht fängt adminAreaGuard ab.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
@@ -232,9 +98,9 @@ export class AdminComponent implements OnInit {
       if (key && this.show(key)) this.selectTab(key);
     });
 
-    if (canUsers) {
+    if (this.auth.has('users.manage')) {
       this.adminService.getConfig().subscribe({
-        next: cfg => { this.kibanaUrl = cfg.kibanaUrl || ''; },
+        next: cfg => { this.kibanaUrl.set(cfg.kibanaUrl || ''); },
         error: () => { /* still keine Pflicht — Link bleibt versteckt */ }
       });
     }
@@ -256,561 +122,9 @@ export class AdminComponent implements OnInit {
   }
 
   private selectTab(key: AdminTabKey): void {
-    this.selectedTab = key;
-    if (AdminComponent.KeptTabKeys.includes(key)) this.keptTabs.add(key);
-  }
-
-
-
-  loadUsers(): void {
-    this.usersLoading = true;
-    this.adminService.getUsers(this.userSearch, this.usersPage, this.usersPageSize).subscribe({
-      next: res => {
-        this.users = res.items;
-        this.usersTotalCount = res.totalCount;
-        this.usersLoading = false;
-      },
-      error: () => {
-        this.snackbar.info(this.translate.instant('admin.users.errors.load'));
-        this.usersLoading = false;
-      }
-    });
-  }
-
-  onUsersPageChange(event: PageEvent): void {
-    this.usersPage = event.pageIndex + 1;
-    this.usersPageSize = event.pageSize;
-    this.loadUsers();
-  }
-
-  /** Admin-Recht vergeben bzw. entziehen (F5-013): erst nach Rückfrage mit dem Kontonamen, als Soll-Wert (ein
-   *  Doppelklick oder eine veraltete Liste schaltet nicht zurück) und mit gesperrtem Knopf, solange gespeichert wird. */
-  toggleAdmin(user: AdminUser): void {
-    if (this.adminBusyId !== null) return;
-    const target = !user.isAdmin;
-    this.confirm.ask(target ? 'admin.users.confirmPromote' : 'admin.users.confirmDemote', { username: user.username })
-      .subscribe(ok => {
-        if (!ok || this.adminBusyId !== null) return;
-        this.adminBusyId = user.id;
-        this.adminService.setAdmin(user.id, target).subscribe({
-          next: updated => {
-            this.adminBusyId = null;
-            user.isAdmin = updated.isAdmin;
-            const key = updated.isAdmin ? 'admin.users.nowAdmin' : 'admin.users.noLongerAdmin';
-            this.snackbar.info(this.translate.instant(key, { username: user.username }));
-          },
-          error: err => {
-            this.adminBusyId = null;
-            this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.errors.toggleAdmin'));
-          }
-        });
-      });
-  }
-
-  deleteUser(user: AdminUser): void {
-    this.confirm.ask('admin.users.deleteConfirm', { username: user.username }).subscribe(ok => {
-      if (!ok) return;
-
-      this.adminService.deleteUser(user.id).subscribe({
-        next: () => {
-          this.snackbar.info(this.translate.instant('admin.users.deleted', { username: user.username }));
-          this.loadUsers();
-        },
-        error: err => {
-          this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.errors.delete'));
-        }
-      });
-    });
-  }
-
-  // --- Bücher -----------------------------------------------------------
-  loadBooks(): void {
-    this.booksLoading = true;
-    this.adminService.getBooks().subscribe({
-      next: books => {
-        this.books = books;
-        this.applyBookFilter();
-        this.booksLoading = false;
-      },
-      error: () => {
-        this.snackbar.info(this.translate.instant('admin.books.errors.load'));
-        this.booksLoading = false;
-      }
-    });
-  }
-
-  /** Clientseitiger Filter über die bereits geladenen Bücher (Name/Dateiname/Tags, case-insensitive). */
-  private emptyBookFilters() {
-    return {
-      name: '',
-      kind: '' as '' | 'Puzzle' | 'Study',
-      difficulty: '',
-      eloMin: null as number | null,
-      eloMax: null as number | null,
-      puzzlesMin: null as number | null,
-      puzzlesMax: null as number | null,
-      daily: '' as '' | 'yes' | 'no',
-      random: '' as '' | 'yes' | 'no',
-      blind: '' as '' | 'yes' | 'no',
-      public: '' as '' | 'yes' | 'no',
-      group: '' as '' | 'none' | number,
-    };
-  }
-
-  applyBookFilter(): void {
-    const q = this.bookSearch.trim().toLowerCase();
-    const f = this.bookFilters;
-    const name = f.name.trim().toLowerCase();
-    const diff = f.difficulty.trim().toLowerCase();
-    const tri = (v: '' | 'yes' | 'no', actual: boolean) => v === '' || (v === 'yes') === actual;
-    this.filteredBooks = this.books.filter(b => {
-      if (q && !((b.displayName ?? '').toLowerCase().includes(q) ||
-                 (b.fileName ?? '').toLowerCase().includes(q) ||
-                 (b.ownerName ?? '').toLowerCase().includes(q) ||
-                 (b.tags ?? '').toLowerCase().includes(q))) return false;
-      if (name && !((b.displayName ?? '').toLowerCase().includes(name) ||
-                    (b.fileName ?? '').toLowerCase().includes(name))) return false;
-      if (f.kind && b.kind !== f.kind) return false;
-      if (diff && !(b.difficulty ?? '').toLowerCase().includes(diff)) return false;
-      if (f.eloMin != null && (b.minElo == null || b.minElo < f.eloMin)) return false;
-      if (f.eloMax != null && (b.maxElo == null || b.maxElo > f.eloMax)) return false;
-      if (f.puzzlesMin != null && b.puzzleCount < f.puzzlesMin) return false;
-      if (f.puzzlesMax != null && b.puzzleCount > f.puzzlesMax) return false;
-      if (!tri(f.daily, b.forDaily)) return false;
-      if (!tri(f.random, b.forRandom)) return false;
-      if (!tri(f.blind, b.forBlind)) return false;
-      if (!tri(f.public, b.isPublic)) return false;
-      if (f.group === 'none' && (b.accessGroupIds?.length ?? 0) > 0) return false;
-      if (typeof f.group === 'number' && !(b.accessGroupIds ?? []).includes(f.group)) return false;
-      return true;
-    });
-  }
-
-  hasActiveBookFilters(): boolean {
-    const f = this.bookFilters;
-    return !!(f.name || f.kind || f.difficulty || f.eloMin != null || f.eloMax != null ||
-      f.puzzlesMin != null || f.puzzlesMax != null || f.daily || f.random || f.blind ||
-      f.public || f.group !== '');
-  }
-
-  resetBookFilters(): void {
-    this.bookFilters = this.emptyBookFilters();
-    this.applyBookFilter();
-  }
-
-  clearBookSearch(): void {
-    this.bookSearch = '';
-    this.applyBookFilter();
-  }
-
-  /** Buch umbenennen (nur DisplayName; Backend akzeptiert das im Update-DTO). */
-  renameBook(book: Book): void {
-    this.prompts.ask({
-      title: this.translate.instant('admin.books.rename'),
-      fields: [{ key: 'name', label: this.translate.instant('admin.books.renamePrompt'), value: book.displayName }],
-    }).subscribe(res => {
-      if (!res) return;
-      const name = (res['name'] ?? '').trim();
-      if (!name || name === book.displayName) return;
-      this.adminService.updateBook(book.id, { displayName: name }).subscribe({
-        next: () => {
-          book.displayName = name;
-          this.applyBookFilter();
-        },
-        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save'))
-      });
-    });
-  }
-
-  onBookFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
-
-    this.booksUploading = true;
-    this.adminService.importBooks(input.files).subscribe({
-      next: res => {
-        const parts = [this.translate.instant(res.totalImported === 1 ? 'admin.books.importedCountOne' : 'admin.books.importedCount', { count: res.totalImported })];
-        if (res.totalSkipped > 0) parts.push(this.translate.instant(res.totalSkipped === 1 ? 'admin.books.duplicatesCountOne' : 'admin.books.duplicatesCount', { count: res.totalSkipped }));
-        if (res.totalInvalid > 0) parts.push(this.translate.instant('admin.books.invalidCount', { count: res.totalInvalid }));
-        this.snackbar.info(parts.join(', '), { duration: 6000 });
-        this.booksUploading = false;
-        input.value = '';
-        this.loadBooks();
-      },
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.import'), { duration: 4000 });
-        this.booksUploading = false;
-        input.value = '';
-      }
-    });
-  }
-
-  /**
-   * Titel auf KidHub, alle Sprachen der Kinderseite in EINEM Dialog (F5-016 — vorher vier Abfragen
-   * hintereinander, Abbrechen bei der letzten verwarf alle). Abbrechen speichert nichts; leer lassen =
-   * kein eigener Titel in dieser Sprache. Die Sprachnamen stehen in der eigenen Sprache (wie in der Sprachwahl).
-   */
-  editKidsTitles(book: Book): void {
-    const languages = [['de', 'Deutsch'], ['en', 'English'], ['hr', 'Hrvatski'], ['hu', 'Magyar']];
-    this.prompts.ask({
-      title: this.translate.instant('admin.books.kidsTitles'),
-      hint: this.translate.instant('admin.books.kidsTitlesHint'),
-      fields: languages.map(([code, name]) => ({ key: code, label: name, value: book.kidsTitles?.[code] ?? '' })),
-    }).subscribe(res => {
-      if (!res) return;
-      const titles: Record<string, string> = {};
-      for (const [code] of languages) titles[code] = (res[code] ?? '').trim();
-      this.adminService.updateBook(book.id, { kidsTitles: titles }).subscribe({
-        next: saved => { book.kidsTitles = saved.kidsTitles; },
-        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save')),
-      });
-    });
-  }
-
-  /** Privates Buch eines ANDEREN Kontos (Nutzer-Import/-Upload) — in der Liste markiert (N9-010). */
-  isForeignBook(book: Book): boolean {
-    return book.ownerUserId != null && book.ownerUserId !== this.auth.currentUser?.userId;
-  }
-
-  /** „Öffentlich" und „Kinder" schalten ein Buch ohne Anmeldung frei — beim EINSCHALTEN erst nachfragen (F5-013).
-   *  Bei einem privaten Buch eines anderen Kontos fragen auch die Pools (Täglich/Zufall/Blind, ebenfalls anonym
-   *  lesbar) nach und nennen den Besitzer (N9-010). Abbrechen stellt den Schalter zurück, Ausschalten speichert sofort. */
-  toggleExposure(book: Book, field: 'isPublic' | 'forKids' | 'forDaily' | 'forRandom' | 'forBlind'): void {
-    const foreign = this.isForeignBook(book);
-    if (!book[field] || (!foreign && field !== 'isPublic' && field !== 'forKids')) { this.saveBook(book); return; }
-    const key = foreign ? 'admin.books.confirmForeign'
-      : field === 'isPublic' ? 'admin.books.confirmPublic' : 'admin.books.confirmKids';
-    const params = foreign ? { name: book.displayName, owner: book.ownerName || `#${book.ownerUserId}` } : { name: book.displayName };
-    this.confirm.ask(key, params).subscribe(ok => {
-      if (ok) this.saveBook(book);
-      else book[field] = false;
-    });
-  }
-
-  saveBook(book: Book): void {
-    this.adminService.updateBook(book.id, {
-      forDaily: book.forDaily,
-      forRandom: book.forRandom,
-      forBlind: book.forBlind,
-      isPublic: book.isPublic,
-      forKids: book.forKids,
-      publicSlug: book.publicSlug ?? '',
-      kind: book.kind,
-      // Geleertes Elo-Feld = null; der Endpunkt liest null als „unverändert", 0 entfernt die Grenze (N9-009).
-      minElo: book.minElo ?? 0,
-      maxElo: book.maxElo ?? 0
-    }).subscribe({
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save'));
-        this.loadBooks(); // Stand zurücksetzen
-      }
-    });
-  }
-
-  saveBookGroups(book: Book): void {
-    this.adminService.updateBookGroups(book.id, book.accessGroupIds ?? []).subscribe({
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.saveGroups'));
-        this.loadBooks(); // Stand zurücksetzen
-      }
-    });
-  }
-
-  deleteBook(book: Book): void {
-    this.confirm.ask(book.puzzleCount === 1 ? 'admin.books.deleteConfirmOne' : 'admin.books.deleteConfirm', { name: book.displayName, count: book.puzzleCount }).subscribe(ok => {
-      if (!ok) return;
-
-      this.adminService.deleteBook(book.id).subscribe({
-        next: () => {
-          this.snackbar.info(this.translate.instant('admin.books.deleted', { name: book.displayName }));
-          this.loadBooks();
-        },
-        error: err => {
-          this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.delete'));
-        }
-      });
-    });
-  }
-
-
-  // --- Gruppen ----------------------------------------------------------
-  /** Tabs, die Gruppen nur zur Auswahl brauchen (ohne groups.manage aus {@link loadGroupOptions}). */
-  private static readonly GroupChoiceTabs: readonly AdminTabKey[] = ['books', 'menu', 'roles'];
-
-  /** Nur Id + Name je Gruppe — für Rechteinhaber ohne groups.manage (F5-005-Nachlauf). */
-  loadGroupOptions(): void {
-    this.adminService.getGroupOptions().subscribe({
-      next: options => {
-        this.groupOptions = options;
-        this.groupOptionsLoaded = true;
-      },
-      error: () => this.snackbar.info(this.translate.instant('admin.groups.errors.load')),
-    });
-  }
-
-  loadGroups(): void {
-    this.groupsLoading = true;
-    this.adminService.getGroups().subscribe({
-      next: groups => {
-        this.groups = groups;
-        this.groupsLoaded = true;
-        this.groupOptions = groups;
-        this.groupOptionsLoaded = true;
-        this.groupsLoading = false;
-        // Auswahl aktualisieren, falls die gewählte Gruppe noch existiert
-        if (this.selectedGroup) {
-          this.selectedGroup = groups.find(g => g.id === this.selectedGroup!.id) ?? null;
-        }
-      },
-      error: () => {
-        this.snackbar.info(this.translate.instant('admin.groups.errors.load'));
-        this.groupsLoading = false;
-      }
-    });
-  }
-
-  /** Obere Schranke der ins Mitglieder-Dropdown geladenen User. Bewusst hart: das Dropdown ist
-   *  für einen kleinen Nutzerkreis gedacht; die paginierte User-TABELLE (loadUsers) ist davon
-   *  unberührt. Sollte der Bestand die Schranke je überschreiten, wird das geloggt, damit der Cap
-   *  sichtbar wird (statt still abzuschneiden) — dann ist ein Such-/Lazy-Picker fällig. */
-  private static readonly MEMBER_PICKER_CAP = 500;
-
-  loadAllUsers(): void {
-    const cap = AdminComponent.MEMBER_PICKER_CAP;
-    this.adminService.getUsers('', 1, cap).subscribe({
-      next: res => {
-        this.allUsers = res.items;
-        if (res.totalCount > cap) {
-          // Cap erreicht → das Dropdown zeigt nicht alle User. Nicht still schlucken.
-          console.warn(`[admin] Mitglieder-Dropdown auf ${cap} von ${res.totalCount} Usern begrenzt — Such-Picker erwägen.`);
-        }
-        this.recomputeAvailableUsers();
-      },
-      error: () => this.snackbar.info(this.translate.instant('admin.users.errors.load'))
-    });
-  }
-
-  createGroup(): void {
-    const name = this.newGroupName.trim();
-    if (!name) return;
-    this.adminService.createGroup(name, this.newGroupDescription.trim() || null).subscribe({
-      next: () => {
-        this.snackbar.info(this.translate.instant('admin.groups.created', { name }));
-        this.newGroupName = '';
-        this.newGroupDescription = '';
-        this.loadGroups();
-      },
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.create'));
-      }
-    });
-  }
-
-  deleteGroup(group: Group): void {
-    this.confirm.ask('admin.groups.deleteConfirm', { name: group.name }).subscribe(ok => {
-      if (!ok) return;
-      this.adminService.deleteGroup(group.id).subscribe({
-        next: () => {
-          this.snackbar.info(this.translate.instant('admin.groups.deleted', { name: group.name }));
-          if (this.selectedGroup?.id === group.id) {
-            this.membersRequest.cancel();
-            this.membersLoading = false;
-            this.selectedGroup = null;
-            this.groupMembers = [];
-            this.recomputeAvailableUsers();
-          }
-          this.loadGroups();
-        },
-        error: err => {
-          this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.delete'));
-        }
-      });
-    });
-  }
-
-  selectGroup(group: Group): void {
-    this.selectedGroup = group;
-    this.memberSearch = '';
-    this.searchResults = null;
-    this.loadMembers(group.id);
-    this.loadGroupGoal(group.id);
-  }
-
-  loadGroupGoal(groupId: number): void {
-    this.goalLoading = true;
-    this.goalLoaded = false;
-    this.goalHasTemplate = false;
-    this.goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
-    this.adminService.getGroupTrainingGoal(groupId).subscribe({
-      next: g => {
-        if (this.selectedGroup && this.selectedGroup.id !== groupId) return;   // veraltete Antwort
-        this.goalHasTemplate = g.source === 'group';
-        this.goalEdit = {
-          dailyMinutes: g.dailyMinutes,
-          playGames: g.playGames,
-          weeklyDaysTarget: g.weeklyDaysTarget,
-        };
-        this.goalLoaded = true;
-        this.goalLoading = false;
-      },
-      error: () => {
-        if (this.selectedGroup && this.selectedGroup.id !== groupId) return;
-        this.snackbar.info(this.translate.instant('admin.groups.goal.errors.load'));
-        this.goalLoading = false;
-      }
-    });
-  }
-
-  saveGroupGoal(): void {
-    if (!this.selectedGroup || !this.goalLoaded) return;
-    const goal = {
-      dailyMinutes: clampGoal(this.goalEdit.dailyMinutes, 600),
-      playGames: clampGoal(this.goalEdit.playGames, 200),
-      weeklyDaysTarget: clampGoal(this.goalEdit.weeklyDaysTarget, 7),
-    };
-    this.adminService.setGroupTrainingGoal(this.selectedGroup.id, goal).subscribe({
-      next: () => { this.goalHasTemplate = true; this.snackbar.info(this.translate.instant('admin.groups.goal.saved')); },
-      error: () => this.snackbar.info(this.translate.instant('admin.groups.goal.errors.save')),
-    });
-  }
-
-  clearGroupGoal(): void {
-    if (!this.selectedGroup || !this.goalLoaded) return;
-    const groupId = this.selectedGroup.id;
-    this.adminService.deleteGroupTrainingGoal(groupId).subscribe({
-      next: () => {
-        this.goalHasTemplate = false;
-        this.goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
-        this.snackbar.info(this.translate.instant('admin.groups.goal.cleared'));
-      },
-      error: () => this.snackbar.info(this.translate.instant('admin.groups.goal.errors.save')),
-    });
-  }
-
-  loadMembers(groupId: number): void {
-    this.membersLoading = true;
-    this.membersRequest.run(this.adminService.getGroupMembers(groupId), {
-      next: members => {
-        this.groupMembers = members;
-        this.recomputeAvailableUsers();
-        this.membersLoading = false;
-      },
-      error: () => {
-        this.snackbar.info(this.translate.instant('admin.groups.errors.loadMembers'));
-        this.membersLoading = false;
-      }
-    });
-  }
-
-  /** Nicht-Mitglieder des gewählten Gruppe (Auswahl im „Mitglied hinzufügen"-Dropdown).
-   *  Wird bei Datenänderung neu berechnet statt je CD-Zyklus (Set + filter). */
-  availableUsers: AdminUser[] = [];
-
-  private recomputeAvailableUsers(): void {
-    const memberIds = new Set(this.groupMembers.map(m => m.userId));
-    this.availableUsers = this.allUsers.filter(u => !memberIds.has(u.id));
-    // Ohne Suche die NEUESTEN zuerst (wer gerade dazukommen soll, hat sich meist eben registriert), mit Suche die Treffer
-    // des Servers — auch jenseits der 500 vorab geladenen.
-    const source = this.searchResults ?? [...this.availableUsers].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
-    this.memberCandidates = source.filter(u => !memberIds.has(u.id)).slice(0, AdminComponent.CandidateLimit);
-  }
-
-  onMemberSearch(q: string): void {
-    if (q.trim().length < 2) { this.searchResults = null; this.recomputeAvailableUsers(); }
-    this.memberSearch$.next(q);
-  }
-
-  addMember(user: AdminUser): void {
-    if (!this.selectedGroup || this.addingUserId) return;
-    const groupId = this.selectedGroup.id;
-    this.addingUserId = user.id;
-    this.adminService.addGroupMember(groupId, user.id).subscribe({
-      next: () => {
-        this.addingUserId = null;
-        this.snackbar.info(this.translate.instant('admin.groups.added', { name: user.username }));
-        if (this.selectedGroup?.id === groupId) this.loadMembers(groupId);   // inzwischen andere Gruppe gewählt → deren Liste bleibt
-        this.loadGroups(); // Mitgliederzahl aktualisieren
-      },
-      error: err => {
-        this.addingUserId = null;
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.addMember'));
-      }
-    });
-  }
-
-  // --- Gruppe in Gruppe ---------------------------------------------------
-  /** Die direkt in der gewählten Gruppe enthaltenen Gruppen. */
-  includedGroups(): Group[] {
-    const ids = new Set(this.selectedGroup?.includedGroupIds ?? []);
-    return this.groups.filter(g => ids.has(g.id));
-  }
-
-  /** Namen der direkt enthaltenen Gruppen einer Zeile (Tabelle). */
-  includedNames(g: Group): string {
-    const ids = new Set(g.includedGroupIds ?? []);
-    return this.groups.filter(o => ids.has(o.id)).map(o => o.name).join(', ');
-  }
-
-  enclosingNames(): string {
-    return this.enclosingGroups().map(g => g.name).join(', ');
-  }
-
-  /** Gruppen, die die gewählte Gruppe direkt enthalten. */
-  enclosingGroups(): Group[] {
-    const id = this.selectedGroup?.id;
-    return this.groups.filter(g => id != null && (g.includedGroupIds ?? []).includes(id));
-  }
-
-  /** Aufnehmbare Gruppen: nicht sie selbst, nicht „Everyone", nicht schon enthalten (Kreise lehnt der Server ab). */
-  includableGroups(): Group[] {
-    const g = this.selectedGroup;
-    if (!g) return [];
-    const ids = new Set(g.includedGroupIds ?? []);
-    return this.groups.filter(o => o.id !== g.id && !o.isEveryone && !ids.has(o.id));
-  }
-
-  addInclusion(includedId: number | null): void {
-    if (!this.selectedGroup || includedId == null) return;
-    const groupId = this.selectedGroup.id;
-    this.adminService.addGroupInclusion(groupId, includedId).subscribe({
-      next: () => {
-        if (this.selectedGroup?.id === groupId) this.loadMembers(groupId);
-        this.loadGroups();
-      },
-      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.include')),
-    });
-  }
-
-  removeInclusion(included: Group): void {
-    if (!this.selectedGroup) return;
-    const group = this.selectedGroup;
-    this.confirm.ask('admin.groups.removeIncludeConfirm', { included: included.name, group: group.name }).subscribe(ok => {
-      if (!ok) return;
-      this.adminService.removeGroupInclusion(group.id, included.id).subscribe({
-        next: () => {
-          if (this.selectedGroup?.id === group.id) this.loadMembers(group.id);
-          this.loadGroups();
-        },
-        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.include')),
-      });
-    });
-  }
-
-  /** Mitglied aus der Gruppe nehmen — erst nach Rückfrage (F5-016): das ✕ am Chip liegt klein neben dem Namen. */
-  removeMember(member: GroupMember): void {
-    if (!this.selectedGroup) return;
-    const group = this.selectedGroup;
-    this.confirm.ask('admin.groups.removeMemberConfirm', { username: member.username, group: group.name }).subscribe(ok => {
-      if (!ok) return;
-      this.adminService.removeGroupMember(group.id, member.userId).subscribe({
-        next: () => {
-          if (this.selectedGroup?.id === group.id) this.loadMembers(group.id);
-          this.loadGroups(); // Mitgliederzahl aktualisieren
-        },
-        error: err => {
-          this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.removeMember'));
-        }
-      });
-    });
+    this.selectedTab.set(key);
+    if (AdminComponent.KeptTabKeys.includes(key) && !this.keptTabs().has(key)) {
+      this.keptTabs.update(s => new Set([...s, key]));
+    }
   }
 }

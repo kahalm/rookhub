@@ -1,0 +1,142 @@
+<div class="tab-content">
+  <!-- UI-Sweep z2 (z2-rk-admin-suche-abstand): kein reservierter Hilfstext-Platz unter dem Suchfeld. -->
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-label>{{ 'admin.users.searchLabel' | translate }}</mat-label>
+    <input matInput [(ngModel)]="userSearch" (keyup.enter)="loadUsers()">
+    <button matSuffix mat-icon-button (click)="loadUsers()">
+      <mat-icon>search</mat-icon>
+    </button>
+  </mat-form-field>
+
+  @if (usersLoading()) {
+    <app-loading-spinner />
+  } @else {
+    <div class="table-responsive users-table-wrap">
+    <table mat-table [dataSource]="users()" class="full-width users-table">
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.id' | translate }}</th>
+        <td mat-cell *matCellDef="let u">{{ u.id }}</td>
+      </ng-container>
+      <ng-container matColumnDef="username">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.username' | translate }}</th>
+        <td mat-cell *matCellDef="let u">{{ u.username }}</td>
+      </ng-container>
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.email' | translate }}</th>
+        <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+      </ng-container>
+      <ng-container matColumnDef="isAdmin">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.admin' | translate }}</th>
+        <td mat-cell *matCellDef="let u">
+          @if (u.isAdmin) {
+            <mat-icon class="admin-badge">shield</mat-icon>
+          }
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="groups">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.groups' | translate }}</th>
+        <td mat-cell *matCellDef="let u">
+          @if (u.groups?.length) {
+            <mat-chip-set>
+              @for (g of u.groups; track g) {
+                <mat-chip class="group-chip">{{ g }}</mat-chip>
+              }
+            </mat-chip-set>
+          } @else {
+            <span class="no-groups">–</span>
+          }
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="createdAt">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.created' | translate }}</th>
+        <td mat-cell *matCellDef="let u">{{ u.createdAt | date:'short' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.actions' | translate }}</th>
+        <td mat-cell *matCellDef="let u">
+          <!-- F5-005: Admin-Konten fasst nur ein Admin an, das Admin-Flag setzt nur ein Admin (Server: 403). -->
+          @if (canManageUser(u)) {
+          <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId() === u.id" [attr.title]="'admin.users.impersonate' | translate">
+            <mat-icon>login</mat-icon>
+          </button>
+          <button mat-icon-button (click)="createResetLink(u)" [disabled]="resetLinkBusyId() === u.id" [attr.title]="'admin.users.resetLink.action' | translate">
+            <mat-icon>key</mat-icon>
+          </button>
+          @if (actorIsAdmin) {
+          <button mat-icon-button (click)="toggleAdmin(u)" [disabled]="adminBusyId() === u.id" [attr.title]="'admin.users.toggleAdmin' | translate">
+            <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
+          </button>
+          }
+          <button mat-icon-button color="warn" (click)="deleteUser(u)" [attr.title]="'admin.users.deleteUser' | translate">
+            <mat-icon>delete</mat-icon>
+          </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="userColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: userColumns;"></tr>
+    </table>
+    </div>
+
+    <!-- UI-Sweep 2026-10-11 (r2-rk-admin-users-mobile): unter 900 px Karten statt der breiten Tabelle.
+         a1-rk-admin-nutzer-schmal: zwei Teile — links Name/Meta/Mail/Gruppen, rechts Einsteigen + ⋮ oben
+         in der ersten Zeile (nie allein in einer eigenen Zeile, DESIGN 5.2). -->
+    <div class="user-cards">
+      @for (u of users(); track u.id) {
+        <div class="user-card">
+          <div class="uc-head">
+            <div class="uc-main">
+              <div class="uc-title">
+                <strong class="uc-name">{{ u.username }}</strong>
+                <span class="uc-meta">#{{ u.id }}@if (u.isAdmin) { · {{ 'admin.users.columns.admin' | translate }} }</span>
+              </div>
+              @if (u.email) { <div class="uc-mail">{{ u.email }}</div> }
+              @if (u.groups?.length) {
+                <div class="uc-row">
+                  @for (g of u.groups ?? []; track g) { <span class="uc-group">{{ g }}</span> }
+                </div>
+              }
+            </div>
+            @if (canManageUser(u)) {
+            <div class="uc-actions">
+              <button mat-icon-button (click)="impersonate(u)" [disabled]="impersonatingId() === u.id" [appIconLabel]="'admin.users.impersonate' | translate">
+                <mat-icon>login</mat-icon>
+              </button>
+              <button mat-icon-button [matMenuTriggerFor]="userMenu"
+                      [attr.aria-label]="'common.moreActions' | translate">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #userMenu="matMenu">
+                <button mat-menu-item (click)="createResetLink(u)" [disabled]="resetLinkBusyId() === u.id">
+                  <mat-icon>key</mat-icon>
+                  <span>{{ 'admin.users.resetLink.action' | translate }}</span>
+                </button>
+                @if (actorIsAdmin) {
+                <button mat-menu-item (click)="toggleAdmin(u)" [disabled]="adminBusyId() === u.id">
+                  <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
+                  <span>{{ 'admin.users.toggleAdmin' | translate }}</span>
+                </button>
+                }
+                <button mat-menu-item class="delete-item" (click)="deleteUser(u)">
+                  <mat-icon>delete</mat-icon>
+                  <span>{{ 'admin.users.deleteUser' | translate }}</span>
+                </button>
+              </mat-menu>
+            </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <mat-paginator
+      [length]="usersTotalCount()"
+      [pageSize]="usersPageSize()"
+      [pageIndex]="usersPage() - 1"
+      [pageSizeOptions]="[10, 20, 50]"
+      (page)="onUsersPageChange($event)"
+      showFirstLastButtons>
+    </mat-paginator>
+  }
+</div>

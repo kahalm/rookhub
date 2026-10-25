@@ -1,0 +1,175 @@
+<div class="tab-content">
+  <div class="group-create">
+    <mat-form-field appearance="outline" class="group-name-field">
+      <mat-label>{{ 'admin.groups.newGroup' | translate }}</mat-label>
+      <input matInput [(ngModel)]="newGroupName" (keyup.enter)="createGroup()" [placeholder]="'admin.groups.namePlaceholder' | translate">
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="group-desc-field">
+      <mat-label>{{ 'admin.groups.descriptionOptional' | translate }}</mat-label>
+      <input matInput [(ngModel)]="newGroupDescription" (keyup.enter)="createGroup()">
+    </mat-form-field>
+    <button mat-flat-button color="primary" (click)="createGroup()" [disabled]="!newGroupName().trim()">
+      <mat-icon>add</mat-icon> {{ 'admin.groups.create' | translate }}
+    </button>
+  </div>
+
+  @if (groupsLoading()) {
+    <app-loading-spinner />
+  } @else if (groups().length === 0) {
+    <p class="empty-state">{{ 'admin.groups.empty' | translate }}</p>
+  } @else {
+    <div class="group-layout">
+      <table mat-table [dataSource]="groups()" class="full-width group-table">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.group' | translate }}</th>
+          <td mat-cell *matCellDef="let g">
+            <strong>{{ g.name }}</strong>
+            @if (g.isEveryone) {
+              <mat-chip class="everyone-chip" disabled>{{ 'admin.groups.everyoneBadge' | translate }}</mat-chip>
+            }
+            @if (g.description) { <div class="group-desc">{{ g.description }}</div> }
+            @if (g.includedGroupIds?.length) {
+              <div class="group-desc">{{ 'admin.groups.includesShort' | translate: { names: includedNames(g) } }}</div>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="memberCount">
+          <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.members' | translate }}</th>
+          <td mat-cell *matCellDef="let g">{{ g.memberCount }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>{{ 'admin.groups.columns.actions' | translate }}</th>
+          <td mat-cell *matCellDef="let g">
+            <button mat-icon-button (click)="selectGroup(g)" [attr.title]="'admin.groups.manageMembers' | translate">
+              <mat-icon>group</mat-icon>
+            </button>
+            @if (!g.isEveryone) {
+              <button mat-icon-button color="warn" (click)="deleteGroup(g)" [attr.title]="'admin.groups.deleteGroup' | translate">
+                <mat-icon>delete</mat-icon>
+              </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="groupColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: groupColumns;"
+            [class.selected-group]="selectedGroup()?.id === row.id"></tr>
+      </table>
+
+      @if (selectedGroup(); as sel) {
+        <mat-card class="member-panel">
+          <mat-card-header>
+            <mat-card-title>{{ 'admin.groups.membersOf' | translate: { name: sel.name } }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @if (sel.isEveryone) {
+              <p class="everyone-hint">{{ 'admin.groups.everyoneHint' | translate }}</p>
+            } @else {
+              <!-- Hinzufügen: Suche + Liste statt Dropdown (0.591.0) — ohne Suche die neuesten Konten zuerst -->
+              <div class="member-add">
+                <mat-form-field appearance="outline" class="member-search" subscriptSizing="dynamic">
+                  <mat-label>{{ 'admin.groups.addUser' | translate }}</mat-label>
+                  <input matInput [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch($event)"
+                         [placeholder]="'admin.groups.searchUser' | translate" />
+                  <mat-icon matSuffix>search</mat-icon>
+                </mat-form-field>
+                <ul class="member-candidates">
+                  @for (u of memberCandidates(); track u.id) {
+                    <li>
+                      <span class="cand-name">{{ u.username }}</span>
+                      <span class="cand-meta">{{ u.createdAt | date:'mediumDate' }}@if (u.groups?.length) { · {{ u.groups.join(', ') }} }</span>
+                      <button mat-stroked-button color="primary" [disabled]="addingUserId() === u.id" (click)="addMember(u)">
+                        <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
+                      </button>
+                    </li>
+                  } @empty {
+                    <li class="empty-hint">{{ 'admin.groups.noCandidates' | translate }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (membersLoading()) {
+              <app-loading-spinner />
+            } @else if (groupMembers().length === 0) {
+              <p class="empty-state">{{ 'admin.groups.noMembers' | translate }}</p>
+            } @else {
+              <mat-chip-set>
+                @for (m of groupMembers(); track m.userId) {
+                  <mat-chip (removed)="removeMember(m)" [class.inherited-member]="m.direct === false"
+                            [attr.title]="m.via?.length ? ('admin.groups.via' | translate: { names: m.via!.join(', ') }) : null">
+                    {{ m.username }}
+                    @if (m.via?.length) { <span class="member-via">· {{ m.via!.join(', ') }}</span> }
+                    @if (!sel.isEveryone && m.direct !== false) {
+                      <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
+                    }
+                  </mat-chip>
+                }
+              </mat-chip-set>
+            }
+
+            @if (!sel.isEveryone) {
+              <!-- Gruppe in Gruppe (2026-10-14): Mitglieder enthaltener Gruppen gehören hier mit dazu -->
+              <h4 class="include-title">{{ 'admin.groups.includesTitle' | translate }}</h4>
+              <p class="group-desc">{{ 'admin.groups.includesHint' | translate: { name: sel.name } }}</p>
+              <mat-chip-set>
+                @for (inc of includedGroups(); track inc.id) {
+                  <mat-chip (removed)="removeInclusion(inc)">
+                    {{ inc.name }}
+                    <button matChipRemove [attr.aria-label]="'common.remove' | translate"><mat-icon>cancel</mat-icon></button>
+                  </mat-chip>
+                }
+              </mat-chip-set>
+              @if (includableGroups().length) {
+                <mat-form-field appearance="outline" class="include-select" subscriptSizing="dynamic">
+                  <mat-label>{{ 'admin.groups.includeAdd' | translate }}</mat-label>
+                  <mat-select [value]="null" (selectionChange)="addInclusion($event.value); $event.source.writeValue(null)">
+                    @for (o of includableGroups(); track o.id) {
+                      <mat-option [value]="o.id">{{ o.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
+              @if (enclosingGroups().length) {
+                <p class="group-desc">{{ 'admin.groups.includedIn' | translate: { names: enclosingNames() } }}</p>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="member-panel">
+          <mat-card-header>
+            <mat-card-title>{{ 'admin.groups.goal.title' | translate }}</mat-card-title>
+            <mat-card-subtitle>{{ 'admin.groups.goal.hint' | translate }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (goalLoading()) {
+              <app-loading-spinner />
+            } @else {
+              <div class="goal-fields">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>{{ 'trainingGoals.dailyGoal' | translate }} ({{ 'trainingGoals.min' | translate }})</mat-label>
+                  <input matInput type="number" min="0" max="600" [(ngModel)]="goalEdit.dailyMinutes" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>{{ 'trainingGoals.cat.play' | translate }} ({{ 'trainingGoals.gamesPerWeek' | translate }})</mat-label>
+                  <input matInput type="number" min="0" max="200" [(ngModel)]="goalEdit.playGames" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>{{ 'trainingGoals.weeklyDays' | translate }}</mat-label>
+                  <input matInput type="number" min="0" max="7" [(ngModel)]="goalEdit.weeklyDaysTarget" />
+                </mat-form-field>
+              </div>
+              <div class="goal-actions">
+                <button mat-flat-button color="primary" [disabled]="!goalLoaded()" (click)="saveGroupGoal()">{{ 'common.save' | translate }}</button>
+                @if (goalHasTemplate() && goalLoaded()) {
+                  <button mat-button (click)="clearGroupGoal()">{{ 'admin.groups.goal.clear' | translate }}</button>
+                }
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</div>
