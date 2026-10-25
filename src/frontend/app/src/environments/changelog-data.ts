@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.18", date: "2026-10-25", changes: [
+    { en: "Technical refactoring (code review 2026-09-29, decomposition Z7 follow-up): the last four federation calendars (Ireland, Slovakia, Poland, France) now run through the shared sync loop with golden tests, so all fifteen use one loop — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Nachlauf Zerlegung Z7): Die letzten vier Verbandskalender (Irland, Slowakei, Polen, Frankreich) laufen über die gemeinsame Abgleichschleife mit Golden-Tests, damit alle fünfzehn über eine Schleife — keine sichtbare Änderung." },
+  ]},
   { version: "0.832.17", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z31): the LeagueHub pages „Add games“ and „Check scoresheet“ are split into pure stores (draft, scoresheet upload), panels (PGN source, scoresheet, side form, export actions) and helpers (merge, export) — no visible change; inputs survive switching between game data and scoresheet as before.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z31): Die LeagueHub-Seiten „Partien hinzufügen“ und „Partieformular prüfen“ sind in reine Stores (Entwurf, Formular-Upload), Panels (PGN-Quelle, Formular, Seiten-Formular, Export-Aktionen) und Helfer (Zusammenführen, Export) zerlegt — keine sichtbare Änderung; Eingaben bleiben beim Wechsel Partiedaten ↔ Partieformular wie bisher erhalten." },
   ]},
