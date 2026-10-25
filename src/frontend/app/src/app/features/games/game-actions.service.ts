@@ -1,4 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { DestroyRef, Injectable, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { TranslateService } from '@ngx-translate/core';
@@ -8,7 +9,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
 import { GameAnalysisService } from '../analysis/game-analysis.service';
-import { GamesService } from './games.service';
+import { GamesService, SavedGameDetail } from './games.service';
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
@@ -25,7 +26,9 @@ export interface PgnFileSource {
 /**
  * Die Aktionen an EINER Partie (Vereinheitlichungs-Karte V33, Zerlegung Z26): PGN kopieren/herunterladen,
  * Teilen-Links kopieren, löschen, im Analysebrett öffnen, Formular-Foto, Roast, Lc0-Analyse anstoßen.
- * Eine Fassung je Aktion samt Rückmeldung; die Seite entscheidet nur, ob die Aktion angeboten wird.
+ * Eine Fassung je Aktion samt Rückmeldung; die Seite entscheidet nur, ob die Aktion angeboten wird. Die Partienliste
+ * hat das PGN nicht und nutzt die Varianten `…Of(id)`: sie laden die Partie erst nach (Fehlschlag → „games.loadError");
+ * das Löschen liefert `true`, damit die Liste die Zeile selbst herausnimmt.
  *
  * <p>Je SEITE bereitgestellt (`providers` der Komponente), nicht in der Wurzel: so öffnen die Dialoge über denselben
  * `MatDialog` (samt Injektor der Seite) wie vorher aus der Komponente heraus.</p>
@@ -40,22 +43,28 @@ export class GameActionsService {
   private confirm = inject(ConfirmService);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
+  private destroyRef = inject(DestroyRef);
 
   /** Das PGN in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */
   copyPgn(pgn: string | null | undefined): void {
     if (!pgn) return;
-    navigator.clipboard?.writeText(pgn).then(
-      () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
-      () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
-    );
+    this.writePgn(pgn);
+  }
+
+  /** Listen-Variante von {@link copyPgn}: PGN der Partie erst nachladen. */
+  copyPgnOf(gameId: number): void {
+    this.withDetail(gameId, detail => this.writePgn(detail.pgn));
   }
 
   /** Das PGN als Datei „Weiß_Schwarz_Datum.pgn". */
   downloadPgn(g: PgnFileSource | null | undefined): void {
     if (!g?.pgn) return;
-    const players = [g.white, g.black].filter(n => !!n).join(' ');
-    downloadBlob(new Blob([g.pgn.endsWith('\n') ? g.pgn : g.pgn + '\n'], { type: 'application/x-chess-pgn' }),
-      pgnFileName(players || 'game', (g.playedAt ?? g.createdAt ?? '').slice(0, 10)));
+    this.savePgnFile(g.pgn, g);
+  }
+
+  /** Listen-Variante von {@link downloadPgn}: PGN der Partie erst nachladen. */
+  downloadPgnOf(gameId: number): void {
+    this.withDetail(gameId, detail => this.savePgnFile(detail.pgn ?? '', detail));
   }
 
   /** Teilen-Link einer Partie in die Zwischenablage; scheitert das, steht der Link in der Meldung. */
@@ -104,10 +113,15 @@ export class GameActionsService {
     void this.router.navigate(['/analysis'], { state: { pgn }, queryParams: { from } });
   }
 
+  /** Listen-Variante von {@link openInAnalysis}: PGN der Partie erst nachladen (Übergabe via Router-State). */
+  openInAnalysisOf(gameId: number, from: string): void {
+    this.withDetail(gameId, detail => void this.router.navigate(['/analysis'], { state: { pgn: detail.pgn }, queryParams: { from } }));
+  }
+
   /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
   photo(gameId: number, download: boolean): void {
     if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, gameId); return; }
-    this.scoresheets.photo(gameId).subscribe({
+    this.scoresheets.photo(gameId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: blob => openPhotoBlob(blob, photoFileName(gameId, blob)),
       error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
     });
@@ -146,6 +160,27 @@ export class GameActionsService {
     this.gameAnalyses.restart(id).subscribe({
       next: () => { this.snackbar.success(this.translate.instant('games.lc0.restarted')); done(); },
       error: () => this.snackbar.warn(this.translate.instant('games.lc0.restartFailed')),
+    });
+  }
+
+  private writePgn(pgn: string): void {
+    navigator.clipboard?.writeText(pgn).then(
+      () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
+      () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
+    );
+  }
+
+  private savePgnFile(pgn: string, g: Omit<PgnFileSource, 'pgn'>): void {
+    const players = [g.white, g.black].filter(n => !!n).join(' ');
+    downloadBlob(new Blob([pgn.endsWith('\n') ? pgn : pgn + '\n'], { type: 'application/x-chess-pgn' }),
+      pgnFileName(players || 'game', (g.playedAt ?? g.createdAt ?? '').slice(0, 10)));
+  }
+
+  /** Partie nachladen (Liste: dort fehlt das PGN); scheitert das, „games.loadError". */
+  private withDetail(gameId: number, then: (detail: SavedGameDetail) => void): void {
+    this.games.get(gameId).subscribe({
+      next: then,
+      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
     });
   }
 }

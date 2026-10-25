@@ -22,19 +22,14 @@ import { distinctTags, filterByTag } from './tags.util';
 import { distinctClassifiers, filterByClassifiers, hasUnclassified, NO_CLASSIFIER } from './classifier.util';
 import { classifierToParam } from './mistakes-collection.util';
 import { AnalyzeGameService } from './analyze-game.service';
+import { GameActionsService } from './game-actions.service';
 import { gameSourceIcon, gameSourceLabel } from './game-source';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
-import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
-import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { PctPipe, formatPct } from '../../shared/format/pct';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
-import { downloadBlob } from '../../shared/download.util';
-import { pgnFileName } from '../../shared/pgn-export.util';
 
 /** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
 export const ANALYSIS_POLL_MS = 10_000;
@@ -46,6 +41,8 @@ export type AnalysisState = 'none' | 'running' | 'done';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-games-list',
   standalone: true,
+  // Je Seite bereitgestellt (wie auf der Partieseite): die Dialoge öffnen über den MatDialog dieser Seite.
+  providers: [GameActionsService],
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
@@ -523,9 +520,8 @@ export class GamesListComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
   private analyzeGame = inject(AnalyzeGameService);
-  private scoresheets = inject(ScoresheetService);
   private dialog = inject(MatDialog);
-  private confirm = inject(ConfirmService);
+  private actions = inject(GameActionsService);
   private poll?: Subscription;
 
   constructor(
@@ -622,71 +618,39 @@ export class GamesListComponent implements OnInit {
       });
   }
 
-  /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
+  /** ⋮-Aktionen: eine Fassung mit der Partieseite (V33, `GameActionsService`); die Liste lädt das PGN je Aktion nach. */
   /** „Roast my game" (0.535.0). */
   roast(g: SavedGame): void {
-    this.dialog.open(GameRoastDialogComponent, {
-      data: { gameId: g.id, shareUrl: g.shareToken ? this.service.shareUrl(g.shareToken) : null, shareToken: g.shareToken ?? null } satisfies GameRoastData,
-      maxWidth: '96vw',
-    });
+    this.actions.roast(g.id, g.shareToken ?? null);
   }
 
+  /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
   photo(g: SavedGame, download: boolean): void {
-    if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, g.id); return; }
-    this.scoresheets.photo(g.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: blob => openPhotoBlob(blob, photoFileName(g.id, blob)),
-      error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
-    });
+    this.actions.photo(g.id, download);
   }
 
   /** PGN nachladen und in der Analyse-Seite öffnen (Übergabe via Router-State). */
   openInAnalysis(g: SavedGame): void {
-    this.service.get(g.id).subscribe({
-      next: detail => this.router.navigate(['/analysis'], { state: { pgn: detail.pgn }, queryParams: { from: '/games' } }),
-      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
-    });
+    this.actions.openInAnalysisOf(g.id, '/games');
   }
 
   /** Eindeutigen Teilen-Link in die Zwischenablage kopieren. */
   share(g: SavedGame): void {
-    const url = this.service.shareUrl(g.shareToken);
-    navigator.clipboard?.writeText(url).then(
-      () => this.snackbar.copy(this.translate.instant('games.shareCopied')),
-      () => this.snackbar.warn(url),
-    );
+    this.actions.copyShareLink(g.shareToken);
   }
 
   /** PGN nachladen und in die Zwischenablage (wie „PGN kopieren“ auf der Partieseite). */
   copyPgn(g: SavedGame): void {
-    this.service.get(g.id).subscribe({
-      next: detail => navigator.clipboard?.writeText(detail.pgn).then(
-        () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
-        () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
-      ),
-      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
-    });
+    this.actions.copyPgnOf(g.id);
   }
 
   /** PGN nachladen und als Datei „Weiß Schwarz_Datum.pgn“ speichern (wie auf der Partieseite). */
   downloadPgn(g: SavedGame): void {
-    this.service.get(g.id).subscribe({
-      next: detail => {
-        const pgn = detail.pgn ?? '';
-        const players = [detail.white, detail.black].filter(n => !!n).join(' ');
-        downloadBlob(new Blob([pgn.endsWith('\n') ? pgn : pgn + '\n'], { type: 'application/x-chess-pgn' }),
-          pgnFileName(players || 'game', (detail.playedAt ?? detail.createdAt ?? '').slice(0, 10)));
-      },
-      error: () => this.snackbar.warn(this.translate.instant('games.loadError')),
-    });
+    this.actions.downloadPgnOf(g.id);
   }
 
+  /** Löschen mit Rückfrage; danach fällt die Zeile aus der Liste. */
   remove(g: SavedGame): void {
-    this.confirm.ask('games.deleteConfirm').subscribe(ok => {
-      if (!ok) return;
-      this.service.delete(g.id).subscribe({
-        next: () => { this.games = this.games.filter(x => x.id !== g.id); },
-        error: () => this.snackbar.warn(this.translate.instant('games.deleteError')),
-      });
-    });
+    this.actions.deleteGame(g.id).subscribe(() => { this.games = this.games.filter(x => x.id !== g.id); });
   }
 }

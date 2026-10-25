@@ -84,6 +84,31 @@ describe('GameActionsService', () => {
     expect(nav).toHaveBeenCalledOnceWith(['/analysis'], { state: { pgn: '1. e4' }, queryParams: { from: '/g/x' } });
   });
 
+  it('Listen-Varianten laden das PGN nach; scheitert das, meldet „games.loadError"', async () => {
+    const detail = { id: 4, white: 'a', black: 'b', playedAt: '2026-07-16T10:00:00Z', pgn: '1. d4' };
+    const written: string[] = [];
+    spyOn(navigator.clipboard, 'writeText').and.callFake((t: string) => { written.push(t); return Promise.resolve(); });
+    const names: string[] = [];
+    spyOn(HTMLAnchorElement.prototype, 'click').and.callFake(function (this: HTMLAnchorElement) { names.push(this.download); });
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:x');
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+
+    actions.copyPgnOf(4);
+    http.expectOne({ method: 'GET', url: '/api/games/4' }).flush(detail);
+    actions.downloadPgnOf(4);
+    http.expectOne({ method: 'GET', url: '/api/games/4' }).flush(detail);
+    actions.openInAnalysisOf(4, '/games');
+    http.expectOne({ method: 'GET', url: '/api/games/4' }).flush(detail);
+    await Promise.resolve();
+    expect(written).toEqual(['1. d4']);
+    expect(names).toEqual(['a_b_2026_07_16.pgn']);
+    expect(nav).toHaveBeenCalledOnceWith(['/analysis'], { state: { pgn: '1. d4' }, queryParams: { from: '/games' } });
+
+    actions.copyPgnOf(5);
+    http.expectOne('/api/games/5').flush('x', { status: 404, statusText: 'nf' });
+    expect(snack.warn).toHaveBeenCalledOnceWith('games.loadError');
+  });
+
   it('Roast-Dialog bekommt Teilen-Link und Kennung', () => {
     const open = spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({} as never);
     actions.roast(3, 'tok');
