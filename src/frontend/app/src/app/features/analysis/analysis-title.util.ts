@@ -25,3 +25,12 @@ export function analysisTitle(title: string | null | undefined, texts: AnalysisT
   if (!wMissing && !bMissing) return t;
   return `${wMissing ? texts.noName : white} – ${bMissing ? texts.noName : black}${suffix}`;
 }
+
+/** Titel eines geladenen PGN für den Verlauf: „Weiß – Schwarz" aus den Kopfdaten (ohne „?"), sonst einer der Namen
+ *  oder das Turnier; null, wenn nichts da ist. */
+export function pgnTitle(h: Record<string, string>): string | null {
+  const white = h['White'] && h['White'] !== '?' ? h['White'] : null;
+  const black = h['Black'] && h['Black'] !== '?' ? h['Black'] : null;
+  if (white && black) return `${white} – ${black}`;
+  return white ?? black ?? (h['Event'] && h['Event'] !== '?' ? h['Event'] : null);
+}

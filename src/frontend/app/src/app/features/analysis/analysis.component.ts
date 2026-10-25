@@ -42,6 +42,7 @@ import {
   removeNode,
 } from './analysis-tree';
 import { AnalysisLineModel, boardMove, playLine } from './analysis-line-model';
+import { pgnTitle } from './analysis-title.util';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MaiaSparring } from './maia/maia-sparring';
@@ -700,12 +701,4 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private isValidFen(fen: string): boolean {
     try { new Chess(fen); return true; } catch { return false; }
   }
-}
-
-/** „Weiß – Schwarz" aus den PGN-Kopfdaten (ohne „?"), sonst null. */
-function pgnTitle(h: Record<string, string>): string | null {
-  const white = h['White'] && h['White'] !== '?' ? h['White'] : null;
-  const black = h['Black'] && h['Black'] !== '?' ? h['Black'] : null;
-  if (white && black) return `${white} – ${black}`;
-  return white ?? black ?? (h['Event'] && h['Event'] !== '?' ? h['Event'] : null);
 }
