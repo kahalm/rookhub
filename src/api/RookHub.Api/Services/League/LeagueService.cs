@@ -84,6 +84,7 @@ public sealed class LeagueService
                 DetachViews(_db);
                 continue;
             }
+            BumpViewsEpoch();
             await CleanupSharesAsync(ct);
             _log.LogInformation("LeagueHub: {Count} Ligen der Saison {Season} neu gerechnet", n, season);
             return n;
@@ -109,6 +110,7 @@ public sealed class LeagueService
             try
             {
                 await db.SaveChangesAsync(ct);
+                BumpViewsEpoch();
                 return;
             }
             catch (DbUpdateConcurrencyException) when (attempt < ViewWriteAttempts)
@@ -117,6 +119,15 @@ public sealed class LeagueService
             }
         }
     }
+
+    private static long _viewsEpoch;
+
+    /// <summary>Zähler der Schreibvorgänge auf die Ansichten in diesem Prozess (Rechnen, Patch): Teil des Schlüssels der
+    /// gecachten Teilen-Ansicht (<see cref="PublicShareAsync"/>) — nach einem Patch (Konto, Partienzahl), der
+    /// <see cref="LeagueView.GeneratedAt"/> nicht ändert, wird so trotzdem neu gelesen.</summary>
+    internal static long ViewsEpoch => Interlocked.Read(ref _viewsEpoch);
+
+    private static void BumpViewsEpoch() => Interlocked.Increment(ref _viewsEpoch);
 
     /// <summary>Geladene Ansichten vergessen, damit der nächste Versuch den Stand aus der Datenbank liest (ein noch
     /// verfolgter Eintrag käme sonst mit seinen alten Werten zurück).</summary>
@@ -348,10 +359,14 @@ public sealed class LeagueService
 
     // ---- Teilen-Links -------------------------------------------------------------------------------
 
+    /// <summary>Wie oft diese Instanz eine Liga-Ansicht ganz geparst hat (Tests: Cache der Teilen-Ansicht).</summary>
+    internal int FixtureParses { get; private set; }
+
     private async Task<(JsonObject League, JsonObject Fixture)?> FixtureAsync(int tnr, int round, string team, CancellationToken ct)
     {
         var json = await LeagueJsonAsync(tnr, ct);
         if (json is null) return null;
+        FixtureParses++;
         var l = JsonNode.Parse(json)!.AsObject();
         var fx = l["fixtures"]?[team]?[round.ToString()]?.AsObject();
         return fx is null ? null : (l, fx);
@@ -442,11 +457,32 @@ public sealed class LeagueService
         return await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(s => s.Token == token && s.Expires >= today, ct);
     }
 
-    /// <summary>Öffentliche Ansicht eines Links: genau diese Begegnung, Online-Konten nur „sicher".</summary>
+    /// <summary>So lange hält der Cache die fertige Teilen-Ansicht eines Links (Codereview N4-003).</summary>
+    internal static readonly TimeSpan ShareViewTtl = TimeSpan.FromSeconds(60);
+
+    private sealed record ShareViewKey(string Token, DateOnly Expires, DateTime? GeneratedAt, long Epoch);
+
+    /// <summary>Öffentliche Ansicht eines Links: genau diese Begegnung, Online-Konten nur „sicher".
+    /// <para>Jeder Aufruf der Seite (und <c>/sources</c>) parste die GANZE Liga-Ansicht und klonte die Begegnung (Codereview
+    /// 2026-09-29, N4-003). Jetzt je Link <see cref="ShareViewTtl"/> lang im Cache, Schlüssel samt
+    /// <see cref="LeagueView.GeneratedAt"/> und <see cref="ViewsEpoch"/> (jedes Rechnen/Patchen der Ansichten liest neu);
+    /// geprüft wird der Link trotzdem bei jedem Aufruf (ein widerrufener gilt sofort nicht mehr). Ausgeliefert wird eine
+    /// Kopie — byte-gleich zur frisch gebauten.</para></summary>
     public async Task<JsonObject?> PublicShareAsync(string token, CancellationToken ct)
     {
         var s = await ValidShareAsync(token, ct);
         if (s is null) return null;
+        var gen = await _db.LeagueViews.AsNoTracking().Where(v => v.Tnr == s.Tnr).Select(v => (DateTime?)v.GeneratedAt).FirstOrDefaultAsync(ct);
+        var key = new ShareViewKey(s.Token, s.Expires, gen, ViewsEpoch);
+        if (_cache != null && _cache.TryGetValue(key, out JsonObject? hit) && hit != null) return (JsonObject)hit.DeepClone();
+        var view = await BuildPublicShareAsync(s, gen ?? default, ct);
+        if (view != null)
+            _cache?.Set(key, (JsonObject)view.DeepClone(), new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = ShareViewTtl });
+        return view;
+    }
+
+    private async Task<JsonObject?> BuildPublicShareAsync(LeagueShare s, DateTime gen, CancellationToken ct)
+    {
         var f = await FixtureAsync(s.Tnr, s.Round, s.Team, ct);
         if (f is null || !Shareable(f.Value.Fixture)) return null;
         var fx = f.Value.Fixture.DeepClone().AsObject();
@@ -456,7 +492,6 @@ public sealed class LeagueService
             if (acc is null) continue;
             r!["acc"] = new JsonArray(acc.Where(a => a?["conf"]?.GetValue<string>() == "sicher").Select(a => a!.DeepClone()).ToArray());
         }
-        var gen = await _db.LeagueViews.AsNoTracking().Where(v => v.Tnr == s.Tnr).Select(v => v.GeneratedAt).FirstOrDefaultAsync(ct);
         var club = await _db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == s.ClubId, ct);
         return new JsonObject
         {

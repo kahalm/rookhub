@@ -29,7 +29,10 @@ Rollenverwaltung an).
   direkt laden-ändern-speichern — Codereview N4-007).
   **Caches** (Codereview N4-003): zerlegte Profil-Partien und geteilte Meldelisten liegen im Keyed-Cache
   `league-profile-games` (`LeagueProfileStore.CacheServiceKey`, SizeLimit 10 000 Partien, 10 min ungenutzt), Schlüssel
-  FIDE-ID + `UpdatedAt` bzw. Tnr/Runde/Team + `GeneratedAt`.
+  FIDE-ID + `UpdatedAt` bzw. Tnr/Runde/Team + `GeneratedAt`. Die öffentliche Ansicht eines Teilen-Links
+  (`GET api/league/s/{token}` und `…/sources`, `LeagueService.PublicShareAsync`) liegt dort je Link 60 s
+  (`ShareViewTtl`), Schlüssel Token + `GeneratedAt` + `ViewsEpoch` (prozessweiter Zähler, den jedes Rechnen und jeder
+  `PatchViewsAsync` hochzählt) — der Link selbst wird bei jedem Aufruf geprüft.
 - **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
   Merkmale NUR aus Wissen vor der Runde, logistische Regression mit den eingebetteten Gewichten
   `Assets/league-model.json` (trainiert in Python, `export_weights.py`; Bayern seit 0.708.0 eigenes Modell, siehe „Modell je Region"), Normierung je Match auf B Bretter,

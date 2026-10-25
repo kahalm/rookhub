@@ -375,6 +375,41 @@ public class LeagueEngineTests
         db.Dispose();
     }
 
+    /// <summary>Codereview 2026-09-29, N4-003: die öffentliche Ansicht eines Teilen-Links parste je Aufruf die ganze
+    /// Liga-Ansicht. Jetzt je Link kurz im Cache: ein Parse für viele Aufrufe, Antwort byte-gleich zur ungecachten, ein
+    /// Patch der Ansichten (Konto, Partienzahl) liest neu, ein widerrufener Link gilt sofort nicht mehr.</summary>
+    [Fact]
+    public async Task PublicShare_ParsesTheViewOncePerLink_SameBytes_PatchAndRevokeStillSeen()
+    {
+        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = LeagueProfileStore.CacheSizeLimit });
+        var (db, svc) = ShareFixture(cache);
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
+        var uncached = new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var expected = (await uncached.PublicShareAsync(s!.Token, default))!.ToJsonString();
+
+        var before = svc.FixtureParses;
+        var epoch = LeagueService.ViewsEpoch;
+        var first = await svc.PublicShareAsync(s.Token, default);
+        var second = await svc.PublicShareAsync(s.Token, default);
+        Assert.Equal(expected, first!.ToJsonString());
+        Assert.Equal(expected, second!.ToJsonString());
+        // Ein paralleler Test, der Ansichten patcht, zählt den (prozessweiten) Zähler hoch — dann darf neu gelesen werden.
+        if (LeagueService.ViewsEpoch == epoch) Assert.Equal(before + 1, svc.FixtureParses);
+        second["round"] = 99;                                             // die Kopie gehört dem Aufrufer
+        Assert.Equal(expected, (await svc.PublicShareAsync(s.Token, default))!.ToJsonString());
+
+        // Patch ohne neues GeneratedAt (z. B. ein Konto wird „sicher"): die Teilen-Ansicht zeigt es sofort.
+        await LeagueService.PatchViewsAsync(db, json => json.Replace("vielleicht", "patched"), default);
+        var afterPatch = svc.FixtureParses;
+        var patched = await svc.PublicShareAsync(s.Token, default);
+        Assert.Equal(afterPatch + 1, svc.FixtureParses);
+        Assert.Equal((await uncached.PublicShareAsync(s.Token, default))!.ToJsonString(), patched!.ToJsonString());
+
+        Assert.True(await svc.DeleteShareAsync(TestClubs.Home, s.Token, default));
+        Assert.Null(await svc.PublicShareAsync(s.Token, default));       // Link weg: der Cache hilft ihm nicht
+        db.Dispose();
+    }
+
     /// <summary>Die API baut <see cref="LeagueService"/> mit dem eigenen, begrenzten Cache (Program.cs) — mit SizeLimit wirft
     /// jeder Eintrag ohne Size, also prüft das auch, dass alle eine haben.</summary>
     [Fact]
