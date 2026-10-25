@@ -77,21 +77,23 @@ public class ProfileServiceTests : IDisposable
 
     /// <summary>
     /// Tabellen mit Fremdschlüssel auf AppUser unter einem ANDEREN Namen als UserId/OwnerUserId, die die Kontolöschung
-    /// heute weder abräumt noch begründet stehen lässt (Codereview 2026-09-29, A1-018). Bewusst NICHT nachgerüstet — das
-    /// wäre eine Verhaltensänderung der Löschung (Produktentscheidung, mit V21/P-4). Bis dahin offen und hier sichtbar:
-    /// jede WEITERE solche Tabelle schlägt im Wächter an. Wer eine davon in einen Löscher aufnimmt, streicht sie hier.
+    /// bewusst stehen lässt (Codereview 2026-09-29, A1-018). Entscheidung User 25.10.: Puzzle-Challenges
+    /// und Revanche-Vermerke gehen mit (PuzzleDataEraser); als Empfänger erhaltene Kurs-/Repertoire-Freigaben und der
+    /// Ersteller eines LeagueHub-Links bleiben — sie werden über Buch/Repertoire bzw. Verein verwaltet. Jede WEITERE solche
+    /// Tabelle schlägt im Wächter an. Wer eine davon in einen Löscher aufnimmt, streicht sie hier.
     /// </summary>
     private static readonly Dictionary<string, string> KnownGapsA1018 = new(StringComparer.Ordinal)
     {
         ["CourseShares"] = "OwnerId/RecipientId: Freigaben EIGENER Bücher gehen mit dem Buch (CourseDataEraser.OwnedBooksAsync → "
-                           + "DeleteBookAsync), die als EMPFÄNGER erhaltenen bleiben heute stehen — offen",
+                           + "DeleteBookAsync), die als EMPFÄNGER erhaltenen bleiben — "
+                           + "werden über das Buch verwaltet (Entscheidung User 25.10.)",
         ["RepertoireShares"] = "OwnerId/RecipientId: Freigaben eigener Repertoires hängen am Repertoire (FK-Cascade relational), "
-                               + "die als Empfänger erhaltenen bleiben heute stehen — offen",
-        ["PuzzleChallenges"] = "FromUserId/ToUserId: gesendete und empfangene Puzzle-Challenges bleiben heute stehen — offen",
-        ["RevengeNotifications"] = "AvengerUserId/TargetUserId: Revanche-Vermerke bleiben heute stehen — offen",
+                               + "die als Empfänger erhaltenen bleiben — werden über das Repertoire verwaltet "
+                               + "(Entscheidung User 25.10.)",
         // LeagueShares.CreatedByUserId hat keinen FK und keinen Heuristik-Namen, der Wächter sähe die Tabelle nicht —
         // der Vollständigkeit halber (die fünfte Tabelle aus A1-018): der Vermerk, wer den Link angelegt hat, bleibt.
-        ["LeagueShares"] = "CreatedByUserId (ohne FK): wer einen LeagueHub-Teilen-Link angelegt hat, bleibt heute stehen — offen",
+        ["LeagueShares"] = "CreatedByUserId (ohne FK): wer einen LeagueHub-Teilen-Link angelegt hat, bleibt — "
+                           + "Links werden über den Verein verwaltet (Entscheidung User 25.10.)",
     };
 
     [Fact]
@@ -169,6 +171,32 @@ public class ProfileServiceTests : IDisposable
             .Select(s => $"{s.Method.DeclaringType!.Name}.{s.Method.Name}").ToList();
         Assert.Equal(steps.Count, steps.Distinct().Count());
         Assert.Equal(declared, steps.OrderBy(n => n, StringComparer.Ordinal).ToList());
+    }
+
+    [Fact]
+    public async Task DeleteAccount_RemovesChallengesAndRevengeInBothRoles_KeepsOtherUsersRows()
+    {
+        // A1-018, Entscheidung User 25.10.: Puzzle-Challenges und Revanche-Vermerke gehen mit dem Konto — gesendet wie
+        // empfangen, als Rächer wie als Ziel. Zeilen zwischen ZWEI anderen Nutzern bleiben.
+        var id = await CreateUserWithPasswordAsync("gone", "secret123");
+        var a = await CreateUserWithPasswordAsync("alice", "x");
+        var b = await CreateUserWithPasswordAsync("bob", "x");
+        _db.PuzzleChallenges.AddRange(
+            new Models.PuzzleChallenge { FromUserId = id, ToUserId = a, PuzzleId = 1 },
+            new Models.PuzzleChallenge { FromUserId = a, ToUserId = id, PuzzleId = 2, Source = Models.PuzzleSource.Book },
+            new Models.PuzzleChallenge { FromUserId = a, ToUserId = b, PuzzleId = 3 });
+        _db.RevengeNotifications.AddRange(
+            new Models.RevengeNotification { AvengerUserId = id, TargetUserId = a, PuzzleId = 1 },
+            new Models.RevengeNotification { AvengerUserId = b, TargetUserId = id, PuzzleId = 2, Solved = true },
+            new Models.RevengeNotification { AvengerUserId = b, TargetUserId = a, PuzzleId = 3 });
+        await _db.SaveChangesAsync();
+
+        await _profileService.DeleteAccountAsync(id, "secret123");
+
+        var challenge = Assert.Single(await _db.PuzzleChallenges.AsNoTracking().ToListAsync());
+        Assert.Equal((a, b, 3), (challenge.FromUserId, challenge.ToUserId, challenge.PuzzleId));
+        var revenge = Assert.Single(await _db.RevengeNotifications.AsNoTracking().ToListAsync());
+        Assert.Equal((b, a, 3), (revenge.AvengerUserId, revenge.TargetUserId, revenge.PuzzleId));
     }
 
     [Fact]

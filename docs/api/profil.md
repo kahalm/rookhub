@@ -20,7 +20,11 @@ gelöschten Konten (A9-004). Der Löschkern selbst liegt in `Services/Accounts/E
 feste Reihenfolge der Löscher je Bereich (`CourseDataEraser`, `SocialDataEraser`, … — ein Bereich darf mehrmals vorkommen,
 FK-/Speicher-Reihenfolge), danach anonymisiert `UserDataEraser` die Identität im selben Save. Neue nutzereigene Tabelle →
 in den passenden Löscher (oder mit Grund in `ProfileServiceTests.DeletionExempt`), sonst schlägt
-`DeleteAccount_CoversEveryUserOwnedTable` an. **Admin-Recht setzen** (F5-013, `users.manage`): `PUT /api/admin/users/{id}/admin`
+`DeleteAccount_CoversEveryUserOwnedTable` an. Löschpflicht A1-018 (Entscheidung User 25.10.): Puzzle-Challenges
+(`PuzzleChallenges`, als Absender wie Empfänger) und Revanche-Vermerke (`RevengeNotifications`, als Rächer wie Ziel)
+gehen mit dem Konto (`PuzzleDataEraser`); als Empfänger erhaltene `CourseShares`/`RepertoireShares` und
+`LeagueShares.CreatedByUserId` bleiben bewusst stehen (über Buch/Repertoire bzw. Verein verwaltet, begründet in
+`ProfileServiceTests.KnownGapsA1018`). **Admin-Recht setzen** (F5-013, `users.manage`): `PUT /api/admin/users/{id}/admin`
 `{ isAdmin }` setzt einen Soll-Wert (idempotent; nur Admins, nie das eigene Konto; fehlender Wert → 400);
 `POST …/toggle-admin` ist veraltet und entfällt in einer späteren Version. **Sperren statt löschen** (F5-011, `users.manage`): `POST /api/admin/users/{id}/lock`
 `{ until: ISO-UTC | null }` (null = unbefristet, `AppUser.LockedIndefinitely`) bzw. `DELETE …/lock` → 200 `AdminUserDto`

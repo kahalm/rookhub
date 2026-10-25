@@ -23,7 +23,8 @@ internal sealed class UserDataEraser
 {
     // 0) Persönliche Bücher zuerst (CourseDataEraser.OwnedBooksAsync — speichert je Buch selbst).
     // 1) Persönliche Inhalte & Verknüpfungen hart entfernen (keine Statistik):
-    //    Freundschaften (FK Restrict -> müssen explizit weg), Repertoires (cascadet Dateien),
+    //    Freundschaften (FK Restrict -> müssen explizit weg), Puzzle-Challenges und Revanche-Vermerke in beiden
+    //    Rollen (A1-018; abhängiges Ende ihrer Restrict-FKs, blockieren also nichts), Repertoires (cascadet Dateien),
     //    Turnier-Abos/-Favoriten/-Einstellungen, Gruppen-Mitgliedschaften, API-Tokens,
     //    Chessable-Bearer + Reset-Tokens, öffentliche Share-Inhalte, gemerkte Stellungen,
     //    Admin-Direktnachrichten (Freitext = PII) samt Thread-Metadaten.
@@ -31,6 +32,8 @@ internal sealed class UserDataEraser
     {
         CourseDataEraser.OwnedBooksAsync,
         SocialDataEraser.FriendshipsAsync,
+        PuzzleDataEraser.ChallengesAsync,
+        PuzzleDataEraser.RevengeNotificationsAsync,
         RepertoireDataEraser.RepertoiresAsync,
         TournamentDataEraser.FollowingAsync,
         AccountDataEraser.ViewStatesAsync,
