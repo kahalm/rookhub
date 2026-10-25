@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.DTOs.Accounts;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services.Accounts;
 
@@ -56,7 +57,9 @@ public class SharedSessionService
     /// </summary>
     public const string LegacyCookiePath = "/api/auth";
 
-    /// <summary>So lange wie eine gewoehnliche Anmeldung ohne „eingeloggt bleiben".</summary>
+    /// <summary>So lange wie eine gewoehnliche Anmeldung ohne „eingeloggt bleiben" — hoechstens aber bis
+    /// <c>auth_time</c> + <c>Auth:SessionMaxDays</c> (<see cref="SessionLifetime"/>, P-14): das Einloesen schreibt das
+    /// Cookie zwar neu, mit dem URSPRUENGLICHEN Anmeldezeitpunkt, und ab der Obergrenze gar nicht mehr.</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
 
     public SharedSessionService(AppDbContext db, AuthService auth, IConfiguration config)
@@ -96,9 +99,16 @@ public class SharedSessionService
     /// Baut den Cookie-Wert fuer einen Nutzer. <c>null</c>, wenn die Funktion aus ist oder das Konto
     /// nicht (mehr) taugt — der Aufrufer schreibt dann schlicht kein Cookie.
     /// </summary>
-    public async Task<string?> IssueAsync(int userId, CancellationToken ct = default)
+    public Task<string?> IssueAsync(int userId, CancellationToken ct = default) => IssueAsync(userId, null, ct);
+
+    /// <summary>Wie oben, mit dem Anmeldezeitpunkt der Sitzung, aus der das Cookie entsteht (<c>null</c> = jetzt).
+    /// Liegt er schon <c>Auth:SessionMaxDays</c> zurueck, gibt es kein Cookie mehr (P-14).</summary>
+    public async Task<string?> IssueAsync(int userId, DateTime? authTime, CancellationToken ct = default)
     {
         if (!IsEnabled) return null;
+        var now = DateTime.UtcNow;
+        var at = authTime ?? now;
+        if (SessionLifetime.IsTooOld(_config, at, now)) return null;
 
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null, ct);
         if (user is null) return null;
@@ -107,15 +117,33 @@ public class SharedSessionService
         // Denselben Stempel wie das normale Token mitfuehren: eine Passwortaenderung entwertet damit
         // auch die geteilte Anmeldung, sonst holte man sich dort ein frisches Token zurueck.
         if (user.SecurityStamp != null) claims.Add(new Claim("sstamp", user.SecurityStamp));
+        claims.Add(SessionLifetime.ToClaim(at));
 
-        return JwtTokens.Issue(_config, Audience, claims, DateTime.UtcNow.Add(Lifetime));
+        return JwtTokens.Issue(_config, Audience, claims, ExpiresAt(at, now));
     }
+
+    /// <summary>Ablauf des Cookies (und seines Tokens): 30 Tage ab jetzt, gekappt auf die Obergrenze der Sitzung.</summary>
+    public DateTime ExpiresAt(DateTime authTime, DateTime? now = null) =>
+        SessionLifetime.CapExpiry(_config, authTime, (now ?? DateTime.UtcNow).Add(Lifetime));
 
     /// <summary>
     /// Tauscht ein Cookie gegen eine richtige Anmeldung. <c>null</c> bei allem, was nicht passt —
     /// von aussen ohne Unterscheidung, der Grund hilft nur beim Raten.
     /// </summary>
     public async Task<AuthResponseDto?> RedeemAsync(string? cookieValue, CancellationToken ct = default)
+    {
+        var valid = await ValidateAsync(cookieValue, ct);
+        if (valid is null) return null;
+        // Das neue Token ERBT den Anmeldezeitpunkt (P-14) — vorher begann mit jedem Einloesen eine neue Frist.
+        return await _auth.IssueTokenAsync(valid.Value.User, authTime: valid.Value.AuthTime);
+    }
+
+    /// <summary>
+    /// Prueft ein Cookie, ohne ein Token auszustellen: Konto und Anmeldezeitpunkt, oder <c>null</c> bei allem, was nicht
+    /// passt — auch, wenn die Anmeldung aelter als <c>Auth:SessionMaxDays</c> ist (P-14). Ein Cookie ohne
+    /// <c>auth_time</c> (vor der Obergrenze ausgegeben) zaehlt als „jetzt angemeldet": kein Massen-Abmelden beim Deploy.
+    /// </summary>
+    public async Task<(AppUser User, DateTime AuthTime)?> ValidateAsync(string? cookieValue, CancellationToken ct = default)
     {
         if (!IsEnabled || string.IsNullOrWhiteSpace(cookieValue)) return null;
 
@@ -141,6 +169,9 @@ public class SharedSessionService
         var stamp = principal.FindFirstValue("sstamp");
         if (user.SecurityStamp != null && user.SecurityStamp != stamp) return null;
 
-        return await _auth.IssueTokenAsync(user);
+        var now = DateTime.UtcNow;
+        var authTime = SessionLifetime.Read(principal) ?? now;
+        if (SessionLifetime.IsTooOld(_config, authTime, now)) return null;
+        return (user, authTime);
     }
 }

@@ -227,6 +227,28 @@ public class AuthServiceTests : IDisposable
         Assert.True(rememberExp < DateTime.UtcNow.AddDays(91), "Remember-Me-Token sollte höchstens 91 Tage gültig sein");
     }
 
+    /// <summary>P-14: Jede Anmeldung trägt ihren Zeitpunkt (auth_time); ein aus einer bestehenden Sitzung abgeleitetes
+    /// Token erbt ihn und läuft nie über auth_time + 90 Tage hinaus — auch mit „eingeloggt bleiben".</summary>
+    [Fact]
+    public async Task Login_SetsAuthTime_AndDerivedTokensInheritItCapped()
+    {
+        await _authService.RegisterAsync(new RegisterDto { Username = "testuser", Email = "test@example.com", Password = "password123" });
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+
+        var login = await _authService.LoginAsync(new LoginDto { Username = "testuser", Password = "password123" });
+        var claim = handler.ReadJwtToken(login.Token).Claims.Single(c => c.Type == SessionLifetime.AuthTimeClaim).Value;
+        Assert.Equal(DateTime.UtcNow, DateTimeOffset.FromUnixTimeSeconds(long.Parse(claim)).UtcDateTime, TimeSpan.FromSeconds(5));
+        Assert.Equal(DateTime.UtcNow, login.AuthTime!.Value, TimeSpan.FromSeconds(5));
+
+        var user = await _db.AppUsers.SingleAsync(u => u.Username == "testuser");
+        var loggedIn = DateTime.UtcNow.AddDays(-85);
+        var derived = await _authService.IssueTokenAsync(user, rememberMe: true, authTime: loggedIn);
+        var token = handler.ReadJwtToken(derived.Token);
+        Assert.Equal(loggedIn.AddDays(90), token.ValidTo, TimeSpan.FromSeconds(2));   // statt +90 Tage ab jetzt
+        Assert.Equal(new DateTimeOffset(loggedIn).ToUnixTimeSeconds().ToString(),
+            token.Claims.Single(c => c.Type == SessionLifetime.AuthTimeClaim).Value);
+    }
+
     [Fact]
     public async Task Impersonate_ReturnsTargetIdentity_WithImpClaim_AndShortLifetime()
     {

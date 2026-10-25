@@ -185,12 +185,14 @@ public class AuthService
             }
         }
 
+        var authTime = DateTime.UtcNow;
         return new AuthResponseDto
         {
-            Token = GenerateJwt(user),
+            Token = GenerateJwt(user, authTime: authTime),
             Username = user.Username,
             UserId = user.Id,
-            IsAdmin = user.IsAdmin
+            IsAdmin = user.IsAdmin,
+            AuthTime = authTime,
         };
     }
 
@@ -253,12 +255,14 @@ public class AuthService
             "UserLogin: User {UserId} {UserName} logged in",
             user.Id, user.Username);
 
+        var authTime = DateTime.UtcNow;   // Anmeldung mit Passwort: hier beginnt die Frist (P-14)
         return new AuthResponseDto
         {
-            Token = GenerateJwt(user, dto.RememberMe, await ResolvePermissionClaimsAsync(user.Id)),
+            Token = GenerateJwt(user, dto.RememberMe, await ResolvePermissionClaimsAsync(user.Id), authTime: authTime),
             Username = user.Username,
             UserId = user.Id,
-            IsAdmin = user.IsAdmin
+            IsAdmin = user.IsAdmin,
+            AuthTime = authTime,
         };
     }
 
@@ -267,15 +271,22 @@ public class AuthService
     /// anderswo passiert ist (heute: die Anmelde-Uebergabe zwischen den Oberflaechen, siehe
     /// <see cref="AuthHandoffService"/>). Dieselben Claims wie beim Login, damit ein uebergebenes
     /// Token nicht heimlich weniger kann als ein erlogenes.
+    /// <para><paramref name="authTime"/>: Anmeldezeitpunkt der Sitzung, aus der dieses Token entsteht (geteiltes Cookie,
+    /// Übergabe) — er wird weitergereicht, das Token läuft höchstens bis <c>authTime</c> + <c>Auth:SessionMaxDays</c>
+    /// (P-14). <c>null</c> = jetzt (Altbestand ohne Claim).</para>
     /// </summary>
-    public async Task<AuthResponseDto> IssueTokenAsync(AppUser user, bool rememberMe = false) =>
-        new AuthResponseDto
+    public async Task<AuthResponseDto> IssueTokenAsync(AppUser user, bool rememberMe = false, DateTime? authTime = null)
+    {
+        var at = authTime ?? DateTime.UtcNow;
+        return new AuthResponseDto
         {
-            Token = GenerateJwt(user, rememberMe, await ResolvePermissionClaimsAsync(user.Id)),
+            Token = GenerateJwt(user, rememberMe, await ResolvePermissionClaimsAsync(user.Id), authTime: at),
             Username = user.Username,
             UserId = user.Id,
             IsAdmin = user.IsAdmin,
+            AuthTime = at,
         };
+    }
 
     /// <summary>Die effektiven Permissions eines Users (eigene Rollen + Rollen seiner Gruppen) als <c>perm</c>-Claims —
     /// nur noch ein Startwert für ältere Oberflächen: geprüft wird live (<see cref="PermissionResolver"/>, 0.589.0), und
@@ -313,12 +324,15 @@ public class AuthService
         // Gecachten Auth-Zustand verwerfen, sonst gelten fremde Sitzungen bis zu 60 s weiter.
         if (_loginFailures is not null) AuthUserValidation.Invalidate(_loginFailures, userId);
 
+        // Mit dem aktuellen Passwort bestätigt → zählt als neue Anmeldung (frische Frist, P-14).
+        var authTime = DateTime.UtcNow;
         return new AuthResponseDto
         {
-            Token = GenerateJwt(user, extraClaims: await ResolvePermissionClaimsAsync(user.Id)),
+            Token = GenerateJwt(user, extraClaims: await ResolvePermissionClaimsAsync(user.Id), authTime: authTime),
             Username = user.Username,
             UserId = user.Id,
             IsAdmin = user.IsAdmin,
+            AuthTime = authTime,
         };
     }
 
@@ -335,8 +349,11 @@ public class AuthService
         || (ex.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) ?? false)
         || ex.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase);
 
-    private string GenerateJwt(AppUser user, bool rememberMe = false, IEnumerable<Claim>? extraClaims = null, TimeSpan? lifetime = null)
+    private string GenerateJwt(AppUser user, bool rememberMe = false, IEnumerable<Claim>? extraClaims = null, TimeSpan? lifetime = null,
+        DateTime? authTime = null)
     {
+        var now = DateTime.UtcNow;
+        var at = authTime ?? now;
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -354,11 +371,15 @@ public class AuthService
         if (extraClaims != null)
             claims.AddRange(extraClaims);
 
+        // Anmeldezeitpunkt (P-14): ein aus einer bestehenden Sitzung abgeleitetes Token erbt ihn und läuft nie über
+        // auth_time + Auth:SessionMaxDays hinaus (SessionLifetime).
+        claims.Add(SessionLifetime.ToClaim(at));
+
         return JwtTokens.Issue(_config, _config["Jwt:Audience"], claims,
             // „Eingeloggt bleiben": 90 Tage, sonst 30. JWTs sind stateless und werden nur über DeletedAt
             // + SecurityStamp (Passwort-Reset/-Änderung) invalidiert — ein abgegriffenes Token bliebe sonst
             // unnötig lange gültig, daher kein Jahr mehr.
-            DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 90 : 30)));
+            SessionLifetime.CapExpiry(_config, at, now.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 90 : 30))));
     }
 
     /// <summary>

@@ -177,6 +177,79 @@ public class SharedSessionServiceTests : IDisposable
         Assert.Null(await _svc.RedeemAsync(value));
     }
 
+    // ── Absolute Obergrenze (P-14/A1-007): auth_time wird weitergereicht, nie verlaengert ──────────────────
+
+    private static (DateTime? AuthTime, DateTime Expires) Read(string jwt)
+    {
+        var t = new JwtSecurityTokenHandler().ReadJwtToken(jwt);
+        var claim = t.Claims.FirstOrDefault(c => c.Type == SessionLifetime.AuthTimeClaim)?.Value;
+        return (claim is null ? null : DateTimeOffset.FromUnixTimeSeconds(long.Parse(claim)).UtcDateTime, t.ValidTo);
+    }
+
+    [Fact]
+    public async Task Redeem_InheritsTheOriginalAuthTime_AndCapsTheTokenAtTheLimit()
+    {
+        var user = await UserAsync();
+        var loggedIn = DateTime.UtcNow.AddDays(-80);
+        var cookie = await _svc.IssueAsync(user.Id, loggedIn);
+
+        Assert.NotNull(cookie);
+        var (cookieAuth, cookieExp) = Read(cookie!);
+        Assert.Equal(loggedIn, cookieAuth!.Value, TimeSpan.FromSeconds(2));
+        Assert.Equal(loggedIn.AddDays(90), cookieExp, TimeSpan.FromSeconds(2));   // nicht +30 Tage ab jetzt
+
+        var res = await _svc.RedeemAsync(cookie);
+        Assert.NotNull(res);
+        Assert.Equal(loggedIn, res!.AuthTime!.Value, TimeSpan.FromSeconds(2));
+        var (tokenAuth, tokenExp) = Read(res.Token);
+        Assert.Equal(loggedIn, tokenAuth!.Value, TimeSpan.FromSeconds(2));
+        Assert.Equal(loggedIn.AddDays(90), tokenExp, TimeSpan.FromSeconds(2));
+        Assert.Equal(loggedIn.AddDays(90), _svc.ExpiresAt(res.AuthTime.Value), TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task SessionOlderThanTheLimit_IsNeitherIssuedNorRedeemed()
+    {
+        var user = await UserAsync();
+        var tooOld = DateTime.UtcNow.AddDays(-91);
+
+        Assert.Null(await _svc.IssueAsync(user.Id, tooOld));
+        // Auch ein noch nicht abgelaufenes Cookie mit zu altem auth_time wird nicht mehr eingeloest.
+        var forged = Signed(user.Id, SharedSessionService.Audience, "TestIssuer", DateTime.UtcNow.AddDays(5),
+            extra: SessionLifetime.ToClaim(tooOld));
+        Assert.Null(await _svc.RedeemAsync(forged));
+        Assert.Null(await _svc.ValidateAsync(forged));
+    }
+
+    /// <summary>Vor der Obergrenze ausgegebene Cookies tragen kein auth_time — sie gelten als „jetzt angemeldet", damit der
+    /// Deploy niemanden abmeldet; ab dem Einloesen laeuft die Frist.</summary>
+    [Fact]
+    public async Task LegacyCookieWithoutAuthTime_CountsAsLoggedInNow()
+    {
+        var user = await UserAsync();
+        var legacy = Signed(user.Id, SharedSessionService.Audience, "TestIssuer", DateTime.UtcNow.AddDays(20));
+
+        var res = await _svc.RedeemAsync(legacy);
+
+        Assert.NotNull(res);
+        Assert.Equal(DateTime.UtcNow, res!.AuthTime!.Value, TimeSpan.FromSeconds(5));
+        Assert.Equal(DateTime.UtcNow, Read(res.Token).AuthTime!.Value, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task SessionMaxDays_IsConfigurable()
+    {
+        var user = await UserAsync();
+        var cfg = new ConfigurationBuilder().AddConfiguration(_config)
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Auth:SessionMaxDays"] = "10" }).Build();
+        var svc = Service(cfg);
+
+        Assert.Null(await svc.IssueAsync(user.Id, DateTime.UtcNow.AddDays(-11)));
+        var cookie = await svc.IssueAsync(user.Id, DateTime.UtcNow.AddDays(-5));
+        Assert.Equal(DateTime.UtcNow.AddDays(5), Read(cookie!).Expires, TimeSpan.FromSeconds(5));
+        Assert.Equal(TimeSpan.FromDays(90), SessionLifetime.MaxAge(_config));   // Vorgabe
+    }
+
     [Fact]
     public void CookieName_IsConfigurableSoDevAndProdDoNotOverwriteEachOther()
     {
@@ -187,12 +260,12 @@ public class SharedSessionServiceTests : IDisposable
     }
 
     private static string Signed(int userId, string audience, string issuer, DateTime expires,
-        string key = Key)
+        string key = Key, params Claim[] extra)
     {
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
-            claims: [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+            claims: [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), .. extra],
             expires: expires,
             signingCredentials: new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)), SecurityAlgorithms.HmacSha256));

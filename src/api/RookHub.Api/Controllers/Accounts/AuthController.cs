@@ -99,7 +99,8 @@ public class AuthController : BaseApiController
         // HandoffExchange, Codereview F1-008). Der Sprung legt sie deshalb hier frisch an — auch wenn das Cookie
         // (30 Tage) aelter ist als das Token (bis 90 Tage mit „eingeloggt bleiben"). Bisher schrieb erst der
         // Tausch drueben das Cookie dieses Kontos; im Ergebnis aendert sich fuer den Sprung also nichts.
-        await WriteSharedSessionAsync(userId, ct);
+        // Der Anmeldezeitpunkt dieses Tokens geht ins Cookie und damit in die Sitzung drueben (P-14).
+        await WriteSharedSessionAsync(userId, SessionLifetime.Read(User), ct);
         return Ok(new { code, expiresInSeconds = (int)AuthHandoffService.Lifetime.TotalSeconds });
     }
 
@@ -122,17 +123,19 @@ public class AuthController : BaseApiController
     [HttpPost("rh-session/handoff")]
     public async Task<ActionResult<AuthResponseDto>> HandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
     {
-        HashSet<int>? holders = null;
+        // Konto → Anmeldezeitpunkt seines Cookies: das neue Token erbt ihn (P-14), ein zu altes Cookie zaehlt nicht.
+        Dictionary<int, DateTime>? holders = null;
         if (_sharedSession.IsEnabled)
         {
-            holders = new HashSet<int>();
+            holders = new Dictionary<int, DateTime>();
             foreach (var cookie in SharedSessionCookieValues())
-                if (await _sharedSession.RedeemAsync(cookie, ct) is { } shared) holders.Add(shared.UserId);
+                if (await _sharedSession.ValidateAsync(cookie, ct) is { } shared) holders.TryAdd(shared.User.Id, shared.AuthTime);
             // Ohne taugliches Cookie kann kein Code mehr passen — dann gar nicht erst einloesen.
             if (holders.Count == 0) return BadRequest(new { message = "Handoff code is not valid." });
         }
-        var res = await _handoff.RedeemAsync(dto?.Code, ct);
-        if (res is null || (holders != null && !holders.Contains(res.UserId)))
+        var res = await _handoff.RedeemAsync(dto?.Code, ct,
+            id => holders != null && holders.TryGetValue(id, out var at) ? at : null);
+        if (res is null || (holders != null && !holders.ContainsKey(res.UserId)))
             return BadRequest(new { message = "Handoff code is not valid." });
         await WriteSharedSessionAsync(res, ct);
         return Ok(res);
@@ -215,13 +218,16 @@ public class AuthController : BaseApiController
 
     /// <summary>Legt das Cookie neu an. Tut nichts, solange keine Elterndomaene eingerichtet ist.</summary>
     private Task WriteSharedSessionAsync(AuthResponseDto res, CancellationToken ct = default) =>
-        WriteSharedSessionAsync(res.UserId, ct);
+        WriteSharedSessionAsync(res.UserId, res.AuthTime, ct);
 
-    private async Task WriteSharedSessionAsync(int userId, CancellationToken ct = default)
+    /// <summary><paramref name="authTime"/>: Anmeldezeitpunkt der Sitzung (P-14) — das Cookie laeuft hoechstens bis
+    /// zu dessen Obergrenze; <c>null</c> = jetzt.</summary>
+    private async Task WriteSharedSessionAsync(int userId, DateTime? authTime, CancellationToken ct = default)
     {
-        var value = await _sharedSession.IssueAsync(userId, ct);
+        var at = authTime ?? DateTime.UtcNow;
+        var value = await _sharedSession.IssueAsync(userId, at, ct);
         if (value is null) return;
-        var expires = DateTimeOffset.UtcNow.Add(SharedSessionService.Lifetime);
+        var expires = new DateTimeOffset(_sharedSession.ExpiresAt(at), TimeSpan.Zero);
         Response.Cookies.Append(_sharedSession.CookieName, value, SharedSessionCookieOptions(expires));
         DeleteLegacySharedSessionCookie();
     }

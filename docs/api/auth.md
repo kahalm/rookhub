@@ -11,6 +11,17 @@
 | POST | `/api/auth/rh-session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`, `Path=/api/auth/rh-session`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
 | POST | `/api/auth/rh-session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
 
+**Absolute Obergrenze der Sitzung** (Codereview A1-007/P-14, entschieden 25.10.2026): jede Anmeldung trägt ihren
+Zeitpunkt als `auth_time`-Claim (Unix-Sekunden) im JWT UND im Cookie `rh_session`. Login, Registrierung und Passwortwechsel
+setzen ihn auf jetzt; das Einlösen des Cookies (`rh-session`), die Übergabe (`handoff` → `rh-session/handoff`) und das
+dabei neu geschriebene Cookie ERBEN ihn. Kein Token und kein Cookie läuft über `auth_time` + `Auth:SessionMaxDays`
+(Vorgabe 90) hinaus, ein älteres Cookie wird nicht mehr eingelöst (204, Cookie gelöscht) — danach läuft das JWT ab, die
+API antwortet 401 `invalid_token`, und die Oberfläche meldet ab (`SessionStore`-Ablauf bzw. `authInterceptor`). Vorher
+schrieb jedes Einlösen ein frisches 30-Tage-Cookie samt neuem Token: eine abgegriffene Sitzung verlängerte sich endlos.
+Altbestand ohne Claim gilt beim nächsten Einlösen als „jetzt angemeldet" (kein Massen-Abmelden beim Deploy). Code:
+`Services/Accounts/SessionLifetime.cs`; Impersonations-Tokens (2 h) tragen ihren eigenen Zeitpunkt. Eine gesenkte
+Konfiguration wirkt auf bereits ausgegebene JWTs erst mit deren Ablauf.
+
 Die alten Pfade `POST /api/auth/session` und `session/end` (samt Merk-Cookie `<name>_moved` und Cookie-Umzug in `GET /api/auth/permissions`) sind seit 0.828.1 entfernt (N6-001). Jedes Schreiben/Löschen des Cookies löscht weiterhin ein altes mit `Path=/api/auth` (ging an JEDEN Host der Elterndomäne mit eigener `/api/auth`-Anmeldung), bis die letzten vor 0.624.0 ausgegebenen Cookies abgelaufen sind.
 
 Der alte Tauschpfad des Übergabe-Codes `POST /api/auth/handoff/exchange` ist seit 0.828.3 entfernt (F1-008); eingelöst wird nur noch über `POST /api/auth/rh-session/handoff`.

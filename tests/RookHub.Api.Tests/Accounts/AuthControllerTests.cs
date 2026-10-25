@@ -23,6 +23,7 @@ public class AuthControllerTests : IDisposable
     private readonly AuthController _controller;
     private readonly SharedSessionService _shared;
     private readonly DefaultHttpContext _http = new();
+    private const string JwtKey = "TestSecretKeyThatIsLongEnoughForHmacSha256!!";
 
     public AuthControllerTests()
     {
@@ -34,7 +35,7 @@ public class AuthControllerTests : IDisposable
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Jwt:Key"] = "TestSecretKeyThatIsLongEnoughForHmacSha256!!",
+                ["Jwt:Key"] = JwtKey,
                 ["Jwt:Issuer"] = "TestIssuer",
                 ["Jwt:Audience"] = "TestAudience",
                 // Die geteilte Anmeldung ueber beide Oberflaechen braucht eine Elterndomaene;
@@ -601,6 +602,48 @@ public class AuthControllerTests : IDisposable
         var res = Assert.IsType<AuthResponseDto>(ok.Value);
         Assert.Equal(user.Id, res.UserId);
         Assert.False(string.IsNullOrWhiteSpace(res.Token));
+    }
+
+    /// <summary>P-14: das Einloesen schreibt das Cookie mit dem URSPRUENGLICHEN Anmeldezeitpunkt neu (kein Gleiten), und
+    /// eine Sitzung jenseits der 90 Tage wird nicht mehr eingeloest — 204, Cookie weg; das JWT laeuft zur selben Grenze
+    /// ab, danach 401 invalid_token und die Oberflaeche meldet ab.</summary>
+    [Fact]
+    public async Task SharedSession_KeepsTheAuthTime_AndStopsAtTheLimit()
+    {
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        var loggedIn = DateTime.UtcNow.AddDays(-75);
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id, loggedIn)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var ok = Assert.IsType<OkObjectResult>((await _controller.SharedSession(CancellationToken.None)).Result);
+        var res = Assert.IsType<AuthResponseDto>(ok.Value);
+        Assert.Equal(loggedIn.AddDays(90),
+            new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(res.Token).ValidTo, TimeSpan.FromSeconds(2));
+        var renewed = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.NotNull(renewed);
+        var renewedAuth = await _shared.ValidateAsync(CookieValue(renewed!));
+        Assert.Equal(loggedIn, renewedAuth!.Value.AuthTime, TimeSpan.FromSeconds(2));
+        // Ablauf des Cookies = Grenze der Sitzung (15 Tage), nicht 30 Tage ab jetzt.
+        var expires = DateTime.Parse(renewed!.Split(';').Select(p => p.Trim())
+            .First(p => p.StartsWith("expires=", StringComparison.OrdinalIgnoreCase))[8..],
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal);
+        Assert.Equal(loggedIn.AddDays(90), expires, TimeSpan.FromSeconds(2));
+
+        // Jenseits der Grenze: nicht einloesbar, Cookie wird geloescht.
+        var tooOld = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: "TestIssuer", audience: SharedSessionService.Audience,
+            claims: [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, user.Id.ToString()),
+                     SessionLifetime.ToClaim(DateTime.UtcNow.AddDays(-91))],
+            expires: DateTime.UtcNow.AddDays(3),
+            signingCredentials: new Microsoft.IdentityModel.Tokens.SigningCredentials(
+                new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(JwtKey)),
+                Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256)));
+        _http.Request.Headers.Cookie = $"rh_session={tooOld}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        Assert.IsType<NoContentResult>((await _controller.SharedSession(CancellationToken.None)).Result);
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
     }
 
     [Fact]

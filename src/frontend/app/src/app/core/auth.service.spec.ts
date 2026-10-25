@@ -407,6 +407,30 @@ describe('AuthService: Sitzungsende ohne Abmelden (Ablauf, Kontowechsel)', () =>
     }
   });
 
+  it('Obergrenze der Sitzung (P-14): eine übernommene Anmeldung endet am gekappten Ablauf ihres Tokens — aufräumen, ohne session/end', () => {
+    // Der Server stellt beim Einlösen der geteilten Anmeldung (rh-session) kein frisch gleitendes Token mehr aus: es läuft
+    // spätestens auth_time + 90 Tage ab. Danach gilt hier dasselbe wie bei jedem Ablauf; ein neues Einlösen lehnt der
+    // Server ab (204), und jeder API-Aufruf mit dem alten Token bekäme 401 invalid_token (Interceptor → logout).
+    jasmine.clock().install();
+    try {
+      jasmine.clock().mockDate(new Date(2026, 9, 25, 12, 0, 0));
+      const svc = TestBed.inject(AuthService);
+      svc.adoptSession({ ...userA(jwt(30)), adopted: true });      // Grenze in 30 s
+      expect(svc.isLoggedIn).toBeTrue();
+      seedTraces();
+
+      jasmine.clock().tick(60_000);
+
+      expect(svc.isLoggedIn).toBeFalse();
+      expect(svc.currentUser).toBeNull();
+      expect(localStorage.getItem('rookhub_user')).toBeNull();
+      expectTraces(false);
+      TestBed.inject(HttpTestingController).expectNone('/api/auth/rh-session/end');
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
   it('lässt beim Ablauf die Anmeldung stehen, die ein anderer Tab inzwischen gespeichert hat', () => {
     // Dieser Tab hält A noch im Speicher, ein anderer hat B angemeldet: dessen Sitzung und
     // Offline-Inhalte gehören nicht diesem Tab.

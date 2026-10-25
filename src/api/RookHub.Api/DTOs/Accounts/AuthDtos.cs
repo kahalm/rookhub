@@ -72,6 +72,10 @@ public class AuthResponseDto
     public bool Impersonating { get; set; }
     /// <summary>Benutzername des Admins, der die Impersonation gestartet hat (nur bei Impersonating).</summary>
     public string? ImpersonatorUsername { get; set; }
+    /// <summary>Anmeldezeitpunkt dieser Sitzung (<c>auth_time</c>, P-14) — nur serverintern, damit das geteilte Cookie
+    /// denselben Zeitpunkt trägt wie das Token; geht nicht an den Client (steht ohnehin im Token).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DateTime? AuthTime { get; set; }
 }
 
 public class ChangePasswordDto

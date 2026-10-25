@@ -64,7 +64,9 @@ public class AuthHandoffService
     /// abgelaufen, schon verbraucht oder das Konto geloescht ist — die Gegenseite zeigt dann einfach
     /// die Anmeldemaske. Bewusst OHNE Unterscheidung nach aussen: der Grund hilft nur beim Raten.
     /// </summary>
-    public async Task<AuthResponseDto?> RedeemAsync(string? raw, CancellationToken ct = default)
+    /// <param name="authTimeOf">Anmeldezeitpunkt der Sitzung je Konto (aus dem geteilten Cookie, P-14) — das neue Token
+    /// erbt ihn; <c>null</c>/kein Wert = jetzt (ohne Elterndomaene gibt es kein Cookie).</param>
+    public async Task<AuthResponseDto?> RedeemAsync(string? raw, CancellationToken ct = default, Func<int, DateTime?>? authTimeOf = null)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
 
@@ -82,6 +84,6 @@ public class AuthHandoffService
         if (user is null) return null;
 
         _logger.LogInformation("AuthHandoff: eingeloest fuer User {UserId}", user.Id);
-        return await _auth.IssueTokenAsync(user);
+        return await _auth.IssueTokenAsync(user, authTime: authTimeOf?.Invoke(user.Id));
     }
 }
