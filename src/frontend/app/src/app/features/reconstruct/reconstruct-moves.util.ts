@@ -21,12 +21,15 @@ export function withSideToMove(fen: string, black: boolean): string {
   return f.join(' ');
 }
 
+/** Ergebnis-Token, die im eingetippten Zugtext wegfallen — „1/2" (Kurzform) gilt wie „1/2-1/2" als Remis. */
+const RESULT_TOKENS: readonly string[] = ['1-0', '0-1', '1/2-1/2', '1/2', '*'];
+
 /** Die Züge eines eingetippten Textes: Zugnummern und Ergebnis fallen weg, „12.e4" wird „e4". */
 export function moveTokens(text: string): string[] {
   return text
     .split(/\s+/)
     .map(t => t.trim())
-    .filter(t => t && !/^\d+\.*$/.test(t) && !['1-0', '0-1', '1/2-1/2', '*'].includes(t))
+    .filter(t => t && !/^\d+\.*$/.test(t) && !RESULT_TOKENS.includes(t))
     .map(t => t.replace(/^\d+\.+/, ''));
 }
 

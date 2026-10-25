@@ -31,6 +31,7 @@ describe('reconstruct-moves.util', () => {
     ['1.e4 e5 2.Nf3 Nc6 1-0', ['e4', 'e5', 'Nf3', 'Nc6']],
     ['12...Bxf3  *', ['Bxf3']],
     ['  d4\nd5 1/2-1/2 ', ['d4', 'd5']],
+    ['1.d4 d5 2.c4 1/2', ['d4', 'd5', 'c4']],
   ];
   for (const [text, want] of tokenCases) {
     it(`moveTokens(${JSON.stringify(text)})`, () => expect(moveTokens(text)).toEqual(want));
