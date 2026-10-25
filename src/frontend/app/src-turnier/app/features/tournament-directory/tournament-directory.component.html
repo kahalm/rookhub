@@ -13,9 +13,8 @@
     <!-- Ort: der Mittelpunkt der Umkreissuche (Aufbau und Gruende in PlaceFieldComponent). -->
     <app-place-field class="place-field" [label]="placeLabel" [suggestions]="placeSuggestions()"
                      [searching]="placeSearching()" [noMatch]="placeNoMatch()" [searchFailed]="placeSearchFailed()"
-                     [locating]="locating()" [geolocationSupported]="geolocationSupported"
-                     (labelChange)="onPlaceInput($event)" (chosen)="choosePlace($event)"
-                     (cleared)="clearPlace()" (locate)="useCurrentLocation()" />
+                     [locating]="locating()" [geolocationSupported]="geolocationSupported" (labelChange)="onPlaceInput($event)"
+                     (chosen)="choosePlace($event)" (cleared)="clearPlace()" (locate)="useCurrentLocation()" />
 
     <!-- Umkreis und Zeitraum stehen am Handy NICHT in der Leiste, sondern im ausklappbaren Filterfeld; ihre Werte
          zeigen die Chips unter der Leiste (d2-t-calendar-filter-mobile: vorher drei offene Filterzeilen, die erste
@@ -80,8 +79,7 @@
                                 (radiusChange)="onRadiusChange($event)" (searchTextChange)="searchText = $event"
                                 (kindsChange)="onKindsChange($event)" (ageGroupsChange)="onAgeGroupsChange($event)"
                                 (gendersChange)="onGendersChange($event)" (adultsOnlyChange)="onAdultsOnlyChange($event)"
-                                (includeIgnoredChange)="onIncludeIgnoredChange($event)"
-                                (includeImplausibleChange)="onIncludeImplausibleChange($event)"
+                                (includeIgnoredChange)="onIncludeIgnoredChange($event)" (includeImplausibleChange)="onIncludeImplausibleChange($event)"
                                 (speedChange)="onSpeedChange($event)" (reload)="reload()" (reset)="resetFilter()" />
   }
 

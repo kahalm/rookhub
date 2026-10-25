@@ -20,6 +20,7 @@ import { requireAccount } from '../../core/require-account';
 import { wideScreen } from '../../core/wide-screen';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { DirectoryFilterPanelComponent } from './directory-filter-panel.component';
+import { DirectoryCalendarLoader, DirectoryListLoader, DirectoryPinsLoader } from './directory-loaders';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { PlaceFieldComponent } from './place-field.component';
 import { PlaceSearch } from './place-search';
@@ -38,7 +39,7 @@ import { TournamentDirectoryService } from './tournament-directory.service';
 import { MapView, TournamentMapComponent } from './tournament-map.component';
 import {
   DEFAULT_RADIUS_KM, DIRECTORY_RADII,
-  DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
+  DIRECTORY_RANGE_PRESETS, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
   TournamentGender, TournamentKind, TournamentSpeed, directoryPageSize, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
 
@@ -110,17 +111,17 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   readonly profilesLoaded = signal(false);
 
-  readonly entries = signal<DirectoryEntry[]>([]);
-  readonly total = signal(0);
-  readonly truncated = signal(false);
-  readonly loading = signal(false);
-  /**
-   * Seite 1 der Liste ist gescheitert. Ohne diese Marke stand dort der Leer-Text „Zu diesen
-   * Filtern gibt es keine Turniere" — der Nutzer schaltete Filter durch, statt es erneut zu
-   * versuchen; der eigentliche Fehler stand nur fuenf Sekunden in einem Snackbar (UX-040).
-   */
-  readonly listFailed = signal(false);
-  page = 1;
+  /** Die Liste (seitenweise, mit Zaehler gegen ueberholte Antworten — `DirectoryListLoader`). */
+  private readonly list = new DirectoryListLoader(
+    (filter, page, size) => this.directory.search(filter, page, size), this.pageSize,
+    () => this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError')));
+  readonly entries = this.list.entries;
+  readonly total = this.list.total;
+  readonly truncated = this.list.truncated;
+  readonly loading = this.list.loading;
+  readonly listFailed = this.list.failed;
+  get page(): number { return this.list.page; }
+  set page(value: number) { this.list.page = value; }
 
   /**
    * Die Liste in zwei Bloecken: erst was im Zeitraum BEGINNT, dann was schon laeuft. Der Server
@@ -135,15 +136,12 @@ export class TournamentDirectoryComponent implements OnInit {
    *  durchgezählt „1 von 2" (z2-t-cal-gleichnamig). */
   readonly sameNameIds = computed(() => sameNameSiblings(this.entries()));
 
-  readonly pins = signal<DirectoryEntry[]>([]);
-  /**
-   * Der Ausschnitt hat mehr Turniere, als die Karte traegt — es fehlen die spaetesten. Ohne das
-   * stand unter einer gekappten Karte nur „N Turniere im Ausschnitt", und ganze Monate wirkten leer.
-   */
-  readonly mapTruncated = signal(false);
-  readonly mapLoading = signal(false);
-  /** Der letzte Kartenausschnitt kam nicht — sonst stuende dort „0 Turniere im Ausschnitt". */
-  readonly mapFailed = signal(false);
+  /** Die Punkte des Kartenausschnitts (`DirectoryPinsLoader`). */
+  private readonly pinsLoader = new DirectoryPinsLoader((filter, bounds) => this.directory.map(filter, bounds));
+  readonly pins = this.pinsLoader.pins;
+  readonly mapTruncated = this.pinsLoader.truncated;
+  readonly mapLoading = this.pinsLoader.loading;
+  readonly mapFailed = this.pinsLoader.failed;
   private lastBounds: string | null = null;
   /**
    * Der zuletzt gezeigte Kartenausschnitt (Mitte + Zoom). Die Karte steht in `@if (tab === 'map')`
@@ -153,12 +151,14 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   mapView: MapView | null = null;
 
-  readonly calendarDays = signal<DirectoryCalendarDay[]>([]);
+  /** Die Tage des gezeigten Monats (`DirectoryCalendarLoader`). */
+  private readonly calendar = new DirectoryCalendarLoader(
+    (filter, year, month) => this.directory.calendar(filter, year, month));
+  readonly calendarDays = this.calendar.days;
   calendarYear = new Date().getFullYear();
   calendarMonth = new Date().getMonth() + 1;
-  readonly calendarLoading = signal(false);
-  /** Der Monat kam nicht — sonst stuende in der Handy-Agenda „In diesem Monat kein Turnier". */
-  readonly calendarFailed = signal(false);
+  readonly calendarLoading = this.calendar.loading;
+  readonly calendarFailed = this.calendar.failed;
 
   /** Stamm des geraetelokalen Schluessels (siehe `DirectoryViewStateSync.ViewKey`). */
   static readonly ViewKey = DirectoryViewStateSync.ViewKey;
@@ -483,53 +483,8 @@ export class TournamentDirectoryComponent implements OnInit {
 
   // ----- Liste ------------------------------------------------------------
 
-  /**
-   * Zaehler gegen ueberholte Antworten. Ohne ihn liest der Antwort-Handler `this.page` zum
-   * ANTWORTZEITPUNKT: „Mehr laden" (Seite 2) anstossen, sofort den Filter wechseln — die
-   * Antwort auf Seite 2 des ALTEN Filters trifft ein, sieht `page === 1` und ERSETZT die Liste
-   * damit. Der falsche Stand bleibt dann stehen, samt Gesamtzahl.
-   */
-  private listGeneration = 0;
-  private pinsGeneration = 0;
-  /**
-   * Dasselbe fuer den Kalender (Codereview F6-005): zweimal schnell weitergeblaettert, und die
-   * langsamere November-Antwort kam NACH der Dezember-Antwort — das Raster zeigte Dezember mit
-   * den Tagen des Novembers, also leer, die Agenda „kein Turnier". Ebenso ueberschrieb die
-   * spaete Antwort eines alten Filters die neue.
-   */
-  private calendarGeneration = 0;
-
   loadList(): void {
-    this.loading.set(true);
-    this.listFailed.set(false);
-    const generation = ++this.listGeneration;
-    const requestedPage = this.page;
-    this.directory.search(this.filter, requestedPage, this.pageSize).subscribe({
-      next: page => {
-        if (generation !== this.listGeneration) return;
-        this.entries.set(requestedPage === 1 ? page.items : [...this.entries(), ...page.items]);
-        this.total.set(page.total);
-        this.truncated.set(page.truncated);
-        this.loading.set(false);
-      },
-      error: () => {
-        if (generation !== this.listGeneration) return;
-        this.loading.set(false);
-        if (requestedPage === 1) {
-          // Die alte Liste gehoert zu einem anderen Filter — stehen bleibt die Fehlerkarte.
-          this.entries.set([]);
-          this.total.set(0);
-          this.truncated.set(false);
-          this.listFailed.set(true);
-        } else {
-          // „Mehr anzeigen" gescheitert: die Liste bis hierher stimmt, nur der Rest fehlt.
-          // `loadMore` hat `page` schon hochgezaehlt — ohne Ruecksetzen fragte der naechste Klick
-          // (der Erholungsweg) die Seite DANACH an und uebersprang still eine ganze Seite.
-          this.page = requestedPage - 1;
-          this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError'));
-        }
-      },
-    });
+    this.list.load(this.filter);
   }
 
   loadMore(): void {
@@ -551,29 +506,7 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   loadPins(bounds: string): void {
-    this.mapLoading.set(true);
-    // Beim erneuten Betreten des Karten-Reiters laufen zwei Abfragen gegeneinander: `reload()`
-    // fragt mit dem GEMERKTEN Ausschnitt, die frisch aufgebaute Karte meldet direkt danach ihren
-    // eigenen. Ohne Zaehler gewinnt die zufaellig spaetere Antwort.
-    const generation = ++this.pinsGeneration;
-    this.mapFailed.set(false);
-    this.directory.map(this.filter, bounds).subscribe({
-      next: res => {
-        if (generation !== this.pinsGeneration) return;
-        this.pins.set(res.items);
-        this.mapTruncated.set(res.truncated);
-        this.mapLoading.set(false);
-      },
-      error: () => {
-        if (generation !== this.pinsGeneration) return;
-        this.mapLoading.set(false);
-        // Wie Liste und Kalender: die alten Punkte (und „es fehlen die spaetesten") gehoeren zu
-        // einem anderen Ausschnitt oder Filter — stehen bleibt die Fehlerzeile.
-        this.pins.set([]);
-        this.mapTruncated.set(false);
-        this.mapFailed.set(true);
-      },
-    });
+    this.pinsLoader.load(this.filter, bounds);
   }
 
   // ----- Kalender ---------------------------------------------------------
@@ -586,24 +519,7 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   private loadCalendar(): void {
-    this.calendarLoading.set(true);
-    this.calendarFailed.set(false);
-    const generation = ++this.calendarGeneration;
-    this.directory.calendar(this.filter, this.calendarYear, this.calendarMonth).subscribe({
-      next: days => {
-        if (generation !== this.calendarGeneration) return;
-        this.calendarDays.set(days);
-        this.calendarLoading.set(false);
-        this.calendarFailed.set(false);
-      },
-      error: () => {
-        if (generation !== this.calendarGeneration) return;
-        this.calendarLoading.set(false);
-        // Die Tage gehoeren zu einem anderen Monat oder Filter — die Fehlerzeile sagt, was los ist.
-        this.calendarDays.set([]);
-        this.calendarFailed.set(true);
-      },
-    });
+    this.calendar.load(this.filter, this.calendarYear, this.calendarMonth);
   }
 
   get calendarLocale(): string {
