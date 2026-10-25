@@ -18,10 +18,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { HandoffService } from '../../core/handoff.service';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { downloadBlob } from '../../shared/download.util';
-import { pgnFileName } from '../../shared/pgn-export.util';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
+import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GameRoast, GamesService, SharedGame } from './games.service';
 import { GameReviewComponent } from './game-review.component';
@@ -41,10 +38,8 @@ import { LiveEnginePanelComponent } from './live-engine-panel.component';
 import { PositionMenuComponent } from '../analysis/position-menu.component';
 import { BoardBadge } from './move-badge.util';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
-import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
-import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
+import { MatDialogModule } from '@angular/material/dialog';
+import { GameActionsService } from './game-actions.service';
 import { SimilarGamesComponent } from './similar-games.component';
 import { GameRecapComponent } from './game-recap.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
@@ -75,13 +70,12 @@ const TAP_MAX_MS = 500;
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
     SimilarGamesComponent, GameRecapComponent, LoadErrorComponent,
   ],
-  providers: [PgnViewerService],
+  providers: [PgnViewerService, GameActionsService],
   templateUrl: './shared-game.component.html',
   styles: [SHARED_GAME_STYLES]
 })
 export class SharedGameComponent implements OnInit, DoCheck {
   private auth = inject(AuthService);
-  private gameAnalyses = inject(GameAnalysisService);
   private handoff = inject(HandoffService);
   /** „In die Vereins-Datenbank" (LeagueHub, Wunsch 2026-09-28): nur mit dem Recht dazu und wenn es ein LeagueHub zu diesem
    * RookHub gibt. Die Partie wird drüben geladen und läuft durch dieselbe Übersicht wie ein PGN-Upload. */
@@ -92,9 +86,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private analyzeGame = inject(AnalyzeGameService);
   private mistakeJudge = inject(MistakeJudgeService);
   private externalEngines = inject(ExternalEngineService);
-  private scoresheets = inject(ScoresheetService);
-  private dialog = inject(MatDialog);
-  private confirm = inject(ConfirmService);
+  /** Aktionen an der Partie (PGN, Teilen, Löschen, Foto, Roast, Lc0) — je Seite bereitgestellt (V33, Z26). */
+  private actions = inject(GameActionsService);
 
   game: SharedGame | null = null;
   loading = true;
@@ -585,97 +578,46 @@ export class SharedGameComponent implements OnInit, DoCheck {
     }
   }
 
-  /** Das Formular-Foto der eigenen, eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
   /** „Roast my game" (0.535.0) — nur die eigene Partie. */
   roast(): void {
-    if (!this.gameId) return;
-    this.dialog.open(GameRoastDialogComponent, {
-      data: { gameId: this.gameId, shareUrl: this.shareToken ? this.games.shareUrl(this.shareToken) : null, shareToken: this.shareToken ?? null } satisfies GameRoastData,
-      maxWidth: '96vw',
-    });
+    if (this.gameId) this.actions.roast(this.gameId, this.shareToken);
   }
 
+  /** Das Formular-Foto der eigenen, eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
   photo(download: boolean): void {
-    if (!this.gameId) return;
-    if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, this.gameId); return; }
-    this.scoresheets.photo(this.gameId).subscribe({
-      next: blob => openPhotoBlob(blob, photoFileName(this.gameId!, blob)),
-      error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
-    });
+    if (this.gameId) this.actions.photo(this.gameId, download);
   }
 
   /** Im Analysebrett öffnen — mit dem GANZEN PGN (Kopfdaten, Kommentare), nicht nur den Zügen (0.592.0); „Zurück" führt
    *  hierher. Übergabe per Router-State wie aus der Partienliste. */
-  openInAnalysis(): void {
-    const pgn = this.game?.pgn;
-    if (!pgn) return;
-    void this.router.navigate(['/analysis'], { state: { pgn }, queryParams: { from: this.router.url } });
-  }
+  openInAnalysis(): void { this.actions.openInAnalysis(this.game?.pgn, this.router.url); }
 
-  /** Das PGN der Partie in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */
   /** „Mit Lc0 analysieren" — angemeldet, Vereinsmitglied, und die Partie hat noch keine Lc0-Analyse. */
   canLc0(): boolean {
     return this.loggedIn && this.auth.has('league.view') && !!this.game?.pgn && !this.review()?.hasLc0();
   }
 
-  analyzeLc0(): void {
-    const pgn = this.game?.pgn;
-    if (!pgn) return;
-    this.gameAnalyses.startLc0(pgn).subscribe({
-      next: () => {
-        this.snackbar.success(this.translate.instant('games.lc0.started'));
-        this.review()?.refreshAlternatives();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('games.lc0.failed')),
-    });
-  }
+  analyzeLc0(): void { this.actions.startLc0(this.game?.pgn, () => this.review()?.refreshAlternatives()); }
 
-  copyPgn(): void {
-    const pgn = this.game?.pgn;
-    if (!pgn) return;
-    navigator.clipboard?.writeText(pgn).then(
-      () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
-      () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
-    );
-  }
+  /** Das PGN der Partie in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */
+  copyPgn(): void { this.actions.copyPgn(this.game?.pgn); }
 
   /** Eigene Partie löschen (d4-rk-partie-menue-loeschen-fehlt-partieseite): Rückfrage wie in der Partienliste, danach
    *  zurück zur Liste — wer die Partie offen hat, muss dafür nicht erst zurück. */
   remove(): void {
     const id = this.gameId;
     if (!this.own || !id) return;
-    this.confirm.ask('games.deleteConfirm').subscribe(ok => {
-      if (!ok) return;
-      this.games.delete(id).subscribe({
-        next: () => void this.router.navigate(['/games']),
-        error: () => this.snackbar.warn(this.translate.instant('games.deleteError')),
-      });
-    });
+    this.actions.deleteGame(id).subscribe(() => void this.router.navigate(['/games']));
   }
 
   /** Das PGN als Datei „Weiß_Schwarz_Datum.pgn". */
-  downloadPgn(): void {
-    const g = this.game;
-    if (!g?.pgn) return;
-    const players = [g.white, g.black].filter(n => !!n).join(' ');
-    downloadBlob(new Blob([g.pgn.endsWith('\n') ? g.pgn : g.pgn + '\n'], { type: 'application/x-chess-pgn' }),
-      pgnFileName(players || 'game', (g.playedAt ?? g.createdAt ?? '').slice(0, 10)));
-  }
+  downloadPgn(): void { this.actions.downloadPgn(this.game); }
 
   /** Link „Fehler nachspielen" für eine Seite (0.740.0, Wunsch 2026-10-10): der Teilen-Link mit `?train=`. Wer ihn öffnet —
    *  angemeldet oder nicht —, landet direkt im Fehler-Training dieser Farbe. */
-  trainingShareUrl(side: 'white' | 'black'): string | null {
-    return this.shareToken ? `${this.games.shareUrl(this.shareToken)}?train=${side}` : null;
-  }
+  trainingShareUrl(side: 'white' | 'black'): string | null { return this.actions.trainingShareUrl(this.shareToken, side); }
 
-  shareTraining(side: 'white' | 'black'): void {
-    const url = this.trainingShareUrl(side);
-    if (!url) return;
-    navigator.clipboard?.writeText(url).then(
-      () => this.snackbar.copy(this.translate.instant('games.shareTrainingCopied')),
-      () => this.snackbar.warn(url),
-    );
-  }
+  shareTraining(side: 'white' | 'black'): void { this.actions.copyTrainingLink(this.trainingShareUrl(side)); }
 
   readonly trainSides: readonly ('white' | 'black')[] = ['white', 'black'];
 
@@ -683,14 +625,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
   mistakeCount(side: 'white' | 'black'): number { return mistakesOf(this.mistakes(), side).length; }
 
   /** Teilen-Link der eigenen Partie in die Zwischenablage — wie in der Liste. */
-  share(): void {
-    if (!this.shareToken) return;
-    const url = this.games.shareUrl(this.shareToken);
-    navigator.clipboard?.writeText(url).then(
-      () => this.snackbar.copy(this.translate.instant('games.shareCopied')),
-      () => this.snackbar.warn(url),
-    );
-  }
+  share(): void { this.actions.copyShareLink(this.shareToken); }
 
   /** Die Partie rechnen lassen (siehe {@link AnalyzeGameService}). Die Seite ist ohne Anmeldung
    *  erreichbar, der Einwurf nicht: ohne Konto geht es zur Anmeldung und danach wieder hierher. Danach
