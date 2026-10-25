@@ -192,8 +192,8 @@ describe('PositionRepertoiresComponent', () => {
     c.setMode('similar');
 
     expect(repSvc.list).toHaveBeenCalledTimes(1);
-    expect(c.simOptions.map(o => o.id)).toEqual([7, 9]);
-    expect([...c.simSelected]).toEqual([7, 9]);            // Default: alle
+    expect(c.sim.options.map(o => o.id)).toEqual([7, 9]);
+    expect([...c.sim.selected]).toEqual([7, 9]);            // Default: alle
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(1);
     const req = repSvc.findSimilarPositions.calls.mostRecent().args[0];
     expect(req.fen).toBe(c.fen);
@@ -206,9 +206,9 @@ describe('PositionRepertoiresComponent', () => {
     expect('minScore' in req).toBeFalse();
     expect('move' in req).toBeFalse();                     // ohne Zug bleibt die Anfrage die alte
     expect('onlyWithMove' in req).toBeFalse();
-    expect(c.similar.length).toBe(2);
-    expect(c.similar.map(m => m.score)).toEqual([88, 61]);  // nach Score sortiert
-    expect(c.similar[1].mirrored).toBeTrue();
+    expect(c.sim.matches.length).toBe(2);
+    expect(c.sim.matches.map(m => m.score)).toEqual([88, 61]);  // nach Score sortiert
+    expect(c.sim.matches[1].mirrored).toBeTrue();
   });
 
   it('sorts the matches by score even if the server does not', () => {
@@ -216,7 +216,7 @@ describe('PositionRepertoiresComponent', () => {
     repSvc.findSimilarPositions.and.returnValue(of({ matches: [...similarResult.matches].reverse() }));
     c.toggle();
     c.setMode('similar');
-    expect(c.similar.map(m => m.score)).toEqual([88, 61]);
+    expect(c.sim.matches.map(m => m.score)).toEqual([88, 61]);
   });
 
   it('changing the preset re-runs the search and is remembered per device', () => {
@@ -224,13 +224,13 @@ describe('PositionRepertoiresComponent', () => {
     c.toggle();
     c.setMode('similar');
 
-    c.setPreset('struktur');
+    c.sim.setPreset('struktur');
 
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(2);
     expect(repSvc.findSimilarPositions.calls.mostRecent().args[0].preset).toBe('struktur');
     expect(JSON.parse(localStorage.getItem('rookhub_position_reps_similar')!).preset).toBe('struktur');
 
-    c.setPreset('struktur');                                // gleiche Voreinstellung → kein Request
+    c.sim.setPreset('struktur');                                // gleiche Voreinstellung → kein Request
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(2);
   });
 
@@ -239,7 +239,7 @@ describe('PositionRepertoiresComponent', () => {
     c.toggle();
     c.setMode('similar');
 
-    c.setMirrored(false);
+    c.sim.setMirrored(false);
 
     expect(repSvc.findSimilarPositions.calls.mostRecent().args[0].includeMirrored).toBeFalse();
     expect(JSON.parse(localStorage.getItem('rookhub_position_reps_similar')!).mirrored).toBeFalse();
@@ -250,13 +250,13 @@ describe('PositionRepertoiresComponent', () => {
     c.toggle();
     c.setMode('similar');
 
-    c.setSimilarSelection([9]);
+    c.sim.setSelection([9]);
     expect(repSvc.findSimilarPositions.calls.mostRecent().args[0].repertoireIds).toEqual([9]);
 
-    c.setSimilarSelection([]);
+    c.sim.setSelection([]);
     // Leere Liste hieße für den Server „alle" — genau das Gegenteil. Also gar kein Request.
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(2);
-    expect(c.similar).toEqual([]);
+    expect(c.sim.matches).toEqual([]);
     expect(c.loading).toBeFalse();
   });
 
@@ -267,9 +267,9 @@ describe('PositionRepertoiresComponent', () => {
     c.setMode('similar');
 
     expect(c.error).toBeFalse();
-    expect(c.simOptions).toEqual([]);
+    expect(c.sim.options).toEqual([]);
     expect(repSvc.findSimilarPositions.calls.mostRecent().args[0].repertoireIds).toEqual([]);
-    expect(c.similar.length).toBe(2);
+    expect(c.sim.matches.length).toBe(2);
   });
 
   it('a failed similar request shows the error state and allows a retry', () => {
@@ -284,7 +284,7 @@ describe('PositionRepertoiresComponent', () => {
     c.setMode('list');
     c.setMode('similar');
     expect(c.error).toBeFalse();
-    expect(c.similar.length).toBe(2);
+    expect(c.sim.matches.length).toBe(2);
   });
 
   it('openMatch() opens the position exactly like the list view does', () => {
@@ -292,7 +292,7 @@ describe('PositionRepertoiresComponent', () => {
     c.toggle();
     c.setMode('similar');
 
-    c.openMatch(c.similar[0]);                              // Najdorf / Main line / gameIndex 0 / ply 6
+    c.openMatch(c.sim.matches[0]);                              // Najdorf / Main line / gameIndex 0 / ply 6
 
     const [path, extras] = router.navigate.calls.mostRecent().args;
     expect(path).toEqual(['/repertoires', 7]);
@@ -305,14 +305,14 @@ describe('PositionRepertoiresComponent', () => {
     const { c } = make();
     c.toggle();
     c.setMode('similar');
-    c.setPreset('stellungsbild');
-    c.setMirrored(false);
-    c.setSameSide(true);
+    c.sim.setPreset('stellungsbild');
+    c.sim.setMirrored(false);
+    c.sim.setSameSide(true);
 
     const fresh = make().c;
-    expect(fresh.simPreset).toBe('stellungsbild');
-    expect(fresh.simMirrored).toBeFalse();
-    expect(fresh.simSameSide).toBeTrue();
+    expect(fresh.sim.preset).toBe('stellungsbild');
+    expect(fresh.sim.mirrored).toBeFalse();
+    expect(fresh.sim.sameSide).toBeTrue();
   });
 
   it('turning "same side to move" on re-runs the search with the flag', () => {
@@ -320,11 +320,11 @@ describe('PositionRepertoiresComponent', () => {
     c.toggle();
     c.setMode('similar');
 
-    c.setSameSide(true);
+    c.sim.setSameSide(true);
 
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(2);
     expect(repSvc.findSimilarPositions.calls.mostRecent().args[0].sameSideToMove).toBeTrue();
-    c.setSameSide(true);                                    // gleicher Wert → kein Request
+    c.sim.setSameSide(true);                                    // gleicher Wert → kein Request
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(2);
   });
 
@@ -335,11 +335,11 @@ describe('PositionRepertoiresComponent', () => {
     c.toggle();
     c.setMode('similar');
 
-    c.setMoveText('Nc6');                                   // Schwarz am Zug: b8→c6
+    c.sim.setMoveText('Nc6');                                   // Schwarz am Zug: b8→c6
 
-    expect(c.simMoveInvalid).toBeFalse();
-    expect(c.simMoveSan).toBe('Nc6');
-    expect(c.simMove).toEqual({ from: 'b8', to: 'c6' });
+    expect(c.sim.moveInvalid).toBeFalse();
+    expect(c.sim.moveSan).toBe('Nc6');
+    expect(c.sim.move).toEqual({ from: 'b8', to: 'c6' });
     const req = repSvc.findSimilarPositions.calls.mostRecent().args[0];
     expect(req.move).toEqual({ from: 'b8', to: 'c6' });
     expect('onlyWithMove' in req).toBeFalse();              // Bonus, kein Zwang
@@ -349,12 +349,12 @@ describe('PositionRepertoiresComponent', () => {
     const { c, repSvc } = make();
     c.toggle();
     c.setMode('similar');
-    c.setMoveText('Nc6');
+    c.sim.setMoveText('Nc6');
     const calls = repSvc.findSimilarPositions.calls.count();
 
-    c.setMoveText('Nbc6');                                  // dasselbe from/to, nur anders notiert
+    c.sim.setMoveText('Nbc6');                                  // dasselbe from/to, nur anders notiert
 
-    expect(c.simMove).toEqual({ from: 'b8', to: 'c6' });
+    expect(c.sim.move).toEqual({ from: 'b8', to: 'c6' });
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(calls);
   });
 
@@ -362,13 +362,13 @@ describe('PositionRepertoiresComponent', () => {
     const { c, repSvc } = make();
     c.toggle();
     c.setMode('similar');
-    c.setMoveText('Nc6');
+    c.sim.setMoveText('Nc6');
 
-    c.setMoveText('Nc7');                                   // kein Springer kann nach c7
+    c.sim.setMoveText('Nc7');                                   // kein Springer kann nach c7
 
-    expect(c.simMoveInvalid).toBeTrue();
-    expect(c.simMove).toBeNull();
-    expect(c.simMoveSan).toBe('');
+    expect(c.sim.moveInvalid).toBeTrue();
+    expect(c.sim.move).toBeNull();
+    expect(c.sim.moveSan).toBe('');
     const req = repSvc.findSimilarPositions.calls.mostRecent().args[0];
     expect('move' in req).toBeFalse();                      // keine leere Trefferliste vortäuschen
   });
@@ -379,10 +379,10 @@ describe('PositionRepertoiresComponent', () => {
     c.setMode('similar');
     const before = repSvc.findSimilarPositions.calls.count();
 
-    c.setMoveText('N');
-    c.setMoveText('Nc');
+    c.sim.setMoveText('N');
+    c.sim.setMoveText('Nc');
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(before);   // beides ist kein Zug
-    c.setMoveText('Nc6');
+    c.sim.setMoveText('Nc6');
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(before + 1);
   });
 
@@ -396,14 +396,14 @@ describe('PositionRepertoiresComponent', () => {
     }));
     c.toggle();
     c.setMode('similar');
-    c.setMoveText('Nc6');
+    c.sim.setMoveText('Nc6');
 
-    c.setOnlyWithMove(true);
+    c.sim.setOnlyWithMove(true);
 
     expect(repSvc.findSimilarPositions.calls.mostRecent().args[0].onlyWithMove).toBeTrue();
     // Sicherheitsnetz: auch ein Server, der den Schalter (noch) nicht kennt, liefert hier nichts Falsches.
-    expect(c.similar.length).toBe(1);
-    expect(c.similar[0].moveMatch).toBe('exact');
+    expect(c.sim.matches.length).toBe(1);
+    expect(c.sim.matches[0].moveMatch).toBe('exact');
   });
 
   it('the switch stays without effect while there is no valid move', () => {
@@ -412,10 +412,10 @@ describe('PositionRepertoiresComponent', () => {
     c.setMode('similar');
     const calls = repSvc.findSimilarPositions.calls.count();
 
-    c.setOnlyWithMove(true);
+    c.sim.setOnlyWithMove(true);
 
     expect(repSvc.findSimilarPositions).toHaveBeenCalledTimes(calls);   // nichts zu filtern
-    expect(c.similar.length).toBe(2);
+    expect(c.sim.matches.length).toBe(2);
   });
 
   it('sorts by the FINAL score, so a move hit outranks the better position', () => {
@@ -429,25 +429,25 @@ describe('PositionRepertoiresComponent', () => {
     }));
     c.toggle();
     c.setMode('similar');
-    c.setMoveText('Nc6');
+    c.sim.setMoveText('Nc6');
 
-    expect(c.similar.map(m => m.score)).toEqual([92.5, 88]);
-    expect(c.similar.map(m => m.positionScore)).toEqual([85, 88]);      // beide Zahlen bleiben da
+    expect(c.sim.matches.map(m => m.score)).toEqual([92.5, 88]);
+    expect(c.sim.matches.map(m => m.positionScore)).toEqual([85, 88]);      // beide Zahlen bleiben da
   });
 
   it('re-reads the move on the NEW anchor when the position changes', () => {
     const { c } = make();
     c.toggle();
     c.setMode('similar');
-    c.setMoveText('Nc6');
-    expect(c.simMove).toEqual({ from: 'b8', to: 'c6' });
+    c.sim.setMoveText('Nc6');
+    expect(c.sim.move).toEqual({ from: 'b8', to: 'c6' });
 
     // Weiter geklickt: 2…Nc6 3.Bb5 — jetzt ist Schwarz erneut am Zug, Nc6 ist gespielt.
     c.fen = 'r1bqkbnr/pp1ppppp/2n5/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3';
     c.ngOnChanges({ fen: { currentValue: c.fen, previousValue: '', firstChange: false, isFirstChange: () => false } });
 
-    expect(c.simMoveInvalid).toBeTrue();     // derselbe Text, dort kein Zug mehr
-    expect(c.simMove).toBeNull();
+    expect(c.sim.moveInvalid).toBeTrue();     // derselbe Text, dort kein Zug mehr
+    expect(c.sim.move).toBeNull();
   });
 
   it('trainNode()/viewNode() navigate for an unambiguous tree node', () => {
@@ -506,7 +506,7 @@ describe('PositionRepertoiresComponent', () => {
     step(c, after2Nc6);
 
     expect(state.cancelled).toBe(1);
-    expect(c.similar.length).toBe(2);
+    expect(c.sim.matches.length).toBe(2);
   });
 
   it('closing the page (destroy) cancels the running request', () => {
@@ -558,7 +558,7 @@ describe('PositionRepertoiresComponent', () => {
     repSvc.findSimilarPositions.and.returnValue(of({ matches: [], truncated: true }));
     c.toggle();
     c.setMode('similar');
-    expect(c.similar.length).toBe(0);
+    expect(c.sim.matches.length).toBe(0);
     expect(c.truncated).toBeTrue();
 
     c.setMode('list');

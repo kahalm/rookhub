@@ -7,19 +7,19 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Observable, Subscription, of } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
 import {
   RepertoireService, RepertoirePositionMatch, RepertoireLineMatch,
   RepertoirePositionTree, PositionTreeNode,
-  SimilarPositionMatch, SimilarityPreset, SimilarMoveInput, SimilarPositionsRequest,
+  SimilarPositionMatch,
 } from '../../core/repertoire.service';
 import { ParsedGame, parsePgnText, splitPgnGames } from '../../shared/pgn-viewer/pgn-parser';
 import { lineKeyFromSans } from './repertoire-line-key.util';
-import { moveKey, parseMoveInput } from './similar-move.util';
 import { PositionTreeComponent } from './position-tree.component';
-import { SimilarPositionsComponent, SimilarRepertoireOption } from './similar-positions.component';
-import { localStore, readJson, readRaw, writeJson, writeRaw } from '../../core/local-json-store';
+import { SimilarPositionsPanelComponent } from './similar-positions-panel.component';
+import { SimilarPositionsSearch } from './similar-positions-search';
+import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { whiteToMove } from '../../shared/chess/fen-side';
 
@@ -27,10 +27,6 @@ interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
 type PanelMode = 'list' | 'tree' | 'similar';
 const MODE_KEY = 'rookhub_position_reps_mode';
-/** Voreinstellung + Spiegel-/Seite-am-Zug-Schalter der Ähnlichkeitssuche, pro Gerät gemerkt (wie
- * die Sicht). Der erwogene ZUG gehört bewusst NICHT dazu: er gilt für genau eine Frage. */
-const SIMILAR_PREFS_KEY = 'rookhub_position_reps_similar';
-const SIMILAR_LIMIT = 40;
 
 /**
  * „In welchen Repertoires kommt diese Stellung vor?" — wiederverwendbarer Knopf + Ergebnis-Panel.
@@ -72,7 +68,7 @@ const SIMILAR_LIMIT = 40;
   selector: 'app-position-repertoires',
   standalone: true,
   imports: [IconLabelDirective, CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressSpinnerModule, TranslatePipe,
-            PositionTreeComponent, SimilarPositionsComponent],
+            PositionTreeComponent, SimilarPositionsPanelComponent],
   template: `
     @if (auth.isLoggedIn) {
       <div class="pos-reps" [class.pr-as-row]="appearance === 'row'">
@@ -112,27 +108,25 @@ const SIMILAR_LIMIT = 40;
             } @else if (error) {
               <div class="pr-muted pr-error">{{ (rateLimited ? 'positionInReps.rateLimited' : 'positionInReps.error') | translate }}</div>
             } @else if (mode === 'similar') {
-              @if (truncated) {
-                <div class="pr-muted pr-note">{{ 'positionInReps.truncated' | translate }}</div>
-              }
-              <app-similar-positions
-                [matches]="similar"
-                [options]="simOptions"
-                [selected]="simSelected"
-                [preset]="simPreset"
-                [includeMirrored]="simMirrored"
-                [sameSideToMove]="simSameSide"
-                [moveText]="simMoveText"
-                [moveSan]="simMoveSan"
-                [moveInvalid]="simMoveInvalid"
-                [onlyWithMove]="simOnlyWithMove"
-                (presetChange)="setPreset($event)"
-                (mirroredChange)="setMirrored($event)"
-                (sameSideToMoveChange)="setSameSide($event)"
-                (moveTextChange)="setMoveText($event)"
-                (onlyWithMoveChange)="setOnlyWithMove($event)"
-                (selectionChange)="setSimilarSelection($event)"
-                (open)="openMatch($event)" />
+              <app-similar-positions-panel
+                [truncated]="truncated"
+                [matches]="sim.matches"
+                [options]="sim.options"
+                [selected]="sim.selected"
+                [preset]="sim.preset"
+                [includeMirrored]="sim.mirrored"
+                [sameSideToMove]="sim.sameSide"
+                [moveText]="sim.moveText"
+                [moveSan]="sim.moveSan"
+                [moveInvalid]="sim.moveInvalid"
+                [onlyWithMove]="sim.onlyWithMove"
+                (presetChange)="sim.setPreset($event)"
+                (mirroredChange)="sim.setMirrored($event)"
+                (sameSideToMoveChange)="sim.setSameSide($event)"
+                (moveTextChange)="sim.setMoveText($event)"
+                (onlyWithMoveChange)="sim.setOnlyWithMove($event)"
+                (selectionChange)="sim.setSelection($event)"
+                (openMatch)="openMatch($event)" />
             } @else if (mode === 'tree') {
               @if (truncated) {
                 <div class="pr-muted pr-note">{{ 'positionInReps.truncated' | translate }}</div>
@@ -273,28 +267,9 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   mode: PanelMode = 'list';
   repertoires: RepertoirePositionMatch[] = [];
   trees: RepertoirePositionTree[] = [];
-  similar: SimilarPositionMatch[] = [];
   totalLines = 0;
   totalOccurrences = 0;
   busyLine: string | null = null;
-
-  /** Auswählbare Repertoires der Ähnlichkeitssuche (leer, solange/falls die Liste nicht kam). */
-  simOptions: SimilarRepertoireOption[] = [];
-  simSelected = new Set<number>();
-  simPreset: SimilarityPreset = 'ausgewogen';
-  simMirrored = true;
-  /** Nur Stellungen mit derselben Seite am Zug (Default aus — wie serverseitig). */
-  simSameSide = false;
-  /** Rohtext des Zug-Feldes, so wie getippt (SAN). */
-  simMoveText = '';
-  /** Auf der ANKER-Stellung aufgelöster Zug; `null` = kein gültiger Zug eingegeben. */
-  simMove: SimilarMoveInput | null = null;
-  /** Kanonischer SAN des erkannten Zuges ('' ohne Zug). */
-  simMoveSan = '';
-  /** Eingabe nicht leer, auf dieser Stellung aber kein legaler Zug. */
-  simMoveInvalid = false;
-  /** Treffer ohne passenden Zug ausblenden. Bewusst NICHT gemerkt: der Zug gilt nur für diese Frage. */
-  simOnlyWithMove = false;
 
   private openReps = new Set<number>();
   private loadedFen = '';
@@ -303,14 +278,14 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   /** Die laufende Anfrage — eine neue Stellung bestellt sie ab (siehe Klassen-Doku). */
   private pending: Subscription | null = null;
   private pgnCache = new Map<number, string[]>();   // die Abschnitte des PGN (splitPgnGames), nicht geparst
-  private simOptionsLoaded = false;
-  /** Sobald der Nutzer die Auswahl angefasst hat, wird sie nicht mehr auf „alle" zurückgesetzt. */
-  private simSelectionTouched = false;
+  /** Sicht „Ähnlich": Filter, Zug, Treffer (überlebt Zuklappen und Sichtwechsel wie bisher die Felder hier). */
+  readonly sim = new SimilarPositionsSearch({
+    api: () => this.repertoireService, fen: () => this.fen, reload: () => this.reloadSimilar(),
+  });
 
   constructor(public auth: AuthService, private repertoireService: RepertoireService, private router: Router) {
     const saved = readRaw(localStore(), MODE_KEY);
     if (saved === 'tree' || saved === 'list' || saved === 'similar') this.mode = saved;
-    this.restoreSimilarPrefs();
   }
 
   /** Nur wo ein Consumer zuhört, ist „Zug aufs Brett spielen" sinnvoll. */
@@ -327,7 +302,7 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
     if (!changes['fen']) return;
     // Der eingegebene Zug hängt an der ANKER-Stellung: „Nd5" ist nach dem Durchklicken ein
     // anderer Zug — oder gar keiner mehr. Also VOR dem Laden neu auflösen.
-    if (this.simMoveText.trim()) this.applyMoveText(this.simMoveText);
+    this.sim.reanchor();
     // Wenn das Panel offen ist und sich die Stellung ändert (Durchklicken), neu laden.
     if (this.open && this.fen !== this.loadedFen) this.load();
   }
@@ -373,7 +348,16 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
     };
 
     if (this.mode === 'similar') {
-      this.loadSimilar(myReq, fail);
+      // Erst die Repertoire-Liste (einmalig), dann die Suche — EINE Kette, das Abbestellen bricht beides ab.
+      this.pending = this.sim.search().subscribe({
+        next: (res) => {
+          if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
+          this.sim.applyResult(res);        // null = nichts ausgewählt → nichts gefragt
+          if (res) this.truncated = res.truncated === true;
+          this.loading = false;
+        },
+        error: fail,
+      });
       return;
     }
 
@@ -406,135 +390,6 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
 
   // ===== Ähnliche Stellungen =====
 
-  /** Erst die Repertoire-Liste (einmalig, für den Filter), dann die eigentliche Suche — als EINE
-   * Kette, damit das Abbestellen (neue Stellung) auch die Suche selbst abbricht. */
-  private loadSimilar(myReq: number, fail: (err?: unknown) => void): void {
-    this.pending = this.repertoireOptions().pipe(
-      switchMap(opts => {
-        this.applyOptions(opts);
-        // Bewusst KEINE Anfrage, wenn der Nutzer alles abgewählt hat — leere Liste hieße für den
-        // Server „alle", und das wäre das Gegenteil dessen, was er gerade eingestellt hat.
-        if (this.simOptions.length > 0 && this.simSelected.size === 0) return of(null);
-        const ids = this.simOptions.filter(o => this.simSelected.has(o.id)).map(o => o.id);
-        const req: SimilarPositionsRequest = {
-          fen: this.fen,
-          repertoireIds: ids,
-          preset: this.simPreset,
-          includeMirrored: this.simMirrored,
-          sameSideToMove: this.simSameSide,
-          limit: SIMILAR_LIMIT,
-          // Kein minScore: die Schwelle setzt der Server (sonst driften die beiden Defaults).
-        };
-        if (this.simMove) {
-          req.move = this.simMove;
-          if (this.simOnlyWithMove) req.onlyWithMove = true;
-        }
-        return this.repertoireService.findSimilarPositions(req);
-      }),
-    ).subscribe({
-      next: (res) => {
-        if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
-        if (!res) {                       // nichts ausgewählt → nichts gefragt
-          this.similar = [];
-          this.loading = false;
-          return;
-        }
-        // Der Server sortiert bereits nach Score; hier wird die Zusage der Sicht abgesichert.
-        // Sortiert wird nach dem ENDWERT — das ist die Reihenfolge, die die Liste zeigt.
-        this.similar = this.applyMoveFilter([...(res.matches ?? [])])
-          .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-        this.truncated = res.truncated === true;
-        this.loading = false;
-      },
-      error: fail,
-    });
-  }
-
-  /** Repertoire-Liste für den Filter; scheitert sie, wird ohne Filter gesucht (Server: alle). */
-  private repertoireOptions(): Observable<SimilarRepertoireOption[]> {
-    if (this.simOptionsLoaded) return of(this.simOptions);
-    return this.repertoireService.list().pipe(
-      map(reps => (reps ?? []).map(r => ({ id: r.id, name: r.name }))),
-      tap(opts => { this.simOptions = opts; this.simOptionsLoaded = true; }),
-      catchError(() => of([] as SimilarRepertoireOption[])),
-    );
-  }
-
-  private applyOptions(opts: SimilarRepertoireOption[]): void {
-    this.simOptions = opts;
-    if (this.simSelectionTouched) {
-      // Zwischenzeitlich gelöschte Repertoires aus der Auswahl werfen.
-      const valid = new Set(opts.map(o => o.id));
-      for (const id of [...this.simSelected]) if (!valid.has(id)) this.simSelected.delete(id);
-      return;
-    }
-    this.simSelected = new Set(opts.map(o => o.id)); // Default: alle
-  }
-
-  setPreset(preset: SimilarityPreset): void {
-    if (this.simPreset === preset) return;
-    this.simPreset = preset;
-    this.saveSimilarPrefs();
-    this.reloadSimilar();
-  }
-
-  setMirrored(on: boolean): void {
-    if (this.simMirrored === on) return;
-    this.simMirrored = on;
-    this.saveSimilarPrefs();
-    this.reloadSimilar();
-  }
-
-  setSameSide(on: boolean): void {
-    if (this.simSameSide === on) return;
-    this.simSameSide = on;
-    this.saveSimilarPrefs();
-    this.reloadSimilar();
-  }
-
-  /**
-   * Zug-Eingabe: Text merken, auf der Ankerstellung auflösen und nur dann neu suchen, wenn sich
-   * der ZUG geändert hat — `Ncd5` nach `Nd5` getippt ist derselbe Zug, und jeder Tastendruck auf
-   * dem Weg zu einem legalen Zug (`N`, `Nd`) ist gar keiner.
-   */
-  setMoveText(text: string): void {
-    const before = moveKey(this.simMove);
-    this.applyMoveText(text);
-    if (moveKey(this.simMove) !== before) this.reloadSimilar();
-  }
-
-  /** Zug-Zwang; ohne gültigen Zug wirkungslos (der Schalter ist dann auch nicht sichtbar). */
-  setOnlyWithMove(on: boolean): void {
-    if (this.simOnlyWithMove === on) return;
-    this.simOnlyWithMove = on;
-    if (this.simMove) this.reloadSimilar();
-  }
-
-  /** Reine Auswertung ohne Nebenwirkung auf die Suche (siehe `setMoveText`/`ngOnChanges`). */
-  private applyMoveText(text: string): void {
-    this.simMoveText = text;
-    const parsed = parseMoveInput(this.fen, text);
-    this.simMove = parsed.move;
-    this.simMoveSan = parsed.san;
-    this.simMoveInvalid = parsed.invalid;
-  }
-
-  /**
-   * Sicherheitsnetz für „nur Stellungen mit diesem Zug": ein Server, der `onlyWithMove` (noch)
-   * nicht kennt, liefert sonst Treffer ohne Zug-Treffer zurück und der Schalter sähe kaputt aus.
-   * Die Bedingung ist dieselbe wie serverseitig, das Filtern also folgenlos, wenn er es tut.
-   */
-  private applyMoveFilter(matches: SimilarPositionMatch[]): SimilarPositionMatch[] {
-    if (!this.simMove || !this.simOnlyWithMove) return matches;
-    return matches.filter(m => m.moveMatch !== null);
-  }
-
-  setSimilarSelection(ids: number[]): void {
-    this.simSelected = new Set(ids);
-    this.simSelectionTouched = true;
-    this.reloadSimilar();
-  }
-
   /** Ein Treffer öffnet die Stellung genau wie in der Listen-Sicht („Ansehen"). */
   openMatch(match: SimilarPositionMatch): void {
     this.navigateToLine(
@@ -545,24 +400,6 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
 
   private reloadSimilar(): void {
     if (this.open && this.mode === 'similar') this.load(true);
-  }
-
-  private restoreSimilarPrefs(): void {
-    // Kaputter/gesperrter Speicher: Voreinstellungen bleiben auf Default.
-    const saved = readJson<{ preset?: string; mirrored?: boolean; sameSide?: boolean }>(localStore(), SIMILAR_PREFS_KEY);
-    if (!saved || typeof saved !== 'object') return;
-    if (saved.preset === 'struktur' || saved.preset === 'ausgewogen' || saved.preset === 'stellungsbild') {
-      this.simPreset = saved.preset;
-    }
-    if (typeof saved.mirrored === 'boolean') this.simMirrored = saved.mirrored;
-    if (typeof saved.sameSide === 'boolean') this.simSameSide = saved.sameSide;
-  }
-
-  private saveSimilarPrefs(): void {
-    // Privatmodus: Auswahl gilt nur für die Sitzung.
-    writeJson(localStore(), SIMILAR_PREFS_KEY, {
-      preset: this.simPreset, mirrored: this.simMirrored, sameSide: this.simSameSide,
-    });
   }
 
   toggleRep(id: number): void {
