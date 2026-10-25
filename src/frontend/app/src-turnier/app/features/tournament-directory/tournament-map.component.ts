@@ -5,10 +5,11 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
-import { formatTournamentDates } from '../../core/tournament-date';
 import { MapPinMarker, pinRadiusFor } from './map-pin-marker';
 import { TournamentCardComponent } from './tournament-card.component';
-import { DirectoryEntry, DirectoryVenue, displayLocation, isPlaceholderLocation } from './tournament-directory.model';
+import { DirectoryEntry } from './tournament-directory.model';
+import { PinGroup, PinMember, groupByPoint, groupStyle } from './map-pin-groups';
+import { MapPopupBuilder, MapText } from './map-popup-builder';
 import {
   MIXED, PIN_COLOUR_SCHEMES, PinCategory, PinColourBy, commonCategory, legendOf,
 } from './pin-palette';
@@ -416,7 +417,9 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
       // Als FUNKTION, nicht als fertiger Text: der Hinweis wird uebersetzt, und beim Zeichnen der
       // Marker koennen die Sprachdateien noch unterwegs sein.
-      marker.bindTooltip(() => this.tooltipHtml(group), { direction: 'top', offset: [0, -above] });
+      marker.bindTooltip(
+        () => MapPopupBuilder.tooltipHtml(group, this.text, this.translate.currentLang()),
+        { direction: 'top', offset: [0, -above] });
       // Klick = Popup (siehe Klassenkommentar), NICHT der Sprung auf die Detailseite.
       marker.bindPopup(() => this.buildPopup(group), {
         offset: [0, -above + 4], minWidth: Math.min(220, avail), maxWidth: Math.min(300, avail),
@@ -500,68 +503,14 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   private renderGroupList(host: HTMLElement, group: PinGroup): void {
     // Zurueck aus der Einzelansicht: die dort erzeugte Kurzansicht wird nicht mehr gebraucht.
     this.destroyPopup();
-    host.replaceChildren();
-
-    const head = document.createElement('p');
-    head.className = 'tm-group-head';
-    head.textContent =
-      this.text('tournamentDirectory.map.samePoint', { count: group.members.length });
-    host.appendChild(head);
-
-    const place = placeOf(group);
-    if (place) {
-      const where = document.createElement('p');
-      where.className = 'tm-group-place';
-      where.textContent = place;
-      host.appendChild(where);
-    }
-
-    // Warum sie uebereinanderliegen, sagt sich nur bei der einen Ursache, die wir kennen: alle
-    // Spielorte dieses Punktes sind Regionsmitten. Ohne diesen Satz sieht es nach einem Fehler
-    // aus, obwohl es die ehrliche Wiedergabe eines Ortstextes ist, der nur „Tirol" sagt.
-    if (isVague(group)) {
-      const why = document.createElement('p');
-      why.className = 'tm-group-vague';
-      why.textContent = this.text('tournamentDirectory.map.samePointVague');
-      host.appendChild(why);
-    }
-
-    const list = document.createElement('div');
-    list.className = 'tm-group-list';
-    for (const member of group.members) {
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'tm-group-row';
-      if (member.entry.subscribed) row.classList.add('is-marked');
-
-      const name = document.createElement('span');
-      name.className = 'tm-group-name';
-      // textContent, nicht innerHTML: die Namen kommen von chess-results, also von aussen.
-      name.textContent = member.entry.name;
-      const when = document.createElement('span');
-      when.className = 'tm-group-when';
-      when.textContent = dateRange(member.entry, this.translate.currentLang());
-
-      row.append(name, when);
-      row.addEventListener('click', () => this.renderGroupCard(host, group, member));
-      list.appendChild(row);
-    }
-    host.appendChild(list);
+    host.replaceChildren(...MapPopupBuilder.groupList(group, this.text, this.translate.currentLang(),
+      member => this.renderGroupCard(host, group, member)));
     this.resizePopup();
   }
 
   /** Die Kurzansicht EINES Turniers des Buendels, mit dem Weg zurueck zur Liste. */
   private renderGroupCard(host: HTMLElement, group: PinGroup, member: PinMember): void {
-    host.replaceChildren();
-
-    const back = document.createElement('button');
-    back.type = 'button';
-    back.className = 'tm-group-back';
-    back.textContent =
-      this.text('tournamentDirectory.map.backToList', { count: group.members.length });
-    back.addEventListener('click', () => this.renderGroupList(host, group));
-    host.appendChild(back);
-
+    host.replaceChildren(MapPopupBuilder.backButton(group, this.text, () => this.renderGroupList(host, group)));
     host.appendChild(this.buildCard(member));
     this.resizePopup();
   }
@@ -614,29 +563,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.popupGroup = undefined;
   }
 
-  /**
-   * Der Hinweis am Pin. Bei einem Buendel nennt er die Anzahl statt eines der Turniere — ein
-   * herausgegriffener Name behauptete, der Punkt gehoere ihm.
-   */
-  private tooltipHtml(group: PinGroup): string {
-    if (group.members.length > 1) {
-      const place = placeOf(group);
-      return `<strong>${escapeHtml(
-        this.text('tournamentDirectory.map.samePoint', { count: group.members.length }))}</strong>` +
-        (place ? `<br>${escapeHtml(place)}` : '');
-    }
-    const { entry, spot } = group.members[0];
-    // „various" ist kein Ort: uebersetzt (UI-Sweep 2026-10-11, r2-t-various).
-    const place = entry.venues.length > 1 ? spot.name : displayLocation(entry.location, key => this.text(key));
-    const when = dateRange(entry, this.translate.currentLang());
-    return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(when)}` +
-           (place ? `<br>${escapeHtml(place)}` : '');
-  }
-
   /** `instant` genuegt hier: ein Popup gibt es erst nach einem Klick, die Texte stehen laengst. */
-  private text(key: string, params?: Record<string, unknown>): string {
-    return this.translate.instant(key, params);
-  }
+  private readonly text: MapText = (key, params) => this.translate.instant(key, params);
 
   /** Schluessel des Umkreises — `null` ohne Mittelpunkt. Dieselbe Form in `MapView.centre`. */
   private centreKey(): string | null {
@@ -712,132 +640,4 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     // aenderte sich nach der Pruefung, im Dev-Build ein NG0100.
     queueMicrotask(() => this.viewChanged.emit(view));
   }
-}
-
-/**
- * Ein Punkt und alles, was auf ihm liegt. Der Pin gehoert der KOORDINATE, nicht dem Turnier —
- * zwei Turniere mit demselben Ortstext („Tirol") sitzen auf derselben Landesmitte, und der
- * zweite Pin waere unter dem ersten unerreichbar.
- */
-interface PinGroup {
-  lat: number;
-  lon: number;
-  members: PinMember[];
-  marker?: MapPinMarker;
-  /** Die gemeinsame Klasse des gewaehlten Merkmals; `MIXED`, wenn sie sich unterscheiden. */
-  category: PinCategory;
-}
-
-/** Ein Turnier an diesem Punkt samt dem Spielort, mit dem es hierher kam. */
-interface PinMember {
-  entry: DirectoryEntry;
-  spot: DirectoryVenue;
-}
-
-/**
- * Die zu zeichnenden Punkte, gebuendelt nach Koordinate und in Zeichenreihenfolge.
- *
- * <p>Gebuendelt wird bei EXAKT gleicher Koordinate (auf fuenf Nachkommastellen, gut einen Meter),
- * nicht bei „nah beieinander": ein Abstandsmass haenge am Zoom und wuerde zwei verschiedene Orte
- * zu einem erklaeren, sobald man weit genug herauszoomt. Gleiche Koordinate heisst dagegen
- * nachweislich dieselbe Aussage.</p>
- *
- * <p>Gemerkte ZULETZT: Leaflet zeichnet in Reihenfolge des Hinzufuegens, und ein gemerkter Punkt
- * soll nicht unter einem beliebigen anderen liegen. In einer Stadt mit dreissig Turnieren ist
- * genau das der Unterschied zwischen „ich sehe meins" und „ich suche meins". `sort` ist stabil,
- * die Reihenfolge des Servers bleibt innerhalb der beiden Gruppen also erhalten.</p>
- */
-function groupByPoint(entries: DirectoryEntry[]): PinGroup[] {
-  const byPoint = new Map<string, PinGroup>();
-  for (const entry of entries) {
-    // Ein Punkt JE SPIELORT: bei Ligen nennt chess-results mehrere („Mayrhofen, St.Veit").
-    // Mit nur dem Hauptort verschwaende ein Turnier die Haelfte seiner Orte, und die
-    // Umkreissuche fand es nicht, obwohl es zur Haelfte vor der Haustuer stattfindet.
-    for (const spot of venuesOf(entry)) {
-      const key = `${spot.lat.toFixed(5)}|${spot.lon.toFixed(5)}`;
-      const group = byPoint.get(key);
-      if (group) group.members.push({ entry, spot });
-      else byPoint.set(key,
-        { lat: spot.lat, lon: spot.lon, members: [{ entry, spot }], category: MIXED });
-    }
-  }
-  return [...byPoint.values()]
-    .sort((a, b) => Number(hasSubscribed(a)) - Number(hasSubscribed(b)));
-}
-
-/** Gemerkt ist ein Punkt, sobald EINES seiner Turniere gemerkt ist — sonst ginge es unter. */
-function hasSubscribed(group: PinGroup): boolean {
-  return group.members.some(m => m.entry.subscribed);
-}
-
-/** Nur ungefaehr verortet ist ein Punkt, wenn ALLE seine Spielorte Regionsmitten sind. */
-function isVague(group: PinGroup): boolean {
-  return group.members.every(m => m.spot.geoSource === 'Region');
-}
-
-/** Der Ortsname des Punktes; alle seine Spielorte liegen ja auf derselben Koordinate. */
-function placeOf(group: PinGroup): string {
-  const { entry, spot } = group.members[0];
-  // Ein Platzhalter wie „various" ist kein Ortsname (r2-t-various) — dann lieber keiner.
-  return spot.name || entry.geoPlaceName || (isPlaceholderLocation(entry.location) ? '' : entry.location) || '';
-}
-
-function groupStyle(group: PinGroup): L.PathOptions {
-  return pinStyle(group.category, hasSubscribed(group), isVague(group));
-}
-
-/**
- * Wie ein Punkt aussieht. Zwei Angaben stecken darin, und beide muessen ohne Legende ablesbar
- * sein:
- *
- * <p><b>Die KLASSE des gewaehlten Merkmals</b> traegt die FUELLUNG (Bedenkzeit, Turnierart,
- * Nachwuchs, Geschlechtsklasse — siehe `pin-palette`). Das ist der Kanal, den man ueberfliegen
- * kann: „wo ist ein Schnellschachturnier" beantwortet sich damit ohne einen einzigen Klick.</p>
- *
- * <p><b>Gemerkt</b> — ein dicker, fast schwarzer RING. Frueher war das die Fuellung (Amber), aber
- * die traegt jetzt die Klasse, und zwei Bedeutungen auf einem Kanal sind keine Auskunft. Der Ring
- * ist dafuer der richtige Platz: „gemerkt" ist eine Ja/Nein-Angabe, und ein Rand um eine beliebige
- * Fuellung bleibt in jeder Farbe erkennbar. Gemerkte werden ausserdem ZULETZT gezeichnet und
- * liegen damit oben.</p>
- *
- * <p><b>Nur ungefaehr verortet</b> (Bundesland-Mittelpunkt) — sichtbar abgeschwaecht, sonst
- * suggeriert ein knackiger Pin eine Genauigkeit, die er nicht hat. Diese Abschwaechung gilt auch
- * fuer gemerkte, damit die Aussage nicht verlorengeht.</p>
- *
- * <p>Die vierte Angabe — wie VIELE Turniere auf dem Punkt liegen — traegt der Pin als Zahl im
- * Kopf (siehe `MapPinMarker`), nicht als weitere Farbe: eine Anzahl ist eine Anzahl.</p>
- */
-function pinStyle(category: PinCategory, subscribed: boolean, vague: boolean): L.PathOptions {
-  return {
-    color: subscribed ? '#202124' : category.stroke,
-    fillColor: category.fill,
-    weight: subscribed ? 4 : 2,
-    fillOpacity: vague ? 0.45 : 0.85,
-  };
-}
-
-/**
- * Die zu zeichnenden Punkte eines Turniers: die Liste der Spielorte, wenn es mehrere gibt, sonst
- * der eine Ort am Eintrag selbst. Nicht verortete Turniere liefern nichts.
- */
-function venuesOf(entry: DirectoryEntry): DirectoryVenue[] {
-  if (entry.venues.length > 0) return entry.venues;
-  if (entry.lat == null || entry.lon == null) return [];
-  return [{ name: entry.geoPlaceName ?? entry.location ?? '', lat: entry.lat, lon: entry.lon,
-            geoSource: entry.geoSource }];
-}
-
-/**
- * „18.–20. Dez. 2026" bzw. nur der eine Tag, in der Oberflaechensprache; leer, wenn chess-results
- * gar kein Datum lieferte (Codereview F6-010: bis dahin roh „2026-12-18 – 2026-12-20").
- */
-function dateRange(entry: DirectoryEntry, locale: string | null): string {
-  return formatTournamentDates(entry.startDate, entry.endDate, locale);
-}
-
-/** Turnier- und Ortsnamen kommen von chess-results — also fremder Text in einem innerHTML-Tooltip. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
