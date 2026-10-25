@@ -8,6 +8,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.833.2", date: "2026-10-25", changes: [
+    { en: "Tournament calendar: Irish tournaments matched to a chess-results tournament no longer show up twice after the first night.", de: "Turnierkalender: Irische Turniere, die einem chess-results-Turnier zugeordnet sind, erscheinen nach der ersten Nacht nicht mehr doppelt." },
+    { en: "Tournament calendar: Slovak tournaments without a chess-results number no longer get an empty number stored (which could break the nightly sync on the unique index).", de: "Turnierkalender: Slowakische Turniere ohne chess-results-Nummer bekommen keine leere Nummer mehr gespeichert (die den nächtlichen Abgleich am eindeutigen Index abbrechen konnte)." },
+    { en: "Tournament calendar: date and venue changes of Slovak tournaments with a chess-results number are picked up again instead of the entry matching itself.", de: "Turnierkalender: Termin- und Ortsänderungen slowakischer Turniere mit chess-results-Nummer kommen wieder an, statt dass sich der Eintrag sich selbst zuordnet." },
+  ]},
   { version: "0.833.1", date: "2026-10-25", changes: [
     { en: "Deleting your account now also removes puzzle challenges you sent or received and your revenge notifications (code review A1-018; received course and repertoire shares stay with the book or repertoire).", de: "Beim Löschen des Kontos werden jetzt auch gesendete und empfangene Puzzle-Challenges sowie die eigenen Revanche-Benachrichtigungen entfernt (Codereview A1-018; erhaltene Kurs- und Repertoire-Freigaben bleiben beim Buch bzw. Repertoire)." },
     { en: "Courses: chapters whose names have leading or trailing spaces now count as one chapter everywhere — „Start chapter“ on the course page no longer opens the wrong chapter, and locked calculation weeks stay hidden.", de: "Kurse: Kapitel, deren Name mit Leerzeichen beginnt oder endet, zählen jetzt überall als dasselbe Kapitel — „Kapitel starten“ auf der Kursseite öffnet nicht mehr das falsche Kapitel, und gesperrte Kalk-Wochen bleiben verborgen." },
