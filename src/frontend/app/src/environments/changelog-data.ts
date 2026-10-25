@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.11", date: "2026-10-25", changes: [
+    { en: "Technical rework (code review 2026-09-29, decomposition Z18): the book/course solver is split into mode building blocks (course, weekly post, daily puzzle, book), a pure review controller and smaller display parts (context card, course stats, comment block, board hint); 30 characterisation specs per mode were written first — behaviour unchanged.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z18): Der Buch-/Kurs-Löser ist in Modus-Bausteine (Kurs, Wochenpost, Tagespuzzle, Buch), einen reinen Durchsicht-Controller und kleinere Anzeige-Teile (Kontextkarte, Kurs-Statistik, Kommentarblock, Brett-Hinweis) zerlegt; vorher 30 Charakterisierungs-Specs je Modus — Verhalten unverändert." },
+  ]},
   { version: "0.832.10", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z19): Endless mode is split into start, result and help screens plus a pure run log; the unreachable „played out“ screen and dead styles are removed (component style budget warning gone) — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z19): Der Endlos-Modus ist in Start-, Ergebnis- und Hilfe-Bildschirm sowie ein reines Lauf-Protokoll aufgeteilt; der unerreichbare „Ausgespielt“-Bildschirm und tote Stile sind entfernt (Budget-Warnung der Komponentenstile weg) — keine sichtbare Änderung." },
   ]},
