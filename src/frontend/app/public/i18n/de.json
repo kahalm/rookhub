@@ -1148,7 +1148,10 @@
       "popToken": "Für lichess.org fehlt ein Lichess-Token (Profil) – oder im Lochfinder die Quelle „Lokal“ wählen.",
       "popRateLimited": "Lichess bremst gerade – beim nächsten Klick geht es weiter.",
       "popFailed": "Die Beliebtheit der Züge konnte gerade nicht geholt werden.",
-      "lichess": "Lichess"
+      "lichess": "Lichess",
+      "arrows": "Pfeile",
+      "dragHint": "Figuren ziehen, um den Linien zu folgen",
+      "notInRepertoire": "{{san}} steht hier nicht im Repertoire."
     },
     "edit": {
       "uploadHint": "PGN-Dateien hierher ziehen oder zum Hochladen klicken",

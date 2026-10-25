@@ -632,3 +632,50 @@ describe('RepertoireDetailComponent Neues Repertoire aus Auswahl', () => {
     expect(create).not.toHaveBeenCalled();
   });
 });
+
+describe('RepertoireDetailComponent Baum: Pfeile + Ziehen', () => {
+  const PGN = '[Event "Rep"]\n[Black "A"]\n\n1. e4 e5 2. Nf3 *\n\n[Event "Rep"]\n[Black "A"]\n\n1. e4 c5 *\n\n[Event "Rep"]\n[Black "B"]\n\n1. d4 d5 *\n';
+
+  async function make() {
+    localStorage.removeItem('rh.repertoire.treeArrows');
+    await TestBed.configureTestingModule({
+      imports: [RepertoireDetailComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const comp = TestBed.createComponent(RepertoireDetailComponent).componentInstance;
+    comp.viewerService.loadPgn(PGN);
+    comp.treeService.buildTreeFromGames(comp.viewerService.games);
+    comp.mode = 'tree';
+    spyOn(comp, 'loadTreePopularity');
+    return comp;
+  }
+
+  it('Pfeile nur mit Schalter oder im Brett-Vollbild — dann je Fortsetzung einer, stabil zwischen Prüfläufen', async () => {
+    const comp = await make();
+    expect(comp.boardArrows).toEqual([]);
+    comp.boardFullscreen = true;
+    expect(comp.boardArrows.map(a => a.from + a.to).sort()).toEqual(['d2d4', 'e2e4']);
+    expect(comp.boardArrows).toBe(comp.boardArrows);
+    comp.boardFullscreen = false;
+    comp.toggleTreeArrows();
+    expect(comp.boardArrows.length).toBe(2);
+    expect(localStorage.getItem('rh.repertoire.treeArrows')).toBe('1');
+    comp.mode = 'lines';
+    expect(comp.boardArrows).toEqual([]);
+  });
+
+  it('Zug auf dem Brett folgt der Fortsetzung; ein fremder Zug springt zurück', async () => {
+    const comp = await make();
+    const resync = jasmine.createSpy('resync');
+    comp.board = { resync } as any;
+    comp.onBoardMove({ from: 'e2', to: 'e4', san: 'e4', fen: '' });
+    expect(comp.treeService.breadcrumbs.map(b => b.san)).toEqual(['e4']);
+    expect(comp.loadTreePopularity).toHaveBeenCalled();
+    comp.onBoardMove({ from: 'g8', to: 'f6', san: 'Nf6', fen: '' });
+    expect(resync).toHaveBeenCalled();
+    expect(comp.treeService.breadcrumbs.map(b => b.san)).toEqual(['e4']);
+    comp.onBoardMove({ from: 'c7', to: 'c5', san: 'c5', fen: '' });
+    expect(comp.treeService.breadcrumbs.map(b => b.san)).toEqual(['e4', 'c5']);
+  });
+});

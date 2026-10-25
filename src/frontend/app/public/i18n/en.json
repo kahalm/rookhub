@@ -1148,7 +1148,10 @@
       "popToken": "lichess.org needs a Lichess token (profile) – or choose the source “Local” in the hole finder.",
       "popRateLimited": "Lichess is slowing us down – the next click carries on.",
       "popFailed": "The popularity of the moves could not be fetched just now.",
-      "lichess": "Lichess"
+      "lichess": "Lichess",
+      "arrows": "Arrows",
+      "dragHint": "Drag pieces to follow the lines",
+      "notInRepertoire": "{{san}} is not in the repertoire here."
     },
     "edit": {
       "uploadHint": "Drag & drop PGN files here or click to upload",

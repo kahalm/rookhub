@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
@@ -10,7 +10,9 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { canonSan, sameArrows, treeArrows } from './repertoire-tree-arrows.util';
+import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { RepertoireLinesComponent } from './repertoire-lines.component';
 import { RepertoireTreeComponent } from './repertoire-tree.component';
@@ -36,6 +38,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
 type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
+
+/** Gerät merkt sich „Pfeile im Baum“ (an/aus). */
+const TREE_ARROWS_KEY = 'rh.repertoire.treeArrows';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -128,8 +133,21 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                 [fen]="boardFen"
                 [lastMove]="boardLastMove"
                 [flipped]="boardFlipped"
-                [playable]="filterBoardActive"
-                (userMove)="onFilterMove($event)" />
+                [playable]="filterBoardActive || mode === 'tree'"
+                [arrows]="boardArrows"
+                (fullscreenChange)="boardFullscreen = $event"
+                (userMove)="onBoardMove($event)" />
+              @if (mode === 'tree') {
+                <!-- Baum: alle Fortsetzungen als Pfeile, Breite = Häufigkeit auf Lichess; im Brett-Vollbild immer an. -->
+                <div class="tree-board-bar">
+                  <button mat-stroked-button type="button" class="tree-arrows-toggle" [class.on]="treeArrowsOn"
+                          [attr.aria-pressed]="treeArrowsOn" (click)="toggleTreeArrows()">
+                    <mat-icon>{{ treeArrowsOn ? 'visibility' : 'visibility_off' }}</mat-icon>
+                    {{ 'repertoire.tree.arrows' | translate }}
+                  </button>
+                  <span class="tree-board-hint">{{ 'repertoire.tree.dragHint' | translate }}</span>
+                </div>
+              }
               @if (filterBoardActive) {
                 <!-- Stellungs-Filter: Züge auf dem Brett grenzen rechts die Linien auf die ein,
                      die die erreichte Stellung enthalten (Transpositionen zählen). -->
@@ -266,6 +284,9 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
       display: flex; align-items: center; gap: 8px; margin-top: 6px;
       font-size: 0.85em; color: color-mix(in srgb, currentColor 70%, transparent);
     }
+    .tree-board-bar { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; }
+    .tree-arrows-toggle.on { border-color: currentColor; }
+    .tree-board-hint { font-size: 12px; color: color-mix(in srgb, currentColor 55%, transparent); }
     .filter-bar { display: flex; align-items: center; gap: 4px; width: 100%; max-width: var(--board-size, 400px); min-height: 40px; }
     .filter-moves { flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -474,6 +495,44 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     return formatSansWithNumbers(this.filterStack.map(s => s.san), this.filterRootFen ?? undefined);
   }
 
+  /** Baum: Pfeile an (gemerkt je Gerät); im Brett-Vollbild immer an. */
+  treeArrowsOn = readRaw(localStore(), TREE_ARROWS_KEY) === '1';
+  boardFullscreen = false;
+  private arrowsCache: BoardArrow[] = [];
+
+  toggleTreeArrows(): void {
+    this.treeArrowsOn = !this.treeArrowsOn;
+    writeRaw(localStore(), TREE_ARROWS_KEY, this.treeArrowsOn ? '1' : '0');
+  }
+
+  /** Pfeile fürs Brett — dieselbe Liste, solange sich nichts ändert (das Brett zeichnet sonst bei jedem Prüflauf neu). */
+  get boardArrows(): BoardArrow[] {
+    const want = this.mode === 'tree' && (this.treeArrowsOn || this.boardFullscreen)
+      ? treeArrows(this.treeService.children.map(c => ({ san: c.san, from: c.node.from, to: c.node.to })), this.treePopularity())
+      : [];
+    if (!sameArrows(want, this.arrowsCache)) this.arrowsCache = want;
+    return this.arrowsCache;
+  }
+
+  onBoardMove(move: UserBoardMove): void {
+    if (this.mode === 'tree') this.onTreeBoardMove(move);
+    else this.onFilterMove(move);
+  }
+
+  /** Baum: ein Zug auf dem Brett folgt der Fortsetzung mit diesem Zug; ein Zug, den das Repertoire hier nicht hat,
+   *  springt zurück. */
+  onTreeBoardMove(move: UserBoardMove): void {
+    const san = canonSan(move.san);
+    const child = this.treeService.children.find(c => canonSan(c.san) === san);
+    if (!child) {
+      this.board?.resync();
+      this.snackbar.quick(this.translate.instant('repertoire.tree.notInRepertoire', { san: move.san }));
+      return;
+    }
+    this.treeService.selectChild(child.san);
+    this.loadTreePopularity();
+  }
+
   onFilterMove(move: UserBoardMove): void {
     this.filterStack.push({ san: move.san, fen: move.fen, lastMove: [move.from, move.to] });
     this.recomputeFilter();
@@ -514,6 +573,8 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     this.filterPlyByGame = res.plyByGame;
     this.filteredLines = this.viewerService.lines.filter(l => res.gameIndices.has(l.gameIndex));
   }
+
+  @ViewChild(ChessBoardComponent) board?: ChessBoardComponent;
 
   constructor(
     private route: ActivatedRoute,

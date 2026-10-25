@@ -10,6 +10,7 @@ import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-b
 import { PromotionPickerComponent, PromotionPiece } from '../promotion-picker/promotion-picker.component';
 import { applyUserMove, isPromotionMove, legalDests, turnColorOf } from './board-moves.util';
 import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
+import { isFullscreen, onFullscreenChange } from '../fullscreen/fullscreen.util';
 
 /** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). `promotion` = gewählte
  *  Umwandlungsfigur, nur bei einer Umwandlung gesetzt (SAN und FEN tragen sie schon). */
@@ -17,7 +18,11 @@ export interface UserBoardMove { from: string; to: string; san: string; fen: str
 
 /** Ein vom Aufrufer vorgegebener Pfeil (z. B. der beste Zug der Engine) — Chessground-„autoShape". `brush` =
  *  Chessground-Farbe (Vorgabe grün; die Live-Engine zeichnet blau, damit man sie von der Partie-Analyse trennt). */
-export interface BoardArrow { from: string; to: string; brush?: string; }
+export interface BoardArrow {
+  from: string; to: string; brush?: string;
+  /** Strichstärke (chessground-Einheiten, Vorgabe des Pinsels 10) — z. B. nach Häufigkeit (Repertoire-Baum). */
+  lineWidth?: number;
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -101,6 +106,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   private fenChangedAt = 0;
   private badgeTimer: number | null = null;
   @Output() userMove = new EventEmitter<UserBoardMove>();
+  /** Brett-Vollbild an/aus (nur das eigene, nicht das App-Vollbild). */
+  @Output() fullscreenChange = new EventEmitter<boolean>();
+  @ViewChild('fsHost') fsHost?: ElementRef<HTMLElement>;
+  private offFullscreen?: () => void;
+  private wasFullscreen = false;
 
   /** Offene Umwandlungs-Auswahl. Ein Signal, weil der Zug aus einem Chessground-Callback kommt (kein
    *  Template-Ereignis) — so zeichnet Angular den Wähler auch unter einem OnPush-Elternteil. */
@@ -127,6 +137,18 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   ngAfterViewInit(): void {
     this.initBoard();
+    this.offFullscreen = onFullscreenChange(() => {
+      const now = isFullscreen(this.fsHost?.nativeElement);
+      if (now !== this.wasFullscreen) { this.wasFullscreen = now; this.fullscreenChange.emit(now); }
+    });
+  }
+
+  /** Stellung, Zugrecht und letzten Zug neu setzen — nach einem Nutzerzug, den der Aufrufer NICHT übernimmt (die
+   *  gezogene Figur springt zurück; ohne neue `fen` gäbe es sonst keine Änderung, die das Brett zurückstellt). */
+  resync(): void {
+    this.ground?.set({ fen: this.fen, turnColor: turnColorOf(this.fen), lastMove: this.lastMove as Key[] | undefined,
+      ...this.interactionConfig() });
+    this.applyArrows();
   }
 
   private initBoard(): void {
@@ -284,7 +306,10 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       return;
     }
     this.arrowsPending = false;
-    const shapes: DrawShape[] = (this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green' }));
+    const shapes: DrawShape[] = (this.arrows ?? []).map(a => ({
+      orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green',
+      ...(a.lineWidth != null ? { modifiers: { lineWidth: a.lineWidth } } : {}),
+    }));
     const badge = this.badge;
     const wait = badge ? this.fenChangedAt + ChessBoardComponent.AnimationMs + ChessBoardComponent.BadgeSettleMs - Date.now() : 0;
     if (badge && wait > 0) {
@@ -368,6 +393,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   ngOnDestroy(): void {
+    this.offFullscreen?.();
     this.destroyed = true;
     if (this.rafId !== undefined) cancelAnimationFrame(this.rafId);
     if (this.roRafId !== undefined) cancelAnimationFrame(this.roRafId);

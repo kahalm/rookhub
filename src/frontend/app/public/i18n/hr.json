@@ -1148,7 +1148,10 @@
       "popToken": "Za lichess.org potreban je Lichess token (profil) – ili u traženju rupa odaberi izvor „Lokalno“.",
       "popRateLimited": "Lichess nas trenutačno usporava – sljedeći klik nastavlja.",
       "popFailed": "Popularnost poteza trenutačno se nije mogla dohvatiti.",
-      "lichess": "Lichess"
+      "lichess": "Lichess",
+      "arrows": "Strelice",
+      "dragHint": "Povucite figure da pratite linije",
+      "notInRepertoire": "{{san}} ovdje nije u repertoaru."
     },
     "edit": {
       "uploadHint": "Povuci PGN datoteke ovdje ili klikni za prijenos",

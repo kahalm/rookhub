@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslatePipe } from '@ngx-translate/core';
 import { TreeChild, Breadcrumb } from './move-tree.service';
 import { ExplorerPosition, formatPercent } from './repertoire-explorer.service';
+import { canonSan } from './repertoire-tree-arrows.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -144,7 +145,3 @@ export class RepertoireTreeComponent {
   }
 }
 
-/** SAN ohne Schach-/Matt-/Bewertungszeichen, Rochade mit „O". */
-function canonSan(san: string): string {
-  return san.trim().replace(/[+#!?]+$/, '').replace(/0-0-0/, 'O-O-O').replace(/0-0/, 'O-O');
-}

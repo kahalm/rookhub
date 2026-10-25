@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.834.0", date: "2026-10-25", changes: [
+    { en: "Repertoire tree: a new “Arrows” button below the board shows every continuation of the current position as an arrow — the more often a move is played on Lichess, the thicker its arrow. In board fullscreen the arrows are always on. You can now also drag the pieces on the board to follow the lines; a move that is not in the repertoire snaps back.",
+      de: "Repertoire-Baum: ein neuer Knopf „Pfeile“ unter dem Brett zeigt jede Fortsetzung der aktuellen Stellung als Pfeil — je häufiger ein Zug auf Lichess gespielt wird, desto dicker sein Pfeil. Im Brett-Vollbild sind die Pfeile immer an. Außerdem kann man jetzt die Figuren auf dem Brett ziehen, um den Linien zu folgen; ein Zug, der nicht im Repertoire steht, springt zurück." },
+  ] },
   { version: "0.833.3", date: "2026-10-25", changes: [
     { en: "Game page: the “engine offline since …” time in the ⋮ menu uses the date format of the app language.", de: "Partieseite: Die Zeit bei „Engine offline seit …“ im ⋮-Menü steht im Datumsformat der App-Sprache." },
   ] },

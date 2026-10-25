@@ -52,3 +52,13 @@ von chess.js. Rückfall auf die Portionen im Hauptthread (`parsePgnTextWithSourc
 Hauptthread dessen Stapel. Genutzt von der Detailseite (`RepertoireViewerService.loadPgnAsync`) und dem Trainer. Gebündelt
 über `webWorkerTsConfig` (`tsconfig.worker.json`, nur Projekt `app`); CSP `worker-src 'self'` reicht. Gemessen in Chrome
 (16 Kerne): 2 348 ms → 721 ms.
+
+## Baum: Pfeile + Ziehen auf dem Brett (0.834.0)
+
+Wunsch 2026-10-25: alle Fortsetzungen im Baum als Pfeile, Pfeilgröße = Häufigkeit auf Lichess, im Brett-Vollbild immer an,
+Figuren ziehen folgt den Linien. Rein Frontend: `repertoire-tree-arrows.util.ts` (`treeArrows`: Breite
+`ARROW_MIN`…`ARROW_MAX` = 3…18 nach √(Partien/max) aus der schon geladenen Baum-Beliebtheit `treePopularity`, SAN über
+`canonSan` abgeglichen; ohne Explorer-Daten `ARROW_UNIFORM` 9). `BoardArrow.lineWidth` → chessground `modifiers.lineWidth`.
+`ChessBoardComponent` meldet `fullscreenChange` (nur eigenes Brett-Vollbild) und hat `resync()` für abgewiesene Züge.
+Detailseite: Brett im Baum spielbar, `onTreeBoardMove` → `treeService.selectChild`; Schalter in localStorage
+`rh.repertoire.treeArrows`.
