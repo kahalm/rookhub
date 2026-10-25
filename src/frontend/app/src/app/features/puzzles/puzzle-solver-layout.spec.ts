@@ -273,8 +273,8 @@ describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-sc
     const el = renderBookPuzzle(c => {
       c.inCourse = true; c.courseTotal = 10; c.courseSolved = 0;
       c.state = 'AWAITING_USER_MOVE';
-      spyOnProperty(c, 'commentLines', 'get').and.returnValue([long]);
-      spyOnProperty(c, 'commentBlocks', 'get').and.returnValue([[{ text: long }]]);
+      spyOnProperty(c.comments as any, 'lines', 'get').and.returnValue([long]);
+      spyOnProperty(c.comments as any, 'blocks', 'get').and.returnValue([[{ text: long }]]);
     });
     const info = el.querySelector('.info-section') as HTMLElement;
     const comment = info.querySelector('.ctx-comment') as HTMLElement;
@@ -309,7 +309,7 @@ describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-sc
   it('ohne Kommentar kein leerer Block', () => {
     const el = renderBookPuzzle(c => {
       c.state = 'AWAITING_USER_MOVE';
-      spyOnProperty(c, 'commentLines', 'get').and.returnValue([]);
+      spyOnProperty(c.comments as any, 'lines', 'get').and.returnValue([]);
     });
     expect(el.querySelector('.ctx-comment-block')).toBeNull();
   });

@@ -836,10 +836,10 @@ describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
     c.puzzle = puzzle;
     (c as any).setupPuzzle(puzzle);
     expect(c.state).toBe('INFO');
-    expect(() => c.commentBlocks).not.toThrow();
-    expect(c.commentLines.length).toBe(1);
+    expect(() => c.comments.blocks).not.toThrow();
+    expect(c.comments.lines.length).toBe(1);
     // Der Text kommt vollständig durch; klickbare Zug-Chips gibt es hier (nicht validierbar) nicht.
-    const segs: CommentSegment[] = c.commentBlocks[0];
+    const segs: CommentSegment[] = c.comments.blocks[0];
     expect(segs.map(s => s.text ?? s.move).join('')).toBe(intro);
     expect(segs.every(s => !s.move)).toBeTrue();
   });
@@ -903,7 +903,7 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', comment: 'Einleitung' };
     c.reviewMode = false;
     c.moveComment = 'sollte-ignoriert-werden';
-    expect(c.displayComment).toBe('Einleitung');
+    expect(c.comments.display).toBe('Einleitung');
   });
 
   it('im Review bevorzugt sie den Zug-Kommentar, fällt sonst auf den Puzzle-Kommentar zurück', () => {
@@ -911,15 +911,15 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: 'b', comment: 'Einleitung' };
     c.reviewMode = true;
     c.moveComment = 'Zug-Kommentar';
-    expect(c.displayComment).toBe('Zug-Kommentar');
+    expect(c.comments.display).toBe('Zug-Kommentar');
     c.moveComment = null;
-    expect(c.displayComment).toBe('Einleitung');
+    expect(c.comments.display).toBe('Einleitung');
   });
 
   it('ohne Puzzle ist sie null', () => {
     const c = makeComponent();
     c.puzzle = null;
-    expect(c.displayComment).toBeNull();
+    expect(c.comments.display).toBeNull();
   });
 
   it('während des Lösens STAPELT commentLines die Zug-Kommentare (kein Intro-Rückfall)', () => {
@@ -932,17 +932,17 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     (c as any).state = 'AWAITING_USER_MOVE';
 
     (c as any).moveIndex = 0;                                  // vor dem ersten Zug → Einleitung
-    expect(c.commentLines).toEqual(['Einleitung']);
+    expect(c.comments.lines).toEqual(['Einleitung']);
     (c as any).moveIndex = 1;                                  // erster Löserzug noch ausstehend → Einleitung bleibt oben (linger), ply-0-Kommentar darunter
-    expect(c.commentLines).toEqual(['Einleitung', 'Guter erster Zug']);
+    expect(c.comments.lines).toEqual(['Einleitung', 'Guter erster Zug']);
     (c as any).moveIndex = 2;                                  // 1. Löserzug gemacht → Einleitung weg, ply 1 KEIN Kommentar → bleibt beim einen
-    expect(c.commentLines).toEqual(['Guter erster Zug']);
+    expect(c.comments.lines).toEqual(['Guter erster Zug']);
     (c as any).moveIndex = 3;                                  // ply 2 hat Kommentar → darunter gestapelt
-    expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
+    expect(c.comments.lines).toEqual(['Guter erster Zug', 'Springer raus']);
     (c as any).moveIndex = 4;                                  // ply 3 KEIN Kommentar → KEIN Intro-Rückfall
-    expect(c.commentLines).toEqual(['Guter erster Zug', 'Springer raus']);
+    expect(c.comments.lines).toEqual(['Guter erster Zug', 'Springer raus']);
     (c as any).onSolutionPath = false;                         // off-path (Fehlzug) → KEIN Intro-Rückfall
-    expect(c.commentLines).toEqual([]);
+    expect(c.comments.lines).toEqual([]);
   });
 
   it('commentLines: nach einem Fehlzug (off-path) kein Rückfall auf die Einleitung', () => {
@@ -956,19 +956,19 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     // Vor dem 1. Zug: Einleitung.
     (c as any).onSolutionPath = true;
     (c as any).moveIndex = 0;
-    expect(c.commentLines).toEqual(['Einleitung']);
+    expect(c.comments.lines).toEqual(['Einleitung']);
 
     // Erster Löserzug ausstehend: Einleitung bleibt einen Halbzug länger stehen, ply-0-Kommentar darunter.
     (c as any).moveIndex = 1;
-    expect(c.commentLines).toEqual(['Einleitung', 'Guter erster Zug']);
+    expect(c.comments.lines).toEqual(['Einleitung', 'Guter erster Zug']);
 
     // 1. Löserzug gemacht → Einleitung weg, nur noch der Zug-Kommentar.
     (c as any).moveIndex = 2;
-    expect(c.commentLines).toEqual(['Guter erster Zug']);
+    expect(c.comments.lines).toEqual(['Guter erster Zug']);
 
     // Danach FALSCH → off-path: die Einleitung darf NICHT wieder auftauchen (Bug-Report Buch 84572).
     (c as any).onSolutionPath = false;
-    expect(c.commentLines).toEqual([]);
+    expect(c.comments.lines).toEqual([]);
   });
 
   it('commentLines: Mid-Line-Puzzle (startPly ≥ 1) zeigt den Kommentar NICHT zu früh', () => {
@@ -986,9 +986,9 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     (c as any).state = 'AWAITING_USER_MOVE';
 
     (c as any).moveIndex = 3;   // nach Setup: letzter gespielter Halbzug = ply 2 (ohne Kommentar)
-    expect(c.commentLines).toEqual([]);        // KEIN verfrühter Kommentar
+    expect(c.comments.lines).toEqual([]);        // KEIN verfrühter Kommentar
     (c as any).moveIndex = 4;   // ply 3 gespielt → dessen Kommentar erscheint
-    expect(c.commentLines).toEqual(['Springer-Kommentar']);
+    expect(c.comments.lines).toEqual(['Springer-Kommentar']);
   });
 
   it('commentLines: leer ohne jeden Kommentar während des Lösens (kein Intro)', () => {
@@ -999,7 +999,7 @@ describe('BookPuzzleComponent Kommentar-Anzeige (displayComment)', () => {
     (c as any).startPly = 0;
     (c as any).state = 'AWAITING_USER_MOVE';
     (c as any).moveIndex = 2;                                  // gespielt, aber keine moveComments
-    expect(c.commentLines).toEqual([]);                        // → Block ausgeblendet, KEIN Intro
+    expect(c.comments.lines).toEqual([]);                        // → Block ausgeblendet, KEIN Intro
   });
 });
 
@@ -1012,7 +1012,7 @@ describe('BookPuzzleComponent Abschlusskommentar nach der Lösung', () => {
     };
     (c as any).enterSolutionReview();
     expect(c.reviewMode).toBeTrue();
-    expect(c.displayComment).toBe('Abschlusstext');   // Schlusstext, nicht die Einleitung
+    expect(c.comments.display).toBe('Abschlusstext');   // Schlusstext, nicht die Einleitung
   });
 
   it('erkennt einen Abschlusskommentar nach dem letzten Zug', () => {

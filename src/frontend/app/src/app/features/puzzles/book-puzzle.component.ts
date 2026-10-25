@@ -9,12 +9,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
 import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
-import { CommentSegment } from './comment-variation.util';
-import { CommentDialogComponent, commentLength, LONG_COMMENT_CHARS } from './comment-dialog.component';
-import { CommentBlockCache } from './line-step.util';
-import {
-  displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
-} from './book-comment.util';
+import { hasTrailingSolutionComment as computeHasTrailingComment } from './book-comment.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
@@ -25,7 +20,6 @@ import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
-import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { parseAltMoves } from './alt-moves.util';
 import { tryLoadFen, fenSideToMove } from './puzzle-move.util';
@@ -59,6 +53,7 @@ import { BookStandaloneMode } from './book-standalone-mode';
 import { BookSolveModeController } from './book-solve-mode';
 import { BookLanguageController } from './book-language';
 import { BookLastSolved, bookShareData } from './book-last-solved';
+import { BookCommentView, VariationPreview } from './book-comment-view';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -96,6 +91,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   readonly lang: BookLanguageController;
   /** Zuletzt gelöstes Puzzle (analysieren / ♥ / teilen / Aufgabenblatt), überlebt den Auto-Advance. */
   readonly lastSolved = new BookLastSolved();
+  /** Info-/Zug-Kommentar: geltende Absätze, Zug-Chips, Fenster für lange Kommentare. */
+  readonly comments: BookCommentView;
 
   private dailySub?: Subscription;
   private courseSub?: Subscription;
@@ -236,7 +233,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     stockfish: StockfishService,
     private prefs: PreferencesService,
     private route: ActivatedRoute,
-    private dialog: MatDialog,
+    readonly dialog: MatDialog,
     readonly courseService: CourseService,
     readonly weeklyService: WeeklyService,
     readonly router: Router,
@@ -258,6 +255,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.book = new BookStandaloneMode(this);
     this.solveModes = new BookSolveModeController(this);
     this.lang = new BookLanguageController(this);
+    this.comments = new BookCommentView(this);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'book',
@@ -430,7 +428,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.singlePuzzle) return;
     // Steht nach dem letzten Lösungszug noch ein Abschlusstext (Kommentar NACH dem Zug), NICHT
     // automatisch weiterspringen — der Spieler soll ihn lesen und selbst „Weiter" klicken. Der
-    // Kommentar wird über displayComment angezeigt (enterSolutionReview springt ans Ende + setzt ihn).
+    // Kommentar wird über comments.display angezeigt (enterSolutionReview springt ans Ende + setzt ihn).
     // Im Vollbild ist der Text ohnehin nicht erreichbar → dennoch weiter.
     if (this.hasTrailingSolutionComment && !inBoardFullscreen) return;
     // Sonst einheitlicher Auto-Advance: nach kurzem Countdown zum nächsten (kontextabhängig
@@ -572,79 +570,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     clearVisualizationHide();
   }
 
-  /** Einzel-Kommentar für Review-/Info-Modus (Kommentar zum aktuell durchgespielten Zug, Fallback
-   *  Einleitung) — Basis der Ply-Navigation; die Anzeige läuft über {@link commentLines}. */
-  get displayComment(): string | null {
-    if (!this.puzzle) return null;
-    return computeDisplayComment(this.reviewMode, this.reviewIndex, this.moveComment, this.puzzle.comment);
-  }
-
-  /** Die im Kontext-Block angezeigten Kommentar-Absätze (gestapelt).
-   *  - Review/Info: EIN Absatz (der zum durchgespielten Zug bzw. die Einleitung).
-   *  - WÄHREND des Lösens: die Kommentare ALLER bereits gespielten Lösungszüge in Reihenfolge
-   *    (jeder neue darunter). Züge ohne Kommentar fügen NICHTS hinzu; es gibt KEINEN Rückfall auf
-   *    die Einleitung, sobald gespielt wird (leere Liste → Block ausgeblendet).
-   *  - Vor dem ersten Zug: die Einleitung des Puzzles. */
-  get commentLines(): string[] {
-    if (!this.puzzle) return [];
-    return buildCommentLines({
-      reviewMode: this.reviewMode,
-      reviewIndex: this.reviewIndex,
-      moveComment: this.moveComment,
-      puzzleComment: this.puzzle.comment,
-      moveComments: this.puzzle.moveComments,
-      onSolutionPath: this.onSolutionPath,
-      moveIndex: this.moveIndex,
-      solving: this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING',
-      startPly: this.startPly,
-    });
-  }
-
-  // ---- Klickbare Züge in Kommentaren (Variante auf dem Brett vorspielen) ----
   /** Brett-Vorschau einer angeklickten Kommentar-Variante (überlagert boardFen/lastMove); null = aus. */
-  variationPreview: { fen: string; lastMove: [Key, Key] } | null = null;
-  private readonly cmtCache = new CommentBlockCache();
-
-  /** {@link commentLines} in klickbare Segmente zerlegt (Text + spielbare Zug-Chips). Gecacht je
-   *  Kommentar-Inhalt + Puzzle, da die Auflösung nur von Puzzle-FEN/-Zügen abhängt (nicht vom Ply);
-   *  derselbe Cache wie in der Kurs-Durchsicht (`line-step.util`). */
-  get commentBlocks(): CommentSegment[][] {
-    return this.cmtCache.get(this.puzzle?.id ?? 0, this.commentLines, this.puzzle?.fen ?? '',
-      () => (this.puzzle?.moves ?? '').split(' ').filter(m => m));
-  }
-
-  /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
-  previewVariationMove(seg: CommentSegment): void {
-    if (!seg.fen || !seg.from || !seg.to) return;
-    this.variationPreview = { fen: seg.fen, lastMove: [seg.from as Key, seg.to as Key] };
-  }
-
-  /** Langer Kommentar (Vorwort, Einleitung): steht weiter VOLLSTÄNDIG im Kasten, ein Klick öffnet ihn zusätzlich im
-   *  Fenster (Wunsch 2026-10-07: „modal, damit mehr Platz … trotzdem alles anzeigen, damit ich nicht klicken muss"). */
+  variationPreview: VariationPreview | null = null;
   /** Kurs-Fortschritt (ganzes Buch + Kapitel) aufgeklappt? Zu bis zum ⓘ neben der Sprachwahl (Wunsch 2026-10-20). */
   readonly statsOpen = signal(false);
-
-  get commentIsLong(): boolean { return commentLength(this.commentBlocks) >= LONG_COMMENT_CHARS; }
-
-  /** Kommentar im Fenster; ein Zug darin schließt es und spielt die Variante am Brett vor wie im Kasten. */
-  openCommentDialog(): void {
-    const subtitle = [this.chapterDisplay, this.displayBookName].filter(s => !!s).join(' · ') || null;
-    this.dialog.open(CommentDialogComponent, {
-      data: { title: this.titleDisplay, subtitle, blocks: this.commentBlocks },
-      width: '760px', maxWidth: '96vw', maxHeight: '90vh', autoFocus: false,
-    }).afterClosed().subscribe((seg?: CommentSegment) => { if (seg) this.previewVariationMove(seg); });
-  }
-
-  /** Klick in den Kommentartext: nur Text öffnet das Fenster — Zug-Chips und markierter Text nicht. */
-  onCommentBodyClick(ev: MouseEvent): void {
-    if (!this.commentIsLong) return;
-    if ((ev.target as HTMLElement | null)?.closest('button')) return;
-    if ((window.getSelection?.()?.toString() ?? '') !== '') return;
-    this.openCommentDialog();
-  }
-
-  /** Vorschau beenden → zurück zur Puzzle-/Review-Stellung. */
-  exitVariationPreview(): void { this.variationPreview = null; }
+  // Für BookCommentView: Lös-Automat-Stand (in der Basis geschützt).
+  get solverMoveIndex(): number { return this.moveIndex; }
+  get solverStartPly(): number { return this.startPly; }
 
   retryLoad(): void {
     this.loadError = false;

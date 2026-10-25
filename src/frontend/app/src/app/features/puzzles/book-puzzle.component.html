@@ -110,13 +110,13 @@
                (Wunsch 2026-10-20 — unten unter der Aktionszeile war er „rangefriemelt“). Lange Kommentare sind gekürzt
                und öffnen sich im Dialog (commentIsLong), damit die Bedienung nicht unter die Falz rutscht
                (a1-rk-kommentar-schiebt-aktionen). -->
-          @if (puzzle && (commentLines.length || course.offlineLangStale)) {
-            <app-book-comment-block [hasLines]="commentLines.length > 0" [blocks]="commentBlocks" [long]="commentIsLong"
+          @if (puzzle && (comments.lines.length || course.offlineLangStale)) {
+            <app-book-comment-block [hasLines]="comments.lines.length > 0" [blocks]="comments.blocks" [long]="comments.isLong"
               [previewing]="!!variationPreview" [machineNote]="lang.enabled && !!puzzle.commentMachine"
               [machineClickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"
               [offlineLangStale]="course.offlineLangStale"
-              (bodyClicked)="onCommentBodyClick($event)" (movePicked)="previewVariationMove($event)"
-              (previewExited)="exitVariationPreview()" (dialogOpened)="openCommentDialog()" (originalPicked)="lang.showOriginal()" />
+              (bodyClicked)="comments.onBodyClick($event)" (movePicked)="comments.previewMove($event)"
+              (previewExited)="comments.exitPreview()" (dialogOpened)="comments.openDialog()" (originalPicked)="lang.showOriginal()" />
           }
 
           <!-- Status-Card: Interaktionszentrum -->
