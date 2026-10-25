@@ -10,7 +10,7 @@ import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { routes } from './app.routes';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
 import { turnierConfig } from './app.config';
-import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE, LegalSite } from '@rh/core/legal-site';
 import { AUTH_INTRO, AuthIntro } from '@rh/features/auth/auth-intro';
 
 /**

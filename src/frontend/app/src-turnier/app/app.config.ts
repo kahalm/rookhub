@@ -12,7 +12,7 @@ import { provideRhHttpClient } from '@rh/core/http-chain';
 import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 import { registerFormatLocaleData } from '@rh/core/locale-data';
-import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/core/legal-site';
 import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
 import { provideEinkMaterial } from '@rh/core/eink.service';
 
