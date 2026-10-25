@@ -36,6 +36,7 @@ import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { turnColorOf } from '../../shared/pgn-viewer/board-moves.util';
 
 type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
 
@@ -525,7 +526,8 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   /** Pfeile fürs Brett — dieselbe Liste, solange sich nichts ändert (das Brett zeichnet sonst bei jedem Prüflauf neu). */
   get boardArrows(): BoardArrow[] {
     const want = this.mode === 'tree' && (this.treeArrowsOn || this.boardFullscreen)
-      ? treeArrows(this.treeService.children.map(c => ({ san: c.san, from: c.node.from, to: c.node.to })), this.treePopularity())
+      ? treeArrows(this.treeService.children.map(c => ({ san: c.san, from: c.node.from, to: c.node.to, count: c.count })),
+          this.treePopularity(), turnColorOf(this.treeService.currentFen) === (this.boardFlipped ? 'black' : 'white'))
       : [];
     if (!sameArrows(want, this.arrowsCache)) this.arrowsCache = want;
     return this.arrowsCache;

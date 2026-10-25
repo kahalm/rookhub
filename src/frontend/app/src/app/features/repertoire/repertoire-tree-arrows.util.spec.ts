@@ -33,6 +33,19 @@ describe('repertoire-tree-arrows.util', () => {
     expect(a.find(x => x.to === 'b5')!.lineWidth).toBe(ARROW_MAX);
   });
 
+  it('eigene Züge: Breite nach Zahl der Repertoire-Linien, Lichess zählt dann nicht', () => {
+    const own = [{ san: 'e4', from: 'e2', to: 'e4', count: 40 }, { san: 'd4', from: 'd2', to: 'd4', count: 10 },
+      { san: 'Nf3', from: 'g1', to: 'f3', count: 0 }];
+    const a = treeArrows(own, pop([['d4', 99999], ['e4', 1]]), true);
+    const by = new Map(a.map(x => [x.to, x.lineWidth!]));
+    expect(by.get('e4')).toBe(ARROW_MAX);
+    expect(by.get('f3')).toBe(ARROW_MIN);
+    expect(by.get('d4')!).toBeGreaterThan(ARROW_MIN);
+    expect(by.get('d4')!).toBeLessThan(ARROW_MAX);
+    // Gegnerzug (ownMove false): wie bisher nach Lichess, die Linienzahl zählt nicht
+    expect(new Map(treeArrows(own, pop([['d4', 99999], ['e4', 1]])).map(x => [x.to, x.lineWidth!])).get('d4')).toBe(ARROW_MAX);
+  });
+
   it('sameArrows vergleicht Inhalt', () => {
     expect(sameArrows(treeArrows(MOVES, null), treeArrows(MOVES, null))).toBeTrue();
     expect(sameArrows(treeArrows(MOVES, null), treeArrows(MOVES, pop([['e4', 1]])))).toBeFalse();

@@ -661,6 +661,9 @@ describe('RepertoireDetailComponent Baum: Pfeile + Ziehen', () => {
     comp.toggleTreeArrows();
     expect(comp.boardArrows.length).toBe(2);
     expect(localStorage.getItem('rh.repertoire.treeArrows')).toBe('1');
+    // Weiß-Repertoire, Weiß am Zug: eigene Züge — e4 trägt zwei Linien, d4 eine → e4 dicker
+    const w = new Map(comp.boardArrows.map(a => [a.to, a.lineWidth!]));
+    expect(w.get('e4')!).toBeGreaterThan(w.get('d4')!);
     comp.mode = 'lines';
     expect(comp.boardArrows).toEqual([]);
   });

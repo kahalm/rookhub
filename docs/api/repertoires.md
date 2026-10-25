@@ -63,3 +63,4 @@ Figuren ziehen folgt den Linien. Rein Frontend: `repertoire-tree-arrows.util.ts`
 Detailseite: Brett im Baum spielbar, `onTreeBoardMove` → `treeService.selectChild`; Schalter in localStorage
 `rh.repertoire.treeArrows`.
 Zurück (0.835.0): im Brett-Vollbild Knopf `.tree-fs-back` (über `ng-content select="[boardFsOverlay]"` der Brett-Komponente in deren Vollbild-Teilbaum), dazu Pfeil links im Baum → `treeBack()` = `treeService.goUp()`.
+Eigene Züge (0.837.1): ist in der Baum-Stellung die Seite des Repertoires am Zug (Brett-Ausrichtung = Kapitelfarben), richtet sich die Pfeilbreite nach der Linienzahl je Zug (`TreeChild.count`), nicht nach Lichess (`treeArrows(…, ownMove)`).

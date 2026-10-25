@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.837.1", date: "2026-10-25", changes: [
+    { en: "Repertoire tree arrows: for your own moves (the side of the repertoire) the arrow size now shows how many lines of your repertoire follow that move; for the opponent's moves it still shows how often the move is played on Lichess.",
+      de: "Pfeile im Repertoire-Baum: bei deinen eigenen Zügen (Seite des Repertoires) zeigt die Pfeilgröße jetzt, wie viele Linien deines Repertoires diesem Zug folgen; bei den Zügen des Gegners weiterhin, wie oft der Zug auf Lichess gespielt wird." },
+  ] },
   { version: "0.837.0", date: "2026-10-25", changes: [
     { en: "E-book board, Training: the eye now shows the current position on the board (look only — you keep moving on the frozen book position), click again for the book position. The solution has its own lightbulb button.",
       de: "E-Book-Brett, Training: das Auge zeigt jetzt die aktuelle Stellung am Brett (nur ansehen — gezogen wird weiter auf der stehenden Buchstellung), noch ein Klick zeigt wieder die Buchstellung. Die Lösung hat einen eigenen Glühbirnen-Knopf." },
