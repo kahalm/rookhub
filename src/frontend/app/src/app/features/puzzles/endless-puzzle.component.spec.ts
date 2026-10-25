@@ -1404,7 +1404,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
     let c: any;
     const el = renderEndless(x => { c = x; finished(c); spyOn(c, 'playAgain'); spyOn(c, 'backToPuzzles'); spyOn(c, 'openPuzzle'); });
     const card = el.querySelector('.gameover-card')!;
-    expect(card.classList).not.toContain('exhausted-card');
+    expect(card.querySelector('.stockfish-fish')).toBeNull();   // kein Pokal
     expect(card.querySelector('mat-card-title')!.textContent!.trim()).toBe('endless.gameOver.title');
     expect(texts(card, '.go-value')).toEqual(['1650', '4', '6', c.formatTime(125)]);
     expect(texts(card, '.go-label')).toEqual(['endless.gameOver.maxRating', 'endless.gameOver.puzzlesSolved',
@@ -1470,7 +1470,7 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
     let c: any;
     const el = renderEndless(x => { c = x; finished(c); c.state = 'WON'; c.run.lives.set(2); spyOn(c, 'playAgain'); spyOn(c, 'backToPuzzles'); });
     const card = el.querySelector('.gameover-card')!;
-    expect(card.classList).toContain('exhausted-card');
+    expect(card.querySelector('.stockfish-fish')!.textContent).toContain('🏆');
     expect(card.querySelector('mat-card-title')!.textContent!.trim()).toBe('endless.gameOver.wonTitle');
     expect(card.querySelector('mat-card-subtitle')!.textContent!.trim()).toBe('endless.gameOver.wonSubtitle');
     expect(card.querySelector('.stockfish-text')!.textContent!.trim()).toBe('endless.gameOver.wonText');

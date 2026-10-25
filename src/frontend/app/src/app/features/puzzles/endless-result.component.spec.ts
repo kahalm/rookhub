@@ -18,7 +18,7 @@ describe('EndlessResultComponent', () => {
 
   it('Sieg: Pokal, Leben statt Stufe, Nochmal/Zurück als Outputs', () => {
     const { el, cmp } = render({ kind: 'won', maxRating: 2100, solved: 30, lives: 1, level: 30, sessionSeconds: 65 });
-    expect(el.querySelector('.exhausted-card')).not.toBeNull();
+    expect(el.querySelector('.stockfish-fish')!.textContent).toContain('🏆');
     expect(values(el)).toEqual(['2100', '30', '1', '1:05']);
     let again = 0, back = 0;
     cmp.playAgain.subscribe(() => again++);
