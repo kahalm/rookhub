@@ -28,7 +28,7 @@ import { CalcAnnotateCardComponent } from './calc-annotate-card.component';
 import { CalcStatusPanelComponent } from './calc-status-panel.component';
 import {
   CalcEval, CalcGlyph, CalcNode, CalcTree,
-  createTree, deserializeTree, findNode, isEmpty, rootNode, serializeTree, setEvaluation, setGlyph,
+  createTree, deserializeTree, findNode, rootNode, setEvaluation, setGlyph,
   whiteToMove,
 } from './calc-tree.util';
 import {
@@ -41,7 +41,7 @@ import {
 import { LocalCalculationBackend } from './calc-local.backend';
 import { CalcTrainingTimer } from './calc-training-timer';
 import { CalcTreeCursor } from './calc-tree-cursor';
-import { KeyedSingleFlightQueue, SingleFlight } from './keyed-single-flight-queue';
+import { CalcTreeSaver } from './calc-tree-saver';
 import { CalcReviewController } from './calc-review.controller';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
@@ -354,20 +354,18 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get cursorComment(): string { return this.cursor.comment; }
   set cursorComment(text: string) { this.cursor.comment = text; }
 
-  saving = false;
-  savedAt: Date | null = null;
-  private dirty = false;
-  /** Noch nicht bestätigte Speicherungen JE STELLUNG (BookPuzzleId → serialisierter Baum, `null` =
-   *  löschen). Der Snapshot muss an der Stellung hängen, zu der er gehört: `this.tree` ist nach
-   *  einem Stellungswechsel schon ersetzt, ein gescheiterter Save wäre sonst unwiederbringlich weg.
-   *  Je Stellung immer nur EINE Anfrage unterwegs: der Server-Upsert ist ein reines „last write wins"
-   *  ohne Versions-Token, zwei parallele Saves derselben Stellung könnten in umgekehrter Reihenfolge
-   *  ankommen (Autosave alle 1,2 s, eine langsame Verbindung genügt) — siehe {@link KeyedSingleFlightQueue}. */
-  private readonly outbox = new KeyedSingleFlightQueue<number, string | null>(flight =>
-    flight.value === null ? this.sendDelete(flight) : this.sendSave(flight, flight.value));
-  private hadStoredTree = false;
-  private saveTimer?: ReturnType<typeof setTimeout>;
-  private static readonly AUTOSAVE_MS = 1200;
+  /** Speichern des Baums (Autosave, Speicherstand, Warteschlange je Stellung) — siehe {@link CalcTreeSaver}. */
+  private readonly saver = new CalcTreeSaver({
+    backend: () => this.backend,
+    currentId: () => this.position?.id ?? null,
+    tree: () => this.tree,
+    markDone: (bookPuzzleId, done) => this.markPositionDone(bookPuzzleId, done),
+    onSaved: () => this.setLocalSaveFailed(false),
+    onFailed: () => this.reportSaveError(),
+  });
+
+  get saving(): boolean { return this.saver.saving; }
+  get savedAt(): Date | null { return this.saver.savedAt; }
 
   private subs = new Subscription();
   /** Entwertet überholte Ladevorgänge (siehe loadPosition). */
@@ -598,12 +596,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
     const startFen = this.buildStartFen(pos);
     this.orientation = whiteToMove(startFen) ? 'white' : 'black';
     const stored = deserializeTree(pos.treeJson, startFen);
-    this.hadStoredTree = !!pos.treeJson;
     this.cursor.reset(stored ?? createTree(startFen), startFen);
-    this.dirty = false;
-    // Ein noch laufender Save gehört zur ALTEN Stellung — sein Spinner darf hier nicht weiterlaufen.
-    this.saving = false;
-    this.savedAt = pos.treeUpdatedAt ? new Date(pos.treeUpdatedAt) : null;
+    this.saver.reset(pos);
     this.revision++;
   }
 
@@ -1204,88 +1198,16 @@ export class CalculationComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ===== Speichern ==========================================================
+  // ===== Speichern (CalcTreeSaver) ==========================================
 
   private markDirty(): void {
     this.revision++;
-    this.dirty = true;
-    this.clearSaveTimer();
-    this.saveTimer = setTimeout(() => { this.saveTimer = undefined; this.flushSave(); },
-      CalculationComponent.AUTOSAVE_MS);
+    this.saver.markDirty();
   }
 
   /** Speichert sofort (Autosave-Timer, Stellungswechsel, Verlassen der Seite). */
   flushSave(): void {
-    if (this.dirty && this.position) {
-      const bookPuzzleId = this.position.id;
-      this.dirty = false;
-      // Leerer Baum: gespeicherten Stand verwerfen (nicht „{}" ablegen).
-      if (isEmpty(this.tree)) {
-        this.markPositionDone(bookPuzzleId, false);
-        if (this.hadStoredTree) { this.hadStoredTree = false; this.outbox.set(bookPuzzleId, null); }
-        // Sonst nur einen noch offenen Stand entwerten: ohne das würde ein zuvor
-        // fehlgeschlagener Save (Eintrag liegt noch in der Outbox) den gerade bewusst
-        // GELEERTEN Baum beim nächsten Senden doch wieder hochschreiben.
-        else this.outbox.delete(bookPuzzleId);
-      } else {
-        this.outbox.set(bookPuzzleId, serializeTree(this.tree));
-      }
-    }
-    this.sendOutbox();
-  }
-
-  /** Alles Offene rausschicken — auch Stände von Stellungen, die inzwischen verlassen wurden.
-   *  Stellungen mit laufender Anfrage bleiben in der Outbox (siehe {@link outbox}). */
-  private sendOutbox(): void {
-    this.outbox.flush();
-  }
-
-  /** GENAU diesen Stand nach einem Fehlschlag erneut einreihen — aber nur, wenn er noch der jüngste ist: weder ein
-   *  inzwischen aufgelaufener neuerer Stand in der Outbox noch ein bereits gesendeter (die Warteschlange prüft das). */
-  private static keepUnlessNewer(json: string | null): (waiting: string | null | undefined) => string | null | undefined {
-    return waiting => (waiting === undefined ? json : undefined);
-  }
-
-  private sendSave(flight: SingleFlight<number, string | null>, json: string): void {
-    const bookPuzzleId = flight.key;
-    if (this.isCurrent(bookPuzzleId)) this.saving = true;
-    this.backend.saveTree(bookPuzzleId, json).subscribe({
-      next: res => {
-        this.setLocalSaveFailed(false);
-        if (this.isCurrent(bookPuzzleId)) {
-          this.saving = false;
-          this.hadStoredTree = true;
-          this.savedAt = new Date(res.updatedAt);
-        }
-        this.markPositionDone(bookPuzzleId, true);
-        this.outbox.succeeded(flight);
-      },
-      error: () => {
-        if (this.isCurrent(bookPuzzleId)) this.saving = false;
-        this.outbox.failed(flight, CalculationComponent.keepUnlessNewer(json));
-        this.reportSaveError();
-      },
-    });
-  }
-
-  private sendDelete(flight: SingleFlight<number, string | null>): void {
-    const bookPuzzleId = flight.key;
-    this.backend.deleteTree(bookPuzzleId).subscribe({
-      next: () => {
-        if (this.isCurrent(bookPuzzleId)) this.savedAt = null;
-        this.outbox.succeeded(flight);
-      },
-      error: () => {
-        this.outbox.failed(flight, CalculationComponent.keepUnlessNewer(null));
-        this.reportSaveError();
-      },
-    });
-  }
-
-  /** Gehört die Antwort noch zur angezeigten Stellung? Sonst dürfen `saving`/`savedAt` nicht angefasst
-   *  werden — eine spät eintreffende Antwort der ALTEN Stellung schriebe sonst in die neue Ansicht. */
-  private isCurrent(bookPuzzleId: number): boolean {
-    return this.position?.id === bookPuzzleId;
+    this.saver.flush();
   }
 
   private markPositionDone(bookPuzzleId: number, done: boolean): void {
@@ -1296,13 +1218,13 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private reportSaveError(): void {
     // Kein `dirty = true`: das Flag hängt am GERADE geladenen Baum — nach einem Stellungswechsel
     // hätte es den nächsten Flush auf die falsche (neue) Stellung gelenkt und den bearbeiteten
-    // Baum der alten Stellung verworfen. Der Wiederholversuch läuft über `outbox` (je Stellung).
+    // Baum der alten Stellung verworfen. Der Wiederholversuch läuft über die Warteschlange des CalcTreeSaver (je Stellung).
     this.setLocalSaveFailed(this.localOnly);   // anonym = Gerätespeicher (siehe `localSaveFailed`)
     this.snackbar.warn(this.translate.instant('calc.saveFailed'));
   }
 
   private clearSaveTimer(): void {
-    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = undefined; }
+    this.saver.cancelAutosave();
   }
 
   // ===== Tastatur ===========================================================
@@ -1310,7 +1232,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /**
    * Reload (F5) / Tab schließen / App in den Hintergrund: `ngOnDestroy` läuft dabei NICHT, die
    * seit dem letzten {@link harvestWatch} gemessene Stellungszeit und ein noch offener
-   * Baum-/Bewertungs-Stand (bis zu AUTOSAVE_MS) gingen sonst still verloren. Für anonyme Nutzer
+   * Baum-/Bewertungs-Stand (bis zu CalcTreeSaver.AUTOSAVE_MS) gingen sonst still verloren. Für anonyme Nutzer
    * ist der Flush synchron (localStorage) und damit auch beim Unload zuverlässig — genau der
    * „anonyme Arbeit geht nicht still verloren"-Pfad. `pagehide` statt `beforeunload`: es feuert
    * auch beim mobilen App-Wechsel und stört keinen bfcache. (Review-Fund 2026-08-09; Endless hat
