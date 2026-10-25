@@ -400,6 +400,11 @@ export class TournamentDirectoryComponent implements OnInit {
     this.reload();
   }
 
+  /** Felder, die das Filterfeld direkt setzt (Datum, Ligen, Wochenende, Mindestzahl) — wie frueher `[(ngModel)]`. */
+  patchFilter(patch: Partial<DirectoryFilter>): void {
+    Object.assign(this.filter, patch);
+  }
+
   onTilesFailed(): void {
     this.tilesFailed.set(true);
   }

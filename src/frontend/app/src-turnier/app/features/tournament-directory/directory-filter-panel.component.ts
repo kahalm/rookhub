@@ -20,17 +20,14 @@ import {
  * Das ausgeklappte Filterfeld des Turnierkalenders: Zeitraum/Umkreis (Handy bzw. eigener
  * Zeitraum), Textsuche, Wer (Art/Alter/Geschlecht), Schalter, Bedenkzeit und der Rest.
  *
- * <p>Darstellung zum Filterzustand der Komponente (Zerlegung Z28). Der FILTER bleibt dort ein
- * einfaches, veraenderliches Objekt (siehe `TournamentDirectoryComponent`): die Felder, die schon
- * vorher per `[(ngModel)]` direkt geschrieben wurden (Datum, Ligen, Wochenende, Mindestzahl), schreibt
- * dieses Feld weiter direkt hinein; alles, was der Elternteil nachbearbeitet, geht als Ereignis
- * hinaus. Deshalb Default-Aenderungserkennung wie der Elternteil: er aendert das Objekt auch in
- * place (gemerkter Zustand, Suchprofil), und eine OnPush-Ansicht zeigte dann einen alten Stand.</p>
+ * <p>Reine Darstellung zum Filterzustand der Komponente (Zerlegung Z28): jeder Wert kommt einzeln
+ * herein, jede Aenderung geht als Ereignis hinaus — die, die der Elternteil nachbearbeitet, je
+ * eigen, die frueher direkt geschriebenen gesammelt als `patch`.</p>
  */
 @Component({
   selector: 'app-directory-filter-panel',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.Default,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule, MatButtonModule, MatChipsModule, MatFormFieldModule, MatIconModule, MatInputModule,
     MatSelectModule, MatSlideToggleModule, MatTooltipModule, HelpHintComponent, TranslatePipe,
@@ -39,7 +36,21 @@ import {
   styleUrls: ['./directory-filter-panel.component.scss'],
 })
 export class DirectoryFilterPanelComponent {
-  readonly filter = input.required<DirectoryFilter>();
+  // Die Filterfelder einzeln: der Elternteil aendert sein Filterobjekt IN PLACE (gemerkter Zustand,
+  // Suchprofil) — ein Objekt-Eingang saehe das unter OnPush nicht, ein Wert je Feld schon.
+  readonly radiusKm = input<number | null>(null);
+  readonly from = input<string | null>(null);
+  readonly to = input<string | null>(null);
+  readonly kinds = input<TournamentKind[]>([]);
+  readonly ageGroups = input<TournamentAgeGroup[]>([]);
+  readonly genders = input<TournamentGender[]>([]);
+  readonly adultsOnly = input(false);
+  readonly hideLeagues = input(false);
+  readonly includeIgnored = input(false);
+  readonly includeImplausible = input(false);
+  readonly speed = input<TournamentSpeed | null>(null);
+  readonly weekendOnly = input(false);
+  readonly minPlayers = input<number | null>(null);
   readonly rangePreset = input.required<DirectoryRangePreset>();
   /** Der Text der Suche (`TournamentDirectoryComponent.searchText`). */
   readonly searchText = input('');
@@ -57,14 +68,19 @@ export class DirectoryFilterPanelComponent {
   readonly includeIgnoredChange = output<boolean>();
   readonly includeImplausibleChange = output<boolean>();
   readonly speedChange = output<TournamentSpeed | null>();
-  /** Ein direkt geschriebenes Feld hat sich geaendert (bzw. Enter in der Suche): neu laden. */
+  /**
+   * Felder, die schon vor der Zerlegung per `[(ngModel)]` direkt in den Filter geschrieben wurden
+   * (Datum, Ligen, Wochenende, Mindestzahl) — der Elternteil legt sie unveraendert hinein.
+   */
+  readonly patch = output<Partial<DirectoryFilter>>();
+  /** Ein direkt geschriebenes Feld ist fertig (`change`) bzw. Enter in der Suche: neu laden. */
   readonly reload = output<void>();
   readonly reset = output<void>();
 
-  readonly speeds: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
+  readonly speedOptions: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
   readonly rangePresets = DIRECTORY_RANGE_PRESETS;
   readonly radii = DIRECTORY_RADII;
-  readonly ageGroups = DIRECTORY_AGE_GROUPS;
-  readonly genders = DIRECTORY_GENDERS;
-  readonly kinds = DIRECTORY_KINDS;
+  readonly ageGroupOptions = DIRECTORY_AGE_GROUPS;
+  readonly genderOptions = DIRECTORY_GENDERS;
+  readonly kindOptions = DIRECTORY_KINDS;
 }

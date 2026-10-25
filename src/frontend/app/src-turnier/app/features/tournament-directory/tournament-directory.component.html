@@ -46,9 +46,8 @@
       {{ 'tournamentDirectory.moreFilters' | translate }}@if (activeExtraFilters) { <span> ({{ activeExtraFilters }})</span> }
     </button>
 
-    <app-search-profile-menu [profiles]="profiles()" [activeProfile]="activeProfile"
-                             (pick)="onProfileChange($event)" (create)="newProfile()"
-                             (edit)="editProfile($event)" (remove)="deleteProfile($event)" />
+    <app-search-profile-menu [profiles]="profiles()" [activeProfile]="activeProfile" (pick)="onProfileChange($event)"
+                             (create)="newProfile()" (edit)="editProfile($event)" (remove)="deleteProfile($event)" />
   </div>
 
   <!-- Handy: die aktuell gueltigen Werte von Zeitraum und Umkreis; ein Tipp oeffnet die Filter. Nur bei zugeklapptem
@@ -73,14 +72,16 @@
   }
 
   @if (filtersOpen) {
-    <!-- Das ausgeklappte Filterfeld (Zeilen nach Sinn, b1-t-filter-feldbreiten) — Aufbau in DirectoryFilterPanelComponent. -->
-    <app-directory-filter-panel [filter]="filter" [rangePreset]="rangePreset" [searchText]="searchText"
-                                [loggedIn]="loggedIn" (rangePresetChange)="applyRangePreset($event)"
-                                (radiusChange)="onRadiusChange($event)" (searchTextChange)="searchText = $event"
-                                (kindsChange)="onKindsChange($event)" (ageGroupsChange)="onAgeGroupsChange($event)"
-                                (gendersChange)="onGendersChange($event)" (adultsOnlyChange)="onAdultsOnlyChange($event)"
-                                (includeIgnoredChange)="onIncludeIgnoredChange($event)" (includeImplausibleChange)="onIncludeImplausibleChange($event)"
-                                (speedChange)="onSpeedChange($event)" (reload)="reload()" (reset)="resetFilter()" />
+    <!-- Das ausgeklappte Filterfeld (b1-t-filter-feldbreiten) — Werte einzeln hinein, weil `filter` in place geaendert wird. -->
+    <app-directory-filter-panel [rangePreset]="rangePreset" [searchText]="searchText" [loggedIn]="loggedIn" [radiusKm]="filter.radiusKm"
+      [from]="filter.from" [to]="filter.to" [speed]="filter.speed" [kinds]="filter.kinds" [ageGroups]="filter.ageGroups" [genders]="filter.genders"
+      [adultsOnly]="filter.adultsOnly" [hideLeagues]="filter.hideLeagues" [includeIgnored]="filter.includeIgnored"
+      [includeImplausible]="filter.includeImplausible" [weekendOnly]="filter.weekendOnly" [minPlayers]="filter.minPlayers"
+      (patch)="patchFilter($event)" (rangePresetChange)="applyRangePreset($event)" (radiusChange)="onRadiusChange($event)"
+      (searchTextChange)="searchText = $event" (kindsChange)="onKindsChange($event)" (ageGroupsChange)="onAgeGroupsChange($event)"
+      (gendersChange)="onGendersChange($event)" (adultsOnlyChange)="onAdultsOnlyChange($event)" (speedChange)="onSpeedChange($event)"
+      (includeIgnoredChange)="onIncludeIgnoredChange($event)" (includeImplausibleChange)="onIncludeImplausibleChange($event)"
+      (reload)="reload()" (reset)="resetFilter()" />
   }
 
   <!-- Der Suchprofil-Hinweis war ein dreizeiliges Banner ueber den Reitern (d2-t-calendar-filter-mobile, am Laptop
@@ -245,5 +246,4 @@
     </button>
     <span class="muted">{{ 'tournamentDirectory.missing.blurb' | translate }}</span>
   </div>
-
 </div>

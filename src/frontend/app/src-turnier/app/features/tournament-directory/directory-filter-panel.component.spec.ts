@@ -2,12 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { DirectoryFilterPanelComponent } from './directory-filter-panel.component';
-import { DirectoryFilter, EMPTY_FILTER } from './tournament-directory.model';
+import { DirectoryFilter } from './tournament-directory.model';
 
 describe('DirectoryFilterPanelComponent', () => {
   let fixture: ComponentFixture<DirectoryFilterPanelComponent>;
   let host: HTMLElement;
-  let filter: DirectoryFilter;
+  let patches: Partial<DirectoryFilter>[];
   let events: string[];
 
   beforeEach(async () => {
@@ -17,7 +17,7 @@ describe('DirectoryFilterPanelComponent', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(DirectoryFilterPanelComponent);
     host = fixture.nativeElement;
-    filter = { ...EMPTY_FILTER, kinds: [], ageGroups: [], genders: [] };
+    patches = [];
     events = [];
     const c = fixture.componentInstance;
     c.rangePresetChange.subscribe(v => events.push(`range:${v}`));
@@ -29,7 +29,7 @@ describe('DirectoryFilterPanelComponent', () => {
     c.speedChange.subscribe(v => events.push(`speed:${v}`));
     c.reload.subscribe(() => events.push('reload'));
     c.reset.subscribe(() => events.push('reset'));
-    fixture.componentRef.setInput('filter', filter);
+    c.patch.subscribe(p => patches.push(p));
     fixture.componentRef.setInput('rangePreset', 'quarter');
   });
 
@@ -52,7 +52,7 @@ describe('DirectoryFilterPanelComponent', () => {
     from.dispatchEvent(new Event('input'));
     from.dispatchEvent(new Event('change'));
 
-    expect(filter.from).toBe('2026-11-01');
+    expect(patches).toEqual([{ from: '2026-11-01' }]);
     expect(events).toEqual(['reload']);
   });
 
@@ -77,8 +77,7 @@ describe('DirectoryFilterPanelComponent', () => {
     toggle('tournamentDirectory.card.showIgnored').click();
 
     expect(events).toEqual(['adults:true', 'reload', 'ignored:true']);
-    expect(filter.hideLeagues).toBeTrue();
-    expect(filter.adultsOnly).withContext('der Elternteil setzt es').toBeFalse();
+    expect(patches).withContext('nur die frueher direkt geschriebenen').toEqual([{ hideLeagues: true }]);
   });
 
   it('meldet Art und Bedenkzeit als Auswahl', async () => {
@@ -101,6 +100,18 @@ describe('DirectoryFilterPanelComponent', () => {
     host.querySelector<HTMLButtonElement>('.search-field button')!.click();
 
     expect(events).toEqual(['reload', 'text:', 'reload']);
+  });
+
+  it('zeigt Werte, die der Elternteil in place geändert hat (OnPush, ein Eingang je Feld)', async () => {
+    await render();
+    const adults = () => [...host.querySelectorAll('mat-slide-toggle')]
+      .find(t => t.textContent!.includes('tournamentDirectory.adultsOnly'))!.querySelector('button')!;
+    expect(adults().getAttribute('aria-checked')).toBe('false');
+
+    fixture.componentRef.setInput('adultsOnly', true);
+    await render();
+
+    expect(adults().getAttribute('aria-checked')).toBe('true');
   });
 
   it('setzt per Knopf zurück', async () => {
