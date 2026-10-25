@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.833.1", date: "2026-10-25", changes: [
+    { en: "Deleting your account now also removes puzzle challenges you sent or received and your revenge notifications (code review A1-018; received course and repertoire shares stay with the book or repertoire).", de: "Beim Löschen des Kontos werden jetzt auch gesendete und empfangene Puzzle-Challenges sowie die eigenen Revanche-Benachrichtigungen entfernt (Codereview A1-018; erhaltene Kurs- und Repertoire-Freigaben bleiben beim Buch bzw. Repertoire)." },
+    { en: "Courses: chapters whose names have leading or trailing spaces now count as one chapter everywhere — „Start chapter“ on the course page no longer opens the wrong chapter, and locked calculation weeks stay hidden.", de: "Kurse: Kapitel, deren Name mit Leerzeichen beginnt oder endet, zählen jetzt überall als dasselbe Kapitel — „Kapitel starten“ auf der Kursseite öffnet nicht mehr das falsche Kapitel, und gesperrte Kalk-Wochen bleiben verborgen." },
+  ]},
   { version: "0.833.0", date: "2026-10-25", changes: [
     { en: "Game page: while a Lc0 analysis is waiting or running, the ⋮ menu shows its state instead of silently dropping “Analyse with Lc0” — “Lc0 is waiting — engine offline since …” or “Lc0 is analysing — 12/80 moves”, with “Cancel Lc0 analysis” (and “Restart” while the engine is online) for your own analysis.", de: "Partieseite: Solange eine Lc0-Analyse wartet oder rechnet, zeigt das ⋮-Menü ihren Stand, statt „Mit Lc0 analysieren“ still wegzulassen — „Lc0 wartet — Engine offline seit …“ oder „Lc0 rechnet — 12/80 Züge“, bei der eigenen Analyse mit „Lc0-Analyse abbrechen“ (und „Neu starten“, solange die Engine erreichbar ist)." },
   ] },
