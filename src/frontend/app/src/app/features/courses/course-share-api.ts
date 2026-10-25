@@ -5,7 +5,7 @@ import { BookPuzzleDto } from '../puzzles/puzzle.service';
 import {
   CourseShareRecipient, CourseShareResult, PublicSlugChapterTarget, PublicSlugTarget,
 } from './course.types';
-import { courseLangParams } from './course-lang-params';
+import { langParams } from '../../shared/lang-params';
 
 /** Kurse teilen: Freigabe an Nutzer, öffentliche Kurse und Kurz-URLs (`/{slug}`, `/{slug}/{kapitel}`). */
 @Injectable({ providedIn: 'root' })
@@ -35,7 +35,7 @@ export class CourseShareApi {
     let params = new HttpParams();
     if (skip != null) params = params.set('skip', String(skip));
     if (take != null) params = params.set('take', String(take));
-    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params: courseLangParams(lang, params) });
+    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params: langParams(lang, params) });
   }
 
   /**

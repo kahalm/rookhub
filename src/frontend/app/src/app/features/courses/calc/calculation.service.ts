@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CalcGrade, CalcReviewPatch, toReviewBody } from './calc-review.util';
-import { courseLangParams } from '../course-lang-params';
+import { langParams } from '../../../shared/lang-params';
 
 /** Eine Stellung in der Sprungliste (leicht — ohne FEN/Kommentar, ohne Züge). */
 export interface CalcPositionListItem {
@@ -165,15 +165,15 @@ export class CalculationService implements CalcBackend {
    * anonym gar nichts (siehe `calc-local.util.ts`).
    */
   getPublicBook(bookId: number, lang?: string | null): Observable<CalcPublicBook> {
-    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`, { params: courseLangParams(lang) });
+    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`, { params: langParams(lang) });
   }
 
   getBook(bookId: number, lang?: string | null): Observable<CalcBook> {
-    return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`, { params: courseLangParams(lang) });
+    return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`, { params: langParams(lang) });
   }
 
   getPosition(bookPuzzleId: number, lang?: string | null): Observable<CalcPosition> {
-    return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`, { params: courseLangParams(lang) });
+    return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`, { params: langParams(lang) });
   }
 
   saveTree(bookPuzzleId: number, treeJson: string): Observable<CalcTreeSaved> {

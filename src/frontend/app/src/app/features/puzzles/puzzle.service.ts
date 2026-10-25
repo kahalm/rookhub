@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from '../../core/anon-session';
+import { langParams } from '../../shared/lang-params';
 import { map } from 'rxjs/operators';
 
 /** „Track solves"-Zähler eines geteilten Puzzles (Erstversuch je Besucher). */
@@ -135,11 +136,6 @@ export interface CourseAttemptDto {
   solved: boolean;
   timeSeconds: number;
   attemptedAt: string;
-}
-
-/** `?lang=` nur mit Sprache — ohne liefern die Buch-Endpunkte exakt das Original (Tagespuzzle, Teilen-Links). */
-function langParams(lang?: string | null): HttpParams {
-  return lang ? new HttpParams().set('lang', lang) : new HttpParams();
 }
 
 @Injectable({ providedIn: 'root' })

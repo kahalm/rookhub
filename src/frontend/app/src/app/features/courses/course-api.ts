@@ -5,7 +5,7 @@ import { BookPuzzleDto } from '../puzzles/puzzle.service';
 import {
   CourseChapter, CourseDetail, CourseLineEbookRef, CourseLineStatus, CourseListItem, CourseMode, CourseNextPuzzle, CourseProgress,
 } from './course.types';
-import { courseLangParams } from './course-lang-params';
+import { langParams } from '../../shared/lang-params';
 
 /** Kurse lesen und lösen: Liste, Detail, Kapitel, nächste Linie, Ergebnisse, Fortschritt, Merkzeichen, Downloads. */
 @Injectable({ providedIn: 'root' })
@@ -30,21 +30,21 @@ export class CourseApi {
   /** Vollbild der Kurs-Detailseite (Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht). Mit
    *  `lang` tragen die Kapitel ihren übersetzten Namen als `label`. */
   getDetail(bookId: number, lang?: string | null): Observable<CourseDetail> {
-    return this.http.get<CourseDetail>(`/api/courses/${bookId}`, { params: courseLangParams(lang) });
+    return this.http.get<CourseDetail>(`/api/courses/${bookId}`, { params: langParams(lang) });
   }
 
   /** Kapitel eines Buchs in Lesereihenfolge inkl. Fortschritt (für die Kapitelübersicht). Mit `lang`
    *  tragen sie ihren übersetzten Namen als `label`. */
   getChapters(bookId: number, lang?: string | null): Observable<CourseChapter[]> {
     return this.http.get<CourseChapter[]>(`/api/courses/${bookId}/chapters`,
-      { params: courseLangParams(lang) });
+      { params: langParams(lang) });
   }
 
   /** Alle Puzzles eines Buchs (Offline-Speichern, Durchsehen, Karteikarten). `lang` = Sprache der
    *  Kommentare (Kurs-Übersetzung); fehlt sie, kommt das Original. */
   getBookPuzzles(bookId: number, lang?: string | null): Observable<BookPuzzleDto[]> {
     return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`,
-      { params: courseLangParams(lang) });
+      { params: langParams(lang) });
   }
 
   /** Pro-Linien-Bearbeitungsstatus (gelöst ✓ / versucht-aber-nicht-gelöst ✗) eines Buchs. */
@@ -58,7 +58,7 @@ export class CourseApi {
     if (after != null) params = params.set('after', after);
     if (exclude != null) params = params.set('exclude', exclude);
     if (chapterIndex != null) params = params.set('chapterIndex', chapterIndex);
-    return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params: courseLangParams(lang, params) });
+    return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params: langParams(lang, params) });
   }
 
   recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0, chapterIndex?: number, hintsUsed = 0, solveMode?: string): Observable<CourseProgress> {

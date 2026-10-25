@@ -35,4 +35,4 @@ sollen nicht im „Aktualisieren"-Banner hängen).
 Die HTTP-Zugriffe stehen seit Z33 thematisch in `course-api.ts` (lesen/lösen), `course-authoring-api.ts` (anlegen/
 pflegen), `course-share-api.ts` (teilen/öffentlich) und `course-translation-api.ts`, Typen in `course.types.ts`;
 `course.service.ts` bleibt als Fassade für die bestehenden Aufrufer, die `?lang=`-Regel steht einmal in
-`course-lang-params.ts`.
+`shared/lang-params.ts` (`langParams`, auch für Kalkulation und Buch-Puzzles).
