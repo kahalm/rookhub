@@ -18,14 +18,15 @@ import { AnalysisBoardComponent } from './analysis-board.component';
 import { AnalysisEngineCardComponent, EngineChoice, arrowBrush } from './analysis-engine-card.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
-import { ExternalEngineService, ExternalEngineInfo, engineTagKey } from './external-engine.service';
+import { ExternalEngineService, ExternalEngineInfo, ExternalEnginesResponse, engineTagKey } from './external-engine.service';
 import { mediaSignal } from '../../shared/layout/wide-media';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
-import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY, ANALYSIS_PROVIDER_KEY, EVAL_SETTLE_DEPTH } from './analysis-settings';
+import { AnalysisSettings, DEPTH_OPTIONS, EVAL_SETTLE_DEPTH } from './analysis-settings';
+import { AnalysisRouteParams, readAnalysisParams } from './analysis-route';
 import { PositionMenuComponent } from './position-menu.component';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
@@ -48,17 +49,6 @@ import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-const LINES_KEY = ANALYSIS_LINES_KEY;
-const ENGINE_KEY = 'rookhub_analysis_engine';
-const DEPTH_KEY = ANALYSIS_DEPTH_KEY;
-/** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
-const PROVIDER_KEY = ANALYSIS_PROVIDER_KEY;
-// Bis 50: für eine externe Engine (mehrere Millionen Knoten/s) sind Tiefen jenseits von 30
-// gut erreichbar. Mit der Browser-Engine dauern sie sehr lange — sie bleiben trotzdem
-// wählbar, statt Optionen je nach Engine verschwinden zu lassen.
-// ACHTUNG: Jeder Wert hier muss den Clamp in AnalysisEngineService.setDepth überleben,
-// sonst wählt man 50 und bekommt stillschweigend weniger (Test hält das fest).
-export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -167,6 +157,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private errorSub?: Subscription;
   private fallbackSub?: Subscription;
   private enginesSub?: Subscription;
+  /** Gemerkte Einstellungen (localStorage, je Gerät). */
+  private readonly settings = new AnalysisSettings();
 
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
@@ -195,40 +187,34 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       selectedEngineId: () => this.selectedEngineId, currentFen: () => this.currentFen,
       canSearch: () => this.engineOn && this.dests.size > 0, changed: () => this.cdr.markForCheck(),
     });
-    try {
-      const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
-      if (l >= 1 && l <= 5) this.linesCount = l;
-      this.engineOn = localStorage.getItem(ENGINE_KEY) !== '0';
-      const d = parseInt(localStorage.getItem(DEPTH_KEY) || '', 10);
-      if (DEPTH_OPTIONS.includes(d)) this.depthSetting = d;
-    } catch {}
+    ({ linesCount: this.linesCount, engineOn: this.engineOn, depthSetting: this.depthSetting } =
+      this.settings.load({ linesCount: this.linesCount, engineOn: this.engineOn, depthSetting: this.depthSetting }));
   }
 
   ngOnInit(): void {
-    const params = this.route.snapshot.queryParamMap;
-    const fenParam = params.get('fen');
-    const startFen = fenParam && this.isValidFen(fenParam) ? fenParam : START_FEN;
-    this.root = createRoot(startFen);
-    const orientationParam = params.get('orientation');
-    if (orientationParam === 'white' || orientationParam === 'black') {
-      this.orientation = orientationParam;
-    }
-    // Herkunft für den Zurück-Button merken — Puzzle, Favoriten, Partienliste, Partie oder Kalkulation, daher heißt
-    // der Knopf neutral „Zurück" (F4-012; vorher stand dort immer „Zurück zum Puzzle").
-    const from = params.get('from');
-    if (from && from.startsWith('/') && !from.startsWith('//') && !from.includes('://')) {
-      this.returnTo = from;
-    }
-    // Von der Auftragsseite: Engine + Suchparameter des Auftrags übernehmen, damit hier WEITERgerechnet
-    // wird statt neu zu beginnen (gleiche Engine = warmer Hash). Die Wahl gilt nur für diesen Aufruf und
-    // wird bewusst NICHT als Dauereinstellung gespeichert.
-    const engineParam = params.get('engine');
-    if (engineParam && /^[A-Za-z0-9_-]{1,64}$/.test(engineParam)) this.requestedEngineId = engineParam;
-    const depthParam = parseInt(params.get('depth') || '', 10);
-    if (DEPTH_OPTIONS.includes(depthParam)) this.depthSetting = depthParam;
-    const linesParam = parseInt(params.get('lines') || '', 10);
-    if (linesParam >= 1 && linesParam <= 5) this.linesCount = linesParam;
+    const p = readAnalysisParams(this.route.snapshot.queryParamMap, fen => this.isValidFen(fen));
+    this.applyRouteParams(p);
+    this.connectEngine();
+    // External Engines des Lichess-Kontos (nur eingeloggt; stiller Hintergrund-Feed — ohne Liste bleibt es beim
+    // Browser-WASM).
+    if (this.auth.isLoggedIn) this.loadExternalEngines();
+    this.loadInitialPosition(p);
+  }
 
+  /** Vorgaben der Adresse übernehmen. Von der Auftragsseite: Engine + Suchparameter des Auftrags, damit hier
+   *  WEITERgerechnet wird statt neu zu beginnen (gleiche Engine = warmer Hash) — nur für diesen Aufruf, bewusst
+   *  NICHT als Dauereinstellung gespeichert. */
+  private applyRouteParams(p: AnalysisRouteParams): void {
+    this.root = createRoot(p.fen ?? START_FEN);
+    if (p.orientation) this.orientation = p.orientation;
+    if (p.returnTo) this.returnTo = p.returnTo;
+    if (p.engine) this.requestedEngineId = p.engine;
+    if (p.depth != null) this.depthSetting = p.depth;
+    if (p.lines != null) this.linesCount = p.lines;
+  }
+
+  /** Engine einstellen und ihre Ströme abonnieren (Linien, Absturz, Rückfall, Abriss) samt Sekundentakt. */
+  private connectEngine(): void {
     this.engine.setDepth(this.depthSetting);
     this.engine.setMultiPv(this.linesCount);
     this.sub = this.engine.analysis$.subscribe(s => {
@@ -249,78 +235,68 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Sekundentakt nur für „rechnet seit …": bei MultiPV 5 vergehen ab Tiefe ~27 Minuten ohne neue
     // Zeile — ohne sichtbare Uhr sieht das aus wie ein Hänger. markForCheck nur bei Wertänderung.
     this.tickSub = interval(1000).subscribe(() => this.updateClocks());
+  }
 
-    // External Engines des Lichess-Kontos laden (nur eingeloggt; stiller Hintergrund-Feed —
-    // ohne Liste bleibt es einfach beim Browser-WASM). War zuletzt eine External Engine gewählt
-    // und existiert sie noch, wird sie wieder aktiv; die evtl. schon laufende WASM-Analyse der
-    // Startstellung wechselt dann auf die Remote-Suche.
-    if (this.auth.isLoggedIn) {
-      // Subscription festhalten: der Engine-Service ist ein App-weites Singleton. Verlässt der
-      // Nutzer die Seite, WÄHREND die Liste noch unterwegs ist, würde die Antwort danach eine
-      // Engine im längst zerstörten Zustand scharf schalten und eine Analyse starten, die
-      // niemand mehr sieht.
-      this.enginesSub = this.externalEngines.listEngines().subscribe({
-        next: r => {
-          // Die Hintergrund-Engine gehört den Aufträgen — im Live-Picker (und im Vergleich) taucht sie
-          // nicht auf, sonst konkurrierten zwei Suchen um dieselben Kerne.
-          this.backgroundEngineIds = r.backgroundEngineIds ?? [];
-          this.hasExternalEngines = r.engines.length > 0;
-          this.externalEnginesList = r.engines.filter(e => !this.backgroundEngineIds.includes(e.id));
-          // Kam der Aufruf von einem Auftrag („im Analysebrett öffnen"), gilt DESSEN Engine — auch wenn es
-          // die Hintergrund-Engine ist, die hier sonst ausgeblendet wird. Der Provider hat die Stellung noch
-          // im Hash, die Suche ist damit sofort wieder auf der erreichten Tiefe statt bei null.
-          const wanted = this.requestedEngineId;
-          if (wanted && r.engines.some(e => e.id === wanted)) {
-            if (!this.externalEnginesList.some(e => e.id === wanted))
-              this.externalEnginesList = [...this.externalEnginesList, r.engines.find(e => e.id === wanted)!];
-            this.selectedEngineId = wanted;
-            this.applyEngineSelection();
-            this.requestedEngineId = null;   // nur für diesen Aufruf, nicht als Dauerwahl merken
-            this.cdr.markForCheck();
-            return;
-          }
-          let stored: string | null = null;
-          try { stored = localStorage.getItem(PROVIDER_KEY); } catch {}
-          if (stored && stored !== 'wasm' && this.externalEnginesList.some(e => e.id === stored)) {
-            this.selectedEngineId = stored;
-            this.applyEngineSelection();
-          }
-          // NICHT unbedingt: applyEngineSelection() oben startet den Vergleich bereits selbst,
-          // wenn Haupt- und Vergleichswahl kollidieren. Ohne diese Bedingung wuerde die eben
-          // gebaute Instanz Millisekunden spaeter wieder zerstoert und neu aufgebaut — im
-          // Browser-Fall eine 7-MB-WASM-Instanziierung fuer nichts.
-          if (this.compare.on && !this.compare.engine) this.compare.start();
-          this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
-        },
-        error: () => {},
-      });
+  /** External Engines laden. Subscription festhalten: der Engine-Service ist ein App-weites Singleton — verlässt der
+   *  Nutzer die Seite, WÄHREND die Liste noch unterwegs ist, würde die Antwort sonst eine Engine im längst
+   *  zerstörten Zustand scharf schalten und eine Analyse starten, die niemand mehr sieht. */
+  private loadExternalEngines(): void {
+    this.enginesSub = this.externalEngines.listEngines().subscribe({ next: r => this.onEnginesLoaded(r), error: () => {} });
+  }
+
+  /** Liste da: Picker füllen und die passende Engine wählen — die eines Auftrags, sonst die zuletzt gewählte (die
+   *  evtl. schon laufende WASM-Analyse der Startstellung wechselt dann auf die Remote-Suche). */
+  private onEnginesLoaded(r: ExternalEnginesResponse): void {
+    // Die Hintergrund-Engine gehört den Aufträgen — im Live-Picker (und im Vergleich) taucht sie
+    // nicht auf, sonst konkurrierten zwei Suchen um dieselben Kerne.
+    this.backgroundEngineIds = r.backgroundEngineIds ?? [];
+    this.hasExternalEngines = r.engines.length > 0;
+    this.externalEnginesList = r.engines.filter(e => !this.backgroundEngineIds.includes(e.id));
+    // Kam der Aufruf von einem Auftrag („im Analysebrett öffnen"), gilt DESSEN Engine — auch wenn es
+    // die Hintergrund-Engine ist, die hier sonst ausgeblendet wird. Der Provider hat die Stellung noch
+    // im Hash, die Suche ist damit sofort wieder auf der erreichten Tiefe statt bei null.
+    const wanted = this.requestedEngineId;
+    if (wanted && r.engines.some(e => e.id === wanted)) {
+      if (!this.externalEnginesList.some(e => e.id === wanted))
+        this.externalEnginesList = [...this.externalEnginesList, r.engines.find(e => e.id === wanted)!];
+      this.selectedEngineId = wanted;
+      this.applyEngineSelection();
+      this.requestedEngineId = null;   // nur für diesen Aufruf, nicht als Dauerwahl merken
+      this.cdr.markForCheck();
+      return;
     }
+    const stored = this.settings.loadProvider();
+    if (stored && stored !== 'wasm' && this.externalEnginesList.some(e => e.id === stored)) {
+      this.selectedEngineId = stored;
+      this.applyEngineSelection();
+    }
+    // NICHT unbedingt: applyEngineSelection() oben startet den Vergleich bereits selbst,
+    // wenn Haupt- und Vergleichswahl kollidieren. Ohne diese Bedingung wuerde die eben
+    // gebaute Instanz Millisekunden spaeter wieder zerstoert und neu aufgebaut — im
+    // Browser-Fall eine 7-MB-WASM-Instanziierung fuer nichts.
+    if (this.compare.on && !this.compare.engine) this.compare.start();
+    this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
+  }
 
-    // Optional: eine Zugfolge (UCI, durch Leerzeichen/Komma getrennt) ab startFen vorladen
-    // und an die aktuelle (letzte) Stellung springen — genutzt vom „Analysieren"-Button der Puzzles.
-    const movesParam = params.get('moves');
-    const uci = movesParam ? movesParam.split(/[ ,]+/).filter(Boolean) : [];
-    // Eine ganze Partie kann per Router-State übergeben werden (z.B. „In Analyse öffnen"
-    // im Bereich „Partien") — zu lang/unhandlich für einen Query-Param.
+  /** Erste Stellung: ein Verlauf-Eintrag (`?history=`), eine Partie (Router-State oder `?pgn=`), eine Zugfolge
+   *  (`?moves=`, vom „Analysieren"-Knopf der Puzzles: ans Ende springen) oder nur die Ausgangsstellung. */
+  private loadInitialPosition(p: AnalysisRouteParams): void {
+    // Eine ganze Partie kann per Router-State übergeben werden (z.B. „In Analyse öffnen" im Bereich „Partien") — zu
+    // lang für einen Query-Param; über Seitengrenzen kommt der State nicht an, dann gilt `?pgn=` (LeagueHub, 0.592.0).
     const statePgn = (window.history.state && window.history.state.pgn) as string | undefined;
-    // … oder über die Adresse (`?pgn=`, 0.592.0): der Router-State kommt über Seitengrenzen nicht an — LeagueHub springt
-    // so mit einer Vereinspartie her, samt Kopfdaten im PGN-Feld.
-    const paramPgn = params.get('pgn');
-    const pgn = typeof statePgn === 'string' && statePgn.trim() ? statePgn : paramPgn?.trim() ? paramPgn : null;
-    // Ein Eintrag des Verlaufs per Adresse (`?history=<id>`): erst die Grundstellung, dann der Eintrag, sobald er da ist.
-    const historyParam = parseInt(params.get('history') || '', 10);
-    if (historyParam > 0 && this.auth.isLoggedIn) {
+    const pgn = typeof statePgn === 'string' && statePgn.trim() ? statePgn : p.pgn;
+    if (p.historyId != null && this.auth.isLoggedIn) {
       this.resetToStart();
-      this.history.get(historyParam).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
+      this.history.get(p.historyId).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
       return;
     }
     if (pgn) {
       this.pgnInput = pgn;
       this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
-    } else if (uci.length) {
-      this.loadFromUci(startFen, uci);
+    } else if (p.moves.length) {
+      this.loadFromUci(p.fen ?? START_FEN, p.moves);
     } else {
-      this.resetToStart(startFen);
+      this.resetToStart(p.fen ?? START_FEN);
     }
   }
 
@@ -629,17 +605,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Controls / IO ----
   onEngineToggle(): void {
-    try { localStorage.setItem(ENGINE_KEY, this.engineOn ? '1' : '0'); } catch {}
+    this.settings.saveEngineOn(this.engineOn);
     this.refresh();
   }
   onLinesChange(): void {
-    try { localStorage.setItem(LINES_KEY, String(this.linesCount)); } catch {}
+    this.settings.saveLines(this.linesCount);
     this.engine.setMultiPv(this.linesCount);
     this.compare.engine?.setMultiPv(this.linesCount);
     this.restartSearches();
   }
   onDepthChange(): void {
-    try { localStorage.setItem(DEPTH_KEY, String(this.depthSetting)); } catch {}
+    this.settings.saveDepth(this.depthSetting);
     this.engine.setDepth(this.depthSetting);
     this.compare.engine?.setDepth(this.depthSetting);
     this.restartSearches();
@@ -698,7 +674,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   get compareSpeedHint(): string { return this.speedHintFor(this.compare.nps, null); }
 
   onEngineSelect(): void {
-    try { localStorage.setItem(PROVIDER_KEY, this.selectedEngineId); } catch {}
+    this.settings.saveProvider(this.selectedEngineId);
     this.applyEngineSelection();
   }
   /** Verdrahtet die aktuelle Auswahl in den Engine-Service (Transport = HTTP-Proxy) und startet neu. */
