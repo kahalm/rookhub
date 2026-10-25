@@ -194,10 +194,6 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
   boardTheme = 'brown';
   pieceSet = 'cburnett';
   gaveUp = false;
-  showEval = false;
-  evalLoading = false;
-  initialEval = '';
-  private initialFen = '';
   private planId = 0;
   /** Dieser Aufgabe wurde schon ein Versuch gemeldet (der Server wertet ohnehin nur den ersten). */
   private recorded = false;
@@ -281,7 +277,6 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
   }
 
   protected override onSolvingBegins(): void {
-    this.initialFen = this.chess.fen();
     this.startTimer();
   }
 
@@ -314,10 +309,6 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
   protected override reviewGoTo(index: number): void {
     if (!this.puzzle) return;
     this.reviewGoToCore(this.puzzle.fen, this.puzzle.moves.split(' ').filter(m => m), index);
-  }
-
-  protected override refreshEvalIfShown(): void {
-    if (this.showEval) this.refreshEval();
   }
 
   // ===== Aktionen der Status-Karte =====
@@ -357,23 +348,6 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
     this.router.navigate(['/analysis'], {
       queryParams: { fen: this.puzzle.fen, moves: moves.join(','), orientation: this.orientation, from: this.router.url },
     });
-  }
-
-  toggleEval(): void {
-    this.showEval = !this.showEval;
-    if (this.showEval) {
-      this.markEvalShown();
-      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
-    }
-  }
-
-  private async refreshEval(): Promise<void> {
-    this.evalLoading = true;
-    try {
-      if (!this.initialEval && this.initialFen) this.initialEval = await this.stockfish.getEval(this.initialFen, STOCKFISH_DEPTH);
-      this.currentEval = await this.stockfish.getEval(this.chess.fen(), STOCKFISH_DEPTH);
-    } catch { /* Engine nicht verfügbar: Anzeige bleibt leer */ }
-    this.evalLoading = false;
   }
 
   /** Meldet den Versuch einmal je Aufgabe; der Fortschritt im Kopf kommt aus der Antwort. */

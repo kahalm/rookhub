@@ -144,11 +144,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   private urlConfigOverrides: Partial<EndlessConfig> = {};
 
 
-  // Eval
-  showEval = false;
-  evalLoading = false;
-  initialEval = '';
-
   // Session timer — beide Stoppuhren zählen nur sichtbare Tab-Zeit (Hintergrund pausiert).
   sessionSeconds = 0;
   private sessionInterval?: ReturnType<typeof setInterval>;
@@ -201,7 +196,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   // Board (Brett/Viz/Lös-State in BasePuzzleSolver)
   puzzle: PuzzleDto | null = null;
-  private initialFen = '';
   /**
    * Gauntlet-Kette: die beim Run-Start (serverseitig per getRandomBatch) generierte, vollständig
    * vordefinierte Puzzle-Folge entlang der ~logarithmischen Kurve. `chainIndex` zeigt auf das aktuell
@@ -643,7 +637,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   protected override onSolvingBegins(): void {
-    this.initialFen = this.chess.fen();
     this.puzzleStartTime = Date.now();   // Wanduhr-Timestamp (für startedAt der Session-Aufzeichnung)
     // Gewertete Dauer = nur aktive Tab-Zeit; nach einem Resume DESSELBEN Puzzles (Refresh mitten
     // im Lösen) wird die persistierte Zwischenzeit fortgesetzt statt bei 0 zu starten.
@@ -1266,29 +1259,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   }
 
   // --- Buttons ---
-
-  toggleEval(): void {
-    this.showEval = !this.showEval;
-    if (this.showEval) {
-      this.markEvalShown();
-      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
-    }
-  }
-
-  private async refreshEval(): Promise<void> {
-    this.evalLoading = true;
-    try {
-      if (!this.initialEval && this.initialFen) {
-        this.initialEval = await this.stockfish.getEval(this.initialFen, this.config.stockfishDepth);
-      }
-      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.config.stockfishDepth);
-    } catch {}
-    this.evalLoading = false;
-  }
-
-  protected override refreshEvalIfShown(): void {
-    if (this.showEval) this.refreshEval();
-  }
 
   onDepthChange(): void {
     if (this.config.stockfishDepth < 1) this.config.stockfishDepth = 1;

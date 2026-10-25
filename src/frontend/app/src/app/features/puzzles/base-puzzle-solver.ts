@@ -372,7 +372,7 @@ export abstract class BasePuzzleSolver {
       this.orientation = this.chess.turn() === 'w' ? 'white' : 'black';
       this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
-      this.onSolvingBegins();
+      this.solvingBegins();
       this.updateBoard();
       return;
     }
@@ -389,7 +389,7 @@ export abstract class BasePuzzleSolver {
       this.moveIndex = this.startPly + 1;
       this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
-      this.onSolvingBegins();
+      this.solvingBegins();
       // Auch der ERSTE (automatische) Gegnerzug bekommt den Pfeil — genau der Zug, der die
       // Puzzle-Stellung erzeugt und den der Löser sehen will (v.a. auf dem Crazy-Brett, wo der
       // Zug kaum erkennbar ist). Vorher nur die Antwortzüge (advanceAfterCorrectMove/opponentRespond).
@@ -397,6 +397,12 @@ export abstract class BasePuzzleSolver {
       this.moveStartTime = Date.now();
       this.updateBoard();
     }, 600);
+  }
+
+  /** Trainingsstellung merken, dann den Hook der Komponente rufen. */
+  private solvingBegins(): void {
+    this.initialFen = this.chess.fen();
+    this.onSolvingBegins();
   }
 
   protected beginSolving(): void {
@@ -733,10 +739,40 @@ export abstract class BasePuzzleSolver {
     this.evalShown = true;
   }
 
-  /** Hook: nach jeder Stellungsänderung (Lösungspfad-Antwort, Gegnerzug, Mouseslip-Rücknahme)
-   *  aufgerufen, damit die Komponente die eingeblendete Eval auf die aktuelle Stellung nachzieht.
-   *  Default no-op; Komponenten überschreiben: `if (this.showEval) this.refreshEval();`. */
-  protected refreshEvalIfShown(): void { /* von der Komponente überschrieben */ }
+  // ===== Eval-Anzeige (alle Modi gleich; Tiefe über den Hook {@link depth}) =====
+  /** Eval-Leiste eingeblendet? */
+  showEval = false;
+  evalLoading = false;
+  /** Eval der Trainingsstellung (für den Vergleich in der Status-Karte), faul beim ersten Einblenden. */
+  initialEval = '';
+  /** Trainingsstellung — gesetzt, sobald gelöst werden kann (vor {@link onSolvingBegins}). */
+  protected initialFen = '';
+
+  /** Eval-Leiste umschalten; beim Einblenden während des Lösens sofort nachrechnen. */
+  toggleEval(): void {
+    this.showEval = !this.showEval;
+    if (this.showEval) {
+      this.markEvalShown();
+      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
+    }
+  }
+
+  protected async refreshEval(): Promise<void> {
+    this.evalLoading = true;
+    try {
+      if (!this.initialEval && this.initialFen) {
+        this.initialEval = await this.stockfish.getEval(this.initialFen, this.depth);
+      }
+      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.depth);
+    } catch { /* Engine nicht verfügbar: Anzeige bleibt leer */ }
+    this.evalLoading = false;
+  }
+
+  /** Nach jeder Stellungsänderung (Lösungspfad-Antwort, Gegnerzug, Mouseslip-Rücknahme) aufgerufen:
+   *  zieht die eingeblendete Eval auf die aktuelle Stellung nach. */
+  protected refreshEvalIfShown(): void {
+    if (this.showEval) this.refreshEval();
+  }
 
   // ===== Off-Path-Warnung =====
 

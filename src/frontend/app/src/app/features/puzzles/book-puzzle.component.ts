@@ -110,12 +110,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   /** alternative-Flag des aktuellen Solves (durchgereicht an finalizeSolve nach der Nachfrage). */
   private solveAlternative = false;
 
-  // Eval (Stockfish-Bewertung) — wie Standard/Endless; currentEval kommt aus BasePuzzleSolver.
-  showEval = false;
-  evalLoading = false;
-  initialEval = '';
-  private initialFen = '';
-
 
   /** Tipps: vorberechnete bzw. on-the-fly gestufte, „Tipps melden“. */
   readonly hints: BookHints;
@@ -283,7 +277,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   protected override onSetupStart(): void { this.settings.applyThemeForSetup(); }
 
   protected override onSolvingBegins(): void {
-    this.initialFen = this.chess.fen();
     // Tagespuzzle/Kurs: früher verbrachte (aktive) Zeit fortführen — wer die Seite mitten im Lösen
     // verlässt oder neu lädt, zählt kumuliert weiter statt bei 0 (Daily: fair für die „schnellster
     // Löser"-Wertung; Kurs: ehrliche Kurs-/Trainingszeit-Statistik).
@@ -317,29 +310,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const n = this.offPathUserMoveNumber;
     return [t('puzzles.offPath.h1'), t('puzzles.offPath.h2'),
       n != null ? t('puzzles.offPath.h3', { n }) : t('puzzles.offPath.h3any')];
-  }
-
-  toggleEval(): void {
-    this.showEval = !this.showEval;
-    if (this.showEval) {
-      this.markEvalShown();
-      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
-    }
-  }
-
-  private async refreshEval(): Promise<void> {
-    this.evalLoading = true;
-    try {
-      if (!this.initialEval && this.initialFen) {
-        this.initialEval = await this.stockfish.getEval(this.initialFen, this.stockfishDepth);
-      }
-      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.stockfishDepth);
-    } catch { /* ignore */ }
-    this.evalLoading = false;
-  }
-
-  protected override refreshEvalIfShown(): void {
-    if (this.showEval) this.refreshEval();
   }
 
   protected override handleSolved(alternative: boolean): void {

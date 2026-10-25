@@ -90,12 +90,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   private filterEpoch = 0;
   lastEloChange: number | null = null;
 
-  // Eval
-  showEval = false;
-  evalLoading = false;
-  initialEval = '';
-  private initialFen = '';
-
   private routePuzzleId: number | null = null;
 
   /** Direkt geteiltes Einzel-Puzzle (?single=1): nach dem Lösen kein Auto-Weiter (der „Weiter"-Knopf
@@ -218,7 +212,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   }
 
   protected override onSolvingBegins(): void {
-    this.initialFen = this.chess.fen();
     this.startTimer();
     this.moveStartTime = Date.now();
   }
@@ -804,30 +797,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   /** Von der Feuerwerk-Card zurück zur Revanche-Liste des Freundes (zeigt jetzt die erledigten). */
   goToRevengeList(): void {
     if (this.revengeUserId != null) this.router.navigate(['/friends', this.revengeUserId, 'revenge']);
-  }
-
-  /** Freundesliste fürs „An Freund schicken"-Menü faul laden (nur einmal). */
-  toggleEval(): void {
-    this.showEval = !this.showEval;
-    if (this.showEval) {
-      this.markEvalShown();
-      if (this.state === 'PLAYING' || this.state === 'AWAITING_USER_MOVE') this.refreshEval();
-    }
-  }
-
-  private async refreshEval(): Promise<void> {
-    this.evalLoading = true;
-    try {
-      if (!this.initialEval && this.initialFen) {
-        this.initialEval = await this.stockfish.getEval(this.initialFen, this.stockfishDepth);
-      }
-      this.currentEval = await this.stockfish.getEval(this.chess.fen(), this.stockfishDepth);
-    } catch {}
-    this.evalLoading = false;
-  }
-
-  protected override refreshEvalIfShown(): void {
-    if (this.showEval) this.refreshEval();
   }
 
   resetPuzzle(): void {
