@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../../core/legal-site';
 import { siteKindOf } from '../../core/partner-site';
 import { apiErrorCodeText } from '../../core/api-error';
 

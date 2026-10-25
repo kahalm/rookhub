@@ -10,7 +10,7 @@ import { provideRhHttpClient } from '@rh/core/http-chain';
 import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 import { registerFormatLocaleData } from '@rh/core/locale-data';
-import { LEGAL_SITE } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE } from '@rh/core/legal-site';
 
 registerFormatLocaleData();
 

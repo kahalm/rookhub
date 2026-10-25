@@ -12,7 +12,7 @@ import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PasswordToggleComponent } from '../../shared/password-toggle/password-toggle.component';
-import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../../core/legal-site';
 import { AUTH_INTRO, AuthIntro } from './auth-intro';
 
 /** Mindestlänge des Benutzernamens — wie `[MinLength(3)]` am RegisterDto (API). */

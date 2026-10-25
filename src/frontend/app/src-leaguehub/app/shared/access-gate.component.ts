@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
-import { LEGAL_SITE } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE } from '@rh/core/legal-site';
 
 /**
  * Sperrkarte der geschützten LeagueHub-Seiten (Codereview UX-033): sagt, mit welchem Konto man angemeldet ist und was

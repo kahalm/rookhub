@@ -7,7 +7,7 @@ import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { HandoffService } from '../../core/handoff.service';
 import { AccountDeletionComponent } from './account-deletion.component';
-import { LEGAL_SITE } from './legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 
 /** Was jede Fassung braucht: Router, Uebersetzung und — fuer den Sprung nach RookHub — HTTP. */
 const base = () => [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' })];

@@ -6,7 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { LEGAL_SITE } from '../legal/legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 import { OPERATOR } from '../../../environments/operator';
 
 describe('ForgotPasswordComponent', () => {

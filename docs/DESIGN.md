@@ -1006,7 +1006,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Komponenten aus `src/app/features/auth/` und `src/app/features/legal/` (Login, Registrierung, Passwort
   vergessen/zurücksetzen, Datenschutz, Impressum, Konto löschen), in den Hubs per Alias `@rh/*` geroutet.
   Jede App prüft ihre Links mit `checkSharedPageLinks` (`src/app/testing/shared-page-links.ts`).
-- **`LEGAL_SITE`** je Oberfläche (`features/legal/legal-site.ts`): Impressum ja/nein, Kontaktadresse, `kind`
+- **`LEGAL_SITE`** je Oberfläche (`core/legal-site.ts`): Impressum ja/nein, Kontaktadresse, `kind`
   (eigene Datenschutz-Einleitung: rookhub/turnier/kidhub/leaguehub/clubhub), Rückziel `back`, `accountHome`.
 - Rücklink „← Zurück“ bzw. zur Startseite statt immer zur Anmeldung (`legalBack`, x-back-login); keine doppelten
   Rechtslinks unter der Anmeldekarte in den Hubs (`.legal-links { display: none }`); kein „Anmelden“-Knopf auf

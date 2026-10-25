@@ -4,7 +4,7 @@ import { RedirectFunction } from '@angular/router';
 import { routes } from './app.routes';
 import { KidsStarsStore } from './core/kids-stars.store';
 import { kidhubConfig } from './app.config';
-import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE, LegalSite } from '@rh/core/legal-site';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
 
 describe('KidHub-Routen und Rechtsseiten', () => {

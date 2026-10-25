@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
-import { LEGAL_SITE } from '../legal/legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 import { AUTH_INTRO } from './auth-intro';
 
 describe('RegisterComponent — optionale Email', () => {

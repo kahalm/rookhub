@@ -24,7 +24,7 @@ import { ThemeService, AppTheme } from '../../core/theme.service';
 import { EinkService } from '../../core/eink.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
-import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 import { canOpenAdmin } from '../../features/admin/admin-tabs';
 import { authLinkQuery, isAuthPage } from '../../core/return-url.util';
 import {

@@ -12,7 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
-import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../../core/legal-site';
 import { apiErrorCodeText } from '../../core/api-error';
 import { AUTH_INTRO, AuthIntro } from './auth-intro';
 import { PasswordToggleComponent } from '../../shared/password-toggle/password-toggle.component';

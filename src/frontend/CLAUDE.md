@@ -146,7 +146,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
   `app/core/design-tokens.spec.ts`
 - **Rechtsseiten** (`features/legal/`, Betreiber-Entscheidung 2026-09-30, UX-001) – `environments/operator.ts`
   (`OPERATOR`) enthaelt NUR die Kontaktadresse (`rookhub@oberschm.id`); das Impressum zeigt nur den Kontakt, kein
-  Diensteanbieter-Block mit Name/Anschrift. Je Oberflaeche steuert `LEGAL_SITE` (`legal-site.ts`) Impressum ja/nein,
+  Diensteanbieter-Block mit Name/Anschrift. Je Oberflaeche steuert `LEGAL_SITE` (`core/legal-site.ts`) Impressum ja/nein,
   Kontaktadresse, `kind`, Ruecklink und `accountHome` (Details im Haupt-CLAUDE.md, KidHub „Kein Impressum"). Daneben
   `AUTH_INTRO` (`features/auth/auth-intro.ts`) als app-eigene Zeile der Anmelde-/Registriermaske (Turnierseite setzt es
   in `turnierConfig`, ClubHub `AUTH_INTRO.login` in `clubhubConfig` — Freischaltung durch den Verein statt

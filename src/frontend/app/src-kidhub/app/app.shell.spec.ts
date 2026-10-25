@@ -10,7 +10,7 @@ import { Subject } from 'rxjs';
 import { KidHubAppComponent } from './app.component';
 import { kidhubConfig } from './app.config';
 import { KID_HOME_WIDTH, KID_MAP_WIDTH } from './shared/kids-layout';
-import { LEGAL_SITE } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE } from '@rh/core/legal-site';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { AccountDeletionComponent } from '@rh/features/legal/account-deletion.component';
 import { ForgotPasswordComponent } from '@rh/features/auth/forgot-password.component';

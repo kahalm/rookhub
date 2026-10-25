@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { TEST_CLUB, provideTestClub } from './core/club-context.testing';
 import { authGuard } from '@rh/core/auth.guard';
-import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE, LegalSite } from '@rh/core/legal-site';
 import { OPERATOR } from '../../src/environments/operator';
 import { leaguehubConfig } from './app.config';
 import { routes } from './app.routes';

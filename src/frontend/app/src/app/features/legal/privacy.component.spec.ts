@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PrivacyComponent } from './privacy.component';
-import { LEGAL_SITE, LegalSite } from './legal-site';
+import { LEGAL_SITE, LegalSite } from '../../core/legal-site';
 import { OPERATOR } from '../../../environments/operator';
 
 describe('PrivacyComponent', () => {

@@ -3,7 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LEGAL_SITE, legalBackLink } from './legal-site';
+import { LEGAL_SITE, legalBackLink } from '../../core/legal-site';
 import { LEGAL_PAGE_STYLES } from './legal-page.styles';
 
 /**

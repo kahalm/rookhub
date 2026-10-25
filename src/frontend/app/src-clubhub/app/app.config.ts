@@ -10,7 +10,7 @@ import localeDe from '@angular/common/locales/de';
 import { routes } from './app.routes';
 import { provideRhHttpClient } from '@rh/core/http-chain';
 import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
-import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/core/legal-site';
 import { CONFIRM_LABELS } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
 

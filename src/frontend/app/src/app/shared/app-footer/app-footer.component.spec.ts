@@ -4,7 +4,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { AppFooterComponent } from './app-footer.component';
 import { DISCORD_INVITE_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
-import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 import { setDarkTheme, textContrast } from '../../testing/contrast';
 import { FooterPresenceService } from './footer-presence';
 

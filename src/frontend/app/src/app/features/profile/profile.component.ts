@@ -25,7 +25,7 @@ import { OfflineSettingsCardComponent } from './offline-settings-card.component'
 import { ThemeCardComponent } from './theme-card.component';
 import { ChangePasswordCardComponent } from './change-password-card.component';
 import { DeleteAccountCardComponent } from './delete-account-card.component';
-import { ACCOUNT_DELETE_SECTION, PROFILE_SECTION_PARAM } from '../legal/legal-site';
+import { ACCOUNT_DELETE_SECTION, PROFILE_SECTION_PARAM } from '../../core/legal-site';
 
 interface Profile {
   userId: number;

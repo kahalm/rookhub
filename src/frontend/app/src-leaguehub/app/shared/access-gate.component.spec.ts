@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
-import { LEGAL_SITE } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE } from '@rh/core/legal-site';
 import { AccessGateComponent } from './access-gate.component';
 
 /** UX-033: die Sperrkarte nennt Konto, fehlendes Recht und den nächsten Schritt — früher nur ein Satz ohne Link. */

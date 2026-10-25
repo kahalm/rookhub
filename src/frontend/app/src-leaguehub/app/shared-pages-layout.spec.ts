@@ -11,7 +11,7 @@ import { RegisterComponent } from '@rh/features/auth/register.component';
 import { ResetPasswordComponent } from '@rh/features/auth/reset-password.component';
 import { AccountDeletionComponent } from '@rh/features/legal/account-deletion.component';
 import { ImpressumComponent } from '@rh/features/legal/impressum.component';
-import { LEGAL_SITE } from '@rh/features/legal/legal-site';
+import { LEGAL_SITE } from '@rh/core/legal-site';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { leaguehubConfig } from './app.config';
 import { parseColor } from '@rh/testing/contrast';

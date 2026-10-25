@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OPERATOR } from '../../../environments/operator';
-import { legalBackLink } from './legal-site';
+import { legalBackLink } from '../../core/legal-site';
 import { LEGAL_PAGE_STYLES } from './legal-page.styles';
 
 /**

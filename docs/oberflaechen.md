@@ -148,7 +148,7 @@ Kinderseite" unter REST API.
   Anmeldung — wer in RookHub oder auf der Turnierseite angemeldet ist, ist es hier auch. Seit 0.563.0 liegt der
   Fortschritt angemeldet im Konto (Abschnitt „Fortschritt im Konto" unter REST API); die Startseite sagt, wo er liegt.
 - **Kein Impressum** (0.563.0, Wunsch 2026-09-27): keine Route, kein Link im Fuß. `LEGAL_SITE`
-  (`src/app/features/legal/legal-site.ts`) sagt den geteilten Rechtsseiten je Oberfläche, ob es ein Impressum gibt und
+  (`src/app/core/legal-site.ts`) sagt den geteilten Rechtsseiten je Oberfläche, ob es ein Impressum gibt und
   welche Adresse für Datenschutzfragen gilt — KidHub setzt `{ contactEmail: 'kidhub@oberschm.id', imprint: false }` in
   `kidhubConfig`; die Datenschutzerklärung nennt den Verantwortlichen dann über diese Adresse statt übers Impressum,
   die Anmeldemaske lässt den Impressum-Link weg, und auch die Seite zur Konto-Löschung (`/account-deletion`, von der

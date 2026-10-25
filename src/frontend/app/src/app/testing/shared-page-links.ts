@@ -13,7 +13,7 @@ import { RegisterComponent } from '../features/auth/register.component';
 import { ResetPasswordComponent } from '../features/auth/reset-password.component';
 import { AccountDeletionComponent } from '../features/legal/account-deletion.component';
 import { ImpressumComponent } from '../features/legal/impressum.component';
-import { LEGAL_SITE } from '../features/legal/legal-site';
+import { LEGAL_SITE } from '../core/legal-site';
 import { PrivacyComponent } from '../features/legal/privacy.component';
 
 /**

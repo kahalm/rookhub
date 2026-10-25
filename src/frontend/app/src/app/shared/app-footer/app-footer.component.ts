@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 import { ChangelogEntry } from '../../../environments/changelog';
 import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
 import { partnerSiteUrl } from '../../core/partner-site';
-import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 import { FooterPresenceService } from './footer-presence';
 
 /**

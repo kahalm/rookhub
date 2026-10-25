@@ -6,7 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
-import { LEGAL_SITE } from '../legal/legal-site';
+import { LEGAL_SITE } from '../../core/legal-site';
 import { AUTH_INTRO } from './auth-intro';
 import { FooterPresenceService } from '../../shared/app-footer/footer-presence';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';

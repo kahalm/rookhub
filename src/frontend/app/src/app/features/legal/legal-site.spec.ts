@@ -6,7 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AccountDeletionComponent } from './account-deletion.component';
 import { ImpressumComponent } from './impressum.component';
-import { LEGAL_SITE, LegalSite, legalBackLink } from './legal-site';
+import { LEGAL_SITE, LegalSite, legalBackLink } from '../../core/legal-site';
 import { PrivacyComponent } from './privacy.component';
 import { AuthService } from '../../core/auth.service';
 import { GUEST_START_URL } from '../../core/handoff.service';
