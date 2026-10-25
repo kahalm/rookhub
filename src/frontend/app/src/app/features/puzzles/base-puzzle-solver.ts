@@ -4,6 +4,7 @@ import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearCrazyStyles, clearVisualizationHide, ThemeMode } from './board-theme.util';
 import { HintLadder } from './hint-ladder';
+import { OffPathPolicy, playerEvalText, whiteEvalToPlayerPawns } from './off-path-policy';
 import { OpponentArrowMode, opponentArrowModeFor, VizController } from './viz-controller';
 import { SecondsCountdown, SolverTimer } from './solver-timer';
 import { lineStepAt } from './line-step.util';
@@ -80,20 +81,12 @@ export abstract class BasePuzzleSolver {
    *  Züge und der Mausrutscher war verbraucht — nur noch Zurücksetzen oder Aufgeben. */
   protected altHolding = false;
 
-  // ---- Off-Path-Warnung: Weicht der User von der Lösung ab und spielt gegen Stockfish weiter,
-  //      wird — sobald die Eval nicht mehr mind. +2 für den Spieler ist — ab dem N-ten off-path-Zug
-  //      einmalig gewarnt (evtl. falsch abgebogen → besser zurücksetzen/aufgeben). N kommt aus den
-  //      Einstellungen (0 = nie); der Hinweis selbst zeigt die überschriebene onOffPathWarning(). ----
-  /** Anzahl der bisher off-path gespielten Züge des Users (seit dem Abweichen). */
-  protected offPathUserPlies = 0;
-  /** In dieser Off-Path-Episode bereits gewarnt (einmalig). */
-  protected offPathWarned = false;
+  // ---- Off-Path-Warnung (OffPathPolicy): Weicht der User von der Lösung ab und spielt gegen Stockfish weiter,
+  //      wird ab dem N-ten off-path-Zug (Einstellung, 0 = nie) einmalig gewarnt; der Hinweis selbst zeigt die
+  //      überschriebene onOffPathWarning(). ----
+  protected readonly offPath = new OffPathPolicy();
   /** True, sobald gewarnt wurde (für eine optionale Dauer-Anzeige im Template). */
-  offPathWarning = false;
-  /** Eval der Trainings-Startstellung aus SPIELER-Sicht (Bauern), lazily im Hintergrund berechnet
-   *  (nur wenn die Off-Path-Warnung aktiv ist). War sie ausgeglichen (≈0), lautet der Warntext
-   *  „nicht mehr ausgeglichen" statt „nicht mehr am Gewinnen". null = (noch) unbekannt. */
-  protected startEvalPawns: number | null = null;
+  get offPathWarning(): boolean { return this.offPath.warning; }
 
   /** Anarchy per URL erzwungen (`?anarchy=max`): e.p.-Zwang gilt dann unabhängig von der Einstellung.
    *  Ohne URL-Zwang folgt der e.p.-Zwang im Crazy-Brett der Einstellung `prefs.enPassantForced`. */
@@ -159,7 +152,7 @@ export abstract class BasePuzzleSolver {
   protected get offPathHints(): string[] { return []; }
   /** 1-basierte Nummer des eigenen Löserzugs, bei dem der User ZUERST vom Lösungsweg abbog; null
    *  solange auf dem Pfad. Speist Stufe 3 der Off-Path-Tipps. */
-  offPathUserMoveNumber: number | null = null;
+  get offPathUserMoveNumber(): number | null { return this.offPath.userMoveNumber; }
   /** Effektive Tipp-Liste: off-path die „falsch abgebogen"-Hinweise, im e.p.-Zwang die Anarchy-
    *  Hinweise, sonst die normalen Tipps. */
   private get effectiveHints(): string[] {
@@ -344,7 +337,7 @@ export abstract class BasePuzzleSolver {
     this.wrongMoveCount = 0;
     this.alternativeSolve = false;
     this.resetOffPathTracking();
-    this.startEvalPawns = null;
+    this.offPath.startEvalPawns = null;
     this.moveLog = [];
     this.evalShown = false;
     this.viz.showCount = 0;
@@ -419,7 +412,7 @@ export abstract class BasePuzzleSolver {
     this.stockfish.getBestMove(fen, this.depth)
       .then(r => {
         if (this.aborted || epoch !== this.solverEpoch) return;
-        this.startEvalPawns = this.whiteEvalToPlayerPawns(r.eval, orient);
+        this.offPath.startEvalPawns = whiteEvalToPlayerPawns(r.eval, orient);
       })
       .catch(() => { /* Eval optional — Warntext fällt sonst auf den Standard zurück */ });
   }
@@ -458,7 +451,7 @@ export abstract class BasePuzzleSolver {
         if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
         this.onSolutionPath = false;
         this.wrongMoveCount++;     // Fehlzug (Abweichung vom Lösungszug)
-        this.offPathUserPlies++;   // erster Abweich-Zug
+        this.offPath.userPlies++;   // erster Abweich-Zug
         this.markOffPathDeviation();   // Zug-Nr der Abzweigung merken + Off-Path-Tipps von vorn
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
@@ -470,7 +463,7 @@ export abstract class BasePuzzleSolver {
 
   protected handleOffPathMove(event: { orig: Key; dest: Key; promotion?: string }): void {
     if (!this.playFreeMove(event.orig, event.dest, event.promotion)) return;
-    this.offPathUserPlies++;   // weiterer off-path-Zug des Users
+    this.offPath.userPlies++;   // weiterer off-path-Zug des Users
     if (this.chess.isGameOver()) { this.handleGameOver(); return; }
     this.opponentRespond();
   }
@@ -751,84 +744,35 @@ export abstract class BasePuzzleSolver {
   protected onOffPathWarning(): void { /* von der Komponente überschrieben */ }
 
   private resetOffPathTracking(): void {
-    this.offPathUserPlies = 0;
-    this.offPathWarned = false;
-    this.offPathWarning = false;
-    this.offPathUserMoveNumber = null;
+    this.offPath.reset();
     this.hintLevel = 0;   // zurück auf dem Pfad → Tipp-Stufe für den (wieder) erwarteten Zug verdeckt
   }
 
   /** Merkt EINMAL je Off-Path-Episode, der wievielte eigene Löserzug die falsche Abzweigung war
    *  (1-basiert), und setzt die Tipp-Stufe zurück, damit die Off-Path-Tipps von Stufe 1 aufdecken. */
   private markOffPathDeviation(): void {
-    if (this.offPathUserMoveNumber != null) return;   // nur die ERSTE Abzweigung zählt
-    const firstUserPly = this.startPly < 0 ? 0 : this.startPly + 1;
-    const n = Math.floor((this.moveIndex - firstUserPly) / 2) + 1;
-    this.offPathUserMoveNumber = n > 0 ? n : 1;
-    this.hintLevel = 0;
+    if (this.offPath.markDeviation(this.moveIndex, this.startPly)) this.hintLevel = 0;
   }
 
-  /** Prüft nach einem off-path-Zug (Eval steht in currentEval, Weiß-Sicht): ab dem
-   *  Schwellwert-Zug und wenn die Eval nicht mind. +2 für den Spieler ist → einmalig warnen. */
+  /** Prüft nach einem off-path-Zug (Eval steht in currentEval, Weiß-Sicht) und warnt einmalig. */
   protected maybeWarnOffPath(): void {
-    const threshold = this.offPathWarnThreshold;
-    if (threshold <= 0 || this.offPathWarned || this.offPathUserPlies < threshold) return;
-    const pawns = this.playerEvalPawns();
-    if (pawns == null) return;
-    // War die Startstellung ausgeglichen (Halten/Remis-Aufgabe) → erst warnen, wenn der Spieler
-    // KLAR schlechter steht (< −1); war sie gewonnen → warnen, sobald es nicht mehr klar
-    // gewonnen ist (< +2). Sonst würde eine noch ausgeglichene Stellung fälschlich warnen.
-    const limit = this.startWasBalanced() ? -1 : 2;
-    if (pawns >= limit) return;
-    this.offPathWarned = true;
-    this.offPathWarning = true;
-    this.onOffPathWarning();
+    if (this.offPath.checkWarn(this.offPathWarnThreshold, this.playerEvalPawns())) this.onOffPathWarning();
   }
 
   /** War die Trainings-Startstellung ausgeglichen (Eval ≈ 0, Spieler-Sicht |x| < 1)? Dann lautet der
    *  Off-Path-Warntext „nicht mehr ausgeglichen" statt „nicht mehr am Gewinnen". */
   protected startWasBalanced(): boolean {
-    return this.startEvalPawns != null && Math.abs(this.startEvalPawns) < 1;
+    return this.offPath.startWasBalanced;
   }
 
-  /** currentEval (String, Weiß-Sicht, z. B. "+1.5"/"#3"/"#-2") → Bauerneinheiten aus Spieler-Sicht;
-   *  Matt = ±100. null, wenn (noch) keine Eval vorliegt. */
+  /** currentEval (Weiß-Sicht) → Bauerneinheiten aus Spieler-Sicht; Matt = ±100, null ohne Eval. */
   protected playerEvalPawns(): number | null {
-    return this.whiteEvalToPlayerPawns(this.currentEval, this.orientation);
+    return whiteEvalToPlayerPawns(this.currentEval, this.orientation);
   }
 
-  /** Eval-String aus Weiß-Sicht ("+1.5"/"#3"/"#-2") → Bauerneinheiten aus Sicht von `orientation`
-   *  (Matt = ±100). null, wenn leer/unparsbar. */
-  protected whiteEvalToPlayerPawns(s: string, orientation: Color): number | null {
-    if (!s) return null;
-    let white: number;
-    if (s.includes('#')) {
-      const m = parseInt(s.replace(/[#+]/g, ''), 10);   // "#3"→3, "#-2"→-2
-      if (isNaN(m)) return null;
-      white = (m >= 0 ? 1 : -1) * 100;
-    } else {
-      white = parseFloat(s);
-      if (isNaN(white)) return null;
-    }
-    return orientation === 'white' ? white : -white;
-  }
-
-  /** Aktuelle Eval aus SPIELER-Sicht als kurzer Anzeige-String ("+1.5"/"-0.8"/"#3"/"#-2"),
-   *  oder null wenn keine vorliegt. Für die Klammer im Off-Path-Hinweis. */
+  /** Aktuelle Eval aus SPIELER-Sicht als kurzer Anzeige-String, oder null (Klammer im Off-Path-Hinweis). */
   protected playerEvalDisplay(): string | null {
-    const s = this.currentEval;
-    if (!s) return null;
-    if (s.includes('#')) {
-      const m = parseInt(s.replace(/[#+]/g, ''), 10);
-      if (isNaN(m)) return null;
-      const signed = this.orientation === 'white' ? m : -m;
-      return signed >= 0 ? `#${signed}` : `#-${Math.abs(signed)}`;
-    }
-    const white = parseFloat(s);
-    if (isNaN(white)) return null;
-    const p = this.orientation === 'white' ? white : -white;
-    const v = Math.abs(p).toFixed(1);
-    return p > 0 ? `+${v}` : p < 0 ? `-${v}` : '0.0';
+    return playerEvalText(this.currentEval, this.orientation);
   }
 
   protected endVisualizationHide(): void {

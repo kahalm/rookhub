@@ -119,9 +119,9 @@ class WarnSolver extends TestSolver {
   protected override onOffPathWarning(): void { this.warned++; }
   // Test-Helfer für die interne Logik.
   setEval(e: string): void { (this as any).currentEval = e; }
-  setOffPath(plies: number): void { (this as any).offPathUserPlies = plies; (this as any).onSolutionPath = false; }
+  setOffPath(plies: number): void { this.offPath.userPlies = plies; (this as any).onSolutionPath = false; }
   callWarn(): void { (this as any).maybeWarnOffPath(); }
-  setStartEval(p: number | null): void { (this as any).startEvalPawns = p; }
+  setStartEval(p: number | null): void { this.offPath.startEvalPawns = p; }
   balanced(): boolean { return (this as any).startWasBalanced(); }
   evalDisplay(): string | null { return (this as any).playerEvalDisplay(); }
 }
