@@ -32,7 +32,7 @@ import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOffline
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { parseWhiteEval } from './repertoire-eval.util';
+import { EvalCompare } from './repertoire-trainer-eval-compare';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { normalizeFen } from './position-filter.util';
@@ -144,10 +144,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   outcome: Outcome = 'correct';
   expectedDisplay = '';
   wrongRevealed = false;
-  evalLoading = false;
-  evalDeltaPawns: number | null = null;
-  evalMateNote: 'missed' | 'allowed' | null = null;
-  private evalEpoch = 0;
+  /** Bewertungsvergleich nach einem Fehlzug (Stockfish, Spielerzug ↔ Repertoirezug). */
+  private readonly evalCmp = new EvalCompare(
+    { getEval: (fen, depth) => this.stockfish.getEval(fen, depth) }, () => this.cdr.markForCheck());
+  get evalLoading(): boolean { return this.evalCmp.loading; }
+  get evalDeltaPawns(): number | null { return this.evalCmp.deltaPawns; }
+  get evalMateNote(): 'missed' | 'allowed' | null { return this.evalCmp.mateNote; }
 
   private statesByKey = new Map<string, LineStateDto>();   // key = lineKey
   /** Ergebnis der AKTUELLEN Linie: true, sobald ein NICHT als Mausrutscher verziehener Fehler
@@ -825,10 +827,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return this.phase === 'FEEDBACK' && this.outcome !== 'wrong';
   }
 
-  get evalDeltaAbsDisplay(): string {
-    if (this.evalDeltaPawns === null) return '';
-    return Math.abs(this.evalDeltaPawns).toFixed(2).replace(/\.?0+$/, '');
-  }
+  get evalDeltaAbsDisplay(): string { return this.evalCmp.deltaAbsDisplay; }
 
   /** Die geduldeten Alternativen ([%alt]) DIESER Stellung in der Form des gemeinsamen Kerns.
    *
@@ -860,7 +859,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
     if (this.phase !== 'PLAYING' && !wrongRetry) return;
     if (wrongRetry) {
-      this.evalLoading = false; this.evalDeltaPawns = null; this.evalMateNote = null; this.evalEpoch++;
+      this.evalCmp.reset();
     }
 
     // Geurteilt wird gegen GENAU diese Stellung — `this.fen`, nicht `this.chess`: im Wiederhol-Fall
@@ -927,7 +926,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.phase = 'FEEDBACK';
 
     if (this.outcome === 'wrong') {
-      this.kickOffEvalCompare(fenAfterPlayer, expectedMove.san);
+      this.evalCmp.start(this.startFen, fenAfterPlayer, expectedMove.san, this.color);
       this.dests = destsAt(this.startFen);
     } else {
       this.scheduleAdvance(ADVANCE_MS[this.outcome]);
@@ -1145,43 +1144,5 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   private clearOppTimer(): void {
     if (this.oppTimer !== null) { clearTimeout(this.oppTimer); this.oppTimer = null; }
-  }
-
-  private kickOffEvalCompare(fenAfterPlayer: string, expectedSan: string): void {
-    const epoch = ++this.evalEpoch;
-    this.evalLoading = true;
-    this.evalDeltaPawns = null;
-    this.evalMateNote = null;
-
-    let fenAfterRep = '';
-    try {
-      const c = new Chess(this.startFen);
-      c.move(expectedSan);
-      fenAfterRep = c.fen();
-    } catch { this.evalLoading = false; this.cdr.markForCheck(); return; }
-
-    Promise.all([
-      this.stockfish.getEval(fenAfterPlayer, 14).catch(() => ''),
-      this.stockfish.getEval(fenAfterRep, 14).catch(() => ''),
-    ]).then(([sPlayer, sRep]) => {
-      if (epoch !== this.evalEpoch) return;
-      this.evalLoading = false;
-      if (!sPlayer || !sRep) { this.cdr.markForCheck(); return; }
-      const ep = parseWhiteEval(sPlayer);
-      const er = parseWhiteEval(sRep);
-      const sign = this.color === 'w' ? 1 : -1;
-      const cpPlayer = ep.cp * sign;
-      const cpRep = er.cp * sign;
-      const playerWasInWin = er.mateFor && (er.mateFor === this.color);
-      const playerNowLosing = ep.mateFor && (ep.mateFor !== this.color);
-      if (playerNowLosing) this.evalMateNote = 'allowed';
-      else if (playerWasInWin && !ep.mateFor) this.evalMateNote = 'missed';
-      this.evalDeltaPawns = (cpPlayer - cpRep) / 100;
-      this.cdr.markForCheck();
-    }).catch(() => {
-      if (epoch !== this.evalEpoch) return;
-      this.evalLoading = false;
-      this.cdr.markForCheck();
-    });
   }
 }
