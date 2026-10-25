@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
-import { calcDests } from '../puzzles/puzzle-move.util';
+import { calcDests } from '../../shared/chess/puzzle-move.util';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 

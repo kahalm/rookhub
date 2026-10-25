@@ -1,7 +1,7 @@
 import { Chess } from 'chess.js';
 import { DrawShape } from 'chessground/draw';
 import { BookPuzzleDto } from '../../puzzles/puzzle.service';
-import { applyUci, tryLoadFen } from '../../puzzles/puzzle-move.util';
+import { applyUci, tryLoadFen } from '../../../shared/chess/puzzle-move.util';
 import { parseMoveShapes } from '../../puzzles/move-shapes.util';
 import { labelOr } from '../course-language.util';
 import { pgnHeaderText } from '../../../shared/pgn-viewer/pgn-header.util';

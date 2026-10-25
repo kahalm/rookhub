@@ -16,7 +16,7 @@ import { BookPuzzleDto } from '../puzzles/puzzle.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ReviewNavComponent } from '../puzzles/review-nav.component';
 import { parseMoveShapes } from '../puzzles/move-shapes.util';
-import { applyUci, fenSideToMove, moveNumberLabels, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { applyUci, fenSideToMove, moveNumberLabels, tryLoadFen } from '../../shared/chess/puzzle-move.util';
 import { CommentSegment } from '../puzzles/comment-variation.util';
 import { CommentBlockCache, lineStepAt } from '../puzzles/line-step.util';
 import { latestCommentUpTo } from '../puzzles/book-comment.util';

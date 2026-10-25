@@ -33,7 +33,6 @@ const KNOWN_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = {
   ],
   'shared/pgn-viewer/pgn-viewer.component.spec.ts': ['features/games/game-review.component'],
   'shared/player-card/game-replay.component.ts': ['features/games/game-review.component', 'features/games/move-badge.util'],
-  'shared/chess/line-solver.ts': ['features/puzzles/puzzle-move.util'],
 };
 
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(['"])([^'"]+)\1/g;

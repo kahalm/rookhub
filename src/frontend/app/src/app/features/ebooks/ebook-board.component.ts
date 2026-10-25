@@ -26,7 +26,7 @@ import { MaiaEngineService } from '../analysis/maia/maia-engine.service';
 import { MAIA_DEFAULT_ELO, MAIA_ELO_OPTIONS } from '../analysis/maia/maia-model';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { tryFreeMove, tryLoadFen } from '../../shared/chess/puzzle-move.util';
 import { EbookDiagram, EbookGame, EbookService } from './ebook.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { sideToMove, whiteToMove } from '../../shared/chess/fen-side';

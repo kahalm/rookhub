@@ -1,6 +1,6 @@
 import { Chess, Move, Square } from 'chess.js';
 import { Key } from 'chessground/types';
-import { applyUci, calcDests, tryFreeMove, tryLoadFen } from '../../features/puzzles/puzzle-move.util';
+import { applyUci, calcDests, tryFreeMove, tryLoadFen } from './puzzle-move.util';
 
 /**
  * Der gemeinsame Kern aller Löser: „ist dieser Zug der erwartete?" — EINMAL beantwortet.

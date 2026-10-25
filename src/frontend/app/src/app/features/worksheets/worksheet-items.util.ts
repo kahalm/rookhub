@@ -1,5 +1,5 @@
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
-import { applyUci, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { applyUci, tryLoadFen } from '../../shared/chess/puzzle-move.util';
 import { buildFlashcard } from '../courses/flashcards/flashcard.util';
 import { NewWorksheetItem } from './worksheet.service';
 

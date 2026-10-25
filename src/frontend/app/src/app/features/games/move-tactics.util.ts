@@ -1,5 +1,5 @@
 import { Chess, Color, PieceSymbol, Square } from 'chess.js';
-import { tryLoadFen } from '../puzzles/puzzle-move.util';
+import { tryLoadFen } from '../../shared/chess/puzzle-move.util';
 
 /**
  * Stellungs-Taktik für die Zug-Klasse „Brilliant" im Partie-Rückblick: hängt nach dem Zug eine eigene

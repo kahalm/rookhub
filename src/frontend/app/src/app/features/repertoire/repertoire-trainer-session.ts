@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
-import { applyUci, tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { applyUci, tryFreeMove, tryLoadFen } from '../../shared/chess/puzzle-move.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { whiteToMove } from '../../shared/chess/fen-side';
 import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
