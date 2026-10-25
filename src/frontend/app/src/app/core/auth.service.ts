@@ -1,48 +1,36 @@
-import { DestroyRef, Injectable, Injector, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, firstValueFrom, tap } from 'rxjs';
+import { Observable, firstValueFrom, tap } from 'rxjs';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
-import { OfflineService } from './offline.service';
-import { SnackbarService } from './snackbar.service';
-import { ClientLogService } from './client-log.service';
-import { localStore, readRaw, removeKey, writeJson } from './local-json-store';
-import { ANON_PUZZLE_SESSION_KEY, readAnonSessionId } from './anon-session';
+import { AuthResponse } from './auth-response';
+import { SessionStore } from './session-store';
+import { PermissionService } from './permission.service';
+import { ImpersonationService } from './impersonation.service';
+import { LoginFollowUpService } from './login-follow-up.service';
+import { localStore, removeKey } from './local-json-store';
 
-export interface AuthResponse {
-  token: string;
-  username: string;
-  userId: number;
-  isAdmin: boolean;
-  /** Gesetzt, wenn dieses Token via Admin-„Als Nutzer einsteigen" erzeugt wurde. */
-  impersonating?: boolean;
-  /** Benutzername des Admins, der eingestiegen ist (nur bei impersonating). */
-  impersonatorUsername?: string;
-  /**
-   * Nur im Client gesetzt: diese Anmeldung wurde aus der GETEILTEN Anmeldung einer anderen Oberflaeche
-   * uebernommen (Cookie auf der Elterndomaene) und endet mit ihr — `HandoffService.verifyAdoptedSession`
-   * gleicht sie beim Start und beim Zurueckkehren in den Tab ab. Eine eigene Anmeldung (Maske,
-   * Registrierung) und ein frisches Token nach „Passwort aendern" tragen das Feld nicht.
-   */
-  adopted?: boolean;
-}
+export type { AuthResponse } from './auth-response';
 
+/**
+ * Anmeldung der Oberfläche — die EINE Fassade, die alle fünf Oberflächen nutzen (Oberfläche unverändert seit vor der
+ * Zerlegung Z34). Dahinter: {@link SessionStore} (Token, Speicher, Ablauf, lokales Aufräumen),
+ * {@link PermissionService} (`has`, Live-Rechte), {@link ImpersonationService} („Als Nutzer einsteigen") und
+ * {@link LoginFollowUpService} (Nachlauf nach dem Anmelden). Hier bleiben die HTTP-Abläufe (Anmelden, Registrieren,
+ * Passwort, Abmelden mit dem Ende der geteilten Anmeldung) und der Abgleich mit anderen Tabs.
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly apiUrl = '/api/auth';
-  private currentUserSubject = new BehaviorSubject<AuthResponse | null>(this.getStoredUser());
-  currentUser$ = this.currentUserSubject.asObservable();
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly session = inject(SessionStore);
+  private readonly perms = inject(PermissionService);
+  private readonly impersonation = inject(ImpersonationService);
+  private readonly followUp = inject(LoginFollowUpService);
+  currentUser$ = this.session.user$;
 
-  /**
-   * Ob der Injektor schon abgeraeumt ist. Gebraucht, weil mehrere Stellen hier einen DYNAMISCHEN
-   * Import machen und den Dienst erst im `then` aus dem Injektor holen — bis dahin kann der
-   * Injektor weg sein.
-   */
-  private destroyed = false;
-
-  constructor(private http: HttpClient, private router: Router, private injector: Injector) {
+  constructor() {
     const destroyRef = inject(DestroyRef);
-    destroyRef.onDestroy(() => this.destroyed = true);
     // Ein Abmelden ohne Netz holt das Ende der geteilten Anmeldung nach, sobald das Netz zurueck ist
     // (siehe sessionEndPending) — nicht erst beim naechsten Start.
     if (typeof window !== 'undefined') {
@@ -54,118 +42,55 @@ export class AuthService {
       window.addEventListener('storage', onStorage);
       destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
     }
-    // Beim Start schon abgelaufen: hier (nicht in getStoredUser) beenden — das Aufraeumen braucht den
-    // Injektor, und der ist erst im Konstruktor gesetzt, nicht schon beim Initialisieren der Felder.
-    this.getValidUser();
-  }
-
-  /**
-   * Einen Dienst holen, der hinter einem dynamischen Import liegt — und dabei aushalten, dass der
-   * Injektor in der Zwischenzeit abgeraeumt wurde.
-   *
-   * <p>Ein `import(...)` loest asynchron auf, und niemand bricht es ab. Meldet sich jemand an und
-   * verlaesst die Seite sofort wieder, kommt das `then` NACH dem Abbau des Injektors an, und
-   * `injector.get` wirft NG0205. Latent seit 0.413.0, an fuenf Stellen dieser Datei.</p>
-   *
-   * <p><b>Was hier NICHT der Beleg ist, obwohl es danach aussieht:</b> im Karma-Protokoll steht
-   * NG0205 zu Dutzenden — auch in gruenen Laeufen, gezaehlt 72-mal in einem. Das ist der
-   * TestBed-Abbau, kein Fehlschlag, und es hat mit dieser Reparatur nichts zu tun. Wer den Race
-   * beheben will, sucht ihn im Browser (Anmelden, sofort weg), nicht im Testprotokoll.</p>
-   *
-   * <p>Bewusst kein `try/catch` um den ganzen Aufruf: das verschluckte auch echte Fehler AUS dem
-   * geholten Dienst. Geprueft wird nur das eine, was hier schiefgehen kann.</p>
-   */
-  private withService<T>(get: () => T, use: (service: T) => void): void {
-    if (this.destroyed) return;
-    use(get());
+    // Beim Start schon abgelaufen: hier beenden (wie einen Ablauf mitten in der Sitzung) — das Aufraeumen braucht
+    // den Injektor, und der ist erst nach dem Aufbau der Felder vollstaendig.
+    this.session.validUser();
   }
 
   get isLoggedIn(): boolean {
-    return this.getValidUser() !== null;
+    return this.session.validUser() !== null;
   }
 
   get token(): string | null {
-    return this.getValidUser()?.token ?? null;
+    return this.session.validUser()?.token ?? null;
   }
 
   get currentUser(): AuthResponse | null {
-    return this.getValidUser();
+    return this.session.validUser();
   }
 
   get isAdmin(): boolean {
-    return this.getValidUser()?.isAdmin ?? false;
+    return this.perms.isAdmin;
   }
 
-  /**
-   * Effektive Permissions des aktuellen Tokens (RBAC), aus den `perm`-Claims des JWT dekodiert.
-   * Mehrere Claims desselben Namens landen im JWT als Array, ein einzelner als String — beides wird
-   * normalisiert. Admins tragen die Admin-Rolle separat (siehe `has`), daher hier ggf. leer.
-   */
+  /** Effektive Permissions des aktuellen Tokens (siehe {@link PermissionService.permissions}). */
   get permissions(): ReadonlySet<string> {
-    const token = this.token;
-    if (!token) return new Set();
-    try {
-      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(atob(base64));
-      const p = payload['perm'];
-      if (Array.isArray(p)) return new Set(p.map(String));
-      if (typeof p === 'string') return new Set([p]);
-      return new Set();
-    } catch {
-      return new Set();
-    }
+    return this.perms.permissions;
   }
 
-  /**
-   * Die Rechte, die JETZT gelten — vom Server (`GET /api/auth/permissions`, eigene Rollen + Rollen der Gruppen), nicht
-   * der Stand beim Anmelden (0.589.0; eine neue Rolle wirkte vorher erst nach dem nächsten Anmelden). `null`, solange
-   * noch nicht geholt — dann gelten die Claims des Tokens. Ein Signal: Menüs und Seiten, die `has` in einem `computed`
-   * oder im Template lesen, ziehen von selbst nach. Aufgefrischt vom {@link PermissionRefresher}.
-   */
-  private readonly live = signal<{ userId: number; isAdmin: boolean; permissions: ReadonlySet<string> } | null>(null);
-
-  /** Darf der aktuelle Nutzer die Aktion? Admin erfüllt jede Permission (Superuser). */
+  /** Darf der aktuelle Nutzer die Aktion? Admin erfüllt jede Permission (Superuser). Live-Stand vor Token-Claims. */
   has(permission: string): boolean {
-    const live = this.live();
-    const user = this.getValidUser();
-    if (live && user && live.userId === user.userId) return live.isAdmin || live.permissions.has(permission);
-    return this.isAdmin || this.permissions.has(permission);
+    return this.perms.has(permission);
   }
 
-  /**
-   * Ist der Nutzer JETZT Admin? Live-Stand aus `GET /api/auth/permissions` (wie {@link has}), sonst die Rolle am Token.
-   * Liest das Signal — Templates/`computed` ziehen nach, ein Entzug wirkt ohne neues Anmelden (Foto-Link 0.727.5).
-   */
+  /** Ist der Nutzer JETZT Admin? (siehe {@link PermissionService.isAdminLive}) */
   get isAdminLive(): boolean {
-    const live = this.live();
-    const user = this.getValidUser();
-    if (live && user && live.userId === user.userId) return live.isAdmin;
-    return this.isAdmin;
+    return this.perms.isAdminLive;
   }
 
   /** Den Live-Stand der Rechte holen. Still bei Fehlern (offline, Server weg) — dann bleibt der bisherige Stand. */
-  async refreshPermissions(): Promise<void> {
-    const user = this.getValidUser();
-    if (!user) { this.live.set(null); return; }
-    try {
-      const r = await firstValueFrom(this.http.get<{ isAdmin: boolean; permissions: string[] }>(`${this.apiUrl}/permissions`));
-      if (this.getValidUser()?.userId === user.userId)
-        this.live.set({ userId: user.userId, isAdmin: !!r.isAdmin, permissions: new Set(r.permissions ?? []) });
-    } catch { /* bisheriger Stand (bzw. die Claims des Tokens) gilt weiter */ }
+  refreshPermissions(): Promise<void> {
+    return this.perms.refresh();
   }
 
-  private readonly adminBackupKey = 'rookhub_admin_user';
-
-  /** Läuft gerade eine Admin-Impersonation? Entscheidend ist allein das Token dieses Tabs — NICHT die
-   *  Admin-Sicherung im (mit allen Tabs geteilten) Speicher: fehlte sie, verschwand der rote Streifen,
-   *  während das fremde Token weiter galt (Codereview F1-005). */
+  /** Läuft gerade eine Admin-Impersonation? Allein das Token dieses Tabs entscheidet (Codereview F1-005). */
   get isImpersonating(): boolean {
-    return !!this.getValidUser()?.impersonating;
+    return this.impersonation.isImpersonating;
   }
 
   /** Benutzername des Admins, der eingestiegen ist (für das Banner). */
   get impersonatorUsername(): string | null {
-    return this.getValidUser()?.impersonatorUsername ?? null;
+    return this.impersonation.impersonatorUsername;
   }
 
   /**
@@ -176,10 +101,10 @@ export class AuthService {
    * entscheidet der Aufrufer.
    */
   adoptSession(user: AuthResponse): void {
-    this.setSessionEndPending(false);   // neue Anmeldung: ein altes ausstehendes Abmelden gilt nicht mehr
-    this.persistSession(user);
-    this.currentUserSubject.next(user);
-    this.loadPreferences();
+    this.session.setSessionEndPending(false);   // neue Anmeldung: ein altes ausstehendes Abmelden gilt nicht mehr
+    this.session.persist(user);
+    this.session.set(user);
+    this.followUp.loadPreferences();
   }
 
   /**
@@ -196,7 +121,7 @@ export class AuthService {
    * es gleich mit. Und ohne Navigation — wohin es danach geht, entscheidet der Aufrufer.</p>
    */
   switchToSharedSession(user: AuthResponse): void {
-    this.clearLocalTraces();
+    this.session.clearLocalTraces();
     this.adoptSession({ ...user, adopted: true });
   }
 
@@ -210,58 +135,15 @@ export class AuthService {
    *          obwohl die Sitzung die des Admins bleibt).
    */
   impersonate(target: AuthResponse): boolean {
-    const admin = this.currentUserSubject.value;
-    // Nur sichern, wenn wir nicht ohnehin schon in einer Impersonation stecken.
-    if (admin && !admin.impersonating && !this.writeAdminBackup(admin)) return false;
-    const user: AuthResponse = { ...target, impersonating: true };
-    this.persistSession(user);
-    this.currentUserSubject.next(user);
-    this.loadPreferences();
+    if (!this.impersonation.start(target)) return false;
+    this.followUp.loadPreferences();
     return true;
   }
 
-  /**
-   * Die Admin-Sitzung für den Rücksprung sichern — bei vollem Speicher wie {@link persistSession}: erst die
-   * Offline-Caches räumen (jederzeit wieder ladbar), dann noch einmal. Der häufige Grund für ein gescheitertes
-   * `setItem` ist nicht der gesperrte Speicher, sondern die Quota, die genau diese Caches füllen.
-   */
-  private writeAdminBackup(admin: AuthResponse): boolean {
-    if (writeJson(localStore(), this.adminBackupKey, admin)) return true;
-    try { this.injector.get(OfflineService).clearAll(); } catch { /* Storage/DI nicht verfügbar */ }
-    return writeJson(localStore(), this.adminBackupKey, admin);
-  }
-
-  /** Impersonation beenden und zur gesicherten Admin-Session zurückkehren. */
+  /** Impersonation beenden und zur gesicherten Admin-Session zurückkehren (ohne brauchbare Sicherung: abmelden). */
   stopImpersonation(): void {
-    const stored = readRaw(localStore(), this.adminBackupKey);
-    // Ohne Sicherung gibt es keinen Rücksprung — dann nicht im fremden Konto hängenbleiben (der Streifen
-    // steht, sein Knopf täte sonst nichts), sondern abmelden wie bei einer beschädigten Sicherung.
-    if (!stored) { this.logout(); return; }
-    let admin: AuthResponse;
-    try {
-      admin = JSON.parse(stored);
-    } catch {
-      // Beschädigtes Admin-Backup: nicht in einem halben Zustand hängenbleiben —
-      // Reste verwerfen und sauber ausloggen.
-      removeKey(localStore(), this.adminBackupKey);
-      this.logout();
-      return;
-    }
-    // Reihenfolge: ERST die Admin-Sitzung zurückschreiben, DANN das Backup löschen. Vorher war es
-    // umgekehrt — warf `setItem` (voller/gesperrter Speicher), war das Backup unwiederbringlich weg,
-    // `rookhub_user` trug weiter das Impersonation-Token und das rote Banner verschwand: der Admin
-    // arbeitete unbemerkt im fremden Konto weiter, ohne Rücksprung.
-    try { localStorage.setItem('rookhub_user', stored); }
-    catch {
-      this.storageFull = true;
-      // Backup NICHT löschen — der Rücksprung bleibt so nach einem Neuladen möglich.
-      this.currentUserSubject.next(admin);
-      this.loadPreferences();
-      return;
-    }
-    removeKey(localStore(), this.adminBackupKey);
-    this.currentUserSubject.next(admin);
-    this.loadPreferences();
+    if (this.impersonation.stop() === 'logout') { this.logout(); return; }
+    this.followUp.loadPreferences();
   }
 
   /**
@@ -274,69 +156,13 @@ export class AuthService {
    * die Sitzung dieses Tabs nachgezogen, ohne erneutes `session/end`.</p>
    */
   private followOtherTab(e: StorageEvent): void {
-    if (e.key !== null && e.key !== 'rookhub_user') return;   // null: der Speicher wurde ganz geleert
-    const current = this.currentUserSubject.value;
-    const stored = this.getStoredUser();
+    if (e.key !== null && e.key !== SessionStore.UserKey) return;   // null: der Speicher wurde ganz geleert
+    const current = this.session.value;
+    const stored = this.session.readStored();
     if ((stored?.token ?? null) === (current?.token ?? null)) return;
-    this.currentUserSubject.next(stored);
+    this.session.set(stored);
     if (!stored) { this.router.navigate(['/login']); return; }
-    if (stored.userId !== current?.userId) this.loadPreferences();
-  }
-
-  private loadPreferences(): void {
-    import('./preferences.service').then(m =>
-      this.withService(() => this.injector.get(m.PreferencesService), p => p.loadFromServer()));
-  }
-
-  /**
-   * Liefert den aktuellen User, loggt aber bei abgelaufenem Token automatisch
-   * aus — eine abgelaufene Session gilt damit sofort als ausgeloggt, nicht erst
-   * nach dem naechsten 401 vom Server.
-   */
-  private getValidUser(): AuthResponse | null {
-    const user = this.currentUserSubject.value;
-    if (user && this.isTokenExpired(user.token)) {
-      this.endExpiredSession(user.token);
-      this.currentUserSubject.next(null);
-      return null;
-    }
-    return user;
-  }
-
-  /**
-   * Eine abgelaufene Sitzung endet lokal wie ein {@link logout}: Sitzung, Offline-Inhalte,
-   * Nutzer-Spuren und Admin-Backup weg. Der Ablauf ist der NORMALFALL jeder Sitzung, die niemand
-   * aktiv beendet (der Interceptor schickt ein abgelaufenes Token gar nicht erst, es kommt also auch
-   * kein 401 → logout). Raeumte nur logout() auf, erbte der naechste Nutzer am Geraet Kursliste und
-   * Downloads, die anonyme Sitzungs-Id — und der Endless-Modus schob Laufhistorie und Highscore des
-   * vorigen beim ersten Oeffnen ins neue Konto, bis in die Bestenliste. Nach einer abgelaufenen
-   * Impersonation (2 h) laege das Admin-Token (30/90 Tage) unbegrenzt im Speicher.
-   *
-   * <p>Bewusst OHNE `session/end` und ohne Navigation: das geteilte Cookie kann laengst einer anderen,
-   * aktiven Anmeldung gehoeren (eine andere Oberflaeche haelt es frisch, womoeglich fuer ein anderes
-   * Konto) — und beim Start laeuft das hier im Konstruktor, wo ein HTTP-Aufruf ueber den
-   * Auth-Interceptor auf diesen noch unfertigen Dienst zurueckliefe.</p>
-   *
-   * <p>Hat ein ANDERER Tab inzwischen eine andere Anmeldung gespeichert, gehoeren Speicher und
-   * Offline-Inhalte ihr — dann endet nur die Sitzung dieses Tabs.</p>
-   */
-  private endExpiredSession(token: string): void {
-    try {
-      const stored = localStorage.getItem('rookhub_user');
-      if (stored && (JSON.parse(stored) as Partial<AuthResponse> | null)?.token !== token) return;
-    } catch { /* unlesbar → wie die eigene behandeln */ }
-    try { localStorage.removeItem('rookhub_user'); } catch { /* Storage gesperrt */ }
-    this.clearLocalTraces();
-  }
-
-  private isTokenExpired(token: string): boolean {
-    try {
-      const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(atob(base64));
-      return !!payload.exp && payload.exp * 1000 < Date.now();
-    } catch {
-      return true; // unparsebares Token -> als abgelaufen behandeln
-    }
+    if (stored.userId !== current?.userId) this.followUp.loadPreferences();
   }
 
   register(username: string, email: string | null, password: string): Observable<AuthResponse> {
@@ -378,61 +204,22 @@ export class AuthService {
       .pipe(tap(res => this.replaceToken(res)));
   }
 
+
   /** Gespeichertes Token gegen ein neues tauschen, ohne den restlichen Anmelde-Nachlauf. */
   private replaceToken(user: AuthResponse): void {
-    this.persistSession(user);
-    this.currentUserSubject.next(user);
+    this.session.persist(user);
+    this.session.set(user);
   }
 
-  /** Konnte die Sitzung auch nach dem Räumen der Offline-Caches nicht gespeichert werden (Quota voll
-   *  / Privatmodus / gesperrter Speicher)? Sie läuft dann nur im Speicher des Tabs: ein Neuladen loggt
-   *  aus. Der Nutzer erfährt es sofort per Snackbar (siehe {@link persistSession}). */
-  storageFull = false;
-
-  /**
-   * Die Sitzung in den localStorage schreiben — und wenn der voll ist, Platz schaffen statt aufgeben.
-   *
-   * <p>Der Speicher ist je Origin auf wenige MB begrenzt, und genau dorthin schreiben die
-   * Offline-Caches (Bücher, Repertoires, Puzzle-Pools) bewusst viel. Scheiterte `setItem`, lebte die
-   * Anmeldung nur noch im Tab: nach jedem Neuladen stand die Anmeldemaske, ohne jeden Hinweis — das
-   * Flag `storageFull` wurde gesetzt und von niemandem gelesen. Die Offline-Daten sind jederzeit
-   * erneut herunterladbar, die Anmeldung nicht — also weichen sie. Klappt es auch danach nicht, sagt
-   * es die App wenigstens, statt den Nutzer beim nächsten Neuladen rätseln zu lassen.</p>
-   *
-   * @returns `true`, wenn die Sitzung jetzt im Speicher liegt.
-   */
-  private persistSession(user: AuthResponse): boolean {
-    const json = JSON.stringify(user);
-    try { localStorage.setItem('rookhub_user', json); this.storageFull = false; return true; }
-    catch { /* voll oder gesperrt → einmal räumen und erneut versuchen */ }
-
-    try { this.injector.get(OfflineService).clearAll(); } catch { /* Storage/DI nicht verfügbar */ }
-    try {
-      localStorage.setItem('rookhub_user', json);
-      this.storageFull = false;
-      this.notifyStorage('auth.storage.evicted', 'storage_full_evicted', false);
-      return true;
-    } catch {
-      this.storageFull = true;
-      this.notifyStorage('auth.storage.full', 'storage_full', true);
-      return false;
-    }
-  }
-
-  /** Nutzer informieren + Diagnose-Event für Kibana — beides best-effort, hier darf nichts werfen
-   *  (die Anmeldung selbst ist längst gültig). */
-  private notifyStorage(i18nKey: string, kind: string, warn: boolean): void {
-    try {
-      const text = this.injector.get(TranslateService).instant(i18nKey);
-      const snack = this.injector.get(SnackbarService);
-      if (warn) snack.warn(text, { duration: 10000 }); else snack.info(text, { duration: 8000 });
-    } catch { /* ohne Übersetzung/Snackbar (Tests, sehr früher Start) bleibt es still */ }
-    try { this.injector.get(ClientLogService).report(kind); } catch { /* egal */ }
+  /** Konnte die Sitzung auch nach dem Räumen der Offline-Caches nicht gespeichert werden (siehe
+   *  {@link SessionStore.storageFull})? Ein Neuladen loggt dann aus. */
+  get storageFull(): boolean {
+    return this.session.storageFull;
   }
 
   logout(): void {
-    removeKey(localStore(), 'rookhub_user');
-    this.clearLocalTraces();
+    removeKey(localStore(), SessionStore.UserKey);
+    this.session.clearLocalTraces();
     // Die GETEILTE Anmeldung mit beenden: sie liegt als Cookie auf der Elterndomaene und ist der
     // einzige Teil dieser Sitzung, den localStorage.removeItem nicht erreicht. Bliebe sie stehen,
     // holte sich die Seite beim naechsten Aufruf genau die Anmeldung zurueck, die man gerade
@@ -443,25 +230,18 @@ export class AuthService {
     // Start ohne Sitzung uebernaehme genau diese Anmeldung — womoeglich fuer den naechsten Nutzer am
     // Geraet. Deshalb ein Merker, der erst faellt, wenn der Server geantwortet hat; solange er steht,
     // holt HandoffService.adoptSharedSession das Ende nach, statt zu uebernehmen (Codereview F1-004).
-    this.setSessionEndPending(true);
+    this.session.setSessionEndPending(true);
     void this.flushSessionEnd();
-    this.currentUserSubject.next(null);
+    this.session.set(null);
     this.router.navigate(['/login']);
   }
 
   /** Merker: ein Abmelden hat die GETEILTE Anmeldung (Cookie) noch nicht beim Server beendet. */
-  static readonly SessionEndPendingKey = 'rookhub_session_end_pending';
+  static readonly SessionEndPendingKey = SessionStore.SessionEndPendingKey;
 
   /** Steht ein Ende der geteilten Anmeldung noch aus (siehe {@link logout})? */
   get sessionEndPending(): boolean {
-    try { return localStorage.getItem(AuthService.SessionEndPendingKey) !== null; } catch { return false; }
-  }
-
-  private setSessionEndPending(pending: boolean): void {
-    try {
-      if (pending) localStorage.setItem(AuthService.SessionEndPendingKey, '1');
-      else localStorage.removeItem(AuthService.SessionEndPendingKey);
-    } catch { /* Speicher voll/gesperrt: dann bleibt es beim einmaligen Versuch */ }
+    return this.session.sessionEndPending;
   }
 
   /**
@@ -478,24 +258,8 @@ export class AuthService {
       const status = e instanceof HttpErrorResponse ? e.status : 0;
       if (status === 0 || status === 408 || status === 429 || status >= 500) return false;
     }
-    this.setSessionEndPending(false);
+    this.session.setSessionEndPending(false);
     return true;
-  }
-
-  /** Was beim Nutzerwechsel am Geraet lokal verschwinden muss — beim Abmelden ({@link logout}), beim
-   *  Wechsel auf die geteilte Anmeldung eines anderen Kontos ({@link switchToSharedSession}), beim
-   *  Ablauf ({@link endExpiredSession}) und beim Kontowechsel ueber die Anmeldemaske ({@link storeUser}). */
-  private clearLocalTraces(): void {
-    removeKey(localStore(), 'rookhub_admin_user');
-    // Geräte-lokale Offline-Inhalte (heruntergeladene Repertoires/Kurse, Kursliste, Tagespuzzle,
-    // Pools) beim Abmelden löschen — sonst blieben sie für den NÄCHSTEN Nutzer desselben Geräts
-    // les-/sichtbar. Die Offline-Schreib-Queue bleibt bewusst bestehen (sie ist user-gestempelt und
-    // geht nur unter demselben Konto raus) → gemerkte Lösungen überstehen ein versehentliches Logout.
-    // clearOnLogout (nicht clearAll): räumt zusätzlich die lokalen Nutzer-SPUREN ab. Der
-    // Endless-Modus überträgt lokale Läufe beim ersten Öffnen ins Konto — auf einem geteilten Gerät
-    // erbte der nächste Nutzer sonst Laufhistorie und Highscore des vorigen, sichtbar bis in die
-    // Bestenliste; ebenso Kalkulations-Notizen, lokalen Kursfortschritt und den Menü-Snapshot.
-    try { this.injector.get(OfflineService).clearOnLogout(); } catch { /* Storage/DI nicht verfügbar */ }
   }
 
   /**
@@ -513,70 +277,19 @@ export class AuthService {
     // Offline-Caches absichtlich vollgeschrieben — ein QuotaExceededError riss damit den
     // Login-Stream, die Maske meldete „Login fehlgeschlagen" und die Sitzung war auch im Speicher
     // nicht gesetzt. Der Nutzer kam nicht mehr herein und erfuhr den echten Grund nie. Die Sitzung
-    // gilt jetzt in jedem Fall (in-memory); persistSession räumt bei vollem Speicher die Caches und
+    // gilt jetzt in jedem Fall (in-memory); persist räumt bei vollem Speicher die Caches und
     // sagt es, wenn auch das nicht reicht.
     // Kontowechsel ohne Abmelden (Anmeldemaske mit ?switch=1): vorher aufraeumen wie beim Abmelden,
     // sonst erbte das neue Konto Offline-Inhalte, Admin-Backup und Endless-Laeufe des vorigen (die der
     // Endless-Modus beim ersten Oeffnen ins Konto uebertraegt). Dasselbe Konto erneut: nichts raeumen —
     // und ohne vorige Sitzung auch nicht, denn dann gehoeren die lokalen Laeufe dem, der sich gerade
     // anmeldet (anonym gespielt, jetzt registriert). Kein session/end: das Cookie gehoert schon dem neuen.
-    const previous = this.getValidUser();
-    if (previous && previous.userId !== user.userId) this.clearLocalTraces();
-    this.setSessionEndPending(false);   // die Anmeldung hat das Cookie eben neu geschrieben
-    this.persistSession(user);
-    this.currentUserSubject.next(user);
-    this.claimAnonymousPuzzleSession();
-    this.consumeStashedDiscordLink();
-    // Sync user preferences from server (overwrites localStorage)
-    import('./preferences.service').then(m =>
-      this.withService(() => this.injector.get(m.PreferencesService), p => p.loadFromServer()));
-  }
-
-  /**
-   * Löst einen über einen Bot-Link (?dl=) vorgemerkten Discord-Token ein, sobald
-   * sich ein anonymer User ein-/registriert — so wird die beim Klick hinterlegte
-   * Discord-ID automatisch mit dem neuen Account verknüpft.
-   */
-  private consumeStashedDiscordLink(): void {
-    import('./discord-link.service').then(m =>
-      this.withService(() => this.injector.get(m.DiscordLinkService), d => d.consumeStashed()));
-  }
-
-  private claimAnonymousPuzzleSession(): void {
-    // Punktepartie: eigene Kennung (GuessService.AnonKey), unabhängig von der Puzzle-Sitzung — ein Besucher
-    // kann nur geraten und nie ein Puzzle gelöst haben (Codereview N11-003).
-    if (readRaw(localStore(), 'rookhub_guess_session'))
-      import('../features/guess/guess.service').then(m =>
-        this.withService(() => this.injector.get(m.GuessService), guess => guess.claimAnonymous().subscribe()));
-    // Mit der Rückfallebene von anon-session: bei gesperrtem Speicher liefen die Versuche unter einer
-    // Speicher-Kennung — auch die gehören jetzt ins Konto.
-    const sessionId = readAnonSessionId(ANON_PUZZLE_SESSION_KEY);
-    if (!sessionId) return;
-    // Lazy import to avoid circular dependency
-    import('../features/puzzles/puzzle.service').then(m =>
-      this.withService(() => this.injector.get(m.PuzzleService), puzzleService => {
-        puzzleService.claimSession().subscribe();
-        puzzleService.claimBookPuzzleSession().subscribe();
-      }));
-    // Also claim endless puzzle progress
-    import('../features/puzzles/endless-storage.service').then(m =>
-      this.withService(() => this.injector.get(m.EndlessStorageService),
-        endlessStorage => endlessStorage.claimEndlessSession().subscribe()));
-    // E-Books ohne Anmeldung (0.778.0): eigene Uploads + Lesestände derselben Kennung ins Konto.
-    import('../features/ebooks/ebook.service').then(m =>
-      this.withService(() => this.injector.get(m.EbookService), ebooks => ebooks.claimSession(sessionId).subscribe()));
-  }
-
-  private getStoredUser(): AuthResponse | null {
-    try {
-      const stored = localStorage.getItem('rookhub_user');
-      if (!stored) return null;
-      // Auch ein abgelaufenes Token zurueckgeben: der Konstruktor beendet es per getValidUser() wie
-      // einen Ablauf mitten in der Sitzung (endExpiredSession).
-      return JSON.parse(stored);
-    } catch {
-      try { localStorage.removeItem('rookhub_user'); } catch { }
-      return null;
-    }
+    const previous = this.session.validUser();
+    if (previous && previous.userId !== user.userId) this.session.clearLocalTraces();
+    this.session.setSessionEndPending(false);   // die Anmeldung hat das Cookie eben neu geschrieben
+    this.session.persist(user);
+    this.session.set(user);
+    // Nachlauf: anonyme Sitzungen übernehmen, Discord-Link einlösen, Präferenzen laden (in dieser Reihenfolge).
+    this.followUp.afterLogin();
   }
 }

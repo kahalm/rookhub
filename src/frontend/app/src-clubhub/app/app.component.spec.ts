@@ -6,6 +6,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { FooterPresenceService } from '@rh/shared/app-footer/footer-presence';
 import { ClubHubAppComponent } from './app.component';
 import { AuthService } from '@rh/core/auth.service';
+import { SessionStore } from '@rh/core/session-store';
 import { LinkStateStore } from './core/link-state.store';
 
 describe('ClubHubAppComponent', () => {
@@ -39,8 +40,7 @@ describe('ClubHubAppComponent', () => {
     expect(Array.from(group.querySelectorAll('a')).map(a => a.getAttribute('href')))
       .toEqual(['/verknuepfen', '/impressum', '/privacy']);
     spyOn(auth, 'has').and.callFake((p: string) => p === 'club.trainer');
-    (auth as unknown as { currentUserSubject: { next(v: unknown): void } }).currentUserSubject.next(
-      { token: 't', username: 'tina', userId: 5, isAdmin: false });
+    TestBed.inject(SessionStore).set({ token: 't', username: 'tina', userId: 5, isAdmin: false });
     f.detectChanges();
     expect(link()).toBeNull();
   });
@@ -53,8 +53,7 @@ describe('ClubHubAppComponent', () => {
     f.detectChanges();
     expect(lede()).not.toBeNull();
     spyOn(auth, 'has').and.callFake((p: string) => p === 'club.trainer');
-    (auth as unknown as { currentUserSubject: { next(v: unknown): void } }).currentUserSubject.next(
-      { token: 't', username: 'tina', userId: 5, isAdmin: false });
+    TestBed.inject(SessionStore).set({ token: 't', username: 'tina', userId: 5, isAdmin: false });
     f.detectChanges();
     expect(lede()).toBeNull();
   });
