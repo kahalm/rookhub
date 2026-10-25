@@ -18,6 +18,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessAccept, GuessHistoryMove, GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { GuessPlayback } from './guess-playback';
 import { SanPipe } from '../../shared/chess/san.pipe';
 
 /** Umwandlungsfigur aus dem SAN („e8=Q+" → „q"); leer, wenn der Zug keine Umwandlung ist. */
@@ -371,12 +372,21 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   busy = false;
 
   /**
-   * Ein Zug, der NICHT der Partiezug war, bleibt auf dem Brett stehen — mit der Info darunter,
-   * was die Partie gespielt hat. Erst „Weiter" rückt auf die nächste Aufgabe vor. Die Sitzung ist
-   * serverseitig längst weitergerückt; zurückgehalten wird nur die ANZEIGE (`pending`).
+   * Abspielsteuerung nach einem Rateversuch: haelt einen abweichenden eigenen Zug bzw. einen
+   * Kommentar fest und spielt die dazugekommenen Halbzuege einzeln ab (Zerlegung Z24).
    */
-  holding = false;
-  private pending: GuessSession | null = null;
+  readonly playback = new GuessPlayback({
+    showStep: step => this.showStep(step),
+    apply: s => this.apply(s),
+    setBusy: busy => { this.busy = busy; },
+    clearStepNote: () => { this.stepNote = null; },
+    gameMoveUci: () => this.last ? this.last.gameMoveUci : undefined,
+    changed: () => this.cdr.markForCheck(),
+  });
+  /** Ein Zug, der NICHT der Partiezug war, bleibt mit der Info darunter stehen — bis „Weiter". */
+  get holding(): boolean { return this.playback.holding; }
+  /** Wird gerade wegen eines Kommentars gehalten? Dann spielt „Weiter" den naechsten Schritt. */
+  get holdingNote(): boolean { return this.playback.holdingNote; }
 
   /**
    * Welcher Zug der Eröffnung gerade angeschaut wird: `null` = die Aufgabe selbst, `-1` = die
@@ -608,7 +618,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.clearReplyTimer(); }
+  ngOnDestroy(): void { this.playback.dispose(); }
 
   /**
    * Blaettern mit den Pfeiltasten. Wer eine Partie nachspielt, hat die Hand nicht an der Maus —
@@ -656,26 +666,6 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * <b>Automatisch gespielte Zuege laufen EINZELN ueber das Brett.</b>
-   *
-   * Nach einem Rateversuch kommen mindestens zwei Halbzuege dazu (der Partiezug und die Antwort),
-   * oft mehr: eine Stellung, in der die Engine den Partiezug nicht unter ihren Kandidaten fuehrt,
-   * wird uebersprungen — sie waere nicht wertbar. Frueher sprang das Brett dann in einem Satz auf
-   * die naechste Aufgabe; auf Dev gemeldet als „nach Bxe7 spielt er sofort 3 Zuege". Man sah nie,
-   * WAS gespielt wurde, und die Kommentare dieser Zuege gingen verloren — bei einer Meisterpartie
-   * genau das, wofuer man sie spielt.
-   *
-   * Jetzt wird jeder dieser Halbzuege gezeigt und gehalten:
-   * <ul>
-   *   <li>mit Kommentar: stehenbleiben, bis „Weiter" kommt;</li>
-   *   <li>der Partiezug ohne Kommentar: eine Sekunde (er gehoert zur eigenen Antwort);</li>
-   *   <li>alles Uebrige: eine halbe Sekunde — genug, um es zu sehen, ohne zu bremsen.</li>
-   * </ul>
-   */
-  private static readonly GameMoveDelayMs = 1000;
-  private static readonly StepDelayMs = 500;
-
-  /**
    * Was als „erledigt" gilt. Wer den PARTIEZUG finden will, laesst einen besseren oder gleich guten
    * Zug NICHT zaehlen — die Aufgabe bleibt dann stehen. Bei einer Meisterpartie ist genau das der
    * Sinn: gesucht ist der Plan des Spielers, nicht der der Engine.
@@ -702,86 +692,14 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     try { this.language = localStorage.getItem(GuessBoardComponent.LanguageKey); } catch { /* gesperrt */ }
     this.language ||= this.translate.currentLang() || null;
   }
-  /** Wird gerade wegen eines Kommentars gehalten? Dann spielt „Weiter" den naechsten Schritt. */
-  holdingNote = false;
-
-  private replyTimer?: ReturnType<typeof setTimeout>;
-  /** Noch abzuspielende Halbzuege bis zur naechsten Aufgabe. */
-  private steps: GuessHistoryMove[] = [];
-  /** Die Sitzung, die nach dem letzten Schritt gilt. */
-  private stepTarget: GuessSession | null = null;
-
-  private clearReplyTimer(): void {
-    if (this.replyTimer !== undefined) {
-      clearTimeout(this.replyTimer);
-      this.replyTimer = undefined;
-    }
-  }
-
-  /**
-   * Die Halbzuege, die seit dem geratenen Zug dazugekommen sind — aus dem VERLAUF der neuen
-   * Sitzung, samt Stellung und Kommentar. Die Stellungen von dort zu nehmen ist genauer als sie
-   * selbst nachzuspielen: es sind dieselben, die der Server geliefert hat.
-   */
-  private startSteps(next: GuessSession, fromPly: number): void {
-    this.steps = next.history.filter(h => h.ply >= fromPly);
-    this.stepTarget = next;
-    this.nextStep();
-  }
-
-  /** Einen Schritt zeigen; danach warten, halten oder fertig sein. */
-  private nextStep(): void {
-    const step = this.steps.shift();
-    const target = this.stepTarget;
-    if (!step || !target) {
-      if (target) { this.stepTarget = null; this.apply(target); }
-      this.busy = false;
-      return;
-    }
-
+  /** Einen Schritt der Abspielfolge aufs Brett legen (siehe `GuessPlayback`). */
+  private showStep(step: GuessHistoryMove): void {
     this.boardFen = step.fen;
     this.lastMove = [step.uci.slice(0, 2), step.uci.slice(2, 4)];
     this.browseIndex = null;
     this.stepNote = step.comment
       ? { move: `${step.moveNumber}${step.white ? '.' : '…'}${step.san}`, text: step.comment }
       : null;
-
-    // Der LETZTE Schritt braucht weder Halt noch Wartezeit: seine Stellung IST die naechste
-    // Aufgabe. Ein „Weiter" waere dort ein Klick, der nichts tut, ausser den Nutzer aufzuhalten —
-    // der Kommentar bleibt einfach stehen, und er zieht.
-    if (this.steps.length === 0) {
-      this.stepTarget = null;
-      this.apply(target);
-      this.busy = false;
-      return;
-    }
-
-    if (step.comment) {
-      // Kommentar mitten in der Folge: stehenbleiben, bis „Weiter" kommt. Sonst laeuft die Partie
-      // weiter, waehrend man liest — und der Text ist der Grund, sie zu spielen.
-      this.holding = true;
-      this.holdingNote = true;
-      this.busy = false;
-      return;
-    }
-
-    this.busy = true;              // Brett gesperrt, solange die Partie von selbst laeuft
-    this.clearReplyTimer();
-    const ms = this.last && step.uci === this.last.gameMoveUci
-      ? GuessBoardComponent.GameMoveDelayMs
-      : GuessBoardComponent.StepDelayMs;
-    this.replyTimer = setTimeout(() => {
-      this.replyTimer = undefined;
-      this.nextStep();
-      this.cdr.markForCheck();
-    }, ms);
-  }
-
-  /** Der Kommentar eines Halbzugs aus dem Verlauf der Sitzung, fertig zum Anzeigen. */
-  private commentAt(s: GuessSession, ply: number): { move: string; text: string } | null {
-    const m = s.history.find(h => h.ply === ply);
-    if (!m?.comment) return null;
-    return { move: `${m.moveNumber}${m.white ? '.' : '…'}${m.san}`, text: m.comment };
   }
 
   onMove(m: UserBoardMove): void {
@@ -844,8 +762,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
           const shown = mine ?? fenAfterUci(fenBefore, res.gameMoveUci);
           const shownUci = uci ?? res.gameMoveUci;
           this.session = res.session;
-          this.holding = false;
-          this.pending = null;
+          this.playback.dropHold();
           this.browseIndex = null;
           if (shown) {
             this.boardFen = shown;
@@ -856,17 +773,15 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
           // Ein anderer Zug als der Partiezug bleibt stehen, damit man sieht, was man gespielt hat —
           // die naechste Aufgabe wartet hinter „Weiter".
           this.session = res.session;              // Punkte/Fortschritt sofort mitnehmen
-          this.pending = res.session;
-          this.holding = true;
+          // Fuer „Weiter": ab dem PARTIEZUG (das ist die Korrektur, die man sehen will) Schritt
+          // fuer Schritt bis zur naechsten Aufgabe.
+          this.playback.hold(res.session, plyGuessed);
           this.browseIndex = null;   // der eigene Zug soll zu sehen sein, nicht die Eroeffnung
           this.boardFen = mine;
           this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
-          // Fuer „Weiter": ab dem PARTIEZUG (das ist die Korrektur, die man sehen will) Schritt
-          // fuer Schritt bis zur naechsten Aufgabe.
-          this.pendingFromPly = plyGuessed;
         } else {
           // Partiezug getroffen oder gepasst: die dazugekommenen Halbzuege einzeln abspielen.
-          this.startSteps(res.session, plyGuessed);
+          this.playback.start(res.session, plyGuessed);
         }
         this.cdr.markForCheck();
       },
@@ -883,29 +798,9 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * „Weiter" — zwei Haltegruende, zwei Bedeutungen:
-   * <ul>
-   *   <li>gehalten wegen des EIGENEN (anderen) Zuges → jetzt den Partiezug zeigen;</li>
-   *   <li>gehalten wegen des KOMMENTARS zum Partiezug → jetzt die Antwort des Gegners spielen.</li>
-   * </ul>
-   */
+  /** „Weiter" — zwei Haltegruende, zwei Bedeutungen (siehe `GuessPlayback.continue`). */
   continueGame(): void {
-    if (this.replyTimer !== undefined) return;   // laeuft schon
-    const s = this.pending;
-    this.pending = null;
-    this.holding = false;
-
-    if (this.holdingNote) {
-      // Gehalten wegen eines Kommentars: weiter in der laufenden Schrittfolge.
-      this.holdingNote = false;
-      this.stepNote = null;
-      this.nextStep();
-    } else if (s) {
-      // Gehalten wegen des EIGENEN Zuges: jetzt zeigt die Partie, was sie gespielt hat.
-      this.startSteps(s, this.pendingFromPly);
-    }
-    this.cdr.markForCheck();
+    if (this.playback.continue()) this.cdr.markForCheck();
   }
 
   /**
@@ -927,8 +822,6 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     this.stepNote = { move: `${last.moveNumber}${last.white ? '.' : '…'}${last.san}`, text: last.comment };
   }
 
-  /** Ab welchem Halbzug die Schrittfolge laeuft, wenn nach dem eigenen Zug gehalten wurde. */
-  private pendingFromPly = -1;
 
   private apply(s: GuessSession): void {
     this.session = s;
