@@ -107,6 +107,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 ## Architektur-Entscheidungen
 
 - **Standalone Components** – kein NgModule, jede Component deklariert eigene Imports
+- **Schichten** (Codereview F8-013) – `shared/` importiert nichts aus `features/` (nur `core/`, `shared/`, Pakete); Wache `shared/no-feature-imports.spec.ts` mit abschließender Ausnahmeliste. App-eigene Rahmenteile (RookHub-Kopfleiste) liegen in `shell/`
 - **Lazy Loading** – alle Feature-Routes werden per `loadComponent()` geladen
 - **Functional Guards** – `authGuard` als `CanActivateFn`
 - **Functional Interceptors** – `authInterceptor` als `HttpInterceptorFn`. Die HTTP-Kette ALLER Oberflächen kommt aus
