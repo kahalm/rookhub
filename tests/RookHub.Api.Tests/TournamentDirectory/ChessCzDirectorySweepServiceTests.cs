@@ -243,6 +243,35 @@ public class ChessCzDirectorySweepServiceTests : IDisposable
         Assert.Null(entry.LocationText);
     }
 
+    /// <summary>
+    /// Ein von Hand gesetzter Standort bleibt stehen, auch wenn die Quelle einen anderen,
+    /// verortbaren Ort liefert (Entscheidung 2026-10-25: Manual gilt fuer jede Quelle).
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_ManualPin_SurvivesAChangedPlace()
+    {
+        _db.GeoPlaces.Add(new GeoPlace
+        {
+            Country = "CZ", Name = "Turnov", NameNormalized = "turnov", NameTranscribed = "turnov",
+            Lat = 50.58, Lon = 15.15, Kind = GeoPlaceKind.City, Population = 14_000,
+        });
+        await _db.SaveChangesAsync();
+        await CreateService($"[{Row("Turnovský Granát", "turnovsky-granat-5", Soon, place: "Jinde")}]").RunAsync();
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        entry.Lat = 49.0;
+        entry.Lon = 14.0;
+        entry.GeoSource = GeoSource.Manual;
+        entry.GeoPlaceName = "Von Hand";
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("Turnovský Granát", "turnovsky-granat-5", Soon, place: "Turnov")}]").RunAsync();
+
+        Assert.Equal("Turnov", entry.LocationText);
+        Assert.Equal(GeoSource.Manual, entry.GeoSource);
+        Assert.Equal(49.0, entry.Lat);
+        Assert.Equal("Von Hand", entry.GeoPlaceName);
+    }
+
     // ----- Herkunft und Ausfaelle -------------------------------------------
 
     [Fact]

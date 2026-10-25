@@ -22,7 +22,8 @@ namespace RookHub.Api.Tests.TournamentDirectory;
 /// <para>Ablauf je Quelle: (1) Erstlauf mit A, B (verortbarer Ort), C, neun Serienturnieren und
 /// einer Zeile U ohne lesbaren Termin; (2) chess-results fuehrt A jetzt auch (A geht dort auf);
 /// (3)/(4) C fehlt — ein Fehlschlag, dann die Karenz; (5) nur B (die 90-%-Bremse spricht an);
-/// (6) leere Liste; (7)/(8) Speichern scheitert am Ende bzw. mitten im Lauf.</para>
+/// (6) leere Liste; (7)/(8) Speichern scheitert am Ende bzw. mitten im Lauf; nach den Sonderfaellen
+/// (M) ein von Hand gesetzter Standort an B, der stehen bleiben muss.</para>
 /// </summary>
 public class ExternalSweepGoldenTests
 {

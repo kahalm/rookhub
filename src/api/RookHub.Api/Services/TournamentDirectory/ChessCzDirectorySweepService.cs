@@ -193,7 +193,8 @@ public class ChessCzDirectorySweepService
         await ExternalDirectorySource.NoteSourceAsync(_db, own,
             DirectorySourceKind.CzechChessFederation, row.EventId, row.Url, now, ct);
 
-        if (location is { Length: > 0 } && (locationChanged || own.Lat is null))
+        // Ein von Hand gesetzter Standort bleibt stehen (wie im ExternalSweepRunner, Entscheidung 2026-10-25).
+        if (location is { Length: > 0 } && (locationChanged || own.Lat is null) && own.GeoSource != GeoSource.Manual)
         {
             var hit = await _geocoding.ResolveAsync(location, null, own.Federation, ct);
             if (hit is not null && hit.Source != GeoSource.Ambiguous)

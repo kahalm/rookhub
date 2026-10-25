@@ -85,7 +85,10 @@ paths:
   Zeilenobjekt ablegen (ICU-Detailseite, `IcuSweepRow`), `ChessResultsId` = exakter Treffer ueber die Nummer der
   Quelle vor dem Namensvergleich (ein Treffer auf den EIGENEN Eintrag zaehlt nicht, er nimmt `ApplyAsync` — ausser die Turniersuche hat ihn ueber die Nummer uebernommen, Vermerk `ChessResults`: dann nur Luecken ueber `FillMatch`, seit 0.836.x), `OnCreated` = Felder nur fuer einen neuen Eintrag, `AfterLookupAsync` = nach
   beiden Suchen). Detailseiten mit Budget/Fassung gehoeren in `ApplyAsync`, nicht in einen neuen Haken. „Geliefert vor lesbar", Zwischenstand, Speichern im `finally` und
-  `RetireVanishedAsync` gelten damit fuer alle umgestellten Quellen an EINER Stelle. Die Log-Vorlagen beginnen mit
+  `RetireVanishedAsync` gelten damit fuer alle umgestellten Quellen an EINER Stelle — ebenso der
+  Schutz eines VON HAND gesetzten Standorts (`GeoSource.Manual`, Entscheidung 2026-10-25): der Runner nimmt jede
+  Pin-Aenderung aus `ApplyAsync` an einem solchen Eintrag zurueck (`ManualPin`), `LocateAsync` fragt gar nicht erst;
+  vorher verorteten neun der fuenfzehn Quellen ihn bei geaendertem Ortstext neu. chess.cz (eigene Schleife) prueft selbst, chess-results ueber `DirectoryGeocoder` (Manual/SourceProvided bleiben), FIDE verortet nur neue Eintraege. Die Log-Vorlagen beginnen mit
   `LogName` wie vorher von Hand. Jede Quelle hat einen Golden-Test (`ExternalSweepGoldenTests`, acht Laeufe); wer
   den Runner oder einen Adapter aendert, sieht dort jede Abweichung (ICU, chess.sk, chessarbiter und FFE zusaetzlich
   mit Sonderfall-Laeufen 9 ff.). Alle fuenfzehn Verbandskalender laufen darueber; ChessCz, FIDE und der

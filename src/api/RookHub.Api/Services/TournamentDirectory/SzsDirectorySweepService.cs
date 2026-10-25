@@ -84,7 +84,7 @@ public class SzsDirectorySweepService : IDirectorySourceAdapter<SzsDirectorySwee
 
         // „Aktualisiert" heisst hier: verortet (wie FRSah/ECF).
         var located = false;
-        if (locationChanged || own.Lat is null)
+        if ((locationChanged || own.Lat is null) && own.GeoSource != GeoSource.Manual)
         {
             var hit = await _geocoding.ResolveAsync(own.LocationText, null, "SLO", ct);
             if (hit is not null && hit.Source != GeoSource.Ambiguous)

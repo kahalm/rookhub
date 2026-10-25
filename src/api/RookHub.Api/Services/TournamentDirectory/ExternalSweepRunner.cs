@@ -218,7 +218,12 @@ internal static class ExternalSweepRunner
                     added++;
                 }
 
+                // Ein von Hand gesetzter Standort gilt fuer JEDE Quelle (Entscheidung 2026-10-25):
+                // was ApplyAsync an Pin/Verortung aendert, wird hier zurueckgenommen — an EINER
+                // Stelle statt in fuenfzehn Adaptern, von denen vorher nur vier daran dachten.
+                var manualPin = ManualPin.Capture(own);
                 if (await source.ApplyAsync(own, row, start, now, ct)) updated++;
+                manualPin?.Restore(own);
 
                 if (processed % source.SaveEvery == 0) await db.SaveChangesAsync(ct);
             }
@@ -257,13 +262,33 @@ internal static class ExternalSweepRunner
     }
 
     /// <summary>
+    /// Ein von Hand gesetzter Standort (<see cref="GeoSource.Manual"/>) vor <c>ApplyAsync</c>,
+    /// damit keine Quelle ihn ueberschreibt; <c>null</c> = der Eintrag hat keinen.
+    /// </summary>
+    private sealed record ManualPin(double? Lat, double? Lon, string? PlaceName)
+    {
+        public static ManualPin? Capture(TournamentDirectoryEntry own) =>
+            own.GeoSource == GeoSource.Manual ? new ManualPin(own.Lat, own.Lon, own.GeoPlaceName) : null;
+
+        public void Restore(TournamentDirectoryEntry own)
+        {
+            own.Lat = Lat;
+            own.Lon = Lon;
+            own.GeoPlaceName = PlaceName;
+            own.GeoSource = GeoSource.Manual;
+        }
+    }
+
+    /// <summary>
     /// Die Verortung der Quellen ohne eigene Koordinaten (WCU, CFC, chess.hu …): nur mit Ortstext, nur wenn er
-    /// sich geaendert hat oder noch kein Pin da ist, und ein mehrdeutiger Treffer setzt nichts.
+    /// sich geaendert hat oder noch kein Pin da ist, und ein mehrdeutiger Treffer setzt nichts. Ein von Hand
+    /// gesetzter Standort bleibt immer stehen.
     /// </summary>
     /// <returns>Ob ein Pin gesetzt wurde.</returns>
     public static async Task<bool> LocateAsync(GeocodingService geocoding, TournamentDirectoryEntry own,
         string? location, string? state, string? federation, bool locationChanged, CancellationToken ct)
     {
+        if (own.GeoSource == GeoSource.Manual) return false;
         if (location is not { Length: > 0 } || !(locationChanged || own.Lat is null)) return false;
 
         var hit = await geocoding.ResolveAsync(location, state, federation, ct);

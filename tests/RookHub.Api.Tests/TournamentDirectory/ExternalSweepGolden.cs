@@ -510,7 +510,7 @@ internal static class ExternalSweepGolden
               Vermerk WelshChessUnion wl8c9a013ab70c url=https://www.welshchessunion.uk/calendar/ erst=ja zuletzt=ja
             Eintrag wla20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=WLS state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk WelshChessUnion wla20a2b7bb084 url=https://www.welshchessunion.uk/calendar/ erst=ja zuletzt=ja
-            Eintrag wlb281bc2c616c cr=- name=Cup Beta Rapid fed=WLS state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag wlb281bc2c616c cr=- name=Cup Beta Rapid fed=WLS state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk WelshChessUnion wlb281bc2c616c url=https://www.welshchessunion.uk/calendar/ erst=ja zuletzt=ja
             Eintrag wle5e53c784d5d cr=- name=Serienturnier Nummer8 fed=WLS state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk WelshChessUnion wle5e53c784d5d url=https://www.welshchessunion.uk/calendar/ erst=ja zuletzt=ja
@@ -768,7 +768,7 @@ internal static class ExternalSweepGolden
               Vermerk CanadianChessFederation ca8c9a013ab70c url=https://www.chess.ca/en/events/ erst=ja zuletzt=ja
             Eintrag caa20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=CAN state=ON start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk CanadianChessFederation caa20a2b7bb084 url=https://www.chess.ca/en/events/ erst=ja zuletzt=ja
-            Eintrag cab281bc2c616c cr=- name=Cup Beta Rapid fed=CAN state=ON start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag cab281bc2c616c cr=- name=Cup Beta Rapid fed=CAN state=ON start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk CanadianChessFederation cab281bc2c616c url=https://www.chess.ca/en/events/ erst=ja zuletzt=ja
             Eintrag cae5e53c784d5d cr=- name=Serienturnier Nummer8 fed=CAN state=ON start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk CanadianChessFederation cae5e53c784d5d url=https://www.chess.ca/en/events/ erst=ja zuletzt=ja
@@ -1009,13 +1009,13 @@ internal static class ExternalSweepGolden
             Eintrag sl2009 cr=- name=Serienturnier Nummer9 fed=SLO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovenianChessFederation 2009 url=- erst=ja zuletzt=ja
             == M Standort von Hand, Quelle liefert B mit anderem Ort
-            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 1, Matched = 0, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
             Log Information: SZS-Kalender: 1 gelesen, 0 neu, 0 zugeordnet, 0 zurueckgezogen
             Log Warning: Verschwunden-Erkennung SlovenianChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=SLO state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk SlovenianChessFederation 1001 url=- erst=ja zuletzt=ja
             Eintrag sl1001 cr=- name=Danubius Kronstadt Memorial fed=SLO state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
-            Eintrag sl1002 cr=- name=Cup Beta Rapid fed=SLO state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sl1002 cr=- name=Cup Beta Rapid fed=SLO state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovenianChessFederation 1002 url=- erst=ja zuletzt=ja
             Eintrag sl1003 cr=- name=Verschwindibus Pokal fed=SLO state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
               Vermerk SlovenianChessFederation 1003 url=- erst=ja zuletzt=ja
@@ -1527,13 +1527,13 @@ internal static class ExternalSweepGolden
             Eintrag hu2009 cr=- name=Serienturnier Nummer9 fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk HungarianChessFederation 2009 url=- erst=ja zuletzt=ja
             == M Standort von Hand, Quelle liefert B mit anderem Ort
-            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 1, Matched = 0, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 0 }
             Log Information: chess.hu-Kalender: 1 gelesen, 0 neu, 0 zugeordnet, 0 zurueckgezogen
             Log Warning: Verschwunden-Erkennung HungarianChessFederation uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk HungarianChessFederation 1001 url=- erst=ja zuletzt=ja
             Eintrag hu1001 cr=- name=Danubius Kronstadt Memorial fed=HUN state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
-            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag hu1002 cr=- name=Cup Beta Rapid fed=HUN state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk HungarianChessFederation 1002 url=- erst=ja zuletzt=ja
             Eintrag hu1003 cr=- name=Verschwindibus Pokal fed=HUN state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
               Vermerk HungarianChessFederation 1003 url=- erst=ja zuletzt=ja
@@ -2051,7 +2051,7 @@ internal static class ExternalSweepGolden
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=ITA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk ItalianChessFederation 1001 url=- erst=ja zuletzt=ja
             Eintrag it1001 cr=- name=Danubius Kronstadt Memorial fed=ITA state=Lazio start=S+0 ende=S+0 we=True ort=Nirgendwo, Roma geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
-            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag it1002 cr=- name=Cup Beta Rapid fed=ITA state=Lazio start=S+7 ende=S+7 we=True ort=Testhausen, Roma geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk ItalianChessFederation 1002 url=- erst=ja zuletzt=ja
             Eintrag it1003 cr=- name=Verschwindibus Pokal fed=ITA state=Lazio start=S+1 ende=S+1 we=True ort=Roma geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
               Vermerk ItalianChessFederation 1003 url=- erst=ja zuletzt=ja
@@ -2322,7 +2322,7 @@ internal static class ExternalSweepGolden
               Vermerk GermanChessFederation de8c9a013ab70c url=https://www.schachbund.de/turnierdetails/1003.html erst=ja zuletzt=ja
             Eintrag dea20a2b7bb084 cr=- name=Serienturnier Nummer5 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk GermanChessFederation dea20a2b7bb084 url=https://www.schachbund.de/turnierdetails/2005.html erst=ja zuletzt=ja
-            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag deb281bc2c616c cr=- name=Cup Beta Rapid fed=GER state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk GermanChessFederation deb281bc2c616c url=https://www.schachbund.de/turnierdetails/1002.html erst=ja zuletzt=ja
             Eintrag dee5e53c784d5d cr=- name=Serienturnier Nummer8 fed=GER state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk GermanChessFederation dee5e53c784d5d url=https://www.schachbund.de/turnierdetails/2008.html erst=ja zuletzt=ja
@@ -3734,7 +3734,7 @@ internal static class ExternalSweepGolden
             Eintrag 9200001 cr=9200001 name=Ganz anderer Name fed=SVK state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk SlovakChessFederation 5001 url=https://chess.sk/turnaj/5001 erst=ja zuletzt=ja
             Eintrag sk1001 cr=- name=Danubius Kronstadt Memorial fed=SVK state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
-            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag sk1002 cr=- name=Cup Beta Rapid fed=SVK state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk SlovakChessFederation 1002 url=https://chess.sk/turnaj/1002 erst=ja zuletzt=ja
             Eintrag sk1003 cr=9200003 name=Verschwindibus Pokal fed=SVK state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=ja alter=None gruppe=ja
               Vermerk SlovakChessFederation 1003 url=https://chess.sk/turnaj/1003 erst=ja zuletzt=ja
@@ -4132,7 +4132,7 @@ internal static class ExternalSweepGolden
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=POL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk PolishChessFederation 2026/ti_1001 url=https://www.chessarbiter.com/turnieje/2026/ti_1001/ erst=ja zuletzt=ja
             Eintrag pl2026-1001 cr=- name=Danubius Kronstadt Memorial fed=POL state=mazowieckie start=S+0 ende=S+0 we=True ort=ul. Testowa 1, Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
-            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag pl2026-1002 cr=- name=Cup Beta Rapid fed=POL state=mazowieckie start=S+7 ende=S+7 we=True ort=Testhausen geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk PolishChessFederation 2026/ti_1002 url=https://www.chessarbiter.com/turnieje/2026/ti_1002/ erst=ja zuletzt=ja
             Eintrag pl2026-1003 cr=- name=Verschwindibus Pokal fed=POL state=mazowieckie start=S+1 ende=S+1 we=True ort=- geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
               Vermerk PolishChessFederation 2026/ti_1003 url=https://www.chessarbiter.com/turnieje/2026/ti_1003/ erst=ja zuletzt=ja
@@ -4509,7 +4509,7 @@ internal static class ExternalSweepGolden
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=FRA state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk FrenchChessFederation 1001 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1001 erst=ja zuletzt=ja
             Eintrag fr1001 cr=- name=Danubius Kronstadt Memorial fed=FRA state=Dept. 58 start=S+0 ende=S+0 we=True ort=1 rue de la Paix, Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
-            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
+            Eintrag fr1002 cr=- name=Cup Beta Rapid fed=FRA state=Dept. 58 start=S+7 ende=S+7 we=True ort=Testhausen (58) geo=Manual lat=47.25 platz=Von Hand gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk FrenchChessFederation 1002 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1002 erst=ja zuletzt=ja
             Eintrag fr1003 cr=- name=Verschwindibus Pokal fed=FRA state=Dept. 58 start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=1 fehlAm=ja alter=None gruppe=ja
               Vermerk FrenchChessFederation 1003 url=https://www.echecs.asso.fr/FicheTournoi.aspx?Ref=1003 erst=ja zuletzt=ja
