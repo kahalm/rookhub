@@ -47,8 +47,19 @@ public static class ChapterOrder
     public static IOrderedQueryable<BookPuzzle> InReadingOrder(this IQueryable<BookPuzzle> query) =>
         query.OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
 
-    /// <summary>null/leer/Whitespace → dieselbe Sammel-„ohne Kapitel"-Gruppe (null).</summary>
-    public static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw;
+    /// <summary>Die EINE Kapitel-Normalisierung: außen getrimmt, null/leer/Whitespace → dieselbe Sammel-„ohne
+    /// Kapitel"-Gruppe (null). Überall, wo Kapitel gruppiert oder verglichen werden (Kapitelliste und -index des
+    /// Solvers, Detailseite, Kapitel-Statistik, Kalk-Wochen, Wochenpost, PGN-Export) — bis 0.832.x trimmte nur die
+    /// Detailseite, „ Kapitel A " war im Solver ein eigenes Kapitel und der SolverIndex verrutschte (Entscheidung
+    /// User 25.10.: überall trimmen). Die Namen in der DB bleiben wie sie sind; SQL-Seite: <see cref="WhereChapter"/>.</summary>
+    public static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
+
+    /// <summary>Linien EINES (normalisierten, <see cref="NormalizeChapter"/>) Kapitels als SQL-Filter —
+    /// null = Sammel-„ohne Kapitel" (null/leer/nur Leerzeichen). Der Rohwert wird in der Abfrage getrimmt.</summary>
+    public static IQueryable<BookPuzzle> WhereChapter(this IQueryable<BookPuzzle> query, string? chapterName) =>
+        chapterName == null
+            ? query.Where(bp => bp.Chapter == null || bp.Chapter.Trim() == "")
+            : query.Where(bp => bp.Chapter != null && bp.Chapter.Trim() == chapterName);
 
     /// <summary>Die eindeutigen (normalisierten) Kapitelnamen eines Buchs in Lesereihenfolge —
     /// Listenindex = stabiler Kapitel-Selektor des Frontends.</summary>

@@ -37,13 +37,12 @@ public class CourseAuthoringService
 
     private const string NoChapterKey = "\0__none__";
 
-    private static string? Normalize(string? chapter) => ChapterOrder.NormalizeChapter(chapter?.Trim());
+    private static string? Normalize(string? chapter) => ChapterOrder.NormalizeChapter(chapter);
 
     /// <summary>Liegt die Linie/das Kapitel in einer für den Betrachter gesperrten Woche
     /// (<see cref="CalcVisibility.HiddenChaptersAsync"/>)? Verglichen wird der NORMALISIERTE Name — so
     /// gruppiert die Detailseite, und so speichert <c>CalcEditionService.UpsertAsync</c> (getrimmt).</summary>
-    private static bool IsHidden(HashSet<string> hidden, string? chapter)
-        => hidden.Count > 0 && Normalize(chapter) is string name && hidden.Contains(name);
+    private static bool IsHidden(HashSet<string> hidden, string? chapter) => CalcVisibility.IsHidden(hidden, chapter);
 
     /// <summary>Buch laden + Lese-Zugriff erzwingen (kein Zugriff → 404).</summary>
     private async Task<Book> LoadReadableAsync(int userId, int bookId, bool isAdmin, CancellationToken ct)

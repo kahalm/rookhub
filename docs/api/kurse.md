@@ -54,3 +54,9 @@ Menü-Sichtbarkeit aus EINER Buchmenge), `CourseSolverService` (next/results/inf
 `BuildScope`), `CoursePersonalService` (Pins, Verknüpfungen), `CourseSharingService` (Teilen),
 `CourseCreationService` (persönliche Kurse anlegen/löschen), gemeinsame Zählregeln in `CourseProgressRules`
 (`Percent`, `SolvedQuizResults`, `AttemptsSinceReset` …). PGN-Export: `CoursePgnExportService`.
+
+**Kapitelnamen** (Entscheidung User 25.10.): EINE Normalisierung `ChapterOrder.NormalizeChapter` (außen getrimmt,
+leer/Whitespace → „ohne Kapitel" = `null`), SQL-Gegenstück `ChapterOrder.WhereChapter` (`TRIM(Chapter)`). Gilt für
+Kapitelliste/Solver-Index (`/chapters`, `chapterIndex`), Kapitel-Modus und -Statistik, Detailseite, Kapitel im
+`BookPuzzleDto`, Wochenpost aus Kapitel, PGN-Export und die Termin-Sperre der Kalk-Serie (`CalcVisibility.IsHidden`).
+„ Kapitel A " und „Kapitel A" sind überall EIN Kapitel; die gespeicherten Namen bleiben unverändert (keine Migration).

@@ -46,12 +46,12 @@ internal static class CourseScopeStatistics
 
         // Frueher wurde hier die KOMPLETTE Puzzle-Liste des Buchs (Id + Kapitel) in den Speicher
         // geladen - bei JEDEM /next und /results, obwohl buchweit nur zwei Zahlen gebraucht werden.
-        // Beide sind SQL-Aggregate. Die Normalisierung aus NormalizeChapter (leer/nur Leerzeichen
-        // -> null) MUSS im Ausdruck mitwandern, sonst zaehlten "", "  " und NULL in der Datenbank
+        // Beide sind SQL-Aggregate. Die Normalisierung aus NormalizeChapter (getrimmt, leer/nur
+        // Leerzeichen -> null) MUSS im Ausdruck mitwandern, sonst zaehlten "", "  " und NULL in der Datenbank
         // als drei Kapitel statt wie bisher als eines.
         var bookTotal = await puzzleQuery.CountAsync();
         var distinctChapters = await puzzleQuery
-            .Select(bp => bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter)
+            .Select(bp => bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter.Trim())
             .Distinct()
             .CountAsync();
 
@@ -60,7 +60,7 @@ internal static class CourseScopeStatistics
         // Puzzle-Ids braucht nur der Kapitel-Block - und dann auch nur die des EINEN Kapitels.
         var chapterPuzzleIds = wantChapter
             ? (await puzzleQuery
-                .Where(bp => (bp.Chapter == null || bp.Chapter.Trim() == "" ? null : bp.Chapter) == currentChapter)
+                .WhereChapter(currentChapter)
                 .Select(bp => bp.Id)
                 .ToListAsync()).ToHashSet()
             : new HashSet<int>();

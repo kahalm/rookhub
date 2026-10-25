@@ -83,9 +83,9 @@ public class WeeklyPostService
     private IQueryable<BookPuzzle> ChapterQuizPuzzles(int bookId, string? chapterName)
     {
         var q = _db.BookPuzzles.Where(bp => bp.BookId == bookId && !bp.IsInfoOnly);
-        q = chapterName == null
-            ? q.Where(bp => bp.Chapter == null || bp.Chapter == "")
-            : q.Where(bp => bp.Chapter == chapterName);
+        // Getrimmt verglichen wie im Kurs (ChapterOrder.NormalizeChapter). Auch der gespeicherte Name wird
+        // normalisiert: ältere Posts können ein ungetrimmtes SourceChapter tragen.
+        q = q.WhereChapter(ChapterOrder.NormalizeChapter(chapterName));
         // Länge ZUERST, dann ordinal, dann Id — exakt wie ChapterOrder/CourseService. Rein alphabetisch
         // sortierte „10" vor „9", die gespiegelte Wochenpost-Reihenfolge wich also ab Kapitel-Zeile 10
         // von der Kurs-Reihenfolge ab, und der index-basierte Fortschritt zeigte auf andere Puzzles.

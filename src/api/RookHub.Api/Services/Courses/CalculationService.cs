@@ -102,7 +102,7 @@ public class CalculationService
         // ausblenden — außer für Besitzer/Admin. Kapitel ohne Ausgabe bleiben ungegatet.
         var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct);
         if (hidden.Count > 0)
-            positions = positions.Where(p => p.Chapter == null || !hidden.Contains(p.Chapter)).ToList();
+            positions = positions.Where(p => !CalcVisibility.IsHidden(hidden, p.Chapter)).ToList();
 
         // Nur die Kennzahlen laden, NICHT das (bis zu 256 KB große) TreeJson — für die Liste zählt
         // bloß, OB ein Baum da ist.
@@ -222,7 +222,7 @@ public class CalculationService
         // Anonyme öffentliche Sicht: kein Besitzer/Tester → terminierte, noch nicht freigegebene Wochen aus.
         var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId: null, isAdmin: false, ct);
         if (hidden.Count > 0)
-            rows = rows.Where(r => r.Chapter == null || !hidden.Contains(r.Chapter)).ToList();
+            rows = rows.Where(r => !CalcVisibility.IsHidden(hidden, r.Chapter)).ToList();
 
         return new CalcPublicBookDto
         {
@@ -255,11 +255,11 @@ public class CalculationService
         // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
         // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
         if (puzzle.Chapter is string gateCh
-            && (await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct)).Contains(gateCh))
+            && CalcVisibility.IsHidden(await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct), gateCh))
             throw new NotFoundException("Position not found.");
 
         // „Gesehen": ein Verteiler-Mitglied hat diese Woche geöffnet (einmalig vermerkt; siehe Helper).
-        if (puzzle.Chapter is string seenCh)
+        if (ChapterOrder.NormalizeChapter(puzzle.Chapter) is string seenCh)   // Ausgaben tragen den getrimmten Namen
             await RecordEditionViewAsync(bookId, userId, seenCh, ct);
 
         var tree = await _db.CalculationTrees
@@ -395,7 +395,7 @@ public class CalculationService
         // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
         // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
         if (puzzle.Chapter is string gateCh
-            && (await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct)).Contains(gateCh))
+            && CalcVisibility.IsHidden(await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct), gateCh))
             throw new NotFoundException("Position not found.");
 
         var tree = await _db.CalculationTrees

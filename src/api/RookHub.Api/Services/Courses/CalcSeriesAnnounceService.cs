@@ -35,13 +35,14 @@ public class CalcSeriesAnnounceService
         // Ausgaben mit mindestens einem offenen Ereignis: Tester-Vorschau erreicht (und noch nicht
         // öffentlich) ODER öffentliche Freigabe erreicht — je noch nicht angekündigt.
         // Nur Ausgaben, deren Kapitel (per NAMEN, siehe CalcEdition) noch Stellungen hat: eine Waise
-        // (Kapitel gelöscht/umbenannt/per Re-Import anders benannt) kündigte sonst eine leere Woche an.
+        // (Kapitel gelöscht/umbenannt/per Re-Import anders benannt) kündigte sonst eine leere Woche an. Der
+        // Kapitelname der Linie wird getrimmt verglichen (die Ausgabe speichert ihn getrimmt, ChapterOrder.NormalizeChapter).
         // Sie bleibt unmarkiert und wird angekündigt, sobald das Kapitel wieder Stellungen hat. Bewusst
         // kein Log je Lauf — es wiederholte sich alle paar Minuten, solange die Waise steht.
         var due = await _db.CalcEditions
             .Where(e => (e.TesterAnnouncedAt == null && e.TesterPreviewAt != null && e.TesterPreviewAt <= now && e.PublishAt > now)
                      || (e.PublishAnnouncedAt == null && e.PublishAt <= now))
-            .Where(e => _db.BookPuzzles.Any(bp => bp.BookId == e.BookId && bp.Chapter == e.Chapter))
+            .Where(e => _db.BookPuzzles.Any(bp => bp.BookId == e.BookId && bp.Chapter != null && bp.Chapter.Trim() == e.Chapter))
             .ToListAsync(ct);
         if (due.Count == 0) return 0;
 

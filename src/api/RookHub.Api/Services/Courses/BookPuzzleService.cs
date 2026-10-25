@@ -862,7 +862,9 @@ public class BookPuzzleService
         Moves = bp.Moves,
         StartPly = bp.StartPly,
         Title = bp.Title,
-        Chapter = bp.Chapter,
+        // Normalisiert wie die Kapitelliste (ChapterOrder.NormalizeChapter: getrimmt, leer → null) — das Frontend
+        // filtert die Linien eines Kapitels über den Namen aus /chapters; roh fielen „ Kapitel A "-Linien heraus.
+        Chapter = ChapterOrder.NormalizeChapter(bp.Chapter),
         Comment = bp.Comment,
         MoveComments = ParseMoveComments(bp.MoveComments),
         MoveShapes = bp.MoveShapes,   // roher JSON-String; das Frontend parst ihn selbst

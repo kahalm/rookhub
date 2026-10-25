@@ -86,12 +86,12 @@ public class CoursePgnExportService
     {
         await EnsureExportAllowedAsync(userId, bookId, isAdmin);
         var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == bookId);   // BuildLinesPgn liest das Roh-PGN
-        var wanted = ChapterOrder.NormalizeChapter(chapter?.Trim());
+        var wanted = ChapterOrder.NormalizeChapter(chapter);
         var puzzles = (await _db.BookPuzzles
                 .Where(bp => bp.BookId == bookId)
                 .InReadingOrder()
                 .ToListAsync())
-            .Where(bp => ChapterOrder.NormalizeChapter(bp.Chapter?.Trim()) == wanted)
+            .Where(bp => ChapterOrder.NormalizeChapter(bp.Chapter) == wanted)
             .ToList();
         if (puzzles.Count == 0) throw new NotFoundException("Chapter not found.");
         var fileName = PgnFileName(book.DisplayName, wanted ?? "no_chapter");

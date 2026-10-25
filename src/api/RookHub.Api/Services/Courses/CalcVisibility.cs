@@ -14,6 +14,12 @@ namespace RookHub.Api.Services.Courses;
 /// </summary>
 public static class CalcVisibility
 {
+    /// <summary>Liegt dieses (rohe) Kapitel in einer gesperrten Woche? Verglichen wird der NORMALISIERTE Name
+    /// (<see cref="ChapterOrder.NormalizeChapter"/>, getrimmt) — so speichert <c>CalcEditionService.UpsertAsync</c> die
+    /// Ausgaben, und so gruppieren Detailseite und Solver. Roh verglichen blieb „ Woche 3 " trotz Sperre sichtbar.</summary>
+    public static bool IsHidden(IReadOnlySet<string> hidden, string? chapter)
+        => hidden.Count > 0 && ChapterOrder.NormalizeChapter(chapter) is string name && hidden.Contains(name);
+
     /// <summary>
     /// Kapitel (Namen wie in <see cref="Models.CalcEdition.Chapter"/>), die für diesen Betrachter noch
     /// VERSTECKT sind: es gibt eine terminierte Ausgabe und der maßgebliche Termin liegt in der Zukunft.

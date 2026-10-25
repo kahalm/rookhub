@@ -54,11 +54,10 @@ internal static class CourseProgressRules
             throw new NotFoundException("Book not found.");
     }
 
-    /// <summary>Schränkt eine Puzzle-Query auf ein Kapitel ein (null = Sammel-„ohne Kapitel").</summary>
+    /// <summary>Schränkt eine Puzzle-Query auf ein (normalisiertes) Kapitel ein (null = Sammel-„ohne Kapitel") —
+    /// getrimmt verglichen wie <see cref="ChapterOrder.NormalizeChapter"/> (<see cref="ChapterOrder.WhereChapter"/>).</summary>
     internal static IQueryable<BookPuzzle> FilterByChapter(IQueryable<BookPuzzle> q, string? chapterName) =>
-        chapterName == null
-            ? q.Where(bp => bp.Chapter == null || bp.Chapter == "")
-            : q.Where(bp => bp.Chapter == chapterName);
+        q.WhereChapter(chapterName);
 
     /// <summary>Löst einen Kapitel-Index in den (normalisierten) Kapitelnamen auf. Ungültiger/keiner
     /// Index → <c>(null, false)</c> = buchweit (kein Kapitel-Scope). Die Indizes kommen aus

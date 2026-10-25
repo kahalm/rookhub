@@ -161,19 +161,22 @@ public class CourseDetailCharacterizationTests : IDisposable
         var shown = string.Join(" | ", detail.Chapters.Select(c => $"{c.Name}:{c.QuizCount}@{c.SolverIndex}"));
         var solverShown = string.Join(" | ", solver.Select(c => $"[{c.Name}]:{c.PuzzleCount}@{c.Index}"));
         var nextShown = $"{next.ChapterName}:{next.Total}/{next.Book?.Total}/{next.Chapter?.Total}";
-        // HEUTE (vor dem Fix): die Detailseite trimmt, der Solver nicht → zwei Solver-Kapitel „Kapitel A" und der
-        // SolverIndex von Kapitel B (2) zeigt im Solver auf das dritte Kapitel; der Kapitel-Modus zählt nur 1 Linie.
-        Assert.Equal("Kapitel A:2@0 | Kapitel B:1@2", shown);
-        Assert.Equal("[Kapitel A]:1@0 | [ Kapitel A ]:1@1 | [Kapitel B]:1@2", solverShown);
-        Assert.Equal("Kapitel A:1/3/1", nextShown);
+        // Bis zum Fix trimmte nur die Detailseite: der Solver hatte zwei Kapitel „Kapitel A" („Kapitel A:2@0 |
+        // Kapitel B:1@2" gegen „[Kapitel A]:1@0 | [ Kapitel A ]:1@1 | [Kapitel B]:1@2", Kapitel-Modus 1 Linie).
+        // Jetzt eine Normalisierung überall (ChapterOrder.NormalizeChapter, Entscheidung User 25.10.).
+        Assert.Equal("Kapitel A:2@0 | Kapitel B:1@1", shown);
+        Assert.Equal("[Kapitel A]:2@0 | [Kapitel B]:1@1", solverShown);
+        Assert.Equal("Kapitel A:2/3/2", nextShown);
+        var all = await courses.GetAllPuzzlesAsync(me.Id, book.Id, isAdmin: false);
+        Assert.Equal(["Kapitel A", "Kapitel A", "Kapitel B"], all.Select(p => p.Chapter));
     }
 
     private const string ExpectedNormal = """
         BookId=Normal CalcMaxPoints=null CalcPoints=null CanManage=True CreatedAt=2026-10-01T12:00:00.0000000Z Description=Beschreibung Normal Difficulty=schwer DisplayName=Normal FileName=Normal.pgn InfoLineCount=3 IsCalculation=False IsOwned=True IsPinned=True IsPublic=False IsShared=False Kind=Study LastActivityAt=2026-10-03T12:00:00.0000000Z LastMode=sequential LinkedBookId=Workbook LinkedDisplayName=Workbook MaxElo=2000 MinElo=1400 ProgressPercent=50 PublicSlug=null PuzzleCount=4 Rating=1800 SharedByUsername=null SkipInfoLines=True SolvedCount=2 Tags=personal Themes=[endgame] TotalLines=7 UpdatedAt=2026-10-01T13:00:00.0000000Z
           FirstLineId=r1 Label=null LineCount=3 Name=Kapitel A ProgressPercent=50 QuizCount=2 SolvedCount=1 SolverIndex=0
-          FirstLineId=r4 Label=null LineCount=2 Name=null ProgressPercent=100 QuizCount=1 SolvedCount=1 SolverIndex=2
+          FirstLineId=r4 Label=null LineCount=2 Name=null ProgressPercent=100 QuizCount=1 SolvedCount=1 SolverIndex=1
           FirstLineId=r6 Label=null LineCount=1 Name=Nur Info ProgressPercent=0 QuizCount=0 SolvedCount=0 SolverIndex=null
-          FirstLineId=r7 Label=null LineCount=1 Name=Kapitel B ProgressPercent=0 QuizCount=1 SolvedCount=0 SolverIndex=3
+          FirstLineId=r7 Label=null LineCount=1 Name=Kapitel B ProgressPercent=0 QuizCount=1 SolvedCount=0 SolverIndex=2
         """;
     private const string ExpectedCalc = """
         BookId=Kalk CalcMaxPoints=12 CalcPoints=4 CanManage=False CreatedAt=2026-10-01T12:00:00.0000000Z Description=Beschreibung Kalk Difficulty=schwer DisplayName=Kalk FileName=Kalk.pgn InfoLineCount=3 IsCalculation=True IsOwned=False IsPinned=False IsPublic=False IsShared=True Kind=Study LastActivityAt=null LastMode=null LinkedBookId=null LinkedDisplayName=null MaxElo=2000 MinElo=1400 ProgressPercent=33 PublicSlug=null PuzzleCount=3 Rating=1800 SharedByUsername=anna SkipInfoLines=False SolvedCount=1 Tags=personal Themes=[endgame] TotalLines=3 UpdatedAt=2026-10-01T13:00:00.0000000Z

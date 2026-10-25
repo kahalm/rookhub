@@ -88,4 +88,43 @@ public class ChapterOrderTests : IDisposable
 
         Assert.Matches(@"ORDER BY CHAR_LENGTH\(`b`\.`Round`\), `b`\.`Round`, `b`\.`Id`", sql);
     }
+
+    /// <summary>EINE Kapitel-Normalisierung (Entscheidung User 25.10.: überall trimmen) — in-memory
+    /// (<see cref="ChapterOrder.NormalizeChapter"/>) und als SQL-Filter (<see cref="ChapterOrder.WhereChapter"/>)
+    /// dieselbe Gruppe; die Kalk-Sperre vergleicht ebenso getrimmt (<see cref="CalcVisibility.IsHidden"/>).</summary>
+    [Fact]
+    public async Task NormalizeChapter_Trims_AndWhereChapterMatchesTheSameLines()
+    {
+        Assert.Null(ChapterOrder.NormalizeChapter(null));
+        Assert.Null(ChapterOrder.NormalizeChapter("  "));
+        Assert.Equal("Kapitel A", ChapterOrder.NormalizeChapter(" Kapitel A "));
+
+        var book = new Book { FileName = "c.pgn", Source = new BookSource() };
+        string?[] chapters = ["Kapitel A", " Kapitel A ", "Kapitel B", null, "", "  "];
+        foreach (var (c, i) in chapters.Select((c, i) => (c, i)))
+            _db.BookPuzzles.Add(new BookPuzzle { Book = book, LineId = $"c:{i}", BookFileName = "c.pgn", Round = $"{i}", Chapter = c, Fen = "x", Moves = "" });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(2, await _db.BookPuzzles.WhereChapter("Kapitel A").CountAsync());
+        Assert.Equal(3, await _db.BookPuzzles.WhereChapter(null).CountAsync());
+        Assert.Equal([null, "Kapitel A", "Kapitel B"],
+            (await ChapterOrder.GetOrderedChapterNamesAsync(_db, book.Id)).Order());
+
+        var hidden = new HashSet<string>(StringComparer.Ordinal) { "Woche 3" };
+        Assert.True(CalcVisibility.IsHidden(hidden, " Woche 3 "));
+        Assert.False(CalcVisibility.IsHidden(hidden, "Woche 2"));
+        Assert.False(CalcVisibility.IsHidden(hidden, null));
+    }
+
+    [Fact]
+    public void WhereChapter_TrimsTheColumnOnMySql()
+    {
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseMySql("server=localhost;database=x;user=x;password=x", DbServerVersion.Current)
+            .Options);
+
+        var sql = db.BookPuzzles.WhereChapter("Kapitel A").ToQueryString();
+
+        Assert.Contains("TRIM(`b`.`Chapter`)", sql);
+    }
 }
