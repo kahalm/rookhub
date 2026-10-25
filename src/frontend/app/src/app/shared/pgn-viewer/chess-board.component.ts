@@ -108,7 +108,6 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Output() userMove = new EventEmitter<UserBoardMove>();
   /** Brett-Vollbild an/aus (nur das eigene, nicht das App-Vollbild). */
   @Output() fullscreenChange = new EventEmitter<boolean>();
-  @ViewChild('fsHost') fsHost?: ElementRef<HTMLElement>;
   private offFullscreen?: () => void;
   private wasFullscreen = false;
 
@@ -138,7 +137,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   ngAfterViewInit(): void {
     this.initBoard();
     this.offFullscreen = onFullscreenChange(() => {
-      const now = isFullscreen(this.fsHost?.nativeElement);
+      const now = isFullscreen(this.boardEl?.nativeElement?.closest('.cb-fs-host'));
       if (now !== this.wasFullscreen) { this.wasFullscreen = now; this.fullscreenChange.emit(now); }
     });
   }

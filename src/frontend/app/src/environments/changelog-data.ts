@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.834.1", date: "2026-10-25", changes: [
+    { en: "Internal: the repertoire page and the board find the board and its fullscreen frame without the old decorator queries, so the build's lint ratchet passes again (no visible change).",
+      de: "Intern: Repertoire-Seite und Brett finden das Brett bzw. dessen Vollbild-Rahmen ohne die alten Decorator-Abfragen, damit die Lint-Ratsche des Builds wieder durchgeht (keine sichtbare Änderung)." },
+  ] },
   { version: "0.834.0", date: "2026-10-25", changes: [
     { en: "Repertoire tree: a new “Arrows” button below the board shows every continuation of the current position as an arrow — the more often a move is played on Lichess, the thicker its arrow. In board fullscreen the arrows are always on. You can now also drag the pieces on the board to follow the lines; a move that is not in the repertoire snaps back.",
       de: "Repertoire-Baum: ein neuer Knopf „Pfeile“ unter dem Brett zeigt jede Fortsetzung der aktuellen Stellung als Pfeil — je häufiger ein Zug auf Lichess gespielt wird, desto dicker sein Pfeil. Im Brett-Vollbild sind die Pfeile immer an. Außerdem kann man jetzt die Figuren auf dem Brett ziehen, um den Linien zu folgen; ein Zug, der nicht im Repertoire steht, springt zurück." },

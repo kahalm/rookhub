@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DoCheck, HostListener, OnInit, ChangeDetectionStrategy, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RepertoireService } from '../../core/repertoire.service';
@@ -525,7 +525,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     const san = canonSan(move.san);
     const child = this.treeService.children.find(c => canonSan(c.san) === san);
     if (!child) {
-      this.board?.resync();
+      this.board()?.resync();
       this.snackbar.quick(this.translate.instant('repertoire.tree.notInRepertoire', { san: move.san }));
       return;
     }
@@ -574,7 +574,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
     this.filteredLines = this.viewerService.lines.filter(l => res.gameIndices.has(l.gameIndex));
   }
 
-  @ViewChild(ChessBoardComponent) board?: ChessBoardComponent;
+  readonly board = viewChild(ChessBoardComponent);
 
   constructor(
     private route: ActivatedRoute,

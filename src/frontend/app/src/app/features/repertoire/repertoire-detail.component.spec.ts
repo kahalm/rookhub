@@ -668,7 +668,7 @@ describe('RepertoireDetailComponent Baum: Pfeile + Ziehen', () => {
   it('Zug auf dem Brett folgt der Fortsetzung; ein fremder Zug springt zurück', async () => {
     const comp = await make();
     const resync = jasmine.createSpy('resync');
-    comp.board = { resync } as any;
+    spyOn(comp, 'board').and.returnValue({ resync } as any);
     comp.onBoardMove({ from: 'e2', to: 'e4', san: 'e4', fen: '' });
     expect(comp.treeService.breadcrumbs.map(b => b.san)).toEqual(['e4']);
     expect(comp.loadTreePopularity).toHaveBeenCalled();
