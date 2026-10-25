@@ -1,4 +1,4 @@
-import { Chess, Square } from 'chess.js';
+import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
@@ -8,6 +8,7 @@ import { OffPathPolicy, playerEvalText, whiteEvalToPlayerPawns } from './off-pat
 import { OpponentArrowMode, opponentArrowModeFor, VizController } from './viz-controller';
 import { SecondsCountdown, SolverTimer } from './solver-timer';
 import { lineStepAt } from './line-step.util';
+import { clampStartPly, previewPosition, solverOrientation } from './solver-setup.util';
 import { formatPuzzleTime } from './puzzle-format.util';
 import { classifyMoveFromFen, FirstMoveHint } from './puzzle-hints.util';
 import { ExpectedMove, judgeMove } from '../../shared/chess/line-solver';
@@ -291,19 +292,12 @@ export abstract class BasePuzzleSolver {
    * hinter dem Spielweise-Dialog ({@link awaitingSolveMode}); setupSolver setzt danach alles neu auf.
    */
   protected previewSetup(fen: string, movesStr: string, startPly = 0): void {
-    const moves = movesStr.split(' ');
-    let sp = startPly;   // geklemmt wie in setupSolver
-    if (sp > moves.length - 2) sp = 0;
-    if (sp < -1) sp = -1;
-    try {
-      const chess = new Chess(fen);
-      for (let i = 0; i < sp; i++) applyUci(chess, moves[i]);
-      this.orientation = sp < 0
-        ? (chess.turn() === 'w' ? 'white' : 'black')
-        : (chess.get(moves[sp].substring(0, 2) as Square)?.color === 'w' ? 'black' : 'white');
-      this.boardFen = this.actualFen = chess.fen();
-      this.turnColor = chess.turn() === 'w' ? 'white' : 'black';
-    } catch {
+    const p = previewPosition(fen, movesStr, startPly);
+    if (p) {
+      this.orientation = p.orientation;
+      this.boardFen = this.actualFen = p.fen;
+      this.turnColor = p.turnColor;
+    } else {
       this.boardFen = this.actualFen = fen;   // chess.js lehnt die FEN ab: wenigstens die Stellung zeigen
     }
     this.lastMove = undefined;
@@ -325,9 +319,7 @@ export abstract class BasePuzzleSolver {
     this.reviewMode = false;
     this.solverEpoch++;
     this.solutionMoves = movesStr.split(' ');
-    this.startPly = startPly;
-    if (this.startPly > this.solutionMoves.length - 2) this.startPly = 0;
-    if (this.startPly < -1) this.startPly = -1;
+    this.startPly = clampStartPly(startPly, this.solutionMoves.length);
     this.moveIndex = 0;
     this.maxHintLevel = 0;   // Tipp-Nutzung fürs neue Puzzle zurücksetzen (hintLevel setzen die Modi)
     this.chess = new Chess(fen);
@@ -354,7 +346,7 @@ export abstract class BasePuzzleSolver {
     if (this.startPly < 0) {
       // FEN ist bereits die Trainingsstellung → sofort lösen, kein Setup-Zug.
       this.moveIndex = 0;
-      this.orientation = this.chess.turn() === 'w' ? 'white' : 'black';
+      this.orientation = solverOrientation(this.chess, this.solutionMoves, this.startPly);
       this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
       this.solvingBegins();
@@ -362,9 +354,7 @@ export abstract class BasePuzzleSolver {
       return;
     }
 
-    const setupMove = this.solutionMoves[this.startPly];
-    const piece = this.chess.get(setupMove.substring(0, 2) as Square);
-    this.orientation = piece?.color === 'w' ? 'black' : 'white';
+    this.orientation = solverOrientation(this.chess, this.solutionMoves, this.startPly);
     this.updateBoard();
     this.state = 'SETUP';
 
