@@ -78,7 +78,11 @@ public sealed class LeaguePairingFinder(AppDbContext db)
         {
             var pick = ctx is null ? null : LeagueProvisionalPairing.Suggest(ctx, club!,
                 LeagueProvisionalPairing.Describe(club!, ctx.OwnFides, q.White, q.WhiteFide, q.Black, q.BlackFide, q.Date, q.Year, q.Id is > 0 ? q.Id : null));
-            return Options(q, rows, club, own).Concat(OpenOptions(q, open, ownFides, club, pick)).Take(MaxOptions).ToList();
+            // Die vorläufige Zuordnung steht VORN (0.832.20): hinter den Paarungen über FIDE-IDs fiel sie bei Spielern mit vielen
+            // Ligapartien aus den ersten MaxOptions heraus — AutoPick fand sie nie (Prod 25.10.2026, Vereinspartien 225–234).
+            var openOptions = OpenOptions(q, open, ownFides, club, pick).ToList();
+            return openOptions.Where(o => o.Provisional).Concat(Options(q, rows, club, own))
+                .Concat(openOptions.Where(o => !o.Provisional)).Take(MaxOptions).ToList();
         }).ToList();
     }
 
@@ -159,8 +163,17 @@ public sealed class LeaguePairingFinder(AppDbContext db)
 
     /// <summary>Die vorgewählte Paarung: genau EIN genauer Vorschlag, sonst die vorläufige Zuordnung zur laufenden Runde
     /// (<see cref="Option.Provisional"/>, 0.832.0), sonst keine.</summary>
-    public static int? AutoPick(IReadOnlyList<Option> options) =>
-        options.Count(o => o.Exact) == 1 ? options.First(o => o.Exact).Id : options.FirstOrDefault(o => o.Provisional)?.Id;
+    public static int? AutoPick(IReadOnlyList<Option> options)
+    {
+        var provisional = options.FirstOrDefault(o => o.Provisional);
+        var exact = options.Where(o => o.Exact).ToList();
+        // Ein genauer Treffer aus einer ANDEREN Saison als die laufende Runde der vorläufigen Zuordnung ist nur übers Jahr „genau"
+        // (Partie ohne Tag, z. B. 2026 passt zu 2025/26) — dann gewinnt die laufende Runde (0.832.20, Vereinspartie 227 vom 24.10.2026
+        // landete auf einem Wiedersehen aus 2025/26).
+        if (exact.Count == 1 && provisional is not null && !exact[0].Open && exact[0].Season != provisional.Season)
+            return provisional.Id;
+        return exact.Count == 1 ? exact[0].Id : provisional?.Id;
+    }
 
     /// <summary>
     /// Die Wahl an der Partie festhalten: <paramref name="id"/> <c>0</c> = keine Ligapartie, sonst die Paarung — dann gilt das

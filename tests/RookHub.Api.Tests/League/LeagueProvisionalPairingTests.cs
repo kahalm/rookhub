@@ -266,4 +266,42 @@ public class LeagueProvisionalPairingTests : IDisposable
         g.HomeColor = board % 2 == 1 ? "w" : "s";
         _db.SaveChanges();
     }
+
+    /// <summary>Prod 25.10.2026 (Vereinspartien 226–234): Gegner mit vielen Ligapartien — die vorläufige Zuordnung fiel hinter
+    /// den Paarungen über FIDE-IDs aus den ersten <see cref="LeaguePairingFinder.MaxOptions"/> heraus, AutoPick fand nichts.</summary>
+    [Fact]
+    public async Task ForAsync_GegnerMitVielenAltenPartien_vorlaeufigeBleibtVorn_undWirdGenommen()
+    {
+        await SeedAsync();
+        for (var r = 10; r < 10 + LeaguePairingFinder.MaxOptions + 2; r++)
+        {
+            _db.LeagueRounds.Add(new LeagueRound { Tnr = Tnr, Round = r, Date = new DateOnly(2026, 1, 1).AddDays(r) });
+            _db.LeagueGames.Add(new LeagueGame { Tnr = Tnr, Round = r, MatchNo = 1, Board = 1, HomeTeam = "Testdorf", AwayTeam = Jenbach2,
+                HomePlayer = "Oberschmid, Patrik", HomeFide = "1693034", AwayPlayer = $"Gast {r}", AwayFide = $"88{r}", HomeColor = "w", Result = "1 - 0" });
+        }
+        await _db.SaveChangesAsync();
+        var finder = new LeaguePairingFinder(_db) { Today = () => new DateOnly(2026, 10, 25) };
+        // Schwaz-Seite = Oberschmid (intern), Gegner Fercher; nur das Jahr bekannt
+        var options = await finder.ForAsync(new("Fercher, Alois", "1621947", "Testdorf", "1693034", null, 2026), TestClubs.Home, default);
+
+        Assert.True(options.Count <= LeaguePairingFinder.MaxOptions);
+        Assert.True(options[0].Provisional);
+        Assert.Equal(options[0].Id, LeaguePairingFinder.AutoPick(options));
+        Assert.Contains(options[0].Id, _r3.Values);
+    }
+
+    /// <summary>Prod 25.10.2026 (Vereinspartie 227): Partie nur mit Jahr 2026, dieselben zwei Spieler trafen sich schon in der
+    /// Vorsaison 2025/26 — dieser „genaue" Treffer über das Jahr darf die laufende Runde nicht schlagen.</summary>
+    [Fact]
+    public void AutoPick_GenauerTrefferAusAndererSaison_unterliegtDerVorlaeufigenZuordnung()
+    {
+        var old = new LeaguePairingFinder.Option(1, "2025/26 · Runde 3", null, "A", "1", "B", "2", "0 - 1", false, true, true, "1. Klasse", "2025/26");
+        var prov = new LeaguePairingFinder.Option(2, "2026/27 · Runde 3", null, "A", null, "B", null, "", false, true, true, "1. Klasse", "2026/27",
+            Open: true, Provisional: true);
+        Assert.Equal(2, LeaguePairingFinder.AutoPick(new[] { prov, old }));
+        // gleiche Saison: der genaue Treffer bleibt vorn (bisheriges Verhalten)
+        var same = old with { Season = "2026/27" };
+        Assert.Equal(2, LeaguePairingFinder.AutoPick(new[] { prov, same }));   // zwei genaue (offen + geschlossen) → die vorläufige, wie bisher
+        Assert.Equal(1, LeaguePairingFinder.AutoPick(new[] { old }));
+    }
 }

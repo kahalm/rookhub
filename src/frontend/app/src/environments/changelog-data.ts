@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.832.20", date: "2026-10-25", changes: [
+    { en: "LeagueHub: the provisional board of the current round is no longer pushed out of the suggestions by many older games of the same player, and a game that only states the year no longer lands on a rematch from last season.", de: "LeagueHub: Die vorläufige Zuordnung zur laufenden Runde fällt nicht mehr hinter viele ältere Partien desselben Spielers aus der Vorschlagsliste, und eine Partie mit nur der Jahreszahl landet nicht mehr auf einem Wiedersehen aus der Vorsaison." },
+  ] },
   { version: "0.832.19", date: "2026-10-25", changes: [
     { en: "Technical refactoring (code review 2026-09-29, decomposition Z30/Z34/F8-013): the admin page is split into separate user, book and group tabs (dead styles removed), the sign-in service is divided into session store, permission, impersonation and login follow-up behind an unchanged facade, and shared building blocks no longer import from features (guard spec) — no visible change.", de: "Technischer Umbau (Codereview 2026-09-29, Zerlegung Z30/Z34/F8-013): Die Admin-Seite ist in eigene Nutzer-, Bücher- und Gruppen-Tabs zerlegt (tote Stile entfernt), der Anmeldedienst in Sitzungsspeicher, Rechte, Impersonation und Login-Nachlauf hinter unveränderter Fassade aufgeteilt, und geteilte Bausteine importieren nichts mehr aus Features (Wächter-Spec) — keine sichtbare Änderung." },
   ]},
