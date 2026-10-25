@@ -95,7 +95,7 @@ export abstract class BasePuzzleSolver {
 
   /** Anarchy per URL erzwungen (`?anarchy=max`): e.p.-Zwang gilt dann unabhängig von der Einstellung.
    *  Ohne URL-Zwang folgt der e.p.-Zwang im Crazy-Brett der Einstellung `prefs.enPassantForced`. */
-  protected anarchyForcedByUrl = false;
+  anarchyForcedByUrl = false;
 
   // ---- Lösungs-Durchsicht (Review) — von allen Modi geteilt ----
   reviewMode = false;
@@ -191,8 +191,10 @@ export abstract class BasePuzzleSolver {
   // ---- intern ----
   protected chess = new Chess();
   protected solutionMoves: string[] = [];
-  protected moveIndex = 0;
-  protected startPly = 0;
+  /** Index des nächsten erwarteten Zugs in `solutionMoves` (von Hilfsklassen der Modi gelesen, nur die Basis schreibt). */
+  moveIndex = 0;
+  /** Vorspiel-Halbzug (siehe {@link setupSolver}); gelesen wie {@link moveIndex}. */
+  startPly = 0;
   protected aborted = false;
   /** Ist die Komponente zerstört (Seite verlassen)? `MatDialogConfig.closeOnNavigation` ist
    *  standardmäßig true — die Lange-Lösezeit-Nachfrage schließt bei einem Routenwechsel also
@@ -283,7 +285,8 @@ export abstract class BasePuzzleSolver {
   protected onSolvingBegins(): void {}
 
   // ===== abgeleitete Helfer =====
-  protected get isSolving(): boolean {
+  /** Läuft gerade ein Lösungsversuch (Lös-Automat offen)? */
+  get isSolving(): boolean {
     return this.state === 'AWAITING_USER_MOVE' || this.state === 'THINKING' || this.state === 'PLAYING';
   }
 
@@ -672,7 +675,8 @@ export abstract class BasePuzzleSolver {
     return true;
   }
 
-  protected updateBoard(): void {
+  /** Brett-Präsentation (FEN, Zugziele, Schach) aus dem Lös-Zustand neu ableiten. */
+  updateBoard(): void {
     this.actualFen = this.chess.fen();
     // Visualisierung: Brett auf der eingefrorenen Startstellung halten, solange gelöst wird;
     // am Ende (Endzustand der Komponente) das echte Brett aufdecken.
@@ -897,7 +901,8 @@ export abstract class BasePuzzleSolver {
     // 'persist': kein Timer → der Pfeil bleibt, bis der User zieht (clear in onMoveMade).
   }
 
-  protected clearVizOpponentArrow(): void {
+  /** Gegnerzug-Pfeil sofort entfernen. */
+  clearVizOpponentArrow(): void {
     if (this.vizOpponentArrowTimer) { clearTimeout(this.vizOpponentArrowTimer); this.vizOpponentArrowTimer = undefined; }
     this.vizOpponentLastMove = undefined;
   }
@@ -985,7 +990,8 @@ export abstract class BasePuzzleSolver {
     return false;
   }
 
-  protected clearSolutionPlay(): void {
+  /** Laufende Lösungs-Wiedergabe (nach Aufgeben) anhalten. */
+  clearSolutionPlay(): void {
     if (this.solutionPlayTimer) {
       clearInterval(this.solutionPlayTimer);
       this.solutionPlayTimer = undefined;

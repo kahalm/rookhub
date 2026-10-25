@@ -10,9 +10,9 @@ export interface BookSettingsHost {
   readonly dialog: MatDialog;
   readonly puzzle: BookPuzzleDto | null;
   /** Läuft gerade ein Lösungsversuch (Lös-Automat offen)? */
-  readonly solving: boolean;
+  readonly isSolving: boolean;
   /** Erzwingt `?anarchy=max` en passant unabhängig von der Einstellung? */
-  readonly urlForcesEnPassant: boolean;
+  readonly anarchyForcedByUrl: boolean;
   readonly solveModes: { followLevel(level: number): void };
   boardTheme: string;
   pieceSet: string;
@@ -23,9 +23,9 @@ export interface BookSettingsHost {
   enPassantForced: boolean;
   setupPuzzle(p: BookPuzzleDto): void;
   /** Gegnerpfeil der Visualisierung entfernen. */
-  dropVizArrow(): void;
+  clearVizOpponentArrow(): void;
   /** Zugziele des laufenden Versuchs nachziehen. */
-  refreshBoard(): void;
+  updateBoard(): void;
 }
 
 /**
@@ -51,7 +51,7 @@ export class BookSettingsController {
     const applied = applyThemeMode(h.themeMode, h.prefs.boardTheme, h.prefs.pieceSet);
     h.boardTheme = applied.boardTheme;
     h.pieceSet = applied.pieceSet;
-    h.enPassantForced = h.urlForcesEnPassant || (h.themeMode === 'crazy' && h.prefs.enPassantForced);
+    h.enPassantForced = h.anarchyForcedByUrl || (h.themeMode === 'crazy' && h.prefs.enPassantForced);
   }
 
   setVisualizationLevel(level: number): void {
@@ -61,12 +61,12 @@ export class BookSettingsController {
     h.solveModes.followLevel(level);   // gemerkte Spielweise mitziehen
     // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
     // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
-    if (h.puzzle && h.solving) h.setupPuzzle(h.puzzle);
+    if (h.puzzle && h.isSolving) h.setupPuzzle(h.puzzle);
   }
 
   setVizArrowEnabled(val: boolean): void {
     this.h.vizArrowEnabled = val;
-    if (!val) this.h.dropVizArrow();
+    if (!val) this.h.clearVizOpponentArrow();
     this.h.prefs.setVizArrow(val);
   }
 
@@ -126,8 +126,8 @@ export class BookSettingsController {
       if (result.enPassantForced !== undefined) {
         h.prefs.setEnPassantForced(result.enPassantForced);
         // Der Link-Zwang (?anarchy=max) gilt unabhängig von der Einstellung (wie in applyThemeForSetup).
-        h.enPassantForced = h.urlForcesEnPassant || (h.themeMode === 'crazy' && result.enPassantForced);
-        if (h.solving) h.refreshBoard();   // Zugziele des laufenden Versuchs nachziehen
+        h.enPassantForced = h.anarchyForcedByUrl || (h.themeMode === 'crazy' && result.enPassantForced);
+        if (h.isSolving) h.updateBoard();   // Zugziele des laufenden Versuchs nachziehen
       }
     });
   }

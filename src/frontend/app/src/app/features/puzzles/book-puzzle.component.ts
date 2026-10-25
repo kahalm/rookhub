@@ -159,12 +159,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.alternativeSolve = false;
     this.gaveUp = false;
   }
-  override clearSolutionPlay(): void { super.clearSolutionPlay(); }
-  // Für BookSettingsController: Lös-Automat-Teile der Basis (dort geschützt).
-  get solving(): boolean { return this.isSolving; }
-  get urlForcesEnPassant(): boolean { return this.anarchyForcedByUrl; }
-  dropVizArrow(): void { this.clearVizOpponentArrow(); }
-  refreshBoard(): void { this.updateBoard(); }
 
   get displayBookName(): string {
     if (!this.puzzle) return '';
@@ -491,9 +485,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   variationPreview: VariationPreview | null = null;
   /** Kurs-Fortschritt (ganzes Buch + Kapitel) aufgeklappt? Zu bis zum ⓘ neben der Sprachwahl (Wunsch 2026-10-20). */
   readonly statsOpen = signal(false);
-  // Für BookCommentView: Lös-Automat-Stand (in der Basis geschützt).
-  get solverMoveIndex(): number { return this.moveIndex; }
-  get solverStartPly(): number { return this.startPly; }
 
   retryLoad(): void {
     this.loadError = false;

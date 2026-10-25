@@ -18,8 +18,8 @@ export interface BookCommentHost {
   readonly moveComment: string | null;
   readonly onSolutionPath: boolean;
   /** Index des nächsten erwarteten Lösungszugs bzw. Vorspiel-Halbzug des Lös-Automaten. */
-  readonly solverMoveIndex: number;
-  readonly solverStartPly: number;
+  readonly moveIndex: number;
+  readonly startPly: number;
   readonly titleDisplay: string | null;
   readonly chapterDisplay: string | null;
   readonly displayBookName: string;
@@ -61,9 +61,9 @@ export class BookCommentView {
       puzzleComment: h.puzzle.comment,
       moveComments: h.puzzle.moveComments,
       onSolutionPath: h.onSolutionPath,
-      moveIndex: h.solverMoveIndex,
+      moveIndex: h.moveIndex,
       solving: h.state === 'AWAITING_USER_MOVE' || h.state === 'THINKING',
-      startPly: h.solverStartPly,
+      startPly: h.startPly,
     });
   }
 

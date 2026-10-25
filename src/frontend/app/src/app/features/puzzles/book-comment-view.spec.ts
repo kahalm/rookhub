@@ -8,7 +8,7 @@ describe('BookCommentView (Zerlegung Z18)', () => {
     return {
       puzzle: { id: 1, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b', comment: 'Einleitung', moveComments: { '0': 'Gut.' } } as any,
       state: 'AWAITING_USER_MOVE', reviewMode: false, reviewIndex: 0, moveComment: null, onSolutionPath: true,
-      solverMoveIndex: 0, solverStartPly: 0, titleDisplay: 'T', chapterDisplay: 'K', displayBookName: 'B',
+      moveIndex: 0, startPly: 0, titleDisplay: 'T', chapterDisplay: 'K', displayBookName: 'B',
       dialog: { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of({ fen: 'f', from: 'e2', to: 'e4' }) }) } as any,
       variationPreview: null,
       ...over,
