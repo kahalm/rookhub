@@ -19,7 +19,7 @@ Regeln, die dabei nicht kippen dürfen:
   `RepertoirePositionLookupService.NormalizeKey` ↔ `normalizeFen` in `position-filter.util.ts`: die
   Linien-Häufigkeiten ordnet der CLIENT über diesen Schlüssel zu, und chess.js setzt das ep-Feld
   anders als Gera.Chess.
-* **Die Farbe je Kapitel rechnet der Client** (`chapterColorsOf` in `repertoire-color.util.ts`,
+* **Die Farbe je Kapitel rechnet der Client** (`chapterColorsOf` in `shared/repertoire/repertoire-color.util.ts`,
   dieselbe Funktion wie im Trainer) und schickt sie mit. Eine zweite Heuristik am Server würde
   auseinanderlaufen — und die eigenen Festlegungen liegen ohnehin nur im Browser.
 * **Abbruchgrenzen**: `MinReach` (0,02 %) — seltenere Stellungen werden nicht mehr abgefragt;

@@ -20,7 +20,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
 import { TrainerSrSync } from './repertoire-trainer-sr-sync';
 import { buildRepertoireGraph } from './repertoire-tree.util';
-import { chapterColorsOf, TrainColor } from './repertoire-color.util';
+import { chapterColorsOf, TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { SrConfigDialogComponent } from './sr-config-dialog.component';
 import { ParsedGame, exceedsSyncLimits, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { parsePgnTextParallel } from '../../shared/pgn-viewer/pgn-parse-pool';

@@ -1,7 +1,7 @@
 import { Observable, Subscription, switchMap } from 'rxjs';
 import type { ExplorerAnalysisRequest, ExplorerAnalysisResult, ExplorerSettings } from './repertoire-explorer.service';
 import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
-import type { TrainColor } from './repertoire-color.util';
+import type { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { normalizeFen } from './position-filter.util';
 
 /** Der Teil von `RepertoireExplorerService`, den der Lader braucht. */

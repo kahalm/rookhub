@@ -16,7 +16,7 @@
  */
 
 import { localStore, readJson, writeJson } from '../../core/local-json-store';
-import { sideToMove } from '../../shared/chess/fen-side';
+import { sideToMove } from '../chess/fen-side';
 
 export type TrainColor = 'w' | 'b';
 

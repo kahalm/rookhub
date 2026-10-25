@@ -5,7 +5,7 @@ import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/
 import { whiteToMove } from '../../shared/chess/fen-side';
 import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import type { LineReviewRequest } from './repertoire-training.service';
-import type { TrainColor } from './repertoire-color.util';
+import type { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { normFen, RepertoireGraph } from './repertoire-tree.util';
 import { destsAt, userMoveCount } from './repertoire-trainer.util';
 import { lineKeyOf } from './repertoire-trainer-queue.util';

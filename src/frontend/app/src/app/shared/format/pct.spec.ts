@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { formatPercent } from '../../features/repertoire/repertoire-explorer.service';
 import { cardPct } from '../player-card/card-lang';
 import { PctPipe, formatPct, pctLocale } from './pct';
 
@@ -28,20 +27,9 @@ describe('formatPct / PctPipe', () => {
     try {
       el.lang = 'de';
       expect(formatPct(7)).toBe('7 %');
-      expect(formatPercent(0.4567)).toBe('46 %');
       el.lang = 'en';
       expect(formatPct(7)).toBe('7%');
-      expect(formatPercent(0.4567)).toBe('46%');
     } finally { el.lang = before; }
-  });
-
-  it('formatPercent (Explorer): Stellen nach Größe, Kleinstwerte als „<0.01%“', () => {
-    expect(formatPercent(0.35, 'en')).toBe('35%');
-    expect(formatPercent(0.035, 'en')).toBe('3.5%');
-    expect(formatPercent(0.0012, 'en')).toBe('0.12%');
-    expect(formatPercent(0.00001, 'en')).toBe('<0.01%');
-    expect(formatPercent(0.00001, 'de')).toBe('<0,01 %');
-    expect(formatPercent(0.035, 'de')).toBe('3,5 %');
   });
 
   it('cardPct der Spielerkarte nutzt denselben Helfer', () => {

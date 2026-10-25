@@ -1,5 +1,5 @@
 import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
-import type { TrainColor } from './repertoire-color.util';
+import type { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { linesInChapter, userMoveCount } from './repertoire-trainer.util';
 

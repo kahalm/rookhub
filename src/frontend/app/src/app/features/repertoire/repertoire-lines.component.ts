@@ -13,7 +13,7 @@ import { MoveListComponent, MoveListCommentSegment } from '../../shared/pgn-view
 import { buildCommentSegments } from '../puzzles/comment-variation.util';
 import { RepertoireLine } from './repertoire-viewer.service';
 import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
-import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from './repertoire-color.util';
+import { autoChapterColors, readChapterColorOverrides, rootSideOf, setChapterColorOverride, TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
 import { SanPipe } from '../../shared/chess/san.pipe';

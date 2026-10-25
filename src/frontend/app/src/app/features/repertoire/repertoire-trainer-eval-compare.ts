@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { parseWhiteEval } from './repertoire-eval.util';
-import type { TrainColor } from './repertoire-color.util';
+import type { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 
 /** Woher die Bewertungen kommen (im Trainer: `StockfishService`). */
 export interface EvalSource {

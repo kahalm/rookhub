@@ -20,7 +20,7 @@ import { isInfoLineGame } from './repertoire-info-line.util';
 import { ExplorerPosition, ExplorerSettings, RepertoireExplorerService } from './repertoire-explorer.service';
 import { Subscription, map, switchMap } from 'rxjs';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
-import { TrainColor, chapterColorsOf, setChapterColorOverride } from './repertoire-color.util';
+import { TrainColor, chapterColorsOf, setChapterColorOverride } from '../../shared/repertoire/repertoire-color.util';
 import { RepertoireViewerService, RepertoireLine } from './repertoire-viewer.service';
 import { parsedGameToPgn } from './repertoire-line-pgn.util';
 import { ShareLineDialogComponent } from './share-line-dialog.component';

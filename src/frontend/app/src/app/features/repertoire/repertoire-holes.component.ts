@@ -13,7 +13,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
-import { TrainColor, chapterColorsOf } from './repertoire-color.util';
+import { TrainColor, chapterColorsOf } from '../../shared/repertoire/repertoire-color.util';
 import {
   EXPLORER_RATINGS, EXPLORER_SPEEDS, ExplorerAnalysisResult, ExplorerSettings, ExplorerSource, ExplorerSources, MAX_THRESHOLD_PERCENT,
   MIN_THRESHOLD_PERCENT, RepertoireExplorerService, RepertoireHole, clampThreshold, formatPath, holeMoveLabel,

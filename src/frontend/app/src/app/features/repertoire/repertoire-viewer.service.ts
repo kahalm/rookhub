@@ -3,7 +3,7 @@ import { Move } from 'chess.js';
 import { ParsedGame, ParsedGameWithSource, START_FEN, parsePgnTextWithSource } from '../../shared/pgn-viewer/pgn-parser';
 import { parsePgnTextParallel } from '../../shared/pgn-viewer/pgn-parse-pool';
 import { lineKeyFromSans } from './repertoire-line-key.util';
-import { sideOfLastMove, TrainColor } from './repertoire-color.util';
+import { sideOfLastMove, TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { isInfoLineGame } from './repertoire-info-line.util';
 import { startNumbering } from './repertoire-move-format.util';
 

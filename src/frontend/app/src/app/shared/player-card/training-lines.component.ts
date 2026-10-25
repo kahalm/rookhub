@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { TreeFilter } from '@lh/core/league.models';
 import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
-import { readChapterColorOverrides } from '@rh/features/repertoire/repertoire-color.util';
+import { readChapterColorOverrides } from '@rh/shared/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
 import { cardLang } from './card-lang';
 import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,

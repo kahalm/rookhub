@@ -4,7 +4,7 @@ import { EMPTY, Observable, catchError, expand, map, of, shareReplay, switchMap,
 import { Chess } from 'chess.js';
 import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { startNumbering } from './repertoire-move-format.util';
-import { TrainColor } from './repertoire-color.util';
+import { TrainColor } from '../../shared/repertoire/repertoire-color.util';
 import { localStore, readJson, writeJson } from '../../core/local-json-store';
 import { formatPct } from '../../shared/format/pct';
 import { whiteToMove } from '../../shared/chess/fen-side';

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
   DEFAULT_EXPLORER_SETTINGS, ExplorerAnalysisRequest, ExplorerAnalysisResult, ExplorerSources, RepertoireExplorerService,
-  RepertoireHole, clampThreshold, fitToLocal, formatPath, holeMoveLabel, nextRoundDelayMs, positionAfterHole, readExplorerSettings,
+  RepertoireHole, clampThreshold, fitToLocal, formatPath, formatPercent, holeMoveLabel, nextRoundDelayMs, positionAfterHole, readExplorerSettings,
   saveExplorerSettings,
 } from './repertoire-explorer.service';
 
@@ -146,4 +146,28 @@ describe('RepertoireExplorerService.run', () => {
     tick(600);
     http.expectOne('/api/repertoires/7/explorer-analysis').flush(result({ complete: true }));
   }));
+});
+
+/** e1-rk-percent-space-en (DESIGN 5.13): Explorer-Prozent über `formatPct` — aus shared/format/pct.spec hierher
+ *  umgezogen (Codereview F8-013: shared importiert nicht aus features). */
+describe('formatPercent (Explorer)', () => {
+  it('Stellen nach Größe, Kleinstwerte als „<0.01%“', () => {
+    expect(formatPercent(0.35, 'en')).toBe('35%');
+    expect(formatPercent(0.035, 'en')).toBe('3.5%');
+    expect(formatPercent(0.0012, 'en')).toBe('0.12%');
+    expect(formatPercent(0.00001, 'en')).toBe('<0.01%');
+    expect(formatPercent(0.00001, 'de')).toBe('<0,01 %');
+    expect(formatPercent(0.035, 'de')).toBe('3,5 %');
+  });
+
+  it('ohne Sprache gilt <html lang> (die Sprache der Oberfläche, nicht die des Browsers)', () => {
+    const el = document.documentElement;
+    const before = el.lang;
+    try {
+      el.lang = 'de';
+      expect(formatPercent(0.4567)).toBe('46 %');
+      el.lang = 'en';
+      expect(formatPercent(0.4567)).toBe('46%');
+    } finally { el.lang = before; }
+  });
 });
