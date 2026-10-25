@@ -80,23 +80,30 @@ internal static class SavedGamePgn
     }
 
     /// <summary>PGN aus vorhandenen Headern (bleiben, soweit hier nicht bearbeitet) + neuen Kopfdaten + Zügen.</summary>
+    /// <param name="pgnEscaped">PGN-Upload: <paramref name="existing"/> trägt die Werte ROH aus dem Text (noch
+    /// maskiert, <c>\"</c>), <paramref name="header"/> bereits entmaskierte (<see cref="UnescapeTag"/>). Geschrieben
+    /// wird dann korrekt maskiert (<see cref="ImportHeader"/>) statt mit Apostroph — vorher wurde aus
+    /// <c>"Landesliga \"A\""</c> ein <c>"Landesliga \'A\'"</c>. Ohne den Schalter (Korrektur, Vereinspartie, vom
+    /// Server angelegt) bleibt es bei <see cref="Header"/>; bereits gespeicherte Partien bleiben, wie sie sind.</param>
     internal static string BuildHeaderedPgn(Dictionary<string, string> existing, GameHeaderInput header, string result,
-        IReadOnlyList<string> sans, string? startFen, IReadOnlyDictionary<int, string>? comments)
+        IReadOnlyList<string> sans, string? startFen, IReadOnlyDictionary<int, string>? comments, bool pgnEscaped = false)
     {
+        Func<string?, string> seven = pgnEscaped ? ImportHeader : Header;
+        Func<string?, string> kept = pgnEscaped ? v => ImportHeader(UnescapeTag(v)) : Header;
         var tags = new Dictionary<string, string>(existing, StringComparer.Ordinal)
         {
-            ["Event"] = Header(header.Event),
-            ["Site"] = Header(header.Site),
+            ["Event"] = seven(header.Event),
+            ["Site"] = seven(header.Site),
             ["Date"] = PgnDate(header.Date),
-            ["Round"] = Header(header.Round),
-            ["White"] = Header(header.White),
-            ["Black"] = Header(header.Black),
+            ["Round"] = seven(header.Round),
+            ["White"] = seven(header.White),
+            ["Black"] = seven(header.Black),
             ["Result"] = result,
         };
         var sb = new StringBuilder();
         foreach (var t in SevenTags) sb.Append('[').Append(t).Append(" \"").Append(tags[t]).Append("\"]\n");
         foreach (var (k, v) in tags.Where(kv => !SevenTags.Contains(kv.Key)))
-            sb.Append('[').Append(k).Append(" \"").Append(Header(v)).Append("\"]\n");
+            sb.Append('[').Append(k).Append(" \"").Append(kept(v)).Append("\"]\n");
         sb.Append('\n');
         sb.Append(PgnWriter.MoveText(sans, startFen, comments, result));
         return sb.ToString();
@@ -194,6 +201,28 @@ internal static class SavedGamePgn
     {
         if (string.IsNullOrWhiteSpace(value)) return "?";
         return value.Replace("\"", "'").Replace("\n", " ").Replace("\r", " ").Trim();
+    }
+
+    /// <summary>Header-Wert eines PGN-Uploads (bereits entmaskiert): leere → "?", Zeilenumbrüche weg, dann
+    /// korrekt maskiert wie <see cref="PgnWriter.Escape"/> (erst Backslash, dann Anführungszeichen).</summary>
+    internal static string ImportHeader(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "?";
+        return PgnWriter.Escape(value.Replace("\n", " ").Replace("\r", " ").Trim());
+    }
+
+    /// <summary>Hebt die PGN-Maskierung eines rohen Tag-Werts auf (<c>\"</c> → <c>"</c>, <c>\\</c> → <c>\</c>); ein
+    /// einzelner Backslash vor einem anderen Zeichen bleibt stehen.</summary>
+    internal static string? UnescapeTag(string? value)
+    {
+        if (value is null || !value.Contains('\\')) return value;
+        var sb = new StringBuilder(value.Length);
+        for (var i = 0; i < value.Length; i++)
+        {
+            if (value[i] == '\\' && i + 1 < value.Length && value[i + 1] is '"' or '\\') { sb.Append(value[++i]); continue; }
+            sb.Append(value[i]);
+        }
+        return sb.ToString();
     }
 
     /// <summary>Die Halbzüge eines gespeicherten PGN, rein lexikalisch (ohne Brett — auch alt gespeicherte,

@@ -198,7 +198,9 @@ internal sealed class SavedGameImport
         {
             index++;
             var headers = rawHeaders ?? new Dictionary<string, string>();
-            string? H(string key) => headers.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? v.Trim() : null;
+            // Werte entmaskiert (\" → "): so landen sie in den Spalten und im neu geschriebenen Kopf (dort wieder maskiert).
+            // Die Import-Kennung rechnet weiter mit den rohen Werten — sonst erkennte ein erneuter Upload keine Dubletten.
+            string? H(string key) => headers.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? UnescapeTag(v.Trim()) : null;
             PgnImportFailureDto Fail(string reason) => new() { Index = index, White = Clip(H("White"), 120), Black = Clip(H("Black"), 120), Reason = reason };
 
             var startFen = H("FEN");
@@ -229,7 +231,7 @@ internal sealed class SavedGameImport
 
             var kept = new Dictionary<string, string>(headers.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
                 .ToDictionary(kv => kv.Key, kv => kv.Value.Trim()), StringComparer.Ordinal);
-            var gamePgn = BuildHeaderedPgn(kept, header, gameResult, sans, startFen, comments);
+            var gamePgn = BuildHeaderedPgn(kept, header, gameResult, sans, startFen, comments, pgnEscaped: true);
             if (ownGames >= _owner.GamesPerUserCap || ownChars + gamePgn.Length > _owner.PgnCharsPerUserCap)
             {
                 result.Failed.Add(Fail("quota"));

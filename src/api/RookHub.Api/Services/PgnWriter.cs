@@ -18,7 +18,8 @@ namespace RookHub.Api.Services;
 /// und in gespeicherten Partien. <see cref="MoveText"/> bekommt sie deshalb als Parameter statt sie
 /// anzugleichen. <see cref="SavedGameService"/> schreibt seine Header-Werte weiterhin selbst: es
 /// ESCAPED das Anführungszeichen nicht, sondern ersetzt es durch ein Apostroph — eine andere
-/// Entscheidung, kein zweiter Versuch derselben.</para>
+/// Entscheidung, kein zweiter Versuch derselben. Ausnahme ist der PGN-Upload: dort kommen die Werte
+/// schon maskiert an und werden mit <see cref="Escape"/> wieder maskiert geschrieben.</para>
 /// </summary>
 public static class PgnWriter
 {

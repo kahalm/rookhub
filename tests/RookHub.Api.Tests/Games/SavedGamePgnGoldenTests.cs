@@ -114,6 +114,20 @@ public class SavedGamePgnGoldenTests : IDisposable
         Assert.Equal(N(GoldenClubMoves), (await _db.SavedGames.AsNoTracking().FirstAsync(g => g.Id == 70)).Pgn);
     }
 
+    /// <summary>PGN-Upload: maskierte Werte (<c>\"</c>, <c>\\</c>) werden korrekt wieder maskiert geschrieben (wie
+    /// <c>PgnWriter.Escape</c>), die Spalten tragen den entmaskierten Namen.</summary>
+    [Fact]
+    public async Task ImportPgn_EscapedHeaderValues_StayEscaped()
+    {
+        const string text = "[White \"O\\\"Neil\"]\n[Black \"B\"]\n[Result \"1-0\"]\n[Annotator \"a\\\\b \\\"c\\\"\"]\n\n1. e4 e5 1-0\n";
+        var r = await _service.ImportPgnAsync(1, text);
+        Assert.Equal(1, r.Imported);
+        var g = await _db.SavedGames.SingleAsync();
+        Assert.Contains("[White \"O\\\"Neil\"]\n", g.Pgn);
+        Assert.Contains("[Annotator \"a\\\\b \\\"c\\\"\"]\n", g.Pgn);
+        Assert.Equal("O\"Neil", g.White);
+    }
+
     /// <summary>Zeilenenden der Quelldatei (CRLF auf Windows) gehören nicht zum PGN.</summary>
     private static string N(string s) => s.Replace("\r\n", "\n");
 
@@ -142,8 +156,10 @@ public class SavedGamePgnGoldenTests : IDisposable
         1. d4 d5 *
         """;
 
+    // Seit dem Fix (PGN-Escape beim Upload) bleibt ein maskiertes Anführungszeichen maskiert; vorher stand hier
+    // "Landesliga \'A\'". Gespeicherte Partien behalten ihren Stand.
     private const string GoldenImport1 = """
-        [Event "Landesliga \'A\'"]
+        [Event "Landesliga \"A\""]
         [Site "Schwaz"]
         [Date "2026.03.14"]
         [Round "5.2"]
