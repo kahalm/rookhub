@@ -31,7 +31,8 @@ import { GeolocationFailure, GeolocationService } from '../../core/geolocation.s
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
 import { PinColourBy } from './pin-palette';
-import { DirectoryViewSync, ViewTab, applyStoredView, snapshotView } from './directory-view-state';
+import { ViewTab, applyStoredView, snapshotView } from './directory-view-state';
+import { DirectoryViewStateSync } from './directory-view-state-sync';
 import { SearchProfileService } from './search-profile.service';
 import { TournamentCalendarComponent } from './tournament-calendar.component';
 import { TournamentCardComponent } from './tournament-card.component';
@@ -169,31 +170,22 @@ export class TournamentDirectoryComponent implements OnInit {
   /** Der Monat kam nicht — sonst stuende in der Handy-Agenda „In diesem Monat kein Turnier". */
   readonly calendarFailed = signal(false);
 
-  /**
-   * Schluessel der gemerkten Ansicht. Ohne sie faellt der Weg „Turnier oeffnen → zurueck" auf die
-   * Vorgabefilter zurueck — man muesste Zeitraum, Reiter, Ort und Monat jedes Mal neu einstellen.
-   *
-   * <p>Das ist nur der Stamm: gespeichert wird je NUTZER (`viewKeyFor`). Der nackte Schluessel war
-   * nutzerlos — auf einem geteilten Geraet erbte der naechste Nutzer Umkreis und Standort-Koordinaten
-   * des vorigen und schob sie beim ersten Aufruf in SEIN Konto. Ein noch liegender alter Eintrag wird
-   * beim Lesen entfernt.</p>
-   */
-  static readonly ViewKey = 'rh.turnier.directoryView';
-
-  /**
-   * Der geraetelokale Schluessel dieses Nutzers; ohne Anmeldung ein eigener Gast-Schluessel. Seit 0.643.0 ist der
-   * Kalender ohne Konto offen, und ein Gast soll „Turnier oeffnen → zurueck" ebenso ohne neu Filtern schaffen. Der
-   * Gast-Stand geht nie zum Server (`queuePersist`) und nie in ein Konto — angemeldet gilt der eigene Schluessel.
-   */
+  /** Stamm des geraetelokalen Schluessels (siehe `DirectoryViewStateSync.ViewKey`). */
+  static readonly ViewKey = DirectoryViewStateSync.ViewKey;
+  /** Der geraetelokale Schluessel dieses Nutzers bzw. des Gasts (`DirectoryViewStateSync.viewKeyFor`). */
   static viewKeyFor(userId: number | null | undefined): string {
-    return `${TournamentDirectoryComponent.ViewKey}.${userId == null ? 'guest' : userId}`;
+    return DirectoryViewStateSync.viewKeyFor(userId);
   }
-
   /** Dieselbe Ansicht beim NUTZER (Server) — die Kennung muss in `ViewStateService.AllowedKeys` stehen. */
-  static readonly StateKey = 'turnier.directory';
+  static readonly StateKey = DirectoryViewStateSync.StateKey;
 
-  /** Der gedrosselte Weg zum Server samt Abgleich-Stand (`DirectoryViewSync`). */
-  private readonly sync = new DirectoryViewSync(this.viewStates, TournamentDirectoryComponent.StateKey, this.destroyRef);
+  /** Der gemerkte Anzeigezustand: geraetelokal, beim Nutzer, und in welcher Reihenfolge. */
+  private readonly viewSync = new DirectoryViewStateSync(this.auth, this.viewStates, this.destroyRef, {
+    snapshot: () => this.viewState(),
+    apply: stored => this.applyStoredView(stored),
+    ready: () => this.ready(),
+    reload: () => this.reload(),
+  });
 
   /**
    * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
@@ -214,9 +206,9 @@ export class TournamentDirectoryComponent implements OnInit {
 
   ngOnInit(): void {
     this.applyRangePreset('quarter', false);
-    this.restoreView();
+    this.viewSync.restore();
     this.watchPlaceInput();
-    this.sync.start();
+    this.viewSync.start();
 
     // Ohne Anmeldung (seit 0.643.0): kein Server-Stand und keine Suchprofile — beide gehoeren einem Konto, und die
     // Abrufe endeten nur in 401. Der Gast-Stand liegt geraetelokal (viewKeyFor).
@@ -224,7 +216,7 @@ export class TournamentDirectoryComponent implements OnInit {
       this.applyQueryParams();
       return;
     }
-    this.syncStoredView();
+    this.viewSync.syncRemote();
 
     this.profileService.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: profiles => {
@@ -870,7 +862,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.ready.set(true);
     // Scheiterte der Abruf schon vorher, ist erst JETZT der Stand da, an dem eine Aenderung des
     // Nutzers zu messen ist (siehe `DirectoryViewSync.stateAtSyncFailure`).
-    this.sync.captureBaselineIfFailed(() => JSON.stringify(this.viewState()));
+    this.viewSync.captureBaselineIfFailed();
 
     const tournamentId = params.get('t');
     if (tournamentId) {
@@ -890,87 +882,9 @@ export class TournamentDirectoryComponent implements OnInit {
     return snapshotView(this);
   }
 
-  /**
-   * Zustand sichern — geraetelokal SOFORT und beim Nutzer (Server) verzoegert.
-   *
-   * <p>Beides, und zwar aus zwei verschiedenen Gruenden: der lokale Speicher traegt den Weg
-   * „Turnier oeffnen → zurueck" ohne einen einzigen Abruf, der Server traegt ihn ueber GERAETE —
-   * der Umkreis, den man am Rechner eingestellt hat, war am Handy weg.</p>
-   *
-   * <p>Der Server-Schreibvorgang ist gedrosselt: `storeView()` laeuft bei jeder Aenderung der
-   * Leiste, und eine Tastatureingabe im Suchfeld sind ein Dutzend davon.</p>
-   */
+  /** Zustand sichern — geraetelokal sofort, beim Nutzer gedrosselt (`DirectoryViewStateSync.store`). */
   private storeView(): void {
-    const state = this.viewState();
-    const key = TournamentDirectoryComponent.viewKeyFor(this.auth.currentUser?.userId);
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
-      // lassen — dann faengt man eben wieder bei der Vorgabe an.
-    }
-    this.queuePersist(state);
-  }
-
-  /**
-   * Zum Server — ausser beim Einstieg als Nutzer: dann sieht sich ein Admin nur um, und was er an
-   * der Leiste dreht (oder die Vorgabe, die der erste Aufbau speichert), gehoert nicht in das fremde
-   * Konto. Der Nutzer saehe sonst beim naechsten Besuch einen Umkreis, den er nie eingestellt hat.
-   */
-  private queuePersist(state: Record<string, unknown>): void {
-    // Gaeste haben keinen Server-Stand; Admins beim Einstieg als Nutzer schreiben nicht ins fremde Konto.
-    if (!this.auth.isLoggedIn || this.auth.isImpersonating) return;
-    this.sync.queue(state);
-  }
-
-  private restoreView(): void {
-    let stored: Record<string, unknown> | null = null;
-    try {
-      // Der alte, nutzerlose Eintrag gehoert irgendwem, der hier einmal angemeldet war — weg damit.
-      localStorage.removeItem(TournamentDirectoryComponent.ViewKey);
-      const key = TournamentDirectoryComponent.viewKeyFor(this.auth.currentUser?.userId);
-      const raw = localStorage.getItem(key);
-      stored = raw ? JSON.parse(raw) : null;
-    } catch {
-      stored = null;                       // unlesbar/kaputt: Vorgabe bleibt stehen
-    }
-    this.applyStoredView(stored);
-  }
-
-  /**
-   * Den beim NUTZER gespeicherten Zustand nachziehen (siehe `ViewStateService`).
-   *
-   * <p>Reihenfolge mit Absicht: erst der geraetelokale Zustand (sofort, ohne Abruf — kein
-   * Aufblitzen der Vorgabefilter), dann der vom Server. Weicht der ab, ist ER der juengere:
-   * geschrieben hat ihn das Geraet, an dem zuletzt gefiltert wurde. Nur dann wird neu geladen —
-   * sonst kostete jeder Seitenaufruf zwei Abfragen.</p>
-   *
-   * <p>Hat der Server nichts, wird der lokale Zustand hinaufgeschoben: beim ersten Aufruf nach
-   * dieser Aenderung steht dort noch nichts, und die bestehende Einstellung soll nicht verloren
-   * gehen. Der lokale Zustand ist der DIESES Nutzers (`viewKeyFor`), und beim Einstieg als Nutzer
-   * geht nichts hinauf (`queuePersist`).</p>
-   */
-  private syncStoredView(): void {
-    this.viewStates.get<Record<string, unknown>>(TournamentDirectoryComponent.StateKey)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(remote => {
-        // Server nicht erreichbar (nicht „hat nichts"): weder uebernehmen noch hinaufschieben — sein
-        // Stand kann juenger sein. Spaetere Aenderungen des Nutzers gehen trotzdem hinauf (remoteSync).
-        if (remote === undefined) {
-          // Vor dem fertigen Aufbau zieht `applyQueryParams` die Basis nach.
-          this.sync.markFailed(this.ready() ? JSON.stringify(this.viewState()) : null);
-          return;
-        }
-        this.sync.markDone();
-        if (!remote) {
-          this.queuePersist(this.viewState());
-          return;
-        }
-        if (JSON.stringify(remote) === JSON.stringify(this.viewState())) return;
-
-        this.applyStoredView(remote);
-        if (this.ready()) this.reload();
-      });
+    this.viewSync.store();
   }
 
   /**
