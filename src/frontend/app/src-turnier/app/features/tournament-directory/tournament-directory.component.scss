@@ -60,7 +60,6 @@
   margin-bottom: 0.5rem;
 }
 
-.profile-field { min-width: 180px; }
 /* Der Ort ist das wichtigste Feld der Leiste und darf den Platz nehmen, den er braucht —
    Ortsnamen aus dem Gazetteer sind lang („5400 Hallein (AT)"). */
 .place-field { min-width: 240px; flex: 1 1 240px; }
@@ -183,57 +182,6 @@
   gap: 0.3rem;
 }
 
-.entry-card.cancelled { opacity: 0.6; }
-
-.entry-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.entry-name {
-  font: inherit;
-  font-weight: 500;
-  text-align: left;
-  background: none;
-  border: 0;
-  padding: 0;
-  color: inherit;
-  cursor: pointer;
-}
-
-.entry-name:hover { text-decoration: underline; }
-.entry-name:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
-
-.entry-line {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: color-mix(in srgb, currentColor 75%, transparent);
-}
-
-.approx { opacity: 0.65; }
-
-.entry-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-top: 0.2rem;
-}
-
-.badge {
-  font-size: 0.72rem;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, currentColor 10%, transparent);
-}
-
-.badge.warn { background: color-mix(in srgb, var(--mat-sys-error) 22%, transparent); }
-
-.flag { color: var(--mat-sys-primary); }
-
 .more-row { display: flex; justify-content: center; margin-top: 1rem; }
 
 /* „Laeuft bereits" (UX-039): abgesetzt unter den kommenden Turnieren, damit Saisonligen nicht wie
@@ -268,7 +216,6 @@
 @media (max-width: 768px) {
   /* Seitenpolster 16 px wie ueberall (DESIGN 3.2, b1-t-seitenpolster-handy-8px; vorher 8 px). */
   .page { padding: 0.75rem 1rem; }
-  .profile-field,
   .place-field,
   .range-field,
   .search-field,
@@ -288,9 +235,4 @@
   .period-row > .extra-narrow { display: inline-flex; min-width: 0; }
   .period-row > .range-field { flex: 1 1 13rem; }
   .period-row > .radius-field { flex: 1 1 8rem; }
-
-  /* Der Erstnutzer-Hinweis behaelt seinen Text, verliert aber den Knopf: „Neues Suchprofil"
-     liegt ohnehin im ⋮-Menue daneben, und ein zweiter Stroked-Button neben „Filter" kostete
-     auf dem Handy nochmals eine Zeile ueber den Reitern. */
-  .hint > button { display: none; }
 }
