@@ -1,5 +1,6 @@
 import { Observable, of, throwError } from 'rxjs';
-import { PositionRepertoiresComponent, findSection } from './position-repertoires.component';
+import { PositionRepertoiresComponent } from './position-repertoires.component';
+import { findSection } from './repertoire-line-link';
 import { PositionLookupResult, PositionTreeResult, SimilarPositionsResult } from '../../core/repertoire.service';
 
 describe('PositionRepertoiresComponent', () => {

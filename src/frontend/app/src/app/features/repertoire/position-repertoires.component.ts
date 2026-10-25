@@ -6,24 +6,20 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Observable, Subscription, of } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import {
   RepertoireService, RepertoirePositionMatch, RepertoireLineMatch,
   RepertoirePositionTree, PositionTreeNode,
   SimilarPositionMatch,
 } from '../../core/repertoire.service';
-import { ParsedGame, parsePgnText, splitPgnGames } from '../../shared/pgn-viewer/pgn-parser';
-import { lineKeyFromSans } from './repertoire-line-key.util';
+import { ChapterGroup, LineKeyResolver, chapterGroups, treeAsMatch, treeNodeAsLine } from './repertoire-line-link';
 import { PositionTreeComponent } from './position-tree.component';
 import { SimilarPositionsPanelComponent } from './similar-positions-panel.component';
 import { SimilarPositionsSearch } from './similar-positions-search';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { whiteToMove } from '../../shared/chess/fen-side';
-
-interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
 type PanelMode = 'list' | 'tree' | 'similar';
 const MODE_KEY = 'rookhub_position_reps_mode';
@@ -41,12 +37,7 @@ const MODE_KEY = 'rookhub_position_reps_mode';
  *   etwas, das SO AUSSIEHT?". Gewichtet Bauerngerüst/Material/Figurenplatzierung/König
  *   (Voreinstellung wählbar) und wertet optional auch den Farbtausch. Die Rechnung liegt komplett
  *   beim Server; hier werden nur Filter gestellt und Treffer samt Aufschlüsselung gezeigt.
- *   Optional kommt ein ZUG dazu („ich erwäge hier 12.Nd5 — wo geht der noch?"): getippt wird SAN,
- *   aufgelöst wird er HIER auf der Ankerstellung (`parseMoveInput`), geschickt werden from/to
- *   (+ Umwandlungsfigur) — `Nbd2` und `Nd2` sind derselbe Zug, ein Textvergleich verfehlte solche
- *   Paare still. Ein Treffer heißt: die Linie geht dort tatsächlich mit diesem Zug weiter (Haupt-
- *   zug oder Variante), nicht bloß „wäre legal". Er wirkt als Bonus (Lücken-Schluss auf den
- *   Stellungswert), nicht als Zwang — dafür gibt es den Schalter „nur mit diesem Zug".
+ *   Optional kommt ein ZUG dazu — Zustand und Zug-Regeln: `SimilarPositionsSearch`.
  *
  * Die gewählte Sicht wird pro Gerät gemerkt. Hört ein Consumer auf `playMoves` (heute die Analyse),
  * spielt ein Klick im Baum die Zugfolge aufs Brett — die Stellung ändert sich, das Panel lädt neu
@@ -58,8 +49,7 @@ const MODE_KEY = 'rookhub_position_reps_mode';
  * Schlange veralteter Scans aufzubauen. Ein abgelaufenes Zeitbudget (`truncated`) und eine Absage
  * wegen zu vieler Anfragen (429) bekommen je einen eigenen Hinweis.
  *
- * Der Ziel-`lineKey` wird bewusst aus dem CLIENT-Parse des Repertoire-PGN berechnet (identisch zu
- * Trainer/Linienliste), nicht aus Server-SAN — so ist die Linien-Identität garantiert konsistent.
+ * Der Ziel-`lineKey` kommt aus dem CLIENT-Parse des Repertoire-PGN (`repertoire-line-link.ts`).
  * Eingebunden in Analyse, PGN-Viewer (Recap-Dialog) und die geteilte-Partie-Seite; blendet sich für
  * nicht eingeloggte Besucher komplett aus (Repertoires sind pro-Nutzer).
  */
@@ -205,46 +195,7 @@ const MODE_KEY = 'rookhub_position_reps_mode';
       </div>
     }
   `,
-  styles: [`
-    .pos-reps { display: block; }
-    .pr-toggle { width: 100%; }
-    .pr-row {
-      display: flex; align-items: center; gap: 8px; padding: 10px 12px; box-sizing: border-box;
-      border: 0; background: none; color: inherit; font: inherit; font-size: 0.92rem; font-weight: 500;
-      text-align: left; cursor: pointer; border-radius: inherit;
-    }
-    .pr-row:hover:not(:disabled) { background: color-mix(in srgb, currentColor 6%, transparent); }
-    .pr-row:disabled { opacity: 0.5; cursor: default; }
-    .pr-row mat-icon { font-size: 18px; width: 18px; height: 18px; opacity: 0.7; }
-    .pr-row-label { flex: 1; }
-    .pr-row .pr-chevron { font-size: 20px; width: 20px; height: 20px; }
-    .pr-as-row .pr-panel { margin: 0; border: 0; border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); border-radius: 0; padding: 8px 12px 10px; }
-    .pr-panel { margin-top: 8px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 6px; padding: 8px; max-height: 46vh; overflow: auto; }
-    .pr-modes { display: flex; justify-content: flex-end; gap: 2px; margin-bottom: 4px; }
-    .pr-mode { width: 26px; height: 26px; padding: 0; border: none; background: none; color: color-mix(in srgb, currentColor 55%, transparent); cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
-    .pr-mode:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
-    .pr-mode-on { color: var(--rh-accent); background: color-mix(in srgb, var(--rh-accent) 14%, transparent); }
-    .pr-mode mat-icon { font-size: 17px; width: 17px; height: 17px; }
-    .pr-tree { margin: 2px 0 6px 22px; }
-    .pr-tree-empty { margin: 2px 0 6px 22px; font-size: .8rem; }
-    .pr-muted { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; display: flex; align-items: center; gap: 8px; }
-    .pr-error { color: var(--rh-error); }
-    .pr-note { font-size: .8rem; margin-bottom: 6px; }
-    .pr-count { font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px; }
-    .pr-rep { margin-bottom: 4px; }
-    .pr-rep-head { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none; color: inherit; cursor: pointer; padding: 4px 2px; text-align: left; font: inherit; }
-    .pr-rep-head:hover { background: color-mix(in srgb, currentColor 7%, transparent); border-radius: 4px; }
-    .pr-rep-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pr-badge { font-size: .72rem; background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); border-radius: 10px; padding: 1px 7px; }
-    .pr-shared { display: inline-flex; align-items: center; gap: 2px; font-size: .68rem; color: color-mix(in srgb, currentColor 65%, transparent); border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 10px; padding: 0 6px 0 3px; }
-    .pr-shared mat-icon { font-size: 13px; width: 13px; height: 13px; }
-    .pr-chapter { margin: 2px 0 6px 22px; }
-    .pr-chapter-name { font-size: .78rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 4px 0 2px; }
-    .pr-line { display: flex; align-items: center; gap: 6px; padding-left: 6px; }
-    .pr-line-name { flex: 1; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pr-line-actions { display: flex; flex: 0 0 auto; }
-    .pr-line-actions .mat-mdc-icon-button { --mdc-icon-button-state-layer-size: 32px; --mdc-icon-button-icon-size: 18px; width: 32px; height: 32px; padding: 4px; }
-  `]
+  styleUrls: ['./position-repertoires.component.scss'],
 })
 export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   @Input() fen = '';
@@ -277,7 +228,8 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   private reqId = 0;
   /** Die laufende Anfrage — eine neue Stellung bestellt sie ab (siehe Klassen-Doku). */
   private pending: Subscription | null = null;
-  private pgnCache = new Map<number, string[]>();   // die Abschnitte des PGN (splitPgnGames), nicht geparst
+  /** lineKey einer gemeldeten Linie aus dem (gecachten) Repertoire-PGN. */
+  private readonly lineKeys = new LineKeyResolver(() => this.repertoireService);
   /** Sicht „Ähnlich": Filter, Zug, Treffer (überlebt Zuklappen und Sichtwechsel wie bisher die Felder hier). */
   readonly sim = new SimilarPositionsSearch({
     api: () => this.repertoireService, fen: () => this.fen, reload: () => this.reloadSimilar(),
@@ -407,17 +359,7 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   }
   isRepOpen(id: number): boolean { return this.openReps.has(id); }
 
-  chaptersOf(rep: RepertoirePositionMatch): ChapterGroup[] {
-    const groups: ChapterGroup[] = [];
-    const byName = new Map<string, ChapterGroup>();
-    for (const line of rep.lines) {
-      const name = line.chapter || '';
-      let g = byName.get(name);
-      if (!g) { g = { name, lines: [] }; byName.set(name, g); groups.push(g); }
-      g.lines.push(line);
-    }
-    return groups;
-  }
+  chaptersOf(rep: RepertoirePositionMatch): ChapterGroup[] { return chapterGroups(rep); }
 
   train(rep: RepertoirePositionMatch, line: RepertoireLineMatch): void {
     this.navigateToLine(rep, line, 'train');
@@ -428,30 +370,16 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
 
   /** Baummodus: Trainieren/Ansehen für einen Knoten, der eindeutig zu EINER Linie gehört. */
   trainNode(tree: RepertoirePositionTree, node: PositionTreeNode): void {
-    this.navigateToLine(this.asMatch(tree), this.asLine(node), 'train');
+    this.navigateToLine(treeAsMatch(tree), treeNodeAsLine(node), 'train');
   }
   viewNode(tree: RepertoirePositionTree, node: PositionTreeNode): void {
-    this.navigateToLine(this.asMatch(tree), this.asLine(node), 'view');
-  }
-
-  private asMatch(tree: RepertoirePositionTree): RepertoirePositionMatch {
-    return {
-      repertoireId: tree.repertoireId, repertoireName: tree.repertoireName,
-      kind: tree.kind, shared: tree.shared, lines: [],
-    };
-  }
-  /** Baum-Knoten → Linien-Treffer (ply -1: die Detailansicht springt dann an den Linienanfang). */
-  private asLine(node: PositionTreeNode): RepertoireLineMatch {
-    return {
-      chapter: node.chapter ?? '', lineName: node.lineName ?? '',
-      gameIndex: node.gameIndex ?? 0, ply: -1,
-    };
+    this.navigateToLine(treeAsMatch(tree), treeNodeAsLine(node), 'view');
   }
 
   private navigateToLine(rep: RepertoirePositionMatch, line: RepertoireLineMatch, target: 'train' | 'view'): void {
     const busy = line.gameIndex + ':' + rep.repertoireId;
     this.busyLine = busy;
-    this.resolveLineKey(rep.repertoireId, line).subscribe({
+    this.lineKeys.resolve(rep.repertoireId, line).subscribe({
       next: (lineKey) => {
         this.busyLine = null;
         this.navigated.emit();
@@ -466,41 +394,4 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
       error: () => { this.busyLine = null; },
     });
   }
-
-  /**
-   * Lädt (gecacht) das Repertoire-PGN, findet die passende Linie und berechnet deren lineKey. Gelesen wird nur DIESE
-   * Partie (0.712.0): vorher wurde das ganze PGN mit dem Vorgabe-Deckel (2 MB/500 Partien) geparst — in einem großen
-   * Chessable-Repertoire (6 MB, 1220 Linien) fehlten damit alle Linien ab Nr. 275, der Link trug `line=` leer und die
-   * Repertoire-Seite öffnete keine Linie. Getrennt wird wie beim Server (`splitPgnGames` ↔ `ParseSections`), also passt
-   * der gemeldete `gameIndex`; Kapitel/Name bestätigen ihn, sonst wird nach ihnen gesucht.
-   */
-  private resolveLineKey(repId: number, line: RepertoireLineMatch): Observable<string> {
-    const cached = this.pgnCache.get(repId);
-    const sections$ = cached
-      ? of(cached)
-      : this.repertoireService.getPgnText(repId).pipe(
-          map(pgn => splitPgnGames(pgn)),
-          tap(sections => this.pgnCache.set(repId, sections)),
-        );
-    return sections$.pipe(map(sections => {
-      const raw = findSection(sections, line);
-      const g = raw ? parsePgnText(raw)[0] : undefined;
-      return g ? lineKeyFromSans(g.moves.map(m => m.san)) : '';
-    }));
-  }
-}
-
-/** Kopfzeile `[Tag "Wert"]` eines PGN-Abschnitts (ohne zu parsen). */
-function headerOf(raw: string, tag: string): string {
-  const m = new RegExp('^\\[' + tag + '\\s+"((?:[^"\\\\]|\\\\.)*)"\\]', 'm').exec(raw);
-  return m ? m[1].replace(/\\(.)/g, '$1').trim() : '';
-}
-
-/** Der Abschnitt einer gemeldeten Linie: am gemeldeten Index, wenn Kapitel ([Black]) und Linienname ([White]) passen,
- *  sonst der erste mit diesen Namen, sonst der Index. */
-export function findSection(sections: string[], line: { chapter: string | null; lineName: string | null; gameIndex: number }): string | null {
-  const matches = (raw: string) => headerOf(raw, 'Black') === (line.chapter ?? '') && headerOf(raw, 'White') === (line.lineName ?? '');
-  const atIndex = sections[line.gameIndex];
-  if (atIndex && matches(atIndex)) return atIndex;
-  return sections.find(matches) ?? atIndex ?? null;
 }
