@@ -89,6 +89,13 @@ public class IcuDirectorySweepService : IDirectorySourceAdapter<IcuDirectorySwee
     {
         public CrawlerIcuEvent Row { get; } = row;
         public ParsedIcuDetail? Detail { get; set; }
+
+        /// <summary>
+        /// Die chess-results-Nummer des Eintrags, an dem der Herkunftsvermerk dieser Zeile schon
+        /// haengt — die Erinnerung an einen frueheren exakten Treffer (siehe
+        /// <see cref="IDirectorySourceAdapter{TRow}.BeforeMatchAsync"/>).
+        /// </summary>
+        public string? KnownChessResultsId { get; set; }
     }
 
     // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
@@ -107,18 +114,32 @@ public class IcuDirectorySweepService : IDirectorySourceAdapter<IcuDirectorySwee
     string? IDirectorySourceAdapter<IcuSweepRow>.MatchPlace(IcuSweepRow row) => row.Row.Place;
     string? IDirectorySourceAdapter<IcuSweepRow>.Url(IcuSweepRow row) => DetailUrl(row.Row, row.Detail);
 
-    /// <summary>Die Nummer steht nur auf der Detailseite — und nur, wenn sie in DIESEM Lauf geholt wurde.</summary>
-    string? IDirectorySourceAdapter<IcuSweepRow>.ChessResultsId(IcuSweepRow row) => row.Detail?.ChessResultsId;
+    /// <summary>
+    /// Die Nummer der Detailseite, wenn sie in DIESEM Lauf geholt wurde — sonst die Nummer des
+    /// Eintrags, an dem der Vermerk schon haengt. Die Detailseite wird nur EINMAL geholt; ohne die
+    /// zweite Haelfte fehlte die Nummer ab der zweiten Nacht, der Namensvergleich schlug fehl, und
+    /// das Turnier stand als eigener Eintrag <c>ie…</c> neben seinem chess-results-Eintrag.
+    /// </summary>
+    string? IDirectorySourceAdapter<IcuSweepRow>.ChessResultsId(IcuSweepRow row) =>
+        row.Detail?.ChessResultsId is { Length: > 0 } fromDetail ? fromDetail : row.KnownChessResultsId;
 
     /// <summary>
     /// Die Detailseite kommt VOR der Zuordnung — anders als bei chessarbiter, wo sie nur den
     /// eigenen Eintrag anreichert. Hier traegt sie den einzigen EXAKTEN Zuordnungsschluessel dieser
     /// Quelle, und ein Schluessel, der erst nach der Entscheidung eintrifft, ist wertlos.
     /// „Aktualisiert" heisst hier: die Detailseite war lesbar.
+    ///
+    /// <para>Vorher wird der bestehende Herkunftsvermerk gelesen: er sagt, ob die Detailseite schon
+    /// geholt wurde, und an welchem Eintrag er haengt. Traegt DER eine chess-results-Nummer, war
+    /// das ein frueherer Treffer — die Nummer gilt dann weiter als exakter Schluessel, auch wenn
+    /// die Detailseite in dieser Nacht nicht geholt wird. Ein eigener Eintrag <c>ie…</c> hat
+    /// keine Nummer und liefert damit nichts.</para>
     /// </summary>
     async Task<bool> IDirectorySourceAdapter<IcuSweepRow>.BeforeMatchAsync(IcuSweepRow row, CancellationToken ct)
     {
-        if (_detailBudget <= 0 || await HasDetailAsync(row.Row.EventId, ct)) return false;
+        var note = await FindNoteAsync(row.Row.EventId, ct);
+        row.KnownChessResultsId = note?.ChessResultsId;
+        if (_detailBudget <= 0 || note is { HasDetail: true }) return false;
 
         _detailBudget--;
         row.Detail = await FetchDetailAsync(row.Row.EventId, ct);
@@ -164,17 +185,25 @@ public class IcuDirectorySweepService : IDirectorySourceAdapter<IcuDirectorySwee
     private static string? FederationOf(CrawlerIcuEvent row) => row.Foreign ? null : "IRL";
 
     /// <summary>
-    /// Ob die Detailseite dieses Turniers schon gelesen wurde — erkennbar an der Adresse im
+    /// Der Herkunftsvermerk dieses Turniers (<c>null</c> = noch keiner): ob die Detailseite schon
+    /// gelesen wurde — erkennbar an der Adresse im
     /// Herkunftsvermerk, die erst dabei gesetzt wird.
     ///
     /// <para>Gefragt wird nach dem VERMERK und nicht nach dem eigenen Eintrag: wurde das Turnier
     /// einem chess-results-Eintrag zugeordnet, gibt es gar keinen eigenen mehr, und ueber ihn
     /// gesucht wuerde dieselbe Seite jede Nacht erneut geholt.</para>
+    ///
+    /// <para>Derselbe Vermerk nennt auch die chess-results-Nummer seines Eintrags (siehe
+    /// <see cref="IDirectorySourceAdapter{TRow}.BeforeMatchAsync"/>). Der Vermerk ist je
+    /// <c>(Kind, ExternalId)</c> eindeutig.</para>
     /// </summary>
-    private Task<bool> HasDetailAsync(string eventId, CancellationToken ct) =>
-        _db.TournamentDirectorySources.AnyAsync(
-            s => s.Kind == DirectorySourceKind.IrishChessUnion
-                 && s.ExternalId == eventId && s.Url != null, ct);
+    private Task<IcuNote?> FindNoteAsync(string eventId, CancellationToken ct) =>
+        _db.TournamentDirectorySources
+            .Where(s => s.Kind == DirectorySourceKind.IrishChessUnion && s.ExternalId == eventId)
+            .Select(s => new IcuNote(s.Url != null, s.Entry.ChessResultsId))
+            .FirstOrDefaultAsync(ct);
+
+    private sealed record IcuNote(bool HasDetail, string? ChessResultsId);
 
     /// <summary>
     /// Die Adresse kommt in den Vermerk erst, wenn die Detailseite wirklich gelesen wurde — sie

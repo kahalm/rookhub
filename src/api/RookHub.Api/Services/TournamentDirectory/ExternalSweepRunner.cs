@@ -67,7 +67,7 @@ internal interface IDirectorySourceAdapter<in TRow>
 
     /// <summary>
     /// Die chess-results-Nummer, die die Quelle SELBST nennt (chess.sk in der Liste, ICU auf der
-    /// Detailseite). Gibt es dazu einen Eintrag, ist das ein exakter Treffer und der
+    /// Detailseite oder, in spaeteren Naechten, ueber den Vermerk am frueher getroffenen Eintrag). Gibt es dazu einen Eintrag, ist das ein exakter Treffer und der
     /// Namensvergleich entfaellt; <c>null</c>/leer = nur der Namensvergleich.
     /// </summary>
     string? ChessResultsId(TRow row) => null;

@@ -216,7 +216,11 @@ public class ExternalSweepGoldenTests
         await db.SaveChangesAsync();
     }
 
-    /// <summary>ICU: die Detailseite traegt die chess-results-Nummer — exakter Treffer VOR dem Namensvergleich.</summary>
+    /// <summary>
+    /// ICU: die Detailseite traegt die chess-results-Nummer — exakter Treffer VOR dem
+    /// Namensvergleich, und er haelt auch in den Naechten danach, in denen die Seite nicht mehr
+    /// geholt wird.
+    /// </summary>
     private static async Task IcuExtraAsync(ScenarioSteps s)
     {
         await SeedChessResultsAsync(s, "9100001", "Ganz anderer Name", "IRL", Soon.AddDays(20));
@@ -227,7 +231,9 @@ public class ExternalSweepGoldenTests
         var exact = new RowSpec("4001", "Irish Exact Open", Soon.AddDays(3), "Galway");
         var missing = new RowSpec("4002", "Detailseite Fehlt Cup", Soon.AddDays(4), null);
         await s.Step("9 exakter Treffer per Nummer, Detailseite fehlt", [exact, missing]);
-        await s.Step("10 schon geholt: kein zweiter Abruf, die fehlende wird wiederholt", [exact, missing]);
+        // Die Nummer stand nur auf der Detailseite der ersten Nacht; der Treffer muss trotzdem
+        // halten (ueber den Vermerk am chess-results-Eintrag) — vorher entstand hier ie4001.
+        await s.Step("10 schon geholt: kein zweiter Abruf, bleibt zugeordnet, die fehlende wird wiederholt", [exact, missing]);
         s.Handler.DetailFor = null;
         await s.Step("11 Detailseite wieder da", [exact, missing]);
         await s.Step("12 kein Turnier (Unterricht)", [B with { NonTournament = true }]);

@@ -2799,14 +2799,15 @@ internal static class ExternalSweepGolden
               Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
             Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 4002 url=- erst=ja zuletzt=ja
-            == 10 schon geholt: kein zweiter Abruf, die fehlende wird wiederholt
-            Ergebnis: ExternalSweepResult { Read = 2, Added = 1, Updated = 0, Matched = 0, Retired = 0 }
+            == 10 schon geholt: kein zweiter Abruf, bleibt zugeordnet, die fehlende wird wiederholt
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 0, Updated = 0, Matched = 1, Retired = 0 }
             Detailabrufe: id=4002
-            Log Information: ICU-Kalender: 2 gelesen, 1 neu, 0 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
-            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Log Information: ICU-Kalender: 2 gelesen, 0 neu, 0 mit Detailseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
             Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
             Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
             Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
@@ -2830,18 +2831,17 @@ internal static class ExternalSweepGolden
               Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
             Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
-            Eintrag ie4001 cr=- name=Irish Exact Open fed=IRL state=- start=S+3 ende=S+3 we=False ort=Galway geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
-              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
             Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 4002 url=- erst=ja zuletzt=ja
             == 11 Detailseite wieder da
-            Ergebnis: ExternalSweepResult { Read = 2, Added = 0, Updated = 1, Matched = 0, Retired = 0 }
+            Ergebnis: ExternalSweepResult { Read = 2, Added = 0, Updated = 1, Matched = 1, Retired = 0 }
             Detailabrufe: id=4002
-            Log Information: ICU-Kalender: 2 gelesen, 0 neu, 1 mit Detailseite, 0 zugeordnet, 0 zurueckgezogen
-            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 2 von 12 eigenen Eintraegen wiedergesehen (16 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
+            Log Information: ICU-Kalender: 2 gelesen, 0 neu, 1 mit Detailseite, 1 zugeordnet, 0 zurueckgezogen
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: nur 1 von 11 eigenen Eintraegen wiedergesehen (9 %, verlangt sind 90 %) — der Lauf ist unvollstaendig. Bleibt das so, zieht diese Quelle NIE etwas zurueck
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
             Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
             Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
             Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
@@ -2865,18 +2865,17 @@ internal static class ExternalSweepGolden
               Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
             Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
-            Eintrag ie4001 cr=- name=Irish Exact Open fed=IRL state=- start=S+3 ende=S+3 we=False ort=Galway geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
-              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
             Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 4002 url=https://www.icu.ie/events/4002 erst=ja zuletzt=ja
             == 12 kein Turnier (Unterricht)
             Ergebnis: ExternalSweepResult { Read = 1, Added = 0, Updated = 0, Matched = 0, Retired = 1 }
             Detailabrufe: 
             Log Information: ICU-Kalender: 1 gelesen, 0 neu, 0 mit Detailseite, 0 zugeordnet, 1 zurueckgezogen
-            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 12 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
+            Log Warning: Verschwunden-Erkennung IrishChessUnion uebersprungen: der Lauf lieferte 1 Kennungen, aber KEINE der 11 eigenen Eintraege — das ist ein kaputter Lauf oder ein Schluesselwechsel der Quelle, keine Massenabsage
             Eintrag 9000001 cr=9000001 name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
               Vermerk IrishChessUnion 1001 url=https://www.icu.ie/events/1001 erst=ja zuletzt=ja
             Eintrag 9100001 cr=9100001 name=Ganz anderer Name fed=IRL state=- start=S+20 ende=S+20 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=-
+              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
             Eintrag ie1001 cr=- name=Danubius Kronstadt Memorial fed=IRL state=- start=S+0 ende=S+0 we=True ort=Nirgendwo geo=None lat=- platz=- gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
             Eintrag ie1002 cr=- name=Cup Beta Rapid fed=IRL state=- start=S+7 ende=S+7 we=True ort=Testhausen geo=City lat=10.5 platz=Testhausen gesehen=ja weg=ja fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 1002 url=https://www.icu.ie/events/1002 erst=ja zuletzt=ja
@@ -2900,8 +2899,6 @@ internal static class ExternalSweepGolden
               Vermerk IrishChessUnion 2008 url=https://www.icu.ie/events/2008 erst=ja zuletzt=ja
             Eintrag ie2009 cr=- name=Serienturnier Nummer9 fed=IRL state=- start=S+1 ende=S+1 we=True ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 2009 url=https://www.icu.ie/events/2009 erst=ja zuletzt=ja
-            Eintrag ie4001 cr=- name=Irish Exact Open fed=IRL state=- start=S+3 ende=S+3 we=False ort=Galway geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
-              Vermerk IrishChessUnion 4001 url=https://www.icu.ie/events/4001 erst=ja zuletzt=ja
             Eintrag ie4002 cr=- name=Detailseite Fehlt Cup fed=IRL state=- start=S+4 ende=S+4 we=False ort=- geo=None lat=- platz=- gesehen=ja weg=- fehl=0 fehlAm=- alter=None gruppe=ja
               Vermerk IrishChessUnion 4002 url=https://www.icu.ie/events/4002 erst=ja zuletzt=ja
             

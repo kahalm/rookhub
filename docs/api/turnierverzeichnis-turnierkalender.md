@@ -234,7 +234,7 @@ das Gemeinsame, je Land ein `…DirectorySweepService`; die Abgleichschleife sel
 Verbandskalender laufen darueber: FRSah, WCU, CFC, SZS, ECF, chess.hu, KNSB, FSI, schachbund, Chess Scotland,
 sjakk.no, ICU, chess.sk, chessarbiter und FFE. Sonderfaelle sind Haken mit Vorgabe: `BeforeMatchAsync` (ICU holt die
 Detailseite VOR der Zuordnung), `ChessResultsId` (exakter Treffer ueber die Nummer der Quelle: chess.sk aus der
-Liste, ICU von der Detailseite), `OnCreated` (chess.sk: Nummer am neuen Eintrag), `AfterLookupAsync` (FFE laedt die
+Liste, ICU von der Detailseite bzw. danach ueber den Vermerk), `OnCreated` (chess.sk: Nummer am neuen Eintrag), `AfterLookupAsync` (FFE laedt die
 Vermerke nach); Detailseite samt Budget und Fassung (chessarbiter, FFE, sjakk.no) bleiben in `ApplyAsync`. ChessCz,
 FIDE und der Ankuendigungskalender haben eine andere Schleife. Golden-Tests: `ExternalSweepGoldenTests`). Jede
 stellt dieselben vier Fragen: kenne ich
@@ -245,6 +245,14 @@ und woher kommt die Angabe (`TournamentDirectorySources`). **Eine Zusatzquelle f
 LUECKEN** (`FillIfEmpty`) — ersetzte sie vorhandene Werte, entschiede die Reihenfolge der
 naechtlichen Durchgaenge, welche Angabe gilt. Die Turnier**art** bleibt dabei immer `Unknown`:
 keine dieser Quellen sagt etwas darueber.
+
+**Nummern-Treffer muessen halten.** ICU nennt die chess-results-Nummer nur auf der Detailseite, und
+die wird je Turnier EINMAL geholt. Bis 0.832.20 fehlte die Nummer deshalb ab der zweiten Nacht, der
+Namensvergleich schlug fehl, es entstand ein eigener Eintrag `ie<nr>` und der Herkunftsvermerk
+wanderte dorthin — das Turnier stand doppelt im Kalender. Seitdem liest ICU in `BeforeMatchAsync` den
+bestehenden Vermerk: haengt er an einem Eintrag MIT Nummer (also einem frueheren Treffer), gilt diese
+Nummer weiter als exakter Schluessel. Gespeichert wird dafuer nichts Neues — die Nummer steht ja am
+chess-results-Eintrag, an dem der Vermerk haengt.
 
 | Land | Praefix | Kosten | Was sie kann, was die anderen nicht koennen |
 |---|---|---|---|
