@@ -57,8 +57,8 @@
             <app-book-board-hint [countdownSeconds]="vizCountdownSeconds" [moveHtml]="vizMoveHtml" [turnColor]="turnColor"
               [showEye]="vizPiecesHidden || visualizationMode === 1" [eyeShowing]="vizShowPressed"
               [showTip]="hasHints && canShowMoreHints" [hintLevel]="hintLevel" [totalHints]="totalHints"
-              [canFlag]="canFlagHints" [flagged]="!!puzzle?.hintsFlagged" [flagSaving]="flagSaving"
-              (eyeClicked)="onVizShow()" (tipClicked)="showNextHint()" (flagClicked)="toggleHintsFlag()" />
+              [canFlag]="hints.canFlag" [flagged]="!!puzzle?.hintsFlagged" [flagSaving]="hints.flagSaving"
+              (eyeClicked)="onVizShow()" (tipClicked)="showNextHint()" (flagClicked)="hints.toggleFlag()" />
           }
           </ng-template>
           <div class="board-hint-slot board-hint-slot--board">

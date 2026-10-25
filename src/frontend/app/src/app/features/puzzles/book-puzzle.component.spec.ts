@@ -491,7 +491,7 @@ describe('BookPuzzleComponent on-the-fly Tipps (Fallback ohne vorberechnete, z. 
     c.puzzle = puzzle;
     atMove(c, ['e2e4', 'e7e5'], 0);   // erster Löserzug e2e4 (ruhiger Bauernzug)
 
-    expect(c.hasPrecomputedHints).toBeFalse();
+    expect(c.hints.hasPrecomputed).toBeFalse();
     expect(c.hasHints).toBeTrue();                    // on-the-fly Fallback greift
     expect(c.availableHints.length).toBe(3);
     expect(c.availableHints[0]).toBe('puzzles.hints.t1Quiet');   // translate-Mock gibt den Key zurück
@@ -516,7 +516,7 @@ describe('BookPuzzleComponent on-the-fly Tipps (Fallback ohne vorberechnete, z. 
     c.puzzle = puzzle;
     atMove(c, ['e2e4', 'e7e5'], 0);
 
-    expect(c.hasPrecomputedHints).toBeTrue();
+    expect(c.hints.hasPrecomputed).toBeTrue();
     expect(c.availableHints).toEqual(HINTS.en);
 
     // an einem späteren Zug greifen die (nur für den Schlüsselzug erzeugten) LLM-Tipps NICHT mehr
@@ -567,8 +567,8 @@ describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
     (c as any).startPly = -1;
     c.hintLevel = 1;                       // ein Tipp aufgedeckt
 
-    expect(c.hasPrecomputedHints).toBeFalse();
-    expect(c.canFlagHints).toBeTrue();
+    expect(c.hints.hasPrecomputed).toBeFalse();
+    expect(c.hints.canFlag).toBeTrue();
   });
 
   it('nicht flaggbar, solange kein Tipp aufgedeckt wurde', () => {
@@ -580,7 +580,7 @@ describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
     c.puzzle = puzzle;
     c.hintLevel = 0;
 
-    expect(c.canFlagHints).toBeFalse();
+    expect(c.hints.canFlag).toBeFalse();
   });
 
   it('NICHT flaggbar im Wochenpost-Modus (puzzle.id = Index, keine echte BookPuzzle-Id)', () => {
@@ -597,7 +597,7 @@ describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
     c.hintLevel = 1;
 
     expect(c.hasHints).toBeTrue();
-    expect(c.canFlagHints).toBeFalse();
+    expect(c.hints.canFlag).toBeFalse();
   });
 
   it('nicht flaggbar, wenn nicht eingeloggt', () => {
@@ -609,7 +609,7 @@ describe('BookPuzzleComponent canFlagHints (Flag-Button-Sichtbarkeit)', () => {
     c.puzzle = puzzle;
     c.hintLevel = 1;
 
-    expect(c.canFlagHints).toBeFalse();
+    expect(c.hints.canFlag).toBeFalse();
   });
 });
 
@@ -622,11 +622,11 @@ describe('BookPuzzleComponent „dumme Tipps" markieren (Admin)', () => {
     c.puzzleService.flagBookPuzzleHints = spy;
     c.puzzle = { id: 5, fen: FEN, moves: 'e2e4', bookFileName: 'b', hintsFlagged: false };
 
-    c.toggleHintsFlag();
+    c.hints.toggleFlag();
 
     expect(spy).toHaveBeenCalledWith(5, true);
     expect(c.puzzle.hintsFlagged).toBeTrue();
-    expect(c.flagSaving).toBeFalse();
+    expect(c.hints.flagSaving).toBeFalse();
   });
 
   it('toggleHintsFlag hebt eine bestehende Markierung wieder auf', () => {
@@ -637,7 +637,7 @@ describe('BookPuzzleComponent „dumme Tipps" markieren (Admin)', () => {
     c.puzzleService.flagBookPuzzleHints = spy;
     c.puzzle = { id: 5, fen: FEN, moves: 'e2e4', bookFileName: 'b', hintsFlagged: true };
 
-    c.toggleHintsFlag();
+    c.hints.toggleFlag();
 
     expect(spy).toHaveBeenCalledWith(5, false);
     expect(c.puzzle.hintsFlagged).toBeFalse();

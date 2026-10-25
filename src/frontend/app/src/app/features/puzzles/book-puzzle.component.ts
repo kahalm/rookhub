@@ -23,7 +23,6 @@ import { DrawShape } from 'chessground/draw';
 import { parseAltMoves } from './alt-moves.util';
 import { tryLoadFen, fenSideToMove } from './puzzle-move.util';
 import { BookReviewController, ReviewFrame } from './book-review';
-import { FirstMoveHint, buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { CourseService } from '../courses/course.service';
 import { LongSolveService } from './long-solve.service';
@@ -54,6 +53,7 @@ import { BookLanguageController } from './book-language';
 import { BookLastSolved, bookShareData } from './book-last-solved';
 import { BookCommentView, VariationPreview } from './book-comment-view';
 import { BookSettingsController } from './book-settings';
+import { BookHints } from './book-hints';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -117,59 +117,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private initialFen = '';
 
 
-  /** True, wenn dieses Puzzle vorberechnete (sprach-keyed) Tipps mitbringt (echtes Buch-Puzzle). */
-  get hasPrecomputedHints(): boolean { return !!this.puzzle?.hints; }
-
-  /** Tipps sind als „dumm/schlecht" flaggbar, sobald mindestens einer aufgedeckt wurde — egal ob
-   *  vorberechnet oder on-the-fly (wie im Standard-/Endless-Solver). Voraussetzung: das Puzzle hat eine
-   *  echte BookPuzzle-Id (Buch/Kurs/Tagespuzzle), die der Flag-Endpoint adressieren kann. Wochenpost-
-   *  Puzzles werden on-the-fly aus dem PGN geparst (puzzle.id = Index, KEINE echte BookPuzzle-Id) →
-   *  nicht flaggbar. */
-  get canFlagHints(): boolean {
-    // Off-Path zeigt der Tipp-Knopf Navigations-Hinweise, keine (LLM-)Puzzle-Tipps → nicht flaggbar.
-    return this.isLoggedIn && this.onSolutionPath && this.hasHints && this.hintLevel > 0 && !this.inWeekly;
-  }
-
-  /** Tipps in der aktiven UI-Sprache (Fallback en→de). Vorberechnete Tipps haben Vorrang; fehlen sie
-   *  (Wochenpost u. a.), werden on-the-fly gestufte Tipps erzeugt wie im Standard-/Endless-Solver.
-   *  Mechanik (hintLevel/shownHints/showNextHint) in BasePuzzleSolver. */
-  override get availableHints(): string[] {
-    // Vorberechnete LLM-Tipps gelten NUR für den ersten/Schlüssel-Löserzug (dafür erzeugt) — bei den
-    // Folgezügen würden sie den falschen Zug beschreiben. Für JEDEN Zug greifen sonst die on-the-fly
-    // gestuften Tipps zum AKTUELL erwarteten Zug (currentMoveHint), sodass Tipps überall funktionieren.
-    const h = this.puzzle?.hints;
-    if (h && this.atFirstSolverMove) {
-      const lang = this.translate.currentLang() || this.translate.getFallbackLang() || 'en';
-      return h[lang] ?? h['en'] ?? h['de'] ?? [];
-    }
-    return this.hintsForMove(this.currentMoveHint);
-  }
-
-  /** Baut die 3 gestuften Tipp-Strings (Typ → Figur → SAN) aus einer Zug-Klassifikation. */
-  private hintsForMove(f: FirstMoveHint | null): string[] {
-    return buildStagedHints(f, (k, p) => this.translate.instant(k, p) as string);
-  }
-
-  flagSaving = false;
-
-  /** Tipps dieses Puzzles als „dumm/schlecht" markieren bzw. die Markierung aufheben (jeder eingeloggte User). */
-  toggleHintsFlag(): void {
-    if (!this.puzzle || this.flagSaving) return;
-    const next = !this.puzzle.hintsFlagged;
-    this.flagSaving = true;
-    this.puzzleService.flagBookPuzzleHints(this.puzzle.id, next).subscribe({
-      next: () => {
-        if (this.puzzle) this.puzzle.hintsFlagged = next;
-        this.flagSaving = false;
-        this.snackbar.success(this.translate.instant(next ? 'book.hints.flagSaved' : 'book.hints.flagCleared'),
-          { duration: 2000 });
-      },
-      error: () => {
-        this.flagSaving = false;
-        this.snackbar.warn(this.translate.instant('book.hints.flagError'), { duration: 3000 });
-      }
-    });
-  }
+  /** Tipps: vorberechnete bzw. on-the-fly gestufte, „Tipps melden“. */
+  readonly hints: BookHints;
+  override get availableHints(): string[] { return this.hints.available(this.atFirstSolverMove, this.currentMoveHint); }
 
   /** True nach Give Up. Status-Panel zeigt einen Hinweis statt "Your turn!". */
   gaveUp = false;
@@ -260,6 +210,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.solveModes = new BookSolveModeController(this);
     this.lang = new BookLanguageController(this);
     this.comments = new BookCommentView(this);
+    this.hints = new BookHints(this);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'book',
