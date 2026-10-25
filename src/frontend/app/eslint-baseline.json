@@ -3,7 +3,7 @@
   "@angular-eslint/prefer-on-push-component-change-detection": 137,
   "@angular-eslint/prefer-signals": 382,
   "@typescript-eslint/no-empty-function": 79,
-  "@typescript-eslint/no-explicit-any": 23,
+  "@typescript-eslint/no-explicit-any": 21,
   "no-console": 7,
-  "no-empty": 65
+  "no-empty": 57
 }
