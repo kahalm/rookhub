@@ -13,13 +13,14 @@ import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Subscription, interval } from 'rxjs';
-import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines } from './engine-lines.util';
+import { EngineDisplayLine, formatElapsed as formatElapsedUtil, toDisplayLines } from './engine-lines.util';
+import { EngineChoiceList, pickEngineAfterLoad, speedHintText } from './analysis-engine-choice';
 import { engineArrows, engineCandidates, evalBar, legalDests, SearchClock, TerminalState, terminalStateOf } from './analysis-readout';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { AnalysisEngineCardComponent, EngineChoice, arrowBrush } from './analysis-engine-card.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
-import { ExternalEngineService, ExternalEngineInfo, ExternalEnginesResponse, engineTagKey } from './external-engine.service';
+import { ExternalEngineService, ExternalEngineInfo, ExternalEnginesResponse } from './external-engine.service';
 import { mediaSignal } from '../../shared/layout/wide-media';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -234,31 +235,21 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.enginesSub = this.externalEngines.listEngines().subscribe({ next: r => this.onEnginesLoaded(r), error: () => {} });
   }
 
-  /** Liste da: Picker füllen und die passende Engine wählen — die eines Auftrags, sonst die zuletzt gewählte (die
-   *  evtl. schon laufende WASM-Analyse der Startstellung wechselt dann auf die Remote-Suche). */
+  /** Liste da: Picker füllen und die passende Engine wählen ({@link pickEngineAfterLoad}) — die eines Auftrags, sonst
+   *  die zuletzt gewählte (die evtl. schon laufende WASM-Analyse der Startstellung wechselt dann auf die Remote-Suche). */
   private onEnginesLoaded(r: ExternalEnginesResponse): void {
-    // Die Hintergrund-Engine gehört den Aufträgen — im Live-Picker (und im Vergleich) taucht sie
-    // nicht auf, sonst konkurrierten zwei Suchen um dieselben Kerne.
-    this.backgroundEngineIds = r.backgroundEngineIds ?? [];
-    this.hasExternalEngines = r.engines.length > 0;
-    this.externalEnginesList = r.engines.filter(e => !this.backgroundEngineIds.includes(e.id));
-    // Kam der Aufruf von einem Auftrag („im Analysebrett öffnen"), gilt DESSEN Engine — auch wenn es
-    // die Hintergrund-Engine ist, die hier sonst ausgeblendet wird. Der Provider hat die Stellung noch
-    // im Hash, die Suche ist damit sofort wieder auf der erreichten Tiefe statt bei null.
-    const wanted = this.requestedEngineId;
-    if (wanted && r.engines.some(e => e.id === wanted)) {
-      if (!this.externalEnginesList.some(e => e.id === wanted))
-        this.externalEnginesList = [...this.externalEnginesList, r.engines.find(e => e.id === wanted)!];
-      this.selectedEngineId = wanted;
+    const pick = pickEngineAfterLoad(r, this.requestedEngineId, this.settings.loadProvider());
+    this.backgroundEngineIds = pick.backgroundEngineIds;
+    this.hasExternalEngines = pick.hasExternalEngines;
+    this.externalEnginesList = pick.list;
+    if (pick.selected) {
+      this.selectedEngineId = pick.selected;
       this.applyEngineSelection();
+    }
+    if (pick.fromRequest) {
       this.requestedEngineId = null;   // nur für diesen Aufruf, nicht als Dauerwahl merken
       this.cdr.markForCheck();
       return;
-    }
-    const stored = this.settings.loadProvider();
-    if (stored && stored !== 'wasm' && this.externalEnginesList.some(e => e.id === stored)) {
-      this.selectedEngineId = stored;
-      this.applyEngineSelection();
     }
     // NICHT unbedingt: applyEngineSelection() oben startet den Vergleich bereits selbst,
     // wenn Haupt- und Vergleichswahl kollidieren. Ohne diese Bedingung wuerde die eben
@@ -497,22 +488,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.spar.serveMoveCheck(fen);
   }
 
-  /** Gemeinsame Tempo-Formatierung. `nodes === null` = Kurzform (Vergleichs-Engine). */
-  private speedHintFor(nps: number, nodes: number | null): string {
-    if (nps <= 0) return this.translate.instant('analysis.speedWaiting');
-    const speed = formatKiloNps(nps, this.locale);
-    return nodes === null
-      ? this.translate.instant('analysis.speedShort', { speed })
-      : this.translate.instant('analysis.speedHint', { speed, nodes: formatKiloNodes(nodes, this.locale) });
-  }
-
-  /** Text hinter dem (i): Rechengeschwindigkeit der laufenden Analyse.
-   *  ACHTUNG: template-gebundener Getter — er läuft MITTEN in der Change-Detection und darf
-   *  deshalb unter keinen Umständen werfen (ein Wurf hier ließe die halbe Karte unrendert,
-   *  siehe CLAUDE.md-Konvention). Daher `toLocaleString` (Browser-Intl, fällt bei unbekannter
-   *  Sprache selbst zurück) statt Angulars formatNumber, das bei nicht registrierten
-   *  Locale-Daten NG0701 wirft — und zusätzlich ein try/catch. */
-  get speedHint(): string { return this.speedHintFor(this.nps, this.nodes); }
+  /** Text hinter dem (i): Rechengeschwindigkeit der laufenden Analyse (template-gebunden, wirft nie). */
+  get speedHint(): string { return speedHintText(this.t, this.locale, this.nps, this.nodes); }
+  private readonly t = (k: string, p?: object) => this.translate.instant(k, p) as string;
 
   /** Lebenszeichen der Remote-Suche — erst ab 5 s ohne neue Zeile, damit es im Normalbetrieb nicht flackert. */
   get showThinking(): boolean {
@@ -575,25 +553,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     engine?.analyze(fen).catch(() => {});
   }
 
-  /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder.
-   *  ACHTUNG: template-gebundener Getter in einer Default-Change-Detection-Component, die unter
-   *  einer externen Engine viele Male pro Sekunde markiert wird. Unmemoisiert baute er bei JEDEM
-   *  Durchlauf ein frisches Array frischer Objekte und schlug `analysis.engineBrowser` neu nach —
-   *  und das mehrfach je Durchlauf, weil beide Namens-Getter ihn ebenfalls aufrufen. Der Cache
-   *  haelt bewusst die Sprache mit fest, sonst bliebe die Beschriftung nach einem Sprachwechsel
-   *  auf der alten stehen. */
-  private choicesCache?: { lang: string | null; list: ExternalEngineInfo[]; value: EngineChoice[] };
+  /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder, memoisiert. */
+  private readonly choiceList = new EngineChoiceList();
   get engineChoices(): EngineChoice[] {
-    const lang = this.translate.currentLang();   // ngx-translate 18: Signal, kein String
-    const c = this.choicesCache;
-    if (c && c.lang === lang && c.list === this.externalEnginesList) return c.value;
-    const value = [
-      { id: 'wasm', name: this.translate.instant('analysis.engineBrowser'), tag: null },
-      // `tag`: „· über Lichess" / „· offline" hinter dem Namen — die Auswahl mischt beide Quellen.
-      ...this.externalEnginesList.map(e => ({ id: e.id, name: e.name, tag: engineTagKey(e) })),
-    ];
-    this.choicesCache = { lang, list: this.externalEnginesList, value };
-    return value;
+    // ngx-translate 18: currentLang ist ein Signal, kein String
+    return this.choiceList.get(this.translate.currentLang(), this.externalEnginesList,
+      () => this.translate.instant('analysis.engineBrowser'));
   }
 
   /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
@@ -606,7 +571,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   /** Tempo der Vergleichs-Engine für deren (i) — gleiche Formatierung wie bei der Haupt-Engine. */
-  get compareSpeedHint(): string { return this.speedHintFor(this.compare.nps, null); }
+  get compareSpeedHint(): string { return speedHintText(this.t, this.locale, this.compare.nps, null); }
 
   onEngineSelect(): void {
     this.settings.saveProvider(this.selectedEngineId);
