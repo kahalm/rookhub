@@ -8,5 +8,6 @@ Höhengrenze (40 vh mit eigenem Scrollbalken) ist weg (Wunsch 2026-10-07: „tro
 muss"). Ab `LONG_COMMENT_CHARS` (300 Zeichen aller Absätze, `commentLength`) öffnet ein Klick auf den Text (nicht auf einen
 Zug-Chip, nicht bei markiertem Text) oder auf „Im Fenster lesen" zusätzlich `CommentDialogComponent`
 (`features/puzzles/comment-dialog.component.ts`): Titel + Kapitel/Kurs, größere Schrift, Zeilenlänge 68ch, dieselben
-Zug-Chips — ein Zug schließt das Fenster und geht an `previewVariationMove`. Gilt für alle Modi des Buch-Lösers (Kurs, Buch,
+Zug-Chips — ein Zug schließt das Fenster und geht an `BookCommentView.previewMove` (`book-comment-view.ts`; der Kasten
+selbst ist `BookCommentBlockComponent`, seit Zerlegung Z18). Gilt für alle Modi des Buch-Lösers (Kurs, Buch,
 Tagespuzzle, Wochenpost).

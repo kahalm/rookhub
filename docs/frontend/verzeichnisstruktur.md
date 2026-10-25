@@ -26,6 +26,8 @@ app/src/app/
     tournaments/
       tournament-list.component.ts          Turnierliste vom Crawler, Subscribe-Button
       tournament-detail.component.ts        Tabs: Players (Table), Teams (Table), Pairings (Table + Round-Select)
+    puzzles/
+      book-puzzle.component.ts              Buch-Löser (Kurs/Wochenpost/Tagespuzzle/Buch): Container, siehe unten
   shared/
     navbar/
       navbar.component.ts   Material Toolbar, Navigation, User-Menu mit Logout
@@ -39,6 +41,13 @@ app/src/app/
                               erwartete Zug?" — EINE Regel fuer alle Loeser
 ```
 
+- **Buch-Löser `features/puzzles/book-puzzle.component`** (Zerlegung Z18, Codereview 2026-09-29): Container
+  (erbt `BasePuzzleSolver`, ist Wirt `BookModeHost`) + **Modus-Strategien** als reine TS-Klassen — `book-course-mode`
+  (inkl. anonymer/öffentlicher und Offline-Kurs), `book-weekly-mode`, `book-daily-mode`, `book-standalone-mode`
+  (Buch-Puzzle, Blättern, Versuch/Challenge/„Track solves“) — + Controller `book-review` (Durchsicht),
+  `book-solve-mode` (Spielweise), `book-language` (Kommentar-Sprache), `book-last-solved` (letztes Puzzle/Teilen),
+  `book-comment-view`, `book-hints`, `book-settings` + OnPush-Kinder `book-context-card` (mit `course-stats-panel`),
+  `book-comment-block`, `book-board-hint`. DOM-Specs rendern die Kinder flach über `testing/book-puzzle-shallow.ts`.
 - **`shared/lines/`** (seit 0.499.2): was sich die beiden LINIEN-LISTEN teilen — die Kurs-Durchsicht
   (`features/courses/course-browse.component.ts`) und die Repertoire-Linienliste
   (`features/repertoire/repertoire-lines.component.ts`). `groupByChapter(items, keyOf)` gruppiert in
