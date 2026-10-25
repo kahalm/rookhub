@@ -27,6 +27,15 @@ function promotionOf(san: string | undefined): string {
   return i >= 0 && san!.length > i + 1 ? san![i + 1].toLowerCase() : '';
 }
 
+/** Was ein Rateversuch bis zur Antwort festhaelt (Stellung davor, geratener Halbzug). */
+interface PendingGuess {
+  id: number;
+  uci: string | null;
+  fenBefore: string;
+  lastBefore: [string, string] | undefined;
+  plyGuessed: number;
+}
+
 /**
  * Punktepartie (`/guess/:id`): Zug für Zug raten, sofort eine Rückmeldung samt Punkten, dann rückt
  * die Partie zwei Halbzüge weiter (eigener Zug + Antwort des Gegners).
@@ -714,6 +723,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     this.send(null);
   }
 
+  /** Ein Rateversuch (`null` = Passen): Brett vorab umlegen, senden, Antwort einordnen. */
   private send(uci: string | null): void {
     const id = this.session?.id;
     if (!id) return;
@@ -721,81 +731,108 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
     this.stepNote = null;              // der Kommentar des VORIGEN Zuges ist erledigt
     this.rejected = null;
     const seconds = Math.min(3600, Math.max(0, Math.round((Date.now() - this.since) / 1000)));
-    const fenBefore = this.boardFen;
-    const lastBefore = this.lastMove;
-    // Der Halbzug, um den es geht — NACH der Antwort zeigt `session` schon die naechste Aufgabe.
-    const plyGuessed = this.session?.position?.ply ?? -1;
-
-    // Den eigenen Zug SOFORT uebernehmen, nicht erst mit der Antwort. Sonst passiert Folgendes:
-    // `busy` sperrt das Brett, das loest ein `ngOnChanges` mit der ALTEN Stellung aus, und
-    // Chessground animiert die gerade gezogene Figur zurueck — 25 ms spaeter kommt die Antwort und
-    // schiebt sie wieder hin. Genau das sichtbare Zucken beim Ziehen.
-    if (uci) {
-      const optimistic = fenAfterUci(fenBefore, uci);
-      if (optimistic) {
-        this.boardFen = optimistic;
-        this.lastMove = [uci.slice(0, 2), uci.slice(2, 4)];
-      }
-    }
+    const guess: PendingGuess = {
+      id, uci, fenBefore: this.boardFen, lastBefore: this.lastMove,
+      // Der Halbzug, um den es geht — NACH der Antwort zeigt `session` schon die naechste Aufgabe.
+      plyGuessed: this.session?.position?.ply ?? -1,
+    };
+    this.showOptimistic(uci);
 
     this.service.guess(id, uci, seconds, this.accept, this.language).subscribe({
-      next: res => {
-        this.busy = false;
-        if (res.accepted === false) {
-          // Guter Zug, aber gesucht ist der Partiezug: Brett zurueck auf die Aufgabe, nichts
-          // gewertet, nichts weitergerueckt — nur die Auskunft, dass es ein anderer war.
-          this.boardFen = fenBefore;
-          this.lastMove = lastBefore;
-          this.rejected = res.playedSan ?? null;
-          this.session = res.session;
-          this.cdr.markForCheck();
-          return;
-        }
-        this.rejected = null;
-        this.last = res;
-        const mine = uci ? fenAfterUci(fenBefore, uci) : null;
-        if (res.session.status !== 'running') {
-          // Sitzung durch: es gibt keine naechste Aufgabe, `apply` wuerde das Brett also gar nicht
-          // anfassen — die geschlagene Figur spraenge zurueck und das Brett zeigte die Stellung VOR
-          // dem Schlusszug. Deshalb hier den letzten Zug selbst aufs Brett legen (beim Passen den
-          // Partiezug, denn der ist ja gespielt worden).
-          const shown = mine ?? fenAfterUci(fenBefore, res.gameMoveUci);
-          const shownUci = uci ?? res.gameMoveUci;
-          this.session = res.session;
-          this.playback.dropHold();
-          this.browseIndex = null;
-          if (shown) {
-            this.boardFen = shown;
-            this.lastMove = [shownUci.slice(0, 2), shownUci.slice(2, 4)];
-          }
-          this.loadReview(id);
-        } else if (mine && uci !== res.gameMoveUci && res.session.position) {
-          // Ein anderer Zug als der Partiezug bleibt stehen, damit man sieht, was man gespielt hat —
-          // die naechste Aufgabe wartet hinter „Weiter".
-          this.session = res.session;              // Punkte/Fortschritt sofort mitnehmen
-          // Fuer „Weiter": ab dem PARTIEZUG (das ist die Korrektur, die man sehen will) Schritt
-          // fuer Schritt bis zur naechsten Aufgabe.
-          this.playback.hold(res.session, plyGuessed);
-          this.browseIndex = null;   // der eigene Zug soll zu sehen sein, nicht die Eroeffnung
-          this.boardFen = mine;
-          this.lastMove = [uci!.slice(0, 2), uci!.slice(2, 4)];
-        } else {
-          // Partiezug getroffen oder gepasst: die dazugekommenen Halbzuege einzeln abspielen.
-          this.playback.start(res.session, plyGuessed);
-        }
-        this.cdr.markForCheck();
-      },
-      error: err => {
-        this.busy = false;
-        // Der Zug wurde nicht gewertet — also auch nicht stehen lassen, sonst stuende das Brett
-        // auf einer Stellung, die es fuer den Server nie gab.
-        this.boardFen = fenBefore;
-        this.lastMove = lastBefore;
-        // Der Nutzer hat gerade gezogen — ein stiller Fehlschlag wäre hier das Schlimmste.
-        this.snackbar.warn(err?.error?.message || this.translate.instant('guess.moveFailed'));
-        this.cdr.markForCheck();
-      },
+      next: res => this.onGuessResult(res, guess),
+      error: err => this.onGuessFailed(err, guess),
     });
+  }
+
+  /**
+   * Den eigenen Zug SOFORT uebernehmen, nicht erst mit der Antwort. Sonst passiert Folgendes:
+   * `busy` sperrt das Brett, das loest ein `ngOnChanges` mit der ALTEN Stellung aus, und
+   * Chessground animiert die gerade gezogene Figur zurueck — 25 ms spaeter kommt die Antwort und
+   * schiebt sie wieder hin. Genau das sichtbare Zucken beim Ziehen.
+   */
+  private showOptimistic(uci: string | null): void {
+    if (!uci) return;
+    const optimistic = fenAfterUci(this.boardFen, uci);
+    if (optimistic) {
+      this.boardFen = optimistic;
+      this.lastMove = [uci.slice(0, 2), uci.slice(2, 4)];
+    }
+  }
+
+  private onGuessResult(res: GuessResult, g: PendingGuess): void {
+    this.busy = false;
+    if (res.accepted === false) {
+      this.rejectGuess(res, g);
+      this.cdr.markForCheck();
+      return;
+    }
+    this.rejected = null;
+    this.last = res;
+    const mine = g.uci ? fenAfterUci(g.fenBefore, g.uci) : null;
+    if (res.session.status !== 'running') {
+      this.finishSession(res, g, mine);
+    } else if (mine && g.uci !== res.gameMoveUci && res.session.position) {
+      this.holdOwnMove(res, g, mine);
+    } else {
+      // Partiezug getroffen oder gepasst: die dazugekommenen Halbzuege einzeln abspielen.
+      this.playback.start(res.session, g.plyGuessed);
+    }
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Guter Zug, aber gesucht ist der Partiezug: Brett zurueck auf die Aufgabe, nichts
+   * gewertet, nichts weitergerueckt — nur die Auskunft, dass es ein anderer war.
+   */
+  private rejectGuess(res: GuessResult, g: PendingGuess): void {
+    this.boardFen = g.fenBefore;
+    this.lastMove = g.lastBefore;
+    this.rejected = res.playedSan ?? null;
+    this.session = res.session;
+  }
+
+  /**
+   * Sitzung durch: es gibt keine naechste Aufgabe, `apply` wuerde das Brett also gar nicht
+   * anfassen — die geschlagene Figur spraenge zurueck und das Brett zeigte die Stellung VOR
+   * dem Schlusszug. Deshalb hier den letzten Zug selbst aufs Brett legen (beim Passen den
+   * Partiezug, denn der ist ja gespielt worden).
+   */
+  private finishSession(res: GuessResult, g: PendingGuess, mine: string | null): void {
+    const shown = mine ?? fenAfterUci(g.fenBefore, res.gameMoveUci);
+    const shownUci = g.uci ?? res.gameMoveUci;
+    this.session = res.session;
+    this.playback.dropHold();
+    this.browseIndex = null;
+    if (shown) {
+      this.boardFen = shown;
+      this.lastMove = [shownUci.slice(0, 2), shownUci.slice(2, 4)];
+    }
+    this.loadReview(g.id);
+  }
+
+  /**
+   * Ein anderer Zug als der Partiezug bleibt stehen, damit man sieht, was man gespielt hat —
+   * die naechste Aufgabe wartet hinter „Weiter".
+   */
+  private holdOwnMove(res: GuessResult, g: PendingGuess, mine: string): void {
+    this.session = res.session;              // Punkte/Fortschritt sofort mitnehmen
+    // Fuer „Weiter": ab dem PARTIEZUG (das ist die Korrektur, die man sehen will) Schritt
+    // fuer Schritt bis zur naechsten Aufgabe.
+    this.playback.hold(res.session, g.plyGuessed);
+    this.browseIndex = null;   // der eigene Zug soll zu sehen sein, nicht die Eroeffnung
+    this.boardFen = mine;
+    this.lastMove = [g.uci!.slice(0, 2), g.uci!.slice(2, 4)];
+  }
+
+  private onGuessFailed(err: { error?: { message?: string } } | null, g: PendingGuess): void {
+    this.busy = false;
+    // Der Zug wurde nicht gewertet — also auch nicht stehen lassen, sonst stuende das Brett
+    // auf einer Stellung, die es fuer den Server nie gab.
+    this.boardFen = g.fenBefore;
+    this.lastMove = g.lastBefore;
+    // Der Nutzer hat gerade gezogen — ein stiller Fehlschlag wäre hier das Schlimmste.
+    this.snackbar.warn(err?.error?.message || this.translate.instant('guess.moveFailed'));
+    this.cdr.markForCheck();
   }
 
   /** „Weiter" — zwei Haltegruende, zwei Bedeutungen (siehe `GuessPlayback.continue`). */
