@@ -139,6 +139,35 @@ public class CourseDetailCharacterizationTests : IDisposable
         Assert.Equal(ExpectedCalc, Describe(detail));
     }
 
+    /// <summary>Kapitelnamen mit Leerzeichen außen: Detailseite und Solver (Kapitelliste, Kapitel-Modus,
+    /// Kapitel-Statistik) müssen dasselbe Kapitel sehen — sonst zeigt der <c>SolverIndex</c> der Detailseite aufs
+    /// falsche Kapitel („Kapitel starten").</summary>
+    [Fact]
+    public async Task ChapterWithSurroundingSpaces_DetailAndSolverSeeTheSameChapters()
+    {
+        var me = User("ich");
+        await _db.SaveChangesAsync();
+        var book = Book("Spaces", me);
+        Line(book, "1", "Kapitel A");
+        Line(book, "2", " Kapitel A ");
+        Line(book, "3", "Kapitel B");
+        await _db.SaveChangesAsync();
+        var courses = TestServices.Course(_db);
+
+        var detail = await _authoring.GetDetailAsync(me.Id, book.Id, isAdmin: false);
+        var solver = await courses.GetChaptersAsync(me.Id, book.Id, isAdmin: false);
+        var next = await courses.GetNextAsync(me.Id, book.Id, "sequential", null, null, isAdmin: false, chapterIndex: 0);
+
+        var shown = string.Join(" | ", detail.Chapters.Select(c => $"{c.Name}:{c.QuizCount}@{c.SolverIndex}"));
+        var solverShown = string.Join(" | ", solver.Select(c => $"[{c.Name}]:{c.PuzzleCount}@{c.Index}"));
+        var nextShown = $"{next.ChapterName}:{next.Total}/{next.Book?.Total}/{next.Chapter?.Total}";
+        // HEUTE (vor dem Fix): die Detailseite trimmt, der Solver nicht → zwei Solver-Kapitel „Kapitel A" und der
+        // SolverIndex von Kapitel B (2) zeigt im Solver auf das dritte Kapitel; der Kapitel-Modus zählt nur 1 Linie.
+        Assert.Equal("Kapitel A:2@0 | Kapitel B:1@2", shown);
+        Assert.Equal("[Kapitel A]:1@0 | [ Kapitel A ]:1@1 | [Kapitel B]:1@2", solverShown);
+        Assert.Equal("Kapitel A:1/3/1", nextShown);
+    }
+
     private const string ExpectedNormal = """
         BookId=Normal CalcMaxPoints=null CalcPoints=null CanManage=True CreatedAt=2026-10-01T12:00:00.0000000Z Description=Beschreibung Normal Difficulty=schwer DisplayName=Normal FileName=Normal.pgn InfoLineCount=3 IsCalculation=False IsOwned=True IsPinned=True IsPublic=False IsShared=False Kind=Study LastActivityAt=2026-10-03T12:00:00.0000000Z LastMode=sequential LinkedBookId=Workbook LinkedDisplayName=Workbook MaxElo=2000 MinElo=1400 ProgressPercent=50 PublicSlug=null PuzzleCount=4 Rating=1800 SharedByUsername=null SkipInfoLines=True SolvedCount=2 Tags=personal Themes=[endgame] TotalLines=7 UpdatedAt=2026-10-01T13:00:00.0000000Z
           FirstLineId=r1 Label=null LineCount=3 Name=Kapitel A ProgressPercent=50 QuizCount=2 SolvedCount=1 SolverIndex=0
