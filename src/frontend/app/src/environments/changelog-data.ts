@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.838.4", date: "2026-10-25", changes: [
+    { en: "Endless mode: a failed attempt before the puzzle's first move was played (e.g. resetting or giving up right away) no longer copies the previous puzzle's start and solve time into the run history.", de: "Endlos-Modus: Ein Fehlversuch, bevor der erste Zug des Puzzles gespielt war (z. B. sofort Zurücksetzen oder Aufgeben), übernimmt nicht mehr Startzeit und Lösezeit des vorigen Puzzles in den Verlauf." },
+    { en: "Technical refactoring (code review PD-007): the Endless run state (chain, lives, resume, result flow, timers, view settings) moved from the 1,452-line component into an EndlessRunStore with a transition-table spec; the component is down to 697 lines — behaviour otherwise unchanged.", de: "Technischer Umbau (Codereview PD-007): Der Lauf-Zustand des Endlos-Modus (Kette, Leben, Fortsetzen, Ergebnis-Fluss, Timer, Ansichts-Einstellungen) ist aus der 1 452-Zeilen-Komponente in einen EndlessRunStore mit Übergangs-Tabellen-Spec gewandert; die Komponente hat noch 697 Zeilen — Verhalten sonst unverändert." },
+  ]},
   { version: "0.838.3", date: "2026-10-25", changes: [
     { en: "LeagueHub: shared match links now offer „Analysis“ next to „Replay“ for the games of the shared match — RookHub’s game page with evaluation curve, mistakes and move classes, without logging in (s/{token}/club-games/{id}). Editing and correcting stay reserved for logged-in members.", de: "LeagueHub: Geteilte Begegnungs-Links bieten bei den Partien der geteilten Begegnung neben „Nachspielen“ jetzt auch „Analyse“ — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen, ohne Anmeldung (s/{token}/club-games/{id}). Bearbeiten und Korrigieren bleiben Angemeldeten vorbehalten." },
   ]},
