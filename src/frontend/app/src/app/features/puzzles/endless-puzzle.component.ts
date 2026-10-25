@@ -350,14 +350,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
       : undefined;
     this.dialog.open(SharePuzzleDialogComponent, {
       data: {
-        url, previousUrl,
-        puzzleId: this.puzzle.id,
-        previousPuzzleId: this.previousPuzzleId ?? undefined,
-        source: 'standard',
-        canChallenge: this.isLoggedIn,
+        url, previousUrl, puzzleId: this.puzzle.id, previousPuzzleId: this.previousPuzzleId ?? undefined,
+        source: 'standard', canChallenge: this.isLoggedIn,
       },
-      width: '400px',
-      maxWidth: '95vw',
+      width: '400px', maxWidth: '95vw',
     });
   }
 
@@ -395,9 +391,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
 
   backToHistory(): void { this.router.navigate(['/puzzles/endless/history']); }
 
-  openPuzzle(id: number): void {
-    this.router.navigate(['/puzzles', id]);
-  }
+  openPuzzle(id: number): void { this.router.navigate(['/puzzles', id]); }
 
   /** Lädt einen abgeschlossenen Lauf aus der History und zeigt ihn im Game-Over-Layout an
    * (gleiche Detail-Ansicht wie direkt nach Spielende). */
@@ -431,7 +425,6 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
 
   // --- Puzzle setup ---
 
-  /** On-the-fly klassifizierter erster Löserzug (Schach/Schlag/ruhig) — Basis der gestuften Tipps (wie Standard-Modus). */
   /**
    * On-the-fly-Tipps für die Standard-Puzzles des Endless-Modus (identisch zum Standard-Solver) — zum
    * AKTUELL erwarteten Zug (jeder Zug, nicht nur der erste): Stufe 1 = Check-Capture-Threat-Hinweis je
@@ -502,7 +495,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   continueAfterSolve(): void {
     this.reviewMode = false;
     this.stopCountdown();
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);  // pending Auto-Advance verwerfen
+    this.cancelAutoAdvance();
     // 0 Herzen = Lauf vorbei. Das tödliche Puzzle darf per Retry nochmal gespielt werden,
     // aber ein gelöstes Retry belebt den Run NICHT wieder (kein Weiterspielen mit 0 Herzen).
     if (this.run.lives() <= 0) {
@@ -515,7 +508,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   continueAfterWrong(): void {
     this.reviewMode = false;
     this.reviewingWrongPuzzle = false;
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.cancelAutoAdvance();
     if (this.run.lives() <= 0) {
       this.run.finish('GAME_OVER');
     } else {
@@ -570,7 +563,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     });
   }
 
-  /** Geplanten Auto-Advance verwerfen (Analyse, Aufgabenblatt, Durchsicht). */
+  /** Geplanten Auto-Advance verwerfen (Weiter, Zurücksetzen, Analyse, Aufgabenblatt, Durchsicht). */
   private cancelAutoAdvance(): void {
     if (this.autoAdvanceTimer) { clearTimeout(this.autoAdvanceTimer); this.autoAdvanceTimer = undefined; }
   }
@@ -620,7 +613,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   resetPuzzle(): void {
     if (!this.puzzle) return;
     this.aborted = true;
-    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.cancelAutoAdvance();
     this.currentEval = '';
     this.initialEval = '';
     this.showEval = false;
@@ -666,13 +659,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     this.setupPuzzle(this.puzzle);
   }
 
-  onThresholdChange(): void {
-    this.fasttrack.applyOverrides(this.config);
-  }
+  onThresholdChange(): void { this.fasttrack.applyOverrides(this.config); }
 
-  resetThreshold(which: number): void {
-    this.fasttrack.reset(which === 1 ? 1 : 2, this.config);
-  }
+  resetThreshold(which: number): void { this.fasttrack.reset(which === 1 ? 1 : 2, this.config); }
 
   /** `seconds` = zu wertende Lösezeit; default = gemessene Zeit (Fehlversuche), beim Lösen ggf. wegen
    *  überlanger Zeit gekappt (siehe {@link LongSolveService}). */
