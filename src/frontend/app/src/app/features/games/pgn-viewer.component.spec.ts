@@ -6,7 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
-import { GameReviewComponent } from '../../features/games/game-review.component';
+import { GameReviewComponent } from './game-review.component';
 import { PgnViewerComponent } from './pgn-viewer.component';
 
 /** Die Auswertung fragt zweimal: schnell ohne Buchzüge (`?book=0`), danach einmal voll (0.664.0) — beide bekommen dieselbe Antwort. */

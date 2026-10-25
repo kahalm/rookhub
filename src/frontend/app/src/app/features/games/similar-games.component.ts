@@ -224,7 +224,7 @@ export class SimilarGamesComponent {
     this.library.view(s.game.id, this.translate.currentLang() || undefined).subscribe({
       next: async v => {
         try {
-          const { PgnViewerComponent } = await import('../../shared/pgn-viewer/pgn-viewer.component');
+          const { PgnViewerComponent } = await import('./pgn-viewer.component');
           this.dialog.open(PgnViewerComponent, { data: { pgn: v.pgn }, maxWidth: '96vw', panelClass: 'pgn-viewer-dialog' });
         } finally {
           this.busy.set(null);

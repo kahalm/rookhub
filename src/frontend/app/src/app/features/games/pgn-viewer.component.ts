@@ -7,17 +7,17 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ChessBoardComponent } from './chess-board.component';
-import { MoveListComponent } from './move-list.component';
-import { PgnViewerService } from './pgn-viewer.service';
+import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
+import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
+import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { PositionRepertoiresComponent } from '../../features/repertoire/position-repertoires.component';
-import { GameReviewComponent } from '../../features/games/game-review.component';
-import { BoardBadge } from '../../features/games/move-badge.util';
-import { GameEvalsStatus } from '../../features/games/game-review.util';
-import { AnalyzeGameService } from '../../features/games/analyze-game.service';
-import { GuessUploadStatus } from '../../features/analysis/game-analysis.service';
-import { isBoardHotkey } from '../keyboard.util';
+import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
+import { GameReviewComponent } from './game-review.component';
+import { BoardBadge } from './move-badge.util';
+import { GameEvalsStatus } from './game-review.util';
+import { AnalyzeGameService } from './analyze-game.service';
+import { GuessUploadStatus } from '../analysis/game-analysis.service';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 export interface PgnViewerData {
   pgn: string;

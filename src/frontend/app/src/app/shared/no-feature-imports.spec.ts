@@ -14,24 +14,14 @@ type Served = { __karma__?: { files?: Record<string, unknown> } };
 
 /**
  * Datei unter `src/app/shared/` → die Feature-Module (Pfad ab `src/app/`, ohne Endung), die sie heute noch importiert.
- * Alle verbliebenen liegen in `features/games`, `features/analysis` und `features/puzzles`, die in der laufenden
- * Zerlegungs-Welle (2026-10-25) parallel von anderen Sitzungen umgebaut werden; ihr Umzug folgt danach:
- * - `pgn-viewer` ist im Kern der Partie-Betrachter von `features/games` (Rückblick, Bewertung, Analyse-Start) und
- *   gehört dorthin bzw. bekommt seine Typen aus einer gemeinsamen Datei;
- * - `game-replay` (Spielerkarte) bettet den Partie-Rückblick ein;
- * - `san.pipe`, `card-lang` und `line-solver` brauchen reine Zug-Helfer aus `features/puzzles`
- *   (`keyboard-move.util`, `puzzle-move.util`), die nach `shared/chess/` gehören.
+ * Seit dem F8-013-Nachlauf (2026-10-25) liegt der Partie-Betrachter `PgnViewerComponent` in `features/games/` (nur
+ * Features benutzen ihn), die Zug-Helfer `keyboard-move.util`/`puzzle-move.util` in `shared/chess/`. Übrig ist eine
+ * begründete Ausnahme: `game-replay` (Spielerkarte, auch in LeagueHub) bettet den Partie-Rückblick
+ * `GameReviewComponent` ein — ihn nach `shared/` zu ziehen hieße, seine Abhängigkeiten in `features/games` und
+ * `features/analysis` (Dienste, Lc0-/Tiefe-Analyse) mitzunehmen, also mehr als ein Umzug. `BoardBadge` hängt an
+ * `MOVE_CLASS_COLORS` in `game-review.util` und folgt mit.
  */
 const KNOWN_EXCEPTIONS: Readonly<Record<string, readonly string[]>> = {
-  'shared/pgn-viewer/pgn-viewer.component.ts': [
-    'features/repertoire/position-repertoires.component',
-    'features/games/game-review.component',
-    'features/games/move-badge.util',
-    'features/games/game-review.util',
-    'features/games/analyze-game.service',
-    'features/analysis/game-analysis.service',
-  ],
-  'shared/pgn-viewer/pgn-viewer.component.spec.ts': ['features/games/game-review.component'],
   'shared/player-card/game-replay.component.ts': ['features/games/game-review.component', 'features/games/move-badge.util'],
 };
 
