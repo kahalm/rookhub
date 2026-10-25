@@ -33,7 +33,7 @@ import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, parseShareViewParams } from './board-theme.util';
 import { Key } from 'chessground/types';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
@@ -448,11 +448,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   ngOnDestroy(): void {
     this.destroyed = true;
     this.stopTimer();
-    this.stopCountdown();
-    this.clearSolutionPlay();
-    this.abortSolver();
-    clearCrazyStyles();
-    clearVisualizationHide();
+    this.releaseSolver();   // bricht auch Countdown und Lösungs-Wiedergabe ab
   }
 
   loadNext(): void {

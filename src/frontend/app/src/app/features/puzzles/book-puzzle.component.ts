@@ -18,7 +18,7 @@ import { ChallengeService } from '../../core/challenge.service';
 import { PuzzleService, BookPuzzleDto } from './puzzle.service';
 import { StockfishService } from './stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
+import { parseShareViewParams } from './board-theme.util';
 import { DrawShape } from 'chessground/draw';
 import { parseAltMoves } from './alt-moves.util';
 import { tryLoadFen, fenSideToMove } from './puzzle-move.util';
@@ -286,7 +286,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   }
 
   /** Zwischenstand der Lösezeit im Sekunden-Tick persistieren (für den Wiederbesuch/Refresh). */
-  protected override onTimerTick(): void {
+  protected override onTimerTick(): void { this.persistElapsed(); }
+
+  /** Lösezeit des Tagespuzzles bzw. der Kurs-Aufgabe für den Wiederbesuch festhalten. */
+  private persistElapsed(): void {
     if (this.isDaily && this.daily.date) { saveDailyElapsed(this.daily.date, this.elapsedSeconds); return; }
     const courseKey = this.course.elapsedKey;
     if (courseKey) saveSolveElapsed(courseKey, this.elapsedSeconds);
@@ -480,15 +483,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Tagespuzzle/Kurs mitten im Lauf verlassen → finalen Stand für den Wiederbesuch festhalten.
     // NUR bei offenem Lauf (isSolving): nach SOLVED/FAILED ist der Versuch erfasst und der Eintrag
     // gelöscht — ein Speichern hier würde ihn wieder aufleben lassen.
-    if (this.isSolving) {
-      const courseKey = this.course.elapsedKey;
-      if (this.isDaily && this.daily.date) saveDailyElapsed(this.daily.date, this.elapsedSeconds);
-      else if (courseKey) saveSolveElapsed(courseKey, this.elapsedSeconds);
-    }
-    this.clearSolutionPlay();
-    this.abortSolver();
-    clearCrazyStyles();
-    clearVisualizationHide();
+    if (this.isSolving) this.persistElapsed();
+    this.releaseSolver();   // bricht auch die Lösungs-Wiedergabe ab
   }
 
   /** Brett-Vorschau einer angeklickten Kommentar-Variante (überlagert boardFen/lastMove); null = aus. */

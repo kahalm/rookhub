@@ -2,7 +2,7 @@ import { Chess, Square } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
-import { applyVisualizationHide, clearVisualizationHide, ThemeMode } from './board-theme.util';
+import { applyVisualizationHide, clearCrazyStyles, clearVisualizationHide, ThemeMode } from './board-theme.util';
 import { VisibilityStopwatch } from './visibility-stopwatch';
 import { lineStepAt } from './line-step.util';
 import { formatPuzzleTime } from './puzzle-format.util';
@@ -1036,5 +1036,13 @@ export abstract class BasePuzzleSolver {
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
     this.clearVizOpponentArrow();
     this.endVisualizationHide();
+  }
+
+  /** Beim Verlassen der Seite (ngOnDestroy): Löser abbrechen und die globalen Brett-Stile (Crazy-Figuren,
+   *  Visualisierungs-Verdeckung) wieder entfernen. */
+  protected releaseSolver(): void {
+    this.abortSolver();
+    clearCrazyStyles();
+    clearVisualizationHide();
   }
 }

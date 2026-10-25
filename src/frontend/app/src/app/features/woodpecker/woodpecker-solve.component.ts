@@ -14,7 +14,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { parseAltMoves } from '../puzzles/alt-moves.util';
 import { BasePuzzleSolver } from '../puzzles/base-puzzle-solver';
-import { applyThemeMode, clearCrazyStyles, clearVisualizationHide } from '../puzzles/board-theme.util';
+import { applyThemeMode } from '../puzzles/board-theme.util';
 import { LongSolveService } from '../puzzles/long-solve.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
@@ -215,11 +215,7 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver implements OnInit
   ngOnDestroy(): void {
     this.destroyed = true;
     this.stopTimer();
-    this.stopCountdown();
-    this.clearSolutionPlay();
-    this.abortSolver();
-    clearCrazyStyles();
-    clearVisualizationHide();
+    this.releaseSolver();   // bricht auch Countdown und Lösungs-Wiedergabe ab
   }
 
   loadNext(): void {

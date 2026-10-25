@@ -36,7 +36,7 @@ import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, clearCrazyStyles, clearVisualizationHide, parseShareViewParams } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, parseShareViewParams } from './board-theme.util';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
 import { VisibilityStopwatch } from './visibility-stopwatch';
@@ -436,9 +436,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Laufender Run: finalen Live-Zeitstand sichern — der 1-s-Tick kann bis zu 1 s hinterherhängen.
     if (this.sessionInterval && this.lives > 0) this.saveLiveElapsedNow();
     this.stopSessionTimer();
-    this.abortSolver();
-    clearCrazyStyles();
-    clearVisualizationHide();
+    this.releaseSolver();
     this.rescueUnrecordedRun();
   }
 
