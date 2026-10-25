@@ -441,6 +441,21 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// Codereview I1-012: ohne <c>concurrency</c> haengte der zuletzt FERTIGE Lauf <c>:dev</c> bzw.
+    /// <c>:latest</c> um — ein aelterer Stand konnte einen neueren ueberschreiben. Die Gruppe haengt am
+    /// <c>ref_type</c> (zwei Release-Tags haben verschiedene Refs, schreiben aber beide <c>:latest</c>),
+    /// und ein laufender Lauf wird nie abgebrochen (halb umgehaengte Images).
+    /// </summary>
+    [Fact]
+    public void DockerWorkflow_SerializesRunsPerRefType()
+    {
+        var block = Regex.Match(ReadRepoFile(Docker), @"(?ms)^concurrency:\s*$(.*?)(?=^\S|\z)").Groups[1].Value;
+
+        Assert.Matches(@"(?m)^  group: docker-\$\{\{ github\.ref_type \}\}\s*$", block);
+        Assert.Matches(@"(?m)^  cancel-in-progress: false\s*$", block);
+    }
+
+    /// <summary>
     /// Der Ausloeser allein reicht nicht: ein Handstart auf einem beliebigen Tag und ein
     /// Release-Tag auf einem ungemergten Commit kaemen sonst durch. Der <c>changes</c>-Job prueft
     /// deshalb bei JEDEM Tag-Lauf die Form und ob der Commit auf master liegt, und bricht sonst ab

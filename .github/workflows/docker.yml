@@ -24,6 +24,19 @@ on:
 # dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
 permissions: {}
 
+# Ein Lauf je bewegliches Tag zur Zeit (Codereview I1-012): `:dev` haengt nur ein master-Lauf um,
+# `:latest` nur ein Tag-Lauf — ohne Gruppe gewann der zuletzt FERTIGE Lauf, und ein aelterer Stand
+# (laengere Wartezeit auf einen Runner, laengere Integrationstests) konnte einen neueren
+# ueberschreiben; Watchtower haette um 02:00 die aeltere Version ausgerollt. Die Gruppe haengt am
+# `ref_type`, nicht am `ref`: zwei Tags kurz nacheinander (x.y.1, x.y.2) haben verschiedene Refs,
+# schreiben aber beide `:latest`. `cancel-in-progress: false` — ein laufender Lauf wird nie
+# abgebrochen (halb umgehaengte Images); GitHub haelt je Gruppe hoechstens EINEN wartenden Lauf und
+# ersetzt ihn durch einen neueren. Restrisiko: wird so ein wartender master-Lauf ersetzt, baut der
+# neuere nur SEINE Pfade (Filter vergleicht nur die Commits seines Pushes) — dann hilft der Handstart.
+concurrency:
+  group: docker-${{ github.ref_type }}
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
 

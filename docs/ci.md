@@ -46,6 +46,13 @@
   Release an, Text = Changelog-Einträge seit dem vorigen Versions-Tag (`scripts/release-notes.mjs`, Test in
   `scripts/tests/test_release_notes.sh`). APK + AAB wandern vom bisherigen Latest-Release mit — `/install` lädt
   `releases/latest/download/app-release-signed.apk`, ein Latest ohne die Datei wäre ein toter Link.
+  **Ein Lauf je bewegliches Tag** (Codereview I1-012): `docker.yml` hat `concurrency: { group: docker-${{ github.ref_type }},
+  cancel-in-progress: false }`. `:dev` hängt nur ein master-Lauf um, `:latest` nur ein Tag-Lauf; ohne Gruppe gewann der
+  zuletzt fertige Lauf, ein älterer Stand konnte einen neueren überschreiben (Watchtower rollt um 02:00 aus). Gruppe am
+  `ref_type`, weil zwei Tags kurz nacheinander verschiedene Refs haben, aber beide `:latest` schreiben. Laufende Läufe
+  werden nie abgebrochen; GitHub hält je Gruppe höchstens einen wartenden Lauf und ersetzt ihn durch einen neueren —
+  wird so ein master-Lauf ersetzt, baut der neuere nur die Pfade seines Pushes, dann hilft der Handstart.
+  `CiWorkflowTests.DockerWorkflow_SerializesRunsPerRefType` hält es fest.
   **Form aller Workflows** (Codereview I1-018, `CiWorkflowTests` hält sie fest): oben `permissions: {}`, Rechte nur je
   Job; jede Action per Commit-SHA mit Versionskommentar, eine Action = ein SHA in allen Dateien (beim Anheben alle
   gemeinsam); `node-version` = Major aus `src/frontend/Dockerfile`.
