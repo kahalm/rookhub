@@ -116,22 +116,22 @@
         @if (canMerge) {
           <!-- 0.736.0, Wunsch 2026-10-10: zwei Fotos derselben Seite getrennt eingelesen → zu einer Einlesung vereinen -->
           <div class="merge small">
-            @if (mergeCandidates(); as list) {
+            @if (merger.mergeCandidates(); as list) {
               @if (list.length === 0) {
                 <span class="muted">Keine andere offene Einlesung zum Zusammenführen.</span>
               } @else {
                 <span class="muted">Welche Einlesung zeigt dieselbe Partie? Ihre Fotos kommen hierher, die Partie wird neu gelesen.</span>
                 <ul class="merge-list">
                   @for (c of list; track c.ref) {
-                    <li><button type="button" class="btn-sec" [disabled]="merging()" (click)="merge(c)">{{ candidateLabel(c) }}</button></li>
+                    <li><button type="button" class="btn-sec" [disabled]="merger.merging()" (click)="merger.merge(c)">{{ merger.candidateLabel(c) }}</button></li>
                   }
                 </ul>
               }
-              <button type="button" class="btn-link" (click)="mergeCandidates.set(null)">Abbrechen</button>
+              <button type="button" class="btn-link" (click)="merger.mergeCandidates.set(null)">Abbrechen</button>
             } @else {
-              <button type="button" class="btn-link merge-open" (click)="openMerge()">Mit anderem Foto derselben Seite zusammenführen …</button>
+              <button type="button" class="btn-link merge-open" (click)="merger.openMerge()">Mit anderem Foto derselben Seite zusammenführen …</button>
             }
-            @if (mergeError(); as e) { <span class="err" role="status">{{ e }}</span> }
+            @if (merger.mergeError(); as e) { <span class="err" role="status">{{ e }}</span> }
           </div>
         }
       }

@@ -10,7 +10,7 @@ import { GameEvals } from '@rh/features/games/game-review.util';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SheetReadingStatusComponent } from '@rh/features/games/sheet-workbench/sheet-reading-status.component';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { ClubGameDetail, ClubSheetState, LeagueScanState, ScanRef } from '../../core/club.models';
+import { ClubGameDetail, ClubSheetState, LeagueScanState } from '../../core/club.models';
 import { alignSheetPlies, pliesOfPgn, toServer } from '@rh/features/games/game-edit.util';
 import { ClubContextService } from '../../core/club-context.service';
 import { SheetPgnInput, isTransientError, loadErrorText, reasonText } from '../../core/club-format';
@@ -21,6 +21,7 @@ import { rememberAnonKey } from './club-anon-keys';
 import { ScanHeaderForm } from './scan-header-form';
 import { ClubSideFormComponent } from './club-side-form.component';
 import { ScanExport } from './scan-export';
+import { ScanMerge } from './scan-merge';
 import { ScanExportActionsComponent } from './scan-export-actions.component';
 import { ScanPhotos } from '@rh/features/games/sheet-workbench/scan-photos';
 import { SheetWorkbenchComponent } from '@rh/features/games/sheet-workbench/sheet-workbench.component';
@@ -91,10 +92,14 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     fetchView: (page, view) => this.gameId != null ? this.api.clubSheetPhoto(this.gameId, page, view) : this.api.photo(this.scanRef, page, view),
     setPageSize: (page, w, h) => this.s.setPageSize(page, w, h),
   });
-  /** Zusammenführen (nur angemeldet, beim Prüfen einer Einlesung): `null` = Auswahl zu. */
-  readonly mergeCandidates = signal<ScanRef[] | null>(null);
-  readonly merging = signal(false);
-  readonly mergeError = signal<string | null>(null);
+  /** Zusammenführen mit einer anderen Einlesung derselben Seite (nur angemeldet, beim Prüfen einer Einlesung). */
+  readonly merger = new ScanMerge({
+    scanRef: () => this.scanRef,
+    scans: () => this.api.scans(),
+    merge: (into, from) => this.api.merge(into, from),
+    confirm: text => firstValueFrom(this.confirm.ask(text)),
+    reload: () => this.reload(),
+  });
   /** Hinweis zu den orangen Stellen hinter (i) (d2-l-korrigieren-layout). */
   readonly hintOpen = signal(false);
   readonly saving = signal(false);
@@ -182,42 +187,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   }
 
   get canMerge(): boolean { return !this.share && this.loggedIn && this.gameId == null; }
-
-  async openMerge(): Promise<void> {
-    this.mergeError.set(null);
-    try {
-      const list = await this.api.scans();
-      this.mergeCandidates.set(list.filter(x => x.ref !== this.scanRef && x.scan.status !== 'running'));
-    } catch {
-      this.mergeError.set('Die Einlesungen ließen sich gerade nicht laden.');
-    }
-  }
-
-  candidateLabel(c: ScanRef): string {
-    const names = c.scan.white || c.scan.black ? `${c.scan.white ?? '?'} – ${c.scan.black ?? '?'}` : (c.scan.fileName ?? 'Formular');
-    const moves = c.scan.moveCount ? ` · ${c.scan.moveCount} Halbzüge` : '';
-    return `#${c.ref} · ${names}${moves}`;
-  }
-
-  async merge(c: ScanRef): Promise<void> {
-    const ok = await firstValueFrom(this.confirm.ask(`Einlesung #${c.ref} hier dazunehmen? Ihre Fotos werden weitere Fotos dieser `
-      + 'Einlesung, sie selbst wird geschlossen, und die Partie wird mit allen Fotos neu gelesen — Änderungen hier gehen dabei verloren.'));
-    if (!ok) return;
-    this.merging.set(true);
-    this.mergeError.set(null);
-    try {
-      await this.api.merge(this.scanRef, c.ref);
-      this.mergeCandidates.set(null);
-      this.reload();
-    } catch (err) {
-      const reason = err instanceof HttpErrorResponse ? (err.error as { reason?: string } | null)?.reason : undefined;
-      this.mergeError.set(reason === 'tooManyViews' ? 'Zu viele Fotos für diese Seite (höchstens vier).'
-        : reason === 'busy' ? 'Eine der beiden wird gerade gelesen — bitte kurz warten.'
-        : 'Zusammenführen hat nicht geklappt.');
-    } finally {
-      this.merging.set(false);
-    }
-  }
 
   /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt, ein laufender Abruf ist überholt. */
   reload(): void {
