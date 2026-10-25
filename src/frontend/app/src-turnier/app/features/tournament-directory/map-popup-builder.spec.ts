@@ -55,6 +55,18 @@ describe('MapPopupBuilder', () => {
       .toBe('<strong>tournamentDirectory.map.samePoint{&quot;count&quot;:2}</strong><br>Salzburg');
   });
 
+  // P15/4e: zwei Turniere ohne Spielort-Liste, beide mit Ortstext „various" — Hinweis und
+  // Bündel-Kopf nannten „various" als Ort.
+  it('nennt bei einem Bündel keinen Platzhalter als Ort', () => {
+    const [group] = groupByPoint([entry({ location: 'various' }), entry({ id: '2', location: 'various' })]);
+
+    expect(MapPopupBuilder.tooltipHtml(group, text, 'en'))
+      .toBe('<strong>tournamentDirectory.map.samePoint{&quot;count&quot;:2}</strong>');
+    const nodes = MapPopupBuilder.groupList(group, text, 'en', () => {});
+    expect(nodes.some(n => n.classList.contains('tm-group-place'))).toBeFalse();
+    expect(nodes.map(n => n.textContent).join()).not.toContain('various');
+  });
+
   it('baut die Liste eines Bündels: Kopf, Ort, Begründung und eine Zeile je Turnier', () => {
     const [group] = groupByPoint([
       entry({ name: 'A', geoSource: 'Region' }),

@@ -1,7 +1,7 @@
 import { DirectoryEntry } from './tournament-directory.model';
 import { MIXED, PinCategory } from './pin-palette';
 import {
-  groupByPoint, groupStyle, hasSubscribed, isVague, pinStyle, placeOf, venuesOf,
+  groupByPoint, groupStyle, hasSubscribed, isVague, pinStyle, placeName, placeOf, venuesOf,
 } from './map-pin-groups';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
@@ -65,6 +65,14 @@ describe('map-pin-groups', () => {
     expect(venuesOf(entry({ lat: null }))).toEqual([]);
   });
 
+  it('gibt einem Punkt ohne Spielort-Liste keinen Platzhalter als Namen', () => {
+    expect(venuesOf(entry({ geoPlaceName: null, location: 'various', geoSource: 'Region' })))
+      .toEqual([{ name: '', lat: 47.8, lon: 13.04, geoSource: 'Region' }]);
+    expect(placeName('verschiedene Spielorte')).toBe('');
+    expect(placeName('Innsbruck')).toBe('Innsbruck');
+    expect(placeName(null)).toBe('');
+  });
+
   it('nennt einen Punkt nur ungefähr, wenn ALLE Spielorte Regionsmitten sind', () => {
     const [vage] = groupByPoint([entry({ geoSource: 'Region' }), entry({ id: '2', geoSource: 'Region' })]);
     const [gemischt] = groupByPoint([entry({ geoSource: 'Region' }), entry({ id: '2', geoSource: 'City' })]);
@@ -73,14 +81,16 @@ describe('map-pin-groups', () => {
     expect(isVague(gemischt)).toBeFalse();
   });
 
-  it('nimmt als Ortsnamen Spielort, Lexikon-Ort oder Ortstext — Platzhalter nur ohne Spielortnamen weg', () => {
+  it('nimmt als Ortsnamen Spielort, Lexikon-Ort oder Ortstext — einen Platzhalter nie', () => {
     const name = (over: Partial<DirectoryEntry>) => placeOf(groupByPoint([entry(over)])[0]);
 
     expect(name({ geoPlaceName: 'Hallein' })).toBe('Hallein');
     expect(name({ geoPlaceName: null, location: 'Tirol' })).toBe('Tirol');
-    // Ohne Spielort-Liste traegt der Spielort selbst den Ortstext (`venuesOf`) — auch einen Platzhalter.
-    expect(name({ geoPlaceName: null, location: 'various' })).toBe('various');
-    // Der Platzhalter-Filter greift erst, wenn der Spielort keinen Namen hat.
+    // P15/4e: ohne Spielort-Liste trug der Punkt den Ortstext als Namen — auch „various".
+    expect(name({ geoPlaceName: null, location: 'various' })).toBe('');
+    expect(name({ geoPlaceName: null, location: 'Div.' })).toBe('');
+    const benannt = { name: 'various', lat: 47.8, lon: 13.04, geoSource: 'City' as const };
+    expect(name({ geoPlaceName: null, location: 'Tirol', venues: [benannt] })).toBe('Tirol');
     const unbenannt = { name: '', lat: 47.8, lon: 13.04, geoSource: 'City' as const };
     expect(name({ geoPlaceName: null, location: 'various', venues: [unbenannt] })).toBe('');
     expect(name({ geoPlaceName: null, location: 'Tirol', venues: [unbenannt] })).toBe('Tirol');

@@ -73,8 +73,16 @@ export function isVague(group: PinGroup): boolean {
 /** Der Ortsname des Punktes; alle seine Spielorte liegen ja auf derselben Koordinate. */
 export function placeOf(group: PinGroup): string {
   const { entry, spot } = group.members[0];
-  // Ein Platzhalter wie „various" ist kein Ortsname (r2-t-various) — dann lieber keiner.
-  return spot.name || entry.geoPlaceName || (isPlaceholderLocation(entry.location) ? '' : entry.location) || '';
+  return placeName(spot.name) || placeName(entry.geoPlaceName) || placeName(entry.location);
+}
+
+/**
+ * Ein Ortsname, wie ihn die Karte zeigt: ein Platzhalter wie „various" ist keiner (r2-t-various) —
+ * dann lieber gar keiner. Die EINE Stelle, an der Punkte, Hover-Hinweis und Buendel-Liste den
+ * Platzhalter wegfiltern; welche Texte Platzhalter sind, sagt `isPlaceholderLocation`.
+ */
+export function placeName(name: string | null | undefined): string {
+  return name && !isPlaceholderLocation(name) ? name : '';
 }
 
 export function groupStyle(group: PinGroup): PathOptions {
@@ -118,6 +126,8 @@ export function pinStyle(category: PinCategory, subscribed: boolean, vague: bool
 export function venuesOf(entry: DirectoryEntry): DirectoryVenue[] {
   if (entry.venues.length > 0) return entry.venues;
   if (entry.lat == null || entry.lon == null) return [];
-  return [{ name: entry.geoPlaceName ?? entry.location ?? '', lat: entry.lat, lon: entry.lon,
+  // Ohne Spielort-Liste traegt der Punkt den Ortstext — aber nie einen Platzhalter als Namen.
+  return [{ name: entry.geoPlaceName != null ? placeName(entry.geoPlaceName) : placeName(entry.location),
+            lat: entry.lat, lon: entry.lon,
             geoSource: entry.geoSource }];
 }

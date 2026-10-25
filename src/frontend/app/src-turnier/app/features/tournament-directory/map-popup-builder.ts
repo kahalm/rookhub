@@ -1,5 +1,5 @@
 import { formatTournamentDates } from '../../core/tournament-date';
-import { PinGroup, PinMember, isVague, placeOf } from './map-pin-groups';
+import { PinGroup, PinMember, isVague, placeName, placeOf } from './map-pin-groups';
 import { DirectoryEntry, displayLocation } from './tournament-directory.model';
 
 /** Uebersetzt einen Schluessel — in der Karte `TranslateService.instant`. */
@@ -25,7 +25,7 @@ export const MapPopupBuilder = {
     }
     const { entry, spot } = group.members[0];
     // „various" ist kein Ort: uebersetzt (UI-Sweep 2026-10-11, r2-t-various).
-    const place = entry.venues.length > 1 ? spot.name : displayLocation(entry.location, key => text(key));
+    const place = entry.venues.length > 1 ? placeName(spot.name) : displayLocation(entry.location, key => text(key));
     const when = dateRange(entry, locale);
     return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(when)}` +
            (place ? `<br>${escapeHtml(place)}` : '');

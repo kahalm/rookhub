@@ -1,6 +1,6 @@
 import { ComponentRef, ViewContainerRef } from '@angular/core';
 import type * as L from 'leaflet';
-import { PinGroup, PinMember } from './map-pin-groups';
+import { PinGroup, PinMember, placeName } from './map-pin-groups';
 import { MapPopupBuilder, MapText } from './map-popup-builder';
 import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry } from './tournament-directory.model';
@@ -107,7 +107,7 @@ export class MapPopupContent {
     const card = this.viewContainer.createComponent(TournamentCardComponent);
     card.setInput('entry', member.entry);
     card.setInput('overview', true);
-    card.setInput('venueName', member.spot.name);
+    card.setInput('venueName', placeName(member.spot.name));
     card.instance.selected.subscribe(selected => this.events.selected(selected));
     card.instance.ignoredChanged.subscribe(change => this.events.ignored(change));
     // Nur umfaerben, nicht neu laden — sonst schlaegt das gerade offene Popup zu.
