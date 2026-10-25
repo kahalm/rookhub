@@ -1568,12 +1568,6 @@ describe('EndlessPuzzleComponent Bildschirme (Charakterisierung Z19)', () => {
   });
 });
 
-/**
- * Golden-Rümpfe (Zerlegungs-Karte Z19): Spielstand an den Server und Lauf-Aufzeichnung für einen gescripteten Lauf
- * (gelöst → Fehler → Fehler → Fehler = Game Over). Zeit und Seed sind festgenagelt, damit die Rümpfe wörtlich stehen.
- * Startzeit = Ende des Setup-Zugs (600 ms nach dem Laden). Puzzle 4 scheitert ohne Uhr-Tick, also vor dem Setup-Zug —
- * dann trägt es die Startzeit des vorigen Puzzles (festgehaltenes Ist-Verhalten, kein Soll).
- */
 /** Charakterisierung A4 (vor dem Run-Store): Lauf-Übergänge, die bisher nur indirekt abgedeckt waren. */
 describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () => {
   function tracked(c: any): { sessions: any[]; local: any[]; immediate: any[] } {
@@ -1731,6 +1725,12 @@ describe('EndlessPuzzleComponent Lauf-Übergänge (Charakterisierung A4)', () =>
   });
 });
 
+/**
+ * Golden-Rümpfe (Zerlegungs-Karte Z19): Spielstand an den Server und Lauf-Aufzeichnung für einen gescripteten Lauf
+ * (gelöst → Fehler → Fehler → Fehler = Game Over). Zeit und Seed sind festgenagelt, damit die Rümpfe wörtlich stehen.
+ * Startzeit = Ende des Setup-Zugs (600 ms nach dem Laden). Puzzle 4 scheitert ohne Uhr-Tick, also vor dem Setup-Zug —
+ * es hat noch nicht begonnen, Start = Ende (früher trug es die Startzeit des vorigen Puzzles, A4).
+ */
 describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)', () => {
   const T0 = Date.UTC(2026, 9, 25, 10, 0, 0);
   beforeEach(() => { jasmine.clock().install(); jasmine.clock().mockDate(new Date(T0)); });
@@ -1780,7 +1780,7 @@ describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)'
     });
     expect(records[0].puzzles.map((p: any) => [p.puzzleNumber, p.puzzleId, p.solved, p.startedAt, p.endedAt]))
       .toEqual([[1, 100, true, T0 + 600, T0 + 4000], [2, 101, false, T0 + 4600, T0 + 6000],
-        [3, 102, false, T0 + 6600, T0 + 9000], [4, 100, false, T0 + 6600, T0 + 9000]]);
+        [3, 102, false, T0 + 6600, T0 + 9000], [4, 100, false, T0 + 9000, T0 + 9000]]);
     expect(c.run.lastSessionId()).toBe(55);
     expect(immediate[immediate.length - 1].g).toBeNull();
     c.ngOnDestroy();

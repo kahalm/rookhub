@@ -60,6 +60,12 @@ export class EndlessRunTimer {
     return seconds;
   }
 
+  /** Neues Puzzle geladen, Setup-Zug noch offen: bis {@link beginPuzzle} gilt es als nicht begonnen — ein Fehler davor
+   *  (Zurücksetzen, Aufgeben) erbt sonst Startzeit und Sekunden des vorigen Puzzles. */
+  clearPuzzle(): void {
+    this.puzzleStartTime = 0;
+  }
+
   /** Gemessene (aktive) Sekunden am aktuellen Puzzle; 0, solange es nicht begonnen hat. */
   puzzleSeconds(): number {
     return this.puzzleStartTime > 0 ? this.puzzleStopwatch.elapsedSeconds : 0;

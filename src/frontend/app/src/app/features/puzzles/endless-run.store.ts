@@ -467,9 +467,10 @@ export class EndlessRunStore {
     this.host.loadCurrent();
   }
 
-  /** Neues Ketten-Puzzle steht: Leben-Sperre lösen, Rating übernehmen. */
+  /** Neues Ketten-Puzzle steht: Leben-Sperre lösen, Puzzle-Uhr auf „nicht begonnen“, Rating übernehmen. */
   enterPuzzle(puzzle: PuzzleDto): void {
     this.puzzleLifeLost = false;
+    this.timer.clearPuzzle();   // Uhr läuft erst ab dem Setup-Zug (beginPuzzle)
     this.currentMinRating.set(puzzle.rating);   // Anzeige/Fehler-Logging am tatsächlichen Puzzle-Rating
     if (puzzle.rating > this.maxRatingReached()) this.maxRatingReached.set(puzzle.rating);
   }

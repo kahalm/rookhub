@@ -148,6 +148,21 @@ describe('EndlessRunStore', () => {
     h.run.stopSessionTimer();
   });
 
+  it('Fehler vor dem Setup-Zug: das neue Puzzle erbt weder Startzeit noch Sekunden des vorigen', () => {
+    const h = makeStore();
+    h.run.start();
+    h.clock.t = 5000;
+    h.run.timer.beginPuzzle();
+    h.clock.t = 8000;
+    apply(h, 'solve');
+    apply(h, 'next');                      // Puzzle 101 geladen, Setup-Zug noch nicht gespielt
+    h.clock.t = 9000;
+    expect(h.run.timer.puzzleSeconds()).toBe(0);
+    apply(h, 'fail');
+    expect(h.run.puzzles[1]).toEqual(jasmine.objectContaining({ puzzleId: 101, solved: false, startedAt: 9000, endedAt: 9000 }));
+    h.run.stopSessionTimer();
+  });
+
   it('Fortsetzen nach Reload mit passendem Seed nimmt die lokale Kette und den Live-Stand', () => {
     const h = makeStore();
     h.storage.loadChainSeed = () => 'S';
