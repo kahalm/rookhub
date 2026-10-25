@@ -3,6 +3,7 @@ import { Color, Key } from 'chessground/types';
 import { StockfishService } from './stockfish.service';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
 import { applyVisualizationHide, clearCrazyStyles, clearVisualizationHide, ThemeMode } from './board-theme.util';
+import { HintLadder } from './hint-ladder';
 import { OpponentArrowMode, opponentArrowModeFor, VizController } from './viz-controller';
 import { SecondsCountdown, SolverTimer } from './solver-timer';
 import { lineStepAt } from './line-step.util';
@@ -136,11 +137,14 @@ export abstract class BasePuzzleSolver {
   /** Pfeil-Anzeige ein/aus (Nutzer-Einstellung, aus Prefs geladen). */
   vizArrowEnabled = true;
 
-  // ---- Tipps (gestuft 1→3). Wie viele Stufen aktuell aufgedeckt sind. ----
-  hintLevel = 0;
+  // ---- Tipps (gestuft 1→3, HintLadder). Wie viele Stufen aktuell aufgedeckt sind. ----
+  private readonly hintLadder = new HintLadder();
+  get hintLevel(): number { return this.hintLadder.level; }
+  set hintLevel(level: number) { this.hintLadder.level = level; }
   /** Höchste je aufgedeckte Tipp-Stufe im GESAMTEN Solve (über alle Züge). Da `hintLevel` je Zug
    *  zurückgesetzt wird (Tipps gelten pro erwartetem Zug), ist DIES der Wert fürs `hintsUsed`-Statistikfeld. */
-  protected maxHintLevel = 0;
+  protected get maxHintLevel(): number { return this.hintLadder.maxLevel; }
+  protected set maxHintLevel(level: number) { this.hintLadder.maxLevel = level; }
   /**
    * Tipps in der aktiven Sprache (0–3). Default keine; die Modi überschreiben das:
    * Buch/Kurs liefert vorberechnete Tipps aus dem DTO, Standard berechnet sie on-the-fly.
@@ -159,20 +163,17 @@ export abstract class BasePuzzleSolver {
   /** Effektive Tipp-Liste: off-path die „falsch abgebogen"-Hinweise, im e.p.-Zwang die Anarchy-
    *  Hinweise, sonst die normalen Tipps. */
   private get effectiveHints(): string[] {
-    if (!this.onSolutionPath && this.offPathHints.length) return this.offPathHints;
-    return this.enPassantForced && this.epForcedHints.length ? this.epForcedHints : this.availableHints;
+    return HintLadder.effective(this.onSolutionPath, this.offPathHints, this.enPassantForced, this.epForcedHints,
+      this.availableHints);
   }
   get hasHints(): boolean { return this.effectiveHints.length > 0; }
-  get shownHints(): string[] { return this.effectiveHints.slice(0, this.hintLevel); }
-  get canShowMoreHints(): boolean { return this.hintLevel < this.effectiveHints.length; }
+  get shownHints(): string[] { return this.hintLadder.shown(this.effectiveHints); }
+  get canShowMoreHints(): boolean { return this.hintLadder.canReveal(this.effectiveHints.length); }
   /** Gesamtzahl der aktuell relevanten Tipp-Stufen (für die „x/N"-Anzeige im Knopf). */
   get totalHints(): number { return this.effectiveHints.length; }
-  /** Nächste Tipp-Stufe aufdecken. */
+  /** Nächste Tipp-Stufe aufdecken (nur ON-PATH-Tipps zählen fürs `hintsUsed`-Statistikfeld). */
   showNextHint(): void {
-    if (!this.canShowMoreHints) return;
-    this.hintLevel++;
-    // Nur ON-PATH-Tipps zählen fürs `hintsUsed`-Statistikfeld; off-path ist die Linie ohnehin vergeigt.
-    if (this.onSolutionPath && this.hintLevel > this.maxHintLevel) this.maxHintLevel = this.hintLevel;
+    this.hintLadder.reveal(this.effectiveHints.length, this.onSolutionPath);
   }
 
   /** Klassifikation des AKTUELL erwarteten Löserzugs (`solutionMoves[moveIndex]` aus der aktuellen
@@ -581,13 +582,10 @@ export abstract class BasePuzzleSolver {
     this.handleFailed();
   }
 
-  /** Ab so vielen aufgedeckten Tipps zu EINEM Zug zählt das Rätsel als nicht gelöst (Nutzerwunsch 20.10.2026). */
-  static readonly HINT_FAIL_LEVEL = 3;
-
   private solvedInternal(alternative: boolean): void {
     this.alternativeSolve = alternative;
     // Zu einem Zug alle drei Tipps geholt: der Zug war vorgesagt — gewertet wie ein Fehlversuch (Lösung zeigen, nicht gelöst).
-    if (this.maxHintLevel >= BasePuzzleSolver.HINT_FAIL_LEVEL) { this.handleFailed(); return; }
+    if (this.hintLadder.failsSolve) { this.handleFailed(); return; }
     this.handleSolved(alternative);
   }
 
