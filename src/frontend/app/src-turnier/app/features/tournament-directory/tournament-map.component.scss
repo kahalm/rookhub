@@ -52,66 +52,6 @@
   line-height: 1.35;
 }
 
-.colour-by { display: flex; flex-direction: column; gap: 2px; }
-.colour-by > span { font-weight: 600; }
-
-.colour-by select {
-  max-width: 100%;
-  padding: 2px 4px;
-  border: 1px solid var(--mat-sys-outline);
-  border-radius: 4px;
-  background: var(--mat-sys-surface);
-  color: inherit;
-  font: inherit;
-}
-
-/* iOS Safari zoomt die ganze Seite auf ~1,4x, sobald ein Formularfeld unter 16 px den Fokus
-   bekommt — und laesst sie so stehen; der Zurueck-Pinch landet dann auf der Karte. Nur fuer
-   Touch: am Desktop bleibt die Legende so kompakt wie bisher. */
-@media (pointer: coarse) {
-  .colour-by select { font-size: 16px; min-height: 32px; }
-}
-
-.legend-toggle {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 5px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-/* Auf dem Handy ein 36-px-Ziel: mit 16 px Hoehe traf man den Knopf selten beim ersten Tipp,
-   Fehltipps landeten im Select darueber. Der negative Rand unten verrechnet das neue
-   Button-Padding mit dem Chrome-Padding, sonst stuende zugeklappt ein Streifen Leerraum. */
-@media (max-width: 768px) {
-  .legend-toggle { min-height: 36px; padding: 6px 0; margin-top: 0; margin-bottom: -6px; }
-}
-
-.chevron { display: inline-block; transition: transform 120ms; }
-.chevron.open { transform: rotate(90deg); }
-
-.legend { margin: 4px 0 0; padding: 0; list-style: none; }
-.legend li { display: flex; align-items: center; gap: 5px; }
-
-.legend i {
-  flex: none;
-  width: 11px;
-  height: 11px;
-  border: 2px solid transparent;
-  border-radius: 50%;
-}
-
-/* „Gemerkt" und „nur ungefaehr" sind KEINE Klassen des gewaehlten Merkmals, sondern liegen
-   darueber — deshalb zeigen sie keine Farbe, sondern nur ihren eigenen Kanal: den dicken
-   dunklen Ring bzw. die Abschwaechung. */
-.legend i.marked { background: transparent; border-color: #202124; }
-.legend i.vague { background: color-mix(in srgb, currentColor 25%, transparent); }
-
 /* Leaflet haengt den Popup-Inhalt in einen EIGENEN Container ausserhalb dieses Templates —
    die View-Encapsulation erreicht ihn nicht. Deshalb ::ng-deep, auf den Host beschraenkt. */
 :host ::ng-deep .tm-popup { display: flex; flex-direction: column; gap: 4px; }

@@ -10,9 +10,8 @@ import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry } from './tournament-directory.model';
 import { PinGroup, PinMember, groupByPoint, groupStyle } from './map-pin-groups';
 import { MapPopupBuilder, MapText } from './map-popup-builder';
-import {
-  MIXED, PIN_COLOUR_SCHEMES, PinCategory, PinColourBy, commonCategory, legendOf,
-} from './pin-palette';
+import { MIXED, PinColourBy, commonCategory } from './pin-palette';
+import { MapLegendComponent } from './map-legend.component';
 
 /** Sichtbarer Kartenausschnitt als „minLat,minLon,maxLat,maxLon" — Serverformat. */
 export type BoundsString = string;
@@ -74,7 +73,7 @@ const PinRadius = 7;
   selector: 'app-tournament-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, MapLegendComponent],
   template: `
     <div class="map-wrap" #wrapEl>
       <div class="map-host" #mapEl [style.height]="height"></div>
@@ -90,45 +89,7 @@ const PinRadius = 7;
       <!-- Kartenzubehoer, kein Formular: es steht UEBER der Karte und darf ihre Ereignisse nicht
            ausloesen (siehe disableClickPropagation in ngAfterViewInit). -->
       <div class="map-chrome" #chromeEl [hidden]="!showChrome">
-        <label class="colour-by">
-          <span>{{ 'tournamentDirectory.map.colourBy' | translate }}</span>
-          <select [value]="colourBy" (change)="pickColourBy($event)">
-            @for (scheme of schemes; track scheme) {
-              <option [value]="scheme">
-                {{ 'tournamentDirectory.map.colourScheme.' + scheme | translate }}
-              </option>
-            }
-          </select>
-        </label>
-
-        <button type="button" class="legend-toggle" (click)="toggleLegend()"
-                [attr.aria-expanded]="legendOpen()">
-          <span class="chevron" [class.open]="legendOpen()">&#9656;</span>
-          {{ 'tournamentDirectory.map.legendTitle' | translate }}
-        </button>
-
-        @if (legendOpen()) {
-        <ul class="legend">
-          @for (category of legend(); track category.key) {
-            <li>
-              <i [style.background]="category.fill" [style.border-color]="category.stroke"></i>
-              {{ category.label | translate }}
-            </li>
-          }
-          @if (hasMixed()) {
-            <li>
-              <i [style.background]="mixed.fill" [style.border-color]="mixed.stroke"></i>
-              {{ mixed.label | translate }}
-            </li>
-          }
-          <li>
-            <i class="marked"></i> {{ 'tournamentDirectory.map.legend.bookmarked' | translate }}
-          </li>
-          <li>
-            <i class="vague"></i> {{ 'tournamentDirectory.map.legend.approximate' | translate }}
-          </li>
-        </ul>
-        }
+        <app-map-legend [colourBy]="colourBy" [mixed]="mixedShown()" (colourPicked)="pickColourBy($event)" />
       </div>
     </div>
   `,
@@ -204,39 +165,15 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
 
   @ViewChild('chromeEl', { static: true }) chromeEl!: ElementRef<HTMLDivElement>;
 
-  readonly schemes = PIN_COLOUR_SCHEMES;
-  readonly mixed = MIXED;
-
-  /** Die Klassen des gewaehlten Merkmals — die Legende zeichnet sie in dieser Reihenfolge. */
-  legend(): PinCategory[] {
-    return legendOf(this.colourBy);
-  }
-
   /**
    * Steht auf der Karte gerade ein gebuendelter Punkt mit UNTERSCHIEDLICHEN Klassen? Nur dann
    * gehoert „gemischt" in die Legende — sonst erklaerte sie eine Farbe, die nirgends vorkommt.
-   */
-  hasMixed(): boolean {
-    return this.mixedShown();
-  }
-
-  /**
-   * Ein SIGNAL, kein Feld: gesetzt wird es in `applyEntries`, und das laeuft auch aus
+   *
+   * <p>Ein SIGNAL, kein Feld: gesetzt wird es in `applyEntries`, und das laeuft auch aus
    * `ngAfterViewInit` — also nach dem ersten Zeichnen. Bei OnPush bliebe die Zeile „gemischt"
-   * dann bis zur naechsten Aenderung unsichtbar.
+   * dann bis zur naechsten Aenderung unsichtbar.</p>
    */
-  private readonly mixedShown = signal(false);
-
-  /**
-   * Ist die Legende aufgeklappt? Zugeklappt als Vorgabe: sie erklaert eine Bildsprache, die man
-   * EINMAL nachliest — dauerhaft aufgeklappt verdeckt sie auf einem Handy ein Viertel der Karte,
-   * also genau das, wofuer man sie aufgeschlagen hat.
-   */
-  readonly legendOpen = signal(false);
-
-  toggleLegend(): void {
-    this.legendOpen.update(open => !open);
-  }
+  protected readonly mixedShown = signal(false);
 
   /**
    * Welcher Gesten-Hinweis gerade ueber der Karte steht: `wheel` (Mausrad, bevor jemand in die
@@ -245,8 +182,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   readonly gestureHint = signal<'wheel' | 'touch' | null>(null);
   private gestureHintTimer?: ReturnType<typeof setTimeout>;
 
-  pickColourBy(event: Event): void {
-    const chosen = (event.target as HTMLSelectElement).value as PinColourBy;
+  pickColourBy(chosen: PinColourBy): void {
     if (chosen === this.colourBy) return;
     this.colourBy = chosen;
     this.applyEntries();
