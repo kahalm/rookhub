@@ -61,10 +61,8 @@ namespace RookHub.Api.Services.TournamentDirectory;
 /// die Turnierseite genau einmal je Turnier, gedeckelt. Eine kurze Anfrage beim oeffentlich
 /// genannten Webmaster bleibt vor dem Dauerbetrieb das saubere Vorgehen.</para>
 /// </summary>
-public class FfeDirectorySweepService
+public class FfeDirectorySweepService : IDirectorySourceAdapter<FfeDirectorySweepService.CrawlerFfeEvent>
 {
-    private const int SaveEvery = 25;
-
     /// <summary>
     /// Wie viele Monatslisten ein Durchgang liest. Zwoelf, obwohl der Ertrag in den ersten vier
     /// steckt: die acht weiteren kosten je einen Abruf von 18 kB und fangen die Fruehstarter
@@ -85,6 +83,9 @@ public class FfeDirectorySweepService
     private readonly int _detailBatchSize;
     private readonly ILogger<FfeDirectorySweepService> _log;
 
+    /// <summary>Wie viele Turnierseiten dieser Lauf noch holen darf.</summary>
+    private int _detailBudget;
+
     public FfeDirectorySweepService(AppDbContext db, IHttpClientFactory httpClientFactory,
         GeocodingService geocoding, IConfiguration configuration,
         ILogger<FfeDirectorySweepService> log)
@@ -100,136 +101,94 @@ public class FfeDirectorySweepService
         int months = DefaultMonths, int? detailLimit = null, CancellationToken ct = default)
     {
         var events = await FetchListAsync(months, ct);
-        if (events.Count == 0) return new ExternalSweepResult(0, 0, 0, 0, 0);
+        _detailBudget = Math.Max(0, detailLimit ?? _detailBatchSize);
+        return await ExternalSweepRunner.RunAsync(_db, _log, this, events, ct);
+    }
 
-        var budget = Math.Max(0, detailLimit ?? _detailBatchSize);
-        var now = DateTime.UtcNow;
-        int added = 0, updated = 0, matched = 0, retired = 0, processed = 0;
-        // Was DIESER Lauf geliefert hat — Grundlage der Verschwunden-Erkennung unten.
-        var delivered = new List<string>();
+    // ----- Abbildung fuer den gemeinsamen Runner ------------------------------
 
-        try
+    DirectorySourceKind IDirectorySourceAdapter<CrawlerFfeEvent>.Kind => DirectorySourceKind.FrenchChessFederation;
+    string IDirectorySourceAdapter<CrawlerFfeEvent>.LogName => "FFE";
+    string? IDirectorySourceAdapter<CrawlerFfeEvent>.SourceKey(CrawlerFfeEvent row) => row.EventId.Length == 0 ? null : row.EventId;
+    DateOnly? IDirectorySourceAdapter<CrawlerFfeEvent>.Start(CrawlerFfeEvent row) => row.Start;
+    string IDirectorySourceAdapter<CrawlerFfeEvent>.Name(CrawlerFfeEvent row) => row.Name;
+    string IDirectorySourceAdapter<CrawlerFfeEvent>.PublicId(CrawlerFfeEvent row) => $"fr{row.EventId}";
+    string? IDirectorySourceAdapter<CrawlerFfeEvent>.Federation(CrawlerFfeEvent row) => "FRA";
+    string? IDirectorySourceAdapter<CrawlerFfeEvent>.MatchPlace(CrawlerFfeEvent row) => LocationOf(row);
+
+    /// <summary>
+    /// Kennt chess-results das Turnier — bei Frankreich der Ausnahmefall (2 von 40) —, bleibt es bei
+    /// einem Herkunftsvermerk: die Turnierseite zu holen, nur um Luecken zu fuellen, waere ein Abruf
+    /// fuer einen Eintrag, der schon steht. Am eigenen Eintrag setzt ApplyAsync die Adresse selbst.
+    /// </summary>
+    string? IDirectorySourceAdapter<CrawlerFfeEvent>.Url(CrawlerFfeEvent row) => row.Url;
+
+    async Task IDirectorySourceAdapter<CrawlerFfeEvent>.AfterLookupAsync(
+        TournamentDirectoryEntry? own, TournamentDirectoryEntry? match, CancellationToken ct)
+    {
+        await EnsureSourcesLoadedAsync(own, ct);
+        await EnsureSourcesLoadedAsync(match, ct);
+    }
+
+    async Task<bool> IDirectorySourceAdapter<CrawlerFfeEvent>.ApplyAsync(
+        TournamentDirectoryEntry own, CrawlerFfeEvent row, DateOnly start, DateTime now, CancellationToken ct)
+    {
+        // Die FFE kennt keine chess-results-Nummer. Alles, was dort gebraucht wird (Rundenplan,
+        // Vereins-Aufloesung, Abo), bleibt deshalb aus — der Runner legt den Eintrag ohne an.
+        var location = LocationOf(row);
+        var locationChanged = own.LocationText != location;
+
+        own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
+        own.StartDate = start;
+        // Die Liste kennt nur den Starttag. Ein schon geholtes Ende bleibt stehen — es
+        // kam von der Turnierseite und ist die genauere Angabe.
+        own.EndDate = own.EndDate is { } end && end > start ? end : start;
+        own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        own.State = ExternalDirectorySource.Truncate(RegionOf(row.Department), 100);
+        own.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        ExternalSweepRunner.MarkSeen(own, now);
+        ExternalDirectorySource.ApplyClassification(own);
+
+        // Der Detailabruf lohnt nur einmal je Turnier. „Schon geholt" steht in der Adresse
+        // des Herkunftsvermerks — sie wird erst dabei gesetzt (dasselbe Verfahren wie bei
+        // chessarbiter; es braucht keine eigene Spalte, weil der Vermerk genau das sagt).
+        // „Aktualisiert" heisst hier: die Turnierseite war lesbar.
+        var loaded = false;
+        var hasDetail = HasDetail(own, row.EventId);
+        if (!hasDetail && _detailBudget > 0)
         {
-            foreach (var row in events)
+            _detailBudget--;
+            if (await LoadDetailAsync(own, row, ct))
             {
-                ct.ThrowIfCancellationRequested();
-                if (row.EventId.Length == 0) continue;
-                // Geliefert ist geliefert: die Quelle FUEHRT diese Zeile. Ob WIR sie lesen
-                // koennen, ist eine andere Frage. Stand das Eintragen erst hinter den Pruefungen,
-                // galt eine Zeile mit unlesbarem Termin als verschwunden und war nach zwei Laeufen
-                // abgesagt — und ein geaendertes Datumsformat trifft nicht eine Zeile, sondern alle.
-                delivered.Add(row.EventId);
-                if (row.Start is not { } start || row.Name.Length == 0) continue;
+                loaded = true;
+                hasDetail = true;
+                locationChanged = true;   // die Anschrift traegt die Postleitzahl
+            }
+            await Task.Delay(DetailDelay, ct);
+        }
 
-                processed++;
-                var publicId = $"fr{row.EventId}";
-                var own = await ExternalDirectorySource.FindOwnAsync(_db, publicId, ct);
-                var match = await ExternalDirectorySource.FindMatchAsync(_db, "FRA", start, row.Name,
-                    new ExternalDirectorySource.MatchHint(
-                        DirectorySourceKind.FrenchChessFederation, row.EventId, LocationOf(row)), ct);
-                await EnsureSourcesLoadedAsync(own, ct);
-                await EnsureSourcesLoadedAsync(match, ct);
+        await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.FrenchChessFederation,
+            row.EventId, hasDetail ? row.Url : null, now, ct);
 
-                if (match is not null)
-                {
-                    // chess-results kennt das Turnier — bei Frankreich der Ausnahmefall (2 von 40).
-                    // Dann bleibt es bei einem Herkunftsvermerk: die Turnierseite zu holen, nur um
-                    // Luecken zu fuellen, waere ein Abruf fuer einen Eintrag, der schon steht.
-                    await ExternalDirectorySource.NoteSourceAsync(_db, match,
-                        DirectorySourceKind.FrenchChessFederation, row.EventId, row.Url, now, ct);
-                    matched++;
-
-                    if (ExternalDirectorySource.RetireIfSuperseded(own, match, now))
-                    {
-                        retired++;
-                        _log.LogInformation("FFE: {PublicId} geht in {Target} auf ({Name})",
-                            own!.PublicId, match.PublicId, match.Name);
-                    }
-                    if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
-                    continue;
-                }
-
-                if (own is null)
-                {
-                    own = new TournamentDirectoryEntry
-                    {
-                        PublicId = publicId,
-                        // Die FFE kennt keine chess-results-Nummer. Alles, was dort gebraucht wird
-                        // (Rundenplan, Vereins-Aufloesung, Abo), bleibt deshalb aus.
-                        ChessResultsId = null,
-                        Federation = "FRA",
-                        FirstSeenAt = now,
-                    };
-                    _db.TournamentDirectoryEntries.Add(own);
-                    added++;
-                }
-
-                var location = LocationOf(row);
-                var locationChanged = own.LocationText != location;
-
-                own.Name = ExternalDirectorySource.Truncate(row.Name, 500)!;
-                own.StartDate = start;
-                // Die Liste kennt nur den Starttag. Ein schon geholtes Ende bleibt stehen — es
-                // kam von der Turnierseite und ist die genauere Angabe.
-                own.EndDate = own.EndDate is { } end && end > start ? end : start;
-                own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                own.State = ExternalDirectorySource.Truncate(RegionOf(row.Department), 100);
-                own.LocationText = ExternalDirectorySource.Truncate(location, 300);
-                own.LastSeenAt = now;
-                own.MissedSweeps = 0;
-                own.RemovedAt = null;
-                ExternalDirectorySource.ApplyClassification(own);
-
-                // Der Detailabruf lohnt nur einmal je Turnier. „Schon geholt" steht in der Adresse
-                // des Herkunftsvermerks — sie wird erst dabei gesetzt (dasselbe Verfahren wie bei
-                // chessarbiter; es braucht keine eigene Spalte, weil der Vermerk genau das sagt).
-                var hasDetail = HasDetail(own, row.EventId);
-                if (!hasDetail && budget > 0)
-                {
-                    budget--;
-                    if (await LoadDetailAsync(own, row, ct))
-                    {
-                        updated++;
-                        hasDetail = true;
-                        locationChanged = true;   // die Anschrift traegt die Postleitzahl
-                    }
-                    await Task.Delay(DetailDelay, ct);
-                }
-
-                await ExternalDirectorySource.NoteSourceAsync(_db, own, DirectorySourceKind.FrenchChessFederation,
-                    row.EventId, hasDetail ? row.Url : null, now, ct);
-
-                if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
-                {
-                    var hit = await _geocoding.ResolveAsync(own.LocationText, own.State, "FRA", ct);
-                    if (hit is not null && hit.Source != GeoSource.Ambiguous)
-                    {
-                        own.Lat = hit.Lat;
-                        own.Lon = hit.Lon;
-                        own.GeoSource = hit.Source;
-                        own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
-                    }
-                }
-
-                if (processed % SaveEvery == 0) await _db.SaveChangesAsync(ct);
+        if (own.LocationText is { Length: > 0 } && (locationChanged || own.Lat is null))
+        {
+            var hit = await _geocoding.ResolveAsync(own.LocationText, own.State, "FRA", ct);
+            if (hit is not null && hit.Source != GeoSource.Ambiguous)
+            {
+                own.Lat = hit.Lat;
+                own.Lon = hit.Lon;
+                own.GeoSource = hit.Source;
+                own.GeoPlaceName = ExternalDirectorySource.Truncate(hit.PlaceName, 200);
             }
         }
-        finally
-        {
-            try { await _db.SaveChangesAsync(CancellationToken.None); }
-            catch (Exception ex) { _log.LogWarning(ex, "FFE: Zwischenstand konnte nicht gespeichert werden"); }
-        }
-
-        _log.LogInformation(
-            "FFE-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Turnierseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
-            events.Count, added, updated, matched, retired);
-        // Was die Quelle nicht mehr liefert, wird zurueckgezogen (zwei Laeufe Karenz,
-        // Bremse gegen halbe Laeufe — siehe RetireVanishedAsync).
-        retired += await ExternalDirectorySource.RetireVanishedAsync(
-            _db, DirectorySourceKind.FrenchChessFederation, delivered, now, _log, ct);
-
-        return new ExternalSweepResult(events.Count, added, updated, matched, retired);
+        return loaded;
     }
+
+    void IDirectorySourceAdapter<CrawlerFfeEvent>.LogSummary(
+        ILogger log, int read, int added, int updated, int matched, int retired) =>
+        log.LogInformation(
+            "FFE-Kalender: {Read} gelesen, {Added} neu, {Updated} mit Turnierseite, {Matched} zugeordnet, {Retired} zurueckgezogen",
+            read, added, updated, matched, retired);
 
     /// <summary>
     /// Die Herkunftsvermerke eines aus der Datenbank geholten Eintrags nachladen.
