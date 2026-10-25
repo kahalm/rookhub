@@ -2335,3 +2335,51 @@ describe('AnalysisComponent Brettspalte (d2-rk-analysis-brettspalte)', () => {
     fixture.destroy();
   });
 });
+
+// Charakterisierung (Zerlegung Z22) vor dem Herausziehen der Einstellungen und der Adress-Parameter:
+// gemerkte Werte, ihre Grenzen und der Vorrang der Adresse vor dem Gemerkten.
+describe('AnalysisComponent gemerkte Einstellungen + Adresse (Charakterisierung Z22)', () => {
+  const KEYS = ['rookhub_analysis_lines', 'rookhub_analysis_engine', 'rookhub_analysis_depth'];
+  afterEach(() => { for (const k of KEYS) { try { localStorage.removeItem(k); } catch {} } });
+
+  it('liest Linien, Engine an/aus und Tiefe; ungültige Werte bleiben bei der Vorgabe', () => {
+    localStorage.setItem('rookhub_analysis_lines', '5');
+    localStorage.setItem('rookhub_analysis_engine', '0');
+    localStorage.setItem('rookhub_analysis_depth', '30');
+    let c = makeComponent({});
+    expect([c.linesCount, c.engineOn, c.depthSetting]).toEqual([5, false, 30]);
+    localStorage.setItem('rookhub_analysis_lines', '9');
+    localStorage.setItem('rookhub_analysis_engine', '1');
+    localStorage.setItem('rookhub_analysis_depth', '23');
+    c = makeComponent({});
+    expect([c.linesCount, c.engineOn, c.depthSetting]).toEqual([3, true, 22]);
+  });
+
+  it('die Adresse (depth/lines) schlägt das Gemerkte, ohne es zu überschreiben', () => {
+    localStorage.setItem('rookhub_analysis_depth', '30');
+    const c = makeComponent({ depth: '40', lines: '2' });
+    c.ngOnInit();
+    expect([c.depthSetting, c.linesCount]).toEqual([40, 2]);
+    expect(localStorage.getItem('rookhub_analysis_depth')).toBe('30');
+    expect((c as any).engine.setMultiPv).toHaveBeenCalledWith(2);
+    c.ngOnDestroy();
+  });
+
+  it('ungültige Adress-Werte und fremde Rücksprünge werden ignoriert', () => {
+    const c = makeComponent({ depth: '41', lines: '0', from: '//evil.example', orientation: 'purple', fen: 'kaputt' });
+    c.ngOnInit();
+    expect([c.depthSetting, c.linesCount, c.returnTo, c.orientation]).toEqual([22, 3, null, 'white']);
+    expect(c.startFen).toBe('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+    c.ngOnDestroy();
+  });
+
+  it('Speichern beim Umschalten schreibt die Schlüssel', () => {
+    const c = makeComponent({});
+    c.ngOnInit();
+    c.linesCount = 4; c.onLinesChange();
+    c.depthSetting = 26; c.onDepthChange();
+    c.engineOn = false; c.onEngineToggle();
+    expect(KEYS.map(k => localStorage.getItem(k))).toEqual(['4', '0', '26']);
+    c.ngOnDestroy();
+  });
+});
