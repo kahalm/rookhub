@@ -9,11 +9,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, take, takeWhile, timer } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
-import { CrawlJob, Tournament } from '@rh/core/models';
+import { Tournament } from '@rh/core/models';
+import { CrawlWatch, watchCrawlJob } from '../../core/watch-crawl-job';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { TournamentListService } from '../../core/tournament-list.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
@@ -284,31 +285,30 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   }
 
   /**
-   * Verfolgt den Holen-Auftrag, bis er fertig ist — hoechstens rund zwei Minuten. Danach wird
-   * nicht weitergefragt: der Auftrag laeuft serverseitig ohnehin weiter, und die naechste
-   * Seitenansicht sieht das Ergebnis. Ein Fehler beim Nachfragen beendet das Verfolgen still.
+   * Verfolgt den Holen-Auftrag, bis er fertig ist — hoechstens rund zwei Minuten (2 s, dann alle 3 s,
+   * 40 Abfragen). Danach wird nicht weitergefragt: der Auftrag laeuft serverseitig ohnehin weiter, und die
+   * naechste Seitenansicht sieht das Ergebnis — das sagt ein Hinweis, die Anzeige „wird geholt" endet
+   * (Codereview F6-012). Ein Fehler beim Nachfragen beendet das Verfolgen still.
    */
   private watchImport(jobId: number, entry: DirectoryEntry): void {
     this.importing.set(true);
-    timer(2000, 3000).pipe(
-      switchMap(() => this.tournaments.getCrawlJob(jobId).pipe(catchError(() => of(null)))),
-      takeWhile(job => job !== null && job.status !== 'Completed' && job.status !== 'Failed', true),
-      take(40),
+    watchCrawlJob(id => this.tournaments.getCrawlJob(id), jobId, { maxMs: 119_000, firstMs: 2000, everyMs: 3000 }).pipe(
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(job => this.onImportProgress(job, entry));
+    ).subscribe(w => this.onImportProgress(w, entry));
   }
 
-  private onImportProgress(job: CrawlJob | null, entry: DirectoryEntry): void {
+  private onImportProgress(w: CrawlWatch, entry: DirectoryEntry): void {
     // Zwischenzeitlich ein anderes Turnier geoeffnet? Dann gehoert das Ergebnis nicht hierher.
     if (this.entry()?.id !== entry.id) return;
-    if (job === null) { this.importing.set(false); return; }
-    if (job.status === 'Completed') {
-      this.importing.set(false);
+    if (w.state === 'running') return;
+    this.importing.set(false);
+    if (w.state === 'completed') {
       this.lookupImported(entry);
       this.snackbar.success(this.translate.instant('tournamentDirectory.detail.importDone'));
-    } else if (job.status === 'Failed') {
-      this.importing.set(false);
+    } else if (w.state === 'failed') {
       this.snackbar.warn(this.translate.instant('tournamentDirectory.detail.importFailed'));
+    } else if (w.state === 'timeout') {
+      this.snackbar.info(this.translate.instant('turnier.history.fetchSlow'));
     }
   }
 

@@ -236,6 +236,31 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.verify();
   });
 
+  /** Codereview F6-012: am Deckel blieb „wird geholt" für immer stehen — jetzt Hinweis „läuft weiter", Anzeige frei. */
+  it('gibt das Holen am Deckel frei und meldet „läuft weiter"', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    jasmine.clock().install();
+    try {
+      component.bookmark();
+      http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+      http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' }).flush({ id: 7, status: 'Pending' });
+      expect(component.importing()).toBeTrue();
+      for (let t = 0; t < 10 * 60_000 && component.importing(); t += 1000) {
+        jasmine.clock().tick(1000);
+        http.match('/api/tournaments/crawl/7').forEach(r => r.flush({ id: 7, status: 'Running' }));
+      }
+      expect(component.importing()).toBeFalse();
+      expect(info).toHaveBeenCalledWith('turnier.history.fetchSlow');
+    } finally {
+      fixture.destroy();
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
   it('bleibt gemerkt, wenn sich der Holen-Auftrag nicht einreihen laesst', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));

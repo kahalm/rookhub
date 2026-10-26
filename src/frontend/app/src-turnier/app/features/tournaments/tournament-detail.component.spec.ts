@@ -366,6 +366,34 @@ describe('TournamentDetailComponent', () => {
     http.verify();
   });
 
+  /** Codereview F6-012: das Verfolgen hat einen Deckel — danach „läuft im Hintergrund weiter", Knopf wieder frei. */
+  it('hört nach dem Deckel auf zu fragen und meldet „läuft weiter"', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    const c = fixture.componentInstance;
+    jasmine.clock().install();
+    try {
+      c.refresh();
+      http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' }).flush({ id: 42, status: 'Pending' });
+      let polls = 0;
+      for (let t = 0; t < 30 * 60_000 && c.refreshing; t += 2000) {
+        jasmine.clock().tick(2000);
+        http.match('/api/tournaments/crawl/42').forEach(r => { polls++; r.flush({ id: 42, status: 'Running' }); });
+      }
+      expect(c.refreshing).toBeFalse();
+      expect(polls).toBeGreaterThan(10);
+      expect(polls).toBeLessThanOrEqual(200);
+      expect(info).toHaveBeenCalledWith('turnier.history.fetchSlow');
+      jasmine.clock().tick(60_000);
+      http.expectNone('/api/tournaments/crawl/42');
+    } finally {
+      c.ngOnDestroy();
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
   it('meldet andere Fehler beim Starten weiter als Fehlschlag', async () => {
     const fixture = await render({ active: false, activeUntil: null });
     const http = TestBed.inject(HttpTestingController);

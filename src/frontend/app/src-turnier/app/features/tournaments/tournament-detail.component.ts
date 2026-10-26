@@ -13,13 +13,14 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
+import { Observable, Subscription as RxSubscription } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentGroup, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { OpenTournamentService } from '../../core/open-tournament.service';
+import { watchCrawlJob } from '../../core/watch-crawl-job';
 import { requireAccount } from '../../core/require-account';
 import { wideScreen } from '../../core/wide-screen';
 import { TournamentRoundMonitor } from './tournament-round-monitor';
@@ -82,7 +83,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] | null = null;
   toggling = false;
   refreshing = false;
-  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private refreshWatch: RxSubscription | null = null;
 
   /**
    * „Beobachten" (Runden-Monitor). UI-Sweep 2026-10-11 (r2-t-public-actions): Status, An/aus, 30-s-Abfrage und Meldung
@@ -181,7 +182,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.pollInterval) clearInterval(this.pollInterval);
+    this.refreshWatch?.unsubscribe();
     this.stopClubPoll();
   }
 
@@ -275,31 +276,27 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Höchstens so lange wird ein Aktualisieren-Auftrag verfolgt; danach läuft er serverseitig weiter (F6-012). */
+  private static readonly RefreshMaxMs = 5 * 60_000;
+
   private pollRefreshJob(jobId: number): void {
-    this.pollInterval = setInterval(() => {
-      this.api.getCrawlJob(jobId).subscribe({
-        next: (job) => {
-          if (job.status === 'Completed') {
-            if (this.pollInterval) clearInterval(this.pollInterval);
-            this.pollInterval = null;
-            this.refreshing = false;
-            this.snackbar.success(this.translate.instant('tournaments.detail.dataRefreshed'));
-            this.reloadAll();
-          } else if (job.status === 'Failed') {
-            if (this.pollInterval) clearInterval(this.pollInterval);
-            this.pollInterval = null;
-            this.refreshing = false;
-            this.snackbar.info(job.errorMessage || this.translate.instant('tournaments.detail.refreshFailed'));
-          }
-        },
-        error: () => {
-          if (this.pollInterval) clearInterval(this.pollInterval);
-          this.pollInterval = null;
-          this.refreshing = false;
-          this.snackbar.info(this.translate.instant('tournaments.list.crawlConnectionLost'));
-        }
-      });
-    }, 2000);
+    this.refreshWatch?.unsubscribe();
+    this.refreshWatch = watchCrawlJob(id => this.api.getCrawlJob(id), jobId,
+      { maxMs: TournamentDetailComponent.RefreshMaxMs }).subscribe(w => {
+      if (w.state === 'running') return;
+      this.refreshing = false;
+      this.refreshWatch = null;
+      if (w.state === 'completed') {
+        this.snackbar.success(this.translate.instant('tournaments.detail.dataRefreshed'));
+        this.reloadAll();
+      } else if (w.state === 'failed') {
+        this.snackbar.info(w.job.errorMessage || this.translate.instant('tournaments.detail.refreshFailed'));
+      } else if (w.state === 'timeout') {
+        this.snackbar.info(this.translate.instant('turnier.history.fetchSlow'));
+      } else {
+        this.snackbar.info(this.translate.instant('tournaments.list.crawlConnectionLost'));
+      }
+    });
   }
 
   private reloadAll(): void {
