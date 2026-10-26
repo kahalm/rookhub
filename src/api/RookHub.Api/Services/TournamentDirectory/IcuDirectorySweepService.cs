@@ -353,7 +353,7 @@ public class IcuDirectorySweepService : IDirectorySourceAdapter<IcuDirectorySwee
                 ? null
                 : new ParsedIcuDetail(row.ChessResultsId, row.PlayerCount, row.Website);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ExternalDirectorySource.IsSourceFailure(ex, ct))
         {
             _log.LogWarning(ex, "ICU: Detailseite {EventId} nicht lesbar", eventId);
             return null;

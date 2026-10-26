@@ -283,7 +283,7 @@ public class ChessArbiterDirectorySweepService : IDirectorySourceAdapter<ChessAr
                    new CrawlerChessArbiterDetail(ParseDate(row.StartDate), ParseDate(row.EndDate),
                        row.Place, row.TimeControl, row.Rounds, row.System, row.PlayerCount));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ExternalDirectorySource.IsSourceFailure(ex, ct))
         {
             _log.LogWarning(ex, "chessarbiter: Detailseite {Year}/{Id} nicht lesbar", year, id);
             return (ChessArbiterDetailOutcome.Unavailable, null);

@@ -177,7 +177,7 @@ public class ChessScotlandDirectorySweepService : IDirectorySourceAdapter<ChessS
     {
         ChessScotlandDetail? detail;
         try { detail = await FetchDetailAsync(slug, ct); }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ExternalDirectorySource.IsSourceFailure(ex, ct))
         {
             _log.LogWarning(ex, "Chess Scotland: Detailseite {Slug} nicht lesbar", slug);
             return false;

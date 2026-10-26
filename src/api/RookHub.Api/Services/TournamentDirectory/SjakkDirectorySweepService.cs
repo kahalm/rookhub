@@ -162,7 +162,7 @@ public class SjakkDirectorySweepService : IDirectorySourceAdapter<SjakkDirectory
     {
         SjakkDetail? detail;
         try { detail = await FetchDetailAsync(slug, ct); }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ExternalDirectorySource.IsSourceFailure(ex, ct))
         {
             _log.LogWarning(ex, "sjakk.no: Detailseite {Slug} nicht lesbar", slug);
             return false;

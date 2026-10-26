@@ -243,7 +243,9 @@ sjakk.no, ICU, chess.sk, chessarbiter und FFE. Sonderfaelle sind Haken mit Vorga
 Detailseite VOR der Zuordnung), `ChessResultsId` (exakter Treffer ueber die Nummer der Quelle: chess.sk aus der
 Liste, ICU von der Detailseite bzw. danach ueber den Vermerk), `OnCreated` (chess.sk: Nummer am neuen Eintrag), `AfterLookupAsync` (FFE laedt die
 Vermerke nach); Detailseite samt Budget und Fassung (chessarbiter, FFE, sjakk.no) bleiben in `ApplyAsync`. ChessCz,
-FIDE und der Ankuendigungskalender haben eine andere Schleife. Golden-Tests: `ExternalSweepGoldenTests`). Jede
+FIDE und der Ankuendigungskalender haben eine andere Schleife. Golden-Tests: `ExternalSweepGoldenTests`. Detail-Faenge
+filtern ueber `ExternalDirectorySource.IsSourceFailure(ex, ct)`: ein HttpClient-Zeitlimit (OCE bei nicht abgebrochenem Lauf)
+kostet nur die eine Detailseite, nicht den Lauf — A5-008). Jede
 stellt dieselben vier Fragen: kenne ich
 das Turnier schon (Termin ±1 Tag + zwei unterscheidende Woerter, ODER — chess.sk und ICU — die
 mitgelieferte chess-results-Nummer, dann exakt), habe ich es selbst schon angelegt

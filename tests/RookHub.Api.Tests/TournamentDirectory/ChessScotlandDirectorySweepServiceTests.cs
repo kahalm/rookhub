@@ -332,6 +332,17 @@ public class ChessScotlandDirectorySweepServiceTests : IDisposable
         await Assert.ThrowsAsync<RookHub.Api.Exceptions.CrawlerRequestException>(
             () => CreateService("kaputt").RunAsync());
 
+    /// <summary>A5-008: Laeuft der Detailabruf ins Zeitlimit (OperationCanceledException bei NICHT abgebrochenem Lauf),
+    /// fehlt nur die Detailseite — der Lauf geht weiter, statt mit der Ausnahme abzubrechen.</summary>
+    [Fact]
+    public async Task RunAsync_DetailRequestTimesOut_KeepsTheEntryAndFinishesTheRun()
+    {
+        var result = await CreateService($"[{Row("Ayr Congress 2026")}]", RouteHandler.DetailTimeout).RunAsync();
+
+        Assert.Equal(1, result.Added);
+        Assert.Single(_db.TournamentDirectoryEntries.ToList());
+    }
+
     // ----- Stubs -------------------------------------------------------------
 
     private sealed class StubClientFactory(HttpMessageHandler handler) : IHttpClientFactory
@@ -424,6 +435,8 @@ public class ChessScotlandDirectorySweepServiceTests : IDisposable
             _detail = detail;
         }
 
+        public const string DetailTimeout = "__detail_timeout__";
+
         public int DetailCalls { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -433,6 +446,8 @@ public class ChessScotlandDirectorySweepServiceTests : IDisposable
             if (path.EndsWith("/detail", StringComparison.Ordinal))
             {
                 DetailCalls++;
+                // Zeitlimit des HttpClient: eine OperationCanceledException, ohne dass der Lauf abgebrochen ist (A5-008).
+                if (_detail == DetailTimeout) throw new TaskCanceledException("detail timeout");
                 return Task.FromResult(_detail is null
                     ? new HttpResponseMessage(HttpStatusCode.NotFound)
                     : Ok(_detail));

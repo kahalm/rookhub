@@ -443,7 +443,7 @@ public class FfeDirectorySweepService : IDirectorySourceAdapter<FfeDirectorySwee
                     row.City, row.Department, row.Address, row.TimeControl, row.Rounds,
                     row.PairingSystem);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ExternalDirectorySource.IsSourceFailure(ex, ct))
         {
             _log.LogWarning(ex, "FFE: Turnierseite {EventId} nicht lesbar", eventId);
             return null;

@@ -37,6 +37,15 @@ public record ExternalSweepResult(int Read, int Added, int Updated, int Matched,
 public static class ExternalDirectorySource
 {
     /// <summary>
+    /// Ist <paramref name="ex"/> ein Ausfall der Quelle (Detailseite nicht lesbar) und KEIN Abbruch des Laufs? Ein
+    /// Zeitlimit des HttpClient kommt ebenfalls als <see cref="OperationCanceledException"/> — solange
+    /// <paramref name="ct"/> nicht abgebrochen ist, kostet es nur diese eine Detailseite, nicht den ganzen Lauf
+    /// (A5-008). Fuer die Detail-Faenge aller Verbandsquellen: <c>catch (Exception ex) when (IsSourceFailure(ex, ct))</c>.
+    /// </summary>
+    public static bool IsSourceFailure(Exception ex, CancellationToken ct) =>
+        ex is not OperationCanceledException || !ct.IsCancellationRequested;
+
+    /// <summary>
     /// Wie weit die Startdaten auseinanderliegen duerfen, um noch dasselbe Turnier zu sein.
     /// Dieselbe Toleranz wie beim FIDE-Abgleich: Verbandskalender und chess-results nennen bei
     /// mehrtaegigen Turnieren gelegentlich den Anreise- statt den ersten Spieltag.
