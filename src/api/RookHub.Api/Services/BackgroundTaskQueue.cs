@@ -24,6 +24,20 @@ public interface IBackgroundTaskQueue
     }
 }
 
+/// <summary>
+/// Zeitbudget, mit dem ein Worker beim Herunterfahren noch wartende Arbeit abarbeitet (<c>BackgroundTasks:DrainSeconds</c>,
+/// Vorgabe 3 s, 0–30). Zwei Worker drainieren NACHEINANDER (Webhook, dann Background) — mit je 5 s füllten sie Dockers
+/// 10-s-Stoppfenster ganz, für übrige Dienste und den Log-Flush blieb nichts (A8-011). Mehr Zeit braucht zusätzlich
+/// <c>stop_grace_period</c> im Compose (docs/ops-haertung.md).
+/// </summary>
+public static class ShutdownDrain
+{
+    public const int DefaultSeconds = 3;
+
+    public static TimeSpan Budget(IConfiguration? configuration) =>
+        TimeSpan.FromSeconds(Math.Clamp(configuration?.GetValue("BackgroundTasks:DrainSeconds", DefaultSeconds) ?? DefaultSeconds, 0, 30));
+}
+
 public class BackgroundTaskQueue : IBackgroundTaskQueue
 {
     private readonly Channel<Func<IServiceProvider, CancellationToken, Task>> _queue;
@@ -99,12 +113,15 @@ public sealed class WebhookTaskWorker : BackgroundService
     private readonly IWebhookTaskQueue _queue;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<WebhookTaskWorker> _logger;
+    private readonly TimeSpan _drainBudget;
 
-    public WebhookTaskWorker(IWebhookTaskQueue queue, IServiceScopeFactory scopeFactory, ILogger<WebhookTaskWorker> logger)
+    public WebhookTaskWorker(IWebhookTaskQueue queue, IServiceScopeFactory scopeFactory, ILogger<WebhookTaskWorker> logger,
+        IConfiguration? configuration = null)
     {
         _queue = queue;
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _drainBudget = ShutdownDrain.Budget(configuration);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -130,7 +147,7 @@ public sealed class WebhookTaskWorker : BackgroundService
     /// <summary>Beim Herunterfahren: kurz nachdrainen, was schon in der Queue liegt, und den Rest
     /// SICHTBAR machen. Die Queue lebt nur im Arbeitsspeicher — ohne diese Zeilen verschwanden
     /// Tag-Backfills, Tipp-Generierung und Auto-Subscription-Tickets beim (nächtlichen) Neustart
-    /// ohne eine einzige Logzeile. Das Zeitbudget ist knapp, weil Docker nach ~10 s hart abschießt.</summary>
+    /// ohne eine einzige Logzeile. Das Zeitbudget ist knapp, weil Docker nach ~10 s hart abschießt (<see cref="ShutdownDrain"/>).</summary>
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         await base.StopAsync(cancellationToken);
@@ -138,7 +155,7 @@ public sealed class WebhookTaskWorker : BackgroundService
         if (pending == 0) return;
 
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(TimeSpan.FromSeconds(5));
+        if (_drainBudget <= TimeSpan.Zero) budget.Cancel(); else budget.CancelAfter(_drainBudget);   // 0 = gar nicht drainieren
         var done = 0;
         while (!budget.IsCancellationRequested && _queue.TryDequeue(out var item) && item is not null)
         {
@@ -164,12 +181,15 @@ public class BackgroundTaskWorker : BackgroundService
     private readonly IBackgroundTaskQueue _queue;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BackgroundTaskWorker> _logger;
+    private readonly TimeSpan _drainBudget;
 
-    public BackgroundTaskWorker(IBackgroundTaskQueue queue, IServiceScopeFactory scopeFactory, ILogger<BackgroundTaskWorker> logger)
+    public BackgroundTaskWorker(IBackgroundTaskQueue queue, IServiceScopeFactory scopeFactory, ILogger<BackgroundTaskWorker> logger,
+        IConfiguration? configuration = null)
     {
         _queue = queue;
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _drainBudget = ShutdownDrain.Budget(configuration);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -196,7 +216,7 @@ public class BackgroundTaskWorker : BackgroundService
     /// <summary>Beim Herunterfahren: kurz nachdrainen, was schon in der Queue liegt, und den Rest
     /// SICHTBAR machen. Die Queue lebt nur im Arbeitsspeicher — ohne diese Zeilen verschwanden
     /// Tag-Backfills, Tipp-Generierung und Auto-Subscription-Tickets beim (nächtlichen) Neustart
-    /// ohne eine einzige Logzeile. Das Zeitbudget ist knapp, weil Docker nach ~10 s hart abschießt.</summary>
+    /// ohne eine einzige Logzeile. Das Zeitbudget ist knapp, weil Docker nach ~10 s hart abschießt (<see cref="ShutdownDrain"/>).</summary>
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         await base.StopAsync(cancellationToken);
@@ -204,7 +224,7 @@ public class BackgroundTaskWorker : BackgroundService
         if (pending == 0) return;
 
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        budget.CancelAfter(TimeSpan.FromSeconds(5));
+        if (_drainBudget <= TimeSpan.Zero) budget.Cancel(); else budget.CancelAfter(_drainBudget);   // 0 = gar nicht drainieren
         var done = 0;
         while (!budget.IsCancellationRequested && _queue.TryDequeue(out var item) && item is not null)
         {

@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -104,5 +107,45 @@ public class BackgroundTaskQueueTests
         await item(null!, CancellationToken.None);
 
         Assert.True(executed);
+    }
+
+    // ---- A8-011: gemeinsames Drain-Budget beim Herunterfahren ----
+
+    [Fact]
+    public void ShutdownDrainBudget_DefaultsToThreeSeconds_TwoDrainsStayUnderDockersTenSeconds()
+    {
+        var budget = ShutdownDrain.Budget(null);
+        Assert.Equal(TimeSpan.FromSeconds(3), budget);
+        Assert.True(budget * 2 < TimeSpan.FromSeconds(10));   // Webhook- + Background-Worker nacheinander
+    }
+
+    [Theory]
+    [InlineData("1", 1)]
+    [InlineData("0", 0)]
+    [InlineData("999", 30)]
+    [InlineData("-4", 0)]
+    public void ShutdownDrainBudget_IsConfigurable_AndClamped(string configured, int expectedSeconds)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["BackgroundTasks:DrainSeconds"] = configured }).Build();
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), ShutdownDrain.Budget(config));
+    }
+
+    [Fact]
+    public async Task Worker_StopWithZeroBudget_DrainsNothing_AndReturnsAtOnce()
+    {
+        var queue = new BackgroundTaskQueue();
+        var ran = 0;
+        await queue.EnqueueAsync((_, _) => { ran++; return Task.CompletedTask; });
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["BackgroundTasks:DrainSeconds"] = "0" }).Build();
+        var services = new ServiceCollection().BuildServiceProvider();
+        var worker = new BackgroundTaskWorker(queue,
+            services.GetRequiredService<IServiceScopeFactory>(), NullLogger<BackgroundTaskWorker>.Instance, config);
+
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.Equal(0, ran);
+        Assert.Equal(1, queue.PendingCount);
     }
 }

@@ -54,6 +54,26 @@ formular hochladen, Kurs-/PGN-Import, Analyse (Stockfish), Kartenkacheln auf der
 `HIT`), Container-Neustart. Schreibt etwas außerhalb dieser Pfade, scheitert es mit `Read-only file system` im Log.
 Danach E2E (`compose.e2e.yml`) mit denselben Einstellungen grün.
 
+## api: stop_grace_period: 30s (Prod/Dev-Compose)
+
+Codereview A8-011. Beim Stopp arbeiten zwei Worker der API noch ab, was in ihren (nur im Arbeitsspeicher liegenden)
+Warteschlangen steht — `WebhookTaskWorker` und `BackgroundTaskWorker`, NACHEINANDER. Ohne `stop_grace_period` gibt
+Docker 10 s, dann `SIGKILL`. Mit je 5 s füllten die beiden Drains dieses Fenster allein; für die übrigen Hosted
+Services (Abbruch laufender Analysen, Heartbeat) und den Log-Flush blieb nichts, die letzten Logzeilen gingen verloren.
+
+- **Im Code (umgesetzt):** gemeinsames Drain-Budget `BackgroundTasks:DrainSeconds` (`ShutdownDrain`, Vorgabe 3 s,
+  0–30; zusammen 6 s < 10 s). `0` = gar nicht drainieren (Rest wird wie bisher als „verworfen“ protokolliert).
+- **Im Compose (macht der Betreiber, Dateien liegen außerhalb des Repos):** für den Dienst `api` in
+  `/opt/stacks/rookhub-schach{,-dev}/compose.yaml`
+
+```yaml
+    stop_grace_period: 30s
+```
+
+  Die .NET-Vorgabe `HostOptions.ShutdownTimeout` ist ebenfalls 30 s — erst damit hat das Herunterfahren die Zeit, die
+  der Host ohnehin einplant. Wer das Budget danach erhöhen will (`BACKGROUNDTASKS__DRAINSECONDS`), bleibt mit beiden
+  Drains unter der Grace-Period.
+
 ## Nicht in diesem Repo
 
 - **log-watcher** (eigenes Repo): Dockerfile ohne `USER`, Container läuft als root, `data/` gehört root — dort `USER`
