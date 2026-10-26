@@ -189,3 +189,29 @@ describe('ResetPasswordComponent Template (Länge + Fehlerblock, UX-018)', () =>
     expect(fixture.nativeElement.querySelector('mat-card-actions a[href="/forgot-password"]')).not.toBeNull();
   });
 });
+
+/** UX-067: ein Link ohne Token ist ein Fehler, kein Info-Hinweis — und „Neuen Link anfordern" ist der Hauptknopf. */
+describe('ResetPasswordComponent Template (ohne Token, UX-067)', () => {
+  it('meldet den fehlenden Token als Fehler (role=alert) mit „Neuen Link anfordern" als Primärknopf', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ResetPasswordComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ResetPasswordComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const alert = el.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('auth.reset.missingToken');
+    const links = Array.from(el.querySelectorAll('mat-card-actions a'));
+    const requestNew = links.find(a => a.textContent!.includes('auth.reset.requestNew'))!;
+    const back = links.find(a => a.textContent!.includes('auth.forgot.backToLogin'))!;
+    expect(requestNew.classList).toContain('mat-mdc-unelevated-button');
+    expect(back.classList).not.toContain('mat-mdc-unelevated-button');
+  });
+});

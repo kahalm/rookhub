@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -39,7 +40,7 @@ const ERROR_KEYS: Record<ResetError, string> = {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-reset-password',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, PasswordToggleComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, PasswordToggleComponent, TranslatePipe],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -48,7 +49,11 @@ const ERROR_KEYS: Record<ResetError, string> = {
         </mat-card-header>
         <mat-card-content>
           @if (!token) {
-            <p class="auth-info">{{ 'auth.reset.missingToken' | translate }}</p>
+            <!-- UX-067: ohne Token geht hier nichts — ein Fehler (Warnfarbe, Symbol, role=alert), kein neutraler Hinweis. -->
+            <div class="form-error missing-token" role="alert">
+              <mat-icon aria-hidden="true">link_off</mat-icon>
+              <p>{{ 'auth.reset.missingToken' | translate }}</p>
+            </div>
           } @else {
             <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
               <mat-form-field appearance="outline">
@@ -86,7 +91,10 @@ const ERROR_KEYS: Record<ResetError, string> = {
         <mat-card-actions>
           <!-- UI-Sweep b1 (b1-rk-login-passwort-vergessen-doppelt): beim abgelaufenen Link bietet der Fehlerkasten
                „Neuen Link anfordern“ schon an — nicht noch einmal direkt darunter. -->
-          @if (error() !== 'expired') {
+          @if (!token) {
+            <!-- UX-067: ohne Token ist das der einzige Weg weiter — Hauptknopf. -->
+            <a mat-flat-button color="primary" routerLink="/forgot-password">{{ 'auth.reset.requestNew' | translate }}</a>
+          } @else if (error() !== 'expired') {
             <a mat-button routerLink="/forgot-password">{{ 'auth.reset.requestNew' | translate }}</a>
           }
           <a mat-button routerLink="/login">{{ 'auth.forgot.backToLogin' | translate }}</a>
@@ -98,12 +106,13 @@ const ERROR_KEYS: Record<ResetError, string> = {
     .auth-container { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
-    .auth-info { background: color-mix(in srgb, var(--rh-info) 15%, transparent); border-left: 3px solid var(--rh-info); padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     mat-form-field { width: 100%; }
     .form-error { margin-top: 12px; padding: 12px; border-radius: 8px;
                   background: rgba(211, 47, 47, 0.08); border: 1px solid rgba(211, 47, 47, 0.35); }
     .form-error p { margin: 0 0 8px; }
     .form-error p:last-child { margin-bottom: 0; }
+    .missing-token { display: flex; align-items: flex-start; gap: 8px; }
+    .missing-token mat-icon { flex-shrink: 0; color: var(--rh-error); }
     /* Handy: 'Neuen Link anfordern' und 'Zurueck zur Anmeldung' passen nicht nebeneinander (gleiches Muster wie
        im Login) und brachen innerhalb des 40px-Buttons zweizeilig um. */
     @media (max-width: 768px) { mat-card-actions { flex-wrap: wrap; } }
