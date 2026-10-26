@@ -32,6 +32,7 @@ import {
   withSideToMove, fenMoveNumber,
 } from './reconstruct-moves.util';
 import { whiteToMove } from '../../shared/chess/fen-side';
+import { Observable } from 'rxjs';
 
 /**
  * Der Arbeitsplatz für EINE zu rekonstruierende Partie: Bruchstücke aufzeichnen, ordnen, ergänzen.
@@ -187,6 +188,22 @@ export class ReconstructDetailComponent implements OnInit {
     });
   }
 
+  /**
+   * Eine Änderung an den Server schicken: währenddessen `busy`, die Antwort (die ganze Kette) übernehmen, dann
+   * `after`. Bei einem Fehler sagt `errorKey` anhand von `error.reason` der Antwort, welcher Text erscheint.
+   */
+  private mutate(call: Observable<Reconstruction>, after?: () => void,
+                 errorKey: (reason: string | undefined) => string = () => 'reconstruct.saveFailed'): void {
+    this.busy.set(true);
+    call.subscribe({
+      next: data => { this.busy.set(false); this.apply(data); after?.(); },
+      error: err => {
+        this.busy.set(false);
+        this.snackbar.warn(this.translate.instant(errorKey(err?.error?.reason)));
+      },
+    });
+  }
+
   private apply(data: Reconstruction): void {
     this.data.set(data);
     this.head = {
@@ -199,8 +216,7 @@ export class ReconstructDetailComponent implements OnInit {
 
   saveHead(): void {
     if (this.busy()) return;
-    this.busy.set(true);
-    this.service.updateHead(this.id, {
+    this.mutate(this.service.updateHead(this.id, {
       title: this.head.title.trim() || '?',
       white: this.head.white.trim() || null,
       black: this.head.black.trim() || null,
@@ -208,10 +224,7 @@ export class ReconstructDetailComponent implements OnInit {
       playedOn: this.head.playedOn || null,
       result: this.head.result.trim() || null,
       note: this.head.note.trim() || null,
-    }).subscribe({
-      next: data => { this.busy.set(false); this.apply(data); this.showHead = false; },
-      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
-    });
+    }), () => { this.showHead = false; });
   }
 
   // ----- Teile -----
@@ -314,24 +327,13 @@ export class ReconstructDetailComponent implements OnInit {
       ? this.service.addPart(this.id, input)
       : this.service.updatePart(this.id, editingId, input);
 
-    this.busy.set(true);
-    call.subscribe({
-      next: data => {
-        this.busy.set(false);
-        this.apply(data);
-        if (then === null) this.editingId.set(null);
-        else this.startNew(then);   // hängt am jetzt LETZTEN Teil, also am gerade gespeicherten
-      },
-      error: err => {
-        this.busy.set(false);
-        const reason = err?.error?.reason;
-        const key = reason === 'invalid-fen' ? 'reconstruct.invalidFen'
-          : reason === 'no-moves' ? 'reconstruct.noMoves'
-          : reason === 'too-many-parts' ? 'reconstruct.tooManyParts'
-          : 'reconstruct.saveFailed';
-        this.snackbar.warn(this.translate.instant(key));
-      },
-    });
+    this.mutate(call, () => {
+      if (then === null) this.editingId.set(null);
+      else this.startNew(then);   // hängt am jetzt LETZTEN Teil, also am gerade gespeicherten
+    }, reason => reason === 'invalid-fen' ? 'reconstruct.invalidFen'
+      : reason === 'no-moves' ? 'reconstruct.noMoves'
+      : reason === 'too-many-parts' ? 'reconstruct.tooManyParts'
+      : 'reconstruct.saveFailed');
   }
 
   removePart(part: ReconstructionPart): void {
@@ -340,10 +342,8 @@ export class ReconstructDetailComponent implements OnInit {
     // Vollbild-Elements, und die native Rückfrage lag dahinter — unsichtbar, aber blockierend.
     this.confirm.ask('reconstruct.deletePartConfirm').subscribe(ok => {
       if (!ok) return;
-      this.busy.set(true);
-      this.service.removePart(this.id, part.id).subscribe({
-        next: data => { this.busy.set(false); this.apply(data); if (this.editingId() === part.id) this.editingId.set(null); },
-        error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
+      this.mutate(this.service.removePart(this.id, part.id), () => {
+        if (this.editingId() === part.id) this.editingId.set(null);
       });
     });
   }
@@ -355,11 +355,7 @@ export class ReconstructDetailComponent implements OnInit {
     const to = from + delta;
     if (from < 0 || to < 0 || to >= parts.length || this.busy()) return;
     parts.splice(to, 0, ...parts.splice(from, 1));
-    this.busy.set(true);
-    this.service.reorder(this.id, parts.map(p => p.id)).subscribe({
-      next: data => { this.busy.set(false); this.apply(data); },
-      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
-    });
+    this.mutate(this.service.reorder(this.id, parts.map(p => p.id)));
   }
 
   /**
@@ -390,8 +386,7 @@ export class ReconstructDetailComponent implements OnInit {
    */
   toggleCertain(part: ReconstructionPart): void {
     if (this.busy()) return;
-    this.busy.set(true);
-    this.service.updatePart(this.id, part.id, {
+    this.mutate(this.service.updatePart(this.id, part.id, {
       kind: part.kind,
       moves: part.kind === PartKind.Moves ? part.moves ?? '' : null,
       fen: part.kind === PartKind.Position ? part.fen ?? '' : null,
@@ -400,10 +395,7 @@ export class ReconstructDetailComponent implements OnInit {
       certain: !part.certain,
       blackToMove: part.blackToMove,
       note: part.note ?? null,
-    }).subscribe({
-      next: data => { this.busy.set(false); this.apply(data); },
-      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
-    });
+    }));
   }
 
   // ----- Lücke schließen -----
@@ -451,11 +443,7 @@ export class ReconstructDetailComponent implements OnInit {
   /** Alle Vorschläge dieser Lücke verwerfen. */
   discardProposals(part: ReconstructionPart): void {
     if (this.busy()) return;
-    this.busy.set(true);
-    this.service.discardProposals(this.id, part.id).subscribe({
-      next: data => { this.busy.set(false); this.apply(data); this.editingId.set(null); this.hideGap(); },
-      error: () => { this.busy.set(false); this.snackbar.warn(this.translate.instant('reconstruct.saveFailed')); },
-    });
+    this.mutate(this.service.discardProposals(this.id, part.id), () => { this.editingId.set(null); this.hideGap(); });
   }
 
   /**
@@ -491,41 +479,19 @@ export class ReconstructDetailComponent implements OnInit {
     const proposal = this.editingPart();
     const target = proposal ? this.targetAfter(proposal) : null;
     if (!proposal || !target || this.busy()) return;
-    this.busy.set(true);
-    this.service.applyGap(this.id, target.id, proposal.moves ?? '').subscribe({
-      next: data => {
-        this.busy.set(false);
-        this.apply(data);
-        this.editingId.set(null);
-        this.hideGap();
-        this.snackbar.info(this.translate.instant('reconstruct.gap.applied'));
-      },
-      error: err => {
-        this.busy.set(false);
-        const reason = err?.error?.reason;
-        this.snackbar.warn(this.translate.instant(
-          reason === 'does-not-fit' ? 'reconstruct.gap.doesNotFit' : 'reconstruct.saveFailed'));
-      },
-    });
+    this.mutate(this.service.applyGap(this.id, target.id, proposal.moves ?? ''), () => {
+      this.editingId.set(null);
+      this.hideGap();
+      this.snackbar.info(this.translate.instant('reconstruct.gap.applied'));
+    }, reason => reason === 'does-not-fit' ? 'reconstruct.gap.doesNotFit' : 'reconstruct.saveFailed');
   }
 
   private saveWaypoint(targetId: number, fen: string, certain: boolean): void {
-    this.busy.set(true);
-    this.service.addWaypoint(this.id, targetId, fen, certain).subscribe({
-      next: data => {
-        this.busy.set(false);
-        this.apply(data);
-        this.waypointFor.set(null);
-        this.editingId.set(null);
-        this.hideGap();
-      },
-      error: err => {
-        this.busy.set(false);
-        const reason = err?.error?.reason;
-        this.snackbar.warn(this.translate.instant(
-          reason === 'invalid-fen' ? 'reconstruct.invalidFen' : 'reconstruct.saveFailed'));
-      },
-    });
+    this.mutate(this.service.addWaypoint(this.id, targetId, fen, certain), () => {
+      this.waypointFor.set(null);
+      this.editingId.set(null);
+      this.hideGap();
+    }, reason => reason === 'invalid-fen' ? 'reconstruct.invalidFen' : 'reconstruct.saveFailed');
   }
 
   hideGap(): void { this.gapFor.set(null); this.gapResult.set(null); }
