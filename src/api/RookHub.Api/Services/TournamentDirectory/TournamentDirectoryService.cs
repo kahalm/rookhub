@@ -55,23 +55,6 @@ public class TournamentDirectoryService
     internal int MaxRows { get; set; } = 2000;
 
     /// <summary>
-    /// Die Turnierarten der chess-results-Suche, die MANNSCHAFTSturniere liefern: 2 Rundenturnier
-    /// fuer Mannschaften, 3 Schweizer System fuer Mannschaften.
-    /// </summary>
-    /// <summary>
-    /// Die vier chess-results-Turnierarten und was sie bedeuten. Sie sind das KREUZPRODUKT aus
-    /// „Mannschaft?" und „welches System?" — wer die Durchgaenge ohnehin macht, bekommt beide
-    /// Angaben aus derselben Abfrage.
-    /// </summary>
-    private static readonly (string Art, TournamentKind Kind, TournamentSystem System)[] ArtPasses =
-    [
-        ("0", TournamentKind.Individual, TournamentSystem.Swiss),
-        ("1", TournamentKind.Individual, TournamentSystem.RoundRobin),
-        ("2", TournamentKind.Team,       TournamentSystem.RoundRobin),
-        ("3", TournamentKind.Team,       TournamentSystem.Swiss),
-    ];
-
-    /// <summary>
     /// Name des eigenen Crawler-Clients (laengeres Zeitlimit als der Live-Pfad, siehe Program.cs).
     /// </summary>
     public const string CrawlerClientName = "CrawlerDirectory";
@@ -105,7 +88,7 @@ public class TournamentDirectoryService
 
     private readonly AppDbContext _db;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly DirectoryGeocoder _geocoder;
+    private readonly DirectorySweepMerge _merge;
     private readonly DirectoryNotifier _notifier;
     private readonly ILogger<TournamentDirectoryService> _log;
 
@@ -118,7 +101,7 @@ public class TournamentDirectoryService
     {
         _db = db;
         _httpClientFactory = httpClientFactory;
-        _geocoder = new DirectoryGeocoder(db, geocoding);
+        _merge = new DirectorySweepMerge(db, new DirectoryGeocoder(db, geocoding));
         _notifier = new DirectoryNotifier(db, notifications);
         _log = log;
     }
@@ -249,12 +232,12 @@ public class TournamentDirectoryService
             return (new DirectorySweepResult(federation, 0, 0, 0, 0, 0, ex.Message), []);
         }
 
-        var artMap = await FetchArtMapAsync(federation, from, to, ct);
+        var artMap = await DirectoryArtPasses.FetchMapAsync(FetchAsync, _log, federation, from, to, MaxRows, ct);
 
-        var (existing, byId) = await LoadKnownAsync(federation, from, rows, ct);
+        var (existing, byId) = await _merge.LoadKnownAsync(federation, from, rows, ct);
 
         var now = DateTime.UtcNow;
-        var (added, changed, updated) = await ApplyRowsAsync(rows, byId, now, artMap, ct);
+        var (added, changed, updated) = await _merge.ApplyRowsAsync(rows, byId, now, artMap, ct);
         var removed = MarkVanished(federation, rows, existing, now);
 
         sweep.LastSweptAt = now;
@@ -273,136 +256,6 @@ public class TournamentDirectoryService
 
         return (new DirectorySweepResult(federation, rows.Count, added.Count, updated, changed.Count, removed.Count),
                 added.Select(e => e.Id).ToList());
-    }
-
-    /// <summary>
-    /// Die bekannten Eintraege der Foederation im Fenster plus die Nachzuegler, die die Liste
-    /// liefert, die aber nicht (mehr) ins Fenster passen — nach chess-results-Nummer.
-    /// </summary>
-    private async Task<(List<TournamentDirectoryEntry> Existing, Dictionary<string, TournamentDirectoryEntry> ById)>
-        LoadKnownAsync(string federation, DateOnly from, List<DirectorySearchRows.CrawlerDirectoryRow> rows,
-            CancellationToken ct)
-    {
-        // Die Spielorte MIT laden: ohne sie steht `entry.Venues` leer da, ReplaceVenues loescht
-        // nichts, und die alten Zeilen sammeln sich mit jedem naechtlichen Lauf an.
-        var existing = await _db.TournamentDirectoryEntries
-            .Include(e => e.Venues)
-            .Include(e => e.Sources)
-            .Where(e => e.Federation == federation && (e.EndDate == null || e.EndDate >= from))
-            .ToListAsync(ct);
-        // NUR die mit Nummer: `ChessResultsId` ist seit 0.428.0 nullbar (FIDE-Ereignisse und die
-        // Verbandskalender fuehren keine), und `ToDictionary` wirft bei einem NULL-Schluessel.
-        // Am 2026-09-09 auf Dev gemessen: Sweep LIE (keine solchen Eintraege) 200, Sweep AUT (78)
-        // 500 mit `ArgumentNullException (Parameter 'key')` — der naechtliche Lauf der HAUPTQUELLE
-        // war fuer jede Foederation tot, in der eine Zusatzquelle etwas beigetragen hatte, und das
-        // sind gerade die taeglichen Nachbarlaender. Ein Eintrag ohne Nummer gehoert hier ohnehin
-        // nicht hin: diese Zuordnung laeuft ueber die Nummer, alles andere ueber Termin und Namen.
-        var byId = existing.Where(e => e.ChessResultsId is not null)
-            .ToDictionary(e => e.ChessResultsId!, StringComparer.Ordinal);
-
-        // Und die Zeilen NACHLADEN, die zwar geliefert wurden, aber nicht ins Fenster passen.
-        // Ohne das gilt ein VERSCHOBENES Turnier als neu: gespeichert mit Ende im Maerz, vom
-        // Veranstalter auf November verlegt, faellt es beim Mai-Lauf aus `existing` heraus, die
-        // Suche liefert es aber weiterhin — der Einfuegeversuch laeuft in den Unique-Index auf
-        // ChessResultsId und reisst den GANZEN Lauf mit (SaveChanges liegt ausserhalb des
-        // try/catch weiter oben). Ausgerechnet die Terminaenderung also, fuer die das
-        // Aenderungs-Feature gebaut wurde. Fremde Foederation absichtlich NICHT eingeschraenkt:
-        // ein Turnier kann auch die Foederation wechseln, und der Unique-Index gilt global.
-        var strays = rows.Select(r => r.ChessResultsId).Where(id => !byId.ContainsKey(id)).Distinct().ToList();
-        if (strays.Count > 0)
-        {
-            foreach (var stray in await _db.TournamentDirectoryEntries
-                         .Include(e => e.Venues)
-                         .Include(e => e.Sources)
-                         .Where(e => strays.Contains(e.ChessResultsId)).ToListAsync(ct))
-            {
-                if (stray.ChessResultsId is not null) byId[stray.ChessResultsId] = stray;
-            }
-        }
-
-        return (existing, byId);
-    }
-
-    /// <summary>
-    /// Die Trefferzeilen auf die Eintraege uebertragen: bekannte aktualisieren (und Aenderungen
-    /// fuer die Meldung sammeln), unbekannte anlegen.
-    /// </summary>
-    private async Task<(List<TournamentDirectoryEntry> Added,
-            List<(TournamentDirectoryEntry Entry, string? OldDate, string? OldLocation)> Changed, int Updated)>
-        ApplyRowsAsync(List<DirectorySearchRows.CrawlerDirectoryRow> rows,
-            Dictionary<string, TournamentDirectoryEntry> byId, DateTime now,
-            Dictionary<string, (TournamentKind Kind, TournamentSystem System)>? artMap, CancellationToken ct)
-    {
-        var added = new List<TournamentDirectoryEntry>();
-        var changed = new List<(TournamentDirectoryEntry Entry, string? OldDate, string? OldLocation)>();
-        var updated = 0;
-
-        foreach (var row in rows)
-        {
-            if (byId.TryGetValue(row.ChessResultsId, out var entry))
-            {
-                var oldHash = entry.ChangeHash;
-                var oldDate = DirectoryKeys.FormatRange(entry.StartDate, entry.EndDate);
-                var oldLocation = entry.LocationText;
-                var oldLocationText = entry.LocationText;
-
-                await ApplyAsync(row, entry, now, artMap, ct);
-                entry.MissedSweeps = 0;
-                entry.LastMissAt = null;
-                entry.RemovedAt = null;
-                updated++;
-
-                if (oldHash is not null && oldHash != entry.ChangeHash)
-                {
-                    changed.Add((entry, oldDate, oldLocation));
-                    // Der Termin hat sich geaendert — die gespeicherten Spieltermine sind damit
-                    // Makulatur. Der Vermerk faellt weg, der naechste Rundenplan-Durchgang holt
-                    // sie neu; bis dahin gilt wieder der ganze Zeitraum, was zwar ungenau, aber
-                    // nicht falsch ist.
-                    if (!string.Equals(oldDate, DirectoryKeys.FormatRange(entry.StartDate, entry.EndDate),
-                            StringComparison.Ordinal))
-                    {
-                        entry.RoundPlanCheckedAt = null;
-                        // Die FASSUNG faellt mit weg: sie beantwortet „mit welchem Parser
-                        // geholt" und haenge sonst an einem Eintrag ohne Vermerk — eine Aussage
-                        // ueber einen Abruf, den es nicht mehr gibt.
-                        entry.RoundPlanVersion = 0;
-                    }
-                }
-
-                // Nur neu verorten, wenn sich der Ortstext wirklich geaendert hat - sonst wuerde
-                // jede Nacht der gesamte Bestand durch den Gazetteer laufen.
-                if (!string.Equals(oldLocationText, entry.LocationText, StringComparison.Ordinal))
-                {
-                    await _geocoder.GeocodeAsync(entry, ct);
-                    // UI-Sweep 2026-10-11 (r2-t-dup-cards): der Schluessel liest den verorteten
-                    // Ort — nach dem Verorten neu rechnen, nicht erst in der naechsten Nacht.
-                    DirectoryKeys.ApplyGrouping(entry);
-                }
-            }
-            else
-            {
-                entry = new TournamentDirectoryEntry
-                {
-                    // Fuer einen chess-results-Eintrag ist die Identitaet die Nummer dort — die
-                    // Adressen, Abos und Teilen-Links, die es schon gibt, bleiben damit gueltig.
-                    PublicId = row.ChessResultsId,
-                    ChessResultsId = row.ChessResultsId,
-                    FirstSeenAt = now,
-                    CreatedAt = now,
-                };
-                await ApplyAsync(row, entry, now, artMap, ct);
-                await _geocoder.GeocodeAsync(entry, ct);
-                DirectoryKeys.ApplyGrouping(entry); // UI-Sweep 2026-10-11 (r2-t-dup-cards): s. o.
-                _db.TournamentDirectoryEntries.Add(entry);
-                added.Add(entry);
-                // Sonst legt dieselbe Nummer, zweimal in EINER Trefferliste, zwei Zeilen an —
-                // und laeuft in denselben Unique-Index.
-                byId[entry.ChessResultsId] = entry;
-            }
-        }
-
-        return (added, changed, updated);
     }
 
     /// <summary>
@@ -427,92 +280,7 @@ public class TournamentDirectoryService
                 "Verschwunden-Erkennung uebersprungen", federation, rows.Count);
         }
 
-        var seen = rows.Select(r => r.ChessResultsId).ToHashSet(StringComparer.Ordinal);
-        var removed = new List<TournamentDirectoryEntry>();
-        // NUR Eintraege MIT chess-results-Nummer. Ein Eintrag ohne Nummer kann in dieser
-        // Trefferliste per Definition nicht vorkommen — er stammt aus einem Verbandskalender oder
-        // dem FIDE-Kalender, und genau das ist deren Sinn: sie fuehren Turniere, die chess-results
-        // NICHT hat. Ohne diese Bedingung sammelte jeder solche Eintrag jede Nacht einen
-        // Fehlschlag und galt beim zweiten als ABGESAGT — samt Benachrichtigung an Abonnenten.
-        // Am 2026-09-09 live passiert: das „ANSBACHER 24 Stunden Blitzturnier" aus dem Kalender des
-        // Deutschen Schachbunds stand nach zwei GER-Sweeps auf abgesagt, obwohl es stattfindet.
-        // Ein Eintrag einer Zusatzquelle kann nur von DIESER Quelle zurueckgezogen werden
-        // (ExternalDirectorySource.RetireVanishedAsync).
-        foreach (var entry in truncated
-                     ? []
-                     : existing.Where(e => e.RemovedAt == null && e.ChessResultsId is not null
-                                           && !seen.Contains(e.ChessResultsId)))
-        {
-            // Hoechstens ein Fehlschlag je Karenzfenster: der Zaehler soll NAECHTE messen, nicht
-            // Laeufe. Zwei Durchgaenge koennen Minuten auseinanderliegen — ein Aufhol-Lauf nach
-            // einem Deploy (auf Dev mehrmals am Tag), ein Handlauf ueber directory-runs.sh, das
-            // bis zu elf Durchgaenge macht. Ohne diese Sperre war ein Turnier, das chess-results
-            // kurz nicht auswies, binnen einer Stunde abgesagt — samt Meldung an Abonnenten.
-            if (entry.LastMissAt is { } last
-                && now - last < ExternalDirectorySource.MissCooldown) continue;
-
-            entry.MissedSweeps++;
-            entry.LastMissAt = now;
-            entry.UpdatedAt = now;
-            if (entry.MissedSweeps < MissedSweepsUntilRemoved) continue;
-            entry.RemovedAt = now;
-            removed.Add(entry);
-        }
-
-        return removed;
-    }
-
-    /// <summary>
-    /// Welche Turnierart hat jedes Turnier dieser Foederation — Einzel oder Mannschaft, Schweizer
-    /// System oder Rundenturnier?
-    ///
-    /// <para>Die chess-results-Turniersuche kennt die Turnierart als Suchfeld, und ihre vier
-    /// Werte sind genau das Kreuzprodukt beider Fragen (siehe <see cref="ArtPasses"/>). Vier
-    /// zusaetzliche Abfragen je Foederation beantworten damit aus der QUELLE, was sonst am
-    /// Turniernamen geraten werden muesste: „Liga" im Namen ist ein Indiz, „SK Aachen 2 - SF
-    /// Katernberg" keines.</para>
-    ///
-    /// <para><b>Alles oder nichts.</b> Zwei Faelle geben <c>null</c> zurueck, also „unbekannt",
-    /// und lassen Art UND System unangetastet: ein FEHLER (sonst wuerde ein Netzausfall den
-    /// halben Bestand umschreiben) und eine ABGESCHNITTENE Liste (chess-results kappt bei
-    /// <see cref="MaxRows"/> Zeilen — der fehlende Schwanz waere sonst lauter falsch eingeordnete
-    /// Turniere). Das gilt fuer JEDEN der vier Durchgaenge: faellt einer aus, ist die Zuordnung
-    /// unvollstaendig, und eine halbe Wahrheit ist hier schlechter als keine.</para>
-    /// </summary>
-    private async Task<Dictionary<string, (TournamentKind Kind, TournamentSystem System)>?>
-        FetchArtMapAsync(string federation, DateOnly from, DateOnly to, CancellationToken ct)
-    {
-        var map = new Dictionary<string, (TournamentKind, TournamentSystem)>(StringComparer.Ordinal);
-        foreach (var (art, kind, system) in ArtPasses)
-        {
-            List<DirectorySearchRows.CrawlerDirectoryRow> rows;
-            try
-            {
-                var path = $"/api/tournament-search?fed={Uri.EscapeDataString(federation)}" +
-                           $"&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}&maxRows={MaxRows}&art={art}";
-                rows = DirectorySearchRows.ParseRows(await FetchAsync(path, ct));
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _log.LogWarning(ex,
-                    "Turnierart-Durchgang {Federation} (Art {Art}) fehlgeschlagen — Art und System bleiben unveraendert",
-                    federation, art);
-                return null;
-            }
-
-            if (rows.Count >= MaxRows)
-            {
-                _log.LogWarning(
-                    "Turnierart-Durchgang {Federation} (Art {Art}) bei {Rows} Zeilen abgeschnitten — " +
-                    "Art und System bleiben unveraendert", federation, art, rows.Count);
-                return null;
-            }
-
-            // Ein Turnier steht in genau EINER Art; taucht es doch zweimal auf, gilt der erste
-            // Treffer, statt die Zuordnung stillschweigend zu ueberschreiben.
-            foreach (var row in rows) map.TryAdd(row.ChessResultsId, (kind, system));
-        }
-        return map;
+        return DirectorySweepMerge.MarkVanished(rows, existing, now, truncated, MissedSweepsUntilRemoved);
     }
 
     /// <summary>
@@ -525,57 +293,6 @@ public class TournamentDirectoryService
     /// </summary>
     private Task<JsonElement> FetchAsync(string path, CancellationToken ct) =>
         _httpClientFactory.GetCrawlerJsonAsync<JsonElement>(path, ct, emptyAsAbsent: true);
-
-    // ----- Abbildung -------------------------------------------------------
-
-    /// <summary>
-    /// Uebertraegt eine Trefferzeile auf den Eintrag. <paramref name="artMap"/> ist das Ergebnis
-    /// der vier Turnierart-Durchgaenge; <c>null</c> heisst „konnte nicht geklaert werden" und
-    /// laesst eine bereits bekannte Art UND ein bekanntes System ausdruecklich in Ruhe.
-    /// </summary>
-    private async Task ApplyAsync(DirectorySearchRows.CrawlerDirectoryRow row, TournamentDirectoryEntry entry, DateTime now,
-        Dictionary<string, (TournamentKind Kind, TournamentSystem System)>? artMap,
-        CancellationToken ct)
-    {
-        entry.Name = Truncate(row.Name, 500);
-        entry.Federation = Truncate(row.Federation, 3);
-        entry.State = Truncate(row.State, 100);
-        entry.StartDate = row.StartDate;
-        entry.EndDate = row.EndDate;
-        entry.StartsOnWeekend = row.StartDate is { } d
-            && d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-        entry.LocationText = Truncate(row.Location, 500);
-        entry.TimeControlText = Truncate(row.TimeControl, 300);
-        entry.Speed = TournamentSpeedClassifier.Classify(row.TimeControl);
-        entry.Organizer = Truncate(row.Organizer, 300);
-        entry.Director = Truncate(row.Director, 300);
-        entry.ChiefArbiter = Truncate(row.ChiefArbiter, 300);
-        entry.Rounds = row.Rounds;
-        entry.PlayerCount = row.PlayerCount;
-        entry.UpstreamUpdatedAt = row.LastUpdatedApproxUtc;
-        entry.ChangeHash = DirectoryKeys.ComputeChangeHash(row.StartDate, row.EndDate, row.Location);
-
-        // Nur wenn ALLE vier Durchgaenge standen. Ein Turnier, das in keinem davon auftauchte,
-        // bleibt bewusst unangetastet: die Arten decken zwar alles ab, was die Suche anbietet,
-        // aber „in keiner Liste" ist eine Aussage ueber die Quelle, nicht ueber das Turnier.
-        if (artMap is not null && artMap.TryGetValue(row.ChessResultsId, out var art))
-        {
-            entry.Kind = art.Kind;
-            entry.System = art.System;
-        }
-        // Publikum und Format haengen am Namen (Alter/Geschlecht) bzw. an Art und Dauer (Liga) —
-        // beides also NACH den Feldern oben und nach der Turnierart auswerten.
-        entry.AgeGroups = TournamentClassifier.AgeGroupsOf(entry.Name);
-        entry.Gender = TournamentClassifier.GenderOf(entry.Name);
-        entry.IsLeague = TournamentClassifier.LooksLikeLeague(
-            entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
-
-        // Nach Name, Termin und Ort - der Gruppenschluessel liest genau diese Felder.
-        DirectoryKeys.ApplyGrouping(entry);
-        entry.LastSeenAt = now;
-        entry.UpdatedAt = now;
-        await NoteSourceAsync(_db, entry, DirectorySourceKind.ChessResults, row.ChessResultsId, now, ct);
-    }
 
     /// <summary>
     /// Vermerkt, dass dieses Turnier auf DIESER Seite gefunden wurde. Beim ersten Mal angelegt,
@@ -622,9 +339,6 @@ public class TournamentDirectoryService
     /// <inheritdoc cref="DirectoryNotifier.MatchesProfile"/>
     internal static bool MatchesProfile(TournamentDirectoryEntry entry, TournamentSearchProfile profile) =>
         DirectoryNotifier.MatchesProfile(entry, profile);
-
-    /// <inheritdoc cref="DirectoryNotifier.SplitCsv"/>
-    internal static List<string> SplitCsv(string? csv) => DirectoryNotifier.SplitCsv(csv);
 
     /// <inheritdoc cref="DirectoryKeys.ApplyGrouping"/>
     internal static void ApplyGrouping(TournamentDirectoryEntry entry) => DirectoryKeys.ApplyGrouping(entry);

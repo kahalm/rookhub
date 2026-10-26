@@ -6,6 +6,13 @@ Gefuellt vom naechtlichen Sweep der chess-results-Turniersuche (`TournamentDirec
 03:00 UTC; Nachbarlaender taeglich, uebrige Foederationen rotierend). Rein lesend — hier wird
 nichts gecrawlt.
 
+**Aufbau des Sweeps** (Zerlegung Z8 + zweite Runde W7b, 2026-10-26): `TournamentDirectoryService` = Ablauf je
+Foederation (Abruf, Sweep-Zeile, Speichern, Meldungen, Log); der Abgleich der Trefferliste mit dem Bestand (bekannte
+Eintraege laden, Zeilen uebertragen/anlegen, Verschwundene zaehlen) steht in `DirectorySweepMerge`, die vier
+Turnierart-Durchgaenge in `DirectoryArtPasses`, Schluessel/Hash in `DirectoryKeys`, Meldungen in `DirectoryNotifier`.
+Die Admin-Endpunkte liegen in `AdminTournamentDirectoryController` (Partial: Wartung + FIDE/chess-results in der
+Hauptdatei, die Verbandskalender-Ausloeser in `AdminTournamentDirectoryController.Federations.cs`).
+
 **Ohne Anmeldung** (seit 0.643.0): Suche, Karte, Kalender, Einzelturnier und die beiden Orts-Endpunkte sind
 `[AllowAnonymous]` mit der Policy `directory-read` (`RateLimitPartitions.DirectoryRead`, 120/min je Konto bzw. IP,
 mal `RateLimitScale`). Was am NUTZER haengt, faellt fuer Gaeste still weg statt zu scheitern: keine ausgeblendeten und
