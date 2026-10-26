@@ -68,7 +68,8 @@ export function isHomeUrl(url: string): boolean {
             <button type="button" class="acct" (click)="logout()">{{ 'nav.logout' | translate }}</button>
           } @else {
             <a class="acct" routerLink="/login" [queryParams]="{ returnUrl: '/' }">{{ 'nav.login' | translate }}</a>
-            <a class="acct primary" routerLink="/register" [queryParams]="{ returnUrl: '/' }">{{ 'nav.register' | translate }}</a>
+            <!-- UX-064: Kontur-Pille wie „Anmelden" — die grüne Vollfläche gehört allein dem Spiel-Einstieg „Los geht's". -->
+            <a class="acct" routerLink="/register" [queryParams]="{ returnUrl: '/' }">{{ 'nav.register' | translate }}</a>
           }
         </nav>
       }
@@ -181,7 +182,6 @@ export function isHomeUrl(url: string): boolean {
             display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px;
             padding: 7px 14px; border-radius: 999px; border: 2px solid var(--kid-title);
             background: var(--kid-card); color: var(--kid-title); box-shadow: 0 3px 0 var(--kid-shadow); }
-    .acct.primary { background: var(--kid-green-strong); border-color: var(--kid-green-strong); color: #fff; }
     .acct:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kid-shadow); }
     .logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--kid-title);
             font-size: 1.35rem; font-weight: 900; }

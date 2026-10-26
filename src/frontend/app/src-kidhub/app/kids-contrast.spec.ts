@@ -135,7 +135,7 @@ describe('KidHub: Kontrast der Knoepfe mit Schrift', () => {
 
   it('Startseite: „Registrieren" und „Los geht\'s"', async () => {
     await go('/');
-    expectReadable(el('.acct.primary'), 'Registrieren');
+    expectReadable(el('.account a[href^="/register"]'), 'Registrieren');   // seit UX-064 Kontur-Pille wie „Anmelden"
     expectReadable(el('.go'), 'Los geht\'s');
   });
 

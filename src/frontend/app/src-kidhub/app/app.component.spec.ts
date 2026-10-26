@@ -154,6 +154,17 @@ describe('KidHubAppComponent', () => {
     expect(links).toEqual(['/login?returnUrl=%2F', '/register?returnUrl=%2F']);
   });
 
+  // UX-064: die grüne Vollfläche gehört dem Spiel-Einstieg („Los geht's") — „Registrieren" ist eine Kontur-Pille wie „Anmelden".
+  it('„Registrieren" sieht aus wie „Anmelden" (Kontur-Pille, keine grüne Vollfläche)', async () => {
+    const f = TestBed.createComponent(KidHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/');
+    f.detectChanges();
+    const [login, register] = Array.from(account(f)!.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(a => getComputedStyle(a));
+    expect(register.backgroundColor).toBe(login.backgroundColor);
+    expect(register.color).toBe(login.color);
+    expect(register.borderTopColor).toBe(login.borderTopColor);
+  });
+
   it('schon angemeldet (geteiltes Cookie): Name statt der Knoepfe', async () => {
     const f = TestBed.createComponent(KidHubAppComponent);
     f.detectChanges();
