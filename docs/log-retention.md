@@ -8,6 +8,28 @@ sie unbegrenzt — sowohl ein Speicher- als auch ein Datenschutzproblem
 `scripts/es_log_retention.py` legt dafür eine ILM-Policy an und verknüpft sie mit
 den Log-Data-Streams **und** deren Index-Templates.
 
+## Betreiber-Schritte (Stand 2026-10-25, O-7)
+
+Befund: die Prod-Datenströme `rookhub`, `crawler`, `piratechess` (`*-logs-generic-default`) liegen seit 2026-06-11 **ohne**
+ILM-Policy, und auf dem Host ist kein Retention-Timer eingerichtet (Codereview I1-010). Aus der Sitzung wird Prod-ES
+bewusst nicht angefasst — das macht der Betreiber auf dem Deploy-Host:
+
+```bash
+cd /opt/rookhub                                         # bzw. Checkout des Repos auf dem Host
+scripts/es/ilm-check.sh http://localhost:9200           # 1. Ist-Zustand, nur lesend (Exit 1 = Befunde)
+scripts/es/ilm-apply.sh http://localhost:9200 --dry-run # 2. zeigen, was geändert würde
+ILM_DAYS=90 scripts/es/ilm-apply.sh http://localhost:9200   # 3. anwenden (Policy rookhub-logs-retention, delete 90 d)
+scripts/es/ilm-check.sh http://localhost:9200           # 4. Exit 0 = alle Backing-Indices und Templates verknüpft
+```
+
+5. Monatlichen Timer installieren (Abschnitt „Regelmäßig ausführen“, Vorlagen `scripts/systemd/rookhub-log-retention.*`),
+   damit eine neu geschriebene Sink-Vorlage die Frist nicht still verliert.
+6. Für Dev dasselbe gegen die Dev-ES-Adresse.
+
+Achtung beim ersten Lauf: ILM löscht danach alle Backing-Indices, deren Rollover älter als `ILM_DAYS` ist — vorher ggf.
+einen Snapshot ziehen. `scripts/es/ilm-apply.sh` ist eine Hülle um `scripts/es_log_retention.py` (gleiche Policy, gleiche
+Prüfungen); `ILM_DAYS` entspricht `--retention-days`.
+
 ## Anwenden
 
 ```bash
