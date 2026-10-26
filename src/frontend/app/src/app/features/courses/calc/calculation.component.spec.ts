@@ -700,8 +700,8 @@ describe('CalculationComponent Speichern', () => {
     });
     load(component, position({ id: 7 }));
     component.startTraining();
-    const inner = component as unknown as { watch: { stop(): number }; harvestWatch(): void; sendReviews(): void };
-    spyOn(inner.watch, 'stop').and.returnValues(30, 12);
+    const inner = component as unknown as { training: { watch: { stop(): number } }; harvestWatch(): void; sendReviews(): void };
+    spyOn(inner.training.watch, 'stop').and.returnValues(30, 12);
     inner.harvestWatch();                        // Anfrage 1 (30 s, Marke A) unterwegs
     (component as unknown as { beginWatch(id: number): void }).beginWatch(7);
     component.applyGrade(3);                     // wartet
@@ -1012,8 +1012,8 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
     const { component: c, reviews } = make();
     c.bookId = 1;
     load(c, position({ chapter: 'A' }));
-    const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
-    spyOn(inner.watch, 'stop').and.returnValue(42);
+    const inner = c as unknown as { training: { watch: { stop(): number } }; harvestWatch(): void };
+    spyOn(inner.training.watch, 'stop').and.returnValue(42);
 
     inner.harvestWatch();
 
@@ -1025,8 +1025,8 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
     const { component: c, reviews } = make();
     c.bookId = 1;
     load(c, position({ chapter: 'A' }));
-    const inner = c as unknown as { watch: { stop(): number } };
-    spyOn(inner.watch, 'stop').and.returnValue(30);
+    const inner = c as unknown as { training: { watch: { stop(): number } } };
+    spyOn(inner.training.watch, 'stop').and.returnValue(30);
 
     c.startTraining();
     jasmine.clock().tick(3000);
@@ -1042,8 +1042,8 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
     const { component: c, reviews } = make();
     c.bookId = 1;
     load(c, position({ chapter: 'A' }));
-    const inner = c as unknown as { watch: { stop(): number } };
-    spyOn(inner.watch, 'stop').and.returnValue(17);
+    const inner = c as unknown as { training: { watch: { stop(): number } } };
+    spyOn(inner.training.watch, 'stop').and.returnValue(17);
 
     c.startTraining();
     jasmine.clock().tick(2000);
@@ -1405,7 +1405,7 @@ describe('CalculationComponent Festlegung auf einen ersten Zug', () => {
 describe('CalculationComponent Rechenzeit', () => {
   it('misst mit der Stoppuhr aus dem Puzzle-Modus (zählt nicht bei verstecktem Tab)', () => {
     const { component: c } = make();
-    expect((c as unknown as { watch: unknown }).watch instanceof VisibilityStopwatch).toBeTrue();
+    expect((c as unknown as { training: { watch: unknown } }).training.watch instanceof VisibilityStopwatch).toBeTrue();
   });
 
   it('schickt die gemessene Zeit als DELTA und schreibt sie der Stellung sofort gut', () => {
@@ -1423,8 +1423,8 @@ describe('CalculationComponent Rechenzeit', () => {
     });
     load(c, position({ secondsSpent: 60 }));
     c.startTraining();          // ohne gestartetes Training misst die Uhr nichts
-    const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
-    spyOn(inner.watch, 'stop').and.returnValue(42);
+    const inner = c as unknown as { training: { watch: { stop(): number } }; harvestWatch(): void };
+    spyOn(inner.training.watch, 'stop').and.returnValue(42);
 
     inner.harvestWatch();
 
@@ -1453,9 +1453,9 @@ describe('CalculationComponent Rechenzeit', () => {
     load(c);
     c.startTraining();
     const inner = c as unknown as {
-      watch: { stop(): number }; harvestWatch(): void; sendReviews(): void;
+      training: { watch: { stop(): number } }; harvestWatch(): void; sendReviews(): void;
     };
-    spyOn(inner.watch, 'stop').and.returnValue(42);
+    spyOn(inner.training.watch, 'stop').and.returnValue(42);
 
     inner.harvestWatch();        // 1. Anlauf scheitert → landet wieder in der Warteschlange
     inner.sendReviews();         // 2. Anlauf
@@ -1472,9 +1472,9 @@ describe('CalculationComponent Rechenzeit', () => {
     load(c);
     c.startTraining();
     const inner = c as unknown as {
-      watch: { stop(): number }; harvestWatch(): void; beginWatch(id: number): void;
+      training: { watch: { stop(): number } }; harvestWatch(): void; beginWatch(id: number): void;
     };
-    spyOn(inner.watch, 'stop').and.returnValues(30, 12);
+    spyOn(inner.training.watch, 'stop').and.returnValues(30, 12);
 
     inner.harvestWatch();
     inner.beginWatch(7);
@@ -1493,9 +1493,9 @@ describe('CalculationComponent Rechenzeit', () => {
     load(c, position({ secondsSpent: 60 }));
     c.startTraining();
     const inner = c as unknown as {
-      watch: { stop(): number }; harvestWatch(): void; beginWatch(id: number): void;
+      training: { watch: { stop(): number } }; harvestWatch(): void; beginWatch(id: number): void;
     };
-    spyOn(inner.watch, 'stop').and.returnValues(20, 15);
+    spyOn(inner.training.watch, 'stop').and.returnValues(20, 15);
 
     inner.harvestWatch();                       // 20 s unterwegs (Antwort steht aus)
     inner.beginWatch(7);
@@ -1509,8 +1509,8 @@ describe('CalculationComponent Rechenzeit', () => {
   it('schöpft die Zeit ab, ohne etwas zu schicken, wenn nichts gemessen wurde', () => {
     const { component: c, reviews } = make();
     load(c);
-    const inner = c as unknown as { watch: { stop(): number }; harvestWatch(): void };
-    spyOn(inner.watch, 'stop').and.returnValue(0);
+    const inner = c as unknown as { training: { watch: { stop(): number } }; harvestWatch(): void };
+    spyOn(inner.training.watch, 'stop').and.returnValue(0);
 
     inner.harvestWatch();
 

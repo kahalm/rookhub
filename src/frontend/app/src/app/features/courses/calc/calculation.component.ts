@@ -19,7 +19,6 @@ import { Color, Key } from 'chessground/types';
 import { Subscription } from 'rxjs';
 import { PuzzleBoardComponent } from '../../puzzles/puzzle-board.component';
 import { applyUci, tryFreeMove, tryLoadFen } from '../../puzzles/puzzle-move.util';
-import { VisibilityStopwatch } from '../../puzzles/visibility-stopwatch';
 import { PreferencesService } from '../../../core/preferences.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { CalcLinesComponent } from './calc-lines.component';
@@ -33,13 +32,13 @@ import {
 } from './calc-tree.util';
 import {
   CALC_GRADE_OPTIONS, CALC_MAX_POINTS_PER_POSITION, CalcGrade, CalcReview, CalcReviewPatch,
-  formatScore, gradePoints, newSecondsToken, normalizeGrade,
+  formatScore, gradePoints, normalizeGrade,
 } from './calc-review.util';
 import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalculationService,
 } from './calculation.service';
 import { LocalCalculationBackend } from './calc-local.backend';
-import { CalcTrainingTimer } from './calc-training-timer';
+import { CalcTrainingSession } from './calc-training-session';
 import { CalcTreeCursor } from './calc-tree-cursor';
 import { CalcTreeSaver } from './calc-tree-saver';
 import { CalcPageMode } from './calc-page-mode';
@@ -208,17 +207,22 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   orientation: Color = 'white';
 
-  // ===== Kapitel-Training (Timer) ==========================================
-  // Kumuliert die Rechenzeit JE KAPITEL — Uhr, Topf und Besitzer stehen in {@link CalcTrainingTimer}.
-  // Solange nicht gestartet wurde, misst auch die Stellungs-Uhr nichts (siehe `beginWatch`)
-  // und es geht kein `addSeconds` an den Server.
-  private readonly timer = new CalcTrainingTimer({
+  /** Kapitel-Uhr, Stellungs-Stoppuhr, Startsperre und Start-Hinweis — siehe {@link CalcTrainingSession}. */
+  private readonly training = new CalcTrainingSession({
     storageKey: () => `rookhub_calc_timer_${this.bookId}`,
     userId: () => this.auth?.currentUser?.userId ?? null,
     // Anonym meldet die Warnung „kann gerade nichts speichern" die Zeit ausdrücklich mit; zurückgenommen wird sie
     // hier nicht — das bleibt dem Baum-Speicher.
     onPersistFailed: () => this.setLocalSaveFailed(this.localOnly),
+  }, {
+    positionLoaded: () => !this.loadError && this.position !== null,
+    currentPositionId: () => this.position?.id ?? null,
+    creditSeconds: (bookPuzzleId, seconds, token) => this.reviews.creditSeconds(bookPuzzleId, seconds, token),
+    warn: (textKey, action) => action
+      ? this.snackbar.warn(this.translate.instant(textKey), { action: action.actionKey, duration: action.duration })
+      : this.snackbar.warn(this.translate.instant(textKey)),
   });
+  private get timer() { return this.training.timer; }
 
   get timerRunning(): boolean { return this.timer.running; }
   get timerSeconds(): number { return this.timer.seconds; }
@@ -258,76 +262,21 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get bookPoints(): number { return this.chapters.bookPoints; }
   get bookMaxPoints(): number { return this.chapters.bookMaxPoints; }
   /** Sekunden der laufenden Sitzung an dieser Stellung (nur Anzeige; gesendet wird das Delta). */
-  liveSeconds = 0;
+  get liveSeconds(): number { return this.training.liveSeconds; }
 
-  /** Misst die AKTIVE Zeit an der Stellung (pausiert, wenn der Tab weg ist). */
-  private readonly watch = new VisibilityStopwatch();
-  /** Stellung, zu der die laufende Uhr gehört; null = keine Uhr. */
-  private watchPositionId: number | null = null;
-  private liveHandle?: ReturnType<typeof setInterval>;
+  // ===== Kapitel-Training starten/stoppen (CalcTrainingSession) ============
 
-
-  // ===== Kapitel-Training starten/stoppen ==================================
-
-  toggleTraining(): void {
-    if (this.timerRunning) this.stopTraining(); else this.startTraining();
-  }
-
-  /**
-   * Darf JETZT gemessen werden? Nur mit geladener Stellung: der Kapitel-Topf
-   * (`CalcTrainingTimer.hasChapter`) entsteht erst in {@link applyPosition} — ohne ihn speichert
-   * die Uhr nichts und `beginWatch` hätte keine Stellung, der die Zeit gehört. Scheitert
-   * das Laden (`loadError`), tickte die Anzeige also vor sich hin, ohne irgendetwas zu messen oder
-   * zu sichern: eine Uhr, die lügt. Dann lieber gar nicht erst starten (und sagen, warum).
-   */
-  get canTrain(): boolean {
-    return !this.loadError && this.position !== null && this.timer.hasChapter;
-  }
-
+  toggleTraining(): void { this.training.toggle(); }
+  /** Darf JETZT gemessen werden? Nur mit geladener Stellung (siehe {@link CalcTrainingSession.canTrain}). */
+  get canTrain(): boolean { return this.training.canTrain; }
   /** Stoppen muss immer gehen — gesperrt wird nur das STARTEN ohne geladene Stellung. */
-  get trainingDisabled(): boolean {
-    return !this.timerRunning && !this.canTrain;
-  }
-
-  /** Beschriftung/Erklärung des Trainings-Knopfes — inklusive des Grundes, wenn es nicht geht. */
-  get trainingActionKey(): string {
-    if (this.timerRunning) return 'calc.timer.stop';
-    return this.canTrain ? 'calc.timer.start' : 'calc.timer.unavailable';
-  }
-
-  /** Laufzustand in Worten; ohne ladbare Stellung steht dort der Grund statt „gestoppt". */
-  get trainingStateKey(): string {
-    if (this.timerRunning) return 'calc.timer.running';
-    return this.canTrain ? 'calc.timer.stopped' : 'calc.timer.unavailable';
-  }
-
-  /**
-   * Ab jetzt wird gemessen — und zwar beides: die kumulierte KAPITEL-Zeit und (über die
-   * VisibilityStopwatch) die Rechenzeit der angezeigten STELLUNG. Ohne diesen Start läuft nichts;
-   * das bloße Ansehen einer Stellung ist kein Training.
-   */
-  startTraining(): void {
-    if (this.timerRunning) return;
-    // Ohne geladene Stellung misst und speichert nichts (siehe {@link canTrain}) — statt still ins
-    // Leere zu zählen, geht der Start gar nicht erst los und sagt es.
-    if (!this.canTrain) {
-      this.snackbar.warn(this.translate.instant('calc.timer.unavailable'));
-      return;
-    }
-    this.timer.start();
-    // Die Stellungs-Uhr wird erst hier aufgezogen (`beginWatch` misst nur bei laufendem Training).
-    if (this.position) this.beginWatch(this.position.id);
-  }
-
-  /**
-   * Stoppen heißt auch ABRECHNEN: die bis hierher gemessene Stellungszeit geht noch raus
-   * (`harvestWatch`), sonst wäre sie mit dem Stopp verloren.
-   */
-  stopTraining(): void {
-    if (!this.timerRunning) return;
-    this.timer.stop();
-    this.harvestWatch();
-  }
+  get trainingDisabled(): boolean { return this.training.disabled; }
+  get trainingActionKey(): string { return this.training.actionKey; }
+  get trainingStateKey(): string { return this.training.stateKey; }
+  /** Kapitel- und Stellungszeit messen (ohne geladene Stellung: Hinweis statt Start). */
+  startTraining(): void { this.training.start(); }
+  /** Stoppen heißt auch ABRECHNEN (die gemessene Stellungszeit geht noch raus). */
+  stopTraining(): void { this.training.stop(); }
 
   /** Angezeigte kumulierte Kapitel-Zeit (m:ss bzw. h:mm:ss). */
   get timerDisplay(): string {
@@ -439,8 +388,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.courseLang.ensureLanguages(this.bookId);
     const requested = Number(this.route.snapshot.queryParamMap.get('pos')) || null;
     this.loadBook(requested);
-    // Nur Anzeige: die Stoppuhr selbst zählt ohne Takt weiter (und pausiert bei verstecktem Tab).
-    this.liveHandle = setInterval(() => { this.liveSeconds = this.currentWatchSeconds(); }, 1000);
+    this.training.startLiveTicker();
   }
 
   /** `<body>`-Klasse, Navbar-Breite und Vollbild-Ziel — siehe {@link CalcPageMode}. */
@@ -457,7 +405,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.stopTraining();     // stoppt UND schöpft die gemessene Zeit ab
     this.pageMode.leave();
-    if (this.liveHandle !== undefined) { clearInterval(this.liveHandle); this.liveHandle = undefined; }
+    this.training.stopLiveTicker();
     this.clearSaveTimer();
     this.flushSave();
     this.harvestWatch();     // gemessene Zeit noch abschöpfen …
@@ -631,20 +579,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.offerTrainingStart();
   }
 
-  /**
-   * Wer anfängt zu rechnen, während das Training nicht läuft, misst nichts — und merkt es oft
-   * erst hinterher. Ein Hinweis mit Sofort-Schalter statt eines Dialogs: er hält beim Rechnen
-   * niemanden auf. Gefragt wird EINMAL je Besuch; wer nicht will, soll nicht bei jedem Zug
-   * erneut gefragt werden.
-   */
   private offerTrainingStart(): void {
-    if (this.timerRunning || this.timerAsked || !this.canTrain) return;
-    this.timerAsked = true;
-    const ref = this.snackbar.warn(this.translate.instant('calc.timer.notRunning'), {
-      action: 'calc.timer.start',
-      duration: 10000,
-    });
-    ref.onAction().subscribe(() => this.startTraining());
+    this.training.offerStart(() => this.startTraining());
   }
 
   // ===== Navigation im Baum =================================================
@@ -788,38 +724,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
     if (!stillThere) this.setReview({ chosenSan: null, chosenUci: null });
   }
 
-  // ===== Rechenzeit messen ==================================================
+  // ===== Rechenzeit messen (CalcTrainingSession) =============================
 
-  /**
-   * Uhr für die angezeigte Stellung neu aufziehen (vorherige Zeit vorher abschöpfen).
-   *
-   * NUR bei gestartetem Kapitel-Training: das bloße Ansehen einer Stellung ist kein Training, und
-   * ohne laufende Uhr geht auch kein `addSeconds` an den Server.
-   */
-  private beginWatch(bookPuzzleId: number): void {
-    this.harvestWatch();
-    if (!this.timerRunning) return;
-    this.watchPositionId = bookPuzzleId;
-    this.watch.start(0);
-    this.liveSeconds = 0;
-  }
-
-  /** Gemessene Sekunden als DELTA einreihen und die Uhr anhalten (idempotent). */
-  private harvestWatch(): void {
-    if (this.watchPositionId === null) return;
-    const bookPuzzleId = this.watchPositionId;
-    this.watchPositionId = null;
-    this.liveSeconds = 0;
-    const seconds = this.watch.stop();
-    if (seconds <= 0) return;
-    // Jedes gemessene Delta bekommt seine eigene Marke: der Server ADDIERT die Zeit, und ein
-    // Wiederholversuch (Antwort verloren, Anfrage angekommen) darf sie nicht doppelt buchen.
-    this.reviews.creditSeconds(bookPuzzleId, seconds, newSecondsToken());
-  }
-
-  private currentWatchSeconds(): number {
-    return this.watchPositionId === null ? 0 : this.watch.elapsedSeconds;
-  }
+  private beginWatch(bookPuzzleId: number): void { this.training.beginWatch(bookPuzzleId); }
+  private harvestWatch(): void { this.training.harvestWatch(); }
 
   // ===== Senden (eigener Endpoint neben dem Baum) ===========================
 
@@ -855,9 +763,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
   showAnnotations = false;
 
   toggleAnnotations(): void { this.showAnnotations = !this.showAnnotations; }
-
-  /** Wurde in diesem Besuch schon gefragt, ob das Training starten soll? Nur EINMAL fragen. */
-  private timerAsked = false;
 
   /** Erklärung an der Uhr: Laufzustand plus der Hinweis, dass man sie anklicken kann. */
   get timerTooltip(): string {
