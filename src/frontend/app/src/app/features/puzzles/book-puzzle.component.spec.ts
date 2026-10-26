@@ -114,7 +114,7 @@ describe('BookPuzzleComponent load race (loadEpoch)', () => {
   });
 });
 
-describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
+describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0 → P-1)', () => {
   function makeDaily(): any {
     const c: any = makeComponent();
     c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
@@ -122,18 +122,22 @@ describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
     return c;
   }
 
-  it('Solve nach vorherigem Fail wird trotzdem gemeldet (Spätlöser)', () => {
+  it('P-1: nach dem Fehlversuch meldet derselbe Durchgang nichts mehr; ein neuer Durchgang (Spätlöser) schon', () => {
     const c = makeDaily();
     const calls: boolean[] = [];
     c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return { subscribe: () => {} }; };
     c.auth = { isLoggedIn: true };
     (c as any).book.recordAttempt(false);   // Fehlzug
-    (c as any).book.recordAttempt(true);    // späterer Solve — darf nicht mehr blockiert sein
+    (c as any).book.recordAttempt(false);   // zweiter Fehler im selben Durchgang: nicht doppelt
+    (c as any).book.recordAttempt(true);    // Lösen danach: Übung, nicht gemeldet
+    expect(calls).toEqual([false]);
+    (c as any).book.resetAttempt();         // neues Laden des Tagespuzzles
+    (c as any).book.recordAttempt(true);    // Spätlöser (Server: 5 statt 10 Punkte)
     (c as any).book.recordAttempt(true);    // zweiter Solve: einmalig
     expect(calls).toEqual([false, true]);
   });
 
-  it('jeder Fehlversuch wird einzeln gemeldet, Reset nach FAILED aber nicht doppelt', () => {
+  it('Reset mitten im Lauf meldet einen Fehlversuch, Reset nach FAILED nicht', () => {
     const c = makeDaily();
     const spy = spyOn(c.book as any, 'recordAttempt');
     // Reset mitten im Lauf (Zug gespielt, nicht FAILED) → Fehlversuch
@@ -142,6 +146,7 @@ describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
     spyOn(c as any, 'setupPuzzle');
     (c as any).resetPuzzle();
     expect(spy).toHaveBeenCalledWith(false);
+    expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle, true);   // derselbe Durchgang
     spy.calls.reset();
     // Reset NACH FAILED (Fehlzug schon erfasst) → KEINE Doppelmeldung
     c.state = 'FAILED';
@@ -149,16 +154,12 @@ describe('BookPuzzleComponent Fehlversuch-Erfassung (Daily, v0.309.0)', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('Off-Path-Mouseslip meldet Fehlversuch, aus FAILED heraus nicht', () => {
+  it('P-1: der Mausrutscher meldet nichts (der Fehlzug selbst hat schon gemeldet)', () => {
     const c = makeDaily();
     const spy = spyOn(c.book as any, 'recordAttempt');
     spyOn(Object.getPrototypeOf(Object.getPrototypeOf(c)), 'mouseslip');
     (c as any).onSolutionPath = false;
     c.state = 'PLAYING';
-    c.mouseslip();
-    expect(spy).toHaveBeenCalledWith(false);
-    spy.calls.reset();
-    c.state = 'FAILED';
     c.mouseslip();
     expect(spy).not.toHaveBeenCalled();
   });
@@ -1134,6 +1135,9 @@ describe('BookPuzzleComponent Daily kumulierte Lösezeit', () => {
     c.puzzleService.recordBookAttemptAnonymous = () => ({ subscribe: () => {} });
     (c as any).book.recordAttempt(false);        // anon-Fail wird nicht gemeldet
     expect(loadDailyElapsed(DATE)).toBe(99);
+    (c as any).book.recordAttempt(true);         // P-1: derselbe Durchgang zählt nach dem Fehlversuch nicht als gelöst
+    expect(loadDailyElapsed(DATE)).toBe(99);
+    (c as any).book.resetAttempt();              // neuer Durchgang (z. B. Neuladen)
     (c as any).book.recordAttempt(true);         // anon-Solve wird gemeldet → Ende der Kumulation
     expect(loadDailyElapsed(DATE)).toBe(0);
   });
@@ -2012,7 +2016,7 @@ describe('BookPuzzleComponent Einstellungen speichern (F2-009)', () => {
 
     c.settings.openDialog();
 
-    expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle);
+    expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle, true);   // derselbe Durchgang (P-1)
   });
 
   it('?anarchy=max erzwingt e.p. weiter, auch wenn es in den Einstellungen aus ist', () => {

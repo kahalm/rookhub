@@ -1,5 +1,5 @@
 {
-  "@angular-eslint/prefer-inject": 511,
+  "@angular-eslint/prefer-inject": 509,
   "@angular-eslint/prefer-on-push-component-change-detection": 136,
   "@angular-eslint/prefer-signals": 382,
   "@typescript-eslint/no-empty-function": 79,

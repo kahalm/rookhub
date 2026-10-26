@@ -12,7 +12,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -1786,4 +1786,57 @@ describe('EndlessPuzzleComponent Golden-Rümpfe Spielstand + Aufzeichnung (Z19)'
     c.ngOnDestroy();
     expect(records.length).toBe(1);                  // Verlassen nach Game Over zeichnet nicht doppelt auf
   });
+});
+
+/**
+ * P-1 im Endless-Modus: der erste Fehlzug kostet sofort das Leben (der bestehende Leben-Mechanismus, einmal je Puzzle)
+ * und meldet den Fehlversuch — nicht erst Matt/Aufgeben. Weiterspielen bleibt Übung: Zurücksetzen kostet kein zweites
+ * Leben, und ein späteres Lösen zählt weder als gelöst noch als zweite Meldung.
+ */
+describe('EndlessPuzzleComponent erster Fehlzug (P-1)', () => {
+  function playing(): { c: any; reports: boolean[] } {
+    const c = makeComponent();
+    const reports: boolean[] = [];
+    c.stockfish.getBestMove = () => Promise.reject('keine Engine im Test');
+    c.puzzleService.recordAnonymousAttempt = jasmine.createSpy('recordAnonymousAttempt')
+      .and.callFake((_id: number, solved: boolean) => { reports.push(solved); return sub(null); });
+    c.startGame();
+    tick(600);   // Setup-Zug e2e4; Schwarz löst mit e7e5
+    return { c, reports };
+  }
+  function done(c: any) { c.ngOnDestroy(); discardPeriodicTasks(); }
+
+  it('der erste Fehlzug kostet sofort ein Leben und meldet den Fehlversuch', fakeAsync(() => {
+    const { c, reports } = playing();
+    c.onMoveMade({ orig: 'a7', dest: 'a6' });
+    expect(c.run.lives()).toBe(2);
+    expect(reports).toEqual([false]);
+    tick();
+    expect(c.state).toBe('PLAYING');   // Übung geht weiter
+    done(c);
+  }));
+
+  it('Zurücksetzen danach kostet kein zweites Leben; Lösen zählt nicht als gelöst', fakeAsync(() => {
+    const { c, reports } = playing();
+    c.onMoveMade({ orig: 'a7', dest: 'a6' });
+    tick();
+    c.resetPuzzle();
+    tick(600);
+    c.onMoveMade({ orig: 'e7', dest: 'e5' });
+    tick(400);
+    expect(c.state).toBe('SOLVED');
+    expect(c.run.lives()).toBe(2);
+    expect(c.run.solved()).toBe(0);
+    expect(reports).toEqual([false]);
+    done(c);
+  }));
+
+  it('fehlerfrei gelöst: gelöst gezählt und einmal gemeldet', fakeAsync(() => {
+    const { c, reports } = playing();
+    c.onMoveMade({ orig: 'e7', dest: 'e5' });
+    tick(400);
+    expect(c.run.solved()).toBe(1);
+    expect(reports).toEqual([true]);
+    done(c);
+  }));
 });

@@ -104,6 +104,17 @@ describe('WoodpeckerSolveComponent', () => {
     expect(service.recordAttempt).toHaveBeenCalledTimes(1);
   });
 
+  it('P-1: der erste Fehlzug meldet sofort; Mausrutscher und Lösen danach melden nichts', async () => {
+    const { c } = render({ puzzle, plan: plan() });
+    c.onMoveMade({ orig: 'a1', dest: 'a2' });   // Fehlzug statt Ta8#
+    expect(service.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number));
+    await Promise.resolve();                     // Engine-Antwort (im Test: Fehler → weiterspielen)
+    c.mouseslip();
+    c.onMoveMade({ orig: 'a1', dest: 'a8' });
+    expect(c.state).toBe('SOLVED');
+    expect(service.recordAttempt).toHaveBeenCalledTimes(1);
+  });
+
   it('richtiger Zug löst die Aufgabe und meldet sie als gelöst', () => {
     const { c } = render({ puzzle, plan: plan() });
     c.onMoveMade({ orig: 'a1', dest: 'a8' });

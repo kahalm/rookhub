@@ -376,6 +376,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   // ===== Tagespuzzle (Datum statt Buch, BookDailyMode) =====
   get isDaily(): boolean { return this.daily.date != null; }
 
+  /** P-1: der erste Fehlzug ist der gewertete Fehlversuch — Kurs, Wochenpost, Tagespuzzle/Einzel-Buch und „Track
+   *  solves“ melden ihn sofort. Die Strategien halten ihre Sperre bis zum nächsten Puzzle (siehe {@link setupPuzzle}):
+   *  Zurücksetzen, „Nochmal“ und Mausrutscher melden danach nichts, ein späteres Lösen zählt nicht als gelöst. */
+  protected override onFirstWrongMove(): void {
+    this.solveSeconds = this.elapsedSeconds;
+    this.recordAttempt(false);
+    this.book.recordTrack(false);
+  }
+
   protected override handleFailed(): void {
     this.state = 'FAILED';
     this.stopTimer();
@@ -511,7 +520,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   /** Spielweise des laufenden Puzzles (gemeldeter Wert, siehe BookSolveModeController.attemptMode). */
   get attemptSolveMode(): SolveMode { return this.solveModes.attemptMode; }
 
-  setupPuzzle(puzzle: BookPuzzleDto): void {
+  /**
+   * `sameAttempt`: dasselbe Puzzle neu aufsetzen (Zurücksetzen, „Nochmal“, Stufenwechsel) — der laufende Durchgang
+   * bleibt, ein schon gemeldeter Versuch also gemeldet (P-1). Ohne das Flag beginnt ein neuer, meldbarer Durchgang.
+   */
+  setupPuzzle(puzzle: BookPuzzleDto, sameAttempt = false): void {
     // Info-/Erklärlinien werden nicht gelöst → keine Spielweise nötig (weder fragen noch anwenden).
     if (!puzzle.isInfoOnly) {
       if (this.solveModes.askIfNeeded(puzzle)) return;
@@ -519,8 +532,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     }
     this.clearSolutionPlay();
     this.variationPreview = null;   // etwaige Kommentar-Varianten-Vorschau aus dem Vorgänger-Puzzle beenden
-    this.book.resetAttempt();
-    this.course.attemptRecorded = false;
+    if (!sameAttempt) {
+      this.book.resetAttempt();
+      this.course.attemptRecorded = false;
+    }
     this.hintLevel = 0;
     // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint) —
     // kein vorab-klassifizierter erster Zug mehr nötig.
@@ -603,7 +618,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   retry(): void {
     if (!this.puzzle) return;
     this.gaveUp = false;
-    this.setupPuzzle(this.puzzle);
+    this.setupPuzzle(this.puzzle, true);   // Übung am selben Puzzle (P-1): kein zweiter Versuch
   }
 
   failedNext(): void {
@@ -714,13 +729,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     this.book.recordTrack(false);
     this.aborted = true;
     if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
-    this.setupPuzzle(this.puzzle);
+    this.setupPuzzle(this.puzzle, true);   // derselbe Durchgang (P-1): ein gemeldeter Fehlversuch bleibt der einzige
   }
-
-  override mouseslip(): void {
-    // Im Tagespuzzle ist der „Mausrutscher" kein straffreier Undo: jede Off-Path-Zurücknahme
-    // zählt als Fehlversuch (rotes ✗). Nach FAILED nicht erneut melden (Fehlzug schon erfasst).
-    if (this.isDaily && !this.onSolutionPath && this.state !== 'FAILED') this.book.recordAttempt(false);
-    super.mouseslip();
-  }
+  // Mausrutscher: bis 0.839 zählte er im Tagespuzzle zusätzlich als Fehlversuch. Seit P-1 meldet schon der Fehlzug
+  // selbst; der Mausrutscher nimmt nur den Zug zurück und meldet nichts (BasePuzzleSolver.mouseslip).
 }

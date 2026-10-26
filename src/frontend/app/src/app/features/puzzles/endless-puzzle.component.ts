@@ -340,6 +340,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   protected override handleSolved(alternative: boolean): void { this.puzzleSolved(alternative); }
   protected override handleFailed(): void { this.loseLife(); }
 
+  /** P-1: der erste Fehlzug kostet sofort das Leben — dieselbe Buchführung wie {@link loseLife} (Fehler-Rating,
+   *  Sitzungs-Eintrag, Versuchs-Meldung, Spielstand), nur ohne den Lauf zu beenden: weiterspielen ist Übung.
+   *  `registerLoss` gilt einmal je Puzzle; Matt/Aufgeben/Zurücksetzen melden danach nichts mehr. */
+  protected override onFirstWrongMove(): void {
+    if (this.run.registerLoss(this.puzzle)) {
+      this.recordAttempt(false);
+      this.run.saveAfterLoss();
+    }
+  }
+
   // --- Game lifecycle ---
 
   sharePuzzle(): void {
@@ -467,7 +477,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   private puzzleSolved(alternative: boolean): void {
     this.alternativeSolve = alternative;
     this.state = 'SOLVED';
-    this.run.markSolved(this.puzzle);   // Serie + Lauf-Protokoll
+    // P-1: hat dieses Puzzle schon ein Leben gekostet (Fehlzug, Zurücksetzen, Retry nach dem Scheitern), ist das
+    // Lösen Übung — kein „gelöst“ im Lauf und keine zweite Meldung.
+    const counted = !this.run.puzzleLifeLost;
+    if (counted) this.run.markSolved(this.puzzle);   // Serie + Lauf-Protokoll
     // Pro-Puzzle-Lösezeit JETZT festhalten (vor einer evtl. Nachfrage, die Zeit kosten würde).
     const perPuzzleSeconds = this.run.timer.puzzleSeconds();
     if (this.puzzle) this.last.remember(this.puzzle, this.orientation);   // überlebt den Auto-Advance
@@ -480,7 +493,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
     // der Dialog ist modal und blockiert „Weiter" dahinter. Aufzeichnen + Auto-Advance erst danach.
     this.longSolve.resolve(perPuzzleSeconds).subscribe(seconds => {
       if (this.destroyed) return;   // Seite verlassen (Dialog schließt bei Navigation)
-      this.recordAttempt(true, seconds);
+      if (counted) this.recordAttempt(true, seconds);
 
       // Bei alternativer Lösung NICHT auto-advancen — der Spieler wählt Weiter / Lösung zeigen.
       if (alternative) return;

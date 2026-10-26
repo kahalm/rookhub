@@ -31,7 +31,7 @@ const ALT_HOLD_MS = 1400;
  * den Visualisierungs-/Blindfold-Modus. Vorher in jeder Komponente ~400 Zeilen dupliziert.
  *
  * Modus-Unterschiede laufen über Hooks: {@link handleSolved}/{@link handleFailed} (Pflicht),
- * {@link depth}, {@link stockfishErrorContinues}, {@link onSetupStart}, {@link onSolvingBegins}.
+ * {@link depth}, {@link stockfishErrorContinues}, {@link onSetupStart}, {@link onSolvingBegins}, {@link onFirstWrongMove}.
  * Die konkrete Komponente setzt am Ende ihren eigenen `state` (SOLVED/FAILED/...) — die erlaubten Endzustände
  * gibt sie als Typ-Parameter an (`extends BasePuzzleSolver<'SOLVED' | 'FAILED'>`).
  */
@@ -271,6 +271,15 @@ export abstract class BasePuzzleSolver<S extends string = never> {
   protected onSetupStart(): void {}
   /** Sobald gelöst werden kann (Trainingsstellung erreicht) — z.B. Timer/initialFen. */
   protected onSolvingBegins(): void {}
+  /**
+   * Erster Fehlzug dieses Lösungsgangs (Produktentscheidung P-1, 2026-10-25): die Komponente meldet SOFORT den
+   * Fehlversuch (Standard `recordAttempt(false)`, Kurs `recordCourseAttempt(false)`, Endless über den Leben-Mechanismus …).
+   * Danach darf weitergespielt werden (Übung) — die Komponente sorgt dafür, dass derselbe Aufgaben-Durchgang weder ein
+   * zweites Mal noch am Ende als „gelöst“ gemeldet wird (auch nicht nach „Zurücksetzen“/„Nochmal“). Der Mausrutscher
+   * meldet nichts: er nimmt den Zug auf dem Brett zurück, der Fehlversuch bleibt gezählt. Läuft je
+   * {@link setupSolver} höchstens einmal (bei `wrongMoveCount` 0 → 1).
+   */
+  protected onFirstWrongMove(): void { /* Basis: nichts melden — die Komponenten überschreiben */ }
 
   // ===== abgeleitete Helfer =====
   /** Läuft gerade ein Lösungsversuch (Lös-Automat offen)? */
@@ -448,6 +457,9 @@ export abstract class BasePuzzleSolver<S extends string = never> {
         this.wrongMoveCount++;     // Fehlzug (Abweichung vom Lösungszug)
         this.offPath.userPlies++;   // erster Abweich-Zug
         this.markOffPathDeviation();   // Zug-Nr der Abzweigung merken + Off-Path-Tipps von vorn
+        // P-1: der ERSTE Fehlzug meldet sofort (wie Lichess) — sonst umgingen „Zurücksetzen“ und Neuladen die
+        // Wertung. Ein abweichender Zug, der selbst mattsetzt, ist eine Lösung (handleGameOver), kein Fehlzug.
+        if (this.wrongMoveCount === 1 && !this.chess.isCheckmate()) this.onFirstWrongMove();
         if (this.chess.isGameOver()) { this.handleGameOver(); return; }
         this.opponentRespond();
       }

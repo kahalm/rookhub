@@ -21,7 +21,8 @@ export interface BookSettingsHost {
   visualizationMode: number;
   vizArrowEnabled: boolean;
   enPassantForced: boolean;
-  setupPuzzle(p: BookPuzzleDto): void;
+  /** `sameAttempt` = derselbe Durchgang (ein schon gemeldeter Versuch bleibt gemeldet, P-1). */
+  setupPuzzle(p: BookPuzzleDto, sameAttempt?: boolean): void;
   /** Gegnerpfeil der Visualisierung entfernen. */
   clearVizOpponentArrow(): void;
   /** Zugziele des laufenden Versuchs nachziehen. */
@@ -61,7 +62,8 @@ export class BookSettingsController {
     h.solveModes.followLevel(level);   // gemerkte Spielweise mitziehen
     // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
     // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
-    if (h.puzzle && h.isSolving) h.setupPuzzle(h.puzzle);
+    // Derselbe Durchgang (P-1): ein Stufenwechsel nach dem ersten Fehlzug macht den Versuch nicht wieder meldbar.
+    if (h.puzzle && h.isSolving) h.setupPuzzle(h.puzzle, true);
   }
 
   setVizArrowEnabled(val: boolean): void {

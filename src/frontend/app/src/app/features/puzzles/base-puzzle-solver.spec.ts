@@ -611,3 +611,80 @@ describe('BasePuzzleSolver Durchsicht blättern (geteilte Vorgabe)', () => {
     discardPeriodicTasks();
   }));
 });
+
+describe('BasePuzzleSolver onFirstWrongMove (P-1)', () => {
+  class HookSolver extends TestSolver {
+    hookCalls = 0;
+    protected override onFirstWrongMove(): void { this.hookCalls++; }
+  }
+  const noEngine = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;
+
+  it('ruft den Hook genau beim ersten Fehlzug — nicht bei richtigen Zügen, nicht beim zweiten Fehlzug', fakeAsync(() => {
+    const s = new HookSolver(noEngine);
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    s.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });   // richtig
+    tick(400);
+    expect(s.hookCalls).toBe(0);
+    s.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });   // erster Fehlzug
+    tick();
+    expect(s.hookCalls).toBe(1);
+    s.onMoveMade({ orig: 'h7' as Key, dest: 'h6' as Key });   // weiter off-path
+    tick();
+    expect(s.hookCalls).toBe(1);
+  }));
+
+  it('Mausrutscher ruft den Hook nicht; ein neuer Fehlzug danach auch nicht (Zählung läuft weiter)', fakeAsync(() => {
+    const s = new HookSolver(noEngine);
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    s.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });
+    tick();
+    s.mouseslip();
+    s.onMoveMade({ orig: 'h7' as Key, dest: 'h6' as Key });
+    tick();
+    expect(s.hookCalls).toBe(1);
+  }));
+
+  it('ein geduldeter Alternativzug ist kein Fehlzug', fakeAsync(() => {
+    const s = new HookSolver(noEngine);
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    s.setAlts({ 1: ['c7c5'] });
+    tick(600);
+    s.onMoveMade({ orig: 'c7' as Key, dest: 'c5' as Key });
+    tick(1500);
+    expect(s.hookCalls).toBe(0);
+  }));
+
+  it('ein abweichender Zug, der selbst mattsetzt, ist eine Lösung und kein Fehlzug', fakeAsync(() => {
+    // Nach Ta3 (Setup) ist Weiß am Zug; erwartet ist Da4, Dd8 setzt aber sofort matt (Grundreihe).
+    const FEN = '6k1/5ppp/8/8/8/8/r4PPP/3Q2K1 b - - 0 1';
+    const s = new HookSolver(noEngine);
+    s.setup(FEN, 'a2a3 d1a4');
+    tick(600);
+    s.onMoveMade({ orig: 'd1' as Key, dest: 'd7' as Key });   // kein Matt → Fehlzug
+    tick();
+    expect(s.hookCalls).toBe(1);
+
+    const t = new HookSolver(noEngine);
+    t.setup(FEN, 'a2a3 d1a4');
+    tick(600);
+    t.onMoveMade({ orig: 'd1' as Key, dest: 'd8' as Key });   // Dd8# statt Da4 → gelöst
+    tick();
+    expect(t.hookCalls).toBe(0);
+    expect(t.state).toBe('SOLVED');
+  }));
+
+  it('nach neuem Aufsetzen zählt der erste Fehlzug wieder (die Komponente entscheidet über Doppelmeldungen)', fakeAsync(() => {
+    const s = new HookSolver(noEngine);
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    s.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });
+    tick();
+    s.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    s.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });
+    tick();
+    expect(s.hookCalls).toBe(2);
+  }));
+});

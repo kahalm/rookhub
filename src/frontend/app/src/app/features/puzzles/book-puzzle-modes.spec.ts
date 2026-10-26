@@ -1,4 +1,5 @@
 import { of, throwError } from 'rxjs';
+import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline, getDailyOffline, saveDailyOffline } from './book-offline.util';
 import { CourseLanguageService } from '../courses/course-language.service';
@@ -437,4 +438,126 @@ describe('BookPuzzle Weiter-Ziel je Modus (Charakterisierung Z18)', () => {
     c = spied(); c.state = 'SOLVED'; c.daily.date = '20260714'; expect(press(c)).toBeFalse(); expect(calls(c)).toEqual([0, 0, 0]);
   });
 
+});
+
+/**
+ * P-1 (Codereview F2-005): der erste Fehlzug meldet sofort — in allen vier Modi des Buch-Lösers. Danach ist
+ * Weiterspielen Übung: Zurücksetzen, „Nochmal“ und Mausrutscher melden nichts, ein späteres Lösen zählt nicht als
+ * gelöst. Vorher meldeten Kurs und Einzel-Buchpuzzle erst Matt/Aufgeben (Zurücksetzen löschte den Fehlzug), das
+ * Tagespuzzle zählte den Mausrutscher zusätzlich als Fehlversuch.
+ */
+describe('BookPuzzle erster Fehlzug meldet sofort (P-1)', () => {
+  const LINE = (id: number) => P(id, { moves: 'e2e4 e7e5 g1f3 b8c6' });
+  function start(c: any, puzzle: any): void {
+    // Antwort auf den Fehlzug a7a6: Sf3 (legal) — der Buch-Löser wertet einen Engine-Fehler sonst als verloren.
+    c.stockfish.getBestMove = () => Promise.resolve({ move: 'g1f3', eval: '0.3' });
+    c.puzzle = puzzle;
+    c.setupPuzzle(puzzle);
+    tick(600);   // Setup-Zug e2e4; Schwarz löst mit e7e5, dann b8c6
+  }
+  const wrong = (c: any) => { c.onMoveMade({ orig: 'a7', dest: 'a6' }); tick(500); };
+  const solve = (c: any) => {
+    c.onMoveMade({ orig: 'e7', dest: 'e5' }); tick(400);
+    c.onMoveMade({ orig: 'b8', dest: 'c6' }); tick(400);
+  };
+  function done(c: any) { c.ngOnDestroy(); discardPeriodicTasks(); }
+
+  it('Kurs: Fehlzug meldet sofort; Zurücksetzen + Lösen meldet nichts mehr', fakeAsync(() => {
+    const c = makeComponent();
+    c.inCourse = true; c.course.bookId = 7;
+    const results: boolean[] = [];
+    c.courseService.recordResult = jasmine.createSpy('recordResult')
+      .and.callFake((_b: number, _p: number, solved: boolean) => { results.push(solved); return of({ solvedCount: 0, total: 9 }); });
+    start(c, LINE(4));
+    wrong(c);
+    expect(results).toEqual([false]);
+    c.resetPuzzle(); tick(600);
+    solve(c);
+    expect(c.state).toBe('SOLVED');
+    expect(results).toEqual([false]);
+    done(c);
+  }));
+
+  it('Kurs: das nächste Puzzle ist wieder meldbar', fakeAsync(() => {
+    const c = makeComponent();
+    c.inCourse = true; c.course.bookId = 7;
+    const results: boolean[] = [];
+    c.courseService.recordResult = jasmine.createSpy('recordResult')
+      .and.callFake((_b: number, _p: number, solved: boolean) => { results.push(solved); return of({ solvedCount: 0, total: 9 }); });
+    start(c, LINE(4));
+    wrong(c);
+    start(c, LINE(5));
+    solve(c);
+    expect(results).toEqual([false, true]);
+    done(c);
+  }));
+
+  it('Tagespuzzle: Fehlzug meldet ✗; Mausrutscher und späteres Lösen melden nichts', fakeAsync(() => {
+    const c = makeComponent();
+    c.daily.date = '20260714';
+    const calls: boolean[] = [];
+    c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return of(null); };
+    start(c, LINE(42));
+    wrong(c);
+    expect(calls).toEqual([false]);
+    c.mouseslip();
+    solve(c);
+    expect(c.state).toBe('SOLVED');
+    expect(calls).toEqual([false]);
+    done(c);
+  }));
+
+  it('Tagespuzzle: Zurücksetzen nach richtigen Zügen bleibt ein Fehlversuch (wie bisher), danach nichts mehr', fakeAsync(() => {
+    const c = makeComponent();
+    c.daily.date = '20260714';
+    const calls: boolean[] = [];
+    c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return of(null); };
+    start(c, LINE(42));
+    c.onMoveMade({ orig: 'e7', dest: 'e5' }); tick(400);
+    c.resetPuzzle(); tick(600);
+    solve(c);
+    expect(calls).toEqual([false]);
+    done(c);
+  }));
+
+  it('Wochenpost: Fehlzug meldet einmal mit 1 Fehlzug; Lösen nach Mausrutscher meldet nichts', fakeAsync(() => {
+    sessionStorage.setItem('rookhub_weekly_mode_5', 'training');
+    const c = makeComponent();
+    c.inWeekly = true; c.weekly.id = 5;
+    c.weeklyService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(of({ playedCount: 1, solvedCount: 0, totalSeconds: 3 }));
+    start(c, LINE(2));
+    wrong(c);
+    expect(c.weeklyService.recordAttempt).toHaveBeenCalledTimes(1);
+    expect(c.weeklyService.recordAttempt.calls.mostRecent().args[2]).toBeFalse();   // solved
+    expect(c.weeklyService.recordAttempt.calls.mostRecent().args[5]).toBe(1);       // wrongAttempts
+    c.mouseslip();
+    solve(c);
+    expect(c.weeklyService.recordAttempt).toHaveBeenCalledTimes(1);
+    sessionStorage.removeItem('rookhub_weekly_mode_5');
+    done(c);
+  }));
+
+  it('Einzel-Buchpuzzle: Fehlzug meldet sofort, „Nochmal“ und Lösen danach nicht', fakeAsync(() => {
+    const c = makeComponent();
+    const calls: boolean[] = [];
+    c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return of(null); };
+    start(c, LINE(9));
+    wrong(c);
+    expect(calls).toEqual([false]);
+    c.giveUp();
+    c.retry(); tick(600);
+    solve(c);
+    expect(calls).toEqual([false]);
+    done(c);
+  }));
+
+  it('fehlerfrei gelöst: eine Meldung „gelöst“ (Einzel-Buchpuzzle)', fakeAsync(() => {
+    const c = makeComponent();
+    const calls: boolean[] = [];
+    c.puzzleService.recordBookAttempt = (_id: number, solved: boolean) => { calls.push(solved); return of(null); };
+    start(c, LINE(9));
+    solve(c);
+    expect(calls).toEqual([true]);
+    done(c);
+  }));
 });

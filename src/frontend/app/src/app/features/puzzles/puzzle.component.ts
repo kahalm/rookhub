@@ -262,6 +262,12 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     });
   }
 
+  /** P-1: der erste Fehlzug ist der gewertete Fehlversuch (Elo/Statistik sofort). Danach bleibt `attemptRecorded`
+   *  bis zum nächsten Puzzle gesetzt — Zurücksetzen, Mausrutscher und „Nochmal“ melden nichts mehr. */
+  protected override onFirstWrongMove(): void {
+    this.recordAttempt(false);
+  }
+
   protected override handleFailed(): void {
     this.state = 'FAILED';
     this.stopTimer();
@@ -615,7 +621,8 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   retry(): void {
     if (!this.puzzle) return;
     this.clearSolutionPlay();
-    this.attemptRecorded = false;
+    // P-1: „Nochmal“ ist Übung am selben Puzzle — der Fehlversuch ist gemeldet, ein zweiter Versuch zählt nicht
+    // (bis 0.839 setzte retry `attemptRecorded` zurück und meldete das Lösen als neuen Versuch).
     this.gaveUp = false;
     this.setupPuzzle(this.puzzle);
   }

@@ -126,7 +126,12 @@ app/src/app/
   (`SolverTimer` Lösezeit, `SecondsCountdown` Auto-Weiter/Viz-Countdown), `hint-ladder.ts` (`HintLadder`),
   `off-path-policy.ts` (`OffPathPolicy`, `whiteEvalToPlayerPawns`, `playerEvalText`), `viz-controller.ts`
   (`VizController`, `opponentArrowModeFor`), `solver-setup.util.ts` (Vorspiel klemmen, Blickrichtung, Vorschau),
-  `solver-texts.ts` (Anarchy-/Off-Path-Texte); Test-Uhr `testing/manual-clock.ts`.
+  `solver-texts.ts` (Anarchy-/Off-Path-Texte); Test-Uhr `testing/manual-clock.ts`. **Fehlversuch (P-1, 2026-10-25)**:
+  der erste Fehlzug eines Lösungsgangs ruft den Hook `onFirstWrongMove()` (nicht bei geduldeten Alternativen und nicht,
+  wenn der abweichende Zug selbst mattsetzt); jede Komponente meldet dort sofort (Standard `recordAttempt(false)`, Endless
+  über `registerLoss` = Leben, Buch an Kurs/Wochenpost/Tagespuzzle/Einzel-Buch/„Track solves“, Woodpecker). Danach meldet
+  derselbe Durchgang nichts mehr — auch nicht nach Zurücksetzen, „Nochmal“ (Buch: `setupPuzzle(p, true)`) oder
+  Mausrutscher, und ein späteres Lösen zählt nicht als gelöst; erst das nächste Puzzle (bzw. Neuladen) ist wieder meldbar.
 - **Analysebrett `features/analysis/analysis.component`** (Zerlegung Z22, 2026-10-25): Container; daneben rein
   `analysis-settings.ts` (`AnalysisSettings`, `DEPTH_OPTIONS`, Schlüssel), `analysis-route.ts` (`readAnalysisParams`),
   `analysis-readout.ts` (Partie-Ende, Zugziele, Bewertungsleiste, Pfeile, `SearchClock`), `analysis-engine-choice.ts`

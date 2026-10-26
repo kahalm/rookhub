@@ -11,6 +11,8 @@ import { BookModeHost, BookModeStrategy } from './book-mode-host';
 export class BookStandaloneMode implements BookModeStrategy {
   navLoading = false;
   private solveRecorded = false;       // Solve nur einmal je Puzzle-Durchgang melden (Tagespuzzle-Statistik)
+  /** P-1: in diesem Durchgang ist schon ein Fehlversuch gemeldet → weder ein zweiter noch ein „gelöst“. */
+  private failureRecorded = false;
   private challengeReported = false;   // Challenge-Ergebnis nur mit dem ERSTEN gemeldeten Versuch aufloesen
   /** Gesetzt, wenn dieses Buch-Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
   challengeId: number | null = null;
@@ -27,6 +29,7 @@ export class BookStandaloneMode implements BookModeStrategy {
   /** Neuer Puzzle-Durchgang: Solve/Challenge wieder meldbar. */
   resetAttempt(): void {
     this.solveRecorded = false;
+    this.failureRecorded = false;
     this.challengeReported = false;
   }
 
@@ -124,12 +127,16 @@ export class BookStandaloneMode implements BookModeStrategy {
     const h = this.h;
     const puzzle = h.puzzle;
     if (!h.standalone || !puzzle) return;
-    // Seit v0.309.0 wird JEDER Fehlversuch gemeldet (Fehlzug/Mouseslip/Restart → je ein rotes ✗
-    // in der Löser-Anzeige); nur der Solve bleibt einmalig je Durchgang. Die Aufrufer stellen
-    // sicher, dass ein Fehler nicht doppelt zählt (State-Guards in resetPuzzle/mouseslip).
+    // Je Durchgang EINE Meldung (P-1, 2026-10-25): der erste Fehlzug (bzw. Aufgeben/Zurücksetzen nach einem Zug) ist
+    // der Fehlversuch; danach meldet derselbe Durchgang nichts mehr — auch kein Lösen. Ein neuer Durchgang (anderes
+    // Puzzle, Neuladen) ist wieder meldbar; der Server wertet im Tagespuzzle ohnehin den ersten Versuch des Tages.
+    // (v0.309.0–0.839: jeder Fehlversuch inkl. Mausrutscher ein eigenes ✗, Lösen danach trotzdem gemeldet.)
+    if (this.failureRecorded) return;
     if (solved) {
       if (this.solveRecorded) return;
       this.solveRecorded = true;
+    } else {
+      this.failureRecorded = true;
     }
     // Ergebnis an eine ggf. offene Freundes-Challenge zurückmelden (nur Standalone; der ERSTE
     // gemeldete Versuch entscheidet — wie die bisherige Erstversuch-Semantik der Challenge).

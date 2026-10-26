@@ -776,3 +776,73 @@ describe('PuzzleComponent Matt nach Fehlzug', () => {
     discardPeriodicTasks();
   }));
 });
+
+/**
+ * Produktentscheidung P-1 (Codereview F2-005): der ERSTE Fehlzug meldet sofort den Fehlversuch. „Zurücksetzen“,
+ * „Nochmal“ und der Mausrutscher dürfen danach weiterhelfen (Übung), aber derselbe Durchgang wird weder ein zweites
+ * Mal noch am Ende als „gelöst“ gemeldet. Vorher meldete Standard erst am Ende — Zurücksetzen löschte den Fehlzug.
+ */
+describe('PuzzleComponent erster Fehlzug meldet sofort (P-1)', () => {
+  // Setup-Zug e2e4 spielt der Solver, der Spieler (Schwarz) löst mit e7e5, danach g1f3 → gelöst.
+  function playing(): { c: any; reports: boolean[] } {
+    const c = makeComponent();
+    const reports: boolean[] = [];
+    c.stockfish.getBestMove = () => Promise.reject('keine Engine im Test');
+    c.puzzleService.ensureSessionId = () => 'sess';
+    c.puzzleService.recordAnonymousAttempt = jasmine.createSpy('recordAnonymousAttempt')
+      .and.callFake((_id: number, solved: boolean) => { reports.push(solved); return of({}); });
+    c.puzzle = { ...PUZZLE };
+    (c as any).setupPuzzle(c.puzzle);
+    tick(600);   // Setup-Zug
+    return { c, reports };
+  }
+  const wrong = (c: any) => c.onMoveMade({ orig: 'a7', dest: 'a6' });
+  const solve = (c: any) => { c.onMoveMade({ orig: 'e7', dest: 'e5' }); tick(400); };
+  function done(c: any) { c.ngOnDestroy(); discardPeriodicTasks(); }
+
+  it('meldet den Fehlversuch schon beim ersten Fehlzug', fakeAsync(() => {
+    const { c, reports } = playing();
+    wrong(c);
+    expect(reports).toEqual([false]);
+    tick();
+    expect(c.state).toBe('PLAYING');   // weiterspielen darf man (Übung)
+    done(c);
+  }));
+
+  it('Zurücksetzen nach dem Fehlzug und Lösen meldet nichts mehr (kein „gelöst“)', fakeAsync(() => {
+    const { c, reports } = playing();
+    wrong(c); tick();
+    c.resetPuzzle(); tick(600);
+    solve(c);
+    expect(c.state).toBe('SOLVED');
+    expect(reports).toEqual([false]);
+    done(c);
+  }));
+
+  it('Mausrutscher nach dem Fehlzug meldet nichts, das Lösen danach auch nicht', fakeAsync(() => {
+    const { c, reports } = playing();
+    wrong(c); tick();
+    c.mouseslip();
+    solve(c);
+    expect(c.state).toBe('SOLVED');
+    expect(reports).toEqual([false]);
+    done(c);
+  }));
+
+  it('„Nochmal“ nach dem Aufgeben meldet keinen zweiten Versuch', fakeAsync(() => {
+    const { c, reports } = playing();
+    wrong(c); tick();
+    c.giveUp();
+    c.retry(); tick(600);
+    solve(c);
+    expect(reports).toEqual([false]);
+    done(c);
+  }));
+
+  it('fehlerfrei gelöst: genau eine Meldung „gelöst“', fakeAsync(() => {
+    const { c, reports } = playing();
+    solve(c);
+    expect(reports).toEqual([true]);
+    done(c);
+  }));
+});

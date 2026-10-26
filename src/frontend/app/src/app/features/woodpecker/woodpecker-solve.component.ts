@@ -293,6 +293,11 @@ export class WoodpeckerSolveComponent extends BasePuzzleSolver<WoodpeckerEndStat
     });
   }
 
+  /** P-1: der erste Fehlzug ist der gewertete Fehlversuch (der Server wertet ohnehin nur den ersten Versuch). */
+  protected override onFirstWrongMove(): void {
+    this.record(false, this.elapsedSeconds);
+  }
+
   protected override handleFailed(): void {
     this.state = 'FAILED';
     this.stopTimer();
