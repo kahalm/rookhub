@@ -28,7 +28,8 @@ public static partial class DomainServicesSetup
         // jeder Request seinen eigenen Zähler (LeagueClubService fällt ohne auf einen eigenen je Dienst zurück).
         services.AddSingleton<RookHub.Api.Services.League.LeagueShareUploadQuota>();
         // Entwürfe der PGN-Importe (0.595.0): liegen online, bis alles importiert oder verworfen ist.
-        services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
+        services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
+            anonymousCap: RookHub.Api.Services.League.LeagueClubDraftService.AnonymousCapFrom(sp.GetService<IConfiguration>())));
         services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
         services.AddScoped<RookHub.Api.Services.League.LeagueFixtureGames>();   // Paarungen samt Partien (0.673.0)
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameMoves(   // Aufstellungen + erste Züge (2026-10-08)

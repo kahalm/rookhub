@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -95,5 +96,33 @@ public class LeagueClubDraftServiceTests : IDisposable
         _now += LeagueClubDraftService.Retention;
         Assert.Empty(await Svc().ListAsync(DraftActor.User(me, false, TestClubs.HomeId)));
         Assert.Empty(_db.LeagueClubDrafts);
+    }
+
+    // ── Gesamtdeckel ohne Konto (Codereview 2026-09-29 F7-005) ───────
+
+    [Fact]
+    public async Task WithoutAccount_TotalCap_StopsNewAddresses_AccountsUnaffected_AndTheRetentionFreesIt()
+    {
+        var (me, _, _) = await UsersAsync();
+        LeagueClubDraftService Capped() => new(_db, () => _now, anonymousCap: 3);
+        for (var i = 0; i < 3; i++) Assert.Null((await Capped().CreateAsync(TestClubs.HomeId, null, $"ip-{i}", Two, null, null)).Reason);
+        // Jede Adresse wäre unter ihrem eigenen Deckel — der Gesamtdeckel hält trotzdem.
+        Assert.Equal("tooManyDrafts", (await Capped().CreateAsync(TestClubs.HomeId, null, "ip-neu", Two, null, null)).Reason);
+        Assert.Null((await Capped().CreateAsync(TestClubs.HomeId, me, null, Two, null, null)).Reason);          // mit Konto nicht gedeckelt
+        _now += LeagueClubDraftService.Retention + TimeSpan.FromDays(1);
+        Assert.Null((await Capped().CreateAsync(TestClubs.HomeId, null, "ip-neu", Two, null, null)).Reason);    // Frist räumte ab
+        Assert.Equal(1, await _db.LeagueClubDrafts.CountAsync());
+    }
+
+    [Theory]
+    [InlineData(null, LeagueClubDraftService.DefaultAnonymousCap)]
+    [InlineData("0", LeagueClubDraftService.DefaultAnonymousCap)]
+    [InlineData("x", LeagueClubDraftService.DefaultAnonymousCap)]
+    [InlineData("42", 42)]
+    public void AnonymousCap_FromConfig_DefaultOnMissingOrInvalid(string? value, int expected)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [LeagueClubDraftService.AnonymousCapKey] = value }).Build();
+        Assert.Equal(expected, LeagueClubDraftService.AnonymousCapFrom(config));
     }
 }

@@ -22,13 +22,28 @@ public sealed record DraftActor(int? UserId, string? Key, bool Manager, int Club
 /// abbricht, macht später weiter; ein Verwalter (<c>league.manage</c>) sieht alle und kann den Import fertigstellen.
 /// Abgeschlossen oder verworfen wird die Zeile gelöscht (der Rohtext nennt die Spieler des Vereins noch mit Namen).
 /// </summary>
-public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
+/// <param name="anonymousCap">Gesamtdeckel aller Entwürfe OHNE Konto (<c>Retention:AnonymousLeagueDraftsCap</c>, Vorgabe
+/// <see cref="DefaultAnonymousCap"/>).</param>
+public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null, int? anonymousCap = null)
 {
     /// <summary>Ohne Bewegung so lange aufgehoben, danach gelöscht (beim nächsten Anlegen oder Auflisten).</summary>
     public static readonly TimeSpan Retention = TimeSpan.FromDays(30);
     public const int MaxOpenPerUser = 20;
     /// <summary>Ohne Konto je Adresse — ein Teilen-Link soll kein Lager für fremde Texte werden.</summary>
     public const int MaxOpenPerIp = 5;
+    /// <summary>Vorgabe für den Gesamtdeckel aller Entwürfe ohne Konto (Codereview 2026-09-29 F7-005, Entscheidung
+    /// 2026-10-25): der Deckel je Adresse allein bindet nicht — jede weitere Adresse (bei IPv6 jedes weitere /64, siehe
+    /// <see cref="IpBucket"/>) ist ein frischer Topf. Ist er voll, nimmt der Teilen-Link keinen Entwurf mehr an
+    /// (<c>tooManyDrafts</c>, wie am Deckel je Adresse), bis die Frist alte abräumt oder ein Verwalter fertigstellt.</summary>
+    public const int DefaultAnonymousCap = 500;
+    /// <summary>Konfigurationsschlüssel für <see cref="DefaultAnonymousCap"/>.</summary>
+    public const string AnonymousCapKey = "Retention:AnonymousLeagueDraftsCap";
+
+    /// <summary>Liest den Gesamtdeckel aus der Konfiguration (≤ 0 oder fehlend = Vorgabe).</summary>
+    public static int AnonymousCapFrom(IConfiguration? config) =>
+        int.TryParse(config?[AnonymousCapKey], out var v) && v > 0 ? v : DefaultAnonymousCap;
+
+    private readonly int _anonymousCap = anonymousCap is > 0 ? anonymousCap.Value : DefaultAnonymousCap;
     public const int MaxStateChars = 4_000_000;
 
     private DateTime Now => (now ?? (() => DateTime.UtcNow))();
@@ -41,6 +56,8 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
             ? await db.LeagueClubDrafts.CountAsync(d => d.UserId == u, ct)
             : await db.LeagueClubDrafts.CountAsync(d => d.UserId == null && d.AnonIpHash == ipHash, ct);
         if (open >= (userId is null ? MaxOpenPerIp : MaxOpenPerUser)) return (null, "tooManyDrafts");
+        if (userId is null && await db.LeagueClubDrafts.CountAsync(x => x.UserId == null, ct) >= _anonymousCap)
+            return (null, "tooManyDrafts");
         var d = new LeagueClubDraft
         {
             ClubId = clubId,
@@ -147,12 +164,23 @@ public class LeagueClubDraftService(AppDbContext db, Func<DateTime>? now = null)
         return q.Where(d => d.UserId == null && d.AccessKey == key && key != "");
     }
 
+    /// <summary>Abgelaufene Entwürfe löschen, OHNE sie zu laden (Rohtext + Stand bis zu Megabytes je Zeile; vorher lud jedes
+    /// Anlegen/Auflisten alle fälligen Zeilen voll in den Tracker, F7-005). Nur die Ids, dann Platzhalter entfernen.</summary>
     private async Task PurgeAsync(CancellationToken ct)
     {
         var cutoff = Now - Retention;
-        var old = await db.LeagueClubDrafts.Where(d => d.UpdatedAt < cutoff).ToListAsync(ct);
-        if (old.Count == 0) return;
-        db.LeagueClubDrafts.RemoveRange(old);
+        var ids = await db.LeagueClubDrafts.Where(d => d.UpdatedAt < cutoff).Select(d => d.Id).Take(500).ToListAsync(ct);
+        if (ids.Count == 0) return;
+        foreach (var id in ids)
+        {
+            var row = db.LeagueClubDrafts.Local.FirstOrDefault(d => d.Id == id);
+            if (row == null)
+            {
+                row = new LeagueClubDraft { Id = id };
+                db.LeagueClubDrafts.Attach(row);
+            }
+            db.LeagueClubDrafts.Remove(row);
+        }
         await db.SaveChangesAsync(ct);
     }
 

@@ -139,21 +139,8 @@ internal sealed class ScoresheetQuota
         return Convert.ToHexString(bytes, 0, 16).ToLowerInvariant();
     }
 
-    /// <summary>
-    /// Wofür die Grenzen je IP gelten: IPv4 (auch als IPv6 verpackt) die Adresse, echtes IPv6 das /64-Netz — ein Anschluss
-    /// bekommt ein ganzes /64 und wählt darin beliebig viele Adressen. Vorher nahm <c>MapToIPv4</c> bei echtem IPv6 nur die
-    /// letzten 32 Bit: aus einem /64 wurden beliebig viele „IPs“, und fremde Anschlüsse mit gleichem Ende teilten sich
-    /// eine (Codereview 2026-09-29, A6-003).
-    /// </summary>
-    internal static string IpKey(System.Net.IPAddress? ip)
-    {
-        if (ip == null) return "?";
-        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
-        if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetworkV6) return ip.ToString();
-        var bytes = ip.GetAddressBytes();
-        Array.Clear(bytes, 8, 8);
-        return new System.Net.IPAddress(bytes) + "/64";
-    }
+    /// <summary>Wofür die Grenzen je IP gelten: IPv4 die Adresse, echtes IPv6 das /64-Netz (<see cref="IpBucket"/>).</summary>
+    internal static string IpKey(System.Net.IPAddress? ip) => IpBucket.Key(ip);
 
     internal IQueryable<ScoresheetScan> AnonCountingSince(DateTime since) =>
         _db.ScoresheetScans.Where(s => s.UserId == null && s.CreatedAt >= since

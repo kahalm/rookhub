@@ -20,7 +20,7 @@ public class ArchitectureGuardTests
     private static readonly HashSet<string> GemeinsameBausteine =
     [
         "ApiErrorResponses.cs", "BackgroundPause.cs", "BackgroundTaskQueue.cs", "ClaudeJsonClient.cs", "DbIdempotency.cs", "FenFields.cs",
-        "FenListParser.cs", "Figurines.cs", "GithubActionsService.cs", "HeartbeatService.cs", "IpCountryService.cs",
+        "FenListParser.cs", "Figurines.cs", "GithubActionsService.cs", "HeartbeatService.cs", "IpBucket.cs", "IpCountryService.cs",
         "LimitedReadStream.cs", "LogThrottle.cs", "OpenAiJsonClient.cs", "Paging.cs", "PeriodicWorker.cs",
         "PermissiveSan.cs", "PgnMoveTree.cs", "PgnParser.cs", "PgnTokens.cs", "PgnWriter.cs", "PieceLetters.cs",
         "QuietHours.cs", "RateLimitPartitions.cs", "RateLimitRejectionHandler.cs", "RateLimitScale.cs",
