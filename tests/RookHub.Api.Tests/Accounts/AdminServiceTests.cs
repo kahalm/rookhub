@@ -146,6 +146,28 @@ public class AdminServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetUsers_SortCreatedDesc_ReturnsTheNewestFirst_PageSizeStaysCapped()
+    {
+        // F5-010: Die Mitglieder-Vorschlagsliste braucht die NEUESTEN Konten — nach Id sortiert lieferte der Endpunkt
+        // (auf 100 geklemmt) nur die ältesten.
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        for (var i = 0; i < 120; i++)
+            _db.AppUsers.Add(new AppUser { Username = $"u{i:000}", Email = $"u{i}@t.com", PasswordHash = "h", CreatedAt = baseTime.AddDays(i) });
+        await _db.SaveChangesAsync();
+        var admin = TestServices.Admin(_db, _cache);
+
+        var (items, total, _, pageSize) = await admin.GetUsersAsync(null, 1, 500, AdminUserSort.CreatedDesc);
+
+        Assert.Equal(120, total);
+        Assert.Equal(100, pageSize);
+        Assert.Equal("u119", items[0].Username);
+        Assert.Equal("u020", items[^1].Username);
+
+        var (byId, _, _, _) = await admin.GetUsersAsync(null, 1, 5);           // Vorgabe bleibt: nach Id
+        Assert.Equal("u000", byId[0].Username);
+    }
+
+    [Fact]
     public async Task DeleteUser_Unknown_ThrowsKeyNotFound_AndSelf_IsRejected()
     {
         var admin = TestServices.Admin(_db, _cache);

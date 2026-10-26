@@ -50,7 +50,7 @@ describe('AdminGroupsTabComponent', () => {
   it('lädt die Mitglieder-Auswahl nur mit users.manage', () => {
     const a = make();
     a.c.ngOnInit();
-    expect(a.adminService.getUsers).toHaveBeenCalledWith('', 1, 500);
+    expect(a.adminService.getUsers).toHaveBeenCalledWith('', 1, 100, 'createdDesc');   // F5-010: neueste zuerst, Server-Höchstwert
     TestBed.resetTestingModule();
     const b = make({}, { has: (p: string) => p === 'groups.manage' });
     b.c.ngOnInit();
@@ -79,6 +79,14 @@ describe('AdminGroupsTabComponent', () => {
     const { c } = make({ getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: [{ id: 1, username: 'a' }], totalCount: 1 })) });
     c.loadAllUsers();
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('loadAllUsers warns when the server returned fewer items than exist (F5-010: page clamp, not the old 500 cap)', () => {
+    const warn = spyOn(console, 'warn');
+    const items = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, username: 'u' + i }));
+    const { c } = make({ getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items, totalCount: 148 })) });
+    c.loadAllUsers();
+    expect(warn).toHaveBeenCalled();
   });
 
   it('loadAllUsers shows an error hint on failure', () => {

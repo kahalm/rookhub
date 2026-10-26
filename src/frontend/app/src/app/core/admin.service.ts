@@ -192,10 +192,11 @@ export class AdminService {
     return this.http.get<AdminConfig>('/api/admin/config');
   }
 
-  getUsers(search = '', page = 1, pageSize = 20): Observable<PagedResult<AdminUser>> {
-    return this.http.get<PagedResult<AdminUser>>('/api/admin/users', {
-      params: { search, page: page.toString(), pageSize: pageSize.toString() }
-    });
+  /** Nutzerliste (max. 100 je Seite). `sort='createdDesc'` liefert die neuesten Konten zuerst (Mitglieder-Vorschläge). */
+  getUsers(search = '', page = 1, pageSize = 20, sort?: 'createdDesc'): Observable<PagedResult<AdminUser>> {
+    const params: Record<string, string> = { search, page: page.toString(), pageSize: pageSize.toString() };
+    if (sort) params['sort'] = sort;
+    return this.http.get<PagedResult<AdminUser>>('/api/admin/users', { params });
   }
 
   deleteUser(id: number): Observable<void> {

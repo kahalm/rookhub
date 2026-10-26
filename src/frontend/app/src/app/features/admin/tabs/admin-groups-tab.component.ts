@@ -85,14 +85,13 @@ export class AdminGroupsTabComponent implements OnInit {
    *  Vorlage der vorher gewählten Gruppe im Formular, und Speichern schriebe sie auf die neue. */
   readonly goalLoaded = signal(false);
 
-  /** Obere Schranke der ins Mitglieder-Dropdown geladenen User. Bewusst hart: das Dropdown ist
-   *  für einen kleinen Nutzerkreis gedacht; die paginierte User-TABELLE (Nutzer-Tab) ist davon
-   *  unberührt. Sollte der Bestand die Schranke je überschreiten, wird das geloggt, damit der Cap
-   *  sichtbar wird (statt still abzuschneiden) — dann ist ein Such-/Lazy-Picker fällig. */
-  private static readonly MEMBER_PICKER_CAP = 500;
+  /** So viele der NEUESTEN Konten lädt die Mitglieder-Vorschlagsliste vorab (Server-Höchstwert je Seite). Ältere Konten
+   *  findet die Server-Suche ab zwei Zeichen. Vorher wurden 500 angefordert, der Server klemmt aber auf 100 und
+   *  sortierte nach Id — die Vorschläge „neueste zuerst“ kamen so nur aus den 100 ÄLTESTEN Konten (F5-010). */
+  private static readonly MEMBER_PICKER_CAP = 100;
 
   constructor() {
-    // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen 500).
+    // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen neuesten).
     this.memberSearch$.pipe(
       debounceTime(250),
       distinctUntilChanged(),
@@ -110,12 +109,12 @@ export class AdminGroupsTabComponent implements OnInit {
 
   loadAllUsers(): void {
     const cap = AdminGroupsTabComponent.MEMBER_PICKER_CAP;
-    this.adminService.getUsers('', 1, cap).subscribe({
+    this.adminService.getUsers('', 1, cap, 'createdDesc').subscribe({
       next: res => {
         this.allUsers.set(res.items);
-        if (res.totalCount > cap) {
-          // Cap erreicht → das Dropdown zeigt nicht alle User. Nicht still schlucken.
-          console.warn(`[admin] Mitglieder-Dropdown auf ${cap} von ${res.totalCount} Usern begrenzt — Such-Picker erwägen.`);
+        if (res.items.length < res.totalCount) {
+          // Mehr Konten als vorab geladen → ältere nur über die Suche. Nicht still schlucken.
+          console.warn(`[admin] Mitglieder-Vorschläge: ${res.items.length} neueste von ${res.totalCount} Usern geladen — ältere über die Suche.`);
         }
         this.recomputeAvailableUsers();
       },
@@ -245,7 +244,7 @@ export class AdminGroupsTabComponent implements OnInit {
     const available = this.allUsers().filter(u => !memberIds.has(u.id));
     this.availableUsers.set(available);
     // Ohne Suche die NEUESTEN zuerst (wer gerade dazukommen soll, hat sich meist eben registriert), mit Suche die Treffer
-    // des Servers — auch jenseits der 500 vorab geladenen.
+    // des Servers — auch jenseits der vorab geladenen.
     const source = this.searchResults ?? [...available].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
     this.memberCandidates.set(source.filter(u => !memberIds.has(u.id)).slice(0, AdminGroupsTabComponent.CandidateLimit));
   }

@@ -37,3 +37,11 @@ public class PasswordResetLinkDto
     public string Link { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
 }
+
+/// <summary>Reihenfolge der Admin-Nutzerliste (<c>GET /api/admin/users?sort=</c>): Vorgabe nach Id, <c>createdDesc</c> die
+/// neuesten Konten zuerst (Mitglieder-Vorschläge im Gruppen-Tab, F5-010).</summary>
+public enum AdminUserSort
+{
+    Id,
+    CreatedDesc,
+}

@@ -35,7 +35,8 @@ public class AdminService
         _logger = logger;
     }
 
-    public async Task<(List<AdminUserDto> items, int totalCount, int page, int pageSize)> GetUsersAsync(string? search, int page, int pageSize)
+    public async Task<(List<AdminUserDto> items, int totalCount, int page, int pageSize)> GetUsersAsync(string? search, int page, int pageSize,
+        AdminUserSort sort = AdminUserSort.Id)
     {
         (page, pageSize) = Paging.Normalize(page, pageSize);
 
@@ -51,8 +52,10 @@ public class AdminService
 
         var totalCount = await query.CountAsync();
 
-        var items = await query
-            .OrderBy(u => u.Id)
+        var ordered = sort == AdminUserSort.CreatedDesc
+            ? query.OrderByDescending(u => u.CreatedAt).ThenByDescending(u => u.Id)
+            : query.OrderBy(u => u.Id);
+        var items = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(u => new AdminUserDto

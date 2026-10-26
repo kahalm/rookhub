@@ -178,7 +178,7 @@ describe('AdminComponent – Tabs mit eigenem Formular (F5-020)', () => {
   // Seitenaufruf (Liste der Konten, Bücher, Mitglieder-Auswahl), Menü und Rollen nicht.
   it('Nutzer-, Bücher- und Gruppen-Tab laden beim Seitenaufruf', async () => {
     const { adminCalls } = await render();
-    expect(adminCalls).toEqual(jasmine.arrayContaining(['getGroups', 'getConfig', 'getUsers:20', 'getBooks', 'getUsers:500']));
+    expect(adminCalls).toEqual(jasmine.arrayContaining(['getGroups', 'getConfig', 'getUsers:20', 'getBooks', 'getUsers:100']));
   });
 });
 

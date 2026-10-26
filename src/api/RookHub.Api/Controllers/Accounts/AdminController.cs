@@ -64,9 +64,12 @@ public class AdminController : BaseApiController
 
     [HttpGet("users")]
     [HasPermission(Permissions.UsersManage)]
-    public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromQuery] string? sort = null)
     {
-        var (items, totalCount, resolvedPage, resolvedPageSize) = await _admin.GetUsersAsync(search, page, pageSize);
+        // sort=createdDesc → neueste Konten zuerst (Mitglieder-Vorschläge, F5-010); sonst wie bisher nach Id.
+        var order = string.Equals(sort, "createdDesc", StringComparison.OrdinalIgnoreCase) ? AdminUserSort.CreatedDesc : AdminUserSort.Id;
+        var (items, totalCount, resolvedPage, resolvedPageSize) = await _admin.GetUsersAsync(search, page, pageSize, order);
         return Ok(new { items, totalCount, page = resolvedPage, pageSize = resolvedPageSize });
     }
 
