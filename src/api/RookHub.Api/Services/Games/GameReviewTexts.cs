@@ -213,12 +213,8 @@ public class GameReviewTextScheduler : IGameReviewTextScheduler
         {
             try
             {
-                while (_quiet?.QuietUntil() is { } until)
-                {
-                    var wait = until - _quiet.Now;
-                    await Task.Delay(wait < TimeSpan.FromSeconds(5) ? TimeSpan.FromSeconds(5)
-                        : wait > TimeSpan.FromMinutes(10) ? TimeSpan.FromMinutes(10) : wait);
-                }
+                while (_quiet?.RemainingClamped(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(10)) is { } wait)
+                    await Task.Delay(wait);
             }
             catch (Exception ex)
             {

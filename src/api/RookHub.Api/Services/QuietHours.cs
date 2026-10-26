@@ -57,6 +57,16 @@ public sealed class QuietHours
         return IsQuiet(now) ? EndOf(now) : null;
     }
 
+    /// <summary>Wie lange bis zum Ende der JETZT geltenden Sperre, geklemmt auf [<paramref name="min"/>, <paramref name="max"/>] —
+    /// <c>null</c>, wenn gerade keine gilt. EINE Stelle für die Warte-Rechnung der Worker (Codereview A8-017; vorher je eigen in
+    /// <c>CourseTranslationWorker</c> und <c>GameReviewTexts</c>).</summary>
+    public TimeSpan? RemainingClamped(TimeSpan min, TimeSpan max)
+    {
+        if (QuietUntil() is not { } until) return null;
+        var left = until - Now;
+        return left < min ? min : left > max ? max : left;
+    }
+
     public bool IsQuiet(DateTimeOffset at) => Containing(TimeZoneInfo.ConvertTime(at, _zone)) != null;
 
     /// <summary>Das Ende des Fensters, in dem <paramref name="at"/> liegt — schließen Fenster lückenlos aneinander an, das

@@ -188,11 +188,7 @@ public class CourseTranslationWorker : BackgroundService, IBackgroundJobInfo
     /// </summary>
     public async Task<TimeSpan> StepAsync(CancellationToken stoppingToken)
     {
-        if (_quiet?.QuietUntil() is { } until)
-        {
-            var left = until - _quiet.Now;
-            return left < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : left > MaxQuietSleep ? MaxQuietSleep : left;
-        }
+        if (_quiet?.RemainingClamped(TimeSpan.FromSeconds(1), MaxQuietSleep) is { } wait) return wait;
 
         (int Id, bool Automatic)? claimed;
         await using (var scope = _scopes.CreateAsyncScope())

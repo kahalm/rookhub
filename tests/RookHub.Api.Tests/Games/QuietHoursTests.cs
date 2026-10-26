@@ -252,4 +252,25 @@ public class QuietHoursTests
         Assert.True(dto.Pending);
         Assert.Equal([game.Id], scheduler.Recaps);
     }
+
+    // ---- A8-017: Warten bis Sperrzeit-Ende EINMAL geklemmt ----
+
+    [Fact]
+    public void RemainingClamped_ClampsTheWaitToTheBounds_AndIsNullOutsideTheWindow()
+    {
+        var clock = new ManualTime { Now = new DateTimeOffset(2026, 9, 28, 8, 0, 0, TimeSpan.Zero) };   // Mo 10:00 Wien
+        var quiet = new QuietHours(QuietHours.DefaultSpec, "Europe/Vienna", clock);
+        var left = quiet.QuietUntil()!.Value - clock.Now;
+        Assert.True(left > TimeSpan.FromMinutes(10));
+
+        Assert.Equal(TimeSpan.FromMinutes(10), quiet.RemainingClamped(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(10)));
+        Assert.Equal(left, quiet.RemainingClamped(TimeSpan.FromSeconds(1), TimeSpan.FromDays(2)));
+
+        clock.Now = quiet.QuietUntil()!.Value - TimeSpan.FromMilliseconds(200);                          // kurz vor dem Ende
+        Assert.Equal(TimeSpan.FromSeconds(5), quiet.RemainingClamped(TimeSpan.FromSeconds(5), TimeSpan.FromMinutes(10)));
+
+        clock.Now = quiet.QuietUntil()!.Value + TimeSpan.FromMinutes(1);
+        if (!quiet.IsQuietNow())
+            Assert.Null(quiet.RemainingClamped(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(10)));
+    }
 }

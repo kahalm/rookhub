@@ -201,7 +201,7 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   Zurueckziehen: der Nutzer seinen WARTENDEN, der Admin jeden offenen (`Cancelled`). **Konto loeschen** setzt die
   offenen Auftraege des Nutzers auf `Cancelled` („account deleted") — `RequestedByUserId` hat bewusst keinen FK.
 * **Hintergrunddienst** (`Services/Courses/CourseTranslationWorker.cs`, EIN Auftrag gleichzeitig — die Parallelitaet steckt
-  im Lauf): kein Text-Modell → schlafen (10 min); Sperrzeit (`QuietHours`) → schlafen bis `EndOf`, hoechstens 10 min
+  im Lauf): kein Text-Modell → schlafen (10 min); Sperrzeit (`QuietHours`) → schlafen bis `EndOf`, hoechstens 10 min (`QuietHours.RemainingClamped`, gemeinsam mit `GameReviewTexts`, A8-017)
   am Stueck; sonst `ClaimNextAsync` — **angeforderte vor der Automatik, je Gruppe die aeltesten** (`InQueueOrder`, EINE
   Stelle fuer Dienst und Platzanzeige). Ohne Arbeit wartet er auf einen Weckruf (`CourseTranslationSignal`: Anfordern,
   Nachziehen), hoechstens 5 min. Beim Start `Running` → `Queued`. **Abbruch mitten im Lauf** ueber einen eigenen Token:
