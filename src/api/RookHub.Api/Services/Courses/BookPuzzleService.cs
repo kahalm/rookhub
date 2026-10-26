@@ -56,14 +56,18 @@ public class BookPuzzleService
         var puzzle = await PuzzleWithBook(_db, id).FirstOrDefaultAsync();
         if (puzzle == null) return null;
         var dto = MapToDto(puzzle);
-        if (puzzle.Book?.IsCalculation == true)
-        {
-            dto.Moves = "";
-            dto.MoveComments = null;
-            dto.MoveShapes = null;
-            dto.AltMoves = null;
-        }
+        if (puzzle.Book?.IsCalculation == true) WithholdSolution(dto);
         return dto;
+    }
+
+    /// <summary>Lösung eines Kalkulations-Puzzles zurückhalten (Züge, Zugkommentare, Pfeile, Alternativen) — gilt
+    /// überall, wo ein Puzzle eines Kalkulationsbuchs ohne Kalk-Schutz ausgeliefert wird (auch Wochenpost, A2-017).</summary>
+    internal static void WithholdSolution(BookPuzzleDto dto)
+    {
+        dto.Moves = "";
+        dto.MoveComments = null;
+        dto.MoveShapes = null;
+        dto.AltMoves = null;
     }
 
     /// <summary>Ein Puzzle MIT Buch-Metadaten (für <see cref="MapToDto"/>) — ohne das Roh-PGN des Buchs

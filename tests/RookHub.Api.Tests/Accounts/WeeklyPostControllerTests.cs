@@ -818,4 +818,75 @@ public class WeeklyPostControllerTests : IDisposable
         });
         Assert.IsType<BadRequestObjectResult>(res);
     }
+
+    // ---- A2-017: Zugriff aufs Quellbuch, keine Kalkulationslösungen ----
+
+    [Fact]
+    public async Task CreateFromChapter_BookTheCallerCannotSee_Returns403_AndCreatesNothing()
+    {
+        var bookId = await SeedBookWithChaptersAsync();   // nicht öffentlich, kein Besitzer, keine Freigabe
+        SetUser(7);                                        // weeklyposts.manage ohne Admin
+
+        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        });
+
+        Assert.Equal(403, Assert.IsAssignableFrom<ObjectResult>(res).StatusCode);
+        Assert.False(await _db.WeeklyPosts.AnyAsync());
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_OwnBook_WorksWithoutAdmin()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        var book = await _db.Books.SingleAsync(b => b.Id == bookId);
+        book.OwnerUserId = 7;
+        await _db.SaveChangesAsync();
+        SetUser(7);
+
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+        Assert.Equal(bookId, post.SourceBookId);
+    }
+
+    [Fact]
+    public async Task CreateFromChapter_CalculationBook_IsRejected_EvenForAdmins()
+    {
+        var bookId = await SeedBookWithChaptersAsync();
+        (await _db.Books.SingleAsync(b => b.Id == bookId)).IsCalculation = true;
+        await _db.SaveChangesAsync();
+        SetUser(1, admin: true);
+
+        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        });
+
+        Assert.IsType<BadRequestObjectResult>(res);
+        Assert.False(await _db.WeeklyPosts.AnyAsync());
+    }
+
+    [Fact]
+    public async Task GetPuzzles_PostOfABookThatBecameACalculationCourse_WithholdsTheSolution()
+    {
+        // Bestands-Posts: das Buch wurde nach dem Anlegen zum Kalkulationskurs — der anonyme Abruf darf die
+        // Lösung nicht liefern (wie BookPuzzleService.GetByIdAsync).
+        var bookId = await SeedBookWithChaptersAsync();
+        SetUser(1, admin: true);
+        var post = Unwrap<WeeklyPostDto>(await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        {
+            BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
+        }));
+        (await _db.Books.SingleAsync(b => b.Id == bookId)).IsCalculation = true;
+        await _db.SaveChangesAsync();
+        SetAnonymous();
+
+        var play = Unwrap<WeeklyPlayDto>(await _controller.GetPuzzles(post.Id));
+
+        Assert.Equal(2, play.Puzzles.Count);
+        Assert.All(play.Puzzles, p => Assert.Equal("", p.Moves));
+    }
 }

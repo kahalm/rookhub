@@ -112,6 +112,8 @@ public class WeeklyPostService
             return puzzles.Select((bp, i) =>
             {
                 var dto = BookPuzzleService.MapToDto(bp);
+                // Wurde das Buch (nach dem Anlegen) zum Kalkulationskurs, liefert der anonyme Abruf keine Lösung (A2-017).
+                if (bp.Book?.IsCalculation == true) BookPuzzleService.WithholdSolution(dto);
                 dto.Id = i;   // Sequenz-Index (Fortschritt ist index-basiert), nicht die DB-Id
                 return dto;
             }).ToList();
@@ -137,12 +139,20 @@ public class WeeklyPostService
     /// <summary>
     /// Legt einen Wochenpost aus EINEM Kapitel eines Buchs an. <paramref name="chapterIndex"/> ist die
     /// 0-basierte Position aus der Kapitel-Liste. Wirft <see cref="ArgumentException"/> (→ 400), wenn das
-    /// Buch fehlt, der Index ungültig ist oder das Kapitel keine (Quiz-)Puzzles enthält.
+    /// Buch fehlt, der Index ungültig ist, das Kapitel keine (Quiz-)Puzzles enthält oder das Buch ein
+    /// Kalkulationskurs ist (dessen Lösungen gäbe der anonyme Abruf preis). Wirft
+    /// <see cref="UnauthorizedAccessException"/> (→ 403), wenn der Aufrufer das Buch nicht als Kurs sehen darf
+    /// (<see cref="CourseAccess.CanAccessAsync"/>, A2-017).
     /// </summary>
-    public async Task<WeeklyPost> CreateFromChapterAsync(int bookId, int chapterIndex, DateTime scheduledAt, string? title, string? description)
+    public async Task<WeeklyPost> CreateFromChapterAsync(int userId, bool isAdmin, int bookId, int chapterIndex,
+        DateTime scheduledAt, string? title, string? description)
     {
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId)
             ?? throw new ArgumentException("Book not found.");
+        if (!await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin))
+            throw new UnauthorizedAccessException("No access to this course.");
+        if (book.IsCalculation)
+            throw new ArgumentException("Calculation courses cannot be used as a weekly post.");
 
         var names = await GetOrderedChapterNamesAsync(bookId);
         if (chapterIndex < 0 || chapterIndex >= names.Count)

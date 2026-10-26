@@ -18,3 +18,8 @@ Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Dat
 | POST | `/api/admin/weekly-posts` | Admin | Upload (multipart: file + scheduledAt + optional title) |
 | PUT | `/api/admin/weekly-posts/{id}` | Admin | Termin/Titel ändern |
 | DELETE | `/api/admin/weekly-posts/{id}` | Admin | Löschen |
+| POST | `/api/admin/weekly-posts/from-chapter` | `weeklyposts.manage` | Wochenpost aus EINEM Kapitel eines Buchs `{ bookId, chapterIndex, scheduledAt, title?, description? }` — Puzzles live aus den BookPuzzles |
+
+**Kapitel-Quelle** (A2-017): `from-chapter` verlangt Kurszugriff auf das Buch (`CourseAccess.CanAccessAsync`, sonst 403) und lehnt
+Kalkulationskurse ab (400) — `GET …/{id}/puzzles` ist anonym und gäbe sonst Lösungen preis. Wird ein Quellbuch nachträglich zum
+Kalkulationskurs, liefert `…/puzzles` die Puzzles ohne Lösung (`BookPuzzleService.WithholdSolution`, wie `GET /api/book-puzzles/{id}`).

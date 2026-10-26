@@ -263,12 +263,17 @@ public class WeeklyPostController : BaseApiController
     {
         try
         {
-            var post = await _progress.CreateFromChapterAsync(dto.BookId, dto.ChapterIndex, dto.ScheduledAt, dto.Title, dto.Description);
+            var post = await _progress.CreateFromChapterAsync(GetUserId(), IsAdmin, dto.BookId, dto.ChapterIndex,
+                dto.ScheduledAt, dto.Title, dto.Description);
             return Ok(ToDto(post));
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
     }
 
