@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.844.1", date: "2026-10-26", changes: [
+    { en: "Technical refactor (code review, second decomposition round backend): tournament directory admin endpoints and the chess-results sweep split into smaller components (federation triggers, result reconciliation, tournament-type passes); extension API Chessable endpoints in their own file; engine resolution and settings extracted from the background analysis worker; saved-games list and scoresheet PGN comments as separate components. Behaviour unchanged, 830 routes identical.", de: "Technischer Umbau (Codereview, zweite Zerlegungsrunde Backend): Wartungs-Endpunkte des Turnierverzeichnisses und der chess-results-Sweep in kleinere Bausteine aufgeteilt (Verbandskalender-Auslöser, Abgleich der Trefferliste, Turnierart-Durchgänge); Chessable-Endpunkte der Erweiterungs-Schnittstelle in eigener Datei; Engine-Auflösung und Einstellungen aus dem Hintergrund-Analyse-Worker herausgelöst; Partienliste und PGN-Kommentare der Formular-Einlesung als eigene Bausteine. Verhalten unverändert, 830 Routen identisch." },
+  ]},
   { version: "0.844.0", date: "2026-10-26", changes: [
     { en: "The changelog is now loaded only when opened (as data, outside the service-worker prefetch); installed apps download about 2 MB less in the background after an update.", de: "Das Änderungsprotokoll wird erst beim Öffnen geladen (als Daten, außerhalb des Service-Worker-Prefetch); installierte Apps laden nach einem Update rund 2 MB weniger im Hintergrund." },
     { en: "Security: the web servers of all sites can no longer modify the files they serve or their configuration (root-owned bundles, nginx owns only cache and logs).", de: "Sicherheit: Die Webserver der Oberflächen können ihre ausgelieferten Dateien und ihre Konfiguration nicht mehr verändern (Bundles root-eigen, nginx besitzt nur Cache und Logs)." },
