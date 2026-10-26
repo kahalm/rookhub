@@ -1,5 +1,5 @@
 import { Sort } from '@angular/material/sort';
-import { DisplayPairing } from '@rh/core/models';
+import { CrawlerPairing, DisplayPairing, TeamPairingResponse, TournamentPairing } from '@rh/core/models';
 
 /**
  * Geteilte Tabellen-Logik für die Turnier-Ansichten (authentifiziert =
@@ -28,15 +28,18 @@ export function chessTitle(raw: string | null | undefined): string | null {
 }
 
 /** Generisches Sortieren nach `sort.active`/`sort.direction`; ohne aktive Sortierung unverändert. */
-export function sortTableData<T>(data: T[], sort: Sort): T[] {
+export function sortTableData<T extends object>(data: T[], sort: Sort): T[] {
   if (!sort.active || sort.direction === '') return data;
   const dir = sort.direction === 'asc' ? 1 : -1;
   const key = sort.active === 'team' ? 'teamName' : sort.active === 'board' ? 'boardNumber' : sort.active;
   // Die Vereinsspalte zeigt ohne eigenen Verein den uebernommenen — sortiert wird nach dem GEZEIGTEN.
   // Ebenso der Titel: nur echte Titel zaehlen, der Rest sortiert wie „ohne Titel".
-  const value = (row: any) => (key === 'teamName' ? row.teamName ?? row.club
-    : key === 'title' ? chessTitle(row.title) : row[key]) ?? '';
-  return [...data].sort((a: any, b: any) => {
+  const value = (item: T) => {
+    const row = item as Record<string, unknown>;
+    return (key === 'teamName' ? row['teamName'] ?? row['club']
+      : key === 'title' ? chessTitle(typeof row['title'] === 'string' ? row['title'] : null) : row[key]) ?? '';
+  };
+  return [...data].sort((a, b) => {
     const valA = value(a);
     const valB = value(b);
     if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
@@ -49,11 +52,11 @@ export function sortTableData<T>(data: T[], sort: Sort): T[] {
  * ist je Turniertyp unterschiedlich: Team-Paarungen tragen `homeTeam`, Einzel-
  * Paarungen `boardNumber`/`white`/`black`. `hasTeamPairings` meldet den erkannten Typ.
  */
-export function toDisplayPairings(raw: any[]): { pairings: DisplayPairing[]; hasTeamPairings: boolean } {
-  if (raw.length > 0 && raw[0].homeTeam !== undefined) {
+export function toDisplayPairings(raw: CrawlerPairing[]): { pairings: DisplayPairing[]; hasTeamPairings: boolean } {
+  if (raw.length > 0 && isTeamPairing(raw[0])) {
     return {
       hasTeamPairings: true,
-      pairings: raw.map((item): DisplayPairing => ({
+      pairings: raw.filter(isTeamPairing).map((item): DisplayPairing => ({
         board: item.matchNumber,
         white: item.homeTeam,
         black: item.awayTeam,
@@ -63,7 +66,7 @@ export function toDisplayPairings(raw: any[]): { pairings: DisplayPairing[]; has
   }
   return {
     hasTeamPairings: false,
-    pairings: raw.map((item): DisplayPairing => ({
+    pairings: raw.filter(isIndividualPairing).map((item): DisplayPairing => ({
       board: item.boardNumber,
       white: item.white,
       black: item.black,
@@ -71,3 +74,13 @@ export function toDisplayPairings(raw: any[]): { pairings: DisplayPairing[]; has
     })),
   };
 }
+
+/** Mannschafts-Paarung (Crawler `TeamPairingResponse`) statt Einzel-Paarung? */
+function isTeamPairing(item: CrawlerPairing): item is TeamPairingResponse {
+  return 'homeTeam' in item && item.homeTeam !== undefined;
+}
+
+function isIndividualPairing(item: CrawlerPairing): item is TournamentPairing {
+  return !isTeamPairing(item);
+}
+

@@ -47,19 +47,19 @@ describe('tournament-table.util', () => {
 
   describe('toDisplayPairings', () => {
     it('erkennt Team-Paarungen (homeTeam) und formatiert den Score', () => {
-      const raw = [{ matchNumber: 1, homeTeam: 'A', awayTeam: 'B', homeScore: 3, awayScore: 1 }];
+      const raw = [{ id: 1, roundNumber: 1, matchNumber: 1, homeTeam: 'A', awayTeam: 'B', homeScore: 3, awayScore: 1 }];
       const { pairings, hasTeamPairings } = toDisplayPairings(raw);
       expect(hasTeamPairings).toBeTrue();
       expect(pairings[0]).toEqual({ board: 1, white: 'A', black: 'B', result: '3 : 1' });
     });
 
     it('lässt den Team-Score leer wenn homeScore null ist', () => {
-      const raw = [{ matchNumber: 2, homeTeam: 'A', awayTeam: 'B', homeScore: null, awayScore: null }];
+      const raw = [{ id: 2, roundNumber: 1, matchNumber: 2, homeTeam: 'A', awayTeam: 'B', homeScore: null, awayScore: null }];
       expect(toDisplayPairings(raw).pairings[0].result).toBe('');
     });
 
     it('erkennt Einzel-Paarungen (boardNumber)', () => {
-      const raw = [{ boardNumber: 1, white: 'P1', black: 'P2', result: '1-0' }];
+      const raw = [{ id: 3, roundNumber: 1, boardNumber: 1, white: 'P1', black: 'P2', result: '1-0' }];
       const { pairings, hasTeamPairings } = toDisplayPairings(raw);
       expect(hasTeamPairings).toBeFalse();
       expect(pairings[0]).toEqual({ board: 1, white: 'P1', black: 'P2', result: '1-0' });

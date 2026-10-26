@@ -12,7 +12,7 @@
   "@angular-eslint/use-lifecycle-interface": 0,
   "@typescript-eslint/ban-ts-comment": 0,
   "@typescript-eslint/no-empty-function": 79,
-  "@typescript-eslint/no-explicit-any": 21,
+  "@typescript-eslint/no-explicit-any": 16,
   "no-alert": 0,
   "no-console": 7,
   "no-debugger": 0,

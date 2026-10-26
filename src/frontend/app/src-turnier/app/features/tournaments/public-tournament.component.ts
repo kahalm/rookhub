@@ -19,7 +19,7 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
-import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription, CrawlerPairing } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { displayedTables } from './tournament-favorites.util';
 import { TournamentRoundMonitor } from './tournament-round-monitor';
@@ -225,7 +225,7 @@ export class PublicTournamentComponent implements OnInit {
   loadPairings(): void {
     this.pairingsLoading = true;
     // Response can be either TeamPairingResponse[] or TournamentPairing[] depending on tournament type
-    this.tournaments.getPairings<any[]>(this.id, this.selectedRound).subscribe({
+    this.tournaments.getPairings<CrawlerPairing[]>(this.id, this.selectedRound).subscribe({
       next: (p) => {
         const { pairings, hasTeamPairings } = toDisplayPairings(p);
         this.pairings = pairings;
