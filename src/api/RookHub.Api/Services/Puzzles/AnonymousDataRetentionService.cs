@@ -27,6 +27,8 @@ namespace RookHub.Api.Services.Puzzles;
 /// <para>Dazu die vier anonymen Versuchs-Senken (<see cref="AnonymousSinkRetention"/>, A2-012): Frist
 /// <c>Retention:AnonymousDays</c> und Gesamtdeckel <c>Retention:AnonymousCap</c> je Senke (<see cref="RetentionOptions"/>).</para>
 ///
+/// <para>Und gelesene Admin-/Direktnachrichten nach <c>Retention:MessagesDays</c> (<see cref="Social.AdminMessageRetention"/>).</para>
+///
 /// Läuft täglich (PeriodicWorker, erster Lauf kurz nach dem Start, nicht pausierbar: Aufbewahrungsfristen); jede Senke hat
 /// ihren eigenen Versuch — ein Fehler der einen lässt die andere nicht aus und beendet den Dienst nicht (nur Logzeile).
 /// Übersicht aller Fristen: <c>docs/api/speicherdauer.md</c>.
@@ -91,6 +93,14 @@ public class AnonymousDataRetentionService : PeriodicWorker
                 RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
             if (pruned > 0)
                 _logger.LogInformation("Anonyme Versuchs-Retention: {Count} Zeilen gelöscht", pruned);
+            return pruned;
+        }, ct);
+        removed += await TryAsync("Nachrichten-Retention fehlgeschlagen", async sp =>
+        {
+            var pruned = await Social.AdminMessageRetention.PruneAsync(sp.GetRequiredService<AppDbContext>(), now,
+                RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
+            if (pruned > 0)
+                _logger.LogInformation("Nachrichten-Retention: {Count} gelesene Nachrichten gelöscht", pruned);
             return pruned;
         }, ct);
         return removed;
