@@ -37,7 +37,7 @@ import {
 import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalculationService,
 } from './calculation.service';
-import { LocalCalculationBackend } from './calc-local.backend';
+import { CalcLocalMode } from './calc-local-mode';
 import { CalcTrainingSession } from './calc-training-session';
 import { CalcTreeCursor } from './calc-tree-cursor';
 import { CalcTreeSaver } from './calc-tree-saver';
@@ -50,7 +50,6 @@ import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board
 import {
   CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult,
 } from './calc-timer-dialog.component';
-import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
 import { AuthService } from '../../../core/auth.service';
 import { formatSecondsClock } from '../../../shared/clock-format.util';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
@@ -114,37 +113,15 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get index(): number { return this.chapters.index; }
   set index(index: number) { this.chapters.index = index; }
 
-  // ===== Woher kommen die Daten? ===========================================
-  // Angemeldet: der Server. Anonym (öffentlicher Kalkulations-Kurs per Kurz-URL): der
-  // localStorage dieses Geräts. Genau EINE Öffnung gibt es serverseitig — LESEND, und nur für
-  // ausdrücklich öffentlich freigegebene Bücher; geschrieben wird anonym gar nichts.
-  private localBackend: LocalCalculationBackend | null = null;
-
-  /** Server oder Gerät — die einzige Stelle, die diesen Unterschied kennt. */
-  private get backend(): CalcBackend { return this.localBackend ?? this.api; }
-
+  /** Server oder Gerät (anonym: localStorage) samt Geräte-Hinweis/Warnung — siehe {@link CalcLocalMode}. */
+  private readonly local = new CalcLocalMode();
+  private get backend(): CalcBackend { return this.local.backend(this.api); }
   /** Läuft alles nur lokal? (dezenter Hinweis + Anmelde-Link in der Ansicht) */
-  get localOnly(): boolean { return this.localBackend !== null; }
-
-  /**
-   * Der Gerätespeicher hat zuletzt NICHT mitgespielt (Privatmodus, Quota voll, gesperrt). Dann ist
-   * „liegt nur auf diesem Gerät" die falsche Auskunft — es liegt gerade NIRGENDS. Der Hinweis oben
-   * wechselt deshalb auf eine Warnung. Wird bei der nächsten erfolgreichen Speicherung zurückgesetzt.
-   */
-  localSaveFailed = false;
-
-  /**
-   * Der ruhige Hinweis „liegt nur auf diesem Gerät" wurde für DIESEN Kurs weggeklickt
-   * (localStorage, siehe `calc-local.util.ts`). Er ist ein Vorschlag — den darf man abstellen.
-   */
-  noticeDismissed = false;
-
-  /**
-   * Die WARNUNG „kann gerade gar nicht gespeichert werden" wurde weggeklickt. Bewusst NUR im
-   * Speicher und bewusst nicht dauerhaft: sie meldet Datenverlust, keinen Vorschlag — beim
-   * nächsten fehlgeschlagenen Schreibversuch steht sie wieder da (siehe {@link setLocalSaveFailed}).
-   */
-  warningDismissed = false;
+  get localOnly(): boolean { return this.local.localOnly; }
+  /** Der Gerätespeicher hat zuletzt NICHT mitgespielt — es liegt gerade NIRGENDS (Warnung statt Hinweis). */
+  get localSaveFailed(): boolean { return this.local.saveFailed; }
+  /** Der ruhige Hinweis „liegt nur auf diesem Gerät" wurde für DIESEN Kurs weggeklickt. */
+  get noticeDismissed(): boolean { return this.local.noticeDismissed; }
 
   /** Anmelde-Link führt GENAU hierher zurück (inkl. `?pos=`/`?chapter=`). */
   get loginReturnUrl(): string { return this.router.url; }
@@ -153,31 +130,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
    *  Kurses hierher — /courses zeigte ihnen nur die Anmeldemaske (UX-024), sie gehen zur Startseite. */
   get homeLink(): string { return this.auth?.isLoggedIn ? '/courses' : '/'; }
 
-  /** Der ruhige Geräte-Hinweis (anonym, Speicher tut es) — wegklickbar. */
-  get showLocalNotice(): boolean {
-    return this.localOnly && !this.localSaveFailed && !this.noticeDismissed;
-  }
-
-  /** Die Warnung, dass gerade NICHTS gespeichert werden kann — nur für die Sitzung wegklickbar. */
-  get showLocalWarning(): boolean {
-    return this.localOnly && this.localSaveFailed && !this.warningDismissed;
-  }
-
-  dismissLocalNotice(): void {
-    this.noticeDismissed = true;
-    writeCalcNoticeDismissed(this.bookId);
-  }
-
+  get showLocalNotice(): boolean { return this.local.showNotice; }
+  get showLocalWarning(): boolean { return this.local.showWarning; }
+  dismissLocalNotice(): void { this.local.dismissNotice(this.bookId); }
   /** Nur für diese Sitzung: der nächste Fehlschlag holt die Warnung zurück. */
-  dismissLocalWarning(): void {
-    this.warningDismissed = true;
-  }
-
-  /** Einzige Stelle, die `localSaveFailed` setzt: jeder NEUE Fehlschlag zeigt die Warnung wieder. */
-  private setLocalSaveFailed(failed: boolean): void {
-    if (failed) this.warningDismissed = false;
-    this.localSaveFailed = failed;
-  }
+  dismissLocalWarning(): void { this.local.dismissWarning(); }
+  private setLocalSaveFailed(failed: boolean): void { this.local.setSaveFailed(failed); }
 
   /**
    * Kapitel-Wunsch aus `?chapter=` (Kurz-URL `/{slug}/{kapitel}`) — er WÄHLT das Kapitel vor,
@@ -378,12 +336,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.pageMode.enter();
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
     this.requestedChapter = (this.route.snapshot.queryParamMap.get('chapter') || '').trim() || null;
-    // Niemand angemeldet → Stellungen lesend vom öffentlichen Endpoint, alles Selbstgemachte
-    // in den localStorage. Serverseitige Persistenz bleibt angemeldeten Nutzern vorbehalten.
-    if (!this.auth?.isLoggedIn && Number.isFinite(this.bookId)) {
-      this.localBackend = new LocalCalculationBackend(this.api, this.bookId);
-    }
-    this.noticeDismissed = readCalcNoticeDismissed(this.bookId);
+    // Niemand angemeldet → Stellungen lesend vom öffentlichen Endpoint, alles Selbstgemachte im Gerät.
+    this.local.enter(this.api, this.bookId, !!this.auth?.isLoggedIn);
     // Welche Sprachen der Kurs hat (Auswahl in der Befehlszeile) — still, ohne Übersicht keine Auswahl.
     this.courseLang.ensureLanguages(this.bookId);
     const requested = Number(this.route.snapshot.queryParamMap.get('pos')) || null;
