@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.846.2", date: "2026-10-26", changes: [
+    { en: "Documentation: TODO list updated to the state of the code review (second check of the 80 plausible findings, fix packages B7, second decomposition round).", de: "Doku: TODO-Liste auf den Stand des Codereviews gebracht (Zweitprüfung der 80 plausiblen Funde, Fixpakete B7, zweite Zerlegungsrunde)." },
+  ]},
   { version: "0.846.1", date: "2026-10-26", changes: [
     { en: "Master-game library: a PGN line comment („;“) no longer cuts off the rest of the game when the start ply is guessed or games are imported with the library tool (code review N3-007, residual).", de: "Meisterpartien-Bibliothek: Ein PGN-Zeilenkommentar („;“) kappt beim Bestimmen des Start-Halbzugs und beim Einlesen mit dem Bibliothekswerkzeug nicht mehr den Rest der Partie (Codereview N3-007, Restmangel)." },
   ]},

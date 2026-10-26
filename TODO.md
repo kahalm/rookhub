@@ -1173,7 +1173,7 @@ eine spaetere „laeuft gerade"-Ansicht dagegen die Hauptquelle.
   in RepCheck anpassen und die betroffenen Nutzer warnen; **harmlos** (geänderte Feldnamen, eine gesperrte Linie in
   einem Vorschau-Kurs) → `checkChessableResponse` in `repcheck/extension/lib/chessable-crawl.js` erweitern und dem
   Nutzer grünes Licht geben. Gilt nur für die Extension — das Userscript prüft nicht.
-- [ ] Code Review — letzter: **2026-09-29** → Vollreview Stack-weit (rookhub + Satelliten). **634 Roh-Funde → 622 nach Dedupe, 531 CONFIRMED** (dazu 79 plausibel, 12 widerlegt); in fünf Wellen umgesetzt: W1–W5 = rookhub v0.601.0, v0.606.0, v0.623.0, v0.624.0, v0.635.0. Bericht: `rookhubstack/CODE_REVIEW_2026-09-29.md` (Plan `CODE_REVIEW_PLAN_2026-09-29.md`). Die `Doku:`-Aufträge der Fix-Commits sind seit 2026-10-24 in `docs/` nachgetragen; offene Nacharbeiten unten unter „Code-Review 2026-09-29“. **Zerlegungs-Welle rookhub erledigt 2026-10-24/25** (Karte Z2–Z35 in 0.832.2–0.832.19, 18 Pakete, je Schnitt Charakterisierungs-/Golden-Tests; Endstände in `CODE_REVIEW_2026-09-29.md` §9c). **Offen:** Satelliten Z36–Z48 (läuft gestaffelt seit 25.10.: Crawler, piratechess, dann schach-bot, dann repcheck mit Testnetz zuerst), Linter-Ratsche Phase 3 (Regeln beim Nullstand auf `'error'`, `docs/ci.md`), Nacharbeiten unten. (vorher 2026-08-25 Review über `rookhub`: 15 Funde, 14 behoben in v0.376.2, offen EngineSlot-Umbau, faktisch Delta; 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
+- [ ] Code Review — letzter: **2026-09-29** → Vollreview Stack-weit (rookhub + Satelliten). **634 Roh-Funde → 622 nach Dedupe, 531 CONFIRMED** (dazu 79 plausibel, 12 widerlegt); in fünf Wellen umgesetzt: W1–W5 = rookhub v0.601.0, v0.606.0, v0.623.0, v0.624.0, v0.635.0. Bericht: `rookhubstack/CODE_REVIEW_2026-09-29.md` (Plan `CODE_REVIEW_PLAN_2026-09-29.md`). Die `Doku:`-Aufträge der Fix-Commits sind seit 2026-10-24 in `docs/` nachgetragen; offene Nacharbeiten unten unter „Code-Review 2026-09-29“. **Zerlegungs-Welle rookhub erledigt 2026-10-24/25** (Karte Z2–Z35 in 0.832.2–0.832.19, 18 Pakete, je Schnitt Charakterisierungs-/Golden-Tests; Endstände in `CODE_REVIEW_2026-09-29.md` §9c). **Satelliten Z36–Z48 erledigt 25.10., Linter-Ratsche Phase 3 + stylelint 0.844.0, zweite Zerlegungsrunde 0.844.1/0.844.2, Entscheidungen 25.10. in B1–B5 (0.839.0–0.844.0), Zweitprüfung der 80 PLAUSIBLE 26.10. (62 bestätigt → B7a 0.845.0, B7b 0.846.0, B7c Satelliten) — Stand in `CODE_REVIEW_2026-09-29.md` §9c.** **Offen:** 16 Entscheidungs-Funde der Zweitprüfung (Liste §9c Punkt 5), A3-016 mit Schlüsselrotation, Ops-Punkte unten, Nacharbeiten unten. (vorher 2026-08-25 Review über `rookhub`: 15 Funde, 14 behoben in v0.376.2, offen EngineSlot-Umbau, faktisch Delta; 2026-08-10 Delta v0.340.0..HEAD: Kalk-Lösungs-Leck behoben v0.356.0, 4 calc-Funde offen; 2026-08-07 stack-weit, 51 Fixes v0.340.0)
 - [ ] Übersetzungen prüfen (en/de/hr vollständig + korrekt) — letzter: **2026-08-26** → alle 25 Sprachdateien JSON-valide; en/de/hr je **2217 Keys** in voller Parität (Platzhalter identisch, keine leeren Werte außer dem gewollten `weekly.oClock`-Suffix) — seit v0.376.4 als Karma-Spec `i18n-parity.spec.ts` dauerhaft erzwungen. Qualitäts-Review per 30 Reviewer + 10 adversariale Verifizierer (je Chunk × en/de/hr): 389 Roh-Funde → **~260 bestätigt und übernommen** (hr ~150: Sie→Du-Form, Chessable-Bereich war englisch, kurs→tečaj, izračun→računanje; de ~75: gemischte „…"-Paare, englisch gebliebene Wörter, Genus/Präpositionen, Ein-Topf-Semantik der Trainingsziele; en ~35: US-Schreibung, Tippfehler). Echte Bugs für ALLE Sprachen: `{score}`-Platzhalter (einfache Klammern), `admin.ci.watchStop` „2 Minuten" (Code: 20 s), literale `\u2019`, `chessable.throughputHint` 15–20/min (Drossel ist ~4/min). Aufräumen: 704 veraltete Keys aus den 22 Weltsprachen, 68 tote Keys überall (31 unter ThemePicker-/VizCard-Namespaces bewusst behalten). Die 22 Weltsprachen hängen weiter ~1360 Keys hinter en (Fallback greift). (vorher 2026-08-25: Registercheck `nav.support` el+hr → v0.376.1; 2026-07-12: hr 2 Lücken → v0.291.34)
 - [ ] Security Review — letzter: **2026-08-10** (im Delta-Review mitgelaufen: Auth-/Injection-/Contract-Blickwinkel). Einziger echter Fund = das Kalk-Lösungs-Leck (behoben). Keine CRIT/HIGH offen. (vorher 2026-07-18 6-Wege-Fan-out)
 - [ ] Logs prüfen (Kibana: Errors/Warnings/Anomalien) — letzter: **2026-08-26** → ES :9200, 7-Tage-Fenster.
@@ -1506,33 +1506,32 @@ leere Karte auf /analysis).
   (bzw. die Bereiche eines vorgeschalteten CDN) einschränken; Docker-Peers an veröffentlichten Ports schließen
   (`API_BIND=127.0.0.1`, Oberflächen-Ports nur mit NPM in den Stack-Netzen oder wg-easy ohne Masquerade). Prod-Konfig —
   nur der User bzw. auf ausdrückliche Anweisung. Hintergrund: `Middleware/ForwardedHeadersSetup.cs`.
-- [ ] **Spiegeltest aller localStorage-Schlüssel** gegen die Abmelde-/Behalten-Liste (F1-010) — braucht vorher eine
-  Einordnung je Schlüssel (räumen beim Abmelden oder behalten).
-- [ ] **Changelog als Daten statt Code** (F8-008): lazy Asset-Gruppe + `HttpClient`, damit der Service Worker den
+- [x] **Spiegeltest aller localStorage-Schlüssel** (F1-010) — `core/local-storage-keys.ts` + Spec, 0.841.0 (B4a).
+- [x] **Changelog als Daten statt Code** (F8-008) — erledigt 0.844.0 (B5: `scripts/changelog-json.mjs`, lazy Asset-Gruppe, `npm run changelog:json` vor `ng build`). Ursprünglich: lazy Asset-Gruppe + `HttpClient`, damit der Service Worker den
   ~1,7-MB-Changelog-Chunk nicht nach jedem Release neu prefetcht; betrifft die Pflege von `changelog-data.ts` und
   `changelog_discord.py`. Dabei die Größenkommentare in `changelog.ts`/`changelog-data.ts` (~0,9 MB) auf ~1,7 MB berichtigen.
 - [x] **Remis-Ergebnis „1/2“ im Rohbestand** (N11-004) — Datencheck 2026-10-25 (nur lesend): Prod und Dev je 130 572 Partien,
   0 mit nacktem „1/2“ am Ende → `rehash-results`/`dedupe` nicht nötig. **Offen bleibt** im Frontend:
   `reconstruct-detail.component.ts` (Ergebnis-Filter) kennt „1/2“ nicht.
 - [x] **Verwaiste Integrationstest-Schemata** (N11-005) — 17 `rh_it_*` auf der Dev-MariaDB am 2026-10-25 gelöscht.
-- [ ] **Nacharbeiten der Zerlegungs-Welle** (Stand 2026-10-25): Endless-Run-Store (PD-007, braucht interaktive Verifikation;
-  `endless-puzzle.component.ts` 1 452 Z.), Partienliste auf `GameActionsService` umstellen (V33), `features/legal/legal-site.ts`
-  ist nur noch Weiterleitung für `src-turnier` → dort auf `@rh/core/legal-site` umstellen und löschen, `core` importiert noch
-  `features/puzzles` (offline-prefetch, preferences), `shared/no-feature-imports.spec.ts` hat 6 begründete Ausnahmen
-  (pgn-viewer, player-card, san.pipe, line-solver). Noch über der 400-Zeilen-Latte: calculation 1 104, base-puzzle-solver 925,
-  reconstruct-detail 774, tournament-directory 735, analysis 704.
-- [ ] **Entscheidungen 2026-10-25 (in Arbeit → 0.832.21 ff.):** Kontolöschung löscht zusätzlich PuzzleChallenges und
+- [ ] **Nacharbeiten der Zerlegungs-Welle** (Stand 2026-10-26): erledigt Endless-Run-Store (0.838.4, Komponente 710 Z.; visuelle
+  Prüfliste offen), `GameActionsService` (V33), `legal-site.ts`-Weiterleitung weg, zweite Runde (0.844.1/0.844.2). **Noch offen:** `core`
+  importiert `features/puzzles` (theme-mode, models, login-follow-up), `shared/no-feature-imports.spec.ts` hat 6 begründete Ausnahmen;
+  über der 400-Zeilen-Latte bleiben calculation 745, book-puzzle 736, endless 710, reconstruct-detail 667, analysis 659, puzzle 626,
+  tournament-directory 622 (Reste hängen an Templates/Specs) sowie Backend-Dateien ohne Review-Fund (ClubService 987, BookPuzzleService 957,
+  TournamentHistoryService 874, EbookService 855, LeagueClubController 832 …) — nur auf Zuruf.
+- [x] **Entscheidungen 2026-10-25 (0.832.21, 0.833.1, 0.833.2):** Kontolöschung löscht zusätzlich PuzzleChallenges und
   RevengeNotifications des Kontos (erhaltene Kurs-/Repertoire-Freigaben und `LeagueShares.CreatedByUserId` bleiben bewusst);
   Kapitelnamen werden überall getrimmt (Solver-Index = Detailseite); Kalk-Punkte zählen leere Analysebäume bewusst mit;
   Sweep-Fixes ICU (Nummer merken), chess.sk (leere Nummer → null, Selbstzuordnung → Apply-Weg).
-- [ ] **Engine-Provider-Zeitplan über Mitternacht** (Fund 2026-10-25): eine Regel mit Tagesangabe wie `Fr 22:00-06:00 0%`
+- [x] **Engine-Provider-Zeitplan über Mitternacht** (0.837.4: Spanne über Mitternacht gilt bis zum Folgetag; Fund 2026-10-25): eine Regel mit Tagesangabe wie `Fr 22:00-06:00 0%`
   gilt nur am selben Wochentag — `Sa 02:00` ergibt 100 %, nicht 0 %. Gemeint ist vermutlich „Freitagnacht bis Samstag 06:00“
   (`engine-provider/entrypoint.sh` `schedule_percent_at`, README Z. 236). Produktentscheidung; mit `*` als Tag tritt es nicht auf.
-- [ ] **Ladefehler über `shared/load-error` vereinheitlichen** (UX-040/UX-074): die Fehlerblöcke der Turnierseite
+- [x] **Ladefehler über `shared/load-error` vereinheitlichen** (UX-040/UX-074, 0.843.0; `loadErrorKind()` 0.846.0 — `tournaments/:id` (F6-013) und shared-game noch eigenständig): die Fehlerblöcke der Turnierseite
   (Kalender, Merkliste, Verlauf, Profil) auf `app-load-error` umstellen.
-- [ ] **Zugliste mit Roving tabindex** (F8-018): heute ist jeder Zug ein eigener Tab-Stopp — gehört in die
+- [x] **Zugliste mit Roving tabindex** (F8-018, 0.843.0): heute ist jeder Zug ein eigener Tab-Stopp — gehört in die
   Barrierefreiheits-Runde (axe-Lauf).
-- [ ] **Folgepunkte in anderen Repos** (nur die rookhub-Seite ist umgesetzt): chessresults_crawler
+- [x] **Folgepunkte in anderen Repos** (Crawler ef41a35 26.10.: SerilogLevels + CLAUDE.md-Spiegelhinweis): chessresults_crawler
   `src/ChessResultsCrawler/Program.cs` braucht denselben HttpClient-Log-Override wie rookhub (A10-014,
   `Logging/SerilogLevels.cs`); chessresults_crawler `CLAUDE.md` (DTOs) bekommt den Spiegel-Hinweis auf
   `tests/RookHub.Api.Tests/Fixtures/CrawlerContract` (I2-006).
