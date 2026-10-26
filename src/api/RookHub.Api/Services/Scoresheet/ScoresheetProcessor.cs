@@ -83,10 +83,7 @@ internal sealed class ScoresheetProcessor
         var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.Id == scanId, ct);
         if (scan == null) return (null, "notFound");
         if (scan.Status is not (ScoresheetScanStatus.Pending or ScoresheetScanStatus.Running)) return (null, "notPending");
-        var photos = new List<byte[]> { scan.Photo };
-        if (scan.PageCount > 1)
-            photos.AddRange(await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scan.Id)
-                .OrderBy(p => p.Page).Select(p => p.Photo).ToListAsync(ct));
+        var photos = await PhotosAsync(scan, ct);
         var sizes = photos.Select(p => ScoresheetImage.Prepare(p, ScoresheetScanService.ModelEdge) is { } j ? ScoresheetImage.Size(j) : null).ToList();
         var json = ScoresheetTranscription.WithImageSize(transcriptionJson,
             sizes.All(x => x != null) ? sizes.Select(x => x!.Value).ToList() : new List<(int Width, int Height)>());
@@ -185,10 +182,7 @@ internal sealed class ScoresheetProcessor
         if (scan == null || scan.Status != ScoresheetScanStatus.Running) return;
 
         // Alle Seiten in Reihenfolge, jede aufrecht und auf die Kante des Modells verkleinert.
-        var photos = new List<byte[]> { scan.Photo };
-        if (scan.PageCount > 1)
-            photos.AddRange(await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scan.Id)
-                .OrderBy(p => p.Page).Select(p => p.Photo).ToListAsync(ct));
+        var photos = await PhotosAsync(scan, ct);
         var jpegs = photos.Select(p => ScoresheetImage.Prepare(p, ScoresheetScanService.ModelEdge)).ToList();
         if (jpegs.Any(j => j == null)) { await FailAsync(scan, "unreadable", ct); return; }
 
@@ -282,21 +276,14 @@ internal sealed class ScoresheetProcessor
         {
             // Vereins-Datenbank: keine Partie in „Meine Partien" — LeagueHub korrigiert und übernimmt selbst. Keine
             // Glocke: die Seite fragt nach, und ein Link aus RookHub nach LeagueHub wäre eine fremde Adresse.
-            scan.TranscriptionJson = outcome.Json;
-            scan.ResolutionJson = JsonSerializer.Serialize(new StoredResolution
-            {
-                Language = outcome.Language, Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt,
-            }, Json);
-            scan.Status = ScoresheetScanStatus.Done;
-            scan.Error = null;
-            scan.FinishedAt = DateTime.UtcNow;
+            MarkDone(scan, outcome, r);
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Formular-Einlesung {ScanId} (Vereins-Datenbank) fertig: {Plies} Halbzüge, {Uncertain} unsicher",
                 scan.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain));
             return;
         }
 
-        var comments = CommentsFor(r);
+        var comments = ScoresheetComments.For(r);
         if (scan.UserId is not int owner) { await FailAsync(scan, "failed", ct, outcome.Json); return; }   // ohne Konto nur Liga
         var side = scan.OwnerSide is "white" or "black" ? scan.OwnerSide : await ScoresheetOwnerSide.GuessOwnerSideAsync(_db, owner, t, ct);
         var game = await _games.CreateGeneratedAsync(owner, SavedGameService.ScoresheetSource,
@@ -305,17 +292,7 @@ internal sealed class ScoresheetProcessor
                 Blank(t.White), Blank(t.Black), t.Result), side);
 
         scan.SavedGameId = game.Id;
-        scan.TranscriptionJson = outcome.Json;
-        scan.ResolutionJson = JsonSerializer.Serialize(new StoredResolution
-        {
-            Language = outcome.Language,
-            Plies = r.Plies,
-            Unresolved = r.Unresolved,
-            UnresolvedFrom = r.StuckAt,
-        }, Json);
-        scan.Status = ScoresheetScanStatus.Done;
-        scan.Error = null;
-        scan.FinishedAt = DateTime.UtcNow;
+        MarkDone(scan, outcome, r);
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation(
             "Formular-Einlesung {ScanId} fertig: Partie {GameId}, {Plies} Halbzüge, {Uncertain} unsicher, {Unresolved} offen, {Rounds} Durchgänge",
@@ -359,37 +336,28 @@ internal sealed class ScoresheetProcessor
         }
     }
 
-    /// <summary>
-    /// Kommentare im PGN: wo der Zug vom Formular abweicht (Lesefehler repariert, Eintrag erschlossen), steht,
-    /// was DASTAND — dieselbe Auskunft, die man beim Nachspielen braucht, um dem Zug zu misstrauen. Die nicht
-    /// aufgelösten Einträge hängen am letzten Zug.
-    /// </summary>
-    internal static Dictionary<int, string> CommentsFor(ScoresheetResolution r)
+
+    /// <summary>Alle Seiten in Reihenfolge: Seite 1 an der Einlesung, Seiten 2+ aus <c>ScoresheetScanPages</c>.</summary>
+    private async Task<List<byte[]>> PhotosAsync(ScoresheetScan scan, CancellationToken ct)
     {
-        var comments = new Dictionary<int, string>();
-        for (var i = 0; i < r.Plies.Count; i++)
+        var photos = new List<byte[]> { scan.Photo };
+        if (scan.PageCount > 1)
+            photos.AddRange(await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scan.Id)
+                .OrderBy(p => p.Page).Select(p => p.Photo).ToListAsync(ct));
+        return photos;
+    }
+
+    /// <summary>Lesung und Auflösung an der Einlesung ablegen und sie als fertig markieren (gespeichert wird danach).</summary>
+    private static void MarkDone(ScoresheetScan scan, ScoresheetReader.ReadOutcome outcome, ScoresheetResolution r)
+    {
+        scan.TranscriptionJson = outcome.Json;
+        scan.ResolutionJson = JsonSerializer.Serialize(new StoredResolution
         {
-            var p = r.Plies[i];
-            if (p.Match is ScoresheetResolver.Matches.Fuzzy or ScoresheetResolver.Matches.Guess)
-                comments[i] = $"sheet: {(string.IsNullOrWhiteSpace(p.Written) ? "?" : p.Written)}";
-            else if (p.Match == ScoresheetResolver.Matches.Inserted)
-                comments[i] = "sheet: —"; // stand nicht auf dem Formular
-        }
-        // Doppelt notierte Einträge hängen am Zug davor.
-        foreach (var skip in r.Skipped)
-        {
-            var at = Math.Max(0, skip.AfterPly - 1);
-            if (at >= r.Plies.Count) continue;
-            var text = "sheet, extra: " + skip.Written;
-            comments[at] = comments.TryGetValue(at, out var c0) ? c0 + " | " + text : text;
-        }
-        if (r.Unresolved.Count > 0 && r.Plies.Count > 0)
-        {
-            var text = "sheet, not resolved: " + string.Join(' ', r.Unresolved);
-            var last = r.Plies.Count - 1;
-            comments[last] = comments.TryGetValue(last, out var c) ? c + " | " + text : text;
-        }
-        return comments;
+            Language = outcome.Language, Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt,
+        }, Json);
+        scan.Status = ScoresheetScanStatus.Done;
+        scan.Error = null;
+        scan.FinishedAt = DateTime.UtcNow;
     }
 
     private async Task FailAsync(ScoresheetScan scan, string reason, CancellationToken ct, string? json = null)
@@ -411,5 +379,4 @@ internal sealed class ScoresheetProcessor
         try { await _notifications.CreateAsync(userId, type, data, link); }
         catch (Exception ex) { _logger.LogWarning(ex, "Benachrichtigung {Type} an User {UserId} fehlgeschlagen", type, userId); }
     }
-
 }

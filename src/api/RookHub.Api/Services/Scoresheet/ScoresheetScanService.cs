@@ -229,7 +229,7 @@ public class ScoresheetScanService
     public Task ProcessAsync(int scanId, CancellationToken ct, CancellationToken shutdown = default) =>
         _processor.ProcessAsync(scanId, ct, shutdown);
 
-    internal static Dictionary<int, string> CommentsFor(ScoresheetResolution r) => ScoresheetProcessor.CommentsFor(r);
+    internal static Dictionary<int, string> CommentsFor(ScoresheetResolution r) => ScoresheetComments.For(r);
 
     /// <summary>Welche Seite gehört dem Nutzer (<see cref="ScoresheetOwnerSide.GuessOwnerSide"/>)?</summary>
     public static string? GuessOwnerSide(string? white, string? black, IEnumerable<string?> myNames) =>

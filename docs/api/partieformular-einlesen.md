@@ -58,7 +58,8 @@ keinen Aufräumlauf — das Foto geht nur beim Übernehmen oder Verwerfen.
   sein; eine Zugumstellung (17. Sbd4/Sfd4 Sxd4 18. Sxd4) gilt als ebenbürtig. Anlass-Partie als Test:
   `ScoresheetResolverTests` rekonstruiert alle 66 Halbzüge allein aus den deutschen Einträgen.
 * **Ablauf** (`ScoresheetScanService` + `ScoresheetScanWorker`; die Fassade verteilt seit der Zerlegung Z6 auf
-  `ScoresheetQuota` (Kontingent), `ScoresheetIntake` (Annahme), `ScoresheetProcessor` (Lesen, Engine-Prüfung, Partie),
+  `ScoresheetQuota` (Kontingent), `ScoresheetIntake` (Annahme), `ScoresheetProcessor` (Lesen, Engine-Prüfung, Partie;
+  die PGN-Kommentare der Lesung baut `ScoresheetComments`),
   `ScoresheetCorrection` (Korrekturseite, Vereinspartie aus dem Archiv), `LeagueScoresheetScans` (LeagueHub) und
   `ScoresheetScanRows` (Zeile → DTO, Löschen ohne Foto)): der Upload legt einen `ScoresheetScan` an
   (Foto in der DB, `LONGBLOB`, über 12 MB auf 3000 px verkleinert), der Worker liest im Hintergrund — DB-gestützt,
