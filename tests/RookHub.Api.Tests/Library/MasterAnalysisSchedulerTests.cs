@@ -199,7 +199,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
         var svc = Analyses();
         var game = Library(1);
         var master = await svc.CreateLibraryBatchAsync(Owner, game.Id, Short, "Meister");
-        var library = new LibraryGameService(_db, svc);
+        var library = TestServices.LibraryGames(_db, svc);
 
         var result = await library.RequestAsync(Viewer, game.Id);
 

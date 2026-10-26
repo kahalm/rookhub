@@ -78,7 +78,7 @@ public class CommentSearchTests : IDisposable
     }
 
     private CommentSearchService Service(AxisEmbedder embedder)
-        => new(_db, embedder, new LibraryGameService(_db, TestServices.GameAnalyses(_db)), NullLogger<CommentSearchService>.Instance);
+        => new(_db, embedder, TestServices.LibraryGames(_db), NullLogger<CommentSearchService>.Instance);
 
     [Fact]
     public async Task EmbedThenSearch_FindsTheGame_GroupsByGame_AndSkipsAlreadyEmbedded()

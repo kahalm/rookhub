@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -28,12 +27,13 @@ public class LibraryGameService
     private readonly AppDbContext _db;
     private readonly GameAnalysisService _analyses;
 
-    /// <param name="comments">Fuer „Anschauen"; Werkzeuge und Tests, die es nicht brauchen, lassen es weg.</param>
-    public LibraryGameService(AppDbContext db, GameAnalysisService analyses, CommentSetService? comments = null)
+    /// <param name="comments">Fuer „Anschauen". Pflicht (N11-008): der fruehere Selbstbau-Rueckfall baute an DI vorbei
+    /// einen eigenen Dienst; Tests nehmen <c>TestServices.LibraryGames</c>.</param>
+    public LibraryGameService(AppDbContext db, GameAnalysisService analyses, CommentSetService comments)
     {
         _db = db;
         _analyses = analyses;
-        _comments = comments ?? new CommentSetService(db, NullLogger<CommentSetService>.Instance);
+        _comments = comments;
     }
 
     private readonly CommentSetService _comments;

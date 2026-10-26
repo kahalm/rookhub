@@ -112,6 +112,11 @@ internal static class TestServices
             NullLogger<GameAnalysisService>.Instance);
     }
 
+    /// <summary>Meisterpartien-Dienst wie im DI (N11-008: kein Selbstbau-Rueckfall mehr im Konstruktor).
+    /// <paramref name="analyses"/> nur setzen, wenn der Test DIESELBE Instanz selbst haelt.</summary>
+    public static LibraryGameService LibraryGames(AppDbContext db, GameAnalysisService? analyses = null) =>
+        new(db, analyses ?? GameAnalyses(db), new CommentSetService(db, NullLogger<CommentSetService>.Instance));
+
     /// <summary><paramref name="analyses"/> nur setzen, wenn der Test DIESELBE Instanz selbst haelt.</summary>
     public static SavedGameService SavedGames(AppDbContext db, GameAnalysisService? analyses = null,
         RepertoireAnalyzeService? repertoires = null)

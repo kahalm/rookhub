@@ -27,7 +27,7 @@ public class SimilarGamesTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private SimilarGamesService Service() => new(_db, new LibraryGameService(_db, null!));
+    private SimilarGamesService Service() => new(_db, TestServices.LibraryGames(_db));
 
     // Spanisch: 1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6 5.O-O Be7 6.Re1 b5 7.Bb3 d6
     private const string Pgn = "[White \"Ich\"]\n[Black \"Gegner\"]\n[Opening \"Ruy Lopez\"]\n\n"

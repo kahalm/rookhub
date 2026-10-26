@@ -52,7 +52,7 @@ public class CommentSearchSqlTests(CommentSearchFixture fixture) : IAsyncLifetim
     {
         var analyses = new GameAnalysisService(db, new AnalysisJobService(db),
             new CommentSetService(db, NullLogger<CommentSetService>.Instance), NullLogger<GameAnalysisService>.Instance);
-        return new CommentSearchService(db, new AxisEmbedder(), new LibraryGameService(db, analyses),
+        return new CommentSearchService(db, new AxisEmbedder(), new LibraryGameService(db, analyses, new CommentSetService(db, NullLogger<CommentSetService>.Instance)),
             NullLogger<CommentSearchService>.Instance);
     }
 

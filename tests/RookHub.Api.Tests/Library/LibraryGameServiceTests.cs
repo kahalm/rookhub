@@ -29,7 +29,7 @@ public class LibraryGameServiceTests : IDisposable
         var jobs = new AnalysisJobService(_db, null);
         var comments = new CommentSetService(_db, NullLogger<CommentSetService>.Instance);
         var analyses = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance);
-        _svc = new LibraryGameService(_db, analyses);
+        _svc = TestServices.LibraryGames(_db, analyses);
     }
 
     public void Dispose() => _db.Dispose();

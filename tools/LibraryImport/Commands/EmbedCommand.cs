@@ -29,7 +29,7 @@ internal static class EmbedCommand
         var started = DateTime.UtcNow;
         // LibraryGameService braucht nur die Suche (MarkKnownAsync) — beim Einbetten wird sie nicht angefasst.
         CommentSearchService Service(AppDbContext db)
-            => new(db, embedder, new LibraryGameService(db, null!), NullLogger<CommentSearchService>.Instance);
+            => new(db, embedder, new LibraryGameService(db, null!, new CommentSetService(db, NullLogger<CommentSetService>.Instance)), NullLogger<CommentSearchService>.Instance);
 
         // Die Auswahl EINMAL je Lauf: sie ist teuer (Prod 37 s bei 10 000 eingebetteten Partien) und riss mit dem
         // 30-s-Standard den Lauf vom 2026-09-26 ab — vorher lief sie für jede Portion von 500 Partien neu.

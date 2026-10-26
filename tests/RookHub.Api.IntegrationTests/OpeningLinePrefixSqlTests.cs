@@ -74,7 +74,7 @@ public class OpeningLinePrefixSqlTests(OpeningLinePrefixSqlFixture fixture)
             Assert.Equal(3, root.Total);
             Assert.Equal(1, (await tree.BranchAsync("d4", onlyPlayable: true)).Total);
 
-            var library = new LibraryGameService(db, Analyses(db));
+            var library = new LibraryGameService(db, Analyses(db), new CommentSetService(db, NullLogger<CommentSetService>.Instance));
             Assert.Equal(0, (await library.SearchAsync(0, null, null, null, 1, 50, line: "_4", byPosition: true)).Total);
             Assert.Equal(2, (await library.SearchAsync(0, null, null, null, 1, 50, line: "e4", byPosition: true)).Total);
 
