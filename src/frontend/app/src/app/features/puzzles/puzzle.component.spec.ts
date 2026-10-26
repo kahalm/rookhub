@@ -199,7 +199,7 @@ describe('PuzzleComponent offline pool exhaustion', () => {
   it('signals exhausted (NOT no-cache) when pool empties after having shown a puzzle', () => {
     const c = makeComponent();
     // Erstaufruf-Cache leer; aber lastShownPuzzle gesetzt → Pool wurde durchgespielt.
-    (c as any).offlinePuzzlePool = [];
+    (c as any).source.offlinePuzzlePool = [];
     (c as any).lastShownPuzzle = { ...PUZZLE };
 
     c.loadNext();
@@ -212,7 +212,7 @@ describe('PuzzleComponent offline pool exhaustion', () => {
 
   it('signals no-cache when pool is empty AND nothing was ever shown', () => {
     const c = makeComponent();
-    (c as any).offlinePuzzlePool = [];
+    (c as any).source.offlinePuzzlePool = [];
     // lastShownPuzzle bleibt null → klassischer „nie online geöffnet"-Fall.
 
     c.loadNext();
@@ -244,10 +244,10 @@ describe('PuzzleComponent load race (loadEpoch)', () => {
   it('a stale puzzle response does not overwrite a newer one', () => {
     const c = makeComponent();
     spyOn(c as any, 'setupPuzzle');
-    spyOn(c as any, 'prefetchNext');
-    spyOn(c as any, 'prefetchOfflinePool');
+    spyOn((c as any).source, 'prefetchNext');
+    spyOn((c as any).source, 'prefetchOfflinePool');
     c.stats = { puzzleElo: 1500 };
-    (c as any).ratingRangeBounds = { min: 0, max: 4000 };
+    (c as any).source.ratingRangeBounds = { min: 0, max: 4000 };
 
     // getRandom gibt steuerbare Observables zurück; wir lösen sie bewusst out-of-order auf.
     const emits: Array<(v: any) => void> = [];
@@ -595,8 +595,8 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     const c = makeComponent();
     c.puzzle = { ...PUZZLE };
     c.state = 'AWAITING_USER_MOVE';
-    (c as any).nextPuzzle = { ...PUZZLE, id: 77 };            // noch mit excludeSolved=false vorgeladen
-    (c as any).offlinePuzzlePool = [{ ...PUZZLE, id: 78 }];
+    (c as any).source.nextPuzzle = { ...PUZZLE, id: 77 };            // noch mit excludeSolved=false vorgeladen
+    (c as any).source.offlinePuzzlePool = [{ ...PUZZLE, id: 78 }];
     stubSettingsDialog(c, { excludeSolved: true });
     c.prefs.setPuzzleExcludeSolved = jasmine.createSpy('setPuzzleExcludeSolved');
     spyOn(c as any, 'setupPuzzle');
@@ -605,8 +605,8 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
 
     expect(c.excludeSolved).toBeTrue();
     expect(c.prefs.setPuzzleExcludeSolved).toHaveBeenCalledWith(true);
-    expect((c as any).nextPuzzle).toBeNull();
-    expect((c as any).offlinePuzzlePool).toEqual([]);
+    expect((c as any).source.nextPuzzle).toBeNull();
+    expect((c as any).source.offlinePuzzlePool).toEqual([]);
     expect((c as any).setupPuzzle).not.toHaveBeenCalled();   // das laufende Puzzle bleibt
 
     const getRandom = jasmine.createSpy('getRandom').and.returnValue({ subscribe: () => ({ unsubscribe() {} }) });
@@ -621,14 +621,14 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     const c = makeComponent();
     let antwort: ((p: any) => void) | null = null;
     c.puzzleService.getRandom = () => ({ subscribe: (h: any) => { antwort = h.next; return { unsubscribe() {} }; } });
-    (c as any).prefetchNext();                                 // läuft noch mit excludeSolved=false
+    (c as any).source.prefetchNext();                                 // läuft noch mit excludeSolved=false
     stubSettingsDialog(c, { excludeSolved: true });
     c.prefs.setPuzzleExcludeSolved = () => {};
 
     c.openSettingsDialog();
     antwort!({ ...PUZZLE, id: 79 });
 
-    expect((c as any).nextPuzzle).toBeNull();
+    expect((c as any).source.nextPuzzle).toBeNull();
     c.ngOnDestroy();
   });
 
@@ -658,7 +658,7 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     c.puzzle = { ...PUZZLE };
     c.state = 'AWAITING_USER_MOVE';
     (c as any).offline.puzzleCount = 3;
-    (c as any).worstThemes = ['fork'];
+    (c as any).source.worstThemes = ['fork'];
     stubSettingsDialog(c, { difficulty: 'schwer', excludeSolved: true, worstTags: true });
     c.prefs.setPuzzleExcludeSolved = () => {};
     c.prefs.setPuzzleWorstTags = () => {};
@@ -683,7 +683,7 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     (c as any).offline.puzzleCount = 3;
     const antworten: Array<(pool: any[]) => void> = [];
     c.puzzleService.getRandomBatch = () => ({ subscribe: (h: any) => { antworten.push(h.next); return { unsubscribe() {} }; } });
-    (c as any).prefetchOfflinePool();                          // läuft noch mit excludeSolved=false
+    (c as any).source.prefetchOfflinePool();                          // läuft noch mit excludeSolved=false
     stubSettingsDialog(c, { excludeSolved: true });
     c.prefs.setPuzzleExcludeSolved = () => {};
 
@@ -692,7 +692,7 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     antworten[1]([{ ...PUZZLE, id: 81 }]);                     // neue Anfrage (gefiltert) zuerst zurück
     antworten[0]([{ ...PUZZLE, id: 80 }]);                     // alte Anfrage kommt zu spät
 
-    expect((c as any).offlinePuzzlePool.map((p: any) => p.id)).toEqual([81]);
+    expect((c as any).source.offlinePuzzlePool.map((p: any) => p.id)).toEqual([81]);
     c.ngOnDestroy();
   });
 });
@@ -720,8 +720,8 @@ describe('PuzzleComponent hinter dem Spielweise-Dialog (UX-045)', () => {
     expect(c.awaitingSolveMode).toBeTrue();
     expect(c.boardFen).not.toBe(AUFGABE.fen);
     c.puzzleService.getRandom = () => of({ ...AUFGABE });
-    spyOn(c as any, 'prefetchNext');
-    spyOn(c as any, 'prefetchOfflinePool');
+    spyOn((c as any).source, 'prefetchNext');
+    spyOn((c as any).source, 'prefetchOfflinePool');
     spyOn(c as any, 'setupPuzzle');
 
     c.loadNext();
@@ -745,8 +745,8 @@ describe('PuzzleComponent hinter dem Spielweise-Dialog (UX-045)', () => {
     c.ngOnInit();
     expect(c.awaitingSolveMode).toBeFalse();
     c.puzzleService.getRandom = () => of({ ...PUZZLE });
-    spyOn(c as any, 'prefetchNext');
-    spyOn(c as any, 'prefetchOfflinePool');
+    spyOn((c as any).source, 'prefetchNext');
+    spyOn((c as any).source, 'prefetchOfflinePool');
     spyOn(c as any, 'setupPuzzle');
 
     c.loadNext();

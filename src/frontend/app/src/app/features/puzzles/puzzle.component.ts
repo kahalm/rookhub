@@ -17,11 +17,11 @@ import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
-import { PuzzleService, PuzzleDto, PuzzleStatsDto, PuzzleRatingRange } from './puzzle.service';
-import { OfflineService, PUZZLE_POOL_KEY } from '../../core/offline.service';
+import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
+import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
-import { DIFFICULTY_OFFSET, puzzleWindow } from './puzzle-window.util';
-import { takeFromPool, takeNearestFromPool } from './endless-prefetch.util';
+import { DIFFICULTY_OFFSET } from './puzzle-window.util';
+import { StandardPuzzleSource } from './standard-puzzle-source';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
@@ -40,7 +40,6 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { epForcedHintTexts, offPathHintTexts, offPathWarningText } from './solver-texts';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
-import { of } from 'rxjs';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { PctPipe } from '../../shared/format/pct';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
@@ -70,7 +69,6 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   // solutionMoves, moveIndex, autoAdvanceTimer, aborted, moveLog, moveStartTime → BasePuzzleSolver
   puzzle: PuzzleDto | null = null;
   stats: PuzzleStatsDto | null = null;
-  private ratingRangeBounds: PuzzleRatingRange | null = null;
 
   boardTheme = 'brown';
 
@@ -78,20 +76,13 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   excludeSolved = false;
   /** „5 schwächste Themen trainieren" — filtert Puzzles auf die schwächsten Themen des Users (ODER). */
   worstTagsEnabled = false;
-  private worstThemes: string[] = [];
   stockfishDepth = 16;
 
   // elapsedSeconds / Stoppuhr / start-/stopTimer / formatTime: jetzt in BasePuzzleSolver (geteilt).
 
   private attemptRecorded = false;
-  private nextPuzzle: PuzzleDto | null = null;
-  /** Monotone Epoche je Ladevorgang. Eine ältere, langsamer auflösende Puzzle-Anfrage
-   *  (schnelle Navigation: Auto-Advance + „Weiter" + Prefetch) darf ein neueres Puzzle
-   *  nicht überschreiben → veraltete Antworten werden anhand der Epoche verworfen. */
-  private loadEpoch = 0;
-  /** Epoche der Puzzle-Filter (Schwierigkeit, Gelöste ausschließen, schwächste Themen): steigt bei jeder
-   *  Filteränderung → Vorab-/Pool-Antworten, die noch mit den alten Filtern angefragt wurden, werden verworfen. */
-  private filterEpoch = 0;
+  /** Woher das nächste Puzzle kommt (Deep-Link, Vorab, Offline-Pool, Zufall) samt Lade-/Filter-Epochen. */
+  readonly source: StandardPuzzleSource;
   lastEloChange: number | null = null;
 
   private routePuzzleId: number | null = null;
@@ -163,12 +154,16 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
       () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
     );
     this.loadConfig();
-    this.offlinePuzzlePool = this.loadOfflinePool();
+    this.source = new StandardPuzzleSource(this.puzzleService, this.offline, {
+      elo: () => this.stats?.puzzleElo ?? 1500,
+      difficulty: () => this.difficulty,
+      excludeSolved: () => this.excludeSolved,
+      worstTagsEnabled: () => this.worstTagsEnabled,
+      isLoggedIn: () => this.isLoggedIn,
+    });
     this.stockfish.init().catch(() => {});
   }
 
-  // ===== Offline-Puzzle-Pool (Standard-Modus) =====
-  private offlinePuzzlePool: PuzzleDto[] = [];
   /** „Offline, nichts gespeichert" — Pool war noch nie befüllt (z.B. Seite erstmals offline geöffnet). */
   offlineNoCache = false;
   /** „Offline, alle gespielt" — Pool ist leer geworden, aber wir hatten zuvor mindestens 1 Puzzle gezeigt.
@@ -179,30 +174,6 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   private lastShownPuzzle: PuzzleDto | null = null;
   /** ID des zuvor angezeigten Puzzles (für „vorheriges Puzzle teilen"). */
   private previousPuzzleId: number | null = null;
-
-  private loadOfflinePool(): PuzzleDto[] {
-    try { return JSON.parse(localStorage.getItem(PUZZLE_POOL_KEY) || '[]') || []; } catch { return []; }
-  }
-  private saveOfflinePool(): void {
-    try { localStorage.setItem(PUZZLE_POOL_KEY, JSON.stringify(this.offlinePuzzlePool)); } catch { /* ignore */ }
-  }
-
-  /** Lädt im Hintergrund N Puzzles auf der aktuellen Schwierigkeit für Offline-Spiel. */
-  private prefetchOfflinePool(): void {
-    const n = this.offline.puzzleCount;
-    if (n <= 0 || !navigator.onLine || this.offlinePuzzlePool.length >= n) return;   // nur auffüllen
-    const r = this.ratingRange();
-    const windows = Array.from({ length: n }, () => ({ minRating: r.min, maxRating: r.max }));
-    const filterEpoch = this.filterEpoch;   // Filter geändert, während die Anfrage lief → verwerfen
-    this.puzzleService.getRandomBatch(windows, undefined, this.excludeSolved, this.worstThemesParam).subscribe({
-      next: pool => {
-        if (filterEpoch !== this.filterEpoch) return;
-        this.offlinePuzzlePool = pool || [];
-        this.saveOfflinePool();
-      },
-      error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
-    });
-  }
 
   // ===== Hooks für BasePuzzleSolver =====
   protected override get depth(): number { return this.stockfishDepth; }
@@ -380,7 +351,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
       // Deep-Link auf ein konkretes Puzzle → sofort laden; Stats/Range nebenher.
       this.loadNext();
       stats$.subscribe({ next: s => this.stats = s, error: () => {} });
-      this.puzzleService.getRatingRange().subscribe({ next: r => this.ratingRangeBounds = r, error: () => {} });
+      this.puzzleService.getRatingRange().subscribe({ next: r => this.source.ratingRangeBounds = r, error: () => {} });
       return;
     }
 
@@ -388,10 +359,10 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     // sonst würde es mit Default-Elo 1500 / ungeklemmtem Fenster gezogen.
     const loadFirst = () => {
       this.puzzleService.getRatingRange().subscribe({
-        next: r => this.ratingRangeBounds = r,
+        next: r => this.source.ratingRangeBounds = r,
         // Schwächste Themen vor dem ersten Puzzle laden, damit der Filter schon greift.
-        error: () => this.ensureWorstThemes(() => this.loadNext()),
-        complete: () => this.ensureWorstThemes(() => this.loadNext()),
+        error: () => this.source.ensureWorstThemes(() => this.loadNext()),
+        complete: () => this.source.ensureWorstThemes(() => this.loadNext()),
       });
     };
     stats$.subscribe({
@@ -454,7 +425,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   }
 
   loadNext(): void {
-    const epoch = ++this.loadEpoch;
+    const epoch = ++this.source.loadEpoch;
     this.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
     this.state = 'LOADING';
     this.offlineNoCache = false;
@@ -472,39 +443,23 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     this.initialEval = '';
     this.currentEval = '';
 
-    let source$;
-    if (this.routePuzzleId) {
-      const id = this.routePuzzleId;
-      this.routePuzzleId = null;
-      source$ = this.puzzleService.getById(id);
-    } else if (this.nextPuzzle) {
-      source$ = of(this.nextPuzzle);
-      this.nextPuzzle = null;
-    } else if (!navigator.onLine) {
-      // Offline: aus dem vorab geladenen Pool bedienen.
-      const r = this.ratingRange();
-      const pooled = takeFromPool(this.offlinePuzzlePool, r.min, r.max)
-        ?? takeNearestFromPool(this.offlinePuzzlePool, (r.min + r.max) / 2);
-      if (!pooled) {
-        // Pool ist leer. Falls wir vorher schon mindestens ein Puzzle hatten, ist der Vorrat
-        // verbraucht (Pool exhausted) — dann „Letztes nochmal spielen" anbieten statt einfach
-        // „nichts gespeichert" zu zeigen. Sonst (Erstaufruf offline ohne Cache): no-cache.
-        if (this.lastShownPuzzle) this.offlinePoolExhausted = true;
-        else this.offlineNoCache = true;
-        this.state = 'ERROR';
-        this.puzzle = null;
-        return;
-      }
-      this.saveOfflinePool();
-      source$ = of(pooled);
-    } else {
-      const r = this.ratingRange();
-      source$ = this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam);
+    const routeId = this.routePuzzleId;
+    this.routePuzzleId = null;
+    const source$ = this.source.pick(routeId);
+    if (!source$) {
+      // Offline und der Pool ist leer. Falls wir vorher schon mindestens ein Puzzle hatten, ist der Vorrat
+      // verbraucht (Pool exhausted) — dann „Letztes nochmal spielen" anbieten statt einfach
+      // „nichts gespeichert" zu zeigen. Sonst (Erstaufruf offline ohne Cache): no-cache.
+      if (this.lastShownPuzzle) this.offlinePoolExhausted = true;
+      else this.offlineNoCache = true;
+      this.state = 'ERROR';
+      this.puzzle = null;
+      return;
     }
 
     source$.subscribe({
         next: puzzle => {
-          if (epoch !== this.loadEpoch) return;   // veraltete Antwort eines früheren Ladevorgangs
+          if (epoch !== this.source.loadEpoch) return;   // veraltete Antwort eines früheren Ladevorgangs
           // Bisher angezeigtes Puzzle als „vorheriges" merken (für Teilen-Dialog).
           if (this.puzzle && this.puzzle.id !== puzzle.id) this.previousPuzzleId = this.puzzle.id;
           this.puzzle = puzzle;
@@ -512,11 +467,11 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
           // Spielweise-Dialog noch offen → nur zeigen; askSolveMode setzt nach der Wahl auf.
           if (this.awaitingSolveMode) this.previewSetup(puzzle.fen, puzzle.moves, 0);
           else this.setupPuzzle(puzzle);
-          this.prefetchNext();
-          this.prefetchOfflinePool();
+          this.source.prefetchNext();
+          this.source.prefetchOfflinePool();
         },
         error: () => {
-          if (epoch !== this.loadEpoch) return;
+          if (epoch !== this.source.loadEpoch) return;
           this.state = 'ERROR';
           this.puzzle = null;
         }
@@ -526,7 +481,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   /** Spielt das zuletzt geladene Puzzle nochmal (Fallback wenn der Offline-Pool aufgebraucht ist). */
   replayLastPuzzle(): void {
     if (!this.lastShownPuzzle) return;
-    ++this.loadEpoch;   // evtl. noch laufenden loadNext entwerten
+    ++this.source.loadEpoch;   // evtl. noch laufenden loadNext entwerten
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
     this.attemptRecorded = false;
@@ -541,29 +496,13 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     this.setupPuzzle(this.lastShownPuzzle);
   }
 
-  private prefetchNext(): void {
-    const epoch = this.loadEpoch;
-    const filterEpoch = this.filterEpoch;   // Filter geändert, während die Anfrage lief → verwerfen
-    const r = this.ratingRange();
-    this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam)
-      .subscribe({ next: p => { if (epoch === this.loadEpoch && filterEpoch === this.filterEpoch) this.nextPuzzle = p; }, error: () => {} });
-  }
-
-  /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */
-  private ratingRange(): { min: number; max: number } {
-    return puzzleWindow(this.stats?.puzzleElo ?? 1500, this.difficulty, this.ratingRangeBounds);
-  }
-
   /** Puzzle-Filter geändert: vorab geladenes Puzzle + Offline-Pool galten für die alten Filter → verwerfen
    *  (auch noch laufende Anfragen) und den Pool mit den neuen Filtern füllen. `loadNow` = gleich ein neues
    *  Puzzle laden (Schwierigkeit/Themen); sonst bleibt das laufende stehen und erst das nächste kommt gefiltert. */
   private onPuzzleFilterChange(loadNow: boolean): void {
-    ++this.filterEpoch;
-    this.nextPuzzle = null;
-    this.offlinePuzzlePool = [];
-    this.saveOfflinePool();
-    this.ensureWorstThemes(() => {
-      this.prefetchOfflinePool();
+    this.source.discardForFilterChange();
+    this.source.ensureWorstThemes(() => {
+      this.source.prefetchOfflinePool();
       if (loadNow) this.loadNext();
     });
   }
@@ -813,28 +752,12 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   }
 
   /** Aktive Schwächen-Themen für die Sichtbar-Anzeige während des Lösens (leer, wenn Filter aus). */
-  get activeWorstThemes(): string[] {
-    return this.worstTagsEnabled ? this.worstThemes : [];
-  }
+  get activeWorstThemes(): string[] { return this.source.activeWorstThemes; }
 
   /** True, wenn das gerade GELÖSTE Puzzle dieses Thema trägt — fürs Einfärben des passenden Chips. */
   themeMatched(theme: string): boolean {
     return this.state === 'SOLVED' && !!this.puzzle?.themes
       && this.puzzle.themes.split(/\s+/).includes(theme);
-  }
-
-  /** Themen-Param für die Puzzle-Auswahl, wenn „schwächste Themen trainieren" aktiv ist (sonst undefined). */
-  private get worstThemesParam(): string | undefined {
-    return this.worstTagsEnabled && this.worstThemes.length ? this.worstThemes.join(' ') : undefined;
-  }
-
-  /** Lädt die schwächsten Themen (nur eingeloggt + aktiviert); ruft danach cb. */
-  private ensureWorstThemes(cb: () => void): void {
-    if (!this.worstTagsEnabled || !this.isLoggedIn || this.worstThemes.length) { cb(); return; }
-    this.puzzleService.getWorstThemes().subscribe({
-      next: themes => { this.worstThemes = themes; cb(); },
-      error: () => cb(),
-    });
   }
 
   setVisualizationLevel(level: number): void {
