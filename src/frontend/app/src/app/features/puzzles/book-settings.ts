@@ -14,6 +14,8 @@ export interface BookSettingsHost {
   /** Erzwingt `?anarchy=max` en passant unabhängig von der Einstellung? */
   readonly anarchyForcedByUrl: boolean;
   readonly solveModes: { followLevel(level: number): void };
+  /** Wochenpost: die Stufe gehört zum Post (Training/Einfach), nicht zur eigenen Einstellung. */
+  readonly inWeekly: boolean;
   boardTheme: string;
   pieceSet: string;
   stockfishDepth: number;
@@ -58,8 +60,12 @@ export class BookSettingsController {
   setVisualizationLevel(level: number): void {
     const { h } = this;
     h.visualizationMode = level;
-    h.prefs.setVisualization(level);
-    h.solveModes.followLevel(level);   // gemerkte Spielweise mitziehen
+    // Wochenpost (F2-010): die Stufe gilt nur für das laufende Puzzle — die eigene, globale Visualisierungs-Einstellung
+    // und die gemerkte Spielweise bleiben unberührt (vorher stand danach die Wochenpost-Stufe 0/1 in den Einstellungen).
+    if (!h.inWeekly) {
+      h.prefs.setVisualization(level);
+      h.solveModes.followLevel(level);   // gemerkte Spielweise mitziehen
+    }
     // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
     // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
     // Derselbe Durchgang (P-1): ein Stufenwechsel nach dem ersten Fehlzug macht den Versuch nicht wieder meldbar.

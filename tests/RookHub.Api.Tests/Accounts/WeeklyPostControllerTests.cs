@@ -266,6 +266,24 @@ public class WeeklyPostControllerTests : IDisposable
         Assert.Equal(1, p.SolvedCount);   // erster (gelöster) Versuch bleibt
     }
 
+    /// <summary>P-1/F2-010: ein Versuch mit Fehlzug ist ein Fehlversuch — auch wenn ein (alter) Client nach Mausrutscher
+    /// oder Zurücksetzen „gelöst“ meldet. Der Server glaubt dem Flag nicht, wenn der Versuch selbst einen Fehlzug zählt.</summary>
+    [Fact]
+    public async Task RecordAttempt_SolvedWithWrongMove_CountsAsFailed()
+    {
+        var id = await CreateTwoPuzzlePostAsync();
+        SetUser(1);
+
+        var p = Unwrap<WeeklyPostProgressDto>(await _controller.RecordAttempt(id,
+            new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 20, WrongAttempts = 1, Mouseslips = 1 }));
+
+        Assert.Equal(1, p.PlayedCount);
+        Assert.Equal(0, p.SolvedCount);
+        var stored = Assert.Single(_db.WeeklyPostAttempts.Where(a => a.WeeklyPostId == id));
+        Assert.False(stored.Solved);
+        Assert.Equal(1, stored.WrongAttempts);
+    }
+
     [Fact]
     public async Task RecordAttempt_IndexOutOfRange_Returns404()
     {
@@ -599,8 +617,8 @@ public class WeeklyPostControllerTests : IDisposable
         // Nach PuzzleIndex sortiert.
         Assert.Equal(0, bd.Rows[0].PuzzleIndex);
         Assert.Equal(1, bd.Rows[1].PuzzleIndex);
-        // Zeile 0 trägt die erfassten Fehlzüge/Mausrutscher/Tipps.
-        Assert.True(bd.Rows[0].Solved);
+        // Zeile 0 trägt die erfassten Fehlzüge/Mausrutscher/Tipps; mit Fehlzügen zählt sie seit P-1 nicht als gelöst.
+        Assert.False(bd.Rows[0].Solved);
         Assert.Equal(30, bd.Rows[0].TimeSeconds);
         Assert.Equal(2, bd.Rows[0].HintsUsed);
         Assert.Equal(3, bd.Rows[0].WrongAttempts);

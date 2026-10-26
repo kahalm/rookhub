@@ -267,6 +267,7 @@ describe('BookPuzzle Modus Wochenpost (Charakterisierung Z18)', () => {
   it('recordWeeklyAttempt online: meldet einmal je Puzzle mit Index und Spielweise', () => {
     const c = makeComponent();
     c.inWeekly = true; c.weekly.id = 5; c.puzzle = P(2); c.solveSeconds = 8;
+    c.visualizationMode = 1;   // wirksame Stufe des Trainings-Modus (F2-010: gemeldet wird die wirksame Stufe)
     c.weeklyService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(of({ playedCount: 3, solvedCount: 2, totalSeconds: 40 }));
     c.weekly.recordAttempt(true);
     c.weekly.recordAttempt(true);
@@ -560,4 +561,47 @@ describe('BookPuzzle erster Fehlzug meldet sofort (P-1)', () => {
     expect(calls).toEqual([true]);
     done(c);
   }));
+});
+
+/**
+ * Codereview F2-010: im Wochenpost ließ sich über ⋮ → Einstellungen die Stufe 0 (Figuren ziehbar) wählen, gemeldet
+ * wurde aber weiter die beim Laden gewählte Spielweise („training“). Gemeldet wird jetzt die WIRKSAME Stufe, und die
+ * Wochenpost-Stufe überschreibt nicht mehr die eigene, globale Visualisierungs-Einstellung.
+ */
+describe('BookPuzzle Wochenpost meldet die wirksame Stufe (F2-010)', () => {
+  function weekly(): any {
+    const c = makeComponent();
+    c.inWeekly = true; c.weekly.id = 5; c.weekly.mode = 'training'; c.puzzle = P(2); c.solveSeconds = 8;
+    c.visualizationMode = 1;
+    c.prefs.setVisualization = jasmine.createSpy('setVisualization');
+    c.weeklyService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(of({ playedCount: 1, solvedCount: 1, totalSeconds: 8 }));
+    return c;
+  }
+
+  it('Training gewählt, im Dialog auf Stufe 0 gestellt → gemeldet wird „easy“', () => {
+    const c = weekly();
+    c.settings.setVisualizationLevel(0);
+    c.weekly.recordAttempt(true);
+    expect(c.weeklyService.recordAttempt.calls.mostRecent().args[7]).toBe('easy');
+  });
+
+  it('Training mit wirksamer Stufe ≥ 1 bleibt „training“', () => {
+    const c = weekly();
+    c.weekly.recordAttempt(true);
+    expect(c.weeklyService.recordAttempt.calls.mostRecent().args[7]).toBe('training');
+  });
+
+  it('der Stufenwechsel im Wochenpost schreibt die globale Einstellung nicht', () => {
+    const c = weekly();
+    c.settings.setVisualizationLevel(0);
+    expect(c.prefs.setVisualization).not.toHaveBeenCalled();
+    expect(c.visualizationMode).toBe(0);
+  });
+
+  it('außerhalb des Wochenposts wird die Stufe wie bisher gespeichert', () => {
+    const c = weekly();
+    c.inWeekly = false;
+    c.settings.setVisualizationLevel(2);
+    expect(c.prefs.setVisualization).toHaveBeenCalledWith(2);
+  });
 });

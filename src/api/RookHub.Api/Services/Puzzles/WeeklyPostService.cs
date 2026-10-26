@@ -195,7 +195,10 @@ public class WeeklyPostService
 
         // Zeit/Tipps/Spielweise: eine Normalisierung für alle Recorder (siehe AttemptRecording).
         // Die [Range]-Attribute am DTO bleiben der Vertrag zum Client — der Helfer ist hier ein No-op.
-        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.Mode);
+        // Plausibilität (P-1/F2-010): ein Versuch mit Fehlzug ist ein Fehlversuch — der Löser meldet seit P-1 schon den
+        // ersten Fehlzug; ein „gelöst“ samt Fehlzug (alter Client, Mausrutscher/Zurücksetzen) zählt nicht als gelöst.
+        var solved = dto.Solved && dto.WrongAttempts <= 0;
+        var core = AttemptRecording.From(solved, dto.TimeSeconds, dto.HintsUsed, dto.Mode);
 
         var already = await _db.WeeklyPostAttempts
             .AnyAsync(a => a.WeeklyPostId == weeklyPostId && a.UserId == userId && a.PuzzleIndex == dto.PuzzleIndex);

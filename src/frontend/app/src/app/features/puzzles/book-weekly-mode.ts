@@ -165,9 +165,10 @@ export class BookWeeklyMode implements BookModeStrategy {
     const wrongAttempts = h.wrongMoveCount;
     const mouseslips = h.mouseslipUsed ? 1 : 0;
     const url = `/api/weekly-posts/${this.id}/attempt`;
-    // Auge nach dem ersten Zug benutzt → das ganze Puzzle zählt als „einfach", egal welcher
-    // Modus eingestellt war: wer die Stellung aufdeckt, hat sie nicht mehr blind gerechnet.
-    const mode: WeeklyMode = this.revealedAfterMove ? 'easy' : this.mode;
+    // Gemeldet wird die WIRKSAME Spielweise (F2-010), nicht die beim Laden gewählte: Stufe 0 (Figuren ziehbar, z. B.
+    // über ⋮ → Einstellungen umgestellt) ist „einfach“. Ebenso das Auge nach dem ersten Zug: wer die Stellung
+    // aufdeckt, hat sie nicht mehr blind gerechnet.
+    const mode: WeeklyMode = this.revealedAfterMove || h.visualizationMode === 0 ? 'easy' : this.mode;
     const body = { puzzleIndex, solved, timeSeconds: h.solveSeconds, hintsUsed: h.hintsUsed, wrongAttempts, mouseslips, mode };
     if (!navigator.onLine) {
       h.offlineQueue.enqueue('POST', url, body);
