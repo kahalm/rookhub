@@ -35,6 +35,9 @@ RepCheck verbindet sich nach Ablauf neu (Ein-Klick-Verbindung).
 Die alten Pfade `POST /api/auth/session` und `session/end` (samt Merk-Cookie `<name>_moved` und Cookie-Umzug in `GET /api/auth/permissions`) sind seit 0.828.1 entfernt (N6-001). Jedes Schreiben/Löschen des Cookies löscht weiterhin ein altes mit `Path=/api/auth` (ging an JEDEN Host der Elterndomäne mit eigener `/api/auth`-Anmeldung), bis die letzten vor 0.624.0 ausgegebenen Cookies abgelaufen sind.
 
 Der alte Tauschpfad des Übergabe-Codes `POST /api/auth/handoff/exchange` ist seit 0.828.3 entfernt (F1-008); eingelöst wird nur noch über `POST /api/auth/rh-session/handoff`.
+**Einmal-Codes atomar** (A1-008): Übergabe-Code und Reset-Link werden per bedingtem `UPDATE … WHERE UsedAt IS NULL` entwertet
+(`OneTimeCodes.TryConsumeAsync`, InMemory-Rückfall wie `ChessableFetchLane.TryClaimAsync`) — von zwei gleichzeitigen Einlösungen
+gelingt nur eine; der Reset entwertet VOR dem Setzen des Passworts. MariaDB-Beleg: `OneTimeCodeSqlTests`.
 
 **Konten ohne E-Mail:** „Passwort vergessen“ erreicht sie nicht — ein Admin erzeugt mit `POST /api/admin/users/{id}/password-reset-link`
 einen einmaligen Link (24 h), den er der Person weitergibt; eingelöst wird er wie ein Mail-Link über `reset-password`

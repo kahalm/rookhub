@@ -58,6 +58,31 @@ public class AuthHandoffServiceTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(res.Token));
     }
 
+    /// <summary>A1-008: Zwei gleichzeitige Einlösungen — die zweite hat die Zeile noch offen geladen, als die erste sie
+    /// entwertet. Lesen→prüfen→setzen ließ beide gelingen; das bedingte Entwerten nur eine.</summary>
+    [Fact]
+    public async Task Redeem_SecondRequestWithAStaleRow_DoesNotWinAgain()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        await using var dbA = new AppDbContext(options);
+        await using var dbB = new AppDbContext(options);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Jwt:Key"] = "TestSecretKeyThatIsAtLeast32Characters!", ["Jwt:Issuer"] = "TestIssuer", ["Jwt:Audience"] = "TestAudience",
+        }).Build();
+        AuthHandoffService Svc(AppDbContext db) =>
+            new(db, new AuthService(db, config, new CapturingLogger<AuthService>()), new CapturingLogger<AuthHandoffService>());
+        var user = new AppUser { Username = "race", Email = "race@t.com", PasswordHash = "h" };
+        dbA.AppUsers.Add(user);
+        await dbA.SaveChangesAsync();
+
+        var code = await Svc(dbA).IssueAsync(user.Id);                 // Zeile liegt offen im ChangeTracker von A
+        Assert.Null((await dbA.AuthHandoffTokens.SingleAsync()).UsedAt);
+
+        Assert.NotNull(await Svc(dbB).RedeemAsync(code));
+        Assert.Null(await Svc(dbA).RedeemAsync(code));
+    }
+
     [Fact]
     public async Task Redeem_WorksExactlyOnce()
     {

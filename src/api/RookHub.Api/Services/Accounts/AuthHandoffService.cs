@@ -77,8 +77,11 @@ public class AuthHandoffService
 
         // ZUERST entwerten, dann das Token bauen: bricht die Token-Erzeugung ab, ist der Code trotzdem
         // verbraucht — lieber ein Sprung, der in der Anmeldemaske endet, als ein zweimal einloesbarer Code.
-        token.UsedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
+        // Bedingt und atomar (A1-008): eine gleichzeitige zweite Einloesung trifft keine Zeile mehr.
+        var id = token.Id;
+        if (!await OneTimeCodes.TryConsumeAsync(_db, _db.AuthHandoffTokens.Where(t => t.Id == id && t.UsedAt == null),
+                t => t.UsedAt, DateTime.UtcNow, ct))
+            return null;
 
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == token.UserId && u.DeletedAt == null, ct);
         if (user is null) return null;

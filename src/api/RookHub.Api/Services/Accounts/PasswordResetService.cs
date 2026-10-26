@@ -164,6 +164,14 @@ public class PasswordResetService
         if (user == null || user.DeletedAt != null)
             throw new UnauthorizedAccessException("Invalid or expired reset token.");
 
+        // Bedingt und atomar entwerten, BEVOR das Passwort gesetzt wird (A1-008): ein gleichzeitiger zweiter Reset mit
+        // demselben Link trifft keine Zeile mehr und scheitert.
+        var tokenId = token.Id;
+        if (!await OneTimeCodes.TryConsumeAsync(_db,
+                _db.PasswordResetTokens.Where(t => t.Id == tokenId && t.UsedAt == null && t.ExpiresAt >= now),
+                t => t.UsedAt, now, ct))
+            throw new UnauthorizedAccessException("Invalid or expired reset token.");
+
         user.PasswordHash = PasswordHashing.Hash(newPassword);
         // Security-Stamp rotieren → bestehende JWTs (mit altem sstamp-Claim) werden ungültig.
         user.SecurityStamp = AuthService.NewSecurityStamp();
@@ -171,7 +179,7 @@ public class PasswordResetService
         // DER Weg nach einer Kontoübernahme und muss auch diese Zugänge entwerten, sonst behält ein
         // Angreifer über sein Extension-Token Zugriff (Repertoire-PGNs, Share-Links, Schreibwege).
         _db.UserApiTokens.RemoveRange(await _db.UserApiTokens.Where(t => t.UserId == user.Id).ToListAsync(ct));
-        token.UsedAt = now;
+        token.UsedAt = now;   // schon in der Datenbank (oben) — hier nur, damit der geladene Stand stimmt
 
         // Alle weiteren offenen Tokens des Users ebenfalls entwerten.
         var others = await _db.PasswordResetTokens

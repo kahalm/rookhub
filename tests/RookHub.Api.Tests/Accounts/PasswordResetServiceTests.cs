@@ -464,4 +464,30 @@ public class PasswordResetServiceTests : IDisposable
         await _service.ResetPasswordAsync(rawToken, "BrandNewPass3!");
         Assert.False(await _db.UserApiTokens.AnyAsync(t => t.UserId == user.Id));
     }
+
+    /// <summary>A1-008: Zwei gleichzeitige Resets mit demselben Link — der zweite hat die Zeile noch offen geladen.
+    /// Nur einer darf das Passwort setzen.</summary>
+    [Fact]
+    public async Task Reset_SecondRequestWithAStaleRow_IsRejected()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        await using var dbA = new AppDbContext(options);
+        await using var dbB = new AppDbContext(options);
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["App:BaseUrl"] = "https://rookhub.example" }).Build();
+        var mailA = new CapturingEmailSender();
+        var svcA = new PasswordResetService(dbA, mailA, config, NullLogger<PasswordResetService>.Instance);
+        var svcB = new PasswordResetService(dbB, new CapturingEmailSender(), config, NullLogger<PasswordResetService>.Instance);
+        dbA.AppUsers.Add(new AppUser { Username = "race", Email = "race@test.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("OldPassword1!") });
+        await dbA.SaveChangesAsync();
+        await svcA.RequestResetAsync("race@test.com");
+        var raw = ExtractToken(mailA.LastText!);
+        Assert.Null((await dbA.PasswordResetTokens.Include(t => t.User).SingleAsync()).UsedAt);   // A hat die Zeile offen geladen
+
+        await svcB.ResetPasswordAsync(raw, "FirstNewPassword1!");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => svcA.ResetPasswordAsync(raw, "SecondNewPassword1!"));
+
+        var hash = (await dbB.AppUsers.AsNoTracking().SingleAsync()).PasswordHash;
+        Assert.True(BCrypt.Net.BCrypt.Verify("FirstNewPassword1!", hash));
+    }
 }
