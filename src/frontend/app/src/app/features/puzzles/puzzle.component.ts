@@ -33,6 +33,7 @@ import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { PuzzleRevengeRound } from './puzzle-revenge-round';
+import { sendStandardAttempt } from './standard-attempt';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, parseShareViewParams } from './board-theme.util';
 import { Key } from 'chessground/types';
 import { buildStagedHints } from './puzzle-hints.util';
@@ -559,45 +560,18 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   private recordAttempt(solved: boolean, seconds: number = this.elapsedSeconds): void {
     if (!this.puzzle || this.attemptRecorded) return;
     this.attemptRecorded = true;
-    const log = this.moveLog.length > 0 ? JSON.stringify(this.moveLog) : undefined;
-    const id = this.puzzle.id;
-    const url = this.isLoggedIn ? `/api/puzzles/${id}/attempt` : `/api/puzzles/${id}/attempt/anonymous`;
-    const body: Record<string, unknown> = {
-      solved, timeSpentSeconds: seconds, moveLog: log ?? null,
-      visualizationLevel: this.visualizationMode,
-      evalShown: this.evalShown, vizShowCount: this.vizShowCount,
+    sendStandardAttempt({
+      puzzleService: this.puzzleService, offlineQueue: this.offlineQueue,
+      challengeService: this.challengeService, revengeService: this.revengeService,
+      loggedIn: this.isLoggedIn, revenge: this.revenge,
+      visualizationMode: () => this.visualizationMode,
+      onEloChange: change => { this.lastEloChange = change; },
+      onStats: stats => { this.stats = stats; },
+    }, {
+      id: this.puzzle.id, solved, seconds, moveLog: this.moveLog,
+      visualizationLevel: this.visualizationMode, evalShown: this.evalShown, vizShowCount: this.vizShowCount,
       hintsUsed: this.maxHintLevel,
-      screenWidth: window.innerWidth, screenHeight: window.innerHeight,
-    };
-    if (!this.isLoggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
-    // Challenge und Revanche: der erste Versuch entscheidet, gemeldet wird erst NACH dem gespeicherten Versuch
-    // (Codereview N9-001). Gleichzeitig abgeschickt prüfte der Server, bevor der Versuch stand — echte Lösungen wurden
-    // als „nicht gelöst" gebucht, die Revanche-Glocke fiel aus. Offline oder bei Fehler geht nur der Versuch in die
-    // Schlange: beim Nachsenden schließt der Server die Challenge selbst und legt über revengeUserId die Glocke an.
-    const challengeId = this.isLoggedIn ? this.revenge.claimChallenge() : null;
-    const revengeTo = this.isLoggedIn ? this.revenge.claimRevenge(solved, !!this.puzzle) : null;
-    if (revengeTo != null) body['revengeUserId'] = revengeTo;
-    if (!navigator.onLine) {
-      // Offline gelöst → für späteres Hochladen vormerken (Stats aktualisieren sich beim Sync).
-      this.offlineQueue.enqueue('POST', url, body);
-      return;
-    }
-    if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel, revengeTo).subscribe({
-        next: res => {
-          if (res.eloChange != null) this.lastEloChange = res.eloChange;
-          this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
-          if (challengeId != null) this.challengeService.resolve(challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });
-          if (revengeTo != null) this.revengeService.recordResult(revengeTo, id, solved).subscribe({ next: () => {}, error: () => {} });
-        },
-        error: () => this.offlineQueue.enqueue('POST', url, body),
-      });
-    } else {
-      this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel).subscribe({
-        next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
-        error: () => this.offlineQueue.enqueue('POST', url, body),
-      });
-    }
+    });
   }
 
   /** „Nächstes": im Revenge-Modus das nächste offene Puzzle des Freundes, sonst normales Zufallspuzzle. */
