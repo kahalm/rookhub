@@ -19,12 +19,12 @@ import { ViewStateService } from '@rh/core/view-state.service';
 import { AuthService } from '@rh/core/auth.service';
 import { requireAccount } from '../../core/require-account';
 import { wideScreen } from '../../core/wide-screen';
-import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
+import { GeolocationService } from '../../core/geolocation.service';
 import { DirectoryFilterPanelComponent } from './directory-filter-panel.component';
 import { DirectoryCalendarLoader, DirectoryListLoader, DirectoryPinsLoader } from './directory-loaders';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { PlaceFieldComponent } from './place-field.component';
-import { PlaceSearch } from './place-search';
+import { DirectoryPlaceController } from './directory-place';
 import { PinColourBy } from './pin-palette';
 import { ViewTab, applyStoredView, snapshotView } from './directory-view-state';
 import { DirectoryViewStateSync } from './directory-view-state-sync';
@@ -39,7 +39,7 @@ import {
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { MapView, TournamentMapComponent } from './tournament-map.component';
 import {
-  DEFAULT_RADIUS_KM, DIRECTORY_RADII,
+  DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
   TournamentGender, TournamentKind, TournamentSpeed, directoryPageSize, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
@@ -201,7 +201,7 @@ export class TournamentDirectoryComponent implements OnInit {
   ngOnInit(): void {
     this.applyRangePreset('quarter', false);
     this.viewSync.restore();
-    this.placeSearch.start();
+    this.place.start();
     this.viewSync.start();
 
     // Ohne Anmeldung (seit 0.643.0): kein Server-Stand und keine Suchprofile — beide gehoeren einem Konto, und die
@@ -222,135 +222,31 @@ export class TournamentDirectoryComponent implements OnInit {
     });
   }
 
-  // ----- Ort + Umkreis ----------------------------------------------------
+  // ----- Ort + Umkreis (DirectoryPlaceController) -------------------------
 
+  /** Ortsfeld, Ortssuche, Browser-Ortung und wie sie den Mittelpunkt im Filter setzen. */
+  private readonly place = new DirectoryPlaceController(this.directory, this.geolocation, this.destroyRef, {
+    filter: () => this.filter,
+    activeProfile: () => this.activeProfile,
+    reload: () => this.reload(),
+  });
   /** Was im Ortsfeld steht — Beschriftung eines Gazetteer-Treffers oder Profilname. */
-  placeLabel = '';
-  /** Die Ortssuche (Vorschlaege, Sanduhr, „kein Ort gefunden", Fehler — Codereview F6-007). */
-  private readonly placeSearch = new PlaceSearch(term => this.directory.places(term), this.destroyRef);
-  readonly placeSuggestions = this.placeSearch.suggestions;
-  readonly placeSearching = this.placeSearch.searching;
-  readonly placeNoMatch = this.placeSearch.noMatch;
-  readonly placeSearchFailed = this.placeSearch.failed;
-  readonly locating = signal(false);
-  readonly locationError = signal<GeolocationFailure | null>(null);
+  get placeLabel(): string { return this.place.label; }
+  set placeLabel(value: string) { this.place.label = value; }
+  readonly placeSuggestions = this.place.suggestions;
+  readonly placeSearching = this.place.searching;
+  readonly placeNoMatch = this.place.noMatch;
+  readonly placeSearchFailed = this.place.searchFailed;
+  readonly locating = this.place.locating;
+  readonly locationError = this.place.locationError;
+  get geolocationSupported(): boolean { return this.place.geolocationSupported; }
 
-  /** Die Beschriftung, zu der die aktuell gehaltenen Koordinaten gehoeren. */
-  private chosenPlaceLabel: string | null = null;
-
-  onPlaceInput(value: string): void {
-    this.placeLabel = value;
-    this.locationError.set(null);
-
-    // Weicht der Text von der zuletzt GEWAEHLTEN Beschriftung ab, gelten die Koordinaten nicht
-    // mehr. Sonst sucht die Seite im Umkreis von Wien weiter, waehrend „Berlin" im Feld steht.
-    if (value.trim() !== (this.chosenPlaceLabel ?? '').trim()) this.clearCentre();
-
-    this.placeSearch.input(value);
-  }
-
-  choosePlace(place: GeoPlaceSuggestion): void {
-    this.placeLabel = place.label;
-    this.chosenPlaceLabel = place.label;
-    this.filter.lat = place.lat;
-    this.filter.lon = place.lon;
-    this.filter.radiusKm ??= DEFAULT_RADIUS_KM;
-    // Ein selbst gewaehlter Ort ERSETZT das Suchprofil: liefe beides mit, gewaenne serverseitig
-    // das Profil und das Feld behauptete etwas anderes als die Liste zeigt.
-    this.filter.profileId = null;
-    this.placeSearch.clear();
-    this.reload();
-  }
-
-  clearPlace(): void {
-    this.placeLabel = '';
-    this.placeSearch.clear();
-    this.locationError.set(null);
-    this.clearCentre();
-    this.filter.profileId = null;
-    this.reload();
-  }
-
-  private clearCentre(): void {
-    this.filter.lat = null;
-    this.filter.lon = null;
-    this.chosenPlaceLabel = null;
-  }
-
-  /**
-   * Den Standort des Browsers uebernehmen. Zwei Schritte, weil der Browser Koordinaten liefert,
-   * im Feld aber ein NAME stehen soll: erst die Ortung, dann der naechstgelegene Ort aus dem
-   * eigenen Lexikon. Findet sich keiner, gelten die Koordinaten trotzdem — dann stehen sie
-   * selbst im Feld, statt dass die Umkreissuche stillschweigend ausfaellt.
-   */
-  useCurrentLocation(): void {
-    this.locationError.set(null);
-    this.locating.set(true);
-
-    this.geolocation.current().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: fix => {
-        this.filter.lat = fix.lat;
-        this.filter.lon = fix.lon;
-        this.filter.radiusKm ??= DEFAULT_RADIUS_KM;
-        this.filter.profileId = null;
-
-        const fallback = `${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}`;
-        this.placeLabel = fallback;
-        this.chosenPlaceLabel = fallback;
-        // Ein stehengebliebenes „Kein Ort gefunden" widerspraeche dem Ort, der jetzt im Feld steht.
-        this.placeSearch.clear();
-        this.reload();
-
-        // Der Name ist Beiwerk: die Suche laeuft schon mit den Koordinaten, und ein Fehlschlag
-        // hier darf sie nicht anhalten.
-        this.directory.nearestPlace(fix.lat, fix.lon)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({
-            next: place => {
-              if (!place) return;
-              this.placeLabel = place.label;
-              this.chosenPlaceLabel = place.label;
-            },
-            error: () => { /* Koordinaten bleiben stehen; nur der Name fehlt. */ },
-          });
-
-        this.locating.set(false);
-      },
-      error: (failure: GeolocationFailure) => {
-        this.locating.set(false);
-        this.locationError.set(failure);
-      },
-    });
-  }
-
-  get geolocationSupported(): boolean {
-    return this.geolocation.supported;
-  }
-
-  onRadiusChange(radiusKm: number | null): void {
-    // Ein selbst gewaehlter Radius ist eine Abweichung vom Profil: bei gesetztem `profileId`
-    // nimmt der Server DESSEN Radius, das Feld zeigte dann 50 km und die Liste 100. Also den
-    // Mittelpunkt des Profils uebernehmen und ab hier selbst fuehren.
-    if (this.filter.profileId !== null) this.adoptProfileCentre();
-    // 0 = „Überall" aus der Auswahl (r2-t-radius-empty); im Filter bleibt das null.
-    this.filter.radiusKm = radiusKm || null;
-    this.reload();
-  }
-
-  /**
-   * Das Profil aufloesen und als selbst gesetzten Mittelpunkt weiterfuehren. Gebraucht, sobald
-   * der Nutzer Ort oder Radius anfasst: ab da beschreibt die Leiste, was gilt, und nicht mehr
-   * das Profil.
-   */
-  private adoptProfileCentre(): void {
-    const profile = this.activeProfile;
-    if (profile) {
-      this.filter.lat = profile.lat;
-      this.filter.lon = profile.lon;
-      this.chosenPlaceLabel = this.placeLabel || null;
-    }
-    this.filter.profileId = null;
-  }
+  onPlaceInput(value: string): void { this.place.input(value); }
+  choosePlace(place: GeoPlaceSuggestion): void { this.place.choose(place); }
+  clearPlace(): void { this.place.clear(); }
+  /** Standort des Browsers uebernehmen (Ortung, dann der naechstgelegene Ortsname). */
+  useCurrentLocation(): void { this.place.useCurrentLocation(); }
+  onRadiusChange(radiusKm: number | null): void { this.place.radiusChange(radiusKm); }
 
   // ----- Filter -----------------------------------------------------------
 
@@ -391,16 +287,7 @@ export class TournamentDirectoryComponent implements OnInit {
 
   onProfileChange(profileId: number | null): void {
     this.filter.profileId = profileId;
-    this.clearCentre();
-
-    // Das Ortsfeld zeigt IMMER den geltenden Mittelpunkt — auch den aus einem Profil. Ohne das
-    // stuende dort der zuletzt getippte Ort, waehrend die Liste den Umkreis des Profils zeigt.
-    const profile = this.activeProfile;
-    this.placeLabel = profile?.placeQuery ?? profile?.name ?? '';
-    this.chosenPlaceLabel = this.placeLabel || null;
-    this.filter.radiusKm = profile?.radiusKm ?? null;
-    this.placeSearch.clear();
-
+    this.place.followProfile();
     this.reload();
   }
 
@@ -469,10 +356,7 @@ export class TournamentDirectoryComponent implements OnInit {
 
   resetFilter(): void {
     this.filter = { ...EMPTY_FILTER };
-    this.placeLabel = '';
-    this.chosenPlaceLabel = null;
-    this.placeSearch.clear();
-    this.locationError.set(null);
+    this.place.reset();
     this.applyRangePreset('quarter');
   }
 
@@ -676,8 +560,7 @@ export class TournamentDirectoryComponent implements OnInit {
     // darin; ein gemerkter selbst gewaehlter Ort behaelt seine Beschriftung.
     const profile = this.activeProfile;
     if (profile) {
-      this.placeLabel = profile.placeQuery ?? profile.name;
-      this.chosenPlaceLabel = this.placeLabel;
+      this.place.showProfile(profile);
       this.filter.radiusKm = profile.radiusKm;
       // Die Koordinaten kommen serverseitig aus dem Profil; ein zusaetzlich mitgeschicktes
       // lat/lon waere eine zweite Wahrheit fuer denselben Mittelpunkt.
@@ -729,7 +612,7 @@ export class TournamentDirectoryComponent implements OnInit {
   private applyStoredView(stored: Record<string, unknown> | null): void {
     const applied = applyStoredView(this, stored);
     if (!applied) return;
-    if (applied.placeRestored) this.chosenPlaceLabel = this.placeLabel || null;
+    if (applied.placeRestored) this.place.markRestored();
     this.storedProfileId = applied.storedProfileId;
     this.hasStoredProfile = applied.hasStoredProfile;
   }
