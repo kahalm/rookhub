@@ -394,6 +394,23 @@ describe('ClubAddPageComponent', () => {
     tick(3000);
   }));
 
+  // Nachlauf 0.840.0: der Server ersetzt Spieler des eigenen Vereins immer (F7-008) — über den Teilen-Link war das Häkchen
+  // wirkungslos. Dort steht nur noch die Zusage; angemeldet bleibt der Schalter (er ersetzt auch die eigene Seite).
+  it('über einen Teilen-Link: kein Häkchen „ersetzen", nur die Zusage „werden immer ersetzt"', fakeAsync(() => {
+    params = { token: 'TOK' };
+    const el = create(false);
+    flushMicrotasks();
+    fixture.detectChanges();
+    const box = el.querySelector('.anon-box')!;
+    expect(box.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(box.textContent).toContain('werden immer durch');
+    expect(box.textContent).toContain('Nach außen erscheint nur');
+    (box.querySelector('.chk-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.anon-info')?.textContent).not.toContain('je Partie ändern');
+    expect(fixture.componentInstance.store.replaceClub()).toBeTrue();
+  }));
+
   it('der Formular-Hinweis nennt Anthropic und verlinkt den Datenschutz (A6-008)', fakeAsync(() => {
     params = { token: 'TOK' };
     query = { art: 'formular' };

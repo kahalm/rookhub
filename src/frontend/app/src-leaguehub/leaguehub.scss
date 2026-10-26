@@ -605,6 +605,8 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .anon-toggle input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--ink); }
 .anon-toggle > span { display: grid; gap: 2px; }
 .anon-toggle .muted { font-size: 14px; }
+/* Teilen-Link (Nachlauf 0.840.0): nur die Zusage, ohne Häkchen. */
+.anon-toggle.anon-fixed { grid-template-columns: minmax(0, 1fr); cursor: default; }
 /* Schalter + (i) nebeneinander (UI-Sweep 2026-10-11, d2-l-hinzufuegen-anon-text): die Fläche trägt der Rahmen, der Knopf steht
    außerhalb des label (sonst schaltete ein Tipp darauf das Häkchen um). */
 .anon-box { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 10px 12px; background: var(--paper); border-radius: 8px; }

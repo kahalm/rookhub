@@ -45,11 +45,20 @@
         <!-- d2-l-hinzufuegen-anon-text: am Schalter nur Beschriftung + ein Satz; der Rest hinter (i) — der Knopf steht NEBEN dem
              label, sonst schaltete ein Tipp darauf das Häkchen um. -->
         <div class="anon-box">
-          <label class="anon-toggle">
-            <input type="checkbox" [checked]="store.replaceClub()" (change)="store.replaceClub.set($any($event.target).checked)" />
-            <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
-              <span class="muted">Nach außen erscheint nur „{{ anon }}“.</span></span>
-          </label>
+          @if (share) {
+            <!-- Nachlauf 0.840.0: der Server ersetzt Spieler des eigenen Vereins immer (F7-008) — über den Teilen-Link gibt es
+                 sonst niemanden zu ersetzen, das Häkchen war wirkungslos. Nur noch die Zusage. -->
+            <p class="anon-toggle anon-fixed">
+              <span><b>Spieler von {{ clubName() }} werden immer durch „{{ anon }}“ ersetzt</b>
+                <span class="muted">Nach außen erscheint nur „{{ anon }}“.</span></span>
+            </p>
+          } @else {
+            <label class="anon-toggle">
+              <input type="checkbox" [checked]="store.replaceClub()" (change)="store.replaceClub.set($any($event.target).checked)" />
+              <span><b>Spieler von {{ clubName() }} durch „{{ anon }}“ ersetzen</b>
+                <span class="muted">Nach außen erscheint nur „{{ anon }}“.</span></span>
+            </label>
+          }
           <button type="button" class="chk-btn" [attr.aria-expanded]="anonInfo()" aria-label="Was das Ersetzen bewirkt"
                   title="Was das Ersetzen bewirkt" (click)="anonInfo.set(!anonInfo())">i</button>
         </div>
@@ -58,8 +67,8 @@
             ist@if (!share) {, und du selbst}. Dann zeigt LeagueHub nach außen nirgends, wer dahinter steht (der echte Name bleibt nur
             intern für Auswertungen des Vereins), und es wird nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns
             vorbereiten. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der eigene Spieler mit Namen, wenn die
-            Partie einer Ligarunde zugeordnet ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je
-            Partie ändern.</p></div>
+            Partie einer Ligarunde zugeordnet ist — der Name kommt dann aus der öffentlichen Paarung.@if (!share) { In der Übersicht lässt
+            sich das je Partie ändern.}</p></div>
         }
         <lh-pgn-source-panel [store]="store" />
       }
