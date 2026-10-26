@@ -63,7 +63,8 @@ public class TokenControllerTests : IDisposable
         Assert.Equal("kahalm", info.UserId);
         // preflight.py: REQUIRED_SCOPES = ("engine:read", "engine:write"), kommasepariert
         Assert.Equal(["engine:read", "engine:write"], info.Scopes.Split(','));
-        Assert.Null(info.Expires);
+        // Seit P-14 laeuft jeder Token ab (ohne Angabe: Auth:PatMaxDays, Vorgabe 365) — Ablauf in ms seit 1970.
+        Assert.NotNull(info.Expires);
     }
 
     [Fact]
