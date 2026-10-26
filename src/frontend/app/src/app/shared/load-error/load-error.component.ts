@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
+import { loadErrorCause } from './load-error-cause';
 
 /**
  * Ladefehler einer Seite/Liste: Meldung + „Erneut versuchen". Steht dort, wo sonst der Leerzustand
@@ -15,7 +16,9 @@ import { TranslatePipe } from '@ngx-translate/core';
   template: `
     <div class="load-error" role="alert">
       <mat-icon class="icon">cloud_off</mat-icon>
-      <span class="msg">{{ messageKey | translate }}</span>
+      <span class="msg">{{ messageKey | translate }}
+        @if (cause(); as c) { <span class="cause">{{ c.key | translate: c.params }}</span> }
+      </span>
       <button mat-stroked-button type="button" class="retry" (click)="retry.emit()">
         <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
       </button>
@@ -25,10 +28,14 @@ import { TranslatePipe } from '@ngx-translate/core';
     .load-error { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 16px 0; }
     .icon { opacity: 0.6; }
     .msg { flex: 1 1 200px; }
+    .cause { display: block; margin-top: 2px; font-size: 0.875em; opacity: 0.8; }
   `]
 })
 export class LoadErrorComponent {
   /** i18n-Schluessel der Meldung. */
   @Input() messageKey = 'common.loadFailed';
   @Output() retry = new EventEmitter<void>();
+  /** Der Fehler des Abrufs (meist `HttpErrorResponse`) — daraus die Ursache: offline, nicht erreichbar, HTTP-Status. */
+  readonly error = input<unknown>(null);
+  readonly cause = computed(() => loadErrorCause(this.error()));
 }

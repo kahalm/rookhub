@@ -105,6 +105,7 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(component.notFound()).toBeFalse();
     expect(page.textContent).toContain('tournamentDirectory.detail.loadFailed');
     expect(page.textContent).not.toContain('tournamentDirectory.unknownTournament');
+    expect(page.querySelector('app-load-error .cause')?.textContent).toContain('common.loadCause.status');   // Ursache (UX-074)
 
     page.querySelector<HTMLButtonElement>('.load-failed button')!.click();
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));

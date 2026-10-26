@@ -4,10 +4,10 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import {
   ProfileIdentityFormComponent, emailAnchorChanged,
@@ -50,8 +50,8 @@ interface TurnierProfile {
   selector: 'app-turnier-profile',
   standalone: true,
   imports: [
-    FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, TranslatePipe, LoadingSpinnerComponent, HelpHintComponent,
+    FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule,
+    MatInputModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, HelpHintComponent,
     ProfileIdentityFormComponent, RouterLink, RookHubLinkComponent, ThemeCardComponent,
   ],
   template: `
@@ -90,11 +90,9 @@ interface TurnierProfile {
         </div>
       } @else {
         <!-- Ohne Formular und ohne Knopf blieb nur Neuladen — in der PWA unsichtbar (UX-074). -->
-        <mat-card class="card failed" role="alert">
-          <p>{{ 'turnier.profile.loadError' | translate }}</p>
-          <button mat-stroked-button (click)="load()">
-            <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
-          </button>
+        <!-- Geteilter Fehlerblock mit Ursache (offline, HTTP-Status) — UX-040/UX-074, Entscheidung 25.10. -->
+        <mat-card class="card failed">
+          <app-load-error messageKey="turnier.profile.loadError" [error]="loadError()" (retry)="load()" />
         </mat-card>
       }
 
@@ -155,8 +153,6 @@ interface TurnierProfile {
     .pw-link ::ng-deep .rh-link:hover { background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent); }
     .delete-link.mat-mdc-button { color: var(--rh-error); }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
-    .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
-    .card.failed p { margin: 0; }
   `],
 })
 export class TurnierProfileComponent implements OnInit {
@@ -168,6 +164,8 @@ export class TurnierProfileComponent implements OnInit {
   /** Signale, weil die Antwort ausserhalb der Angular-Zone eintrifft (siehe Turnierkalender). */
   readonly profile = signal<TurnierProfile | null>(null);
   readonly loading = signal(true);
+  /** Der Fehler des letzten Abrufs — der Fehlerblock nennt daraus die Ursache. */
+  readonly loadError = signal<unknown>(null);
   readonly saving = signal(false);
   /** Zuletzt gespeicherte E-Mail — Vergleichsstand fuer „Adresse geaendert, Passwort noetig". */
   readonly savedEmail = signal<string | null>(null);
@@ -180,13 +178,17 @@ export class TurnierProfileComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set(null);
     this.profiles.getProfile<TurnierProfile>().subscribe({
       next: profile => {
         this.profile.set(profile);
         this.savedEmail.set(profile?.email ?? null);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: (err: unknown) => {
+        this.loadError.set(err);
+        this.loading.set(false);
+      },
     });
   }
 

@@ -303,6 +303,7 @@ describe('TurnierProfileComponent', () => {
     expect(component.profile()).toBeNull();
     const card = (fixture.nativeElement as HTMLElement).querySelector('.failed');
     expect(card?.textContent).toContain('turnier.profile.loadError');
+    expect(card?.querySelector('app-load-error .cause')?.textContent).toContain('common.loadCause.status');
 
     const retry = card!.querySelector<HTMLButtonElement>('button');
     expect(retry).withContext('Wiederholen-Knopf fehlt').toBeTruthy();

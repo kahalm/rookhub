@@ -12,6 +12,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { ViewStateService } from '@rh/core/view-state.service';
@@ -68,7 +69,7 @@ import {
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatCardModule, MatDialogModule, MatFormFieldModule,
     MatIconModule, MatSelectModule, MatTabsModule, TranslatePipe,
-    LoadingSpinnerComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
+    LoadingSpinnerComponent, LoadErrorComponent, HelpHintComponent, TournamentCalendarComponent, TournamentCardComponent,
     TournamentMapComponent, PlaceFieldComponent, SearchProfileMenuComponent, DirectoryFilterPanelComponent,
   ],
   templateUrl: './tournament-directory.component.html',
@@ -120,6 +121,7 @@ export class TournamentDirectoryComponent implements OnInit {
   readonly truncated = this.list.truncated;
   readonly loading = this.list.loading;
   readonly listFailed = this.list.failed;
+  readonly listError = this.list.error;
   get page(): number { return this.list.page; }
   set page(value: number) { this.list.page = value; }
 
@@ -142,6 +144,7 @@ export class TournamentDirectoryComponent implements OnInit {
   readonly mapTruncated = this.pinsLoader.truncated;
   readonly mapLoading = this.pinsLoader.loading;
   readonly mapFailed = this.pinsLoader.failed;
+  readonly mapError = this.pinsLoader.error;
   private lastBounds: string | null = null;
   /**
    * Der zuletzt gezeigte Kartenausschnitt (Mitte + Zoom). Die Karte steht in `@if (tab === 'map')`
@@ -159,6 +162,7 @@ export class TournamentDirectoryComponent implements OnInit {
   calendarMonth = new Date().getMonth() + 1;
   readonly calendarLoading = this.calendar.loading;
   readonly calendarFailed = this.calendar.failed;
+  readonly calendarError = this.calendar.error;
 
   /** Stamm des geraetelokalen Schluessels (siehe `DirectoryViewStateSync.ViewKey`). */
   static readonly ViewKey = DirectoryViewStateSync.ViewKey;

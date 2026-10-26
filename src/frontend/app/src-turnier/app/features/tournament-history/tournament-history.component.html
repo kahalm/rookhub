@@ -84,15 +84,11 @@
   } @else if (loading()) {
     <app-loading-spinner />
   } @else if (failed()) {
-    <!-- Mit Wiederholen-Knopf: in der installierten PWA gibt es keinen sichtbaren Neuladen-Knopf. -->
-    <p class="hint warn" role="alert">
-      {{ 'turnier.history.loadError' | translate }}
-      @if (activeKey(); as key) {
-        <button mat-stroked-button (click)="load(key)">
-          <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
-        </button>
-      }
-    </p>
+    <!-- Mit Wiederholen-Knopf: in der installierten PWA gibt es keinen sichtbaren Neuladen-Knopf. Geteilter Fehlerblock
+         mit Ursache (offline, HTTP-Status) — UX-040/UX-074, Entscheidung 25.10. -->
+    <div class="hint warn">
+      <app-load-error messageKey="turnier.history.loadError" [error]="loadError()" (retry)="retry()" />
+    </div>
   } @else {
     @if (current(); as history) {
       <mat-card class="player-card">

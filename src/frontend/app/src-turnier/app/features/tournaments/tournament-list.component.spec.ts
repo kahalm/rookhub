@@ -81,6 +81,7 @@ describe('TournamentListComponent', () => {
     const page = fixture.nativeElement as HTMLElement;
     expect(page.textContent).toContain('tournaments.list.loadFailed');
     expect(page.textContent).not.toContain('crawlerUnavailable');
+    expect(page.querySelector('app-load-error .cause')?.textContent).toContain('common.loadCause.status');   // Ursache statt Betreiber-Hinweis
 
     const retry = page.querySelector<HTMLButtonElement>('.failed button');
     expect(retry).withContext('Wiederholen-Knopf fehlt').toBeTruthy();
@@ -92,6 +93,14 @@ describe('TournamentListComponent', () => {
     expect(component.subscriptions().length).toBe(1);
     expect(page.querySelector('.failed')).toBeNull();
     http.verify();
+  });
+
+  it('leere Merkliste: Leer-Text mit Weg zum Kalender, kein Fehlerblock (UX-040)', async () => {
+    await setup([]);
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('tournaments.list.emptyBookmarks');
+    expect(page.querySelector('app-load-error')).toBeNull();
   });
 
   /** F6-011: dieselbe Aktion heisst ueberall „Merken"/„Merken aufheben" — hier stand „Abo beenden". */

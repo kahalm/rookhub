@@ -149,6 +149,8 @@ h3 {
 .no-name p { margin: 0 0 0.6rem; font-size: 0.9rem; }
 
 .hint.warn { background: color-mix(in srgb, var(--mat-sys-error) 18%, transparent); }
+/* Geteilter Fehlerblock (UX-040/UX-074) füllt die Zeile. */
+.hint > app-load-error { flex: 1 1 auto; }
 .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
 
 @media (max-width: 768px) {

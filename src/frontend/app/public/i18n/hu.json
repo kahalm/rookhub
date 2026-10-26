@@ -55,6 +55,11 @@
     "search": "Keresés",
     "back": "Vissza",
     "loadFailed": "Nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
+    "loadCause": {
+      "offline": "Nincs internetkapcsolat — ellenőrizd a hálózatot.",
+      "unreachable": "A szerver most nem érhető el.",
+      "status": "A szerver hibát jelzett (HTTP {{status}})."
+    },
     "retry": "Újra",
     "loading": "Betöltés…",
     "ok": "OK",

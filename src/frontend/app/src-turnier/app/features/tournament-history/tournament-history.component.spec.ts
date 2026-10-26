@@ -137,6 +137,7 @@ describe('TournamentHistoryComponent', () => {
     expect(component.failed()).toBeTrue();
     const warn = (fixture.nativeElement as HTMLElement).querySelector('.hint.warn');
     expect(warn?.textContent).toContain('turnier.history.loadError');
+    expect(warn?.querySelector('app-load-error .cause')?.textContent).toContain('common.loadCause.status');
     const retry = warn!.querySelector<HTMLButtonElement>('button');
     expect(retry).withContext('Wiederholen-Knopf fehlt').toBeTruthy();
     expect(retry!.textContent).toContain('common.retry');
@@ -149,6 +150,16 @@ describe('TournamentHistoryComponent', () => {
 
     expect(component.failed()).toBeFalse();
     expect(component.current()).not.toBeNull();
+    http.verify();
+  });
+
+  it('leerer Verlauf: Leer-Text, kein Fehlerblock (UX-040)', async () => {
+    const req = await setup();
+    req.flush([history({ entries: [] })]);
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('turnier.history.empty');
+    expect(page.querySelector('app-load-error')).toBeNull();
     http.verify();
   });
 

@@ -832,6 +832,8 @@ describe('TournamentDirectoryComponent', () => {
     expect(component.listFailed()).toBeTrue();
     expect(text()).toContain('tournamentDirectory.loadError');
     expect(text()).not.toContain('tournamentDirectory.empty');
+    // geteilter Fehlerblock mit Ursache (UX-040/UX-074, Entscheidung 25.10.)
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-load-error .cause')?.textContent).toContain('common.loadCause.status');
 
     const retry = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.load-failed button');
     expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
@@ -843,6 +845,15 @@ describe('TournamentDirectoryComponent', () => {
     expect(component.entries().length).toBe(1);
     expect((fixture.nativeElement as HTMLElement).querySelector('.load-failed')).toBeNull();
     http.verify();
+  });
+
+  it('leere Antwort: Leer-Text, kein Fehlerblock (UX-040)', async () => {
+    await setup();
+    flushProfiles([profile(1, 'Zuhause')]);
+    flushList([]);
+    fixture.detectChanges();
+    expect(text()).toContain('tournamentDirectory.empty');
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-load-error')).toBeNull();
   });
 
   it('räumt bei gescheitertem Filterwechsel die Liste des alten Filters ab', async () => {

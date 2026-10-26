@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, take, takeWhile, timer } from 'rxjs';
+import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { CrawlJob, Tournament } from '@rh/core/models';
@@ -65,7 +66,7 @@ export function directorySourceNote(kind: string): string | null {
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule,
-    TranslatePipe, LoadingSpinnerComponent, TournamentMapComponent, TournamentDatePipe,
+    TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, TournamentMapComponent, TournamentDatePipe,
   ],
   templateUrl: './tournament-directory-detail.component.html',
   styleUrls: ['./tournament-directory-detail.component.scss'],
@@ -112,6 +113,8 @@ export class TournamentDirectoryDetailComponent implements OnInit {
    * und wer das glaubte, meldete ein Turnier nach, das laengst drinsteht (Codereview UX-040).
    */
   readonly loadFailed = signal(false);
+  /** Der Fehler dazu — der Fehlerblock nennt daraus die Ursache (offline, HTTP-Status). */
+  readonly loadError = signal<unknown>(null);
   readonly tilesFailed = signal(false);
 
   /** „Erneut versuchen" laedt dieselbe Id noch einmal — ohne Umweg ueber die Adresse. */
@@ -131,20 +134,22 @@ export class TournamentDirectoryDetailComponent implements OnInit {
         this.loading.set(true);
         this.notFound.set(false);
         this.loadFailed.set(false);
+        this.loadError.set(null);
         this.entry.set(null);
         this.imported.set(null);
         return this.directory.get(params.get('id') ?? '').pipe(
-          map(entry => ({ entry: entry as DirectoryEntry | null, failed: false })),
+          map(entry => ({ entry: entry as DirectoryEntry | null, failed: false, error: null as unknown })),
           // 404 (unbekannt) und 400 (keine gueltige Id) heissen wirklich „nicht im Verzeichnis";
           // alles andere ist ein Ausfall und bekommt „Erneut versuchen".
-          catchError((err: unknown) => of({ entry: null, failed: !isMissing(err) })),
+          catchError((err: unknown) => of({ entry: null, failed: !isMissing(err), error: err })),
         );
       }),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(({ entry, failed }) => {
+    ).subscribe(({ entry, failed, error }) => {
       this.loading.set(false);
       this.entry.set(entry);
       this.loadFailed.set(failed);
+      this.loadError.set(failed ? error : null);
       this.notFound.set(entry === null && !failed);
       if (entry) this.lookupImported(entry);
     });

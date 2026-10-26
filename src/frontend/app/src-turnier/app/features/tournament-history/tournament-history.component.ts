@@ -14,6 +14,7 @@ import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { Observable, Subscription, catchError, map, of, switchMap, takeWhile, timer } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -79,7 +80,7 @@ export const trackedKey = (id: number): string => `t:${id}`;
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule,
     MatDialogModule, MatIconModule, MatTabsModule, MatTooltipModule, IconLabelDirective, RouterLink, TranslatePipe,
-    LoadingSpinnerComponent, HelpHintComponent, TournamentDatePipe, RookHubLinkComponent,
+    LoadingSpinnerComponent, LoadErrorComponent, HelpHintComponent, TournamentDatePipe, RookHubLinkComponent,
   ],
   templateUrl: './tournament-history.component.html',
   styleUrls: ['./tournament-history.component.scss'],
@@ -109,6 +110,8 @@ export class TournamentHistoryComponent implements OnInit {
   readonly tracked = signal<TrackedPlayer[]>([]);
   readonly loading = signal(true);
   readonly failed = signal(false);
+  /** Der Fehler des letzten Abrufs — der Fehlerblock nennt daraus die Ursache. */
+  readonly loadError = signal<unknown>(null);
 
   /** Welcher Reiter offen ist — `null`, solange die eigene Kennung nicht feststeht. */
   readonly activeKey = signal<string | null>(null);
@@ -375,12 +378,19 @@ export class TournamentHistoryComponent implements OnInit {
         this.loading.set(false);
         this.schedulePoll(generation, key);
       },
-      error: () => {
+      error: (err: unknown) => {
         if (generation !== this.generation) return;
         this.loading.set(false);
+        this.loadError.set(err);
         this.failed.set(true);
       },
     });
+  }
+
+  /** „Wiederholen" im Fehlerblock: den offenen Reiter noch einmal laden. */
+  retry(): void {
+    const key = this.activeKey();
+    if (key) this.load(key);
   }
 
   /**

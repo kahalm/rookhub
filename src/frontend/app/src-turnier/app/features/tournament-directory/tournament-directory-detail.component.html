@@ -9,12 +9,9 @@
   @if (loading()) {
     <app-loading-spinner />
   } @else if (loadFailed()) {
-    <mat-card class="detail-card load-failed" role="alert">
-      <p>{{ 'tournamentDirectory.detail.loadFailed' | translate }}</p>
-      <button mat-stroked-button (click)="retry()">
-        <mat-icon>refresh</mat-icon>
-        {{ 'common.retry' | translate }}
-      </button>
+    <!-- Geteilter Fehlerblock mit Ursache (UX-040/UX-074, Entscheidung 25.10.) -->
+    <mat-card class="detail-card load-failed">
+      <app-load-error messageKey="tournamentDirectory.detail.loadFailed" [error]="loadError()" (retry)="retry()" />
     </mat-card>
   } @else if (notFound() || !entry()) {
     <mat-card class="detail-card">

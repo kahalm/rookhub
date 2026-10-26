@@ -25,6 +25,8 @@ export class DirectoryListLoader {
    * versuchen; der eigentliche Fehler stand nur fuenf Sekunden in einem Snackbar (UX-040).
    */
   readonly failed = signal(false);
+  /** Der Fehler dazu — die Fehlerkarte nennt daraus die Ursache (offline, HTTP-Status). */
+  readonly error = signal<unknown>(null);
   page = 1;
 
   /**
@@ -53,9 +55,9 @@ export class DirectoryListLoader {
         if (generation !== this.generation) return;
         this.applyPage(page, requestedPage);
       },
-      error: () => {
+      error: (err: unknown) => {
         if (generation !== this.generation) return;
-        this.applyFailure(requestedPage);
+        this.applyFailure(requestedPage, err);
       },
     });
   }
@@ -67,13 +69,14 @@ export class DirectoryListLoader {
     this.loading.set(false);
   }
 
-  private applyFailure(requestedPage: number): void {
+  private applyFailure(requestedPage: number, err: unknown): void {
     this.loading.set(false);
     if (requestedPage === 1) {
       // Die alte Liste gehoert zu einem anderen Filter — stehen bleibt die Fehlerkarte.
       this.entries.set([]);
       this.total.set(0);
       this.truncated.set(false);
+      this.error.set(err);
       this.failed.set(true);
     } else {
       // „Mehr anzeigen" gescheitert: die Liste bis hierher stimmt, nur der Rest fehlt.
@@ -96,6 +99,7 @@ export class DirectoryPinsLoader {
   readonly loading = signal(false);
   /** Der letzte Kartenausschnitt kam nicht — sonst stuende dort „0 Turniere im Ausschnitt". */
   readonly failed = signal(false);
+  readonly error = signal<unknown>(null);
 
   /**
    * Beim erneuten Betreten des Karten-Reiters laufen zwei Abfragen gegeneinander: `reload()`
@@ -119,9 +123,10 @@ export class DirectoryPinsLoader {
         this.truncated.set(res.truncated);
         this.loading.set(false);
       },
-      error: () => {
+      error: (err: unknown) => {
         if (generation !== this.generation) return;
         this.loading.set(false);
+        this.error.set(err);
         // Wie Liste und Kalender: die alten Punkte (und „es fehlen die spaetesten") gehoeren zu
         // einem anderen Ausschnitt oder Filter — stehen bleibt die Fehlerzeile.
         this.pins.set([]);
@@ -138,6 +143,7 @@ export class DirectoryCalendarLoader {
   readonly loading = signal(false);
   /** Der Monat kam nicht — sonst stuende in der Handy-Agenda „In diesem Monat kein Turnier". */
   readonly failed = signal(false);
+  readonly error = signal<unknown>(null);
 
   /**
    * Zaehler gegen ueberholte Antworten (Codereview F6-005): zweimal schnell weitergeblaettert, und
@@ -162,9 +168,10 @@ export class DirectoryCalendarLoader {
         this.loading.set(false);
         this.failed.set(false);
       },
-      error: () => {
+      error: (err: unknown) => {
         if (generation !== this.generation) return;
         this.loading.set(false);
+        this.error.set(err);
         // Die Tage gehoeren zu einem anderen Monat oder Filter — die Fehlerzeile sagt, was los ist.
         this.days.set([]);
         this.failed.set(true);

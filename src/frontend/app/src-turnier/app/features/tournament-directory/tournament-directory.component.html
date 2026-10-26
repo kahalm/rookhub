@@ -142,7 +142,7 @@
                 <p class="hint map-truncated">{{ 'tournamentDirectory.mapTruncated' | translate }}</p>
               }
               @if (mapFailed()) {
-                <ng-container *ngTemplateOutlet="loadFailed" />
+                <ng-container *ngTemplateOutlet="loadFailed; context: { $implicit: mapError() }" />
               } @else {
                 <p class="muted count">
                   {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
@@ -162,7 +162,7 @@
       <div class="tab-body">
         @if (tab === 'calendar') {
           @if (calendarFailed()) {
-            <ng-container *ngTemplateOutlet="loadFailed" />
+            <ng-container *ngTemplateOutlet="loadFailed; context: { $implicit: calendarError() }" />
           }
           <app-tournament-calendar [days]="calendarDays()" [year]="calendarYear" [month]="calendarMonth"
                                    [locale]="calendarLocale" [loading]="calendarLoading()"
@@ -180,7 +180,7 @@
     @if (loading() && entries().length === 0) {
       <app-loading-spinner />
     } @else if (listFailed()) {
-      <ng-container *ngTemplateOutlet="loadFailed" />
+      <ng-container *ngTemplateOutlet="loadFailed; context: { $implicit: listError() }" />
     } @else if (entries().length === 0) {
       <p class="empty-state muted">{{ 'tournamentDirectory.empty' | translate }}</p>
       <p class="muted profile-line"><ng-container *ngTemplateOutlet="profileNote" /></p>
@@ -226,14 +226,9 @@
 
   <!-- Ein gescheitertes Laden darf nicht wie „es gibt nichts" aussehen (UX-040): Satz und
        „Wiederholen" statt des Leer-Textes, in Liste, Karte und Kalender gleich. -->
-  <ng-template #loadFailed>
-    <div class="load-failed" role="alert">
-      <span>{{ 'tournamentDirectory.loadError' | translate }}</span>
-      <button mat-stroked-button (click)="reload()">
-        <mat-icon>refresh</mat-icon>
-        {{ 'common.retry' | translate }}
-      </button>
-    </div>
+  <!-- Seit UX-040/UX-074 (Sammel-Entscheidung 25.10.) der geteilte Fehlerblock: dazu die Ursache (offline, HTTP-Status). -->
+  <ng-template #loadFailed let-error>
+    <app-load-error class="load-failed" messageKey="tournamentDirectory.loadError" [error]="error" (retry)="reload()" />
   </ng-template>
 
   <!-- Unter ALLEN drei Ansichten, weil die Luecke in jeder gleich unsichtbar ist: das

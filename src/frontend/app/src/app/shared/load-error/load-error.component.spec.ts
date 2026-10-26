@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { LoadErrorComponent } from './load-error.component';
@@ -27,5 +28,15 @@ describe('LoadErrorComponent', () => {
   it('nimmt einen eigenen Meldungsschluessel', () => {
     const el: HTMLElement = render('x.custom').nativeElement;
     expect(el.textContent).toContain('x.custom');
+  });
+
+  it('nennt mit Fehlerobjekt die Ursache (HTTP-Status), ohne keine (UX-040)', () => {
+    const fixture = render();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.cause')).toBeNull();
+    fixture.componentRef.setInput('error', new HttpErrorResponse({ status: 500 }));
+    fixture.detectChanges();
+    expect(el.querySelector('.cause')?.textContent).toContain('common.loadCause.status');
+    expect(fixture.componentInstance.cause()).toEqual({ key: 'common.loadCause.status', params: { status: 500 } });
   });
 });

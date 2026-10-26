@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { IconLabelDirective } from '@rh/shared/icon-label/icon-label.directive';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '@rh/shared/load-error/load-error.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subscription } from '@rh/core/models';
 import { TournamentListService } from '../../core/tournament-list.service';
@@ -38,7 +39,7 @@ import { TournamentDatePipe } from '../../core/tournament-date';
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, IconLabelDirective,
-    TranslatePipe, LoadingSpinnerComponent, TournamentDatePipe,
+    TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, TournamentDatePipe,
   ],
   template: `
     <div class="page">
@@ -50,9 +51,9 @@ import { TournamentDatePipe } from '../../core/tournament-date';
         <!-- Die Merkliste kommt aus der EIGENEN Datenbank, nicht vom Crawler — der fruehere Satz
              „Stelle sicher, dass der Crawler-Dienst laeuft" nannte die falsche Ursache und einen
              Schritt, den kein Nutzer gehen kann (Codereview UX-074). -->
-        <mat-card class="card failed" role="alert">
-          <p>{{ 'tournaments.list.loadFailed' | translate }}</p>
-          <button mat-stroked-button (click)="load()">{{ 'common.retry' | translate }}</button>
+        <!-- Geteilter Fehlerblock mit Ursache (offline, HTTP-Status) — UX-040/UX-074, Entscheidung 25.10. -->
+        <mat-card class="card failed">
+          <app-load-error messageKey="tournaments.list.loadFailed" [error]="loadError()" (retry)="load()" />
         </mat-card>
       } @else if (upcoming().length === 0 && past().length === 0) {
         <!-- Leer heisst hier nicht „kaputt", sondern „noch nichts gemerkt" — und der Weg dorthin
@@ -111,10 +112,10 @@ import { TournamentDatePipe } from '../../core/tournament-date';
     h2 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
 
     .card { padding: 1rem; }
-    .card.empty-state, .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .card.empty-state { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .card.failed { display: block; }
     /* Leerzustand zentriert wie der globale .empty-state (DESIGN.md 5.10). */
     .card.empty-state { align-items: center; }
-    .card.failed p { margin: 0; }
 
     .rows { display: flex; flex-direction: column; gap: 0.5rem; }
     /* mat-card ist selbst „display: flex; flex-direction: column" — ohne ausdrueckliches „row"
@@ -151,6 +152,8 @@ export class TournamentListComponent implements OnInit {
   readonly subscriptions = signal<Subscription[]>([]);
   readonly loading = signal(true);
   readonly failed = signal(false);
+  /** Der Fehler des letzten Abrufs — der Fehlerblock nennt daraus die Ursache. */
+  readonly loadError = signal<unknown>(null);
   readonly removing = signal<number | null>(null);
 
   readonly opening = this.opener.opening;
@@ -178,8 +181,9 @@ export class TournamentListComponent implements OnInit {
         this.subscriptions.set(subs);
         this.loading.set(false);
       },
-      error: () => {
+      error: (err: unknown) => {
         this.loading.set(false);
+        this.loadError.set(err);
         this.failed.set(true);
       },
     });

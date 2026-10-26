@@ -140,6 +140,11 @@
     "clear": "Clear",
     "back": "Back",
     "loadFailed": "Could not load. Check your connection and try again.",
+    "loadCause": {
+      "offline": "You're offline — check your internet connection.",
+      "unreachable": "The server can't be reached right now.",
+      "status": "The server reported an error (HTTP {{status}})."
+    },
     "retry": "Retry",
     "loading": "Loading…",
     "ok": "OK",
