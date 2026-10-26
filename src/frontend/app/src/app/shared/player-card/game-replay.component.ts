@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, SimpleChanges, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, SimpleChanges, computed, inject, input, signal, viewChild } from '@angular/core';
 import { Chess } from 'chess.js';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -92,7 +92,7 @@ import { cardDate, cardLang, cardSan } from './card-lang';
     .replay-marks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 6px 0 0; }
     .mark-jump.on { font-weight: 700; }
     .mv.marked::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 3px; border-radius: 50%;
-      background: var(--rh-success, #2e7d32); vertical-align: middle; }
+      background: var(--rh-success); vertical-align: middle; }
     .replay-side { margin: 6px 0; }
   `],
 })
@@ -102,8 +102,7 @@ export class GameReplayComponent implements OnChanges {
   /** `GET …/evals` einer analysierten Partie — dann mit Rückblick; `null` = nur nachspielen. */
   @Input() evalsUrl: string | null = null;
   /** Interessante Stellungen der Partie (0.848.0) — leer = keine Sprungmarken. */
-  @Input() marks: readonly ReplayMark[] = [];
-  private readonly marksSig = signal<readonly ReplayMark[]>([]);
+  readonly marks = input<readonly ReplayMark[]>([]);
   /** Stellung aus einer Variante auf dem Brett — gilt nur, solange der Partiezug ihr Abzweig ist (`at`). */
   readonly side = signal<{ at: number; fen: string; line: string } | null>(null);
   readonly activeSide = computed(() => { const s = this.side(); return s && s.at === this.index() ? s : null; });
@@ -167,14 +166,14 @@ export class GameReplayComponent implements OnChanges {
   });
 
   /** Halbzug-Indizes (`index`) mit einer Marke — Hauptlinie an ihrem Zug, Variante an ihrem Abzweig. */
-  readonly markedIdx = computed(() => new Set(this.marksSig().flatMap(m =>
+  readonly markedIdx = computed(() => new Set(this.marks().flatMap(m =>
     m.ply != null ? [m.ply - 1] : m.variationFromPly != null ? [m.variationFromPly - 1] : [])));
 
   /** Die Sprungmarken mit Beschriftung: „12…Sf6" in der Partie, „Variante: 12…c5" aus einer Variante, sonst „in einer Variante". */
   readonly markList = computed(() => {
     const g = this.game(), lang = this.lang(), active = this.activeSide(), i = this.index();
     if (!g) return [];
-    return this.marksSig().map(m => {
+    return this.marks().map(m => {
       const line = m.ply == null && m.variationFromPly != null ? this.variationLine(g, m, lang, 1) : '';
       const label = m.ply != null ? this.moveLabel(g, m.ply - 1, lang)
         : line ? (this.translate?.instant('playerCard.markVariation', { line }) ?? line)
@@ -222,7 +221,6 @@ export class GameReplayComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    this.marksSig.set(this.marks ?? []);
     if (!changes['pgn'] && this.game()) return;   // nur die Marken kamen neu — die Partie bleibt, wo sie ist
     this.side.set(null);
     let g: ParsedGame | null = null;

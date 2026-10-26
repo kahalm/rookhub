@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.848.1", date: "2026-10-26", changes: [
+    { en: "Technical: the jump marks of the game replay use a signal input (lint ratchet) and the success colour token without a fixed fallback colour; no visible change.", de: "Technisch: Die Sprungmarken des Nachspielens nutzen ein Signal-Input (Lint-Ratsche) und das Erfolgsfarben-Token ohne feste Rückfallfarbe; sichtbar ändert sich nichts." },
+  ]},
   { version: "0.848.0", date: "2026-10-26", changes: [
     { en: "LeagueHub: new page „Overview“ for the club — every match of the club’s teams this season with boards, results and games; a „◆ n“ marker shows games with interesting positions, and a filter shows only those.", de: "LeagueHub: Neue Seite „Übersicht“ für den Verein — jede Begegnung der eigenen Mannschaften dieser Saison mit Brettern, Ergebnissen und Partien; ein Marker „◆ n“ zeigt Partien mit interessanten Stellungen, ein Filter nur diese." },
     { en: "LeagueHub: replaying a club game shows „Interesting positions“ as jump marks — positions in the game jump to their move, positions marked in a variation jump to where the variation branches off and show it on the board („Back to the game“). Marked moves carry a dot in the move list.", de: "LeagueHub: Beim Nachspielen einer Vereinspartie stehen „Interessante Stellungen“ als Sprungmarken — Stellungen der Partie springen an ihren Zug, in einer Variante markierte an den Abzweig und zeigen sie auf dem Brett („Zurück zur Partie“). Markierte Züge tragen in der Zugliste einen Punkt." },

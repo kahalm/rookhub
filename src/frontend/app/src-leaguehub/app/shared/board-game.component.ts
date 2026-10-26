@@ -63,7 +63,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
        Linkfarbe, ohne das Polster der Knöpfe) und standen höher als „Nachspielen"/„Analyse". Grundlinie statt Oberkante. */
     .bg-actions { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; white-space: nowrap; }
     .bg-replay-box { margin: 8px 0 4px; }
-    .bg-marks { color: var(--rh-success, #2e7d32); font-weight: 700; white-space: nowrap; }
+    .bg-marks { color: var(--rh-success); font-weight: 700; white-space: nowrap; }
   `],
 })
 export class BoardGameComponent {
