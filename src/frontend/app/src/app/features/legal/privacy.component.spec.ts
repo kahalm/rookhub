@@ -5,7 +5,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { PrivacyComponent } from './privacy.component';
-import { LEGAL_SITE, LegalSite } from '../../core/legal-site';
+import { LEGAL_SITE, LegalSite, LegalSiteKind } from '../../core/legal-site';
+import { PRIVACY_PERIODS } from './privacy-periods';
 import { OPERATOR } from '../../../environments/operator';
 
 describe('PrivacyComponent', () => {
@@ -494,6 +495,118 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['leagueSourcesOnline']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
       // Teilen-Link: gespielte Runde 7 Tage ab Teilen, ohne Datum 30 Tage (LeagueService.ExpiresFor).
       expect(p['leagueRecipients']).toMatch(/30/);
+    });
+  }
+});
+
+/**
+ * Codereview R-2 a (Entscheidung 2026-10-25: offenlegen statt pseudonymisieren). Die neuen Abschnitte — Sichtbarkeit,
+ * Nachrichten an das Admin-Team, Push, Server-Protokolle, Fristen-Tabelle — und der Drittdienst api.chesstools.org stehen
+ * in JEDER Fassung (RookHub, KidHub, LeagueHub, ClubHub, Turnierseite), mit Eintrag im Inhaltsverzeichnis; KidHub hat die
+ * Kurzfassung dazu. Schlüssel-Spiegel: jeder Schlüssel, den eine Fassung zeichnet, steht in de/en/hr/hu.
+ */
+describe('Datenschutz R-2 a: neue Abschnitte in allen Fassungen', () => {
+  const KINDS: readonly LegalSiteKind[] = ['rookhub', 'kidhub', 'leaguehub', 'clubhub', 'turnier'];
+  const NEW_SECTIONS = ['privacy-visibility', 'privacy-messages', 'privacy-push', 'privacy-logs'];
+
+  function renderKind(kind: LegalSiteKind): HTMLElement {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PrivacyComponent],
+      providers: [
+        provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: LEGAL_SITE, useValue: { contactEmail: 'x@example.org', imprint: kind !== 'kidhub', kind } satisfies LegalSite },
+      ],
+    });
+    const f = TestBed.createComponent(PrivacyComponent);
+    f.detectChanges();
+    return f.nativeElement as HTMLElement;
+  }
+
+  async function flatLang(lang: string): Promise<Set<string>> {
+    for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const out = new Set<string>();
+      const walk = (o: Record<string, unknown>, p: string) => {
+        for (const [k, v] of Object.entries(o)) {
+          const key = p ? `${p}.${k}` : k;
+          if (v && typeof v === 'object') walk(v as Record<string, unknown>, key); else out.add(key);
+        }
+      };
+      walk(await res.json(), '');
+      return out;
+    }
+    throw new Error(`${lang}.json nicht ladbar`);
+  }
+
+  for (const kind of KINDS) {
+    it(`${kind}: Sichtbarkeit, Nachrichten, Push, Protokolle, Fristen-Tabelle und chesstools`, () => {
+      const el = renderKind(kind);
+      const tocTargets = Array.from(el.querySelectorAll<HTMLAnchorElement>('nav.toc a')).map(a => a.getAttribute('href')!.split('#')[1]);
+      for (const id of NEW_SECTIONS) {
+        expect(el.querySelector(`h2#${id}`)).withContext(`${kind}: #${id}`).not.toBeNull();
+        expect(tocTargets).withContext(`${kind}: Inhaltsverzeichnis`).toContain(id);
+      }
+      // Inhaltsverzeichnis in derselben Reihenfolge wie die Überschriften.
+      const heads = Array.from(el.querySelectorAll('mat-card-content > h2')).map(h => h.id);
+      expect(tocTargets).withContext(kind).toEqual(heads);
+      const table = el.querySelector('table#privacy-periods')!;
+      expect(table).withContext(`${kind}: Fristen-Tabelle`).not.toBeNull();
+      const rows = PRIVACY_PERIODS.reduce((n, g) => n + g.rows.length, 0);
+      expect(table.querySelectorAll('tbody tr:not(.group)').length).toBe(rows);
+      expect(table.querySelectorAll('tbody tr.group').length).toBe(PRIVACY_PERIODS.length);
+      const text = el.textContent ?? '';
+      for (const k of ['thirdChesstools', 'thirdPush', 'storageLogout', 'logsEmail', 'logsRetention', 'visibilitySearch'])
+        expect(text).withContext(`${kind}: ${k}`).toContain(`legal.privacy.${k}`);
+      for (const k of ['kidVisibility', 'kidLogs', 'kidPeriods']) {
+        if (kind === 'kidhub') expect(text).withContext(k).toContain(`legal.privacy.${k}`);
+        else expect(text).withContext(`${kind}: ${k}`).not.toContain(`legal.privacy.${k}`);
+      }
+    });
+  }
+
+  it('Schlüssel-Spiegel: jeder gezeichnete legal.privacy-Schlüssel jeder Fassung steht in de/en/hr/hu', async () => {
+    const used = new Set<string>();
+    for (const kind of KINDS) {
+      // Je Textknoten: ein Schlüssel endet am Ende seines Knotens (nicht im angrenzenden Link-Text).
+      const walker = document.createTreeWalker(renderKind(kind), NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode())
+        for (const m of (n.textContent ?? '').matchAll(/legal\.privacy\.[\w.]+/g)) used.add(m[0].replace(/\.$/, ''));
+    }
+    expect(used.size).toBeGreaterThan(60);
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      const keys = await flatLang(lang);
+      expect([...used].filter(k => !keys.has(k))).withContext(`${lang}: fehlende Schlüssel`).toEqual([]);
+    }
+  });
+});
+
+/** R-2 a: die offengelegten Inhalte in den gepflegten Sprachen — Klarnamen in Protokollen, Frist, chesstools, Push. */
+describe('Datenschutz-Texte R-2 a (en/de/hr/hu)', () => {
+  async function load(lang: string): Promise<Record<string, any>> {
+    for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+    }
+    throw new Error(`${lang}.json nicht ladbar`);
+  }
+
+  for (const lang of ['en', 'de', 'hr', 'hu']) {
+    it(`${lang}: Protokolle nicht mehr „pseudonym“, 90 Tage, E-Mail-Adresse; chesstools; Push-Dienste`, async () => {
+      const p = (await load(lang))['legal']['privacy'];
+      // A10-009: angemeldet steht der Benutzername im Klartext — die alte Zusage „pseudonyme Besucher-Kennung“ ist weg.
+      expect(p['dataTechnical']).not.toMatch(/pseudonyme Besucher|pseudonymous visitor|pseudonimni identifikator|álnevesített látogató/);
+      expect(p['logsRetention']).toMatch(/\b90\b/);
+      expect(p['logsEmail']).toMatch(/E-Mail|email|e-pošt|e-mail/i);
+      expect(p['thirdChesstools']).toContain('api.chesstools.org');
+      expect(p['push']).toMatch(/Google/);
+      expect(p['push']).toMatch(/Mozilla/);
+      expect(p['push']).toMatch(/Apple/);
+      expect(p['messages']).toMatch(/\b365\b/);
+      // A6-016 (0.840.0): keine Zusage mehr „ohne Frist, keine automatische Löschung“ für liegengelassene Einlesungen.
+      expect(p['aiScoresheet']).not.toMatch(/ohne Frist, eine automatische|no time limit; there is no|bez roka; automatskog|határidő nélkül megőrzi/);
+      expect(p['aiScoresheet']).toMatch(/\b14\b/);
     });
   }
 });

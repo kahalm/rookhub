@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LEGAL_SITE, legalBackLink } from '../../core/legal-site';
 import { LEGAL_PAGE_STYLES } from './legal-page.styles';
+import { PRIVACY_PERIODS, privacyPeriodKey } from './privacy-periods';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -49,6 +50,10 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
               <li>{{ 'legal.privacy.kidAccount' | translate }}</li>
               <li>{{ 'legal.privacy.kidParents' | translate }}</li>
               <li>{{ 'legal.privacy.kidNoTracking' | translate }}</li>
+              <!-- Codereview R-2 a (2026-10-25): Sichtbarkeit, Protokolle und Fristen auch in der Kinder-Fassung. -->
+              <li>{{ 'legal.privacy.kidVisibility' | translate }}</li>
+              <li>{{ 'legal.privacy.kidLogs' | translate }}</li>
+              <li>{{ 'legal.privacy.kidPeriods' | translate }}</li>
             </ul>
             <p>{{ 'legal.privacy.kidDetails' | translate }}</p>
           } @else if (kind === 'leaguehub') {
@@ -136,13 +141,38 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
           <h2 id="privacy-purposes" tabindex="-1">{{ 'legal.privacy.purposesTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.purposes' | translate }}</p>
 
+          <!-- Codereview R-2 a (Entscheidung 2026-10-25, F5-014): was andere Konten sehen — Nutzersuche
+               (FriendService.SearchUsersAsync: Teilstring ueber Benutzer-/Anzeige-/Online-Namen, Praefix ueber FIDE-/
+               ChessResults-ID), Bestenlisten (LeaderboardService: DisplayName ?? Username, [Authorize]), Freunde
+               (FriendController stats/revenge, TournamentHistoryController); anonym kein Profil (A2-008). -->
+          <h2 id="privacy-visibility" tabindex="-1">{{ 'legal.privacy.visibilityTitle' | translate }}</h2>
+          <ul>
+            <li>{{ 'legal.privacy.visibilitySearch' | translate }}</li>
+            <li>{{ 'legal.privacy.visibilityLeaderboards' | translate }}</li>
+            <li>{{ 'legal.privacy.visibilityFriends' | translate }}</li>
+            <li>{{ 'legal.privacy.visibilityGuests' | translate }}</li>
+          </ul>
+
+          <!-- Direktnachrichten Admin<->Nutzer (AdminMessageService): Leser = messages.admin; Frist O-7 (365 Tage gelesen,
+               AdminMessageRetention, 0.840.0); Kontoloeschung raeumt sie (SocialDataEraser). -->
+          <h2 id="privacy-messages" tabindex="-1">{{ 'legal.privacy.messagesTitle' | translate }}</h2>
+          <p>{{ 'legal.privacy.messages' | translate }}</p>
+
+          <!-- Web-Push (PushNotificationService: Endpunkte fcm.googleapis.com, push.services.mozilla.com,
+               notify.windows.com, web.push.apple.com; Nutzlast nach RFC 8291 verschluesselt; 404/410 = Abo geloescht). -->
+          <h2 id="privacy-push" tabindex="-1">{{ 'legal.privacy.pushTitle' | translate }}</h2>
+          <p>{{ 'legal.privacy.push' | translate }}</p>
+
           <h2 id="privacy-third" tabindex="-1">{{ 'legal.privacy.thirdTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.thirdIntro' | translate }}</p>
           <ul>
             <li>{{ 'legal.privacy.thirdDiscord' | translate }}</li>
             <li>{{ 'legal.privacy.thirdChessresults' | translate }}</li>
+            <!-- A5-016: FIDE-Suche ueber api.chesstools.org (PlayerSearchService, HttpClient „FideSearch“) — serverseitig. -->
+            <li>{{ 'legal.privacy.thirdChesstools' | translate }}</li>
             <li>{{ 'legal.privacy.thirdChesssites' | translate }}</li>
             <li>{{ 'legal.privacy.thirdLogging' | translate }}</li>
+            <li>{{ 'legal.privacy.thirdPush' | translate }}</li>
             <li>{{ 'legal.privacy.thirdHosting' | translate }}</li>
             <li>{{ 'legal.privacy.thirdAnthropic' | translate }}</li>
             <li>{{ 'legal.privacy.thirdTextLlm' | translate }}</li>
@@ -185,11 +215,48 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
             </ul>
           }
 
+          <!-- Codereview R-2 a (A10-009/A2-004): KEINE Pseudonymisierung der Logs — offenlegen. VisitorIdResolver
+               („u:“ + Benutzername, „a:“ + anonyme Sitzungs-Id), UserName/UserId im LogContext, SmtpEmailSender loggt die
+               Empfaengeradresse; Frist 90 Tage = ILM rookhub-logs-retention (docs/log-retention.md). -->
+          <h2 id="privacy-logs" tabindex="-1">{{ 'legal.privacy.logsTitle' | translate }}</h2>
+          <p>{{ 'legal.privacy.logsIntro' | translate }}</p>
+          <ul>
+            <li>{{ 'legal.privacy.logsContent' | translate }}</li>
+            <li>{{ 'legal.privacy.logsEmail' | translate }}</li>
+            <li>{{ 'legal.privacy.logsAccess' | translate }}</li>
+            <li>{{ 'legal.privacy.logsRetention' | translate }}</li>
+          </ul>
+
           <h2 id="privacy-storage" tabindex="-1">{{ 'legal.privacy.storageTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.storage' | translate }}</p>
+          <!-- F1-010: was das Abmelden vom Geraet raeumt (core/local-storage-keys.ts). -->
+          <p>{{ 'legal.privacy.storageLogout' | translate }}</p>
 
           <h2 id="privacy-retention" tabindex="-1">{{ 'legal.privacy.retentionTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.retention' | translate }} <a routerLink="/account-deletion">{{ 'legal.privacy.retentionLink' | translate }}</a>.</p>
+          <!-- Fristen je Datenart in Nutzersprache (O-7, Quelle docs/api/speicherdauer.md; Zeilen in privacy-periods.ts). -->
+          <p>{{ 'legal.privacy.periodsIntro' | translate }}</p>
+          <div class="periods-wrap">
+            <table class="periods" id="privacy-periods">
+              <thead>
+                <tr>
+                  <th scope="col">{{ 'legal.privacy.periodsColData' | translate }}</th>
+                  <th scope="col">{{ 'legal.privacy.periodsColPeriod' | translate }}</th>
+                </tr>
+              </thead>
+              @for (g of periods; track g.title) {
+                <tbody>
+                  <tr class="group"><th scope="rowgroup" colspan="2">{{ g.title | translate }}</th></tr>
+                  @for (r of g.rows; track r) {
+                    <tr>
+                      <td>{{ periodKey(r, 'data') | translate }}</td>
+                      <td>{{ periodKey(r, 'period') | translate }}</td>
+                    </tr>
+                  }
+                </tbody>
+              }
+            </table>
+          </div>
 
           <h2 id="privacy-rights" tabindex="-1">{{ 'legal.privacy.rightsTitle' | translate }}</h2>
           <p>{{ 'legal.privacy.rights' | translate }}</p>
@@ -245,6 +312,14 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
     .toc ul { columns: 2; column-gap: 1.5rem; }
     .toc li { break-inside: avoid; }
     ul.sub { margin: 0.25rem 0 0; }
+    /* Fristen-Tabelle (R-2 a): zwei Spalten, am Handy umbrechend statt quer scrollend; Gruppenzeilen als Zwischentitel. */
+    .periods-wrap { overflow-x: auto; }
+    table.periods { width: 100%; border-collapse: collapse; margin: 0.25rem 0 0.5rem; }
+    table.periods th, table.periods td { text-align: start; vertical-align: top; padding: 6px 8px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(127, 127, 127, 0.35)); overflow-wrap: anywhere; }
+    table.periods td:last-child { width: 40%; }
+    table.periods thead th { font-weight: bold; }
+    table.periods tr.group th { padding-top: 12px; font-weight: bold; color: var(--mat-sys-primary); }
     /* Klebt unten; am Seitenende ruht die Leiste in ihrer eigenen Hoehe unter dem letzten Absatz (DESIGN 4.6 Regel 10). */
     .to-toc-bar { position: sticky; bottom: 0; height: 60px; margin-right: -8px; display: flex; justify-content: flex-end;
                   align-items: center; pointer-events: none; z-index: 1; }
@@ -460,15 +535,23 @@ export class PrivacyComponent implements AfterViewInit {
     ...(this.kind === 'leaguehub' ? [{ id: 'privacy-league', title: 'legal.privacy.leagueTitle' }] : []),
     { id: 'privacy-data', title: 'legal.privacy.dataTitle' },
     { id: 'privacy-purposes', title: 'legal.privacy.purposesTitle' },
+    { id: 'privacy-visibility', title: 'legal.privacy.visibilityTitle' },
+    { id: 'privacy-messages', title: 'legal.privacy.messagesTitle' },
+    { id: 'privacy-push', title: 'legal.privacy.pushTitle' },
     { id: 'privacy-third', title: 'legal.privacy.thirdTitle' },
     { id: 'privacy-ai', title: 'legal.privacy.aiTitle' },
     { id: 'privacy-bot', title: 'legal.privacy.botTitle' },
     ...(this.kind !== 'turnier' ? [{ id: 'privacy-tournament', title: 'legal.privacy.tournamentTitle' }] : []),
+    { id: 'privacy-logs', title: 'legal.privacy.logsTitle' },
     { id: 'privacy-storage', title: 'legal.privacy.storageTitle' },
     { id: 'privacy-retention', title: 'legal.privacy.retentionTitle' },
     { id: 'privacy-rights', title: 'legal.privacy.rightsTitle' },
     { id: 'privacy-contact', title: 'legal.privacy.contactTitle' },
   ];
+
+  /** Fristen-Tabelle unter „Speicherdauer & Löschung" (R-2 a): Gruppen und Zeilen-Kennungen. */
+  readonly periods = PRIVACY_PERIODS;
+  readonly periodKey = privacyPeriodKey;
 
   /** Adresse fuer „im neuen Tab oeffnen": diese Seite mit Sprungmarke (ein blankes `#…` loeste sich gegen
    *  `<base href="/">` auf die Startseite auf). */

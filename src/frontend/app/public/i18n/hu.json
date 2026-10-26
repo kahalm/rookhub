@@ -599,7 +599,7 @@
     "privacy": {
       "title": "Adatvédelmi nyilatkozat",
       "link": "Adatvédelmi nyilatkozat",
-      "updated": "Utoljára frissítve: 2026. október 1.",
+      "updated": "Utoljára frissítve: 2026. október 26.",
       "tocTitle": "Tartalom",
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
       "introLeagueHub": "A LeagueHub (a RookHub része) összeállítás-előrejelzéseket készít csapatmérkőzésekhez, és vezeti a résztvevő klubok játszmaadatbázisát. A fiók ugyanaz, mint a RookHubon. Ez a nyilatkozat a személyes adatok GDPR szerinti kezeléséről tájékoztat.",
@@ -619,6 +619,9 @@
       "kidAccount": "Fiókkal a haladásodat a fiókodban tároljuk, hogy egy másik eszközön is folytathasd a játékot. Ez ugyanaz a fiók, mint a RookHubon. Kijelentkezéskor a haladás törlődik az eszközről, a fiókban megmarad.",
       "kidParents": "Fiókot csak a szüleid engedélyével hozz létre. A szülők bármikor kérhetik a fiók törlését — elég egy üzenet az alábbi címre.",
       "kidNoTracking": "A KidHub nem mutat reklámot, nem használ nyomkövető sütiket, és nincs benne csevegés. A megfelelő nyelv kiválasztásához egyszer megnézzük, melyik országból származik az internetcímed — ehhez nem tároljuk.",
+      "kidVisibility": "Más bejelentkezett RookHub-felhasználók megtalálhatják a felhasználónevedet. Ezért becenevet válassz, ne az igazi nevedet.",
+      "kidLogs": "A szerverünk feljegyzi, mely oldalakat nyitják meg — ha be vagy jelentkezve, a felhasználóneveddel. Ezt 90 nap után töröljük.",
+      "kidPeriods": "Hogy mit meddig őrzünk meg, lent a „Megőrzés és törlés” részben áll.",
       "kidDetails": "A szülőknek: a következő részek részletesen leírják, milyen adatokat kezelünk. A KidHub-fiók ugyanaz a fiók, mint a RookHubon, ezért mindkét oldalra vonatkoznak.",
       "controllerTitle": "Adatkezelő",
       "controllerNamed": "Az adatkezelésért e weboldal üzemeltetője felelős, elérhető:",
@@ -640,22 +643,33 @@
       "dataAccount": "Fiókadatok: felhasználónév, e-mail cím, jelszó (csak hash formában tárolva).",
       "dataProfile": "Profiladatok (opcionális): megjelenített/valódi név, FIDE azonosító, ChessResults azonosító, Chess.com/Lichess felhasználónév, opcionális Discord kapcsolat.",
       "dataUsage": "Használati adatok: megoldott feladványok, végtelen/tanfolyam haladás és statisztikák, játékértékelés, bejelentkezési időbélyegek.",
-      "dataTechnical": "Technikai adatok: IP-cím, lekért végpontok időbélyegekkel és egy álnevesített látogatóazonosító (elérés mérése) a szervernaplókban.",
+      "dataTechnical": "Technikai adatok: IP-cím, böngésző és eszköz, lekért címek időponttal, valamint egy látogatóazonosító a szervernaplókban — bejelentkezve a felhasználóneveddel (részletek a „Szervernaplók” részben).",
       "dataIpCountry": "KidHub (gyerekoldal): ha a böngésző nyelve nem az oldal egyik nyelve, az IP-címből meghatározzuk az országot, hogy megfelelő nyelvet válasszunk — helyben, a saját szerverünkön, a DB-IP országlistájával (IP Geolocation by DB-IP, CC BY 4.0). A címet ehhez sem továbbítjuk, sem nem tároljuk.",
       "dataScoresheet": "Játszmalapok fényképei, ha beolvastatsz egy játszmát — mindazzal, ami rajtuk szerepel, pl. mindkét játékos neve, a verseny, a dátum és az aláírások.",
       "purposesTitle": "Célok és jogalapok",
       "purposes": "A fiók és a funkciók biztosítása (szerződés teljesítése, GDPR 6. cikk (1) b) pont), valamint az üzemeltetési biztonság, hibaelhárítás és elérés mérése naplókon keresztül (jogos érdek, GDPR 6. cikk (1) f) pont).",
+      "visibilityTitle": "Mit látnak más felhasználók",
+      "visibilitySearch": "Felhasználókeresés: bármely bejelentkezett fiók megtalálhat — a felhasználóneved, a megjelenített neved vagy a Chess.com-, illetve Lichess-neved alapján (a név egy része is elég), valamint a FIDE-azonosítód vagy ChessResults-azonosítód eleje alapján. A találat ezeket az adatokat mutatja, amennyiben megadtad őket a profilodban.",
+      "visibilityLeaderboards": "Ranglisták: a bejelentkezett fiókok ott a megjelenített nevedet (ennek hiányában a felhasználónevedet) látják az eredményeiddel.",
+      "visibilityFriends": "Barátok: csak ha egy barátkérést elfogadtak, látja a barát a feladványstatisztikádat, azokat a feladványokat, amelyeknél hibáztál („Revenge”), és a versenytörténetedet.",
+      "visibilityGuests": "Bejelentkezés nélkül a profilod nem érhető el.",
+      "messagesTitle": "Üzenetek az adminisztrátori csapatnak",
+      "messages": "Ha írsz az adminisztrátori csapatnak, vagy az ír neked, az üzeneteket időponttal együtt tároljuk. Olvashatod te, valamint minden fiók, amely üzeneteket kezelhet — az adminisztrátorok és az általuk ezzel megbízott személyek. Az olvasott üzeneteket 365 nap után töröljük, az olvasatlanok az elolvasásukig megmaradnak; a fiókoddal együtt mind törlődik.",
+      "pushTitle": "Push-értesítések",
+      "push": "Ha bekapcsolod a push-értesítéseket, a böngésződ push-szolgáltatása egy fogadási címet ad ki (Chrome esetén a Google, Edge esetén a Microsoft, Firefox esetén a Mozilla, Safari esetén az Apple), amelyet a fiókodhoz tárolunk. A szerverünk minden értesítést ezen a szolgáltatáson keresztül küld; a tartalma titkosított, a szolgáltatás csak a fogadási címet, az időpontot és a méretet látja. A szolgáltatók egy része az USA-ban működik (harmadik országba történő továbbítás). Ha kikapcsolod a push-t, törlöd a fiókodat, vagy a szolgáltatás érvénytelennek jelzi a címet, töröljük azt.",
       "thirdTitle": "Címzettek / harmadik fél szolgáltatások",
       "thirdIntro": "Az adatokat nem adjuk el. Használattól függően a következő szolgáltatások érintettek:",
       "thirdDiscord": "Discord: csak önkéntes fiókkapcsoláskor (Discord azonosító/név) a RookHub Discord botban való megjelenítéshez.",
       "thirdChessresults": "chess-results.com: versenyadatok szerveroldali lekérése, ha megadsz egy ChessResults azonosítót vagy betöltesz versenyeket.",
+      "thirdChesstools": "api.chesstools.org: ha játékost keresel a FIDE-értékszámlistán (például a profilodban vagy a versenytörténethez), a szerverünk elküldi a megadott nevet (vezetéknév, keresztnév) ennek a szolgáltatásnak, és visszakapja a FIDE-lista megfelelő bejegyzéseit. Az IP-címedet és a fiókodat ilyenkor nem továbbítjuk.",
       "thirdChesssites": "Chess.com / Lichess: ha a profilodban megadod az ottani felhasználóneved, szerverünk automatikusan lekérdezi e platformok nyilvános játszma-interfészeit — a háttérben alapértelmezés szerint 6 óránként, amíg számodra aktív egy heti „játszmák” cél, valamint amikor az edzéscéloknál kézzel szinkronizálsz. Ennek során az ottani felhasználónevedet továbbítjuk az adott platformnak; a chess.com-ot egy egyesült államokbeli szolgáltató üzemelteti (harmadik országba történő továbbítás). Csak a naponkénti rapid/klasszikus játszmáid számát és a legutóbb lekért játszma időpontját tároljuk — játszmalépéseket nem. Ha törlöd a felhasználónevet a profilodból, a lekérdezés megszűnik.",
       "thirdLogging": "Elasticsearch/Kibana: saját üzemeltetésű naplózás/monitorozás az infrastruktúránkon.",
+      "thirdPush": "A böngészőgyártók push-szolgáltatásai: csak ha bekapcsolod a push-értesítéseket — részletek a „Push-értesítések” részben.",
       "thirdHosting": "Tárhely: saját szerver-infrastruktúrán működik TLS fordított proxy-val.",
       "thirdAnthropic": "Anthropic PBC (USA): a Claude nevű MI-modelljével olvassa be a játszmalapok fényképeit — részletek az „MI-szolgáltatások” részben.",
       "thirdTextLlm": "Nyelvimodell-szerver (NVIDIA DGX Spark, Ausztria): játszma-összefoglalókat, hibamagyarázatokat, roastokat és tanfolyam-fordításokat készít, és feldolgozza a „Kérdezd a kommentárokat” kérdéseit; a szervert e weboldal üzemeltetője maga működteti, az adatok nem kerülnek harmadik félhez — részletek az „MI-szolgáltatások” részben.",
       "aiTitle": "MI-szolgáltatások",
-      "aiScoresheet": "Játszmalap beolvasása (a RookHubban a „Játszmalap beolvasása” menüpontban, a LeagueHubban a klubjátszmáknál — ott bejelentkezés nélkül is, megosztási linken keresztül): a fényképet beolvasásra továbbítjuk az egyesült államokbeli Anthropic PBC-nek, amelynek Claude nevű MI-modellje leírja a lépéseket és a fejléc adatait. Ez harmadik országba történő adattovábbítás. Az olvasás az üzemeltető egyik Claude-fiókján keresztül történik; hogy az Anthropic tárolja-e és meddig az adatokat, illetve felhasználja-e őket modelljei fejlesztésére, az e fiók feltételeitől és adatvédelmi beállításaitól függ. Az Anthropickal nincs adatfeldolgozási szerződés. A jogalap számodra a szerződés teljesítése (GDPR 6. cikk (1) b) pont), a játszmalapon szereplő más személyek esetében pedig a lejátszott játszmák rögzítéséhez fűződő jogos érdek (GDPR 6. cikk (1) f) pont). Nálunk a fénykép a RookHubban a játszmánál marad, amíg nem törlöd (ha a beolvasás nem sikerült, amíg nem törlöd a fiókodat). A LeagueHubban eltávolítjuk a beolvasásból, amint azt átveszik vagy elvetik; addig a klub adminisztrátorai is látják a beolvasást a fényképpel együtt. Ezután a fényképet a felismerés által kiolvasott adatokkal és az átvett játszmával együtt 365 napig megőrizzük a beolvasás javítása érdekében (jogos érdek, GDPR 6. cikk (1) f) pont) — az üzemeltetők, valamint a játszma utólagos javításához a feltöltő és a klub adminisztrátorai látják; ezután automatikusan töröljük, a fiókoddal együtt azonnal. A nyitva hagyott beolvasás határidő nélkül megőrzi a fényképet; automatikus törlés nincs. Fénykép nélkül semmi sem kerül az Anthropichoz.",
+      "aiScoresheet": "Játszmalap beolvasása (a RookHubban a „Játszmalap beolvasása” menüpontban, a LeagueHubban a klubjátszmáknál — ott bejelentkezés nélkül is, megosztási linken keresztül): a fényképet beolvasásra továbbítjuk az egyesült államokbeli Anthropic PBC-nek, amelynek Claude nevű MI-modellje leírja a lépéseket és a fejléc adatait. Ez harmadik országba történő adattovábbítás. Az olvasás az üzemeltető egyik Claude-fiókján keresztül történik; hogy az Anthropic tárolja-e és meddig az adatokat, illetve felhasználja-e őket modelljei fejlesztésére, az e fiók feltételeitől és adatvédelmi beállításaitól függ. Az Anthropickal nincs adatfeldolgozási szerződés. A jogalap számodra a szerződés teljesítése (GDPR 6. cikk (1) b) pont), a játszmalapon szereplő más személyek esetében pedig a lejátszott játszmák rögzítéséhez fűződő jogos érdek (GDPR 6. cikk (1) f) pont). Nálunk a fénykép a RookHubban a játszmánál marad, amíg nem törlöd (ha a beolvasás nem sikerült, 30 napig). A LeagueHubban eltávolítjuk a beolvasásból, amint azt átveszik vagy elvetik; addig a klub adminisztrátorai is látják a beolvasást a fényképpel együtt. Ezután a fényképet a felismerés által kiolvasott adatokkal és az átvett játszmával együtt 365 napig megőrizzük a beolvasás javítása érdekében (jogos érdek, GDPR 6. cikk (1) f) pont) — az üzemeltetők, valamint a játszma utólagos javításához a feltöltő és a klub adminisztrátorai látják; ezután automatikusan töröljük, a fiókoddal együtt azonnal. A fiókkal nyitva hagyott beolvasás megőrzi a fényképet, amíg nem törlöd a beolvasást vagy a fiókodat; a fiók nélküli (megosztási linken keresztüli), soha át nem vett beolvasást 14 nap után kiürítjük. Fénykép nélkül semmi sem kerül az Anthropichoz.",
       "aiLocal": "A játszmák összefoglalása, a hibák magyarázata és a „Roast my game” soha nem az Anthropicon keresztül működik, hanem egy különálló, ausztriai nyelvimodell-szerveren (NVIDIA DGX Spark), amelyet e weboldal üzemeltetője maga működtet. Ehhez a játszma adatait titkosítva továbbítjuk oda, az összefoglalásnál és a roastnál a játékosok nevét és Élő-pontszámát is. Az adatok eközben nem kerülnek harmadik félhez. Ugyanezen a szerveren fut a „Kérdezd a kommentárokat” (a kérdésed szövege) és a tanfolyam-fordítás is; a fordítások csak a tanfolyam szövegeit érintik (kommentárok, változatcímek, fejezetnevek), rád vonatkozó adatokat nem.",
       "botTitle": "Discord bot",
       "botIntro": "Ha használod a Discord botunkat, az emellett a következőket kezeli:",
@@ -666,11 +680,98 @@
       "tournamentIntro": "A RookHub és a versenyoldal versenynézeteihez szerverünk nyilvános versenyadatokat kér le a chess-results.com-ról, és egy külön adatbázisban tárolja őket:",
       "tournamentData": "Adatok: a verseny (név, helyszín, időpont, fordulók), a játékosok neve, címe, FIDE azonosítója, Élő-pontszáma, országa, csapata és táblája, valamint a párosítások és az eredmények — olyan személyeké is, akiknek nincs fiókjuk nálunk. A „Klubok pótlása” funkcióval a szerver a FIDE azonosítókhoz a klubot is kikeresi a chess-results.com más versenyeiből.",
       "tournamentRetention": "Tárolási idő: a lekérési feladatokat befejezésük után 30 nappal, a kikeresett klubhozzárendelést az utolsó frissítése után 180 nappal töröljük. A versenyeket a játékosokkal, párosításokkal és eredményekkel együtt jelenleg rögzített határidő nélkül tároljuk, mert a RookHub hivatkozik rájuk.",
+      "logsTitle": "Szervernaplók",
+      "logsIntro": "A szerverünk minden kérést naplóz, hogy megtalálja a hibákat, kivédje a visszaéléseket és megszámolja a használatot. Egy bejegyzés tartalmazza:",
+      "logsContent": "az IP-címet, a böngészőt és az eszközt (user agent), a lekért címet időponttal és eredménnyel, valamint egy látogatóazonosítót. Ha be vagy jelentkezve, a felhasználóneved és a felhasználói számod olvasható formában szerepel benne — az azonosító tehát nem álnevesített. Bejelentkezés nélkül ez az a véletlen azonosító, amelyet a böngésződ a fiók nélküli feladványokhoz hoz létre.",
+      "logsEmail": "Ha e-mailt küldünk neked (például a jelszó visszaállításához), az e-mail-címed és a tárgy a naplóban szerepel.",
+      "logsAccess": "A naplók a saját üzemeltetésű Elasticsearch-ünkben vannak; csak az üzemeltető tekinthet beléjük. Nem adjuk tovább és nem használjuk reklámra őket.",
+      "logsRetention": "90 nap után automatikusan töröljük őket (legkésőbb egy héttel később). Ha törlöd a fiókodat, a már megírt bejegyzések e határidő végéig megmaradnak.",
       "storageTitle": "Helyi tárolás (sütik/tárhely)",
       "storage": "Nem használunk nyomkövető sütiket. A böngésző tárhelye (localStorage) tartalmazza pl. a bejelentkezési tokenedet, beállításokat és – ha engedélyezve van – az offline feladványokat. Ezek az eszközödön maradnak.",
+      "storageLogout": "Kijelentkezéskor töröljük az eszközről azt, ami a fiókodhoz tartozik, például a gyorsítótárazott tartalmat és a helyi haladást. Az eszközbeállítások, mint a nyelv, a tábla, a téma, a felület mérete és az e-ink mód, megmaradnak. A még el nem küldött megoldások szintén megmaradnak, és csak ugyanannak a fióknak a következő bejelentkezésekor mennek el.",
       "retentionTitle": "Megőrzés és törlés",
       "retention": "A fiókadatokat a fiók törléséig tároljuk. Fiókod bármikor törölheted – a személyazonosság és személyes adatok törlődnek, az anonimizált statisztikák megmaradnak. Bővebben:",
       "retentionLink": "Így törölheted a fiókodat",
+      "periodsIntro": "A határidők részletesen:",
+      "periodsColData": "Adatok",
+      "periodsColPeriod": "Határidő",
+      "periodsGroupAccount": "Fiókkal",
+      "periodsGroupAnon": "Fiók nélkül",
+      "periodsGroupOther": "Naplók és biztonsági mentések",
+      "periods": {
+        "account": {
+          "data": "Fiók, profil, haladás és saját tartalmak",
+          "period": "amíg nem törlöd a fiókot"
+        },
+        "notifications": {
+          "data": "Olvasott értesítések",
+          "period": "180 nap"
+        },
+        "messages": {
+          "data": "Üzenetek az adminisztrátori csapattal",
+          "period": "olvasott: 365 nap, olvasatlan: elolvasásig"
+        },
+        "scoresheetFailed": {
+          "data": "Sikertelen beolvasás játszmalap-fotói",
+          "period": "30 nap"
+        },
+        "scoresheetSaved": {
+          "data": "Átvett játszma játszmalap-fotója (RookHub)",
+          "period": "amíg nem törlöd a játszmát, a beolvasást vagy a fiókodat"
+        },
+        "scoresheetArchive": {
+          "data": "A ligabeolvasások játszmalap-archívuma",
+          "period": "365 nap"
+        },
+        "sharedLogin": {
+          "data": "Közös bejelentkezés az összes RookHub-oldalhoz",
+          "period": "30 nap"
+        },
+        "linkCodes": {
+          "data": "Összekapcsolási kódok (Discord, illetve ClubHub)",
+          "period": "30, illetve 14 nap"
+        },
+        "endless": {
+          "data": "Végtelen mód állásai",
+          "period": "60 nap használat nélkül"
+        },
+        "attempts": {
+          "data": "Feladvány-, könyv- és napi feladvány-kísérletek, lépéstippelő játszmák",
+          "period": "90 nap"
+        },
+        "extension": {
+          "data": "Kurzusvonalak a böngészőbővítményből",
+          "period": "90 nap (összekapcsolt fiók nélkül 14 nap)"
+        },
+        "leagueDrafts": {
+          "data": "Ligatervezetek megosztási linken keresztül",
+          "period": "30 nap szerkesztés nélkül"
+        },
+        "scoresheetAnon": {
+          "data": "Játszmalap-fotók megosztási linken keresztül, soha át nem véve",
+          "period": "14 nap"
+        },
+        "ipHash": {
+          "data": "Az IP-cím ellenőrző értéke játszmalapok feltöltésekor",
+          "period": "2 nap"
+        },
+        "ebooks": {
+          "data": "Feltöltött e-könyvek olvasási helyzettel együtt",
+          "period": "30 nap"
+        },
+        "logs": {
+          "data": "Szervernaplók",
+          "period": "90 nap"
+        },
+        "backups": {
+          "data": "Adatbázis-mentések",
+          "period": "14 nap"
+        },
+        "botDm": {
+          "data": "Közvetlen üzenetek a Discord-bottal",
+          "period": "30 nap"
+        }
+      },
       "rightsTitle": "Jogaid",
       "rights": "Jogod van hozzáférni, helyesbíteni, törölni, korlátozni, adathordozhatósághoz, tiltakozni, valamint panaszt benyújtani egy felügyeleti hatóságnál (Ausztriában: az Adatvédelmi Hatóságnál).",
       "contactTitle": "Kapcsolat",

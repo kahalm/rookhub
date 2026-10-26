@@ -860,7 +860,7 @@
     "privacy": {
       "title": "Pravila o privatnosti",
       "link": "Pravila o privatnosti",
-      "updated": "Zadnja izmjena: 1. listopada 2026.",
+      "updated": "Zadnja izmjena: 26. listopada 2026.",
       "tocTitle": "Sadržaj",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
       "introLeagueHub": "LeagueHub (dio RookHuba) izrađuje prognoze postava za ekipne mečeve i vodi bazu partija klubova sudionika. Račun je isti kao na RookHubu. Ova izjava objašnjava obradu osobnih podataka prema GDPR-u.",
@@ -880,6 +880,9 @@
       "kidAccount": "S računom spremamo tvoj napredak u tvoj račun, kako bi mogao nastaviti igrati na drugom uređaju. To je isti račun kao na RookHubu. Kad se odjaviš, napredak se briše s uređaja, a u računu ostaje.",
       "kidParents": "Račun molimo otvori samo uz dopuštenje svojih roditelja. Roditelji mogu u bilo kojem trenutku zatražiti brisanje računa — dovoljna je poruka na adresu ispod.",
       "kidNoTracking": "KidHub ne prikazuje oglase, ne koristi kolačiće za praćenje i nema chat. Da bismo odabrali odgovarajući jezik, jednom provjerimo iz koje zemlje dolazi tvoja internetska adresa — pritom se ona ne sprema.",
+      "kidVisibility": "Drugi prijavljeni korisnici RookHuba mogu pronaći tvoje korisničko ime. Zato odaberi nadimak, a ne svoje pravo ime.",
+      "kidLogs": "Naš poslužitelj bilježi koje se stranice otvaraju — ako si prijavljen, s tvojim korisničkim imenom. To se briše nakon 90 dana.",
+      "kidPeriods": "Koliko dugo što čuvamo piše dolje pod „Zadržavanje i brisanje“.",
       "kidDetails": "Za roditelje: sljedeći odjeljci detaljno opisuju koje podatke obrađujemo. KidHub račun isti je račun kao na RookHubu, pa vrijede za obje stranice.",
       "controllerTitle": "Voditelj obrade",
       "controllerNamed": "Voditelj obrade podataka je operater ove web-stranice, dostupan na:",
@@ -901,22 +904,33 @@
       "dataAccount": "Podaci računa: korisničko ime, adresa e-pošte, lozinka (pohranjena samo kao hash).",
       "dataProfile": "Podaci profila (neobavezno): prikazno/pravo ime, FIDE ID, ChessResults ID, Chess.com/Lichess korisničko ime, neobavezna Discord veza.",
       "dataUsage": "Podaci o korištenju: riješene zagonetke, napredak i statistika u beskonačnom načinu/tečajevima, rejting igre, vremenska oznaka prijave.",
-      "dataTechnical": "Tehnički podaci: IP adresa, zahtijevane krajnje točke s vremenskim oznakama i pseudonimni identifikator posjetitelja (mjerenje dosega) u zapisima poslužitelja.",
+      "dataTechnical": "Tehnički podaci: IP adresa, preglednik i uređaj, zahtijevane adrese s vremenom i identifikator posjetitelja u zapisima poslužitelja — kad si prijavljen, s tvojim korisničkim imenom (pojedinosti pod „Zapisi poslužitelja“).",
       "dataIpCountry": "KidHub (dječja stranica): ako jezik preglednika nije jedan od jezika stranice, iz IP adrese određuje se zemlja kako bi se odabrao odgovarajući — lokalno na našem poslužitelju s popisom zemalja DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Adresa se pritom ne prosljeđuje niti pohranjuje.",
       "dataScoresheet": "Fotografije zapisnika partija, ako daš učitati partiju — sa svime što je na njima, npr. imenima obaju igrača, turnirom, datumom i potpisima.",
       "purposesTitle": "Svrhe i pravne osnove",
       "purposes": "Pružanje računa i funkcija (izvršenje ugovora, čl. 6(1)(b) GDPR-a) te operativna sigurnost, analiza pogrešaka i mjerenje dosega putem zapisa (legitimni interes, čl. 6(1)(f) GDPR-a).",
+      "visibilityTitle": "Što vide drugi korisnici",
+      "visibilitySearch": "Pretraga korisnika: svaki prijavljeni račun može te pronaći — po korisničkom imenu, prikaznom imenu ili imenu na Chess.com odnosno Lichessu (dovoljan je dio imena) te po početku tvojeg FIDE ID-a ili ChessResults ID-a. Rezultat prikazuje te podatke ako si ih unio u profil.",
+      "visibilityLeaderboards": "Ljestvice: prijavljeni računi ondje vide tvoje prikazno ime (bez prikaznog imena tvoje korisničko ime) s tvojim brojkama.",
+      "visibilityFriends": "Prijatelji: tek kad je zahtjev za prijateljstvo prihvaćen, prijatelj vidi tvoju statistiku zagonetki, zagonetke na kojima si pogriješio („Revenge“) i tvoju turnirsku povijest.",
+      "visibilityGuests": "Bez prijave tvoj profil nije dostupan.",
+      "messagesTitle": "Poruke administratorskom timu",
+      "messages": "Ako pišeš administratorskom timu ili on piše tebi, spremamo poruke s vremenom. Čitati ih možeš ti i svaki račun koji smije obrađivati poruke — administratori i osobe kojima su to povjerili. Pročitane poruke brišemo nakon 365 dana, nepročitane ostaju dok se ne pročitaju; s tvojim računom brišu se sve.",
+      "pushTitle": "Push obavijesti",
+      "push": "Ako uključiš push obavijesti, push usluga tvojeg preglednika dodjeljuje adresu za primanje (za Chrome Google, za Edge Microsoft, za Firefox Mozilla, za Safari Apple), koju spremamo uz tvoj račun. Svaku obavijest naš poslužitelj šalje preko te usluge; njezin sadržaj je šifriran, a usluga vidi samo adresu za primanje, vrijeme i veličinu. Neki od tih pružatelja nalaze se u SAD-u (prijenos u treću zemlju). Ako isključiš push, izbrišeš račun ili usluga prijavi adresu kao nevažeću, brišemo je.",
       "thirdTitle": "Primatelji / usluge trećih strana",
       "thirdIntro": "Podaci se ne prodaju. Ovisno o korištenju, uključene su sljedeće usluge:",
       "thirdDiscord": "Discord: samo pri dobrovoljnom povezivanju računa (Discord ID/ime) za prikaz u RookHub Discord botu.",
       "thirdChessresults": "chess-results.com: podaci o turnirima dohvaćaju se na strani poslužitelja kada postaviš ChessResults ID ili učitaš turnire.",
+      "thirdChesstools": "api.chesstools.org: kad tražiš igrača na FIDE rejting listi (npr. u profilu ili za turnirsku povijest), naš poslužitelj šalje uneseno ime (prezime, ime) toj usluzi i dobiva odgovarajuće unose s FIDE liste. Tvoja IP adresa i tvoj račun pritom se ne prenose.",
       "thirdChesssites": "Chess.com / Lichess: ako u profilu spremiš korisničko ime za te platforme, naš poslužitelj automatski šalje upite njihovim javnim sučeljima za partije — u pozadini prema zadanim postavkama svakih 6 sati dok je za tebe aktivan tjedni cilj „partije“, te pri ručnoj sinkronizaciji u ciljevima treninga. Pritom se tvoje korisničko ime na toj platformi prenosi njoj; chess.com vodi pružatelj iz SAD-a (prijenos u treću zemlju). Pohranjujemo samo broj tvojih rapid/klasičnih partija po danu i vrijeme zadnje dohvaćene partije — nikakve poteze partija. Ukloniš li korisničko ime u profilu, dohvat izostaje.",
       "thirdLogging": "Elasticsearch/Kibana: vlastito hostano evidentiranje/nadzor na našoj infrastrukturi.",
+      "thirdPush": "Push usluge proizvođača preglednika: samo ako uključiš push obavijesti — pojedinosti pod „Push obavijesti“.",
       "thirdHosting": "Hosting: rad na vlastitoj serverskoj infrastrukturi s TLS reverznim proxyjem.",
       "thirdAnthropic": "Anthropic PBC (SAD): čita fotografije zapisnika partija svojim AI modelom Claude — pojedinosti pod „AI usluge“.",
       "thirdTextLlm": "Poslužitelj jezičnog modela (NVIDIA DGX Spark, Austrija): izrađuje prepričavanja partija, objašnjenja pogrešaka, roastove i prijevode tečajeva te obrađuje pitanja za „Pitaj komentare“; poslužitelj vodi sam operater ove web-stranice, podaci se ne prosljeđuju trećima — pojedinosti pod „AI usluge“.",
       "aiTitle": "AI usluge",
-      "aiScoresheet": "Učitavanje zapisnika partije (u RookHubu putem „Učitaj zapisnik partije“, u LeagueHubu kod klupskih partija — ondje i bez prijave putem poveznice za dijeljenje): fotografija se radi čitanja prenosi tvrtki Anthropic PBC u SAD-u, čiji AI model Claude prepisuje poteze i podatke zaglavlja. To je prijenos u treću zemlju. Čitanje se odvija preko Claude računa operatera; hoće li i koliko dugo Anthropic pohranjuje podatke te koristi li ih za poboljšanje svojih modela, ovisi o uvjetima i postavkama privatnosti tog računa. S tvrtkom Anthropic ne postoji ugovor o obradi podataka. Pravna osnova za tebe je izvršenje ugovora (čl. 6(1)(b) GDPR-a), a za druge osobe na zapisniku legitimni interes za bilježenje odigranih partija (čl. 6(1)(f) GDPR-a). Kod nas fotografija u RookHubu ostaje uz partiju dok je ne izbrišeš (ako učitavanje nije uspjelo, dok ne izbrišeš svoj račun). U LeagueHubu uklanja se iz učitavanja čim se ono preuzme ili odbaci; do tada učitavanje zajedno s fotografijom vide i administratori kluba. Nakon toga fotografiju zajedno s onim što je prepoznavanje pročitalo i preuzetom partijom čuvamo 365 dana radi poboljšanja učitavanja (legitimni interes, čl. 6(1)(f) GDPR-a) — vide je operateri te, radi naknadnog ispravljanja partije, onaj tko ju je prenio i administratori kluba; zatim se automatski briše, a s tvojim računom odmah. Učitavanje koje ostane otvoreno zadržava fotografiju bez roka; automatskog brisanja nema. Bez fotografije ništa se ne prenosi tvrtki Anthropic.",
+      "aiScoresheet": "Učitavanje zapisnika partije (u RookHubu putem „Učitaj zapisnik partije“, u LeagueHubu kod klupskih partija — ondje i bez prijave putem poveznice za dijeljenje): fotografija se radi čitanja prenosi tvrtki Anthropic PBC u SAD-u, čiji AI model Claude prepisuje poteze i podatke zaglavlja. To je prijenos u treću zemlju. Čitanje se odvija preko Claude računa operatera; hoće li i koliko dugo Anthropic pohranjuje podatke te koristi li ih za poboljšanje svojih modela, ovisi o uvjetima i postavkama privatnosti tog računa. S tvrtkom Anthropic ne postoji ugovor o obradi podataka. Pravna osnova za tebe je izvršenje ugovora (čl. 6(1)(b) GDPR-a), a za druge osobe na zapisniku legitimni interes za bilježenje odigranih partija (čl. 6(1)(f) GDPR-a). Kod nas fotografija u RookHubu ostaje uz partiju dok je ne izbrišeš (ako učitavanje nije uspjelo, 30 dana). U LeagueHubu uklanja se iz učitavanja čim se ono preuzme ili odbaci; do tada učitavanje zajedno s fotografijom vide i administratori kluba. Nakon toga fotografiju zajedno s onim što je prepoznavanje pročitalo i preuzetom partijom čuvamo 365 dana radi poboljšanja učitavanja (legitimni interes, čl. 6(1)(f) GDPR-a) — vide je operateri te, radi naknadnog ispravljanja partije, onaj tko ju je prenio i administratori kluba; zatim se automatski briše, a s tvojim računom odmah. Otvoreno učitavanje s računom zadržava fotografiju dok ne izbrišeš njega ili svoj račun; učitavanje bez računa (poveznica za dijeljenje) koje nikad nije preuzeto praznimo nakon 14 dana. Bez fotografije ništa se ne prenosi tvrtki Anthropic.",
       "aiLocal": "Prepričavanja partija, objašnjenja pogrešaka i „Roast my game“ nikad ne rade preko tvrtke Anthropic, nego na zasebnom poslužitelju jezičnog modela (NVIDIA DGX Spark) u Austriji, koji vodi sam operater ove web-stranice. Za to se podaci o partiji šifrirano prenose onamo, kod prepričavanja i roasta i imena igrača s njihovim Elo rejtingom. Podaci se pritom ne prosljeđuju trećima. Na istom poslužitelju rade i „Pitaj komentare“ (tekst tvog pitanja) i prijevodi tečajeva; prijevodi se odnose samo na tekstove tečaja (komentare, naslove linija, nazive poglavlja), ne na podatke o tebi.",
       "botTitle": "Discord bot",
       "botIntro": "Ako koristiš naš Discord bot, on dodatno obrađuje:",
@@ -927,11 +941,98 @@
       "tournamentIntro": "Za prikaze turnira u RookHubu i na stranici turnira naš poslužitelj dohvaća javne podatke o turnirima s chess-results.com i pohranjuje ih u zasebnu bazu podataka:",
       "tournamentData": "Podaci: turnir (naziv, mjesto, termin, kola), igračice i igrači s imenom, titulom, FIDE ID-om, Elom, državom, ekipom i pločom te parovi i rezultati — i za osobe koje kod nas nemaju račun. Pomoću „Dopuni klubove“ poslužitelj za FIDE ID-ove dodatno traži klub u drugim turnirima na chess-results.com.",
       "tournamentRetention": "Rok pohrane: naloge za dohvat brišemo 30 dana nakon njihova završetka, a pronađenu pripadnost klubu 180 dana nakon posljednjeg osvježavanja. Turniri s igračima, parovima i rezultatima zasad se čuvaju bez fiksnog roka jer se RookHub na njih poziva.",
+      "logsTitle": "Zapisi poslužitelja",
+      "logsIntro": "Naš poslužitelj bilježi svaki zahtjev kako bi pronašao pogreške, spriječio zlouporabu i brojio korištenje. Zapis sadrži:",
+      "logsContent": "IP adresu, preglednik i uređaj (user agent), zahtijevanu adresu s vremenom i rezultatom te identifikator posjetitelja. Ako si prijavljen, uz to stoje tvoje korisničko ime i tvoj korisnički broj u čitljivom obliku — identifikator dakle nije pseudonim. Bez prijave to je slučajni identifikator koji tvoj preglednik stvara za zagonetke bez računa.",
+      "logsEmail": "Kad ti pošaljemo e-poruku (npr. za ponovno postavljanje lozinke), tvoja adresa e-pošte i predmet stoje u zapisu.",
+      "logsAccess": "Zapisi se nalaze u našem vlastito hostanom Elasticsearchu; uvid u njih ima samo operater. Ne prosljeđuju se i ne koriste se za oglašavanje.",
+      "logsRetention": "Automatski se brišu nakon 90 dana (najkasnije tjedan dana poslije). Ako izbrišeš račun, već zapisani unosi ostaju do isteka tog roka.",
       "storageTitle": "Lokalna pohrana (kolačići/pohrana)",
       "storage": "Ne koristimo kolačiće za praćenje. Pohrana preglednika (localStorage) sadrži npr. tvoj token za prijavu, postavke i — ako je omogućeno — zagonetke za offline igranje. Ovi podaci ostaju na tvojem uređaju.",
+      "storageLogout": "Kad se odjaviš, s uređaja brišemo ono što pripada tvojem računu, npr. privremeno spremljeni sadržaj i lokalni napredak. Postavke uređaja poput jezika, ploče, izgleda, veličine sučelja i e-ink načina ostaju. Rješenja koja još nisu poslana također ostaju i šalju se tek pri sljedećoj prijavi istog računa.",
       "retentionTitle": "Zadržavanje i brisanje",
       "retention": "Podaci računa pohranjuju se do brisanja tvojeg računa. Račun možeš izbrisati u bilo kojem trenutku — identitet i osobni podaci uklanjaju se, anonimizirana statistika zadržava se. Više:",
       "retentionLink": "Kako izbrisati račun",
+      "periodsIntro": "Rokovi pojedinačno:",
+      "periodsColData": "Podaci",
+      "periodsColPeriod": "Rok",
+      "periodsGroupAccount": "S računom",
+      "periodsGroupAnon": "Bez računa",
+      "periodsGroupOther": "Zapisi i sigurnosne kopije",
+      "periods": {
+        "account": {
+          "data": "Račun, profil, napredak i vlastiti sadržaj",
+          "period": "dok ne izbrišeš račun"
+        },
+        "notifications": {
+          "data": "Pročitane obavijesti",
+          "period": "180 dana"
+        },
+        "messages": {
+          "data": "Poruke s administratorskim timom",
+          "period": "pročitane 365 dana, nepročitane dok se ne pročitaju"
+        },
+        "scoresheetFailed": {
+          "data": "Fotografije zapisnika neuspjelog učitavanja",
+          "period": "30 dana"
+        },
+        "scoresheetSaved": {
+          "data": "Fotografija zapisnika preuzete partije (RookHub)",
+          "period": "dok ne izbrišeš partiju, učitavanje ili račun"
+        },
+        "scoresheetArchive": {
+          "data": "Arhiva zapisnika ligaških učitavanja",
+          "period": "365 dana"
+        },
+        "sharedLogin": {
+          "data": "Zajednička prijava za sve RookHub stranice",
+          "period": "30 dana"
+        },
+        "linkCodes": {
+          "data": "Kodovi za povezivanje s Discordom odnosno ClubHubom",
+          "period": "30 odnosno 14 dana"
+        },
+        "endless": {
+          "data": "Stanja beskonačnog načina",
+          "period": "60 dana bez korištenja"
+        },
+        "attempts": {
+          "data": "Pokušaji zagonetki, zagonetki iz knjiga i dnevnih zagonetki, partije pogađanja poteza",
+          "period": "90 dana"
+        },
+        "extension": {
+          "data": "Linije tečajeva iz proširenja preglednika",
+          "period": "90 dana (bez povezanog računa 14 dana)"
+        },
+        "leagueDrafts": {
+          "data": "Ligaški nacrti putem poveznice za dijeljenje",
+          "period": "30 dana bez uređivanja"
+        },
+        "scoresheetAnon": {
+          "data": "Fotografije zapisnika putem poveznice za dijeljenje, nikad preuzete",
+          "period": "14 dana"
+        },
+        "ipHash": {
+          "data": "Kontrolna vrijednost IP adrese pri prijenosu zapisnika",
+          "period": "2 dana"
+        },
+        "ebooks": {
+          "data": "Preneseni e-knjige s mjestom čitanja",
+          "period": "30 dana"
+        },
+        "logs": {
+          "data": "Zapisi poslužitelja",
+          "period": "90 dana"
+        },
+        "backups": {
+          "data": "Sigurnosne kopije baze podataka",
+          "period": "14 dana"
+        },
+        "botDm": {
+          "data": "Izravne poruke s Discord botom",
+          "period": "30 dana"
+        }
+      },
       "rightsTitle": "Tvoja prava",
       "rights": "Imaš pravo na pristup, ispravak, brisanje, ograničenje, prenosivost podataka i prigovor, kao i pravo podnošenja pritužbe nadzornom tijelu (u Austriji: Datenschutzbehörde).",
       "contactTitle": "Kontakt",

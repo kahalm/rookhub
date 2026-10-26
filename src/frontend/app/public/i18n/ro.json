@@ -259,7 +259,6 @@
       "dataAccount": "Date de cont: nume utilizator, adresă de email, parolă (stocată doar ca hash).",
       "dataProfile": "Date de profil (opționale): nume afișat/real, ID FIDE, ID ChessResults, nume utilizator Chess.com/Lichess, link Discord opțional.",
       "dataUsage": "Date de utilizare: probleme rezolvate, progres și statistici infinite/curs, rating de joc, marcaje de timp la conectare.",
-      "dataTechnical": "Date tehnice: adresă IP, endpoint-uri solicitate cu marcaje de timp și un identificator de vizitator pseudonim (măsurarea audiențe) în jurnalele serverului.",
       "purposesTitle": "Scopuri și temeiuri legale",
       "purposes": "Furnizarea contului și a funcțiilor (executarea unui contract, art. 6 alin. (1) lit. (b) GDPR), precum și securitate operațională, analiză a erorilor și măsurarea audienței prin jurnale (interes legitim, art. 6 alin. (1) lit. (f) GDPR).",
       "thirdTitle": "Destinatari / servicii terțe",

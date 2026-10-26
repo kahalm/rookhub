@@ -259,7 +259,6 @@
       "dataAccount": "Accountgegevens: gebruikersnaam, e-mailadres, wachtwoord (alleen als hash opgeslagen).",
       "dataProfile": "Profielgegevens (optioneel): weergave-/echte naam, FIDE ID, ChessResults ID, Chess.com/Lichess-gebruikersnaam, optionele Discord-koppeling.",
       "dataUsage": "Gebruiksgegevens: opgeloste puzzels, voortgang en statistieken van eindeloze modus/cursussen, speelrating, inlogtijdstippen.",
-      "dataTechnical": "Technische gegevens: IP-adres, opgevraagde endpoints met tijdstippen en een pseudonieme bezoekersidentificator (bereiksmeting) in serverlogboeken.",
       "purposesTitle": "Doeleinden & juridische grondslagen",
       "purposes": "Het verlenen van het account en de functies (uitvoering van een overeenkomst, art. 6 lid 1 sub b AVG) alsmede operationele beveiliging, foutanalyse en bereiksmeting via logboeken (gerechtvaardigd belang, art. 6 lid 1 sub f AVG).",
       "thirdTitle": "Ontvangers / diensten van derden",

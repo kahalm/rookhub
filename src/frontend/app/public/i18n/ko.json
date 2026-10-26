@@ -259,7 +259,6 @@
       "dataAccount": "계정 데이터: 사용자명, 이메일 주소, 비밀번호(해시로만 저장).",
       "dataProfile": "프로필 데이터(선택): 표시/실명, FIDE ID, ChessResults ID, Chess.com/Lichess 사용자명, 선택적 Discord 연결.",
       "dataUsage": "사용 데이터: 풀은 퍼즐, 무한/코스 진행 현황 및 통계, 플레이 등급, 로그인 타임스탬프.",
-      "dataTechnical": "기술 데이터: IP 주소, 요청된 엔드포인트(타임스탬프 포함) 및 서버 로그의 가명 방문자 식별자(도달 측정).",
       "purposesTitle": "목적 및 법적 근거",
       "purposes": "계정 및 기능 제공(계약 이행, GDPR 제6조 제1항 제b호) 및 로그를 통한 운영 보안, 오류 분석, 도달 측정(정당한 이익, GDPR 제6조 제1항 제f호).",
       "thirdTitle": "수신자 / 제3자 서비스",

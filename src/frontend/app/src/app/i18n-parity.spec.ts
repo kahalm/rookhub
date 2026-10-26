@@ -293,7 +293,9 @@ describe('i18n Sprachdateien', () => {
       'legal.privacy.controllerTitle': 'a15e8ea1',
       'legal.privacy.dataTitle': 'df172352', 'legal.privacy.dataIntro': 'f6c135d3',
       'legal.privacy.dataAccount': '07a9ced8', 'legal.privacy.dataProfile': 'acf57914',
-      'legal.privacy.dataUsage': 'e3661c7e', 'legal.privacy.dataTechnical': '22f3e113',
+      // legal.privacy.dataTechnical fehlt seit R-2 a (2026-10-26): „pseudonyme Besucher-Kennung“ stimmte nicht (A10-009),
+      // die Teilsprachen zeigen den neuen en-Text.
+      'legal.privacy.dataUsage': 'e3661c7e',
       'legal.privacy.purposesTitle': '8f067ecb', 'legal.privacy.purposes': '74d5163f',
       'legal.privacy.thirdTitle': '0883fee4', 'legal.privacy.thirdIntro': '66056906',
       'legal.privacy.thirdDiscord': 'd11a95bf', 'legal.privacy.thirdChessresults': 'c7a5e460',

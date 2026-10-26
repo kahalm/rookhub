@@ -259,7 +259,6 @@
       "dataAccount": "Hesap verileri: kullanıcı adı, e-posta adresi, şifre (yalnızca özet olarak saklanır).",
       "dataProfile": "Profil verileri (isteğe bağlı): görünen/gerçek ad, FIDE ID, ChessResults ID, Chess.com/Lichess kullanıcı adı, isteğe bağlı Discord bağlantısı.",
       "dataUsage": "Kullanım verileri: çözülen problemler, sonsuz/kurs ilerleme ve istatistikleri, oyun derecesi, giriş zaman damgaları.",
-      "dataTechnical": "Teknik veriler: IP adresi, zaman damgalı istek edilen uç noktalar ve sunucu günlüklerinde takma adlı ziyaretçi tanımlayıcısı (erişim ölçümü).",
       "purposesTitle": "Amaçlar ve hukuki dayanaklar",
       "purposes": "Hesap ve özelliklerin sağlanması (sözleşmenin ifası, GDPR Madde 6(1)(b)) ile günlükler aracılığıyla operasyonel güvenlik, hata analizi ve erişim ölçümü (meşru menfaat, GDPR Madde 6(1)(f)).",
       "thirdTitle": "Alıcılar / üçüncü taraf hizmetler",

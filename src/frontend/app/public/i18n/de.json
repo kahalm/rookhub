@@ -860,7 +860,7 @@
     "privacy": {
       "title": "Datenschutzerklärung",
       "link": "Datenschutzerklärung",
-      "updated": "Stand: 1. Oktober 2026",
+      "updated": "Stand: 26. Oktober 2026",
       "tocTitle": "Inhalt",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
       "introLeagueHub": "LeagueHub (Teil von RookHub) erstellt Aufstellungs-Prognosen für Mannschaftskämpfe und führt die Partiedatenbank teilnehmender Vereine. Das Konto ist dasselbe wie bei RookHub. Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
@@ -880,6 +880,9 @@
       "kidAccount": "Mit Konto speichern wir deinen Fortschritt in deinem Konto, damit du auf einem anderen Gerät weiterspielen kannst. Es ist dasselbe Konto wie bei RookHub. Beim Abmelden wird der Fortschritt vom Gerät gelöscht, im Konto bleibt er.",
       "kidParents": "Ein Konto bitte nur mit Erlaubnis deiner Eltern anlegen. Eltern können das Konto jederzeit löschen lassen — eine Nachricht an die Adresse unten genügt.",
       "kidNoTracking": "KidHub zeigt keine Werbung, verwendet keine Tracking-Cookies und hat keinen Chat. Um eine passende Sprache zu wählen, schauen wir einmal nach, aus welchem Land deine Internet-Adresse kommt — gespeichert wird sie dafür nicht.",
+      "kidVisibility": "Andere angemeldete Nutzer von RookHub können deinen Benutzernamen finden. Nimm darum einen Spitznamen, nicht deinen echten Namen.",
+      "kidLogs": "Unser Server schreibt mit, welche Seiten aufgerufen werden — wenn du angemeldet bist, mit deinem Benutzernamen. Nach 90 Tagen wird das gelöscht.",
+      "kidPeriods": "Wie lange wir was aufheben, steht unten unter „Speicherdauer & Löschung“.",
       "kidDetails": "Für Eltern: Die folgenden Abschnitte beschreiben ausführlich, welche Daten wir verarbeiten. Das KidHub-Konto ist dasselbe Konto wie bei RookHub, deshalb gelten sie für beide Seiten.",
       "controllerTitle": "Verantwortlicher",
       "controllerNamed": "Verantwortlich für die Datenverarbeitung ist der Betreiber dieser Website, erreichbar unter:",
@@ -901,22 +904,33 @@
       "dataAccount": "Kontodaten: Benutzername, E-Mail-Adresse, Passwort (nur als Hash gespeichert).",
       "dataProfile": "Profildaten (freiwillig): Anzeige-⁠/Klarname, FIDE-ID, ChessResults-ID, Chess.com-⁠/Lichess-Benutzername, optionale Discord-Verknüpfung.",
       "dataUsage": "Nutzungsdaten: gelöste Puzzles, Endless-⁠/Kurs-Fortschritt und -⁠Statistiken, Spiel-Elo, Login-Zeitpunkte.",
-      "dataTechnical": "Technische Daten: IP-Adresse, abgerufene Endpunkte mit Zeitstempel und eine pseudonyme Besucher-Kennung (Reichweitenmessung) in Server-Logs.",
+      "dataTechnical": "Technische Daten: IP-Adresse, Browser und Gerät, abgerufene Adressen mit Zeitpunkt und eine Besucher-Kennung in den Protokollen des Servers — angemeldet mit deinem Benutzernamen (Einzelheiten unter „Server-Protokolle“).",
       "dataIpCountry": "KidHub (Kinderseite): Ist die Sprache des Browsers keine der Sprachen der Seite, wird aus der IP-Adresse das Land bestimmt, um eine passende zu wählen — lokal auf unserem Server mit der Länderliste von DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Die Adresse wird dafür weder weitergegeben noch gespeichert.",
       "dataScoresheet": "Fotos von Partieformularen, wenn du eine Partie einlesen lässt — mit allem, was darauf steht, etwa den Namen beider Spieler, Turnier, Datum und Unterschriften.",
       "purposesTitle": "Zwecke & Rechtsgrundlagen",
       "purposes": "Bereitstellung von Konto und Funktionen (Vertragserfüllung, Art. 6 Abs. 1 lit. b DSGVO) sowie Betriebssicherheit, Fehleranalyse und Reichweitenmessung über Logs (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO).",
+      "visibilityTitle": "Was andere Nutzer sehen",
+      "visibilitySearch": "Nutzersuche: Jedes angemeldete Konto kann dich finden — über deinen Benutzernamen, deinen Anzeigenamen oder deinen Chess.com- bzw. Lichess-Namen (ein Teil des Namens genügt) sowie über den Anfang deiner FIDE-ID oder ChessResults-ID. Der Treffer zeigt diese Angaben, soweit du sie im Profil eingetragen hast.",
+      "visibilityLeaderboards": "Bestenlisten: Angemeldete Konten sehen dort deinen Anzeigenamen (ohne Anzeigenamen deinen Benutzernamen) mit deinen Zahlen.",
+      "visibilityFriends": "Freunde: Erst wenn eine Freundschaftsanfrage angenommen ist, sieht der Freund deine Puzzle-Statistik, die Puzzles, an denen du gescheitert bist („Revenge“), und deinen Turnierverlauf.",
+      "visibilityGuests": "Ohne Anmeldung ist dein Profil nicht abrufbar.",
+      "messagesTitle": "Nachrichten an das Admin-Team",
+      "messages": "Schreibst du dem Admin-Team oder schreibt es dir, speichern wir die Nachrichten mit Zeitpunkt. Lesen können sie du und alle Konten, die Nachrichten bearbeiten dürfen — die Administratoren und von ihnen damit beauftragte Personen. Gelesene Nachrichten löschen wir nach 365 Tagen, ungelesene bleiben, bis sie gelesen sind; mit deinem Konto gehen alle.",
+      "pushTitle": "Push-Benachrichtigungen",
+      "push": "Schaltest du Push-Benachrichtigungen ein, vergibt der Push-Dienst deines Browsers eine Empfangsadresse (bei Chrome Google, bei Edge Microsoft, bei Firefox Mozilla, bei Safari Apple), die wir mit deinem Konto speichern. Jede Benachrichtigung schickt unser Server über diesen Dienst; ihr Inhalt ist verschlüsselt, der Dienst sieht nur Empfangsadresse, Zeitpunkt und Größe. Die Anbieter sitzen teils in den USA (Übermittlung in ein Drittland). Schaltest du Push ab, löschst du dein Konto oder meldet der Dienst die Adresse als ungültig, löschen wir sie.",
       "thirdTitle": "Empfänger / Drittdienste",
       "thirdIntro": "Daten werden nicht verkauft. Je nach Nutzung sind folgende Dienste eingebunden:",
       "thirdDiscord": "Discord: nur bei freiwilliger Konto-Verknüpfung (Discord-ID/-Name) zur Anzeige im RookHub-Discord-Bot.",
       "thirdChessresults": "chess-results.com: serverseitiger Abruf von Turnierdaten, wenn du eine ChessResults-ID hinterlegst oder Turniere abrufst.",
+      "thirdChesstools": "api.chesstools.org: Suchst du einen Spieler in der FIDE-Wertungsliste (etwa im Profil oder für den Turnierverlauf), schickt unser Server den eingegebenen Namen (Nachname, Vorname) an diesen Dienst und bekommt passende Einträge der FIDE-Liste zurück. Deine IP-Adresse und dein Konto werden dabei nicht übertragen.",
       "thirdChesssites": "Chess.com / Lichess: Hinterlegst du im Profil einen dortigen Benutzernamen, ruft unser Server die öffentlichen Partie-Schnittstellen dieser Plattformen automatisch ab — im Hintergrund standardmäßig alle 6 Stunden, solange für dich ein Wochenziel „Partien“ aktiv ist, sowie bei manuellem Synchronisieren in den Trainingszielen. Dabei wird dein dortiger Benutzername an die jeweilige Plattform übertragen; chess.com wird von einem US-Anbieter betrieben (Übermittlung in ein Drittland). Gespeichert werden nur die Anzahl deiner Rapid-⁠/Klassisch-Partien je Tag sowie der Zeitpunkt der zuletzt abgerufenen Partie — keine Partiezüge. Entfernst du den Benutzernamen im Profil, unterbleibt der Abruf.",
       "thirdLogging": "Elasticsearch/Kibana: selbst gehostetes Logging/Monitoring auf unserer Infrastruktur.",
+      "thirdPush": "Push-Dienste der Browser-Hersteller: nur wenn du Push-Benachrichtigungen einschaltest — Einzelheiten unter „Push-Benachrichtigungen“.",
       "thirdHosting": "Hosting: Betrieb auf eigener Server-Infrastruktur mit TLS-Reverse-Proxy.",
       "thirdAnthropic": "Anthropic PBC (USA): liest Fotos von Partieformularen mit seinem KI-Modell Claude — Einzelheiten unter „KI-Dienste“.",
       "thirdTextLlm": "Sprachmodell-Server (NVIDIA DGX Spark, Österreich): erstellt Partie-Nacherzählungen, Erklärungen zu Fehlern, Roasts und Kurs-Übersetzungen und verarbeitet Fragen bei „Frag die Kommentare“; der Server wird vom Betreiber dieser Website selbst betrieben, die Daten gehen an keinen Dritten — Einzelheiten unter „KI-Dienste“.",
       "aiTitle": "KI-Dienste",
-      "aiScoresheet": "Partieformular einlesen (in RookHub über „Partieformular einlesen“, in LeagueHub bei den Vereinspartien — dort auch ohne Anmeldung über einen Teilen-Link): Das Foto wird zum Lesen an Anthropic PBC in den USA übertragen, dessen KI-Modell Claude die Züge und Kopfdaten abschreibt. Das ist eine Übermittlung in ein Drittland. Gelesen wird über ein Claude-Konto des Betreibers; ob und wie lange Anthropic die Daten speichert und ob es sie zum Verbessern seiner Modelle verwendet, richtet sich nach den Bedingungen und Datenschutz-Einstellungen dieses Kontos. Mit Anthropic besteht kein Vertrag zur Auftragsverarbeitung. Rechtsgrundlage ist für dich die Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO), für andere Personen auf dem Formular das berechtigte Interesse, gespielte Partien zu erfassen (Art. 6 Abs. 1 lit. f DSGVO). Bei uns bleibt das Foto in RookHub bei der Partie, bis du sie löschst (ist das Einlesen gescheitert, bis du dein Konto löschst). In LeagueHub verschwindet es aus der Einlesung, sobald sie übernommen oder verworfen wird; bis dahin sehen auch die Verwalter des Vereins die Einlesung samt Foto. Danach bewahren wir das Foto zusammen mit dem, was die Erkennung gelesen hat, und der übernommenen Partie 365 Tage auf, um das Einlesen zu verbessern (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO) — sehen können es die Betreiber und, zum Nachkorrigieren der Partie, wer sie hochgeladen hat und die Verwalter des Vereins; danach wird es automatisch gelöscht, mit deinem Konto sofort. Eine liegengelassene Einlesung behält das Foto ohne Frist, eine automatische Löschung gibt es nicht. Ohne Foto wird nichts an Anthropic übertragen.",
+      "aiScoresheet": "Partieformular einlesen (in RookHub über „Partieformular einlesen“, in LeagueHub bei den Vereinspartien — dort auch ohne Anmeldung über einen Teilen-Link): Das Foto wird zum Lesen an Anthropic PBC in den USA übertragen, dessen KI-Modell Claude die Züge und Kopfdaten abschreibt. Das ist eine Übermittlung in ein Drittland. Gelesen wird über ein Claude-Konto des Betreibers; ob und wie lange Anthropic die Daten speichert und ob es sie zum Verbessern seiner Modelle verwendet, richtet sich nach den Bedingungen und Datenschutz-Einstellungen dieses Kontos. Mit Anthropic besteht kein Vertrag zur Auftragsverarbeitung. Rechtsgrundlage ist für dich die Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO), für andere Personen auf dem Formular das berechtigte Interesse, gespielte Partien zu erfassen (Art. 6 Abs. 1 lit. f DSGVO). Bei uns bleibt das Foto in RookHub bei der Partie, bis du sie löschst (ist das Einlesen gescheitert, 30 Tage). In LeagueHub verschwindet es aus der Einlesung, sobald sie übernommen oder verworfen wird; bis dahin sehen auch die Verwalter des Vereins die Einlesung samt Foto. Danach bewahren wir das Foto zusammen mit dem, was die Erkennung gelesen hat, und der übernommenen Partie 365 Tage auf, um das Einlesen zu verbessern (berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO) — sehen können es die Betreiber und, zum Nachkorrigieren der Partie, wer sie hochgeladen hat und die Verwalter des Vereins; danach wird es automatisch gelöscht, mit deinem Konto sofort. Eine liegengelassene Einlesung mit Konto behält das Foto, bis du sie oder dein Konto löschst; eine nie übernommene Einlesung ohne Konto (Teilen-Link) leeren wir nach 14 Tagen. Ohne Foto wird nichts an Anthropic übertragen.",
       "aiLocal": "Partie-Nacherzählungen, Erklärungen zu Fehlern und „Roast my game“ laufen nie über Anthropic, sondern auf einem gesonderten Sprachmodell-Server (NVIDIA DGX Spark) in Österreich, den der Betreiber dieser Website selbst betreibt. Dafür werden die Angaben zur Partie verschlüsselt dorthin übertragen, bei Nacherzählung und Roast auch die Namen der Spieler mit ihren Elo-Zahlen. Die Daten gehen dabei an keinen Dritten. Über denselben Server laufen „Frag die Kommentare“ (der Text deiner Frage) und Kurs-Übersetzungen; Übersetzungen betreffen nur Kurstexte (Kommentare, Linien-Titel, Kapitelnamen), keine Angaben zu deiner Person.",
       "botTitle": "Discord-Bot",
       "botIntro": "Nutzt du unseren Discord-Bot, verarbeitet er zusätzlich:",
@@ -927,11 +941,98 @@
       "tournamentIntro": "Für die Turnieransichten in RookHub und auf der Turnierseite ruft unser Server öffentliche Turnierdaten von chess-results.com ab und speichert sie in einer eigenen Datenbank:",
       "tournamentData": "Daten: Turnier (Name, Ort, Termin, Runden), Spielerinnen und Spieler mit Name, Titel, FIDE-ID, Elo, Land, Mannschaft und Brett sowie Paarungen und Ergebnisse — auch von Personen ohne Konto bei uns. Mit „Vereine nachtragen“ schlägt der Server zu FIDE-IDs außerdem den Verein in anderen Turnieren auf chess-results.com nach.",
       "tournamentRetention": "Speicherdauer: Abruf-Aufträge löschen wir 30 Tage nach ihrem Abschluss, eine nachgeschlagene Vereinszuordnung 180 Tage nach ihrer letzten Auffrischung. Turniere mit Spielern, Paarungen und Ergebnissen bleiben derzeit ohne feste Frist gespeichert, weil RookHub auf sie verweist.",
+      "logsTitle": "Server-Protokolle",
+      "logsIntro": "Unser Server protokolliert jeden Aufruf, um Fehler zu finden, Missbrauch abzuwehren und die Nutzung zu zählen. Ein Eintrag enthält:",
+      "logsContent": "IP-Adresse, Browser und Gerät (User-Agent), die aufgerufene Adresse mit Zeitpunkt und Ergebnis sowie eine Besucher-Kennung. Bist du angemeldet, stehen dein Benutzername und deine Nutzernummer im Klartext dabei — die Kennung ist also nicht pseudonym. Ohne Anmeldung ist es die zufällige Kennung, die dein Browser für Puzzles ohne Konto anlegt.",
+      "logsEmail": "Schicken wir dir eine E-Mail (etwa zum Zurücksetzen des Passworts), stehen deine E-Mail-Adresse und der Betreff im Protokoll.",
+      "logsAccess": "Die Protokolle liegen in unserem selbst gehosteten Elasticsearch; einsehen kann sie nur der Betreiber. Sie werden nicht weitergegeben und nicht für Werbung genutzt.",
+      "logsRetention": "Nach 90 Tagen werden sie automatisch gelöscht (spätestens eine Woche später). Löschst du dein Konto, bleiben schon geschriebene Einträge bis zum Ende dieser Frist bestehen.",
       "storageTitle": "Lokale Speicherung (Cookies/Storage)",
       "storage": "Wir setzen keine Tracking-Cookies. Im Browser-Speicher (localStorage) liegen u. a. dein Login-Token, Einstellungen und — sofern aktiviert — Offline-Puzzles. Diese verbleiben auf deinem Gerät.",
+      "storageLogout": "Beim Abmelden löschen wir vom Gerät, was zu deinem Konto gehört, etwa zwischengespeicherte Inhalte und lokalen Fortschritt. Gerätevorlieben wie Sprache, Brett, Design, Größe der Oberfläche und E-Ink-Modus bleiben. Noch nicht gesendete Lösungen bleiben ebenfalls und gehen erst bei der nächsten Anmeldung desselben Kontos hinaus.",
       "retentionTitle": "Speicherdauer & Löschung",
       "retention": "Kontodaten werden bis zur Löschung des Kontos gespeichert. Du kannst dein Konto jederzeit selbst löschen — Identität und persönliche Daten werden entfernt, anonymisierte Statistiken bleiben erhalten. Mehr dazu:",
       "retentionLink": "Konto löschen – so geht’s",
+      "periodsIntro": "Die Fristen im Einzelnen:",
+      "periodsColData": "Daten",
+      "periodsColPeriod": "Frist",
+      "periodsGroupAccount": "Mit Konto",
+      "periodsGroupAnon": "Ohne Konto",
+      "periodsGroupOther": "Protokolle und Sicherungen",
+      "periods": {
+        "account": {
+          "data": "Konto, Profil, Fortschritt und eigene Inhalte",
+          "period": "bis du das Konto löschst"
+        },
+        "notifications": {
+          "data": "Gelesene Benachrichtigungen",
+          "period": "180 Tage"
+        },
+        "messages": {
+          "data": "Nachrichten mit dem Admin-Team",
+          "period": "gelesen 365 Tage, ungelesen bis zum Lesen"
+        },
+        "scoresheetFailed": {
+          "data": "Formular-Fotos einer gescheiterten Einlesung",
+          "period": "30 Tage"
+        },
+        "scoresheetSaved": {
+          "data": "Formular-Foto einer übernommenen Partie (RookHub)",
+          "period": "bis du die Partie, die Einlesung oder dein Konto löschst"
+        },
+        "scoresheetArchive": {
+          "data": "Formular-Archiv der Liga-Einlesungen",
+          "period": "365 Tage"
+        },
+        "sharedLogin": {
+          "data": "Gemeinsame Anmeldung für alle RookHub-Seiten",
+          "period": "30 Tage"
+        },
+        "linkCodes": {
+          "data": "Codes zum Verknüpfen mit Discord bzw. ClubHub",
+          "period": "30 bzw. 14 Tage"
+        },
+        "endless": {
+          "data": "Endlos-Spielstände",
+          "period": "60 Tage ohne Nutzung"
+        },
+        "attempts": {
+          "data": "Versuche an Puzzles, Buch- und Tagespuzzles, Punktepartien",
+          "period": "90 Tage"
+        },
+        "extension": {
+          "data": "Kurs-Linien aus der Browser-Erweiterung",
+          "period": "90 Tage (ohne verknüpftes Konto 14 Tage)"
+        },
+        "leagueDrafts": {
+          "data": "Liga-Entwürfe über einen Teilen-Link",
+          "period": "30 Tage ohne Bearbeitung"
+        },
+        "scoresheetAnon": {
+          "data": "Formular-Fotos über einen Teilen-Link, nie übernommen",
+          "period": "14 Tage"
+        },
+        "ipHash": {
+          "data": "Prüfwert der IP-Adresse beim Hochladen von Formularen",
+          "period": "2 Tage"
+        },
+        "ebooks": {
+          "data": "Hochgeladene E-Books samt Lesestand",
+          "period": "30 Tage"
+        },
+        "logs": {
+          "data": "Server-Protokolle",
+          "period": "90 Tage"
+        },
+        "backups": {
+          "data": "Datensicherungen",
+          "period": "14 Tage"
+        },
+        "botDm": {
+          "data": "Direktnachrichten mit dem Discord-Bot",
+          "period": "30 Tage"
+        }
+      },
       "rightsTitle": "Deine Rechte",
       "rights": "Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie auf Beschwerde bei einer Aufsichtsbehörde (in Österreich: Datenschutzbehörde).",
       "contactTitle": "Kontakt",

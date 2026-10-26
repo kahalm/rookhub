@@ -259,7 +259,6 @@
       "dataAccount": "账户数据：用户名、邮箱地址、密码（仅以哈希形式存储）。",
       "dataProfile": "个人资料数据（可选）：显示名/真实姓名、FIDE ID、ChessResults ID、Chess.com/Lichess 用户名、可选 Discord 关联。",
       "dataUsage": "使用数据：已解战术题、无尽/课程进度与统计、游戏评分、登录时间戳。",
-      "dataTechnical": "技术数据：IP 地址、带时间戳的请求端点以及服务器日志中的匿名访客标识符（用于访问量统计）。",
       "purposesTitle": "目的与法律依据",
       "purposes": "提供账户和功能（合同履行，GDPR 第 6 条第 1 款 b 项），以及通过日志进行运营安全、错误分析和访问量统计（合法利益，GDPR 第 6 条第 1 款 f 项）。",
       "thirdTitle": "接收方 / 第三方服务",

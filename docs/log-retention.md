@@ -5,6 +5,10 @@ Die Log-Data-Streams enthalten personenbezogene Daten: `labels.IpAddress`, `labe
 sie unbegrenzt — sowohl ein Speicher- als auch ein Datenschutzproblem
 (Speicherbegrenzung, Art. 5 Abs. 1 lit. e DSGVO).
 
+Die Datenschutzerklärung legt Inhalt und Frist offen (Abschnitt „Server-Protokolle“ und Fristen-Tabelle, Codereview R-2 a:
+keine Pseudonymisierung, Benutzername/Nutzer-Id und Empfänger-Adressen von Mails stehen im Klartext) — wer die
+Frist hier ändert, ändert `legal.privacy.logsRetention`/`kidLogs`/`periods.logs` in de/en/hr/hu mit.
+
 `scripts/es_log_retention.py` legt dafür eine ILM-Policy an und verknüpft sie mit
 den Log-Data-Streams **und** deren Index-Templates.
 

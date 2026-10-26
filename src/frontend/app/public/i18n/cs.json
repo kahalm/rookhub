@@ -259,7 +259,6 @@
       "dataAccount": "Údaje účtu: uživatelské jméno, e-mailová adresa, heslo (uloženo pouze jako hash).",
       "dataProfile": "Profilové údaje (volitelné): zobrazované/skutečné jméno, FIDE ID, ChessResults ID, uživatelské jméno Chess.com/Lichess, volitelný Discord odkaz.",
       "dataUsage": "Údaje o využívání: vyřešené úlohy, postup a statistiky nekonečného/kursového režimu, herní hodnocení, časová razítka přihlášení.",
-      "dataTechnical": "Technické údaje: IP adresa, požadované endpointy s časovými razítky a pseudonymní identifikátor návštěvníka (měření dosahu) v protokolech serveru.",
       "purposesTitle": "Účely a právní základy",
       "purposes": "Poskytování účtu a funkcí (plnění smlouvy, čl. 6 odst. 1 písm. b) GDPR) a provozní bezpečnost, analýza chyb a měření dosahu prostřednictvím protokolů (oprávněný zájem, čl. 6 odst. 1 písm. f) GDPR).",
       "thirdTitle": "Příjemci / služby třetích stran",

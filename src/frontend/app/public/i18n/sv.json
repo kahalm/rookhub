@@ -259,7 +259,6 @@
       "dataAccount": "Kontouppgifter: användarnamn, e-postadress, lösenord (lagrat enbart som hash).",
       "dataProfile": "Profiluppgifter (valfritt): visnings-/riktigt namn, FIDE ID, ChessResults ID, Chess.com/Lichess-användarnamn, valfri Discord-länk.",
       "dataUsage": "Användningsdata: lösta uppgifter, ändlöst/kursförlopp och statistik, spelbetyg, inloggningstidsstämplar.",
-      "dataTechnical": "Teknisk data: IP-adress, begärda endpoints med tidsstämplar och en pseudonym besökaridentifierare (räckviddsanalys) i serverloggar.",
       "purposesTitle": "Ändamål och rättsliga grunder",
       "purposes": "Tillhandahållande av konto och funktioner (uppfyllande av avtal, art. 6.1 b GDPR) samt driftsäkerhet, felanalys och räckviddsanalys via loggar (berättigat intresse, art. 6.1 f GDPR).",
       "thirdTitle": "Mottagare / tredjepartstjänster",

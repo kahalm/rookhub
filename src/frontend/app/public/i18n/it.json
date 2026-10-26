@@ -259,7 +259,6 @@
       "dataAccount": "Dati dell'account: nome utente, indirizzo email, password (conservata solo come hash).",
       "dataProfile": "Dati del profilo (facoltativi): nome visualizzato/reale, FIDE ID, ChessResults ID, nome utente Chess.com/Lichess, collegamento Discord facoltativo.",
       "dataUsage": "Dati di utilizzo: puzzle risolti, avanzamento e statistiche nei corsi/modalità infinita, valutazione di gioco, timestamp di accesso.",
-      "dataTechnical": "Dati tecnici: indirizzo IP, endpoint richiesti con timestamp e un identificatore visitatore pseudonimo (misurazione della portata) nei log del server.",
       "purposesTitle": "Finalità e basi giuridiche",
       "purposes": "Fornitura dell'account e delle funzionalità (esecuzione di un contratto, art. 6, par. 1, lett. b) GDPR) nonché sicurezza operativa, analisi degli errori e misurazione della portata tramite log (interesse legittimo, art. 6, par. 1, lett. f) GDPR).",
       "thirdTitle": "Destinatari / servizi di terze parti",

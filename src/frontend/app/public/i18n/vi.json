@@ -259,7 +259,6 @@
       "dataAccount": "Dữ liệu tài khoản: tên người dùng, địa chỉ email, mật khẩu (chỉ lưu dưới dạng mã băm).",
       "dataProfile": "Dữ liệu hồ sơ (tùy chọn): tên hiển thị/tên thật, ID FIDE, ID ChessResults, tên người dùng Chess.com/Lichess, liên kết Discord tùy chọn.",
       "dataUsage": "Dữ liệu sử dụng: bài đã giải, tiến trình và thống kê khóa học/vô tận, xếp hạng, dấu thời gian đăng nhập.",
-      "dataTechnical": "Dữ liệu kỹ thuật: địa chỉ IP, các endpoint được yêu cầu với dấu thời gian và mã định danh khách truy cập bút danh (đo lường lượt truy cập) trong nhật ký máy chủ.",
       "purposesTitle": "Mục đích & cơ sở pháp lý",
       "purposes": "Cung cấp tài khoản và tính năng (thực hiện hợp đồng, Điều 6(1)(b) GDPR) cũng như bảo mật vận hành, phân tích lỗi và đo lường lượt truy cập qua nhật ký (lợi ích hợp pháp, Điều 6(1)(f) GDPR).",
       "thirdTitle": "Người nhận / dịch vụ bên thứ ba",

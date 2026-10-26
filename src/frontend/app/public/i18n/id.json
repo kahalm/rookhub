@@ -259,7 +259,6 @@
       "dataAccount": "Data akun: nama pengguna, alamat email, kata sandi (disimpan hanya sebagai hash).",
       "dataProfile": "Data profil (opsional): nama tampilan/asli, FIDE ID, ChessResults ID, nama pengguna Chess.com/Lichess, tautan Discord opsional.",
       "dataUsage": "Data penggunaan: puzzle yang diselesaikan, progres dan statistik endless/kursus, rating bermain, waktu masuk.",
-      "dataTechnical": "Data teknis: alamat IP, endpoint yang diminta beserta waktu dan pengenal pengunjung pseudonim (pengukuran jangkauan) dalam log server.",
       "purposesTitle": "Tujuan & dasar hukum",
       "purposes": "Menyediakan akun dan fitur (pelaksanaan kontrak, Pasal 6(1)(b) GDPR) serta keamanan operasional, analisis kesalahan dan pengukuran jangkauan melalui log (kepentingan sah, Pasal 6(1)(f) GDPR).",
       "thirdTitle": "Penerima / layanan pihak ketiga",

@@ -860,7 +860,7 @@
     "privacy": {
       "title": "Privacy Policy",
       "link": "Privacy policy",
-      "updated": "Last updated: 1 October 2026",
+      "updated": "Last updated: 26 October 2026",
       "tocTitle": "Contents",
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
       "introLeagueHub": "LeagueHub (part of RookHub) prepares lineup forecasts for team matches and keeps the game database of participating clubs. The account is the same as on RookHub. This statement explains how personal data is processed under the GDPR.",
@@ -880,6 +880,9 @@
       "kidAccount": "With an account, we store your progress in your account so you can keep playing on another device. It is the same account as on RookHub. When you log out, the progress is removed from the device but stays in the account.",
       "kidParents": "Please only create an account with your parents’ permission. Parents can have the account deleted at any time — a message to the address below is enough.",
       "kidNoTracking": "KidHub shows no ads, uses no tracking cookies and has no chat. To choose a suitable language, we check once which country your internet address comes from — it is not stored for this.",
+      "kidVisibility": "Other logged-in RookHub users can find your username. So pick a nickname, not your real name.",
+      "kidLogs": "Our server notes which pages are opened — with your username if you are logged in. This is deleted after 90 days.",
+      "kidPeriods": "How long we keep what is listed below under “Retention & deletion”.",
       "kidDetails": "For parents: the following sections describe in detail which data we process. The KidHub account is the same account as on RookHub, so they apply to both sites.",
       "controllerTitle": "Controller",
       "controllerNamed": "The controller responsible for data processing is the operator of this website, reachable at:",
@@ -901,22 +904,33 @@
       "dataAccount": "Account data: username, email address, password (stored only as a hash).",
       "dataProfile": "Profile data (optional): display/real name, FIDE ID, ChessResults ID, Chess.com/Lichess username, optional Discord link.",
       "dataUsage": "Usage data: solved puzzles, endless/course progress and statistics, play rating, login timestamps.",
-      "dataTechnical": "Technical data: IP address, requested endpoints with timestamps and a pseudonymous visitor identifier (reach measurement) in server logs.",
+      "dataTechnical": "Technical data: IP address, browser and device, requested addresses with timestamps and a visitor identifier in the server logs — when you are logged in, with your username (details under “Server logs”).",
       "dataIpCountry": "KidHub (the kids' site): if your browser language is not one of its languages, the country of your IP address is determined to choose one — locally on our server with the country list of DB-IP (IP Geolocation by DB-IP, CC BY 4.0). The address is not passed on or stored for this.",
       "dataScoresheet": "Photos of scoresheets, if you have a game read in — with everything on them, such as both players’ names, the event, the date and signatures.",
       "purposesTitle": "Purposes & legal bases",
       "purposes": "Providing the account and features (performance of a contract, Art. 6(1)(b) GDPR) as well as operational security, error analysis and reach measurement via logs (legitimate interest, Art. 6(1)(f) GDPR).",
+      "visibilityTitle": "What other users see",
+      "visibilitySearch": "User search: any logged-in account can find you — by your username, your display name or your Chess.com or Lichess name (part of the name is enough), and by the beginning of your FIDE ID or ChessResults ID. The result shows these details as far as you have entered them in your profile.",
+      "visibilityLeaderboards": "Leaderboards: logged-in accounts see your display name there (without a display name, your username) together with your figures.",
+      "visibilityFriends": "Friends: only once a friend request has been accepted does the friend see your puzzle statistics, the puzzles you failed (“Revenge”) and your tournament history.",
+      "visibilityGuests": "Without logging in, your profile cannot be viewed.",
+      "messagesTitle": "Messages to the admin team",
+      "messages": "If you write to the admin team or it writes to you, we store the messages with their time. They can be read by you and by every account allowed to handle messages — the administrators and people they have given this task. We delete read messages after 365 days; unread ones remain until they are read; all of them go with your account.",
+      "pushTitle": "Push notifications",
+      "push": "If you turn on push notifications, your browser’s push service issues a delivery address (Google for Chrome, Microsoft for Edge, Mozilla for Firefox, Apple for Safari), which we store with your account. Our server sends every notification through this service; its content is encrypted, and the service only sees the delivery address, time and size. Some of these providers are based in the USA (transfer to a third country). If you turn push off, delete your account or the service reports the address as invalid, we delete it.",
       "thirdTitle": "Recipients / third-party services",
       "thirdIntro": "Data is not sold. Depending on your use, the following services are involved:",
       "thirdDiscord": "Discord: only on voluntary account linking (Discord ID/name) for display in the RookHub Discord bot.",
       "thirdChessresults": "chess-results.com: tournament data is fetched server-side when you set a ChessResults ID or load tournaments.",
+      "thirdChesstools": "api.chesstools.org: when you search for a player in the FIDE rating list (for example in your profile or for the tournament history), our server sends the name you entered (last name, first name) to this service and receives matching entries of the FIDE list. Your IP address and your account are not transmitted.",
       "thirdChesssites": "Chess.com / Lichess: if you store a username for these platforms in your profile, our server queries their public game APIs automatically — in the background every 6 hours by default while a weekly “games” goal is active for you, and whenever you trigger a manual sync in the training goals. Your username on that platform is transmitted to it; chess.com is operated by a US provider (transfer to a third country). We only store the number of your rapid/classical games per day and the time of the most recently fetched game — no game moves. Removing the username in your profile stops these queries.",
       "thirdLogging": "Elasticsearch/Kibana: self-hosted logging/monitoring on our infrastructure.",
+      "thirdPush": "Push services of the browser vendors: only if you turn on push notifications — details under “Push notifications”.",
       "thirdHosting": "Hosting: operated on our own server infrastructure with a TLS reverse proxy.",
       "thirdAnthropic": "Anthropic PBC (USA): reads scoresheet photos with its AI model Claude — details under “AI services”.",
       "thirdTextLlm": "Language-model server (NVIDIA DGX Spark, Austria): writes game recaps, explanations of mistakes, roasts and course translations and processes questions for “Ask the comments”; the server is run by the operator of this website, the data is not passed to any third party — details under “AI services”.",
       "aiTitle": "AI services",
-      "aiScoresheet": "Reading a scoresheet (in RookHub via “Read a scoresheet”, in LeagueHub for club games — there also without logging in via a share link): the photo is sent to Anthropic PBC in the USA, whose AI model Claude transcribes the moves and header data. This is a transfer to a third country. Reading runs through a Claude account of the operator; whether and how long Anthropic stores the data and whether it uses it to improve its models depends on the terms and privacy settings of that account. There is no data processing agreement with Anthropic. The legal basis is performance of a contract for you (Art. 6(1)(b) GDPR) and, for other people on the scoresheet, the legitimate interest in recording games played (Art. 6(1)(f) GDPR). On our side, in RookHub the photo stays with the game until you delete it (if reading failed, until you delete your account). In LeagueHub it is removed from the reading as soon as the reading is accepted or discarded; until then the club’s administrators can also see the reading including the photo. After that we keep the photo together with what the recognition read and the accepted game for 365 days to improve the reading (legitimate interest, Art. 6(1)(f) GDPR) — it can be seen by the operators and, for correcting the game later, by whoever uploaded it and the club's administrators; it is then deleted automatically, and immediately with your account. A reading left open keeps the photo with no time limit; there is no automatic deletion. Without a photo, nothing is sent to Anthropic.",
+      "aiScoresheet": "Reading a scoresheet (in RookHub via “Read a scoresheet”, in LeagueHub for club games — there also without logging in via a share link): the photo is sent to Anthropic PBC in the USA, whose AI model Claude transcribes the moves and header data. This is a transfer to a third country. Reading runs through a Claude account of the operator; whether and how long Anthropic stores the data and whether it uses it to improve its models depends on the terms and privacy settings of that account. There is no data processing agreement with Anthropic. The legal basis is performance of a contract for you (Art. 6(1)(b) GDPR) and, for other people on the scoresheet, the legitimate interest in recording games played (Art. 6(1)(f) GDPR). On our side, in RookHub the photo stays with the game until you delete it (if reading failed, for 30 days). In LeagueHub it is removed from the reading as soon as the reading is accepted or discarded; until then the club’s administrators can also see the reading including the photo. After that we keep the photo together with what the recognition read and the accepted game for 365 days to improve the reading (legitimate interest, Art. 6(1)(f) GDPR) — it can be seen by the operators and, for correcting the game later, by whoever uploaded it and the club's administrators; it is then deleted automatically, and immediately with your account. A reading left open with an account keeps the photo until you delete it or your account; a reading without an account (share link) that is never accepted is cleared after 14 days. Without a photo, nothing is sent to Anthropic.",
       "aiLocal": "Game recaps, explanations of mistakes and “Roast my game” never run via Anthropic, but on a separate language-model server (NVIDIA DGX Spark) in Austria run by the operator of this website. The game data is sent there over an encrypted connection, for recaps and roasts including the players’ names and ratings. The data is not passed to any third party. “Ask the comments” (the text of your question) and course translations run on the same server; translations only involve course texts (comments, line titles, chapter names), no information about you.",
       "botTitle": "Discord bot",
       "botIntro": "If you use our Discord bot, it also processes:",
@@ -927,11 +941,98 @@
       "tournamentIntro": "For the tournament views in RookHub and on the tournament site, our server fetches public tournament data from chess-results.com and stores it in a separate database:",
       "tournamentData": "Data: the tournament (name, venue, dates, rounds), players with name, title, FIDE ID, rating, country, team and board, as well as pairings and results — including people who have no account with us. With “Look up clubs”, the server also looks up the club for FIDE IDs in other tournaments on chess-results.com.",
       "tournamentRetention": "Retention: we delete fetch jobs 30 days after they finish, and a looked-up club assignment 180 days after it was last refreshed. Tournaments with their players, pairings and results are currently kept without a fixed time limit, because RookHub refers to them.",
+      "logsTitle": "Server logs",
+      "logsIntro": "Our server logs every request in order to find errors, fend off abuse and count usage. An entry contains:",
+      "logsContent": "IP address, browser and device (user agent), the requested address with time and result, and a visitor identifier. If you are logged in, your username and your user number are included in plain text — so the identifier is not pseudonymous. Without logging in, it is the random identifier your browser creates for puzzles without an account.",
+      "logsEmail": "When we send you an email (for example to reset your password), your email address and the subject appear in the log.",
+      "logsAccess": "The logs are kept in our self-hosted Elasticsearch; only the operator can view them. They are not passed on and not used for advertising.",
+      "logsRetention": "They are deleted automatically after 90 days (at the latest one week later). If you delete your account, entries already written remain until the end of this period.",
       "storageTitle": "Local storage (cookies/storage)",
       "storage": "We do not use tracking cookies. Browser storage (localStorage) holds e.g. your login token, settings and — if enabled — offline puzzles. These remain on your device.",
+      "storageLogout": "When you log out, we remove from the device what belongs to your account, such as cached content and local progress. Device preferences such as language, board, theme, interface size and e-ink mode remain. Solutions not yet sent also remain and are only sent at the next login of the same account.",
       "retentionTitle": "Retention & deletion",
       "retention": "Account data is stored until you delete your account. You can delete your account at any time — identity and personal data are removed, anonymised statistics are retained. More:",
       "retentionLink": "How to delete your account",
+      "periodsIntro": "The periods in detail:",
+      "periodsColData": "Data",
+      "periodsColPeriod": "Period",
+      "periodsGroupAccount": "With an account",
+      "periodsGroupAnon": "Without an account",
+      "periodsGroupOther": "Logs and backups",
+      "periods": {
+        "account": {
+          "data": "Account, profile, progress and your own content",
+          "period": "until you delete the account"
+        },
+        "notifications": {
+          "data": "Read notifications",
+          "period": "180 days"
+        },
+        "messages": {
+          "data": "Messages with the admin team",
+          "period": "read: 365 days, unread: until read"
+        },
+        "scoresheetFailed": {
+          "data": "Scoresheet photos of a failed reading",
+          "period": "30 days"
+        },
+        "scoresheetSaved": {
+          "data": "Scoresheet photo of an accepted game (RookHub)",
+          "period": "until you delete the game, the reading or your account"
+        },
+        "scoresheetArchive": {
+          "data": "Scoresheet archive of league readings",
+          "period": "365 days"
+        },
+        "sharedLogin": {
+          "data": "Shared login for all RookHub sites",
+          "period": "30 days"
+        },
+        "linkCodes": {
+          "data": "Codes for linking with Discord or ClubHub",
+          "period": "30 or 14 days"
+        },
+        "endless": {
+          "data": "Endless game states",
+          "period": "60 days without use"
+        },
+        "attempts": {
+          "data": "Attempts at puzzles, book and daily puzzles, guess-the-move games",
+          "period": "90 days"
+        },
+        "extension": {
+          "data": "Course lines from the browser extension",
+          "period": "90 days (14 days without a linked account)"
+        },
+        "leagueDrafts": {
+          "data": "League drafts via a share link",
+          "period": "30 days without editing"
+        },
+        "scoresheetAnon": {
+          "data": "Scoresheet photos via a share link, never accepted",
+          "period": "14 days"
+        },
+        "ipHash": {
+          "data": "Check value of the IP address when uploading scoresheets",
+          "period": "2 days"
+        },
+        "ebooks": {
+          "data": "Uploaded e-books including reading position",
+          "period": "30 days"
+        },
+        "logs": {
+          "data": "Server logs",
+          "period": "90 days"
+        },
+        "backups": {
+          "data": "Database backups",
+          "period": "14 days"
+        },
+        "botDm": {
+          "data": "Direct messages with the Discord bot",
+          "period": "30 days"
+        }
+      },
       "rightsTitle": "Your rights",
       "rights": "You have the right to access, rectification, erasure, restriction, data portability and objection, as well as the right to lodge a complaint with a supervisory authority (in Austria: the Data Protection Authority).",
       "contactTitle": "Contact",
