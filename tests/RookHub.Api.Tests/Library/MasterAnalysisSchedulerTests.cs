@@ -90,6 +90,24 @@ public class MasterAnalysisSchedulerTests : IDisposable
     }
 
     [Fact]
+    public async Task Tick_HausEngine_nachDerselbenRegelWieEngineOwnerResolver_LeereListeZaehltNicht()
+    {
+        // A4-011: Der Takt bestimmte den Besitzer eigen (Spalte nicht leer) statt über EngineOwnerResolver (mindestens
+        // eine Engine). Ein Admin mit kleinerer Id und einer Liste ohne Engine („ , “) blockierte so die Haus-Engine.
+        _db.AppUsers.Add(new AppUser { Id = 3, Username = "leer", PasswordHash = "x", IsAdmin = true });
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential { UserId = 3, EncryptedToken = "enc", ShareAsHouseEngine = true,
+            BackgroundEngineIds = " , " });
+        await _db.SaveChangesAsync();
+        Library(1);
+
+        var id = await Scheduler(Never).TickOnceAsync(_db, Analyses(), default);
+
+        Assert.NotNull(id);
+        Assert.Equal(Owner, (await _db.GameAnalyses.SingleAsync(g => g.Id == id)).UserId);
+        Assert.Equal(Owner, (await EngineOwnerResolver.HouseOwnerAsync(_db, default))?.UserId);
+    }
+
+    [Fact]
     public async Task Tick_legtNachwieNeueAn_bisAlleEnginesArbeitHaben()
     {
         Library(1); Library(2); Library(3);   // je 10 Halbzuege, 16 Engines

@@ -8,7 +8,7 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   dieselbe Angabe `TextLlm:QuietHours` wie Übersetzung und Texte — Vorgabe Mo–Do 08–17, Fr 08–14 gesperrt) legt er
   Bibliothekspartien ohne Analyse als `GameAnalysisOrigin.Library` an — erst die kommentierten, dann der Rest, je nach
   Id; eine neue erst, wenn die laufenden zusammen weniger offene Stellungen haben als der Besitzer Hintergrund-Engines
-  (derselbe „Schwanz" wie 0.543.0). Besitzer = Haus-Engine-Besitzer (Admin mit „als Haus-Engine teilen"), abweichend
+  (derselbe „Schwanz" wie 0.543.0). Besitzer = Haus-Engine-Besitzer (Admin mit „als Haus-Engine teilen", mind. eine Engine — `EngineOwnerResolver.HouseOwnerAsync`, dieselbe Regel wie die Punktepartie, A4-011), abweichend
   `MasterAnalysis:OwnerUserId`; abschalten mit `MasterAnalysis:Enabled=false`. Tiefe/Linien wie eine angeforderte
   Bibliothekspartie (`GuessTargetDepth`, 5 Linien, `CreateLibraryBatchAsync`). In der Sperrzeit reiht die laufende
   Partie keine Stellungen ein (`EnqueueNextAsync`); was schon eingereiht ist, läuft zu Ende.

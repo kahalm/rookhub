@@ -187,15 +187,15 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
         }
     }
 
-    /// <summary>Der Besitzer, auf dessen Hintergrund-Engines gerechnet wird — mit mindestens einer Engine.</summary>
-    private Task<LichessEngineCredential?> OwnerAsync(AppDbContext db, CancellationToken ct)
+    /// <summary>Der Besitzer, auf dessen Hintergrund-Engines gerechnet wird — mit mindestens einer Engine. Fest
+    /// eingestellt (<c>MasterAnalysis:OwnerUserId</c>) oder die Haus-Engine nach derselben Regel wie Punktepartie und
+    /// Zugvergleich (<see cref="EngineOwnerResolver.HouseOwnerAsync"/>, A4-011).</summary>
+    private async Task<LichessEngineCredential?> OwnerAsync(AppDbContext db, CancellationToken ct)
     {
-        var q = db.LichessEngineCredentials.AsNoTracking()
-            .Where(c => c.BackgroundEngineIds != null && c.BackgroundEngineIds != "");
-        q = _configuredOwner is int id
-            ? q.Where(c => c.UserId == id)
-            : q.Where(c => c.ShareAsHouseEngine && c.User!.IsAdmin);
-        return q.OrderBy(c => c.UserId).FirstOrDefaultAsync(ct);
+        if (_configuredOwner is not int id) return await EngineOwnerResolver.HouseOwnerAsync(db, ct);
+        var cred = await db.LichessEngineCredentials.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.UserId == id && c.BackgroundEngineIds != null, ct);
+        return cred is not null && cred.BackgroundEngines.Count > 0 ? cred : null;
     }
 
     /// <summary>Die nächste Vereinspartie ohne Analyse, nach Id. Ohne Zeiger: es sind wenige, und eine gelöschte oder neu

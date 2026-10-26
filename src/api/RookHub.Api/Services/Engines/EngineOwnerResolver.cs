@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services.Engines;
 
@@ -20,6 +21,16 @@ public static class EngineOwnerResolver
             .FirstOrDefaultAsync(c => c.UserId == userId, ct);
         if (own is not null && own.BackgroundEngines.Count > 0) return userId;
 
+        return (await HouseOwnerAsync(db, ct))?.UserId;
+    }
+
+    /// <summary>
+    /// Die Haus-Engine: Zugangsdaten mit gesetztem Freigabe-Haekchen, mindestens einer Hintergrund-Engine und einem
+    /// Admin als Besitzer — bei mehreren die mit der kleinsten UserId. Geteilt von <see cref="ResolveAsync"/> und dem
+    /// Meisterpartien-Takt (<c>MasterAnalysisScheduler</c>, A4-011), damit die Regel an EINER Stelle steht.
+    /// </summary>
+    public static async Task<LichessEngineCredential?> HouseOwnerAsync(AppDbContext db, CancellationToken ct)
+    {
         // Haus-Engine: die Freigabe steht an den Zugangsdaten, gelten lassen wir sie aber nur bei
         // einem Admin — verliert jemand die Rechte, soll seine Maschine nicht weiter fuer fremde
         // Partien laufen, ohne dass jemand das Haekchen wegnimmt.
@@ -27,7 +38,7 @@ public static class EngineOwnerResolver
             .Where(c => c.ShareAsHouseEngine && c.BackgroundEngineIds != null && c.User!.IsAdmin)
             .OrderBy(c => c.UserId)
             .ToListAsync(ct);
-        return house.FirstOrDefault(c => c.BackgroundEngines.Count > 0)?.UserId;
+        return house.FirstOrDefault(c => c.BackgroundEngines.Count > 0);
     }
 
     /// <summary>
