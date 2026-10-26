@@ -5509,6 +5509,10 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AnonSessionId")
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
                     b.Property<string>("BestUci")
                         .HasMaxLength(5)
                         .HasColumnType("varchar(5)");
@@ -5544,10 +5548,13 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
-                    b.Property<int>("UserId")
+                    b.Property<int?>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AnonSessionId", "PositionKey")
+                        .IsUnique();
 
                     b.HasIndex("UserId", "PositionKey")
                         .IsUnique();
@@ -9915,8 +9922,7 @@ namespace RookHub.Api.Migrations
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("User");
                 });

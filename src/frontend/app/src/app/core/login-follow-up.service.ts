@@ -94,6 +94,9 @@ export class LoginFollowUpService {
     import('../features/puzzles/endless-storage.service').then(m =>
       this.withService(() => this.injector.get(m.EndlessStorageService),
         endlessStorage => endlessStorage.claimEndlessSession().subscribe()));
+    // „+"-Markierungen ohne Anmeldung (0.847.0) — ebenfalls unter dieser Kennung.
+    import('../shared/mark-position/marked-positions.service').then(m =>
+      this.withService(() => this.injector.get(m.MarkedPositionsService), marks => marks.claimSession(sessionId).subscribe()));
     // E-Books ohne Anmeldung (0.778.0): eigene Uploads + Lesestände derselben Kennung ins Konto.
     import('../features/ebooks/ebook.service').then(m =>
       this.withService(() => this.injector.get(m.EbookService), ebooks => ebooks.claimSession(sessionId).subscribe()));

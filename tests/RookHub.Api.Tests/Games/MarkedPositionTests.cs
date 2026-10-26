@@ -107,4 +107,63 @@ public class MarkedPositionTests : IDisposable
         Assert.IsType<NotFoundResult>(await _controller.Unmark(AfterE4, default));
         Assert.Single(_db.MarkedPositions); // die Markierung des anderen Nutzers bleibt
     }
+
+    // 0.847.0 (Wunsch 2026-10-26): auch ohne Anmeldung — die Zeile hält fest, wer markiert hat; beim Anmelden ins Konto.
+    private const string AnonA = "0123456789abcdef0123456789abcdef";
+    private const string AnonB = "fedcba9876543210fedcba9876543210";
+    private const string AfterE4E5 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2";
+
+    private void SetAnonymous(string? visitorId)
+    {
+        var http = new DefaultHttpContext();
+        if (visitorId != null) http.Request.Headers["X-Visitor-Id"] = visitorId;
+        _controller.ControllerContext = new ControllerContext { HttpContext = http };
+    }
+
+    [Fact]
+    public async Task Controller_Anonymous_MarksUnderTheVisitorId_AndSeesOnlyItsOwn()
+    {
+        SetAnonymous(AnonA);
+        Assert.IsType<OkObjectResult>((await _controller.Mark(new MarkPositionInputDto { Fen = AfterE4, SavedGameId = 5 }, default)).Result);
+        await _service.MarkAsync(MarkCaller.Anonymous(AnonB), new MarkPositionInputDto { Fen = AfterE4 });
+        await _service.MarkAsync(997107, new MarkPositionInputDto { Fen = AfterE4 });
+
+        var row = _db.MarkedPositions.Single(p => p.AnonSessionId == AnonA);
+        Assert.Null(row.UserId);                         // wer es war: die anonyme Kennung
+        Assert.Null(row.SavedGameId);                    // eine Partie-Id zählt nur für den Besitzer
+        var list = Assert.IsType<List<MarkedPositionDto>>(Assert.IsType<OkObjectResult>((await _controller.List(default)).Result).Value);
+        Assert.Single(list);
+
+        Assert.IsType<NoContentResult>(await _controller.Unmark(AfterE4, default));
+        Assert.Equal(2, _db.MarkedPositions.Count());   // die von B und vom Konto bleiben
+    }
+
+    [Fact]
+    public async Task Controller_Anonymous_WithoutValidVisitorId_GetsNothing()
+    {
+        SetAnonymous("kein-gueltiger-wert");
+        var bad = Assert.IsType<BadRequestObjectResult>((await _controller.Mark(new MarkPositionInputDto { Fen = AfterE4 }, default)).Result);
+        Assert.Contains("noVisitor", bad.Value!.ToString());
+        Assert.Empty(Assert.IsType<List<MarkedPositionDto>>(Assert.IsType<OkObjectResult>((await _controller.List(default)).Result).Value));
+        Assert.Empty(_db.MarkedPositions);
+    }
+
+    [Fact]
+    public async Task ClaimAnonymous_MovesIntoTheAccount_AndMergesTheSamePosition()
+    {
+        await _service.MarkAsync(997108, new MarkPositionInputDto { Fen = AfterE4, Context = "board" });
+        await _service.MarkAsync(MarkCaller.Anonymous(AnonA), new MarkPositionInputDto { Fen = AfterE4, Ply = 1, BestUci = "e7e5" });
+        await _service.MarkAsync(MarkCaller.Anonymous(AnonA), new MarkPositionInputDto { Fen = AfterE4E5 });
+        await _service.MarkAsync(MarkCaller.Anonymous(AnonB), new MarkPositionInputDto { Fen = AfterE4E5 });
+
+        Assert.Equal(2, await _service.ClaimAnonymousAsync(997108, AnonA));
+
+        var mine = _db.MarkedPositions.Where(p => p.UserId == 997108).ToList();
+        Assert.Equal(2, mine.Count);
+        var merged = mine.Single(p => p.Fen == AfterE4);
+        Assert.Equal(("board", 1, "e7e5"), (merged.Context, merged.Ply, merged.BestUci));   // Herkunft ergänzt
+        Assert.All(mine, p => Assert.Null(p.AnonSessionId));
+        Assert.Single(_db.MarkedPositions, p => p.AnonSessionId == AnonB);                  // fremde Kennung bleibt
+        Assert.Equal(0, await _service.ClaimAnonymousAsync(997108, "kaputt"));
+    }
 }

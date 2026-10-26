@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 
 /** Woher die markierte Stellung stammt — alles optional (Analysebrett: nichts davon). */
 export interface MarkOrigin {
@@ -37,18 +38,33 @@ export function positionKey(fen: string): string {
  * „+"-Markierungen besonders guter Stellungen (0.749.0). Hält die Schlüssel der eigenen Markierungen als Signal — einmal
  * geladen, danach optimistisch nachgeführt —, damit jeder „+"-Knopf (Partie-Analyse, Analysebrett, Fehler-Training)
  * sofort weiß, ob die Stellung auf dem Brett schon markiert ist.
+ * Seit 0.847.0 auch ohne Anmeldung: der Server ordnet sie dann der anonymen Kennung (`X-Visitor-Id`) zu. Die Schlüssel
+ * gelten je Aufrufer — wechselt das Konto (Anmelden/Abmelden), lädt der nächste Knopf neu.
  */
 @Injectable({ providedIn: 'root' })
 export class MarkedPositionsService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
   readonly keys = signal<ReadonlySet<string>>(new Set());
-  private loaded = false;
+  /** Für wen die Schlüssel geladen sind: Nutzer-Id oder `anon`; `null` = noch nicht. */
+  private loadedFor: string | null = null;
 
-  /** Einmal je Sitzung die eigenen Markierungen holen (still im Fehlerfall — der Knopf zeigt dann „nicht markiert"). */
+  private who(): string { return String(this.auth.currentUser?.userId ?? 'anon'); }
+
+  /** Einmal je Aufrufer die eigenen Markierungen holen (still im Fehlerfall — der Knopf zeigt dann „nicht markiert"). */
   ensureLoaded(): void {
-    if (this.loaded) return;
-    this.loaded = true;
-    this.list().subscribe({ error: () => { this.loaded = false; } });
+    const who = this.who();
+    if (this.loadedFor === who) return;
+    this.loadedFor = who;
+    this.keys.set(new Set());
+    this.list().subscribe({ error: () => { this.loadedFor = null; } });
+  }
+
+  /** Beim Anmelden: die ohne Anmeldung markierten Stellungen dieser Kennung ins Konto holen, danach neu laden. */
+  claimSession(sessionId: string): Observable<{ claimed: number }> {
+    return this.http.post<{ claimed: number }>('/api/positions/marked/claim-session', { sessionId }).pipe(
+      tap(() => { this.loadedFor = null; this.ensureLoaded(); }),
+    );
   }
 
   list(): Observable<MarkedPosition[]> {

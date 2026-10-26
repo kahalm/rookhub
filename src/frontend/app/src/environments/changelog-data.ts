@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.847.0", date: "2026-10-26", changes: [
+    { en: "Analysis: the “+” button that marks a particularly interesting position now works without an account too — the mark is kept under this device’s anonymous id and moves into your account when you sign in. Every mark records who set it (account or anonymous visitor).", de: "Analyse: Der „+“-Knopf, der eine besonders interessante Stellung markiert, geht jetzt auch ohne Konto — die Markierung liegt unter der anonymen Kennung dieses Geräts und wandert beim Anmelden ins Konto. Jede Markierung hält fest, wer sie gesetzt hat (Konto oder anonymer Besucher)." },
+    { en: "The “+” sits centred in its button again instead of too low, and its label now reads “Mark as a particularly interesting position”.", de: "Das „+“ sitzt wieder mittig im Knopf statt zu tief, und die Beschriftung lautet jetzt „Als besonders interessante Stellung markieren“." },
+  ] },
   { version: "0.846.4", date: "2026-10-26", changes: [
     { en: "LeagueHub: an expired share link no longer stops logged-in members at „Link invalid“ — anyone allowed to see the forecasts is taken straight to that match’s forecast. A revoked link offers „To the forecasts“ instead.", de: "LeagueHub: Ein abgelaufener Teilen-Link hält angemeldete Mitglieder nicht mehr bei „Link ungültig“ auf — wer die Prognosen ohnehin sehen darf, landet direkt bei der Prognose dieser Begegnung. Ein widerrufener Link bietet stattdessen „Zu den Prognosen“." },
   ]},

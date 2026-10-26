@@ -27,3 +27,9 @@ public class MarkPositionInputDto
     public int? Ply { get; set; }
     public string? BestUci { get; set; }
 }
+
+/// <summary>Anonyme Kennung (<c>X-Visitor-Id</c> der App), deren Markierungen ins Konto wandern (0.847.0).</summary>
+public class ClaimMarkedSessionDto
+{
+    [System.ComponentModel.DataAnnotations.MaxLength(36)] public string? SessionId { get; set; }
+}

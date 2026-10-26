@@ -10,11 +10,11 @@ describe('MarkPositionButtonComponent', () => {
   const FEN = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
   const KEY = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3';
 
-  function setup(loggedIn = true) {
+  function setup(loggedIn = true, auth: { currentUser: { userId: number } | null } = { currentUser: loggedIn ? { userId: 7 } : null }) {
     TestBed.configureTestingModule({
       imports: [MarkPositionButtonComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isLoggedIn: loggedIn } }],
+        { provide: AuthService, useValue: auth }],
     });
     const http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(MarkPositionButtonComponent);
@@ -57,9 +57,37 @@ describe('MarkPositionButtonComponent', () => {
     expect(TestBed.inject(MarkedPositionsService).isMarked(FEN)).toBeTrue();
   });
 
-  it('ohne Anmeldung kein Knopf und keine Anfrage', () => {
-    const { http, el } = setup(false);
-    expect(el.querySelector('button')).toBeNull();
+  // 0.847.0 (Wunsch 2026-10-26): auch ohne Anmeldung — der Server ordnet die Markierung der Besucher-Kennung zu.
+  it('ohne Anmeldung: Knopf da, lädt und markiert ebenso', () => {
+    const { fixture, http, el } = setup(false);
+    http.expectOne('/api/positions/marked').flush([]);
+    fixture.detectChanges();
+    (el.querySelector('button.mark') as HTMLButtonElement).click();
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/positions/marked').flush({});
     http.verify();
+  });
+
+  it('nach dem Anmelden: holt die anonymen Markierungen ins Konto und lädt für das Konto neu', () => {
+    const auth = { currentUser: null as { userId: number } | null };
+    const { http } = setup(false, auth);
+    http.expectOne('/api/positions/marked').flush([]);
+    auth.currentUser = { userId: 7 };
+    const service = TestBed.inject(MarkedPositionsService);
+    let claimed = -1;
+    service.claimSession('0123456789abcdef0123456789abcdef').subscribe(r => claimed = r.claimed);
+    const claim = http.expectOne('/api/positions/marked/claim-session');
+    expect(claim.request.body).toEqual({ sessionId: '0123456789abcdef0123456789abcdef' });
+    claim.flush({ claimed: 1 });
+    expect(claimed).toBe(1);
+    http.expectOne('/api/positions/marked').flush([{ id: 1, fen: FEN, positionKey: KEY, context: 'analysis', createdAt: '' }]);
+    expect(service.isMarked(FEN)).toBeTrue();
+    service.ensureLoaded();                               // gleicher Aufrufer: keine weitere Anfrage
+    http.verify();
+  });
+
+  it('die Beschriftung nennt die Stellung „besonders interessant"', () => {
+    const { http, el } = setup();
+    http.expectOne('/api/positions/marked').flush([]);
+    expect(el.querySelector('button.mark')!.getAttribute('aria-label') ?? '').toContain('markPosition.mark');
   });
 });

@@ -29,7 +29,9 @@ internal sealed class MarkedPositionConfiguration : IEntityTypeConfiguration<Mar
         e.Property(p => p.Context).HasMaxLength(16);
         e.Property(p => p.ShareToken).HasMaxLength(32);
         e.Property(p => p.BestUci).HasMaxLength(5);
+        e.Property(p => p.AnonSessionId).HasMaxLength(36);
         e.HasIndex(p => new { p.UserId, p.PositionKey }).IsUnique();
+        e.HasIndex(p => new { p.AnonSessionId, p.PositionKey }).IsUnique();
     }
 }
 

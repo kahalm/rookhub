@@ -108,6 +108,11 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s/{token}/club/scans/{key}/photo",
         "POST /api/league/s/{token}/club/scans/{key}/resolve",
         "DELETE /api/league/s/{token}/club/scans/{key}",
+        // „+"-Markierungen ohne Anmeldung (0.847.0): der Aufrufer ist dann die anonyme Kennung aus X-Visitor-Id —
+        // man sieht und ändert nur die eigenen; claim-session (ins Konto übernehmen) bleibt angemeldet.
+        "GET /api/positions/marked",
+        "POST /api/positions/marked",
+        "DELETE /api/positions/marked",
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am

@@ -5,6 +5,8 @@ namespace RookHub.Api.Models;
 /// Analysebrett oder dem Fehler-Training. Vorrat für ein späteres Feature, das diese Stellungen ALLEN zum Nachspielen
 /// anbietet; bis dahin sieht sie nur der Markierende.
 ///
+/// <para>Wer markiert hat, steht in <see cref="UserId"/> bzw. <see cref="AnonSessionId"/> (Besucher ohne Anmeldung, seit 0.847.0).</para>
+///
 /// <para>Eine Zeile je Nutzer und Stellung (<see cref="PositionKey"/> = FEN ohne Zugzähler): dieselbe Stellung aus einer
 /// anderen Partie ist dieselbe Markierung. Die Herkunft ist Beiwerk — wo sie fehlt (Analysebrett), bleibt die Stellung
 /// trotzdem brauchbar. Keine Fremdschlüssel auf die Partien: eine gelöschte Partie soll die Markierung nicht mitnehmen.</para>
@@ -13,8 +15,16 @@ public class MarkedPosition
 {
     public int Id { get; set; }
 
-    public int UserId { get; set; }
+    /// <summary>Wer markiert hat: das Konto — oder <c>null</c>, dann ein Besucher ohne Anmeldung (<see cref="AnonSessionId"/>).</summary>
+    public int? UserId { get; set; }
     public AppUser? User { get; set; }
+
+    /// <summary>
+    /// Ohne Anmeldung (0.847.0, Wunsch 2026-10-26: „auch anonymen Usern — notiere, wer es war"): die anonyme Kennung der App
+    /// (<c>X-Visitor-Id</c>, dieselbe wie bei Puzzles/E-Books). Beim Anmelden wandern die Markierungen ins Konto
+    /// (<see cref="Services.Games.MarkedPositionService.ClaimAnonymousAsync"/>); genau eines von beiden ist gesetzt.
+    /// </summary>
+    public string? AnonSessionId { get; set; }
 
     /// <summary>Brett, Seite am Zug, Rochade, en passant — der Vergleichsschlüssel (eindeutig je Nutzer).</summary>
     public string PositionKey { get; set; } = string.Empty;
