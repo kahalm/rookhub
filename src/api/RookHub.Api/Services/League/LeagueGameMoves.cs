@@ -63,8 +63,9 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
     /// <summary>Alle Begegnungen der Runde samt Aufstellung und Zügen. <c>null</c> = die Runde gibt es in der Liga nicht.</summary>
     /// <param name="canContribute"><c>league.contribute</c> (live) — ohne darf er nur lesen.</param>
     /// <param name="canManage"><c>league.manage</c> (live) — Verwalter dürfen jede Paarung und fremde Einträge ändern.</param>
-    /// <param name="revealOwn">Angemeldetes Vereinsmitglied: in einer vorläufigen Aufstellung steht für die eigene Seite der echte
-    /// Spieler (0.739.0). Über einen Teilen-Link (0.838.0) <c>false</c> — dort bleibt sie anonymisiert wie bei <c>/s/{token}/games</c>.</param>
+    /// <param name="revealOwn">In einer vorläufigen Aufstellung steht für die eigene Seite der echte Spieler statt „Schwaz"
+    /// (0.739.0, angemeldete Mitglieder; seit 0.846.3 auch über den Teilen-Link, Wunsch 2026-10-26 — <c>false</c> nur noch, wo
+    /// ein Aufrufer die anonymisierte Fassung ausdrücklich will).</param>
     public async Task<Lineups?> LineupsAsync(LeagueClub club, int tnr, int round, int userId, bool canContribute, bool canManage,
         bool revealOwn = true, CancellationToken ct = default)
     {

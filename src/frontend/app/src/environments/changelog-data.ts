@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.846.3", date: "2026-10-26", changes: [
+    { en: "LeagueHub: shared match links now show the club’s own players by name in the provisional line-up of the current round (board pairings and „All line-ups of round N“), as logged-in members see them, instead of the club placeholder. The stored games themselves stay anonymised.", de: "LeagueHub: Geteilte Begegnungs-Links zeigen in der vorläufigen Aufstellung der laufenden Runde (Brettpaarungen und „Alle Aufstellungen der Runde N“) jetzt die eigenen Spieler mit Namen, wie angemeldete Mitglieder sie sehen, statt des Vereins-Platzhalters. Die gespeicherten Partien selbst bleiben anonymisiert." },
+  ]},
   { version: "0.846.2", date: "2026-10-26", changes: [
     { en: "Documentation: TODO list updated to the state of the code review (second check of the 80 plausible findings, fix packages B7, second decomposition round).", de: "Doku: TODO-Liste auf den Stand des Codereviews gebracht (Zweitprüfung der 80 plausiblen Funde, Fixpakete B7, zweite Zerlegungsrunde)." },
   ]},

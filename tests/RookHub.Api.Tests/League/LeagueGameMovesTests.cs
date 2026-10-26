@@ -365,9 +365,14 @@ public class LeagueGameMovesTests : IDisposable
         Assert.True(l.Matches[0].Own);
         Assert.Equal("e4", l.Matches[0].Boards[0].Moves);
         Assert.All(l.Matches.SelectMany(m => m.Boards), b => Assert.False(b.CanEditMoves || b.CanDeleteMoves));
+        // 0.846.3, Wunsch 2026-10-26: „beim anonymen Link zeigt er die Namen der Schwazer nicht an — kann er ruhig" → auch über
+        // den Link der echte eigene Spieler (revealOwn), in den Aufstellungen wie in den Paarungen der Begegnung
         var b4 = l.Matches[0].Boards.Single(b => b.Board == 4);
-        Assert.Equal(("Testdorf", null, "Ober, Olga", "222", true), (b4.HomePlayer, b4.HomeFide, b4.AwayPlayer, b4.AwayFide, b4.Provisional));
+        Assert.Equal(("Hess, Max", "111", "Ober, Olga", "222", true), (b4.HomePlayer, b4.HomeFide, b4.AwayPlayer, b4.AwayFide, b4.Provisional));
         Assert.Equal((c.Id, false), (b4.Game!.ClubGameId, b4.Game.CanEdit));
+        var shared4 = ((List<LeagueFixtureGames.Pairing>)((OkObjectResult)await share.FixtureGames("LINK1", new LeagueFixtureGames(_db), default)).Value!)
+            .Single(p => p.Board == 4);
+        Assert.Equal(("Hess, Max", "111", false), (shared4.Black, shared4.BlackFide, shared4.CanEdit));
 
         Assert.IsType<NotFoundResult>(await share.Lineups("ALT", Service(), default));
         Assert.IsType<NotFoundResult>(await share.Lineups("nix", Service(), default));

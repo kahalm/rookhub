@@ -49,17 +49,20 @@ Möglichkeit, die ersten paar Züge einzugeben."
   der Partie, Elo aus der Partie sonst der Meldeliste der Liga, Heimfarbe über die anonymisierte eigene Seite (sonst die Mannschaft
   der weißen FIDE-ID), Ergebnis aus der Partie. **Die eigene Seite („Schwaz") zeigt den internen echten Spieler NUR mit
   `revealOwn`** — gesetzt von `GET /api/league/{tnr}/round/{r}/games` und den Aufstellungen (angemeldete Vereinsmitglieder; bewusste
-  Ausnahme von „Real-Namen nie ausgeben", Entscheidung des Users 10.10.), nie über `/api/league/s/{token}/games`. `LineupBoard.Provisional`;
+  Ausnahme von „Real-Namen nie ausgeben", Entscheidung des Users 10.10.); seit 0.846.3 auch über den Teilen-Link
+  (`/api/league/s/{token}/games` und `…/lineups`, Wunsch 2026-10-26: „beim anonymen Link zeigt er die Namen der Schwazer nicht an —
+  kann er ruhig"). Die gespeicherte Partie selbst bleibt anonymisiert (Vereinsliste, `club/games/{id}`). `LineupBoard.Provisional`;
   `lh-fixture` lädt die Paarungen auch für eine offene Runde und zeigt sie mit Hinweis „vorläufig", sobald ein Brett
   vorläufig ist (leere Bretter „offen") — angemeldet seit 0.739.0, über den Teilen-Link seit 0.838.2 (Wunsch 2026-10-25: „seh ich
-  die Paarungen von Runde 3 nicht im shared link"; der Server liefert dort über `/s/{token}/games` dieselben vorläufigen Bretter mit
-  anonymisierter eigener Seite). Sobald chess-results die Runde bringt, gilt wieder die öffentliche Paarung.
+  die Paarungen von Runde 3 nicht im shared link"; der Server liefert dort über `/s/{token}/games` dieselben vorläufigen Bretter —
+  eigene Seite bis 0.846.2 anonymisiert, seitdem mit echtem Spieler). Sobald chess-results die Runde bringt, gilt wieder die
+  öffentliche Paarung.
 * **Auch über den Teilen-Link** (0.838.0, Wunsch 2026-10-25: „die Aufstellung für die Runden (das mit den Partien) soll auch bei
   den anonymen Links verfügbar sein"): `GET /api/league/s/{token}/lineups` (`LeagueShareController.Lineups`, ohne Anmeldung,
   Rate-Limit `anonymous-tournament`) liefert dieselbe Antwort wie der angemeldete Endpunkt für Liga, Runde und Verein DES LINKS —
   nur lesend: `canEdit`, `canEditMoves`, `canDeleteMoves` und `game.canEdit` immer `false` (`LineupsAsync` mit `userId 0`,
-  `canContribute`/`canManage` aus), die eigene Seite einer vorläufigen Aufstellung bleibt anonymisiert (`revealOwn: false`, wie
-  `/s/{token}/games`), Vereinspartien nur des Vereins des Links; 404 = Link ungültig oder Runde unbekannt. Oberfläche: auf der
+  `canContribute`/`canManage` aus), die eigene Seite einer vorläufigen Aufstellung mit echtem Spieler (`revealOwn: true` seit
+  0.846.3, vorher anonymisiert), Vereinspartien nur des Vereins des Links; 404 = Link ungültig oder Runde unbekannt. Oberfläche: auf der
   Teilen-Seite (`share-page`) unter der Begegnung derselbe Textknopf „Alle Aufstellungen der Runde N" wie auf der Ligaseite
   (Zustand `?aufstellungen=1`), `lh-round-lineups` mit `shareToken` (lädt über den Link), `shareTeam` (die geteilte Begegnung = „wir"
   fürs Drehen des Bretts; nur dort „Nachspielen", PGN über `/s/{token}/games`, weil der Link nur deren Partien kennt) und
@@ -91,7 +94,7 @@ Möglichkeit, die ersten paar Züge einzugeben."
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
 | GET | `/api/league/{tnr}/round/{round}/lineups` | `league.view` | `{ tnr, round, date, canEdit, matches[{ matchNo, home, away, homePts, awayPts, own, boards[{ board, homePlayer, homeTitle, homeElo, awayPlayer, awayTitle, awayElo, homeColor, result, forfeit, moves, canEditMoves, game?, canDeleteMoves, homeFide, awayFide }] }] }` — `homeFide`/`awayFide` (0.727.2) = FIDE-IDs der Paarung oder `null`; `game` (0.724.0) = vorhandene Partie des Bretts `{ source, clubGameId, plies, result, white, black, firstMoves, canEdit }` oder `null`, dann `canEditMoves = false`; 404 ohne Runde |
-| GET | `/api/league/s/{token}/lineups` | – (Teilen-Link) | Dieselbe Antwort für die Runde des Links (0.838.0), nur lesend (`canEdit`/`canEditMoves`/`canDeleteMoves`/`game.canEdit` = `false`), eigene Seite anonymisiert; 404 Link ungültig/Runde unbekannt |
+| GET | `/api/league/s/{token}/lineups` | – (Teilen-Link) | Dieselbe Antwort für die Runde des Links (0.838.0), nur lesend (`canEdit`/`canEditMoves`/`canDeleteMoves`/`game.canEdit` = `false`), eigene Seite mit echtem Spieler (seit 0.846.3); 404 Link ungültig/Runde unbekannt |
 | PUT | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | `{ moves }` (leer = löschen) → `{ moves }` (englische SAN); 404 ohne Paarung, 403 `foreignMatch`/`notYours`, 400 `noGame`/`tooLong`/`illegal` (+ `move`, `ply`) |
 | DELETE | `/api/league/{tnr}/round/{round}/match/{matchNo}/board/{board}/moves` | `league.contribute` | → 204; 404/403 wie oben |
 
