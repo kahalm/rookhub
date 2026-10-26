@@ -32,7 +32,6 @@ import {
 } from './calc-tree.util';
 import {
   CALC_GRADE_OPTIONS, CALC_MAX_POINTS_PER_POSITION, CalcGrade, CalcReview, CalcReviewPatch,
-  normalizeGrade,
 } from './calc-review.util';
 import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalculationService,
@@ -46,12 +45,8 @@ import { CalcChapterModel } from './calc-chapter-model';
 import { CalcPageLoader, calcStartFen } from './calc-page-loader';
 import { CalcLabels } from './calc-labels';
 import { CalcReviewController } from './calc-review.controller';
-import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
-import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
+import { openCalcGradeDialog, openCalcSettingsDialog, openCalcTimerDialog } from './calc-dialogs';
 import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
-import {
-  CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult,
-} from './calc-timer-dialog.component';
 import { AuthService } from '../../../core/auth.service';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
@@ -329,9 +324,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get fsTarget(): HTMLElement | null { return this.pageMode.fsTarget; }
 
   /** Brett- und Figurenart — alles, was in DIESEM Modus etwas bewirkt. */
-  openSettings(): void {
-    this.dialog.open(CalcSettingsDialogComponent, { autoFocus: false });
-  }
+  openSettings(): void { openCalcSettingsDialog(this.dialog); }
 
   ngOnDestroy(): void {
     this.stopTraining();     // stoppt UND schöpft die gemessene Zeit ab
@@ -527,32 +520,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
     return this.review.grade === grade;
   }
 
-  /**
-   * Der Knopf „Ergebnis" öffnet die Auswahl. Bewusst ein Dialog statt fünf Schaltern in der
-   * Seitenspalte: der Modus soll ein Brett bleiben, kein Formular (UI-Dichte-Regel).
-   */
+  /** Der Knopf „Ergebnis" öffnet die Auswahl (Dialog statt fünf Schaltern, UI-Dichte-Regel). */
   openGradeDialog(): void {
-    const ref = this.dialog.open<CalcGradeDialogComponent, unknown, CalcGradeDialogResult>(
-      CalcGradeDialogComponent, {
-        data: { grade: this.review.grade, chosenSan: this.review.chosenSan },
-        width: '440px',
-        autoFocus: false,
-      });
-    this.subs.add(ref.afterClosed().subscribe(result => {
-      // Durchgelassen wird nur ein ECHTES Ergebnis: eine Zahl = Stufe, `null` = Bewertung
-      // ausdrücklich zurücknehmen. Alles andere heißt „weggeklickt, nichts ändern".
-      //
-      // Bewusst NICHT auf `undefined` prüfen: was hier ankommt, befüllt teils ein fremdes
-      // Framework (ein `mat-dialog-close`-Attribut schließt mit dem leeren STRING). Ein solcher
-      // Wert liefe über `normalizeGrade('') === null` als `clearGrade` an den Server — wer eine
-      // bestehende Bewertung nur ansieht und abbricht, verlöre sie. Ein Löschbefehl muss aus
-      // einer AUSDRÜCKLICHEN Handlung kommen, nicht aus einem Vorgabewert.
-      if (typeof result === 'number' && Number.isFinite(result)) {
-        this.applyGrade(normalizeGrade(result));
-      } else if (result === null) {
-        this.applyGrade(null);
-      }
-    }));
+    this.subs.add(openCalcGradeDialog(this.dialog, this.review, grade => this.applyGrade(grade)));
   }
 
   /** Optimistisch anzeigen + an den Server einreihen. */
@@ -612,26 +582,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   toggleAnnotations(): void { this.showAnnotations = !this.showAnnotations; }
 
-  /**
-   * Kapitelzeit von Hand nachtragen — für den Fall, dass das Training zu spät gestartet wurde.
-   * Bewusst NUR die Kapitel-Uhr (Merkhilfe auf diesem Gerät): die je Stellung gemessene Zeit
-   * entsteht aus echten Abschnitten und bliebe sonst keine Messung mehr.
-   */
+  /** Kapitelzeit von Hand nachtragen (nur die Kapitel-Uhr, nicht die je Stellung gemessene Zeit). */
   openTimerDialog(): void {
-    const ref = this.dialog.open<CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult | undefined>(
-      CalcTimerDialogComponent,
-      {
-        data: {
-          seconds: this.timerSeconds,
-          chapter: this.labels.chapterName || this.translate.instant('courses.noChapter'),
-        },
-        autoFocus: false,
-      });
-    ref.afterClosed().subscribe(result => {
-      // Nur eine echte Zahl zählt: ein Fremdwert (leerer String vom Framework) ist „weggeklickt".
-      if (typeof result !== 'number' || !Number.isFinite(result)) return;
-      this.timer.setSeconds(Math.max(0, Math.floor(result)));
-    });
+    openCalcTimerDialog(this.dialog, {
+      seconds: this.timerSeconds,
+      chapter: this.labels.chapterName || this.translate.instant('courses.noChapter'),
+    }, seconds => this.timer.setSeconds(seconds));
   }
 
   // ===== Analyse + FEN kopieren =============================================
