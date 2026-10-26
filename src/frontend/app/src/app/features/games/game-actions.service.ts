@@ -107,6 +107,24 @@ export class GameActionsService {
     });
   }
 
+  /** Teilen-Link widerrufen (nach Rückfrage, A2-006) → das neue, unveröffentlichte Token; nichts bei Abbruch/Fehler. */
+  revokeShareLink(id: number): Observable<string> {
+    return new Observable<string>(sub => {
+      const ask = this.confirm.ask('games.revokeShareConfirm').subscribe(ok => {
+        if (!ok) { sub.complete(); return; }
+        this.games.revokeShare(id).subscribe({
+          next: r => {
+            this.snackbar.success(this.translate.instant('games.revokeShareDone'));
+            sub.next(r.shareToken);
+            sub.complete();
+          },
+          error: () => { this.snackbar.warn(this.translate.instant('games.revokeShareError')); sub.complete(); },
+        });
+      });
+      return () => ask.unsubscribe();
+    });
+  }
+
   /** Im Analysebrett öffnen — mit dem GANZEN PGN (Kopfdaten, Kommentare); „Zurück" führt nach `from`. */
   openInAnalysis(pgn: string | null | undefined, from: string): void {
     if (!pgn) return;

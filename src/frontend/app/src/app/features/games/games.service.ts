@@ -244,6 +244,11 @@ export class GamesService {
     return this.http.delete<void>(`/api/games/${id}`);
   }
 
+  /** Teilen-Link widerrufen (A2-006): der Server vergibt ein neues Token, der alte `/g/`-Link ist tot. */
+  revokeShare(id: number): Observable<{ shareToken: string }> {
+    return this.http.delete<{ shareToken: string }>(`/api/games/${id}/share`);
+  }
+
   getShared(token: string): Observable<SharedGame> {
     return this.http.get<SharedGame>(`/api/games/shared/${encodeURIComponent(token)}`);
   }

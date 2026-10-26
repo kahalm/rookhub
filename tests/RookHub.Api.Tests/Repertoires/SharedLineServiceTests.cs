@@ -225,4 +225,55 @@ public class SharedLineServiceTests : IDisposable
         Assert.Equal(res.ShareToken, again!.ShareToken);
         Assert.Single(_db.SharedLines);
     }
+
+    // ── Widerruf + Liste (Codereview A2-006) ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ListOwn_ShowsOnlyOwnLinks_DeleteOwn_KillsTheLink_ForeignDeleteIsNotFound()
+    {
+        var owner = await AddUserAsync("owner");
+        var other = await AddUserAsync("other");
+        var repId = await AddRepertoireAsync(owner, "Najdorf-Rep");
+        var mine = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn, Title = "Najdorf" });
+        var ext = await _svc.CreateStandaloneAsync(owner, ["e4", "e5"], "chess.com");
+        var foreign = await _svc.CreateStandaloneAsync(other, ["d4"], null);
+
+        var list = await _svc.ListOwnAsync(owner);
+        Assert.Equal(2, list.Count);
+        var line = Assert.Single(list, l => l.ShareToken == mine!.ShareToken);
+        Assert.Equal(("Najdorf", "Najdorf-Rep", (int?)repId), (line.Title, line.RepertoireName, line.RepertoireId));
+        Assert.Null(Assert.Single(list, l => l.ShareToken == ext!.ShareToken).RepertoireId);
+
+        var foreignId = (await _db.SharedLines.SingleAsync(s => s.ShareToken == foreign!.ShareToken)).Id;
+        Assert.False(await _svc.DeleteOwnAsync(owner, foreignId));
+        Assert.NotNull(await _svc.GetByTokenAsync(foreign!.ShareToken));
+
+        Assert.True(await _svc.DeleteOwnAsync(owner, line.Id));
+        Assert.Null(await _svc.GetByTokenAsync(mine!.ShareToken));
+        Assert.False(await _svc.DeleteOwnAsync(owner, line.Id));
+
+        // Erneut teilen → NEUER Link, der alte bleibt tot.
+        var again = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn, Title = "Najdorf" });
+        Assert.NotEqual(mine.ShareToken, again!.ShareToken);
+        Assert.Null(await _svc.GetByTokenAsync(mine.ShareToken));
+    }
+
+    /// <summary>A2-006: vorher überlebte /l/ das Löschen des Repertoires. Jetzt gehen dessen Links mit; Links anderer
+    /// Repertoires und freistehende (Extension) bleiben.</summary>
+    [Fact]
+    public async Task DeletingTheRepertoire_RemovesItsLineLinks_Only()
+    {
+        var owner = await AddUserAsync("owner");
+        var repA = await AddRepertoireAsync(owner, "A");
+        var repB = await AddRepertoireAsync(owner, "B");
+        var a = await _svc.CreateAsync(owner, repA, new ShareLineInputDto { Pgn = Pgn });
+        var b = await _svc.CreateAsync(owner, repB, new ShareLineInputDto { Pgn = Pgn.Replace("{solid}", "{andere Linie}") });
+        var ext = await _svc.CreateStandaloneAsync(owner, ["e4"], null);
+
+        await TestServices.Repertoire(_db).DeleteAsync(repA, owner);
+
+        Assert.Null(await _svc.GetByTokenAsync(a!.ShareToken));
+        Assert.NotNull(await _svc.GetByTokenAsync(b!.ShareToken));
+        Assert.NotNull(await _svc.GetByTokenAsync(ext!.ShareToken));
+    }
 }

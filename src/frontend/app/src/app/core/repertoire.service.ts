@@ -262,6 +262,16 @@ export interface SharedLine {
   createdAt: string;
 }
 
+/** Eigener Linien-Link in „Meine Teilen-Links" (Profil, A2-006). `repertoireId` null = aus der RepCheck-Extension. */
+export interface OwnSharedLine {
+  id: number;
+  shareToken: string;
+  title: string | null;
+  repertoireName: string | null;
+  repertoireId: number | null;
+  createdAt: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RepertoireService {
   private readonly apiUrl = '/api/repertoires';
@@ -286,6 +296,16 @@ export class RepertoireService {
   /** Erzeugt einen öffentlichen Nur-Ansehen-Link für eine einzelne Linie (liefert das Token). */
   shareLine(id: number, body: { pgn: string; title?: string }): Observable<{ shareToken: string }> {
     return this.http.post<{ shareToken: string }>(`${this.apiUrl}/${id}/share-line`, body);
+  }
+
+  /** Alle eigenen Linien-Links (neueste zuerst). */
+  listSharedLines(): Observable<OwnSharedLine[]> {
+    return this.http.get<OwnSharedLine[]>(`${this.apiUrl}/shared-lines`);
+  }
+
+  /** Widerruft einen eigenen Linien-Link — danach liefert `/l/{token}` 404. */
+  deleteSharedLine(lineId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/shared-lines/${lineId}`);
   }
 
   /** Öffentliche Sicht einer geteilten Linie über ihr Token (kein Login). */

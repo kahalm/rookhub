@@ -77,6 +77,24 @@ describe('GameActionsService', () => {
     expect(snack.warn).toHaveBeenCalledWith('games.deleteError');
   });
 
+  it('widerruft den Teilen-Link nach Rückfrage und liefert das neue Token (A2-006)', () => {
+    const got: string[] = [];
+    confirmAnswer = false;
+    actions.revokeShareLink(7).subscribe(t => got.push(t));
+    http.expectNone('/api/games/7/share');
+
+    confirmAnswer = true;
+    actions.revokeShareLink(7).subscribe(t => got.push(t));
+    http.expectOne({ url: '/api/games/7/share', method: 'DELETE' }).flush({ shareToken: 'neu' });
+    expect(got).toEqual(['neu']);
+    expect(snack.success).toHaveBeenCalledWith('games.revokeShareDone');
+
+    actions.revokeShareLink(8).subscribe(t => got.push(t));
+    http.expectOne({ url: '/api/games/8/share', method: 'DELETE' }).flush('x', { status: 404, statusText: 'nf' });
+    expect(got).toEqual(['neu']);
+    expect(snack.warn).toHaveBeenCalledWith('games.revokeShareError');
+  });
+
   it('oeffnet das Analysebrett mit dem ganzen PGN', () => {
     const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     actions.openInAnalysis(null, '/g/x');

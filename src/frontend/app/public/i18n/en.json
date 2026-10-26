@@ -718,6 +718,19 @@
         "engine": "Engine"
       }
     },
+    "sharedLinks": {
+      "title": "My share links",
+      "hint": "Public links to single repertoire lines (/l/…). Anyone with the link can view the line without signing in — until you revoke it.",
+      "gamesHint": "Revoke game links (/g/…) in the game list: ⋮ → “Revoke share link”.",
+      "empty": "You have not shared any line publicly.",
+      "fromExtension": "from RepCheck",
+      "open": "Open",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the link to “{{title}}”? Anyone who has it will no longer see the line.",
+      "revoked": "Link revoked.",
+      "error": "Could not load your share links.",
+      "revokeError": "Revoking failed."
+    },
     "engine": {
       "title": "External engine",
       "hint": "A stronger engine for the analysis board — your own computer or a cloud engine.",
@@ -2865,6 +2878,10 @@
     "replay": "Replay",
     "openInAnalysis": "Open in analysis",
     "share": "Copy share link",
+    "revokeShare": "Revoke share link",
+    "revokeShareConfirm": "Revoke this game's share link? The current link (including roast and training links) stops working; “Copy share link” gives out a new one.",
+    "revokeShareDone": "Share link revoked.",
+    "revokeShareError": "Revoking failed.",
     "shareCopied": "Share link copied to clipboard",
     "shareTrainingCopied": "Link copied — it opens the mistakes training directly, also without an account",
     "shareTraining": {

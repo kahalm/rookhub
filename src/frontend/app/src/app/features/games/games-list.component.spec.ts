@@ -352,7 +352,7 @@ describe('GamesListComponent', () => {
     fixture.detectChanges();
     const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel .mat-mdc-menu-item-text')).map(x => x.textContent!.trim());
     // d4-rk-partie-menue-loeschen-fehlt-partieseite: PGN kopieren/herunterladen wie auf der Partieseite.
-    expect(items).toEqual(['games.openInAnalysis', 'games.openOriginal', 'games.edit.menu', 'games.roast.menu', 'games.share',
+    expect(items).toEqual(['games.openInAnalysis', 'games.openOriginal', 'games.edit.menu', 'games.roast.menu', 'games.share', 'games.revokeShare',
       'games.pgnCopy', 'common.downloadPgn', 'games.photo.show', 'games.photo.download', 'common.delete']);
   });
 

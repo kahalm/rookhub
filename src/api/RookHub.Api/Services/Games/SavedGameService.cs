@@ -291,6 +291,21 @@ public class SavedGameService
         return true;
     }
 
+    /// <summary>
+    /// Widerruft den öffentlichen Teilen-Link einer eigenen Partie (Codereview A2-006): die Partie bekommt ein NEUES
+    /// Token, der alte <c>/g/</c>-Link (samt Roast-, Trainings- und Analyse-Links daran) liefert ab sofort 404. Das neue
+    /// Token ist nirgends veröffentlicht — erst „Link kopieren" gibt es heraus. Vorher blieb nur „Partie löschen".
+    /// <c>null</c>, wenn die Partie nicht existiert oder fremd ist.
+    /// </summary>
+    public async Task<string?> RotateShareTokenAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var g = await _db.SavedGames.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+        if (g == null) return null;
+        g.ShareToken = await ShareTokens.NewUniqueAsync(t => _db.SavedGames.AnyAsync(x => x.ShareToken == t, ct));
+        await _db.SaveChangesAsync(ct);
+        return g.ShareToken;
+    }
+
     // ── Hereinholen (SavedGameImport) ─────────────────────────────────
 
     // ── Vom Server angelegt + korrigiert (Partieformular, 0.529.0) ─────

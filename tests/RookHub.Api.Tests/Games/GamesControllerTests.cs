@@ -957,4 +957,28 @@ public class GamesControllerTests : IDisposable
         Assert.Contains("CHAR_LENGTH", sql);
         Assert.Contains("GROUP BY", sql);
     }
+
+    // ── Teilen-Link widerrufen (Codereview A2-006) ──────────────────────────────────────────
+
+    [Fact]
+    public async Task RevokeShare_RotatesTheToken_OldLinkIsDead_ForeignIsNotFound()
+    {
+        var owner = await CreateUserAsync("owner");
+        var other = await CreateUserAsync("other");
+        var game = await SeedGameAsync(owner.Id);
+        var oldToken = game.ShareToken;
+
+        SetUser(other.Id);
+        Assert.IsType<NotFoundResult>((await _controller.RevokeShare(game.Id, CancellationToken.None)).Result);
+        Assert.IsType<OkObjectResult>((await _controller.GetShared(oldToken)).Result);
+
+        SetUser(owner.Id);
+        var ok = Assert.IsType<OkObjectResult>((await _controller.RevokeShare(game.Id, CancellationToken.None)).Result);
+        var fresh = Assert.IsType<SavedGameShareDto>(ok.Value).ShareToken;
+        Assert.NotEqual(oldToken, fresh);
+        Assert.IsType<NotFoundResult>((await _controller.GetShared(oldToken)).Result);
+        Assert.IsType<OkObjectResult>((await _controller.GetShared(fresh)).Result);
+        Assert.Equal(fresh, (await _service.GetAsync(owner.Id, game.Id))!.ShareToken);
+        Assert.IsType<NotFoundResult>((await _controller.RevokeShare(999_901, CancellationToken.None)).Result);
+    }
 }

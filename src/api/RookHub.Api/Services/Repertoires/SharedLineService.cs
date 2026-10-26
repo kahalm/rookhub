@@ -144,6 +144,31 @@ public class SharedLineService
         return sb.ToString();
     }
 
+    /// <summary>Alle eigenen Linien-Links, neueste zuerst — für „Meine Teilen-Links" (Codereview A2-006: vorher gab es
+    /// weder Liste noch Widerruf, ein /l/-Link lebte bis zur Kontolöschung).</summary>
+    public async Task<List<OwnSharedLineDto>> ListOwnAsync(int userId, CancellationToken ct = default)
+        => await _db.SharedLines.AsNoTracking()
+            .Where(s => s.OwnerUserId == userId)
+            .OrderByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id)
+            .Select(s => new OwnSharedLineDto
+            {
+                Id = s.Id, ShareToken = s.ShareToken, Title = s.Title, RepertoireName = s.RepertoireName,
+                RepertoireId = s.RepertoireId, CreatedAt = s.CreatedAt,
+            })
+            .ToListAsync(ct);
+
+    /// <summary>Widerruft einen eigenen Linien-Link (Zeile weg → <c>/l/{token}</c> 404). <c>false</c>, wenn es ihn nicht
+    /// gibt oder er einem anderen gehört — von außen nicht zu unterscheiden. Erneutes Teilen derselben Linie legt einen
+    /// NEUEN Link an (anderes Token).</summary>
+    public async Task<bool> DeleteOwnAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var row = await _db.SharedLines.FirstOrDefaultAsync(s => s.Id == id && s.OwnerUserId == userId, ct);
+        if (row == null) return false;
+        _db.SharedLines.Remove(row);
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
     /// <summary>Öffentliche Sicht über das Token; <c>null</c> wenn unbekannt.</summary>
     public async Task<SharedLineDto?> GetByTokenAsync(string token, CancellationToken ct = default)
     {

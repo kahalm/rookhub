@@ -253,6 +253,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   <button mat-menu-item (click)="share(g)">
                     <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
                   </button>
+                  <button mat-menu-item class="revoke-share" (click)="revokeShare(g)">
+                    <mat-icon>link_off</mat-icon><span>{{ 'games.revokeShare' | translate }}</span>
+                  </button>
                   <!-- d4-rk-partie-menue-loeschen-fehlt-partieseite: dieselben Einträge wie das ⋮ der Partieseite (DESIGN 5.5). -->
                   <button mat-menu-item class="pgn-copy" (click)="copyPgn(g)">
                     <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
@@ -637,6 +640,11 @@ export class GamesListComponent implements OnInit {
   /** Eindeutigen Teilen-Link in die Zwischenablage kopieren. */
   share(g: SavedGame): void {
     this.actions.copyShareLink(g.shareToken);
+  }
+
+  /** Teilen-Link widerrufen (A2-006): die Zeile bekommt das neue Token, „Link kopieren" gibt danach diesen heraus. */
+  revokeShare(g: SavedGame): void {
+    this.actions.revokeShareLink(g.id).subscribe(token => { g.shareToken = token; });
   }
 
   /** PGN nachladen und in die Zwischenablage (wie „PGN kopieren“ auf der Partieseite). */

@@ -9,6 +9,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { AuthService } from '../../core/auth.service';
 import { ApiTokensComponent } from './api-tokens.component';
+import { SharedLinksCardComponent } from './shared-links-card.component';
 import { EngineCardComponent } from './engine-card.component';
 import { OfflineSettingsCardComponent } from './offline-settings-card.component';
 import { ThemeCardComponent } from './theme-card.component';
@@ -229,7 +230,7 @@ describe('ProfileComponent (Template bei Ladefehler)', () => {
       ],
     });
     TestBed.overrideComponent(ProfileComponent, {
-      remove: { imports: [ApiTokensComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+      remove: { imports: [ApiTokensComponent, SharedLinksCardComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
         ChangePasswordCardComponent, DeleteAccountCardComponent, ProfileIdentityFormComponent] },
       add: { imports: [OfflineStub, ThemeStub] },
     });
@@ -262,6 +263,8 @@ describe('ProfileComponent (Template bei Ladefehler)', () => {
 class IdentityStub { profile = input<unknown>(); savedEmail = input<unknown>(); currentPassword = model<string>(''); }
 @Component({ selector: 'app-api-tokens', standalone: true, template: 'TOKENS' })
 class TokensStub {}
+@Component({ selector: 'app-shared-links-card', standalone: true, template: 'LINKS' })
+class SharedLinksStub {}
 @Component({ selector: 'app-engine-card', standalone: true, template: 'ENGINE' })
 class EngineStub {}
 @Component({ selector: 'app-change-password-card', standalone: true, template: 'PW' })
@@ -282,9 +285,9 @@ describe('ProfileComponent (Darstellung zuerst)', () => {
       ],
     });
     TestBed.overrideComponent(ProfileComponent, {
-      remove: { imports: [ApiTokensComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+      remove: { imports: [ApiTokensComponent, SharedLinksCardComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
         ChangePasswordCardComponent, DeleteAccountCardComponent, ProfileIdentityFormComponent] },
-      add: { imports: [OfflineStub, ThemeStub, IdentityStub, TokensStub, EngineStub, PasswordStub, DeleteStub] },
+      add: { imports: [OfflineStub, ThemeStub, IdentityStub, TokensStub, SharedLinksStub, EngineStub, PasswordStub, DeleteStub] },
     });
     const fixture = TestBed.createComponent(ProfileComponent);
     fixture.detectChanges();

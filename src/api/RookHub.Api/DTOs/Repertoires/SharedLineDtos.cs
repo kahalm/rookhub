@@ -29,6 +29,18 @@ public class ShareExtensionLineInputDto
     public string? Title { get; set; }
 }
 
+/// <summary>Eigener Teilen-Link einer Linie in der Übersicht „Meine Teilen-Links" (A2-006) — nur für den Besitzer.</summary>
+public class OwnSharedLineDto
+{
+    public int Id { get; set; }
+    public string ShareToken { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string? RepertoireName { get; set; }
+    /// <summary>Herkunfts-Repertoire; <c>null</c> bei einer Linie aus der RepCheck-Extension.</summary>
+    public int? RepertoireId { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 /// <summary>Öffentliche Sicht einer geteilten Linie (kein Login nötig).</summary>
 public class SharedLineDto
 {

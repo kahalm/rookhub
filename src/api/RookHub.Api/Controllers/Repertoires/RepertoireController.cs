@@ -103,6 +103,17 @@ public class RepertoireController : BaseApiController
         return dto == null ? NotFound(new { message = "Shared line not found." }) : Ok(dto);
     }
 
+    /// <summary>„Meine Teilen-Links": alle eigenen Linien-Links (A2-006). Literale Route MUSS vor `{id}` stehen.</summary>
+    [HttpGet("shared-lines")]
+    public async Task<ActionResult<List<OwnSharedLineDto>>> ListSharedLines(CancellationToken ct)
+        => Ok(await _sharedLines.ListOwnAsync(GetUserId(), ct));
+
+    /// <summary>Widerruft einen eigenen Linien-Link — danach liefert <c>/l/{token}</c> 404 (A2-006). 404 auch für fremde.</summary>
+    [HttpDelete("shared-lines/{lineId:int}")]
+    public async Task<IActionResult> DeleteSharedLine(int lineId, CancellationToken ct)
+        => await _sharedLines.DeleteOwnAsync(GetUserId(), lineId, ct)
+            ? NoContent() : NotFound(new { message = "Shared line not found." });
+
     /// <summary>Erzeugt einen öffentlichen Nur-Ansehen-Link für eine Linie des Repertoires.
     /// Nur der Besitzer; liefert bei erneutem Teilen derselben Linie denselben Link.
     /// 400 bei übergroßem PGN (Cap in <see cref="SharedLineService.MaxPgnChars"/>).</summary>

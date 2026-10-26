@@ -718,6 +718,19 @@
         "engine": "Engine"
       }
     },
+    "sharedLinks": {
+      "title": "Meine Teilen-Links",
+      "hint": "Öffentliche Links zu einzelnen Repertoire-Linien (/l/…). Wer den Link hat, sieht die Linie ohne Anmeldung — bis du ihn widerrufst.",
+      "gamesHint": "Partie-Links (/g/…) widerrufst du in der Partieliste: ⋮ → „Teilen-Link widerrufen“.",
+      "empty": "Du hast keine Linie öffentlich geteilt.",
+      "fromExtension": "aus RepCheck",
+      "open": "Öffnen",
+      "revoke": "Widerrufen",
+      "revokeConfirm": "Link zu „{{title}}“ widerrufen? Wer ihn hat, sieht die Linie danach nicht mehr.",
+      "revoked": "Link widerrufen.",
+      "error": "Teilen-Links konnten nicht geladen werden.",
+      "revokeError": "Widerrufen fehlgeschlagen."
+    },
     "engine": {
       "title": "Externe Engine",
       "hint": "Stärkere Engine fürs Analysebrett — dein eigener Rechner oder eine Cloud-Engine.",
@@ -2865,6 +2878,10 @@
     "replay": "Nachspielen",
     "openInAnalysis": "In Analyse öffnen",
     "share": "Teilen-Link kopieren",
+    "revokeShare": "Teilen-Link widerrufen",
+    "revokeShareConfirm": "Teilen-Link dieser Partie widerrufen? Der bisherige Link (auch Roast- und Trainings-Links) funktioniert danach nicht mehr; „Teilen-Link kopieren“ gibt einen neuen heraus.",
+    "revokeShareDone": "Teilen-Link widerrufen.",
+    "revokeShareError": "Widerrufen fehlgeschlagen.",
     "shareCopied": "Teilen-Link in die Zwischenablage kopiert",
     "shareTrainingCopied": "Link kopiert — er öffnet direkt das Fehler-Training, auch ohne Konto",
     "shareTraining": {

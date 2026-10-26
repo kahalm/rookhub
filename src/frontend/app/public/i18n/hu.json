@@ -457,6 +457,19 @@
         "engine": "Engine"
       }
     },
+    "sharedLinks": {
+      "title": "Megosztási linkjeim",
+      "hint": "Nyilvános linkek egyes repertoárvonalakhoz (/l/…). Akinél a link van, bejelentkezés nélkül látja a vonalat — amíg vissza nem vonod.",
+      "gamesHint": "A játszmalinkeket (/g/…) a játszmalistában vonhatod vissza: ⋮ → „Megosztási link visszavonása”.",
+      "empty": "Még nem osztottál meg nyilvánosan vonalat.",
+      "fromExtension": "RepCheckből",
+      "open": "Megnyitás",
+      "revoke": "Visszavonás",
+      "revokeConfirm": "Visszavonod a(z) „{{title}}” linkjét? Akinél megvan, többé nem látja a vonalat.",
+      "revoked": "Link visszavonva.",
+      "error": "A megosztási linkek nem tölthetők be.",
+      "revokeError": "A visszavonás nem sikerült."
+    },
     "offline": {
       "title": "Offline",
       "hint": "Tárold a feladványokat ezen az eszközön, hogy internet nélkül is megoldhasd őket (eszközönként).",
@@ -3227,6 +3240,10 @@
     "replay": "Újrajátszás",
     "openInAnalysis": "Megnyitás az elemzésben",
     "share": "Megosztási link másolása",
+    "revokeShare": "Megosztási link visszavonása",
+    "revokeShareConfirm": "Visszavonod a játszma megosztási linkjét? Az eddigi link (a roast- és edzéslinkekkel együtt) nem működik tovább; a „Megosztási link másolása” újat ad.",
+    "revokeShareDone": "Megosztási link visszavonva.",
+    "revokeShareError": "A visszavonás nem sikerült.",
     "shareCopied": "A megosztási link a vágólapra másolva",
     "shareTrainingCopied": "Link másolva — közvetlenül a hibagyakorlást nyitja meg, fiók nélkül is",
     "shareTraining": {

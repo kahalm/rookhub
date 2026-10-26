@@ -718,6 +718,19 @@
         "engine": "Engine"
       }
     },
+    "sharedLinks": {
+      "title": "Moje poveznice za dijeljenje",
+      "hint": "Javne poveznice na pojedine linije repertoara (/l/…). Tko ima poveznicu, vidi liniju bez prijave — dok je ne opozoveš.",
+      "gamesHint": "Poveznice partija (/g/…) opozivaš u popisu partija: ⋮ → „Opozovi poveznicu za dijeljenje”.",
+      "empty": "Nisi javno podijelio nijednu liniju.",
+      "fromExtension": "iz RepChecka",
+      "open": "Otvori",
+      "revoke": "Opozovi",
+      "revokeConfirm": "Opozvati poveznicu na „{{title}}”? Tko je ima, više neće vidjeti liniju.",
+      "revoked": "Poveznica opozvana.",
+      "error": "Poveznice za dijeljenje nije moguće učitati.",
+      "revokeError": "Opoziv nije uspio."
+    },
     "engine": {
       "title": "Vanjski motor",
       "hint": "Jači motor za ploču za analizu — tvoje vlastito računalo ili motor u oblaku.",
@@ -2865,6 +2878,10 @@
     "replay": "Ponovi",
     "openInAnalysis": "Otvori u analizi",
     "share": "Kopiraj poveznicu za dijeljenje",
+    "revokeShare": "Opozovi poveznicu za dijeljenje",
+    "revokeShareConfirm": "Opozvati poveznicu za dijeljenje ove partije? Dosadašnja poveznica (i poveznice za roast i trening) više neće raditi; „Kopiraj poveznicu za dijeljenje” daje novu.",
+    "revokeShareDone": "Poveznica za dijeljenje opozvana.",
+    "revokeShareError": "Opoziv nije uspio.",
     "shareCopied": "Poveznica za dijeljenje kopirana u međuspremnik",
     "shareTrainingCopied": "Poveznica kopirana — otvara izravno trening grešaka, i bez računa",
     "shareTraining": {

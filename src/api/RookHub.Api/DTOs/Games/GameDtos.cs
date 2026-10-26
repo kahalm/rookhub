@@ -443,3 +443,8 @@ public class PgnImportFailureDto
     public string Reason { get; set; } = "illegal";
 }
 
+/// <summary>Antwort auf <c>DELETE /api/games/{id}/share</c> (A2-006): das neue, noch unveröffentlichte Teilen-Token.</summary>
+public class SavedGameShareDto
+{
+    public string ShareToken { get; set; } = string.Empty;
+}

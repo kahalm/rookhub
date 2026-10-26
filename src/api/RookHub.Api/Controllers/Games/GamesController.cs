@@ -145,6 +145,15 @@ public class GamesController : BaseApiController
         [FromBody] SavedGameAnalyzeRequest? body = null)
         => AnalyzeResult(await _service.AnalyzeAsync(GetUserId(), id, ct, body?.Lang));
 
+    /// <summary>Teilen-Link einer eigenen Partie widerrufen (A2-006): neues Token, der alte <c>/g/</c>-Link ist tot.
+    /// Antwort: das neue (unveröffentlichte) Token, damit die Liste es ohne Neuladen kennt; 404 für fremde/fehlende.</summary>
+    [HttpDelete("{id:int}/share")]
+    public async Task<ActionResult<SavedGameShareDto>> RevokeShare(int id, CancellationToken ct)
+    {
+        var token = await _service.RotateShareTokenAsync(GetUserId(), id, ct);
+        return token == null ? NotFound() : Ok(new SavedGameShareDto { ShareToken = token });
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
         => await _service.DeleteAsync(GetUserId(), id) ? NoContent() : NotFound();

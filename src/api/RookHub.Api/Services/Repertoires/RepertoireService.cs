@@ -301,6 +301,9 @@ public class RepertoireService
             .Where(s => s.RepertoireId == id).Select(s => s.RecipientId).ToListAsync();
         // Freigaben explizit entfernen (FK-Cascade greift bei InMemory-Tests nicht).
         _db.RepertoireShares.RemoveRange(_db.RepertoireShares.Where(s => s.RepertoireId == id));
+        // Öffentliche Linien-Links (/l/) dieses Repertoires gehen mit (Codereview A2-006): vorher überlebten sie das
+        // Löschen und lieferten PGN, Titel und Repertoirenamen weiter aus. SharedLine.RepertoireId ist kein FK.
+        _db.SharedLines.RemoveRange(_db.SharedLines.Where(s => s.RepertoireId == id && s.OwnerUserId == userId));
         _db.Repertoires.Remove(rep);
         await _db.SaveChangesAsync();
         InvalidateCaches(userId);
