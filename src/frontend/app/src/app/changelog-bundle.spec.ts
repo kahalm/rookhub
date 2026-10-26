@@ -43,11 +43,14 @@ describe('Changelog als Daten, nicht im Bundle (F8-008)', () => {
     const urls = sourceUrls();
     expect(urls.length).withContext('karma.conf.js liefert die Quelltexte nicht aus').toBeGreaterThan(500);
     const offenders: string[] = [];
-    await Promise.all(urls.map(async url => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-      if (importsChangelogData(await res.text())) offenders.push(url.replace(/^\/base\//, ''));
-    }));
+    // In Portionen statt alle ~1 000 auf einmal: unter Last (paralleler Build) scheitern sonst einzelne fetch-Aufrufe.
+    for (let i = 0; i < urls.length; i += 50) {
+      await Promise.all(urls.slice(i, i + 50).map(async url => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+        if (importsChangelogData(await res.text())) offenders.push(url.replace(/^\/base\//, ''));
+      }));
+    }
     expect(offenders.sort()).withContext('Changelog per HttpClient aus /assets/changelog.json laden').toEqual([]);
   }, 60_000);
 });
