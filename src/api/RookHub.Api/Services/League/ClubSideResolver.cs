@@ -91,8 +91,21 @@ internal static class ClubSideResolver
     }
 
     /// <summary>Was der Nutzer für eine Seite festgelegt hat: ein gewählter Ligaspieler (FIDE-ID) schlägt den Namen, ein
-    /// getippter Name wird neu abgeglichen, ohne Angabe gilt die Kopfzeile.</summary>
+    /// getippter Name wird neu abgeglichen, ohne Angabe gilt die Kopfzeile.
+    ///
+    /// <para><b>Ein Spieler des eigenen Vereins wird IMMER ersetzt</b> (<see cref="LeagueRosterIndex.Hit.OwnClub"/>), egal was
+    /// der Nutzer angehakt hat — hier, an der EINEN Stelle, durch die alle drei Wege gehen: PGN-Import (mit und ohne Konto,
+    /// Teilen-Link), einzelne Partie bzw. Formular-Übernahme (<c>AddGame</c>) und Korrigieren (<c>UpdateAsync</c>). Vorher
+    /// erzwang nur das Korrigieren die Ersetzung; beim Hochladen genügte <c>replace:false</c>, obwohl die Teilen-Seite
+    /// „wird immer ersetzt“ zusichert (Codereview 2026-09-29 F7-008, Entscheidung 2026-10-25). <c>Replace</c> des Nutzers
+    /// kann also nur zusätzlich ersetzen (z. B. sich selbst oder einen Gast), nie einen eigenen Spieler nennen.</para></summary>
     internal static Side Decided(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, Lookups lk)
+    {
+        var s = DecidedAsChosen(d, raw, rawFide, elo, lk);
+        return s.Hit.OwnClub && !s.Replace ? s with { Replace = true } : s;
+    }
+
+    private static Side DecidedAsChosen(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, Lookups lk)
     {
         d ??= new LeagueClubSideDecision();
         if (lk.Roster.ByFide(d.Fide) is { } p) return new Side(p.Name, new LeagueRosterIndex.Hit(true, p, new[] { p }), elo, d.Replace);

@@ -224,13 +224,9 @@ internal sealed class ClubGameWriter
         Side Current(string name, string? fide, int? elo) => Anon(name, fide)
             ? new Side(name, LeagueRosterIndex.None, null, true)
             : new Side(name, LeagueRosterIndex.None, elo, false, fide, new LeagueMegaPlayers.Hit(name, fide));   // war schon angenommen
-        Side Changed(LeagueClubSideDecision d, string name, string? fide, int? elo)
-        {
-            var s = Decided(d, name, fide, elo, lk);
-            return s with { Replace = d.Replace || s.Hit.OwnClub };
-        }
-        var w = req.White is { } dw ? Changed(dw, g.White, g.WhiteFide, g.WhiteElo) : Current(g.White, g.WhiteFide, g.WhiteElo);
-        var b = req.Black is { } db ? Changed(db, g.Black, g.BlackFide, g.BlackElo) : Current(g.Black, g.BlackFide, g.BlackElo);
+        // Eigener Verein → ersetzt: erzwingt Decided selbst, wie auf den Wegen Import und AddGame (F7-008).
+        var w = req.White is { } dw ? Decided(dw, g.White, g.WhiteFide, g.WhiteElo, lk) : Current(g.White, g.WhiteFide, g.WhiteElo);
+        var b = req.Black is { } db ? Decided(db, g.Black, g.BlackFide, g.BlackElo, lk) : Current(g.Black, g.BlackFide, g.BlackElo);
         var moveText = PgnParser.SplitGames(g.Pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty;
         var sans = PgnParser.ExtractMainlineSans(moveText);
         var (built, reason) = Build(club, w, b, sans, g.Year, req.Result ?? g.Result, g.Event);

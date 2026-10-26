@@ -433,7 +433,7 @@ public class LeagueClubServiceTests : IDisposable
         var r = await Club().ImportPgnAsync(TestClubs.Home, me, pgn, new List<LeagueClubImportGameDecision>
         {
             new() { Index = 1, White = new() { Fide = "333" }, Black = new() { Replace = true } },
-            new() { Index = 2, White = new(), Black = new() { Replace = false } },                    // Binder bleibt stehen
+            new() { Index = 2, White = new(), Black = new() { Replace = false } },                    // Binder: eigener Verein → trotzdem ersetzt (F7-008)
             new() { Index = 3, White = new() { Replace = true }, Black = new() { Replace = true } },  // nur Schwaz übrig
             new() { Index = 4, White = new() { Name = "Hengl, Philip" }, Black = new() },             // getippt → erkannt
             new() { Index = 99, White = new(), Black = new() },
@@ -443,7 +443,7 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(new[] { (3, "onlyOwnClub"), (99, "notFound") }, r.Failed.Select(f => (f.Index, f.Reason)));
         var games = await _db.LeagueClubGames.OrderBy(g => g.Id).ToListAsync();
         Assert.Equal(("Schnabl, Andreas Dr.", "Testdorf", "333"), (games[0].White, games[0].Black, games[0].WhiteFide));
-        Assert.Equal(("Hengl, Philip", "Binder, Moriz", false), (games[1].White, games[1].Black, games[1].Anonymized));
+        Assert.Equal(("Hengl, Philip", "Testdorf", true), (games[1].White, games[1].Black, games[1].Anonymized));
         Assert.Equal(("Hengl, Philip", "Someone, Other"), (games[2].White, games[2].Black));
     }
 
