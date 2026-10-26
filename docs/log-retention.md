@@ -143,3 +143,12 @@ ECS-Mappings des Serilog-Sinks verloren und die Kibana-Felder wären kaputt.
 curl -s "$ES_URL/_ilm/policy/rookhub-logs-retention?pretty"
 curl -s "$ES_URL/rookhub-logs-generic-default/_ilm/explain?pretty"
 ```
+
+## VisitorId anonymer Besucher (Codereview F1-012)
+
+`VisitorId` im Request-Log ist `u:<Username>` für Angemeldete und für Anonyme `a:<pseudonym>` — seit F1-012 ein gekürzter
+SHA-256 (16 Hex, `VisitorIdResolver.Pseudonym`) der Anon-Session-Id aus `X-Visitor-Id`, nicht mehr die Id selbst. Die Id
+schützt anonyme Puzzle-/Endlos-/E-Book-Stände; im Klartext stand sie in jedem Log. Gehasht wird auf dem Server: der Header
+bleibt die rohe Id, weil die E-Book-Bibliothek ohne Konto (`EbookCaller.Anonymous`, Übernahme ins Konto) und die
+Rate-Limit-Partition `UserVisitorOrIp` sie so brauchen. Unique Visits zählen weiter (stabil je Besucher); am Umstellungstag
+erscheinen bestehende Besucher einmal unter neuem Wert.

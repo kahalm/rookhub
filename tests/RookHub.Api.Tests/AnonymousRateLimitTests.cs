@@ -1,3 +1,4 @@
+using RookHub.Api.Logging;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
@@ -187,7 +188,7 @@ public class AnonymousRateLimitTests
     public void PartitionKeys_UserVisitorOrIp()
     {
         Assert.Equal("u:42", RateLimitPartitions.UserVisitorOrIp(Context(VisitorA, userId: 42)));
-        Assert.Equal($"ip:{Ip}|a:{VisitorA}", RateLimitPartitions.UserVisitorOrIp(Context(VisitorA)));
+        Assert.Equal($"ip:{Ip}|a:{VisitorIdResolver.Pseudonym(VisitorA)}", RateLimitPartitions.UserVisitorOrIp(Context(VisitorA)));   // F1-012: Pseudonym
         Assert.Equal($"ip:{Ip}", RateLimitPartitions.UserVisitorOrIp(Context()));
         // Eine ungültige Visitor-Id (Form wie die Anon-Session-Id) zählt nicht — sonst wäre sie eine freie Partition.
         Assert.Equal($"ip:{Ip}", RateLimitPartitions.UserVisitorOrIp(Context("abc")));
