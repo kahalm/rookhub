@@ -31,41 +31,11 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     private readonly AnalysisJobLive _live;
     private readonly IEngineBroker _broker;
     private readonly ILogger<AnalysisJobWorker> _logger;
-    private readonly TimeSpan _tick;
-    private readonly TimeSpan _idleGrace;
-    private readonly TimeSpan _persistInterval;
-    /// <summary>Ohne erste Datenzeile binnen dieser Frist gilt der Provider als nicht rechnend — sonst hinge der
-    /// Auftrag unbegrenzt in „läuft" (der HttpClient hat bewusst kein Timeout) und blockierte den Slot des Users.</summary>
-    private readonly TimeSpan _firstLineTimeout;
-    /// <summary>Frist fuer jede WEITERE Datenzeile, nachdem die erste da war. Der Wert muss ueber der
-    /// laengsten ehrlichen Iteration liegen (Tiefe 40+ mit fuenf Linien dauert Minuten), deshalb sehr
-    /// grosszuegig — er faengt nicht die langsame, sondern die HAENGENDE Engine.
-    /// <para>Am 2026-09-12 auf Prod gebraucht: ein Auftrag stand vier Stunden auf „laeuft" bei Tiefe 11,
-    /// waehrend der Provider unveraendert dieselbe <c>info</c>-Zeile wiederholte (time 27 ms, nodes 24006,
-    /// Tempo auf die Stelle genau eingefroren). Der Waechter der ersten Zeile war da laengst entschaerft,
-    /// einen zweiten gab es nicht — und weil die Pumpe je Nutzer nur EINE Partie fuettert, standen darueber
-    /// 434 wartende Partien und elf freie Engines still.</para>
-    /// <para>Konfiguration: <c>AnalysisJobs:StallTimeoutSeconds</c> (300..86400, Vorgabe 1800).</para></summary>
-    private readonly TimeSpan _stallTimeout;
-    /// <summary>Wartezeit, nachdem ein Auftrag wegen eines 503/504 auf eine ANDERE Engine
-    /// umgehaengt wurde. Kurz, weil die neue Engine sofort laufen kann — und trotzdem
-    /// unbedenklich: der Worker rechnet je Engine nur einen Auftrag, es sind also hoechstens so
-    /// viele Versuche gleichzeitig unterwegs wie Engines hinterlegt sind, nicht so viele wie
-    /// Auftraege offen sind. Faellt der Broker ganz aus, pendeln die Auftraege damit im Takt
-    /// dieser Frist statt im Zwei-Minuten-Takt — bei sechzehn Engines rund ein Abruf je Sekunde.
-    /// <para>Konfiguration: <c>AnalysisJobs:EngineSwitchBackoffSeconds</c> (5..600, Vorgabe 15).</para></summary>
-    private readonly TimeSpan _engineSwitchBackoff;
-    /// <summary>Ab dieser Laufzeit gilt „kein Tiefenfortschritt" NICHT mehr als Fehlversuch: eine echte Sackgasse
-    /// (Matt/Patt, abgelehnte Arbeit) endet in Sekunden, ein langer Lauf ohne neue Zeile ist eine gekappte
-    /// Verbindung — dafür darf der Auftrag nicht als gescheitert gelten.</summary>
-    private readonly TimeSpan _fruitlessMinRuntime;
+    private readonly AnalysisJobWorkerSettings _settings;
     private readonly ConcurrentDictionary<string, Running> _running = new();   // key = EngineId
     /// <summary>Weckt die Schleife, sobald ein Lauf endet — die Engine soll nicht bis zum nächsten Tick warten.</summary>
     private readonly WakeSignal _wake = new();
 
-    private readonly IReadOnlySet<string> _explicitOnly;
-    /// <summary>Schrittweite der Zwischenstände einer Knotenanalyse (<c>AnalysisJobs:SnapshotStepNodes</c>, Vorgabe 10 000, 0 = aus).</summary>
-    private readonly long _snapshotStep;
     /// <summary>Admin-Schalter „Hintergrundjobs pausieren" (ohne Registrierung, z. B. in Tests: läuft immer).</summary>
     private readonly BackgroundPause? _pauseSwitch;
     private readonly PauseGate _pause;
@@ -79,16 +49,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         _live = live;
         _broker = broker;
         _logger = logger;
-        _tick = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:TickSeconds") ?? 5, 1, 60));
-        _idleGrace = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:IdleGraceSeconds") ?? 20, 0, 600));
-        _persistInterval = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:PersistIntervalSeconds") ?? 5, 1, 60));
-        _firstLineTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FirstLineTimeoutSeconds") ?? 300, 30, 3600));
-        _stallTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:StallTimeoutSeconds") ?? 1800, 300, 86400));
-        _engineSwitchBackoff = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:EngineSwitchBackoffSeconds") ?? 15, 5, 600));
-        _fruitlessMinRuntime = TimeSpan.FromSeconds(Math.Clamp(config.GetValue<int?>("AnalysisJobs:FruitlessMinRuntimeSeconds") ?? 60, 5, 3600));
-        _explicitOnly = ExplicitOnlyEngines.From(config);
-        var step = config.GetValue<long?>("AnalysisJobs:SnapshotStepNodes") ?? 10_000;
-        _snapshotStep = step <= 0 ? 0 : Math.Clamp(step, 1_000, 1_000_000);
+        _settings = AnalysisJobWorkerSettings.From(config);
         _tracker.LiveStarted += PauseEngine;
         _pauseSwitch = pause;
         _pause = new PauseGate(nameof(AnalysisJobWorker), logger).Use(pause);
@@ -178,7 +139,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { _logger.LogError(ex, "AnalysisJobWorker: Tick fehlgeschlagen"); }
-            try { await _wake.WaitAsync(_tick, stoppingToken); }
+            try { await _wake.WaitAsync(_settings.Tick, stoppingToken); }
             catch (OperationCanceledException) { break; }
         }
         foreach (var r in _running.Values) TryCancel(r.Cts);
@@ -194,7 +155,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         foreach (var engineId in engines)
         {
             if (_running.ContainsKey(engineId)) continue;                                   // Engine rechnet schon einen Auftrag
-            if (_tracker.IsEngineBusy(engineId) || _tracker.EngineIdleFor(engineId) < _idleGrace) continue;   // Live hat Vorrang
+            if (_tracker.IsEngineBusy(engineId) || _tracker.EngineIdleFor(engineId) < _settings.IdleGrace) continue;   // Live hat Vorrang
 
             using var scope = _scopeFactory.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<AnalysisJobService>();
@@ -220,7 +181,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var job = await db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId, CancellationToken.None);
             if (job is null) return;
-            if (await ResolveEngineAsync(scope, db, job, run, ct) is not { } engine) return;
+            if (await AnalysisJobEngineResolver.ResolveAsync(_tracker, scope, db, job, run.EngineId, ct) is not { } engine) return;
             await MarkRunningAsync(db, job);
 
             // Frist NUR für die Antwort-KOPFZEILEN: der HttpClient des Brokers ist bewusst timeout-los
@@ -231,7 +192,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             // dieser Engine warteten mit. Auflösbar war das nur durch einen Live-Stream oder Neustart.
             // Die Quelle lebt bis zum Ende des Laufs (wie vor der Zerlegung).
             using var headerCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            headerCts.CancelAfter(_firstLineTimeout);
+            headerCts.CancelAfter(_settings.FirstLineTimeout);
             if (await OpenUpstreamAsync(db, job, engine, headerCts.Token, ct) is not { } upstream) return;
 
             await using (upstream)
@@ -257,62 +218,6 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         }
     }
 
-    /// <summary>Token und Engine-Registrierung kommen vom ENGINE-BESITZER: bei einer eingeworfenen
-    /// Punktepartie ohne eigene Engine ist das nicht der Auftraggeber, sondern das Haus-Konto.
-    /// Eine Engine „RookHub direkt" (rhe_) braucht keinen Token, eine Lichess-Engine (eei_) schon.</summary>
-    private static int EngineOwnerOf(AnalysisJob job) => job.EngineOwnerUserId ?? job.UserId;
-
-    /// <summary>Vor dem Lauf: Live-Vorrang, Freigabe der Haus-Engine, Engine des Besitzers auflösen.
-    /// <c>null</c> = es geht nicht weiter, der Auftrag ist schon eingestellt.</summary>
-    private async Task<EngineRef?> ResolveEngineAsync(IServiceScope scope, AppDbContext db, AnalysisJob job, Running run,
-        CancellationToken ct)
-    {
-        // Zwischen der Live-Prüfung im Tick und dem Eintrag in _running liegen DB-Roundtrips. Startet in
-        // diesem Fenster ein Live-Stream auf DIESER Engine, lief sein LiveStarted ins Leere (kein Eintrag
-        // zum Abbrechen) — ohne diese zweite Prüfung rechnete der Hintergrund daneben weiter.
-        if (_tracker.IsEngineBusy(run.EngineId))
-        {
-            await AnalysisJobTransitions.PauseAsync(db, job, null);
-            return null;
-        }
-
-        var engineOwnerId = EngineOwnerOf(job);
-        // Fremde Rechenzeit nur, solange die Freigabe gilt (A4-004): schon eingereihte Auftraege fremder Nutzer
-        // liefen sonst nach dem Zuruecknehmen der Haus-Engine (oder dem Verlust der Admin-Rolle) weiter.
-        if (job.EngineOwnerUserId is int houseOwner
-            && !await EngineOwnerResolver.IsHouseEngineSharedAsync(db, houseOwner, ct))
-        {
-            await AnalysisJobTransitions.FailAsync(db, job, EngineOwnerResolver.HouseEngineWithdrawnError);
-            return null;
-        }
-        var registry = scope.ServiceProvider.GetRequiredService<EngineRegistry>();
-        EngineLookup lookup;
-        try { lookup = await registry.ResolveAsync(engineOwnerId, job.EngineId, ct); }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Live hat begonnen / gelöscht / Shutdown — MUSS vor dem Filter darunter stehen, sonst wäre
-            // der eigene Abbruch als „Lichess nicht erreichbar" mit 60 s Backoff im Auftrag gelandet.
-            await AnalysisJobTransitions.PauseAsync(db, job, null);
-            return null;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.LichessUnreachable);
-            return null;
-        }
-        if (lookup.Failure == EngineLookupFailure.NoToken)
-        {
-            await AnalysisJobTransitions.FailAsync(db, job, "Kein Lichess-Token hinterlegt");
-            return null;
-        }
-        if (lookup.Engine is not { } engine)
-        {
-            await AnalysisJobTransitions.FailAsync(db, job, "Engine nicht (mehr) registriert");
-            return null;
-        }
-        return engine;
-    }
-
     private static async Task MarkRunningAsync(AppDbContext db, AnalysisJob job)
     {
         job.Status = AnalysisJobStatus.Running;
@@ -322,30 +227,18 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         await db.SaveChangesAsync(CancellationToken.None);
     }
 
-    /// <summary>Die Arbeit für den Broker: genau EIN Limit (Tiefe oder Knoten), Linien auf das Protokoll begrenzt.</summary>
-    private static EngineWork WorkOf(AnalysisJob job, EngineRef engine) => new(
-        SessionId: $"rh-bg-{job.UserId}", Threads: Math.Max(1, engine.MaxThreads),
-        Hash: Math.Clamp(engine.MaxHash, 16, 32768),
-        // Das Protokoll erlaubt 1..5; ein größerer Wert würde vom Broker abgewiesen und der Auftrag
-        // liefe endlos in die Wiederholung. Zweiter Riegel neben AnalysisJobService.MaxMultiPv.
-        MultiPv: Math.Clamp(job.MultiPv, 1, EngineProtocol.MaxMultiPv),
-        // Knotenauftrag: `nodes` statt `depth` — GENAU EINES der drei Limits geht an die Engine
-        // (EngineWork.ToJson/WorkSanitizer). Eine Tiefe obendrauf liefe bei Lc0 ins Leere.
-        InitialFen: job.Fen, Moves: [],
-        Depth: job.TargetNodes is null ? job.TargetDepth : null, Nodes: job.TargetNodes);
-
     /// <summary>Den Broker anfragen, bis die Kopfzeilen da sind. <c>null</c> = kein Stream, der Auftrag ist eingestellt.</summary>
     private async Task<EngineAnalysisSession?> OpenUpstreamAsync(AppDbContext db, AnalysisJob job, EngineRef engine,
         CancellationToken headerCt, CancellationToken ct)
     {
-        var work = WorkOf(job, engine);
+        var work = AnalysisJobEngineResolver.WorkOf(job, engine);
         try { return await _broker.AnalyseAsync(engine, work, headerCt); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { await AnalysisJobTransitions.PauseAsync(db, job, null); return null; }
         catch (OperationCanceledException)
         {
             // Nur die Kopfzeilen-Frist ist abgelaufen (der Job-Token ist nicht abgebrochen).
             _logger.LogWarning("AnalysisJob {JobId}: Broker antwortete nicht binnen {Timeout} (keine Kopfzeilen) — pausiert",
-                job.Id, _firstLineTimeout);
+                job.Id, _settings.FirstLineTimeout);
             await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.NoHeaders);
             return null;
         }
@@ -367,9 +260,9 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             job.FruitlessAttempts, upstream.Error);
         var alt = job.EngineId;
         if (decision.TryOtherEngine
-            && await BackgroundEngineRotation.SwitchAsync(db, job, EngineOwnerOf(job), _explicitOnly, CancellationToken.None))
+            && await BackgroundEngineRotation.SwitchAsync(db, job, AnalysisJobEngineResolver.OwnerOf(job), _settings.ExplicitOnly, CancellationToken.None))
         {
-            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.SwitchedEngine(code, _engineSwitchBackoff));
+            await AnalysisJobTransitions.ApplyAsync(db, job, BrokerFailurePolicy.SwitchedEngine(code, _settings.EngineSwitchBackoff));
             _logger.LogInformation(
                 "AnalysisJob {JobId}: Broker antwortete {Code} fuer {Old} — weiter auf {New}",
                 job.Id, code, alt, job.EngineId);
@@ -383,8 +276,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     private async Task StreamAndClassifyAsync(AppDbContext db, AnalysisJob job, Running run, EngineAnalysisSession upstream,
         CancellationToken ct)
     {
-        var stream = new JobStreamRun(db, job, run.EngineId, _live, _logger, _snapshotStep, _persistInterval,
-            _firstLineTimeout, _stallTimeout);
+        var stream = new JobStreamRun(db, job, run.EngineId, _live, _logger, _settings.SnapshotStep, _settings.PersistInterval,
+            _settings.FirstLineTimeout, _settings.StallTimeout);
         if (await stream.ConsumeAsync(upstream.Ndjson, ct) == StreamEnd.Silent)
         {
             await OnSilenceAsync(db, job, stream);
@@ -392,7 +285,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         }
         await stream.FinishAsync();
 
-        var facts = stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _fruitlessMinRuntime);
+        var facts = stream.Facts(ct.IsCancellationRequested, _tracker.IsEngineBusy(run.EngineId), _settings.FruitlessMinRuntime);
         if (AnalysisJobRunEnd.EndedOwnSearch(facts))
             _logger.LogInformation(
                 "AnalysisJob {JobId}: Engine beendet die Suche selbst vor dem Ziel ({Nodes} von {Target} Knoten, z. B. Lc0 "
@@ -410,14 +303,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
         {
             await AnalysisJobTransitions.ApplyAsync(db, job, AnalysisJobRunEnd.ClassifyStall(stream.GotData, job.FruitlessAttempts, stream.CurrentDepth));
             _logger.LogWarning("AnalysisJob {JobId}: keine Datenzeile binnen {Timeout} — pausiert",
-                job.Id, _firstLineTimeout);
+                job.Id, _settings.FirstLineTimeout);
             return;
         }
         // Die Engine HAT gerechnet und ist dann stehen geblieben. Das ist eine Aussage über die
         // ENGINE, nicht über die Stellung — die kürzeste Schlange wählte ausgerechnet sie erneut
         // (sie hat ja nichts zu tun), deshalb wird hier auf die nächste hinterlegte umgehängt.
         var stalled = job.EngineId;
-        var moved = await BackgroundEngineRotation.SwitchAsync(db, job, EngineOwnerOf(job), _explicitOnly, CancellationToken.None);
+        var moved = await BackgroundEngineRotation.SwitchAsync(db, job, AnalysisJobEngineResolver.OwnerOf(job), _settings.ExplicitOnly, CancellationToken.None);
         // Der Fehlversuchs-Zähler (ClassifyStall) ist nötig, damit ein durchweg unbrauchbarer Auftrag nicht
         // ewig im Kreis läuft; er wird bei jedem Lauf MIT Tiefenfortschritt wieder auf 0 gesetzt, eine bloß
         // langsame tiefe Suche kann also nicht daran scheitern.
@@ -425,7 +318,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
             "AnalysisJob {JobId}: Stillstand — seit {Timeout} keine neue Datenzeile, nur Wiederholungen "
             + "({DataLines} Datenzeilen, {Heartbeats} Lebenszeichen, Tiefe {Depth}/{Target}); "
             + "Engine {Stalled} → {Next}",
-            job.Id, _stallTimeout, stream.Tally.DataLines, stream.Tally.Heartbeats, stream.CurrentDepth, job.TargetDepth,
+            job.Id, _settings.StallTimeout, stream.Tally.DataLines, stream.Tally.Heartbeats, stream.CurrentDepth, job.TargetDepth,
             stalled, moved ? job.EngineId : "(keine andere hinterlegt)");
         await AnalysisJobTransitions.ApplyAsync(db, job, AnalysisJobRunEnd.ClassifyStall(stream.GotData, job.FruitlessAttempts, stream.CurrentDepth));
     }

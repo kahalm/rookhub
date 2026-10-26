@@ -8,6 +8,9 @@ Stillstands-Wächter, Knotenziel) ist `JobStreamRun`; WELCHER Status am Ende gil
 `AnalysisJobRunEnd.ClassifyRunEnd(RunFacts)` / `ClassifyStall` und `BrokerFailurePolicy.OnStatus` (Golden-Tabelle
 `AnalysisJobRunEndTests`); geschrieben wird er über `AnalysisJobTransitions`, der Engine-Wechsel reihum ist
 `BackgroundEngineRotation`. Zeilen-Bausteine: `AnalysisJobStream`, `StreamTally` (je eigene Datei).
+Seit der zweiten Zerlegungsrunde (W7b, 2026-10-26): Engine des Besitzers auflösen, Freigabe der Haus-Engine und die
+Arbeit für den Broker (`WorkOf`) stehen in `AnalysisJobEngineResolver`, die `AnalysisJobs:*`-Einstellungen (geklemmt)
+in `AnalysisJobWorkerSettings`.
 
 `AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
 Service, Singleton) über denselben Broker-Pfad wie live — **je ENGINE ein laufender Auftrag** (`_running`
