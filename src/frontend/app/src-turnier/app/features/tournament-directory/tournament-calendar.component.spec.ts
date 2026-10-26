@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SimpleChange, SimpleChanges } from '@angular/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { TournamentCalendarComponent } from './tournament-calendar.component';
+import { localIsoDate, TournamentCalendarComponent } from './tournament-calendar.component';
 import { DirectoryCalendarDay, DirectoryEntry } from './tournament-directory.model';
 
 function entry(id: string, name: string): DirectoryEntry {
@@ -159,5 +159,30 @@ describe('TournamentCalendarComponent', () => {
 
     expect(component.monthLabel).toContain('October');
     expect(component.weekdayLabels[0]).toBe('Mon');
+  });
+
+  describe('Heute-Markierung in Ortszeit (UX-076)', () => {
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('markiert um 00:30 Ortszeit am Monatsersten den Ersten, nicht den Vortag', () => {
+      jasmine.clock().install();
+      // Lokale Uhr: 1. Oktober 2026, 00:30 — in Mitteleuropa ist das in UTC noch der 30. September.
+      jasmine.clock().mockDate(new Date(2026, 9, 1, 0, 30));
+      component.days = [];
+      apply({ days: [] });
+
+      const today = component.weeks.flat().filter(c => c.isToday);
+      expect(today.map(c => c.date)).toEqual(['2026-10-01']);
+      expect(today[0].inMonth).toBeTrue();
+    });
+
+    it('localIsoDate nimmt die Ortszeit-Bestandteile, auch wenn der UTC-Tag abweicht', () => {
+      // Zeitzonen-unabhängig festgenagelt: ein Datum, dessen UTC-Tag noch der Vortag ist (z. B. CEST 00:30).
+      const fake = {
+        getFullYear: () => 2026, getMonth: () => 9, getDate: () => 1,
+        getUTCFullYear: () => 2026, getUTCMonth: () => 8, getUTCDate: () => 30,
+      } as unknown as Date;
+      expect(localIsoDate(fake)).toBe('2026-10-01');
+    });
   });
 });

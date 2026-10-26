@@ -141,7 +141,9 @@ export class TournamentCalendarComponent implements OnChanges {
       .format(new Date(Date.UTC(this.year, this.month - 1, 1)));
 
     const byDate = new Map(this.days.map(d => [d.date.slice(0, 10), d.items]));
-    const todayIso = isoDate(new Date());
+    // „Heute“ ist der Kalendertag des Betrachters (Ortszeit), nicht der UTC-Tag — sonst steht der Rahmen in
+    // Mitteleuropa bis 1 bzw. 2 Uhr nachts auf dem Vortag (UX-076). Das Raster selbst bleibt UTC (Date.UTC).
+    const todayIso = localIsoDate(new Date());
 
     const first = new Date(Date.UTC(this.year, this.month - 1, 1));
     // Montag = 0: getUTCDay() liefert Sonntag = 0, deshalb der Versatz.
@@ -191,6 +193,11 @@ export class TournamentCalendarComponent implements OnChanges {
 
 function isoDate(date: Date): string {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+/** Kalendertag in der Ortszeit des Browsers als `yyyy-MM-dd` (für die Heute-Markierung). */
+export function localIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function pad(value: number): string {
