@@ -140,3 +140,25 @@ der eigenen Gruppe `changelog` (`installMode`/`updateMode` `lazy`), und das Over
   `CiWorkflowTests.Changelog_ShippedAsDataInALazyServiceWorkerGroup` hält Dockerfile, Gate-Schritte, SW-Gruppe,
   `.gitignore` und `tsconfig.app.json` fest. `scripts/release-notes.mjs` und `.github/scripts/changelog_discord.py`
   lesen unverändert `changelog-data.ts`.
+
+## stylelint-Ratsche (Frontend, Codereview F8-003)
+
+Fest verdrahtete Farbwerte: beim Review ~580 Hex-Werte in Komponenten-Styles, dieselbe Bedeutung in bis zu sechs
+Varianten, keine dunkelmodus-fähig. Die semantischen Tokens stehen in `src/frontend/app/src/_tokens.scss`
+(`var(--rh-error)` …); die Ratsche verhindert, dass der Bestand wächst — **keine Massenumstellung**.
+
+- `stylelint.config.mjs` (devDependencies `stylelint` + `stylelint-config-standard-scss`, Versionen fest; nur
+  `postcss-scss` als Syntax, KEIN Standard-Regelsatz): `color-no-hex` (jeder Hex-Wert, der grobe Zähler) und
+  `declaration-property-value-disallowed-list` für `color`/`background*` mit Hex OHNE `var(` im Wert (die scharfe
+  Regel: genau die Stellen, die im Dunkelmodus unlesbar werden). `src/_tokens.scss` ist ausgenommen.
+- `scripts/stylelint-ratchet.mjs` lintet `src*/**/*.scss|css` UND die Inline-Styles der Komponenten (`styles: [`…`]`
+  in `*.ts`, per `extractInlineStyles` herausgezogen, Zeilen auf die `.ts`-Datei bezogen; Literale mit `${…}` werden
+  übersprungen). Vergleich/Update/Baseline-Format teilt es mit der ESLint-Ratsche. Nicht erfasst: `style="…"` in
+  Templates und `[style.color]`-Bindungen.
+- Baseline beim Einführen (26.10.2026, `stylelint-baseline.json`): `color-no-hex` 539,
+  `declaration-property-value-disallowed-list` 244 (783 Meldungen in 103 Dateien, 252 Style-Blöcke).
+- `build-frontend` in `test.yml`: `node --test scripts/stylelint-ratchet.test.mjs`, dann
+  `node scripts/stylelint-ratchet.mjs --summary "$GITHUB_STEP_SUMMARY"` (Tabelle in der Job-Summary, kein
+  `continue-on-error`). `CiWorkflowTests.FrontendStylelint_RatchetBlocksTheGate` hält Schritt, feste Versionen,
+  Filter und Baseline fest. Lokal: `npm run lint:css:ratchet`; nach Abbau `npm run lint:css:ratchet:update` (senkt
+  nur; Anheben `--update --force` mit Begründung). Rot = Farbe aus einem Token nehmen, nicht die Baseline heben.

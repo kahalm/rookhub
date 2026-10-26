@@ -144,7 +144,8 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Zustandsfarben aus Tokens** (Codereview F8-003) – Fehler, Erfolg, Warnung, Info und Akzent kommen aus den
   semantischen Tokens in `src/_tokens.scss` (`var(--rh-…)`, hell/dunkel), nicht als Hex-Wert. Es sind
   Vordergrund-Tokens (Text/Icon/Rahmen), Flaechen per `color-mix`; den Kontrast je Modus prueft
-  `app/core/design-tokens.spec.ts`
+  `app/core/design-tokens.spec.ts`. Neue Hex-Werte haelt die stylelint-Ratsche auf (`npm run lint:css:ratchet`,
+  `docs/ci.md`)
 - **Rechtsseiten** (`features/legal/`, Betreiber-Entscheidung 2026-09-30, UX-001) – `environments/operator.ts`
   (`OPERATOR`) enthaelt NUR die Kontaktadresse (`rookhub@oberschm.id`); das Impressum zeigt nur den Kontakt, kein
   Diensteanbieter-Block mit Name/Anschrift. Je Oberflaeche steuert `LEGAL_SITE` (`core/legal-site.ts`) Impressum ja/nein,
@@ -239,6 +240,7 @@ npx ng build              # Production Build -> dist/app/browser/
 npx ng build --watch      # Watch-Mode
 npx ng test --watch=false # Unit-Tests (Karma/Jasmine), einmalig headless
 npm run lint:ratchet      # ESLint-Ratsche: keine Regel ueber eslint-baseline.json
+npm run lint:css:ratchet  # stylelint-Ratsche (Hex-Farben, F8-003): keine Regel ueber stylelint-baseline.json
 ```
 
 **Linter (ESLint, F8-004):** Regeln mit Bestand `'warn'`, Regeln ohne Bestand `'error'` (Phase 3); die CI ist rot,

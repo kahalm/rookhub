@@ -947,6 +947,54 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// stylelint-Ratsche (Codereview F8-003): ~580 fest verdrahtete Hex-Farben in Komponenten-Styles, keine passt sich dem
+    /// Dunkelmodus an. Die Tokens stehen in src/_tokens.scss; die Ratsche haelt den Bestand je Regel in
+    /// stylelint-baseline.json und macht build-frontend ROT, sobald er waechst — wie die ESLint-Ratsche ohne
+    /// continue-on-error, nach npm ci (stylelint ist eine devDependency mit fester Version), im frontend-Filter.
+    /// </summary>
+    [Fact]
+    public void FrontendStylelint_RatchetBlocksTheGate()
+    {
+        var job = TestJob("build-frontend");
+        var step = Step(job, Regex.Escape("name: stylelint-Ratsche (keine Regel ueber stylelint-baseline.json)"));
+        Assert.Contains("working-directory: src/frontend/app", step);
+        Assert.DoesNotContain("continue-on-error", step);
+        Assert.Contains("node scripts/stylelint-ratchet.mjs --summary \"$GITHUB_STEP_SUMMARY\"", step);
+        var logic = Step(job, Regex.Escape("name: stylelint-Ratschen-Logik (node --test)"));
+        Assert.DoesNotContain("continue-on-error", logic);
+        Assert.Contains("node --test scripts/stylelint-ratchet.test.mjs", logic);
+        Assert.True(job.IndexOf("run: npm ci", StringComparison.Ordinal)
+                    < job.IndexOf("name: stylelint-Ratsche", StringComparison.Ordinal),
+            "die Ratsche braucht node_modules (stylelint) — sie muss NACH npm ci stehen");
+
+        var package = ReadRepoFile($"{FrontendApp}/package.json");
+        Assert.Contains("\"lint:css:ratchet\": \"node scripts/stylelint-ratchet.mjs\"", package);
+        Assert.Contains("\"lint:css:ratchet:update\": \"node scripts/stylelint-ratchet.mjs --update\"", package);
+        var lockfile = ReadRepoFile($"{FrontendApp}/package-lock.json");
+        foreach (var pkg in new[] { "stylelint", "stylelint-config-standard-scss" })
+        {
+            // Feste Version (kein ^/~) in den devDependencies, und im Lockfile.
+            Assert.Matches($@"""devDependencies"":\s*\{{[^}}]*""{Regex.Escape(pkg)}"":\s*""\d+\.\d+\.\d+""", package);
+            Assert.Contains($"\"node_modules/{pkg}\": {{", lockfile);
+        }
+        ReadRepoFile($"{FrontendApp}/scripts/stylelint-ratchet.mjs");
+        ReadRepoFile($"{FrontendApp}/scripts/stylelint-ratchet.test.mjs");
+
+        var filters = ReadRepoFile(Filters);
+        foreach (var path in new[] { "stylelint.config.mjs", "stylelint-baseline.json", "scripts/**" })
+            Assert.Contains($"- '{FrontendApp}/{path}'", filters);
+
+        var config = ReadRepoFile($"{FrontendApp}/stylelint.config.mjs");
+        using var doc = System.Text.Json.JsonDocument.Parse(ReadRepoFile($"{FrontendApp}/stylelint-baseline.json"));
+        foreach (var rule in new[] { "color-no-hex", "declaration-property-value-disallowed-list" })
+        {
+            Assert.Contains($"'{rule}'", config);
+            Assert.True(doc.RootElement.TryGetProperty(rule, out var n) && n.TryGetInt32(out var count) && count >= 0,
+                $"stylelint-baseline.json fehlt die Regel {rule}");
+        }
+    }
+
+    /// <summary>
     /// Changelog als DATEN (Codereview F8-008): als Code (dynamic import) lag das ~2 MB-Changelog als Lazy-Chunk unter
     /// `/*.js` in der prefetch-Gruppe des Service Workers und wurde nach jedem Release auf jedem Geraet neu geladen.
     /// Jetzt erzeugt scripts/changelog-json.mjs vor dem Build /assets/changelog.json (nicht eingecheckt) — im Dockerfile

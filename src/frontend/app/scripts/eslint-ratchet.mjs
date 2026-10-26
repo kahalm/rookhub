@@ -93,13 +93,13 @@ export function serializeBaseline(counts) {
   return JSON.stringify(sorted, null, 2) + '\n';
 }
 
-/** Markdown-Tabelle Regel | Baseline | jetzt | Δ fuer die Job-Summary. */
-export function summaryMarkdown(result, fileCount) {
+/** Markdown-Tabelle Regel | Baseline | jetzt | Δ fuer die Job-Summary (auch von scripts/stylelint-ratchet.mjs genutzt). */
+export function summaryMarkdown(result, fileCount, { title = 'ESLint-Ratsche (Frontend)', updateCmd = 'npm run lint:ratchet:update' } = {}) {
   const total = (key) => result.rows.reduce((sum, r) => sum + r[key], 0);
   const sign = (d) => (d > 0 ? `+${d}` : `${d}`);
   const status = result.ok ? 'gruen' : `ROT — ${result.increased.length} Regel(n) ueber der Baseline`;
   const lines = [
-    '## ESLint-Ratsche (Frontend)',
+    `## ${title}`,
     '',
     `${total('current')} Meldungen in ${fileCount} Dateien (Baseline ${total('baseline')}) — ${status}`,
     '',
@@ -109,7 +109,7 @@ export function summaryMarkdown(result, fileCount) {
     `| **gesamt** | ${total('baseline')} | ${total('current')} | ${sign(total('current') - total('baseline'))} |`,
     '',
   ];
-  if (result.decreased.length) lines.push('Baseline kann gesenkt werden: `npm run lint:ratchet:update`', '');
+  if (result.decreased.length) lines.push(`Baseline kann gesenkt werden: \`${updateCmd}\``, '');
   return lines.join('\n') + '\n';
 }
 

@@ -291,6 +291,17 @@ jobs:
       - name: ESLint-Ratsche (keine Regel ueber eslint-baseline.json)
         working-directory: src/frontend/app
         run: node scripts/eslint-ratchet.mjs --summary "$GITHUB_STEP_SUMMARY"
+      # stylelint-Ratsche (Codereview F8-003, fest verdrahtete Farbwerte): dasselbe Muster wie die ESLint-Ratsche.
+      # stylelint.config.mjs zaehlt Hex-Farben (color-no-hex) und Text-/Hintergrundfarben als Hex ohne Token
+      # (declaration-property-value-disallowed-list) in *.scss und den Inline-Styles der Komponenten;
+      # stylelint-baseline.json haelt den Bestand. Mehr als dort → Job ROT (bewusst nicht abschaltbar): Token aus
+      # src/_tokens.scss nehmen, nicht die Baseline heben. Abbau: `npm run lint:css:ratchet:update`.
+      - name: stylelint-Ratschen-Logik (node --test)
+        working-directory: src/frontend/app
+        run: node --test scripts/stylelint-ratchet.test.mjs
+      - name: stylelint-Ratsche (keine Regel ueber stylelint-baseline.json)
+        working-directory: src/frontend/app
+        run: node scripts/stylelint-ratchet.mjs --summary "$GITHUB_STEP_SUMMARY"
       # Changelog als DATEN (Codereview F8-008): changelog-data.ts bleibt die Quelle, der Build liefert es aber als
       # /assets/changelog.json (lazy-Gruppe `changelog` im Service Worker) statt als ~2 MB-Chunk in der prefetch-Gruppe.
       # Wie im Dockerfile vor `ng build app` erzeugen, damit dieses Gate dasselbe Bundle baut wie das Image.
