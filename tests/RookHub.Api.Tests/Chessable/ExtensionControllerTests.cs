@@ -56,6 +56,8 @@ public class ExtensionControllerTests : IDisposable
         public Func<int, string?>? PgnFor;
         /// <summary>Optional: piratechess beantwortet den Parse-Aufruf mit diesem Fehlerstatus.</summary>
         public System.Net.HttpStatusCode? ParseFails;
+        /// <summary>Mit <see cref="ParseFails"/>: nur die ersten n Parse-Aufrufe scheitern (0 = alle).</summary>
+        public int ParseFailsFirst;
         /// <summary>Dieselbe Linie mit Chessable-oid — so, wie piratechess seit v1.29.0 jede Linie liefert.</summary>
         public static string WithOid(string oid) => Pgn.Replace("[SetUp", $"[ChessableOid \"{oid}\"]\n[SetUp");
 
@@ -73,7 +75,7 @@ public class ExtensionControllerTests : IDisposable
                 throw new HttpRequestException("Connection refused");
             Calls++;
             LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
-            if (ParseFails is { } failure)
+            if (ParseFails is { } failure && (ParseFailsFirst == 0 || Calls <= ParseFailsFirst))
                 return new HttpResponseMessage(failure)
                 {
                     Content = new StringContent("{\"message\":\"parse failed\"}", System.Text.Encoding.UTF8, "application/json"),
@@ -563,6 +565,32 @@ public class ExtensionControllerTests : IDisposable
 
     private static ChessableIngestChapter Chapter(params string[] lines)
         => new("{\"list\":{\"name\":\"Ch\",\"data\":[]}}", lines.ToList());
+
+    /// <summary>I2-005: piratechess drosselt mit 429 und erwartet Backoff — der Chunk ging vorher als 502 an den Browser.</summary>
+    [Fact]
+    public async Task ChessableIngestChunk_ParserAnswers429Once_IsRetried_AndImports()
+    {
+        SetUser(7, scope: "extension");
+        _parse.ParseFails = System.Net.HttpStatusCode.TooManyRequests;
+        _parse.ParseFailsFirst = 1;
+        const string line = "{\"game\":{\"bid\":163418,\"name\":\"Kurs\",\"title\":\"Line 1\"}}";
+
+        var r = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-429", "163418", "book", "Kurs", Chapter(line), false), default);
+
+        Assert.IsType<OkObjectResult>(r);
+        Assert.Equal(2, _parse.Calls);
+        Assert.Single(await _db.ChessableImports.ToListAsync());
+    }
+
+    [Fact]
+    public void ProxyAnswer429_CountsAsTransient_ForTheFetchPolls()
+    {
+        Assert.True(ChessableImportService.IsTransientConnectionError(
+            new ChessableProxyException(System.Net.HttpStatusCode.TooManyRequests, "rate limited")));
+        Assert.False(ChessableImportService.IsTransientConnectionError(
+            new ChessableProxyException(System.Net.HttpStatusCode.BadGateway, "kaputt")));
+    }
 
     [Fact]
     public async Task ChessableIngestChunk_TakesTheCourseNameFromTheLines_NotFromThePageText()

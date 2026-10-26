@@ -122,8 +122,7 @@ internal sealed class ChessableBrowserIngest
         ChessableCourseDataDto parsed;
         try
         {
-            parsed = await _proxy.ParseCourseAsync(dto.Bid, ChessableImportTargets.ParseMode(target),
-                new[] { chapter }, dto.CourseJson, dto.Complete, ct);
+            parsed = await ParseWithBackoffAsync(dto, target, chapter, ct);
         }
         catch (ChessableProxyException ex)
         {
@@ -134,6 +133,28 @@ internal sealed class ChessableBrowserIngest
         if (!string.IsNullOrWhiteSpace(parsed.Pgn))
             await AppendChapterAsync(sessions, session, userId, dto, parsed, target, courseName, ct);
         return null;
+    }
+
+    /// <summary>Wartezeiten nach einem 429 des Parsers (I2-005): piratechess drosselt mit einem Fenster für ganz
+    /// rookhub und erwartet Backoff — vorher ging der Chunk sofort als 502 an den Browser.</summary>
+    private static readonly int[] ParseRetryDelaysMs = { 1000, 3000 };
+
+    private async Task<ChessableCourseDataDto> ParseWithBackoffAsync(ChessableIngestChunkRequest dto, string target,
+        ChessableIngestChapter chapter, CancellationToken ct)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return await _proxy.ParseCourseAsync(dto.Bid, ChessableImportTargets.ParseMode(target),
+                    new[] { chapter }, dto.CourseJson, dto.Complete, ct);
+            }
+            catch (ChessableProxyException ex) when (ex.Status == System.Net.HttpStatusCode.TooManyRequests
+                                                     && attempt < ParseRetryDelaysMs.Length)
+            {
+                await Task.Delay(ParseRetryDelaysMs[attempt], ct);
+            }
+        }
     }
 
     private async Task AppendChapterAsync(ChessableIngestSessionStore sessions, ChessableIngestSessionStore.Session session,

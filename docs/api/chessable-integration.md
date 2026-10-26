@@ -7,9 +7,9 @@
 Fast-Lane, Kurslisten-Refresh) und der `ImportReprocessService` (`ICourseReimporter`) sprechen weiter nur mit
 `Services/Chessable/ChessableImportService.cs` — seit der Zerlegung eine Fassade, die ihre Teile aus den eigenen
 (scoped) Abhängigkeiten baut: `ChessableFetchLane` (Lane-Wahl, atomarer Claim, Lauf; prozessweites Download-Gate),
-`ChessableCourseFetch` (Bearer/Breaker/Tageslimit, Poll-Schleife, Verbindungs-Retry), `ChessableReimportQueue`
+`ChessableCourseFetch` (Bearer/Breaker/Tageslimit, Poll-Schleife, Verbindungs-Retry — auch bei 429 von piratechess, I2-005), `ChessableReimportQueue`
 (Re-Import anlegen, Queue-Ticket), `ChessableBrowserImport` (Direktimport, laufender Kapitel-Import, Cache-Schranke),
-`ChessableBrowserIngest` (Ablauf eines `ingest/chunk`, vorher im `ExtensionController`, A3-012), `ChessableLiveAppend`
+`ChessableBrowserIngest` (Ablauf eines `ingest/chunk`, vorher im `ExtensionController`, A3-012; Parser-429 → bis zu zwei Wiederholungen nach 1 s/3 s statt sofort 502), `ChessableLiveAppend`
 (Live-Anhängen, Import-Stand je oid; Schloss je (User, bid)), `ChessableTargetWriter` (Buch/Repertoire schreiben),
 `ChessableImportOutcome` (Fehlschlag/Fertig-Meldung). Reine Helfer: `ChessablePgnBlocks` (PGN-Blöcke, oids),
 `ChessableImportTargets` (Ziel, Modus, Dateinamen), `ChessableImportProgress` (prozessweite Treiber-Liste,

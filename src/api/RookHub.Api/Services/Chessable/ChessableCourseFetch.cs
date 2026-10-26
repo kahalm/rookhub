@@ -29,7 +29,7 @@ internal sealed class ChessableCourseFetch
     // NICHT sofort scheitern lassen — sonst killt ein 5-Sekunden-Recreate die ganze Queue kaskadierend.
     // Daher mit Backoff erneut versuchen (summiert ~2,5 min), bis piratechess wieder erreichbar ist;
     // erst danach propagiert der Fehler und der Import scheitert. Echte Antwort-Fehler von piratechess
-    // (ChessableProxyException, kein Transportfehler) werden NICHT erneut versucht.
+    // (ChessableProxyException, kein Transportfehler) werden NICHT erneut versucht — außer 429 (Drosselung, I2-005).
     private static readonly int[] ConnRetryBackoffMs = { 3000, 5000, 10000, 15000, 20000, 30000, 30000, 30000 };
 
     private readonly AppDbContext _db;
@@ -303,7 +303,9 @@ internal sealed class ChessableCourseFetch
     {
         for (var e = ex; e is not null; e = e.InnerException)
         {
-            if (e is ChessableProxyException) return false;
+            // 429: piratechess drosselt (EIN Fenster für rookhub) und erwartet Backoff — wiederholbar wie ein kurzer
+            // Ausfall (I2-005). Jede andere Antwort von piratechess ist ein echter Fehler.
+            if (e is ChessableProxyException proxyEx) return proxyEx.Status == System.Net.HttpStatusCode.TooManyRequests;
             if (e is System.Net.Sockets.SocketException or HttpRequestException or TaskCanceledException) return true;
             var m = e.Message;
             if (m.Contains("Connection refused", StringComparison.OrdinalIgnoreCase)
