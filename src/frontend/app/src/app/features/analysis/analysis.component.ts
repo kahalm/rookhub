@@ -14,13 +14,14 @@ import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { Subscription, interval } from 'rxjs';
 import { EngineDisplayLine, formatElapsed as formatElapsedUtil, toDisplayLines } from './engine-lines.util';
-import { EngineChoiceList, pickEngineAfterLoad, speedHintText } from './analysis-engine-choice';
+import { speedHintText } from './analysis-engine-choice';
+import { AnalysisEnginePicker } from './analysis-engine-picker';
 import { engineArrows, engineCandidates, evalBar, legalDests, SearchClock, TerminalState, terminalStateOf } from './analysis-readout';
 import { AnalysisBoardComponent } from './analysis-board.component';
 import { AnalysisEngineCardComponent, EngineChoice, arrowBrush } from './analysis-engine-card.component';
 import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
-import { ExternalEngineService, ExternalEngineInfo, ExternalEnginesResponse } from './external-engine.service';
+import { ExternalEngineService, ExternalEngineInfo } from './external-engine.service';
 import { mediaSignal } from '../../shared/layout/wide-media';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -121,16 +122,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
   get historyId(): number | null { return this.historySaver.id; }
 
+  /** Engine-Wahl (External Engines laden, Auswahl, Verdrahtung) — siehe {@link AnalysisEnginePicker}. */
+  private readonly picker: AnalysisEnginePicker;
   /** External Engines des Lichess-Kontos (leer = kein Picker); Auswahl 'wasm' = Browser. */
-  externalEnginesList: ExternalEngineInfo[] = [];
-  selectedEngineId = 'wasm';
-  /** Im Profil gewählte Hintergrund-Engine — gehört den Aufträgen, fehlt deshalb im Live-Picker. */
+  get externalEnginesList(): ExternalEngineInfo[] { return this.picker.list; }
+  set externalEnginesList(list: ExternalEngineInfo[]) { this.picker.list = list; }
+  get selectedEngineId(): string { return this.picker.selectedId; }
+  set selectedEngineId(id: string) { this.picker.selectedId = id; }
   /** Alle als Hintergrund gewaehlten Engines — der Live-Picker blendet sie aus. */
-  backgroundEngineIds: string[] = [];
-  /** Per `?engine=` gewünschte Engine (von der Auftragsseite) — gilt einmalig für diesen Aufruf. */
-  private requestedEngineId: string | null = null;
+  get backgroundEngineIds(): string[] { return this.picker.backgroundIds; }
   /** Mindestens eine externe Engine registriert (inkl. Hintergrund-Engine) → Aufträge sind möglich. */
-  hasExternalEngines = false;
+  get hasExternalEngines(): boolean { return this.picker.hasExternal; }
   remoteFallback = false;
   /** Abriss der Remote-Suche vor der Zieltiefe (Hinweis in der Karte; null = keiner). */
   remoteCut: RemoteInterruption | null = null;
@@ -156,7 +158,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private errorSub?: Subscription;
   private fallbackSub?: Subscription;
-  private enginesSub?: Subscription;
   /** Gemerkte Einstellungen (localStorage, je Gerät). */
   private readonly settings = new AnalysisSettings();
 
@@ -180,6 +181,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       depthSetting: () => this.depthSetting, goToNode: node => this.goToNode(node), refresh: () => this.refresh(),
       treeChanged: () => { this.treeVersion++; }, changed: () => this.cdr.markForCheck(),
     });
+    this.picker = new AnalysisEnginePicker({
+      engine, externalEngines, settings: this.settings, compare: () => this.compare,
+      t: key => this.translate.instant(key), currentLang: () => this.translate.currentLang(),
+      remoteFallback: () => this.remoteFallback,
+      mainShouldRun: () => (this.engineOn || this.spar.sparringEngineQuiet) && this.dests.size > 0,
+      runMain: () => this.runAnalysis(this.engine, this.currentFen),
+      changed: () => this.cdr.markForCheck(),
+    });
     this.compare = new AnalysisCompare({
       mainEngine: engine, externalEngines,
       depthSetting: () => this.depthSetting, linesCount: () => this.linesCount,
@@ -197,7 +206,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.connectEngine();
     // External Engines des Lichess-Kontos (nur eingeloggt; stiller Hintergrund-Feed — ohne Liste bleibt es beim
     // Browser-WASM).
-    if (this.auth.isLoggedIn) this.loadExternalEngines();
+    if (this.auth.isLoggedIn) this.picker.load();
     this.loadInitialPosition(p);
   }
 
@@ -208,7 +217,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.model.root = createRoot(p.fen ?? START_FEN);
     if (p.orientation) this.orientation = p.orientation;
     if (p.returnTo) this.returnTo = p.returnTo;
-    if (p.engine) this.requestedEngineId = p.engine;
+    if (p.engine) this.picker.requestedId = p.engine;
     if (p.depth != null) this.depthSetting = p.depth;
     if (p.lines != null) this.linesCount = p.lines;
   }
@@ -228,37 +237,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Sekundentakt nur für „rechnet seit …": bei MultiPV 5 vergehen ab Tiefe ~27 Minuten ohne neue
     // Zeile — ohne sichtbare Uhr sieht das aus wie ein Hänger. markForCheck nur bei Wertänderung.
     this.tickSub = interval(1000).subscribe(() => this.updateClocks());
-  }
-
-  /** External Engines laden. Subscription festhalten: der Engine-Service ist ein App-weites Singleton — verlässt der
-   *  Nutzer die Seite, WÄHREND die Liste noch unterwegs ist, würde die Antwort sonst eine Engine im längst
-   *  zerstörten Zustand scharf schalten und eine Analyse starten, die niemand mehr sieht. */
-  private loadExternalEngines(): void {
-    this.enginesSub = this.externalEngines.listEngines().subscribe({ next: r => this.onEnginesLoaded(r), error: () => {} });
-  }
-
-  /** Liste da: Picker füllen und die passende Engine wählen ({@link pickEngineAfterLoad}) — die eines Auftrags, sonst
-   *  die zuletzt gewählte (die evtl. schon laufende WASM-Analyse der Startstellung wechselt dann auf die Remote-Suche). */
-  private onEnginesLoaded(r: ExternalEnginesResponse): void {
-    const pick = pickEngineAfterLoad(r, this.requestedEngineId, this.settings.loadProvider());
-    this.backgroundEngineIds = pick.backgroundEngineIds;
-    this.hasExternalEngines = pick.hasExternalEngines;
-    this.externalEnginesList = pick.list;
-    if (pick.selected) {
-      this.selectedEngineId = pick.selected;
-      this.applyEngineSelection();
-    }
-    if (pick.fromRequest) {
-      this.requestedEngineId = null;   // nur für diesen Aufruf, nicht als Dauerwahl merken
-      this.cdr.markForCheck();
-      return;
-    }
-    // NICHT unbedingt: applyEngineSelection() oben startet den Vergleich bereits selbst,
-    // wenn Haupt- und Vergleichswahl kollidieren. Ohne diese Bedingung wuerde die eben
-    // gebaute Instanz Millisekunden spaeter wieder zerstoert und neu aufgebaut — im
-    // Browser-Fall eine 7-MB-WASM-Instanziierung fuer nichts.
-    if (this.compare.on && !this.compare.engine) this.compare.start();
-    this.cdr.markForCheck();   // sonst erscheint der Picker erst beim nächsten DOM-Event
   }
 
   /** Erste Stellung: ein Verlauf-Eintrag (`?history=`), eine Partie (Router-State oder `?pgn=`), eine Zugfolge
@@ -299,7 +277,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.fallbackSub?.unsubscribe();
     this.cutSub?.unsubscribe();
     this.tickSub?.unsubscribe();
-    this.enginesSub?.unsubscribe();
+    this.picker.destroy();
     this.compare.stop();         // eigene Instanz + deren Worker/Streams beenden
     this.engine.destroy();
     this.spar.destroy();         // Maia freigeben, eine späte Antwort verfällt
@@ -534,41 +512,18 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   /** Alle wählbaren Engines (Browser + registrierte externe) — für beide Auswahlfelder, memoisiert. */
-  private readonly choiceList = new EngineChoiceList();
-  get engineChoices(): EngineChoice[] {
-    // ngx-translate 18: currentLang ist ein Signal, kein String
-    return this.choiceList.get(this.translate.currentLang(), this.externalEnginesList,
-      () => this.translate.instant('analysis.engineBrowser'));
-  }
+  get engineChoices(): EngineChoice[] { return this.picker.choices; }
 
   /** Anzeigename der Vergleichs-Engine. Ist sie zurückgefallen, wird die TATSÄCHLICH rechnende
    *  Engine genannt — ein Vergleich mit falschem Etikett wäre schlimmer als gar keiner. */
   get compareEngineName(): string { return this.compare.name(this.translate.instant('analysis.engineBrowser')); }
   /** Anzeigename der Haupt-Engine — im Vergleichsmodus muss beschriftet sein, welche welche ist. */
-  get mainEngineName(): string {
-    if (this.remoteFallback && this.selectedEngineId !== 'wasm') return this.translate.instant('analysis.engineBrowser');
-    return this.engineChoices.find(c => c.id === this.selectedEngineId)?.name ?? '';
-  }
+  get mainEngineName(): string { return this.picker.mainName; }
 
   /** Tempo der Vergleichs-Engine für deren (i) — gleiche Formatierung wie bei der Haupt-Engine. */
   get compareSpeedHint(): string { return speedHintText(this.t, this.locale, this.compare.nps, null); }
 
-  onEngineSelect(): void {
-    this.settings.saveProvider(this.selectedEngineId);
-    this.applyEngineSelection();
-  }
-  /** Verdrahtet die aktuelle Auswahl in den Engine-Service (Transport = HTTP-Proxy) und startet neu. */
-  private applyEngineSelection(): void {
-    const info = this.externalEnginesList.find(e => e.id === this.selectedEngineId) ?? null;
-    this.engine.setRemoteEngine(info, (id, work) => this.externalEngines.analyse(id, work));
-    // Wandert die Haupt-Engine auf die, die gerade als Vergleich läuft, muss die Vergleichs-
-    // seite ausweichen — sonst rechnen beide Instanzen dasselbe.
-    // ensureDistinctEngine() NICHT hier aufrufen: compare.start() macht es als zweiten
-    // Schritt ohnehin. Zwei Aufrufstellen fuer dieselbe Invariante lesen sich, als sicherten sie
-    // Verschiedenes ab, und laden dazu ein, nur eine davon zu „reparieren".
-    if (this.compare.on && this.compare.engineId === this.selectedEngineId) this.compare.start();
-    if ((this.engineOn || this.spar.sparringEngineQuiet) && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
-  }
+  onEngineSelect(): void { this.picker.select(); }
 
   backToPuzzle(): void {
     if (this.returnTo) this.router.navigateByUrl(this.returnTo);
