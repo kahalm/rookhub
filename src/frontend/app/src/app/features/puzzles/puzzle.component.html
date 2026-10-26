@@ -1,8 +1,8 @@
     <div class="puzzle-page">
-      @if (revengeComplete) {
+      @if (revenge.complete) {
         <div class="revenge-done">
           <div class="fireworks" aria-hidden="true">
-            @for (i of fireworkDots; track i) {
+            @for (i of revenge.fireworkDots; track i) {
               <span class="spark"
                     [style.--rot]="(i * 12.857) + 'deg'"
                     [style.background]="'hsl(' + (i * 51 % 360) + ',90%,58%)'"
@@ -12,7 +12,7 @@
           <div class="revenge-done-card">
             <div class="trophy">🎆🏆🎆</div>
             <h2>{{ 'puzzles.revengeDone.title' | translate }}</h2>
-            <p class="summary">{{ 'puzzles.revengeDone.summary' | translate:{ solved: revengeSolvedCount, total: revengeTotalCount, name: revengeFriendName } }}</p>
+            <p class="summary">{{ 'puzzles.revengeDone.summary' | translate:{ solved: revenge.solvedCount, total: revenge.totalCount, name: revenge.friendName } }}</p>
             <button mat-flat-button color="primary" (click)="goToRevengeList()">
               <mat-icon>arrow_back</mat-icon> {{ 'puzzles.revengeDone.backToFriend' | translate }}
             </button>

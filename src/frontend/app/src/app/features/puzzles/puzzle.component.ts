@@ -33,6 +33,7 @@ import { loadLastSolved, saveLastSolved } from './last-solved-store';
 import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
+import { PuzzleRevengeRound } from './puzzle-revenge-round';
 import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, parseShareViewParams } from './board-theme.util';
 import { Key } from 'chessground/types';
 import { buildStagedHints } from './puzzle-hints.util';
@@ -91,22 +92,8 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
    *  bleibt aber, der Empfänger kann selbst weiterblättern). */
   singlePuzzle = false;
 
-  /** Gesetzt, wenn dieses Puzzle aus einer Freundes-Challenge geöffnet wurde (?challengeId=…). */
-  private challengeId: number | null = null;
-  private challengeResolved = false;
-
-  /** Gesetzt, wenn dieses Puzzle als Revanche an einem gescheiterten Puzzle dieses Users geöffnet wurde (?revengeUserId=…). */
-  private revengeUserId: number | null = null;
-  private revengeNotified = false;
-  /** Warteschlange der noch offenen Revenge-Puzzle-Ids des Freundes (ohne das aktuelle). */
-  private revengeQueue: number[] = [];
-  /** Revanche-Runde durch → Glückwunsch-/Feuerwerk-Card statt nächstem Puzzle. */
-  revengeComplete = false;
-  revengeFriendName = '';
-  revengeSolvedCount = 0;
-  revengeTotalCount = 0;
-  /** Indizes für die Feuerwerk-Funken im Template. */
-  readonly fireworkDots = Array.from({ length: 28 }, (_, i) => i);
+  /** Freundes-Challenge + Revanche-Runde (?challengeId= / ?revengeUserId=). */
+  readonly revenge: PuzzleRevengeRound;
   lastSolvedPuzzleId: number | null = null;
   private lastSolvedFen: string | null = null;
   private lastSolvedMoves = '';
@@ -149,6 +136,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     private worksheets: WorksheetService
   ) {
     super(stockfish);
+    this.revenge = new PuzzleRevengeRound(this.http);
     this.favoriteTracker = new FavoriteTracker(
       this.favorites, 'standard',
       () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
@@ -323,15 +311,15 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     // Aus einer Freundes-Challenge geöffnet → nach dem Versuch das Ergebnis zurückmelden.
     const challengeParam = this.route.snapshot.queryParamMap.get('challengeId');
     if (challengeParam) {
-      this.challengeId = Number(challengeParam) || null;
+      this.revenge.challengeId = Number(challengeParam) || null;
     }
 
     // Als Revanche an einem gescheiterten Puzzle eines Freundes geöffnet → den Freund informieren
     // und im Revenge-Modus bleiben (offene Puzzles des Freundes nacheinander durchspielen).
     const revengeParam = this.route.snapshot.queryParamMap.get('revengeUserId');
     if (revengeParam) {
-      this.revengeUserId = Number(revengeParam) || null;
-      if (this.revengeUserId) this.loadRevengeQueue(this.revengeUserId);
+      this.revenge.userId = Number(revengeParam) || null;
+      if (this.revenge.userId) this.revenge.loadQueue(this.revenge.userId, () => [this.routePuzzleId, this.puzzle?.id]);
     }
 
     // Spielweise für den Bereich „Puzzles" einmalig erfragen — aber nur beim normalen Einstieg
@@ -340,7 +328,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     // Absender die Ansicht bereits gewählt bzw. es ist kein Trainingseinstieg, und ein
     // blockierender Dialog stünde nur im Weg.
     this.solveModeAskSuppressed = ov.visualization != null || this.singlePuzzle
-      || this.challengeId != null || this.revengeUserId != null;
+      || this.revenge.challengeId != null || this.revenge.userId != null;
     this.askSolveMode();
 
     const stats$ = this.isLoggedIn
@@ -431,7 +419,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
     this.attemptRecorded = false;
-    this.revengeNotified = false;
+    this.revenge.notified = false;
     this.gaveUp = false;
     this.stopTimer();
     this.stopCountdown();
@@ -641,8 +629,8 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     // (Codereview N9-001). Gleichzeitig abgeschickt prüfte der Server, bevor der Versuch stand — echte Lösungen wurden
     // als „nicht gelöst" gebucht, die Revanche-Glocke fiel aus. Offline oder bei Fehler geht nur der Versuch in die
     // Schlange: beim Nachsenden schließt der Server die Challenge selbst und legt über revengeUserId die Glocke an.
-    const challengeId = this.isLoggedIn ? this.claimChallenge() : null;
-    const revengeTo = this.isLoggedIn ? this.claimRevenge(solved) : null;
+    const challengeId = this.isLoggedIn ? this.revenge.claimChallenge() : null;
+    const revengeTo = this.isLoggedIn ? this.revenge.claimRevenge(solved, !!this.puzzle) : null;
     if (revengeTo != null) body['revengeUserId'] = revengeTo;
     if (!navigator.onLine) {
       // Offline gelöst → für späteres Hochladen vormerken (Stats aktualisieren sich beim Sync).
@@ -667,53 +655,18 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     }
   }
 
-  /** Beansprucht genau einmal die offene Challenge für diesen (ersten) Versuch; die Meldung folgt erst nach dem
-   *  gespeicherten Versuch (fire-and-forget). `null` = nichts zu melden. Sofort beansprucht, damit ein späteres,
-   *  fremdes Puzzle derselben Seite die Challenge nicht mit seinem Ergebnis meldet. */
-  private claimChallenge(): number | null {
-    if (this.challengeId == null || this.challengeResolved) return null;
-    this.challengeResolved = true;
-    return this.challengeId;
-  }
-
-  /** Beansprucht genau einmal je Puzzle die Revanche-Meldung an den Freund, dessen gescheitertes Puzzle gerade
-   *  gerächt wurde, und zählt den Solve sofort für die Abschlusskarte. Liefert den Freund oder `null`. */
-  private claimRevenge(solved: boolean): number | null {
-    if (this.revengeUserId == null || this.revengeNotified || !this.puzzle) return null;
-    this.revengeNotified = true;
-    if (solved) this.revengeSolvedCount++;
-    return this.revengeUserId;
-  }
-
-  /** Offene Revenge-Puzzles des Freundes laden und als Warteschlange für die Revanche-Runde merken. */
-  private loadRevengeQueue(friendUserId: number): void {
-    this.http.get<{ displayName: string | null; username: string; puzzles: { puzzleId: number; solvedByViewer: boolean }[] }>(
-      `/api/friends/${friendUserId}/revenge`
-    ).subscribe({
-      next: d => {
-        this.revengeFriendName = d.displayName || d.username;
-        const openIds = d.puzzles.filter(p => !p.solvedByViewer).map(p => p.puzzleId);
-        this.revengeTotalCount = openIds.length;
-        // Das aktuell geladene Puzzle wird zuerst gespielt → aus der Restschlange nehmen.
-        this.revengeQueue = openIds.filter(id => id !== this.routePuzzleId && id !== this.puzzle?.id);
-      },
-      error: () => {}
-    });
-  }
-
   /** „Nächstes": im Revenge-Modus das nächste offene Puzzle des Freundes, sonst normales Zufallspuzzle. */
   onNext(): void {
-    if (this.revengeUserId != null) { this.advanceRevenge(); return; }
+    if (this.revenge.userId != null) { this.advanceRevenge(); return; }
     this.loadNext();
   }
 
   /** Nächstes Puzzle der Revanche-Runde laden; ist die Schlange leer → Glückwunsch/Feuerwerk. */
   private advanceRevenge(): void {
-    const nextId = this.revengeQueue.shift();
+    const nextId = this.revenge.takeNext();
     if (nextId == null) {
       this.stopTimer();
       this.stopCountdown();
-      this.revengeComplete = true;
       return;
     }
     this.routePuzzleId = nextId;
@@ -722,7 +675,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
 
   /** Von der Feuerwerk-Card zurück zur Revanche-Liste des Freundes (zeigt jetzt die erledigten). */
   goToRevengeList(): void {
-    if (this.revengeUserId != null) this.router.navigate(['/friends', this.revengeUserId, 'revenge']);
+    if (this.revenge.userId != null) this.router.navigate(['/friends', this.revenge.userId, 'revenge']);
   }
 
   resetPuzzle(): void {

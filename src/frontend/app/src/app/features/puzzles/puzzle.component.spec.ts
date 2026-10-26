@@ -382,7 +382,7 @@ describe('PuzzleComponent Spielweise', () => {
     for (const params of faelle) {
       const sm = makeSolveMode('easy');
       const c = makeComponent(params, sm);
-      (c as any).loadRevengeQueue = () => {};   // Revanche: Queue-Abruf im Test überspringen
+      (c as any).revenge.loadQueue = () => {};   // Revanche: Queue-Abruf im Test überspringen
 
       c.ngOnInit();
 
@@ -435,8 +435,8 @@ describe('PuzzleComponent Challenge/Revanche erst nach dem gespeicherten Versuch
     const c = makeComponent();
     (c as any).authService = { isLoggedIn: true };
     c.puzzle = { ...PUZZLE };
-    (c as any).challengeId = 7;
-    (c as any).revengeUserId = 9;
+    (c as any).revenge.challengeId = 7;
+    (c as any).revenge.userId = 9;
     const attempt$ = new Subject<any>();
     c.puzzleService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(attempt$);
     c.puzzleService.getStats = () => of({});
@@ -455,7 +455,7 @@ describe('PuzzleComponent Challenge/Revanche erst nach dem gespeicherten Versuch
     expect(c.puzzleService.recordAttempt.calls.mostRecent().args[8]).toBe(9);   // revengeUserId im Versuch
     expect(resolve).not.toHaveBeenCalled();
     expect(recordResult).not.toHaveBeenCalled();
-    expect(c.revengeSolvedCount).toBe(1);   // Abschlusskarte zählt sofort, nicht erst mit der Antwort
+    expect(c.revenge.solvedCount).toBe(1);   // Abschlusskarte zählt sofort, nicht erst mit der Antwort
 
     attempt$.next({ eloChange: 4 });
     expect(resolve).toHaveBeenCalledOnceWith(7, true, 12);
@@ -484,7 +484,7 @@ describe('PuzzleComponent Challenge/Revanche erst nach dem gespeicherten Versuch
     c.puzzleService.recordAttempt.and.returnValue(next$);
     c.puzzle = { ...PUZZLE, id: 2 };
     c.attemptRecorded = false;              // wie loadNext()
-    (c as any).revengeNotified = false;
+    (c as any).revenge.notified = false;
     (c as any).recordAttempt(false, 5);
     next$.next({});
 
