@@ -147,6 +147,8 @@ Kinderseite" unter REST API.
   `authInterceptor`; beim Start tauscht `HandoffService.consumeIncoming()` das geteilte Cookie gegen eine eigene
   Anmeldung — wer in RookHub oder auf der Turnierseite angemeldet ist, ist es hier auch. Seit 0.563.0 liegt der
   Fortschritt angemeldet im Konto (Abschnitt „Fortschritt im Konto" unter REST API); die Startseite sagt, wo er liegt.
+  Über beiden Masken steht `AUTH_INTRO` (`kids.authIntro.*`, UX-066): Spielen geht ohne Konto, mit Konto ist der
+  Fortschritt auf jedem Gerät, dasselbe Konto wie RookHub; „← Start“ über der Karte (r2-k-login).
 - **Kein Impressum** (0.563.0, Wunsch 2026-09-27): keine Route, kein Link im Fuß. `LEGAL_SITE`
   (`src/app/core/legal-site.ts`) sagt den geteilten Rechtsseiten je Oberfläche, ob es ein Impressum gibt und
   welche Adresse für Datenschutzfragen gilt — KidHub setzt `{ contactEmail: 'kidhub@oberschm.id', imprint: false }` in

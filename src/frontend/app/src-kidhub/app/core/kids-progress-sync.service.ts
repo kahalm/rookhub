@@ -2,7 +2,9 @@ import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angu
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '@rh/core/auth.service';
 import { KidsApiService } from './kids-api.service';
+import { KidsEndlessStore } from './kids-endless.store';
 import { KidsProgressStore } from './kids-progress.store';
+import { KidsStarsStore } from './kids-stars.store';
 
 /** So lange nach der letzten Aenderung, bevor der Stand hinaufgeht — ein Durchgang sind viele kleine Schritte. */
 export const SYNC_DEBOUNCE_MS = 800;
@@ -17,7 +19,8 @@ export type KidsSyncState = 'off' | 'saving' | 'saved' | 'offline';
  *   <li>nach jeder Aenderung (gebuendelt), wenn der Tab wieder sichtbar wird (anderes Geraet) und wenn das
  *       Netz zurueck ist;</li>
  *   <li>beim Abmelden bleibt der Stand im Konto, hier wird er geleert — auf einem geteilten Tablet soll das
- *       naechste Kind nicht mit fremden Sternen anfangen (und die nicht in SEIN Konto uebernehmen). Liegt
+ *       naechste Kind nicht mit fremden Sternen anfangen (und die nicht in SEIN Konto uebernehmen). Dazu gehen die
+ *       Geraete-Staende, die (noch) nicht im Konto liegen: Endlos-Laeufe samt Rekord und Kurve, Sternenjagd (F7-013). Liegt
  *       beim Anmelden noch der Stand eines ANDEREN Kontos hier, wird er verworfen statt uebernommen.</li>
  * </ul>
  * Scheitert ein Abgleich, bleibt alles lokal; der naechste Anlass holt ihn nach.
@@ -27,6 +30,8 @@ export class KidsProgressSync {
   private readonly auth = inject(AuthService);
   private readonly api = inject(KidsApiService);
   private readonly store = inject(KidsProgressStore);
+  private readonly endless = inject(KidsEndlessStore);
+  private readonly stars = inject(KidsStarsStore);
 
   readonly state = signal<KidsSyncState>('off');
 
@@ -59,6 +64,9 @@ export class KidsProgressSync {
       clearTimeout(this.timer);
       this.state.set('off');
       if (this.store.owner() !== null) this.store.clear();
+      // Nur beim Wechsel angemeldet → abgemeldet (der Start ohne Konto kommt hier nicht an: userId war schon null).
+      this.endless.clear();
+      this.stars.clear();
       return;
     }
     const owner = this.store.owner();

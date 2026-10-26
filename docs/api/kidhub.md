@@ -59,6 +59,8 @@ bewusst keinen FK; Buch löschen räumt beides ausdrücklich ab (`BookAdminServi
 Browser: `KidsProgressSync` (hinauf beim Anmelden, 800 ms nach jeder Änderung, bei sichtbarem Tab und zurückkehrendem
 Netz). Abmelden LEERT den Stand im Browser (er liegt im Konto; auf einem geteilten Tablet soll das nächste Kind nicht
 mit fremden Sternen anfangen), und ein Stand mit fremdem `owner` wird beim Anmelden verworfen statt übernommen.
+Seit F7-013 (2026-10-26) leert das Abmelden auch, was nur auf dem Gerät liegt: Endlos-Läufe samt Rekord und Kurve
+(`KidsEndlessStore.clear`) und die Sternenjagd (`KidsStarsStore.clear`); ohne Anmeldung gespielt bleibt beides liegen.
 
 **Kindertitel + „erst, wenn Deutsch"** (0.565.0, Wunsch 2026-09-27: „benenne alle Kurse für die Kinder um, blende sie
 vorerst aus, bis sie deutsch sind"): `Book.KidsTitles` (JSON `{"de":"…","en":"…","hr":"…","hu":"…"}`, `Services/Kids/KidsTitles.cs`)

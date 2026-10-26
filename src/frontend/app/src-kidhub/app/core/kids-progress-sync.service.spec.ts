@@ -5,6 +5,9 @@ import { BehaviorSubject } from 'rxjs';
 import { AuthResponse, AuthService } from '@rh/core/auth.service';
 import { KidsProgressSync, SYNC_DEBOUNCE_MS } from './kids-progress-sync.service';
 import { KidsProgressDto, KidsProgressStore } from './kids-progress.store';
+import { KidsEndlessStore } from './kids-endless.store';
+import { KidsStarsStore } from './kids-stars.store';
+import { EndlessRun } from './kids-endless';
 
 describe('KidsProgressSync', () => {
   const KEY = 'rh-kids-progress-v1';
@@ -17,13 +20,13 @@ describe('KidsProgressSync', () => {
   let user: BehaviorSubject<AuthResponse | null>;
 
   beforeEach(() => {
-    localStorage.removeItem(KEY);
+    for (const k of [KEY, 'rh-kids-endless-v1', 'rh-kids-stars-v1']) localStorage.removeItem(k);
     user = new BehaviorSubject<AuthResponse | null>(null);
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting(), { provide: AuthService, useValue: { currentUser$: user } }],
     });
   });
-  afterEach(() => localStorage.removeItem(KEY));
+  afterEach(() => { for (const k of [KEY, 'rh-kids-endless-v1', 'rh-kids-stars-v1']) localStorage.removeItem(k); });
 
   const http = () => TestBed.inject(HttpTestingController);
   const progressCalls = () => http().match(r => r.url === '/api/kids/progress');
@@ -94,6 +97,29 @@ describe('KidsProgressSync', () => {
     expect(req.request.body).toEqual(empty);
     req.flush(empty);
     expect(store.owner()).toBe(8);
+  }));
+
+  // F7-013: Endlos-Rekord und -Kurve sowie die Sternenjagd blieben nach dem Abmelden liegen — das naechste Kind am
+  // geteilten Tablet sah „Rekord: 25“ und startete mit der steilen Kurve des vorigen.
+  it('Abmelden leert auch Endlos-Laeufe, Rekord und Sternenjagd; ohne Anmeldung bleiben sie', fakeAsync(() => {
+    const endless = TestBed.inject(KidsEndlessStore);
+    const stars = TestBed.inject(KidsStarsStore);
+    const run: EndlessRun = { at: 1, solved: 25, maxRating: 1600, firstMistakeRating: null };
+    start();
+    endless.record(run);
+    stars.complete(1);
+    tick(SYNC_DEBOUNCE_MS);
+    expect(endless.best()).toBe(25);                      // ohne Konto gespielt: bleibt
+    expect(stars.done()).toBe(1);
+
+    user.next(lena);
+    progressCalls()[0].flush(empty);
+    endless.record({ ...run, solved: 30 });
+    user.next(null);                                      // abgemeldet
+    expect(endless.best()).toBe(0);
+    expect(endless.runs()).toEqual([]);
+    expect(stars.done()).toBe(0);
+    expect(JSON.parse(localStorage.getItem('rh-kids-endless-v1')!)).toEqual({ runs: [], best: 0 });
   }));
 
   it('ohne Netz bleibt alles lokal und der Zustand sagt es', fakeAsync(() => {

@@ -4843,6 +4843,10 @@
         "range": "2 to {{max}} stars · hold to count faster",
         "solved": "{{n}} solved"
       }
+    },
+    "authIntro": {
+      "login": "You can play without an account. With a free account your progress is on every device – it is the same account as on RookHub.",
+      "register": "You can play without an account. The account brings your progress to every device and also works on RookHub."
     }
   },
   "turnierAdmin": {

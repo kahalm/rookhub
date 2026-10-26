@@ -43,6 +43,13 @@ export class KidsStarsStore {
     return true;
   }
 
+  /** Abmelden (F7-013): geschaffte und per Link freigeschaltete Stufen gehoerten dem angemeldeten Kind. */
+  clear(): void {
+    this.state.set(new Set());
+    this.unlocked.set(new Set());
+    this.save();
+  }
+
   private save(): void {
     const sorted = (set: ReadonlySet<number>) => [...set].sort((a, b) => a - b);
     const data: { done: number[]; unlocked?: number[] } = { done: sorted(this.state()) };

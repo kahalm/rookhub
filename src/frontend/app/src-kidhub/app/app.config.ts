@@ -11,6 +11,7 @@ import { provideTouchSubmenuGuard } from '@rh/core/touch-submenu-guard';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 import { registerFormatLocaleData } from '@rh/core/locale-data';
 import { LEGAL_SITE } from '@rh/core/legal-site';
+import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
 
 registerFormatLocaleData();
 
@@ -33,6 +34,9 @@ export const kidhubConfig: ApplicationConfig = {
     // Datenschutzerklaerung in der Kinder-Fassung, der Ruecklink fuehrt zur Startseite (Codereview F7-003). Konto
     // loeschen geht nur in RookHub — die Loeschseite verweist dorthin (Codereview UX-023).
     { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' } },
+    // Anmelde-/Registriermaske (Codereview UX-066, R-3 a): wozu das Konto dient — Spielen geht ohne, mit Konto ist der
+    // Fortschritt auf jedem Geraet, dasselbe Konto wie RookHub. Ersetzt den Satz „Ein Konto ist kostenlos“.
+    { provide: AUTH_INTRO, useValue: { login: 'kids.authIntro.login', register: 'kids.authIntro.register' } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

@@ -13,7 +13,8 @@ export const ENDLESS_KEEP_RUNS = 20;
 
 /**
  * Die Laeufe des Endlos-Modus auf diesem Geraet (localStorage) — Grundlage der adaptiven Kurve und des Rekords.
- * Bewusst (noch) nicht im Konto: der Abgleich (`KidsProgressSync`) kennt nur Stufen und Kurse.
+ * Bewusst (noch) nicht im Konto: der Abgleich (`KidsProgressSync`) kennt nur Stufen und Kurse — beim Abmelden leert er
+ * ihn aber mit (F7-013).
  */
 @Injectable({ providedIn: 'root' })
 export class KidsEndlessStore {
@@ -32,6 +33,13 @@ export class KidsEndlessStore {
     });
     this.save();
     return isBest;
+  }
+
+  /** Abmelden (F7-013): Laeufe und Rekord gehoerten dem Kind, das angemeldet war — das naechste am geteilten Tablet
+   *  beginnt mit der flachen Anfangskurve und ohne fremden Rekord. */
+  clear(): void {
+    this.state.set({ runs: [], best: 0 });
+    this.save();
   }
 
   private load(): StoredEndless {

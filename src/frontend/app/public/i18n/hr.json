@@ -4843,6 +4843,10 @@
         "range": "2 do {{max}} zvjezdica · drži za brže brojanje",
         "solved": "{{n}} riješeno"
       }
+    },
+    "authIntro": {
+      "login": "Igrati možeš i bez računa. S besplatnim računom tvoj je napredak na svakom uređaju – to je isti račun kao na RookHubu.",
+      "register": "Igrati možeš i bez računa. Račun prenosi tvoj napredak na svaki uređaj i vrijedi i za RookHub."
     }
   },
   "turnierAdmin": {

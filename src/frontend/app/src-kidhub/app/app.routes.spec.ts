@@ -6,6 +6,7 @@ import { KidsStarsStore } from './core/kids-stars.store';
 import { kidhubConfig } from './app.config';
 import { LEGAL_SITE, LegalSite } from '@rh/core/legal-site';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
+import { AUTH_INTRO, AuthIntro } from '@rh/features/auth/auth-intro';
 
 describe('KidHub-Routen und Rechtsseiten', () => {
   it('Anmelden, Registrieren und Datenschutz gibt es, ein Impressum nicht', () => {
@@ -22,6 +23,12 @@ describe('KidHub-Routen und Rechtsseiten', () => {
       { useValue: LegalSite } | undefined;
     // accountHome: KidHub hat kein Profil — die Loeschseite verweist auf RookHubs Profil (UX-023).
     expect(legal?.useValue).toEqual({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' });
+  });
+
+  it('Anmelde- und Registriermaske sagen, wozu das Konto dient (UX-066)', () => {
+    const intro = kidhubConfig.providers.find(p => (p as { provide?: unknown }).provide === AUTH_INTRO) as
+      { useValue: AuthIntro } | undefined;
+    expect(intro?.useValue).toEqual({ login: 'kids.authIntro.login', register: 'kids.authIntro.register' });
   });
 
   it('jeder Link der geteilten Anmelde- und Rechtsseiten hat hier einen Weg — mit KidHubs LEGAL_SITE (UX-003)', async () => {

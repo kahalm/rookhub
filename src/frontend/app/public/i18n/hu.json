@@ -4468,6 +4468,10 @@
         "range": "2–{{max}} csillag · tartsd lenyomva a gyorsabb számoláshoz",
         "solved": "{{n}} megoldva"
       }
+    },
+    "authIntro": {
+      "login": "Fiók nélkül is játszhatsz. Ingyenes fiókkal a haladásod minden eszközön megvan – ez ugyanaz a fiók, mint a RookHubon.",
+      "register": "Fiók nélkül is játszhatsz. A fiókkal a haladásod minden eszközre eljut, és a RookHubon is érvényes."
     }
   },
   "turnierAdmin": {
