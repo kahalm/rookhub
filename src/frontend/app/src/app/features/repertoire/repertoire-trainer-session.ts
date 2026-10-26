@@ -7,8 +7,9 @@ import { normFen } from './repertoire-tree.util';
 import { destsAt, userMoveCount } from './repertoire-trainer.util';
 import { lineKeyOf } from './repertoire-trainer-queue.util';
 import {
-  ADVANCE_MS, BoardMove, LEARN_GAP_MS, LEARN_REPEATS, LEARN_SHOW_MS, OPP_MOVE_DELAY_MS, TrainerSessionState,
+  ADVANCE_MS, BoardMove, LEARN_GAP_MS, LEARN_REPEATS, OPP_MOVE_DELAY_MS,
 } from './repertoire-trainer-state';
+import { TrainerLearnMode } from './repertoire-trainer-learn';
 
 // Typen, Zeiten und Uhr stehen seit W7a in repertoire-trainer-state.ts — hier weiter erreichbar wie bisher.
 export {
@@ -30,11 +31,10 @@ export type {
  * FELDER statt Zug-TEXT. Bei der ANZEIGE (`expectedDisplay`, `movesInLine`, `currentMovePrettyLabel`) und beim
  * Eval-Vergleich bleibt es bei der SAN — dort ist sie Text für Menschen, kein Urteil.</p>
  *
- * <p>Zustand, Anzeige-Werte und Timer erbt sie von {@link TrainerSessionState}.</p>
+ * <p>Zustand, Anzeige-Werte und Timer erbt sie von {@link TrainerSessionState}, den Lern-Modus von
+ * {@link TrainerLearnMode}.</p>
  */
-export class TrainerSession extends TrainerSessionState {
-  private chess = new Chess();
-
+export class TrainerSession extends TrainerLearnMode {
   // ===== Warteschlange =====
 
   /** Neue Warteschlange von vorn (Zähler zurück). Leer → `EMPTY`. */
@@ -87,7 +87,7 @@ export class TrainerSession extends TrainerSessionState {
   }
 
   /** Spielt Gegnerzüge nacheinander, bis der User dran ist — oder die Linie zu Ende ist. */
-  private advanceToUserMove(): void {
+  protected override advanceToUserMove(): void {
     const line = this.queue[this.qIndex];
     if (!line) { this.phase = 'DONE'; this.hooks.changed(); return; }
     if (this.currentPly >= line.moves.length) { this.finishLine(); return; }
@@ -138,7 +138,7 @@ export class TrainerSession extends TrainerSessionState {
     }, OPP_MOVE_DELAY_MS);
   }
 
-  private finishLine(): void {
+  protected override finishLine(): void {
     const line = this.queue[this.qIndex];
     this.oppMoving = false;
     this.nextRepeatAt = null;
@@ -359,89 +359,5 @@ export class TrainerSession extends TrainerSessionState {
     this.dests = destsAt(this.startFen);
     this.phase = 'PLAYING';
     this.hooks.changed();
-  }
-
-  // ===== Lern-Modus =====
-
-  /** Kommentar eines gerade gespielten Gegnerzugs dauerhaft anzeigen (COMMENT), bis der User „Weiter" bestätigt. */
-  private enterCommentHold(comment: string): void {
-    this.clearLearn();
-    this.clearOppTimer();
-    this.holdComment = comment;
-    this.dests = new Map();
-    this.phase = 'COMMENT';
-    this.hooks.changed();
-  }
-
-  /** „Weiter" aus der COMMENT-Phase. */
-  continueFromComment(): void {
-    if (this.phase !== 'COMMENT') return;
-    this.holdComment = '';
-    this.advanceToUserMove();
-  }
-
-  /** Wiederholungs-Durchläufe: den erwarteten Zug NICHT vorzeigen, das Brett ist sofort spielbar. */
-  private enterLearnPlay(): void {
-    this.clearLearn();
-    this.fen = this.startFen;
-    this.lastMove = undefined;
-    this.dests = destsAt(this.startFen);
-    this.learnComment = '';
-    this.phase = 'PLAYING';
-    this.hooks.changed();
-  }
-
-  /** Zeigt den erwarteten Zug (view-only). Ohne Kommentar nach {@link LEARN_SHOW_MS} zurücknehmen; MIT Kommentar
-   *  stehen lassen, bis der User weitertippt. */
-  private enterLearnShow(): void {
-    this.clearLearn();
-    const line = this.queue[this.qIndex];
-    const expected = line?.moves[this.currentPly];
-    if (!expected) { this.finishLine(); return; }
-    let fenAfter = this.startFen;
-    try {
-      const c = new Chess(this.startFen);
-      const mv = c.move(expected.san);
-      if (mv) { fenAfter = c.fen(); this.lastMove = [mv.from as Key, mv.to as Key]; }
-    } catch { /* nicht spielbar → nur Text */ }
-    this.fen = fenAfter;
-    this.dests = new Map();
-    this.expectedDisplay = expected.san;
-    // Kommentar nur beim ERSTEN Durchlauf zeigen; die Wiederholungen laufen ohne Kommentar-Halt durch.
-    this.learnComment = this.learnPass === 0 ? (line.comments?.[this.currentPly] || '').trim() : '';
-    this.phase = 'LEARN_SHOW';
-    this.hooks.changed();
-    if (!this.learnComment) {
-      this.learnTimer = this.clock.setTimeout(() => { this.learnTimer = null; this.learnRetract(); }, LEARN_SHOW_MS);
-    }
-  }
-
-  /** Gezeigten Zug zurücknehmen → der User spielt ihn selbst. */
-  private learnRetract(): void {
-    this.clearLearn();
-    this.fen = this.startFen;
-    this.lastMove = undefined;
-    this.dests = destsAt(this.startFen);
-    this.learnComment = '';
-    this.phase = 'PLAYING';
-    this.hooks.changed();
-  }
-
-  /** Learn-Zug: nur der gezeigte (erwartete) Zug führt weiter; falsch → Zug erneut zeigen. Keine Alternativen. */
-  private onLearnMove(ev: BoardMove): void {
-    const line = this.queue[this.qIndex];
-    if (!line || this.phase !== 'PLAYING' || this.currentPly >= line.moves.length) return;
-    const board = tryLoadFen(this.startFen);
-    if (!board) return;
-    const expected: ExpectedMove = { san: line.moves[this.currentPly].san };
-    const verdict = judgeMove(board, expected, [], ev.orig, ev.dest, ev.promotion);
-    if (verdict === 'illegal' || verdict === 'not-your-turn') return;
-    if (verdict !== 'correct') { this.enterLearnShow(); return; }   // nicht der Zug → nochmal vormachen
-    const uci = resolveExpectedUci(board, expected);
-    if (uci) { try { applyUci(this.chess, uci); } catch { /* Brett steht woanders */ } }
-    this.fen = this.chess.fen();
-    this.lastMove = [ev.orig, ev.dest];
-    this.currentPly++;
-    this.advanceToUserMove();
   }
 }
