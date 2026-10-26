@@ -42,7 +42,7 @@ import {
   DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryEntry, DirectoryFilter,
   DirectoryRangePreset, EMPTY_FILTER, GeoPlaceSuggestion, SearchProfile, TournamentAgeGroup,
-  TournamentGender, TournamentKind, TournamentSpeed, directoryPageSize, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
+  DirectoryIgnoredChange, TournamentGender, TournamentKind, TournamentSpeed, directoryPageSize, rangeFor, groupSameName, sameNameSiblings } from './tournament-directory.model';
 
 /**
  * Turnierkalender: Liste, Karte und Monatsansicht auf DENSELBEN Filterzustand.
@@ -439,11 +439,18 @@ export class TournamentDirectoryComponent implements OnInit {
    * verschwaende dann ohne erkennbaren Anlass. Die Gesamtzahl wandert mit, sonst behauptet die
    * Zeile darueber „12 von 40", waehrend elf zu sehen sind.
    */
-  onIgnoredChanged(event: { entry: DirectoryEntry; ignored: boolean }): void {
+  onIgnoredChanged(event: DirectoryIgnoredChange): void {
     if (!event.ignored || this.filter.includeIgnored) return;
 
+    const index = this.entries().findIndex(e => e.id === event.entry.id);
     this.entries.update(list => list.filter(e => e.id !== event.entry.id));
     this.total.update(total => Math.max(0, total - 1));
+    // „Rueckgaengig" (UX-041): an den alten Platz zurueck — die Karte selbst ist da schon aus der Liste.
+    event.undone?.subscribe(() => {
+      if (index < 0 || this.entries().some(e => e.id === event.entry.id)) return;
+      this.entries.update(list => [...list.slice(0, index), event.entry, ...list.slice(index)]);
+      this.total.update(total => total + 1);
+    });
   }
 
   /**
@@ -480,8 +487,10 @@ export class TournamentDirectoryComponent implements OnInit {
    * einzelner Punkt entfernen, ohne den Ausschnitt neu zu holen — und ein Turnier kann mehrere
    * Punkte haben.
    */
-  onIgnoredFromMap(): void {
+  onIgnoredFromMap(change?: DirectoryIgnoredChange): void {
     if (this.lastBounds) this.loadPins(this.lastBounds);
+    // „Rueckgaengig" (UX-041): der Punkt kommt mit dem naechsten Ausschnitt zurueck.
+    change?.undone?.subscribe(() => { if (this.lastBounds) this.loadPins(this.lastBounds); });
   }
 
   onIncludeIgnoredChange(includeIgnored: boolean): void {

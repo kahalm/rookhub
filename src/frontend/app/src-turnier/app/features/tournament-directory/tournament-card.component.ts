@@ -17,7 +17,8 @@ import { TournamentListService } from '../../core/tournament-list.service';
 import { formatTournamentDates, formatTournamentDay } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import { DirectoryEntry, isPlaceholderLocation, SameNameMark } from './tournament-directory.model';
+import { DirectoryEntry, DirectoryIgnoredChange, isPlaceholderLocation, SameNameMark } from './tournament-directory.model';
+import { Subject } from 'rxjs';
 
 /**
  * Die Kurzansicht EINES Turniers — Name, Termin, Ort, Merkmale und vier Aktionen.
@@ -330,9 +331,9 @@ export class TournamentCardComponent {
   /**
    * Der Ausblend-Zustand hat sich geaendert. Die Liste laesst die Zeile daraufhin fallen, wenn
    * ihr Filter Ausgeblendete nicht mitanzeigt — sonst bliebe eine Zeile stehen, die beim
-   * naechsten Laden verschwindet.
+   * naechsten Laden verschwindet. Beim Ausblenden traegt das Ereignis `undone` fuer „Rueckgaengig" (UX-041).
    */
-  @Output() ignoredChanged = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
+  @Output() ignoredChanged = new EventEmitter<DirectoryIgnoredChange>();
 
   /**
    * „Gemerkt" hat sich geaendert. Gebraucht von der KARTE: der Punkt zeigt diesen Zustand mit an
@@ -466,14 +467,36 @@ export class TournamentCardComponent {
       next: () => {
         this.busy.set(false);
         this.ignoredOverride.set(next);
-        this.snackbar.success(this.translate.instant(
-          next ? 'tournamentDirectory.card.hidden' : 'tournamentDirectory.card.shown'));
-        this.ignoredChanged.emit({ entry: this.entry, ignored: next });
+        if (!next) {
+          this.snackbar.success(this.translate.instant('tournamentDirectory.card.shown'));
+          this.ignoredChanged.emit({ entry: this.entry, ignored: false });
+          return;
+        }
+        // UX-041: die Liste nimmt die Karte sofort heraus — ein Fehltipp waere ohne „Rueckgaengig" endgueltig
+        // (wie in der Merkliste). Die Karte kann danach schon zerstoert sein; `undone` erreicht die Liste trotzdem.
+        const undone = new Subject<void>();
+        this.snackbar.success(this.translate.instant('tournamentDirectory.card.hidden'),
+          { action: 'common.undo', duration: 6000 })
+          .onAction().subscribe(() => this.undoIgnore(undone));
+        this.ignoredChanged.emit({ entry: this.entry, ignored: true, undone: undone.asObservable() });
       },
       error: () => {
         this.busy.set(false);
         this.snackbar.warn(this.translate.instant('tournamentDirectory.card.hideError'));
       },
+    });
+  }
+
+  /** „Rueckgaengig" nach dem Ausblenden: wieder einblenden und das melden. */
+  private undoIgnore(undone: Subject<void>): void {
+    this.directory.setIgnored(this.entry.id, false).subscribe({
+      next: () => {
+        this.ignoredOverride.set(false);
+        undone.next();
+        undone.complete();
+        this.ignoredChanged.emit({ entry: this.entry, ignored: false });
+      },
+      error: () => this.snackbar.warn(this.translate.instant('common.error')),
     });
   }
 

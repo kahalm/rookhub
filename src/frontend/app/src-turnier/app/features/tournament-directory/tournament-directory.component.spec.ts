@@ -429,6 +429,24 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /** UX-041: „Rückgängig" nach dem Ausblenden setzt die Zeile an ihren alten Platz zurück. */
+  it('setzt eine ausgeblendete Zeile nach „Rückgängig" wieder an ihren Platz', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1'), entry('2'), entry('3')], 3);
+
+    const undone = new Subject<void>();
+    const middle = component.entries()[1];
+    component.onIgnoredChanged({ entry: middle, ignored: true, undone });
+    expect(component.entries().map(e => e.id)).toEqual(['1', '3']);
+    expect(component.total()).toBe(2);
+
+    undone.next();
+    expect(component.entries().map(e => e.id)).toEqual(['1', '2', '3']);
+    expect(component.total()).toBe(3);
+    http.verify();
+  });
+
   it('setzt beim Filterwechsel wieder auf Seite 1', async () => {
     await setup();
     flushProfiles([]);

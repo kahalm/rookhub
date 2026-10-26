@@ -3,12 +3,12 @@ import type * as L from 'leaflet';
 import { PinGroup, PinMember, placeName } from './map-pin-groups';
 import { MapPopupBuilder, MapText } from './map-popup-builder';
 import { TournamentCardComponent } from './tournament-card.component';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DirectoryEntry, DirectoryIgnoredChange } from './tournament-directory.model';
 
 /** Was die Kurzansicht im Popup nach draussen meldet — die Karte reicht es weiter. */
 export interface MapPopupEvents {
   selected(entry: DirectoryEntry): void;
-  ignored(change: { entry: DirectoryEntry; ignored: boolean }): void;
+  ignored(change: DirectoryIgnoredChange): void;
   subscribed(entry: DirectoryEntry, subscribed: boolean): void;
 }
 

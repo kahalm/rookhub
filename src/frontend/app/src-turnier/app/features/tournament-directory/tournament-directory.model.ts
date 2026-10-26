@@ -1,3 +1,5 @@
+import type { Observable } from 'rxjs';
+
 /** Bedenkzeit-Kategorie, die der Server aus dem Bedenkzeit-Freitext ableitet. */
 export type TournamentSpeed = 'Unknown' | 'Standard' | 'Rapid' | 'Blitz';
 
@@ -397,3 +399,15 @@ export function groupSameName<T extends DirectoryEntry>(entries: readonly T[]): 
   }
   return [...byKey.values()].flat();
 }
+
+/**
+ * Ausblend-Zustand einer Kurzansicht hat sich geändert. `undone` (nur beim Ausblenden) feuert, wenn der Betrachter
+ * über „Rückgängig" in der Snackbar wieder eingeblendet hat — die Karte selbst ist dann womöglich schon aus der
+ * Liste genommen, deshalb meldet sie es über diesen Strom statt über ein neues Ereignis (UX-041).
+ */
+export interface DirectoryIgnoredChange {
+  entry: DirectoryEntry;
+  ignored: boolean;
+  undone?: Observable<void>;
+}
+

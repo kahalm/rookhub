@@ -6,7 +6,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, TranslationObject, provideTranslateService } from '@ngx-translate/core';
 import { TournamentCardComponent } from './tournament-card.component';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DirectoryEntry, DirectoryIgnoredChange } from './tournament-directory.model';
+import { SnackbarService } from '@rh/core/snackbar.service';
+import { Subject } from 'rxjs';
 import { directoryCalendarEvent } from './directory-calendar-event';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
@@ -184,6 +186,32 @@ describe('TournamentCardComponent', () => {
 
     expect(component.ignored()).toBeTrue();
     expect(change!.ignored).toBeTrue();
+    http.verify();
+  });
+
+  /** UX-041: „Für mich ausblenden" nimmt die Karte sofort aus der Liste — die Snackbar bietet „Rückgängig". */
+  it('bietet nach dem Ausblenden „Rückgängig", das wieder einblendet und das nach draußen meldet', () => {
+    setup();
+    const action = new Subject<void>();
+    const success = spyOn(TestBed.inject(SnackbarService), 'success')
+      .and.returnValue({ onAction: () => action.asObservable() } as unknown as ReturnType<SnackbarService['success']>);
+    const changes: DirectoryIgnoredChange[] = [];
+    component.ignoredChanged.subscribe(c => changes.push(c));
+
+    component.toggleIgnore();
+    http.expectOne('/api/tournament-directory/1457129/ignore').flush(null);
+    expect(success).toHaveBeenCalledWith('tournamentDirectory.card.hidden', jasmine.objectContaining({ action: 'common.undo' }));
+    let undone = false;
+    changes[0].undone!.subscribe(() => (undone = true));
+
+    action.next();
+    const req = http.expectOne('/api/tournament-directory/1457129/ignore');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(component.ignored()).toBeFalse();
+    expect(undone).toBeTrue();
+    expect(changes.map(c => c.ignored)).toEqual([true, false]);
     http.verify();
   });
 

@@ -6,7 +6,7 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { MapPinMarker, pinRadiusFor } from './map-pin-marker';
-import { DirectoryEntry } from './tournament-directory.model';
+import { DirectoryEntry, DirectoryIgnoredChange } from './tournament-directory.model';
 import { MapGestureHint, wireMapGestures } from './map-gestures';
 import { PinGroup, groupByPoint, groupStyle } from './map-pin-groups';
 import { MapPopupBuilder, MapText } from './map-popup-builder';
@@ -166,7 +166,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   /** Feuert nach jedem Verschieben/Zoomen mit dem neuen Ausschnitt. */
   @Output() boundsChanged = new EventEmitter<BoundsString>();
   /** Ein Turnier wurde aus dem Popup heraus aus- oder wieder eingeblendet. */
-  @Output() entryIgnored = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
+  @Output() entryIgnored = new EventEmitter<DirectoryIgnoredChange>();
   /** Der Betrachter hat ein anderes Merkmal zum Einfaerben gewaehlt. */
   @Output() colourByChange = new EventEmitter<PinColourBy>();
   /**
