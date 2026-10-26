@@ -98,8 +98,9 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 
 ## Code-Aufteilung im Frontend (Zerlegung Z20, Codereview F3-001)
 
-`features/courses/calc/calculation.component.ts` ist nur noch der Container (Laden, URL, Dialoge, Stoppuhr,
-Tastatur, `pagehide`); die Teile daneben:
+`features/courses/calc/calculation.component.ts` ist nur noch der Container (Verdrahtung, Zug-Eingabe, Baum-Bearbeitung,
+Navigation/URL, Tastatur, `pagehide`); die Teile daneben (seit W7a, 2026-10-26, auch Laden, Training, Geräte-Modus,
+Beschriftungen und Dialoge):
 
 | Datei | Inhalt |
 |-------|--------|
@@ -111,4 +112,9 @@ Tastatur, `pagehide`); die Teile daneben:
 | `keyed-single-flight-queue.ts` | EINE Sende-Warteschlange für Baum und Bewertung: je Stellung höchstens eine Anfrage, jüngerer Stand wartet, Fehlschlag reiht nach eigener Regel wieder ein (kein sofortiger Neuversuch) |
 | `calc-training-timer.ts` | Kapitel-Uhr (Topf je Kapitel im localStorage, Besitzer-Prüfung F3-019, Fehlschlag-Übergang F3-011; Takt austauschbar) |
 | `calc-page-mode.ts` | `<body>`-Klasse `calc-mode`, gemessene Navbar-Breite, Vollbild-Ziel |
+| `calc-page-loader.ts` | Buch laden (Einstiegskapitel), Stellung laden (Epoche gegen überholte Antworten), Texte nach Sprachwechsel; `calcStartFen` (Vorlauf, illegale FEN sperrt die Eingabe) |
+| `calc-training-session.ts` | Kapitel-Training: Uhr, Rechenzeit je Stellung (`beginWatch`/`harvestWatch` → Delta mit Marke), Startsperre ohne Stellung, einmaliger Start-Hinweis |
+| `calc-local-mode.ts` | Server oder Gerät (Gäste: `LocalCalculationBackend`), Geräte-Hinweis und Speicher-Warnung |
+| `calc-labels.ts` | Anzeige-Texte: Kapitel-/Stellungsnamen, Punkte, Zeiten, Tooltips (Template liest `labels.*`) |
+| `calc-dialogs.ts` | Ergebnis-Dialog (nur echte Stufe/`null`), Kapitelzeit-Dialog, Einstellungen |
 | `calc-result-card` / `calc-annotate-card` / `calc-status-panel` (`.component.*`) | OnPush-Darstellung: Ergebnisfeld, Editor-Leiste (Symbole + Kommentar), Kapitelende + Fußzeile + Geräte-Hinweis |
