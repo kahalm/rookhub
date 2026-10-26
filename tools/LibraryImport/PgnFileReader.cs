@@ -1,4 +1,5 @@
 using System.Text;
+using RookHub.Api.Services;
 
 namespace RookHub.Tools.LibraryImport;
 
@@ -26,6 +27,7 @@ public static class PgnFileReader
         var moves = new StringBuilder();
         var raw = new StringBuilder();
         var sawMoves = false;
+        var braceDepth = 0;
 
         string? line;
         while ((line = reader.ReadLine()) is not null)
@@ -42,6 +44,7 @@ public static class PgnFileReader
                 moves.Clear();
                 raw.Clear();
                 sawMoves = false;
+                braceDepth = 0;
             }
 
             raw.Append(line).Append('\n');
@@ -55,8 +58,14 @@ public static class PgnFileReader
 
             if (trimmed.Length == 0) continue;
 
+            // Zeilenkommentar („;" bis Zeilenende) VOR dem Zusammenfuegen weg — die Zeilen haengen
+            // gleich mit Leerzeichen aneinander, danach kappte er den Rest der Partie (N3-007).
+            var (text, nextDepth) = PgnTokens.StripLineComment(trimmed, braceDepth);
+            braceDepth = nextDepth;
+            text = text.TrimEnd();
             sawMoves = true;
-            moves.Append(trimmed).Append(' ');
+            if (text.Length == 0) continue;
+            moves.Append(text).Append(' ');
         }
 
         if (headers.Count > 0 || moves.Length > 0)

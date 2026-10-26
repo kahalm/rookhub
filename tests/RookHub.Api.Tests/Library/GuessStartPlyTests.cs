@@ -158,4 +158,16 @@ public class GuessStartPlyTests : IDisposable
         Assert.DoesNotContain("e5 Open", moves);
         Assert.Contains("1. d4 d5", moves);
     }
+
+    /// <summary>Ein Zeilenkommentar („;") endet an der Zeile — nicht an der Partie. Die Zeilen werden mit
+    /// Leerzeichen zusammengefuegt, deshalb muss der Kommentar VORHER weg, sonst kappt er den Rest
+    /// (Zweitpruefung N3-007). Innerhalb von Klammern ist „;" kein Kommentar.</summary>
+    [Fact]
+    public void MoveTextOf_schneidetZeilenkommentareAb_undBehaeltDieFolgezeilen()
+    {
+        var moves = GuessStartPly.MoveTextOf("[Event \"x\"]\n\n1. d4 ; Damenbauer\nd5 2. c4 { a ; b } e6\n; nur Kommentar\n3. Nc3");
+
+        Assert.Equal("1. d4 d5 2. c4 { a ; b } e6 3. Nc3 ", moves);
+        Assert.Equal(1, LibraryGameReader.Analyse(moves).CommentCount); // nur der Klammerkommentar, kein „;"-Rest
+    }
 }

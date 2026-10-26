@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.846.1", date: "2026-10-26", changes: [
+    { en: "Master-game library: a PGN line comment („;“) no longer cuts off the rest of the game when the start ply is guessed or games are imported with the library tool (code review N3-007, residual).", de: "Meisterpartien-Bibliothek: Ein PGN-Zeilenkommentar („;“) kappt beim Bestimmen des Start-Halbzugs und beim Einlesen mit dem Bibliothekswerkzeug nicht mehr den Rest der Partie (Codereview N3-007, Restmangel)." },
+  ]},
   { version: "0.846.0", date: "2026-10-26", changes: [
     { en: "Logging out now also unsubscribes this device from push notifications. Reset password: a link without a token is shown as an error, with „Request a new link“ as the main button. Share dialog: friends the server skipped no longer appear as „shared“.", de: "Beim Abmelden wird das Push-Abo des Geräts mit abgemeldet. Passwort zurücksetzen: Ein Link ohne Token wird als Fehler angezeigt, mit „Neuen Link anfordern“ als Hauptknopf. Teilen-Dialog: Vom Server übersprungene Freunde erscheinen nicht mehr als „geteilt“." },
     { en: "Score sheet reading, guess-the-move and game editing show „Retry“ on load errors instead of „not set up“ or „not found“. Library search: a slow older response no longer overwrites a newer search. Trainer and hole finder take the chapter colour from Chessable PGNs instead of guessing it.", de: "Formular-Einlesen, Punktepartie und Partie bearbeiten zeigen bei Ladefehlern „Erneut versuchen“ statt „nicht eingerichtet“ oder „gibt es nicht“. Bibliothekssuche: Eine langsame ältere Antwort überschreibt die neuere Suche nicht mehr. Trainer und Lochfinder übernehmen die Kapitelfarbe aus Chessable-PGNs, statt sie zu raten." },

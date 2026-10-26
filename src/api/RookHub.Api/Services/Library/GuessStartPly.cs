@@ -138,16 +138,23 @@ public class GuessStartPly
 
     /// <summary>Der Zugteil eines PGN — Kopfzeilen raus. Ein Tag-Wert kann alles enthalten, auch
     /// etwas, das wie ein Zug aussieht („[Opening \"e4 e5\"]"); ihn mitzulesen verschoebe die
-    /// Zaehlung.</summary>
+    /// Zaehlung. Zeilenkommentare („;" bis Zeilenende, ausserhalb von Klammern) fallen HIER weg
+    /// (<see cref="PgnTokens.StripLineComment"/>): die Zeilen werden mit Leerzeichen zusammengefuegt,
+    /// danach gaebe es kein Zeilenende mehr und der Kommentar kappte den Rest der Partie
+    /// (Zweitpruefung N3-007).</summary>
     public static string MoveTextOf(string pgn)
     {
         var lines = pgn.Split('\n');
         var moves = new System.Text.StringBuilder(pgn.Length);
+        var braceDepth = 0;
         foreach (var raw in lines)
         {
             var line = raw.Trim();
             if (line.Length == 0) continue;
             if (line.StartsWith('[') && line.EndsWith(']')) continue;
+            (line, braceDepth) = PgnTokens.StripLineComment(line, braceDepth);
+            line = line.TrimEnd();
+            if (line.Length == 0) continue;
             moves.Append(line).Append(' ');
         }
         return moves.ToString();
