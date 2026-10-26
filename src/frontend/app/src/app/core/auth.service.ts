@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, inject } from '@angular/core';
+import { DestroyRef, Injectable, Injector, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, firstValueFrom, tap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -8,6 +8,7 @@ import { PermissionService } from './permission.service';
 import { ImpersonationService } from './impersonation.service';
 import { LoginFollowUpService } from './login-follow-up.service';
 import { localStore, removeKey } from './local-json-store';
+import { PushService } from './push.service';
 
 export type { AuthResponse } from './auth-response';
 
@@ -27,6 +28,7 @@ export class AuthService {
   private readonly perms = inject(PermissionService);
   private readonly impersonation = inject(ImpersonationService);
   private readonly followUp = inject(LoginFollowUpService);
+  private readonly injector = inject(Injector);
   currentUser$ = this.session.user$;
 
   constructor() {
@@ -218,6 +220,7 @@ export class AuthService {
   }
 
   logout(): void {
+    this.dropPushSubscription(this.token);
     removeKey(localStore(), SessionStore.UserKey);
     this.session.clearLocalTraces();
     // Die GETEILTE Anmeldung mit beenden: sie liegt als Cookie auf der Elterndomaene und ist der
@@ -234,6 +237,19 @@ export class AuthService {
     void this.flushSessionEnd();
     this.session.set(null);
     this.router.navigate(['/login']);
+  }
+
+  /**
+   * Das Push-Abo dieses Geräts beim Abmelden mit abmelden (Codereview F1-011) — sonst bekäme das Gerät
+   * weiter die Benachrichtigungen des abgemeldeten Kontos. Das Token wird mitgegeben, weil die Sitzung
+   * gleich danach geleert ist. Best effort: PushService lazy holen (Apps ohne Service Worker haben kein
+   * SwPush), jeder Fehler wird geschluckt — ein Abmelden darf daran nie scheitern.
+   */
+  private dropPushSubscription(token: string | null): void {
+    if (!token) return;
+    try {
+      void this.injector.get(PushService).removeSubscription(token).catch(() => undefined);
+    } catch { /* kein Service Worker/Push in dieser App → nichts abzumelden */ }
   }
 
   /** Merker: ein Abmelden hat die GETEILTE Anmeldung (Cookie) noch nicht beim Server beendet. */

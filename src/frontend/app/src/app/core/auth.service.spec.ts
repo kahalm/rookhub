@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { OfflineService } from './offline.service';
+import { PushService } from './push.service';
 import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from './anon-session';
 
 // Minimaler JWT (nur der payload-Teil wird ausgewertet) mit relativem exp.
@@ -902,5 +903,69 @@ describe('AuthService: Fassade (Charakterisierung Z34)', () => {
     expect(svc.currentUser?.adopted).toBeTrue();
     expect(svc.isImpersonating).toBeFalse();
     expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+  });
+});
+
+// Codereview F1-011: Abmelden lässt sonst das Push-Abo am Konto — das Gerät bekäme weiter Benachrichtigungen
+// des abgemeldeten Kontos. Best effort: das Abmelden darf nie daran scheitern.
+describe('AuthService logout meldet das Push-Abo ab', () => {
+  const user = { token: jwt(3600), username: 'u', userId: 3, isAdmin: false };
+
+  function setup(removeSubscription: jasmine.Spy) {
+    localStorage.clear();
+    localStorage.setItem('rookhub_user', JSON.stringify(user));
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        { provide: PushService, useValue: { removeSubscription } },
+      ],
+    });
+    const svc = TestBed.inject(AuthService);
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    return { svc, navigate };
+  }
+  afterEach(() => localStorage.clear());
+
+  it('ruft removeSubscription mit dem Token, solange es noch da ist', () => {
+    const remove = jasmine.createSpy('removeSubscription').and.resolveTo();
+    const { svc, navigate } = setup(remove);
+
+    svc.logout();
+
+    expect(remove).toHaveBeenCalledOnceWith(user.token);
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('meldet trotzdem ab, wenn removeSubscription wirft oder scheitert', async () => {
+    const throwing = jasmine.createSpy('removeSubscription').and.throwError('kaputt');
+    const a = setup(throwing);
+    a.svc.logout();
+    expect(a.svc.isLoggedIn).toBeFalse();
+    expect(a.navigate).toHaveBeenCalledWith(['/login']);
+
+    TestBed.resetTestingModule();
+    const rejecting = jasmine.createSpy('removeSubscription').and.rejectWith(new Error('offline'));
+    const b = setup(rejecting);
+    b.svc.logout();
+    await Promise.resolve();
+    expect(b.svc.isLoggedIn).toBeFalse();
+    expect(b.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('ruft removeSubscription nicht ohne Anmeldung', () => {
+    const remove = jasmine.createSpy('removeSubscription').and.resolveTo();
+    const { svc } = setup(remove);
+    localStorage.clear();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        { provide: PushService, useValue: { removeSubscription: remove } }],
+    });
+    const fresh = TestBed.inject(AuthService);
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fresh.logout();
+    expect(svc).toBeTruthy();
+    expect(remove).not.toHaveBeenCalled();
   });
 });

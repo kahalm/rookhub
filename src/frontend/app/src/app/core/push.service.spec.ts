@@ -42,4 +42,26 @@ describe('PushService', () => {
     req.flush({ categories: ['courses'] });   // Server verwarf „admin" (Nicht-Admin)
     expect(res.categories).toEqual(['courses']);
   });
+
+  it('removeSubscription(token) schickt das Token mit und löst das Browser-Abo auch bei Serverfehler', async () => {
+    const unsubscribe = jasmine.createSpy('unsubscribe').and.resolveTo();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        PushService, provideHttpClient(), provideHttpClientTesting(),
+        { provide: SwPush, useValue: { isEnabled: false, notificationClicks: of(), subscription: of({ endpoint: 'https://push/x' }), unsubscribe } },
+        { provide: Router, useValue: { navigateByUrl: jasmine.createSpy('nav') } },
+      ],
+    });
+    const push = TestBed.inject(PushService);
+    const ctl = TestBed.inject(HttpTestingController);
+    const done = push.removeSubscription('TOK');
+    await Promise.resolve();
+    const req = ctl.expectOne('/api/notifications/push/unsubscribe');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer TOK');
+    expect(req.request.body).toEqual({ endpoint: 'https://push/x' });
+    req.flush(null, { status: 500, statusText: 'err' });
+    await done;
+    expect(unsubscribe).toHaveBeenCalled();
+  });
 });

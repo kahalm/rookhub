@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { SwPush } from '@angular/service-worker';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 
 export interface PushConfig {
   /** VAPID-Public-Key; null = serverseitig nicht konfiguriert (Push nicht verfügbar). */
@@ -57,11 +57,18 @@ export class PushService {
     }).toPromise();
   }
 
-  /** Meldet die aktuelle Browser-Subscription server- und clientseitig ab (idempotent). */
-  async removeSubscription(): Promise<void> {
+  /** Meldet die aktuelle Browser-Subscription server- und clientseitig ab (idempotent).
+   *  `token`: beim Abmelden das Token der endenden Sitzung — die ist geleert, bevor die Anfrage rausgeht. */
+  async removeSubscription(token?: string): Promise<void> {
     const sub = await this.currentSubscription();
     if (sub) {
-      await this.http.post<void>('/api/notifications/push/unsubscribe', { endpoint: sub.endpoint }).toPromise();
+      const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+      try {
+        await this.http.post<void>('/api/notifications/push/unsubscribe', { endpoint: sub.endpoint }, { headers }).toPromise();
+      } catch (e) {
+        // Beim Abmelden trotzdem das Browser-Abo lösen: der Server räumt den toten Endpunkt beim nächsten Push (410) ab.
+        if (!token) throw e;
+      }
       try { await this.swPush.unsubscribe(); } catch { /* schon abgemeldet → egal */ }
     }
   }
@@ -72,8 +79,7 @@ export class PushService {
   }
 
   private currentSubscription(): Promise<PushSubscription | null> {
-    return new Promise(resolve => {
-      const s = this.swPush.subscription.subscribe(sub => { s.unsubscribe(); resolve(sub); });
-    });
+    // firstValueFrom statt subscribe+unsubscribe: verträgt auch eine synchron emittierende Quelle.
+    return firstValueFrom(this.swPush.subscription);
   }
 }
