@@ -241,9 +241,10 @@ npx ng test --watch=false # Unit-Tests (Karma/Jasmine), einmalig headless
 npm run lint:ratchet      # ESLint-Ratsche: keine Regel ueber eslint-baseline.json
 ```
 
-**Linter (ESLint, F8-004):** alle Regeln `'warn'`, aber die CI ist rot, sobald eine Regel mehr Meldungen hat als in
-`app/eslint-baseline.json` — neue Stelle fixen, nicht die Baseline heben; nach Abbau `npm run lint:ratchet:update`
-(Details: `docs/ci.md`, Abschnitt „ESLint-Ratsche“).
+**Linter (ESLint, F8-004):** Regeln mit Bestand `'warn'`, Regeln ohne Bestand `'error'` (Phase 3); die CI ist rot,
+sobald eine Regel mehr Meldungen hat als in `app/eslint-baseline.json` — neue Stelle fixen, nicht die Baseline heben;
+nach Abbau `npm run lint:ratchet:update`, eine auf 0 gesunkene Regel auf `'error'` (Details: `docs/ci.md`, Abschnitt
+„ESLint-Ratsche“).
 
 Fuer den vollen Stack: `docker compose -f compose.dev.yml --env-file .env.dev up --build` im rookhub Root.
 

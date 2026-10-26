@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// ESLint-Ratsche (Codereview F8-004, PHASE 2).
+// ESLint-Ratsche (Codereview F8-004, PHASE 2 + 3).
 //
-// eslint.config.mjs stellt jede Regel auf 'warn' — der Bestand (rund 1 200 Meldungen) bleibt stehen,
+// eslint.config.mjs stellt jede Regel mit Bestand auf 'warn' — der Bestand (rund 1 200 Meldungen) bleibt stehen,
 // aber er darf nicht WACHSEN. Dieses Skript zaehlt die Meldungen je Regel und vergleicht sie mit
 // eslint-baseline.json:
 //   - eine Regel liegt UEBER ihrer Baseline  → Exit 1, mit Regel, Baseline → jetzt und den Dateien
@@ -9,6 +9,8 @@
 //   - eine Regel liegt DARUNTER               → Hinweis „Baseline kann gesenkt werden" (bleibt gruen).
 //   - Regel ohne Baseline-Eintrag             → zaehlt wie Baseline 0 (neue Regeln starten sauber).
 //   - Meldungen ohne Regel (Parse-Fehler)     → laufen unter „(Parse-Fehler)" mit Baseline 0, also rot.
+//   - PHASE 3: eine 'warn'-Regel mit Baseline 0 und 0 Meldungen → Hinweis „kann auf 'error'" (bleibt gruen).
+//     'error'-Regeln zaehlen genauso (Baseline 0); CiWorkflowTests erlaubt 'error' nur bei Baseline 0.
 //
 // Aufruf (aus src/frontend/app):
 //   node scripts/eslint-ratchet.mjs                    pruefen (npm run lint:ratchet)
@@ -17,7 +19,7 @@
 //                                                      fehlt die Datei, legt --update sie mit den aktuellen Zahlen an
 //   node scripts/eslint-ratchet.mjs --summary <datei>  zusaetzlich Markdown-Tabelle an <datei> anhaengen (CI: $GITHUB_STEP_SUMMARY)
 //
-// Die Vergleichslogik (compare, applyUpdate, serializeBaseline, summaryMarkdown) ist exportiert und
+// Die Vergleichslogik (compare, applyUpdate, serializeBaseline, summaryMarkdown, phase3Candidates) ist exportiert und
 // in scripts/eslint-ratchet.test.mjs per `node --test` geprueft.
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -67,6 +69,24 @@ export function applyUpdate(baseline, current, { force = false } = {}) {
   return { next, raised };
 }
 
+/**
+ * PHASE 3: Regeln, die auf 'error' duerfen — Baseline 0, jetzt 0 Meldungen, in der Konfiguration noch 'warn'.
+ * @param {Record<string, number>} baseline
+ * @param {Record<string, number>} current
+ * @param {Record<string, 'off' | 'warn' | 'error'>} severities Schwere je Regel aus der wirksamen Konfiguration
+ */
+export function phase3Candidates(baseline, current, severities) {
+  return Object.keys(severities)
+    .filter((rule) => severities[rule] === 'warn' && (baseline[rule] ?? 0) === 0 && (current[rule] ?? 0) === 0)
+    .sort();
+}
+
+/** ESLint-Schwere (0/1/2, 'off'/'warn'/'error' oder [schwere, …optionen]) als Wort. */
+export function severityName(entry) {
+  const raw = Array.isArray(entry) ? entry[0] : entry;
+  return raw === 2 || raw === 'error' ? 'error' : raw === 1 || raw === 'warn' ? 'warn' : 'off';
+}
+
 /** Sortierte Schluessel, zwei Leerzeichen, Zeilenende am Schluss — byte-stabil. */
 export function serializeBaseline(counts) {
   const sorted = Object.fromEntries(Object.keys(counts).sort().map((k) => [k, counts[k]]));
@@ -113,7 +133,12 @@ async function lint() {
       perFile.set(path, (perFile.get(path) ?? 0) + 1);
     }
   }
-  return { counts, files, filesWithMessages };
+  // Wirksame Schwere je Regel (fuer den Phase-3-Hinweis); alle Projekte teilen eine Konfiguration (src*/**/*.ts).
+  const config = await eslint.calculateConfigForFile(join(APP_DIR, 'src', 'main.ts'));
+  /** @type {Record<string, 'off' | 'warn' | 'error'>} */
+  const severities = {};
+  for (const [rule, entry] of Object.entries(config?.rules ?? {})) severities[rule] = severityName(entry);
+  return { counts, files, filesWithMessages, severities };
 }
 
 function readBaseline() {
@@ -139,7 +164,7 @@ function parseArgs(argv) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const baseline = readBaseline();
-  const { counts, files, filesWithMessages } = await lint();
+  const { counts, files, filesWithMessages, severities } = await lint();
   const result = compare(baseline, counts);
 
   if (opts.summary) appendFileSync(opts.summary, summaryMarkdown(result, filesWithMessages));
@@ -172,6 +197,8 @@ async function main() {
   }
   for (const r of result.decreased)
     console.log(`Hinweis ${r.rule}: Baseline ${r.baseline} → jetzt ${r.current} — Baseline kann gesenkt werden (npm run lint:ratchet:update).`);
+  for (const rule of phase3Candidates(baseline, counts, severities))
+    console.log(`Hinweis ${rule}: Baseline 0, keine Meldung — kann in eslint.config.mjs auf 'error' (Phase 3, docs/ci.md).`);
   if (!result.ok) {
     console.error('\nDie Ratsche ist rot: neue Stelle fixen (die Dateiliste oben zeigt, wo die Regel trifft), NICHT die Baseline heben.');
     process.exitCode = 1;

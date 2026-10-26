@@ -84,11 +84,11 @@
   Wartungs-Skripte in `scripts/requirements.txt` (Codereview I1-011).
   **Laufende API-Fassung** (Codereview I1-017): das API-Image trägt `BUILD_GIT_SHA`/`BUILD_GIT_REF` (Build-Args aus
   `prebuild-api`); `GithubActionsService` meldet für rookhub `ApiSha`/`ApiRef` getrennt vom Frontend (`RunningSha`).
-  **Frontend-Linter** (Codereview F8-004): `npm run lint` in `src/frontend/app` (`eslint.config.mjs`, alle Regeln
-  `'warn'`; die CI hält die Zahl je Regel mit der Ratsche unten). Worktrees mit `node_modules`-Symlink auf eine andere
+  **Frontend-Linter** (Codereview F8-004): `npm run lint` in `src/frontend/app` (`eslint.config.mjs`; Regeln mit
+  Bestand `'warn'`, Regeln ohne Bestand `'error'`; die CI hält die Zahl je Regel mit der Ratsche unten). Worktrees mit `node_modules`-Symlink auf eine andere
   Kopie brauchen dafür erst `npm ci`.
 
-## ESLint-Ratsche (Frontend, Codereview F8-004 Phase 2)
+## ESLint-Ratsche (Frontend, Codereview F8-004 Phase 2 + 3)
 
 `build-frontend` in `test.yml` prüft nach `npm ci` mit `node scripts/eslint-ratchet.mjs` (aus `src/frontend/app`),
 dass **keine ESLint-Regel mehr Meldungen hat als in `src/frontend/app/eslint-baseline.json`** steht. Die Regeln selbst
@@ -107,7 +107,17 @@ ohne `continue-on-error`, Baseline gültig (ganze Zahlen ≥ 0, sortiert, im Skr
 - **Anheben** nur mit `node scripts/eslint-ratchet.mjs --update --force` und Begründung im Commit (z. B. eine neue
   Regel mit Bestand bewusst aufgenommen). Eine Regel ohne Baseline-Eintrag zählt wie Baseline 0; Meldungen ohne Regel
   (Parse-Fehler) laufen unter `(Parse-Fehler)` und sind damit immer rot.
-- **Phase 3:** erreicht eine Regel Baseline 0, darf sie in `eslint.config.mjs` auf `'error'`.
+- **Phase 3 (aktiv seit 26.10.2026):** Regeln mit Baseline 0 stehen in `eslint.config.mjs` auf `'error'` (zweiter
+  Block) — `npm run lint` ist dann schon lokal rot, nicht erst die Ratsche. Beim Einführen hatte keine der sieben
+  Stilregeln 0 (Stand 26.10.: 509 `prefer-inject`, 382 `prefer-signals`, 136 `prefer-on-push`, 79
+  `no-empty-function`, 57 `no-empty`, 21 `no-explicit-any`, 7 `no-console`); auf `'error'` stehen deshalb 15 Regeln,
+  die beim Einführen 0 Treffer hatten und den sauberen Stand festhalten: `prefer-standalone`,
+  `use-lifecycle-interface`, `contextual-lifecycle`, `no-empty-lifecycle-method`, `no-inputs-/no-outputs-metadata-property`,
+  `no-output-on-prefix`, `no-output-rename` (Angular), `no-alert` (Rückfragen nie nativ, F8-005), `no-eval`,
+  `no-implied-eval`, `no-new-func`, `no-debugger`, `no-var`, `@typescript-eslint/ban-ts-comment`. Sinkt eine
+  `'warn'`-Regel auf 0, meldet die Ratsche „kann in eslint.config.mjs auf 'error'“: dann Baseline senken
+  (`npm run lint:ratchet:update`) und die Regel im selben Commit umstellen. Neue `'error'`-Regel = Zeile mit 0 in
+  `eslint-baseline.json` (`CiWorkflowTests` verlangt sie).
 
 ## Changelog als Daten (Codereview F8-008)
 

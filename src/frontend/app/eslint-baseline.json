@@ -1,9 +1,24 @@
 {
+  "@angular-eslint/contextual-lifecycle": 0,
+  "@angular-eslint/no-empty-lifecycle-method": 0,
+  "@angular-eslint/no-inputs-metadata-property": 0,
+  "@angular-eslint/no-output-on-prefix": 0,
+  "@angular-eslint/no-output-rename": 0,
+  "@angular-eslint/no-outputs-metadata-property": 0,
   "@angular-eslint/prefer-inject": 509,
   "@angular-eslint/prefer-on-push-component-change-detection": 136,
   "@angular-eslint/prefer-signals": 382,
+  "@angular-eslint/prefer-standalone": 0,
+  "@angular-eslint/use-lifecycle-interface": 0,
+  "@typescript-eslint/ban-ts-comment": 0,
   "@typescript-eslint/no-empty-function": 79,
   "@typescript-eslint/no-explicit-any": 21,
+  "no-alert": 0,
   "no-console": 7,
-  "no-empty": 57
+  "no-debugger": 0,
+  "no-empty": 57,
+  "no-eval": 0,
+  "no-implied-eval": 0,
+  "no-new-func": 0,
+  "no-var": 0
 }
