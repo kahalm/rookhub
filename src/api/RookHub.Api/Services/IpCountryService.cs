@@ -112,11 +112,15 @@ public class IpCountryService
     private readonly string _sourceUrlTemplate;
     private readonly string _cachePath;
     private readonly Func<DateTime> _utcNow;
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly TimeSpan _downloadTimeout;
+    private readonly TimeSpan _callerWait;
+    private readonly object _refreshLock = new();
 
-    private IpCountryTable? _table;
+    private volatile IpCountryTable? _table;
     private DateTime _loadedAt;
     private DateTime? _failedAt;
+    /// <summary>Die laufende Aktualisierung (höchstens eine) — läuft unabhängig vom Aufrufer zu Ende.</summary>
+    private Task? _refresh;
 
     public IpCountryService(IHttpClientFactory httpFactory, IConfiguration config, ILogger<IpCountryService> logger)
         : this(httpFactory, config, logger, () => DateTime.UtcNow) { }
@@ -130,6 +134,8 @@ public class IpCountryService
         _enabled = config.GetValue("IpCountry:Enabled", true);
         _sourceUrlTemplate = config["IpCountry:SourceUrlTemplate"] ?? DefaultSourceUrlTemplate;
         _cachePath = config["IpCountry:CachePath"] ?? Path.Combine(Path.GetTempPath(), "dbip-country-lite.csv.gz");
+        _downloadTimeout = TimeSpan.FromSeconds(Math.Clamp(config.GetValue("IpCountry:DownloadTimeoutSeconds", 60.0), 0.01, 600));
+        _callerWait = TimeSpan.FromSeconds(Math.Clamp(config.GetValue("IpCountry:CallerWaitSeconds", 2.0), 0, 30));
     }
 
     /// <summary>ISO-Land der Adresse, oder <c>null</c> (private/lokale Adresse, unbekannt, Liste nicht da).</summary>
@@ -159,74 +165,97 @@ public class IpCountryService
         return false;
     }
 
+    /// <summary>
+    /// Die Liste, wenn sie da ist. Fehlt sie oder ist sie alt, startet EINE Aktualisierung im Hintergrund — mit eigenem
+    /// Zeitlimit (<c>IpCountry:DownloadTimeoutSeconds</c>, 60 s), nicht mit dem Token des Aufrufers (N6-006: KidHub bricht
+    /// nach 4 s ab, der Download fing so jedes Mal von vorn an). Der Aufrufer wartet höchstens
+    /// <c>IpCountry:CallerWaitSeconds</c> (2 s) und antwortet sonst ohne Land; sein Abbruch beendet nur sein Warten.
+    /// </summary>
     private async Task<IpCountryTable?> EnsureTableAsync(CancellationToken ct)
     {
         var now = _utcNow();
         if (_table is not null && now - _loadedAt < MaxAge) return _table;
         if (_failedAt is DateTime failed && now - failed < RetryAfterFailure) return _table;
 
-        await _gate.WaitAsync(ct);
+        Task refresh;
+        lock (_refreshLock) refresh = _refresh ??= Task.Run(() => RefreshAsync(now));
+        try { await refresh.WaitAsync(_callerWait, ct); }
+        catch (TimeoutException) { /* läuft im Hintergrund weiter — diesmal ohne Land */ }
+        return _table;
+    }
+
+    private async Task RefreshAsync(DateTime now)
+    {
         try
         {
-            if (_table is not null && now - _loadedAt < MaxAge) return _table;
-            if (_failedAt is DateTime again && now - again < RetryAfterFailure) return _table;
-
             var fresh = File.Exists(_cachePath) && now - File.GetLastWriteTimeUtc(_cachePath) < MaxAge;
-            if (!fresh && !await DownloadAsync(now, ct))
+            var table = fresh ? Load(_cachePath) : await DownloadAsync(now);
+            if (table is null)
             {
                 _failedAt = now;
                 // Eine alte Datei ist besser als keine — Länder wechseln ihre Adressen selten.
-                if (_table is null && File.Exists(_cachePath)) _table = Load();
-                return _table;
+                if (_table is null && File.Exists(_cachePath)) _table = Load(_cachePath);
+                return;
             }
 
-            _table = Load();
+            _table = table;
             _loadedAt = now;
             _failedAt = null;
-            _logger.LogInformation("IP-Länderliste geladen: {Count} Bereiche.", _table.Count);
-            return _table;
+            _logger.LogInformation("IP-Länderliste geladen: {Count} Bereiche.", table.Count);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             _logger.LogWarning(ex, "IP-Länderliste nicht verfügbar.");
             _failedAt = now;
-            return _table;
         }
         finally
         {
-            _gate.Release();
+            lock (_refreshLock) _refresh = null;
         }
     }
 
-    /// <summary>Diesen Monat, sonst den vorigen (am Monatsersten steht die neue Datei eventuell noch nicht da).</summary>
-    private async Task<bool> DownloadAsync(DateTime now, CancellationToken ct)
+    /// <summary>Diesen Monat, sonst den vorigen (am Monatsersten steht die neue Datei eventuell noch nicht da). Die Datei
+    /// wird erst übernommen, wenn sie sich als gz-Liste mit mindestens einem Bereich lesen lässt — sonst galt eine
+    /// Fehlerseite mit 200 als „frisch“ und blockierte 35 Tage lang jeden neuen Download (N6-006). Das eigene
+    /// Zeitlimit zählt als Fehlschlag.</summary>
+    private async Task<IpCountryTable?> DownloadAsync(DateTime now)
     {
         var http = _httpFactory.CreateClient(nameof(IpCountryService));
-        http.Timeout = TimeSpan.FromSeconds(60);
+        http.Timeout = Timeout.InfiniteTimeSpan;   // es gilt das eigene Zeitlimit unten
+        using var limit = new CancellationTokenSource(_downloadTimeout);
         foreach (var month in new[] { now, now.AddMonths(-1) })
         {
             var url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _sourceUrlTemplate, month);
+            var temp = _cachePath + ".part";
             try
             {
-                using var response = await http.GetAsync(url, ct);
+                using var response = await http.GetAsync(url, limit.Token);
                 if (!response.IsSuccessStatusCode) continue;
-                var temp = _cachePath + ".part";
                 await using (var file = File.Create(temp))
-                    await response.Content.CopyToAsync(file, ct);
+                    await response.Content.CopyToAsync(file, limit.Token);
+                var table = Load(temp);
+                if (table.Count == 0) throw new InvalidDataException("Länderliste ohne einen einzigen Bereich.");
                 File.Move(temp, _cachePath, overwrite: true);
-                return true;
+                return table;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex)
             {
                 _logger.LogWarning(ex, "IP-Länderliste: Download von {Url} fehlgeschlagen.", url);
+                TryDelete(temp);
             }
         }
-        return false;
+        return null;
     }
 
-    private IpCountryTable Load()
+    private static void TryDelete(string path)
     {
-        using var file = File.OpenRead(_cachePath);
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (IOException) { /* nächster Versuch überschreibt sie */ }
+    }
+
+    private static IpCountryTable Load(string path)
+    {
+        using var file = File.OpenRead(path);
         using var gzip = new GZipStream(file, CompressionMode.Decompress);
         using var reader = new StreamReader(gzip);
         return IpCountryTable.Parse(reader);

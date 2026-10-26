@@ -226,4 +226,85 @@ public class IpCountryServiceTests : IDisposable
         Assert.Null(dto.Country);
         Assert.Null(dto.Language);
     }
+
+    // ---- N6-006: Download vom Aufrufer entkoppelt, eigener Timeout = Fehlschlag, Datei vor dem Übernehmen geprüft ----
+
+    private sealed class AsyncHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
+    {
+        public int Requests;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Interlocked.Increment(ref Requests);
+            return respond(request, ct);
+        }
+    }
+
+    private IpCountryService CreateWith(HttpMessageHandler handler, Func<DateTime> clock, Dictionary<string, string?>? extra = null)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["IpCountry:CachePath"] = _cachePath,
+            ["IpCountry:SourceUrlTemplate"] = "https://example.test/dbip-{0:yyyy-MM}.csv.gz",
+        };
+        foreach (var (k, v) in extra ?? new()) values[k] = v;
+        var config = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        return new IpCountryService(new FakeFactory(handler), config, NullLogger<IpCountryService>.Instance, clock);
+    }
+
+    [Fact]
+    public async Task AbbruchDesAufrufers_BrichtDenDownloadNichtAb()
+    {
+        // KidHub bricht nach 4 s ab — der Download lief mit diesem Token und fing jedes Mal von vorn an.
+        var handler = new AsyncHandler(async (_, ct) => { await Task.Delay(300, ct); return Ok(); });
+        var now = new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc);
+        var service = CreateWith(handler, () => now);
+        using var caller = new CancellationTokenSource(50);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.CountryOfAsync(IPAddress.Parse("2.16.16.9"), caller.Token));
+        await Task.Delay(800);
+
+        Assert.Equal("AT", await service.CountryOfAsync(IPAddress.Parse("2.16.16.9")));
+        Assert.Equal(1, handler.Requests);
+    }
+
+    [Fact]
+    public async Task EigenerTimeout_ZaehltAlsFehlschlag_DerAufruferWartetNurKurz()
+    {
+        var handler = new AsyncHandler(async (_, ct) => { await Task.Delay(Timeout.Infinite, ct); return Ok(); });
+        var now = new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc);
+        var service = CreateWith(handler, () => now, new()
+        {
+            ["IpCountry:DownloadTimeoutSeconds"] = "0.2",
+            ["IpCountry:CallerWaitSeconds"] = "0.05",
+        });
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Assert.Null(await service.CountryOfAsync(IPAddress.Parse("2.16.16.9")));
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(2), $"Aufrufer wartete {sw.Elapsed}");
+        await Task.Delay(1000);                               // beide Monate laufen ins eigene Zeitlimit
+
+        var requests = handler.Requests;
+        Assert.Equal(2, requests);
+        Assert.Null(await service.CountryOfAsync(IPAddress.Parse("2.16.16.9")));
+        await Task.Delay(100);
+        Assert.Equal(requests, handler.Requests);             // Fehlschlag gemerkt: eine Stunde Pause
+    }
+
+    [Fact]
+    public async Task KaputteDatei_WirdNichtUebernommen_UndSpaeterNeuGeladen()
+    {
+        var good = false;
+        var handler = new AsyncHandler((_, _) => Task.FromResult(good
+            ? Ok()
+            : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html>Wartung</html>") }));
+        var now = new DateTime(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc);
+        var service = CreateWith(handler, () => now);
+
+        Assert.Null(await service.CountryOfAsync(IPAddress.Parse("2.16.16.9")));
+        Assert.False(File.Exists(_cachePath));                // nicht 35 Tage lang als „frisch“ liegen geblieben
+
+        good = true;
+        now = now.AddHours(2);
+        Assert.Equal("AT", await service.CountryOfAsync(IPAddress.Parse("2.16.16.9")));
+    }
 }
