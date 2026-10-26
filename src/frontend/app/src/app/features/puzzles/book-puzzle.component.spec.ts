@@ -1600,7 +1600,7 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     c.setupPuzzle(P);
     c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(of(null));
     c.book.recordAttempt(true);
-    expect(c.puzzleService.recordBookAttempt).toHaveBeenCalledWith(5, true, jasmine.any(Number), 0, 'easy');
+    expect(c.puzzleService.recordBookAttempt).toHaveBeenCalledWith(5, true, jasmine.any(Number), 0, 'easy', null);
 
     const off = makeSolver();
     off.daily.date = '20260808';

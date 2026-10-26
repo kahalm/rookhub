@@ -41,7 +41,14 @@ describe('PuzzleService', () => {
   it('recordBookAttempt schickt die Spielweise als mode mit', () => {
     service.recordBookAttempt(42, true, 30, 1, 'easy').subscribe();
     const req = httpMock.expectOne('/api/book-puzzles/42/attempt');
-    expect(req.request.body).toEqual({ solved: true, timeSeconds: 30, hintsUsed: 1, mode: 'easy' });
+    expect(req.request.body).toEqual({ solved: true, timeSeconds: 30, hintsUsed: 1, mode: 'easy', startToken: null });
+    req.flush({});
+  });
+
+  it('recordBookAttempt reicht die Startmarke des Tagespuzzles durch (A2-014)', () => {
+    service.recordBookAttempt(42, true, 30, 0, 'training', 'tok').subscribe();
+    const req = httpMock.expectOne('/api/book-puzzles/42/attempt');
+    expect(req.request.body.startToken).toBe('tok');
     req.flush({});
   });
 

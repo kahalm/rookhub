@@ -27,6 +27,8 @@ public static partial class DomainServicesSetup
         services.AddSingleton<IHintTaskQueue, HintTaskQueue>();
         // Anonyme Buch-Puzzle-Solves melden hoechstens einmal je Puzzle und 30 s an den Bot (A2-003).
         services.AddSingleton<AnonymousSolveNotifyThrottle>();
+        // Signierte Startmarke des Tagespuzzles: Wertung nach Serverzeit, ohne Tabelle (A2-014).
+        services.AddSingleton<DailyStartTokens>();
     }
 
     /// <summary>Kurse, Aufgabenblätter, Kalkulation, Woodpecker, Kurs-Übersetzung, Katalog.</summary>

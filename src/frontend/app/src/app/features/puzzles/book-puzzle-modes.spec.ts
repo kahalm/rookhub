@@ -605,3 +605,28 @@ describe('BookPuzzle Wochenpost meldet die wirksame Stufe (F2-010)', () => {
     expect(c.prefs.setVisualization).toHaveBeenCalledWith(2);
   });
 });
+
+describe('BookPuzzle Tagespuzzle schickt die Startmarke (A2-014)', () => {
+  it('meldet den Versuch mit der Marke vom Laden — online und im Offline-Body', () => {
+    const c = makeComponent();
+    c.daily.date = '20260714';
+    c.puzzle = P(42, { startToken: 'marke' });
+    c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(of(null));
+    c.book.recordAttempt(true);
+    expect(c.puzzleService.recordBookAttempt.calls.mostRecent().args[5]).toBe('marke');
+
+    const d = makeComponent();
+    d.daily.date = '20260714';
+    d.puzzle = P(43, { startToken: 'marke2' });
+    offline(() => d.book.recordAttempt(true));
+    expect(d.offlineQueue.enqueue).toHaveBeenCalledWith('POST', '/api/book-puzzles/43/attempt', jasmine.objectContaining({ startToken: 'marke2' }));
+  });
+
+  it('außerhalb des Tagespuzzles geht keine Marke mit', () => {
+    const c = makeComponent();
+    c.puzzle = P(9, { startToken: 'fremd' });
+    c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(of(null));
+    c.book.recordAttempt(true);
+    expect(c.puzzleService.recordBookAttempt.calls.mostRecent().args[5]).toBeNull();
+  });
+});

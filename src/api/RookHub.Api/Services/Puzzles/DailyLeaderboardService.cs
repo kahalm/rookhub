@@ -28,8 +28,10 @@ public class DailyLeaderboardService
 
     /// <summary>Eine gewertete Lösung an einem Tagespuzzle (Rohzeile fürs Ranking).
     /// <c>FirstTry</c> = der erste Versuch des Tages war bereits gelöst (10 statt 5 Basispunkte);
-    /// <c>TimeSeconds</c> = Summe aller Versuche bis einschließlich des ersten Solves.</summary>
-    private sealed record DailyScoreRow(DateOnly Date, int UserId, int TimeSeconds, DateTime FirstAt, bool FirstTry);
+    /// <c>TimeSeconds</c> = Summe aller Versuche bis einschließlich des ersten Solves. <c>Ranked</c> = der erste Solve
+    /// trägt eine gewertete Zeit (&gt; 0); 0 heißt seit A2-014 „ohne Serverzeit“ (keine/ungültige Startmarke, offline,
+    /// unter 2 s) — die Lösung zählt (Punkte, gelöst), aber ohne Rang, 🥇 und „schnellste Lösung“.</summary>
+    private sealed record DailyScoreRow(DateOnly Date, int UserId, int TimeSeconds, DateTime FirstAt, bool FirstTry, bool Ranked);
 
     /// <summary>Tages-Rang-Bonus nach (Summen-)Zeit: 🥇 +5 / 🥈 +3 / 🥉 +1, sonst 0.</summary>
     private static int RankBonus(int rank) => rank switch { 1 => 5, 2 => 3, 3 => 1, _ => 0 };
@@ -81,7 +83,8 @@ public class DailyLeaderboardService
                 if (firstSolve == null) continue;
                 var counted = ordered.Where(a => a.AttemptedAt <= firstSolve.AttemptedAt).ToList();
                 rows.Add(new DailyScoreRow(
-                    d.Date, g.Key, counted.Sum(a => a.TimeSeconds), firstSolve.AttemptedAt, ordered[0].Solved));
+                    d.Date, g.Key, counted.Sum(a => a.TimeSeconds), firstSolve.AttemptedAt, ordered[0].Solved,
+                    firstSolve.TimeSeconds > 0));
             }
         }
         return rows;
@@ -97,13 +100,15 @@ public class DailyLeaderboardService
         var acc = new Dictionary<int, (int points, int solved, int golds)>();
         foreach (var day in rows.GroupBy(r => r.Date))
         {
-            var ranked = day.OrderBy(r => r.TimeSeconds).ThenBy(r => r.FirstAt).ToList();
-            foreach (var r in ranked)
+            // Nur Lösungen mit gewerteter (Server-)Zeit konkurrieren um Rang und Bonus (A2-014); die übrigen
+            // bekommen ihre Basispunkte und zählen als gelöst.
+            var ranked = day.Where(r => r.Ranked).OrderBy(r => r.TimeSeconds).ThenBy(r => r.FirstAt).ToList();
+            foreach (var r in day)
             {
                 // Competition-Ranking: Rang = 1 + Anzahl strikt SCHNELLERER Löser. Zeitgleiche Löser
                 // bekommen denselben Rang/Bonus — und alle mit der Bestzeit zählen als 🥇 (statt dass
-                // Submit-Reihenfolge/Mikrosekunden über Gold vs. Silber entscheiden, insb. bei TimeSeconds==0).
-                var rank = 1 + ranked.Count(o => o.TimeSeconds < r.TimeSeconds);
+                // Submit-Reihenfolge/Mikrosekunden über Gold vs. Silber entscheiden).
+                var rank = r.Ranked ? 1 + ranked.Count(o => o.TimeSeconds < r.TimeSeconds) : 0;
                 acc.TryGetValue(r.UserId, out var cur);
                 var basePoints = r.FirstTry ? 10 : 5;
                 acc[r.UserId] = (cur.points + basePoints + RankBonus(rank), cur.solved + 1, cur.golds + (rank == 1 ? 1 : 0));
@@ -205,7 +210,7 @@ public class DailyLeaderboardService
             .ToList();
 
         FastestSolveDto? fastest = null;
-        var best = rows.Where(r => r.TimeSeconds > 0)
+        var best = rows.Where(r => r.Ranked && r.TimeSeconds > 0)
             .OrderBy(r => r.TimeSeconds).ThenBy(r => r.FirstAt).FirstOrDefault();
         if (best != null)
         {

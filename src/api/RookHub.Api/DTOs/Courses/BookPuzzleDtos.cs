@@ -12,6 +12,11 @@ public class RecordBookAttemptDto
     /// BEWUSST ohne Längenbegrenzung: ein unbekannter Wert soll auf "training" zurückfallen, nicht
     /// den ganzen Versuch mit 400 abweisen (die Spaltenlänge sichert das Modell).
     public string? Mode { get; set; }
+
+    /// <summary>Startmarke des heutigen Tagespuzzles (<see cref="BookPuzzleDto.StartToken"/>, A2-014): mit gültiger
+    /// Marke wertet der Server die Zeit selbst (Serveruhr), ohne zählt eine Tageslösung ohne Rang.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(2048)]
+    public string? StartToken { get; set; }
 }
 
 public class RecordAnonymousBookAttemptDto : RecordBookAttemptDto
@@ -154,6 +159,9 @@ public class DailyHallOfFameDto
 public class BookPuzzleDto
 {
     public int Id { get; set; }
+    /// <summary>Nur am HEUTIGEN Tagespuzzle für Angemeldete (A2-014): signierte Startmarke, die der Client beim
+    /// Ergebnis zurückschickt (<see cref="RecordBookAttemptDto.StartToken"/>); sonst <c>null</c>.</summary>
+    public string? StartToken { get; set; }
     public string LineId { get; set; } = string.Empty;
     public string BookFileName { get; set; } = string.Empty;
     public string? BookTitle { get; set; }

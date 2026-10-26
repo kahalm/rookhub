@@ -63,6 +63,9 @@ export interface PuzzleBreakdown { themes: ThemeStat[]; ratingBands: RatingBand[
 
 export interface BookPuzzleDto {
   id: number;
+  /** Nur am heutigen Tagespuzzle für Angemeldete: signierte Startmarke, die beim Ergebnis zurückgeht — der Server
+   *  wertet damit die Zeit nach seiner Uhr (A2-014). */
+  startToken?: string | null;
   lineId: string;
   bookFileName: string;
   bookTitle?: string;
@@ -296,8 +299,9 @@ export class PuzzleService {
 
   /** Lösungsversuch an einem Buch-Puzzle melden (eingeloggt; Basis für Tagespuzzle-Anzeige).
    *  `mode` = Spielweise ('training'/'easy'); fehlt sie, fällt der Server auf 'training' zurück. */
-  recordBookAttempt(id: number, solved: boolean, timeSeconds: number, hintsUsed = 0, mode?: string): Observable<unknown> {
-    return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds, hintsUsed, mode });
+  recordBookAttempt(id: number, solved: boolean, timeSeconds: number, hintsUsed = 0, mode?: string,
+                    startToken?: string | null): Observable<unknown> {
+    return this.http.post(`/api/book-puzzles/${id}/attempt`, { solved, timeSeconds, hintsUsed, mode, startToken: startToken ?? null });
   }
 
   /** Tipps eines Buch-Puzzles als „dumm/schlecht" markieren (oder aufheben) — jeder eingeloggte User. */

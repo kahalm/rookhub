@@ -158,9 +158,12 @@ export class BookStandaloneMode implements BookModeStrategy {
       // Spielweise beim Nachsenden verloren.
       const mode = h.attemptSolveMode;
       const seconds = h.solveSeconds;
-      const body = { solved, timeSeconds: seconds, hintsUsed: h.hintsUsed, mode };
+      // Tagespuzzle: die Startmarke vom Laden mitschicken — der Server wertet die Zeit nach SEINER Uhr (A2-014); ohne
+      // Marke (offline geladen) zählt die Lösung ohne Rang. Auch im Offline-Body, sonst geht sie beim Nachsenden verloren.
+      const startToken = dailyDate ? puzzle.startToken ?? null : null;
+      const body = { solved, timeSeconds: seconds, hintsUsed: h.hintsUsed, mode, startToken };
       if (!navigator.onLine) { h.offlineQueue.enqueue('POST', url, body); return; }
-      h.puzzleService.recordBookAttempt(puzzle.id, solved, seconds, h.hintsUsed, mode)
+      h.puzzleService.recordBookAttempt(puzzle.id, solved, seconds, h.hintsUsed, mode, startToken)
         .subscribe({
           next: () => {
             if (challengeId != null) h.challengeService.resolve(challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });

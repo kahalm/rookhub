@@ -258,7 +258,13 @@ public class BookPuzzleController : BaseApiController
             return BadRequest(new { message = "date must be yyyyMMdd or 'today'." });
         }
 
-        try { return Ok(await _service.GetOrAssignDailyAsync(parsed)); }
+        try
+        {
+            var dto = await _service.GetOrAssignDailyAsync(parsed);
+            // Serverzeit statt Browserzeit für die Tageswertung (A2-014): signierte Startmarke fürs heutige Puzzle.
+            dto.StartToken = _service.DailyStartTokenFor(GetUserIdOrNull(), parsed);
+            return Ok(dto);
+        }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }

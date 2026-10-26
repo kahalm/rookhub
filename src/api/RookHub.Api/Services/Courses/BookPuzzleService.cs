@@ -25,10 +25,14 @@ public class BookPuzzleService
     private readonly AnonymousSolveNotifyThrottle? _anonNotifyThrottle;
     /// <summary>Schließt offene Buch-Challenges mit dem gespeicherten Versuch (N9-001); <c>null</c> (Tests) = aus.</summary>
     private readonly ChallengeService? _challenges;
+    /// <summary>Startmarken des Tagespuzzles (A2-014); <c>null</c> (Tests ohne Marke) = Zeit wie vom Client.</summary>
+    private readonly DailyStartTokens? _startTokens;
 
     public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IWebhookTaskQueue bgQueue,
-        AnonymousSolveNotifyThrottle? anonNotifyThrottle = null, ChallengeService? challenges = null)
+        AnonymousSolveNotifyThrottle? anonNotifyThrottle = null, ChallengeService? challenges = null,
+        DailyStartTokens? startTokens = null)
     {
+        _startTokens = startTokens;
         _db = db;
         _logger = logger;
         _bgQueue = bgQueue;
@@ -152,7 +156,9 @@ public class BookPuzzleService
             throw new KeyNotFoundException("Book puzzle not found.");
 
         // Zeit/Tipps/Spielweise/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording).
-        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.Mode);
+        var core = AttemptRecording.From(dto.Solved, dto.TimeSeconds, dto.HintsUsed, dto.Mode, _startTokens?.UtcNow);
+        if (_startTokens != null && await IsTodaysDailyAsync(id))
+            core = core with { TimeSeconds = await DailyServerSecondsAsync(id, userId, dto.StartToken, core.Solved) };
 
         _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
         {
@@ -172,6 +178,38 @@ public class BookPuzzleService
 
         await ResolveChallengesAsync(userId, id, core.Solved, core.TimeSeconds);
         await NotifySchachBotAsync(id);
+    }
+
+    /// <summary>Startmarke fürs Tagespuzzle (A2-014): nur am HEUTIGEN Tag und nur für Angemeldete — die Tageswertung
+    /// kennt nur namentliche Löser; ohne Marke (anonym, Offline-Cache, alter Client) zählt eine Lösung ohne Rang.</summary>
+    public string? DailyStartTokenFor(int? userId, DateOnly date) =>
+        _startTokens != null && userId is int uid && date == _startTokens.Today ? _startTokens.Issue(uid) : null;
+
+    private Task<bool> IsTodaysDailyAsync(int bookPuzzleId)
+    {
+        var today = _startTokens!.Today;
+        return _db.DailyPuzzles.AnyAsync(d => d.Date == today && d.BookPuzzleId == bookPuzzleId);
+    }
+
+    /// <summary>
+    /// Gewertete Zeit eines Versuchs am heutigen Tagespuzzle (A2-014) — nach der SERVERUHR, nicht nach dem Browser:
+    /// Sekunden seit der Startmarke minus die schon gespeicherten Versuche dieses Tages, damit die Summe bis zum
+    /// ersten Solve (Regel der Tageswertung, <see cref="DailyLeaderboardService"/>) die Serverzeit seit dem ersten
+    /// Öffnen ist. Eine Lösung ohne gültige Marke oder unter <see cref="DailyStartTokens.MinRankedSeconds"/> bekommt
+    /// 0 = „ohne gewertete Zeit“: sie zählt als gelöst, aber ohne Rang (Tageswertung, Hall of Fame, Bot ohne Zeit).
+    /// </summary>
+    private async Task<int> DailyServerSecondsAsync(int bookPuzzleId, int userId, string? token, bool solved)
+    {
+        var total = _startTokens!.ElapsedSeconds(token, userId);
+        if (total == null || total < DailyStartTokens.MinRankedSeconds)
+            return 0;
+        var dayStart = _startTokens.Today.ToDateTime(TimeOnly.MinValue);
+        var before = await _db.BookPuzzleAttempts
+            .Where(a => a.BookPuzzleId == bookPuzzleId && a.UserId == userId && a.AttemptedAt >= dayStart)
+            .SumAsync(a => a.TimeSeconds);
+        var own = total.Value - before;
+        // Eine Lösung muss als gewertet erkennbar bleiben (> 0); ein Fehlversuch darf 0 tragen.
+        return solved ? Math.Max(own, 1) : Math.Max(own, 0);
     }
 
     /// <summary>Offene Buch-Challenges an den Nutzer für dieses Puzzle mit dem gespeicherten Versuch abschließen
@@ -445,7 +483,9 @@ public class BookPuzzleService
                 {
                     UserId = g.Key,
                     Solved = firstSolve != null,
-                    TimeSeconds = counted.Sum(a => a.TimeSeconds),
+                    // Ein Solve ohne gewertete Zeit (0, A2-014: Tagespuzzle ohne gültige Startmarke) zeigt keine Zeit —
+                    // sonst stünde die Summe der Fehlversuche als Lösezeit da (der Bot blendet 0 aus).
+                    TimeSeconds = firstSolve is { TimeSeconds: 0 } ? 0 : counted.Sum(a => a.TimeSeconds),
                     HintsUsed = counted.Count == 0 ? 0 : counted.Max(a => a.HintsUsed),
                     WrongAttempts = counted.Count(a => !a.Solved),
                     // Spielweise = die des ersten Solves (sonst des ersten Versuchs); alles, was
