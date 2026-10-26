@@ -49,7 +49,10 @@ public sealed class RateLimitRejectionHandler
             .HandleAsync(context.HttpContext, context.Lease, cancellationToken);
 
     /// <summary>Der Status (429) steht schon, wenn die Middleware hierher ruft.</summary>
-    public async ValueTask HandleAsync(HttpContext context, RateLimitLease lease, CancellationToken cancellationToken)
+    /// <param name="policyName">Policy fürs Log, wenn die Absage nicht aus der Middleware kommt (z. B.
+    /// <c>ExplorerOnlineQuota</c>); sonst die des Endpunkts.</param>
+    public async ValueTask HandleAsync(HttpContext context, RateLimitLease lease, CancellationToken cancellationToken,
+        string? policyName = null)
     {
         int? retryAfterSeconds = null;
         if (lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
@@ -58,16 +61,17 @@ public sealed class RateLimitRejectionHandler
             context.Response.Headers.RetryAfter = retryAfterSeconds.Value.ToString(CultureInfo.InvariantCulture);
         }
 
-        LogRejection(context, retryAfterSeconds, DateTimeOffset.UtcNow);
+        LogRejection(context, retryAfterSeconds, DateTimeOffset.UtcNow, policyName);
 
         await context.Response.WriteAsJsonAsync(
             new { message = Message, code = ApiErrorCodes.RateLimited, retryAfterSeconds }, cancellationToken);
     }
 
-    private void LogRejection(HttpContext context, int? retryAfterSeconds, DateTimeOffset now)
+    private void LogRejection(HttpContext context, int? retryAfterSeconds, DateTimeOffset now, string? policyName = null)
     {
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var policy = context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "global";
+        var policy = policyName
+            ?? context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName ?? "global";
         var (warn, suppressed) = Register($"{ip}|{policy}", now);
         if (!warn) return;
 

@@ -32,6 +32,12 @@
 | GET | `/api/repertoires/explorer/sources` | Welche Explorer-Quellen es gibt `{ online, local, localRatings[], localSpeeds[] }` — `local` nur mit `LichessExplorer:LocalUrl` (0.503.0) |
 | POST | `/api/repertoires/{id:int}/explorer-analysis` | **Lochfinder + Linien-Häufigkeiten** (0.502.0) `{ color?, chapterColors, database, ratings[], speeds[], thresholdPercent, includeHoles, includeLineFrequencies }` (+ `source`: `online`/`local`, 0.503.0) → `{ complete, positionsAnalyzed, positionsPending, rateLimited, retryAfterSeconds?, tokenMissing, tokenInvalid, fetchFailed, holes[], lineFrequencies? }`. Antwortet nach ~20 s Abfragezeit mit dem bisherigen Stand (`complete: false`) — der Client fragt erneut, das Abgefragte liegt im Speicher. Lesend: Besitzer ODER Freigabe-Empfänger (sonst 404); ungültige Auswahl → 400. Siehe „Lochfinder" unten |
 
+
+**Deckel je Konto für die Online-Quelle** (Codereview N7-003): `GET /api/explorer/position`, `GET /api/explorer/games` und
+`POST …/explorer-analysis` zählen bei Quelle `online` (auch leer = Vorgabe) gemeinsam gegen `Explorer:OnlinePerAccountPerMinute`
+(Vorgabe 30) je Konto und Minute (`ExplorerOnlineQuota`, Singleton) — die Lichess-Leitung ist global, ein Konto konnte sie
+sonst dauerhaft belegen. Darüber 429 wie bei jeder Policy (`{ message, code: "rate_limited", retryAfterSeconds }` +
+`Retry-After`, Log über `RateLimitRejectionHandler` mit Policy `explorer-online`). `source=local` bleibt frei.
 ## Neues Repertoire aus Auswahl (0.809.0)
 
 Wunsch 2026-10-19: „mehrere kapitel oder/und lines markieren und ein neues repertoir daraus machen". Linienliste →

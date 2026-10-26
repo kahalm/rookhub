@@ -137,8 +137,11 @@ public class RepertoireController : BaseApiController
     /// Der Dienst kommt per <c>[FromServices]</c>, damit der Konstruktor (und seine Tests) unberührt bleibt.</summary>
     [HttpPost("{id:int}/explorer-analysis")]
     public async Task<ActionResult<ExplorerAnalysisResultDto>> ExplorerAnalysis(
-        int id, [FromBody] ExplorerAnalysisRequestDto dto, [FromServices] RepertoireExplorerService explorer, CancellationToken ct)
+        int id, [FromBody] ExplorerAnalysisRequestDto dto, [FromServices] RepertoireExplorerService explorer, CancellationToken ct,
+        [FromServices] ExplorerOnlineQuota? quota = null)
     {
+        // Online gedeckelt je Konto, zusammen mit /api/explorer/position|games (N7-003); lokal frei.
+        if (quota is not null && await quota.RejectAsync(HttpContext, GetUserId(), dto.Source, ct)) return new EmptyResult();
         return Ok(await explorer.AnalyzeAsync(GetUserId(), id, dto, ct));
     }
 

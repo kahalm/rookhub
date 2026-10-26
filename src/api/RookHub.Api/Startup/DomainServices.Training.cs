@@ -98,6 +98,7 @@ public static partial class DomainServicesSetup
                 refillInterval: refillMs is >= 0 ? TimeSpan.FromMilliseconds(refillMs.Value) : null);
         });
         services.AddScoped<RepertoireExplorerService>();
+        services.AddSingleton<ExplorerOnlineQuota>();   // Deckel je Konto für die Online-Quelle (N7-003)
         services.AddScoped<RepertoireCleanupService>();
         services.AddScoped<SharedLineService>();
     }

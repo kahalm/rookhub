@@ -25,16 +25,23 @@ namespace RookHub.Api.Controllers.Engines;
 public class ExplorerController : BaseApiController
 {
     private readonly RepertoireExplorerService _explorer;
+    private readonly ExplorerOnlineQuota? _quota;
 
-    public ExplorerController(RepertoireExplorerService explorer) => _explorer = explorer;
+    public ExplorerController(RepertoireExplorerService explorer, ExplorerOnlineQuota? quota = null)
+    {
+        _explorer = explorer;
+        _quota = quota;
+    }
 
-    /// <summary>Zugstatistik der Stellung. <c>ratings</c>/<c>speeds</c> als Komma-Liste (nur Lichess).</summary>
+    /// <summary>Zugstatistik der Stellung. <c>ratings</c>/<c>speeds</c> als Komma-Liste (nur Lichess). Online gedeckelt je Konto
+    /// (<see cref="ExplorerOnlineQuota"/>, 429).</summary>
     [HttpGet("position")]
     public async Task<ActionResult<ExplorerPositionResultDto>> Position(
         [FromQuery] string? fen, [FromQuery] string? source, [FromQuery] string? database,
         [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct)
     {
         var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
+        if (_quota is not null && await _quota.RejectAsync(HttpContext, GetUserId(), source, ct)) return new EmptyResult();
         return Ok(await _explorer.PositionAsync(GetUserId(), fen, source, query, ct));
     }
 
@@ -45,6 +52,7 @@ public class ExplorerController : BaseApiController
         [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct)
     {
         var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
+        if (_quota is not null && await _quota.RejectAsync(HttpContext, GetUserId(), source, ct)) return new EmptyResult();
         return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct));
     }
 
