@@ -3987,6 +3987,7 @@
       "calendarDone": "A naptárbejegyzés elkészült — a felvételhez nyisd meg a fájlt.",
       "calendarFailed": "A naptárbejegyzést nem sikerült létrehozni ezen az eszközön.",
       "playDates": "Játéknapok",
+      "roundsVsDates": "{{rounds}} rögzítve · {{dates}} játéknap",
       "sources": "Megtalálva itt",
       "notOnChessResults": "Nincs meghirdetve a chess-results oldalon — résztvevők, párosítások és tabella itt nem érhető el.",
       "loadFailed": "A versenyt most nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra."
@@ -4131,7 +4132,7 @@
       "sendError": "Az üzenetet nem sikerült elküldeni. Próbáld meg még egyszer."
     },
     "report": {
-      "cta": "Hibás esemény jelentése",
+      "cta": "Hibás bejegyzés jelentése",
       "title": "Hibás bejegyzés jelentése",
       "lead": "Mondd el, mi a hibás itt. Minden mező szabadon hagyható — a szöveg is: ha egy szó nélkül küldöd el, az is annyit mond, hogy „ezzel itt valami nem stimmel”.",
       "current": "Jelenleg tárolva",

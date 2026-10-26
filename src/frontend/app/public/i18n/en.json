@@ -4362,6 +4362,7 @@
       "calendarDone": "Calendar entry created — open the file to add it.",
       "calendarFailed": "The calendar entry could not be created on this device.",
       "playDates": "Playing dates",
+      "roundsVsDates": "{{rounds}} recorded · {{dates}} playing dates",
       "sources": "Found on",
       "notOnChessResults": "Not announced on chess-results — no players, pairings or table here.",
       "loadFailed": "The tournament could not be loaded right now. Check your connection and try again."
@@ -4506,7 +4507,7 @@
       "sendError": "The message could not be sent. Please try again."
     },
     "report": {
-      "cta": "Report wrong event",
+      "cta": "Report a wrong entry",
       "title": "Report a wrong entry",
       "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says “something is off with this one”.",
       "current": "Currently stored",

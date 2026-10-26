@@ -68,7 +68,13 @@
         }
         @if (entry.rounds) {
           <dt>{{ 'tournamentDirectory.detail.rounds' | translate }}</dt>
-          <dd>{{ entry.rounds }}</dd>
+          <!-- UX-075: bei Ligen nennt die Quelle oft weniger Runden als Spieltermine (4 vs. 7) — dann sagen, dass die
+               Zahl nur die erfassten Runden nennt, statt den Terminen oben stumm zu widersprechen. -->
+          @if (entry.roundDates.length > entry.rounds) {
+            <dd class="rounds-vs-dates">{{ 'tournamentDirectory.detail.roundsVsDates' | translate: { rounds: entry.rounds, dates: entry.roundDates.length } }}</dd>
+          } @else {
+            <dd>{{ entry.rounds }}</dd>
+          }
         }
         @if (entry.groupSize > 1) {
           <dt>{{ 'tournamentDirectory.detail.groups' | translate }}</dt>

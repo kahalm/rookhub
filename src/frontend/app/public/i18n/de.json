@@ -4362,6 +4362,7 @@
       "calendarDone": "Kalendereintrag erstellt — zum Übernehmen die Datei öffnen.",
       "calendarFailed": "Der Kalendereintrag konnte auf diesem Gerät nicht erstellt werden.",
       "playDates": "Spieltermine",
+      "roundsVsDates": "{{rounds}} erfasst · {{dates}} Spieltermine",
       "sources": "Gefunden auf",
       "notOnChessResults": "Nicht auf chess-results ausgeschrieben — Teilnehmer, Paarungen und Tabelle gibt es hier nicht.",
       "loadFailed": "Das Turnier konnte gerade nicht geladen werden. Prüfe die Verbindung und versuche es erneut."
@@ -4506,7 +4507,7 @@
       "sendError": "Die Nachricht konnte nicht gesendet werden. Bitte noch einmal versuchen."
     },
     "report": {
-      "cta": "Falsches Event melden",
+      "cta": "Falschen Eintrag melden",
       "title": "Falschen Eintrag melden",
       "lead": "Sag uns, was hier falsch steht. Alles ist freiwillig — auch der Text: Absenden ohne ein Wort sagt immerhin „mit dem hier stimmt etwas nicht\".",
       "current": "Aktuell gespeichert",

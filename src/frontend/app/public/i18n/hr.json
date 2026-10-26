@@ -4362,6 +4362,7 @@
       "calendarDone": "Unos u kalendar je stvoren — otvori datoteku da ga preuzmeš.",
       "calendarFailed": "Unos u kalendar nije se mogao stvoriti na ovom uređaju.",
       "playDates": "Dani igranja",
+      "roundsVsDates": "{{rounds}} zabilježeno · {{dates}} dana igranja",
       "sources": "Nađeno na",
       "notOnChessResults": "Nije objavljen na chess-resultsu — igrači, parovi i tablica ovdje ne postoje.",
       "loadFailed": "Turnir se trenutno nije mogao učitati. Provjeri vezu i pokušaj ponovno."
@@ -4506,7 +4507,7 @@
       "sendError": "Poruka se nije mogla poslati. Pokušaj ponovno."
     },
     "report": {
-      "cta": "Prijavi pogrešan turnir",
+      "cta": "Prijavi pogrešan unos",
       "title": "Prijavi pogrešan unos",
       "lead": "Reci nam što je ovdje pogrešno. Sve je neobavezno — i tekst: slanje bez ijedne riječi ipak kaže „s ovim nešto nije u redu\".",
       "current": "Trenutno zapisano",

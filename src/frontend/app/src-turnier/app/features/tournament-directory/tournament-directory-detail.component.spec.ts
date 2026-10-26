@@ -489,6 +489,27 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(dates).toEqual(['1. Sat, Sep 26', '2. Sat, Oct 10']);
   });
 
+  /** UX-075: 7 Spieltermine, aber nur 4 „Runden" — die Zeile sagt jetzt, dass die Rundenzahl nur die erfassten nennt. */
+  it('beschriftet die Runden, wenn mehr Spieltermine als Runden bekannt sind', async () => {
+    await setup('1457129');
+    const roundDates = Array.from({ length: 7 }, (_, i) => ({ round: i + 1, date: `2026-10-${10 + i}`, time: null }));
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { rounds: 4, roundDates }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const rounds = (fixture.nativeElement as HTMLElement).querySelector('.rounds-vs-dates');
+    expect(rounds?.textContent?.trim()).toBe('tournamentDirectory.detail.roundsVsDates');
+  });
+
+  it('zeigt die Runden schlicht, wenn sie den Spielterminen nicht widersprechen', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', {
+      rounds: 7, roundDates: [{ round: 1, date: '2026-09-26', time: '14:00' }, { round: 2, date: '2026-10-10', time: '14:00' }],
+    }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.rounds-vs-dates')).toBeNull();
+  });
+
   // d3-t-detail-spieltermine-ohne-trenner: „1. Sa., 17. Okt.  2. Sa., 7. Nov." verschwamm — jetzt „ · " ab dem zweiten Termin.
   it('trennt die Spieltermine mit „·" (nicht vor dem ersten), am Zeilenanfang abgeschnitten', async () => {
     await setup('1457129');
