@@ -7,7 +7,8 @@
     "types": []
   },
   "files": [
-    "src/main.ts"
+    "src/main.ts",
+    "src/environments/changelog-data.ts"
   ],
   "include": [
     "src/**/*.d.ts"

@@ -1,6 +1,8 @@
 import { Component, HostListener, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DomSanitizer } from '@angular/platform-browser';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { A11yModule } from '@angular/cdk/a11y';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -225,16 +227,18 @@ export class AppFooterComponent implements OnInit, OnDestroy {
   readonly helpHref = this.helpRoute ? null : partnerSiteUrl() && `${partnerSiteUrl()}/help`;
 
   /**
-   * Changelog-Eintraege — LEER bis zum ersten Oeffnen: das Array (~1,7 MB Prosa, Stand Oktober 2026,
-   * changelog-data.ts) kommt per dynamic import() und darf nicht im Initial-Bundle liegen.
-   *
-   * <p>Bekannt und offen (Codereview W5 F8-008): der Service Worker legt den Lazy-Chunk trotzdem in seine
-   * prefetch-Gruppe `app` (`/*.js`) und laedt ihn nach jedem Release auf jedem installierten Geraet neu, weil
-   * sich sein Hash mit jedem Eintrag aendert. Beheben laesst sich das erst mit einem anderen Ablageformat
-   * (Daten statt Code, eigene lazy-Assetgruppe) — das betrifft die Pflege des Changelogs und das Discord-Skript.</p>
+   * Changelog-Eintraege — LEER bis zum ersten Oeffnen: das Array (~2,2 MB Prosa, Stand Oktober 2026) kommt als DATEN
+   * (`/assets/changelog.json`, Codereview F8-008) per HttpClient und liegt weder im Initial-Bundle noch in einem
+   * Lazy-Chunk. Quelle bleibt `environments/changelog-data.ts`; `scripts/changelog-json.mjs` erzeugt das JSON vor dem
+   * Build. Im Service Worker steht es in der eigenen lazy-Gruppe `changelog` (ngsw-config.json) — eine neue Version
+   * laedt es also nicht mehr auf jedem Geraet im Hintergrund nach, sondern erst, wenn jemand das Overlay oeffnet.
+   * `changelog-data.ts` NIE importieren (auch nicht per dynamic import()): Wache `changelog-bundle.spec.ts`.
    */
   changelog: ChangelogEntry[] = [];
   showChangelog = false;
+
+  /** Das Changelog als Asset — angular.json kopiert generated/changelog/changelog.json (nur Projekt `app`) dorthin. */
+  static readonly ChangelogUrl = '/assets/changelog.json';
 
   /** Wie viele Versionen das Overlay je Schritt zeigt. */
   static readonly ChangelogPage = 30;
@@ -250,6 +254,7 @@ export class AppFooterComponent implements OnInit, OnDestroy {
   }
 
   private readonly presence = inject(FooterPresenceService);
+  private readonly http = inject(HttpClient);
 
   /** Meldet, wo diese Fusszeile die Rechtslinks zeigt — die Anmeldemaske laesst ihre eigene Zeile dort weg. */
   ngOnInit(): void {
@@ -286,8 +291,8 @@ export class AppFooterComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Lazy laden: erst beim Oeffnen, genau einmal. Ein Fehlschlag (offline ohne SW-Cache, Chunk
-   * nach einem Deploy weg) bleibt still — das Overlay zeigt dann nur den Kopf, und der naechste
+   * Lazy laden: erst beim Oeffnen, genau einmal. Ein Fehlschlag (offline ohne SW-Cache, Datei
+   * fehlt) bleibt still — das Overlay zeigt dann nur den Kopf, und der naechste
    * Versuch laedt erneut (kein „geladen"-Merker im Fehlerfall).
    */
   constructor(iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
@@ -301,8 +306,7 @@ export class AppFooterComponent implements OnInit, OnDestroy {
   private async loadChangelog(): Promise<void> {
     if (this.changelog.length > 0) return;
     try {
-      const m = await import('../../../environments/changelog-data');
-      this.changelog = m.CHANGELOG;
+      this.changelog = await firstValueFrom(this.http.get<ChangelogEntry[]>(AppFooterComponent.ChangelogUrl));
     } catch {
       /* still: das Overlay bleibt bis zum naechsten Versuch leer */
     }

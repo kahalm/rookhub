@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ChangelogEntry } from '../../../environments/changelog';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AppFooterComponent } from './app-footer.component';
 import { DISCORD_INVITE_URL } from '../../core/community';
@@ -8,16 +11,35 @@ import { LEGAL_SITE } from '../../core/legal-site';
 import { setDarkTheme, textContrast } from '../../testing/contrast';
 import { FooterPresenceService } from './footer-presence';
 
+/** Ein Changelog wie /assets/changelog.json — neueste Version zuerst. */
+function fakeChangelog(n: number): ChangelogEntry[] {
+  return Array.from({ length: n }, (_, i) => ({
+    version: `0.${n - i}.0`, date: '2026-10-26',
+    changes: [{ en: `change ${n - i}`, de: `Änderung ${n - i}` }],
+  }));
+}
+
+/** Beantwortet die offene Changelog-Anfrage und wartet, bis die Komponente sie uebernommen hat. */
+async function answerChangelog(footer: AppFooterComponent, entries = fakeChangelog(3)): Promise<void> {
+  const req = TestBed.inject(HttpTestingController).expectOne(AppFooterComponent.ChangelogUrl);
+  expect(req.request.method).toBe('GET');
+  req.flush(entries);
+  await footer.changelogLoad;
+}
+
+/** Fuer alle Fusszeilen-Specs: Router, Uebersetzung und ein Fake-HttpClient (das Changelog kommt per HTTP). */
+const FOOTER_PROVIDERS = [provideHttpClient(), provideHttpClientTesting()];
+
 /**
  * Die Fusszeile gehoert BEIDEN Oberflaechen (RookHub und Turnierseite). Geprueft wird vor allem
- * das Changelog-Overlay: seine ~0,9 MB Prosa duerfen nicht im Initial-Bundle liegen, kommen also
- * per dynamic import() erst beim Oeffnen.
+ * das Changelog-Overlay: seine ~2,2 MB Prosa liegen weder im Initial-Bundle noch in einem Chunk, sondern
+ * kommen als Daten (/assets/changelog.json, Codereview F8-008) erst beim Oeffnen.
  */
 describe('AppFooterComponent', () => {
   function buildFixture(routes: { path: string }[] = [], legal?: object) {
     TestBed.configureTestingModule({
       providers: [provideRouter(routes.map(r => ({ path: r.path, children: [] }))),
-                  provideTranslateService({ fallbackLang: 'en' }),
+                  provideTranslateService({ fallbackLang: 'en' }), ...FOOTER_PROVIDERS,
                   ...(legal ? [{ provide: LEGAL_SITE, useValue: legal }] : [])],
     });
     return TestBed.createComponent(AppFooterComponent);
@@ -38,37 +60,53 @@ describe('AppFooterComponent', () => {
     expect(build().changelog.length).toBe(0);
   });
 
-  it('laedt die Changelog-Eintraege beim Oeffnen des Overlays nach (dynamic import)', async () => {
+  it('laedt die Changelog-Eintraege erst beim Oeffnen des Overlays per HTTP (/assets/changelog.json)', async () => {
     const footer = build();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectNone(AppFooterComponent.ChangelogUrl);   // vor dem Oeffnen: keine Anfrage
     footer.openChangelog();
     expect(footer.showChangelog).toBeTrue();
-    await footer.changelogLoad;
-    expect(footer.changelog.length).toBeGreaterThan(0);
-    expect(footer.changelog[0].version).toBeTruthy();
-    expect(footer.changelog[0].changes[0].en).toBeTruthy();
-    expect(footer.changelog[0].changes[0].de).toBeTruthy();
+    await answerChangelog(footer, fakeChangelog(2));
+    expect(footer.changelog.map(e => e.version)).toEqual(['0.2.0', '0.1.0']);
+    expect(footer.changelog[0].changes[0].de).toBe('Änderung 2');
+    http.verify();
   });
 
   it('klappt das Overlay per Versionslink auf und zu (Laden nur beim Oeffnen)', async () => {
     const footer = build();
     footer.toggleChangelog();
     expect(footer.showChangelog).toBeTrue();
-    await footer.changelogLoad;
+    await answerChangelog(footer);
     const loaded = footer.changelog;
-    expect(loaded.length).toBeGreaterThan(0);
+    expect(loaded.length).toBe(3);
 
     footer.toggleChangelog();
     expect(footer.showChangelog).toBeFalse();
 
     footer.toggleChangelog();                 // erneutes Oeffnen laedt nicht neu
     await footer.changelogLoad;
+    TestBed.inject(HttpTestingController).verify();
     expect(footer.changelog).toBe(loaded);
+  });
+
+  it('bleibt nach einem Ladefehler leer und versucht es beim naechsten Oeffnen erneut', async () => {
+    const footer = build();
+    const http = TestBed.inject(HttpTestingController);
+    footer.openChangelog();
+    http.expectOne(AppFooterComponent.ChangelogUrl).flush('weg', { status: 404, statusText: 'Not Found' });
+    await footer.changelogLoad;
+    expect(footer.changelog).toEqual([]);
+
+    footer.onEscape();
+    footer.openChangelog();
+    await answerChangelog(footer);
+    expect(footer.changelog.length).toBe(3);
   });
 
   it('schliesst das Overlay mit Escape', async () => {
     const footer = build();
     footer.openChangelog();
-    await footer.changelogLoad;
+    await answerChangelog(footer);
 
     footer.onEscape();
 
@@ -93,7 +131,7 @@ describe('AppFooterComponent', () => {
     expect(overlay).withContext('Overlay nicht gerendert').not.toBeNull();
     expect(getComputedStyle(overlay!).position).toBe('fixed');
 
-    await fixture.componentInstance.changelogLoad;   // dynamic import nicht offen lassen
+    await answerChangelog(fixture.componentInstance);   // Anfrage nicht offen lassen
   });
 
   // ----- Kontrast der Markenlinks (UX-055) ---------------------------------------------------
@@ -230,7 +268,7 @@ describe('AppFooterComponent', () => {
 describe('AppFooterComponent am Handy (UX-072)', () => {
   function render(changelogLink?: boolean) {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), ...FOOTER_PROVIDERS],
     });
     const fixture = TestBed.createComponent(AppFooterComponent);
     fixture.componentRef.setInput('hideOnMobile', false);
@@ -279,7 +317,7 @@ describe('AppFooterComponent am Handy (UX-072)', () => {
   it('haelt Impressum und Datenschutz am Handy als eigene, gemeinsame Zeile zusammen (a1-t-fuss-rechtslinks-en)', () => {
     TestBed.configureTestingModule({
       providers: [provideRouter([{ path: 'privacy', children: [] }, { path: 'impressum', children: [] }]),
-                  provideTranslateService({ fallbackLang: 'en' })],
+                  provideTranslateService({ fallbackLang: 'en' }), ...FOOTER_PROVIDERS],
     });
     const fixture = TestBed.createComponent(AppFooterComponent);
     fixture.componentRef.setInput('hideOnMobile', false);
@@ -313,12 +351,12 @@ describe('AppFooterComponent Changelog seitenweise (F8-008)', () => {
 
   it('zeigt die neuesten 30 Versionen und auf Wunsch die naechsten 30', async () => {
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }), ...FOOTER_PROVIDERS],
     });
     const fixture = TestBed.createComponent(AppFooterComponent);
     fixture.detectChanges();
     (fixture.nativeElement.querySelector('.version-link') as HTMLElement).click();
-    await fixture.componentInstance.changelogLoad;
+    await answerChangelog(fixture.componentInstance, fakeChangelog(75));
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const total = fixture.componentInstance.changelog.length;

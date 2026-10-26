@@ -325,7 +325,7 @@ auf diesem Geraet noch NIE benutzt wurde, laesst sich offline nicht umstellen.
 
 ## Build-Konfiguration
 
-- Budget: 1.5MB warning / 2MB error (initial bundle; angehoben, da der Single-Source-Changelog stetig wächst)
+- Budget: 1.5MB warning / 2MB error (initial bundle). Das Changelog liegt NICHT im Bundle, sondern als `/assets/changelog.json` (lazy-SW-Gruppe `changelog`, Codereview F8-008, `docs/ci.md`)
 - Output: `dist/app/browser/` (wird in Docker nach nginx kopiert)
 - SCSS als Style-Preprocessor
 - Keine Server-Side Rendering / SSR

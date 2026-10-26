@@ -68,6 +68,11 @@
                 "output": "/assets/maia"
               },
               {
+                "glob": "changelog.json",
+                "input": "generated/changelog",
+                "output": "/assets"
+              },
+              {
                 "glob": "*.onnx",
                 "input": "maia-model",
                 "output": "/assets/maia"

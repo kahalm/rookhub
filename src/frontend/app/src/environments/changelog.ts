@@ -4,7 +4,8 @@
 // Footer in JEDEM Build dieselbe Version — ein Bump aendert nur hier.
 //
 // Die Changelog-EINTRAEGE (CHANGELOG-Array) liegen in changelog-data.ts:
-// ~0,9 MB Prosa, die das Overlay per dynamic import() erst beim Oeffnen laedt.
+// ~2,2 MB Prosa (Stand Oktober 2026). Der Build macht daraus /assets/changelog.json,
+// das Overlay laedt es per HttpClient erst beim Oeffnen (Codereview F8-008).
 // Neue Eintraege gehoeren dort hinein; diese Datei bleibt bewusst winzig,
 // damit sie ohne Bundle-Kosten eager importierbar ist (Version im Footer).
 export const APP_VERSION = '0.843.0';

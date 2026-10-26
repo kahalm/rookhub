@@ -16,6 +16,10 @@ ARG APP_PROJECT=app
 COPY app/maia-model/fetch.sh maia-model/fetch.sh
 RUN if [ "$APP_PROJECT" = "app" ]; then sh maia-model/fetch.sh; fi
 COPY app/ .
+# Changelog als DATEN (Codereview F8-008): changelog-data.ts → generated/changelog/changelog.json, das angular.json im
+# Projekt `app` nach /assets/changelog.json kopiert (nicht eingecheckt, deshalb hier vor dem Build erzeugt). Bricht bei
+# einem Syntax-/Formfehler im Changelog ab. Die anderen Projekte kopieren die Datei nicht — der Schritt ist dort billig.
+RUN node scripts/changelog-json.mjs
 RUN npx ng build ${APP_PROJECT} --configuration=production
 
 FROM nginx:alpine

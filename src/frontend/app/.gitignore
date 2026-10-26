@@ -2,6 +2,8 @@
 
 # Compiled output
 /dist
+# Changelog als Daten (scripts/changelog-json.mjs, vor jedem Build erzeugt; Quelle: src/environments/changelog-data.ts)
+/generated
 /tmp
 /out-tsc
 /bazel-out

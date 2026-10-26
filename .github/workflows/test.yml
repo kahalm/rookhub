@@ -291,6 +291,14 @@ jobs:
       - name: ESLint-Ratsche (keine Regel ueber eslint-baseline.json)
         working-directory: src/frontend/app
         run: node scripts/eslint-ratchet.mjs --summary "$GITHUB_STEP_SUMMARY"
+      # Changelog als DATEN (Codereview F8-008): changelog-data.ts bleibt die Quelle, der Build liefert es aber als
+      # /assets/changelog.json (lazy-Gruppe `changelog` im Service Worker) statt als ~2 MB-Chunk in der prefetch-Gruppe.
+      # Wie im Dockerfile vor `ng build app` erzeugen, damit dieses Gate dasselbe Bundle baut wie das Image.
+      - name: Changelog als Daten (node --test + JSON erzeugen)
+        working-directory: src/frontend/app
+        run: |
+          node --test scripts/changelog-json.test.mjs
+          node scripts/changelog-json.mjs
       # karma.conf sucht ohne CHROME_BIN eine Puppeteer-Cache-Shell, die es auf dem
       # Runner nicht gibt. Leerer Wert ist unschaedlich (karma faellt auf sein eigenes
       # Chrome-Lookup zurueck).
@@ -311,6 +319,12 @@ jobs:
       # jedes Image abfangen, bevor es gepusht wird.
       - run: npx ng build app --configuration=production
         working-directory: src/frontend/app
+      # Das Changelog liegt als Asset im Bundle und im Service Worker in einer lazy-Gruppe — nie wieder in `app` (prefetch).
+      - name: Changelog-JSON im Bundle, lazy im Service Worker
+        working-directory: src/frontend/app
+        run: |
+          test -s dist/app/browser/assets/changelog.json
+          node -e "const n=require('./dist/app/browser/ngsw.json'); const g=n.assetGroups.filter(g=>g.urls.includes('/assets/changelog.json')); if(g.length!==1||g[0].installMode!=='lazy'||g[0].updateMode!=='lazy'){console.error('changelog.json nicht (nur) in einer lazy-Gruppe:',g.map(x=>x.name));process.exit(1)}"
 
   # Die vier kleinen Oberflaechen in einem EIGENEN Job neben `build-frontend` (nur RookHub selbst
   # + Linter): nacheinander in einem Job lagen alle fuenf Projekte bei 4–5,5 min und damit auf dem

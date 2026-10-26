@@ -1,8 +1,10 @@
 // Changelog-DATEN (nur das Array) — bewusst getrennt von changelog.ts:
-// diese Datei ist ~0,9 MB zweisprachige Prosa und wird vom Changelog-Overlay
-// per dynamic import() erst beim Oeffnen geladen (app.component.loadChangelog).
-// NIEMALS statisch aus environment.ts/app.config.ts importieren, sonst landet
-// die komplette Versionshistorie wieder im Initial-Bundle (~0,8 MB, Perf!).
+// diese Datei ist ~2,2 MB zweisprachige Prosa. Der Build schreibt sie per
+// scripts/changelog-json.mjs nach /assets/changelog.json; das Overlay
+// (shared/app-footer) laedt das JSON erst beim Oeffnen (Codereview F8-008).
+// NIEMALS importieren (auch nicht per dynamic import()), sonst landet die
+// Versionshistorie wieder im Bundle — Wache: src/app/changelog-bundle.spec.ts.
+// `ng build app` prueft die Datei trotzdem (tsconfig.app.json „files“).
 // APP_VERSION/APK_VERSION + Typen bleiben in changelog.ts (Versions-Konvention
 // und Tooling haengen daran).
 import { ChangelogEntry } from './changelog';

@@ -108,3 +108,25 @@ ohne `continue-on-error`, Baseline gültig (ganze Zahlen ≥ 0, sortiert, im Skr
   Regel mit Bestand bewusst aufgenommen). Eine Regel ohne Baseline-Eintrag zählt wie Baseline 0; Meldungen ohne Regel
   (Parse-Fehler) laufen unter `(Parse-Fehler)` und sind damit immer rot.
 - **Phase 3:** erreicht eine Regel Baseline 0, darf sie in `eslint.config.mjs` auf `'error'`.
+
+## Changelog als Daten (Codereview F8-008)
+
+Die Pflege bleibt: Einträge oben in `src/frontend/app/src/environments/changelog-data.ts`, `APP_VERSION` in
+`changelog.ts`. Ausgeliefert wird das Changelog aber nicht mehr als Code (früher dynamic `import()` → ~2,2 MB-Lazy-Chunk
+unter `/*.js` in der prefetch-Gruppe `app` des Service Workers, nach JEDEM Release auf jedem installierten Gerät neu
+geladen), sondern als Daten: `scripts/changelog-json.mjs` schreibt `generated/changelog/changelog.json` (nicht
+eingecheckt), `angular.json` kopiert es im Projekt `app` nach `/assets/changelog.json`, `ngsw-config.json` führt es in
+der eigenen Gruppe `changelog` (`installMode`/`updateMode` `lazy`), und das Overlay (`shared/app-footer`) holt es per
+`HttpClient` erst beim Öffnen. nginx liefert `/assets/` mit `no-cache, must-revalidate` (ETag → 304).
+
+- Erzeugt wird das JSON im **Dockerfile** (`RUN node scripts/changelog-json.mjs` vor `ng build`) und im Gate
+  (`build-frontend`, Schritt „Changelog als Daten“: `node --test scripts/changelog-json.test.mjs` + Erzeugen vor
+  `ng build app`; danach prüft „Changelog-JSON im Bundle, lazy im Service Worker“ Datei und Gruppe). Lokal erzeugen
+  `npm start`/`npm run build` (pre-Skripte) oder `npm run changelog:json`; ein nacktes `npx ng build app`/`ng serve`
+  ohne das JSON baut trotzdem, das Overlay bleibt dann nur leer.
+- `ng build app` prüft `changelog-data.ts` weiter (die Datei steht in `tsconfig.app.json` unter `files`): ein gerades
+  `"` im Prosatext bleibt ein Build-Fehler, die Regel in `.claude/rules/changelog.md` gilt unverändert.
+- Niemand importiert `changelog-data.ts` (auch nicht per `import()`): Wache `src/app/changelog-bundle.spec.ts`.
+  `CiWorkflowTests.Changelog_ShippedAsDataInALazyServiceWorkerGroup` hält Dockerfile, Gate-Schritte, SW-Gruppe,
+  `.gitignore` und `tsconfig.app.json` fest. `scripts/release-notes.mjs` und `.github/scripts/changelog_discord.py`
+  lesen unverändert `changelog-data.ts`.

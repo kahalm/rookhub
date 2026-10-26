@@ -947,6 +947,47 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// Changelog als DATEN (Codereview F8-008): als Code (dynamic import) lag das ~2 MB-Changelog als Lazy-Chunk unter
+    /// `/*.js` in der prefetch-Gruppe des Service Workers und wurde nach jedem Release auf jedem Geraet neu geladen.
+    /// Jetzt erzeugt scripts/changelog-json.mjs vor dem Build /assets/changelog.json (nicht eingecheckt) — im Dockerfile
+    /// UND im Gate, sonst fehlte die Datei im Image bzw. baute das Gate ein anderes Bundle. Der Service Worker fuehrt sie
+    /// in einer eigenen lazy-Gruppe, und tsconfig.app.json behaelt changelog-data.ts im Programm, damit `ng build app`
+    /// ein gerades Anfuehrungszeichen im Prosatext weiter faengt (Pflege unveraendert).
+    /// </summary>
+    [Fact]
+    public void Changelog_ShippedAsDataInALazyServiceWorkerGroup()
+    {
+        var job = TestJob("build-frontend");
+        var gen = Step(job, Regex.Escape("name: Changelog als Daten (node --test + JSON erzeugen)"));
+        Assert.Contains("working-directory: src/frontend/app", gen);
+        Assert.Contains("node --test scripts/changelog-json.test.mjs", gen);
+        Assert.Contains("node scripts/changelog-json.mjs", gen);
+        Assert.True(job.IndexOf("name: Changelog als Daten", StringComparison.Ordinal)
+                    < job.IndexOf("npx ng build app", StringComparison.Ordinal),
+            "das Changelog-JSON muss VOR `ng build app` entstehen");
+        var check = Step(job, Regex.Escape("name: Changelog-JSON im Bundle, lazy im Service Worker"));
+        Assert.Contains("dist/app/browser/assets/changelog.json", check);
+
+        var dockerfile = ReadRepoFile("src/frontend/Dockerfile");
+        var genAt = dockerfile.IndexOf("RUN node scripts/changelog-json.mjs", StringComparison.Ordinal);
+        Assert.True(genAt > 0 && genAt < dockerfile.IndexOf("RUN npx ng build", StringComparison.Ordinal),
+            "Dockerfile: changelog-json.mjs vor `ng build`");
+
+        using var ngsw = System.Text.Json.JsonDocument.Parse(ReadRepoFile($"{FrontendApp}/ngsw-config.json"));
+        var groups = ngsw.RootElement.GetProperty("assetGroups").EnumerateArray()
+            .Where(g => g.GetProperty("resources").GetProperty("files").EnumerateArray()
+                .Any(f => f.GetString() == "/assets/changelog.json"))
+            .ToList();
+        var group = Assert.Single(groups);
+        Assert.Equal("lazy", group.GetProperty("installMode").GetString());
+        Assert.Equal("lazy", group.GetProperty("updateMode").GetString());
+
+        Assert.Contains("\"input\": \"generated/changelog\"", ReadRepoFile($"{FrontendApp}/angular.json"));
+        Assert.Contains("/generated", ReadRepoFile($"{FrontendApp}/.gitignore"));
+        Assert.Contains("\"src/environments/changelog-data.ts\"", ReadRepoFile($"{FrontendApp}/tsconfig.app.json"));
+    }
+
+    /// <summary>
     /// eslint-baseline.json ist ein flaches JSON-Objekt Regel → Anzahl (ganzzahlig, ≥ 0), sortiert und so formatiert,
     /// wie scripts/eslint-ratchet.mjs sie schreibt (`--update` ohne Aenderung bleibt byte-gleich, Diffs bleiben klein).
     /// </summary>

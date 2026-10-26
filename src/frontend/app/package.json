@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "prestart": "node scripts/changelog-json.mjs",
     "start": "ng serve",
+    "prebuild": "node scripts/changelog-json.mjs",
     "build": "ng build",
+    "changelog:json": "node scripts/changelog-json.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "eslint .",

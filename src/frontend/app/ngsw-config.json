@@ -71,6 +71,16 @@
       }
     },
     {
+      "name": "changelog",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/assets/changelog.json"
+        ]
+      }
+    },
+    {
       "name": "maia",
       "installMode": "lazy",
       "updateMode": "lazy",

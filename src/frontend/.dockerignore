@@ -5,3 +5,5 @@ app/.angular
 # gehoert nicht in den Build-Kontext (45 MB je Build hochgeladen, und sie verdeckte den gepinnten Abruf).
 app/maia-model/*.onnx
 app/maia-model/*.part
+# Changelog-JSON: erzeugt der Build selbst (scripts/changelog-json.mjs) — keine lokale, evtl. veraltete Kopie mitschicken.
+app/generated
