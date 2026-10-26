@@ -27,11 +27,13 @@ gehen mit dem Konto (`PuzzleDataEraser`); als Empfänger erhaltene `CourseShares
 `ProfileServiceTests.KnownGapsA1018`). **Admin-Recht setzen** (F5-013, `users.manage`): `PUT /api/admin/users/{id}/admin`
 `{ isAdmin }` setzt einen Soll-Wert (idempotent; nur Admins, nie das eigene Konto; fehlender Wert → 400);
 `POST …/toggle-admin` ist veraltet und entfällt in einer späteren Version. **Sperren statt löschen** (F5-011, `users.manage`): `POST /api/admin/users/{id}/lock`
-`{ until: ISO-UTC | null }` (null = unbefristet, `AppUser.LockedIndefinitely`) bzw. `DELETE …/lock` → 200 `AdminUserDto`
+`{ until: ISO-UTC | null, reason?: string }` (null = unbefristet, `AppUser.LockedIndefinitely`; `reason` nur ins Protokoll, Zeile „AdminLock“, eine Zeile, ≤ 200 Zeichen, P-4) bzw. `DELETE …/lock` → 200 `AdminUserDto`
 (mit `lockedUntil`). Die Sperre setzt `AppUser.LockedUntil`, rotiert den Security-Stamp (laufende Sitzungen enden sofort)
 und verwirft den Auth-Cache; Konto, Daten und API-Tokens bleiben. `AuthUserValidation` zählt eine laufende Sperre als
 inaktiv, API-Token- und Engine-Token-Prüfung weisen gesperrte Besitzer ab, Impersonation eines gesperrten Kontos → 400.
 Guards: nicht sich selbst (400), Ende in der Zukunft (400), Admin-Konten nur durch Admins (403).
+Oberfläche (P-4, 2026-10-26): Admin → Nutzer, „Sperren …“ (Dialog `features/admin/lock-user-dialog.component.ts`: bis
+einschließlich eines Tages oder unbefristet, Grund optional) bzw. „Entsperren“, Status „Gesperrt bis …“ in Zeile und Karte.
 **Reset-Link für Konten ohne E-Mail** (UX-002 / P-2, `users.manage`, 0.828.0): `POST /api/admin/users/{id}/password-reset-link`
 → 200 `{ link, expiresAt }` (ISO-UTC). `PasswordResetService.IssueAdminResetLinkAsync` legt wie „Passwort vergessen“ einen
 einmaligen Token an (nur SHA-256 in `PasswordResetTokens`, offene ältere Tokens entwertet), schickt aber keine Mail — der

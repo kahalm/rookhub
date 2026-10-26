@@ -196,6 +196,22 @@ public class AdminServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LockUser_Reason_GoesToTheLogOnly_OneLine_Trimmed_Capped()
+    {
+        var target = await AddUserAsync("laut", isAdmin: false, stamp: "s1");
+        var log = new CapturingLogger<AdminService>();
+        var admin = new AdminService(_db, TestServices.Profile(_db, new NoOpTaskQueue()), _cache, log);
+
+        await admin.LockUserAsync(target.Id, ActorId, null, reason: "  Spam\nin Nachrichten " + new string('x', 300));
+
+        var e = Assert.Single(log.Events, x => x.Message.StartsWith("AdminLock:"));
+        var reason = Assert.IsType<string>(e.State["LockReason"]);
+        Assert.StartsWith("Spam in Nachrichten x", reason);
+        Assert.Equal(AdminService.LockReasonMaxLength, reason.Length);
+        Assert.Null(AdminService.CleanReason("   "));
+    }
+
+    [Fact]
     public async Task LockUser_WithoutEnd_IsIndefinite_AndUnlockLetsNewTokensThrough()
     {
         var target = await AddUserAsync("dauer", isAdmin: false, stamp: "s1");

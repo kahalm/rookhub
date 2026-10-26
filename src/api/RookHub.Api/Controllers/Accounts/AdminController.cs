@@ -119,13 +119,14 @@ public class AdminController : BaseApiController
         catch (KeyNotFoundException) { return NotFound(); }
     }
 
-    /// <summary>Sperrt einen Nutzer bis <c>until</c> (UTC; <c>null</c>/leer = unbefristet) statt ihn zu löschen (F5-011):
+    /// <summary>Sperrt einen Nutzer bis <c>until</c> (UTC; <c>null</c>/leer = unbefristet) statt ihn zu löschen (F5-011),
+    /// optional mit <c>reason</c> fürs Protokoll (P-4):
     /// laufende Sitzungen enden sofort, Anmelden geht erst nach Ablauf bzw. Entsperren wieder.</summary>
     [HttpPost("users/{id}/lock")]
     [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> LockUser(int id, [FromBody] LockUserDto? dto)
     {
-        try { return Ok(await _admin.LockUserAsync(id, GetUserId(), dto?.Until, IsAdmin)); }
+        try { return Ok(await _admin.LockUserAsync(id, GetUserId(), dto?.Until, IsAdmin, dto?.Reason)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }

@@ -19,7 +19,17 @@
       </ng-container>
       <ng-container matColumnDef="username">
         <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.username' | translate }}</th>
-        <td mat-cell *matCellDef="let u">{{ u.username }}</td>
+        <td mat-cell *matCellDef="let u">
+          {{ u.username }}
+          <!-- P-4: Status der Sperre in der Zeile. -->
+          @if (isLocked(u)) {
+            <span class="lock-status">
+              <mat-icon aria-hidden="true">block</mat-icon>
+              @if (isIndefinite(u)) { {{ 'admin.users.lock.statusIndefinite' | translate }} }
+              @else { {{ 'admin.users.lock.statusUntil' | translate: { date: (u.lockedUntil | date:'short') } }} }
+            </span>
+          }
+        </td>
       </ng-container>
       <ng-container matColumnDef="email">
         <th mat-header-cell *matHeaderCellDef>{{ 'admin.users.columns.email' | translate }}</th>
@@ -67,6 +77,17 @@
             <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
           </button>
           }
+          @if (canLock(u)) {
+            @if (isLocked(u)) {
+              <button mat-icon-button class="unlock-btn" (click)="unlockUser(u)" [disabled]="lockBusyId() === u.id" [attr.title]="'admin.users.lock.unlock' | translate">
+                <mat-icon>lock_open</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button class="lock-btn" (click)="lockUser(u)" [disabled]="lockBusyId() === u.id" [attr.title]="'admin.users.lock.action' | translate">
+                <mat-icon>block</mat-icon>
+              </button>
+            }
+          }
           <button mat-icon-button color="warn" (click)="deleteUser(u)" [attr.title]="'admin.users.deleteUser' | translate">
             <mat-icon>delete</mat-icon>
           </button>
@@ -92,6 +113,13 @@
                 <span class="uc-meta">#{{ u.id }}@if (u.isAdmin) { · {{ 'admin.users.columns.admin' | translate }} }</span>
               </div>
               @if (u.email) { <div class="uc-mail">{{ u.email }}</div> }
+              @if (isLocked(u)) {
+                <div class="lock-status">
+                  <mat-icon aria-hidden="true">block</mat-icon>
+                  @if (isIndefinite(u)) { {{ 'admin.users.lock.statusIndefinite' | translate }} }
+                  @else { {{ 'admin.users.lock.statusUntil' | translate: { date: (u.lockedUntil | date:'short') } }} }
+                </div>
+              }
               @if (u.groups?.length) {
                 <div class="uc-row">
                   @for (g of u.groups ?? []; track g) { <span class="uc-group">{{ g }}</span> }
@@ -117,6 +145,19 @@
                   <mat-icon>{{ u.isAdmin ? 'remove_moderator' : 'add_moderator' }}</mat-icon>
                   <span>{{ 'admin.users.toggleAdmin' | translate }}</span>
                 </button>
+                }
+                @if (canLock(u)) {
+                  @if (isLocked(u)) {
+                    <button mat-menu-item (click)="unlockUser(u)" [disabled]="lockBusyId() === u.id">
+                      <mat-icon>lock_open</mat-icon>
+                      <span>{{ 'admin.users.lock.unlock' | translate }}</span>
+                    </button>
+                  } @else {
+                    <button mat-menu-item (click)="lockUser(u)" [disabled]="lockBusyId() === u.id">
+                      <mat-icon>block</mat-icon>
+                      <span>{{ 'admin.users.lock.action' | translate }}</span>
+                    </button>
+                  }
                 }
                 <button mat-menu-item class="delete-item" (click)="deleteUser(u)">
                   <mat-icon>delete</mat-icon>

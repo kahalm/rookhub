@@ -10,6 +10,8 @@ export interface AdminUser {
   isAdmin: boolean;
   createdAt: string;
   groups: string[];
+  /** Gesperrt bis (ISO-UTC), nur solange die Sperre läuft; unbefristet = Jahr 9999 (F5-011/P-4). */
+  lockedUntil?: string | null;
 }
 
 /** Antwort von `POST /api/admin/users/{id}/password-reset-link`. */
@@ -203,6 +205,16 @@ export class AdminService {
   /** Admin-Recht auf einen Soll-Wert setzen — idempotent, ein Doppelklick entzieht es nicht wieder (F5-013). */
   setAdmin(id: number, isAdmin: boolean): Observable<AdminUser> {
     return this.http.put<AdminUser>(`/api/admin/users/${id}/admin`, { isAdmin });
+  }
+
+  /** Sperren bis `until` (ISO; `null` = unbefristet), optional mit Grund fürs Protokoll (P-4). */
+  lockUser(id: number, until: string | null, reason?: string | null): Observable<AdminUser> {
+    return this.http.post<AdminUser>(`/api/admin/users/${id}/lock`, { until, reason: reason || null });
+  }
+
+  /** Sperre aufheben (idempotent). */
+  unlockUser(id: number): Observable<AdminUser> {
+    return this.http.delete<AdminUser>(`/api/admin/users/${id}/lock`);
   }
 
   /** „Als Nutzer einsteigen": liefert ein Impersonation-Token für den Zielnutzer. */

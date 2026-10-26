@@ -21,10 +21,12 @@ import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.co
 import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { ResetLinkDialogComponent, ResetLinkDialogData } from '../reset-link-dialog.component';
+import { LockUserDialogComponent, LockUserDialogData, LockUserDialogResult } from '../lock-user-dialog.component';
+import { isIndefiniteLock } from '../lock-user.util';
 
 /**
  * Admin-Tab „Nutzer" (users.manage): paginierte Kontenliste (Tabelle ab 900 px, darunter Karten), Einsteigen als Nutzer,
- * Reset-Link (UX-002), Admin-Recht (F5-013, nur Admins) und Löschen. Aus `AdminComponent` ausgelagert (Zerlegung Z30);
+ * Reset-Link (UX-002), Admin-Recht (F5-013, nur Admins), Sperren/Entsperren (P-4) und Löschen. Aus `AdminComponent` ausgelagert (Zerlegung Z30);
  * die Seite rendert den Tab nur mit `users.manage` (F5-005), er lädt daher beim Seitenaufruf ohne weitere Prüfung.
  */
 @Component({
@@ -63,11 +65,19 @@ export class AdminUsersTabComponent implements OnInit {
   readonly adminBusyId = signal<number | null>(null);
   /** Konto, für das gerade ein Reset-Link erzeugt wird (UX-002) — sein Knopf ist so lange gesperrt. */
   readonly resetLinkBusyId = signal<number | null>(null);
+  /** Konto, dessen Sperre gerade gesetzt/aufgehoben wird (P-4). */
+  readonly lockBusyId = signal<number | null>(null);
 
   /** Nur Admins dürfen das Admin-Flag setzen und Admin-Konten anfassen (Server: „Only an admin may …", 403). */
   get actorIsAdmin(): boolean { return this.auth.isAdminLive; }
   /** Einsteigen/Reset-Link/Löschen: für Admin-Konten nur durch Admins — sonst gar nicht anbieten (Server: 403). */
   canManageUser(u: AdminUser): boolean { return this.actorIsAdmin || !u.isAdmin; }
+
+  /** Sperren geht nicht für das eigene Konto (Server: „Cannot lock yourself“). */
+  canLock(u: AdminUser): boolean { return this.canManageUser(u) && u.id !== this.auth.currentUser?.userId; }
+  /** Läuft eine Sperre? Der Server liefert `lockedUntil` nur dann. */
+  isLocked(u: AdminUser): boolean { return !!u.lockedUntil; }
+  isIndefinite(u: AdminUser): boolean { return isIndefiniteLock(u.lockedUntil); }
 
   ngOnInit(): void {
     this.loadUsers();
@@ -157,6 +167,44 @@ export class AdminUsersTabComponent implements OnInit {
           }
         });
       });
+  }
+
+  /** „Sperren …“ (P-4): Dialog mit Ende (Tag oder unbefristet) und optionalem Grund; laufende Sitzungen enden sofort. */
+  lockUser(user: AdminUser): void {
+    if (this.lockBusyId() !== null) return;
+    const data: LockUserDialogData = { username: user.username };
+    this.dialog.open<LockUserDialogComponent, LockUserDialogData, LockUserDialogResult>(LockUserDialogComponent, { data })
+      .afterClosed().subscribe(res => {
+        if (!res || this.lockBusyId() !== null) return;
+        this.lockBusyId.set(user.id);
+        this.adminService.lockUser(user.id, res.until, res.reason).subscribe({
+          next: updated => this.lockDone(user, updated, 'admin.users.lock.locked'),
+          error: err => this.lockFailed(err, 'admin.users.lock.lockFailed'),
+        });
+      });
+  }
+
+  /** „Entsperren“ (P-4) — ohne Rückfrage, die Aktion ist harmlos und umkehrbar. */
+  unlockUser(user: AdminUser): void {
+    if (this.lockBusyId() !== null) return;
+    this.lockBusyId.set(user.id);
+    this.adminService.unlockUser(user.id).subscribe({
+      next: updated => this.lockDone(user, updated, 'admin.users.lock.unlocked'),
+      error: err => this.lockFailed(err, 'admin.users.lock.unlockFailed'),
+    });
+  }
+
+  private lockDone(user: AdminUser, updated: AdminUser, key: string): void {
+    this.lockBusyId.set(null);
+    user.lockedUntil = updated.lockedUntil ?? null;
+    this.users.update(list => [...list]);   // Zeile und Karte zeigen den neuen Status
+    this.cdr.markForCheck();
+    this.snackbar.info(this.translate.instant(key, { username: user.username }));
+  }
+
+  private lockFailed(err: unknown, fallbackKey: string): void {
+    this.lockBusyId.set(null);
+    this.snackbar.info(apiErrorText(err, this.translate, fallbackKey));
   }
 
   deleteUser(user: AdminUser): void {

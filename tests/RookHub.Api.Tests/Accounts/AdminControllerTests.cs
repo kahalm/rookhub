@@ -333,7 +333,7 @@ public class AdminControllerTests : IDisposable
         var user = await CreateUserAsync("target");
         var until = DateTime.UtcNow.AddDays(1);
 
-        var locked = Assert.IsType<OkObjectResult>(await _controller.LockUser(user.Id, new LockUserDto { Until = until }));
+        var locked = Assert.IsType<OkObjectResult>(await _controller.LockUser(user.Id, new LockUserDto { Until = until, Reason = "Spam" }));
         Assert.Equal(until, Assert.IsType<AdminUserDto>(locked.Value).LockedUntil);
         Assert.Equal(until, (await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id)).LockedUntil);
 

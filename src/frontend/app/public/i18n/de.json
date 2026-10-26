@@ -2546,6 +2546,25 @@
         "copied": "Link kopiert",
         "copyFailed": "Kopieren fehlgeschlagen — markiere den Link und kopiere ihn von Hand.",
         "error": "Reset-Link konnte nicht erzeugt werden"
+      },
+      "lock": {
+        "action": "Sperren …",
+        "unlock": "Entsperren",
+        "title": "{{username}} sperren",
+        "hint": "Laufende Sitzungen enden sofort, Anmelden geht bis zum Ende der Sperre nicht. Konto und Daten bleiben erhalten.",
+        "modeUntil": "Bis zu einem Tag",
+        "modeIndefinite": "Unbefristet",
+        "dateLabel": "Gesperrt bis einschließlich",
+        "reasonLabel": "Grund (optional)",
+        "reasonHint": "Steht nur im Protokoll des Servers; die Person sieht ihn nicht.",
+        "invalidDate": "Bitte einen Tag ab heute wählen.",
+        "confirm": "Sperren",
+        "statusUntil": "Gesperrt bis {{date}}",
+        "statusIndefinite": "Gesperrt (unbefristet)",
+        "locked": "{{username}} ist gesperrt.",
+        "unlocked": "{{username}} ist entsperrt.",
+        "lockFailed": "Sperren fehlgeschlagen",
+        "unlockFailed": "Entsperren fehlgeschlagen"
       }
     },
     "books": {

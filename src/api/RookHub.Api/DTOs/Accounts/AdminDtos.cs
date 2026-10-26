@@ -25,6 +25,10 @@ public class SetAdminDto
 public class LockUserDto
 {
     public DateTime? Until { get; set; }
+
+    /// <summary>Optionaler Grund (P-4): steht nur im Protokoll des Servers (Zeile „AdminLock“), nicht in der Datenbank
+    /// und nicht beim Nutzer; gekürzt auf 200 Zeichen (`AdminService.LockReasonMaxLength`).</summary>
+    public string? Reason { get; set; }
 }
 
 /// <summary>Antwort von <c>POST /api/admin/users/{id}/password-reset-link</c>: einmaliger Reset-Link und sein Ablauf (UTC).</summary>

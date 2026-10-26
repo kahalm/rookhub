@@ -2546,6 +2546,25 @@
         "copied": "Poveznica kopirana",
         "copyFailed": "Kopiranje nije uspjelo — označi poveznicu i kopiraj je ručno.",
         "error": "Izrada poveznice za poništavanje nije uspjela"
+      },
+      "lock": {
+        "action": "Zaključaj …",
+        "unlock": "Otključaj",
+        "title": "Zaključaj {{username}}",
+        "hint": "Aktivne sesije odmah završavaju, a prijava nije moguća do isteka zaključavanja. Račun i podaci ostaju sačuvani.",
+        "modeUntil": "Do određenog dana",
+        "modeIndefinite": "Neograničeno",
+        "dateLabel": "Zaključano do uključivo",
+        "reasonLabel": "Razlog (neobavezno)",
+        "reasonHint": "Upisuje se samo u zapis poslužitelja; osoba ga ne vidi.",
+        "invalidDate": "Odaberi dan od danas nadalje.",
+        "confirm": "Zaključaj",
+        "statusUntil": "Zaključano do {{date}}",
+        "statusIndefinite": "Zaključano (neograničeno)",
+        "locked": "{{username}} je zaključan.",
+        "unlocked": "{{username}} je otključan.",
+        "lockFailed": "Zaključavanje nije uspjelo",
+        "unlockFailed": "Otključavanje nije uspjelo"
       }
     },
     "books": {

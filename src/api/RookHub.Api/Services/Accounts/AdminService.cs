@@ -142,7 +142,8 @@ public class AdminService
     /// die Sperre läuft; der Security-Stamp rotiert, damit laufende Sitzungen SOFORT enden und auch nach Ablauf der Sperre
     /// nicht zurückkommen. Konto und Daten bleiben unberührt. Ein Admin-Konto sperrt nur ein Admin (sonst sperrte eine
     /// delegierte Rolle mit <c>users.manage</c> die Admins aus).</summary>
-    public async Task<AdminUserDto> LockUserAsync(int id, int currentUserId, DateTime? until, bool actorIsAdmin = true)
+    public async Task<AdminUserDto> LockUserAsync(int id, int currentUserId, DateTime? until, bool actorIsAdmin = true,
+        string? reason = null)
     {
         if (id == currentUserId)
             throw new InvalidOperationException("Cannot lock yourself.");
@@ -161,9 +162,21 @@ public class AdminService
         user.SecurityStamp = AuthService.NewSecurityStamp();
         await _db.SaveChangesAsync();
         if (_authCache is not null) AuthUserValidation.Invalidate(_authCache, user.Id);
-        _logger?.LogInformation("AdminLock: User {UserId} gesperrt bis {LockedUntil} von {ActorId}", user.Id, end, currentUserId);
+        _logger?.LogInformation("AdminLock: User {UserId} gesperrt bis {LockedUntil} von {ActorId}, Grund: {LockReason}",
+            user.Id, end, currentUserId, CleanReason(reason));
 
         return await UserDtoAsync(user);
+    }
+
+    /// <summary>Höchstlänge des optionalen Sperrgrunds (P-4) — er steht nur im Protokoll.</summary>
+    public const int LockReasonMaxLength = 200;
+
+    /// <summary>Sperrgrund fürs Protokoll: eine Zeile (Steuerzeichen → Leerzeichen), getrimmt, gekürzt; leer = <c>null</c>.</summary>
+    internal static string? CleanReason(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return null;
+        var line = new string(reason.Select(c => char.IsControl(c) ? ' ' : c).ToArray()).Trim();
+        return line.Length > LockReasonMaxLength ? line[..LockReasonMaxLength] : line;
     }
 
     /// <summary>Hebt die Sperre eines Nutzers auf (idempotent). Die bei der Sperre entwerteten Sitzungen bleiben entwertet —

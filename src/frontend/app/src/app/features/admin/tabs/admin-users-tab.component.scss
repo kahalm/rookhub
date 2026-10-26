@@ -27,3 +27,8 @@
 .uc-actions { flex: none; display: flex; align-items: center; }
 .uc-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .uc-group { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, currentColor 10%, transparent); }
+/* P-4: Sperr-Status in Zeile und Karte (Warnfarbe aus den Tokens, DESIGN 3). */
+.lock-status { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 0.8rem; white-space: nowrap;
+  color: var(--rh-error, var(--mat-sys-error)); }
+.lock-status mat-icon { font-size: 16px; width: 16px; height: 16px; }
+.uc-main .lock-status { margin-left: 0; }

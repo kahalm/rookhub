@@ -11,6 +11,7 @@ import { MenuService } from '../../../core/menu.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { ResetLinkDialogComponent } from '../reset-link-dialog.component';
+import { LockUserDialogComponent } from '../lock-user-dialog.component';
 import { AdminUsersTabComponent } from './admin-users-tab.component';
 
 /** Rückfrage-Doppelgänger: `answer` legt fest, was der Dialog liefert (F5-013). */
@@ -157,6 +158,66 @@ describe('AdminUsersTabComponent', () => {
   });
 
   // F5-013: Admin-Recht nur nach Rückfrage, als Soll-Wert, Knopf während der Anfrage gesperrt.
+  // Codereview P-4 (Entscheidung 2026-10-25): Sperren/Entsperren in der Nutzerliste über POST/DELETE …/lock.
+  describe('Sperren', () => {
+    const until = '2026-11-03T23:00:00.000Z';
+
+    it('„Sperren …“ öffnet den Dialog und sperrt mit Ende und Grund; die Zeile zeigt den Status', () => {
+      const lockUser = jasmine.createSpy('lockUser').and.returnValue(of({ id: 5, username: 'spam', lockedUntil: until }));
+      const { c, snackbar } = make({ lockUser }, { currentUser: { userId: 1 } });
+      dialogStub.open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of({ until, reason: 'Spam' }) });
+      const u: any = { id: 5, username: 'spam', isAdmin: false };
+      c.users.set([u]);
+
+      c.lockUser(u);
+
+      expect(dialogStub.open.calls.mostRecent().args[0]).toBe(LockUserDialogComponent);
+      expect(lockUser).toHaveBeenCalledWith(5, until, 'Spam');
+      expect(u.lockedUntil).toBe(until);
+      expect(c.isLocked(u)).toBeTrue();
+      expect(c.lockBusyId()).toBeNull();
+      expect(snackbar.info).toHaveBeenCalledWith('admin.users.lock.locked');
+    });
+
+    it('Abbrechen im Dialog sperrt nicht', () => {
+      const lockUser = jasmine.createSpy('lockUser');
+      const { c } = make({ lockUser }, { currentUser: { userId: 1 } });
+      dialogStub.open = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) });
+      c.lockUser({ id: 5, username: 'x', isAdmin: false } as any);
+      expect(lockUser).not.toHaveBeenCalled();
+    });
+
+    it('„Entsperren“ hebt die Sperre auf', () => {
+      const unlockUser = jasmine.createSpy('unlockUser').and.returnValue(of({ id: 5, username: 'spam', lockedUntil: null }));
+      const { c, snackbar } = make({ unlockUser }, { currentUser: { userId: 1 } });
+      const u: any = { id: 5, username: 'spam', isAdmin: false, lockedUntil: until };
+      c.unlockUser(u);
+      expect(unlockUser).toHaveBeenCalledWith(5);
+      expect(u.lockedUntil).toBeNull();
+      expect(snackbar.info).toHaveBeenCalledWith('admin.users.lock.unlocked');
+    });
+
+    it('ein Fehler beim Entsperren meldet sich und gibt den Knopf frei', () => {
+      const failing = make({ unlockUser: () => throwError(() => ({ status: 500 })) }, { currentUser: { userId: 1 } });
+      failing.c.unlockUser({ id: 6, username: 'b', isAdmin: false, lockedUntil: until } as any);
+      expect(failing.snackbar.info).toHaveBeenCalledWith('admin.users.lock.unlockFailed');
+      expect(failing.c.lockBusyId()).toBeNull();
+    });
+
+    it('das eigene Konto und — für Nicht-Admins — Admin-Konten sind nicht sperrbar', () => {
+      const { c } = make({}, { currentUser: { userId: 1 }, isAdminLive: false });
+      expect(c.canLock({ id: 1, isAdmin: false } as any)).toBeFalse();
+      expect(c.canLock({ id: 2, isAdmin: true } as any)).toBeFalse();
+      expect(c.canLock({ id: 3, isAdmin: false } as any)).toBeTrue();
+    });
+
+    it('unbefristet = Jahr 9999', () => {
+      const { c } = make();
+      expect(c.isIndefinite({ lockedUntil: '9999-12-31T00:00:00Z' } as any)).toBeTrue();
+      expect(c.isIndefinite({ lockedUntil: until } as any)).toBeFalse();
+    });
+  });
+
   describe('Admin-Recht', () => {
     it('fragt mit dem Namen nach und setzt dann den Soll-Wert', () => {
       const setAdmin = jasmine.createSpy('setAdmin').and.returnValue(of({ id: 4, isAdmin: true }));
@@ -241,6 +302,20 @@ describe('AdminUsersTabComponent – Darstellung', () => {
     expect(el.querySelectorAll('tr.mat-mdc-row').length).toBe(2);
     expect(el.querySelectorAll('.user-card').length).toBe(2);
     expect(el.querySelector('mat-paginator')).not.toBeNull();
+  });
+
+  it('gesperrte Konten zeigen den Status und „Entsperren“, andere „Sperren …“, das eigene keins (P-4)', async () => {
+    const fixture = await render([
+      { id: 1, username: 'ich', isAdmin: true, groups: [], createdAt: '2026-01-01T00:00:00Z' },
+      { id: 5, username: 'spam', isAdmin: false, groups: [], createdAt: '2026-01-01T00:00:00Z', lockedUntil: '9999-12-31T00:00:00Z' },
+      { id: 6, username: 'nett', isAdmin: false, groups: [], createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tr.mat-mdc-row'));
+    expect(rows[0].querySelector('.lock-btn, .unlock-btn')).toBeNull();
+    expect(rows[1].querySelector('.lock-status')!.textContent).toContain('admin.users.lock.statusIndefinite');
+    expect(rows[1].querySelector('.unlock-btn')).not.toBeNull();
+    expect(rows[2].querySelector('.lock-btn')).not.toBeNull();
+    expect(rows[2].querySelector('.lock-status')).toBeNull();
   });
 
   // UI-Sweep z2 (z2-rk-admin-suche-abstand): das Nutzer-Suchfeld reserviert keinen leeren Hilfstext-Platz.

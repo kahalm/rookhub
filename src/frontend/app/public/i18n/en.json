@@ -2546,6 +2546,25 @@
         "copied": "Link copied",
         "copyFailed": "Copying failed — select the link and copy it by hand.",
         "error": "Failed to create the reset link"
+      },
+      "lock": {
+        "action": "Lock …",
+        "unlock": "Unlock",
+        "title": "Lock {{username}}",
+        "hint": "Running sessions end at once, and signing in is impossible until the lock ends. The account and its data are kept.",
+        "modeUntil": "Until a day",
+        "modeIndefinite": "Indefinitely",
+        "dateLabel": "Locked up to and including",
+        "reasonLabel": "Reason (optional)",
+        "reasonHint": "Only written to the server log; the person does not see it.",
+        "invalidDate": "Please pick a day from today on.",
+        "confirm": "Lock",
+        "statusUntil": "Locked until {{date}}",
+        "statusIndefinite": "Locked (indefinitely)",
+        "locked": "{{username}} is locked.",
+        "unlocked": "{{username}} is unlocked.",
+        "lockFailed": "Locking failed",
+        "unlockFailed": "Unlocking failed"
       }
     },
     "books": {

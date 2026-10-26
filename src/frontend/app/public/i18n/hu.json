@@ -2108,6 +2108,25 @@
         "copied": "Link másolva",
         "copyFailed": "A másolás nem sikerült — jelöld ki a linket, és másold kézzel.",
         "error": "Nem sikerült létrehozni a visszaállító linket"
+      },
+      "lock": {
+        "action": "Zárolás …",
+        "unlock": "Feloldás",
+        "title": "{{username}} zárolása",
+        "hint": "A futó munkamenetek azonnal véget érnek, és a zárolás végéig nem lehet bejelentkezni. A fiók és az adatai megmaradnak.",
+        "modeUntil": "Egy adott napig",
+        "modeIndefinite": "Határozatlan ideig",
+        "dateLabel": "Zárolva eddig a napig (bezárólag)",
+        "reasonLabel": "Indok (opcionális)",
+        "reasonHint": "Csak a szervernaplóba kerül; az érintett nem látja.",
+        "invalidDate": "Válassz a mai naptól kezdődő napot.",
+        "confirm": "Zárolás",
+        "statusUntil": "Zárolva eddig: {{date}}",
+        "statusIndefinite": "Zárolva (határozatlan ideig)",
+        "locked": "{{username}} zárolva.",
+        "unlocked": "{{username}} zárolása feloldva.",
+        "lockFailed": "A zárolás nem sikerült",
+        "unlockFailed": "A feloldás nem sikerült"
       }
     },
     "books": {
