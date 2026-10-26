@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Services.Social.TrainingGoals;
 using RookHub.Api.DTOs.Social;
 
 namespace RookHub.Api.Controllers.Social;
@@ -144,12 +145,14 @@ public class TrainingGoalController : BaseApiController
     }
 
     /// <summary>Timer starten (aus Vorlage per <c>presetId</c> oder ad-hoc mit <c>label</c>+<c>kind</c>).
-    /// Ersetzt still einen ggf. laufenden Timer — der Client sollte vorher warnen.</summary>
+    /// Läuft schon einer: nur mit <c>?replace=true</c> ersetzt (ohne Eintrag), sonst 409
+    /// <c>{ message, timer }</c> mit dem laufenden Timer (F5-008).</summary>
     [HttpPost("timer/start")]
-    public async Task<ActionResult<ActivityTimerDto>> StartTimer([FromBody] StartActivityTimerDto dto)
+    public async Task<ActionResult<ActivityTimerDto>> StartTimer([FromBody] StartActivityTimerDto dto, [FromQuery] bool replace = false)
     {
-        try { return Ok(await _service.StartTimerAsync(GetUserId(), dto)); }
+        try { return Ok(await _service.StartTimerAsync(GetUserId(), dto, replace)); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (ActivityTimerRunningException ex) { return Conflict(new { message = ex.Message, timer = ex.Running }); }
     }
 
     /// <summary>Timer stoppen und als manuellen Aktivitätseintrag speichern. Optional

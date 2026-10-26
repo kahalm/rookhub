@@ -170,8 +170,10 @@ public class TrainingGoalService
 
     public Task<ActivityTimerDto?> GetTimerAsync(int userId) => _timer.GetTimerAsync(userId);
 
-    /// <summary>Startet einen neuen Timer (ersetzt einen ggf. laufenden still, ohne Eintrag).</summary>
-    public Task<ActivityTimerDto> StartTimerAsync(int userId, StartActivityTimerDto dto) => _timer.StartTimerAsync(userId, dto);
+    /// <summary>Startet einen neuen Timer; einen laufenden ersetzt nur <paramref name="replace"/> (sonst
+    /// <see cref="ActivityTimerRunningException"/>, F5-008).</summary>
+    public Task<ActivityTimerDto> StartTimerAsync(int userId, StartActivityTimerDto dto, bool replace = false)
+        => _timer.StartTimerAsync(userId, dto, replace);
 
     /// <summary>Stoppt den laufenden Timer, erzeugt einen <see cref="ManualActivity"/>-Eintrag und entfernt den Timer;
     /// null, wenn kein Timer läuft (siehe <see cref="ActivityTimerStore.StopTimerAsync"/>).</summary>

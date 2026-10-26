@@ -90,10 +90,10 @@ internal sealed class ActivityTimerStore
         return t == null ? null : ToTimerDto(t);
     }
 
-    /// <summary>Startet einen neuen Timer (ersetzt einen ggf. laufenden — der laufende wird STILL
-    /// verworfen, ohne einen ManualActivity-Eintrag zu erzeugen; damit versehentlicher Verlust nicht
-    /// passiert, sollte der Client vorher warnen).</summary>
-    public async Task<ActivityTimerDto> StartTimerAsync(int userId, StartActivityTimerDto dto)
+    /// <summary>Startet einen neuen Timer. Läuft schon einer, ersetzt ihn nur <paramref name="replace"/> (der laufende wird
+    /// verworfen, ohne einen ManualActivity-Eintrag); sonst <see cref="ActivityTimerRunningException"/> (→ 409 mit dem
+    /// laufenden Timer). Vorher ersetzte der Start immer still — die Rückfrage hing nur am Client-Zustand (F5-008).</summary>
+    public async Task<ActivityTimerDto> StartTimerAsync(int userId, StartActivityTimerDto dto, bool replace = false)
     {
         string label;
         ManualActivityKind kind;
@@ -117,6 +117,7 @@ internal sealed class ActivityTimerStore
         }
 
         var existing = await _db.ActivityTimers.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (existing != null && !replace) throw new ActivityTimerRunningException(ToTimerDto(existing));
         if (existing != null) _db.ActivityTimers.Remove(existing);
         var timer = new ActivityTimer { UserId = userId, Label = label, Kind = kind, Theme = theme, StartedAt = DateTime.UtcNow };
         _db.ActivityTimers.Add(timer);

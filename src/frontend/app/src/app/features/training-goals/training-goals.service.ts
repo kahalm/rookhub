@@ -258,8 +258,11 @@ export class TrainingGoalService {
     );
   }
 
-  startTimer(input: StartTimerInput): Observable<ActivityTimer> {
-    return this.http.post<ActivityTimer>('/api/training-goals/timer/start', input);
+  /** Timer starten. Läuft schon einer, antwortet der Server 409 `{ message, timer }` — ersetzt wird nur mit
+   *  `replace` (nach ausdrücklicher Rückfrage, F5-008). */
+  startTimer(input: StartTimerInput, replace = false): Observable<ActivityTimer> {
+    return this.http.post<ActivityTimer>('/api/training-goals/timer/start', input,
+      replace ? { params: { replace: 'true' } } : {});
   }
 
   /** Stoppen — erzeugt einen ManualActivity-Eintrag; endedAt optional (ISO) für Backdating. */

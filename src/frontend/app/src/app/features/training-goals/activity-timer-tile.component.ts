@@ -7,7 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { of, timer } from 'rxjs';
+import { EMPTY, of, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import {
   TrainingGoalService, ActivityPreset, ActivityTimer, ManualActivityKind,
@@ -132,15 +132,12 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Sofort + alle 30 s vom Server aktualisieren (andere Geräte / verpasstes Auto-Stop).
+    // Ein Poll-Fehler behält den letzten Zustand (F5-008) — vorher blendete er einen laufenden Timer aus, und der
+    // nächste Klick auf eine Vorlage hätte ihn ohne Rückfrage ersetzt.
     timer(0, 30_000).pipe(
-      switchMap(() => this.goals.getTimer().pipe(catchError(() => of(null)))),
+      switchMap(() => this.goals.getTimer().pipe(catchError(() => { this.loading = false; return EMPTY; }))),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(t => {
-      this.running = t;
-      if (t) this.elapsed = t.elapsedSeconds;
-      this.loading = false;
-      this.ensureTicker();
-    });
+    ).subscribe(t => this.showTimer(t));
 
     this.reloadPresets();
   }
@@ -158,25 +155,45 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   start(preset: ActivityPreset): void {
     if (this.busy) return;
-    (this.running ? this.confirm.ask('trainingGoals.timer.replaceConfirm') : of(true)).subscribe(ok => {
+    // Ersetzen (replace) nur nach ausdrücklicher Rückfrage — der Server verwirft einen laufenden Timer sonst nicht.
+    const replace = !!this.running;
+    (replace ? this.confirm.ask('trainingGoals.timer.replaceConfirm') : of(true)).subscribe(ok => {
       if (!ok || this.busy) return;
-      this.busy = true;
-      this.goals.startTimer({ presetId: preset.id }).subscribe({
-        next: t => {
-          this.running = t;
-          this.elapsed = t.elapsedSeconds;
-          this.ensureTicker();
-          this.busy = false;
-          this.snackbar.info(this.translate.instant('trainingGoals.timer.started', { label: preset.label }),
-            { action: 'common.ok', duration: 2000 });
-        },
-        error: () => {
-          this.busy = false;
-          this.snackbar.info(this.translate.instant('trainingGoals.timer.startFailed'),
-            { action: 'common.ok', duration: 3000 });
-        },
-      });
+      this.sendStart(preset, replace);
     });
+  }
+
+  private sendStart(preset: ActivityPreset, replace: boolean): void {
+    this.busy = true;
+    this.goals.startTimer({ presetId: preset.id }, replace).subscribe({
+      next: t => {
+        this.showTimer(t);
+        this.busy = false;
+        this.snackbar.info(this.translate.instant('trainingGoals.timer.started', { label: preset.label }),
+          { action: 'common.ok', duration: 2000 });
+      },
+      error: err => {
+        this.busy = false;
+        const runningElsewhere = err?.status === 409 ? err.error?.timer as ActivityTimer | undefined : undefined;
+        if (runningElsewhere) {
+          // Läuft schon (anderes Gerät, verpasster Poll): laufenden Timer zeigen und erst nach Rückfrage ersetzen.
+          this.showTimer(runningElsewhere);
+          this.confirm.ask('trainingGoals.timer.replaceConfirm').subscribe(ok => {
+            if (ok && !this.busy) this.sendStart(preset, true);
+          });
+          return;
+        }
+        this.snackbar.info(this.translate.instant('trainingGoals.timer.startFailed'),
+          { action: 'common.ok', duration: 3000 });
+      },
+    });
+  }
+
+  private showTimer(t: ActivityTimer | null): void {
+    this.running = t;
+    if (t) this.elapsed = t.elapsedSeconds;
+    this.loading = false;
+    this.ensureTicker();
   }
 
   openStopDialog(): void {

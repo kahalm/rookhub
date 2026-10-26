@@ -7,6 +7,7 @@ using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Social;
+using RookHub.Api.Services.Social.TrainingGoals;
 using RookHub.Api.DTOs.Social;
 using RookHub.Api.Controllers.Accounts;
 
@@ -962,11 +963,28 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.Equal("Coaching Alice", t1.Label);
         Assert.Equal(ManualActivityKind.Coaching, t1.Kind);
 
-        // Zweites Start ersetzt still (kein Fehler, keine ManualActivity aus dem alten Timer).
-        var t2 = await _service.StartTimerAsync(u.Id, new() { Label = "Book", Kind = ManualActivityKind.OfflineStudy });
+        // Zweites Start mit replace ersetzt (keine ManualActivity aus dem alten Timer).
+        var t2 = await _service.StartTimerAsync(u.Id, new() { Label = "Book", Kind = ManualActivityKind.OfflineStudy }, replace: true);
         Assert.Equal("Book", t2.Label);
         Assert.Equal(1, _db.ActivityTimers.Count(x => x.UserId == u.Id));
         Assert.Empty(_db.ManualActivities.Where(m => m.UserId == u.Id));  // Ersetzung schreibt NICHTS
+    }
+
+    /// <summary>F5-008: Ohne ausdrückliches Ersetzen verwirft der Start einen laufenden Timer nicht mehr still — die
+    /// Rückfrage hing nur am Client-Zustand (Poll-Fehler, zweites Gerät). Konflikt mit dem laufenden Timer.</summary>
+    [Fact]
+    public async Task StartTimer_WhileRunning_WithoutReplace_ConflictsWithTheRunningTimer_AndKeepsIt()
+    {
+        var u = await CreateUserAsync();
+        var running = await _service.StartTimerAsync(u.Id, new() { Label = "Coaching", Kind = ManualActivityKind.Coaching });
+
+        var ex = await Assert.ThrowsAsync<ActivityTimerRunningException>(() =>
+            _service.StartTimerAsync(u.Id, new() { Label = "Book", Kind = ManualActivityKind.OfflineStudy }));
+
+        Assert.Equal("Coaching", ex.Running.Label);
+        var stored = Assert.Single(_db.ActivityTimers.Where(x => x.UserId == u.Id));
+        Assert.Equal("Coaching", stored.Label);
+        Assert.Equal(running.StartedAt, ex.Running.StartedAt);
     }
 
     [Fact]
