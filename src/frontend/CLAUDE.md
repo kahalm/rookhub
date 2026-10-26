@@ -176,6 +176,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
   Zurück, Weitere Aktionen, Kopieren, Weiß/Schwarz am Zug …) IMMER über `common.*`; die Parity-Spec lehnt neue
   wortgleiche Doppel ab. `common.next`/`common.previous` sind in den 21 nicht gepflegten Sprachen noch englische
   Platzhalter (Codereview F8-010).
+- **Abdeckung im Sprachmenü** (Codereview F8-009): RookHub- und Turnier-Navbar zeigen die gepflegten Sprachen oben, die übrigen unter „Teilweise übersetzt“ als „Français (17 %)“ (`core/language-menu.ts`). Die Prozente stehen generiert in `core/i18n-coverage.ts` — nach größeren Übersetzungs-Änderungen `node scripts/i18n-coverage.mjs`; `language-menu.spec.ts` wird rot, wenn die Datei mehr als 2 Punkte vom Stand abweicht.
 - **Kein toter Schlüssel** (Codereview F8-011): `src/app/i18n-usage.spec.ts` verlangt, dass jeder `en.json`-Schlüssel im
   Quelltext vorkommt (Literal, `'ns.' + x`, `` `ns.${x}` ``, Namensraum-Literal, `x + '.suffix'`); wer einen Schlüssel
   nicht mehr benutzt, löscht ihn aus allen 25 Dateien. `karma.conf.js` liefert dafür `src*/**/*.ts|html` aus.

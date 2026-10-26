@@ -278,6 +278,7 @@
     "login": "Login",
     "register": "Register",
     "language": "Language",
+    "languagePartial": "Partially translated",
     "fullscreen": "Fullscreen",
     "fullscreenExit": "Leave fullscreen (Esc)",
     "menu": "Menu",

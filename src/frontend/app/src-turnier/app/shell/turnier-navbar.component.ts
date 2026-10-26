@@ -13,6 +13,8 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { authLinkQuery } from '@rh/core/return-url.util';
 import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
+import { LanguageMenu, languageMenu } from '@rh/core/language-menu';
+import { PctPipe } from '@rh/shared/format/pct';
 
 /**
  * Kopfzeile der Turnierseite. Bewusst schmal: drei Wege (Kalender, Gemerkt, Meine Turniere), Sprache, Konto — und
@@ -29,7 +31,7 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [CommonModule, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule,
-    MatIconModule, MatMenuModule, IconLabelDirective, TranslatePipe],
+    MatIconModule, MatMenuModule, IconLabelDirective, TranslatePipe, PctPipe],
   template: `
     <mat-toolbar color="primary" class="tb">
       <!-- Die Marke fuehrt zur Startseite (/ = Kalender, siehe app.routes.ts), nicht auf die Merkliste (F6-019). -->
@@ -99,10 +101,18 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
            aktuellen). Vorher fest EN/DE/HR ohne Markierung: wer ueber das geteilte Cookie oder den Browser z. B. auf
            Ungarisch kam, sah hier weder, was eingestellt ist, noch fuehrte nach einem Wechsel ein Weg zurueck. -->
       <mat-menu #langMenu="matMenu">
-        @for (l of locale.languages; track l.code) {
+        @for (l of langGroups.full; track l.code) {
           <button mat-menu-item (click)="locale.use(l.code)">
             <mat-icon>{{ locale.current === l.code ? 'check' : 'translate' }}</mat-icon>
             <span>{{ l.label }}</span>
+          </button>
+        }
+        <!-- F8-009: Teilübersetzungen wie in RookHubs Navbar — eigene Gruppe mit Anteil. -->
+        <div class="lang-menu-label lang-partial">{{ 'nav.languagePartial' | translate }}</div>
+        @for (l of langGroups.partial; track l.code) {
+          <button mat-menu-item class="lang-partial-item" (click)="locale.use(l.code)">
+            <mat-icon>{{ locale.current === l.code ? 'check' : 'translate' }}</mat-icon>
+            <span>{{ l.label }} ({{ l.coverage | pct }})</span>
           </button>
         }
       </mat-menu>
@@ -135,6 +145,9 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
     </mat-toolbar>
   `,
   styles: [`
+    /* F8-009: Zwischentitel der Teilübersetzungen im Sprachmenü (wie RookHubs Navbar). */
+    .lang-menu-label { padding: 12px 16px 4px; margin-top: 4px; font-size: 0.75rem; text-transform: uppercase;
+      color: color-mix(in srgb, currentColor 47%, transparent); border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
     .tb { gap: 4px; }
     .brand { font-weight: 600; text-decoration: none; color: inherit; margin-right: 8px; }
     .links { display: flex; gap: 2px; }
@@ -176,6 +189,9 @@ import { trackNavEdge } from '@rh/shared/navbar/nav-edge';
 export class TurnierNavbarComponent {
   auth = inject(AuthService);
   readonly locale = inject(LocaleService);
+  /** Sprachmenü: gepflegte Sprachen oben, Teilübersetzungen mit Prozent darunter (F8-009) — erst beim Zeichnen. */
+  private langGroupsCache?: LanguageMenu;
+  get langGroups(): LanguageMenu { return this.langGroupsCache ??= languageMenu(this.locale.languages); }
   private translate = inject(TranslateService);
   private handoff = inject(HandoffService);
   readonly theme = inject(ThemeService);

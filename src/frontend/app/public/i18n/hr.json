@@ -278,6 +278,7 @@
     "login": "Prijava",
     "register": "Registracija",
     "language": "Jezik",
+    "languagePartial": "Djelomično prevedeno",
     "fullscreen": "Cijeli zaslon",
     "fullscreenExit": "Izađi iz cijelog zaslona (Esc)",
     "menu": "Izbornik",

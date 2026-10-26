@@ -31,6 +31,8 @@ import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
 } from '../shared/fullscreen/fullscreen.util';
 import { trackNavEdge } from '../shared/navbar/nav-edge';
+import { LanguageMenu, languageMenu } from '../core/language-menu';
+import { PctPipe } from '../shared/format/pct';
 
 /** Body-Klasse: die Seite hat eine eigene Werkzeugleiste, die Kopfleiste dockt oben rechts darauf an (0.785.x). */
 export const NAV_DOCKED_CLASS = 'nav-docked';
@@ -52,7 +54,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, IconLabelDirective, MatBadgeModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, IconLabelDirective, MatBadgeModule, TranslatePipe, PctPipe],
   template: `
     <mat-toolbar color="primary">
       <!-- Links, keine span/button mit routerLink (UX-059): nur ein Anker ist per Enter bedienbar, fuer Screenreader
@@ -303,10 +305,18 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
       </mat-menu>
       <mat-menu #langMenu="matMenu" class="nav-submenu">
         <div class="lang-menu-label">{{ 'nav.language' | translate }}</div>
-        @for (l of locale.languages; track l.code) {
+        @for (l of langGroups.full; track l.code) {
           <button mat-menu-item (click)="locale.use(l.code)">
             <mat-icon>{{ locale.current === l.code ? 'check' : 'translate' }}</mat-icon>
             <span>{{ l.label }}</span>
+          </button>
+        }
+        <!-- F8-009: Teilübersetzungen mit Anteil, darunter fällt der Text auf Englisch zurück. -->
+        <div class="lang-menu-label lang-partial">{{ 'nav.languagePartial' | translate }}</div>
+        @for (l of langGroups.partial; track l.code) {
+          <button mat-menu-item class="lang-partial-item" (click)="locale.use(l.code)">
+            <mat-icon>{{ locale.current === l.code ? 'check' : 'translate' }}</mat-icon>
+            <span>{{ l.label }} ({{ l.coverage | pct }})</span>
           </button>
         }
       </mat-menu>
@@ -322,6 +332,8 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
     }
     .theme-eink-note mat-icon { flex: none; }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
+    /* F8-009: Trennlinie vor den Teilübersetzungen. */
+    .lang-menu-label.lang-partial { margin-top: 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-mark-all { width: 32px; height: 32px; line-height: 32px; padding: 0; }
@@ -494,6 +506,10 @@ export class NavbarComponent implements OnInit {
   readonly themeIcons: Record<AppTheme, string> = { system: 'brightness_auto', light: 'light_mode', dark: 'dark_mode' };
   /** E-Ink-Modus: Design-Wahl wirkungslos (immer hell) — der Menüeintrag sagt das statt sie anzubieten. */
   readonly eink = inject(EinkService);
+
+  /** Sprachmenü: gepflegte Sprachen oben, Teilübersetzungen mit Prozent darunter (F8-009) — erst beim Zeichnen. */
+  private langGroupsCache?: LanguageMenu;
+  get langGroups(): LanguageMenu { return this.langGroupsCache ??= languageMenu(this.locale.languages); }
 
   constructor(public auth: AuthService, private courseService: CourseService, private catalogService: CatalogService, private menu: MenuService, private notif: InAppNotificationService, private messages: MessageService, public locale: LocaleService, public theme: ThemeService, private translate: TranslateService, private router: Router, iconRegistry: MatIconRegistry, sanitizer: DomSanitizer) {
     // Discord-Markenlogo als SVG-Icon registrieren (nicht im Material-Standardsatz enthalten).

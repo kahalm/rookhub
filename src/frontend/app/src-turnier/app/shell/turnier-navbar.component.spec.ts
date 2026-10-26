@@ -155,6 +155,19 @@ describe('TurnierNavbarComponent', () => {
    * Cookie, dem Geraet oder dem Browser und kann jede der 25 Sprachen sein — wer so auf Ungarisch kam, sah nicht,
    * was eingestellt ist, und fand nach einem Wechsel keinen Weg zurueck.
    */
+  it('Sprachmenue: gepflegte Sprachen oben, darunter „Teilweise übersetzt“ mit Prozent (F8-009)', () => {
+    const fixture = setup(null);
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('mat-toolbar button.wide[aria-label="nav.language"]')!.click();
+    fixture.detectChanges();
+    const panel = document.querySelector('.cdk-overlay-container .mat-mdc-menu-content')!;
+    const rows = Array.from(panel.children).map(e => e.textContent!.trim().replace(/^(check|translate)\s*/, ''));
+    const head = rows.indexOf('nav.languagePartial');
+    expect(rows.slice(0, head)).toEqual(['English', 'Deutsch', 'Hrvatski', 'Magyar']);
+    expect(rows.slice(head + 1).length).toBe(21);
+    expect(rows.slice(head + 1).every(r => /\(\d+\s?%\)$/.test(r))).withContext(rows.slice(head + 1).join(' | ')).toBeTrue();
+  });
+
   it('Sprachmenue: alle Sprachen mit Eigenbezeichnung wie RookHub, Haken an der aktuellen (F6-020, UX-073)', () => {
     const fixture = setup(null);
     const locale = TestBed.inject(LocaleService);

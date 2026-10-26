@@ -1,0 +1,30 @@
+// GENERIERT von scripts/i18n-coverage.mjs (Codereview F8-009) — nicht von Hand aendern, sondern neu erzeugen:
+//   cd src/frontend/app && node scripts/i18n-coverage.mjs
+/** Anteil der en-Schluessel je Sprachdatei in Prozent (gerundet). */
+export const I18N_COVERAGE: Readonly<Record<string, number>> = {
+  ar: 17,
+  cs: 17,
+  de: 100,
+  el: 17,
+  en: 100,
+  es: 17,
+  fa: 17,
+  fr: 17,
+  hi: 17,
+  hr: 100,
+  hu: 100,
+  id: 17,
+  it: 17,
+  ja: 17,
+  ko: 17,
+  nl: 17,
+  pl: 17,
+  pt: 17,
+  ro: 17,
+  ru: 17,
+  sv: 17,
+  tr: 17,
+  uk: 17,
+  vi: 17,
+  zh: 17,
+};
