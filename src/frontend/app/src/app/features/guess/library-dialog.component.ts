@@ -9,10 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subject, debounceTime, takeUntil } from 'rxjs';
+import { EMPTY, Subject, catchError, debounceTime, switchMap, takeUntil } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
-import { LibraryGame, LibrarySemanticHit, LibraryService } from './library.service';
+import { LibraryGame, LibraryQuery, LibrarySemanticHit, LibraryService } from './library.service';
 
 /**
  * „Partie anfordern": der Rohbestand kommentierter Meisterpartien als Nachschlagewerk.
@@ -210,6 +210,10 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   /** „Frag die Kommentare": gedrosselt wie die Namenssuche, die Frage wird am Server eingebettet. */
   readonly asked = new Subject<void>();
   private readonly destroyed = new Subject<void>();
+  /** Jede Suche/Frage läuft über switchMap: eine langsame ältere Antwort darf die neuere nicht
+   *  überschreiben (Codereview F4-010). `null` bei der Frage = laufende verwerfen (Frage zu kurz). */
+  private readonly searches = new Subject<LibraryQuery>();
+  private readonly questions = new Subject<string | null>();
 
   /** Die vollständig gepflegten Sprachen des Bestands; alles Übrige steht unter „egal". */
   readonly languages = ['en', 'de', 'fr', 'es'];
@@ -239,6 +243,34 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
       .subscribe(() => this.reload(1));
     this.asked.pipe(debounceTime(LibraryDialogComponent.AskDebounceMs), takeUntil(this.destroyed))
       .subscribe(() => this.runAsk());
+    this.searches.pipe(
+      switchMap(query => this.service.search(query).pipe(catchError(() => {
+        this.loading = false;
+        this.snackbar.warn(this.translate.instant('guess.library.loadFailed'));
+        this.cdr.markForCheck();
+        return EMPTY;
+      }))),
+      takeUntil(this.destroyed),
+    ).subscribe(p => {
+      this.items = p.items;
+      this.total = p.total;
+      this.page = p.page;
+      this.loading = false;
+      this.cdr.markForCheck();
+    });
+    this.questions.pipe(
+      switchMap(q => q === null ? EMPTY : this.service.semantic(q).pipe(catchError(() => {
+        this.asking = false;
+        this.snackbar.warn(this.translate.instant('guess.library.loadFailed'));
+        this.cdr.markForCheck();
+        return EMPTY;
+      }))),
+      takeUntil(this.destroyed),
+    ).subscribe(p => {
+      this.hits = p.items;
+      this.asking = false;
+      this.cdr.markForCheck();
+    });
     this.reload(1);
     // Gibt es die Kommentar-Suche? Ohne Frage antwortet der Server nur mit „verfügbar" und der Zahl der Stücke.
     this.service.semantic('').pipe(takeUntil(this.destroyed)).subscribe({
@@ -255,23 +287,10 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   reload(page: number): void {
     this.loading = true;
     this.page = page;
-    this.service.search({
+    this.searches.next({
       q: this.query, language: this.language || undefined,
       minCommentedPlies: this.minCommentedPlies || undefined,
       page, pageSize: LibraryDialogComponent.PageSize,
-    }).subscribe({
-      next: p => {
-        this.items = p.items;
-        this.total = p.total;
-        this.page = p.page;
-        this.loading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.loading = false;
-        this.snackbar.warn(this.translate.instant('guess.library.loadFailed'));
-        this.cdr.markForCheck();
-      },
     });
   }
 
@@ -283,23 +302,14 @@ export class LibraryDialogComponent implements OnInit, OnDestroy {
   runAsk(): void {
     const q = this.ask.trim();
     if (q.length < 3) {
+      this.questions.next(null);
       this.hits = [];
+      this.asking = false;
       this.cdr.markForCheck();
       return;
     }
     this.asking = true;
-    this.service.semantic(q).pipe(takeUntil(this.destroyed)).subscribe({
-      next: p => {
-        this.hits = p.items;
-        this.asking = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.asking = false;
-        this.snackbar.warn(this.translate.instant('guess.library.loadFailed'));
-        this.cdr.markForCheck();
-      },
-    });
+    this.questions.next(q);
   }
 
   /** „Anderssen – Kieseritzky"; fehlt ein Name, bleibt der andere. */

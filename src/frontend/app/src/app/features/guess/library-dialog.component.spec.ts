@@ -95,6 +95,41 @@ describe('LibraryDialogComponent', () => {
     req.flush({ items: [], total: 120, page: 2, pageSize: 50 });
   });
 
+  // Codereview F4-010: eine langsame ältere Antwort darf die neuere nicht überschreiben.
+  it('Namenssuche: die neuere Anfrage gewinnt, auch wenn die ältere zuletzt antwortet', () => {
+    const fixture = open([game()], 120);
+    const c = fixture.componentInstance;
+    c.reload(2);
+    c.reload(3);
+    const reqs = http.match(r => r.url === '/api/library-games');
+    expect(reqs.length).toBe(2);
+    reqs[1].flush({ items: [game({ id: 3, white: 'Neu' })], total: 120, page: 3, pageSize: 50 });
+    if (!reqs[0].cancelled) reqs[0].flush({ items: [game({ id: 2, white: 'Alt' })], total: 120, page: 2, pageSize: 50 });
+    expect(c.items.map(g => g.id)).toEqual([3]);
+    expect(c.page).toBe(3);
+    expect(c.loading).toBeFalse();
+  });
+
+  it('Frag die Kommentare: die neuere Frage gewinnt, eine verkürzte Frage verwirft die laufende', () => {
+    const fixture = open([game()], 1, { available: true, indexed: 1200 });
+    const c = fixture.componentInstance;
+    const hit = (id: number) => ({ game: game({ id }), matches: [] });
+    c.ask = 'erste frage'; c.runAsk();
+    c.ask = 'zweite frage'; c.runAsk();
+    const reqs = http.match(r => r.url === '/api/library-games/semantic' && r.params.has('q'));
+    expect(reqs.length).toBe(2);
+    reqs[1].flush({ available: true, indexed: 1200, items: [hit(2)] });
+    if (!reqs[0].cancelled) reqs[0].flush({ available: true, indexed: 1200, items: [hit(1)] });
+    expect(c.hits.map(h => h.game.id)).toEqual([2]);
+
+    c.ask = 'dritte frage'; c.runAsk();
+    const third = http.expectOne(r => r.url === '/api/library-games/semantic' && r.params.get('q') === 'dritte frage');
+    c.ask = 'x'; c.runAsk();
+    if (!third.cancelled) third.flush({ available: true, indexed: 1200, items: [hit(3)] });
+    expect(c.hits).toEqual([]);
+    expect(c.asking).toBeFalse();
+  });
+
   /** Ein Umlauf je Buchstabe waere bei 130 000 Zeilen das Gegenteil von schnell. */
   it('drosselt das Tippen', fakeAsync(() => {
     const fixture = open();
