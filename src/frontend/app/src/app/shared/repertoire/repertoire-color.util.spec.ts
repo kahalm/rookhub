@@ -1,5 +1,5 @@
 import {
-  autoChapterColors, readChapterColorOverrides, resolveChapterColors, rootSideOf,
+  autoChapterColors, chapterColorsOf, readChapterColorOverrides, resolveChapterColors, rootSideOf,
   setChapterColorOverride, sideOfLastMove,
 } from './repertoire-color.util';
 
@@ -63,6 +63,39 @@ describe('repertoire-color.util', () => {
       expect(readChapterColorOverrides(999)).toEqual({});
       localStorage.setItem('rookhub_rep_train_chaptercolor_42', '{not json');
       expect(readChapterColorOverrides(42)).toEqual({});
+    });
+  });
+
+  // Codereview F3-016: Chessable-PGNs tragen [ChessableColor] — der Header schlägt die Heuristik.
+  describe('chapterColorsOf mit [ChessableColor]', () => {
+    beforeEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_77'));
+    afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_77'));
+
+    const line = (chapter: string, plies: number, color?: string) => ({
+      headers: (color === undefined ? { Black: chapter } : { Black: chapter, ChessableColor: color }) as Record<string, string>,
+      fens: [START],
+      moves: new Array(plies).fill('x'),
+    });
+
+    it('nimmt die Mehrheit der Header je Kapitel, auch gegen die Heuristik', () => {
+      // Alle Linien enden mit Weiß (ungerade Halbzüge) → Heuristik sagt Weiß; der Header sagt Schwarz.
+      const map = chapterColorsOf(77, [
+        line('French', 3, 'black'), line('French', 5, 'Black'), line('French', 7, 'white'),
+      ]);
+      expect(map.get('French')).toBe('b');
+    });
+
+    it('fällt ohne Header auf die Heuristik zurück', () => {
+      const map = chapterColorsOf(77, [line('Sicilian', 3), line('Sicilian', 5), line('Caro', 4, 'white')]);
+      expect(map.get('Sicilian')).toBe('w');   // Heuristik: letzter Halbzug Weiß
+      expect(map.get('Caro')).toBe('w');       // Header, obwohl die Linie mit Schwarz endet
+    });
+
+    it('ignoriert unbekannte Header-Werte und eigene Festlegungen gewinnen weiter', () => {
+      setChapterColorOverride(77, 'French', 'w');
+      const map = chapterColorsOf(77, [line('French', 4, 'black'), line('Pirc', 4, '???')]);
+      expect(map.get('French')).toBe('w');     // Override
+      expect(map.get('Pirc')).toBe('b');       // Heuristik (letzter Halbzug Schwarz)
     });
   });
 });

@@ -6,8 +6,10 @@
  * globale Weiß/Schwarz-Umschalter im Trainer konnte das nicht abbilden — mit „Weiß" wurden die
  * Schwarz-Kapitel aus der falschen Seite abgefragt und umgekehrt.
  *
- * Da das hochgeladene PGN KEINE Orientierungs-Metadaten trägt (alle FENs = Grundstellung mit Weiß
- * am Zug, kein Chessable-Kursbezug), leiten wir die Trainingsfarbe PRO KAPITEL heuristisch ab:
+ * Quelle 1 — der Header `[ChessableColor "white|black"]` (piratechess ab v1.0.46, auch im Repertoire-
+ * Modus): je Kapitel gilt die MEHRHEIT der Header-Werte (Codereview F3-016; der Server wertet denselben
+ * Header beim Import aus). Quelle 2 — nur für Kapitel OHNE verwertbaren Header (ältere PGNs ohne
+ * Orientierungs-Metadaten, Header-Gleichstand) — leiten wir die Trainingsfarbe heuristisch ab:
  * die Seite, die in der MEHRHEIT der Kapitel-Linien den LETZTEN Halbzug zieht — Chessable beendet
  * eine gelernte Linie meist mit dem Zug der trainierten Seite. Gleichstand / kein Signal →
  * Wurzel-Fallback (zieht Weiß an der Wurzel zuerst, trainieren wir mangels Besserem Schwarz —
@@ -40,20 +42,35 @@ export interface ChapterColorSample {
   side: TrainColor | null;
   /** Seite an der Wurzel (für den Gleichstands-Fallback). */
   rootSide: TrainColor;
+  /** Farbe aus dem Header `[ChessableColor]` (null/fehlend = kein Header bzw. unbekannter Wert). */
+  header?: TrainColor | null;
 }
 
-/** Automatisch erkannte Trainingsfarbe je Kapitel (Mehrheit „Seite des letzten Zugs"). */
+/** `[ChessableColor]`-Wert → Trainingsfarbe; unbekannt/leer → null. */
+export function parseChessableColor(value: string | undefined): TrainColor | null {
+  const v = (value ?? '').trim().toLowerCase();
+  if (v === 'white' || v === 'w') return 'w';
+  if (v === 'black' || v === 'b') return 'b';
+  return null;
+}
+
+/** Automatisch erkannte Trainingsfarbe je Kapitel: Mehrheit der `[ChessableColor]`-Header, ohne
+ *  (eindeutigen) Header Mehrheit „Seite des letzten Zugs". */
 export function autoChapterColors(samples: ChapterColorSample[]): Map<string, TrainColor> {
-  const agg = new Map<string, { w: number; b: number; root: TrainColor }>();
+  const agg = new Map<string, { w: number; b: number; hw: number; hb: number; root: TrainColor }>();
   for (const s of samples) {
     let a = agg.get(s.chapter);
-    if (!a) { a = { w: 0, b: 0, root: s.rootSide }; agg.set(s.chapter, a); }
+    if (!a) { a = { w: 0, b: 0, hw: 0, hb: 0, root: s.rootSide }; agg.set(s.chapter, a); }
     if (s.side === 'w') a.w++;
     else if (s.side === 'b') a.b++;
+    if (s.header === 'w') a.hw++;
+    else if (s.header === 'b') a.hb++;
   }
   const out = new Map<string, TrainColor>();
   for (const [chapter, a] of agg) {
-    const majority: TrainColor = a.w > a.b ? 'w' : a.b > a.w ? 'b' : (a.root === 'w' ? 'b' : 'w');
+    const byHeader: TrainColor | null = a.hw > a.hb ? 'w' : a.hb > a.hw ? 'b' : null;
+    const majority: TrainColor = byHeader
+      ?? (a.w > a.b ? 'w' : a.b > a.w ? 'b' : (a.root === 'w' ? 'b' : 'w'));
     out.set(chapter, majority);
   }
   return out;
@@ -95,7 +112,7 @@ export interface ChapterColorLine {
 }
 
 /**
- * Effektive Trainingsfarbe je Kapitel für eine Linienliste: Auto-Erkennung + eigene Festlegungen.
+ * Effektive Trainingsfarbe je Kapitel für eine Linienliste: Header/Auto-Erkennung + eigene Festlegungen.
  * EINE Rechnung für Trainer und Lochfinder — sonst sähe der Lochfinder ein Kapitel als Weiß, das
  * der Trainer als Schwarz abfragt.
  */
@@ -106,6 +123,7 @@ export function chapterColorsOf(repId: number, lines: ChapterColorLine[]): Map<s
       chapter: (l.headers['Black'] || '').trim(),
       side: sideOfLastMove(start, l.moves.length),
       rootSide: rootSideOf(start),
+      header: parseChessableColor(l.headers['ChessableColor']),
     };
   }));
   return resolveChapterColors(repId, auto);
