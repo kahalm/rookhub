@@ -197,6 +197,13 @@ export class LeagueApiService {
     return firstValueFrom(this.http.delete(`/api/league/share/${encodeURIComponent(token)}`));
   }
 
+  /** Wohin ein Teilen-Link zeigt, auch ein abgelaufener (0.846.4, `league.view`) — für Angemeldete, die die Begegnung ohnehin
+   *  sehen dürfen; 404 = nie vergeben oder widerrufen. */
+  shareTarget(token: string): Promise<{ tnr: number; round: number; team: string; expires: string; expired: boolean }> {
+    return firstValueFrom(this.http.get<{ tnr: number; round: number; team: string; expires: string; expired: boolean }>(
+      `/api/league/share/${encodeURIComponent(token)}`));
+  }
+
   startUpdate(): Promise<UpdateStatus> {
     return firstValueFrom(this.http.post<UpdateStatus>('/api/league/update', {}));
   }

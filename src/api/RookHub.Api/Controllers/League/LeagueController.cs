@@ -286,6 +286,16 @@ public class LeagueController : BaseApiController
     public Task<IActionResult> DeleteShare(string token, CancellationToken ct) => WithClubAsync(ct, async club =>
         await _league.DeleteShareAsync(club, token, ct) ? NoContent() : NotFound());
 
+    /// <summary>Wohin ein Teilen-Link zeigt, auch ein abgelaufener (0.846.4): Angemeldete mit <c>league.view</c> dürfen die
+    /// Begegnung ohnehin sehen — die Teilen-Seite leitet sie damit zur Prognose (<c>/?liga=&amp;runde=&amp;verein=</c>) statt
+    /// „Link ungültig" zu zeigen → <c>{ tnr, round, team, expires, expired }</c>; 404 = nie vergeben oder widerrufen.</summary>
+    [HttpGet("share/{token}")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> ShareTarget(string token, CancellationToken ct) =>
+        await _league.ShareTargetAsync(token, ct) is { } t
+            ? Ok(new { tnr = t.Tnr, round = t.Round, team = t.Team, expires = t.Expires.ToString("yyyy-MM-dd"), expired = t.Expired })
+            : NotFound();
+
     // ---- Vereine (Mandanten-Schritt 2026-10-07): nur Admins mit league.manage ------------------------------
 
     public sealed record ClubRequest(string? Name, string? TeamPrefix, string? AnonName, string? Region);

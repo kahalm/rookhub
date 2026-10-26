@@ -250,7 +250,9 @@ Rollenverwaltung an).
   archivierte sind überall unsichtbar; `IgnoreQueryFilters()` nur in Konto löschen (`ProfileService`), Rückbau eines Teilen-Links
   (`DeleteByShareAsync`) und Zuordnen nach dem Anmelden (Claims). Antwort von `POST …/club/games`: `replaced` = Zahl archivierter.
 - **Endpunkte** (`Controllers/League/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
-  `GET /api/league/player/{fide}` (+`/pgn`), `POST/DELETE /api/league/share`, `POST /api/league/update`
+  `GET /api/league/player/{fide}` (+`/pgn`), `POST/DELETE /api/league/share`, `GET /api/league/share/{token}` (0.846.4, `league.view`:
+  Ziel eines Links AUCH nach Ablauf → `{ tnr, round, team, expires, expired }`, 404 nie vergeben/widerrufen — die Teilen-Seite leitet
+  Angemeldete damit bei einem abgelaufenen Link zur Prognose `/?liga=&runde=&verein=` statt „Link ungültig"; Wunsch 2026-10-26), `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/rebuild`, `POST /api/league/admin/chessresults/import` (eine chess-results-Liga je Saison über den Crawler,
   Bundesliga, siehe „Österreichische Bundesliga"), `POST /api/league/admin/ligamanager/import` (Bayern, siehe unten),

@@ -8,6 +8,7 @@ import { GameSources, SharedFixture } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { RoundLineupsComponent } from '../../shared/round-lineups.component';
 import { ClubContextService } from '../../core/club-context.service';
+import { AuthService } from '@rh/core/auth.service';
 
 /**
  * Geteilte Begegnung (`/s/:token`) — OHNE Anmeldung. Zeigt genau die geteilte Begegnung samt Meldeliste
@@ -27,6 +28,11 @@ import { ClubContextService } from '../../core/club-context.service';
       <section class="gate">
         <h2>Link ungültig</h2>
         <p>Dieser Link ist abgelaufen oder wurde widerrufen.</p>
+        <!-- 0.846.4: ein Angemeldeter darf die Prognosen ohnehin sehen — wohin der Link zeigte, weiß der Server nach einem
+             Widerruf nicht mehr (abgelaufene Links leiten direkt weiter, siehe load()). -->
+        @if (loggedIn) {
+          <div class="actions"><a class="btn-sec" routerLink="/">Zu den Prognosen</a></div>
+        }
       </section>
     } @else if (loadError(); as e) {
       <section class="gate" role="alert">
@@ -89,6 +95,9 @@ export class SharePageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   /** Der Verein des Links gilt auf dieser Seite (Karten, Paarungen): 0.698.0. */
   private readonly clubs = inject(ClubContextService);
+  private readonly auth = inject(AuthService);
+  /** Angemeldet (0.846.4): ein abgelaufener Link führt zur Prognose der Begegnung, ein widerrufener bietet „Zu den Prognosen". */
+  readonly loggedIn = this.auth.isLoggedIn;
   readonly token = this.route.snapshot.paramMap.get('token') ?? '';
   readonly data = signal<SharedFixture | null>(null);
   /** Alle Aufstellungen der Runde aufgeklappt (0.838.0) — in der Adresse `?aufstellungen=1`. */
@@ -116,7 +125,12 @@ export class SharePageComponent implements OnInit {
       this.title.setTitle(`${tn(d.team)} – Runde ${d.round} | LeagueHub`);
     } catch (err) {
       const status = err instanceof HttpErrorResponse ? err.status : null;
-      if (status === 404) this.invalid.set(true);
+      if (status === 404) {
+        // 0.846.4, Wunsch 2026-10-26: „wenn man eingeloggt ist und ein Link abgelaufen ist, aber das sowieso sehen darf, sollte
+        // die Seite auch aufgehen" — der Server kennt das Ziel eines abgelaufenen Links noch; angemeldet geht es dorthin.
+        if (this.loggedIn && await this.redirectToTarget()) return;
+        this.invalid.set(true);
+      }
       else this.loadError.set(
         status === 429 ? 'Gerade kamen sehr viele Anfragen aus deinem Netz (etwa dasselbe WLAN). Bitte in einer Minute neu laden.'
         : status === 0 ? 'Der Server ist gerade nicht erreichbar — prüfe die Verbindung und lade neu.'
@@ -133,6 +147,18 @@ export class SharePageComponent implements OnInit {
 
   until(iso: string): string {
     return (iso || '').split('-').reverse().join('.');
+  }
+
+  /** Zur Prognose der Begegnung, auf die der (abgelaufene) Link zeigte — `false`, wenn der Server den Link nicht mehr kennt
+   *  (widerrufen) oder der Angemeldete die Prognosen nicht sehen darf (403). */
+  private async redirectToTarget(): Promise<boolean> {
+    try {
+      const t = await this.api.shareTarget(this.token);
+      await this.router.navigate(['/'], { queryParams: { liga: t.tnr, runde: t.round, verein: t.team }, replaceUrl: true });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   toggleLineups(): void {

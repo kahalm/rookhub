@@ -377,6 +377,17 @@ public class LeagueGameMovesTests : IDisposable
         Assert.IsType<NotFoundResult>(await share.Lineups("ALT", Service(), default));
         Assert.IsType<NotFoundResult>(await share.Lineups("nix", Service(), default));
 
+        // 0.846.4, Wunsch 2026-10-26: ein ANGEMELDETER (league.view) steht vor einem abgelaufenen Link nicht vor „Link ungültig",
+        // sondern erfährt, wohin er zeigte — die Seite leitet ihn zur Prognose; widerrufen (Zeile weg) bleibt 404.
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var target = await league.ShareTargetAsync("ALT", default);
+        Assert.Equal((Tnr, Round, "Testdorf", true), (target!.Value.Tnr, target.Value.Round, target.Value.Team, target.Value.Expired));
+        Assert.False((await league.ShareTargetAsync("LINK1", default))!.Value.Expired);
+        Assert.Null(await league.ShareTargetAsync("nix", default));
+        var ctl = new LeagueController(league, null!, null!);
+        Assert.IsType<OkObjectResult>(await ctl.ShareTarget("ALT", default));
+        Assert.IsType<NotFoundResult>(await ctl.ShareTarget("nix", default));
+
         // 0.838.3, Wunsch 2026-10-25: „Analyse auch über den Link" — EINE Vereinspartie lesen, aber nur die der Begegnung des
         // Links (die zeigt er ohnehin mit PGN), ohne Bearbeitungsrecht; fremde Partien und ungültige Links 404.
         var fixtures = new LeagueFixtureGames(_db);

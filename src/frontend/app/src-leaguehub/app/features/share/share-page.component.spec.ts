@@ -6,10 +6,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../../core/league-api.service';
 import { LineupsApiService } from '../../core/lineups';
 import { SharePageComponent } from './share-page.component';
+import { AuthService } from '@rh/core/auth.service';
+import { Router } from '@angular/router';
 
 describe('SharePageComponent', () => {
   let api: jasmine.SpyObj<LeagueApiService>;
   let lineups: jasmine.SpyObj<LineupsApiService>;
+  /** Anmeldestand (0.846.4): abgelaufener Link → angemeldet zur Prognose. */
+  let auth: { isLoggedIn: boolean; has: () => boolean };
 
   function create() {
     TestBed.configureTestingModule({
@@ -18,6 +22,7 @@ describe('SharePageComponent', () => {
         provideRouter([]), provideTranslateService({ fallbackLang: 'de' }),
         { provide: LeagueApiService, useValue: api },
         { provide: LineupsApiService, useValue: lineups },
+        { provide: AuthService, useValue: auth },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }), queryParamMap: convertToParamMap({}) } } },
       ],
     });
@@ -27,8 +32,9 @@ describe('SharePageComponent', () => {
   }
 
   beforeEach(() => {
+    auth = { isLoggedIn: false, has: () => false };
     lineups = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'fixturePgn', 'sharedPgn']);
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats', 'fixtureGames']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats', 'fixtureGames', 'shareTarget']);
     // 0.838.2: auch eine offene Runde holt über den Link die (vorläufigen) Paarungen
     api.fixtureGames.and.resolveTo([]);
     api.forecastStats.and.resolveTo({ season: null, total: { fixtures: 0, top1: 0, top2: 0, top3: 0, of: 0 }, rounds: [], leagues: [] });
@@ -119,7 +125,37 @@ describe('SharePageComponent', () => {
     const el = f.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Link ungültig');
     expect(el.querySelector('.gate button')).toBeNull();
+    expect(el.querySelector('.gate a')).toBeNull();          // ohne Anmeldung kein „Zu den Prognosen"
+    expect(api.shareTarget).not.toHaveBeenCalled();
     expect(api.sources).not.toHaveBeenCalled();
+  });
+
+  // 0.846.4, Wunsch 2026-10-26: „wenn man eingeloggt ist und ein Link abgelaufen ist, aber das sowieso sehen darf, sollte die
+  // Seite auch aufgehen" — angemeldet fragt die Seite das Ziel des Links ab und leitet zur Prognose der Begegnung.
+  it('abgelaufen, aber angemeldet: leitet zur Prognose der Begegnung weiter', async () => {
+    auth.isLoggedIn = true;
+    api.shared.and.rejectWith(new HttpErrorResponse({ status: 404 }));
+    api.shareTarget.and.resolveTo({ tnr: 1479345, round: 3, team: 'Schwaz/', expires: '2026-10-20', expired: true });
+    const f = create();
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    await f.whenStable();
+    f.detectChanges();
+    expect(api.shareTarget).toHaveBeenCalledWith('TOKEN123');
+    expect(navigate).toHaveBeenCalledWith(['/'], { queryParams: { liga: 1479345, runde: 3, verein: 'Schwaz/' }, replaceUrl: true });
+    expect((f.nativeElement as HTMLElement).textContent).not.toContain('Link ungültig');
+  });
+
+  it('widerrufen, aber angemeldet: „Link ungültig" mit „Zu den Prognosen"', async () => {
+    auth.isLoggedIn = true;
+    api.shared.and.rejectWith(new HttpErrorResponse({ status: 404 }));
+    api.shareTarget.and.rejectWith(new HttpErrorResponse({ status: 404 }));
+    const f = create();
+    await f.whenStable();
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Link ungültig');
+    expect(el.querySelector('.gate a')?.textContent).toContain('Zu den Prognosen');
+    expect(el.querySelector('.gate a')?.getAttribute('href')).toBe('/');
   });
 
   // F7-009: 429 (viele Handys im selben Vereins-WLAN) oder Funkloch heißt NICHT, dass der Link tot ist.

@@ -457,6 +457,17 @@ public sealed class LeagueService
         return await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(s => s.Token == token && s.Expires >= today, ct);
     }
 
+    /// <summary>Wohin ein Teilen-Link zeigt — AUCH wenn er abgelaufen ist (0.846.4, Wunsch 2026-10-26: „wenn man eingeloggt ist und
+    /// ein Link abgelaufen ist, aber das sowieso sehen darf, sollte die Seite auch aufgehen"): ein Angemeldeter mit
+    /// <c>league.view</c> wird damit auf die Prognose der Begegnung geleitet statt vor „Link ungültig" zu stehen. <c>null</c> =
+    /// den Link gab es nie oder er wurde widerrufen (Zeile gelöscht). Nur für Angemeldete gedacht — ohne Anmeldung gilt weiter
+    /// <see cref="ValidShareAsync"/>.</summary>
+    public async Task<(int Tnr, int Round, string Team, DateOnly Expires, bool Expired)?> ShareTargetAsync(string token, CancellationToken ct)
+    {
+        var s = await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(x => x.Token == token, ct);
+        return s is null ? null : (s.Tnr, s.Round, s.Team, s.Expires, s.Expires < DateOnly.FromDateTime(DateTime.UtcNow));
+    }
+
     /// <summary>So lange hält der Cache die fertige Teilen-Ansicht eines Links (Codereview N4-003).</summary>
     internal static readonly TimeSpan ShareViewTtl = TimeSpan.FromSeconds(60);
 

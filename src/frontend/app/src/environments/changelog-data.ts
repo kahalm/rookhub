@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.846.4", date: "2026-10-26", changes: [
+    { en: "LeagueHub: an expired share link no longer stops logged-in members at „Link invalid“ — anyone allowed to see the forecasts is taken straight to that match’s forecast. A revoked link offers „To the forecasts“ instead.", de: "LeagueHub: Ein abgelaufener Teilen-Link hält angemeldete Mitglieder nicht mehr bei „Link ungültig“ auf — wer die Prognosen ohnehin sehen darf, landet direkt bei der Prognose dieser Begegnung. Ein widerrufener Link bietet stattdessen „Zu den Prognosen“." },
+  ]},
   { version: "0.846.3", date: "2026-10-26", changes: [
     { en: "LeagueHub: shared match links now show the club’s own players by name in the provisional line-up of the current round (board pairings and „All line-ups of round N“), as logged-in members see them, instead of the club placeholder. The stored games themselves stay anonymised.", de: "LeagueHub: Geteilte Begegnungs-Links zeigen in der vorläufigen Aufstellung der laufenden Runde (Brettpaarungen und „Alle Aufstellungen der Runde N“) jetzt die eigenen Spieler mit Namen, wie angemeldete Mitglieder sie sehen, statt des Vereins-Platzhalters. Die gespeicherten Partien selbst bleiben anonymisiert." },
   ]},
