@@ -41,6 +41,35 @@ describe('ScoresheetUploadComponent', () => {
     expect(el.querySelector('.upload')).toBeNull();
   });
 
+  // Codereview F4-011: ein Ladefehler (Netz/5xx) ist kein „nicht eingerichtet" — Meldung + „Erneut versuchen".
+  it('a failed status load shows a retry instead of „not configured"', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.notice')).toBeNull();
+    expect(el.querySelector('app-load-error')).toBeTruthy();
+
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne('/api/scoresheets/status').flush(status());
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.upload')).toBeTruthy();
+  });
+
+  it('a missing status endpoint (404) still reads as not configured', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(null, { status: 404, statusText: 'Not Found' });
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.notice')).toBeTruthy();
+    expect(el.querySelector('app-load-error')).toBeNull();
+  });
+
   // d3-rk-scoresheet-hilfe-icon-abgesetzt-handy: das ⓘ gehört IN den Titel, direkt hinter das letzte Wort.
   it('puts the help hint inside the title, right after its last word', async () => {
     const { fixture, http } = await setup();

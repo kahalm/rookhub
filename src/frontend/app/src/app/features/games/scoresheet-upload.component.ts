@@ -20,6 +20,8 @@ import { SheetReadingStatusComponent } from './sheet-workbench/sheet-reading-sta
 import { formatQuietUntil } from './quiet-hours.util';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { loadErrorKind } from '../../shared/load-error/load-error-cause';
 
 /** So oft fragt die Seite nach, solange Claude liest. */
 export const SCAN_POLL_MS = 3000;
@@ -44,7 +46,7 @@ export const MAX_PAGES = 3;
   standalone: true,
   imports: [SheetReadingStatusComponent, 
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatFormFieldModule,
-    MatSelectModule, MatProgressSpinnerModule, MatButtonToggleModule, TranslatePipe, HelpHintComponent,
+    MatSelectModule, MatProgressSpinnerModule, MatButtonToggleModule, TranslatePipe, HelpHintComponent, LoadErrorComponent,
   ],
   template: `
     <div class="sheet-page">
@@ -55,7 +57,9 @@ export const MAX_PAGES = 3;
       </div>
       <p class="hint">{{ 'scoresheet.hint' | translate }}</p>
 
-      @if (status(); as st) {
+      @if (statusError(); as err) {
+        <mat-card class="load-card"><app-load-error [error]="err" (retry)="loadStatus()" /></mat-card>
+      } @else if (status(); as st) {
         @if (!st.available) {
           <mat-card class="notice">
             <mat-icon>cloud_off</mat-icon>
@@ -227,6 +231,7 @@ export const MAX_PAGES = 3;
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 4px 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 32px; }
     .notice { display: flex; align-items: center; gap: 12px; padding: 16px; }
+    .load-card { padding: 0 16px; }
     .upload { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
     .pick { display: flex; flex-wrap: wrap; gap: 8px; }
     .preview { max-width: 100%; max-height: 360px; object-fit: contain; align-self: center; border-radius: 4px;
@@ -269,6 +274,8 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   private snackbar = inject(SnackbarService);
 
   readonly status = signal<ScoresheetStatus | null>(null);
+  /** Status konnte nicht geladen werden (Netz/Server) — dann „Erneut versuchen" statt „nicht eingerichtet" (F4-011). */
+  readonly statusError = signal<unknown>(null);
   /** Die gewählten Fotos in Seitenreihenfolge, je mit Vorschau-Adresse (0.600.0: bis zu MAX_PAGES). */
   readonly pages = signal<{ file: File; url: string }[]>([]);
   readonly maxPages = MAX_PAGES;
@@ -409,10 +416,16 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     return s.status === 'done' ? 'task_alt' : s.status === 'failed' ? 'error_outline' : 'hourglass_top';
   }
 
-  private loadStatus(): void {
+  /** Status laden; auch „Erneut versuchen" nach einem Ladefehler. Fehlt der Endpunkt (4xx), gilt die Einlesung
+   *  weiter als nicht eingerichtet; Netz-/Serverfehler zeigen dagegen den Ladefehler (Codereview F4-011). */
+  loadStatus(): void {
+    this.statusError.set(null);
     this.service.status().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: st => this.status.set(st),
-      error: () => this.status.set({ available: false, dailyLimit: 0, usedToday: 0, languages: [] }),
+      error: e => {
+        if (loadErrorKind(e) === 'failed') this.statusError.set(e ?? true);
+        else this.status.set({ available: false, dailyLimit: 0, usedToday: 0, languages: [] });
+      },
     });
   }
 

@@ -47,6 +47,33 @@ describe('GuessBoardComponent', () => {
     return fixture;
   }
 
+  // Codereview F4-011: ein Ladefehler (Netz/5xx) ist kein „gibt es nicht" — Meldung + „Erneut versuchen".
+  it('Ladefehler: zeigt „Erneut versuchen" statt „gibt es nicht" und lädt neu', () => {
+    const fixture = TestBed.createComponent(GuessBoardComponent);
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/guess-sessions/3').flush(null, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('guess.notFound');
+    expect(el.querySelector('app-load-error')).toBeTruthy();
+
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne(r => r.url === '/api/guess-sessions/3').flush(session());
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(fixture.componentInstance.session).not.toBeNull();
+  });
+
+  it('404: bleibt bei „gibt es nicht"', () => {
+    const fixture = TestBed.createComponent(GuessBoardComponent);
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/guess-sessions/3').flush(null, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('guess.notFound');
+    expect(el.querySelector('app-load-error')).toBeNull();
+  });
+
   it('zeigt die zu ratende Stellung und hebt den Zug DAVOR hervor', () => {
     const c = load().componentInstance;
     expect(c.boardFen).toBe('fen-8');

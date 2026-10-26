@@ -10,6 +10,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { fenAfterUci } from '../../shared/pgn-viewer/board-moves.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { loadErrorKind } from '../../shared/load-error/load-error-cause';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -52,7 +54,7 @@ const NO_LANGUAGES: string[] = [];
   standalone: true,
   imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatProgressBarModule, TranslatePipe, ChessBoardComponent, LoadingSpinnerComponent, HelpHintComponent, SanPipe,
-    GuessHistoryPanelComponent, GuessSettingsMenuComponent],
+    GuessHistoryPanelComponent, GuessSettingsMenuComponent, LoadErrorComponent],
   templateUrl: './guess-board.component.html',
   styleUrl: './guess-board.component.scss',
 })
@@ -68,6 +70,8 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   last: GuessResult | null = null;
   review: GuessReviewMove[] = [];
   loading = true;
+  /** Laden gescheitert (Netz/Server, nicht 4xx) — „Erneut versuchen" statt „gibt es nicht" (Codereview F4-011). */
+  loadError: unknown = null;
   busy = false;
 
   /**
@@ -257,6 +261,13 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadAccept();
     this.loadLanguage();
+    this.loadSession();
+  }
+
+  /** Sitzung laden; auch „Erneut versuchen" nach einem Ladefehler. */
+  loadSession(): void {
+    this.loading = true;
+    this.loadError = null;
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.service.get(id, this.language).subscribe({
       next: s => {
@@ -272,7 +283,11 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
         this.loading = false;
         this.cdr.markForCheck();
       },
-      error: () => { this.loading = false; this.cdr.markForCheck(); },
+      error: e => {
+        if (loadErrorKind(e) === 'failed') this.loadError = e ?? true;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
     });
   }
 

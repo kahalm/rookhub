@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { loadErrorCause } from './load-error-cause';
+import { loadErrorCause, loadErrorKind } from './load-error-cause';
 
 describe('loadErrorCause', () => {
   it('ohne Fehlerobjekt keine Ursache', () => {
@@ -19,5 +19,18 @@ describe('loadErrorCause', () => {
 
   it('andere Fehler (kein HTTP) ohne Ursache', () => {
     expect(loadErrorCause(new Error('x'), true)).toBeNull();
+  });
+});
+
+describe('loadErrorKind', () => {
+  it('4xx (außer 408/429) = gibt es nicht, sonst = Laden gescheitert', () => {
+    expect(loadErrorKind(new HttpErrorResponse({ status: 404 }))).toBe('missing');
+    expect(loadErrorKind(new HttpErrorResponse({ status: 403 }))).toBe('missing');
+    expect(loadErrorKind(new HttpErrorResponse({ status: 408 }))).toBe('failed');
+    expect(loadErrorKind(new HttpErrorResponse({ status: 429 }))).toBe('failed');
+    expect(loadErrorKind(new HttpErrorResponse({ status: 500 }))).toBe('failed');
+    expect(loadErrorKind(new HttpErrorResponse({ status: 0 }))).toBe('failed');
+    expect(loadErrorKind(new Error('x'))).toBe('failed');
+    expect(loadErrorKind(null)).toBe('failed');
   });
 });

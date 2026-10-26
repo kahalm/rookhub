@@ -31,6 +31,24 @@ describe('GameEditComponent', () => {
     createdAt: '2026-09-25T00:00:00Z', pgn, ...extra,
   });
 
+  // Codereview F4-011: ein Ladefehler (Netz/5xx) ist kein „gibt es nicht" — Meldung + „Erneut versuchen".
+  it('a failed load offers a retry instead of „not found"; a 404 stays „not found"', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(null, { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('games.edit.notFound');
+    expect(el.querySelector('app-load-error')).toBeTruthy();
+
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne('/api/games/5').flush(null, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.textContent).toContain('games.edit.notFound');
+    expect(c.loading()).toBeFalse();
+  });
+
   it('an ordinary game: loads moves and headers, a board move replaces the move and keeps what stays legal', async () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();

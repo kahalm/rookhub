@@ -34,6 +34,8 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { IsoDateFieldComponent } from '../../shared/date-field/iso-date-field.component';
 import { ScanPhotos } from './sheet-workbench/scan-photos';
 import { SheetWorkbenchComponent } from './sheet-workbench/sheet-workbench.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { loadErrorKind } from '../../shared/load-error/load-error-cause';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -50,12 +52,14 @@ import { SheetWorkbenchComponent } from './sheet-workbench/sheet-workbench.compo
   standalone: true,
   imports: [IconLabelDirective,
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatFormFieldModule,
-    MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, IsoDateFieldComponent, HelpHintComponent, SheetWorkbenchComponent,
+    MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule, MatDialogModule, TranslatePipe, IsoDateFieldComponent, HelpHintComponent, SheetWorkbenchComponent, LoadErrorComponent,
   ],
   template: `
     <div class="edit-page">
       @if (loading()) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
+      } @else if (loadError(); as err) {
+        <mat-card><app-load-error [messageKey]="'games.loadError'" [error]="err" (retry)="reload()" /></mat-card>
       } @else if (notFound()) {
         <mat-card class="empty-state"><mat-icon>link_off</mat-icon><p>{{ 'games.edit.notFound' | translate }}</p></mat-card>
       } @else {
@@ -225,6 +229,8 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   gameId = 0;
   readonly loading = signal(true);
   readonly notFound = signal(false);
+  /** Laden gescheitert (Netz/Server, nicht 4xx) — „Erneut versuchen" statt „gibt es nicht" (Codereview F4-011). */
+  readonly loadError = signal<unknown>(null);
   readonly saving = signal(false);
   readonly dirty = signal(false);
   /** Angaben-Karte am Handy aufgeklappt? Vorgabe zu; offen, wenn beim Laden ein Name fehlt. */
@@ -320,9 +326,24 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
+    this.fetch();
+  }
+
+  /** „Erneut versuchen" nach einem Ladefehler. */
+  reload(): void {
+    this.loading.set(true);
+    this.loadError.set(null);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.games.get(this.gameId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: game => this.load(game),
-      error: () => { this.notFound.set(true); this.loading.set(false); },
+      error: e => {
+        if (loadErrorKind(e) === 'failed') this.loadError.set(e ?? true);
+        else this.notFound.set(true);
+        this.loading.set(false);
+      },
     });
   }
 

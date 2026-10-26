@@ -1,6 +1,11 @@
 <div class="gb-container">
   @if (loading) {
     <app-loading-spinner />
+  } @else if (loadError) {
+    <mat-card><mat-card-content>
+      <app-load-error [error]="loadError" (retry)="loadSession()" />
+      <a mat-stroked-button routerLink="/guess">{{ 'guess.back' | translate }}</a>
+    </mat-card-content></mat-card>
   } @else if (!session) {
     <mat-card><mat-card-content>
       <p>{{ 'guess.notFound' | translate }}</p>
