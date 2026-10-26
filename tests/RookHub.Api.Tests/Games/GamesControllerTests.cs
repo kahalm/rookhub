@@ -940,7 +940,35 @@ public class GamesControllerTests : IDisposable
             Source = "lichess", Moves = new() { "e4", new string('x', SavedGameService.MaxSanLength + 1) }, ExternalId = "long-1",
         }));
         Assert.Equal(0, await _db.SavedGames.CountAsync());
-        await _service.SaveAsync(user.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "exd8=Q+!" }, ExternalId = "ok-1" });
+        await _service.SaveAsync(user.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5", "Nf3!" }, ExternalId = "ok-1" });
+    }
+
+    /// <summary>A6-013: 16 Zeichen reichten für „} 2. Qh5 {“ oder einen Kopfzeilen-Einschub — die Züge gingen roh ins PGN.
+    /// Jetzt prüft „Partie speichern“ wie die Korrektur über <see cref="SavedGamePgn.LegalSans"/> und speichert die
+    /// kanonische Schreibweise.</summary>
+    [Theory]
+    [InlineData("} 2. Qh5 {")]
+    [InlineData("x\n[Opening \"X\"]")]
+    [InlineData("Ke2e4")]
+    [InlineData("Qh4")]
+    public async Task Save_IllegalOrInjectedMove_IsRejected(string bad)
+    {
+        var user = await CreateUserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", bad }, ExternalId = "inj-1",
+        }));
+        Assert.Equal(0, await _db.SavedGames.CountAsync());
+    }
+
+    [Fact]
+    public async Task Save_StoresTheCanonicalSan()
+    {
+        var user = await CreateUserAsync();
+        await _service.SaveAsync(user.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5", "Nf3!?", "Nc6", "Bc4", "Nf6", "0-0" }, ExternalId = "can-1" });
+        var pgn = (await _db.SavedGames.SingleAsync()).Pgn;
+        Assert.Contains("4. O-O", pgn);
+        Assert.DoesNotContain("!?", pgn);
     }
 
     /// <summary>Die Belegung (Zahl + Zeichensumme) muss der ECHTE Provider in EINE Abfrage übersetzen — InMemory

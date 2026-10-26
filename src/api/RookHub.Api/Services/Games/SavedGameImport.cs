@@ -47,11 +47,15 @@ internal sealed class SavedGameImport
         dto.SourceUrl = SafeSourceUrl(dto.SourceUrl);
         var moves = (dto.Moves ?? new())
             .Select(m => (m ?? string.Empty).Trim())
-            .Where(m => m.Length > 0)
+            // „…“-/Punkt-Platzhalter der alten DOM-Auslese sind kein Zug (wie SanKeys beim Heilen).
+            .Where(m => m.Length > 0 && m.Any(c => c != '.' && c != '…'))
             .ToList();
         if (moves.Count == 0) throw new ArgumentException("No moves.");
         if (moves.Count > 600) throw new ArgumentException("Too many moves (max 600 plies).");
         if (moves.Any(m => m.Length > SavedGameService.MaxSanLength)) throw new ArgumentException("Invalid move.");
+        // Legal ab der Grundstellung, wie bei der Korrektur — sonst gingen Zug-„Strings“ roh ins PGN (Kommentar- und
+        // Kopfzeilen-Einschub, A6-013). Gespeichert wird die kanonische Schreibweise; illegal → ArgumentException (400).
+        moves = LegalSans(moves);
 
         var externalId = string.IsNullOrWhiteSpace(dto.ExternalId) ? null : dto.ExternalId.Trim();
 

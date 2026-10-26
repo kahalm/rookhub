@@ -42,7 +42,9 @@ Meldeliste, `EloI ?? EloN`) — nichts wird gespeichert, ein späteres Aktualisi
 und `MaxPgnCharsPerUser` (100 Mio. Zeichen PGN, Summe) je Konto, alle Quellen zusammen. `POST /api/games/import`
 meldet jede neue Partie darüber in `failed` mit `reason: "quota"` (HTTP 200); `PUT /api/games/{id}` antwortet bei
 wachsendem PGN über dem Zeichendeckel 400 `{ reason: "quota" }` (Kürzen geht immer); `POST /api/extension/games`
-400 am Zähldeckel. Züge der Extension höchstens 16 Zeichen (`MaxSanLength`, sonst 400 „Invalid move.").
+400 am Zähldeckel. Züge der Extension höchstens 16 Zeichen (`MaxSanLength`, sonst 400 „Invalid move.") und seit A6-013 legal ab
+der Grundstellung (`SavedGamePgn.LegalSans` wie die Korrektur, sonst 400 „Illegal move … at ply n."); gespeichert wird die
+kanonische Schreibweise, „…“-Platzhalter der alten DOM-Auslese fallen weg.
 
 **„Warum war das ein Fehler?" (0.534.0, `GameMoveExplanationService`).** Zu jedem Fehler der verknüpften Analyse
 (Ungenauigkeit/Fehler/grober Fehler/verpasste Chance, die schwersten `MaxPerGame` = 15) schreibt das Sprachmodell auf
