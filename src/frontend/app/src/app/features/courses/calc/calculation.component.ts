@@ -18,7 +18,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Color, Key } from 'chessground/types';
 import { Subscription } from 'rxjs';
 import { PuzzleBoardComponent } from '../../puzzles/puzzle-board.component';
-import { applyUci, tryFreeMove, tryLoadFen } from '../../puzzles/puzzle-move.util';
+import { tryFreeMove, tryLoadFen } from '../../puzzles/puzzle-move.util';
 import { PreferencesService } from '../../../core/preferences.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { CalcLinesComponent } from './calc-lines.component';
@@ -43,6 +43,7 @@ import { CalcTreeCursor } from './calc-tree-cursor';
 import { CalcTreeSaver } from './calc-tree-saver';
 import { CalcPageMode } from './calc-page-mode';
 import { CalcChapterModel } from './calc-chapter-model';
+import { CalcPageLoader, calcStartFen } from './calc-page-loader';
 import { CalcLabels } from './calc-labels';
 import { CalcReviewController } from './calc-review.controller';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
@@ -56,7 +57,7 @@ import { CourseLanguageService, CourseRef } from '../course-language.service';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
 import { isBoardHotkey } from '../../../shared/keyboard.util';
 import {
-  CalcPositionGroup, chapterGroupLabel, pickChapterIndex,
+  CalcPositionGroup,
 } from './calc-chapters.util';
 
 // Kapitelmodell (Schlüssel, Gruppen, Einstiegskapitel, Summen) als reine Funktionen: calc-chapters.util.ts.
@@ -95,7 +96,6 @@ export type { CalcPositionGroup } from './calc-chapters.util';
 })
 export class CalculationComponent implements OnInit, OnDestroy {
   bookId!: number;
-  book: CalcBook | null = null;
   /** Stellungen, Kapitel, Standort und Summen — siehe {@link CalcChapterModel}. */
   private readonly chapters = new CalcChapterModel();
   /** Anzeige-Texte (Kapitel-/Stellungsnamen, Punkte, Zeiten, Erklärungen) — siehe {@link CalcLabels}. */
@@ -106,6 +106,19 @@ export class CalculationComponent implements OnInit, OnDestroy {
     liveSeconds: () => this.liveSeconds,
     trainingStateKey: () => this.trainingStateKey,
   });
+  /** Buch, Stellung und Ladezustand — siehe {@link CalcPageLoader}. */
+  private readonly loader = new CalcPageLoader({
+    backend: () => this.backend,
+    bookId: () => this.bookId,
+    lang: () => this.courseLang.requestLang(this.langRef),
+    chapters: this.chapters,
+    enterChapter: (chapterIndex, requested, updateUrl) => this.enterChapter(chapterIndex, requested, updateUrl),
+    applyPosition: pos => this.applyPosition(pos),
+    stopTraining: () => this.stopTraining(),
+    track: sub => this.subs.add(sub),
+  });
+  get book(): CalcBook | null { return this.loader.book; }
+  set book(book: CalcBook | null) { this.loader.book = book; }
 
   /** ALLE Stellungen des Buchs (Quelle der Kapitel-Gruppen) — gearbeitet wird nie auf dieser Liste. */
   get positions(): CalcPositionListItem[] { return this.chapters.positions; }
@@ -144,16 +157,12 @@ export class CalculationComponent implements OnInit, OnDestroy {
   dismissLocalWarning(): void { this.local.dismissWarning(); }
   private setLocalSaveFailed(failed: boolean): void { this.local.setSaveFailed(failed); }
 
-  /**
-   * Kapitel-Wunsch aus `?chapter=` (Kurz-URL `/{slug}/{kapitel}`) — er WÄHLT das Kapitel vor,
-   * filtert aber nichts mehr weg: gewechselt werden kann weiterhin zu jedem anderen Kapitel.
-   * Was in der URL stand, kann anders geschrieben sein als der Kapitelname im Buch.
-   */
-  private requestedChapter: string | null = null;
-
-  position: CalcPosition | null = null;
-  loading = true;
-  loadError = false;
+  get position(): CalcPosition | null { return this.loader.position; }
+  set position(pos: CalcPosition | null) { this.loader.position = pos; }
+  get loading(): boolean { return this.loader.loading; }
+  set loading(value: boolean) { this.loader.loading = value; }
+  get loadError(): boolean { return this.loader.loadError; }
+  set loadError(value: boolean) { this.loader.loadError = value; }
 
   /** Position im Baum (Cursor, aktive Linie, Kommentar-Entwurf) — siehe {@link CalcTreeCursor}. */
   private readonly cursor = new CalcTreeCursor();
@@ -266,8 +275,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get savedAt(): Date | null { return this.saver.savedAt; }
 
   private subs = new Subscription();
-  /** Entwertet überholte Ladevorgänge (siehe loadPosition). */
-  private loadEpoch = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -293,7 +300,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /** Sprache gewählt: merken und NUR die Texte nachladen — Baum, Uhr und Bewertung bleiben stehen. */
   pickLanguage(lang: string): void {
     this.courseLang.setChoice(this.langRef, lang);
-    this.refreshTexts();
+    this.loader.refreshTexts();
   }
 
   /** „maschinell übersetzt" angeklickt → aufs Original. */
@@ -302,47 +309,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
     if (source) this.pickLanguage(source);
   }
 
-  /**
-   * Überschriften und Aufgabentext in der gewählten Sprache holen. Übernommen werden nur die TEXTE
-   * (Labels, Kommentar, Sprache, maschinell?) — die Stellungsliste trägt daneben Festlegung, Zeit und
-   * Bewertung, die hier gerade in Arbeit sein können.
-   */
-  private refreshTexts(): void {
-    const lang = this.courseLang.requestLang(this.langRef);
-    this.subs.add(this.backend.getBook(this.bookId, lang).subscribe({
-      next: book => {
-        const byId = new Map(book.positions.map(p => [p.id, p]));
-        for (const item of this.positions) {
-          const fresh = byId.get(item.id);
-          if (!fresh) continue;
-          item.titleLabel = fresh.titleLabel ?? null;
-          item.chapterLabel = fresh.chapterLabel ?? null;
-        }
-        for (const g of this.groups) g.label = chapterGroupLabel(g.items, g.chapter);
-        const pos = this.position;
-        if (!pos) return;
-        this.subs.add(this.backend.getPosition(pos.id, lang).subscribe({
-          next: fresh => {
-            if (this.position?.id !== fresh.id) return;   // inzwischen weitergeblättert
-            Object.assign(this.position, {
-              comment: fresh.comment,
-              titleLabel: fresh.titleLabel ?? null,
-              chapterLabel: fresh.chapterLabel ?? null,
-              commentLanguage: fresh.commentLanguage ?? null,
-              commentMachine: !!fresh.commentMachine,
-            });
-          },
-          error: () => { /* der Text bleibt, wie er war */ },
-        }));
-      },
-      error: () => { /* Beiwerk — die Arbeit an der Stellung geht weiter */ },
-    }));
-  }
-
   ngOnInit(): void {
     this.pageMode.enter();
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
-    this.requestedChapter = (this.route.snapshot.queryParamMap.get('chapter') || '').trim() || null;
+    this.loader.requestedChapter = (this.route.snapshot.queryParamMap.get('chapter') || '').trim() || null;
     // Niemand angemeldet → Stellungen lesend vom öffentlichen Endpoint, alles Selbstgemachte im Gerät.
     this.local.enter(this.api, this.bookId, !!this.auth?.isLoggedIn);
     // Welche Sprachen der Kurs hat (Auswahl in der Befehlszeile) — still, ohne Übersicht keine Auswahl.
@@ -376,84 +346,21 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   // ===== Laden ==============================================================
 
-  private loadBook(requestedPositionId: number | null): void {
-    this.loading = true;
-    this.loadError = false;
-    this.subs.add(this.backend.getBook(this.bookId, this.courseLang.requestLang(this.langRef)).subscribe({
-      next: book => {
-        this.book = book;
-        this.chapters.setBook(book);
-        if (this.positions.length === 0) { this.loading = false; return; }
-        // Erst das KAPITEL, dann die Stellung darin — der Modus arbeitet ein Kapitel durch.
-        this.enterChapter(pickChapterIndex(this.groups, this.requestedChapter, requestedPositionId), requestedPositionId, false);
-      },
-      error: () => { this.loading = false; this.loadError = true; },
-    }));
-  }
-
-  /**
-   * FALLE: bei schnellem Weiterklicken laufen zwei Ladevorgänge parallel und können
-   * out-of-order eintreffen — die ältere Antwort würde Brett/Baum auf die VORHERIGE Stellung
-   * setzen, während Index/URL/Sprungliste schon auf der neuen stehen (Eingaben landeten dann
-   * unter der falschen Stellung). Der Epoch-Zähler entwertet jede überholte Antwort.
-   */
-  private loadPosition(bookPuzzleId: number): void {
-    this.loading = true;
-    const epoch = ++this.loadEpoch;
-    this.subs.add(this.backend.getPosition(bookPuzzleId, this.courseLang.requestLang(this.langRef)).subscribe({
-      next: pos => {
-        if (epoch !== this.loadEpoch) return;
-        // Ein früherer Fehlschlag (Funkloch, 502 beim Deploy) darf nicht kleben bleiben: sonst
-        // bliebe `canTrain` für den Rest des Besuchs false, obwohl diese Stellung geladen ist.
-        this.loadError = false;
-        this.position = pos;
-        this.applyPosition(pos);
-        this.loading = false;
-      },
-      error: () => {
-        if (epoch !== this.loadEpoch) return;
-        this.loading = false;
-        this.loadError = true;
-        // Beim WEITERblättern stünde sonst weiter das Brett der VORHERIGEN Stellung da, während
-        // Index, URL und Sprungliste schon auf der neuen stehen — dieselbe Verwechslung, gegen die
-        // oben der Epoch-Zähler schützt, nur über den Fehlerpfad. Die Arbeit an der alten Stellung
-        // ist zu diesem Zeitpunkt bereits abgeflossen (`leaveCurrentPosition` vor dem Laden), es
-        // geht also nichts verloren; ohne Stellung zeigt die Vorlage die Fehlermeldung.
-        this.position = null;
-        // Und ohne Stellung wird nicht gemessen: sonst tickte die Kapitel-Uhr weiter, während man
-        // auf eine Fehlermeldung schaut. `stopTraining` sichert die bis hierhin gemessene Zeit.
-        this.stopTraining();
-      },
-    }));
-  }
+  private loadBook(requestedPositionId: number | null): void { this.loader.loadBook(requestedPositionId); }
+  /** Eine Stellung laden (Epoche gegen überholte Antworten, siehe {@link CalcPageLoader.loadPosition}). */
+  private loadPosition(bookPuzzleId: number): void { this.loader.loadPosition(bookPuzzleId); }
 
   private applyPosition(pos: CalcPosition): void {
     this.timer.syncChapter(pos.chapter);
     this.beginWatch(pos.id);
     this.reviews.load(pos);
-    const startFen = this.buildStartFen(pos);
+    const { fen: startFen, illegal } = calcStartFen(pos);
+    this.illegalPosition = illegal;
     this.orientation = whiteToMove(startFen) ? 'white' : 'black';
     const stored = deserializeTree(pos.treeJson, startFen);
     this.cursor.reset(stored ?? createTree(startFen), startFen);
     this.saver.reset(pos);
     this.revision++;
-  }
-
-  /**
-   * Ausgangsstellung: Header-FEN plus den (nicht lösungsrelevanten) Vorlauf `setupMoves`.
-   * Scheitert das — illegale Muster-FEN oder unspielbarer Zug —, bleibt die Header-FEN stehen und
-   * die Zug-Eingabe wird gesperrt (das Brett selbst rendert auch illegale Stellungen).
-   */
-  private buildStartFen(pos: CalcPosition): string {
-    this.illegalPosition = false;
-    const chess = tryLoadFen(pos.fen);
-    if (!chess) { this.illegalPosition = true; return pos.fen; }
-    const setup = (pos.setupMoves || '').split(' ').filter(m => m.length >= 4);
-    for (const uci of setup) {
-      try { applyUci(chess, uci); }
-      catch { this.illegalPosition = true; return pos.fen; }
-    }
-    return chess.fen();
   }
 
   // ===== Kapitel (Stufe 1 der Auswahl) ======================================
