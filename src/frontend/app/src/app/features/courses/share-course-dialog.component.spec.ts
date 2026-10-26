@@ -63,6 +63,16 @@ describe('ShareCourseDialogComponent', () => {
     expect(component.selected.size).toBe(0);
   });
 
+  // Codereview F8-015: vom Server übersprungene Empfänger (z. B. Freundschaft inzwischen beendet) stehen NICHT als „geteilt" da.
+  it('does not list skipped recipients as shared', () => {
+    courseService.shareCourse.and.returnValue(of({ shared: 1, skipped: [{ userId: 3, reason: 'not_friends' }] }));
+    component.toggle(2, true);
+    component.toggle(3, true);
+    component.share();
+    expect(component.recipients.map(r => r.userId)).toEqual([2]);
+    expect(component.selectableFriends.map(f => f.userId)).toEqual([3]);
+  });
+
   it('unshares a recipient', () => {
     component.recipients = [{ userId: 2, username: 'alice', displayName: null, sharedAt: '' }];
     courseService.unshareCourse.and.returnValue(of(void 0));

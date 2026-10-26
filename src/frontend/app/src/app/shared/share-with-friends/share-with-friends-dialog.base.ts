@@ -20,10 +20,16 @@ export interface ShareRecipient {
   sharedAt: string;
 }
 
-/** Antwort eines Batch-Teilens: wie viele gingen durch, wie viele wurden übersprungen. */
+/** Ein vom Server übersprungener Empfänger (`CourseShareSkipDto`/`RepertoireShareSkipDto`), z. B. `not_friends`. */
+export interface ShareSkip {
+  userId: number;
+  reason: string;
+}
+
+/** Antwort eines Batch-Teilens: wie viele gingen durch, wer wurde übersprungen. */
 export interface ShareBatchResult {
   shared: number;
-  skipped?: unknown[];
+  skipped?: ShareSkip[];
 }
 
 /**
@@ -176,10 +182,12 @@ export abstract class ShareWithFriendsDialogBase implements OnInit {
       next: res => {
         this.busy = false;
         this.selected.clear();
-        // Frisch geteilte Empfänger oben einsortieren (aus der geladenen Freundesliste).
+        // Frisch geteilte Empfänger oben einsortieren (aus der geladenen Freundesliste) — ohne die, die der Server
+        // übersprungen hat (Freundschaft inzwischen beendet, Konto weg; Codereview F8-015).
         const known = new Set(this.recipients.map(r => r.userId));
+        const skippedIds = new Set((res.skipped ?? []).map(s => s.userId));
         for (const f of this.friends) {
-          if (ids.includes(f.userId) && !known.has(f.userId)) {
+          if (ids.includes(f.userId) && !known.has(f.userId) && !skippedIds.has(f.userId)) {
             this.recipients = [...this.recipients, {
               userId: f.userId, username: f.username, displayName: f.displayName, sharedAt: new Date().toISOString(),
             }];
