@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using RookHub.Api.Services;
 using System.Linq.Expressions;
 using System.Net;
@@ -1329,5 +1330,70 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
         var never = new StubFactory(HttpStatusCode.OK, "x");
         Assert.Equal("invalidUrl", (await new LichessStudySource(never).FetchAsync("https://evil.example/x", default)).Reason);
         Assert.Empty(never.Paths);
+    }
+
+    // ---- N6-002: Studienabruf über den Teilen-Link gedeckelt, Antwort gestreamt ----
+
+    /// <summary>Liefert <paramref name="length"/> Zeichen, ohne sie vorher zu bauen, und zählt, wie viel gelesen wurde.</summary>
+    private sealed class CountingStream(long length) : Stream
+    {
+        public long Served;
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var n = (int)Math.Min(count, length - Served);
+            Array.Fill(buffer, (byte)'a', offset, n);
+            Served += n;
+            return n;
+        }
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => Served; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class StreamFactory(Stream body) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(new Handler(body)) { BaseAddress = new Uri("https://lichess.org") };
+        private sealed class Handler(Stream body) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct)
+                => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) });
+        }
+    }
+
+    [Fact]
+    public async Task LichessStudy_OversizedAnswer_StopsReadingAfterTheCap()
+    {
+        var body = new CountingStream(3L * LeagueClubService.MaxImportChars);
+
+        var (pgn, reason) = await new LichessStudySource(new StreamFactory(body)).FetchAsync("https://lichess.org/study/AbCdEf12", default);
+
+        Assert.Null(pgn);
+        Assert.Equal("tooLarge", reason);
+        Assert.True(body.Served < LeagueClubService.MaxImportChars + 1_000_000, $"gelesen: {body.Served}");
+    }
+
+    [Fact]
+    public async Task LichessStudy_ViaShareLink_IsCappedPerLinkAndDay()
+    {
+        var ok = new StubFactory(HttpStatusCode.OK, "[Event \"S: 1\"]\n\n1. e4 *\n");
+        var cache = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["League:StudyFetchPerLinkPerDay"] = "2" }).Build();
+        var source = new LichessStudySource(ok, cache, config);
+        const string url = "https://lichess.org/study/AbCdEf12";
+
+        Assert.Null((await source.FetchForShareAsync("link-a", url, default)).Reason);
+        Assert.Null((await source.FetchForShareAsync("LINK-A", url, default)).Reason);   // dieselbe Zeile, andere Schreibweise
+        Assert.Equal("studyLimit", (await source.FetchForShareAsync("link-a", url, default)).Reason);
+        Assert.Equal(2, ok.Paths.Count);                                                   // der dritte Abruf ging nicht raus
+        Assert.Null((await source.FetchForShareAsync("link-b", url, default)).Reason);     // anderer Link, eigener Deckel
+        // Ungültige Adressen zählen nicht (kein Abruf).
+        Assert.Equal("invalidUrl", (await source.FetchForShareAsync("link-c", "https://evil.example/x", default)).Reason);
     }
 }

@@ -16,6 +16,7 @@ export function reasonText(reason: string): string {
     case 'invalidUrl': return 'Das ist keine Adresse einer Lichess-Studie (lichess.org/study/…).';
     case 'lichessNotFound': return 'Diese Studie gibt es nicht oder sie ist nicht öffentlich.';
     case 'lichessFailed': return 'Lichess hat gerade nicht geantwortet — bitte später noch einmal.';
+    case 'studyLimit': return 'Über diesen Teilen-Link sind heute schon genug Lichess-Studien geladen worden — bitte morgen oder angemeldet.';
     case 'fromPosition': return 'Beginnt nicht in der Grundstellung.';
     case 'illegal': return 'Ein Zug ist nicht legal.';
     case 'noMoves': return 'Keine Züge.';

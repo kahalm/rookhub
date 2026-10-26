@@ -246,7 +246,9 @@ gewählte FIDE-ID ohne Ligaspieler bleibt an der Partie stehen (`Side.Fide`). Ei
 einer ÖFFENTLICHEN Studie bzw. eines Kapitels (`LichessStudySource`, nur `lichess.org/study/{8}` bzw. `…/{8}/{8}` —
 der Server ruft ausschließlich `/api/study/{id}[/{kapitel}].pgn` der festen Lichess-Basis `Lichess:SiteUrl` auf, kein
 freier Abruf); danach wie ein Upload (Übersicht, Import). Absagen `invalidUrl`, `lichessNotFound` (privat/fehlt),
-`lichessFailed`, `tooLarge`.
+`lichessFailed`, `tooLarge` (die Antwort wird gestreamt und bei 5 Mio. + 1 Zeichen abgebrochen, N6-002). Über den
+Teilen-Link höchstens `League:StudyFetchPerLinkPerDay` (Vorgabe 10) Abrufe je Link und UTC-Tag, danach 429 `studyLimit`
+(Zähler im Arbeitsspeicher, `LichessStudySource.FetchForShareAsync`; LeagueHub zeigt den Grund als Text).
 
 **Eröffnungsbaum** (0.574.0): `GET /api/league/player/{fide}/tree?color=w|s&line=e4 e5` (und `/api/league/s/{token}/player/{fide}/tree`
 für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, score (Punkte aus SEINER Sicht, %), last (Jahr) }] }`

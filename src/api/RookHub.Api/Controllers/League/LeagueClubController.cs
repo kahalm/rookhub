@@ -570,8 +570,11 @@ public class LeagueShareClubController : ControllerBase
     public async Task<IActionResult> Lichess(string token, [FromBody] LeagueClubLichessRequest req, [FromServices] LichessStudySource lichess,
         CancellationToken ct)
     {
-        if (await LinkAsync(token, ct) is null) return NotFound();
-        var (pgn, reason) = await lichess.FetchAsync(req?.Url, ct);
+        if (await LinkAsync(token, ct) is not { } link) return NotFound();
+        // Deckel je Link und Tag (N6-002): jeder Abruf geht von der Server-IP an Lichess.
+        var (pgn, reason) = await lichess.FetchForShareAsync(link.Token, req?.Url, ct);
+        if (reason == "studyLimit")
+            return StatusCode(StatusCodes.Status429TooManyRequests, new { reason, message = "Too many study imports via this link today." });
         return pgn == null ? BadRequest(new { reason, message = "Study not loaded." }) : Ok(new { pgn });
     }
 
