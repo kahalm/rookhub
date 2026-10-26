@@ -388,6 +388,21 @@ public class LeagueGameMovesTests : IDisposable
         Assert.IsType<OkObjectResult>(await ctl.ShareTarget("ALT", default));
         Assert.IsType<NotFoundResult>(await ctl.ShareTarget("nix", default));
 
+        // 0.848.0, Wunsch 2026-10-26: Vereinsübersicht — nur eigene Begegnungen mit Brettern, eigene Seite mit echtem Spieler,
+        // je Vereinspartie die Zahl markierter Stellungen
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = Tnr, Season = "2026/27", Level = 3, League = "Landesliga", Stage = "Liga" });
+        _db.LeagueViews.Add(new LeagueView { Tnr = Tnr, Json = "{}", GeneratedAt = Now });
+        _db.MarkedPositions.Add(new MarkedPosition { UserId = HomeMember, PositionKey = "k", Fen = "k", LeagueClubGameId = c.Id });
+        await _db.SaveChangesAsync();
+        var marksSvc = new ClubGameMarks(_db);
+        var ov = await new LeagueClubOverview(_db, league, Service(), marksSvc).BuildAsync(TestClubs.Home, HomeMember);
+        var lg1 = Assert.Single(ov.Leagues);
+        var r = Assert.Single(lg1.Rounds);
+        var m = Assert.Single(r.Matches);                                              // Talhausen – Seewinkel ist nicht eigen
+        Assert.Equal(("Testdorf", Round), (m.Home, r.Number));
+        Assert.Equal("Hess, Max", m.Boards.Single(b => b.Board == 4).HomePlayer);
+        Assert.Equal(1, ov.Marks[c.Id]);
+
         // 0.838.3, Wunsch 2026-10-25: „Analyse auch über den Link" — EINE Vereinspartie lesen, aber nur die der Begegnung des
         // Links (die zeigt er ohnehin mit PGN), ohne Bearbeitungsrecht; fremde Partien und ungültige Links 404.
         var fixtures = new LeagueFixtureGames(_db);

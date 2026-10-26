@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Chess } from 'chess.js';
 import { de } from './league-format';
+import { ReplayMark } from '@rh/shared/player-card/game-replay.component';
 
 /**
  * Aufstellungen je Runde + erste Züge je Partie (2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen
@@ -60,6 +61,14 @@ export interface LineupMatch {
 
 export interface RoundLineups { tnr: number; round: number; date: string | null; canEdit: boolean; matches: LineupMatch[] }
 
+/** Vereinsübersicht (0.848.0, `GET /api/league/club/overview`): je Liga die Runden mit den eigenen Begegnungen; `marks` = Zahl
+ *  markierter Stellungen je Vereinspartie (fehlt = keine). */
+export interface ClubOverview {
+  season: string | null;
+  leagues: { tnr: number; name: string; rounds: { number: number; date: string | null; matches: LineupMatch[] }[] }[];
+  marks: Record<string, number>;
+}
+
 /** Schlüssel einer Partie: Liga, Runde, Begegnung, Brett. */
 export interface MovesKey { tnr: number; round: number; matchNo: number; board: number }
 
@@ -91,6 +100,16 @@ export class LineupsApiService {
   /** Den Handeintrag löschen (auch den „ersetzten" neben einer Partie). */
   async deleteMoves(k: MovesKey): Promise<void> {
     await firstValueFrom(this.http.delete(`/api/league/${k.tnr}/round/${k.round}/match/${k.matchNo}/board/${k.board}/moves`));
+  }
+
+  /** Interessante Stellungen einer Vereinspartie (0.848.0, `league.view`) — Sprungmarken fürs Nachspielen. */
+  clubGameMarks(id: number): Promise<ReplayMark[]> {
+    return firstValueFrom(this.http.get<ReplayMark[]>(`/api/league/club/games/${id}/marks`));
+  }
+
+  /** Alle Begegnungen der eigenen Mannschaften der laufenden Saison mit Brettern, Partien und Markern (0.848.0). */
+  overview(): Promise<ClubOverview> {
+    return firstValueFrom(this.http.get<ClubOverview>('/api/league/club/overview'));
   }
 
   /** PGN einer Vereinspartie samt Stand der Analyse (wie die Vereinsliste, `league.view`, Verein über `?club=`). */

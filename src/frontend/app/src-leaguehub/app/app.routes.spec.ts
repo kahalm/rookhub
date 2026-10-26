@@ -17,7 +17,7 @@ describe('LeagueHub-Routen', () => {
   });
 
   it('die Vereins-Datenbank braucht eine Anmeldung', () => {
-    for (const path of ['verein', 'verein/neu', 'verein/formular/:id']) {
+    for (const path of ['verein', 'verein/neu', 'verein/formular/:id', 'verein/uebersicht']) {
       expect(routes.find(r => r.path === path)?.canActivate).withContext(path).toContain(authGuard);
     }
   });

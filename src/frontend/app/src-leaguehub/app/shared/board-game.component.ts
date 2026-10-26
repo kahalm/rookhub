@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
+import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
@@ -13,6 +13,8 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
  * `canEdit` „Bearbeiten"/„Korrigieren" wie in `lh-fixture`. Alle vier als `.btn-link` (0.727.2: gleiche Farbe und Grundlinie).
  * Über einen Teilen-Link (0.838.0, `shareToken`): „Nachspielen" nur an der geteilten Begegnung (`shared`, PGN über
  * `/s/{token}/games`), keine Analyse, kein Bearbeiten — ohne Anmeldung gibt es dafür keine Wege.
+ * Seit 0.848.0 (Vereinsübersicht, Wunsch 2026-10-26): `markCount` zeigt einen Marker „◆ n interessante Stellungen", und beim
+ * Nachspielen einer Vereinspartie (angemeldet) kommen deren markierte Stellungen als Sprungmarken mit.
  */
 @Component({
   selector: 'lh-board-game',
@@ -23,6 +25,9 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
     @let g = game();
     <span class="bg">
       <span class="bg-what">Partie vorhanden · {{ g.plies }} Halbzüge@if (g.firstMoves.length) { · <span class="bg-moves">{{ shown() }}</span>}</span>
+      @if (markCount() > 0) {
+        <span class="bg-marks" [title]="markCount() === 1 ? '1 interessante Stellung' : markCount() + ' interessante Stellungen'">◆ {{ markCount() }}</span>
+      }
       <span class="bg-actions">
         @if (!shareToken() || shared()) {
           <button type="button" class="btn-link bg-replay" [attr.aria-expanded]="open()" (click)="toggle()"
@@ -42,7 +47,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
     </span>
     @if (open()) {
       @if (pgn(); as p) {
-        <div class="bg-replay-box"><lh-game-replay [pgn]="p" [flipped]="flipped()" [evalsUrl]="evalsUrl()" /></div>
+        <div class="bg-replay-box"><lh-game-replay [pgn]="p" [flipped]="flipped()" [evalsUrl]="evalsUrl()" [marks]="marks()" /></div>
       } @else if (error()) {
         <p class="err" role="alert">{{ error() }}</p>
       } @else {
@@ -58,6 +63,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
        Linkfarbe, ohne das Polster der Knöpfe) und standen höher als „Nachspielen"/„Analyse". Grundlinie statt Oberkante. */
     .bg-actions { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; white-space: nowrap; }
     .bg-replay-box { margin: 8px 0 4px; }
+    .bg-marks { color: var(--rh-success, #2e7d32); font-weight: 700; white-space: nowrap; }
   `],
 })
 export class BoardGameComponent {
@@ -81,6 +87,10 @@ export class BoardGameComponent {
   readonly pgn = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   private readonly hasEvals = signal(false);
+  /** 0.848.0: so viele interessante Stellungen hat die Partie (Vereinsübersicht) — 0 = kein Marker. */
+  readonly markCount = input(0);
+  /** Die Sprungmarken der Vereinspartie — erst beim Nachspielen geladen; still leer, wenn das scheitert. */
+  readonly marks = signal<ReplayMark[]>([]);
   readonly rookHub = rookHubUrlForLeagueHub();
 
   readonly shown = computed(() => {
@@ -104,6 +114,7 @@ export class BoardGameComponent {
         if (p) this.pgn.set(p); else this.error.set('Die Partie ist nicht mehr da — bitte neu laden.');
       } else if (g.source === 'club' && g.clubGameId) {
         const d = await this.api.clubGame(g.clubGameId);
+        this.loadMarks(g.clubGameId);
         this.hasEvals.set(!!d.analysis);
         this.pgn.set(d.pgn);
       } else {
@@ -116,6 +127,11 @@ export class BoardGameComponent {
   }
 
   /** Angemeldet RookHubs `club-games/{id}` (Einmal-Code), über den Teilen-Link `s/{token}/club-games/{id}` ohne Anmeldung (0.838.3). */
+  /** Sprungmarken nachladen — ein Fehler (oder eine Partie ohne Marken) lässt das Nachspielen unberührt. */
+  private loadMarks(id: number): void {
+    Promise.resolve(this.api.clubGameMarks(id)).then(m => this.marks.set(m ?? []), () => this.marks.set([]));
+  }
+
   analyse(id: number): void {
     const token = this.shareToken();
     void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}`);

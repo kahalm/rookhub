@@ -5256,7 +5256,12 @@
       "dutch": "Dutch",
       "benoni": "Benoni (1…c5)",
       "chigorin": "Chigorin (1…Nc6)"
-    }
+    },
+    "marksTitle": "Interesting positions",
+    "markVariation": "Variation: {{line}}",
+    "markInVariation": "in a variation",
+    "backToGame": "Back to the game",
+    "markedTimes": "marked {{count}} times"
   },
   "prep": {
     "trainingRepertoire": {

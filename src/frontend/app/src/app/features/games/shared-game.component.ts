@@ -259,12 +259,18 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   /** Herkunft für den „+"-Knopf (0.749.0): welche Partie — gesetzt in ngOnInit je Ansicht. */
   markSource: Partial<MarkOrigin> = {};
-  private markOriginCache: { ply: number | null; origin: MarkOrigin } | null = null;
-  /** Herkunft der Stellung auf dem Brett; in einer eigenen Nebenvariante ohne Halbzug (sie steht in keiner Partie). */
+  private markOriginCache: { key: string; origin: MarkOrigin } | null = null;
+  /** Herkunft der Stellung auf dem Brett; in einer eigenen Nebenvariante ohne Halbzug (sie steht in keiner Partie), dafür seit
+   *  0.848.0 mit Abzweig und Variantenzügen — LeagueHub setzt daraus eine Sprungmarke an den Abzweig. */
   markOrigin(): MarkOrigin {
-    const ply = this.live()?.variation()?.length ? null : this.service.currentMoveIndex + 1;
+    const variation = this.live()?.variation() ?? [];
+    const at = this.service.currentMoveIndex + 1;
+    const line = variation.map(m => m.uci).join(' ');
+    const key = variation.length ? `v${at}:${line}` : `p${at}`;
     // Gleiches Objekt, solange sich nichts ändert — das Signal-Input des Knopfs soll nicht bei jeder Prüfung feuern.
-    if (this.markOriginCache?.ply !== ply) this.markOriginCache = { ply, origin: { ...this.markSource, context: 'analysis', ply } };
+    if (this.markOriginCache?.key !== key) this.markOriginCache = { key, origin: variation.length
+      ? { ...this.markSource, context: 'analysis', ply: null, variationFromPly: at, variationUci: line }
+      : { ...this.markSource, context: 'analysis', ply: at } };
     return this.markOriginCache.origin;
   }
 

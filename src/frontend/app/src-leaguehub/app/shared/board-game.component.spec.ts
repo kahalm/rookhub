@@ -26,7 +26,7 @@ describe('BoardGameComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [BoardGameComponent], providers: [
-      { provide: LineupsApiService, useValue: jasmine.createSpyObj('LineupsApiService', ['clubGame', 'fixturePgn', 'sharedPgn']) },
+      { provide: LineupsApiService, useValue: jasmine.createSpyObj('LineupsApiService', ['clubGame', 'clubGameMarks', 'fixturePgn', 'sharedPgn']) },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
       provideRouter([]), provideTranslateService({ fallbackLang: 'de' })] });
   });
@@ -75,5 +75,24 @@ describe('BoardGameComponent', () => {
     fixture.detectChanges();
     expect(el.querySelectorAll('.bg-actions > *').length).toBe(0);
     expect(el.querySelector('.bg-what')?.textContent).toContain('Partie vorhanden');
+  });
+
+  // 0.848.0: Marker „◆ n" (Vereinsübersicht) und die markierten Stellungen als Sprungmarken beim Nachspielen
+  it('zeigt den Marker und gibt die Sprungmarken der Vereinspartie an das Nachspielen weiter', async () => {
+    const api = TestBed.inject(LineupsApiService) as jasmine.SpyObj<LineupsApiService>;
+    api.clubGame.and.resolveTo({ pgn: '1. d4 Nf6 1/2-1/2', analysis: null });
+    const marks = [{ fen: 'x', positionKey: 'k', ply: 1, variationFromPly: null, variationUci: null, count: 3 }];
+    api.clubGameMarks.and.resolveTo(marks);
+    const el = render(GAME, null);
+    expect(el.querySelector('.bg-marks')).toBeNull();
+    fixture.componentRef.setInput('markCount', 2);
+    fixture.detectChanges();
+    expect(el.querySelector('.bg-marks')?.textContent).toContain('◆ 2');
+    expect(el.querySelector('.bg-marks')?.getAttribute('title')).toBe('2 interessante Stellungen');
+    (el.querySelector('.bg-replay') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.clubGameMarks).toHaveBeenCalledWith(168);
+    expect(fixture.componentInstance.marks()).toEqual(marks);
   });
 });

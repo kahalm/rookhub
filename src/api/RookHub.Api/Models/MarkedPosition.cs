@@ -50,5 +50,12 @@ public class MarkedPosition
     /// <summary>Der bessere Zug (UCI), wenn bekannt — im Fehler-Training die Lösung der Aufgabe.</summary>
     public string? BestUci { get; set; }
 
+    /// <summary>In einer Nebenvariante markiert (0.848.0): Halbzug der Partie, an dem die Variante abzweigt (0 = Grundstellung).
+    /// Dann ist <see cref="Ply"/> leer — die Stellung steht in keiner Partie, ist aber über den Abzweig erreichbar.</summary>
+    public int? VariationFromPly { get; set; }
+
+    /// <summary>Die Züge der Variante ab <see cref="VariationFromPly"/> bis zur markierten Stellung (UCI, Leerzeichen).</summary>
+    public string? VariationUci { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

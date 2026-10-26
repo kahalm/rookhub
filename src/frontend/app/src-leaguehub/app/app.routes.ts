@@ -15,6 +15,9 @@ export const routes: Routes = [
     loadComponent: () => import('./features/league/league-page.component').then(m => m.LeaguePageComponent) },
   { path: 'verein', pathMatch: 'full', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-games-page.component').then(m => m.ClubGamesPageComponent) },
+  // Vereinsübersicht (0.848.0): alle eigenen Begegnungen der Saison mit Partien und Markern interessanter Stellungen
+  { path: 'verein/uebersicht', canActivate: [authGuard],
+    loadComponent: () => import('./features/club/club-overview-page.component').then(m => m.ClubOverviewPageComponent) },
   // „Meine Partien" (/verein/meine, 0.652.0) ist seit 0.672.7 weg (Wunsch 2026-10-05: „entferne").
   { path: 'verein/neu', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },

@@ -77,6 +77,8 @@ public partial class MarkedPositionService
         var token = string.IsNullOrWhiteSpace(input.ShareToken) || input.ShareToken.Length > 32 ? null : input.ShareToken.Trim();
         var ply = input.Ply is >= 0 and < GameMistakeProgressService.MaxPly ? input.Ply : null;
         var clubGameId = input.ClubGameId is > 0 ? input.ClubGameId : null;
+        // 0.848.0: in einer Nebenvariante markiert — der Abzweig zählt nur, wenn die Stellung nicht selbst in der Partie steht
+        var (fromPly, line) = ply is null ? MarkedPositionVariation.Clean(input.VariationFromPly, input.VariationUci) : (null, null);
 
         var row = await Of(caller).FirstOrDefaultAsync(p => p.PositionKey == key, ct);
         if (row == null)
@@ -96,6 +98,8 @@ public partial class MarkedPositionService
         row.ShareToken ??= token;
         row.Ply ??= ply;
         row.BestUci ??= bestUci;
+        if (row.Ply is null && row.VariationFromPly is null && fromPly is not null)
+            (row.VariationFromPly, row.VariationUci) = (fromPly, line);
         await _db.SaveChangesAsync(ct);
         return (Map(row), null);
     }
@@ -155,5 +159,6 @@ public partial class MarkedPositionService
     {
         Id = p.Id, Fen = p.Fen, PositionKey = p.PositionKey, Context = p.Context, SavedGameId = p.SavedGameId,
         ClubGameId = p.LeagueClubGameId, ShareToken = p.ShareToken, Ply = p.Ply, BestUci = p.BestUci, CreatedAt = p.CreatedAt,
+        VariationFromPly = p.VariationFromPly, VariationUci = p.VariationUci,
     };
 }

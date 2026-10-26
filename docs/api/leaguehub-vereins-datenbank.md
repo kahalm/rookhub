@@ -206,6 +206,8 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/s/{token}/club/games/lichess` | Teilen-Link | Lichess-Studie laden, wie oben |
 | POST | `/api/league/s/{token}/club/games/chessbase` | Teilen-Link | ChessBase-Datenbank → PGN, wie oben |
 | GET | `/api/league/s/{token}/club/players`, `POST …/match`, `GET …/scoresheet/status` | Teilen-Link | wie oben (Status: je IP) |
+| GET | `/api/league/club/overview` | `league.view` | Vereinsübersicht (0.848.0): `{ season, leagues[{ tnr, name, rounds[{ number, date, matches[LineupMatch] }] }], marks{ clubGameId: n } }` — nur eigene Begegnungen der laufenden Saison mit mindestens einem Brett (Bretter wie „Alle Aufstellungen“, `LeagueClubOverview`), `marks` = Zahl verschiedener markierter Stellungen je Vereinspartie |
+| GET | `/api/league/club/games/{id}/marks` | `league.view` | Interessante Stellungen der Vereinspartie (0.848.0, `ClubGameMarks`): `[{ fen, positionKey, ply?, variationFromPly?, variationUci?, count }]` in Partiereihenfolge — `ply` = Halbzug in der Hauptlinie (Vergleich ohne en-passant-Feld), sonst aus einer Variante (Abzweig + Züge, fehlt bei älteren Markierungen); 404 anderer Verein |
 | GET | `/api/league/s/{token}/club/games/{id}`, `…/evals` | Teilen-Link | EINE Vereinspartie der geteilten Begegnung (0.838.3, RookHubs Partieseite `s/{token}/club-games/{id}`): wie angemeldet, aber `canDelete` false, keine Paarungs-Id; jede Partie, die nicht an einem Brett der Begegnung des Links hängt, 404 |
 | POST | `/api/league/s/{token}/club/scans` | Teilen-Link | Foto hochladen → `{ key, scan }` |
 | POST | `/api/league/s/{token}/club/scans/lookup` | Teilen-Link | `{ keys[] }` → die offenen Einlesungen dazu |
@@ -620,3 +622,27 @@ Aufbau im Frontend (Zerlegung Z31, 2026-10-25): `/verein/neu` = `club-add-page.c
 `scoresheet-upload-store.ts` + `club-scoresheet-panel.component` (Art „Partieformular"); `/verein/formular/:id` =
 `club-scan-page.component` mit `club-side-form.component` (Kopfdaten), `scan-export.ts` + `scan-export-actions.component`
 (PGN, „Meine Partien") und `scan-merge.ts` (Zusammenführen); gemerkte Teilen-Link-Schlüssel in `club-anon-keys.ts`.
+
+
+### Vereinsübersicht + interessante Stellungen (0.848.0)
+
+Wunsch 2026-10-26: „LeagueHub — Übersichtsseite für den Verein (zeigt alle Begegnungen + Partien + Marker neben Partien mit
+interessanten Stellungen). In der Partie soll es — wenn es interessante Stellungen gibt — Sprungmarken zu denen geben; achtung,
+nicht jede interessante Stellung muss in der Partie vorkommen, kann auch in einer Variation markiert werden.“
+
+* **Seite** `/verein/uebersicht` (`features/club/club-overview-page.component.ts`, Reiter „Übersicht“, `league.view`): je Liga
+  der Saison jede Runde mit den eigenen Begegnungen (Karten wie „Alle Aufstellungen“), je Brett Spieler/Farbe/Ergebnis und die
+  vorhandene Partie (`lh-board-game`: Nachspielen, Analyse, Bearbeiten wie sonst) mit Marker „◆ n“, wenn Stellungen markiert
+  sind; „Nur mit interessanten Stellungen (n)“ blendet die übrigen Bretter und leere Begegnungen aus.
+* **Interessante Stellung** = eine „+“-Markierung (`MarkedPositions`, siehe `markierte-stellungen.md`) an der Vereinspartie oder
+  einer ihrer Kopien, von irgendwem — gezählt je Stellung (`count`), ohne Namen. Hauptlinie: die Stellung kommt in der Partie
+  vor (`ClubGameMarks.MainlineKeys`, Brett + Zugrecht + Rochade). Sonst stammt sie aus einer Variante: mit `variationFromPly`
+  (seit 0.848.0 beim Markieren mitgeschickt) hängt sie an ihrem Abzweig, ältere Markierungen ohne Ort stehen am Ende.
+* **Sprungmarken** im Nachspielen (`lh-game-replay`, Eingabe `marks`; `lh-board-game` lädt sie beim Aufklappen einer
+  Vereinspartie): „Interessante Stellungen:“ unter der Zugliste — Hauptlinie springt an den Zug, eine Variante an den Abzweig
+  und stellt die markierte Stellung aufs Brett (Zeile „Variante: 12…c5 13.Sf3“ mit „Zurück zur Partie“; Blättern verlässt sie),
+  ohne Ort nur die Stellung („in einer Variante“). Punkt an jedem markierten Zug bzw. Abzweig in der Zugliste.
+* Tests: `ClubGameMarksTests` (Hauptlinie trotz en-passant-Unterschied, Variante, Kopie zählt, anderer Verein, Zählung,
+  Variantenfelder nur ohne `ply` und gültig), `LeagueGameMovesTests` (Übersicht: nur eigene Begegnungen, echter eigener Spieler,
+  Marker-Zahl); Specs `game-replay` (Sprungmarken), `board-game` (Marker + Laden), `club-overview-page`, `shared-game`
+  (Variantenherkunft), `app.routes` (Anmeldung nötig).

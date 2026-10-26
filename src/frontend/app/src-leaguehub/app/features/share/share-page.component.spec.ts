@@ -33,7 +33,7 @@ describe('SharePageComponent', () => {
 
   beforeEach(() => {
     auth = { isLoggedIn: false, has: () => false };
-    lineups = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'fixturePgn', 'sharedPgn']);
+    lineups = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'clubGameMarks', 'fixturePgn', 'sharedPgn']);
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources', 'forecastStats', 'fixtureGames', 'shareTarget']);
     // 0.838.2: auch eine offene Runde holt über den Link die (vorläufigen) Paarungen
     api.fixtureGames.and.resolveTo([]);

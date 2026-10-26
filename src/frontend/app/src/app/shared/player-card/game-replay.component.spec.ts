@@ -73,4 +73,55 @@ describe('GameReplayComponent', () => {
     expect(el().querySelector('app-game-review')).toBeNull();
     TestBed.inject(HttpTestingController).verify();
   });
+
+  // 0.848.0, Wunsch 2026-10-26: „in der Partie Sprungmarken zu interessanten Stellungen — nicht jede muss in der Partie
+  // vorkommen, kann auch in einer Variation markiert werden"
+  it('Sprungmarken: Hauptlinie springt an den Zug, Variante an den Abzweig mit der Stellung, ohne Ort nur die Stellung', () => {
+    const c = create(PGN);
+    const nf3 = 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2';
+    const nc3 = 'r1bqkbnr/pp1ppppp/2n5/2p5/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 2 3';
+    const lone = '8/8/8/8/8/8/k7/K7 w - - 0 1';
+    fixture.componentRef.setInput('marks', [
+      { fen: nf3, positionKey: 'a', ply: 3, variationFromPly: null, variationUci: null, count: 2 },
+      { fen: nc3, positionKey: 'b', ply: null, variationFromPly: 2, variationUci: 'b1c3 b8c6', count: 1 },
+      { fen: lone, positionKey: 'c', ply: null, variationFromPly: null, variationUci: null, count: 1 },
+    ]);
+    fixture.detectChanges();
+    const jumps = Array.from(el().querySelectorAll('.mark-jump')) as HTMLButtonElement[];
+    expect(jumps.map(b => b.textContent?.trim())).toEqual(['2.Sf3 ×2', 'Variante: 2.Sc3', 'in einer Variante']);
+    expect(el().querySelector('.replay-marks')?.textContent).toContain('Interessante Stellungen');
+    // Punkte in der Zugliste: an 2.Sf3 (Index 2) und am Abzweig nach 1…c5 (Index 1)
+    expect(Array.from(el().querySelectorAll('.mv.marked')).map(b => b.textContent)).toEqual(['c5', 'Sf3']);
+
+    jumps[0].click();
+    fixture.detectChanges();
+    expect(c.index()).toBe(2);
+    expect(c.fen()).toBe(nf3);
+    expect(el().querySelector('.replay-side')).toBeNull();
+
+    jumps[1].click();
+    fixture.detectChanges();
+    expect(c.index()).toBe(1);
+    expect(c.fen()).toBe(nc3);
+    expect(c.last()).toBeUndefined();
+    expect(el().querySelector('.replay-side')?.textContent).toContain('Variante: 2.Sc3 Sc6');
+    (el().querySelector('.replay-side button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(c.fen()).not.toBe(nc3);
+    expect(c.index()).toBe(1);
+
+    jumps[2].click();
+    fixture.detectChanges();
+    expect(c.fen()).toBe(lone);
+    expect(el().querySelector('.replay-side')?.textContent).toContain('in einer Variante');
+    c.step(1);                                                // Blättern verlässt die Variante
+    fixture.detectChanges();
+    expect(c.fen()).not.toBe(lone);
+  });
+
+  it('ohne Marken keine Leiste', () => {
+    create(PGN);
+    expect(el().querySelector('.replay-marks')).toBeNull();
+    expect(el().querySelectorAll('.mv.marked').length).toBe(0);
+  });
 });

@@ -165,6 +165,11 @@ describe('SharedGameComponent', () => {
     expect(el.querySelector('.meta')!.textContent).toContain('Landesliga');
     expect(el.querySelector('button.analyze')).toBeNull();
     expect(fixture.debugElement.query(By.directive(GameReviewComponent)).componentInstance.withExplanations()).toBeFalse();
+
+    // 0.848.0: „+" in der Partie → Halbzug; in einer eigenen Nebenvariante → Abzweig + Variantenzüge (LeagueHub-Sprungmarke)
+    expect(c.markOrigin()).toEqual(jasmine.objectContaining({ clubGameId: 12, ply: 0 }));
+    (c as unknown as { live: () => unknown }).live = () => ({ variation: () => [{ uci: 'g1f3' }, { uci: 'b8c6' }] });
+    expect(c.markOrigin()).toEqual(jasmine.objectContaining({ clubGameId: 12, ply: null, variationFromPly: 0, variationUci: 'g1f3 b8c6' }));
   });
 
   it('creates (template AOT-compiles + DI resolves)', async () => {

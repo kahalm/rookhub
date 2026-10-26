@@ -5256,7 +5256,12 @@
       "dutch": "Nizozemska",
       "benoni": "Benoni (1…c5)",
       "chigorin": "Čigorin (1…Sc6)"
-    }
+    },
+    "marksTitle": "Zanimljive pozicije",
+    "markVariation": "Varijanta: {{line}}",
+    "markInVariation": "u varijanti",
+    "backToGame": "Natrag na partiju",
+    "markedTimes": "označeno {{count}} puta"
   },
   "prep": {
     "trainingRepertoire": {

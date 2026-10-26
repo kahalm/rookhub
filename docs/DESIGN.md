@@ -960,6 +960,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Tabellen: Namen kürzen nicht mit „…“ (am Touch fehlt der Tooltip) — sie brechen um, Nebenangaben (Elo) in die zweite
   Zeile; gekürzt wird nur Nebeninformation (Zugfolge mit `title`). Am Handy fallen Nebenspalten weg statt Hauptspalten
   rechts aus dem Bild zu schieben (Prognose-ⓘ).
+- Interessante Stellungen (0.848.0): an einer Partie ein Marker `.bg-marks` „◆ n“ in `--rh-success` (fett, `nowrap`,
+  Titel „n interessante Stellungen“); im Nachspielen `lh-game-replay` darunter „Interessante Stellungen:“ als Textknöpfe
+  (`.btn-link.mark-jump`, aktiv fett) — Hauptlinie „12…Sf6“, aus einer Variante „Variante: 12…c5“, ohne Ort „in einer
+  Variante“, mehrfach markiert „×n“ gedämpft. Züge mit Marke bzw. Abzweig tragen in der Zugliste einen 6-px-Punkt in
+  `--rh-success`; eine Variantenstellung auf dem Brett hat darüber eine Zeile „Variante: …“ mit „Zurück zur Partie“.
 
 ### 8.5 ClubHub (`src-clubhub/`, `clubhub.scss`)
 
@@ -1073,6 +1078,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-26 | 0.848.0 | LeagueHub, interessante Stellungen: Marker „◆ n“ (`--rh-success`) an Partien, Sprungmarken als Textknöpfe unter der Zugliste, Punkt an markierten Zügen, Variantenstellung mit „Zurück zur Partie“; neue Seite „Übersicht“ (`/verein/uebersicht`) in den Aufstellungs-Karten (`lu-*`) | Grün = „+“-Markierung (wie der Knopf), Textknöpfe wie die übrigen Partie-Aktionen | Nutzerwunsch 26.10. |
 | 2026-10-25 | 0.837.0 · E-Book-Brett Training | Auge (`visibility`) = aktuelle Stellung am eingefrorenen Brett ansehen (umschaltbar, nur ansehen, beim Lösen und Kalkulieren); Lösung zeigen = Glühbirne (`lightbulb`, aktiv in Primärfarbe) | Das Auge zeigte die Lösung — im Training will man aber zuerst die echte Stellung nach den gespielten Zügen sehen | Nutzerwunsch 25.10. |
 | 2026-10-21 | 0.817.0 · Formular-Leser | Wartezeit als zwei Schritte mit Uhr („Wartet auf den Leser“ → ✓ + „Wird gelesen“), geteilt RookHub/LeagueHub (5.10) | Eine Zeile mit einer Uhr ab dem Hochladen sagte nicht, ob der Leser die Einlesung schon hat | Nutzerwunsch 21.10. |
 | 2026-10-21 | 0.816.0 · Formular-Werkbank | RookHub-Korrektur (`/games/:id/edit`) und LeagueHub-Prüfseite teilen `app-sheet-workbench` mit der LeagueHub-Aufteilung (Foto mit Seiten-/Fotowahl und markierter Zeile │ Brett, Kurve, Engine │ Ausschnitt + Prüfen, Zugliste); RookHub bekommt Fotowahl, Markierung im Foto, Ausschnitt im Prüfteil, Bewertungskurve der Werkbank und die zuschaltbare Engine statt des Partie-Rückblicks; Texte unter `sheetEdit.*` (en/de/hr/hu) | Zwei Fassungen derselben Korrektur, RookHubs Aufteilung (Foto + Ausschnitt gestapelt, Lesarten rechts) gefiel schlechter | Nutzerwunsch 21.10. (Screenshots 075033 LeagueHub / 075211 RookHub) |

@@ -76,6 +76,7 @@ const MID_PAGES = /^\/(?:verein(?:\/neu)?|vereine|konten|uebertragungen|s\/[^/?#
           @if (nav().view) {
             <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
             <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
+            <a routerLink="/verein/uebersicht" routerLinkActive="on">Übersicht</a>
           }
           @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
           @if (nav().manage) {

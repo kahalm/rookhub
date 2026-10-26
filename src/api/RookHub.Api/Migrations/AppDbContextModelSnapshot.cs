@@ -5551,7 +5551,16 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("VariationFromPly")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VariationUci")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("LeagueClubGameId");
 
                     b.HasIndex("AnonSessionId", "PositionKey")
                         .IsUnique();

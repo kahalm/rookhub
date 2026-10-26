@@ -5256,7 +5256,12 @@
       "dutch": "Holland",
       "benoni": "Benoni (1…c5)",
       "chigorin": "Csigorin (1…Hc6)"
-    }
+    },
+    "marksTitle": "Érdekes állások",
+    "markVariation": "Változat: {{line}}",
+    "markInVariation": "egy változatban",
+    "backToGame": "Vissza a játszmához",
+    "markedTimes": "{{count}}× megjelölve"
   },
   "prep": {
     "trainingRepertoire": {

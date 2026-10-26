@@ -35,6 +35,8 @@ public static partial class DomainServicesSetup
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameMoves(   // Aufstellungen + erste Züge (2026-10-08)
             sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), null,                     // + Partie je Brett (0.724.0)
             sp.GetRequiredService<RookHub.Api.Services.League.LeagueFixtureGames>()));
+        services.AddScoped<RookHub.Api.Services.League.ClubGameMarks>();            // interessante Stellungen der Vereinspartien (0.848.0)
+        services.AddScoped<RookHub.Api.Services.League.LeagueClubOverview>();       // Übersicht aller eigenen Begegnungen (0.848.0)
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(
             sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
         services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();

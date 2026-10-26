@@ -42,7 +42,7 @@ describe('RoundLineupsComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'fixturePgn']);
+    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'clubGameMarks', 'fixturePgn']);
     api.lineups.and.resolveTo(DATA);
     TestBed.configureTestingModule({ imports: [RoundLineupsComponent], providers: [{ provide: LineupsApiService, useValue: api },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },

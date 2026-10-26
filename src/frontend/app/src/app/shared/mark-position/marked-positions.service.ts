@@ -14,6 +14,10 @@ export interface MarkOrigin {
   ply?: number | null;
   /** Der bessere Zug (UCI), wenn bekannt — im Fehler-Training die Lösung. */
   bestUci?: string | null;
+  /** 0.848.0: in einer Nebenvariante markiert — Halbzug der Partie, an dem sie abzweigt (dann ohne `ply`)… */
+  variationFromPly?: number | null;
+  /** …und ihre Züge bis zur Stellung (UCI, Leerzeichen). */
+  variationUci?: string | null;
 }
 
 export interface MarkedPosition {
