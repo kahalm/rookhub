@@ -125,6 +125,12 @@ public class TournamentDirectoryScheduler : BackgroundService, IBackgroundJobInf
         {
             return;
         }
+        catch (Exception ex)
+        {
+            // Wie RunOnceAsync: BackgroundServiceExceptionBehavior ist StopHost — ein DB-Fehler bei der Aufhol-Pruefung
+            // kurz nach dem Start nahm sonst die ganze API mit (A8-005). Ohne Aufholen weiter; der Nachtlauf kommt.
+            _logger.LogWarning(ex, "Turnierverzeichnis: Aufhol-Pruefung nach dem Start fehlgeschlagen — kein Aufhol-Lauf");
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {

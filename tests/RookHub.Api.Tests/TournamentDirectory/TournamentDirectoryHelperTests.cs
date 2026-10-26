@@ -441,6 +441,27 @@ public class TournamentDirectorySchedulerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    /// <summary>A8-005: Die Aufhol-Pruefung beim Start liest die DB. Fing der Block nur den Shutdown-Abbruch, beendete
+    /// ein DB-Fehler kurz nach dem Start ueber StopHost die ganze API. Jetzt: Warnung, ohne Aufholen weiter.</summary>
+    [Fact]
+    public async Task Start_CatchUpCheckFailsOnTheDatabase_KeepsRunning()
+    {
+        var services = new ServiceCollection()
+            .AddScoped<RookHub.Api.Data.AppDbContext>(_ => throw new InvalidOperationException("DB weg"))
+            .BuildServiceProvider();
+        var config = new ConfigurationBuilder().Build();
+        using var scheduler = new TournamentDirectoryScheduler(services.GetRequiredService<IServiceScopeFactory>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<TournamentDirectoryScheduler>.Instance, config);
+
+        await scheduler.StartAsync(CancellationToken.None);
+        await Task.Delay(200);
+
+        Assert.NotNull(scheduler.ExecuteTask);
+        Assert.False(scheduler.ExecuteTask!.IsFaulted, scheduler.ExecuteTask.Exception?.ToString());
+        Assert.False(scheduler.ExecuteTask.IsCompleted);   // wartet auf 03:00 UTC statt zu enden
+        await scheduler.StopAsync(CancellationToken.None);
+    }
+
     [Fact]
     public void TimeUntilNextRun_BeforeThreeUtc_WaitsUntilToday()
     {

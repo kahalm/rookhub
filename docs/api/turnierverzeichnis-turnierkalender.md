@@ -28,6 +28,8 @@ Ausblenden, Melden, „Mein Turnier fehlt" und die Suchprofile bleiben `[Authori
 > `PlayerHistory:Enabled=false` (04:30 UTC). **Auf DEV seit 2026-09-10 beides abgeschaltet**: dort
 > stoert ein Sweep zur Unzeit die Messung, an der gerade jemand arbeitet, und die Laeufe werden
 > ohnehin von Hand angestossen. Prod bleibt unveraendert an.
+> Scheitert die Aufhol-Pruefung beim Start an der DB, gibt es eine Warnung und keinen Aufhol-Lauf — die API laeuft
+> weiter (vorher StopHost, A8-005).
 
 **Verortung (`GeocodingService`, ueberarbeitet in 0.418.0).** Der Spielort ist Freitext und nennt
 bei Ligen MEHRERE Orte. Die Reihenfolge:
