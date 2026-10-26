@@ -16,11 +16,10 @@ import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';
 import { ChallengeFriendsComponent } from './challenge-friends.component';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
-import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleService, PuzzleDto, PuzzleStatsDto } from './puzzle.service';
 import { OfflineService } from '../../core/offline.service';
 import { OfflineQueueService } from '../../core/offline-queue.service';
-import { DIFFICULTY_OFFSET } from './puzzle-window.util';
+import { PuzzleDifficulty, StandardViewSettings } from './standard-view-settings';
 import { StandardPuzzleSource } from './standard-puzzle-source';
 import { StockfishService } from './stockfish.service';
 import { AuthService } from '../../core/auth.service';
@@ -34,7 +33,7 @@ import { WorksheetService } from '../worksheets/worksheet.service';
 import { taskItemFromPuzzle } from '../worksheets/worksheet-items.util';
 import { FavoriteTracker } from './favorite-tracker';
 import { PuzzleRevengeRound } from './puzzle-revenge-round';
-import { BOARD_THEMES, PIECE_SETS, ThemeMode, applyThemeMode, parseShareViewParams } from './board-theme.util';
+import { BOARD_THEMES, PIECE_SETS, ThemeMode, parseShareViewParams } from './board-theme.util';
 import { Key } from 'chessground/types';
 import { buildStagedHints } from './puzzle-hints.util';
 import { BasePuzzleSolver } from './base-puzzle-solver';
@@ -44,9 +43,6 @@ import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { PctPipe } from '../../shared/format/pct';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
-
-/** Bereichs-Schlüssel der Spielweise (SolveModeService) für die Standard-Puzzles. */
-const SOLVE_SCOPE = 'puzzles';
 
 
 /** Endzustände dieses Lösers (die übrigen setzt {@link BasePuzzleSolver}). */
@@ -73,7 +69,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
 
   boardTheme = 'brown';
 
-  difficulty: 'sehr_leicht' | 'leicht' | 'normal' | 'schwer' | 'sehr_schwer' = 'normal';
+  difficulty: PuzzleDifficulty = 'normal';
   excludeSolved = false;
   /** „5 schwächste Themen trainieren" — filtert Puzzles auf die schwächsten Themen des Users (ODER). */
   worstTagsEnabled = false;
@@ -107,32 +103,29 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
    *  einen Hinweis statt "Your turn!". Reset bei loadNext/retry. */
   gaveUp = false;
 
-  /** Gewählte Spielweise für den Bereich „Puzzles" (Training/Einfach). `null` = es wurde bewusst
-   *  nicht gefragt (fester Ansichts-Link, geteiltes Einzel-Puzzle, Challenge/Revanche) — dann
-   *  bleibt es bei der Stufe aus den Einstellungen bzw. aus der URL, und das ⋮-Menü zeigt keinen
-   *  Umschalter. */
-  solveModeChoice: SolveMode | null = null;
-  /** True, wenn in diesem Aufruf nicht nach der Spielweise gefragt werden darf (siehe oben). */
-  private solveModeAskSuppressed = false;
+  /** Ansicht, Filter-Einstellungen und Spielweise (Training/Einfach) — siehe {@link StandardViewSettings}. */
+  readonly view: StandardViewSettings;
+  /** Gewählte Spielweise für „Puzzles"; `null` = bewusst nicht gefragt (fester Link, Einzelkontext). */
+  get solveModeChoice(): SolveMode | null { return this.view.solveModeChoice; }
 
   constructor(
-    private puzzleService: PuzzleService,
+    readonly puzzleService: PuzzleService,
     stockfish: StockfishService,
     private authService: AuthService,
-    private prefs: PreferencesService,
+    readonly prefs: PreferencesService,
     private router: Router,
     private route: ActivatedRoute,
-    private dialog: MatDialog,
+    readonly dialog: MatDialog,
     private offline: OfflineService,
     private offlineQueue: OfflineQueueService,
-    private snackbar: SnackbarService,
+    readonly snackbar: SnackbarService,
     private challengeService: ChallengeService,
     private revengeService: RevengeService,
-    private translate: TranslateService,
+    readonly translate: TranslateService,
     private http: HttpClient,
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
-    private solveMode: SolveModeService,
+    readonly solveMode: SolveModeService,
     private worksheets: WorksheetService
   ) {
     super(stockfish);
@@ -141,7 +134,8 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
       this.favorites, 'standard',
       () => this.puzzle?.id, () => this.lastSolvedPuzzleId, () => this.isLoggedIn,
     );
-    this.loadConfig();
+    this.view = new StandardViewSettings(this);
+    this.view.loadConfig();
     this.source = new StandardPuzzleSource(this.puzzleService, this.offline, {
       elo: () => this.stats?.puzzleElo ?? 1500,
       difficulty: () => this.difficulty,
@@ -166,13 +160,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   // ===== Hooks für BasePuzzleSolver =====
   protected override get depth(): number { return this.stockfishDepth; }
 
-  protected override onSetupStart(): void {
-    const applied = applyThemeMode(this.themeMode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-    // e.p.-Zwang: per URL erzwungen ODER (Crazy-Brett + Einstellung an).
-    this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && this.prefs.enPassantForced);
-  }
+  protected override onSetupStart(): void { this.view.applyLook(); }
 
   protected override onSolvingBegins(): void {
     this.startTimer();
@@ -327,9 +315,9 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     // oder ein Einzelkontext geöffnet wurde (geteiltes Puzzle, Challenge, Revanche): dort hat der
     // Absender die Ansicht bereits gewählt bzw. es ist kein Trainingseinstieg, und ein
     // blockierender Dialog stünde nur im Weg.
-    this.solveModeAskSuppressed = ov.visualization != null || this.singlePuzzle
+    this.view.askSuppressed = ov.visualization != null || this.singlePuzzle
       || this.revenge.challengeId != null || this.revenge.userId != null;
-    this.askSolveMode();
+    this.view.askSolveMode();
 
     const stats$ = this.isLoggedIn
       ? this.puzzleService.getStats(this.visualizationMode)
@@ -360,51 +348,8 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     });
   }
 
-  // ===== Spielweise (Training/Einfach) =====
-
-  /** Fragt beim ersten Einstieg in den Bereich nach der Spielweise; danach kommt die gemerkte
-   *  Wahl ohne Dialog (SolveModeService). Das erste Puzzle steht evtl. schon → mit der frisch
-   *  gewählten Spielweise neu aufsetzen (wie im Wochenpost). */
-  private askSolveMode(): void {
-    if (this.solveModeAskSuppressed) return;
-    // Bis zur Wahl wird ein ankommendes Puzzle nur GEZEIGT, nicht aufgesetzt (loadNext) — sonst liefe die
-    // Uhr hinter dem Dialog und der Gegnerzug wäre schon gespielt. Mit gemerkter Wahl antwortet ensure
-    // synchron, das Flag fällt also sofort wieder.
-    this.awaitingSolveMode = true;
-    this.solveMode.ensure(SOLVE_SCOPE, { scopeLabel: this.translate.instant('solveMode.scope.puzzles') })
-      .subscribe(mode => {
-        this.awaitingSolveMode = false;
-        const vorher = this.visualizationMode;
-        this.solveModeChoice = mode;
-        this.applySolveModeLevel();
-        // Elo/Statistik hängen an der Visualisierungsstufe (wie in setVisualizationLevel) →
-        // nur nachladen, wenn die Wahl die Stufe tatsächlich verschoben hat.
-        if (this.isLoggedIn && this.visualizationMode !== vorher) {
-          this.puzzleService.getStats(this.visualizationMode)
-            .subscribe({ next: s => this.stats = s, error: () => {} });
-        }
-        if (this.puzzle) this.setupPuzzle(this.puzzle);
-      });
-  }
-
-  /** Visualisierungsstufe zur gemerkten Spielweise setzen. Wird bei jedem Puzzle-Start
-   *  aufgerufen, damit ein Umschalten ab dem NÄCHSTEN Puzzle greift. Ohne gemerkte Wahl
-   *  (nicht gefragt) bleibt die Stufe unangetastet. */
-  private applySolveModeLevel(): void {
-    if (!this.solveModeChoice) return;
-    this.visualizationMode = this.solveMode.levelFor(this.solveModeChoice);
-  }
-
-  /** Spielweise umschalten (⋮-Menü). Wirkt ab dem NÄCHSTEN Puzzle — ein laufender Versuch darf
-   *  nicht mitten im Rechnen die Regeln wechseln. */
-  toggleSolveMode(): void {
-    const neu: SolveMode = this.solveModeChoice === 'training' ? 'easy' : 'training';
-    this.solveModeChoice = neu;
-    this.solveMode.set(SOLVE_SCOPE, neu);
-    this.snackbar.info(
-      this.translate.instant(neu === 'easy' ? 'solveMode.switchedEasy' : 'solveMode.switchedTraining'),
-      { duration: 3000 });
-  }
+  /** Spielweise umschalten (⋮-Menü) — wirkt ab dem NÄCHSTEN Puzzle. */
+  toggleSolveMode(): void { this.view.toggleSolveMode(); }
 
   ngOnDestroy(): void {
     this.destroyed = true;
@@ -414,7 +359,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
 
   loadNext(): void {
     const epoch = ++this.source.loadEpoch;
-    this.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
+    this.view.applySolveModeLevel();   // ein Umschalten der Spielweise greift ab diesem Puzzle
     this.state = 'LOADING';
     this.offlineNoCache = false;
     this.offlinePoolExhausted = false;
@@ -487,7 +432,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   /** Puzzle-Filter geändert: vorab geladenes Puzzle + Offline-Pool galten für die alten Filter → verwerfen
    *  (auch noch laufende Anfragen) und den Pool mit den neuen Filtern füllen. `loadNow` = gleich ein neues
    *  Puzzle laden (Schwierigkeit/Themen); sonst bleibt das laufende stehen und erst das nächste kommt gefiltert. */
-  private onPuzzleFilterChange(loadNow: boolean): void {
+  onPuzzleFilterChange(loadNow: boolean): void {
     this.source.discardForFilterChange();
     this.source.ensureWorstThemes(() => {
       this.source.prefetchOfflinePool();
@@ -525,7 +470,7 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     });
   }
 
-  private setupPuzzle(puzzle: PuzzleDto): void {
+  setupPuzzle(puzzle: PuzzleDto): void {
     this.reviewMode = false;
     this.reviewIndex = 0;
     this.hintLevel = 0;
@@ -689,21 +634,6 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
     this.setupPuzzle(this.puzzle);
   }
 
-  // --- Config persistence ---
-
-  private loadConfig(): void {
-    this.boardTheme = this.prefs.boardTheme;
-    this.pieceSet = this.prefs.pieceSet;
-    this.themeMode = this.prefs.themeMode;
-    this.stockfishDepth = this.prefs.stockfishDepth;
-    this.visualizationMode = this.prefs.visualization;
-    this.vizArrowEnabled = this.prefs.vizArrow;
-    const d = this.prefs.puzzleDifficulty;
-    if (d && d in DIFFICULTY_OFFSET) this.difficulty = d as typeof this.difficulty;
-    this.worstTagsEnabled = this.prefs.puzzleWorstTags;
-    this.excludeSolved = this.prefs.puzzleExcludeSolved;
-  }
-
   /** Aktive Schwächen-Themen für die Sichtbar-Anzeige während des Lösens (leer, wenn Filter aus). */
   get activeWorstThemes(): string[] { return this.source.activeWorstThemes; }
 
@@ -713,105 +643,10 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
       && this.puzzle.themes.split(/\s+/).includes(theme);
   }
 
-  setVisualizationLevel(level: number): void {
-    this.visualizationMode = level;
-    this.prefs.setVisualization(level);
-    // Stufe direkt gewählt → gemerkte Spielweise mitziehen, sonst widersprechen sich beide.
-    this.solveModeChoice = this.solveMode.modeForLevel(level);
-    this.solveMode.set(SOLVE_SCOPE, this.solveModeChoice);
-    if (this.isLoggedIn) {
-      this.puzzleService.getStats(level).subscribe(s => this.stats = s);
-    }
-    // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
-    // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
-    if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);
-  }
-
-  setVizArrowEnabled(val: boolean): void {
-    this.vizArrowEnabled = val;
-    if (!val) this.clearVizOpponentArrow();
-    this.prefs.setVizArrow(val);
-  }
-
-  setBoardTheme(theme: string): void {
-    this.boardTheme = theme;
-    this.prefs.setBoardTheme(theme);
-  }
-
-  setPieceSet(set: string): void {
-    this.pieceSet = set;
-    this.prefs.setPieceSet(set);
-  }
-
-  setThemeMode(mode: ThemeMode): void {
-    this.themeMode = mode;
-    this.prefs.setThemeMode(mode);
-    const applied = applyThemeMode(mode, this.prefs.boardTheme, this.prefs.pieceSet);
-    this.boardTheme = applied.boardTheme;
-    this.pieceSet = applied.pieceSet;
-  }
-
-  openSettingsDialog(): void {
-    const ref = this.dialog.open(PuzzleSettingsDialogComponent, {
-      data: {
-        mode: 'standard',
-        boardTheme: this.prefs.boardTheme,
-        pieceSet: this.prefs.pieceSet,
-        themeMode: this.themeMode,
-        visualizationMode: this.visualizationMode,
-        vizArrowEnabled: this.vizArrowEnabled,
-        stockfishDepth: this.stockfishDepth,
-        difficulty: this.difficulty,
-        excludeSolved: this.excludeSolved,
-        worstTags: this.worstTagsEnabled,
-        isLoggedIn: this.isLoggedIn,
-        puzzleElo: this.stats?.puzzleElo,
-        offPathWarnMoves: this.prefs.offPathWarnMoves,
-        enPassantForced: this.prefs.enPassantForced,
-      } as PuzzleSettingsDialogData,
-      width: '360px',
-      maxWidth: '95vw',
-    });
-    ref.afterClosed().subscribe((result: PuzzleSettingsDialogResult | null) => {
-      if (!result) return;
-      this.setBoardTheme(result.boardTheme);
-      this.setPieceSet(result.pieceSet);
-      this.setThemeMode(result.themeMode);
-      // Nur eine GEÄNDERTE Stufe setzt neu auf — Brett/Figuren speichern darf den Versuch nicht neu starten.
-      if (result.visualizationMode !== this.visualizationMode) this.setVisualizationLevel(result.visualizationMode);
-      this.setVizArrowEnabled(result.vizArrowEnabled);
-      if (result.stockfishDepth !== undefined) {
-        this.stockfishDepth = result.stockfishDepth;
-        this.prefs.setStockfishDepth(this.stockfishDepth);
-      }
-      // Puzzle-Filter: erst ALLE neuen Werte setzen und merken, dann EIN gemeinsamer Neuaufbau — sonst fragt
-      // ein früherer Block (z. B. Schwierigkeit) Puzzle/Offline-Pool noch mit dem alten Wert eines späteren an.
-      const difficultyChanged = result.difficulty !== undefined && result.difficulty !== this.difficulty;
-      const excludeSolvedChanged = result.excludeSolved !== undefined && result.excludeSolved !== this.excludeSolved;
-      const worstTagsChanged = result.worstTags !== undefined && result.worstTags !== this.worstTagsEnabled;
-      if (difficultyChanged) {
-        this.difficulty = result.difficulty as typeof this.difficulty;
-        this.prefs.setPuzzleDifficulty(this.difficulty);
-      }
-      if (excludeSolvedChanged) {
-        this.excludeSolved = !!result.excludeSolved;
-        this.prefs.setPuzzleExcludeSolved(this.excludeSolved);
-      }
-      if (worstTagsChanged) {
-        this.worstTagsEnabled = !!result.worstTags;
-        this.prefs.setPuzzleWorstTags(this.worstTagsEnabled);
-      }
-      // Neue Schwierigkeit/Themen laden sofort ein neues Puzzle; „Gelöste ausschließen" allein lässt das laufende stehen.
-      if (difficultyChanged || excludeSolvedChanged || worstTagsChanged) {
-        this.onPuzzleFilterChange(difficultyChanged || worstTagsChanged);
-      }
-      if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
-      if (result.enPassantForced !== undefined) {
-        this.prefs.setEnPassantForced(result.enPassantForced);
-        // Der Link-Zwang (?anarchy=max) gilt unabhängig von der Einstellung (wie in onSetupStart).
-        this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && result.enPassantForced);
-        if (this.isSolving) this.updateBoard();   // Zugziele des laufenden Versuchs nachziehen
-      }
-    });
-  }
+  setVisualizationLevel(level: number): void { this.view.setVisualizationLevel(level); }
+  setVizArrowEnabled(val: boolean): void { this.view.setVizArrowEnabled(val); }
+  setBoardTheme(theme: string): void { this.view.setBoardTheme(theme); }
+  setPieceSet(set: string): void { this.view.setPieceSet(set); }
+  setThemeMode(mode: ThemeMode): void { this.view.setThemeMode(mode); }
+  openSettingsDialog(): void { this.view.openDialog(); }
 }
