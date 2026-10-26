@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
@@ -23,7 +22,6 @@ namespace RookHub.Api.Controllers.Chessable;
 [ApiController]
 [Route("api/extension")]
 [Authorize]
-[EnableCors("ExtensionPolicy")]
 // Eine Stelle statt 17: prüft je Anfrage, dass ein PAT den Scope „extension" trägt (JWT-Nutzer
 // haben keinen scope-Claim und dürfen immer). Vorher stand dieselbe Zeile in JEDER Action.
 [RequireTokenScope(ApiTokenService.DefaultScope)]

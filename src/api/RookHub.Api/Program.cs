@@ -38,7 +38,7 @@ try
     builder.Services.AddRookHubHttpClients(builder.Configuration);
 
     builder.Services.AddRookHubDataProtection(builder.Configuration);
-    builder.Services.AddRookHubCors();
+    builder.Services.AddRookHubCors(builder.Environment);
 
     // Hinter nginx (Docker) kommt sonst nur die Proxy-IP an → der globale Rate-Limiter
     // würde ALLE Nutzer in eine Partition werfen (faktische Site-weite 100/min-Drossel) und

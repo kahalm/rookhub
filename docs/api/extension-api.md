@@ -1,10 +1,12 @@
-# Extension API (auth, CORS für chess.com)
+# Extension API (auth, ohne CORS)
 
 > Ausgelagert aus `CLAUDE.md` am 2026-10-11 (Abschnitt „REST API → Extension API (auth, CORS für chess.com)“). Neue Doku zu diesem Bereich gehört HIERHER, nicht in die CLAUDE.md.
 
 Code: `Controllers/Chessable/ExtensionController.cs` (Repertoire, Analyse, Merken, Partien, Token) und als Partial
 `ExtensionController.Chessable.cs` (Chessable-Ingest, Trainings-Mitschnitte, Fortschritt, Linien-Cache, Fehlermeldungen;
-zweite Zerlegungsrunde W7b) — Route, Auth, CORS und Token-Scope stehen einmal an der Hauptdatei.
+zweite Zerlegungsrunde W7b) — Route, Auth und Token-Scope stehen einmal an der Hauptdatei. **Kein CORS** (A10-007): die
+`ExtensionPolicy` fürs entfallene Userscript ist weg; die Extension ruft RookHub nur aus ihrem Background-Worker
+(host_permissions, CORS-frei). Die Dev-Default-Policy gilt nur in Development (`Startup/CorsSetup.cs`).
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|

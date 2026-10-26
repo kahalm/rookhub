@@ -1,31 +1,17 @@
 namespace RookHub.Api.Startup;
 
-/// <summary>CORS: Policy der Extension/des Userscripts (nur ExtensionController) und die Dev-Vorgabe.</summary>
+/// <summary>CORS: nur die Dev-Vorgabe für das lokale Frontend, und nur in Development (Codereview A10-007).
+/// Prod ist same-origin hinter nginx; die RepCheck-Extension ruft RookHub ausschließlich aus ihrem Background-Worker
+/// (host_permissions, CORS-frei). Die frühere <c>ExtensionPolicy</c> (chess.com, lichess.org, chessable.com) diente dem
+/// entfallenen Userscript und ist weg.</summary>
 public static class CorsSetup
 {
-    public static IServiceCollection AddRookHubCors(this IServiceCollection services)
+    public static IServiceCollection AddRookHubCors(this IServiceCollection services, IHostEnvironment environment)
     {
-        // CORS policies
         services.AddCors(options =>
         {
-            // Policy for the Chrome extension (applied only to ExtensionController).
-            // KEIN AllowCredentials: Auth laeuft ausschliesslich ueber Bearer-Token im
-            // Authorization-Header — Cookies werden vom Userscript nicht gebraucht und
-            // wuerden CSRF-Risiko schaffen, sollten weitere Origins hinzukommen.
-            options.AddPolicy("ExtensionPolicy", policy =>
-            {
-                // Origins, auf denen das RepCheck-Userscript läuft und per fetch direkt zur API spricht
-                // (die Extension-Variante geht CORS-frei über ihren Background-Worker). chessable.com kam
-                // mit der Chessable-Trainingszeit-Meldung dazu; POST für analyze-game + training-activity.
-                policy.WithOrigins(
-                        "https://www.chess.com",
-                        "https://lichess.org",
-                        "https://www.chessable.com",
-                        "https://chessable.com")
-                    .WithMethods("GET", "POST")
-                    .WithHeaders("Authorization", "Content-Type");
-            });
-            // Default policy for frontend (nur lokale Dev-Origins; Prod ist same-origin hinter nginx).
+            if (!environment.IsDevelopment()) return;
+            // Default policy for frontend (nur lokale Dev-Origins).
             // KEIN AllowCredentials: Auth läuft ausschließlich über den Bearer-Header (JWT aus localStorage),
             // es werden keine Cookies gebraucht. Die Kombination AllowCredentials + AllowAnyHeader wäre eine
             // gefährliche Default-Fläche, sobald jemand später eine weitere Origin hinzufügt — daher weglassen.
