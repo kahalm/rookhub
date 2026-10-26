@@ -41,16 +41,16 @@ describe('Browser-Speicher: jeder Schlüssel eingeordnet (F1-010)', () => {
     const urls = sourceUrls();
     expect(urls.length).withContext('Quelltexte nicht ausgeliefert (karma.conf.js files)').toBeGreaterThan(500);
     const missing = new Set<string>();
-    for (const url of urls) {
-      const res = await fetch(url);
-      for (const lit of storageLiterals(await res.text())) {
+    const texts = await Promise.all(urls.map(async url => [url, await (await fetch(url)).text()] as const));
+    for (const [url, text] of texts) {
+      for (const lit of storageLiterals(text)) {
         const head = lit.endsWith('${') ? lit.slice(0, -2) : null;
         const entry = head !== null ? classifyStorageKey(head + 'x') : classifyStorageKey(lit);
         if (!entry || (head !== null && !entry.prefix)) missing.add(`${lit}  (${url.replace('/base/', '')})`);
       }
     }
     expect([...missing]).withContext('neuer Schlüssel: in core/local-storage-keys.ts einordnen').toEqual([]);
-  });
+  }, 60000);
 
   it('kein Gerätewert liegt unter einem Präfix, das beim Abmelden geräumt wird', () => {
     const userPrefixes = STORAGE_KEYS.filter(e => e.cls === 'user' && e.prefix).map(e => e.key);
