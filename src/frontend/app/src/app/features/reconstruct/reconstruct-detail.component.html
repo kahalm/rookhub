@@ -185,7 +185,7 @@
             </mat-checkbox>
           }
 
-          @if (editKind() === Kind.Moves && !editAnchored() && !editingGenerated()) {
+          @if (editKind() === Kind.Moves && !draft.anchored() && !editingGenerated()) {
             <p class="muted small">{{ 'reconstruct.unanchoredHint' | translate }}</p>
           }
 
@@ -218,13 +218,13 @@
               <input matInput [(ngModel)]="editNote" maxlength="500">
             </mat-form-field>
           } @else {
-            <app-part-editor [fen]="editBoardFen()" [playable]="boardPlayable()" [boardTheme]="boardTheme"
-                             [pieceSet]="pieceSet" [plyShown]="plyShown()" [plyTotal]="plyTotal()" [atEnd]="atEnd()"
-                             [moves]="editMoves" [badMove]="editBadMove()" [(note)]="editNote" [sideBlack]="sideBlack()"
+            <app-part-editor [fen]="draft.boardFen()" [playable]="draft.playable()" [boardTheme]="boardTheme"
+                             [pieceSet]="pieceSet" [plyShown]="draft.plyShown()" [plyTotal]="draft.plyTotal()" [atEnd]="draft.atEnd()"
+                             [moves]="draft.text" [badMove]="draft.badMove()" [(note)]="editNote" [sideBlack]="draft.sideBlack()"
                              [generated]="editingGenerated()" [isNew]="editingId() === 0" [busy]="busy()"
-                             (boardMove)="onBoardMove($event)" (goPly)="goPly($event)" (truncate)="truncateHere()"
+                             (boardMove)="onBoardMove($event)" (goPly)="goPly($event)" (truncate)="draft.truncateHere()"
                              (movesInput)="onMovesInput($event)" (sideChange)="setSideBlack($event)"
-                             (save)="savePart()" (toPosition)="toPosition()" (cancel)="cancelEdit()" (undo)="undoMove()" />
+                             (save)="savePart()" (toPosition)="toPosition()" (cancel)="cancelEdit()" (undo)="draft.undoMove()" />
           }
         }
       </section>

@@ -81,9 +81,9 @@ describe('ReconstructDetailComponent', () => {
     c.startNew(PartKind.Moves);
     c.onMovesInput('1. e4 e5 2. Nf3');
 
-    expect(c.editBoardFen()).toContain('5N2');          // Springer steht auf f3
-    expect(c.editBoardFen()).toContain(' b ');          // Schwarz ist am Zug
-    expect(c.editBadMove()).toBeNull();
+    expect(c.draft.boardFen()).toContain('5N2');          // Springer steht auf f3
+    expect(c.draft.boardFen()).toContain(' b ');          // Schwarz ist am Zug
+    expect(c.draft.badMove()).toBeNull();
   });
 
   it('nimmt beim BEARBEITEN eines gespeicherten Teils weiter Züge am Brett an', () => {
@@ -94,19 +94,19 @@ describe('ReconstructDetailComponent', () => {
 
     c.edit(saved);
     // Ein angeklicktes Teil zeigt seinen ANFANG — gespielt wird am Ende.
-    expect(c.plyShown()).toBe(0);
-    expect(c.boardPlayable()).toBeFalse();
+    expect(c.draft.plyShown()).toBe(0);
+    expect(c.draft.playable()).toBeFalse();
 
     c.goPly('end');
-    const before = c.editBoardFen();
+    const before = c.draft.boardFen();
     c.onBoardMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: '' });
-    const afterFirst = c.editBoardFen();
+    const afterFirst = c.draft.boardFen();
     c.onBoardMove({ from: 'b8', to: 'c6', san: 'Nc6', fen: '' });
 
-    expect(c.editMoves).toBe('e4 e5 Nf3 Nc6');
+    expect(c.draft.text).toBe('e4 e5 Nf3 Nc6');
     expect(afterFirst).not.toBe(before);
-    expect(c.editBoardFen()).not.toBe(afterFirst);
-    expect(c.editBadMove()).toBeNull();
+    expect(c.draft.boardFen()).not.toBe(afterFirst);
+    expect(c.draft.badMove()).toBeNull();
   });
 
   it('nennt den ersten unmöglichen Zug sofort, ohne den Server zu fragen', () => {
@@ -114,7 +114,7 @@ describe('ReconstructDetailComponent', () => {
     c.startNew(PartKind.Moves);
     c.onMovesInput('e4 e5 Qh9');
 
-    expect(c.editBadMove()).toBe('Qh9');
+    expect(c.draft.badMove()).toBe('Qh9');
     http.expectNone({ method: 'POST' });
   });
 
@@ -124,9 +124,9 @@ describe('ReconstructDetailComponent', () => {
     c.onMovesInput('e4');
     c.onBoardMove({ from: 'e7', to: 'e5', san: 'e5', fen: START });
 
-    expect(c.editMoves).toBe('e4 e5');
-    c.undoMove();
-    expect(c.editMoves).toBe('e4');
+    expect(c.draft.text).toBe('e4 e5');
+    c.draft.undoMove();
+    expect(c.draft.text).toBe('e4');
   });
 
   // Die Grundannahme ist LÜCKE: Bruchstücke stammen von verschiedenen Stellen der Partie.
@@ -213,9 +213,9 @@ describe('ReconstructDetailComponent', () => {
     const c = open([part({ id: 4, moves: 'Bc5', startFen: MIDDLE, endFen: MIDDLE, continuesPrevious: true })]);
     c.edit(c.data()!.parts[0]);
 
-    expect(c.editMoves).toBe('Bc5');
+    expect(c.draft.text).toBe('Bc5');
     expect(c.editContinues).toBeTrue();
-    expect(c.editBoardFen()).not.toBe(START);
+    expect(c.draft.boardFen()).not.toBe(START);
   });
 
   it('öffnet bei einer leeren Rekonstruktion gleich den Zug-Editor', () => {
@@ -280,13 +280,13 @@ describe('ReconstructDetailComponent', () => {
     // auf dem Brett an — gemeldet als „ich kann nur einen Zug machen".
     const c = open([]);
     c.startNew(PartKind.Moves);
-    expect(c.boardPlayable()).toBeTrue();
+    expect(c.draft.playable()).toBeTrue();
 
     c.onMovesInput('e4 Qh9');
-    expect(c.boardPlayable()).toBeFalse();
+    expect(c.draft.playable()).toBeFalse();
 
     c.onMovesInput('e4 e5');
-    expect(c.boardPlayable()).toBeTrue();
+    expect(c.draft.playable()).toBeTrue();
   });
 
   it('bietet die Lückensuche an einer Stellung an, wie der Server sie schickt', () => {
@@ -366,7 +366,7 @@ describe('ReconstructDetailComponent', () => {
     expect(c.canAcceptWaypoint()).toBeFalse();   // am Anfang steht die Stellung davor
     c.goPly(1);                                  // eine Stellung MITTEN im Vorschlag
     expect(c.canAcceptWaypoint()).toBeTrue();
-    const fen = c.editBoardFen();
+    const fen = c.draft.boardFen();
     c.acceptWaypoint();
 
     const req = http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/waypoint', method: 'POST' });
@@ -417,32 +417,32 @@ describe('ReconstructDetailComponent', () => {
     const c = open([first, second]);
 
     c.edit(first);
-    expect(c.plyShown()).toBe(0);            // Klick zeigt den Anfang
+    expect(c.draft.plyShown()).toBe(0);            // Klick zeigt den Anfang
     c.goPly('end');
     c.goPly(1);                              // am Ende → nächstes Teil
     expect(c.editingId()).toBe(2);
 
     c.goPly(-1);                             // am Anfang → zurück ins vorige, dort ans Ende
     expect(c.editingId()).toBe(1);
-    expect(c.atEnd()).toBeTrue();
+    expect(c.draft.atEnd()).toBeTrue();
   });
 
   it('blättert mit den Pfeiltasten durch die eingetippten Züge', () => {
     const c = open([]);
     c.onMovesInput('e4 e5 Nf3');
-    expect(c.plyTotal()).toBe(3);
-    expect(c.atEnd()).toBeTrue();
+    expect(c.draft.plyTotal()).toBe(3);
+    expect(c.draft.atEnd()).toBeTrue();
 
     c.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
-    expect(c.plyShown()).toBe(2);
-    expect(c.editBoardFen()).not.toContain('5N2');     // der Springer steht noch auf g1
-    expect(c.atEnd()).toBeFalse();
-    expect(c.boardPlayable()).toBeFalse();             // hier wird geschaut, nicht gespielt
+    expect(c.draft.plyShown()).toBe(2);
+    expect(c.draft.boardFen()).not.toContain('5N2');     // der Springer steht noch auf g1
+    expect(c.draft.atEnd()).toBeFalse();
+    expect(c.draft.playable()).toBeFalse();             // hier wird geschaut, nicht gespielt
 
     c.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(c.plyShown()).toBe(3);
-    expect(c.atEnd()).toBeTrue();
-    expect(c.boardPlayable()).toBeTrue();
+    expect(c.draft.plyShown()).toBe(3);
+    expect(c.draft.atEnd()).toBeTrue();
+    expect(c.draft.playable()).toBeTrue();
   });
 
   it('lässt die Pfeiltasten in Textfeldern in Ruhe', () => {
@@ -454,7 +454,7 @@ describe('ReconstructDetailComponent', () => {
 
     c.onKeyDown(event);
 
-    expect(c.plyShown()).toBe(2);   // der Cursor im Textfeld gehört dem Textfeld
+    expect(c.draft.plyShown()).toBe(2);   // der Cursor im Textfeld gehört dem Textfeld
   });
 
   it('schneidet mit „ab hier weiterspielen" den Rest der Zugfolge ab', () => {
@@ -462,10 +462,10 @@ describe('ReconstructDetailComponent', () => {
     c.onMovesInput('e4 e5 Nf3');
     c.goPly('start');
     c.goPly(1);
-    c.truncateHere();
+    c.draft.truncateHere();
 
-    expect(c.editMoves).toBe('e4');
-    expect(c.atEnd()).toBeTrue();
+    expect(c.draft.text).toBe('e4');
+    expect(c.draft.atEnd()).toBeTrue();
   });
 
   it('stellt die Seite am Zug um und löst das Teil dabei vom vorigen', () => {
@@ -475,14 +475,14 @@ describe('ReconstructDetailComponent', () => {
     const c = open([part({ id: 1, kind: PartKind.Position, fen: MIDDLE, moves: null, endFen: MIDDLE })]);
     c.startNew(PartKind.Moves);
     expect(c.editContinues).toBeTrue();
-    expect(c.sideBlack()).toBeTrue();
+    expect(c.draft.sideBlack()).toBeTrue();
 
     c.setSideBlack(false);
 
-    expect(c.sideBlack()).toBeFalse();
+    expect(c.draft.sideBlack()).toBeFalse();
     expect(c.editContinues).toBeFalse();   // die Stellung davor sagt etwas anderes
     c.onMovesInput('d3');                  // ein weißer Zug, der vorher nicht möglich wäre
-    expect(c.editBadMove()).toBeNull();
+    expect(c.draft.badMove()).toBeNull();
   });
 
   it('schickt beim Speichern mit, wer am Zug ist', () => {

@@ -1,4 +1,4 @@
-import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, computed, ViewChild } from '@angular/core';
+import { Component, OnInit, HostListener, inject, ChangeDetectionStrategy, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -25,9 +25,10 @@ import { GapProposalsComponent } from './gap-proposals.component';
 import { PartEditorComponent } from './part-editor.component';
 import { ReconstructHead, ReconstructHeadFormComponent } from './reconstruct-head-form.component';
 import { ReconstructShareMenuComponent } from './reconstruct-share-menu.component';
+import { ReconstructMovesDraft } from './reconstruct-moves-draft';
 import {
-  canCloseGap, firstGap, gapMessageKey, gapTargetAt, hasProposalsBefore, moveNo, moveTokens, partState, partSummary,
-  plyCountOf, positionOrientation, previewFen, recordedEndBefore, recordedParts, replayMoves, targetAfter, tokensUpTo,
+  canCloseGap, firstGap, gapMessageKey, gapTargetAt, hasProposalsBefore, moveNo, partState, partSummary,
+  plyCountOf, positionOrientation, previewFen, recordedEndBefore, recordedParts, targetAfter,
   withSideToMove, fenMoveNumber,
 } from './reconstruct-moves.util';
 import { whiteToMove } from '../../shared/chess/fen-side';
@@ -71,8 +72,9 @@ export class ReconstructDetailComponent implements OnInit {
   /** Id des Teils, das gerade bearbeitet wird; 0 = ein neues, noch nicht gespeichertes. */
   readonly editingId = signal<number | null>(null);
   readonly editKind = signal<PartKind>(PartKind.Moves);
-  /** Eingabefeld der Zugfolge (SAN, Zugnummern erlaubt) bzw. die bearbeitete Stellung. */
-  editMoves = '';
+  /** Die bearbeitete Zugfolge (Text, Ausgangsstellung, Blätter-Stand) — siehe {@link ReconstructMovesDraft}. */
+  readonly draft = new ReconstructMovesDraft();
+  /** Die bearbeitete Stellung (Stellungs-Teil). */
   editFen = START_FEN;
   editNote = '';
   editFromPly: number | null = null;
@@ -109,37 +111,6 @@ export class ReconstructDetailComponent implements OnInit {
   get boardTheme(): string { return this.prefs.boardTheme; }
   get pieceSet(): string { return this.prefs.pieceSet; }
 
-  /** Die Stellung, ab der die gerade bearbeitete Zugfolge läuft (Grundstellung, wenn unbekannt). */
-  readonly editStartFen = signal<string>(START_FEN);
-  /** Ist die Stellung vor der bearbeiteten Zugfolge überhaupt bekannt? */
-  readonly editAnchored = signal(true);
-
-  /**
-   * Wie viele Halbzüge der Eingabe das Brett zeigt — `null` heißt „alle" (der Normalfall beim
-   * Eintippen). Mit den Pfeiltasten bzw. den Knöpfen blättert man hier durch die Zugfolge.
-   */
-  readonly editPly = signal<number | null>(null);
-
-  /** Stellung nach den gezeigten Zügen — das Brett zeigt sie und spielt darauf weiter. */
-  readonly editBoardFen = computed(() =>
-    replayMoves(this.editStartFen(), this.shownTokens()).fen);
-  readonly editBadMove = signal<string | null>(null);
-  private readonly movesSignal = signal('');
-
-  /** Die Züge bis zum Blätter-Stand (alle, solange nicht geblättert wird). */
-  private shownTokens(): string[] {
-    return tokensUpTo(this.editMovesTokens(), this.editPly());
-  }
-
-  /** Zahl der eingetippten Halbzüge. */
-  plyTotal(): number { return this.editMovesTokens().length; }
-
-  /** Der angezeigte Halbzug (0 = Ausgangsstellung). */
-  plyShown(): number { const ply = this.editPly(); return ply === null ? this.plyTotal() : Math.min(ply, this.plyTotal()); }
-
-  /** Steht das Brett am Ende der Eingabe? Nur dort darf gespielt werden. */
-  atEnd(): boolean { return this.plyShown() >= this.plyTotal(); }
-
   /**
    * Blättern: `delta` Halbzüge vor oder zurück; `null` → ans Ende.
    *
@@ -149,13 +120,14 @@ export class ReconstructDetailComponent implements OnInit {
    * Eingabe verwerfen.</p>
    */
   goPly(delta: number | 'start' | 'end'): void {
-    const total = this.plyTotal();
-    if (delta === 'end') { this.editPly.set(null); return; }
-    if (delta === 'start') { this.editPly.set(0); return; }
-    if (delta > 0 && this.atEnd()) { this.jumpPart(1); return; }
-    if (delta < 0 && this.plyShown() === 0) { this.jumpPart(-1); return; }
-    const next = Math.max(0, Math.min(this.plyShown() + delta, total));
-    this.editPly.set(next >= total ? null : next);
+    const draft = this.draft;
+    const total = draft.plyTotal();
+    if (delta === 'end') { draft.ply.set(null); return; }
+    if (delta === 'start') { draft.ply.set(0); return; }
+    if (delta > 0 && draft.atEnd()) { this.jumpPart(1); return; }
+    if (delta < 0 && draft.plyShown() === 0) { this.jumpPart(-1); return; }
+    const next = Math.max(0, Math.min(draft.plyShown() + delta, total));
+    draft.ply.set(next >= total ? null : next);
   }
 
   /** Zum nächsten/vorigen Teil der Liste springen (Vorschläge zählen mit, wenn sie sichtbar sind). */
@@ -167,19 +139,7 @@ export class ReconstructDetailComponent implements OnInit {
     const next = index < 0 ? undefined : parts[index + dir];
     if (!next) return;
     this.edit(next);
-    this.editPly.set(dir === 1 ? 0 : null);
-  }
-
-  /**
-   * „Ab hier weiterspielen": schneidet die Züge nach dem angezeigten Halbzug ab. Bewusst ein
-   * eigener Knopf statt eines stillen Abschneidens beim nächsten Brettzug — sonst löschte ein
-   * versehentliches Ziehen auf dem Brett den Rest einer langen Zugfolge.
-   */
-  truncateHere(): void {
-    const ply = this.plyShown();
-    this.editMoves = this.editMovesTokens().slice(0, ply).join(' ');
-    this.setMoves(this.editMoves);
-    this.editPly.set(null);
+    this.draft.ply.set(dir === 1 ? 0 : null);
   }
 
   /** Pfeiltasten am PC: blättern, solange der Fokus nicht in einem Textfeld oder offenen Menü/Dialog steht. */
@@ -195,9 +155,6 @@ export class ReconstructDetailComponent implements OnInit {
 
   // ----- Wer ist am Zug -----
 
-  /** Steht in der Ausgangsstellung des Editors Schwarz am Zug? */
-  sideBlack(): boolean { return !whiteToMove(this.editStartFen()); }
-
   /**
    * Die Seite am Zug umstellen — jederzeit, auch mitten im Aufzeichnen („und dann schlug ER auf f7").
    *
@@ -206,11 +163,9 @@ export class ReconstructDetailComponent implements OnInit {
    * Angabe stehen zu lassen, die der Kette widerspricht.</p>
    */
   setSideBlack(black: boolean): void {
-    if (this.sideBlack() === black) return;
+    if (this.draft.sideBlack() === black) return;
     if (this.editContinues) this.editContinues = false;
-    this.editAnchored.set(false);
-    this.editStartFen.set(withSideToMove(this.editStartFen(), black));
-    this.setMoves(this.editMoves);
+    this.draft.setSideBlack(black);
   }
 
   ngOnInit(): void {
@@ -270,8 +225,7 @@ export class ReconstructDetailComponent implements OnInit {
     const last = parts.length ? parts[parts.length - 1] : null;
     this.editingId.set(0);
     this.editKind.set(kind);
-    this.editMoves = '';
-    this.setMoves('');
+    this.draft.setText('');
     this.editNote = '';
     this.editFromPly = null;
     this.editCertain = true;
@@ -279,12 +233,12 @@ export class ReconstructDetailComponent implements OnInit {
     // nach einer Zugfolge das Bruchstück von anderswo — hingen sie aneinander, wären sie ein Teil.
     this.editContinues = !!last && last.kind === PartKind.Position && kind === PartKind.Moves;
     this.editFen = last?.endFen || START_FEN;
-    this.editStartFen.set(kind === PartKind.Moves ? (last?.endFen || START_FEN) : START_FEN);
-    this.editPly.set(null);
+    this.draft.startFen.set(kind === PartKind.Moves ? (last?.endFen || START_FEN) : START_FEN);
+    this.draft.ply.set(null);
     if (kind === PartKind.Moves) this.focusBoard();
     // Ein neues Teil hängt an der letzten bekannten Stellung — ist keine da, beginnt das Brett in
     // der Grundstellung, und die Züge stehen dann für eine Stelle, die nicht die gemeinte ist.
-    this.editAnchored.set(kind !== PartKind.Moves || !!last?.endFen || parts.length === 0);
+    this.draft.anchored.set(kind !== PartKind.Moves || !!last?.endFen || parts.length === 0);
   }
 
   edit(part: ReconstructionPart): void {
@@ -296,19 +250,18 @@ export class ReconstructDetailComponent implements OnInit {
     this.editContinues = part.continuesPrevious;
     this.editCertain = part.certain;
     this.editFen = part.fen || START_FEN;
-    // ZUERST die Ausgangsstellung, DANN die Züge: `setMoves` prüft gegen `editStartFen`, und mit der
+    // ZUERST die Ausgangsstellung, DANN die Züge: `setText` prüft gegen `startFen`, und mit der
     // Stellung des zuvor bearbeiteten Teils meldete es Züge als unmöglich, die hier stimmen.
     // Ohne Anker gibt es keine Stellung davor — dann sagt der gespeicherte Haken, wer am Zug war.
     // Ein VORSCHLAG hat keinen Ketten-Eintrag (er zählt nicht zur Partie), hängt aber sehr wohl an
     // der letzten aufgezeichneten Stellung — ohne sie zeigte das Brett die Grundstellung.
     const anchor = part.generated ? this.recordedEndBefore(part) : part.startFen;
-    this.editAnchored.set(part.kind !== PartKind.Moves || !!anchor);
-    this.editStartFen.set(anchor || withSideToMove(START_FEN, part.blackToMove));
+    this.draft.anchored.set(part.kind !== PartKind.Moves || !!anchor);
+    this.draft.startFen.set(anchor || withSideToMove(START_FEN, part.blackToMove));
     // Das Brett steht am ANFANG des Teils, nicht am Ende: man klickt es an, um zu sehen, wo es
     // losgeht, und blättert dann mit den Pfeiltasten durch.
-    this.editPly.set(0);
-    this.editMoves = part.moves ?? '';
-    this.setMoves(this.editMoves);
+    this.draft.ply.set(0);
+    this.draft.setText(part.moves ?? '');
     if (part.kind === PartKind.Moves) this.focusBoard();
   }
 
@@ -326,31 +279,13 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Der Zugtext hat sich geändert (Tippen oder Einfügen) — Brett und Fehlerhinweis nachziehen. */
   onMovesInput(value: string): void {
-    this.editMoves = value;
-    this.setMoves(value);
+    this.draft.setText(value);
   }
-
-  /**
-   * Darf am Brett gespielt werden? Nur, solange die eingetippte Zugfolge WIRKLICH bis zum Ende
-   * spielbar ist. Sonst zeigt das Brett die Stellung vor dem ersten unmöglichen Zug, jeder weitere
-   * Zug landete aber hinter diesem Zug im Text und käme nie auf dem Brett an — gemeldet als
-   * „ich kann nur einen Zug machen und nicht mehrere".
-   */
-  boardPlayable(): boolean { return this.editBadMove() === null && this.atEnd(); }
 
   /** Ein Zug auf dem Brett: hinten an die Zugfolge anhängen (gespielt wird nur am Ende, s. o.). */
   onBoardMove(move: UserBoardMove): void {
-    if (this.editKind() !== PartKind.Moves || !this.atEnd()) return;
-    this.editMoves = `${this.editMoves.trim()} ${move.san}`.trim();
-    this.setMoves(this.editMoves);
-  }
-
-  /** Letzten Zug der Eingabe zurücknehmen. */
-  undoMove(): void {
-    const tokens = this.editMovesTokens();
-    tokens.pop();
-    this.editMoves = tokens.join(' ');
-    this.setMoves(this.editMoves);
+    if (this.editKind() !== PartKind.Moves || !this.draft.atEnd()) return;
+    this.draft.append(move.san);
   }
 
   /**
@@ -363,14 +298,14 @@ export class ReconstructDetailComponent implements OnInit {
     const kind = this.editKind();
     const input: PartInput = {
       kind,
-      moves: kind === PartKind.Moves ? this.editMoves : null,
+      moves: kind === PartKind.Moves ? this.draft.text : null,
       fen: kind === PartKind.Position ? this.editFen : null,
       fromPly: this.editFromPly ?? null,
       continuesPrevious: this.editContinues,
       certain: this.editCertain,
       // Nur wenn das Teil NICHT anschließt, ist die Seite eine eigene Aussage — sonst steht sie in
       // der Stellung davor, und zwei Quellen für dieselbe Angabe widersprechen sich irgendwann.
-      blackToMove: kind === PartKind.Moves && !this.editContinues && this.sideBlack(),
+      blackToMove: kind === PartKind.Moves && !this.editContinues && this.draft.sideBlack(),
       note: this.editNote.trim() || null,
     };
     const editingId = this.editingId();
@@ -433,7 +368,7 @@ export class ReconstructDetailComponent implements OnInit {
    */
   toPosition(): void {
     if (this.busy()) return;
-    if (this.editMovesTokens().length > 0) this.savePart(PartKind.Position);
+    if (this.draft.tokens().length > 0) this.savePart(PartKind.Position);
     else this.startNew(PartKind.Position);
   }
 
@@ -528,7 +463,7 @@ export class ReconstructDetailComponent implements OnInit {
    * ist die Stellung davor und das Ende die Zielstellung — beide stehen schon in der Liste.
    */
   canAcceptWaypoint(): boolean {
-    return this.editingGenerated() && this.plyShown() > 0 && !this.atEnd();
+    return this.editingGenerated() && this.draft.plyShown() > 0 && !this.draft.atEnd();
   }
 
   /** „Diese Stellung stimmt": die gerade gezeigte Stellung des Vorschlags wird ein eigenes Teil. */
@@ -537,7 +472,7 @@ export class ReconstructDetailComponent implements OnInit {
     const target = proposal ? this.targetAfter(proposal) : null;
     if (!proposal || !target || this.busy()) return;
     // Bestätigt heißt SICHER — der Vorschlag selbst ist unsicher, der Mensch sagt hier das Gegenteil.
-    this.saveWaypoint(target.id, this.editBoardFen(), true);
+    this.saveWaypoint(target.id, this.draft.boardFen(), true);
   }
 
   /** „Diese Stellung korrigieren": dieselbe Stellung im Stellungs-Editor öffnen. */
@@ -547,7 +482,7 @@ export class ReconstructDetailComponent implements OnInit {
     if (!proposal || !target) return;
     this.waypointFor.set(target.id);
     this.editKind.set(PartKind.Position);
-    this.editFen = this.editBoardFen();
+    this.editFen = this.draft.boardFen();
     this.editCertain = true;
   }
 
@@ -763,12 +698,4 @@ export class ReconstructDetailComponent implements OnInit {
 
   /** Der Zustand eines Teils als Schlüssel für Text und Farbe. */
   state(part: ReconstructionPart): 'ok' | 'floating' | 'broken' | 'mismatch' { return partState(part); }
-
-  private setMoves(text: string): void {
-    this.movesSignal.set(text);
-    const replayed = replayMoves(this.editStartFen(), this.editMovesTokens());
-    this.editBadMove.set(replayed.bad);
-  }
-
-  private editMovesTokens(): string[] { return moveTokens(this.movesSignal()); }
 }
