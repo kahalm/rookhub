@@ -228,6 +228,31 @@ describe('ClubScanPageComponent', () => {
     expect(shown('.scan-photo .photo-toggle')).toBeFalse();
   });
 
+  // UX-036 (Charakterisierung): am PC Foto | Brett | Prüfen nebeneinander, der Speicherteil (Namen, Übernehmen) in voller
+  // Breite UNTER der ganzen Werkbank — das bleibt so.
+  it('breit (1300 px): Foto | Brett | Prüfen nebeneinander, Namen und „Übernehmen" in voller Breite darunter (UX-036)', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 600;
+    const blob: Blob = await new Promise(r => canvas.toBlob(b => r(b!), 'image/png'));
+    api.photo.and.resolveTo(blob);
+    const el = create();
+    el.style.display = 'block';
+    el.style.width = '1300px';
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const box = (sel: string) => (el.querySelector(sel) as HTMLElement).getBoundingClientRect();
+    const photo = box('.scan-photo'), board = box('.scan-board'), check = box('.scan-check'), moves = box('.scan-moves');
+    const layout = box('.scan-layout'), save = box('section.save-panel');
+    expect(photo.right).toBeLessThanOrEqual(board.left);
+    expect(board.right).toBeLessThanOrEqual(check.left);
+    expect(check.bottom).toBeLessThanOrEqual(moves.top);
+    for (const r of [photo, board, check, moves]) expect(save.top).toBeGreaterThanOrEqual(r.bottom);
+    expect(Math.abs(save.left - layout.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(save.width - layout.width)).toBeLessThanOrEqual(1);
+    expect(save.top - Math.max(photo.bottom, board.bottom, moves.bottom)).toBeCloseTo(28, 0);   // Abstand wie bisher
+  });
+
   // UI-Sweep 2026-10-11 (d2-l-korrigieren-layout): der Hinweis zu den orangen Stellen steht hinter (i)
   it('Hinweis „Orange markiert …" erst nach Tipp auf (i)', fakeAsync(() => {
     const el = create();
