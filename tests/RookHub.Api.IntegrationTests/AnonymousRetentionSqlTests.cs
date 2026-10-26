@@ -75,6 +75,30 @@ public class AnonymousRetentionSqlTests(AnonymousRetentionSqlFixture fixture)
             Assert.Equal(userId, (await check.EndlessSessions.SingleAsync()).UserId);
         }
     }
+
+    /// <summary>Die vier anonymen Versuchs-Senken (A2-012) gegen MariaDB: alle Abfragen (Koaleszenz der Punktepartie,
+    /// <c>StartsWith("s:")</c>, Deckel nach Alter) übersetzen — auch über leere Tabellen —, und an den geteilten Puzzles
+    /// gehen Alte und der Überhang über dem Deckel, Kontozeilen bleiben.</summary>
+    [MySqlFact]
+    public async Task PruneAnonymousSinks_TranslatesOnMariaDb_AgeAndCap()
+    {
+        var now = new DateTime(2026, 10, 25, 3, 0, 0, DateTimeKind.Utc);
+        await using (var db = fixture.Schema.NewContext())
+        {
+            db.SharedPuzzleAttempts.Add(new SharedPuzzleAttempt { BookPuzzleId = 1, IdentityKey = "s:alt", CreatedAt = now.AddDays(-100) });
+            for (var i = 0; i < 4; i++)
+                db.SharedPuzzleAttempts.Add(new SharedPuzzleAttempt { BookPuzzleId = 1, IdentityKey = $"s:n{i}", CreatedAt = now.AddDays(-10 + i) });
+            db.SharedPuzzleAttempts.Add(new SharedPuzzleAttempt { BookPuzzleId = 1, IdentityKey = "u:1", CreatedAt = now.AddDays(-400) });
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = fixture.Schema.NewContext())
+            Assert.Equal(3, await AnonymousSinkRetention.PruneAsync(db, now, new RetentionOptions { AnonymousCap = 2 }, chunkSize: 1));
+
+        await using var check = fixture.Schema.NewContext();
+        Assert.Equal(new[] { "s:n2", "s:n3", "u:1" }, await check.SharedPuzzleAttempts
+            .OrderBy(a => a.IdentityKey).Select(a => a.IdentityKey).ToArrayAsync());
+    }
 }
 
 public sealed class AnonymousRetentionSqlFixture() : MariaDbClassFixture("aret", withApp: false);

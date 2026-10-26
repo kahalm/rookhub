@@ -40,7 +40,7 @@ namespace RookHub.Api.Startup;
 /// ClubSecondEngineScheduler           intern: ClubSecondEngine:EngineName   Vereinspartien zusätzlich auf Lc0
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
 /// LeagueOnlineSyncScheduler           intern: LeagueOnline:Enabled          Online-Partien der Ligaspieler
-/// AnonymousDataRetentionService       immer (auch ohne Chessable)           Aufbewahrung anonymer Stände/Senke
+/// AnonymousDataRetentionService       immer (auch ohne Chessable)           Aufbewahrungsfristen (anonyme Senken, Retention:*)
 /// NotificationRetentionScheduler      immer                                 Benachrichtigungen 180 Tage
 /// EngineBrokerMaintenanceService      immer                                 Engine-Lebenszeichen in die DB
 /// AnalysisJobWorker                   immer (Singleton, s. Engines)         Hintergrund-Analyseaufträge
@@ -96,6 +96,8 @@ public static class BackgroundServicesSetup
         // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension
         // (90 bzw. 14 Tage). IMMER registriert, unabhängig von `Chessable:Enabled`: der Extension-Endpunkt nimmt
         // auch mit Schalter aus an — hinter dem Schalter (im Kurslisten-Refresh) lief die Retention auf PROD nie.
+        // Seit O-7 (2026-10-25) der tägliche Aufräumlauf aller Fristen ohne eigenen Dienst: anonyme Versuchs-Senken
+        // (Retention:AnonymousDays/AnonymousCap). Übersicht: docs/api/speicherdauer.md.
         services.AddHostedService<AnonymousDataRetentionService>();
         // Benachrichtigungen: gelesene nach 180 Tagen weg, Namen gelöschter Konten in fremden Glocken ersetzen (A9-003).
         services.AddHostedService<NotificationRetentionScheduler>();
