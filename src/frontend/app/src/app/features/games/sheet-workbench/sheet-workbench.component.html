@@ -148,5 +148,9 @@
         <p class="err small">{{ 'sheetEdit.illegalHint' | translate: { count: s().illegalCount() } }}</p>
       }
     </section>
+
+    <!-- UX-036: Seitenteil des Aufrufers (LeagueHub: Namen + „Übernehmen") — breit in voller Breite unter der Werkbank, am Handy
+         direkt unter dem Brett statt hinter Zugliste und Foto. Ohne Inhalt (RookHub) entfällt er ganz. -->
+    <div class="scan-side"><ng-content select="[sheetSide]" /></div>
   </div>
 </div>

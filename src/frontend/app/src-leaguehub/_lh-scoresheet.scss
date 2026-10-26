@@ -45,6 +45,8 @@ app-sheet-workbench { display: block; }
 .extra-page { align-items: flex-end; }
 
 .save-panel { margin-top: 14px; }
+/* UX-036: in der Werkbank (Seitenteil) setzt deren Zeilenabstand den Abstand. */
+.scan-side > .save-panel { margin-top: 0; }
 .save-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, .7fr) minmax(0, 2fr) minmax(0, .7fr); gap: 0 12px; }
 .save-grid .field.narrow { min-width: 0; }
 .save-grid .field.wide { grid-column: span 2; }

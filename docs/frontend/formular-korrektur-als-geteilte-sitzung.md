@@ -58,7 +58,9 @@ Aufteilung wie in LeagueHub).
   Eingaben: `session` (die `SheetEditSession` der Seite), `photos` (`ScanPhotos`), `flipped` (zweiseitig), `evals` +
   `savedSans` (Analyse der GESPEICHERTEN Partie → Bewertungskurve, `correctionCurve`), `boardTheme`/`pieceSet`.
   Inhaltsplätze: `[sheetPhotoTools]` (RookHub: Foto öffnen/herunterladen), `[sheetPlyExtra]` (RookHub: Kommentar zum Zug),
-  `[sheetEnd]` (LeagueHub: „Weiter zu den Namen").
+  `[sheetEnd]` (LeagueHub: „Weiter zu den Namen"), `[sheetSide]` (LeagueHub: Speicherteil mit Namen und „Übernehmen" —
+  breit in voller Breite unter der Werkbank, am Handy ≤ 720 px direkt unter dem Brett vor Zugliste und Foto, UX-036; ohne
+  Inhalt entfällt er).
 - `ScanPhotos` (vorher LeagueHub): Seiten, weitere Fotos je Seite (`fetchView`), Objekt-Adressen und — neu — die Datei je
   Seite (`blob`, für RookHubs Öffnen/Herunterladen). RookHub hat keine weiteren Fotos; `fetchView` lehnt dort ab.
 - `SheetEngineComponent` (`app-sheet-engine`, vorher `lh-scan-engine`): zuschaltbare Engine, gemerkt unter dem alten

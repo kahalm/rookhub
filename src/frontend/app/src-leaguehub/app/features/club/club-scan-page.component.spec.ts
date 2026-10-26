@@ -253,6 +253,37 @@ describe('ClubScanPageComponent', () => {
     expect(save.top - Math.max(photo.bottom, board.bottom, moves.bottom)).toBeCloseTo(28, 0);   // Abstand wie bisher
   });
 
+  // UX-036: am Handy begann das Brett bei 741 px und ragte über den Rand; Namen und „Übernehmen" standen hinter Zugliste und
+  // Foto. Jetzt: Prüfen (Ausschnitt/Lesung) → Brett in Inhaltsbreite → Speicherteil → Zugliste → Foto, ohne Seiten-Überlauf.
+  it('am Handy (390 px): Lesung, Brett in voller Breite, dann Namen und „Übernehmen", erst danach Zugliste und Foto (UX-036)', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 600;
+    const blob: Blob = await new Promise(r => canvas.toBlob(b => r(b!), 'image/png'));
+    const st = structuredClone(STATE);
+    st.boxes = [null, null, [100, 300, 400, 340], null];
+    api.scan.and.resolveTo(st);
+    api.photo.and.resolveTo(blob);
+    const el = create();
+    Object.assign(el.style, { display: 'block', width: '390px', padding: '0 16px', boxSizing: 'border-box', overflowX: 'hidden' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const box = (sel: string) => (el.querySelector(sel) as HTMLElement).getBoundingClientRect();
+    const check = box('.scan-check'), board = box('.scan-board app-chess-board'), save = box('section.save-panel');
+    const moves = box('.scan-moves'), photo = box('.scan-photo');
+    expect(check.bottom).toBeLessThanOrEqual(board.top);
+    expect(board.bottom).toBeLessThanOrEqual(save.top);
+    expect(save.bottom).toBeLessThanOrEqual(moves.top);
+    expect(moves.bottom).toBeLessThanOrEqual(photo.top);
+    expect(Math.abs(board.width - 358)).toBeLessThanOrEqual(1);                       // 390 minus 2 × 16 px Seitenrand
+    expect(board.height).toBeLessThanOrEqual(window.innerHeight);
+    const pri = [...el.querySelectorAll('section.save-panel button')].find(b => b.textContent?.includes('In die Vereins-Datenbank übernehmen'));
+    expect(pri).toBeTruthy();
+    expect(el.scrollWidth).toBeLessThanOrEqual(el.clientWidth + 1);
+    const layout = el.querySelector('.scan-layout') as HTMLElement;
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+  });
+
   // UI-Sweep 2026-10-11 (d2-l-korrigieren-layout): der Hinweis zu den orangen Stellen steht hinter (i)
   it('Hinweis „Orange markiert …" erst nach Tipp auf (i)', fakeAsync(() => {
     const el = create();

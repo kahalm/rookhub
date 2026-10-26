@@ -59,8 +59,14 @@ describe('SheetWorkbenchComponent', () => {
     const css = ((SheetWorkbenchComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
       .replace(/\[_ngcontent-[^\]]*\]/g, '').replace(/\s+/g, ' ');
     expect(css).toContain('grid-template-areas: "photo board check" "photo board moves"');
-    expect(css).toContain('grid-template-areas: "check" "board" "moves" "photo"');
+    // UX-036: am Handy als Reihenfolge Prüfen → Brett → Seitenteil des Aufrufers → Zugliste → Foto
+    const phone = css.slice(css.indexOf('grid-template-areas: none'));
+    const order = ['.scan-check', '.scan-board', '.scan-side', '.scan-moves', '.scan-photo']
+      .map(sel => Number(new RegExp(`\\${sel} \\{ ?order: (\\d)`).exec(phone)?.[1]));
+    expect(order).toEqual([1, 2, 3, 4, 5]);
     for (const sel of ['.scan-photo', '.scan-board', '.scan-check', '.scan-moves']) expect(el.querySelector(sel)).withContext(sel).not.toBeNull();
+    // ohne Seitenteil (RookHub) bleibt keine leere Zeile
+    expect(getComputedStyle(el.querySelector('.scan-side')!).display).toBe('none');
   });
 
   // b1-l-korrigieren-zugliste-kasten (aus LeagueHub übernommen): einspaltig läuft die Zugliste mit der Seite, zweispaltig Kasten.

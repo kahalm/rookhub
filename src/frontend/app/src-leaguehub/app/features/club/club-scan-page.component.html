@@ -75,10 +75,10 @@
     <app-sheet-workbench [session]="s" [photos]="ph" [flipped]="f.ownerSide() === 'black'" [evals]="savedEvals()" [savedSans]="savedSans()">
       <!-- UX-036: ohne unsichere Stellen kommt der Abschlusshinweis nie — am Ende der Partie geht es hier weiter. -->
       <div sheetEnd class="actions"><button type="button" class="btn-sec to-save" (click)="toSave()">Weiter zu den Namen</button></div>
-    </app-sheet-workbench>
 
+    <!-- UX-036: der Speicherteil steht IN der Werkbank (Seitenteil) — am Handy direkt unter dem Brett, breit darunter wie bisher. -->
     @if (gameId != null) {
-      <section class="panel save-panel" #savePanel>
+      <section sheetSide class="panel save-panel" #savePanel>
         <h3 class="club-h3">Korrektur speichern</h3>
         <p>{{ gameTitle() }}</p>
         <p class="muted small">Die Züge werden in der Vereins-Datenbank ersetzt — und in jeder Kopie in „Meine Partien“. Die
@@ -94,7 +94,7 @@
         }
       </section>
     } @else {
-    <section class="panel save-panel" #savePanel>
+    <section sheetSide class="panel save-panel" #savePanel>
       <h3 class="club-h3">Partie</h3>
       <lh-club-side-form [form]="f" [client]="client" [anon]="anon" [clubName]="clubName()" />
 
@@ -138,6 +138,7 @@
       <lh-scan-export-actions [exp]="exporter" [loggedIn]="loggedIn" [rookHub]="rookHub" />
     </section>
     }
+    </app-sheet-workbench>
 
     <!-- Wunsch 2026-09-28: nach der letzten unsicheren Stelle darauf hinweisen und gleich Speichern anbieten. -->
     <dialog #doneDlg class="card done-dlg" aria-labelledby="done-title">

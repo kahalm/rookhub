@@ -55,9 +55,22 @@
 @container (max-width: 1100px) {
   .scan-layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "board check" "board moves" "photo photo"; }
 }
+// Seitenteil des Aufrufers (UX-036): breit in eigener Zeile über alle Spalten unter Brett, Zugliste und Foto.
+.scan-side { grid-column: 1 / -1; min-width: 0; }
+.scan-side:empty { display: none; }
+// Handy (UX-036): Prüfen (Ausschnitt + Lesarten), Brett, Seitenteil, Zugliste, Foto — als Reihenfolge statt Flächen, damit ein
+// fehlender Seitenteil keine leere Zeile mit Abstand hinterlässt. Das Brett ohne Kartenrahmen: so breit wie der Inhalt
+// (Bildschirm minus Seitenrand) und nie höher als der sichtbare Bereich unter dem Kopf.
 @container (max-width: 720px) {
-  .scan-layout, .scan-layout.with-photo { grid-template-columns: minmax(0, 1fr); grid-template-areas: "check" "board" "moves" "photo"; gap: 10px; }
-  .scan-check, .scan-board { padding: 10px 12px; }
+  .scan-layout, .scan-layout.with-photo { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; grid-template-rows: none; gap: 10px; }
+  .scan-check, .scan-board, .scan-side, .scan-moves, .scan-photo { grid-area: auto; }
+  .scan-check { order: 1; }
+  .scan-board { order: 2; }
+  .scan-side { order: 3; }
+  .scan-moves { order: 4; }
+  .scan-photo { order: 5; }
+  .scan-check { padding: 10px 12px; }
+  .scan-board { padding: 4px 0 6px; border: 0; background: transparent; }
   .scan-check .option { padding: 6px 10px; }
   .scan-check .crop-frame { max-width: none; }
 }
@@ -85,6 +98,10 @@
 // ── Brett ── Die Spalte darf NICHT mit dem Brett wachsen (Chessground setzt einmal eine Pixelbreite, gemeldet 2026-09-28).
 .scan-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; justify-items: center; }
 .scan-board app-chess-board, .scan-board .eval-curve { width: min(100%, 62vh); }
+@container (max-width: 720px) {
+  // UX-036: Brett = Inhaltsbreite, höchstens so hoch, dass es mit den Knöpfen darunter in den sichtbaren Bereich passt.
+  .scan-board app-chess-board, .scan-board .eval-curve { width: min(100%, calc(100svh - 160px)); }
+}
 .scan-board .eval-curve p { margin: 4px 0 0; }
 .board-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .board-nav .btn-sec { min-width: 44px; }
