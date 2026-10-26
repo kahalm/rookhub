@@ -245,7 +245,8 @@ internal sealed class ScoresheetIntake
     public async Task<List<ScoresheetScanDto>> ListAsync(int userId, int take = 20)
     {
         // Einlesungen einer gelöschten Partie bleiben nur fürs Kontingent liegen (ohne Foto) — in der Liste nicht.
-        var scans = await ScanHeads(_db).Where(s => s.UserId == userId && s.Purpose == null
+        // Ebenso gelöschte bzw. nach Frist geleerte (Vermerk, ScoresheetPhotoRetention).
+        var scans = await ScanHeads(_db).Where(s => s.UserId == userId && s.Purpose == null && s.FileName != DiscardedMark
                 && !(s.Status == ScoresheetScanStatus.Done && s.SavedGameId == null))
             .OrderByDescending(s => s.CreatedAt).Take(Math.Clamp(take, 1, 50)).ToListAsync();
         var gameIds = scans.Where(s => s.SavedGameId != null).Select(s => s.SavedGameId!.Value).ToList();

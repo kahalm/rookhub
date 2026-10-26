@@ -98,7 +98,8 @@ public static class BackgroundServicesSetup
         // auch mit Schalter aus an — hinter dem Schalter (im Kurslisten-Refresh) lief die Retention auf PROD nie.
         // Seit O-7 (2026-10-25) der tägliche Aufräumlauf aller Fristen ohne eigenen Dienst: anonyme Versuchs-Senken
         // (Retention:AnonymousDays/AnonymousCap) und
-        // gelesene Admin-/Direktnachrichten (Retention:MessagesDays). Übersicht: docs/api/speicherdauer.md.
+        // gelesene Admin-/Direktnachrichten (Retention:MessagesDays), Formular-Fotos
+        // (Retention:ScoresheetFailedDays/ScoresheetOpenAnonymousDays) und das Formular-Archiv. Übersicht: docs/api/speicherdauer.md.
         services.AddHostedService<AnonymousDataRetentionService>();
         // Benachrichtigungen: gelesene nach 180 Tagen weg, Namen gelöschter Konten in fremden Glocken ersetzen (A9-003).
         services.AddHostedService<NotificationRetentionScheduler>();

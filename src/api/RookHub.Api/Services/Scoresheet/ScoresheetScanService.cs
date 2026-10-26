@@ -35,6 +35,7 @@ public class ScoresheetScanService
     private readonly LeagueScoresheetScans _league;
     private readonly ScoresheetCorrection _correction;
     private readonly ScoresheetIntake _intake;
+    private readonly AppDbContext _db;
 
     /// <summary>Größter angenommener Upload (je Foto).</summary>
     public const int MaxUploadBytes = 30 * 1024 * 1024;
@@ -101,6 +102,7 @@ public class ScoresheetScanService
         // Rückfall ohne.
         var startMode = bool.TryParse(config?["Scoresheet:Thinking"], out var thinking) && thinking
             ? ScoresheetReadMode.Full : ScoresheetReadMode.Transcribe;
+        _db = db;
         _budget = new ScoresheetBudget(config);
         var reader = new ScoresheetReader(vision);
         // Scoresheet:Plausibility — Engine-Prüfung nach dem Lesen (0.646.0, ScoresheetPlausibility), Vorgabe an.
@@ -196,6 +198,11 @@ public class ScoresheetScanService
     public Task<ScoresheetScanDto?> GetAsync(int userId, int id) => _intake.GetAsync(userId, id);
 
     public Task<List<ScoresheetScanDto>> ListAsync(int userId, int take = 20) => _intake.ListAsync(userId, take);
+
+    /// <summary>Eigene Einlesung löschen — Foto und Lesung gehen, die Zeile bleibt fürs Kontingent
+    /// (<see cref="ScoresheetPhotoRetention.DeleteOwnAsync"/>, A6-016).</summary>
+    public Task<string?> DeleteOwnAsync(int userId, int id, CancellationToken ct = default) =>
+        ScoresheetPhotoRetention.DeleteOwnAsync(_db, userId, id, ct);
 
     // ── Lesen (ScoresheetProcessor) ───────────────────────────────────
 

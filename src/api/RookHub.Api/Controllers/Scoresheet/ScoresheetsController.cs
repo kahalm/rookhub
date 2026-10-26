@@ -82,6 +82,21 @@ public class ScoresheetsController : BaseApiController
         var scan = await _service.GetAsync(GetUserId(), id);
         return scan == null ? NotFound() : Ok(scan);
     }
+
+    /// <summary>Eigene Einlesung löschen (A6-016): Foto(s) und Lesung gehen, eine daraus entstandene Partie bleibt (ohne
+    /// Foto). 204; 404 fremd/unbekannt/schon gelöscht; 409 <c>{ reason: "busy" }</c>, solange sie wartet oder gelesen wird.
+    /// Die Einlesung zählt weiter fürs Tageskontingent.</summary>
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        var reason = await _service.DeleteOwnAsync(GetUserId(), id, ct);
+        return reason switch
+        {
+            null => NoContent(),
+            "busy" => Conflict(new { reason, message = "The scan is still being read." }),
+            _ => NotFound(),
+        };
+    }
 }
 
 /// <summary>

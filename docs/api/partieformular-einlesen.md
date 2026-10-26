@@ -320,6 +320,7 @@ Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt
 | GET | `/api/scoresheets?take=` | Die letzten Einlesungen (ohne Foto) |
 | POST | `/api/scoresheets` | Multipart `file` (bis zu 3 Teile = Seiten in Reihenfolge, 0.600.0) + `language` (Code oder `auto`) + `side` (white/black/auto) → 202 mit der Einlesung (`pageCount`); 400 `reason` ∈ `noFile`/`unsupportedImage`/`tooLarge`/`tooManyPages`/`dailyLimit`/`tooManyOpen`/`invalidLanguage`/`userDailyBudget`/`userMonthlyBudget`/`globalBudget`, 503 `notConfigured` |
 | GET | `/api/scoresheets/{id}` | Stand: `pending`/`running`/`done`/`failed` (+ `error`), `savedGameId`, Zähler |
+| DELETE | `/api/scoresheets/{id}` | Eigene Einlesung löschen (A6-016): Foto(s), Antwort des Modells und Stand gehen, die Zeile bleibt fürs Kontingent (Vermerk `∅`, nicht mehr in der Liste); eine entstandene Partie bleibt ohne Foto. 204; 404 fremd/unbekannt/Liga-Einlesung/schon gelöscht; 409 `busy` solange `pending`/`running` |
 | PUT | `/api/games/{id}` | Partie korrigieren `{ moves[{ san, comment? }], white, black, result, event, site, round, date, ownerSide?, scoresheetPlies? }` (`GameCorrectionController`, eigene Klasse unter derselben Route wie `GamesController`) |
 | GET | `/api/games/{id}/photo?download=&page=` | Das Formular-Foto, Seite `page` (ab 1; 404 ohne) — Header `X-Page-Count` = Zahl der Seiten |
 | GET | `/api/games/{id}/scoresheet` | Formular-Einträge + Stand je Halbzug für die Korrekturseite; `pageCount` + `pages` (Seite je Eintrag) |
@@ -329,3 +330,13 @@ Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt
 | POST | `/api/admin/scoresheets/{id}/reading` | messages.admin: Lesung übernehmen `{ transcription }` → die Einlesung; 400 `reason` ∈ notPending/invalidTranscription, 404 |
 | POST | `/api/admin/scoresheets/{id}/start` | messages.admin: der Leser fängt an — wartend → läuft, die Seite zeigt „wird gelesen“ (0.721.2) → 204 |
 | POST | `/api/admin/scoresheets/{id}/fail` | messages.admin: als gescheitert schließen `{ reason }` (unreadable/noMoves/failed, Glocke wie sonst) → 204 |
+
+## Fristen der Fotos (A6-016, 2026-10-25)
+
+Der tägliche Aufräumlauf (`AnonymousDataRetentionService` → `ScoresheetPhotoRetention`) leert — wie `DELETE` — Foto(s) und
+Lesung, die Zeile bleibt fürs Kontingent: **gescheiterte** Einlesungen nach `Retention:ScoresheetFailedDays` (30 Tage ab
+Ende), nie übernommene **Liga-Einlesungen ohne Konto** (Teilen-Link, auch nie gelesene) nach
+`Retention:ScoresheetOpenAnonymousDays` (14 Tage ab Upload). Das Archiv (`ScoresheetScanArchives`) geht nach `ExpiresAt`
+(365 Tage) — bisher nur beim nächsten Abschluss einer Liga-Einlesung mitgeräumt. Fotos übernommener RookHub-Einlesungen
+bleiben bei ihrer Partie. Übersicht aller Fristen: [speicherdauer.md](speicherdauer.md).
+

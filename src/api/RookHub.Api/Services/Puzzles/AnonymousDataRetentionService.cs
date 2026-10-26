@@ -27,7 +27,9 @@ namespace RookHub.Api.Services.Puzzles;
 /// <para>Dazu die vier anonymen Versuchs-Senken (<see cref="AnonymousSinkRetention"/>, A2-012): Frist
 /// <c>Retention:AnonymousDays</c> und Gesamtdeckel <c>Retention:AnonymousCap</c> je Senke (<see cref="RetentionOptions"/>).</para>
 ///
-/// <para>Und gelesene Admin-/Direktnachrichten nach <c>Retention:MessagesDays</c> (<see cref="Social.AdminMessageRetention"/>).</para>
+/// <para>Und gelesene Admin-/Direktnachrichten nach <c>Retention:MessagesDays</c> (<see cref="Social.AdminMessageRetention"/>),
+/// Formular-Fotos (<see cref="Scoresheet.ScoresheetPhotoRetention"/>: gescheiterte nach 30, offene ohne Konto nach 14 Tagen,
+/// Archiv nach Ablauf).</para>
 ///
 /// Läuft täglich (PeriodicWorker, erster Lauf kurz nach dem Start, nicht pausierbar: Aufbewahrungsfristen); jede Senke hat
 /// ihren eigenen Versuch — ein Fehler der einen lässt die andere nicht aus und beendet den Dienst nicht (nur Logzeile).
@@ -102,6 +104,15 @@ public class AnonymousDataRetentionService : PeriodicWorker
             if (pruned > 0)
                 _logger.LogInformation("Nachrichten-Retention: {Count} gelesene Nachrichten gelöscht", pruned);
             return pruned;
+        }, ct);
+        removed += await TryAsync("Formularfoto-Retention fehlgeschlagen", async sp =>
+        {
+            var (cleared, archive) = await Scoresheet.ScoresheetPhotoRetention.PruneAsync(sp.GetRequiredService<AppDbContext>(), now,
+                RetentionOptions.From(sp.GetService<IConfiguration>()), ct);
+            if (cleared > 0 || archive > 0)
+                _logger.LogInformation("Formularfoto-Retention: {Cleared} Einlesungen geleert, {Archive} Archiv-Einträge gelöscht",
+                    cleared, archive);
+            return cleared + archive;
         }, ct);
         return removed;
     }
