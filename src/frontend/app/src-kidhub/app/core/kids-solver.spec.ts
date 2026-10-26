@@ -1,4 +1,4 @@
-import { KidsSolver, parseAltMoves, splitMoves } from './kids-solver';
+import { KidsSolver, parseAltMoves, splitMoves, taskHasSolverMove } from './kids-solver';
 
 /**
  * Die Loese-Logik von KidHub, an echten Lichess-Puzzles (CC0) aus der Kinder-Leiter und an einer
@@ -137,5 +137,24 @@ describe('splitMoves / parseAltMoves', () => {
     expect(parseAltMoves('{"1":["b8a8"],"x":["a1a2"],"3":"kaputt"}')).toEqual({ 1: ['b8a8'] });
     expect(parseAltMoves(null)).toBeUndefined();
     expect(parseAltMoves('kein json')).toBeUndefined();
+  });
+});
+
+/** Codereview F7-002: eine Linie ohne Zug für das Kind würde sonst „Du bist dran" ohne „Weiter" zeigen. */
+describe('hasSolverMove', () => {
+  const fen = '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73';
+
+  it('erkennt Aufgaben mit und ohne Kinderzug', () => {
+    expect(taskHasSolverMove({ fen, moves: ['g4g3', 'b8h8'], startPly: 0 })).toBeTrue();
+    expect(taskHasSolverMove({ fen, moves: ['g4g3'], startPly: 0 })).toBeFalse();      // nur der Stellungszug
+    expect(taskHasSolverMove({ fen, moves: ['g4g3'], startPly: 5 })).toBeFalse();      // Startzug hinter dem Ende
+    expect(taskHasSolverMove({ fen, moves: ['g4g3'], startPly: -1 })).toBeTrue();      // das Kind zieht sofort
+    expect(taskHasSolverMove({ fen, moves: [], startPly: -1 })).toBeFalse();
+    expect(taskHasSolverMove({ fen, moves: [], startPly: 0 })).toBeFalse();
+  });
+
+  it('der KidsSolver kennt es auch', () => {
+    expect(new KidsSolver({ fen, moves: ['g4g3', 'b8h8'], startPly: 0 }).hasSolverMove()).toBeTrue();
+    expect(new KidsSolver({ fen, moves: ['g4g3'], startPly: 0 }).hasSolverMove()).toBeFalse();
   });
 });

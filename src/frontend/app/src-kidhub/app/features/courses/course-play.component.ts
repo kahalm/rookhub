@@ -7,7 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourseLine } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
-import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
+import { KidsTask, parseAltMoves, splitMoves, taskHasSolverMove } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
 import { KID_BACK, KID_COUNTER, KID_SHORT, KID_STACKED, KID_WIDE_SIDE } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
@@ -234,10 +234,22 @@ export class CoursePlayComponent {
   /** Ragt die (zugeklappte) Einleitung über ihre Höhe hinaus? Gemessen nach dem Zeichnen. */
   readonly introClipped = signal(false);
   private readonly introEl = viewChild<ElementRef<HTMLElement>>('intro');
+  /** Linien ohne Zug für das Kind (nur Stellungszug) — sie würden den Kurs sperren und gelten deshalb als gelöst,
+   *  ohne im Fortschritt zu landen (Codereview F7-002; Prod/Dev hatten 0 solche Linien). */
+  private readonly withoutSolverMove = computed(() => new Set(
+    this.lines().filter(l => !taskHasSolverMove({ fen: l.fen, moves: splitMoves(l.moves), startPly: l.startPly }))
+      .map(l => l.id)));
   readonly solvedCount = computed(() => {
-    const solved = new Set(this.progress.course(this.bookId()).solved);
+    const solved = this.solvedIds(this.bookId());
     return this.lines().filter(l => solved.has(l.id)).length;
   });
+
+  /** Gelöste Linien des Kurses samt der übersprungenen ohne Kinderzug. */
+  private solvedIds(bookId: number, fromProgress = true): Set<number> {
+    const solved = new Set(fromProgress ? this.progress.course(bookId).solved : []);
+    for (const id of this.withoutSolverMove()) solved.add(id);
+    return solved;
+  }
   /** Gleiche Stellung und Züge = gleiche Aufgabe: ein Sprachwechsel bringt neue Linien-Objekte (übersetzte Texte),
    *  die laufende Aufgabe auf dem Brett darf dabei nicht von vorn beginnen. */
   readonly task = computed<KidsTask | null>(() => {
@@ -282,7 +294,7 @@ export class CoursePlayComponent {
         if (lang !== this.lang || bookId !== this.bookId()) return;
         const sameLines = lines.length === this.lines().length && lines.every((l, i) => l.id === this.lines()[i].id);
         this.lines.set(lines);
-        if (!sameLines) this.index.set(nextUnsolved(lines, new Set(this.progress.course(bookId).solved), 0));
+        if (!sameLines) this.index.set(nextUnsolved(lines, this.solvedIds(bookId), 0));
       },
       error: () => {},
     });
@@ -308,7 +320,7 @@ export class CoursePlayComponent {
     this.api.coursePuzzles(bookId, lang).subscribe({
       next: lines => {
         this.lines.set(lines);
-        this.index.set(nextUnsolved(lines, new Set(this.progress.course(bookId).solved), 0));
+        this.index.set(nextUnsolved(lines, this.solvedIds(bookId), 0));
         this.loading.set(false);
       },
       error: () => { this.failed.set(true); this.loading.set(false); },
@@ -321,12 +333,11 @@ export class CoursePlayComponent {
   }
 
   onNext(): void {
-    const solved = new Set(this.progress.course(this.bookId()).solved);
-    this.index.set(nextUnsolved(this.lines(), solved, this.index() + 1));
+    this.index.set(nextUnsolved(this.lines(), this.solvedIds(this.bookId()), this.index() + 1));
   }
 
   restart(): void {
     this.progress.resetCourse(this.bookId());
-    this.index.set(nextUnsolved(this.lines(), new Set(), 0));
+    this.index.set(nextUnsolved(this.lines(), this.solvedIds(this.bookId(), false), 0));
   }
 }

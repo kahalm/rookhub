@@ -382,3 +382,51 @@ describe('CoursePlayComponent — Kopf am Tablet und am Laptop', () => {
     }
   });
 });
+
+/** Codereview F7-002: eine Linie ohne Kinderzug sperrte den Kurs — sie gilt jetzt als gelöst und wird übersprungen. */
+describe('CoursePlayComponent — Linie ohne Kinderzug', () => {
+  const fen = '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73';
+  const line = (id: number, moves: string): KidsCourseLine => ({
+    id, bookTitle: 'Kurs', fen, moves, startPly: 0,
+    title: null, chapter: null, comment: null, moveComments: null, altMoves: null,
+  });
+
+  function create(lines: KidsCourseLine[]) {
+    localStorage.removeItem('rh-kids-progress-v1');
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['coursePuzzles']);
+    api.coursePuzzles.and.returnValue(of(lines));
+    TestBed.configureTestingModule({
+      imports: [CoursePlayComponent],
+      providers: [
+        provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: KidsApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ bookId: '9' })) } },
+      ],
+    });
+    const f = TestBed.createComponent(CoursePlayComponent);
+    f.detectChanges();
+    return f;
+  }
+
+  it('steigt bei der ersten Linie MIT Kinderzug ein und zählt die leere als gelöst', () => {
+    const f = create([line(1, 'g4g3'), line(2, 'g4g3 b8h8')]);
+    const c = f.componentInstance;
+    expect(c.current()?.id).toBe(2);
+    expect(c.solvedCount()).toBe(1);
+
+    c.onSolved();
+    c.onNext();
+    expect(c.index()).withContext('Kurs fertig').toBe(-1);
+    expect(c.solvedCount()).toBe(2);
+  });
+
+  it('„Von vorn" überspringt sie wieder', () => {
+    const f = create([line(1, 'g4g3 b8h8'), line(2, 'g4g3')]);
+    const c = f.componentInstance;
+    c.onSolved();
+    c.onNext();
+    expect(c.index()).toBe(-1);
+    c.restart();
+    expect(c.current()?.id).toBe(1);
+  });
+});

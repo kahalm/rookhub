@@ -32,6 +32,19 @@ export type KidsMoveResult =
 
 export interface KidsMove { from: string; to: string; }
 
+/** Stellungszug, wie der KidsSolver ihn liest: auf `-1 … moves.length-1` geklemmt. */
+function clampedStartPly(task: KidsTask): number {
+  return Math.max(-1, Math.min(task.startPly, task.moves.length - 1));
+}
+
+/**
+ * Bleibt nach dem Stellungszug noch ein Zug für das Kind? Ohne ihn wäre die Aufgabe sofort „fertig", das Brett
+ * zeigte aber „Du bist dran" ohne „Weiter" — im Kurs sperrte das alle folgenden Linien (Codereview F7-002).
+ */
+export function taskHasSolverMove(task: KidsTask): boolean {
+  return task.moves.length > clampedStartPly(task) + 1;
+}
+
 /**
  * Die Loese-Logik der Kinderseite, frei von Angular: haelt die Stellung, prueft Zuege gegen die
  * Loesung und spielt die Antworten des Gegners.
@@ -51,7 +64,7 @@ export class KidsSolver {
 
   constructor(private readonly task: KidsTask) {
     this.chess = new Chess(task.fen);
-    const startPly = Math.max(-1, Math.min(task.startPly, task.moves.length - 1));
+    const startPly = clampedStartPly(task);
     // Alles VOR dem Stellungszug wird stumm vorgespult; der Stellungszug selbst wird sichtbar
     // gespielt (playSetup), damit das Kind sieht, was gerade passiert ist.
     for (let i = 0; i < startPly; i++) this.apply(task.moves[i]);
@@ -63,6 +76,9 @@ export class KidsSolver {
     if (!this.setupPlayed) probe.move(uciToMove(task.moves[startPly]));
     this.solverColor = probe.turn() === 'w' ? 'white' : 'black';
   }
+
+  /** Gibt es überhaupt einen Zug für das Kind (siehe {@link taskHasSolverMove})? */
+  hasSolverMove(): boolean { return taskHasSolverMove(this.task); }
 
   /** Aktuelle Stellung. */
   fen(): string { return this.chess.fen(); }
