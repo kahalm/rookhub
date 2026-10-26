@@ -106,14 +106,14 @@ public sealed class CommentTranslator
                     LogAborted(subject, subjectId, to);
                     return null;   // lieber gar kein Satz als ein halber
                 }
-                var parsed = Parse(json);
+                // Was nicht gefragt war, wird nie uebernommen — auch bei Partien (A6-022): ein erfundener Halbzug
+                // landete sonst im Satz und zaehlte in die Laengenpruefung.
+                var asked = chunk.Select(c => c.Key).ToHashSet();
+                var parsed = Parse(json).Where(p => asked.Contains(p.Ply)).ToList();
                 if (strict)
                 {
-                    // Kurse: eine Fuhre, die nicht JEDEN Schluessel beantwortet, ist ein Fehlschlag — und was
-                    // nicht gefragt war, wird nicht uebernommen. Bei Partien bleibt es wie bisher (was kommt,
-                    // zaehlt; die Laengenpruefung faengt den Rest).
-                    var asked = chunk.Select(c => c.Key).ToHashSet();
-                    parsed = parsed.Where(p => asked.Contains(p.Ply)).ToList();
+                    // Kurse: eine Fuhre, die nicht JEDEN Schluessel beantwortet, ist ein Fehlschlag. Bei Partien
+                    // bleiben fehlende erlaubt (die Laengenpruefung faengt den Rest).
                     var answered = parsed.Select(p => p.Ply).ToHashSet();
                     if (!asked.All(answered.Contains))
                     {
@@ -147,7 +147,7 @@ public sealed class CommentTranslator
         }
         if (translated.Count == 0) return translated;
 
-        // Welche Schluessel fuer Laenge und Sprache zaehlen: bei Partien alle, bei Kursen nur die Prosa.
+        // Welche Schluessel fuer Laenge und Sprache zaehlen: bei Partien alle (gefragten), bei Kursen nur die Prosa.
         bool Counts(int key) => subject switch
         {
             TranslationSubject.Game => true,

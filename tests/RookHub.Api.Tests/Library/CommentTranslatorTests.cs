@@ -58,6 +58,29 @@ public class CommentTranslatorTests
         Assert.Equal(new[] { 0 }, result!.Keys);
     }
 
+    /// <summary>A6-022: Auch bei Partien gilt „nur gefragte Schluessel“ — ein erfundener Halbzug wurde sonst gespeichert
+    /// und zaehlte in die Laengenpruefung (verdeckte dort eine zu kurze Antwort). Fehlende bleiben bei Partien erlaubt.</summary>
+    [Fact]
+    public async Task Game_UngefragterSchluessel_WirdNichtUebernommen_FehlendeErlaubt()
+    {
+        _llm.Answer = """{"items":[{"ply":3,"text":"Der Springer steht gut."},{"ply":9,"text":"erfunden"}]}""";
+
+        var result = await Translator().TranslateAsync(
+            [(3, "The knight stands well."), (5, "Good.")], "en", "de", TranslationSubject.Game, 1);
+
+        Assert.Equal(new[] { 3 }, result!.Keys);
+    }
+
+    [Fact]
+    public async Task Game_UngefragterSchluessel_ZaehltNichtInDieLaenge()
+    {
+        var prose = string.Join(" ", Enumerable.Repeat("The knight is better than the bishop here.", 6));
+        var padding = string.Join(" ", Enumerable.Repeat("Der Springer ist hier besser als der Laeufer.", 8));
+        _llm.Answer = $$"""{"items":[{"ply":1,"text":"Kurz."},{"ply":40,"text":"{{padding}}"}]}""";
+
+        Assert.Null(await Translator().TranslateAsync([(1, prose)], "en", "de", TranslationSubject.Game, 1));
+    }
+
     [Fact]
     public async Task CourseLine_AntwortInFalscherSprache_Verworfen()
     {

@@ -104,6 +104,8 @@ Regeln, die dabei nicht kippen duerfen:
   waehrend Struktur und Zuege stimmten. Keine der uebrigen Pruefungen schlug an, weil in der Prosa
   keine Zuege stehen. Die Grenze liegt bei 70 % und nicht hoeher, weil manche Quell-Saetze selbst
   zweisprachig sind und die Uebersetzung die doppelte Haelfte zu Recht wegwirft (gemessen 53 %).
+* **Nur gefragte Schluessel** (A6-022, Partien UND Kurse): ein Halbzug, nach dem nicht gefragt wurde, wird nie
+  uebernommen und zaehlt nicht in die Laengenpruefung. Fehlende Halbzuege bleiben bei Partien erlaubt (bei Kursen Fehlschlag).
 * **Kein offenes Zitat** (0.551.1, `CommentTranslator.EndsInsideQuote`, gilt fuer Partien UND Kurse). Das Modell
   oeffnet ein deutsches Zitat mit „ und schliesst es mit dem GERADEN `"` — das beendet in der JSON-Antwort den
   String, die Grammatik laesst danach nur noch das Schliessen zu: der Text endet mitten im Zitat, alle Eintraege
