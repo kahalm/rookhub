@@ -315,8 +315,11 @@ public class AuthController : BaseApiController
         try
         {
             // Antwort trägt ein frisches Token: der rotierte Security-Stamp entwertet auch das Token
-            // dieser Sitzung — das Frontend ersetzt seinen gespeicherten Stand damit und bleibt drin.
-            return Ok(await _authService.ChangePasswordAsync(GetUserId(), dto));
+            // dieser Sitzung — das Frontend ersetzt seinen gespeicherten Stand damit und bleibt drin. Dasselbe gilt fuer
+            // das geteilte Cookie: das alte faellt mit dem Stempel, also wie beim Login neu schreiben (A1-020).
+            var res = await _authService.ChangePasswordAsync(GetUserId(), dto);
+            await WriteSharedSessionAsync(res);
+            return Ok(res);
         }
         catch (UnauthorizedAccessException)
         {

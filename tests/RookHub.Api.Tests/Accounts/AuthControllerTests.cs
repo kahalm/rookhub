@@ -412,6 +412,37 @@ public class AuthControllerTests : IDisposable
         new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance).IssueAsync(userId);
 
     [Fact]
+    public async Task ChangePassword_RewritesTheSharedCookie_SoTheOtherSurfacesStaySignedIn()
+    {
+        // A1-020: Der Passwortwechsel rotiert den Stempel — das alte rh_session gilt danach nicht mehr. Wie beim
+        // Login muss die Antwort ein frisches Cookie mitbringen.
+        var user = await AddUserAsync("pw");
+        SignIn(user.Id);
+
+        var result = await _controller.ChangePassword(new ChangePasswordDto { CurrentPassword = "Password1!", NewPassword = "Password2!x" });
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var res = Assert.IsType<AuthResponseDto>(ok.Value);
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.NotNull(cookie);
+        Assert.False(IsDeletion(cookie));
+        Assert.Equal(user.Id, (await _shared.RedeemAsync(CookieValue(cookie)))?.UserId);
+        Assert.Equal(user.Id, res.UserId);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WrongCurrentPassword_WritesNoCookie()
+    {
+        var user = await AddUserAsync("pw2");
+        SignIn(user.Id);
+
+        var result = await _controller.ChangePassword(new ChangePasswordDto { CurrentPassword = "falsch", NewPassword = "Password2!x" });
+
+        Assert.IsType<UnauthorizedObjectResult>(result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
     public async Task Handoff_LeavesTheSharedCookieOfTheCaller_SoTheJumpCanBeRedeemedOverThere()
     {
         // Der Nachweis drueben ist das geteilte Cookie DESSELBEN Kontos — der Sprung legt es beim Holen des Codes an,

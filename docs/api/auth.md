@@ -18,6 +18,8 @@ dabei neu geschriebene Cookie ERBEN ihn. Kein Token und kein Cookie läuft über
 (Vorgabe 90) hinaus, ein älteres Cookie wird nicht mehr eingelöst (204, Cookie gelöscht) — danach läuft das JWT ab, die
 API antwortet 401 `invalid_token`, und die Oberfläche meldet ab (`SessionStore`-Ablauf bzw. `authInterceptor`). Vorher
 schrieb jedes Einlösen ein frisches 30-Tage-Cookie samt neuem Token: eine abgegriffene Sitzung verlängerte sich endlos.
+Der Passwortwechsel (`PUT /api/auth/change-password`) schreibt das Cookie wie der Login neu (A1-020) — der rotierte
+Stempel entwertet das alte, sonst bräuchten die Nebenoberflächen danach eine neue Anmeldung.
 Altbestand ohne Claim gilt beim nächsten Einlösen als „jetzt angemeldet" (kein Massen-Abmelden beim Deploy). Code:
 `Services/Accounts/SessionLifetime.cs`; Impersonations-Tokens (2 h) tragen ihren eigenen Zeitpunkt. Eine gesenkte
 Konfiguration wirkt auf bereits ausgegebene JWTs erst mit deren Ablauf.
