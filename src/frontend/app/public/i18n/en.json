@@ -5073,6 +5073,9 @@
     "b": "Promote to bishop",
     "n": "Promote to knight"
   },
+  "moveList": {
+    "label": "Moves"
+  },
   "playerCard": {
     "games": "{{n}} games",
     "gamesOne": "{{n}} game",

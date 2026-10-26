@@ -254,6 +254,88 @@ describe('MoveListComponent Fokus folgt dem aktiven Zug (F8-018)', () => {
   }));
 });
 
+// F8-018 (Entscheidung 25.10.): die Zugliste ist EINE Tab-Station (roving tabindex) — Pfeiltasten wandern von Zug zu Zug,
+// Enter/Leertaste wählt; Liste und Züge als listbox/option.
+describe('MoveListComponent Tastatur (F8-018)', () => {
+  function render(current: number) {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    const chess = new Chess();
+    ['e4', 'e5', 'Nf3', 'Nc6'].forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('currentMoveIndex', current);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const moves = () => Array.from(el.querySelectorAll('.move')) as HTMLButtonElement[];
+    const key = (k: string) => {
+      const ev = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+      document.activeElement!.dispatchEvent(ev);
+      fixture.detectChanges();
+      return ev;
+    };
+    return { fixture, el, moves, key };
+  }
+
+  it('listbox mit options, der aktive ist ausgewählt und die einzige Tab-Station', () => {
+    const { el, moves } = render(1);
+    expect(el.querySelector('.move-list')!.getAttribute('role')).toBe('listbox');
+    expect(moves().every(m => m.getAttribute('role') === 'option')).toBeTrue();
+    expect(moves().map(m => m.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+    expect(moves().map(m => m.getAttribute('tabindex'))).toEqual(['-1', '0', '-1', '-1']);
+  });
+
+  it('ohne aktiven Zug ist der erste die Tab-Station', () => {
+    const { moves } = render(-1);
+    expect(moves().map(m => m.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1']);
+  });
+
+  it('Pfeiltasten und Pos1/Ende wandern, ohne zu wählen; die Taste geht nicht an die Seite; Enter wählt', () => {
+    const { fixture, moves, key } = render(0);
+    const clicked: number[] = [];
+    fixture.componentInstance.moveClicked.subscribe(i => clicked.push(i));
+    const page = jasmine.createSpy('keydown am body');
+    document.body.addEventListener('keydown', page);
+    try {
+      moves()[0].focus();
+      const ev = key('ArrowRight');
+      expect(ev.defaultPrevented).toBeTrue();
+      expect(document.activeElement).toBe(moves()[1]);
+      expect(moves().map(m => m.getAttribute('tabindex'))).toEqual(['-1', '0', '-1', '-1']);
+      key('ArrowDown');
+      expect(document.activeElement).toBe(moves()[2]);
+      key('ArrowLeft');
+      key('ArrowUp');
+      expect(document.activeElement).toBe(moves()[0]);
+      key('ArrowLeft');                                               // am Anfang bleibt es beim ersten Zug
+      expect(document.activeElement).toBe(moves()[0]);
+      key('End');
+      expect(document.activeElement).toBe(moves()[3]);
+      key('Home');
+      expect(document.activeElement).toBe(moves()[0]);
+      key('End');
+    } finally {
+      document.body.removeEventListener('keydown', page);
+    }
+    expect(page).not.toHaveBeenCalled();
+    expect(clicked).toEqual([]);                                      // wandern wählt nicht
+    // Enter/Leertaste auf dem Knopf = Klick mit detail 0
+    moves()[3].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 0 }));
+    expect(clicked).toEqual([3]);
+    expect(document.activeElement).toBe(moves()[3]);
+  });
+
+  it('andere Tasten bleiben unberührt', () => {
+    const { moves, key } = render(0);
+    moves()[0].focus();
+    expect(key('a').defaultPrevented).toBeFalse();
+  });
+
+  it('sichtbarer Fokus: Umriss in der Schriftfarbe', () => {
+    const css = ((MoveListComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/\s+/g, ' ');
+    expect(css).toMatch(/\.move(\[[^\]]*\])?:focus-visible[^{]*\{ ?outline: 2px solid currentColor/);
+  });
+});
+
 // 0.836.0: Zeichen der Engine-Auswertung hinter den Zügen — anklickbar ist weiter der ganze Zug.
 describe('MoveListComponent Zeichen', () => {
   it('zeigt das Zeichen hinter genau dem markierten Zug, mit Farbe und Tooltip', () => {

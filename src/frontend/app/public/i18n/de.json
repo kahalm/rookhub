@@ -5073,6 +5073,9 @@
     "b": "In einen Läufer umwandeln",
     "n": "In einen Springer umwandeln"
   },
+  "moveList": {
+    "label": "Züge"
+  },
   "playerCard": {
     "games": "{{n}} Partien",
     "gamesOne": "{{n}} Partie",

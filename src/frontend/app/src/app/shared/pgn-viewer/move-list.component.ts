@@ -1,8 +1,9 @@
 import {
   Component, Input, Output, EventEmitter, OnChanges,
-  SimpleChanges, ElementRef, ViewChild, ChangeDetectionStrategy, input } from '@angular/core';
+  SimpleChanges, ElementRef, ViewChild, ChangeDetectionStrategy, input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Move } from 'chess.js';
+import { TranslateService } from '@ngx-translate/core';
 import { SanPipe } from '../chess/san.pipe';
 
 /** Ein Stück Kommentartext; mit `move` ein anklickbarer Zug, dessen Stellung `fen` ist. */
@@ -36,32 +37,37 @@ export interface MoveListMark {
         <span class="mark" [style.background]="m.color" [style.color]="markText(m.color)" [attr.title]="m.label ?? null">{{ m.symbol }}</span>
       }
     </ng-template>
-    <div class="move-list" #moveListEl>
+    <!-- F8-018: Liste mit EINER Tab-Station (roving tabindex) — Pfeiltasten wandern von Zug zu Zug, Enter/Leertaste wählt. -->
+    <div class="move-list" #moveListEl role="listbox" [attr.aria-label]="label()" (keydown)="onKeydown($event)">
       @if (comments[-1]) {
-        <div class="comment-row comment-intro">
+        <div class="comment-row comment-intro" role="none">
           <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: -1 }"></ng-container>
         </div>
       }
       @for (pair of movePairs; track $index) {
-        <div class="move-row" [class.row-active]="isRowActive(pair)">
-          <span class="move-number">{{ pair.number }}.</span>
+        <div class="move-row" role="none" [class.row-active]="isRowActive(pair)">
+          <span class="move-number" role="none">{{ pair.number }}.</span>
           @if (pair.white !== undefined) {
-            <button type="button" class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
+            <button type="button" class="move" role="option" [class.active]="pair.whiteIndex === currentMoveIndex"
+                    [attr.data-index]="pair.whiteIndex" [attr.tabindex]="pair.whiteIndex === tabStop() ? 0 : -1"
+                    [attr.aria-selected]="pair.whiteIndex === currentMoveIndex"
                     [attr.aria-current]="pair.whiteIndex === currentMoveIndex ? 'true' : null"
                     (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.whiteIndex }"></ng-container></button>
           } @else {
-            <span class="move-empty"></span>
+            <span class="move-empty" role="none"></span>
           }
           @if (pair.black) {
-            <button type="button" class="move" [class.active]="pair.blackIndex === currentMoveIndex"
+            <button type="button" class="move" role="option" [class.active]="pair.blackIndex === currentMoveIndex"
+                    [attr.data-index]="pair.blackIndex" [attr.tabindex]="pair.blackIndex === tabStop() ? 0 : -1"
+                    [attr.aria-selected]="pair.blackIndex === currentMoveIndex"
                     [attr.aria-current]="pair.blackIndex === currentMoveIndex ? 'true' : null"
                     (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black | san }}<ng-container *ngTemplateOutlet="markTpl; context: { $implicit: pair.blackIndex }"></ng-container></button>
           } @else {
-            <span class="move-empty"></span>
+            <span class="move-empty" role="none"></span>
           }
         </div>
         @if (commentIndex(pair) !== null) {
-          <div class="comment-row">
+          <div class="comment-row" role="none">
             <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: commentIndex(pair) }"></ng-container>
           </div>
         }
@@ -106,6 +112,8 @@ export interface MoveListMark {
       line-height: 1.5;
     }
     .move:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+    /* Sichtbarer Fokus (F8-018) in der Schriftfarbe — auf dem farbigen aktiven Zug also hell. */
+    .move:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
     .move.active { background: var(--rh-accent, #1976d2); color: var(--mat-sys-on-primary, #fff); }
     .move-empty { display: block; }
     /* Zug-Klasse aus der Engine-Auswertung (0.836.0): kleines farbiges Schild hinter dem Zug, die Schrift schwarz oder
@@ -148,6 +156,46 @@ export class MoveListComponent implements OnChanges {
 
   @ViewChild('moveListEl') moveListEl!: ElementRef<HTMLElement>;
 
+  private readonly translate = inject(TranslateService, { optional: true });
+  /** Name der Liste für Vorleser. */
+  label(): string | null { return this.translate?.instant('moveList.label') ?? null; }
+
+  /** Zug, auf den die Pfeiltasten zuletzt gewandert sind — `null` = die Tab-Station folgt dem aktiven Zug. */
+  private focusIndex: number | null = null;
+
+  /** Die EINE Tab-Station der Liste (roving tabindex, F8-018): der zuletzt angesteuerte, sonst der aktive, sonst der erste Zug. */
+  tabStop(): number {
+    const last = this.moves.length - 1;
+    if (this.focusIndex !== null && this.focusIndex <= last) return this.focusIndex;
+    return this.currentMoveIndex >= 0 && this.currentMoveIndex <= last ? this.currentMoveIndex : 0;
+  }
+
+  /** Pfeiltasten (←/↑ zurück, →/↓ vor), Pos1/Ende wandern zwischen den Zügen; Enter/Leertaste wählt (Knopf-Klick).
+   *  Die Taste geht nicht weiter — sonst blätterte die Seite (globale ←/→) das Brett zusätzlich. */
+  onKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLElement | null;
+    const raw = target?.getAttribute?.('data-index');
+    if (raw === null || raw === undefined || !this.moves.length) return;
+    const from = Number(raw);
+    const last = this.moves.length - 1;
+    let to: number;
+    switch (event.key) {
+      case 'ArrowRight': case 'ArrowDown': to = Math.min(from + 1, last); break;
+      case 'ArrowLeft': case 'ArrowUp': to = Math.max(from - 1, 0); break;
+      case 'Home': to = 0; break;
+      case 'End': to = last; break;
+      default: return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.focusIndex = to;
+    const next = this.moveListEl?.nativeElement.querySelector<HTMLElement>(`.move[data-index="${to}"]`);
+    if (next) {
+      next.focus({ preventScroll: true });
+      scrollIntoContainer(next);
+    }
+  }
+
   movePairs: { number: number; white?: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
 
   /** Schrift fürs Zeichen-Schild: Schwarz oder Weiß, was auf `color` (#rrggbb) mehr Kontrast hat (Gelb → Schwarz). */
@@ -164,6 +212,7 @@ export class MoveListComponent implements OnChanges {
       this.buildPairs();
     }
     if (changes['currentMoveIndex']) {
+      this.focusIndex = null;   // die Tab-Station folgt wieder dem aktiven Zug
       this.scrollToActive();
     }
   }

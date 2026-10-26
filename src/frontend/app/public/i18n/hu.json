@@ -5073,6 +5073,9 @@
     "b": "Átváltozás futóvá",
     "n": "Átváltozás huszárrá"
   },
+  "moveList": {
+    "label": "Lépések"
+  },
   "playerCard": {
     "games": "{{n}} parti",
     "gamesOne": "{{n}} parti",

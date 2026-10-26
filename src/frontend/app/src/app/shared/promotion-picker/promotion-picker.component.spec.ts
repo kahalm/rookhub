@@ -91,7 +91,51 @@ describe('PromotionPickerComponent Tastatur (F8-018)', () => {
     expect(buttons.map(b => b.getAttribute('aria-label')))
       .toEqual(['promotion.q', 'promotion.r', 'promotion.b', 'promotion.n']);
     expect(buttons.every(b => b.getAttribute('type') === 'button')).toBeTrue();
-    expect(el.querySelector('[role="group"]')!.getAttribute('aria-label')).toBe('promotion.group');
+    expect(el.querySelector('[role="radiogroup"]')!.getAttribute('aria-label')).toBe('promotion.group');
+    expect(buttons.every(b => b.getAttribute('role') === 'radio')).toBeTrue();
+    expect(document.activeElement).toBe(buttons[0]);
+  });
+
+  it('eine Tab-Station: Pfeiltasten wandern im Kreis, Enter wählt die angesteuerte Figur (F8-018)', () => {
+    const fixture = render();
+    const el = fixture.nativeElement as HTMLElement;
+    const buttons = () => Array.from(el.querySelectorAll<HTMLButtonElement>('button.promotion-piece'));
+    const tabs = () => buttons().map(b => b.getAttribute('tabindex'));
+    const key = (k: string) => { document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); fixture.detectChanges(); };
+    expect(tabs()).toEqual(['0', '-1', '-1', '-1']);
+    expect(buttons()[0].getAttribute('aria-checked')).toBe('true');
+    key('ArrowDown');
+    expect(document.activeElement).toBe(buttons()[1]);
+    expect(tabs()).toEqual(['-1', '0', '-1', '-1']);
+    expect(buttons()[1].getAttribute('aria-checked')).toBe('true');
+    key('ArrowUp');
+    key('ArrowUp');                                                   // vor der Dame: im Kreis zum Springer
+    expect(document.activeElement).toBe(buttons()[3]);
+    key('Home');
+    expect(document.activeElement).toBe(buttons()[0]);
+    key('End');
+    expect(document.activeElement).toBe(buttons()[3]);
+
+    const chosen = spyOn(fixture.componentInstance.choose, 'emit');
+    (fixture.componentInstance as unknown as { guardUntil: number }).guardUntil = 0;
+    buttons()[3].click();                                             // Enter/Leertaste auf einem Knopf = Klick
+    expect(chosen).toHaveBeenCalledWith('n');
+  });
+
+  it('von unten geöffnet: ↓ geht auf dem Brett nach unten, also zurück zur Dame', () => {
+    TestBed.configureTestingModule({
+      imports: [PromotionPickerComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(PromotionPickerComponent);
+    fixture.componentRef.setInput('color', 'b');
+    fixture.componentRef.setInput('dest', 'a1');
+    fixture.detectChanges();
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button.promotion-piece'));
+    expect(fixture.componentInstance.fromBottom).toBeTrue();
+    buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(buttons[1]);
+    buttons[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
     expect(document.activeElement).toBe(buttons[0]);
   });
 

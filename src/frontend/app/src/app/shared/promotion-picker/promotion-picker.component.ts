@@ -29,10 +29,12 @@ export type PromotionPiece = 'q' | 'r' | 'b' | 'n';
   imports: [TranslatePipe],
   template: `
     <div class="promotion-backdrop" aria-hidden="true" (click)="onDismiss()"></div>
-    <div class="promotion-choices" role="group" [attr.aria-label]="'promotion.group' | translate"
-         [style.left.%]="filePercent" [class.from-bottom]="fromBottom">
-      @for (piece of pieces; track piece) {
-        <button #choice type="button" class="promotion-piece" (click)="onChoose(piece)"
+    <!-- F8-018: Auswahlgruppe mit EINER Tab-Station (roving tabindex) — Pfeiltasten wandern, Enter/Leertaste wählt. -->
+    <div class="promotion-choices" role="radiogroup" [attr.aria-label]="'promotion.group' | translate"
+         [style.left.%]="filePercent" [class.from-bottom]="fromBottom" (keydown)="onKeydown($event)">
+      @for (piece of pieces; track piece; let i = $index) {
+        <button #choice type="button" class="promotion-piece" role="radio" (click)="onChoose(piece)"
+                [attr.tabindex]="i === focused ? 0 : -1" [attr.aria-checked]="i === focused" (focus)="focused = i"
                 [attr.aria-label]="'promotion.' + piece | translate">
           <span class="piece-icon" aria-hidden="true" [style.backgroundImage]="image(piece)"></span>
         </button>
@@ -89,6 +91,8 @@ export class PromotionPickerComponent implements OnInit, AfterViewInit, OnDestro
   @Output() dismiss = new EventEmitter<void>();
 
   pieces: PromotionPiece[] = ['q', 'r', 'b', 'n'];
+  /** Index der Figur mit der Tab-Station (Start: Dame). */
+  focused = 0;
   filePercent = 0;
   fromBottom = false;
 
@@ -138,6 +142,26 @@ export class PromotionPickerComponent implements OnInit, AfterViewInit, OnDestro
     event.stopPropagation();
     event.preventDefault();
     this.dismiss.emit();
+  }
+
+  /** Pfeiltasten wandern im Kreis durch die vier Figuren — ↑/↓ wie sie auf dem Brett stehen (von unten geöffnet ist die
+   *  Reihenfolge gespiegelt), ←/→ in der Reihenfolge Dame, Turm, Läufer, Springer; Pos1/Ende springen an die Enden. */
+  onKeydown(event: KeyboardEvent): void {
+    const n = this.pieces.length;
+    let to: number;
+    switch (event.key) {
+      case 'ArrowDown': to = this.focused + (this.fromBottom ? -1 : 1); break;
+      case 'ArrowUp': to = this.focused + (this.fromBottom ? 1 : -1); break;
+      case 'ArrowRight': to = this.focused + 1; break;
+      case 'ArrowLeft': to = this.focused - 1; break;
+      case 'Home': to = 0; break;
+      case 'End': to = n - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.focused = (to + n) % n;
+    this.choices?.get(this.focused)?.nativeElement.focus({ preventScroll: true });
   }
 
   onChoose(piece: PromotionPiece): void {

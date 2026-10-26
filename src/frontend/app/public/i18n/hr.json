@@ -5073,6 +5073,9 @@
     "b": "Promoviraj u lovca",
     "n": "Promoviraj u skakača"
   },
+  "moveList": {
+    "label": "Potezi"
+  },
   "playerCard": {
     "games": "{{n}} partija",
     "gamesOne": "{{n}} partija",
