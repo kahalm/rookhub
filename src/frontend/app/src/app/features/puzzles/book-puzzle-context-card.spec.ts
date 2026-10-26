@@ -74,7 +74,7 @@ function render(setup: (c: any) => void): HTMLElement {
 }
 
 const nextButtons = (el: Element) =>
-  Array.from(el.querySelectorAll('button')).filter(b => b.textContent?.includes('book.actions.nextPuzzle'));
+  Array.from(el.querySelectorAll('button')).filter(b => b.textContent?.includes('solver.actions.nextPuzzle'));
 
 // b1-rk-seq-doppelt-naechstes-puzzle (DESIGN 5.4): nach Lösen/Aufgeben stand „Nächstes Puzzle" als gefüllter Knopf in
 // der Kontext-Card UND in der Statuskarte. Jetzt bringt ihn nur die Statuskarte.
@@ -174,9 +174,9 @@ describe('BookPuzzleComponent Tipp-Knopf zählt den nächsten Tipp (d4)', () => 
     expect(tip(render(withHints(0)))).toContain('(1/3)');
   });
 
-  it('nach einem gezeigten Tipp „book.hints.next (2/3)“', () => {
+  it('nach einem gezeigten Tipp „solver.hints.next (2/3)“', () => {
     const t = tip(render(withHints(1)));
-    expect(t).toContain('book.hints.next');
+    expect(t).toContain('solver.hints.next');
     expect(t).toContain('(2/3)');
   });
 });

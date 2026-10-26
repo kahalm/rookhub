@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Ładowanie zadania…",
       "loadFailed": "Nie udało się załadować zadania",
       "offlineNoCache": "Jesteś offline i nie ma zapisanych zadań. Otwórz tę stronę online, aby zapisać zadania do gry offline.",
       "offlinePoolExhausted": "Brak kolejnych zadań offline — przerobiłeś wszystkie zapisane. Nowe zadania załadują się, gdy wrócisz do sieci.",
       "replayLast": "Zagraj ostatnie zadanie ponownie",
-      "watchOpponent": "Obserwuj ruch przeciwnika…",
-      "yourTurn": "Twój ruch!",
-      "gaveUpPlayOut": "Poddano — zagraj rozwiązanie samodzielnie.",
-      "thinking": "Stockfish myśli…"
+      "yourTurn": "Twój ruch!"
     },
     "result": {
       "solutionPlayedOut": "Rozwiązanie zagrane.",
-      "tryYourselfNextTime": "Następnym razem spróbuj sam!",
-      "checkmate": "Mat!",
-      "alternativeSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",
-      "correct": "Poprawnie!",
-      "incorrect": "Niepoprawnie"
-    },
-    "eval": {
-      "start": "Start",
-      "now": "Teraz",
-      "show": "Pokaż ocenę",
-      "hide": "Ukryj ocenę"
+      "tryYourselfNextTime": "Następnym razem spróbuj sam!"
     },
     "actions": {
-      "reset": "Resetuj",
-      "mouseslip": "Pomyłka myszy",
-      "giveUp": "Poddaj się",
-      "nextPuzzle": "Następne zadanie",
-      "share": "Udostępnij zadanie",
-      "reviewLast": "Przejrzyj ostatnie zadanie",
-      "endlessMode": "Tryb nieskończony",
-      "analyze": "Analizuj"
+      "endlessMode": "Tryb nieskończony"
     },
     "info": {
       "rating": "Ocena"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Motyw szachownicy",
       "pieces": "Bierki"
-    },
-    "viz": {
-      "countdown": "Bierki znikają za {{seconds}}s…",
-      "show": "Pokaż",
-      "showing": "Wyświetlanie…"
     },
     "share": {
       "title": "Udostępnij zadanie",
@@ -655,26 +629,13 @@
       "start": "Start"
     },
     "game": {
-      "vizCountdown": "Bierki znikają za {{seconds}}s...",
-      "vizShow": "Pokaż",
-      "vizShowing": "Wyświetlanie...",
-      "loadingPuzzle": "Ładowanie zadania...",
-      "watchOpponent": "Obserwuj ruch przeciwnika...",
-      "yourTurn": "Twój ruch! Znajdź najlepszy ruch.",
       "yourMove": "Twój ruch...",
       "opponentThinking": "Przeciwnik myśli...",
-      "checkmate": "Mat!",
-      "alternativeSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną linię.",
-      "correct": "Poprawnie!",
-      "wrong": "Błędnie!",
       "gaveUp": "Poddano",
       "continue": "Kontynuuj",
-      "analyze": "Analizuj",
-      "reviewLast": "Analizuj ostatnie zadanie",
       "levelRange": "Poziom {{level}} ({{min}}–{{max}})",
       "showTags": "Pokaż tagi",
       "hideTags": "Ukryj tagi",
-      "sharePuzzle": "Udostępnij zadanie",
       "statSolved": "Rozwiązane",
       "statTime": "Czas",
       "phaseLabel": "Faza {{phase}} (krok {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Trudność",
     "offlineUnavailable": "Ta książka nie jest dostępna offline.",
     "status": {
-      "loading": "Ładowanie zadania...",
-      "watchOpponent": "Obserwuj ruch przeciwnika...",
-      "yourTurn": "Twój ruch! Znajdź najlepszy ruch.",
-      "gaveUp": "Poddano — zagraj rozwiązanie samodzielnie.",
-      "stockfishThinking": "Stockfish myśli...",
       "yourMoveVsStockfish": "Twój ruch przeciwko Stockfishowi...",
-      "correct": "Poprawnie!",
-      "incorrect": "Niepoprawnie",
       "gaveUpSolution": "Poddano — oto rozwiązanie",
-      "checkmate": "Mat!",
-      "altSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",
       "fullGame": "Pełna partia"
     },
     "actions": {
-      "nextPuzzle": "Następne zadanie",
       "skip": "Pomiń",
       "viewFullGame": "Obejrzyj pełną partię",
-      "analyze": "Analizuj",
-      "reviewLast": "Analizuj ostatnie zadanie",
       "nextInBook": "Następne w książce",
       "randomInBook": "Losowe z książki",
       "prevDaily": "Poprzedni dzień",
       "nextDaily": "Następny dzień",
-      "sharePuzzle": "Udostępnij zadanie",
       "backToPuzzle": "Wróć do zadania"
-    },
-    "viz": {
-      "countdown": "Bierki znikają za {{seconds}}s...",
-      "show": "Pokaż",
-      "showing": "Wyświetlanie..."
     },
     "course": {
       "backToCourses": "Do przeglądu kursu",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Ładowanie zadania…",
+      "watchOpponent": "Obserwuj ruch przeciwnika…",
+      "correct": "Poprawnie!",
+      "checkmate": "Mat!",
+      "altSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną sekwencję ruchów.",
+      "incorrect": "Niepoprawnie",
+      "findBestMove": "Twój ruch! Znajdź najlepszy ruch.",
+      "stockfishThinking": "Stockfish myśli…",
+      "gaveUpPlayOut": "Poddano — zagraj rozwiązanie samodzielnie."
+    },
+    "actions": {
+      "nextPuzzle": "Następne zadanie",
+      "analyze": "Analizuj",
+      "share": "Udostępnij zadanie",
+      "reviewLast": "Analizuj ostatnie zadanie",
+      "reset": "Resetuj",
+      "mouseslip": "Pomyłka myszy",
+      "giveUp": "Poddaj się"
+    },
+    "eval": {
+      "show": "Pokaż ocenę",
+      "hide": "Ukryj ocenę",
+      "start": "Start",
+      "now": "Teraz"
+    },
+    "viz": {
+      "show": "Pokaż",
+      "showing": "Wyświetlanie…",
+      "countdown": "Bierki znikają za {{seconds}}s…"
     }
   }
 }

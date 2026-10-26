@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Se încarcă problema…",
       "loadFailed": "Încărcarea problemei a eșuat",
       "offlineNoCache": "Ești offline și nicio problemă nu este salvată în cache. Deschide această pagină o dată cu internet pentru a salva probleme pentru joc offline.",
-      "watchOpponent": "Urmărește mutarea adversarului…",
       "yourTurn": "Rândul tău!",
-      "gaveUpPlayOut": "Ai renunțat — joacă singur soluția.",
-      "thinking": "Stockfish gândește…",
       "offlinePoolExhausted": "Nu mai sunt probleme offline — ai jucat toate cele salvate în cache. Problemele noi se vor încărca imediat ce ești din nou online.",
       "replayLast": "Rejoacă ultima problemă"
     },
     "result": {
       "solutionPlayedOut": "Soluție jucată.",
-      "tryYourselfNextTime": "Poate o rezolvi singur data viitoare!",
-      "checkmate": "Șah mat!",
-      "alternativeSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",
-      "correct": "Corect!",
-      "incorrect": "Incorect"
-    },
-    "eval": {
-      "start": "Start",
-      "now": "Acum",
-      "show": "Arată evaluarea",
-      "hide": "Ascunde evaluarea"
+      "tryYourselfNextTime": "Poate o rezolvi singur data viitoare!"
     },
     "actions": {
-      "reset": "Resetează",
-      "mouseslip": "Alunecare mouse",
-      "giveUp": "Renunță",
-      "nextPuzzle": "Problema următoare",
-      "share": "Distribuie problema",
-      "reviewLast": "Analizează ultima problemă",
-      "endlessMode": "Mod infinit",
-      "analyze": "Analizează"
+      "endlessMode": "Mod infinit"
     },
     "info": {
       "rating": "Rating"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Temă tablă",
       "pieces": "Piese"
-    },
-    "viz": {
-      "countdown": "Piesele dispar în {{seconds}}s…",
-      "show": "Arată",
-      "showing": "Se afișează…"
     },
     "share": {
       "title": "Distribuie problema",
@@ -655,26 +629,13 @@
       "start": "Start"
     },
     "game": {
-      "vizCountdown": "Piesele dispar în {{seconds}}s...",
-      "vizShow": "Arată",
-      "vizShowing": "Se afișează...",
-      "loadingPuzzle": "Se încarcă problema...",
-      "watchOpponent": "Urmărește mutarea adversarului...",
-      "yourTurn": "Rândul tău! Găsește cea mai bună mutare.",
       "yourMove": "Mutarea ta...",
       "opponentThinking": "Adversarul gândește...",
-      "checkmate": "Șah mat!",
-      "alternativeSolution": "Soluție alternativă — problema avea o altă linie intenționată.",
-      "correct": "Corect!",
-      "wrong": "Greșit!",
       "gaveUp": "Ai renunțat",
       "continue": "Continuă",
-      "analyze": "Analizează",
-      "reviewLast": "Analizează ultima problemă",
       "levelRange": "Nivel {{level}} ({{min}}–{{max}})",
       "showTags": "Arată etichete",
       "hideTags": "Ascunde etichete",
-      "sharePuzzle": "Distribuie problema",
       "statSolved": "Rezolvate",
       "statTime": "Timp",
       "phaseLabel": "Faza {{phase}} (pas {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Dificultate",
     "offlineUnavailable": "Această carte nu este disponibilă offline.",
     "status": {
-      "loading": "Se încarcă problema...",
-      "watchOpponent": "Urmărește mutarea adversarului...",
-      "yourTurn": "Rândul tău! Găsește cea mai bună mutare.",
-      "gaveUp": "Ai renunțat — joacă singur soluția.",
-      "stockfishThinking": "Stockfish gândește...",
       "yourMoveVsStockfish": "Mutarea ta împotriva Stockfish...",
-      "correct": "Corect!",
-      "incorrect": "Incorect",
       "gaveUpSolution": "Ai renunțat — iată soluția",
-      "checkmate": "Șah mat!",
-      "altSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",
       "fullGame": "Partida completă"
     },
     "actions": {
-      "nextPuzzle": "Problema următoare",
       "skip": "Sari",
       "viewFullGame": "Vezi partida completă",
-      "analyze": "Analizează",
-      "reviewLast": "Analizează ultima problemă",
       "nextInBook": "Următoarea din carte",
       "randomInBook": "Aleatorie din carte",
-      "sharePuzzle": "Distribuie problema",
       "backToPuzzle": "Înapoi la problemă",
       "prevDaily": "Ziua anterioară",
       "nextDaily": "Ziua următoare"
-    },
-    "viz": {
-      "countdown": "Piesele dispar în {{seconds}}s...",
-      "show": "Arată",
-      "showing": "Se afișează..."
     },
     "course": {
       "backToCourses": "La prezentarea generală a cursurilor",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Se încarcă problema…",
+      "watchOpponent": "Urmărește mutarea adversarului…",
+      "correct": "Corect!",
+      "checkmate": "Șah mat!",
+      "altSolution": "Soluție alternativă — problema avea o altă secvență de mutări intenționată.",
+      "incorrect": "Incorect",
+      "findBestMove": "Rândul tău! Găsește cea mai bună mutare.",
+      "stockfishThinking": "Stockfish gândește…",
+      "gaveUpPlayOut": "Ai renunțat — joacă singur soluția."
+    },
+    "actions": {
+      "nextPuzzle": "Problema următoare",
+      "analyze": "Analizează",
+      "share": "Distribuie problema",
+      "reviewLast": "Analizează ultima problemă",
+      "reset": "Resetează",
+      "mouseslip": "Alunecare mouse",
+      "giveUp": "Renunță"
+    },
+    "eval": {
+      "show": "Arată evaluarea",
+      "hide": "Ascunde evaluarea",
+      "start": "Start",
+      "now": "Acum"
+    },
+    "viz": {
+      "show": "Arată",
+      "showing": "Se afișează…",
+      "countdown": "Piesele dispar în {{seconds}}s…"
     }
   }
 }

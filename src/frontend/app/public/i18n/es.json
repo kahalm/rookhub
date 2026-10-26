@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Cargando ejercicio…",
       "loadFailed": "Error al cargar el ejercicio",
       "offlineNoCache": "Estás sin conexión y no hay ejercicios en caché. Abre esta página una vez con conexión para guardar ejercicios para jugar sin internet.",
       "offlinePoolExhausted": "No quedan ejercicios sin conexión — has jugado todos los almacenados. Los nuevos ejercicios se cargarán en cuanto vuelvas a conectarte.",
       "replayLast": "Repetir último ejercicio",
-      "watchOpponent": "Observa la jugada del rival…",
-      "yourTurn": "¡Tu turno!",
-      "gaveUpPlayOut": "Te rendiste — juega tú mismo la solución.",
-      "thinking": "Stockfish está calculando…"
+      "yourTurn": "¡Tu turno!"
     },
     "result": {
       "solutionPlayedOut": "Solución ejecutada.",
-      "tryYourselfNextTime": "¡Intenta resolverlo tú mismo la próxima vez!",
-      "checkmate": "¡Jaque mate!",
-      "alternativeSolution": "Solución alternativa — el ejercicio tenía una secuencia de jugadas prevista diferente.",
-      "correct": "¡Correcto!",
-      "incorrect": "Incorrecto"
-    },
-    "eval": {
-      "start": "Inicio",
-      "now": "Ahora",
-      "show": "Mostrar evaluación",
-      "hide": "Ocultar evaluación"
+      "tryYourselfNextTime": "¡Intenta resolverlo tú mismo la próxima vez!"
     },
     "actions": {
-      "reset": "Reiniciar",
-      "mouseslip": "Error de ratón",
-      "giveUp": "Rendirse",
-      "nextPuzzle": "Siguiente ejercicio",
-      "share": "Compartir ejercicio",
-      "reviewLast": "Revisar último ejercicio",
-      "endlessMode": "Modo sin fin",
-      "analyze": "Analizar"
+      "endlessMode": "Modo sin fin"
     },
     "info": {
       "rating": "Puntuación"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Tema del tablero",
       "pieces": "Piezas"
-    },
-    "viz": {
-      "countdown": "Las piezas desaparecen en {{seconds}}s…",
-      "show": "Mostrar",
-      "showing": "Mostrando…"
     },
     "share": {
       "title": "Compartir ejercicio",
@@ -655,26 +629,13 @@
       "start": "Iniciar"
     },
     "game": {
-      "vizCountdown": "Las piezas desaparecen en {{seconds}}s...",
-      "vizShow": "Mostrar",
-      "vizShowing": "Mostrando...",
-      "loadingPuzzle": "Cargando ejercicio...",
-      "watchOpponent": "Observa la jugada del rival...",
-      "yourTurn": "¡Tu turno! Encuentra la mejor jugada.",
       "yourMove": "Tu jugada...",
       "opponentThinking": "El rival está calculando...",
-      "checkmate": "¡Jaque mate!",
-      "alternativeSolution": "Solución alternativa — el ejercicio tenía una línea prevista diferente.",
-      "correct": "¡Correcto!",
-      "wrong": "¡Incorrecto!",
       "gaveUp": "Te rendiste",
       "continue": "Continuar",
-      "analyze": "Analizar",
-      "reviewLast": "Analizar último ejercicio",
       "levelRange": "Nivel {{level}} ({{min}}–{{max}})",
       "showTags": "Mostrar etiquetas",
       "hideTags": "Ocultar etiquetas",
-      "sharePuzzle": "Compartir ejercicio",
       "statSolved": "Resueltos",
       "statTime": "Tiempo",
       "phaseLabel": "Fase {{phase}} (paso {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Dificultad",
     "offlineUnavailable": "Este libro no está disponible sin conexión.",
     "status": {
-      "loading": "Cargando ejercicio...",
-      "watchOpponent": "Observa la jugada del rival...",
-      "yourTurn": "¡Tu turno! Encuentra la mejor jugada.",
-      "gaveUp": "Te rendiste — juega tú mismo la solución.",
-      "stockfishThinking": "Stockfish está calculando...",
       "yourMoveVsStockfish": "Tu jugada contra Stockfish...",
-      "correct": "¡Correcto!",
-      "incorrect": "Incorrecto",
       "gaveUpSolution": "Te rendiste — aquí está la solución",
-      "checkmate": "¡Jaque mate!",
-      "altSolution": "Solución alternativa — el ejercicio tenía una secuencia de jugadas prevista diferente.",
       "fullGame": "Partida completa"
     },
     "actions": {
-      "nextPuzzle": "Siguiente ejercicio",
       "skip": "Omitir",
       "viewFullGame": "Ver partida completa",
-      "analyze": "Analizar",
-      "reviewLast": "Analizar último ejercicio",
       "nextInBook": "Siguiente en el libro",
       "randomInBook": "Aleatorio del libro",
       "prevDaily": "Día anterior",
       "nextDaily": "Día siguiente",
-      "sharePuzzle": "Compartir ejercicio",
       "backToPuzzle": "Volver al ejercicio"
-    },
-    "viz": {
-      "countdown": "Las piezas desaparecen en {{seconds}}s...",
-      "show": "Mostrar",
-      "showing": "Mostrando..."
     },
     "course": {
       "backToCourses": "A la vista general del curso",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Cargando ejercicio…",
+      "watchOpponent": "Observa la jugada del rival…",
+      "correct": "¡Correcto!",
+      "checkmate": "¡Jaque mate!",
+      "altSolution": "Solución alternativa — el ejercicio tenía una secuencia de jugadas prevista diferente.",
+      "incorrect": "Incorrecto",
+      "findBestMove": "¡Tu turno! Encuentra la mejor jugada.",
+      "stockfishThinking": "Stockfish está calculando…",
+      "gaveUpPlayOut": "Te rendiste — juega tú mismo la solución."
+    },
+    "actions": {
+      "nextPuzzle": "Siguiente ejercicio",
+      "analyze": "Analizar",
+      "share": "Compartir ejercicio",
+      "reviewLast": "Analizar último ejercicio",
+      "reset": "Reiniciar",
+      "mouseslip": "Error de ratón",
+      "giveUp": "Rendirse"
+    },
+    "eval": {
+      "show": "Mostrar evaluación",
+      "hide": "Ocultar evaluación",
+      "start": "Inicio",
+      "now": "Ahora"
+    },
+    "viz": {
+      "show": "Mostrar",
+      "showing": "Mostrando…",
+      "countdown": "Las piezas desaparecen en {{seconds}}s…"
     }
   }
 }

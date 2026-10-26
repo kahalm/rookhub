@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "퍼즐 로딩 중…",
       "loadFailed": "퍼즐 로드 실패",
       "offlineNoCache": "오프라인 상태이며 캐시된 퍼즐이 없습니다. 온라인 상태에서 이 페이지를 한 번 열어 오프라인 플레이용 퍼즐을 저장하세요.",
       "offlinePoolExhausted": "더 이상 오프라인 퍼즐이 없습니다 — 캐시된 퍼즐을 모두 풀었습니다. 온라인 상태로 돌아오면 새 퍼즐이 로드됩니다.",
       "replayLast": "마지막 퍼즐 다시 풀기",
-      "watchOpponent": "상대방의 수를 보세요…",
-      "yourTurn": "당신의 차례!",
-      "gaveUpPlayOut": "포기했습니다 — 직접 해답을 두세요.",
-      "thinking": "Stockfish가 생각 중…"
+      "yourTurn": "당신의 차례!"
     },
     "result": {
       "solutionPlayedOut": "해답 재생 완료.",
-      "tryYourselfNextTime": "다음에는 직접 풀어보세요!",
-      "checkmate": "체크메이트!",
-      "alternativeSolution": "대안 해답 — 퍼즐의 의도한 수순과 다릅니다.",
-      "correct": "정답!",
-      "incorrect": "오답"
-    },
-    "eval": {
-      "start": "시작",
-      "now": "현재",
-      "show": "평가 보기",
-      "hide": "평가 숨기기"
+      "tryYourselfNextTime": "다음에는 직접 풀어보세요!"
     },
     "actions": {
-      "reset": "초기화",
-      "mouseslip": "실수 취소",
-      "giveUp": "포기",
-      "nextPuzzle": "다음 퍼즐",
-      "share": "퍼즐 공유",
-      "reviewLast": "마지막 퍼즐 복습",
-      "endlessMode": "무한 모드",
-      "analyze": "분석"
+      "endlessMode": "무한 모드"
     },
     "info": {
       "rating": "등급"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "보드 테마",
       "pieces": "기물"
-    },
-    "viz": {
-      "countdown": "기물이 {{seconds}}초 후 사라집니다…",
-      "show": "보기",
-      "showing": "표시 중…"
     },
     "share": {
       "title": "퍼즐 공유",
@@ -655,26 +629,13 @@
       "start": "시작"
     },
     "game": {
-      "vizCountdown": "기물이 {{seconds}}초 후 사라집니다...",
-      "vizShow": "보기",
-      "vizShowing": "표시 중...",
-      "loadingPuzzle": "퍼즐 로딩 중...",
-      "watchOpponent": "상대방의 수를 보세요...",
-      "yourTurn": "당신의 차례! 최선의 수를 찾으세요.",
       "yourMove": "당신의 수...",
       "opponentThinking": "상대가 생각 중...",
-      "checkmate": "체크메이트!",
-      "alternativeSolution": "대안 해답 — 퍼즐의 의도한 라인과 다릅니다.",
-      "correct": "정답!",
-      "wrong": "오답!",
       "gaveUp": "포기함",
       "continue": "계속",
-      "analyze": "분석",
-      "reviewLast": "마지막 퍼즐 분석",
       "levelRange": "레벨 {{level}} ({{min}}–{{max}})",
       "showTags": "태그 보기",
       "hideTags": "태그 숨기기",
-      "sharePuzzle": "퍼즐 공유",
       "statSolved": "풀음",
       "statTime": "시간",
       "phaseLabel": "{{phase}}단계 (스텝 {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "난이도",
     "offlineUnavailable": "이 교재는 오프라인에서 사용할 수 없습니다.",
     "status": {
-      "loading": "퍼즐 로딩 중...",
-      "watchOpponent": "상대방의 수를 보세요...",
-      "yourTurn": "당신의 차례! 최선의 수를 찾으세요.",
-      "gaveUp": "포기했습니다 — 직접 해답을 두세요.",
-      "stockfishThinking": "Stockfish가 생각 중...",
       "yourMoveVsStockfish": "Stockfish를 상대로 당신의 수...",
-      "correct": "정답!",
-      "incorrect": "오답",
       "gaveUpSolution": "포기했습니다 — 해답입니다",
-      "checkmate": "체크메이트!",
-      "altSolution": "대안 해답 — 퍼즐의 의도한 수순과 다릅니다.",
       "fullGame": "전체 게임"
     },
     "actions": {
-      "nextPuzzle": "다음 퍼즐",
       "skip": "건너뜀",
       "viewFullGame": "전체 게임 보기",
-      "analyze": "분석",
-      "reviewLast": "마지막 퍼즐 분석",
       "nextInBook": "교재에서 다음",
       "randomInBook": "교재에서 랜덤",
       "prevDaily": "이전 날",
       "nextDaily": "다음 날",
-      "sharePuzzle": "퍼즐 공유",
       "backToPuzzle": "퍼즐로 돌아가기"
-    },
-    "viz": {
-      "countdown": "기물이 {{seconds}}초 후 사라집니다...",
-      "show": "보기",
-      "showing": "표시 중..."
     },
     "course": {
       "backToCourses": "코스 개요로",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "퍼즐 로딩 중…",
+      "watchOpponent": "상대방의 수를 보세요…",
+      "correct": "정답!",
+      "checkmate": "체크메이트!",
+      "altSolution": "대안 해답 — 퍼즐의 의도한 수순과 다릅니다.",
+      "incorrect": "오답",
+      "findBestMove": "당신의 차례! 최선의 수를 찾으세요.",
+      "stockfishThinking": "Stockfish가 생각 중…",
+      "gaveUpPlayOut": "포기했습니다 — 직접 해답을 두세요."
+    },
+    "actions": {
+      "nextPuzzle": "다음 퍼즐",
+      "analyze": "분석",
+      "share": "퍼즐 공유",
+      "reviewLast": "마지막 퍼즐 분석",
+      "reset": "초기화",
+      "mouseslip": "실수 취소",
+      "giveUp": "포기"
+    },
+    "eval": {
+      "show": "평가 보기",
+      "hide": "평가 숨기기",
+      "start": "시작",
+      "now": "현재"
+    },
+    "viz": {
+      "show": "보기",
+      "showing": "표시 중…",
+      "countdown": "기물이 {{seconds}}초 후 사라집니다…"
     }
   }
 }

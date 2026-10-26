@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "جارٍ تحميل اللغز…",
       "loadFailed": "فشل تحميل اللغز",
       "offlineNoCache": "أنت غير متصل ولا توجد ألغاز مخزّنة. افتح هذه الصفحة مرة وأنت متصل لحفظ الألغاز للعب غير المتصل.",
       "offlinePoolExhausted": "لا مزيد من الألغاز غير المتصلة — لقد لعبت جميع الألغاز المخزّنة. ستُحمَّل ألغاز جديدة فور عودتك للاتصال.",
       "replayLast": "إعادة آخر لغز",
-      "watchOpponent": "راقب حركة الخصم…",
-      "yourTurn": "دورك!",
-      "gaveUpPlayOut": "استسلمت — العب الحل بنفسك.",
-      "thinking": "Stockfish يفكّر…"
+      "yourTurn": "دورك!"
     },
     "result": {
       "solutionPlayedOut": "تم تنفيذ الحل.",
-      "tryYourselfNextTime": "حاول حله بنفسك في المرة القادمة!",
-      "checkmate": "كش ملك!",
-      "alternativeSolution": "حل بديل — كان اللغز يحتوي على تسلسل حركات مقصود مختلف.",
-      "correct": "صحيح!",
-      "incorrect": "خاطئ"
-    },
-    "eval": {
-      "start": "البداية",
-      "now": "الآن",
-      "show": "إظهار التقييم",
-      "hide": "إخفاء التقييم"
+      "tryYourselfNextTime": "حاول حله بنفسك في المرة القادمة!"
     },
     "actions": {
-      "reset": "إعادة تعيين",
-      "mouseslip": "انزلاق الفأرة",
-      "giveUp": "الاستسلام",
-      "nextPuzzle": "اللغز التالي",
-      "share": "مشاركة اللغز",
-      "reviewLast": "مراجعة اللغز الأخير",
-      "endlessMode": "وضع لا نهاية",
-      "analyze": "تحليل"
+      "endlessMode": "وضع لا نهاية"
     },
     "info": {
       "rating": "التقييم"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "مظهر اللوحة",
       "pieces": "القطع"
-    },
-    "viz": {
-      "countdown": "القطع تختفي في {{seconds}} ثانية…",
-      "show": "إظهار",
-      "showing": "جارٍ الإظهار…"
     },
     "share": {
       "title": "مشاركة اللغز",
@@ -655,26 +629,13 @@
       "start": "ابدأ"
     },
     "game": {
-      "vizCountdown": "القطع تختفي في {{seconds}} ثانية...",
-      "vizShow": "إظهار",
-      "vizShowing": "جارٍ الإظهار...",
-      "loadingPuzzle": "جارٍ تحميل اللغز...",
-      "watchOpponent": "راقب حركة الخصم...",
-      "yourTurn": "دورك! ابحث عن أفضل حركة.",
       "yourMove": "حركتك...",
       "opponentThinking": "الخصم يفكّر...",
-      "checkmate": "كش ملك!",
-      "alternativeSolution": "حل بديل — كان اللغز يحتوي على خط مقصود مختلف.",
-      "correct": "صحيح!",
-      "wrong": "خاطئ!",
       "gaveUp": "استسلم",
       "continue": "متابعة",
-      "analyze": "تحليل",
-      "reviewLast": "تحليل اللغز الأخير",
       "levelRange": "المستوى {{level}} ({{min}}–{{max}})",
       "showTags": "إظهار العلامات",
       "hideTags": "إخفاء العلامات",
-      "sharePuzzle": "مشاركة اللغز",
       "statSolved": "محلول",
       "statTime": "الوقت",
       "phaseLabel": "المرحلة {{phase}} (خطوة {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "الصعوبة",
     "offlineUnavailable": "هذا الكتاب غير متاح غير المتصل.",
     "status": {
-      "loading": "جارٍ تحميل اللغز...",
-      "watchOpponent": "راقب حركة الخصم...",
-      "yourTurn": "دورك! ابحث عن أفضل حركة.",
-      "gaveUp": "استسلمت — العب الحل بنفسك.",
-      "stockfishThinking": "Stockfish يفكّر...",
       "yourMoveVsStockfish": "حركتك ضد Stockfish...",
-      "correct": "صحيح!",
-      "incorrect": "خاطئ",
       "gaveUpSolution": "استسلمت — إليك الحل",
-      "checkmate": "كش ملك!",
-      "altSolution": "حل بديل — كان اللغز يحتوي على تسلسل حركات مقصود مختلف.",
       "fullGame": "اللعبة الكاملة"
     },
     "actions": {
-      "nextPuzzle": "اللغز التالي",
       "skip": "تخطي",
       "viewFullGame": "عرض اللعبة الكاملة",
-      "analyze": "تحليل",
-      "reviewLast": "تحليل اللغز الأخير",
       "nextInBook": "التالي في الكتاب",
       "randomInBook": "عشوائي من الكتاب",
       "prevDaily": "اليوم السابق",
       "nextDaily": "اليوم التالي",
-      "sharePuzzle": "مشاركة اللغز",
       "backToPuzzle": "العودة إلى اللغز"
-    },
-    "viz": {
-      "countdown": "القطع تختفي في {{seconds}} ثانية...",
-      "show": "إظهار",
-      "showing": "جارٍ الإظهار..."
     },
     "course": {
       "backToCourses": "إلى نظرة عامة على الدورات",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "جارٍ تحميل اللغز…",
+      "watchOpponent": "راقب حركة الخصم…",
+      "correct": "صحيح!",
+      "checkmate": "كش ملك!",
+      "altSolution": "حل بديل — كان اللغز يحتوي على تسلسل حركات مقصود مختلف.",
+      "incorrect": "خاطئ",
+      "findBestMove": "دورك! ابحث عن أفضل حركة.",
+      "stockfishThinking": "Stockfish يفكّر…",
+      "gaveUpPlayOut": "استسلمت — العب الحل بنفسك."
+    },
+    "actions": {
+      "nextPuzzle": "اللغز التالي",
+      "analyze": "تحليل",
+      "share": "مشاركة اللغز",
+      "reviewLast": "تحليل اللغز الأخير",
+      "reset": "إعادة تعيين",
+      "mouseslip": "انزلاق الفأرة",
+      "giveUp": "الاستسلام"
+    },
+    "eval": {
+      "show": "إظهار التقييم",
+      "hide": "إخفاء التقييم",
+      "start": "البداية",
+      "now": "الآن"
+    },
+    "viz": {
+      "show": "إظهار",
+      "showing": "جارٍ الإظهار…",
+      "countdown": "القطع تختفي في {{seconds}} ثانية…"
     }
   }
 }

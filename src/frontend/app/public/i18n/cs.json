@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Načítám úlohu…",
       "loadFailed": "Načtení úlohy se nezdařilo",
       "offlineNoCache": "Jste offline a žádné úlohy nejsou uloženy v mezipaměti. Otevřete tuto stránku jednou online, abyste si uložili úlohy pro hraní offline.",
       "offlinePoolExhausted": "Žádné další offline úlohy – prošli jste všemi uloženými. Nové úlohy se načtou, jakmile budete zpět online.",
       "replayLast": "Přehrát poslední úlohu",
-      "watchOpponent": "Sledujte tah soupeře…",
-      "yourTurn": "Jste na tahu!",
-      "gaveUpPlayOut": "Vzdali jste se – zahrajte řešení sami.",
-      "thinking": "Stockfish přemýšlí…"
+      "yourTurn": "Jste na tahu!"
     },
     "result": {
       "solutionPlayedOut": "Řešení bylo zahráno.",
-      "tryYourselfNextTime": "Příště to zkuste vyřešit sami!",
-      "checkmate": "Mat!",
-      "alternativeSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",
-      "correct": "Správně!",
-      "incorrect": "Nesprávně"
-    },
-    "eval": {
-      "start": "Start",
-      "now": "Nyní",
-      "show": "Zobrazit hodnocení",
-      "hide": "Skrýt hodnocení"
+      "tryYourselfNextTime": "Příště to zkuste vyřešit sami!"
     },
     "actions": {
-      "reset": "Resetovat",
-      "mouseslip": "Překlep myší",
-      "giveUp": "Vzdát se",
-      "nextPuzzle": "Další úloha",
-      "share": "Sdílet úlohu",
-      "reviewLast": "Přezkoumat poslední úlohu",
-      "endlessMode": "Nekonečný mód",
-      "analyze": "Analyzovat"
+      "endlessMode": "Nekonečný mód"
     },
     "info": {
       "rating": "Hodnocení"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Téma šachovnice",
       "pieces": "Figurky"
-    },
-    "viz": {
-      "countdown": "Figurky zmizí za {{seconds}}s…",
-      "show": "Zobrazit",
-      "showing": "Zobrazuji…"
     },
     "share": {
       "title": "Sdílet úlohu",
@@ -655,26 +629,13 @@
       "start": "Start"
     },
     "game": {
-      "vizCountdown": "Figurky zmizí za {{seconds}}s...",
-      "vizShow": "Zobrazit",
-      "vizShowing": "Zobrazuji...",
-      "loadingPuzzle": "Načítám úlohu...",
-      "watchOpponent": "Sledujte tah soupeře...",
-      "yourTurn": "Jste na tahu! Najděte nejlepší tah.",
       "yourMove": "Váš tah...",
       "opponentThinking": "Soupeř přemýšlí...",
-      "checkmate": "Mat!",
-      "alternativeSolution": "Alternativní řešení – úloha měla jinou zamýšlenou linii.",
-      "correct": "Správně!",
-      "wrong": "Špatně!",
       "gaveUp": "Vzdáno",
       "continue": "Pokračovat",
-      "analyze": "Analyzovat",
-      "reviewLast": "Analyzovat poslední úlohu",
       "levelRange": "Úroveň {{level}} ({{min}}–{{max}})",
       "showTags": "Zobrazit štítky",
       "hideTags": "Skrýt štítky",
-      "sharePuzzle": "Sdílet úlohu",
       "statSolved": "Vyřešeno",
       "statTime": "Čas",
       "phaseLabel": "Fáze {{phase}} (krok {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Obtížnost",
     "offlineUnavailable": "Tato kniha není dostupná offline.",
     "status": {
-      "loading": "Načítám úlohu...",
-      "watchOpponent": "Sledujte tah soupeře...",
-      "yourTurn": "Jste na tahu! Najděte nejlepší tah.",
-      "gaveUp": "Vzdali jste se – sami si zahrajte řešení.",
-      "stockfishThinking": "Stockfish přemýšlí...",
       "yourMoveVsStockfish": "Váš tah proti Stockfishi...",
-      "correct": "Správně!",
-      "incorrect": "Nesprávně",
       "gaveUpSolution": "Vzdáno – zde je řešení",
-      "checkmate": "Mat!",
-      "altSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",
       "fullGame": "Celá partie"
     },
     "actions": {
-      "nextPuzzle": "Další úloha",
       "skip": "Přeskočit",
       "viewFullGame": "Zobrazit celou partii",
-      "analyze": "Analyzovat",
-      "reviewLast": "Analyzovat poslední úlohu",
       "nextInBook": "Další v knize",
       "randomInBook": "Náhodně z knihy",
       "prevDaily": "Předchozí den",
       "nextDaily": "Další den",
-      "sharePuzzle": "Sdílet úlohu",
       "backToPuzzle": "Zpět na úlohu"
-    },
-    "viz": {
-      "countdown": "Figurky zmizí za {{seconds}}s...",
-      "show": "Zobrazit",
-      "showing": "Zobrazuji..."
     },
     "course": {
       "backToCourses": "Na přehled kurzů",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Načítám úlohu…",
+      "watchOpponent": "Sledujte tah soupeře…",
+      "correct": "Správně!",
+      "checkmate": "Mat!",
+      "altSolution": "Alternativní řešení – úloha měla jinou zamýšlenou sekvenci tahů.",
+      "incorrect": "Nesprávně",
+      "findBestMove": "Jste na tahu! Najděte nejlepší tah.",
+      "stockfishThinking": "Stockfish přemýšlí…",
+      "gaveUpPlayOut": "Vzdali jste se – zahrajte řešení sami."
+    },
+    "actions": {
+      "nextPuzzle": "Další úloha",
+      "analyze": "Analyzovat",
+      "share": "Sdílet úlohu",
+      "reviewLast": "Analyzovat poslední úlohu",
+      "reset": "Resetovat",
+      "mouseslip": "Překlep myší",
+      "giveUp": "Vzdát se"
+    },
+    "eval": {
+      "show": "Zobrazit hodnocení",
+      "hide": "Skrýt hodnocení",
+      "start": "Start",
+      "now": "Nyní"
+    },
+    "viz": {
+      "show": "Zobrazit",
+      "showing": "Zobrazuji…",
+      "countdown": "Figurky zmizí za {{seconds}}s…"
     }
   }
 }

@@ -1225,44 +1225,22 @@
   "puzzles": {
     "solveTime": "Megoldási idő",
     "status": {
-      "loading": "Feladvány betöltése…",
       "loadFailed": "Nem sikerült betölteni a feladványt",
       "offlineNoCache": "Offline vagy, és nincsenek gyorsítótárazott feladványok. Nyisd meg ezt az oldalt egyszer online, hogy elmentsd a feladványokat offline játékhoz.",
       "offlinePoolExhausted": "Nincs több offline feladvány – az összes gyorsítótárazottat végigjátszottad. Új feladványok töltődnek be, amint visszakerülsz online.",
       "replayLast": "Utolsó feladvány újrajátszása",
-      "watchOpponent": "Figyeld az ellenfél lépését…",
-      "yourTurn": "Te jössz!",
-      "gaveUpPlayOut": "Feladtad – játszd végig magad a megoldást.",
-      "thinking": "Stockfish gondolkodik…"
+      "yourTurn": "Te jössz!"
     },
     "result": {
       "solutionPlayedOut": "Megoldás lejátszva.",
       "tryYourselfNextTime": "Legközelebb próbáld meg magad megoldani!",
-      "checkmate": "Matt!",
-      "alternativeSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",
-      "correct": "Helyes!",
-      "incorrect": "Helytelen",
       "matedHint": "Mattot kaptál — próbáld újra, vagy nézd meg a megoldást.",
       "showSolution": "Megoldás mutatása"
     },
-    "eval": {
-      "start": "Kezdet",
-      "now": "Most",
-      "show": "Állásértékelés mutatása",
-      "hide": "Állásértékelés elrejtése"
-    },
     "actions": {
-      "reset": "Visszaállítás",
-      "mouseslip": "Egércsúszás",
-      "giveUp": "Feladás",
-      "nextPuzzle": "Következő feladvány",
-      "share": "Feladvány megosztása",
-      "reviewLast": "Utolsó feladvány áttekintése",
       "endlessMode": "Végtelen mód",
-      "analyze": "Elemzés",
       "challengeFriend": "Küldés ismerősnek",
-      "noFriends": "Nincs kihívható ismerős",
-      "showOriginalSolution": "Eredeti megoldás mutatása"
+      "noFriends": "Nincs kihívható ismerős"
     },
     "info": {
       "rating": "Értékelés"
@@ -1297,9 +1275,6 @@
       "pieces": "Bábuk"
     },
     "viz": {
-      "countdown": "A bábuk {{seconds}} másodperc múlva eltűnnek…",
-      "show": "Mutatás",
-      "showing": "Mutatás…",
       "level0Name": "Normál",
       "level1Name": "Vakjáték",
       "level2Name": "Korongok",
@@ -1360,19 +1335,12 @@
     "anarchyHint2": "Google en passant. 📖 A gyalogod üthet en passant, és a szent anarchy-szabály szerint ez az egyetlen szabályos lépés.",
     "anarchyHint3": "New response just dropped: EN PASSANT! ⚡ Kapd el azt a gyalogot — ebben a lépésben minden más szabálytalan. Actual zap.",
     "hints": {
-      "show": "Tipp",
-      "next": "Következő tipp",
       "t1Check": "Kényszerítő lépés — kezdd a sakkokkal (ellenőrzőlista: sakk, ütés, fenyegetés).",
       "t1Capture": "Egy ütés a kulcs — vedd végig az ellenőrzőlistát: sakk, ütés, fenyegetés.",
       "t1Quiet": "Nincs sakk, nincs ütés — találd meg a csendes lépést, amely döntő fenyegetést hoz (a sakk–ütés–fenyegetés lista „F”-je).",
       "t2Piece": "A {{piece}} lép.",
       "t3Move": "Játszd: {{move}}.",
-      "flag": "Tippek jelentése",
-      "flagged": "Tippek jelentve ✓",
       "flagTitle": "Jelöld meg rossznak ezeket a tippeket",
-      "flagSaved": "Tippek rossznak megjelölve.",
-      "flagCleared": "Megjelölés eltávolítva.",
-      "flagError": "A megjelölést nem sikerült menteni.",
       "pieces": {
         "pawn": "gyalog",
         "knight": "huszár",
@@ -1869,31 +1837,17 @@
       "advanced": "Finomhangolás"
     },
     "game": {
-      "vizCountdown": "A bábuk {{seconds}} másodperc múlva eltűnnek...",
-      "vizShow": "Mutatás",
-      "vizShowing": "Mutatás...",
-      "loadingPuzzle": "Feladvány betöltése...",
-      "watchOpponent": "Figyeld az ellenfél lépését...",
-      "yourTurn": "Te jössz! Találd meg a legjobb lépést.",
       "yourMove": "A te lépésed...",
       "opponentThinking": "Az ellenfél gondolkodik...",
-      "checkmate": "Matt!",
-      "alternativeSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt vonala.",
-      "correct": "Helyes!",
-      "wrong": "Helytelen!",
       "gaveUp": "Feladtad",
       "continue": "Folytatás",
-      "analyze": "Elemzés",
-      "reviewLast": "Utolsó feladvány elemzése",
       "levelRange": "{{level}}. szint ({{min}}–{{max}})",
       "showTags": "Címkék mutatása",
       "hideTags": "Címkék elrejtése",
-      "sharePuzzle": "Feladvány megosztása",
       "statSolved": "Megoldva",
       "statTime": "Munkamenet",
       "lives": "{{lives}} / {{max}} élet",
-      "phaseLabel": "{{phase}}. fázis ({{step}}. lépés)",
-      "showOriginalSolution": "Eredeti megoldás mutatása"
+      "phaseLabel": "{{phase}}. fázis ({{step}}. lépés)"
     },
     "gameOver": {
       "title": "Játék vége",
@@ -1950,39 +1904,20 @@
     "difficulty": "Nehézség",
     "offlineUnavailable": "Ez a könyv nem érhető el offline.",
     "status": {
-      "loading": "Feladvány betöltése...",
-      "watchOpponent": "Figyeld az ellenfél lépését...",
-      "yourTurn": "Te jössz! Találd meg a legjobb lépést.",
-      "gaveUp": "Feladtad – játszd végig magad a megoldást.",
-      "stockfishThinking": "Stockfish gondolkodik...",
       "yourMoveVsStockfish": "A te lépésed Stockfish ellen...",
-      "correct": "Helyes!",
-      "incorrect": "Helytelen",
       "gaveUpSolution": "Feladtad – íme a megoldás",
-      "checkmate": "Matt!",
-      "altSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",
       "fullGame": "Teljes játszma",
       "loadError": "A betöltés nem sikerült. Kérlek, ellenőrizd a kapcsolatot."
     },
     "actions": {
-      "nextPuzzle": "Következő feladvány",
       "skip": "Kihagyás",
       "viewFullGame": "Teljes játszma megtekintése",
-      "analyze": "Elemzés",
-      "reviewLast": "Utolsó feladvány elemzése",
       "nextInBook": "Következő a könyvben",
       "randomInBook": "Véletlenszerű a könyvből",
       "prevDaily": "Előző nap",
       "nextDaily": "Következő nap",
-      "sharePuzzle": "Feladvány megosztása",
       "backToPuzzle": "Vissza a feladványhoz",
-      "showOriginalSolution": "Eredeti megoldás mutatása",
       "prev": "Vissza"
-    },
-    "viz": {
-      "countdown": "A bábuk {{seconds}} másodperc múlva eltűnnek...",
-      "show": "Mutatás",
-      "showing": "Mutatás..."
     },
     "course": {
       "backToCourses": "Tanfolyam áttekintéséhez",
@@ -2027,14 +1962,7 @@
     },
     "alternativeMove": "Ez is jó lépés — de a fő változat lépését játszd.",
     "hints": {
-      "show": "Tipp",
-      "next": "Következő tipp",
-      "flag": "Tippek jelentése",
-      "flagged": "Tippek jelentve ✓",
-      "flagTitle": "Ezeknek a tippeknek a rossznak jelölése (admin)",
-      "flagSaved": "Tippek rossznak jelölve.",
-      "flagCleared": "Jelölés eltávolítva.",
-      "flagError": "A jelölést nem sikerült menteni."
+      "flagTitle": "Ezeknek a tippeknek a rossznak jelölése (admin)"
     },
     "track": {
       "solved": "Megoldva",
@@ -5862,6 +5790,49 @@
       "reading": "Olvasás folyamatban",
       "readingWhy": "ez általában néhány percig tart",
       "longWait": "A szokásosnál tovább tart – az olvasó most valószínűleg nem fut. A játszmalap mentve marad."
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Feladvány betöltése…",
+      "watchOpponent": "Figyeld az ellenfél lépését…",
+      "correct": "Helyes!",
+      "checkmate": "Matt!",
+      "altSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",
+      "incorrect": "Helytelen",
+      "findBestMove": "Te jössz! Találd meg a legjobb lépést.",
+      "stockfishThinking": "Stockfish gondolkodik…",
+      "gaveUpPlayOut": "Feladtad – játszd végig magad a megoldást."
+    },
+    "actions": {
+      "nextPuzzle": "Következő feladvány",
+      "analyze": "Elemzés",
+      "showOriginalSolution": "Eredeti megoldás mutatása",
+      "share": "Feladvány megosztása",
+      "reviewLast": "Utolsó feladvány elemzése",
+      "reset": "Visszaállítás",
+      "mouseslip": "Egércsúszás",
+      "giveUp": "Feladás"
+    },
+    "eval": {
+      "show": "Állásértékelés mutatása",
+      "hide": "Állásértékelés elrejtése",
+      "start": "Kezdet",
+      "now": "Most"
+    },
+    "viz": {
+      "show": "Mutatás",
+      "showing": "Mutatás…",
+      "countdown": "A bábuk {{seconds}} másodperc múlva eltűnnek…"
+    },
+    "hints": {
+      "show": "Tipp",
+      "next": "Következő tipp",
+      "flag": "Tippek jelentése",
+      "flagged": "Tippek jelentve ✓",
+      "flagSaved": "Tippek rossznak megjelölve.",
+      "flagCleared": "Megjelölés eltávolítva.",
+      "flagError": "A megjelölést nem sikerült menteni."
     }
   }
 }

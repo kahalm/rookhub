@@ -1486,44 +1486,22 @@
   "puzzles": {
     "solveTime": "Vrijeme rješavanja",
     "status": {
-      "loading": "Učitavanje zagonetke…",
       "loadFailed": "Učitavanje zagonetke nije uspjelo",
       "offlineNoCache": "Izvan mreže si i nema spremljenih zagonetki. Otvori ovu stranicu jednom dok si na mreži kako bi se zagonetke spremile za izvanmrežno igranje.",
       "offlinePoolExhausted": "Nema više izvanmrežnih zagonetki — odigrao/la si sve spremljene. Nove će se učitati čim ponovno budeš na mreži.",
       "replayLast": "Ponovno odigraj zadnju zagonetku",
-      "watchOpponent": "Prati protivnikov potez…",
-      "yourTurn": "Ti si na potezu!",
-      "gaveUpPlayOut": "Predao/la si se — sam/a odigraj rješenje.",
-      "thinking": "Stockfish razmišlja…"
+      "yourTurn": "Ti si na potezu!"
     },
     "result": {
       "solutionPlayedOut": "Rješenje odigrano.",
       "tryYourselfNextTime": "Sljedeći put možda riješiš sam/a!",
-      "checkmate": "Šah-mat!",
-      "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
-      "correct": "Točno!",
-      "incorrect": "Netočno",
       "matedHint": "Dobio si mat — pokušaj ponovno ili pogledaj rješenje.",
       "showSolution": "Prikaži rješenje"
     },
-    "eval": {
-      "start": "Početak",
-      "now": "Sada",
-      "show": "Prikaži procjenu pozicije",
-      "hide": "Sakrij procjenu pozicije"
-    },
     "actions": {
-      "reset": "Poništi",
-      "mouseslip": "Klizanje mišem",
-      "giveUp": "Predaj se",
-      "nextPuzzle": "Sljedeća zagonetka",
-      "share": "Podijeli zagonetku",
-      "reviewLast": "Pregledaj zadnju zagonetku",
       "endlessMode": "Beskonačni način",
-      "analyze": "Analiziraj",
       "challengeFriend": "Pošalji prijatelju",
-      "noFriends": "Nema prijatelja za izazov",
-      "showOriginalSolution": "Prikaži izvorno rješenje"
+      "noFriends": "Nema prijatelja za izazov"
     },
     "challenge": {
       "sentCount": "Izazov poslan prijateljima ({{count}})",
@@ -1599,19 +1577,12 @@
       "pieces": "Figure"
     },
     "hints": {
-      "show": "Savjet",
-      "next": "Sljedeći savjet",
       "t1Check": "Forsirajući potez — počni od šahova (lista: šah, uzimanje, prijetnja).",
       "t1Capture": "Uzimanje je ključ — prođi listu: šah, uzimanje, prijetnja.",
       "t1Quiet": "Nema šaha ni uzimanja — pronađi tihi potez s odlučujućom prijetnjom („P“ s liste šah–uzimanje–prijetnja).",
       "t2Piece": "Na potezu je {{piece}}.",
       "t3Move": "Igraj {{move}}.",
-      "flag": "Prijavi savjete",
-      "flagged": "Savjeti prijavljeni ✓",
       "flagTitle": "Označi ove savjete kao loše",
-      "flagSaved": "Savjeti označeni kao loši.",
-      "flagCleared": "Oznaka uklonjena.",
-      "flagError": "Oznaku nije moguće spremiti.",
       "pieces": {
         "pawn": "pješak",
         "knight": "skakač",
@@ -1624,9 +1595,6 @@
       "shownOf": "Prikazano savjeta: {{n}} od {{total}}"
     },
     "viz": {
-      "countdown": "Figure nestaju za {{seconds}}s…",
-      "show": "Prikaži",
-      "showing": "Prikazuje se…",
       "level0Name": "Normalno",
       "level1Name": "Naslijepo",
       "level2Name": "Žetoni",
@@ -2292,31 +2260,17 @@
       "advanced": "Fino podešavanje"
     },
     "game": {
-      "vizCountdown": "Figure nestaju za {{seconds}}s...",
-      "vizShow": "Prikaži",
-      "vizShowing": "Prikazuje se...",
-      "loadingPuzzle": "Učitavanje zagonetke...",
-      "watchOpponent": "Promatraj protivnikov potez...",
-      "yourTurn": "Ti si na potezu! Pronađi najbolji potez.",
       "yourMove": "Tvoj potez...",
       "opponentThinking": "Protivnik razmišlja...",
-      "checkmate": "Šah-mat!",
-      "alternativeSolution": "Alternativno rješenje — zagonetka je imala drugačiju predviđenu liniju.",
-      "correct": "Točno!",
-      "wrong": "Pogrešno!",
       "gaveUp": "Predaja",
       "continue": "Nastavi",
-      "analyze": "Analiziraj",
-      "reviewLast": "Analiziraj zadnju zagonetku",
       "levelRange": "Razina {{level}} ({{min}}–{{max}})",
       "showTags": "Prikaži oznake",
       "hideTags": "Sakrij oznake",
-      "sharePuzzle": "Podijeli zagonetku",
       "statSolved": "Riješeno",
       "statTime": "Sesija",
       "lives": "{{lives}} od {{max}} života",
-      "phaseLabel": "Faza {{phase}} (korak {{step}})",
-      "showOriginalSolution": "Prikaži izvorno rješenje"
+      "phaseLabel": "Faza {{phase}} (korak {{step}})"
     },
     "gameOver": {
       "title": "Kraj igre",
@@ -2364,51 +2318,25 @@
     "sourceGame": "Otvori partiju",
     "alternativeMove": "Također dobar potez — ali odigraj potez glavne varijante.",
     "hints": {
-      "show": "Savjet",
-      "next": "Sljedeći savjet",
-      "flag": "Prijavi savjete",
-      "flagged": "Savjeti prijavljeni ✓",
-      "flagTitle": "Označi ove savjete kao loše (admin)",
-      "flagSaved": "Savjeti označeni kao loši.",
-      "flagCleared": "Oznaka uklonjena.",
-      "flagError": "Oznaku nije moguće spremiti."
+      "flagTitle": "Označi ove savjete kao loše (admin)"
     },
     "difficulty": "Težina",
     "offlineUnavailable": "Ova knjiga nije dostupna offline.",
     "status": {
-      "loading": "Učitavanje zagonetke...",
-      "watchOpponent": "Pogledaj protivnikov potez...",
-      "yourTurn": "Ti si na potezu! Pronađi najbolji potez.",
-      "gaveUp": "Predao si — odigraj rješenje sam.",
-      "stockfishThinking": "Stockfish razmišlja...",
       "yourMoveVsStockfish": "Tvoj potez protiv Stockfisha...",
-      "correct": "Točno!",
-      "incorrect": "Netočno",
       "gaveUpSolution": "Predao si — evo rješenja",
-      "checkmate": "Šah-mat!",
-      "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
       "fullGame": "Cijela partija",
       "loadError": "Učitavanje nije uspjelo. Provjeri vezu."
     },
     "actions": {
-      "nextPuzzle": "Sljedeća zagonetka",
       "skip": "Preskoči",
       "viewFullGame": "Pogledaj cijelu partiju",
-      "analyze": "Analiziraj",
-      "reviewLast": "Analiziraj zadnju zagonetku",
       "nextInBook": "Sljedeća u knjizi",
       "randomInBook": "Slučajna iz knjige",
       "prevDaily": "Prethodni dan",
       "nextDaily": "Sljedeći dan",
-      "sharePuzzle": "Podijeli zagonetku",
       "backToPuzzle": "Natrag na zagonetku",
-      "showOriginalSolution": "Prikaži izvorno rješenje",
       "prev": "Natrag"
-    },
-    "viz": {
-      "countdown": "Figure nestaju za {{seconds}}s...",
-      "show": "Prikaži",
-      "showing": "Prikazujem..."
     },
     "course": {
       "backToCourses": "Na pregled tečajeva",
@@ -5862,6 +5790,49 @@
       "reading": "Čita se",
       "readingWhy": "to obično traje nekoliko minuta",
       "longWait": "Dulje nego obično – čitač trenutno vjerojatno ne radi. Zapisnik ostaje spremljen."
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Učitavanje zagonetke…",
+      "watchOpponent": "Prati protivnikov potez…",
+      "correct": "Točno!",
+      "checkmate": "Šah-mat!",
+      "altSolution": "Alternativno rješenje — zagonetka je imala drugačiji predviđeni slijed poteza.",
+      "incorrect": "Netočno",
+      "findBestMove": "Ti si na potezu! Pronađi najbolji potez.",
+      "stockfishThinking": "Stockfish razmišlja…",
+      "gaveUpPlayOut": "Predao/la si se — sam/a odigraj rješenje."
+    },
+    "actions": {
+      "nextPuzzle": "Sljedeća zagonetka",
+      "analyze": "Analiziraj",
+      "showOriginalSolution": "Prikaži izvorno rješenje",
+      "share": "Podijeli zagonetku",
+      "reviewLast": "Analiziraj zadnju zagonetku",
+      "reset": "Poništi",
+      "mouseslip": "Klizanje mišem",
+      "giveUp": "Predaj se"
+    },
+    "eval": {
+      "show": "Prikaži procjenu pozicije",
+      "hide": "Sakrij procjenu pozicije",
+      "start": "Početak",
+      "now": "Sada"
+    },
+    "viz": {
+      "show": "Prikaži",
+      "showing": "Prikazuje se…",
+      "countdown": "Figure nestaju za {{seconds}}s…"
+    },
+    "hints": {
+      "show": "Savjet",
+      "next": "Sljedeći savjet",
+      "flag": "Prijavi savjete",
+      "flagged": "Savjeti prijavljeni ✓",
+      "flagSaved": "Savjeti označeni kao loši.",
+      "flagCleared": "Oznaka uklonjena.",
+      "flagError": "Oznaku nije moguće spremiti."
     }
   }
 }

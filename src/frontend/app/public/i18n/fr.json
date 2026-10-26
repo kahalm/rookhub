@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Chargement du puzzle…",
       "loadFailed": "Impossible de charger le puzzle",
       "offlineNoCache": "Vous êtes hors ligne et aucun puzzle n'est en cache. Ouvrez cette page une fois en ligne pour sauvegarder des puzzles pour le jeu hors ligne.",
       "offlinePoolExhausted": "Plus de puzzles hors ligne — vous avez joué tous ceux en cache. De nouveaux puzzles se chargeront dès que vous serez de nouveau en ligne.",
       "replayLast": "Rejouer le dernier puzzle",
-      "watchOpponent": "Observez le coup de l'adversaire…",
-      "yourTurn": "À vous de jouer !",
-      "gaveUpPlayOut": "Abandonné — jouez la solution vous-même.",
-      "thinking": "Stockfish réfléchit…"
+      "yourTurn": "À vous de jouer !"
     },
     "result": {
       "solutionPlayedOut": "Solution jouée.",
-      "tryYourselfNextTime": "Essayez de le résoudre vous-même la prochaine fois !",
-      "checkmate": "Échec et mat !",
-      "alternativeSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",
-      "correct": "Correct !",
-      "incorrect": "Incorrect"
-    },
-    "eval": {
-      "start": "Départ",
-      "now": "Maintenant",
-      "show": "Afficher l'évaluation",
-      "hide": "Masquer l'évaluation"
+      "tryYourselfNextTime": "Essayez de le résoudre vous-même la prochaine fois !"
     },
     "actions": {
-      "reset": "Réinitialiser",
-      "mouseslip": "Glissement souris",
-      "giveUp": "Abandonner",
-      "nextPuzzle": "Puzzle suivant",
-      "share": "Partager le puzzle",
-      "reviewLast": "Revoir le dernier puzzle",
-      "endlessMode": "Mode infini",
-      "analyze": "Analyser"
+      "endlessMode": "Mode infini"
     },
     "info": {
       "rating": "Classement"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Thème de l'échiquier",
       "pieces": "Pièces"
-    },
-    "viz": {
-      "countdown": "Les pièces disparaissent dans {{seconds}}s…",
-      "show": "Afficher",
-      "showing": "Affichage…"
     },
     "share": {
       "title": "Partager le puzzle",
@@ -655,26 +629,13 @@
       "start": "Démarrer"
     },
     "game": {
-      "vizCountdown": "Les pièces disparaissent dans {{seconds}}s...",
-      "vizShow": "Afficher",
-      "vizShowing": "Affichage...",
-      "loadingPuzzle": "Chargement du puzzle...",
-      "watchOpponent": "Observez le coup de l'adversaire...",
-      "yourTurn": "À vous de jouer ! Trouvez le meilleur coup.",
       "yourMove": "Votre coup...",
       "opponentThinking": "L'adversaire réfléchit...",
-      "checkmate": "Échec et mat !",
-      "alternativeSolution": "Solution alternative — le puzzle avait une ligne prévue différente.",
-      "correct": "Correct !",
-      "wrong": "Incorrect !",
       "gaveUp": "Abandonné",
       "continue": "Continuer",
-      "analyze": "Analyser",
-      "reviewLast": "Analyser le dernier puzzle",
       "levelRange": "Niveau {{level}} ({{min}}–{{max}})",
       "showTags": "Afficher les tags",
       "hideTags": "Masquer les tags",
-      "sharePuzzle": "Partager le puzzle",
       "statSolved": "Résolus",
       "statTime": "Temps",
       "phaseLabel": "Phase {{phase}} (pas {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Difficulté",
     "offlineUnavailable": "Ce livre n'est pas disponible hors ligne.",
     "status": {
-      "loading": "Chargement du puzzle...",
-      "watchOpponent": "Observez le coup de l'adversaire...",
-      "yourTurn": "À vous de jouer ! Trouvez le meilleur coup.",
-      "gaveUp": "Abandonné — jouez la solution vous-même.",
-      "stockfishThinking": "Stockfish réfléchit...",
       "yourMoveVsStockfish": "Votre coup contre Stockfish...",
-      "correct": "Correct !",
-      "incorrect": "Incorrect",
       "gaveUpSolution": "Abandonné — voici la solution",
-      "checkmate": "Échec et mat !",
-      "altSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",
       "fullGame": "Partie complète"
     },
     "actions": {
-      "nextPuzzle": "Puzzle suivant",
       "skip": "Passer",
       "viewFullGame": "Voir la partie complète",
-      "analyze": "Analyser",
-      "reviewLast": "Analyser le dernier puzzle",
       "nextInBook": "Suivant dans le livre",
       "randomInBook": "Aléatoire dans le livre",
       "prevDaily": "Jour précédent",
       "nextDaily": "Jour suivant",
-      "sharePuzzle": "Partager le puzzle",
       "backToPuzzle": "Retour au puzzle"
-    },
-    "viz": {
-      "countdown": "Les pièces disparaissent dans {{seconds}}s...",
-      "show": "Afficher",
-      "showing": "Affichage..."
     },
     "course": {
       "backToCourses": "Vers la vue d'ensemble des cours",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Chargement du puzzle…",
+      "watchOpponent": "Observez le coup de l'adversaire…",
+      "correct": "Correct !",
+      "checkmate": "Échec et mat !",
+      "altSolution": "Solution alternative — le puzzle avait une séquence de coups prévue différente.",
+      "incorrect": "Incorrect",
+      "findBestMove": "À vous de jouer ! Trouvez le meilleur coup.",
+      "stockfishThinking": "Stockfish réfléchit…",
+      "gaveUpPlayOut": "Abandonné — jouez la solution vous-même."
+    },
+    "actions": {
+      "nextPuzzle": "Puzzle suivant",
+      "analyze": "Analyser",
+      "share": "Partager le puzzle",
+      "reviewLast": "Analyser le dernier puzzle",
+      "reset": "Réinitialiser",
+      "mouseslip": "Glissement souris",
+      "giveUp": "Abandonner"
+    },
+    "eval": {
+      "show": "Afficher l'évaluation",
+      "hide": "Masquer l'évaluation",
+      "start": "Départ",
+      "now": "Maintenant"
+    },
+    "viz": {
+      "show": "Afficher",
+      "showing": "Affichage…",
+      "countdown": "Les pièces disparaissent dans {{seconds}}s…"
     }
   }
 }

@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Đang tải bài tập…",
       "loadFailed": "Không thể tải bài tập",
       "offlineNoCache": "Bạn đang ngoại tuyến và chưa có bài tập nào được lưu. Mở trang này khi có kết nối để lưu bài tập cho lần chơi ngoại tuyến.",
       "offlinePoolExhausted": "Không còn bài tập ngoại tuyến — bạn đã giải hết tất cả bài đã lưu. Bài mới sẽ tải khi bạn kết nối lại.",
       "replayLast": "Chơi lại bài tập trước",
-      "watchOpponent": "Xem nước đi của đối thủ…",
-      "yourTurn": "Đến lượt bạn!",
-      "gaveUpPlayOut": "Đã bỏ cuộc — hãy tự mình thực hiện lời giải.",
-      "thinking": "Stockfish đang suy nghĩ…"
+      "yourTurn": "Đến lượt bạn!"
     },
     "result": {
       "solutionPlayedOut": "Đã thực hiện xong lời giải.",
-      "tryYourselfNextTime": "Lần sau hãy thử tự giải nhé!",
-      "checkmate": "Chiếu hết!",
-      "alternativeSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",
-      "correct": "Đúng rồi!",
-      "incorrect": "Sai rồi"
-    },
-    "eval": {
-      "start": "Ban đầu",
-      "now": "Hiện tại",
-      "show": "Hiển thị đánh giá",
-      "hide": "Ẩn đánh giá"
+      "tryYourselfNextTime": "Lần sau hãy thử tự giải nhé!"
     },
     "actions": {
-      "reset": "Đặt lại",
-      "mouseslip": "Trượt chuột",
-      "giveUp": "Bỏ cuộc",
-      "nextPuzzle": "Bài tập tiếp theo",
-      "share": "Chia sẻ bài tập",
-      "reviewLast": "Xem lại bài tập trước",
-      "endlessMode": "Chế độ vô tận",
-      "analyze": "Phân tích"
+      "endlessMode": "Chế độ vô tận"
     },
     "info": {
       "rating": "Xếp hạng"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Giao diện bàn cờ",
       "pieces": "Quân cờ"
-    },
-    "viz": {
-      "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s…",
-      "show": "Hiển thị",
-      "showing": "Đang hiển thị…"
     },
     "share": {
       "title": "Chia sẻ bài tập",
@@ -655,26 +629,13 @@
       "start": "Bắt đầu"
     },
     "game": {
-      "vizCountdown": "Quân cờ sẽ biến mất trong {{seconds}}s...",
-      "vizShow": "Hiển thị",
-      "vizShowing": "Đang hiển thị...",
-      "loadingPuzzle": "Đang tải bài tập...",
-      "watchOpponent": "Xem nước đi của đối thủ...",
-      "yourTurn": "Đến lượt bạn! Tìm nước đi tốt nhất.",
       "yourMove": "Nước đi của bạn...",
       "opponentThinking": "Đối thủ đang suy nghĩ...",
-      "checkmate": "Chiếu hết!",
-      "alternativeSolution": "Lời giải thay thế — bài tập có đường lời giải dự kiến khác.",
-      "correct": "Đúng rồi!",
-      "wrong": "Sai rồi!",
       "gaveUp": "Đã bỏ cuộc",
       "continue": "Tiếp tục",
-      "analyze": "Phân tích",
-      "reviewLast": "Phân tích bài tập trước",
       "levelRange": "Cấp {{level}} ({{min}}–{{max}})",
       "showTags": "Hiển thị thẻ",
       "hideTags": "Ẩn thẻ",
-      "sharePuzzle": "Chia sẻ bài tập",
       "statSolved": "Đã giải",
       "statTime": "Thời gian",
       "phaseLabel": "Giai đoạn {{phase}} (bước {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Độ khó",
     "offlineUnavailable": "Cuốn sách này không có sẵn ngoại tuyến.",
     "status": {
-      "loading": "Đang tải bài tập...",
-      "watchOpponent": "Xem nước đi của đối thủ...",
-      "yourTurn": "Đến lượt bạn! Tìm nước đi tốt nhất.",
-      "gaveUp": "Đã bỏ cuộc — hãy tự mình thực hiện lời giải.",
-      "stockfishThinking": "Stockfish đang suy nghĩ...",
       "yourMoveVsStockfish": "Nước đi của bạn chống lại Stockfish...",
-      "correct": "Đúng rồi!",
-      "incorrect": "Sai rồi",
       "gaveUpSolution": "Đã bỏ cuộc — đây là lời giải",
-      "checkmate": "Chiếu hết!",
-      "altSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",
       "fullGame": "Toàn bộ ván cờ"
     },
     "actions": {
-      "nextPuzzle": "Bài tập tiếp theo",
       "skip": "Bỏ qua",
       "viewFullGame": "Xem toàn bộ ván cờ",
-      "analyze": "Phân tích",
-      "reviewLast": "Phân tích bài tập trước",
       "nextInBook": "Tiếp theo trong sách",
       "randomInBook": "Ngẫu nhiên từ sách",
       "prevDaily": "Ngày trước",
       "nextDaily": "Ngày tiếp theo",
-      "sharePuzzle": "Chia sẻ bài tập",
       "backToPuzzle": "Quay lại bài tập"
-    },
-    "viz": {
-      "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s...",
-      "show": "Hiển thị",
-      "showing": "Đang hiển thị..."
     },
     "course": {
       "backToCourses": "Đến tổng quan khóa học",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Đang tải bài tập…",
+      "watchOpponent": "Xem nước đi của đối thủ…",
+      "correct": "Đúng rồi!",
+      "checkmate": "Chiếu hết!",
+      "altSolution": "Lời giải thay thế — bài tập có chuỗi nước đi dự kiến khác.",
+      "incorrect": "Sai rồi",
+      "findBestMove": "Đến lượt bạn! Tìm nước đi tốt nhất.",
+      "stockfishThinking": "Stockfish đang suy nghĩ…",
+      "gaveUpPlayOut": "Đã bỏ cuộc — hãy tự mình thực hiện lời giải."
+    },
+    "actions": {
+      "nextPuzzle": "Bài tập tiếp theo",
+      "analyze": "Phân tích",
+      "share": "Chia sẻ bài tập",
+      "reviewLast": "Phân tích bài tập trước",
+      "reset": "Đặt lại",
+      "mouseslip": "Trượt chuột",
+      "giveUp": "Bỏ cuộc"
+    },
+    "eval": {
+      "show": "Hiển thị đánh giá",
+      "hide": "Ẩn đánh giá",
+      "start": "Ban đầu",
+      "now": "Hiện tại"
+    },
+    "viz": {
+      "show": "Hiển thị",
+      "showing": "Đang hiển thị…",
+      "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s…"
     }
   }
 }

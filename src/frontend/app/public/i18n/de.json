@@ -1486,44 +1486,22 @@
   "puzzles": {
     "solveTime": "Lösezeit",
     "status": {
-      "loading": "Puzzle wird geladen…",
       "loadFailed": "Puzzle konnte nicht geladen werden",
       "offlineNoCache": "Du bist offline und es sind keine Puzzles gespeichert. Öffne diese Seite einmal online, um Puzzles für den Offline-Modus zu speichern.",
       "offlinePoolExhausted": "Keine neuen Offline-Puzzles mehr — du hast alle vorab gespeicherten Puzzles durchgespielt. Sobald du wieder online bist, werden neue geladen.",
       "replayLast": "Letztes Puzzle nochmal spielen",
-      "watchOpponent": "Beobachte den Zug des Gegners…",
-      "yourTurn": "Du bist am Zug!",
-      "gaveUpPlayOut": "Aufgegeben — spiel die Lösung selbst durch.",
-      "thinking": "Stockfish denkt…"
+      "yourTurn": "Du bist am Zug!"
     },
     "result": {
       "solutionPlayedOut": "Lösung durchgespielt.",
       "tryYourselfNextTime": "Nächstes Mal vielleicht selbst lösen!",
-      "checkmate": "Schachmatt!",
-      "alternativeSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
-      "correct": "Richtig!",
-      "incorrect": "Falsch",
       "matedHint": "Matt — versuch es nochmal oder schau dir die Lösung an.",
       "showSolution": "Lösung zeigen"
     },
-    "eval": {
-      "start": "Start",
-      "now": "Jetzt",
-      "show": "Stellungsbewertung anzeigen",
-      "hide": "Stellungsbewertung ausblenden"
-    },
     "actions": {
-      "reset": "Zurücksetzen",
-      "mouseslip": "Mausrutscher",
-      "giveUp": "Aufgeben",
-      "nextPuzzle": "Nächstes Puzzle",
-      "share": "Puzzle teilen",
-      "reviewLast": "Letztes Puzzle ansehen",
       "endlessMode": "Endlos-Modus",
-      "analyze": "Analysieren",
       "challengeFriend": "An Freund schicken",
-      "noFriends": "Keine Freunde zum Herausfordern",
-      "showOriginalSolution": "Originale Lösung zeigen"
+      "noFriends": "Keine Freunde zum Herausfordern"
     },
     "challenge": {
       "sentCount": "Challenge an {{count}} Freunde gesendet",
@@ -1599,19 +1577,12 @@
       "pieces": "Figuren"
     },
     "hints": {
-      "show": "Tipp",
-      "next": "Nächster Tipp",
       "t1Check": "Forcierender Zug — fang bei den Schachgeboten an (Checkliste: Schach, Schlagen, Drohung).",
       "t1Capture": "Ein Schlagzug ist der Schlüssel — geh die Checkliste durch: Schach, Schlagen, Drohung.",
       "t1Quiet": "Kein Schach, kein Schlag — finde den ruhigen Zug mit einer entscheidenden Drohung (das „D“ der Checkliste Schach–Schlagen–Drohung).",
       "t2Piece": "Es zieht {{piece}}.",
       "t3Move": "Spiel {{move}}.",
-      "flag": "Tipps melden",
-      "flagged": "Tipps gemeldet ✓",
       "flagTitle": "Diese Tipps als schlecht markieren",
-      "flagSaved": "Tipps als schlecht markiert.",
-      "flagCleared": "Markierung entfernt.",
-      "flagError": "Markierung konnte nicht gespeichert werden.",
       "pieces": {
         "pawn": "der Bauer",
         "knight": "der Springer",
@@ -1624,9 +1595,6 @@
       "shownOf": "{{n}} von {{total}} Tipps gezeigt"
     },
     "viz": {
-      "countdown": "Figuren verschwinden in {{seconds}}s…",
-      "show": "Anzeigen",
-      "showing": "Wird angezeigt…",
       "level0Name": "Normal",
       "level1Name": "Blindspiel",
       "level2Name": "Spielsteine",
@@ -2292,31 +2260,17 @@
       "advanced": "Feineinstellungen"
     },
     "game": {
-      "vizCountdown": "Figuren verschwinden in {{seconds}}s...",
-      "vizShow": "Anzeigen",
-      "vizShowing": "Wird angezeigt...",
-      "loadingPuzzle": "Puzzle wird geladen...",
-      "watchOpponent": "Beobachte den Zug des Gegners...",
-      "yourTurn": "Du bist dran! Finde den besten Zug.",
       "yourMove": "Dein Zug...",
       "opponentThinking": "Gegner denkt nach...",
-      "checkmate": "Schachmatt!",
-      "alternativeSolution": "Alternative Lösung — das Puzzle hatte einen anderen vorgesehenen Lösungsweg.",
-      "correct": "Richtig!",
-      "wrong": "Falsch!",
       "gaveUp": "Aufgegeben",
       "continue": "Fortsetzen",
-      "analyze": "Analysieren",
-      "reviewLast": "Letztes Puzzle analysieren",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Tags anzeigen",
       "hideTags": "Tags ausblenden",
-      "sharePuzzle": "Puzzle teilen",
       "statSolved": "Gelöst",
       "statTime": "Sitzung",
       "lives": "{{lives}} von {{max}} Leben",
-      "phaseLabel": "Phase {{phase}} (Schritt {{step}})",
-      "showOriginalSolution": "Originale Lösung zeigen"
+      "phaseLabel": "Phase {{phase}} (Schritt {{step}})"
     },
     "gameOver": {
       "title": "Spiel vorbei",
@@ -2364,51 +2318,25 @@
     "sourceGame": "Zur Partie",
     "alternativeMove": "Auch ein guter Zug — spiel aber den Zug der Hauptvariante.",
     "hints": {
-      "show": "Tipp",
-      "next": "Nächster Tipp",
-      "flag": "Tipps melden",
-      "flagged": "Tipps gemeldet ✓",
-      "flagTitle": "Diese Tipps als schlecht markieren (Admin)",
-      "flagSaved": "Tipps als schlecht markiert.",
-      "flagCleared": "Markierung entfernt.",
-      "flagError": "Markierung konnte nicht gespeichert werden."
+      "flagTitle": "Diese Tipps als schlecht markieren (Admin)"
     },
     "difficulty": "Schwierigkeit",
     "offlineUnavailable": "Dieses Buch ist nicht offline verfügbar.",
     "status": {
-      "loading": "Puzzle wird geladen...",
-      "watchOpponent": "Beobachte den Zug des Gegners...",
-      "yourTurn": "Du bist am Zug! Finde den besten Zug.",
-      "gaveUp": "Aufgegeben — spiel die Lösung selbst durch.",
-      "stockfishThinking": "Stockfish denkt...",
       "yourMoveVsStockfish": "Dein Zug gegen Stockfish...",
-      "correct": "Richtig!",
-      "incorrect": "Falsch",
       "gaveUpSolution": "Aufgegeben — hier ist die Lösung",
-      "checkmate": "Schachmatt!",
-      "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
       "fullGame": "Ganze Partie",
       "loadError": "Laden fehlgeschlagen. Bitte Verbindung prüfen."
     },
     "actions": {
-      "nextPuzzle": "Nächstes Puzzle",
       "skip": "Überspringen",
       "viewFullGame": "Ganze Partie ansehen",
-      "analyze": "Analysieren",
-      "reviewLast": "Letztes Puzzle analysieren",
       "nextInBook": "Nächstes im Buch",
       "randomInBook": "Zufällig aus Buch",
       "prevDaily": "Voriger Tag",
       "nextDaily": "Nächster Tag",
-      "sharePuzzle": "Puzzle teilen",
       "backToPuzzle": "Zurück zum Puzzle",
-      "showOriginalSolution": "Originale Lösung zeigen",
       "prev": "Zurück"
-    },
-    "viz": {
-      "countdown": "Figuren verschwinden in {{seconds}}s...",
-      "show": "Anzeigen",
-      "showing": "Wird angezeigt..."
     },
     "course": {
       "backToCourses": "Zur Kursübersicht",
@@ -5862,6 +5790,49 @@
       "reading": "Wird gelesen",
       "readingWhy": "das dauert meist ein paar Minuten",
       "longWait": "Länger als üblich – der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert."
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Puzzle wird geladen…",
+      "watchOpponent": "Beobachte den Zug des Gegners…",
+      "correct": "Richtig!",
+      "checkmate": "Schachmatt!",
+      "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",
+      "incorrect": "Falsch",
+      "findBestMove": "Du bist am Zug! Finde den besten Zug.",
+      "stockfishThinking": "Stockfish denkt…",
+      "gaveUpPlayOut": "Aufgegeben — spiel die Lösung selbst durch."
+    },
+    "actions": {
+      "nextPuzzle": "Nächstes Puzzle",
+      "analyze": "Analysieren",
+      "showOriginalSolution": "Originale Lösung zeigen",
+      "share": "Puzzle teilen",
+      "reviewLast": "Letztes Puzzle analysieren",
+      "reset": "Zurücksetzen",
+      "mouseslip": "Mausrutscher",
+      "giveUp": "Aufgeben"
+    },
+    "eval": {
+      "show": "Stellungsbewertung anzeigen",
+      "hide": "Stellungsbewertung ausblenden",
+      "start": "Start",
+      "now": "Jetzt"
+    },
+    "viz": {
+      "show": "Anzeigen",
+      "showing": "Wird angezeigt…",
+      "countdown": "Figuren verschwinden in {{seconds}}s…"
+    },
+    "hints": {
+      "show": "Tipp",
+      "next": "Nächster Tipp",
+      "flag": "Tipps melden",
+      "flagged": "Tipps gemeldet ✓",
+      "flagSaved": "Tipps als schlecht markiert.",
+      "flagCleared": "Markierung entfernt.",
+      "flagError": "Markierung konnte nicht gespeichert werden."
     }
   }
 }

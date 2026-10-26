@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Laddar uppgift…",
       "loadFailed": "Det gick inte att läsa in uppgiften",
       "offlineNoCache": "Du är offline och inga uppgifter finns cachade. Öppna den här sidan en gång online för att spara uppgifter för offlinespel.",
       "offlinePoolExhausted": "Inga fler offlineuppgifter — du har spelat igenom alla cachade. Nya uppgifter laddas så snart du är online igen.",
       "replayLast": "Spela om senaste uppgiften",
-      "watchOpponent": "Se motståndarens drag…",
-      "yourTurn": "Din tur!",
-      "gaveUpPlayOut": "Gick upp — spela lösningen själv.",
-      "thinking": "Stockfish tänker…"
+      "yourTurn": "Din tur!"
     },
     "result": {
       "solutionPlayedOut": "Lösningen genomspelad.",
-      "tryYourselfNextTime": "Försök lösa det själv nästa gång!",
-      "checkmate": "Schackmatt!",
-      "alternativeSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
-      "correct": "Rätt!",
-      "incorrect": "Fel"
-    },
-    "eval": {
-      "start": "Start",
-      "now": "Nu",
-      "show": "Visa eval",
-      "hide": "Dölj eval"
+      "tryYourselfNextTime": "Försök lösa det själv nästa gång!"
     },
     "actions": {
-      "reset": "Återställ",
-      "mouseslip": "Råkade flytta",
-      "giveUp": "Ge upp",
-      "nextPuzzle": "Nästa uppgift",
-      "share": "Dela uppgift",
-      "reviewLast": "Granska senaste uppgiften",
-      "endlessMode": "Ändlöst läge",
-      "analyze": "Analysera"
+      "endlessMode": "Ändlöst läge"
     },
     "info": {
       "rating": "Betyg"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Brädtema",
       "pieces": "Pjäser"
-    },
-    "viz": {
-      "countdown": "Pjäser försvinner om {{seconds}}s…",
-      "show": "Visa",
-      "showing": "Visar…"
     },
     "share": {
       "title": "Dela uppgift",
@@ -655,26 +629,13 @@
       "start": "Starta"
     },
     "game": {
-      "vizCountdown": "Pjäser försvinner om {{seconds}}s...",
-      "vizShow": "Visa",
-      "vizShowing": "Visar...",
-      "loadingPuzzle": "Laddar uppgift...",
-      "watchOpponent": "Se motståndarens drag...",
-      "yourTurn": "Din tur! Hitta det bästa draget.",
       "yourMove": "Ditt drag...",
       "opponentThinking": "Motståndaren tänker...",
-      "checkmate": "Schackmatt!",
-      "alternativeSolution": "Alternativ lösning — uppgiften hade en annan avsedd linje.",
-      "correct": "Rätt!",
-      "wrong": "Fel!",
       "gaveUp": "Gav upp",
       "continue": "Fortsätt",
-      "analyze": "Analysera",
-      "reviewLast": "Analysera senaste uppgiften",
       "levelRange": "Nivå {{level}} ({{min}}–{{max}})",
       "showTags": "Visa taggar",
       "hideTags": "Dölj taggar",
-      "sharePuzzle": "Dela uppgift",
       "statSolved": "Lösta",
       "statTime": "Tid",
       "phaseLabel": "Fas {{phase}} (steg {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Svårighetsgrad",
     "offlineUnavailable": "Den här boken är inte tillgänglig offline.",
     "status": {
-      "loading": "Laddar uppgift...",
-      "watchOpponent": "Se motståndarens drag...",
-      "yourTurn": "Din tur! Hitta det bästa draget.",
-      "gaveUp": "Gav upp — spela igenom lösningen själv.",
-      "stockfishThinking": "Stockfish tänker...",
       "yourMoveVsStockfish": "Ditt drag mot Stockfish...",
-      "correct": "Rätt!",
-      "incorrect": "Fel",
       "gaveUpSolution": "Gav upp — här är lösningen",
-      "checkmate": "Schackmatt!",
-      "altSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
       "fullGame": "Hela partiet"
     },
     "actions": {
-      "nextPuzzle": "Nästa uppgift",
       "skip": "Hoppa över",
       "viewFullGame": "Visa hela partiet",
-      "analyze": "Analysera",
-      "reviewLast": "Analysera senaste uppgiften",
       "nextInBook": "Nästa i boken",
       "randomInBook": "Slumpmässig från boken",
       "prevDaily": "Föregående dag",
       "nextDaily": "Nästa dag",
-      "sharePuzzle": "Dela uppgift",
       "backToPuzzle": "Tillbaka till uppgiften"
-    },
-    "viz": {
-      "countdown": "Pjäser försvinner om {{seconds}}s...",
-      "show": "Visa",
-      "showing": "Visar..."
     },
     "course": {
       "backToCourses": "Till kursöversikt",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Laddar uppgift…",
+      "watchOpponent": "Se motståndarens drag…",
+      "correct": "Rätt!",
+      "checkmate": "Schackmatt!",
+      "altSolution": "Alternativ lösning — uppgiften hade en annan avsedd dragföljd.",
+      "incorrect": "Fel",
+      "findBestMove": "Din tur! Hitta det bästa draget.",
+      "stockfishThinking": "Stockfish tänker…",
+      "gaveUpPlayOut": "Gick upp — spela lösningen själv."
+    },
+    "actions": {
+      "nextPuzzle": "Nästa uppgift",
+      "analyze": "Analysera",
+      "share": "Dela uppgift",
+      "reviewLast": "Analysera senaste uppgiften",
+      "reset": "Återställ",
+      "mouseslip": "Råkade flytta",
+      "giveUp": "Ge upp"
+    },
+    "eval": {
+      "show": "Visa eval",
+      "hide": "Dölj eval",
+      "start": "Start",
+      "now": "Nu"
+    },
+    "viz": {
+      "show": "Visa",
+      "showing": "Visar…",
+      "countdown": "Pjäser försvinner om {{seconds}}s…"
     }
   }
 }

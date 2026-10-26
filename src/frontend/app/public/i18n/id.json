@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Memuat puzzle…",
       "loadFailed": "Gagal memuat puzzle",
       "offlineNoCache": "Anda offline dan tidak ada puzzle yang tersimpan. Buka halaman ini sekali saat online untuk menyimpan puzzle untuk bermain offline.",
       "offlinePoolExhausted": "Tidak ada lagi puzzle offline — Anda telah memainkan semua yang tersimpan. Puzzle baru akan dimuat begitu Anda kembali online.",
       "replayLast": "Ulangi puzzle terakhir",
-      "watchOpponent": "Perhatikan langkah lawan…",
-      "yourTurn": "Giliran Anda!",
-      "gaveUpPlayOut": "Menyerah — mainkan solusinya sendiri.",
-      "thinking": "Stockfish sedang berpikir…"
+      "yourTurn": "Giliran Anda!"
     },
     "result": {
       "solutionPlayedOut": "Solusi dimainkan.",
-      "tryYourselfNextTime": "Coba selesaikan sendiri lain kali!",
-      "checkmate": "Skakmat!",
-      "alternativeSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
-      "correct": "Benar!",
-      "incorrect": "Salah"
-    },
-    "eval": {
-      "start": "Mulai",
-      "now": "Sekarang",
-      "show": "Tampilkan Eval",
-      "hide": "Sembunyikan Eval"
+      "tryYourselfNextTime": "Coba selesaikan sendiri lain kali!"
     },
     "actions": {
-      "reset": "Ulang",
-      "mouseslip": "Salah klik",
-      "giveUp": "Menyerah",
-      "nextPuzzle": "Puzzle Berikutnya",
-      "share": "Bagikan Puzzle",
-      "reviewLast": "Tinjau puzzle terakhir",
-      "endlessMode": "Mode Tanpa Batas",
-      "analyze": "Analisis"
+      "endlessMode": "Mode Tanpa Batas"
     },
     "info": {
       "rating": "Rating"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Tema Papan",
       "pieces": "Bidak"
-    },
-    "viz": {
-      "countdown": "Bidak menghilang dalam {{seconds}}d…",
-      "show": "Tampilkan",
-      "showing": "Menampilkan…"
     },
     "share": {
       "title": "Bagikan Puzzle",
@@ -655,26 +629,13 @@
       "start": "Mulai"
     },
     "game": {
-      "vizCountdown": "Bidak menghilang dalam {{seconds}}d...",
-      "vizShow": "Tampilkan",
-      "vizShowing": "Menampilkan...",
-      "loadingPuzzle": "Memuat puzzle...",
-      "watchOpponent": "Perhatikan langkah lawan...",
-      "yourTurn": "Giliran Anda! Temukan langkah terbaik.",
       "yourMove": "Langkah Anda...",
       "opponentThinking": "Lawan sedang berpikir...",
-      "checkmate": "Skakmat!",
-      "alternativeSolution": "Solusi alternatif — puzzle memiliki jalur yang berbeda dari yang dimaksud.",
-      "correct": "Benar!",
-      "wrong": "Salah!",
       "gaveUp": "Menyerah",
       "continue": "Lanjutkan",
-      "analyze": "Analisis",
-      "reviewLast": "Analisis puzzle terakhir",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Tampilkan tag",
       "hideTags": "Sembunyikan tag",
-      "sharePuzzle": "Bagikan puzzle",
       "statSolved": "Diselesaikan",
       "statTime": "Waktu",
       "phaseLabel": "Fase {{phase}} (langkah {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Kesulitan",
     "offlineUnavailable": "Buku ini tidak tersedia offline.",
     "status": {
-      "loading": "Memuat puzzle...",
-      "watchOpponent": "Perhatikan langkah lawan...",
-      "yourTurn": "Giliran Anda! Temukan langkah terbaik.",
-      "gaveUp": "Menyerah — mainkan solusinya sendiri.",
-      "stockfishThinking": "Stockfish sedang berpikir...",
       "yourMoveVsStockfish": "Langkah Anda melawan Stockfish...",
-      "correct": "Benar!",
-      "incorrect": "Salah",
       "gaveUpSolution": "Menyerah — ini solusinya",
-      "checkmate": "Skakmat!",
-      "altSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
       "fullGame": "Permainan penuh"
     },
     "actions": {
-      "nextPuzzle": "Puzzle berikutnya",
       "skip": "Lewati",
       "viewFullGame": "Lihat permainan penuh",
-      "analyze": "Analisis",
-      "reviewLast": "Analisis puzzle terakhir",
       "nextInBook": "Berikutnya dalam buku",
       "randomInBook": "Acak dari buku",
       "prevDaily": "Hari sebelumnya",
       "nextDaily": "Hari berikutnya",
-      "sharePuzzle": "Bagikan puzzle",
       "backToPuzzle": "Kembali ke puzzle"
-    },
-    "viz": {
-      "countdown": "Bidak menghilang dalam {{seconds}}d...",
-      "show": "Tampilkan",
-      "showing": "Menampilkan..."
     },
     "course": {
       "backToCourses": "Ke ikhtisar kursus",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Memuat puzzle…",
+      "watchOpponent": "Perhatikan langkah lawan…",
+      "correct": "Benar!",
+      "checkmate": "Skakmat!",
+      "altSolution": "Solusi alternatif — puzzle memiliki urutan langkah yang berbeda dari yang dimaksud.",
+      "incorrect": "Salah",
+      "findBestMove": "Giliran Anda! Temukan langkah terbaik.",
+      "stockfishThinking": "Stockfish sedang berpikir…",
+      "gaveUpPlayOut": "Menyerah — mainkan solusinya sendiri."
+    },
+    "actions": {
+      "nextPuzzle": "Puzzle Berikutnya",
+      "analyze": "Analisis",
+      "share": "Bagikan Puzzle",
+      "reviewLast": "Analisis puzzle terakhir",
+      "reset": "Ulang",
+      "mouseslip": "Salah klik",
+      "giveUp": "Menyerah"
+    },
+    "eval": {
+      "show": "Tampilkan Eval",
+      "hide": "Sembunyikan Eval",
+      "start": "Mulai",
+      "now": "Sekarang"
+    },
+    "viz": {
+      "show": "Tampilkan",
+      "showing": "Menampilkan…",
+      "countdown": "Bidak menghilang dalam {{seconds}}d…"
     }
   }
 }

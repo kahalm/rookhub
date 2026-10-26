@@ -445,11 +445,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
       next: () => {
         if (this.puzzle) this.puzzle.hintsFlagged = next;
         this.flagSaving = false;
-        this.snackbar.success(this.translate.instant(next ? 'puzzles.hints.flagSaved' : 'puzzles.hints.flagCleared'), { duration: 2000 });
+        this.snackbar.success(this.translate.instant(next ? 'solver.hints.flagSaved' : 'solver.hints.flagCleared'), { duration: 2000 });
       },
       error: () => {
         this.flagSaving = false;
-        this.snackbar.warn(this.translate.instant('puzzles.hints.flagError'), { duration: 3000 });
+        this.snackbar.warn(this.translate.instant('solver.hints.flagError'), { duration: 3000 });
       }
     });
   }

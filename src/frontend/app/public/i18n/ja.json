@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "パズルを読み込み中…",
       "loadFailed": "パズルの読み込みに失敗しました",
       "offlineNoCache": "オフラインで、パズルのキャッシュがありません。オンライン中にこのページを一度開いて、オフライン用のパズルを保存してください。",
       "offlinePoolExhausted": "オフラインパズルがなくなりました — キャッシュされているパズルをすべてプレイし終えました。オンラインに戻り次第、新しいパズルが読み込まれます。",
       "replayLast": "最後のパズルをもう一度",
-      "watchOpponent": "相手の手を確認してください…",
-      "yourTurn": "あなたの番です！",
-      "gaveUpPlayOut": "あきらめました — 自分で解答を指してみてください。",
-      "thinking": "Stockfish が考えています…"
+      "yourTurn": "あなたの番です！"
     },
     "result": {
       "solutionPlayedOut": "解答を再生しました。",
-      "tryYourselfNextTime": "次回は自分で解いてみましょう！",
-      "checkmate": "チェックメイト！",
-      "alternativeSolution": "別の解答 — このパズルには異なる想定手順がありました。",
-      "correct": "正解！",
-      "incorrect": "不正解"
-    },
-    "eval": {
-      "start": "開始",
-      "now": "現在",
-      "show": "評価を表示",
-      "hide": "評価を非表示"
+      "tryYourselfNextTime": "次回は自分で解いてみましょう！"
     },
     "actions": {
-      "reset": "リセット",
-      "mouseslip": "マウスミス",
-      "giveUp": "あきらめる",
-      "nextPuzzle": "次のパズル",
-      "share": "パズルを共有",
-      "reviewLast": "最後のパズルを確認",
-      "endlessMode": "エンドレスモード",
-      "analyze": "解析"
+      "endlessMode": "エンドレスモード"
     },
     "info": {
       "rating": "レーティング"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "盤のテーマ",
       "pieces": "駒"
-    },
-    "viz": {
-      "countdown": "{{seconds}} 秒後に駒が消えます…",
-      "show": "表示",
-      "showing": "表示中…"
     },
     "share": {
       "title": "パズルを共有",
@@ -655,26 +629,13 @@
       "start": "スタート"
     },
     "game": {
-      "vizCountdown": "{{seconds}} 秒後に駒が消えます...",
-      "vizShow": "表示",
-      "vizShowing": "表示中...",
-      "loadingPuzzle": "パズルを読み込み中...",
-      "watchOpponent": "相手の手を確認してください...",
-      "yourTurn": "あなたの番！最善手を見つけましょう。",
       "yourMove": "あなたの手...",
       "opponentThinking": "相手が考えています...",
-      "checkmate": "チェックメイト！",
-      "alternativeSolution": "別の解答 — このパズルには異なる想定ラインがありました。",
-      "correct": "正解！",
-      "wrong": "不正解！",
       "gaveUp": "あきらめました",
       "continue": "続ける",
-      "analyze": "解析",
-      "reviewLast": "最後のパズルを解析",
       "levelRange": "レベル {{level}} ({{min}}〜{{max}})",
       "showTags": "タグを表示",
       "hideTags": "タグを非表示",
-      "sharePuzzle": "パズルを共有",
       "statSolved": "正解数",
       "statTime": "時間",
       "phaseLabel": "フェーズ {{phase}}（ステップ {{step}}）"
@@ -723,36 +684,18 @@
     "difficulty": "難易度",
     "offlineUnavailable": "このブックはオフラインで利用できません。",
     "status": {
-      "loading": "パズルを読み込み中...",
-      "watchOpponent": "相手の手を確認してください...",
-      "yourTurn": "あなたの番！最善手を見つけましょう。",
-      "gaveUp": "あきらめました — 自分で解答を指してみてください。",
-      "stockfishThinking": "Stockfish が考えています...",
       "yourMoveVsStockfish": "Stockfish に対してあなたの手...",
-      "correct": "正解！",
-      "incorrect": "不正解",
       "gaveUpSolution": "あきらめました — 解答はこちらです",
-      "checkmate": "チェックメイト！",
-      "altSolution": "別の解答 — このパズルには異なる想定手順がありました。",
       "fullGame": "全対局"
     },
     "actions": {
-      "nextPuzzle": "次のパズル",
       "skip": "スキップ",
       "viewFullGame": "全対局を見る",
-      "analyze": "解析",
-      "reviewLast": "最後のパズルを解析",
       "nextInBook": "ブックの次へ",
       "randomInBook": "ブックからランダム",
       "prevDaily": "前の日",
       "nextDaily": "次の日",
-      "sharePuzzle": "パズルを共有",
       "backToPuzzle": "パズルに戻る"
-    },
-    "viz": {
-      "countdown": "{{seconds}} 秒後に駒が消えます...",
-      "show": "表示",
-      "showing": "表示中..."
     },
     "course": {
       "backToCourses": "コース一覧へ",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "パズルを読み込み中…",
+      "watchOpponent": "相手の手を確認してください…",
+      "correct": "正解！",
+      "checkmate": "チェックメイト！",
+      "altSolution": "別の解答 — このパズルには異なる想定手順がありました。",
+      "incorrect": "不正解",
+      "findBestMove": "あなたの番！最善手を見つけましょう。",
+      "stockfishThinking": "Stockfish が考えています…",
+      "gaveUpPlayOut": "あきらめました — 自分で解答を指してみてください。"
+    },
+    "actions": {
+      "nextPuzzle": "次のパズル",
+      "analyze": "解析",
+      "share": "パズルを共有",
+      "reviewLast": "最後のパズルを解析",
+      "reset": "リセット",
+      "mouseslip": "マウスミス",
+      "giveUp": "あきらめる"
+    },
+    "eval": {
+      "show": "評価を表示",
+      "hide": "評価を非表示",
+      "start": "開始",
+      "now": "現在"
+    },
+    "viz": {
+      "show": "表示",
+      "showing": "表示中…",
+      "countdown": "{{seconds}} 秒後に駒が消えます…"
     }
   }
 }

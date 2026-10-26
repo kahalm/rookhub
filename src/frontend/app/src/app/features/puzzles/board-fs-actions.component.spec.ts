@@ -34,9 +34,9 @@ describe('BoardFsActionsComponent', () => {
 
   it('hint title switches from show to next once a hint was taken', () => {
     const c = make();
-    expect(c.hintTitle).toBe('puzzles.hints.show');
+    expect(c.hintTitle).toBe('solver.hints.show');
     c.hintLevel = 1;
-    expect(c.hintTitle).toBe('puzzles.hints.next');
+    expect(c.hintTitle).toBe('solver.hints.next');
   });
 
   it('reset appears once there is something to reset', () => {
@@ -64,11 +64,11 @@ describe('BoardFsActionsComponent', () => {
 
   it('uses the same translation keys in every mode (same buttons as the normal action row)', () => {
     const c = make();
-    expect(c.keys.reset).toBe('puzzles.actions.reset');
+    expect(c.keys.reset).toBe('solver.actions.reset');
     c.mode = 'endless';
-    expect(c.keys.giveUp).toBe('puzzles.actions.giveUp');
+    expect(c.keys.giveUp).toBe('solver.actions.giveUp');
     c.mode = 'book';
-    expect(c.keys.mouseslip).toBe('puzzles.actions.mouseslip');
+    expect(c.keys.mouseslip).toBe('solver.actions.mouseslip');
   });
 
   it('emits the four solver actions', () => {

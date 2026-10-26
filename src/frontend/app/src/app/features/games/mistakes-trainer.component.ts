@@ -116,7 +116,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
         @if ((session.phase() === 'ask' || session.phase() === 'wrong') && session.hintLevel() < hints(m).length) {
           <button mat-stroked-button class="hint" (click)="session.showHint(hints(m).length)">
             <mat-icon>lightbulb</mat-icon>
-            {{ (session.hintLevel() === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
+            {{ (session.hintLevel() === 0 ? 'solver.hints.show' : 'solver.hints.next') | translate }}
             ({{ session.hintLevel() + 1 }}/{{ hints(m).length }})
           </button>
         }

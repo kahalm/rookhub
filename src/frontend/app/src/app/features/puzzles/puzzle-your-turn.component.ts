@@ -14,20 +14,20 @@ export type PuzzleMode = 'standard' | 'endless' | 'book';
 const STATUS_KEYS = {
   standard: {
     yourTurn: 'puzzles.status.yourTurn',
-    gaveUp: 'puzzles.status.gaveUpPlayOut',
-    thinking: 'puzzles.status.thinking',
+    gaveUp: 'solver.status.gaveUpPlayOut',
+    thinking: 'solver.status.stockfishThinking',
     yourMove: 'puzzles.status.yourTurn',
   },
   endless: {
-    yourTurn: 'endless.game.yourTurn',
+    yourTurn: 'solver.status.findBestMove',
     gaveUp: '',
     thinking: 'endless.game.opponentThinking',
     yourMove: 'endless.game.yourMove',
   },
   book: {
-    yourTurn: 'book.status.yourTurn',
-    gaveUp: 'book.status.gaveUp',
-    thinking: 'book.status.stockfishThinking',
+    yourTurn: 'solver.status.findBestMove',
+    gaveUp: 'solver.status.gaveUpPlayOut',
+    thinking: 'solver.status.stockfishThinking',
     yourMove: 'book.status.yourMoveVsStockfish',
   },
 } as const;

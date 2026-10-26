@@ -141,7 +141,7 @@ export class BoardFsActionsComponent {
   get visible(): boolean { return !this.reviewMode && isSolvingState(this.state); }
   get keys() { return SOLVER_ACTION_KEYS[this.mode]; }
   get showHint(): boolean { return this.hasHints && this.canShowMoreHints; }
-  get hintTitle(): string { return this.hintLevel === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next'; }
+  get hintTitle(): string { return this.hintLevel === 0 ? 'solver.hints.show' : 'solver.hints.next'; }
   get showReset(): boolean { return canReset(this.state, this.hasMadeFirstMove); }
   get showMouseslipAction(): boolean {
     return canMouseslip(this.state, this.showMouseslip, this.hasMadeFirstMove, this.showMouseslipInThinking);

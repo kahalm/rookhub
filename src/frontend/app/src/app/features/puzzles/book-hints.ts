@@ -67,12 +67,12 @@ export class BookHints {
       next: () => {
         if (h.puzzle) h.puzzle.hintsFlagged = next;
         this.flagSaving = false;
-        h.snackbar.success(h.translate.instant(next ? 'book.hints.flagSaved' : 'book.hints.flagCleared'),
+        h.snackbar.success(h.translate.instant(next ? 'solver.hints.flagSaved' : 'solver.hints.flagCleared'),
           { duration: 2000 });
       },
       error: () => {
         this.flagSaving = false;
-        h.snackbar.warn(h.translate.instant('book.hints.flagError'), { duration: 3000 });
+        h.snackbar.warn(h.translate.instant('solver.hints.flagError'), { duration: 3000 });
       }
     });
   }

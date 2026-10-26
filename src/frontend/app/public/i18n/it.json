@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Caricamento puzzle…",
       "loadFailed": "Impossibile caricare il puzzle",
       "offlineNoCache": "Sei offline e non ci sono puzzle in cache. Apri questa pagina almeno una volta online per salvare i puzzle per l'uso offline.",
       "offlinePoolExhausted": "Nessun altro puzzle offline — hai giocato tutti quelli salvati in cache. I nuovi puzzle si caricheranno non appena tornerai online.",
       "replayLast": "Rigioca l'ultimo puzzle",
-      "watchOpponent": "Osserva la mossa dell'avversario…",
-      "yourTurn": "Tocca a te!",
-      "gaveUpPlayOut": "Hai rinunciato — gioca tu stesso la soluzione.",
-      "thinking": "Stockfish sta pensando…"
+      "yourTurn": "Tocca a te!"
     },
     "result": {
       "solutionPlayedOut": "Soluzione eseguita.",
-      "tryYourselfNextTime": "La prossima volta prova a risolverlo da solo!",
-      "checkmate": "Scacco matto!",
-      "alternativeSolution": "Soluzione alternativa — il puzzle aveva una sequenza di mosse diversa.",
-      "correct": "Corretto!",
-      "incorrect": "Errato"
-    },
-    "eval": {
-      "start": "Inizio",
-      "now": "Ora",
-      "show": "Mostra valutazione",
-      "hide": "Nascondi valutazione"
+      "tryYourselfNextTime": "La prossima volta prova a risolverlo da solo!"
     },
     "actions": {
-      "reset": "Ricomincia",
-      "mouseslip": "Scivolata del mouse",
-      "giveUp": "Rinuncia",
-      "nextPuzzle": "Puzzle successivo",
-      "share": "Condividi puzzle",
-      "reviewLast": "Rivedi l'ultimo puzzle",
-      "endlessMode": "Modalità infinita",
-      "analyze": "Analizza"
+      "endlessMode": "Modalità infinita"
     },
     "info": {
       "rating": "Valutazione"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Tema scacchiera",
       "pieces": "Pezzi"
-    },
-    "viz": {
-      "countdown": "I pezzi scompaiono in {{seconds}}s…",
-      "show": "Mostra",
-      "showing": "Visualizzazione…"
     },
     "share": {
       "title": "Condividi puzzle",
@@ -655,26 +629,13 @@
       "start": "Inizia"
     },
     "game": {
-      "vizCountdown": "I pezzi scompaiono in {{seconds}}s...",
-      "vizShow": "Mostra",
-      "vizShowing": "Visualizzazione...",
-      "loadingPuzzle": "Caricamento puzzle...",
-      "watchOpponent": "Osserva la mossa dell'avversario...",
-      "yourTurn": "Tocca a te! Trova la mossa migliore.",
       "yourMove": "La tua mossa...",
       "opponentThinking": "L'avversario sta pensando...",
-      "checkmate": "Scacco matto!",
-      "alternativeSolution": "Soluzione alternativa — il puzzle aveva una linea prevista diversa.",
-      "correct": "Corretto!",
-      "wrong": "Sbagliato!",
       "gaveUp": "Rinunciato",
       "continue": "Continua",
-      "analyze": "Analizza",
-      "reviewLast": "Analizza l'ultimo puzzle",
       "levelRange": "Livello {{level}} ({{min}}–{{max}})",
       "showTags": "Mostra tag",
       "hideTags": "Nascondi tag",
-      "sharePuzzle": "Condividi puzzle",
       "statSolved": "Risolti",
       "statTime": "Tempo",
       "phaseLabel": "Fase {{phase}} (passo {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Difficoltà",
     "offlineUnavailable": "Questo libro non è disponibile offline.",
     "status": {
-      "loading": "Caricamento puzzle...",
-      "watchOpponent": "Osserva la mossa dell'avversario...",
-      "yourTurn": "Tocca a te! Trova la mossa migliore.",
-      "gaveUp": "Hai rinunciato — gioca tu stesso la soluzione.",
-      "stockfishThinking": "Stockfish sta pensando...",
       "yourMoveVsStockfish": "La tua mossa contro Stockfish...",
-      "correct": "Corretto!",
-      "incorrect": "Errato",
       "gaveUpSolution": "Hai rinunciato — ecco la soluzione",
-      "checkmate": "Scacco matto!",
-      "altSolution": "Soluzione alternativa — il puzzle aveva una sequenza di mosse diversa.",
       "fullGame": "Partita completa"
     },
     "actions": {
-      "nextPuzzle": "Puzzle successivo",
       "skip": "Salta",
       "viewFullGame": "Vedi la partita completa",
-      "analyze": "Analizza",
-      "reviewLast": "Analizza l'ultimo puzzle",
       "nextInBook": "Successivo nel libro",
       "randomInBook": "Casuale dal libro",
       "prevDaily": "Giorno precedente",
       "nextDaily": "Giorno successivo",
-      "sharePuzzle": "Condividi puzzle",
       "backToPuzzle": "Torna al puzzle"
-    },
-    "viz": {
-      "countdown": "I pezzi scompaiono in {{seconds}}s...",
-      "show": "Mostra",
-      "showing": "Visualizzazione..."
     },
     "course": {
       "backToCourses": "Al riepilogo del corso",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Caricamento puzzle…",
+      "watchOpponent": "Osserva la mossa dell'avversario…",
+      "correct": "Corretto!",
+      "checkmate": "Scacco matto!",
+      "altSolution": "Soluzione alternativa — il puzzle aveva una sequenza di mosse diversa.",
+      "incorrect": "Errato",
+      "findBestMove": "Tocca a te! Trova la mossa migliore.",
+      "stockfishThinking": "Stockfish sta pensando…",
+      "gaveUpPlayOut": "Hai rinunciato — gioca tu stesso la soluzione."
+    },
+    "actions": {
+      "nextPuzzle": "Puzzle successivo",
+      "analyze": "Analizza",
+      "share": "Condividi puzzle",
+      "reviewLast": "Analizza l'ultimo puzzle",
+      "reset": "Ricomincia",
+      "mouseslip": "Scivolata del mouse",
+      "giveUp": "Rinuncia"
+    },
+    "eval": {
+      "show": "Mostra valutazione",
+      "hide": "Nascondi valutazione",
+      "start": "Inizio",
+      "now": "Ora"
+    },
+    "viz": {
+      "show": "Mostra",
+      "showing": "Visualizzazione…",
+      "countdown": "I pezzi scompaiono in {{seconds}}s…"
     }
   }
 }

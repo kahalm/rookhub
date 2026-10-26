@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "در حال بارگذاری تاکتیک…",
       "loadFailed": "بارگذاری تاکتیک ناموفق بود",
       "offlineNoCache": "شما آفلاین هستید و تاکتیکی ذخیره نشده است. برای ذخیره تاکتیک‌ها برای بازی آفلاین، این صفحه را یک‌بار در حالت آنلاین باز کنید.",
       "offlinePoolExhausted": "تاکتیک آفلاین دیگری وجود ندارد — تمام تاکتیک‌های ذخیره‌شده را بازی کردید. به محض اتصال مجدد، تاکتیک‌های جدید بارگذاری می‌شوند.",
       "replayLast": "آخرین تاکتیک را دوباره بازی کنید",
-      "watchOpponent": "حرکت حریف را تماشا کنید…",
-      "yourTurn": "نوبت شماست!",
-      "gaveUpPlayOut": "تسلیم شدید — خودتان راه‌حل را بازی کنید.",
-      "thinking": "Stockfish در حال فکر کردن است…"
+      "yourTurn": "نوبت شماست!"
     },
     "result": {
       "solutionPlayedOut": "راه‌حل بازی شد.",
-      "tryYourselfNextTime": "شاید دفعه بعد خودتان حل کنید!",
-      "checkmate": "کیش و مات!",
-      "alternativeSolution": "راه‌حل جایگزین — این تاکتیک دنباله حرکات متفاوتی داشت.",
-      "correct": "درست!",
-      "incorrect": "نادرست"
-    },
-    "eval": {
-      "start": "شروع",
-      "now": "اکنون",
-      "show": "نمایش ارزیابی",
-      "hide": "پنهان کردن ارزیابی"
+      "tryYourselfNextTime": "شاید دفعه بعد خودتان حل کنید!"
     },
     "actions": {
-      "reset": "بازنشانی",
-      "mouseslip": "لغزش موس",
-      "giveUp": "تسلیم شدن",
-      "nextPuzzle": "تاکتیک بعدی",
-      "share": "اشتراک‌گذاری تاکتیک",
-      "reviewLast": "مرور آخرین تاکتیک",
-      "endlessMode": "حالت بی‌پایان",
-      "analyze": "تحلیل"
+      "endlessMode": "حالت بی‌پایان"
     },
     "info": {
       "rating": "رتبه"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "قالب صفحه",
       "pieces": "مهره‌ها"
-    },
-    "viz": {
-      "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند…",
-      "show": "نمایش",
-      "showing": "در حال نمایش…"
     },
     "share": {
       "title": "اشتراک‌گذاری تاکتیک",
@@ -655,26 +629,13 @@
       "start": "شروع"
     },
     "game": {
-      "vizCountdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند...",
-      "vizShow": "نمایش",
-      "vizShowing": "در حال نمایش...",
-      "loadingPuzzle": "در حال بارگذاری تاکتیک...",
-      "watchOpponent": "حرکت حریف را تماشا کنید...",
-      "yourTurn": "نوبت شماست! بهترین حرکت را پیدا کنید.",
       "yourMove": "حرکت شما...",
       "opponentThinking": "حریف در حال فکر کردن است...",
-      "checkmate": "کیش و مات!",
-      "alternativeSolution": "راه‌حل جایگزین — این تاکتیک دنباله متفاوتی داشت.",
-      "correct": "درست!",
-      "wrong": "اشتباه!",
       "gaveUp": "تسلیم شدید",
       "continue": "ادامه",
-      "analyze": "تحلیل",
-      "reviewLast": "تحلیل آخرین تاکتیک",
       "levelRange": "سطح {{level}} ({{min}}–{{max}})",
       "showTags": "نمایش برچسب‌ها",
       "hideTags": "پنهان کردن برچسب‌ها",
-      "sharePuzzle": "اشتراک‌گذاری تاکتیک",
       "statSolved": "حل‌شده",
       "statTime": "زمان",
       "phaseLabel": "فاز {{phase}} (گام {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "سختی",
     "offlineUnavailable": "این کتاب به‌صورت آفلاین در دسترس نیست.",
     "status": {
-      "loading": "در حال بارگذاری تاکتیک...",
-      "watchOpponent": "حرکت حریف را تماشا کنید...",
-      "yourTurn": "نوبت شماست! بهترین حرکت را پیدا کنید.",
-      "gaveUp": "تسلیم شدید — خودتان راه‌حل را بازی کنید.",
-      "stockfishThinking": "Stockfish در حال فکر کردن است...",
       "yourMoveVsStockfish": "حرکت شما در برابر Stockfish...",
-      "correct": "درست!",
-      "incorrect": "نادرست",
       "gaveUpSolution": "تسلیم شدید — این راه‌حل است",
-      "checkmate": "کیش و مات!",
-      "altSolution": "راه‌حل جایگزین — این تاکتیک دنباله حرکات متفاوتی داشت.",
       "fullGame": "بازی کامل"
     },
     "actions": {
-      "nextPuzzle": "تاکتیک بعدی",
       "skip": "رد کردن",
       "viewFullGame": "مشاهده بازی کامل",
-      "analyze": "تحلیل",
-      "reviewLast": "تحلیل آخرین تاکتیک",
       "nextInBook": "بعدی در کتاب",
       "randomInBook": "تصادفی از کتاب",
       "prevDaily": "روز قبل",
       "nextDaily": "روز بعد",
-      "sharePuzzle": "اشتراک‌گذاری تاکتیک",
       "backToPuzzle": "بازگشت به تاکتیک"
-    },
-    "viz": {
-      "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند...",
-      "show": "نمایش",
-      "showing": "در حال نمایش..."
     },
     "course": {
       "backToCourses": "به نمای کلی دوره",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "در حال بارگذاری تاکتیک…",
+      "watchOpponent": "حرکت حریف را تماشا کنید…",
+      "correct": "درست!",
+      "checkmate": "کیش و مات!",
+      "altSolution": "راه‌حل جایگزین — این تاکتیک دنباله حرکات متفاوتی داشت.",
+      "incorrect": "نادرست",
+      "findBestMove": "نوبت شماست! بهترین حرکت را پیدا کنید.",
+      "stockfishThinking": "Stockfish در حال فکر کردن است…",
+      "gaveUpPlayOut": "تسلیم شدید — خودتان راه‌حل را بازی کنید."
+    },
+    "actions": {
+      "nextPuzzle": "تاکتیک بعدی",
+      "analyze": "تحلیل",
+      "share": "اشتراک‌گذاری تاکتیک",
+      "reviewLast": "تحلیل آخرین تاکتیک",
+      "reset": "بازنشانی",
+      "mouseslip": "لغزش موس",
+      "giveUp": "تسلیم شدن"
+    },
+    "eval": {
+      "show": "نمایش ارزیابی",
+      "hide": "پنهان کردن ارزیابی",
+      "start": "شروع",
+      "now": "اکنون"
+    },
+    "viz": {
+      "show": "نمایش",
+      "showing": "در حال نمایش…",
+      "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند…"
     }
   }
 }

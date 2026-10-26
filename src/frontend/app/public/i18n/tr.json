@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Problem yükleniyor…",
       "loadFailed": "Problem yüklenemedi",
       "offlineNoCache": "Çevrimdışısınız ve önbelleğe alınmış problem yok. Çevrimdışı oynama için çevrimiçiyken bu sayfayı bir kez açın.",
       "offlinePoolExhausted": "Çevrimdışı problem kalmadı — önbellekteki tüm problemleri oynadınız. Tekrar çevrimiçi olduğunuzda yeni problemler yüklenecektir.",
       "replayLast": "Son problemi tekrar oyna",
-      "watchOpponent": "Rakibin hamlesini izleyin…",
-      "yourTurn": "Sıra sizde!",
-      "gaveUpPlayOut": "Vazgeçildi — çözümü kendiniz oynayın.",
-      "thinking": "Stockfish düşünüyor…"
+      "yourTurn": "Sıra sizde!"
     },
     "result": {
       "solutionPlayedOut": "Çözüm oynandı.",
-      "tryYourselfNextTime": "Bir dahaki sefere kendiniz çözmeyi deneyin!",
-      "checkmate": "Mat!",
-      "alternativeSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",
-      "correct": "Doğru!",
-      "incorrect": "Yanlış"
-    },
-    "eval": {
-      "start": "Başlangıç",
-      "now": "Şimdi",
-      "show": "Değerlendirmeyi Göster",
-      "hide": "Değerlendirmeyi Gizle"
+      "tryYourselfNextTime": "Bir dahaki sefere kendiniz çözmeyi deneyin!"
     },
     "actions": {
-      "reset": "Sıfırla",
-      "mouseslip": "Fare kayması",
-      "giveUp": "Vazgeç",
-      "nextPuzzle": "Sonraki Problem",
-      "share": "Problemi Paylaş",
-      "reviewLast": "Son problemi incele",
-      "endlessMode": "Sonsuz Mod",
-      "analyze": "Analiz Et"
+      "endlessMode": "Sonsuz Mod"
     },
     "info": {
       "rating": "Derece"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Tahta Teması",
       "pieces": "Taşlar"
-    },
-    "viz": {
-      "countdown": "Taşlar {{seconds}} saniyede kayboluyor…",
-      "show": "Göster",
-      "showing": "Gösteriliyor…"
     },
     "share": {
       "title": "Problemi Paylaş",
@@ -655,26 +629,13 @@
       "start": "Başla"
     },
     "game": {
-      "vizCountdown": "Taşlar {{seconds}} saniyede kayboluyor...",
-      "vizShow": "Göster",
-      "vizShowing": "Gösteriliyor...",
-      "loadingPuzzle": "Problem yükleniyor...",
-      "watchOpponent": "Rakibin hamlesini izleyin...",
-      "yourTurn": "Sıra sizde! En iyi hamleyi bulun.",
       "yourMove": "Hamleniz...",
       "opponentThinking": "Rakip düşünüyor...",
-      "checkmate": "Mat!",
-      "alternativeSolution": "Alternatif çözüm — problemin farklı bir amaçlanan satırı vardı.",
-      "correct": "Doğru!",
-      "wrong": "Yanlış!",
       "gaveUp": "Vazgeçildi",
       "continue": "Devam Et",
-      "analyze": "Analiz Et",
-      "reviewLast": "Son problemi analiz et",
       "levelRange": "Seviye {{level}} ({{min}}–{{max}})",
       "showTags": "Etiketleri göster",
       "hideTags": "Etiketleri gizle",
-      "sharePuzzle": "Problemi paylaş",
       "statSolved": "Çözüldü",
       "statTime": "Süre",
       "phaseLabel": "Aşama {{phase}} (adım {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Zorluk",
     "offlineUnavailable": "Bu kitap çevrimdışı kullanılamaz.",
     "status": {
-      "loading": "Problem yükleniyor...",
-      "watchOpponent": "Rakibin hamlesini izleyin...",
-      "yourTurn": "Sıra sizde! En iyi hamleyi bulun.",
-      "gaveUp": "Vazgeçildi — çözümü kendiniz oynayın.",
-      "stockfishThinking": "Stockfish düşünüyor...",
       "yourMoveVsStockfish": "Stockfish'e karşı hamleniz...",
-      "correct": "Doğru!",
-      "incorrect": "Yanlış",
       "gaveUpSolution": "Vazgeçildi — işte çözüm",
-      "checkmate": "Mat!",
-      "altSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",
       "fullGame": "Tam oyun"
     },
     "actions": {
-      "nextPuzzle": "Sonraki problem",
       "skip": "Atla",
       "viewFullGame": "Tam oyunu gör",
-      "analyze": "Analiz Et",
-      "reviewLast": "Son problemi analiz et",
       "nextInBook": "Kitapta sonraki",
       "randomInBook": "Kitaptan rastgele",
       "prevDaily": "Önceki gün",
       "nextDaily": "Sonraki gün",
-      "sharePuzzle": "Problemi paylaş",
       "backToPuzzle": "Probleme dön"
-    },
-    "viz": {
-      "countdown": "Taşlar {{seconds}} saniyede kayboluyor...",
-      "show": "Göster",
-      "showing": "Gösteriliyor..."
     },
     "course": {
       "backToCourses": "Kurs genel bakışına git",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Problem yükleniyor…",
+      "watchOpponent": "Rakibin hamlesini izleyin…",
+      "correct": "Doğru!",
+      "checkmate": "Mat!",
+      "altSolution": "Alternatif çözüm — problemin farklı bir amaçlanan hamle sırası vardı.",
+      "incorrect": "Yanlış",
+      "findBestMove": "Sıra sizde! En iyi hamleyi bulun.",
+      "stockfishThinking": "Stockfish düşünüyor…",
+      "gaveUpPlayOut": "Vazgeçildi — çözümü kendiniz oynayın."
+    },
+    "actions": {
+      "nextPuzzle": "Sonraki Problem",
+      "analyze": "Analiz Et",
+      "share": "Problemi Paylaş",
+      "reviewLast": "Son problemi analiz et",
+      "reset": "Sıfırla",
+      "mouseslip": "Fare kayması",
+      "giveUp": "Vazgeç"
+    },
+    "eval": {
+      "show": "Değerlendirmeyi Göster",
+      "hide": "Değerlendirmeyi Gizle",
+      "start": "Başlangıç",
+      "now": "Şimdi"
+    },
+    "viz": {
+      "show": "Göster",
+      "showing": "Gösteriliyor…",
+      "countdown": "Taşlar {{seconds}} saniyede kayboluyor…"
     }
   }
 }

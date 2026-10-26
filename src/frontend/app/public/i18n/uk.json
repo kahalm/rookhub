@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Завантаження задачі…",
       "loadFailed": "Не вдалося завантажити задачу",
       "offlineNoCache": "Ви офлайн і задачі не кешовані. Відкрийте цю сторінку онлайн, щоб зберегти задачі для офлайн-гри.",
       "offlinePoolExhausted": "Офлайн-задачі закінчилися — ви зіграли всі збережені. Нові задачі завантажаться, як тільки ви знову підключитесь до мережі.",
       "replayLast": "Зіграти останню задачу ще раз",
-      "watchOpponent": "Дивіться хід суперника…",
-      "yourTurn": "Ваш хід!",
-      "gaveUpPlayOut": "Здалися — зіграйте рішення самостійно.",
-      "thinking": "Stockfish думає…"
+      "yourTurn": "Ваш хід!"
     },
     "result": {
       "solutionPlayedOut": "Рішення розіграно.",
-      "tryYourselfNextTime": "Наступного разу спробуйте розв'язати самостійно!",
-      "checkmate": "Мат!",
-      "alternativeSolution": "Альтернативне рішення — задача мала інший запланований порядок ходів.",
-      "correct": "Правильно!",
-      "incorrect": "Неправильно"
-    },
-    "eval": {
-      "start": "Початок",
-      "now": "Зараз",
-      "show": "Показати оцінку",
-      "hide": "Сховати оцінку"
+      "tryYourselfNextTime": "Наступного разу спробуйте розв'язати самостійно!"
     },
     "actions": {
-      "reset": "Скинути",
-      "mouseslip": "Помилковий хід",
-      "giveUp": "Здатися",
-      "nextPuzzle": "Наступна задача",
-      "share": "Поділитися задачею",
-      "reviewLast": "Переглянути останню задачу",
-      "endlessMode": "Нескінченний режим",
-      "analyze": "Аналізувати"
+      "endlessMode": "Нескінченний режим"
     },
     "info": {
       "rating": "Рейтинг"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Тема дошки",
       "pieces": "Фігури"
-    },
-    "viz": {
-      "countdown": "Фігури зникають через {{seconds}}с…",
-      "show": "Показати",
-      "showing": "Показую…"
     },
     "share": {
       "title": "Поділитися задачею",
@@ -655,26 +629,13 @@
       "start": "Старт"
     },
     "game": {
-      "vizCountdown": "Фігури зникають через {{seconds}}с...",
-      "vizShow": "Показати",
-      "vizShowing": "Показую...",
-      "loadingPuzzle": "Завантаження задачі...",
-      "watchOpponent": "Дивіться хід суперника...",
-      "yourTurn": "Ваш хід! Знайдіть найкращий хід.",
       "yourMove": "Ваш хід...",
       "opponentThinking": "Суперник думає...",
-      "checkmate": "Мат!",
-      "alternativeSolution": "Альтернативне рішення — задача мала іншу заплановану лінію.",
-      "correct": "Правильно!",
-      "wrong": "Неправильно!",
       "gaveUp": "Здалися",
       "continue": "Продовжити",
-      "analyze": "Аналізувати",
-      "reviewLast": "Аналізувати останню задачу",
       "levelRange": "Рівень {{level}} ({{min}}–{{max}})",
       "showTags": "Показати теги",
       "hideTags": "Сховати теги",
-      "sharePuzzle": "Поділитися задачею",
       "statSolved": "Розв'язано",
       "statTime": "Час",
       "phaseLabel": "Фаза {{phase}} (крок {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Складність",
     "offlineUnavailable": "Ця книга недоступна офлайн.",
     "status": {
-      "loading": "Завантаження задачі...",
-      "watchOpponent": "Дивіться хід суперника...",
-      "yourTurn": "Ваш хід! Знайдіть найкращий хід.",
-      "gaveUp": "Здалися — зіграйте рішення самостійно.",
-      "stockfishThinking": "Stockfish думає...",
       "yourMoveVsStockfish": "Ваш хід проти Stockfish...",
-      "correct": "Правильно!",
-      "incorrect": "Неправильно",
       "gaveUpSolution": "Здалися — ось рішення",
-      "checkmate": "Мат!",
-      "altSolution": "Альтернативне рішення — задача мала інший запланований порядок ходів.",
       "fullGame": "Повна партія"
     },
     "actions": {
-      "nextPuzzle": "Наступна задача",
       "skip": "Пропустити",
       "viewFullGame": "Переглянути повну партію",
-      "analyze": "Аналізувати",
-      "reviewLast": "Аналізувати останню задачу",
       "nextInBook": "Наступна в книзі",
       "randomInBook": "Випадкова з книги",
       "prevDaily": "Попередній день",
       "nextDaily": "Наступний день",
-      "sharePuzzle": "Поділитися задачею",
       "backToPuzzle": "До задачі"
-    },
-    "viz": {
-      "countdown": "Фігури зникають через {{seconds}}с...",
-      "show": "Показати",
-      "showing": "Показую..."
     },
     "course": {
       "backToCourses": "До огляду курсів",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Завантаження задачі…",
+      "watchOpponent": "Дивіться хід суперника…",
+      "correct": "Правильно!",
+      "checkmate": "Мат!",
+      "altSolution": "Альтернативне рішення — задача мала інший запланований порядок ходів.",
+      "incorrect": "Неправильно",
+      "findBestMove": "Ваш хід! Знайдіть найкращий хід.",
+      "stockfishThinking": "Stockfish думає…",
+      "gaveUpPlayOut": "Здалися — зіграйте рішення самостійно."
+    },
+    "actions": {
+      "nextPuzzle": "Наступна задача",
+      "analyze": "Аналізувати",
+      "share": "Поділитися задачею",
+      "reviewLast": "Аналізувати останню задачу",
+      "reset": "Скинути",
+      "mouseslip": "Помилковий хід",
+      "giveUp": "Здатися"
+    },
+    "eval": {
+      "show": "Показати оцінку",
+      "hide": "Сховати оцінку",
+      "start": "Початок",
+      "now": "Зараз"
+    },
+    "viz": {
+      "show": "Показати",
+      "showing": "Показую…",
+      "countdown": "Фігури зникають через {{seconds}}с…"
     }
   }
 }

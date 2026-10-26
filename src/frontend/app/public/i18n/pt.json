@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "A carregar puzzle…",
       "loadFailed": "Falha ao carregar puzzle",
       "offlineNoCache": "Está offline e não há puzzles em cache. Abra esta página uma vez com internet para guardar puzzles para jogar offline.",
       "offlinePoolExhausted": "Sem mais puzzles offline — já jogou todos os que estavam em cache. Novos puzzles serão carregados assim que estiver online novamente.",
       "replayLast": "Repetir o último puzzle",
-      "watchOpponent": "Observe o lance do adversário…",
-      "yourTurn": "A sua vez!",
-      "gaveUpPlayOut": "Desistiu — jogue a solução você mesmo.",
-      "thinking": "Stockfish está a calcular…"
+      "yourTurn": "A sua vez!"
     },
     "result": {
       "solutionPlayedOut": "Solução jogada.",
-      "tryYourselfNextTime": "Da próxima vez tente resolver sozinho!",
-      "checkmate": "Xeque-mate!",
-      "alternativeSolution": "Solução alternativa — o puzzle tinha uma sequência de lances pretendida diferente.",
-      "correct": "Correto!",
-      "incorrect": "Incorreto"
-    },
-    "eval": {
-      "start": "Início",
-      "now": "Agora",
-      "show": "Mostrar avaliação",
-      "hide": "Ocultar avaliação"
+      "tryYourselfNextTime": "Da próxima vez tente resolver sozinho!"
     },
     "actions": {
-      "reset": "Recomeçar",
-      "mouseslip": "Erro de rato",
-      "giveUp": "Desistir",
-      "nextPuzzle": "Próximo puzzle",
-      "share": "Partilhar puzzle",
-      "reviewLast": "Rever último puzzle",
-      "endlessMode": "Modo sem fim",
-      "analyze": "Analisar"
+      "endlessMode": "Modo sem fim"
     },
     "info": {
       "rating": "Classificação"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Tema do tabuleiro",
       "pieces": "Peças"
-    },
-    "viz": {
-      "countdown": "As peças desaparecem em {{seconds}}s…",
-      "show": "Mostrar",
-      "showing": "A mostrar…"
     },
     "share": {
       "title": "Partilhar puzzle",
@@ -655,26 +629,13 @@
       "start": "Iniciar"
     },
     "game": {
-      "vizCountdown": "As peças desaparecem em {{seconds}}s...",
-      "vizShow": "Mostrar",
-      "vizShowing": "A mostrar...",
-      "loadingPuzzle": "A carregar puzzle...",
-      "watchOpponent": "Observe o lance do adversário...",
-      "yourTurn": "A sua vez! Encontre o melhor lance.",
       "yourMove": "O seu lance...",
       "opponentThinking": "O adversário está a calcular...",
-      "checkmate": "Xeque-mate!",
-      "alternativeSolution": "Solução alternativa — o puzzle tinha uma linha prevista diferente.",
-      "correct": "Correto!",
-      "wrong": "Errado!",
       "gaveUp": "Desistiu",
       "continue": "Continuar",
-      "analyze": "Analisar",
-      "reviewLast": "Analisar último puzzle",
       "levelRange": "Nível {{level}} ({{min}}–{{max}})",
       "showTags": "Mostrar etiquetas",
       "hideTags": "Ocultar etiquetas",
-      "sharePuzzle": "Partilhar puzzle",
       "statSolved": "Resolvidos",
       "statTime": "Tempo",
       "phaseLabel": "Fase {{phase}} (passo {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Dificuldade",
     "offlineUnavailable": "Este livro não está disponível offline.",
     "status": {
-      "loading": "A carregar puzzle...",
-      "watchOpponent": "Observe o lance do adversário...",
-      "yourTurn": "A sua vez! Encontre o melhor lance.",
-      "gaveUp": "Desistiu — jogue a solução você mesmo.",
-      "stockfishThinking": "Stockfish está a calcular...",
       "yourMoveVsStockfish": "O seu lance contra o Stockfish...",
-      "correct": "Correto!",
-      "incorrect": "Incorreto",
       "gaveUpSolution": "Desistiu — aqui está a solução",
-      "checkmate": "Xeque-mate!",
-      "altSolution": "Solução alternativa — o puzzle tinha uma sequência de lances pretendida diferente.",
       "fullGame": "Partida completa"
     },
     "actions": {
-      "nextPuzzle": "Próximo puzzle",
       "skip": "Saltar",
       "viewFullGame": "Ver partida completa",
-      "analyze": "Analisar",
-      "reviewLast": "Analisar último puzzle",
       "nextInBook": "Próximo no livro",
       "randomInBook": "Aleatório do livro",
       "prevDaily": "Dia anterior",
       "nextDaily": "Dia seguinte",
-      "sharePuzzle": "Partilhar puzzle",
       "backToPuzzle": "Voltar ao puzzle"
-    },
-    "viz": {
-      "countdown": "As peças desaparecem em {{seconds}}s...",
-      "show": "Mostrar",
-      "showing": "A mostrar..."
     },
     "course": {
       "backToCourses": "Para a visão geral do curso",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "A carregar puzzle…",
+      "watchOpponent": "Observe o lance do adversário…",
+      "correct": "Correto!",
+      "checkmate": "Xeque-mate!",
+      "altSolution": "Solução alternativa — o puzzle tinha uma sequência de lances pretendida diferente.",
+      "incorrect": "Incorreto",
+      "findBestMove": "A sua vez! Encontre o melhor lance.",
+      "stockfishThinking": "Stockfish está a calcular…",
+      "gaveUpPlayOut": "Desistiu — jogue a solução você mesmo."
+    },
+    "actions": {
+      "nextPuzzle": "Próximo puzzle",
+      "analyze": "Analisar",
+      "share": "Partilhar puzzle",
+      "reviewLast": "Analisar último puzzle",
+      "reset": "Recomeçar",
+      "mouseslip": "Erro de rato",
+      "giveUp": "Desistir"
+    },
+    "eval": {
+      "show": "Mostrar avaliação",
+      "hide": "Ocultar avaliação",
+      "start": "Início",
+      "now": "Agora"
+    },
+    "viz": {
+      "show": "Mostrar",
+      "showing": "A mostrar…",
+      "countdown": "As peças desaparecem em {{seconds}}s…"
     }
   }
 }

@@ -31,10 +31,10 @@ describe('solver-actions.util', () => {
   it('all three solvers label the same action with the same key', () => {
     for (const mode of ['standard', 'endless', 'book'] as const) {
       expect(SOLVER_ACTION_KEYS[mode]).withContext(mode).toEqual({
-        reset: 'puzzles.actions.reset', mouseslip: 'puzzles.actions.mouseslip', giveUp: 'puzzles.actions.giveUp',
+        reset: 'solver.actions.reset', mouseslip: 'solver.actions.mouseslip', giveUp: 'solver.actions.giveUp',
       });
       expect(SOLVER_EVAL_KEYS[mode]).withContext(mode).toEqual({
-        show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now',
+        show: 'solver.eval.show', hide: 'solver.eval.hide', start: 'solver.eval.start', now: 'solver.eval.now',
       });
     }
   });

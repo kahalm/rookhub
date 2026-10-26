@@ -1486,44 +1486,22 @@
   "puzzles": {
     "solveTime": "Solve time",
     "status": {
-      "loading": "Loading puzzle…",
       "loadFailed": "Failed to load puzzle",
       "offlineNoCache": "You're offline and no puzzles are cached. Open this page once while online to save puzzles for offline play.",
       "offlinePoolExhausted": "No more offline puzzles — you've played through all the cached ones. New puzzles will load as soon as you're back online.",
       "replayLast": "Replay last puzzle",
-      "watchOpponent": "Watch the opponent's move…",
-      "yourTurn": "Your turn!",
-      "gaveUpPlayOut": "Gave up — play the solution yourself.",
-      "thinking": "Stockfish is thinking…"
+      "yourTurn": "Your turn!"
     },
     "result": {
       "solutionPlayedOut": "Solution played out.",
       "tryYourselfNextTime": "Maybe solve it yourself next time!",
-      "checkmate": "Checkmate!",
-      "alternativeSolution": "Alternative solution — the puzzle had a different intended move sequence.",
-      "correct": "Correct!",
-      "incorrect": "Incorrect",
       "matedHint": "You were mated — try again or look at the solution.",
       "showSolution": "Show solution"
     },
-    "eval": {
-      "start": "Start",
-      "now": "Now",
-      "show": "Show eval",
-      "hide": "Hide eval"
-    },
     "actions": {
-      "reset": "Reset",
-      "mouseslip": "Mouseslip",
-      "giveUp": "Give up",
-      "nextPuzzle": "Next puzzle",
-      "share": "Share puzzle",
-      "reviewLast": "Review last puzzle",
       "endlessMode": "Endless mode",
-      "analyze": "Analyse",
       "challengeFriend": "Send to a friend",
-      "noFriends": "No friends to challenge",
-      "showOriginalSolution": "Show original solution"
+      "noFriends": "No friends to challenge"
     },
     "challenge": {
       "sentCount": "Challenge sent to {{count}} friends",
@@ -1599,19 +1577,12 @@
       "pieces": "Pieces"
     },
     "hints": {
-      "show": "Hint",
-      "next": "Next hint",
       "t1Check": "Forcing move — start with the checks (checklist: Checks, Captures, Threats).",
       "t1Capture": "A capture is the key — work the checklist: Checks, Captures, Threats.",
       "t1Quiet": "No check or capture — find the quiet move that makes a decisive threat (the “T” in Checks–Captures–Threats).",
       "t2Piece": "Move your {{piece}}.",
       "t3Move": "Play {{move}}.",
-      "flag": "Report hints",
-      "flagged": "Hints reported ✓",
       "flagTitle": "Mark these hints as bad",
-      "flagSaved": "Hints marked as bad.",
-      "flagCleared": "Mark removed.",
-      "flagError": "Could not save the mark.",
       "pieces": {
         "pawn": "pawn",
         "knight": "knight",
@@ -1624,9 +1595,6 @@
       "shownOf": "{{n}} of {{total}} hints shown"
     },
     "viz": {
-      "countdown": "Pieces disappear in {{seconds}}s…",
-      "show": "Show",
-      "showing": "Showing…",
       "level0Name": "Normal",
       "level1Name": "Blindfold",
       "level2Name": "Checker",
@@ -2292,31 +2260,17 @@
       "advanced": "Fine-tuning"
     },
     "game": {
-      "vizCountdown": "Pieces disappear in {{seconds}}s...",
-      "vizShow": "Show",
-      "vizShowing": "Showing...",
-      "loadingPuzzle": "Loading puzzle...",
-      "watchOpponent": "Watch the opponent's move...",
-      "yourTurn": "Your turn! Find the best move.",
       "yourMove": "Your move...",
       "opponentThinking": "Opponent is thinking...",
-      "checkmate": "Checkmate!",
-      "alternativeSolution": "Alternative solution — the puzzle had a different intended line.",
-      "correct": "Correct!",
-      "wrong": "Wrong!",
       "gaveUp": "Gave up",
       "continue": "Continue",
-      "analyze": "Analyse",
-      "reviewLast": "Analyse last puzzle",
       "levelRange": "Level {{level}} ({{min}}–{{max}})",
       "showTags": "Show tags",
       "hideTags": "Hide tags",
-      "sharePuzzle": "Share puzzle",
       "statSolved": "Solved",
       "statTime": "Session",
       "lives": "{{lives}} of {{max}} lives",
-      "phaseLabel": "Phase {{phase}} (step {{step}})",
-      "showOriginalSolution": "Show original solution"
+      "phaseLabel": "Phase {{phase}} (step {{step}})"
     },
     "gameOver": {
       "title": "Game Over",
@@ -2364,51 +2318,25 @@
     "sourceGame": "Open the game",
     "alternativeMove": "Also a good move — but play the main line's move.",
     "hints": {
-      "show": "Hint",
-      "next": "Next hint",
-      "flag": "Report hints",
-      "flagged": "Hints reported ✓",
-      "flagTitle": "Mark these hints as bad (admin)",
-      "flagSaved": "Hints marked as bad.",
-      "flagCleared": "Mark removed.",
-      "flagError": "Could not save the mark."
+      "flagTitle": "Mark these hints as bad (admin)"
     },
     "difficulty": "Difficulty",
     "offlineUnavailable": "This book is not available offline.",
     "status": {
-      "loading": "Loading puzzle...",
-      "watchOpponent": "Watch the opponent's move...",
-      "yourTurn": "Your turn! Find the best move.",
-      "gaveUp": "Gave up — play through the solution yourself.",
-      "stockfishThinking": "Stockfish is thinking...",
       "yourMoveVsStockfish": "Your move against Stockfish...",
-      "correct": "Correct!",
-      "incorrect": "Incorrect",
       "gaveUpSolution": "Gave up — here's the solution",
-      "checkmate": "Checkmate!",
-      "altSolution": "Alternative solution — the puzzle had a different intended move sequence.",
       "fullGame": "Full game",
       "loadError": "Failed to load. Please check your connection."
     },
     "actions": {
-      "nextPuzzle": "Next puzzle",
       "skip": "Skip",
       "viewFullGame": "View full game",
-      "analyze": "Analyse",
-      "reviewLast": "Analyse last puzzle",
       "nextInBook": "Next in book",
       "randomInBook": "Random from book",
       "prevDaily": "Previous day",
       "nextDaily": "Next day",
-      "sharePuzzle": "Share puzzle",
       "backToPuzzle": "Back to puzzle",
-      "showOriginalSolution": "Show original solution",
       "prev": "Previous"
-    },
-    "viz": {
-      "countdown": "Pieces disappear in {{seconds}}s...",
-      "show": "Show",
-      "showing": "Showing..."
     },
     "course": {
       "backToCourses": "To course overview",
@@ -5862,6 +5790,49 @@
       "reading": "Reading",
       "readingWhy": "this usually takes a few minutes",
       "longWait": "Longer than usual – the reader is probably not running right now. The scoresheet stays saved."
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Loading puzzle…",
+      "watchOpponent": "Watch the opponent's move…",
+      "correct": "Correct!",
+      "checkmate": "Checkmate!",
+      "altSolution": "Alternative solution — the puzzle had a different intended move sequence.",
+      "incorrect": "Incorrect",
+      "findBestMove": "Your turn! Find the best move.",
+      "stockfishThinking": "Stockfish is thinking…",
+      "gaveUpPlayOut": "Gave up — play the solution yourself."
+    },
+    "actions": {
+      "nextPuzzle": "Next puzzle",
+      "analyze": "Analyse",
+      "showOriginalSolution": "Show original solution",
+      "share": "Share puzzle",
+      "reviewLast": "Analyse last puzzle",
+      "reset": "Reset",
+      "mouseslip": "Mouseslip",
+      "giveUp": "Give up"
+    },
+    "eval": {
+      "show": "Show eval",
+      "hide": "Hide eval",
+      "start": "Start",
+      "now": "Now"
+    },
+    "viz": {
+      "show": "Show",
+      "showing": "Showing…",
+      "countdown": "Pieces disappear in {{seconds}}s…"
+    },
+    "hints": {
+      "show": "Hint",
+      "next": "Next hint",
+      "flag": "Report hints",
+      "flagged": "Hints reported ✓",
+      "flagSaved": "Hints marked as bad.",
+      "flagCleared": "Mark removed.",
+      "flagError": "Could not save the mark."
     }
   }
 }

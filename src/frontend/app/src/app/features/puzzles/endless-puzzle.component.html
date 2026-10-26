@@ -62,7 +62,7 @@
               @if (!reviewMode && (state === 'AWAITING_USER_MOVE' || state === 'THINKING' || state === 'PLAYING')) {
                 <div class="board-hint">
                   @if (vizCountdownSeconds > 0) {
-                    <span class="board-hint-countdown">{{ 'endless.game.vizCountdown' | translate:{ seconds: vizCountdownSeconds } }}</span>
+                    <span class="board-hint-countdown">{{ 'solver.viz.countdown' | translate:{ seconds: vizCountdownSeconds } }}</span>
                   }
                   @if (vizMoveHtml) {
                     <span [innerHTML]="vizMoveHtml"></span>
@@ -74,8 +74,8 @@
                   }
                   @if (vizPiecesHidden || visualizationMode === 1) {
                     <button class="board-hint-show board-hint-eye" (click)="onVizShow()"
-                            [attr.title]="(vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate"
-                            [attr.aria-label]="(vizShowPressed ? 'endless.game.vizShowing' : 'endless.game.vizShow') | translate">
+                            [attr.title]="(vizShowPressed ? 'solver.viz.showing' : 'solver.viz.show') | translate"
+                            [attr.aria-label]="(vizShowPressed ? 'solver.viz.showing' : 'solver.viz.show') | translate">
                       <mat-icon>{{ vizShowPressed ? 'visibility' : 'visibility_off' }}</mat-icon>
                     </button>
                   }
@@ -83,9 +83,9 @@
                     <!-- d4-rk-tipp-zaehler-beschriftung: die Klammer nennt die Stufe, die der Klick aufdeckt (vorher „Nächster Tipp (1/3)“
                          mit Tipp 1 schon sichtbar). -->
                     <button class="board-hint-tip" (click)="showNextHint()"
-                            [attr.title]="'puzzles.hints.show' | translate">
+                            [attr.title]="'solver.hints.show' | translate">
                       <mat-icon>lightbulb</mat-icon>
-                      {{ (hintLevel === 0 ? 'puzzles.hints.show' : 'puzzles.hints.next') | translate }}
+                      {{ (hintLevel === 0 ? 'solver.hints.show' : 'solver.hints.next') | translate }}
                       ({{ hintLevel + 1 }}/{{ totalHints }})
                     </button>
                   }
@@ -95,9 +95,9 @@
                          (Tooltip + aria-label, am Handy steht nur das Symbol). -->
                     <button class="board-hint-flag" [class.flagged]="puzzle?.hintsFlagged"
                             [disabled]="flagSaving" (click)="toggleHintsFlag()"
-                            [appIconLabel]="(puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flagTitle') | translate">
+                            [appIconLabel]="(puzzle?.hintsFlagged ? 'solver.hints.flagged' : 'puzzles.hints.flagTitle') | translate">
                       <mat-icon>{{ puzzle?.hintsFlagged ? 'thumb_down' : 'thumb_down_off_alt' }}</mat-icon>
-                      <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'puzzles.hints.flagged' : 'puzzles.hints.flag') | translate }}</span>
+                      <span class="board-hint-flag-label">{{ (puzzle?.hintsFlagged ? 'solver.hints.flagged' : 'solver.hints.flag') | translate }}</span>
                     </button>
                   }
                 </div>
@@ -188,8 +188,8 @@
                   [hasLast]="!!lastSolvedPuzzleId"
                   [canLoveLast]="isLoggedIn"
                   [lastLoved]="favoriteTracker.lastIsFavorite"
-                  shareLabelKey="endless.game.sharePuzzle"
-                  reviewLastKey="endless.game.reviewLast"
+                  shareLabelKey="solver.actions.share"
+                  reviewLastKey="solver.actions.reviewLast"
                   [solveModeChoice]="solveModeChoice"
                   (solveModeToggle)="toggleSolveMode()"
                   (shareClicked)="sharePuzzle()"

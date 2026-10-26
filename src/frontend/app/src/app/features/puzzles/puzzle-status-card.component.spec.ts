@@ -81,12 +81,12 @@ describe('PuzzleStatusCardComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('mat-spinner')).not.toBeNull();
-    expect(el.textContent).toContain('book.status.loading');
+    expect(el.textContent).toContain('solver.status.loading');
 
     fixture.componentRef.setInput('awaitingSolveMode', true);
     fixture.detectChanges();
     expect(el.querySelector('mat-spinner')).toBeNull();
     expect(el.textContent).toContain('solveMode.awaitingChoice');
-    expect(el.textContent).not.toContain('book.status.loading');
+    expect(el.textContent).not.toContain('solver.status.loading');
   });
 });

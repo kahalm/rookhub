@@ -19,7 +19,7 @@ export const SOLVING_STATES = ['AWAITING_USER_MOVE', 'THINKING', 'PLAYING'] as c
  * bleibt, damit die Aufrufer weiter `[mode]` nachschlagen.
  */
 const SHARED_ACTION_KEYS = {
-  reset: 'puzzles.actions.reset', mouseslip: 'puzzles.actions.mouseslip', giveUp: 'puzzles.actions.giveUp',
+  reset: 'solver.actions.reset', mouseslip: 'solver.actions.mouseslip', giveUp: 'solver.actions.giveUp',
 } as const;
 
 export const SOLVER_ACTION_KEYS: Readonly<Record<PuzzleSolverMode, typeof SHARED_ACTION_KEYS>> = {
@@ -30,7 +30,7 @@ export const SOLVER_ACTION_KEYS: Readonly<Record<PuzzleSolverMode, typeof SHARED
 
 /** Bewertungs-Knopf und -Zeile im „Your turn"-Panel — ebenfalls ein Satz Keys für alle Modi. */
 const SHARED_EVAL_KEYS = {
-  show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now',
+  show: 'solver.eval.show', hide: 'solver.eval.hide', start: 'solver.eval.start', now: 'solver.eval.now',
 } as const;
 
 export const SOLVER_EVAL_KEYS: Readonly<Record<PuzzleSolverMode, typeof SHARED_EVAL_KEYS>> = {

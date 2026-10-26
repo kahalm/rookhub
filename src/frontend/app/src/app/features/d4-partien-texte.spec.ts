@@ -72,7 +72,7 @@ describe('Design-Runde d4 · Partien/Texte', () => {
       .map(([k, v]) => `${k} = ${v}`);
     expect(bad).toEqual([]);
     expect(en['dashboard.analysis.subtitle']).toBe('Analyse a position');
-    expect(en['puzzles.actions.analyze']).toBe('Analyse');
+    expect(en['solver.actions.analyze']).toBe('Analyse');
   });
 
   // d4-rk-beschriftung-uhr-symbol-hinweis: der Leerhinweis schickte zu einem Uhr-Symbol, das es am Brett nicht gibt —

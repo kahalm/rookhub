@@ -135,8 +135,8 @@ export class PuzzleActionBarComponent {
   @Input() canWorksheetLast = false;
   /** ⋮-Eintrag „Endlos-Modus" (nur Standard-Puzzle). */
   @Input() showEndless = false;
-  @Input() shareLabelKey = 'puzzles.actions.share';
-  @Input() reviewLastKey = 'puzzles.actions.reviewLast';
+  @Input() shareLabelKey = 'solver.actions.share';
+  @Input() reviewLastKey = 'solver.actions.reviewLast';
 
   /** Gewählte Spielweise des Bereichs — `null` blendet den Umschalter aus (Bereiche ohne
    *  Spielweisen-Abfrage, z. B. geteiltes Einzel-Puzzle mit fester Ansicht). */

@@ -36,9 +36,9 @@ describe('Design-Runde d3 · Training (Texte und Vorlagen)', () => {
   it('englische Puzzle-/Endlos-Knöpfe in Satzschreibung', async () => {
     const en = await lang('en');
     const expected: Record<string, string> = {
-      'puzzles.actions.giveUp': 'Give up', 'puzzles.actions.nextPuzzle': 'Next puzzle',
-      'puzzles.actions.share': 'Share puzzle', 'puzzles.actions.endlessMode': 'Endless mode',
-      'puzzles.eval.show': 'Show eval', 'puzzles.eval.hide': 'Hide eval',
+      'solver.actions.giveUp': 'Give up', 'solver.actions.nextPuzzle': 'Next puzzle',
+      'solver.actions.share': 'Share puzzle', 'puzzles.actions.endlessMode': 'Endless mode',
+      'solver.eval.show': 'Show eval', 'solver.eval.hide': 'Hide eval',
       'endless.config.newGame': 'New game', 'endless.gameOver.playAgain': 'Play again',
       'endless.config.viewHistory': 'View history', 'endless.history.startPlaying': 'Start playing',
     };
@@ -48,8 +48,8 @@ describe('Design-Runde d3 · Training (Texte und Vorlagen)', () => {
   // d3-rk-bewertung-anzeigen-beschriftung
   it('„Bewertung anzeigen“ sagt, welche Bewertung (Stellung, nicht Aufgaben-Wertung)', async () => {
     const de = await lang('de');
-    expect(de['puzzles.eval.show']).toBe('Stellungsbewertung anzeigen');
-    expect(de['puzzles.eval.hide']).toBe('Stellungsbewertung ausblenden');
+    expect(de['solver.eval.show']).toBe('Stellungsbewertung anzeigen');
+    expect(de['solver.eval.hide']).toBe('Stellungsbewertung ausblenden');
   });
 
   // d3-rk-kurskarte-neu-holen-chip

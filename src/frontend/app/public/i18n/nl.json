@@ -448,39 +448,18 @@
   },
   "puzzles": {
     "status": {
-      "loading": "Puzzel laden…",
       "loadFailed": "Puzzel laden mislukt",
       "offlineNoCache": "Je bent offline en er zijn geen puzzels in de cache. Open deze pagina eenmaal online om puzzels op te slaan voor offline spelen.",
       "offlinePoolExhausted": "Geen offline puzzels meer — je hebt alle gecachte puzzels gespeeld. Nieuwe puzzels worden geladen zodra je weer online bent.",
       "replayLast": "Laatste puzzel opnieuw spelen",
-      "watchOpponent": "Kijk de zet van de tegenstander…",
-      "yourTurn": "Jij bent aan de beurt!",
-      "gaveUpPlayOut": "Opgegeven — speel de oplossing zelf door.",
-      "thinking": "Stockfish denkt…"
+      "yourTurn": "Jij bent aan de beurt!"
     },
     "result": {
       "solutionPlayedOut": "Oplossing doorgespeeld.",
-      "tryYourselfNextTime": "Volgende keer zelf proberen!",
-      "checkmate": "Schaakmat!",
-      "alternativeSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",
-      "correct": "Correct!",
-      "incorrect": "Onjuist"
-    },
-    "eval": {
-      "start": "Start",
-      "now": "Nu",
-      "show": "Evaluatie tonen",
-      "hide": "Evaluatie verbergen"
+      "tryYourselfNextTime": "Volgende keer zelf proberen!"
     },
     "actions": {
-      "reset": "Opnieuw",
-      "mouseslip": "Muisfout",
-      "giveUp": "Opgeven",
-      "nextPuzzle": "Volgende puzzel",
-      "share": "Puzzel delen",
-      "reviewLast": "Laatste puzzel bekijken",
-      "endlessMode": "Eindeloze modus",
-      "analyze": "Analyseren"
+      "endlessMode": "Eindeloze modus"
     },
     "info": {
       "rating": "Rating"
@@ -508,11 +487,6 @@
     "theme": {
       "boardTheme": "Bordthema",
       "pieces": "Stukken"
-    },
-    "viz": {
-      "countdown": "Stukken verdwijnen over {{seconds}}s…",
-      "show": "Tonen",
-      "showing": "Tonen…"
     },
     "share": {
       "title": "Puzzel delen",
@@ -655,26 +629,13 @@
       "start": "Starten"
     },
     "game": {
-      "vizCountdown": "Stukken verdwijnen over {{seconds}}s...",
-      "vizShow": "Tonen",
-      "vizShowing": "Tonen...",
-      "loadingPuzzle": "Puzzel laden...",
-      "watchOpponent": "Kijk de zet van de tegenstander...",
-      "yourTurn": "Jij bent aan de beurt! Vind de beste zet.",
       "yourMove": "Jouw zet...",
       "opponentThinking": "Tegenstander denkt na...",
-      "checkmate": "Schaakmat!",
-      "alternativeSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde lijn.",
-      "correct": "Correct!",
-      "wrong": "Fout!",
       "gaveUp": "Opgegeven",
       "continue": "Doorgaan",
-      "analyze": "Analyseren",
-      "reviewLast": "Laatste puzzel analyseren",
       "levelRange": "Niveau {{level}} ({{min}}–{{max}})",
       "showTags": "Labels tonen",
       "hideTags": "Labels verbergen",
-      "sharePuzzle": "Puzzel delen",
       "statSolved": "Opgelost",
       "statTime": "Tijd",
       "phaseLabel": "Fase {{phase}} (stap {{step}})"
@@ -723,36 +684,18 @@
     "difficulty": "Moeilijkheidsgraad",
     "offlineUnavailable": "Dit boek is niet offline beschikbaar.",
     "status": {
-      "loading": "Puzzel laden...",
-      "watchOpponent": "Kijk de zet van de tegenstander...",
-      "yourTurn": "Jij bent aan de beurt! Vind de beste zet.",
-      "gaveUp": "Opgegeven — speel de oplossing zelf door.",
-      "stockfishThinking": "Stockfish denkt...",
       "yourMoveVsStockfish": "Jouw zet tegen Stockfish...",
-      "correct": "Correct!",
-      "incorrect": "Onjuist",
       "gaveUpSolution": "Opgegeven — dit is de oplossing",
-      "checkmate": "Schaakmat!",
-      "altSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",
       "fullGame": "Volledige partij"
     },
     "actions": {
-      "nextPuzzle": "Volgende puzzel",
       "skip": "Overslaan",
       "viewFullGame": "Volledige partij bekijken",
-      "analyze": "Analyseren",
-      "reviewLast": "Laatste puzzel analyseren",
       "nextInBook": "Volgende in boek",
       "randomInBook": "Willekeurig uit boek",
       "prevDaily": "Vorige dag",
       "nextDaily": "Volgende dag",
-      "sharePuzzle": "Puzzel delen",
       "backToPuzzle": "Terug naar puzzel"
-    },
-    "viz": {
-      "countdown": "Stukken verdwijnen over {{seconds}}s...",
-      "show": "Tonen",
-      "showing": "Tonen..."
     },
     "course": {
       "backToCourses": "Naar cursusoverzicht",
@@ -1039,6 +982,39 @@
     },
     "library": {
       "requestNeedsLogin": "Sign in to request"
+    }
+  },
+  "solver": {
+    "status": {
+      "loading": "Puzzel laden…",
+      "watchOpponent": "Kijk de zet van de tegenstander…",
+      "correct": "Correct!",
+      "checkmate": "Schaakmat!",
+      "altSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde zetvolgorde.",
+      "incorrect": "Onjuist",
+      "findBestMove": "Jij bent aan de beurt! Vind de beste zet.",
+      "stockfishThinking": "Stockfish denkt…",
+      "gaveUpPlayOut": "Opgegeven — speel de oplossing zelf door."
+    },
+    "actions": {
+      "nextPuzzle": "Volgende puzzel",
+      "analyze": "Analyseren",
+      "share": "Puzzel delen",
+      "reviewLast": "Laatste puzzel analyseren",
+      "reset": "Opnieuw",
+      "mouseslip": "Muisfout",
+      "giveUp": "Opgeven"
+    },
+    "eval": {
+      "show": "Evaluatie tonen",
+      "hide": "Evaluatie verbergen",
+      "start": "Start",
+      "now": "Nu"
+    },
+    "viz": {
+      "show": "Tonen",
+      "showing": "Tonen…",
+      "countdown": "Stukken verdwijnen over {{seconds}}s…"
     }
   }
 }
