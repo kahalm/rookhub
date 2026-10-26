@@ -10,6 +10,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.844.0", date: "2026-10-26", changes: [
+    { en: "The changelog is now loaded only when opened (as data, outside the service-worker prefetch); installed apps download about 2 MB less in the background after an update.", de: "Das Änderungsprotokoll wird erst beim Öffnen geladen (als Daten, außerhalb des Service-Worker-Prefetch); installierte Apps laden nach einem Update rund 2 MB weniger im Hintergrund." },
+    { en: "Security: the web servers of all sites can no longer modify the files they serve or their configuration (root-owned bundles, nginx owns only cache and logs).", de: "Sicherheit: Die Webserver der Oberflächen können ihre ausgelieferten Dateien und ihre Konfiguration nicht mehr verändern (Bundles root-eigen, nginx besitzt nur Cache und Logs)." },
+    { en: "Technical change (code review F8-004/F8-003): stricter frontend code checks (15 rules without legacy findings are now errors) and a stylelint ratchet that catches new hard-coded colour values (baseline 783 in 103 files).", de: "Technischer Umbau (Codereview F8-004/F8-003): strengere Code-Prüfung im Frontend (15 Regeln ohne Altbestand sind jetzt Fehler) und eine stylelint-Ratsche, die neue fest eingetragene Farbwerte erkennt (Baseline 783 in 103 Dateien)." },
+  ]},
   { version: "0.843.0", date: "2026-10-26", changes: [
     { en: "Checking a scoresheet on the phone (LeagueHub): the board spans the screen width and fits on screen; names and „Add to club database“ follow right below it, before the move list and photo.", de: "Formular prüfen am Handy (LeagueHub): Das Brett ist so breit wie der Bildschirm und passt ins Bild, Namen und „In die Vereins-Datenbank übernehmen“ stehen direkt darunter – vor Zugliste und Foto." },
     { en: "Tournament site: loading errors in calendar, bookmarks, history, profile and calendar entry no longer look like „empty“ — they show the cause (offline, server unreachable, HTTP error) and „Retry“.", de: "Turnierseite: Ladefehler in Kalender, Merkliste, Verlauf, Profil und Kalendereintrag sehen nicht mehr wie „leer“ aus – mit Ursache (offline, Server nicht erreichbar, HTTP-Fehler) und „Wiederholen“." },
