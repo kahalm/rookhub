@@ -6,6 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { SnackbarService } from '../../core/snackbar.service';
 import { ReconstructDetailComponent } from './reconstruct-detail.component';
 import { GapProposalsComponent } from './gap-proposals.component';
 import { PartKind, Reconstruction, ReconstructionPart } from './reconstruct.service';
@@ -614,6 +615,60 @@ describe('ReconstructDetailComponent', () => {
     fixture.componentInstance.edit(fixture.componentInstance.data()!.parts[0]);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.gap-row .gap-close')!.classList).not.toContain('gap-close-dup');
+  });
+
+  describe('Fehlertexte beim Speichern (je error.reason)', () => {
+    function failWith(req: { flush(body: unknown, opts: { status: number; statusText: string }): void }, reason?: string): void {
+      req.flush(reason ? { reason } : {}, { status: 400, statusText: 'Bad Request' });
+    }
+
+    it('Teil speichern: invalid-fen / no-moves / too-many-parts / sonst saveFailed', () => {
+      const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+      const c = open([part({ id: 1 })]);
+      for (const [reason, key] of [['invalid-fen', 'reconstruct.invalidFen'], ['no-moves', 'reconstruct.noMoves'],
+        ['too-many-parts', 'reconstruct.tooManyParts'], [undefined, 'reconstruct.saveFailed']] as const) {
+        c.startNew(PartKind.Moves);
+        c.onMovesInput('e4');
+        c.savePart();
+        failWith(http.expectOne({ url: '/api/reconstructions/5/parts', method: 'POST' }), reason);
+        expect(warn.calls.mostRecent().args[0]).toBe(key);
+        expect(c.busy()).toBeFalse();
+        expect(c.editingId()).toBe(0);            // Editor bleibt offen
+      }
+    });
+
+    it('Linie übernehmen: does-not-fit, sonst saveFailed; Erfolg meldet „übernommen“', () => {
+      const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+      const info = spyOn(TestBed.inject(SnackbarService), 'info');
+      const proposal = part({ id: 9, ordinal: 1, moves: 'Nc6 Bb5', generated: true });
+      const position = part({ id: 2, ordinal: 2, kind: PartKind.Position, fen: MIDDLE, endFen: MIDDLE, moves: null });
+      const c = open([part({ id: 1 }), proposal, position]);
+      c.edit(proposal);
+      c.acceptProposal();
+      failWith(http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/apply', method: 'POST' }), 'does-not-fit');
+      expect(warn.calls.mostRecent().args[0]).toBe('reconstruct.gap.doesNotFit');
+      c.acceptProposal();
+      failWith(http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/apply', method: 'POST' }));
+      expect(warn.calls.mostRecent().args[0]).toBe('reconstruct.saveFailed');
+      c.acceptProposal();
+      http.expectOne({ url: '/api/reconstructions/5/parts/2/gap/apply', method: 'POST' }).flush(data([]));
+      expect(info.calls.mostRecent().args[0]).toBe('reconstruct.gap.applied');
+      expect(c.editingId()).toBeNull();
+      expect(c.busy()).toBeFalse();
+    });
+
+    it('Kopfdaten: Fehler → saveFailed und Formular bleibt offen; Erfolg schließt es', () => {
+      const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+      const c = open([part({ id: 1 })]);
+      c.showHead = true;
+      c.saveHead();
+      failWith(http.expectOne({ url: '/api/reconstructions/5', method: 'PUT' }), 'whatever');
+      expect(warn.calls.mostRecent().args[0]).toBe('reconstruct.saveFailed');
+      expect(c.showHead).toBeTrue();
+      c.saveHead();
+      http.expectOne({ url: '/api/reconstructions/5', method: 'PUT' }).flush(data([part({ id: 1 })]));
+      expect(c.showHead).toBeFalse();
+    });
   });
 });
 
