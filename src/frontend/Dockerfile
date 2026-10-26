@@ -35,8 +35,16 @@ ARG APP_PROJECT=app
 # Seite abweicht (Kacheln, Link-Vorschau), entscheidet nginx.conf am Host.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/${APP_PROJECT}/browser /usr/share/nginx/html
+# Haertung (Codereview I1-013): ausgelieferte Bundles (html/) und die Server-Konfiguration (conf.d/) bleiben ROOT-eigen
+# und fuer den Laufzeitnutzer nur lesbar — vorher gehoerten sie per chown dem nginx-Nutzer, und eine Schwachstelle mit
+# Schreibrecht im nginx-Prozess haette main-*.js aller Besucher oder default.conf dauerhaft veraendern koennen.
+# Schreiben darf nginx nur: /var/cache/nginx (Temp-Dateien, Kachel-Cache), /var/log/nginx (zeigt auf stdout/stderr)
+# und die PID-Datei unter /tmp. Die Einstiegsskripte des nginx-Images aendern default.conf dann nicht mehr
+# („can not modify …“ im Start-Log, harmlos: unsere Konfiguration lauscht selbst auf 8080).
 RUN printf '{"sha":"%s","ref":"%s"}' "$GIT_SHA" "$GIT_REF" > /usr/share/nginx/html/build-info.json && \
     sed -i 's|/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf && \
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d
+    chown -R root:root /usr/share/nginx/html /etc/nginx/conf.d && \
+    chmod -R a+rX,go-w /usr/share/nginx/html /etc/nginx/conf.d && \
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx
 EXPOSE 8080
 USER nginx

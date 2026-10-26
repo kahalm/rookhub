@@ -77,7 +77,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Verweise im Code wie „siehe CLAUDE.md, Abschnitt X“ meinen die gleichnamige Überschrift in einer dieser Dateien:
   `grep -rl "^# X" docs/` findet sie.
 - Datenbank-Schema: `docs/datenbank-schema.md` · Oberflächen (RookHub/Turnier/KidHub, Filterleiste): `docs/oberflaechen.md`
-- Konventionen im Volltext (mit Begründung und Fallen): `docs/konventionen.md` · CI/CD im Detail: `docs/ci.md`
+- Konventionen im Volltext (mit Begründung und Fallen): `docs/konventionen.md` · CI/CD im Detail: `docs/ci.md` · Container-Härtung (Images, Compose-Vorschlag): `docs/ops-haertung.md`
 - Startup-Konfiguration (DI je Bereich, ALLE Hosted Services als Tabelle, HttpClients, Pipeline-Bausteine): `src/api/RookHub.Api/Startup/` — `Program.cs` hält nur die Reihenfolge
 - Frontend-Regeln: `src/frontend/CLAUDE.md` (lädt automatisch, sobald man dort arbeitet); Frontend-Feature-Doku: `docs/frontend/` · Gestaltung: `docs/DESIGN.md` (verbindlich)
 

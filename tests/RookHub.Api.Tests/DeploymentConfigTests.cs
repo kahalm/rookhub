@@ -433,6 +433,35 @@ public class DeploymentConfigTests
             $"{file}: der api-Healthcheck ruft '{tool}' auf, das API-Image installiert es aber nicht.");
     }
 
+    /// <summary>
+    /// Container-Haertung der Images (Codereview I1-013): das Frontend-Image gab per chown die ausgelieferten Bundles
+    /// (html/) und die Server-Konfiguration (conf.d/) seinem Laufzeitnutzer nginx — eine Schwachstelle mit Schreibrecht
+    /// im nginx-Prozess haette main-*.js fuer jeden Besucher dauerhaft veraendern koennen. Jetzt root-eigen und nur
+    /// lesbar; nginx schreibt nur Cache und Logs. Das API-Image laeuft als appuser, /app bleibt root-eigen (COPY).
+    /// </summary>
+    [Fact]
+    public void Images_RunUnprivileged_AndCannotRewriteWhatTheyServe()
+    {
+        var frontend = ReadRepoFile("src/frontend/Dockerfile");
+        var runtime = frontend[frontend.LastIndexOf("\nFROM ", StringComparison.Ordinal)..];
+        Assert.Matches(@"(?m)^USER nginx\s*$", runtime);
+        foreach (Match chown in Regex.Matches(runtime, @"chown\s+(-R\s+)?nginx[^&\n]*"))
+        {
+            Assert.DoesNotContain("/usr/share/nginx/html", chown.Value);
+            Assert.DoesNotContain("/etc/nginx", chown.Value);
+        }
+        Assert.Contains("chown -R root:root /usr/share/nginx/html /etc/nginx/conf.d", runtime);
+        Assert.Contains("chown -R nginx:nginx /var/cache/nginx /var/log/nginx", runtime);
+        // Die PID-Datei liegt beschreibbar unter /tmp, nicht im root-eigenen /run.
+        Assert.Contains("s|/run/nginx.pid|/tmp/nginx.pid|", runtime);
+
+        var api = ReadRepoFile("src/api/RookHub.Api/Dockerfile");
+        var apiRuntime = api[api.LastIndexOf("\nFROM ", StringComparison.Ordinal)..];
+        Assert.Matches(@"(?m)^USER appuser\s*$", apiRuntime);
+        Assert.DoesNotMatch(@"chown[^\n]*\s/app\b", apiRuntime);
+        Assert.DoesNotMatch(@"(?m)^COPY --chown", apiRuntime);
+    }
+
     /// <summary>Auch der E2E-Stack reicht einen Verschluesselungsschluessel durch. Ohne ihn werfen
     /// Analyse-Pumpe und Auftrags-Worker bei jedem Durchlauf „Encryption:Key not configured" — die
     /// API bleibt gesund, aber das Log, in dem man einen echten E2E-Fehler suchen muss, ist voll davon.</summary>
