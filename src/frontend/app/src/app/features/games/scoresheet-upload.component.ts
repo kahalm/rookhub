@@ -18,6 +18,8 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
 import { SheetReadingStatusComponent } from './sheet-workbench/sheet-reading-status.component';
 import { formatQuietUntil } from './quiet-hours.util';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { SnackbarService } from '../../core/snackbar.service';
 
 /** So oft fragt die Seite nach, solange Claude liest. */
 export const SCAN_POLL_MS = 3000;
@@ -206,7 +208,12 @@ export const MAX_PAGES = 3;
                 <a mat-icon-button [routerLink]="['/games', s.savedGameId, 'edit']" [attr.aria-label]="'scoresheet.review' | translate">
                   <mat-icon>edit_note</mat-icon>
                 </a>
-              }
+              } @else { <span></span> }
+              <!-- Nachlauf 0.840.0: eigene Einlesung löschen (DELETE /api/scoresheets/{id}), mit Rückfrage -->
+              <button mat-icon-button type="button" class="delete" [disabled]="deleting() === s.id"
+                      [attr.aria-label]="'scoresheet.delete' | translate" [attr.title]="'scoresheet.delete' | translate" (click)="remove(s)">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
             </div>
           }
         </div>
@@ -246,18 +253,20 @@ export const MAX_PAGES = 3;
     .warn { color: var(--rh-warn); }
     h2 { font-size: 1.05rem; margin: 24px 0 8px; }
     .recent { display: flex; flex-direction: column; }
-    .row { display: grid; grid-template-columns: 28px 120px minmax(0, 1fr) 40px; align-items: center; gap: 8px;
+    .row { display: grid; grid-template-columns: 28px 120px minmax(0, 1fr) 40px 40px; align-items: center; gap: 8px;
       padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
     .when { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .state { opacity: 0.8; }
-    @media (max-width: 520px) { .row { grid-template-columns: 28px minmax(0, 1fr) 40px; } .when { display: none; } }
+    @media (max-width: 520px) { .row { grid-template-columns: 28px minmax(0, 1fr) 40px 40px; } .when { display: none; } }
   `],
 })
 export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   private service = inject(ScoresheetService);
   private translate = inject(TranslateService);
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
+  private snackbar = inject(SnackbarService);
 
   readonly status = signal<ScoresheetStatus | null>(null);
   /** Die gewählten Fotos in Seitenreihenfolge, je mit Vorschau-Adresse (0.600.0: bis zu MAX_PAGES). */
@@ -267,6 +276,8 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly current = signal<ScoresheetScan | null>(null);
   readonly recent = signal<ScoresheetScan[]>([]);
+  /** Id der Einlesung, die gerade gelöscht wird (Knopf gesperrt). */
+  readonly deleting = signal<number | null>(null);
   /** Darf gerade eingelesen werden? Kostenbudget und Tageszahl — Admins nur das Gesamtbudget. */
   readonly canRead = computed(() => {
     const st = this.status();
@@ -366,6 +377,32 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
       },
       error: () => { /* der nächste Abruf versucht es wieder */ },
     });
+  }
+
+  /** Eigene Einlesung nach Rückfrage löschen: 204 → aus der Liste; 404 → war schon weg, ebenfalls aus der Liste;
+   *  409 `busy` → wird noch gelesen, bleibt stehen. */
+  remove(s: ScoresheetScan): void {
+    this.confirm.ask('scoresheet.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.deleting.set(s.id);
+      this.service.delete(s.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: () => this.dropFromList(s.id, 'scoresheet.deleted'),
+        error: (err: unknown) => {
+          this.deleting.set(null);
+          const status = err instanceof HttpErrorResponse ? err.status : 0;
+          if (status === 404) this.dropFromList(s.id, 'scoresheet.deleteGone');
+          else if (status === 409) this.snackbar.warn(this.translate.instant('scoresheet.deleteBusy'));
+          else this.snackbar.warn(this.translate.instant('scoresheet.deleteFailed'));
+        },
+      });
+    });
+  }
+
+  private dropFromList(id: number, messageKey: string): void {
+    this.deleting.set(null);
+    this.recent.set(this.recent().filter(x => x.id !== id));
+    if (this.current()?.id === id) this.current.set(null);
+    this.snackbar.info(this.translate.instant(messageKey));
   }
 
   stateIcon(s: ScoresheetScan): string {

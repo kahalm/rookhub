@@ -4,6 +4,9 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { SnackbarService } from '../../core/snackbar.service';
 import { SCAN_POLL_MS, ScoresheetUploadComponent } from './scoresheet-upload.component';
 
 describe('ScoresheetUploadComponent', () => {
@@ -246,4 +249,89 @@ describe('ScoresheetUploadComponent', () => {
     http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([scan('failed', { error: 'noMoves' })]);
     discardPeriodicTasks();
   }));
+});
+
+// Nachlauf 0.840.0: eigene Einlesung in der Liste „Zuletzt eingelesen“ löschen (DELETE /api/scoresheets/{id}).
+describe('ScoresheetUploadComponent — Einlesung löschen', () => {
+  let answer: boolean;
+  let snackbar: jasmine.SpyObj<SnackbarService>;
+  const scan = (id: number, extra: object = {}) => ({
+    id, status: 'done', notationLanguage: 'de', createdAt: '2026-09-25T10:00:00Z', rounds: 1,
+    moveCount: 40, uncertainCount: 0, unresolvedCount: 0, white: 'A', black: 'B', ...extra,
+  });
+
+  async function setup() {
+    answer = true;
+    snackbar = jasmine.createSpyObj<SnackbarService>('SnackbarService', ['info', 'warn', 'success']);
+    const confirm = { ask: jasmine.createSpy('ask').and.callFake(() => of(answer)) };
+    await TestBed.configureTestingModule({
+      imports: [ScoresheetUploadComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ConfirmService, useValue: confirm },
+        { provide: SnackbarService, useValue: snackbar },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ScoresheetUploadComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush({ available: true, dailyLimit: 20, usedToday: 2, languages: [] });
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([scan(7, { savedGameId: 42 }), scan(8)]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const del = (i: number) => el.querySelectorAll<HTMLButtonElement>('.recent .row button.delete')[i];
+    return { fixture, http, el, del, confirm };
+  }
+
+  it('jede Zeile hat einen benannten Löschen-Knopf; nach der Rückfrage geht DELETE, 204 nimmt die Zeile heraus', async () => {
+    const { fixture, http, el, del, confirm } = await setup();
+    expect(el.querySelectorAll('.recent .row').length).toBe(2);
+    expect(del(0).getAttribute('aria-label')).toBe('scoresheet.delete');
+    del(1).click();
+    expect(confirm.ask).toHaveBeenCalledWith('scoresheet.deleteConfirm');
+    const req = http.expectOne({ method: 'DELETE', url: '/api/scoresheets/8' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.recent().map(s => s.id)).toEqual([7]);
+    expect(snackbar.info).toHaveBeenCalledWith('scoresheet.deleted');
+    http.verify();
+  });
+
+  it('abgebrochene Rückfrage löscht nichts', async () => {
+    const { http, del } = await setup();
+    answer = false;
+    del(0).click();
+    http.expectNone({ method: 'DELETE' });
+    http.verify();
+  });
+
+  it('409 busy: die Zeile bleibt, der Hinweis sagt, dass sie noch gelesen wird', async () => {
+    const { fixture, http, del } = await setup();
+    del(0).click();
+    http.expectOne({ method: 'DELETE', url: '/api/scoresheets/7' })
+      .flush({ reason: 'busy' }, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.recent().length).toBe(2);
+    expect(snackbar.warn).toHaveBeenCalledWith('scoresheet.deleteBusy');
+    expect(del(0).disabled).toBeFalse();
+  });
+
+  it('404: schon weg — die Zeile geht trotzdem aus der Liste', async () => {
+    const { fixture, http, del } = await setup();
+    del(0).click();
+    http.expectOne({ method: 'DELETE', url: '/api/scoresheets/7' }).flush(null, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.recent().map(s => s.id)).toEqual([8]);
+    expect(snackbar.info).toHaveBeenCalledWith('scoresheet.deleteGone');
+  });
+
+  it('anderer Fehler: Zeile bleibt, Fehlerhinweis', async () => {
+    const { fixture, http, del } = await setup();
+    del(0).click();
+    http.expectOne({ method: 'DELETE', url: '/api/scoresheets/7' }).flush(null, { status: 500, statusText: 'Error' });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.recent().length).toBe(2);
+    expect(snackbar.warn).toHaveBeenCalledWith('scoresheet.deleteFailed');
+  });
 });

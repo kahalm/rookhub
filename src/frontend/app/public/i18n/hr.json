@@ -4974,6 +4974,12 @@
     "openGame": "Otvori partiju",
     "recent": "Nedavno učitano",
     "moves": "{{count}} polupoteza",
+    "delete": "Obriši očitanje",
+    "deleteConfirm": "Obrisati ovo očitanje? Fotografija i očitanje se brišu; partija spremljena iz njega ostaje (bez fotografije).",
+    "deleted": "Očitanje obrisano.",
+    "deleteGone": "Ovo očitanje više ne postoji.",
+    "deleteBusy": "Obrazac se još čita — možeš ga obrisati nakon toga.",
+    "deleteFailed": "Očitanje nije moguće obrisati. Pokušaj ponovno.",
     "error": {
       "failed": "Učitavanje nije uspjelo.",
       "unreadable": "Sliku nije bilo moguće otvoriti.",

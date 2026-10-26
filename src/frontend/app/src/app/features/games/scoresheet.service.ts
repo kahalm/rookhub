@@ -143,6 +143,12 @@ export class ScoresheetService {
     return this.http.post<ScoresheetScan>('/api/scoresheets', form);
   }
 
+  /** Eigene Einlesung löschen (0.840.0): 204; 404 fremd/schon weg; 409 `{ reason: "busy" }`, solange sie wartet oder
+   *  gelesen wird. Eine daraus gespeicherte Partie bleibt (ohne Foto). */
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/scoresheets/${id}`);
+  }
+
   scan(id: number): Observable<ScoresheetScan> {
     return this.http.get<ScoresheetScan>(`/api/scoresheets/${id}`);
   }

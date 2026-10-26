@@ -4974,6 +4974,12 @@
     "openGame": "Open game",
     "recent": "Recent scoresheets",
     "moves": "{{count}} half-moves",
+    "delete": "Delete scan",
+    "deleteConfirm": "Delete this scan? The photo and the reading are deleted; a game saved from it stays (without the photo).",
+    "deleted": "Scan deleted.",
+    "deleteGone": "This scan no longer exists.",
+    "deleteBusy": "The scoresheet is still being read — you can delete it afterwards.",
+    "deleteFailed": "The scan could not be deleted. Please try again.",
     "error": {
       "failed": "Reading failed.",
       "unreadable": "The image could not be opened.",

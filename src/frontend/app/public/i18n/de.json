@@ -4974,6 +4974,12 @@
     "openGame": "Partie öffnen",
     "recent": "Zuletzt eingelesen",
     "moves": "{{count}} Halbzüge",
+    "delete": "Einlesung löschen",
+    "deleteConfirm": "Diese Einlesung löschen? Foto und Lesung werden gelöscht; eine daraus gespeicherte Partie bleibt (ohne Foto).",
+    "deleted": "Einlesung gelöscht.",
+    "deleteGone": "Diese Einlesung gibt es schon nicht mehr.",
+    "deleteBusy": "Das Formular wird gerade gelesen — löschen geht erst danach.",
+    "deleteFailed": "Die Einlesung ließ sich nicht löschen. Bitte erneut versuchen.",
     "error": {
       "failed": "Das Einlesen ist fehlgeschlagen.",
       "unreadable": "Das Bild ließ sich nicht öffnen.",

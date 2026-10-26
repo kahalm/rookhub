@@ -4974,6 +4974,12 @@
     "openGame": "Játszma megnyitása",
     "recent": "Legutóbb beolvasott",
     "moves": "{{count}} féllépés",
+    "delete": "Beolvasás törlése",
+    "deleteConfirm": "Törlöd ezt a beolvasást? A fotó és a beolvasás törlődik; a belőle mentett játszma megmarad (fotó nélkül).",
+    "deleted": "Beolvasás törölve.",
+    "deleteGone": "Ez a beolvasás már nem létezik.",
+    "deleteBusy": "Az űrlap beolvasása még folyik — utána törölheted.",
+    "deleteFailed": "A beolvasást nem sikerült törölni. Próbáld újra.",
     "error": {
       "failed": "A beolvasás nem sikerült.",
       "unreadable": "A képet nem sikerült megnyitni.",
