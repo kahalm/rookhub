@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { allKeys, localStore, readJson, readRaw, removeKey, sessionStore, writeJson } from './local-json-store';
-import { ANON_PUZZLE_SESSION_KEY } from './anon-session';
+import { clearedOnLogout } from './local-storage-keys';
 
 /** localStorage-Keys der Offline-Caches. */
 export const ENDLESS_POOL_KEY = 'rookhub_endless_offline_pool';
@@ -80,26 +80,11 @@ export class OfflineService {
    *  sichtbar bleibt. Die Endless-Schlüssel standen nicht auf der Liste, und der Endless-Modus
    *  ÜBERTRÄGT lokale Läufe beim ersten Öffnen ins Konto (Migration von localStorage zum Server):
    *  Nutzer B erbte damit auf einem geteilten Gerät die Laufhistorie und den Highscore von A — in
-   *  seiner Statistik und in der Bestenliste. Ebenso die Kalkulations-Notizen und der lokale
-   *  Kursfortschritt (Freitext bzw. fremde Leistung) und der Menü-Snapshot (fremde Sichtbarkeit).
+   *  seiner Statistik und in der Bestenliste.
    *
-   *  Bewusst als PRÄFIX-Liste: eine Handliste einzelner Namen ist genau so gealtert. */
-  private static readonly LocalTracePrefixes = [
-    'rookhub_endless_',            // Konfiguration, Historie, Highscore, laufender Lauf, Ketten-Seed …
-    'rookhub_calc_local_',         // Analysebäume/Bewertungen ohne Konto
-    'rookhub_calc_timer_',         // Kapitel-Uhr der Kalkulation je Kurs (ohne Nutzerbezug — fremde Trainingszeit)
-    'rookhub_calc_note_off_',      // weggeklickter Kalkulations-Hinweis je Kurs (verrät, welche Kurse offen waren)
-    'rookhub_course_local_solved_',// lokal gelöste Kurs-Linien
-    'rookhub_solve_modes',         // Spielweise je Bereich
-    'rookhub_course_lang',         // Sprachwahl je Kurs (verrät, welche Kurse offen waren)
-    'rookhub_menu_keys',           // Menü-Sichtbarkeit des vorigen Nutzers
-    ANON_PUZZLE_SESSION_KEY,       // anonyme Puzzle-Sitzung
-    'rookhub_guess_session',       // anonyme Partie-Raten-Sitzung (Gegenstück zur Puzzle-Sitzung)
-    'rookhub_dashboard_cache_',    // Dashboard-Snapshot je Konto: Turniere samt Ort/Termin, Kurse, Elo
-    'rookhub_discord_link',        // Discord-Vormerkung, Altbestand im localStorage (heute sessionStorage, s. u.)
-    'rh.turnier.',                 // Turnierseite: Kalender-Filter samt Ort/Koordinaten, Verlaufs-Reiter
-  ];
-
+   *  Welche Schlüssel das sind, steht seit Codereview F1-010 in `local-storage-keys.ts` (jeder Schlüssel
+   *  der Oberflächen eingeordnet, Klasse `user` = räumen); dessen Spec wird bei einem neuen, nicht
+   *  eingeordneten Schlüssel rot. */
   /** Nutzer-Spuren im sessionStorage DIESES Tabs, die beim Abmelden ebenfalls verschwinden: die
    *  Discord-Vormerkung bleibt nach einem vorübergehenden Fehler beim Einlösen liegen — der NÄCHSTE, der
    *  sich im selben Tab anmeldet, würde sonst gefragt, ob er den Discord-Account des vorigen verknüpft. */
@@ -109,7 +94,7 @@ export class OfflineService {
   private logoutKeys(): string[] {
     const keys = new Set(this.cacheKeys());
     for (const k of allKeys(localStore()))
-      if (OfflineService.LocalTracePrefixes.some(p => k.startsWith(p))) keys.add(k);
+      if (clearedOnLogout(k)) keys.add(k);
     return [...keys];
   }
 
