@@ -32,7 +32,7 @@ import {
 } from './calc-tree.util';
 import {
   CALC_GRADE_OPTIONS, CALC_MAX_POINTS_PER_POSITION, CalcGrade, CalcReview, CalcReviewPatch,
-  formatScore, gradePoints, normalizeGrade,
+  normalizeGrade,
 } from './calc-review.util';
 import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalculationService,
@@ -43,6 +43,7 @@ import { CalcTreeCursor } from './calc-tree-cursor';
 import { CalcTreeSaver } from './calc-tree-saver';
 import { CalcPageMode } from './calc-page-mode';
 import { CalcChapterModel } from './calc-chapter-model';
+import { CalcLabels } from './calc-labels';
 import { CalcReviewController } from './calc-review.controller';
 import { CalcGradeDialogComponent, CalcGradeDialogResult } from './calc-grade-dialog.component';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
@@ -51,9 +52,7 @@ import {
   CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult,
 } from './calc-timer-dialog.component';
 import { AuthService } from '../../../core/auth.service';
-import { formatSecondsClock } from '../../../shared/clock-format.util';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
-import { labelOr } from '../course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
 import { isBoardHotkey } from '../../../shared/keyboard.util';
 import {
@@ -99,6 +98,14 @@ export class CalculationComponent implements OnInit, OnDestroy {
   book: CalcBook | null = null;
   /** Stellungen, Kapitel, Standort und Summen — siehe {@link CalcChapterModel}. */
   private readonly chapters = new CalcChapterModel();
+  /** Anzeige-Texte (Kapitel-/Stellungsnamen, Punkte, Zeiten, Erklärungen) — siehe {@link CalcLabels}. */
+  readonly labels = new CalcLabels({
+    t: (key, params) => this.translate.instant(key, params),
+    chapters: this.chapters,
+    review: () => this.review,
+    liveSeconds: () => this.liveSeconds,
+    trainingStateKey: () => this.trainingStateKey,
+  });
 
   /** ALLE Stellungen des Buchs (Quelle der Kapitel-Gruppen) — gearbeitet wird nie auf dieser Liste. */
   get positions(): CalcPositionListItem[] { return this.chapters.positions; }
@@ -457,20 +464,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /** Nur die Stellungen dieses Kapitels — die einzige Liste, auf der navigiert wird. */
   get chapterPositions(): CalcPositionListItem[] { return this.chapters.chapterPositions; }
 
-  /** Anzeigename des Kapitels („ohne Kapitel" ist auch einer). */
-  get chapterName(): string {
-    const group = this.chapter;
-    if (!group) return '';
-    return group.label || group.chapter || this.translate.instant('courses.noChapter');
-  }
-
   get hasNextChapter(): boolean { return this.chapters.hasNextChapter; }
-
-  get nextChapterName(): string {
-    const next = this.chapters.nextChapter;
-    if (!next) return '';
-    return next.label || next.chapter || this.translate.instant('courses.noChapter');
-  }
 
   /**
    * Kapitel wechseln. Das ist bewusst ein SCHNITT: offene Speicherungen raus, Training stoppen
@@ -654,13 +648,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
     }));
   }
 
-  /** Beschriftung des Knopfes: unbewertet „Ergebnis", sonst die gewählte Stufe. */
-  get gradeButtonLabel(): string {
-    return this.review.grade === null
-      ? this.translate.instant('calc.review.result')
-      : this.gradeShortLabel(this.review.grade);
-  }
-
   /** Optimistisch anzeigen + an den Server einreihen. */
   private setReview(patch: CalcReviewPatch): void {
     this.reviews.set(patch);
@@ -718,12 +705,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   toggleAnnotations(): void { this.showAnnotations = !this.showAnnotations; }
 
-  /** Erklärung an der Uhr: Laufzustand plus der Hinweis, dass man sie anklicken kann. */
-  get timerTooltip(): string {
-    return `${this.translate.instant(this.trainingStateKey)}\n`
-      + this.translate.instant('calc.timer.editHint');
-  }
-
   /**
    * Kapitelzeit von Hand nachtragen — für den Fall, dass das Training zu spät gestartet wurde.
    * Bewusst NUR die Kapitel-Uhr (Merkhilfe auf diesem Gerät): die je Stellung gemessene Zeit
@@ -735,7 +716,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
       {
         data: {
           seconds: this.timerSeconds,
-          chapter: this.chapterName || this.translate.instant('courses.noChapter'),
+          chapter: this.labels.chapterName || this.translate.instant('courses.noChapter'),
         },
         autoFocus: false,
       });
@@ -744,68 +725,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
       if (typeof result !== 'number' || !Number.isFinite(result)) return;
       this.timer.setSeconds(Math.max(0, Math.floor(result)));
     });
-  }
-
-  /**
-   * Erklärung am Kapitelstand in der Befehlszeile. Die BUCH-Summe steht hier statt als eigene
-   * Zeile: interessant, aber nie dringend — und als Dauerzeile war sie die vierte Punktzahl auf
-   * einem Schirm.
-   */
-  get pointsTooltip(): string {
-    const chapter = this.translate.instant('calc.review.totalPointsChapterHint');
-    const book = this.translate.instant('calc.review.bookPoints', {
-      score: formatScore(this.bookPoints, this.bookMaxPoints),
-    });
-    return `${chapter}\n${book}`;
-  }
-
-  positionLabel(item: CalcPositionListItem): string {
-    const title = labelOr(item.titleLabel, item.title);
-    return title?.trim() ? title : `#${this.chapterNumberOf(item)}`;
-  }
-
-  /** Die ANGEZEIGTE Nummer einer Stellung (Position im Kapitel, siehe {@link CalcChapterModel.chapterNumberOf}). */
-  chapterNumberOf(item: CalcPositionListItem): string {
-    return this.chapters.chapterNumberOf(item);
-  }
-
-  /** Rechenzeit an der ANGEZEIGTEN Stellung inkl. der laufenden Sitzung. */
-  get positionTimeDisplay(): string {
-    return formatSecondsClock(this.review.secondsSpent + this.liveSeconds);
-  }
-
-  timeDisplay(seconds: number): string {
-    return formatSecondsClock(seconds);
-  }
-
-  /** Punkte der ANGEZEIGTEN Stellung („2 / 4"); null-Stufe hat keine Punktzahl, sondern gar keine. */
-  get positionPoints(): number {
-    return gradePoints(this.review.grade);
-  }
-
-  /** Punkte einer Stellung aus der Sprungliste. */
-  pointsOf(item: CalcPositionListItem): number {
-    return gradePoints(item.grade);
-  }
-
-  /** Kurzform der Stufe für die Sprungliste („Zug, ohne Hauptfolge"). */
-  gradeShortLabel(grade: CalcGrade): string {
-    return this.translate.instant(this.gradeOptions[grade].shortKey);
-  }
-
-  /** Punktzahl IMMER mit Maximum — „14" allein ist ohne die Zahl der Stellungen nicht lesbar. */
-  scoreDisplay(points: number, max: number): string {
-    return formatScore(points, max);
-  }
-
-  /** Kapitel-Kopf der Sprungliste: Name plus die Summen des Kapitels („14 / 24 Pkt · 12:30"). */
-  chapterLabel(group: CalcPositionGroup): string {
-    const name = group.label || group.chapter || this.translate.instant('courses.noChapter');
-    const score = formatScore(group.points, group.maxPoints);
-    const summary = group.seconds
-      ? this.translate.instant('calc.review.chapterSummary', { score, time: formatSecondsClock(group.seconds) })
-      : this.translate.instant('calc.review.chapterScore', { score });
-    return `${name} · ${summary}`;
   }
 
   // ===== Analyse + FEN kopieren =============================================

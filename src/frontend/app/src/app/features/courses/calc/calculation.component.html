@@ -24,12 +24,12 @@
     <!-- Stufe 1: Kapitel. Das Menü nennt je Kapitel Punkte und Zeit. -->
     <button mat-button class="calc-bar-pick" [matMenuTriggerFor]="chapterMenu"
             [matTooltip]="'calc.chapter.label' | translate">
-      <span class="calc-bar-pick-text">{{ chapterName || ('courses.noChapter' | translate) }}</span>
+      <span class="calc-bar-pick-text">{{ labels.chapterName || ('courses.noChapter' | translate) }}</span>
       <mat-icon iconPositionEnd class="calc-bar-caret">arrow_drop_down</mat-icon>
     </button>
     <mat-menu #chapterMenu="matMenu">
       @for (group of groups; track group.key) {
-        <button mat-menu-item (click)="selectChapter($index)">{{ chapterLabel(group) }}</button>
+        <button mat-menu-item (click)="selectChapter($index)">{{ labels.chapterLabel(group) }}</button>
       }
     </mat-menu>
 
@@ -47,17 +47,17 @@
       <mat-menu #posMenu="matMenu">
         @for (item of chapterPositions; track item.id) {
           <button mat-menu-item (click)="jumpToPosition(item.id)">
-            {{ item.hasTree ? '✓ ' : '' }}{{ positionLabel(item) }}
+            {{ item.hasTree ? '✓ ' : '' }}{{ labels.positionLabel(item) }}
             <span class="calc-opt-meta">
               @if (item.chosenSan) {
                 <span class="calc-opt-choice">★ {{ item.chosenSan }}</span>
               }
               @if (item.secondsSpent) {
-                <span class="calc-opt-time">{{ timeDisplay(item.secondsSpent) }}</span>
+                <span class="calc-opt-time">{{ labels.timeDisplay(item.secondsSpent) }}</span>
               }
               @if (item.grade !== null) {
-                <span class="calc-opt-grade">{{ gradeShortLabel(item.grade) }}</span>
-                <span class="calc-opt-points">{{ scoreDisplay(pointsOf(item), maxPointsPerPosition) }}</span>
+                <span class="calc-opt-grade">{{ labels.gradeShortLabel(item.grade) }}</span>
+                <span class="calc-opt-points">{{ labels.scoreDisplay(labels.pointsOf(item), maxPointsPerPosition) }}</span>
               }
             </span>
           </button>
@@ -90,7 +90,7 @@
     <!-- Anklickbar: wer das Starten vergessen hat, trägt die Kapitelzeit hier nach. -->
     <button type="button" class="calc-timer calc-timer-btn"
             [class.calc-timer--running]="timerRunning" (click)="openTimerDialog()"
-            [matTooltip]="timerTooltip" [attr.aria-label]="timerTooltip">
+            [matTooltip]="labels.timerTooltip" [attr.aria-label]="labels.timerTooltip">
       <mat-icon class="calc-timer-icon">{{ timerRunning ? 'timer' : 'timer_off' }}</mat-icon>
       <span class="calc-timer-time">{{ timerDisplay }}</span>
     </button>
@@ -101,8 +101,8 @@
 
     <!-- Kapitelstand. Die Buchsumme ist interessant, aber nie dringend — sie steht im Tooltip. -->
     <!-- UI-Sweep 2026-10-11 (r2-rp-calc-fullscreen): beschriftet („0 / 24 Punkte“) statt zweier nackter Brüche. -->
-    <span class="calc-bar-points" [matTooltip]="pointsTooltip">
-      {{ 'courses.calcPoints' | translate:{ score: scoreDisplay(totalPoints, totalMaxPoints) } }}
+    <span class="calc-bar-points" [matTooltip]="labels.pointsTooltip">
+      {{ 'courses.calcPoints' | translate:{ score: labels.scoreDisplay(totalPoints, totalMaxPoints) } }}
     </span>
 
     <!-- FEN der aktuellen (Cursor-)Stellung kopieren — immer verfügbar. UI-Sweep z1 (z1-rk-calc-werkzeugzeile):
@@ -238,9 +238,9 @@
         </mat-card>
 
         <!-- Festlegung · Rechenzeit · Ergebnis — Darstellung in CalcResultCardComponent. -->
-        <app-calc-result-card [chosenSan]="review.chosenSan" [positionTime]="positionTimeDisplay"
-          [graded]="review.grade !== null" [gradeLabel]="gradeButtonLabel"
-          [score]="scoreDisplay(positionPoints, maxPointsPerPosition)"
+        <app-calc-result-card [chosenSan]="review.chosenSan" [positionTime]="labels.positionTimeDisplay"
+          [graded]="review.grade !== null" [gradeLabel]="labels.gradeButtonLabel"
+          [score]="labels.scoreDisplay(labels.positionPoints, maxPointsPerPosition)"
           (openGrade)="openGradeDialog()" (analyze)="analyzeCurrentLine()" />
 
         <!-- Werkzeug erscheint am Werkstück: die Symbole wirken auf EINEN ausgewählten Zug.
@@ -255,7 +255,7 @@
 
         <!-- Kapitelende · Bearbeitungs-/Speicherstand · Geräte-Hinweis — Darstellung in CalcStatusPanelComponent. -->
         <app-calc-status-panel [atChapterEnd]="atChapterEnd" [atLastPosition]="atLastPosition"
-          [hasNextChapter]="hasNextChapter" [chapterName]="chapterName" [nextChapterName]="nextChapterName"
+          [hasNextChapter]="hasNextChapter" [chapterName]="labels.chapterName" [nextChapterName]="labels.nextChapterName"
           [doneCount]="doneCount" [positionCount]="positionCount" [saving]="saving" [savedAt]="savedAt"
           [showLocalNotice]="showLocalNotice" [showLocalWarning]="showLocalWarning" [loginReturnUrl]="loginReturnUrl"
           (nextChapter)="goToNextChapter()" (dismissNotice)="dismissLocalNotice()"

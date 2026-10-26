@@ -1064,7 +1064,7 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
 
     // Sonst liefe die Kapitel-Zeit still über die Kapitelgrenze hinweg weiter.
     expect(c.timerRunning).toBeFalse();
-    expect(c.chapterName).toBe('B');
+    expect(c.labels.chapterName).toBe('B');
   });
 
   it('überlebt kein Neuladen: der Laufzustand liegt in KEINEM Speicher', () => {
@@ -1219,7 +1219,7 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
     c.applyGrade(3);
 
     expect(c.review.grade).toBe(3);
-    expect(c.positionPoints).toBe(3);
+    expect(c.labels.positionPoints).toBe(3);
     expect(reviews).toEqual([{ id: 7, patch: { grade: 3 } }]);
     // Die Sprunglisten-Zeile zieht sofort mit (ohne auf den Server zu warten).
     expect(c.positions[0].grade).toBe(3);
@@ -1247,7 +1247,7 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
     c.applyGrade(4);
 
     expect(c.review.grade).toBe(4);
-    expect(c.positionPoints).toBe(4);
+    expect(c.labels.positionPoints).toBe(4);
   });
 
   it('übernimmt die gespeicherte Stufe beim Laden der Stellung', () => {
@@ -1257,7 +1257,7 @@ describe('CalculationComponent Selbstbewertung (Stufen)', () => {
     expect(c.review.grade).toBe(2);
     expect(c.isGrade(2)).toBeTrue();
     expect(c.review.chosenSan).toBe('Nd5');
-    expect(c.positionTimeDisplay).toBe('1:30');
+    expect(c.labels.positionTimeDisplay).toBe('1:30');
   });
 
   it('bietet die fünf Stufen in der Reihenfolge schlecht → gut an', () => {
@@ -1281,13 +1281,13 @@ describe('CalculationComponent Summen mit Maximum', () => {
     });
 
     expect(c.groups.length).toBe(2);
-    expect(c.scoreDisplay(c.groups[0].points, c.groups[0].maxPoints)).toBe('6 / 12');
-    expect(c.scoreDisplay(c.groups[1].points, c.groups[1].maxPoints)).toBe('1 / 4');
+    expect(c.labels.scoreDisplay(c.groups[0].points, c.groups[0].maxPoints)).toBe('6 / 12');
+    expect(c.labels.scoreDisplay(c.groups[1].points, c.groups[1].maxPoints)).toBe('1 / 4');
     // Die große Zahl unter der Liste gehört dem KAPITEL, in dem man steht …
-    expect(c.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('6 / 12');
+    expect(c.labels.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('6 / 12');
     // … die Buchsumme gibt es weiterhin, aber getrennt und beschriftet.
-    expect(c.scoreDisplay(c.bookPoints, c.bookMaxPoints)).toBe('7 / 16');
-    expect(c.chapterLabel(c.groups[0])).toBe('Turmendspiele · calc.review.chapterScore');
+    expect(c.labels.scoreDisplay(c.bookPoints, c.bookMaxPoints)).toBe('7 / 16');
+    expect(c.labels.chapterLabel(c.groups[0])).toBe('Turmendspiele · calc.review.chapterScore');
   });
 
   it('übernimmt die Kapitelzeit des Servers (Feldname `secondsSum`)', () => {
@@ -1300,7 +1300,7 @@ describe('CalculationComponent Summen mit Maximum', () => {
     });
 
     expect(c.groups[0].seconds).toBe(750);
-    expect(c.chapterLabel(c.groups[0])).toBe('K1 · calc.review.chapterSummary');
+    expect(c.labels.chapterLabel(c.groups[0])).toBe('K1 · calc.review.chapterSummary');
   });
 
   it('nimmt die Summen des Servers — bis der Nutzer selbst bewertet', () => {
@@ -1592,9 +1592,9 @@ describe('CalculationComponent Ergebnis-Dialog', () => {
   it('beschriftet den Knopf mit „Ergebnis" bzw. der gewählten Stufe', () => {
     const { component: c } = make();
     load(c);
-    expect(c.gradeButtonLabel).toBe('calc.review.result');
+    expect(c.labels.gradeButtonLabel).toBe('calc.review.result');
     c.applyGrade(2);
-    expect(c.gradeButtonLabel).toBe('calc.review.gradeShort.moveNoMainLine');
+    expect(c.labels.gradeButtonLabel).toBe('calc.review.gradeShort.moveNoMainLine');
   });
 });
 
@@ -1645,7 +1645,7 @@ describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
   it('steigt ohne ?chapter= im ersten Kapitel mit offener Arbeit ein', () => {
     const { component: c } = boot(
       [item(1, { chapter: 'A', hasTree: true }), item(2, { chapter: 'B' })], null);
-    expect(c.chapterName).toBe('B');
+    expect(c.labels.chapterName).toBe('B');
     expect(c.chapterPositions.map(p => p.id)).toEqual([2]);
     // Das ganze Buch bleibt geladen — nur gearbeitet wird kapitelweise.
     expect(c.positions.length).toBe(2);
@@ -1657,7 +1657,7 @@ describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
     const { component: c } = boot(
       [item(1, { chapter: 'Woche 46' }), item(2, { chapter: 'Woche 47' }), item(3, { chapter: 'Woche 46' })],
       'Woche 46');
-    expect(c.chapterName).toBe('Woche 46');
+    expect(c.labels.chapterName).toBe('Woche 46');
     expect(c.chapterPositions.map(p => p.id)).toEqual([1, 3]);
     // Die Summen gehören dem Kapitel — 2 Stellungen à 4 Punkte.
     expect(c.totalMaxPoints).toBe(8);
@@ -1668,7 +1668,7 @@ describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
     const { component: c } = boot([item(1, { chapter: 'KW46' }), item(2, { chapter: 'KW47' })], ' kw46 ');
     expect(c.chapterPositions.map(p => p.id)).toEqual([1]);
     // Angezeigt wird die Schreibweise aus dem BUCH, nicht die aus der URL.
-    expect(c.chapterName).toBe('KW46');
+    expect(c.labels.chapterName).toBe('KW46');
     c.ngOnDestroy();
   });
 
@@ -1678,7 +1678,7 @@ describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
     const { component: c } = boot([
       item(1, { chapter: 'Taktik' }), item(2, { chapter: 'taktik' }), item(3, { chapter: 'Taktik' }),
     ], 'TAKTIK');
-    expect(c.chapterName).toBe('Taktik');
+    expect(c.labels.chapterName).toBe('Taktik');
     expect(c.chapterPositions.map(p => p.id)).toEqual([1, 3]);
     expect(c.groups.length).toBe(2);
     c.ngOnDestroy();
@@ -1686,7 +1686,7 @@ describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
 
   it('behauptet ein unbekanntes Kapitel nicht, sondern steigt normal ein', () => {
     const { component: c } = boot([item(1, { chapter: 'A' }), item(2, { chapter: 'B' })], 'gibt-es-nicht');
-    expect(c.chapterName).toBe('A');
+    expect(c.labels.chapterName).toBe('A');
     expect(c.groups.length).toBe(2);
     c.ngOnDestroy();
   });
@@ -1699,7 +1699,7 @@ describe('CalculationComponent Kapitel-Vorauswahl (?chapter=)', () => {
       },
       { pos: '2' });
     made.component.ngOnInit();
-    expect(made.component.chapterName).toBe('B');
+    expect(made.component.labels.chapterName).toBe('B');
     expect(made.component.position?.id).toBe(2);
     made.component.ngOnDestroy();
   });
@@ -1718,7 +1718,7 @@ describe('CalculationComponent kapitelweises Arbeiten', () => {
 
   it('iteriert NUR innerhalb des Kapitels', () => {
     const { component: c } = twoChapters();
-    expect(c.chapterName).toBe('A');
+    expect(c.labels.chapterName).toBe('A');
     expect(c.chapterPositions.map(p => p.id)).toEqual([1, 2, 3]);
 
     c.nextPosition();
@@ -1736,11 +1736,11 @@ describe('CalculationComponent kapitelweises Arbeiten', () => {
     c.nextPosition(); c.nextPosition();
     expect(c.atChapterEnd).toBeTrue();
     expect(c.hasNextChapter).toBeTrue();
-    expect(c.nextChapterName).toBe('B');
+    expect(c.labels.nextChapterName).toBe('B');
 
     c.goToNextChapter();
 
-    expect(c.chapterName).toBe('B');
+    expect(c.labels.chapterName).toBe('B');
     expect(c.chapterPositions.map(p => p.id)).toEqual([4, 5]);
     expect(c.index).toBe(0);
     expect(c.position?.id).toBe(4);
@@ -1794,7 +1794,7 @@ describe('CalculationComponent kapitelweises Arbeiten', () => {
   it('springt über die Sprungliste auch in ein anderes Kapitel', () => {
     const { component: c } = twoChapters();
     c.jumpToPosition(5);
-    expect(c.chapterName).toBe('B');
+    expect(c.labels.chapterName).toBe('B');
     expect(c.position?.id).toBe(5);
     expect(c.index).toBe(1);
   });
@@ -1815,7 +1815,7 @@ describe('CalculationComponent kapitelweises Arbeiten', () => {
     });
 
     // Kapitel A: 2 Stellungen, davon 1 bearbeitet — nicht „1 von 4" des ganzen Buchs.
-    expect(c.chapterName).toBe('A');
+    expect(c.labels.chapterName).toBe('A');
     expect(c.positionCount).toBe(2);
     expect(c.doneCount).toBe(1);
     // Punkte kommen fertig aus chapters[] (Server), nicht aus einem zweiten Rechenweg.
@@ -1871,7 +1871,7 @@ describe('CalculationComponent kapitelweises Arbeiten', () => {
     expect(c.groups.map(g => g.chapter)).toEqual([null, 'A']);
     expect(c.groups[0].items.map(i => i.id)).toEqual([1, 3]);
     // Ohne Namen steht dort der übersetzte Sammelbegriff, nicht „null".
-    expect(c.chapterName).toBe('courses.noChapter');
+    expect(c.labels.chapterName).toBe('courses.noChapter');
   });
 });
 
@@ -1891,7 +1891,7 @@ describe('CalculationComponent Nummerierung je Kapitel', () => {
   it('nummeriert in JEDEM Kapitel ab 1 — unabhängig von `round`', () => {
     const { component: c } = bookWithGaps();
     c.selectChapter(1);
-    expect(c.chapterPositions.map(p => c.positionLabel(p))).toEqual(['#1', '#2', '#3']);
+    expect(c.chapterPositions.map(p => c.labels.positionLabel(p))).toEqual(['#1', '#2', '#3']);
     // Die Befehlszeile zeigt die Stellung als „1 / 3" — derselbe kapitelweise Zuschnitt.
     expect(`${c.index + 1} / ${c.positionCount}`).toBe('1 / 3');
   });
@@ -1906,7 +1906,7 @@ describe('CalculationComponent Nummerierung je Kapitel', () => {
     const { component: c } = makeWithBook({
       positions: [item(1, { chapter: 'A', round: '7', title: 'Aufgabe X' })],
     });
-    expect(c.positionLabel(c.chapterPositions[0])).toBe('Aufgabe X');
+    expect(c.labels.positionLabel(c.chapterPositions[0])).toBe('Aufgabe X');
   });
 });
 
@@ -1971,10 +1971,10 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
     const second = anonymous();
     expect(second.component.positions[0].hasTree).toBeTrue();
     // Kapitel KW46 ist durch → der Einstieg liegt im ersten Kapitel mit offener Arbeit (KW47).
-    expect(second.component.chapterName).toBe('KW47');
+    expect(second.component.labels.chapterName).toBe('KW47');
     // Der Sprung zurück wechselt auch das Kapitel; der Baum ist noch da.
     second.component.jumpToPosition(11);
-    expect(second.component.chapterName).toBe('KW46');
+    expect(second.component.labels.chapterName).toBe('KW46');
     expect(second.component.position?.treeJson).toContain('Bxf7');
     second.component.ngOnDestroy();
   });
@@ -1982,7 +1982,7 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
   it('wählt auch anonym das Kapitel aus der Kurz-URL vor', () => {
     const { component: c } = anonymous('KW47');
     expect(c.chapterPositions.map(p => p.id)).toEqual([12]);
-    expect(c.chapterName).toBe('KW47');
+    expect(c.labels.chapterName).toBe('KW47');
     // Das ganze (öffentliche) Buch bleibt geladen — der Wechsel ins andere Kapitel geht weiter.
     expect(c.groups.length).toBe(2);
     c.ngOnDestroy();
@@ -2159,12 +2159,12 @@ describe('CalculationComponent entrümpelte Ansicht', () => {
       points: 6, maxPoints: 12, secondsSum: 0,
     });
     // Sichtbar bleibt das KAPITEL; das Buch steht in der Erklärung daneben.
-    expect(c.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('4 / 8');
-    expect(c.scoreDisplay(c.bookPoints, c.bookMaxPoints)).toBe('6 / 12');
+    expect(c.labels.scoreDisplay(c.totalPoints, c.totalMaxPoints)).toBe('4 / 8');
+    expect(c.labels.scoreDisplay(c.bookPoints, c.bookMaxPoints)).toBe('6 / 12');
     // Die Attrappe für Übersetzungen gibt nur den Schlüssel zurück — prüfbar ist damit, dass die
     // Erklärung BEIDES zusammenfasst: den Kapitel-Hinweis und die Buchsumme.
-    expect(c.pointsTooltip).toContain('calc.review.totalPointsChapterHint');
-    expect(c.pointsTooltip).toContain('calc.review.bookPoints');
+    expect(c.labels.pointsTooltip).toContain('calc.review.totalPointsChapterHint');
+    expect(c.labels.pointsTooltip).toContain('calc.review.bookPoints');
   });
 });
 
@@ -2362,11 +2362,11 @@ describe('CalculationComponent Sprache der Kurs-Kommentare', () => {
       item(3, { chapter: 'Week 2' }),
     ] });
     expect(component.groups.map(g => [g.chapter, g.label])).toEqual([['Week 1', 'Woche 1'], ['Week 2', 'Week 2']]);
-    expect(component.chapterName).toBe('Woche 1');
-    expect(component.nextChapterName).toBe('Week 2');
-    expect(component.positionLabel(component.groups[0].items[0])).toBe('Aufgabe');
-    expect(component.positionLabel(component.groups[0].items[1])).toBe('#2');
-    expect(component.chapterLabel(component.groups[0])).toContain('Woche 1');
+    expect(component.labels.chapterName).toBe('Woche 1');
+    expect(component.labels.nextChapterName).toBe('Week 2');
+    expect(component.labels.positionLabel(component.groups[0].items[0])).toBe('Aufgabe');
+    expect(component.labels.positionLabel(component.groups[0].items[1])).toBe('#2');
+    expect(component.labels.chapterLabel(component.groups[0])).toContain('Woche 1');
   });
 
   it('Sprachwechsel tauscht nur die Texte — der Analysebaum bleibt', () => {
