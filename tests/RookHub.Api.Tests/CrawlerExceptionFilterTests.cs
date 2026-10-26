@@ -85,4 +85,39 @@ public class CrawlerExceptionFilterTests
         Assert.IsType<EmptyResult>(ctx.Result);
         Assert.DoesNotContain(log.Events, e => e.Level >= Microsoft.Extensions.Logging.LogLevel.Warning);
     }
+
+    // ---- I2-003: 401/503 des Crawlers ohne Upstream-Text an Anonyme ----
+
+    private static async Task<ObjectResult> RunAsAsync(Exception ex, bool signedIn)
+    {
+        var http = new DefaultHttpContext();
+        if (signedIn)
+            http.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "5")], "Test"));
+        var actionContext = new ActionContext(http, new RouteData(), new ActionDescriptor());
+        var ctx = new ExceptionContext(actionContext, new List<IFilterMetadata>()) { Exception = ex };
+        await new CrawlerExceptionFilter(NullLogger<CrawlerExceptionFilter>.Instance).OnExceptionAsync(ctx);
+        return Assert.IsType<ObjectResult>(ctx.Result);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, 401)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, 503)]
+    public async Task UnauthorizedAndUnavailable_ToAnonymous_CarryANeutralMessage(HttpStatusCode crawlerStatus, int expected)
+    {
+        var result = await RunAsAsync(new CrawlerRequestException(crawlerStatus, "{\"message\":\"Invalid or missing API key.\"}"), signedIn: false);
+
+        Assert.Equal(expected, result.StatusCode);
+        var json = System.Text.Json.JsonSerializer.Serialize(result.Value);
+        Assert.DoesNotContain("API key", json);
+        Assert.Contains("Crawler service unavailable.", json);
+    }
+
+    [Fact]
+    public async Task Unavailable_ToSignedInUser_KeepsTheCrawlerBody()
+    {
+        var result = await RunAsAsync(new CrawlerRequestException(HttpStatusCode.ServiceUnavailable, "{\"message\":\"busy\"}"), signedIn: true);
+        Assert.Equal(503, result.StatusCode);
+        Assert.Contains("busy", System.Text.Json.JsonSerializer.Serialize(result.Value));
+    }
 }

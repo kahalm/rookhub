@@ -27,7 +27,13 @@ public class CrawlerExceptionFilter : IAsyncExceptionFilter
             // pauschal als 502 zu maskieren). Nur uneindeutige 5xx (500/501/…) werden auf 502 normalisiert.
             var passThrough = (statusCode >= 400 && statusCode < 500)
                 || statusCode is 502 or 503 or 504;
-            if (passThrough)
+            if (passThrough && statusCode is 401 or 503 && context.HttpContext.User.Identity?.IsAuthenticated != true)
+            {
+                // 401 (Schlüssel fehlt/falsch) und 503 (überlastet) sagen einem anonymen Aufrufer nichts, der Crawler-Text
+                // („Invalid or missing API key.“) verrät aber die Betriebslage — neutral antworten, Status bleibt (I2-003).
+                context.Result = new ObjectResult(new { message = "Crawler service unavailable." }) { StatusCode = statusCode };
+            }
+            else if (passThrough)
             {
                 object body;
                 try

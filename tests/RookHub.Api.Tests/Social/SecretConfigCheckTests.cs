@@ -170,6 +170,42 @@ public class SecretConfigCheckTests
         Assert.Contains("503", entry.Message);
     }
 
+    /// <summary>I2-003: Leerer Satelliten-Schlüssel bei gesetzter Adresse — der Header fehlt dann still, der Satellit
+    /// antwortet 401, und beim Start sagte es niemand.</summary>
+    [Theory]
+    [InlineData("Crawler:BaseUrl", "http://crawler:8080", "Crawler:ApiKey")]
+    [InlineData("Chessable:ApiUrl", "http://piratechess-api:8080", "Chessable:ServiceKey")]
+    public void LogStartupFindings_meldetLeerenSatellitenSchluessel_wennDieAdresseGesetztIst(string urlKey, string url, string keyKey)
+    {
+        var log = new CapturingLogger<SecretConfigCheckTests>();
+
+        SecretConfigCheck.LogStartupFindings(Config(new()
+        {
+            ["SchachBot:StatsSecret"] = "echtes-stats-secret-1234567890",
+            [urlKey] = url,
+            [keyKey] = "",
+        }), log);
+
+        var entry = Assert.Single(log.Events);
+        Assert.Equal(LogLevel.Error, entry.Level);
+        Assert.Equal(keyKey, entry.State["ConfigKey"]);
+    }
+
+    [Fact]
+    public void LogStartupFindings_leererSatellitenSchluessel_ohneAdresse_oderChessableAus_schweigt()
+    {
+        var log = new CapturingLogger<SecretConfigCheckTests>();
+
+        SecretConfigCheck.LogStartupFindings(Config(new()
+        {
+            ["SchachBot:StatsSecret"] = "echtes-stats-secret-1234567890",
+            ["Chessable:Enabled"] = "false",
+            ["Chessable:ApiUrl"] = "http://piratechess-api:8080",
+        }), log);
+
+        Assert.Empty(log.Events);
+    }
+
     [Fact]
     public void BotSignatur_mitPlatzhalterSecret_giltAlsUngueltig()
     {

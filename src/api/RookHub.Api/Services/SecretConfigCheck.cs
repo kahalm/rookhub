@@ -50,6 +50,14 @@ public static class SecretConfigCheck
         ["SchachBot:WebhookSecret"] = "der Schach-Bot",
     };
 
+    /// <summary>Schlüssel, die RookHub an einen Satelliten schickt: (Schlüssel, Adresse, Gegenstelle). Leer bei gesetzter
+    /// Adresse ist ein Konfigurationsfehler (I2-003); Chessable nur, solange <c>Chessable:Enabled</c> an ist.</summary>
+    private static readonly (string Key, string UrlKey, string Peer)[] SatelliteKeys =
+    [
+        ("Crawler:ApiKey", "Crawler:BaseUrl", "der Crawler"),
+        ("Chessable:ServiceKey", "Chessable:ApiUrl", "piratechess"),
+    ];
+
     /// <summary>
     /// Ist <paramref name="value"/> ein Platzhalter aus den Beispielen? Leer ist KEIN Platzhalter (das
     /// entscheidet jede Stelle selbst, meist „Feature aus"). Erkannt werden die Präfixe
@@ -85,8 +93,8 @@ public static class SecretConfigCheck
         }
     }
 
-    /// <summary>Jeden Platzhalter-Fund einmal beim Start auf Error melden, samt Folge; dazu eine Warnung bei
-    /// leerem <c>SchachBot:StatsSecret</c>.</summary>
+    /// <summary>Jeden Platzhalter-Fund einmal beim Start auf Error melden, samt Folge; dazu Error bei leerem
+    /// Satelliten-Schlüssel mit gesetzter Adresse und eine Warnung bei leerem <c>SchachBot:StatsSecret</c>.</summary>
     public static void LogStartupFindings(IConfiguration config, ILogger logger)
     {
         foreach (var (key, envName) in CryptoKeys)
@@ -106,6 +114,17 @@ public static class SecretConfigCheck
                 logger.LogError(
                     "Startprüfung: {ConfigKey} ist ein Platzhalter aus den Beispiel-Dateien — {Effect}",
                     key, $"{peer} nimmt ihn als gültigen Schlüssel an; in beiden Stacks einen echten Wert setzen");
+
+        // Leerer Satelliten-Schlüssel bei gesetzter Adresse (I2-003): der Header fehlt dann still, Crawler bzw.
+        // piratechess antworten 401 — beim Start sagte es bisher niemand (der Platzhalter-Fall oben schon).
+        foreach (var (key, urlKey, peer) in SatelliteKeys)
+        {
+            if (string.IsNullOrWhiteSpace(config[urlKey]) || !string.IsNullOrWhiteSpace(config[key])) continue;
+            if (key == "Chessable:ServiceKey" && !Chessable.ChessableSwitch.IsEnabled(config)) continue;
+            logger.LogError(
+                "Startprüfung: {ConfigKey} ist leer — {Effect}",
+                key, $"{urlKey} ist gesetzt, {peer} weist die Aufrufe ohne Schlüssel mit 401 ab; den Wert aus dessen .env übernehmen");
+        }
 
         // Leeres Bot-Stats-Geheimnis: /api/bot/player-progress antwortet 503 not-configured, und der Bot
         // pausiert die Motivations-DMs. Das ist legitim (Installation ohne Bot), aber im Betrieb meist ein
