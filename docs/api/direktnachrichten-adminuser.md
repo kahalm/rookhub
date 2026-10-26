@@ -23,3 +23,5 @@ Rate-Limit `user-message` (10/min je Konto) — ein gemeinsamer Topf für `POST 
 `POST /api/tournament-directory/{id}/report` und `POST /api/tournament-directory/suggest-source` (gleicher Kanal).
 Die Admin-Glocke ist je Thread entprellt, aber nur INNERHALB einer ungelesenen Serie: liegt im Thread schon eine andere
 ungelesene User-Nachricht, gibt es keine neue Glocke; nach dem Lesen klingelt die nächste wieder.
+
+**Frist (O-7, 2026-10-25):** gelesene Nachrichten älter als `Retention:MessagesDays` (365 Tage) löscht der tägliche Aufräumlauf (`AdminMessageRetention`); ungelesene bleiben. Übersicht: [speicherdauer.md](speicherdauer.md).

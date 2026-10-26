@@ -124,6 +124,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Eigener Engine-Broker (0.537.0) — der Provider spricht direkt mit RookHub → `docs/api/eigener-engine-broker.md`
 - Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist" → `docs/api/hintergrund-analyseauftraege.md`
 - Hintergrundjobs pausieren (Admin) — ein Schalter für alle pausierbaren Hintergrunddienste, ohne Neustart → `docs/api/hintergrundjobs-pause.md`
+- Speicherdauer — alle Aufbewahrungsfristen je Datenart, Aufräumlauf und `Retention:*`-Schlüssel → `docs/api/speicherdauer.md`
 - Analyse-Verlauf + Sterne (0.603.0, auth) → `docs/api/analyse-verlauf-sterne.md`
 - Maia-Sparring im Analysebrett (0.632.0) → `docs/api/maia-sparring-im-analysebrett.md`
 - Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?" → `docs/api/zuege-vergleichen.md`
