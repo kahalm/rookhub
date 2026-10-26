@@ -1,9 +1,10 @@
 name: Changelog → Discord
 
-# Postet neue changelog.ts-Einträge (deutscher Text) in den Discord-Changelog-
-# Channel — als silent messages, ohne Push-Benachrichtigungen. Deckt den ganzen
-# Stack ab (RookHub + Crawler + piratechess + log-watcher + RepCheck), weil
-# changelog.ts die Single Source of Truth für alle Repos ist.
+# Postet neue Changelog-Einträge (changelog-data.ts, deutscher Text) in den Discord-
+# Changelog-Channel — als silent messages, ohne Push-Benachrichtigungen. Erfasst nur,
+# was hier eingetragen wird: RookHub selbst und die Satelliten-Änderungen, die per
+# Hausregel mitgeführt werden (v. a. Crawler). Repos mit eigener Versionierung
+# (RepCheck, piratechess, log-watcher) stehen nur drin, wenn jemand sie nachträgt.
 # workflow_dispatch postet den neuesten Eintrag (manueller Test/Nachreichen).
 
 on:
