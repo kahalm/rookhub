@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { tn } from '../core/league-format';
-import { LineupBoard, LineupMatch, LineupsApiService, MovesKey, RoundLineups, points } from '../core/lineups';
+import { GameMarkers, LineupBoard, LineupMatch, LineupsApiService, MovesKey, RoundLineups, points } from '../core/lineups';
 import { BoardMovesComponent } from './board-moves.component';
 import { BoardGameComponent } from './board-game.component';
 import { ownsTeam } from '../core/club-context.service';
@@ -17,6 +17,8 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
  * Seit 0.838.0 (Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein") auch OHNE
  * Anmeldung über einen Teilen-Link (`shareToken`): Liga und Runde bestimmt der Server, nichts ist beschreibbar, die Spielerkarte
  * öffnet nur für die Meldeliste des Links (`coveredFides`), „Nachspielen" nur an der geteilten Begegnung (`shareTeam`).
+ * Seit 0.850.0 (Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut") angemeldet dieselben
+ * Marker „◆ n"/„!! n" an den Vereinspartien wie in der Vereinsübersicht (`GameMarkers`).
  */
 @Component({
   selector: 'lh-round-lineups',
@@ -62,7 +64,8 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
                     @if (b.game; as g) {
                       <span class="lu-moves">
                         <lh-board-game [game]="g" [tnr]="d.tnr" [round]="d.round" [team]="m.home" [board]="b.board"
-                                       [title]="boardTitle(b)" [flipped]="ownIsBlack(m, b)" [shareToken]="shareToken()" [shared]="isShared(m)" />
+                                       [title]="boardTitle(b)" [flipped]="ownIsBlack(m, b)" [shareToken]="shareToken()" [shared]="isShared(m)"
+                                       [markCount]="markers.markCount(b)" [brilliantCount]="markers.brilliantCount(b)" />
                         @if (b.moves) {
                           <lh-board-moves [key]="key(d, m, b)" [title]="boardTitle(b)" [initial]="b.moves" [replaced]="true"
                                           [canDelete]="!!b.canDeleteMoves" />
@@ -126,6 +129,8 @@ export class RoundLineupsComponent {
   readonly coveredFides = input<readonly string[] | null>(null);
 
   readonly data = signal<RoundLineups | null>(null);
+  /** „◆ n"/„!! n" an den Vereinspartien wie in der Vereinsübersicht (0.850.0) — nur angemeldet, nicht über einen Teilen-Link. */
+  readonly markers = new GameMarkers(this.api);
   readonly error = signal<string | null>(null);
   private loadedFor = '';
   readonly tn = tn;
@@ -147,11 +152,14 @@ export class RoundLineupsComponent {
     const tnr = this.tnr(), round = this.round(), token = this.shareToken(), key = this.loadKey();
     this.loadedFor = key;
     this.data.set(null);
+    this.markers.clear();
     this.error.set(null);
     if (!token && (tnr == null || round == null)) return;
     try {
       const d = token ? await this.api.lineups(null, null, token) : await this.api.lineups(tnr, round);
-      if (this.loadedFor === key) this.data.set(d);
+      if (this.loadedFor !== key) return;
+      this.data.set(d);
+      if (!token) void this.markers.load(GameMarkers.idsOf(d.matches));
     } catch (err) {
       if (this.loadedFor !== key) return;
       const s = err instanceof HttpErrorResponse ? err.status : 0;

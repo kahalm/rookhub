@@ -66,6 +66,9 @@ public class ClubGameMarksTests : IDisposable
         var counts = await marks.CountsAsync([g.Id, g.Id + 99]);
         Assert.Equal(3, counts[g.Id]);
         Assert.False(counts.ContainsKey(g.Id + 99));
+        // 0.850.0: Ids vom Aufrufer (Aufstellungen einer Runde) — nur Partien des eigenen Vereins
+        Assert.Equal(3, (await marks.CountsForClubAsync(TestClubs.Home, [g.Id]))[g.Id]);
+        Assert.Empty(await marks.CountsForClubAsync(TestClubs.Other, [g.Id]));
     }
 
     [Fact]

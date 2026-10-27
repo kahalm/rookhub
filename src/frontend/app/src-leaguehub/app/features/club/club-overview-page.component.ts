@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
-import { ClubOverview, LineupBoard, LineupMatch, LineupsApiService, brilliantMoves, points } from '../../core/lineups';
+import { ClubOverview, GameMarkers, LineupBoard, LineupMatch, LineupsApiService, points } from '../../core/lineups';
 import { tn } from '../../core/league-format';
 import { ownsTeam, ClubContextService } from '../../core/club-context.service';
 import { BoardGameComponent } from '../../shared/board-game.component';
@@ -123,12 +123,13 @@ export class ClubOverviewPageComponent implements OnInit {
   readonly onlyMarked = signal(false);
   readonly tn = tn;
   readonly pts = points;
-  /** Brillante Züge je Vereinspartie (Id → Zahl), füllt sich nach der Übersicht paketweise. */
-  readonly brilliant = signal<Record<number, number>>({});
+  /** „◆"/„!!" je Partie (`GameMarkers`, 0.850.0 geteilt mit den Aufstellungen einer Runde); „!!" füllt sich paketweise. */
+  readonly markers = new GameMarkers(this.api);
   /** Partien mit markierter Stellung oder „!!" — Zahl hinter dem Filter. */
   readonly markedTotal = computed(() => {
-    const ids = new Set(Object.entries(this.data()?.marks ?? {}).filter(([, n]) => n > 0).map(([id]) => Number(id)));
-    for (const [id, n] of Object.entries(this.brilliant())) if (n > 0) ids.add(Number(id));
+    const ids = new Set<number>();
+    for (const counts of [this.markers.marks(), this.markers.brilliant()])
+      for (const [id, n] of Object.entries(counts)) if (n > 0) ids.add(Number(id));
     return ids.size;
   });
 
@@ -141,7 +142,7 @@ export class ClubOverviewPageComponent implements OnInit {
     try {
       const d = await this.api.overview();
       this.data.set(d);
-      void this.loadBrilliant(d);
+      void this.markers.load(GameMarkers.idsOf(d.leagues.flatMap(l => l.rounds.flatMap(r => r.matches))), d.marks);
     } catch (err) {
       const s = err instanceof HttpErrorResponse ? err.status : 0;
       this.error.set(s === 403 ? 'Die Vereinsübersicht ist für dein Konto nicht freigeschaltet.'
@@ -149,28 +150,12 @@ export class ClubOverviewPageComponent implements OnInit {
     }
   }
 
-  /** „!!" nachrechnen — Pakete zu 60 Partien, nacheinander; ein Fehler kostet nur die Marker seines Pakets. */
-  private async loadBrilliant(d: ClubOverview): Promise<void> {
-    const ids = [...new Set(d.leagues.flatMap(l => l.rounds.flatMap(r => r.matches.flatMap(m => m.boards)))
-      .map(b => b.game?.clubGameId).filter((id): id is number => !!id))];
-    for (let i = 0; i < ids.length; i += 60) {
-      let got: Awaited<ReturnType<LineupsApiService['clubGameReviews']>>;
-      try { got = await this.api.clubGameReviews(ids.slice(i, i + 60)); } catch { continue; }
-      if (this.data() !== d) return;
-      const add: Record<number, number> = {};
-      for (const [id, r] of Object.entries(got)) add[Number(id)] = brilliantMoves(r.pgn, r.evals);
-      this.brilliant.update(cur => ({ ...cur, ...add }));
-    }
+  markCount(b: LineupBoard): number {
+    return this.markers.markCount(b);
   }
 
   brilliantCount(b: LineupBoard): number {
-    const id = b.game?.clubGameId;
-    return id ? this.brilliant()[id] ?? 0 : 0;
-  }
-
-  markCount(b: LineupBoard): number {
-    const id = b.game?.clubGameId;
-    return id ? this.data()?.marks[String(id)] ?? 0 : 0;
+    return this.markers.brilliantCount(b);
   }
 
   /** Mit Filter nur Bretter, deren Partie markierte Stellungen oder „!!" hat. */

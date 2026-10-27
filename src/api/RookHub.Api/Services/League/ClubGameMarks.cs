@@ -42,6 +42,19 @@ public sealed class ClubGameMarks(AppDbContext db)
             .GroupBy(x => x.Game).ToDictionary(g => g.Key, g => g.Count());
     }
 
+    /// <summary>Höchstzahl Partien je <see cref="CountsForClubAsync"/>-Aufruf.</summary>
+    public const int MaxCountIds = 200;
+
+    /// <summary>Wie <see cref="CountsAsync"/>, aber nur für Partien DIESES Vereins (0.850.0, Marker in den Aufstellungen einer
+    /// Runde — die Ids kommen dort vom Aufrufer); fremde und unbekannte Ids fehlen.</summary>
+    public async Task<Dictionary<int, int>> CountsForClubAsync(LeagueClub club, IReadOnlyCollection<int> clubGameIds, CancellationToken ct = default)
+    {
+        if (clubGameIds.Count == 0) return new();
+        var own = await db.LeagueClubGames.AsNoTracking().Where(g => g.ClubId == club.Id && clubGameIds.Contains(g.Id))
+            .Select(g => g.Id).ToListAsync(ct);
+        return await CountsAsync(own, ct);
+    }
+
     /// <summary>Die interessanten Stellungen EINER Vereinspartie des Vereins, in Partiereihenfolge (Hauptlinie nach Halbzug,
     /// Varianten nach Abzweig, ohne Ort zuletzt). <c>null</c> = keine Partie dieses Vereins.</summary>
     public async Task<List<Mark>?> ForGameAsync(LeagueClub club, int clubGameId, CancellationToken ct = default)

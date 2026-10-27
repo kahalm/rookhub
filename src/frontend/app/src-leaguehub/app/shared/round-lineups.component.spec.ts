@@ -42,8 +42,11 @@ describe('RoundLineupsComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'clubGameMarks', 'fixturePgn']);
+    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'deleteMoves', 'clubGame', 'clubGameMarks',
+      'clubGameMarkCounts', 'clubGameReviews', 'fixturePgn']);
     api.lineups.and.resolveTo(DATA);
+    api.clubGameMarkCounts.and.resolveTo({});
+    api.clubGameReviews.and.resolveTo({});
     TestBed.configureTestingModule({ imports: [RoundLineupsComponent], providers: [{ provide: LineupsApiService, useValue: api },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
       { provide: PLAYER_CARD_API, useValue: jasmine.createSpyObj('PlayerCardApi', ['card']) },
@@ -139,6 +142,26 @@ describe('RoundLineupsComponent', () => {
     expect(boards[2].querySelector('.bg-edit')).toBeNull();
   });
 
+  // 0.850.0, Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut"
+  it('zeigt „◆ n" und „!! n" an den Vereinspartien der Runde wie die Vereinsübersicht', async () => {
+    api.lineups.and.resolveTo(withGames());
+    api.clubGameMarkCounts.and.resolveTo({ '168': 2 });
+    // 7.Lxh7+ opfert den Läufer, Bestzug, Zweitbester +0,50 → brillant
+    api.clubGameReviews.and.resolveTo({ '168': {
+      pgn: '[SetUp "1"]\n[FEN "rnbq1rk1/pppnbppp/4p3/3pP3/3P4/2NB1N2/PPP2PPP/R1BQK2R w KQ - 5 7"]\n\n7. Bxh7+ *\n',
+      evals: { status: 'done', analyzed: 1, total: 1, targetDepth: 20, final: { cp: 150 },
+        plies: [{ ply: 0, cp: 150, depth: 20, bestUci: 'd3h7', playedUci: 'd3h7', playedCp: 150, secondCp: 50 }] } } });
+    const el = await render();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.clubGameMarkCounts).toHaveBeenCalledOnceWith([168]);   // nur Vereinspartien
+    expect(api.clubGameReviews).toHaveBeenCalledOnceWith([168]);
+    const boards = el.querySelectorAll('.lu-board');
+    expect(boards[0].querySelector('.bg-marks')?.textContent).toContain('◆ 2');
+    expect(boards[0].querySelector('.bg-brilliant')?.textContent).toContain('!! 1');
+    expect(boards[2].querySelector('.bg-marks')).toBeNull();
+  });
+
   it('Nachspielen holt das PGN: Vereinspartie über den Club-Endpunkt, Spielerkarte über …/games?team=', async () => {
     api.lineups.and.resolveTo(withGames());
     api.clubGame.and.resolveTo({ pgn: PGN, analysis: { status: 'done' } });
@@ -183,6 +206,8 @@ describe('RoundLineupsComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(api.lineups).toHaveBeenCalledWith(null, null, 'TOK');
+    expect(api.clubGameMarkCounts).not.toHaveBeenCalled();   // Marker nur angemeldet
+    expect(api.clubGameReviews).not.toHaveBeenCalled();
     expect(el.querySelectorAll('.lu-match').length).toBe(3);
     expect(el.querySelector('.bm-edit')).toBeNull();
     expect(el.querySelector('.bm-del')).toBeNull();

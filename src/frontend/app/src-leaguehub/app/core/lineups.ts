@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Chess } from 'chess.js';
@@ -81,6 +81,65 @@ export function brilliantMoves(pgn: string, evals: GameEvals): number {
   return r.white.counts.brilliant + r.black.counts.brilliant;
 }
 
+/**
+ * „◆ n" (markierte Stellungen) und „!! n" (brillante Züge) je Vereinspartie — geteilt von der Vereinsübersicht und den
+ * Aufstellungen einer Runde (0.850.0, Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut").
+ * `load` holt die Zahlen in Paketen nach; ein neuer `load` verwirft späte Antworten des vorigen. Nur angemeldet (`league.view`).
+ */
+export class GameMarkers {
+  readonly marks = signal<Record<number, number>>({});
+  readonly brilliant = signal<Record<number, number>>({});
+  private run = 0;
+
+  constructor(private readonly api: LineupsApiService) {}
+
+  /** Die Vereinspartien aller Bretter. */
+  static idsOf(matches: readonly LineupMatch[]): number[] {
+    return [...new Set(matches.flatMap(m => m.boards).map(b => b.game?.clubGameId).filter((id): id is number => !!id))];
+  }
+
+  /** `marks` schon bekannt (Übersicht) → nur „!!" nachladen. */
+  async load(ids: readonly number[], marks?: Record<string, number>): Promise<void> {
+    const run = ++this.run;
+    this.marks.set(marks ? Object.fromEntries(Object.entries(marks).map(([k, v]) => [Number(k), v])) : {});
+    this.brilliant.set({});
+    if (!marks) {
+      for (let i = 0; i < ids.length; i += 200) {
+        try {
+          const got = await this.api.clubGameMarkCounts(ids.slice(i, i + 200));
+          if (run !== this.run) return;
+          this.marks.update(cur => ({ ...cur, ...Object.fromEntries(Object.entries(got).map(([k, v]) => [Number(k), v])) }));
+        } catch { /* ohne Marker weiter */ }
+      }
+    }
+    for (let i = 0; i < ids.length; i += 60) {
+      let got: Record<string, { pgn: string; evals: GameEvals }>;
+      try { got = await this.api.clubGameReviews(ids.slice(i, i + 60)); } catch { continue; }
+      if (run !== this.run) return;
+      const add: Record<number, number> = {};
+      for (const [id, r] of Object.entries(got)) add[Number(id)] = brilliantMoves(r.pgn, r.evals);
+      this.brilliant.update(cur => ({ ...cur, ...add }));
+    }
+  }
+
+  /** Verwirft laufende Antworten und leert die Marker (z. B. über einen Teilen-Link). */
+  clear(): void {
+    this.run++;
+    this.marks.set({});
+    this.brilliant.set({});
+  }
+
+  markCount(b: LineupBoard): number {
+    const id = b.game?.clubGameId;
+    return id ? this.marks()[id] ?? 0 : 0;
+  }
+
+  brilliantCount(b: LineupBoard): number {
+    const id = b.game?.clubGameId;
+    return id ? this.brilliant()[id] ?? 0 : 0;
+  }
+}
+
 /** Schlüssel einer Partie: Liga, Runde, Begegnung, Brett. */
 export interface MovesKey { tnr: number; round: number; matchNo: number; board: number }
 
@@ -128,6 +187,11 @@ export class LineupsApiService {
   clubGameReviews(ids: readonly number[]): Promise<Record<string, { pgn: string; evals: GameEvals }>> {
     return firstValueFrom(this.http.get<Record<string, { pgn: string; evals: GameEvals }>>(
       `/api/league/club/games/reviews?ids=${ids.join(',')}`));
+  }
+
+  /** Zahl der markierten Stellungen je Vereinspartie unter `ids` (höchstens 200, 0.850.0) — für die „◆"-Marker einer Runde. */
+  clubGameMarkCounts(ids: readonly number[]): Promise<Record<string, number>> {
+    return firstValueFrom(this.http.get<Record<string, number>>(`/api/league/club/games/marks?ids=${ids.join(',')}`));
   }
 
   /** PGN einer Vereinspartie samt Stand der Analyse (wie die Vereinsliste, `league.view`, Verein über `?club=`). */

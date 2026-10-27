@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.850.0", date: "2026-10-27", changes: [
+    { en: "LeagueHub: the markers ◆ n (interesting positions) and !! n (brilliant moves) now also appear in „All line-ups“ of a round, at every game that is there – not only in the club overview. Signed in only; not via a share link.", de: "LeagueHub: Die Marker ◆ n (interessante Stellungen) und !! n (brillante Züge) stehen jetzt auch in „Alle Aufstellungen“ einer Runde an jeder vorhandenen Partie – nicht nur in der Vereinsübersicht. Nur angemeldet, nicht über einen Teilen-Link." },
+  ] },
   { version: "0.849.0", date: "2026-10-27", changes: [
     { en: "LeagueHub club overview: next to the ◆ marker for interesting positions, games now also show „!! n“ for brilliant moves – the same move classes as RookHub’s game review, calculated from the engine analysis (only analysed games). The filter is now called „Only with interesting positions or !!“ and keeps both.", de: "LeagueHub-Vereinsübersicht: Neben dem Marker ◆ für interessante Stellungen zeigen Partien jetzt auch „!! n“ für brillante Züge – dieselben Zug-Klassen wie im Partie-Rückblick von RookHub, gerechnet aus der Engine-Analyse (nur analysierte Partien). Der Filter heißt jetzt „Nur mit interessanten Stellungen oder !!“ und behält beide." },
   ] },

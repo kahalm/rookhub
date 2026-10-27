@@ -44,9 +44,24 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
     [HasPermission(Permissions.LeagueView)]
     public Task<IActionResult> Reviews([FromQuery] string? ids, CancellationToken ct) => WithClubAsync(ct, async c =>
     {
-        var list = (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();
+        var list = IdList(ids);
         if (list.Count > ClubGameReader.MaxReviewInputs) return BadRequest(new { error = "tooMany" });
         return Ok(await club.ReviewInputsAsync(c, list, ct));
     });
+
+    /// <summary>Zahl der markierten Stellungen je Vereinspartie unter <c>?ids=1,2,…</c> (höchstens
+    /// <see cref="ClubGameMarks.MaxCountIds"/>) → <c>{ clubGameId: n }</c>, für die „◆"-Marker in den Aufstellungen einer Runde
+    /// (0.850.0). Ohne Markierung, fremd oder unbekannt fehlt die Id; 400 bei zu vielen Ids.</summary>
+    [HttpGet("games/marks")]
+    [HasPermission(Permissions.LeagueView)]
+    public Task<IActionResult> MarkCounts([FromQuery] string? ids, CancellationToken ct) => WithClubAsync(ct, async c =>
+    {
+        var list = IdList(ids);
+        if (list.Count > ClubGameMarks.MaxCountIds) return BadRequest(new { error = "tooMany" });
+        return Ok(await marks.CountsForClubAsync(c, list, ct));
+    });
+
+    private static List<int> IdList(string? ids) =>
+        (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();
 }
