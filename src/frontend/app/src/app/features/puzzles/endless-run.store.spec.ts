@@ -79,6 +79,8 @@ function apply(h: Harness, step: Step): void {
 }
 
 describe('EndlessRunStore Übergänge (Tabelle)', () => {
+  // Das Aufzeichnen merkt die Server-Id (9) in sessionStorage — wegräumen, sonst liest sie ein anderer Spec.
+  afterEach(() => { sessionStorage.removeItem('rookhub_endless_pending_sid'); sessionStorage.removeItem('rookhub_endless_gameover'); });
   const CASES: { name: string; steps: Step[]; want: { lives: number; solved: number; chainIndex: number; level: number; last?: EndlessRunScreen; recorded: number } }[] = [
     { name: 'Start lädt Puzzle 0', steps: ['start'],
       want: { lives: 3, solved: 0, chainIndex: 0, level: 0, last: 'LOADING', recorded: 0 } },
@@ -111,6 +113,8 @@ describe('EndlessRunStore Übergänge (Tabelle)', () => {
 });
 
 describe('EndlessRunStore', () => {
+  // Das Aufzeichnen merkt die Server-Id (9) in sessionStorage — wegräumen, sonst liest sie ein anderer Spec.
+  afterEach(() => { sessionStorage.removeItem('rookhub_endless_pending_sid'); sessionStorage.removeItem('rookhub_endless_gameover'); });
   it('Spielstand nach einem Ergebnis zeigt aufs NÄCHSTE Puzzle; bei 0 Leben wird er geräumt', () => {
     const h = makeStore();
     h.run.start();

@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.860.2", date: "2026-10-27", changes: [
+    { en: "Tests: the endless-mode specs clear the remembered session id in the browser session storage, so a test no longer depends on the random order (tag build v0.860.1 was red).", de: "Tests: Die Specs des Endlos-Modus räumen die gemerkte Sitzungs-Id im Sitzungsspeicher des Browsers weg, damit kein Test mehr von der zufälligen Reihenfolge abhängt (Tag-Build v0.860.1 war rot)." },
+  ] },
   { version: "0.860.1", date: "2026-10-27", changes: [
     { en: "Without engine, after switching the engine on: the evaluation now stands behind every move of your lines in the move list (also in variations), and moves that missed the best one carry a coloured ?!, ? or ?? with the better move as tooltip. The long list above the board is gone — only the counts remain.", de: "Ohne Engine, nach dem Einschalten: die Bewertung steht jetzt hinter jedem Zug deiner Linien in der Zugliste (auch in Varianten), und Züge, die den besten verfehlten, tragen ein farbiges ?!, ? oder ?? mit dem besseren Zug als Tooltip. Die lange Liste über dem Brett ist weg — oben bleiben nur die Zähler." },
   ] },

@@ -18,7 +18,10 @@ describe('EndlessSessionRecorder', () => {
   const RUN = { lives: 2, solved: 3, level: 4, chainIndex: 4, seed: 's1', currentMinRating: 1200, maxRatingReached: 1250, sessionSeconds: 90 };
   const PUZ = (id: number, rating: number): any => ({ id, lichessId: 'L' + id, rating, themes: 'fork', fen: '', moves: '' });
 
-  afterEach(() => { sessionStorage.removeItem('rookhub_endless_gameover'); sessionStorage.removeItem('rookhub_endless_pending_sid'); });
+  // Vorher UND nachher räumen: ein anderer Spec könnte die Schlüssel liegen lassen (CI-Tag v0.860.1: „Expected 9 to be undefined“).
+  const clear = () => { sessionStorage.removeItem('rookhub_endless_gameover'); sessionStorage.removeItem('rookhub_endless_pending_sid'); };
+  beforeEach(clear);
+  afterEach(clear);
 
   it('restoreSessionPuzzles: fehlende Zeiten und Lichess-Id werden 0 bzw. leer, Themen fallen weg', () => {
     expect(restoreSessionPuzzles([{ puzzleNumber: 1, puzzleId: 5, rating: 900, solved: true, startedAt: '1000' }])).toEqual([
