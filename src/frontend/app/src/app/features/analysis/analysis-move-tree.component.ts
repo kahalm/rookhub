@@ -50,7 +50,7 @@ const LONG_PRESS_SLOP_PX = 10;
                     <span class="vmove" [class.active]="t.node === current" [class.starred]="t.node.starred"
                           (click)="pick(t.node)" (contextmenu)="onContextMenu($event, t.node)"
                           (pointerdown)="onPointerDown($event, t.node)" (pointermove)="onPointerMove($event)"
-                          (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label | san:'text' }}{{ t.node.glyph ?? '' }}@if (t.node.evaluation) {<span class="ann"> {{ t.node.evaluation }}</span>}@if (t.node.starred) {<span class="star">★</span>}@if (t.node.comment) {<span class="cmt"> {{ t.node.comment }}</span>}</span>
+                          (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label | san:'text' }}{{ t.node.glyph ?? '' }}@if (!hideEngine() && t.node.verdict; as vd) {<span class="vd" [style.color]="vd.color" [title]="verdictTitle(vd)">{{ vd.symbol }}</span>}@if (t.node.evaluation) {<span class="ann"> {{ t.node.evaluation }}</span>}@if (t.node.starred) {<span class="star">★</span>}@if (!hideEngine() && t.node.evalText) {<span class="vev"> {{ t.node.evalText }}</span>}@if (t.node.comment) {<span class="cmt"> {{ t.node.comment }}</span>}</span>
                   } @else if (t.kind === 'open') {
                     <span class="paren">(</span>
                   } @else {
@@ -72,8 +72,8 @@ const LONG_PRESS_SLOP_PX = 10;
               (click)="pick(c)" (contextmenu)="onContextMenu($event, c)"
               (pointerdown)="onPointerDown($event, c)" (pointermove)="onPointerMove($event)"
               (pointerup)="clearPress()" (pointercancel)="clearPress()">
-          <span class="san">{{ c.san | san }}{{ c.glyph ?? '' }}@if (c.evaluation) {<span class="ann"> {{ c.evaluation }}</span>}@if (c.starred) {<span class="star">★</span>}</span>
-          @if (c.evalText) { <span class="ev">{{ c.evalText }}</span> }
+          <span class="san">{{ c.san | san }}{{ c.glyph ?? '' }}@if (!hideEngine() && c.verdict; as vd) {<span class="vd" [style.color]="vd.color" [title]="verdictTitle(vd)">{{ vd.symbol }}</span>}@if (c.evaluation) {<span class="ann"> {{ c.evaluation }}</span>}@if (c.starred) {<span class="star">★</span>}</span>
+          @if (!hideEngine() && c.evalText) { <span class="ev">{{ c.evalText }}</span> }
           @if (c.comment) { <mat-icon class="cmt-icon" [title]="c.comment" aria-hidden="true">chat_bubble_outline</mat-icon> }
         </span>
       } @else {
@@ -126,6 +126,9 @@ const LONG_PRESS_SLOP_PX = 10;
     /* Eigene Anmerkungen (0.855.2): Stellungsbewertung leiser, Kommentar kursiv. */
     .ann { font-weight: 500; opacity: 0.8; }
     .cmt { font-style: italic; font-weight: 400; opacity: 0.75; }
+    /* Urteil der Engine über den eigenen Zug (0.860.1) und Bewertung in Varianten. */
+    .vd { font-weight: 800; margin-left: 1px; }
+    .vev { font-weight: 400; font-size: 0.85em; opacity: 0.7; font-variant-numeric: tabular-nums; }
     .cmt-icon { font-size: 14px; width: 14px; height: 14px; opacity: 0.7; vertical-align: -2px; }
     .ev { font-size: .78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }
     .star { color: #f9a825; font-size: .75rem; margin-left: 2px; }
@@ -139,6 +142,11 @@ const LONG_PRESS_SLOP_PX = 10;
   `],
 })
 export class AnalysisMoveTreeComponent implements OnChanges, AfterViewChecked, OnDestroy {
+  /** Tooltip am Urteil: der bessere Zug („→ Nf3"). */
+  verdictTitle(v: { better: string | null }): string {
+    return v.better ? '→ ' + v.better : '';
+  }
+
   private readonly cdr = inject(ChangeDetectorRef);
 
   @Input({ required: true }) root!: AnalysisNode;
@@ -148,6 +156,8 @@ export class AnalysisMoveTreeComponent implements OnChanges, AfterViewChecked, O
   @Input() version = 0;
   /** Stern im Rechtsklick-Menü anbieten (ohne Engine nicht, 0.859.0 — dort gibt es das „+"). */
   readonly canStar = input(true);
+  /** „Ohne Engine" (0.860.1): Bewertungen und Urteile der Engine nicht zeigen, solange sie aus ist. */
+  readonly hideEngine = input(false);
 
   @Output() readonly select = new EventEmitter<AnalysisNode>();
   @Output() readonly action = new EventEmitter<{ kind: MoveTreeAction; node: AnalysisNode }>();

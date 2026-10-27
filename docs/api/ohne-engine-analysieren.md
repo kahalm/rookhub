@@ -60,3 +60,11 @@ Specs `line-study.util`, `line-study-session`, `analyze-choice`.
   gilt damit auch für den Analyse-Verlauf). Die Zugliste zeigt Symbol und Bewertung am Zug, den Kommentar in Varianten kursiv,
   in der Hauptlinie als Sprechblasen-Symbol mit Tooltip.
 
+
+## Nachtrag 0.860.1 — Bewertung am Zug statt Liste oben
+
+Wunsch 2026-10-27 mit Screenshot: „die Auflistung oben bringt gar nichts — besser vermutlich unten hinter jeden Zug die Eval
+schreiben“. Die Leiste zeigt nach dem Aufdecken nur noch die Zähler („84/135 beste · ?! 7 · ? 7 · ?? 16“); das Urteil über
+jeden eigenen Zug ab Ungenauigkeit steht als farbiges ?!/?/?? direkt am Zug in der Zugliste (`AnalysisNode.verdict`, gesetzt von
+`LineStudySession.applyEvals`, Tooltip „→ besserer Zug“), die Bewertung steht jetzt auch in Varianten hinter dem Zug. Mit
+„Engine ausschalten“ (0.859.0) blendet die Zugliste beides wieder aus (`hideEngine`).

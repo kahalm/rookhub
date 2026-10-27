@@ -3414,7 +3414,6 @@
       "hint": "Play your own lines — nothing is evaluated on screen. When you are done, switch the engine on to see every line evaluated and compared with the best move.",
       "reveal": "Switch engine on",
       "hide": "Switch engine off",
-      "better": "better {{san}}",
       "progressShort": "{{done}}/{{total}} analysed",
       "bestShort": "{{best}}/{{rated}} best"
     }

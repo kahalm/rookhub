@@ -2,7 +2,8 @@ import { Subscription, timer } from 'rxjs';
 import { AnalysisNode, fromDto, toDto } from './analysis-tree';
 import { LineStudy, LineStudyEvals, LineStudyService } from './line-study.service';
 import { LineComparison, NodeEval, compareLines, flatNodes } from './line-study.util';
-import { formatEval } from '../games/game-review.util';
+import { MOVE_CLASS_COLORS, formatEval } from '../games/game-review.util';
+import { MOVE_CLASS_SYMBOLS } from '../games/move-badge.util';
 
 /** Was die Sitzung vom Analysebrett braucht. */
 export interface LineStudyHost {
@@ -155,6 +156,11 @@ export class LineStudySession {
         if (node !== this.savedRoot) node.evalText = formatEval(score);
       }
       this.comparison = compareLines(this.savedRoot, evalOf, this.gameUcis);
+      // Das Urteil steht am Zug in der Zugliste (Wunsch 2026-10-27: „besser hinter jeden Zug die Eval schreiben" statt Liste oben).
+      for (const node of flatNodes(this.savedRoot)) delete node.verdict;
+      for (const v of this.comparison.verdicts) {
+        v.node.verdict = { symbol: MOVE_CLASS_SYMBOLS[v.cls], color: MOVE_CLASS_COLORS[v.cls], better: v.bestSan };
+      }
     }
     this.host.changed();
   }

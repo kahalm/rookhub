@@ -58,7 +58,7 @@
       @if (study; as s) {
         <!-- „Ohne Engine analysieren" (0.855.0): Fortschritt der Hintergrundrechnung, „Engine einschalten", danach der Vergleich. -->
         <app-line-study-card [revealed]="s.revealed" [hidden]="studyEngineHidden" [analyzed]="s.analyzed" [total]="s.total"
-                             [comparison]="s.comparison" (reveal)="revealStudy()" (hide)="hideStudyEngine()" (jump)="goToNode($event)" />
+                             [comparison]="s.comparison" (reveal)="revealStudy()" (hide)="hideStudyEngine()" />
       }
       @if (engineCrashed) {
         <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">
@@ -151,7 +151,7 @@
           } @else {
             <!-- Zugbaum wie auf Lichess (0.604.0): Hauptlinie als Tabelle mit Bewertung, Varianten als Block,
                  Rechtsklick bzw. langer Druck: Stern, hochstufen, zur Hauptvariante, ab hier löschen. -->
-            <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion" [canStar]="!study"
+            <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion" [canStar]="!study" [hideEngine]="blind"
                                     (select)="goToNode($event)" (action)="onTreeAction($event)" />
             <p class="tree-hint">{{ 'analysis.tree.hint' | translate }}</p>
           }

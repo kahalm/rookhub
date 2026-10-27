@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.860.1", date: "2026-10-27", changes: [
+    { en: "Without engine, after switching the engine on: the evaluation now stands behind every move of your lines in the move list (also in variations), and moves that missed the best one carry a coloured ?!, ? or ?? with the better move as tooltip. The long list above the board is gone — only the counts remain.", de: "Ohne Engine, nach dem Einschalten: die Bewertung steht jetzt hinter jedem Zug deiner Linien in der Zugliste (auch in Varianten), und Züge, die den besten verfehlten, tragen ein farbiges ?!, ? oder ?? mit dem besseren Zug als Tooltip. Die lange Liste über dem Brett ist weg — oben bleiben nur die Zähler." },
+  ] },
   { version: "0.860.0", date: "2026-10-27", changes: [
     { en: "LeagueHub: the “+” and “!!” badges in the board pairings and the club games list now sit in fixed columns of equal width — a missing badge leaves its place empty, so they line up row by row.", de: "LeagueHub: Die Abzeichen „+“ und „!!“ in den Brettpaarungen und der Vereinspartien-Liste stehen jetzt in festen Spalten gleicher Breite — ein fehlendes lässt seinen Platz frei, so stehen sie Zeile für Zeile untereinander." },
   ] },

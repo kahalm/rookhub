@@ -50,6 +50,24 @@ describe('AnalysisMoveTreeComponent', () => {
     expect(el.querySelector('.vmove.active')!.textContent).toContain('Ke7');
   });
 
+  // 0.860.1 (Wunsch 2026-10-27: „besser hinter jeden Zug die Eval schreiben"): nach dem Aufdecken stehen Urteil und Bewertung am
+  // Zug — auch in Varianten; mit ausgeschalteter Engine (`hideEngine`) nicht.
+  it('zeigt Urteil und Bewertung am Zug, auch in Varianten — und nichts, solange die Engine aus ist', () => {
+    const { root, ke7 } = screenshotTree();
+    ke7.evalText = '-1.50';
+    ke7.verdict = { symbol: '??', color: '#ca3431', better: 'Nf6' };
+    const { fixture, el } = make(root, ke7);
+    const vd = el.querySelector('.vars .vd') as HTMLElement;
+    expect(vd.textContent).toBe('??');
+    expect(vd.getAttribute('title')).toBe('→ Nf6');
+    expect(el.querySelector('.vars .vev')!.textContent!.trim()).toBe('-1.50');
+    fixture.componentRef.setInput('hideEngine', true);
+    fixture.detectChanges();
+    expect(el.querySelector('.vd')).toBeNull();
+    expect(el.querySelector('.vev')).toBeNull();
+    expect(el.querySelector('.ev')).toBeNull();
+  });
+
   // UI-Sweep 2026-10-11 (r2-rg-notation): Anzeige in den Figurenbuchstaben der Sprache, der Baum bleibt englisch.
   it('shows moves in German piece letters when the UI is German', () => {
     const { root, ke7 } = screenshotTree();

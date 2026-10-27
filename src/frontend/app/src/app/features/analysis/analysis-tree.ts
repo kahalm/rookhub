@@ -25,6 +25,9 @@ export interface AnalysisNode {
   evaluation?: string;
   /** Eigener Kommentar zur Stellung nach dem Zug. */
   comment?: string;
+  /** „Ohne Engine" nach dem Aufdecken (0.860.1): Klasse des eigenen Zugs ab Ungenauigkeit (?!, ?, ??) samt besserem Zug —
+   *  gerechnet, nicht gespeichert. */
+  verdict?: { symbol: string; color: string; better: string | null };
 }
 
 /** Ein Knoten in der FLACHEN Form des Verlaufs (Server `AnalysisTreeNodeDto`): `p` = Index des Elternknotens davor
