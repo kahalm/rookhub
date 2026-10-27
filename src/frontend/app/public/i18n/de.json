@@ -5401,7 +5401,10 @@
       "critical": "Kritischer Moment",
       "instructive": "Lehrreich",
       "beautiful": "Schön"
-    }
+    },
+    "history": "Frühere Fassungen",
+    "historyEmpty": "Noch keine früheren Fassungen — jede Änderung hebt die vorige hier auf.",
+    "restore": "Wiederherstellen"
   },
   "puzzleThemes": {
     "advancedPawn": "Vorgerückter Bauer",

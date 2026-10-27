@@ -19,6 +19,20 @@ internal sealed class GameMistakeProgressConfiguration : IEntityTypeConfiguratio
     }
 }
 
+internal sealed class MarkedPositionNoteRevisionConfiguration : IEntityTypeConfiguration<MarkedPositionNoteRevision>
+{
+    public void Configure(EntityTypeBuilder<MarkedPositionNoteRevision> e)
+    {
+        e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(r => r.PositionKey).HasMaxLength(100);
+        e.Property(r => r.AnonSessionId).HasMaxLength(36);
+        e.Property(r => r.Tags).HasMaxLength(MarkedPositionService.MaxTagsLength);
+        e.Property(r => r.Comment).HasMaxLength(MarkedPositionService.MaxCommentLength);
+        e.HasIndex(r => new { r.UserId, r.PositionKey });
+        e.HasIndex(r => new { r.AnonSessionId, r.PositionKey });
+    }
+}
+
 internal sealed class MarkedPositionConfiguration : IEntityTypeConfiguration<MarkedPosition>
 {
     public void Configure(EntityTypeBuilder<MarkedPosition> e)

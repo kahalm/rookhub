@@ -54,3 +54,13 @@ Variante‘“, „in der Übersicht je Runde und je Liga +30“, „auch auf de
 Nachspielen des Bretts auf (`BoardGameComponent.showAt`). „+n“ steht an jeder Partie, in der Übersicht je Liga und Runde und
 in den Aufstellungen einer Runde ganz oben (`GameMarkers.markTotal/markedBoards`). Über den Teilen-Link ohne Konto springt das
 „+“ an der Partie wie bisher direkt ins Nachspielen.
+
+**Frühere Fassungen** (0.862.1, Wunsch 2026-10-27: „merk dir beim Bearbeiten auch die alten, damit ich ggf. Gelöschtes
+wiederherstellen kann“): Bevor `PUT …/notes` Schlagworte/Kommentar ändert oder `DELETE` die Markierung entfernt, hebt
+`MarkedPositionService.KeepRevisionAsync` die bisherige Fassung in `MarkedPositionNoteRevisions` auf (Migration
+`MarkedPositionNoteRevisions`) — am Aufrufer (Konto/anonyme Kennung) und `PositionKey`, nicht an der Markierung, damit der
+Verlauf das Entfernen überlebt; leere Notizen und unveränderte Saves erzeugen keine Fassung, je Stellung höchstens 30.
+`GET /api/positions/marked/notes/history?fen=` → `[{ id, tags, comment, createdAt }]`, neueste zuerst (anonym erreichbar wie
+die übrigen, nur die eigenen). Der Editor (`MarkNotesEditorComponent`, RookHub und LeagueHub) klappt „Frühere Fassungen“ auf;
+„Wiederherstellen“ übernimmt eine in die Felder, gespeichert wird mit „Speichern“. Löschen des Kontos löscht den Verlauf mit,
+`claim-session` nimmt ihn ins Konto mit.

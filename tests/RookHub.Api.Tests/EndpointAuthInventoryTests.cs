@@ -113,6 +113,8 @@ public class EndpointAuthInventoryTests
         "GET /api/positions/marked",
         "POST /api/positions/marked",
         "DELETE /api/positions/marked",
+        "PUT /api/positions/marked/notes",          // 0.862.0: Schlagworte + Kommentar, wie das Markieren auch ohne Konto
+        "GET /api/positions/marked/notes/history",  // 0.862.1: frühere Fassungen davon (nur die eigenen)
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am

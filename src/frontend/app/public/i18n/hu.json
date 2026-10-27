@@ -5401,7 +5401,10 @@
       "critical": "Kritikus pillanat",
       "instructive": "Tanulságos",
       "beautiful": "Szép"
-    }
+    },
+    "history": "Korábbi változatok",
+    "historyEmpty": "Még nincs korábbi változat — minden módosítás itt megőrzi az előzőt.",
+    "restore": "Visszaállítás"
   },
   "puzzleThemes": {
     "advancedPawn": "Előretolt gyalog",

@@ -209,4 +209,45 @@ public class MarkedPositionTests : IDisposable
         var row = _db.MarkedPositions.Single(p => p.UserId == 997110);
         Assert.Equal(("endgame", "anonym"), (row.Tags, row.Comment));
     }
+
+    // 0.862.1 (Wunsch 2026-10-27: „merk dir beim Bearbeiten auch die alten, damit ich ggf. Gelöschtes wiederherstellen kann").
+    [Fact]
+    public async Task SetNotes_And_Unmark_KeepTheOldVersions_NewestFirst_Capped()
+    {
+        await _service.MarkAsync(997111, new MarkPositionInputDto { Fen = AfterE4 });
+        await _service.SetNotesAsync(997111, new MarkedPositionNotesDto { Fen = AfterE4, Tags = ["tactic"], Comment = "eins" });
+        Assert.Empty(await _service.RevisionsAsync(997111, AfterE4));                // leere Notizen werden nicht aufgehoben
+        await _service.SetNotesAsync(997111, new MarkedPositionNotesDto { Fen = AfterE4, Tags = ["tactic"], Comment = "eins" });
+        Assert.Empty(await _service.RevisionsAsync(997111, AfterE4));                // unverändert → keine Fassung
+        await _service.SetNotesAsync(997111, new MarkedPositionNotesDto { Fen = AfterE4, Tags = [], Comment = null });
+
+        var history = await _service.RevisionsAsync(997111, AfterE4);
+        Assert.Equal(["tactic"], Assert.Single(history).Tags);
+        Assert.Equal("eins", history[0].Comment);
+
+        await _service.SetNotesAsync(997111, new MarkedPositionNotesDto { Fen = AfterE4, Comment = "zwei" });
+        await _service.UnmarkAsync(997111, AfterE4);                                  // Entfernen hebt die letzte Fassung auf
+        history = await _service.RevisionsAsync(997111, AfterE4);
+        Assert.Equal(["zwei", "eins"], history.Select(h => h.Comment));
+        Assert.Empty(await _service.RevisionsAsync(997112, AfterE4));                // fremde sieht man nicht
+
+        await _service.MarkAsync(997111, new MarkPositionInputDto { Fen = AfterE4 });
+        for (var i = 0; i < MarkedPositionService.MaxRevisions + 5; i++)
+            await _service.SetNotesAsync(997111, new MarkedPositionNotesDto { Fen = AfterE4, Comment = "v" + i });
+        history = await _service.RevisionsAsync(997111, AfterE4);
+        Assert.Equal(MarkedPositionService.MaxRevisions, history.Count);
+        Assert.Equal("v" + (MarkedPositionService.MaxRevisions + 3), history[0].Comment);
+    }
+
+    [Fact]
+    public async Task ClaimAnonymous_TakesTheHistoryAlong()
+    {
+        var anon = MarkCaller.Anonymous(AnonA);
+        await _service.MarkAsync(anon, new MarkPositionInputDto { Fen = AfterE4 });
+        await _service.SetNotesAsync(anon, new MarkedPositionNotesDto { Fen = AfterE4, Comment = "alt" });
+        await _service.SetNotesAsync(anon, new MarkedPositionNotesDto { Fen = AfterE4, Comment = "neu" });
+        await _service.ClaimAnonymousAsync(997113, AnonA);
+        Assert.Equal("alt", Assert.Single(await _service.RevisionsAsync(997113, AfterE4)).Comment);
+        Assert.Empty(await _service.RevisionsAsync(anon, AfterE4));
+    }
 }

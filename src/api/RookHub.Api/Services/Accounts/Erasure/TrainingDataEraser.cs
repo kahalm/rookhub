@@ -13,6 +13,7 @@ internal static class TrainingDataEraser
         // über seine Schüler geschrieben) — die gehen mit; die Aufgaben cascaden am Blatt.
         db.GameMistakeProgresses.RemoveRange(await db.GameMistakeProgresses.Where(m => m.UserId == userId).ToListAsync());
         db.MarkedPositions.RemoveRange(await db.MarkedPositions.Where(m => m.UserId == userId).ToListAsync());
+        db.MarkedPositionNoteRevisions.RemoveRange(await db.MarkedPositionNoteRevisions.Where(m => m.UserId == userId).ToListAsync());
         db.Worksheets.RemoveRange(await db.Worksheets.Where(w => w.UserId == userId).ToListAsync());
     }
 

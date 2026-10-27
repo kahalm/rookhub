@@ -37,6 +37,9 @@ public partial class MarkedPositionService
     public const int MaxTagsLength = 400;
     public const int MaxCommentLength = 1000;
 
+    /// <summary>So viele frühere Fassungen je Aufrufer und Stellung (0.862.1) — die ältesten fallen weg.</summary>
+    public const int MaxRevisions = 30;
+
     private static readonly HashSet<string> Contexts = new() { "analysis", "board", "mistake" };
 
     [GeneratedRegex("^[a-h][1-8][a-h][1-8][qrbn]?$")]
@@ -132,10 +135,44 @@ public partial class MarkedPositionService
         if (tags == null || comment?.Length > MaxCommentLength) return (null, "invalid");
         var row = await Of(caller).FirstOrDefaultAsync(p => p.PositionKey == key, ct);
         if (row == null) return (null, "notMarked");
-        row.Tags = string.Join(';', tags);
+        var newTags = string.Join(';', tags);
+        if (newTags != row.Tags || comment != row.Comment) await KeepRevisionAsync(caller, row, ct);
+        row.Tags = newTags;
         row.Comment = comment;
         await _db.SaveChangesAsync(ct);
         return (Map(row), null);
+    }
+
+    /// <summary>Die früheren Fassungen der eigenen Notizen zu einer Stellung, neueste zuerst (0.862.1).</summary>
+    public async Task<List<MarkedPositionRevisionDto>> RevisionsAsync(MarkCaller caller, string? fen, CancellationToken ct = default)
+    {
+        var key = KeyOf(fen);
+        if (key == null || caller.IsNobody) return [];
+        return (await Revisions(caller).AsNoTracking().Where(r => r.PositionKey == key)
+                .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id).Take(MaxRevisions).ToListAsync(ct))
+            .Select(r => new MarkedPositionRevisionDto
+            {
+                Id = r.Id, Tags = r.Tags.Length == 0 ? [] : r.Tags.Split(';').ToList(), Comment = r.Comment, CreatedAt = r.CreatedAt,
+            }).ToList();
+    }
+
+    private IQueryable<MarkedPositionNoteRevision> Revisions(MarkCaller caller) => caller.UserId is int u
+        ? _db.MarkedPositionNoteRevisions.Where(r => r.UserId == u)
+        : _db.MarkedPositionNoteRevisions.Where(r => r.UserId == null && r.AnonSessionId == caller.AnonId);
+
+    /// <summary>Die jetzige Fassung aufheben, bevor sie überschrieben oder entfernt wird — leere Notizen nicht; über
+    /// <see cref="MaxRevisions"/> fallen die ältesten weg.</summary>
+    private async Task KeepRevisionAsync(MarkCaller caller, MarkedPosition row, CancellationToken ct)
+    {
+        if (row.Tags.Length == 0 && string.IsNullOrEmpty(row.Comment)) return;
+        _db.MarkedPositionNoteRevisions.Add(new MarkedPositionNoteRevision
+        {
+            UserId = caller.UserId, AnonSessionId = caller.UserId is null ? caller.AnonId : null,
+            PositionKey = row.PositionKey, Tags = row.Tags, Comment = row.Comment, CreatedAt = DateTime.UtcNow,
+        });
+        var old = await Revisions(caller).Where(r => r.PositionKey == row.PositionKey)
+            .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id).Skip(MaxRevisions - 1).ToListAsync(ct);
+        _db.MarkedPositionNoteRevisions.RemoveRange(old);
     }
 
     /// <summary>Schlagworte säubern: getrimmt, ohne Leere und Doppel (Groß/klein egal), feste Codes klein geschrieben;
@@ -162,6 +199,7 @@ public partial class MarkedPositionService
         if (key == null || caller.IsNobody) return false;
         var row = await Of(caller).FirstOrDefaultAsync(p => p.PositionKey == key, ct);
         if (row == null) return false;
+        await KeepRevisionAsync(caller, row, ct);
         _db.MarkedPositions.Remove(row);
         await _db.SaveChangesAsync(ct);
         return true;
@@ -203,6 +241,8 @@ public partial class MarkedPositionService
                 claimed++;
             }
         }
+        foreach (var r in await _db.MarkedPositionNoteRevisions.Where(r => r.UserId == null && r.AnonSessionId == anonId).ToListAsync(ct))
+            (r.UserId, r.AnonSessionId) = (userId, null);
         await _db.SaveChangesAsync(ct);
         if (claimed > 0) _logger.LogInformation("Markierte Stellungen von anon {AnonId} ins Konto {UserId}: {Count}", anonId, userId, claimed);
         return claimed;

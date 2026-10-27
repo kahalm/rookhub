@@ -72,6 +72,24 @@ describe('MarkNotesDialogComponent', () => {
     expect(service.notesOf(FEN).tags).toEqual([]);
   });
 
+  // 0.862.1 (Wunsch 2026-10-27: „merk dir beim Bearbeiten auch die alten, damit ich ggf. Gelöschtes wiederherstellen kann").
+  it('„Frühere Fassungen" lädt den Verlauf erst beim Aufklappen; „Wiederherstellen" übernimmt eine in die Felder', () => {
+    const { fixture, http, el } = setup();
+    expect(el.querySelector('.mn-hist')).toBeNull();
+    (el.querySelector('.mn-hist-toggle') as HTMLButtonElement).click();
+    const get = http.expectOne(r => r.url === '/api/positions/marked/notes/history');
+    expect(get.request.params.get('fen')).toBe(FEN);
+    get.flush([{ id: 5, tags: ['sacrifice', 'Läuferpaar'], comment: 'gelöscht', createdAt: '2026-10-27T20:00:00Z' }]);
+    fixture.detectChanges();
+    expect(el.querySelector('.mn-hist-tags')?.textContent).toContain('Läuferpaar');
+    (el.querySelector('.mn-hist .mn-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect((el.querySelector('textarea') as HTMLTextAreaElement).value).toBe('gelöscht');
+    (el.querySelector('button.save') as HTMLButtonElement).click();
+    expect(http.expectOne(r => r.method === 'PUT').request.body)
+      .toEqual({ fen: FEN, tags: ['sacrifice', 'Läuferpaar'], comment: 'gelöscht' });
+  });
+
   it('Schlagworte: feste Codes klein, keine Doppel, kein „;", Grenze 12', () => {
     expect(knownMarkTag(' Tactic ')).toBe('tactic');
     expect(knownMarkTag('Motiv')).toBeNull();

@@ -5401,7 +5401,10 @@
       "critical": "Kritični trenutak",
       "instructive": "Poučno",
       "beautiful": "Lijepo"
-    }
+    },
+    "history": "Ranije verzije",
+    "historyEmpty": "Još nema ranijih verzija — svaka promjena ovdje čuva prethodnu.",
+    "restore": "Vrati"
   },
   "puzzleThemes": {
     "advancedPawn": "Istureni pješak",

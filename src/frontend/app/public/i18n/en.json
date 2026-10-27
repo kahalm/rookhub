@@ -5401,7 +5401,10 @@
       "critical": "Critical moment",
       "instructive": "Instructive",
       "beautiful": "Beautiful"
-    }
+    },
+    "history": "Earlier versions",
+    "historyEmpty": "No earlier versions yet — every change keeps the previous one here.",
+    "restore": "Restore"
   },
   "puzzleThemes": {
     "advancedPawn": "Advanced pawn",

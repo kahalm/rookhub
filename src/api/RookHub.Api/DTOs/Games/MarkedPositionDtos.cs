@@ -30,6 +30,15 @@ public class MarkedPositionNotesDto
     public string? Comment { get; set; }
 }
 
+/// <summary>Eine frühere Fassung von Schlagworten + Bemerkung (0.862.1) — <see cref="CreatedAt"/> = wann sie abgelöst wurde.</summary>
+public class MarkedPositionRevisionDto
+{
+    public int Id { get; set; }
+    public List<string> Tags { get; set; } = [];
+    public string? Comment { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 /// <summary>Stellung markieren. Herkunft optional; eine fremde <c>SavedGameId</c> wird verworfen.</summary>
 public class MarkPositionInputDto
 {

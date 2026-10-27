@@ -5701,6 +5701,47 @@ namespace RookHub.Api.Migrations
                     b.ToTable("MarkedPositions");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.MarkedPositionNoteRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AnonSessionId")
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PositionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("varchar(400)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnonSessionId", "PositionKey");
+
+                    b.HasIndex("UserId", "PositionKey");
+
+                    b.ToTable("MarkedPositionNoteRevisions");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.MenuItemGroupAccess", b =>
                 {
                     b.Property<string>("ItemKey")
@@ -10098,6 +10139,16 @@ namespace RookHub.Api.Migrations
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.MarkedPosition", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.MarkedPositionNoteRevision", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
                         .WithMany()

@@ -60,6 +60,13 @@ public class MarkedPositionsController : BaseApiController
         return mark != null ? Ok(mark) : error == "invalid" ? BadRequest(new { reason = error }) : NotFound();
     }
 
+    /// <summary>Frühere Fassungen der eigenen Schlagworte + Bemerkung zu einer Stellung (<c>?fen=</c>), neueste zuerst (0.862.1)
+    /// — zum Wiederherstellen; bleiben auch nach dem Entfernen der Markierung.</summary>
+    [HttpGet("notes/history")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<MarkedPositionRevisionDto>>> NotesHistory([FromQuery] string fen, CancellationToken ct)
+        => Ok(await _service.RevisionsAsync(Caller, fen, ct));
+
     /// <summary>Die Markierungen dieser anonymen Kennung ins Konto übernehmen (beim Anmelden) → <c>{ claimed }</c>.</summary>
     [HttpPost("claim-session")]
     public async Task<IActionResult> ClaimSession([FromBody] ClaimMarkedSessionDto dto, CancellationToken ct)

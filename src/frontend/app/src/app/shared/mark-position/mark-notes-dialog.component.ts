@@ -26,7 +26,7 @@ export type MarkNotesDialogResult = 'saved' | 'removed' | undefined;
   template: `
     <h2 mat-dialog-title>{{ 'markPosition.title' | translate }}</h2>
     <mat-dialog-content>
-      <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" />
+      <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [fen]="fen" />
       @if (error()) { <p class="err" role="alert">{{ 'markPosition.saveFailed' | translate }}</p> }
     </mat-dialog-content>
     <mat-dialog-actions>
@@ -49,6 +49,7 @@ export class MarkNotesDialogComponent {
 
   readonly tags = signal<string[]>(this.service.notesOf(this.data.fen).tags);
   readonly comment = signal(this.service.notesOf(this.data.fen).comment ?? '');
+  readonly fen = this.data.fen;
   readonly busy = signal(false);
   readonly error = signal(false);
 

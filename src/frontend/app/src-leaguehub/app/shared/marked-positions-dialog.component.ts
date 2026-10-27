@@ -58,7 +58,7 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
         </div>
         <div class="mp-board"><app-chess-board [fen]="m.fen" [flipped]="!!current()!.game.flipped" /></div>
         @for (m2 of [m]; track current()!.game.clubGameId + ':' + m2.positionKey) {
-          <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [otherTags]="m2.tags ?? []" [others]="m2.comments ?? []" />
+          <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [otherTags]="m2.tags ?? []" [others]="m2.comments ?? []" [fen]="m2.fen" />
         }
         @if (saveError()) { <p class="mp-msg err" role="alert">{{ saveError() }}</p> }
         @if (saved()) { <p class="mp-msg ok" role="status">Gespeichert.</p> }

@@ -36,6 +36,14 @@ export interface MarkedPosition {
   comment?: string | null;
 }
 
+/** Eine frühere Fassung von Schlagworten + Kommentar (0.862.1) — `createdAt` = wann sie abgelöst wurde. */
+export interface MarkNotesRevision {
+  id: number;
+  tags: string[];
+  comment: string | null;
+  createdAt: string;
+}
+
 /** Schlagworte + Kommentar einer markierten Stellung (0.862.0). */
 export interface MarkNotes {
   tags: string[];
@@ -107,6 +115,11 @@ export class MarkedPositionsService {
         return next;
       })),
     );
+  }
+
+  /** Frühere Fassungen der eigenen Notizen zu einer Stellung, neueste zuerst (0.862.1) — zum Wiederherstellen. */
+  history(fen: string): Observable<MarkNotesRevision[]> {
+    return this.http.get<MarkNotesRevision[]>('/api/positions/marked/notes/history', { params: { fen } });
   }
 
   /** Markieren (idempotent) — wie `toggle`, aber nie zurücknehmen. */
