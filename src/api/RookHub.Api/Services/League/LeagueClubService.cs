@@ -172,6 +172,10 @@ public sealed class LeagueClubService
     /// <inheritdoc cref="ClubGameReader.EvalsAsync"/>
     public Task<GameEvalsDto?> EvalsAsync(LeagueClub club, int id, CancellationToken ct = default) => _reader.EvalsAsync(club, id, ct);
 
+    /// <inheritdoc cref="ClubGameReader.ReviewInputsAsync"/>
+    public Task<Dictionary<int, ClubGameReviewInput>> ReviewInputsAsync(LeagueClub club, IReadOnlyCollection<int> ids, CancellationToken ct = default) =>
+        _reader.ReviewInputsAsync(club, ids, ct);
+
     /// <inheritdoc cref="ClubGameReader.CanCorrectAsync"/>
     public Task<bool> CanCorrectAsync(LeagueClub club, int userId, bool canManage, int id, CancellationToken ct = default) =>
         _reader.CanCorrectAsync(club, userId, canManage, id, ct);

@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.849.0", date: "2026-10-27", changes: [
+    { en: "LeagueHub club overview: next to the ◆ marker for interesting positions, games now also show „!! n“ for brilliant moves – the same move classes as RookHub’s game review, calculated from the engine analysis (only analysed games). The filter is now called „Only with interesting positions or !!“ and keeps both.", de: "LeagueHub-Vereinsübersicht: Neben dem Marker ◆ für interessante Stellungen zeigen Partien jetzt auch „!! n“ für brillante Züge – dieselben Zug-Klassen wie im Partie-Rückblick von RookHub, gerechnet aus der Engine-Analyse (nur analysierte Partien). Der Filter heißt jetzt „Nur mit interessanten Stellungen oder !!“ und behält beide." },
+  ] },
   { version: "0.848.1", date: "2026-10-26", changes: [
     { en: "Technical: the jump marks of the game replay use a signal input (lint ratchet) and the success colour token without a fixed fallback colour; no visible change.", de: "Technisch: Die Sprungmarken des Nachspielens nutzen ein Signal-Input (Lint-Ratsche) und das Erfolgsfarben-Token ohne feste Rückfallfarbe; sichtbar ändert sich nichts." },
   ]},

@@ -253,6 +253,38 @@ internal sealed class ClubGameReader
         return head is null ? new GameEvalsDto() : await GameEvalsStore.ReadAsync(_db, head, null, ct);
     }
 
+    /// <summary>Höchstzahl Partien je <see cref="ReviewInputsAsync"/>-Aufruf.</summary>
+    public const int MaxReviewInputs = 60;
+
+    /// <summary>
+    /// PGN + Bewertungen mehrerer Vereinspartien des Vereins in EINEM Aufruf (0.849.0, Vereinsübersicht: „!!"-Marker) — der
+    /// Browser rechnet daraus die Zug-Klassen wie auf der Partieseite. Schlank: ohne Kandidatenlisten, Varianten und Buchzüge
+    /// (die Klassen brauchen nur Bester/Gespielter/Zweitbester). Nur Partien MIT Analyse; fremde und unbekannte Ids fehlen.
+    /// </summary>
+    public async Task<Dictionary<int, ClubGameReviewInput>> ReviewInputsAsync(LeagueClub club, IReadOnlyCollection<int> ids, CancellationToken ct = default)
+    {
+        var result = new Dictionary<int, ClubGameReviewInput>();
+        if (ids.Count == 0) return result;
+        var games = await Games(club).AsNoTracking().Where(g => ids.Contains(g.Id)).Select(g => new { g.Id, g.Pgn }).ToListAsync(ct);
+        var gameIds = games.Select(g => g.Id).ToList();
+        var latest = (await _db.GameAnalyses.AsNoTracking()
+                .Where(a => a.LeagueClubGameId != null && gameIds.Contains(a.LeagueClubGameId.Value)
+                    && a.Origin == GameAnalysisOrigin.Club && a.EngineId == null)
+                .Select(a => new { Game = a.LeagueClubGameId!.Value, a.Id })
+                .ToListAsync(ct))
+            .GroupBy(a => a.Game).ToDictionary(g => g.Key, g => g.Max(a => a.Id));
+        foreach (var g in games)
+        {
+            if (!latest.TryGetValue(g.Id, out var analysisId)) continue;
+            var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == analysisId)).FirstAsync(ct);
+            var evals = await GameEvalsStore.ReadAsync(_db, head, null, ct);
+            if (evals.Plies.Count == 0) continue;
+            foreach (var p in evals.Plies) p.Candidates = new();
+            result[g.Id] = new ClubGameReviewInput(g.Pgn, evals);
+        }
+        return result;
+    }
+
     internal static LeagueClubGameDto ToDto(LeagueClubGame g, int userId, bool canManage) => new()
     {
         Id = g.Id, Year = g.Year, White = g.White, Black = g.Black, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide,
@@ -343,3 +375,6 @@ internal sealed class ClubGameReader
         return new LeagueClubMatchDto { White = One(white), Black = One(black) };
     }
 }
+
+/// <summary>PGN und Bewertungen einer Vereinspartie für einen Rückblick im Browser (<c>reviewGame</c>, 0.849.0).</summary>
+public sealed record ClubGameReviewInput(string Pgn, GameEvalsDto Evals);

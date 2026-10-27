@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
+import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
 import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
 
 /**
@@ -14,7 +15,8 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
  * Über einen Teilen-Link (0.838.0, `shareToken`): „Nachspielen" nur an der geteilten Begegnung (`shared`, PGN über
  * `/s/{token}/games`), keine Analyse, kein Bearbeiten — ohne Anmeldung gibt es dafür keine Wege.
  * Seit 0.848.0 (Vereinsübersicht, Wunsch 2026-10-26): `markCount` zeigt einen Marker „◆ n interessante Stellungen", und beim
- * Nachspielen einer Vereinspartie (angemeldet) kommen deren markierte Stellungen als Sprungmarken mit.
+ * Nachspielen einer Vereinspartie (angemeldet) kommen deren markierte Stellungen als Sprungmarken mit. Seit 0.849.0
+ * (Wunsch 2026-10-27: „zeige auch !! an") daneben `brilliantCount` als „!! n" in der Farbe des Rückblicks.
  */
 @Component({
   selector: 'lh-board-game',
@@ -27,6 +29,10 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
       <span class="bg-what">Partie vorhanden · {{ g.plies }} Halbzüge@if (g.firstMoves.length) { · <span class="bg-moves">{{ shown() }}</span>}</span>
       @if (markCount() > 0) {
         <span class="bg-marks" [title]="markCount() === 1 ? '1 interessante Stellung' : markCount() + ' interessante Stellungen'">◆ {{ markCount() }}</span>
+      }
+      @if (brilliantCount() > 0) {
+        <span class="bg-brilliant" [style.color]="brilliantColor"
+              [title]="brilliantCount() === 1 ? '1 brillanter Zug' : brilliantCount() + ' brillante Züge'">!! {{ brilliantCount() }}</span>
       }
       <span class="bg-actions">
         @if (!shareToken() || shared()) {
@@ -64,6 +70,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
     .bg-actions { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; white-space: nowrap; }
     .bg-replay-box { margin: 8px 0 4px; }
     .bg-marks { color: var(--rh-success); font-weight: 700; white-space: nowrap; }
+    .bg-brilliant { font-weight: 700; white-space: nowrap; }
   `],
 })
 export class BoardGameComponent {
@@ -89,6 +96,10 @@ export class BoardGameComponent {
   private readonly hasEvals = signal(false);
   /** 0.848.0: so viele interessante Stellungen hat die Partie (Vereinsübersicht) — 0 = kein Marker. */
   readonly markCount = input(0);
+  /** Brillante Züge („!!“) laut Rückblick der Analyse (0.849.0, Vereinsübersicht); 0 = kein Marker. */
+  readonly brilliantCount = input(0);
+  /** Dieselbe Farbe wie „!!“ im Rückblick. */
+  readonly brilliantColor = MOVE_CLASS_COLORS.brilliant;
   /** Die Sprungmarken der Vereinspartie — erst beim Nachspielen geladen; still leer, wenn das scheitert. */
   readonly marks = signal<ReplayMark[]>([]);
   readonly rookHub = rookHubUrlForLeagueHub();

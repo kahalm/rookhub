@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs.Games;
 using RookHub.Api.Models;
@@ -80,5 +81,34 @@ public class ClubGameMarksTests : IDisposable
         Assert.Equal(((int?)null, (string?)null), (bad.VariationFromPly, bad.VariationUci));
         Assert.Equal(((int?)2, "c7c5 g1f3"), MarkedPositionVariation.Clean(2, " C7C5 G1F3 "));
         Assert.Equal(((int?)null, (string?)null), MarkedPositionVariation.Clean(-1, "c7c5"));
+    }
+
+    // 0.849.0, Wunsch 2026-10-27: „in der Übersicht … zeige auch !! an" — PGN + schlanke Bewertungen in einem Aufruf
+    [Fact]
+    public async Task ReviewInputs_LatestClubAnalysis_WithoutCandidates_OnlyOwnClubAndAnalyzed()
+    {
+        var g = await SeedAsync();
+        var bare = new LeagueClubGame { ClubId = TestClubs.HomeId, Year = 2026, White = "B", Black = "C", Pgn = Pgn, MovesHash = "h2" };
+        var other = new LeagueClubGame { ClubId = TestClubs.OtherId, Year = 2026, White = "D", Black = "E", Pgn = Pgn, MovesHash = "h3" };
+        _db.LeagueClubGames.AddRange(bare, other);
+        await _db.SaveChangesAsync();
+        GameAnalysis Analysis(int gameId, string bestUci) => new()
+        {
+            UserId = 1, Pgn = Pgn, StartFen = "startpos", Status = GameAnalysisStatus.Done, PlyCount = 4, TargetDepth = 20,
+            Origin = GameAnalysisOrigin.Club, LeagueClubGameId = gameId,
+            Positions = { new GameAnalysisPosition { Ply = 0, Fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                GameMoveUci = "e2e4", GameMoveSan = "e4", Depth = 20,
+                CandidatesJson = $$"""[{"uci":"{{bestUci}}","cp":30,"pv":["{{bestUci}}","e7e5"]},{"uci":"e2e4","cp":20}]""" } },
+        };
+        _db.GameAnalyses.AddRange(Analysis(g.Id, "d2d4"), Analysis(g.Id, "e2e4"), Analysis(other.Id, "e2e4"));
+        await _db.SaveChangesAsync();
+
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
+        var got = await club.ReviewInputsAsync(TestClubs.Home, [g.Id, bare.Id, other.Id, 999_123]);
+        Assert.Equal([g.Id], got.Keys);                                     // ohne Analyse / fremder Verein / unbekannt fehlen
+        Assert.Equal(Pgn, got[g.Id].Pgn);
+        var ply = Assert.Single(got[g.Id].Evals.Plies);
+        Assert.Equal(("e2e4", 20), (ply.BestUci, ply.SecondCp));            // die jüngste Analyse zählt
+        Assert.Empty(ply.Candidates);                                       // schlank: keine Kandidatenlisten
     }
 }

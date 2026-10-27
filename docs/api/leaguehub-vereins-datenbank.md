@@ -207,6 +207,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/s/{token}/club/games/chessbase` | Teilen-Link | ChessBase-Datenbank → PGN, wie oben |
 | GET | `/api/league/s/{token}/club/players`, `POST …/match`, `GET …/scoresheet/status` | Teilen-Link | wie oben (Status: je IP) |
 | GET | `/api/league/club/overview` | `league.view` | Vereinsübersicht (0.848.0): `{ season, leagues[{ tnr, name, rounds[{ number, date, matches[LineupMatch] }] }], marks{ clubGameId: n } }` — nur eigene Begegnungen der laufenden Saison mit mindestens einem Brett (Bretter wie „Alle Aufstellungen“, `LeagueClubOverview`), `marks` = Zahl verschiedener markierter Stellungen je Vereinspartie |
+| GET | `/api/league/club/games/reviews?ids=1,2,…` | `league.view` | „!!“-Marker der Übersicht (0.849.0): `{ clubGameId: { pgn, evals } }` für höchstens 60 Partien des Vereins MIT Analyse (jüngste Vereins-Analyse, `evals` ohne Kandidatenlisten und Buchzüge); fremde/unbekannte/unanalysierte fehlen, 400 `tooMany` (`ClubGameReader.ReviewInputsAsync`) |
 | GET | `/api/league/club/games/{id}/marks` | `league.view` | Interessante Stellungen der Vereinspartie (0.848.0, `ClubGameMarks`): `[{ fen, positionKey, ply?, variationFromPly?, variationUci?, count }]` in Partiereihenfolge — `ply` = Halbzug in der Hauptlinie (Vergleich ohne en-passant-Feld), sonst aus einer Variante (Abzweig + Züge, fehlt bei älteren Markierungen); 404 anderer Verein |
 | GET | `/api/league/s/{token}/club/games/{id}`, `…/evals` | Teilen-Link | EINE Vereinspartie der geteilten Begegnung (0.838.3, RookHubs Partieseite `s/{token}/club-games/{id}`): wie angemeldet, aber `canDelete` false, keine Paarungs-Id; jede Partie, die nicht an einem Brett der Begegnung des Links hängt, 404 |
 | POST | `/api/league/s/{token}/club/scans` | Teilen-Link | Foto hochladen → `{ key, scan }` |
@@ -646,3 +647,8 @@ nicht jede interessante Stellung muss in der Partie vorkommen, kann auch in eine
   Variantenfelder nur ohne `ply` und gültig), `LeagueGameMovesTests` (Übersicht: nur eigene Begegnungen, echter eigener Spieler,
   Marker-Zahl); Specs `game-replay` (Sprungmarken), `board-game` (Marker + Laden), `club-overview-page`, `shared-game`
   (Variantenherkunft), `app.routes` (Anmeldung nötig).
+* **„!!“** (0.849.0, Wunsch 2026-10-27: „in der Übersicht … zeige auch !! an“): nach der Übersicht lädt die Seite für alle
+  Vereinspartien PGN + Bewertungen in Paketen zu 60 (`club/games/reviews`) und rechnet den Rückblick im Browser
+  (`brilliantMoves` in `core/lineups.ts` = `reviewGame` wie RookHubs Partieseite — die Klasse „Brillant“ gibt es nur dort,
+  der Server spiegelt sie nicht). Marker „!! n“ in der Farbe des Rückblicks neben „◆ n“; der Filter heißt „Nur mit
+  interessanten Stellungen oder !!“ und nimmt beide. Tests: `ClubGameMarksTests.ReviewInputs_…`, Spec `club-overview-page`.

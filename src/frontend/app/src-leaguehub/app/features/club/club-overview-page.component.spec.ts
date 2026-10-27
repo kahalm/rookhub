@@ -3,7 +3,8 @@ import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { HandoffService } from '@rh/core/handoff.service';
-import { ClubOverview, LineupsApiService } from '../../core/lineups';
+import { ClubOverview, LineupsApiService, brilliantMoves } from '../../core/lineups';
+import { GameEvals } from '@rh/features/games/game-review.util';
 import { ClubOverviewPageComponent } from './club-overview-page.component';
 
 // Erfundene Vereine und Spieler.
@@ -30,13 +31,19 @@ const DATA: ClubOverview = {
   marks: { '77': 3 },
 };
 
+// Griechisches Geschenk: 7.Lxh7+ opfert den Läufer, Bestzug, Zweitbester +0,50 → brillant (wie game-review.util.spec)
+const GREEK_PGN = '[SetUp "1"]\n[FEN "rnbq1rk1/pppnbppp/4p3/3pP3/3P4/2NB1N2/PPP2PPP/R1BQK2R w KQ - 5 7"]\n\n7. Bxh7+ *\n';
+const GREEK_EVALS: GameEvals = { status: 'done', analyzed: 1, total: 1, targetDepth: 20, final: { cp: 150 },
+  plies: [{ ply: 0, cp: 150, depth: 20, bestUci: 'd3h7', playedUci: 'd3h7', playedCp: 150, secondCp: 50 }] };
+
 describe('ClubOverviewPageComponent', () => {
   let api: jasmine.SpyObj<LineupsApiService>;
   let fixture: ComponentFixture<ClubOverviewPageComponent>;
 
   async function create(allowed = true): Promise<HTMLElement> {
-    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['overview', 'clubGame', 'clubGameMarks', 'fixturePgn']);
+    api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['overview', 'clubGame', 'clubGameMarks', 'clubGameReviews', 'fixturePgn']);
     api.overview.and.resolveTo(DATA);
+    api.clubGameReviews.and.resolveTo({ '78': { pgn: GREEK_PGN, evals: GREEK_EVALS } });
     TestBed.configureTestingModule({ imports: [ClubOverviewPageComponent], providers: [
       { provide: LineupsApiService, useValue: api },
       { provide: AuthService, useValue: { has: () => allowed, isLoggedIn: true } },
@@ -63,15 +70,27 @@ describe('ClubOverviewPageComponent', () => {
     expect(boards[0].querySelector('.bg-marks')?.textContent).toContain('◆ 3');
     expect(boards[1].querySelector('.bg-marks')).toBeNull();
     expect(boards[1].querySelector('.bg-what')?.textContent).toContain('Partie vorhanden');
-    expect(el.querySelector('.ov-filter')?.textContent).toContain('(1)');
+    expect(el.querySelector('.ov-filter')?.textContent).toContain('(2)');
   });
 
-  it('„Nur mit interessanten Stellungen" blendet Bretter und Begegnungen ohne Marker aus', async () => {
+  // 0.849.0, Wunsch 2026-10-27: „in der Übersicht … zeige auch !! an"
+  it('lädt PGN + Bewertungen in einem Aufruf und zeigt „!! n" an Partien mit brillanten Zügen', async () => {
+    const el = await create();
+    expect(api.clubGameReviews).toHaveBeenCalledOnceWith([77, 78]);
+    const boards = el.querySelectorAll('.lu-board');
+    expect(boards[0].querySelector('.bg-brilliant')).toBeNull();
+    expect(boards[1].querySelector('.bg-brilliant')?.textContent).toContain('!! 1');
+    expect(boards[1].querySelector('.bg-brilliant')?.getAttribute('title')).toBe('1 brillanter Zug');
+    expect(brilliantMoves(GREEK_PGN, { ...GREEK_EVALS, plies: [{ ...GREEK_EVALS.plies[0], secondCp: 800 }] })).toBe(0);   // ohnehin gewonnen
+    expect(brilliantMoves('kein PGN', GREEK_EVALS)).toBe(0);
+  });
+
+  it('„Nur mit interessanten Stellungen oder !!" blendet Bretter und Begegnungen ohne Marker aus', async () => {
     const el = await create();
     (el.querySelector('.ov-filter input') as HTMLInputElement).click();
     fixture.detectChanges();
     expect(el.querySelectorAll('.lu-match').length).toBe(1);
-    expect(el.querySelectorAll('.lu-board').length).toBe(1);
+    expect(el.querySelectorAll('.lu-board').length).toBe(2);                 // Brett 1 mit ◆, Brett 2 mit !!
     expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026']);
   });
 

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
-import { ClubOverview, LineupBoard, LineupMatch, LineupsApiService, points } from '../../core/lineups';
+import { ClubOverview, LineupBoard, LineupMatch, LineupsApiService, brilliantMoves, points } from '../../core/lineups';
 import { tn } from '../../core/league-format';
 import { ownsTeam, ClubContextService } from '../../core/club-context.service';
 import { BoardGameComponent } from '../../shared/board-game.component';
@@ -13,6 +13,9 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
  * eigenen Mannschaften, darunter die Bretter (Spieler, Farbe, Ergebnis) und die vorhandene Partie (`lh-board-game`: Nachspielen
  * mit Sprungmarken, Analyse). Ein Marker „◆ n" steht neben jeder Partie mit markierten Stellungen; „Nur mit interessanten
  * Stellungen" blendet die übrigen Bretter aus. Lesen mit `league.view`.
+ * Seit 0.849.0 (Wunsch 2026-10-27: „zeige auch !! an") steht daneben „!! n" für brillante Züge: nach der Übersicht lädt die
+ * Seite für alle Partien PGN + Bewertungen in Paketen (`club/games/reviews`) und rechnet den Rückblick wie RookHub; der
+ * Filter nimmt Partien mit „!!" mit.
  */
 @Component({
   selector: 'lh-club-overview-page',
@@ -26,7 +29,7 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
       <section class="ov-head">
         <h1>Übersicht@if (data()?.season; as s) { <span class="muted">{{ s }}</span>}</h1>
         <label class="ov-filter"><input type="checkbox" [checked]="onlyMarked()" (change)="onlyMarked.set(!onlyMarked())" />
-          Nur mit interessanten Stellungen@if (markedTotal()) { ({{ markedTotal() }})}</label>
+          Nur mit interessanten Stellungen oder !!@if (markedTotal()) { ({{ markedTotal() }})}</label>
       </section>
       @if (error(); as e) {
         <p class="err" role="alert">{{ e }} <button type="button" class="btn-link" (click)="load()">Erneut versuchen</button></p>
@@ -62,7 +65,8 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
                             <span class="lu-moves">
                               <lh-board-game [game]="g" [tnr]="l.tnr" [round]="r.number" [team]="m.home" [board]="b.board"
                                              [title]="'Brett ' + b.board + ': ' + (b.homePlayer ?? '–') + ' – ' + (b.awayPlayer ?? '–')"
-                                             [flipped]="ownIsBlack(m, b)" [markCount]="markCount(b)" />
+                                             [flipped]="ownIsBlack(m, b)" [markCount]="markCount(b)"
+                                             [brilliantCount]="brilliantCount(b)" />
                             </span>
                           }
                         </li>
@@ -119,8 +123,14 @@ export class ClubOverviewPageComponent implements OnInit {
   readonly onlyMarked = signal(false);
   readonly tn = tn;
   readonly pts = points;
-  /** Partien mit mindestens einer markierten Stellung — Zahl hinter dem Filter. */
-  readonly markedTotal = computed(() => Object.values(this.data()?.marks ?? {}).filter(n => n > 0).length);
+  /** Brillante Züge je Vereinspartie (Id → Zahl), füllt sich nach der Übersicht paketweise. */
+  readonly brilliant = signal<Record<number, number>>({});
+  /** Partien mit markierter Stellung oder „!!" — Zahl hinter dem Filter. */
+  readonly markedTotal = computed(() => {
+    const ids = new Set(Object.entries(this.data()?.marks ?? {}).filter(([, n]) => n > 0).map(([id]) => Number(id)));
+    for (const [id, n] of Object.entries(this.brilliant())) if (n > 0) ids.add(Number(id));
+    return ids.size;
+  });
 
   ngOnInit(): Promise<void> | void {
     if (this.allowed) return this.load();
@@ -129,7 +139,9 @@ export class ClubOverviewPageComponent implements OnInit {
   async load(): Promise<void> {
     this.error.set(null);
     try {
-      this.data.set(await this.api.overview());
+      const d = await this.api.overview();
+      this.data.set(d);
+      void this.loadBrilliant(d);
     } catch (err) {
       const s = err instanceof HttpErrorResponse ? err.status : 0;
       this.error.set(s === 403 ? 'Die Vereinsübersicht ist für dein Konto nicht freigeschaltet.'
@@ -137,14 +149,33 @@ export class ClubOverviewPageComponent implements OnInit {
     }
   }
 
+  /** „!!" nachrechnen — Pakete zu 60 Partien, nacheinander; ein Fehler kostet nur die Marker seines Pakets. */
+  private async loadBrilliant(d: ClubOverview): Promise<void> {
+    const ids = [...new Set(d.leagues.flatMap(l => l.rounds.flatMap(r => r.matches.flatMap(m => m.boards)))
+      .map(b => b.game?.clubGameId).filter((id): id is number => !!id))];
+    for (let i = 0; i < ids.length; i += 60) {
+      let got: Awaited<ReturnType<LineupsApiService['clubGameReviews']>>;
+      try { got = await this.api.clubGameReviews(ids.slice(i, i + 60)); } catch { continue; }
+      if (this.data() !== d) return;
+      const add: Record<number, number> = {};
+      for (const [id, r] of Object.entries(got)) add[Number(id)] = brilliantMoves(r.pgn, r.evals);
+      this.brilliant.update(cur => ({ ...cur, ...add }));
+    }
+  }
+
+  brilliantCount(b: LineupBoard): number {
+    const id = b.game?.clubGameId;
+    return id ? this.brilliant()[id] ?? 0 : 0;
+  }
+
   markCount(b: LineupBoard): number {
     const id = b.game?.clubGameId;
     return id ? this.data()?.marks[String(id)] ?? 0 : 0;
   }
 
-  /** Mit Filter nur Bretter, deren Partie markierte Stellungen hat. */
+  /** Mit Filter nur Bretter, deren Partie markierte Stellungen oder „!!" hat. */
   boards(m: LineupMatch): LineupBoard[] {
-    return this.onlyMarked() ? m.boards.filter(b => this.markCount(b) > 0) : m.boards;
+    return this.onlyMarked() ? m.boards.filter(b => this.markCount(b) > 0 || this.brilliantCount(b) > 0) : m.boards;
   }
 
   visible(matches: LineupMatch[]): LineupMatch[] {

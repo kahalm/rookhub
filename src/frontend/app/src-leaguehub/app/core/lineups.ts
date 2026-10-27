@@ -4,6 +4,9 @@ import { firstValueFrom } from 'rxjs';
 import { Chess } from 'chess.js';
 import { de } from './league-format';
 import { ReplayMark } from '@rh/shared/player-card/game-replay.component';
+import { GameEvals, reviewGame } from '@rh/features/games/game-review.util';
+import { uciOf } from '@rh/features/games/move-tactics.util';
+import { parsePgnText } from '@rh/shared/pgn-viewer/pgn-parser';
 
 /**
  * Aufstellungen je Runde + erste Züge je Partie (2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen
@@ -69,6 +72,15 @@ export interface ClubOverview {
   marks: Record<string, number>;
 }
 
+/** Zahl der brillanten Züge („!!") einer Partie — derselbe Rückblick wie auf RookHubs Partieseite (`reviewGame`). */
+export function brilliantMoves(pgn: string, evals: GameEvals): number {
+  let g;
+  try { g = parsePgnText(pgn)[0]; } catch { return 0; }
+  if (!g) return 0;
+  const r = reviewGame(evals, g.fens, g.moves.map(uciOf));
+  return r.white.counts.brilliant + r.black.counts.brilliant;
+}
+
 /** Schlüssel einer Partie: Liga, Runde, Begegnung, Brett. */
 export interface MovesKey { tnr: number; round: number; matchNo: number; board: number }
 
@@ -110,6 +122,12 @@ export class LineupsApiService {
   /** Alle Begegnungen der eigenen Mannschaften der laufenden Saison mit Brettern, Partien und Markern (0.848.0). */
   overview(): Promise<ClubOverview> {
     return firstValueFrom(this.http.get<ClubOverview>('/api/league/club/overview'));
+  }
+
+  /** PGN + schlanke Bewertungen der analysierten Vereinspartien unter `ids` (höchstens 60, 0.849.0) — für die „!!"-Marker. */
+  clubGameReviews(ids: readonly number[]): Promise<Record<string, { pgn: string; evals: GameEvals }>> {
+    return firstValueFrom(this.http.get<Record<string, { pgn: string; evals: GameEvals }>>(
+      `/api/league/club/games/reviews?ids=${ids.join(',')}`));
   }
 
   /** PGN einer Vereinspartie samt Stand der Analyse (wie die Vereinsliste, `league.view`, Verein über `?club=`). */

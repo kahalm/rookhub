@@ -36,4 +36,17 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
     public async Task<IActionResult> Marks(int id, CancellationToken ct) =>
         await WithClubAsync(ct, async c => await marks.ForGameAsync(c, id, ct) is { } m ? Ok(m) : NotFound(),
             await club.ClubOfGameAsync(id, ct));
+
+    /// <summary>PGN + schlanke Bewertungen der analysierten Partien unter <c>?ids=1,2,…</c> (höchstens
+    /// <see cref="ClubGameReader.MaxReviewInputs"/>) → <c>{ clubGameId: { pgn, evals } }</c>, für die „!!"-Marker der Übersicht
+    /// (0.849.0). Partien ohne Analyse oder aus einem anderen Verein fehlen; 400 bei zu vielen Ids.</summary>
+    [HttpGet("games/reviews")]
+    [HasPermission(Permissions.LeagueView)]
+    public Task<IActionResult> Reviews([FromQuery] string? ids, CancellationToken ct) => WithClubAsync(ct, async c =>
+    {
+        var list = (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();
+        if (list.Count > ClubGameReader.MaxReviewInputs) return BadRequest(new { error = "tooMany" });
+        return Ok(await club.ReviewInputsAsync(c, list, ct));
+    });
 }
