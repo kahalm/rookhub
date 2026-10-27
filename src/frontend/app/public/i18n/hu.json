@@ -2554,6 +2554,7 @@
       "titleRevealed": "A változataid motorral",
       "hint": "Játszd a saját változataidat — a képernyőn semmi sincs értékelve. Ha végeztél, kapcsold be a motort: minden változatot értékelve és a legjobb lépéssel összevetve látsz.",
       "reveal": "Motor bekapcsolása",
+      "hide": "Motor kikapcsolása",
       "better": "jobb {{san}}",
       "progressShort": "{{done}}/{{total}} elemezve",
       "bestShort": "{{best}}/{{rated}} legjobb"

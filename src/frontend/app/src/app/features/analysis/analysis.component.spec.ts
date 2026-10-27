@@ -301,6 +301,32 @@ describe('AnalysisComponent Nachbarlinie mit ↑/↓', () => {
   });
 });
 
+// 0.859.0, Wunsch 2026-10-27: „es soll einen Knopf geben, wo ich die Engine wieder wegschalte"
+describe('AnalysisComponent ohne Engine: wieder wegschalten', () => {
+  it('nach dem Aufdecken schaltet „Engine ausschalten" zurück in den Blindmodus, „einschalten" ohne neue Anfrage zurück', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    const reveal = jasmine.createSpy('reveal');
+    c.study = { revealed: true, reveal, schedule: () => {} } as any;
+    expect(c.blind).toBeFalse();
+    c.engineOn = true;
+    c.hideStudyEngine();
+    expect(c.blind).toBeTrue();
+    expect(c.engineOn).toBeFalse();
+    c.revealStudy();
+    expect(reveal).not.toHaveBeenCalled();
+    expect(c.blind).toBeFalse();
+    expect(c.engineOn).toBeTrue();
+    // 0.859.0, Wunsch 2026-10-27: „star position braucht man in dem Modus nicht, gibt ja das +"
+    c.onKey(new KeyboardEvent('keydown', { key: 's' }));
+    expect(c.currentNode.starred).toBeFalsy();
+    c.study = null;
+    c.onKey(new KeyboardEvent('keydown', { key: 's' }));
+    expect(c.currentNode.starred).toBeTrue();
+    c.ngOnDestroy();
+  });
+});
+
 describe('AnalysisComponent back-to-puzzle + depth', () => {
   it('reads the from param and navigates back to it', () => {
     const c = makeComponent({ fen: START, from: '/puzzles/123' });

@@ -57,8 +57,8 @@
       }
       @if (study; as s) {
         <!-- „Ohne Engine analysieren" (0.855.0): Fortschritt der Hintergrundrechnung, „Engine einschalten", danach der Vergleich. -->
-        <app-line-study-card [revealed]="s.revealed" [analyzed]="s.analyzed" [total]="s.total" [comparison]="s.comparison"
-                             (reveal)="revealStudy()" (jump)="goToNode($event)" />
+        <app-line-study-card [revealed]="s.revealed" [hidden]="studyEngineHidden" [analyzed]="s.analyzed" [total]="s.total"
+                             [comparison]="s.comparison" (reveal)="revealStudy()" (hide)="hideStudyEngine()" (jump)="goToNode($event)" />
       }
       @if (engineCrashed) {
         <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">
@@ -116,10 +116,13 @@
             <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [appIconLabel]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
             <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
             <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
-            <button mat-icon-button class="star-btn" [class.on]="!!currentNode.starred" (click)="toggleStar()"
-                    [appIconLabel]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
-              <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
-            </button>
+            <!-- Ohne Engine kein Stern (0.859.0, Wunsch 2026-10-27: „braucht man in dem Modus nicht, gibt ja das +"). -->
+            @if (!study) {
+              <button mat-icon-button class="star-btn" [class.on]="!!currentNode.starred" (click)="toggleStar()"
+                      [appIconLabel]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
+                <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
+              </button>
+            }
             <span class="spacer"></span>
             <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
             @if (!study) {
@@ -135,7 +138,7 @@
                                [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
             }
           </div>
-          @if (starredList.length > 0) {
+          @if (starredList.length > 0 && !study) {
             <div class="star-jumps" [attr.aria-label]="'analysis.star.jumps' | translate">
               <mat-icon class="star-icon">star</mat-icon>
               @for (n of starredList; track n) {
@@ -148,7 +151,7 @@
           } @else {
             <!-- Zugbaum wie auf Lichess (0.604.0): Hauptlinie als Tabelle mit Bewertung, Varianten als Block,
                  Rechtsklick bzw. langer Druck: Stern, hochstufen, zur Hauptvariante, ab hier löschen. -->
-            <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion"
+            <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion" [canStar]="!study"
                                     (select)="goToNode($event)" (action)="onTreeAction($event)" />
             <p class="tree-hint">{{ 'analysis.tree.hint' | translate }}</p>
           }

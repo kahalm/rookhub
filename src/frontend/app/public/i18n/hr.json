@@ -3413,6 +3413,7 @@
       "titleRevealed": "Tvoje varijante s engineom",
       "hint": "Igraj vlastite varijante — ništa se ne ocjenjuje na zaslonu. Kad završiš, uključi engine i vidjet ćeš svaku varijantu ocijenjenu i uspoređenu s najboljim potezom.",
       "reveal": "Uključi engine",
+      "hide": "Isključi engine",
       "better": "bolje {{san}}",
       "progressShort": "{{done}}/{{total}} analizirano",
       "bestShort": "{{best}}/{{rated}} najboljih"

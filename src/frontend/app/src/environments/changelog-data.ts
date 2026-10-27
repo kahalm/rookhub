@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.859.0", date: "2026-10-27", changes: [
+    { en: "Without engine: after “Switch engine on” a “Switch engine off” button turns it off again (bar, engine and evaluations hidden as before); “Switch engine on” brings it back.", de: "Ohne Engine: Nach „Engine einschalten“ schaltet „Engine ausschalten“ sie wieder weg (Leiste, Engine und Bewertungen verschwinden wie vorher); „Engine einschalten“ holt sie zurück." },
+    { en: "Without engine there is no star for positions any more (button, S key, right-click menu) — the “+” of the annotations does that job.", de: "Ohne Engine gibt es keinen Stern für Stellungen mehr (Knopf, Taste S, Rechtsklick-Menü) — das übernimmt das „+“ der Anmerkungen." },
+  ] },
   { version: "0.858.0", date: "2026-10-27", changes: [
     { en: "Analysis board: ↑/↓ switch between neighbouring lines at the same depth — ↓ into the next variation, ↑ back towards the main line (across outer branches too). Without a branch the keys scroll the page as before.", de: "Analysebrett: ↑/↓ wechseln zwischen nebeneinanderliegenden Linien in gleicher Tiefe — ↓ in die nächste Variante, ↑ zurück Richtung Hauptlinie (auch über äußere Verzweigungen). Ohne Verzweigung scrollen die Tasten wie bisher die Seite." },
   ] },

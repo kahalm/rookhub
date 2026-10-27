@@ -3413,6 +3413,7 @@
       "titleRevealed": "Deine Linien mit Engine",
       "hint": "Spiel deine eigenen Linien — nichts wird bewertet angezeigt. Wenn du fertig bist, schalte die Engine ein: dann siehst du jede Linie bewertet und mit dem besten Zug verglichen.",
       "reveal": "Engine einschalten",
+      "hide": "Engine ausschalten",
       "better": "besser {{san}}",
       "progressShort": "{{done}}/{{total}} gerechnet",
       "bestShort": "{{best}}/{{rated}} beste"

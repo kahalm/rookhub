@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +12,9 @@ import { contrastText } from '../../shared/contrast-text.util';
 /**
  * Leiste „Ohne Engine" am Analysebrett (0.855.0, seit 0.855.1 eine Zeile): solange die Engine aus ist, der Fortschritt der
  * Hintergrundrechnung und „Engine einschalten"; danach die Zähler des Vergleichs, aufklappbar zur Liste — wo die Linie vom besten
- * Zug abwich (Klick springt hin).
+ * Zug abwich (Klick springt hin). Seit 0.859.0 (Wunsch 2026-10-27: „es soll einen Knopf geben, wo ich die Engine wieder
+ * wegschalte") schaltet „Engine ausschalten" sie nach dem Aufdecken wieder weg (nur auf dieser Seite, `hidden`), „Engine
+ * einschalten" holt sie zurück.
  */
 @Component({
   selector: 'app-line-study-card',
@@ -22,13 +24,13 @@ import { contrastText } from '../../shared/contrast-text.util';
   template: `
     <div class="line-study" [class.open]="open()">
       <div class="bar">
-        <mat-icon class="icon" aria-hidden="true">{{ revealed() ? 'insights' : 'visibility_off' }}</mat-icon>
-        <span class="label" [matTooltip]="revealed() ? '' : ('analysis.lineStudy.hint' | translate)">
-          {{ (revealed() ? 'analysis.lineStudy.titleRevealed' : 'analysis.lineStudy.title') | translate }}
+        <mat-icon class="icon" aria-hidden="true">{{ on() ? 'insights' : 'visibility_off' }}</mat-icon>
+        <span class="label" [matTooltip]="on() ? '' : ('analysis.lineStudy.hint' | translate)">
+          {{ (on() ? 'analysis.lineStudy.titleRevealed' : 'analysis.lineStudy.title') | translate }}
         </span>
         <span class="progress">{{ 'analysis.lineStudy.progressShort' | translate:{ done: analyzed(), total: total() } }}</span>
         @if (comparison(); as c) {
-          @if (revealed() && c.rated > 0) {
+          @if (on() && c.rated > 0) {
             <button type="button" class="toggle" [attr.aria-expanded]="open()" (click)="open.set(!open())">
               <span class="cnt best">{{ 'analysis.lineStudy.bestShort' | translate:{ best: c.best, rated: c.rated } }}</span>
               @if (c.inaccuracies) { <span class="cnt" [style.color]="color('inaccuracy')">?! {{ c.inaccuracies }}</span> }
@@ -38,13 +40,17 @@ import { contrastText } from '../../shared/contrast-text.util';
             </button>
           }
         }
-        @if (!revealed()) {
+        @if (!on()) {
           <button mat-stroked-button type="button" class="reveal" (click)="reveal.emit()">
             <mat-icon>visibility</mat-icon> {{ 'analysis.lineStudy.reveal' | translate }}
           </button>
+        } @else {
+          <button mat-stroked-button type="button" class="reveal hide" (click)="hide.emit()">
+            <mat-icon>visibility_off</mat-icon> {{ 'analysis.lineStudy.hide' | translate }}
+          </button>
         }
       </div>
-      @if (revealed() && open()) {
+      @if (on() && open()) {
         @if (comparison(); as c) {
           <ul class="verdicts">
             @for (v of c.verdicts; track v.node) {
@@ -89,10 +95,15 @@ import { contrastText } from '../../shared/contrast-text.util';
 })
 export class LineStudyCardComponent {
   readonly revealed = input(false);
+  /** Nach dem Aufdecken wieder weggeschaltet (0.859.0). */
+  readonly hidden = input(false);
+  /** Engine sichtbar: aufgedeckt und nicht weggeschaltet. */
+  readonly on = computed(() => this.revealed() && !this.hidden());
   readonly analyzed = input(0);
   readonly total = input(0);
   readonly comparison = input<LineComparison | null>(null);
   readonly reveal = output<void>();
+  readonly hide = output<void>();
   readonly jump = output<AnalysisNode>();
   /** Vergleichsliste aufgeklappt (zu, bis man auf die Zähler tippt). */
   readonly open = signal(false);

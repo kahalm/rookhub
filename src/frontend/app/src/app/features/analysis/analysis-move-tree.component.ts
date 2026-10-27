@@ -1,6 +1,6 @@
 import {
   AfterViewChecked, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy,
-  Output, SimpleChanges, ViewChild, inject, signal,
+  Output, SimpleChanges, ViewChild, inject, input, signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
@@ -86,10 +86,12 @@ const LONG_PRESS_SLOP_PX = 10;
           [matMenuTriggerFor]="ctxMenu" #trigger="matMenuTrigger"></span>
     <mat-menu #ctxMenu="matMenu">
       @if (menuNode(); as n) {
-        <button mat-menu-item type="button" (click)="act('star', n)">
-          <mat-icon>{{ n.starred ? 'star' : 'star_border' }}</mat-icon>
-          {{ (n.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate }}
-        </button>
+        @if (canStar()) {
+          <button mat-menu-item type="button" (click)="act('star', n)">
+            <mat-icon>{{ n.starred ? 'star' : 'star_border' }}</mat-icon>
+            {{ (n.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate }}
+          </button>
+        }
         @if (!onMainline(n)) {
           <button mat-menu-item type="button" (click)="act('promote', n)">
             <mat-icon>arrow_upward</mat-icon> {{ 'analysis.tree.promote' | translate }}
@@ -144,6 +146,8 @@ export class AnalysisMoveTreeComponent implements OnChanges, AfterViewChecked, O
   @Input({ required: true }) current!: AnalysisNode;
   /** Zählt jede Änderung am Baum (Zug, Variante, Stern, Bewertung) — der Baum selbst wird an Ort und Stelle verändert. */
   @Input() version = 0;
+  /** Stern im Rechtsklick-Menü anbieten (ohne Engine nicht, 0.859.0 — dort gibt es das „+"). */
+  readonly canStar = input(true);
 
   @Output() readonly select = new EventEmitter<AnalysisNode>();
   @Output() readonly action = new EventEmitter<{ kind: MoveTreeAction; node: AnalysisNode }>();

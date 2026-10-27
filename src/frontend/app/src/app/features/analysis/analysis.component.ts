@@ -129,7 +129,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Eigene Linien zu einer Partie ohne Bewertung; `null` = normales Analysebrett. */
   study: LineStudySession | null = null;
   /** Ohne Engine und noch nicht aufgedeckt: keine Leiste, keine Engine, kein Explorer, keine Bewertungen. */
-  get blind(): boolean { return !!this.study && !this.study.revealed; }
+  get blind(): boolean { return !!this.study && (!this.study.revealed || this.studyEngineHidden); }
+  /** Nach dem Aufdecken wieder weggeschaltet (0.859.0, „Engine ausschalten") — nur auf dieser Seite, aufgedeckt bleibt aufgedeckt. */
+  studyEngineHidden = false;
 
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   private readonly historySaver: AnalysisHistorySaver;
@@ -300,7 +302,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       root: () => this.root,
       current: () => this.currentNode,
       setTree: (root, current) => this.setTree(root, current),
-      revealed: () => { this.engineOn = true; this.refresh(); },
+      revealed: () => { this.studyEngineHidden = false; this.engineOn = true; this.refresh(); },
       changed: () => { this.treeVersion++; this.cdr.markForCheck(); },
     }, lineStudyKey(parsed.root.fen, gameUcis), gameUcis, pgnTitle(parsed.headers));
     this.loadPgn(true);
@@ -308,7 +310,18 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   /** „Engine einschalten" auf der Karte „Ohne Engine". */
-  revealStudy(): void { this.study?.reveal(); }
+  revealStudy(): void {
+    if (!this.study) return;
+    if (this.study.revealed) { this.studyEngineHidden = false; this.engineOn = true; this.refresh(); return; }
+    this.study.reveal();
+  }
+
+  /** „Engine ausschalten" (0.859.0): wieder wie ohne Engine — keine Leiste, keine Engine, keine Bewertungen. */
+  hideStudyEngine(): void {
+    this.studyEngineHidden = true;
+    this.engineOn = false;
+    this.refresh();
+  }
 
   // Eigene Anmerkungen am Zug (0.855.2, Wunsch 2026-10-27: „Bewertungsbuttons analog zum Kalk-Modus fehlen, auch Kommentare zu
   // Stellungen wären gut") — dieselbe Karte wie im Kalkulations-Modus, gespeichert im Linien-Baum.
@@ -421,7 +434,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
     else if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
     else if (e.key === 'End') { e.preventDefault(); this.goTo(this.line.length); }
-    else if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); this.toggleStar(); }
+    else if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey && !this.study) { e.preventDefault(); this.toggleStar(); }
   }
 
   // ---- User move ----
