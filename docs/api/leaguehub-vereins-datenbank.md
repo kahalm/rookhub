@@ -657,3 +657,6 @@ nicht jede interessante Stellung muss in der Partie vorkommen, kann auch in eine
   Runde anschaut“): `lh-round-lineups` lädt angemeldet dieselben Marker (`GameMarkers` in `core/lineups.ts`, geteilt mit der
   Übersicht: „◆“ über `club/games/marks`, „!!“ über `club/games/reviews`); über einen Teilen-Link keine Marker (beide
   Endpunkte brauchen `league.view`). Spec `round-lineups`.
+* **Auch in der Liste der Vereinspartien** (`/verein`, 0.851.0, Wunsch 2026-10-27: „markiere diese Partien auch so in der Liste
+  Vereinsspiele“): hinter dem Ergebnis (Tabelle und Handy-Karte) „◆ n“/„!! n“, je geladener Seite nachgeholt
+  (`GameMarkers.add`). Spec `club-games-page`.

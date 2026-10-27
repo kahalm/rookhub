@@ -83,7 +83,8 @@ export function brilliantMoves(pgn: string, evals: GameEvals): number {
 
 /**
  * „◆ n" (markierte Stellungen) und „!! n" (brillante Züge) je Vereinspartie — geteilt von der Vereinsübersicht und den
- * Aufstellungen einer Runde (0.850.0, Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut").
+ * Aufstellungen einer Runde (0.850.0, Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut") und
+ * der Liste der Vereinspartien (0.851.0: „markiere diese Partien auch so in der Liste Vereinsspiele").
  * `load` holt die Zahlen in Paketen nach; ein neuer `load` verwirft späte Antworten des vorigen. Nur angemeldet (`league.view`).
  */
 export class GameMarkers {
@@ -98,17 +99,23 @@ export class GameMarkers {
     return [...new Set(matches.flatMap(m => m.boards).map(b => b.game?.clubGameId).filter((id): id is number => !!id))];
   }
 
-  /** `marks` schon bekannt (Übersicht) → nur „!!" nachladen. */
-  async load(ids: readonly number[], marks?: Record<string, number>): Promise<void> {
-    const run = ++this.run;
-    this.marks.set(marks ? Object.fromEntries(Object.entries(marks).map(([k, v]) => [Number(k), v])) : {});
-    this.brilliant.set({});
-    if (!marks) {
+  /** `marks` schon bekannt (Übersicht) → nur „!!" nachladen. Leert vorher; späte Antworten eines früheren `load` fallen weg. */
+  load(ids: readonly number[], marks?: Record<string, number>): Promise<void> {
+    this.clear();
+    return this.add(ids, marks);
+  }
+
+  /** Weitere Partien dazu, ohne die bisherigen Marker zu leeren (Vereinspartien: nächste Seite, 0.851.0). */
+  async add(ids: readonly number[], marks?: Record<string, number>): Promise<void> {
+    const run = this.run;
+    const asNum = (r: Record<string, number>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [Number(k), v]));
+    if (marks) this.marks.update(cur => ({ ...cur, ...asNum(marks) }));
+    else {
       for (let i = 0; i < ids.length; i += 200) {
         try {
           const got = await this.api.clubGameMarkCounts(ids.slice(i, i + 200));
           if (run !== this.run) return;
-          this.marks.update(cur => ({ ...cur, ...Object.fromEntries(Object.entries(got).map(([k, v]) => [Number(k), v])) }));
+          this.marks.update(cur => ({ ...cur, ...asNum(got) }));
         } catch { /* ohne Marker weiter */ }
       }
     }
@@ -120,6 +127,15 @@ export class GameMarkers {
       for (const [id, r] of Object.entries(got)) add[Number(id)] = brilliantMoves(r.pgn, r.evals);
       this.brilliant.update(cur => ({ ...cur, ...add }));
     }
+  }
+
+  /** Nach Id statt Brett (Vereinspartien-Liste). */
+  marksOf(id: number): number {
+    return this.marks()[id] ?? 0;
+  }
+
+  brilliantOf(id: number): number {
+    return this.brilliant()[id] ?? 0;
   }
 
   /** Verwirft laufende Antworten und leert die Marker (z. B. über einen Teilen-Link). */

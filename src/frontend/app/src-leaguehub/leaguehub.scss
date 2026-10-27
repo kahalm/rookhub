@@ -649,6 +649,9 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .gc-side { white-space: nowrap; }
 .gc-vs { color: var(--muted); }
 .gc-result { flex: 0 0 auto; }
+/* 0.851.0: Marker hinter dem Ergebnis (Vereinspartien) — wie .bg-marks/.bg-brilliant in lh-board-game */
+.gm-marks { color: var(--rh-success); font-weight: 700; white-space: nowrap; }
+.gm-brilliant { font-weight: 700; white-space: nowrap; }
 .gc-meta { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gc-acts { justify-content: flex-end; }
 /* z2-l-verein-karten-aktionen: Meta-Zeile und Aktionen in einer Zeile (vorher eigene Aktionszeile, ~40 px je Karte). */

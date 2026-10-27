@@ -9,6 +9,7 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { ClubGame, ClubGameAnalysis } from '../../core/club.models';
 import { ClubGamesPageComponent } from './club-games-page.component';
+import { LineupsApiService } from '../../core/lineups';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
@@ -23,10 +24,14 @@ describe('ClubGamesPageComponent', () => {
   /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
   let confirmAsk: jasmine.Spy;
   let perms: Set<string>;
+  let lineups: jasmine.SpyObj<LineupsApiService>;
 
   beforeEach(() => {
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     perms = new Set(['league.view', 'league.contribute']);
+    lineups = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['clubGameMarkCounts', 'clubGameReviews']);
+    lineups.clubGameMarkCounts.and.resolveTo({});
+    lineups.clubGameReviews.and.resolveTo({});
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn', 'updateGame', 'players', 'game', 'evalsUrl']);
     api.evalsUrl.and.callFake((id: number) => `/api/league/club/games/${id}/evals`);
     api.players.and.resolveTo([]);
@@ -40,6 +45,7 @@ describe('ClubGamesPageComponent', () => {
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting(),
         { provide: ClubApiService, useValue: { client: () => api } },
+        { provide: LineupsApiService, useValue: lineups },
         { provide: LeagueApiService, useValue: jasmine.createSpyObj('LeagueApiService', ['card', 'pgn']) },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
         { provide: ActivatedRoute, useValue: { snapshot: { data: routeData, queryParamMap: convertToParamMap(query) } } },
@@ -49,6 +55,25 @@ describe('ClubGamesPageComponent', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  // 0.851.0, Wunsch 2026-10-27: „markiere diese Partien auch so in der Liste Vereinsspiele"
+  it('zeigt „◆ n" und „!! n" hinter dem Ergebnis, je Seite nachgeladen', fakeAsync(() => {
+    lineups.clubGameMarkCounts.and.resolveTo({ '2': 3 });
+    lineups.clubGameReviews.and.resolveTo({ '1': {
+      pgn: '[SetUp "1"]\n[FEN "rnbq1rk1/pppnbppp/4p3/3pP3/3P4/2NB1N2/PPP2PPP/R1BQK2R w KQ - 5 7"]\n\n7. Bxh7+ *\n',
+      evals: { status: 'done', analyzed: 1, total: 1, targetDepth: 20, final: { cp: 150 },
+        plies: [{ ply: 0, cp: 150, depth: 20, bestUci: 'd3h7', playedUci: 'd3h7', playedCp: 150, secondCp: 50 }] } } });
+    const el = create();
+    flush();
+    fixture.detectChanges();
+    expect(lineups.clubGameMarkCounts).toHaveBeenCalledOnceWith([1, 2]);
+    const rows = el.querySelectorAll('tr.game');
+    expect(rows[0].querySelector('td.num:nth-of-type(4) .gm-brilliant')?.textContent).toContain('!! 1');
+    expect(rows[0].querySelector('.gm-marks')).toBeNull();
+    expect(rows[1].querySelector('.gm-marks')?.textContent).toContain('◆ 3');
+    expect(rows[1].querySelector('.gc-result .gm-marks')?.getAttribute('title')).toBe('3 interessante Stellungen');   // auch in der Handy-Karte
+    discardPeriodicTasks();
+  }));
 
   it('?bearbeiten=<id> öffnet diese Partie gleich zum Bearbeiten (0.675.0)', fakeAsync(() => {
     create({}, { bearbeiten: '2' });

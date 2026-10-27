@@ -19,6 +19,8 @@ import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
+import { GameMarkers, LineupsApiService } from '../../core/lineups';
+import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
 
 /**
  * Vereinspartien (`/verein`): was die Mitglieder hochgeladen haben, neueste Jahre zuerst. Lesen darf, wer LeagueHub
@@ -29,6 +31,10 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
  * Jede Partie wird im Hintergrund analysiert (0.588.0), und die Analyse steht allen offen, die die Vereinspartien sehen
  * (Wunsch 2026-09-28, 0.593.0): die Spalte „Analyse" zeigt die Genauigkeit beider Seiten bzw. den Fortschritt,
  * „Nachspielen" klappt darunter Brett und Rückblick auf (Kurve, Zug-Klassen, Computer-Linien).
+ *
+ * Seit 0.851.0 (Wunsch 2026-10-27: „markiere diese Partien auch so in der Liste Vereinsspiele") stehen hinter dem Ergebnis
+ * dieselben Marker wie in der Vereinsübersicht: „◆ n" interessante Stellungen, „!! n" brillante Züge (`GameMarkers`, je Seite
+ * nachgeladen).
  */
 type Side = 'white' | 'black';
 
@@ -106,7 +112,7 @@ type Side = 'white' | 'black';
                   @for (k of sides; track k) {
                     <td class="side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: k }" /></td>
                   }
-                  <td class="num">{{ resultText(g.result) }}</td>
+                  <td class="num">{{ resultText(g.result) }}<ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" /></td>
                   <td class="hide-s small opening" [attr.title]="de(g.opening)">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
                   @if (showAnalysis()) { <td class="num small" [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</td> }
@@ -116,7 +122,7 @@ type Side = 'white' | 'black';
                       <span class="gc-names"><span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'white' }" /></span>
                         <span class="gc-vs" aria-hidden="true">–</span>
                         <span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'black' }" /></span></span>
-                      <b class="gc-result">{{ resultText(g.result) }}</b>
+                      <b class="gc-result">{{ resultText(g.result) }}<ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" /></b>
                     </div>
                     <!-- z2-l-verein-karten-aktionen: Jahr · Eröffnung links, „Nachspielen" und ⋮ rechts in DERSELBEN Zeile. -->
                     <div class="gc-foot">
@@ -223,6 +229,15 @@ type Side = 'white' | 'black';
       @else { <span [attr.title]="nameOf(g, k)">{{ nameOf(g, k) }}</span> }
       @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }
     </ng-template>
+    <!-- 0.851.0: „◆ n"/„!! n" wie in der Vereinsübersicht (lh-board-game) -->
+    <ng-template #gameMarks let-g>
+      @if (markers.marksOf(g.id); as n) {
+        <span class="gm-marks" [title]="n === 1 ? '1 interessante Stellung' : n + ' interessante Stellungen'"> ◆ {{ n }}</span>
+      }
+      @if (markers.brilliantOf(g.id); as n) {
+        <span class="gm-brilliant" [style.color]="brilliantColor" [title]="n === 1 ? '1 brillanter Zug' : n + ' brillante Züge'"> !! {{ n }}</span>
+      }
+    </ng-template>
     <ng-template #rowActs let-g>
       <!-- Nachspielen bleibt sichtbar, der Rest steckt im ⋮ (Wunsch 2026-10-06: die Spalte machte die Tabelle zu breit). -->
       <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
@@ -263,6 +278,9 @@ export class ClubGamesPageComponent implements OnInit {
   readonly de = de;
 
   readonly items = signal<ClubGame[]>([]);
+  /** „◆"/„!!" je Partie (0.851.0), je geladener Seite nachgeholt. */
+  readonly markers = new GameMarkers(inject(LineupsApiService));
+  readonly brilliantColor = MOVE_CLASS_COLORS.brilliant;
   /** Spalte „Analyse" nur, wenn mindestens eine Partie einen Wert hat — sonst stand dort nur „–" (UI-Sweep 2026-10-10). */
   readonly showAnalysis = computed(() => this.items().some(g => this.analysisText(g) !== '–'));
   readonly total = signal<number | null>(null);
@@ -331,6 +349,8 @@ export class ClubGamesPageComponent implements OnInit {
       this.page = r.page;
       this.items.set(page === 1 ? r.items : [...this.items(), ...r.items]);
       this.total.set(r.total);
+      const ids = r.items.map(g => g.id);
+      void (page === 1 ? this.markers.load(ids) : this.markers.add(ids));
     } catch (err) {
       if (my === this.seq) this.error.set(this.errorText(err));
     } finally {

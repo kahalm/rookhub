@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.851.0", date: "2026-10-27", changes: [
+    { en: "LeagueHub club games list: behind the result, games now show the same markers as the club overview – ◆ n for interesting positions and !! n for brilliant moves (also on the phone card).", de: "LeagueHub-Liste der Vereinspartien: Hinter dem Ergebnis stehen jetzt dieselben Marker wie in der Vereinsübersicht – ◆ n für interessante Stellungen und !! n für brillante Züge (auch in der Karte am Handy)." },
+  ] },
   { version: "0.850.1", date: "2026-10-27", changes: [
     { en: "Technical: the new marker endpoints answer „too many games“ with the usual error body (message instead of error) – the build of 0.849.0/0.850.0 failed on that check; no visible change.", de: "Technisch: Die neuen Marker-Endpunkte melden „zu viele Partien“ mit dem üblichen Fehlerrumpf (message statt error) – daran war der Build von 0.849.0/0.850.0 gescheitert; nichts Sichtbares." },
   ] },
