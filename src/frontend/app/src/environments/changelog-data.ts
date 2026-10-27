@@ -10,6 +10,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.856.0", date: "2026-10-27", changes: [
+    { en: "Without engine: annotate your lines like in calculation mode — move symbols (!!, !, !?, ?!, ?, ??), a position assessment (=, ⩲, ±, +−, ∞ …) and a comment for each move; they appear in the move list and are saved with your lines.", de: "Ohne Engine: deine Linien wie im Kalkulations-Modus anmerken — Zug-Symbol (!!, !, !?, ?!, ?, ??), Stellungsbewertung (=, ⩲, ±, +−, ∞ …) und Kommentar je Zug; sie stehen in der Zugliste und werden mit deinen Linien gespeichert." },
+    { en: "The “Without engine” box on the analysis board is now a slim single line (progress and a small “Switch engine on” button); after switching on, the comparison counts open the list on tap.", de: "Der Kasten „Ohne Engine“ am Analysebrett ist jetzt eine schmale Zeile (Fortschritt und kleiner Knopf „Engine einschalten“); nach dem Einschalten klappen die Zähler des Vergleichs die Liste auf." },
+    { en: "“Analyse” in LeagueHub now asks “with or without engine” on RookHub’s game page too, also for games that are already analysed (or applies your saved default).", de: "„Analyse“ in LeagueHub fragt auf RookHubs Partieseite jetzt ebenfalls „mit oder ohne Engine“, auch bei schon analysierten Partien (bzw. nimmt deine gespeicherte Vorgabe)." },
+  ] },
   { version: "0.855.1", date: "2026-10-27", changes: [
     { en: "LeagueHub club overview: “Newest first” lists the rounds of each league in reverse order (latest round on top); the browser remembers the choice.", de: "LeagueHub-Vereinsübersicht: „Neueste zuerst“ zeigt die Runden jeder Liga umgekehrt (jüngste Runde oben); der Browser merkt sich die Wahl." },
   ] },

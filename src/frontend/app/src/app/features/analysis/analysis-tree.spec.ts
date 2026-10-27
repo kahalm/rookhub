@@ -76,6 +76,12 @@ describe('analysis-tree', () => {
     expect(back.nodes[3]).toBe(nodeAtPath(back.root, [0, 1, 0]));
     expect(back.nodes[3]!.starred).toBeTrue();
     expect(back.nodes[2]!.evalText).toBe('+0.30');
+    // Eigene Anmerkungen (0.855.2) gehen mit hin und zurück
+    nf3.glyph = '!?'; nf3.evaluation = '±'; nf3.comment = 'Druck auf e5';
+    const annotated = toDto(root).tree.n![3];
+    expect(annotated).toEqual({ p: 2, u: 'g1f3', s: true, g: '!?', v: '±', c: 'Druck auf e5' });
+    const again = fromDto(START, toDto(root).tree).nodes[3]!;
+    expect([again.glyph, again.evaluation, again.comment]).toEqual(['!?', '±', 'Druck auf e5']);
     // Ein Zug, der nicht geht, fällt samt Teilbaum weg
     const broken = fromDto(START, { n: [{ p: -1, u: 'e2e4' }, { p: 0, u: 'e2e4' }, { p: 1, u: 'g1f3' }, { p: 0, u: 'd7d5' }] });
     expect(sans(broken.root.children[0].children)).toEqual(['d5']);

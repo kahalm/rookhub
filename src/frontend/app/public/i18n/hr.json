@@ -3409,12 +3409,11 @@
     "lineStudy": {
       "title": "Bez enginea",
       "titleRevealed": "Tvoje varijante s engineom",
-      "progress": "{{done}} od {{total}} pozicija analizirano u pozadini",
       "hint": "Igraj vlastite varijante — ništa se ne ocjenjuje na zaslonu. Kad završiš, uključi engine i vidjet ćeš svaku varijantu ocijenjenu i uspoređenu s najboljim potezom.",
       "reveal": "Uključi engine",
-      "noOwnMoves": "Još nisi odigrao nijednu vlastitu varijantu.",
-      "summary": "Tvoji potezi: {{rated}}, od toga {{best}} najboljih po engineu.",
-      "better": "bolje {{san}}"
+      "better": "bolje {{san}}",
+      "progressShort": "{{done}}/{{total}} analizirano",
+      "bestShort": "{{best}}/{{rated}} najboljih"
     }
   },
   "stats": {

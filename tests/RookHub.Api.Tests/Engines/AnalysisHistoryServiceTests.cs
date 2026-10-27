@@ -43,6 +43,21 @@ public class AnalysisHistoryServiceTests : IDisposable
     private static SaveAnalysisHistoryRequest TreeReq(int current, params AnalysisTreeNodeDto[] nodes)
         => new() { StartFen = START, Current = current, Tree = new AnalysisTreeDto { N = nodes.ToList() } };
 
+    // 0.855.2: eigene Anmerkungen am Knoten (Zug-Symbol, Stellungsbewertung, Kommentar) bleiben — Unbekanntes fällt weg.
+    [Fact]
+    public void CheckTree_KeepsKnownAnnotations_DropsUnknown_TrimsComment()
+    {
+        var tree = AnalysisHistoryService.CheckTree("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", new AnalysisTreeDto
+        {
+            N = [new() { P = -1, U = "e2e4", G = "!?", V = "±", C = "  Druck  " }, new() { P = 0, U = "e7e5", G = "!!!", V = "x", C = new string('a', 600) }],
+        }, -1);
+        Assert.Equal(("!?", "±", "Druck"), (tree.Tree.N![0].G, tree.Tree.N[0].V, tree.Tree.N[0].C));
+        Assert.Null(tree.Tree.N[1].G);
+        Assert.Null(tree.Tree.N[1].V);
+        Assert.Equal(AnalysisHistoryService.MaxCommentLength, tree.Tree.N[1].C!.Length);
+        Assert.Equal(2, tree.Fens.Count);
+    }
+
     [Fact]
     public async Task Save_legtAn_undSchreibtUeberDieKennungFort()
     {

@@ -796,6 +796,20 @@ describe('SharedGameComponent', () => {
     flushEvals(http, '/api/games/4/evals', { status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
   });
 
+  // 0.855.2 (Wunsch 2026-10-27: „club-games/226 — keine Frage wegen Analysieren"): der „Analyse"-Sprung aus LeagueHub hängt
+  // ?ask=1 an; die Seite fragt mit/ohne Engine bzw. wendet die Vorgabe an — „ohne Engine" geht aufs Analysebrett.
+  it('?ask=1: Vorgabe „ohne Engine" → Analysebrett mit der Partie', async () => {
+    const route = { snapshot: { paramMap: convertToParamMap({ id: '4' }), queryParamMap: convertToParamMap({ ask: '1' }), data: { mode: 'own' } } };
+    const { fixture, http } = await setup(true, true, [{ provide: ActivatedRoute, useValue: route }]);
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.detectChanges();
+    const pgn = '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1';
+    http.expectOne('/api/games/4').flush({ id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', moveCount: 2, pgn,
+      createdAt: '2026-07-16T00:00:00Z' });
+    http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'blind' });
+    expect(nav).toHaveBeenCalledWith(['/analysis'], { state: { pgn, blind: true }, queryParams: { blind: 1 } });
+  });
+
   it('own mode: a missing game says so (not the „shared link" text) and leads back to my games', async () => {
     const { fixture, http } = await setup(true, true);
     fixture.detectChanges();

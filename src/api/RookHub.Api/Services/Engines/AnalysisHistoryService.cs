@@ -39,6 +39,12 @@ public sealed class AnalysisHistoryService
     {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
+    /// <summary>Eigene Anmerkungen am Knoten (0.855.2) — dieselben Symbole wie der Kalkulations-Modus (<c>calc-tree.util.ts</c>).</summary>
+    internal static readonly IReadOnlySet<string> Glyphs = new HashSet<string> { "!!", "!", "!?", "?!", "?", "??" };
+    internal static readonly IReadOnlySet<string> Evaluations =
+        new HashSet<string> { "=", "⩲", "⩱", "±", "∓", "+−", "−+", "∞", "⯹", "→", "↑", "⇆", "⨀" };
+    public const int MaxCommentLength = 500;
+
     private static readonly Regex EvalPattern = new(@"^(#-?\d{1,3}|[+-]?\d{1,3}\.\d{1,2})$", RegexOptions.CultureInvariant);
 
     private readonly AppDbContext _db;
@@ -159,7 +165,15 @@ public sealed class AnalysisHistoryService
                 var starred = n.S == true;
                 if (starred) stars++;
                 var eval = n.E?.Trim();
-                nodes.Add(new AnalysisTreeNodeDto { P = p, U = uci, S = starred ? true : null, E = eval is not null && EvalPattern.IsMatch(eval) ? eval : null });
+                var comment = n.C?.Trim();
+                nodes.Add(new AnalysisTreeNodeDto
+                {
+                    P = p, U = uci, S = starred ? true : null, E = eval is not null && EvalPattern.IsMatch(eval) ? eval : null,
+                    // Unbekannte Symbole fallen still weg, ein zu langer Kommentar wird gekürzt (wie die Bewertung: Beiwerk).
+                    G = n.G is { } g && Glyphs.Contains(g) ? g : null,
+                    V = n.V is { } v && Evaluations.Contains(v) ? v : null,
+                    C = string.IsNullOrEmpty(comment) ? null : comment.Length > MaxCommentLength ? comment[..MaxCommentLength] : comment,
+                });
             }
         }
         catch (ArgumentException) { throw; }

@@ -47,6 +47,7 @@ import { pgnTitle } from './analysis-title.util';
 import { LineStudyService, lineStudyKey } from './line-study.service';
 import { LineStudySession } from './line-study-session';
 import { LineStudyCardComponent } from './line-study-card.component';
+import { CalcAnnotateCardComponent } from '../courses/calc/calc-annotate-card.component';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MaiaSparring } from './maia/maia-sparring';
@@ -66,7 +67,8 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, AnalysisEngineCardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
-    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, LineStudyCardComponent
+    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, LineStudyCardComponent,
+    CalcAnnotateCardComponent
   ],
   templateUrl: './analysis.component.html',
   styleUrl: './analysis.component.scss',
@@ -306,6 +308,32 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** „Engine einschalten" auf der Karte „Ohne Engine". */
   revealStudy(): void { this.study?.reveal(); }
+
+  // Eigene Anmerkungen am Zug (0.855.2, Wunsch 2026-10-27: „Bewertungsbuttons analog zum Kalk-Modus fehlen, auch Kommentare zu
+  // Stellungen wären gut") — dieselbe Karte wie im Kalkulations-Modus, gespeichert im Linien-Baum.
+  private commentDraft: { node: AnalysisNode; text: string } | null = null;
+  /** Kommentar-Entwurf des aktuellen Zugs (ungespeichert bis Enter/Verlassen des Felds). */
+  get commentText(): string {
+    return this.commentDraft?.node === this.currentNode ? this.commentDraft.text : this.currentNode.comment ?? '';
+  }
+  set commentText(text: string) { this.commentDraft = { node: this.currentNode, text }; }
+
+  setGlyph(glyph: string): void { this.annotate(n => { n.glyph = n.glyph === glyph ? undefined : glyph; }); }
+  setEvaluation(evaluation: string): void { this.annotate(n => { n.evaluation = n.evaluation === evaluation ? undefined : evaluation; }); }
+  clearAnnotations(): void { this.annotate(n => { n.glyph = undefined; n.evaluation = undefined; }); }
+  saveComment(): void {
+    const text = this.commentText.trim();
+    this.commentDraft = null;
+    this.annotate(n => { n.comment = text || undefined; });
+  }
+
+  private annotate(change: (node: AnalysisNode) => void): void {
+    const node = this.currentNode;
+    if (node === this.root) return;
+    change(node);
+    this.treeVersion++;
+    this.scheduleSave();
+  }
 
   /** Änderung am Baum merken: in den Linien-Baum (ohne Engine) oder in den Analyse-Verlauf. */
   private scheduleSave(): void {

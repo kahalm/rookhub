@@ -126,7 +126,7 @@ describe('ClubGamesPageComponent', () => {
     const c = fixture.componentInstance as any;
     const jump = spyOn(c.handoff, 'jumpToRookHub').and.resolveTo();
     c.openInRookHub(G(7));
-    expect(jump).toHaveBeenCalledWith('club-games/7');
+    expect(jump).toHaveBeenCalledWith('club-games/7?ask=1');   // drüben „mit/ohne Engine“ (0.855.2)
   }));
 
   it('Ligaspieler ohne FIDE-ID: kein Bleistift, sondern „ohne FIDE-ID"; unbekannte Namen behalten ihn (0.594.0)', fakeAsync(() => {

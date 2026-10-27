@@ -3409,12 +3409,11 @@
     "lineStudy": {
       "title": "Ohne Engine",
       "titleRevealed": "Deine Linien mit Engine",
-      "progress": "{{done}} von {{total}} Stellungen im Hintergrund analysiert",
       "hint": "Spiel deine eigenen Linien — nichts wird bewertet angezeigt. Wenn du fertig bist, schalte die Engine ein: dann siehst du jede Linie bewertet und mit dem besten Zug verglichen.",
       "reveal": "Engine einschalten",
-      "noOwnMoves": "Du hast noch keine eigenen Linien gespielt.",
-      "summary": "Deine Züge: {{rated}}, davon {{best}}-mal der beste der Engine.",
-      "better": "besser {{san}}"
+      "better": "besser {{san}}",
+      "progressShort": "{{done}}/{{total}} gerechnet",
+      "bestShort": "{{best}}/{{rated}} beste"
     }
   },
   "stats": {

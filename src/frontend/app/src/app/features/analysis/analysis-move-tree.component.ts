@@ -50,7 +50,7 @@ const LONG_PRESS_SLOP_PX = 10;
                     <span class="vmove" [class.active]="t.node === current" [class.starred]="t.node.starred"
                           (click)="pick(t.node)" (contextmenu)="onContextMenu($event, t.node)"
                           (pointerdown)="onPointerDown($event, t.node)" (pointermove)="onPointerMove($event)"
-                          (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label | san:'text' }}@if (t.node.starred) {<span class="star">★</span>}</span>
+                          (pointerup)="clearPress()" (pointercancel)="clearPress()">{{ t.label | san:'text' }}{{ t.node.glyph ?? '' }}@if (t.node.evaluation) {<span class="ann"> {{ t.node.evaluation }}</span>}@if (t.node.starred) {<span class="star">★</span>}@if (t.node.comment) {<span class="cmt"> {{ t.node.comment }}</span>}</span>
                   } @else if (t.kind === 'open') {
                     <span class="paren">(</span>
                   } @else {
@@ -72,8 +72,9 @@ const LONG_PRESS_SLOP_PX = 10;
               (click)="pick(c)" (contextmenu)="onContextMenu($event, c)"
               (pointerdown)="onPointerDown($event, c)" (pointermove)="onPointerMove($event)"
               (pointerup)="clearPress()" (pointercancel)="clearPress()">
-          <span class="san">{{ c.san | san }}@if (c.starred) {<span class="star">★</span>}</span>
+          <span class="san">{{ c.san | san }}{{ c.glyph ?? '' }}@if (c.evaluation) {<span class="ann"> {{ c.evaluation }}</span>}@if (c.starred) {<span class="star">★</span>}</span>
           @if (c.evalText) { <span class="ev">{{ c.evalText }}</span> }
+          @if (c.comment) { <mat-icon class="cmt-icon" [title]="c.comment" aria-hidden="true">chat_bubble_outline</mat-icon> }
         </span>
       } @else {
         <span class="cell"></span>
@@ -120,6 +121,10 @@ const LONG_PRESS_SLOP_PX = 10;
        statt fest weiß — dunkel ist die Markierung hellblau, dort war Weiß kaum lesbar (≈ 1,6:1). */
     .move.active .ev { color: color-mix(in srgb, var(--mat-sys-on-primary) 85%, transparent); }
     .san { font-weight: 600; white-space: nowrap; }
+    /* Eigene Anmerkungen (0.855.2): Stellungsbewertung leiser, Kommentar kursiv. */
+    .ann { font-weight: 500; opacity: 0.8; }
+    .cmt { font-style: italic; font-weight: 400; opacity: 0.75; }
+    .cmt-icon { font-size: 14px; width: 14px; height: 14px; opacity: 0.7; vertical-align: -2px; }
     .ev { font-size: .78rem; color: color-mix(in srgb, currentColor 55%, transparent); white-space: nowrap; }
     .star { color: #f9a825; font-size: .75rem; margin-left: 2px; }
     .vars { padding: 4px 8px 6px 10px; border-left: 2px solid color-mix(in srgb, currentColor 18%, transparent);

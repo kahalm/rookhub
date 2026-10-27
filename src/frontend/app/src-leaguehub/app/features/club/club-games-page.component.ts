@@ -475,7 +475,7 @@ export class ClubGamesPageComponent implements OnInit {
    *  Werten zum schnellen Durchgehen") — Brett, Bewertungskurve, Zug-Klassen und Computer-Linien aus der Hintergrund-Analyse
    *  des Vereins. Sprung mit Einmal-Code, damit man drüben gleich angemeldet ist. Vorher: das Analysebrett mit dem PGN. */
   openInRookHub(g: ClubGame): void {
-    void this.handoff.jumpToRookHub(`club-games/${g.id}`);
+    void this.handoff.jumpToRookHub(`club-games/${g.id}?ask=1`);   // drüben „mit/ohne Engine" (0.855.1)
   }
 
   setResult(r: string): void {

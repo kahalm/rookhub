@@ -15,6 +15,12 @@ public class AnalysisTreeNodeDto
     public bool? S { get; set; }
     /// <summary>Zuletzt gesehene Bewertung der Stellung NACH dem Zug („+0.25", „#-3"), Weiß-Sicht.</summary>
     public string? E { get; set; }
+    /// <summary>Eigenes Zug-Symbol (0.855.2): !!, !, !?, ?!, ?, ?? — wie im Kalkulations-Modus.</summary>
+    public string? G { get; set; }
+    /// <summary>Eigene Stellungsbewertung (=, ⩲, ⩱, ±, ∓, +−, −+, ∞ …).</summary>
+    public string? V { get; set; }
+    /// <summary>Eigener Kommentar zur Stellung nach dem Zug (höchstens <c>AnalysisHistoryService.MaxCommentLength</c>).</summary>
+    public string? C { get; set; }
 }
 
 public class AnalysisTreeDto

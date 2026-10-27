@@ -506,7 +506,8 @@ export class FixtureViewComponent {
   /** Angemeldet RookHubs `club-games/{id}` (Einmal-Code), über den Teilen-Link `s/{token}/club-games/{id}` ohne Anmeldung (0.838.3). */
   openInRookHub(id: number): void {
     const token = this.shareToken();
-    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}`);
+    // `?ask=1` (0.855.1): drüben fragt die Partieseite „mit/ohne Engine" — über den Teilen-Link nicht (ohne Konto kein „ohne Engine").
+    void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}?ask=1`);
   }
 
   colorName(b: Board): string {

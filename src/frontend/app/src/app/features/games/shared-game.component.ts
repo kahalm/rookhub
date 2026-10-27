@@ -408,7 +408,21 @@ export class SharedGameComponent implements OnInit, DoCheck {
     this.loading = false;
     if (this.auth.isLoggedIn) {
       this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));
+      this.askAnalyzeMode(g);
     }
+  }
+
+  /**
+   * `?ask=1` (0.855.1, Wunsch 2026-10-27: „bin auf club-games/226 gegangen und hab keine Frage wegen Analysieren bekommen"):
+   * der Sprung kam von einem „Analyse"-Knopf (LeagueHub), die Partie ist aber schon analysiert — dann fragt die Seite hier
+   * „mit/ohne Engine" (bzw. wendet die gemerkte Vorgabe an). Mit Engine bleibt man; ohne Engine geht es aufs Analysebrett.
+   */
+  private askAnalyzeMode(g: SharedGame): void {
+    if (this.route.snapshot.queryParamMap?.get('ask') !== '1' || !g.pgn) return;
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { ask: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.analyzeGame.choose().subscribe(choice => {
+      if (choice === 'blind') this.analyzeGame.startWithoutEngine(null, g.pgn);
+    });
   }
 
   /** „Roast my game" (0.535.0) — nur die eigene Partie. */

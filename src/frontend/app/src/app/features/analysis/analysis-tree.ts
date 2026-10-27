@@ -19,12 +19,22 @@ export interface AnalysisNode {
   starred?: boolean;
   /** Zuletzt gesehene Bewertung der Engine in dieser Stellung (Weiß-Sicht, „+0.25"). */
   evalText?: string;
+  /** Eigene Anmerkung (0.855.2, „ohne Engine" wie im Kalkulations-Modus): Zug-Symbol (!!, !, !?, ?!, ?, ??). */
+  glyph?: string;
+  /** Eigene Stellungsbewertung (=, ⩲, ±, +−, ∞ …). */
+  evaluation?: string;
+  /** Eigener Kommentar zur Stellung nach dem Zug. */
+  comment?: string;
 }
 
 /** Ein Knoten in der FLACHEN Form des Verlaufs (Server `AnalysisTreeNodeDto`): `p` = Index des Elternknotens davor
  *  (-1 = Ausgangsstellung), `u` = UCI, `s` = Stern, `e` = Bewertung. Die Reihenfolge der Geschwister ist die der Liste.
  *  Flach, weil ein verschachtelter Baum bei langen Partien an der Schachtelungsgrenze des JSON-Lesers scheitert. */
-export interface AnalysisTreeNodeDto { p: number; u: string; s?: boolean | null; e?: string | null; }
+export interface AnalysisTreeNodeDto {
+  p: number; u: string; s?: boolean | null; e?: string | null;
+  /** Zug-Symbol, Stellungsbewertung, Kommentar (0.855.2). */
+  g?: string | null; v?: string | null; c?: string | null;
+}
 export interface AnalysisTreeDto { s?: boolean | null; n?: AnalysisTreeNodeDto[] | null; }
 
 export function createRoot(fen: string): AnalysisNode {
@@ -171,6 +181,9 @@ export function toDto(root: AnalysisNode, current?: AnalysisNode | null): { tree
       const d: AnalysisTreeNodeDto = { p, u: child.uci };
       if (child.starred) d.s = true;
       if (child.evalText) d.e = child.evalText;
+      if (child.glyph) d.g = child.glyph;
+      if (child.evaluation) d.v = child.evaluation;
+      if (child.comment) d.c = child.comment;
       n.push(d);
       if (child === current) cur = i;
       walk(child, i);
@@ -193,6 +206,9 @@ export function fromDto(fen: string, tree: AnalysisTreeDto | null | undefined): 
     const node = parent && d.u ? playUci(parent, d.u) : null;
     if (node && d.s) node.starred = true;
     if (node && d.e) node.evalText = d.e;
+    if (node && d.g) node.glyph = d.g;
+    if (node && d.v) node.evaluation = d.v;
+    if (node && d.c) node.comment = d.c;
     nodes.push(node);
   }
   return { root, nodes };

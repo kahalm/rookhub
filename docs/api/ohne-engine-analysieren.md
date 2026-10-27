@@ -43,3 +43,20 @@ Partie-Analyse läuft im Hintergrund und bleibt dabei verdeckt; EIN Baum je Part
 
 Höchstens 300 Bäume je Nutzer (älteste fliegen). Kontolöschung räumt ab (`AnalysisDataEraser`). Tests: `LineStudyServiceTests`,
 Specs `line-study.util`, `line-study-session`, `analyze-choice`.
+
+## Nachträge 0.856.0 (Rückmeldungen 2026-10-27 nach dem ersten Einsatz)
+
+* **Frage auch bei schon analysierten Partien** („club-games/226 — keine Frage wegen Analysieren“): die „Analyse“-Knöpfe in
+  LeagueHub (Vereinsliste, Aufstellung, Brett) springen auf `club-games/{id}?ask=1`; die Partieseite fragt dann nach dem Laden
+  (`askAnalyzeMode`) bzw. wendet die Vorgabe an — „ohne Engine“ geht aufs Analysebrett, „mit Engine“ bleibt. Der Parameter wird
+  danach aus der Adresse genommen. Über einen Teilen-Link nicht (ohne Konto kein „ohne Engine“).
+* **Schmale Leiste statt großer Karte** („der große Block rechts oben stört“): eine Zeile — Symbol, „Ohne Engine“, „12/68
+  gerechnet“, kleiner Knopf „Engine einschalten“; die Erklärung steht im Tooltip. Nach dem Aufdecken die Zähler des Vergleichs
+  („7/12 beste · ?! 2 · ? 1“), ein Tipp klappt die Liste auf (höchstens 220 px, scrollt).
+* **Eigene Bewertungen und Kommentare** („Bewertungsbuttons analog zum Kalk-Modus fehlen, auch Kommentare zu Stellungen“): unter
+  der Zugliste die Karte des Kalkulations-Modus (`CalcAnnotateCardComponent`) für den aktuellen Zug — Zug-Symbol (!!, !, !?, ?!,
+  ?, ??), Stellungsbewertung (=, ⩲, ±, +−, ∞ …) und Kommentar (≤ 500 Zeichen). Sie hängen am Knoten (`glyph`, `evaluation`,
+  `comment`; flach `g`/`v`/`c`), der Server behält bekannte Symbole und kürzt den Kommentar (`AnalysisHistoryService.CheckTree`,
+  gilt damit auch für den Analyse-Verlauf). Die Zugliste zeigt Symbol und Bewertung am Zug, den Kommentar in Varianten kursiv,
+  in der Hauptlinie als Sprechblasen-Symbol mit Tooltip.
+

@@ -143,6 +143,14 @@
         </mat-card-content>
       </mat-card>
 
+      @if (study && currentNode !== root) {
+        <!-- Eigene Anmerkungen am Zug (0.855.2) — Zug-Symbole, Stellungsbewertung und Kommentar wie im Kalkulations-Modus. -->
+        <app-calc-annotate-card [san]="starLabel(currentNode)" [glyph]="$any(currentNode.glyph ?? null)"
+          [evaluation]="$any(currentNode.evaluation ?? null)" [comment]="commentText" (commentChange)="commentText = $event"
+          (glyphPicked)="setGlyph($event)" (evalPicked)="setEvaluation($event)" (cleared)="clearAnnotations()"
+          (commentSaved)="saveComment()" />
+      }
+
       </div>
 
       <div class="side-b">

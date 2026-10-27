@@ -3409,12 +3409,11 @@
     "lineStudy": {
       "title": "Without engine",
       "titleRevealed": "Your lines with engine",
-      "progress": "{{done}} of {{total}} positions analysed in the background",
       "hint": "Play your own lines — nothing is evaluated on screen. When you are done, switch the engine on to see every line evaluated and compared with the best move.",
       "reveal": "Switch engine on",
-      "noOwnMoves": "You have not played any lines of your own yet.",
-      "summary": "Your moves: {{rated}}, of which {{best}} were the engine's best.",
-      "better": "better {{san}}"
+      "better": "better {{san}}",
+      "progressShort": "{{done}}/{{total}} analysed",
+      "bestShort": "{{best}}/{{rated}} best"
     }
   },
   "stats": {
