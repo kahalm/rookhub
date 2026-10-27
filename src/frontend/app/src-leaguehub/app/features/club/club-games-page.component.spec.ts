@@ -77,6 +77,19 @@ describe('ClubGamesPageComponent', () => {
     discardPeriodicTasks();
   }));
 
+  // 0.854.0: der Server liefert geerntete Partien mit fertigen „!!"-Halbzügen — ohne PGN und Bewertungen, nichts zu rechnen.
+  it('übernimmt vorgerechnete „!!"-Halbzüge vom Server', fakeAsync(() => {
+    lineups.clubGameMarkCounts.and.resolveTo({ '2': 1 });   // damit die Spalte „Analyse" steht
+    lineups.clubGameReviews.and.resolveTo({ '1': { brilliant: [42, 46] }, '2': { brilliant: [] } });
+    const el = create();
+    flush();
+    fixture.detectChanges();
+    const rows = el.querySelectorAll('tr.game');
+    expect(rows[0].querySelector('.analysis-cell .gb-brilliant')?.textContent?.trim()).toBe('!!2');
+    expect(rows[1].querySelector('.gb-brilliant')).toBeNull();
+    discardPeriodicTasks();
+  }));
+
   it('?bearbeiten=<id> öffnet diese Partie gleich zum Bearbeiten (0.675.0)', fakeAsync(() => {
     create({}, { bearbeiten: '2' });
     flushMicrotasks();

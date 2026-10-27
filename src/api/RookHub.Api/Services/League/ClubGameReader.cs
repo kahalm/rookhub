@@ -260,6 +260,9 @@ internal sealed class ClubGameReader
     /// PGN + Bewertungen mehrerer Vereinspartien des Vereins in EINEM Aufruf (0.849.0, Vereinsübersicht: „!!"-Marker) — der
     /// Browser rechnet daraus die Zug-Klassen wie auf der Partieseite. Schlank: ohne Kandidatenlisten, Varianten und Buchzüge
     /// (die Klassen brauchen nur Bester/Gespielter/Zweitbester). Nur Partien MIT Analyse; fremde und unbekannte Ids fehlen.
+    /// <para>Seit 0.854.0 vorgerechnet: trägt die Analyse die Zug-Klassen im aktuellen Regelstand
+    /// (<see cref="GameMoveClasses"/>, Erntelauf), kommen nur die „!!"-Halbzüge (<c>brilliant</c>) — ohne PGN und Bewertungen,
+    /// der Browser rechnet dann nichts. Sonst wie bisher PGN + Bewertungen.</para>
     /// </summary>
     public async Task<Dictionary<int, ClubGameReviewInput>> ReviewInputsAsync(LeagueClub club, IReadOnlyCollection<int> ids, CancellationToken ct = default)
     {
@@ -270,17 +273,23 @@ internal sealed class ClubGameReader
         var latest = (await _db.GameAnalyses.AsNoTracking()
                 .Where(a => a.LeagueClubGameId != null && gameIds.Contains(a.LeagueClubGameId.Value)
                     && a.Origin == GameAnalysisOrigin.Club && a.EngineId == null)
-                .Select(a => new { Game = a.LeagueClubGameId!.Value, a.Id })
+                .Select(a => new { Game = a.LeagueClubGameId!.Value, a.Id, a.MoveClasses, a.MoveClassesVersion })
                 .ToListAsync(ct))
-            .GroupBy(a => a.Game).ToDictionary(g => g.Key, g => g.Max(a => a.Id));
+            .GroupBy(a => a.Game).ToDictionary(g => g.Key, g => g.MaxBy(a => a.Id)!);
         foreach (var g in games)
         {
-            if (!latest.TryGetValue(g.Id, out var analysisId)) continue;
+            if (!latest.TryGetValue(g.Id, out var newest)) continue;
+            if (newest.MoveClassesVersion == GameMoveClasses.Version && newest.MoveClasses is { } classes)
+            {
+                result[g.Id] = new ClubGameReviewInput(null, null, GameMoveClasses.PliesOf(classes, 'B'));
+                continue;
+            }
+            var analysisId = newest.Id;
             var head = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == analysisId)).FirstAsync(ct);
             var evals = await GameEvalsStore.ReadAsync(_db, head, null, ct);
             if (evals.Plies.Count == 0) continue;
             foreach (var p in evals.Plies) p.Candidates = new();
-            result[g.Id] = new ClubGameReviewInput(g.Pgn, evals);
+            result[g.Id] = new ClubGameReviewInput(g.Pgn, evals, null);
         }
         return result;
     }
@@ -377,4 +386,5 @@ internal sealed class ClubGameReader
 }
 
 /// <summary>PGN und Bewertungen einer Vereinspartie für einen Rückblick im Browser (<c>reviewGame</c>, 0.849.0).</summary>
-public sealed record ClubGameReviewInput(string Pgn, GameEvalsDto Evals);
+/// <summary>Eingabe für die „!!"-Marker: entweder vorgerechnet (<see cref="Brilliant"/>, 0.854.0) oder PGN + Bewertungen.</summary>
+public sealed record ClubGameReviewInput(string? Pgn, GameEvalsDto? Evals, List<int>? Brilliant);

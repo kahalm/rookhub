@@ -3121,6 +3121,12 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("LibraryGameId")
                         .HasColumnType("int");
 
+                    b.Property<string>("MoveClasses")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("MoveClassesVersion")
+                        .HasColumnType("int");
+
                     b.Property<string>("MovesHash")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");
@@ -3200,6 +3206,8 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("IsPublic", "OpeningLine");
+
+                    b.HasIndex("Status", "MoveClassesVersion");
 
                     b.HasIndex("UserId", "CreatedAt");
 

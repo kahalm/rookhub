@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.854.0", date: "2026-10-27", changes: [
+    { en: "Move classes (!!, !, ?, ?? …) are now computed once on the server when an analysis finishes and stored with a rule version; a background run fills in all existing analyses and recomputes them whenever the rules change. LeagueHub’s club overview and game lists get the “!!” markers ready-made instead of calculating every game in the browser.", de: "Zug-Klassen (!!, !, ?, ?? …) werden jetzt einmal am Server gerechnet, sobald eine Analyse fertig ist, und mit einer Regel-Version gespeichert; ein Hintergrundlauf trägt alle vorhandenen Analysen nach und rechnet sie bei jeder Regeländerung neu. LeagueHubs Vereinsübersicht und Partienlisten bekommen die „!!“-Marker fertig, statt jede Partie im Browser zu rechnen." },
+  ] },
   { version: "0.853.0", date: "2026-10-27", changes: [
     { en: "Game review: Brilliant (!!) and Great (!) now match chess.com much more closely. A piece sacrifice where the king recaptures last (…Qxe6 Qxe6+ Kxe6) is recognised; a merely good move is brilliant only if the moved piece itself is left en prise; Great is the only good move (8 points of winning chance ahead of the second-best) even without a prior mistake by the opponent, but not a recapture or piece trade. Checked against club game 228: now identical to chess.com.", de: "Partie-Rückblick: Brillant (!!) und Stark (!) treffen jetzt viel genauer wie bei chess.com. Ein Figurenopfer, bei dem der König zuletzt zurückschlägt (…Dxe6 Dxe6+ Kxe6), wird erkannt; ein nur guter Zug ist brillant nur, wenn die gezogene Figur selbst stehen bleibt; Stark ist der einzige gute Zug (8 Punkte Gewinnchance vor dem Zweitbesten) auch ohne vorigen Fehler des Gegners, aber kein Zurückschlagen oder Figurentausch. Geprüft an Vereinspartie 228: jetzt deckungsgleich mit chess.com." },
   ] },

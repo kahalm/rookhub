@@ -242,6 +242,18 @@ flachere), aber mit eigenem Ursprung
   Bewusst NICHT `GET /api/game-analyses/throughput`: das ist das Tempo aller Analysen EINES Nutzers und braucht
   Anmeldung — `/g/` ist öffentlich. Die Schreibweise („11 min", „3 h 20 min") teilen sich beide über
   `shared/eta.util.ts`.
+* **Zug-Klassen am Server** (0.854.0, Wunsch 2026-10-27: „die Bewertungen in einem eigenen Lauf ernten, damit große Listen
+  nicht alles live rechnen — mit Versionsnummer“): `GameAnalysis.MoveClasses` = ein Zeichen je Halbzug (B !!, G !, S best,
+  E excellent, O good, I ?!, M ?, X miss, P ??, `-` nicht bewertbar; ohne „Book“, das hängt am Betrachter) plus
+  `MoveClassesVersion`. `Services/Games/GameMoveClasses.cs` ist der SPIEGEL von `reviewGame`/`specialClass`,
+  `MoveTactics.cs` der von `move-tactics.util.ts`, beide über das kleine Brett `TacticsBoard.cs` (Gera.Chess hat keine
+  Angreifer-Abfrage). Gerechnet beim Fertigwerden und nach der Vertiefung (`GameAnalysisPump`, neben der Genauigkeit) und
+  vom Erntelauf `MoveClassHarvestWorker` (jede Minute höchstens 200 fertige Analysen ohne oder mit älterem Regelstand,
+  jüngste zuerst, pausierbar). **Regeln ändern = `GameMoveClasses.Version` hochzählen und den Client im selben Commit
+  mitziehen** — der Erntelauf rechnet dann den Bestand neu. Parität beim Port an 300 Prod-Analysen Zeichen für Zeichen geprüft
+  (111 „!!“, 917 „!“, 76 Miss; C# ~12 ms je Partie, der Client ~90 ms); fest abgesichert durch `GameMoveClassesTests`
+  (Vereinspartie 228 als Fixture, chess.com-Markierungen literal), `MoveTacticsTests` ↔ `move-tactics.util.spec.ts`,
+  `TacticsBoardTests`. Erster Abnehmer: LeagueHubs „!!“-Marker (`club/games/reviews`).
 * **Genauigkeit je Seite liegt AN DER ANALYSE** (0.515.0, `GameAnalysis.AccuracyWhite/AccuracyBlack`,
   `Services/Games/GameAccuracy.cs` = Server-SPIEGEL der Client-Formeln mit denselben LITERALEN Testwerten in
   `GameAccuracyTests` ↔ `game-review.util.spec.ts`): gerechnet in `PumpOneAsync` beim Übergang auf `Done`, damit die

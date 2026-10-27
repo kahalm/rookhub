@@ -207,6 +207,17 @@ public class GameAnalysis
     public double? AccuracyWhite { get; set; }
     public double? AccuracyBlack { get; set; }
 
+    /// <summary>
+    /// Zug-Klassen vorgerechnet (0.854.0, <see cref="Services.Games.GameMoveClasses"/>): ein Zeichen je Halbzug
+    /// (B !!, G !, S best, E excellent, O good, I ?!, M ?, X miss, P ??, - nicht bewertbar), ohne „Book". Damit zeigen Listen
+    /// (LeagueHub-Vereinsübersicht: „!!") die Klassen, ohne je Partie im Browser zu rechnen. <c>null</c> = noch nicht geerntet.
+    /// </summary>
+    public string? MoveClasses { get; set; }
+
+    /// <summary>Regelstand von <see cref="MoveClasses"/> (<see cref="Services.Games.GameMoveClasses.Version"/>); ein älterer
+    /// Stand wird vom Erntelauf neu gerechnet.</summary>
+    public int? MoveClassesVersion { get; set; }
+
     [MaxLength(500)] public string? LastError { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

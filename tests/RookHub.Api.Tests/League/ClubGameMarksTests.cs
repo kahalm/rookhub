@@ -110,9 +110,24 @@ public class ClubGameMarksTests : IDisposable
         var got = await club.ReviewInputsAsync(TestClubs.Home, [g.Id, bare.Id, other.Id, 999_123]);
         Assert.Equal([g.Id], got.Keys);                                     // ohne Analyse / fremder Verein / unbekannt fehlen
         Assert.Equal(Pgn, got[g.Id].Pgn);
-        var ply = Assert.Single(got[g.Id].Evals.Plies);
+        Assert.Null(got[g.Id].Brilliant);                                    // nicht geerntet: der Browser rechnet
+        var ply = Assert.Single(got[g.Id].Evals!.Plies);
         Assert.Equal(("e2e4", 20), (ply.BestUci, ply.SecondCp));            // die jüngste Analyse zählt
         Assert.Empty(ply.Candidates);                                       // schlank: keine Kandidatenlisten
+
+        // 0.854.0: geerntet im aktuellen Regelstand → nur die „!!"-Halbzüge, ohne PGN und Bewertungen.
+        var newest = _db.GameAnalyses.Where(a => a.LeagueClubGameId == g.Id).OrderByDescending(a => a.Id).First();
+        newest.MoveClasses = "SB-B";
+        newest.MoveClassesVersion = GameMoveClasses.Version;
+        await _db.SaveChangesAsync();
+        var harvested = (await club.ReviewInputsAsync(TestClubs.Home, [g.Id]))[g.Id];
+        Assert.Equal([1, 3], harvested.Brilliant);
+        Assert.Null(harvested.Pgn);
+        Assert.Null(harvested.Evals);
+
+        newest.MoveClassesVersion = GameMoveClasses.Version - 1;            // alter Regelstand: wieder rechnen lassen
+        await _db.SaveChangesAsync();
+        Assert.Null((await club.ReviewInputsAsync(TestClubs.Home, [g.Id]))[g.Id].Brilliant);
     }
 
     // 0.851.1, Wunsch 2026-10-27: „einige leere Runden" — Begegnungen, deren Bretter alle „nicht besetzt" sind, fallen weg

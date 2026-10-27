@@ -39,6 +39,7 @@ namespace RookHub.Api.Startup;
 /// ClubCopyLinkScheduler               immer                                 Kopien der Vereinspartien verknüpfen
 /// ClubSecondEngineScheduler           intern: ClubSecondEngine:EngineName   Vereinspartien zusätzlich auf Lc0
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
+/// MoveClassHarvestWorker              immer                                 Zug-Klassen vorrechnen (Version)
 /// LeagueOnlineSyncScheduler           intern: LeagueOnline:Enabled          Online-Partien der Ligaspieler
 /// AnonymousDataRetentionService       immer (auch ohne Chessable)           Aufbewahrungsfristen (anonyme Senken, Retention:*)
 /// NotificationRetentionScheduler      immer                                 Benachrichtigungen 180 Tage
@@ -91,6 +92,8 @@ public static class BackgroundServicesSetup
         services.AddHostedService<ClubSecondEngineScheduler>();
         // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen
         services.AddHostedService<TacticHarvestScheduler>();
+        // Zug-Klassen ernten (0.854.0): fertige Analysen ohne oder mit altem Regelstand (GameMoveClasses.Version) nachrechnen.
+        services.AddHostedService<MoveClassHarvestWorker>();
         services.AddHostedService<LeagueOnlineSyncScheduler>();
         // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
         // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension

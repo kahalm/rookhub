@@ -72,6 +72,13 @@ export interface ClubOverview {
   marks: Record<string, number>;
 }
 
+/** Eingabe der „!!"-Marker je Vereinspartie: vorgerechnet (`brilliant`, 0.854.0) oder PGN + Bewertungen zum Selbstrechnen. */
+export interface ClubGameReviewInput {
+  pgn?: string | null;
+  evals?: GameEvals | null;
+  brilliant?: number[] | null;
+}
+
 /** Die brillanten Halbzüge („!!", 0-basiert) einer Partie — derselbe Rückblick wie auf RookHubs Partieseite (`reviewGame`). */
 export function brilliantPlies(pgn: string, evals: GameEvals): number[] {
   let g;
@@ -131,12 +138,16 @@ export class GameMarkers {
       }
     }
     for (let i = 0; i < ids.length; i += 60) {
-      let got: Record<string, { pgn: string; evals: GameEvals }>;
+      let got: Record<string, ClubGameReviewInput>;
       try { got = await this.api.clubGameReviews(ids.slice(i, i + 60)); } catch { continue; }
       if (run !== this.run) return;
       // Je Partie ein eigener Task (0.851.1): der Rückblick kostet ~50 ms, ein ganzes Paket am Stück fror den Browser ein
       // („this page is slowing down Firefox").
+      // Vorgerechnet (0.854.0, Erntelauf am Server): die „!!"-Halbzüge kommen fertig — auf einmal übernehmen.
+      const ready = Object.entries(got).filter(([, r]) => r.brilliant);
+      if (ready.length) this.brilliant.update(cur => ({ ...cur, ...Object.fromEntries(ready.map(([id, r]) => [Number(id), r.brilliant!])) }));
       for (const [id, r] of Object.entries(got)) {
+        if (r.brilliant || !r.pgn || !r.evals) continue;
         await new Promise(resolve => setTimeout(resolve));
         if (run !== this.run) return;
         const plies = brilliantPlies(r.pgn, r.evals);
@@ -215,9 +226,10 @@ export class LineupsApiService {
     return firstValueFrom(this.http.get<ClubOverview>('/api/league/club/overview'));
   }
 
-  /** PGN + schlanke Bewertungen der analysierten Vereinspartien unter `ids` (höchstens 60, 0.849.0) — für die „!!"-Marker. */
-  clubGameReviews(ids: readonly number[]): Promise<Record<string, { pgn: string; evals: GameEvals }>> {
-    return firstValueFrom(this.http.get<Record<string, { pgn: string; evals: GameEvals }>>(
+  /** PGN + schlanke Bewertungen der analysierten Vereinspartien unter `ids` (höchstens 60, 0.849.0) — für die „!!"-Marker; seit
+   *  0.854.0 bei geernteten Partien gleich die fertigen „!!"-Halbzüge (`brilliant`) ohne PGN und Bewertungen. */
+  clubGameReviews(ids: readonly number[]): Promise<Record<string, ClubGameReviewInput>> {
+    return firstValueFrom(this.http.get<Record<string, ClubGameReviewInput>>(
       `/api/league/club/games/reviews?ids=${ids.join(',')}`));
   }
 

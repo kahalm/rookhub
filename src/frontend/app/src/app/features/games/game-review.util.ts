@@ -16,6 +16,10 @@ import { whiteToMove } from '../../shared/chess/fen-side';
  *   Miss gibt es bei freechess nicht. Siehe `specialClass`.
  *   Book gibt es nicht: der Client hat kein Eröffnungsbuch.
  *
+ * **Der Server spiegelt die Zug-Klassen** (0.854.0, `Services/Games/GameMoveClasses.cs` + `MoveTactics.cs`) und legt sie an
+ * der Analyse ab, damit Listen nicht live rechnen. Wer hier eine Klassen-Regel oder Schwelle ändert, zieht dort im selben
+ * Commit nach UND zählt `GameMoveClasses.Version` hoch — dann rechnet der Erntelauf den Bestand neu.
+ *
  * ALLE Bewertungen, die hereinkommen, stehen aus WEISS-Sicht (der Server dreht sie, siehe
  * `GameEvals.PlyOf`). Umgerechnet auf den Ziehenden wird erst hier, und zwar über die Seite am Zug
  * aus der FEN — nicht über die Parität des Halbzugs: eine Partie aus einer Stellung mit Schwarz am

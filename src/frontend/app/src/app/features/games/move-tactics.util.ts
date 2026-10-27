@@ -17,6 +17,9 @@ import { tryLoadFen } from '../../shared/chess/puzzle-move.util';
  * ein falsches Brilliant. Die VERTEIDIGER bleiben Pseudo-Angriffe (`attackers`, ohne Röntgen): der
  * Ziehende ist danach nicht am Zug, für ihn gibt es keine legalen Züge zu fragen.
  *
+ * Server-Spiegel (0.854.0): `Services/Games/MoveTactics.cs` — Regel hier ändern = dort nachziehen und
+ * `GameMoveClasses.Version` hochzählen (siehe `game-review.util.ts`).
+ *
  * Alles hier wirft NIE: die Funktionen laufen in einem `computed` hinter der Vorlage, ein Wurf dort ließe
  * den ganzen Rückblick unrendert. Eine unlesbare Stellung heißt „kein Opfer".
  */

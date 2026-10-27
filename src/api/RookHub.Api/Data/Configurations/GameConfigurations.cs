@@ -327,6 +327,9 @@ internal sealed class GameAnalysisConfiguration : IEntityTypeConfiguration<GameA
         e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
         e.Property(g => g.MovesHash).HasMaxLength(64);
         e.HasIndex(g => g.MovesHash);   // Liga-Partien des Stapels (0.665.0)
+        // Zug-Klassen vorgerechnet (0.854.0): der Erntelauf sucht fertige Analysen ohne oder mit altem Regelstand.
+        e.Property(g => g.MoveClasses).HasColumnType("TEXT");
+        e.HasIndex(g => new { g.Status, g.MoveClassesVersion });
     }
 }
 

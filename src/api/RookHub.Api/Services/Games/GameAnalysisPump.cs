@@ -84,6 +84,7 @@ internal sealed class GameAnalysisPump
             var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
             analysis.AccuracyWhite = accuracy.White;
             analysis.AccuracyBlack = accuracy.Black;
+            GameMoveClasses.Store(analysis);
             changed = true;
         }
         else if (analysis.Status == GameAnalysisStatus.Pending && analysis.Positions.Any(p => p.AnalysisJobId != null))
@@ -120,6 +121,7 @@ internal sealed class GameAnalysisPump
             var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
             analysis.AccuracyWhite = accuracy.White;
             analysis.AccuracyBlack = accuracy.Black;
+            GameMoveClasses.Store(analysis);
             changed = true;
         }
         if (changed)
