@@ -16,8 +16,16 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
  * Seit 0.849.0 (Wunsch 2026-10-27: „zeige auch !! an") steht daneben „!! n" für brillante Züge: nach der Übersicht lädt die
  * Seite für alle Partien PGN + Bewertungen in Paketen (`club/games/reviews`) und rechnet den Rückblick wie RookHub; der
  * Filter nimmt Partien mit „!!" mit. Seit 0.851.1 (Wunsch 2026-10-27) steht an der Partie nur „Partie vorhanden", ohne
- * Halbzüge und erste Züge.
+ * Halbzüge und erste Züge. Seit 0.855.1 (Wunsch 2026-10-27: „sortiere die übersicht auch umgekehrt") dreht „Neueste zuerst"
+ * die Runden je Liga um; die Wahl merkt sich der Browser.
  */
+/** Merkt „Neueste zuerst" (`'1'`) im Browser. */
+export const NEWEST_FIRST_KEY = 'lh-overview-newest-first';
+
+function storedNewestFirst(): boolean {
+  try { return localStorage.getItem(NEWEST_FIRST_KEY) === '1'; } catch { return false; }
+}
+
 @Component({
   selector: 'lh-club-overview-page',
   standalone: true,
@@ -31,6 +39,8 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
         <h1>Übersicht@if (data()?.season; as s) { <span class="muted">{{ s }}</span>}</h1>
         <label class="ov-filter"><input type="checkbox" [checked]="onlyMarked()" (change)="onlyMarked.set(!onlyMarked())" />
           Nur Partien mit + oder !!@if (markedTotal()) { ({{ markedTotal() }})}</label>
+        <label class="ov-filter"><input type="checkbox" [checked]="newestFirst()" (change)="setNewestFirst(!newestFirst())" />
+          Neueste zuerst</label>
       </section>
       @if (error(); as e) {
         <p class="err" role="alert">{{ e }} <button type="button" class="btn-link" (click)="load()">Erneut versuchen</button></p>
@@ -41,7 +51,7 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
         @for (l of d.leagues; track l.tnr) {
           <section class="ov-league" [attr.aria-label]="l.name">
             <h2>{{ l.name }}</h2>
-            @for (r of l.rounds; track r.number) {
+            @for (r of ordered(l.rounds); track r.number) {
               @let shown = visible(r.matches);
               @if (shown.length) {
                 <h3 class="ov-round">Runde {{ r.number }}@if (r.date) {<span class="muted">&nbsp;· {{ date(r.date) }}</span>}</h3>
@@ -88,6 +98,7 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
     .ov-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin: 0 0 8px; }
     .ov-head h1 { margin: 0; }
     .ov-head h1 .muted { font-size: 0.6em; margin-left: 8px; }
+    .ov-head .ov-filter:first-of-type { margin-left: auto; }
     .ov-filter { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; }
     .ov-league { margin: 0 0 18px; display: grid; gap: 10px; }
     .ov-league h2 { margin: 12px 0 0; }
@@ -122,6 +133,8 @@ export class ClubOverviewPageComponent implements OnInit {
   readonly data = signal<ClubOverview | null>(null);
   readonly error = signal<string | null>(null);
   readonly onlyMarked = signal(false);
+  /** Runden absteigend (jüngste oben) statt aufsteigend. */
+  readonly newestFirst = signal(storedNewestFirst());
   readonly tn = tn;
   readonly pts = points;
   /** „◆"/„!!" je Partie (`GameMarkers`, 0.850.0 geteilt mit den Aufstellungen einer Runde); „!!" füllt sich paketweise. */
@@ -149,6 +162,15 @@ export class ClubOverviewPageComponent implements OnInit {
       this.error.set(s === 403 ? 'Die Vereinsübersicht ist für dein Konto nicht freigeschaltet.'
         : `Übersicht nicht geladen (${s ? `HTTP ${s}` : 'keine Verbindung'}).`);
     }
+  }
+
+  setNewestFirst(on: boolean): void {
+    this.newestFirst.set(on);
+    try { if (on) localStorage.setItem(NEWEST_FIRST_KEY, '1'); else localStorage.removeItem(NEWEST_FIRST_KEY); } catch { /* nur Bequemlichkeit */ }
+  }
+
+  ordered<T>(rounds: readonly T[]): readonly T[] {
+    return this.newestFirst() ? [...rounds].reverse() : rounds;
   }
 
   markCount(b: LineupBoard): number {

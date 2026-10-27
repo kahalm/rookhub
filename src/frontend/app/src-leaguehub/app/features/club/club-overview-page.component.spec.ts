@@ -5,7 +5,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ClubOverview, LineupsApiService, brilliantMoves } from '../../core/lineups';
 import { GameEvals } from '@rh/features/games/game-review.util';
-import { ClubOverviewPageComponent } from './club-overview-page.component';
+import { ClubOverviewPageComponent, NEWEST_FIRST_KEY } from './club-overview-page.component';
 
 // Erfundene Vereine und Spieler.
 const DATA: ClubOverview = {
@@ -93,6 +93,25 @@ describe('ClubOverviewPageComponent', () => {
     expect(el.querySelectorAll('.lu-match').length).toBe(1);
     expect(el.querySelectorAll('.lu-board').length).toBe(2);                 // Brett 1 mit ◆, Brett 2 mit !!
     expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026']);
+  });
+
+  // 0.855.1, Wunsch 2026-10-27: „sortiere die übersicht auch umgekehrt"
+  it('„Neueste zuerst" dreht die Runden um und merkt sich die Wahl', async () => {
+    localStorage.removeItem(NEWEST_FIRST_KEY);
+    try {
+      const el = await create();
+      const rounds = () => Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim());
+      expect(rounds()).toEqual(['Runde 3 · 24.10.2026', 'Runde 4']);
+      (el.querySelectorAll('.ov-filter input')[1] as HTMLInputElement).click();
+      fixture.detectChanges();
+      expect(rounds()).toEqual(['Runde 4', 'Runde 3 · 24.10.2026']);
+      expect(localStorage.getItem(NEWEST_FIRST_KEY)).toBe('1');
+      TestBed.resetTestingModule();
+      const again = await create();
+      expect(Array.from(again.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 4', 'Runde 3 · 24.10.2026']);
+    } finally {
+      localStorage.removeItem(NEWEST_FIRST_KEY);
+    }
   });
 
   it('ohne league.view die Sperrkarte und keine Abfrage', async () => {
