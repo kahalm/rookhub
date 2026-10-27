@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.852.1", date: "2026-10-27", changes: [
+    { en: "Documentation: design rule and API notes for the LeagueHub badges (+ and !!); no visible change.", de: "Doku: Gestaltungsregel und API-Notizen zu den LeagueHub-Abzeichen (+ und !!); nichts Sichtbares." },
+  ] },
   { version: "0.852.0", date: "2026-10-27", changes: [
     { en: "LeagueHub: the markers are now small round badges – „+“ on gold for interesting positions (like the + button that marks them), „!!“ on turquoise for brilliant moves, the number only from 2. They no longer sit next to the result: in the forecast before the analysis icon, in the club games list in the „Analysis“ column (on the phone in the card’s bottom line). Clicking a badge opens the replay right at the first interesting position or the first brilliant move.", de: "LeagueHub: Die Marker sind jetzt kleine runde Abzeichen – „+“ auf Gold für interessante Stellungen (wie der +-Knopf, mit dem man sie markiert), „!!“ auf Türkis für brillante Züge, die Zahl erst ab 2. Sie stehen nicht mehr am Ergebnis: in der Prognose vor dem Analyse-Symbol, in der Liste der Vereinspartien in der Spalte „Analyse“ (am Handy in der Fußzeile der Karte). Ein Klick aufs Abzeichen öffnet das Nachspielen gleich an der ersten interessanten Stellung bzw. am ersten brillanten Zug." },
   ] },

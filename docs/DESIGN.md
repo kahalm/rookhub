@@ -960,8 +960,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Tabellen: Namen kürzen nicht mit „…“ (am Touch fehlt der Tooltip) — sie brechen um, Nebenangaben (Elo) in die zweite
   Zeile; gekürzt wird nur Nebeninformation (Zugfolge mit `title`). Am Handy fallen Nebenspalten weg statt Hauptspalten
   rechts aus dem Bild zu schieben (Prognose-ⓘ).
-- Interessante Stellungen (0.848.0): an einer Partie ein Marker `.bg-marks` „◆ n“ in `--rh-success` (fett, `nowrap`,
-  Titel „n interessante Stellungen“); im Nachspielen `lh-game-replay` darunter „Interessante Stellungen:“ als Textknöpfe
+- Abzeichen an Partien (0.852.0, ersetzt den Text-Marker „◆ n“/„!! n“ von 0.848.0–0.851.1): `lh-game-badges` — runde
+  Knöpfe (20 px hoch, Radius 10 px, 12 px fett), „+“ auf Gold (`MOVE_CLASS_COLORS.inaccuracy`) = interessante Stellungen wie
+  der „+“-Knopf, „!!“ auf Türkis (`MOVE_CLASS_COLORS.brilliant`) = brillante Züge; Schrift dunkel auf beiden (≥ 4,5:1, Spec),
+  Zahl erst ab 2 („+3“, „!!“). Sie stehen NIE am Ergebnis (Ergebnisspalte bleibt bündig): Prognose-Brettpaarungen vor dem
+  Analyse-Symbol, Vereinspartien in der Spalte „Analyse“ vor der Genauigkeit bzw. in der Fußzeile der Handy-Karte,
+  Übersicht/Runden hinter „Partie vorhanden“. Klick = Nachspielen aufklappen und zur ersten Marke bzw. zum ersten „!!“.
+- Interessante Stellungen (0.848.0): im Nachspielen `lh-game-replay` darunter „Interessante Stellungen:“ als Textknöpfe
   (`.btn-link.mark-jump`, aktiv fett) — Hauptlinie „12…Sf6“, aus einer Variante „Variante: 12…c5“, ohne Ort „in einer
   Variante“, mehrfach markiert „×n“ gedämpft. Züge mit Marke bzw. Abzweig tragen in der Zugliste einen 6-px-Punkt in
   `--rh-success`; eine Variantenstellung auf dem Brett hat darüber eine Zeile „Variante: …“ mit „Zurück zur Partie“.
@@ -1078,6 +1083,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-27 | 0.852.0 | LeagueHub: Marker als Abzeichen `lh-game-badges` („+“ Gold, „!!“ Türkis, dunkle Schrift, Zahl ab 2), eigener Platz statt am Ergebnis, Klick springt beim Nachspielen hin | Text hinter dem Ergebnis las sich wie ein zweiter Spielstand und verschob die Ergebnisspalte; ◆ und !! waren beide grün | Nutzerwunsch 27.10. (Vorschlag A+B+C) |
 | 2026-10-26 | 0.848.0 | LeagueHub, interessante Stellungen: Marker „◆ n“ (`--rh-success`) an Partien, Sprungmarken als Textknöpfe unter der Zugliste, Punkt an markierten Zügen, Variantenstellung mit „Zurück zur Partie“; neue Seite „Übersicht“ (`/verein/uebersicht`) in den Aufstellungs-Karten (`lu-*`) | Grün = „+“-Markierung (wie der Knopf), Textknöpfe wie die übrigen Partie-Aktionen | Nutzerwunsch 26.10. |
 | 2026-10-25 | 0.837.0 · E-Book-Brett Training | Auge (`visibility`) = aktuelle Stellung am eingefrorenen Brett ansehen (umschaltbar, nur ansehen, beim Lösen und Kalkulieren); Lösung zeigen = Glühbirne (`lightbulb`, aktiv in Primärfarbe) | Das Auge zeigte die Lösung — im Training will man aber zuerst die echte Stellung nach den gespielten Zügen sehen | Nutzerwunsch 25.10. |
 | 2026-10-21 | 0.817.0 · Formular-Leser | Wartezeit als zwei Schritte mit Uhr („Wartet auf den Leser“ → ✓ + „Wird gelesen“), geteilt RookHub/LeagueHub (5.10) | Eine Zeile mit einer Uhr ab dem Hochladen sagte nicht, ob der Leser die Einlesung schon hat | Nutzerwunsch 21.10. |

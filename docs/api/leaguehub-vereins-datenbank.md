@@ -666,3 +666,9 @@ nicht jede interessante Stellung muss in der Partie vorkommen, kann auch in eine
   Browser ~475 ms je Partie (`sacrificedPiece` → `legalCapturersOf` erzeugte für jede eigene Figur alle Züge neu) — jetzt
   ~50 ms (Abkürzung ohne Angreifer + Zugliste je Stellung einmal, `move-tactics.util.ts`), und `GameMarkers` rechnet je Partie
   in einem eigenen Task („this page is slowing down Firefox“).
+* **0.852.0 Abzeichen** (Wunsch 2026-10-27, „schaut noch nicht gut aus“ → Vorschlag A+B+C): `lh-game-badges` („+n“ Gold,
+  „!!n“ Türkis, Zahl ab 2) statt Text am Ergebnis — Prognose vor dem Analyse-Symbol, Vereinspartien in der Spalte „Analyse“
+  (Handy: Fußzeile), Übersicht/Runden in `lh-board-game`. Klick klappt das Nachspielen auf und springt (`lh-game-replay
+  [startAt]`: `{ kind: 'mark' }` = erste Sprungmarke, sobald geladen; `{ kind: 'ply', ply }` = erster „!!“ aus
+  `GameMarkers.brilliant` — jetzt die HALBZÜGE je Partie, `brilliantPlies` in `core/lineups.ts`). Liste und Prognose laden
+  dafür beim Aufklappen auch die Sprungmarken (`club/games/{id}/marks`).
