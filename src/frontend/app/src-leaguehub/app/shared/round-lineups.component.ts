@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal, viewChild, viewChildren } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { tn } from '../core/league-format';
 import { GameMarkers, LineupBoard, LineupMatch, LineupsApiService, MovesKey, RoundLineups, points } from '../core/lineups';
 import { BoardMovesComponent } from './board-moves.component';
 import { BoardGameComponent } from './board-game.component';
+import { GameBadgesComponent } from './game-badges.component';
+import { openMarkedPositions } from './marked-positions-dialog.component';
 import { ownsTeam } from '../core/club-context.service';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 
@@ -18,13 +21,14 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
  * Anmeldung über einen Teilen-Link (`shareToken`): Liga und Runde bestimmt der Server, nichts ist beschreibbar, die Spielerkarte
  * öffnet nur für die Meldeliste des Links (`coveredFides`), „Nachspielen" nur an der geteilten Begegnung (`shareTeam`).
  * Seit 0.850.0 (Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut") angemeldet dieselben
- * Marker „◆ n"/„!! n" an den Vereinspartien wie in der Vereinsübersicht (`GameMarkers`).
+ * Marker „◆ n"/„!! n" an den Vereinspartien wie in der Vereinsübersicht (`GameMarkers`). Seit 0.862.0 (Wunsch 2026-10-27:
+ * „auch für die Prognose — ganz oben ein +10") ganz oben „+n" für alle markierten Stellungen der Runde (Stellungsfenster).
  */
 @Component({
   selector: 'lh-round-lineups',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BoardMovesComponent, BoardGameComponent, PlayerCardComponent],
+  imports: [BoardMovesComponent, BoardGameComponent, PlayerCardComponent, GameBadgesComponent],
   template: `
     <section class="lu" aria-label="Aufstellungen der Runde">
       @if (error(); as e) {
@@ -32,6 +36,9 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
       } @else if (data(); as d) {
         @if (!d.matches.length) {
           <p class="muted">Für Runde {{ d.round }} gibt es noch keine Begegnungen.</p>
+        }
+        @if (markers.markTotal(d.matches); as n) {
+          <p class="lu-plus">Interessante Stellungen dieser Runde <lh-game-badges [marks]="n" (pick)="openMarks(d.matches, d.round)" /></p>
         }
         @for (m of d.matches; track $index) {
           <article class="lu-match" [class.own]="m.own">
@@ -91,6 +98,7 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
   `,
   styles: [`
     .lu { margin: 0 0 18px; display: grid; gap: 12px; }
+    .lu-plus { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; }
     .lu-match { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; }
     .lu-match.own { border-color: var(--ink); border-width: 2px; }
     .lu-head { margin: 0 0 6px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font: 600 19px/1.2 var(--cond); }
@@ -118,6 +126,8 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
 export class RoundLineupsComponent {
   private readonly api = inject(LineupsApiService);
   private readonly card = viewChild.required(PlayerCardComponent);
+  private readonly dialog = inject(MatDialog);
+  private readonly boardGames = viewChildren(BoardGameComponent);
   /** Angemeldet: Liga und Runde; über einen Teilen-Link (`shareToken`) bestimmt sie der Server, beide bleiben `null`. */
   readonly tnr = input<number | null>(null);
   readonly round = input<number | null>(null);
@@ -166,6 +176,17 @@ export class RoundLineupsComponent {
       this.error.set(s === 404 ? (token ? 'Dieser Link ist abgelaufen oder wurde widerrufen.' : 'Diese Runde gibt es in der Liga nicht.')
         : `Aufstellungen nicht geladen (${s ? `HTTP ${s}` : 'keine Verbindung'}).`);
     }
+  }
+
+  /** „+n" ganz oben (0.862.0): alle markierten Stellungen der Runde; „In der Partie zeigen" klappt das Brett auf. */
+  async openMarks(matches: readonly LineupMatch[], round: number): Promise<void> {
+    const games = this.markers.markedBoards(matches).map(({ match, board }) => ({
+      clubGameId: board.game!.clubGameId!,
+      flipped: this.ownIsBlack(match, board),
+      subtitle: `Runde ${round} · ${tn(match.home)} – ${tn(match.away)}, Brett ${board.board}`,
+    }));
+    const r = await openMarkedPositions(this.dialog, games);
+    if (r) this.boardGames().find(c => c.game().clubGameId === r.clubGameId)?.showAt(r.start);
   }
 
   /** Angemeldet jeder Name mit FIDE-ID; über den Link nur die Meldeliste des Links (sonst antwortet der Server 404). */

@@ -5377,7 +5377,31 @@
   },
   "markPosition": {
     "mark": "Označi kao posebno zanimljivu poziciju (+)",
-    "unmark": "Ukloni oznaku +"
+    "edit": "Zanimljiva pozicija — klasificiraj, komentiraj ili ukloni",
+    "title": "Zanimljiva pozicija",
+    "tags": "Klasifikacija",
+    "ownTag": "Vlastita oznaka",
+    "comment": "Komentar",
+    "othersComments": "Bilješke drugih",
+    "fromOthers": "Koriste drugi — klik je preuzima",
+    "remove": "Ukloni oznaku",
+    "saveFailed": "To trenutno nije uspjelo — pokušaj ponovno.",
+    "tag": {
+      "tactic": "Taktika",
+      "combination": "Kombinacija",
+      "sacrifice": "Žrtva",
+      "attack": "Napad",
+      "defence": "Obrana",
+      "strategy": "Strategija",
+      "positional": "Pozicijski",
+      "calculation": "Računanje",
+      "endgame": "Završnica",
+      "opening": "Otvaranje",
+      "trap": "Zamka",
+      "critical": "Kritični trenutak",
+      "instructive": "Poučno",
+      "beautiful": "Lijepo"
+    }
   },
   "puzzleThemes": {
     "advancedPawn": "Istureni pješak",

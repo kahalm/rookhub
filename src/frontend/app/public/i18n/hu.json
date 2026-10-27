@@ -5377,7 +5377,31 @@
   },
   "markPosition": {
     "mark": "Megjelölés különösen érdekes állásként (+)",
-    "unmark": "A + jelölés eltávolítása"
+    "edit": "Érdekes állás — besorolás, megjegyzés vagy eltávolítás",
+    "title": "Érdekes állás",
+    "tags": "Besorolás",
+    "ownTag": "Saját címke",
+    "comment": "Megjegyzés",
+    "othersComments": "Mások megjegyzései",
+    "fromOthers": "Mások használják — kattintással átveszed",
+    "remove": "Jelölés eltávolítása",
+    "saveFailed": "Ez most nem sikerült — kérlek, próbáld újra.",
+    "tag": {
+      "tactic": "Taktika",
+      "combination": "Kombináció",
+      "sacrifice": "Áldozat",
+      "attack": "Támadás",
+      "defence": "Védekezés",
+      "strategy": "Stratégia",
+      "positional": "Pozíciós",
+      "calculation": "Számolás",
+      "endgame": "Végjáték",
+      "opening": "Megnyitás",
+      "trap": "Csapda",
+      "critical": "Kritikus pillanat",
+      "instructive": "Tanulságos",
+      "beautiful": "Szép"
+    }
   },
   "puzzleThemes": {
     "advancedPawn": "Előretolt gyalog",

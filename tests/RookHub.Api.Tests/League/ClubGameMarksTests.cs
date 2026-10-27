@@ -142,4 +142,35 @@ public class ClubGameMarksTests : IDisposable
         Assert.True(LeagueClubOverview.HasContent(B(result: "+ - -")));
         Assert.True(LeagueClubOverview.HasContent(B(moves: "e4")));
     }
+
+    // 0.862.0 (Wunsch 2026-10-27: „Diagramm, wer am Zug, Klassifizierung + Bemerkung — hier änderbar/erweiterbar").
+    [Fact]
+    public async Task SetNotes_MarksForTheViewer_AndForGameSplitsOwnFromOthers()
+    {
+        var g = await SeedAsync();
+        var svc = new MarkedPositionService(_db);
+        await svc.MarkAsync(2, new MarkPositionInputDto { Fen = Sicilian, ClubGameId = g.Id, VariationFromPly = 1, VariationUci = "c7c5 g1f3" });
+        await svc.SetNotesAsync(2, new MarkedPositionNotesDto { Fen = Sicilian, Tags = ["opening"], Comment = "von b" });
+        var marks = new ClubGameMarks(_db);
+
+        // Nutzer 1 ergänzt die Variante, die nur Nutzer 2 markiert hatte → eigene Markierung mit Abzweig
+        var (ok, err) = await marks.SetNotesAsync(TestClubs.Home, g.Id, 1,
+            new MarkedPositionNotesDto { Fen = Sicilian, Tags = ["trap", "opening"], Comment = "von a" }, svc);
+        Assert.True(ok, err);
+        var own = _db.MarkedPositions.Single(p => p.UserId == 1);
+        Assert.Equal((g.Id, (int?)1, "c7c5 g1f3"), (own.LeagueClubGameId!.Value, own.VariationFromPly, own.VariationUci));
+
+        var m = Assert.Single((await marks.ForGameAsync(TestClubs.Home, g.Id, 1))!);
+        Assert.Equal(2, m.Count);
+        Assert.True(m.Mine);
+        Assert.Equal(["opening", "trap"], m.Tags);                 // alle Schlagworte, ohne Doppel
+        Assert.Equal(["trap", "opening"], m.MyTags);
+        Assert.Equal("von a", m.MyComment);                       // eigene getrennt …
+        Assert.Equal(["von b"], m.Comments);                      // … fremde ohne Namen
+
+        // Hauptlinie: Halbzug wird aus der Partie bestimmt; fremder Verein → notFound
+        Assert.True((await marks.SetNotesAsync(TestClubs.Home, g.Id, 1, new MarkedPositionNotesDto { Fen = AfterNf3 }, svc)).Ok);
+        Assert.Equal(3, _db.MarkedPositions.Single(p => p.UserId == 1 && p.Ply != null).Ply);
+        Assert.Equal("notFound", (await marks.SetNotesAsync(TestClubs.Other, g.Id, 1, new MarkedPositionNotesDto { Fen = AfterNf3 }, svc)).Error);
+    }
 }

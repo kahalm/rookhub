@@ -1,3 +1,5 @@
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -28,6 +30,7 @@ const DATA: RoundLineups = {
 };
 
 describe('RoundLineupsComponent', () => {
+  let dialog: { open: jasmine.Spy };
   let fixture: ComponentFixture<RoundLineupsComponent>;
   let api: jasmine.SpyObj<LineupsApiService>;
 
@@ -47,7 +50,9 @@ describe('RoundLineupsComponent', () => {
     api.lineups.and.resolveTo(DATA);
     api.clubGameMarkCounts.and.resolveTo({});
     api.clubGameReviews.and.resolveTo({});
+    dialog = { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) }) };
     TestBed.configureTestingModule({ imports: [RoundLineupsComponent], providers: [{ provide: LineupsApiService, useValue: api },
+      { provide: MatDialog, useValue: dialog },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
       { provide: PLAYER_CARD_API, useValue: jasmine.createSpyObj('PlayerCardApi', ['card']) },
       { provide: AuthService, useValue: { has: () => false, isLoggedIn: true } },
@@ -160,6 +165,10 @@ describe('RoundLineupsComponent', () => {
     expect(boards[0].querySelector('.gb-mark')?.textContent?.trim()).toBe('+2');
     expect(boards[0].querySelector('.gb-brilliant')?.textContent?.trim()).toBe('!!');   // Zahl erst ab 2
     expect(boards[2].querySelector('.gb-mark')).toBeNull();
+    // 0.862.0 (Wunsch 2026-10-27: „auch für die Prognose — ganz oben ein +10"): Summe der Runde ganz oben, öffnet das Fenster
+    expect(el.querySelector('.lu-plus .gb-mark')?.textContent?.trim()).toBe('+2');
+    (el.querySelector('.lu-plus .gb-mark') as HTMLButtonElement).click();
+    expect(dialog.open.calls.mostRecent().args[1].data.games.map((g: { clubGameId: number }) => g.clubGameId)).toEqual([168]);
   });
 
   it('Nachspielen holt das PGN: Vereinspartie über den Club-Endpunkt, Spielerkarte über …/games?team=', async () => {

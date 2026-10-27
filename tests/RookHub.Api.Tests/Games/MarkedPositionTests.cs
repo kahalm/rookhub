@@ -166,4 +166,47 @@ public class MarkedPositionTests : IDisposable
         Assert.Single(_db.MarkedPositions, p => p.AnonSessionId == AnonB);                  // fremde Kennung bleibt
         Assert.Equal(0, await _service.ClaimAnonymousAsync(997108, "kaputt"));
     }
+
+    // 0.862.0 (Wunsch 2026-10-27: „die + Stellungen auch klassifizieren — Tags vergeben, Kommentare dazu").
+    [Fact]
+    public async Task SetNotes_CleansTags_ReplacesBoth_AndNeedsAMark()
+    {
+        var none = await _service.SetNotesAsync(997109, new MarkedPositionNotesDto { Fen = AfterE4, Tags = ["tactic"] });
+        Assert.Equal("notMarked", none.Error);
+
+        await _service.MarkAsync(997109, new MarkPositionInputDto { Fen = AfterE4 });
+        var (mark, err) = await _service.SetNotesAsync(997109, new MarkedPositionNotesDto
+        {
+            Fen = AfterE4, Tags = [" Tactic ", "Mein Motiv", "tactic", "", "mein motiv"], Comment = "  Weiß droht Lxf7+  ",
+        });
+        Assert.Null(err);
+        Assert.Equal(["tactic", "Mein Motiv"], mark!.Tags);              // feste Codes klein, Doppel weg (Groß/klein egal)
+        Assert.Equal("Weiß droht Lxf7+", mark.Comment);
+        Assert.Equal(["tactic", "Mein Motiv"], (await _service.ListAsync(997109)).Single().Tags);
+
+        var cleared = (await _service.SetNotesAsync(997109, new MarkedPositionNotesDto { Fen = AfterE4, Tags = [], Comment = " " })).Mark!;
+        Assert.Empty(cleared.Tags);
+        Assert.Null(cleared.Comment);
+
+        Assert.Equal("invalid", (await _service.SetNotesAsync(997109, new MarkedPositionNotesDto
+            { Fen = AfterE4, Tags = Enumerable.Range(0, 13).Select(i => "t" + i).ToList() })).Error);
+        Assert.Equal("invalid", (await _service.SetNotesAsync(997109, new MarkedPositionNotesDto { Fen = AfterE4, Tags = ["a;b"] })).Error);
+        Assert.Equal("invalid", (await _service.SetNotesAsync(997109, new MarkedPositionNotesDto
+            { Fen = AfterE4, Comment = new string('x', MarkedPositionService.MaxCommentLength + 1) })).Error);
+    }
+
+    [Fact]
+    public async Task ClaimAnonymous_KeepsOwnNotes_FillsMissingOnes()
+    {
+        await _service.MarkAsync(997110, new MarkPositionInputDto { Fen = AfterE4 });
+        await _service.SetNotesAsync(997110, new MarkedPositionNotesDto { Fen = AfterE4, Tags = ["endgame"] });
+        var anon = MarkCaller.Anonymous(AnonA);
+        await _service.MarkAsync(anon, new MarkPositionInputDto { Fen = AfterE4 });
+        await _service.SetNotesAsync(anon, new MarkedPositionNotesDto { Fen = AfterE4, Tags = ["trap"], Comment = "anonym" });
+
+        await _service.ClaimAnonymousAsync(997110, AnonA);
+
+        var row = _db.MarkedPositions.Single(p => p.UserId == 997110);
+        Assert.Equal(("endgame", "anonym"), (row.Tags, row.Comment));
+    }
 }

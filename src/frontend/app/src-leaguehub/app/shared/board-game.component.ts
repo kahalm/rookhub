@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { LineupGame, LineupsApiService, ReplayStart, formatMoves } from '../core/lineups';
+import { MatDialog } from '@angular/material/dialog';
+import { openMarkedPositions } from './marked-positions-dialog.component';
 import { GameBadgesComponent } from './game-badges.component';
 
 /**
@@ -68,6 +70,8 @@ import { GameBadgesComponent } from './game-badges.component';
 })
 export class BoardGameComponent {
   private readonly api = inject(LineupsApiService);
+  private readonly dialog = inject(MatDialog);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly handoff = inject(HandoffService);
 
   readonly game = input.required<LineupGame>();
@@ -109,10 +113,25 @@ export class BoardGameComponent {
   });
 
   /** Abzeichen angeklickt: Nachspielen aufklappen (falls zu) und zur ersten markierten Stellung bzw. zum ersten „!!“ springen. */
-  openAt(kind: 'mark' | 'brilliant'): void {
+  /** „+" (0.862.0): erst das Fenster mit den Stellungen (Diagramm, Klassifizierung, Bemerkung); „In der Partie zeigen" klappt
+   *  dann das Nachspielen dort auf. Über den Teilen-Link ohne Konto wie bisher direkt ins Nachspielen. */
+  async openAt(kind: 'mark' | 'brilliant'): Promise<void> {
+    const id = this.game().clubGameId;
+    if (kind === 'mark' && id && !this.shareToken()) {
+      const r = await openMarkedPositions(this.dialog, [{ clubGameId: id, subtitle: this.title(), flipped: this.flipped() }]);
+      if (r) this.showAt(r.start);
+      return;
+    }
     const ply = this.brilliantPlies()[0];
     this.start.set(kind === 'mark' ? { kind: 'mark' } : { kind: 'ply', ply: ply ?? 0 });
     if (!this.open()) void this.toggle();
+  }
+
+  /** Nachspielen aufklappen (falls zu) und an `start` springen; bringt die Partie ins Bild (0.862.0, „+n" der Übersicht). */
+  showAt(start: ReplayStart): void {
+    this.start.set(start);
+    if (!this.open()) void this.toggle();
+    this.host.nativeElement.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
   }
 
   async toggle(): Promise<void> {

@@ -49,6 +49,17 @@ public class MarkedPositionsController : BaseApiController
     public async Task<IActionResult> Unmark([FromQuery] string fen, CancellationToken ct)
         => await _service.UnmarkAsync(Caller, fen, ct) ? NoContent() : NotFound();
 
+    /// <summary>Schlagworte und Kommentar einer markierten Stellung setzen (0.862.0). 404 = nicht markiert,
+    /// 400 <c>{ reason: "invalid" }</c> bei zu vielen/zu langen Schlagworten oder zu langem Kommentar.</summary>
+    [HttpPut("notes")]
+    [AllowAnonymous]
+    public async Task<ActionResult<MarkedPositionDto>> SetNotes([FromBody] MarkedPositionNotesDto body, CancellationToken ct)
+    {
+        if (body is null) return NotFound();
+        var (mark, error) = await _service.SetNotesAsync(Caller, body, ct);
+        return mark != null ? Ok(mark) : error == "invalid" ? BadRequest(new { reason = error }) : NotFound();
+    }
+
     /// <summary>Die Markierungen dieser anonymen Kennung ins Konto übernehmen (beim Anmelden) → <c>{ claimed }</c>.</summary>
     [HttpPost("claim-session")]
     public async Task<IActionResult> ClaimSession([FromBody] ClaimMarkedSessionDto dto, CancellationToken ct)

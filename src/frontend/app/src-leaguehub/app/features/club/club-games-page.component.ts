@@ -20,6 +20,8 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
 import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 import { GameMarkers, LineupsApiService, ReplayStart } from '../../core/lineups';
+import { MatDialog } from '@angular/material/dialog';
+import { openMarkedPositions } from '../../shared/marked-positions-dialog.component';
 import { GameBadgesComponent } from '../../shared/game-badges.component';
 
 /**
@@ -280,6 +282,7 @@ export class ClubGamesPageComponent implements OnInit {
 
   readonly items = signal<ClubGame[]>([]);
   private readonly lineupsApi = inject(LineupsApiService);
+  private readonly dialog = inject(MatDialog);
   /** „+"/„!!" je Partie (0.851.0), je geladener Seite nachgeholt. */
   readonly markers = new GameMarkers(this.lineupsApi);
   /** Sprungmarken der nachgespielten Partie (0.852.0) und wohin ein Klick aufs Abzeichen springt. */
@@ -451,8 +454,13 @@ export class ClubGamesPageComponent implements OnInit {
 
   /** Nachspielen auf- bzw. zuklappen; die Partie (PGN + Stand) kommt erst beim Aufklappen. */
   /** Abzeichen angeklickt (0.852.0): Nachspielen aufklappen (falls zu) und zur ersten markierten Stellung bzw. zum ersten „!!". */
-  viewAt(g: ClubGame, kind: 'mark' | 'brilliant'): void {
-    this.replayStart.set(kind === 'mark' ? { kind: 'mark' } : { kind: 'ply', ply: this.markers.brilliantOf(g.id)[0] ?? 0 });
+  /** „+" (0.862.0): erst das Fenster mit den Stellungen; „In der Partie zeigen" klappt das Nachspielen dort auf. */
+  async viewAt(g: ClubGame, kind: 'mark' | 'brilliant'): Promise<void> {
+    const start: ReplayStart | null = kind === 'mark'
+      ? (await openMarkedPositions(this.dialog, [{ clubGameId: g.id, subtitle: `${g.white} – ${g.black}` }]))?.start ?? null
+      : { kind: 'ply', ply: this.markers.brilliantOf(g.id)[0] ?? 0 };
+    if (!start) return;
+    this.replayStart.set(start);
     if (this.viewing()?.id !== g.id) void this.view(g, true);
   }
 

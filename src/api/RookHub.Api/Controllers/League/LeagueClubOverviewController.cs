@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Authorization;
 using RookHub.Api.Models;
+using RookHub.Api.Services.Games;
+using RookHub.Api.DTOs.Games;
 using RookHub.Api.Services.League;
 
 namespace RookHub.Api.Controllers.League;
@@ -15,7 +17,7 @@ namespace RookHub.Api.Controllers.League;
 [Route("api/league/club")]
 [Authorize]
 public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOverview overview, ClubGameMarks marks,
-    LeagueClubService club) : BaseApiController
+    LeagueClubService club, MarkedPositionService markedPositions) : BaseApiController
 {
     private async Task<IActionResult> WithClubAsync(CancellationToken ct, Func<LeagueClub, Task<IActionResult>> run, int? preferred = null)
     {
@@ -34,8 +36,22 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
     [HttpGet("games/{id:int}/marks")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> Marks(int id, CancellationToken ct) =>
-        await WithClubAsync(ct, async c => await marks.ForGameAsync(c, id, ct) is { } m ? Ok(m) : NotFound(),
+        await WithClubAsync(ct, async c => await marks.ForGameAsync(c, id, GetUserId(), ct) is { } m ? Ok(m) : NotFound(),
             await club.ClubOfGameAsync(id, ct));
+
+    /// <summary>Eigene Schlagworte und Bemerkung zu einer interessanten Stellung dieser Vereinspartie setzen (0.862.0) — die
+    /// Stellung wird dabei auch selbst markiert → die Stellungen neu wie <c>GET …/marks</c>. 404 Partie unbekannt/fremd,
+    /// 400 <c>{ reason }</c> (<c>invalid</c>, <c>invalidFen</c>, <c>limit</c>).</summary>
+    [HttpPut("games/{id:int}/marks/notes")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> SetMarkNotes(int id, [FromBody] MarkedPositionNotesDto body, CancellationToken ct) =>
+        await WithClubAsync(ct, async c =>
+        {
+            if (body is null) return BadRequest(new { reason = "invalid" });
+            var (ok, error) = await marks.SetNotesAsync(c, id, GetUserId(), body, markedPositions, ct);
+            if (!ok) return error == "notFound" ? NotFound() : BadRequest(new { reason = error });
+            return Ok(await marks.ForGameAsync(c, id, GetUserId(), ct));
+        }, await club.ClubOfGameAsync(id, ct));
 
     /// <summary>PGN + schlanke Bewertungen der analysierten Partien unter <c>?ids=1,2,…</c> (höchstens
     /// <see cref="ClubGameReader.MaxReviewInputs"/>) → <c>{ clubGameId: { pgn, evals } }</c>, für die „!!"-Marker der Übersicht

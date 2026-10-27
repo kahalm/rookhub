@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { of } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
@@ -39,13 +41,15 @@ const GREEK_EVALS: GameEvals = { status: 'done', analyzed: 1, total: 1, targetDe
 describe('ClubOverviewPageComponent', () => {
   let api: jasmine.SpyObj<LineupsApiService>;
   let fixture: ComponentFixture<ClubOverviewPageComponent>;
+  let dialog: { open: jasmine.Spy };
 
   async function create(allowed = true): Promise<HTMLElement> {
     api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['overview', 'clubGame', 'clubGameMarks', 'clubGameReviews', 'fixturePgn']);
     api.overview.and.resolveTo(DATA);
+    dialog = { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) }) };
     api.clubGameReviews.and.resolveTo({ '78': { pgn: GREEK_PGN, evals: GREEK_EVALS } });
     TestBed.configureTestingModule({ imports: [ClubOverviewPageComponent], providers: [
-      { provide: LineupsApiService, useValue: api },
+      { provide: LineupsApiService, useValue: api }, { provide: MatDialog, useValue: dialog },
       { provide: AuthService, useValue: { has: () => allowed, isLoggedIn: true } },
       { provide: HandoffService, useValue: jasmine.createSpyObj('HandoffService', ['jumpToRookHub']) },
       provideRouter([]), provideTranslateService({ fallbackLang: 'de' })] });
@@ -62,7 +66,7 @@ describe('ClubOverviewPageComponent', () => {
     const el = await create();
     expect(el.querySelector('h1')?.textContent).toContain('2026/27');
     expect(el.querySelector('.ov-league h2')?.textContent).toContain('Landesliga');
-    expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026', 'Runde 4']);
+    expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026+3', 'Runde 4']);
     expect(el.querySelectorAll('.lu-match').length).toBe(2);
     expect(el.querySelector('.lu-score')?.textContent).toContain('2½ : 1½');
     const boards = el.querySelectorAll('.lu-match')[0].querySelectorAll('.lu-board');
@@ -72,6 +76,25 @@ describe('ClubOverviewPageComponent', () => {
     // 0.851.1, Wunsch 2026-10-27: „da nur schreiben Partie vorhanden“ — ohne Halbzüge und erste Züge
     expect(boards[1].querySelector('.bg-what')?.textContent?.trim()).toBe('Partie vorhanden');
     expect(el.querySelector('.ov-filter')?.textContent).toContain('(2)');
+  });
+
+  // 0.862.0, Wunsch 2026-10-27: „je Runde und je Liga eine Anzeige +30, Klick bringt diese 30 Stellungen, jeweils mit
+  // ‚in der Partie zeigen'"
+  it('„+n" an Liga und Runde öffnet das Stellungsfenster über deren Partien; „In der Partie zeigen" klappt das Brett auf', async () => {
+    const el = await create();
+    expect(el.querySelector('.ov-league h2 .gb-mark')?.textContent?.trim()).toBe('+3');
+    api.clubGame.and.resolveTo({ pgn: '1. e4 e5 *' });
+    api.clubGameMarks.and.resolveTo([]);
+    dialog.open.and.returnValue({ afterClosed: () => of({ clubGameId: 77, mark: { ply: 1 } }) });
+    (el.querySelector('.ov-round .gb-mark') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(dialog.open.calls.mostRecent().args[1].data.games).toEqual([
+      { clubGameId: 77, flipped: false, subtitle: 'Brett 1: Ackermann, Anna – Brunner, Bert' }]);
+    expect(el.querySelector('.lu-board .bg-replay')?.getAttribute('aria-expanded')).toBe('true');
+
+    (el.querySelector('.ov-league h2 .gb-mark') as HTMLButtonElement).click();
+    expect(dialog.open.calls.mostRecent().args[1].data.games[0].subtitle).toBe('Runde 3 · Brett 1: Ackermann, Anna – Brunner, Bert');
   });
 
   // 0.849.0, Wunsch 2026-10-27: „in der Übersicht … zeige auch !! an"
@@ -92,7 +115,7 @@ describe('ClubOverviewPageComponent', () => {
     fixture.detectChanges();
     expect(el.querySelectorAll('.lu-match').length).toBe(1);
     expect(el.querySelectorAll('.lu-board').length).toBe(2);                 // Brett 1 mit ◆, Brett 2 mit !!
-    expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026']);
+    expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026+3']);
   });
 
   // 0.855.1, Wunsch 2026-10-27: „sortiere die übersicht auch umgekehrt"
@@ -101,14 +124,14 @@ describe('ClubOverviewPageComponent', () => {
     try {
       const el = await create();
       const rounds = () => Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim());
-      expect(rounds()).toEqual(['Runde 3 · 24.10.2026', 'Runde 4']);
+      expect(rounds()).toEqual(['Runde 3 · 24.10.2026+3', 'Runde 4']);
       (el.querySelectorAll('.ov-filter input')[1] as HTMLInputElement).click();
       fixture.detectChanges();
-      expect(rounds()).toEqual(['Runde 4', 'Runde 3 · 24.10.2026']);
+      expect(rounds()).toEqual(['Runde 4', 'Runde 3 · 24.10.2026+3']);
       expect(localStorage.getItem(NEWEST_FIRST_KEY)).toBe('1');
       TestBed.resetTestingModule();
       const again = await create();
-      expect(Array.from(again.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 4', 'Runde 3 · 24.10.2026']);
+      expect(Array.from(again.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 4', 'Runde 3 · 24.10.2026+3']);
     } finally {
       localStorage.removeItem(NEWEST_FIRST_KEY);
     }

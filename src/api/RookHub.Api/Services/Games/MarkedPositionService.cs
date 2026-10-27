@@ -24,6 +24,19 @@ public partial class MarkedPositionService
     /// <summary>Ohne Anmeldung weniger — die Kennung kostet nichts, ein Konto schon.</summary>
     public const int MaxPerAnon = 500;
 
+    /// <summary>Die festen Schlagworte (0.862.0) — Codes, die Oberfläche übersetzt sie (<c>markPosition.tag.*</c>).
+    /// Alles andere ist ein eigenes Wort des Nutzers und bleibt, wie er es geschrieben hat.</summary>
+    public static readonly IReadOnlyList<string> KnownTags =
+    [
+        "tactic", "combination", "sacrifice", "attack", "defence", "strategy", "positional", "calculation",
+        "endgame", "opening", "trap", "critical", "instructive", "beautiful",
+    ];
+
+    public const int MaxTags = 12;
+    public const int MaxTagLength = 30;
+    public const int MaxTagsLength = 400;
+    public const int MaxCommentLength = 1000;
+
     private static readonly HashSet<string> Contexts = new() { "analysis", "board", "mistake" };
 
     [GeneratedRegex("^[a-h][1-8][a-h][1-8][qrbn]?$")]
@@ -104,6 +117,44 @@ public partial class MarkedPositionService
         return (Map(row), null);
     }
 
+    /// <summary>
+    /// Schlagworte und Kommentar einer markierten Stellung setzen (0.862.0). Ersetzt beide; leere Liste/leerer Text löscht.
+    /// <c>(null, "notMarked")</c>, wenn die Stellung nicht markiert ist, <c>(null, "invalid")</c> bei zu vielen/zu langen
+    /// Schlagworten oder zu langem Kommentar.
+    /// </summary>
+    public async Task<(MarkedPositionDto? Mark, string? Error)> SetNotesAsync(MarkCaller caller, MarkedPositionNotesDto input,
+        CancellationToken ct = default)
+    {
+        var key = KeyOf(input.Fen);
+        if (key == null || caller.IsNobody) return (null, "notMarked");
+        var tags = CleanTags(input.Tags);
+        var comment = string.IsNullOrWhiteSpace(input.Comment) ? null : input.Comment.Trim().ReplaceLineEndings("\n");
+        if (tags == null || comment?.Length > MaxCommentLength) return (null, "invalid");
+        var row = await Of(caller).FirstOrDefaultAsync(p => p.PositionKey == key, ct);
+        if (row == null) return (null, "notMarked");
+        row.Tags = string.Join(';', tags);
+        row.Comment = comment;
+        await _db.SaveChangesAsync(ct);
+        return (Map(row), null);
+    }
+
+    /// <summary>Schlagworte säubern: getrimmt, ohne Leere und Doppel (Groß/klein egal), feste Codes klein geschrieben;
+    /// <c>null</c> bei mehr als <see cref="MaxTags"/>, einem zu langen Wort oder einem <c>;</c> darin.</summary>
+    public static List<string>? CleanTags(IEnumerable<string>? raw)
+    {
+        var result = new List<string>();
+        foreach (var t in raw ?? [])
+        {
+            var tag = (t ?? string.Empty).Trim();
+            if (tag.Length == 0) continue;
+            if (tag.Length > MaxTagLength || tag.Contains(';')) return null;
+            var known = KnownTags.FirstOrDefault(k => string.Equals(k, tag, StringComparison.OrdinalIgnoreCase));
+            tag = known ?? tag;
+            if (!result.Contains(tag, StringComparer.OrdinalIgnoreCase)) result.Add(tag);
+        }
+        return result.Count > MaxTags ? null : result;
+    }
+
     /// <summary>Markierung einer Stellung zurücknehmen; <c>false</c>, wenn es keine gab.</summary>
     public async Task<bool> UnmarkAsync(MarkCaller caller, string? fen, CancellationToken ct = default)
     {
@@ -139,6 +190,8 @@ public partial class MarkedPositionService
                 own.ShareToken ??= a.ShareToken;
                 own.Ply ??= a.Ply;
                 own.BestUci ??= a.BestUci;
+                if (own.Tags.Length == 0) own.Tags = a.Tags;
+                own.Comment ??= a.Comment;
                 _db.MarkedPositions.Remove(a);
                 claimed++;
             }
@@ -160,5 +213,6 @@ public partial class MarkedPositionService
         Id = p.Id, Fen = p.Fen, PositionKey = p.PositionKey, Context = p.Context, SavedGameId = p.SavedGameId,
         ClubGameId = p.LeagueClubGameId, ShareToken = p.ShareToken, Ply = p.Ply, BestUci = p.BestUci, CreatedAt = p.CreatedAt,
         VariationFromPly = p.VariationFromPly, VariationUci = p.VariationUci,
+        Tags = p.Tags.Length == 0 ? [] : p.Tags.Split(';').ToList(), Comment = p.Comment,
     };
 }

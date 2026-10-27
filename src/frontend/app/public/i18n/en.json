@@ -5377,7 +5377,31 @@
   },
   "markPosition": {
     "mark": "Mark as a particularly interesting position (+)",
-    "unmark": "Remove the + mark"
+    "edit": "Interesting position — classify, comment or remove",
+    "title": "Interesting position",
+    "tags": "Classification",
+    "ownTag": "Own tag",
+    "comment": "Comment",
+    "othersComments": "Notes by others",
+    "fromOthers": "Used by others — click to take it over",
+    "remove": "Remove mark",
+    "saveFailed": "That did not work just now — please try again.",
+    "tag": {
+      "tactic": "Tactics",
+      "combination": "Combination",
+      "sacrifice": "Sacrifice",
+      "attack": "Attack",
+      "defence": "Defence",
+      "strategy": "Strategy",
+      "positional": "Positional",
+      "calculation": "Calculation",
+      "endgame": "Endgame",
+      "opening": "Opening",
+      "trap": "Trap",
+      "critical": "Critical moment",
+      "instructive": "Instructive",
+      "beautiful": "Beautiful"
+    }
   },
   "puzzleThemes": {
     "advancedPawn": "Advanced pawn",

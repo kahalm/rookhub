@@ -12,6 +12,8 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { BoardMovesComponent } from './board-moves.component';
 import { GameMarkers, LineupMatch, LineupsApiService, ReplayStart } from '../core/lineups';
+import { MatDialog } from '@angular/material/dialog';
+import { openMarkedPositions } from './marked-positions-dialog.component';
 import { GameBadgesComponent } from './game-badges.component';
 
 /**
@@ -379,6 +381,7 @@ export class FixtureViewComponent {
   readonly provisional = computed(() => this.pairings().some(p => p.provisional));
   private pairingsFor = '';
   private readonly lineups = inject(LineupsApiService);
+  private readonly dialog = inject(MatDialog);
   /** „+n"/„!!n" an den Vereinspartien der Begegnung (0.851.1, Abzeichen 0.852.0) — nur angemeldet. */
   readonly markers = new GameMarkers(this.lineups);
   /** Sprungmarken des aufgeklappten Bretts und wohin ein Klick aufs Abzeichen springt (0.852.0). */
@@ -398,7 +401,16 @@ export class FixtureViewComponent {
   }
 
   /** Abzeichen angeklickt: aufklappen und zur ersten markierten Stellung bzw. zum ersten „!!" springen. */
-  openAt(p: FixturePairing, kind: 'mark' | 'brilliant'): void {
+  /** „+" (0.862.0): erst das Fenster mit den Stellungen; „In der Partie zeigen" klappt das Nachspielen auf (Teilen-Link: direkt). */
+  async openAt(p: FixturePairing, kind: 'mark' | 'brilliant'): Promise<void> {
+    if (kind === 'mark' && p.clubGameId && !this.shareToken()) {
+      const r = await openMarkedPositions(this.dialog, [{ clubGameId: p.clubGameId, flipped: this.ownIsBlack(p),
+        subtitle: `Brett ${p.board}` }]);
+      if (!r) return;
+      this.replayStart.set(r.start);
+      if (this.openBoard() !== p.board) this.toggleBoard(p, true);
+      return;
+    }
     this.replayStart.set(kind === 'mark' ? { kind: 'mark' } : { kind: 'ply', ply: this.markers.brilliantOf(p.clubGameId ?? 0)[0] ?? 0 });
     this.toggleBoard(p, true);
   }

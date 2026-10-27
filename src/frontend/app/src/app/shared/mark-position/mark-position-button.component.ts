@@ -1,14 +1,18 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { IconLabelDirective } from '../icon-label/icon-label.directive';
 import { TranslatePipe } from '@ngx-translate/core';
 import { MarkOrigin, MarkedPositionsService, positionKey } from './marked-positions.service';
+import { MarkNotesDialogComponent, MarkNotesDialogData, MarkNotesDialogResult } from './mark-notes-dialog.component';
 
 /**
  * Der „+"-Knopf (0.749.0, Wunsch 2026-10-11: „besonders gute Stellungen mit einem + markieren — in der Analyse und beim
  * Fehler-Nachspielen"). Markiert die übergebene Stellung bzw. nimmt die Markierung zurück; markiert = grün gefüllt.
  * Seit 0.847.0 auch ohne Anmeldung (dann unter der anonymen Kennung, beim Anmelden ins Konto übernommen). Die Stellungen
  * sind der Vorrat für ein späteres „Stellungen für alle nachspielen".
+ * Seit 0.862.0 (Wunsch 2026-10-27: „Tags vergeben + Kommentare") markiert ein Klick und öffnet das Fenster für Schlagworte
+ * und Kommentar (`MarkNotesDialogComponent`); auf einer markierten Stellung öffnet er es nur — dort steht auch „entfernen".
  */
 @Component({
   selector: 'app-mark-position-button',
@@ -19,7 +23,7 @@ import { MarkOrigin, MarkedPositionsService, positionKey } from './marked-positi
     @if (fen()) {
       <button mat-icon-button type="button" class="mark" [class.on]="marked()" (click)="toggle()"
               [attr.aria-pressed]="marked()"
-              [appIconLabel]="(marked() ? 'markPosition.unmark' : 'markPosition.mark') | translate">
+              [appIconLabel]="(marked() ? 'markPosition.edit' : 'markPosition.mark') | translate">
         <span class="plus" aria-hidden="true"></span>
       </button>
     }
@@ -41,6 +45,7 @@ import { MarkOrigin, MarkedPositionsService, positionKey } from './marked-positi
 })
 export class MarkPositionButtonComponent implements OnInit {
   private readonly service = inject(MarkedPositionsService);
+  private readonly dialog = inject(MatDialog);
 
   /** Die Stellung, die der Knopf meint (FEN). */
   readonly fen = input<string | null | undefined>(null);
@@ -56,9 +61,15 @@ export class MarkPositionButtonComponent implements OnInit {
     this.service.ensureLoaded();
   }
 
+  /** Markieren (falls noch nicht) und das Fenster für Schlagworte + Kommentar öffnen. */
   toggle(): void {
     const fen = this.fen();
     if (!fen) return;
-    this.service.toggle(fen, this.origin()).subscribe({ error: () => { /* Knopf ist schon zurückgedreht */ } });
+    const origin = this.origin();
+    this.service.mark(fen, origin).subscribe({
+      next: () => this.dialog.open<MarkNotesDialogComponent, MarkNotesDialogData, MarkNotesDialogResult>(MarkNotesDialogComponent,
+        { data: { fen, origin }, width: '420px', maxWidth: '94vw' }),
+      error: () => { /* Knopf ist schon zurückgedreht */ },
+    });
   }
 }

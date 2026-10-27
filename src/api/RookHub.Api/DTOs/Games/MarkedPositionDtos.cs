@@ -17,6 +17,17 @@ public class MarkedPositionDto
     /// <summary>In einer Nebenvariante markiert (0.848.0): Abzweig-Halbzug der Partie und die Züge bis zur Stellung (UCI).</summary>
     public int? VariationFromPly { get; set; }
     public string? VariationUci { get; set; }
+    /// <summary>0.862.0: Schlagworte (feste Codes oder eigene Wörter) und Kommentar des Markierenden.</summary>
+    public List<string> Tags { get; set; } = [];
+    public string? Comment { get; set; }
+}
+
+/// <summary>Schlagworte und Kommentar einer markierten Stellung setzen (0.862.0) — ersetzt beide vollständig.</summary>
+public class MarkedPositionNotesDto
+{
+    public string Fen { get; set; } = string.Empty;
+    public List<string>? Tags { get; set; }
+    public string? Comment { get; set; }
 }
 
 /// <summary>Stellung markieren. Herkunft optional; eine fremde <c>SavedGameId</c> wird verworfen.</summary>

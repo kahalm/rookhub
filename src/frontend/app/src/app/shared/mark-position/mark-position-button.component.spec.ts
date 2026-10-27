@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { MarkNotesDialogComponent } from './mark-notes-dialog.component';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -10,11 +12,14 @@ describe('MarkPositionButtonComponent', () => {
   const FEN = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
   const KEY = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3';
 
+  let dialog: { open: jasmine.Spy };
+  beforeEach(() => { dialog = { open: jasmine.createSpy('open') }; });
+
   function setup(loggedIn = true, auth: { currentUser: { userId: number } | null } = { currentUser: loggedIn ? { userId: 7 } : null }) {
     TestBed.configureTestingModule({
       imports: [MarkPositionButtonComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: auth }],
+        { provide: AuthService, useValue: auth }, { provide: MatDialog, useValue: dialog }],
     });
     const http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(MarkPositionButtonComponent);
@@ -36,7 +41,8 @@ describe('MarkPositionButtonComponent', () => {
     http.verify();
   });
 
-  it('Klick markiert mit Herkunft; nochmal Klick nimmt zurück; Fehler dreht zurück', () => {
+  // 0.862.0 (Wunsch 2026-10-27: „wenn ich auf das + klicke, sollte ich Tags vergeben können, außerdem Kommentare").
+  it('Klick markiert mit Herkunft und öffnet das Fenster; markiert öffnet er es nur; Fehler dreht zurück', () => {
     const { fixture, http, el } = setup();
     http.expectOne('/api/positions/marked').flush([]);
     fixture.detectChanges();
@@ -46,15 +52,23 @@ describe('MarkPositionButtonComponent', () => {
     const post = http.expectOne(r => r.method === 'POST' && r.url === '/api/positions/marked');
     expect(post.request.body).toEqual({ fen: FEN, context: 'mistake', savedGameId: 5, ply: 1, bestUci: 'e7e5' });
     expect(btn().classList).toContain('on');
+    expect(dialog.open).not.toHaveBeenCalled();             // erst wenn der Server die Markierung hat
     post.flush({});
+    expect(dialog.open).toHaveBeenCalledOnceWith(MarkNotesDialogComponent, jasmine.objectContaining({
+      data: { fen: FEN, origin: { context: 'mistake', savedGameId: 5, ply: 1, bestUci: 'e7e5' } } }));
+    expect(btn().getAttribute('aria-label')).toContain('markPosition.edit');
 
-    btn().click(); fixture.detectChanges();
-    const del = http.expectOne(r => r.method === 'DELETE');
-    expect(del.request.params.get('fen')).toBe(FEN);
-    del.flush('fail', { status: 500, statusText: 'x' });
+    btn().click();                                          // schon markiert: kein Request, nur das Fenster
+    http.expectNone(r => r.method !== 'GET');
+    expect(dialog.open).toHaveBeenCalledTimes(2);
+
+    TestBed.inject(MarkedPositionsService).keys.set(new Set());
     fixture.detectChanges();
-    expect(btn().classList).toContain('on');
-    expect(TestBed.inject(MarkedPositionsService).isMarked(FEN)).toBeTrue();
+    btn().click(); fixture.detectChanges();
+    http.expectOne(r => r.method === 'POST').flush('fail', { status: 500, statusText: 'x' });
+    fixture.detectChanges();
+    expect(btn().classList).not.toContain('on');
+    expect(dialog.open).toHaveBeenCalledTimes(2);
   });
 
   // 0.847.0 (Wunsch 2026-10-26): auch ohne Anmeldung — der Server ordnet die Markierung der Besucher-Kennung zu.

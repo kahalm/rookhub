@@ -1,0 +1,93 @@
+import { TestBed } from '@angular/core/testing';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { provideTranslateService } from '@ngx-translate/core';
+import { ReplayMark } from '@rh/shared/player-card/game-replay.component';
+import { LineupsApiService } from '../core/lineups';
+import { MarkedPositionsDialogComponent } from './marked-positions-dialog.component';
+
+/** „+" in LeagueHub (0.862.0, Wunsch 2026-10-27): Diagramm, wer am Zug, Klassifizierung + Bemerkung, ‹ › durch die Stellungen. */
+describe('MarkedPositionsDialogComponent', () => {
+  const MAIN: ReplayMark = { fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2', positionKey: 'k1', ply: 3,
+    variationFromPly: null, variationUci: null, count: 2, tags: ['tactic', 'Motiv'], comments: ['von b'], myTags: ['tactic'],
+    myComment: 'meins', mine: true };
+  const VAR: ReplayMark = { fen: 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2', positionKey: 'k2', ply: null,
+    variationFromPly: 1, variationUci: 'c7c5 g1f3', count: 1, tags: ['opening'], comments: [], myTags: [], myComment: null, mine: false };
+
+  async function setup(api: Partial<LineupsApiService>, games = [{ clubGameId: 9, subtitle: 'A – B' }]) {
+    const ref = { close: jasmine.createSpy('close') };
+    TestBed.configureTestingModule({
+      imports: [MarkedPositionsDialogComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), { provide: LineupsApiService, useValue: api },
+        { provide: MAT_DIALOG_DATA, useValue: { games } }, { provide: MatDialogRef, useValue: ref }],
+    });
+    const fixture = TestBed.createComponent(MarkedPositionsDialogComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, ref, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('Partie-Stellung: Überschrift, wer am Zug, eigene Notizen, fremde Bemerkung; › zur Variante', async () => {
+    const { fixture, c, el } = await setup({ clubGameMarks: () => Promise.resolve([MAIN, VAR]) });
+    const text = () => el.textContent!.replace(/\s+/g, ' ');
+    expect(text()).toContain('Interessante Stellung aus Partie');
+    expect(text()).toContain('Schwarz am Zug');
+    expect(text()).toContain('nach Zug 2');
+    expect(text()).toContain('1 / 2');
+    expect(text()).toContain('von b');
+    expect(c.tags()).toEqual(['tactic']);
+    expect(c.comment()).toBe('meins');
+    expect(el.querySelector('app-chess-board')).not.toBeNull();
+
+    (el.querySelectorAll<HTMLButtonElement>('.mp-nav')[1]).click();
+    fixture.detectChanges();
+    expect(text()).toContain('Interessante Stellung aus Variante');
+    expect(text()).toContain('Weiß am Zug');
+    expect(text()).toContain('Variante ab Zug 1');
+    expect(c.tags()).toEqual([]);
+    expect((el.querySelectorAll<HTMLButtonElement>('.mp-nav')[1]).disabled).toBeTrue();
+  });
+
+  it('Speichern schickt die eigenen Notizen und bleibt auf der Stellung; „In der Partie zeigen" schließt mit ihr', async () => {
+    const saved = { ...VAR, myTags: ['trap'], myComment: 'neu', mine: true, count: 2 };
+    const put = jasmine.createSpy('put').and.returnValue(Promise.resolve([MAIN, saved]));
+    const { fixture, c, ref, el } = await setup({ clubGameMarks: () => Promise.resolve([MAIN, VAR]), setClubGameMarkNotes: put });
+    c.go(1);
+    c.tags.set(['trap']);
+    c.comment.set(' neu ');
+    fixture.detectChanges();
+    await c.save();
+    expect(put).toHaveBeenCalledWith(9, VAR.fen, ['trap'], 'neu');
+    expect(c.index()).toBe(1);
+    expect(c.dirty()).toBeFalse();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Gespeichert.');
+
+    c.show(c.current()!);
+    expect(ref.close).toHaveBeenCalledWith({ clubGameId: 9, mark: saved });
+  });
+
+  // Nachtrag (Wunsch 2026-10-27: „je Runde und je Liga +30, Klick bringt diese 30 Stellungen, jeweils mit ‚in der Partie zeigen'").
+  it('mehrere Partien: Stellungen hintereinander, Untertitel je Partie, Speichern frischt nur die eigene Partie auf', async () => {
+    const byGame: Record<number, ReplayMark[]> = { 9: [MAIN], 11: [VAR] };
+    const put = jasmine.createSpy('put').and.callFake((id: number) => Promise.resolve([{ ...byGame[id][0], myTags: ['trap'] }]));
+    const { fixture, c, ref, el } = await setup({ clubGameMarks: (id: number) => Promise.resolve(byGame[id]), setClubGameMarkNotes: put },
+      [{ clubGameId: 9, subtitle: 'Runde 1 · Brett 1' }, { clubGameId: 11, subtitle: 'Runde 2 · Brett 3' }]);
+    expect(el.textContent).toContain('Runde 1 · Brett 1');
+    expect(el.textContent).toContain('1 / 2');
+    c.go(1);
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Runde 2 · Brett 3');
+    c.tags.set(['trap']);
+    await c.save();
+    expect(put).toHaveBeenCalledWith(11, VAR.fen, ['trap'], null);
+    expect(c.items().map(i => i.mark.myTags)).toEqual([['tactic'], ['trap']]);
+    c.show(c.current()!);
+    expect(ref.close).toHaveBeenCalledWith(jasmine.objectContaining({ clubGameId: 11 }));
+  });
+
+  it('Ladefehler → Meldung statt leerer Liste', async () => {
+    const { el } = await setup({ clubGameMarks: () => Promise.reject(new Error('x')) });
+    expect(el.querySelector('[role=alert]')?.textContent).toContain('nicht geladen');
+  });
+});

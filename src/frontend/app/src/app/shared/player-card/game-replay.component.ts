@@ -284,4 +284,10 @@ export interface ReplayMark {
   variationUci: string | null;
   /** So oft markiert. */
   count: number;
+  /** 0.862.0 (LeagueHub): Schlagworte aller Markierenden, Bemerkungen der anderen (ohne Namen), die eigenen, selbst markiert. */
+  tags?: string[];
+  comments?: string[];
+  myTags?: string[];
+  myComment?: string | null;
+  mine?: boolean;
 }

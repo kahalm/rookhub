@@ -5638,6 +5638,10 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(5)
                         .HasColumnType("varchar(5)");
 
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
                     b.Property<string>("Context")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -5668,6 +5672,11 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("ShareToken")
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("varchar(400)");
 
                     b.Property<int?>("UserId")
                         .HasColumnType("int");

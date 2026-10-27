@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChildren } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubOverview, GameMarkers, LineupBoard, LineupMatch, LineupsApiService, points } from '../../core/lineups';
@@ -6,6 +7,8 @@ import { tn } from '../../core/league-format';
 import { ownsTeam, ClubContextService } from '../../core/club-context.service';
 import { BoardGameComponent } from '../../shared/board-game.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
+import { GameBadgesComponent } from '../../shared/game-badges.component';
+import { MarkedPositionsGame, openMarkedPositions } from '../../shared/marked-positions-dialog.component';
 
 /**
  * Vereinsübersicht (`/verein/uebersicht`, 0.848.0, Wunsch 2026-10-26: „Übersichtsseite für den Verein — zeigt alle Begegnungen +
@@ -17,7 +20,9 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
  * Seite für alle Partien PGN + Bewertungen in Paketen (`club/games/reviews`) und rechnet den Rückblick wie RookHub; der
  * Filter nimmt Partien mit „!!" mit. Seit 0.851.1 (Wunsch 2026-10-27) steht an der Partie nur „Partie vorhanden", ohne
  * Halbzüge und erste Züge. Seit 0.855.1 (Wunsch 2026-10-27: „sortiere die übersicht auch umgekehrt") dreht „Neueste zuerst"
- * die Runden je Liga um; die Wahl merkt sich der Browser.
+ * die Runden je Liga um; die Wahl merkt sich der Browser. Seit 0.862.0 (Wunsch 2026-10-27: „je Runde und je Liga eine Anzeige
+ * +30, Klick bringt diese 30 Stellungen, jeweils mit ‚in der Partie zeigen'") steht „+n" neben Liga und Runde; es öffnet das
+ * Stellungsfenster über alle Partien dort, „In der Partie zeigen" klappt das Nachspielen des Bretts auf.
  */
 /** Merkt „Neueste zuerst" (`'1'`) im Browser. */
 export const NEWEST_FIRST_KEY = 'lh-overview-newest-first';
@@ -30,7 +35,7 @@ function storedNewestFirst(): boolean {
   selector: 'lh-club-overview-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BoardGameComponent, AccessGateComponent],
+  imports: [BoardGameComponent, AccessGateComponent, GameBadgesComponent],
   template: `
     @if (!allowed) {
       <lh-access-gate text="Die Vereinsübersicht sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
@@ -50,11 +55,12 @@ function storedNewestFirst(): boolean {
         }
         @for (l of d.leagues; track l.tnr) {
           <section class="ov-league" [attr.aria-label]="l.name">
-            <h2>{{ l.name }}</h2>
+            @let lm = leagueMatches(l);
+            <h2>{{ l.name }}@if (markers.markTotal(lm); as n) { <lh-game-badges class="ov-plus" [marks]="n" (pick)="openMarks(lm, true)" />}</h2>
             @for (r of ordered(l.rounds); track r.number) {
               @let shown = visible(r.matches);
               @if (shown.length) {
-                <h3 class="ov-round">Runde {{ r.number }}@if (r.date) {<span class="muted">&nbsp;· {{ date(r.date) }}</span>}</h3>
+                <h3 class="ov-round">Runde {{ r.number }}@if (r.date) {<span class="muted">&nbsp;· {{ date(r.date) }}</span>}@if (markers.markTotal(r.matches); as n) { <lh-game-badges class="ov-plus" [marks]="n" (pick)="openMarks(r.matches, false)" />}</h3>
                 @for (m of shown; track $index) {
                   <article class="lu-match own">
                     <h4 class="lu-head">
@@ -103,6 +109,7 @@ function storedNewestFirst(): boolean {
     .ov-league { margin: 0 0 18px; display: grid; gap: 10px; }
     .ov-league h2 { margin: 12px 0 0; }
     .ov-round { margin: 6px 0 0; font: 600 17px/1.2 var(--cond); }
+    .ov-plus { margin-left: 8px; font-size: 14px; }
     .lu-match { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; }
     .lu-match.own { border-color: var(--ink); border-width: 2px; }
     .lu-head { margin: 0 0 6px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font: 600 19px/1.2 var(--cond); }
@@ -129,6 +136,8 @@ export class ClubOverviewPageComponent implements OnInit {
   private readonly api = inject(LineupsApiService);
   private readonly auth = inject(AuthService);
   private readonly clubs = inject(ClubContextService);
+  private readonly dialog = inject(MatDialog);
+  private readonly boardGames = viewChildren(BoardGameComponent);
   readonly allowed = this.auth.has('league.view');
   readonly data = signal<ClubOverview | null>(null);
   readonly error = signal<string | null>(null);
@@ -171,6 +180,24 @@ export class ClubOverviewPageComponent implements OnInit {
 
   ordered<T>(rounds: readonly T[]): readonly T[] {
     return this.newestFirst() ? [...rounds].reverse() : rounds;
+  }
+
+  /** Alle Begegnungen einer Liga, Runden in Spielreihenfolge. */
+  leagueMatches(l: ClubOverview['leagues'][number]): LineupMatch[] {
+    return l.rounds.flatMap(r => r.matches);
+  }
+
+  /** „+n" neben Liga/Runde: die markierten Stellungen aller Bretter dort; „In der Partie zeigen" springt im Brett hin. */
+  async openMarks(matches: readonly LineupMatch[], withRound: boolean): Promise<void> {
+    const rounds = new Map<LineupMatch, number>();
+    for (const l of this.data()?.leagues ?? []) for (const r of l.rounds) for (const m of r.matches) rounds.set(m, r.number);
+    const games: MarkedPositionsGame[] = this.markers.markedBoards(matches).map(({ match, board }) => ({
+      clubGameId: board.game!.clubGameId!,
+      flipped: this.ownIsBlack(match, board),
+      subtitle: `${withRound ? `Runde ${rounds.get(match)} · ` : ''}Brett ${board.board}: ${board.homePlayer ?? '–'} – ${board.awayPlayer ?? '–'}`,
+    }));
+    const r = await openMarkedPositions(this.dialog, games);
+    if (r) this.boardGames().find(c => c.game().clubGameId === r.clubGameId)?.showAt(r.start);
   }
 
   markCount(b: LineupBoard): number {

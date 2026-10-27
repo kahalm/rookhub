@@ -57,5 +57,12 @@ public class MarkedPosition
     /// <summary>Die Züge der Variante ab <see cref="VariationFromPly"/> bis zur markierten Stellung (UCI, Leerzeichen).</summary>
     public string? VariationUci { get; set; }
 
+    /// <summary>Schlagworte des Markierenden (0.862.0, Wunsch 2026-10-27: „die Stellungen auch klassifizieren"): feste Codes
+    /// aus <see cref="Services.Games.MarkedPositionService.KnownTags"/> oder eigene Wörter, mit <c>;</c> getrennt, leer = keine.</summary>
+    public string Tags { get; set; } = string.Empty;
+
+    /// <summary>Eigener Kommentar zur Stellung (0.862.0), höchstens <see cref="Services.Games.MarkedPositionService.MaxCommentLength"/> Zeichen.</summary>
+    public string? Comment { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

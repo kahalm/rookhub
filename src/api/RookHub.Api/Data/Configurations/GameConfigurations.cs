@@ -31,6 +31,8 @@ internal sealed class MarkedPositionConfiguration : IEntityTypeConfiguration<Mar
         e.Property(p => p.BestUci).HasMaxLength(5);
         e.Property(p => p.AnonSessionId).HasMaxLength(36);
         e.Property(p => p.VariationUci).HasMaxLength(MarkedPositionVariation.MaxUciLength);
+        e.Property(p => p.Tags).HasMaxLength(MarkedPositionService.MaxTagsLength);
+        e.Property(p => p.Comment).HasMaxLength(MarkedPositionService.MaxCommentLength);
         e.HasIndex(p => p.LeagueClubGameId);
         e.HasIndex(p => new { p.UserId, p.PositionKey }).IsUnique();
         e.HasIndex(p => new { p.AnonSessionId, p.PositionKey }).IsUnique();

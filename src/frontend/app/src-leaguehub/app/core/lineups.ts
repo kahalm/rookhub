@@ -172,6 +172,15 @@ export class GameMarkers {
     this.brilliant.set({});
   }
 
+  /** Bretter mit markierten Stellungen (in Reihenfolge) und deren Summe — für „+n" je Runde/Liga (0.862.0). */
+  markedBoards(matches: readonly LineupMatch[]): { match: LineupMatch; board: LineupBoard }[] {
+    return matches.flatMap(match => match.boards.filter(b => this.markCount(b) > 0).map(board => ({ match, board })));
+  }
+
+  markTotal(matches: readonly LineupMatch[]): number {
+    return matches.reduce((n, m) => n + m.boards.reduce((k, b) => k + this.markCount(b), 0), 0);
+  }
+
   markCount(b: LineupBoard): number {
     const id = b.game?.clubGameId;
     return id ? this.marks()[id] ?? 0 : 0;
@@ -219,6 +228,12 @@ export class LineupsApiService {
   /** Interessante Stellungen einer Vereinspartie (0.848.0, `league.view`) — Sprungmarken fürs Nachspielen. */
   clubGameMarks(id: number): Promise<ReplayMark[]> {
     return firstValueFrom(this.http.get<ReplayMark[]>(`/api/league/club/games/${id}/marks`));
+  }
+
+  /** Eigene Schlagworte + Bemerkung zu einer interessanten Stellung setzen (0.862.0) — markiert sie dabei selbst → alle
+   *  Stellungen der Partie neu. */
+  setClubGameMarkNotes(id: number, fen: string, tags: string[], comment: string | null): Promise<ReplayMark[]> {
+    return firstValueFrom(this.http.put<ReplayMark[]>(`/api/league/club/games/${id}/marks/notes`, { fen, tags, comment }));
   }
 
   /** Alle Begegnungen der eigenen Mannschaften der laufenden Saison mit Brettern, Partien und Markern (0.848.0). */

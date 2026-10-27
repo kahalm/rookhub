@@ -33,3 +33,24 @@ Antwort tragen beide Felder mit.
 Vereinspartie — direkt (`LeagueClubGameId`) oder über eine Kopie in „Meine Partien“ (`SavedGames.LeagueClubGameId`) — und
 gibt nur Stellung, Ort und Anzahl heraus, nie wer markiert hat (`Services/League/ClubGameMarks.cs`, Doku
 `leaguehub-vereins-datenbank.md`). Index `MarkedPositions.LeagueClubGameId` (Migration `MarkedPositionVariation`).
+
+**Schlagworte + Kommentar** (0.862.0, Wunsch 2026-10-27: „für das (+) möchte ich die Stellungen auch klassifizieren — Tags
+vergeben, außerdem Kommentare dazu“): `MarkedPositions.Tags` (`;`-getrennt, ≤ 400) und `Comment` (≤ 1 000), Migration
+`MarkedPositionNotes`. `PUT /api/positions/marked/notes` `{ fen, tags[], comment }` ersetzt beide (404 nicht markiert, 400
+`invalid`: > 12 Schlagworte, eines > 30 Zeichen oder mit `;`, Kommentar zu lang). Feste Codes stehen in
+`MarkedPositionService.KnownTags` und gespiegelt in `shared/mark-position/mark-tags.ts` (Übersetzung `markPosition.tag.*`);
+alles andere ist ein eigenes Wort und bleibt, wie geschrieben (`CleanTags`: getrimmt, ohne Doppel, Codes klein). Beim
+Übernehmen ins Konto gewinnen die eigenen Notizen, fehlende kommen von der anonymen Zeile. Oberfläche: Klick aufs „+“
+markiert und öffnet `MarkNotesDialogComponent` (Editor `MarkNotesEditorComponent`, geteilt mit LeagueHub); auf einer
+markierten Stellung öffnet er nur das Fenster, dort auch „Markierung entfernen“.
+
+**LeagueHub-Stellungsfenster** (0.862.0, Wünsche 2026-10-27: „Klick aufs (+) zeigt nur das Diagramm — wer am Zug,
+Klassifizierung, Bemerkung, hier änderbar; ‹ › durch die Stellungen; Überschrift ‚Interessante Stellung aus Partie/aus
+Variante‘“, „in der Übersicht je Runde und je Liga +30“, „auch auf der Prognose-Seite ganz oben“):
+`GET …/club/games/{id}/marks` trägt je Stellung `tags` (aller Markierenden), `comments` (der ANDEREN, ohne Namen),
+`myTags`/`myComment`/`mine`; `PUT …/club/games/{id}/marks/notes` setzt die eigenen und markiert die Stellung dabei selbst
+(Halbzug aus der Partie, sonst Abzweig der vorhandenen Markierung) → Liste neu. `lh-marked-positions-dialog`
+(`openMarkedPositions(dialog, games[])`) zeigt die Stellungen einer oder vieler Partien; „In der Partie zeigen“ klappt das
+Nachspielen des Bretts auf (`BoardGameComponent.showAt`). „+n“ steht an jeder Partie, in der Übersicht je Liga und Runde und
+in den Aufstellungen einer Runde ganz oben (`GameMarkers.markTotal/markedBoards`). Über den Teilen-Link ohne Konto springt das
+„+“ an der Partie wie bisher direkt ins Nachspielen.

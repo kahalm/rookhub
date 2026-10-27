@@ -5377,7 +5377,31 @@
   },
   "markPosition": {
     "mark": "Als besonders interessante Stellung markieren (+)",
-    "unmark": "+-Markierung entfernen"
+    "edit": "Interessante Stellung — klassifizieren, kommentieren oder entfernen",
+    "title": "Interessante Stellung",
+    "tags": "Klassifizierung",
+    "ownTag": "Eigenes Schlagwort",
+    "comment": "Bemerkung",
+    "othersComments": "Bemerkungen anderer",
+    "fromOthers": "Von anderen vergeben — Klick übernimmt es",
+    "remove": "Markierung entfernen",
+    "saveFailed": "Das ging gerade nicht — bitte noch einmal versuchen.",
+    "tag": {
+      "tactic": "Taktik",
+      "combination": "Kombination",
+      "sacrifice": "Opfer",
+      "attack": "Angriff",
+      "defence": "Verteidigung",
+      "strategy": "Strategie",
+      "positional": "Positionell",
+      "calculation": "Rechnen",
+      "endgame": "Endspiel",
+      "opening": "Eröffnung",
+      "trap": "Falle",
+      "critical": "Kritischer Moment",
+      "instructive": "Lehrreich",
+      "beautiful": "Schön"
+    }
   },
   "puzzleThemes": {
     "advancedPawn": "Vorgerückter Bauer",
