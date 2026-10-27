@@ -69,7 +69,8 @@ describe('ClubOverviewPageComponent', () => {
     expect(boards.length).toBe(2);
     expect(boards[0].querySelector('.bg-marks')?.textContent).toContain('◆ 3');
     expect(boards[1].querySelector('.bg-marks')).toBeNull();
-    expect(boards[1].querySelector('.bg-what')?.textContent).toContain('Partie vorhanden');
+    // 0.851.1, Wunsch 2026-10-27: „da nur schreiben Partie vorhanden“ — ohne Halbzüge und erste Züge
+    expect(boards[1].querySelector('.bg-what')?.textContent?.trim()).toBe('Partie vorhanden');
     expect(el.querySelector('.ov-filter')?.textContent).toContain('(2)');
   });
 

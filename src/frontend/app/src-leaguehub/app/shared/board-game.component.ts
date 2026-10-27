@@ -26,7 +26,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
   template: `
     @let g = game();
     <span class="bg">
-      <span class="bg-what">Partie vorhanden · {{ g.plies }} Halbzüge@if (g.firstMoves.length) { · <span class="bg-moves">{{ shown() }}</span>}</span>
+      <span class="bg-what">Partie vorhanden@if (!brief()) { · {{ g.plies }} Halbzüge@if (g.firstMoves.length) { · <span class="bg-moves">{{ shown() }}</span>}}</span>
       @if (markCount() > 0) {
         <span class="bg-marks" [title]="markCount() === 1 ? '1 interessante Stellung' : markCount() + ' interessante Stellungen'">◆ {{ markCount() }}</span>
       }
@@ -95,6 +95,8 @@ export class BoardGameComponent {
   readonly error = signal<string | null>(null);
   private readonly hasEvals = signal(false);
   /** 0.848.0: so viele interessante Stellungen hat die Partie (Vereinsübersicht) — 0 = kein Marker. */
+  /** Nur „Partie vorhanden“, ohne Halbzüge und erste Züge (Vereinsübersicht, 0.851.1, Wunsch 2026-10-27). */
+  readonly brief = input(false);
   readonly markCount = input(0);
   /** Brillante Züge („!!“) laut Rückblick der Analyse (0.849.0, Vereinsübersicht); 0 = kein Marker. */
   readonly brilliantCount = input(0);

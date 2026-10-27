@@ -114,4 +114,17 @@ public class ClubGameMarksTests : IDisposable
         Assert.Equal(("e2e4", 20), (ply.BestUci, ply.SecondCp));            // die jüngste Analyse zählt
         Assert.Empty(ply.Candidates);                                       // schlank: keine Kandidatenlisten
     }
+
+    // 0.851.1, Wunsch 2026-10-27: „einige leere Runden" — Begegnungen, deren Bretter alle „nicht besetzt" sind, fallen weg
+    [Fact]
+    public void Overview_EmptyBoardsHaveNoContent()
+    {
+        LeagueGameMoves.LineupBoard B(string? home = null, string result = "", string? moves = null) =>
+            new(1, home, null, null, null, null, null, null, result, 0, moves, false);
+        Assert.False(LeagueClubOverview.HasContent(B()));
+        Assert.False(LeagueClubOverview.HasContent(B(home: " ")));
+        Assert.True(LeagueClubOverview.HasContent(B(home: "Hess, Max")));
+        Assert.True(LeagueClubOverview.HasContent(B(result: "+ - -")));
+        Assert.True(LeagueClubOverview.HasContent(B(moves: "e4")));
+    }
 }

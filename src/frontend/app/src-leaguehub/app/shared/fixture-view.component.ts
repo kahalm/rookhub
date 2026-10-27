@@ -11,7 +11,8 @@ import { RouterLink } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { BoardMovesComponent } from './board-moves.component';
-import { LineupMatch, LineupsApiService } from '../core/lineups';
+import { GameMarkers, LineupMatch, LineupsApiService } from '../core/lineups';
+import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
@@ -58,7 +59,15 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 <tr>
                   <td class="num">{{ p.board }}</td>
                   <td class="pw">{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted"> {{ p.whiteElo }}</span>}</td>
-                  <td class="pr">{{ p.result }}</td>
+                  <td class="pr">{{ p.result }}
+                    <!-- 0.851.1, Wunsch 2026-10-27: „in der Prognose fehlt mir + und !! info" — wie in der Vereinsübersicht -->
+                    @if (p.clubGameId && markers.marksOf(p.clubGameId); as n) {
+                      <span class="gm-marks" [title]="n === 1 ? '1 interessante Stellung' : n + ' interessante Stellungen'"> ◆ {{ n }}</span>
+                    }
+                    @if (p.clubGameId && markers.brilliantOf(p.clubGameId); as n) {
+                      <span class="gm-brilliant" [style.color]="brilliantColor" [title]="n === 1 ? '1 brillanter Zug' : n + ' brillante Züge'"> !! {{ n }}</span>
+                    }
+                  </td>
                   <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
@@ -373,6 +382,9 @@ export class FixtureViewComponent {
   readonly provisional = computed(() => this.pairings().some(p => p.provisional));
   private pairingsFor = '';
   private readonly lineups = inject(LineupsApiService);
+  /** „◆ n"/„!! n" an den Vereinspartien der Begegnung (0.851.1) — nur angemeldet. */
+  readonly markers = new GameMarkers(this.lineups);
+  readonly brilliantColor = MOVE_CLASS_COLORS.brilliant;
   /** Die eigene Begegnung aus den Aufstellungen der Runde — trägt die ersten Züge je Brett (2026-10-08). */
   readonly ownMatch = signal<LineupMatch | null>(null);
   movesBoard(board: number) {
@@ -387,13 +399,18 @@ export class FixtureViewComponent {
       this.pairingsFor = key;
       this.pairings.set([]);
       this.ownMatch.set(null);
+      this.markers.clear();
       this.openBoard.set(null);
       // 0.739.0: auch die laufende Runde — gezeigt wird sie nur, wenn ein Brett aus einer zugeordneten Partie kommt.
       // Seit 0.838.2 (Wunsch 2026-10-25: „seh ich die Paarungen von Runde 3 nicht im shared link") auch über den
       // Teilen-Link: der Server liefert dort dieselben vorläufigen Bretter, die eigene Seite anonymisiert.
       if (!f || (!token && tnr == null)) return;
       this.api.fixtureGames(tnr, round, team, token).then(
-        p => { if (this.pairingsFor === key) this.pairings.set(p); },
+        p => {
+          if (this.pairingsFor !== key) return;
+          this.pairings.set(p);
+          if (!token) void this.markers.load([...new Set(p.map(x => x.clubGameId).filter((id): id is number => !!id))]);
+        },
         () => { if (this.pairingsFor === key) this.pairings.set([]); });
       // Erste Züge (2026-10-08) über die Aufstellungen der Runde — nur angemeldet; fehlen sie, fehlt nur die Zeile.
       if (!token && tnr != null)

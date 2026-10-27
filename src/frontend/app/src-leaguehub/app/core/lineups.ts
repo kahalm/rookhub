@@ -123,9 +123,14 @@ export class GameMarkers {
       let got: Record<string, { pgn: string; evals: GameEvals }>;
       try { got = await this.api.clubGameReviews(ids.slice(i, i + 60)); } catch { continue; }
       if (run !== this.run) return;
-      const add: Record<number, number> = {};
-      for (const [id, r] of Object.entries(got)) add[Number(id)] = brilliantMoves(r.pgn, r.evals);
-      this.brilliant.update(cur => ({ ...cur, ...add }));
+      // Je Partie ein eigener Task (0.851.1): der Rückblick kostet ~50 ms, ein ganzes Paket am Stück fror den Browser ein
+      // („this page is slowing down Firefox").
+      for (const [id, r] of Object.entries(got)) {
+        await new Promise(resolve => setTimeout(resolve));
+        if (run !== this.run) return;
+        const n = brilliantMoves(r.pgn, r.evals);
+        this.brilliant.update(cur => ({ ...cur, [Number(id)]: n }));
+      }
     }
   }
 

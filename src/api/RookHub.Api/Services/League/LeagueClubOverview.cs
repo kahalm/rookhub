@@ -10,13 +10,19 @@ namespace RookHub.Api.Services.League;
 /// Marker neben Partien mit interessanten Stellungen"): jede Begegnung einer eigenen Mannschaft der laufenden Saison mit ihren
 /// Brettern — dieselben Bretter wie „Alle Aufstellungen" (<see cref="LeagueGameMoves.LineupsAsync"/>, nur lesend, eigene Seite mit
 /// echtem Spieler) — und je Vereinspartie der Zahl ihrer markierten Stellungen (<see cref="ClubGameMarks.CountsAsync"/>).
-/// Nur Runden mit mindestens einem Brett; Begegnungen ohne Aufstellung fallen weg.
+/// Nur Runden mit mindestens einem Brett; Begegnungen ohne Aufstellung fallen weg — auch solche, deren Bretter alle leer sind
+/// (0.851.1, Wunsch 2026-10-27: „einige leere Runden" — künftige Runden stehen mit „nicht besetzt – nicht besetzt" da).
 /// </summary>
 public sealed class LeagueClubOverview(AppDbContext db, LeagueService league, LeagueGameMoves moves, ClubGameMarks marks)
 {
     public sealed record Round(int Number, string? Date, List<LeagueGameMoves.LineupMatch> Matches);
     public sealed record League(int Tnr, string Name, List<Round> Rounds);
     public sealed record Overview(string? Season, List<League> Leagues, Dictionary<int, int> Marks);
+
+    /// <summary>Ein Brett mit Inhalt: ein Spieler, ein Ergebnis, eingegebene Züge oder eine Partie.</summary>
+    public static bool HasContent(LeagueGameMoves.LineupBoard b) =>
+        !string.IsNullOrWhiteSpace(b.HomePlayer) || !string.IsNullOrWhiteSpace(b.AwayPlayer) || !string.IsNullOrWhiteSpace(b.Result)
+        || !string.IsNullOrWhiteSpace(b.Moves) || b.Game is not null;
 
     public async Task<Overview> BuildAsync(LeagueClub club, int userId, CancellationToken ct = default)
     {
@@ -35,7 +41,7 @@ public sealed class LeagueClubOverview(AppDbContext db, LeagueService league, Le
             {
                 if (await moves.LineupsAsync(club, tnr, r, userId, canContribute: false, canManage: false, revealOwn: true, ct) is not { } l)
                     continue;
-                var own = l.Matches.Where(m => m.Own && m.Boards.Count > 0).ToList();
+                var own = l.Matches.Where(m => m.Own && m.Boards.Any(HasContent)).ToList();
                 if (own.Count == 0) continue;
                 foreach (var b in own.SelectMany(m => m.Boards))
                     if (b.Game?.ClubGameId is { } id) gameIds.Add(id);

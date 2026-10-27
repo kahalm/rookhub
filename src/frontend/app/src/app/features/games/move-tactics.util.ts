@@ -1,4 +1,4 @@
-import { Chess, Color, PieceSymbol, Square } from 'chess.js';
+import { Chess, Color, Move, PieceSymbol, Square } from 'chess.js';
 import { tryLoadFen } from '../../shared/chess/puzzle-move.util';
 
 /**
@@ -57,12 +57,22 @@ export function attackersOf(chess: Chess, square: Square, color: Color): Influen
 export function legalCapturersOf(chess: Chess, square: Square): Influencer[] {
   const seen = new Set<string>();
   const out: Influencer[] = [];
-  for (const m of chess.moves({ verbose: true })) {
+  for (const m of verboseMoves(chess)) {
     if (m.to !== square || !m.captured || seen.has(m.from)) continue;
     seen.add(m.from);
     out.push({ square: m.from, type: m.piece });
   }
   return out;
+}
+
+/** Die letzte Stellung und ihre legalen Züge (0.851.1): `sacrificedPiece` fragt für jede eigene Figur dieselbe Stellung nach
+ *  ihren Schlagzügen — die volle Zuggenerierung je Figur war der größte Teil der Rechenzeit eines Rückblicks. Über die FEN, nicht
+ *  die Instanz: `capturable` zieht in einer Test-Stellung weiter. */
+let movesCache: { fen: string; moves: Move[] } | null = null;
+function verboseMoves(chess: Chess): Move[] {
+  const fen = chess.fen();
+  if (movesCache?.fen !== fen) movesCache = { fen, moves: chess.moves({ verbose: true }) };
+  return movesCache.moves;
 }
 
 /** Umwandlungszug? Der UCI-Zug trägt dann die neue Figur als fünftes Zeichen. */
@@ -226,6 +236,8 @@ function influenceOn(after: Chess, square: Square, color: Color): { attackers: I
 function hangingOn(before: Chess, after: Chess, square: Square): boolean {
   const piece = after.get(square);
   if (!piece) return false;
+  // Ohne Pseudo-Angreifer gibt es auch keinen legalen Schlagzug (Abkürzung, 0.851.1 — c) und d) wären ohnehin „nein").
+  if (!after.isAttacked(square, piece.color === 'w' ? 'b' : 'w')) return false;
   const value = pieceValue(piece.type);
   const { attackers, defenders } = influenceOn(after, square, piece.color);
 

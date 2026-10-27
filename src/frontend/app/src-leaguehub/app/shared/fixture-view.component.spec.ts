@@ -43,7 +43,9 @@ describe('FixtureViewComponent', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats', 'fixtureGames']);
     api.fixtureGames.and.resolveTo([]);
-    lineupsApi = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves']);
+    lineupsApi = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'clubGameMarkCounts', 'clubGameReviews']);
+    lineupsApi.clubGameMarkCounts.and.resolveTo({});
+    lineupsApi.clubGameReviews.and.resolveTo({});
     lineupsApi.lineups.and.resolveTo({ tnr: 1479345, round: 1, date: null, canEdit: false, matches: [] });
     api.forecastStats.and.resolveTo({
       season: '2026/27', total: { fixtures: 4, top1: 10, top2: 18, top3: 22, of: 30, e1: 9000, e2: 16500, e3: 21000, pa: 6300, pb: 1800 },
@@ -97,6 +99,31 @@ describe('FixtureViewComponent', () => {
     (items[0] as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.pairings lh-game-replay')).not.toBeNull();
+  });
+
+  // 0.851.1, Wunsch 2026-10-27: „in der Prognose fehlt mir + und !! info"
+  it('Brettpaarungen: „◆ n" und „!! n" an Vereinspartien, nur angemeldet', async () => {
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Hess, Max', whiteElo: 2040, black: 'Binder, Moriz', blackElo: 2100, result: '1 - 0', forfeit: false,
+        pgn: '1. e4 1-0', source: 'club', clubGameId: 10 },
+      { board: 2, white: 'Gruber, Michael', whiteElo: null, black: 'Ciolek, Andreas', blackElo: 1900, result: '0 - 1', forfeit: false,
+        pgn: null, source: null, clubGameId: null },
+    ]);
+    lineupsApi.clubGameMarkCounts.and.resolveTo({ '10': 2 });
+    lineupsApi.clubGameReviews.and.resolveTo({ '10': {
+      pgn: '[SetUp "1"]\n[FEN "rnbq1rk1/pppnbppp/4p3/3pP3/3P4/2NB1N2/PPP2PPP/R1BQK2R w KQ - 5 7"]\n\n7. Bxh7+ *\n',
+      evals: { status: 'done', analyzed: 1, total: 1, targetDepth: 20, final: { cp: 150 },
+        plies: [{ ply: 0, cp: 150, depth: 20, bestUci: 'd3h7', playedUci: 'd3h7', playedCp: 150, secondCp: 50 }] } } });
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render({ ...OPEN, status: 'played', score: '3 : 3' });
+    for (let i = 0; i < 3; i++) { await fixture.whenStable(); await new Promise(r => setTimeout(r)); }
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(lineupsApi.clubGameMarkCounts).toHaveBeenCalledOnceWith([10]);
+    const rows = el.querySelectorAll('.pairings tbody tr');
+    expect(rows[0].querySelector('.pr .gm-marks')?.textContent).toContain('◆ 2');
+    expect(rows[0].querySelector('.pr .gm-brilliant')?.textContent).toContain('!! 1');
+    expect(rows[1].querySelector('.gm-marks')).toBeNull();
   });
 
   it('gespielte Runde: erste Züge je Brett aus den Aufstellungen, „Züge eingeben" wo erlaubt (2026-10-08)', async () => {
@@ -202,6 +229,7 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.provisional-note')?.textContent).toContain('hochgeladenen Partien');
     expect(el.querySelector('.pairings tbody tr')?.textContent).toContain('Kobold, Jonathan');
     expect(lineupsApi.lineups).not.toHaveBeenCalled();
+    expect(lineupsApi.clubGameMarkCounts).not.toHaveBeenCalled();   // Marker nur angemeldet
     // 0.838.3: „Analyse" auch über den Link — RookHubs Partieseite über den Link, ohne Einmal-Code
     const handoff = TestBed.inject(HandoffService) as jasmine.SpyObj<HandoffService>;
     (el.querySelector('.pairings .icon-btn') as HTMLButtonElement).click();

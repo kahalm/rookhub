@@ -660,3 +660,9 @@ nicht jede interessante Stellung muss in der Partie vorkommen, kann auch in eine
 * **Auch in der Liste der Vereinspartien** (`/verein`, 0.851.0, Wunsch 2026-10-27: „markiere diese Partien auch so in der Liste
   Vereinsspiele“): hinter dem Ergebnis (Tabelle und Handy-Karte) „◆ n“/„!! n“, je geladener Seite nachgeholt
   (`GameMarkers.add`). Spec `club-games-page`.
+* **0.851.1** (Wunsch 2026-10-27): Marker auch in den Brettpaarungen der Prognose (`lh-fixture`, nur angemeldet); die
+  Übersicht schreibt an der Partie nur „Partie vorhanden“ (`lh-board-game [brief]`) und lässt Begegnungen ohne Inhalt weg
+  (`LeagueClubOverview.HasContent`: alle Bretter „nicht besetzt“, kein Ergebnis, keine Partie). Tempo: der Rückblick kostete im
+  Browser ~475 ms je Partie (`sacrificedPiece` → `legalCapturersOf` erzeugte für jede eigene Figur alle Züge neu) — jetzt
+  ~50 ms (Abkürzung ohne Angreifer + Zugliste je Stellung einmal, `move-tactics.util.ts`), und `GameMarkers` rechnet je Partie
+  in einem eigenen Task („this page is slowing down Firefox“).

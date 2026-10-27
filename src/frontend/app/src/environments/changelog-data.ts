@@ -10,6 +10,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.851.1", date: "2026-10-27", changes: [
+    { en: "LeagueHub: the club overview and the club games list no longer freeze the browser („this page is slowing down Firefox“) – the move classes behind the !! marker are now calculated about ten times faster, game by game in the background (the same speed-up also helps RookHub’s game review).", de: "LeagueHub: Vereinsübersicht und Liste der Vereinspartien frieren den Browser nicht mehr ein („this page is slowing down Firefox“) – die Zug-Klassen hinter dem Marker !! rechnen jetzt rund zehnmal schneller und Partie für Partie im Hintergrund (das hilft auch dem Partie-Rückblick in RookHub)." },
+    { en: "LeagueHub forecast: the board pairings of a played match now show the markers ◆ n (interesting positions) and !! n (brilliant moves) too.", de: "LeagueHub-Prognose: Die Brettpaarungen einer gespielten Begegnung zeigen jetzt auch die Marker ◆ n (interessante Stellungen) und !! n (brillante Züge)." },
+    { en: "LeagueHub club overview: a game now only says „Game available“ (without plies and first moves), and matches whose boards are all still empty (future rounds) are left out.", de: "LeagueHub-Vereinsübersicht: An einer Partie steht jetzt nur „Partie vorhanden“ (ohne Halbzüge und erste Züge), und Begegnungen, deren Bretter alle noch leer sind (künftige Runden), fallen weg." },
+  ] },
   { version: "0.851.0", date: "2026-10-27", changes: [
     { en: "LeagueHub club games list: behind the result, games now show the same markers as the club overview – ◆ n for interesting positions and !! n for brilliant moves (also on the phone card).", de: "LeagueHub-Liste der Vereinspartien: Hinter dem Ergebnis stehen jetzt dieselben Marker wie in der Vereinsübersicht – ◆ n für interessante Stellungen und !! n für brillante Züge (auch in der Karte am Handy)." },
   ] },

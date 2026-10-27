@@ -15,7 +15,8 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
  * Stellungen" blendet die übrigen Bretter aus. Lesen mit `league.view`.
  * Seit 0.849.0 (Wunsch 2026-10-27: „zeige auch !! an") steht daneben „!! n" für brillante Züge: nach der Übersicht lädt die
  * Seite für alle Partien PGN + Bewertungen in Paketen (`club/games/reviews`) und rechnet den Rückblick wie RookHub; der
- * Filter nimmt Partien mit „!!" mit.
+ * Filter nimmt Partien mit „!!" mit. Seit 0.851.1 (Wunsch 2026-10-27) steht an der Partie nur „Partie vorhanden", ohne
+ * Halbzüge und erste Züge.
  */
 @Component({
   selector: 'lh-club-overview-page',
@@ -65,7 +66,7 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
                             <span class="lu-moves">
                               <lh-board-game [game]="g" [tnr]="l.tnr" [round]="r.number" [team]="m.home" [board]="b.board"
                                              [title]="'Brett ' + b.board + ': ' + (b.homePlayer ?? '–') + ' – ' + (b.awayPlayer ?? '–')"
-                                             [flipped]="ownIsBlack(m, b)" [markCount]="markCount(b)"
+                                             [flipped]="ownIsBlack(m, b)" [brief]="true" [markCount]="markCount(b)"
                                              [brilliantCount]="brilliantCount(b)" />
                             </span>
                           }
