@@ -456,6 +456,33 @@ internal sealed class AnalysisHistoryEntryConfiguration : IEntityTypeConfigurati
     }
 }
 
+// „Ohne Engine analysieren" (0.855.0): ein Zugbaum je Nutzer und Partie, je Stellung die Bewertung aus dem Hintergrund.
+internal sealed class LineStudyConfiguration : IEntityTypeConfiguration<LineStudy>
+{
+    public void Configure(EntityTypeBuilder<LineStudy> e)
+    {
+        e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(s => s.GameKey).HasMaxLength(64);
+        e.Property(s => s.StartFen).HasMaxLength(120);
+        e.Property(s => s.Title).HasMaxLength(200);
+        e.Property(s => s.TreeJson).HasColumnType("LONGTEXT");
+        e.HasIndex(s => new { s.UserId, s.GameKey }).IsUnique();
+        e.HasMany(s => s.Positions).WithOne(p => p.LineStudy).HasForeignKey(p => p.LineStudyId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class LineStudyPositionConfiguration : IEntityTypeConfiguration<LineStudyPosition>
+{
+    public void Configure(EntityTypeBuilder<LineStudyPosition> e)
+    {
+        e.Property(p => p.PositionKey).HasMaxLength(100);
+        e.Property(p => p.Fen).HasMaxLength(120);
+        e.Property(p => p.CandidatesJson).HasColumnType("TEXT");
+        e.HasIndex(p => new { p.LineStudyId, p.PositionKey }).IsUnique();
+        e.HasIndex(p => p.Status);   // der Erntelauf sucht offene Stellungen
+    }
+}
+
 // Züge vergleichen (0.602.0): Kopf je Vergleich, eine Zeile je gerechneter Stellung.
 internal sealed class MoveComparisonConfiguration : IEntityTypeConfiguration<MoveComparison>
 {

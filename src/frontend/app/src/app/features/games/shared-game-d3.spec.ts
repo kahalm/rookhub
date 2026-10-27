@@ -133,7 +133,7 @@ describe('SharedGameComponent (Design-Runde d3)', () => {
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();
     const items = Array.from(overlay.querySelectorAll('.mat-mdc-menu-panel .mat-mdc-menu-item-text')).map(x => x.textContent!.trim());
     expect(items).toEqual(['games.openInAnalysis', 'games.openOriginal', 'games.edit.menu', 'games.live.engineMenu',
-      'games.roast.menu', 'games.share', 'games.pgnCopy', 'common.downloadPgn', 'common.delete']);
+      'games.analyzeChoice.blind', 'games.roast.menu', 'games.share', 'games.pgnCopy', 'common.downloadPgn', 'common.delete']);
   });
 
   // d4-rk-partie-menue-loeschen-fehlt-partieseite: „Löschen“ auch im ⋮ der Partieseite (rot, zuletzt) — Rückfrage, danach

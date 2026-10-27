@@ -128,6 +128,12 @@
                   <mat-icon>memory</mat-icon><span>{{ 'games.live.engineMenu' | translate }}</span>
                 </button>
               }
+              @if (loggedIn && game.pgn) {
+                <!-- „Ohne Engine analysieren" (0.855.0, Engine-Gruppe der Menüordnung DESIGN 5.5): eigene Linien ohne Bewertung, aufgedeckt wird später. -->
+                <button mat-menu-item class="without-engine" (click)="analyzeWithoutEngine()">
+                  <mat-icon>visibility_off</mat-icon><span>{{ 'games.analyzeChoice.blind' | translate }}</span>
+                </button>
+              }
               @if (canLc0()) {
                 <!-- Ganze Partie auf Lc0 (0.692.0): nur Vereinsmitglieder, nur solange es keine Lc0-Analyse gibt. -->
                 <button mat-menu-item class="lc0-game" (click)="analyzeLc0()">

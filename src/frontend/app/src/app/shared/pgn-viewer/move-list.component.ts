@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { Move } from 'chess.js';
 import { TranslateService } from '@ngx-translate/core';
 import { SanPipe } from '../chess/san.pipe';
+import { contrastText } from '../contrast-text.util';
 
 /** Ein Stück Kommentartext; mit `move` ein anklickbarer Zug, dessen Stellung `fen` ist. */
 export interface MoveListCommentSegment { text?: string; move?: string; fen?: string; from?: string; to?: string; }
@@ -199,13 +200,7 @@ export class MoveListComponent implements OnChanges {
   movePairs: { number: number; white?: string; whiteIndex: number; black?: string; blackIndex?: number }[] = [];
 
   /** Schrift fürs Zeichen-Schild: Schwarz oder Weiß, was auf `color` (#rrggbb) mehr Kontrast hat (Gelb → Schwarz). */
-  markText(color: string): string {
-    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
-    if (!m) return '#fff';
-    const lin = (h: string) => { const c = parseInt(h, 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-    const l = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
-    return 1.05 / (l + 0.05) >= (l + 0.05) / 0.05 ? '#fff' : '#000';
-  }
+  markText(color: string): string { return contrastText(color); }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['moves'] || changes['comments']) {

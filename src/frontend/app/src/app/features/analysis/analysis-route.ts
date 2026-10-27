@@ -20,6 +20,8 @@ export interface AnalysisRouteParams {
   pgn: string | null;
   /** Verlauf-Eintrag (`?history=<id>`). */
   historyId: number | null;
+  /** „Ohne Engine analysieren" (`?blind=1`, 0.855.0) — zusammen mit einer Partie (`?pgn=` bzw. Router-State). */
+  blind: boolean;
 }
 
 /** Adress-Parameter lesen und prüfen; `isValidFen` entscheidet über `?fen=`. */
@@ -45,5 +47,6 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
     moves: moves ? moves.split(/[ ,]+/).filter(Boolean) : [],
     pgn: pgn?.trim() ? pgn : null,
     historyId: historyId > 0 ? historyId : null,
+    blind: params.get('blind') === '1',
   };
 }

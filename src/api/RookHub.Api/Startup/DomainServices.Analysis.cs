@@ -35,6 +35,7 @@ public static partial class DomainServicesSetup
         // Züge vergleichen (0.602.0): Kandidatenzüge über Hintergrund-Aufträge durchrechnen, Begründung vom Modell.
         // Analyse-Verlauf (0.603.0): die letzten 20 Analysen des Analysebretts je Nutzer.
         services.AddScoped<AnalysisHistoryService>();
+        services.AddScoped<LineStudyService>();   // „ohne Engine analysieren" (0.855.0)
         services.AddSingleton<MoveComparisonExplainJobs>();
         services.AddScoped<MoveComparisonService>();
         // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).

@@ -425,6 +425,11 @@ export class SharedGameComponent implements OnInit, DoCheck {
    *  hierher. Übergabe per Router-State wie aus der Partienliste. */
   openInAnalysis(): void { this.actions.openInAnalysis(this.game?.pgn, this.router.url); }
 
+  /** „Ohne Engine analysieren" aus dem ⋮ (0.855.0) — auch für schon analysierte Partien. */
+  analyzeWithoutEngine(): void {
+    if (this.game?.pgn) this.analyzeGame.startWithoutEngine(this.analyzeUrl || null, this.game.pgn);
+  }
+
   /** „Mit Lc0 analysieren" — angemeldet, Vereinsmitglied, und die Partie hat noch keine Lc0-Analyse. */
   canLc0(): boolean {
     return this.loggedIn && this.auth.has('league.view') && !!this.game?.pgn && !this.review()?.hasLc0();
@@ -493,7 +498,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       return;
     }
     this.analyzing.set(true);
-    this.analyzeGame.submit(this.analyzeUrl, this.uploadStatus()).subscribe(ok => {
+    this.analyzeGame.analyze(this.analyzeUrl, this.uploadStatus(), this.game.pgn).subscribe(ok => {
       this.analyzing.set(false);
       if (ok) this.review()?.reload();
     });

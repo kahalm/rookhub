@@ -293,7 +293,7 @@ export class PgnViewerComponent implements OnInit {
     const url = this.data.analyzeUrl;
     if (!url || this.analyzing()) return;
     this.analyzing.set(true);
-    this.analyzeGame.submit(url, this.uploadStatus()).subscribe(ok => {
+    this.analyzeGame.analyze(url, this.uploadStatus(), this.data.pgn).subscribe(ok => {
       this.analyzing.set(false);
       if (ok) this.review()?.reload();
     });

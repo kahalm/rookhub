@@ -5472,6 +5472,104 @@ namespace RookHub.Api.Migrations
                     b.ToTable("LichessExplorerCacheEntries");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.LineStudy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Current")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GameKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("RevealedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("StartFen")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("TreeJson")
+                        .IsRequired()
+                        .HasColumnType("LONGTEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "GameKey")
+                        .IsUnique();
+
+                    b.ToTable("LineStudies");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.LineStudyPosition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AnalysisJobId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CandidatesJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Depth")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Fen")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<int>("LineStudyId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PositionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("LineStudyId", "PositionKey")
+                        .IsUnique();
+
+                    b.ToTable("LineStudyPositions");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.ManualActivity", b =>
                 {
                     b.Property<int>("Id")
@@ -9923,6 +10021,28 @@ namespace RookHub.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.LineStudy", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.LineStudyPosition", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.LineStudy", "LineStudy")
+                        .WithMany("Positions")
+                        .HasForeignKey("LineStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LineStudy");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.ManualActivity", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
@@ -10789,6 +10909,11 @@ namespace RookHub.Api.Migrations
             modelBuilder.Entity("RookHub.Api.Models.LeagueBatchUpload", b =>
                 {
                     b.Navigation("Files");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.LineStudy", b =>
+                {
+                    b.Navigation("Positions");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.MenuItemSetting", b =>

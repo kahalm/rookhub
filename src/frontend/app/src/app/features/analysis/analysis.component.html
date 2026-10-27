@@ -14,10 +14,13 @@
           [initialFen]="currentFen" [orientation]="orientation"
           (apply)="onSetupApply($event)" (cancel)="editing = false" />
       } @else {
-        <!-- Mit Tablebase-Ergebnis zeigt die Leiste die Wahrheit statt der Schätzung der Engine (0.729.0). -->
-        <div class="eval-bar" [matTooltip]="tbVerdict?.fen === currentFen ? tbVerdict!.text : evalText">
-          <div class="eval-white" [style.height.%]="tbVerdict?.fen === currentFen ? tbVerdict!.whiteHeight : whiteHeight"></div>
-        </div>
+        <!-- Mit Tablebase-Ergebnis zeigt die Leiste die Wahrheit statt der Schätzung der Engine (0.729.0).
+             „Ohne Engine" (0.855.0): keine Leiste — sie verriete die Bewertung. -->
+        @if (!blind) {
+          <div class="eval-bar" [matTooltip]="tbVerdict?.fen === currentFen ? tbVerdict!.text : evalText">
+            <div class="eval-white" [style.height.%]="tbVerdict?.fen === currentFen ? tbVerdict!.whiteHeight : whiteHeight"></div>
+          </div>
+        }
         <!-- Mobil: schmale, unsichtbare Tap-Zonen — links = Zug zurück (liegt als Overlay ÜBER der
              Bewertungsleiste, kostet keine Brettbreite), rechts = Zug vor. goTo() clampt selbst. -->
         <div class="board-tap board-tap-prev" (click)="prev()" aria-hidden="true"></div>
@@ -40,6 +43,11 @@
           <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
         </button>
       }
+      @if (study; as s) {
+        <!-- „Ohne Engine analysieren" (0.855.0): Fortschritt der Hintergrundrechnung, „Engine einschalten", danach der Vergleich. -->
+        <app-line-study-card [revealed]="s.revealed" [analyzed]="s.analyzed" [total]="s.total" [comparison]="s.comparison"
+                             (reveal)="revealStudy()" (jump)="goToNode($event)" />
+      }
       @if (engineCrashed) {
         <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">
           <mat-card-content style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -49,6 +57,7 @@
           </mat-card-content>
         </mat-card>
       }
+      @if (!blind) {
       <app-analysis-engine-card
         [engineOn]="engineOn" [sparring]="!!spar.sparring" [depth]="depth" [depthSetting]="depthSetting" [depthOptions]="depthOptions"
         [linesCount]="linesCount" [searchTime]="searchTime" [speedHint]="speedHint" [engines]="externalEnginesList"
@@ -68,11 +77,12 @@
           <app-tablebase-panel [fen]="currentFen" (playSan)="playRepertoireMoves([$event])" (verdict)="tbVerdict = $event" />
         }
       </app-analysis-engine-card>
+      }
 
       <!-- Sparring gegen Maia: die Karte führt den Lade-Ablauf selbst und meldet „start" erst mit fertigem Modell.
            Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte.
            Seit 0.760.0 standardmäßig zu: das ⋮ der Stellung blendet sie ein, ✕ wieder aus; läuft ein Sparring, bleibt sie. -->
-      @if (!editing && maiaCardVisible) {
+      @if (!editing && maiaCardVisible && !blind) {
         <app-maia-sparring-card [closable]="true" (dismiss)="closeMaiaCard()"
           [active]="!!spar.sparring" [userColor]="spar.sparring?.userColor ?? turnColor" [thinking]="spar.maiaThinking"
           [maiaToMove]="spar.maiaToMove" [elo]="spar.maiaElo"
@@ -100,14 +110,18 @@
             </button>
             <span class="spacer"></span>
             <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
-            <button mat-icon-button (click)="reset()" [appIconLabel]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
+            @if (!study) {
+              <button mat-icon-button (click)="reset()" [appIconLabel]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
+            }
             <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
                  die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
             <!-- „+" (0.749.0): besonders gute Stellung markieren. -->
             <app-mark-position-button [fen]="currentFen" [origin]="boardMarkOrigin" />
+            @if (!blind) {
             <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
                                [candidates]="engineCandidates" [sparring]="!editing" (sparringOpen)="openMaiaCard()"
                                [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
+            }
           </div>
           @if (starredList.length > 0) {
             <div class="star-jumps" [attr.aria-label]="'analysis.star.jumps' | translate">
@@ -134,7 +148,7 @@
       <div class="side-b">
       <!-- Eröffnungs-Explorer (Lichess/Meister, online oder lokal) — nur eingeloggt: die Online-Quelle
            verbraucht das gemeinsame Kontingent des Server-Tokens. Ein Klick spielt den Zug. -->
-      @if (auth.isLoggedIn) {
+      @if (auth.isLoggedIn && !blind) {
         <mat-card class="explorer-card">
           <mat-card-content>
             <app-opening-explorer [fen]="currentFen" [wide]="wideLayout()" (playMove)="playRepertoireMoves([$event])" />
@@ -152,6 +166,7 @@
         </mat-card>
       }
 
+      @if (!study) {
       <mat-card class="io-card">
         <mat-card-content>
           <mat-form-field appearance="outline" class="full">
@@ -169,6 +184,7 @@
           <button mat-stroked-button (click)="loadPgn()"><mat-icon>upload</mat-icon> {{ 'analysis.loadPgn' | translate }}</button>
         </mat-card-content>
       </mat-card>
+      }
       </div>
     </div>
   </div>

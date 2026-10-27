@@ -5,16 +5,16 @@ describe('readAnalysisParams', () => {
 
   it('übernimmt gültige Werte', () => {
     const r = read({ fen: 'F', orientation: 'black', from: '/puzzles/1', engine: 'eei_a', depth: '30', lines: '5',
-      moves: 'e2e4, e7e5  g1f3', pgn: '1. e4', history: '7' });
+      moves: 'e2e4, e7e5  g1f3', pgn: '1. e4', history: '7', blind: '1' });
     expect(r).toEqual({ fen: 'F', orientation: 'black', returnTo: '/puzzles/1', engine: 'eei_a', depth: 30, lines: 5,
-      moves: ['e2e4', 'e7e5', 'g1f3'], pgn: '1. e4', historyId: 7 });
+      moves: ['e2e4', 'e7e5', 'g1f3'], pgn: '1. e4', historyId: 7, blind: true });
   });
 
   it('verwirft ungültige Werte', () => {
     const r = read({ fen: 'F', orientation: 'red', from: 'https://x', engine: 'a b', depth: '31', lines: '6', pgn: '  ',
       history: '0' }, false);
     expect(r).toEqual({ fen: null, orientation: null, returnTo: null, engine: null, depth: null, lines: null, moves: [],
-      pgn: null, historyId: null });
+      pgn: null, historyId: null, blind: false });
     expect(read({ from: '//evil' }).returnTo).toBeNull();
   });
 });

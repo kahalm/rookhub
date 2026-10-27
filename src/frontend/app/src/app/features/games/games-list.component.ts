@@ -14,7 +14,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { map, switchMap } from 'rxjs/operators';
 import { GamesService, PgnImportResult, SavedGame } from './games.service';
 import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
@@ -572,7 +572,7 @@ export class GamesListComponent implements OnInit {
   analyze(g: SavedGame): void {
     if (this.analyzingId !== null) return;
     this.analyzingId = g.id;
-    this.analyzeGame.submit(this.service.analyzeUrl(g.id), this.uploadStatus)
+    this.analyzeGame.analyze(this.service.analyzeUrl(g.id), this.uploadStatus, () => this.service.get(g.id).pipe(map(d => d.pgn)))
       .subscribe(started => { this.analyzingId = null; if (started) this.refresh(); });
   }
 

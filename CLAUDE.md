@@ -127,6 +127,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Hintergrundjobs pausieren (Admin) — ein Schalter für alle pausierbaren Hintergrunddienste, ohne Neustart → `docs/api/hintergrundjobs-pause.md`
 - Speicherdauer — alle Aufbewahrungsfristen je Datenart, Aufräumlauf und `Retention:*`-Schlüssel → `docs/api/speicherdauer.md`
 - Analyse-Verlauf + Sterne (0.603.0, auth) → `docs/api/analyse-verlauf-sterne.md`
+- „Ohne Engine analysieren" — eigene Linien, Bewertung erst auf Zuruf (0.855.0, auth) → `docs/api/ohne-engine-analysieren.md`
 - Maia-Sparring im Analysebrett (0.632.0) → `docs/api/maia-sparring-im-analysebrett.md`
 - Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?" → `docs/api/zuege-vergleichen.md`
 - Knotenziel + „nur auf Anforderung"-Engines (2026-10-05, Phase 1 der Lc0-Zweitprüfung, UNGETAGGT) → `docs/api/knotenziel-nur-auf-anforderung-engines.md`

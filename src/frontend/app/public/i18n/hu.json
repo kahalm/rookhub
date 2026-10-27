@@ -569,7 +569,12 @@
       "mismatch": "A jelszavak nem egyeznek.",
       "failed": "A jelszót nem sikerült módosítani."
     },
-    "displayNameHint": "Ez jelenik meg másoknak a „{{username}}” helyett."
+    "displayNameHint": "Ez jelenik meg másoknak a „{{username}}” helyett.",
+    "analyzeChoice": {
+      "title": "Játszma elemzése",
+      "ask": "Mindig kérdezzen",
+      "hint": "Mit tegyen a „Játszma elemzése“ — kérdezzen, mindig motorral vagy mindig motor nélkül. Minden eszközödön érvényes."
+    }
   },
   "legal": {
     "accountDeletion": {
@@ -2541,6 +2546,16 @@
       "analyzeMove": "Elemzés",
       "enginePaused": "A motor szünetel az edzőjátszma alatt",
       "hint": "A Maia-3 a Torontói Egyetem neurális hálózata. Több millió játszmából tanulta meg, milyen lépéseket választanak egy adott játékerősségű emberek — jellegzetes hibáikkal együtt.\n\nAz erősség egy Lichess villám-értékszámnak felel meg; ökölszabályként nagyjából 200 ponttal a FIDE-Élő fölött van.\n\nMaia nem számol előre, hanem érzésből játszik. A motor közben kikapcsolva marad, hogy te magad számolj.\n\n„Rossz lépések jelzése”: minden saját lépésed után a motor a háttérben ellenőrzi, hogy az értékelés legalább 0,2 gyaloggal romlott-e — ilyenkor megjelenik egy figyelmeztetés, és az „Elemzés” megmutatja, mi lett volna jobb. „Értékelősáv bekapcsolva marad”: a tábla melletti sáv a sparring alatt is mutatja az értékelést; a vonalak és nyilak rejtve maradnak."
+    },
+    "lineStudy": {
+      "title": "Motor nélkül",
+      "titleRevealed": "A változataid motorral",
+      "progress": "{{done}} / {{total}} állás elemezve a háttérben",
+      "hint": "Játszd a saját változataidat — a képernyőn semmi sincs értékelve. Ha végeztél, kapcsold be a motort: minden változatot értékelve és a legjobb lépéssel összevetve látsz.",
+      "reveal": "Motor bekapcsolása",
+      "noOwnMoves": "Még nem játszottál saját változatot.",
+      "summary": "A lépéseid: {{rated}}, ebből {{best}} a motor legjobbja.",
+      "better": "jobb {{san}}"
     }
   },
   "stats": {
@@ -3600,7 +3615,15 @@
         "failed": "A feltöltés nem sikerült — próbáld újra."
       }
     },
-    "clubImport": "Hozzáadás a klub adatbázisához (LeagueHub)"
+    "clubImport": "Hozzáadás a klub adatbázisához (LeagueHub)",
+    "analyzeChoice": {
+      "title": "Játszma elemzése",
+      "engine": "Motorral",
+      "engineDesc": "Értékelési görbe, lépésosztályok és a hibáid — mint eddig.",
+      "blind": "Motor nélkül",
+      "blindDesc": "Kattints végig a játszmán és a saját változataidon értékelés nélkül. Elmentjük neked és a háttérben elemezzük; a végén kapcsold be a motort.",
+      "remember": "Emlékezz a döntésemre (a profilban módosítható)"
+    }
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",

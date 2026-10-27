@@ -654,6 +654,7 @@ describe('SharedGameComponent', () => {
 
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
 
+    http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'engine' });   // Vorgabe „mit Engine“ (0.855.0)
     const post = http.expectOne({ method: 'POST', url: '/api/games/shared/tok/analyze' });
     // Kein PGN (der Server hat es) — nur die Sprache der Seite für die Texte danach (0.540.0).
     expect(post.request.body).toEqual({ lang: 'en' });
@@ -676,6 +677,7 @@ describe('SharedGameComponent', () => {
     fixture.componentInstance.analyze();
     fixture.componentInstance.analyze();
 
+    http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'engine' });   // Vorgabe „mit Engine“ (0.855.0)
     expect(http.match({ method: 'POST', url: '/api/games/shared/tok/analyze' }).length).toBe(1);
   });
 
@@ -789,6 +791,7 @@ describe('SharedGameComponent', () => {
     expect(el.querySelector('.header .analyze')).not.toBeNull();
 
     (el.querySelector('button.analyze') as HTMLButtonElement).click();
+    http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'engine' });   // Vorgabe „mit Engine“ (0.855.0)
     http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 9 }, reused: false });
     flushEvals(http, '/api/games/4/evals', { status: 'pending', analyzed: 0, total: 2, targetDepth: 20, plies: [], final: null });
   });

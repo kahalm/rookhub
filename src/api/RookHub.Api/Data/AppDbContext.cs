@@ -149,6 +149,8 @@ public partial class AppDbContext : DbContext
     public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
     public DbSet<AnalysisHistoryEntry> AnalysisHistoryEntries => Set<AnalysisHistoryEntry>();
+    public DbSet<LineStudy> LineStudies => Set<LineStudy>();
+    public DbSet<LineStudyPosition> LineStudyPositions => Set<LineStudyPosition>();
     public DbSet<MoveComparison> MoveComparisons => Set<MoveComparison>();
     public DbSet<MoveComparisonLine> MoveComparisonLines => Set<MoveComparisonLine>();
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();

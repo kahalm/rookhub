@@ -66,6 +66,7 @@ describe('GamesListComponent', () => {
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
 
     http.expectNone('/api/games/4');
+    http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'engine' });   // Vorgabe „mit Engine“ (0.855.0)
     const post = http.expectOne({ method: 'POST', url: '/api/games/4/analyze' });
     // Die Sprache der Seite reist mit — darin schreibt der Server danach Erklärungen und Roasts (0.540.0).
     expect(post.request.body).toEqual({ lang: 'en' });

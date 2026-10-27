@@ -22,6 +22,7 @@ import { DiscordLinkService } from '../../core/discord-link.service';
 import { ApiTokensComponent } from './api-tokens.component';
 import { SharedLinksCardComponent } from './shared-links-card.component';
 import { EngineCardComponent } from './engine-card.component';
+import { AnalyzeChoiceCardComponent } from './analyze-choice-card.component';
 import { OfflineSettingsCardComponent } from './offline-settings-card.component';
 import { ThemeCardComponent } from './theme-card.component';
 import { ChangePasswordCardComponent } from './change-password-card.component';
@@ -55,7 +56,7 @@ interface Profile {
   imports: [CommonModule, FormsModule, MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatProgressSpinnerModule, MatListModule,
     MatIconModule, MatDividerModule, TranslatePipe, LoadingSpinnerComponent,
-    ApiTokensComponent, SharedLinksCardComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+    ApiTokensComponent, SharedLinksCardComponent, EngineCardComponent, AnalyzeChoiceCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
     ChangePasswordCardComponent, DeleteAccountCardComponent, ProfileIdentityFormComponent],
   template: `
     @if (loading) {
@@ -118,6 +119,9 @@ interface Profile {
 
             <mat-divider class="discord-divider"></mat-divider>
             <app-engine-card></app-engine-card>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <app-analyze-choice-card></app-analyze-choice-card>
 
             <mat-divider class="discord-divider"></mat-divider>
             <app-offline-settings-card></app-offline-settings-card>

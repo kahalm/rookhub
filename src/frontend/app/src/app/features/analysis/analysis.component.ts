@@ -44,6 +44,9 @@ import {
 } from './analysis-tree';
 import { AnalysisLineModel, boardMove, playLine } from './analysis-line-model';
 import { pgnTitle } from './analysis-title.util';
+import { LineStudyService, lineStudyKey } from './line-study.service';
+import { LineStudySession } from './line-study-session';
+import { LineStudyCardComponent } from './line-study-card.component';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MaiaSparring } from './maia/maia-sparring';
@@ -63,7 +66,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, AnalysisEngineCardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, OpeningExplorerComponent, PositionMenuComponent, MarkPositionButtonComponent, AnalysisMoveTreeComponent,
-    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent
+    IconLabelDirective, MaiaSparringCardComponent, TablebasePanelComponent, LineStudyCardComponent
   ],
   templateUrl: './analysis.component.html',
   styleUrl: './analysis.component.scss',
@@ -117,6 +120,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Läuft ein Sparring, ist die Karte immer da — sonst nur, wenn über das ⋮ geöffnet. */
   get maiaCardVisible(): boolean { return this.maiaCardOpen || !!this.spar.sparring; }
 
+  // ---- „Ohne Engine analysieren" (0.855.0) ----
+  /** API der Linien-Bäume (aus dem AnalyzeGameService; in Specs mit Stub fehlt sie — dann kein „ohne Engine"). */
+  private readonly lineStudies?: LineStudyService;
+  /** Eigene Linien zu einer Partie ohne Bewertung; `null` = normales Analysebrett. */
+  study: LineStudySession | null = null;
+  /** Ohne Engine und noch nicht aufgedeckt: keine Leiste, keine Engine, kein Explorer, keine Bewertungen. */
+  get blind(): boolean { return !!this.study && !this.study.revealed; }
+
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   private readonly historySaver: AnalysisHistorySaver;
   /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
@@ -166,6 +177,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
               private cdr: ChangeDetectorRef, private translate: TranslateService,
               @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog,
               maia: MaiaEngineService, games: GamesService, analyzeGame: AnalyzeGameService) {
+    this.lineStudies = analyzeGame?.lineStudies;
     this.historySaver = new AnalysisHistorySaver({
       save: req => this.history.save(req),
       loggedIn: () => this.auth.isLoggedIn,
@@ -251,7 +263,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.history.get(p.historyId).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
       return;
     }
-    if (pgn) {
+    if (pgn && this.lineStudies && this.auth.isLoggedIn && (window.history.state?.blind === true || p.blind)) {
+      this.pgnInput = pgn;
+      this.startWithoutEngine();
+    } else if (pgn) {
       this.pgnInput = pgn;
       this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
     } else if (p.moves.length) {
@@ -269,9 +284,39 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.setTree(root, playLine(root, uciMoves, playUci));
   }
 
+  /**
+   * „Ohne Engine" (0.855.0): Engine aus (nur für diese Seite, nicht als Einstellung), die Partie laden und ihren eigenen Baum
+   * holen bzw. anlegen. Gespeichert wird dann in den Linien-Baum statt in den Analyse-Verlauf.
+   */
+  private startWithoutEngine(): void {
+    this.engineOn = false;
+    const parsed = parsePgnTree(this.pgnInput.trim());
+    if (!parsed) { this.loadPgn(true); return; }
+    const gameUcis = mainline(parsed.root).map(n => n.uci);
+    this.study = new LineStudySession(this.lineStudies!, {
+      root: () => this.root,
+      current: () => this.currentNode,
+      setTree: (root, current) => this.setTree(root, current),
+      revealed: () => { this.engineOn = true; this.refresh(); },
+      changed: () => { this.treeVersion++; this.cdr.markForCheck(); },
+    }, lineStudyKey(parsed.root.fen, gameUcis), gameUcis, pgnTitle(parsed.headers));
+    this.loadPgn(true);
+    this.study.open();
+  }
+
+  /** „Engine einschalten" auf der Karte „Ohne Engine". */
+  revealStudy(): void { this.study?.reveal(); }
+
+  /** Änderung am Baum merken: in den Linien-Baum (ohne Engine) oder in den Analyse-Verlauf. */
+  private scheduleSave(): void {
+    if (this.study) this.study.schedule();
+    else this.historySaver.schedule();
+  }
+
   ngOnDestroy(): void {
     // Wer die Seite verlässt, bevor die Drossel abläuft, soll den letzten Stand trotzdem im Verlauf haben.
     this.historySaver.flush();
+    this.study?.destroy();
     this.sub?.unsubscribe();
     this.errorSub?.unsubscribe();
     this.fallbackSub?.unsubscribe();
@@ -353,7 +398,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Refresh board + engine for current ply ----
   private refresh(): void {
-    this.historySaver.schedule();
+    this.scheduleSave();
     const fen = this.currentFen;
     let c: Chess;
     try { c = new Chess(fen); } catch { return; }
@@ -440,7 +485,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       if (node !== this.root && node.evalText !== best.evalText) {
         node.evalText = best.evalText;
         this.treeVersion++;
-        this.historySaver.schedule();
+        this.scheduleSave();
       }
     }
     this.spar.serveMoveCheck(fen);
@@ -588,7 +633,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   private toggleStarOn(node: AnalysisNode): void {
     this.model.toggleStar(node);
-    this.historySaver.schedule();
+    this.scheduleSave();
   }
 
   /** „12...Nf6" — der Zug, der zur markierten Stellung führte; die Wurzel = Ausgangsstellung. */
@@ -625,7 +670,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Brett und Engine bleiben, nur die Reihenfolge änderte sich: die Linie durch den aktuellen Zug neu ziehen.
     this.treeVersion++;
     this.model.relineThrough(current);
-    this.historySaver.schedule();
+    this.scheduleSave();
   }
 
   // ---- Analyse-Verlauf ----

@@ -14,6 +14,10 @@ internal static class AnalysisDataEraser
         db.AnalysisJobs.RemoveRange(await db.AnalysisJobs.Where(x => x.UserId == userId).ToListAsync());
         // Analyse-Verlauf (0.603.0): Stellungen und Zugfolgen des Nutzers.
         db.AnalysisHistoryEntries.RemoveRange(await db.AnalysisHistoryEntries.Where(h => h.UserId == userId).ToListAsync());
+        // „Ohne Engine analysieren" (0.855.0): eigene Linien je Partie samt ihren Stellungen (unter InMemory ausdrücklich).
+        var studies = await db.LineStudies.Include(s => s.Positions).Where(s => s.UserId == userId).ToListAsync();
+        db.LineStudyPositions.RemoveRange(studies.SelectMany(s => s.Positions));
+        db.LineStudies.RemoveRange(studies);
         // Zugvergleiche (0.602.0): die Zeilen cascaden am Kopf; ihre Aufträge stehen in AnalysisJobs und gehen oben mit.
         // Unter InMemory cascadet nichts — die Zeilen deshalb ausdrücklich.
         var comparisons = await db.MoveComparisons.Include(c => c.Lines).Where(c => c.UserId == userId).ToListAsync();

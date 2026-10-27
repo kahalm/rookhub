@@ -111,7 +111,12 @@ public sealed class AnalysisHistoryService
     }
 
     /// <summary>Ein geprüfter Baum: gespeicherte Form, Hauptlinie, der Knoten, an dem man stand, samt Tiefe, Zähler.</summary>
-    internal sealed record CheckedTree(AnalysisTreeDto Tree, List<string> Mainline, int Current, int Ply, int NodeCount, int StarCount);
+    internal sealed record CheckedTree(AnalysisTreeDto Tree, List<string> Mainline, int Current, int Ply, int NodeCount, int StarCount)
+    {
+        /// <summary>FEN NACH dem Zug je Knoten (gleiche Reihenfolge wie <see cref="AnalysisTreeDto.N"/>) — für „ohne Engine
+        /// analysieren" (0.855.0), das jede Stellung des Baums rechnen lässt.</summary>
+        public IReadOnlyList<string> Fens { get; init; } = [];
+    }
 
     /// <summary>
     /// Den Baum prüfen und in die gespeicherte Form bringen: jeder Zug wird in der Stellung seines Elternknotens gespielt
@@ -165,7 +170,7 @@ public sealed class AnalysisHistoryService
         for (var at = -1; firstChild.TryGetValue(at, out var c); at = c) mainline.Add(nodes[c].U);
         var cur = current >= 0 && current < nodes.Count ? current : -1;
         return new CheckedTree(new AnalysisTreeDto { S = tree?.S == true ? true : null, N = nodes }, mainline, cur,
-            cur < 0 ? 0 : depth[cur], nodes.Count, stars);
+            cur < 0 ? 0 : depth[cur], nodes.Count, stars) { Fens = fens };
     }
 
     /// <summary>Eine Zugfolge als Baum ohne Varianten (Einträge von 0.603.0 ohne <see cref="AnalysisHistoryEntry.TreeJson"/>).</summary>

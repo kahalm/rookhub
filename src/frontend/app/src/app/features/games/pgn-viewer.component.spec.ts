@@ -87,6 +87,7 @@ describe('PgnViewerComponent', () => {
     const button = fixture.nativeElement.querySelector('.viewer-header button.analyze') as HTMLButtonElement;
     expect(button).not.toBeNull();
     button.click();
+    http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'engine' });   // Vorgabe „mit Engine“ (0.855.0)
     http.expectOne({ method: 'POST', url: '/api/games/4/analyze' }).flush({ analysis: { id: 3 }, reused: false });
     flushEvals(http, '/api/games/4/evals', running);
     fixture.detectChanges();
