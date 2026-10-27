@@ -54,7 +54,7 @@ import { MaiaSparring } from './maia/maia-sparring';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { TablebasePanelComponent, TablebaseVerdict } from './tablebase-panel.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
-import { NextMoveChoice, nextMoveKey, openNextMoveChoice } from './next-move-choice';
+import { NextMoveChoice, nextMoveKey, openNextMoveChoice, siblingLine } from './next-move-choice';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 
@@ -413,6 +413,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       // Mehrere Fortsetzungen: erst fragen, wohin (Wunsch 2026-10-27), statt still der Linie zu folgen.
       const choice = openNextMoveChoice(this.currentNode);
       if (choice) this.nextChoice = choice; else this.next();
+    }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      // Nachbarlinie (0.858.0); ohne Verzweigung bleibt die Taste der Seite (scrollen).
+      const target = siblingLine(this.currentNode, e.key === 'ArrowUp' ? -1 : 1);
+      if (target) { e.preventDefault(); this.goToNode(target); }
     }
     else if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
     else if (e.key === 'End') { e.preventDefault(); this.goTo(this.line.length); }

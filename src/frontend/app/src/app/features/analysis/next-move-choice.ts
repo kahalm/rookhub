@@ -35,3 +35,23 @@ export function nextMoveKey(choice: NextMoveChoice, key: string): NextMoveKeyRes
     default: return { kind: 'ignore' };
   }
 }
+
+/**
+ * Nebenlinie wechseln (0.858.0, Wunsch 2026-10-27: „Pfeiltaste rauf/runter soll zwischen nebeneinanderliegenden Lines wechseln
+ * (oder halt zurück zur Mainline)"): von `node` aufwärts die nächste Verzweigung, an der es in Richtung `dir` noch eine Linie
+ * gibt (−1 = ↑ zur Hauptlinie hin, +1 = ↓ zur nächsten Variante), dort die Nachbarlinie nehmen und auf ihr so weit
+ * vorgehen, wie man in der alten Linie hinter der Verzweigung stand (`children[0]`, soweit vorhanden). `null` = keine
+ * Nachbarlinie.
+ */
+export function siblingLine(node: AnalysisNode, dir: -1 | 1): AnalysisNode | null {
+  let depth = 0;
+  for (let n: AnalysisNode = node; n.parent; n = n.parent, depth++) {
+    const siblings = n.parent.children;
+    const target = siblings[siblings.indexOf(n) + dir];
+    if (!target) continue;
+    let out = target;
+    for (let i = 0; i < depth && out.children[0]; i++) out = out.children[0];
+    return out;
+  }
+  return null;
+}

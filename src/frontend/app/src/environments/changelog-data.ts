@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.858.0", date: "2026-10-27", changes: [
+    { en: "Analysis board: ↑/↓ switch between neighbouring lines at the same depth — ↓ into the next variation, ↑ back towards the main line (across outer branches too). Without a branch the keys scroll the page as before.", de: "Analysebrett: ↑/↓ wechseln zwischen nebeneinanderliegenden Linien in gleicher Tiefe — ↓ in die nächste Variante, ↑ zurück Richtung Hauptlinie (auch über äußere Verzweigungen). Ohne Verzweigung scrollen die Tasten wie bisher die Seite." },
+  ] },
   { version: "0.857.0", date: "2026-10-27", changes: [
     { en: "Analysis board: stepping forward with → at a position where you already entered a line of your own opens a small “Next move” box instead of silently following one line. The game move is preselected; ↑/↓ choose, →, Enter or Space confirm, ← or Esc close it.", de: "Analysebrett: Kommt man mit → an eine Stellung, an der man schon eine eigene Linie eingegeben hat, öffnet sich ein kleines Fenster „Nächster Zug“, statt still einer Linie zu folgen. Der Zug der Partie ist vorausgewählt; ↑/↓ wählen, →, Enter oder Leertaste bestätigen, ← oder Esc schließen." },
     { en: "The browser-storage key of “Newest first” (0.855.1) is now listed in the privacy overview.", de: "Der Browser-Speicher-Schlüssel von „Neueste zuerst“ (0.855.1) steht jetzt in der Datenschutz-Übersicht." },

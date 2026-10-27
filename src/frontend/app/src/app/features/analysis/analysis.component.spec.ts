@@ -278,6 +278,29 @@ describe('AnalysisComponent Zugwahl beim Blättern', () => {
   });
 });
 
+describe('AnalysisComponent Nachbarlinie mit ↑/↓', () => {
+  it('↓ springt in die eigene Linie, ↑ zurück zur Partie; ohne Verzweigung bleibt die Taste frei', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.onMove({ orig: 'c7', dest: 'c5' });
+    c.goTo(1);
+    c.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    c.onKey(new KeyboardEvent('keydown', { key: 'Enter' }));          // Zugwahl: Partiezug e5
+    expect(c.currentNode.san).toBe('e5');
+    c.onKey(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(c.currentNode.san).toBe('c5');
+    c.onKey(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    expect(c.currentNode.san).toBe('e5');
+    c.goTo(0);
+    const free = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+    c.onKey(free);
+    expect(free.defaultPrevented).toBeFalse();
+    expect(c.ply).toBe(0);
+    c.ngOnDestroy();
+  });
+});
+
 describe('AnalysisComponent back-to-puzzle + depth', () => {
   it('reads the from param and navigates back to it', () => {
     const c = makeComponent({ fen: START, from: '/puzzles/123' });
