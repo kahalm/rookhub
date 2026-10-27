@@ -5614,6 +5614,7 @@
       "assignTitle": "Add to a collection",
       "new": "New collection",
       "existing": "Existing collection",
+      "additional": "Additionally – keep in the current collection",
       "name": "Name",
       "label": "Collection",
       "assigned": "Added to “{{name}}”.",

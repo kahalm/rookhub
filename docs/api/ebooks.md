@@ -415,7 +415,7 @@ Sammlung, sobald eines ihrer Bücher sichtbar ist (keine eigene Freigabe). Seite
 | Methode | Endpoint | Recht | Zweck |
 |---|---|---|---|
 | GET | `/api/ebooks/collections` | `ebooks.manage` | alle Sammlungen mit Buchzahl |
-| PUT | `/api/ebooks/collections/assign` | `ebooks.manage` | `{ ebookIds, collectionId?, newName? }` — zuordnen / neu anlegen / (beides leer) herausnehmen; leere Sammlungen verschwinden |
+| PUT | `/api/ebooks/collections/assign` | `ebooks.manage` | `{ ebookIds, collectionId?, newName?, additional?, fromCollectionId? }` — zuordnen / neu anlegen / (beides leer) herausnehmen; leere Sammlungen verschwinden. 0.861.0: `additional` = zusätzlich (Hauptsammlung `Ebooks.CollectionId` bleibt, weitere in `EbookCollectionLinks`), `fromCollectionId` = nur aus dieser nehmen (Hauptsammlung weg → erste weitere rückt nach) |
 | PUT | `/api/ebooks/collections/{id}` | `ebooks.manage` | umbenennen `{ name }` |
 | DELETE | `/api/ebooks/collections/{id}` | `ebooks.manage` | auflösen, die Bücher bleiben |
 

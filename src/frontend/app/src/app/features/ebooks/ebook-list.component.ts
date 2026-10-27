@@ -444,7 +444,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
   removeFromCollectionSelected(): void {
     const ebookIds = [...this.selected()];
     if (ebookIds.length === 0) return;
-    this.ebooks.assignCollection(ebookIds, null, null).subscribe({
+    this.ebooks.assignCollection(ebookIds, null, null, { fromCollectionId: this.list?.collection?.id ?? null }).subscribe({
       next: () => {
         this.snackbar.quick(this.translate.instant('ebooks.collection.removed', { n: ebookIds.length }));
         this.selected.set(new Set());

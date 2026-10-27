@@ -257,9 +257,12 @@ export class EbookService {
     return this.http.get<EbookCollection[]>('/api/ebooks/collections');
   }
 
-  /** Bücher einer bestehenden (`collectionId`) oder neuen (`newName`) Sammlung zuordnen; beides leer = herausnehmen. */
-  assignCollection(ebookIds: number[], collectionId: number | null, newName: string | null): Observable<EbookCollection | null> {
-    return this.http.put<EbookCollection | null>('/api/ebooks/collections/assign', { ebookIds, collectionId, newName });
+  /** Bücher einer bestehenden (`collectionId`) oder neuen (`newName`) Sammlung zuordnen; beides leer = herausnehmen.
+   *  `additional` (0.861.0): zusätzlich zur bisherigen Sammlung; `fromCollectionId`: beim Herausnehmen nur aus dieser. */
+  assignCollection(ebookIds: number[], collectionId: number | null, newName: string | null,
+                   opts: { additional?: boolean; fromCollectionId?: number | null } = {}): Observable<EbookCollection | null> {
+    return this.http.put<EbookCollection | null>('/api/ebooks/collections/assign',
+      { ebookIds, collectionId, newName, additional: !!opts.additional, fromCollectionId: opts.fromCollectionId ?? null });
   }
 
   renameCollection(id: number, name: string): Observable<EbookCollection> {

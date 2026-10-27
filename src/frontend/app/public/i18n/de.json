@@ -5614,6 +5614,7 @@
       "assignTitle": "Zu einer Sammlung hinzufügen",
       "new": "Neue Sammlung",
       "existing": "Bestehende Sammlung",
+      "additional": "Zusätzlich – in der bisherigen Sammlung lassen",
       "name": "Name",
       "label": "Sammlung",
       "assigned": "Zu „{{name}}“ hinzugefügt.",

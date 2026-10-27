@@ -349,6 +349,10 @@ public class EbookCollectionAssignDto
     public List<int> EbookIds { get; set; } = new();
     public int? CollectionId { get; set; }
     [System.ComponentModel.DataAnnotations.MaxLength(200)] public string? NewName { get; set; }
+    /// <summary>0.861.0: <c>true</c> = zusätzlich zuordnen, die bisherige Sammlung bleibt (Hauptsammlung); <c>false</c> = verschieben.</summary>
+    public bool Additional { get; set; }
+    /// <summary>0.861.0, nur beim Herausnehmen: nur aus dieser Sammlung nehmen (die anderen bleiben); leer = aus allen.</summary>
+    public int? FromCollectionId { get; set; }
 }
 
 public class EbookCollectionRenameDto

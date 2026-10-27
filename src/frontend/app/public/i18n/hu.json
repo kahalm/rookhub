@@ -5614,6 +5614,7 @@
       "assignTitle": "Hozzáadás gyűjteményhez",
       "new": "Új gyűjtemény",
       "existing": "Meglévő gyűjtemény",
+      "additional": "Ezen felül – maradjon a jelenlegi gyűjteményben",
       "name": "Név",
       "label": "Gyűjtemény",
       "assigned": "Hozzáadva ehhez: „{{name}}“.",

@@ -30,6 +30,18 @@ internal sealed class EbookConfiguration : IEntityTypeConfiguration<Ebook>
     }
 }
 
+internal sealed class EbookCollectionLinkConfiguration : IEntityTypeConfiguration<EbookCollectionLink>
+{
+    public void Configure(EntityTypeBuilder<EbookCollectionLink> e)
+    {
+        e.HasKey(l => new { l.EbookId, l.CollectionId });
+        e.HasIndex(l => l.CollectionId);
+        // Buch gelöscht oder Sammlung aufgelöst → die Zuordnung verschwindet mit.
+        e.HasOne(l => l.Ebook).WithMany(b => b.ExtraCollections).HasForeignKey(l => l.EbookId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(l => l.Collection).WithMany().HasForeignKey(l => l.CollectionId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class EbookFileConfiguration : IEntityTypeConfiguration<EbookFile>
 {
     public void Configure(EntityTypeBuilder<EbookFile> e)

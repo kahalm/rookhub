@@ -64,4 +64,65 @@ public class EbookCollectionTests : IDisposable
         Assert.Null((await _kit.Db.Ebooks.SingleAsync()).CollectionId);
         Assert.Empty(_kit.Db.EbookCollections);
     }
+
+    [Fact]
+    public async Task Additional_KeepsTheMainCollection_BookShowsInBoth_RemoveTakesItOutOfOneOnly()
+    {
+        var admin = await _kit.UserAsync("admin", admin: true);
+        var kongress = await _kit.BookAsync("Kongress Nürnberg 1906", admin.Id);
+        var turnier = await _kit.BookAsync("Nürnberg 1896", admin.Id);
+        var k = await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [kongress.Id], NewName = "Kongressbücher" });
+        var t = await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [turnier.Id], NewName = "Turnierbücher" });
+
+        var both = await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [kongress.Id], CollectionId = t!.Id, Additional = true });
+        Assert.Equal(2, both!.BookCount);
+        Assert.Equal(k!.Id, (await _kit.Db.Ebooks.SingleAsync(b => b.Id == kongress.Id)).CollectionId);   // Hauptsammlung bleibt
+        Assert.Equal(2, (await Collections().ListAsync(true)).Single(c => c.Id == t.Id).BookCount);
+
+        var openT = await _kit.Service.ListAsync(admin.Id, true, new EbookQuery { Collection = t.Id, Sort = "title" });
+        Assert.Equal([kongress.Id, turnier.Id], openT.Items.Select(i => i.Id));
+        Assert.Equal(2, openT.Collection!.BookCount);
+        var main = await _kit.Service.ListAsync(admin.Id, true, new EbookQuery { Sort = "title" });
+        Assert.Equal(2, main.Total);                                        // zwei Ordner, das Buch nicht doppelt
+
+        // Zweimal zusätzlich oder in die eigene Hauptsammlung → keine doppelte Zuordnung.
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [kongress.Id], CollectionId = t.Id, Additional = true });
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [kongress.Id], CollectionId = k.Id, Additional = true });
+        Assert.Equal(1, await _kit.Db.EbookCollectionLinks.CountAsync());
+
+        // Aus der geöffneten weiteren Sammlung nehmen → Hauptsammlung bleibt.
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [kongress.Id], FromCollectionId = t.Id });
+        Assert.Equal(k.Id, (await _kit.Db.Ebooks.SingleAsync(b => b.Id == kongress.Id)).CollectionId);
+        Assert.Empty(_kit.Db.EbookCollectionLinks);
+    }
+
+    [Fact]
+    public async Task RemovingTheMainCollection_PromotesTheExtraOne_AndDissolveKeepsTheOther()
+    {
+        var admin = await _kit.UserAsync("admin", admin: true);
+        var a = await _kit.BookAsync("A", admin.Id);
+        var b = await _kit.BookAsync("B", admin.Id);
+        var x = await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id, b.Id], NewName = "X" });
+        var y = await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id], NewName = "Y", Additional = true });
+        Assert.Equal(1, y!.BookCount);
+        Assert.Equal(x!.Id, (await _kit.Db.Ebooks.SingleAsync(e => e.Id == a.Id)).CollectionId);
+
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id], FromCollectionId = x.Id });
+        Assert.Equal(y.Id, (await _kit.Db.Ebooks.SingleAsync(e => e.Id == a.Id)).CollectionId);       // Y rückt nach
+        Assert.Empty(_kit.Db.EbookCollectionLinks);
+
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id], CollectionId = x.Id, Additional = true });
+        await Collections().DeleteAsync(true, x.Id);
+        Assert.Equal(y.Id, (await _kit.Db.Ebooks.SingleAsync(e => e.Id == a.Id)).CollectionId);
+        Assert.Null((await _kit.Db.Ebooks.SingleAsync(e => e.Id == b.Id)).CollectionId);
+        Assert.Empty(_kit.Db.EbookCollectionLinks);
+
+        // Ohne Angabe: aus allen Sammlungen nehmen.
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id, b.Id], NewName = "Z", Additional = true });
+        Assert.Equal(1, await _kit.Db.EbookCollectionLinks.CountAsync());
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id, b.Id] });
+        Assert.All(await _kit.Db.Ebooks.ToListAsync(), e => Assert.Null(e.CollectionId));
+        Assert.Empty(_kit.Db.EbookCollectionLinks);
+        Assert.Empty(_kit.Db.EbookCollections);
+    }
 }

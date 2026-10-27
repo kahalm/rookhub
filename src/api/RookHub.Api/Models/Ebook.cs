@@ -125,6 +125,11 @@ public class Ebook
     public int? CollectionId { get; set; }
     public EbookCollection? Collection { get; set; }
 
+    /// <summary>Weitere Sammlungen (0.861.0): das Buch steht in der Liste unter <see cref="CollectionId"/> (Hauptsammlung),
+    /// erscheint aber auch beim Öffnen dieser Sammlungen (z. B. ein Kongressbuch zusätzlich unter „Turnierbücher“).
+    /// Nie gleich der Hauptsammlung.</summary>
+    public List<EbookCollectionLink> ExtraCollections { get; set; } = new();
+
     public List<EbookFile> Files { get; set; } = new();
     public List<EbookGroupAccess> GroupAccess { get; set; } = new();
 }
@@ -411,6 +416,15 @@ public class EbookCollection
     public string Name { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Buch in einer weiteren Sammlung neben seiner Hauptsammlung (0.861.0, <see cref="Ebook.ExtraCollections"/>).</summary>
+public class EbookCollectionLink
+{
+    public int EbookId { get; set; }
+    public Ebook? Ebook { get; set; }
+    public int CollectionId { get; set; }
+    public EbookCollection? Collection { get; set; }
 }
 
 /// <summary>

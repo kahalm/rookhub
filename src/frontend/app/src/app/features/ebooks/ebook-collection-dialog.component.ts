@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -15,12 +16,13 @@ import { EbookCollection, EbookService } from './ebook.service';
 
 export interface EbookCollectionDialogData { ebookIds: number[]; }
 
-/** „Zu Sammlung …“ (0.787.0): ausgewählte Bücher einer bestehenden oder neuen Sammlung zuordnen. */
+/** „Zu Sammlung …“ (0.787.0): ausgewählte Bücher einer bestehenden oder neuen Sammlung zuordnen — verschieben oder
+ *  (0.861.0) zusätzlich. */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-ebook-collection-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatRadioModule, MatSelectModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, MatRadioModule, MatSelectModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'ebooks.collection.assignTitle' | translate }}</h2>
     <mat-dialog-content>
@@ -44,6 +46,7 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
           </mat-select>
         </mat-form-field>
       }
+      <mat-checkbox [(ngModel)]="additional">{{ 'ebooks.collection.additional' | translate }}</mat-checkbox>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close [disabled]="busy()">{{ 'common.cancel' | translate }}</button>
@@ -70,6 +73,8 @@ export class EbookCollectionDialogComponent implements OnInit {
   mode: 'new' | 'existing' = 'new';
   name = '';
   collectionId: number | null = null;
+  /** 0.861.0: Bücher bleiben in ihrer bisherigen Sammlung und stehen zusätzlich in der gewählten. */
+  additional = false;
 
   ngOnInit(): void {
     this.ebooks.collections().subscribe({ next: c => this.collections.set(c), error: () => {} });
@@ -82,7 +87,7 @@ export class EbookCollectionDialogComponent implements OnInit {
     this.busy.set(true);
     const existing = this.mode === 'existing' ? this.collectionId : null;
     const newName = this.mode === 'new' ? this.name.trim() : null;
-    this.ebooks.assignCollection(this.data.ebookIds, existing, newName).subscribe({
+    this.ebooks.assignCollection(this.data.ebookIds, existing, newName, { additional: this.additional }).subscribe({
       next: c => this.ref.close(c),
       error: err => { this.busy.set(false); this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.saveFailed')); },
     });

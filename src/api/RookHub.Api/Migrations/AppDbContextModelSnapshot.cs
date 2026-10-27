@@ -2398,6 +2398,21 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookCollections");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookCollectionLink", b =>
+                {
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CollectionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("EbookId", "CollectionId");
+
+                    b.HasIndex("CollectionId");
+
+                    b.ToTable("EbookCollectionLinks");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
                 {
                     b.Property<int>("Id")
@@ -9478,6 +9493,25 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Ebook");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookCollectionLink", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.EbookCollection", "Collection")
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany("ExtraCollections")
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Collection");
+
+                    b.Navigation("Ebook");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookDiagram", b =>
                 {
                     b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
@@ -10881,6 +10915,8 @@ namespace RookHub.Api.Migrations
 
             modelBuilder.Entity("RookHub.Api.Models.Ebook", b =>
                 {
+                    b.Navigation("ExtraCollections");
+
                     b.Navigation("Files");
 
                     b.Navigation("GroupAccess");

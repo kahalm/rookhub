@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.861.0", date: "2026-10-27", changes: [
+    { en: "E-book library: a book can now be in several collections. “Add to a collection” has a new tick box “Additionally – keep in the current collection”; the book stays filed under its main collection in the list and also appears when the other collection is opened. “Remove from collection” only takes it out of the collection that is open — if that was its main collection, the next one takes its place.", de: "E-Book-Bibliothek: Ein Buch kann jetzt in mehreren Sammlungen stehen. „Zu einer Sammlung hinzufügen“ hat das neue Häkchen „Zusätzlich – in der bisherigen Sammlung lassen“; in der Liste steht das Buch weiter unter seiner Hauptsammlung und erscheint zusätzlich, wenn man die andere Sammlung öffnet. „Aus der Sammlung nehmen“ nimmt es nur noch aus der gerade geöffneten Sammlung — war das seine Hauptsammlung, rückt die nächste nach." },
+  ] },
   { version: "0.860.2", date: "2026-10-27", changes: [
     { en: "Tests: the endless-mode specs clear the remembered session id in the browser session storage, so a test no longer depends on the random order (tag build v0.860.1 was red).", de: "Tests: Die Specs des Endlos-Modus räumen die gemerkte Sitzungs-Id im Sitzungsspeicher des Browsers weg, damit kein Test mehr von der zufälligen Reihenfolge abhängt (Tag-Build v0.860.1 war rot)." },
   ] },

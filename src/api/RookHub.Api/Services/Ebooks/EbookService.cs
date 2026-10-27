@@ -93,7 +93,9 @@ public class EbookService
         // Ordner da — außer bei einer Suche oder einem Autor, die sollen das einzelne Heft finden.
         var filtered = query;
         var collapse = q.Collection == null && string.IsNullOrWhiteSpace(q.Search) && string.IsNullOrWhiteSpace(q.Author);
-        if (q.Collection != null) query = query.Where(b => b.CollectionId == q.Collection);
+        // Geöffnet zählen auch Bücher, die die Sammlung nur als weitere haben (0.861.0); der Ordner in der Liste hängt an der
+        // Hauptsammlung.
+        if (q.Collection != null) query = query.Where(b => b.CollectionId == q.Collection || b.ExtraCollections.Any(l => l.CollectionId == q.Collection));
         else if (collapse)
             query = query.Where(b => b.CollectionId == null || b.Id == filtered.Where(x => x.CollectionId == b.CollectionId).Min(x => x.Id));
 
@@ -125,9 +127,11 @@ public class EbookService
         {
             var counts = await filtered.Where(b => b.CollectionId != null && collIds.Contains(b.CollectionId.Value))
                 .GroupBy(b => b.CollectionId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
+            counts.AddRange(await _db.EbookCollectionLinks.Where(l => collIds.Contains(l.CollectionId) && filtered.Any(b => b.Id == l.EbookId))
+                .GroupBy(l => l.CollectionId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct));
             colls = await _db.EbookCollections.Where(c => collIds.Contains(c.Id))
                 .ToDictionaryAsync(c => c.Id, c => new EbookCollectionDto { Id = c.Id, Name = c.Name }, ct);
-            foreach (var c in counts) if (colls.TryGetValue(c.Key, out var dto)) dto.BookCount = c.Count;
+            foreach (var c in counts) if (colls.TryGetValue(c.Key, out var dto)) dto.BookCount += c.Count;
         }
         for (var i = 0; i < items.Count; i++)
         {
