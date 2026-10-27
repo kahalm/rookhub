@@ -2396,6 +2396,8 @@
   },
   "analysis": {
     "title": "Elemzés",
+    "nextChoice": "Következő lépés",
+    "nextChoiceMain": "játszma",
     "engine": "Motor",
     "depth": "Mélység",
     "lines": "Vonalak",

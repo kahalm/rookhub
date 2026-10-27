@@ -29,6 +29,18 @@
             [fen]="boardFen" [orientation]="orientation" [turnColor]="turnColor"
             [dests]="dests" [lastMove]="lastMove" [check]="isCheck" [shapes]="shapes"
             (moveMade)="onMove($event)" />
+          @if (nextChoice; as c) {
+            <!-- Zugwahl beim Blättern (0.857.0): ↑/↓ wählen, →/Enter/Leertaste nehmen, ←/Esc schließen. -->
+            <div class="next-choice" role="listbox" [attr.aria-label]="'analysis.nextChoice' | translate">
+              <div class="next-choice-head">{{ 'analysis.nextChoice' | translate }}</div>
+              @for (o of c.options; track o; let i = $index) {
+                <button type="button" role="option" class="next-choice-opt" [class.sel]="i === c.index"
+                        [attr.aria-selected]="i === c.index" (click)="pickNext(o)">
+                  {{ moveLabel(o) }}@if (i === 0) {<span class="next-choice-main">{{ 'analysis.nextChoiceMain' | translate }}</span>}
+                </button>
+              }
+            </div>
+          }
         </div>
         <div class="board-tap board-tap-next" (click)="next()" aria-hidden="true"></div>
       }

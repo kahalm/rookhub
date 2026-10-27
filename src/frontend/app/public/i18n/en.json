@@ -3255,6 +3255,8 @@
   },
   "analysis": {
     "title": "Analysis",
+    "nextChoice": "Next move",
+    "nextChoiceMain": "game",
     "engine": "Engine",
     "depth": "Depth",
     "lines": "Lines",

@@ -119,6 +119,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('rh.repertoire.treeArrows', 'Baum-Pfeile'),
   d('rh-kids-stars-free', 'KidHub: Figur und Zahl im freien Spiel'),
   d('lh-auto-my-games', 'LeagueHub: eigene Partien automatisch'),
+  d('lh-overview-newest-first', 'LeagueHub: Vereinsübersicht „Neueste zuerst“'),
   d('lh-all-leagues', 'LeagueHub: alle Ligen zeigen'),
   d('lh-scan-engine', 'Formular-Werkbank: Engine'),
   d('lh-tree-filter', 'Spielerkarte: Baum-Filter'),

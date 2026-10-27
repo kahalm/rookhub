@@ -54,6 +54,7 @@ import { MaiaSparring } from './maia/maia-sparring';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { TablebasePanelComponent, TablebaseVerdict } from './tablebase-panel.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { NextMoveChoice, nextMoveKey, openNextMoveChoice } from './next-move-choice';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
 
@@ -384,11 +385,35 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   prev(): void { this.goTo(this.ply - 1); }
   next(): void { this.goTo(this.ply + 1); }
 
+  /** Offene Zugwahl beim Blättern ({@link openNextMoveChoice}, 0.857.0) — `null` = zu. */
+  nextChoice: NextMoveChoice | null = null;
+
+  /** „12.Nf3" bzw. „12...Nf6" in der Zugwahl. */
+  readonly moveLabel = numberedSan;
+
+  /** Zug aus der Zugwahl nehmen (Taste oder Klick). */
+  pickNext(node: AnalysisNode): void {
+    this.nextChoice = null;
+    this.goToNode(node);
+  }
+
   @HostListener('window:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
     if (!isBoardHotkey(e)) return;
+    if (this.nextChoice) {
+      const r = nextMoveKey(this.nextChoice, e.key);
+      if (r.kind !== 'ignore') e.preventDefault();
+      if (r.kind === 'select') { this.nextChoice = r.choice; return; }
+      if (r.kind === 'pick') { this.pickNext(r.node); return; }
+      if (r.kind === 'close') { this.nextChoice = null; return; }
+    }
     if (e.key === 'ArrowLeft') { e.preventDefault(); this.prev(); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); this.next(); }
+    else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      // Mehrere Fortsetzungen: erst fragen, wohin (Wunsch 2026-10-27), statt still der Linie zu folgen.
+      const choice = openNextMoveChoice(this.currentNode);
+      if (choice) this.nextChoice = choice; else this.next();
+    }
     else if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
     else if (e.key === 'End') { e.preventDefault(); this.goTo(this.line.length); }
     else if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); this.toggleStar(); }
@@ -426,6 +451,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Refresh board + engine for current ply ----
   private refresh(): void {
+    this.nextChoice = null;   // jede Bewegung (Klick in der Zugliste, Zug am Brett) schließt die Zugwahl
     this.scheduleSave();
     const fen = this.currentFen;
     let c: Chess;

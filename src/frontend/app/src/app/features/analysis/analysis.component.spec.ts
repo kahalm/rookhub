@@ -236,6 +236,48 @@ describe('AnalysisComponent prev/next navigation (Tap-Zonen)', () => {
   });
 });
 
+// 0.857.0, Wunsch 2026-10-27: an einer Stelle mit eigener Linie fragt → nach dem nächsten Zug
+describe('AnalysisComponent Zugwahl beim Blättern', () => {
+  const key = (k: string) => new KeyboardEvent('keydown', { key: k, cancelable: true });
+
+  it('→ an einer Verzweigung öffnet die Wahl (Partiezug vorausgewählt), ↓ + Enter nimmt die Variante', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.onMove({ orig: 'c7', dest: 'c5' });             // eigene Linie 1...c5 neben 1...e5
+    c.goTo(1);
+    expect(c.currentNode.san).toBe('e4');
+    c.onKey(key('ArrowRight'));
+    expect(c.ply).toBe(1);                              // noch nicht weiter
+    expect(c.nextChoice.options.map((n: any) => n.san)).toEqual(['e5', 'c5']);
+    expect(c.nextChoice.index).toBe(0);
+    c.onKey(key('ArrowDown'));
+    c.onKey(key('Enter'));
+    expect(c.nextChoice).toBeNull();
+    expect(c.currentNode.san).toBe('c5');
+    c.ngOnDestroy();
+  });
+
+  it('→ bestätigt den vorausgewählten Partiezug, ← schließt ohne Bewegung, ohne Verzweigung geht → direkt weiter', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.onMove({ orig: 'c7', dest: 'c5' });
+    c.goTo(1);
+    c.onKey(key('ArrowRight'));
+    c.onKey(key('ArrowLeft'));
+    expect(c.nextChoice).toBeNull();
+    expect(c.ply).toBe(1);
+    c.onKey(key('ArrowRight'));
+    c.onKey(key('ArrowRight'));
+    expect(c.currentNode.san).toBe('e5');
+    c.onKey(key('ArrowRight'));                         // e5 hat nur Nf3
+    expect(c.nextChoice).toBeNull();
+    expect(c.currentNode.san).toBe('Nf3');
+    c.ngOnDestroy();
+  });
+});
+
 describe('AnalysisComponent back-to-puzzle + depth', () => {
   it('reads the from param and navigates back to it', () => {
     const c = makeComponent({ fen: START, from: '/puzzles/123' });

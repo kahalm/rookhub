@@ -3255,6 +3255,8 @@
   },
   "analysis": {
     "title": "Analiza",
+    "nextChoice": "Sljedeći potez",
+    "nextChoiceMain": "partija",
     "engine": "Motor",
     "depth": "Dubina",
     "lines": "Linije",

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.857.0", date: "2026-10-27", changes: [
+    { en: "Analysis board: stepping forward with → at a position where you already entered a line of your own opens a small “Next move” box instead of silently following one line. The game move is preselected; ↑/↓ choose, →, Enter or Space confirm, ← or Esc close it.", de: "Analysebrett: Kommt man mit → an eine Stellung, an der man schon eine eigene Linie eingegeben hat, öffnet sich ein kleines Fenster „Nächster Zug“, statt still einer Linie zu folgen. Der Zug der Partie ist vorausgewählt; ↑/↓ wählen, →, Enter oder Leertaste bestätigen, ← oder Esc schließen." },
+    { en: "The browser-storage key of “Newest first” (0.855.1) is now listed in the privacy overview.", de: "Der Browser-Speicher-Schlüssel von „Neueste zuerst“ (0.855.1) steht jetzt in der Datenschutz-Übersicht." },
+  ] },
   { version: "0.856.0", date: "2026-10-27", changes: [
     { en: "Without engine: annotate your lines like in calculation mode — move symbols (!!, !, !?, ?!, ?, ??), a position assessment (=, ⩲, ±, +−, ∞ …) and a comment for each move; they appear in the move list and are saved with your lines.", de: "Ohne Engine: deine Linien wie im Kalkulations-Modus anmerken — Zug-Symbol (!!, !, !?, ?!, ?, ??), Stellungsbewertung (=, ⩲, ±, +−, ∞ …) und Kommentar je Zug; sie stehen in der Zugliste und werden mit deinen Linien gespeichert." },
     { en: "The “Without engine” box on the analysis board is now a slim single line (progress and a small “Switch engine on” button); after switching on, the comparison counts open the list on tap.", de: "Der Kasten „Ohne Engine“ am Analysebrett ist jetzt eine schmale Zeile (Fortschritt und kleiner Knopf „Engine einschalten“); nach dem Einschalten klappen die Zähler des Vergleichs die Liste auf." },

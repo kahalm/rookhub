@@ -3255,6 +3255,8 @@
   },
   "analysis": {
     "title": "Analyse",
+    "nextChoice": "Nächster Zug",
+    "nextChoiceMain": "Partie",
     "engine": "Engine",
     "depth": "Tiefe",
     "lines": "Linien",
