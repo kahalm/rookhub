@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.850.1", date: "2026-10-27", changes: [
+    { en: "Technical: the new marker endpoints answer „too many games“ with the usual error body (message instead of error) – the build of 0.849.0/0.850.0 failed on that check; no visible change.", de: "Technisch: Die neuen Marker-Endpunkte melden „zu viele Partien“ mit dem üblichen Fehlerrumpf (message statt error) – daran war der Build von 0.849.0/0.850.0 gescheitert; nichts Sichtbares." },
+  ] },
   { version: "0.850.0", date: "2026-10-27", changes: [
     { en: "LeagueHub: the markers ◆ n (interesting positions) and !! n (brilliant moves) now also appear in „All line-ups“ of a round, at every game that is there – not only in the club overview. Signed in only; not via a share link.", de: "LeagueHub: Die Marker ◆ n (interessante Stellungen) und !! n (brillante Züge) stehen jetzt auch in „Alle Aufstellungen“ einer Runde an jeder vorhandenen Partie – nicht nur in der Vereinsübersicht. Nur angemeldet, nicht über einen Teilen-Link." },
   ] },

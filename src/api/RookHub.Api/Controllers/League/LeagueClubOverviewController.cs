@@ -45,7 +45,7 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
     public Task<IActionResult> Reviews([FromQuery] string? ids, CancellationToken ct) => WithClubAsync(ct, async c =>
     {
         var list = IdList(ids);
-        if (list.Count > ClubGameReader.MaxReviewInputs) return BadRequest(new { error = "tooMany" });
+        if (list.Count > ClubGameReader.MaxReviewInputs) return BadRequest(new { message = "tooMany" });
         return Ok(await club.ReviewInputsAsync(c, list, ct));
     });
 
@@ -57,7 +57,7 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
     public Task<IActionResult> MarkCounts([FromQuery] string? ids, CancellationToken ct) => WithClubAsync(ct, async c =>
     {
         var list = IdList(ids);
-        if (list.Count > ClubGameMarks.MaxCountIds) return BadRequest(new { error = "tooMany" });
+        if (list.Count > ClubGameMarks.MaxCountIds) return BadRequest(new { message = "tooMany" });
         return Ok(await marks.CountsForClubAsync(c, list, ct));
     });
 
