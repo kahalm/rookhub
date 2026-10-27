@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.853.0", date: "2026-10-27", changes: [
+    { en: "Game review: Brilliant (!!) and Great (!) now match chess.com much more closely. A piece sacrifice where the king recaptures last (…Qxe6 Qxe6+ Kxe6) is recognised; a merely good move is brilliant only if the moved piece itself is left en prise; Great is the only good move (8 points of winning chance ahead of the second-best) even without a prior mistake by the opponent, but not a recapture or piece trade. Checked against club game 228: now identical to chess.com.", de: "Partie-Rückblick: Brillant (!!) und Stark (!) treffen jetzt viel genauer wie bei chess.com. Ein Figurenopfer, bei dem der König zuletzt zurückschlägt (…Dxe6 Dxe6+ Kxe6), wird erkannt; ein nur guter Zug ist brillant nur, wenn die gezogene Figur selbst stehen bleibt; Stark ist der einzige gute Zug (8 Punkte Gewinnchance vor dem Zweitbesten) auch ohne vorigen Fehler des Gegners, aber kein Zurückschlagen oder Figurentausch. Geprüft an Vereinspartie 228: jetzt deckungsgleich mit chess.com." },
+  ] },
   { version: "0.852.1", date: "2026-10-27", changes: [
     { en: "Documentation: design rule and API notes for the LeagueHub badges (+ and !!); no visible change.", de: "Doku: Gestaltungsregel und API-Notizen zu den LeagueHub-Abzeichen (+ und !!); nichts Sichtbares." },
   ] },

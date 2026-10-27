@@ -37,12 +37,18 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
     2. **Brilliant** ersetzt best/excellent und seit 0.521.3 auch good (`BRILLIANT_BASES` — chess.com rechnet die
        Erwartungspunkte je Elo, dort ist 21.Ba6 der Prod-Partie „nahezu best", bei uns good): `sacrificedPiece` findet ein Opfer, der Zweitbeste liegt unter
        `BRILLIANT_WINNING_ANYWAY_PAWNS` +7 und ist kein Matt für den Ziehenden (fehlt er: kein Ausschluss),
-       danach ≥ `BRILLIANT_MIN_AFTER_PAWNS` −1, keine Umwandlung, vorher nicht im Schach.
-    3. **Great** ersetzt best (nie zusammen mit Brilliant): zweiter Kandidat da, Abstand ≥
-       `GREAT_MIN_GAP_PAWNS` 1,5, der Zweitbeste gewinnt NICHT ohnehin (< +7 und kein Matt — dieselbe Grenze wie
-       bei Brilliant; „#2 gegen #4" ist kein einziger guter Zug), Gegner hat davor gepatzt, danach ≥
-       `GREAT_MIN_AFTER_WIN` 45 %, und KEIN Opfer (`sacrificedPiece` = null) — ein Zug mit hängender Figur ist
-       Brilliants Sache. Erster Zug: kein Great.
+       danach ≥ `BRILLIANT_MIN_AFTER_PAWNS` −1, keine Umwandlung, vorher nicht im Schach. Ein nur „guter“ Zug zählt
+       seit 0.853.0 nur, wenn die GEZOGENE Figur das Opfer ist (25.Df3 der Vereinspartie 228 ließ einen schon früher
+       geopferten Springer weiter hängen — chess.com: kein „!!“).
+    3. **Great** ersetzt best (nie zusammen mit Brilliant): zweiter Kandidat da, Abstand in GEWINNCHANCE ≥
+       `GREAT_MIN_GAP_WIN` 8 Punkte (bis 0.852 `GREAT_MIN_GAP_PAWNS` 1,5 Bauern), der Zweitbeste gewinnt NICHT ohnehin
+       (< +7 und kein Matt), danach ≥ `GREAT_MIN_AFTER_WIN` 45 %, KEIN Opfer (`sacrificedPiece` = null) und der Zug
+       schlägt keine Figur (`capturesPiece`: Zurückschlagen und Abtausch sind naheliegend). Seit 0.853.0 OHNE „der
+       Gegner hat davor gepatzt“ — chess.com gibt „!“ auch nach einem besten Zug des Gegners.
+    **Abgleich mit chess.com (0.853.0, Vereinspartie 228):** chess.com „!!“ 22.Sxe6, 24.O-O; „!“ 14.Sexd4, 19…Kd7,
+    23.g3, 30.De7+, 31.Te6+ — seit 0.853.0 bei uns genauso (vorher „!!“ 25.Df3, „!“ nur 23.g3, 30.De7+). Dazu zählt
+    der König im Abtausch als LETZTER Schläger (`influenceOn`): nach 22.Sxe6 schlägt erst …Dxe6, nach Dxe6+ der König —
+    vorher fehlte er, weil Kxe6 im Moment illegal ist, und das Opfer blieb unerkannt.
     Fehlt eine Zutat (Lücke davor, kein zweiter Kandidat, keine UCI), entfällt die Sonderklasse. Book gibt es
     nicht (kein Eröffnungsbuch im Client). `MOVE_CLASS_COLORS` ist die EINE Farbtabelle (chess.com-nah) für
     Zähler, Abzeichen und Kurven-Punkte.

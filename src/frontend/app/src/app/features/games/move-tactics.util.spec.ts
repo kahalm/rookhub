@@ -1,8 +1,7 @@
 import { Chess } from 'chess.js';
 import {
   attackersOf, capturedValue, exchangeGain, inCheck, isPieceHanging, isPromotion, legalCapturersOf, pieceValue, sacrificedPiece,
-  uciOf,
-} from './move-tactics.util';
+  uciOf, capturesPiece } from './move-tactics.util';
 
 // Alle Stellungen sind LITERALE, mit chess.js 1.4 nachgespielt (Zugfolge steht jeweils dabei) — keine
 // Stellung wird im Test erst erzeugt, sonst prüfte der Test den Zuggenerator statt der Regel.
@@ -45,13 +44,25 @@ describe('move-tactics.util', () => {
       expect(isPieceHanging(RUY_BEFORE, RUY_AFTER, 'c6')).toBeFalse();
     });
 
-    it('der König darf eine gedeckte Dame nicht schlagen: Ke8 + De7 gegen den Lc4 → nur die Dame greift legal an → hängt nicht', () => {
-      // 1.e4 e5 2.Lc4 De7 3.Dh5 Sc6 4.Dxf7+: f7 greifen Ke8 und De7 an, gedeckt nur vom Lc4. Mit
-      // Pseudo-Angriffen wäre das eine Überzahl (2 gegen 1) — legal ist Kxf7 nicht, und Dxf7 Lxf7 ist ein
-      // Damentausch, kein Opfer.
+    // Bis 0.853.0 hieß es hier „Kxf7 ist nicht legal, Dxf7 Lxf7 ist ein Damentausch" — schachlich falsch: nach …Dxf7
+    // Lxf7+ schlägt der König ZULETZT zurück, Weiß hat Dame + Läufer für Dame + Bauer gegeben. Der König zählt im Abtausch
+    // als letzter Schläger mit (Partie 228, 22.Sxe6: chess.com „!!", bei uns vorher kein Opfer).
+    it('der König schlägt im Abtausch zuletzt: 4.Dxf7+ gegen Ke8 + De7, gedeckt nur vom Lc4 → hängt', () => {
       expect(isPieceHanging(
         'r1b1kbnr/ppppqppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4',
-        'r1b1kbnr/ppppqQpp/2n5/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', 'f7')).toBeFalse();
+        'r1b1kbnr/ppppqQpp/2n5/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4', 'f7')).toBeTrue();
+    });
+
+    it('Partie 228, 22.Sxe6: Dd6 und Kd7 gegen De2 — der Springer ist geopfert (…Dxe6 Dxe6+ Kxe6)', () => {
+      expect(sacrificedPiece('r1b4r/3kb1pp/p2qp3/3p2NB/8/2P5/P3Q1PP/R3K2R w KQ - 7 22',
+        'r1b4r/3kb1pp/p2qN3/3p3B/8/2P5/P3Q1PP/R3K2R b KQ - 0 22', 'g5e6')).toEqual({ square: 'e6', piece: 'n' });
+    });
+
+    it('capturesPiece: Figur ja, Bauer nein, eigene Figur (Rochade e1h1) nein', () => {
+      expect(capturesPiece('4k3/8/8/3n4/8/2N5/8/4K3 w - - 0 1', 'c3d5')).toBeTrue();
+      expect(capturesPiece('4k3/8/8/3p4/8/2N5/8/4K3 w - - 0 1', 'c3d5')).toBeFalse();
+      expect(capturesPiece('4k3/8/8/8/8/8/8/4K2R w K - 0 1', 'e1h1')).toBeFalse();
+      expect(capturesPiece('4k2r/8/8/8/8/8/8/4K2R b k - 0 1', 'e8h8')).toBeFalse();
     });
 
     it('Abzugsschach: der Bauer e6 greift f5 an, darf aber nicht schlagen, weil der Td1 Schach gibt → hängt nicht', () => {

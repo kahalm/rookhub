@@ -390,6 +390,17 @@ describe('game-review.util', () => {
         expect(greek({ cp: 150 }, { cp: 50 }, { secondCp: 140 }, 'e1g1').moves[0]!.cls).toBe('inaccuracy');
       });
 
+      // 0.853.0, Partie 228: 25.Df3 (Good, +4,16 → +3,58) lässt den Springer e6 weiter hängen, den 22.Sxe6 geopfert hatte —
+      // chess.com: kein „!!". Ein nur „guter" Zug ist brillant nur, wenn die GEZOGENE Figur stehen bleibt (wie 21.Ba6).
+      it('good: hängt eine andere als die gezogene Figur, ist der Zug nicht brillant (25.Df3)', () => {
+        const fens = ['r1b4r/3k2pp/p3Nb2/3pq2B/8/2P3P1/P3Q2P/R4RK1 w - - 3 25',
+                      'r1b4r/3k2pp/p3Nb2/3pq2B/8/2P2QP1/P6P/R4RK1 b - - 4 25'];
+        expect(sacrificedPiece(fens[0], fens[1], 'e2f3')).toEqual({ square: 'e6', piece: 'n' });   // hängen tut er
+        const r = reviewGame(game([ply(0, { cp: 416 }, 'e2d1', 'e2f3', { secondCp: 283 })], { cp: 358 }), fens, ['e2f3']);
+        expect(r.moves[0]!.base).toBe('good');
+        expect(r.moves[0]!.cls).toBe('good');
+      });
+
       it('eine Umwandlung ist nie brillant — auch wenn die neue Dame hängt', () => {
         const fens = ['r7/4P2k/8/8/8/8/8/6K1 w - - 0 1', 'r3Q3/7k/8/8/8/8/8/6K1 b - - 0 1'];
         expect(sacrificedPiece(fens[0], fens[1], 'e7e8q')).toEqual({ square: 'e8', piece: 'q' });   // Opfer läge vor
@@ -436,16 +447,29 @@ describe('game-review.util', () => {
         expect(r.white.counts.best).toBe(1);
       });
 
-      it('Abstand 1,49 → best', () => {
-        const r = reviewGame(greatGame({ secondCp: 151 }), SICILIAN, UCIS);
+      // Seit 0.853.0 zählt der Abstand in GEWINNCHANCE (8 Punkte), nicht in Bauern: +3,00 gegen +1,93 = 8,06 Punkte.
+      it('Abstand 8,06 Punkte Gewinnchance → great, 7,98 → best', () => {
+        expect(reviewGame(greatGame({ secondCp: 193 }), SICILIAN, UCIS).moves[2]!.cls).toBe('great');
+        const r = reviewGame(greatGame({ secondCp: 194 }), SICILIAN, UCIS);
         expect(r.moves[2]!.cls).toBe('best');
-        expect(r.moves[2]!.gapPawns).toBe(1.49);
+        expect(r.moves[2]!.gapPawns).toBe(1.06);
       });
 
-      it('ohne Fehler des Gegners davor → best', () => {
+      // 0.853.0: chess.com gibt „!" auch ohne Fehler des Gegners davor (Partie 228: 19…Kd7 nach 19.Lh5+, 31.Te6+).
+      it('auch ohne Fehler des Gegners davor → great', () => {
         const r = reviewGame(greatGame({ secondCp: 100 }, 300), SICILIAN, UCIS);
         expect(r.moves[1]!.cls).toBe('best');
-        expect(r.moves[2]!.cls).toBe('best');
+        expect(r.moves[2]!.cls).toBe('great');
+      });
+
+      // 0.853.0: Zurückschlagen und Figurentausch sind naheliegend (Partie 228: 16.Lxd4, 17…Sxd4 bei chess.com ohne „!").
+      it('ein Zug, der eine Figur schlägt, ist kein Great — ein Bauer schlagen schon (14.Sexd4)', () => {
+        const fens = ['4k3/8/8/3n4/8/2N5/8/4K3 w - - 0 1', '4k3/8/8/3N4/8/8/8/4K3 b - - 0 1'];
+        const one = (uci: string) => reviewGame(game([ply(0, { cp: 300 }, uci, uci, { secondCp: 0 })], { cp: 300 }), fens, [uci]);
+        expect(one('c3d5').moves[0]!.cls).toBe('best');
+        const pawn = ['4k3/8/8/3p4/8/2N5/8/4K3 w - - 0 1', '4k3/8/8/3N4/8/8/8/4K3 b - - 0 1'];
+        expect(reviewGame(game([ply(0, { cp: 300 }, 'c3d5', 'c3d5', { secondCp: 0 })], { cp: 300 }), pawn, ['c3d5']).moves[0]!.cls)
+          .toBe('great');
       });
 
       it('danach unter 45 % → best (40,90 %)', () => {
@@ -473,19 +497,21 @@ describe('game-review.util', () => {
         expect(r.moves[2]!.gapPawns).toBe(2);   // der Abstand wird trotzdem ausgewiesen
       });
 
-      it('der Zweitbeste gewinnt ohnehin (+7,00): kein Great — dieselbe Grenze wie bei Brilliant; +6,99 → great', () => {
+      // Mit dem Abstand in Gewinnchance (0.853.0) greift die +7-Grenze kaum noch: wer bei +6,99 steht, hat schon
+      // 92,9 % — selbst ein Matt liegt nur 7,1 Punkte darüber.
+      it('der Zweitbeste gewinnt ohnehin (+7,00 bzw. +6,99): kein Great, auch gegen ein Matt', () => {
         expect(reviewGame(greatGame({ secondCp: 700 }, 25, { cp: 900 }, { cp: 850 }), SICILIAN, UCIS).moves[2]!.cls)
           .toBe('best');
-        expect(reviewGame(greatGame({ secondCp: 699 }, 25, { cp: 900 }, { cp: 850 }), SICILIAN, UCIS).moves[2]!.cls)
-          .toBe('great');
+        expect(reviewGame(greatGame({ secondCp: 699 }, 25, { mate: 3 }, { mate: 2 }), SICILIAN, UCIS).moves[2]!.cls)
+          .toBe('best');
       });
 
-      it('der erste Zug der Partie hat keinen vorigen Zug → kein Great', () => {
+      it('der erste Zug der Partie zählt wie jeder andere: nur der Abstand entscheidet', () => {
         const r = reviewGame(game([
           ply(0, { cp: 30 }, 'e2e4', 'e2e4', { secondCp: -200 }),
           ply(1, { cp: 30 }, 'c7c5', 'c7c5'),
         ], { cp: 30 }), SICILIAN, UCIS);
-        expect(r.moves[0]!.cls).toBe('best');
+        expect(r.moves[0]!.cls).toBe('great');
         expect(r.moves[0]!.gapPawns).toBe(2.3);
       });
 

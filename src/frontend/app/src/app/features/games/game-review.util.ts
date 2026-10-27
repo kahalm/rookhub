@@ -1,4 +1,4 @@
-import { Sacrifice, inCheck, isPromotion, sacrificedPiece } from './move-tactics.util';
+import { Sacrifice, capturesPiece, inCheck, isPromotion, sacrificedPiece } from './move-tactics.util';
 import { whiteToMove } from '../../shared/chess/fen-side';
 
 /**
@@ -119,8 +119,11 @@ export const MISS_MIN_AFTER_WIN = 40;
 export const BRILLIANT_WINNING_ANYWAY_PAWNS = 7;
 /** Brilliant: schlechter als das darf die Stellung nach dem Opfer nicht stehen. */
 export const BRILLIANT_MIN_AFTER_PAWNS = -1;
-/** Great: so weit muss der Bestzug vor dem zweitbesten Kandidaten liegen („der einzige gute Zug"). */
-export const GREAT_MIN_GAP_PAWNS = 1.5;
+/** Great: so weit muss der Bestzug in GEWINNCHANCE vor dem zweitbesten Kandidaten liegen („der einzige gute Zug").
+ *  Seit 0.853.0 in Prozentpunkten statt Bauern (vorher 1,5 Bauern): bei +9 sind zwei Bauern egal, bei 0 ist einer
+ *  alles. Gesetzt an Partie 228 gegen chess.com — 14.Sexd4 und 19…Kd7 (je ~9 Punkte) sind dort „!", 33.Le2
+ *  (+9,4 gegen +6,4 = 5,6 Punkte) nicht. */
+export const GREAT_MIN_GAP_WIN = 8;
 /** Great: so viel Gewinnchance muss danach bleiben — der einzige Zug, der bloß langsamer verliert, ist kein starker. */
 export const GREAT_MIN_AFTER_WIN = 45;
 
@@ -416,16 +419,20 @@ interface SpecialInput {
  * 2. **Brilliant** ersetzt Best/Excellent (chess.com: „best or nearly best"), wenn dabei eine Figur
  *    GEOPFERT wird (`sacrificedPiece`), die Stellung nicht ohnehin gewonnen war (Zweitbester < +7 und kein
  *    Matt), sie danach nicht schlecht steht (≥ −1) und der Zug weder eine Umwandlung noch eine Antwort auf
- *    Schach ist (dort sind Opfer erzwungen, nicht gefunden).
- * 3. **Great** ersetzt Best, wenn er nicht schon brillant ist: der Gegner hat davor gepatzt, der Bestzug
- *    liegt ≥ 1,5 Bauern vor dem Zweitbesten (der EINZIGE Zug, der die Chance nutzt), der Zweitbeste gewinnt
- *    nicht ohnehin (dieselbe Grenze wie bei Brilliant — #2 gegen #4 ist kein „einziger guter Zug"), danach
- *    bleiben ≥ 45 %, und es hängt nichts — ein Zug mit Opfer ist Brilliants Sache.
+ *    Schach ist (dort sind Opfer erzwungen, nicht gefunden). Ein nur „guter" Zug (Good) ist brillant nur, wenn
+ *    er die GEZOGENE Figur stehen lässt (0.853.0): 25.Df3 in Partie 228 ließ einen Springer weiter hängen, den
+ *    schon 22.Sxe6 geopfert hatte — chess.com sah darin nichts, beim besten Zug davor (24.O-O) aber „!!".
+ * 3. **Great** ersetzt Best, wenn er nicht schon brillant ist: der Bestzug liegt ≥ 8 Punkte Gewinnchance vor
+ *    dem Zweitbesten (der EINZIGE gute Zug), der Zweitbeste gewinnt nicht ohnehin (dieselbe Grenze wie bei
+ *    Brilliant — #2 gegen #4 ist kein „einziger guter Zug"), danach bleiben ≥ 45 %, es hängt nichts — ein Zug
+ *    mit Opfer ist Brilliants Sache —, und er schlägt keine Figur (Zurückschlagen und Abtausch sind naheliegend,
+ *    auch wenn sie der einzige Zug sind). Seit 0.853.0 OHNE „der Gegner hat davor gepatzt": chess.com gibt „!"
+ *    auch 19…Kd7 und 31.Te6+ in Partie 228, beide nach einem besten Zug des Gegners.
  *
  * Fehlt eine Zutat (zweiter Kandidat, bewerteter Vorzug, lesbare Stellung), entfällt die Sonderklasse.
  */
 function specialClass(m: SpecialInput): { cls: MoveClass; sacrifice?: Sacrifice; gapPawns?: number } {
-  const opponentErred = m.prevBase === 'mistake' || m.prevBase === 'blunder';
+  const opponentErred = m.prevBase === 'mistake' || m.prevBase === 'blunder';   // nur noch für Miss
   // Alles in CENTIPAWNS und ganzzahlig verglichen: „Abstand ≥ 1,5" als Differenz zweier Kommazahlen
   // landet in Gleitkomma knapp daneben (dieselbe Falle wie bei CLASS_LIMITS).
   const second = scoreOf({ cp: m.row.secondCp, mate: m.row.secondMate });
@@ -457,12 +464,16 @@ function specialClass(m: SpecialInput): { cls: MoveClass; sacrifice?: Sacrifice;
   if (!isPromotion(m.uci) && !winningAnyway && afterCp != null && afterCp >= BRILLIANT_MIN_AFTER_PAWNS * 100
       && !inCheck(m.fenBefore)) {
     const s = sacrificed();
-    if (s) return { ...out, cls: 'brilliant', sacrifice: s };
+    if (s && (m.base !== 'good' || s.square === m.uci.slice(2, 4))) return { ...out, cls: 'brilliant', sacrifice: s };
   }
 
-  if (m.base === 'best' && gapCp != null && gapCp >= GREAT_MIN_GAP_PAWNS * 100 && opponentErred
-      && !winningAnyway && m.winAfter >= GREAT_MIN_AFTER_WIN && !sacrificed()) {
-    return { ...out, cls: 'great' };
+  if (m.base === 'best' && second && !winningAnyway && m.winAfter >= GREAT_MIN_AFTER_WIN) {
+    const secondWin = winPercent(second, whiteToMove(m.fenBefore));
+    const moverSecond = secondWin == null ? null : (m.white ? secondWin : 100 - secondWin);
+    if (moverSecond != null && m.winBefore - moverSecond >= GREAT_MIN_GAP_WIN
+        && !capturesPiece(m.fenBefore, m.uci) && !sacrificed()) {
+      return { ...out, cls: 'great' };
+    }
   }
   return out;
 }

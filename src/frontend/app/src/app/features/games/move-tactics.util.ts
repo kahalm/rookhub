@@ -227,10 +227,18 @@ function exchangeLossOn(after: Chess, square: Square): number {
  */
 function influenceOn(after: Chess, square: Square, color: Color): { attackers: Influencer[]; defenders: Influencer[] } {
   const opponent: Color = color === 'w' ? 'b' : 'w';
-  return {
-    attackers: after.turn() === opponent ? legalCapturersOf(after, square) : attackersOf(after, square, opponent),
-    defenders: attackersOf(after, square, color),
-  };
+  if (after.turn() !== opponent) {
+    return { attackers: attackersOf(after, square, opponent), defenders: attackersOf(after, square, color) };
+  }
+  const attackers = legalCapturersOf(after, square);
+  // Der König schlägt im Abtausch ZULETZT (Wert ∞): dass er JETZT nicht schlagen darf, weil das Feld gedeckt ist,
+  // heißt nicht, dass er fehlt — nach …Dxe6 Dxe6+ nimmt er (Partie 228, 22.Sxe6: chess.com „!!“, bei uns kein Opfer,
+  // weil nur die Dame als Angreifer zählte). Gefesselte Figuren bleiben draußen, der König ist nie gefesselt.
+  if (!attackers.some(a => a.type === 'k')) {
+    const king = attackersOf(after, square, opponent).find(a => a.type === 'k');
+    if (king) attackers.push(king);
+  }
+  return { attackers, defenders: attackersOf(after, square, color) };
 }
 
 function hangingOn(before: Chess, after: Chess, square: Square): boolean {
@@ -258,6 +266,23 @@ function hangingOn(before: Chess, after: Chess, square: Square): boolean {
     if (value < cheapest && defenders.some(d => pieceValue(d.type) < cheapest)) return false;
     if (defenders.some(d => d.type === 'p')) return false;
     return true;
+  }
+  return false;
+}
+
+/** Schlägt der Zug eine FIGUR (Leichtfigur oder mehr)? Für „Great": Zurückschlagen und Abtausch sind naheliegend
+ *  (Partie 228: 16.Lxd4 und 17…Sxd4 sind bei chess.com nicht „!", obwohl je der einzige gute Zug). */
+export function capturesPiece(fenBefore: string, moveUci: string): boolean {
+  // Direkt aus der FEN statt über eine Brett-Ladung — läuft für jeden besten Zug mit großem Abstand (Tempo der Vereinsübersicht).
+  const to = /^[a-h][1-8]([a-h])([1-8])/.exec(moveUci ?? '');
+  const rows = (fenBefore ?? '').split(' ')[0]?.split('/');
+  if (!to || rows?.length !== 8) return false;
+  let file = 0;
+  for (const ch of rows[8 - Number(to[2])]) {
+    if (/\d/.test(ch)) { file += Number(ch); continue; }
+    // Nur eine GEGNERISCHE Figur: die Rochade in König-schlägt-Turm-Schreibweise (e1h1) trifft den eigenen Turm.
+    if (file === to[1].charCodeAt(0) - 97) return (fenBefore.split(' ')[1] === 'b' ? 'NBRQ' : 'nbrq').includes(ch);
+    file++;
   }
   return false;
 }
