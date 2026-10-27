@@ -67,7 +67,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                          (RookHubs Partieseite über den Link, Wunsch 2026-10-25), Bearbeiten/Korrigieren bleiben angemeldet. -->
                     <!-- 0.852.0: Abzeichen „+n"/„!!n" vor dem Analyse-Symbol (nur angemeldet); Klick = Nachspielen an der Stelle -->
                     @if (p.clubGameId && p.pgn) {
-                      <lh-game-badges [marks]="markers.marksOf(p.clubGameId)" [brilliant]="markers.brilliantOf(p.clubGameId).length"
+                      <lh-game-badges [columns]="true" [marks]="markers.marksOf(p.clubGameId)" [brilliant]="markers.brilliantOf(p.clubGameId).length"
                                       (pick)="openAt(p, $event)" />
                     }
                     @if (p.clubGameId && rookHub) {

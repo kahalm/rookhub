@@ -42,4 +42,32 @@ describe('GameBadgesComponent', () => {
     expect(ratio(c.markColor, c.markText)).toBeGreaterThanOrEqual(4.5);
     expect(ratio(c.brilliantColor, c.brilliantText)).toBeGreaterThanOrEqual(4.5);
   });
+
+  // 0.860.0, Wunsch 2026-10-27: „wirkt bissl unruhig, vielleicht besser in eine Flucht bringen?"
+  it('columns: feste Plätze gleicher Breite, fehlendes Abzeichen lässt seinen Platz leer', () => {
+    fixture = TestBed.createComponent(GameBadgesComponent);
+    fixture.componentRef.setInput('marks', 0);
+    fixture.componentRef.setInput('brilliant', 2);
+    fixture.componentRef.setInput('columns', true);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(el);
+    try {
+      const kids = Array.from(el.children) as HTMLElement[];
+      expect(kids.map(k => k.className)).toEqual(['gb gb-slot', 'gb gb-brilliant']);
+      expect(kids[0].getBoundingClientRect().width).toBe(kids[1].getBoundingClientRect().width);
+      expect(getComputedStyle(kids[0]).visibility).toBe('hidden');
+      fixture.componentRef.setInput('marks', 12);
+      fixture.detectChanges();
+      const mark = el.querySelector('.gb-mark') as HTMLElement;
+      expect(mark.getBoundingClientRect().width).toBe(36);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('ohne columns keine leeren Plätze', () => {
+    const el = render(0, 1);
+    expect(el.querySelector('.gb-slot')).toBeNull();
+  });
 });

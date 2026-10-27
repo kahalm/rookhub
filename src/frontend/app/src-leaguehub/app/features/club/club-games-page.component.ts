@@ -237,7 +237,7 @@ type Side = 'white' | 'black';
     <!-- 0.852.0: Abzeichen „+n"/„!!n" (lh-game-badges) — in der Spalte „Analyse" bzw. in der Fußzeile der Handy-Karte;
          ein Klick klappt das Nachspielen auf und springt zur ersten markierten Stellung bzw. zum ersten „!!". -->
     <ng-template #gameMarks let-g>
-      <lh-game-badges [marks]="markers.marksOf(g.id)" [brilliant]="markers.brilliantOf(g.id).length" (pick)="viewAt(g, $event)" />
+      <lh-game-badges [columns]="true" [marks]="markers.marksOf(g.id)" [brilliant]="markers.brilliantOf(g.id).length" (pick)="viewAt(g, $event)" />
     </ng-template>
     <ng-template #rowActs let-g>
       <!-- Nachspielen bleibt sichtbar, der Rest steckt im ⋮ (Wunsch 2026-10-06: die Spalte machte die Tabelle zu breit). -->

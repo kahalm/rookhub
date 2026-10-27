@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.860.0", date: "2026-10-27", changes: [
+    { en: "LeagueHub: the “+” and “!!” badges in the board pairings and the club games list now sit in fixed columns of equal width — a missing badge leaves its place empty, so they line up row by row.", de: "LeagueHub: Die Abzeichen „+“ und „!!“ in den Brettpaarungen und der Vereinspartien-Liste stehen jetzt in festen Spalten gleicher Breite — ein fehlendes lässt seinen Platz frei, so stehen sie Zeile für Zeile untereinander." },
+  ] },
   { version: "0.859.0", date: "2026-10-27", changes: [
     { en: "Without engine: after “Switch engine on” a “Switch engine off” button turns it off again (bar, engine and evaluations hidden as before); “Switch engine on” brings it back.", de: "Ohne Engine: Nach „Engine einschalten“ schaltet „Engine ausschalten“ sie wieder weg (Leiste, Engine und Bewertungen verschwinden wie vorher); „Engine einschalten“ holt sie zurück." },
     { en: "Without engine there is no star for positions any more (button, S key, right-click menu) — the “+” of the annotations does that job.", de: "Ohne Engine gibt es keinen Stern für Stellungen mehr (Knopf, Taste S, Rechtsklick-Menü) — das übernimmt das „+“ der Anmerkungen." },
