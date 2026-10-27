@@ -17,10 +17,10 @@ import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
-import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
+import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
-import { GameMarkers, LineupsApiService } from '../../core/lineups';
-import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
+import { GameMarkers, LineupsApiService, ReplayStart } from '../../core/lineups';
+import { GameBadgesComponent } from '../../shared/game-badges.component';
 
 /**
  * Vereinspartien (`/verein`): was die Mitglieder hochgeladen haben, neueste Jahre zuerst. Lesen darf, wer LeagueHub
@@ -32,9 +32,9 @@ import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
  * (Wunsch 2026-09-28, 0.593.0): die Spalte „Analyse" zeigt die Genauigkeit beider Seiten bzw. den Fortschritt,
  * „Nachspielen" klappt darunter Brett und Rückblick auf (Kurve, Zug-Klassen, Computer-Linien).
  *
- * Seit 0.851.0 (Wunsch 2026-10-27: „markiere diese Partien auch so in der Liste Vereinsspiele") stehen hinter dem Ergebnis
- * dieselben Marker wie in der Vereinsübersicht: „◆ n" interessante Stellungen, „!! n" brillante Züge (`GameMarkers`, je Seite
- * nachgeladen).
+ * Seit 0.851.0 (Wunsch 2026-10-27: „markiere diese Partien auch so in der Liste Vereinsspiele") dieselben Marker wie in der
+ * Vereinsübersicht (`GameMarkers`, je Seite nachgeladen); seit 0.852.0 als Abzeichen „+n"/„!!n" in der Spalte „Analyse" (Handy:
+ * Fußzeile der Karte), ein Klick springt beim Nachspielen hin.
  */
 type Side = 'white' | 'black';
 
@@ -42,7 +42,7 @@ type Side = 'white' | 'black';
   selector: 'lh-club-games-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgTemplateOutlet, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent, MatMenuModule],
+  imports: [RouterLink, NgTemplateOutlet, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent, MatMenuModule, GameBadgesComponent],
   template: `
     @if (!allowed) {
       <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
@@ -112,21 +112,25 @@ type Side = 'white' | 'black';
                   @for (k of sides; track k) {
                     <td class="side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: k }" /></td>
                   }
-                  <td class="num">{{ resultText(g.result) }}<ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" /></td>
+                  <td class="num">{{ resultText(g.result) }}</td>
                   <td class="hide-s small opening" [attr.title]="de(g.opening)">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
-                  @if (showAnalysis()) { <td class="num small" [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</td> }
+                  @if (showAnalysis()) {
+                    <td class="num small analysis-cell"><ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" />
+                      <span [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</span></td>
+                  }
                   <td class="acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></td>
                   <td class="card-cell">
                     <div class="gc-head">
                       <span class="gc-names"><span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'white' }" /></span>
                         <span class="gc-vs" aria-hidden="true">–</span>
                         <span class="gc-side"><ng-container *ngTemplateOutlet="sideName; context: { $implicit: g, k: 'black' }" /></span></span>
-                      <b class="gc-result">{{ resultText(g.result) }}<ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" /></b>
+                      <b class="gc-result">{{ resultText(g.result) }}</b>
                     </div>
                     <!-- z2-l-verein-karten-aktionen: Jahr · Eröffnung links, „Nachspielen" und ⋮ rechts in DERSELBEN Zeile. -->
                     <div class="gc-foot">
                       <div class="gc-meta muted small">{{ cardMeta(g) }}</div>
+                      <ng-container *ngTemplateOutlet="gameMarks; context: { $implicit: g }" />
                       <div class="row-acts gc-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
                     </div>
                   </td>
@@ -155,7 +159,8 @@ type Side = 'white' | 'black';
                   @if (v.id === g.id) {
                     <tr class="edit-row"><td colspan="9">
                       @if (v.game; as d) {
-                        <lh-game-replay [pgn]="d.pgn" [evalsUrl]="d.analysis ? api.evalsUrl(d.id) : null" />
+                        <lh-game-replay [pgn]="d.pgn" [evalsUrl]="d.analysis ? api.evalsUrl(d.id) : null" [marks]="replayMarks()"
+                                        [startAt]="replayStart()" />
                         @if (!d.analysis) { <p class="small muted">Noch nicht analysiert — die Analyse läuft abends und am Wochenende.</p> }
                       } @else if (v.error) { <p class="err small">{{ v.error }}</p> }
                       @else { <p class="small muted">Lade …</p> }
@@ -229,14 +234,10 @@ type Side = 'white' | 'black';
       @else { <span [attr.title]="nameOf(g, k)">{{ nameOf(g, k) }}</span> }
       @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }
     </ng-template>
-    <!-- 0.851.0: „◆ n"/„!! n" wie in der Vereinsübersicht (lh-board-game) -->
+    <!-- 0.852.0: Abzeichen „+n"/„!!n" (lh-game-badges) — in der Spalte „Analyse" bzw. in der Fußzeile der Handy-Karte;
+         ein Klick klappt das Nachspielen auf und springt zur ersten markierten Stellung bzw. zum ersten „!!". -->
     <ng-template #gameMarks let-g>
-      @if (markers.marksOf(g.id); as n) {
-        <span class="gm-marks" [title]="n === 1 ? '1 interessante Stellung' : n + ' interessante Stellungen'"> ◆ {{ n }}</span>
-      }
-      @if (markers.brilliantOf(g.id); as n) {
-        <span class="gm-brilliant" [style.color]="brilliantColor" [title]="n === 1 ? '1 brillanter Zug' : n + ' brillante Züge'"> !! {{ n }}</span>
-      }
+      <lh-game-badges [marks]="markers.marksOf(g.id)" [brilliant]="markers.brilliantOf(g.id).length" (pick)="viewAt(g, $event)" />
     </ng-template>
     <ng-template #rowActs let-g>
       <!-- Nachspielen bleibt sichtbar, der Rest steckt im ⋮ (Wunsch 2026-10-06: die Spalte machte die Tabelle zu breit). -->
@@ -278,11 +279,14 @@ export class ClubGamesPageComponent implements OnInit {
   readonly de = de;
 
   readonly items = signal<ClubGame[]>([]);
-  /** „◆"/„!!" je Partie (0.851.0), je geladener Seite nachgeholt. */
-  readonly markers = new GameMarkers(inject(LineupsApiService));
-  readonly brilliantColor = MOVE_CLASS_COLORS.brilliant;
+  private readonly lineupsApi = inject(LineupsApiService);
+  /** „+"/„!!" je Partie (0.851.0), je geladener Seite nachgeholt. */
+  readonly markers = new GameMarkers(this.lineupsApi);
+  /** Sprungmarken der nachgespielten Partie (0.852.0) und wohin ein Klick aufs Abzeichen springt. */
+  readonly replayMarks = signal<ReplayMark[]>([]);
+  readonly replayStart = signal<ReplayStart | null>(null);
   /** Spalte „Analyse" nur, wenn mindestens eine Partie einen Wert hat — sonst stand dort nur „–" (UI-Sweep 2026-10-10). */
-  readonly showAnalysis = computed(() => this.items().some(g => this.analysisText(g) !== '–'));
+  readonly showAnalysis = computed(() => this.items().some(g => this.analysisText(g) !== '–' || this.markers.marksOf(g.id) > 0));
   readonly total = signal<number | null>(null);
   readonly query = signal('');
   readonly loading = signal(false);
@@ -446,9 +450,19 @@ export class ClubGamesPageComponent implements OnInit {
   }
 
   /** Nachspielen auf- bzw. zuklappen; die Partie (PGN + Stand) kommt erst beim Aufklappen. */
-  async view(g: ClubGame): Promise<void> {
+  /** Abzeichen angeklickt (0.852.0): Nachspielen aufklappen (falls zu) und zur ersten markierten Stellung bzw. zum ersten „!!". */
+  viewAt(g: ClubGame, kind: 'mark' | 'brilliant'): void {
+    this.replayStart.set(kind === 'mark' ? { kind: 'mark' } : { kind: 'ply', ply: this.markers.brilliantOf(g.id)[0] ?? 0 });
+    if (this.viewing()?.id !== g.id) void this.view(g, true);
+  }
+
+  async view(g: ClubGame, keepStart = false): Promise<void> {
     if (this.viewing()?.id === g.id) { this.viewing.set(null); return; }
+    if (!keepStart) this.replayStart.set(null);
+    this.replayMarks.set([]);
     this.viewing.set({ id: g.id, game: null, error: null });
+    if (this.markers.marksOf(g.id))
+      Promise.resolve(this.lineupsApi.clubGameMarks(g.id)).then(m => { if (this.viewing()?.id === g.id) this.replayMarks.set(m ?? []); }, () => undefined);
     try {
       const d = await this.api.game(g.id);
       if (this.viewing()?.id === g.id) this.viewing.set({ id: g.id, game: d, error: null });

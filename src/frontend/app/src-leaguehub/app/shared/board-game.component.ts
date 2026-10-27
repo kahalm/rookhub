@@ -3,8 +3,8 @@ import { RouterLink } from '@angular/router';
 import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
-import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
-import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
+import { LineupGame, LineupsApiService, ReplayStart, formatMoves } from '../core/lineups';
+import { GameBadgesComponent } from './game-badges.component';
 
 /**
  * Die vorhandene Partie an einem Brett der Aufstellungen (0.724.0, Wunsch 2026-10-08: „wenn ich das hab, dann sollt er nicht
@@ -16,24 +16,19 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
  * `/s/{token}/games`), keine Analyse, kein Bearbeiten — ohne Anmeldung gibt es dafür keine Wege.
  * Seit 0.848.0 (Vereinsübersicht, Wunsch 2026-10-26): `markCount` zeigt einen Marker „◆ n interessante Stellungen", und beim
  * Nachspielen einer Vereinspartie (angemeldet) kommen deren markierte Stellungen als Sprungmarken mit. Seit 0.849.0
- * (Wunsch 2026-10-27: „zeige auch !! an") daneben `brilliantCount` als „!! n" in der Farbe des Rückblicks.
+ * (Wunsch 2026-10-27: „zeige auch !! an") daneben die brillanten Züge; seit 0.852.0 beides als Abzeichen „+n"/„!!n"
+ * (`lh-game-badges`), ein Klick klappt das Nachspielen auf und springt hin.
  */
 @Component({
   selector: 'lh-board-game',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GameReplayComponent, RouterLink],
+  imports: [GameReplayComponent, RouterLink, GameBadgesComponent],
   template: `
     @let g = game();
     <span class="bg">
       <span class="bg-what">Partie vorhanden@if (!brief()) { · {{ g.plies }} Halbzüge@if (g.firstMoves.length) { · <span class="bg-moves">{{ shown() }}</span>}}</span>
-      @if (markCount() > 0) {
-        <span class="bg-marks" [title]="markCount() === 1 ? '1 interessante Stellung' : markCount() + ' interessante Stellungen'">◆ {{ markCount() }}</span>
-      }
-      @if (brilliantCount() > 0) {
-        <span class="bg-brilliant" [style.color]="brilliantColor"
-              [title]="brilliantCount() === 1 ? '1 brillanter Zug' : brilliantCount() + ' brillante Züge'">!! {{ brilliantCount() }}</span>
-      }
+      <lh-game-badges [marks]="markCount()" [brilliant]="brilliantPlies().length" (pick)="openAt($event)" />
       <span class="bg-actions">
         @if (!shareToken() || shared()) {
           <button type="button" class="btn-link bg-replay" [attr.aria-expanded]="open()" (click)="toggle()"
@@ -53,7 +48,7 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
     </span>
     @if (open()) {
       @if (pgn(); as p) {
-        <div class="bg-replay-box"><lh-game-replay [pgn]="p" [flipped]="flipped()" [evalsUrl]="evalsUrl()" [marks]="marks()" /></div>
+        <div class="bg-replay-box"><lh-game-replay [pgn]="p" [flipped]="flipped()" [evalsUrl]="evalsUrl()" [marks]="marks()" [startAt]="start()" /></div>
       } @else if (error()) {
         <p class="err" role="alert">{{ error() }}</p>
       } @else {
@@ -69,8 +64,6 @@ import { LineupGame, LineupsApiService, formatMoves } from '../core/lineups';
        Linkfarbe, ohne das Polster der Knöpfe) und standen höher als „Nachspielen"/„Analyse". Grundlinie statt Oberkante. */
     .bg-actions { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; white-space: nowrap; }
     .bg-replay-box { margin: 8px 0 4px; }
-    .bg-marks { color: var(--rh-success); font-weight: 700; white-space: nowrap; }
-    .bg-brilliant { font-weight: 700; white-space: nowrap; }
   `],
 })
 export class BoardGameComponent {
@@ -98,10 +91,10 @@ export class BoardGameComponent {
   /** Nur „Partie vorhanden“, ohne Halbzüge und erste Züge (Vereinsübersicht, 0.851.1, Wunsch 2026-10-27). */
   readonly brief = input(false);
   readonly markCount = input(0);
-  /** Brillante Züge („!!“) laut Rückblick der Analyse (0.849.0, Vereinsübersicht); 0 = kein Marker. */
-  readonly brilliantCount = input(0);
-  /** Dieselbe Farbe wie „!!“ im Rückblick. */
-  readonly brilliantColor = MOVE_CLASS_COLORS.brilliant;
+  /** Die brillanten Halbzüge („!!“) laut Rückblick der Analyse (0.849.0 als Zahl, seit 0.852.0 die Halbzüge für den Sprung). */
+  readonly brilliantPlies = input<readonly number[]>([]);
+  /** Klick auf ein Abzeichen (0.852.0): wohin das Nachspielen springt. */
+  readonly start = signal<ReplayStart | null>(null);
   /** Die Sprungmarken der Vereinspartie — erst beim Nachspielen geladen; still leer, wenn das scheitert. */
   readonly marks = signal<ReplayMark[]>([]);
   readonly rookHub = rookHubUrlForLeagueHub();
@@ -114,6 +107,13 @@ export class BoardGameComponent {
     const g = this.game();
     return g.source === 'club' && g.clubGameId && this.hasEvals() && !this.shareToken() ? `/api/league/club/games/${g.clubGameId}/evals` : null;
   });
+
+  /** Abzeichen angeklickt: Nachspielen aufklappen (falls zu) und zur ersten markierten Stellung bzw. zum ersten „!!“ springen. */
+  openAt(kind: 'mark' | 'brilliant'): void {
+    const ply = this.brilliantPlies()[0];
+    this.start.set(kind === 'mark' ? { kind: 'mark' } : { kind: 'ply', ply: ply ?? 0 });
+    if (!this.open()) void this.toggle();
+  }
 
   async toggle(): Promise<void> {
     if (this.open()) { this.open.set(false); return; }

@@ -43,7 +43,8 @@ describe('FixtureViewComponent', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn', 'forecastStats', 'fixtureGames']);
     api.fixtureGames.and.resolveTo([]);
-    lineupsApi = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'clubGameMarkCounts', 'clubGameReviews']);
+    lineupsApi = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves', 'clubGameMarks', 'clubGameMarkCounts', 'clubGameReviews']);
+    lineupsApi.clubGameMarks.and.resolveTo([]);
     lineupsApi.clubGameMarkCounts.and.resolveTo({});
     lineupsApi.clubGameReviews.and.resolveTo({});
     lineupsApi.lineups.and.resolveTo({ tnr: 1479345, round: 1, date: null, canEdit: false, matches: [] });
@@ -121,9 +122,16 @@ describe('FixtureViewComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(lineupsApi.clubGameMarkCounts).toHaveBeenCalledOnceWith([10]);
     const rows = el.querySelectorAll('.pairings tbody tr');
-    expect(rows[0].querySelector('.pr .gm-marks')?.textContent).toContain('◆ 2');
-    expect(rows[0].querySelector('.pr .gm-brilliant')?.textContent).toContain('!! 1');
-    expect(rows[1].querySelector('.gm-marks')).toBeNull();
+    // 0.852.0: Abzeichen vor dem Analyse-Symbol, nicht mehr am Ergebnis
+    expect(rows[0].querySelector('.pr lh-game-badges')).toBeNull();
+    expect(rows[0].querySelector('.pg .gb-mark')?.textContent?.trim()).toBe('+2');
+    expect(rows[0].querySelector('.pg .gb-brilliant')?.textContent?.trim()).toBe('!!');
+    expect(rows[1].querySelector('.gb-mark')).toBeNull();
+    // Klick aufs „!!": Nachspielen klappt auf und steht am brillanten Zug
+    (rows[0].querySelector('.gb-brilliant') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.pairings lh-game-replay')).not.toBeNull();
+    expect(fixture.componentInstance.replayStart()).toEqual({ kind: 'ply', ply: 0 });
   });
 
   it('gespielte Runde: erste Züge je Brett aus den Aufstellungen, „Züge eingeben" wo erlaubt (2026-10-08)', async () => {

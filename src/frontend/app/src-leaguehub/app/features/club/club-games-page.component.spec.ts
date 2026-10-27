@@ -68,10 +68,12 @@ describe('ClubGamesPageComponent', () => {
     fixture.detectChanges();
     expect(lineups.clubGameMarkCounts).toHaveBeenCalledOnceWith([1, 2]);
     const rows = el.querySelectorAll('tr.game');
-    expect(rows[0].querySelector('td.num:nth-of-type(4) .gm-brilliant')?.textContent).toContain('!! 1');
-    expect(rows[0].querySelector('.gm-marks')).toBeNull();
-    expect(rows[1].querySelector('.gm-marks')?.textContent).toContain('◆ 3');
-    expect(rows[1].querySelector('.gc-result .gm-marks')?.getAttribute('title')).toBe('3 interessante Stellungen');   // auch in der Handy-Karte
+    // 0.852.0: Abzeichen in der Spalte „Analyse" (nicht am Ergebnis) und in der Fußzeile der Handy-Karte
+    expect(rows[0].querySelector('.analysis-cell .gb-brilliant')?.textContent?.trim()).toBe('!!');
+    expect(rows[0].querySelector('.gb-mark')).toBeNull();
+    expect(rows[1].querySelector('.analysis-cell .gb-mark')?.textContent?.trim()).toBe('+3');
+    expect(rows[1].querySelector('.gc-foot .gb-mark')?.textContent?.trim()).toBe('+3');
+    expect(rows[1].querySelector('td.num:nth-of-type(4) lh-game-badges')).toBeNull();
     discardPeriodicTasks();
   }));
 

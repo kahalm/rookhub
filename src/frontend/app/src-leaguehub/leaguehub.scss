@@ -203,6 +203,7 @@ main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
 .pairings .pb { text-align: right; }
 .pairings .pg { text-align: right; }
 .pairings .pg .btn-link { margin-left: 6px; white-space: nowrap; }
+.pairings .pg lh-game-badges { margin-right: 4px; }   /* 0.852.0: vor dem Analyse-Symbol */
 .pairings .pg { white-space: nowrap; width: 1%; }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--ink); cursor: pointer; vertical-align: middle; }
 .icon-btn:hover, .icon-btn:focus-visible { background: var(--line); }
@@ -649,9 +650,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .gc-side { white-space: nowrap; }
 .gc-vs { color: var(--muted); }
 .gc-result { flex: 0 0 auto; }
-/* 0.851.0: Marker hinter dem Ergebnis (Vereinspartien) — wie .bg-marks/.bg-brilliant in lh-board-game */
-.gm-marks { color: var(--rh-success); font-weight: 700; white-space: nowrap; }
-.gm-brilliant { font-weight: 700; white-space: nowrap; }
+/* 0.852.0: Abzeichen „+n"/„!!n" (lh-game-badges) vor der Genauigkeit bzw. in der Fußzeile der Handy-Karte */
+.club-table .analysis-cell { white-space: nowrap; }
+.club-table .analysis-cell lh-game-badges { margin-right: 6px; }
+.gc-foot lh-game-badges { flex: 0 0 auto; }
 .gc-meta { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gc-acts { justify-content: flex-end; }
 /* z2-l-verein-karten-aktionen: Meta-Zeile und Aktionen in einer Zeile (vorher eigene Aktionszeile, ~40 px je Karte). */

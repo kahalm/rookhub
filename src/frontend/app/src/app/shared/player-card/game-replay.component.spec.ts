@@ -119,6 +119,24 @@ describe('GameReplayComponent', () => {
     expect(c.fen()).not.toBe(lone);
   });
 
+  // 0.852.0: Klick auf ein Abzeichen in LeagueHub — das Nachspielen öffnet an der Stelle
+  it('startAt: an einen Halbzug bzw. zur ersten Marke, sobald die Marken da sind; ein neues Objekt springt erneut', () => {
+    const c = create(PGN);
+    fixture.componentRef.setInput('startAt', { kind: 'ply', ply: 2 });
+    fixture.detectChanges();
+    expect(c.index()).toBe(2);
+    c.step(-1);
+    fixture.detectChanges();
+    expect(c.index()).toBe(1);                                       // dasselbe Objekt springt nicht noch einmal
+    fixture.componentRef.setInput('startAt', { kind: 'mark' });
+    fixture.detectChanges();
+    expect(c.index()).toBe(1);                                       // noch keine Marken → wartet
+    fixture.componentRef.setInput('marks', [
+      { fen: 'x', positionKey: 'a', ply: 3, variationFromPly: null, variationUci: null, count: 1 }]);
+    fixture.detectChanges();
+    expect(c.index()).toBe(2);                                       // Halbzug 3 = Index 2
+  });
+
   it('ohne Marken keine Leiste', () => {
     create(PGN);
     expect(el().querySelector('.replay-marks')).toBeNull();

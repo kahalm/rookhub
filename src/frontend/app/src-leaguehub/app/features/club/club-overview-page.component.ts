@@ -30,7 +30,7 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
       <section class="ov-head">
         <h1>Übersicht@if (data()?.season; as s) { <span class="muted">{{ s }}</span>}</h1>
         <label class="ov-filter"><input type="checkbox" [checked]="onlyMarked()" (change)="onlyMarked.set(!onlyMarked())" />
-          Nur mit interessanten Stellungen oder !!@if (markedTotal()) { ({{ markedTotal() }})}</label>
+          Nur Partien mit + oder !!@if (markedTotal()) { ({{ markedTotal() }})}</label>
       </section>
       @if (error(); as e) {
         <p class="err" role="alert">{{ e }} <button type="button" class="btn-link" (click)="load()">Erneut versuchen</button></p>
@@ -67,7 +67,7 @@ import { AccessGateComponent } from '../../shared/access-gate.component';
                               <lh-board-game [game]="g" [tnr]="l.tnr" [round]="r.number" [team]="m.home" [board]="b.board"
                                              [title]="'Brett ' + b.board + ': ' + (b.homePlayer ?? '–') + ' – ' + (b.awayPlayer ?? '–')"
                                              [flipped]="ownIsBlack(m, b)" [brief]="true" [markCount]="markCount(b)"
-                                             [brilliantCount]="brilliantCount(b)" />
+                                             [brilliantPlies]="markers.brilliantPlies(b)" />
                             </span>
                           }
                         </li>
@@ -129,8 +129,8 @@ export class ClubOverviewPageComponent implements OnInit {
   /** Partien mit markierter Stellung oder „!!" — Zahl hinter dem Filter. */
   readonly markedTotal = computed(() => {
     const ids = new Set<number>();
-    for (const counts of [this.markers.marks(), this.markers.brilliant()])
-      for (const [id, n] of Object.entries(counts)) if (n > 0) ids.add(Number(id));
+    for (const [id, n] of Object.entries(this.markers.marks())) if (n > 0) ids.add(Number(id));
+    for (const [id, plies] of Object.entries(this.markers.brilliant())) if (plies.length) ids.add(Number(id));
     return ids.size;
   });
 
@@ -156,7 +156,7 @@ export class ClubOverviewPageComponent implements OnInit {
   }
 
   brilliantCount(b: LineupBoard): number {
-    return this.markers.brilliantCount(b);
+    return this.markers.brilliantPlies(b).length;
   }
 
   /** Mit Filter nur Bretter, deren Partie markierte Stellungen oder „!!" hat. */

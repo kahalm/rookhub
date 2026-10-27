@@ -5,14 +5,14 @@ import { Board, Candidate, Fixture, FixturePairing, ForecastStats, ForecastTally
 import { GameSourcesComponent } from './game-sources.component';
 import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
-import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
+import { GameReplayComponent, ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { BoardMovesComponent } from './board-moves.component';
-import { GameMarkers, LineupMatch, LineupsApiService } from '../core/lineups';
-import { MOVE_CLASS_COLORS } from '@rh/features/games/game-review.util';
+import { GameMarkers, LineupMatch, LineupsApiService, ReplayStart } from '../core/lineups';
+import { GameBadgesComponent } from './game-badges.component';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
@@ -26,7 +26,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
   selector: 'lh-fixture',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule, BoardMovesComponent],
+  imports: [PlayerCardComponent, GameSourcesComponent, GameReplayComponent, RouterLink, MatMenuModule, BoardMovesComponent, GameBadgesComponent],
   template: `
     @let e = fixture();
     @if (!e) {
@@ -59,20 +59,17 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 <tr>
                   <td class="num">{{ p.board }}</td>
                   <td class="pw">{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted"> {{ p.whiteElo }}</span>}</td>
-                  <td class="pr">{{ p.result }}
-                    <!-- 0.851.1, Wunsch 2026-10-27: „in der Prognose fehlt mir + und !! info" — wie in der Vereinsübersicht -->
-                    @if (p.clubGameId && markers.marksOf(p.clubGameId); as n) {
-                      <span class="gm-marks" [title]="n === 1 ? '1 interessante Stellung' : n + ' interessante Stellungen'"> ◆ {{ n }}</span>
-                    }
-                    @if (p.clubGameId && markers.brilliantOf(p.clubGameId); as n) {
-                      <span class="gm-brilliant" [style.color]="brilliantColor" [title]="n === 1 ? '1 brillanter Zug' : n + ' brillante Züge'"> !! {{ n }}</span>
-                    }
-                  </td>
+                  <td class="pr">{{ p.result }}</td>
                   <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
                          dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link seit 0.838.3 auch „Analyse"
                          (RookHubs Partieseite über den Link, Wunsch 2026-10-25), Bearbeiten/Korrigieren bleiben angemeldet. -->
+                    <!-- 0.852.0: Abzeichen „+n"/„!!n" vor dem Analyse-Symbol (nur angemeldet); Klick = Nachspielen an der Stelle -->
+                    @if (p.clubGameId && p.pgn) {
+                      <lh-game-badges [marks]="markers.marksOf(p.clubGameId)" [brilliant]="markers.brilliantOf(p.clubGameId).length"
+                                      (pick)="openAt(p, $event)" />
+                    }
                     @if (p.clubGameId && rookHub) {
                       <button type="button" class="icon-btn" (click)="openInRookHub(p.clubGameId)"
                               title="Analyse — RookHubs Partieseite mit Bewertungskurve, Fehlern und Zug-Klassen"
@@ -109,7 +106,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 }
                 @if (openBoard() === p.board && p.pgn) {
                   <tr class="replay-row"><td colspan="5">
-                    <lh-game-replay [pgn]="p.pgn" [flipped]="ownIsBlack(p)"
+                    <lh-game-replay [pgn]="p.pgn" [flipped]="ownIsBlack(p)" [marks]="replayMarks()" [startAt]="replayStart()"
                                     [evalsUrl]="p.clubGameId && !shareToken() ? '/api/league/club/games/' + p.clubGameId + '/evals' : null" />
                   </td></tr>
                 }
@@ -118,7 +115,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
           </table>
           <mat-menu #pairMenu="matMenu" xPosition="before">
             <ng-template matMenuContent let-p="p">
-              <button mat-menu-item type="button" (click)="openBoard.set(openBoard() === p.board ? null : p.board)">
+              <button mat-menu-item type="button" (click)="toggleBoard(p)">
                 {{ openBoard() === p.board ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
               @if (p.clubGameId && !shareToken() && p.canEdit) {
                 <a mat-menu-item [routerLink]="['/verein']" [queryParams]="{ bearbeiten: p.clubGameId }">Bearbeiten (Namen, Ergebnis)</a>
@@ -382,9 +379,29 @@ export class FixtureViewComponent {
   readonly provisional = computed(() => this.pairings().some(p => p.provisional));
   private pairingsFor = '';
   private readonly lineups = inject(LineupsApiService);
-  /** „◆ n"/„!! n" an den Vereinspartien der Begegnung (0.851.1) — nur angemeldet. */
+  /** „+n"/„!!n" an den Vereinspartien der Begegnung (0.851.1, Abzeichen 0.852.0) — nur angemeldet. */
   readonly markers = new GameMarkers(this.lineups);
-  readonly brilliantColor = MOVE_CLASS_COLORS.brilliant;
+  /** Sprungmarken des aufgeklappten Bretts und wohin ein Klick aufs Abzeichen springt (0.852.0). */
+  readonly replayMarks = signal<ReplayMark[]>([]);
+  readonly replayStart = signal<ReplayStart | null>(null);
+
+  /** Nachspielen eines Bretts auf-/zuklappen; an einer Vereinspartie mit markierten Stellungen kommen deren Sprungmarken mit. */
+  toggleBoard(p: FixturePairing, keepStart = false): void {
+    if (this.openBoard() === p.board && !keepStart) { this.openBoard.set(null); return; }
+    if (!keepStart) this.replayStart.set(null);
+    if (this.openBoard() === p.board) return;
+    this.openBoard.set(p.board);
+    this.replayMarks.set([]);
+    const id = p.clubGameId;
+    if (id && !this.shareToken() && this.markers.marksOf(id))
+      Promise.resolve(this.lineups.clubGameMarks(id)).then(m => { if (this.openBoard() === p.board) this.replayMarks.set(m ?? []); }, () => undefined);
+  }
+
+  /** Abzeichen angeklickt: aufklappen und zur ersten markierten Stellung bzw. zum ersten „!!" springen. */
+  openAt(p: FixturePairing, kind: 'mark' | 'brilliant'): void {
+    this.replayStart.set(kind === 'mark' ? { kind: 'mark' } : { kind: 'ply', ply: this.markers.brilliantOf(p.clubGameId ?? 0)[0] ?? 0 });
+    this.toggleBoard(p, true);
+  }
   /** Die eigene Begegnung aus den Aufstellungen der Runde — trägt die ersten Züge je Brett (2026-10-08). */
   readonly ownMatch = signal<LineupMatch | null>(null);
   movesBoard(board: number) {

@@ -72,24 +72,35 @@ export interface ClubOverview {
   marks: Record<string, number>;
 }
 
-/** Zahl der brillanten Züge („!!") einer Partie — derselbe Rückblick wie auf RookHubs Partieseite (`reviewGame`). */
-export function brilliantMoves(pgn: string, evals: GameEvals): number {
+/** Die brillanten Halbzüge („!!", 0-basiert) einer Partie — derselbe Rückblick wie auf RookHubs Partieseite (`reviewGame`). */
+export function brilliantPlies(pgn: string, evals: GameEvals): number[] {
   let g;
-  try { g = parsePgnText(pgn)[0]; } catch { return 0; }
-  if (!g) return 0;
-  const r = reviewGame(evals, g.fens, g.moves.map(uciOf));
-  return r.white.counts.brilliant + r.black.counts.brilliant;
+  try { g = parsePgnText(pgn)[0]; } catch { return []; }
+  if (!g) return [];
+  return reviewGame(evals, g.fens, g.moves.map(uciOf)).moves.filter(m => m?.cls === 'brilliant').map(m => m!.ply);
 }
 
+/** Zahl der brillanten Züge — siehe {@link brilliantPlies}. */
+export function brilliantMoves(pgn: string, evals: GameEvals): number {
+  return brilliantPlies(pgn, evals).length;
+}
+
+const NONE: readonly number[] = [];
+
+/** Klick auf ein Abzeichen (0.852.0): beim Nachspielen zur ersten markierten Stellung bzw. zu diesem Halbzug springen. Jeder Klick
+ *  ist ein neues Objekt — das Nachspielen springt erneut, auch wenn es schon offen ist. */
+export type ReplayStart = { kind: 'mark' } | { kind: 'ply'; ply: number };
+
 /**
- * „◆ n" (markierte Stellungen) und „!! n" (brillante Züge) je Vereinspartie — geteilt von der Vereinsübersicht und den
+ * „+ n" (markierte Stellungen) und „!! n" (brillante Züge) je Vereinspartie — geteilt von der Vereinsübersicht und den
  * Aufstellungen einer Runde (0.850.0, Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut") und
  * der Liste der Vereinspartien (0.851.0: „markiere diese Partien auch so in der Liste Vereinsspiele").
  * `load` holt die Zahlen in Paketen nach; ein neuer `load` verwirft späte Antworten des vorigen. Nur angemeldet (`league.view`).
  */
 export class GameMarkers {
   readonly marks = signal<Record<number, number>>({});
-  readonly brilliant = signal<Record<number, number>>({});
+  /** Je Vereinspartie die brillanten Halbzüge (0.852.0: für den Sprung beim Klick aufs Abzeichen). */
+  readonly brilliant = signal<Record<number, number[]>>({});
   private run = 0;
 
   constructor(private readonly api: LineupsApiService) {}
@@ -128,8 +139,8 @@ export class GameMarkers {
       for (const [id, r] of Object.entries(got)) {
         await new Promise(resolve => setTimeout(resolve));
         if (run !== this.run) return;
-        const n = brilliantMoves(r.pgn, r.evals);
-        this.brilliant.update(cur => ({ ...cur, [Number(id)]: n }));
+        const plies = brilliantPlies(r.pgn, r.evals);
+        this.brilliant.update(cur => ({ ...cur, [Number(id)]: plies }));
       }
     }
   }
@@ -139,8 +150,8 @@ export class GameMarkers {
     return this.marks()[id] ?? 0;
   }
 
-  brilliantOf(id: number): number {
-    return this.brilliant()[id] ?? 0;
+  brilliantOf(id: number): readonly number[] {
+    return this.brilliant()[id] ?? NONE;
   }
 
   /** Verwirft laufende Antworten und leert die Marker (z. B. über einen Teilen-Link). */
@@ -155,9 +166,9 @@ export class GameMarkers {
     return id ? this.marks()[id] ?? 0 : 0;
   }
 
-  brilliantCount(b: LineupBoard): number {
+  brilliantPlies(b: LineupBoard): readonly number[] {
     const id = b.game?.clubGameId;
-    return id ? this.brilliant()[id] ?? 0 : 0;
+    return id ? this.brilliant()[id] ?? NONE : NONE;
   }
 }
 

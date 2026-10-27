@@ -143,7 +143,7 @@ describe('RoundLineupsComponent', () => {
   });
 
   // 0.850.0, Wunsch 2026-10-27: „die Anzeige von + und !! auch, wenn man sich eine Runde anschaut"
-  it('zeigt „◆ n" und „!! n" an den Vereinspartien der Runde wie die Vereinsübersicht', async () => {
+  it('zeigt die Abzeichen „+n"/„!!" an den Vereinspartien der Runde wie die Vereinsübersicht', async () => {
     api.lineups.and.resolveTo(withGames());
     api.clubGameMarkCounts.and.resolveTo({ '168': 2 });
     // 7.Lxh7+ opfert den Läufer, Bestzug, Zweitbester +0,50 → brillant
@@ -157,9 +157,9 @@ describe('RoundLineupsComponent', () => {
     expect(api.clubGameMarkCounts).toHaveBeenCalledOnceWith([168]);   // nur Vereinspartien
     expect(api.clubGameReviews).toHaveBeenCalledOnceWith([168]);
     const boards = el.querySelectorAll('.lu-board');
-    expect(boards[0].querySelector('.bg-marks')?.textContent).toContain('◆ 2');
-    expect(boards[0].querySelector('.bg-brilliant')?.textContent).toContain('!! 1');
-    expect(boards[2].querySelector('.bg-marks')).toBeNull();
+    expect(boards[0].querySelector('.gb-mark')?.textContent?.trim()).toBe('+2');
+    expect(boards[0].querySelector('.gb-brilliant')?.textContent?.trim()).toBe('!!');   // Zahl erst ab 2
+    expect(boards[2].querySelector('.gb-mark')).toBeNull();
   });
 
   it('Nachspielen holt das PGN: Vereinspartie über den Club-Endpunkt, Spielerkarte über …/games?team=', async () => {

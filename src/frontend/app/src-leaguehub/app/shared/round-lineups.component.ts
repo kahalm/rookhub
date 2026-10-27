@@ -65,7 +65,7 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
                       <span class="lu-moves">
                         <lh-board-game [game]="g" [tnr]="d.tnr" [round]="d.round" [team]="m.home" [board]="b.board"
                                        [title]="boardTitle(b)" [flipped]="ownIsBlack(m, b)" [shareToken]="shareToken()" [shared]="isShared(m)"
-                                       [markCount]="markers.markCount(b)" [brilliantCount]="markers.brilliantCount(b)" />
+                                       [markCount]="markers.markCount(b)" [brilliantPlies]="markers.brilliantPlies(b)" />
                         @if (b.moves) {
                           <lh-board-moves [key]="key(d, m, b)" [title]="boardTitle(b)" [initial]="b.moves" [replaced]="true"
                                           [canDelete]="!!b.canDeleteMoves" />

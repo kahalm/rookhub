@@ -67,8 +67,8 @@ describe('ClubOverviewPageComponent', () => {
     expect(el.querySelector('.lu-score')?.textContent).toContain('2½ : 1½');
     const boards = el.querySelectorAll('.lu-match')[0].querySelectorAll('.lu-board');
     expect(boards.length).toBe(2);
-    expect(boards[0].querySelector('.bg-marks')?.textContent).toContain('◆ 3');
-    expect(boards[1].querySelector('.bg-marks')).toBeNull();
+    expect(boards[0].querySelector('.gb-mark')?.textContent?.trim()).toBe('+3');
+    expect(boards[1].querySelector('.gb-mark')).toBeNull();
     // 0.851.1, Wunsch 2026-10-27: „da nur schreiben Partie vorhanden“ — ohne Halbzüge und erste Züge
     expect(boards[1].querySelector('.bg-what')?.textContent?.trim()).toBe('Partie vorhanden');
     expect(el.querySelector('.ov-filter')?.textContent).toContain('(2)');
@@ -79,9 +79,9 @@ describe('ClubOverviewPageComponent', () => {
     const el = await create();
     expect(api.clubGameReviews).toHaveBeenCalledOnceWith([77, 78]);
     const boards = el.querySelectorAll('.lu-board');
-    expect(boards[0].querySelector('.bg-brilliant')).toBeNull();
-    expect(boards[1].querySelector('.bg-brilliant')?.textContent).toContain('!! 1');
-    expect(boards[1].querySelector('.bg-brilliant')?.getAttribute('title')).toBe('1 brillanter Zug');
+    expect(boards[0].querySelector('.gb-brilliant')).toBeNull();
+    expect(boards[1].querySelector('.gb-brilliant')?.textContent?.trim()).toBe('!!');
+    expect(boards[1].querySelector('.gb-brilliant')?.getAttribute('title')).toBe('1 brillanter Zug — anspringen');
     expect(brilliantMoves(GREEK_PGN, { ...GREEK_EVALS, plies: [{ ...GREEK_EVALS.plies[0], secondCp: 800 }] })).toBe(0);   // ohnehin gewonnen
     expect(brilliantMoves('kein PGN', GREEK_EVALS)).toBe(0);
   });

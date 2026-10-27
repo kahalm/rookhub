@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, SimpleChanges, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, SimpleChanges, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { Chess } from 'chess.js';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -103,6 +103,10 @@ export class GameReplayComponent implements OnChanges {
   @Input() evalsUrl: string | null = null;
   /** Interessante Stellungen der Partie (0.848.0) — leer = keine Sprungmarken. */
   readonly marks = input<readonly ReplayMark[]>([]);
+  /** Wohin beim Öffnen springen (0.852.0, Klick auf ein Abzeichen in LeagueHub): zur ersten markierten Stellung (sobald die
+   *  Marken da sind) bzw. an einen Halbzug (0-basiert, der Zug steht danach auf dem Brett). Jedes neue Objekt springt erneut. */
+  readonly startAt = input<{ kind: 'mark' } | { kind: 'ply'; ply: number } | null>(null);
+  private startDone: object | null = null;
   /** Stellung aus einer Variante auf dem Brett — gilt nur, solange der Partiezug ihr Abzweig ist (`at`). */
   readonly side = signal<{ at: number; fen: string; line: string } | null>(null);
   readonly activeSide = computed(() => { const s = this.side(); return s && s.at === this.index() ? s : null; });
@@ -183,6 +187,20 @@ export class GameReplayComponent implements OnChanges {
     });
   });
 
+  constructor() {
+    effect(() => {
+      const start = this.startAt(), g = this.game(), marks = this.marks();
+      if (!start || !g || start === this.startDone) return;
+      if (start.kind === 'mark') {
+        if (!marks.length) return;
+        untracked(() => this.jump(marks[0]));
+      } else {
+        untracked(() => { this.side.set(null); this.index.set(Math.max(-1, Math.min(g.moves.length - 1, start.ply))); });
+      }
+      this.startDone = start;
+    });
+  }
+
   /** Zu einer Marke: in der Partie an ihren Halbzug, aus einer Variante an den Abzweig mit der Stellung auf dem Brett. */
   jump(m: ReplayMark): void {
     const g = this.game();
@@ -227,6 +245,7 @@ export class GameReplayComponent implements OnChanges {
     try { g = parsePgnText(this.pgn)[0] ?? null; } catch { g = null; }
     this.game.set(g);
     this.index.set(-1);
+    this.startDone = null;
     setTimeout(() => this.box()?.nativeElement.focus({ preventScroll: true }));
   }
 

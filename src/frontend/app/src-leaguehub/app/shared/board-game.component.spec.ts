@@ -84,15 +84,31 @@ describe('BoardGameComponent', () => {
     const marks = [{ fen: 'x', positionKey: 'k', ply: 1, variationFromPly: null, variationUci: null, count: 3 }];
     api.clubGameMarks.and.resolveTo(marks);
     const el = render(GAME, null);
-    expect(el.querySelector('.bg-marks')).toBeNull();
+    expect(el.querySelector('.gb-mark')).toBeNull();
     fixture.componentRef.setInput('markCount', 2);
     fixture.detectChanges();
-    expect(el.querySelector('.bg-marks')?.textContent).toContain('◆ 2');
-    expect(el.querySelector('.bg-marks')?.getAttribute('title')).toBe('2 interessante Stellungen');
+    expect(el.querySelector('.gb-mark')?.textContent?.trim()).toBe('+2');
+    expect(el.querySelector('.gb-mark')?.getAttribute('title')).toBe('2 interessante Stellungen — anspringen');
     (el.querySelector('.bg-replay') as HTMLButtonElement).click();
     await fixture.whenStable();
     fixture.detectChanges();
     expect(api.clubGameMarks).toHaveBeenCalledWith(168);
     expect(fixture.componentInstance.marks()).toEqual(marks);
+  });
+
+  // 0.852.0: Klick aufs Abzeichen klappt das Nachspielen auf und gibt die Stelle mit
+  it('Klick auf „!!" öffnet das Nachspielen am ersten brillanten Zug', async () => {
+    const api = TestBed.inject(LineupsApiService) as jasmine.SpyObj<LineupsApiService>;
+    api.clubGame.and.resolveTo({ pgn: '1. d4 Nf6 2. c4 e6 1/2-1/2', analysis: null });
+    api.clubGameMarks.and.resolveTo([]);
+    const el = render(GAME, null);
+    fixture.componentRef.setInput('brilliantPlies', [3, 9]);
+    fixture.detectChanges();
+    (el.querySelector('.gb-brilliant') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.open()).toBeTrue();
+    expect(fixture.componentInstance.start()).toEqual({ kind: 'ply', ply: 3 });
+    expect(el.querySelector('lh-game-replay')).not.toBeNull();
   });
 });
