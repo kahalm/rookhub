@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.871.0", date: "2026-10-28", changes: [
+    { en: "E-book reader: double-clicking a diagram in a book whose diagrams have not been processed yet now says exactly that, instead of asking whether a diagram is missing.",
+      de: "E-Book-Leser: Ein Doppelklick auf ein Diagramm in einem Buch, dessen Diagramme noch nicht verarbeitet sind, sagt jetzt genau das, statt zu fragen, ob ein Diagramm fehlt." },
+  ] },
   { version: "0.870.1", date: "2026-10-28", changes: [
     { en: "Maintenance: the token dialog gets the sign-in service via inject() — the build check (lint ratchet) had stopped 0.870.0.",
       de: "Wartung: Der Token-Dialog holt den Anmeldedienst per inject() — die Build-Prüfung (Lint-Ratsche) hatte 0.870.0 gestoppt." },

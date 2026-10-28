@@ -71,6 +71,20 @@ describe('EbookReaderComponent', () => {
     expect(service.reportMissedDiagram.calls.allArgs()).toEqual([[b.id, 4, 0.5, 0.25, true, undefined], [b.id, 4, 0.5, 0.25, false, undefined]]);
   });
 
+  it('Doppelklick, solange die Diagramme noch nicht verarbeitet sind: Hinweis statt Rückfrage, nichts gespeichert (PDF + EPUB)', async () => {
+    const b = book({ diagramState: 'pending' });
+    const fixture = await make(b);
+    const c = fixture.componentInstance;
+    const open = spyOn(TestBed.inject(MatDialog), 'open');
+    const quick = spyOn(TestBed.inject(SnackbarService), 'quick');
+    spyOnProperty(c, 'loggedIn', 'get').and.returnValue(true);
+    c.askMissedDiagram(b, { page: 4, x: 0.5, y: 0.25 });
+    c.askMissedEpub(b, { ref: 'OEBPS/i/a.png', chapter: 'OEBPS/c3.xhtml' });
+    expect(open).not.toHaveBeenCalled();
+    expect(service.reportMissedDiagram).not.toHaveBeenCalled();
+    expect(quick.calls.allArgs()).toEqual([['ebooks.reader.diagramsPending'], ['ebooks.reader.diagramsPending']]);
+  });
+
   it('EPUB: Doppelklick ohne erkanntes Diagramm fragt ebenso und speichert Bildpfad + Kapitel (Seite 0)', async () => {
     const b = book();
     const fixture = await make(b);

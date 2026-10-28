@@ -542,6 +542,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   /** Doppelklick auf eine Stelle ohne erkanntes Diagramm: „Fehlt ein Diagramm?“ / „Text falsch“ / Abbrechen — die Antwort
    *  wird für die Auswertung gespeichert (Text falsch = kein fehlendes Diagramm). */
   askMissedDiagram(ebook: Ebook, at: { page: number; x: number; y: number }): void {
+    if (this.diagramsPending(ebook)) return;
     if (!this.loggedIn) return;
     this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '30rem' }).afterClosed().subscribe((answer: MissedAnswer) => {
       if (!answer) return;
@@ -552,12 +553,21 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   /** EPUB (0.798.0): dieselbe Rückfrage, Stelle = Bildpfad + Kapitel. „Text falsch“ bietet danach das PDF an der Stelle an
    *  (Fließtext-EPUB aus einem PDF: Druckseite aus dem Seitenanker, {@link epubPageAt}). */
   askMissedEpub(ebook: Ebook, spot: EpubMissedSpot): void {
+    if (this.diagramsPending(ebook)) return;
     if (!this.loggedIn) return;
     this.dialog.open(EbookMissedDiagramDialogComponent, { maxWidth: '30rem' }).afterClosed().subscribe((answer: MissedAnswer) => {
       if (!answer) return;
       this.reportMissed(ebook, answer, 0, 0, 0, spot);
       if (answer === 'text' && this.otherReadableFormats.includes('pdf')) this.offerPdfAt(spot.page ?? null);
     });
+  }
+
+  /** Diagramme des Buchs noch nicht verarbeitet (0.871.0, Wunsch 28.10.): dann fehlt kein Diagramm, die Erkennung ist nur
+   *  noch nicht gelaufen — das sagen statt „Fehlt ein Diagramm?“ zu fragen (auch ohne Anmeldung). */
+  private diagramsPending(ebook: Ebook): boolean {
+    if (ebook.diagramState !== 'pending') return false;
+    this.snackbar.quick(this.translate.instant('ebooks.reader.diagramsPending'));
+    return true;
   }
 
   private reportMissed(ebook: Ebook, answer: 'diagram' | 'text', page: number, x: number, y: number, spot?: EpubMissedSpot): void {

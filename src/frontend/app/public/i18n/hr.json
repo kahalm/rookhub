@@ -5756,6 +5756,7 @@
       "missedYes": "Nedostaje dijagram",
       "missedThanks": "Hvala – zabilježeno za prepoznavanje.",
       "missedFailed": "Odgovor nije moguće spremiti.",
+      "diagramsPending": "Dijagrami ove knjige još nisu obrađeni – moći ćete ih kliknuti čim prepoznavanje završi.",
       "fontSmaller": "Manji tekst",
       "fontLarger": "Veći tekst",
       "layoutScroll": "Neprekinuti tekst (pomicanje)",

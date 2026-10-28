@@ -5756,6 +5756,7 @@
       "missedYes": "A diagram is missing",
       "missedThanks": "Thanks – noted for the recognition.",
       "missedFailed": "The answer could not be saved.",
+      "diagramsPending": "The diagrams of this book have not been processed yet – they will be clickable once the recognition is done.",
       "fontSmaller": "Smaller text",
       "fontLarger": "Larger text",
       "layoutScroll": "Continuous text (scroll)",

@@ -5756,6 +5756,7 @@
       "missedYes": "Fehlt ein Diagramm",
       "missedThanks": "Danke – für die Erkennung vorgemerkt.",
       "missedFailed": "Die Antwort konnte nicht gespeichert werden.",
+      "diagramsPending": "Die Diagramme dieses Buchs sind noch nicht verarbeitet – anklickbar werden sie, sobald die Erkennung durch ist.",
       "fontSmaller": "Schrift kleiner",
       "fontLarger": "Schrift größer",
       "layoutScroll": "Fließtext (scrollen)",

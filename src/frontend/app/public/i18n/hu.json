@@ -5756,6 +5756,7 @@
       "missedYes": "Hiányzik egy diagram",
       "missedThanks": "Köszönjük – feljegyeztük a felismeréshez.",
       "missedFailed": "A választ nem sikerült menteni.",
+      "diagramsPending": "A könyv diagramjai még nincsenek feldolgozva – a felismerés után lesznek kattinthatók.",
       "fontSmaller": "Kisebb betű",
       "fontLarger": "Nagyobb betű",
       "layoutScroll": "Folyamatos szöveg (görgetés)",
