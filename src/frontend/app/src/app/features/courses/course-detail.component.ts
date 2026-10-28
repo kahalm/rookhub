@@ -304,6 +304,8 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
       return chapter.firstLineId == null ? null : ['/courses', this.bookId, 'calc'];
     }
     if (chapter.solverIndex == null) return null;
+    // Studienbuch ohne Aufgaben: kein ▶ je Kapitel, so wenig wie oben ein Startknopf (d7-rk-studienbuch-start-sequenziell).
+    if (this.isEmptyQuiz) return null;
     const mode = this.detail.lastMode === 'random' ? 'random' : 'sequential';
     return ['/courses', this.bookId, 'chapter', chapter.solverIndex, mode];
   }

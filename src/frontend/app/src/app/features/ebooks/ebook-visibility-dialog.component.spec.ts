@@ -29,4 +29,33 @@ describe('EbookVisibilityDialogComponent', () => {
     req.flush({ updated: 2 });
     expect(closed).toEqual([2]);
   });
+
+  // d7-rk-gilt-fuer-ebooks-mehrzahlklammer: Schlüsselpaar statt „E-Book(s)“.
+  for (const [ids, key] of [[[1], 'ebooks.bulk.forCountOne'], [[1, 2], 'ebooks.bulk.forCount']] as const) {
+    it(`${ids.length} Buch/Bücher → ${key}`, async () => {
+      await TestBed.configureTestingModule({
+        imports: [EbookVisibilityDialogComponent],
+        providers: [
+          provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+          { provide: MatDialogRef, useValue: { close: () => {} } },
+          { provide: MAT_DIALOG_DATA, useValue: { ebookIds: ids, groups: [], selected: [] } },
+        ],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(EbookVisibilityDialogComponent);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.hint')!.textContent!.trim()).toBe(key);
+    });
+  }
+});
+
+describe('ebooks.bulk ohne Klammer-Mehrzahl (d7)', () => {
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(lang, async () => {
+      const d = await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json();
+      for (const k of ['forCount', 'forCountOne', 'done', 'doneOne']) {
+        expect(d.ebooks.bulk[k]).withContext(k).not.toMatch(/\(s\)|\/e-/);
+      }
+      expect(d.ebooks.bulk.forCountOne).not.toContain('{{n}}');
+    });
+  }
 });

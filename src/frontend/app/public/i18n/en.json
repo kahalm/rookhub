@@ -708,11 +708,14 @@
         "title": "New API token",
         "name": "Name",
         "nameHint": "e.g. “Chess.com extension (laptop)”",
+        "needName": "Enter a name first.",
         "expires": "Expires",
         "create": "Create",
         "scope": "Scope",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (engine provider on your computer)",
+        "scopeEngineShort": "Engine",
         "scopeHint": "A token only works for its scope: an extension token cannot register engines, an engine token cannot read your repertoires."
       },
       "show": {
@@ -1584,7 +1587,23 @@
     },
     "theme": {
       "boardTheme": "Board theme",
-      "pieces": "Pieces"
+      "pieces": "Pieces",
+      "board": {
+        "brown": "Brown",
+        "blue": "Blue",
+        "green": "Green",
+        "gray": "Grey",
+        "wood": "Wood tone",
+        "realwood": "Wood",
+        "water": "Water",
+        "marble": "Marble",
+        "metal": "Metal",
+        "leather": "Leather",
+        "maple": "Maple"
+      },
+      "piece": {
+        "cburnett": "Classic"
+      }
     },
     "hints": {
       "t1Check": "Forcing move — start with the checks (checklist: Checks, Captures, Threats).",
@@ -1639,11 +1658,11 @@
     "emptyHint": "No courses yet. Create your own course above — with or without a PGN.",
     "create": {
       "title": "Create a new course",
-      "hint": "Create your own course — visible only to you. You can add the positions chapter by chapter on the course page afterwards.",
+      "hint": "Visible only to you — add positions on the course page afterwards.",
       "nameLabel": "Course name",
       "namePlaceholder": "e.g. Rook endgames",
       "attachPgn": "Attach PGN (optional)",
-      "pgnNote": "An attached PGN may contain your own games or a puzzle PGN in Chessable style (FEN plus training markers). Comments in braces are kept and shown while clicking through. Questions?",
+      "pgnNote": "An attached PGN may contain your own games or a puzzle PGN in Chessable style (FEN plus training markers). Comments in braces are kept and shown while clicking through.",
       "button": "Create course",
       "creating": "Creating…",
       "short": "New",
@@ -1886,9 +1905,9 @@
     "startChapterRandom": "Start chapter (random)",
     "import": {
       "title": "Upload a course from PGN",
-      "hint": "Load a PGN with your own games. You can then click through them move by move — and comments contained in the PGN appear at the move they belong to.",
+      "hint": "Your games as a course to click through, comments included.",
       "attachPgn": "Choose PGN file",
-      "pgnNote": "Any PGN works: your own games, a downloaded collection or a puzzle PGN in Chessable style. Comments in braces are kept and shown while clicking through. Questions?",
+      "pgnNote": "Any PGN works: your own games, a downloaded collection or a puzzle PGN in Chessable style. Comments in braces are kept and shown while clicking through.",
       "button": "Upload course"
     },
     "lang": {
@@ -2088,6 +2107,7 @@
       "planEdition": "Schedule edition",
       "videoUrl": "Video URL",
       "publishAt": "Release date/time",
+      "publishRequired": "Set the release date/time to save.",
       "testerPreviewAt": "Tester preview (optional)",
       "hint": "Testers see this chapter from the tester date, everyone else from the release date. Leave the tester field empty for no early access.",
       "watchVideo": "Watch video",
@@ -2174,6 +2194,10 @@
     "fromChapter": {
       "button": "From book chapter",
       "title": "Weekly post from a book chapter",
+      "pickBookFirst": "Pick a book first.",
+      "needBook": "Pick a book and a chapter first.",
+      "needChapter": "Pick a chapter first.",
+      "needSchedule": "Pick a date and time first.",
       "or": "or",
       "book": "Book",
       "chapter": "Chapter",
@@ -3330,7 +3354,7 @@
     "history": {
       "open": "History",
       "title": "Recent analyses",
-      "empty": "No analyses yet — as soon as you move on the board while logged in, the analysis appears here.",
+      "empty": "No analyses yet — as soon as you move on the board, it appears here.",
       "fromStart": "From the starting position",
       "fromPosition": "From a set-up position",
       "noMoves": "no moves yet",
@@ -4089,7 +4113,7 @@
     "depthLines": "Depth {{depth}} · {{lines}} lines",
     "nodesLines": "{{nodes}} nodes · {{lines}} lines",
     "nodes": {
-      "title": "Analyse game with lc0",
+      "title": "Analyse game with Lc0",
       "button": "Analyse with Lc0",
       "buttonHint": "Analyse the whole game with a node-based engine (e.g. lc0) — optionally in addition to Stockfish",
       "hint": "The engine analyses every position of the game with a fixed number of nodes. For lc0 depth means little — nodes decide quality and duration.",
@@ -4396,6 +4420,8 @@
       "nextMonth": "Next month",
       "today": "Today",
       "more": "+{{count}} more",
+      "week": "Wk {{week}}",
+      "weekJump": "Jump to a week",
       "empty": "No tournaments this month."
     },
     "profile": {
@@ -4430,6 +4456,7 @@
     "minPlayers": "Min. entries",
     "groupCount": "{{count}} sections",
     "tilesFailed": "Map tiles could not be loaded. The tournaments are placed correctly, only the background map is missing.",
+    "tilesFailedOne": "Map tiles could not be loaded. The venue is marked correctly, only the background map is missing.",
     "range": {
       "label": "Period",
       "quarter": "Next three months",
@@ -4519,14 +4546,15 @@
     },
     "audienceHelp": "Individual or team comes from chess-results itself — and anything not recognised as a team event counts as individual.\n\nAge group and gender section do not come from a field: there is none, so they are read from the tournament name. That works where the name states the class (“U12 girls”, “UNDER 16 BOYS”) and not at all where it does not.\n\n“Adults only” hides everything with a youth marker in its name. Seniors stay — seniors’ chess is adult chess.\n\nA league is a team competition running a whole season, or one that says so in its name.\n\nSomething in the wrong drawer? A tournament page has “report wrong event”, and it asks what tournaments of that kind are called in your region. That is what improves it for everyone.",
     "missing": {
-      "cta": "Your event missing? Add it here",
+      "cta": "Your event missing? Suggest a source",
       "blurb": "Not every organiser announces where this directory reads. A link to an official page can be added.",
-      "title": "Add a missing tournament source",
+      "title": "Suggest a missing tournament source",
       "lead": "This directory is filled from tournament sites that publish their calendars — whoever announces somewhere else does not appear here. What helps most is not a single date but a LINK: an official page where your tournaments are listed can be read regularly, so all of them show up from now on.",
       "link": "Link to the official page",
       "linkHint": "Association calendar, club page, series page — the more official, the better",
       "linkRequired": "Please give a complete link starting with http:// or https://.",
-      "message": "Anything else we should know? (optional)",
+      "message": "Note (optional)",
+      "messagePlaceholder": "Anything else we should know?",
       "thanks": "Thank you — we will look at the page.",
       "sendError": "The message could not be sent. Please try again."
     },
@@ -4655,6 +4683,7 @@
         "added": "{{name}} is now being tracked.",
         "help": "Follow any player: your child, a club mate, your next opponent — no account needed.",
         "lead": "Search on chess-results and FIDE. The last name is enough; a first name narrows it down.",
+        "needLastName": "Enter a last name first (at least 2 letters), then you can search.",
         "limitReached": "You can track at most {{count}} players. Remove one first.",
         "remove": "Stop tracking",
         "removeError": "The player couldn't be removed.",
@@ -5508,7 +5537,7 @@
         "view": "Only the position from the book",
         "free": "Move the pieces freely",
         "calc": "Write down variations without moving the pieces for good – check them later",
-        "solve": "Play the solution: stored (book or engine) or Stockfish now",
+        "solve": "Find the move yourself; it is checked against the book solution, or by the computer if there is none",
         "maia": "Play the position out against Maia",
         "game": "play through the game this diagram comes from"
       },
@@ -5631,8 +5660,10 @@
       "selected": "{{n}} selected",
       "all": "Select all on this page",
       "setVisibility": "Set visibility",
-      "forCount": "Applies to {{n}} e-book(s).",
-      "done": "Visibility set for {{n}} e-book(s)."
+      "forCount": "Applies to {{n}} e-books.",
+      "forCountOne": "Applies to one e-book.",
+      "done": "Visibility set for {{n}} e-books.",
+      "doneOne": "Visibility set for one e-book."
     },
     "library": {
       "import": "Import server library",

@@ -47,28 +47,43 @@
   @if (agenda.length === 0 && !loading && !failed) {
     <p class="empty-state muted">{{ 'tournamentDirectory.calendar.empty' | translate }}</p>
   }
-  @for (day of agenda; track day.date) {
-    <div class="agenda-day">
-      <div class="agenda-label">{{ day.label }}</div>
-      @for (entry of visibleAgendaEntries(day); track trackById($index, entry)) {
-        <button type="button" class="agenda-entry" [class.cancelled]="entry.cancelled"
-                (click)="entrySelected.emit(entry)">
-          <span class="agenda-name">{{ entry.name }}</span>
-          @if (entry.location) {
-            <!-- „various" ist kein Ort: uebersetzt und kursiv (UI-Sweep 2026-10-11, r2-t-various). -->
-            @if (isVarious(entry)) {
-              <span class="agenda-place agenda-various">{{ 'tournamentDirectory.variousVenues' | translate }}</span>
-            } @else {
-              <span class="agenda-place">{{ entry.location }}</span>
-            }
+  <!-- Gliederung nach Kalenderwochen mit Sprungleiste (DESIGN 4.6 Regel 11, d7-t-kalender-handy-seite-zu-lang). -->
+  @if (agendaWeeks.length > 1) {
+    <nav class="week-jump" [attr.aria-label]="'tournamentDirectory.calendar.weekJump' | translate">
+      @for (week of agendaWeeks; track week.key) {
+        <button type="button" class="week-chip" (click)="jumpToWeek(week)" [attr.aria-label]="week.range">
+          {{ 'tournamentDirectory.calendar.week' | translate: { week: week.week } }}
+        </button>
+      }
+    </nav>
+  }
+  @for (week of agendaWeeks; track week.key) {
+    <section class="agenda-week" [id]="'cal-week-' + week.key">
+      <h3 class="agenda-week-head">{{ 'tournamentDirectory.calendar.week' | translate: { week: week.week } }} · {{ week.range }}</h3>
+      @for (day of week.days; track day.date) {
+        <div class="agenda-day">
+          <div class="agenda-label">{{ day.label }}</div>
+          @for (entry of visibleAgendaEntries(day); track trackById($index, entry)) {
+            <button type="button" class="agenda-entry" [class.cancelled]="entry.cancelled"
+                    (click)="entrySelected.emit(entry)">
+              <span class="agenda-name">{{ entry.name }}</span>
+              @if (entry.location) {
+                <!-- „various" ist kein Ort: uebersetzt und kursiv (UI-Sweep 2026-10-11, r2-t-various). -->
+                @if (isVarious(entry)) {
+                  <span class="agenda-place agenda-various">{{ 'tournamentDirectory.variousVenues' | translate }}</span>
+                } @else {
+                  <span class="agenda-place">{{ entry.location }}</span>
+                }
+              }
+            </button>
           }
-        </button>
+          @if (hiddenAgendaCount(day) > 0) {
+            <button type="button" class="cal-more" (click)="expand(day.date)">
+              {{ 'tournamentDirectory.calendar.more' | translate: { count: hiddenAgendaCount(day) } }}
+            </button>
+          }
+        </div>
       }
-      @if (hiddenAgendaCount(day) > 0) {
-        <button type="button" class="cal-more" (click)="expand(day.date)">
-          {{ 'tournamentDirectory.calendar.more' | translate: { count: hiddenAgendaCount(day) } }}
-        </button>
-      }
-    </div>
+    </section>
   }
 </div>

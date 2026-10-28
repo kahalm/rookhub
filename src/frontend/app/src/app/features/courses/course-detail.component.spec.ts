@@ -184,6 +184,12 @@ describe('CourseDetailComponent Starten', () => {
     expect(component.chapterStartLink(chapter({ solverIndex: null }))).toBeNull();
     expect(component.chapterStartParams(chapter({ solverIndex: 2 }))).toBeNull();
   });
+
+  it('d7-rk-studienbuch-start-sequenziell: im Studienbuch ohne Aufgaben kein ▶ je Kapitel', () => {
+    const { component } = make({ getDetail: () => of(detail({ isCalculation: false, puzzleCount: 0, lastMode: 'sequential' })) });
+    component.ngOnInit();
+    expect(component.chapterStartLink(chapter({ solverIndex: 2, quizCount: 0 }))).toBeNull();
+  });
 });
 
 describe('CourseDetailComponent Kapitel', () => {
@@ -675,8 +681,11 @@ describe('CourseDetailComponent Kopf (gerendert)', () => {
     const primary = el.querySelectorAll('.head-card .actions [mat-flat-button]');
     expect(primary.length).withContext('genau ein Hauptknopf').toBe(1);
     expect(primary[0].classList).toContain('browse-btn');
-    expect(el.querySelector('.head-card .actions .start-btn')!.hasAttribute('mat-flat-button')).toBeFalse();
+    // d7-rk-studienbuch-start-sequenziell: kein zweiter Startknopf „Sequenziell“ — wie auf der Kurskarte.
+    expect(el.querySelector('.head-card .actions .start-btn')).withContext('kein Startknopf').toBeNull();
+    expect(el.querySelector('.head-card .actions .browse-btn')!.hasAttribute('mat-flat-button')).toBeTrue();
   });
+
 
   it('Kurs mit Aufgaben: Fortschritt und „Sequenziell" als Hauptknopf bleiben', async () => {
     const { el } = await render({ chapters: [chapter({ quizCount: 3 }), chapter({ name: 'Info', quizCount: 0 })] });

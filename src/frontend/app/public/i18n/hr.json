@@ -708,11 +708,14 @@
         "title": "Novi API token",
         "name": "Naziv",
         "nameHint": "npr. \"Chess.com proširenje (laptop)\"",
+        "needName": "Najprije unesi naziv.",
         "expires": "Istječe",
         "create": "Stvori",
         "scope": "Opseg",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (provider motora na tvom računalu)",
+        "scopeEngineShort": "Engine",
         "scopeHint": "Token vrijedi samo za svoj opseg: token za proširenje ne može prijavljivati motore, token za motor ne može čitati tvoje repertoare."
       },
       "show": {
@@ -1584,7 +1587,23 @@
     },
     "theme": {
       "boardTheme": "Tema ploče",
-      "pieces": "Figure"
+      "pieces": "Figure",
+      "board": {
+        "brown": "Smeđa",
+        "blue": "Plava",
+        "green": "Zelena",
+        "gray": "Siva",
+        "wood": "Boja drva",
+        "realwood": "Drvo",
+        "water": "Voda",
+        "marble": "Mramor",
+        "metal": "Metal",
+        "leather": "Koža",
+        "maple": "Javor"
+      },
+      "piece": {
+        "cburnett": "Klasične"
+      }
     },
     "hints": {
       "t1Check": "Forsirajući potez — počni od šahova (lista: šah, uzimanje, prijetnja).",
@@ -1639,11 +1658,11 @@
     "emptyHint": "Još nema tečajeva. Stvori vlastiti tečaj gore — sa ili bez PGN-a.",
     "create": {
       "title": "Stvori novi tečaj",
-      "hint": "Napravi vlastiti tečaj — vidljiv samo tebi. Pozicije zatim možeš dodavati poglavlje po poglavlje na stranici tečaja.",
+      "hint": "Vidljiv samo tebi — pozicije zatim dodaješ na stranici tečaja.",
       "nameLabel": "Naziv tečaja",
       "namePlaceholder": "npr. Završnice s topovima",
       "attachPgn": "Priloži PGN (opcionalno)",
-      "pgnNote": "Priloženi PGN može sadržavati vlastite partije ili biti puzzle-PGN u Chessable stilu (FEN i oznake za trening). Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
+      "pgnNote": "Priloženi PGN može sadržavati vlastite partije ili biti puzzle-PGN u Chessable stilu (FEN i oznake za trening). Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju.",
       "button": "Stvori tečaj",
       "creating": "Stvara se…",
       "short": "Novi",
@@ -1886,9 +1905,9 @@
     "startChapterRandom": "Pokreni poglavlje (nasumično)",
     "import": {
       "title": "Učitaj tečaj iz PGN-a",
-      "hint": "Učitaj PGN s vlastitim partijama. Nakon toga možeš ih prolaziti potez po potez — komentari iz PGN-a pojavljuju se kod poteza na koji se odnose.",
+      "hint": "Tvoje partije kao tečaj za prolaženje, s komentarima.",
       "attachPgn": "Odaberi PGN datoteku",
-      "pgnNote": "Radi svaki PGN: vlastite partije, preuzeta zbirka ili puzzle-PGN u Chessable stilu. Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
+      "pgnNote": "Radi svaki PGN: vlastite partije, preuzeta zbirka ili puzzle-PGN u Chessable stilu. Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju.",
       "button": "Učitaj tečaj"
     },
     "lang": {
@@ -2088,6 +2107,7 @@
       "planEdition": "Zakaži izdanje",
       "videoUrl": "URL videozapisa",
       "publishAt": "Vrijeme objave",
+      "publishRequired": "Postavi vrijeme objave da bi spremio.",
       "testerPreviewAt": "Pregled za testere (opcionalno)",
       "hint": "Testeri vide ovo poglavlje od termina za testere, ostali od objave. Bez termina za testere nema ranog pristupa.",
       "watchVideo": "Pogledaj videozapis",
@@ -2174,6 +2194,10 @@
     "fromChapter": {
       "button": "Iz poglavlja knjige",
       "title": "Tjedna objava iz poglavlja knjige",
+      "pickBookFirst": "Najprije odaberi knjigu.",
+      "needBook": "Najprije odaberi knjigu i poglavlje.",
+      "needChapter": "Najprije odaberi poglavlje.",
+      "needSchedule": "Najprije odaberi datum i vrijeme.",
       "or": "ili",
       "book": "Knjiga",
       "chapter": "Poglavlje",
@@ -3330,7 +3354,7 @@
     "history": {
       "open": "Povijest",
       "title": "Nedavne analize",
-      "empty": "Još nema analiza — čim prijavljen povučeš potez na ploči, analiza se pojavljuje ovdje.",
+      "empty": "Još nema analiza — čim povučeš potez na ploči, analiza se pojavljuje ovdje.",
       "fromStart": "Iz početne pozicije",
       "fromPosition": "Iz postavljene pozicije",
       "noMoves": "još nema poteza",
@@ -4089,7 +4113,7 @@
     "depthLines": "Dubina {{depth}} · {{lines}} varijanti",
     "nodesLines": "{{nodes}} čvorova · {{lines}} varijanti",
     "nodes": {
-      "title": "Analiziraj partiju s lc0",
+      "title": "Analiziraj partiju s Lc0",
       "button": "Analiziraj s Lc0",
       "buttonHint": "Analiziraj cijelu partiju strojem koji radi po čvorovima (npr. lc0) — po želji uz Stockfish",
       "hint": "Stroj analizira svaku poziciju partije s fiksnim brojem čvorova. Kod lc0 dubina malo govori — čvorovi određuju kvalitetu i trajanje.",
@@ -4396,6 +4420,8 @@
       "nextMonth": "Sljedeći mjesec",
       "today": "Danas",
       "more": "+{{count}} više",
+      "week": "{{week}}. tj.",
+      "weekJump": "Skoči na tjedan",
       "empty": "Ovaj mjesec nema turnira."
     },
     "profile": {
@@ -4430,6 +4456,7 @@
     "minPlayers": "Najmanje prijavljenih",
     "groupCount": "{{count}} skupina",
     "tilesFailed": "Karta se nije mogla učitati. Turniri su na pravim mjestima, nedostaje samo podloga.",
+    "tilesFailedOne": "Karta se nije mogla učitati. Mjesto je ispravno označeno, nedostaje samo podloga.",
     "range": {
       "label": "Razdoblje",
       "quarter": "Sljedeća tri mjeseca",
@@ -4519,14 +4546,15 @@
     },
     "audienceHelp": "Pojedinačno ili ekipno dolazi sa samog chess-resultsa — i sve što nije prepoznato kao ekipni turnir računa se kao pojedinačno.\n\nUzrasna i rodna kategorija ne dolaze iz nijednog polja: takvo ne postoji, pa se čitaju iz imena turnira. To radi gdje ime navodi kategoriju („U12 djevojke“, „UNDER 16 BOYS“), a nikako gdje je ne navodi.\n\n„Samo odrasli“ skriva sve s uzrasnom oznakom u imenu. Seniori ostaju — seniorski šah je šah odraslih.\n\nLiga je ekipno natjecanje kroz cijelu sezonu ili ono koje to kaže u svom imenu.\n\nNešto je u pogrešnoj kutiji? Na stranici turnira postoji „prijavi pogrešan događaj“ i pita kako se takvi turniri zovu u tvojoj regiji. To je ono što ovo popravlja za sve.",
     "missing": {
-      "cta": "Tvoj turnir nedostaje? Prijavi ga ovdje",
+      "cta": "Tvoj turnir nedostaje? Predloži izvor",
       "blurb": "Ne svaki organizator objavljuje tamo gdje ovaj imenik čita. Link na službenu stranicu može se dodati.",
       "title": "Prijavi izvor turnira koji nedostaje",
       "lead": "Ovaj imenik puni se iz turnirskih stranica koje objavljuju svoje kalendare — kdo objavljuje drugdje, ovdje se ne pojavljuje. Najviše pomaže ne pojedinačni datum, nego LINK: službena stranica na kojoj su navedeni tvoji turniri može se redovno čitati, i tada se od tada pojavljuju svi.",
       "link": "Link na službenu stranicu",
       "linkHint": "Kalendar saveza, stranica kluba, stranica serije turnira — što službenije, to bolje",
       "linkRequired": "Navedi potpuni link koji počinje s http:// ili https://.",
-      "message": "Još nešto što bismo trebali znati? (neobavezno)",
+      "message": "Napomena (neobavezno)",
+      "messagePlaceholder": "Još nešto što bismo trebali znati?",
       "thanks": "Hvala — pogledat ćemo stranicu.",
       "sendError": "Poruka se nije mogla poslati. Pokušaj ponovno."
     },
@@ -4655,6 +4683,7 @@
         "added": "{{name}} se sada prati.",
         "help": "Prati bilo koga: svoje dijete, člana kluba, sljedećeg protivnika — bez računa.",
         "lead": "Pretražuje se chess-results i FIDE. Dovoljno je prezime; ime sužava izbor.",
+        "needLastName": "Najprije upiši prezime (barem 2 slova), zatim možeš pretraživati.",
         "limitReached": "Može se pratiti najviše {{count}} igrača. Prvo ukloni jednoga.",
         "remove": "Prestani pratiti",
         "removeError": "Igrača nije bilo moguće ukloniti.",
@@ -5508,7 +5537,7 @@
         "view": "Samo pozicija iz knjige",
         "free": "Slobodno pomiči figure",
         "calc": "Zapiši varijante bez konačnog pomicanja figura – provjeri ih kasnije",
-        "solve": "Odigraj rješenje: spremljeno (knjiga ili engine) ili Stockfish sada",
+        "solve": "Sam pronađi potez; provjerava se prema rješenju iz knjige, a ako ga nema, računalom",
         "maia": "Odigraj poziciju protiv Maie",
         "game": "odigraj partiju iz koje potječe dijagram"
       },
@@ -5631,8 +5660,10 @@
       "selected": "Odabrano: {{n}}",
       "all": "Sve na ovoj stranici",
       "setVisibility": "Postavi vidljivost",
-      "forCount": "Vrijedi za {{n}} e-knjigu/e-knjiga.",
-      "done": "Vidljivost postavljena za {{n}} e-knjigu/e-knjiga."
+      "forCount": "Vrijedi za odabrane e-knjige ({{n}}).",
+      "forCountOne": "Vrijedi za jednu e-knjigu.",
+      "done": "Vidljivost postavljena za odabrane e-knjige ({{n}}).",
+      "doneOne": "Vidljivost postavljena za jednu e-knjigu."
     },
     "library": {
       "import": "Uvezi knjižnicu s poslužitelja",

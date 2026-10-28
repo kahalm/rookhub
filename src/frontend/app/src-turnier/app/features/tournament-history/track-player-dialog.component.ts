@@ -64,6 +64,10 @@ import { TournamentHistoryService } from './tournament-history.service';
           {{ 'profile.searchPlayer' | translate }}
         </button>
       </form>
+      <!-- Nichts ist ohne sichtbaren Grund gesperrt (DESIGN 2 Nr. 8, d7): am Handy gibt es keinen Tooltip. -->
+      @if (!searchable() && !searching()) {
+        <p class="muted reason">{{ 'turnier.history.track.needLastName' | translate }}</p>
+      }
 
       @if (results(); as found) {
         @if (!found.chessResultsResults.length && !found.fideResults.length) {
@@ -132,6 +136,7 @@ import { TournamentHistoryService } from './tournament-history.service';
     .name { overflow-wrap: anywhere; }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85em; }
     .error { color: var(--mat-sys-error); margin: 0; }
+    .reason { font-size: 0.8125rem; margin: -0.5rem 0 0; }
     /* Auf dem Handy zoomt Safari bei Schrift unter 16px in das Feld hinein. */
     @media (pointer: coarse) { .names input { font-size: 16px; } }
   `],

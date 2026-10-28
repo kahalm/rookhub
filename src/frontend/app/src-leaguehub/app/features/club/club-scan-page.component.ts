@@ -77,6 +77,13 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   scanRef = '';
   /** Korrektur einer schon übernommenen Vereinspartie (Route `verein/partie/:id/korrigieren`, 0.660.0) — sonst `null`. */
   readonly gameId: number | null = this.route.snapshot.data['game'] ? Number(this.route.snapshot.paramMap.get('id')) : null;
+  /** Sperrkarte ohne Beitragsrecht: Korrigieren einer Vereinspartie ist etwas anderes als Formulare einlesen
+   *  (d7-l-gate-korrigieren-text-passt-nicht). */
+  get gate(): { who: string; missing: string; purpose: string } {
+    return this.gameId != null
+      ? { who: 'Vereinspartien korrigieren', missing: 'Zum Korrigieren von Vereinspartien', purpose: 'das Korrigieren von Vereinspartien' }
+      : { who: 'Partieformulare einlesen', missing: 'Zum Einlesen von Partieformularen', purpose: 'das Einlesen von Partieformularen' };
+  }
   /** „Weiß – Schwarz (Jahr) · Ergebnis" der Vereinspartie (Korrektur-Modus). */
   readonly gameTitle = signal('');
   /** Analyse und Züge der gespeicherten Vereinspartie (Korrektur-Modus) — daraus zeichnet die Werkbank die Bewertungskurve (0.756.0). */

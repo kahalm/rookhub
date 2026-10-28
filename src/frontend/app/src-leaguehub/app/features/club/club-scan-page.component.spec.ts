@@ -743,6 +743,27 @@ describe('ClubScanPageComponent', () => {
     expect(gate.textContent).toContain('Angemeldet als patrik.');
     expect(gate.textContent).not.toContain('Zu den Vereinspartien');
   });
+
+  // d7-l-gate-korrigieren-text-passt-nicht: gesperrt ist dort das Korrigieren, nicht das Einlesen von Formularen
+  it('Korrigieren ohne Beitragsrecht: Sperrkarte spricht vom Korrigieren, die Anfrage auch', () => {
+    perms = ['league.view'];
+    routeData = { game: true };
+    const el = create();
+    const gate = el.querySelector('lh-access-gate')!;
+    expect(gate.textContent).toContain('Zum Korrigieren von Vereinspartien fehlt dir noch die Freigabe');
+    expect(gate.textContent).not.toContain('Partieformular');
+    const req = gate.querySelector('a[href^="mailto:"]')!.getAttribute('href')!;
+    expect(decodeURIComponent(req)).toContain('für das Korrigieren von Vereinspartien frei');
+    expect(api.game).not.toHaveBeenCalled();
+  });
+
+  it('Korrigieren ganz ohne Recht: „Vereinspartien korrigieren dürfen …“', () => {
+    perms = [];
+    routeData = { game: true };
+    const el = create();
+    expect(el.querySelector('lh-access-gate')!.textContent)
+      .toContain('Vereinspartien korrigieren dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine.');
+  });
   // 0.817.0 (Wunsch 2026-10-21): erst „Wartet auf den Leser" mit Uhr, nach dem Abholen ✓ dahinter und „Wird gelesen" mit Uhr
   it('wartendes Formular: „Wartet auf den Leser" mit Uhr, nach langer Wartezeit ein Hinweis', fakeAsync(() => {
     const created = new Date(Date.now() - (42 * 3600 + 18 * 60 + 30) * 1000).toISOString();

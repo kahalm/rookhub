@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe } from '@ngx-translate/core';
 import { TournamentPlayer } from '@rh/core/models';
+import { chessTitle } from './tournament-table.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -22,7 +23,7 @@ import { TournamentPlayer } from '@rh/core/models';
         </ng-container>
         <ng-container matColumnDef="title">
           <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.title' | translate }}</th>
-          <td mat-cell *matCellDef="let p">{{ p.title }}</td>
+          <td mat-cell *matCellDef="let p">@if (chessTitle(p.title); as t) { {{ t }} }</td>
         </ng-container>
         <ng-container matColumnDef="name">
           <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.name' | translate }}</th>
@@ -49,6 +50,11 @@ import { TournamentPlayer } from '@rh/core/models';
   `]
 })
 export class TeamPlayersDialogComponent {
-  columns = ['boardNumber', 'title', 'name', 'elo'];
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: TournamentPlayer[] }) {}
+  readonly chessTitle = chessTitle;
+  /** Titel nur echte (GM, IM …): Rohcodes wie „Z56“ fallen weg, ohne echten Titel fehlt die Spalte (DESIGN 8.2, d7). */
+  readonly columns: string[];
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { teamName: string; players: TournamentPlayer[] }) {
+    const hasTitle = (data.players ?? []).some(p => chessTitle(p.title));
+    this.columns = hasTitle ? ['boardNumber', 'title', 'name', 'elo'] : ['boardNumber', 'name', 'elo'];
+  }
 }

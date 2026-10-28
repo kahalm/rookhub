@@ -53,7 +53,9 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
     </mat-dialog-actions>
   `,
   styles: [`
-    .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+    /* d7-rk-letzte-analysen-leertext-kontrast: im Dialog ist currentColor schon gedimmt — nie Prozent davon (DESIGN 3.1). */
+    .muted { color: var(--mat-sys-on-surface-variant); }
+    .empty-state { color: var(--mat-sys-on-surface); margin: 24px 0; }
     .small { font-size: .78rem; }
     .list { display: flex; flex-direction: column; gap: 2px; }
     .row { display: flex; align-items: center; gap: 4px; }

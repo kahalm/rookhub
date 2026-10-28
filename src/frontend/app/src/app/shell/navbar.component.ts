@@ -416,13 +416,16 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
     :host-context(body.nav-docked) .nav-anon { display: none; }
     /* d3-rk-leser-glocken-abzeichen-abgeschnitten: angedockt sitzt die Leiste am Fensterrand (y = 0) — das Abzeichen
        (über dem Knopf, Rand −12 px, pulsiert ×1,28) ragte darüber hinaus und wurde oben abgeschnitten. */
-    :host-context(body.nav-docked) .notif-bell ::ng-deep .mat-badge-content,
-    :host-context(body.nav-docked) .msg-mail ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
+    :host-context(body.nav-docked) .notif-bell.mat-badge-overlap ::ng-deep .mat-badge-content,
+    :host-context(body.nav-docked) .msg-mail.mat-badge-overlap ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
     /* Niedrige Fenster (styles.scss, DESIGN 4.6 „Niedrige Fenster“): die Leiste ist dort 48 px hoch — das Abzeichen
-       ragte wie angedockt über den Fensterrand und wurde oben abgeschnitten. */
+       ragte wie angedockt über den Fensterrand und wurde oben abgeschnitten.
+       d7-rk-glocke-abzeichen-angeschnitten: Materials „.mat-badge-medium.mat-badge-overlap .mat-badge-content
+       { margin: -12px }“ hat dieselbe Spezifität und lädt später (erst beim ersten Abzeichen) — margin-top blieb −12 px.
+       :host + .mat-badge-overlap heben die Regel darüber; die waagerechte Überlappung (margin-left) bleibt. */
     @media (max-width: 768px) and (max-height: 720px) {
-      .notif-bell ::ng-deep .mat-badge-content,
-      .msg-mail ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
+      :host .notif-bell.mat-badge-overlap ::ng-deep .mat-badge-content,
+      :host .msg-mail.mat-badge-overlap ::ng-deep .mat-badge-content { top: 4px; bottom: auto; margin-top: 0; }
     }
   `]
 })

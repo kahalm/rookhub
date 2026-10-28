@@ -68,7 +68,7 @@ export class MarkPositionButtonComponent implements OnInit {
     const origin = this.origin();
     this.service.mark(fen, origin).subscribe({
       next: () => this.dialog.open<MarkNotesDialogComponent, MarkNotesDialogData, MarkNotesDialogResult>(MarkNotesDialogComponent,
-        { data: { fen, origin }, width: '420px', maxWidth: '94vw' }),
+        { data: { fen, origin }, width: '440px', maxWidth: '94vw' }),
       error: () => { /* Knopf ist schon zurückgedreht */ },
     });
   }

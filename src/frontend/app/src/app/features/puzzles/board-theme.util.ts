@@ -2,22 +2,30 @@ import type { ThemeMode } from '../../core/theme-mode';
 
 export type { ThemeMode };
 
-export const BOARD_THEMES: { key: string; name: string; light: string; dark: string; img?: string }[] = [
-  { key: 'brown', name: 'Brown', light: '#f0d9b5', dark: '#b58863' },
-  { key: 'blue', name: 'Blue', light: '#d4e3ed', dark: '#5882a1' },
-  { key: 'green', name: 'Green', light: '#eeeed2', dark: '#769656' },
-  { key: 'gray', name: 'Gray', light: '#f0f0f0', dark: '#8a8a8a' },
-  { key: 'wood', name: 'Wood', light: '#e6d1a0', dark: '#8b5e3c' },
-  { key: 'realwood', name: 'Holz', light: '#d8b98a', dark: '#8a5a33', img: '/board/wood4.jpg' },
-  { key: 'water', name: 'Wasser', light: '#6f93b8', dark: '#3c5a78', img: '/board/blue3.jpg' },
-  { key: 'marble', name: 'Marmor', light: '#e8e8e8', dark: '#9a9a9a', img: '/board/marble.jpg' },
-  { key: 'metal', name: 'Metall', light: '#cfcfcf', dark: '#7a7a7a', img: '/board/metal.jpg' },
-  { key: 'leather', name: 'Leder', light: '#a87c4f', dark: '#5a3d23', img: '/board/leather.jpg' },
-  { key: 'maple', name: 'Ahorn', light: '#e8cfa0', dark: '#b5895a', img: '/board/maple.jpg' },
+/** Brett-Designs. Der Anzeigename kommt über i18n (`labelKey`, d7-rk-brettdesign-sprachmix) — vorher standen
+ *  englische und deutsche Namen fest im Code und mischten sich in jeder Sprache. */
+export interface BoardTheme { key: string; labelKey: string; light: string; dark: string; img?: string }
+
+export const BOARD_THEMES: BoardTheme[] = [
+  { key: 'brown', labelKey: 'puzzles.theme.board.brown', light: '#f0d9b5', dark: '#b58863' },
+  { key: 'blue', labelKey: 'puzzles.theme.board.blue', light: '#d4e3ed', dark: '#5882a1' },
+  { key: 'green', labelKey: 'puzzles.theme.board.green', light: '#eeeed2', dark: '#769656' },
+  { key: 'gray', labelKey: 'puzzles.theme.board.gray', light: '#f0f0f0', dark: '#8a8a8a' },
+  { key: 'wood', labelKey: 'puzzles.theme.board.wood', light: '#e6d1a0', dark: '#8b5e3c' },
+  { key: 'realwood', labelKey: 'puzzles.theme.board.realwood', light: '#d8b98a', dark: '#8a5a33', img: '/board/wood4.jpg' },
+  { key: 'water', labelKey: 'puzzles.theme.board.water', light: '#6f93b8', dark: '#3c5a78', img: '/board/blue3.jpg' },
+  { key: 'marble', labelKey: 'puzzles.theme.board.marble', light: '#e8e8e8', dark: '#9a9a9a', img: '/board/marble.jpg' },
+  { key: 'metal', labelKey: 'puzzles.theme.board.metal', light: '#cfcfcf', dark: '#7a7a7a', img: '/board/metal.jpg' },
+  { key: 'leather', labelKey: 'puzzles.theme.board.leather', light: '#a87c4f', dark: '#5a3d23', img: '/board/leather.jpg' },
+  { key: 'maple', labelKey: 'puzzles.theme.board.maple', light: '#e8cfa0', dark: '#b5895a', img: '/board/maple.jpg' },
 ];
 
-export const PIECE_SETS = [
-  { key: 'cburnett', name: 'Classic', preview: '/piece/cburnett/wN.svg' },
+/** Figurensätze. `name` ist ein Eigenname und in allen Sprachen gleich (Merida, Celtic …); nur wo es kein
+ *  Eigenname ist („Classic“ = cburnett), übersetzt `labelKey` (Vorrang vor `name`). */
+export interface PieceSet { key: string; name: string; labelKey?: string; preview: string }
+
+export const PIECE_SETS: PieceSet[] = [
+  { key: 'cburnett', name: 'Classic', labelKey: 'puzzles.theme.piece.cburnett', preview: '/piece/cburnett/wN.svg' },
   { key: 'merida', name: 'Merida', preview: '/piece/merida/wN.svg' },
   { key: 'fantasy', name: 'Fantasy', preview: '/piece/fantasy/wN.svg' },
   { key: 'spatial', name: 'Spatial', preview: '/piece/spatial/wN.svg' },

@@ -410,7 +410,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
       this.dialog.open(EbookVisibilityDialogComponent, { data, width: '440px', maxWidth: '94vw' })
         .afterClosed().subscribe((updated: number | null | undefined) => {
           if (updated == null) return;
-          this.snackbar.quick(this.translate.instant('ebooks.bulk.done', { n: updated }));
+          this.snackbar.quick(this.translate.instant(updated === 1 ? 'ebooks.bulk.doneOne' : 'ebooks.bulk.done', { n: updated }));
           this.selected.set(new Set());
           this.selecting.set(false);
           this.load();

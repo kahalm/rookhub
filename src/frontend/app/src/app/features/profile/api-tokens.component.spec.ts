@@ -166,4 +166,51 @@ describe('ApiTokensComponent', () => {
     dialog.submit();
     expect(closed[1]).toEqual({ name: 'devrechner', expiresInDays: 30, scope: 'engine' });
   });
+
+  async function renderCreateDialog() {
+    await TestBed.configureTestingModule({
+      imports: [CreateTokenDialogComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: MAT_DIALOG_DATA, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CreateTokenDialogComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
+  // d7-rk-gesperrter-knopf-ohne-grund: gesperrtes „Erstellen“ sagt, dass der Name fehlt (DESIGN 5.4).
+  it('d7: ohne Namen steht der Grund neben dem gesperrten „Erstellen“, mit Namen nicht mehr', async () => {
+    const { fixture, el } = await renderCreateDialog();
+    const create = () => el.querySelector('mat-dialog-actions button[color="primary"]') as HTMLButtonElement;
+    expect(create().disabled).toBeTrue();
+    expect(el.querySelector('mat-dialog-actions .why')?.textContent).toContain('profile.tokens.dialog.needName');
+
+    fixture.componentInstance.name = '   ';
+    fixture.detectChanges();
+    expect(create().disabled).withContext('nur Leerzeichen ist kein Name').toBeTrue();
+
+    fixture.componentInstance.name = 'Laptop';
+    fixture.detectChanges();
+    expect(create().disabled).toBeFalse();
+    expect(el.querySelector('mat-dialog-actions .why')).toBeNull();
+  });
+
+  // d7-rk-token-bereich-abgeschnitten: geschlossen zeigt das Bereichsfeld nur den Kurznamen, die Liste den vollen Text.
+  it('d7: das Bereichsfeld zeigt geschlossen den Kurznamen statt des langen Optionstexts', async () => {
+    const { fixture, el } = await renderCreateDialog();
+    const trigger = () => el.querySelectorAll('mat-select')[0].querySelector('.mat-mdc-select-value') as HTMLElement;
+    expect(trigger().textContent!.trim()).toBe('profile.tokens.dialog.scopeExtensionShort');
+
+    fixture.componentInstance.scope = 'engine';
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(trigger().textContent!.trim()).toBe('profile.tokens.dialog.scopeEngineShort');
+  });
 });

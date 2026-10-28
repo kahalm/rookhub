@@ -53,4 +53,30 @@ describe('AnalysisHistoryDialogComponent', () => {
     fixture.detectChanges();
     expect(c.entries().map(e => e.id)).toEqual([2]);
   });
+
+  // d7-rk-letzte-analysen-leertext-kontrast: Leersatz in voller Textfarbe statt Prozent von currentColor, mit Abstand.
+  it('Leersatz in on-surface mit 24 px Abstand', () => {
+    const { fixture, http } = make();
+    http.expectOne('/api/analysis-history').flush([]);
+    fixture.detectChanges();
+    document.body.appendChild(fixture.nativeElement);
+    const p = fixture.nativeElement.querySelector('.empty-state') as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--mat-sys-on-surface)';
+    document.body.appendChild(probe);
+    expect(getComputedStyle(p).color).toBe(getComputedStyle(probe).color);
+    expect(getComputedStyle(p).marginTop).toBe('24px');
+    probe.remove();
+    fixture.nativeElement.remove();
+  });
+});
+
+// d7-rk-verlauf-leertext-angemeldet: den Verlauf sehen nur Angemeldete — kein „sobald du angemeldet …“.
+describe('analysis.history.empty ohne Anmelde-Einschub', () => {
+  for (const [lang, word] of [['de', 'angemeldet'], ['en', 'logged in'], ['hr', 'prijavljen'], ['hu', 'bejelentkezve']]) {
+    it(lang, async () => {
+      const d = await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json();
+      expect(d.analysis.history.empty).not.toContain(word);
+    });
+  }
 });

@@ -124,7 +124,7 @@ export class CalcSeriesController {
    *  die angezeigten Kapitel dieser Seite). */
   openMembers(): void {
     if (!this.host.canManage) return;
-    this.dialog.open(CalcMembersDialogComponent, { width: '480px', data: { bookId: this.host.bookId } });
+    this.dialog.open(CalcMembersDialogComponent, { width: '440px', maxWidth: '94vw', data: { bookId: this.host.bookId } });
   }
 
   private done(key: string): void {

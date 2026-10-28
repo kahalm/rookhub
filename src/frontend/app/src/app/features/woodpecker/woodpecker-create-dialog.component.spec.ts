@@ -67,10 +67,14 @@ describe('WoodpeckerCreateDialogComponent (UI-Sweep c1)', () => {
     const courses = /\.courses\{[^}]*\}/.exec(css)![0];
     expect(courses).not.toContain('max-height');
     expect(courses).not.toContain('overflow');
-    // Weiterscroll-Schatten auf dem einzigen Scrollbereich (local-Abdeckung + scroll-Schatten, DESIGN 5.3).
-    const content = /\.wp-content\{[^}]*\}/.exec(css)![0];
-    expect(content).toContain('var(--mat-dialog-container-color,var(--mat-sys-surface))70%)centerbottom/100%32pxno-repeatlocal');
-    expect(content).toContain('100%14pxno-repeatscroll');
+    // Weiterscroll-Schatten auf dem einzigen Scrollbereich: globale Klasse rh-scroll-hint (styles.scss, DESIGN 5.6) —
+    // local-Abdeckung + scroll-Schatten, gemessen am berechneten Stil.
+    const content = el.querySelector<HTMLElement>('mat-dialog-content')!;
+    expect(content.classList).toContain('rh-scroll-hint');
+    const cs = getComputedStyle(content);
+    expect(cs.backgroundImage).toContain('linear-gradient');
+    expect(cs.backgroundImage).toContain('radial-gradient');
+    expect(cs.backgroundAttachment).toBe('local, scroll');
   });
 
   it('c1-wp-dialog-zahlformat: Aufgabenzahl mit Tausendertrenner, Zahl + Einheit mit U+00A0 und nowrap', async () => {

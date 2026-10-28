@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SimpleChange, SimpleChanges } from '@angular/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { localIsoDate, TournamentCalendarComponent } from './tournament-calendar.component';
+import { isoWeek, localIsoDate, TournamentCalendarComponent } from './tournament-calendar.component';
 import { DirectoryCalendarDay, DirectoryEntry } from './tournament-directory.model';
 
 function entry(id: string, name: string): DirectoryEntry {
@@ -122,6 +122,45 @@ describe('TournamentCalendarComponent', () => {
 
     expect(host.querySelectorAll('.agenda-day .agenda-entry').length).toBe(8);
     expect(host.querySelectorAll('.agenda-day .cal-more').length).toBe(0);
+  });
+
+  // d7-t-kalender-handy-seite-zu-lang: am Handy war ein voller Monat 17,6 Bildschirme lang (6 je Tag, keine Gliederung)
+  it('Handy-Agenda: höchstens 3 je Tag, nach Kalenderwochen gegliedert, Sprungleiste springt zur Woche', () => {
+    const six = Array.from({ length: 6 }, (_, i) => `Turnier ${i + 1}`);
+    component.days = [day('2026-10-01', ...six), day('2026-10-04', ...six), day('2026-10-07', ...six), day('2026-10-31', ...six)];
+    apply({ days: component.days });
+
+    const host: HTMLElement = fixture.nativeElement;
+    expect(TournamentCalendarComponent.AgendaVisiblePerDay).toBe(3);
+    for (const d of Array.from(host.querySelectorAll('.agenda-day'))) {
+      expect(d.querySelectorAll('.agenda-entry').length).toBeLessThanOrEqual(3);
+    }
+    // Okt. 2026: 1.–4. = KW 40 (am Monatsanfang beschnitten), 5.–11. = KW 41, 26.–31. = KW 44
+    expect(component.agendaWeeks.map(w => [w.week, w.days.length])).toEqual([[40, 2], [41, 1], [44, 1]]);
+    expect(component.agendaWeeks[0].range).toBe(new Intl.DateTimeFormat('de', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+      .formatRange(new Date(Date.UTC(2026, 9, 1)), new Date(Date.UTC(2026, 9, 4))));
+    expect(host.querySelectorAll('.agenda-week').length).toBe(3);
+    expect(host.querySelectorAll('.agenda-week-head').length).toBe(3);
+
+    const chips = host.querySelectorAll<HTMLButtonElement>('.week-jump .week-chip');
+    expect(chips.length).toBe(3);
+    const target = host.querySelector<HTMLElement>('#cal-week-2026-10-26')!;
+    const scrolled = spyOn(target, 'scrollIntoView');
+    chips[2].click();
+    expect(scrolled).toHaveBeenCalledWith({ block: 'start' });
+  });
+
+  it('isoWeek: Jahreswechsel nach ISO 8601', () => {
+    expect(isoWeek(new Date(Date.UTC(2026, 9, 5)))).toBe(41);
+    expect(isoWeek(new Date(Date.UTC(2026, 0, 1)))).toBe(1);    // Do
+    expect(isoWeek(new Date(Date.UTC(2027, 0, 1)))).toBe(53);   // Fr → KW 53 von 2026
+    expect(isoWeek(new Date(Date.UTC(2024, 11, 30)))).toBe(1);  // Mo → KW 1 von 2025
+  });
+
+  it('eine einzige Woche braucht keine Sprungleiste', () => {
+    component.days = [day('2026-10-10', 'Open Braunau')];
+    apply({ days: component.days });
+    expect((fixture.nativeElement as HTMLElement).querySelector('.week-jump')).toBeNull();
   });
 
   it('blättert über den Jahreswechsel hinweg', () => {

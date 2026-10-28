@@ -135,3 +135,12 @@ describe('EbookEditDialogComponent', () => {
   });
 });
 
+// d7-rk-schlagworte-schlagwoerter-uneinheitlich: eine Form — „Schlagwörter“ (DESIGN 6, Glossar).
+describe('de: „Schlagwörter“ statt „Schlagworte“', () => {
+  it('kein „Schlagworte“ in de.json', async () => {
+    const res = await fetch('/i18n/de.json').then(r => r.ok ? r : fetch('/base/i18n/de.json'));
+    const text = await res.text();
+    expect(text.match(/Schlagworte\b/g) ?? []).toEqual([]);
+    expect(JSON.parse(text).ebooks.meta.tags).toBe('Schlagwörter');
+  });
+});

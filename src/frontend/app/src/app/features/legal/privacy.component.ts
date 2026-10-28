@@ -391,12 +391,16 @@ export class PrivacyComponent implements AfterViewInit {
   /** Wird gerade nach oben gescrollt? Nur dann zeigt sich „↑ Inhalt" ueber dem Text (z2-rk-privacy-knopf-handy). */
   readonly scrollingUp = signal(false);
 
-  /** Ab dieser Breite bleiben in LeagueHub alle Abschnitte offen; darunter klappt {@link foldSections} sie zu. */
-  static readonly SECTIONS_OPEN_QUERY = '(min-width: 600px)';
-  /** Wie viele Abschnitte (h2) am Handy offen bleiben: Verantwortlicher und der Abschnitt der Oberflaeche (Liga bzw. Kartei; Einleitung hat keine h2). */
+  /** Erst auf grossen Bildschirmen (ab 1440 × 900) bleiben alle Abschnitte offen; darunter — Handy, Tablet, Laptop,
+   *  Boox — klappt {@link foldSections} sie zu (d7-l-datenschutz-laptop-zu-lang: am Laptop 1366 × 768 waren es offen
+   *  12,8 Bildschirme, bei 1920 × 1080 rund 9). Vorher nur unter 600 px. */
+  static readonly SECTIONS_OPEN_QUERY = '(min-width: 1440px) and (min-height: 900px)';
+  /** Wie viele Abschnitte (h2) offen bleiben: Verantwortlicher und der zweite Abschnitt (bei LeagueHub/ClubHub der der
+   *  Oberflaeche: Liga bzw. Kartei; Einleitung hat keine h2). */
   static readonly OPEN_SECTIONS = 2;
-  /** Oberflaechen, deren Datenschutz am Handy ab dem dritten Abschnitt zuklappt (z2-l, d6-c). */
-  static readonly FOLDING_KINDS: readonly string[] = ['leaguehub', 'clubhub'];
+  /** Oberflaechen, deren Datenschutz ab dem dritten Abschnitt zuklappt (z2-l, d6-c; RookHub seit d7-rk-privacy-seite-zu-lang,
+   *  auf dem Boox 13 Bildschirme). Turnierseite und KidHub (eigenes foldPrivacy) bleiben offen. */
+  static readonly FOLDING_KINDS: readonly string[] = ['rookhub', 'leaguehub', 'clubhub'];
   /** Klasse der zur Laufzeit erzeugten Aufklapper. */
   static readonly FOLD_CLASS = 'legal-fold';
 
@@ -436,11 +440,13 @@ export class PrivacyComponent implements AfterViewInit {
   }
 
   /**
-   * LeagueHub und ClubHub am Handy (z2-l-datenschutz-laenge, vom User freigegeben; ClubHub seit d6-c-privacy-mobile-zu-lang,
-   * dort waren es 14 Bildschirme): offen war die Seite auf 390 px 12 Bildschirme lang. Unter 600 px kommt jeder Abschnitt ab dem dritten in ein zugeklapptes `<details>`, seine Ueberschrift (h2 mit
+   * RookHub, LeagueHub und ClubHub (z2-l-datenschutz-laenge, vom User freigegeben; ClubHub seit d6-c-privacy-mobile-zu-lang,
+   * dort waren es 14 Bildschirme; RookHub und „auch am Laptop“ seit d7, ebenfalls vom User freigegeben — der Rechtstext
+   * bleibt unveraendert, nur die Darstellung): offen war die Seite auf 390 px 12 Bildschirme lang, am Laptop 12,8. Unterhalb
+   * von {@link SECTIONS_OPEN_QUERY} kommt jeder Abschnitt ab dem dritten in ein zugeklapptes `<details>`, seine Ueberschrift (h2 mit
    * `id`) wird das `<summary>`. Verschoben werden die von Angular gezeichneten Knoten selbst (wie KidHubs foldPrivacy) —
-   * ihre Bindungen bleiben; die Bedingungen der Seite haengen nur an LEGAL_SITE. Breiter und in allen anderen
-   * Oberflaechen unveraendert offen; Wechsel der Breite und der Druck (beforeprint) klappen zurueck aus.
+   * ihre Bindungen bleiben; die Bedingungen der Seite haengen nur an LEGAL_SITE. Auf grossen Bildschirmen und in den
+   * anderen Oberflaechen unveraendert offen; Wechsel der Breite und der Druck (beforeprint) klappen zurueck aus.
    */
   private setupSectionFolding(): void {
     if (!PrivacyComponent.FOLDING_KINDS.includes(this.kind) || typeof matchMedia !== 'function') return;

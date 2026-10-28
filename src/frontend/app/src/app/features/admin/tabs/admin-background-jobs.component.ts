@@ -52,7 +52,7 @@ export const BACKGROUND_JOBS_URL = '/api/admin/background-jobs/pause';
       } @else if (state(); as s) {
         <mat-card appearance="outlined" class="jobs-card">
           <mat-card-header>
-            <mat-card-title>{{ 'admin.jobs.title' | translate }}&nbsp;<app-help-hint [text]="'admin.jobs.help' | translate" /></mat-card-title>
+            <mat-card-title>{{ 'admin.jobs.title' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'admin.jobs.help' | translate" /></span></mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <div class="switch-row">

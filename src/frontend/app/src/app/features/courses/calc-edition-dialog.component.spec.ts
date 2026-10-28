@@ -55,6 +55,20 @@ describe('CalcEditionDialogComponent', () => {
     } }]);
   });
 
+  // d7-rk-ausgabe-speichern-ohne-grund: gesperrtes „Speichern“ nennt den Grund, das Feld ist als Pflicht markiert.
+  it('d7: ohne Freigabe-Zeitpunkt steht der Grund neben „Speichern“, das Feld trägt das Pflicht-Sternchen', async () => {
+    const { fixture, c, el } = await open({ chapter: 'KW 8' });
+    const why = el.querySelector('mat-dialog-actions .why');
+    expect(why?.textContent).toContain('calc.series.publishRequired');
+    const publish = el.querySelectorAll('mat-form-field')[1];
+    expect(publish.querySelector('input')!.required).toBeTrue();
+    expect(publish.querySelector('.mat-mdc-form-field-required-marker')).not.toBeNull();
+
+    c.publishLocal = '2026-09-14T18:00';
+    fixture.detectChanges();
+    expect(el.querySelector('mat-dialog-actions .why')).toBeNull();
+  });
+
   it('bestehende Ausgabe: füllt die Felder vor, und unverändert gespeichert kommen dieselben Zeitpunkte zurück', async () => {
     const { c, el, button, closed } = await open({ chapter: EDITION.chapter, edition: EDITION });
 

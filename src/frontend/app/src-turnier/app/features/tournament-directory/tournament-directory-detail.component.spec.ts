@@ -287,6 +287,17 @@ describe('TournamentDirectoryDetailComponent', () => {
     expect(component.mapCentre()).toBe(component.mapCentre());
   });
 
+  // d7-t-map-tiles-hint-plural: die Detailkarte hat genau einen Pin — Einzahl-Hinweis, nicht der der Kalenderkarte
+  it('meldet fehlende Kartenkacheln mit dem Einzahl-Text (ein Ort)', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    component.onTilesFailed();
+    fixture.detectChanges();
+    const hint = (fixture.nativeElement as HTMLElement).querySelector('.map-card .hint.warn');
+    expect(hint?.textContent?.trim()).toBe('tournamentDirectory.tilesFailedOne');
+  });
+
   it('lässt die Karte weg, wenn das Turnier nicht verortet ist', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129')

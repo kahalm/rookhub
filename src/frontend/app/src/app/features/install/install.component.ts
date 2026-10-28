@@ -69,7 +69,7 @@ export const APK_DOWNLOAD_URL =
                  (DESIGN 2 Grundsatz 2: höchstens ein Satz Fließtext je Karte). -->
             <!-- d4-rk-hilfe-symbol-umbruch: U+00A0 statt Zeilenumbruch vor dem ? — sonst rutscht es allein in die nächste Zeile
                  (DESIGN 5.11: vor app-help-hint am Satzende ein geschütztes Leerzeichen). -->
-            <p class="unavailable"><mat-icon>info</mat-icon><span>{{ 'install.pwa.unavailable' | translate }}&nbsp;<app-help-hint [text]="'install.pwa.unavailableHelp' | translate" /></span></p>
+            <p class="unavailable"><mat-icon>info</mat-icon><span>{{ 'install.pwa.unavailable' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'install.pwa.unavailableHelp' | translate" /></span></span></p>
           }
         </mat-card-content>
       </mat-card>

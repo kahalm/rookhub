@@ -84,10 +84,12 @@ export interface CalcMembersDialogData { bookId: number; }
     </mat-dialog-actions>
   `,
   styles: [`
-    .cmd { min-width: 380px; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin: 0 0 8px; }
-    .add-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .add-row .grow { flex: 1 1 180px; }
+    /* d7-rk-verteiler-tester-rand: kein min-width mehr (war am Handy breiter als der Dialog) — Feld oben über die
+       volle Breite, darunter Tester-Schalter links und „Hinzufügen“ rechts. */
+    .add-row { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; }
+    .add-row .grow { grid-column: 1 / -1; width: 100%; }
+    .add-row mat-slide-toggle { justify-self: start; }
     .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
     .members { list-style: none; margin: 8px 0 0; padding: 0; }
     .member { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }

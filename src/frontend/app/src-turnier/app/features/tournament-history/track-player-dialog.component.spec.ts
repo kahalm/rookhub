@@ -49,6 +49,18 @@ describe('TrackPlayerDialogComponent', () => {
     expect(component.searchable()).toBeTrue();
   });
 
+  // d7-t-spieler-suchen-gesperrt-ohne-grund / d7-t-track-player-search-disabled-no-reason: der gesperrte Knopf nennt den Grund
+  it('nennt unter dem gesperrten Suchknopf den Grund; mit Nachnamen verschwindet er', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect((el.querySelector('.search-btn') as HTMLButtonElement).disabled).toBeTrue();
+    expect(el.querySelector('.reason')?.textContent?.trim()).toBe('turnier.history.track.needLastName');
+
+    component.lastName = 'Ob';
+    fixture.detectChanges();
+    expect(el.querySelector('.reason')).toBeNull();
+    expect((el.querySelector('.search-btn') as HTMLButtonElement).disabled).toBeFalse();
+  });
+
   it('fragt beide Quellen ab und zeigt die Treffer', () => {
     component.lastName = 'Oberschmid';
     component.firstName = 'Patrik';

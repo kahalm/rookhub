@@ -210,7 +210,8 @@
           <p class="muted hint approx-hint">{{ 'tournamentDirectory.approximate' | translate }}</p>
         }
         @if (tilesFailed()) {
-          <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
+          <!-- Ein Pin, ein Ort: Einzahl-Text statt „Die Turniere sitzen richtig“ der Kalenderkarte (d7-t-map-tiles-hint-plural). -->
+          <p class="hint warn">{{ 'tournamentDirectory.tilesFailedOne' | translate }}</p>
         }
         <!-- Genau EIN Pin: Einfaerben-Auswahl und Legende haetten hier nichts zu erklaeren und
              verdeckten auf dem Handy ein Viertel der kleinen Karte. -->

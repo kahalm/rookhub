@@ -80,6 +80,33 @@ describe('InstallComponent', () => {
     expect(/\s$/.test(prev.textContent!.replace(/ $/, ''))).toBeFalse();
   });
 
+  // d7-rk-install-hilfesymbol-allein-in-zeile: U+00A0 allein schützt nicht vor dem Umbruch vor app-help-hint
+  // (inline-flex = atomares Inline-Element). U+00A0 und Symbol stehen gemeinsam in .rh-nowrap (styles.scss).
+  it('d7: das ? bricht bei keiner Breite allein in eine eigene Zeile', () => {
+    const { el } = setup({ canInstall: false });
+    const p = el.querySelector('.pwa-section .unavailable') as HTMLElement;
+    const wrap = p.querySelector('.rh-nowrap') as HTMLElement;
+    expect(wrap).withContext('Klammer um U+00A0 + ?').not.toBeNull();
+    expect(getComputedStyle(wrap).whiteSpace).toBe('nowrap');
+    expect(wrap.firstChild!.textContent).toBe('\u00a0');
+    const hint = wrap.querySelector('app-help-hint') as HTMLElement;
+    const textNode = wrap.previousSibling as Text;
+    textNode.textContent = 'Your browser is not offering an install button right now.';
+    expect(document.body.contains(el)).toBeTrue();
+    {
+      for (let w = 160; w <= 480; w += 4) {
+        p.style.width = `${w}px`;
+        const r = document.createRange();
+        r.setStart(textNode, textNode.length - 1);
+        r.setEnd(textNode, textNode.length);
+        const last = r.getBoundingClientRect();
+        const h = hint.getBoundingClientRect();
+        // gleiche Zeile: die senkrechten Bereiche von letztem Zeichen und Symbol überschneiden sich
+        expect(h.top < last.bottom && h.bottom > last.top).withContext(`Breite ${w}px`).toBeTrue();
+      }
+    }
+  });
+
   it('Kartentexte sind je ein Satz (de/en/hr/hu)', async () => {
     for (const lang of ['de', 'en', 'hr', 'hu']) {
       let res = await fetch(`/i18n/${lang}.json`).catch(() => null);

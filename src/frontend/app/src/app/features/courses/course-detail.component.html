@@ -127,13 +127,10 @@
         </dl>
 
         <div class="actions">
-          <!-- Ohne Aufgaben ist „Linien durchsehen" die Hauptsache: dann ist er der gefüllte Knopf und der Start
-               tritt zurück — genau ein Hauptknopf (DESIGN 5.4, b1-rk-studienbuch-fortschritt-0-0). -->
-          @if (isEmptyQuiz) {
-            <button mat-stroked-button class="start-btn" [routerLink]="startLink" [disabled]="d.totalLines === 0">
-              <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
-            </button>
-          } @else {
+          <!-- Ohne Aufgaben ist „Linien durchsehen" die Hauptsache und der einzige Startknopf — wie auf der Kurskarte
+               (d7-rk-studienbuch-start-sequenziell; vorher stand „▶ Sequenziell“ zurückgestuft daneben und führte zu
+               denselben Infolinien). Genau ein Hauptknopf (DESIGN 5.4/5.10). -->
+          @if (!isEmptyQuiz) {
             <button mat-flat-button color="primary" class="start-btn" [routerLink]="startLink" [disabled]="d.totalLines === 0">
               <mat-icon>play_arrow</mat-icon>{{ startLabel | translate }}
             </button>

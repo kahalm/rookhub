@@ -119,7 +119,7 @@ describe('PrivacyComponent', () => {
       const folds = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLDetailsElement>('mat-card-content > details.legal-fold'));
 
       it('unter 600 px: Verantwortlicher und Liga-Abschnitt offen, jeder weitere zugeklappt mit der Überschrift als summary', () => {
-        expect(PrivacyComponent.SECTIONS_OPEN_QUERY).toBe('(min-width: 600px)');
+        expect(PrivacyComponent.SECTIONS_OPEN_QUERY).toBe('(min-width: 1440px) and (min-height: 900px)');
         const el = renderAt(false, league).nativeElement as HTMLElement;
         const heads = Array.from(el.querySelectorAll('h2'));
         const d = folds(el);
@@ -180,16 +180,15 @@ describe('PrivacyComponent', () => {
         expect(folds(el).length).toBeGreaterThan(0);
       });
 
-      it('breit und in allen anderen Oberflächen unverändert offen', () => {
+      it('groß und auf der Turnierseite/KidHub unverändert offen', () => {
         expect(folds(renderAt(true, league).nativeElement as HTMLElement).length).toBe(0);
-        const others: (LegalSite | undefined)[] = [
-          undefined,
+        const others: LegalSite[] = [
           { contactEmail: OPERATOR.email, imprint: true, kind: 'turnier', accountHome: 'rookhub' },
           { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' },
         ];
         for (const site of others) {
           const el = renderAt(false, site).nativeElement as HTMLElement;
-          expect(el.querySelectorAll('details.legal-fold').length).withContext(site?.kind ?? 'rookhub').toBe(0);
+          expect(el.querySelectorAll('details.legal-fold').length).withContext(site.kind ?? '').toBe(0);
           expect(el.querySelectorAll('mat-card-content > h2').length).toBeGreaterThan(5);
         }
       });
@@ -216,11 +215,67 @@ describe('PrivacyComponent', () => {
         expect(el.querySelector('p.back')!.closest('details')).toBeNull();
       });
 
-      it('breiter als 600 px bleibt alles offen', () => {
+      it('ab 1440 × 900 bleibt alles offen', () => {
         const el = renderAt(true, club).nativeElement as HTMLElement;
         expect(folds(el).length).toBe(0);
         expect(el.querySelectorAll('mat-card-content > h2').length).toBeGreaterThan(5);
       });
+    });
+
+    // UI-Sweep d7 (d7-rk-privacy-seite-zu-lang, d7-l-datenschutz-laptop-zu-lang; vom User freigegeben): RookHub klappt wie
+    // LeagueHub/ClubHub zu, und zwar unter 1440 × 900 — also auch am Laptop (1366 × 768) und auf dem Boox (480 × 640).
+    describe('d7: zuklappen je Fenstergröße', () => {
+      const sites: Record<string, LegalSite | undefined> = {
+        rookhub: undefined,
+        leaguehub: { contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' },
+        clubhub: { contactEmail: OPERATOR.email, imprint: true, kind: 'clubhub', accountHome: 'rookhub' },
+        turnier: { contactEmail: OPERATOR.email, imprint: true, kind: 'turnier', accountHome: 'rookhub' },
+        kidhub: { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' },
+      };
+      /** matchMedia für ein Fenster w × h: wertet min-/max-width/-height der Abfrage aus. */
+      function viewport(w: number, h: number) {
+        (window.matchMedia as jasmine.Spy).and.callFake((q: string) => {
+          const ok = Array.from(q.matchAll(/(min|max)-(width|height):\s*(\d+)px/g)).every(([, mm, dim, v]) => {
+            const x = dim === 'width' ? w : h;
+            return mm === 'min' ? x >= +v : x <= +v;
+          });
+          return { matches: ok, media: q } as MediaQueryList;
+        });
+      }
+      function render(site: LegalSite | undefined) {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          imports: [PrivacyComponent],
+          providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' }),
+            ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
+        });
+        const f = TestBed.createComponent(PrivacyComponent);
+        f.detectChanges();
+        return f.nativeElement as HTMLElement;
+      }
+      const cases: [number, number, string, boolean][] = [
+        [390, 844, 'Handy', true], [480, 640, 'Boox', true], [820, 1180, 'Tablet', true],
+        [1366, 768, 'Laptop', true], [1920, 1080, 'breit', false],
+      ];
+      for (const [w, h, name, folded] of cases) {
+        for (const kind of Object.keys(sites)) {
+          const expectFold = folded && ['rookhub', 'leaguehub', 'clubhub'].includes(kind);
+          it(`${kind} @ ${name} ${w}×${h}: ${expectFold ? 'ab dem dritten Abschnitt zugeklappt' : 'alles offen'}`, () => {
+            viewport(w, h);
+            const el = render(sites[kind]);
+            const heads = Array.from(el.querySelectorAll('h2'));
+            const n = el.querySelectorAll('mat-card-content > details.legal-fold').length;
+            if (expectFold) {
+              expect(n).toBe(heads.length - PrivacyComponent.OPEN_SECTIONS);
+              expect(heads.slice(0, 2).every(x => !x.closest('details'))).toBeTrue();
+              // Rechtstext vollständig, nur zugeklappt.
+              expect(el.querySelector('#privacy-rights')!.closest('details')!.textContent).toContain('legal.privacy.rights');
+            } else {
+              expect(n).toBe(0);
+            }
+          });
+        }
+      }
     });
 
     // UI-Sweep z2 (z2-rk-privacy-knopf-handy): „↑" verdeckte beim Lesen das letzte Wort der Zeile darunter.
@@ -575,8 +630,8 @@ describe('Datenschutz R-2 a: neue Abschnitte in allen Fassungen', () => {
         expect(el.querySelector(`h2#${id}`)).withContext(`${kind}: #${id}`).not.toBeNull();
         expect(tocTargets).withContext(`${kind}: Inhaltsverzeichnis`).toContain(id);
       }
-      // Inhaltsverzeichnis in derselben Reihenfolge wie die Überschriften.
-      const heads = Array.from(el.querySelectorAll('mat-card-content > h2')).map(h => h.id);
+      // Inhaltsverzeichnis in derselben Reihenfolge wie die Überschriften (auch zugeklappte, d7: unter 1440 × 900).
+      const heads = Array.from(el.querySelectorAll('mat-card-content > h2, mat-card-content > details.legal-fold > summary > h2')).map(h => h.id);
       expect(tocTargets).withContext(kind).toEqual(heads);
       const table = el.querySelector('table#privacy-periods')!;
       expect(table).withContext(`${kind}: Fristen-Tabelle`).not.toBeNull();

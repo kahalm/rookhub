@@ -171,4 +171,30 @@ describe('CalcMembersDialogComponent (OnPush zeichnet nach HTTP neu)', () => {
     expect(warn).toHaveBeenCalledWith('calc.series.saveFailed');
     expect(quick).not.toHaveBeenCalled();             // kein „hinzugefügt" und kein Nachladen
   });
+  it('Handy: kein Überlauf — Feld oben voll breit, Tester links, „Hinzufügen“ rechts (d7-rk-verteiler-tester-rand)', () => {
+    const fixture = create();
+    flushReload([]);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    el.style.display = 'block';
+    el.style.width = '300px';
+    try {
+      const content = el.querySelector<HTMLElement>('mat-dialog-content')!;
+      expect(getComputedStyle(content).minWidth).not.toBe('380px');
+      const row = el.querySelector<HTMLElement>('.add-row')!;
+      expect(getComputedStyle(row).display).toBe('grid');
+      const rowBox = row.getBoundingClientRect();
+      const field = row.querySelector<HTMLElement>('.grow')!.getBoundingClientRect();
+      const toggle = row.querySelector<HTMLElement>('mat-slide-toggle')!.getBoundingClientRect();
+      const add = row.querySelector<HTMLElement>(':scope > button')!.getBoundingClientRect();   // nicht der Schalter-Knopf im Toggle
+      expect(Math.round(field.width)).toBe(Math.round(rowBox.width));
+      expect(toggle.top).toBeGreaterThanOrEqual(field.bottom - 1);
+      expect(Math.round(add.top)).toBeLessThanOrEqual(Math.round(toggle.bottom));   // gleiche Zeile
+      expect(add.right).toBeLessThanOrEqual(rowBox.right + 0.5);
+      expect(toggle.left).toBeLessThan(add.left);
+    } finally {
+      el.remove();
+    }
+  });
 });

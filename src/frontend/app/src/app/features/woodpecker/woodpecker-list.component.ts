@@ -43,7 +43,7 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
       </div>
       @let intro = 'woodpecker.intro' | translate;
       <!-- Letztes Wort + (?) untrennbar: ein geschütztes Leerzeichen vor dem Inline-Block-Hinweis hält in Chrome NICHT (Tablet brach das (?) allein um). -->
-      <p class="intro">{{ introHead(intro) }}<span class="intro-tail">{{ introTail(intro) }}&nbsp;<app-help-hint [text]="'woodpecker.rules' | translate" /></span></p>
+      <p class="intro">{{ introHead(intro) }}<span class="intro-tail">{{ introTail(intro) }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'woodpecker.rules' | translate" /></span></span></p>
 
       @if (loading()) {
         <app-loading-spinner />

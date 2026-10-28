@@ -102,6 +102,9 @@ export interface RevengeList {
     h1 { font-size: 1.5rem; margin: 0.25rem 0 0.25rem; }
     .hint { margin: 0 0 1rem; color: color-mix(in srgb, currentColor 55%, transparent); }
     mat-card { padding: 0.5rem 1rem; }
+    /* d7-rk-revenge-leer-titelabstand: ohne Hinweiszeile (Leerzustand) klebte die Karte 4 px unter dem Titel —
+       derselbe Abstand wie mit Hinweis (≈ 16 px). */
+    h1 + mat-card { margin-top: 0.75rem; }
     /* Themen umbrechen statt am Handy mit „…“ abzuschneiden — die Zeile wächst mit. */
     .rev-item.mat-mdc-list-item { height: auto; padding-top: 8px; padding-bottom: 8px; }
     .themes { font-size: 0.8rem; white-space: normal; color: color-mix(in srgb, currentColor 50%, transparent); }

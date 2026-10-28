@@ -50,14 +50,10 @@ export interface PuzzleSettingsDialogResult {
     MatSelectModule, MatSlideToggleModule, TranslatePipe
   ],
   template: `
-    <div class="psd-header" mat-dialog-title>
-      <span>{{ 'puzzles.settings.title' | translate }}</span>
-      <button mat-icon-button mat-dialog-close class="psd-close-btn">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
+    <!-- d7-rk-dialog-titel-uneinheitlich: Standardtitel ohne eigene Schrift; kein ✕, unten steht „Abbrechen“. -->
+    <h2 mat-dialog-title>{{ 'puzzles.settings.title' | translate }}</h2>
 
-    <mat-dialog-content>
+    <mat-dialog-content class="psd-content rh-scroll-hint">
       <div class="psd-preview">
         @for (sq of previewSquares; track $index) {
           <div class="psd-sq" [style.background-color]="sq.light ? lightColor : darkColor">
@@ -71,7 +67,7 @@ export interface PuzzleSettingsDialogResult {
           <span class="psd-label">{{ 'puzzles.settings.pieces' | translate }}</span>
           <mat-select [(ngModel)]="pieceSetEdit" class="psd-select">
             @for (ps of PIECE_SETS; track ps.key) {
-              <mat-option [value]="ps.key">{{ ps.name }}</mat-option>
+              <mat-option [value]="ps.key">{{ ps.labelKey ? (ps.labelKey | translate) : ps.name }}</mat-option>
             }
           </mat-select>
         </div>
@@ -80,7 +76,7 @@ export interface PuzzleSettingsDialogResult {
           <span class="psd-label">{{ 'puzzles.settings.board' | translate }}</span>
           <mat-select [(ngModel)]="boardThemeEdit" class="psd-select">
             @for (bt of BOARD_THEMES; track bt.key) {
-              <mat-option [value]="bt.key">{{ bt.name }}</mat-option>
+              <mat-option [value]="bt.key">{{ bt.labelKey | translate }}</mat-option>
             }
           </mat-select>
         </div>
@@ -200,16 +196,8 @@ export interface PuzzleSettingsDialogResult {
     </mat-dialog-actions>
   `,
   styles: [`
-    .psd-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0;
-      margin-bottom: 4px;
-      font-size: 18px;
-      font-weight: 500;
-    }
-    .psd-close-btn { margin-left: 8px; flex-shrink: 0; }
+    /* d7-rk-einstellungen-dialog-scroll-ohne-hinweis: Weiterscroll-Schatten über die globale Klasse rh-scroll-hint
+       (styles.scss, DESIGN 5.6). */
     .psd-preview {
       display: grid;
       grid-template-columns: repeat(4, 52px);
@@ -224,6 +212,12 @@ export interface PuzzleSettingsDialogResult {
       display: flex; align-items: center; justify-content: center;
     }
     .psd-piece { width: 44px; height: 44px; object-fit: contain; }
+    /* Am Handy kleinere Vorschau, damit die Umschalter weiter unten früher ins Bild kommen. */
+    @media (max-width: 599px) {
+      .psd-preview { grid-template-columns: repeat(4, 36px); margin-bottom: 8px; }
+      .psd-sq { width: 36px; height: 36px; }
+      .psd-piece { width: 30px; height: 30px; }
+    }
     .psd-rows { display: flex; flex-direction: column; }
     .psd-row {
       display: flex; align-items: center; justify-content: space-between;

@@ -28,4 +28,27 @@ describe('EndlessHelpDialogComponent', () => {
     expect(items).toContain('P3 ab 26 (+15)');
     expect(el.querySelector('button[mat-dialog-close]')!.getAttribute('aria-label')).toBe('common.close');
   });
+  it('kein Leerband unter dem Titel: Inhalt ohne Polster oben, erste Überschrift ohne Abstand (d7-rk-hilfe-dialog-leerraum-unter-titel)', () => {
+    TestBed.configureTestingModule({
+      imports: [EndlessHelpDialogComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MAT_DIALOG_DATA, useValue: { p1End: 10, p2Start: 11, p2End: 25, p3Start: 26, flatStep: 15 } },
+      ],
+    });
+    const fixture = TestBed.createComponent(EndlessHelpDialogComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(el);
+    try {
+      const body = el.querySelector<HTMLElement>('.help-body')!;
+      expect(getComputedStyle(body).paddingTop).toBe('0px');
+      const h3s = el.querySelectorAll<HTMLElement>('.help-body h3');
+      expect(getComputedStyle(h3s[0]).marginTop).toBe('0px');
+      expect(getComputedStyle(h3s[1]).marginTop).not.toBe('0px');   // spätere Abschnitte behalten ihren Abstand
+    } finally {
+      el.remove();
+      TestBed.resetTestingModule();
+    }
+  });
 });

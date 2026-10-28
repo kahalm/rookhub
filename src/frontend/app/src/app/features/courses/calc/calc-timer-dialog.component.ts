@@ -68,9 +68,10 @@ export type CalcTimerDialogResult = number;
   styles: [`
     .ct-where { margin: 0 0 12px; font-weight: 600; }
     .ct-fields { display: flex; gap: 10px; }
-    .ct-field { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; }
+    .ct-field { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; flex: 1 1 0; min-width: 0; }
+    /* d7-rk-dialog-felder-unter-44px-mobil: Tippziel ≥ 44 px (DESIGN 2.5/7); die drei Felder teilen sich die Breite. */
     .ct-field input {
-      width: 5rem; padding: 6px 8px; border-radius: 4px; font: inherit;
+      width: 100%; min-height: 44px; box-sizing: border-box; padding: 8px 10px; border-radius: 4px; font: inherit;
       font-variant-numeric: tabular-nums;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
       background: transparent; color: inherit;

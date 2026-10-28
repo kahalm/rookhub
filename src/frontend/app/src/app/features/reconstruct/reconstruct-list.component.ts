@@ -32,7 +32,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
       <div class="header">
         <div>
           <h1>{{ 'reconstruct.title' | translate }}</h1>
-          <p class="muted">{{ 'reconstruct.intro' | translate }}&nbsp;<app-help-hint [text]="'reconstruct.introMore' | translate" /></p>
+          <p class="muted">{{ 'reconstruct.intro' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'reconstruct.introMore' | translate" /></span></p>
         </div>
       </div>
 

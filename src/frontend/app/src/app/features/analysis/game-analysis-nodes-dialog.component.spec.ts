@@ -67,4 +67,29 @@ describe('GameAnalysisNodesDialogComponent', () => {
     expect(ref.close).not.toHaveBeenCalled();
     expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/profile"]')).not.toBeNull();
   });
+
+  // d7-rk-lc0-dialog-info-icon-abgeschnitten
+  it('ⓘ bleibt bei zweizeiligem Hinweis volle 24 px breit', async () => {
+    const { fixture } = await make({ engines: [] });
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.cssText = 'display:block;width:300px';
+    document.body.appendChild(host);
+    const p = host.querySelector('p.warn') as HTMLElement;
+    p.append(' ' + 'Im Profil ist keine Hintergrund-Engine festgelegt, bitte dort eine wählen. '.repeat(3));
+    const icon = p.querySelector('mat-icon') as HTMLElement;
+    expect(icon.textContent!.trim()).toBe('info');
+    expect(icon.getBoundingClientRect().width).toBeGreaterThanOrEqual(24);
+    expect(getComputedStyle(icon).flexShrink).toBe('0');
+    host.remove();
+  });
+});
+
+describe('gameAnalysis.nodes.title schreibt „Lc0“', () => {
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(lang, async () => {
+      const d = await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json();
+      expect(d.gameAnalysis.nodes.title).toContain('Lc0');
+      expect(d.gameAnalysis.nodes.title).not.toContain('lc0');
+    });
+  }
 });

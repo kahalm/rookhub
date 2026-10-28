@@ -6,7 +6,7 @@
     @for (m of visibleModes; track m) {
       <button mat-icon-button type="button" class="eb-mode" [class.eb-mode--on]="mode() === m" [attr.aria-pressed]="mode() === m"
               [disabled]="m !== 'view' && !legal()" (click)="setMode(m)"
-              [appIconLabel]="(('ebooks.board.mode.' + m) | translate) + ': ' + (('ebooks.board.modeHint.' + m) | translate)">
+              [appIconLabel]="(('ebooks.board.mode.' + m) | translate) + ' – ' + (('ebooks.board.modeHint.' + m) | translate)">
         <mat-icon>{{ modeIcon(m) }}</mat-icon>
       </button>
     }

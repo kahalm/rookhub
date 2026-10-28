@@ -38,7 +38,7 @@ import { PreferencesService } from '../../../core/preferences.service';
                 <span [style.background]="t.light"></span><span [style.background]="t.dark"></span>
               </span>
             }
-            <span class="cs-name">{{ t.name }}</span>
+            <span class="cs-name">{{ t.labelKey | translate }}</span>
           </button>
         }
       </div>
@@ -49,7 +49,7 @@ import { PreferencesService } from '../../../core/preferences.service';
           <button type="button" class="cs-chip" [class.cs-chip--on]="prefs.pieceSet === p.key"
                   [attr.aria-pressed]="prefs.pieceSet === p.key" (click)="pickPieces(p.key)">
             <span class="cs-piece" [style.backgroundImage]="'url(' + p.preview + ')'"></span>
-            <span class="cs-name">{{ p.name }}</span>
+            <span class="cs-name">{{ p.labelKey ? (p.labelKey | translate) : p.name }}</span>
           </button>
         }
       </div>

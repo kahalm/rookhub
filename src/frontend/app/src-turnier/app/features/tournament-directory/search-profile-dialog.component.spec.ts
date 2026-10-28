@@ -8,6 +8,7 @@ import { of, throwError } from 'rxjs';
 import { GeolocationService } from '../../core/geolocation.service';
 import { SearchProfileDialogComponent } from './search-profile-dialog.component';
 import { SearchProfile } from './tournament-directory.model';
+import { setEinkActive } from '@rh/core/eink';
 
 describe('SearchProfileDialogComponent', () => {
   let fixture: ComponentFixture<SearchProfileDialogComponent>;
@@ -127,6 +128,28 @@ describe('SearchProfileDialogComponent', () => {
     expect(slider.getAttribute('max')).toBe('500');
     expect(slider.getAttribute('step')).toBe('25');
     expect(component.radiusKm % 25).toBe(0);
+  });
+
+  // d7-t-suchprofil-slider-spur-kaum-sichtbar: unter E-Ink war die Restspur #fafafa auf Weiß
+  it('E-Ink: Umkreis-Regler mit schwarz umrandeter Spur, schwarzem Füllteil und weißem Griff mit Rahmen', async () => {
+    await setup();
+    setEinkActive(true);
+    try {
+      const host = fixture.nativeElement as HTMLElement;
+      const inactive = getComputedStyle(host.querySelector('.radius .mdc-slider__track--inactive')!);
+      expect(inactive.opacity).toBe('1');
+      expect(inactive.borderTopColor).toBe('rgb(0, 0, 0)');
+      expect(inactive.borderTopWidth).toBe('2px');
+      expect(inactive.backgroundColor).toBe('rgb(255, 255, 255)');
+      const knob = getComputedStyle(host.querySelector('.radius .mdc-slider__thumb-knob')!);
+      expect(knob.backgroundColor).toBe('rgb(255, 255, 255)');
+      expect(knob.borderTopColor).toBe('rgb(0, 0, 0)');
+      expect(getComputedStyle(host.querySelector('.radius mat-slider')!).getPropertyValue('--mat-slider-active-track-color').trim()).toBe('#000');
+    } finally {
+      setEinkActive(false);
+    }
+    // ohne E-Ink bleibt Materials Vorgabe (blasse Restspur)
+    expect(getComputedStyle((fixture.nativeElement as HTMLElement).querySelector('.radius .mdc-slider__track--inactive')!).opacity).toBe('0.24');
   });
 
   it('macht aus einer Null-Teilnehmerzahl kein Filterkriterium', async () => {

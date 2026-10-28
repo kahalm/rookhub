@@ -98,6 +98,8 @@ describe('EbookBoardComponent', () => {
     expect(modes.length).toBe(5);
     expect(modes.every(b => b.textContent!.trim() === b.querySelector('mat-icon')!.textContent!.trim())).toBeTrue();   // nur Symbol
     expect(modes[3].getAttribute('aria-label')).toContain('ebooks.board.mode.solve');
+    // d7-rk-ebook-brett-tooltip-jargon: Name und Erklärung mit Halbgeviertstrich, keine Doppelpunkt-Kette.
+    expect(modes[3].getAttribute('aria-label')).toBe('ebooks.board.mode.solve – ebooks.board.modeHint.solve');
     expect(modes[3].getAttribute('aria-pressed')).toBe('true');
     expect(modes[3].classList).toContain('eb-mode--on');
     expect(el.querySelector('.eb-bar .eb-settings')).not.toBeNull();
@@ -586,6 +588,18 @@ describe('Maia-Hinweis hält „etwa 46 MB“ zusammen (c2-eb-maia-46mb-umbruch)
       expect(d.ebooks.board.maiaMissing).toMatch(/\S 46 MB/);
       expect(d.analysis.maia.downloadInfo).toContain('46 MB');
       expect(d.analysis.maia.downloadInfoNoStore).toContain('46 MB');
+    });
+  }
+});
+
+describe('Tooltip „Lösen“ als Handlungssatz (d7-rk-ebook-brett-tooltip-jargon)', () => {
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(`${lang}: ohne Doppelpunkt und ohne interne Quellnamen`, async () => {
+      const d = await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json() as
+        { ebooks: { board: { modeHint: { solve: string } } } };
+      const t = d.ebooks.board.modeHint.solve;
+      expect(t).not.toContain(':');
+      expect(t).not.toMatch(/Stockfish|engine|motor/i);
     });
   }
 });

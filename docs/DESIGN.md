@@ -493,6 +493,23 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - Gleiche Frage = gleicher Dialog (Wochenpost nutzt `SolveModeService.openDialog`, r2-rk-weekly-mode-dialog).
 - Im Vollbild hängt `FullscreenOverlayService` die Overlays ins Vollbild-Element (`usePopover: false`).
 - PGN-Viewer-Dialog: ohne Polster, ≤ 768 px randlos (`.pgn-viewer-dialog`, `styles.scss`).
+- **Erstes Feld unter dem Titel:** 8 px Luft für die schwebende Beschriftung — global in `styles.scss`
+  (`.mat-mdc-dialog-title + .mat-mdc-dialog-content:has(.mat-mdc-form-field) { padding-top: 8px }`); Material setzt dort
+  0 und der Inhalt scrollt, das Label des ersten Outline-Felds wurde halb abgeschnitten. Reine Text-Dialoge bleiben
+  ohne. Keine eigenen `padding-top`-Ausgleiche je Dialog (gegen Materials Regel wirkungslos) (d7).
+- **Dialogfläche dunkel** = `--mat-sys-surface-container-high` (über `mat.dialog-overrides`) + 1 px
+  `--mat-sys-outline-variant` (`styles.scss`, `html.dark-theme`); hell Material-Vorgabe ohne Rahmen, E-Ink 2 px schwarz
+  (3.6). Vorher war sie `surface` = Seitenfarbe, eine abgedunkelte Karte dahinter verschmolz mit ihr (d7).
+- **Hinweistext im Dialog** im Ton von `mat-hint` (`var(--mat-sys-on-surface-variant)`), nicht `currentColor 60 %` —
+  im Dialog ist currentColor schon on-surface-variant, 60 % davon lag bei ≈ 3,1:1 (d7-rk-dialog-hint-kontrast).
+- **Gesperrter Dialogknopf:** der Grund steht links in der Knopfleiste (`.why`, ≤ 280 px, 0,85 rem,
+  on-surface-variant, `role="status"`, Leiste `flex-wrap`) — Vorbild E-Book-Dialog; Pflichtfeld mit `required` (Sternchen).
+- **Titel** immer `<h2 mat-dialog-title>` in Standardschrift; ✕ nur bei Dialogen ohne Knopfzeile (Kopfzeile mit ✕:
+  Inhalt darunter oben ohne Polster wie beim schlichten Titel, mit Formfeld 8 px — global in `styles.scss`).
+- Ein scrollender Dialoginhalt bekommt den Weiterscroll-Schatten (`rh-scroll-hint`, global in `styles.scss`:
+  `<mat-dialog-content class="rh-scroll-hint">`).
+- **Lange Optionstexte im `mat-select`:** geschlossen per `<mat-select-trigger>` nur der Kurzname, die Liste zeigt den
+  vollen Text (Token-Bereich, d7).
 
 ### 5.7 Snackbars
 
@@ -574,7 +591,9 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Hilfe:** `app-help-hint` (`shared/help-hint/`): 22-px-Knopf, Deckkraft .55 (Fokus/Hover 1), Touch-Trefferfläche
   34 px, Tooltip per Klick fest (`.hh-tooltip`: max. 320 px, `pre-line`, Absätze mit `\n\n`, max. 60vh scrollbar).
   Am Satzende steht davor **U+00A0** (`}}&nbsp;<app-help-hint …/>`, kein Zeilenumbruch im Markup) — sonst bricht das ?
-  allein in die nächste Zeile (0.808.x, d4-rk-hilfe-symbol-umbruch).
+  allein in die nächste Zeile (0.808.x, d4-rk-hilfe-symbol-umbruch). U+00A0 und Symbol stehen **gemeinsam** in
+  `<span class="rh-nowrap">&nbsp;<app-help-hint …/></span>` (`styles.scss`): `app-help-hint` ist inline-flex, Chrome
+  bricht vor so einem atomaren Element trotz U+00A0 (d7-rk-install-hilfesymbol-allein-in-zeile).
 - **Banner** (Seitenhinweise): Fläche getönt, Symbol links, Text `flex: 1 1 220px`, ein Knopf rechts, Radius 8 px
   (Vorbild `shared/reprocess-banner/`); Offline-Banner, Impersonation-Banner (`shared/impersonation-banner/`).
   Aktualisierungs- und Angebots-Banner tönen mit `--rh-info`, `--rh-warn` nur für echte Warnungen — hell liegt
@@ -746,6 +765,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Platzhalter aus Fremddaten nicht anzeigen: PGN-„?“ heißt „ohne Name/Kapitel“ (r2-rg-rep-question),
   chess-results-„various“ heißt „verschiedene Spielorte“ (kursiv, r2-t-various), keine internen Dateinamen
   (r2-rp-sourcefile).
+- **Glossar (eine Form je Begriff):** „Schlagwörter“ (nie „Schlagworte“; d7-rk-schlagworte-schlagwoerter-uneinheitlich,
+  `ebook-edit-dialog.component.spec`); „Lc0“ mit großem L (d7-rk-lc0-dialog-info-icon-abgeschnitten).
 
 ---
 
@@ -859,6 +880,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Geteilter Turnier-Link: dieselbe Knopfreihe wie die Detailseite — Merken (primär), Beobachten, Volle Ansicht,
   Teilen (r2-t-public-actions).
 - Datenschutz mit eigener Einleitung (`LegalSiteKind 'turnier'`).
+- **Kalender am Handy** (Agenda, d7): 3 Turniere je Tag („+n weitere“ klappt auf), nach Kalenderwochen gegliedert
+  (Kopf „KW 41 · 5.–11. Okt.“) mit Wochen-Sprungleiste darüber (nicht klebend — die Reiter-Hülle ist ein
+  Scroll-Container). Mannschaftsfenster filtert Titel wie die Tabellen (`chessTitle`), ohne echten Titel keine Spalte.
+  E-Ink: Umkreis-Regler mit schwarz umrandeter weißer Spur, schwarzem Füllteil, weißem Griff mit Rahmen
+  (komponentenlokal per `:host-context(html.eink)`).
 - **Kalender-Filterfeld** (b1): Zeilen nach Sinn statt Fließblock — Zeitraum/Umkreis (Handy; sonst nur eigener
   Zeitraum), Suche allein, Art/Alter/Geschlecht, Schalter, Bedenkzeit + Wochenende + „Mind. Teilnehmer“ (14rem) +
   Zurücksetzen. Am Handy stehen Zeitraum und Umkreis nur nebeneinander, wenn beide ganz hineinpassen. Wertechips unter
@@ -1040,9 +1066,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Oberfläche | Wie |
 |---|---|
-| RookHub, Turnierseite | Material unverändert |
+| RookHub, Turnierseite | Material unverändert; **Datenschutz zuklappen** (RookHub, LeagueHub, ClubHub; vom User freigegeben, Rechtstext unverändert): unter `PrivacyComponent.SECTIONS_OPEN_QUERY` = 1440 × 900 — also auch am Laptop und auf dem Boox — bleiben Verantwortlicher und der zweite Abschnitt offen, alle weiteren stehen als `details.legal-fold` (h2 als `<summary>`); Verzeichnis-Sprung, `#…` und Druck klappen auf (d7-rk-privacy-seite-zu-lang, d7-l-datenschutz-laptop-zu-lang). Turnierseite und KidHub bleiben offen |
 | LeagueHub | `lh-root :is(app-login, …, app-account-deletion) .mat-mdc-card { --mat-sys-primary: var(--red); --mat-card-elevated-container-shape: 10px; --mat-button-*-container-shape: 6px; … }`, Schrift Barlow, Rechtsseiten-Köpfe rot (r2-l-legal-style) |
-| ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style); Knöpfe auf Rechtsseiten wie `.btn` (Radius 8, 44 px); Datenschutz am Handy (< 600 px) wie LeagueHub ab dem dritten Abschnitt zugeklappt (`details.legal-fold`, `PrivacyComponent.FOLDING_KINDS`, Linie in `--line`; d6-c-privacy-mobile-zu-lang) |
+| ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style); Knöpfe auf Rechtsseiten wie `.btn` (Radius 8, 44 px); Datenschutz unter 1440 × 900 (Handy, Tablet, Laptop) wie LeagueHub ab dem dritten Abschnitt zugeklappt (`details.legal-fold`, `PrivacyComponent.FOLDING_KINDS`, Linie in `--line`; d6-c-privacy-mobile-zu-lang, d7) |
 | KidHub | `KID_AUTH_STYLES` / `KID_PRIVACY_STYLES` in der Hülle + „← Start“-Pille; Rechtsseiten = `/privacy` **und** `/account-deletion` (`isLegalUrl`, Breite `KID_PAGE_WIDTH.legal`); Fachbegriff-Listen für Eltern zugeklappt (`details.kid-parent`), davor ein Kindersatz (`foldPrivacy`, `foldAccountDeletion`: Kindersatz unter „Was entfernt wird“, Löschknopf nach „Was bleibt“); „Passwort vergessen“: beide Eltern-Hinweise in einem `details.kid-parent` (`foldForgotPassword`) |
 
 ---
@@ -1094,6 +1120,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-28 | 0.869.0 | Runde d7, Stellung korrigieren, Datenschutz, Texte: Dialog „Stellung korrigieren“: Abbrechen (`mat-button`, ohne ✕) und Übernehmen (`mat-flat-button`) in `mat-dialog-actions`, Brett und Figurenleisten an der Fensterhöhe bemessen (`--ps-board-size`), Werkzeugzeile in voller Breite; Stellungs-Editor: „Grundstellung“/„Brett leeren“ (`layers_clear`) beschriftet im ⋮ statt loser Symbole; Datenschutz RookHub/LeagueHub/ClubHub unter 1440 × 900 ab dem dritten Abschnitt zugeklappt (8.6); Studienbuch ohne Startknopf „Sequenziell“ und ohne ▶ je Kapitel; Glossar „Schlagwörter“, „Lc0“ (6); E-Book-Tooltip „Modus – Erklärung“ ohne Quellnamen; Mehrzahl-Paar `ebooks.bulk.forCount/…One`; Markieren-Dialog 440 px, Aktionen in einer Zeile; Glocken-Abzeichen in niedrigen Fenstern mit höherer Spezifität | Knöpfe außer Sicht, ✕ wie Schließen aber destruktiv, Datenschutz am Laptop 12,8 und auf dem Boox 13 Bildschirme, zwei Startknöpfe, uneinheitliche Begriffe, Doppelpunkt-Kette, Klammer-Mehrzahl, Knopf allein in Zeile 2, Abzeichen −8 px | UI-Sweep d7: d7-rk-stellung-korrigieren-dialog-abgeschnitten, d7-rk-stellung-korrigieren-x-knopf-unklar, d7-rk-privacy-seite-zu-lang, d7-l-datenschutz-laptop-zu-lang, d7-rk-studienbuch-start-sequenziell, d7-rk-schlagworte-schlagwoerter-uneinheitlich, d7-rk-lc0-dialog-info-icon-abgeschnitten, d7-rk-ebook-brett-tooltip-jargon, d7-rk-gilt-fuer-ebooks-mehrzahlklammer, d7-rk-markieren-dialog-speichern-eigene-zeile, d7-rk-glocke-abzeichen-angeschnitten, d7-rk-revenge-leer-titelabstand, d7-rk-letzte-analysen-leertext-kontrast, d7-rk-verlauf-leertext-angemeldet, d7-rk-kurs-dialog-fliesstext |
+| 2026-10-28 | 0.869.0 | Runde d7, Dialoge: Dialoge (5.6): erstes Formfeld unter dem Titel mit 8 px Luft (global, nur Dialoge mit Formfeld); dunkle Dialogfläche `surface-container-high` + 1 px `outline-variant`; Hinweistext im Dialog in on-surface-variant; gesperrter Knopf mit Grund in der Knopfleiste (Token „Erstellen“, Wochenpost „Anlegen“, Kalkulations-Ausgabe „Speichern“ + Pflichtfeld); Token-Bereich geschlossen als Kurzname (`mat-select-trigger`); Weiterscroll-Schatten als globale Klasse `rh-scroll-hint` (Woodpecker, Puzzle-Einstellungen); Kopfzeile mit ✕ polstert den Inhalt wie der schlichte Titel. Hilfe-? (5.11): U+00A0 + Symbol in `.rh-nowrap` (Installieren, Rekonstruktion, Aufgabenblätter, E-Books, Woodpecker, geteilte Links, Hintergrundjobs) | Label des ersten Felds halb abgeschnitten (Token, E-Book bearbeiten, Wochenpost, Neue Ausgabe, Kapitel hinzufügen), Dialog verschmolz dunkel mit der abgedunkelten Karte, Hinweis ≈ 3,1:1, gesperrte Knöpfe ohne Grund, „Extension (chess.com, lichess.org, Chess…“, ? allein in der Zeile trotz U+00A0 | UI-Sweep d7: d7-rk-dialog-erstes-feld-label-abgeschnitten, d7-rk-dialog-label-oben-abgeschnitten, d7-rk-ebook-dialog-titel-label-abgeschnitten, d7-rk-token-dialog-label-abgeschnitten, d7-rk-dialog-dunkel-kaum-abgesetzt, d7-rk-token-dialog-flaeche, d7-rk-dialog-hint-kontrast, d7-rk-gesperrter-knopf-ohne-grund, d7-rk-ausgabe-speichern-ohne-grund, d7-rk-token-bereich-abgeschnitten, d7-rk-install-hilfesymbol-allein-in-zeile |
+| 2026-10-28 | 0.869.0 | Runde d7, Turnierseite + LeagueHub: Kalender am Handy höchstens 3 Einträge je Tag, nach Kalenderwochen gegliedert mit Sprungleiste (44-px-Chips); Mannschaftsfenster zeigt nur echte FIDE-Titel; Melde-Dialog mit kurzer Feldbeschriftung + Frage als Platzhalter, „Quelle vorschlagen“ statt „Hier eintragen“; Suchknopf nennt den Grund, solange er gesperrt ist; E-Ink-Umkreisregler mit sichtbarer Spur; LeagueHub-Übersicht ohne schweren „eigene Begegnung“-Rahmen, Sperrkarte beim Korrigieren spricht vom Korrigieren | Volllauf 28.10. (d7) | d7-t-*, d7-l-uebersicht-begegnungskarte-rahmen, d7-l-gate-korrigieren-text-passt-nicht |
 | 2026-10-27 | 0.852.0 | LeagueHub: Marker als Abzeichen `lh-game-badges` („+“ Gold, „!!“ Türkis, dunkle Schrift, Zahl ab 2), eigener Platz statt am Ergebnis, Klick springt beim Nachspielen hin | Text hinter dem Ergebnis las sich wie ein zweiter Spielstand und verschob die Ergebnisspalte; ◆ und !! waren beide grün | Nutzerwunsch 27.10. (Vorschlag A+B+C) |
 | 2026-10-26 | 0.848.0 | LeagueHub, interessante Stellungen: Marker „◆ n“ (`--rh-success`) an Partien, Sprungmarken als Textknöpfe unter der Zugliste, Punkt an markierten Zügen, Variantenstellung mit „Zurück zur Partie“; neue Seite „Übersicht“ (`/verein/uebersicht`) in den Aufstellungs-Karten (`lu-*`) | Grün = „+“-Markierung (wie der Knopf), Textknöpfe wie die übrigen Partie-Aktionen | Nutzerwunsch 26.10. |
 | 2026-10-25 | 0.837.0 · E-Book-Brett Training | Auge (`visibility`) = aktuelle Stellung am eingefrorenen Brett ansehen (umschaltbar, nur ansehen, beim Lösen und Kalkulieren); Lösung zeigen = Glühbirne (`lightbulb`, aktiv in Primärfarbe) | Das Auge zeigte die Lösung — im Training will man aber zuerst die echte Stellung nach den gespielten Zügen sehen | Nutzerwunsch 25.10. |

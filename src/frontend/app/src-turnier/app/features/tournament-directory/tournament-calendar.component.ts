@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
-  ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges,
+  ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,17 @@ interface AgendaDay {
   date: string;
   label: string;
   entries: DirectoryEntry[];
+}
+
+/** Eine Kalenderwoche der Handy-Agenda (Montag–Sonntag, auf den Monat beschnitten). */
+interface AgendaWeek {
+  /** Montag der Woche, `yyyy-MM-dd` — zugleich Sprungziel `#cal-week-<key>`. */
+  key: string;
+  /** ISO-Kalenderwoche. */
+  week: number;
+  /** Tage der Woche im Monat, z. B. „5.–11. Okt.“ (Intl, Sprache des Nutzers). */
+  range: string;
+  days: AgendaDay[];
 }
 
 /**
@@ -53,6 +64,10 @@ export class TournamentCalendarComponent implements OnChanges {
 
   /** Unter 768px ist das Raster unlesbar — dort zeigt das Template diese Agenda-Liste. */
   agenda: AgendaDay[] = [];
+  /** Dieselbe Agenda nach Kalenderwochen, mit Sprungleiste darüber (d7-t-kalender-handy-seite-zu-lang). */
+  agendaWeeks: AgendaWeek[] = [];
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['locale'] || !this.weekdayLabels.length) this.buildWeekdayLabels();
@@ -105,10 +120,17 @@ export class TournamentCalendarComponent implements OnChanges {
    * Deckel fuer die Handy-Agenda. Die listete jedes Turnier an jedem seiner Tage ohne Grenze —
    * mit dem Standardfilter (kein Umkreis) waren das fuer einen Monat rund 2750 Knopf-Zeilen
    * untereinander: kilometerlanges Scrollen, kein Ueberblick, spuerbar traege beim Rendern.
-   * Sechs statt der vier des Rasters, weil hier keine Zellenhoehe begrenzt, sondern nur die
-   * Bildschirmhoehe: sechs Eintraege sind etwa eine Handy-Seite je Tag.
+   * Drei je Tag: mit sechs war die Agenda eines vollen Monats 14 850 px bzw. 17,6 Handy-Bildschirme lang
+   * (UI-Sweep d7, DESIGN 4.6 Regel 11) — „+n weitere“ klappt den Tag auf, die Wochen-Sprungleiste gliedert.
    */
-  static readonly AgendaVisiblePerDay = 6;
+  static readonly AgendaVisiblePerDay = 3;
+
+  /** Sprungleiste: zur Woche scrollen. */
+  jumpToWeek(week: AgendaWeek): void {
+    this.host.nativeElement.querySelector(`#cal-week-${week.key}`)?.scrollIntoView({ block: 'start' });
+  }
+
+  trackByWeek = (_: number, week: AgendaWeek) => week.key;
 
   visibleAgendaEntries(day: AgendaDay): DirectoryEntry[] {
     return this.expanded.has(day.date)
@@ -188,7 +210,47 @@ export class TournamentCalendarComponent implements OnChanges {
         label: dayFormatter.format(new Date(d.date.slice(0, 10) + 'T00:00:00Z')),
         entries: d.items,
       }));
+    this.agendaWeeks = this.groupByWeek(this.agenda);
   }
+
+  private groupByWeek(days: AgendaDay[]): AgendaWeek[] {
+    const rangeFormatter = new Intl.DateTimeFormat(this.locale, { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const monthStart = new Date(Date.UTC(this.year, this.month - 1, 1));
+    const monthEnd = new Date(Date.UTC(this.year, this.month, 0));
+    const weeks: AgendaWeek[] = [];
+    for (const day of days) {
+      const date = new Date(day.date + 'T00:00:00Z');
+      const monday = new Date(date);
+      monday.setUTCDate(monday.getUTCDate() - (date.getUTCDay() + 6) % 7);
+      const key = isoDate(monday);
+      let week = weeks[weeks.length - 1];
+      if (!week || week.key !== key) {
+        const sunday = new Date(monday);
+        sunday.setUTCDate(sunday.getUTCDate() + 6);
+        const from = monday < monthStart ? monthStart : monday;
+        const to = sunday > monthEnd ? monthEnd : sunday;
+        week = { key, week: isoWeek(monday), range: formatRange(rangeFormatter, from, to), days: [] };
+        weeks.push(week);
+      }
+      week.days.push(day);
+    }
+    return weeks;
+  }
+}
+
+/** ISO-8601-Kalenderwoche (Woche mit dem ersten Donnerstag ist KW 1). */
+export function isoWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() + 3 - (d.getUTCDay() + 6) % 7);   // Donnerstag derselben Woche
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((d.getTime() - firstThursday.getTime()) / 86_400_000 - 3 + (firstThursday.getUTCDay() + 6) % 7) / 7);
+}
+
+function formatRange(formatter: Intl.DateTimeFormat, from: Date, to: Date): string {
+  if (from.getTime() === to.getTime()) return formatter.format(from);
+  return typeof formatter.formatRange === 'function'
+    ? formatter.formatRange(from, to)
+    : `${formatter.format(from)} – ${formatter.format(to)}`;
 }
 
 function isoDate(date: Date): string {

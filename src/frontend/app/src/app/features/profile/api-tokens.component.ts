@@ -53,6 +53,9 @@ export type ApiTokenScope = 'extension' | 'engine';
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ 'profile.tokens.dialog.scope' | translate }}</mat-label>
           <mat-select [(ngModel)]="scope" name="scope">
+            <!-- d7-rk-token-bereich-abgeschnitten: geschlossen nur der Kurzname — der volle Text mit der Seitenliste
+                 passte im schmalen Dialog (Boox, Handy) nicht und endete in „…“; die Liste zeigt ihn weiter ganz. -->
+            <mat-select-trigger>{{ (scope === 'engine' ? 'profile.tokens.dialog.scopeEngineShort' : 'profile.tokens.dialog.scopeExtensionShort') | translate }}</mat-select-trigger>
             <mat-option value="extension">{{ 'profile.tokens.dialog.scopeExtension' | translate }}</mat-option>
             <mat-option value="engine">{{ 'profile.tokens.dialog.scopeEngine' | translate }}</mat-option>
           </mat-select>
@@ -71,13 +74,17 @@ export type ApiTokenScope = 'extension' | 'engine';
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <!-- d7-rk-gesperrter-knopf-ohne-grund: gesperrtes „Erstellen“ sagt, was fehlt (DESIGN 5.4). -->
+      @if (!name.trim()) { <span class="why" role="status">{{ 'profile.tokens.dialog.needName' | translate }}</span> }
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-      <button mat-flat-button color="primary" [disabled]="!name" (click)="submit()">
+      <button mat-flat-button color="primary" [disabled]="!name.trim()" (click)="submit()">
         {{ 'profile.tokens.dialog.create' | translate }}
       </button>
     </mat-dialog-actions>
   `,
-  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(320px, 78vw); } mat-form-field { width: 100%; }`]
+  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(320px, 78vw); } mat-form-field { width: 100%; }
+    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
+    .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }`]
 })
 export class CreateTokenDialogComponent {
   name = '';

@@ -58,11 +58,13 @@ import { Repertoire } from '../../core/models';
   `,
   // Die Unterlage scrollt (Material: max-height 65vh), aber Overlay-Rollbalken (Chrome unter Windows, Handys) zeigen das
   // nicht — der letzte Hinweis sah abgeschnitten aus. Deshalb ein Schatten am Rand, solange darüber/darunter noch etwas
-  // kommt (background-attachment: local deckt ihn am Ende zu), und oben etwas Luft für das schwebende Label des ersten Felds.
-  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(300px, 78vw); padding-top: 6px; }
+  // kommt (background-attachment: local deckt ihn am Ende zu). Die Luft für das schwebende Label des ersten Felds kommt
+  // global aus styles.scss (d7-rk-dialog-erstes-feld-label-abgeschnitten). Hinweistext im Ton von mat-hint: im Dialog ist
+  // currentColor schon on-surface-variant, 60 % davon lagen bei ≈ 3,1:1 (d7-rk-dialog-hint-kontrast).
+  styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(300px, 78vw); }
     mat-form-field { width: 100%; }
     .course-id { margin-bottom: 0.75rem; }
-    .ext-note { margin: 0 0 0.25rem 30px; font-size: 0.78rem; line-height: 1.3; color: color-mix(in srgb, currentColor 60%, transparent); }
+    .ext-note { margin: 0 0 0.25rem 30px; font-size: 0.75rem; line-height: 1.3; color: var(--mat-sys-on-surface-variant); }
     .scroll-cue {
       --cue-bg: var(--mat-dialog-container-color, var(--mat-sys-surface, #121316));
       background:

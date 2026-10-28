@@ -43,6 +43,15 @@ export type MarkNotesDialogResult = 'saved' | 'removed' | undefined;
   styles: [`
     .spacer { flex: 1; }
     .remove { color: var(--mat-sys-error); }
+    /* d7-rk-markieren-dialog-speichern-eigene-zeile: „Speichern“ rutschte allein in eine zweite Zeile (5.2/5.4). Ab 400 px
+       eine Zeile; schmaler steht „Markierung entfernen“ allein oben, Abbrechen und Speichern bleiben zusammen. */
+    mat-dialog-actions { flex-wrap: nowrap; gap: 4px; }
+    .remove { padding-inline: 8px; }
+    @media (max-width: 400px) {
+      mat-dialog-actions { flex-wrap: wrap; justify-content: flex-end; }
+      .remove { order: -1; flex-basis: 100%; justify-content: flex-start; }
+      .spacer { display: none; }
+    }
     .err { color: var(--mat-sys-error); margin: 8px 0 0; }
   `],
 })

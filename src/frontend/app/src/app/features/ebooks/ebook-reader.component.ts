@@ -583,7 +583,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     const ebook = this.ebook;
     if (!ebook?.canManage) return;
     const data: EbookPositionDialogData = { fen: d.fen, flipped: !whiteToMove(d.fen) };
-    this.dialog.open(EbookPositionDialogComponent, { data, maxWidth: '32rem', width: '100%' }).afterClosed().subscribe((fen: string | undefined) => {
+    this.dialog.open(EbookPositionDialogComponent, { data, width: '32rem', maxWidth: '94vw', autoFocus: 'dialog' }).afterClosed().subscribe((fen: string | undefined) => {
       if (!fen) return;
       this.ebooks.correctDiagramPosition(ebook.id, d.id, fen).subscribe({
         next: updated => {

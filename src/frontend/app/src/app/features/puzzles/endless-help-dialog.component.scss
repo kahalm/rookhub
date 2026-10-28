@@ -3,6 +3,11 @@
 .help-header { display: flex; justify-content: space-between; align-items: center; padding-right: 0.5rem; }
 .help-header h2 { flex: 1; }
 .help-body h3 { margin: 1.25rem 0 0.5rem; color: var(--rh-accent); }
+/* d7-rk-hilfe-dialog-leerraum-unter-titel: der Titel steckt in .help-header, damit greift Materials
+   `.mat-mdc-dialog-title + .mat-mdc-dialog-content { padding-top: 0 }` nicht — hier nachziehen, und die erste
+   Überschrift ohne eigenen Abstand oben (sonst ~55 px Leere unter dem Titel). */
+.help-header + .help-body { padding-top: 0; }
+.help-body > :first-child { margin-top: 0; }
 .help-body p { margin: 0.25rem 0; line-height: 1.5; }
 .help-body ul { margin: 0.25rem 0; padding-left: 1.5rem; }
 .help-body li { margin: 0.25rem 0; line-height: 1.5; }

@@ -128,4 +128,34 @@ describe('CreateCourseDialogComponent', () => {
     c.submit();
     expect(ref.close).not.toHaveBeenCalled();
   });
+
+  // d7-rk-kurs-dialog-fliesstext: ein Satz sichtbar, der PGN-Hinweis hinter dem ? neben dem PGN-Knopf.
+  for (const mode of ['course', 'games'] as const) {
+    it(`${mode}: höchstens ein sichtbarer Absatz, PGN-Hinweis als app-help-hint in der PGN-Zeile`, async () => {
+      await TestBed.configureTestingModule({
+        imports: [CreateCourseDialogComponent],
+        providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+          { provide: MatDialogRef, useValue: { close: () => {} } }, { provide: MAT_DIALOG_DATA, useValue: { mode } }],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(CreateCourseDialogComponent);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('mat-dialog-content p').length).toBe(1);
+      const help = el.querySelector('.pgn-row app-help-hint button') as HTMLElement;
+      expect(help.getAttribute('aria-label')).toBe(`courses.${mode === 'games' ? 'import' : 'create'}.pgnNote`);
+    });
+  }
+});
+
+describe('Kurs-Dialog: Hinweis ist ein Satz (d7)', () => {
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(lang, async () => {
+      const d = await (await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`))).json();
+      for (const g of ['create', 'import']) {
+        const sentences = (d.courses[g].hint as string).split(/[.!?](\s|$)/).filter(x => x && x.trim()).length;
+        expect(sentences).withContext(g).toBe(1);
+        expect(d.courses[g].pgnNote).not.toMatch(/\?$/);   // kein „Fragen?“ ohne den Discord-Link
+      }
+    });
+  }
 });

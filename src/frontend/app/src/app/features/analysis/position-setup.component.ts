@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
@@ -63,7 +64,7 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
   selector: 'app-position-setup',
   standalone: true,
   imports: [IconLabelDirective,
-    CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule,
+    CommonModule, MatButtonModule, MatIconModule, MatButtonToggleModule, MatMenuModule,
     TranslatePipe
   ],
   template: `
@@ -99,25 +100,39 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
         </mat-button-toggle-group>
         <span class="ps-spacer"></span>
         <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
-        <button mat-icon-button (click)="setStart()" [appIconLabel]="'analysis.setup.startpos' | translate"><mat-icon>restart_alt</mat-icon></button>
-        <button mat-icon-button (click)="clearBoard()" [appIconLabel]="'analysis.setup.clear' | translate"><mat-icon>clear</mat-icon></button>
+        <!-- „Grundstellung“ und „Brett leeren“ mit Text im ⋮ (d7-rk-stellung-korrigieren-x-knopf-unklar): das ✕ allein
+             sah wie „Schließen“ aus, leerte aber das Brett, und die Zeile brach in 26 rem um. -->
+        <button mat-icon-button class="ps-more" [matMenuTriggerFor]="psMenu"
+                [appIconLabel]="'common.moreActions' | translate"><mat-icon>more_vert</mat-icon></button>
+        <mat-menu #psMenu="matMenu">
+          <button mat-menu-item class="ps-startpos" (click)="setStart()">
+            <mat-icon>restart_alt</mat-icon><span>{{ 'analysis.setup.startpos' | translate }}</span>
+          </button>
+          <button mat-menu-item class="ps-clear" (click)="clearBoard()">
+            <mat-icon>layers_clear</mat-icon><span>{{ 'analysis.setup.clear' | translate }}</span>
+          </button>
+        </mat-menu>
       </div>
 
       @if (error) { <p class="ps-error">{{ error }}</p> }
 
-      <div class="ps-actions">
-        <button mat-flat-button color="primary" (click)="applyPosition()">
-          <mat-icon>check</mat-icon> {{ 'analysis.setup.apply' | translate }}
-        </button>
-        <button mat-stroked-button (click)="cancel.emit()">
-          <mat-icon>close</mat-icon> {{ 'common.cancel' | translate }}
-        </button>
-      </div>
+      @if (!hideActions) {
+        <div class="ps-actions">
+          <button mat-flat-button color="primary" (click)="applyPosition()">
+            <mat-icon>check</mat-icon> {{ 'analysis.setup.apply' | translate }}
+          </button>
+          <button mat-stroked-button (click)="cancel.emit()">
+            <mat-icon>close</mat-icon> {{ 'common.cancel' | translate }}
+          </button>
+        </div>
+      }
     </div>
   `,
   styles: [`
     .ps-editor { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-    .ps-spares { display: flex; width: 100%; }
+    /* --ps-board-size (d7, Dialog „Stellung korrigieren“): Brett und Figurenleisten schmaler als der Editor, damit die
+       Werkzeugzeile darunter die volle Breite behält und nicht umbricht. Ohne Angabe 100 %. */
+    .ps-spares { display: flex; width: var(--ps-board-size, 100%); margin-inline: auto; }
     .sp {
       flex: 1 1 0; aspect-ratio: 1; cursor: pointer;
       background-size: 88%; background-repeat: no-repeat; background-position: center;
@@ -125,9 +140,12 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
     }
     .sp:hover { background-color: color-mix(in srgb, currentColor 8%, transparent); }
     .sp.active { background-color: color-mix(in srgb, var(--rh-accent) 32%, transparent); }
-    .ps-board-wrap { width: 100%; }
+    .ps-board-wrap { width: var(--ps-board-size, 100%); margin-inline: auto; }
     .ps-board { width: 100%; aspect-ratio: 1 / 1; }
-    .ps-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    /* Je 4 px über/unter den 40-px-Symbolknöpfen: ihre Touch-Fläche (48 px) ragte sonst unter die Zeile — im Dialog
+       „Stellung korrigieren“ scrollte der Inhalt dadurch um 3–4 px (d7). */
+    .ps-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 48px; }
+    .ps-tools > button { margin-block: 4px; }
     .ps-tools .active { background: color-mix(in srgb, var(--rh-accent) 22%, transparent); border-radius: 50%; }
     .ps-spacer { flex: 1 1 auto; }
     .ps-error { color: var(--rh-error); margin: 0; font-size: .85rem; }
@@ -141,6 +159,9 @@ export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
   /** `false` (E-Book-Diagramm korrigieren, 0.798.0): nur je ein König pro Farbe verlangen statt einer regelgerechten
    *  Stellung — Buchdiagramme sind manchmal Teilstellungen oder Studien, die chess.js ablehnt. */
   @Input() requireLegal = true;
+  /** `true` (Dialog „Stellung korrigieren“, d7): eigene Knopfzeile weglassen — der Dialog setzt „Abbrechen“/„Übernehmen“
+   *  in `mat-dialog-actions` (bleibt sichtbar, während der Inhalt scrollt) und ruft {@link applyPosition} selbst. */
+  @Input() hideActions = false;
 
   /** Volle, validierte FEN. */
   @Output() apply = new EventEmitter<string>();

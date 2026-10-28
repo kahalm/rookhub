@@ -64,4 +64,15 @@ describe('CalcSeriesController', () => {
     ctrl.openMembers();
     expect(log).toEqual(['visible']);
   });
+  it('Serien-Verteiler öffnet als kurzes Formular mit maxWidth 94vw (DESIGN 5.6, d7-rk-verteiler-tester-rand)', () => {
+    const configs: Record<string, unknown>[] = [];
+    const dialog = { open: (_c: unknown, cfg: Record<string, unknown>) => { configs.push(cfg); return { afterClosed: () => of(undefined) }; } };
+    const host: CalcSeriesHost = { bookId: 9, canManage: true, setBusy: () => {}, track: () => {} };
+    const ctrl = new CalcSeriesController(host, {} as never, {} as never, dialog as never, {} as never,
+      { instant: (k: string) => k } as never);
+    ctrl.openMembers();
+    expect(configs.length).toBe(1);
+    expect(configs[0]['width']).toBe('440px');
+    expect(configs[0]['maxWidth']).toBe('94vw');
+  });
 });

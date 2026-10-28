@@ -35,6 +35,22 @@ describe('CalcTimerDialogComponent', () => {
     expect(el.querySelector('.ct-where')!.textContent).toContain('calc.timer.editFor');
   });
 
+  it('Felder sind Tippziele von mindestens 44 px und teilen sich die Breite (d7-rk-dialog-felder-unter-44px-mobil)', async () => {
+    const { el } = await open({ seconds: 60, chapter: 'K' });
+    document.body.appendChild(el);
+    el.style.width = '300px';
+    try {
+      const inputs = Array.from(el.querySelectorAll<HTMLInputElement>('.ct-field input'));
+      inputs.forEach(i => expect(i.getBoundingClientRect().height).toBeGreaterThanOrEqual(44));
+      const fields = Array.from(el.querySelectorAll<HTMLElement>('.ct-field'));
+      const widths = fields.map(f => Math.round(f.getBoundingClientRect().width));
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+      expect(getComputedStyle(fields[0]).flexGrow).toBe('1');
+    } finally {
+      el.remove();
+    }
+  });
+
   it('läuft ohne Dialogdaten mit null Sekunden an', async () => {
     const { c } = await open(null);
     expect([c.hours, c.minutes, c.seconds]).toEqual([0, 0, 0]);

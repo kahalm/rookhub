@@ -71,5 +71,17 @@ describe('CreateRepertoireDialogComponent', () => {
       expect(content?.querySelector('.ext-note')).not.toBeNull();
       expect(el.querySelector('mat-dialog-actions .ext-note')).toBeNull();
     });
+
+    // d7-rk-dialog-hint-kontrast: currentColor 60 % war im Dialog doppelt abgeblasst (≈ 3,1:1) — jetzt im Ton von mat-hint.
+    it('d7: der Extension-Hinweis hat denselben Ton wie mat-hint (on-surface-variant), nicht currentColor 60 %', () => {
+      const el = render();
+      const note = el.querySelector('.ext-note') as HTMLElement;
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--mat-sys-on-surface-variant)';
+      note.parentElement!.appendChild(probe);
+      expect(getComputedStyle(note).color).toBe(getComputedStyle(probe).color);
+      expect(getComputedStyle(note).color).not.toMatch(/rgba|color\(/);   // deckend, nicht gemischt
+      probe.remove();
+    });
   });
 });

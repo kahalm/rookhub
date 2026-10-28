@@ -542,6 +542,38 @@ describe('NavbarComponent angedockt (body.nav-docked)', () => {
     fixture.destroy();
   });
 
+  // d7-rk-glocke-abzeichen-angeschnitten: die Regel für niedrige Fenster (≤ 768 × 720) muss Materials gleich spezifische,
+  // später geladene „margin: -12px“ schlagen. Der Testbrowser ist größer — die Regeln der Media-Abfrage werden deshalb
+  // ohne Abfrage eingehängt und das Abzeichen am echten Material-Stil gemessen.
+  it('d7: niedriges Fenster — Abzeichen von Glocke und ☰ liegen ganz im Fenster', () => {
+    const fixture = render(true, 3);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const inner: string[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const r of Array.from(rules)) {
+        if (r instanceof CSSMediaRule && r.conditionText.includes('max-height: 720px') && r.cssText.includes('notif-bell')) {
+          inner.push(...Array.from(r.cssRules).map(x => x.cssText));
+        }
+      }
+    }
+    expect(inner.length).withContext('Regel für niedrige Fenster gefunden').toBeGreaterThan(0);
+    const style = document.createElement('style');
+    style.textContent = inner.join('\n');
+    document.head.appendChild(style);
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0';
+    for (const sel of ['.notif-bell', '.msg-mail']) {
+      const badge = el.querySelector<HTMLElement>(`${sel} .mat-badge-content`)!;
+      badge.style.animation = 'none';
+      expect(getComputedStyle(badge).marginTop).withContext(sel).toBe('0px');
+      expect(badge.getBoundingClientRect().top).withContext(sel).toBeGreaterThanOrEqual(0);
+    }
+    style.remove();
+    fixture.destroy();
+  });
+
   it('ohne Klasse unverändert: im Fluss, volle Höhe, Logo sichtbar', () => {
     const el = render(true).nativeElement as HTMLElement;
     expect(getComputedStyle(el).position).toBe('static');

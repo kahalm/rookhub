@@ -95,6 +95,37 @@
 
 .agenda-day { margin-bottom: 14px; }
 
+/* d7-t-kalender-handy-seite-zu-lang: Wochen-Sprungleiste über der Agenda und ein Kopf je Kalenderwoche. Nicht klebend:
+   die Reiter-Hülle von mat-tab-group ist ein Scroll-Container, sticky bliebe dort nicht am Fenster stehen. */
+.week-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.week-chip {
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.85rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 22px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.week-chip:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
+
+.agenda-week-head {
+  margin: 4px 0 8px;
+  padding-bottom: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
 .agenda-label {
   font-weight: 500;
   font-size: 0.85rem;

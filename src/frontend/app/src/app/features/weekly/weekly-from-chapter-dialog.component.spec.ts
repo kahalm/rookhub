@@ -94,3 +94,26 @@ describe('WeeklyFromChapterDialogComponent Vorbelegung aus dem Kapitel', () => {
     expect(courses.getChapters).not.toHaveBeenCalled();
   });
 });
+
+// d7-rk-gesperrter-knopf-ohne-grund: gesperrtes „Anlegen“ nennt, was fehlt (DESIGN 5.4).
+describe('WeeklyFromChapterDialogComponent Grund für gesperrtes Anlegen', () => {
+  it('nennt der Reihe nach Buch, Kapitel, Termin — und nichts, wenn alles gewählt ist', () => {
+    const c = new WeeklyFromChapterDialogComponent({ close: () => {} } as any, { date: '2026-07-10', time: '19:00' } as any,
+      {} as any, {} as any, {} as any, {} as any);
+    expect(c.blockReason).toBe('weekly.fromChapter.needBook');
+    c.bookId = 1;
+    expect(c.blockReason).toBe('weekly.fromChapter.needChapter');
+    c.chapterIndex = 0;
+    c.date = '';
+    expect(c.blockReason).toBe('weekly.fromChapter.needSchedule');
+    c.date = '2026-07-10';
+    expect(c.blockReason).toBeNull();
+    expect(c.canCreate()).toBeTrue();
+  });
+
+  it('Vorlage: Grundzeile in der Knopfleiste und Hinweis „erst ein Buch“ am gesperrten Kapitelfeld', async () => {
+    const src = await (await fetch('/base/src/app/features/weekly/weekly-from-chapter-dialog.component.ts')).text();
+    expect(src).toMatch(/@if \(blockReason && !saving\) \{ <span class="why" role="status">/);
+    expect(src).toContain("'weekly.fromChapter.pickBookFirst' | translate");
+  });
+});

@@ -30,7 +30,7 @@
   <!-- d3-rk-ebooks-anon-vorlauf-zu-lang: ohne Anmeldung erklärt das Banner, was man sieht — der Einleitungssatz steht
        dann nur im ⓘ am Titel (wie am Handy), das Regal rückt ≈ 32 px höher. -->
   @if (!anonymous) {
-    <p class="intro">{{ 'ebooks.intro' | translate }}&nbsp;<app-help-hint [text]="'ebooks.introMore' | translate" /></p>
+    <p class="intro">{{ 'ebooks.intro' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'ebooks.introMore' | translate" /></span></p>
   } @else {
     <div class="eb-anon" role="note">
       <mat-icon>person_outline</mat-icon>

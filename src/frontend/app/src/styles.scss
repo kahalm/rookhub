@@ -249,6 +249,44 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
+/* Dialoge (UI-Sweep d7, DESIGN 5.6):
+   - d7-rk-dialog-erstes-feld-label-abgeschnitten / d7-rk-dialog-label-oben-abgeschnitten: Material setzt bei
+     `mat-dialog-title + mat-dialog-content` das obere Polster auf 0, der Inhalt scrollt (overflow: auto) — die schwebende
+     Beschriftung eines Outline-Felds ragt ~8 px über den Feldrahmen und wurde beim ERSTEN Feld unter dem Titel halb
+     abgeschnitten (Token-Dialog, E-Book bearbeiten, Wochenpost aus Kapitel, Neue Ausgabe, Kapitel hinzufügen …).
+     Darum 8 px Luft, aber nur wenn der Inhalt Formfelder hat: reine Text-Dialoge (Rückfrage) bleiben wie gehabt.
+     Spezifität 0,4,1 > Materials 0,3,0 — Einzelregeln in Komponenten (gekapselt, 0,2,0) kamen dagegen nicht an.
+     Kopfzeile mit ✕ (Titel in einer Hülle, z. B. Endlos-Hilfe): Materials Regel greift dort nicht (kein direkter
+     Nachbar), der Inhalt hatte 20 px oben — jetzt wie beim schlichten Titel 0 bzw. 8 px mit Formfeld. */
+html .mat-mdc-dialog-container :has(> .mat-mdc-dialog-title) + .mat-mdc-dialog-content { padding-top: 0; }
+html .mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content:has(.mat-mdc-form-field),
+html .mat-mdc-dialog-container :has(> .mat-mdc-dialog-title) + .mat-mdc-dialog-content:has(.mat-mdc-form-field) {
+  padding-top: 8px;
+}
+/* - d7-rk-dialog-dunkel-kaum-abgesetzt / d7-rk-token-dialog-flaeche: im Dunkeln war die Dialogfläche `surface` — die
+     Seitenfarbe; eine abgedunkelte Karte dahinter lag bei 17/18/21 gegen 18/19/22, und der Schatten ist auf Dunkel
+     unsichtbar. Fläche eine Stufe heller (surface-container-high) + 1-px-Rahmen (3.4: Rahmen statt Schatten). Wer die
+     Dialogfarbe liest (`--mat-dialog-container-color`, Weiterscroll-Schatten), folgt von selbst. E-Ink ist immer hell
+     (kein dark-theme) und hat seinen 2-px-Rahmen in _eink.scss. */
+html.dark-theme {
+  @include mat.dialog-overrides((container-color: var(--mat-sys-surface-container-high)));
+}
+html.dark-theme .mat-mdc-dialog-surface { border: 1px solid var(--mat-sys-outline-variant); }
+
+/* - Weiterscroll-Schatten für scrollende Dialoginhalte (DESIGN 5.6, vorher je Dialog kopiert: Woodpecker, Puzzle-
+     Einstellungen): skriptlos — die Abdeckung (local) in Dialogfarbe wandert mit dem Inhaltsende, der Schatten (scroll)
+     bleibt am unteren Rand und ist nur sichtbar, solange unten noch etwas kommt. */
+.mat-mdc-dialog-content.rh-scroll-hint {
+  background:
+    linear-gradient(to bottom, transparent, var(--mat-dialog-container-color, var(--mat-sys-surface)) 70%) center bottom / 100% 32px no-repeat local,
+    radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, currentColor 30%, transparent), transparent)
+      center bottom / 100% 14px no-repeat scroll;
+}
+
+/* d7-rk-install-hilfesymbol-allein-in-zeile (DESIGN 5.11): `&nbsp;` vor dem ?-Symbol allein schützt nicht — app-help-hint
+   ist inline-flex (atomares Inline-Element), Chrome bricht davor trotzdem. U+00A0 und Symbol gemeinsam in diese Klasse. */
+.rh-nowrap { white-space: nowrap; }
+
 /* PGN Viewer dialog: no padding */
 .pgn-viewer-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
   padding: 0;

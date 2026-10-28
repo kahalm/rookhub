@@ -46,3 +46,27 @@
 .error { color: var(--mat-sys-error); margin: 0.25rem 0 0; font-size: 0.85rem; }
 
 .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+
+/* E-Ink (d7-t-suchprofil-slider-spur-kaum-sichtbar): die Restspur war #fafafa auf Weiß — rechts vom Griff war nicht
+   zu sehen, wo der Regler endet. Spur als weiße Bahn mit 2-px-Rahmen, gefüllter Teil schwarz, Griff schwarz umrandet
+   mit weißem Kern (DESIGN 3.6: keine Bedeutung in hellen Grautönen). Komponentenlokal, `_eink.scss` hat keine
+   Slider-Regel — der Umkreis-Regler ist der einzige der Turnierseite. */
+:host-context(html.eink) .radius mat-slider {
+  --mat-slider-inactive-track-color: #fff;
+  --mat-slider-inactive-track-height: 8px;
+  --mat-slider-active-track-color: #000;
+  --mat-slider-active-track-height: 8px;
+  --mat-slider-handle-color: #000;
+  --mat-slider-hover-handle-color: #000;
+  --mat-slider-focus-handle-color: #000;
+  --mat-slider-handle-elevation: none;
+}
+:host-context(html.eink) .radius mat-slider ::ng-deep .mdc-slider__track--inactive {
+  opacity: 1;
+  border: 2px solid #000;
+  box-sizing: border-box;
+}
+:host-context(html.eink) .radius mat-slider ::ng-deep .mdc-slider__thumb-knob {
+  background-color: #fff;
+  border: 3px solid #000;
+}

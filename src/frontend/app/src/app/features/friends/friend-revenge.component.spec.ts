@@ -106,6 +106,15 @@ describe('FriendRevengeComponent (UI-Sweep 2026-10-11)', () => {
     expect(none.querySelector('.hint')).toBeNull();
     expect(none.querySelector('.empty-state')).not.toBeNull();
   });
+
+  it('d7-rk-revenge-leer-titelabstand: im Leerzustand folgt die Karte dem Titel mit ≥ 12 px Abstand', () => {
+    const none = render({ ...data, puzzles: data.puzzles.filter(p => p.solvedByViewer) });
+    document.body.appendChild(none);
+    const card = none.querySelector('h1 + mat-card') as HTMLElement;
+    expect(card).withContext('mat-card direkt nach h1').not.toBeNull();
+    expect(parseFloat(getComputedStyle(card).marginTop)).toBeGreaterThanOrEqual(12);
+    none.remove();
+  });
 });
 
 /** Sprachdatei wie im Browser laden (Karma liefert public/ unter / oder /base/). */

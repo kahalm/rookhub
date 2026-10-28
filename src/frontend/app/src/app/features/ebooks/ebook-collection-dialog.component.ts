@@ -26,7 +26,7 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
   template: `
     <h2 mat-dialog-title>{{ 'ebooks.collection.assignTitle' | translate }}</h2>
     <mat-dialog-content>
-      <p class="hint">{{ 'ebooks.bulk.forCount' | translate: { n: data.ebookIds.length } }}</p>
+      <p class="hint">{{ (data.ebookIds.length === 1 ? 'ebooks.bulk.forCountOne' : 'ebooks.bulk.forCount') | translate: { n: data.ebookIds.length } }}</p>
       <mat-radio-group [(ngModel)]="mode" class="modes">
         <mat-radio-button value="new">{{ 'ebooks.collection.new' | translate }}</mat-radio-button>
         @if (collections().length > 0) {

@@ -39,7 +39,7 @@ function localInputToIso(local: string): string | null {
       </mat-form-field>
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'calc.series.publishAt' | translate }}</mat-label>
-        <input matInput type="datetime-local" [(ngModel)]="publishLocal">
+        <input matInput type="datetime-local" [(ngModel)]="publishLocal" required>
       </mat-form-field>
       <mat-form-field appearance="outline" class="full">
         <mat-label>{{ 'calc.series.testerPreviewAt' | translate }}</mat-label>
@@ -52,14 +52,21 @@ function localInputToIso(local: string): string | null {
         <button mat-button color="warn" (click)="onDelete()"><mat-icon>delete</mat-icon> {{ 'common.delete' | translate }}</button>
       }
       <span class="spacer"></span>
+      <!-- d7-rk-ausgabe-speichern-ohne-grund: gesperrtes „Speichern“ sagt, was fehlt (DESIGN 5.4). -->
+      @if (!publishLocal) { <span class="why" role="status">{{ 'calc.series.publishRequired' | translate }}</span> }
       <button mat-button (click)="ref.close()">{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button color="primary" [disabled]="!publishLocal" (click)="onSave()">{{ 'common.save' | translate }}</button>
     </mat-dialog-actions>
   `,
   styles: [`
-    .ced { display: flex; flex-direction: column; min-width: 320px; padding-top: 8px; }
+    /* Oberes Polster für das schwebende Label kommt global aus styles.scss (d7-rk-dialog-erstes-feld-label-abgeschnitten);
+       das eigene padding-top hier kam gegen Materials Regel nie an. */
+    .ced { display: flex; flex-direction: column; min-width: min(320px, 80vw); }
     .full { width: 100%; }
-    .hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin: 0; }
+    /* Im Dialog ist currentColor schon on-surface-variant — 60 % davon war doppelt abgeblasst (d7-rk-dialog-hint-kontrast). */
+    .hint { color: var(--mat-sys-on-surface-variant); font-size: 12px; margin: 0; }
+    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
+    .why { max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .spacer { flex: 1 1 auto; }
   `],
 })

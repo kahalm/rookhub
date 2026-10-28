@@ -7,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
-import { DISCORD_INVITE_URL } from '../../core/community';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /** Ergebnis des Dialogs: der Name steht immer, das PGN ist optional — ein Kurs darf leer
  *  entstehen und wird dann auf der Detailseite Kapitel für Kapitel gefüllt. */
@@ -26,7 +26,7 @@ export interface CreateCourseDialogData {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-create-course-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, TranslatePipe, HelpHintComponent],
   template: `
     <h2 mat-dialog-title>{{ (games ? 'courses.import.title' : 'courses.create.title') | translate }}</h2>
     <mat-dialog-content>
@@ -50,11 +50,9 @@ export interface CreateCourseDialogData {
             <button mat-icon-button type="button" [attr.aria-label]="'common.delete' | translate"
                     (click)="clearFile(fileInput)"><mat-icon>close</mat-icon></button>
           }
+          <!-- d7-rk-kurs-dialog-fliesstext: höchstens ein Satz sichtbar (Grundsatz 2) — der PGN-Hinweis steht hinter dem ?. -->
+          <app-help-hint class="pgn-help" [text]="(games ? 'courses.import.pgnNote' : 'courses.create.pgnNote') | translate" />
         </div>
-        <p class="note">
-          {{ (games ? 'courses.import.pgnNote' : 'courses.create.pgnNote') | translate }}
-          <a [href]="discordUrl" target="_blank" rel="noopener noreferrer">Discord</a>.
-        </p>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -69,9 +67,6 @@ export interface CreateCourseDialogData {
     .dialog-form { display: flex; flex-direction: column; gap: 0.6rem; min-width: min(360px, 80vw); }
     mat-form-field { width: 100%; }
     .hint { margin: 0; font-size: 0.88rem; color: color-mix(in srgb, currentColor 70%, transparent); }
-    .note { margin: 0; font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
-    .note a { color: #5865F2; font-weight: 500; text-decoration: none; }
-    .note a:hover { text-decoration: underline; }
     .pick-btn { align-self: flex-start; }
     .pgn-row { display: flex; align-items: center; gap: 0.25rem; }
   `]
@@ -79,7 +74,6 @@ export interface CreateCourseDialogData {
 export class CreateCourseDialogComponent {
   name = '';
   file: File | null = null;
-  readonly discordUrl = DISCORD_INVITE_URL;
   /** „Partien importieren" statt „Kurs erstellen": ohne Datei gibt es hier nichts anzulegen. */
   readonly games: boolean;
 

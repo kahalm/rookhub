@@ -80,6 +80,7 @@ export interface WeeklyFromChapterDialogData {
           </mat-select>
           @if (loadingChapters) { <mat-hint>{{ 'common.loading' | translate }}</mat-hint> }
           @else if (bookId && chapters.length === 0) { <mat-hint>{{ 'weekly.fromChapter.noChapters' | translate }}</mat-hint> }
+          @else if (!bookId && !loadingBooks) { <mat-hint>{{ 'weekly.fromChapter.pickBookFirst' | translate }}</mat-hint> }
         </mat-form-field>
 
         <div class="fc-row">
@@ -99,6 +100,8 @@ export interface WeeklyFromChapterDialogData {
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <!-- d7-rk-gesperrter-knopf-ohne-grund: gesperrtes „Anlegen“ sagt, was fehlt (DESIGN 5.4). -->
+      @if (blockReason && !saving) { <span class="why" role="status">{{ blockReason | translate }}</span> }
       <button mat-button (click)="ref.close()">{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button color="primary"
               [disabled]="!canCreate() || saving" (click)="create()">
@@ -119,6 +122,8 @@ export interface WeeklyFromChapterDialogData {
     .fc-search input { flex: 1; border: none; outline: none; background: transparent;
       font: inherit; color: inherit; padding: 4px 0; }
     .fc-nomatch { padding: 10px 16px; opacity: .6; font-size: .9rem; }
+    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
+    .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     @media (max-width: 480px) { .fc-form { min-width: 0; } }
   `],
 })
@@ -202,6 +207,14 @@ export class WeeklyFromChapterDialogComponent implements OnInit {
       },
       error: () => { this.loadingChapters = false; this.snackbar.info(this.translate.instant('weekly.fromChapter.loadChaptersFailed'), { action: 'common.ok', duration: 3000 }); },
     });
+  }
+
+  /** Warum „Anlegen“ gesperrt ist (i18n-Schlüssel) — null, wenn alles gewählt ist. */
+  get blockReason(): string | null {
+    if (this.bookId == null) return 'weekly.fromChapter.needBook';
+    if (this.chapterIndex == null) return 'weekly.fromChapter.needChapter';
+    if (!this.date || !this.time) return 'weekly.fromChapter.needSchedule';
+    return null;
   }
 
   canCreate(): boolean {

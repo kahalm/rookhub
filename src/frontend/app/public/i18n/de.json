@@ -708,11 +708,14 @@
         "title": "Neuer API-Token",
         "name": "Name",
         "nameHint": "z. B. „Chess.com-Extension (Laptop)“",
+        "needName": "Erst einen Namen eingeben.",
         "expires": "Ablauf",
         "create": "Erstellen",
         "scope": "Bereich",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (Engine-Provider auf deinem Rechner)",
+        "scopeEngineShort": "Engine",
         "scopeHint": "Ein Token gilt nur für seinen Bereich: ein Extension-Token kann keine Engines anmelden, ein Engine-Token deine Repertoires nicht lesen."
       },
       "show": {
@@ -1584,7 +1587,23 @@
     },
     "theme": {
       "boardTheme": "Brett-Design",
-      "pieces": "Figuren"
+      "pieces": "Figuren",
+      "board": {
+        "brown": "Braun",
+        "blue": "Blau",
+        "green": "Grün",
+        "gray": "Grau",
+        "wood": "Holzton",
+        "realwood": "Holz",
+        "water": "Wasser",
+        "marble": "Marmor",
+        "metal": "Metall",
+        "leather": "Leder",
+        "maple": "Ahorn"
+      },
+      "piece": {
+        "cburnett": "Klassisch"
+      }
     },
     "hints": {
       "t1Check": "Forcierender Zug — fang bei den Schachgeboten an (Checkliste: Schach, Schlagen, Drohung).",
@@ -1639,11 +1658,11 @@
     "emptyHint": "Noch keine Kurse. Lege oben einen eigenen Kurs an — mit oder ohne PGN.",
     "create": {
       "title": "Neuen Kurs erstellen",
-      "hint": "Lege einen eigenen Kurs an — nur für dich sichtbar. Die Stellungen kannst du danach Kapitel für Kapitel auf der Kursseite einfügen.",
+      "hint": "Nur für dich sichtbar — Stellungen fügst du danach auf der Kursseite ein.",
       "nameLabel": "Kursname",
       "namePlaceholder": "z. B. Turmendspiele",
       "attachPgn": "PGN anhängen (optional)",
-      "pgnNote": "Ein angehängtes PGN darf eigene Partien enthalten oder ein Puzzle-PGN im Chessable-Stil sein (FEN plus Trainingsmarker). Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
+      "pgnNote": "Ein angehängtes PGN darf eigene Partien enthalten oder ein Puzzle-PGN im Chessable-Stil sein (FEN plus Trainingsmarker). Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt.",
       "button": "Kurs erstellen",
       "creating": "Wird erstellt…",
       "short": "Neu",
@@ -1886,9 +1905,9 @@
     "startChapterRandom": "Kapitel starten (zufällig)",
     "import": {
       "title": "Kurs aus PGN hochladen",
-      "hint": "Lade ein PGN mit deinen eigenen Partien. Du kannst sie danach Zug für Zug durchklicken — und Kommentare, die im PGN stehen, erscheinen an dem Zug, zu dem sie gehören.",
+      "hint": "Deine Partien als Kurs zum Durchklicken, Kommentare inklusive.",
       "attachPgn": "PGN-Datei wählen",
-      "pgnNote": "Jedes PGN geht: eigene Partien, eine heruntergeladene Sammlung oder ein Puzzle-PGN im Chessable-Stil. Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
+      "pgnNote": "Jedes PGN geht: eigene Partien, eine heruntergeladene Sammlung oder ein Puzzle-PGN im Chessable-Stil. Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt.",
       "button": "Kurs hochladen"
     },
     "lang": {
@@ -2088,6 +2107,7 @@
       "planEdition": "Ausgabe planen",
       "videoUrl": "Video-URL",
       "publishAt": "Freigabe-Zeitpunkt",
+      "publishRequired": "Lege den Freigabe-Zeitpunkt fest, um zu speichern.",
       "testerPreviewAt": "Tester-Vorschau (optional)",
       "hint": "Tester sehen dieses Kapitel ab dem Tester-Zeitpunkt, alle anderen ab der Freigabe. Ohne Tester-Zeitpunkt gibt es keinen Frühzugang.",
       "watchVideo": "Video ansehen",
@@ -2174,6 +2194,10 @@
     "fromChapter": {
       "button": "Aus Buch-Kapitel",
       "title": "Wochenpost aus Buch-Kapitel",
+      "pickBookFirst": "Erst ein Buch wählen.",
+      "needBook": "Erst ein Buch und ein Kapitel wählen.",
+      "needChapter": "Erst ein Kapitel wählen.",
+      "needSchedule": "Erst Datum und Uhrzeit wählen.",
       "or": "oder",
       "book": "Buch",
       "chapter": "Kapitel",
@@ -3330,7 +3354,7 @@
     "history": {
       "open": "Verlauf",
       "title": "Letzte Analysen",
-      "empty": "Noch keine Analysen — sobald du angemeldet auf dem Brett ziehst, steht die Analyse hier.",
+      "empty": "Noch keine Analysen — sobald du auf dem Brett ziehst, steht sie hier.",
       "fromStart": "Aus der Grundstellung",
       "fromPosition": "Aus einer aufgebauten Stellung",
       "noMoves": "noch keine Züge",
@@ -3830,7 +3854,7 @@
         "t": "E-Books",
         "p": [
           "Die E-Book-Bibliothek sammelt Schachbücher als PDF, EPUB, DJVU und Comic-Archive. PDFs öffnen sich direkt im Browser: durch die Seiten scrollen, zoomen und dort weiterlesen, wo du aufgehört hast – die Seite wird je Buch gemerkt. Andere Formate lädst du herunter.",
-          "Jeder Angemeldete kann ein Buch hochladen und bestimmen, wer es sieht: nur du, eine deiner Gruppen oder alle Angemeldeten. Wer hochgeladen hat (und Admins), kann Titel, Autor, Jahr und Schlagworte bearbeiten, die Sichtbarkeit später ändern oder das Buch löschen."
+          "Jeder Angemeldete kann ein Buch hochladen und bestimmen, wer es sieht: nur du, eine deiner Gruppen oder alle Angemeldeten. Wer hochgeladen hat (und Admins), kann Titel, Autor, Jahr und Schlagwörter bearbeiten, die Sichtbarkeit später ändern oder das Buch löschen."
         ]
       },
       "woodpecker": {
@@ -4089,7 +4113,7 @@
     "depthLines": "Tiefe {{depth}} · {{lines}} Varianten",
     "nodesLines": "{{nodes}} Knoten · {{lines}} Varianten",
     "nodes": {
-      "title": "Partie mit lc0 analysieren",
+      "title": "Partie mit Lc0 analysieren",
       "button": "Mit Lc0 analysieren",
       "buttonHint": "Ganze Partie mit einer Knoten-Engine (z. B. lc0) rechnen — wahlweise zusätzlich zu Stockfish",
       "hint": "Die Engine rechnet jede Stellung der Partie mit einer festen Knotenzahl. Bei lc0 sagt die Tiefe nichts aus — die Knoten bestimmen Qualität und Dauer.",
@@ -4396,6 +4420,8 @@
       "nextMonth": "Nächster Monat",
       "today": "Heute",
       "more": "+{{count}} weitere",
+      "week": "KW {{week}}",
+      "weekJump": "Zu einer Woche springen",
       "empty": "In diesem Monat kein Turnier."
     },
     "profile": {
@@ -4430,6 +4456,7 @@
     "minPlayers": "Mind. Teilnehmer",
     "groupCount": "{{count}} Gruppen",
     "tilesFailed": "Die Kartenkacheln ließen sich nicht laden. Die Turniere sitzen richtig, nur die Hintergrundkarte fehlt.",
+    "tilesFailedOne": "Die Kartenkacheln ließen sich nicht laden. Der Ort ist richtig markiert, nur die Hintergrundkarte fehlt.",
     "range": {
       "label": "Zeitraum",
       "quarter": "Nächste drei Monate",
@@ -4519,14 +4546,15 @@
     },
     "audienceHelp": "Einzel oder Mannschaft kommt von chess-results selbst — und alles, was nicht als Mannschaftsturnier erkannt wird, zählt als Einzel.\n\nAltersklasse und Geschlechtsklasse kommen aus keinem Feld: es gibt keines, sie werden aus dem Turniernamen gelesen. Das klappt, wo der Name die Klasse nennt („U12 weiblich“, „UNDER 16 BOYS“) — und gar nicht, wo er das nicht tut.\n\n„Nur Erwachsene“ blendet alles mit einem Jugendmerkmal im Namen aus. Senioren bleiben — Seniorenschach ist Erwachsenenschach.\n\nEine Liga ist ein Mannschaftswettbewerb über eine ganze Saison, oder einer, der es im Namen sagt.\n\nEtwas in der falschen Schublade? Auf jeder Turnierseite gibt es „falsches Event melden“, und dort wird gefragt, wie solche Turniere in deiner Region heißen. Genau das verbessert es für alle.",
     "missing": {
-      "cta": "Dein Turnier fehlt? Hier eintragen",
+      "cta": "Dein Turnier fehlt? Quelle vorschlagen",
       "blurb": "Nicht jeder Veranstalter schreibt dort aus, wo dieses Verzeichnis liest. Ein Link auf eine offizielle Seite lässt sich ergänzen.",
       "title": "Fehlende Turnierquelle melden",
       "lead": "Dieses Verzeichnis füllt sich aus Turnierseiten, die ihre Kalender veröffentlichen — wer woanders ausschreibt, kommt hier nicht vor. Am meisten hilft dabei nicht ein einzelner Termin, sondern ein LINK: eine offizielle Seite, auf der deine Turniere stehen, lässt sich regelmäßig auslesen, und dann erscheinen von da an alle.",
       "link": "Link auf die offizielle Seite",
       "linkHint": "Verbandskalender, Vereinsseite, Seite der Turnierreihe — je offizieller, desto besser",
       "linkRequired": "Bitte einen vollständigen Link angeben, der mit http:// oder https:// beginnt.",
-      "message": "Sonst noch etwas, das wir wissen sollten? (freiwillig)",
+      "message": "Anmerkung (freiwillig)",
+      "messagePlaceholder": "Sonst noch etwas, das wir wissen sollten?",
       "thanks": "Danke — wir sehen uns die Seite an.",
       "sendError": "Die Nachricht konnte nicht gesendet werden. Bitte noch einmal versuchen."
     },
@@ -4655,6 +4683,7 @@
         "added": "{{name}} wird jetzt verfolgt.",
         "help": "Beliebige Person verfolgen: dein Kind, ein Vereinskamerad, dein nächster Gegner — ganz ohne Konto.",
         "lead": "Gesucht wird auf chess-results und bei der FIDE. Der Nachname genügt; ein Vorname grenzt ein.",
+        "needLastName": "Erst den Nachnamen eingeben (mindestens 2 Buchstaben), dann lässt sich suchen.",
         "limitReached": "Mehr als {{count}} Spieler lassen sich nicht verfolgen. Entferne zuerst einen.",
         "remove": "Nicht mehr verfolgen",
         "removeError": "Der Spieler konnte nicht entfernt werden.",
@@ -5508,7 +5537,7 @@
         "view": "Nur die Stellung aus dem Buch",
         "free": "Figuren frei ziehen",
         "calc": "Varianten notieren, ohne die Figuren endgültig zu ziehen – später prüfen",
-        "solve": "Die Lösung ziehen: gespeichert (Buch oder Engine) oder Stockfish jetzt",
+        "solve": "Finde den Zug selbst; geprüft wird mit der Buchlösung, fehlt sie, mit dem Computer",
         "maia": "Die Stellung gegen Maia ausspielen",
         "game": "die Partie nachspielen, aus der das Diagramm stammt"
       },
@@ -5556,7 +5585,7 @@
     },
     "title": "E-Books",
     "intro": "Schachbücher zum Lesen im Browser oder zum Herunterladen; jedes Buch ist für die Gruppen freigegeben, die der Hochladende gewählt hat.",
-    "introMore": "PDFs öffnen sich im Leser mit Zoom und gemerkter Seite. EPUB, DJVU und Comic-Archive werden heruntergeladen.\n\nMit „Hochladen“ legst du ein Buch an und hakst die Gruppen an, die es sehen dürfen – nichts angehakt heißt nur du. Schlagworte machen die Bibliothek durchsuchbar; die Schlagwort-Chips filtern die Liste.",
+    "introMore": "PDFs öffnen sich im Leser mit Zoom und gemerkter Seite. EPUB, DJVU und Comic-Archive werden heruntergeladen.\n\nMit „Hochladen“ legst du ein Buch an und hakst die Gruppen an, die es sehen dürfen – nichts angehakt heißt nur du. Schlagwörter machen die Bibliothek durchsuchbar; die Schlagwort-Chips filtern die Liste.",
     "upload": "Hochladen",
     "uploaded": "„{{title}}“ wurde hinzugefügt.",
     "search": "Titel, Autor oder Schlagwort suchen",
@@ -5611,7 +5640,7 @@
       "title": "Titel",
       "author": "Autor",
       "year": "Jahr",
-      "tags": "Schlagworte",
+      "tags": "Schlagwörter",
       "tagsHint": "Endspiel, Strategie, … (kommagetrennt)",
       "description": "Beschreibung"
     },
@@ -5631,8 +5660,10 @@
       "selected": "{{n}} ausgewählt",
       "all": "Alle auf dieser Seite",
       "setVisibility": "Sichtbarkeit setzen",
-      "forCount": "Gilt für {{n}} E-Book(s).",
-      "done": "Sichtbarkeit für {{n}} E-Book(s) gesetzt."
+      "forCount": "Gilt für {{n}} E-Books.",
+      "forCountOne": "Gilt für ein E-Book.",
+      "done": "Sichtbarkeit für {{n}} E-Books gesetzt.",
+      "doneOne": "Sichtbarkeit für ein E-Book gesetzt."
     },
     "library": {
       "import": "Bibliothek vom Server einlesen",

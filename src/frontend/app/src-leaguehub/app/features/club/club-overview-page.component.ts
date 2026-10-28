@@ -75,7 +75,7 @@ function storedNewestFirst(): boolean {
               @if (shown.length) {
                 <h3 class="ov-round">Runde {{ r.number }}@if (r.date) {<span class="muted">&nbsp;· {{ date(r.date) }}</span>}@if (markers.markTotal(r.matches); as n) { <lh-game-badges class="ov-plus" [marks]="n" (pick)="openMarks(r.matches, false)" />}</h3>
                 @for (m of shown; track $index) {
-                  <article class="lu-match own">
+                  <article class="lu-match">
                     <h4 class="lu-head">
                       <span class="lu-teams">{{ tn(m.home) }} <span class="muted">–</span> {{ tn(m.away) }}</span>
                       @if (m.homePts != null || m.awayPts != null) { <span class="lu-score">{{ pts(m.homePts) }} : {{ pts(m.awayPts) }}</span> }
@@ -133,7 +133,6 @@ function storedNewestFirst(): boolean {
     .ov-round { margin: 6px 0 0; font: 600 17px/1.2 var(--cond); }
     .ov-plus { margin-left: 8px; font-size: 14px; }
     .lu-match { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; }
-    .lu-match.own { border-color: var(--ink); border-width: 2px; }
     .lu-head { margin: 0 0 6px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font: 600 19px/1.2 var(--cond); }
     .lu-teams { overflow-wrap: anywhere; }
     .lu-score { font-weight: 700; white-space: nowrap; }

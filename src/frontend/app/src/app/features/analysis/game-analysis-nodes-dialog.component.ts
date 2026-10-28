@@ -51,7 +51,7 @@ export const MAX_NODES = 50_000_000;
     <h2 mat-dialog-title>{{ 'gameAnalysis.nodes.title' | translate }}</h2>
     <mat-dialog-content>
       @if (data.engines.length === 0) {
-        <p class="warn"><mat-icon>info_outline</mat-icon> {{ 'gameAnalysis.nodes.noEngine' | translate }}</p>
+        <p class="warn"><mat-icon>info</mat-icon> {{ 'gameAnalysis.nodes.noEngine' | translate }}</p>
         <a mat-stroked-button routerLink="/profile" (click)="ref.close(null)">{{ 'gameAnalysis.nodes.toProfile' | translate }}</a>
       } @else {
         <p class="hint">{{ 'gameAnalysis.nodes.hint' | translate }}</p>
@@ -103,7 +103,9 @@ export const MAX_NODES = 50_000_000;
     .full { width: 100%; margin-bottom: 12px; }
     .hint { color: color-mix(in srgb, currentColor 65%, transparent); font-size: .9rem; margin: 0 0 12px; }
     .hint.small { font-size: .8rem; margin: 8px 0 0; }
-    .warn { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; }
+    /* d7-rk-lc0-dialog-info-icon-abgeschnitten: bei zweizeiligem Text staucht Flex das Symbol — flex: none, oben bündig. */
+    .warn { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 12px; }
+    .warn mat-icon { flex: none; }
   `],
 })
 export class GameAnalysisNodesDialogComponent {

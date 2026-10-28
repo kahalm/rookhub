@@ -2,7 +2,7 @@
   <div class="wl-head">
     <h1><mat-icon>assignment</mat-icon> {{ 'worksheets.title' | translate }}</h1>
     <!-- Ein Satz, der Rest hinter dem ⓘ (d2-rk-ws-list-clip). -->
-    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}&nbsp;<app-help-hint [text]="'worksheets.list.hintMore' | translate" /></p>
+    <p class="wl-hint">{{ 'worksheets.list.hint' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'worksheets.list.hintMore' | translate" /></span></p>
   </div>
 
   @if (loading) {

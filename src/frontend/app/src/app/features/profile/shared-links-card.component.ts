@@ -24,7 +24,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
     <div class="shared-links">
       <!-- d6-rk-profil-teilen-links-textstapel: Erklärung (Linien- und Partie-Links) hinter dem ?, sichtbar bleibt nur
            die Liste bzw. der Leersatz (DESIGN 2 Nr. 2), ohne Pfadkürzel (Nr. 7). -->
-      <h4>{{ 'profile.sharedLinks.title' | translate }}&nbsp;<app-help-hint [text]="'profile.sharedLinks.help' | translate" /></h4>
+      <h4>{{ 'profile.sharedLinks.title' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'profile.sharedLinks.help' | translate" /></span></h4>
       @if (error()) {
         <p class="hint error">{{ 'profile.sharedLinks.error' | translate }}</p>
       } @else if (lines(); as list) {

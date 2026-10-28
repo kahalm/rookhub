@@ -41,7 +41,7 @@ export type WoodpeckerDialogData =
     <h2 mat-dialog-title>{{ (data.mode === 'create' ? 'woodpecker.create.title' : 'woodpecker.start.title') | translate }}</h2>
     <!-- c1-wp-dialog-kasten-im-kasten: EIN Scrollbereich (mat-dialog-content) mit Weiterscroll-Schatten; der Beginn
          steht vorn, damit Feld und Hinweis nie unter einer halb angeschnittenen Kurszeile verschwinden. -->
-    <mat-dialog-content class="wp-content">
+    <mat-dialog-content class="wp-content rh-scroll-hint">
       @if (data.mode === 'create') {
         @if (loading()) {
           <app-loading-spinner />
@@ -101,15 +101,8 @@ export type WoodpeckerDialogData =
     .hint { margin: 0 0 8px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .courses-hint { margin-top: 8px; }
     .search { width: 100%; margin-bottom: 4px; }
-    /* c1-wp-dialog-kasten-im-kasten: kein eigener Scrollkasten mehr — es scrollt nur mat-dialog-content. Weiterscroll-
-       Schatten skriptlos wie die Repertoire-Linienliste (DESIGN 5.3): die Abdeckung (local) in Dialogfarbe wandert mit
-       dem Inhaltsende, der Schatten (scroll) bleibt am unteren Rand — sichtbar nur, solange noch etwas kommt. */
-    .wp-content {
-      background:
-        linear-gradient(to bottom, transparent, var(--mat-dialog-container-color, var(--mat-sys-surface)) 70%) center bottom / 100% 32px no-repeat local,
-        radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, currentColor 30%, transparent), transparent)
-          center bottom / 100% 14px no-repeat scroll;
-    }
+    /* c1-wp-dialog-kasten-im-kasten: kein eigener Scrollkasten mehr — es scrollt nur mat-dialog-content. Den
+       Weiterscroll-Schatten gibt die globale Klasse rh-scroll-hint (styles.scss, DESIGN 5.6). */
     .courses { display: flex; flex-direction: column; }
     /* d3-rk-woodpecker-dialog-kurswahl-tippziel: jede Kurszeile ist ganzzeilig mindestens 44 px hoch und als Ganzes
        antippbar (DESIGN 2.5/7) — das Label füllt die Zeile. Material-Interna → ::ng-deep, auf diese Liste begrenzt. */

@@ -68,6 +68,9 @@ describe('ClubOverviewPageComponent', () => {
     expect(el.querySelector('.ov-league h2')?.textContent).toContain('Landesliga');
     expect(Array.from(el.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 3 · 24.10.2026+3', 'Runde 4']);
     expect(el.querySelectorAll('.lu-match').length).toBe(2);
+    // d7-l-uebersicht-begegnungskarte-rahmen: hier gehören alle Begegnungen dem eigenen Verein — kein schwerer „own“-Rahmen
+    expect(el.querySelector('.lu-match.own')).toBeNull();
+    expect(getComputedStyle(el.querySelector('.lu-match')!).borderTopWidth).toBe('1px');
     expect(el.querySelector('.lu-score')?.textContent).toContain('2½ : 1½');
     const boards = el.querySelectorAll('.lu-match')[0].querySelectorAll('.lu-board');
     expect(boards.length).toBe(2);

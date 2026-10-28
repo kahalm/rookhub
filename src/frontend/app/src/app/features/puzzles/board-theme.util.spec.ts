@@ -208,3 +208,49 @@ describe('board-theme.util', () => {
     });
   });
 });
+
+/** d7-rk-brettdesign-sprachmix / d7-rk-brettdesign-deutsche-namen-en: Designnamen kommen aus i18n, nicht fest aus
+ *  dem Code — in jeder gepflegten Sprache vorhanden und je Sprache eindeutig („Wood“ und „Holz“ nicht verwechselbar). */
+describe('Brett-Design- und Figurennamen über i18n', () => {
+  async function load(lang: string): Promise<Record<string, unknown>> {
+    for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+    }
+    throw new Error(`${lang}.json nicht ladbar`);
+  }
+  const at = (obj: Record<string, unknown>, key: string): unknown =>
+    key.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], obj);
+
+  it('jedes Brett-Design hat einen Schlüssel statt eines festen Namens', () => {
+    for (const t of BOARD_THEMES) {
+      expect(t.labelKey).toBe(`puzzles.theme.board.${t.key}`);
+      expect((t as unknown as Record<string, unknown>)['name']).toBeUndefined();
+    }
+    // Nur „Classic“ ist kein Eigenname und wird übersetzt; Merida, Celtic … bleiben gleich.
+    expect(PIECE_SETS.filter(p => p.labelKey).map(p => p.key)).toEqual(['cburnett']);
+  });
+
+  for (const lang of ['de', 'en', 'hr', 'hu']) {
+    it(`${lang}: alle Namen vorhanden und eindeutig`, async () => {
+      const dict = await load(lang);
+      const names = BOARD_THEMES.map(t => at(dict, t.labelKey));
+      names.forEach((n, i) => expect(typeof n).withContext(BOARD_THEMES[i].labelKey).toBe('string'));
+      expect(new Set(names).size).toBe(names.length);
+      expect(typeof at(dict, 'puzzles.theme.piece.cburnett')).toBe('string');
+    });
+  }
+
+  it('de ist durchgehend deutsch, en durchgehend englisch', async () => {
+    const de = await load('de');
+    const en = await load('en');
+    const deNames = BOARD_THEMES.map(t => at(de, t.labelKey));
+    const enNames = BOARD_THEMES.map(t => at(en, t.labelKey));
+    expect(deNames).not.toContain('Brown');
+    expect(deNames).toContain('Braun');
+    expect(enNames).not.toContain('Holz');
+    expect(enNames).toContain('Marble');
+    expect(at(de, 'puzzles.theme.piece.cburnett')).toBe('Klassisch');
+    expect(at(en, 'puzzles.theme.piece.cburnett')).toBe('Classic');
+  });
+});

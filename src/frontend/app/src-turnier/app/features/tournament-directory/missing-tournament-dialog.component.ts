@@ -30,7 +30,8 @@ import { TournamentDirectoryService } from './tournament-directory.service';
     <mat-dialog-content>
       <p class="lead">{{ 'tournamentDirectory.missing.lead' | translate }}</p>
 
-      <mat-form-field appearance="outline" class="full">
+      <!-- Der Hinweis bricht am Handy um: dynamische Hinweiszeile, sonst liegt Zeile 2 auf dem Notizfeld (DESIGN 5.8, d7). -->
+      <mat-form-field appearance="outline" class="full link-field" subscriptSizing="dynamic">
         <mat-icon matPrefix>link</mat-icon>
         <mat-label>{{ 'tournamentDirectory.missing.link' | translate }}</mat-label>
         <input matInput type="url" [(ngModel)]="link" inputmode="url"
@@ -38,9 +39,11 @@ import { TournamentDirectoryService } from './tournament-directory.service';
         <mat-hint>{{ 'tournamentDirectory.missing.linkHint' | translate }}</mat-hint>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="full">
+      <!-- Kurzes Label (Material kürzt Labels einzeilig mit „…“), die Frage als Platzhalter — der bricht um (d7). -->
+      <mat-form-field appearance="outline" class="full message-field">
         <mat-label>{{ 'tournamentDirectory.missing.message' | translate }}</mat-label>
-        <textarea matInput rows="4" [(ngModel)]="message"></textarea>
+        <textarea matInput rows="4" [(ngModel)]="message"
+                  [placeholder]="'tournamentDirectory.missing.messagePlaceholder' | translate"></textarea>
       </mat-form-field>
 
       @if (error(); as key) {
@@ -56,10 +59,10 @@ import { TournamentDirectoryService } from './tournament-directory.service';
     </mat-dialog-actions>
   `,
   styles: [`
-    .lead { margin: 0 0 1rem; font-size: 0.9rem; }
+    .lead { margin: 0 0 0.25rem; font-size: 0.9rem; }
     .full { width: 100%; }
     .error { color: var(--mat-sys-error); font-size: 0.85rem; margin: 0; }
-    mat-dialog-content { display: flex; flex-direction: column; }
+    mat-dialog-content { display: flex; flex-direction: column; gap: 0.75rem; }
   `],
 })
 export class MissingTournamentDialogComponent {

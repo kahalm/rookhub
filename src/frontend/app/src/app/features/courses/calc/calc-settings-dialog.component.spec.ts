@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { PreferencesService } from '../../../core/preferences.service';
 import { BOARD_THEMES, PIECE_SETS } from '../../puzzles/board-theme.util';
 import { CalcSettingsDialogComponent } from './calc-settings-dialog.component';
@@ -51,6 +51,22 @@ describe('CalcSettingsDialogComponent', () => {
     expect(pieces[0].getAttribute('aria-pressed')).toBe('true');
     expect(Array.from(boards).filter(b => b.classList.contains('cs-chip--on')).length).toBe(1);
     expect(Array.from(pieces).filter(b => b.classList.contains('cs-chip--on')).length).toBe(1);
+  });
+
+  it('zeigt die Namen übersetzt — Brett-Designs immer, Figuren nur „Classic“ (d7-rk-brettdesign-sprachmix)', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { puzzles: { theme: {
+      board: Object.fromEntries(BOARD_THEMES.map(t => [t.key, `DE-${t.key}`])),
+      piece: { cburnett: 'Klassisch' },
+    } } });
+    translate.use('de');
+    const { boards, pieces } = render();
+
+    expect(Array.from(boards).map(b => b.querySelector('.cs-name')!.textContent!.trim()))
+      .toEqual(BOARD_THEMES.map(t => `DE-${t.key}`));
+    const pieceNames = Array.from(pieces).map(b => b.querySelector('.cs-name')!.textContent!.trim());
+    expect(pieceNames[0]).toBe('Klassisch');
+    expect(pieceNames).toContain('Merida');           // Eigenname bleibt
   });
 
   it('eine Wahl wirkt sofort über den PreferencesService', () => {

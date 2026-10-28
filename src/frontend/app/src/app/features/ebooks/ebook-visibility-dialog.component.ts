@@ -25,7 +25,7 @@ export interface EbookVisibilityDialogData {
   template: `
     <h2 mat-dialog-title>{{ 'ebooks.bulk.setVisibility' | translate }}</h2>
     <mat-dialog-content>
-      <p class="hint">{{ 'ebooks.bulk.forCount' | translate: { n: data.ebookIds.length } }}</p>
+      <p class="hint">{{ (data.ebookIds.length === 1 ? 'ebooks.bulk.forCountOne' : 'ebooks.bulk.forCount') | translate: { n: data.ebookIds.length } }}</p>
       @if (data.groups.length === 0) {
         <p class="hint">{{ 'ebooks.visibility.noGroups' | translate }}</p>
       } @else {

@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { TranslateService } from '@ngx-translate/core';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { MarkNotesDialogComponent } from './mark-notes-dialog.component';
@@ -117,5 +119,28 @@ describe('MarkNotesDialogComponent', () => {
     expect(addMarkTag([], '   ')).toBeNull();
     expect(addMarkTag(Array.from({ length: 12 }, (_, i) => 't' + i), 'x')).toBeNull();
     expect(addMarkTag(['Motiv'], 'Endgame')).toEqual(['Motiv', 'endgame']);
+  });
+
+  // d7-rk-markieren-dialog-speichern-eigene-zeile: echte Dialoggröße (440 px) — Entfernen, Abbrechen, Speichern in EINER Zeile.
+  it('Aktionszeile bricht bei 440 px nicht um (deutsche Texte)', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'de' }),
+        { provide: AuthService, useValue: { currentUser: { userId: 7 } } }],
+    });
+    const t = TestBed.inject(TranslateService);
+    t.setTranslation('de', { common: { cancel: 'Abbrechen', save: 'Speichern', close: 'Schließen' },
+      markPosition: { title: 'Interessante Stellung', remove: 'Markierung entfernen' } });
+    t.use('de');
+    const ref = TestBed.inject(MatDialog).open(MarkNotesDialogComponent,
+      { data: { fen: FEN, origin: { context: 'analysis' } }, width: '440px', maxWidth: '94vw' });
+    ref.componentInstance.editing.set(true);
+    for (let i = 0; i < 3; i++) { TestBed.tick(); await new Promise(r => setTimeout(r, 20)); }
+    const actions = document.querySelector('.cdk-overlay-container mat-dialog-actions') as HTMLElement;
+    const top = (sel: string) => (actions.querySelector(sel) as HTMLElement).getBoundingClientRect().top;
+    const save = top('.save');
+    expect(top('.remove')).toBe(save);
+    expect(top('button[mat-dialog-close]')).toBe(save);
+    ref.close();
   });
 });

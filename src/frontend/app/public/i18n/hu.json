@@ -447,11 +447,14 @@
         "title": "Új API-token",
         "name": "Név",
         "nameHint": "pl. \"Chess.com kiterjesztés (laptop)\"",
+        "needName": "Előbb adj meg nevet.",
         "expires": "Lejárat",
         "create": "Létrehozás",
         "scope": "Hatókör",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
+        "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (motor-provider a gépeden)",
+        "scopeEngineShort": "Engine",
         "scopeHint": "Egy token csak a saját hatókörében érvényes: kiterjesztés-tokennel nem lehet motort regisztrálni, motor-tokennel nem olvashatók a repertoárjaid."
       },
       "show": {
@@ -1282,7 +1285,23 @@
     },
     "theme": {
       "boardTheme": "Táblastílus",
-      "pieces": "Bábuk"
+      "pieces": "Bábuk",
+      "board": {
+        "brown": "Barna",
+        "blue": "Kék",
+        "green": "Zöld",
+        "gray": "Szürke",
+        "wood": "Faszín",
+        "realwood": "Fa",
+        "water": "Víz",
+        "marble": "Márvány",
+        "metal": "Fém",
+        "leather": "Bőr",
+        "maple": "Juhar"
+      },
+      "piece": {
+        "cburnett": "Klasszikus"
+      }
     },
     "viz": {
       "level0Name": "Normál",
@@ -1601,11 +1620,11 @@
     "startChapterRandom": "Fejezet indítása (véletlenszerűen)",
     "create": {
       "title": "Új tanfolyam létrehozása",
-      "hint": "Hozz létre saját tanfolyamot — csak te látod. Az állásokat utána fejezetről fejezetre adhatod hozzá a tanfolyam oldalán.",
+      "hint": "Csak te látod — az állásokat utána a tanfolyam oldalán adod hozzá.",
       "nameLabel": "Tanfolyam neve",
       "namePlaceholder": "pl. Bástyavégjátékok",
       "attachPgn": "PGN csatolása (opcionális)",
-      "pgnNote": "A csatolt PGN tartalmazhatja a saját játszmáidat, vagy lehet Chessable-stílusú feladvány-PGN (FEN és tréningjelölők). A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
+      "pgnNote": "A csatolt PGN tartalmazhatja a saját játszmáidat, vagy lehet Chessable-stílusú feladvány-PGN (FEN és tréningjelölők). A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek.",
       "button": "Tanfolyam létrehozása",
       "creating": "Létrehozás…",
       "short": "Új",
@@ -1625,9 +1644,9 @@
     "noMatch": "Egy tanfolyam sem illik erre: „{{query}}”.",
     "import": {
       "title": "Kurzus feltöltése PGN-ből",
-      "hint": "Töltsd be a saját játszmáidat PGN-ben. Utána lépésenként végigkattinthatod őket — a PGN-ben lévő megjegyzések annál a lépésnél jelennek meg, amelyikhez tartoznak.",
+      "hint": "A játszmáid tanfolyamként végigkattintva, megjegyzésekkel együtt.",
       "attachPgn": "PGN-fájl kiválasztása",
-      "pgnNote": "Bármilyen PGN működik: saját játszmák, letöltött gyűjtemény vagy Chessable-stílusú feladvány-PGN. A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
+      "pgnNote": "Bármilyen PGN működik: saját játszmák, letöltött gyűjtemény vagy Chessable-stílusú feladvány-PGN. A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek.",
       "button": "Kurzus feltöltése"
     },
     "lang": {
@@ -1760,6 +1779,10 @@
     "fromChapter": {
       "button": "Könyvfejezetből",
       "title": "Heti poszt könyvfejezetből",
+      "pickBookFirst": "Előbb válassz könyvet.",
+      "needBook": "Előbb válassz könyvet és fejezetet.",
+      "needChapter": "Előbb válassz fejezetet.",
+      "needSchedule": "Előbb válassz dátumot és időpontot.",
       "or": "vagy",
       "book": "Könyv",
       "chapter": "Fejezet",
@@ -2471,7 +2494,7 @@
     "history": {
       "open": "Előzmények",
       "title": "Legutóbbi elemzések",
-      "empty": "Még nincs elemzés — amint bejelentkezve lépsz a táblán, az elemzés itt megjelenik.",
+      "empty": "Még nincs elemzés — amint lépsz a táblán, az elemzés itt megjelenik.",
       "fromStart": "A kiinduló állásból",
       "fromPosition": "Felállított állásból",
       "noMoves": "még nincs lépés",
@@ -3159,6 +3182,7 @@
       "planEdition": "Kiadás ütemezése",
       "videoUrl": "Videó-URL",
       "publishAt": "Megjelenés időpontja",
+      "publishRequired": "A mentéshez add meg a megjelenés időpontját.",
       "testerPreviewAt": "Tesztelői előnézet (opcionális)",
       "hint": "A tesztelők a tesztelői időponttól látják ezt a fejezetet, mindenki más a megjelenéstől. Hagyd üresen a tesztelői mezőt, ha nincs korai hozzáférés.",
       "watchVideo": "Videó megtekintése",
@@ -3714,7 +3738,7 @@
     "depthLines": "Mélység {{depth}} · {{lines}} változat",
     "nodesLines": "{{nodes}} csomópont · {{lines}} változat",
     "nodes": {
-      "title": "Játszma elemzése lc0-val",
+      "title": "Játszma elemzése Lc0-val",
       "button": "Elemzés Lc0-val",
       "buttonHint": "A teljes játszmát csomópont-alapú motorral (pl. lc0) elemezteti — kérésre a Stockfish mellett",
       "hint": "A motor a játszma minden állását rögzített csomópontszámmal elemzi. Az lc0-nál a mélység keveset mond — a csomópontok döntik el a minőséget és az időt.",
@@ -4021,6 +4045,8 @@
       "nextMonth": "Következő hónap",
       "today": "Ma",
       "more": "+{{count}} további",
+      "week": "{{week}}. hét",
+      "weekJump": "Ugrás egy hétre",
       "empty": "Ebben a hónapban nincs verseny."
     },
     "profile": {
@@ -4055,6 +4081,7 @@
     "minPlayers": "Min. résztvevő",
     "groupCount": "{{count}} csoport",
     "tilesFailed": "A térképcsempéket nem sikerült betölteni. A versenyek a helyükön ülnek, csak a háttértérkép hiányzik.",
+    "tilesFailedOne": "A térképcsempéket nem sikerült betölteni. A helyszín jól van megjelölve, csak a háttértérkép hiányzik.",
     "range": {
       "label": "Időszak",
       "quarter": "A következő három hónap",
@@ -4144,14 +4171,15 @@
     },
     "audienceHelp": "Az „egyéni vagy csapat” magától a chess-resultstól jön — és minden, amit nem ismer fel csapatversenyként, egyéninek számít.\n\nA korosztály és a nemi kategória nem mezőből jön: olyan nincs, ezért a verseny nevéből olvassuk ki. Ez ott működik, ahol a név megnevezi a kategóriát („U12 lány”, „UNDER 16 BOYS”) — és sehol ott, ahol nem.\n\nA „Csak felnőtt” mindent elrejt, aminek ifjúsági jelölés van a nevében. A szeniorok maradnak — a szeniorsakk felnőttsakk.\n\nA liga egy egész szezonon át futó csapatverseny, vagy olyan, amelyik ezt a nevében is kimondja.\n\nValami rossz fiókba került? Minden versenyoldalon van „hibás esemény jelentése”, és ott azt kérdezzük, hogyan hívják az ilyen versenyeket a te vidékeden. Épp ez az, ami mindenkinek javít rajta.",
     "missing": {
-      "cta": "Hiányzik a versenyed? Itt jelentsd be",
+      "cta": "Hiányzik a versenyed? Javasolj forrást",
       "blurb": "Nem minden szervező ott hirdet, ahonnan ez a jegyzék olvas. Egy hivatalos oldalra mutató link pótolható.",
       "title": "Hiányzó versenyforrás bejelentése",
       "lead": "Ez a jegyzék olyan versenyoldalakból töltődik fel, amelyek közzéteszik a naptárukat — aki máshol hirdet, az itt nem szerepel. A legtöbbet nem egyetlen időpont segít, hanem egy LINK: egy hivatalos oldal, amelyen a versenyeitek szerepelnek, rendszeresen kiolvasható, és onnantól mind megjelenik.",
       "link": "Link a hivatalos oldalra",
       "linkHint": "Szövetségi naptár, klubhonlap, versenysorozat oldala — minél hivatalosabb, annál jobb",
       "linkRequired": "Adj meg egy teljes linket, amely http:// vagy https:// kezdetű.",
-      "message": "Van még valami, amit tudnunk kellene? (nem kötelező)",
+      "message": "Megjegyzés (nem kötelező)",
+      "messagePlaceholder": "Van még valami, amit tudnunk kellene?",
       "thanks": "Köszönjük — megnézzük az oldalt.",
       "sendError": "Az üzenetet nem sikerült elküldeni. Próbáld meg még egyszer."
     },
@@ -4280,6 +4308,7 @@
         "added": "{{name}} követése elindult.",
         "help": "Kövess bárkit: a gyermekedet, egy klubtársat, a következő ellenfeledet — fiók nélkül is.",
         "lead": "A keresés a chess-results és a FIDE adataiban fut. A vezetéknév elég; a keresztnév szűkíti a találatokat.",
+        "needLastName": "Előbb add meg a vezetéknevet (legalább 2 betű), utána kereshetsz.",
         "limitReached": "Legfeljebb {{count}} játékos követhető. Előbb távolíts el egyet.",
         "remove": "Követés megszüntetése",
         "removeError": "A játékost nem sikerült eltávolítani.",
@@ -5508,7 +5537,7 @@
         "view": "Csak a könyv állása",
         "free": "Szabadon lépni a bábukkal",
         "calc": "Változatok lejegyzése a bábuk végleges mozgatása nélkül – később ellenőrizhető",
-        "solve": "A megoldás lejátszása: mentett (könyv vagy motor) vagy most a Stockfish",
+        "solve": "Találd meg magad a lépést; a könyv megoldása ellenőrzi, ha nincs, a számítógép",
         "maia": "Az állás lejátszása Maia ellen",
         "game": "a játszma végigjátszása, amelyből az ábra származik"
       },
@@ -5632,7 +5661,9 @@
       "all": "Minden ezen az oldalon",
       "setVisibility": "Láthatóság beállítása",
       "forCount": "{{n}} e-könyvre vonatkozik.",
-      "done": "Láthatóság beállítva {{n}} e-könyvhöz."
+      "forCountOne": "Egy e-könyvre vonatkozik.",
+      "done": "Láthatóság beállítva {{n}} e-könyvhöz.",
+      "doneOne": "Láthatóság beállítva egy e-könyvhöz."
     },
     "library": {
       "import": "Szerverkönyvtár beolvasása",

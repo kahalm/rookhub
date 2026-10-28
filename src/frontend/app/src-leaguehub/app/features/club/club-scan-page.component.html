@@ -1,10 +1,10 @@
 @if (!allowed) {
   <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
   @if (canRead) {
-    <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Einlesen von Partieformularen fehlt dir noch die Freigabe — frag einen Verwalter."
-                    purpose="das Einlesen von Partieformularen" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
+    <lh-access-gate [text]="'Du kannst die Vereinspartien lesen. ' + gate.missing + ' fehlt dir noch die Freigabe — frag einen Verwalter.'"
+                    [purpose]="gate.purpose" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
   } @else {
-    <lh-access-gate text="Partieformulare einlesen dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine." />
+    <lh-access-gate [text]="gate.who + ' dürfen Admins und die Vereinsgruppen der teilnehmenden Vereine.'" />
   }
 } @else if (notFound() && gameId != null) {
   <section class="gate"><h2>Partie nicht gefunden</h2>
