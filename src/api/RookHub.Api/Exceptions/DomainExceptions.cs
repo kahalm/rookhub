@@ -31,6 +31,14 @@ public interface IApiErrorCode
     string? Code { get; }
 }
 
+/// <summary>Ausnahme mit maschinenlesbaren Zusatzdaten für das Feld <c>details</c> der Antwort (0.863.0, z. B. die
+/// vorhandenen Bücher bei <c>ebook_duplicate_book</c>). Wie die Meldung geht es WÖRTLICH an den Aufrufer — nur Daten,
+/// die er sehen darf.</summary>
+public interface IApiErrorDetails
+{
+    object? Details { get; }
+}
+
 /// <summary>Gesuchtes existiert nicht (oder ist für den Aufrufer unsichtbar) → 404.</summary>
 public class NotFoundException : KeyNotFoundException, IApiErrorCode
 {
@@ -48,11 +56,12 @@ public class DomainValidationException : InvalidOperationException, IApiErrorCod
 }
 
 /// <summary>Anfrage kollidiert mit dem aktuellen Stand (Dublette, schon erledigt, gleichzeitig geändert) → 409.</summary>
-public class ConflictException : InvalidOperationException, IApiErrorCode
+public class ConflictException : InvalidOperationException, IApiErrorCode, IApiErrorDetails
 {
     public ConflictException(string userMessage) : base(userMessage) { }
     public ConflictException(string userMessage, Exception? inner) : base(userMessage, inner) { }
     public string? Code { get; init; }
+    public object? Details { get; init; }
 }
 
 /// <summary>Angemeldet, aber für DIESE Sache nicht berechtigt → 403.</summary>

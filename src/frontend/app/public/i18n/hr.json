@@ -109,6 +109,7 @@
     "ebook_anonymous_upload_disabled": "Učitavanje bez računa trenutno nije moguće – prijavi se.",
     "ebook_reflow_unsupported": "Prilagodljivi EPUB može nastati samo iz tekstualnog PDF-a s prepoznatim dijagramima (bez skena, bez postojećeg EPUB-a).",
     "ebook_duplicate_file": "Ova je datoteka već u knjižnici.",
+    "ebook_duplicate_book": "Ova je knjiga već u knjižnici.",
     "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
   },
   "common": {
@@ -5735,7 +5736,21 @@
     "processing": "Obrađuje se …",
     "processingHint": "Dijagrami se prepoznaju — dobit ćeš obavijest.",
     "eloBadge": "od {{n}} Elo",
-    "eloHint": "Preporučeni najmanji rejting za ovu knjigu"
+    "eloHint": "Preporučeni najmanji rejting za ovu knjigu",
+    "duplicate": {
+      "titleCertain": "Ova je knjiga već u knjižnici",
+      "titleProbable": "Je li ovo jedna od ovih knjiga?",
+      "introCertain": "Datoteka je ista knjiga kao:",
+      "introProbable": "Vaš prijenos vrlo je sličan knjizi koja je već ovdje:",
+      "reasonFile": "Ista datoteka",
+      "reasonIsbn": "Isti ISBN",
+      "reasonText": "Tekst {{pct}} % isti",
+      "reasonTitle": "Isti naslov i autor",
+      "open": "Na postojeću knjigu",
+      "takeExisting": "Da, uzmi postojeću",
+      "uploadAnyway": "Ipak prenesi kao novu knjigu",
+      "keep": "Ne, zadrži"
+    }
   },
   "woodpecker": {
     "timeBar": "Prošlo {{used}} od {{total}} dana",

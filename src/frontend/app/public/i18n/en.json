@@ -109,6 +109,7 @@
     "ebook_anonymous_upload_disabled": "Uploading without an account is not possible right now – please sign in.",
     "ebook_reflow_unsupported": "A reflowable EPUB can only be made from a text PDF with recognised diagrams (no scan, no existing EPUB).",
     "ebook_duplicate_file": "This file is already in the library.",
+    "ebook_duplicate_book": "This book is already in the library.",
     "ebook_file_missing": "The file is missing on the server."
   },
   "common": {
@@ -5735,7 +5736,21 @@
     "processing": "Processing …",
     "processingHint": "Diagrams are being recognised — you will get a notification.",
     "eloBadge": "from {{n}} Elo",
-    "eloHint": "Recommended minimum rating for this book"
+    "eloHint": "Recommended minimum rating for this book",
+    "duplicate": {
+      "titleCertain": "This book is already in the library",
+      "titleProbable": "Is this one of these books?",
+      "introCertain": "The file is the same book as:",
+      "introProbable": "Your upload looks very much like a book that is already here:",
+      "reasonFile": "Same file",
+      "reasonIsbn": "Same ISBN",
+      "reasonText": "Text {{pct}}% the same",
+      "reasonTitle": "Same title and author",
+      "open": "Go to the existing book",
+      "takeExisting": "Yes, use the existing one",
+      "uploadAnyway": "Upload as a new book anyway",
+      "keep": "No, keep mine"
+    }
   },
   "woodpecker": {
     "timeBar": "{{used}} of {{total}} days gone",

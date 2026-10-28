@@ -39,8 +39,12 @@ public static class ApiErrorResponses
     /// </summary>
     public static object Body(string message, string? code) => code is null ? new { message } : new { message, code };
 
-    /// <summary><see cref="Body(string, string?)"/> aus einer Ausnahme — der Code kommt von <see cref="IApiErrorCode"/>.</summary>
-    public static object Body(Exception ex) => Body(ex.Message, (ex as IApiErrorCode)?.Code);
+    /// <summary><see cref="Body(string, string?)"/> aus einer Ausnahme — der Code kommt von <see cref="IApiErrorCode"/>,
+    /// Zusatzdaten (<see cref="IApiErrorDetails"/>, 0.863.0) als <c>details</c>; ohne sie bleibt die Form unverändert.</summary>
+    public static object Body(Exception ex) =>
+        (ex as IApiErrorDetails)?.Details is { } details
+            ? new { message = ex.Message, code = (ex as IApiErrorCode)?.Code, details }
+            : Body(ex.Message, (ex as IApiErrorCode)?.Code);
 
     /// <summary>
     /// Rumpf des globalen Handlers (<c>app.UseExceptionHandler</c>). Domänen-Ausnahmen kommen hier nicht an

@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,7 +15,8 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { apiErrorText } from '../../core/api-error';
 import { SnackbarService } from '../../core/snackbar.service';
-import { EBOOK_ACCEPT, Ebook, EbookGroupOption, EbookMeta, EbookService, formatBytes } from './ebook.service';
+import { EBOOK_ACCEPT, EBOOK_DUPLICATE_BOOK, Ebook, EbookGroupOption, EbookMeta, EbookService, duplicateBooksOf, formatBytes } from './ebook.service';
+import { EbookDuplicateDialogComponent, EbookDuplicateDialogData, EbookDuplicateDialogResult } from './ebook-duplicate-dialog.component';
 
 export interface EbookEditDialogData {
   /** Vorhandenes Buch (bearbeiten) oder `null` (hochladen). */
@@ -143,6 +145,8 @@ export class EbookEditDialogComponent {
   private ebooks = inject(EbookService);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
+  private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   readonly accept = EBOOK_ACCEPT;
   readonly isNew = this.data.ebook == null;
@@ -205,14 +209,7 @@ export class EbookEditDialogComponent {
     if (!this.canSave) return;
     this.busy.set(true);
     if (this.isNew && this.file) {
-      this.progress.set(0);
-      this.ebooks.upload(this.file, this.meta()).subscribe({
-        next: event => {
-          if (event.type === HttpEventType.UploadProgress && event.total) this.progress.set(Math.round(100 * event.loaded / event.total));
-          else if (event.type === HttpEventType.Response) this.ref.close(event.body);
-        },
-        error: err => this.fail(err),
-      });
+      this.upload(false);
     } else if (this.data.ebook) {
       // PUT: `year: null` heißt „keine Angabe" — das Backend sieht null als „unverändert", deshalb 0 schicken (→ wird null).
       const m = this.meta();
@@ -221,6 +218,56 @@ export class EbookEditDialogComponent {
         error: err => this.fail(err),
       });
     }
+  }
+
+  private upload(forceNew: boolean): void {
+    if (!this.file) return;
+    this.busy.set(true);
+    this.progress.set(0);
+    this.ebooks.upload(this.file, this.meta(), forceNew).subscribe({
+      next: event => {
+        if (event.type === HttpEventType.UploadProgress && event.total) this.progress.set(Math.round(100 * event.loaded / event.total));
+        else if (event.type === HttpEventType.Response && event.body) this.uploaded(event.body);
+      },
+      error: err => this.uploadFailed(err),
+    });
+  }
+
+  /** Hochgeladen — wahrscheinliche Dubletten (0.863.0) erst nachfragen: „Ja, das vorhandene nehmen“ löscht das neue wieder. */
+  private uploaded(book: Ebook): void {
+    const books = book.possibleDuplicates ?? [];
+    if (books.length === 0) { this.ref.close(book); return; }
+    this.askDuplicate({ mode: 'probable', books, uploadedTitle: book.title }, result => {
+      if (result?.action !== 'open') { this.ref.close(book); return; }
+      this.ebooks.delete(book.id).subscribe({
+        next: () => this.goTo(result.id),
+        // Löschen gescheitert: das neue Buch bleibt — sagen und trotzdem zum gewählten.
+        error: err => { this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.deleteFailed')); this.goTo(result.id); },
+      });
+    });
+  }
+
+  /** Abgelehnt: dasselbe Buch ist schon da (ISBN/Text, 409 mit den Büchern) → zeigen statt nur eine Meldung. */
+  private uploadFailed(err: unknown): void {
+    const dup = duplicateBooksOf(err);
+    if (!dup || dup.books.length === 0) { this.fail(err); return; }
+    this.progress.set(null);
+    this.askDuplicate({ mode: 'certain', books: dup.books, uploadedTitle: this.title.trim(), allowForce: dup.code === EBOOK_DUPLICATE_BOOK }, result => {
+      if (result?.action === 'open') this.goTo(result.id);
+      else if (result?.action === 'force') this.upload(true);
+      else this.busy.set(false);
+    });
+  }
+
+  private askDuplicate(data: EbookDuplicateDialogData, then: (result: EbookDuplicateDialogResult | undefined) => void): void {
+    this.dialog.open<EbookDuplicateDialogComponent, EbookDuplicateDialogData, EbookDuplicateDialogResult>(EbookDuplicateDialogComponent,
+      { data, width: '560px', maxWidth: '94vw', autoFocus: 'dialog' })
+      .afterClosed().subscribe(then);
+  }
+
+  private goTo(id: number): void {
+    this.ref.close(null);
+    void this.router.navigate(['/ebooks', id]);
   }
 
   private fail(err: unknown): void {

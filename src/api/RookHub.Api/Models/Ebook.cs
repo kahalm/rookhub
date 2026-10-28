@@ -166,6 +166,20 @@ public class EbookFile
     /// (<c>Ebooks:Root</c>, <c>converted/</c>), auch wenn das Buch aus der Bibliothek stammt, und wird mit dem Buch gelöscht.</summary>
     public bool Derived { get; set; }
 
+    /// <summary>ISBN-13 der Datei, kommagetrennt (0.863.0, <c>EbookFingerprint</c>): aus den Metadaten (EPUB-OPF, PDF-XMP/Info)
+    /// und dem Text der ersten Seiten, ISBN-10 umgerechnet, Prüfziffer geprüft. <c>null</c> = keine gefunden.</summary>
+    [MaxLength(200)]
+    public string? Isbns { get; set; }
+
+    /// <summary>MinHash-Fingerabdruck des Texts (64 × uint32, Base64; 0.863.0) — erkennt dasselbe Buch in einer anderen
+    /// Datei (anderer PDF-Export, EPUB statt PDF). <c>null</c> = (fast) kein Text (Scan) oder Format ohne Text.</summary>
+    [MaxLength(400)]
+    public string? TextFingerprint { get; set; }
+
+    /// <summary>Wann <see cref="Isbns"/>/<see cref="TextFingerprint"/> bestimmt wurden; <c>null</c> = noch offen
+    /// (der <c>EbookFingerprintWorker</c> holt das nach).</summary>
+    public DateTime? FingerprintedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.863.0", date: "2026-10-28", changes: [
+    { en: "E-books: uploading a book that is already in the library is now recognised even when the file differs (another PDF export, EPUB instead of PDF) — by ISBN or by nearly identical text. The upload then shows “This book is already in the library” with the existing book and “Go to the existing book”; “Upload as a new book anyway” still creates it. If a book only looks similar (similar text, same title and author), it is uploaded and you are asked “Is this one of these books?” — “Yes, use the existing one” removes your upload again. Only books you can see are suggested. Existing books get their fingerprints in the background.",
+      de: "E-Books: Ein Buch, das schon in der Bibliothek ist, wird beim Hochladen jetzt auch dann erkannt, wenn die Datei eine andere ist (anderer PDF-Export, EPUB statt PDF) — an der ISBN oder am fast gleichen Text. Der Upload zeigt dann „Dieses Buch ist schon in der Bibliothek“ mit dem vorhandenen Buch und „Zum vorhandenen Buch“; „Trotzdem als neues Buch hochladen“ legt es dennoch an. Ist ein Buch nur ähnlich (ähnlicher Text, gleicher Titel und Autor), wird es hochgeladen und nachgefragt „Ist das eines dieser Bücher?“ — „Ja, das vorhandene nehmen“ entfernt den Upload wieder. Vorgeschlagen werden nur Bücher, die man sehen darf. Vorhandene Bücher bekommen ihren Fingerabdruck im Hintergrund." },
+  ] },
   { version: "0.862.2", date: "2026-10-28", changes: [
     { en: "UI sweep: the club game opened through a LeagueHub share link (/s/…/club-games/…) is now in the page catalogue, with a share link of a played round as test data.",
       de: "UI-Sweep: Die Vereinspartie über einen LeagueHub-Teilen-Link (/s/…/club-games/…) steht jetzt im Seitenkatalog, mit dem Teilen-Link einer gespielten Runde als Testdaten." },

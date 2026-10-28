@@ -36,6 +36,9 @@ public static class ApiErrorCodes
     public const string EbookFileEmpty = "ebook_file_empty";
     public const string EbookQuotaExceeded = "ebook_quota_exceeded";
     public const string EbookDuplicateFile = "ebook_duplicate_file";
+    /// <summary>Upload ist mit hoher Sicherheit ein Buch, das schon da ist (gleiche ISBN oder fast gleicher Text, 0.863.0);
+    /// <c>details.books</c> nennt es. Erneut mit <c>forceNew=true</c> legt trotzdem ein neues an.</summary>
+    public const string EbookDuplicateBook = "ebook_duplicate_book";
     public const string EbookFileMissing = "ebook_file_missing";
     public const string EbookAnonymousUploadDisabled = "ebook_anonymous_upload_disabled";
     public const string EbookReflowUnsupported = "ebook_reflow_unsupported";

@@ -21,7 +21,8 @@ das Einlesen; Übersicht und Leser laufen trotzdem. Gelöscht werden nur Uploads
 `location ^~ /api/ebooks` hält dieselbe Grenze ungepuffert, `DeploymentConfigTests`), Kontingent 5 GiB Uploads je Nutzer
 (`UserQuotaBytes`, 0 = aus; Verwalter ohne), Formate `pdf epub djvu cbz cbr mobi azw3` (`EbookFormats.Allowed`), höchstens
 20 Schlagworte à 40 Zeichen. Eine zweite Datei mit demselben SHA-256 → 409 `ebook_duplicate_file` (die Datei wird wieder
-gelöscht).
+gelöscht). Dasselbe Buch in einer ANDEREN Datei erkennt seit 0.863.0 die Dublettenprüfung (ISBN, Text-Fingerabdruck,
+Titel + Autor) — siehe „Upload-Dublettenprüfung“ unten.
 
 **Titelbilder** rendert der `EbookCoverWorker` (alle 20 s, 4 Bücher je Durchlauf) nachträglich: PDF über `pdftoppm` (die erste
 NICHT leere der ersten 8 Seiten — ≥ 0,2 % dunkle Pixel, `EbookCoverRenderer.MinCoverInk`; 0.775.3, alte Bücher und Scans
@@ -41,7 +42,7 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 | GET | `/api/ebooks?search=&tag=&mine=&withDiagrams=&minElo=&maxElo=&sort=&page=&pageSize=` | Auth | Sichtbare Bücher, eine Seite (`pageSize` ≤ 100, Vorgabe 24). `minElo`/`maxElo` (0.822.0): Mindest-Elo des Buchs (`TargetMinElo`, 0 = Anfänger) in der Spanne, mit einer Grenze fallen Bücher ohne Elo heraus; die Oberfläche zeigt dafür „Elo von – bis“ statt des früheren Schalters „Mit Diagrammen“ (fast alle Bücher haben welche) und „ab N Elo“ auf jeder Karte. Rahmen: `tags[]` (Schlagwort-Facette über ALLE sichtbaren, unabhängig vom Filter), `uploadEnabled`, `quotaUsedBytes`/`quotaLimitBytes` (null = unbegrenzt), `maxFileBytes`, `canManageAll`, `canImportLibrary`. `sort`: `title` (Vorgabe) / `newest` / `recent` (zuletzt gelesen zuerst). `tag` trifft nur ganze Schlagworte. Je Buch `canManage`, `groupIds` (nur wenn verwaltbar), `files[]`, `primaryFormat` (PDF vor allem anderen), `progress` (Lesestand des Aufrufers), `hasCover` |
 | GET | `/api/ebooks/groups` | Auth | Gruppen, die der Aufrufer freigeben darf: Verwalter alle, sonst die eigenen + „Everyone" (`isEveryone`). Literal vor `{id}` |
 | GET | `/api/ebooks/access-token` | Auth | `{ token, expiresAt }` — der Ausweis für `…/file` und `…/cover` |
-| POST | `/api/ebooks` | Auth | Hochladen: Multipart `file` + `title?` (sonst aus dem Dateinamen), `author?`, `year?`, `tags?` (CSV), `description?`, `targetMinElo?`, `groupIds?` (CSV) → 201 + Buch. 400 `ebook_format_unsupported` / `ebook_file_too_large` / `ebook_file_empty` / `ebook_quota_exceeded` / `ebooks_not_configured`, 409 `ebook_duplicate_file`. Gruppen außerhalb der erlaubten werden still verworfen. Gesperrt in der Impersonation |
+| POST | `/api/ebooks` | Auth | Hochladen: Multipart `file` + `title?` (sonst aus dem Dateinamen), `author?`, `year?`, `tags?` (CSV), `description?`, `targetMinElo?`, `groupIds?` (CSV), `forceNew?` (0.863.0) → 201 + Buch (ggf. mit `possibleDuplicates`). 400 `ebook_format_unsupported` / `ebook_file_too_large` / `ebook_file_empty` / `ebook_quota_exceeded` / `ebooks_not_configured`, 409 `ebook_duplicate_file` / `ebook_duplicate_book` (je mit `details.books`, siehe „Upload-Dublettenprüfung“). Gruppen außerhalb der erlaubten werden still verworfen. Gesperrt in der Impersonation |
 | PUT | `/api/ebooks/groups` | Auth | Freigabe vieler Bücher auf einmal `{ ebookIds[], groupIds[] }` (ersetzt die bisherige; nicht verwaltbare Bücher werden übersprungen) → `{ updated }`. Literal vor `{id}` |
 | GET | `/api/ebooks/{id:int}` | Auth | Ein Buch (unsichtbar → 404) |
 | PUT | `/api/ebooks/{id:int}` | Besitzer/Verwalter | Metadaten + Freigabe; nur gesetzte Felder wirken (`year: 0` = keine Angabe, `groupIds: []` = nur ich). Leerer Titel → 400; fremd → 403; unsichtbar → 404 |
@@ -66,6 +67,50 @@ werden nur sichtbare Seiten ± eine Sichtfeldhöhe (Leinwände weiter weg werden
 (`disableAutoFetch`), „Breite füllen" als Vorgabe, Zoomstufen in `reader-progress.util.ts`; der Lesestand geht 1,5 s nach dem
 letzten Seitenwechsel an den Server und wird beim nächsten Öffnen angesprungen. EPUB/DJVU/CBZ/… zeigen eine Download-Karte
 (ein EPUB-Leser im Browser ist offen, siehe TODO).
+
+## Upload-Dublettenprüfung (0.863.0)
+
+Byte-Gleichheit (SHA-256) fing nur exakt dieselbe Datei. Ein anderer Export desselben Buchs (zweites PDF, EPUB statt PDF)
+wurde ein zweites Buch. Jetzt bekommt jede `EbookFile` einen **Fingerabdruck** (`Services/Ebooks/EbookFingerprint.cs`,
+Spalten `Isbns`, `TextFingerprint`, `FingerprintedAt`, Migration `EbookFileFingerprints`):
+
+- **ISBN** (`Isbns`, ISBN-13 kommagetrennt): EPUB aus dem OPF (`dc:identifier`, `urn:isbn:`) und dem Text, PDF aus Info/XMP
+  und dem Text der ersten 10 Seiten. ISBN-10 → ISBN-13, nur mit gültiger Prüfziffer; ohne „ISBN“ davor zählt nur eine
+  13-stellige 978/979-Zahl. Mehr als 4 verschiedene im Text = Verlagsliste → nur die Metadaten zählen.
+- **Text-MinHash** (`TextFingerprint`, 64 × uint32 Base64): Wortstrom normalisiert (klein, ohne Akzente, nur Buchstaben/
+  Ziffern, reine Zahlen wie Seitenzahlen weg, Trennstriche am Zeilenende zusammengezogen), Fenster von 60 000 Wörtern nach
+  den ersten 1 000 (Titelei), Wort-5-Gramme. PDF: höchstens 400 Seiten bzw. 45 s; hat der Text nach 20 Seiten keine 200
+  Wörter (Scan), kein Fingerabdruck. Unter 2 000 Wörtern ebenfalls keiner.
+- **Titel + Autor** (ohne Spalte, `NormalizeTitle`/`AuthorsOverlap`): Haupttitel vor „:“/„ - “, ohne Artikel/Satzzeichen;
+  gemeinsamer Nachname (oder eine Seite ohne Autor).
+
+**Beim Hochladen** (`EbookService.UploadAsync` → `EbookDuplicateFinder`), NUR unter den Büchern, die der Hochladende sehen
+darf (`EbookAccess.Visible` — ein verstecktes Buch verrät sich nie):
+
+| Treffer | Stufe | Folge |
+|---------|-------|-------|
+| gleiche ISBN | sicher | 409 `ebook_duplicate_book`, Datei wird gelöscht |
+| Text-Jaccard ≥ 0,8 (`CertainSimilarity`) | sicher | 409 `ebook_duplicate_book` |
+| Text-Jaccard 0,4–0,8 (`ProbableSimilarity`) | wahrscheinlich | Buch angelegt, `possibleDuplicates` in der Antwort |
+| gleicher Haupttitel + Autor | wahrscheinlich | wie oben |
+
+Gemessen an synthetischen Büchern (`EbookFingerprintTests`): PDF-Layout mit 2 500 Wörtern längerer Titelei gegen EPUB 0,89,
+zwei PDF-Exporte 0,92, Neuauflage mit jedem vierten Absatz neu 0,58, fremde Bücher 0,00. `forceNew=true` überspringt
+ISBN/Text/Titel (Byte-Prüfung bleibt). Der 409 trägt `details.books[{ id, title, author, year, formats[], reason
+(file|isbn|text|title), similarity }]` (`IApiErrorDetails` an `ConflictException`, `ApiErrorResponses.Body` hängt `details`
+nur an, wenn welche da sind); auch `ebook_duplicate_file` nennt das vorhandene Buch, wenn es sichtbar ist.
+
+**Oberfläche** (`ebook-edit-dialog` + `ebook-duplicate-dialog`): 409 → „Dieses Buch ist schon in der Bibliothek“ mit den
+Büchern, „Zum vorhandenen Buch“ und „Trotzdem als neues Buch hochladen“ (nicht bei gleicher Datei); wahrscheinlich → „Ist
+das eines dieser Bücher?“, „Ja, das vorhandene nehmen“ löscht den eben hochgeladenen Upload und öffnet das gewählte,
+„Nein, behalten“ schließt.
+
+**Bestand**: `EbookFingerprintWorker` (alle 20 s 3 Dateien, Start nach 2 min, pausierbar) holt alle Dateien mit
+`FingerprintedAt = null` nach — Bibliothek, alte Uploads, abgeleitete PDFs (DJVU → PDF) und Fließtext-EPUBs. Formate ohne
+Textweg (djvu, cbz, mobi, azw3) werden nur als erledigt markiert. ~2 500 Bücher ≈ 7 000 Dateien ≈ 13 h.
+
+**Noch nicht**: Scans ohne Textebene haben nur ISBN (selten) und Titel; ein Bildvergleich (pHash der Seiten) bzw. ein Abgleich
+über die erkannten Diagramm-FENs wäre der nächste Schritt.
 
 ## Diagramm-Erkennung (Stufe 1, 0.766.0)
 

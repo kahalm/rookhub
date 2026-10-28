@@ -29,6 +29,7 @@
     "ebook_anonymous_upload_disabled": "Fiók nélkül most nem lehet feltölteni – kérjük, jelentkezz be.",
     "ebook_reflow_unsupported": "Újratördelhető EPUB csak felismert diagramokat tartalmazó szöveges PDF-ből készülhet (nem szkennelt, és még nincs EPUB).",
     "ebook_duplicate_file": "Ez a fájl már a könyvtárban van.",
+    "ebook_duplicate_book": "Ez a könyv már a könyvtárban van.",
     "ebook_file_missing": "A fájl hiányzik a szerverről."
   },
   "common": {
@@ -5735,7 +5736,21 @@
     "processing": "Feldolgozás …",
     "processingHint": "A diagramok felismerése folyamatban — értesítést kapsz.",
     "eloBadge": "{{n}} Élőtől",
-    "eloHint": "Ajánlott minimális értékszám ehhez a könyvhöz"
+    "eloHint": "Ajánlott minimális értékszám ehhez a könyvhöz",
+    "duplicate": {
+      "titleCertain": "Ez a könyv már a könyvtárban van",
+      "titleProbable": "Ezek egyike ez a könyv?",
+      "introCertain": "A fájl ugyanaz a könyv, mint:",
+      "introProbable": "A feltöltésed nagyon hasonlít egy már meglévő könyvre:",
+      "reasonFile": "Ugyanaz a fájl",
+      "reasonIsbn": "Ugyanaz az ISBN",
+      "reasonText": "A szöveg {{pct}}%-ban azonos",
+      "reasonTitle": "Ugyanaz a cím és szerző",
+      "open": "A meglévő könyvhöz",
+      "takeExisting": "Igen, a meglévőt választom",
+      "uploadAnyway": "Feltöltés mégis új könyvként",
+      "keep": "Nem, megtartom"
+    }
   },
   "woodpecker": {
     "timeBar": "{{total}} napból {{used}} eltelt",

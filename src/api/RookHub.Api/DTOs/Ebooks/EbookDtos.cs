@@ -63,6 +63,25 @@ public class EbookDto
     public bool CollectionStub { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>Nur in der Antwort des Uploads (0.863.0): vorhandene Bücher, die WAHRSCHEINLICH dasselbe sind (ähnlicher
+    /// Text, gleicher Titel + Autor) — die Oberfläche fragt „Ist das eines dieser Bücher?“. Sonst <c>null</c>.</summary>
+    public List<EbookDuplicateDto>? PossibleDuplicates { get; set; }
+}
+
+/// <summary>Ein vorhandenes Buch, das ein Upload womöglich doppelt (0.863.0): im 409 <c>ebook_duplicate_book</c> /
+/// <c>ebook_duplicate_file</c> unter <c>details.books</c> und in <see cref="EbookDto.PossibleDuplicates"/>.</summary>
+public class EbookDuplicateDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Author { get; set; } = string.Empty;
+    public int? Year { get; set; }
+    /// <summary>Formate der eigenen (nicht abgeleiteten) Dateien, bevorzugtes zuerst.</summary>
+    public List<string> Formats { get; set; } = new();
+    /// <summary><c>file</c> (Bytes gleich), <c>isbn</c>, <c>text</c> (MinHash), <c>title</c> (Titel + Autor).</summary>
+    public string Reason { get; set; } = string.Empty;
+    /// <summary>Geschätzte Text-Ähnlichkeit 0–1 (bei <c>file</c>/<c>isbn</c> 1, bei <c>title</c> 0, wenn kein Text verglichen wurde).</summary>
+    public double Similarity { get; set; }
 }
 
 public class EbookTagFacetDto
@@ -147,6 +166,8 @@ public class EbookUploadForm
     [MaxLength(10)] public string? DefaultBoardMode { get; set; }
     /// <summary>Gruppen-Ids, kommagetrennt.</summary>
     [MaxLength(500)] public string? GroupIds { get; set; }
+    /// <summary>„Trotzdem als neues Buch hochladen“ (0.863.0): ISBN-/Text-/Titelprüfung überspringen; die Byte-Prüfung bleibt.</summary>
+    public bool ForceNew { get; set; }
 }
 
 /// <summary>Freigabe mehrerer Bücher auf einmal (Übersicht: auswählen → „Sichtbarkeit setzen").</summary>

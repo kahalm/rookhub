@@ -56,6 +56,34 @@ export interface Ebook {
   progress: EbookProgress | null;
   createdAt: string;
   updatedAt: string;
+  /** Nur in der Antwort des Uploads (0.863.0): vorhandene Bücher, die wahrscheinlich dasselbe sind. */
+  possibleDuplicates?: EbookDuplicate[] | null;
+}
+
+/** Ein vorhandenes Buch, das ein Upload womöglich doppelt (0.863.0; Server: `EbookDuplicateDto`). */
+export interface EbookDuplicate {
+  id: number;
+  title: string;
+  author: string;
+  year: number | null;
+  formats: string[];
+  /** `file` gleiche Datei, `isbn` gleiche ISBN, `text` fast gleicher Text, `title` gleicher Titel + Autor. */
+  reason: 'file' | 'isbn' | 'text' | 'title';
+  /** Text-Ähnlichkeit 0–1. */
+  similarity: number;
+}
+
+/** Fehlercode „dieses Buch gibt es schon“ (409, 0.863.0) — `error.details.books` nennt es. */
+export const EBOOK_DUPLICATE_BOOK = 'ebook_duplicate_book';
+
+/** Die vorhandenen Bücher aus einem 409 (`ebook_duplicate_book` oder `ebook_duplicate_file`), sonst `null`. */
+export function duplicateBooksOf(err: unknown): { code: string; books: EbookDuplicate[] } | null {
+  const e = (err as { status?: number; error?: { code?: unknown; details?: { books?: unknown } } } | null);
+  if (e?.status !== 409) return null;
+  const code = e.error?.code;
+  if (code !== EBOOK_DUPLICATE_BOOK && code !== 'ebook_duplicate_file') return null;
+  const books = e.error?.details?.books;
+  return { code, books: Array.isArray(books) ? books as EbookDuplicate[] : [] };
 }
 
 /** Ein erkanntes Diagramm: Lage als Anteil der Seite (0–1, Ursprung links oben), FEN, Nummer, Überschrift. */
@@ -316,7 +344,7 @@ export class EbookService {
   }
 
   /** Hochladen mit Fortschritt (Ereignisse, weil ein Buch Minuten brauchen kann). */
-  upload(file: File, meta: EbookMeta): Observable<HttpEvent<Ebook>> {
+  upload(file: File, meta: EbookMeta, forceNew = false): Observable<HttpEvent<Ebook>> {
     const form = new FormData();
     form.append('file', file, file.name);
     if (meta.title) form.append('title', meta.title);
@@ -327,6 +355,8 @@ export class EbookService {
     if (meta.targetMinElo != null) form.append('targetMinElo', String(meta.targetMinElo));
     if (meta.defaultBoardMode) form.append('defaultBoardMode', meta.defaultBoardMode);
     if (meta.groupIds) form.append('groupIds', meta.groupIds.join(','));
+    // „Trotzdem als neues Buch hochladen“ (0.863.0): ISBN-/Text-/Titelprüfung aus, Byte-Prüfung bleibt.
+    if (forceNew) form.append('forceNew', 'true');
     return this.http.post<Ebook>('/api/ebooks', form, { reportProgress: true, observe: 'events' });
   }
 

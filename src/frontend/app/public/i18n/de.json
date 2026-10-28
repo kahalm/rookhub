@@ -109,6 +109,7 @@
     "ebook_anonymous_upload_disabled": "Hochladen ohne Konto ist gerade nicht möglich – bitte melde dich an.",
     "ebook_reflow_unsupported": "Ein Fließtext-EPUB entsteht nur aus einem Text-PDF mit erkannten Diagrammen (kein Scan, noch kein EPUB).",
     "ebook_duplicate_file": "Diese Datei ist schon in der Bibliothek.",
+    "ebook_duplicate_book": "Dieses Buch ist schon in der Bibliothek.",
     "ebook_file_missing": "Die Datei fehlt auf dem Server."
   },
   "common": {
@@ -5735,7 +5736,21 @@
     "processing": "Wird verarbeitet …",
     "processingHint": "Die Diagramme werden erkannt — du bekommst eine Benachrichtigung.",
     "eloBadge": "ab {{n}} Elo",
-    "eloHint": "Empfohlene Mindest-Elo für dieses Buch"
+    "eloHint": "Empfohlene Mindest-Elo für dieses Buch",
+    "duplicate": {
+      "titleCertain": "Dieses Buch ist schon in der Bibliothek",
+      "titleProbable": "Ist das eines dieser Bücher?",
+      "introCertain": "Die Datei ist dasselbe Buch wie:",
+      "introProbable": "Dein Upload sieht einem Buch, das schon da ist, sehr ähnlich:",
+      "reasonFile": "Gleiche Datei",
+      "reasonIsbn": "Gleiche ISBN",
+      "reasonText": "Text zu {{pct}} % gleich",
+      "reasonTitle": "Gleicher Titel und Autor",
+      "open": "Zum vorhandenen Buch",
+      "takeExisting": "Ja, das vorhandene nehmen",
+      "uploadAnyway": "Trotzdem als neues Buch hochladen",
+      "keep": "Nein, behalten"
+    }
   },
   "woodpecker": {
     "timeBar": "{{used}} von {{total}} Tagen vorbei",

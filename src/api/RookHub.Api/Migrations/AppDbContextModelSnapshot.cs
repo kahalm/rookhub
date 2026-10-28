@@ -2624,10 +2624,17 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<DateTime?>("FingerprintedAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("varchar(10)");
+
+                    b.Property<string>("Isbns")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("RelativePath")
                         .IsRequired()
@@ -2640,6 +2647,10 @@ namespace RookHub.Api.Migrations
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("TextFingerprint")
+                        .HasMaxLength(400)
+                        .HasColumnType("varchar(400)");
 
                     b.HasKey("Id");
 

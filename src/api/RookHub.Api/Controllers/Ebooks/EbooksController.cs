@@ -92,7 +92,7 @@ public class EbooksController : BaseApiController
             GroupIds = ParseIds(form.GroupIds),
         };
         await using var stream = form.File.OpenReadStream();
-        var dto = await _service.UploadAsync(Caller, await ManageAllAsync(), stream, form.File.FileName, form.File.Length, meta, ct);
+        var dto = await _service.UploadAsync(Caller, await ManageAllAsync(), stream, form.File.FileName, form.File.Length, meta, ct, form.ForceNew);
         return CreatedAtAction(nameof(Get), new { id = dto.Id }, dto);
     }
 

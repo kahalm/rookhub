@@ -244,10 +244,11 @@ public class EbookService
 
     /// <summary>
     /// Nimmt eine Datei an: Format geprüft, Grenze und Kontingent geprüft, auf die Platte geschrieben (mit Hash),
-    /// Dublette erkannt (409), dann das Buch mit Metadaten und Freigabe angelegt. Ein Verwalter hat kein Kontingent.
+    /// Dublette erkannt (409: gleiche Bytes, seit 0.863.0 auch gleiche ISBN bzw. fast gleicher Text — außer mit
+    /// <paramref name="forceNew"/>), dann das Buch mit Metadaten und Freigabe angelegt. Ein Verwalter hat kein Kontingent.
     /// </summary>
     public async Task<EbookDto> UploadAsync(EbookCaller caller, bool manageAll, Stream content, string fileName, long declaredLength,
-        EbookMetaDto meta, CancellationToken ct = default)
+        EbookMetaDto meta, CancellationToken ct = default, bool forceNew = false)
     {
         if (!_storage.UploadsEnabled)
             throw new DomainValidationException("Uploads are not configured on this server.") { Code = ApiErrorCodes.EbooksNotConfigured };
@@ -273,12 +274,38 @@ public class EbookService
         var saved = await _storage.SaveUploadAsync(content, format, maxFile, ct);
         try
         {
-            if (await _db.EbookFiles.AnyAsync(f => f.Sha256 == saved.Sha256, ct))
-                throw new ConflictException("This file is already in the library.") { Code = ApiErrorCodes.EbookDuplicateFile };
+            var sameBytes = await _db.EbookFiles.Where(f => f.Sha256 == saved.Sha256).Select(f => f.EbookId).Distinct().ToListAsync(ct);
+            if (sameBytes.Count > 0)
+            {
+                // Das vorhandene Buch nur nennen, wenn der Hochladende es sehen darf (0.863.0: „Zum vorhandenen Buch“).
+                var visibleSame = await EbookAccess.Visible(_db, caller, manageAll).Where(b => sameBytes.Contains(b.Id)).Select(b => b.Id).ToListAsync(ct);
+                var books = await EbookDuplicateFinder.DescribeAsync(_db, visibleSame.Select(id => new EbookDuplicateMatch(id, "file", 1, true)).ToList(), ct);
+                throw new ConflictException("This file is already in the library.")
+                {
+                    Code = ApiErrorCodes.EbookDuplicateFile,
+                    Details = books.Count > 0 ? new { books } : null,
+                };
+            }
             if (quota > 0 && await UsedBytesAsync(caller, ct) + saved.SizeBytes > quota)
                 throw new DomainValidationException("Your upload quota is used up.") { Code = ApiErrorCodes.EbookQuotaExceeded };
 
             var title = string.IsNullOrWhiteSpace(meta.Title) ? EbookFormats.TitleFromFileName(fileName) : meta.Title.Trim();
+
+            // Dasselbe Buch in einer anderen Datei (0.863.0): ISBN, Text-Fingerabdruck, Titel + Autor — nur unter den
+            // sichtbaren Büchern. Sicher → 409 mit dem vorhandenen Buch; wahrscheinlich → anlegen und in der Antwort nennen.
+            var fingerprint = EbookFingerprint.Compute(_storage.ResolvePath(EbookSource.Upload, saved.RelativePath), format, ct);
+            List<EbookDuplicateDto>? possible = null;
+            if (!forceNew)
+            {
+                var matches = await EbookDuplicateFinder.FindAsync(_db, EbookAccess.Visible(_db, caller, manageAll), fingerprint, title, meta.Author, ct);
+                var certain = matches.Where(m => m.Certain).ToList();
+                if (certain.Count > 0)
+                {
+                    var books = await EbookDuplicateFinder.DescribeAsync(_db, certain, ct);
+                    throw new ConflictException("This book is already in the library.") { Code = ApiErrorCodes.EbookDuplicateBook, Details = new { books } };
+                }
+                if (matches.Count > 0) possible = await EbookDuplicateFinder.DescribeAsync(_db, matches, ct);
+            }
             var ebook = new Ebook
             {
                 Title = Clip(title, 300),
@@ -302,6 +329,9 @@ public class EbookService
                 FileName = Clip(Path.GetFileName(fileName), 300),
                 SizeBytes = saved.SizeBytes,
                 Sha256 = saved.Sha256,
+                Isbns = fingerprint.IsbnCsv,
+                TextFingerprint = fingerprint.MinHash is { } mh ? EbookFingerprint.Encode(mh) : null,
+                FingerprintedAt = DateTime.UtcNow,
             });
             if (EbookFormats.NeedsPdfConversion(ebook.Files)) ebook.ConversionState = EbookConversionState.Pending;
             _db.Ebooks.Add(ebook);
@@ -314,7 +344,9 @@ public class EbookService
             _logger.LogInformation("E-Book {EbookId} hochgeladen: {Format}, {Bytes} Bytes von {Caller}", ebook.Id, format, saved.SizeBytes,
                 caller.UserId is int u ? $"Nutzer {u}" : "anonym");
             if (!manageAll) await NotifyAdminsOfUploadAsync(ebook, caller, ct);
-            return await GetAsync(caller, manageAll, ebook.Id, ct);
+            var dto = await GetAsync(caller, manageAll, ebook.Id, ct);
+            dto.PossibleDuplicates = possible is { Count: > 0 } ? possible : null;
+            return dto;
         }
         catch
         {
