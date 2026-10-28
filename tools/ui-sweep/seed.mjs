@@ -417,6 +417,33 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
   });
 
+  // Eine „+“-Stellung an einer Partie der LeagueHub-Vereinsübersicht — sonst fehlt dort jedes „+n“, und das
+  // Stellungsfenster (Zustände `verein-uebersicht--plus-fenster` / `--in-partie-zeigen`) lässt sich nicht öffnen
+  // (Dev hatte am 28.10. keine). Markiert wird die Stellung nach Halbzug 12 mit dem Kommentar „ui-sweep“, als claude-dev;
+  // gibt es an der Partie schon eine, bleibt alles, wie es ist. chess.js kommt aus dem Frontend-Workspace.
+  await step(['overviewMarkGameId'], async () => {
+    const me = await a.get('/api/league/me');
+    const club = me.clubs?.[0];
+    if (!club) return {};
+    const ov = await a.get(`/api/league/club/overview?club=${club.id}`);
+    const ids = (ov.leagues ?? []).flatMap(l => l.rounds.flatMap(r => r.matches.flatMap(m => m.boards.map(b => b.game?.clubGameId))))
+      .filter(Number.isInteger);
+    if (!ids.length) return { _why: 'keine Partie in der Vereinsübersicht' };
+    const marked = ids.find(id => (ov.marks ?? {})[id] > 0);
+    if (marked) return { overviewMarkGameId: marked };
+    const { Chess } = await import(new URL('../../src/frontend/app/node_modules/chess.js/dist/esm/chess.js', import.meta.url).href);
+    const id = ids[0];
+    const g = await a.get(`/api/league/club/games/${id}?club=${club.id}`);
+    const chess = new Chess();
+    chess.loadPgn(g.pgn);
+    const moves = chess.history();
+    if (moves.length < 12) return { _why: `Partie ${id} zu kurz` };
+    const at = new Chess();
+    for (const san of moves.slice(0, 12)) at.move(san);
+    await a.put(`/api/league/club/games/${id}/marks/notes?club=${club.id}`, { fen: at.fen(), tags: [], comment: 'ui-sweep' });
+    return { overviewMarkGameId: id };
+  });
+
   // Offene Formular-Einlesung in LeagueHub (/verein/formular/{id}). Dev liest Formulare nicht selbst
   // (`Scoresheet:Reader=external`, der Watcher schaut nur auf Prod) — ein hochgeladenes Bild bleibt also „wartet aufs
   // Einlesen" stehen, ohne den Anthropic-Schlüssel anzufassen. Hochgeladen wird nur, wenn das Konto keine offene hat.

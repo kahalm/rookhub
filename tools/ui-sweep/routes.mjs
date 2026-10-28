@@ -211,7 +211,7 @@ export const ROUTES = [
   // ---------------------------------------------------------------- LeagueHub
   r('leaguehub', '/', 'user', { label: 'start', main: LH_FIXTURE }),
   r('leaguehub', '/verein', 'user', { main: ['table.club-table tr.game', 'section.empty', 'section.gate', 'form.club-search'] }),
-  r('leaguehub', '/verein/uebersicht', 'user', { main: ['article.lu-match', 'section.ov-league', 'section.gate', 'p.muted'] }),
+  r('leaguehub', '/verein/uebersicht', 'user', { main: ['article.lu-match', 'section.ov-league', 'details.ov-league', 'section.gate', 'p.muted'] }),
   r('leaguehub', '/verein/neu', 'user', { main: LH_UPLOAD }),
   r('leaguehub', '/verein/formular/{scanId}', 'user', { main: LH_SCAN }),
   // 404 auf …/sheet = kein Formular aufbewahrt → Korrektur am Brett (club-scan-page.component.ts, clubSheet-catch).

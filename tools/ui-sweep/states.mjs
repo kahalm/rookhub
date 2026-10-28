@@ -290,6 +290,17 @@ export const STATES = [
   { of: 'leaguehub__verein', name: 'zeilenmenue', auth: LEAGUE,
     steps: [{ click: 'table.club-table tr.game td.acts button.more-btn:visible, .gc-acts button.more-btn:visible' }], expect: MENU },
   { of: 'leaguehub__verein', name: 'info', auth: LEAGUE, steps: [{ click: 'p.info-line button.chk-btn' }], expect: '.info-panel .note' },
+  // Vereinsübersicht (28.10.2026): Nachspielen einer Partie, das „+n“-Stellungsfenster einer Runde und „In der Partie zeigen“.
+  // Die „+“-Stellung legt seed.mjs an (overviewMarkGameId).
+  { of: 'leaguehub__verein-uebersicht', name: 'nachspielen', auth: LEAGUE,
+    steps: [{ click: '.lu-board .bg-replay >> nth=0' }], expect: '.bg-replay-box lh-game-replay' },
+  { of: 'leaguehub__verein-uebersicht', name: 'plus-fenster', auth: LEAGUE,
+    steps: [{ click: '.ov-round .gb-mark >> nth=0' }, { waitFor: 'lh-marked-positions-dialog .mp-board' }],
+    expect: dlg('lh-marked-positions-dialog', '.mp-board') },
+  { of: 'leaguehub__verein-uebersicht', name: 'in-partie-zeigen', auth: LEAGUE,
+    steps: [{ click: '.ov-round .gb-mark >> nth=0' }, { waitFor: 'lh-marked-positions-dialog .mp-board' },
+      { click: 'lh-marked-positions-dialog .mat-mdc-dialog-actions button.btn-link >> nth=0' }],
+    expect: '.bg-replay-box lh-game-replay' },
   { of: 'leaguehub__konten', name: 'info', auth: ['admin'], steps: [{ click: 'button.chk-btn[aria-label="Wie gesucht wird"]' }], expect: '.info-panel.sugg-info' },
   { of: 'leaguehub__start', name: 'prognose-info', auth: LEAGUE,
     steps: [{ click: 'lh-fixture button.chk-btn[aria-label="Wie die Prognose zustande kommt"]' }], expect: 'lh-fixture .info-panel' },

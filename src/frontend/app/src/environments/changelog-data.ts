@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.864.2", date: "2026-10-28", changes: [
+    { en: "UI sweep: the LeagueHub club overview is now also photographed while a game is replayed, with the “+n” position window open and after “Show in game”; the seed marks one position there with the comment “ui-sweep”.",
+      de: "UI-Sweep: Die LeagueHub-Vereinsübersicht wird jetzt auch beim Nachspielen einer Partie, mit offenem „+n“-Stellungsfenster und nach „In der Partie zeigen“ fotografiert; der Seed markiert dafür eine Stellung mit dem Kommentar „ui-sweep“." },
+  ] },
   { version: "0.864.1", date: "2026-10-28", changes: [
     { en: "UI sweep: 40 more dialogs are now opened and photographed (analysis, repertoire, courses, calculation, puzzles, e-books, admin, tournament site) — 91 states instead of 51.",
       de: "UI-Sweep: 40 weitere Dialoge werden jetzt geöffnet und fotografiert (Analyse, Repertoire, Kurse, Kalkulation, Puzzles, E-Books, Admin, Turnierseite) — 91 Zustände statt 51." },
