@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.867.2", date: "2026-10-28", changes: [
+    { en: "Tests: the engine stream limit test runs each stream with its own request context — the tag build v0.867.1 failed on a race in the shared response headers.",
+      de: "Tests: Der Test zum Engine-Stromdeckel lässt jeden Strom mit eigenem Anfragekontext laufen — der Tag-Build v0.867.1 scheiterte an einem Wettlauf in den gemeinsamen Antwort-Kopfzeilen." },
+  ] },
   { version: "0.867.1", date: "2026-10-28", changes: [
     { en: "E-book reader: in some EPUBs (e.g. Scribd conversions like “50 Chess Traps in the Opening”) the text was squeezed into a very narrow column and the diagrams shrank to a few pixels — empty elements written as <div/> swallowed the rest of the chapter. They are now written out properly before display.",
       de: "E-Book-Leser: In manchen EPUBs (z. B. Scribd-Umwandlungen wie „50 Chess Traps in the Opening“) stand der Text in einer sehr schmalen Spalte und die Diagramme schrumpften auf wenige Pixel — leere Elemente als <div/> verschluckten den Rest des Kapitels. Sie werden jetzt vor der Anzeige richtig ausgeschrieben." },

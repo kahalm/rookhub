@@ -8,7 +8,7 @@
 // das Overlay laedt es per HttpClient erst beim Oeffnen (Codereview F8-008).
 // Neue Eintraege gehoeren dort hinein; diese Datei bleibt bewusst winzig,
 // damit sie ohne Bundle-Kosten eager importierbar ist (Version im Footer).
-export const APP_VERSION = '0.867.1';
+export const APP_VERSION = '0.867.2';
 /** Bump this integer whenever a new APK must be installed by existing users. */
 export const APK_VERSION = 3;
 

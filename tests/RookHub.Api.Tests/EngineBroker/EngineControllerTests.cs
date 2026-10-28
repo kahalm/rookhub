@@ -79,13 +79,13 @@ public class EngineControllerTests : IDisposable
     }
 
     private EngineController CreateController(LocalBrokerOptions brokerOptions, EngineHub hub,
-        ILogger<EngineController>? logger = null)
+        ILogger<EngineController>? logger = null, EngineActivityTracker? activity = null)
     {
         var registry = new EngineRegistry(_db, _encryption, _lichess, _directory, brokerOptions);
         var broker = new EngineBrokerRouter(
             new LocalEngineBroker(hub, brokerOptions, NullLogger<LocalEngineBroker>.Instance),
             new LichessEngineBroker(_lichess));
-        return new EngineController(_db, _encryption, registry, broker, new EngineActivityTracker(),
+        return new EngineController(_db, _encryption, registry, broker, activity ?? new EngineActivityTracker(),
             logger ?? NullLogger<EngineController>.Instance);
     }
 
@@ -95,7 +95,9 @@ public class EngineControllerTests : IDisposable
         _sp.Dispose();
     }
 
-    private void SetUser(int userId)
+    private void SetUser(int userId) => _controller.ControllerContext = UserContext(userId);
+
+    private static ControllerContext UserContext(int userId)
     {
         var httpContext = new DefaultHttpContext
         {
@@ -103,7 +105,7 @@ public class EngineControllerTests : IDisposable
                 new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) }, "Test"))
         };
         httpContext.Response.Body = new MemoryStream();
-        _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        return new ControllerContext { HttpContext = httpContext };
     }
 
     private async Task<AppUser> CreateUserAsync(int id = 42)
@@ -360,13 +362,22 @@ public class EngineControllerTests : IDisposable
         await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
         _handler.BlockAnalyse = true;
 
-        // Vier Ströme dürfen offen sein; sie hängen im Handler fest.
+        // Vier Ströme dürfen offen sein; sie hängen im Handler fest. Jeder Strom ist eine eigene Anfrage mit eigenem
+        // HttpContext (wie im Betrieb) und gemeinsamem Zähler — auf EINEM Context setzten die vier nach dem Freigeben
+        // gleichzeitig Kopfzeilen in dasselbe Dictionary (CI-Fehler beim Tag v0.867.1: „concurrent update … corrupted“).
+        var activity = new EngineActivityTracker();
+        EngineController Request()
+        {
+            var c = CreateController(_brokerOptions, _hub, activity: activity);
+            c.ControllerContext = UserContext(42);
+            return c;
+        }
         var running = Enumerable.Range(0, 4)
-            .Select(_ => _controller.Analyse("eei_abc", ValidRequest(), CancellationToken.None))
+            .Select(_ => Request().Analyse("eei_abc", ValidRequest(), CancellationToken.None))
             .ToList();
         while (_handler.AnalyseCalls < 4) await Task.Delay(10);
 
-        var overflow = await _controller.Analyse("eei_abc", ValidRequest(), CancellationToken.None);
+        var overflow = await Request().Analyse("eei_abc", ValidRequest(), CancellationToken.None);
         var status = Assert.IsType<ObjectResult>(overflow);
         Assert.Equal(429, status.StatusCode);
 
@@ -375,7 +386,7 @@ public class EngineControllerTests : IDisposable
 
         // Nach dem Freiwerden geht es wieder — der Zähler wird sauber zurückgegeben.
         _handler.BlockAnalyse = false;
-        Assert.IsType<EmptyResult>(await _controller.Analyse("eei_abc", ValidRequest(), CancellationToken.None));
+        Assert.IsType<EmptyResult>(await Request().Analyse("eei_abc", ValidRequest(), CancellationToken.None));
     }
 
     // ---- Robustheit der Engine-Liste ----
