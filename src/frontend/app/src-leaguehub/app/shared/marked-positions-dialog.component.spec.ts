@@ -48,6 +48,26 @@ describe('MarkedPositionsDialogComponent', () => {
     expect((el.querySelectorAll<HTMLButtonElement>('.mp-nav')[1]).disabled).toBeTrue();
   });
 
+  // 0.865.0, Wunsch 2026-10-28: „zeig beim Klicken auf + normal die hinterlegte Klassifizierung + Kommentar, irgendwo klein ein
+  // Bleistift zum Bearbeiten, dann stehen alle zum Auswählen + Edit für Kommentar"
+  it('erst lesen (Schlagworte + Bemerkungen, kein Speichern), Bleistift → alle Schlagworte, Textfeld und Speichern', async () => {
+    const { fixture, el } = await setup({ clubGameMarks: () => Promise.resolve([MAIN, VAR]) });
+    const chips = () => [...el.querySelectorAll('.mn-chip')].map(x => x.textContent!.trim());
+    expect(chips()).toEqual(['markPosition.tag.tactic', 'Motiv']);
+    expect(el.querySelector('.mn-mine')?.textContent).toBe('meins');
+    expect(el.querySelector('textarea')).toBeNull();
+    expect(el.querySelector('.mp-save')).toBeNull();
+    (el.querySelector('.mn-pencil') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(chips().length).toBeGreaterThan(14);
+    expect(el.querySelector('textarea')).not.toBeNull();
+    expect(el.querySelector('.mp-save')).not.toBeNull();
+    (el.querySelectorAll<HTMLButtonElement>('.mp-nav')[1]).click();      // nächste Stellung wieder zum Lesen
+    fixture.detectChanges();
+    expect(el.querySelector('textarea')).toBeNull();
+    expect(chips()).toEqual(['markPosition.tag.opening']);
+  });
+
   it('Speichern schickt die eigenen Notizen und bleibt auf der Stellung; „In der Partie zeigen" schließt mit ihr', async () => {
     const saved = { ...VAR, myTags: ['trap'], myComment: 'neu', mine: true, count: 2 };
     const put = jasmine.createSpy('put').and.returnValue(Promise.resolve([MAIN, saved]));

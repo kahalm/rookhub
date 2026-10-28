@@ -13,7 +13,7 @@ describe('MarkNotesDialogComponent', () => {
   const FEN = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
   const KEY = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3';
 
-  function setup() {
+  function setup(edit = true) {
     const ref = { close: jasmine.createSpy('close') };
     TestBed.configureTestingModule({
       imports: [MarkNotesDialogComponent],
@@ -29,8 +29,27 @@ describe('MarkNotesDialogComponent', () => {
       tags: ['tactic', 'Mein Motiv'], comment: 'alt' }]);
     const fixture = TestBed.createComponent(MarkNotesDialogComponent);
     fixture.detectChanges();
-    return { fixture, http, ref, service, el: fixture.nativeElement as HTMLElement };
+    const el = fixture.nativeElement as HTMLElement;
+    if (edit) { (el.querySelector('.mn-pencil') as HTMLButtonElement).click(); fixture.detectChanges(); }
+    return { fixture, http, ref, service, el };
   }
+
+  // 0.865.0, Wunsch 2026-10-28: „zeig beim Klicken auf + normal die hinterlegte Klassifizierung + Kommentar, irgendwo klein ein
+  // Bleistift zum Bearbeiten, dann stehen alle zum Auswählen + Edit für Kommentar"
+  it('öffnet zum Lesen: nur die vergebenen Schlagworte und die Bemerkung, Bleistift schaltet in die Bearbeitung', () => {
+    const { fixture, el } = setup(false);
+    const chips = [...el.querySelectorAll('.mn-chip')].map(c => c.textContent!.trim());
+    expect(chips).toEqual(['markPosition.tag.tactic', 'Mein Motiv']);
+    expect(el.querySelector('.mn-mine')?.textContent).toBe('alt');
+    expect(el.querySelector('textarea')).toBeNull();
+    expect(el.querySelector('button.save')).toBeNull();
+    expect(el.querySelector('button.close')).not.toBeNull();
+    (el.querySelector('.mn-pencil') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.mn-chip').length).toBeGreaterThan(14);   // alle festen zum Auswählen
+    expect((el.querySelector('textarea') as HTMLTextAreaElement).value).toBe('alt');
+    expect(el.querySelector('button.save')).not.toBeNull();
+  });
 
   it('zeigt die gespeicherten Schlagworte, Klick schaltet, eigenes Wort per Enter, Speichern schickt beides', () => {
     const { fixture, http, ref, service, el } = setup();

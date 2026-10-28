@@ -26,14 +26,18 @@ export type MarkNotesDialogResult = 'saved' | 'removed' | undefined;
   template: `
     <h2 mat-dialog-title>{{ 'markPosition.title' | translate }}</h2>
     <mat-dialog-content>
-      <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [fen]="fen" />
+      <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [(editing)]="editing" [fen]="fen" />
       @if (error()) { <p class="err" role="alert">{{ 'markPosition.saveFailed' | translate }}</p> }
     </mat-dialog-content>
     <mat-dialog-actions>
       <button mat-button type="button" class="remove" [disabled]="busy()" (click)="remove()">{{ 'markPosition.remove' | translate }}</button>
       <span class="spacer"></span>
-      <button mat-button type="button" mat-dialog-close>{{ 'common.cancel' | translate }}</button>
-      <button mat-flat-button color="primary" type="button" class="save" [disabled]="busy()" (click)="save()">{{ 'common.save' | translate }}</button>
+      @if (editing()) {
+        <button mat-button type="button" mat-dialog-close>{{ 'common.cancel' | translate }}</button>
+        <button mat-flat-button color="primary" type="button" class="save" [disabled]="busy()" (click)="save()">{{ 'common.save' | translate }}</button>
+      } @else {
+        <button mat-button type="button" class="close" mat-dialog-close>{{ 'common.close' | translate }}</button>
+      }
     </mat-dialog-actions>
   `,
   styles: [`
@@ -50,6 +54,8 @@ export class MarkNotesDialogComponent {
   readonly tags = signal<string[]>(this.service.notesOf(this.data.fen).tags);
   readonly comment = signal(this.service.notesOf(this.data.fen).comment ?? '');
   readonly fen = this.data.fen;
+  /** Lesen oder Bearbeiten (0.865.0) — der Editor entscheidet beim Öffnen, der Bleistift schaltet um. */
+  readonly editing = signal(false);
   readonly busy = signal(false);
   readonly error = signal(false);
 

@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.865.0", date: "2026-10-28", changes: [
+    { en: "Interesting positions (+): the window now first shows what is stored — the classification and the comment (also those of others in LeagueHub) — just for reading. A small pencil switches to editing: then all tags are there to choose from and the comment can be changed. A position without anything yet opens straight in editing.", de: "Interessante Stellungen (+): Das Fenster zeigt jetzt zuerst, was hinterlegt ist — Klassifizierung und Bemerkung (in LeagueHub auch die anderer) — nur zum Lesen. Ein kleiner Bleistift schaltet in die Bearbeitung: dann stehen alle Schlagworte zur Auswahl und die Bemerkung lässt sich ändern. Eine Stellung ohne alles öffnet gleich in der Bearbeitung." },
+  ] },
   { version: "0.864.2", date: "2026-10-28", changes: [
     { en: "UI sweep: the LeagueHub club overview is now also photographed while a game is replayed, with the “+n” position window open and after “Show in game”; the seed marks one position there with the comment “ui-sweep”.",
       de: "UI-Sweep: Die LeagueHub-Vereinsübersicht wird jetzt auch beim Nachspielen einer Partie, mit offenem „+n“-Stellungsfenster und nach „In der Partie zeigen“ fotografiert; der Seed markiert dafür eine Stellung mit dem Kommentar „ui-sweep“." },

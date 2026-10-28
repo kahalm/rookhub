@@ -58,7 +58,8 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
         </div>
         <div class="mp-board"><app-chess-board [fen]="m.fen" [flipped]="!!current()!.game.flipped" /></div>
         @for (m2 of [m]; track current()!.game.clubGameId + ':' + m2.positionKey) {
-          <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [otherTags]="m2.tags ?? []" [others]="m2.comments ?? []" [fen]="m2.fen" />
+          <app-mark-notes-editor [(tags)]="tags" [(comment)]="comment" [otherTags]="m2.tags ?? []" [others]="m2.comments ?? []" [fen]="m2.fen"
+                                 [(editing)]="editing" />
         }
         @if (saveError()) { <p class="mp-msg err" role="alert">{{ saveError() }}</p> }
         @if (saved()) { <p class="mp-msg ok" role="status">Gespeichert.</p> }
@@ -70,7 +71,7 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
       @if (current(); as it) { <button type="button" class="btn-link" (click)="show(it)">In der Partie zeigen</button> }
       <span class="spacer"></span>
       <button type="button" class="btn-link" mat-dialog-close>Schließen</button>
-      @if (current()) { <button type="button" class="btn-sec mp-save" [disabled]="busy() || !dirty()" (click)="save()">Speichern</button> }
+      @if (current() && editing()) { <button type="button" class="btn-sec mp-save" [disabled]="busy() || !dirty()" (click)="save()">Speichern</button> }
     </mat-dialog-actions>
   `,
   styles: [`
@@ -108,6 +109,8 @@ export class MarkedPositionsDialogComponent {
   readonly saved = signal(false);
   readonly tags = signal<string[]>([]);
   readonly comment = signal('');
+  /** Lesen oder Bearbeiten (0.865.0): je Stellung erst lesen, der Bleistift im Editor schaltet um; nach dem Speichern wieder lesen. */
+  readonly editing = signal(false);
 
   readonly current = computed<Item | null>(() => this.items()[this.index()] ?? null);
   readonly mark = computed(() => this.current()?.mark ?? null);
@@ -146,6 +149,7 @@ export class MarkedPositionsDialogComponent {
     const m = this.items()[i]?.mark;
     this.tags.set([...(m?.myTags ?? [])]);
     this.comment.set(m?.myComment ?? '');
+    this.editing.set(false);
     this.saveError.set(null);
     this.saved.set(false);
   }

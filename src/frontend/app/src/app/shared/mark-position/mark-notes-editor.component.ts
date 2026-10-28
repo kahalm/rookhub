@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, input, model, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MarkNotesRevision, MarkedPositionsService } from './marked-positions.service';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -12,6 +12,10 @@ import { KNOWN_MARK_TAGS, MAX_MARK_COMMENT_LENGTH, MAX_MARK_TAG_LENGTH, addMarkT
  * Seit 0.862.1 (Wunsch 2026-10-27: „merk dir beim Bearbeiten auch die alten, damit ich ggf. Gelöschtes wiederherstellen
  * kann"): mit `fen` klappt „Frühere Fassungen" die aufgehobenen Fassungen auf; „Wiederherstellen" übernimmt eine in die
  * Felder (gespeichert wird erst mit „Speichern" — die jetzige Fassung wandert dabei selbst in den Verlauf).
+ * Seit 0.865.0 (Wunsch 2026-10-28: „zeig beim Klicken auf + normal die hinterlegte Klassifizierung + Kommentar, irgendwo klein
+ * ein Bleistift zum Bearbeiten, dann stehen alle zum Auswählen + Edit für Kommentar"): Hat die Stellung schon etwas, zeigt der
+ * Editor es erst nur zum Lesen (`editing` aus); der Bleistift schaltet in die Bearbeitung. Eine leere Stellung startet gleich
+ * in der Bearbeitung.
  */
 @Component({
   selector: 'app-mark-notes-editor',
@@ -19,6 +23,29 @@ import { KNOWN_MARK_TAGS, MAX_MARK_COMMENT_LENGTH, MAX_MARK_TAG_LENGTH, addMarkT
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, DatePipe],
   template: `
+    @if (!editing()) {
+      <div class="mn-view-head">
+        <span class="mn-label">{{ 'markPosition.tags' | translate }}</span>
+        <button type="button" class="mn-pencil" (click)="editing.set(true)" [title]="'common.edit' | translate"
+                [attr.aria-label]="'common.edit' | translate">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor"
+            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </button>
+      </div>
+      @if (viewTags().length) {
+        <div class="mn-chips">
+          @for (t of viewTags(); track t.tag) {
+            <span class="mn-chip" [class.on]="t.mine" [class.other]="!t.mine" [title]="t.mine ? '' : ('markPosition.byOthers' | translate)">{{ label(t.tag) | translate }}</span>
+          }
+        </div>
+      } @else {
+        <p class="mn-none">{{ 'markPosition.noTags' | translate }}</p>
+      }
+      <div class="mn-label">{{ 'markPosition.comment' | translate }}</div>
+      @if (comment().trim()) { <p class="mn-mine">{{ comment() }}</p> }
+      @for (c of others(); track $index) { <blockquote class="mn-other">{{ c }}</blockquote> }
+      @if (!comment().trim() && !others().length) { <p class="mn-none">{{ 'markPosition.noComment' | translate }}</p> }
+    } @else {
     <div class="mn-label" id="mn-tags">{{ 'markPosition.tags' | translate }}</div>
     <div class="mn-chips" role="group" aria-labelledby="mn-tags">
       @for (t of known; track t) {
@@ -72,9 +99,18 @@ import { KNOWN_MARK_TAGS, MAX_MARK_COMMENT_LENGTH, MAX_MARK_TAG_LENGTH, addMarkT
         }
       }
     }
+    }
   `,
   styles: [`
     :host { display: block; }
+    .mn-view-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .mn-pencil { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-top: 6px;
+      border: 0; border-radius: 50%; background: transparent; color: inherit; opacity: 0.7; cursor: pointer; }
+    .mn-pencil:hover { opacity: 1; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .mn-pencil:focus-visible { outline: 2px solid currentColor; opacity: 1; }
+    .mn-view-head + .mn-chips .mn-chip { cursor: default; }
+    .mn-none { margin: 0; font-size: 0.88rem; opacity: 0.7; }
+    .mn-mine { margin: 0 0 6px; white-space: pre-wrap; font-size: 0.92rem; }
     .mn-label { display: block; font-size: 0.8rem; font-weight: 600; opacity: 0.8; margin: 10px 0 4px; }
     .mn-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .mn-chip { font: inherit; font-size: 0.82rem; padding: 3px 10px; border-radius: 999px; cursor: pointer;
@@ -106,7 +142,7 @@ import { KNOWN_MARK_TAGS, MAX_MARK_COMMENT_LENGTH, MAX_MARK_TAG_LENGTH, addMarkT
       white-space: pre-wrap; font-size: 0.88rem; }
   `],
 })
-export class MarkNotesEditorComponent {
+export class MarkNotesEditorComponent implements OnInit {
   /** Die eigenen Schlagworte (feste Codes oder eigene Wörter). */
   readonly tags = model<string[]>([]);
   /** Der eigene Kommentar. */
@@ -118,6 +154,9 @@ export class MarkNotesEditorComponent {
   /** Die Stellung — mit ihr gibt es „Frühere Fassungen" (0.862.1). */
   readonly fen = input<string | null>(null);
 
+  /** Bearbeiten (Chips + Felder) statt Lesen (0.865.0); startet an, wenn die Stellung noch nichts hat. */
+  readonly editing = model(false);
+
   private readonly service = inject(MarkedPositionsService);
   readonly historyOpen = signal(false);
   readonly history = signal<MarkNotesRevision[] | null>(null);
@@ -127,6 +166,13 @@ export class MarkNotesEditorComponent {
   readonly maxTag = MAX_MARK_TAG_LENGTH;
   readonly maxComment = MAX_MARK_COMMENT_LENGTH;
   readonly draft = signal('');
+
+  /** Lesen: eigene Schlagworte, dahinter die anderer, die man selbst nicht hat. */
+  readonly viewTags = computed(() => {
+    const mine = this.tags().map(tag => ({ tag, mine: true }));
+    const more = this.otherTags().filter(t => !this.has(t)).map(tag => ({ tag, mine: false }));
+    return [...mine, ...more];
+  });
 
   /** Eigene Wörter (alles, was kein fester Code ist). */
   readonly custom = computed(() => this.tags().filter(t => !knownMarkTag(t)));
@@ -141,6 +187,10 @@ export class MarkNotesEditorComponent {
       this.historyOpen.set(false);
       this.history.set(null);
     });
+  }
+
+  ngOnInit(): void {
+    if (!this.tags().length && !this.comment().trim() && !this.otherTags().length && !this.others().length) this.editing.set(true);
   }
 
   toggleHistory(): void {
