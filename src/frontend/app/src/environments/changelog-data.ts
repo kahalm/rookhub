@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.866.1", date: "2026-10-28", changes: [
+    { en: "UI sweep: the “+” position window in the LeagueHub overview is also photographed in edit mode (after the pencil).",
+      de: "UI-Sweep: Das „+“-Stellungsfenster der LeagueHub-Übersicht wird auch im Bearbeiten-Modus (nach dem Bleistift) fotografiert." },
+  ] },
   { version: "0.866.0", date: "2026-10-28", changes: [
     { en: "LeagueHub club overview: every league (e.g. Landesliga, 1. Klasse, Gebietsklasse) can be folded away by tapping its heading — handy on the phone; the browser remembers which ones are folded. “Show in the game” opens a folded league first.", de: "LeagueHub-Vereinsübersicht: Jede Liga (z. B. Landesliga, 1. Klasse, Gebietsklasse) lässt sich mit einem Tipp auf ihre Überschrift einklappen — angenehm am Handy; der Browser merkt sich, welche zu sind. „In der Partie zeigen“ klappt eine zugeklappte Liga vorher auf." },
     { en: "LeagueHub: “Show in the game” from the window of interesting positions landed one half-move too far (the move after the marked position); it now stops exactly at the position.", de: "LeagueHub: „In der Partie zeigen“ aus dem Fenster der interessanten Stellungen landete einen Halbzug zu weit (beim Zug nach der markierten Stellung); jetzt steht es genau dort." },

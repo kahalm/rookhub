@@ -297,6 +297,11 @@ export const STATES = [
   { of: 'leaguehub__verein-uebersicht', name: 'plus-fenster', auth: LEAGUE,
     steps: [{ click: '.ov-round .gb-mark >> nth=0' }, { waitFor: 'lh-marked-positions-dialog .mp-board' }],
     expect: dlg('lh-marked-positions-dialog', '.mp-board') },
+  // Seit 0.865.0 öffnet das Fenster zum Lesen (Schlagworte + Bemerkung); Bearbeiten erst über den Bleistift.
+  { of: 'leaguehub__verein-uebersicht', name: 'plus-fenster-bearbeiten', auth: LEAGUE,
+    steps: [{ click: '.ov-round .gb-mark >> nth=0' }, { waitFor: 'lh-marked-positions-dialog .mp-board' },
+      { click: 'lh-marked-positions-dialog button.mn-pencil' }],
+    expect: 'lh-marked-positions-dialog textarea.mn-text' },
   { of: 'leaguehub__verein-uebersicht', name: 'in-partie-zeigen', auth: LEAGUE,
     steps: [{ click: '.ov-round .gb-mark >> nth=0' }, { waitFor: 'lh-marked-positions-dialog .mp-board' },
       { click: 'lh-marked-positions-dialog .mat-mdc-dialog-actions button.btn-link >> nth=0' }],
