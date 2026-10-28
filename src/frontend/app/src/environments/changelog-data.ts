@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.867.0", date: "2026-10-28", changes: [
+    { en: "E-books: diagrams drawn as pictures in EPUBs that the old picture reader could not read (e.g. Merida-style pieces on grey light squares, as in “50 Chess Traps in the Opening”) are now read by the scan network — such books no longer stay at 0 diagrams.",
+      de: "E-Books: Diagramme als Bilder in EPUBs, die der bisherige Bildleser nicht lesen konnte (z. B. Merida-artige Figuren auf grauen hellen Feldern wie in „50 Chess Traps in the Opening“), liest jetzt das Scan-Netz — solche Bücher bleiben nicht mehr bei 0 Diagrammen." },
+  ] },
   { version: "0.866.1", date: "2026-10-28", changes: [
     { en: "UI sweep: the “+” position window in the LeagueHub overview is also photographed in edit mode (after the pencil).",
       de: "UI-Sweep: Das „+“-Stellungsfenster der LeagueHub-Übersicht wird auch im Bearbeiten-Modus (nach dem Bleistift) fotografiert." },

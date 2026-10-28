@@ -143,4 +143,32 @@ public class EbookEpubDiagramTests
         Assert.InRange(p, 0, 11);
         Assert.InRange(m.EmptyProbability(new float[1152]), 0.0, 1.0);
     }
+
+    [Fact]
+    public void Extract_TemplateClassifierFails_ScanNetReadsGreyMeridaBoard()
+    {
+        // „50 Chess Traps in the Opening“ (Prod #2250, 0.865.0): Merida-artige Figuren auf grauen hellen Feldern — der
+        // Vorlagen-Klassifikator las Unsinn (keine Könige), das Buch blieb bei 0 Diagrammen. Das Scan-Netz liest das Bild.
+        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Ebooks", "epub-board-grey.png"));
+        var path = Path.Combine(Path.GetTempPath(), $"epub-grey-{Guid.NewGuid():N}.epub");
+        try
+        {
+            using (var zip = ZipFile.Open(path, ZipArchiveMode.Create))
+            {
+                void Add(string name, string text) { using var w = new StreamWriter(zip.CreateEntry(name).Open(), Encoding.UTF8); w.Write(text); }
+                Add("META-INF/container.xml", """<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/book.opf"/></rootfiles></container>""");
+                Add("OEBPS/book.opf", """<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf"><manifest><item id="a" href="ch1.xhtml"/></manifest><spine><itemref idref="a"/></spine></package>""");
+                Add("OEBPS/ch1.xhtml", "<p>Black to move</p><img src='b.png'/>");
+                using (var s = zip.CreateEntry("OEBPS/b.png").Open()) s.Write(png);
+            }
+            var r = new EbookEpubDiagramExtractor(Microsoft.Extensions.Logging.Abstractions.NullLogger<EbookEpubDiagramExtractor>.Instance)
+                .Extract(path, 1, default);
+            var d = Assert.Single(r.Diagrams);
+            Assert.Equal("r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/8/PPP2PPP/RNBQKB1R", d.Fen.Split(' ')[0]);
+            Assert.Equal("image-cnn", d.FontFamily);
+            Assert.NotNull(d.Confidence);
+        }
+        finally { File.Delete(path); }
+    }
 }
+

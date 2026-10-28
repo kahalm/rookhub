@@ -26,10 +26,12 @@ public class EbookEpubDiagramExtractor
 
     /// <param name="keepUnread">Ergänzen-Modus (0.811.0): ein Brettbild mit unplausibler Lesung wird nicht verworfen, sondern
     /// mit der rohen Lesung als <see cref="EbookDiagramVisibility.Unread"/> angelegt (für Nutzer unsichtbar).</param>
+    /// <param name="cnn">Scan-Netz als zweite Meinung, wenn der Vorlagen-Klassifikator kein stimmiges Brett liest (Standard: eingebautes Netz).</param>
     public EbookDiagramExtractor.Result Extract(string epubPath, int ebookId, CancellationToken ct, EbookBoardClassifier? model = null,
-        bool keepUnread = false)
+        bool keepUnread = false, EbookBoardCnn? cnn = null)
     {
         model ??= EbookBoardClassifier.Instance;
+        cnn ??= EbookBoardCnn.Instance;
         using var zip = ZipFile.OpenRead(epubPath);
         var blocks = EbookEpubContent.Read(zip);
         // Durchgang 1: welche Bilder sind Bretter (nur das Rechteck merken — die Felder ALLER Bretter wären bei 1 000
@@ -71,6 +73,16 @@ public class EbookEpubDiagramExtractor
                 var cells = g == null ? null : EbookBoardImage.Cells(g, box);
                 var grid = cells == null ? null : EbookBoardImage.ReadGrid(cells, bg, bgBlur, model);
                 var board = grid == null ? null : EbookBoardImage.GridToBoard(grid);
+                // Kein stimmiges Brett: das Scan-Netz probieren (0.865.0). Der Vorlagen-Klassifikator kennt manche Figurensätze
+                // nicht (z. B. Merida-artige Figuren auf grauen hellen Feldern, „50 Chess Traps in the Opening“) und liest dann
+                // Unsinn — so blieben 56 EPUB-Bücher bei 0 Diagrammen; das Scan-Netz liest dieselben Bilder sicher.
+                float? cnnConfidence = null;
+                if (board == null && g != null && cnn != null)
+                {
+                    var reading = cnn.Read(g, box.X0, box.Y0, box.X1, box.Y1);
+                    if (EbookBoardImage.GridToBoard(reading.Grid) is string cnnBoard)
+                        (grid, board, cnnConfidence) = (reading.Grid, cnnBoard, reading.MinConfidence);
+                }
                 if (board == null)
                 {
                     if (!keepUnread || grid == null) continue;
@@ -101,7 +113,8 @@ public class EbookEpubDiagramExtractor
                     Label = label,
                     Caption = Caption(blocks, bi),
                     SideKnown = sideKnown,
-                    FontFamily = "image",
+                    FontFamily = cnnConfidence == null ? "image" : "image-cnn",   // eigener Wert: „cnn“ meint Scan-PDF-Bretter (Opus-Stapel schneiden sie aus PDF-Seiten)
+                    Confidence = cnnConfidence,
                 });
             }
         }
