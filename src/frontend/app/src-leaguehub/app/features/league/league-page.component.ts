@@ -6,6 +6,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { readJson, writeJson, localStore, sessionStore } from '@rh/core/local-json-store';
 import { LeagueApiService } from '../../core/league-api.service';
 import { roundLabel, tn } from '../../core/league-format';
+import { SOURCES_RETRIES, SOURCES_RETRY_MS } from '../../core/game-sources';
 import { loadErrorText } from '../../core/club-format';
 import { GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
@@ -215,20 +216,26 @@ export class LeaguePageComponent implements OnInit {
   readonly tn = tn;
   readonly label = roundLabel;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private sourcesTimer: ReturnType<typeof setTimeout> | null = null;
   private polling = false;
   /** Der zuletzt angeforderte Ligawechsel — „Erneut versuchen" wiederholt genau ihn. */
   private lastShow: [number, number, string, boolean] = [0, 0, '', false];
   private destroyed = false;
 
   /** Nebenbei: fehlt die Zählung, fehlt nur die Tabelle — die Prognose hängt nicht daran. Eine Antwort, die nach einem
-   *  Wechsel der Begegnung eintrifft, wird verworfen. */
-  private async loadSources(tnr: number, fides: string[]): Promise<void> {
+   *  Wechsel der Begegnung eintrifft, wird verworfen. Läuft die Gesamtzählung am Server noch (`pending`, 28.10.2026), kommt die
+   *  Antwort nach ein paar Sekunden ohne sie — dann wird nach {@link SOURCES_RETRY_MS} nachgefragt. */
+  private async loadSources(tnr: number, fides: string[], attempt = 0): Promise<void> {
     const key = `${tnr}|${fides.join(',')}`;
-    if (key === this.sourcesKey && this.sources()) return;
+    if (attempt === 0 && key === this.sourcesKey && this.sources()) return;
     this.sourcesKey = key;
+    if (this.sourcesTimer) { clearTimeout(this.sourcesTimer); this.sourcesTimer = null; }
     try {
       const s = await this.api.sources(null, fides, tnr);
-      if (this.sourcesKey === key) this.sources.set(s);
+      if (this.sourcesKey !== key) return;
+      this.sources.set(s);
+      if (s.pending && attempt < SOURCES_RETRIES && !this.destroyed)
+        this.sourcesTimer = setTimeout(() => void this.loadSources(tnr, fides, attempt + 1), SOURCES_RETRY_MS);
     } catch {
       if (this.sourcesKey === key) this.sources.set(null);
     }
@@ -244,6 +251,7 @@ export class LeaguePageComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.destroyed = true;
       if (this.pollTimer) clearTimeout(this.pollTimer);
+      if (this.sourcesTimer) clearTimeout(this.sourcesTimer);
     });
   }
 

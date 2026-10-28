@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
 import { GameSources, SharedFixture } from '../../core/league.models';
+import { SOURCES_RETRIES, SOURCES_RETRY_MS } from '../../core/game-sources';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { RoundLineupsComponent } from '../../shared/round-lineups.component';
 import { ClubContextService } from '../../core/club-context.service';
@@ -96,6 +97,7 @@ export class SharePageComponent implements OnInit {
   /** Der Verein des Links gilt auf dieser Seite (Karten, Paarungen): 0.698.0. */
   private readonly clubs = inject(ClubContextService);
   private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   /** Angemeldet (0.846.4): ein abgelaufener Link führt zur Prognose der Begegnung, ein widerrufener bietet „Zu den Prognosen". */
   readonly loggedIn = this.auth.isLoggedIn;
   readonly token = this.route.snapshot.paramMap.get('token') ?? '';
@@ -107,6 +109,8 @@ export class SharePageComponent implements OnInit {
   readonly invalid = signal(false);
   /** Partien je Quelle wie auf der Startseite (0.627.0; als Tabelle mit Gegner seit 0.628.0); fehlt die Zählung, fehlt nur die Tabelle. */
   readonly sources = signal<GameSources | null>(null);
+  private destroyed = false;
+  constructor() { this.destroyRef.onDestroy(() => (this.destroyed = true)); }
   /** Vorübergehender Fehler (kein 404): der Link kann gültig sein — Klartext und „Neu laden" statt „Link ungültig". */
   readonly loadError = signal<string | null>(null);
   /** Erklärtext der Aufforderung hinter (i) (d2-l-teilen-cta). */
@@ -138,10 +142,20 @@ export class SharePageComponent implements OnInit {
         : 'Die Begegnung ließ sich gerade nicht laden. Bitte neu laden.');
       return;
     }
-    try {
-      this.sources.set(await this.api.sources(this.token));
-    } catch {
-      this.sources.set(null);
+    // Läuft die Gesamtzählung am Server noch (`pending`, 28.10.2026), kommt die Antwort ohne sie — dann nachfragen.
+    for (let attempt = 0; ; attempt++) {
+      let s: GameSources;
+      try {
+        s = await this.api.sources(this.token);
+      } catch {
+        this.sources.set(null);
+        return;
+      }
+      if (this.destroyed) return;
+      this.sources.set(s);
+      if (!s.pending || attempt >= SOURCES_RETRIES) return;
+      await new Promise(r => setTimeout(r, SOURCES_RETRY_MS));
+      if (this.destroyed) return;
     }
   }
 

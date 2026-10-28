@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
@@ -57,7 +58,11 @@ public class LeagueGameSourcesTests : IDisposable
     private sealed class CountingCache(IMemoryCache inner) : IMemoryCache
     {
         public int Writes;
-        public ICacheEntry CreateEntry(object key) { Interlocked.Increment(ref Writes); return inner.CreateEntry(key); }
+        public ICacheEntry CreateEntry(object key)
+        {
+            if (key is not string k || !k.EndsWith(":last", StringComparison.Ordinal)) Interlocked.Increment(ref Writes);   // „zuletzt gezählt" je Zählung dazu
+            return inner.CreateEntry(key);
+        }
         public void Dispose() => inner.Dispose();
         public void Remove(object key) => inner.Remove(key);
         public bool TryGetValue(object key, out object? value) => inner.TryGetValue(key, out value);
@@ -86,6 +91,95 @@ public class LeagueGameSourcesTests : IDisposable
             Assert.Equal(1, cache.Writes);
         }
         finally { foreach (var db in contexts) await db.DisposeAsync(); }
+    }
+
+    /// <summary>Ein Dienst wie im Betrieb: Scope-Fabrik über eine eigene In-Memory-DB mit Muster + Huber (Gesamt 6 Brettpartien).</summary>
+    private static async Task<(ServiceProvider Sp, string Name)> BackgroundDb()
+    {
+        var name = Guid.NewGuid().ToString();
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(name));
+        var sp = services.BuildServiceProvider();
+        using var scope = sp.CreateScope();
+        var seed = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        seed.LeaguePlayerProfiles.AddRange(
+            new LeaguePlayerProfile { FideId = "222", Name = "Muster, Max", Pgn = MusterPgn },
+            new LeaguePlayerProfile { FideId = "333", Name = "Huber, Franz", Pgn = HuberPgn });
+        seed.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Kufstein", Name = "Muster, Max", NameKey = "muster, max", FideId = "222" });
+        await seed.SaveChangesAsync();
+        return (sp, name);
+    }
+
+    private static async Task Until(Func<bool> done)
+    {
+        for (var i = 0; i < 500 && !done(); i++) await Task.Delay(10);
+        Assert.True(done());
+    }
+
+    // 28.10.2026 (Dev): Die Gesamtzählung dauerte länger als nginx wartet (60 s). Der Abbruch der Anfrage brach auch die
+    // Zählung ab, der Cache blieb leer, jede weitere Anfrage begann von vorn — 28 von 28 Anfragen 499. Jetzt: Antwort nach dem
+    // Zeitbudget mit „pending" (der Gegner-Block ist trotzdem da), die Zählung läuft im Hintergrund zu Ende und landet im Cache.
+    [Fact]
+    public async Task Get_SlowColdCount_AnswersPending_AndFinishesInBackgroundDespiteAbort()
+    {
+        var (sp, _) = await BackgroundDb();
+        await using var _sp = sp;
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var computes = 0;
+        LeagueGameSources Svc(AppDbContext db) => new(db, cache, sp.GetRequiredService<IServiceScopeFactory>())
+        {
+            Budget = TimeSpan.FromMilliseconds(50),
+            BeforeComputeForTests = () => { Interlocked.Increment(ref computes); return hold.Task; },
+        };
+        try
+        {
+            using var scope = sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var r = await Svc(db).GetAsync(TestClubs.HomeId, default, new[] { "333" }, leagueTnr: 1);
+            Assert.True(r["pending"]!.GetValue<bool>());
+            Assert.Equal(0, r["boardTotal"]!.GetValue<int>());
+            Assert.Null(r["league"]);
+            Assert.Equal(2, r["opponent"]!["boardTotal"]!.GetValue<int>());            // Huber: 2 Partien, sofort
+
+            // nginx gibt auf (Anfrage abgebrochen) — die Zählung läuft trotzdem weiter, und nur einmal.
+            using var cts = new CancellationTokenSource();
+            await cts.CancelAsync();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Svc(db).GetAsync(TestClubs.HomeId, cts.Token, leagueTnr: 1));
+        }
+        finally { hold.TrySetResult(); }
+
+        await Until(() => cache.TryGetValue(LeagueGameSources.TotalsKey(TestClubs.HomeId), out _)
+                          && cache.TryGetValue(LeagueGameSources.LeagueKey(TestClubs.HomeId, 1, false), out _));
+        using var scope2 = sp.CreateScope();
+        var done = await Svc(scope2.ServiceProvider.GetRequiredService<AppDbContext>()).GetAsync(TestClubs.HomeId, default, leagueTnr: 1);
+        Assert.Null(done["pending"]);
+        Assert.Equal(6, done["boardTotal"]!.GetValue<int>());
+        Assert.Equal(5, done["league"]!["boardTotal"]!.GetValue<int>());                // nur Muster
+        Assert.Equal(2, computes);                                                      // Gesamt + Liga, je einmal
+    }
+
+    // Nach 30 min kommt die letzte Zählung sofort; die neue rechnet im Hintergrund und gilt ab der nächsten Anfrage.
+    [Fact]
+    public async Task Get_Expired_ServesLastCountAtOnce_AndRefreshesInBackground()
+    {
+        var (sp, _) = await BackgroundDb();
+        await using var _sp = sp;
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        LeagueGameSources Svc() => new(db, cache, sp.GetRequiredService<IServiceScopeFactory>()) { Budget = TimeSpan.FromSeconds(5) };
+        Assert.Equal(6, (await Svc().GetAsync(TestClubs.HomeId, default))["boardTotal"]!.GetValue<int>());
+
+        db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "444", Name = "Neu, Nora", Pgn = Game("Neu, Nora", "X, Y", "2021.01.01", "1") });
+        await db.SaveChangesAsync();
+        cache.Remove(LeagueGameSources.TotalsKey(TestClubs.HomeId));                   // 30 min vorbei
+        var stale = await Svc().GetAsync(TestClubs.HomeId, default);
+        Assert.Equal(6, stale["boardTotal"]!.GetValue<int>());
+        Assert.Null(stale["pending"]);
+
+        await Until(() => cache.TryGetValue(LeagueGameSources.TotalsKey(TestClubs.HomeId), out _));
+        Assert.Equal(7, (await Svc().GetAsync(TestClubs.HomeId, default))["boardTotal"]!.GetValue<int>());
     }
 
     [Fact]

@@ -7,6 +7,7 @@ import { LineupsApiService } from '../../core/lineups';
 import { LeagueApiService } from '../../core/league-api.service';
 import { League, LeagueIndex } from '../../core/league.models';
 import { LeaguePageComponent } from './league-page.component';
+import { SOURCES_RETRIES, SOURCES_RETRY_MS } from '../../core/game-sources';
 import { TEST_CLUB, provideTestClub } from '../../core/club-context.testing';
 
 const INDEX: LeagueIndex = { season: '2026/27', generated: '27.09.2026 21:00', leagues: [{ tnr: 10, name: 'Landesliga' }, { tnr: 20, name: '1. Klasse Ost' }],
@@ -334,6 +335,38 @@ describe('LeaguePageComponent', () => {
     expect(el.querySelector('.src-tbl')).toBeNull();
     expect(el.querySelector('lh-fixture')).not.toBeNull();
   });
+
+  /** Versprechen auflösen, Effekte laufen lassen (die Zählung hängt am Effekt auf Liga + Gegner), wieder auflösen. */
+  const step = () => { flushMicrotasks(); fixture.detectChanges(); flushMicrotasks(); };
+
+  it('Zählung läuft am Server noch (pending, 28.10.2026): fragt nach, bis sie da ist — höchstens ein paar Mal', fakeAsync(() => {
+    let pending = 2;
+    api.sources.and.callFake(async (_t: string | null = null, fides: string[] = []) => pending-- > 0
+      ? { board: [], boardTotal: 0, online: [], onlineTotal: 0, countedAt: null, pending: true,
+          opponent: { players: fides.length, board: { Lumbra: 187 }, boardTotal: 187, online: {}, onlineTotal: 0, onlineAccounts: 0 } }
+      : { board: [{ key: 'Lumbra', label: 'Lumbra', games: 900 }], boardTotal: 900, online: [], onlineTotal: 0, countedAt: 'x' });
+    create();
+    step();
+    expect(api.sources).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.sources()?.pending).toBeTrue();
+    tick(SOURCES_RETRY_MS); step();
+    expect(api.sources).toHaveBeenCalledTimes(2);
+    tick(SOURCES_RETRY_MS); step();
+    expect(api.sources).toHaveBeenCalledTimes(3);
+    expect(fixture.componentInstance.sources()?.boardTotal).toBe(900);
+    tick(SOURCES_RETRY_MS * 3); step();
+    expect(api.sources).toHaveBeenCalledTimes(3);                 // fertig — keine weitere Nachfrage
+    fixture.destroy();
+  }));
+
+  it('Zählung bleibt pending: hört nach SOURCES_RETRIES Nachfragen auf', fakeAsync(() => {
+    api.sources.and.resolveTo({ board: [], boardTotal: 0, online: [], onlineTotal: 0, countedAt: null, pending: true });
+    create();
+    step();
+    for (let i = 0; i < SOURCES_RETRIES + 3; i++) { tick(SOURCES_RETRY_MS); step(); }
+    expect(api.sources).toHaveBeenCalledTimes(SOURCES_RETRIES + 1);
+    fixture.destroy();
+  }));
 
   it('nimmt Liga, Runde und Verein aus der Adresse; ein unbekannter Verein fällt zurück', async () => {
     query = { liga: '20', runde: '3', verein: 'Hall' };

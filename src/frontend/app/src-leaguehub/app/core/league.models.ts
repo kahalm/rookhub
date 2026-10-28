@@ -21,7 +21,11 @@ export interface GameSourceRow { key: string; label: string; games: number }
 export interface GameSources {
   board: GameSourceRow[]; boardTotal: number;
   online: GameSourceRow[]; onlineTotal: number;
-  countedAt: string;
+  /** Leer, solange die Gesamtzählung noch läuft (`pending`). */
+  countedAt: string | null;
+  /** Die Gesamtzählung (bzw. der Block `league`) lief beim Antworten noch (28.10.2026) — dann fehlen die Gesamtzeilen und `league`;
+   *  die Seite fragt nach ein paar Sekunden noch einmal. */
+  pending?: boolean;
   /** Nur mit Liga (0.628.0): dieselbe Zählung für alle Meldelisten der Liga. */
   league?: PlayerSources;
   /** Nur mit Begegnung (0.628.0): dieselbe Zählung für die Meldeliste des Gegners. */

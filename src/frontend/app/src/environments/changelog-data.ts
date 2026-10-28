@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.869.6", date: "2026-10-28", changes: [
+    { en: "LeagueHub: the “games in stock” count no longer stalls the forecast page — the overall count runs in the background and is no longer aborted by the 60-second gateway limit (before, it restarted on every page load and never finished on Dev); the page gets an answer after at most 8 seconds and asks again until the count is there. The online part of the count reads only the index (Dev: 61 s → 6.5 s).",
+      de: "LeagueHub: Die Zählung „Partien im Bestand“ bremst die Prognoseseite nicht mehr aus — die Gesamtzählung läuft im Hintergrund und wird nicht mehr nach 60 Sekunden vom Gateway abgebrochen (vorher begann sie bei jedem Seitenaufruf von vorn und wurde auf Dev nie fertig); die Seite bekommt nach höchstens 8 Sekunden eine Antwort und fragt nach, bis die Zählung da ist. Der Online-Teil liest nur noch den Index (Dev: 61 s → 6,5 s)." },
+  ] },
   { version: "0.869.5", date: "2026-10-28", changes: [
     { en: "LeagueHub: on phones the board pairings of a played round no longer stick out of the screen — names wrap, the rating moves to a second line, and the badges, analysis icon and ⋮ are stacked in a narrow column as 44 px tap targets.",
       de: "LeagueHub: Am Handy ragen die Brettpaarungen einer gespielten Runde nicht mehr aus dem Bild — Namen brechen um, die Elo steht in der zweiten Zeile, Abzeichen, Analyse-Symbol und ⋮ stehen gestapelt in einer schmalen Spalte als 44-px-Tippziele." },

@@ -38,7 +38,9 @@ public static partial class DomainServicesSetup
         services.AddScoped<RookHub.Api.Services.League.ClubGameMarks>();            // interessante Stellungen der Vereinspartien (0.848.0)
         services.AddScoped<RookHub.Api.Services.League.LeagueClubOverview>();       // Übersicht aller eigenen Begegnungen (0.848.0)
         services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(
-            sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
+            sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+            sp.GetRequiredService<IServiceScopeFactory>(),       // Gesamtzählung im Hintergrund (28.10.2026)
+            sp.GetService<ILogger<RookHub.Api.Services.League.LeagueGameSources>>()));
         services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();
         // Online-Konten der Ligaspieler + Abruf ihrer Partien (Lichess/chess.com, 0.605.0).
         services.AddSingleton<RookHub.Api.Services.League.LeagueOnlineSyncSignal>();

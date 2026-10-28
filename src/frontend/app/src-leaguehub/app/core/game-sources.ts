@@ -1,5 +1,9 @@
 import { GameSources, PlayerSources } from './league.models';
 
+/** Läuft die Gesamtzählung noch (`pending`), fragt die Seite nach dieser Zeit noch einmal — höchstens {@link SOURCES_RETRIES}-mal. */
+export const SOURCES_RETRY_MS = 10_000;
+export const SOURCES_RETRIES = 6;
+
 /** „1.100" — fest mit Punkt (wie `chessbase-upload.ts`): `toLocaleString('de-AT')` setzt je nach Umgebung ein schmales Leerzeichen. */
 export const thousands = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 

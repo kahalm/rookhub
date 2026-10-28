@@ -70,6 +70,15 @@ Rollenverwaltung an).
   verworfen); über den Link nimmt der SERVER Liga und Meldeliste der geteilten Begegnung (`LeagueService.ShareTnrAsync`) und
   zählt online nur gesicherte Konten. „–" = auf dieser Seite hat keiner der Spieler ein Konto (≠ 0 Partien). Prod 01.10.:
   Landesliga 177 Spieler / 46.058 Brett, 1. Klasse 226 / 18.783.
+  **Seit 0.869.6 ohne 60-s-Hänger** (Dev 28.10.2026: 28 von 28 Anfragen 499 nach 60 s, Prod 15 s/48 s): Die Gesamtzählung (2 267
+  Profile, 843 MB PGN, dazu 1,2 Mio. Online-Partien) dauerte auf Dev direkt gemessen 59,9 s; nginx brach nach 60 s ab, der
+  Abbruch brach auch die Zählung ab, der Cache blieb leer — jede Anfrage begann von vorn. Jetzt laufen Gesamt und Block `league`
+  im Hintergrund in eigenem Scope (`IServiceScopeFactory`, ohne den Abbruch der Anfrage, weiter hinter `ColdGate`); die Anfrage
+  wartet höchstens `LeagueGameSources.DefaultBudget` (8 s) und antwortet sonst mit `pending: true` (Gesamtzeilen leer,
+  `countedAt: null`, `league` fehlt, `opponent` immer). Nach 30 min kommt die letzte Zählung (`…:last`) sofort und die neue rechnet
+  im Hintergrund. Startseite und Teilen-Seite fragen bei `pending` alle 10 s nach (`SOURCES_RETRY_MS`, höchstens
+  `SOURCES_RETRIES` = 6). Die Online-Gesamtzählung filtert erst die Konten und zählt dann über den Index `(AccountId,
+  ExternalId)` — der Filter direkt auf den Partien las die ganze Tabelle plus alle Profile samt PGN (Dev 61 s → 6,5 s).
   **Seit 0.650.0 hinter zwei (i) in der Begegnung** (Wunsch 2026-10-04: „versteck den Text am Anfang hinter 2 (i) …"):
   `fixture-view.component.ts` bekommt `[sources]` von Startseite/Teilen-Seite und zeigt „Partien {Gegner}: N (i)" (N = Brett +
   online des Blocks `opponent`) — das (i) klappt die Tabelle auf — und „Prognose · bisher x % der Aufgestellten richtig · hier
