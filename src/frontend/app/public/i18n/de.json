@@ -716,6 +716,8 @@
         "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (Engine-Provider auf deinem Rechner)",
         "scopeEngineShort": "Engine",
+        "scopeDiagrams": "Diagramm-Worker (Buchdiagramme auf einem anderen Rechner erkennen, nur Bibliotheksverwaltung)",
+        "scopeDiagramsShort": "Diagramm-Worker",
         "scopeHint": "Ein Token gilt nur für seinen Bereich: ein Extension-Token kann keine Engines anmelden, ein Engine-Token deine Repertoires nicht lesen."
       },
       "show": {
@@ -725,7 +727,8 @@
       },
       "scope": {
         "extension": "Extension",
-        "engine": "Engine"
+        "engine": "Engine",
+        "diagrams": "Diagramm-Worker"
       }
     },
     "sharedLinks": {

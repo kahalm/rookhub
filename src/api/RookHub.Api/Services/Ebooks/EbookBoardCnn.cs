@@ -28,12 +28,17 @@ public sealed class EbookBoardCnn : IDisposable
         return new EbookBoardCnn(ms.ToArray());
     });
 
+    /// <summary>Threads je Lauf des Netzes (ONNX IntraOp). Der Server bleibt bei 2; der externe Diagramm-Worker
+    /// (<c>tools/DiagramCli</c>, 0.870.0) setzt 1, weil er die Kerne über die parallelen Seitenstapel verteilt. Nur vor dem
+    /// ersten Zugriff auf <see cref="Instance"/> wirksam.</summary>
+    public static int IntraOpThreads { get; set; } = 2;
+
     /// <summary>Das eingebettete Modell (<c>null</c>, wenn es fehlt).</summary>
     public static EbookBoardCnn? Instance => Default.Value;
 
     public EbookBoardCnn(byte[] model)
     {
-        var opts = new Microsoft.ML.OnnxRuntime.SessionOptions { IntraOpNumThreads = 2, InterOpNumThreads = 1 };
+        var opts = new Microsoft.ML.OnnxRuntime.SessionOptions { IntraOpNumThreads = Math.Max(1, IntraOpThreads), InterOpNumThreads = 1 };
         _session = new InferenceSession(model, opts);
         _input = _session.InputMetadata.Keys.First();
     }

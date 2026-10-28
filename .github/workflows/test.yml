@@ -85,6 +85,8 @@ jobs:
         if: matrix.shard == 'rest'
       - run: dotnet build tools/ScoresheetBench --verbosity minimal
         if: matrix.shard == 'rest'
+      - run: dotnet build tools/DiagramCli --verbosity minimal
+        if: matrix.shard == 'rest'
 
   # Zweite API-Suite gegen eine ECHTE MariaDB. Grund: test-rookhub laeuft gegen EF InMemory,
   # das jede LINQ-Abfrage im Speicher auswertet - auch eine, die MySQL nicht uebersetzen kann.

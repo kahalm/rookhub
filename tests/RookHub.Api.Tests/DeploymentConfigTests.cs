@@ -918,6 +918,26 @@ public class DeploymentConfigTests
     }
 
     [Fact]
+    public void DiagramWorkerLocation_AllowsTheResultLimit_AndStreamsUnbuffered()
+    {
+        // Externe Diagramm-Worker (0.870.0): das Ergebnis eines Riesenbands ist EIN JSON-Rumpf mit mehreren 10 MB — die
+        // generische /api/-Location deckelt auf 15 MB. nginx muss mindestens das [RequestSizeLimit] von SubmitResult erlauben;
+        // die Bücher gehen ungepuffert hinaus (bis 1 GB).
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/diagram-worker \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/diagram-worker fehlt in nginx.conf");
+        var body = loc.Groups["body"].Value;
+        var size = Regex.Match(body, @"client_max_body_size (?<n>\d+)M;");
+        Assert.True(size.Success, "client_max_body_size (in M) fehlt in der Diagramm-Worker-Location");
+        var apiLimit = typeof(RookHub.Api.Controllers.Ebooks.DiagramWorkerController).GetMethod("SubmitResult")!
+            .GetCustomAttributesData().Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute))
+            .ConstructorArguments[0].Value;
+        Assert.True(long.Parse(size.Groups["n"].Value) * 1024 * 1024 >= Convert.ToInt64(apiLimit));
+        Assert.Contains("proxy_request_buffering off;", body);
+        Assert.Contains("proxy_buffering off;", body);
+    }
+
+    [Fact]
     public void ExtensionChessableLocation_AllowsTheApiRequestSizeLimits()
     {
         // Gemeldet 2026-09-14: „Mitschnitt importieren" bekam 413, obwohl die API bis 64 MB annimmt — die

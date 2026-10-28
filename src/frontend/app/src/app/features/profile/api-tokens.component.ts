@@ -14,6 +14,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { apiErrorText } from '../../core/api-error';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { AuthService } from '../../core/auth.service';
 
 interface ApiToken {
   id: number;
@@ -32,7 +33,15 @@ interface ApiTokenCreated extends ApiToken {
 /** Bereich eines Tokens: `extension` (RepCheck, nur /api/extension) oder `engine` (Engine-Provider auf dem
  *  eigenen Rechner, nur /api/external-engine — der eigene Engine-Broker). Der Server zäunt jeden Token auf
  *  seine Fläche ein; ein Token für die falsche Aufgabe bekommt dort 403. */
-export type ApiTokenScope = 'extension' | 'engine';
+export type ApiTokenScope = 'extension' | 'engine' | 'diagrams';
+
+/** i18n-Kurzname je Bereich (geschlossene Auswahl im Dialog). `diagrams` (0.870.0): externe Diagramm-Worker
+ *  (Buchdiagramme auf dem Laptop erkennen, nur /api/diagram-worker) — nur mit `ebooks.manage` wählbar. */
+const SCOPE_SHORT: Record<ApiTokenScope, string> = {
+  extension: 'profile.tokens.dialog.scopeExtensionShort',
+  engine: 'profile.tokens.dialog.scopeEngineShort',
+  diagrams: 'profile.tokens.dialog.scopeDiagramsShort',
+};
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -55,9 +64,12 @@ export type ApiTokenScope = 'extension' | 'engine';
           <mat-select [(ngModel)]="scope" name="scope">
             <!-- d7-rk-token-bereich-abgeschnitten: geschlossen nur der Kurzname — der volle Text mit der Seitenliste
                  passte im schmalen Dialog (Boox, Handy) nicht und endete in „…“; die Liste zeigt ihn weiter ganz. -->
-            <mat-select-trigger>{{ (scope === 'engine' ? 'profile.tokens.dialog.scopeEngineShort' : 'profile.tokens.dialog.scopeExtensionShort') | translate }}</mat-select-trigger>
+            <mat-select-trigger>{{ scopeShort[scope] | translate }}</mat-select-trigger>
             <mat-option value="extension">{{ 'profile.tokens.dialog.scopeExtension' | translate }}</mat-option>
             <mat-option value="engine">{{ 'profile.tokens.dialog.scopeEngine' | translate }}</mat-option>
+            @if (canDiagrams) {
+              <mat-option value="diagrams">{{ 'profile.tokens.dialog.scopeDiagrams' | translate }}</mat-option>
+            }
           </mat-select>
           <mat-hint>{{ 'profile.tokens.dialog.scopeHint' | translate }}</mat-hint>
         </mat-form-field>
@@ -91,7 +103,12 @@ export class CreateTokenDialogComponent {
   /** Tage bis zum Ablauf — Vorgabe die Höchstdauer, die der Server zulässt (P-14). */
   expiresIn = 365;
   scope: ApiTokenScope = 'extension';
-  constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>) {}
+  readonly scopeShort = SCOPE_SHORT;
+  /** Diagramm-Worker-Token holen ganze Bücher — der Server lässt sie nur mit `ebooks.manage` anlegen. */
+  readonly canDiagrams: boolean;
+  constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>, auth: AuthService) {
+    this.canDiagrams = auth.has('ebooks.manage');
+  }
 
   submit(): void {
     this.dialogRef.close({ name: this.name, expiresInDays: this.expiresIn, scope: this.scope });
@@ -264,7 +281,7 @@ export class ApiTokensComponent implements OnInit {
 
   /** i18n-Schlüssel des Bereichs; ein unbekannter (älterer/neuerer Server) steht roh da. */
   scopeLabel(scope: string): string {
-    return scope === 'engine' || scope === 'extension' ? `profile.tokens.scope.${scope}` : scope;
+    return Object.hasOwn(SCOPE_SHORT, scope) ? `profile.tokens.scope.${scope}` : scope;
   }
 
   revoke(t: ApiToken): void {

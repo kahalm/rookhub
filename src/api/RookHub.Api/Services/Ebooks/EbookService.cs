@@ -653,12 +653,14 @@ public class EbookService
 
     /// <summary>
     /// „Ergänzen statt ersetzen“ für EIN Buch (0.811.0): <see cref="Ebook.DiagramSupplement"/> setzen und die Erkennung einreihen.
-    /// Wirkt auch bei <see cref="Ebook.DiagramsCurated"/> — der Worker führt dann zusammen statt zu ersetzen. Unbekannt → 404.
+    /// Wirkt auch bei <see cref="Ebook.DiagramsCurated"/> — der Worker führt dann zusammen statt zu ersetzen. Mit Vorrang
+    /// (<see cref="Ebook.DiagramPriority"/>, 0.870.0): das Buch springt an den Anfang der Warteschlange. Unbekannt → 404.
     /// </summary>
     public async Task QueueDiagramSupplementAsync(int id, CancellationToken ct = default)
     {
         var book = await _db.Ebooks.FirstOrDefaultAsync(b => b.Id == id, ct) ?? throw new NotFoundException("E-book not found.");
         book.DiagramSupplement = true;
+        book.DiagramPriority = true;   // 0.870.0: der Admin wartet darauf — vor der übrigen Warteschlange
         book.DiagramState = EbookDiagramState.Pending;
         book.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);

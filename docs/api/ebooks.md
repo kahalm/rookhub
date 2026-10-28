@@ -351,6 +351,77 @@ Fehler), bleibt ein Buch mit Diagrammen `Done`. `DiagramsCurated` bleibt, wie es
   zufällig); `W` bleibt 0. Im Ergänzen-Modus wird vorhandenen EPUB-Diagrammen mit `Y = 0` die Höhe über den `ImageRef` nachgetragen.
 - Das 8-MB-Limit der EPUB-Erkennung gilt je BILD im EPUB (`MaxImageBytes`), nicht für die ganze Datei.
 
+## Externe Diagramm-Worker + Vorrang (0.870.0)
+
+Die Erkennung läuft sonst nur im API-Container (~40 Bücher/h, Server ohnehin ausgelastet). Ein **externer Diagramm-Worker**
+(Patriks Laptop, `~/claude/ebook-board-training/worker/worker.py`) nimmt ihm Bücher ab: er leiht ein wartendes Buch, lädt
+die Dateien, erkennt mit **`tools/DiagramCli`** (`rookhub-diagrams`, derselbe Erkennungscode: `EbookDiagramRecognizer`) und
+schickt das Ergebnis. Gespeichert wird über **`EbookDiagramResults`** — denselben Weg wie beim eigenen `EbookDiagramWorker`
+(ersetzen bzw. Ergänzen-Modus mit `EbookDiagramMerge`, `DiagramCount`, `Done`/`Unsupported`, Stockfish-Prüfung einreihen,
+Kurs-Verweise, Fließtext-EPUB, Fertig-Meldung).
+
+**Leihe** (`EbookDiagramLease`, Spalten `DiagramLeaseId/Owner/Until`): das Buch bleibt `Pending`; wer es rechnet, hat eine
+Leihe — der eigene Worker (`server`, 12 h, nach einem Neustart zurückgegeben), ein externer (`pat:<Token-Id>`, 30 min,
+per Lebenszeichen verlängert). Übernommen wird atomar (`UPDATE … WHERE Pending AND Leihe frei`); der eigene Worker überspringt
+Bücher unter fremder Leihe. Läuft eine Leihe ab, ist das Buch von selbst frei; ein spätes Ergebnis wird abgelehnt (409/404).
+
+**Vorrang**: `POST /api/admin/ebooks/{id}/diagrams/supplement` setzt zusätzlich `DiagramPriority` — das Buch steht in
+`QueueOrder` vor allen anderen (auch vor Uploads), für den eigenen wie für externe Worker. Jeder Abschluss löscht Leihe,
+`DiagramPriority` und `DiagramExternalFailed`.
+
+Endpunkte (`DiagramWorkerController`, `ebooks.manage` + API-Token mit Scope **`diagrams`**; der Scope-Zaun lässt so einen
+Token NUR auf `/api/diagram-worker`; ein Admin-Browser-Login kommt zum Ausprobieren auch durch):
+
+| Methode | Pfad | Zweck |
+|---|---|---|
+| POST | `/api/diagram-worker/claim` | `{ worker?, cliVersion? }` → 200 Auftrag `{ jobId, ebookId, title, supplement, pageCount, leaseUntil, heartbeatSeconds, files: [{ fileId, role, format, sizeBytes, url }] }`, 204 = nichts zu tun |
+| GET | `/api/diagram-worker/jobs/{jobId}/files/{fileId}` | Datei des Auftrags (Range erlaubt), nur solange die Leihe gilt |
+| POST | `/api/diagram-worker/jobs/{jobId}/heartbeat` | Leihe +30 min → `{ leaseUntil }`; 409 = Leihe weg (abbrechen) |
+| POST | `/api/diagram-worker/jobs/{jobId}/release` | `{ error? }` → 204. Mit `error`: `DiagramExternalFailed`, externe Worker nehmen es nicht wieder, der Server erkennt es selbst |
+| POST | `/api/diagram-worker/jobs/{jobId}/result` | `DiagramWorkerResultDto` (genau die Ausgabe von `rookhub-diagrams`) → `{ ebookId, state, diagramCount }`; 400 ungültig, 409/404 Leihe weg |
+
+- **Was externe Worker bekommen**: `Pending`, Leihe frei, nicht `DiagramExternalFailed`, nicht „kuratiert ohne Ergänzen“
+  (macht der Server ohne Erkennung), mit PDF (auch umgewandeltem DJVU) oder echtem EPUB. Reine DJVU ohne PDF-Fassung bleiben
+  dem Server (er setzt sie auf `Unsupported`, nach der Umwandlung werden sie wieder `Pending`). Rollen der Dateien wie im
+  Worker (`EbookDiagramRecognizer.Choose`): `primary` (Original-PDF vor abgeleitetem PDF vor EPUB), `reading` (leichte
+  Lesefassung zum Rendern von Scans), `epub` (echtes EPUB zum Verknüpfen / bevorzugt bei Scan-PDF).
+- **Prüfung des Ergebnisses** (`EbookDiagramWorkerService.Validate`): `ebookId` = Buch der Leihe, ≤ 50 000 Diagramme, Rumpf
+  ≤ 128 MB, Längen wie die Spalten, Lage endlich und ≥ 0 (PDF: Seitenanteil ≤ 1; EPUB-Bild: `Y` = Reihenfolge), Familie aus
+  `ChessDiagramFonts` + `scan`/`cnn`/`image`/`image-cnn`/`unread` (nie `opus`/`hand`), `SolutionSource` nur `book`, FEN
+  syntaktisch gültig; lesbare Diagramme zusätzlich höchstens ein König und 16 Steine je Farbe (Illustrationen ohne König
+  bleiben erlaubt). Ein Fehler lehnt das ganze Ergebnis ab — der Worker gibt das Buch dann mit `error` zurück.
+- **Token anlegen**: Profil → API-Tokens → Bereich „Diagramm-Worker“ (nur sichtbar und erlaubt mit `ebooks.manage`;
+  `POST /api/profile/tokens { name, scope: "diagrams" }` ohne das Recht → 403). Ein Token = ein Worker (Leihe je Token).
+- **nginx**: eigene Location `/api/diagram-worker` (130 MB Rumpf, ungepuffert, 1 h) — die generische `/api/`-Regel deckelt
+  auf 15 MB (`DeploymentConfigTests`). Vor dem Stack steht NPM: dessen Rumpf-Grenze muss das ebenfalls erlauben.
+
+**`tools/DiagramCli`** (`rookhub-diagrams`, verweist auf das API-Projekt, Modelle eingebettet):
+
+```
+rookhub-diagrams --ebook-id 123 --primary buch.pdf [--reading lesefassung.pdf] [--epub buch.epub] [--format pdf|epub]
+                 [--supplement] [--threads N] [--poppler <bin-Ordner>] [--out ergebnis.json] [--verbose]
+rookhub-diagrams --version
+```
+
+`--threads` = parallele Seitenstapel beim Scan (`EbookOptions.ScanParallelism`); das Faltungsnetz rechnet je Stapel einfädig
+(`EbookBoardCnn.IntraOpThreads = 1`, Server bleibt bei 2). Scans brauchen `pdftoppm` + `pdfinfo` (Poppler) im PATH; fehlen
+sie, bricht das Programm mit Rückgabe 3 ab (sonst liefe ein Scan still mit 0 Diagrammen durch). Rückgaben: 0 fertig, 1
+Erkennung gescheitert, 2 Aufruf falsch, 3 Poppler fehlt, 4 Datei fehlt. Protokoll auf stderr.
+
+Windows-Build (auf dem Server, ~210 MB entpackt):
+
+```bash
+export PATH="$HOME/.dotnet:$PATH"
+V=<APP_VERSION>; OUT=/srv/media/claude-sessions/diagram-worker/publish-$V
+dotnet publish tools/DiagramCli -c Release -r win-x64 --self-contained -p:Version=$V -o $OUT
+(cd $OUT && zip -qr /srv/media/sftp/kahalm2/ebook-board-cells/_tools/rookhub-diagrams-$V-win-x64.zip .)
+echo $V > /srv/media/sftp/kahalm2/ebook-board-cells/_tools/rookhub-diagrams.version
+```
+
+Der Laptop-Worker liest `_tools/rookhub-diagrams.version` über WebDAV und lädt das Zip bei neuer Version
+(Anleitung: `~/claude/ebook-board-training/worker/README.md`). Eine neue Erkennung im Server sollte immer mit einem neuen
+Build auf den Laptop — sonst rechnen beide verschieden.
+
 ## Brett-Modi im Leser (0.777.0)
 
 Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das

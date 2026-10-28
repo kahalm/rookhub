@@ -455,6 +455,8 @@
         "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (motor-provider a gépeden)",
         "scopeEngineShort": "Engine",
+        "scopeDiagrams": "Diagramfelismerő (könyvdiagramok felismerése másik gépen, csak könyvtárkezelőknek)",
+        "scopeDiagramsShort": "Diagramfelismerő",
         "scopeHint": "Egy token csak a saját hatókörében érvényes: kiterjesztés-tokennel nem lehet motort regisztrálni, motor-tokennel nem olvashatók a repertoárjaid."
       },
       "show": {
@@ -464,7 +466,8 @@
       },
       "scope": {
         "extension": "Extension",
-        "engine": "Engine"
+        "engine": "Engine",
+        "diagrams": "Diagramfelismerő"
       }
     },
     "sharedLinks": {

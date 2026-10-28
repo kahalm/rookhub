@@ -101,6 +101,25 @@ public class Ebook
     /// dabei als <c>FontFamily = "unread"</c> aufgehoben (für Nutzer unsichtbar). Der Worker löscht das Feld danach.</summary>
     public bool DiagramSupplement { get; set; }
 
+    /// <summary>Vorrang in der Warteschlange der Diagramm-Erkennung (0.870.0): ein Admin hat das Buch gerade neu eingereiht
+    /// (<c>POST /api/admin/ebooks/{id}/diagrams/supplement</c>) und will das Ergebnis jetzt sehen — es läuft vor allen anderen,
+    /// auch vor Uploads. Wird nach dem Lauf gelöscht.</summary>
+    public bool DiagramPriority { get; set; }
+
+    /// <summary>Wer das Buch gerade erkennt (0.870.0, <c>EbookDiagramLease</c>): der eigene Worker (<c>server</c>) oder ein
+    /// externer Diagramm-Worker (<c>pat:&lt;Token-Id&gt;</c>, <c>/api/diagram-worker</c>). Nur gültig bis
+    /// <see cref="DiagramLeaseUntil"/>; danach ist das Buch wieder frei (bleibt die ganze Zeit <see cref="EbookDiagramState.Pending"/>).</summary>
+    public Guid? DiagramLeaseId { get; set; }
+
+    [MaxLength(100)]
+    public string? DiagramLeaseOwner { get; set; }
+
+    public DateTime? DiagramLeaseUntil { get; set; }
+
+    /// <summary>Ein externer Diagramm-Worker hat das Buch mit Fehler zurückgegeben (0.870.0): externe Worker nehmen es nicht
+    /// wieder, der eigene Worker erkennt es wie bisher. Wird nach dem Lauf gelöscht.</summary>
+    public bool DiagramExternalFailed { get; set; }
+
     /// <summary>Wann der Hochladende benachrichtigt wurde, dass die Verarbeitung (Titelbild, Umwandlung, Diagramme, Prüfung)
     /// fertig ist (0.773.0); <c>null</c> = noch nicht. Nur für Uploads — eingelesene Bibliotheksbücher melden sich nicht.</summary>
     public DateTime? ReadyNotifiedAt { get; set; }

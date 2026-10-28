@@ -178,10 +178,21 @@ public class PatScopeFenceTests
     [Fact]
     public void AllowedPrefixes_AreExactlyTheTokenSurfaces()
     {
-        Assert.Equal(new[] { "engine", "extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope.Keys.Order());
+        Assert.Equal(new[] { "diagrams", "engine", "extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope.Keys.Order());
         Assert.Equal(new[] { "/api/extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["extension"]);
         Assert.Equal(new[] { "/api/external-engine" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["engine"]);
+        Assert.Equal(new[] { "/api/diagram-worker" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["diagrams"]);
     }
+
+    /// <summary>Externe Diagramm-Worker (0.870.0): ihr Token darf nur /api/diagram-worker, nicht die Bibliothek selbst.</summary>
+    [Theory]
+    [InlineData("/api/diagram-worker/claim", true)]
+    [InlineData("/api/diagram-worker/jobs/00000000-0000-0000-0000-000000000001/result", true)]
+    [InlineData("/api/ebooks", false)]
+    [InlineData("/api/admin/ebooks/1/diagrams/supplement", false)]
+    [InlineData("/api/diagram-workerx", false)]
+    public void DiagramsScope_OnlyTheWorkerSurface(string path, bool allowed)
+        => Assert.Equal(allowed, PatScopeFenceMiddleware.IsAllowedPath(path, "diagrams"));
 
     // ---------------------------------------------------------------- Scope „engine" (eigener Broker)
 

@@ -9,6 +9,7 @@ import { ApiTokensComponent, CreateTokenDialogComponent } from './api-tokens.com
 import { MatDialog } from '@angular/material/dialog';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { Subject, of } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 
 describe('ApiTokensComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -45,6 +46,8 @@ describe('ApiTokensComponent', () => {
     const c = fixture.componentInstance;
     expect(c.scopeLabel('engine')).toBe('profile.tokens.scope.engine');
     expect(c.scopeLabel('extension')).toBe('profile.tokens.scope.extension');
+    expect(c.scopeLabel('diagrams')).toBe('profile.tokens.scope.diagrams');
+    expect(c.scopeLabel('toString')).toBe('toString');   // kein Treffer über den Prototyp
     expect(c.scopeLabel('future')).toBe('future');   // unbekannter Bereich steht roh da
 
     const dialog = TestBed.createComponent(CreateTokenDialogComponent).componentInstance;
@@ -146,6 +149,7 @@ describe('ApiTokensComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CreateTokenDialogComponent],
       providers: [
+        { provide: AuthService, useValue: { has: () => false } },
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: MatDialogRef, useValue: { close: () => {} } },
@@ -171,6 +175,7 @@ describe('ApiTokensComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CreateTokenDialogComponent],
       providers: [
+        { provide: AuthService, useValue: { has: () => false } },
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: MatDialogRef, useValue: { close: () => {} } },
@@ -213,4 +218,28 @@ describe('ApiTokensComponent', () => {
     fixture.detectChanges();
     expect(trigger().textContent!.trim()).toBe('profile.tokens.dialog.scopeEngineShort');
   });
+
+  // 0.870.0: Diagramm-Worker-Token (externe Diagramm-Erkennung) nur für die Bibliotheksverwaltung (ebooks.manage).
+  for (const allowed of [false, true]) {
+    it(`offers the diagrams scope only with ebooks.manage (${allowed})`, async () => {
+      const asked: string[] = [];
+      await TestBed.configureTestingModule({
+        imports: [CreateTokenDialogComponent],
+        providers: [
+          { provide: AuthService, useValue: { has: (p: string) => { asked.push(p); return allowed; } } },
+          provideNoopAnimations(),
+          provideTranslateService({ fallbackLang: 'en' }),
+          { provide: MatDialogRef, useValue: { close: () => {} } },
+          { provide: MAT_DIALOG_DATA, useValue: {} },
+        ],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(CreateTokenDialogComponent);
+      fixture.detectChanges();
+      expect(asked).toContain('ebooks.manage');
+      expect(fixture.componentInstance.canDiagrams).toBe(allowed);
+      fixture.componentInstance.scope = 'diagrams';
+      fixture.detectChanges();
+      expect(fixture.componentInstance.scopeShort[fixture.componentInstance.scope]).toBe('profile.tokens.dialog.scopeDiagramsShort');
+    });
+  }
 });

@@ -22,7 +22,10 @@ public class ApiTokenService
     /// einem fremden Rechner in einer <c>.env</c> liegt, soll nicht auch die Repertoires lesen koennen
     /// (und umgekehrt ein Extension-Token keine Engines anlegen).</summary>
     public const string EngineScope = "engine";
-    public static readonly string[] AllowedScopes = { DefaultScope, EngineScope };
+    /// <summary>Scope fuer externe Diagramm-Worker (0.870.0, <c>/api/diagram-worker</c>): ein Rechner ausserhalb des Servers
+    /// erkennt Buchdiagramme. Anlegen nur mit <c>ebooks.manage</c> (ProfileController); der Endpunkt prueft das Recht zusaetzlich.</summary>
+    public const string DiagramScope = "diagrams";
+    public static readonly string[] AllowedScopes = { DefaultScope, EngineScope, DiagramScope };
     public const int MaxTokensPerUser = 20;
     /// <summary>LastUsedAt wird höchstens einmal pro diesem Fenster persistiert (Auth-Hot-Path-Drossel).</summary>
     public static readonly TimeSpan LastUsedThrottle = TimeSpan.FromMinutes(5);

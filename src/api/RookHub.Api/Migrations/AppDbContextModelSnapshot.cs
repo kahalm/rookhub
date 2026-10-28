@@ -2282,6 +2282,22 @@ namespace RookHub.Api.Migrations
                     b.Property<int>("DiagramCount")
                         .HasColumnType("int");
 
+                    b.Property<bool>("DiagramExternalFailed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid?>("DiagramLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("DiagramLeaseOwner")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("DiagramLeaseUntil")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("DiagramPriority")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("DiagramState")
                         .HasColumnType("int");
 

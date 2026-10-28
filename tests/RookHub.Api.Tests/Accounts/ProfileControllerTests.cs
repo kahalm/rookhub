@@ -80,6 +80,21 @@ public class ProfileControllerTests : IDisposable
         Assert.IsType<BadRequestObjectResult>(bad.Result);
     }
 
+    /// <summary>Diagramm-Worker-Token (0.870.0) holen ganze Bücher: anlegen nur mit ebooks.manage (hier: Admin-Rolle).</summary>
+    [Fact]
+    public async Task CreateToken_DiagramsScope_OnlyWithEbooksManage()
+    {
+        var u = await CreateUserAsync("u-diag");
+        SetUser(u.Id);
+        var denied = await _controller.CreateToken(new CreateApiTokenDto { Name = "laptop", Scope = ApiTokenService.DiagramScope });
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(denied.Result).StatusCode);
+
+        _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, u.Id.ToString()), new Claim(ClaimTypes.Role, "Admin")], "Test"));
+        var ok = Assert.IsType<OkObjectResult>((await _controller.CreateToken(new CreateApiTokenDto { Name = "laptop", Scope = ApiTokenService.DiagramScope })).Result);
+        Assert.Equal("diagrams", ((ApiTokenCreatedDto)ok.Value!).Scope);
+    }
+
     [Fact]
     public async Task RevokeToken_RemovesAndReturns204_NotFoundForForeign()
     {

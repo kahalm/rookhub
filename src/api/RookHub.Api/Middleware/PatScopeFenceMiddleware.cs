@@ -38,6 +38,8 @@ public sealed class PatScopeFenceMiddleware
         {
             ["extension"] = ["/api/extension"],
             ["engine"] = ["/api/external-engine"],
+            // Externe Diagramm-Worker (0.870.0): holen Bücher und liefern erkannte Diagramme — sonst nichts.
+            ["diagrams"] = ["/api/diagram-worker"],
         };
 
     /// <summary>Maschinenlesbarer Fehlercode im 403-Body (das Frontend/RepCheck unterscheidet

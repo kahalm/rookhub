@@ -7,6 +7,7 @@ using RookHub.Api.Services.Tournaments;
 using RookHub.Api.Services.Accounts;
 using RookHub.Api.Services.Social;
 using RookHub.Api.DTOs.Accounts;
+using RookHub.Api.Models;
 using RookHub.Api.DTOs.Tournaments;
 
 namespace RookHub.Api.Controllers.Accounts;
@@ -37,8 +38,12 @@ public class ProfileController : BaseApiController
 
     [HttpPost("tokens")]
     [DenyWhileImpersonating]
-    public async Task<ActionResult<ApiTokenCreatedDto>> CreateToken([FromBody] CreateApiTokenDto dto)
+    public async Task<ActionResult<ApiTokenCreatedDto>> CreateToken([FromBody] CreateApiTokenDto dto,
+        [FromServices] PermissionResolver? permissions = null)
     {
+        // Diagramm-Worker-Token (0.870.0) holen ganze Bücher — nur wer die Bibliothek verwaltet, darf so einen anlegen.
+        if (dto.Scope == ApiTokenService.DiagramScope && !await HasPermissionAsync(permissions, Permissions.EbooksManage))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Scope 'diagrams' requires the permission ebooks.manage." });
         try
         {
             return Ok(await _apiTokens.CreateAsync(GetUserId(), dto.Name, dto.Scope, dto.ExpiresInDays));

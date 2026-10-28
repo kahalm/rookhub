@@ -716,6 +716,8 @@
         "scopeExtensionShort": "Extension",
         "scopeEngine": "Engine (provider motora na tvom računalu)",
         "scopeEngineShort": "Engine",
+        "scopeDiagrams": "Prepoznavanje dijagrama (dijagrami iz knjiga na drugom računalu, samo za upravitelje knjižnice)",
+        "scopeDiagramsShort": "Prepoznavanje dijagrama",
         "scopeHint": "Token vrijedi samo za svoj opseg: token za proširenje ne može prijavljivati motore, token za motor ne može čitati tvoje repertoare."
       },
       "show": {
@@ -725,7 +727,8 @@
       },
       "scope": {
         "extension": "Extension",
-        "engine": "Engine"
+        "engine": "Engine",
+        "diagrams": "Prepoznavanje dijagrama"
       }
     },
     "sharedLinks": {
