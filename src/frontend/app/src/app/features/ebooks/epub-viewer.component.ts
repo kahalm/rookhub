@@ -12,7 +12,6 @@ import { EINK_CLASS, isEinkActive } from '../../core/eink';
 export interface EpubLocation { fraction: number; cfi: string; }
 export interface EpubTocEntry { label: string; href: string; }
 /** Ein erkanntes Diagrammbild (0.775.0): Kapitel (Spine, 1-basiert) und Bildpfad im EPUB. */
-const SERIALIZE_HOOKED = new WeakSet<object>();
 
 /** Void-Elemente aus HTML — nur sie dürfen im HTML-Parser „/>“ tragen. */
 const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
@@ -24,6 +23,30 @@ export function expandSelfClosing(html: string): string {
     (m, tag: string, attrs: string) => VOID_ELEMENTS.has(tag.toLowerCase()) ? m : `<${tag}${attrs}></${tag}>`);
 }
 
+/** `.html`/`.htm`-Kapitel: epub.js parst sie mit dem HTML-Parser (nicht als XHTML) — schon dabei landet alles nach einem
+ * `<div …/>` in diesem div. Scribd-Umwandlungen („50 Chess Traps in the Opening“, Prod #2250) haben `<div style="width:
+ * 6.25%" />` als Trennlinie → Text und Diagramme in einer 6-%-Spalte, Bilder 15 px breit (0.867.2; der Serialize-Hook aus
+ * 0.867.1 kam zu spät). Darum vor dem Parsen ausschreiben, in beiden Lademodi (Ordner: `book.request`, Archiv: `archive.request`). */
+export function patchHtmlRequests(book: Pick<EpubBook, 'request' | 'archive'>): void {
+  const isHtml = (url: string, type?: string | null) => !type || type === 'html' || type === 'htm'
+    ? /\.html?(?:[?#]|$)/i.test(url) : false;
+  const parse = (text: string) => new DOMParser().parseFromString(expandSelfClosing(text), 'text/html');
+  const orig = book.request;
+  if (orig) {
+    book.request = (url, type, withCredentials, headers) => isHtml(url, type)
+      ? fetch(url, { credentials: withCredentials ? 'include' : 'same-origin', headers }).then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.text();
+        }).then(parse)
+      : orig(url, type, withCredentials, headers);
+  }
+  const archive = book.archive;
+  if (archive) {
+    const origArchive = archive.request.bind(archive);
+    archive.request = (url, type) => isHtml(url, type) ? archive.getText(url).then(parse) : origArchive(url, type);
+  }
+}
+
 export interface EpubDiagramImage { id: number; chapter: number; ref: string; title?: string; }
 
 /** Minimal-Schnittstelle von epub.js, die hier gebraucht wird (das Paket bringt eigene, sehr breite Typen mit). */
@@ -33,10 +56,10 @@ interface EpubBook {
   loaded: { navigation: Promise<{ toc: { label: string; href: string }[] }> };
   locations: { generate(chars: number): Promise<unknown>; percentageFromCfi(cfi: string): number; length(): number };
   renderTo(el: HTMLElement, opts: Record<string, unknown>): EpubRendition;
-  spine: {
-    get(index: number): { href: string } | null;
-    hooks?: { serialize: { register(fn: (output: string, section: { output?: string }) => void): void } };
-  };
+  spine: { get(index: number): { href: string } | null };
+  /** Lädt Buchdateien (Ordner-Modus); im Archiv-Modus übernimmt `archive.request`. */
+  request?: (url: string, type?: string | null, withCredentials?: boolean, headers?: Record<string, string>) => Promise<unknown>;
+  archive?: { request(url: string, type?: string): Promise<unknown>; getText(url: string): Promise<string> };
   /** Im Archiv-Modus ersetzt epub.js Bildadressen durch blob:-URLs — parallel dazu die Pfade im Buch. */
   resources?: { urls?: string[]; replacementUrls?: string[] };
   destroy(): void;
@@ -172,6 +195,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (this.dirSrc) {
       const base = new URL(this.dirSrc, document.baseURI).href;
       const book = ePub({ replacements: 'none' });
+      patchHtmlRequests(book);
       try {
         await withTimeout(book.open(base, 'directory'), DIRECTORY_OPEN_TIMEOUT_MS);
         if (this.destroyed) { book.destroy(); return null; }
@@ -187,7 +211,9 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     const data = await res.arrayBuffer();
     if (this.destroyed) return null;
     this.dirBase = null;
-    return ePub(data);
+    const book = ePub(data);
+    patchHtmlRequests(book);
+    return book;
   }
 
   /**
@@ -198,14 +224,6 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     const opts = this.layout === 'scroll'
       ? { width: '100%', height: '100%', flow: 'scrolled', manager: 'continuous', spread: 'none' }
       : { width: '100%', height: '100%', flow: 'paginated', spread: 'none' };
-    // Leere Nicht-Void-Elemente ausschreiben (0.867.1): epub.js gibt das Kapitel als XML-serialisierten Text per srcdoc an den
-    // HTML-Parser — dort ist `<div …/>` KEIN leeres Element, alles Folgende landet darin. Scribd-Umwandlungen
-    // („50 Chess Traps in the Opening“) haben `<div style="width: 6.25%" />` als Trennlinie → Text und Diagramme in einer
-    // 6-%-Spalte, Bilder 15 px breit. Nach den Ressourcen-Ersetzungen (section.output) anwenden.
-    if (!SERIALIZE_HOOKED.has(book)) {   // beim Umschalten Seite/Fließend nicht mehrfach anmelden
-      SERIALIZE_HOOKED.add(book);
-      book.spine?.hooks?.serialize.register((output, section) => { section.output = expandSelfClosing(section.output ?? output); });
-    }
     const rendition = book.renderTo(this.area.nativeElement, opts);
     this.rendition = rendition;
     rendition.themes.default({ body: { 'line-height': '1.5' }, img: { 'max-width': '100%' } });

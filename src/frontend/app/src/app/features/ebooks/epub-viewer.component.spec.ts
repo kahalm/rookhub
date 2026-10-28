@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { EpubViewerComponent, epubImagePath, expandSelfClosing, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
+import { EpubViewerComponent, epubImagePath, expandSelfClosing, patchHtmlRequests, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
 import { setEinkActive } from '../../core/eink';
 
 const BASE = 'http://rh.test/api/ebooks/9/epub/tok/';
@@ -36,6 +36,34 @@ describe('expandSelfClosing', () => {
   it('keeps void elements and attribute values containing slashes', () => {
     expect(expandSelfClosing('<img src="../Images/a.png" alt="x/y"/><br/>')).toBe('<img src="../Images/a.png" alt="x/y"/><br/>');
     expect(expandSelfClosing('<a href="x/y.html"/>')).toBe('<a href="x/y.html"></a>');
+  });
+});
+
+describe('patchHtmlRequests', () => {
+  const chapter = '<html><body><div id="b4" style="width: 6.25%" /><p id="t">Text</p></body></html>';
+
+  it('archive mode: .html chapters are parsed with empty elements written out, other files go to the original request', async () => {
+    const other = jasmine.createSpy('request').and.resolveTo('xml');
+    const archive = { request: other, getText: jasmine.createSpy('getText').and.resolveTo(chapter) };
+    const book: Parameters<typeof patchHtmlRequests>[0] = { archive };
+    patchHtmlRequests(book);
+    const doc = await book.archive!.request('/OEBPS/Text/chapter0007.html') as Document;
+    expect(doc.querySelector('#b4')!.children.length).toBe(0);   // der Absatz steht neben, nicht im 6-%-div
+    expect(doc.querySelector('#t')!.parentElement!.tagName).toBe('BODY');
+    expect(await book.archive!.request('/OEBPS/content.opf')).toBe('xml');
+    expect(other).toHaveBeenCalledOnceWith('/OEBPS/content.opf', undefined);
+  });
+
+  it('directory mode: .html chapters are fetched and fixed, .xhtml and other types use the original request', async () => {
+    const orig = jasmine.createSpy('request').and.resolveTo('orig');
+    spyOn(window, 'fetch').and.resolveTo(new Response(chapter));
+    const book: Parameters<typeof patchHtmlRequests>[0] = { request: orig };
+    patchHtmlRequests(book);
+    const doc = await book.request!('https://x/epub/OEBPS/Text/c.html', null) as Document;
+    expect(doc.querySelector('#b4')!.children.length).toBe(0);
+    expect(await book.request!('https://x/epub/OEBPS/Text/c.xhtml', null)).toBe('orig');
+    expect(await book.request!('https://x/epub/book.epub', 'binary')).toBe('orig');
+    expect(window.fetch).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.869.2", date: "2026-10-28", changes: [
+    { en: "E-book reader: the fix for squeezed EPUB chapters (narrow text column, tiny diagrams, e.g. “50 Chess Traps in the Opening”) now really takes effect — chapter files ending in .html are cleaned up before the browser parses them, not afterwards.",
+      de: "E-Book-Leser: Die Korrektur für gequetschte EPUB-Kapitel (schmale Textspalte, winzige Diagramme, z. B. „50 Chess Traps in the Opening“) greift jetzt wirklich — Kapiteldateien mit der Endung .html werden vor dem Einlesen bereinigt, nicht erst danach." },
+  ] },
   { version: "0.869.1", date: "2026-10-28", changes: [
     { en: "Position editor: the “hide buttons” option is a signal input (the build check for new decorator inputs failed for 0.869.0).",
       de: "Stellungs-Editor: Die Option „Knopfzeile ausblenden“ ist ein Signal-Input (die Build-Prüfung auf neue Dekorator-Inputs schlug bei 0.869.0 fehl)." },
