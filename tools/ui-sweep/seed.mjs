@@ -417,6 +417,23 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
   });
 
+  // Eine GESPIELTE Runde mit Vereinspartie für die Prognoseseite (`/?liga=…&runde=…&verein=…`, 28.10.2026): ohne
+  // Abfrage zeigt sie nur die nächste offene Runde (Prognose, keine Partien) — Ergebnisse, „Partie vorhanden“, „+“/„!!“
+  // und „Alle Aufstellungen der Runde“ sah der Sweep nie. Liga + Runde aus dem Label einer zugeordneten Vereinspartie.
+  await step(['playedLiga', 'playedRunde', 'playedVerein'], async () => {
+    const me = await a.get('/api/league/me');
+    const club = me.clubs?.[0];
+    if (!club) return {};
+    const index = await a.get(`/api/league/index?club=${club.id}`);
+    const games = list(await a.get(`/api/league/club/games?club=${club.id}`)).filter(g => g.leagueGameId && g.leagueGameLabel);
+    for (const g of games) {
+      const m = /^[^·]+·\s*(.+?)\s*·\s*Runde\s+(\d+)\s*·/.exec(g.leagueGameLabel);
+      const league = m && (index.leagues ?? []).find(l => l.name === m[1] && l.own?.length);
+      if (league) return { playedLiga: league.tnr, playedRunde: Number(m[2]), playedVerein: encodeURIComponent(league.own[0]) };
+    }
+    return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
+  });
+
   // Eine „+“-Stellung an einer Partie der LeagueHub-Vereinsübersicht — sonst fehlt dort jedes „+n“, und das
   // Stellungsfenster (Zustände `verein-uebersicht--plus-fenster` / `--in-partie-zeigen`) lässt sich nicht öffnen
   // (Dev hatte am 28.10. keine). Markiert wird die Stellung nach Halbzug 12 mit dem Kommentar „ui-sweep“, als claude-dev;

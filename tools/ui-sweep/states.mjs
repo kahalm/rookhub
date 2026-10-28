@@ -309,6 +309,8 @@ export const STATES = [
   { of: 'leaguehub__konten', name: 'info', auth: ['admin'], steps: [{ click: 'button.chk-btn[aria-label="Wie gesucht wird"]' }], expect: '.info-panel.sugg-info' },
   { of: 'leaguehub__start', name: 'prognose-info', auth: LEAGUE,
     steps: [{ click: 'lh-fixture button.chk-btn[aria-label="Wie die Prognose zustande kommt"]' }], expect: 'lh-fixture .info-panel' },
+  { of: 'leaguehub__start-gespielt', name: 'brettmenue', auth: LEAGUE,
+    steps: [{ click: 'lh-fixture td.pg button.more-btn >> nth=0' }], expect: MENU },
   { of: 'leaguehub__start', name: 'kader', auth: LEAGUE,
     steps: [{ click: 'lh-fixture details.roster > summary' }], expect: 'lh-fixture details.roster[open] .rtable' },
 

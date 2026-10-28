@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.869.4", date: "2026-10-28", changes: [
+    { en: "UI sweep: the LeagueHub forecast page is now also photographed for a played round with club games (results, provisional line-up, board menu) and with all line-ups of that round.",
+      de: "UI-Sweep: Die LeagueHub-Prognoseseite wird jetzt auch für eine gespielte Runde mit Vereinspartien (Ergebnisse, vorläufige Aufstellung, Brettmenü) und mit allen Aufstellungen dieser Runde fotografiert." },
+  ] },
   { version: "0.869.3", date: "2026-10-28", changes: [
     { en: "Tournament site: the E-ink slider colours use colour keywords instead of hex values (the style check failed for 0.869.1).",
       de: "Turnierseite: Die E-Ink-Reglerfarben stehen als Farbwörter statt Hex-Werte (die Stil-Prüfung schlug bei 0.869.1 fehl)." },
