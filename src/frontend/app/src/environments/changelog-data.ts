@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.868.0", date: "2026-10-28", changes: [
+    { en: "Admin → CI: the page opens at once — the server returns the last known state immediately and fetches the fresh one from GitHub in the background (up to 10 minutes old, then it waits as before). Tags are fetched alongside the runs and kept for a minute. Before, every opening waited 2–2.6 s for GitHub.",
+      de: "Admin → CI: Die Seite öffnet sofort — der Server liefert gleich den letzten Stand und holt den frischen im Hintergrund von GitHub (bis 10 Minuten alt, danach wartet er wie bisher). Tags kommen gleichzeitig mit den Läufen und bleiben eine Minute gespeichert. Vorher wartete jedes Öffnen 2–2,6 s auf GitHub." },
+  ] },
   { version: "0.867.2", date: "2026-10-28", changes: [
     { en: "Tests: the engine stream limit test runs each stream with its own request context — the tag build v0.867.1 failed on a race in the shared response headers.",
       de: "Tests: Der Test zum Engine-Stromdeckel lässt jeden Strom mit eigenem Anfragekontext laufen — der Tag-Build v0.867.1 scheiterte an einem Wettlauf in den gemeinsamen Antwort-Kopfzeilen." },

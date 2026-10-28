@@ -135,6 +135,68 @@ public class GithubActionsServiceTests
         Assert.Equal(2, handler.Calls);
     }
 
+    /// <summary>0.868.0: abgelaufener (aber nicht zu alter) Stand kommt SOFORT zurück, der GitHub-Abruf läuft im
+    /// Hintergrund und ersetzt ihn danach — das Öffnen der CI-Seite wartet nicht mehr 2–2,6 s auf GitHub.</summary>
+    [Fact]
+    public async Task StaleOverview_IsServedAtOnce_AndRefreshedInBackground()
+    {
+        var title = "old";
+        var gate = new TaskCompletionSource();
+        var handler = new StubHandler((req, _) =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/tags")) return Json("[]");
+            if (title == "new") gate.Task.Wait();
+            return Json(RunsJson.Replace("fix things", title));
+        });
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?> { ["GitHub:CacheSeconds"] = "1" });
+
+        Assert.Equal("old", (await svc.GetOverviewAsync()).Repos[0].Runs[0].Title);
+        await Task.Delay(1100);   // frisches Fenster (1 s) vorbei
+        title = "new";
+
+        var stale = await svc.GetOverviewAsync();   // darf nicht auf den (blockierten) GitHub-Abruf warten
+        Assert.Equal("old", stale.Repos[0].Runs[0].Title);
+
+        gate.SetResult();
+        await svc.WaitForBackgroundRefreshForTests();
+        Assert.Equal("new", (await svc.GetOverviewAsync()).Repos[0].Runs[0].Title);
+    }
+
+    [Fact]
+    public async Task TooOldOverview_IsFetchedSynchronously()
+    {
+        var title = "old";
+        var handler = new StubHandler((req, _) => req.RequestUri!.AbsolutePath.EndsWith("/tags")
+            ? Json("[]") : Json(RunsJson.Replace("fix things", title)));
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?>
+            { ["GitHub:CacheSeconds"] = "1", ["GitHub:StaleSeconds"] = "0" });
+
+        await svc.GetOverviewAsync();
+        await Task.Delay(1100);
+        title = "new";
+
+        Assert.Equal("new", (await svc.GetOverviewAsync()).Repos[0].Runs[0].Title);
+    }
+
+    /// <summary>Tags werden je Repo kurz gecacht: der Einzel-Repo-Abruf (👁) holt sie nicht bei jedem Poll neu.</summary>
+    [Fact]
+    public async Task Tags_AreCachedAcrossRepoPolls()
+    {
+        var tagCalls = 0;
+        var handler = new StubHandler((req, _) =>
+        {
+            if (!req.RequestUri!.AbsolutePath.EndsWith("/tags")) return Json(RunsJson);
+            tagCalls++;
+            return Json("""[ { "name": "v1.0.0", "commit": { "sha": "abc1234def5678" } } ]""");
+        });
+        var svc = Build(handler);
+
+        await svc.GetRepoAsync("rookhub");
+        await svc.GetRepoAsync("rookhub");
+
+        Assert.Equal(1, tagCalls);
+    }
+
     [Fact]
     public async Task MergesRunningBuild_FromStackBuildInfo()
     {

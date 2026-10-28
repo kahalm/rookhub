@@ -17,6 +17,9 @@ namespace RookHub.Api.Services;
 /// für die Admin-CI-Übersicht. Ruft die GitHub-REST-API mit einem hinterlegten Token auf und cacht das
 /// aggregierte Ergebnis kurz (<c>GitHub:CacheSeconds</c>, Default 4 s) — so bleiben viele 5-s-Polls
 /// mehrerer Admins weit unter dem GitHub-Rate-Limit (ein Fetch je Cache-Fenster, nicht je Poll).
+/// Ist der Stand älter, aber jünger als <c>GitHub:StaleSeconds</c> (Default 600 s), kommt SOFORT der alte
+/// Stand zurück und der Abruf läuft im Hintergrund (stale-while-revalidate, 0.868.0) — vorher wartete
+/// jedes Öffnen der CI-Seite 2–2,6 s auf GitHub.
 /// Ohne Token liefert der Service <see cref="CiOverviewDto.Configured"/>=false (die UI zeigt dann den
 /// Hinweis, <c>GitHub__Token</c> zu setzen), damit das knappe unauthentifizierte Limit nicht verbrannt wird.
 /// </summary>
@@ -52,6 +55,19 @@ public class GithubActionsService
     };
 
     private const string CacheKey = "ci_actions_overview";
+
+    /// <summary>Letzter GitHub-Stand der Übersicht + Zeitpunkt + „Abruf läuft“-Marke (eine je Cache,
+    /// ohne Ablauf). Hält den Stand über die frische TTL hinaus, damit ein Öffnen nicht auf GitHub wartet.</summary>
+    private sealed class OverviewSlot
+    {
+        public CiOverviewDto? Value;
+        public DateTime FetchedAt;
+        public int Refreshing;
+        public Task? Background;
+    }
+
+    /// <summary>Tags ändern sich selten — je Repo kurz gecacht statt bei jedem Übersichts-Abruf neu.</summary>
+    private static readonly TimeSpan TagsTtl = TimeSpan.FromSeconds(60);
 
     /// <summary>Meldet die laufende Build-SHA/Ref eines Repos (aufgerufen vom Build-Report-Endpoint).
     /// PERSISTENT in der DB (Tabelle <c>CiBuildReports</c>, Upsert je Repo) — damit die Admin-CI die
@@ -154,18 +170,49 @@ public class GithubActionsService
 
     public async Task<CiOverviewDto> GetOverviewAsync(CancellationToken ct = default)
     {
-        if (!_cache.TryGetValue(CacheKey, out CiOverviewDto? cached) || cached is null)
+        var slot = _cache.GetOrCreate(CacheKey, e => { e.Priority = CacheItemPriority.NeverRemove; return new OverviewSlot(); })!;
+        var fresh = TimeSpan.FromSeconds(Math.Clamp(_config.GetValue("GitHub:CacheSeconds", 4), 1, 60));
+        var stale = TimeSpan.FromSeconds(Math.Clamp(_config.GetValue("GitHub:StaleSeconds", 600), 0, 3600));
+        var cached = slot.Value;
+        var age = DateTime.UtcNow - slot.FetchedAt;
+
+        if (cached is null || age > fresh + stale)
         {
-            cached = await FetchAsync(ct);
-            var ttl = TimeSpan.FromSeconds(Math.Clamp(_config.GetValue("GitHub:CacheSeconds", 4), 1, 60));
-            _cache.Set(CacheKey, cached, ttl);
+            // Kein (brauchbarer) Stand → einmal warten müssen.
+            cached = await FetchAsync(await LoadReportsAsync(ct), ct);
+            slot.Value = cached;
+            slot.FetchedAt = DateTime.UtcNow;
+        }
+        else if (age > fresh && Interlocked.CompareExchange(ref slot.Refreshing, 1, 0) == 0)
+        {
+            // Alter Stand sofort zurück, frischer im Hintergrund (nur EIN Abruf zugleich). Die DB-Meldungen
+            // werden noch im Request gelesen — der DbContext gehört dem Request-Scope und ist danach weg.
+            var reports = await LoadReportsAsync(ct);
+            slot.Background = Task.Run(async () =>
+            {
+                try
+                {
+                    var next = await FetchAsync(reports, CancellationToken.None);
+                    slot.Value = next;
+                    slot.FetchedAt = DateTime.UtcNow;
+                }
+                catch (Exception ex) { _logger.LogWarning(ex, "CI-Übersicht: Hintergrund-Abruf fehlgeschlagen"); }
+                finally { Interlocked.Exchange(ref slot.Refreshing, 0); }
+            });
         }
         // Push-Events (Webhook) IMMER live drüberlegen — nicht mitcachen, damit Start/Ende sofort erscheint,
         // während die GitHub-Daten selbst nur selten (Cache-TTL) frisch geholt werden.
         return OverlayPushedRuns(cached);
     }
 
-    private async Task<CiOverviewDto> FetchAsync(CancellationToken ct)
+    /// <summary>Für Tests: wartet auf einen laufenden Hintergrund-Abruf der Übersicht.</summary>
+    internal Task WaitForBackgroundRefreshForTests()
+        => _cache.TryGetValue(CacheKey, out OverviewSlot? s) && s?.Background is { } t ? t : Task.CompletedTask;
+
+    private Task<List<CiBuildReport>> LoadReportsAsync(CancellationToken ct)
+        => _db.CiBuildReports.AsNoTracking().ToListAsync(ct);
+
+    private async Task<CiOverviewDto> FetchAsync(IReadOnlyList<CiBuildReport> reports, CancellationToken ct)
     {
         var token = _config["GitHub:Token"];
         if (string.IsNullOrWhiteSpace(token))
@@ -178,7 +225,7 @@ public class GithubActionsService
         // Alle Repos parallel abrufen; ein Repo-Fehler kippt nicht die ganze Übersicht.
         var runsTask = Task.WhenAll(repos.Select(r => FetchRepoAsync(owner, r, token, ct)));
         // Parallel dazu: welche Build-SHA/Ref läuft aktuell je Stack? (crawler/piratechess/bot; best-effort)
-        var buildInfoTask = ResolveRunningBuildsAsync(ct);
+        var buildInfoTask = ResolveRunningBuildsAsync(reports, ct);
         await Task.WhenAll(runsTask, buildInfoTask);
 
         var running = buildInfoTask.Result;
@@ -233,7 +280,7 @@ public class GithubActionsService
         var repos = _config.GetSection("GitHub:Repos").Get<string[]>() is { Length: > 0 } cfg ? cfg : DefaultRepos;
         if (!repos.Contains(repo, StringComparer.OrdinalIgnoreCase)) return null;
 
-        var running = await ResolveRunningBuildsAsync(ct);
+        var running = await ResolveRunningBuildsAsync(await LoadReportsAsync(ct), ct);
         var r = await FetchRepoAsync(owner, repo, token, ct);
         return OverlayPushedRepo(await MergeRunningAsync(r, running, owner, token, ct));
     }
@@ -343,7 +390,7 @@ public class GithubActionsService
     /// <summary>Fragt bei den erreichbaren Stacks (crawler/piratechess/bot) deren build-info-Endpoint ab
     /// → welche Commit-SHA/Ref läuft dort GERADE. Rein best-effort: jeder Fehler/Timeout → kein Eintrag
     /// (die UI markiert dann nichts für dieses Repo). Das rookhub-Frontend meldet seine SHA selbst im Browser.</summary>
-    private async Task<Dictionary<string, BuildInfo>> ResolveRunningBuildsAsync(CancellationToken ct)
+    private async Task<Dictionary<string, BuildInfo>> ResolveRunningBuildsAsync(IReadOnlyList<CiBuildReport> reports, CancellationToken ct)
     {
         var targets = new List<(string Repo, string? Url, IReadOnlyList<(string Name, string Value)> Headers)>();
 
@@ -374,7 +421,7 @@ public class GithubActionsService
         var map = new Dictionary<string, BuildInfo>();
         // Zuerst per Push gemeldete Build-Infos aus der DB (z. B. log-watcher, das rookhub nicht erreichen
         // kann) — überlebt rookhub-api-Neustarts. Ein direkt abgefragter Wert (unten) hat Vorrang.
-        foreach (var rep in await _db.CiBuildReports.AsNoTracking().ToListAsync(ct))
+        foreach (var rep in reports)
             map[rep.Repo] = new BuildInfo(rep.Sha, rep.Ref);
         foreach (var (repo, info) in pairs)
             if (info is not null) map[repo] = info;
@@ -430,6 +477,8 @@ public class GithubActionsService
 
     private async Task<CiRepoDto> FetchRepoAsync(string owner, string repo, string token, CancellationToken ct)
     {
+        // Tags parallel zu den Läufen holen (vorher nacheinander = ein GitHub-Roundtrip mehr je Abruf).
+        var tagsTask = GetTagsByShaAsync(owner, repo, token, ct);
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
@@ -442,7 +491,7 @@ public class GithubActionsService
             var payload = await resp.Content.ReadFromJsonAsync<RunsResponse>(GithubJson, ct);
 
             // Tags auflösen (Tag-Läufe haben kein head_branch → Ref = Tag-Name via sha-Map).
-            var tagBySha = await GetTagsByShaAsync(owner, repo, token, ct);
+            var tagBySha = await tagsTask;
 
             var filter = WorkflowFilterFor(repo);
             var matching = (payload?.WorkflowRuns ?? new List<RunItem>())
@@ -464,6 +513,15 @@ public class GithubActionsService
     /// <summary>Neueste Tags des Repos als sha→Name-Map (für die Ref-Anzeige der Tag-Läufe).
     /// Fehler → leere Map (dann fällt die Anzeige auf den Branch/Short-SHA zurück).</summary>
     private async Task<Dictionary<string, string>> GetTagsByShaAsync(string owner, string repo, string token, CancellationToken ct)
+    {
+        var key = $"ci_tags:{owner}/{repo}";
+        if (_cache.TryGetValue(key, out Dictionary<string, string>? cached) && cached is not null) return cached;
+        var map = await FetchTagsByShaAsync(owner, repo, token, ct);
+        if (map.Count > 0) _cache.Set(key, map, TagsTtl);   // Fehler (leer) nicht cachen
+        return map;
+    }
+
+    private async Task<Dictionary<string, string>> FetchTagsByShaAsync(string owner, string repo, string token, CancellationToken ct)
     {
         try
         {
