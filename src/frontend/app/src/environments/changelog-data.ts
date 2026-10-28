@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.870.1", date: "2026-10-28", changes: [
+    { en: "Maintenance: the token dialog gets the sign-in service via inject() — the build check (lint ratchet) had stopped 0.870.0.",
+      de: "Wartung: Der Token-Dialog holt den Anmeldedienst per inject() — die Build-Prüfung (Lint-Ratsche) hatte 0.870.0 gestoppt." },
+  ] },
   { version: "0.870.0", date: "2026-10-28", changes: [
     { en: "E-book diagram recognition can now also run on another computer (e.g. a laptop): an external diagram worker borrows the next waiting book (/api/diagram-worker), recognises the diagrams with the new command-line program „rookhub-diagrams“ (the same recognition code as the server) and sends the result back, which the server checks and stores exactly like its own worker. While a book is borrowed the server skips it; if the worker disappears, the book is free again after 30 minutes. Admins create the token for this in Profile → API tokens (scope „Diagram worker“, only with the permission ebooks.manage).",
       de: "Die Diagramm-Erkennung der E-Books kann jetzt auch auf einem anderen Rechner laufen (z. B. einem Laptop): ein externer Diagramm-Worker leiht sich das nächste wartende Buch (/api/diagram-worker), erkennt die Diagramme mit dem neuen Kommandozeilenprogramm „rookhub-diagrams“ (derselbe Erkennungscode wie der Server) und schickt das Ergebnis zurück; der Server prüft es und speichert es genau wie bei seinem eigenen Worker. Solange ein Buch verliehen ist, lässt der Server es aus; verschwindet der Worker, ist es nach 30 Minuten wieder frei. Den Token dafür legen Admins unter Profil → API-Tokens an (Bereich „Diagramm-Worker“, nur mit dem Recht ebooks.manage)." },

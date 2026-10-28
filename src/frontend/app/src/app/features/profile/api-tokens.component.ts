@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -105,10 +105,8 @@ export class CreateTokenDialogComponent {
   scope: ApiTokenScope = 'extension';
   readonly scopeShort = SCOPE_SHORT;
   /** Diagramm-Worker-Token holen ganze Bücher — der Server lässt sie nur mit `ebooks.manage` anlegen. */
-  readonly canDiagrams: boolean;
-  constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>, auth: AuthService) {
-    this.canDiagrams = auth.has('ebooks.manage');
-  }
+  readonly canDiagrams = inject(AuthService).has('ebooks.manage');
+  constructor(public dialogRef: MatDialogRef<CreateTokenDialogComponent>) {}
 
   submit(): void {
     this.dialogRef.close({ name: this.name, expiresInDays: this.expiresIn, scope: this.scope });
