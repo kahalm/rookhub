@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.867.1", date: "2026-10-28", changes: [
+    { en: "E-book reader: in some EPUBs (e.g. Scribd conversions like “50 Chess Traps in the Opening”) the text was squeezed into a very narrow column and the diagrams shrank to a few pixels — empty elements written as <div/> swallowed the rest of the chapter. They are now written out properly before display.",
+      de: "E-Book-Leser: In manchen EPUBs (z. B. Scribd-Umwandlungen wie „50 Chess Traps in the Opening“) stand der Text in einer sehr schmalen Spalte und die Diagramme schrumpften auf wenige Pixel — leere Elemente als <div/> verschluckten den Rest des Kapitels. Sie werden jetzt vor der Anzeige richtig ausgeschrieben." },
+  ] },
   { version: "0.867.0", date: "2026-10-28", changes: [
     { en: "E-books: diagrams drawn as pictures in EPUBs that the old picture reader could not read (e.g. Merida-style pieces on grey light squares, as in “50 Chess Traps in the Opening”) are now read by the scan network — such books no longer stay at 0 diagrams.",
       de: "E-Books: Diagramme als Bilder in EPUBs, die der bisherige Bildleser nicht lesen konnte (z. B. Merida-artige Figuren auf grauen hellen Feldern wie in „50 Chess Traps in the Opening“), liest jetzt das Scan-Netz — solche Bücher bleiben nicht mehr bei 0 Diagrammen." },

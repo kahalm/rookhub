@@ -12,6 +12,18 @@ import { EINK_CLASS, isEinkActive } from '../../core/eink';
 export interface EpubLocation { fraction: number; cfi: string; }
 export interface EpubTocEntry { label: string; href: string; }
 /** Ein erkanntes Diagrammbild (0.775.0): Kapitel (Spine, 1-basiert) und Bildpfad im EPUB. */
+const SERIALIZE_HOOKED = new WeakSet<object>();
+
+/** Void-Elemente aus HTML — nur sie dürfen im HTML-Parser „/>“ tragen. */
+const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
+/** `<div a="b"/>` → `<div a="b"></div>` für alle Nicht-Void-Elemente (siehe createRendition). Attributwerte mit „>“ werden
+ * respektiert; Void-Elemente (`<img/>`, `<br/>`) bleiben unverändert. */
+export function expandSelfClosing(html: string): string {
+  return html.replace(/<([A-Za-z][\w:.-]*)((?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'>]+))?)*)\s*\/>/g,
+    (m, tag: string, attrs: string) => VOID_ELEMENTS.has(tag.toLowerCase()) ? m : `<${tag}${attrs}></${tag}>`);
+}
+
 export interface EpubDiagramImage { id: number; chapter: number; ref: string; title?: string; }
 
 /** Minimal-Schnittstelle von epub.js, die hier gebraucht wird (das Paket bringt eigene, sehr breite Typen mit). */
@@ -21,7 +33,10 @@ interface EpubBook {
   loaded: { navigation: Promise<{ toc: { label: string; href: string }[] }> };
   locations: { generate(chars: number): Promise<unknown>; percentageFromCfi(cfi: string): number; length(): number };
   renderTo(el: HTMLElement, opts: Record<string, unknown>): EpubRendition;
-  spine: { get(index: number): { href: string } | null };
+  spine: {
+    get(index: number): { href: string } | null;
+    hooks?: { serialize: { register(fn: (output: string, section: { output?: string }) => void): void } };
+  };
   /** Im Archiv-Modus ersetzt epub.js Bildadressen durch blob:-URLs — parallel dazu die Pfade im Buch. */
   resources?: { urls?: string[]; replacementUrls?: string[] };
   destroy(): void;
@@ -183,6 +198,14 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     const opts = this.layout === 'scroll'
       ? { width: '100%', height: '100%', flow: 'scrolled', manager: 'continuous', spread: 'none' }
       : { width: '100%', height: '100%', flow: 'paginated', spread: 'none' };
+    // Leere Nicht-Void-Elemente ausschreiben (0.867.1): epub.js gibt das Kapitel als XML-serialisierten Text per srcdoc an den
+    // HTML-Parser — dort ist `<div …/>` KEIN leeres Element, alles Folgende landet darin. Scribd-Umwandlungen
+    // („50 Chess Traps in the Opening“) haben `<div style="width: 6.25%" />` als Trennlinie → Text und Diagramme in einer
+    // 6-%-Spalte, Bilder 15 px breit. Nach den Ressourcen-Ersetzungen (section.output) anwenden.
+    if (!SERIALIZE_HOOKED.has(book)) {   // beim Umschalten Seite/Fließend nicht mehrfach anmelden
+      SERIALIZE_HOOKED.add(book);
+      book.spine?.hooks?.serialize.register((output, section) => { section.output = expandSelfClosing(section.output ?? output); });
+    }
     const rendition = book.renderTo(this.area.nativeElement, opts);
     this.rendition = rendition;
     rendition.themes.default({ body: { 'line-height': '1.5' }, img: { 'max-width': '100%' } });

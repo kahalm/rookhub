@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { EpubViewerComponent, epubImagePath, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
+import { EpubViewerComponent, epubImagePath, expandSelfClosing, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
 import { setEinkActive } from '../../core/eink';
 
 const BASE = 'http://rh.test/api/ebooks/9/epub/tok/';
@@ -20,6 +20,22 @@ describe('epubImagePath', () => {
     expect(epubImagePath('/OEBPS/images/d3.png', 'about:blank', null, none)).toBe('OEBPS/images/d3.png');
     // Fremde Adresse (nicht unter der Basis): roh, der Dateiname-Rückfall greift danach.
     expect(epubImagePath('http://elsewhere/x/d4.png', BASE + 'OEBPS/ch.xhtml', BASE, none)).toBe('http://elsewhere/x/d4.png');
+  });
+});
+
+describe('expandSelfClosing', () => {
+  it('writes out empty non-void elements so the HTML parser does not nest the rest of the chapter in them', () => {
+    // „50 Chess Traps in the Opening“ (Scribd-Umwandlung, 0.867.1): Trennlinie als <div …/>, sonst alles in einer 6-%-Spalte.
+    const html = '<div style="border-top: 1px solid; width: 6.25%;" id="b4" /><p>Text</p><div class="spacer spacer-100"/>';
+    expect(expandSelfClosing(html)).toBe(
+      '<div style="border-top: 1px solid; width: 6.25%;" id="b4"></div><p>Text</p><div class="spacer spacer-100"></div>');
+    const doc = new DOMParser().parseFromString(expandSelfClosing(html), 'text/html');
+    expect(doc.querySelector('#b4')!.children.length).toBe(0);
+  });
+
+  it('keeps void elements and attribute values containing slashes', () => {
+    expect(expandSelfClosing('<img src="../Images/a.png" alt="x/y"/><br/>')).toBe('<img src="../Images/a.png" alt="x/y"/><br/>');
+    expect(expandSelfClosing('<a href="x/y.html"/>')).toBe('<a href="x/y.html"></a>');
   });
 });
 
