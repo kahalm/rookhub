@@ -184,7 +184,6 @@ describe('PrivacyComponent', () => {
         expect(folds(renderAt(true, league).nativeElement as HTMLElement).length).toBe(0);
         const others: (LegalSite | undefined)[] = [
           undefined,
-          { contactEmail: OPERATOR.email, imprint: true, kind: 'clubhub', accountHome: 'rookhub' },
           { contactEmail: OPERATOR.email, imprint: true, kind: 'turnier', accountHome: 'rookhub' },
           { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' },
         ];
@@ -193,6 +192,34 @@ describe('PrivacyComponent', () => {
           expect(el.querySelectorAll('details.legal-fold').length).withContext(site?.kind ?? 'rookhub').toBe(0);
           expect(el.querySelectorAll('mat-card-content > h2').length).toBeGreaterThan(5);
         }
+      });
+    });
+
+    // UI-Sweep d6 (d6-c-privacy-mobile-zu-lang): ClubHub-Datenschutz war am Handy 14 Bildschirme lang — klappt wie LeagueHub zu.
+    describe('ClubHub am Handy: Abschnitte ab dem dritten als Aufklapper', () => {
+      const club: LegalSite = { contactEmail: OPERATOR.email, imprint: true, kind: 'clubhub', accountHome: 'rookhub' };
+      const folds = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLDetailsElement>('mat-card-content > details.legal-fold'));
+
+      it('unter 600 px: Verantwortlicher und Kartei-Abschnitt offen, ab dem dritten h2 zugeklappt', () => {
+        const el = renderAt(false, club).nativeElement as HTMLElement;
+        const heads = Array.from(el.querySelectorAll('h2'));
+        expect(heads.slice(0, 2).map(h => h.id)).toEqual(['privacy-controller', 'privacy-club']);
+        expect(heads.slice(0, 2).every(h => !h.closest('details'))).toBeTrue();
+        const d = folds(el);
+        expect(d.length).toBe(heads.length - 2);
+        for (const f of d) {
+          expect(f.open).toBeFalse();
+          expect(f.querySelector(':scope > summary > h2')).not.toBeNull();
+        }
+        // Der Rechtstext selbst bleibt vollständig — nur zugeklappt.
+        expect(el.querySelector('#privacy-rights')!.closest('details')!.textContent).toContain('legal.privacy.rights');
+        expect(el.querySelector('p.back')!.closest('details')).toBeNull();
+      });
+
+      it('breiter als 600 px bleibt alles offen', () => {
+        const el = renderAt(true, club).nativeElement as HTMLElement;
+        expect(folds(el).length).toBe(0);
+        expect(el.querySelectorAll('mat-card-content > h2').length).toBeGreaterThan(5);
       });
     });
 

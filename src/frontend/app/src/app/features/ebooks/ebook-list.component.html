@@ -233,7 +233,9 @@
                 @if (book.year) { <span class="eb-sep">·</span><span>{{ book.year }}</span> }
               </div>
               <div class="eb-badges">
-                @for (f of book.files; track f.id) { <span class="chip">{{ f.format | uppercase }}</span> }
+                @for (f of formats(book); track f.label) {
+                  <span class="chip eb-format" [matTooltip]="f.n > 1 ? ('ebooks.formatFiles' | translate: { n: f.n }) : ''">{{ f.label }}</span>
+                }
                 @if (book.targetMinElo != null) { <span class="chip eb-elo-badge" [matTooltip]="'ebooks.eloHint' | translate">{{ 'ebooks.eloBadge' | translate: { n: book.targetMinElo } }}</span> }
                 @if (book.pageCount) { <span class="chip">{{ (book.pageCount === 1 ? 'ebooks.pagesOne' : 'ebooks.pages') | translate: { n: book.pageCount } }}</span> }
                 @if (book.processing) { <span class="chip eb-processing" [matTooltip]="'ebooks.processingHint' | translate"><mat-icon>hourglass_top</mat-icon>{{ 'ebooks.processing' | translate }}</span> }

@@ -727,8 +727,7 @@
     },
     "sharedLinks": {
       "title": "Moje poveznice za dijeljenje",
-      "hint": "Javne poveznice na pojedine linije repertoara (/l/…). Tko ima poveznicu, vidi liniju bez prijave — dok je ne opozoveš.",
-      "gamesHint": "Poveznice partija (/g/…) opozivaš u popisu partija: ⋮ → „Opozovi poveznicu za dijeljenje”.",
+      "help": "Tko ima poveznicu na liniju repertoara, vidi je bez prijave — dok je ne opozoveš.\n\nPoveznice partija opozivaš u popisu partija: ⋮ → „Opozovi poveznicu za dijeljenje”.",
       "empty": "Nisi javno podijelio nijednu liniju.",
       "fromExtension": "iz RepChecka",
       "open": "Otvori",
@@ -2856,12 +2855,12 @@
       "toggle": "Podijeli list (poveznica + QR kod)",
       "qr": "QR kod",
       "short": "Dijeli",
-      "hint": "Tko otvori poveznicu, može list proći za pločom bez prijave — na ispisu stoji u podnožju svake stranice kao QR kod.",
+      "hint": "Tko otvori poveznicu, može list proći za pločom bez prijave. Na ispisu stoji u podnožju svake stranice kao QR kod.\n\nIza poveznice stoje i rješenja zadataka — vidi ih svatko tko je dobije.",
       "off": "Nije podijeljeno — tada ispis nema QR koda.",
       "copy": "Kopiraj poveznicu",
       "copied": "Poveznica kopirana.",
       "stopConfirm": "Prekinuti dijeljenje? Dosadašnja poveznica prestaje vrijediti — ispisani QR kodovi nakon toga ne vode nikamo, a novo dijeljenje stvara drugu poveznicu.",
-      "solutionWarning": "Iza poveznice stoje i rješenja zadataka — vidi ih svatko tko je dobije.",
+      "solutionWarning": "Pažnja: poveznica prikazuje i rješenja.",
       "scanHint": "Prođi za pločom:",
       "noSheetLink": "Ovaj list nije podijeljen — ispis neće dobiti QR kod."
     },
@@ -5592,6 +5591,7 @@
     "saveFailed": "Spremanje nije uspjelo.",
     "pages": "{{n}} stranica",
     "pagesOne": "1 stranica",
+    "formatFiles": "Datoteka: {{n}}",
     "quota": "Iskorišteno {{used}} od {{limit}}",
     "visibilityLabel": "Vidljivost",
     "visibility": {
@@ -5876,7 +5876,11 @@
       "waitingWhy": "čitač svake minute provjerava nove zapisnike",
       "reading": "Čita se",
       "readingWhy": "to obično traje nekoliko minuta",
-      "longWait": "Dulje nego obično – čitač trenutno vjerojatno ne radi. Zapisnik ostaje spremljen."
+      "longWait": "Dulje nego obično – čitač trenutno vjerojatno ne radi. Zapisnik ostaje spremljen.",
+      "sinceDays": "već {{days}} dana",
+      "sinceDaysOne": "već 1 dan",
+      "sinceDaysHours": "već {{days}} dana {{hours}} h",
+      "sinceDaysHoursOne": "već 1 dan {{hours}} h"
     }
   },
   "solver": {

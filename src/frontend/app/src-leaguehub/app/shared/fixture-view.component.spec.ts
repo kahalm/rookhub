@@ -290,6 +290,18 @@ describe('FixtureViewComponent', () => {
     expect(first.querySelector('.name .g')?.getAttribute('title')).toBe('12 Partien im Bestand');
   });
 
+  // d6-l-partien-tausendertrenner: „Alle Gemeldeten" zeigte die Partienzahl roh (3115), die Bretter darüber „3.115".
+  it('Meldeliste: Partienzahl mit Tausenderpunkt wie an den Brettern, ohne Partien „–"', () => {
+    const el = render({ ...OPEN, roster: [
+      { ...OPEN.roster![0], g: 3115 },
+      { rb: 3, n: 'Tabernig, Bernhard', elo: null, p: 0.05, prev: '', cur: '', fide: null, g: 0, acc: [] }] });
+    const rows = Array.from(el.querySelectorAll('details.roster tbody tr'));
+    expect(rows.length).toBe(2);
+    const games = (tr: Element) => tr.querySelectorAll('td')[4].textContent!.trim();
+    expect(games(rows[0])).toBe('3.115');
+    expect(games(rows[1])).toBe('–');
+  });
+
   it('0.730.0: Spieler ohne FIDE-ID öffnen die Karte über ihren n-Schlüssel (Meldeliste und Kandidat)', async () => {
     api.card.and.resolveTo({ fide: '', key: 'n-0123456789abcd', name: 'Tabernig, Bernhard', n: 0, accounts: [] } as never);
     const el = render({ ...OPEN,

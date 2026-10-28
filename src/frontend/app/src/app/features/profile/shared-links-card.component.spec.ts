@@ -80,4 +80,12 @@ describe('SharedLinksCardComponent', () => {
     failing.detectChanges();
     expect(failing.nativeElement.querySelector('.error')).not.toBeNull();
   });
+
+  it('d6-rk-profil-teilen-links-textstapel: Erklärung hinter dem ?, kein Hinweis-Absatz und keine Pfadkürzel', () => {
+    const el: HTMLElement = render().nativeElement;
+    expect(el.querySelector('h4 app-help-hint')).not.toBeNull();
+    expect(el.querySelectorAll('p.hint').length).withContext('mit Liste kein Hinweis-Absatz').toBe(0);
+    expect(el.textContent).not.toContain('/l/…');
+    expect(el.textContent).not.toContain('/g/…');
+  });
 });

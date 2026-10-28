@@ -252,6 +252,45 @@ describe('ClubGamesPageComponent', () => {
     expect(visible(card)).toBeFalse();
   });
 
+  // UI-Sweep d6 (d6-l-vereinspartien-handy-ueberlauf): eine lange Zugfolge machte die Kartenzelle breiter als das Fenster —
+  // „Nachspielen" schnitt ab, ⋮ und Ergebnis lagen außerhalb, die Liste war waagrecht verschoben.
+  it('am Handy (390 px) ragt keine Karte über den Container, auch mit langer Eröffnung; „Nachspielen" und ⋮ ganz sichtbar', async () => {
+    api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [
+      G(8, { white: 'Mustermann-Huber, Maximilian', black: 'Obergruber, Gottfried', result: '0-1', canDelete: true,
+        opening: '1.d4 Nf6 2.Nc3 d5 3.Bf4 Bf5 4.e3 e6 5.Nf3 c5 6.Bb5+ Nc6 7.O-O a6',
+        analysis: { status: 'done', analyzed: 22, total: 22, accuracyWhite: 87.4, accuracyBlack: 71.6 } }),
+      G(9, { opening: '1.e4 c6' })] });
+    const el = create();
+    el.style.display = 'block';
+    el.style.width = '390px';
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const scroll = el.querySelector('.club-scroll') as HTMLElement;
+    void scroll.offsetWidth;
+    await (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready;
+    const box = scroll.getBoundingClientRect();
+    expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
+    for (const card of Array.from(el.querySelectorAll<HTMLElement>('tbody tr.game td.card-cell'))) {
+      const r = card.getBoundingClientRect();
+      expect(r.left).toBeGreaterThanOrEqual(box.left - 0.5);
+      expect(r.right).toBeLessThanOrEqual(box.right + 0.5);
+      // „Nachspielen", ⋮ (falls vorhanden) und das Ergebnis liegen ganz in der Karte.
+      const play = Array.from(card.querySelectorAll<HTMLElement>('.gc-acts .btn-link')).find(b => b.textContent?.trim() === 'Nachspielen')!;
+      const parts = [play, card.querySelector<HTMLElement>('.gc-acts .more-btn'), card.querySelector<HTMLElement>('.gc-result')!];
+      for (const b of parts.filter((x): x is HTMLElement => !!x)) {
+        const br = b.getBoundingClientRect();
+        expect(br.width).withContext(b.textContent!.trim()).toBeGreaterThan(0);
+        expect(br.left).withContext(b.textContent!.trim()).toBeGreaterThanOrEqual(r.left - 0.5);
+        expect(br.right).withContext(b.textContent!.trim()).toBeLessThanOrEqual(r.right + 0.5);
+      }
+    }
+    expect(el.querySelector('tbody tr.game .gc-acts .more-btn')).withContext('erste Partie mit ⋮').not.toBeNull();
+    // Die lange Zugfolge kürzt mit „…" statt die Karte zu verbreitern.
+    const meta = el.querySelector('tbody tr.game .gc-meta') as HTMLElement;
+    expect(meta.scrollWidth).toBeGreaterThan(meta.clientWidth);
+    expect(getComputedStyle(meta).textOverflow).toBe('ellipsis');
+  });
+
   // UI-Sweep 2026-10-10 (l-club-table): die Spalte „Analyse“ zeigte nur „–“.
   it('Spalte „Analyse“ nur, wenn mindestens eine Partie einen Wert hat', fakeAsync(() => {
     const el = create();

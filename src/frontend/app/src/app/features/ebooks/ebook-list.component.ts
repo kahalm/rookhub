@@ -49,6 +49,24 @@ export function eloParam(v: string | null | undefined): number | null {
   return Number.isFinite(n) && n >= 0 && n <= 3500 ? n : null;
 }
 
+/** Ein Format-Abzeichen der Regal-Karte: Format in Großbuchstaben und wie viele Dateien es trägt. */
+export interface EbookFormatBadge { label: string; n: number; }
+
+/**
+ * Formate eines Buchs, je Format EIN Abzeichen in der Reihenfolge des ersten Vorkommens (d6-rk-ebook-format-chip-doppelt:
+ * zwei PDF-Dateien, etwa Scan und Textfassung, zeigten „PDF PDF“). Die einzelnen Dateien bleiben im Download-Menü.
+ */
+export function ebookFormats(files: readonly { format: string }[] | null | undefined): EbookFormatBadge[] {
+  const out: EbookFormatBadge[] = [];
+  for (const f of files ?? []) {
+    const label = (f.format ?? '').toUpperCase();
+    if (!label) continue;
+    const hit = out.find(x => x.label === label);
+    if (hit) hit.n++; else out.push({ label, n: 1 });
+  }
+  return out;
+}
+
 /**
  * Übersicht der E-Book-Bibliothek (`/ebooks`): Suche, Schlagwort-Filter, Sortierung, Seiten; je Buch eine Karte mit
  * Titelbild, Lesestand und der Hauptaktion „Lesen" (PDF) bzw. „Herunterladen". Besitzer und Verwalter bearbeiten,
@@ -222,6 +240,14 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   readonly authorNames = ebookAuthorNames;
+
+  /** Format-Abzeichen je Buch, einmal je geladenem Buch-Objekt berechnet (die Liste läuft mit Default-Erkennung). */
+  private readonly formatCache = new WeakMap<Ebook, EbookFormatBadge[]>();
+  formats(book: Ebook): EbookFormatBadge[] {
+    let f = this.formatCache.get(book);
+    if (!f) { f = ebookFormats(book.files); this.formatCache.set(book, f); }
+    return f;
+  }
 
   /** Klick auf einen Autor: nur seine Bücher; derselbe Name noch einmal (oder ✕ am Chip) hebt den Filter auf. */
   setAuthor(name: string | null): void {

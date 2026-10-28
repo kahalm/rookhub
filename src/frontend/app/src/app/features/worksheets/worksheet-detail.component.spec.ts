@@ -309,13 +309,21 @@ describe('WorksheetDetailComponent Themen + Teilen als eine Zeile', () => {
     expect(row.compareDocumentPosition(el.querySelector('.wd-list')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(el.querySelector('.wd-themes')).withContext('Themen-Feld zu').toBeNull();
     expect(el.querySelector('app-qr-code')).withContext('QR zu').toBeNull();
-    expect(el.querySelector('.wd-warn')).withContext('Lösungs-Warnung bleibt als leise Zeile').not.toBeNull();
+    // d6-rk-blatt-qr-karte-fliesstext: die Erklärung steht hinter dem ? der Teilen-Zeile; die kurze Lösungs-Warnung bleibt
+    // sichtbar, solange das Blatt geteilt ist — auch bei zugeklapptem QR-Code (die Lösungen hängen am Link).
+    expect(el.querySelector('.wd-warn')?.textContent).withContext('Lösungs-Warnung sichtbar').toContain('worksheets.share.solutionWarning');
+    expect(row.querySelector('app-help-hint.wd-share-help')).not.toBeNull();
 
     (el.querySelector('.wd-theme-toggle') as HTMLButtonElement).click();
     (el.querySelector('.wd-qr-toggle') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(el.querySelector('.wd-themes input')).not.toBeNull();
     expect(el.querySelector('app-qr-code')).not.toBeNull();
+    // QR-Karte: kein Fließtext-Absatz mehr; die Warnung steht genau einmal, unter der Karte.
+    const card = el.querySelector('.wd-share') as HTMLElement;
+    expect(card.querySelectorAll('.wd-share-lines p').length).toBe(0);
+    expect(el.querySelectorAll('.wd-warn').length).toBe(1);
+    expect(card.compareDocumentPosition(el.querySelector('.wd-warn')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   // 0.808.x · Boox 200 % Falz: im niedrigen Fenster stehen Drucken und Link kopieren nur als Symbol — der Name muss

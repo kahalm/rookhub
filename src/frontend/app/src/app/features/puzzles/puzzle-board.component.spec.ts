@@ -587,4 +587,30 @@ describe('PuzzleBoardComponent Brett schrumpft auf 0 (NaN-Koordinaten, UI-Sweep 
     fixture.destroy();
     el.remove();
   });
+
+  // UI-Sweep 28.10. (d6-k-sternenjagd-sterne-fehlen): das Fenster war kurz 1 × 1 bzw. 4 × 4 px. Das Brett blieb 1–4 px
+  // breit (der Wächter auf „0 × 0" schlug nie an), chessground rundet den Container auf ganze 8 px ab → cg-board 0 × 0;
+  // der eigene ResizeObserver rief redrawAll, das die Sterne sofort mit `translate(NaN,NaN)` malte.
+  it('winziges Fenster (Brett < 8 px): kein NaN, und danach sind die Sterne mit frischen Maßen wieder da', async () => {
+    const fixture = TestBed.createComponent(HideHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await frames(3);
+    const el = fixture.nativeElement as HTMLElement;
+    const box = el.querySelector('#box') as HTMLElement;
+    const custom = () => el.querySelector('svg.cg-custom-svgs g')!;
+    expect(custom().children.length).toBe(1);
+
+    box.style.width = '4px';
+    await frames(4);
+    expect(el.querySelector('.cg-wrap')!.innerHTML).not.toContain('NaN');
+
+    box.style.width = '320px';
+    await frames(4);
+    expect(el.querySelector('.cg-wrap')!.innerHTML).not.toContain('NaN');
+    expect(custom().children.length).toBe(1);
+    expect(custom().children[0].getAttribute('transform')).toMatch(/^translate\(-?[\d.]+,-?[\d.]+\)$/);
+    fixture.destroy();
+    el.remove();
+  });
 });

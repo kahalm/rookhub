@@ -357,6 +357,26 @@ describe('clubhub.scss', () => {
     expect(getComputedStyle(el.querySelector('a')!).color).toBe(probe('--primary'));
   });
 
+  // UI-Sweep d6 (d6-c-privacy-mobile-zu-lang): zugeklappte Abschnitte am Handy — Kopf wie die übrigen Slab-Köpfe, Linie in --line.
+  it('Datenschutz-Aufklapper: Überschrift im summary in Zilla Slab und --rule, Trennlinie in --line', () => {
+    const el = mount(`<ch-root><main class="wrap"><app-privacy><div class="legal-container"><div class="mat-mdc-card">
+      <details class="legal-fold" style="border-top: 1px solid red"><summary><h2>Speicherdauer</h2></summary><p>Text</p></details>
+      </div></div></app-privacy></main></ch-root>`);
+    const card = el.querySelector<HTMLElement>('.mat-mdc-card')!;
+    const probe = (v: string) => {
+      const p = document.createElement('span');
+      p.style.color = `var(${v})`;
+      card.appendChild(p);
+      return getComputedStyle(p).color;
+    };
+    const h2 = getComputedStyle(el.querySelector('summary h2')!);
+    expect(h2.fontFamily).toContain('Zilla Slab');
+    expect(h2.color).toBe(probe('--rule'));
+    const fold = el.querySelector<HTMLElement>('details.legal-fold')!;
+    fold.style.borderTopColor = '';
+    expect(getComputedStyle(fold).borderTopColor).toBe(probe('--line'));
+  });
+
   // UI-Sweep 2026-10-11 (d1-x-account-delete-warn-ignored)
   for (const dark of [false, true]) {
     it(`Konto löschen (${dark ? 'dunkel' : 'hell'}): Knopf in --bad statt Primärgrün, Form wie .btn (Radius 8, ≥ 44 px), lesbar`, () => {

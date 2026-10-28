@@ -18,6 +18,7 @@ export class KidBoardSizeDirective {
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     let observer: ResizeObserver | undefined;
+    let mutations: MutationObserver | undefined;
     afterNextRender(() => {
       if (typeof ResizeObserver === 'undefined') { this.measured.set(true); return; }
       // chessground baut `cg-board` bei jedem redrawAll neu — das jeweils aktuelle beobachten, dazu immer den Host.
@@ -34,8 +35,15 @@ export class KidBoardSizeDirective {
       };
       observer = new ResizeObserver(check);
       observer.observe(host);
+      // redrawAll ersetzt `cg-board`, oft ohne dass sich der Host in der Größe ändert: Der ResizeObserver hing dann am
+      // abgehängten alten Brett, `measured()` blieb stehen und die Sterne kamen nie (UI-Sweep 28.10., Sternenjagd).
+      // Darum nach jedem Neubau sofort neu messen.
+      if (typeof MutationObserver !== 'undefined') {
+        mutations = new MutationObserver(() => { if (host.querySelector('cg-board') !== watched) check(); });
+        mutations.observe(host, { childList: true, subtree: true });
+      }
       check();
     });
-    inject(DestroyRef).onDestroy(() => observer?.disconnect());
+    inject(DestroyRef).onDestroy(() => { observer?.disconnect(); mutations?.disconnect(); });
   }
 }

@@ -183,7 +183,10 @@ import { daysLeft, WoodpeckerCycle, WoodpeckerPlan, WoodpeckerService } from './
     .plan { display: flex; flex-direction: column; padding: 16px; gap: 8px; }
     .plan-head { display: flex; align-items: flex-start; gap: 8px; }
     .plan-title { flex: 1 1 auto; min-width: 0; }
-    .plan-title h2 { margin: 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* d6-rk-woodpecker-kartentitel-abgeschnitten: der Kursname ist der einzige Hinweis, welcher Kurs trainiert wird — am Handy
+       bis zu zwei Zeilen statt einzeilig mit „…“ (den title-Tooltip gibt es am Touchgerät nicht). */
+    .plan-title h2 { margin: 0; font-size: 1.1rem; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; text-wrap: balance; }
     .plan-head button { flex: none; }
     .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
     .sep::before { content: '· '; }

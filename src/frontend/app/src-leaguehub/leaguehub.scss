@@ -658,12 +658,17 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .gc-acts { justify-content: flex-end; }
 /* z2-l-verein-karten-aktionen: Meta-Zeile und Aktionen in einer Zeile (vorher eigene Aktionszeile, ~40 px je Karte). */
 .gc-foot { display: flex; align-items: center; gap: 8px; }
-.gc-foot .gc-meta { flex: 1 1 auto; min-width: 0; margin: 0; }
+/* d6-l-vereinspartien-handy-ueberlauf: mit `flex: 1 1 auto` zählte die ganze Zugfolge (nowrap) zur Mindestbreite der
+   Kartenzelle — die Tabelle wurde breiter als das Fenster, „Nachspielen" schnitt ab, ⋮ und Ergebnis lagen außerhalb. Basis 0
+   und Breite 0: die Meta-Zeile nimmt nur den Rest und kürzt mit „…". */
+.gc-foot .gc-meta { flex: 1 1 0; width: 0; min-width: 0; margin: 0; }
 .gc-foot .gc-acts { flex: 0 0 auto; flex-wrap: nowrap; }
 @container (max-width: 640px) {
   .club-table thead { display: none; }
   .club-table tr.game > td { display: none; }
   .club-table tr.game > td.card-cell { display: block; padding: 10px 2px 4px; }
+  /* Absicherung (d6): die Karten-Tabelle ist nie breiter als ihr Container, egal was eine Karte enthält. */
+  .club-table { table-layout: fixed; }
 }
 /* a1-l-vereinspartien-tablet-eroeffnung: am Tablet (Tabelle 641–960 px) nahmen die einzeiligen Namen samt Elo den Platz und die
    Eröffnung schrumpfte auf „1.d4 Sf…" — sie behält ≥ 14ch. b1-l-vereinspartien-tablet-namen: der Name ist die Hauptinformation

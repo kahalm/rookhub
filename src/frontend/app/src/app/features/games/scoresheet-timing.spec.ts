@@ -1,5 +1,5 @@
 import { fakeAsync, tick } from '@angular/core/testing';
-import { SecondsTicker, formatClock, readingSeconds, serverTime } from './scoresheet-timing';
+import { SecondsTicker, clockDays, formatClock, readingSeconds, serverTime } from './scoresheet-timing';
 
 describe('scoresheet-timing', () => {
   it('liest Zeiten ohne Zone als UTC, mit Zone wie angegeben', () => {
@@ -18,6 +18,13 @@ describe('scoresheet-timing', () => {
 
   it('schreibt m:ss', () => {
     expect([0, 7, 60, 83, 3725].map(formatClock)).toEqual(['0:00', '0:07', '1:00', '1:23', '62:05']);
+  });
+
+  // d6-l-wartet-leser-gedankenstrich: nach zwölf Tagen stand „298:59:11"
+  it('ab 24 Stunden Tage und Stunden, darunter nichts', () => {
+    expect(clockDays(24 * 3600 - 1)).toBeNull();
+    expect(clockDays(24 * 3600)).toEqual({ days: 1, hours: 0 });
+    expect(clockDays(298 * 3600 + 59 * 60 + 11)).toEqual({ days: 12, hours: 10 });
   });
 
   it('die Uhr läuft nur, solange sie soll', fakeAsync(() => {

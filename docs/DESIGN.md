@@ -683,7 +683,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   „Chess.com-⁠/Lichess“ mit U+2060 zwischen Strich und „/“ — WebKit bricht sonst dort, die Zeile beginnt mit „/“ (0.765.0).
 - **Gedankenstrich** („bereit — versuch es …“) nie am Zeilenanfang: davor U+00A0 statt Leerzeichen — mit
   `text-wrap: balance` brach der kurze Grund unter „Partie analysieren“ genau davor um (0.807.x, `*NoEngine` in
-  `i18n-parity.spec`, d3-rk-partie-grund-strich-zeilenanfang).
+  `i18n-parity.spec`, d3-rk-partie-grund-strich-zeilenanfang). Ein Nachsatz mit Strich als `::before` (`"\00a0–\00a0"`)
+  steht nicht in einer Flex-Zeile (dort rutscht er als Ganzes mit „–“ vorn um), sondern im Fließtext
+  (`app-sheet-reading-status`, d6-l-wartet-leser-gedankenstrich). Laufende Uhren ab einem Tag in Tagen und Stunden
+  („seit 12 Tagen 10 Std.“, `clockDays` + `sheetEdit.status.sinceDays…`), nie „298:59:11“.
 - **Zahl und Einheit/%** mit geschütztem Leerzeichen (U+00A0) zusammenhalten, auch in Übersetzungen hinter einem
   Platzhalter („{{percent}} %“) — sonst steht „%)“ allein in der nächsten Zeile (0.759.0, `i18n-parity.spec`).
   **Sprachausnahme Prozent** (0.761.0): Englisch und Ungarisch schreiben „46%“ ohne Leerzeichen (en/hu-JSON
@@ -820,7 +823,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Zyklus 1: der Balken misst die verstrichene Frist und steht deshalb beschriftet (`aria-label` „3 von 28 Tagen
   vorbei“) direkt unter der Fristzeile, nicht unter „Satz: n Aufgaben von N“; der Löser nennt den Satz im selben
   Wortlaut. Ohne lösbaren Kurs zeigt die leere Übersicht gleich „Zu den Kursen“; im Dialog sind Kurszeilen ganzzeilig
-  ≥ 44 px, gleichnamige Kurse tragen eine Meta-Zeile (Herkunft, zuletzt geübt) (d3).
+  ≥ 44 px, gleichnamige Kurse tragen eine Meta-Zeile (Herkunft, zuletzt geübt) (d3). Kartentitel (Kursname) bis zwei
+  Zeilen, erst dann „…“; das ⋮ bleibt oben (d6).
 - Repertoire-Trainer (d3): Kopf = Name des Repertoires, „Repertoire-Trainer“ leise daneben; „Häufigste Linien zuerst“
   als beschrifteter Umschalter (Häkchen, `aria-pressed`), Übungszyklen und „Fortschritt zurücksetzen“ (zuletzt, rot)
   im ⋮; Leerzustand mit genau einer Aktion — dort weder „Häufigste Linien zuerst“ noch „Fortschritt zurücksetzen“ (nur
@@ -912,9 +916,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Am Handy (< 600 px, nicht jedes Hochformat) zeigt die Zurück-Pille der Kursaufgabe nur „←", der Stand kurz „8/287“,
   der Titel bricht auf ≤ 2 Zeilen um (5.1); Pfeil und Wort der Pille trennt `gap: .3em` (`KID_BACK`), kein Leerzeichen.
   Markierungen (Sterne, Tipp-Pfeile) gehen erst an ein vermessenes Brett (`KidBoardSizeDirective`, `shared/kid-board-size.directive.ts`,
-  wie `applyArrows` in RookHub — sonst NaN-Koordinaten). Kurs-Fortschrittsbalken über die Textspalte (≤ 520 px), Spur
+  wie `applyArrows` in RookHub — sonst NaN-Koordinaten); die Direktive misst nach jedem Neubau von `cg-board` neu, und
+  `PuzzleBoardComponent` baut ein Brett unter 8 Gerätepixeln (chessground rundet es auf 0 × 0 ab) nicht neu auf, sondern
+  hält die Markierungen zurück und setzt sie nach jedem Neuaufbau mit frischen Maßen wieder (d6-k-sternenjagd-sterne-fehlen).
+  Kurs-Fortschrittsbalken über die Textspalte (≤ 520 px), Spur
   `rgba(120,60,0,.22)`, Füllung `#b45f06`, angefangen ≥ 8 px. Anmeldemasken: Feldunterzeile nur mit Hinweis 14 px Luft,
-  ohne Hinweis 8 px flach.
+  ohne Hinweis 8 px flach. Registrieren: genau ein Hinweis „Für Eltern“, der Zweck des Kontos steht hinter dem ?
+  (keine zweite Einleitung aus `AUTH_INTRO.register`, d6-k-register-doppelter-hinweis).
   Tablet (600–899 px): Startkacheln 2 × 2, eine allein übrige nimmt die ganze Zeile. Kurs-Zähler ist die `.kid-counter`-Pille.
 - Sprachwahl als Pille mit 🌐 über einem nativen `select`; Anmeldemasken mit „← Start“ über der Karte;
   Datenschutz kindgerecht, kein Impressum.
@@ -957,6 +965,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   `.delete-item` in `--red`. Aufgeklappte ⓘ-Kästen `.info-panel` enden mit ihrem Inhalt (`fit-content`, ≤ 760 px); ein
   Satz mit ⓘ dahinter ist ein Absatz `.info-inline` (ⓘ am Satzende), keine Flex-Zeile; letztes Wort + ⓘ stehen in
   `.info-tail` (`nowrap`) — das ⓘ bricht nie allein um.
+- Vereinspartien-Karte am Handy: die Meta-Zeile (Jahr · Zugfolge) trägt nichts zur Mindestbreite bei (`flex: 1 1 0; width: 0`),
+  die Karten-Tabelle hat `table-layout: fixed` — „Nachspielen“, ⋮ und Ergebnis bleiben ganz im Bild, die Zugfolge kürzt mit „…“
+  (d6-l-vereinspartien-handy-ueberlauf). Zahlen über 999 überall mit Tausenderpunkt (`thousands`, auch „Alle Gemeldeten“).
 - Tabellen: Namen kürzen nicht mit „…“ (am Touch fehlt der Tooltip) — sie brechen um, Nebenangaben (Elo) in die zweite
   Zeile; gekürzt wird nur Nebeninformation (Zugfolge mit `title`). Am Handy fallen Nebenspalten weg statt Hauptspalten
   rechts aus dem Bild zu schieben (Prognose-ⓘ).
@@ -1031,7 +1042,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 |---|---|
 | RookHub, Turnierseite | Material unverändert |
 | LeagueHub | `lh-root :is(app-login, …, app-account-deletion) .mat-mdc-card { --mat-sys-primary: var(--red); --mat-card-elevated-container-shape: 10px; --mat-button-*-container-shape: 6px; … }`, Schrift Barlow, Rechtsseiten-Köpfe rot (r2-l-legal-style) |
-| ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style); Knöpfe auf Rechtsseiten wie `.btn` (Radius 8, 44 px) |
+| ClubHub | dieselbe Technik mit `:is(…) .mat-mdc-card`, Primär grün, Köpfe Zilla Slab in `--rule` (r2-c-privacy-style); Knöpfe auf Rechtsseiten wie `.btn` (Radius 8, 44 px); Datenschutz am Handy (< 600 px) wie LeagueHub ab dem dritten Abschnitt zugeklappt (`details.legal-fold`, `PrivacyComponent.FOLDING_KINDS`, Linie in `--line`; d6-c-privacy-mobile-zu-lang) |
 | KidHub | `KID_AUTH_STYLES` / `KID_PRIVACY_STYLES` in der Hülle + „← Start“-Pille; Rechtsseiten = `/privacy` **und** `/account-deletion` (`isLegalUrl`, Breite `KID_PAGE_WIDTH.legal`); Fachbegriff-Listen für Eltern zugeklappt (`details.kid-parent`), davor ein Kindersatz (`foldPrivacy`, `foldAccountDeletion`: Kindersatz unter „Was entfernt wird“, Löschknopf nach „Was bleibt“); „Passwort vergessen“: beide Eltern-Hinweise in einem `details.kid-parent` (`foldForgotPassword`) |
 
 ---
@@ -1214,3 +1225,5 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-27 | 0.855.0 | RookHub: Auswahlfenster „Partie analysieren — mit/ohne Engine“ (zwei große Wahlflächen mit Symbol + Satz, Kästchen „Entscheidung merken“, Abbrechen unten rechts); Analysebrett „ohne Engine“ blendet alles Bewertende aus (Leiste, Engine, Explorer, Maia, ⋮ der Stellung) und zeigt oben eine Karte mit Fortschritt + „Engine einschalten“, danach den Vergleich als Liste (Klassen-Schild wie in der Zugliste) | Analysebrett (8.x), Dialoge |
 | 2026-10-27 | 0.862.0 | RookHub, „+“-Knopf: Klick markiert und öffnet ein kurzes Fenster (420 px) mit Schlagwort-Chips (feste Liste als Umschalter, grün = gesetzt; eigene Wörter über Feld + Enter, mit ×), Kommentarfeld und „Markierung entfernen“ links in Fehlerfarbe; markiert öffnet er nur das Fenster. LeagueHub: „+“ öffnet ein Stellungsfenster (440 px) — Überschrift „Interessante Stellung aus Partie/aus Variante“ zwischen ‹ ›, darunter Partie, wer am Zug (Punkt in Figurfarbe), „nach Zug n“, Zähler „3 / 30“, Diagramm ≤ 360 px, dann derselbe Editor (Schlagworte anderer gestrichelt, Bemerkungen anderer als Zitat), „In der Partie zeigen“ links, „Speichern“ rechts; „+n“-Abzeichen auch an Liga/Runde der Übersicht und oben in den Aufstellungen einer Runde | Stellungen klassifizieren und kommentieren, ohne die Partie aufzuklappen | Nutzer |
 | 2026-10-27 | 0.862.1 | RookHub + LeagueHub, Notizen-Editor der „+“-Stellungen: unter der Bemerkung ein leiser Klappknopf „Frühere Fassungen ▾“; aufgeklappt eine Liste (≤ 220 px, scrollt) mit Zeitpunkt (`short`), Schlagworten als kleine Pillen, Bemerkung und „Wiederherstellen“ — übernimmt nur in die Felder, Speichern bleibt ausdrücklich | Gelöschtes zurückholen ohne versehentliches Überschreiben | Nutzer |
+| 2026-10-28 | 0.864.0 | Runde d6: ClubHub-Datenschutz am Handy klappt wie LeagueHub ab dem dritten Abschnitt zu (Rechtstext unverändert); LeagueHub-Vereinspartien-Karte: Meta-Zeile ohne Mindestbreite + `table-layout: fixed`; Formular-Leser-Status als Fließtext, Strich mit U+00A0 an der Uhr, Uhr ab einem Tag in Tagen/Stunden; „Alle Gemeldeten“ mit Tausenderpunkt | ClubHub-Datenschutz 14 Handy-Bildschirme; Karten breiter als das Fenster („Nachspi…“, ⋮ außerhalb); „– der Leser …“ am Zeilenanfang + „298:59:11“; „3115“ neben „3.115“ | UI-Sweep 20261028_0657: d6-c-privacy-mobile-zu-lang, d6-l-vereinspartien-handy-ueberlauf, d6-l-wartet-leser-gedankenstrich, d6-l-partien-tausendertrenner |
+| 2026-10-28 | 0.864.0 | Runde d6, KidHub: Sternenjagd: Markierungen nur auf ein Brett ≥ 8 Gerätepixel, nach jedem Neuaufbau mit frischen Maßen neu gesetzt; `kidBoardSize` misst nach jedem Neubau von `cg-board`. Registrieren: nur der Kasten „Für Eltern“ (8.3) | Sterne fehlten nach kurzem Mini-Fenster (`translate(NaN,NaN)`), zwei Kästen mit demselben Anfang vor dem ersten Feld | UI-Sweep d6: d6-k-sternenjagd-sterne-fehlen, d6-k-register-doppelter-hinweis |

@@ -727,8 +727,7 @@
     },
     "sharedLinks": {
       "title": "My share links",
-      "hint": "Public links to single repertoire lines (/l/…). Anyone with the link can view the line without signing in — until you revoke it.",
-      "gamesHint": "Revoke game links (/g/…) in the game list: ⋮ → “Revoke share link”.",
+      "help": "Anyone with a link to a repertoire line can view it without signing in, until you revoke it.\n\nRevoke game links in the game list: ⋮ → “Revoke share link”.",
       "empty": "You have not shared any line publicly.",
       "fromExtension": "from RepCheck",
       "open": "Open",
@@ -2856,12 +2855,12 @@
       "toggle": "Share this sheet (link + QR code)",
       "qr": "QR code",
       "short": "Share",
-      "hint": "Whoever opens the link can play the sheet through at the board without signing in — on the print-out it sits in the footer of every page as a QR code.",
+      "hint": "Whoever opens the link can play the sheet through at the board without signing in. On the print-out it sits in the footer of every page as a QR code.\n\nThe link also carries the solutions — anyone who gets it can see them.",
       "off": "Not shared — then the print-out carries no QR code.",
       "copy": "Copy link",
       "copied": "Link copied.",
       "stopConfirm": "Stop sharing? The current link stops working — printed QR codes lead nowhere afterwards, and sharing again creates a different link.",
-      "solutionWarning": "The link also carries the solutions — anyone who gets it can see them.",
+      "solutionWarning": "Note: the link also shows the solutions.",
       "scanHint": "Play it through at the board:",
       "noSheetLink": "This sheet is not shared — the print-out gets no QR code."
     },
@@ -5592,6 +5591,7 @@
     "saveFailed": "Saving did not work.",
     "pages": "{{n}} pages",
     "pagesOne": "1 page",
+    "formatFiles": "{{n}} files",
     "quota": "{{used}} of {{limit}} used",
     "visibilityLabel": "Visibility",
     "visibility": {
@@ -5876,7 +5876,11 @@
       "waitingWhy": "the reader checks for new scoresheets every minute",
       "reading": "Reading",
       "readingWhy": "this usually takes a few minutes",
-      "longWait": "Longer than usual – the reader is probably not running right now. The scoresheet stays saved."
+      "longWait": "Longer than usual – the reader is probably not running right now. The scoresheet stays saved.",
+      "sinceDays": "for {{days}} days",
+      "sinceDaysOne": "for 1 day",
+      "sinceDaysHours": "for {{days}} days {{hours}} h",
+      "sinceDaysHoursOne": "for 1 day {{hours}} h"
     }
   },
   "solver": {

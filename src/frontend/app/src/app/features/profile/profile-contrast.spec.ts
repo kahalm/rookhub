@@ -3,6 +3,11 @@ import { EngineCardComponent } from './engine-card.component';
 import { OfflineSettingsCardComponent } from './offline-settings-card.component';
 import { DeleteAccountCardComponent } from './delete-account-card.component';
 import { ProfileComponent } from './profile.component';
+import { AnalyzeChoiceCardComponent } from './analyze-choice-card.component';
+import { ApiTokensComponent } from './api-tokens.component';
+import { ChangePasswordCardComponent } from './change-password-card.component';
+import { SharedLinksCardComponent } from './shared-links-card.component';
+import { ThemeCardComponent } from './theme-card.component';
 
 /**
  * UI-Sweep a1 (a1-rk-profile-hell-blass): Hinweistexte und Zwischentitel auf /profile standen mit festen
@@ -46,5 +51,22 @@ describe('Profil-Karten: Kontrast im hellen Design (a1-rk-profile-hell-blass)', 
     expect(css(EngineCardComponent)).toMatch(/\.engine-section h5[^{]*\{[^}]*color:\s*inherit/);
     expect(css(ProfileComponent)).toMatch(/\.title[^{]*\{[^}]*color:\s*var\(--rh-warn\)/);
     expect(css(ProfileComponent)).toMatch(/\.elo[^{]*\{[^}]*color:\s*var\(--rh-success\)/);
+  });
+
+  // d6-rk-profil-ueberschrift-partie-analysieren: „Partie analysieren“ war als einziger Abschnittstitel ohne Farbregel (weiß).
+  it('alle Abschnittstitel (h4) der Profilkarten stehen in der Akzentfarbe', () => {
+    const SECTIONS: [string, Type<unknown>, string][] = [
+      ['Erscheinungsbild', ThemeCardComponent, 'theme-section'],
+      ['Discord', ProfileComponent, 'discord-section'],
+      ['API-Tokens', ApiTokensComponent, 'tokens-section'],
+      ['Meine Teilen-Links', SharedLinksCardComponent, 'shared-links'],
+      ['Externe Engine', EngineCardComponent, 'engine-section'],
+      ['Partie analysieren', AnalyzeChoiceCardComponent, 'analyze-choice-section'],
+      ['Offline', OfflineSettingsCardComponent, 'offline-section'],
+      ['Passwort ändern', ChangePasswordCardComponent, 'changepwd-section'],
+    ];
+    for (const [name, cmp, cls] of SECTIONS) {
+      expect(css(cmp)).withContext(name).toMatch(new RegExp(`\\.${cls} h4 ?\\{[^}]*color: var\\(--rh-accent\\)`));
+    }
   });
 });

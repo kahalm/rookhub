@@ -466,8 +466,7 @@
     },
     "sharedLinks": {
       "title": "Megosztási linkjeim",
-      "hint": "Nyilvános linkek egyes repertoárvonalakhoz (/l/…). Akinél a link van, bejelentkezés nélkül látja a vonalat — amíg vissza nem vonod.",
-      "gamesHint": "A játszmalinkeket (/g/…) a játszmalistában vonhatod vissza: ⋮ → „Megosztási link visszavonása”.",
+      "help": "Akinél egy repertoárvonal linkje van, bejelentkezés nélkül látja a vonalat — amíg vissza nem vonod.\n\nA játszmalinkeket a játszmalistában vonhatod vissza: ⋮ → „Megosztási link visszavonása”.",
       "empty": "Még nem osztottál meg nyilvánosan vonalat.",
       "fromExtension": "RepCheckből",
       "open": "Megnyitás",
@@ -3229,12 +3228,12 @@
       "toggle": "Lap megosztása (link + QR-kód)",
       "qr": "QR-kód",
       "short": "Megosztás",
-      "hint": "Aki megnyitja a linket, bejelentkezés nélkül végigjátszhatja a lapot a táblán — a nyomtatványon minden oldal láblécében QR-kódként szerepel.",
+      "hint": "Aki megnyitja a linket, bejelentkezés nélkül végigjátszhatja a lapot a táblán. A nyomtatványon minden oldal láblécében QR-kódként szerepel.\n\nA link mögött a megoldások is ott vannak — bárki látja őket, aki megkapja.",
       "off": "Nincs megosztva — így a nyomtatványra nem kerül QR-kód.",
       "copy": "Link másolása",
       "copied": "Link másolva.",
       "stopConfirm": "Befejezed a megosztást? A mostani link érvénytelen lesz — a kinyomtatott QR-kódok ezután sehová sem vezetnek, egy újabb megosztás pedig másik linket hoz létre.",
-      "solutionWarning": "A link mögött a megoldások is ott vannak — bárki látja őket, aki megkapja.",
+      "solutionWarning": "Figyelem: a link a megoldásokat is mutatja.",
       "scanHint": "Játszd végig a táblán:",
       "noSheetLink": "Ez a lap nincs megosztva — a nyomtatvány nem kap QR-kódot."
     },
@@ -5592,6 +5591,7 @@
     "saveFailed": "A mentés nem sikerült.",
     "pages": "{{n}} oldal",
     "pagesOne": "1 oldal",
+    "formatFiles": "{{n}} fájl",
     "quota": "{{used}} / {{limit}} felhasználva",
     "visibilityLabel": "Láthatóság",
     "visibility": {
@@ -5876,7 +5876,11 @@
       "waitingWhy": "az olvasó percenként keres új játszmalapokat",
       "reading": "Olvasás folyamatban",
       "readingWhy": "ez általában néhány percig tart",
-      "longWait": "A szokásosnál tovább tart – az olvasó most valószínűleg nem fut. A játszmalap mentve marad."
+      "longWait": "A szokásosnál tovább tart – az olvasó most valószínűleg nem fut. A játszmalap mentve marad.",
+      "sinceDays": "{{days}} napja",
+      "sinceDaysOne": "1 napja",
+      "sinceDaysHours": "{{days}} nap {{hours}} órája",
+      "sinceDaysHoursOne": "1 nap {{hours}} órája"
     }
   },
   "solver": {

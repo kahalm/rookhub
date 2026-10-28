@@ -340,7 +340,7 @@ import { PRIVACY_PERIODS, privacyPeriodKey } from './privacy-periods';
       .to-toc.idle:not(:focus-visible) { opacity: 0; pointer-events: none; }
     }
     @media (prefers-reduced-motion: reduce) { .to-toc { transition: none; } }
-    /* LeagueHub am Handy (z2-l-datenschutz-laenge): Abschnitte ab dem dritten als Aufklapper. Die <details> entstehen zur
+    /* LeagueHub und ClubHub am Handy (z2-l-datenschutz-laenge, d6-c-privacy-mobile-zu-lang): Abschnitte ab dem dritten als Aufklapper. Die <details> entstehen zur
        Laufzeit (foldSections) und tragen kein _ngcontent — daher ::ng-deep unter :host. Farben ueber die Theme-Token,
        die LeagueHub auf Rot/Linie setzt (leaguehub.scss, Rechtsseiten). */
     :host ::ng-deep details.legal-fold { border-top: 1px solid var(--mat-sys-outline, #888); }
@@ -393,8 +393,10 @@ export class PrivacyComponent implements AfterViewInit {
 
   /** Ab dieser Breite bleiben in LeagueHub alle Abschnitte offen; darunter klappt {@link foldSections} sie zu. */
   static readonly SECTIONS_OPEN_QUERY = '(min-width: 600px)';
-  /** Wie viele Abschnitte (h2) am Handy offen bleiben: Verantwortlicher und der LeagueHub-Abschnitt (Einleitung hat keine h2). */
+  /** Wie viele Abschnitte (h2) am Handy offen bleiben: Verantwortlicher und der Abschnitt der Oberflaeche (Liga bzw. Kartei; Einleitung hat keine h2). */
   static readonly OPEN_SECTIONS = 2;
+  /** Oberflaechen, deren Datenschutz am Handy ab dem dritten Abschnitt zuklappt (z2-l, d6-c). */
+  static readonly FOLDING_KINDS: readonly string[] = ['leaguehub', 'clubhub'];
   /** Klasse der zur Laufzeit erzeugten Aufklapper. */
   static readonly FOLD_CLASS = 'legal-fold';
 
@@ -434,14 +436,14 @@ export class PrivacyComponent implements AfterViewInit {
   }
 
   /**
-   * LeagueHub am Handy (z2-l-datenschutz-laenge, vom User freigegeben): offen war die Seite auf 390 px 12 Bildschirme
-   * lang. Unter 600 px kommt jeder Abschnitt ab dem dritten in ein zugeklapptes `<details>`, seine Ueberschrift (h2 mit
+   * LeagueHub und ClubHub am Handy (z2-l-datenschutz-laenge, vom User freigegeben; ClubHub seit d6-c-privacy-mobile-zu-lang,
+   * dort waren es 14 Bildschirme): offen war die Seite auf 390 px 12 Bildschirme lang. Unter 600 px kommt jeder Abschnitt ab dem dritten in ein zugeklapptes `<details>`, seine Ueberschrift (h2 mit
    * `id`) wird das `<summary>`. Verschoben werden die von Angular gezeichneten Knoten selbst (wie KidHubs foldPrivacy) —
    * ihre Bindungen bleiben; die Bedingungen der Seite haengen nur an LEGAL_SITE. Breiter und in allen anderen
    * Oberflaechen unveraendert offen; Wechsel der Breite und der Druck (beforeprint) klappen zurueck aus.
    */
   private setupSectionFolding(): void {
-    if (this.kind !== 'leaguehub' || typeof matchMedia !== 'function') return;
+    if (!PrivacyComponent.FOLDING_KINDS.includes(this.kind) || typeof matchMedia !== 'function') return;
     const mql = matchMedia(PrivacyComponent.SECTIONS_OPEN_QUERY);
     const apply = () => (mql.matches ? this.unfoldSections() : this.foldSections());
     apply();

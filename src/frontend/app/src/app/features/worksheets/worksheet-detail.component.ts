@@ -19,6 +19,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { whiteToMove as fenWhiteToMove } from '../../shared/chess/fen-side';
@@ -42,7 +43,7 @@ import { whiteToMove as fenWhiteToMove } from '../../shared/chess/fen-side';
     CommonModule, FormsModule, RouterLink, DragDropModule, MatButtonModule, MatButtonToggleModule,
     MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule,
     MatProgressSpinnerModule, MatSlideToggleModule, MatTooltipModule, TranslatePipe,
-    FlashcardBoardComponent, QrCodeComponent,
+    FlashcardBoardComponent, QrCodeComponent, HelpHintComponent,
   ],
   templateUrl: './worksheet-detail.component.html',
   styleUrls: ['./worksheet-detail.component.scss'],

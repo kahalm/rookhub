@@ -9,7 +9,7 @@ import { of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { EBOOK_TAGS_COLLAPSED, EbookListComponent, eloParam } from './ebook-list.component';
+import { EBOOK_TAGS_COLLAPSED, EbookListComponent, ebookFormats, eloParam } from './ebook-list.component';
 import { Ebook, EbookList, EbookService } from './ebook.service';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
@@ -187,6 +187,19 @@ describe('EbookListComponent', () => {
     expect(again.search).toBe('woodpecker');
     expect(calls[0]).toEqual(jasmine.objectContaining({ tag: 'Taktik', minElo: 1500, search: 'woodpecker' }));
     sessionStorage.removeItem('rh.ebooks.listState');
+  });
+
+  // d6-rk-ebook-format-chip-doppelt
+  it('zeigt je Format EIN Abzeichen (2× PDF + DJVU → „PDF“, „DJVU“), mehrere Dateien im Tooltip', () => {
+    expect(ebookFormats([{ format: 'pdf' }, { format: 'PDF' }, { format: 'djvu' }]))
+      .toEqual([{ label: 'PDF', n: 2 }, { label: 'DJVU', n: 1 }]);
+    const fixture = render([book({ files: [
+      { id: 1, format: 'pdf', fileName: 'scan.pdf', sizeBytes: 1 },
+      { id: 2, format: 'pdf', fileName: 'text.pdf', sizeBytes: 1 },
+      { id: 3, format: 'djvu', fileName: 'x.djvu', sizeBytes: 1 },
+    ] })]);
+    const chips = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.eb-badges .eb-format'));
+    expect(chips.map(c => c.textContent?.trim())).toEqual(['PDF', 'DJVU']);
   });
 
   // ── UI-Sweep c1 ─────────────────────────────────────────────────────────────────────────────

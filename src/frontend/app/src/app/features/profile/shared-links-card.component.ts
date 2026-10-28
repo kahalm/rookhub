@@ -7,6 +7,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OwnSharedLine, RepertoireService } from '../../core/repertoire.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /**
  * Karte „Meine Teilen-Links" im Profil (Codereview A2-006, entschieden 25.10.2026): alle eigenen öffentlichen
@@ -18,11 +19,12 @@ import { SnackbarService } from '../../core/snackbar.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-shared-links-card',
   standalone: true,
-  imports: [DatePipe, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [DatePipe, MatButtonModule, MatIconModule, TranslatePipe, HelpHintComponent],
   template: `
     <div class="shared-links">
-      <h4>{{ 'profile.sharedLinks.title' | translate }}</h4>
-      <p class="hint">{{ 'profile.sharedLinks.hint' | translate }}</p>
+      <!-- d6-rk-profil-teilen-links-textstapel: Erklärung (Linien- und Partie-Links) hinter dem ?, sichtbar bleibt nur
+           die Liste bzw. der Leersatz (DESIGN 2 Nr. 2), ohne Pfadkürzel (Nr. 7). -->
+      <h4>{{ 'profile.sharedLinks.title' | translate }}&nbsp;<app-help-hint [text]="'profile.sharedLinks.help' | translate" /></h4>
       @if (error()) {
         <p class="hint error">{{ 'profile.sharedLinks.error' | translate }}</p>
       } @else if (lines(); as list) {
@@ -50,7 +52,6 @@ import { SnackbarService } from '../../core/snackbar.service';
           </ul>
         }
       }
-      <p class="hint">{{ 'profile.sharedLinks.gamesHint' | translate }}</p>
     </div>
   `,
   styles: [`

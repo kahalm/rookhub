@@ -58,9 +58,7 @@ public static class ApiErrorResponses
         // Serverfehler aus (am 2026-09-20 die halbe Fehlersuche gekostet).
         var ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         var (status, title) = ex is BadHttpRequestException bad
-            ? (bad.StatusCode, bad.StatusCode == StatusCodes.Status413PayloadTooLarge
-                ? "Request body too large."
-                : "Malformed request.")
+            ? (bad.StatusCode, BadRequestTitle(bad.StatusCode))
             : (StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
 
         context.Response.StatusCode = status;
@@ -74,6 +72,11 @@ public static class ApiErrorResponses
             traceId = TraceId(context),
         });
     }
+
+    /// <summary>Meldung zu Kestrels <see cref="BadHttpRequestException"/> (hier und im ClientAbortedExceptionFilter).</summary>
+    public static string BadRequestTitle(int status) => status == StatusCodes.Status413PayloadTooLarge
+        ? "Request body too large."
+        : "Malformed request.";
 
     /// <summary>
     /// <c>ApiBehaviorOptions.InvalidModelStateResponseFactory</c>: dieselbe ValidationProblemDetails wie die

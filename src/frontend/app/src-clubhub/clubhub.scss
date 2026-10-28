@@ -593,6 +593,10 @@ ch-root :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card { fo
 }
 :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card h2 { font: 700 19px/1.2 var(--slab); color: var(--rule); }
 :is(app-privacy, app-impressum, app-account-deletion) .mat-mdc-card a:not(.mat-mdc-button-base) { color: var(--primary); }
+/* d6-c-privacy-mobile-zu-lang: Datenschutz am Handy klappt wie im LeagueHub ab dem dritten Abschnitt zu (privacy.component,
+   details.legal-fold). Der Kopf bleibt die Slab-Überschrift in --rule (Regel darüber), die Trennlinien in --line statt
+   Materials Umrissfarbe. */
+app-privacy .mat-mdc-card details.legal-fold { border-color: var(--line); }
 
 @media (prefers-reduced-motion: reduce) {
   .tick[aria-pressed="true"] .box svg { transition: none; }

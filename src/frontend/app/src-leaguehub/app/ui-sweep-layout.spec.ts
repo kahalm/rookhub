@@ -125,8 +125,8 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
       <td class="acts"></td>
       <td class="card-cell" id="card"><div class="gc-head"><span class="gc-names"><span class="gc-side">Mitteregger, Gottfried</span>
         <span class="gc-vs">–</span><span class="gc-side">Erlacher, Herbert</span></span><b class="gc-result" id="res">½</b></div>
-        <div class="gc-meta muted small">2026 · Caro-Kann</div>
-        <div class="row-acts gc-acts" id="acts"><button class="btn-link" id="view">Nachspielen</button><button class="btn-link more-btn">⋮</button></div>
+        <div class="gc-foot"><div class="gc-meta muted small" id="meta">2026 · 1.d4 Sf6 2.Sc3 d5 3.Lf4 Lf5 4.e3 e6 5.Sf3 c5</div>
+        <div class="row-acts gc-acts" id="acts"><button class="btn-link" id="view">Nachspielen</button><button class="btn-link more-btn" id="more">⋮</button></div></div>
       </td></tr></tbody></table></div>`;
     let doc = await render(1240, `<main class="wrap mid">${row}</main>`);
     expect(style(doc, 'card').display).toBe('none');
@@ -143,6 +143,13 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep 2026-10-10', () => {
     expect(card.right - box(doc, 'acts').right).toBeLessThan(12);           // Aktionen rechtsbündig
     const scroll = doc.querySelector('.club-scroll') as HTMLElement;
     expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
+    // d6-l-vereinspartien-handy-ueberlauf: die lange Zugfolge kürzt mit „…", die Karte bleibt im Container,
+    // „Nachspielen" und ⋮ ganz sichtbar.
+    const sb = scroll.getBoundingClientRect();
+    expect(card.right).toBeLessThanOrEqual(sb.right + 0.5);
+    for (const id of ['view', 'more', 'res']) expect(box(doc, id).right).withContext(id).toBeLessThanOrEqual(card.right + 0.5);
+    const meta = doc.getElementById('meta')!;
+    expect(meta.scrollWidth).toBeGreaterThan(meta.clientWidth);
   });
 
   // l-clubs-table: Region schmal, Quelle als graue zweite Zeile.

@@ -49,4 +49,33 @@ describe('KidBoardSizeDirective', () => {
       f.nativeElement.remove();
     }
   });
+
+  // UI-Sweep 28.10.: chessground ersetzt cg-board bei redrawAll; der Host behält seine Größe. Vorher beobachtete die
+  // Direktive weiter das abgehängte alte Brett, `measured()` blieb false und die Sterne kamen nie.
+  it('misst neu, wenn cg-board ersetzt wird, auch ohne Größenänderung des Hosts', async () => {
+    const f = TestBed.createComponent(HostComponent);
+    document.body.appendChild(f.nativeElement);
+    try {
+      f.componentInstance.size.set(320);
+      f.detectChanges();
+      const host = (f.nativeElement as HTMLElement).querySelector('[kidboardsize]') as HTMLElement;
+      const out = () => (f.nativeElement as HTMLElement).querySelector('.out')!.textContent!.trim();
+      // Altes Brett noch ohne Größe (wie nach dem Schrumpfen auf < 8 px), Host aber schon groß.
+      (host.querySelector('cg-board') as HTMLElement).style.cssText = 'display: block; width: 0; height: 0';
+      await frame();
+      f.detectChanges();
+      expect(out()).toBe('false');
+
+      // redrawAll: neues cg-board in voller Größe, der Host bleibt gleich groß.
+      host.querySelector('cg-board')!.remove();
+      const fresh = document.createElement('cg-board');
+      fresh.style.cssText = 'display: block; width: 100%; height: 100%';
+      host.appendChild(fresh);
+      await frame();
+      f.detectChanges();
+      expect(out()).toBe('true');
+    } finally {
+      f.nativeElement.remove();
+    }
+  });
 });

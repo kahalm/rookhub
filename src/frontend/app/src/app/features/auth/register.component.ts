@@ -77,8 +77,10 @@ const ERROR_KEYS: Record<RegisterError, string> = {
           @if (leagueHub) {
             <p class="site-note" role="note">{{ 'auth.register.leaguehubNote' | translate }}</p>
           }
-          <!-- Turnierseite (UX-027): das neue Konto ist ein RookHub-Konto — vorher sagte die Karte das nicht. -->
-          @if (introKey) {
+          <!-- Turnierseite (UX-027): das neue Konto ist ein RookHub-Konto — vorher sagte die Karte das nicht.
+               Nicht in KidHub (d6-k-register-doppelter-hinweis): dort trägt allein „Für Eltern“, der Zweck des Kontos
+               steht hinter dem ? — sonst zwei Kästen, die beide mit „Spielen geht auch ohne Konto.“ beginnen. -->
+          @if (introKey && !kids) {
             <p class="site-note" role="note">{{ introKey | translate }}</p>
           }
           <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">

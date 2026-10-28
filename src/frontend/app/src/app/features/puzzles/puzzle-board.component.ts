@@ -19,6 +19,15 @@ import { parseKeyboardMove } from './keyboard-move.util';
 import { boardAnimation, flashEinkRefresh, isBoardSwitch } from '../../core/eink';
 import { whiteToMove } from '../../shared/chess/fen-side';
 
+/**
+ * Hat ein Brett dieser Größe für chessground Maße? chessground rundet den Container auf ganze 8 Gerätepixel ab
+ * (render.js updateBounds); darunter ist cg-board 0 × 0 und jede Markierung landet bei `0 / 0 = NaN`.
+ */
+function drawableSize(width: number, height: number): boolean {
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+  return Math.floor((width * dpr) / 8) > 0 && Math.floor((height * dpr) / 8) > 0;
+}
+
 /** Rückmeldung der Zug-Eingabe per Tastatur (i18n-Schlüssel + Parameter). */
 interface KeyboardFeedback { key: string; params?: Record<string, string>; }
 
@@ -562,9 +571,8 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     // kidBoardSize). Darum die Markierungen hier zuerst wegnehmen; der zweite Observer unten holt sie nach dem Messen nach.
     this.hideObserver = new ResizeObserver(entries => {
       const r = entries[entries.length - 1]?.contentRect;
-      if (!this.ground || !r || (r.width > 0 && r.height > 0)) return;
-      if (this.ground.state.drawable.autoShapes.length > 0) this.ground.setAutoShapes([]);
-      this.shapesPending = true;
+      if (!this.ground || !r || drawableSize(r.width, r.height)) return;
+      this.holdBackShapes();
     });
     this.hideObserver.observe(el);
 
@@ -617,20 +625,53 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     this.applyAutoShapes();
 
     // After init, force a redraw to ensure correct dimensions
-    requestAnimationFrame(() => { this.ground?.redrawAll(); this.repaintCrazyPieces(); });
+    requestAnimationFrame(() => this.redrawBoard());
 
+    // Breite nachziehen + neu aufbauen im nächsten Bild, nicht im Callback: Die Brettgröße ändert die Höhe des
+    // beobachteten Elternteils, im Callback gäbe das „ResizeObserver loop completed with undelivered notifications".
+    let resizeQueued = false;
     this.resizeObserver = new ResizeObserver(() => {
-      const hostEl = el.parentElement as HTMLElement;
-      const w = hostEl?.clientWidth || el.clientWidth;
-      if (w > 0 && w !== el.clientWidth) {
-        el.style.width = `${w}px`;
-        el.style.height = `${w}px`;
-      }
-      this.ground?.redrawAll();
-      this.repaintCrazyPieces();   // redrawAll baut die Figuren neu → erneut würfeln/malen
-      if (this.shapesPending) this.applyAutoShapes();
+      if (resizeQueued) return;
+      resizeQueued = true;
+      requestAnimationFrame(() => {
+        resizeQueued = false;
+        if (this.destroyed) return;
+        const hostEl = el.parentElement as HTMLElement;
+        const w = hostEl?.clientWidth || el.clientWidth;
+        if (w > 0 && w !== el.clientWidth) {
+          el.style.width = `${w}px`;
+          el.style.height = `${w}px`;
+        }
+        this.redrawBoard();
+      });
     });
     this.resizeObserver.observe(el.parentElement || el);
+  }
+
+  /**
+   * `redrawAll` nur auf ein Brett, das chessground auch vermessen kann. redrawAll baut cg-board neu, misst frisch und
+   * malt die gesetzten Markierungen SOFORT mit. Ist das Brett unter 8 Gerätepixel breit (UI-Sweep 28.10.: Fenster kurz
+   * 1 × 1 bzw. 4 × 4 px), rundet chessground den Container auf 0 × 0 ab, und die Sterne der Sternenjagd standen bei
+   * `translate(NaN,NaN)`, unsichtbar auch nach dem Wiederherstellen, weil chessground beim Größerwerden keine SVGs
+   * neu malt. Darum dann Markierungen zurückhalten und nicht neu aufbauen; sonst nach jedem Neuaufbau die Markierungen
+   * mit den frischen Maßen neu setzen.
+   */
+  private redrawBoard(): void {
+    if (!this.ground || this.destroyed) return;
+    const r = this.boardEl.nativeElement.getBoundingClientRect();
+    if (!drawableSize(r.width, r.height)) {
+      this.holdBackShapes();
+      return;
+    }
+    this.ground.redrawAll();
+    this.repaintCrazyPieces();   // redrawAll baut die Figuren neu → erneut würfeln/malen
+    this.applyAutoShapes();
+  }
+
+  /** Markierungen vom (zu kleinen) Brett nehmen und merken; applyAutoShapes holt sie nach dem Messen nach. */
+  private holdBackShapes(): void {
+    if (this.ground && this.ground.state.drawable.autoShapes.length > 0) this.ground.setAutoShapes([]);
+    this.shapesPending = true;
   }
 
   /**

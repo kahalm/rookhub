@@ -40,7 +40,8 @@ const MATCH = (blackLeague: boolean): ClubMatch => ({
 const SHEET_DE = {
   confirm: 'Stimmt so', delete: 'Zug löschen', deleted: 'Zug gelöscht.', options: 'Mögliche Lesarten',
   showPhoto: 'Ganzes Foto zeigen', hidePhoto: 'Ganzes Foto ausblenden', photo: 'Foto {{n}}', page: 'Seite {{n}}',
-  status: { waiting: 'Wartet auf den Leser', reading: 'Wird gelesen', longWait: 'Länger als üblich – der Leser läuft gerade wohl nicht.' },
+  status: { waiting: 'Wartet auf den Leser', reading: 'Wird gelesen', longWait: 'Länger als üblich – der Leser läuft gerade wohl nicht.',
+    sinceDaysHoursOne: 'seit\u00A01\u00A0Tag {{hours}}\u00A0Std.' },
 };
 
 describe('ClubScanPageComponent', () => {
@@ -751,7 +752,7 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     const st = el.querySelector('app-sheet-reading-status')!;
     expect(st.textContent).toContain('Wartet auf den Leser');
-    expect(st.querySelector('.rs-clock')?.textContent?.trim()).toBe('42:18:30');
+    expect(st.querySelector('.rs-clock')?.textContent?.trim()).toBe('seit\u00A01\u00A0Tag 18\u00A0Std.');   // d6: ab einem Tag in Tagen
     expect(st.querySelector('.rs-check')).toBeNull();
     expect(st.querySelector('.rs-long')?.textContent).toContain('Länger als üblich');
     fixture.destroy();

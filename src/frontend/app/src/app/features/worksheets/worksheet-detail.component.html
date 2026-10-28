@@ -120,6 +120,8 @@
             <button mat-button class="wd-qr-toggle" (click)="qrOpen.set(!qrOpen())" [attr.aria-expanded]="qrOpen()">
               {{ 'worksheets.share.qr' | translate }}<mat-icon iconPositionEnd>{{ qrOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
+            <!-- d6-rk-blatt-qr-karte-fliesstext: Erklärung (ohne Anmeldung, Fußzeile, Lösungen) hinter dem ?. -->
+            <app-help-hint class="wd-share-help" [text]="'worksheets.share.hint' | translate" />
           }
         }
       </div>
@@ -163,7 +165,6 @@
               <div class="wd-share-body">
                 <app-qr-code class="wd-qr" [data]="shareUrl" [width]="132" />
                 <div class="wd-share-lines">
-                  <p class="wd-hint">{{ 'worksheets.share.hint' | translate }}</p>
                   <div class="wd-share-row">
                     <input class="wd-share-url" [value]="shareUrl" readonly />
                   </div>
@@ -172,6 +173,7 @@
             </mat-card-content>
           </mat-card>
         }
+        <!-- Lösungen hängen am Link: die Warnung steht, solange das Blatt geteilt ist — nicht nur bei offenem QR-Code. -->
         <p class="wd-hint wd-warn">{{ 'worksheets.share.solutionWarning' | translate }}</p>
       }
     </div>

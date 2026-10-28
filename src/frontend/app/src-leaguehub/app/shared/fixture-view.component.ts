@@ -307,7 +307,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                       <td>@if (r.fide || r.key) { <button type="button" class="pl" (click)="openCard((r.fide || r.key)!, null, null)">{{ r.n }}</button> } @else { {{ r.n }} }</td>
                       <td class="num">{{ r.elo ?? '–' }}</td>
                       <td class="num"><b>{{ pct(r.p) }}</b></td>
-                      <td class="num">{{ r.g || '–' }}</td>
+                      <td class="num">{{ r.g ? thousands(r.g) : '–' }}</td>
                       <td class="small acc-cell">
                         @for (a of r.acc; track a.url) {
                           <a [href]="a.url" target="_blank" rel="noopener" [attr.title]="a.site + ': ' + a.user + ' (' + a.conf + ')'">{{ a.site }}{{ a.conf === 'sicher' ? '' : '?' }}</a>{{ ' ' }}

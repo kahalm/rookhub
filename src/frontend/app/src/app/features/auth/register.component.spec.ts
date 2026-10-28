@@ -272,7 +272,7 @@ describe('RegisterComponent — Datenschutz-Link an der Maske (UX-017)', () => {
  * echten Namen (der Benutzername ist fuer andere sichtbar). Nur Hinweise, kein Pflicht-Haken.
  */
 describe('RegisterComponent — KidHub-Variante (UX-032)', () => {
-  async function render(legal?: object) {
+  async function render(legal?: object, intro?: object) {
     await TestBed.configureTestingModule({
       imports: [RegisterComponent],
       providers: [
@@ -281,6 +281,7 @@ describe('RegisterComponent — KidHub-Variante (UX-032)', () => {
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: {} },
         ...(legal ? [{ provide: LEGAL_SITE, useValue: legal }] : []),
+        ...(intro ? [{ provide: AUTH_INTRO, useValue: intro }] : []),
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(RegisterComponent);
@@ -335,6 +336,16 @@ describe('RegisterComponent — KidHub-Variante (UX-032)', () => {
     expect((await render()).querySelector('.site-note')).toBeNull();
     TestBed.resetTestingModule();
     expect((await render(KIDHUB)).querySelector('.site-note')).toBeNull();
+  });
+
+  // d6-k-register-doppelter-hinweis: KidHub setzt AUTH_INTRO.register; die Maske zeigte darum zwei Kästen, die beide mit
+  // „Spielen geht auch ohne Konto.“ begannen (Erster Blick, DESIGN.md 4.6). Es bleibt genau einer: „Für Eltern“.
+  it('KidHub mit AUTH_INTRO: genau ein Hinweis („Für Eltern“), kein zweiter Kasten', async () => {
+    const el = await render(KIDHUB, { login: 'kids.authIntro.login', register: 'kids.authIntro.register' });
+    expect(el.querySelectorAll('[role="note"]').length).toBe(1);
+    expect(el.querySelector('.kids-parents')).not.toBeNull();
+    expect(el.querySelector('.site-note')).toBeNull();
+    expect(text(el)).not.toContain('kids.authIntro.register');
   });
 
   // UX-027: auf der Turnierseite legt die Karte ein vollständiges RookHub-Konto an, sagte das aber nicht.

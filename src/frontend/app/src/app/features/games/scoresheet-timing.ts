@@ -37,6 +37,16 @@ export function formatLongClock(seconds: number): string {
   return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
 }
 
+/**
+ * Ab einem Tag zählt die Uhr in Tagen und Stunden (d6-l-wartet-leser-gedankenstrich): `formatLongClock` zeigte nach zwölf
+ * Tagen „298:59:11". Unter 24 Stunden `null` — dann gilt `formatLongClock`. Den Text setzt die Oberfläche in ihrer Sprache
+ * (`sheetEdit.status.sinceDays…`), wie LeagueHubs `waitClock` („seit 12 Tagen 10 Std.").
+ */
+export function clockDays(seconds: number): { days: number; hours: number } | null {
+  const h = Math.floor(Math.max(0, Math.floor(seconds)) / 3600);
+  return h >= 24 ? { days: Math.floor(h / 24), hours: h % 24 } : null;
+}
+
 /** Eine Sekunden-Uhr, die nur läuft, solange etwas gelesen wird (ein Intervall ohne Grund hielte auch Tests auf). */
 export class SecondsTicker {
   readonly now = signal(Date.now());

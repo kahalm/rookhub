@@ -148,6 +148,14 @@ describe('WoodpeckerListComponent (UI-Sweep c1)', () => {
     expect(intro).not.toContain('flex-wrap');
   });
 
+  it('d6-rk-woodpecker-kartentitel-abgeschnitten: Kartentitel bricht um (bis zwei Zeilen), ⋮ bleibt oben', () => {
+    const h2 = /\.plan-titleh2\{[^}]*\}/.exec(listCss())![0];
+    expect(h2).not.toContain('white-space:nowrap');
+    expect(h2).toContain('-webkit-line-clamp:2');
+    expect(h2).toContain('overflow-wrap:anywhere');
+    expect(/\.plan-head\{[^}]*\}/.exec(listCss())![0]).toContain('align-items:flex-start');
+  });
+
   it('c1-wp-woodpecker-seitenpolster-96vw: Seite ohne 96vw, Rand = 16-px-Polster', () => {
     const page = /\.page\{[^}]*\}/.exec(listCss())![0];
     expect(page).toContain('max-width:var(--page-max-width)');
