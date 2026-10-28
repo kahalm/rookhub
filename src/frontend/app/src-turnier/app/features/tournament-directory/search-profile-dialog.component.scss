@@ -52,21 +52,21 @@
    mit weißem Kern (DESIGN 3.6: keine Bedeutung in hellen Grautönen). Komponentenlokal, `_eink.scss` hat keine
    Slider-Regel — der Umkreis-Regler ist der einzige der Turnierseite. */
 :host-context(html.eink) .radius mat-slider {
-  --mat-slider-inactive-track-color: #fff;
+  --mat-slider-inactive-track-color: white;
   --mat-slider-inactive-track-height: 8px;
-  --mat-slider-active-track-color: #000;
+  --mat-slider-active-track-color: black;
   --mat-slider-active-track-height: 8px;
-  --mat-slider-handle-color: #000;
-  --mat-slider-hover-handle-color: #000;
-  --mat-slider-focus-handle-color: #000;
+  --mat-slider-handle-color: black;
+  --mat-slider-hover-handle-color: black;
+  --mat-slider-focus-handle-color: black;
   --mat-slider-handle-elevation: none;
 }
 :host-context(html.eink) .radius mat-slider ::ng-deep .mdc-slider__track--inactive {
   opacity: 1;
-  border: 2px solid #000;
+  border: 2px solid black;
   box-sizing: border-box;
 }
 :host-context(html.eink) .radius mat-slider ::ng-deep .mdc-slider__thumb-knob {
-  background-color: #fff;
-  border: 3px solid #000;
+  background-color: white;
+  border: 3px solid black;
 }

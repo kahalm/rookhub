@@ -144,7 +144,7 @@ describe('SearchProfileDialogComponent', () => {
       const knob = getComputedStyle(host.querySelector('.radius .mdc-slider__thumb-knob')!);
       expect(knob.backgroundColor).toBe('rgb(255, 255, 255)');
       expect(knob.borderTopColor).toBe('rgb(0, 0, 0)');
-      expect(getComputedStyle(host.querySelector('.radius mat-slider')!).getPropertyValue('--mat-slider-active-track-color').trim()).toBe('#000');
+      expect(getComputedStyle(host.querySelector('.radius mat-slider')!).getPropertyValue('--mat-slider-active-track-color').trim()).toBe('black');
     } finally {
       setEinkActive(false);
     }
