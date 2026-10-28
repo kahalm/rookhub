@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.864.1", date: "2026-10-28", changes: [
+    { en: "UI sweep: 40 more dialogs are now opened and photographed (analysis, repertoire, courses, calculation, puzzles, e-books, admin, tournament site) — 91 states instead of 51.",
+      de: "UI-Sweep: 40 weitere Dialoge werden jetzt geöffnet und fotografiert (Analyse, Repertoire, Kurse, Kalkulation, Puzzles, E-Books, Admin, Turnierseite) — 91 Zustände statt 51." },
+  ] },
   { version: "0.864.0", date: "2026-10-28", changes: [
     { en: "Design round d6 (12 findings): KidHub star hunt — the stars no longer go missing from the board after a tiny layout pass; LeagueHub club games fit the phone again; ClubHub privacy page folds its sections on the phone; waiting scoresheet shows days instead of “298:59:11”; thousands separators in the roster table; one note on KidHub registration; profile toggle on one line, accent headings and help instead of a text stack; Woodpecker titles on two lines; e-book format badges no longer doubled; worksheet QR card without running text. Server: an aborted request body now answers 499/400 instead of 500.",
       de: "Design-Runde d6 (12 Funde): KidHub-Sternenjagd — die Sterne fehlen nach einem winzigen Zwischen-Layout nicht mehr auf dem Brett; LeagueHub-Vereinspartien passen wieder aufs Handy; ClubHub-Datenschutz klappt am Handy die Abschnitte zu; wartendes Formular zeigt Tage statt „298:59:11“; Tausenderpunkt in der Kadertabelle; KidHub-Registrierung mit nur einem Hinweis; Profil-Umschalter in einer Zeile, Akzent-Überschrift und Hilfe statt Textstapel; Woodpecker-Titel zweizeilig; E-Book-Format-Abzeichen nicht mehr doppelt; Aufgabenblatt-QR-Karte ohne Fließtext. Server: ein abgebrochener Anfrage-Rumpf antwortet 499/400 statt 500." },

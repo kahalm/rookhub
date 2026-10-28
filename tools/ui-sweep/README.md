@@ -206,6 +206,18 @@ selbst mit 200 und dem gesendeten JSON-Körper (sonst `{}`) — „Aufgeben“, 
 erreichen den Server nicht. Ausnahmen (`writeDecision` in `states.mjs`): POSTs, die nur lesen (`READ_POSTS`, Puzzle-Vorrat
 für Endlos), gehen durch; Adressen in `once` eines Zustands gehen einmal je Rolle/Sprache zum Server, danach wird die
 Antwort wiedergegeben (Fehlanmeldung — sonst Anmelde-Drossel 429).
+Dialoge (Stand 28.10.2026, 91 Zustände, davon 40 Dialoge aus der Runde „Dialoge“): je Dialog ein Zustand, `expect` auf
+den Titel IN der Dialog-Komponente (`dlg('app-…-dialog')`), nicht nur auf `mat-dialog-container`. Abgedeckt u. a. PGN
+hochladen, Roast, Analyse-Verlauf, Züge vergleichen, Tiefe Analyse, Markieren-Notizen, Lc0-Knoten (admin), Repertoire
+anlegen/bearbeiten/teilen/Teilauswahl, Übungszyklen, Kurs anlegen/importieren/verknüpfen/Themen, Kapitel anlegen,
+Wochenpost aus Kapitel, Kalkulation (Ausgabe, Verteiler, Einstellungen, Zeit, Ergebnis), Puzzle teilen/Einstellungen,
+Endlos-Hilfe, API-Token, Konto sperren (admin), E-Book bearbeiten/Sichtbarkeit/Sammlung/Stellung korrigieren, Turnier
+teilen/Mannschaft/Kalenderkarte/fehlt melden/Suchprofil/Eintrag melden/Spieler verfolgen. Bewusst NICHT: Dialoge, die
+erst nach einer schreibenden Aktion mit Serverantwort aufgehen (Linie teilen, Reset-Link — gestellt käme ein leerer
+Link), oder für die Dev-Testdaten fehlen (Kurs teilen: kein eigener Kurs; Wochenpost-Aufschlüsselung: keine
+Teilnehmer; gemerkte Stellungen/Analyseauftrag; Formularfoto; markierte Stellungen in LeagueHub; Hintergrund-Engine;
+Mit/ohne Engine-Wahl braucht eine freie Engine oder `?ask=1`; langer Kurs-Kommentar; Langlöser; laufende Stoppuhr;
+Doppelklick auf eine diagrammfreie Buchstelle).
 Spielweise: jeder Lauf legt „Einfachmodus“ in `rookhub_solve_modes` — ohne die Wahl verdeckte der Spielweise-Dialog JEDE
 Aufnahme von Puzzle- und Kursseiten (frischer Speicher = erster Besuch). Den Dialog selbst zeigt der Zustand
 `rookhub__puzzles-puzzleId--spielweise` (`fresh: true`).

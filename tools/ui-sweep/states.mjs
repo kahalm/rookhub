@@ -37,6 +37,10 @@
 
 const MENU = '.cdk-overlay-pane .mat-mdc-menu-panel';
 const DIALOG = 'mat-dialog-container';
+/** Inhalt IM Dialog: der Titel der Dialog-Komponente (`comp` = deren Selektor) — nicht nur der leere Rahmen. */
+const dlg = (comp, inner = ':is([mat-dialog-title], .dialog-title)') => `${DIALOG} ${comp} ${inner}`;
+/** Menüpunkt eines offenen Menüs über sein Symbol (sprachunabhängig). */
+const menuItem = icon => `.mat-mdc-menu-panel button.mat-mdc-menu-item:has(mat-icon:text-is("${icon}"))`;
 
 // Spielweise-Dialog (Trainings-/Einfachmodus): sweep.mjs belegt die Wahl vor; falls ein Bereich trotzdem fragt
 // (eigene Wahl je Kurs/Wochenpost), vor den eigentlichen Schritten wegklicken (Einfachmodus: schreibt nur localStorage).
@@ -139,6 +143,125 @@ export const STATES = [
   { of: 'rookhub__woodpecker', name: 'anlegen', auth: ['user', 'admin'],
     steps: [{ click: '.page .header-actions button, .page .empty-state button' }], expect: DIALOG },
   { of: 'rookhub__woodpecker', name: 'plan-menue', auth: ['admin'], steps: [{ click: '.plans .plan .plan-head button[mat-icon-button]' }], expect: MENU },
+
+  // ---------------------------------------------------------------- Dialoge (Runde 28.10.2026)
+  // Je Dialog EIN Zustand: öffnen, nie bestätigen. `expect` prüft einen Inhalt IM Dialog (Titel der Komponente), nicht
+  // nur den leeren Rahmen. Speichert ein Dialog beim Öffnen etwas (Markieren vor „Notizen“), stellt das Sicherheitsnetz
+  // die Antwort (writeDecision) — der Server sieht nichts.
+  // Partien
+  { of: 'rookhub__games', name: 'pgn-import', auth: LOGGED_IN,
+    steps: [{ click: '.games-page button.pgn-upload, .games-page button.empty-upload' }], expect: dlg('app-pgn-import-dialog') },
+  { of: 'rookhub__games', name: 'roast', auth: LOGGED_IN,
+    steps: [{ click: '.games-page .row.game .actions button.mat-mdc-menu-trigger' }, { click: menuItem('local_fire_department') }],
+    expect: dlg('app-game-roast-dialog') },
+  // Analyse
+  { of: 'rookhub__analysis', name: 'verlauf', auth: LOGGED_IN,
+    steps: [{ click: '.header button.history-btn' }], expect: dlg('app-analysis-history-dialog') },
+  { of: 'rookhub__analysis', name: 'zuege-vergleichen', auth: LOGGED_IN,
+    steps: [{ click: 'app-position-menu button.position-menu-btn' }, { click: '.mat-mdc-menu-panel button.pm-compare' }],
+    expect: dlg('app-move-compare-dialog') },
+  { of: 'rookhub__analysis', name: 'markieren-notizen', auth: LOGGED_IN,
+    steps: [{ click: 'app-mark-position-button button.mark' }], expect: dlg('app-mark-notes-dialog') },
+  { of: 'rookhub__games-analyzed', name: 'tiefe-analyse', auth: LOGGED_IN,
+    steps: [{ click: 'app-position-menu.nav-menu button.position-menu-btn' }, { click: '.mat-mdc-menu-panel button.pm-deep' }],
+    expect: dlg('app-deep-analysis-dialog') },
+  { of: 'rookhub__analysis-games', name: 'knoten', auth: ['admin'],
+    steps: [{ clickIf: '.ga-container button.add-btn' }, { fill: '.new-card textarea', text: '1. e4 e5 2. Nf3 Nc6 *' },
+      { click: '.new-card button.nodes-btn' }], expect: dlg('app-game-analysis-nodes-dialog') },
+  // Repertoire
+  { of: 'rookhub__repertoires', name: 'anlegen', auth: LOGGED_IN,
+    steps: [{ click: '.repertoire-container .header button[color="primary"]' }], expect: dlg('app-create-repertoire-dialog') },
+  { of: 'rookhub__repertoires', name: 'bearbeiten', auth: LOGGED_IN,
+    steps: [{ click: '.rep-card .rep-actions button.mat-mdc-menu-trigger' }, { click: menuItem('edit') }],
+    expect: dlg('app-create-repertoire-dialog') },
+  { of: 'rookhub__repertoires', name: 'teilen', auth: LOGGED_IN,
+    steps: [{ click: '.rep-card .rep-actions button.mat-mdc-menu-trigger' }, { click: menuItem('group_add') }],
+    expect: dlg('app-share-repertoire-dialog') },
+  { of: 'rookhub__repertoires-repertoireId', name: 'teilauswahl', auth: LOGGED_IN,
+    steps: [{ click: 'app-repertoire-lines .course-bar button.mat-mdc-menu-trigger' }, { click: menuItem('library_add') }],
+    expect: dlg('app-create-subset-dialog') },
+  { of: 'rookhub__repertoires-repertoireId-train', name: 'intervalle', auth: LOGGED_IN,
+    steps: [{ click: 'button.more.mat-mdc-menu-trigger' }, { click: menuItem('tune') }], expect: dlg('app-sr-config-dialog') },
+  // Kurse
+  { of: 'rookhub__courses', name: 'anlegen', auth: LOGGED_IN,
+    steps: [{ click: '.header-actions button[color="primary"]' }], expect: dlg('app-create-course-dialog') },
+  { of: 'rookhub__courses', name: 'partien-importieren', auth: LOGGED_IN,
+    steps: [{ click: '.header-actions button[mat-stroked-button]' }], expect: dlg('app-create-course-dialog') },
+  { of: 'rookhub__courses', name: 'verknuepfen', auth: LOGGED_IN,
+    steps: [{ click: 'app-course-card .util-actions button.mat-mdc-menu-trigger' },
+      { click: '.mat-mdc-menu-panel button.mat-mdc-menu-item:has(mat-icon:text-matches("^(add_)?link$"))' }],
+    expect: dlg('app-link-course-dialog') },
+  { of: 'rookhub__courses', name: 'themen', auth: ['admin'],
+    steps: [{ click: 'app-course-card .util-actions button.mat-mdc-menu-trigger' }, { click: menuItem('sell') }],
+    expect: dlg('app-course-themes-dialog') },
+  { of: 'rookhub__courses-bookId', name: 'kapitel-anlegen', auth: ['admin'],
+    steps: [{ click: '.chapters-card .section-head button' }], expect: dlg('app-add-lines-dialog') },
+  { of: 'rookhub__courses-bookId', name: 'wochenpost', auth: ['admin'],
+    steps: [{ click: 'app-chapter-row .chapter-actions button.mat-mdc-menu-trigger' }, { click: '.mat-mdc-menu-panel button.weekly-from-chapter' }],
+    expect: dlg('app-weekly-from-chapter-dialog') },
+  { of: 'rookhub__courses-calc-detail', name: 'ausgabe', auth: ['admin'],
+    steps: [{ click: 'app-chapter-row .chapter-actions button.mat-mdc-menu-trigger' }, { click: menuItem('event') }],
+    expect: dlg('app-calc-edition-dialog') },
+  { of: 'rookhub__courses-calc-detail', name: 'verteiler', auth: ['admin'],
+    steps: [{ click: '.head-card button.mat-mdc-menu-trigger' }, { click: menuItem('group') }], expect: dlg('app-calc-members-dialog') },
+  { of: 'rookhub__courses-calcBookId-calc', name: 'einstellungen',
+    steps: [{ click: 'button.calc-settings-bar:visible, button.calc-rail-btn:visible' }], expect: dlg('app-calc-settings-dialog') },
+  { of: 'rookhub__courses-calcBookId-calc', name: 'zeit', steps: [{ click: 'button.calc-timer-btn' }], expect: dlg('app-calc-timer-dialog') },
+  { of: 'rookhub__courses-calcBookId-calc', name: 'ergebnis', steps: [{ click: 'button.calc-result-btn' }], expect: dlg('app-calc-grade-dialog') },
+  // Puzzles
+  { of: 'rookhub__puzzles-puzzleId', name: 'teilen', steps: [EASY, { click: 'app-puzzle-action-bar button.pab-share' }],
+    expect: dlg('app-share-puzzle-dialog') },
+  { of: 'rookhub__puzzles-puzzleId', name: 'einstellungen',
+    steps: [EASY, { click: 'app-puzzle-action-bar button.pab-more' }, { click: menuItem('settings') }], expect: dlg('app-puzzle-settings-dialog') },
+  { of: 'rookhub__puzzles-endless', name: 'hilfe', steps: [{ click: '.config-screen button.help-btn' }], expect: dlg('app-endless-help-dialog') },
+  // Wochenpost, Profil, Admin
+  { of: 'rookhub__weekly', name: 'aus-kapitel', auth: ['admin'],
+    steps: [{ click: '.header-actions button.upload-toggle' }, { click: '.upload-card .or-chapter button' }],
+    expect: dlg('app-weekly-from-chapter-dialog') },
+  { of: 'rookhub__profile', name: 'token-anlegen', auth: LOGGED_IN,
+    steps: [{ click: 'app-api-tokens button.tokens-create' }], expect: dlg('app-create-token-dialog') },
+  // Konto „claude-dev-user“: gibt es immer, ist nie das eigene (sich selbst sperren geht nicht). Breit: Knopf in der
+  // Tabelle; am Handy: Karte → ⋮ → „Sperren …“ (Symbol „block“).
+  { of: 'rookhub__admin', name: 'sperren', auth: ['admin'],
+    steps: [{ clickIf: 'app-admin-users-tab tr:has-text("claude-dev-user") button.lock-btn:visible' },
+      { clickIf: 'app-admin-users-tab .user-card:has(.uc-name:text-is("claude-dev-user")) .uc-actions button.mat-mdc-menu-trigger:visible' },
+      { clickIf: menuItem('block') }],
+    expect: dlg('app-lock-user-dialog') },
+  // E-Books
+  { of: 'rookhub__ebooks', name: 'bearbeiten', auth: ['admin'],
+    steps: [{ click: 'mat-card.eb-card:not(.eb-card--folder) button.mat-mdc-menu-trigger' }, { click: menuItem('edit') }],
+    expect: dlg('app-ebook-edit-dialog') },
+  { of: 'rookhub__ebooks', name: 'sichtbarkeit', auth: ['admin'],
+    steps: [{ click: 'mat-card.eb-card:not(.eb-card--folder) button.mat-mdc-menu-trigger' }, { click: menuItem('visibility') }],
+    expect: dlg('app-ebook-visibility-dialog') },
+  { of: 'rookhub__ebooks', name: 'sammlung', auth: ['admin'],
+    steps: [{ click: '.eb-page .header-actions button[aria-pressed]' }, { click: 'mat-checkbox.eb-select input' },
+      { click: '.eb-bulk button:has(mat-icon:text-is("create_new_folder"))' }],
+    expect: dlg('app-ebook-collection-dialog') },
+  { of: 'rookhub__ebooks-diagramme', name: 'stellung-korrigieren', auth: ['admin'],
+    steps: [{ clickIf: '.rd-toolbar .rd-diag-btn' }, { click: '.rd-panel-head button.rd-jump >> nth=0' },
+      { waitFor: '.rd-panel app-ebook-board' }, { click: '.rd-panel app-ebook-board button.eb-more' }, { click: '.mat-mdc-menu-panel button.eb-correct-item' }],
+    expect: dlg('app-ebook-position-dialog') },
+  // Turnierseite
+  { of: 'turnier__tournaments-tournamentId', name: 'teilen',
+    steps: [{ clickIf: 'button.wide-only:has(mat-icon:text-is("share")):visible' }, { clickIf: 'button.more-actions:visible' },
+      { clickIf: menuItem('share') }],
+    expect: dlg('app-share-tournament-dialog') },
+  { of: 'turnier__tournaments-tournamentId', name: 'mannschaft',
+    steps: [{ click: 'app-tournament-tables .mat-mdc-tab-labels > [role="tab"]:nth-child(2)' }, { click: 'app-tournament-tables .team-link:visible' }],
+    expect: dlg('app-team-players-dialog') },
+  { of: 'turnier__tournaments-calendar', name: 'kalender-karte',
+    steps: [{ click: '.mat-mdc-tab-labels > [role="tab"]:last-child' }, { click: 'app-tournament-calendar :is(.cal-entry, .agenda-entry):visible' }],
+    expect: `${DIALOG} app-tournament-card-dialog app-tournament-card` },
+  { of: 'turnier__tournaments-calendar', name: 'fehlt-melden', auth: LOGGED_IN,
+    steps: [{ click: '.missing-row button' }], expect: dlg('app-missing-tournament-dialog') },
+  { of: 'turnier__tournaments-calendar', name: 'suchprofil', auth: LOGGED_IN,
+    steps: [{ click: 'app-search-profile-menu button.mat-mdc-menu-trigger' }, { click: menuItem('add_location_alt') }],
+    expect: dlg('app-search-profile-dialog') },
+  { of: 'turnier__tournaments-calendar-directoryId', name: 'melden', auth: LOGGED_IN,
+    steps: [{ click: 'button.report-btn' }], expect: dlg('app-report-entry-dialog') },
+  { of: 'turnier__tournaments-history', name: 'spieler-verfolgen', auth: LOGGED_IN,
+    steps: [{ click: 'button.track-add' }], expect: dlg('app-track-player-dialog') },
 
   // ---------------------------------------------------------------- Anmeldung (dieselbe Komponente in allen Oberflächen)
   // Falsches Kennwort mit einem Namen, den es nicht gibt — kein echtes Konto wird gedrosselt.
