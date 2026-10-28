@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.869.5", date: "2026-10-28", changes: [
+    { en: "LeagueHub: on phones the board pairings of a played round no longer stick out of the screen — names wrap, the rating moves to a second line, and the badges, analysis icon and ⋮ are stacked in a narrow column as 44 px tap targets.",
+      de: "LeagueHub: Am Handy ragen die Brettpaarungen einer gespielten Runde nicht mehr aus dem Bild — Namen brechen um, die Elo steht in der zweiten Zeile, Abzeichen, Analyse-Symbol und ⋮ stehen gestapelt in einer schmalen Spalte als 44-px-Tippziele." },
+  ] },
   { version: "0.869.4", date: "2026-10-28", changes: [
     { en: "UI sweep: the LeagueHub forecast page is now also photographed for a played round with club games (results, provisional line-up, board menu) and with all line-ups of that round.",
       de: "UI-Sweep: Die LeagueHub-Prognoseseite wird jetzt auch für eine gespielte Runde mit Vereinspartien (Ergebnisse, vorläufige Aufstellung, Brettmenü) und mit allen Aufstellungen dieser Runde fotografiert." },

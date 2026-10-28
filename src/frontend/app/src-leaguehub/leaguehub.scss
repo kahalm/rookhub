@@ -209,6 +209,21 @@ main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
 .icon-btn:hover, .icon-btn:focus-visible { background: var(--line); }
 .pairings .replay-row td { padding: 8px 0 14px; }
 .pairings .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* 0.869.5 (UI-Sweep 28.10., lh-brettmenue): am Handy war die Tabelle 461 px breit, Analyse-Symbol und ⋮ lagen außerhalb.
+   Schmal (Container < 480 px) brechen die Namen um, die Elo steht in der zweiten Zeile, Abzeichen, Analyse und ⋮ stehen
+   gestapelt in einer schmalen Spalte, Analyse und ⋮ als 44-px-Tippziele (DESIGN 8.4). */
+.pairings-wrap { container-type: inline-size; }
+.pg-acts { display: inline-flex; align-items: center; vertical-align: middle; }
+@container (max-width: 479.98px) {
+  .pairings { font-size: 14px; }
+  .pairings td { padding: 5px 3px; }
+  .pairings .num { width: 1.4em; }
+  .pairings .pw, .pairings .pb { overflow-wrap: anywhere; }
+  .pairings .elo { display: block; }
+  .pairings .pg .pg-acts { flex-direction: column; gap: 2px; }
+  .pairings .pg lh-game-badges { flex-direction: column; margin-right: 0; }
+  .pairings .pg .icon-btn, .pairings .pg .more-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: 0; padding: 0; }
+}
 .boards { list-style: none; margin: 0; padding: 0; }
 /* Großer Bildschirm (UI-Sweep 2026-10-11, d2-l-breit-bretter): die Bretter zweispaltig — die Nummer hält die Reihenfolge lesbar. */
 @media (min-width: 1280px) { .wrap.mid .boards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; } }

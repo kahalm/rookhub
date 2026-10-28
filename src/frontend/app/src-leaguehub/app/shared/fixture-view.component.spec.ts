@@ -134,6 +134,40 @@ describe('FixtureViewComponent', () => {
     expect(fixture.componentInstance.replayStart()).toEqual({ kind: 'ply', ply: 0 });
   });
 
+  // 0.869.5, UI-Sweep 28.10. (lh-brettmenue): am Handy war die Paarungstabelle 461 px breit, Analyse + ⋮ außerhalb
+  for (const width of [390, 360, 328]) {
+    it(`Brettpaarungen am Handy (${width} px): nichts ragt raus, Analyse und ⋮ ganz sichtbar und ≥ 44 px`, async () => {
+      api.fixtureGames.and.resolveTo([
+        { board: 1, white: 'Wirtenberger, Markus Mag.', whiteElo: 1863, black: 'Baumgartner, Armin Mag.', blackElo: 1904, result: '½ - ½',
+          forfeit: false, pgn: '1. e4 1/2-1/2', source: 'club', clubGameId: 10, canEdit: true },
+        { board: 2, white: 'Mitteregger, Gottfried', whiteElo: 1826, black: 'Niedermayer, Anton', blackElo: 1987, result: '1 - 0',
+          forfeit: false, pgn: '1. d4 1-0', source: 'club', clubGameId: 11 },
+      ]);
+      lineupsApi.clubGameMarkCounts.and.resolveTo({ '10': 2, '11': 1 });
+      (fixture.componentInstance as unknown as { rookHub: string }).rookHub = 'https://rookhub.example';
+      const host = fixture.nativeElement as HTMLElement;
+      host.style.display = 'block';
+      host.style.width = `${width}px`;
+      fixture.componentRef.setInput('leagueTnr', 1479345);
+      render({ ...OPEN, status: 'played', score: '3 : 3' });
+      for (let i = 0; i < 3; i++) { await fixture.whenStable(); await new Promise(r => setTimeout(r)); }
+      fixture.detectChanges();
+
+      const art = host.querySelector('article.fixture') as HTMLElement;
+      expect(art.scrollWidth).toBeLessThanOrEqual(art.clientWidth);
+      const box = art.getBoundingClientRect();
+      const btns = Array.from(host.querySelectorAll<HTMLElement>('.pairings td.pg .icon-btn, .pairings td.pg button.more-btn'));
+      expect(btns.length).toBe(4);
+      for (const b of btns) {
+        const r = b.getBoundingClientRect();
+        expect(r.right).toBeLessThanOrEqual(box.right + 0.5);
+        expect(r.left).toBeGreaterThanOrEqual(box.left - 0.5);
+        expect(r.width).toBeGreaterThanOrEqual(44);
+        expect(r.height).toBeGreaterThanOrEqual(44);
+      }
+    });
+  }
+
   it('gespielte Runde: erste Züge je Brett aus den Aufstellungen, „Züge eingeben" wo erlaubt (2026-10-08)', async () => {
     api.fixtureGames.and.resolveTo([
       { board: 1, white: 'Ackermann, Anna', whiteElo: 2040, black: 'Brunner, Bert', blackElo: 2100, result: '1 - 0', forfeit: false,

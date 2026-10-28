@@ -54,20 +54,24 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             <!-- 0.739.0, Wunsch 2026-10-10: die laufende Runde aus den zugeordneten Vereinspartien -->
             <p class="muted small provisional-note">Aufstellung laut {{ shareToken() ? 'den hochgeladenen' : 'euren' }} Partien — vorläufig, bis chess-results die Runde bringt.</p>
           }
+          <!-- 0.869.5 (UI-Sweep 28.10.): eigener Container — schmal (< 480 px) brechen die Namen um, Elo in die zweite
+               Zeile, Abzeichen/Analyse/⋮ stehen gestapelt in einer 44-px-Spalte; nichts ragt über das Handy hinaus -->
+          <div class="pairings-wrap">
           <table class="pairings">
             <caption class="sr-only">Brettpaarungen</caption>
             <tbody>
               @for (p of pairings(); track p.board) {
                 <tr>
                   <td class="num">{{ p.board }}</td>
-                  <td class="pw">{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted"> {{ p.whiteElo }}</span>}</td>
+                  <td class="pw">{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted elo"> {{ p.whiteElo }}</span>}</td>
                   <td class="pr">{{ p.result }}</td>
-                  <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted"> {{ p.blackElo }}</span>}</td>
+                  <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted elo"> {{ p.blackElo }}</span>}</td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
                          dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link seit 0.838.3 auch „Analyse"
                          (RookHubs Partieseite über den Link, Wunsch 2026-10-25), Bearbeiten/Korrigieren bleiben angemeldet. -->
                     <!-- 0.852.0: Abzeichen „+n"/„!!n" vor dem Analyse-Symbol (nur angemeldet); Klick = Nachspielen an der Stelle -->
+                    <span class="pg-acts">
                     @if (p.clubGameId && p.pgn) {
                       <lh-game-badges [columns]="true" [marks]="markers.marksOf(p.clubGameId)" [brilliant]="markers.brilliantOf(p.clubGameId).length"
                                       (pick)="openAt(p, $event)" />
@@ -84,6 +88,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                       <button type="button" class="btn-link more-btn" [matMenuTriggerFor]="pairMenu" [matMenuTriggerData]="{ p: p }"
                               [attr.aria-label]="'Weitere Aktionen Brett ' + p.board" title="Weitere Aktionen">⋮</button>
                     }
+                    </span>
                   </td>
                 </tr>
                 <!-- 2026-10-08: die ersten Züge der Partie (angemeldet; über einen Teilen-Link nicht) -->
@@ -115,6 +120,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               }
             </tbody>
           </table>
+          </div>
           <mat-menu #pairMenu="matMenu" xPosition="before">
             <ng-template matMenuContent let-p="p">
               <button mat-menu-item type="button" (click)="toggleBoard(p)">
