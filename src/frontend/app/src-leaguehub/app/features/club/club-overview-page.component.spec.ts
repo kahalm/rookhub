@@ -7,7 +7,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ClubOverview, LineupsApiService, brilliantMoves } from '../../core/lineups';
 import { GameEvals } from '@rh/features/games/game-review.util';
-import { ClubOverviewPageComponent, NEWEST_FIRST_KEY } from './club-overview-page.component';
+import { COLLAPSED_KEY, ClubOverviewPageComponent, NEWEST_FIRST_KEY } from './club-overview-page.component';
 
 // Erfundene Vereine und Spieler.
 const DATA: ClubOverview = {
@@ -134,6 +134,58 @@ describe('ClubOverviewPageComponent', () => {
       expect(Array.from(again.querySelectorAll('.ov-round')).map(h => h.textContent?.replace(/\s+/g, ' ').trim())).toEqual(['Runde 4', 'Runde 3 · 24.10.2026+3']);
     } finally {
       localStorage.removeItem(NEWEST_FIRST_KEY);
+    }
+  });
+
+  // 0.866.0, Wunsch 2026-10-28: „Landesliga, darunter Erste und dann Gebietsklasse — mach die jeweils einklappbar, vor allem
+  // für mobile feiner"
+  it('jede Liga ist ein Aufklapper; zugeklappt merkt sich der Browser, „+n" im Kopf klappt nicht', async () => {
+    localStorage.removeItem(COLLAPSED_KEY);
+    try {
+      const el = await create();
+      const league = el.querySelector('details.ov-league') as HTMLDetailsElement;
+      expect(league.open).toBeTrue();
+      expect(league.querySelector(':scope > summary h2')?.textContent).toContain('Landesliga');
+      expect(getComputedStyle(league.querySelector('summary')!).minHeight).toBe('44px');
+
+      // „+3" im Kopf öffnet das Stellungsfenster, die Liga bleibt offen
+      (league.querySelector('summary .gb-mark') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(dialog.open).toHaveBeenCalled();
+      expect(league.open).toBeTrue();
+
+      (league.querySelector('summary') as HTMLElement).click();
+      await new Promise(r => setTimeout(r));   // toggle-Ereignis kommt asynchron
+      fixture.detectChanges();
+      expect(league.open).toBeFalse();
+      expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY)!)).toEqual([4711]);
+
+      TestBed.resetTestingModule();
+      const again = await create();
+      expect((again.querySelector('details.ov-league') as HTMLDetailsElement).open).toBeFalse();
+    } finally {
+      localStorage.removeItem(COLLAPSED_KEY);
+    }
+  });
+
+  it('„In der Partie zeigen" klappt eine zugeklappte Liga erst auf', async () => {
+    localStorage.setItem(COLLAPSED_KEY, '[4711]');
+    try {
+      const el = await create();
+      const league = el.querySelector('details.ov-league') as HTMLDetailsElement;
+      expect(league.open).toBeFalse();
+      api.clubGame.and.resolveTo({ pgn: '1. e4 e5 *' });
+      api.clubGameMarks.and.resolveTo([]);
+      dialog.open.and.returnValue({ afterClosed: () => of({ clubGameId: 77, mark: { ply: 1 } }) });
+      await fixture.componentInstance.openMarks(DATA.leagues[0].rounds[0].matches, false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(league.open).toBeTrue();
+      expect(localStorage.getItem(COLLAPSED_KEY)).toBeNull();
+    } finally {
+      localStorage.removeItem(COLLAPSED_KEY);
     }
   });
 

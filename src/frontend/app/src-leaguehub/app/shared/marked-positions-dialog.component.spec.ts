@@ -3,7 +3,8 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ReplayMark } from '@rh/shared/player-card/game-replay.component';
 import { LineupsApiService } from '../core/lineups';
-import { MarkedPositionsDialogComponent } from './marked-positions-dialog.component';
+import { MarkedPositionsDialogComponent, openMarkedPositions } from './marked-positions-dialog.component';
+import { of } from 'rxjs';
 
 /** „+" in LeagueHub (0.862.0, Wunsch 2026-10-27): Diagramm, wer am Zug, Klassifizierung + Bemerkung, ‹ › durch die Stellungen. */
 describe('MarkedPositionsDialogComponent', () => {
@@ -109,5 +110,13 @@ describe('MarkedPositionsDialogComponent', () => {
   it('Ladefehler → Meldung statt leerer Liste', async () => {
     const { el } = await setup({ clubGameMarks: () => Promise.reject(new Error('x')) });
     expect(el.querySelector('[role=alert]')?.textContent).toContain('nicht geladen');
+  });
+
+  // 0.866.0: „In der Partie zeigen" stand einen Halbzug zu weit (markiert nach 6…O-O, Nachspielen auf 7.Dc2)
+  it('„In der Partie zeigen": Halbzug der Marke → Zug-Index des Nachspielens (ply − 1), Variante → erste Marke', async () => {
+    const open = (mark: ReplayMark) => ({ open: () => ({ afterClosed: () => of({ clubGameId: 9, mark }) }) }) as any;
+    expect(await openMarkedPositions(open(MAIN), [])).toEqual({ clubGameId: 9, start: { kind: 'ply', ply: 2 } });
+    expect(await openMarkedPositions(open({ ...MAIN, ply: 0 }), [])).toEqual({ clubGameId: 9, start: { kind: 'ply', ply: -1 } });
+    expect(await openMarkedPositions(open(VAR), [])).toEqual({ clubGameId: 9, start: { kind: 'mark' } });
   });
 });

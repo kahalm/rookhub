@@ -96,6 +96,7 @@ const NONE: readonly number[] = [];
 
 /** Klick auf ein Abzeichen (0.852.0): beim Nachspielen zur ersten markierten Stellung bzw. zu diesem Halbzug springen. Jeder Klick
  *  ist ein neues Objekt — das Nachspielen springt erneut, auch wenn es schon offen ist. */
+/** Einstieg ins Nachspielen: erste Marke oder Zug-Index `ply` (0 = erster Zug, −1 = Ausgangsstellung). */
 export type ReplayStart = { kind: 'mark' } | { kind: 'ply'; ply: number };
 
 /**

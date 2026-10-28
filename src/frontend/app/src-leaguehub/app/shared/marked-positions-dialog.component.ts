@@ -194,5 +194,7 @@ export async function openMarkedPositions(dialog: MatDialog, games: MarkedPositi
     MarkedPositionsDialogComponent, { data: { games }, width: '440px', maxWidth: '94vw', autoFocus: 'dialog' });
   const r = await firstValueFrom(ref.afterClosed());
   if (!r) return null;
-  return { clubGameId: r.clubGameId, start: r.mark.ply != null ? { kind: 'ply', ply: r.mark.ply } : { kind: 'mark' } };
+  // `mark.ply` zählt die gespielten Halbzüge (Stellung NACH ihnen), `ReplayStart.ply` ist der Zug-Index des Nachspielens
+  // (0 = erster Zug, −1 = Ausgangsstellung) — wie `jump()` dort: ply − 1. Ohne das stand es einen Halbzug zu weit (0.866.0).
+  return { clubGameId: r.clubGameId, start: r.mark.ply != null ? { kind: 'ply', ply: r.mark.ply - 1 } : { kind: 'mark' } };
 }

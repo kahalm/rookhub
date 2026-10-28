@@ -22,10 +22,21 @@ import { MarkedPositionsGame, openMarkedPositions } from '../../shared/marked-po
  * Halbzüge und erste Züge. Seit 0.855.1 (Wunsch 2026-10-27: „sortiere die übersicht auch umgekehrt") dreht „Neueste zuerst"
  * die Runden je Liga um; die Wahl merkt sich der Browser. Seit 0.862.0 (Wunsch 2026-10-27: „je Runde und je Liga eine Anzeige
  * +30, Klick bringt diese 30 Stellungen, jeweils mit ‚in der Partie zeigen'") steht „+n" neben Liga und Runde; es öffnet das
- * Stellungsfenster über alle Partien dort, „In der Partie zeigen" klappt das Nachspielen des Bretts auf.
+ * Stellungsfenster über alle Partien dort, „In der Partie zeigen" klappt das Nachspielen des Bretts auf. Seit 0.866.0 (Wunsch
+ * 2026-10-28: „Landesliga, darunter Erste und dann Gebietsklasse — mach die jeweils einklappbar, vor allem für mobile feiner")
+ * ist jede Liga ein Aufklapper (`<details>`, Kopf = Liganame); zugeklappte Ligen merkt sich der Browser.
  */
 /** Merkt „Neueste zuerst" (`'1'`) im Browser. */
 export const NEWEST_FIRST_KEY = 'lh-overview-newest-first';
+/** Merkt die zugeklappten Ligen (JSON-Liste der Turniernummern) im Browser. */
+export const COLLAPSED_KEY = 'lh-overview-collapsed';
+
+function storedCollapsed(): ReadonlySet<number> {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]');
+    return new Set(Array.isArray(v) ? v.filter((x): x is number => typeof x === 'number') : []);
+  } catch { return new Set(); }
+}
 
 function storedNewestFirst(): boolean {
   try { return localStorage.getItem(NEWEST_FIRST_KEY) === '1'; } catch { return false; }
@@ -54,9 +65,11 @@ function storedNewestFirst(): boolean {
           <p class="muted">Noch keine Begegnungen mit Aufstellung in dieser Saison.</p>
         }
         @for (l of d.leagues; track l.tnr) {
-          <section class="ov-league" [attr.aria-label]="l.name">
+          <details class="ov-league" [attr.aria-label]="l.name" [open]="!collapsed().has(l.tnr)" (toggle)="onToggle(l.tnr, $event)">
             @let lm = leagueMatches(l);
-            <h2>{{ l.name }}@if (markers.markTotal(lm); as n) { <lh-game-badges class="ov-plus" [marks]="n" (pick)="openMarks(lm, true)" />}</h2>
+            <!-- „+n" im Kopf öffnet das Stellungsfenster, ohne die Liga auf- oder zuzuklappen. -->
+            <summary><h2>{{ l.name }}@if (markers.markTotal(lm); as n) { <span class="ov-plus" (click)="$event.preventDefault()"><lh-game-badges [marks]="n" (pick)="openMarks(lm, true)" /></span>}</h2></summary>
+            <div class="ov-league-body">
             @for (r of ordered(l.rounds); track r.number) {
               @let shown = visible(r.matches);
               @if (shown.length) {
@@ -93,7 +106,8 @@ function storedNewestFirst(): boolean {
                 }
               }
             }
-          </section>
+            </div>
+          </details>
         }
       } @else {
         <p class="muted">Lade Übersicht …</p>
@@ -106,8 +120,16 @@ function storedNewestFirst(): boolean {
     .ov-head h1 .muted { font-size: 0.6em; margin-left: 8px; }
     .ov-head .ov-filter:first-of-type { margin-left: auto; }
     .ov-filter { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; }
-    .ov-league { margin: 0 0 18px; display: grid; gap: 10px; }
-    .ov-league h2 { margin: 12px 0 0; }
+    .ov-league { margin: 0 0 18px; }
+    .ov-league-body { display: grid; gap: 10px; }
+    /* Liga-Kopf als Aufklapper (DESIGN 8.4, wie details.legal-fold): ganze Zeile tippbar (≥ 44 px), ▸ in Tiroler Rot. */
+    .ov-league > summary { list-style: none; cursor: pointer; display: flex; align-items: center; min-height: 44px;
+      margin: 12px 0 0; border-bottom: 1px solid var(--line); }
+    .ov-league > summary::-webkit-details-marker { display: none; }
+    .ov-league > summary::before { content: '▸'; color: var(--red); margin-right: 8px; transition: transform .15s; }
+    .ov-league[open] > summary::before { transform: rotate(90deg); }
+    .ov-league[open] > summary { margin-bottom: 10px; }
+    .ov-league h2 { margin: 0; }
     .ov-round { margin: 6px 0 0; font: 600 17px/1.2 var(--cond); }
     .ov-plus { margin-left: 8px; font-size: 14px; }
     .lu-match { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; }
@@ -144,6 +166,8 @@ export class ClubOverviewPageComponent implements OnInit {
   readonly onlyMarked = signal(false);
   /** Runden absteigend (jüngste oben) statt aufsteigend. */
   readonly newestFirst = signal(storedNewestFirst());
+  /** Zugeklappte Ligen (Turniernummern). */
+  readonly collapsed = signal<ReadonlySet<number>>(storedCollapsed());
   readonly tn = tn;
   readonly pts = points;
   /** „◆"/„!!" je Partie (`GameMarkers`, 0.850.0 geteilt mit den Aufstellungen einer Runde); „!!" füllt sich paketweise. */
@@ -178,6 +202,21 @@ export class ClubOverviewPageComponent implements OnInit {
     try { if (on) localStorage.setItem(NEWEST_FIRST_KEY, '1'); else localStorage.removeItem(NEWEST_FIRST_KEY); } catch { /* nur Bequemlichkeit */ }
   }
 
+  /** Auf-/Zuklappen einer Liga merken (auch das Aufklappen durch „In der Partie zeigen"). */
+  onToggle(tnr: number, ev: Event): void {
+    this.setCollapsed(tnr, !(ev.target as HTMLDetailsElement).open);
+  }
+
+  private setCollapsed(tnr: number, closed: boolean): void {
+    if (this.collapsed().has(tnr) === closed) return;
+    const next = new Set(this.collapsed());
+    if (closed) next.add(tnr); else next.delete(tnr);
+    this.collapsed.set(next);
+    try {
+      if (next.size) localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next])); else localStorage.removeItem(COLLAPSED_KEY);
+    } catch { /* nur Bequemlichkeit */ }
+  }
+
   ordered<T>(rounds: readonly T[]): readonly T[] {
     return this.newestFirst() ? [...rounds].reverse() : rounds;
   }
@@ -197,7 +236,11 @@ export class ClubOverviewPageComponent implements OnInit {
       subtitle: `${withRound ? `Runde ${rounds.get(match)} · ` : ''}Brett ${board.board}: ${board.homePlayer ?? '–'} – ${board.awayPlayer ?? '–'}`,
     }));
     const r = await openMarkedPositions(this.dialog, games);
-    if (r) this.boardGames().find(c => c.game().clubGameId === r.clubGameId)?.showAt(r.start);
+    if (!r) return;
+    // „In der Partie zeigen" in einer zugeklappten Liga: erst die Liga aufklappen.
+    const league = this.data()?.leagues.find(l => l.rounds.some(rd => rd.matches.some(m => m.boards.some(b => b.game?.clubGameId === r.clubGameId))));
+    if (league) this.setCollapsed(league.tnr, false);
+    this.boardGames().find(c => c.game().clubGameId === r.clubGameId)?.showAt(r.start);
   }
 
   markCount(b: LineupBoard): number {
