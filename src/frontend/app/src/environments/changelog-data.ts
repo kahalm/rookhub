@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.862.2", date: "2026-10-28", changes: [
+    { en: "UI sweep: the club game opened through a LeagueHub share link (/s/…/club-games/…) is now in the page catalogue, with a share link of a played round as test data.",
+      de: "UI-Sweep: Die Vereinspartie über einen LeagueHub-Teilen-Link (/s/…/club-games/…) steht jetzt im Seitenkatalog, mit dem Teilen-Link einer gespielten Runde als Testdaten." },
+  ] },
   { version: "0.862.1", date: "2026-10-27", changes: [
     { en: "Interesting positions (+): changing or removing tags and comments keeps the previous version — “Earlier versions” in the window lists them with time, and “Restore” puts one back into the fields (save to keep it). The history survives removing the mark.", de: "Interessante Stellungen (+): Ändern oder Löschen von Schlagworten und Bemerkung hebt die vorige Fassung auf — „Frühere Fassungen“ im Fenster zeigt sie mit Zeitpunkt, „Wiederherstellen“ holt eine in die Felder zurück (mit „Speichern“ übernehmen). Der Verlauf bleibt auch nach dem Entfernen der Markierung." },
     { en: "Fix: the new endpoint for saving tags and comments without an account was missing from the list of allowed anonymous endpoints (tag build v0.862.0 was red).", de: "Korrektur: Das Speichern von Schlagworten und Bemerkung ohne Konto fehlte in der Prüfliste der anonymen Endpunkte (Tag-Build v0.862.0 war rot)." },

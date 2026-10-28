@@ -118,6 +118,8 @@ export const ROUTES = [
   r('rookhub', '/games/{gameId}/edit', 'user', { main: ['.edit-page .board-card app-chess-board', '.edit-page mat-card.empty-state', '.edit-page .center'] }),
   r('rookhub', '/games/{analyzedGameId}', 'user', { label: 'games-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/club-games/{clubGameId}', 'user', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/club\/games\/\d+ → 403$/] }),
+  // Vereinspartie über den LeagueHub-Teilen-Link (0.838.3, „Analyse“ ohne Konto)
+  r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/reconstruct', 'user', { main: ['.page mat-card.item', '.page .empty-state', '.page mat-card.new-card'] }),

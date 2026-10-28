@@ -377,6 +377,46 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return {};
   });
 
+  // Teilen-Link einer GESPIELTEN Begegnung samt einer Vereinspartie an einem ihrer Bretter — für RookHubs
+  // `/s/{token}/club-games/{id}` (0.838.3). Der Link oben zeigt die nächste offene Runde, dort hängt noch keine Partie
+  // (404 im Lauf vom 28.10.). Höchstens 8 Versuche, jüngste gespielte Runden zuerst.
+  await step(['leagueShareGameToken', 'shareClubGameId'], async () => {
+    const firstGame = o => {
+      if (Array.isArray(o)) { for (const x of o) { const g = firstGame(x); if (g) return g; } return null; }
+      if (o && typeof o === 'object') {
+        if (Number.isInteger(o.clubGameId)) return o.clubGameId;
+        for (const v of Object.values(o)) { const g = firstGame(v); if (g) return g; }
+      }
+      return null;
+    };
+    const tryToken = async token => {
+      // Die Begegnung selbst trägt nur die Prognose; die Partien an den Brettern kommen aus `…/games` (lineups.ts).
+      const r = await fetch(`${base}/api/league/s/${token}/games`).then(x => x.ok ? x.json() : null, () => null);
+      return r && firstGame(r);
+    };
+    if (previous.leagueShareGameToken) {
+      const g = await tryToken(previous.leagueShareGameToken);
+      if (g) return { leagueShareGameToken: previous.leagueShareGameToken, shareClubGameId: g };
+    }
+    const me = await a.get('/api/league/me');
+    const club = me.clubs?.[0];
+    if (!club) return {};
+    // Vereinspartien mit Ligapaarung tragen „2026/27 · 1. Klasse · Runde 2 · Brett 5 (…)“ — daraus Liga + Runde.
+    const index = await a.get(`/api/league/index?club=${club.id}`);
+    const games = list(await a.get(`/api/league/club/games?club=${club.id}`)).filter(g => g.leagueGameId && g.leagueGameLabel);
+    let tries = 0;
+    for (const g of games) {
+      const m = /^[^·]+·\s*(.+?)\s*·\s*Runde\s+(\d+)\s*·/.exec(g.leagueGameLabel);
+      const league = m && (index.leagues ?? []).find(l => l.name === m[1] && l.own?.length);
+      if (!league) continue;
+      if (++tries > 4) break;
+      const s = await a.post(`/api/league/share?club=${club.id}`, { tnr: league.tnr, round: Number(m[2]), team: league.own[0] });
+      const id = await tryToken(s.token);
+      if (id) return { leagueShareGameToken: s.token, shareClubGameId: id };
+    }
+    return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
+  });
+
   // Offene Formular-Einlesung in LeagueHub (/verein/formular/{id}). Dev liest Formulare nicht selbst
   // (`Scoresheet:Reader=external`, der Watcher schaut nur auf Prod) — ein hochgeladenes Bild bleibt also „wartet aufs
   // Einlesen" stehen, ohne den Anthropic-Schlüssel anzufassen. Hochgeladen wird nur, wenn das Konto keine offene hat.
