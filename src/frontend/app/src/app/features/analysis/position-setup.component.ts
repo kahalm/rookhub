@@ -1,5 +1,5 @@
 import {
-  Component, ElementRef, EventEmitter, Input, inject, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy, OnChanges, SimpleChanges} from '@angular/core';
+  Component, ElementRef, EventEmitter, Input, input, inject, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy, OnChanges, SimpleChanges} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -116,7 +116,7 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
 
       @if (error) { <p class="ps-error">{{ error }}</p> }
 
-      @if (!hideActions) {
+      @if (!hideActions()) {
         <div class="ps-actions">
           <button mat-flat-button color="primary" (click)="applyPosition()">
             <mat-icon>check</mat-icon> {{ 'analysis.setup.apply' | translate }}
@@ -161,7 +161,7 @@ export class PositionSetupComponent implements OnInit, OnChanges, OnDestroy {
   @Input() requireLegal = true;
   /** `true` (Dialog „Stellung korrigieren“, d7): eigene Knopfzeile weglassen — der Dialog setzt „Abbrechen“/„Übernehmen“
    *  in `mat-dialog-actions` (bleibt sichtbar, während der Inhalt scrollt) und ruft {@link applyPosition} selbst. */
-  @Input() hideActions = false;
+  readonly hideActions = input(false);
 
   /** Volle, validierte FEN. */
   @Output() apply = new EventEmitter<string>();

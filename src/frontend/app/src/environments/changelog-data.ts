@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.869.1", date: "2026-10-28", changes: [
+    { en: "Position editor: the “hide buttons” option is a signal input (the build check for new decorator inputs failed for 0.869.0).",
+      de: "Stellungs-Editor: Die Option „Knopfzeile ausblenden“ ist ein Signal-Input (die Build-Prüfung auf neue Dekorator-Inputs schlug bei 0.869.0 fehl)." },
+  ] },
   { version: "0.869.0", date: "2026-10-28", changes: [
     { en: "Design round d7 (47 findings from the full check): “Correct position” keeps Apply/Cancel visible at every window size; dialogs show their first field label in full, stand out in dark mode and name the reason next to a disabled button; settings dialogs with translated board names, scroll hint and consistent titles; privacy pages also fold on the laptop (RookHub, LeagueHub, ClubHub); tournament calendar grouped by week on the phone; many text fixes (plurals, labels, tooltips).",
       de: "Design-Runde d7 (47 Funde aus dem vollen Check): „Stellung korrigieren“ zeigt Übernehmen/Abbrechen bei jeder Fenstergröße; Dialoge zeigen die Beschriftung des ersten Felds ganz, heben sich im Dunkelmodus ab und nennen den Grund neben einem gesperrten Knopf; Einstellungs-Dialoge mit übersetzten Brettnamen, Scroll-Hinweis und einheitlichen Titeln; Datenschutz klappt auch am Laptop zu (RookHub, LeagueHub, ClubHub); Turnierkalender am Handy nach Wochen gegliedert; viele Textkorrekturen (Mehrzahl, Beschriftungen, Tooltips)." },
