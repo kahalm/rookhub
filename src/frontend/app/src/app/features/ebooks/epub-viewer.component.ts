@@ -47,6 +47,34 @@ export function patchHtmlRequests(book: Pick<EpubBook, 'request' | 'archive'>): 
   }
 }
 
+/** Höchstlänge einer Zugzelle („12“, „Nxe5“, „Bxd4?!“, „0-0-0+“, „…“). */
+const MOVE_CELL_MAX = 10;
+
+/**
+ * Zugtabellen kompakt (0.875.0): Scribd-Umwandlungen setzen jede Zugzeile („4 | Nxe5 | Nxe5“) als Tabelle mit
+ * `width: 100%; margin: 5% auto` — Nummer, Weiß- und Schwarzzug standen über die ganze Breite verteilt, und die
+ * Prozent-Ränder (von der BREITE gerechnet) rissen große Lücken zwischen die Zeilen (Prod #2250, Screenshot 29.10.).
+ * Nur Tabellen, deren Zellen ALLE kurzer Text ohne Bild sind, werden markiert — andere Tabellen (Bewertungskästen,
+ * Diagramm-Layouts) bleiben, wie das Buch sie setzt. Gibt die Zahl der markierten Tabellen zurück.
+ */
+export function compactMoveTables(doc: Document): number {
+  let n = 0;
+  doc.querySelectorAll('table').forEach(t => {
+    const cells = Array.from(t.querySelectorAll('td, th'));
+    if (!cells.length || t.querySelector('img, svg, table')) return;
+    if (!cells.every(c => (c.textContent ?? '').trim().length <= MOVE_CELL_MAX)) return;
+    t.classList.add('rh-moves'); n++;
+  });
+  if (n && !doc.getElementById('rh-moves-style')) {
+    const s = doc.createElement('style');
+    s.id = 'rh-moves-style';
+    s.textContent = 'table.rh-moves{width:auto!important;margin:.15em 0!important;border-collapse:collapse}'
+      + 'table.rh-moves td,table.rh-moves th{padding:.05em 1.2em .05em 0!important;width:auto!important}';
+    (doc.head ?? doc.documentElement).appendChild(s);
+  }
+  return n;
+}
+
 export interface EpubDiagramImage { id: number; chapter: number; ref: string; title?: string; }
 
 /** Minimal-Schnittstelle von epub.js, die hier gebraucht wird (das Paket bringt eigene, sehr breite Typen mit). */
@@ -230,6 +258,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     rendition.themes.fontSize(`${this.fontScale}%`);
     rendition.hooks.content.register(c => this.markImages(c));
     rendition.hooks.content.register(c => this.listenMissed(c));
+    rendition.hooks.content.register((c: { document?: Document }) => { if (c.document) compactMoveTables(c.document); });
     // Mausrad im Kapitel (iframe): Ereignisse von dort erreichen den Host nicht (0.780.1).
     rendition.hooks.content.register((c: { document?: Document }) => c.document?.addEventListener('wheel',
       (ev: WheelEvent) => this.zone.run(() => this.onWheel(ev)), { passive: true }));

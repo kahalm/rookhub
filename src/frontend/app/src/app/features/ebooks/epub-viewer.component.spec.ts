@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { EpubViewerComponent, epubImagePath, expandSelfClosing, patchHtmlRequests, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
+import { compactMoveTables, EpubViewerComponent, epubImagePath, expandSelfClosing, patchHtmlRequests, SWIPE_MIN_PX, swipeDirection } from './epub-viewer.component';
 import { setEinkActive } from '../../core/eink';
 
 const BASE = 'http://rh.test/api/ebooks/9/epub/tok/';
@@ -36,6 +36,28 @@ describe('expandSelfClosing', () => {
   it('keeps void elements and attribute values containing slashes', () => {
     expect(expandSelfClosing('<img src="../Images/a.png" alt="x/y"/><br/>')).toBe('<img src="../Images/a.png" alt="x/y"/><br/>');
     expect(expandSelfClosing('<a href="x/y.html"/>')).toBe('<a href="x/y.html"></a>');
+  });
+});
+
+describe('compactMoveTables', () => {
+  const doc = (body: string) => new DOMParser().parseFromString(`<html><head></head><body>${body}</body></html>`, 'text/html');
+  const wide = 'style="width: 100%; margin: 5% auto"';
+
+  it('marks move rows (number, White, Black) and adds the style once', () => {
+    const d = doc(`<table ${wide}><tr><td>4</td><td>Nxe5</td><td>Nxe5</td></tr></table>`
+      + `<table ${wide}><tr><td>6</td><td>…</td><td>Qf6?</td></tr></table>`);
+    expect(compactMoveTables(d)).toBe(2);
+    expect(compactMoveTables(d)).toBe(2);
+    expect(d.querySelectorAll('table.rh-moves').length).toBe(2);
+    expect(d.querySelectorAll('#rh-moves-style').length).toBe(1);
+  });
+
+  it('leaves tables with images or longer text alone (rating boxes, layouts)', () => {
+    const d = doc(`<table ${wide}><tr><td>Soundness rating <img src="star.png"></td></tr></table>`
+      + `<table><tr><td>Position after 6 Qxf3 White has sacrificed a piece</td></tr></table>`);
+    expect(compactMoveTables(d)).toBe(0);
+    expect(d.querySelector('table.rh-moves')).toBeNull();
+    expect(d.getElementById('rh-moves-style')).toBeNull();
   });
 });
 

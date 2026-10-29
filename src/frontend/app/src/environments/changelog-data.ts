@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.875.0',
+    date: '2026-10-29',
+    changes: [
+      { en: 'E-book reader (EPUB): move tables are shown compactly — number, White and Black move side by side instead of spread across the whole width with large gaps (e.g. “50 Chess Traps in the Opening”).',
+        de: 'E-Book-Leser (EPUB): Zugtabellen kompakt — Nummer, Weiß- und Schwarzzug nebeneinander statt über die ganze Breite verteilt mit großen Lücken (z. B. „50 Chess Traps in the Opening“).' },
+    ],
+  },
   { version: "0.874.0", date: "2026-10-29", changes: [
     { en: "E-books: the jobs for cutting out diagram boards (raw material for the AI reading of book diagrams) now also run through RookHub — the diagram worker container fetches them with its own token and cuts them, instead of only the laptop via a file share.",
       de: "E-Books: Die Aufträge zum Ausschneiden der Diagramm-Bretter (Rohstoff für das KI-Lesen der Buchdiagramme) laufen jetzt auch über RookHub — der Diagramm-Worker-Container holt sie mit seinem eigenen Token und schneidet sie aus, statt nur der Laptop über eine Dateifreigabe." },

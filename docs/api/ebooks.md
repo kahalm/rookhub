@@ -171,6 +171,9 @@ Stellung. Regelwidrige Buchstellungen (chess.js lehnt ab, z. B. Studie ohne Kön
   Prozent (1–100) bei `PageCount` 100 — so funktioniert der Fortschrittsbalken der Karten unverändert. Die CSP des
   Frontend-nginx erlaubt dafür `blob:` bei `style-src` und `font-src` (epub.js reicht Buch-CSS und -Schriften als blob: ins
   iframe; vorher: Buch ungestaltet, CSP-Fehler). Buch-Skripte bleiben aus (epub.js-Vorgabe).
+  **Zugtabellen** (0.875.0, `compactMoveTables`, Content-Hook): Tabellen, deren Zellen alle kurzer Text (≤ 10 Zeichen, kein
+  Bild) sind, bekommen `rh-moves` → `width:auto`, kleine Ränder. Scribd-Umwandlungen setzen jede Zugzeile als Tabelle mit
+  `width:100%; margin:5% auto` (#2250: Züge über die ganze Breite, große Lücken). Andere Tabellen bleiben unverändert.
 - **DJVU → PDF** (`EbookDjvuConverter`, alle 30 s ein Buch, `ddjvu -format=pdf`, Deckel 30 min): Bücher NUR mit DJVU
   (`EbookFormats.NeedsPdfConversion`) bekommen `converted/<id>.pdf` unter `Ebooks:Root` als `EbookFile` mit `Derived = true`
   (liegt immer unter der beschreibbaren Wurzel, wird mit dem Buch gelöscht; `EbookStorage.ResolveFile` wählt die Wurzel).
