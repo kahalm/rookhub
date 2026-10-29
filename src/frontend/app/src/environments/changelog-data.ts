@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.877.2',
+    date: '2026-10-29',
+    changes: [
+      { en: 'E-book library: sorting and “My uploads” now also sit behind “Filter ▾” on every screen width.',
+        de: 'E-Book-Bibliothek: Sortierung und „Meine Uploads“ stehen jetzt auf jeder Breite ebenfalls hinter „Filter ▾“.' },
+    ],
+  },
+  {
     version: '0.877.1',
     date: '2026-10-29',
     changes: [

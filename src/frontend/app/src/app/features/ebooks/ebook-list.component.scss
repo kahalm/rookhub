@@ -25,9 +25,10 @@
 .eb-sort { flex: 0 0 320px; max-width: 100%; }
 /* Ab 600 px stehen Sortierung und „Meine Uploads“ direkt in der Zeile (die Hülle zählt nicht); Schlagwörter, Sprache und
    Elo-Spanne liegen auf jeder Breite in der Filter-Komponente hinter „Filter ▾“ (0.877.0), aktive als Chips darunter. */
-.eb-filter-more { display: contents; }
+.eb-filter-more { display: none; }
+/* 0.877.2: Sortierung und „Meine Uploads“ auf jeder Breite hinter „Filter ▾“ (Nutzerwunsch 29.10.). */
+.eb-filter-more--open { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
 .eb-active { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.eb-chip.eb-active-mine { display: none; } /* „Meine Uploads“ steht ab 600 px sichtbar in der Zeile */
 /* Gesamtmenge zur Filterung (0.877.0): leise Zeile über dem Regal. */
 .eb-totals { margin: 0 0 12px; font-size: .85rem; opacity: .75; }
 .eb-author-filter { display: flex; margin-bottom: 12px; }
@@ -124,9 +125,6 @@
   /* Handy (DESIGN 4.6 Nr. 7): Suche + „Filter ▾“ in einer Zeile, der Rest zugeklappt; aktive Filter als Chips. */
   .eb-search { flex: 1 1 0; min-width: 0; max-width: none; }
   .eb-chip.eb-filter-toggle { min-height: 44px; }
-  .eb-filter-more { display: none; }
-  .eb-filter-more--open { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
-  .eb-chip.eb-active-mine { display: inline-flex; }
   .eb-totals-formats { display: none; }
   /* Download nur als Symbol (der Name steht im aria-label): „Herunterladen“ passt nicht in 110 px. */
   .eb-act--download .eb-act-label { display: none; }

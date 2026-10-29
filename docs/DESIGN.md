@@ -821,8 +821,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Regal: Hauptknopf füllt die Aktionszeile, einzeilig („Weiter“, Seite im Namen; Download am Handy nur Symbol);
   Filter (Schlagwörter, Sprache, Elo-Spanne) auf JEDER Breite in einer Filter-Komponente hinter „Filter ▾“ mit Zahl der
   aktiven Filter, zugeklappt aktive Filter als Chips (0.877.0); darin Schlagwörter zugeklappt die 8 häufigsten + „Alle
-  Schlagwörter (n)“, aufgeklappt nach angezeigter Beschriftung sortiert; am Handy zusätzlich Sortierung/„Meine Uploads“
-  hinter „Filter ▾“; über dem Regal eine leise Gesamtzeile „N Bücher · M Dateien (Formate)“; ohne Bücher keine
+  Schlagwörter (n)“, aufgeklappt nach angezeigter Beschriftung sortiert; Sortierung und „Meine Uploads“ ebenfalls hinter
+  „Filter ▾“, auf jeder Breite (0.877.2); über dem Regal eine leise Gesamtzeile „N Bücher · M Dateien (Formate)“; ohne Bücher keine
   Filterzeile; gefiltert leer → „Filter zurücksetzen“. Leser: 404/403 = „gibt es nicht“ + „Zurück zur Bibliothek“, keine
   App-Fußzeile (Seite genau fensterhoch).
   **EINE Leiste oben (0.785.x):** ist das Buch geladen, setzt der Leser `body.nav-docked` — die App-Kopfleiste verliert Logo
@@ -1131,6 +1131,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-29 | 0.877.2 | E-Books: Sortierung und „Meine Uploads“ auf jeder Breite hinter „Filter ▾“ (vorher ab 600 px in der Zeile); aktives „Meine Uploads“ zugeklappt als Chip | Nutzerwunsch 29.10.: „my uploads gehört auch in filtercomponente“, „sort by auch in filter“ | Nutzer |
 | 2026-10-29 | 0.877.0 | E-Books: Schlagwörter, Sprache und Elo-Spanne auf jeder Breite in EINER Filter-Komponente hinter „Filter ▾“ (Zahl der aktiven Filter, zugeklappt Chips), Sortierung/„Meine Uploads“ ab 600 px weiter in der Zeile; Schlagwörter in der Oberflächensprache beschriftet und danach sortiert; leise Gesamtzeile „N Bücher · M Dateien (Formate)“ über dem Regal | Nutzerwunsch 29.10.: „versteck die tags in einer filterkomponente“, „tags müssen mehrsprachig sein“, Gesamtmenge passend zur Filterung | Nutzer |
 | 2026-10-29 | 0.876.0 · Buch-Übersetzung | Leser: Sprachschalter als `translate`-Symbolknopf mit Menü Original/Englisch (aktiv = Primärfarbe), je Gerät gemerkt; Regal: Abzeichen `translate` + „EN“; Verwalter-Übersicht als 560-px-Dialog aus dem Bibliotheks-⋮ (8.1) | Bücher werden ins Englische übersetzt — umschalten muss im Leser ohne neue Leiste gehen | Nutzerwunsch 29.10. |
 | 2026-10-28 | 0.869.5 | LeagueHub-Brettpaarungen am Handy: eigener Container `.pairings-wrap`, unter 480 px Namen umbrechend, Elo in Zeile 2, Abzeichen/Analyse/⋮ gestapelt, Analyse und ⋮ 44 × 44 px (8.4) | Tabelle 461 px breit, Analyse-Symbol und ⋮ außerhalb des Bildes, Seite scrollte waagerecht | UI-Sweep 20261028_1906_lh-brettmenue |

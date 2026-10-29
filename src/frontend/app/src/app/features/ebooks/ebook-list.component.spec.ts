@@ -275,15 +275,12 @@ describe('EbookListComponent', () => {
     expect(panel.querySelectorAll('.eb-tags .eb-chip:not(.eb-tags-more)').length).toBe(8);
     expect(panel.querySelector('.eb-elo')).not.toBeNull();
     expect(panel.querySelector('[data-lang="de"]')!.getAttribute('aria-pressed')).toBe('true');
-    // „Filter ▾“ auf jeder Breite; unter 600 px Sortierung/„Meine Uploads“ zusätzlich hinter dem Knopf.
+    // 0.877.2: „Filter ▾“ auf jeder Breite, Sortierung und „Meine Uploads“ auf jeder Breite dahinter.
     const css = compactCss(EbookListComponent);
-    const base = css.slice(0, css.indexOf('@media(max-width:599.98px)'));
-    expect(base).toMatch(/\.eb-filter-more(\[[^\]]*\])?\{display:contents/);
-    expect(base).not.toMatch(/\.eb-filter-toggle(\[[^\]]*\])?\{display:none/);
-    expect(base).toMatch(/\.eb-active-mine(\[[^\]]*\])?\{display:none/);
-    const narrow = css.slice(css.indexOf('@media(max-width:599.98px)'));
-    expect(narrow).toMatch(/\.eb-filter-more(\[[^\]]*\])?\{display:none/);
-    expect(narrow).toMatch(/\.eb-active-mine(\[[^\]]*\])?\{display:inline-flex/);
+    expect(css).toMatch(/\.eb-filter-more(\[[^\]]*\])?\{display:none/);
+    expect(css).toMatch(/\.eb-filter-more--open(\[[^\]]*\])?\{display:flex/);
+    expect(css).not.toMatch(/\.eb-filter-toggle(\[[^\]]*\])?\{display:none/);
+    expect(css).not.toMatch(/\.eb-active-mine(\[[^\]]*\])?\{display:none/);
     fixture.destroy();
   });
 

@@ -60,7 +60,7 @@
                  [placeholder]="(narrow() ? 'ebooks.searchShort' : 'ebooks.search') | translate" [attr.aria-label]="'ebooks.search' | translate" />
         </mat-form-field>
         <!-- 0.877.0 (Nutzerwunsch 29.10.): Schlagwörter, Sprache und Elo stehen auf jeder Breite hinter „Filter ▾“ (Zahl =
-             aktive Filter); am Handy kommen Sortierung und „Meine Uploads“ dazu (DESIGN 4.6 Nr. 7, c1-eb-tag-filter-lead). -->
+             aktive Filter); Sortierung und „Meine Uploads“ ebenfalls, seit 0.877.2 auf jeder Breite (DESIGN 4.6 Nr. 7). -->
         <button type="button" class="eb-chip eb-filter-toggle" [class.eb-chip--on]="activeFilterCount > 0"
                 [attr.aria-expanded]="filtersOpen()" aria-controls="eb-filter-panel eb-filter-more" (click)="filtersOpen.set(!filtersOpen())">
           <mat-icon>tune</mat-icon>{{ 'ebooks.filter.toggle' | translate }}
@@ -96,7 +96,7 @@
         </div>
       }
 
-      <!-- Zugeklappt: aktive Filter als Chips (ein Tipp nimmt sie zurück); „Meine Uploads“ nur am Handy (sonst in der Zeile). -->
+      <!-- Zugeklappt: aktive Filter als Chips (ein Tipp nimmt sie zurück), auch „Meine Uploads“. -->
       @if (!filtersOpen() && (mine || eloActive || tag || language || translation)) {
         <div class="eb-active" role="group" [attr.aria-label]="'ebooks.filter.active' | translate">
           @if (mine) {
