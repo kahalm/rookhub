@@ -63,51 +63,59 @@ public class EbookService
             .OrderByDescending(f => f.Count).ThenBy(f => f.Tag, StringComparer.OrdinalIgnoreCase)
             .Take(60)
             .ToList();
-        // Sprach-Facetten (0.877.0): Buchsprache und fertige Übersetzungen, ebenfalls über alles Sichtbare.
-        var languages = (await visible.GroupBy(b => b.Language).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
+        IQueryable<Ebook> Filter(bool language, bool translation)
+        {
+            var query = visible;
+            if (q.Mine)
+                query = caller.IsAnonymous
+                    ? query.Where(b => anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon)
+                    : query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
+            if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount >= MinDiagramsForFilter);
+            if (q.MinElo is int minElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo >= minElo);
+            if (q.MaxElo is int maxElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo <= maxElo);
+            if (language && !string.IsNullOrWhiteSpace(q.Language))
+            {
+                var lang = q.Language.Trim().ToLowerInvariant();
+                query = lang == "unknown" ? query.Where(b => b.Language == null) : query.Where(b => b.Language == lang);
+            }
+            if (translation && !string.IsNullOrWhiteSpace(q.Translation))
+            {
+                var target = q.Translation.Trim().ToLowerInvariant();
+                query = query.Where(b => _db.EbookTranslations.Any(t => t.EbookId == b.Id && t.Language == target && t.State == EbookTranslationState.Done));
+            }
+            if (!string.IsNullOrWhiteSpace(q.Search))
+            {
+                var term = q.Search.Trim().ToLowerInvariant();
+                query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term) || b.Tags.ToLower().Contains(term));
+            }
+            if (!string.IsNullOrWhiteSpace(q.Author))
+            {
+                var name = q.Author.Trim().ToLowerInvariant();
+                query = query.Where(b => b.Author.ToLower().Contains(name));
+            }
+            if (!string.IsNullOrWhiteSpace(q.Tag))
+            {
+                // CSV-Spalte: „,Tag," im ",Tags," — ohne Teilwort-Treffer (Endspiel ≠ Endspielstudien).
+                var needle = "," + q.Tag.Trim().ToLowerInvariant() + ",";
+                query = query.Where(b => ("," + b.Tags.ToLower() + ",").Contains(needle));
+            }
+            return query;
+        }
+
+        // Sprach-Facetten (0.877.0): Buchsprache und fertige Übersetzungen. Gezählt unter allen ANDEREN Filtern (0.879.1,
+        // UI-Sweep): sonst zeigte „es 23“ neben einem Schlagwortfilter und die Kombination ergab 0 Bücher.
+        var languages = (await Filter(language: false, translation: true).GroupBy(b => b.Language).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
             .Select(g => new EbookLanguageFacetDto { Language = g.Key, Count = g.Count })
             .OrderByDescending(f => f.Count).ThenBy(f => f.Language ?? "~", StringComparer.Ordinal).ToList();
         // (EbookId, Language) ist eindeutig — Count zählt Bücher.
+        var forTranslations = Filter(language: true, translation: false);
         var translations = (await _db.EbookTranslations
-                .Where(t => t.State == EbookTranslationState.Done && visible.Any(b => b.Id == t.EbookId))
+                .Where(t => t.State == EbookTranslationState.Done && forTranslations.Any(b => b.Id == t.EbookId))
                 .GroupBy(t => t.Language).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
             .Select(g => new EbookLanguageFacetDto { Language = g.Key, Count = g.Count })
             .OrderByDescending(f => f.Count).ThenBy(f => f.Language, StringComparer.Ordinal).ToList();
 
-        var query = visible;
-        if (q.Mine)
-            query = caller.IsAnonymous
-                ? query.Where(b => anon != null && b.OwnerUserId == null && b.AnonymousSessionId == anon)
-                : query.Where(b => b.OwnerUserId == userId && b.Source == EbookSource.Upload);
-        if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount >= MinDiagramsForFilter);
-        if (q.MinElo is int minElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo >= minElo);
-        if (q.MaxElo is int maxElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo <= maxElo);
-        if (!string.IsNullOrWhiteSpace(q.Language))
-        {
-            var lang = q.Language.Trim().ToLowerInvariant();
-            query = lang == "unknown" ? query.Where(b => b.Language == null) : query.Where(b => b.Language == lang);
-        }
-        if (!string.IsNullOrWhiteSpace(q.Translation))
-        {
-            var target = q.Translation.Trim().ToLowerInvariant();
-            query = query.Where(b => _db.EbookTranslations.Any(t => t.EbookId == b.Id && t.Language == target && t.State == EbookTranslationState.Done));
-        }
-        if (!string.IsNullOrWhiteSpace(q.Search))
-        {
-            var term = q.Search.Trim().ToLowerInvariant();
-            query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term) || b.Tags.ToLower().Contains(term));
-        }
-        if (!string.IsNullOrWhiteSpace(q.Author))
-        {
-            var name = q.Author.Trim().ToLowerInvariant();
-            query = query.Where(b => b.Author.ToLower().Contains(name));
-        }
-        if (!string.IsNullOrWhiteSpace(q.Tag))
-        {
-            // CSV-Spalte: „,Tag," im ",Tags," — ohne Teilwort-Treffer (Endspiel ≠ Endspielstudien).
-            var needle = "," + q.Tag.Trim().ToLowerInvariant() + ",";
-            query = query.Where(b => ("," + b.Tags.ToLower() + ",").Contains(needle));
-        }
+        var query = Filter(language: true, translation: true);
 
         // Sammlungen (0.787.0): geöffnet → nur ihre Bücher; sonst steht je Sammlung EIN Buch (das älteste passende) als
         // Ordner da — außer bei einer Suche oder einem Autor, die sollen das einzelne Heft finden.

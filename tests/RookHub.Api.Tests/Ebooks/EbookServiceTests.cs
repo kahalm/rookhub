@@ -264,10 +264,19 @@ public class EbookServiceTests : IDisposable
         Assert.Equal(["Deutsch A"], await Titles(null, "en"));
         Assert.Equal(["Deutsch A"], await Titles("de", "en"));
 
-        // Facetten über alles Sichtbare, unabhängig vom Filter; null = unbestimmt.
+        // Sprach-Facette ohne den eigenen Sprachfilter (alle Sprachen bleiben wählbar); null = unbestimmt. Die
+        // Übersetzungs-Facette gilt unter dem Sprachfilter: unter den englischen Büchern ist keines übersetzt.
         var filtered = await List("en", null);
         Assert.Equal([("de", 2), ("en", 1), (null, 1)], filtered.Languages.Select(f => (f.Language, f.Count)));
-        Assert.Equal([("en", 1)], filtered.Translations.Select(f => (f.Language, f.Count)));
+        Assert.Empty(filtered.Translations);
+        Assert.Equal([("en", 1)], (await List("de", null)).Translations.Select(f => (f.Language, f.Count)));
+
+        // Andere Filter zählen mit (0.879.1, UI-Sweep): mit Schlagwort nur noch die Sprachen der passenden Bücher.
+        a.Tags = "Endspiel";
+        await _kit.Db.SaveChangesAsync();
+        var tagged = await _kit.Service.ListAsync(owner.Id, false, new EbookQuery { Tag = "Endspiel" });
+        Assert.Equal([("de", 1)], tagged.Languages.Select(f => (f.Language, f.Count)));
+        Assert.Equal([("en", 1)], tagged.Translations.Select(f => (f.Language, f.Count)));
     }
 
     [Fact]

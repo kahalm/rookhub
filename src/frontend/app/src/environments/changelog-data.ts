@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.879.1',
+    date: '2026-10-29',
+    changes: [
+      {
+        en: 'E-book library: the language and translation counts in the filter now respect the other filters (tag, Elo, search …), so a language chip no longer promises books that the combination then does not show.',
+        de: 'E-Book-Bibliothek: die Zahlen bei Sprachen und Übersetzungen im Filter berücksichtigen jetzt die übrigen Filter (Schlagwort, Elo, Suche …) — ein Sprach-Chip verspricht keine Bücher mehr, die die Kombination dann nicht zeigt.',
+      },
+    ],
+  },
+  {
     version: '0.879.0',
     date: '2026-10-29',
     changes: [
