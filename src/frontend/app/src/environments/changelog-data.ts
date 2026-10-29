@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.876.2',
+    date: '2026-10-29',
+    changes: [
+      { en: 'Book translation status dialog uses OnPush change detection (lint ratchet).',
+        de: 'Statusfenster der Buch-Übersetzung mit OnPush-Änderungserkennung (Lint-Ratsche).' },
+    ],
+  },
+  {
     version: '0.876.1',
     date: '2026-10-29',
     changes: [

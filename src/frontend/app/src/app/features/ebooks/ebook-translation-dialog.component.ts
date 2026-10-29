@@ -17,7 +17,7 @@ import { EbookService, EbookTranslationStatus } from './ebook.service';
  * „Fehlgeschlagene wiederholen“ reiht sie neu ein.
  */
 @Component({
-  changeDetection: ChangeDetectionStrategy.Default,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-ebook-translation-dialog',
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule, TranslatePipe, LoadErrorComponent, LoadingSpinnerComponent],
