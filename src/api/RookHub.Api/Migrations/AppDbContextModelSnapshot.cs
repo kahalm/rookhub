@@ -420,6 +420,55 @@ namespace RookHub.Api.Migrations
                     b.ToTable("AuthHandoffTokens");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.BoardCutJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<int?>("FileId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Worker")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookId");
+
+                    b.HasIndex("State", "CreatedAt");
+
+                    b.ToTable("BoardCutJobs");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.Book", b =>
                 {
                     b.Property<int>("Id")
@@ -8900,6 +8949,17 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.BoardCutJob", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.BookGroupAccess", b =>

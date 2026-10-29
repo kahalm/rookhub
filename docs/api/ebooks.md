@@ -427,6 +427,29 @@ amd64 + arm64, Workflow `diagram-worker.yml` bei jedem Release-Tag) plus ein sch
 Diagramm-Erkennung (`worker.py`, Test `scripts/tests/test_diagram_worker.py`). Gedacht für den DGX Spark und andere
 Linux-Rechner; Einrichten: `tools/DiagramWorker/README.md`. Die Laptop-Fassung (Windows, mit Brett-Aufträgen) bleibt.
 
+## Brett-Ausschneide-Aufträge (0.874.0)
+
+Die Opus-Lese-Schleife (`ebook-board-training/fs`) braucht je Buch ausgeschnittene Bretter (`cells.npz`, `crops/`). Statt
+über Dateien im WebDAV-Bereich laufen die Aufträge jetzt (zusätzlich, WebDAV bleibt bis zur Umstellung von `remote.py`)
+über RookHub: Tabelle **`BoardCutJobs`** (`BoardCutJobService`), Leihe wie bei den Diagramm-Workern (30 min, Lebenszeichen).
+Der Container-Worker (`tools/DiagramWorker`, gleicher Token mit Scope `diagrams`) nimmt Brett-Aufträge VOR der
+Diagramm-Erkennung; das Ausschneiden ist wörtlich der Laptop-Code (`boardcut/`, geprüft bytegleich an #3615).
+
+| Methode | Pfad | Zweck |
+|---|---|---|
+| POST | `/api/admin/board-jobs` | Admin: `{ ebookId, fileId?, payload }` (payload = bisheriges Auftrags-JSON mit `pages`) → Auftrag; ein wartender älterer für dasselbe Buch wird `Cancelled` |
+| GET | `/api/admin/board-jobs?state=Pending` · `/api/admin/board-jobs/{jobId}` | Stand (`Pending`/`Done`/`Failed`/`Cancelled`, Worker, Fehler) |
+| POST | `/api/admin/board-jobs/{jobId}/cancel` | wartenden Auftrag zurückziehen |
+| POST | `/api/board-worker/claim` | Worker: `{ worker? }` → `{ jobId, ebookId, title, payload, file: { url, … }, leaseUntil, heartbeatSeconds }`, 204 = nichts |
+| GET | `/api/board-worker/jobs/{jobId}/file` | das PDF (Original vor abgeleitetem, wie `prep.book_file`) |
+| POST | `/api/board-worker/jobs/{jobId}/heartbeat` · `…/release` | Leihe verlängern · zurückgeben (`{ error }` = fehlgeschlagen) |
+| POST | `/api/board-worker/jobs/{jobId}/result` | multipart `cells` (npz), `prep` (JSON), `crops` (ZIP nur `<Diagramm-Id>.png`) |
+
+Ablage: **`<Ebooks:Root>/board-cells/<EbookId>/`** (Prod-Host `/srv/media/rookhub-ebooks/prod/board-cells/<EbookId>`),
+dieselben Dateien wie bisher unter `ebook-board-cells/b<id>`. Überschrieben wird, gelöscht nie („Bretter nie löschen“);
+`prep.json` kommt zuletzt (sein Dasein heißt „fertig“), jede Datei erst als `.part`. Der Admin-Teil ist für den Worker-Token
+gesperrt (Scope-Zaun).
+
 ## Brett-Modi im Leser (0.777.0)
 
 Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das

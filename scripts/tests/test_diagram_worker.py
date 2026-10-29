@@ -6,6 +6,7 @@ Prueft die Zusagen des Workers:
   * Pausen nach /claim: 204 kurz, Token-/Versionsfehler eine Stunde, sonst 5 min
   * Token aus Datei (Docker-Secret) vor Umgebungsvariable
   * Erfolg: Ergebnis an /result; Programmfehler: Buch mit Fehlertext zurueckgeben; Ausnahme: Buch ohne Fehler freigeben
+  * Bretter (0.874.0): Brett-Auftraege gehen vor; Upload als cells.npz/prep.json/crops.zip im Format des Laptop-Workers
 
     python3 scripts/tests/test_diagram_worker.py
 """
@@ -140,6 +141,55 @@ class WorkerTests(unittest.TestCase):
         w.run_job(JOB, '0.873.0')
         released = [c for c in self.calls if c[1].endswith('/release')]
         self.assertEqual(released, [('POST', 'api/diagram-worker/jobs/j1/release', {})])
+
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+
+class BoardTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self._rh, self._work, self._sleep = w.rh, w.WORK, w.time.sleep
+        w.WORK = os.path.join(self.tmp, 'work')
+        w.time.sleep = lambda s: None
+
+    def tearDown(self):
+        w.rh, w.WORK, w.time.sleep = self._rh, self._work, self._sleep
+
+    def test_boards_go_first_then_diagrams(self):
+        order = []
+        old_b, old_d = w.board_once, w.diagram_once
+        try:
+            w.board_once = lambda: order.append('board') or False
+            w.diagram_once = lambda v: order.append('diagram') or False
+            (w.board_once() or w.diagram_once('x'))
+        finally:
+            w.board_once, w.diagram_once = old_b, old_d
+        self.assertEqual(order, ['board', 'diagram'])
+
+    def test_board_claim_without_work_does_nothing(self):
+        w.rh = lambda m, p, **kw: Resp(204)
+        self.assertFalse(w.board_once())
+
+    @unittest.skipIf(np is None, 'numpy fehlt')
+    def test_upload_parts_have_the_laptop_format(self):
+        import zipfile
+        work = os.path.join(self.tmp, 'b1'); os.makedirs(os.path.join(work, 'crops'))
+        open(os.path.join(work, 'crops', '11.png'), 'wb').write(b'png')
+        res = [(np.zeros((64, 32, 32), np.uint8), 11, '8/8/8/8/8/8/8/K6k w - - 0 1', 0.9, (3, 0.1, 0.1, 0.3, 0.3))]
+        files = w.cut_files(res, {'diagrams': 1, 'source': '/lib/b.pdf'}, 1, work)
+        d = np.load(io.BytesIO(files['cells'][1]))
+        self.assertEqual(d['cells'].shape, (1, 64, 32, 32))
+        self.assertEqual(d['cells'].dtype, np.uint8)
+        self.assertEqual(list(d['ids']), [11])
+        self.assertEqual(d['pos'].shape, (1, 5))
+        self.assertEqual(json.loads(files['prep'][1])['cut'], 1)
+        self.assertEqual(zipfile.ZipFile(io.BytesIO(files['crops'][1])).namelist(), ['11.png'])
+        empty = np.load(io.BytesIO(w.cut_files([], {'diagrams': 3}, 2, work)['cells'][1]))
+        self.assertEqual(empty['cells'].shape, (0, 64, 32, 32))
 
 
 if __name__ == '__main__':

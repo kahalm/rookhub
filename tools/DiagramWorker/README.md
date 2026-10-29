@@ -2,8 +2,10 @@
 
 Externer Diagramm-Worker für RookHub (ab 0.873.0, Server ab 0.870.0): leiht wartende E-Books über `/api/diagram-worker`,
 erkennt die Diagramme mit dem eingebauten `rookhub-diagrams` (`tools/DiagramCli`, derselbe Code wie der Server) und
-schickt das Ergebnis zurück. Nur die Diagramm-Erkennung — die Brett-Aufträge über WebDAV bleiben beim Laptop-Worker
-(`~/claude/ebook-board-training/worker/`). Ablauf, Leihe und Endpunkte: `docs/api/ebooks.md`, „Externe Diagramm-Worker“.
+schickt das Ergebnis zurück. Seit 0.874.0 schneidet er außerdem **Bretter** für die Opus-Schleife aus (`/api/board-worker`,
+derselbe Token; Brett-Aufträge gehen vor) — das Ausschneiden ist wörtlich der Code des Laptop-Workers (`boardcut/`,
+bytegleiche Ergebnisse). Die WebDAV-Aufträge macht weiter nur der Laptop. Ablauf, Leihe und Endpunkte: `docs/api/ebooks.md`,
+„Externe Diagramm-Worker“ und „Brett-Ausschneide-Aufträge“.
 
 ## Starten (z. B. DGX Spark)
 
@@ -28,6 +30,7 @@ geänderter Erkennung: `docker compose pull && docker compose up -d`.
 | `WORKER_NAME` | Rechnername (`spark` in compose) | Name im Server-Log |
 | `THREADS` | Kerne − 2 | Seitenstapel gleichzeitig |
 | `IDLE_SECONDS` | 30 | Pause ohne Arbeit |
+| `BOARDS` / `DIAGRAMS` | an | `0` schaltet Brett-Aufträge bzw. Diagramm-Erkennung ab |
 
 `docker stop` gibt ein laufendes Buch sofort frei (SIGTERM), sonst wäre es bis zum Ablauf der Leihe (30 min) gesperrt.
 

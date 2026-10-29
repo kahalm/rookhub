@@ -161,3 +161,22 @@ internal sealed class EbookDiagramCorrectionConfiguration : IEntityTypeConfigura
     }
 }
 
+
+// Brett-Ausschneide-Aufträge (0.874.0): Warteschlange für externe Worker, „älteste wartende zuerst“.
+internal sealed class BoardCutJobConfiguration : IEntityTypeConfiguration<BoardCutJob>
+{
+    public void Configure(EntityTypeBuilder<BoardCutJob> e)
+    {
+        e.HasIndex(j => new { j.State, j.CreatedAt });
+        e.HasIndex(j => j.EbookId);
+        e.Property(j => j.PayloadJson).HasColumnType("longtext");
+        e.Property(j => j.LeaseOwner).HasMaxLength(64);
+        e.Property(j => j.Worker).HasMaxLength(64);
+        e.Property(j => j.Error).HasMaxLength(2000);
+        e.HasOne(j => j.Ebook)
+         .WithMany()
+         .HasForeignKey(j => j.EbookId)
+         // Buch gelöscht → seine Aufträge sind gegenstandslos (die Bretter auf der Platte bleiben).
+         .OnDelete(DeleteBehavior.Cascade);
+    }
+}

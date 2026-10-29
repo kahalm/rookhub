@@ -181,7 +181,7 @@ public class PatScopeFenceTests
         Assert.Equal(new[] { "diagrams", "engine", "extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope.Keys.Order());
         Assert.Equal(new[] { "/api/extension" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["extension"]);
         Assert.Equal(new[] { "/api/external-engine" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["engine"]);
-        Assert.Equal(new[] { "/api/diagram-worker" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["diagrams"]);
+        Assert.Equal(new[] { "/api/diagram-worker", "/api/board-worker" }, PatScopeFenceMiddleware.AllowedPrefixesByScope["diagrams"]);
     }
 
     /// <summary>Externe Diagramm-Worker (0.870.0): ihr Token darf nur /api/diagram-worker, nicht die Bibliothek selbst.</summary>
@@ -191,6 +191,11 @@ public class PatScopeFenceTests
     [InlineData("/api/ebooks", false)]
     [InlineData("/api/admin/ebooks/1/diagrams/supplement", false)]
     [InlineData("/api/diagram-workerx", false)]
+    // 0.874.0: derselbe Token schneidet Bretter aus — die Aufträge ANLEGEN darf er nicht (nur Admin per Anmeldung)
+    [InlineData("/api/board-worker/claim", true)]
+    [InlineData("/api/board-worker/jobs/00000000-0000-0000-0000-000000000001/result", true)]
+    [InlineData("/api/admin/board-jobs", false)]
+    [InlineData("/api/board-workerx", false)]
     public void DiagramsScope_OnlyTheWorkerSurface(string path, bool allowed)
         => Assert.Equal(allowed, PatScopeFenceMiddleware.IsAllowedPath(path, "diagrams"));
 

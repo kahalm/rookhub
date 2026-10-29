@@ -29,5 +29,6 @@ public static partial class DomainServicesSetup
         services.AddScoped<RookHub.Api.Services.Ebooks.CourseEbookLinker>();
         // Externe Diagramm-Worker (0.870.0, /api/diagram-worker): Leihe, Dateien, Ergebnis über denselben Speicherweg wie der Worker.
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookDiagramWorkerService>();
+        services.AddScoped<RookHub.Api.Services.Ebooks.BoardCutJobService>();
     }
 }

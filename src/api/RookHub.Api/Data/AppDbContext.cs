@@ -122,6 +122,7 @@ public partial class AppDbContext : DbContext
     public DbSet<BookGroupAccess> BookGroupAccesses => Set<BookGroupAccess>();
     // E-Book-Bibliothek (/ebooks): Titel mit Dateien, Gruppen-Freigabe je Buch, Lesestand je Nutzer.
     public DbSet<Ebook> Ebooks => Set<Ebook>();
+    public DbSet<BoardCutJob> BoardCutJobs => Set<BoardCutJob>();
     public DbSet<EbookFile> EbookFiles => Set<EbookFile>();
     public DbSet<EbookGroupAccess> EbookGroupAccesses => Set<EbookGroupAccess>();
     public DbSet<EbookProgress> EbookProgresses => Set<EbookProgress>();

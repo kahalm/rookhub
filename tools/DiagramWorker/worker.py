@@ -1,9 +1,10 @@
 """Externer Diagramm-Worker als Container (0.873.0): leiht wartende E-Books über /api/diagram-worker, erkennt die Diagramme
 mit dem eingebauten rookhub-diagrams (tools/DiagramCli, derselbe Code wie der Server) und schickt das Ergebnis zurück.
 
-Nur die Diagramm-Erkennung — die Brett-Aufträge über WebDAV bleiben beim Laptop-Worker
-(~/claude/ebook-board-training/worker/worker.py, von dem dieser Ablauf stammt). Das Programm liegt im Image, also immer in
-der Fassung des Builds; nach einer Änderung an der Erkennung das Image neu bauen (CI: diagram-worker.yml).
+Seit 0.874.0 schneidet er auch Bretter für die Opus-Schleife aus (/api/board-worker, derselbe Token) — Brett-Aufträge gehen
+vor, sonst Diagramm-Erkennung (wie der Laptop-Worker ~/claude/ebook-board-training/worker/worker.py, von dem beides stammt;
+das Ausschneiden selbst ist wörtlich übernommen: boardcut/). Das Programm liegt im Image, also immer in der Fassung des
+Builds; nach einer Änderung an der Erkennung das Image neu bauen (CI: diagram-worker.yml).
 
 Umgebung:
   ROOKHUB_URL         Vorgabe https://rookhub.oberschmid.homes
@@ -12,8 +13,11 @@ Umgebung:
   WORKER_NAME         Name im Server-Log (Vorgabe: Rechnername)
   THREADS             Seitenstapel gleichzeitig (Vorgabe: Kerne − 2)
   IDLE_SECONDS        Pause, wenn nichts zu tun ist (Vorgabe 30)
+  BOARDS              0 = keine Brett-Aufträge (nur Diagramme), Vorgabe an
+  DIAGRAMS            0 = keine Diagramm-Erkennung (nur Bretter), Vorgabe an
 """
 import os, sys, time, socket, shutil, tempfile, threading, subprocess
+import io, json, zipfile
 import requests
 
 CLI = os.environ.get('ROOKHUB_DIAGRAMS', '/app/cli/rookhub-diagrams')
@@ -146,6 +150,129 @@ def run_job(job, version):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def board_once():
+    """Einen Brett-Auftrag erledigen → True, wenn gearbeitet wurde. Ergebnis wie beim Laptop: cells.npz, prep.json, crops/."""
+    if os.environ.get('BOARDS') == '0':
+        return False
+    try:
+        r = rh('POST', 'api/board-worker/claim', json={'worker': NAME})
+    except requests.RequestException as e:
+        log(f'Bretter: RookHub nicht erreichbar ({type(e).__name__})')
+        return False
+    if r.status_code != 200:
+        if r.status_code not in (204, 404):   # 404 = Server vor 0.874.0
+            log(f'Bretter: claim {r.status_code}')
+        return False
+    job = r.json()
+    eid, payload, t0 = job['ebookId'], job['payload'], time.time()
+    work = os.path.join(WORK, f'b{eid}')
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(os.path.join(work, 'crops'))
+    lost, stop = threading.Event(), threading.Event()
+
+    def heartbeat():
+        while not stop.wait(max(60, job.get('heartbeatSeconds', 600))):
+            try:
+                if rh('POST', f"api/board-worker/jobs/{job['jobId']}/heartbeat").status_code in (404, 409):
+                    lost.set()
+                    return
+            except requests.RequestException:
+                pass
+
+    threading.Thread(target=heartbeat, daemon=True).start()
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'boardcut'))
+        import cut
+        pdf = os.path.join(work, 'book.pdf')
+        with rh('GET', job['file']['url'], stream=True, timeout=600) as d, open(pdf, 'wb') as out:
+            d.raise_for_status()
+            for chunk in d.iter_content(1 << 20):
+                out.write(chunk)
+        jobs = [(pdf, int(p), diags, work) for p, diags in payload['pages'].items()]
+        log(f"Bretter: Buch {eid} „{job.get('title', '')}“ ({payload.get('diagrams', '?')} Diagramme auf {len(jobs)} Seiten) …")
+        res = []
+        from multiprocessing import Pool
+        with Pool(THREADS) as pool:
+            for o in pool.imap_unordered(cut.work, jobs, chunksize=2):
+                if lost.is_set():
+                    log(f'Bretter: Buch {eid}: Leihe verloren, abgebrochen')
+                    return True
+                res += o
+        res.sort(key=lambda t: t[1])
+        files = cut_files(res, payload, eid, work)
+        r = rh('POST', f"api/board-worker/jobs/{job['jobId']}/result", files=files, timeout=1800)
+        if r.status_code == 200:
+            log(f"Bretter: Buch {eid}: {len(res)}/{payload.get('diagrams', '?')} Bretter in {time.time() - t0:.0f} s")
+        else:
+            release_board(job, f'Ergebnis abgelehnt ({r.status_code}): {r.text[:400]}' if r.status_code == 400 else None)
+            log(f'Bretter: Buch {eid}: Ergebnis nicht angenommen ({r.status_code}) {r.text[:200]}')
+        return True
+    except BaseException as e:
+        gone = isinstance(e, requests.HTTPError) and e.response is not None and e.response.status_code == 404
+        release_board(job, f'Datei fehlt: {e}' if gone else None)
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
+        log(f'Bretter: Buch {eid}: {type(e).__name__} {e} — freigegeben')
+        time.sleep(30)
+        return True
+    finally:
+        stop.set()
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def cut_files(res, payload, eid, work):
+    """Upload-Teile in genau dem Format des Laptop-Workers (cells/ids/fens/conf/pos in Diagramm-Id-Reihenfolge)."""
+    import numpy as np
+    npz = io.BytesIO()
+    if res:
+        np.savez(npz, cells=np.stack([r[0] for r in res]), ids=np.array([r[1] for r in res]),
+                 fens=np.array([r[2] for r in res]), conf=np.array([r[3] for r in res]), pos=np.array([r[4] for r in res]))
+    else:
+        np.savez(npz, cells=np.zeros((0, 64, 32, 32), np.uint8), ids=np.zeros(0, np.int64), fens=np.array([], '<U71'),
+                 conf=np.zeros(0), pos=np.zeros((0, 5)))
+    meta = {'path': payload.get('source') or f'ebook {eid}', 'diagrams': payload.get('diagrams', len(res)), 'cut': len(res), 'worker': NAME}
+    crops = io.BytesIO()
+    with zipfile.ZipFile(crops, 'w', zipfile.ZIP_STORED) as z:   # PNG ist schon komprimiert
+        cdir = os.path.join(work, 'crops')
+        for fn in sorted(os.listdir(cdir)):
+            z.write(os.path.join(cdir, fn), fn)
+    return {'cells': ('cells.npz', npz.getvalue(), 'application/octet-stream'),
+            'prep': ('prep.json', json.dumps(meta).encode(), 'application/json'),
+            'crops': ('crops.zip', crops.getvalue(), 'application/zip')}
+
+
+def release_board(job, error=None):
+    try:
+        rh('POST', f"api/board-worker/jobs/{job['jobId']}/release", json={'error': error} if error else {})
+    except requests.RequestException:
+        pass
+
+
+def diagram_once(version):
+    """Ein Buch für die Diagramm-Erkennung → True, wenn gearbeitet wurde. Nach Fehlern/Ablehnung wartet sie DIAG_WAIT ab,
+    die Brett-Aufträge laufen in der Zeit weiter."""
+    global DIAG_WAIT
+    if os.environ.get('DIAGRAMS') == '0' or time.time() < DIAG_WAIT:
+        return False
+    try:
+        r = rh('POST', 'api/diagram-worker/claim', json={'worker': NAME, 'cliVersion': version})
+    except requests.RequestException as e:
+        log(f'RookHub nicht erreichbar ({type(e).__name__}) — 5 min Pause')
+        DIAG_WAIT = time.time() + 300
+        return False
+    wait = pause_for(r.status_code)
+    if wait is None:
+        run_job(r.json(), version)
+        return True
+    if r.status_code != 204:
+        log(f'claim {r.status_code} — {wait // 60} min Pause')
+        DIAG_WAIT = time.time() + wait
+    return False
+
+
+DIAG_WAIT = 0.0
+
+
 def main():
     import signal
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # docker stop → finally/except geben das Buch frei
@@ -158,21 +285,13 @@ def main():
     if not version:
         sys.exit(f'{CLI} startet nicht')
     RH.headers['Authorization'] = 'Bearer ' + tok
-    log(f'{NAME}: rookhub-diagrams {version}, {THREADS} Threads, Server {URL}')
+    log(f'{NAME}: rookhub-diagrams {version}, {THREADS} Threads, Server {URL}, '
+        f'Bretter {"aus" if os.environ.get("BOARDS") == "0" else "an"}, Diagramme {"aus" if os.environ.get("DIAGRAMS") == "0" else "an"}')
     while True:
-        try:
-            r = rh('POST', 'api/diagram-worker/claim', json={'worker': NAME, 'cliVersion': version})
-        except requests.RequestException as e:
-            log(f'RookHub nicht erreichbar ({type(e).__name__}) — 5 min Pause')
-            time.sleep(300)
+        # Brett-Aufträge zuerst (sie halten die Opus-Schleife auf), sonst ein Buch für die Diagramm-Erkennung.
+        if board_once() or diagram_once(version):
             continue
-        wait = pause_for(r.status_code)
-        if wait is None:
-            run_job(r.json(), version)
-            continue
-        if r.status_code != 204:
-            log(f'claim {r.status_code} — {wait // 60} min Pause')
-        time.sleep(wait)
+        time.sleep(IDLE)
 
 
 if __name__ == '__main__':

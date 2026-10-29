@@ -17,14 +17,15 @@ RUN dotnet publish tools/DiagramCli -c Release --no-restore -p:UseAppHost=false 
 
 # aspnet statt runtime: über den Projektverweis hängt das Programm am ASP.NET-Rahmen der API.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
-# poppler-utils: pdftoppm/pdfinfo für Scans; python3-requests: der Worker selbst.
+# poppler-utils: pdftoppm/pdfinfo für Scans; python3-requests: der Worker selbst; numpy/scipy/PIL: Brett-Ausschneiden (0.874.0).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends poppler-utils python3 python3-requests \
+    && apt-get install -y --no-install-recommends poppler-utils python3 python3-requests python3-numpy python3-scipy python3-pil \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --no-create-home worker
 WORKDIR /app
 COPY --from=build /out cli/
 COPY tools/DiagramWorker/worker.py .
+COPY tools/DiagramWorker/boardcut/ boardcut/
 RUN printf '#!/bin/sh\nexec dotnet /app/cli/rookhub-diagrams.dll "$@"\n' > cli/rookhub-diagrams && chmod +x cli/rookhub-diagrams
 USER worker
 ENTRYPOINT ["python3", "-u", "/app/worker.py"]

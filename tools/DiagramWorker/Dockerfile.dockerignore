@@ -3,6 +3,8 @@
 !src/api/RookHub.Api/**
 !tools/DiagramCli/**
 !tools/DiagramWorker/worker.py
+!tools/DiagramWorker/boardcut/*.py
+!tools/DiagramWorker/boardcut/model-ref.npz
 src/api/RookHub.Api/bin
 src/api/RookHub.Api/obj
 tools/DiagramCli/bin

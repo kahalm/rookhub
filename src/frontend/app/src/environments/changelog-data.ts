@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.874.0", date: "2026-10-29", changes: [
+    { en: "E-books: the jobs for cutting out diagram boards (raw material for the AI reading of book diagrams) now also run through RookHub — the diagram worker container fetches them with its own token and cuts them, instead of only the laptop via a file share.",
+      de: "E-Books: Die Aufträge zum Ausschneiden der Diagramm-Bretter (Rohstoff für das KI-Lesen der Buchdiagramme) laufen jetzt auch über RookHub — der Diagramm-Worker-Container holt sie mit seinem eigenen Token und schneidet sie aus, statt nur der Laptop über eine Dateifreigabe." },
+  ] },
   { version: "0.873.0", date: "2026-10-29", changes: [
     { en: "E-books: the external diagram worker now also runs as a Docker image (amd64 and arm64, e.g. on the DGX Spark) — more machines can help work through the recognition queue.",
       de: "E-Books: Der externe Diagramm-Worker läuft jetzt auch als Docker-Image (amd64 und arm64, z. B. auf dem DGX Spark) — so helfen mehr Rechner, die Erkennungs-Warteschlange abzuarbeiten." },
