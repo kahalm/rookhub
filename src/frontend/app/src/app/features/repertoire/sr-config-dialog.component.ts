@@ -68,7 +68,8 @@ import { RepertoireTrainingService, SrLevel } from './repertoire-training.servic
   `,
   styles: [`
     .load { display: flex; justify-content: center; padding: 24px; }
-    .hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: .85rem; margin: 6px 0 12px; }
+    /* Im Dialog ist currentColor schon on-surface-variant — der Anteil davon war doppelt abgeblasst (d8-rk-dialog-hinweis-kontrast, DESIGN 5.6). */
+    .hint { color: var(--mat-sys-on-surface-variant); font-size: .85rem; margin: 6px 0 12px; }
     .rows { display: flex; flex-direction: column; gap: 6px; }
     .row { display: flex; align-items: center; gap: 10px; }
     .lv { width: 70px; font-size: .9rem; }

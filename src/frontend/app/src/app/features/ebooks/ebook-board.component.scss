@@ -14,6 +14,8 @@
    Statuszeile (40) + Abstände; vorher 64 + 330 px. Auf hohen Fenstern greift 100 %; nie schmaler als 280 px. */
 .eb-board { width: clamp(min(280px, 100%), calc(100dvh - 250px), 100%); margin-inline: auto; }
 .eb-note { margin: 0; font-size: .85rem; opacity: .75; }
+.eb-note-row { display: flex; align-items: center; gap: 4px; }
+.eb-note-row .eb-note { flex: 1 1 auto; min-width: 0; }
 .eb-note--warn { color: var(--rh-warn); opacity: 1; }
 .eb-busy { display: flex; flex-direction: column; gap: 4px; font-size: .82rem; opacity: .85; }
 .eb-moves { display: flex; align-items: center; gap: 2px; }

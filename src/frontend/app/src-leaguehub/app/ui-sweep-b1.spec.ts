@@ -54,6 +54,23 @@ describe('LeagueHub: Gestaltung nach dem UI-Sweep b1', () => {
       expect(contrast(parseColor(style(doc, 'd').color), parseColor(style(doc, 'p').backgroundColor))).toBeGreaterThanOrEqual(4.5);
     });
 
+    // d8-l-plus-dialog-fremde-flaeche: „+“-Fenster (panelClass lh-dialog) wie die Karten — --surface, 1 px --line (auch gegen
+    // RookHubs dunklen Dialograhmen outline-variant), Radius 10, Barlow
+    it(`${mode}: Dialog mit lh-dialog im LeagueHub-Stil`, async () => {
+      const doc = await render(800, `<div class="cdk-overlay-pane mat-mdc-dialog-panel lh-dialog" id="pane">
+        <div class="mat-mdc-dialog-container"><div class="mat-mdc-dialog-surface" id="s"
+          style="background: var(--mat-dialog-container-color); border-radius: var(--mat-dialog-container-shape)">
+          <h2 class="mat-mdc-dialog-title" id="t" style="font-family: var(--mat-dialog-subhead-font)">Titel</h2></div></div></div>
+        <span id="surface" style="background: var(--surface); border: 1px solid var(--line)">x</span>
+        <span id="cond" style="font-family: var(--cond)">x</span><span id="body" style="font-family: var(--body)">x</span>`, dark);
+      expect(style(doc, 's').backgroundColor).toBe(style(doc, 'surface').backgroundColor);
+      expect(style(doc, 's').borderTopWidth).toBe('1px');
+      expect(style(doc, 's').borderTopColor).toBe(style(doc, 'surface').borderTopColor);
+      expect(style(doc, 's').borderTopLeftRadius).toBe('10px');
+      expect(style(doc, 't').fontFamily).toBe(style(doc, 'cond').fontFamily);
+      expect(style(doc, 'pane').fontFamily).toBe(style(doc, 'body').fontFamily);
+    });
+
     // b1-l-passwort-mail-deckkraft: die gekapselte Regel `.no-email[_ngcontent]` (0,2,0) setzte weiter opacity .85
     it(`${mode}: „Passwort vergessen“: Hinweis mit Mail-Adresse ohne Deckkraft, Link ≥ 4,5:1`, async () => {
       const doc = await render(800, `<lh-root><main class="wrap"><app-forgot-password>

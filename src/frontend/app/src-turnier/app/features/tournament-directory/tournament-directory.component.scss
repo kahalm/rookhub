@@ -104,6 +104,7 @@
    .profile-line (Leerzustand) steht nichts davor, dort bleibt der Punkt weg. */
 .count > .profile-note::before { content: '·'; margin: 0 0.4rem; }
 .count > .low-help { display: none; }
+.note-help-low { display: none; }
 
 /* d3-t-kalender-vorlauf-zu-hoch: in niedrigen Fenstern (Boox 200 % = 480 × 640) begann die erste Karte erst bei 48 %.
    Der Titel wiederholt den Menüpunkt — dort nur für Vorleser (4.6), sein ⓘ wandert hinter die Zählzeile. */
@@ -115,6 +116,11 @@
   .header app-help-hint { display: none; }
   .count { display: flex; flex-wrap: wrap; align-items: center; }
   .count > .low-help { display: inline-flex; margin-left: 0.25rem; }
+  /* d8-t-doppeltes-info-symbol: steht schon „Anmelden ⓘ“/„Neues Suchprofil ⓘ“ in der Zeile, trägt dessen ⓘ den Seitentext mit —
+     EIN ⓘ je Zeile statt zwei gleicher, nicht zuordenbarer Symbole. */
+  .count:has(> .profile-note) > .low-help { display: none; }
+  .count > .profile-note > .note-help { display: none; }
+  .count > .profile-note > .note-help-low { display: inline-flex; }
 }
 .link-btn {
   padding: 0.25rem 0; border: 0; background: none; font: inherit; cursor: pointer;

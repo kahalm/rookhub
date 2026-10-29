@@ -1,6 +1,6 @@
 import type { EngineChoice } from './analysis-engine-card.component';
 import { engineTagKey, ExternalEngineInfo, ExternalEnginesResponse } from './external-engine.service';
-import { formatKiloNodes, formatKiloNps } from './engine-lines.util';
+import { formatCount } from './engine-lines.util';
 
 /**
  * Engine-Wahl des Analysebretts, rein (Zerlegung Z22): welche Engine nach dem Laden der Liste gilt, die Liste der
@@ -66,8 +66,10 @@ export class EngineChoiceList {
 export function speedHintText(t: (key: string, params?: object) => string, locale: string, nps: number,
                               nodes: number | null): string {
   if (nps <= 0) return t('analysis.speedWaiting');
-  const speed = formatKiloNps(nps, locale);
+  // Volle Zahlen mit Tausenderpunkt statt „kN/s“ — die Erklärung arbeitete sonst mit der Einheit, die sie erklären soll
+  // (d8-rk-engine-tooltip-kn-jargon, DESIGN 2 Nr. 7). Die Einheit „Stellungen pro Sekunde“ steht im Text.
+  const speed = formatCount(nps, locale);
   return nodes === null
     ? t('analysis.speedShort', { speed })
-    : t('analysis.speedHint', { speed, nodes: formatKiloNodes(nodes, locale) });
+    : t('analysis.speedHint', { speed, nodes: formatCount(nodes, locale) });
 }

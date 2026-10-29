@@ -2,7 +2,8 @@ import { Fixture, LeagueRound, Phase } from './league.models';
 
 // Reine Hilfsfunktionen (ohne Angular) — aus der Python/JS-Fassung übernommen.
 
-export const pct = (p: number): string => `${Math.round(p * 100)} %`;
+/** Zahl und „%“ mit geschütztem Leerzeichen (DESIGN 5.13) — sonst brach „%)“ allein um (d8-l-prozent-umbruch-allein). */
+export const pct = (p: number): string => `${Math.round(p * 100)}\u00a0%`;
 
 /** chess-results kürzt lange Teamnamen und lässt dabei „/" oder „-" am Ende stehen. */
 export const tn = (s: string | null | undefined): string => String(s ?? '').replace(/[\s/-]+$/, '');

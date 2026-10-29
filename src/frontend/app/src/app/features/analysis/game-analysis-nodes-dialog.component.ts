@@ -101,7 +101,7 @@ export const MAX_NODES = 50_000_000;
     .row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
     .row mat-form-field { flex: 1 1 140px; }
     .full { width: 100%; margin-bottom: 12px; }
-    .hint { color: color-mix(in srgb, currentColor 65%, transparent); font-size: .9rem; margin: 0 0 12px; }
+    .hint { color: var(--mat-sys-on-surface-variant); font-size: .9rem; margin: 0 0 12px; }
     .hint.small { font-size: .8rem; margin: 8px 0 0; }
     /* d7-rk-lc0-dialog-info-icon-abgeschnitten: bei zweizeiligem Text staucht Flex das Symbol — flex: none, oben bündig. */
     .warn { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 12px; }

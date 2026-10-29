@@ -40,7 +40,8 @@ import { TournamentHistoryService } from './tournament-history.service';
   template: `
     <h2 mat-dialog-title>{{ 'turnier.history.track.title' | translate }}</h2>
 
-    <mat-dialog-content>
+    <!-- d8-t-dialog-scroll-hint-fehlt: scrollt am Laptop/Handy/Boox — Weiterscroll-Schatten (DESIGN 5.6) -->
+    <mat-dialog-content class="rh-scroll-hint">
       <p class="lead">{{ 'turnier.history.track.lead' | translate }}</p>
 
       <form class="names" (ngSubmit)="search()">

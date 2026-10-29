@@ -107,6 +107,14 @@ describe('MarkedPositionsDialogComponent', () => {
     expect(ref.close).toHaveBeenCalledWith(jasmine.objectContaining({ clubGameId: 11 }));
   });
 
+  // d8-l-plus-dialog-fremde-flaeche: bei nur einer Stellung keine blassen, nutzlosen ‹ ›; der Titel bleibt mittig
+  it('eine Stellung: keine Blätterpfeile, zwei Platzhalter', async () => {
+    const { el } = await setup({ clubGameMarks: () => Promise.resolve([MAIN]) });
+    expect(el.querySelectorAll('.mp-nav').length).toBe(0);
+    expect(el.querySelectorAll('.mp-nav-slot').length).toBe(2);
+    expect(el.querySelector('.mp-board')).not.toBeNull();
+  });
+
   it('Ladefehler → Meldung statt leerer Liste', async () => {
     const { el } = await setup({ clubGameMarks: () => Promise.reject(new Error('x')) });
     expect(el.querySelector('[role=alert]')?.textContent).toContain('nicht geladen');
@@ -118,5 +126,11 @@ describe('MarkedPositionsDialogComponent', () => {
     expect(await openMarkedPositions(open(MAIN), [])).toEqual({ clubGameId: 9, start: { kind: 'ply', ply: 2 } });
     expect(await openMarkedPositions(open({ ...MAIN, ply: 0 }), [])).toEqual({ clubGameId: 9, start: { kind: 'ply', ply: -1 } });
     expect(await openMarkedPositions(open(VAR), [])).toEqual({ clubGameId: 9, start: { kind: 'mark' } });
+  });
+
+  it('öffnet mit panelClass lh-dialog (LeagueHub-Fläche statt Material-Grau, d8)', async () => {
+    const dialog = { open: jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(undefined) }) };
+    await openMarkedPositions(dialog as never, []);
+    expect(dialog.open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ panelClass: 'lh-dialog' }));
   });
 });

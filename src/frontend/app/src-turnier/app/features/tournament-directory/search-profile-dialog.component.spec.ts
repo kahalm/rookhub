@@ -321,12 +321,26 @@ describe('SearchProfileDialogComponent', () => {
     component.save();
     component.save();
     fixture.detectChanges();
-    const button = Array.from(fixture.nativeElement.querySelectorAll('.dialog-actions button') as NodeListOf<HTMLButtonElement>)
+    const button = Array.from(fixture.nativeElement.querySelectorAll('mat-dialog-actions button') as NodeListOf<HTMLButtonElement>)
       .find(b => b.textContent?.includes('common.save'))!;
     expect(button.disabled).toBeTrue();
 
     const req = expectSave();
     req.flush(saved(req.request.body));
     expect(closed).toEqual(jasmine.objectContaining({ id: 9 }));
+  });
+
+  // d8-t-dialog-titel-fett / d8-t-suchprofil-hinweis-abstand: Baukasten-Titel und -Knopfleiste; Hinweis mit Abstand zum nächsten Feld
+  it('Titel als mat-dialog-title, Inhalt/Knöpfe aus dem Baukasten, Felder mit dynamischer Hinweiszeile und 16 px Abstand', async () => {
+    await setup();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('h2[mat-dialog-title]')).not.toBeNull();
+    expect(el.querySelector('.dialog-title, .dialog-actions')).toBeNull();
+    expect(el.querySelector('mat-dialog-content.form')).not.toBeNull();
+    expect(el.querySelector('mat-dialog-actions')).not.toBeNull();
+    expect(el.querySelectorAll('.mat-mdc-form-field-subscript-dynamic-size').length)
+      .toBe(el.querySelectorAll('mat-form-field').length);
+    expect(getComputedStyle(el.querySelector('.form')!).rowGap).toBe('16px');
+    expect(getComputedStyle(el).paddingTop).toBe('0px');
   });
 });

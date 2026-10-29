@@ -227,6 +227,26 @@ describe('LeagueHubAppComponent Kopf (UI-Sweep 2026-10-10)', () => {
     expect(reload).toHaveBeenCalled();
   });
 
+  // d8-l-lh-brettmenue-flaeche: jedes mat-menu in LeagueHub trägt lh-menu (Fläche --surface, 1 px --line)
+  it('das Konto-Menü trägt lh-menu', async () => {
+    const f = await create('/', { userId: 7, username: 'patrik' });
+    (f.nativeElement.querySelector('header button.acct-btn') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(document.querySelector('.mat-mdc-menu-panel')?.classList).toContain('lh-menu');
+  });
+
+  // d8-l-start-reiter-ohne-aktiv: {exact:true} verglich auch die Query-Parameter — „Prognosen“ war auf /?liga=… nie aktiv
+  it('aktiver Reiter nach dem Pfad, Query-Parameter zählen nicht', async () => {
+    const active = async (url: string) => {
+      TestBed.resetTestingModule();
+      const f = await create(url, { userId: 7, username: 'patrik' });
+      return Array.from((f.nativeElement as HTMLElement).querySelectorAll('nav.tabs a.on')).map(a => a.textContent!.trim());
+    };
+    expect(await active('/?liga=1&runde=2&verein=3')).toEqual(['Prognosen']);
+    expect(await active('/verein?bearbeiten=5')).toEqual(['Vereinspartien']);
+    expect(await active('/verein/uebersicht')).toEqual(['Übersicht']);
+  });
+
   it('angemeldet: der Werbesatz ist nicht „anon" — am Handy ausgeblendet (d2-l-kopf-lede-mobile)', async () => {
     const f = await create('/verein', { userId: 7, username: 'patrik' });
     expect((f.nativeElement as HTMLElement).querySelector('p.lede')?.classList).not.toContain('anon');

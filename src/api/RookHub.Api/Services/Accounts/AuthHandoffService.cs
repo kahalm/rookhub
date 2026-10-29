@@ -42,10 +42,7 @@ public class AuthHandoffService
 
         // Abgelaufene/verbrauchte Codes DIESES Nutzers wegraeumen — sonst waechst die Tabelle mit jedem
         // Sprung. Ein eigener Aufraeum-Dienst waere fuer Zeilen mit 60 s Lebensdauer uebertrieben.
-        var stale = await _db.AuthHandoffTokens
-            .Where(t => t.UserId == userId && (t.UsedAt != null || t.ExpiresAt < DateTime.UtcNow))
-            .ToListAsync(ct);
-        if (stale.Count > 0) _db.AuthHandoffTokens.RemoveRange(stale);
+        await RemoveStaleAsync(userId, ct);
 
         var raw = SecretTokens.NewRaw();
         _db.AuthHandoffTokens.Add(new AuthHandoffToken
@@ -57,6 +54,35 @@ public class AuthHandoffService
         });
         await _db.SaveChangesAsync(ct);
         return raw;
+    }
+
+    /// <summary>
+    /// Raeumt abgelaufene/verbrauchte Codes des Nutzers in einem EIGENEN Speichern weg, bevor der neue
+    /// Code dazukommt. Das Aufraeumen darf einen Wettlauf verlieren: zwei gleichzeitige Spruenge desselben
+    /// Kontos (zwei Tabs, Doppeltipp) laden dieselben Altzeilen, der erste loescht sie, der zweite traf
+    /// frueher 0 Zeilen → <see cref="DbUpdateConcurrencyException"/> → 500, und der Sprung kam ohne Code an
+    /// (d8-rk-auth-handoff-500). Hat jemand anderes die Zeilen schon geloescht, ist das Ziel erreicht —
+    /// die Eintraege werden losgelassen, und der neue Code wird trotzdem ausgegeben.
+    /// </summary>
+    private async Task RemoveStaleAsync(int userId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var stale = await _db.AuthHandoffTokens
+            .Where(t => t.UserId == userId && (t.UsedAt != null || t.ExpiresAt < now))
+            .ToListAsync(ct);
+        if (stale.Count == 0) return;
+
+        _db.AuthHandoffTokens.RemoveRange(stale);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Nicht nur die gemeldeten Eintraege: ein Teil der Liste kann schon geloescht sein, der Rest nicht
+            // gespeichert. Alle loslassen — was liegen bleibt, raeumt der naechste Sprung weg.
+            foreach (var t in stale) _db.Entry(t).State = EntityState.Detached;
+        }
     }
 
     /// <summary>

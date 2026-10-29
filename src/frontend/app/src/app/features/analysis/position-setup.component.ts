@@ -95,8 +95,14 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
         <button mat-icon-button [class.active]="brush === 'trash'" (click)="toggleTrash()"
                 [appIconLabel]="'analysis.setup.erase' | translate"><mat-icon>delete</mat-icon></button>
         <mat-button-toggle-group [value]="side" (change)="side = $event.value" hideSingleSelectionIndicator="true">
-          <mat-button-toggle value="w">{{ 'common.whiteToMove' | translate }}</mat-button-toggle>
-          <mat-button-toggle value="b">{{ 'common.blackToMove' | translate }}</mat-button-toggle>
+          <!-- Unter 26 rem Zeilenbreite (Handy-Dialog „Stellung korrigieren“) Kurztexte „Weiß | Schwarz“, sonst stehen Drehen
+               und ⋮ allein in Zeile 2 (d8-rk-stellung-korrigieren-mobil-symbolzeile); der Langtext bleibt als aria-label. -->
+          <mat-button-toggle value="w" [aria-label]="'common.whiteToMove' | translate">
+            <span class="ps-long">{{ 'common.whiteToMove' | translate }}</span><span class="ps-short">{{ 'analysis.setup.white' | translate }}</span>
+          </mat-button-toggle>
+          <mat-button-toggle value="b" [aria-label]="'common.blackToMove' | translate">
+            <span class="ps-long">{{ 'common.blackToMove' | translate }}</span><span class="ps-short">{{ 'analysis.setup.black' | translate }}</span>
+          </mat-button-toggle>
         </mat-button-toggle-group>
         <span class="ps-spacer"></span>
         <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
@@ -144,7 +150,12 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
     .ps-board { width: 100%; aspect-ratio: 1 / 1; }
     /* Je 4 px über/unter den 40-px-Symbolknöpfen: ihre Touch-Fläche (48 px) ragte sonst unter die Zeile — im Dialog
        „Stellung korrigieren“ scrollte der Inhalt dadurch um 3–4 px (d7). */
-    .ps-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 48px; }
+    .ps-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 48px; container-type: inline-size; }
+    .ps-short { display: none; }
+    @container (max-width: 26rem) {
+      .ps-long { display: none; }
+      .ps-short { display: inline; }
+    }
     .ps-tools > button { margin-block: 4px; }
     .ps-tools .active { background: color-mix(in srgb, var(--rh-accent) 22%, transparent); border-radius: 50%; }
     .ps-spacer { flex: 1 1 auto; }

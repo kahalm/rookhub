@@ -105,7 +105,9 @@ const ACTION_KEYS = SOLVER_ACTION_KEYS;
     </div>
   `,
   styles: [`
-    .ytp-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
+    /* d8-rk-zeitkarte-polster-unten: die Textknöpfe der letzten Zeile bringen unten ≈ 8 px unsichtbaren Rand mit — unten
+       8 px weniger Polster, damit der SICHTBARE Abstand oben und unten gleich ist (DESIGN 5.2). */
+    .ytp-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0 calc(1rem - 8px); }
     .ytp-status { font-size: 1.05em; font-weight: 500; margin: 0; text-align: center; }
     .ytp-timer { display: inline-flex; align-items: center; gap: 6px; font-size: 1.25em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }
     .timer-icon { font-size: 20px; width: 20px; height: 20px; opacity: .7; }

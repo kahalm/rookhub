@@ -80,4 +80,27 @@ describe('PuzzleYourTurnComponent Überspringen neben Aufgeben (2026-10-20)', ()
     skip.click();
     expect(n).toBe(1);
   });
+
+  // d8-rk-zeitkarte-polster-unten: die Textknöpfe unten bringen ≈ 8 px unsichtbaren Rand mit — das Polster unten ist um
+  // genau diese 8 px kleiner, damit der sichtbare Abstand oben und unten gleich ist (DESIGN 5.2).
+  it('d8: unten 8 px weniger Polster als oben, die letzte Zeile sind Textknöpfe', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PuzzleYourTurnComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PuzzleYourTurnComponent);
+    fixture.componentRef.setInput('timerSeconds', 42);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    try {
+      const center = el.querySelector<HTMLElement>('.ytp-center')!;
+      const s = getComputedStyle(center);
+      expect(parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)).toBe(8);
+      expect(center.lastElementChild!.classList).toContain('ytp-actions');
+      const buttons = Array.from(center.lastElementChild!.querySelectorAll('button'));
+      expect(buttons.length).toBeGreaterThan(0);
+      buttons.forEach(b => expect(b.classList).toContain('mat-mdc-button'));   // Textknöpfe, kein Rahmen/keine Fläche
+    } finally { el.remove(); }
+  });
 });

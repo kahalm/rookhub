@@ -90,6 +90,9 @@ describe('GameReplayComponent', () => {
     const jumps = Array.from(el().querySelectorAll('.mark-jump')) as HTMLButtonElement[];
     expect(jumps.map(b => b.textContent?.trim())).toEqual(['2.Sf3 ×2', 'Variante: 2.Sc3', 'in einer Variante']);
     expect(el().querySelector('.replay-marks')?.textContent).toContain('Interessante Stellungen');
+    // d8: nicht im Rollkasten der Zugliste (LeagueHub max-height 360px) — eigene Zeile unter Brett und Zugliste
+    expect(el().querySelector('.replay-moves .replay-marks')).toBeNull();
+    expect(el().querySelector('.replay-body + .replay-marks')).not.toBeNull();
     // Punkte in der Zugliste: an 2.Sf3 (Index 2) und am Abzweig nach 1…c5 (Index 1)
     expect(Array.from(el().querySelectorAll('.mv.marked')).map(b => b.textContent)).toEqual(['c5', 'Sf3']);
 

@@ -54,8 +54,9 @@ describe('AnalysisHistoryDialogComponent', () => {
     expect(c.entries().map(e => e.id)).toEqual([2]);
   });
 
-  // d7-rk-letzte-analysen-leertext-kontrast: Leersatz in voller Textfarbe statt Prozent von currentColor, mit Abstand.
-  it('Leersatz in on-surface mit 24 px Abstand', () => {
+  // d7-rk-letzte-analysen-leertext-kontrast: Leersatz in voller Textfarbe statt Prozent von currentColor.
+  // d8-rk-verlauf-leerzustand-luftig: ohne das Seitenpolster der globalen .empty-state, linksbündig direkt unter dem Titel.
+  it('Leersatz in on-surface, ohne Seitenpolster, linksbündig', () => {
     const { fixture, http } = make();
     http.expectOne('/api/analysis-history').flush([]);
     fixture.detectChanges();
@@ -65,7 +66,13 @@ describe('AnalysisHistoryDialogComponent', () => {
     probe.style.color = 'var(--mat-sys-on-surface)';
     document.body.appendChild(probe);
     expect(getComputedStyle(p).color).toBe(getComputedStyle(probe).color);
-    expect(getComputedStyle(p).marginTop).toBe('24px');
+    const cs = getComputedStyle(p);
+    expect(cs.marginTop).toBe('0px');
+    expect(cs.marginBottom).toBe('0px');
+    expect(cs.paddingTop).toBe('8px');
+    expect(cs.paddingBottom).toBe('4px');
+    expect(cs.paddingLeft).toBe('0px');
+    expect(cs.textAlign).toBe('left');
     probe.remove();
     fixture.nativeElement.remove();
   });

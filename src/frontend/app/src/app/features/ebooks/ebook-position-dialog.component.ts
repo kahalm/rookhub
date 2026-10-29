@@ -43,7 +43,8 @@ export interface EbookPositionDialogData { fen: string; flipped?: boolean; }
     .pos-content { max-height: calc(100vh - 9rem); }
     app-position-setup { display: block; width: 100%;
       --ps-board-size: min(100%, 26rem, max(13rem, calc((95vh - 17rem) * .75))); }
-    /* Handy: „Weiß/Schwarz am Zug“ bricht die Werkzeugzeile um (+48 px) und der Hinweis wird länger — mehr Höhe abziehen. */
+    /* Handy: der Hinweis wird länger — mehr Höhe abziehen. Die Werkzeugzeile bricht seit d8 nicht mehr um (Kurztexte
+       „Weiß | Schwarz“ im Stellungs-Editor), die Reserve bleibt für lange Hinweise in hr/hu. */
     @media (max-width: 599px) {
       app-position-setup { --ps-board-size: min(100%, max(13rem, calc((95vh - 24rem) * .75))); }
     }

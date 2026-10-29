@@ -38,6 +38,11 @@ describe('TrackPlayerDialogComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
+  // d8-t-dialog-scroll-hint-fehlt: scrollt am Handy bzw. Boox 200 %
+  it('Inhalt mit Weiterscroll-Schatten', () => {
+    expect((fixture.nativeElement as HTMLElement).querySelector('mat-dialog-content')?.classList).toContain('rh-scroll-hint');
+  });
+
   /** Der Nachname traegt die Suche — chess-results kennt keine Suche ueber eine Nummer. */
   it('sucht erst ab zwei Zeichen im Nachnamen', () => {
     component.lastName = 'O';

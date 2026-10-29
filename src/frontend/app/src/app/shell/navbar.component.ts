@@ -108,7 +108,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           <mat-icon>menu</mat-icon>
         </button>
         <!-- ☰: kurzes Hauptmenü mit Untermenüs je Kategorie statt 19 flacher Einträge. -->
-        <mat-menu #navMenu="matMenu">
+        <mat-menu #navMenu="matMenu" class="nav-main-menu">
           @if (can('dashboard')) {
             <button mat-menu-item routerLink="/dashboard">
               <mat-icon>dashboard</mat-icon><span>{{ 'nav.dashboard' | translate }}</span>
@@ -228,7 +228,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
         <button mat-icon-button class="anon-menu" [matMenuTriggerFor]="anonMenu" [attr.aria-label]="'nav.menu' | translate">
           <mat-icon>menu</mat-icon>
         </button>
-        <mat-menu #anonMenu="matMenu">
+        <mat-menu #anonMenu="matMenu" class="nav-main-menu">
           @if (!onAuthPage) {
             <a mat-menu-item class="anon-narrow" routerLink="/register" [queryParams]="authQuery">
               <mat-icon>person_add</mat-icon>
@@ -371,9 +371,16 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
     /* b1-rk-nav-konto-untermenue-handy: am Handy passt ein Untermenü weder links noch rechts neben das ☰-Menü — die CDK
        schob es an x = 0 und es schnitt die Symbole des Hauptmenüs an. Unter 600 px liegt es deckungsgleich über dem
        Hauptmenü (8 px vom Rand, gleiche Breite). Die Regel greift nur, wenn die CDK die Lage fest setzt (geschoben). */
+    /* d8-rk-konto-menue-doppelt: die Höhe legt weiter die CDK fest (an der Zeile „Konto“, nach oben geschoben) — oben ragte
+       das Hauptmenü heraus, seitlich standen zwei Rahmen versetzt. Solange ein Untermenü offen ist, sind alle Menüs darunter
+       (☰, bei Konto → Sprache auch Konto) unsichtbar: eine Fläche. Ein Klick daneben schließt wie bisher alle. */
     @media (max-width: 599.98px) {
       ::ng-deep .cdk-overlay-pane:has(> .nav-submenu) { left: auto !important; right: 8px !important; }
       ::ng-deep .nav-submenu.mat-mdc-menu-panel { min-width: 232px; }
+      ::ng-deep .cdk-overlay-container
+        :is(.cdk-overlay-connected-position-bounding-box, .cdk-overlay-pane):has(.nav-main-menu, .nav-submenu):has(~ * .nav-submenu) {
+        visibility: hidden;
+      }
     }
     @media (min-width: 481px) { .anon-narrow { display: none; } .nav-register { margin-inline: 8px 4px; } }
     @media (max-width: 480px) {

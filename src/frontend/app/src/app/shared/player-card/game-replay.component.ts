@@ -18,7 +18,7 @@ import { cardDate, cardLang, cardSan } from './card-lang';
  * Ohne die Adresse (Spielerkarte) bleibt es beim bloßen Nachspielen.</p>
  *
  * <p>Mit `marks` (0.848.0, LeagueHub-Vereinspartien, Wunsch 2026-10-26: „in der Partie Sprungmarken zu den interessanten
- * Stellungen — nicht jede muss in der Partie vorkommen, kann auch in einer Variation markiert werden") steht unter der Zugliste
+ * Stellungen — nicht jede muss in der Partie vorkommen, kann auch in einer Variation markiert werden") steht unter Brett und Zugliste
  * „Interessante Stellungen": eine Marke springt in der Partie an ihren Halbzug; eine Marke aus einer Variante springt an den
  * Abzweig und stellt die markierte Stellung aufs Brett (darüber die Variante, „Zurück zur Partie"). In der Zugliste trägt jeder
  * Zug mit einer Marke (bzw. einem Abzweig) einen Punkt.</p>
@@ -62,18 +62,20 @@ import { cardDate, cardLang, cardSan } from './card-lang';
                 }
               </ol>
               <p class="muted small">{{ result() }}</p>
-              @if (markList().length) {
-                <div class="replay-marks" role="group" [attr.aria-label]="'playerCard.marksTitle' | translate">
-                  <span class="muted small">{{ 'playerCard.marksTitle' | translate }}:</span>
-                  @for (m of markList(); track m.key) {
-                    <button type="button" class="btn-link mark-jump" [class.on]="m.active" (click)="jump(m.mark)"
-                            [title]="m.count > 1 ? ('playerCard.markedTimes' | translate: { count: m.count }) : ''">{{ m.label }}@if (m.count > 1) {<span class="muted"> ×{{ m.count }}</span>}</button>
-                  }
-                </div>
-              }
               @if (comment()) { <p class="replay-comment small">{{ comment() }}</p> }
             </div>
           </div>
+          <!-- Sprungmarken als eigene Zeile UNTER Brett und Zugliste, nicht im Rollkasten der Zugliste (LeagueHub
+               .replay-moves max-height 360px) — sonst lagen sie bei langen Partien unsichtbar am Kastenende (d8). -->
+          @if (markList().length) {
+            <div class="replay-marks" role="group" [attr.aria-label]="'playerCard.marksTitle' | translate">
+              <span class="muted small">{{ 'playerCard.marksTitle' | translate }}:</span>
+              @for (m of markList(); track m.key) {
+                <button type="button" class="btn-link mark-jump" [class.on]="m.active" (click)="jump(m.mark)"
+                        [title]="m.count > 1 ? ('playerCard.markedTimes' | translate: { count: m.count }) : ''">{{ m.label }}@if (m.count > 1) {<span class="muted"> ×{{ m.count }}</span>}</button>
+              }
+            </div>
+          }
           @if (evalsUrl) {
             <app-game-review class="replay-review" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
                              [currentIndex]="index()" [withExplanations]="false"
@@ -89,7 +91,7 @@ import { cardDate, cardLang, cardSan } from './card-lang';
     </div>
   `,
   styles: [`
-    .replay-marks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 6px 0 0; }
+    .replay-marks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin: 8px 0 0; }
     .mark-jump.on { font-weight: 700; }
     .mv.marked::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 3px; border-radius: 50%;
       background: var(--rh-success); vertical-align: middle; }

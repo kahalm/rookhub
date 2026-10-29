@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { Observable, TimeoutError, of, throwError } from 'rxjs';
+import { Observable, Subject, TimeoutError, of, throwError } from 'rxjs';
 import { PublicSlugComponent } from './public-slug.component';
 import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './course.service';
 
@@ -123,6 +123,32 @@ describe('PublicSlugComponent', () => {
     expect(el.querySelector('app-not-found')).toBeNull();
     expect(el.querySelector('app-load-error [role="alert"]')?.textContent).toContain('common.loadFailed');
     expect(el.querySelector('app-load-error button')?.textContent).toContain('common.retry');
+  });
+
+  it('zeigt den Ladekreis, solange die Kapitel-Kurz-URL aufgelöst wird (d8-rk-kurs-kapitel-leer-dunkel)', async () => {
+    const pending = new Subject<PublicSlugChapterTarget>();
+    await TestBed.configureTestingModule({
+      imports: [PublicSlugComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => (k === 'slug' ? 'noel' : k === 'chapter' ? 'KW46' : null) } } } },
+        { provide: CourseService, useValue: { resolvePublicSlugChapter: () => pending.asObservable() } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PublicSlugComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.slug-loading app-loading-spinner mat-spinner')).not.toBeNull();
+    expect(el.querySelector('app-not-found')).toBeNull();
+    expect(el.querySelector('app-load-error')).toBeNull();
+
+    // Scheitert die Auflösung, ersetzt der Ladefehler den Kreis — kein Kreis, der stehen bleibt.
+    pending.error(new HttpErrorResponse({ status: 503 }));
+    fixture.detectChanges();
+    expect(el.querySelector('app-loading-spinner')).toBeNull();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
   });
 });
 

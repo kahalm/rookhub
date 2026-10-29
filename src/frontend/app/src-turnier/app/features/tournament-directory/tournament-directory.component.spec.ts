@@ -963,11 +963,41 @@ describe('TournamentDirectoryComponent', () => {
       frame!.style.height = '640px';
       await new Promise<void>(r => requestAnimationFrame(() => r()));
       expect(el.querySelector('.header h1')!.getBoundingClientRect().height).toBeLessThanOrEqual(1);
-      expect(getComputedStyle(el.querySelector('.count .low-help')!).display).not.toBe('none');
+      // d8-t-doppeltes-info-symbol: steht „Neues Suchprofil ⓘ“ in der Zeile, trägt dessen ⓘ den Seitentext — EIN ⓘ statt zwei
+      const shown = () => Array.from(el.querySelectorAll<HTMLElement>('.count app-help-hint'))
+        .filter(h => getComputedStyle(h).display !== 'none');
+      expect(el.querySelector('.count .profile-note')).not.toBeNull();
+      expect(shown().length).toBe(1);
+      expect(shown()[0].classList).toContain('note-help-low');
+      expect(shown()[0].querySelector('[aria-label]')?.getAttribute('aria-label'))
+        .toBe('tournamentDirectory.noProfileHint\n\ntournamentDirectory.help');
       frame!.style.height = '900px';
       await new Promise<void>(r => requestAnimationFrame(() => r()));
       expect(el.querySelector('.header h1')!.getBoundingClientRect().height).toBeGreaterThan(10);
       expect(getComputedStyle(el.querySelector('.count .low-help')!).display).toBe('none');
+      expect(shown().map(h => h.classList.contains('note-help'))).toEqual([true]);
+    } finally {
+      [frame!.style.width, frame!.style.height] = prev;
+    }
+    http.verify();
+  });
+
+  // d8-t-doppeltes-info-symbol: ohne Hinweis in der Zeile (Profil vorhanden) bleibt das Seiten-ⓘ hinter der Trefferzahl
+  it('niedriges Fenster mit Suchprofil: Seiten-ⓘ hinter der Trefferzahl', async () => {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma läuft nicht im iframe');
+    await setup();
+    flushProfiles([profile(1, 'Zuhause')]);
+    flushList([entry('1')], 10);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const prev = [frame!.style.width, frame!.style.height];
+    try {
+      frame!.style.width = '480px';
+      frame!.style.height = '640px';
+      await new Promise<void>(r => requestAnimationFrame(() => r()));
+      expect(el.querySelector('.count .profile-note')).toBeNull();
+      expect(getComputedStyle(el.querySelector('.count .low-help')!).display).not.toBe('none');
     } finally {
       [frame!.style.width, frame!.style.height] = prev;
     }

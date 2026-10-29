@@ -55,7 +55,9 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
   styles: [`
     /* d7-rk-letzte-analysen-leertext-kontrast: im Dialog ist currentColor schon gedimmt — nie Prozent davon (DESIGN 3.1). */
     .muted { color: var(--mat-sys-on-surface-variant); }
-    .empty-state { color: var(--mat-sys-on-surface); margin: 24px 0; }
+    /* d8-rk-verlauf-leerzustand-luftig: im Dialog ohne das Seitenpolster der globalen .empty-state (2rem 1rem, zentriert) —
+       zusammen mit 24 px Rand standen je ≈ 90 px Leere über und unter dem einen Satz. Linksbündig wie Fließtext (DESIGN 5.10). */
+    .empty-state { color: var(--mat-sys-on-surface); margin: 0; padding: 8px 0 4px; text-align: left; }
     .small { font-size: .78rem; }
     .list { display: flex; flex-direction: column; gap: 2px; }
     .row { display: flex; align-items: center; gap: 4px; }

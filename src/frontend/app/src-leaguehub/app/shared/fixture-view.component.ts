@@ -121,7 +121,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             </tbody>
           </table>
           </div>
-          <mat-menu #pairMenu="matMenu" xPosition="before">
+          <mat-menu #pairMenu="matMenu" xPosition="before" class="lh-menu">
             <ng-template matMenuContent let-p="p">
               <button mat-menu-item type="button" (click)="toggleBoard(p)">
                 {{ openBoard() === p.board ? 'Nachspielen schließen' : 'Nachspielen' }}</button>
@@ -224,7 +224,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                           <th scope="col" class="num">eingetroffen</th></tr></thead>
                         <tbody>
                           @for (b of cal.rows; track b.from) {
-                            <tr><td>{{ b.from }}–{{ b.from + 10 }} %</td><td class="num">{{ b.n }}</td><td class="num">{{ b.said }} %</td>
+                            <tr><td>{{ b.from }}–{{ b.from + 10 }} %</td><td class="num">{{ thousands(b.n) }}</td><td class="num">{{ b.said }} %</td>
                               <td class="num"><b>{{ b.came }} %</b></td></tr>
                           }
                         </tbody>

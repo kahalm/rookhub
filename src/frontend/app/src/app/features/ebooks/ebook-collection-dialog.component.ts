@@ -36,12 +36,12 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
       @if (mode === 'new') {
         <mat-form-field appearance="outline" class="full">
           <mat-label>{{ 'ebooks.collection.name' | translate }}</mat-label>
-          <input matInput [(ngModel)]="name" maxlength="200" cdkFocusInitial />
+          <input matInput [(ngModel)]="name" maxlength="200" required cdkFocusInitial />
         </mat-form-field>
       } @else {
         <mat-form-field appearance="outline" class="full">
           <mat-label>{{ 'ebooks.collection.label' | translate }}</mat-label>
-          <mat-select [(ngModel)]="collectionId">
+          <mat-select [(ngModel)]="collectionId" required>
             @for (c of collections(); track c.id) { <mat-option [value]="c.id">{{ c.name }} ({{ c.bookCount }})</mat-option> }
           </mat-select>
         </mat-form-field>
@@ -49,6 +49,8 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
       <mat-checkbox [(ngModel)]="additional">{{ 'ebooks.collection.additional' | translate }}</mat-checkbox>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <!-- d8-rk-sammlung-speichern-ohne-grund: gesperrtes „Speichern“ sagt, was fehlt (DESIGN 5.6). -->
+      @if (blockReason && !busy()) { <span class="why" role="status">{{ blockReason | translate }}</span> }
       <button mat-button mat-dialog-close [disabled]="busy()">{{ 'common.cancel' | translate }}</button>
       <button mat-flat-button color="primary" (click)="save()" [disabled]="busy() || !valid">
         <mat-icon>folder</mat-icon>{{ 'common.save' | translate }}
@@ -58,7 +60,7 @@ export interface EbookCollectionDialogData { ebookIds: number[]; }
   styles: [`
     .modes { display: flex; flex-direction: column; margin-bottom: 8px; }
     .full { width: 100%; }
-    .hint { margin: 0 0 8px; font-size: .85rem; opacity: .7; }
+    .hint { margin: 0 0 8px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
   `],
 })
 export class EbookCollectionDialogComponent implements OnInit {
@@ -80,7 +82,14 @@ export class EbookCollectionDialogComponent implements OnInit {
     this.ebooks.collections().subscribe({ next: c => this.collections.set(c), error: () => {} });
   }
 
-  get valid(): boolean { return this.mode === 'new' ? this.name.trim().length > 0 : this.collectionId != null; }
+  get valid(): boolean { return this.blockReason === null; }
+
+  /** Warum „Speichern“ gesperrt ist (Schlüssel), null = nichts fehlt. */
+  get blockReason(): string | null {
+    if (this.mode === 'new' && !this.name.trim()) return 'ebooks.collection.needName';
+    if (this.mode === 'existing' && this.collectionId == null) return 'ebooks.collection.needPick';
+    return null;
+  }
 
   save(): void {
     if (!this.valid) return;

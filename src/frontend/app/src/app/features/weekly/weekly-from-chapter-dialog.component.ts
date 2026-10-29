@@ -122,8 +122,7 @@ export interface WeeklyFromChapterDialogData {
     .fc-search input { flex: 1; border: none; outline: none; background: transparent;
       font: inherit; color: inherit; padding: 4px 0; }
     .fc-nomatch { padding: 10px 16px; opacity: .6; font-size: .9rem; }
-    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
-    .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    /* Knopfleiste mit Grund (.why): global in styles.scss (DESIGN 5.6, d8-rk-dialog-aktionen-umbruch). */
     @media (max-width: 480px) { .fc-form { min-width: 0; } }
   `],
 })

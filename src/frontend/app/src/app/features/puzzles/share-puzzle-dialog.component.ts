@@ -26,8 +26,10 @@ import { PuzzleChallengeSource } from '../../core/challenge.service';
         <app-qr-code [data]="activeUrl" [width]="220" />
       </div>
       <div class="link-row">
-        <input class="link-input" [value]="activeUrl" readonly #linkInput />
-        <button mat-icon-button (click)="copyLink()" [appIconLabel]="'common.copy' | translate">
+        <!-- d8-rk-share-url-feld-abgeschnitten: der Dialog fokussiert „Kopieren“ statt des Felds — ein fokussiertes Feld
+             scrollte ans Textende, „https://ro…“ war weg. Ein Klick ins Feld markiert die ganze Adresse. -->
+        <input class="link-input" [value]="activeUrl" readonly #linkInput (focus)="linkInput.select()" />
+        <button mat-icon-button cdkFocusInitial (click)="copyLink()" [appIconLabel]="'common.copy' | translate">
           <mat-icon>content_copy</mat-icon>
         </button>
       </div>
@@ -52,7 +54,7 @@ import { PuzzleChallengeSource } from '../../core/challenge.service';
     .challenge-row { display: flex; justify-content: center; margin-top: 0.85rem; }
     .link-input {
       flex: 1; min-width: 0; padding: 0.5rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 4px;
-      font-size: 0.85rem; background: var(--mat-sys-surface-container, #f5f5f5); color: inherit;
+      font-size: 0.85rem; background: var(--mat-sys-surface-container); color: inherit; text-overflow: ellipsis;
     }
     .spacer { flex: 1; }
   `]

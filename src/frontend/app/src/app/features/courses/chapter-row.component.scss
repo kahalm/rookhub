@@ -92,6 +92,15 @@
   .chapter-row > .chapter-progress { order: 3; flex: 1 1 0; min-width: 6rem; margin-left: 1.9rem; }
   .chapter-row > .chapter-counts { order: 4; }
   .chapter-row > .chapter-progress--none { display: none; }
+  /* d8-rk-kapitel-menue-spalte-versetzt: ohne sichtbaren Balken (Studienbuch, Kapitel ohne Aufgaben) rutscht der
+     Linienzähler in Zeile 1 — vor das ⋮ und in fester Breite rechtsbündig, sonst schob „6 Linien“ das ⋮ anders weit als
+     „1 Linie“ und es stand hinter dem Zähler statt zuletzt (DESIGN 5.3/5.5). */
+  .chapter-row:not(:has(> .chapter-progress:not(.chapter-progress--none))) > .chapter-counts {
+    order: 1;
+    min-width: 5.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 .rename-input {

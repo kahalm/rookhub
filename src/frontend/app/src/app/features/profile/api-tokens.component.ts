@@ -95,8 +95,7 @@ const SCOPE_SHORT: Record<ApiTokenScope, string> = {
     </mat-dialog-actions>
   `,
   styles: [`.dialog-form { display: flex; flex-direction: column; gap: 0.5rem; min-width: min(320px, 78vw); } mat-form-field { width: 100%; }
-    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
-    .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }`]
+    /* Knopfleiste mit Grund (.why): global in styles.scss (DESIGN 5.6, d8-rk-dialog-aktionen-umbruch). */`]
 })
 export class CreateTokenDialogComponent {
   name = '';

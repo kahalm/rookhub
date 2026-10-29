@@ -49,6 +49,18 @@ describe('Datumsformate (DESIGN 5.13)', () => {
     expect(hits).toEqual([]);
   });
 
+  // d8-rk-ausgabe-datetime-us-format: ein natives datetime-local-Feld zeigt „mm/dd/yyyy, --:-- --“ mit 12-h-Uhr
+  // (Browsersprache) — RookHub nimmt das Paar aus Datum + Uhrzeit (shared/date-field/date-time-fields).
+  it('RookHub hat kein natives datetime-local-Feld', async () => {
+    const urls = sourceUrls().filter(u => u.startsWith('/base/src/'));
+    expect(urls.length).withContext('karma liefert keine Quelltexte aus').toBeGreaterThan(100);
+    const hits: string[] = [];
+    await Promise.all(urls.map(async u => {
+      if (/type=["']datetime-local["']/.test(await (await fetch(u)).text())) hits.push(u);
+    }));
+    expect(hits).toEqual([]);
+  });
+
   it('Wochenpost-Format: deutsch „Do., 09.07.2026 · 21:00“, englisch „Thu, Jul 9, 2026 · 9:00 PM“', () => {
     registerFormatLocaleData();
     const at = new Date(2026, 6, 9, 21, 0);

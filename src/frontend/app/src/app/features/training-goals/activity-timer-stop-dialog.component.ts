@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe } from '@ngx-translate/core';
+import { DateTimeFieldsComponent } from '../../shared/date-field/date-time-fields.component';
 import { ActivityTheme, ACTIVITY_THEMES } from './training-goals.service';
 
 export interface StopDialogData {
@@ -46,7 +47,7 @@ export interface StopDialogResult {
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatFormFieldModule,
-    MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, TranslatePipe,
+    MatInputModule, MatButtonModule, MatIconModule, MatSelectModule, DateTimeFieldsComponent, TranslatePipe,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'trainingGoals.timer.stopTitle' | translate }}</h2>
@@ -56,12 +57,9 @@ export interface StopDialogResult {
         <p class="hint">{{ 'trainingGoals.timer.stopHint' | translate }}</p>
 
         <div class="fields">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'trainingGoals.timer.startedAt' | translate }}</mat-label>
-            <input matInput type="datetime-local" [(ngModel)]="startLocal"
-                   [max]="nowLocal" (ngModelChange)="onStartChanged()">
-            <mat-icon matSuffix>play_circle</mat-icon>
-          </mat-form-field>
+          <!-- d8-rk-ausgabe-datetime-us-format: Datum + Uhrzeit in der App-Sprache statt datetime-local (DESIGN 5.13). -->
+          <app-date-time-fields class="f-start" [value]="startLocal" (valueChange)="startLocal = $event; onStartChanged()" [max]="nowLocal"
+                                [dateLabel]="'trainingGoals.timer.startedAt' | translate" [timeLabel]="'weekly.fields.time' | translate" />
 
           <mat-form-field appearance="outline">
             <mat-label>{{ 'trainingGoals.timer.duration' | translate }}</mat-label>
@@ -70,12 +68,8 @@ export interface StopDialogResult {
             <span matSuffix class="unit">{{ 'trainingGoals.min' | translate }}</span>
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>{{ 'trainingGoals.timer.endedAt' | translate }}</mat-label>
-            <input matInput type="datetime-local" [(ngModel)]="endLocal"
-                   [max]="nowLocal" (ngModelChange)="onEndChanged()">
-            <mat-icon matSuffix>schedule</mat-icon>
-          </mat-form-field>
+          <app-date-time-fields class="f-end" [value]="endLocal" (valueChange)="endLocal = $event; onEndChanged()" [max]="nowLocal"
+                                [dateLabel]="'trainingGoals.timer.endedAt' | translate" [timeLabel]="'weekly.fields.time' | translate" />
         </div>
         <p class="hint-small">{{ 'trainingGoals.timer.startEndHint' | translate }}</p>
 
@@ -108,18 +102,16 @@ export interface StopDialogResult {
   styles: [`
     .dialog-form { display: flex; flex-direction: column; gap: 0.6rem; min-width: min(420px, 92vw); }
     .label { margin: 0; font-weight: 600; font-size: 1rem; }
-    .hint { margin: 0; color: color-mix(in srgb, currentColor 65%, transparent); font-size: 0.87rem; }
-    .hint-small { margin: -2px 0 0; color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.78rem; }
-    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 0.6rem; }
-    .fields mat-form-field:nth-child(2) { grid-column: 2; }
-    .fields mat-form-field:nth-child(3) { grid-column: 1 / -1; }
-    @media (max-width: 599.98px) { .fields { grid-template-columns: 1fr; } .fields mat-form-field:nth-child(2), .fields mat-form-field:nth-child(3) { grid-column: 1; } }
+    .hint { margin: 0; color: var(--mat-sys-on-surface-variant); font-size: 0.87rem; }
+    .hint-small { margin: -2px 0 0; color: var(--mat-sys-on-surface-variant); font-size: 0.78rem; }
+    /* Start (Datum + Uhrzeit), Dauer, Ende (Datum + Uhrzeit) untereinander; Luft für die schwebenden Beschriftungen. */
+    .fields { display: flex; flex-direction: column; gap: 12px; }
     .unit { color: color-mix(in srgb, currentColor 55%, transparent); font-size: 0.85rem; }
     mat-form-field { width: 100%; }
   `]
 })
 export class ActivityTimerStopDialogComponent {
-  /** Lokal-formattierte ISO-Strings für `<input type="datetime-local">` (keine Sekunden, kein Z). */
+  /** Lokalzeit „yyyy-MM-ddTHH:mm“ (Wert von app-date-time-fields, keine Sekunden, kein Z). */
   startLocal: string;
   endLocal: string;
   /** Dauer in Minuten — separates Feld, hält Start/Ende zusammen. Min 1, Max 600. */
@@ -148,6 +140,7 @@ export class ActivityTimerStopDialogComponent {
 
   /** User änderte Start → Dauer neu rechnen (Ende bleibt). Bei End < neuem Start → Ende = Start. */
   onStartChanged(): void {
+    if (!this.startLocal || !this.endLocal) return;   // Datum/Uhrzeit erst halb ausgefüllt
     const startMs = fromLocalInput(this.startLocal);
     let endMs = fromLocalInput(this.endLocal);
     if (endMs < startMs) { endMs = startMs; this.endLocal = toLocalInput(new Date(endMs)); }
@@ -156,6 +149,7 @@ export class ActivityTimerStopDialogComponent {
 
   /** User änderte Ende → Dauer neu rechnen (Start bleibt). Kein zukünftiges Ende erlaubt. */
   onEndChanged(): void {
+    if (!this.startLocal || !this.endLocal) return;   // Datum/Uhrzeit erst halb ausgefüllt
     const nowMs = Date.now();
     let endMs = fromLocalInput(this.endLocal);
     if (endMs > nowMs) { endMs = nowMs; this.endLocal = toLocalInput(new Date(endMs)); }
@@ -210,13 +204,13 @@ export function timerNoteMaxLength(label: string): number {
   return Math.max(0, MANUAL_NOTE_MAX_LENGTH - label.length - ' — '.length);
 }
 
-/** JS-Date → String im Format `yyyy-MM-ddTHH:mm` (Lokalzeit) — passt auf `<input type="datetime-local">`. */
+/** JS-Date → String im Format `yyyy-MM-ddTHH:mm` (Lokalzeit) — Wert von app-date-time-fields. */
 export function toLocalInput(d: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Umkehr von {@link toLocalInput}: interpretiert einen `datetime-local`-String als Lokalzeit. */
+/** Umkehr von {@link toLocalInput}: interpretiert einen „yyyy-MM-ddTHH:mm“-String als Lokalzeit. */
 export function fromLocalInput(s: string): number {
   return s ? new Date(s).getTime() : Date.now();
 }

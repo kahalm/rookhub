@@ -47,6 +47,20 @@ describe('ReportEntryDialogComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
+  // d8-t-dialog-scroll-hint-fehlt / d8-t-melden-dialog-hilfetext-kontrast
+  it('Inhalt mit Weiterscroll-Schatten, Erklärtext im Ton von mat-hint', () => {
+    setup();
+    const fixture = TestBed.createComponent(ReportEntryDialogComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('mat-dialog-content')?.classList).toContain('rh-scroll-hint');
+    const hint = el.querySelector('.learn-hint') as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--mat-sys-on-surface-variant)';
+    el.appendChild(probe);
+    expect(getComputedStyle(hint).color).toBe(getComputedStyle(probe).color);
+  });
+
   /** Ein Knopfdruck ohne ein Wort ist eine gueltige Meldung („hier stimmt was nicht"). */
   it('sendet auch ohne jede Eingabe', () => {
     const component = setup();

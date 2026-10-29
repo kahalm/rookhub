@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe } from '@ngx-translate/core';
 
 export interface CalcTimerDialogData {
@@ -31,25 +33,27 @@ export type CalcTimerDialogResult = number;
   selector: 'app-calc-timer-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, MatDialogModule, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>{{ 'calc.timer.editTitle' | translate }}</h2>
     <mat-dialog-content>
       <p class="ct-where">{{ 'calc.timer.editFor' | translate: { chapter: data.chapter } }}</p>
 
+      <!-- d8-rk-kalk-kapitelzeit-felder-nicht-outline / d8-rk-kapitelzeit-eingabefelder-klein: Outline-Felder wie in allen
+           RookHub-Dialogen (DESIGN 5.8) — Schrift 16 px, Höhe und Rahmen kommen von Material. -->
       <div class="ct-fields">
-        <label class="ct-field">
-          <span>{{ 'calc.timer.hours' | translate }}</span>
-          <input type="number" min="0" max="99" step="1" [(ngModel)]="hours" (ngModelChange)="clamp()" />
-        </label>
-        <label class="ct-field">
-          <span>{{ 'calc.timer.minutes' | translate }}</span>
-          <input type="number" min="0" max="59" step="1" [(ngModel)]="minutes" (ngModelChange)="clamp()" />
-        </label>
-        <label class="ct-field">
-          <span>{{ 'calc.timer.seconds' | translate }}</span>
-          <input type="number" min="0" max="59" step="1" [(ngModel)]="seconds" (ngModelChange)="clamp()" />
-        </label>
+        <mat-form-field appearance="outline" class="ct-field" subscriptSizing="dynamic">
+          <mat-label>{{ 'calc.timer.hours' | translate }}</mat-label>
+          <input matInput type="number" min="0" max="99" step="1" [(ngModel)]="hours" (ngModelChange)="clamp()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ct-field" subscriptSizing="dynamic">
+          <mat-label>{{ 'calc.timer.minutes' | translate }}</mat-label>
+          <input matInput type="number" min="0" max="59" step="1" [(ngModel)]="minutes" (ngModelChange)="clamp()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="ct-field" subscriptSizing="dynamic">
+          <mat-label>{{ 'calc.timer.seconds' | translate }}</mat-label>
+          <input matInput type="number" min="0" max="59" step="1" [(ngModel)]="seconds" (ngModelChange)="clamp()" />
+        </mat-form-field>
       </div>
 
       <p class="ct-note">
@@ -68,17 +72,12 @@ export type CalcTimerDialogResult = number;
   styles: [`
     .ct-where { margin: 0 0 12px; font-weight: 600; }
     .ct-fields { display: flex; gap: 10px; }
-    .ct-field { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; flex: 1 1 0; min-width: 0; }
-    /* d7-rk-dialog-felder-unter-44px-mobil: Tippziel ≥ 44 px (DESIGN 2.5/7); die drei Felder teilen sich die Breite. */
-    .ct-field input {
-      width: 100%; min-height: 44px; box-sizing: border-box; padding: 8px 10px; border-radius: 4px; font: inherit;
-      font-variant-numeric: tabular-nums;
-      border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-      background: transparent; color: inherit;
-    }
+    /* Die drei Felder teilen sich die Breite. */
+    .ct-field { flex: 1 1 0; min-width: 0; }
+    .ct-field input { font-variant-numeric: tabular-nums; }
     .ct-note {
       display: flex; align-items: flex-start; gap: 6px; margin: 14px 0 0;
-      font-size: .82rem; color: color-mix(in srgb, currentColor 65%, transparent);
+      font-size: .82rem; color: var(--mat-sys-on-surface-variant);
     }
     .ct-note mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
   `],

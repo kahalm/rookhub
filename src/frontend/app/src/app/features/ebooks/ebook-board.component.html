@@ -104,8 +104,12 @@
   }
   @case ('calc') {
     <!-- d4-rk-kalk-hilfetext-lang: ein Satz sichtbar, der Rest hinter ? (DESIGN 2 Nr. 2). -->
-    <p class="eb-note">{{ 'ebooks.board.calcHint' | translate }} <app-help-hint [text]="'ebooks.board.calcHelp' | translate" />
-      @if (frozen()) { <ng-container [ngTemplateOutlet]="peekToggle" /> }</p>
+    <!-- d8-rk-hinweiszeile-auge-versetzt: Auge nicht im Fließtext (saß auf der Grundlinie, abgeblasst), sondern wie beim
+         Lösen in einer mittig ausgerichteten Zeile rechtsbündig. -->
+    <div class="eb-note-row">
+      <p class="eb-note">{{ 'ebooks.board.calcHint' | translate }} <app-help-hint [text]="'ebooks.board.calcHelp' | translate" /></p>
+      @if (frozen()) { <ng-container [ngTemplateOutlet]="peekToggle" /> }
+    </div>
     @if (calcTree) {
       <app-calc-lines [tree]="calcTree" [cursorId]="calcCursor()" [startFen]="diagram.fen" [revision]="calcRevision()"
                       (selectNode)="calcSelect($event)" (newLine)="calcNewLine()" (deleteLine)="calcDelete($event)"

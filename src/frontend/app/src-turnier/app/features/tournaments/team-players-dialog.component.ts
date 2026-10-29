@@ -14,8 +14,9 @@ import { chessTitle } from './tournament-table.util';
   standalone: true,
   imports: [CommonModule, MatTableModule, MatButtonModule, MatIconModule, MatDialogModule, TranslatePipe],
   template: `
-    <h2 class="dialog-title">{{ data.teamName }}</h2>
-    <div class="dialog-table-scroll">
+    <!-- d8-t-dialog-titel-fett: Titel/Inhalt/Knöpfe aus dem Baukasten (DESIGN 5.6); die Tabelle scrollt im Dialoginhalt -->
+    <h2 mat-dialog-title class="team-title">{{ data.teamName }}</h2>
+    <mat-dialog-content class="rh-scroll-hint">
       <table mat-table [dataSource]="data.players" class="full-width">
         <ng-container matColumnDef="boardNumber">
           <th mat-header-cell *matHeaderCellDef>{{ 'tournaments.players.boardShort' | translate }}</th>
@@ -36,17 +37,16 @@ import { chessTitle } from './tournament-table.util';
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns;"></tr>
       </table>
-    </div>
-    <div class="dialog-actions">
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
-    </div>
+    </mat-dialog-actions>
   `,
   styles: [`
-    :host { display: block; padding: 1.25rem; }
-    .dialog-title { margin: 0 0 1rem; font-size: 1.2rem; word-break: break-word; }
-    .dialog-table-scroll { overflow-x: auto; max-height: 60vh; }
-    .full-width { width: 100%; }
-    .dialog-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+    .team-title { overflow-wrap: anywhere; }
+    /* d8-t-team-dialog-tabelle-kasten-dunkel: die Tabelle liegt ohne eigenen Grund auf der Dialogfläche — mat-table behielt
+       sonst „surface“ (Seitenfarbe) und stand im Dunkeln als schwarzer Kasten auf dem helleren Dialog. */
+    .full-width { width: 100%; --mat-table-background-color: transparent; }
   `]
 })
 export class TeamPlayersDialogComponent {

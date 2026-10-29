@@ -49,7 +49,7 @@ export interface ResetLinkDialogData {
     .link-input {
       flex: 1 1 16rem; min-width: 0; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: inherit;
       border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-      background: var(--mat-sys-surface-container, #f5f5f5);
+      background: var(--mat-sys-surface-container);
     }
     .hint { font-size: 0.875rem; margin: 0.75rem 0 0; }
     .mail { opacity: 0.7; }

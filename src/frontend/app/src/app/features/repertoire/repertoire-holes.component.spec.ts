@@ -265,4 +265,25 @@ describe('RepertoireHolesComponent', () => {
     expect(groups[1].textContent).toContain('repertoire.holes.dbLichess');
     expect(groups[1].textContent).toContain('repertoire.holes.dbMasters');
   });
+
+  // d8-rk-lochfinder-hilfe-symbole-uneinheitlich: die Quelle-Zeile zeigte ⓘ (info_outline), Datenbank und Grenzwert ? —
+  // dieselbe Komponente, dasselbe Verhalten, also dasselbe Symbol (DESIGN 2.9, 5.11).
+  it('alle Hilfe-Symbole der Karte zeigen dasselbe ? (help_outline), auch bei lokaler Quelle', async () => {
+    localStorage.setItem('rookhub_explorer_settings', JSON.stringify({ source: 'local' }));
+    await TestBed.configureTestingModule({
+      imports: [RepertoireHolesComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: RepertoireExplorerService, useValue: { run: () => of(result()), sources: () => of(WITH_LOCAL) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireHolesComponent);
+    fixture.componentRef.setInput('repertoireId', 5);
+    fixture.componentRef.setInput('games', games(PGN_BLACK));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const icons = Array.from(el.querySelectorAll('app-help-hint mat-icon')).map(i => i.textContent!.trim());
+    expect(icons.length).withContext('Quelle, Datenbank, Grenzwert').toBe(3);
+    expect(new Set(icons)).toEqual(new Set(['help_outline']));
+  });
 });

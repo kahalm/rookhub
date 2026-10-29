@@ -31,6 +31,14 @@ describe('MissingTournamentDialogComponent', () => {
     return fixture.componentInstance;
   }
 
+  // d8-t-dialog-scroll-hint-fehlt: scrollt am Handy bzw. Boox 200 %
+  it('Inhalt mit Weiterscroll-Schatten', () => {
+    setup();
+    const fixture = TestBed.createComponent(MissingTournamentDialogComponent);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('mat-dialog-content')?.classList).toContain('rh-scroll-hint');
+  });
+
   it('sendet Link und Nachricht', () => {
     const component = setup();
     component.link = ' https://www.tiroler-schachverband.at/termine ';

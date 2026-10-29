@@ -40,12 +40,33 @@ describe('CalcTimerDialogComponent', () => {
     document.body.appendChild(el);
     el.style.width = '300px';
     try {
-      const inputs = Array.from(el.querySelectorAll<HTMLInputElement>('.ct-field input'));
-      inputs.forEach(i => expect(i.getBoundingClientRect().height).toBeGreaterThanOrEqual(44));
+      // Tippziel ist das ganze Outline-Feld (Rahmen), nicht nur die Textzeile darin.
+      const boxes = Array.from(el.querySelectorAll<HTMLElement>('.ct-field .mat-mdc-text-field-wrapper'));
+      expect(boxes.length).toBe(3);
+      boxes.forEach(b => expect(b.getBoundingClientRect().height).toBeGreaterThanOrEqual(44));
       const fields = Array.from(el.querySelectorAll<HTMLElement>('.ct-field'));
       const widths = fields.map(f => Math.round(f.getBoundingClientRect().width));
       expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
       expect(getComputedStyle(fields[0]).flexGrow).toBe('1');
+    } finally {
+      el.remove();
+    }
+  });
+
+  // d8-rk-kalk-kapitelzeit-felder-nicht-outline / d8-rk-kapitelzeit-eingabefelder-klein: Outline-Felder wie in den übrigen
+  // RookHub-Dialogen (DESIGN 5.8), Beschriftung im Rahmen, Ziffern mindestens 16 px (DESIGN 3.5, sonst zoomt iOS).
+  it('d8: Stunden/Minuten/Sekunden sind Outline-Felder mit mindestens 16 px Schrift', async () => {
+    const { el } = await open({ seconds: 60, chapter: 'K' });
+    document.body.appendChild(el);
+    try {
+      const fields = Array.from(el.querySelectorAll<HTMLElement>('mat-form-field.ct-field'));
+      expect(fields.length).toBe(3);
+      fields.forEach(f => expect(f.classList).toContain('mat-form-field-appearance-outline'));
+      expect(Array.from(fields, f => f.querySelector('mat-label')?.textContent?.trim()))
+        .toEqual(['calc.timer.hours', 'calc.timer.minutes', 'calc.timer.seconds']);
+      el.querySelectorAll<HTMLInputElement>('.ct-field input').forEach(i =>
+        expect(parseFloat(getComputedStyle(i).fontSize)).toBeGreaterThanOrEqual(16));
+      expect(el.querySelector('label.ct-field')).toBeNull();
     } finally {
       el.remove();
     }

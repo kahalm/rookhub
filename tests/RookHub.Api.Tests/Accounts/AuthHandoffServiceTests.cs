@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -154,5 +155,75 @@ public class AuthHandoffServiceTests : IDisposable
         // Der Code ueberbrueckt einen Klick. Waere er lang, stuende eine gueltige Anmeldung im
         // Browserverlauf — genau das soll er verhindern.
         Assert.True(AuthHandoffService.Lifetime <= TimeSpan.FromMinutes(2));
+    }
+    /// <summary>d8-rk-auth-handoff-500: Zwei gleichzeitige Spruenge desselben Kontos laden dieselben abgelaufenen
+    /// Codes; der andere Aufruf loescht sie, bevor dieser speichert. Frueher scheiterte das Speichern an 0 Zeilen
+    /// (DbUpdateConcurrencyException → 500) und der Sprung kam ohne Code an — jetzt kommt der neue Code trotzdem.</summary>
+    [Fact]
+    public async Task Issue_StaleCodesAlreadyRemovedByAParallelJump_StillIssuesANewCode()
+    {
+        var name = Guid.NewGuid().ToString();
+        var interceptor = new DeleteHandoffTokensFirst(name);
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(name).AddInterceptors(interceptor).Options;
+        await using var db = new AppDbContext(options);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Jwt:Key"] = "TestSecretKeyThatIsAtLeast32Characters!", ["Jwt:Issuer"] = "TestIssuer", ["Jwt:Audience"] = "TestAudience",
+        }).Build();
+        var svc = new AuthHandoffService(db, new AuthService(db, config, new CapturingLogger<AuthService>()),
+            new CapturingLogger<AuthHandoffService>());
+
+        var user = new AppUser { Username = "twotabs", Email = "twotabs@t.com", PasswordHash = "h" };
+        db.AppUsers.Add(user);
+        await db.SaveChangesAsync();
+        db.AuthHandoffTokens.Add(new AuthHandoffToken
+        {
+            UserId = user.Id, TokenHash = "old-expired", CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-9),
+        });
+        db.AuthHandoffTokens.Add(new AuthHandoffToken
+        {
+            UserId = user.Id, TokenHash = "old-used", CreatedAt = DateTime.UtcNow, UsedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(1),
+        });
+        await db.SaveChangesAsync();
+        // Beim Seed das Gegenstueck noch NICHT spielen — erst beim Speichern, das die Altzeilen loescht.
+        interceptor.Armed = true;
+
+        var code = await svc.IssueAsync(user.Id);
+
+        Assert.False(string.IsNullOrWhiteSpace(code));
+        Assert.True(interceptor.Fired);
+        var res = await svc.RedeemAsync(code);
+        Assert.NotNull(res);
+        Assert.Equal(user.Id, res!.UserId);
+        await using var check = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(name).Options);
+        Assert.DoesNotContain(await check.AuthHandoffTokens.ToListAsync(), t => t.TokenHash is "old-expired" or "old-used");
+    }
+
+    /// <summary>Spielt den parallelen Sprung: unmittelbar bevor dieser Kontext Altcodes loescht, hat ein zweiter
+    /// Kontext (eigener Request) dieselben Zeilen schon entfernt.</summary>
+    private sealed class DeleteHandoffTokensFirst(string dbName) : SaveChangesInterceptor
+    {
+        public bool Armed { get; set; }
+        public bool Fired { get; private set; }
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            var deleting = eventData.Context!.ChangeTracker.Entries<AuthHandoffToken>()
+                .Where(e => e.State == EntityState.Deleted).Select(e => e.Entity.Id).ToList();
+            if (Armed && !Fired && deleting.Count > 0)
+            {
+                Fired = true;
+                await using var other = new AppDbContext(
+                    new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(dbName).Options);
+                other.AuthHandoffTokens.RemoveRange(
+                    await other.AuthHandoffTokens.Where(t => deleting.Contains(t.Id)).ToListAsync(cancellationToken));
+                await other.SaveChangesAsync(cancellationToken);
+            }
+            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 }

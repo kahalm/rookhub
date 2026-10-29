@@ -96,6 +96,8 @@ describe('FixtureViewComponent', () => {
     fixture.detectChanges();
     const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item'));
     expect(items.map(i => i.textContent?.trim())).toEqual(['Nachspielen', 'Bearbeiten (Namen, Ergebnis)', 'Korrigieren (Züge)']);
+    // d8-l-lh-brettmenue-flaeche: LeagueHub-Fläche statt Material-Grau
+    expect(document.querySelector('.mat-mdc-menu-panel')?.classList).toContain('lh-menu');
     expect(items.slice(1).map(a => a.getAttribute('href'))).toEqual(['/verein?bearbeiten=10', '/verein/partie/10/korrigieren']);
     (items[0] as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -302,7 +304,7 @@ describe('FixtureViewComponent', () => {
     expect(boards.length).toBe(2);
     const first = boards[0].querySelector('.cand.first')!;
     expect(first.textContent).toContain('Polterauer, Chiara');
-    expect(first.querySelector('.pct')?.textContent?.trim()).toBe('70 %');
+    expect(first.querySelector('.pct')?.textContent?.trim()).toBe('70\u00a0%');   // d8: geschütztes Leerzeichen
     expect((first.querySelector('.bar i') as HTMLElement).style.width).toBe('70%');
     expect(boards[0].querySelector('.sq.s')).not.toBeNull();
     expect(boards[1].querySelector('.sq.w')).not.toBeNull();
@@ -386,6 +388,19 @@ describe('FixtureViewComponent', () => {
     fixture.componentInstance.openInfo.set('forecast');                                   // (i) ist schon offen bzw. bleibt offen
     fixture.detectChanges();
     expect(el.querySelector('.info-panel')!.textContent).toContain('an 3 von 8 Brettern genau der erste Vorschlag');
+  });
+
+  // d8-l-prognose-info-zahlen-ohne-tausenderpunkt: „Fälle“ über 999 mit Tausenderpunkt wie die übrigen Zahlen
+  it('Kalibrierung: Fälle mit Tausenderpunkt', async () => {
+    api.forecastStats.and.resolveTo({
+      season: '2026/27', total: { fixtures: 4, top1: 10, top2: 18, top3: 22, of: 30 }, rounds: [], leagues: [],
+      calibration: [{ from: 30, n: 3258, p: 3258 * 350, hits: 1140 }],
+    } as never);
+    const el = render(OPEN);
+    await fixture.whenStable();
+    (el.querySelector('button[aria-label="Wie die Prognose zustande kommt"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.cal-tbl tbody tr td.num')?.textContent?.trim()).toBe('3.258');
   });
 
   it('über den Teilen-Link holt die Statistik über den Link', async () => {

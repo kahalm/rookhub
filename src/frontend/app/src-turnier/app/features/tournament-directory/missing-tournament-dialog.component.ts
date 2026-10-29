@@ -27,7 +27,8 @@ import { TournamentDirectoryService } from './tournament-directory.service';
   template: `
     <h2 mat-dialog-title>{{ 'tournamentDirectory.missing.title' | translate }}</h2>
 
-    <mat-dialog-content>
+    <!-- d8-t-dialog-scroll-hint-fehlt: scrollt am Laptop/Handy/Boox — Weiterscroll-Schatten (DESIGN 5.6) -->
+    <mat-dialog-content class="rh-scroll-hint">
       <p class="lead">{{ 'tournamentDirectory.missing.lead' | translate }}</p>
 
       <!-- Der Hinweis bricht am Handy um: dynamische Hinweiszeile, sonst liegt Zeile 2 auf dem Notizfeld (DESIGN 5.8, d7). -->

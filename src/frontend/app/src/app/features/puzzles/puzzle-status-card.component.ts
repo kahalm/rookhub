@@ -263,6 +263,9 @@ const CK = {
   styles: [`
     .psc-card { min-height: 120px; position: relative; }
     .psc-center { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1rem 0; }
+    /* d8-rk-zeitkarte-polster-unten: endet die Karte mit einer Zeile reiner Textknöpfe, deren unsichtbarer Rand (≈ 8 px)
+       vom Polster abziehen — ein gefüllter Knopf zeigt seine Kante, dort bleibt es bei 1rem. */
+    .psc-center:has(> .psc-actions:last-child):not(:has(> .psc-actions .mat-mdc-unelevated-button)) { padding-bottom: calc(1rem - 8px); }
     .psc-text { font-size: 1.1em; font-weight: 500; margin: 0; }
     .psc-hint { font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; text-align: center; }
     .psc-timer { display: inline-flex; align-items: center; gap: 6px; font-size: 1.25em; font-weight: bold; font-variant-numeric: tabular-nums; margin: 0; }

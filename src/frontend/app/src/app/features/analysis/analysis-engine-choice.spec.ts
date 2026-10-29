@@ -38,7 +38,24 @@ describe('speedHintText', () => {
   const t = (k: string, p?: object) => p ? `${k}:${JSON.stringify(p)}` : k;
   it('wartet, Kurzform, Langform', () => {
     expect(speedHintText(t, 'de', 0, 5)).toBe('analysis.speedWaiting');
-    expect(speedHintText(t, 'de', 3450000, null)).toBe('analysis.speedShort:{"speed":"3.450 kN/s"}');
-    expect(speedHintText(t, 'de', 3450000, 8234567)).toBe('analysis.speedHint:{"speed":"3.450 kN/s","nodes":"8.235 kN"}');
+    expect(speedHintText(t, 'de', 3450000, null)).toBe('analysis.speedShort:{"speed":"3.450.000"}');
+    expect(speedHintText(t, 'de', 3450000, 8234567)).toBe('analysis.speedHint:{"speed":"3.450.000","nodes":"8.234.567"}');
+  });
+
+  // d8-rk-engine-tooltip-kn-jargon: kein „kN“ — weder in den Zahlen noch in den Texten aller vier Sprachen; die Texte
+  // nennen die Einheit in Worten.
+  it('ohne „kN“-Jargon, Einheit in Worten (de/en/hr/hu)', async () => {
+    const words: Record<string, RegExp> = { de: /Stellungen pro Sekunde/, en: /positions per second/,
+      hr: /pozicija u sekundi/, hu: /másodpercenként/ };
+    for (const lang of Object.keys(words)) {
+      const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
+      const a = (await res.json()).analysis as Record<string, string>;
+      const tr = (k: string, p?: object) =>
+        a[k.replace('analysis.', '')].replace(/\{\{(\w+)\}\}/g, (_m, n) => (p as Record<string, string> | undefined)?.[n] ?? '');
+      for (const text of [speedHintText(tr, lang, 201000, 337000), speedHintText(tr, lang, 201000, null)]) {
+        expect(text).withContext(lang).not.toMatch(/kN/);
+        expect(text).withContext(lang).toMatch(words[lang]);
+      }
+    }
   });
 });

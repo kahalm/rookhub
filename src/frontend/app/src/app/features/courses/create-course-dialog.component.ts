@@ -66,7 +66,8 @@ export interface CreateCourseDialogData {
   styles: [`
     .dialog-form { display: flex; flex-direction: column; gap: 0.6rem; min-width: min(360px, 80vw); }
     mat-form-field { width: 100%; }
-    .hint { margin: 0; font-size: 0.88rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+    /* Im Dialog ist currentColor schon on-surface-variant — der Anteil davon war doppelt abgeblasst (d8-rk-dialog-hinweis-kontrast, DESIGN 5.6). */
+    .hint { margin: 0; font-size: 0.88rem; color: var(--mat-sys-on-surface-variant); }
     .pick-btn { align-self: flex-start; }
     .pgn-row { display: flex; align-items: center; gap: 0.25rem; }
   `]

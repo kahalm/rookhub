@@ -67,12 +67,12 @@ export interface LinkCourseDialogData {
     </mat-dialog-actions>
   `,
   styles: [`
-    .hint { margin: 0 0 12px; font-size: 0.88rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .hint { margin: 0 0 12px; font-size: 0.88rem; color: var(--mat-sys-on-surface-variant); }
     .current { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; min-width: min(360px, 80vw); }
     .current mat-icon { color: var(--mat-sys-primary); }
     .cur-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .picker { width: 100%; }
-    .empty { font-style: italic; font-size: 0.85rem; color: color-mix(in srgb, currentColor 55%, transparent); margin: 0; }
+    .empty { font-style: italic; font-size: 0.85rem; color: var(--mat-sys-on-surface-variant); margin: 0; }
   `]
 })
 export class LinkCourseDialogComponent {

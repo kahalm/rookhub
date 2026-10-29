@@ -997,3 +997,19 @@ lh-claim-prompt { display: block; }
   border: 1px solid var(--line);
 }
 .lh-menu .mat-mdc-menu-item.delete-item { --mat-menu-item-label-text-color: var(--red); color: var(--red); }
+/* d8-l-plus-dialog-fremde-flaeche / -material-standardoptik: Dialoge im LeagueHub-Stil wie .lh-menu — Fläche --surface,
+   1 px --line, Radius 10, Barlow (DESIGN 8.4). Global, weil der Dialog im cdk-Overlay außerhalb von lh-root liegt; der
+   Rahmen mit `html` davor, sonst gewinnt RookHubs `html.dark-theme .mat-mdc-dialog-surface` (styles.scss). */
+.cdk-overlay-pane.lh-dialog {
+  --mat-dialog-container-color: var(--surface);
+  --mat-dialog-container-shape: 10px;
+  --mat-dialog-subhead-font: var(--cond);
+  --mat-dialog-subhead-color: var(--ink);
+  --mat-dialog-supporting-text-font: var(--body);
+  --mat-dialog-supporting-text-color: var(--ink);
+  --mat-sys-on-surface: var(--ink);
+  --mat-sys-on-surface-variant: var(--muted);
+  font-family: var(--body);
+  color: var(--ink);
+}
+html .lh-dialog .mat-mdc-dialog-surface { border: 1px solid var(--line); }

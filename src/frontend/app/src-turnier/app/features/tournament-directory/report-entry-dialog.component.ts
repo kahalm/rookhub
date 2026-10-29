@@ -40,7 +40,8 @@ export interface ReportEntryDialogData {
   template: `
     <h2 mat-dialog-title>{{ 'tournamentDirectory.report.title' | translate }}</h2>
 
-    <mat-dialog-content>
+    <!-- d8-t-dialog-scroll-hint-fehlt: scrollt am Laptop/Handy/Boox — Weiterscroll-Schatten (DESIGN 5.6) -->
+    <mat-dialog-content class="rh-scroll-hint">
       <p class="lead">{{ 'tournamentDirectory.report.lead' | translate }}</p>
 
       <p class="current">
@@ -114,7 +115,8 @@ export interface ReportEntryDialogData {
       font-size: 0.95rem;
     }
 
-    .learn-hint { margin: 0; font-size: 0.82rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    /* d8-t-melden-dialog-hilfetext-kontrast: im Dialog ist currentColor schon on-surface-variant, 65 % davon lag bei ≈ 3,5:1 */
+    .learn-hint { margin: 0; font-size: 0.82rem; color: var(--mat-sys-on-surface-variant); }
 
     .error { color: var(--mat-sys-error); font-size: 0.85rem; margin: 0; }
   `],

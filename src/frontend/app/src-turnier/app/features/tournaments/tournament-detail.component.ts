@@ -562,10 +562,12 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   share(): void {
     const url = window.location.origin + '/t/' + this.id;
+    // d8-t-teilen-link-abgeschnitten: Fokus auf die Dialogfläche, nicht ins Linkfeld — sonst sprang es ans Ende („s://…“)
     this.dialog.open(ShareTournamentDialogComponent, {
       data: { url },
       width: '400px',
-      maxWidth: '95vw'
+      maxWidth: '95vw',
+      autoFocus: 'dialog'
     });
   }
 

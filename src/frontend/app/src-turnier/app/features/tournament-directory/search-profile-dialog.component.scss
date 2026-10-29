@@ -1,12 +1,11 @@
-:host { display: block; padding: 1.25rem; max-width: 460px; }
-
-.dialog-title { margin: 0 0 1rem; font-size: 1.2rem; }
-
-.form { display: flex; flex-direction: column; gap: 0.25rem; }
+/* d8-t-dialog-titel-fett: Titel/Inhalt/Knöpfe aus mat-dialog-*, kein eigenes Polster mehr.
+   d8-t-suchprofil-hinweis-abstand: Felder mit subscriptSizing="dynamic" und 1rem Abstand — vorher holten sie ihren Abstand
+   nur aus Materials leerer Hinweiszeile, „Leer = alle Bedenkzeiten“ klebte 4 px über „Mindestteilnehmer“ (DESIGN 5.8). */
+.form { display: flex; flex-direction: column; gap: 1rem; }
 
 .suggestions {
   list-style: none;
-  margin: -0.5rem 0 0.75rem;
+  margin: -0.5rem 0 0;
   padding: 0;
   max-height: 190px;
   overflow-y: auto;
@@ -35,17 +34,16 @@
 .suggestions button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
 .suggestions button:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
 
-.radius { display: flex; flex-direction: column; margin-bottom: 0.5rem; }
+.radius { display: flex; flex-direction: column; }
 .radius mat-slider { width: 100%; }
 
 .ok { color: var(--mat-sys-primary); }
 
 /* Kein Treffer, Suche weg oder Standort gescheitert: ein Satz unter dem Ortsfeld (F6-007). */
-.place-note { margin: -0.5rem 0 0.75rem; font-size: 0.85rem; }
+.place-note { margin: -0.5rem 0 0; font-size: 0.85rem; }
 
-.error { color: var(--mat-sys-error); margin: 0.25rem 0 0; font-size: 0.85rem; }
+.error { color: var(--mat-sys-error); margin: 0; font-size: 0.85rem; }
 
-.dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
 
 /* E-Ink (d7-t-suchprofil-slider-spur-kaum-sichtbar): die Restspur war #fafafa auf Weiß — rechts vom Griff war nicht
    zu sehen, wo der Regler endet. Spur als weiße Bahn mit 2-px-Rahmen, gefüllter Teil schwarz, Griff schwarz umrandet

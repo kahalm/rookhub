@@ -135,6 +135,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   // --- keine Speicherschlüssel --------------------------------------------------------------------------------------
   { key: 'leaguehub-dev', cls: 'none', why: 'Host-Kennung (partner-site)' },
   { key: 'leaguehub-stapel-', prefix: true, cls: 'none', why: 'Dateiname des Stapel-Downloads' },
+  { key: 'lh-dialog', cls: 'none', why: 'CSS-Klasse (panelClass)' },
   { key: 'lh-menu', cls: 'none', why: 'CSS-Klasse' },
   { key: 'lh-pick', cls: 'none', why: 'CSS-Klasse' },
 ];

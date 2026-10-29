@@ -1,3 +1,4 @@
+import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { TestBed } from '@angular/core/testing';
@@ -71,6 +72,16 @@ describe('PublicTournamentComponent', () => {
     expect(c.displayedPlayers).toBe(c.displayedPlayers);
     expect(c.displayedTeams).toBe(c.displayedTeams);
     expect(c.displayedPairings).toBe(c.displayedPairings);
+  });
+
+  // d8-t-teilen-link-abgeschnitten / d8-t-share-url-mobil-abgeschnitten
+  it('öffnet „Teilen“ ohne Fokus im Linkfeld (autoFocus dialog)', async () => {
+    const { fixture, http } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    const open = spyOn((fixture.componentInstance as unknown as { dialog: MatDialog }).dialog, 'open').and.returnValue({} as never);
+    fixture.componentInstance.share();
+    expect(open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ autoFocus: 'dialog' }));
   });
 
   /** b1-t-paarungen-leer-ohne-weg: hier gibt es kein „Aktualisieren" — leere Paarungen verweisen auf die volle Ansicht. */

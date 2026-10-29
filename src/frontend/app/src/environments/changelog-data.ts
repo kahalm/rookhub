@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.878.0", date: "2026-10-29", changes: [
+    { en: "Design round d8 (41 findings from the re-check): dialog buttons stay on one row with the reason next to a disabled button; dates and times in the app language instead of US format; faint hint texts darker; “Correct position” keeps its tools on one row on the phone; LeagueHub replay shows “Interesting positions” under the board, active tab with filters, LeagueHub look for menus and the “+” window; tournament dialogs with standard titles and readable share links; server: two simultaneous handoff codes no longer fail with 500.",
+      de: "Design-Runde d8 (41 Funde aus der Nachprüfung): Dialogknöpfe bleiben in einer Zeile, der Grund steht neben dem gesperrten Knopf; Datum und Uhrzeit in der App-Sprache statt US-Format; blasse Hinweistexte dunkler; „Stellung korrigieren“ hält die Werkzeuge am Handy in einer Zeile; LeagueHub-Nachspielen zeigt „Interessante Stellungen“ unter dem Brett, aktiver Reiter auch mit Filtern, LeagueHub-Optik für Menüs und das „+“-Fenster; Turnier-Dialoge mit Standardtiteln und lesbarem Teilen-Link; Server: zwei gleichzeitige Sprung-Codes scheitern nicht mehr mit 500." },
+  ] },
   {
     version: '0.877.2',
     date: '2026-10-29',

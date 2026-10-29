@@ -60,6 +60,27 @@ describe('RoundLineupsComponent', () => {
     fixture = TestBed.createComponent(RoundLineupsComponent);
   });
 
+  // d8-l-fold-long-aufstellungen-handy: am Handy 7,8 Bildschirme lang — eigene Begegnung zuerst, Sprungleiste, fremde zugeklappt
+  it('eigene Begegnung zuerst, Sprungchips, am Handy fremde zugeklappt; ein Chip klappt auf', async () => {
+    api.lineups.and.resolveTo({ ...DATA, matches: [DATA.matches[1], DATA.matches[2], DATA.matches[0]] });
+    fixture.componentInstance.compact.set(true);
+    const el = await render();
+    const matches = Array.from(el.querySelectorAll<HTMLDetailsElement>('details.lu-match'));
+    expect(matches.map(m => m.querySelector('.lu-teams')!.textContent!.replace(/\s+/g, ' ').trim()))
+      .toEqual(['Bergheim – Testdorf 1', 'Talhausen – Seewinkel', 'Oberdorf – Unterdorf']);
+    expect(matches.map(m => m.open)).toEqual([true, false, false]);
+    expect(matches.map(m => m.id)).toEqual(['lu-m-0', 'lu-m-1', 'lu-m-2']);
+    const chips = Array.from(el.querySelectorAll<HTMLButtonElement>('.lu-jump .lu-chip'));
+    expect(chips.map(c => c.textContent!.trim())).toEqual(['Bergheim – Testdorf 1', 'Talhausen – Seewinkel', 'Oberdorf – Unterdorf']);
+    expect(chips[0].classList).toContain('own');
+    chips[2].click();
+    expect(matches[2].open).toBeTrue();
+    // breit alle offen
+    fixture.componentInstance.compact.set(false);
+    fixture.detectChanges();
+    expect(matches[1].open).toBeTrue();
+  });
+
   it('zeigt alle Begegnungen mit Brettern, Titel, Elo, Ergebnis und hebt die eigene hervor', async () => {
     const el = await render();
     expect(api.lineups).toHaveBeenCalledWith(4711, 2);

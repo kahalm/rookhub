@@ -1,7 +1,12 @@
-import { de, pgnDate, roundLabel, shareText, shortTeam, tn, venueShort } from './league-format';
+import { de, pct, pgnDate, roundLabel, shareText, shortTeam, tn, venueShort } from './league-format';
 import { Fixture } from './league.models';
 
 describe('league-format', () => {
+  // d8-l-prozent-umbruch-allein: „%)“ brach am Tablet allein in die nächste Zeile
+  it('pct hält Zahl und „%“ mit geschütztem Leerzeichen zusammen', () => {
+    expect(pct(0.55)).toBe('55\u00a0%');
+  });
+
   it('schreibt SAN in deutscher Notation', () => {
     expect(de('1.e4 c5 2.Nf3 Nc6 3.Bb5 Qc7 4.O-O')).toBe('1.e4 c5 2.Sf3 Sc6 3.Lb5 Dc7 4.O-O');
     expect(de('exd8=Q+ Rxe1 Kf2')).toBe('exd8=D+ Txe1 Kf2');

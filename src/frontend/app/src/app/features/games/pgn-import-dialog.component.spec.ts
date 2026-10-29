@@ -66,6 +66,22 @@ describe('PgnImportDialogComponent', () => {
     expect(c.busy()).toBeFalse();
   });
 
+  // d8-rk-pgn-dialog-hochladen-ohne-grund: gesperrtes „Hochladen“ nennt den Grund links in der Knopfleiste (DESIGN 5.6).
+  it('d8: leerer Text → genau ein Grund in der Knopfleiste; mit PGN verschwindet er', async () => {
+    const { fixture, c } = await setup();
+    const el = fixture.nativeElement as HTMLElement;
+    const whys = el.querySelectorAll('[mat-dialog-actions] .why');
+    expect(whys.length).toBe(1);
+    expect(whys[0].textContent).toContain('games.pgnUpload.error.empty');
+    expect(whys[0].getAttribute('role')).toBe('status');
+    const upload = Array.from(el.querySelectorAll<HTMLButtonElement>('[mat-dialog-actions] button')).pop()!;
+    expect(upload.disabled).toBeTrue();
+    c.text.set('1. e4 e5 *');
+    fixture.detectChanges();
+    expect(el.querySelector('[mat-dialog-actions] .why')).toBeNull();
+    expect(upload.disabled).toBeFalse();
+  });
+
   it('puts the chosen file into the text field', async () => {
     const { c } = await setup();
     const file = new File(['[Event "x"]\n\n1. d4 d5 *'], 'partie.pgn', { type: 'application/x-chess-pgn' });

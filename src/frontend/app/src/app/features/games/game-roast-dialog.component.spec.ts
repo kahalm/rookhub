@@ -92,4 +92,24 @@ describe('GameRoastDialogComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('button.share-game')).toBeNull();
   });
+
+  // d8-rk-partie-menue-roast-englisch: Menüeintrag und Dialogtitel in de/hr/hu übersetzt, nicht „Roast my game“
+  // (DESIGN 6 nimmt nur FEN/PGN, Eigennamen, „RookHub“, „Stockfish“ aus); der Menüeintrag sagt, dass eine KI kommentiert.
+  it('Menüeintrag und Titel sind in de/hr/hu übersetzt und nennen die KI', async () => {
+    const load = async (lang: string) => {
+      for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) return (await res.json()).games.roast as { menu: string; title: string };
+      }
+      throw new Error(`${lang}.json nicht ladbar`);
+    };
+    for (const lang of ['de', 'hr', 'hu']) {
+      const r = await load(lang);
+      expect(r.menu).withContext(lang).not.toContain('Roast my game');
+      expect(r.title).withContext(lang).not.toContain('Roast my game');
+      expect(r.menu).withContext(lang).toMatch(/\((KI|AI)\)$/);
+    }
+    expect((await load('de')).menu).toBe('Partie roasten lassen (KI)');
+    expect((await load('de')).title).toBe('Partie roasten');
+  });
 });

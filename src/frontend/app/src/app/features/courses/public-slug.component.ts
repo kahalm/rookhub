@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NotFoundComponent } from '../../shared/not-found/not-found.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './course.service';
 
 /**
@@ -32,15 +33,18 @@ import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './cour
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-slug',
   standalone: true,
-  imports: [NotFoundComponent, LoadErrorComponent],
+  imports: [NotFoundComponent, LoadErrorComponent, LoadingSpinnerComponent],
   template: `
     @if (notFound()) {
       <app-not-found />
     } @else if (loadFailed()) {
       <section class="slug-load-error"><app-load-error (retry)="retry()" /></section>
+    } @else {
+      <!-- Auflösung läuft (bis die Weiterleitung greift): Laden als sichtbarer Zustand (DESIGN 5.10), keine leere Seite. -->
+      <section class="slug-loading"><app-loading-spinner /></section>
     }
   `,
-  styles: [`.slug-load-error { max-width: 560px; margin: 48px auto; padding: 0 16px; }`],
+  styles: [`.slug-load-error, .slug-loading { max-width: 560px; margin: 48px auto; padding: 0 16px; }`],
 })
 export class PublicSlugComponent implements OnInit {
   private route = inject(ActivatedRoute);

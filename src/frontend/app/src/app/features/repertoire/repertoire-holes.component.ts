@@ -62,7 +62,8 @@ export interface HoleBoardView {
               <mat-button-toggle value="local">{{ 'repertoire.holes.sourceLocal' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
             @if (settings().source === 'local') {
-              <app-help-hint icon="info_outline" [text]="'repertoire.holes.localHint' | translate" />
+              <!-- Standard-? wie Datenbank und Grenzwert (d8-rk-lochfinder-hilfe-symbole-uneinheitlich, DESIGN 2.9/5.11). -->
+              <app-help-hint [text]="'repertoire.holes.localHint' | translate" />
             }
           </div>
         }

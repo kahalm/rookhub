@@ -69,6 +69,27 @@ describe('CalcEditionDialogComponent', () => {
     expect(el.querySelector('mat-dialog-actions .why')).toBeNull();
   });
 
+  // d8-rk-ausgabe-datetime-us-format: Datum + Uhrzeit in der App-Sprache statt datetime-local (DESIGN 5.13).
+  it('d8: Freigabe und Tester-Vorschau als Datum-+-Uhrzeit-Paar, kein natives datetime-local', async () => {
+    const { fixture, c, el } = await open({ chapter: EDITION.chapter, edition: EDITION });
+    expect(el.querySelector('input[type="datetime-local"]')).toBeNull();
+    expect(el.querySelectorAll('app-date-time-fields').length).toBe(2);
+    expect(el.querySelectorAll('mat-datepicker-toggle').length).toBe(2);
+    expect(el.querySelectorAll('mat-timepicker-toggle').length).toBe(2);
+    // Der vorhandene Zeitpunkt steht in den Feldern (Datum + Uhrzeit aus der Lokalzeit).
+    const [d, t] = c.publishLocal.split('T');
+    fixture.detectChanges();
+    const inputs = el.querySelectorAll<HTMLInputElement>('app-date-time-fields input');
+    expect(inputs[0].value).not.toBe('');
+    expect(inputs[1].value.replace(/\s/g, '')).toContain(t.slice(3));   // Minuten
+    expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('d8: ohne Löschen kein Abstandhalter vor dem Grund (sonst schob er den Grund nach rechts)', async () => {
+    const { el } = await open({ chapter: 'KW 8' });
+    expect(el.querySelector('mat-dialog-actions .spacer')).toBeNull();
+  });
+
   it('bestehende Ausgabe: füllt die Felder vor, und unverändert gespeichert kommen dieselben Zeitpunkte zurück', async () => {
     const { c, el, button, closed } = await open({ chapter: EDITION.chapter, edition: EDITION });
 

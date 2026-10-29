@@ -84,6 +84,36 @@ describe('CalcMembersDialogComponent (OnPush zeichnet nach HTTP neu)', () => {
     expect((el.querySelector('.add-row input') as HTMLInputElement).disabled).toBeFalse();
   });
 
+  // d8-rk-serien-verteiler-hinweis-lang-klein: ein Satz sichtbar, der Rest hinter dem ? (Grundsatz 2); Hinweis im Ton von
+  // mat-hint, 0,85 rem statt 12 px (DESIGN 5.6).
+  it('d8: Hinweis = ein Satz + ?-Symbol mit den Einzelheiten', async () => {
+    const fixture = create();
+    flushReload([]);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    try {
+      const hint = el.querySelector<HTMLElement>('p.hint')!;
+      expect(hint.textContent).toContain('calc.series.membersHint');
+      expect(hint.querySelector('app-help-hint button')!.getAttribute('aria-label')).toBe('calc.series.membersHelp');
+      expect(parseFloat(getComputedStyle(hint).fontSize)).toBeGreaterThan(12);
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--mat-sys-on-surface-variant)';
+      el.appendChild(probe);
+      expect(getComputedStyle(hint).color).toBe(getComputedStyle(probe).color);
+    } finally { el.remove(); }
+    for (const code of ['de', 'en', 'hr', 'hu']) {
+      let json: { calc: { series: { membersHint: string; membersHelp: string } } } | null = null;
+      for (const url of [`/i18n/${code}.json`, `/base/i18n/${code}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { json = await res.json(); break; }
+      }
+      const visible = json!.calc.series.membersHint;
+      expect(visible.split(/[.!?](\s|$)/).filter(x => x && x.trim()).length).withContext(code).toBe(1);
+      expect(json!.calc.series.membersHelp.length).withContext(code).toBeGreaterThan(20);
+    }
+  });
+
   it('zeigt „keine Mitglieder", wenn die Liste leer ist', () => {
     const fixture = create();
     flushReload([]);

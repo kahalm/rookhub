@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
+import { SnackbarService } from '../../core/snackbar.service';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
@@ -47,6 +48,26 @@ describe('SharePuzzleDialogComponent', () => {
     expect(el.querySelector('.dialog-actions')).toBeNull();
     // Symbolknopf „Kopieren“ trägt Name für Screenreader (appIconLabel).
     expect(el.querySelector('.link-row button')!.getAttribute('aria-label')).toBe('common.copy');
+    TestBed.resetTestingModule();
+  });
+
+  // d8-rk-share-url-feld-abgeschnitten: der Fokus landet beim Öffnen auf „Kopieren“, nicht im Linkfeld — das fokussierte
+  // Feld scrollte ans Textende, „https://ro…“ fehlte.
+  it('d8: beim Öffnen hat „Kopieren“ den Fokus, das Linkfeld zeigt den Anfang der Adresse', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: SnackbarService, useValue: { copy: () => {} } }],
+    });
+    const dialog = TestBed.inject(MatDialog);
+    dialog.open(SharePuzzleDialogComponent, {
+      width: '400px', data: { url: 'https://rookhub-dev.oberschmid.homes/puzzles/4108001?single=1&mit=einer-langen-adresse' } });
+    for (let i = 0; i < 4; i++) { TestBed.tick(); await new Promise(r => setTimeout(r, 30)); }
+    const input = document.querySelector<HTMLInputElement>('.cdk-overlay-container .link-input')!;
+    expect(document.activeElement).not.toBe(input);
+    expect(document.activeElement?.closest('.link-row button')).not.toBeNull();
+    expect(input.scrollLeft).toBe(0);
+    expect(getComputedStyle(input).textOverflow).toBe('ellipsis');
+    dialog.closeAll();
     TestBed.resetTestingModule();
   });
 });

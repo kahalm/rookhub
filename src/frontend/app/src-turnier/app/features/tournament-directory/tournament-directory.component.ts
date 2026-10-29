@@ -77,6 +77,8 @@ import {
 })
 export class TournamentDirectoryComponent implements OnInit {
   private readonly directory = inject(TournamentDirectoryService);
+  /** Absatz zwischen zwei Hilfetexten in einem ⓘ (pre-line, d8-t-doppeltes-info-symbol). */
+  readonly paraBreak = '\n\n';
   private readonly profileService = inject(SearchProfileService);
   private readonly geolocation = inject(GeolocationService);
   private readonly dialog = inject(MatDialog);

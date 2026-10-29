@@ -34,6 +34,17 @@ describe('TeamPlayersDialogComponent', () => {
     expect(Array.from(el.querySelectorAll('td.mat-column-title')).map(td => td.textContent!.trim())).toEqual(['', 'FM']);
   });
 
+  // d8-t-dialog-titel-fett / d8-t-team-dialog-tabelle-kasten-dunkel
+  it('Titel als mat-dialog-title, Tabelle im Dialoginhalt ohne eigenen Grund', async () => {
+    const el = await render([{ boardNumber: 1, title: null, name: 'Eins', elo: 2100 }]);
+    expect(el.querySelector('h2[mat-dialog-title]')?.textContent).toContain('Reinter Snina');
+    expect(el.querySelector('.dialog-title, .dialog-actions')).toBeNull();
+    expect(el.querySelector('mat-dialog-content table')).not.toBeNull();
+    expect(el.querySelector('mat-dialog-content')?.classList).toContain('rh-scroll-hint');
+    expect(el.querySelector('mat-dialog-actions button')).not.toBeNull();
+    expect(getComputedStyle(el.querySelector('table')!).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  });
+
   it('ohne echten Titel fehlt die Spalte „Titel“', async () => {
     const el = await render([
       { boardNumber: 1, title: 'Z56', name: 'Eins', elo: 2100 },

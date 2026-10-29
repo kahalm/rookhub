@@ -393,6 +393,8 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - **Kopfzeile einer Listen-Karte mit Symbolknöpfen:** zwei Teile ohne Umbruch — links Titel/Status/Meta
   (`flex: 1 1 auto; min-width: 0`, bricht in sich um), rechts die Knöpfe (`flex: none`) oben in der ersten Zeile; nie
   ein Knopf allein in einer eigenen Zeile (Partie-Analysen, 0.759.2).
+- **Polster sichtbar gleich:** endet eine Karte mit einer Zeile Textknöpfe (`mat-button`, ≈ 8 px unsichtbarer Rand unter der
+  Schrift), ist das untere Polster um diese 8 px kleiner (Zeitkarte der Löser, `calc(1rem - 8px)`, d8-rk-zeitkarte-polster-unten).
 
 ### 5.3 Listen und Tabellen
 
@@ -465,7 +467,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - Brett-Stellungen haben ein eigenes ⋮ (`features/analysis/position-menu.component.ts`).
 - **Untermenüs am Handy** (☰ → Konto usw., `class="nav-submenu"`): unter 600 px liegen sie deckungsgleich über dem
   Hauptmenü (8 px vom rechten Rand, mindestens 232 px breit), statt an den linken Rand geschoben das Hauptmenü
-  anzuschneiden (b1-rk-nav-konto-untermenue-handy).
+  anzuschneiden (b1-rk-nav-konto-untermenue-handy). Solange ein Untermenü offen ist, sind die Menüs darunter (☰, bei
+  Konto → Sprache auch Konto) ausgeblendet — eine Fläche statt zweier versetzter Rahmen (`class="nav-main-menu"` am ☰,
+  d8-rk-konto-menue-doppelt).
 - Selten gebrauchte Werkzeugkarten stehen nicht von vornherein auf der Seite: ein ⋮-Eintrag blendet sie ein (und
   scrollt sie in Sicht), ein ✕ in ihrer Kopfzeile wieder aus; solange sie arbeiten, bleiben sie ohne ✕ stehen
   (Analysebrett: „Sparring gegen Maia“ im ⋮ der Stellung, sichtbar während eines Sparrings, 0.760.0).
@@ -501,13 +505,22 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   `--mat-sys-outline-variant` (`styles.scss`, `html.dark-theme`); hell Material-Vorgabe ohne Rahmen, E-Ink 2 px schwarz
   (3.6). Vorher war sie `surface` = Seitenfarbe, eine abgedunkelte Karte dahinter verschmolz mit ihr (d7).
 - **Hinweistext im Dialog** im Ton von `mat-hint` (`var(--mat-sys-on-surface-variant)`), nicht `currentColor 60 %` —
-  im Dialog ist currentColor schon on-surface-variant, 60 % davon lag bei ≈ 3,1:1 (d7-rk-dialog-hint-kontrast).
-- **Gesperrter Dialogknopf:** der Grund steht links in der Knopfleiste (`.why`, ≤ 280 px, 0,85 rem,
-  on-surface-variant, `role="status"`, Leiste `flex-wrap`) — Vorbild E-Book-Dialog; Pflichtfeld mit `required` (Sternchen).
+  im Dialog ist currentColor schon on-surface-variant, 60 % davon lag bei ≈ 3,1:1 (d7-rk-dialog-hint-kontrast; Wache
+  `dialog-hint-contrast.spec` für `.hint`/`.hint-small`/`.empty` in allen Dialog-Dateien, d8).
+- **Gesperrter Dialogknopf:** der Grund steht links in der Knopfleiste (`<span class="why" role="status">` als direktes
+  Kind von `mat-dialog-actions`) — Pflichtfeld mit `required` (Sternchen). Die Gestaltung kommt **global aus `styles.scss`**
+  (`.mat-mdc-dialog-actions > .why`, keine Kopien je Dialog): ≤ 280 px, 0,85 rem, on-surface-variant; der **Grund schrumpft**
+  (`flex: 1 1 0; min-width: 0`) und bricht in sich um, die Knöpfe (`flex: none`) bleiben zusammen in einer Zeile — nie der
+  Hauptknopf allein in Zeile 2 (d8-rk-dialog-aktionen-umbruch). Steht ein Knopf **vor** dem Grund (Löschen links) oder ist
+  das Fenster < 480 px, bekommt der Grund eine eigene Zeile über den Knöpfen. Kein `.spacer` vor dem Grund.
 - **Titel** immer `<h2 mat-dialog-title>` in Standardschrift; ✕ nur bei Dialogen ohne Knopfzeile (Kopfzeile mit ✕:
   Inhalt darunter oben ohne Polster wie beim schlichten Titel, mit Formfeld 8 px — global in `styles.scss`).
 - Ein scrollender Dialoginhalt bekommt den Weiterscroll-Schatten (`rh-scroll-hint`, global in `styles.scss`:
   `<mat-dialog-content class="rh-scroll-hint">`).
+- **Tabellen im Dialog ohne eigenen Grund** (`--mat-table-background-color: transparent`) — sonst stand `mat-table` im Dunkeln
+  als Kasten in Seitenfarbe auf der helleren Dialogfläche (Turnier-Mannschaftsfenster, d8).
+- Felder mit Kopiertext (Teilen-Link): Fläche/Schrift/Rahmen aus Tokens ohne hellen Festwert, `text-overflow: ellipsis`; Dialog
+  mit `autoFocus: 'dialog'`, damit das Feld nicht fokussiert ans Ende springt (d8).
 - **Lange Optionstexte im `mat-select`:** geschlossen per `<mat-select-trigger>` nur der Kurzname, die Liste zeigt den
   vollen Text (Token-Bereich, d7).
 
@@ -582,6 +595,9 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   leerem Balken, sondern den Satz der Kurskarte; „Linien durchsehen“ wird dann der Hauptknopf (b1-rk-studienbuch-fortschritt-0-0).
 - Ist: Klassen `.empty` (75×), `.empty-hint`, `.empty-state`, `.empty-text`. **Regel ab jetzt:** `.empty-state`
   mit `text-align: center; padding: 2rem 1rem`; ein geteilter Baustein ist offen (Abschnitt 10).
+- Leerzustand **in Dialogen** ohne das Seitenpolster von `.empty-state`: linksbündig direkt unter dem Titel wie
+  Fließtext (`margin: 0; padding: 8px 0 4px`) — sonst steht ein Satz zentriert in ≈ 90 px Leere oben und unten
+  (Analysebrett „Letzte Analysen“, d8-rk-verlauf-leerzustand-luftig).
 - Ein Ladekreis, der nach dem Laden stehen bleibt, ist ein Fehler (UI-Sweep-Prüfung „lädt noch“).
 - Hinweiszeilen **im** Leerzustand (`.muted`, `.empty-hint`) erben dessen 60 % und werden nicht ein zweites Mal
   abgeblasst (sonst 36 %, hell ≈ 2,5:1) — Unterschied nur über die Größe (≈ .85–.9em) (a1-rk-leer-hinweis-blass).
@@ -590,6 +606,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 
 - **Hilfe:** `app-help-hint` (`shared/help-hint/`): 22-px-Knopf, Deckkraft .55 (Fokus/Hover 1), Touch-Trefferfläche
   34 px, Tooltip per Klick fest (`.hh-tooltip`: max. 320 px, `pre-line`, Absätze mit `\n\n`, max. 60vh scrollbar).
+  Symbol immer das Standard-? (`help_outline`) — kein ⓘ (`info_outline`) neben ? in derselben Karte
+  (Lochfinder, d8-rk-lochfinder-hilfe-symbole-uneinheitlich).
   Am Satzende steht davor **U+00A0** (`}}&nbsp;<app-help-hint …/>`, kein Zeilenumbruch im Markup) — sonst bricht das ?
   allein in die nächste Zeile (0.808.x, d4-rk-hilfe-symbol-umbruch). U+00A0 und Symbol stehen **gemeinsam** in
   `<span class="rh-nowrap">&nbsp;<app-help-hint …/></span>` (`styles.scss`): `app-help-hint` ist inline-flex, Chrome
@@ -684,7 +702,10 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   deutsch „16.07.2026, 21:00“; Zeiträume „… – …“ (Halbgeviertstrich, r2-t-date-format); ClubHub TT.MM.JJJJ.
   **Datumsfelder** nie als `<input type="date">` (formatiert nach der Browsersprache: „10/10/2026“ in der deutschen
   Oberfläche), sondern `app-iso-date-field` (`shared/date-field/`, Material-Datepicker mit `LocaleNativeDateAdapter`,
-  Wert nach außen "YYYY-MM-DD"; b1-rk-edit-datum-us-format).
+  Wert nach außen "YYYY-MM-DD"; b1-rk-edit-datum-us-format). **Zeitpunkte** ebenso nie als `datetime-local`
+  („mm/dd/yyyy, --:-- --“, 12-h-Uhr), sondern als Paar Datum + Uhrzeit `app-date-time-fields` (`shared/date-field/`,
+  Datepicker + Timepicker 15 min, Wert "YYYY-MM-DDTHH:mm" in Lokalzeit; Datum ohne Uhrzeit → 00:00 sichtbar;
+  `date-format-usage.spec`, d8-rk-ausgabe-datetime-us-format).
   **Keine festen Muster** (`dd.MM.yyyy`, `HH:mm` …) in der DatePipe, nur Locale-Formate (`date-format-usage.spec`,
   0.761.0): Datum mit Wochentag `EEE` + `, ` + `mediumDate` (+ ` · ` `shortTime`) — de „Do., 09.07.2026 · 21:00“,
   en „Thu, Jul 9, 2026 · 9:00 PM“; knappe Zeitpunkte in Listen/Tabellen `short` — de „11.10.26, 00:20“, en
@@ -995,8 +1016,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Häkchen ohne eigene Regel 18 px mit `accent-color: var(--ink)` (Grundregel in `:where()`, Spezifität 0), nie Browserblau.
 - Gesperrte Knöpfe `.btn-pri`/`.btn-sec` mit festen Farben (`--muted` auf `--track` bzw. `--line`-Rahmen), nicht per Deckkraft.
 - Wer mehrere Konto-Vorschläge hat (`.sugg-group.multi`), steht als umrahmte Fläche mit „N Konten“ im Kopf, Knöpfe auf einer Höhe.
-- ⋮-Menüs: `mat-menu class="lh-menu"` (Fläche `--surface`, 1 px `--line`, Radius 8, Barlow), „Löschen“ zuletzt mit
-  `.delete-item` in `--red`. Aufgeklappte ⓘ-Kästen `.info-panel` enden mit ihrem Inhalt (`fit-content`, ≤ 760 px); ein
+- ⋮-Menüs: **jedes** `mat-menu` in LeagueHub trägt `class="lh-menu"` (Fläche `--surface`, 1 px `--line`, Radius 8, Barlow; auch
+  Brett-⋮ der Prognose und Kontomenü, d8), „Löschen“ zuletzt mit `.delete-item` in `--red`. Dialoge öffnen mit
+  `panelClass: 'lh-dialog'` (Fläche `--surface`, 1 px `--line`, Radius 10, Titel Barlow Semi Condensed, Text Barlow — „+“-Fenster, d8). Aufgeklappte ⓘ-Kästen `.info-panel` enden mit ihrem Inhalt (`fit-content`, ≤ 760 px); ein
   Satz mit ⓘ dahinter ist ein Absatz `.info-inline` (ⓘ am Satzende), keine Flex-Zeile; letztes Wort + ⓘ stehen in
   `.info-tail` (`nowrap`) — das ⓘ bricht nie allein um.
 - Vereinspartien-Karte am Handy: die Meta-Zeile (Jahr · Zugfolge) trägt nichts zur Mindestbreite bei (`flex: 1 1 0; width: 0`),
@@ -1017,7 +1039,12 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Interessante Stellungen (0.848.0): im Nachspielen `lh-game-replay` darunter „Interessante Stellungen:“ als Textknöpfe
   (`.btn-link.mark-jump`, aktiv fett) — Hauptlinie „12…Sf6“, aus einer Variante „Variante: 12…c5“, ohne Ort „in einer
   Variante“, mehrfach markiert „×n“ gedämpft. Züge mit Marke bzw. Abzweig tragen in der Zugliste einen 6-px-Punkt in
-  `--rh-success`; eine Variantenstellung auf dem Brett hat darüber eine Zeile „Variante: …“ mit „Zurück zur Partie“.
+  `--rh-success`; eine Variantenstellung auf dem Brett hat darüber eine Zeile „Variante: …“ mit „Zurück zur Partie“. Die Zeile
+  „Interessante Stellungen:“ steht unter Brett UND Zugliste, nie im Rollkasten der Zugliste (d8).
+- Reiter-Aktivmarke nur nach dem Pfad (`paths: 'exact', queryParams: 'ignored'`) — Prognosen und Vereinspartien tragen
+  Query-Parameter (d8). Prozentangaben über `pct()` mit geschütztem Leerzeichen („55 %“ bricht nicht um).
+- Aufstellungen der Runde (`lh-round-lineups`): eigene Begegnung zuerst, darüber Sprungchips (eigene umrahmt), jede Begegnung
+  ein `<details>` mit Kopf + Ergebnis; am Handy (≤ 640 px) fremde zugeklappt (d8-l-fold-long-aufstellungen-handy).
 
 ### 8.5 ClubHub (`src-clubhub/`, `clubhub.scss`)
 
@@ -1134,6 +1161,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-29 | 0.877.2 | E-Books: Sortierung und „Meine Uploads“ auf jeder Breite hinter „Filter ▾“ (vorher ab 600 px in der Zeile); aktives „Meine Uploads“ zugeklappt als Chip | Nutzerwunsch 29.10.: „my uploads gehört auch in filtercomponente“, „sort by auch in filter“ | Nutzer |
 | 2026-10-29 | 0.877.0 | E-Books: Schlagwörter, Sprache und Elo-Spanne auf jeder Breite in EINER Filter-Komponente hinter „Filter ▾“ (Zahl der aktiven Filter, zugeklappt Chips), Sortierung/„Meine Uploads“ ab 600 px weiter in der Zeile; Schlagwörter in der Oberflächensprache beschriftet und danach sortiert; leise Gesamtzeile „N Bücher · M Dateien (Formate)“ über dem Regal | Nutzerwunsch 29.10.: „versteck die tags in einer filterkomponente“, „tags müssen mehrsprachig sein“, Gesamtmenge passend zur Filterung | Nutzer |
 | 2026-10-29 | 0.876.0 · Buch-Übersetzung | Leser: Sprachschalter als `translate`-Symbolknopf mit Menü Original/Englisch (aktiv = Primärfarbe), je Gerät gemerkt; Regal: Abzeichen `translate` + „EN“; Verwalter-Übersicht als 560-px-Dialog aus dem Bibliotheks-⋮ (8.1) | Bücher werden ins Englische übersetzt — umschalten muss im Leser ohne neue Leiste gehen | Nutzerwunsch 29.10. |
+| 2026-10-29 | 0.878.0 | Runde d8, RookHub-Dialoge: Grund eines gesperrten Dialogknopfs global in `styles.scss`, schrumpft statt die Knöpfe umzubrechen, eigene Zeile bei Knopf davor (5.6); Sammlungs- und PGN-Dialog nennen den Grund; Hinweistexte aller Dialoge on-surface-variant (Wache `dialog-hint-contrast.spec`); Serien-Verteiler ein Satz + ?; Zeitpunkte als Datum + Uhrzeit `app-date-time-fields` statt `datetime-local` (5.13); Kapitelzeit-Felder als Outline-Felder (5.8); Teilen-Dialog fokussiert „Kopieren“; Zeitkarte unten 8 px weniger Polster vor Textknöpfen (5.2); Auge im Kalkulieren in einer Flex-Zeile neben dem Hinweis | Hauptknopf allein in Zeile 2, gesperrte Knöpfe ohne Grund, doppelt abgeblasste Hinweise, US-Datum mit 12-h-Uhr in der deutschen Oberfläche, 12,8-px-Zahlenfelder, abgeschnittener Link, unten mehr Luft als oben, Auge auf der Grundlinie | UI-Sweep d8: d8-rk-dialog-aktionen-umbruch, d8-rk-dialog-aktionen-zweite-zeile, d8-rk-ausgabe-dialog-grund-umbruch, d8-rk-sammlung-speichern-ohne-grund, d8-rk-sammlung-dialog-speichern-ohne-grund, d8-rk-pgn-dialog-hochladen-ohne-grund, d8-rk-dialog-hinweis-kontrast, d8-rk-serien-verteiler-hinweis-lang-klein, d8-rk-ausgabe-datetime-us-format, d8-rk-kapitelzeit-eingabefelder-klein, d8-rk-kalk-kapitelzeit-felder-nicht-outline, d8-rk-share-url-feld-abgeschnitten, d8-rk-zeitkarte-polster-unten, d8-rk-hinweiszeile-auge-versetzt |
+| 2026-10-29 | 0.878.0 | Runde d8, RookHub: ☰-Untermenü am Handy blendet die Menüs darunter aus (5.5); Leerzustand im Dialog ohne Seitenpolster, linksbündig (5.10); Hilfe-Symbol immer ? (5.11); „Stellung korrigieren“: unter 26 rem Zeilenbreite „Weiß | Schwarz“ statt „… am Zug“ (Langtext als `aria-label`), Werkzeugzeile in einer Zeile; Kapitelzeilen ohne Balken am Handy: Linienzähler vor dem ⋮, 5,5 rem rechtsbündig; „Roast my game“ in de/hr/hu übersetzt („Partie roasten lassen (KI)“); Engine-Tempo in vollen Zahlen „Stellungen pro Sekunde“ statt kN/s | zwei Menüflächen versetzt übereinander, ein Satz in ≈ 90 px Leere, ⓘ neben ?, Drehen und ⋮ allein in Zeile 2 (d7 nicht behoben), ⋮ je Zähler anders versetzt, englischer Menüeintrag, Erklärung mit der Einheit, die sie erklären soll | UI-Sweep d8: d8-rk-konto-menue-doppelt, d8-rk-verlauf-leerzustand-luftig, d8-rk-lochfinder-hilfe-symbole-uneinheitlich, d8-rk-stellung-korrigieren-mobil-symbolzeile, d8-rk-kapitel-menue-spalte-versetzt, d8-rk-partie-menue-roast-englisch, d8-rk-engine-tooltip-kn-jargon |
+| 2026-10-29 | 0.878.0 | Runde d8, LeagueHub + Turnier: „Interessante Stellungen:“ unter Brett und Steuerung statt im Rollbereich der Zugliste; Reiter aktiv auch mit Query-Parametern; jedes mat-menu `lh-menu`, „+“-Fenster `panelClass: lh-dialog` (LeagueHub-Fläche); Prozent mit geschütztem Leerzeichen; Turnier-Dialogtitel als `mat-dialog-title`, Teilen-Link aus Tokens mit „…“, Weiterscroll-Schatten `rh-scroll-hint`, ein ⓘ je Zeile | Nachprüf-Lauf 29.10. (d8) | d8-l-*, d8-t-* |
 | 2026-10-28 | 0.869.5 | LeagueHub-Brettpaarungen am Handy: eigener Container `.pairings-wrap`, unter 480 px Namen umbrechend, Elo in Zeile 2, Abzeichen/Analyse/⋮ gestapelt, Analyse und ⋮ 44 × 44 px (8.4) | Tabelle 461 px breit, Analyse-Symbol und ⋮ außerhalb des Bildes, Seite scrollte waagerecht | UI-Sweep 20261028_1906_lh-brettmenue |
 | 2026-10-28 | 0.869.0 | Runde d7, Stellung korrigieren, Datenschutz, Texte: Dialog „Stellung korrigieren“: Abbrechen (`mat-button`, ohne ✕) und Übernehmen (`mat-flat-button`) in `mat-dialog-actions`, Brett und Figurenleisten an der Fensterhöhe bemessen (`--ps-board-size`), Werkzeugzeile in voller Breite; Stellungs-Editor: „Grundstellung“/„Brett leeren“ (`layers_clear`) beschriftet im ⋮ statt loser Symbole; Datenschutz RookHub/LeagueHub/ClubHub unter 1440 × 900 ab dem dritten Abschnitt zugeklappt (8.6); Studienbuch ohne Startknopf „Sequenziell“ und ohne ▶ je Kapitel; Glossar „Schlagwörter“, „Lc0“ (6); E-Book-Tooltip „Modus – Erklärung“ ohne Quellnamen; Mehrzahl-Paar `ebooks.bulk.forCount/…One`; Markieren-Dialog 440 px, Aktionen in einer Zeile; Glocken-Abzeichen in niedrigen Fenstern mit höherer Spezifität | Knöpfe außer Sicht, ✕ wie Schließen aber destruktiv, Datenschutz am Laptop 12,8 und auf dem Boox 13 Bildschirme, zwei Startknöpfe, uneinheitliche Begriffe, Doppelpunkt-Kette, Klammer-Mehrzahl, Knopf allein in Zeile 2, Abzeichen −8 px | UI-Sweep d7: d7-rk-stellung-korrigieren-dialog-abgeschnitten, d7-rk-stellung-korrigieren-x-knopf-unklar, d7-rk-privacy-seite-zu-lang, d7-l-datenschutz-laptop-zu-lang, d7-rk-studienbuch-start-sequenziell, d7-rk-schlagworte-schlagwoerter-uneinheitlich, d7-rk-lc0-dialog-info-icon-abgeschnitten, d7-rk-ebook-brett-tooltip-jargon, d7-rk-gilt-fuer-ebooks-mehrzahlklammer, d7-rk-markieren-dialog-speichern-eigene-zeile, d7-rk-glocke-abzeichen-angeschnitten, d7-rk-revenge-leer-titelabstand, d7-rk-letzte-analysen-leertext-kontrast, d7-rk-verlauf-leertext-angemeldet, d7-rk-kurs-dialog-fliesstext |
 | 2026-10-28 | 0.869.0 | Runde d7, Dialoge: Dialoge (5.6): erstes Formfeld unter dem Titel mit 8 px Luft (global, nur Dialoge mit Formfeld); dunkle Dialogfläche `surface-container-high` + 1 px `outline-variant`; Hinweistext im Dialog in on-surface-variant; gesperrter Knopf mit Grund in der Knopfleiste (Token „Erstellen“, Wochenpost „Anlegen“, Kalkulations-Ausgabe „Speichern“ + Pflichtfeld); Token-Bereich geschlossen als Kurzname (`mat-select-trigger`); Weiterscroll-Schatten als globale Klasse `rh-scroll-hint` (Woodpecker, Puzzle-Einstellungen); Kopfzeile mit ✕ polstert den Inhalt wie der schlichte Titel. Hilfe-? (5.11): U+00A0 + Symbol in `.rh-nowrap` (Installieren, Rekonstruktion, Aufgabenblätter, E-Books, Woodpecker, geteilte Links, Hintergrundjobs) | Label des ersten Felds halb abgeschnitten (Token, E-Book bearbeiten, Wochenpost, Neue Ausgabe, Kapitel hinzufügen), Dialog verschmolz dunkel mit der abgedunkelten Karte, Hinweis ≈ 3,1:1, gesperrte Knöpfe ohne Grund, „Extension (chess.com, lichess.org, Chess…“, ? allein in der Zeile trotz U+00A0 | UI-Sweep d7: d7-rk-dialog-erstes-feld-label-abgeschnitten, d7-rk-dialog-label-oben-abgeschnitten, d7-rk-ebook-dialog-titel-label-abgeschnitten, d7-rk-token-dialog-label-abgeschnitten, d7-rk-dialog-dunkel-kaum-abgesetzt, d7-rk-token-dialog-flaeche, d7-rk-dialog-hint-kontrast, d7-rk-gesperrter-knopf-ohne-grund, d7-rk-ausgabe-speichern-ohne-grund, d7-rk-token-bereich-abgeschnitten, d7-rk-install-hilfesymbol-allein-in-zeile |

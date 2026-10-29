@@ -467,19 +467,20 @@ describe('AnalysisComponent speed hint', () => {
     c.ngOnDestroy();
   });
 
-  it('always uses kN — never switches to MN/s or N/s — with thousands separators and no decimals', () => {
+  // d8-rk-engine-tooltip-kn-jargon: volle Zahlen mit Tausenderpunkt statt „kN/s“ (die Einheit nennt der Text in Worten).
+  it('full numbers with thousands separators and no decimals — no kN/MN jargon', () => {
     const c = makeComponent({ fen: START });
     c.ngOnInit();
     c.engineOn = true;
 
     (c as any).onEngineUpdate(c.currentFen, 20, [], 8234567, 3450000);
-    expect(c.speedHint).toContain('3.450 kN/s');     // NICHT „3,5 MN/s"
-    expect(c.speedHint).toContain('8.235 kN');
-    expect(c.speedHint).not.toContain('MN/s');
+    expect(c.speedHint).toContain('3.450.000');
+    expect(c.speedHint).toContain('8.234.567');
+    expect(c.speedHint).not.toContain('kN');
+    expect(c.speedHint).not.toContain('MN');
 
     (c as any).onEngineUpdate(c.currentFen, 20, [], 90000, 45000);
-    expect(c.speedHint).toContain('45 kN/s');        // kleine Werte bleiben ebenfalls kN
-    expect(c.speedHint).not.toContain('N/s'.replace('N/s', 'XX'));
+    expect(c.speedHint).toContain('45.000');
     c.ngOnDestroy();
   });
 

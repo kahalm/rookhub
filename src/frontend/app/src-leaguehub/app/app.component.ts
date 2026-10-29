@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, effect, inject } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { IsActiveMatchOptions, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatMenuModule } from '@angular/material/menu';
 import { filter, map } from 'rxjs';
@@ -50,7 +50,7 @@ const MID_PAGES = /^\/(?:verein(?:\/neu)?|vereine|konten|uebertragungen|s\/[^/?#
             <!-- UI-Sweep 2026-10-10 (l-nav-mobile): am Handy EIN Konto-Knopf, dahinter Name, Verein wechseln, Abmelden -->
             <button type="button" class="btn-sec acct-btn mob" [matMenuTriggerFor]="acctMenu"
                     [attr.aria-label]="'Konto ' + u.username" title="Konto">👤 ▾</button>
-            <mat-menu #acctMenu="matMenu" xPosition="before">
+            <mat-menu #acctMenu="matMenu" xPosition="before" class="lh-menu">
               <button mat-menu-item type="button" class="acct-who" disabled>{{ u.username }}</button>
               @if (clubs.clubs().length > 1) {
                 @for (c of clubs.clubs(); track c.id) {
@@ -74,8 +74,9 @@ const MID_PAGES = /^\/(?:verein(?:\/neu)?|vereine|konten|uebertragungen|s\/[^/?#
       @if (user()) {
         <nav class="wrap tabs" aria-label="Bereiche" [class.wide]="wide()" [class.mid]="mid()">
           @if (nav().view) {
-            <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
-            <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
+            <!-- d8-l-start-reiter-ohne-aktiv: nur der Pfad exakt — „exact: true“ verglich auch ?liga=…&runde=…, „Prognosen“ war nie aktiv -->
+            <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="exactPath">Prognosen</a>
+            <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="exactPath">Vereinspartien</a>
             <a routerLink="/verein/uebersicht" routerLinkActive="on">Übersicht</a>
           }
           @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
@@ -110,6 +111,8 @@ export class LeagueHubAppComponent implements OnInit {
   /** Der Verein des Kontos (0.698.0) — Umschalter im Kopf, wenn es mehrere sind. */
   readonly clubs = inject(ClubContextService);
   readonly version = environment.version;
+  /** Reiter aktiv nach dem Pfad allein — Prognosen/Vereinspartien tragen Query-Parameter (Liga, Runde, Suche). */
+  readonly exactPath: IsActiveMatchOptions = { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' };
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
   readonly nav = computed(() => {
     this.user();

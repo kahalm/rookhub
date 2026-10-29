@@ -40,9 +40,14 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
   imports: [MatDialogModule, ChessBoardComponent, MarkNotesEditorComponent],
   template: `
     <div class="mp-head">
-      <button type="button" class="mp-nav" (click)="go(-1)" [disabled]="index() === 0" aria-label="Vorige Stellung">‹</button>
+      <!-- d8-l-plus-dialog-fremde-flaeche: Blätterpfeile nur bei mehreren Stellungen; sonst hält ein leerer Platz den Titel mittig -->
+      @if (items().length > 1) {
+        <button type="button" class="mp-nav" (click)="go(-1)" [disabled]="index() === 0" aria-label="Vorige Stellung">‹</button>
+      } @else { <span class="mp-nav-slot" aria-hidden="true"></span> }
       <h2 mat-dialog-title class="mp-title">{{ mark()?.ply == null && mark() ? 'Interessante Stellung aus Variante' : 'Interessante Stellung aus Partie' }}</h2>
-      <button type="button" class="mp-nav" (click)="go(1)" [disabled]="index() >= items().length - 1" aria-label="Nächste Stellung">›</button>
+      @if (items().length > 1) {
+        <button type="button" class="mp-nav" (click)="go(1)" [disabled]="index() >= items().length - 1" aria-label="Nächste Stellung">›</button>
+      } @else { <span class="mp-nav-slot" aria-hidden="true"></span> }
     </div>
     <mat-dialog-content>
       @if (current()?.game?.subtitle; as sub) { <div class="mp-sub">{{ sub }}</div> }
@@ -80,6 +85,7 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
     .mp-nav { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent; color: inherit; cursor: pointer;
       font-size: 1.6rem; line-height: 1; }
     .mp-nav:disabled { opacity: 0.3; cursor: default; }
+    .mp-nav-slot { width: 36px; flex: none; }
     .mp-nav:not(:disabled):hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .mp-nav:focus-visible { outline: 2px solid currentColor; }
     .mp-sub { font-size: 0.85rem; opacity: 0.75; text-align: center; margin-bottom: 6px; }
@@ -191,7 +197,8 @@ export class MarkedPositionsDialogComponent {
 export async function openMarkedPositions(dialog: MatDialog, games: MarkedPositionsGame[]):
     Promise<{ clubGameId: number; start: ReplayStart } | null> {
   const ref = dialog.open<MarkedPositionsDialogComponent, MarkedPositionsDialogData, MarkedPositionsDialogResult>(
-    MarkedPositionsDialogComponent, { data: { games }, width: '440px', maxWidth: '94vw', autoFocus: 'dialog' });
+    MarkedPositionsDialogComponent, { data: { games }, width: '440px', maxWidth: '94vw', autoFocus: 'dialog',
+      panelClass: 'lh-dialog' });   // d8: LeagueHub-Fläche (leaguehub.scss) statt Material-Grau
   const r = await firstValueFrom(ref.afterClosed());
   if (!r) return null;
   // `mark.ply` zählt die gespielten Halbzüge (Stellung NACH ihnen), `ReplayStart.ply` ist der Zug-Index des Nachspielens

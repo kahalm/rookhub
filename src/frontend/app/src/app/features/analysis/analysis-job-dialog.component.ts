@@ -83,7 +83,7 @@ export const JOB_LINE_OPTIONS = [1, 2, 3, 4, 5];
     .row { display: flex; gap: 12px; flex-wrap: wrap; }
     .row mat-form-field { flex: 1 1 120px; }
     .full { width: 100%; margin-top: 8px; }
-    .hint { color: color-mix(in srgb, currentColor 65%, transparent); font-size: .9rem; margin: 0 0 12px; }
+    .hint { color: var(--mat-sys-on-surface-variant); font-size: .9rem; margin: 0 0 12px; }
     .hint.small { font-size: .8rem; margin: 4px 0 0; }
     .warn { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; }
   `],

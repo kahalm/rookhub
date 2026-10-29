@@ -283,6 +283,24 @@ html.dark-theme .mat-mdc-dialog-surface { border: 1px solid var(--mat-sys-outlin
       center bottom / 100% 14px no-repeat scroll;
 }
 
+/* - Gesperrter Dialogknopf mit Grund (DESIGN 5.6, d8-rk-dialog-aktionen-umbruch / -zweite-zeile / d8-rk-ausgabe-dialog-
+     grund-umbruch): der Grund `.why` steht links in der Knopfleiste. Vorher je Dialog kopiert mit `max-width: 280px`, aber
+     ohne Schrumpfen — der Text behielt seine volle Breite, und in 400–480-px-Dialogen rutschte der Hauptknopf allein in
+     Zeile 2. Jetzt schrumpft der Grund (`flex: 1 1 0`, bricht in sich um), die Knöpfe bleiben zusammen in einer Zeile.
+     Steht ein Knopf VOR dem Grund (Löschen links) oder ist das Fenster schmal, bekommt der Grund eine eigene Zeile über
+     den Knöpfen. */
+html .mat-mdc-dialog-actions:has(> .why) { flex-wrap: wrap; row-gap: 4px; }
+html .mat-mdc-dialog-actions > .why {
+  flex: 1 1 0; min-width: 0; max-width: 280px; margin-right: auto;
+  text-align: start; text-wrap: pretty;
+  font-size: .85rem; color: var(--mat-sys-on-surface-variant);
+}
+html .mat-mdc-dialog-actions > .why ~ .mat-mdc-button-base { flex: none; }
+html .mat-mdc-dialog-actions > .mat-mdc-button-base ~ .why { order: -1; flex-basis: 100%; max-width: none; margin-right: 0; }
+@media (max-width: 479.98px) {
+  html .mat-mdc-dialog-actions > .why { flex-basis: 100%; max-width: none; margin-right: 0; }
+}
+
 /* d7-rk-install-hilfesymbol-allein-in-zeile (DESIGN 5.11): `&nbsp;` vor dem ?-Symbol allein schützt nicht — app-help-hint
    ist inline-flex (atomares Inline-Element), Chrome bricht davor trotzdem. U+00A0 und Symbol gemeinsam in diese Klasse. */
 .rh-nowrap { white-space: nowrap; }

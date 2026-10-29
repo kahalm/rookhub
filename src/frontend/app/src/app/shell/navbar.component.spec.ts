@@ -354,6 +354,46 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     expect(block).toContain('.cdk-overlay-pane:has(>.nav-submenu){left:auto!important;right:8px!important');
     expect(block).toContain('.nav-submenu.mat-mdc-menu-panel{min-width:232px');
   });
+
+  // d8-rk-konto-menue-doppelt: unter 600 px lag das Konto-Untermenü über dem Hauptmenü, oben ragte das Hauptmenü heraus —
+  // zwei Flächen. Solange ein Untermenü offen ist, ist alles darunter unsichtbar. Karma ist breit → Regel aus dem CSS-Text
+  // lesen und ihren Selektor gegen die echten offenen Overlays prüfen.
+  it('d8: am Handy verdeckt ein offenes Untermenü das ☰-Menü ganz (nur eine Fläche), Konto → Sprache auch Konto', () => {
+    const css = ((NavbarComponent as unknown as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n');
+    const flat = css.replace(/\s+/g, ' ');
+    const at = flat.indexOf('@media (max-width: 599.98px)');
+    expect(at).toBeGreaterThan(-1);
+    const block = flat.slice(at, flat.indexOf('} }', at) + 3);
+    const m = /([^{}]*:has\(~ \* \.nav-submenu\))\s*\{\s*visibility:\s*hidden/.exec(block);
+    expect(m).withContext(block).not.toBeNull();
+    const selector = m![1].trim();
+
+    const fixture = render({ loggedIn: true, keys: ['dashboard'] });
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const main = document.querySelector('.cdk-overlay-container .nav-main-menu.mat-mdc-menu-panel')!;
+    expect(main).not.toBeNull();
+    const hidden = () => Array.from(document.querySelectorAll(selector));
+    expect(hidden().length).withContext('nur das ☰ offen: nichts verbergen').toBe(0);
+
+    const item = (text: string) => Array.from(document.querySelectorAll('.cdk-overlay-container button'))
+      .find(b => b.textContent?.includes(text)) as HTMLButtonElement;
+    item('nav.account').click();
+    fixture.detectChanges();
+    const account = document.querySelector('.cdk-overlay-container .nav-submenu.mat-mdc-menu-panel')!;
+    expect(hidden().some(h => h.contains(main))).withContext('☰ verborgen').toBeTrue();
+    expect(hidden().some(h => h.contains(account))).withContext('Konto bleibt sichtbar').toBeFalse();
+
+    item('nav.language').click();
+    fixture.detectChanges();
+    const panels = Array.from(document.querySelectorAll('.cdk-overlay-container .nav-submenu.mat-mdc-menu-panel'));
+    expect(panels.length).toBe(2);
+    expect(hidden().some(h => h.contains(account))).withContext('Konto unter Sprache verborgen').toBeTrue();
+    expect(hidden().some(h => h.contains(panels[1]))).withContext('Sprache sichtbar').toBeFalse();
+    trigger.click();
+    fixture.detectChanges();
+  });
 });
 
 describe('NavbarComponent App-Vollbild', () => {

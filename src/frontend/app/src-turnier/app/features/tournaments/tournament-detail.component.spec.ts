@@ -1,3 +1,4 @@
+import { MatDialog } from '@angular/material/dialog';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { By } from '@angular/platform-browser';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -119,6 +120,14 @@ describe('TournamentDetailComponent', () => {
     const refresh = spyOn(fixture.componentInstance, 'refresh');
     tables.refresh.emit();
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  // d8-t-teilen-link-abgeschnitten: Fokus auf die Dialogfläche, sonst springt das Linkfeld ans Ende („s://…“)
+  it('öffnet „Teilen“ ohne Fokus im Linkfeld (autoFocus dialog)', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const open = spyOn((fixture.componentInstance as unknown as { dialog: MatDialog }).dialog, 'open').and.returnValue({} as never);
+    fixture.componentInstance.share();
+    expect(open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ autoFocus: 'dialog' }));
   });
 
   /**

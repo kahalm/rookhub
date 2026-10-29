@@ -78,4 +78,26 @@ describe('ChapterRowComponent', () => {
     const css = ((ChapterRowComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
     expect(css).toMatch(/\.chapter-label[^{]*\{[^}]*min-width: 7ch;[^}]*text-align: right/);
   });
+
+  // d8-rk-kapitel-menue-spalte-versetzt: am Handy stand im Studienbuch der Linienzähler HINTER dem ⋮ und schob es je nach
+  // Textlänge anders weit — ohne sichtbaren Balken steht der Zähler jetzt vor dem ⋮ (order 1) in fester Breite rechtsbündig.
+  // Karma ist breit → Regel als CSS-Text, ihre Bedingung gegen die echten Zeilen (Studienbuch / Kurs mit Aufgaben).
+  it('d8: ohne Balken steht der Linienzähler am Handy vor dem ⋮, fest breit und rechtsbündig', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const css = ((ChapterRowComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ');
+    const at = css.indexOf('@media (max-width: 599.98px)');
+    const block = css.slice(at);
+    expect(block).toMatch(/:not\(:has\(> ?\.chapter-progress[^)]*:not\(\.chapter-progress--none\)\)\)[^{]*> ?\.chapter-counts[^{]*\{[^}]*order: 1;[^}]*min-width: 5\.5rem;[^}]*text-align: right/);
+    const rule = '.chapter-row:not(:has(> .chapter-progress:not(.chapter-progress--none))) > .chapter-counts';
+
+    const study = await render({ chapter: chapter({ quizCount: 0, solvedCount: 0, progressPercent: 0, lineCount: 6 }) });
+    expect(study.el.querySelector('.chapter-progress--none')).not.toBeNull();
+    expect(study.el.querySelector('.chapter-counts')!.matches(rule)).withContext('Studienbuch').toBeTrue();
+    TestBed.resetTestingModule();
+    const empty = await render({ isEmptyQuiz: true });
+    expect(empty.el.querySelector('.chapter-counts')!.matches(rule)).withContext('Kurs ohne Aufgaben').toBeTrue();
+    TestBed.resetTestingModule();
+    const quiz = await render();
+    expect(quiz.el.querySelector('.chapter-counts')!.matches(rule)).withContext('mit Balken: Zeile 2 wie bisher').toBeFalse();
+  });
 });

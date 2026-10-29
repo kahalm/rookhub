@@ -119,8 +119,7 @@ export interface EbookEditDialogData {
   styles: [`
     /* Scrollkante sichtbar (c1-eb-upload-disabled-no-reason): was unter der Linie liegt, ist nur weggescrollt. */
     mat-dialog-content { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; border-bottom: 1px solid var(--mat-sys-outline-variant); }
-    mat-dialog-actions { flex-wrap: wrap; row-gap: 4px; }
-    .why { margin-right: auto; max-width: 280px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+    /* Knopfleiste mit Grund (.why): global in styles.scss (DESIGN 5.6, d8-rk-dialog-aktionen-umbruch). */
     .full { width: 100%; }
     /* Dynamischer Hinweisbereich reserviert unten nichts — 12 px Luft bis zur schwebenden Beschriftung des nächsten Felds. */
     .board-mode { margin-bottom: 12px; }

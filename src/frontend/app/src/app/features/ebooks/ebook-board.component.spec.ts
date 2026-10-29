@@ -481,6 +481,31 @@ describe('EbookBoardComponent', () => {
     expect(c.slice(0, at)).toMatch(/\.eb-bar(\[[^\]]*\])?\{display:flex;align-items:center/);
     expect(c.slice(0, at)).not.toContain('flex-wrap:wrap');   // eine Zeile, kein Umbruch
   });
+  // d8-rk-hinweiszeile-auge-versetzt: im Kalkulieren steht das Auge nicht im Fließtext (Grundlinie, abgeblasst), sondern
+  // wie beim Lösen in einer mittig ausgerichteten Flex-Zeile rechts neben dem Hinweis.
+  it('d8: Kalkulieren — Auge sitzt mittig neben dem Hinweis, nicht im abgeblassten Absatz', () => {
+    const fixture = make(D, 'calc');
+    const c = fixture.componentInstance;
+    c.setMode('calc');
+    fixture.detectChanges();
+    expect(c.frozen()).toBeTrue();
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    try {
+      const row = el.querySelector<HTMLElement>('.eb-note-row')!;
+      expect(getComputedStyle(row).display).toBe('flex');
+      expect(getComputedStyle(row).alignItems).toBe('center');
+      const eye = row.querySelector<HTMLElement>(':scope > .eb-peek')!;
+      expect(eye).not.toBeNull();
+      expect(el.querySelector('.eb-note .eb-peek')).toBeNull();
+      expect(getComputedStyle(eye).opacity).toBe('1');
+      const note = row.querySelector<HTMLElement>('.eb-note')!.getBoundingClientRect();
+      const r = eye.getBoundingClientRect();
+      expect(Math.abs((r.top + r.bottom) / 2 - (note.top + note.bottom) / 2)).toBeLessThanOrEqual(2);
+      expect(r.left).toBeGreaterThanOrEqual(note.right - 1);
+    } finally { el.remove(); }
+  });
+
   // d4-rk-kalk-hilfetext-lang: unter dem Brett ein Satz, der Rest hinter dem ?-Symbol (DESIGN 2 Nr. 2).
   it('Kalkulieren: ein Satz Erklärung, Einzelheiten hinter ?', async () => {
     const fixture = make(D, 'calc');

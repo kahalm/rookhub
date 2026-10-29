@@ -89,16 +89,24 @@
        der Satz liegt hinter ⓘ. Nur nach einem geglueckten Abruf: ein gescheiterter hiesse sonst „du hast noch keins". -->
   <!-- Ohne Konto: lesen geht alles, speichern nicht (0.643.0) — „Anmelden ⓘ" hinter der Trefferzahl, der Satz im ⓘ
        (z1-t-calendar-gast-vorlauf: der Kasten ueber den Reitern hielt den Vorlauf fuer Gaeste ueber 40 %). -->
-  <ng-template #profileNote>
+  <!-- d8-t-doppeltes-info-symbol: hinter der Trefferzahl (withHelp) stand in niedrigen Fenstern „Anmelden ⓘ ⓘ“ — dort trägt das
+       ⓘ des Hinweises auch den Seitentext (note-help-low), das Seiten-ⓘ .low-help entfällt (scss). -->
+  <ng-template #profileNote let-withHelp="withHelp">
     @if (!loggedIn) {
       <span class="profile-note guest-note">
         <button type="button" class="link-btn" (click)="newProfile()">{{ 'nav.login' | translate }}</button>
-        <app-help-hint [text]="'tournamentDirectory.guestHint' | translate" />
+        <app-help-hint class="note-help" [text]="'tournamentDirectory.guestHint' | translate" />
+        @if (withHelp) {
+          <app-help-hint class="note-help-low" [text]="('tournamentDirectory.guestHint' | translate) + paraBreak + ('tournamentDirectory.help' | translate)" />
+        }
       </span>
     } @else if (profilesLoaded() && profiles().length === 0) {
       <span class="profile-note">
         <button type="button" class="link-btn" (click)="newProfile()">{{ 'tournamentDirectory.profile.new' | translate }}</button>
-        <app-help-hint [text]="'tournamentDirectory.noProfileHint' | translate" />
+        <app-help-hint class="note-help" [text]="'tournamentDirectory.noProfileHint' | translate" />
+        @if (withHelp) {
+          <app-help-hint class="note-help-low" [text]="('tournamentDirectory.noProfileHint' | translate) + paraBreak + ('tournamentDirectory.help' | translate)" />
+        }
       </span>
     }
   </ng-template>
@@ -189,7 +197,7 @@
         <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>
       }
       <!-- d3-t-kalender-vorlauf-zu-hoch: in niedrigen Fenstern (Boox 200 %) steht der Titel nur für Vorleser, sein ⓘ hier. -->
-      <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}<ng-container *ngTemplateOutlet="profileNote" /><app-help-hint class="low-help" [text]="'tournamentDirectory.help' | translate" /></p>
+      <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}<ng-container *ngTemplateOutlet="profileNote; context: { withHelp: true }" /><app-help-hint class="low-help" [text]="'tournamentDirectory.help' | translate" /></p>
       @if (upcomingEntries().length > 0) {
         <div class="entry-grid">
           @for (entry of upcomingEntries(); track trackById($index, entry)) {

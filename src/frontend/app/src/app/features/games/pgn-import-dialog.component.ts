@@ -57,6 +57,9 @@ export const MAX_PGN_CHARS = 5_000_000;
       @if (result()) {
         <button mat-flat-button (click)="ref.close(result() ?? undefined)">{{ 'common.close' | translate }}</button>
       } @else {
+        <!-- d8-rk-pgn-dialog-hochladen-ohne-grund: gesperrtes „Hochladen“ sagt, was fehlt (DESIGN 5.6); derselbe Satz
+             wie die Fehlermeldung bei leerem Text. -->
+        @if (!busy() && !text().trim() && !error()) { <span class="why" role="status">{{ 'games.pgnUpload.error.empty' | translate }}</span> }
         <button mat-button (click)="ref.close()">{{ 'common.cancel' | translate }}</button>
         <button mat-flat-button (click)="upload()" [disabled]="busy() || !text().trim()">
           <mat-icon>cloud_upload</mat-icon> {{ 'games.pgnUpload.import' | translate }}
@@ -66,7 +69,8 @@ export const MAX_PGN_CHARS = 5_000_000;
   `,
   styles: [`
     .content { display: flex; flex-direction: column; gap: 8px; min-width: min(560px, 86vw); }
-    .hint { margin: 0; font-size: 0.9rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    /* Im Dialog ist currentColor schon on-surface-variant — 65 % davon war doppelt abgeblasst (d8-rk-dialog-hinweis-kontrast). */
+    .hint { margin: 0; font-size: 0.9rem; color: var(--mat-sys-on-surface-variant); }
     .file-name { font-size: 0.85rem; }
     .text { width: 100%; }
     .text textarea { font-family: ui-monospace, monospace; font-size: 0.85rem; }

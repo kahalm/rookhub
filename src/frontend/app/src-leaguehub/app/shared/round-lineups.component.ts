@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, viewChild, viewChildren } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, signal, viewChild, viewChildren } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpErrorResponse } from '@angular/common/http';
-import { tn } from '../core/league-format';
+import { shortTeam, tn } from '../core/league-format';
 import { GameMarkers, LineupBoard, LineupMatch, LineupsApiService, MovesKey, RoundLineups, points } from '../core/lineups';
 import { BoardMovesComponent } from './board-moves.component';
 import { BoardGameComponent } from './board-game.component';
@@ -40,12 +40,21 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
         @if (markers.markTotal(d.matches); as n) {
           <p class="lu-plus">Interessante Stellungen dieser Runde <lh-game-badges [marks]="n" (pick)="openMarks(d.matches, d.round)" /></p>
         }
-        @for (m of d.matches; track $index) {
-          <article class="lu-match" [class.own]="m.own">
-            <h3 class="lu-head">
+        <!-- d8-l-fold-long-aufstellungen-handy: am Handy wurde die Seite 7,8 Bildschirme lang — eigene Begegnung zuerst, darüber
+             eine Sprungleiste, fremde Begegnungen am Handy zugeklappt (Kopf mit Ergebnis bleibt sichtbar). -->
+        @if (ordered().length > 1) {
+          <nav class="lu-jump" aria-label="Zur Begegnung springen">
+            @for (m of ordered(); track $index) {
+              <button type="button" class="lu-chip" [class.own]="m.own" (click)="jump($index)">{{ short(m.home) }} – {{ short(m.away) }}</button>
+            }
+          </nav>
+        }
+        @for (m of ordered(); track $index) {
+          <details class="lu-match" [class.own]="m.own" [id]="'lu-m-' + $index" [open]="m.own || !compact()">
+            <summary class="lu-sum"><h3 class="lu-head">
               <span class="lu-teams">{{ tn(m.home) }} <span class="muted">–</span> {{ tn(m.away) }}</span>
               @if (m.homePts != null || m.awayPts != null) { <span class="lu-score">{{ pts(m.homePts) }} : {{ pts(m.awayPts) }}</span> }
-            </h3>
+            </h3></summary>
             @if (!m.boards.length) {
               <p class="muted lu-none">Noch keine Aufstellung.</p>
             } @else {
@@ -88,7 +97,7 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
                 }
               </ol>
             }
-          </article>
+          </details>
         }
       } @else {
         <p class="muted">Lade Aufstellungen …</p>
@@ -101,6 +110,21 @@ import { PlayerCardComponent } from '@rh/shared/player-card/player-card.componen
     .lu-plus { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; }
     .lu-match { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 6px; }
     .lu-match.own { border-color: var(--ink); border-width: 2px; }
+    .lu-match { scroll-margin-top: 12px; }
+    .lu-sum { display: flex; align-items: baseline; gap: 6px; cursor: pointer; list-style: none; }
+    .lu-sum::-webkit-details-marker { display: none; }
+    .lu-sum::before { content: '▾'; color: var(--muted); font-size: 14px; flex: none; }
+    .lu-match:not([open]) > .lu-sum::before { content: '▸'; }
+    .lu-match:not([open]) { padding-bottom: 12px; }
+    .lu-match:not([open]) .lu-head { margin-bottom: 0; }
+    .lu-sum .lu-head { flex: 1; min-width: 0; }
+    .lu-sum:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+    .lu-jump { display: flex; flex-wrap: wrap; gap: 6px; }
+    .lu-chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; min-height: 36px;
+      padding: 4px 12px; font: 500 14px/1.2 var(--body); cursor: pointer; text-align: left; }
+    .lu-chip:hover { background: var(--paper); }
+    .lu-chip.own { border: 2px solid var(--ink); font-weight: 600; }
+    .lu-chip:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
     .lu-head { margin: 0 0 6px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font: 600 19px/1.2 var(--cond); }
     .lu-teams { overflow-wrap: anywhere; }
     .lu-score { font-weight: 700; white-space: nowrap; }
@@ -144,7 +168,16 @@ export class RoundLineupsComponent {
   readonly error = signal<string | null>(null);
   private loadedFor = '';
   readonly tn = tn;
+  readonly short = shortTeam;
   readonly pts = points;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** Handy (wie die @media-Regel unten): fremde Begegnungen zugeklappt (d8). */
+  readonly compact = signal(typeof matchMedia === 'function' && matchMedia('(max-width: 640px)').matches);
+  /** Eigene Begegnung(en) zuerst, dann der Rest in der Reihenfolge des Servers (Tabellenreihenfolge). */
+  readonly ordered = computed(() => {
+    const ms = this.data()?.matches ?? [];
+    return [...ms.filter(m => m.own), ...ms.filter(m => !m.own)];
+  });
 
   constructor() {
     effect(() => {
@@ -187,6 +220,14 @@ export class RoundLineupsComponent {
     }));
     const r = await openMarkedPositions(this.dialog, games);
     if (r) this.boardGames().find(c => c.game().clubGameId === r.clubGameId)?.showAt(r.start);
+  }
+
+  /** Sprungleiste: Begegnung aufklappen und in Sicht holen. */
+  jump(i: number): void {
+    const el = this.host.nativeElement.querySelector<HTMLDetailsElement>(`#lu-m-${i}`);
+    if (!el) return;
+    el.open = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /** Angemeldet jeder Name mit FIDE-ID; über den Link nur die Meldeliste des Links (sonst antwortet der Server 404). */

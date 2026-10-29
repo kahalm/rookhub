@@ -100,7 +100,7 @@ export const SHARE_DIALOG_TEMPLATE = `
 
 export const SHARE_DIALOG_STYLES = `
     .center { display: flex; justify-content: center; padding: 24px; }
-    .hint { margin: 0 0 12px; font-size: 0.88rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .hint { margin: 0 0 12px; font-size: 0.88rem; color: var(--mat-sys-on-surface-variant); }
     .section { margin-bottom: 14px; min-width: min(360px, 80vw); }
     .section h3 { font-size: 0.85rem; font-weight: 600; margin: 0 0 6px; opacity: 0.75; }
     .recipient-list { list-style: none; margin: 0; padding: 0; }

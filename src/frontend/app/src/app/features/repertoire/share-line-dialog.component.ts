@@ -42,7 +42,7 @@ import { SnackbarService } from '../../core/snackbar.service';
     .link-row { display: flex; align-items: center; gap: 0.5rem; }
     .link-input {
       flex: 1; padding: 0.5rem; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 4px;
-      font-size: 0.85rem; background: var(--mat-sys-surface-container, #f5f5f5); color: inherit;
+      font-size: 0.85rem; background: var(--mat-sys-surface-container); color: inherit;
     }
     .hint { font-size: 0.8rem; opacity: 0.65; margin: 0.75rem 0 0; }
     .dialog-actions { display: flex; align-items: center; margin-top: 1rem; }

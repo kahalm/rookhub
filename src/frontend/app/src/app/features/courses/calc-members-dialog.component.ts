@@ -14,6 +14,7 @@ import { forkJoin } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CalcEditionsService, CalcSeriesMember } from './calc-editions.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 export interface CalcMembersDialogData { bookId: number; }
 
@@ -34,12 +35,13 @@ export interface CalcMembersDialogData { bookId: number; }
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatSlideToggleModule, MatProgressBarModule, MatTooltipModule, TranslatePipe,
+    MatButtonModule, MatIconModule, MatSlideToggleModule, MatProgressBarModule, MatTooltipModule, HelpHintComponent, TranslatePipe,
   ],
   template: `
     <h2 mat-dialog-title>{{ 'calc.series.members' | translate }}</h2>
     <mat-dialog-content class="cmd">
-      <p class="hint">{{ 'calc.series.membersHint' | translate }}</p>
+      <!-- d8-rk-serien-verteiler-hinweis-lang-klein: ein Satz sichtbar, der Rest hinter dem ? (Grundsatz 2). -->
+      <p class="hint">{{ 'calc.series.membersHint' | translate }}<span class="rh-nowrap">&nbsp;<app-help-hint [text]="'calc.series.membersHelp' | translate" /></span></p>
 
       <div class="add-row">
         <mat-form-field appearance="outline" class="grow">
@@ -84,13 +86,15 @@ export interface CalcMembersDialogData { bookId: number; }
     </mat-dialog-actions>
   `,
   styles: [`
-    .hint { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 12px; margin: 0 0 8px; }
+    /* Im Dialog ist currentColor schon on-surface-variant — der Anteil davon war doppelt abgeblasst (d8-rk-dialog-hinweis-kontrast, DESIGN 5.6). */
+    .hint { color: var(--mat-sys-on-surface-variant); font-size: .85rem; margin: 0 0 8px; }
+    .hint app-help-hint { vertical-align: middle; }
     /* d7-rk-verteiler-tester-rand: kein min-width mehr (war am Handy breiter als der Dialog) — Feld oben über die
        volle Breite, darunter Tester-Schalter links und „Hinzufügen“ rechts. */
     .add-row { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; }
     .add-row .grow { grid-column: 1 / -1; width: 100%; }
     .add-row mat-slide-toggle { justify-self: start; }
-    .empty { color: color-mix(in srgb, currentColor 60%, transparent); font-style: italic; }
+    .empty { color: var(--mat-sys-on-surface-variant); font-style: italic; }
     .members { list-style: none; margin: 8px 0 0; padding: 0; }
     .member { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .member .name { flex: 1 1 auto; font-weight: 500; }
