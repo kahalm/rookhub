@@ -30,6 +30,8 @@ api:
   - 'tools/LibraryImport/**'
   - 'tools/ScoresheetBench/**'
   - 'tools/DiagramCli/**'
+  # Container-Worker (Python): sein Test laeuft in `test-scripts` (scripts/tests/test_diagram_worker.py)
+  - 'tools/DiagramWorker/**'
 
 # Der geteilte Teil der Angular-Projekte. `src-turnier/` importiert per Alias @rh/* aus
 # `src/app/` — eine Aenderung DORT trifft BEIDE Bundles, deshalb steht dieser Block auch im

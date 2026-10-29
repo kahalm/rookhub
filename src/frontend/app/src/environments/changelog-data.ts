@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.873.0", date: "2026-10-29", changes: [
+    { en: "E-books: the external diagram worker now also runs as a Docker image (amd64 and arm64, e.g. on the DGX Spark) — more machines can help work through the recognition queue.",
+      de: "E-Books: Der externe Diagramm-Worker läuft jetzt auch als Docker-Image (amd64 und arm64, z. B. auf dem DGX Spark) — so helfen mehr Rechner, die Erkennungs-Warteschlange abzuarbeiten." },
+  ] },
   { version: "0.872.0", date: "2026-10-29", changes: [
     { en: "E-books: a book whose reading copy cannot be created (e.g. a scan with pages several metres tall) is now marked as failed instead of being retried every 30 seconds — the endless retry held up all other conversions and drove the server out of memory on 29 October.",
       de: "E-Books: Ein Buch, dessen Lesefassung sich nicht erzeugen lässt (z. B. ein Scan mit meterhohen Seiten), gilt jetzt als fehlgeschlagen, statt alle 30 Sekunden neu versucht zu werden — der Dauerversuch hielt alle anderen Umwandlungen auf und trieb den Server am 29. Oktober in einen Speicherüberlauf." },

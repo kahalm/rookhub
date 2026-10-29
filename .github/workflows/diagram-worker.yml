@@ -1,0 +1,81 @@
+name: Diagram-Worker-Image
+
+# Externer Diagramm-Worker (tools/DiagramWorker, 0.873.0) → ghcr.io/<owner>/rookhub-diagram-worker, amd64 + arm64 (DGX Spark).
+# Eigenständig wie board-train: kein Test-Gate, kein Prod-Image. Gebaut bei jedem Release-Tag (die Erkennung im Image soll
+# zur Server-Fassung passen) und wenn sich Worker oder DiagramCli auf master ändern.
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+    paths:
+      - 'tools/DiagramWorker/**'
+      - 'tools/DiagramCli/**'
+      - '.github/workflows/diagram-worker.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  image:
+    # Je Architektur ein nativer Runner — kein QEMU.
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image-Name und Version
+        id: name
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rookhub-diagram-worker" >> "$GITHUB_OUTPUT"
+          echo "version=$(grep -oP "APP_VERSION = '\K[^']+" src/frontend/app/src/environments/changelog.ts)" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: tools/DiagramWorker/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          build-args: VERSION=${{ steps.name.outputs.version }}
+          push: true
+          tags: ${{ steps.name.outputs.image }}:${{ github.sha }}-${{ matrix.arch }}
+      - name: Rauchtest (Programm startet)
+        run: docker run --rm --entrypoint /app/cli/rookhub-diagrams "${{ steps.name.outputs.image }}:${{ github.sha }}-${{ matrix.arch }}" --version
+
+  manifest:
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Mehrarchitektur-Tags (sha, latest, bei Tag die Version)
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rookhub-diagram-worker"
+          tags=(-t "$image:$GITHUB_SHA" -t "$image:latest")
+          if [ "$REF_TYPE" = tag ]; then tags+=(-t "$image:$REF_NAME"); fi
+          docker buildx imagetools create "${tags[@]}" "$image:$GITHUB_SHA-amd64" "$image:$GITHUB_SHA-arm64"

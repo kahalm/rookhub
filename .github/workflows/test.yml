@@ -257,6 +257,7 @@ jobs:
       - run: bash scripts/tests/test_init_db.sh
       - run: python3 scripts/tests/test_es_log_retention.py
       - run: python3 scripts/tests/test_prep_import.py
+      - run: python3 scripts/tests/test_diagram_worker.py
       - run: bash scripts/tests/test_release_notes.sh
 
   build-frontend:

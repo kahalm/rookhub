@@ -1,0 +1,14 @@
+# Externer Diagramm-Worker (z. B. auf dem DGX Spark):
+#   echo 'ROOKHUB_TOKEN=rkh_…' > .env && chmod 600 .env && docker compose up -d
+# Token: RookHub → Profil → API-Tokens → Bereich „Diagramm-Worker“ (ein Token je Rechner).
+services:
+  diagram-worker:
+    image: ghcr.io/kahalm/rookhub-diagram-worker:latest
+    restart: unless-stopped
+    environment:
+      - ROOKHUB_URL=${ROOKHUB_URL:-https://rookhub.oberschmid.homes}
+      - ROOKHUB_TOKEN=${ROOKHUB_TOKEN:?ROOKHUB_TOKEN in .env setzen}
+      - WORKER_NAME=${WORKER_NAME:-spark}
+      - THREADS=${THREADS:-}
+    # docker stop schickt SIGTERM: der Worker gibt das laufende Buch frei, statt die Leihe (30 min) ablaufen zu lassen
+    stop_grace_period: 30s

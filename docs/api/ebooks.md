@@ -422,6 +422,11 @@ Der Laptop-Worker liest `_tools/rookhub-diagrams.version` über WebDAV und lädt
 (Anleitung: `~/claude/ebook-board-training/worker/README.md`). Eine neue Erkennung im Server sollte immer mit einem neuen
 Build auf den Laptop — sonst rechnen beide verschieden.
 
+**Als Container (0.873.0)**: `tools/DiagramWorker` — dasselbe `rookhub-diagrams` im Image (`ghcr.io/kahalm/rookhub-diagram-worker`,
+amd64 + arm64, Workflow `diagram-worker.yml` bei jedem Release-Tag) plus ein schlanker Python-Worker nur für die
+Diagramm-Erkennung (`worker.py`, Test `scripts/tests/test_diagram_worker.py`). Gedacht für den DGX Spark und andere
+Linux-Rechner; Einrichten: `tools/DiagramWorker/README.md`. Die Laptop-Fassung (Windows, mit Brett-Aufträgen) bleibt.
+
 ## Brett-Modi im Leser (0.777.0)
 
 Die Brett-Leiste ist eine eigene Komponente (`features/ebooks/ebook-board.component.*`, `app-ebook-board`, Eingabe das
