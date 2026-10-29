@@ -59,14 +59,15 @@
           <input matInput type="search" [ngModel]="search" (ngModelChange)="onSearch($event)"
                  [placeholder]="(narrow() ? 'ebooks.searchShort' : 'ebooks.search') | translate" [attr.aria-label]="'ebooks.search' | translate" />
         </mat-form-field>
-        <!-- Handy (DESIGN 4.6 Nr. 7): Sortierung, Schalter und Schlagwörter hinter „Filter ▾“ (c1-eb-tag-filter-lead). -->
+        <!-- 0.877.0 (Nutzerwunsch 29.10.): Schlagwörter, Sprache und Elo stehen auf jeder Breite hinter „Filter ▾“ (Zahl =
+             aktive Filter); am Handy kommen Sortierung und „Meine Uploads“ dazu (DESIGN 4.6 Nr. 7, c1-eb-tag-filter-lead). -->
         <button type="button" class="eb-chip eb-filter-toggle" [class.eb-chip--on]="activeFilterCount > 0"
-                [attr.aria-expanded]="filtersOpen()" aria-controls="eb-filter-panel" (click)="filtersOpen.set(!filtersOpen())">
+                [attr.aria-expanded]="filtersOpen()" aria-controls="eb-filter-panel eb-filter-more" (click)="filtersOpen.set(!filtersOpen())">
           <mat-icon>tune</mat-icon>{{ 'ebooks.filter.toggle' | translate }}
           @if (activeFilterCount > 0) { <span class="eb-chip-count">{{ activeFilterCount }}</span> }
           <mat-icon>{{ filtersOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
         </button>
-        <div class="eb-filter-more" id="eb-filter-panel" [class.eb-filter-more--open]="filtersOpen()">
+        <div class="eb-filter-more" id="eb-filter-more" [class.eb-filter-more--open]="filtersOpen()">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-sort">
             <mat-label>{{ 'ebooks.sort.label' | translate }}</mat-label>
             <mat-select [value]="sort" (valueChange)="setSort($event)">
@@ -76,22 +77,15 @@
           <button type="button" class="eb-chip" [class.eb-chip--on]="mine" [attr.aria-pressed]="mine" (click)="toggleMine()">
             <mat-icon>person</mat-icon>{{ 'ebooks.filter.mine' | translate }}
           </button>
-          <!-- 0.822.0: Elo-Spanne statt „Mit Diagrammen“ — Mindest-Elo des Buchs von … bis …, leer = offen. -->
-          <div class="eb-elo" role="group" [attr.aria-label]="'ebooks.filter.elo' | translate">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-elo-field">
-              <mat-label>{{ 'ebooks.filter.eloFrom' | translate }}</mat-label>
-              <input matInput type="number" inputmode="numeric" min="0" max="3500" step="100"
-                     [ngModel]="minElo" (ngModelChange)="setElo('min', $event)" />
-            </mat-form-field>
-            <span class="eb-elo-dash" aria-hidden="true">–</span>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="eb-elo-field">
-              <mat-label>{{ 'ebooks.filter.eloTo' | translate }}</mat-label>
-              <input matInput type="number" inputmode="numeric" min="0" max="3500" step="100"
-                     [ngModel]="maxElo" (ngModelChange)="setElo('max', $event)" />
-            </mat-form-field>
-          </div>
         </div>
       </div>
+      @if (filtersOpen()) {
+        <app-ebook-filter-panel id="eb-filter-panel"
+          [tags]="list.tags" [languages]="list.languages ?? []" [translations]="list.translations ?? []"
+          [tag]="tag" [language]="language" [translation]="translation" [minElo]="minElo" [maxElo]="maxElo"
+          (tagChange)="setTag($event)" (languageChange)="setLanguage($event)" (translationChange)="setTranslation($event)"
+          (eloChange)="setElo($event.which, $event.value)" />
+      }
 
       <!-- Autor-Filter (0.796.0): immer sichtbar, ein Tipp nimmt ihn zurück. -->
       @if (author) {
@@ -102,12 +96,27 @@
         </div>
       }
 
-      <!-- Handy, zugeklappt: aktive Filter als Chips (ein Tipp nimmt sie zurück). -->
-      @if (!filtersOpen() && (mine || eloActive || tag)) {
+      <!-- Zugeklappt: aktive Filter als Chips (ein Tipp nimmt sie zurück); „Meine Uploads“ nur am Handy (sonst in der Zeile). -->
+      @if (!filtersOpen() && (mine || eloActive || tag || language || translation)) {
         <div class="eb-active" role="group" [attr.aria-label]="'ebooks.filter.active' | translate">
           @if (mine) {
-            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="toggleMine()">
+            <button type="button" class="eb-chip eb-chip--on eb-active-mine" aria-pressed="true" (click)="toggleMine()">
               <mat-icon>person</mat-icon>{{ 'ebooks.filter.mine' | translate }}<mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (tag) {
+            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setTag(tag)">
+              {{ tag | ebookTagLabel }}<mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (language) {
+            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setLanguage(null)">
+              <mat-icon>language</mat-icon>{{ languageLabel(language) }}<mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (translation) {
+            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setTranslation(null)">
+              <mat-icon>translate</mat-icon>{{ 'ebooks.filter.translatedInto' | translate: { lang: languageLabel(translation) } }}<mat-icon>close</mat-icon>
             </button>
           }
           @if (eloActive) {
@@ -115,27 +124,18 @@
               {{ 'ebooks.filter.eloRange' | translate: { from: minElo ?? 0, to: maxElo ?? '…' } }}<mat-icon>close</mat-icon>
             </button>
           }
-          @if (tag) {
-            <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setTag(tag)">
-              {{ tag }}<mat-icon>close</mat-icon>
-            </button>
-          }
         </div>
       }
 
-      @if (list.tags.length > 0) {
-        <div class="eb-tags" [class.eb-tags--open]="filtersOpen()" role="group" [attr.aria-label]="'ebooks.meta.tags' | translate">
-          @for (t of visibleTags; track t.tag) {
-            <button type="button" class="eb-chip" [class.eb-chip--on]="tag === t.tag" [attr.aria-pressed]="tag === t.tag"
-                    (click)="setTag(t.tag)">{{ t.tag }} <span class="eb-chip-count">{{ t.count }}</span></button>
+      <!-- 0.877.0: Gesamtmenge zur Filterung — Sammlungen zählen mit jedem Buch (die Seitenwahl zählt Ordner). -->
+      @if (list.bookCount != null) {
+        <p class="eb-totals" role="status" [title]="'ebooks.totals.label' | translate">
+          {{ list.bookCount === 1 ? ('ebooks.totals.booksOne' | translate) : ('ebooks.totals.books' | translate: { n: num(list.bookCount) }) }}
+          @if (fileTotal > 0) {
+            · {{ fileTotal === 1 ? ('ebooks.totals.filesOne' | translate) : ('ebooks.totals.files' | translate: { n: num(fileTotal) }) }}
+            <span class="eb-totals-formats">({{ formatSummary }})</span>
           }
-          @if (list.tags.length > tagsCollapsedCount) {
-            <button type="button" class="eb-chip eb-tags-more" [attr.aria-expanded]="tagsOpen()" (click)="tagsOpen.set(!tagsOpen())">
-              {{ (tagsOpen() ? 'ebooks.filter.fewerTags' : 'ebooks.filter.allTags') | translate: { n: list.tags.length } }}
-              <mat-icon>{{ tagsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-            </button>
-          }
-        </div>
+        </p>
       }
     }
 

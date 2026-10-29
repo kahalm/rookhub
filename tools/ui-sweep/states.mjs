@@ -126,8 +126,8 @@ export const STATES = [
     steps: [{ click: '.eb-page .header-actions button[mat-icon-button]' }], expect: MENU },
   // Seit c1 steht der Schalter in .eb-filter-more (am Handy hinter „Filter ▾“, ab 600 px offen in der Zeile). Die
   // Filterzeile gibt es nur, wenn die Rolle mindestens ein Buch sieht — seed.mjs gibt zwei für „Everyone" frei.
-  // 0.822.0: Elo-Spanne statt „Mit Diagrammen“ — ab 1800 filtern (Handy: erst die Filter aufklappen; breit steht
-  // das Feld offen da). Geprüft wird das ausgefüllte Feld, das in jeder Breite sichtbar bleibt.
+  // 0.822.0: Elo-Spanne statt „Mit Diagrammen“ — ab 1800 filtern. Seit 0.877.0 steht sie auf jeder Breite in der
+  // Filter-Komponente hinter „Filter ▾“ (erst aufklappen). Geprüft wird das ausgefüllte Feld.
   { of: 'rookhub__ebooks', name: 'elo-filter',
     steps: [{ clickIf: '.eb-filters button.eb-filter-toggle' }, { fill: '.eb-elo input >> nth=0', text: '1800' }],
     expect: '.eb-elo input.ng-dirty' },

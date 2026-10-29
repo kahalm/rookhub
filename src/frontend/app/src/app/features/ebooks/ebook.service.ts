@@ -166,6 +166,15 @@ export interface EbookDiagramList {
 
 export interface EbookTagFacet { tag: string; count: number; }
 
+/** Sprach-Facette (0.877.0): ISO 639-1, `null` = Sprache nicht bestimmt (Filterwert `unknown`). */
+export interface EbookLanguageFacet { language: string | null; count: number; }
+
+/** Dateien eines Formats in der gefilterten Menge (0.877.0). */
+export interface EbookFormatCount { format: string; count: number; }
+
+/** Filterwert „Sprache nicht bestimmt“. */
+export const EBOOK_LANGUAGE_UNKNOWN = 'unknown';
+
 /** Sammlung (0.787.0): mehrere Bücher als ein Ordner in der Liste. */
 export interface EbookCollection { id: number; name: string; bookCount: number; }
 
@@ -176,7 +185,15 @@ export interface EbookList {
   total: number;
   page: number;
   pageSize: number;
+  /** Bücher zur aktuellen Filterung — jede Sammlung zählt mit all ihren Büchern (`total` zählt sie als einen Ordner). */
+  bookCount?: number;
+  /** Dateien dieser Bücher je Format (ohne abgeleitete), häufigste zuerst. */
+  fileCounts?: EbookFormatCount[];
   tags: EbookTagFacet[];
+  /** Sprachen aller sichtbaren Bücher (unabhängig vom Filter), häufigste zuerst. */
+  languages?: EbookLanguageFacet[];
+  /** Fertige Übersetzungen aller sichtbaren Bücher je Zielsprache. */
+  translations?: EbookLanguageFacet[];
   uploadEnabled: boolean;
   quotaUsedBytes: number;
   quotaLimitBytes: number | null;
@@ -201,6 +218,10 @@ export interface EbookQuery {
   /** Elo-Spanne (0.822.0): Mindest-Elo des Buchs von … bis …; mit einer Grenze fallen Bücher ohne Elo heraus. */
   minElo?: number | null;
   maxElo?: number | null;
+  /** Sprache des Buchtexts (ISO 639-1) oder `unknown` (0.877.0). */
+  language?: string | null;
+  /** Nur Bücher mit fertiger Übersetzung in diese Sprache (0.877.0). */
+  translation?: string | null;
   /** Nur die Bücher dieser Sammlung; ohne erscheinen Sammlungen als je ein Ordner. */
   collection?: number | null;
   sort?: EbookSort;
@@ -320,6 +341,8 @@ export class EbookService {
     if (q.mine) params = params.set('mine', 'true');
     if (q.minElo != null) params = params.set('minElo', String(q.minElo));
     if (q.maxElo != null) params = params.set('maxElo', String(q.maxElo));
+    if (q.language) params = params.set('language', q.language);
+    if (q.translation) params = params.set('translation', q.translation);
     if (q.collection) params = params.set('collection', String(q.collection));
     if (q.sort) params = params.set('sort', q.sort);
     if (q.page) params = params.set('page', String(q.page));

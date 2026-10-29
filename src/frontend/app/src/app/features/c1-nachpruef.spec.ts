@@ -11,11 +11,12 @@ function css(cmp: Type<unknown>): string {
 }
 
 describe('Nachprüfung c1 (0.775.3)', () => {
-  it('E-Books: „Filter ▾“ ist ab 600 px ausgeblendet — die Regel schlägt .eb-chip (gleich stark und davor stand sie)', () => {
+  it('E-Books: „Filter ▾“ steht seit 0.877.0 auf jeder Breite; der Chip „Meine Uploads“ unter der Zeile nur am Handy — die Regel schlägt .eb-chip', () => {
     const c = css(EbookListComponent);
-    expect(c).toMatch(/\.eb-chip(\[[^\]]*\])?\.eb-filter-toggle(\[[^\]]*\])?\{display:none/);
-    // Am Handy wieder sichtbar, ebenso stark.
-    expect(c).toMatch(/max-width:599\.98px\)\{[^@]*\.eb-chip(\[[^\]]*\])?\.eb-filter-toggle(\[[^\]]*\])?\{display:inline-flex/);
+    expect(c).not.toMatch(/\.eb-filter-toggle(\[[^\]]*\])?\{display:none/);
+    expect(c).toMatch(/\.eb-chip(\[[^\]]*\])?\.eb-active-mine(\[[^\]]*\])?\{display:none/);
+    // Am Handy sichtbar, ebenso stark.
+    expect(c).toMatch(/max-width:599\.98px\)\{[^@]*\.eb-chip(\[[^\]]*\])?\.eb-active-mine(\[[^\]]*\])?\{display:inline-flex/);
   });
 
   it('Leser am Handy: ⋮ steht in der Titelzeile, damit der Diagramm-Knopf es nicht in eine dritte Zeile schiebt', () => {

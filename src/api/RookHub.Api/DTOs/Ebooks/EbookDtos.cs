@@ -94,6 +94,21 @@ public class EbookTagFacetDto
     public int Count { get; set; }
 }
 
+/// <summary>Dateien eines Formats in der gefilterten Menge (0.877.0).</summary>
+public class EbookFormatCountDto
+{
+    public string Format { get; set; } = string.Empty;
+    public int Count { get; set; }
+}
+
+/// <summary>Sprach-Facette der Übersicht (0.877.0): Sprache des Buchtexts bzw. Zielsprache einer fertigen Übersetzung.</summary>
+public class EbookLanguageFacetDto
+{
+    /// <summary>ISO 639-1; <c>null</c> = Sprache nicht bestimmt (Filterwert <c>unknown</c>).</summary>
+    public string? Language { get; set; }
+    public int Count { get; set; }
+}
+
 /// <summary>Antwort der Übersicht: eine Seite plus Rahmen (Schlagworte, Upload-Stand, Kontingent).</summary>
 public class EbookListDto
 {
@@ -101,10 +116,19 @@ public class EbookListDto
     /// <summary>Die geöffnete Sammlung (bei <c>?collection=</c>), sonst <c>null</c>.</summary>
     public EbookCollectionDto? Collection { get; set; }
     public int Total { get; set; }
+    /// <summary>Bücher zur aktuellen Filterung (0.877.0) — anders als <see cref="Total"/> zählt jede Sammlung mit all ihren
+    /// passenden Büchern statt als ein Ordner.</summary>
+    public int BookCount { get; set; }
+    /// <summary>Dateien dieser Bücher je Format (ohne abgeleitete), häufigste zuerst (0.877.0).</summary>
+    public List<EbookFormatCountDto> FileCounts { get; set; } = new();
     public int Page { get; set; }
     public int PageSize { get; set; }
     /// <summary>Schlagworte über ALLE sichtbaren Bücher (unabhängig vom Filter), häufigste zuerst.</summary>
     public List<EbookTagFacetDto> Tags { get; set; } = new();
+    /// <summary>Sprachen der sichtbaren Bücher (0.877.0, unabhängig vom Filter), häufigste zuerst; <c>null</c> = unbestimmt.</summary>
+    public List<EbookLanguageFacetDto> Languages { get; set; } = new();
+    /// <summary>Fertige Übersetzungen der sichtbaren Bücher je Zielsprache (0.877.0) — „mit englischer Übersetzung“.</summary>
+    public List<EbookLanguageFacetDto> Translations { get; set; } = new();
     public bool UploadEnabled { get; set; }
     public long QuotaUsedBytes { get; set; }
     /// <summary><c>null</c> = unbegrenzt (Verwalter oder Kontingent 0).</summary>
@@ -134,6 +158,10 @@ public class EbookQuery
     /// mit einer Grenze fallen Bücher ohne Elo heraus.</summary>
     public int? MinElo { get; set; }
     public int? MaxElo { get; set; }
+    /// <summary>Sprache des Buchtexts (0.877.0, ISO 639-1); <c>unknown</c> = nicht bestimmt.</summary>
+    public string? Language { get; set; }
+    /// <summary>Nur Bücher mit fertiger Übersetzung in diese Sprache (0.877.0, z. B. <c>en</c>).</summary>
+    public string? Translation { get; set; }
     /// <summary><c>title</c> (Vorgabe), <c>newest</c>, <c>recent</c> (zuletzt gelesen zuerst).</summary>
     public string? Sort { get; set; }
     public int Page { get; set; } = 1;

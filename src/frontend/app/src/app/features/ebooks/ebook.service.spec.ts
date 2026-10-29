@@ -54,8 +54,10 @@ describe('EbookService', () => {
   });
 
   it('schickt nur gesetzte Filter als Query', () => {
-    service.list({ search: 'endgame', tag: 'Endspiel', mine: true, sort: 'recent', page: 2 }).subscribe();
+    service.list({ search: 'endgame', tag: 'Endspiel', mine: true, sort: 'recent', page: 2, language: 'unknown', translation: 'en' }).subscribe();
     const req = http.expectOne(r => r.url === '/api/ebooks');
+    expect(req.request.params.get('language')).toBe('unknown');
+    expect(req.request.params.get('translation')).toBe('en');
     expect(req.request.params.get('search')).toBe('endgame');
     expect(req.request.params.get('tag')).toBe('Endspiel');
     expect(req.request.params.get('mine')).toBe('true');

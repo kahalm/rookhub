@@ -39,7 +39,7 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/ebooks?search=&tag=&mine=&withDiagrams=&minElo=&maxElo=&sort=&page=&pageSize=` | Auth | Sichtbare Bücher, eine Seite (`pageSize` ≤ 100, Vorgabe 24). `minElo`/`maxElo` (0.822.0): Mindest-Elo des Buchs (`TargetMinElo`, 0 = Anfänger) in der Spanne, mit einer Grenze fallen Bücher ohne Elo heraus; die Oberfläche zeigt dafür „Elo von – bis“ statt des früheren Schalters „Mit Diagrammen“ (fast alle Bücher haben welche) und „ab N Elo“ auf jeder Karte. Rahmen: `tags[]` (Schlagwort-Facette über ALLE sichtbaren, unabhängig vom Filter), `uploadEnabled`, `quotaUsedBytes`/`quotaLimitBytes` (null = unbegrenzt), `maxFileBytes`, `canManageAll`, `canImportLibrary`. `sort`: `title` (Vorgabe) / `newest` / `recent` (zuletzt gelesen zuerst). `tag` trifft nur ganze Schlagworte. Je Buch `canManage`, `groupIds` (nur wenn verwaltbar), `files[]`, `primaryFormat` (PDF vor allem anderen), `progress` (Lesestand des Aufrufers), `hasCover` |
+| GET | `/api/ebooks?search=&tag=&mine=&withDiagrams=&minElo=&maxElo=&language=&translation=&sort=&page=&pageSize=` | Auth | Sichtbare Bücher, eine Seite (`pageSize` ≤ 100, Vorgabe 24). `language` (0.877.0): Sprache des Buchtexts (`Ebook.Language`, ISO 639-1), `unknown` = nicht bestimmt; `translation`: nur Bücher mit FERTIGER Übersetzung in diese Sprache. Rahmen zusätzlich `languages[]` und `translations[]` (`{ language, count }` über alle sichtbaren, unabhängig vom Filter; `language: null` = unbestimmt), `bookCount` (Bücher zur Filterung — jede Sammlung mit all ihren passenden Büchern, `total` zählt sie als einen Ordner) und `fileCounts[]` (`{ format, count }`, Dateien dieser Bücher ohne abgeleitete, Format klein). `minElo`/`maxElo` (0.822.0): Mindest-Elo des Buchs (`TargetMinElo`, 0 = Anfänger) in der Spanne, mit einer Grenze fallen Bücher ohne Elo heraus; die Oberfläche zeigt dafür „Elo von – bis“ statt des früheren Schalters „Mit Diagrammen“ (fast alle Bücher haben welche) und „ab N Elo“ auf jeder Karte. Rahmen: `tags[]` (Schlagwort-Facette über ALLE sichtbaren, unabhängig vom Filter), `uploadEnabled`, `quotaUsedBytes`/`quotaLimitBytes` (null = unbegrenzt), `maxFileBytes`, `canManageAll`, `canImportLibrary`. `sort`: `title` (Vorgabe) / `newest` / `recent` (zuletzt gelesen zuerst). `tag` trifft nur ganze Schlagworte. Je Buch `canManage`, `groupIds` (nur wenn verwaltbar), `files[]`, `primaryFormat` (PDF vor allem anderen), `progress` (Lesestand des Aufrufers), `hasCover` |
 | GET | `/api/ebooks/groups` | Auth | Gruppen, die der Aufrufer freigeben darf: Verwalter alle, sonst die eigenen + „Everyone" (`isEveryone`). Literal vor `{id}` |
 | GET | `/api/ebooks/access-token` | Auth | `{ token, expiresAt }` — der Ausweis für `…/file` und `…/cover` |
 | POST | `/api/ebooks` | Auth | Hochladen: Multipart `file` + `title?` (sonst aus dem Dateinamen), `author?`, `year?`, `tags?` (CSV), `description?`, `targetMinElo?`, `groupIds?` (CSV), `forceNew?` (0.863.0) → 201 + Buch (ggf. mit `possibleDuplicates`). 400 `ebook_format_unsupported` / `ebook_file_too_large` / `ebook_file_empty` / `ebook_quota_exceeded` / `ebooks_not_configured`, 409 `ebook_duplicate_file` / `ebook_duplicate_book` (je mit `details.books`, siehe „Upload-Dublettenprüfung“). Gruppen außerhalb der erlaubten werden still verworfen. Gesperrt in der Impersonation |
@@ -151,6 +151,21 @@ Diagramm liegt eine Zone (`PdfViewerComponent.zones`, Prozent der Seite → zoom
 Stellung aufs Brett, Schwarz am Zug dreht es. ‹/› gehen alle Diagramme durch und scrollen das Buch mit, „Analysieren“ öffnet
 `/analysis?fen=…&from=/ebooks/:id`, FEN kopieren. Unter 900 px öffnet das Brett nach dem ersten Doppelklick als Vollbild über dem Buch (0.780.2, vorher Leiste unten mit
 höchstens 62 % Höhe); Kopf mit ‹ › und Schließen bleibt oben stehen, Escape schließt.
+
+**Filter-Komponente, mehrsprachige Schlagwörter, Gesamtzeile** (0.877.0, Nutzerwunsch 29.10.): Schlagwörter, Sprache
+(Buchsprache + „Übersetzung: English“) und Elo-Spanne stehen auf jeder Breite in `EbookFilterPanelComponent` hinter
+„Filter ▾“ (Zahl = aktive Filter, zugeklappt aktive Filter als Chips); Sortierung und „Meine Uploads“ bleiben ab 600 px in
+der Zeile. Schlagwörter bleiben als DEUTSCHES Wort gespeichert (kanonischer Wert für `?tag=`, Suche, Bearbeiten-Dialog,
+Einlese-Werkzeuge, keine Datenmigration); nur die Anzeige wird übersetzt: `EBOOK_TAG_KEYS` in `features/ebooks/ebook-tags.ts`
+ordnet Schlagwort → `ebooks.tags.<slug>` (en/de/hr/hu gepflegt, die übrigen Sprachen fallen aufs Englische zurück),
+`ebookTagLabel`/`EbookTagLabelPipe` zeigen es — ohne Eintrag (freie Schlagwörter, Eigennamen wie „Top 100“, „ChessDojo“,
+„ECF Book of the Year“) wörtlich. Aufgeklappt sortiert die Schlagwort-Gruppe nach der angezeigten Beschriftung; zugeklappt
+die 8 häufigsten. Neues Schlagwort mit Übersetzung = Zeile in `EBOOK_TAG_KEYS` + Text in allen vier Sprachdateien
+(`ebook-tags.spec.ts` prüft beides, de = gespeichertes Wort). Sprachnamen kommen aus `Intl.DisplayNames` in der
+Oberflächensprache. Über dem Regal steht „1 234 Bücher · 3 456 Dateien (PDF … · EPUB …)“ aus `bookCount`/`fileCounts`
+derselben gefilterten Abfrage (Formate am Handy ausgeblendet). Zeitschriften haben noch keinen eigenen Begriff (nur das
+Schlagwort „Zeitschrift“ und Sammlungen) — deshalb keine eigene Zahl dafür. Sprache/Übersetzung stehen wie die übrigen
+Filter in Adresse (`?lang=&tr=`) und Sitzung (`rh.ebooks.listState`).
 
 **Übersicht merkt sich die Ansicht** (0.768.0): Suche, Schlagwort, Sortierung, „Meine Uploads“, „Mit Diagrammen“ und Seite
 stehen in der Adresse (`?q=&tag=&sort=&mine=1&diagrams=1&page=`, `replaceUrl`) und in der Sitzung (`rh.ebooks.listState`) —

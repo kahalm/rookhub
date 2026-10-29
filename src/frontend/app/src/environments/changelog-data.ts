@@ -11,6 +11,18 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.877.0',
+    date: '2026-10-29',
+    changes: [
+      { en: 'E-book library: tags are shown in your interface language (English, German, Croatian and Hungarian; other languages show English). The stored keyword stays the same, so filters, search and editing are unchanged; names of lists and awards such as „Top 100“ or „ChessDojo“ stay as they are.',
+        de: 'E-Book-Bibliothek: Schlagwörter erscheinen in der Sprache der Oberfläche (Deutsch, Englisch, Kroatisch, Ungarisch; andere Sprachen zeigen Englisch). Gespeichert bleibt dasselbe Wort, Filter, Suche und Bearbeiten ändern sich nicht; Namen von Listen und Preisen wie „Top 100“ oder „ChessDojo“ bleiben wie sie sind.' },
+      { en: 'Tags, the Elo range and a new language filter (language of the book, „unknown“, or „Translation: English“) now sit together behind „Filter ▾“ on every screen size; the button shows how many filters are active, and active filters appear as chips when it is closed. With all tags shown, they are sorted by their displayed name.',
+        de: 'Schlagwörter, Elo-Spanne und ein neuer Sprachfilter (Sprache des Buchs, „Unbekannt“ oder „Übersetzung: Englisch“) stehen jetzt auf jeder Bildschirmbreite gemeinsam hinter „Filter ▾“; der Knopf zeigt die Zahl der aktiven Filter, zugeklappt stehen sie als Chips da. Alle Schlagwörter aufgeklappt sind nach ihrer angezeigten Beschriftung sortiert.' },
+      { en: 'Above the shelf a line shows how many books and files match the current filters — every book of a collection counts, not just the folder — with the files per format (PDF, EPUB, DjVu …).',
+        de: 'Über dem Regal zeigt eine Zeile, wie viele Bücher und Dateien zur aktuellen Filterung passen — jedes Buch einer Sammlung zählt, nicht nur der Ordner —, dazu die Dateien je Format (PDF, EPUB, DjVu …).' },
+    ],
+  },
+  {
     version: '0.876.3',
     date: '2026-10-29',
     changes: [

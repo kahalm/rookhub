@@ -23,21 +23,19 @@
    statt das Feld auf ≈ 317 px zu drücken („… Schlagwort such“); am Laptop passt weiter alles in eine Zeile. */
 .eb-search { flex: 1 1 360px; max-width: 640px; }
 .eb-sort { flex: 0 0 320px; max-width: 100%; }
-/* Elo-Spanne (0.822.0): zwei schmale Zahlenfelder „Elo von – bis“. */
-.eb-elo { display: inline-flex; align-items: center; gap: 4px; }
-.eb-elo-field { width: 104px; }
-.eb-elo-dash { opacity: .6; }
-/* Ab 600 px stehen Sortierung und Schalter direkt in der Zeile (die Hülle zählt nicht); „Filter ▾“ nur am Handy. */
+/* Ab 600 px stehen Sortierung und „Meine Uploads“ direkt in der Zeile (die Hülle zählt nicht); Schlagwörter, Sprache und
+   Elo-Spanne liegen auf jeder Breite in der Filter-Komponente hinter „Filter ▾“ (0.877.0), aktive als Chips darunter. */
 .eb-filter-more { display: contents; }
-.eb-chip.eb-filter-toggle { display: none; } /* vor .eb-chip gleich stark → sonst gewinnt dessen inline-flex */
-.eb-active { display: none; }
+.eb-active { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.eb-chip.eb-active-mine { display: none; } /* „Meine Uploads“ steht ab 600 px sichtbar in der Zeile */
+/* Gesamtmenge zur Filterung (0.877.0): leise Zeile über dem Regal. */
+.eb-totals { margin: 0 0 12px; font-size: .85rem; opacity: .75; }
 .eb-author-filter { display: flex; margin-bottom: 12px; }
 /* Autorennamen unter dem Titel: wie Text, unterstrichen erst beim Darüberfahren (0.796.0). */
 .eb-author-link { all: unset; cursor: pointer; border-radius: 2px; }
 .eb-author-link:hover { text-decoration: underline; }
 .eb-author-link:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 1px; }
 
-.eb-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .eb-chip {
   display: inline-flex; align-items: center; gap: 4px;
   min-height: 32px; padding: 2px 10px; border-radius: 999px;
@@ -47,7 +45,6 @@
 }
 .eb-chip--on { background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent); border-color: var(--mat-sys-primary); }
 .eb-chip-count { opacity: .6; font-size: .75rem; }
-.eb-tags-more { border-style: dashed; }
 
 .eb-bulk {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -126,12 +123,11 @@
   .eb-upload mat-icon { margin: 0; }
   /* Handy (DESIGN 4.6 Nr. 7): Suche + „Filter ▾“ in einer Zeile, der Rest zugeklappt; aktive Filter als Chips. */
   .eb-search { flex: 1 1 0; min-width: 0; max-width: none; }
-  .eb-chip.eb-filter-toggle { display: inline-flex; min-height: 44px; }
+  .eb-chip.eb-filter-toggle { min-height: 44px; }
   .eb-filter-more { display: none; }
   .eb-filter-more--open { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
-  .eb-active { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .eb-tags { display: none; }
-  .eb-tags--open { display: flex; }
+  .eb-chip.eb-active-mine { display: inline-flex; }
+  .eb-totals-formats { display: none; }
   /* Download nur als Symbol (der Name steht im aria-label): „Herunterladen“ passt nicht in 110 px. */
   .eb-act--download .eb-act-label { display: none; }
   .eb-act--download mat-icon { margin: 0; }

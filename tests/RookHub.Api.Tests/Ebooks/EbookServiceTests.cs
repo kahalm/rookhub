@@ -241,6 +241,36 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_FiltersByLanguageAndTranslation_WithFacetsOverAllVisible()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var everyone = await _kit.GroupAsync("Everyone", everyone: true);
+        foreach (var (title, lang) in new (string, string?)[] { ("Deutsch A", "de"), ("Deutsch B", "de"), ("English", "en"), ("Unklar", null) })
+            (await _kit.BookAsync(title, owner.Id, "epub", null, everyone.Id)).Language = lang;
+        var a = _kit.Db.Ebooks.Single(b => b.Title == "Deutsch A");
+        var b2 = _kit.Db.Ebooks.Single(b => b.Title == "Deutsch B");
+        _kit.Db.EbookTranslations.Add(new EbookTranslation { EbookId = a.Id, Language = "en", State = EbookTranslationState.Done });
+        _kit.Db.EbookTranslations.Add(new EbookTranslation { EbookId = b2.Id, Language = "en", State = EbookTranslationState.Pending });
+        await _kit.Db.SaveChangesAsync();
+
+        async Task<EbookListDto> List(string? language, string? translation) => await _kit.Service.ListAsync(owner.Id, false,
+            new EbookQuery { Sort = "title", Language = language, Translation = translation });
+        async Task<string[]> Titles(string? language, string? translation) => (await List(language, translation)).Items.Select(i => i.Title).ToArray();
+
+        Assert.Equal(["Deutsch A", "Deutsch B"], await Titles("de", null));
+        Assert.Equal(["English"], await Titles("EN", null));
+        Assert.Equal(["Unklar"], await Titles("unknown", null));
+        // Nur FERTIGE Übersetzungen zählen (Deutsch B steht noch in der Warteschlange).
+        Assert.Equal(["Deutsch A"], await Titles(null, "en"));
+        Assert.Equal(["Deutsch A"], await Titles("de", "en"));
+
+        // Facetten über alles Sichtbare, unabhängig vom Filter; null = unbestimmt.
+        var filtered = await List("en", null);
+        Assert.Equal([("de", 2), ("en", 1), (null, 1)], filtered.Languages.Select(f => (f.Language, f.Count)));
+        Assert.Equal([("en", 1)], filtered.Translations.Select(f => (f.Language, f.Count)));
+    }
+
+    [Fact]
     public async Task List_FiltersByEloRange_BooksWithoutEloDropOut_AndZeroIsBeginner()
     {
         var owner = await _kit.UserAsync("owner");

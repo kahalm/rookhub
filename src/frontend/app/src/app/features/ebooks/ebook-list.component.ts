@@ -26,7 +26,9 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { mediaSignal } from '../../shared/layout/wide-media';
-import { Ebook, EbookGroupOption, EbookList, EbookTagFacet, EbookService, EbookSort, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
+import { Ebook, EbookGroupOption, EbookList, EbookService, EbookSort, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
+import { EbookFilterPanelComponent, ebookLanguageLabel } from './ebook-filter-panel.component';
+import { EbookTagLabelPipe } from './ebook-tags';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
 import { EbookCollectionDialogComponent, EbookCollectionDialogData } from './ebook-collection-dialog.component';
@@ -35,13 +37,15 @@ import { EbookTranslationDialogComponent } from './ebook-translation-dialog.comp
 
 export const EBOOK_PAGE_SIZE = 60;
 
-/** Zugeklappt zeigt die Schlagwort-Leiste nur die häufigsten (der Server liefert sie nach Anzahl), c1-eb-tag-filter-lead. */
-export const EBOOK_TAGS_COLLAPSED = 8;
-
 /** Sitzungs-Schlüssel der Listen-Ansicht (Suche, Filter, Seite) — „zurück" aus dem Leser landet wieder dort. */
 export const EBOOK_LIST_STATE_KEY = 'rh.ebooks.listState';
 
-export interface EbookListState { search: string; tag: string | null; author?: string | null; sort: EbookSort; mine: boolean; minElo?: number | null; maxElo?: number | null; page: number; collection?: number | null; }
+export interface EbookListState {
+  search: string; tag: string | null; author?: string | null; sort: EbookSort; mine: boolean; minElo?: number | null; maxElo?: number | null;
+  /** Sprache des Buchs (ISO 639-1 oder `unknown`) bzw. fertige Übersetzung (0.877.0). */
+  language?: string | null; translation?: string | null;
+  page: number; collection?: number | null;
+}
 
 /** Elo aus Feld/Adresse: ganze Zahl 0–3500, sonst keine Grenze. */
 export function eloParam(v: string | null | undefined): number | null {
@@ -81,7 +85,8 @@ export function ebookFormats(files: readonly { format: string }[] | null | undef
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatCheckboxModule, MatDialogModule,
     MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatPaginatorModule, MatProgressBarModule, MatSelectModule,
-    MatTooltipModule, TranslatePipe, HelpHintComponent, IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent],
+    MatTooltipModule, TranslatePipe, HelpHintComponent, IconLabelDirective, LoadErrorComponent, LoadingSpinnerComponent,
+    EbookFilterPanelComponent, EbookTagLabelPipe],
   templateUrl: './ebook-list.component.html',
   styleUrls: ['./ebook-list.component.scss'],
 })
@@ -101,6 +106,9 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Elo-Spanne (0.822.0, ersetzt „Mit Diagrammen“ — das hatten fast alle Bücher): Mindest-Elo des Buchs von … bis …. */
   minElo: number | null = null;
   maxElo: number | null = null;
+  /** Sprache des Buchtexts (ISO 639-1 oder `unknown`) und „hat fertige Übersetzung in …“ (0.877.0). */
+  language: string | null = null;
+  translation: string | null = null;
   page = 1;
   readonly pageSize = EBOOK_PAGE_SIZE;
   readonly sorts: EbookSort[] = ['title', 'newest', 'recent'];
@@ -113,11 +121,11 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Geöffnete Sammlung (0.787.0); `null` = Hauptliste, Sammlungen dort als Ordner. */
   collection: number | null = null;
   readonly importing = signal(false);
-  /** Schlagwort-Leiste ganz aufgeklappt (sonst nur die häufigsten + das aktive). */
-  readonly tagsOpen = signal(false);
-  /** Handy: Sortierung, Schalter und Schlagwörter aufgeklappt (ab 600 px stehen sie immer da). */
+  /**
+   * Filter aufgeklappt (0.877.0: auf jeder Breite) — Schlagwörter, Sprache und Elo stehen in der Filter-Komponente; am
+   * Handy kommen Sortierung und „Meine Uploads“ dazu (ab 600 px stehen die beiden in der Zeile).
+   */
   readonly filtersOpen = signal(false);
-  readonly tagsCollapsedCount = EBOOK_TAGS_COLLAPSED;
 
   private groups: EbookGroupOption[] | null = null;
   private search$ = new Subject<string>();
@@ -156,7 +164,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
     let st: Partial<EbookListState> | null = null;
     if (q && q.keys.length > 0) {
       st = { search: q.get('q') ?? '', tag: q.get('tag'), author: q.get('author'), sort: (q.get('sort') as EbookSort) ?? 'newest',
-        mine: q.get('mine') === '1', minElo: eloParam(q.get('eloMin')), maxElo: eloParam(q.get('eloMax')), page: Number(q.get('page')) || 1,
+        mine: q.get('mine') === '1', minElo: eloParam(q.get('eloMin')), maxElo: eloParam(q.get('eloMax')),
+        language: q.get('lang'), translation: q.get('tr'), page: Number(q.get('page')) || 1,
         collection: Number(q.get('collection')) || null };
     } else {
       const store = sessionStore();
@@ -170,18 +179,22 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.mine = !!st.mine;
     this.minElo = st.minElo ?? null;
     this.maxElo = st.maxElo ?? null;
+    this.language = st.language || null;
+    this.translation = st.translation || null;
     this.page = Math.max(1, Math.floor(st.page ?? 1));
     this.collection = st.collection ?? null;
   }
 
   /** Aktuelle Ansicht in Sitzung + Adresse (replaceUrl: kein neuer Verlaufseintrag je Tastendruck). */
   private saveState(): void {
-    const st: EbookListState = { search: this.search.trim(), tag: this.tag, author: this.author, sort: this.sort, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo, page: this.page, collection: this.collection };
+    const st: EbookListState = { search: this.search.trim(), tag: this.tag, author: this.author, sort: this.sort, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo,
+      language: this.language, translation: this.translation, page: this.page, collection: this.collection };
     const store = sessionStore();
     if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
     const queryParams: Record<string, string | null> = {
       q: st.search || null, tag: st.tag, author: st.author || null, sort: st.sort !== 'newest' ? st.sort : null,
-      mine: st.mine ? '1' : null, eloMin: st.minElo != null ? String(st.minElo) : null, eloMax: st.maxElo != null ? String(st.maxElo) : null, page: st.page > 1 ? String(st.page) : null,
+      mine: st.mine ? '1' : null, eloMin: st.minElo != null ? String(st.minElo) : null, eloMax: st.maxElo != null ? String(st.maxElo) : null,
+      lang: st.language || null, tr: st.translation || null, page: st.page > 1 ? String(st.page) : null,
       collection: st.collection ? String(st.collection) : null,
     };
     void this.router?.navigate([], { relativeTo: this.route ?? undefined, queryParams, replaceUrl: true });
@@ -191,7 +204,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.saveState();
     this.loading = this.list == null;
     this.error = false;
-    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
+    this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo,
+      language: this.language, translation: this.translation, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
       .subscribe({
         next: list => {
           this.list = list;
@@ -206,20 +220,32 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   get items(): Ebook[] { return this.list?.items ?? []; }
-  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.author || this.mine || this.eloActive); }
+  get filtered(): boolean { return !!(this.search.trim() || this.tag || this.author || this.mine || this.eloActive || this.language || this.translation); }
 
   get eloActive(): boolean { return this.minElo != null || this.maxElo != null; }
 
-  /** Schlagwörter, die die Leiste gerade zeigt: aufgeklappt alle, sonst die häufigsten plus das aktive. */
-  get visibleTags(): EbookTagFacet[] {
-    const all = this.list?.tags ?? [];
-    if (this.tagsOpen() || all.length <= EBOOK_TAGS_COLLAPSED) return all;
-    return all.filter((t, i) => i < EBOOK_TAGS_COLLAPSED || t.tag === this.tag);
+  /** Zahl der aktiven Filter am Knopf „Filter ▾“. Die Suche steht sichtbar daneben und zählt nicht. */
+  get activeFilterCount(): number {
+    return (this.tag ? 1 : 0) + (this.mine ? 1 : 0) + (this.eloActive ? 1 : 0) + (this.language ? 1 : 0) + (this.translation ? 1 : 0);
   }
 
-  /** Zahl der aktiven Filter hinter „Filter ▾“ (Handy). Die Suche steht sichtbar daneben und zählt nicht. */
-  get activeFilterCount(): number {
-    return (this.tag ? 1 : 0) + (this.mine ? 1 : 0) + (this.eloActive ? 1 : 0);
+  /** Sprachname für den Chip des aktiven Sprachfilters (Oberflächensprache). */
+  languageLabel(code: string | null): string {
+    return ebookLanguageLabel(code, this.translate, this.translate.currentLang() || 'en');
+  }
+
+  /** Zahl in der Schreibweise der Oberflächensprache („1 234“ / „1,234“). */
+  num(n: number): string {
+    try { return n.toLocaleString(this.translate.currentLang() || 'en'); } catch { return String(n); }
+  }
+
+  /** Dateien je Format für die Gesamtzeile: „PDF 2 000 · EPUB 1 000“. */
+  get formatSummary(): string {
+    return (this.list?.fileCounts ?? []).map(f => `${f.format.toUpperCase()} ${this.num(f.count)}`).join(' · ');
+  }
+
+  get fileTotal(): number {
+    return (this.list?.fileCounts ?? []).reduce((sum, f) => sum + f.count, 0);
   }
 
   /** Alle Filter weg (Leerzustand „Zu diesem Filter passt nichts.“, c1-eb-filter-empty-no-reset). Sortierung bleibt. */
@@ -230,6 +256,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.mine = false;
     this.minElo = null;
     this.maxElo = null;
+    this.language = null;
+    this.translation = null;
     this.page = 1;
     // Über den Such-Strom, damit distinctUntilChanged den alten Suchbegriff vergisst (sonst lädt dieselbe Suche nie wieder).
     if (hadSearch) this.onSearch(''); else this.load();
@@ -260,6 +288,20 @@ export class EbookListComponent implements OnInit, OnDestroy {
 
   setTag(tag: string | null): void {
     this.tag = this.tag === tag ? null : tag;
+    this.page = 1;
+    this.load();
+  }
+
+  /** Sprache des Buchs (`unknown` = nicht bestimmt); derselbe Wert noch einmal hebt den Filter auf. */
+  setLanguage(language: string | null): void {
+    this.language = language && this.language !== language ? language : null;
+    this.page = 1;
+    this.load();
+  }
+
+  /** Nur Bücher mit fertiger Übersetzung in diese Sprache; derselbe Wert noch einmal hebt den Filter auf. */
+  setTranslation(lang: string | null): void {
+    this.translation = lang && this.translation !== lang ? lang : null;
     this.page = 1;
     this.load();
   }

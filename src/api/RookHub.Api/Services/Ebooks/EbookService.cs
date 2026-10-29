@@ -63,6 +63,16 @@ public class EbookService
             .OrderByDescending(f => f.Count).ThenBy(f => f.Tag, StringComparer.OrdinalIgnoreCase)
             .Take(60)
             .ToList();
+        // Sprach-Facetten (0.877.0): Buchsprache und fertige Übersetzungen, ebenfalls über alles Sichtbare.
+        var languages = (await visible.GroupBy(b => b.Language).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
+            .Select(g => new EbookLanguageFacetDto { Language = g.Key, Count = g.Count })
+            .OrderByDescending(f => f.Count).ThenBy(f => f.Language ?? "~", StringComparer.Ordinal).ToList();
+        // (EbookId, Language) ist eindeutig — Count zählt Bücher.
+        var translations = (await _db.EbookTranslations
+                .Where(t => t.State == EbookTranslationState.Done && visible.Any(b => b.Id == t.EbookId))
+                .GroupBy(t => t.Language).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
+            .Select(g => new EbookLanguageFacetDto { Language = g.Key, Count = g.Count })
+            .OrderByDescending(f => f.Count).ThenBy(f => f.Language, StringComparer.Ordinal).ToList();
 
         var query = visible;
         if (q.Mine)
@@ -72,6 +82,16 @@ public class EbookService
         if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount >= MinDiagramsForFilter);
         if (q.MinElo is int minElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo >= minElo);
         if (q.MaxElo is int maxElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo <= maxElo);
+        if (!string.IsNullOrWhiteSpace(q.Language))
+        {
+            var lang = q.Language.Trim().ToLowerInvariant();
+            query = lang == "unknown" ? query.Where(b => b.Language == null) : query.Where(b => b.Language == lang);
+        }
+        if (!string.IsNullOrWhiteSpace(q.Translation))
+        {
+            var target = q.Translation.Trim().ToLowerInvariant();
+            query = query.Where(b => _db.EbookTranslations.Any(t => t.EbookId == b.Id && t.Language == target && t.State == EbookTranslationState.Done));
+        }
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var term = q.Search.Trim().ToLowerInvariant();
@@ -118,6 +138,15 @@ public class EbookService
         };
 
         var total = await query.CountAsync(ct);
+        // Gesamtmenge zur Filterung (0.877.0): Sammlungen zählen mit jedem Buch, nicht als ein Ordner; Dateien ohne die
+        // abgeleiteten (DJVU → PDF), je Format.
+        var counted = q.Collection != null ? query : filtered;
+        var bookCount = collapse ? await filtered.CountAsync(ct) : total;
+        var fileCounts = (await _db.EbookFiles.Where(f => !f.Derived && counted.Any(b => b.Id == f.EbookId))
+                .GroupBy(f => f.Format).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct))
+            .GroupBy(g => g.Key.ToLowerInvariant())
+            .Select(g => new EbookFormatCountDto { Format = g.Key, Count = g.Sum(x => x.Count) })
+            .OrderByDescending(f => f.Count).ThenBy(f => f.Format, StringComparer.Ordinal).ToList();
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).Include(b => b.Files).ToListAsync(ct);
         var dtos = await MapAsync(items, caller, manageAll, ct);
         var collIds = items.Where(b => b.CollectionId != null).Select(b => b.CollectionId!.Value).Distinct().ToList();
@@ -149,6 +178,10 @@ public class EbookService
             Page = page,
             PageSize = pageSize,
             Tags = facets,
+            BookCount = bookCount,
+            FileCounts = fileCounts,
+            Languages = languages,
+            Translations = translations,
             UploadEnabled = _storage.UploadsEnabled && (!caller.IsAnonymous || (AnonQuota > 0 && anon != null)),
             QuotaUsedBytes = used,
             QuotaLimitBytes = caller.IsAnonymous ? AnonQuota : manageAll || _storage.UserQuotaBytes <= 0 ? null : _storage.UserQuotaBytes,

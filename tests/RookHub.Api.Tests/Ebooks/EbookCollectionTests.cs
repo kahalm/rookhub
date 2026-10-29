@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.DTOs.Ebooks;
 using RookHub.Api.Exceptions;
+using RookHub.Api.Models;
 using RookHub.Api.Services.Ebooks;
 using Xunit;
 
@@ -38,6 +39,33 @@ public class EbookCollectionTests : IDisposable
 
         var search = await _kit.Service.ListAsync(admin.Id, true, new EbookQuery { Search = "05.2022" });
         Assert.Equal(b.Id, Assert.Single(search.Items).Id);
+    }
+
+    [Fact]
+    public async Task List_BookAndFileCounts_CountEveryBookInACollection_AndFollowTheFilter()
+    {
+        var admin = await _kit.UserAsync("admin", admin: true);
+        var a = await _kit.BookAsync("British Chess Magazine 03.2022", admin.Id, "pdf", "Zeitschrift");
+        var b = await _kit.BookAsync("British Chess Magazine 05.2022", admin.Id, "pdf", "Zeitschrift");
+        var c = await _kit.BookAsync("Silman Endgame Course", admin.Id, "djvu", "Endspiel");
+        // DJVU mit abgeleiteter PDF (zählt nicht) und einem echten EPUB daneben.
+        c.Files.Add(new EbookFile { Format = "pdf", RelativePath = "converted/c.pdf", FileName = "c.pdf", Derived = true });
+        c.Files.Add(new EbookFile { Format = "EPUB", RelativePath = "files/c.epub", FileName = "c.epub" });
+        await _kit.Db.SaveChangesAsync();
+        await Collections().AssignAsync(true, new EbookCollectionAssignDto { EbookIds = [a.Id, b.Id], NewName = "British Chess Magazine" });
+
+        var main = await _kit.Service.ListAsync(admin.Id, true, new EbookQuery { Sort = "title" });
+        Assert.Equal(2, main.Total);                                     // Ordner + Einzelbuch
+        Assert.Equal(3, main.BookCount);                                 // jedes Heft zählt
+        Assert.Equal([("pdf", 2), ("djvu", 1), ("epub", 1)], main.FileCounts.Select(f => (f.Format, f.Count)));
+
+        var tagged = await _kit.Service.ListAsync(admin.Id, true, new EbookQuery { Tag = "Zeitschrift" });
+        Assert.Equal(1, tagged.Total);
+        Assert.Equal(2, tagged.BookCount);
+        Assert.Equal([("pdf", 2)], tagged.FileCounts.Select(f => (f.Format, f.Count)));
+
+        var search = await _kit.Service.ListAsync(admin.Id, true, new EbookQuery { Search = "Silman" });
+        Assert.Equal(1, search.BookCount);
     }
 
     [Fact]

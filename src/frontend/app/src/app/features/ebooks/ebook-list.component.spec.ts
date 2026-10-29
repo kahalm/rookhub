@@ -5,11 +5,11 @@ import { provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { EBOOK_TAGS_COLLAPSED, EbookListComponent, ebookFormats, eloParam } from './ebook-list.component';
+import { EbookListComponent, ebookFormats, eloParam } from './ebook-list.component';
 import { Ebook, EbookList, EbookService, EbookTranslationItem } from './ebook.service';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
@@ -189,12 +189,20 @@ describe('EbookListComponent', () => {
     c.onSearch('woodpecker');
     c.setTag('Taktik');
     c.minElo = 1500;
+    c.setLanguage('unknown');
+    c.setTranslation('en');
     c.load();   // speichert den Stand mit Elo
     const again = make([book()]);
     expect(again.tag).toBe('Taktik');
+    expect([again.language, again.translation]).toEqual(['unknown', 'en']);
     expect(again.minElo).toBe(1500);
     expect(again.search).toBe('woodpecker');
-    expect(calls[0]).toEqual(jasmine.objectContaining({ tag: 'Taktik', minElo: 1500, search: 'woodpecker' }));
+    expect(calls[0]).toEqual(jasmine.objectContaining({ tag: 'Taktik', minElo: 1500, search: 'woodpecker', language: 'unknown', translation: 'en' }));
+    // Derselbe Wert noch einmal hebt den Filter auf; „Filter zurücksetzen“ leert beide.
+    again.setLanguage('unknown');
+    expect(again.language).toBeNull();
+    again.resetFilters();
+    expect(again.translation).toBeNull();
     sessionStorage.removeItem('rh.ebooks.listState');
   });
 
@@ -244,50 +252,70 @@ describe('EbookListComponent', () => {
 
   const manyTags = Array.from({ length: 20 }, (_, i) => ({ tag: `T${i}`, count: 40 - i }));
 
-  it('c1-eb-tag-filter-lead: zugeklappt nur die häufigsten Schlagwörter + das aktive, aufgeklappt alle', () => {
-    const c = make([book()], { tags: manyTags });
-    expect(c.visibleTags.map(t => t.tag)).toEqual(manyTags.slice(0, EBOOK_TAGS_COLLAPSED).map(t => t.tag));
-    c.setTag('T15');
-    expect(c.visibleTags.map(t => t.tag)).toContain('T15');
-    expect(c.visibleTags.length).toBe(EBOOK_TAGS_COLLAPSED + 1);
-    c.tagsOpen.set(true);
-    expect(c.visibleTags.length).toBe(20);
-    // Wenige Schlagwörter: alle, ohne Umschalter.
-    const few = make([book()], { tags: manyTags.slice(0, 5) });
-    expect(few.visibleTags.length).toBe(5);
-  });
-
-  it('c1-eb-tag-filter-lead: „Alle Schlagwörter (n)“ klappt auf; am Handy „Filter ▾“ mit Zahl der aktiven Filter', () => {
-    const fixture = render([book()], { tags: manyTags });
+  it('0.877.0: Schlagwörter, Sprache und Elo nur hinter „Filter ▾“ (jede Breite), Zahl der aktiven Filter, Chips zugeklappt', () => {
+    const fixture = render([book()], { tags: manyTags, languages: [{ language: 'de', count: 1 }] });
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelectorAll('.eb-tags .eb-chip:not(.eb-tags-more)').length).toBe(EBOOK_TAGS_COLLAPSED);
-    const more = el.querySelector<HTMLButtonElement>('.eb-tags-more')!;
-    expect(more.getAttribute('aria-expanded')).toBe('false');
-    more.click();
-    fixture.detectChanges();
-    expect(el.querySelectorAll('.eb-tags .eb-chip:not(.eb-tags-more)').length).toBe(20);
+    // Zugeklappt: keine Schlagwort-Leiste mehr offen.
+    expect(el.querySelector('app-ebook-filter-panel')).toBeNull();
+    expect(el.querySelector('.eb-tags')).toBeNull();
     const toggle = el.querySelector<HTMLButtonElement>('.eb-filter-toggle')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     const c = fixture.componentInstance;
     c.toggleMine();
     c.minElo = 1400;
-    expect(c.activeFilterCount).toBe(2);
+    c.setLanguage('de');
+    expect(c.activeFilterCount).toBe(3);
     fixture.detectChanges();
-    // Zugeklappt (Handy): die aktiven Filter stehen als Chips über der Liste.
-    expect(el.querySelectorAll('.eb-active .eb-chip').length).toBe(2);
+    expect(el.querySelectorAll('.eb-active .eb-chip').length).toBe(3);
     toggle.click();
     fixture.detectChanges();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(el.querySelector('.eb-active')).toBeNull();
-    // Unter 600 px: Rest zugeklappt, Schalter sichtbar; darüber bleibt die Zeile wie bisher (Hülle display: contents).
+    const panel = el.querySelector('app-ebook-filter-panel')!;
+    expect(panel.querySelectorAll('.eb-tags .eb-chip:not(.eb-tags-more)').length).toBe(8);
+    expect(panel.querySelector('.eb-elo')).not.toBeNull();
+    expect(panel.querySelector('[data-lang="de"]')!.getAttribute('aria-pressed')).toBe('true');
+    // „Filter ▾“ auf jeder Breite; unter 600 px Sortierung/„Meine Uploads“ zusätzlich hinter dem Knopf.
     const css = compactCss(EbookListComponent);
     const base = css.slice(0, css.indexOf('@media(max-width:599.98px)'));
     expect(base).toMatch(/\.eb-filter-more(\[[^\]]*\])?\{display:contents/);
-    expect(base).toMatch(/\.eb-filter-toggle(\[[^\]]*\])?\{display:none/);
+    expect(base).not.toMatch(/\.eb-filter-toggle(\[[^\]]*\])?\{display:none/);
+    expect(base).toMatch(/\.eb-active-mine(\[[^\]]*\])?\{display:none/);
     const narrow = css.slice(css.indexOf('@media(max-width:599.98px)'));
     expect(narrow).toMatch(/\.eb-filter-more(\[[^\]]*\])?\{display:none/);
-    expect(narrow).toMatch(/\.eb-tags(\[[^\]]*\])?\{display:none/);
-    expect(narrow).toMatch(/\.eb-filter-toggle(\[[^\]]*\])?\{display:inline-flex/);
+    expect(narrow).toMatch(/\.eb-active-mine(\[[^\]]*\])?\{display:inline-flex/);
+    fixture.destroy();
+  });
+
+  it('0.877.0: Chip zeigt das übersetzte Schlagwort, der Filter nimmt das gespeicherte', async () => {
+    const fixture = render([book()], { tags: [{ tag: 'Eröffnung', count: 3 }, { tag: 'Top 100', count: 1 }] });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { ebooks: { tags: { opening: 'Opening' } } });
+    await firstValueFrom(translate.use('en'));
+    const el: HTMLElement = fixture.nativeElement;
+    el.querySelector<HTMLButtonElement>('.eb-filter-toggle')!.click();
+    fixture.detectChanges();
+    const chip = el.querySelector<HTMLButtonElement>('app-ebook-filter-panel [data-tag="Eröffnung"]')!;
+    expect(chip.textContent).toContain('Opening');
+    expect(chip.textContent).not.toContain('Eröffnung');
+    expect(el.querySelector('app-ebook-filter-panel [data-tag="Top 100"]')!.textContent).toContain('Top 100');
+    chip.click();
+    expect(service.list.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ tag: 'Eröffnung', page: 1 }));
+    expect(fixture.componentInstance.tag).toBe('Eröffnung');
+    // Zugeklappt steht der aktive Filter übersetzt als Chip da.
+    el.querySelector<HTMLButtonElement>('.eb-filter-toggle')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.eb-active')!.textContent).toContain('Opening');
+    fixture.destroy();
+  });
+
+  it('0.877.0: Gesamtzeile zählt Bücher (Sammlungen einzeln) und Dateien je Format', () => {
+    const fixture = render([book()], { total: 2, bookCount: 1234, fileCounts: [{ format: 'pdf', count: 2000 }, { format: 'epub', count: 34 }] });
+    const text = (fixture.nativeElement as HTMLElement).querySelector('.eb-totals')!.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('ebooks.totals.books');
+    expect(text).toContain('ebooks.totals.files');
+    expect(text).toContain('PDF 2,000 · EPUB 34');
+    expect(fixture.componentInstance.fileTotal).toBe(2034);
     fixture.destroy();
   });
 
