@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.877.1',
+    date: '2026-10-29',
+    changes: [
+      { en: 'Tests: the e-book library list (language and translation filters, book and file counts) is now also checked against a real MariaDB.',
+        de: 'Tests: die E-Book-Bibliotheksliste (Sprach- und Übersetzungsfilter, Bücher- und Dateizähler) wird jetzt auch gegen ein echtes MariaDB geprüft.' },
+    ],
+  },
+  {
     version: '0.877.0',
     date: '2026-10-29',
     changes: [
