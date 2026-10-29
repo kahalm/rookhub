@@ -466,7 +466,11 @@ export class EbookBoardComponent implements OnChanges {
     void this.holdsResult(before, m.fen, reference).then(ok => {
       if (this.diagram.id !== id || this.mode() !== 'solve') return;
       this.checking.set(false);
-      if (ok) {
+      if (ok && this.findBookMove) {
+        // Auch gut, aber weiter den Buchzug suchen lassen (Nutzerwunsch 29.10.2026) — kein Fehler, nur zurücknehmen.
+        this.snackbar.quick(this.translate.instant('ebooks.board.alternativeFindBook'));
+        this.timer = setTimeout(() => { this.played.update(l => l.slice(0, -1)); this.cdr.markForCheck(); }, 600);
+      } else if (ok) {
         this.deviated.set(true);
         this.snackbar.quick(this.translate.instant('ebooks.board.alternativeOk'));
         this.advance();
@@ -475,6 +479,13 @@ export class EbookBoardComponent implements OnChanges {
       }
       this.cdr.markForCheck();
     });
+  }
+
+  /** Gleichwertiger Zug statt des Buchzugs: „auch gut“, aber zurücknehmen, damit man den Buchzug noch findet.
+   *  Nicht bei der Stockfish-Linie (dort gibt es keinen Buchzug) und nicht, wenn die Prüfung den Buchzug als fraglich
+   *  markiert hat — dann darf der bessere eigene Zug die Lösung sein (Antworten danach wie bisher von Stockfish). */
+  private get findBookMove(): boolean {
+    return this.solveSource() === 'stored' && this.diagram?.solutionCheck !== 'doubtful';
   }
 
   /** Falscher Zug: nur „falsch“ sagen und zurücknehmen — weitersuchen; „Training“ merkt sich den Fehler. */

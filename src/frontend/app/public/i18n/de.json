@@ -5529,6 +5529,7 @@
       "drawNote": "Remisstellung – das ist nur ein Weg; jeder Zug, der das Remis hält, ist richtig.",
       "checking": "Stockfish prüft deinen Zug …",
       "alternativeOk": "Auch richtig – dein Zug hält das Ergebnis (Stockfish). Die Antworten kommen jetzt von Stockfish.",
+      "alternativeFindBook": "Auch gut – dein Zug hält das Ergebnis (Stockfish). Das Buch spielt aber etwas anderes: such den Buchzug.",
       "anyMoveHint": "Jeder Zug, der das Ergebnis hält, zählt – nicht nur der aus dem Buch.",
       "modes": "Brett-Modi",
       "mode": {

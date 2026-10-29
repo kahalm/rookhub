@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.879.0',
+    date: '2026-10-29',
+    changes: [
+      {
+        en: 'E-book solving: a move that is as good as the book move now says „also good“ but is taken back without counting as a mistake, so you can still find the book move. Only if the check marked the book move as doubtful (or the solution comes from Stockfish) does your move count and Stockfish reply.',
+        de: 'E-Book-Lösen: ein Zug, der so gut ist wie der Buchzug, heißt jetzt „auch gut“, wird aber ohne Fehler zurückgenommen — man kann den Buchzug noch finden. Nur wenn die Prüfung den Buchzug als fraglich markiert hat (oder die Lösung von Stockfish stammt), zählt der eigene Zug und Stockfish antwortet.',
+      },
+    ],
+  },
+  {
     version: '0.878.1',
     date: '2026-10-29',
     changes: [

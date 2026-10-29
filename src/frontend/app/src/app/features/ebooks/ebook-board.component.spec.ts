@@ -278,8 +278,27 @@ describe('EbookBoardComponent', () => {
     expect(c.solveState()).toBe('running');
   }));
 
-  it('Lösen: ein abweichender Zug, der das Ergebnis hält, zählt auch — die Antworten kommen dann von Stockfish', fakeAsync(() => {
+  it('Lösen: ein gleichwertiger Zug ist „auch gut“, wird aber zurückgenommen — man sucht den Buchzug weiter (kein Fehler)', fakeAsync(() => {
     const c = make().componentInstance;
+    c.setMode('solve');
+    c.setSolveStyle('training');
+    let n = 0;
+    stockfish.getBestMove.and.callFake(() => Promise.resolve({ move: 'e1e2', eval: '-5', score: { cp: n++ === 0 ? -500 : -520 } } as never));
+    c.onBoardMove({ from: 'f4', to: 'h3', san: 'Nh3', fen: WRONG });
+    flushMicrotasks();
+    expect(TestBed.inject(SnackbarService).quick).toHaveBeenCalledWith('ebooks.board.alternativeFindBook');
+    expect(c.deviated()).toBeFalse();
+    expect(c.mistake()).toBeFalse();
+    tick(700);
+    expect(c.played().length).toBe(0);
+    expect(c.solveState()).toBe('running');
+    c.onBoardMove({ from: 'h8', to: 'h2', san: 'Rxh2+', fen: AFTER_RXH2 });
+    tick(500);
+    expect(c.played().map(m => m.san)).toEqual(['Rxh2+', 'Kxh2']);
+  }));
+
+  it('Lösen: ist der Buchzug als fraglich geprüft, zählt ein gleichwertiger Zug — die Antworten kommen dann von Stockfish', fakeAsync(() => {
+    const c = make({ ...D, solutionCheck: 'doubtful' }).componentInstance;
     c.setMode('solve');
     // Stockfish: nach Sh3 wie nach Txh2+ beides klar für Schwarz (Weiß-Sicht −500 bzw. −520), dann Antwort „h1h2“.
     let n = 0;

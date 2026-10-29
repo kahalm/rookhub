@@ -5529,6 +5529,7 @@
       "drawNote": "Drawn position – this is only one way; every move that keeps the draw is fine.",
       "checking": "Stockfish is checking your move …",
       "alternativeOk": "Also correct – your move keeps the result (Stockfish). The replies now come from Stockfish.",
+      "alternativeFindBook": "Also good – your move keeps the result (Stockfish). But the book plays something else: find the book move.",
       "anyMoveHint": "Every move that keeps the result counts – not only the one from the book.",
       "modes": "Board modes",
       "mode": {

@@ -5529,6 +5529,7 @@
       "drawNote": "Remi pozicija – ovo je samo jedan put; svaki potez koji drži remi je dobar.",
       "checking": "Stockfish provjerava tvoj potez …",
       "alternativeOk": "Također točno – tvoj potez zadržava rezultat (Stockfish). Odgovori sada dolaze od Stockfisha.",
+      "alternativeFindBook": "I to je dobro – tvoj potez zadržava rezultat (Stockfish). Ali knjiga igra nešto drugo: pronađi potez iz knjige.",
       "anyMoveHint": "Vrijedi svaki potez koji zadržava rezultat – ne samo onaj iz knjige.",
       "modes": "Načini ploče",
       "mode": {
