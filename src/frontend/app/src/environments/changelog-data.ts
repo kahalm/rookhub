@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.876.3',
+    date: '2026-10-29',
+    changes: [
+      { en: 'E-book diagram recognition finds boards inside a wide grey frame with coordinates (e.g. the light-blue diagrams in Sofia Polgar’s „Amazing Artist – Dangerous Tactician“: 155 instead of 1) and reads the side to move from the triangle next to the frame.',
+        de: 'Die Diagrammerkennung der E-Books findet Bretter in einem breiten grauen Rand mit Koordinaten (z. B. die hellblauen Diagramme in Sofia Polgars „Amazing Artist – Dangerous Tactician“: 155 statt 1) und liest das Zugrecht aus dem Dreieck neben dem Rand.' },
+    ],
+  },
+  {
     version: '0.876.2',
     date: '2026-10-29',
     changes: [

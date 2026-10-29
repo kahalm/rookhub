@@ -165,6 +165,16 @@ public class EbookScanDiagramExtractor
                 var sc = EbookBoardImage.GridScore(c);
                 if (sc > score) { score = sc; box = inner; cells = c; }
             }
+            // Brett im grauen Passepartout mit Koordinaten (0.876.3, Polgar): bis an die hellen Felder nehmen. Der Zugrecht-Marker
+            // liegt dann außerhalb des Passepartouts — gesucht wird er am äußeren Rechteck (innen stehen nur Koordinaten).
+            var markerBox = (X0: 0, Y0: 0, X1: 0, Y1: 0);
+            if (score < MinGridScore && EbookBoardImage.LightExtent(g, found) is { } lit)
+            {
+                var (sq, _) = EbookBoardImage.SquareUp(g, lit);
+                var c = EbookBoardImage.Cells(g, sq);
+                var sc = EbookBoardImage.GridScore(c);
+                if (sc > score) { score = sc; box = sq; cells = c; markerBox = found; }
+            }
             if (score < MinGridScore) continue;
             var trimmed = EbookBoardImage.TrimToFrame(g, box);
             if (trimmed != box) { box = trimmed; cells = EbookBoardImage.Cells(g, box); }
@@ -190,8 +200,9 @@ public class EbookScanDiagramExtractor
                 // Bestmögliche Lesung: die des Netzes, sonst die des Scan-Modells — ungeprüft.
                 raw = EbookBoardImage.GridToPlacement(cnnGrid ?? EbookBoardImage.ReadGrid(cells, bg, bgBlur, model));
             }
+            var mb = markerBox.X1 > 0 ? markerBox : box;
             list.Add(new ScanCandidate(page, (double)box.X0 / W, (double)box.Y0 / H, (double)(box.X1 - box.X0) / W, (double)(box.Y1 - box.Y0) / H,
-                board, altBoard, full == null ? null : EbookBoardImage.SideMarker(full, (box.X0 * 2, box.Y0 * 2, box.X1 * 2, box.Y1 * 2)), conf, raw));
+                board, altBoard, full == null ? null : EbookBoardImage.SideMarker(full, (mb.X0 * 2, mb.Y0 * 2, mb.X1 * 2, mb.Y1 * 2), belowRight: markerBox.X1 > 0), conf, raw));
         }
         return list;
     }

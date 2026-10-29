@@ -308,6 +308,22 @@ Striche (Beim: 85 statt 166 Bretter). Gerendert wird die leichte Lesefassung, we
   Findet `FindBoards` auf einer Seite nichts, verdickt ein dritter Durchgang die dunkle Maske um `FrameLessDilate` = 3 px
   (Arbeitsbild ≈ 150 dpi; 4 px ließ Textblöcke verschmelzen) und schrumpft das Rechteck danach zurück; Textblöcke fallen über
   `GridScore` heraus. Gegenprobe 18 Bücher mit Opus-Lesungen: unverändert; Kislik-Probe 48 Seiten: 0 → 23 Bretter (19 sicher).
+- **Brett im grauen Passepartout** (0.876.3, Prod #1292 Polgar „Amazing Artist – Dangerous Tactician“: Text-PDF ohne
+  Schachfont, hellblaue JPEG-Bretter in einem breiten grauen Rand mit a–h/1–8; 1 statt ~150 Bretter): der Rand hat den
+  Grauwert der dunklen Felder (~0,68), gehört zur selben dunklen Komponente und ist weder Rahmenlinie noch weiß — `Peel`
+  lässt ihn stehen, das Raster lag quer über Rand und Koordinaten (`GridScore` −58, helle und dunkle Felder gleich).
+  Scheitert `GridScore` (auch nach dem Hineinnehmen), nimmt `EbookBoardImage.LightExtent` das Rechteck bis an die hellen
+  Felder: längster Lauf von Zeilen/Spalten mit ≥ 5 % hellen Pixeln (> 235/255, `LightLineShare`), Lücken bis ½ Feld
+  (Gitterlinien, Figurenreihen) überbrückt — die Eckfelder a8/h1 sind immer hell, der Rand hat keine. Nur wenn das um
+  ≥ 5 % schrumpft (sonst nur Rahmenlinien) und ≥ 52 erreicht, gilt das neue Rechteck (`SquareUp` ergänzt zum Quadrat).
+  Der Zugrecht-Marker wird dann am äußeren Rechteck gesucht, zusätzlich (nur für solche Bretter — bei Flear traf es sonst
+  Rahmenreste) ein Dreieck rechts NEBEN der Unterkante
+  (`EbookBoardImage.BelowRightTriangle`, △ = Weiß, ▼ = Schwarz; nur eine Form, deren Zeilenbreite oben/unten um mehr als
+  die Hälfte abweicht, und nicht mehr als zwei zeichengroße Teile im Suchfeld — Fließtext). Bretter, die vorher schon
+  gefunden wurden, ändern sich nicht (Vergleich alt/neu je 70 Seiten Stean, Kislik, Yusupov, Beim, Flear: identisch);
+  das Netz liest die hellblauen Bretter ohne Nachtraining (Kontrast 0,95/0,66).
+  Gemessen Polgar: 1 → 155 Bretter (153 plausibel; jedes Brettbild des Buchs, auch Doppelbilder), Zugrecht 90 w / 55 b /
+  10 offen; Stichprobe 6 Stellungen + Zugrecht richtig.
 - **Hintergrund je Brett** (Median der eigenen hellen/dunklen Felder), nicht je Buch: die Schraffur liegt in jedem Scan anders.
 - **Zwei Scan-Modelle**: `ebook-board-model-scan.bin` (`EbookBoardClassifier.Scan`, Font-Diagramme „gescannt“: weichgezeichnet,
   verrauscht, meist binarisiert — Gambit/Batsford-Figuren, Beim 95 % plausibel) und `ebook-board-model-scan2.bin` (`ScanAlt`,

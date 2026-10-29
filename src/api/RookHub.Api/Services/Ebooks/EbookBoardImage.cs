@@ -202,17 +202,7 @@ public static class EbookBoardImage
                 var (x0, y0, x1, y1) = p.Value;
                 w = x1 - x0; h = y1 - y0;
                 if (w < 96 || h < 96 || !(0.85 < (double)w / h && (double)w / h < 1.18)) continue;
-                var d = Math.Abs(w - h);
-                var cands = new List<(int, int, int, int)> { (x0, y0, x1, y1) };
-                if (w < h) cands = [(Math.Max(0, x0 - d), y0, x1, y1), (x0, y0, Math.Min(W, x1 + d), y1), (Math.Max(0, x0 - d / 2), y0, Math.Min(W, x1 + d - d / 2), y1)];
-                else if (h < w) cands = [(x0, Math.Max(0, y0 - d), x1, y1), (x0, y0, x1, Math.Min(H, y1 + d)), (x0, Math.Max(0, y0 - d / 2), x1, Math.Min(H, y1 + d - d / 2))];
-                var best = cands[0]; var bestScore = double.MinValue;
-                foreach (var c in cands)
-                {
-                    var sc = GridFit(Cells(g, c));
-                    if (sc > bestScore) { bestScore = sc; best = c; }
-                }
-                found.Add((best, bestScore));
+                found.Add(SquareUp(g, (x0, y0, x1, y1)));
             }
         }
         // Rahmenlose Bretter (0.824.0, Gambit-Scan Kislik „Applying Logic in Chess“): ohne Rahmen und mit hauchdünn
@@ -245,17 +235,7 @@ public static class EbookBoardImage
                     int x0 = xmin + FrameLessDilate, y0 = ymin + FrameLessDilate, x1 = xmax + 1 - FrameLessDilate, y1 = ymax + 1 - FrameLessDilate;
                     int w = x1 - x0, h = y1 - y0;
                     if (w < 96 || h < 96 || !(0.85 < (double)w / h && (double)w / h < 1.18)) continue;
-                    var d = Math.Abs(w - h);
-                    var cands = new List<(int, int, int, int)> { (x0, y0, x1, y1) };
-                    if (w < h) cands = [(Math.Max(0, x0 - d), y0, x1, y1), (x0, y0, Math.Min(W, x1 + d), y1), (Math.Max(0, x0 - d / 2), y0, Math.Min(W, x1 + d - d / 2), y1)];
-                    else if (h < w) cands = [(x0, Math.Max(0, y0 - d), x1, y1), (x0, y0, x1, Math.Min(H, y1 + d)), (x0, Math.Max(0, y0 - d / 2), x1, Math.Min(H, y1 + d - d / 2))];
-                    var best = cands[0]; var bestScore = double.MinValue;
-                    foreach (var c in cands)
-                    {
-                        var sc = GridFit(Cells(g, c));
-                        if (sc > bestScore) { bestScore = sc; best = c; }
-                    }
-                    found.Add((best, bestScore));
+                    found.Add(SquareUp(g, (x0, y0, x1, y1)));
                 }
         }
         // Dasselbe Brett zweimal (doppelter Rahmen: äußere Linie + inneres Brett, 0.780.5): von überlappenden Treffern
@@ -264,6 +244,70 @@ public static class EbookBoardImage
             if (!result.Any(r => Overlap(r, box) > 0.5)) result.Add(box);
         return result.OrderBy(b => b.Y0).ThenBy(b => b.X0).ToList();
     }
+
+    /// <summary>Nicht quadratisches Rechteck zum Quadrat ergänzen — auf der Seite (links/rechts bzw. oben/unten/beidseitig), deren
+    /// Schachbrettmuster am besten passt (<see cref="GridFit"/>). Quadratische Rechtecke bleiben.</summary>
+    internal static ((int X0, int Y0, int X1, int Y1) Box, double Fit) SquareUp(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        var (x0, y0, x1, y1) = box;
+        int w = x1 - x0, h = y1 - y0, d = Math.Abs(w - h);
+        var cands = new List<(int, int, int, int)> { (x0, y0, x1, y1) };
+        if (w < h) cands = [(Math.Max(0, x0 - d), y0, x1, y1), (x0, y0, Math.Min(W, x1 + d), y1), (Math.Max(0, x0 - d / 2), y0, Math.Min(W, x1 + d - d / 2), y1)];
+        else if (h < w) cands = [(x0, Math.Max(0, y0 - d), x1, y1), (x0, y0, x1, Math.Min(H, y1 + d)), (x0, Math.Max(0, y0 - d / 2), x1, Math.Min(H, y1 + d - d / 2))];
+        var best = cands[0]; var bestScore = double.MinValue;
+        foreach (var c in cands)
+        {
+            var sc = GridFit(Cells(g, c));
+            if (sc > bestScore) { bestScore = sc; best = c; }
+        }
+        return (best, bestScore);
+    }
+
+    /// <summary>
+    /// Brett in einem breiten grauen Passepartout (0.876.3, Polgar „Amazing Artist – Dangerous Tactician“: hellblaue Bretter als
+    /// JPEG, grauer Rand mit a–h/1–8): der Rand hat den Grauwert der dunklen Felder, gehört zur selben dunklen Komponente und
+    /// ist weder Rahmenlinie (&lt; 0,5) noch weiß — <see cref="Peel"/> lässt ihn stehen, das Raster liegt quer über Rand und
+    /// Koordinaten. Die hellen Felder liegen aber nur IM Brett, und die Eckfelder a8/h1 sind immer hell: die Zeilen und Spalten
+    /// mit mindestens <see cref="LightLineShare"/> hellen Pixeln (&gt; 235/255) umreißen das Brett. <c>null</c>, wenn das
+    /// Rechteck dadurch um weniger als 5 % kleiner wird (nur Rahmenlinien) oder unter 60 % schrumpft.
+    /// </summary>
+    public static (int X0, int Y0, int X1, int Y1)? LightExtent(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        int x0 = Math.Clamp(box.X0, 0, W - 1), x1 = Math.Clamp(box.X1, x0 + 1, W), y0 = Math.Clamp(box.Y0, 0, H - 1), y1 = Math.Clamp(box.Y1, y0 + 1, H);
+        const float light = 235f / 255f;
+        var rows = new int[y1 - y0]; var cols = new int[x1 - x0];
+        for (var y = y0; y < y1; y++)
+            for (var x = x0; x < x1; x++)
+                if (g[y, x] > light) { rows[y - y0]++; cols[x - x0]++; }
+        // Längster Lauf heller Zeilen/Spalten; Lücken bis ½ Feld (Gitterlinien zwischen den Reihen, Figuren) überbrückt, ein
+        // einzelner heller Streifen außen (Kante zum weißen Papier) zählt nicht mit.
+        (int From, int To) Run(int[] a, int n)
+        {
+            var gap = Math.Max(2, a.Length / 16);
+            (int From, int To) best = (-1, -1); int start = -1, last = -1;
+            for (var i = 0; i <= a.Length; i++)
+            {
+                var on = i < a.Length && a[i] >= LightLineShare * n;
+                if (on && start >= 0 && i - last > gap + 1) { if (last - start > best.To - best.From) best = (start, last); start = -1; }
+                if (on) { if (start < 0) start = i; last = i; }
+            }
+            if (start >= 0 && last - start > best.To - best.From) best = (start, last);
+            return best;
+        }
+        var (ry0, ry1) = Run(rows, x1 - x0); var (cx0, cx1) = Run(cols, y1 - y0);
+        if (ry0 < 0 || cx0 < 0) return null;
+        var inner = (x0 + cx0, y0 + ry0, x0 + cx1 + 1, y0 + ry1 + 1);
+        int iw = inner.Item3 - inner.Item1, ih = inner.Item4 - inner.Item2;
+        if (iw < (x1 - x0) * 0.6 || ih < (y1 - y0) * 0.6 || iw < 64 || ih < 64) return null;
+        if (iw >= (x1 - x0) * 0.95 && ih >= (y1 - y0) * 0.95) return null;   // nur Rahmenlinien weg, kein Passepartout
+        return inner;
+    }
+
+    /// <summary>Mindestanteil heller Pixel, ab dem eine Zeile/Spalte zum Brett zählt (<see cref="LightExtent"/>): eine Brettreihe
+    /// hat vier helle Felder (≈ 50 %, mit Figuren auf der d-Linie nur noch 6 %), der Rand mit Koordinaten keines.</summary>
+    internal const double LightLineShare = 0.05;
 
     /// <summary>Verdickung der dunklen Maske für rahmenlose Bretter (Arbeitsbild ≈ 150 dpi): 3 px verbinden die schraffierten
     /// Felder; 4 px ließen in Kislik schon Textblöcke zu quadratischen Flächen verschmelzen.</summary>
@@ -309,10 +353,13 @@ public static class EbookBoardImage
     /// „W“ keine — das trennt beide sicher (Hansen/Beim 23 von 23), anders als das Seitenverhältnis allein. Ohne Innenraum
     /// muss das Zeichen deutlich breiter als hoch sein (≥ 1,05), sonst <c>null</c>.
     /// </summary>
-    public static char? SideMarker(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    /// <param name="belowRight">Auch ein Dreieck rechts neben der Unterkante zählt (<see cref="BelowRightTriangle"/>) — nur für
+    /// Bretter im Passepartout (0.876.3); bei anderen Büchern traf es dort Rahmenreste und Bildunterschriften (Flear).</param>
+    public static char? SideMarker(float[,] g, (int X0, int Y0, int X1, int Y1) box, bool belowRight = false)
     {
         // Dreieck rechts über dem Brett (Quality Chess, z. B. Yusupov): △ hohl = Weiß, ▼ voll = Schwarz (0.797.0).
         if (TriangleMarker(g, box) is char tri) return tri;
+        if (belowRight && BelowRightTriangle(g, box) is char low) return low;
         // Kästchen links unter dem Brett (Chessable/NIC, z. B. „The Checkmate Patterns Manual“): ■ voll = Schwarz, □ hohl = Weiß.
         if (SquareMarker(g, box) is char sq) return sq;
         int H = g.GetLength(0);
@@ -343,6 +390,39 @@ public static class EbookBoardImage
         // Ein Dreieck füllt sein Rechteck etwa zur Hälfte: gefüllt ≥ 35 %, hohl nur der Umriss — aber mit Innenraum.
         if (Holes(tri) > 0) return 'w';
         return tri.Points.Count >= 0.35 * tri.W * tri.H ? 'b' : null;
+    }
+
+    /// <summary>
+    /// Dreieck rechts NEBEN der Unterkante (0.876.3, Polgar „Amazing Artist – Dangerous Tactician“: △ = Weiß, ▼ = Schwarz neben
+    /// dem grauen Passepartout). Hier steht leicht Fließtext, deshalb zählt nur eine Form, deren Zeilenbreite von oben nach
+    /// unten deutlich zu- (△) oder abnimmt (▼) — Buchstaben wie „o“ oder „e“ haben oben und unten fast dieselbe Breite.
+    /// </summary>
+    internal static char? BelowRightTriangle(float[,] g, (int X0, int Y0, int X1, int Y1) box)
+    {
+        int H = g.GetLength(0), W = g.GetLength(1);
+        var bw = box.X1 - box.X0;
+        int sx0 = Math.Min(W, box.X1 + 2), sx1 = Math.Min(W, box.X1 + bw / 8), sy0 = Math.Max(0, box.Y1 - (int)(bw * 0.1)), sy1 = Math.Min(H, box.Y1 + (int)(bw * 0.04));
+        if (sx1 - sx0 < 8 || sy1 - sy0 < 8) return null;
+        // Reichweite 3: der hohle Umriss ist im JPEG nur ~2 px dick und zerfällt unter 0,5 in Striche.
+        var comps = Components(g, sx0, sx1, sy0, sy1, 3);
+        // Mehrere zeichengroße Teile = Fließtext daneben, kein alleinstehendes Dreieck.
+        if (comps.Count(c => c.H >= bw * 0.015) > 2) return null;
+        foreach (var c in comps
+                     .Where(c => c.H >= bw * 0.025 && c.H <= bw * 0.09 && c.W >= c.H * 0.8 && c.W <= c.H * 1.6)
+                     .OrderBy(c => c.X0))
+        {
+            var span = new int[c.H];
+            foreach (var grp in c.Points.GroupBy(p => p.Y - c.Y0)) span[grp.Key] = grp.Max(p => p.X) - grp.Min(p => p.X) + 1;
+            int q = Math.Max(1, c.H / 4);
+            double top = span.Take(q).Average(), bottom = span.Skip(c.H - q).Average();
+            var apexUp = top < 0.5 * bottom; var apexDown = bottom < 0.5 * top;
+            if (!apexUp && !apexDown) continue;
+            // Hohl: Innenraum, oder (Umriss mit Lücken) nur wenig Tinte; gefüllt: etwa die halbe Rechteckfläche.
+            var fill = (double)c.Points.Count / (c.W * c.H);
+            if (Holes(c) > 0 || fill < 0.2) return 'w';
+            if (fill >= 0.35) return 'b';
+        }
+        return null;
     }
 
     /// <summary>Kästchen links unterhalb des Bretts (neben der Linie „a“): hohl (Innenraum) = Weiß, voll = Schwarz.</summary>
