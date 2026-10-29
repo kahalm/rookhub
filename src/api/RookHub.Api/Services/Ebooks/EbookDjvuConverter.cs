@@ -53,9 +53,21 @@ public class EbookDjvuConverter : PeriodicWorker
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         var tmp = target + ".part";
         // DJVU (klein, verlustarm) vor dem Neu-Rendern des übergroßen PDFs.
-        var ok = djvu != null
-            ? await RunAsync(options.DdjvuPath, ["-format=pdf", $"-scale={ReadingDpi}", $"-quality={DjvuQuality}", _storage.ResolveFile(ebook, djvu), tmp], ct)
-            : heavy != null && await RasterizeAsync(options, _storage.ResolveFile(ebook, heavy), tmp, ct);
+        bool ok;
+        try
+        {
+            ok = djvu != null
+                ? await RunAsync(options.DdjvuPath, ["-format=pdf", $"-scale={ReadingDpi}", $"-quality={DjvuQuality}", _storage.ResolveFile(ebook, djvu), tmp], ct)
+                : heavy != null && await RasterizeAsync(options, _storage.ResolveFile(ebook, heavy), tmp, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // 0.872.0: Ein Fehler beim Umwandeln (z. B. „kein lesbares JPEG“ aus einem Riesenseiten-Scan, #2496) gilt als
+            // fehlgeschlagen. Vorher flog er aus dem Durchlauf, das Buch blieb „ausstehend“, wurde alle 30 s neu versucht,
+            // hielt die ganze Warteschlange auf und trieb die API am 29.10. in einen OutOfMemory-Absturz.
+            Logger.LogWarning(ex, "E-Book {EbookId}: Umwandlung abgebrochen", ebook.Id);
+            ok = false;
+        }
         if (!ok || !File.Exists(tmp) || new FileInfo(tmp).Length == 0)
         {
             if (File.Exists(tmp)) File.Delete(tmp);

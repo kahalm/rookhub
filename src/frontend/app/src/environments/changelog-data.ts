@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.872.0", date: "2026-10-29", changes: [
+    { en: "E-books: a book whose reading copy cannot be created (e.g. a scan with pages several metres tall) is now marked as failed instead of being retried every 30 seconds — the endless retry held up all other conversions and drove the server out of memory on 29 October.",
+      de: "E-Books: Ein Buch, dessen Lesefassung sich nicht erzeugen lässt (z. B. ein Scan mit meterhohen Seiten), gilt jetzt als fehlgeschlagen, statt alle 30 Sekunden neu versucht zu werden — der Dauerversuch hielt alle anderen Umwandlungen auf und trieb den Server am 29. Oktober in einen Speicherüberlauf." },
+  ] },
   { version: "0.871.0", date: "2026-10-28", changes: [
     { en: "E-book reader: double-clicking a diagram in a book whose diagrams have not been processed yet now says exactly that, instead of asking whether a diagram is missing.",
       de: "E-Book-Leser: Ein Doppelklick auf ein Diagramm in einem Buch, dessen Diagramme noch nicht verarbeitet sind, sagt jetzt genau das, statt zu fragen, ob ein Diagramm fehlt." },

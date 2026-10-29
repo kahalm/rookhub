@@ -99,6 +99,40 @@ public class EbookDjvuConverterTests : IDisposable
         Assert.Equal(1, doc.NumberOfPages);
     }
 
+    /// <summary>0.872.0: liefert das Rendern ein kaputtes Seitenbild, wird das Buch „fehlgeschlagen“ und der nächste Durchlauf
+    /// nimmt das nächste Buch — vorher blieb es „ausstehend“ und blockierte die Warteschlange (Endlosschleife, OOM 29.10.).</summary>
+    [Fact]
+    public async Task BrokenPageImage_MarksTheBookFailed_AndTheQueueMovesOn()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        // Ersatz für pdftoppm: legt eine „JPEG“-Datei ohne Bilddaten ab und meldet Erfolg.
+        var fake = Path.Combine(_kit.Root, "fake-pdftoppm.sh");
+        await File.WriteAllTextAsync(fake, "#!/bin/sh\nfor a; do last=$a; done\nprintf 'kaputt' > \"$last-01.jpg\"\n");
+        File.SetUnixFileMode(fake, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        _kit.Options.PdftoppmPath = fake;
+        var dir = Path.Combine(_kit.LibraryRoot, "Autor");
+        Directory.CreateDirectory(dir);
+        await File.WriteAllBytesAsync(Path.Combine(dir, "Riesen.pdf"), EbookTestKit.TinyPdf());
+        var admin = await _kit.UserAsync("admin", admin: true);
+        Ebook Heavy(string title) => new()
+        {
+            Title = title, OwnerUserId = admin.Id, Source = EbookSource.Library, ConversionState = EbookConversionState.Pending,
+            CoverState = EbookCoverState.Done, DiagramState = EbookDiagramState.Unsupported, PageCount = 1,
+            Files = { new EbookFile { Format = "pdf", RelativePath = "Autor/Riesen.pdf", FileName = "Riesen.pdf", SizeBytes = 5_000_000 } },
+        };
+        var first = Heavy("Riesen");
+        var second = Heavy("Danach");
+        _kit.Db.Ebooks.AddRange(first, second);
+        await _kit.Db.SaveChangesAsync();
+
+        await Converter().RunStepAsync(CancellationToken.None);
+        await Converter().RunStepAsync(CancellationToken.None);
+
+        Assert.Equal(EbookConversionState.Failed, (await _kit.Db.Ebooks.SingleAsync(b => b.Id == first.Id)).ConversionState);
+        Assert.Equal(EbookConversionState.Failed, (await _kit.Db.Ebooks.SingleAsync(b => b.Id == second.Id)).ConversionState);
+        Assert.Empty(Directory.GetFiles(_kit.Root, "*.part", SearchOption.AllDirectories));
+    }
+
     [Fact]
     public void DerivedFiles_LiveUnderTheWritableRoot_EvenForLibraryBooks()
     {
