@@ -54,6 +54,10 @@ export interface Ebook {
   files: EbookFile[];
   primaryFormat: string | null;
   progress: EbookProgress | null;
+  /** Sprache des Buchtexts (0.876.0, ISO 639-1); `null` = nicht bestimmt/unklar. */
+  language?: string | null;
+  /** Fertige Übersetzungen (Zielsprachen, z. B. `['en']`) — der Leser bietet „Original / English“ an. */
+  translations?: string[];
   createdAt: string;
   updatedAt: string;
   /** Nur in der Antwort des Uploads (0.863.0): vorhandene Bücher, die wahrscheinlich dasselbe sind. */
@@ -233,6 +237,49 @@ export const EBOOK_ACCEPT = '.pdf,.epub,.djvu,.cbz,.cbr,.mobi,.azw3';
 /** Formate, die der Browser zeigt (alles andere ist Download). */
 export const READABLE_FORMATS: ReadonlySet<string> = new Set(['pdf', 'epub']);
 
+/** Buch-Übersetzung (0.876.0): Übersicht für Verwalter (Server: `EbookTranslationStatusDto`). */
+export interface EbookTranslationItem {
+  ebookId: number;
+  title: string;
+  language: string;
+  sourceLanguage: string | null;
+  /** `pending` / `running` / `done` / `failed` / `notext`; `queued` = in der Reihe, noch ohne Lauf. */
+  state: string;
+  priority: boolean;
+  segmentsDone: number;
+  segmentsTotal: number;
+  segmentsFailed: number;
+  error: string | null;
+  completedAt: string | null;
+}
+
+export interface EbookTranslationStatus {
+  enabled: boolean;
+  modelAvailable: boolean;
+  languages: string[];
+  quietNow: boolean;
+  quietUntil: string | null;
+  running: { ebookId: number; title: string; language: string; sourceLanguage: string | null; segmentsDone: number; segmentsTotal: number; startedAt: string; etaMinutes: number | null } | null;
+  /** Bücher je Quellsprache; `und` = unklar/gemischt, `notext` = ohne Text, `pending` = noch nicht geprüft. */
+  bookLanguages: { language: string; books: number }[];
+  targets: { language: string; done: number; pending: number; failed: number; noText: number; remaining: number; remainingFirstRound: number }[];
+  failed: EbookTranslationItem[];
+  next: EbookTranslationItem[];
+}
+
+/** Gemerkte Lesesprache je Gerät (`original` oder Zielsprache wie `en`). */
+export const EBOOK_READ_LANG_KEY = 'rh.ebooks.readLang';
+
+/**
+ * Lesestelle beim Wechsel Original ↔ Übersetzung: dieselbe Kapitel- und Elementstruktur, aber andere Textlängen — der
+ * Zeichenversatz am Ende einer CFI (`…/4/2:120)`) zeigte ins Leere. Ohne ihn landet epub.js am Anfang desselben Absatzes.
+ */
+export function coarseCfi(cfi: string | null | undefined): string | null {
+  if (!cfi) return null;
+  return cfi.replace(/:\d+(\[[^\]]*\])?(?=\)$)/, '').replace(/,[^,)]*,[^,)]*(?=\)$)/, '');
+}
+
+
 /**
  * „1,2 MB" — Bytes lesbar, ohne Nachkommastelle unter 10 in der Einheit. Binär gerechnet (÷ 1024, Einheiten wie im
  * Betriebssystem „kB/MB/GB“): die Upload-Grenze des Servers ist 300 MiB und soll überall als „300 MB“ erscheinen,
@@ -376,6 +423,19 @@ export class EbookService {
     return this.http.put<EbookProgress>(`/api/ebooks/${id}/progress`, { page, pageCount, locator: locator ?? null });
   }
 
+  translationStatus(): Observable<EbookTranslationStatus> {
+    return this.http.get<EbookTranslationStatus>('/api/admin/ebooks/translations');
+  }
+
+  /** Ein Buch vorziehen (bzw. neu übersetzen lassen) — läuft beim nächsten Lauf außerhalb der Sperrzeit. */
+  enqueueTranslation(id: number, lang: string): Observable<EbookTranslationItem> {
+    return this.http.post<EbookTranslationItem>(`/api/admin/ebooks/${id}/translations/${encodeURIComponent(lang)}`, {});
+  }
+
+  retryFailedTranslations(): Observable<{ queued: number }> {
+    return this.http.post<{ queued: number }>('/api/admin/ebooks/translations/retry-failed', {});
+  }
+
   importLibrary(): Observable<EbookLibraryImportResult> {
     return this.http.post<EbookLibraryImportResult>('/api/admin/ebooks/library/import', {});
   }
@@ -423,6 +483,16 @@ export class EbookService {
    *  von Kapiteln, Bildern und CSS dagegen auf und kann keine Query-Parameter anhängen). Endet mit „/“. */
   epubBaseUrl(id: number, token: string): string {
     return `/api/ebooks/${id}/epub/${encodeURIComponent(token)}/`;
+  }
+
+  /** Übersetztes EPUB als Datei (Rückfall „ganzes Archiv“ bzw. Download). */
+  translatedFileUrl(id: number, lang: string, token: string, download = false): string {
+    return `/api/ebooks/${id}/translations/${encodeURIComponent(lang)}/file?t=${encodeURIComponent(token)}${download ? '&download=true' : ''}`;
+  }
+
+  /** Wie {@link epubBaseUrl}, aber das übersetzte EPUB (gleiche Pfade im Archiv). */
+  translatedEpubBaseUrl(id: number, lang: string, token: string): string {
+    return `/api/ebooks/${id}/translations/${encodeURIComponent(lang)}/epub/${encodeURIComponent(token)}/`;
   }
 
   coverUrl(id: number, token: string, version: string | number = ''): string {

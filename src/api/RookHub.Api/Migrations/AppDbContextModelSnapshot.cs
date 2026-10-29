@@ -2359,6 +2359,14 @@ namespace RookHub.Api.Migrations
                     b.Property<bool>("DiagramsCurated")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("Language")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("LanguageSource")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
                     b.Property<int?>("OwnerUserId")
                         .HasColumnType("int");
 
@@ -2409,6 +2417,8 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("CoverState", "Id");
 
                     b.HasIndex("DiagramState", "Id");
+
+                    b.HasIndex("LanguageSource", "Language");
 
                     b.ToTable("Ebooks");
                 });
@@ -2860,6 +2870,90 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("UserId", "UpdatedAt");
 
                     b.ToTable("EbookProgresses");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookTranslation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime?>("NotBefore")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Priority")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("RelativePath")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int>("Runs")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SegmentsDone")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SegmentsFailed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SegmentsTotal")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("SourceFileId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EbookId", "Language")
+                        .IsUnique();
+
+                    b.HasIndex("State", "Priority");
+
+                    b.ToTable("EbookTranslations");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EndlessProgress", b =>
@@ -9766,6 +9860,17 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Ebook");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookTranslation", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EndlessProgress", b =>

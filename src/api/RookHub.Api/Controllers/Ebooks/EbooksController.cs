@@ -265,6 +265,45 @@ public class EbooksController : BaseApiController
         return File(entry.Bytes, entry.ContentType);
     }
 
+    /// <summary>
+    /// Übersetzung (0.876.0): ein Eintrag aus dem übersetzten EPUB, wie <see cref="GetEpubEntry"/> — der Leser schaltet
+    /// „Original / English“ um und öffnet dann dieses Archiv als Ordner. Gleiche Pfade wie im Original (Bilder, Kapitel),
+    /// darum gelten die Diagramm-Verweise weiter. Keine fertige Übersetzung → 404.
+    /// </summary>
+    [HttpGet("{id:int}/translations/{lang}/epub/{token}/{**path}")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.EbookEntriesPolicy)]
+    public async Task<IActionResult> GetTranslatedEpubEntry(int id, string lang, string token, string? path, CancellationToken ct)
+    {
+        var caller = await ResolveCallerAsync(token, ct);
+        if (caller == null) return Unauthorized();
+        var (_, file) = await _service.ResolveTranslationAsync(caller.Value.Caller, caller.Value.ManageAll, id, lang, ct);
+        var entry = await EbookEpubEntries.ReadAsync(file, path, ct);
+        if (entry == null) return NotFound();
+        // Kürzer als beim Original: eine Übersetzung wird erneuert, wenn sich die Quelle ändert.
+        Response.Headers.CacheControl = "private, max-age=3600";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(entry.Bytes, entry.ContentType);
+    }
+
+    /// <summary>Das übersetzte EPUB als Datei (Leser-Rückfall „ganzes Archiv“ bzw. <c>?download=true</c>).</summary>
+    [HttpGet("{id:int}/translations/{lang}/file")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.EbookFilePolicy)]
+    public async Task<IActionResult> GetTranslatedFile(int id, string lang, [FromQuery(Name = "t")] string? token,
+        [FromQuery] bool download = false, CancellationToken ct = default)
+    {
+        var caller = await ResolveCallerAsync(token, ct);
+        if (caller == null) return Unauthorized();
+        var (ebook, fullPath) = await _service.ResolveTranslationAsync(caller.Value.Caller, caller.Value.ManageAll, id, lang, ct);
+        Response.Headers.CacheControl = "private, max-age=3600";
+        var name = DownloadName(ebook, new EbookFile { Format = "epub", FileName = ebook.Title + ".epub" });
+        name = name[..^5] + " (" + lang.ToLowerInvariant() + ").epub";
+        if (download) return PhysicalFile(fullPath, EbookFormats.ContentType("epub"), name, enableRangeProcessing: true);
+        Response.Headers.ContentDisposition = $"inline; filename*=UTF-8''{Uri.EscapeDataString(name)}";
+        return PhysicalFile(fullPath, EbookFormats.ContentType("epub"), enableRangeProcessing: true);
+    }
+
     private const string UnsafeNameChars = "<>:\"/\\|?*";
 
     /// <summary>Dateiname fürs Speichern: Titel + Format (sicher für Dateisysteme), sonst der Originalname.</summary>

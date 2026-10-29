@@ -5788,6 +5788,39 @@
       "takeExisting": "Ja, das vorhandene nehmen",
       "uploadAnyway": "Trotzdem als neues Buch hochladen",
       "keep": "Nein, behalten"
+    },
+    "translation": {
+      "switch": "Sprache des Buchs",
+      "original": "Original",
+      "lang": {
+        "en": "Englisch"
+      },
+      "title": "Buch-Übersetzungen",
+      "off": "Die Übersetzung ist auf diesem Server ausgeschaltet.",
+      "noModel": "Kein Modell auf eigener Hardware eingestellt — Bücher werden nur über die Spark übersetzt.",
+      "quiet": "Sperrzeit der Spark — weiter um {{until}}.",
+      "active": "Übersetzt gerade.",
+      "idle": "Gerade nichts zu übersetzen.",
+      "progress": "{{done}} von {{total}} Texten",
+      "eta": "noch etwa {{n}} min",
+      "done": "{{n}} fertig",
+      "remaining": "{{n}} noch offen",
+      "firstRound": "{{n}} vor Deutsch",
+      "failed": "{{n}} gescheitert",
+      "noText": "{{n}} ohne Text",
+      "bookLanguages": "Bücher nach Sprache",
+      "next": "Als Nächstes",
+      "priority": "vorgezogen",
+      "failedTitle": "Gescheitert",
+      "retryFailed": "Gescheiterte wiederholen",
+      "retried": "{{n}} wieder eingereiht.",
+      "actionFailed": "Das hat nicht geklappt.",
+      "unclear": "unklar",
+      "noTextLabel": "ohne Text",
+      "undetected": "noch nicht geprüft",
+      "badgeHint": "Auch auf Englisch lesbar (Umschalter im Leser)",
+      "enqueue": "Als Nächstes ins Englische übersetzen",
+      "enqueued": "Eingereiht — wird im nächsten freien Zeitfenster der Spark übersetzt."
     }
   },
   "woodpecker": {

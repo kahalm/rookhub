@@ -64,3 +64,7 @@ paths:
   Persoenliche Kurse: 100 Puzzles je Lauf, 300 je Besitzer und UTC-Tag (Arbeitsspeicher); Admin-/Pool-Buecher ungedeckelt.
   Ein NEUES Buch traegt seinen Besitzer erst nach dem Import — Aufrufer eines persoenlichen Imports reichen deshalb
   `ownerUserId` an `ImportFileAsync`, sonst gaelte der Kurs als Admin-Buch.
+- **Buch-Übersetzung nur über die Spark** (0.876.0, `EbookTranslationService`): läuft über `TextJsonClients` wie die
+  Kurs-Übersetzung, aber NUR, wenn der Client eigene Hardware ist (`IsLocal`) — mit nur `Anthropic:TextApiKey` ruht sie
+  (ein Buch sind Hunderttausende Tokens). Schalter `EbookTranslation:Languages` (leer = aus, Prod auf Zuruf `en`),
+  Sperrzeiten wie oben, Doku `docs/api/ebooks.md` „Bücher auf Englisch übersetzen“.

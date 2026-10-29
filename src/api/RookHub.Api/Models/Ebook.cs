@@ -136,6 +136,18 @@ public class Ebook
     /// (<see cref="EbookFile.Derived"/>), die der Browser-Leser zeigen kann.</summary>
     public EbookConversionState ConversionState { get; set; } = EbookConversionState.NotNeeded;
 
+    /// <summary>Sprache des Buchtexts (ISO 639-1, z. B. <c>de</c>, <c>en</c>, <c>ru</c>; 0.876.0) — bestimmt vom
+    /// <c>EbookTranslationWorker</c> aus dem Text selbst (<c>EbookLanguageDetector</c>; <c>dc:language</c> des EPUB nur als
+    /// Hinweis). <c>null</c> = noch nicht bestimmt, gemischt oder unklar — siehe <see cref="LanguageSource"/>.</summary>
+    [MaxLength(8)]
+    public string? Language { get; set; }
+
+    /// <summary>Wie <see cref="Language"/> zustande kam: <c>text</c> (aus dem Text erkannt), <c>manual</c> (von Hand gesetzt),
+    /// <c>unclear</c> (Text da, aber gemischt/unklar — keine Übersetzung), <c>notext</c> (keine Textebene, z. B. Scan; Stufe 2
+    /// der Übersetzung liest später die OCR-Ebene). <c>null</c> = noch nicht geprüft.</summary>
+    [MaxLength(10)]
+    public string? LanguageSource { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

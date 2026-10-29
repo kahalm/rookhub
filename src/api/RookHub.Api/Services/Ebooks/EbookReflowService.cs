@@ -99,6 +99,8 @@ public class EbookReflowService
             else { diagrams[i].ImageRef = null; diagrams[i].EpubChapter = null; }
         }
         ebook.UpdatedAt = DateTime.UtcNow;
+        // Neues Quell-EPUB → fertige Übersetzungen sind veraltet (0.876.0; der Zwischenspeicher macht das Erneuern billig).
+        await EbookTranslationService.MarkOutdatedAsync(_db, ebookId, ct);
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("E-Book {EbookId}: Fließtext-EPUB {Bytes} Bytes, {Chapters} Kapitel, {Paragraphs} Absätze, {Linked}/{Diagrams} Diagramme als Bild",
             ebookId, size, result.Chapters, result.Paragraphs, linked, diagrams.Count);

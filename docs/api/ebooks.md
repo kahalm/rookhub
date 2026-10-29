@@ -664,3 +664,68 @@ für Bücher mit echtem EPUB lehnt der Dienst ohnehin ab.
   17 s; Grooten 544 S. → 52 Kapitel, 995/995, 9 s; Ward „Dragon“ 59 S., 80/80, < 1 s. epub.js (Ordner-Modus wie im Leser)
   zeigt alle drei.
 
+
+## Bücher auf Englisch übersetzen (0.876.0)
+
+Alle Bücher werden im Hintergrund über das Sprachmodell auf der **eigenen Hardware** (Spark, `TextLlm:BaseUrl`) ins
+Englische übersetzt — nie über den Claude-Text-Schlüssel (`IClaudeJsonClient.IsLocal`), und nur außerhalb der
+Sperrzeiten der Spark (`TextLlm:QuietHours`, dieselben wie Kurs-Übersetzung und Partietexte: Mo–Do 8–17, Fr 8–14 Wien).
+Ergebnis je Buch und Zielsprache ist ein ABGELEITETES EPUB `converted/<id>.<lang>.epub` unter `Ebooks:Root`.
+
+- **Schalter**: `EbookTranslation:Languages` (Compose `EBOOK_TRANSLATION_LANGUAGES`, Komma-Liste, heute `en`), LEER = aus
+  (Vorgabe, auch Dev — die Spark ist geteilt). `EbookTranslation:Parallel` (Vorgabe 8) Anfragen je Buch gleichzeitig,
+  `ChunkChars` (3000) / `ChunkItems` (40) je Anfrage. Die Obergrenze für ALLE LLM-Zwecke ist `TextLlm:MaxConcurrent`
+  (Vorgabe 8) — wer schneller will (vLLM verträgt ≈ 64 Folgen), hebt beide. Pausierbar über „Hintergrundjobs pausieren“.
+- **Sprache je Buch** (`Ebook.Language` + `LanguageSource`, `EbookLanguageDetector`): aus dem Text (Probe über das ganze
+  Buch, Funktionswörter wie `CommentLanguage` + eigene Liste Kroatisch, Kyrillisch an der Schrift → ru/uk/bg/sr), aus dem
+  EPUB bzw. einer Textprobe des PDF (40 Seiten). `dc:language` nur als Hinweis bei knapper Entscheidung. Quelle
+  `text`/`manual`; `unclear` (gemischt: zweite Sprache > 45 % der Treffer der ersten, oder < 40 Treffer) und `notext`
+  (Scan, DJVU, < 2 000 Zeichen Prosa) werden nicht übersetzt. Erkennung läuft im selben Worker, immer (keine Spark).
+- **Reihenfolge** (`EbookTranslationService.ClaimNextAsync`): von Hand vorgezogene zuerst; dann alle Bücher, die weder
+  Englisch noch Deutsch sind (nach Id); erst wenn davon keines mehr dran ist UND jedes Buch eine geprüfte Sprache hat, die
+  deutschen (`LateSources`: für Ziel `en` = `de`, für ein späteres Ziel `de` = `en`). Bücher in der Zielsprache nie,
+  anonyme Uploads nie. Ein wartendes Buch (`NotBefore`) hält die deutsche Runde nicht auf.
+- **Quelle** = das EPUB, das der Leser zeigt (`EbookFormats.Primary`, echtes vor Fließtext-EPUB). Nur Text-PDF → erst
+  `EbookReflowService.ConvertAsync` (Fließtext-EPUB, wird damit auch das Leseformat des Buchs!); Diagramme noch nicht
+  erkannt → 6 h später wieder; Reflow abgelehnt (Scan ohne Textebene) → `NoText`. **Stufe 2** (Scans über die OCR-Ebene)
+  ist offen: dafür `LanguageSource = notext` / `State = NoText` wieder aufnehmen.
+- **Zerlegen** (`EbookTextSegmenter`, `EbookEpubTranslation`): alle (X)HTML-Dokumente des Manifests (Kapitel, `nav.xhtml`)
+  und das NCX; Block-Tags trennen, Inline-Tags werden Platzhalter `<tN>…</tN>` (umschließendes Paar) bzw. `<tN/>`
+  (Bild, Umbruch, benachbarte Tags); Hüllen um den ganzen Block bleiben draußen. Schachnotation (SAN in allen
+  Figurenbuchstaben-Sprachen, Figurinen, Zugnummern, Langnotation, Rochade, Bewertungszeichen, Ergebnisse, FEN, Figurinen
+  im Privatbereich) wird folgenweise — auch über `<span>♖</span>` hinweg — EIN Platzhalter und geht nie ans Modell; Blöcke
+  ohne Wörter, PGN-Kopfzeilen und Partieköpfe „Name – Name, Ort 1985“ bleiben unübersetzt. `head`, `script`, `style`,
+  `svg`, `pre`, `code` werden nicht angefasst. Figurenbuchstaben werden NICHT umgesetzt (kein `PieceLetters.Convert`).
+- **Modell** über `CommentTranslator` (`TranslationSubject.EbookText`, eigener Auftrag: Platzhalter genau einmal
+  zurück, Notation/Namen bleiben, ‘…’ als Anführungszeichen; Längen-, Sprach- und Zitatprüfung, zweiter Versuch). Jeder
+  verschiedene Text geht nur EINMAL ans Modell. Fehlen Platzhalter oder scheitert eine Fuhre, geht jeder Text allein noch
+  einmal; was dann scheitert oder beim Einsetzen die Verschachtelung bräche, bleibt im Original (`SegmentsFailed`).
+- **Fortsetzbar**: jede fertige Fuhre landet sofort in `converted/<id>.<lang>.cache.jsonl` (SHA-256 des Modelltexts →
+  Übersetzung). Sperrzeit/Pause/Neustart bricht den Lauf ab, die Zeile geht zurück auf `Pending`, der nächste Lauf
+  schickt nur, was fehlt. Spark nicht erreichbar → Lauf hält an, nichts wird als gescheitert gebucht.
+- **Ausgabe**: Kopie des Quell-EPUB, `mimetype` zuerst unkomprimiert, alle Einträge in gleicher Reihenfolge und
+  Schreibweise, Bilder/CSS/Schriften byte-gleich, ids/Anker unverändert (Diagramm-`ImageRef`/`EpubChapter` gelten
+  weiter), `lang`/`xml:lang` am `<html>` und `dc:language` auf die Zielsprache, Text als UTF-8.
+- **Veraltet**: `SourceHash` (SHA-256 über OPF + Text-Dokumente) und `SourceFileId`; ein neues Fließtext-EPUB stellt
+  fertige Übersetzungen sofort zurück, sonst prüft der Worker im Leerlauf je Durchgang 3 fertige gegen ihre Quelle. Dank
+  Zwischenspeicher kostet das Erneuern nur den geänderten Text.
+- **Löschen** des Buchs entfernt Zeilen, EPUB und Zwischenspeicher (`EbookStorage.DeleteTranslations`).
+- Tabelle `EbookTranslations` (je Buch + Sprache eindeutig): `State` Pending/Running/Done/Failed/NoText, `Priority`,
+  `NotBefore`, `SourceFileId`, `SourceHash`, `RelativePath`, `SizeBytes`, `SegmentsTotal/Done/Failed`, `Model`, `Error`,
+  `Runs`, Zeitstempel. Bewusst KEINE `EbookFile`-Zeile — an „epub + Derived“ hängen Leseformat, Reflow,
+  Diagramm-Verknüpfung und Fingerabdrücke.
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/ebooks/{id:int}/translations/{lang}/epub/{token}/{**path}` | **AllowAnonymous** (Ausweis im Pfad oder Bearer), Rate-Limit `ebook-entries` | Ein Eintrag des übersetzten EPUB (Leser „als Ordner“), Sichtbarkeit wie `…/epub`; keine fertige Übersetzung → 404 |
+| GET | `/api/ebooks/{id:int}/translations/{lang}/file?t=&download=` | **AllowAnonymous** (Ausweis oder Bearer) | Das übersetzte EPUB als Datei („<Titel> (en).epub“) |
+| GET | `/api/admin/ebooks/translations` | `ebooks.manage` | Übersicht: eingeschaltet, Modell, Sperrzeit bis, laufendes Buch mit Fortschritt + Restdauer (Tempo dieses Laufs), Bücher je Sprache (`und`/`notext`/`pending`), je Ziel fertig/wartend/gescheitert/ohne Text/noch offen (davon erste Runde), die nächsten 10, die letzten 20 gescheiterten |
+| POST | `/api/admin/ebooks/{id:int}/translations/{lang}` | `ebooks.manage` | Buch vorziehen bzw. neu übersetzen (Vorrang, weckt den Worker); Buch schon in der Sprache → 400, unbekannt → 404 |
+| POST | `/api/admin/ebooks/translations/retry-failed` | `ebooks.manage` | Gescheiterte und unvollständige (`SegmentsFailed > 0`) wieder einreihen → `{ queued }` |
+
+`EbookDto` trägt `language` und `translations` (fertige Zielsprachen). **Oberfläche**: im Leser ein Sprachschalter
+(Symbol `translate`, Menü „Original“ / „Englisch“, aktiv in Primärfarbe), nur mit fertiger Übersetzung; die Wahl gilt je
+Gerät (`rh.ebooks.readLang`) für jedes Buch mit dieser Übersetzung und öffnet immer das EPUB. Beim Wechsel baut der
+EPUB-Leser neu auf und springt an dieselbe Stelle (CFI ohne Zeichenversatz, `coarseCfi`); der Lesestand ist einer für
+beide Sprachen. Regal: Abzeichen mit `translate`-Symbol + „EN“ und Tooltip; Verwalter: im ⋮ der Bibliothek „Buch-Übersetzungen“ (Übersicht
+als Dialog, „Gescheiterte wiederholen“), im ⋮ der Karte „Als Nächstes ins Englische übersetzen“.

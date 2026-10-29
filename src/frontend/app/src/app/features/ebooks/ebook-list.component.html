@@ -9,15 +9,22 @@
           <mat-icon>{{ selecting() ? 'close' : 'checklist' }}</mat-icon>{{ (selecting() ? 'common.cancel' : 'ebooks.bulk.select') | translate }}
         </button>
       }
-      @if (list?.canImportLibrary) {
+      @if (list?.canImportLibrary || list?.canManageAll) {
         <button mat-icon-button type="button" [matMenuTriggerFor]="adminMenu" [appIconLabel]="'common.moreActions' | translate">
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #adminMenu="matMenu">
-          <button mat-menu-item (click)="importLibrary()" [disabled]="importing()">
-            <mat-icon>library_add</mat-icon>
-            <span>{{ (importing() ? 'ebooks.library.importing' : 'ebooks.library.import') | translate }}</span>
-          </button>
+          @if (list?.canImportLibrary) {
+            <button mat-menu-item (click)="importLibrary()" [disabled]="importing()">
+              <mat-icon>library_add</mat-icon>
+              <span>{{ (importing() ? 'ebooks.library.importing' : 'ebooks.library.import') | translate }}</span>
+            </button>
+          }
+          @if (list?.canManageAll) {
+            <button mat-menu-item (click)="openTranslations()">
+              <mat-icon>translate</mat-icon><span>{{ 'ebooks.translation.title' | translate }}</span>
+            </button>
+          }
         </mat-menu>
       }
       <!-- d4-rk-ebooks-upload-knopf-aussermittig: unter 600 px nur Symbol → Name im aria-label + title (DESIGN 5.4). -->
@@ -239,6 +246,9 @@
                 @if (book.targetMinElo != null) { <span class="chip eb-elo-badge" [matTooltip]="'ebooks.eloHint' | translate">{{ 'ebooks.eloBadge' | translate: { n: book.targetMinElo } }}</span> }
                 @if (book.pageCount) { <span class="chip">{{ (book.pageCount === 1 ? 'ebooks.pagesOne' : 'ebooks.pages') | translate: { n: book.pageCount } }}</span> }
                 @if (book.processing) { <span class="chip eb-processing" [matTooltip]="'ebooks.processingHint' | translate"><mat-icon>hourglass_top</mat-icon>{{ 'ebooks.processing' | translate }}</span> }
+                @if (book.translations?.length) {
+                  <span class="chip" [matTooltip]="'ebooks.translation.badgeHint' | translate"><mat-icon>translate</mat-icon>{{ book.translations!.join(' ').toUpperCase() }}</span>
+                }
                 @if (book.diagramCount > 0) { <span class="chip"><mat-icon>grid_on</mat-icon>{{ (book.diagramCount === 1 ? 'ebooks.diagramsOne' : 'ebooks.diagrams') | translate: { n: book.diagramCount } }}</span> }
                 @if (book.canManage) {
                   <span class="chip eb-vis" [matTooltip]="'ebooks.visibilityLabel' | translate">
@@ -272,6 +282,9 @@
                     <mat-icon>download</mat-icon>
                     <span>{{ 'ebooks.downloadFormat' | translate: { format: f.format.toUpperCase(), size: size(f.sizeBytes) } }}</span>
                   </a>
+                }
+                @if (list.canManageAll && book.language !== 'en' && !book.translations?.includes('en')) {
+                  <button mat-menu-item (click)="translateBook(book)"><mat-icon>translate</mat-icon><span>{{ 'ebooks.translation.enqueue' | translate }}</span></button>
                 }
                 @if (book.canManage) {
                   <button mat-menu-item (click)="edit(book)"><mat-icon>edit</mat-icon><span>{{ 'common.edit' | translate }}</span></button>

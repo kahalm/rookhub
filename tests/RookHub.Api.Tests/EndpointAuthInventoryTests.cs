@@ -59,6 +59,8 @@ public class EndpointAuthInventoryTests
         "GET /api/ebooks/{id:int}/cover",                            // EbooksController.GetCover
         "GET /api/ebooks/{id:int}/file",                             // EbooksController.GetFile
         "GET /api/ebooks/{id:int}/epub/{token}/{**path}",            // EbooksController.GetEpubEntry (Ausweis im Pfad, EPUB als Ordner)
+        "GET /api/ebooks/{id:int}/translations/{lang}/epub/{token}/{**path}", // EbooksController.GetTranslatedEpubEntry (0.876.0, Übersetzung als Ordner)
+        "GET /api/ebooks/{id:int}/translations/{lang}/file",         // EbooksController.GetTranslatedFile (0.876.0, Ausweis)
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress
         // KidHub, die Kinderseite (0.554.0): ganz ohne Konto — Stufen aus markierten Lichess-Puzzles und
         // die Aufgaben der Kurse, die ein Admin mit Book.ForKids freigegeben hat (nie Kalkulationsbuecher).

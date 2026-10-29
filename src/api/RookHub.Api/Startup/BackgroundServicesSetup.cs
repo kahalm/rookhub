@@ -37,6 +37,7 @@ namespace RookHub.Api.Startup;
 /// EbookDjvuConverter                  intern: Ebooks:Root                   DjVu → PDF
 /// EbookSolutionCheckWorker            intern: Ebooks:EngineCheck            Stockfish prüft/löst Buchaufgaben
 /// EbookFingerprintWorker              intern: Ebooks:Root/LibraryRoot       ISBN + Text-Fingerabdruck je Datei (Dubletten)
+/// EbookTranslationWorker              intern: EbookTranslation:Languages    Bücher übersetzen (Spark, QuietHours)
 /// ClubCopyLinkScheduler               immer                                 Kopien der Vereinspartien verknüpfen
 /// ClubSecondEngineScheduler           intern: ClubSecondEngine:EngineName   Vereinspartien zusätzlich auf Lc0
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
@@ -92,6 +93,8 @@ public static class BackgroundServicesSetup
         services.AddHostedService<EbookSolutionCheckWorker>();
         // Fingerabdrücke (ISBN + Text-MinHash) für die Upload-Dublettenprüfung nachholen (0.863.0).
         services.AddHostedService<EbookFingerprintWorker>();
+        // Bücher übersetzen (0.876.0): ein Buch nach dem anderen über die Spark, Sperrzeiten wie die Kurs-Übersetzung.
+        services.AddHostedService<EbookTranslationWorker>();
         services.AddHostedService<ClubCopyLinkScheduler>();
         services.AddHostedService<ClubSecondEngineScheduler>();
         // Taktik-Ernte (0.657.0): fertige Analysen → Aufgaben in Kursen

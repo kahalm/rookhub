@@ -10,7 +10,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { EBOOK_TAGS_COLLAPSED, EbookListComponent, ebookFormats, eloParam } from './ebook-list.component';
-import { Ebook, EbookList, EbookService } from './ebook.service';
+import { Ebook, EbookList, EbookService, EbookTranslationItem } from './ebook.service';
 
 const book = (over: Partial<Ebook> = {}): Ebook => ({
   id: 1, title: 'Buch', author: 'Autor', year: 2000, tags: [], description: null, targetMinElo: null, source: 'upload',
@@ -34,7 +34,7 @@ describe('EbookListComponent', () => {
 
   function make(items: Ebook[], over: Partial<EbookList> = {}, loggedIn = true): EbookListComponent {
     calls = [];
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['list', 'accessToken', 'coverUrl', 'fileUrl', 'groupOptions', 'delete', 'setGroups', 'importLibrary']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['list', 'accessToken', 'coverUrl', 'fileUrl', 'groupOptions', 'delete', 'setGroups', 'importLibrary', 'enqueueTranslation']);
     service.list.and.callFake(q => { calls.push(q); return of(list(items, over)); });
     service.accessToken.and.returnValue(of('tok'));
     service.coverUrl.and.callFake((id, t, v) => `/api/ebooks/${id}/cover?t=${t}&v=${v}`);
@@ -66,6 +66,15 @@ describe('EbookListComponent', () => {
     expect(calls.at(-1)).toEqual(jasmine.objectContaining({ collection: 9, page: 1 }));
     c.closeCollection();
     expect(calls.at(-1)).toEqual(jasmine.objectContaining({ collection: null, page: 1 }));
+  });
+
+  it('Übersetzung (0.876.0): Buch vorziehen reiht es fürs Englische ein und meldet es', () => {
+    const c = make([book({ id: 4, language: 'de' })], { canManageAll: true });
+    service.enqueueTranslation.and.returnValue(of({} as EbookTranslationItem));
+    const quick = spyOn(TestBed.inject(SnackbarService), 'quick');
+    c.translateBook(c.items[0]);
+    expect(service.enqueueTranslation).toHaveBeenCalledWith(4, 'en');
+    expect(quick).toHaveBeenCalledWith('ebooks.translation.enqueued');
   });
 
   it('lädt die erste Seite mit der Titel-Sortierung und ohne Filter', () => {

@@ -16,6 +16,11 @@ public enum TranslationSubject
     CourseLine,
     /// <summary>Alle Kapitelnamen EINES Kurses in einer Fuhre — damit dasselbe Kapitel ueberall gleich heisst.</summary>
     CourseChapters,
+    /// <summary>Text-Bloecke eines E-BOOKS (0.876.0, <c>EbookTranslationService</c>): Absatz, Ueberschrift, Listenpunkt oder
+    /// Tabellenzelle je Eintrag, Formatierung und Schachnotation als Platzhalter <c>&lt;tN&gt;</c>. Jeder Eintrag muss
+    /// beantwortet sein; Laenge und Sprache werden geprueft wie bei Kurs-Linien; die Figurenbuchstaben bleiben, wie sie sind
+    /// (Notation wird in einem Buch nie uebersetzt).</summary>
+    EbookText,
 }
 
 /// <summary>
@@ -143,7 +148,7 @@ public sealed class CommentTranslator
                 // Die Figurenbuchstaben stehen zwar im Auftrag, aber welcher Buchstabe zu welcher
                 // Figur gehoert, ist nichts, was ein Modell entscheiden muss — siehe PieceLetters.
                 // Unbekannte Quelle („und") → Convert laesst den Text, wie er ist.
-                translated[ply] = PieceLetters.Convert(text, from, to);
+                translated[ply] = subject == TranslationSubject.EbookText ? text : PieceLetters.Convert(text, from, to);
         }
         if (translated.Count == 0) return translated;
 
@@ -152,6 +157,7 @@ public sealed class CommentTranslator
         {
             TranslationSubject.Game => true,
             TranslationSubject.CourseLine => CourseTextSlots.IsProse(key),
+            TranslationSubject.EbookText => true,
             _ => false,   // Kapitelnamen: lauter Ueberschriften
         };
 
@@ -210,6 +216,9 @@ public sealed class CommentTranslator
             case TranslationSubject.CourseLine:
                 _logger.LogWarning("Uebersetzung der Kurs-Linie {Id} nach {Lang} abgebrochen.", id, to);
                 break;
+            case TranslationSubject.EbookText:
+                _logger.LogInformation("Uebersetzung von Text aus E-Book {Id} nach {Lang} abgebrochen.", id, to);
+                break;
             default:
                 _logger.LogWarning("Uebersetzung der Kapitelnamen von Kurs {Id} nach {Lang} abgebrochen.", id, to);
                 break;
@@ -221,6 +230,10 @@ public sealed class CommentTranslator
         if (subject == TranslationSubject.CourseLine)
             _logger.LogWarning(
                 "Uebersetzung der Kurs-Linie {Id} nach {Lang} verworfen: {Got} von {Asked} Texten beantwortet.",
+                id, to, got, asked);
+        else if (subject == TranslationSubject.EbookText)
+            _logger.LogInformation(
+                "Uebersetzung von Text aus E-Book {Id} nach {Lang} verworfen: {Got} von {Asked} Texten beantwortet.",
                 id, to, got, asked);
         else
             _logger.LogWarning(
@@ -234,6 +247,10 @@ public sealed class CommentTranslator
             _logger.LogWarning(
                 "Uebersetzung der Partie {Id} nach {Lang} verworfen: {Anteil} % der Quelllaenge — es fehlt Text.",
                 id, to, share);
+        else if (subject == TranslationSubject.EbookText)
+            _logger.LogInformation(
+                "Uebersetzung von Text aus E-Book {Id} nach {Lang} verworfen: {Anteil} % der Quelllaenge — es fehlt Text.",
+                id, to, share);
         else
             _logger.LogWarning(
                 "Uebersetzung der Kurs-Linie {Id} nach {Lang} verworfen: {Anteil} % der Quelllaenge — es fehlt Text.",
@@ -245,6 +262,10 @@ public sealed class CommentTranslator
         if (subject == TranslationSubject.Game)
             _logger.LogWarning(
                 "Uebersetzung der Partie {Id} nach {Lang} verworfen: Text {Ply} endet in einem offenen Zitat.",
+                id, to, ply);
+        else if (subject == TranslationSubject.EbookText)
+            _logger.LogInformation(
+                "Uebersetzung von Text aus E-Book {Id} nach {Lang} verworfen: Text {Ply} endet in einem offenen Zitat.",
                 id, to, ply);
         else
             _logger.LogWarning(
@@ -278,6 +299,9 @@ public sealed class CommentTranslator
         if (subject == TranslationSubject.Game)
             _logger.LogWarning("Uebersetzung der Partie {Id} nach {Lang} verworfen: liest sich als {Erkannt}.",
                 id, to, detected);
+        else if (subject == TranslationSubject.EbookText)
+            _logger.LogInformation("Uebersetzung von Text aus E-Book {Id} nach {Lang} verworfen: liest sich als {Erkannt}.",
+                id, to, detected);
         else
             _logger.LogWarning("Uebersetzung der Kurs-Linie {Id} nach {Lang} verworfen: liest sich als {Erkannt}.",
                 id, to, detected);
@@ -307,6 +331,7 @@ public sealed class CommentTranslator
     /// (die Tests der Partie-Uebersetzung pruefen ihn mit); fuer Kurse kommen die Kurs-Regeln dazu.</summary>
     internal static string SystemPrompt(string? from, string to, TranslationSubject subject)
     {
+        if (subject == TranslationSubject.EbookText) return EbookPrompt(from, to);
         // Partien: wie vor dem Umbau (auch bei „und"), dazu die Anfuehrungszeichen-Regel. Kurse: eine unbekannte
         // Quelle wird nicht als Sprachkuerzel behauptet.
         var source = subject == TranslationSubject.Game || IsKnown(from)
@@ -339,6 +364,42 @@ public sealed class CommentTranslator
                   short heading and name the same thing the same way in every entry.
                 """,
         };
+    }
+
+    /// <summary>
+    /// Der Auftrag fuer Buchtext (0.876.0). Anders als bei Anmerkungen ist hier fast alles Prosa, und die Notation steckt
+    /// schon als Platzhalter weg (<c>EbookTextSegmenter</c>) — die Regel zu Zuegen bleibt trotzdem drin fuer das, was der
+    /// Zerleger nicht als Notation erkennt. Figurenbuchstaben werden NIE umgesetzt (Wunsch: Notation bleibt, wie sie im Buch steht).
+    /// </summary>
+    private static string EbookPrompt(string? from, string to)
+    {
+        var source = IsKnown(from) ? $"from {LanguageName(from!)} " : "from the language it is written in ";
+        var target = LanguageName(to);
+        return $"""
+            You translate the text of a chess book {source}to {target}. Every entry is one paragraph, heading, list item or
+            table cell of the book, in reading order.
+
+            Rules:
+            - Translate the prose completely and naturally, the way a published {target} chess book is written. Keep the
+              author's voice. Do not explain, summarise, shorten or add anything.
+            - Markers like <t1>, </t1> and <t2/> stand for formatting, chess moves, diagrams and symbols. Copy every marker
+              exactly once and unchanged into the translation, keep a pair <tN> … </tN> around the words it marks, and never
+              invent a marker.
+            - Leave every chess move, move number, piece letter or piece symbol, evaluation symbol (± ∓ ⩲ ⩱ = ∞ !? ?! !! ??),
+              coordinate, FEN and result exactly as written.
+            - Player names stay exactly as written. Book titles, tournaments, places and opening names: use the customary
+              {target} form if there is one.
+            - Keep one entry per input entry, with the same ply number.
+            - Quotation marks: inside a text use ONLY {QuoteNote(to)}. Never write „ or “ or ”,
+              and never the straight double quote character.
+            """;
+    }
+
+    /// <summary>„German“ fuer <c>de</c> — der Name der Sprache, wie ihn das Modell am sichersten versteht.</summary>
+    internal static string LanguageName(string code)
+    {
+        try { return System.Globalization.CultureInfo.GetCultureInfo(code).EnglishName; }
+        catch (System.Globalization.CultureNotFoundException) { return code; }
     }
 
     private const string CourseRules = """

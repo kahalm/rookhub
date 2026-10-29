@@ -31,6 +31,7 @@ import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dial
 import { EbookVisibilityDialogComponent, EbookVisibilityDialogData } from './ebook-visibility-dialog.component';
 import { EbookCollectionDialogComponent, EbookCollectionDialogData } from './ebook-collection-dialog.component';
 import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
+import { EbookTranslationDialogComponent } from './ebook-translation-dialog.component';
 
 export const EBOOK_PAGE_SIZE = 60;
 
@@ -421,6 +422,19 @@ export class EbookListComponent implements OnInit, OnDestroy {
   setVisibilitySelected(): void {
     const ids = this.selected();
     this.setVisibility(this.items.filter(b => ids.has(b.id)));
+  }
+
+  /** Buch-Übersetzung (0.876.0): Übersicht für Verwalter. */
+  openTranslations(): void {
+    this.dialog.open(EbookTranslationDialogComponent, { width: '560px', maxWidth: '94vw', autoFocus: 'dialog' });
+  }
+
+  /** Buch vorziehen: wird im nächsten freien Zeitfenster der Spark übersetzt. */
+  translateBook(book: Ebook): void {
+    this.ebooks.enqueueTranslation(book.id, 'en').subscribe({
+      next: () => this.snackbar.quick(this.translate.instant('ebooks.translation.enqueued')),
+      error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'ebooks.translation.actionFailed')),
+    });
   }
 
   importLibrary(): void {

@@ -197,6 +197,9 @@ public class EbookService
                     .ToDictionary(p => p.EbookId, p => (p.Page, p.PageCount, p.Locator, p.UpdatedAt))
             : (await _db.EbookProgresses.Where(p => p.UserId == userId && ids.Contains(p.EbookId)).ToListAsync(ct))
                 .ToDictionary(p => p.EbookId, p => (p.Page, p.PageCount, p.Locator, p.UpdatedAt));
+        var translations = (await _db.EbookTranslations.Where(t => ids.Contains(t.EbookId) && t.State == EbookTranslationState.Done)
+                .Select(t => new { t.EbookId, t.Language }).ToListAsync(ct))
+            .GroupBy(t => t.EbookId).ToDictionary(g => g.Key, g => g.Select(t => t.Language).OrderBy(l => l).ToList());
         var manageableIds = items.Where(b => EbookAccess.CanManage(b, caller, manageAll)).Select(b => b.Id).ToList();
         var groups = manageableIds.Count == 0
             ? new Dictionary<int, List<int>>()
@@ -234,6 +237,8 @@ public class EbookService
                 Progress = progress.TryGetValue(b.Id, out var p)
                     ? new EbookProgressDto { Page = p.Page, PageCount = p.PageCount ?? b.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt }
                     : null,
+                Language = b.Language,
+                Translations = translations.TryGetValue(b.Id, out var tr) ? tr : [],
                 CreatedAt = b.CreatedAt,
                 UpdatedAt = b.UpdatedAt,
             };
@@ -429,12 +434,14 @@ public class EbookService
         _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
         _db.EbookMissedDiagrams.RemoveRange(_db.EbookMissedDiagrams.Where(m => m.EbookId == id));
         _db.EbookDiagramCorrections.RemoveRange(_db.EbookDiagramCorrections.Where(c => c.EbookId == id));
+        _db.EbookTranslations.RemoveRange(_db.EbookTranslations.Where(t => t.EbookId == id));
         _db.EbookGroupAccesses.RemoveRange(ebook.GroupAccess);
         _db.EbookFiles.RemoveRange(ebook.Files);
         _db.Ebooks.Remove(ebook);
         await _db.SaveChangesAsync(ct);
         foreach (var f in files) _storage.DeleteUpload(f, ebook.Source);
         _storage.DeleteCover(id);
+        _storage.DeleteTranslations(id);
     }
 
     // ── Freigabe ────────────────────────────────────────────────────────────────────────────────
@@ -811,6 +818,23 @@ public class EbookService
         if (!System.IO.File.Exists(full))
             throw new NotFoundException("The file is missing on the server.") { Code = ApiErrorCodes.EbookFileMissing };
         return full;
+    }
+
+    /// <summary>Das übersetzte EPUB (0.876.0) eines sichtbaren Buchs: Buch + voller Pfad. Unsichtbar, keine fertige
+    /// Übersetzung in <paramref name="language"/> oder Datei weg → 404.</summary>
+    public async Task<(Ebook Ebook, string FullPath)> ResolveTranslationAsync(EbookCaller caller, bool manageAll, int id, string language, CancellationToken ct = default)
+    {
+        if (caller.IsAnonymous) manageAll = false;
+        var ebook = await EbookAccess.Visible(_db, caller, manageAll).FirstOrDefaultAsync(b => b.Id == id, ct)
+            ?? throw new NotFoundException("E-book not found.");
+        var lang = (language ?? "").Trim().ToLowerInvariant();
+        var tr = await _db.EbookTranslations.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.EbookId == id && t.Language == lang && t.State == EbookTranslationState.Done, ct);
+        if (tr?.RelativePath == null) throw new NotFoundException("This book has no translation in that language.");
+        var full = _storage.ResolvePath(EbookSource.Upload, tr.RelativePath);
+        if (!System.IO.File.Exists(full))
+            throw new NotFoundException("The file is missing on the server.") { Code = ApiErrorCodes.EbookFileMissing };
+        return (ebook, full);
     }
 
     /// <summary>Pfad des Titelbilds eines sichtbaren Buchs; <c>null</c>, wenn (noch) keines da ist.</summary>

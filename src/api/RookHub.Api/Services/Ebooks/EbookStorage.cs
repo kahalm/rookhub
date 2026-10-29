@@ -89,6 +89,23 @@ public class EbookStorage
     /// <summary>Relativer Zielpfad des Fließtext-EPUBs eines Text-PDFs (0.802.0, <see cref="EbookReflowService"/>).</summary>
     public static string ConvertedEpubPath(int ebookId) => $"converted/{ebookId}.epub";
 
+    /// <summary>Relativer Pfad des übersetzten EPUB (0.876.0, <see cref="EbookTranslationService"/>), z. B. <c>converted/12.en.epub</c>.</summary>
+    public static string TranslatedEpubPath(int ebookId, string language) => $"converted/{ebookId}.{language}.epub";
+
+    /// <summary>Zwischenspeicher der Übersetzung (je Text eine Zeile) — macht einen unterbrochenen Lauf fortsetzbar.</summary>
+    public static string TranslationCachePath(int ebookId, string language) => $"converted/{ebookId}.{language}.cache.jsonl";
+
+    /// <summary>Alle Übersetzungs-Dateien eines Buchs löschen (EPUB, Zwischenspeicher, halbe Dateien) — beim Löschen des Buchs.</summary>
+    public void DeleteTranslations(int ebookId)
+    {
+        if (Root == null) return;
+        var dir = Path.Combine(Root, "converted");
+        if (!Directory.Exists(dir)) return;
+        var pattern = new System.Text.RegularExpressions.Regex($@"^{ebookId}\.[a-z]{{2}}\.(epub|cache\.jsonl)(\.part)?$");
+        foreach (var f in Directory.EnumerateFiles(dir, ebookId + ".*"))
+            if (pattern.IsMatch(Path.GetFileName(f))) TryDelete(f);
+    }
+
     /// <summary>Relativer Pfad (mit „/“) einer Datei unter der Bibliothek; <c>null</c>, wenn sie nicht darunter liegt.</summary>
     public string? LibraryRelativePath(string fullPath)
     {

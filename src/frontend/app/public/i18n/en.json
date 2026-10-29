@@ -5788,6 +5788,39 @@
       "takeExisting": "Yes, use the existing one",
       "uploadAnyway": "Upload as a new book anyway",
       "keep": "No, keep mine"
+    },
+    "translation": {
+      "switch": "Book language",
+      "original": "Original",
+      "lang": {
+        "en": "English"
+      },
+      "title": "Book translations",
+      "off": "Translation is switched off on this server.",
+      "noModel": "No model on own hardware configured — books are only translated via the Spark.",
+      "quiet": "Quiet hours of the Spark — continues at {{until}}.",
+      "active": "Translating now.",
+      "idle": "Nothing to translate at the moment.",
+      "progress": "{{done}} of {{total}} texts",
+      "eta": "about {{n}} min left",
+      "done": "{{n}} done",
+      "remaining": "{{n}} still to do",
+      "firstRound": "{{n}} before German",
+      "failed": "{{n}} failed",
+      "noText": "{{n}} without text",
+      "bookLanguages": "Books by language",
+      "next": "Next in line",
+      "priority": "brought forward",
+      "failedTitle": "Failed",
+      "retryFailed": "Retry failed ones",
+      "retried": "{{n}} queued again.",
+      "actionFailed": "That did not work.",
+      "unclear": "unclear",
+      "noTextLabel": "no text",
+      "undetected": "not checked yet",
+      "badgeHint": "Also readable in English (switch in the reader)",
+      "enqueue": "Translate into English next",
+      "enqueued": "Queued — it will be translated in the next free window of the Spark."
     }
   },
   "woodpecker": {

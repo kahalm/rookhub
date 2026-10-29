@@ -17,7 +17,7 @@ import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
+import { EBOOK_READ_LANG_KEY, Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, coarseCfi, ebookAuthorNames, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
 import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
@@ -80,6 +80,14 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   readonly epubImages = signal<EpubDiagramImage[]>([]);
   epubLocator: string | null = null;
   private epubSave$ = new Subject<EpubLocation>();
+  /** Letzte Lesestelle im EPUB (CFI) — beim Wechsel Original ↔ Übersetzung springt der neue Leser dorthin. */
+  private lastCfi: string | null = null;
+
+  /**
+   * Lesesprache (0.876.0): `original` oder eine fertige Übersetzung (`en`). Je Gerät gemerkt (`rh.ebooks.readLang`) und
+   * gilt für jedes Buch, das diese Übersetzung hat. Die Übersetzung ist immer ein EPUB — gewählt, liest man das EPUB.
+   */
+  readonly readLang = signal<string>('original');
 
   /** Breite der Brettleiste (Desktop), per Trenner verschiebbar, je Gerät gemerkt. */
   readonly panelWidth = signal<number | null>(EbookReaderComponent.loadPanelWidth());
@@ -161,6 +169,11 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
           next: token => {
             this.token = token;
             this.viewFormat.set(book.primaryFormat && READABLE_FORMATS.has(book.primaryFormat) ? book.primaryFormat : null);
+            const remembered = readRaw(localStore(), EBOOK_READ_LANG_KEY);
+            if (remembered && (book.translations ?? []).includes(remembered)) {
+              this.readLang.set(remembered);
+              this.viewFormat.set('epub');
+            }
             this.applyViewFormat();
             this.loading = false;
             this.cdr.markForCheck();
@@ -198,8 +211,35 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
     return (format === 'pdf' ? files.find(f => f.derived) : files.find(f => !f.derived)) ?? files[0];
   }
 
+  /** Fertige Übersetzungen dieses Buchs (für den Sprachschalter). */
+  get translations(): string[] { return this.ebook?.translations ?? []; }
+
+  /** Liest man gerade eine Übersetzung? (Nur im EPUB — „Als PDF lesen“ zeigt das Original.) */
+  get translated(): boolean { return this.isEpub && this.readLang() !== 'original' && this.translations.includes(this.readLang()); }
+
+  /** Schlüssel des EPUB-Lesers: wechselt er (Sprache), baut der Leser neu auf — epub.js öffnet ein Buch nur einmal. */
+  readonly epubKey = computed(() => this.readLang());
+
+  /** „Original“ / „English“: anderes Archiv, gleiche Stelle (so gut es geht, {@link coarseCfi}); auf dem Gerät gemerkt. */
+  setReadLang(lang: string): void {
+    if (lang !== 'original' && !this.translations.includes(lang)) return;
+    writeRaw(localStore(), EBOOK_READ_LANG_KEY, lang);
+    if (lang === this.readLang() && (lang === 'original' || this.isEpub)) return;
+    this.epubLocator = coarseCfi(this.lastCfi) ?? this.epubLocator;
+    this.readLang.set(lang);
+    if (lang !== 'original') this.viewFormat.set('epub');
+    this.applyViewFormat();
+    this.cdr.markForCheck();
+  }
+
   private applyViewFormat(): void {
     const book = this.ebook, fmt = this.viewFormat();
+    if (book && this.translated) {
+      const lang = this.readLang();
+      this.fileUrl = this.ebooks.translatedFileUrl(book.id, lang, this.token);
+      this.epubDirUrl = this.ebooks.translatedEpubBaseUrl(book.id, lang, this.token);
+      return;
+    }
     const file = fmt ? this.fileFor(fmt) : undefined;
     // Hauptformat ohne fileId (der Server liefert dann genau diese Datei, die Adresse bleibt wie bisher).
     this.fileUrl = book && file ? this.ebooks.fileUrl(book.id, this.token, fmt === book.primaryFormat ? {} : { fileId: file.id }) : null;
@@ -215,6 +255,7 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   }
 
   onEpubLocated(l: EpubLocation): void {
+    this.lastCfi = l.cfi;
     this.epubPercent.set(Math.round(l.fraction * 100));
     this.epubSave$.next(l);
   }

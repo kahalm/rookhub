@@ -79,6 +79,23 @@ public class EbooksAdminController : BaseApiController
         });
     }
 
+    /// <summary>Buch-Übersetzung (0.876.0): Übersicht — Sprachen der Bücher, Stand je Zielsprache, laufendes Buch mit
+    /// Restdauer, die nächsten in der Reihe, zuletzt gescheiterte. Literal vor <c>{id}</c>.</summary>
+    [HttpGet("translations")]
+    public async Task<ActionResult<EbookTranslationStatusDto>> TranslationStatus([FromServices] EbookTranslationService translations, CancellationToken ct)
+        => Ok(await translations.StatusAsync(ct));
+
+    /// <summary>Gescheiterte und unvollständige Übersetzungen wieder einreihen → <c>{ queued }</c>.</summary>
+    [HttpPost("translations/retry-failed")]
+    public async Task<IActionResult> RetryFailedTranslations([FromServices] EbookTranslationService translations, CancellationToken ct)
+        => Ok(new { queued = await translations.RetryFailedAsync(ct) });
+
+    /// <summary>Ein Buch vorziehen bzw. neu übersetzen lassen (nächster Lauf außerhalb der Sperrzeit) → die Zeile.
+    /// Buch schon in der Sprache → 400, unbekannt → 404.</summary>
+    [HttpPost("{id:int}/translations/{lang}")]
+    public async Task<ActionResult<EbookTranslationItemDto>> EnqueueTranslation(int id, string lang, [FromServices] EbookTranslationService translations, CancellationToken ct)
+        => Ok(await translations.EnqueueAsync(id, lang, ct));
+
     /// <summary>Ist die Bibliothek konfiguriert, wie viel ist eingelesen, wie viele Titelbilder stehen noch aus.</summary>
     [HttpGet("library")]
     public async Task<ActionResult<EbookLibraryStatusDto>> LibraryStatus(CancellationToken ct)

@@ -16,6 +16,8 @@ internal sealed class EbookConfiguration : IEntityTypeConfiguration<Ebook>
         // „Welche Bücher braucht der Cover-Worker noch?" — ältestes zuerst.
         e.HasIndex(b => new { b.CoverState, b.Id });
         e.HasIndex(b => new { b.DiagramState, b.Id });
+        // Übersetzung (0.876.0): „welche Bücher sind noch ohne Sprache, welche sind in Sprache X?“
+        e.HasIndex(b => new { b.LanguageSource, b.Language });
         e.HasOne(b => b.Owner)
          .WithMany()
          .HasForeignKey(b => b.OwnerUserId)
@@ -148,6 +150,17 @@ internal sealed class EbookMissedDiagramConfiguration : IEntityTypeConfiguration
     {
         e.HasIndex(m => new { m.EbookId, m.Page });
         e.HasOne(m => m.Ebook).WithMany().HasForeignKey(m => m.EbookId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+// Übersetzungen (0.876.0): je Buch und Zielsprache eine Zeile; „was kommt als Nächstes?“ über Zustand + Vorrang.
+internal sealed class EbookTranslationConfiguration : IEntityTypeConfiguration<EbookTranslation>
+{
+    public void Configure(EntityTypeBuilder<EbookTranslation> e)
+    {
+        e.HasIndex(t => new { t.EbookId, t.Language }).IsUnique();
+        e.HasIndex(t => new { t.State, t.Priority });
+        e.HasOne(t => t.Ebook).WithMany().HasForeignKey(t => t.EbookId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

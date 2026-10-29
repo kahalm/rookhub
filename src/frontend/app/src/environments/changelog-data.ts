@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.876.0',
+    date: '2026-10-29',
+    changes: [
+      { en: 'E-books in English: the library translates every book into English in the background over our own language model (Spark), only outside its reserved hours — first all books that are neither English nor German, then the German ones. Only the text is translated; moves, symbols, diagrams and names stay as in the book. In the reader a new switch “Original / English” appears as soon as a translation is ready (remembered per device), and the card shows a small “EN” badge.',
+        de: 'E-Books auf Englisch: Die Bibliothek übersetzt jedes Buch im Hintergrund über unser eigenes Sprachmodell (Spark) ins Englische, nur außerhalb seiner Sperrzeiten — zuerst alle Bücher, die weder englisch noch deutsch sind, danach die deutschen. Übersetzt wird nur der Text; Züge, Zeichen, Diagramme und Namen bleiben wie im Buch. Im Leser erscheint ein Schalter „Original / Englisch“, sobald eine Übersetzung fertig ist (je Gerät gemerkt), und die Karte zeigt ein kleines „EN“.' },
+      { en: 'Admins: overview of the book translations in the library menu (progress, remaining time, queue, failed ones) and “Translate into English next” on each book.',
+        de: 'Admins: Übersicht der Buch-Übersetzungen im Menü der Bibliothek (Fortschritt, Restdauer, Reihe, gescheiterte) und „Als Nächstes ins Englische übersetzen“ an jedem Buch.' },
+    ],
+  },
+  {
     version: '0.875.0',
     date: '2026-10-29',
     changes: [

@@ -63,6 +63,8 @@
 .rd-page-count { white-space: nowrap; font-size: .9rem; opacity: .8; }
 .rd-zoom { display: flex; flex: none; }
 .rd-zoom-active { color: var(--mat-sys-primary); }
+/* Sprachschalter (0.876.0): liest man die Übersetzung, ist das Symbol in Primärfarbe getönt (wie der aktive Zoom). */
+.rd-lang--on { color: var(--mat-sys-primary); }
 /* Diagramm-Knopf nur, wo das Brett zugeklappt ist (< 900 px); Abstandhalter nur ab 2400 px (siehe unten). */
 .rd-diag-btn { display: none; min-width: 0; padding-inline: 8px; font-variant-numeric: tabular-nums; }
 .rd-toolbar-spacer { display: none; }

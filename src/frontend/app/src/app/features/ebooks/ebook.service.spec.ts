@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { EbookService, formatBytes } from './ebook.service';
-import { epubPageAt } from './ebook.service';
+import { coarseCfi, epubPageAt } from './ebook.service';
 
 describe('EbookService', () => {
   let service: EbookService;
@@ -155,5 +155,19 @@ describe('EbookService', () => {
     const plain = document.implementation.createHTMLDocument('ch');
     plain.body.innerHTML = '<p id="t">Text</p>';
     expect(epubPageAt(plain.getElementById('t')!)).toBeNull();
+  });
+
+  it('coarseCfi: Zeichenversatz weg, Element bleibt (Wechsel Original ↔ Übersetzung)', () => {
+    expect(coarseCfi('epubcfi(/6/14!/4/2/1:120)')).toBe('epubcfi(/6/14!/4/2/1)');
+    expect(coarseCfi('epubcfi(/6/14!/4,/2/1:0,/2/1:5)')).toBe('epubcfi(/6/14!/4)');
+    expect(coarseCfi('epubcfi(/6/14!/4/2)')).toBe('epubcfi(/6/14!/4/2)');
+    expect(coarseCfi(null)).toBeNull();
+  });
+
+  it('Übersetzung: Adressen des übersetzten EPUB (Datei + als Ordner)', () => {
+    const svc = service;
+    expect(svc.translatedFileUrl(3, 'en', 'a b')).toBe('/api/ebooks/3/translations/en/file?t=a%20b');
+    expect(svc.translatedFileUrl(3, 'en', 't', true)).toBe('/api/ebooks/3/translations/en/file?t=t&download=true');
+    expect(svc.translatedEpubBaseUrl(3, 'en', 't')).toBe('/api/ebooks/3/translations/en/epub/t/');
   });
 });

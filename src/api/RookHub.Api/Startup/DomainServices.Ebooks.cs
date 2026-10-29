@@ -30,5 +30,9 @@ public static partial class DomainServicesSetup
         // Externe Diagramm-Worker (0.870.0, /api/diagram-worker): Leihe, Dateien, Ergebnis über denselben Speicherweg wie der Worker.
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookDiagramWorkerService>();
         services.AddScoped<RookHub.Api.Services.Ebooks.BoardCutJobService>();
+        // Bücher auf Englisch (0.876.0): über die Spark, nur außerhalb der Sperrzeiten; EbookTranslation:Languages leer = aus.
+        services.Configure<RookHub.Api.Services.Ebooks.EbookTranslationOptions>(configuration.GetSection(RookHub.Api.Services.Ebooks.EbookTranslationOptions.Section));
+        services.AddSingleton<RookHub.Api.Services.Ebooks.EbookTranslationSignal>();
+        services.AddScoped<RookHub.Api.Services.Ebooks.EbookTranslationService>();
     }
 }

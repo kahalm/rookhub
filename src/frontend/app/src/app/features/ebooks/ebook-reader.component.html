@@ -79,6 +79,23 @@
         </button>
       }
       <span class="rd-toolbar-spacer"></span>
+      <!-- Buch-Übersetzung (0.876.0): „Original / English“, nur wenn eine fertige Übersetzung da ist; je Gerät gemerkt. -->
+      @if (translations.length > 0) {
+        <button mat-icon-button class="rd-lang" [matMenuTriggerFor]="langMenu" [class.rd-lang--on]="translated"
+                [appIconLabel]="'ebooks.translation.switch' | translate">
+          <mat-icon>translate</mat-icon>
+        </button>
+        <mat-menu #langMenu="matMenu">
+          <button mat-menu-item role="menuitemradio" [attr.aria-checked]="!translated" (click)="setReadLang('original')">
+            <mat-icon>{{ translated ? '' : 'check' }}</mat-icon><span>{{ 'ebooks.translation.original' | translate }}</span>
+          </button>
+          @for (l of translations; track l) {
+            <button mat-menu-item role="menuitemradio" [attr.aria-checked]="translated && readLang() === l" (click)="setReadLang(l)">
+              <mat-icon>{{ translated && readLang() === l ? 'check' : '' }}</mat-icon><span>{{ ('ebooks.translation.lang.' + l) | translate }}</span>
+            </button>
+          }
+        </mat-menu>
+      }
       <button mat-icon-button class="rd-more" [matMenuTriggerFor]="moreMenu" [appIconLabel]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
@@ -108,10 +125,12 @@
            [style.--rd-panel-w.px]="effectivePanelWidth()">
         <div class="rd-viewer">
           @if (isEpub) {
+            @for (k of [epubKey()]; track k) {
             <app-epub-viewer [src]="fileUrl" [dirSrc]="epubDirUrl" [initialLocator]="epubLocator" (located)="onEpubLocated($event)"
                              [images]="epubImages()" [activeImage]="picked()?.id ?? null" (imagePick)="pick($event)" (missedPick)="askMissedEpub(ebook, $event)"
                              (toc)="epubToc.set($event)" (failed)="onViewerFailed()"
                              [layout]="epubLayout()" [fontScale]="epubFont()" />
+            }
           } @else {
             <app-pdf-viewer [src]="fileUrl" [initialPage]="initialPage" [zoom]="zoom()"
                             [zones]="zones()" [activeZone]="picked()?.id ?? null" (zonePick)="pick($event)" (blankDblclick)="askMissedDiagram(ebook, $event)"

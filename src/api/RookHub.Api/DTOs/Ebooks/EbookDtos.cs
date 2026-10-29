@@ -57,6 +57,10 @@ public class EbookDto
     /// <summary>Format der Hauptdatei (PDF liest der Browser); <c>null</c> ohne Dateien.</summary>
     public string? PrimaryFormat { get; set; }
     public EbookProgressDto? Progress { get; set; }
+    /// <summary>Sprache des Buchtexts (0.876.0, ISO 639-1); <c>null</c> = nicht bestimmt/unklar.</summary>
+    public string? Language { get; set; }
+    /// <summary>Fertige Übersetzungen (Zielsprachen, z. B. <c>["en"]</c>) — der Leser bietet „Original / English“ an (0.876.0).</summary>
+    public List<string> Translations { get; set; } = new();
     /// <summary>Sammlung des Buchs (0.787.0); <c>null</c> = keine.</summary>
     public EbookCollectionDto? Collection { get; set; }
     /// <summary>Dieser Eintrag steht in der Liste STELLVERTRETEND für seine Sammlung (Ordner-Karte, Titelbild von ihm).</summary>

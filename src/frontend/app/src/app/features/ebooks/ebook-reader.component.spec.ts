@@ -35,7 +35,9 @@ describe('EbookReaderComponent', () => {
   let service: jasmine.SpyObj<EbookService>;
 
   async function make(b: Ebook, query: Map<string, string> = new Map()) {
-    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram', 'reportMissedDiagram', 'correctDiagramPosition']);
+    service = jasmine.createSpyObj<EbookService>('EbookService', ['get', 'accessToken', 'fileUrl', 'epubBaseUrl', 'setProgress', 'forgetToken', 'diagrams', 'reportDiagram', 'reportMissedDiagram', 'correctDiagramPosition', 'translatedFileUrl', 'translatedEpubBaseUrl']);
+    service.translatedFileUrl.and.callFake((id, l, t) => `/api/ebooks/${id}/translations/${l}/file?t=${t}`);
+    service.translatedEpubBaseUrl.and.callFake((id, l, t) => `/api/ebooks/${id}/translations/${l}/epub/${t}/`);
     service.diagrams.and.returnValue(of({ state: 'done', items: DIAGRAMS }));
     service.get.and.returnValue(of(b));
     service.accessToken.and.returnValue(of('tok'));
@@ -57,6 +59,56 @@ describe('EbookReaderComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  describe('Sprachschalter Original / English (0.876.0)', () => {
+    const translatedBook = (over: Partial<Ebook> = {}) => book({
+      files: [{ id: 1, format: 'pdf', fileName: 'b.pdf', sizeBytes: 1000 }, { id: 2, format: 'epub', fileName: 'b.epub', sizeBytes: 10 }],
+      primaryFormat: 'epub', translations: ['en'], progress: { page: 3, pageCount: 100, locator: 'epubcfi(/6/4!/4/2/1:57)', updatedAt: '' }, ...over,
+    });
+    beforeEach(() => localStorage.removeItem('rh.ebooks.readLang'));
+    afterEach(() => localStorage.removeItem('rh.ebooks.readLang'));
+
+    it('ohne Übersetzung kein Schalter', async () => {
+      const fixture = await make(book());
+      expect(fixture.nativeElement.querySelector('.rd-lang')).toBeNull();
+    });
+
+    it('mit Übersetzung: Schalter da, Englisch öffnet das übersetzte EPUB an derselben Stelle und wird gemerkt', async () => {
+      const fixture = await make(translatedBook());
+      const c = fixture.componentInstance;
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.rd-lang')).not.toBeNull();
+      expect(c.epubDirUrl).toBe('/api/ebooks/9/epub/tok/');
+      c.onEpubLocated({ fraction: 0.2, cfi: 'epubcfi(/6/8!/4/10/1:120)' });
+      c.setReadLang('en');
+      expect(c.translated).toBeTrue();
+      expect(c.epubDirUrl).toBe('/api/ebooks/9/translations/en/epub/tok/');
+      expect(c.fileUrl).toBe('/api/ebooks/9/translations/en/file?t=tok');
+      expect(c.epubLocator).toBe('epubcfi(/6/8!/4/10/1)');
+      expect(localStorage.getItem('rh.ebooks.readLang')).toBe('en');
+      c.setReadLang('original');
+      expect(c.translated).toBeFalse();
+      expect(c.epubDirUrl).toBe('/api/ebooks/9/epub/tok/');
+      expect(localStorage.getItem('rh.ebooks.readLang')).toBe('original');
+    });
+
+    it('gemerktes Englisch: ein PDF-Buch mit Übersetzung öffnet gleich das englische EPUB; ohne Übersetzung bleibt das Original', async () => {
+      localStorage.setItem('rh.ebooks.readLang', 'en');
+      const fixture = await make(translatedBook({ primaryFormat: 'pdf', files: [{ id: 1, format: 'pdf', fileName: 'b.pdf', sizeBytes: 1000 }] }));
+      expect(fixture.componentInstance.isEpub).toBeTrue();
+      expect(fixture.componentInstance.epubDirUrl).toBe('/api/ebooks/9/translations/en/epub/tok/');
+      TestBed.resetTestingModule();
+      const plain = await make(book());
+      expect(plain.componentInstance.translated).toBeFalse();
+      expect(plain.componentInstance.isEpub).toBeFalse();
+    });
+
+    it('unbekannte Sprache wird ignoriert', async () => {
+      const fixture = await make(translatedBook());
+      fixture.componentInstance.setReadLang('fr');
+      expect(fixture.componentInstance.readLang()).toBe('original');
+    });
+  });
 
   it('Doppelklick ohne Diagramm: „Fehlt ein Diagramm“/„Text falsch“ wird gespeichert, Abbrechen nicht (nur angemeldet)', async () => {
     const b = book();

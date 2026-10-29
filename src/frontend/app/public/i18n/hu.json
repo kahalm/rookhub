@@ -5788,6 +5788,39 @@
       "takeExisting": "Igen, a meglévőt választom",
       "uploadAnyway": "Feltöltés mégis új könyvként",
       "keep": "Nem, megtartom"
+    },
+    "translation": {
+      "switch": "A könyv nyelve",
+      "original": "Eredeti",
+      "lang": {
+        "en": "Angol"
+      },
+      "title": "Könyvfordítások",
+      "off": "A fordítás ezen a szerveren ki van kapcsolva.",
+      "noModel": "Nincs saját hardveres modell beállítva — a könyveket csak a Sparkon fordítjuk.",
+      "quiet": "A Spark tiltott ideje — folytatás {{until}}-kor.",
+      "active": "Éppen fordít.",
+      "idle": "Most nincs mit fordítani.",
+      "progress": "{{done}} / {{total}} szöveg",
+      "eta": "még kb. {{n}} perc",
+      "done": "{{n}} kész",
+      "remaining": "{{n}} van még hátra",
+      "firstRound": "{{n}} a németek előtt",
+      "failed": "{{n}} sikertelen",
+      "noText": "{{n}} szöveg nélkül",
+      "bookLanguages": "Könyvek nyelv szerint",
+      "next": "Következnek",
+      "priority": "előrehozva",
+      "failedTitle": "Sikertelenek",
+      "retryFailed": "Sikertelenek újra",
+      "retried": "{{n}} újra sorba állítva.",
+      "actionFailed": "Ez nem sikerült.",
+      "unclear": "nem egyértelmű",
+      "noTextLabel": "szöveg nélkül",
+      "undetected": "még nincs ellenőrizve",
+      "badgeHint": "Angolul is olvasható (váltó az olvasóban)",
+      "enqueue": "Következőként angolra fordítani",
+      "enqueued": "Sorba állítva — a Spark következő szabad idősávjában fordítjuk."
     }
   },
   "woodpecker": {

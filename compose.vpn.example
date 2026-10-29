@@ -50,6 +50,7 @@
 #   TEXT_LLM_API_KEY=          its key (optional)
 #   TEXT_LLM_MODEL=            its model id (empty = first one the server lists)
 #   COURSE_TRANSLATION_AUTO_LANGUAGES=  translate every course into these languages in the background (e.g. de,en); empty = off
+#   EBOOK_TRANSLATION_LANGUAGES=        translate every e-book into these languages over the own LLM hardware, outside the quiet hours (e.g. en); empty = off
 #   EMBEDDING_BASE_URL=        embedding model for "ask the comments" (OpenAI-compatible /embeddings, e.g. vLLM Qwen3-Embedding); empty = off
 #   EMBEDDING_API_KEY=         its key (optional)
 #   EMBEDDING_MODEL=           its model id (empty = first one the server lists)
@@ -231,6 +232,7 @@ services:
       # Optional: Kurs-Übersetzung automatisch in diese Sprachen (Komma-Liste, z. B. de,en) — leer = aus.
       # Nur Prod: Dev übersetzte sonst dieselben Kurse ein zweites Mal auf der Spark.
       CourseTranslation__AutoLanguages: ${COURSE_TRANSLATION_AUTO_LANGUAGES:-}
+      EbookTranslation__Languages: ${EBOOK_TRANSLATION_LANGUAGES:-}
       Embedding__BaseUrl: ${EMBEDDING_BASE_URL:-}
       Embedding__ApiKey: ${EMBEDDING_API_KEY:-}
       Embedding__Model: ${EMBEDDING_MODEL:-}

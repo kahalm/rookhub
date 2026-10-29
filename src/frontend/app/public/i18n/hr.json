@@ -5788,6 +5788,39 @@
       "takeExisting": "Da, uzmi postojeću",
       "uploadAnyway": "Ipak prenesi kao novu knjigu",
       "keep": "Ne, zadrži"
+    },
+    "translation": {
+      "switch": "Jezik knjige",
+      "original": "Izvornik",
+      "lang": {
+        "en": "Engleski"
+      },
+      "title": "Prijevodi knjiga",
+      "off": "Prevođenje je na ovom poslužitelju isključeno.",
+      "noModel": "Nije postavljen model na vlastitom hardveru — knjige se prevode samo preko Sparka.",
+      "quiet": "Vrijeme mirovanja Sparka — nastavlja se u {{until}}.",
+      "active": "Upravo prevodi.",
+      "idle": "Trenutno nema ništa za prevesti.",
+      "progress": "{{done}} od {{total}} tekstova",
+      "eta": "još oko {{n}} min",
+      "done": "{{n}} gotovo",
+      "remaining": "{{n}} još preostalo",
+      "firstRound": "{{n}} prije njemačkih",
+      "failed": "{{n}} neuspjelo",
+      "noText": "{{n}} bez teksta",
+      "bookLanguages": "Knjige po jeziku",
+      "next": "Sljedeće na redu",
+      "priority": "pomaknuto naprijed",
+      "failedTitle": "Neuspjelo",
+      "retryFailed": "Ponovi neuspjele",
+      "retried": "{{n}} ponovno u redu.",
+      "actionFailed": "To nije uspjelo.",
+      "unclear": "nejasno",
+      "noTextLabel": "bez teksta",
+      "undetected": "još nije provjereno",
+      "badgeHint": "Može se čitati i na engleskom (prekidač u čitaču)",
+      "enqueue": "Sljedeće prevesti na engleski",
+      "enqueued": "U redu — prevest će se u sljedećem slobodnom terminu Sparka."
     }
   },
   "woodpecker": {
