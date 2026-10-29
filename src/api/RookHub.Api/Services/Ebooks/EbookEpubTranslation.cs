@@ -88,12 +88,17 @@ public static class EbookEpubTranslation
 
     /// <summary>
     /// Übersetztes EPUB schreiben. <paramref name="translate"/>: Modelltext → Übersetzung (<c>null</c> = Original lassen).
-    /// Antwort: Blöcke, deren Übersetzung nicht passte und die im Original blieben.
+    /// Antwort: Blöcke, deren Übersetzung nicht passte und die im Original blieben. <paramref name="sourceLanguage"/>:
+    /// Sprache des Buchs — setzt das Buch landestypische Figurenbuchstaben, stellt <see cref="EbookNotationLetters"/> sie
+    /// im ganzen Kapitel auf die Zielsprache um (auch reine Zuglisten, die nie ans Modell gehen).
     /// </summary>
-    public static int Write(ZipArchive source, EpubTranslationPlan plan, Stream output, string language, Func<string, string?> translate)
+    public static int Write(ZipArchive source, EpubTranslationPlan plan, Stream output, string language, Func<string, string?> translate,
+        string? sourceLanguage = null)
     {
         var rejected = 0;
         var docs = plan.Documents.ToDictionary(d => d.Path, StringComparer.Ordinal);
+        var letters = EbookNotationLetters.For(sourceLanguage, language,
+            plan.Documents.Select(d => d.Document.Rebuild(_ => null, out _)));
         using var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
         var mimetype = source.GetEntry("mimetype");
         if (mimetype != null) Copy(mimetype, zip, CompressionLevel.NoCompression);
@@ -105,6 +110,7 @@ public static class EbookEpubTranslation
             {
                 var text = doc.Document.Rebuild(translate, out var r);
                 rejected += r;
+                if (letters != null) text = letters(text);
                 WriteText(zip, entry, SetHtmlLanguage(Utf8Declaration(text), language));
             }
             else if (entry.FullName == plan.OpfPath)

@@ -370,7 +370,7 @@ public class EbookTranslationService
         try
         {
             await using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
-                rejected = EbookEpubTranslation.Write(zip, plan, fs, row.Language, cache.Get);
+                rejected = EbookEpubTranslation.Write(zip, plan, fs, row.Language, cache.Get, ebook.Language);
             File.Move(tmp, target, overwrite: true);
         }
         catch

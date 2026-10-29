@@ -672,6 +672,12 @@ Englische übersetzt — nie über den Claude-Text-Schlüssel (`IClaudeJsonClien
 Sperrzeiten der Spark (`TextLlm:QuietHours`, dieselben wie Kurs-Übersetzung und Partietexte: Mo–Do 8–17, Fr 8–14 Wien).
 Ergebnis je Buch und Zielsprache ist ein ABGELEITETES EPUB `converted/<id>.<lang>.epub` unter `Ebooks:Root`.
 
+**Figurenbuchstaben** (0.876.1, `EbookNotationLetters`): setzt das Buch landestypische Notation (de/hr/sr S L T D,
+nl P L T D, es/it/pt C A T D R, fr C F T D R, cs J S V D, hu H F B V, pl S G W H), stellt das Schreiben des EPUBs sie im
+ganzen Kapitel auf Englisch um („Sf3“ → „Nf3“, „e1=D“ → „e1=Q“) — auch reine Zuglisten, die nie ans Modell gehen; nur
+Text zwischen Tags, Attribute bleiben. Umgestellt wird nur, wenn landestypische Buchstaben die englischen mindestens
+3 : 1 überwiegen (≥ 5 Züge): ein spanisches Buch mit englischer Notation behält sie („R“ = König im Spanischen).
+
 - **Schalter**: `EbookTranslation:Languages` (Compose `EBOOK_TRANSLATION_LANGUAGES`, Komma-Liste, heute `en`), LEER = aus
   (Vorgabe, auch Dev — die Spark ist geteilt). `EbookTranslation:Parallel` (Vorgabe 8) Anfragen je Buch gleichzeitig,
   `ChunkChars` (3000) / `ChunkItems` (40) je Anfrage. Die Obergrenze für ALLE LLM-Zwecke ist `TextLlm:MaxConcurrent`

@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.876.1',
+    date: '2026-10-29',
+    changes: [
+      { en: 'Book translation: moves in translated books use English piece letters (e.g. “Nf3” instead of the German “Sf3”), as long as the book prints its own language’s letters.',
+        de: 'Buch-Übersetzung: Züge in übersetzten Büchern stehen mit englischen Figurenbuchstaben (z. B. „Nf3“ statt „Sf3“), sofern das Buch die Buchstaben seiner Sprache druckt.' },
+    ],
+  },
+  {
     version: '0.876.0',
     date: '2026-10-29',
     changes: [
