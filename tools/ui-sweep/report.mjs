@@ -10,7 +10,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const KIND_LABEL = {
   'overflow-x': 'Seite zu breit', offscreen: 'ragt raus', 'clipped-text': 'Text abgeschnitten',
   'i18n-key': 'Schlüssel statt Text', spinner: 'lädt noch',
-  'state-step': 'Bedienschritt gescheitert', 'state-missed': 'Zustand nicht erreicht', ...FOLD_KINDS,
+  'state-step': 'Bedienschritt gescheitert', 'state-missed': 'Zustand nicht erreicht', 'not-ready': 'noch geladen', ...FOLD_KINDS,
 };
 const isFold = f => f.kind.startsWith('fold-') && f.level !== 'hint';
 const real = s => !!(s.findings?.some(f => f.level !== 'hint') || s.error || s.console?.length || s.failedRequests?.length);

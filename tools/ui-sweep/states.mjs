@@ -131,6 +131,51 @@ export const STATES = [
   { of: 'rookhub__ebooks', name: 'elo-filter',
     steps: [{ clickIf: '.eb-filters button.eb-filter-toggle' }, { fill: '.eb-elo input >> nth=0', text: '1800' }],
     expect: '.eb-elo input.ng-dirty' },
+  // Filter-Komponente (0.877.0 ff.): „Filter ▾“ mit Zähler aufklappen (Schlagwörter, Sprache mit Intl-Namen und
+  // „Unbekannt“, „Übersetzung: Englisch“, Elo-Spanne). Filter setzen schreibt nur Adresse + Sitzungsspeicher (saveState)
+  // und lädt die Liste neu (GET). seed.mjs gibt ein übersetztes Buch für „Everyone“ frei — so gibt es die Chips in jeder Rolle.
+  { of: 'rookhub__ebooks', name: 'filter-offen',
+    steps: [{ click: '.eb-filters button.eb-filter-toggle' }, { waitFor: 'app-ebook-filter-panel .eb-langs .eb-chip' }],
+    expect: 'app-ebook-filter-panel .eb-langs .eb-chip[data-translation="en"]' },
+  // Ein Schlagwort + eine Sprache gesetzt, Panel wieder zu: aktive Filter als Chips unter der Zeile, Zähler „2“ am Knopf,
+  // darunter die Gesamtzeile „N Bücher · M Dateien …“ der gefilterten Menge.
+  { of: 'rookhub__ebooks', name: 'filter-aktiv',
+    steps: [{ click: '.eb-filters button.eb-filter-toggle' }, { click: 'app-ebook-filter-panel .eb-tags .eb-chip[data-tag] >> nth=0' },
+      { click: 'app-ebook-filter-panel .eb-langs .eb-chip[data-lang] >> nth=0' }, { click: '.eb-filters button.eb-filter-toggle' }],
+    expect: '.eb-active .eb-chip:has(mat-icon:text-is("language"))' },
+  { of: 'rookhub__ebooks', name: 'filter-uebersetzung',
+    steps: [{ click: '.eb-filters button.eb-filter-toggle' }, { click: 'app-ebook-filter-panel .eb-langs .eb-chip[data-translation="en"]' }],
+    expect: 'app-ebook-filter-panel .eb-chip--on[data-translation="en"]' },
+  // Admin: Übersicht „Buch-Übersetzungen“ aus dem ⋮ der Bibliothek (lädt nur den Stand; „Fehlgeschlagene wiederholen“ wird
+  // nicht gedrückt).
+  { of: 'rookhub__ebooks', name: 'uebersetzungen', auth: ['admin'],
+    steps: [{ click: '.eb-page .header-actions button[mat-icon-button]' }, { click: menuItem('translate') }],
+    expect: dlg('app-ebook-translation-dialog') },
+  // Admin: ⋮ einer Karte mit „Als Nächstes ins Englische übersetzen“ — den Punkt gibt es nur bei Büchern, die nicht
+  // englisch und noch nicht übersetzt sind; deshalb erst auf Sprache „Unbekannt“ filtern. Nur das Menü, nichts auslösen.
+  { of: 'rookhub__ebooks', name: 'karte-uebersetzen', auth: ['admin'],
+    steps: [{ click: '.eb-filters button.eb-filter-toggle' }, { click: 'app-ebook-filter-panel .eb-langs .eb-chip[data-lang="unknown"]' },
+      { click: '.eb-filters button.eb-filter-toggle' },
+      { click: 'mat-card.eb-card:not(.eb-card--folder) button.mat-mdc-menu-trigger' }],
+    expect: menuItem('translate') },
+  // Leser mit Übersetzung (0.876.0): Sprachmenü „Original / Englisch“, dann Englisch gewählt (Knopf getönt).
+  { of: 'rookhub__ebooks-uebersetzt', name: 'sprache', steps: [{ click: 'button.rd-lang' }],
+    expect: '.mat-mdc-menu-panel button[role="menuitemradio"][aria-checked="true"]' },
+  { of: 'rookhub__ebooks-uebersetzt', name: 'englisch',
+    steps: [{ click: 'button.rd-lang' }, { click: '.mat-mdc-menu-panel button[role="menuitemradio"] >> nth=1' },
+      { waitFor: 'button.rd-lang.rd-lang--on' }, { wait: 1500 }],
+    expect: 'button.rd-lang.rd-lang--on' },
+  // Partiensammlung: Zugtabellen kompakt (0.875.0) — zum LETZTEN Diagramm springen (öffnet dessen Partiekapitel), dann
+  // muss im Kapitel-iframe eine Tabelle `rh-moves` stehen. Nicht das erste: im Kapitel der ersten Partie von „My 60
+  // Memorable Games“ trägt jede Zugtabelle Figurinen-Bilder — solche Tabellen lässt compactMoveTables absichtlich stehen.
+  { of: 'rookhub__ebooks-partien', name: 'zugtabellen',
+    steps: [{ clickIf: '.rd-toolbar .rd-diag-btn' }, { click: '.rd-panel-head button.rd-jump >> nth=1' }, { wait: 1500 }],
+    expect: '.rd-viewer iframe >> internal:control=enter-frame >> table.rh-moves' },
+  // Brett-Modus „Partie“ (0.831.0): Startmodus des Buchs (seed.mjs setzt ihn wie bei Prod #2250), Partie geladen.
+  { of: 'rookhub__ebooks-partien', name: 'partie',
+    steps: [{ clickIf: '.rd-toolbar .rd-diag-btn' }, { click: '.rd-panel-head button.rd-jump >> nth=0' },
+      { waitFor: '.rd-panel app-ebook-board' }, { clickIf: '.rd-panel .eb-modes .eb-mode:not(.eb-mode--on):has(mat-icon:text-is("replay"))' }],
+    expect: '.rd-panel .eb-game-moves .eb-gm--on' },
   { of: 'rookhub__ebooks-ebookId', name: 'menue', auth: ['admin'], steps: [{ click: '.rd-toolbar > button[mat-icon-button]' }], expect: MENU },
   // Brett im Leser (0.777.0 ff.): erstes Diagramm aufs Brett (am Handy erst den Brett-Knopf), dann die Modi.
   ...[['brett', null], ['frei', 1], ['kalkulieren', 2], ['loesen', 3], ['maia', 4]].map(([name, nth]) => ({

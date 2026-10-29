@@ -45,6 +45,9 @@ const PUZZLE_BOARD = ['.board-section app-puzzle-board', '.puzzle-page app-puzzl
 const GAME_BOARD = ['.shared-page .board-wrap app-chess-board', '.shared-page mat-card.empty-state', '.shared-page .center'];
 // Anmeldung/Registrierung/Kennwort und Rechtstexte sind in allen fünf Oberflächen dieselben Komponenten
 // (src/app/features/auth, …/legal, in den anderen Apps über @rh/*).
+// epub.js fragt beim Öffnen eines EPUB als Ordner immer die Apple-Anzeigeoptionen ab; fast kein Buch hat die Datei (404 =
+// „gibt es nicht“, epub.js fängt das ab). Gilt für Original und Übersetzung.
+const EPUB_PROBE_404 = /^GET \/api\/ebooks\/\d+\/(translations\/[a-z]+\/)?epub\/…\/META-INF\/com\.apple\.ibooks\.display-options\.xml → 404$/;
 const AUTH_FORM = ['form.auth-form', '.auth-container p.auth-info', '.auth-container'];
 // Reine Textseiten: Hauptsache = erster Inhaltsblock der Karte (Stand-Zeile, Überschrift „Kontakt" bzw. erster Absatz).
 const LEGAL = ['.legal-container mat-card-content > :first-child', '.legal-container h1', '.legal-container mat-card'];
@@ -100,6 +103,10 @@ export const ROUTES = [
   r('rookhub', '/ebooks/{ebookId}', 'any', { main: ['.rd-viewer', '.rd-download', '.rd-page app-load-error'], foldExempt: true }),
   // Leser mit erkannten Diagrammen: Buch links, Brett rechts (0.766.0 ff.) — ein Buch, das das Konto sehen darf.
   r('rookhub', '/ebooks/{ebookDiagramId}', 'any', { label: 'ebooks-diagramme', main: ['.rd-panel app-chess-board', '.rd-viewer', '.rd-page app-load-error'], foldExempt: true }),
+  // Leser mit fertiger Übersetzung (0.876.0): Knopf „Original / Englisch“ in der Werkzeugleiste (seed.mjs ebookTranslatedId).
+  r('rookhub', '/ebooks/{ebookTranslatedId}', 'any', { label: 'ebooks-uebersetzt', main: ['.rd-viewer', '.rd-page app-load-error'], foldExempt: true, expectedFailures: [EPUB_PROBE_404] }),
+  // Partiensammlung: Brett-Modus „Partie“ als Startmodus (0.831.0) und kompakte Zugtabellen im EPUB (0.875.0) — wie Prod #2250.
+  r('rookhub', '/ebooks/{ebookGamesId}', 'any', { label: 'ebooks-partien', main: ['.rd-panel app-chess-board', '.rd-viewer', '.rd-page app-load-error'], foldExempt: true, expectedFailures: [EPUB_PROBE_404] }),
   r('rookhub', '/weekly', 'user', { main: ['.wp-list .wp-card', '.weekly-container .empty-state', '.upload-card'] }),
   r('rookhub', '/weekly/{weeklyId}', 'user', { main: PUZZLE_BOARD }),
   r('rookhub', '/guess', 'any', { main: ['.game-row', '.lists .start-card', '.gl-container .start-card'] }),

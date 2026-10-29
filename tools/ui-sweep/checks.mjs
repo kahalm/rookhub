@@ -2,6 +2,7 @@
 // Sie ersetzen das Hinsehen nicht, finden aber die Fehler, die man auf 500 Bildern übersieht.
 //
 // Ergebnis: [{ kind, detail }] — kind ∈ overflow-x | offscreen | clipped-text | i18n-key | spinner
+// (dazu aus sweep.mjs: not-ready = Werkzeug-Befund „noch geladen“, waitShellReady unten)
 // (Konsolenfehler und fehlgeschlagene Anfragen sammelt sweep.mjs außerhalb der Seite.)
 //
 // Dazu „Erster Blick und Scrollen" (docs/DESIGN.md 4.6): foldTop/foldScroll messen im Browser, foldFindings bewertet
@@ -21,6 +22,33 @@ export const FOLD = {
   scrollWaitMs: 200,                                      // nach dem Scrollen: Leisten (Scroll-Ereignisse) nachziehen lassen
 };
 
+/**
+ * Warten vor dem Foto (Fehlbefund 29.10.2026: unter Last fotografierte der Sweep 4 von 2 232 Seiten, bevor die App
+ * stand — leere Seite, Fußzeile voller Schlüssel wie `nav.help`, 0 Seiten-Anfragen). Netzruhe allein reicht nicht:
+ * die Übersetzungen und die Seiten-Komponente können nach 800 ms Stille noch fehlen.
+ * `probe()` liefert { keys, outlet, routed } (pageChecks im Hüllen-Modus). Bereit = keine Schlüssel in der Hülle UND
+ * die Seiten-Komponente steht hinter dem router-outlet (Seiten ohne router-outlet gelten als bereit).
+ * Ergebnis: { ready, loading, waitedMs, detail } — detail beschreibt bei Ablauf, was noch fehlte; loading = die
+ * Seiten-Komponente fehlt (dann ist das Bild unbrauchbar, nicht die App fehlerhaft).
+ */
+export async function waitShellReady(probe, { maxMs = 10000, intervalMs = 200, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now } = {}) {
+  const t0 = now();
+  let last = null;
+  for (;;) {
+    last = await probe().catch(() => null);
+    if (last && !last.keys.length && (!last.outlet || last.routed)) return { ready: true, loading: false, waitedMs: now() - t0, detail: null };
+    if (now() - t0 >= maxMs) break;
+    await sleep(intervalMs);
+  }
+  // loading = die Seite selbst fehlt noch (oder ließ sich nicht prüfen) → Werkzeug-Befund „noch geladen“. Steht die Seite,
+  // und nur die Hülle zeigt nach Ablauf noch Schlüssel, ist das ein echter Übersetzungsfehler (bleibt „i18n-key“).
+  const loading = !last || (last.outlet && !last.routed);
+  const why = !last ? 'Seite nicht prüfbar'
+    : [last.keys.length ? `Hülle noch unübersetzt (${last.keys.slice(0, 4).join(', ')})` : null,
+      last.outlet && !last.routed ? 'Seiteninhalt hinter dem router-outlet fehlt' : null].filter(Boolean).join('; ');
+  return { ready: false, loading, waitedMs: now() - t0, detail: `nach ${Math.round((now() - t0) / 1000)} s noch nicht fertig geladen: ${why}` };
+}
+
 /** Befund-Arten der Falz-Prüfung mit Klartext (report.mjs, fold-summary.json). */
 export const FOLD_KINDS = {
   'fold-main-missing': 'Hauptsache nicht gefunden',
@@ -33,7 +61,12 @@ export const FOLD_KINDS = {
   'fold-too-long': 'Seite zu lang',
 };
 
-export function pageChecks(i18nNamespaces) {
+export function pageChecks(arg) {
+  // arg = Liste der i18n-Namensräume (volle Prüfung) oder { ns, shell: true } — dann NUR die Hülle prüfen (shellProbe,
+  // Warten vor dem Foto): Schlüssel in Kopfleiste/Fußzeile (Text außerhalb von <main>) und ob das erste router-outlet
+  // einen Nachbarn hat (die Seiten-Komponente). Dieselbe Schlüssel-Erkennung wie Prüfung 4 unten.
+  const shellMode = !Array.isArray(arg);
+  const i18nNamespaces = shellMode ? arg.ns : arg;
   const findings = [];
   const vw = document.documentElement.clientWidth;
 
@@ -59,6 +92,34 @@ export function pageChecks(i18nNamespaces) {
     }
     return false;
   };
+
+  // Sichtbare Übersetzungsschlüssel; shellOnly = nur Text außerhalb von <main> (Kopfleiste, Fußzeile, Navigation).
+  function i18nKeys(shellOnly) {
+    const ns = new Set(i18nNamespaces);
+    const keyRe = /^([a-z][a-zA-Z0-9]*)(\.[a-zA-Z0-9_-]+)+$/;
+    const keys = new Set();
+    const inShell = el => !el.closest('main, .cdk-overlay-container');
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const t = n.textContent.trim();
+      const m = keyRe.exec(t);
+      if (m && ns.has(m[1]) && n.parentElement && visible(n.parentElement) && (!shellOnly || inShell(n.parentElement))) keys.add(t);
+    }
+    for (const el of document.querySelectorAll('[placeholder],[aria-label],[title]')) {
+      if (shellOnly && !inShell(el)) continue;
+      for (const attr of ['placeholder', 'title']) {
+        const t = (el.getAttribute(attr) || '').trim(); const m = keyRe.exec(t);
+        if (m && ns.has(m[1])) keys.add(`${t} (${attr})`);
+      }
+    }
+    return [...keys];
+  }
+  if (shellMode) {
+    // Alle fünf Hüllen (RookHub, Turnier, KidHub, LeagueHub, ClubHub) tragen GENAU ein router-outlet direkt in <main>;
+    // Angular hängt die Seiten-Komponente als nächsten Geschwister-Knoten dahinter.
+    const outlet = document.querySelector('router-outlet');
+    return { keys: i18nKeys(true), outlet: !!outlet, routed: !!outlet?.nextElementSibling };
+  }
 
   // 1. Die Seite selbst scrollt waagerecht.
   const sw = document.documentElement.scrollWidth;
@@ -99,22 +160,7 @@ export function pageChecks(i18nNamespaces) {
   }
 
   // 4. Sichtbare Übersetzungsschlüssel („games.review.title" statt Text).
-  const ns = new Set(i18nNamespaces);
-  const keyRe = /^([a-z][a-zA-Z0-9]*)(\.[a-zA-Z0-9_-]+)+$/;
-  const keys = new Set();
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    const t = n.textContent.trim();
-    const m = keyRe.exec(t);
-    if (m && ns.has(m[1]) && n.parentElement && visible(n.parentElement)) keys.add(t);
-  }
-  for (const el of document.querySelectorAll('[placeholder],[aria-label],[title]')) {
-    for (const attr of ['placeholder', 'title']) {
-      const t = (el.getAttribute(attr) || '').trim(); const m = keyRe.exec(t);
-      if (m && ns.has(m[1])) keys.add(`${t} (${attr})`);
-    }
-  }
-  for (const k of [...keys].slice(0, 8)) findings.push({ kind: 'i18n-key', detail: k });
+  for (const k of i18nKeys(false).slice(0, 8)) findings.push({ kind: 'i18n-key', detail: k });
 
   // 5. Spinner, der nach dem Laden noch steht.
   const spinner = [...document.querySelectorAll('mat-spinner, mat-progress-spinner, .mat-mdc-progress-spinner')].find(visible);

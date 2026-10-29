@@ -15,7 +15,7 @@ import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { APPS, AREAS, ROUTES, areaOf, routeId, isExpectedFailure } from './routes.mjs';
 import { login, resolveParams, resolveClubParams, ensureTrainer } from './seed.mjs';
-import { pageChecks, foldTop, foldScroll, foldFindings, FOLD, FOLD_KINDS } from './checks.mjs';
+import { pageChecks, foldTop, foldScroll, foldFindings, waitShellReady, FOLD, FOLD_KINDS } from './checks.mjs';
 import { writeIndex, foldSummary } from './report.mjs';
 import { withStates, runSteps, writeDecision, stubBody } from './states.mjs';
 import { themeSetup, storageFor } from './themes.mjs';
@@ -42,6 +42,10 @@ const BROWSER_LOCALE = { de: 'de-DE', en: 'en-US', hr: 'hr-HR', hu: 'hu-HU' };
 const PUZZLE_AREAS = new Set(['puzzles', 'kurse', 'wochenpost', 'woodpecker']);
 const SETTLE_MAX_MS = 60000;   // hoch, weil Anfragen in der eigenen Bremse warten können
 const QUIET_MS = 800;
+// Nach der Netzruhe zusätzlich höchstens so lange warten, bis die Hülle übersetzt ist und die Seite hinter dem
+// router-outlet steht (waitShellReady in checks.mjs). Läuft das ab und fehlt die Seite noch: Werkzeug-Befund „noch
+// geladen“ (not-ready) statt „Schlüssel statt Text“. Steht die Seite und nur die Hülle zeigt Schlüssel, bleibt „i18n-key“.
+const SHELL_READY_MAX_MS = 10000;
 // Die API drosselt je Adresse (Prod global 100 Anfragen/min, anonyme Wege teils 60/min; Dev läuft mit
 // RateLimiting__PermitScale=20, also 2000/min). Alle Aufnahmen kommen von EINER Adresse — ohne eigene Bremse lief der
 // erste Lauf in hunderte 429 und fotografierte Fehlerzustände. Vorgaben je Umgebung, --rate/--concurrency gehen vor.
@@ -577,9 +581,13 @@ async function main() {
 
     const records = [];
     let loadError = null;
+    // Hülle fertig? (Übersetzungen da, Seiten-Komponente hinter dem router-outlet) — sonst „noch geladen“.
+    const shellReady = () => waitShellReady(() => page.evaluate(pageChecks, { ns: i18n, shell: true }), { maxMs: SHELL_READY_MAX_MS });
+    let shell = null;
     try {
       await page.goto(origin + job.url, { waitUntil: 'load', timeout: 30000 });
       await settle(page, net, SETTLE_MAX_MS);
+      shell = await shellReady();
       await page.addStyleTag({ content: '*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important}' });
       await page.waitForTimeout(300);
     } catch (e) {
@@ -608,11 +616,19 @@ async function main() {
           await page.setViewportSize({ width: vp.width, height: vp.height });
           await page.waitForTimeout(RESIZE_WAIT_MS);
           await settle(page, net, RESIZE_SETTLE_MAX_MS);
+          shell = await shellReady();
           await page.evaluate(() => window.scrollTo(0, 0));
           await page.waitForTimeout(100);
         }
         record.finalUrl = page.url().replace(origin, '');
         record.findings = await page.evaluate(pageChecks, i18n);
+        if (shell && !shell.ready && shell.loading) {
+          // Das Bild zeigt eine halb geladene Seite (Werkzeug wartete zu kurz bzw. Server zu langsam) — Schlüssel in der
+          // Hülle sind dann kein Übersetzungsfehler der App.
+          record.findings = record.findings.filter(f => f.kind !== 'i18n-key');
+          record.findings.push({ kind: 'not-ready', detail: shell.detail });
+        }
+        if (shell?.waitedMs > 300) record.shellWaitMs = shell.waitedMs;
         if (stepError) record.findings.push({ kind: 'state-step', detail: stepError });
         else if (stateMissed) record.findings.push({ kind: 'state-missed', detail: `nach den Schritten nicht sichtbar: ${job.route.expect}` });
         // Erster Blick (DESIGN.md 4.6): Messung oben, bevor irgendetwas gescrollt wird.
@@ -749,7 +765,9 @@ async function main() {
 
 /** Auffällig = ein Befund (Hinweise mit level 'hint' zählen nicht), ein Fehler, Konsole oder fehlgeschlagene Anfrage. */
 export const hasProblems = s => !!(s.findings?.some(f => f.level !== 'hint') || s.error || s.console?.length || s.failedRequests?.length);
-const shortUrl = u => u.replace(/^https?:\/\/[^/]+/, '').slice(0, 140);
+// Lange Zugangs-Token im Pfad (E-Book-Ordner `/epub/<token>/…`) werden zu „…“ — sonst schnitt die 140-Zeichen-Grenze den
+// Dateinamen ab, und weder Bericht noch `expectedFailures` sahen, WELCHE Datei fehlte.
+const shortUrl = u => u.replace(/^https?:\/\/[^/]+/, '').replace(/\/[A-Za-z0-9_-]{40,}(?=\/)/g, '/…').slice(0, 140);
 const stripQuery = u => u.replace(/[?#].*$/, '').replace(/\/$/, '');
 
 function previousRun(current) {

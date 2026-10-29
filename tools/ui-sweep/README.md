@@ -115,6 +115,13 @@ Sprach-Achse, damit der Vergleich mit älteren Läufen weiter greift.
 - **Text abgeschnitten** — ein Element schneidet ab (`overflow: hidden`), sein Text ist breiter, keine Auslassungspunkte.
 - **Schlüssel statt Text** — sichtbarer Text wie `games.review.title` (Namensräume aus `public/i18n/en.json`).
 - **lädt noch** — nach dem Laden steht noch ein Ladekreis.
+- **noch geladen** (`not-ready`, Werkzeug-Befund) — vor dem Foto (nach dem Laden UND nach jedem Breitenwechsel) wartet
+  der Sweep zusätzlich zur Netzruhe höchstens 10 s, bis die Hülle übersetzt ist (kein Text wie `nav.help` außerhalb von
+  `<main>` — dieselbe Erkennung wie „Schlüssel statt Text“) und hinter dem ersten `router-outlet` die Seiten-Komponente
+  steht (alle fünf Hüllen tragen genau eines direkt in `<main>`). Fehlt die Seite danach noch, steht statt „Schlüssel
+  statt Text“ dieser Befund — das Bild ist zu früh, nicht die App kaputt (Fehlbefund 29.10.2026: 4 von 2 232 Seiten
+  unter Last leer mit `nav.help`, `legal.privacy.link` … in der Fußzeile). Steht die Seite und nur die Hülle zeigt nach
+  10 s Schlüssel, bleibt es ein echter i18n-Befund. `shellWaitMs` im Bericht = so lange wurde gewartet (ab 300 ms).
 - **Konsole / Anfrage** — Konsolenfehler, Ausnahmen, API-Antworten ab 400, abgebrochene Anfragen.
   **Erwartete Fehlantworten** je Route (`expectedFailures` in `routes.mjs`, RegExps auf die Berichtszeile
   `GET /api/… → 404`) zählen nicht: z. B. der Turnierkalender fragt mit `GET /api/tournaments/{chessResultsId}`, ob ein
@@ -175,7 +182,14 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   letzten Lauf, sonst ein schon für alle freigegebenes, sonst das kürzeste), gibt es über das Admin-Konto
   ZUSÄTZLICH für die Gruppe „Everyone" frei und prüft mit den Ausweisen aller Rollen des Laufs (plus abgemeldet), dass
   `GET /api/ebooks/{id}` 200 liefert — sonst „nicht auflösbar". Folge: auch das leere Konto sieht in `/ebooks` diese
-  Bücher statt des Leerzustands. EPUB-Bücher werden nicht genommen (auf Dev fehlten Kapiteldateien → 404 je Kapitel).
+  Bücher statt des Leerzustands. Für diese beiden werden EPUB-Bücher nicht genommen (früher fehlten auf Dev Kapiteldateien).
+  Seit 0.878.1 zwei EPUB-Leser, ebenso für alle freigegeben: `ebookTranslatedId` (EPUB mit fertiger Übersetzung ins
+  Englische, Original und Übersetzung öffnen sich als Ordner — Route `ebooks-uebersetzt`) und `ebookGamesId`
+  (Partiensammlung „My 60 Memorable Games“, sonst ein EPUB mit Diagrammen — Route `ebooks-partien`). Dev hat keine
+  verknüpften Partien: fehlen sie, hängt der Seed EINE Sweep-Partie („ui-sweep“) an die ersten drei Diagramme
+  (`PUT /api/admin/ebooks/{id}/games`) und setzt den Startmodus des Bretts auf „Partie“ wie Prod #2250. Erwartet:
+  epub.js fragt `META-INF/com.apple.ibooks.display-options.xml` ab (404, `EPUB_PROBE_404`). Lange Zugangs-Token im Pfad
+  stehen im Bericht als `…`.
 - **Engine-abhängige Parameter** (`analysisId`, `analyzedGameId`, `analyzedShareToken`, `comparisonId`): der Seed stößt
   „Partie analysieren" an der Sweep-Partie bzw. einen Zugvergleich an, sobald Dev eine Engine hat
   (`/api/game-analyses/guess/status`), und nimmt nur FERTIGE — fertig ist eine Analyse erst nach Minuten, also beim
@@ -206,6 +220,13 @@ selbst mit 200 und dem gesendeten JSON-Körper (sonst `{}`) — „Aufgeben“, 
 erreichen den Server nicht. Ausnahmen (`writeDecision` in `states.mjs`): POSTs, die nur lesen (`READ_POSTS`, Puzzle-Vorrat
 für Endlos), gehen durch; Adressen in `once` eines Zustands gehen einmal je Rolle/Sprache zum Server, danach wird die
 Antwort wiedergegeben (Fehlanmeldung — sonst Anmelde-Drossel 429).
+E-Books (Stand 29.10.2026, 0.878.1): Filter-Komponente offen (`filter-offen`, mit Sprach- und „Übersetzung: Englisch“-Chip),
+Schlagwort + Sprache gesetzt und zugeklappt (`filter-aktiv`: Chips, Zähler am Knopf, Gesamtzeile), Übersetzungsfilter an
+(`filter-uebersetzung`), Admin: „Buch-Übersetzungen“ (`uebersetzungen`) und ⋮ einer Karte mit „Als Nächstes ins Englische
+übersetzen“ (`karte-uebersetzen`, nach Sprache „Unbekannt“ gefiltert); Leser: Sprachmenü „Original / Englisch“
+(`ebooks-uebersetzt--sprache`, `--englisch`), kompakte Zugtabellen im Kapitel-iframe (`ebooks-partien--zugtabellen`,
+`expect` mit `internal:control=enter-frame`) und Brett-Modus „Partie“ (`ebooks-partien--partie`). Filter setzen schreibt
+nur Adresse + Sitzungsspeicher.
 Dialoge (Stand 28.10.2026, 91 Zustände, davon 40 Dialoge aus der Runde „Dialoge“): je Dialog ein Zustand, `expect` auf
 den Titel IN der Dialog-Komponente (`dlg('app-…-dialog')`), nicht nur auf `mat-dialog-container`. Abgedeckt u. a. PGN
 hochladen, Roast, Analyse-Verlauf, Züge vergleichen, Tiefe Analyse, Markieren-Notizen, Lc0-Knoten (admin), Repertoire
@@ -249,5 +270,6 @@ Benachrichtigungen) ändern sich auch ohne Umbau — das ist kein Fehler.
   (Vorgabe dev 1600, prod 70 — Dev läuft mit 2000/min, siehe „Tempo"; Antworten aus dem Zwischenspeicher zählen nicht); `POST /api/client-log` wird gar nicht erst
   geschickt. Antwortet der Server trotzdem 429, pausieren alle eine Minute und die Seite wird neu aufgenommen; die Zahl
   der Pausen steht am Ende der Ausgabe und im Kopf der Übersicht.
-- Gewartet wird, bis 0,8 s keine Anfrage mehr läuft, höchstens 60 s (Poller halten das Netz nie ganz still).
+- Gewartet wird, bis 0,8 s keine Anfrage mehr läuft, höchstens 60 s (Poller halten das Netz nie ganz still), danach
+  bis die Hülle übersetzt und die Seite gerendert ist, höchstens 10 s (`waitShellReady`, „noch geladen“).
 - Ganzseitige Bilder sind auf 4000 px Höhe begrenzt (`truncated` im Bericht).

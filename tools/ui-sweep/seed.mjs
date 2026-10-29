@@ -236,6 +236,58 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { _why: 'kein PDF-Buch mit erkannten Diagrammen, das alle Rollen sehen (Freigabe „Everyone" nur über das Admin-Konto)' };
   });
 
+  // Leser mit fertiger Übersetzung (0.876.0, Knopf „Original / Englisch“): ein EPUB mit Übersetzung ins Englische, dessen
+  // Original UND Übersetzung sich als Ordner öffnen lassen (container.xml). Das vom letzten Lauf, ein schon geteiltes,
+  // sonst das kürzeste — für „Everyone“ freigegeben, damit auch die Bibliothek abgemeldet die Sprach-/Übersetzungs-Chips zeigt.
+  await step(['ebookTranslatedId'], async () => {
+    const all = list(await a.get('/api/ebooks?translation=en&pageSize=100'))
+      .filter(b => b.primaryFormat === 'epub' && (b.translations ?? []).includes('en'));
+    const prev = all.find(b => String(b.id) === String(previous.ebookTranslatedId));
+    const shared = await ebooks.everyoneId().then(id => all.filter(b => (b.groupIds ?? []).includes(id)));
+    const rest = [...all].sort((x, y) => (x.pageCount ?? 1e9) - (y.pageCount ?? 1e9));
+    for (const book of [...new Set([prev, ...shared, ...rest].filter(Boolean))].slice(0, 8)) {
+      if (!await ebooks.epubOpens(book.id) || !await ebooks.epubOpens(book.id, 'en')) continue;
+      if (await ebooks.shareWithAll(book, only)) return { ebookTranslatedId: book.id };
+      if (only !== null) break;
+    }
+    return { _why: 'kein EPUB mit fertiger Übersetzung ins Englische, das sich öffnen lässt und alle Rollen sehen' };
+  });
+
+  // Partiensammlung (0.831.0 Brett-Modus „Partie“, 0.875.0 kompakte Zugtabellen): auf Prod z. B. #2250. Dev hat keine
+  // verknüpften Partien (EbookGames leer, Stand 29.10.) und kein #2250 — genommen wird „My 60 Memorable Games“ (EPUB,
+  // 93 erkannte Diagramme, Zugtabellen ohne Bilder in jedem Partiekapitel), sonst ein anderes EPUB mit Diagrammen. Fehlt
+  // eine Verknüpfung, hängt das Admin-Konto EINE Sweep-Partie („ui-sweep“, Spanisch) an die ersten drei Diagramme
+  // (PUT /api/admin/ebooks/{id}/games, ohne Replace) und setzt den Startmodus des Bretts auf „Partie“ wie bei #2250.
+  // Wiedergefunden über `hasGame` — beim nächsten Lauf wird nichts mehr angelegt.
+  await step(['ebookGamesId'], async () => {
+    const byTitle = list(await a.get(`/api/ebooks?search=${encodeURIComponent('My 60 Memorable Games')}&pageSize=5`));
+    const others = list(await a.get('/api/ebooks?withDiagrams=true&pageSize=100'))
+      .filter(b => b.primaryFormat === 'epub' && b.diagramState === 'done' && (b.diagramCount ?? 0) > 0)
+      .sort((x, y) => (x.pageCount ?? 1e9) - (y.pageCount ?? 1e9));
+    const prev = [...byTitle, ...others].find(b => String(b.id) === String(previous.ebookGamesId));
+    const candidates = [...new Map([prev, ...byTitle, ...others].filter(b => b && b.primaryFormat === 'epub'
+      && b.diagramState === 'done' && (b.diagramCount ?? 0) > 0).map(b => [b.id, b])).values()].slice(0, 6);
+    for (const book of candidates) {
+      if (!await ebooks.epubOpens(book.id)) continue;
+      const diagrams = list(await a.get(`/api/ebooks/${book.id}/diagrams`));
+      if (!diagrams.some(d => d.hasGame)) {
+        if (only !== null) continue;
+        const first = diagrams.slice(0, 3);
+        if (!first.length) continue;
+        await a.put(`/api/admin/ebooks/${book.id}/games`, {
+          replace: false,
+          games: [{ key: SWEEP_TAG, white: 'Sweep, Weiss', black: 'Sweep, Schwarz', event: SWEEP_TAG, date: '2026.10.29', result: '*',
+            moves: 'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6', source: SWEEP_TAG }],
+          links: first.map(d => ({ diagramId: d.id, gameKey: SWEEP_TAG, ply: 8 })),
+        });
+        if (book.defaultBoardMode !== 'game') await a.put(`/api/ebooks/${book.id}`, { defaultBoardMode: 'game' });
+      }
+      if (await ebooks.shareWithAll(book, only)) return { ebookGamesId: book.id };
+      if (only !== null) break;
+    }
+    return { _why: 'kein EPUB mit erkannten Diagrammen, das sich öffnen lässt und alle Rollen sehen' };
+  });
+
   await step(['reconstructionId', 'reconstructionToken'], async () => {
     let rc = list(await a.get('/api/reconstructions')).find(x => x.title === SWEEP_TAG);
     if (!rc) {
@@ -509,6 +561,14 @@ function ebookHelpers(base, a, viewers) {
     fileLoads: async id => {
       const { token } = await a.get('/api/ebooks/access-token');
       const res = await fetch(`${base}/api/ebooks/${id}/file?t=${encodeURIComponent(token)}`, { headers: { Range: 'bytes=0-15' } });
+      await res.arrayBuffer().catch(() => null);
+      return res.ok;
+    },
+    /** Lässt sich das EPUB (bzw. seine Übersetzung `lang`) als Ordner öffnen? So lädt es der Leser (container.xml zuerst). */
+    epubOpens: async (id, lang = null) => {
+      const { token } = await a.get('/api/ebooks/access-token');
+      const dir = lang ? `/api/ebooks/${id}/translations/${encodeURIComponent(lang)}/epub/` : `/api/ebooks/${id}/epub/`;
+      const res = await fetch(`${base}${dir}${encodeURIComponent(token)}/META-INF/container.xml`);
       await res.arrayBuffer().catch(() => null);
       return res.ok;
     },
