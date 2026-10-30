@@ -54,15 +54,23 @@ const MOVE_CELL_MAX = 10;
  * Zugtabellen kompakt (0.875.0): Scribd-Umwandlungen setzen jede Zugzeile („4 | Nxe5 | Nxe5“) als Tabelle mit
  * `width: 100%; margin: 5% auto` — Nummer, Weiß- und Schwarzzug standen über die ganze Breite verteilt, und die
  * Prozent-Ränder (von der BREITE gerechnet) rissen große Lücken zwischen die Zeilen (Prod #2250, Screenshot 29.10.).
- * Nur Tabellen, deren Zellen ALLE kurzer Text ohne Bild sind, werden markiert — andere Tabellen (Bewertungskästen,
- * Diagramm-Layouts) bleiben, wie das Buch sie setzt. Gibt die Zahl der markierten Tabellen zurück.
+ * Nur Tabellen, deren Zellen ALLE kurzer Text sind, werden markiert — andere Tabellen (Bewertungskästen,
+ * Diagramm-Layouts) bleiben, wie das Buch sie setzt. Figurinen als Bild („<img>f6“, My 60 Memorable Games, UI-Sweep
+ * 29.10.) zählen mit, solange die Zelle auch Text hat (höchstens zwei Bilder je Zelle): ein Brett aus Bildkacheln oder
+ * eine Bildzelle ohne Text bleibt außen vor. Gibt die Zahl der markierten Tabellen zurück.
  */
+function isMoveCell(c: Element): boolean {
+  const text = (c.textContent ?? '').trim();
+  const imgs = c.querySelectorAll('img').length;
+  return text.length <= MOVE_CELL_MAX && (imgs === 0 || (imgs <= 2 && text.length > 0));
+}
+
 export function compactMoveTables(doc: Document): number {
   let n = 0;
   doc.querySelectorAll('table').forEach(t => {
     const cells = Array.from(t.querySelectorAll('td, th'));
-    if (!cells.length || t.querySelector('img, svg, table')) return;
-    if (!cells.every(c => (c.textContent ?? '').trim().length <= MOVE_CELL_MAX)) return;
+    if (!cells.length || t.querySelector('svg, table')) return;
+    if (!cells.every(c => isMoveCell(c))) return;
     t.classList.add('rh-moves'); n++;
   });
   if (n && !doc.getElementById('rh-moves-style')) {

@@ -169,6 +169,11 @@
   .rd-back { order: -2; }
   /* ⋮ in die Titelzeile (dort sind 96 px für Zurück + ⋮ frei) — sonst rutscht es mit dem Diagramm-Knopf in eine dritte Zeile. */
   .rd-more { order: -1; }
+  /* Sprachschalter ebenfalls in die Titelzeile (UI-Sweep 29.10.: stand allein in einer dritten Zeile); der Titel gibt
+     dafür 48 px ab. */
+  .rd-lang { order: -1; }
+  .rd-toolbar:has(.rd-lang) .rd-title { flex-basis: calc(100% - 144px); }
+  :host-context(body.nav-docked) .rd-toolbar:has(.rd-lang) .rd-title { flex-basis: calc(100% - 144px - var(--rh-nav-w, 96px)); }
   /* d3-rk-leser-handy-kopfleiste-ueberlappt: ⋮ ist das letzte Element der Titelzeile — sein rechter Rand belegt die Breite
      der angedockten Kopfleiste, sonst rückte das Seitenfeld in die Lücke darunter (Anmelden/Glocke lagen darauf). */
   :host-context(body.nav-docked) .rd-more { margin-right: var(--rh-nav-w, 96px); }

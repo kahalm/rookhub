@@ -784,6 +784,25 @@ describe('EbookReaderComponent', () => {
     bar.remove();
   });
 
+  it('UI-Sweep 29.10.: am Handy steht der Sprachschalter in der Titelzeile, nicht allein in einer dritten Zeile', () => {
+    const css = compactCss(EbookReaderComponent);
+    const mobile = css.slice(css.lastIndexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/\.rd-lang(\[[^\]]*\])?\{order:-1/);
+    expect(mobile).toMatch(/body\.nav-docked[^{]*\.rd-toolbar(\[[^\]]*\])?:has\(\.rd-lang(\[[^\]]*\])?\)[^{]*\.rd-title(\[[^\]]*\])?\{flex-basis:calc\(100%-144px-var\(--rh-nav-w,96px\)\)/);
+    // Nachgestellt bei 390 px, angedockt: Zurück | Titel | Sprache | ⋮ + Rand in EINER Zeile.
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:390px;padding:4px 8px;box-sizing:border-box;--rh-nav-w:140px';
+    bar.innerHTML = '<span style="order:-2;flex:none;width:40px;height:40px"></span>'
+      + '<span style="order:-1;flex:1 1 calc(100% - 144px - var(--rh-nav-w));min-width:0;height:40px"></span>'
+      + '<span class="lang" style="order:-1;flex:none;width:40px;height:40px"></span>'
+      + '<span class="more" style="order:-1;flex:none;width:40px;height:40px;margin-right:var(--rh-nav-w)"></span>';
+    document.body.appendChild(bar);
+    const top = bar.querySelector('.more')!.getBoundingClientRect().top;
+    expect(bar.querySelector('.lang')!.getBoundingClientRect().top).toBe(top);
+    expect(bar.firstElementChild!.getBoundingClientRect().top).toBe(top);
+    bar.remove();
+  });
+
   it('d3-rk-diagram-subtitle-abgeschnitten: Zugrecht-Zeile im Brett-Kopf bricht um (≤ 2 Zeilen) statt das Herkunftssymbol mit „…“ abzuschneiden', () => {
     const css = compactCss(EbookReaderComponent);
     const side = css.match(/\.rd-side(\[[^\]]*\])?\{([^}]*)\}/)![2];

@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.879.2',
+    date: '2026-10-30',
+    changes: [
+      {
+        en: 'E-book reader: move tables with figurine images (e.g. My 60 Memorable Games) are now set as compactly as plain move tables; on phones the translate button sits in the title row instead of alone in a third row.',
+        de: 'E-Book-Leser: Zugtabellen mit Figurinen-Bildern (z. B. My 60 Memorable Games) stehen jetzt so kompakt wie reine Text-Zugtabellen; am Handy steht der Übersetzen-Knopf in der Titelzeile statt allein in einer dritten Zeile.',
+      },
+    ],
+  },
+  {
     version: '0.879.1',
     date: '2026-10-29',
     changes: [

@@ -59,6 +59,15 @@ describe('compactMoveTables', () => {
     expect(d.querySelector('table.rh-moves')).toBeNull();
     expect(d.getElementById('rh-moves-style')).toBeNull();
   });
+
+  it('counts figurine images next to the move text, but not image-only cells (board tiles, pictures)', () => {
+    const d = doc(`<table width="50%"><tr><td><em>1</em></td><td><strong>d4</strong></td><td><img src="hars.jpg"><strong>f6</strong></td></tr></table>`
+      + `<table><tr><td><img src="a8.png"></td><td><img src="b8.png"></td></tr></table>`
+      + `<table><tr><td><img src="diagram.png"></td></tr><tr><td>12</td></tr></table>`);
+    expect(compactMoveTables(d)).toBe(1);
+    expect(d.querySelectorAll('table.rh-moves').length).toBe(1);
+    expect(d.querySelector('table.rh-moves img')?.getAttribute('src')).toBe('hars.jpg');
+  });
 });
 
 describe('patchHtmlRequests', () => {
