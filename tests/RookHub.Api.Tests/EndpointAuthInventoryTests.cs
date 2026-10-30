@@ -52,6 +52,7 @@ public class EndpointAuthInventoryTests
         "GET /api/ebooks/{id:int}",                                  // EbooksController.Get
         "GET /api/ebooks/{id:int}/diagrams",                         // EbooksController.GetDiagrams
         "GET /api/ebooks/{id:int}/diagrams/{diagramId:int}/game",   // EbooksController.GetDiagramGame (0.831.0, Partiensammlungen)
+        "GET /api/ebooks/{id:int}/tree",                             // EbooksController.GetTree (0.881.0, Eröffnungsbaum)
         "GET /api/ebooks/{id:int}/progress",                         // EbooksController.GetProgress
         "POST /api/ebooks",                                          // EbooksController.Upload (Kontingent + Gesamtdeckel)
         "PUT /api/ebooks/{id:int}",                                  // EbooksController.Update (nur eigene anonyme)
