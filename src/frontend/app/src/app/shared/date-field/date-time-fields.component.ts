@@ -49,6 +49,7 @@ export function splitLocalDateTime(s: string | null | undefined): [string, strin
              [max]="maxDate" />
       <mat-datepicker-toggle matIconSuffix [for]="dp" />
       <mat-datepicker #dp />
+      @if (hint()) { <mat-hint>{{ hint() }}</mat-hint> }
     </mat-form-field>
     <mat-form-field appearance="outline" class="dtf-time" subscriptSizing="dynamic">
       <mat-label>{{ timeLabel() }}</mat-label>
@@ -59,8 +60,10 @@ export function splitLocalDateTime(s: string | null | undefined): [string, strin
   `,
   styles: [`
     :host { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
-    .dtf-date { flex: 1 1 180px; min-width: 0; }
-    .dtf-time { flex: 0 1 130px; min-width: 110px; }
+    /* d9-rk-datepicker-label-eng: das Datum bekommt den Platz, die Uhrzeit (5 Zeichen) bleibt schmal — die Beschriftung
+       stieß sonst ans Kalender-Symbol. Zusätze wie „optional“ stehen als Hinweis darunter, nicht im Label. */
+    .dtf-date { flex: 2 1 200px; min-width: 0; }
+    .dtf-time { flex: 0 1 120px; min-width: 110px; }
   `],
 })
 export class DateTimeFieldsComponent {
@@ -69,6 +72,8 @@ export class DateTimeFieldsComponent {
   readonly dateLabel = input('');
   readonly timeLabel = input('');
   readonly required = input(false);
+  /** Hinweis unter dem Datum (bereits übersetzt), z. B. „Optional“ — statt den Zusatz ins Label zu schreiben. */
+  readonly hint = input('');
   /** Spätestes Datum (Lokalzeit "YYYY-MM-DDTHH:mm" oder "YYYY-MM-DD"), nur fürs Datum. */
   readonly max = input<string | null>(null);
 

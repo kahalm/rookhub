@@ -839,5 +839,30 @@ describe('EbookReaderComponent', () => {
     el.remove();
     fixture.destroy();
   });
-});
 
+  // d9-rk-reader-titel-abgeschnitten: am Tablet (820 px, abgemeldet) blieben für den Titel ≈ 40 px („Pro…“). Unter 1100 px
+  // stehen Zoom und „Inhalt“ im ⋮, der Titel behält eine Mindestbreite, die Leiste bricht notfalls um.
+  it('d9: unter 1100 px Zoom/Inhalt im ⋮ statt in der Leiste, Titel mit Mindestbreite', async () => {
+    const css = compactCss(EbookReaderComponent);
+    expect(css).toMatch(/\.rd-more-narrow(\[[^\]]*\])?\{display:none/);
+    const narrow = css.slice(css.indexOf('@media(max-width:1099.98px){'));
+    expect(narrow).toMatch(/^@media\(max-width:1099\.98px\)\{\.rd-zoom(\[[^\]]*\])?,\.rd-toc(\[[^\]]*\])?\{display:none/);
+    expect(narrow).toMatch(/\.rd-more-narrow(\[[^\]]*\])?\{display:flex/);
+    const tablet = css.slice(css.indexOf('@media(max-width:1099.98px)and(min-width:600px)'));
+    expect(tablet).toMatch(/\.rd-title(\[[^\]]*\])?\{min-width:min\(11rem,28vw\)/);
+    expect(CSS.supports('min-width', 'min(11rem, 28vw)')).toBeTrue();
+
+    const fixture = await make(book());
+    const c = fixture.componentInstance;
+    const el: HTMLElement = fixture.nativeElement;
+    (el.querySelector('.rd-more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const items = Array.from(document.querySelectorAll<HTMLElement>('.cdk-overlay-container .rd-more-narrow'));
+    expect(items.map(i => i.textContent!.replace(i.querySelector('mat-icon')!.textContent!, '').trim())).toEqual(['ebooks.reader.zoomOut', 'ebooks.reader.fitWidth', 'ebooks.reader.zoomIn']);
+    expect(getComputedStyle(items[0]).display).toBe(window.innerWidth < 1100 ? 'flex' : 'none');
+    c.appliedZoom.set(1.1);
+    items[2].click();
+    expect(c.zoom()).toBe(1.25);
+    fixture.destroy();
+  });
+});

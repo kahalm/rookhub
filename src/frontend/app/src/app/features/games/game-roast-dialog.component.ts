@@ -14,7 +14,12 @@ export interface GameRoastData {
   shareUrl: string | null;
   /** Teilen-Kennung der Partie — für „Partie mit diesem Roast teilen" (0.742.0). */
   shareToken?: string | null;
+  /** Der Aufrufer kann die Partie analysieren lassen: ohne Analyse schließt „Partie analysieren“ mit `'analyze'` (d9). */
+  canAnalyze?: boolean;
 }
+
+/** Ergebnis beim Schließen: `'analyze'` = der Aufrufer soll die Analyse starten. */
+export type GameRoastResult = 'analyze' | undefined;
 
 /**
  * „Roast my game" (0.535.0): ein frecher Kommentar zur eigenen Partie, geschrieben vom Sprachmodell auf eigener
@@ -85,7 +90,14 @@ export interface GameRoastData {
           {{ (current() ? 'games.roast.again' : 'games.roast.go') | translate }}
         </button>
       }
-      <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
+      <!-- d9-rk-roast-dialog-sackgasse: ohne Analyse nicht nur „Schließen“ — der Weg weiter ist die Analyse (DESIGN 2 Nr. 8). -->
+      @if (offerAnalyze()) {
+        <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
+        <button mat-flat-button class="analyze" [mat-dialog-close]="'analyze'">
+          <mat-icon>insights</mat-icon> {{ 'games.analyze' | translate }}</button>
+      } @else {
+        <button mat-button mat-dialog-close>{{ 'common.close' | translate }}</button>
+      }
     </div>
   `,
   styles: [`
@@ -120,6 +132,12 @@ export class GameRoastDialogComponent implements OnInit {
 
   private lang(): string {
     return this.translate.currentLang() || this.translate.getFallbackLang() || 'en';
+  }
+
+  /** Ohne Analyse, aber der Aufrufer kann sie starten: Hauptknopf „Partie analysieren“ statt Sackgasse. */
+  offerAnalyze(): boolean {
+    const s = this.state();
+    return !!s && s.available && !s.hasAnalysis && !!this.data.canAnalyze;
   }
 
   current(): GameRoast | null {

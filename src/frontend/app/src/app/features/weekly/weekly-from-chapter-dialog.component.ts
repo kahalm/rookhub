@@ -80,7 +80,8 @@ export interface WeeklyFromChapterDialogData {
           </mat-select>
           @if (loadingChapters) { <mat-hint>{{ 'common.loading' | translate }}</mat-hint> }
           @else if (bookId && chapters.length === 0) { <mat-hint>{{ 'weekly.fromChapter.noChapters' | translate }}</mat-hint> }
-          @else if (!bookId && !loadingBooks) { <mat-hint>{{ 'weekly.fromChapter.pickBookFirst' | translate }}</mat-hint> }
+          <!-- d9-rk-weekly-dialog-hinweis-abstand: kein „Erst ein Buch wählen.“ mehr am Kapitelfeld — den Grund nennt die
+               Knopfleiste (.why, DESIGN 2 Nr. 8: ein Hinweis je Grund); am Feld wirkte er wie ein Hinweis zum Datum. -->
         </mat-form-field>
 
         <div class="fc-row">

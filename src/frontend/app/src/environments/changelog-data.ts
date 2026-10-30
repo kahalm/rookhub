@@ -11,6 +11,28 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.880.0',
+    date: '2026-10-30',
+    changes: [
+      {
+        en: 'E-book library and reader: covers are no longer cropped, the guest note is one short line on phones, „1 group“ instead of „1 groups“, the active language chip says „Language: Unknown“, the translation dialog no longer mentions the server by name, and on tablets the book title in the reader bar is readable again (zoom and contents move into the ⋮ menu below 1100 px). Saving reading progress twice at the same moment no longer fails.',
+        de: 'E-Book-Bibliothek und Leser: Titelbilder werden nicht mehr beschnitten, der Gast-Hinweis ist am Handy eine kurze Zeile, „1 Gruppe“ statt „1 Gruppen“, der aktive Sprach-Chip sagt „Sprache: Unbekannt“, der Übersetzungsdialog nennt keinen Servernamen mehr, und am Tablet ist der Buchtitel in der Leser-Leiste wieder lesbar (Zoom und Inhalt wandern unter 1100 px ins ⋮-Menü). Zweimal gleichzeitig gespeicherter Lesefortschritt scheitert nicht mehr.',
+      },
+      {
+        en: 'Dialogs: hint texts keep their distance from the next field, „optional“ is a hint instead of part of the label, the share dialog says why „Share“ is locked, the roast dialog offers „Analyse game“ when no analysis exists yet, and QR codes have a proper quiet zone. Chapter rows on phones keep the ⋮ in the same line again.',
+        de: 'Dialoge: Hinweistexte halten Abstand zum nächsten Feld, „optional“ steht als Hinweis statt im Label, der Teilen-Dialog sagt, warum „Teilen“ gesperrt ist, der Roast-Dialog bietet „Partie analysieren“ an, wenn noch keine Analyse da ist, und QR-Codes haben eine richtige Ruhezone. Kapitelzeilen am Handy behalten das ⋮ wieder in derselben Zeile.',
+      },
+      {
+        en: 'Analysis and puzzles: the eval bar lines up with the board, „Compare moves“ explains that it runs on the server and links to your own engine, the diagram button in e-book game mode is a clear „Back to diagram“, puzzle settings use the standard help icon and say „Computer search depth“ instead of „Stockfish depth“, and the guest menu uses icons consistently.',
+        de: 'Analyse und Puzzles: die Bewertungsleiste fluchtet mit dem Brett, „Züge vergleichen“ erklärt, dass es auf dem Server rechnet, und verweist auf die eigene Engine, der Diagramm-Knopf im E-Book-Partiemodus heißt klar „Zum Diagramm“, die Puzzle-Einstellungen nutzen das übliche Hilfe-Symbol und sagen „Rechentiefe des Computers“ statt „Stockfish-Tiefe“, und das Gast-Menü setzt Symbole einheitlich.',
+      },
+      {
+        en: 'LeagueHub and tournament site: board pairings on phones are much shorter, the result „1 : 0“ no longer wraps, the „+“ window explains why „Save“ is locked, tournament names cut by chess-results end with „…“, the region no longer shows „- (AUT)“, and the team dialog no longer opens with a highlighted „Close“.',
+        de: 'LeagueHub und Turnierseite: Brettpaarungen am Handy sind deutlich kürzer, das Ergebnis „1 : 0“ bricht nicht mehr um, das „+“-Fenster sagt, warum „Speichern“ gesperrt ist, von chess-results gekürzte Turniernamen enden mit „…“, die Region zeigt nicht mehr „- (AUT)“, und das Mannschaftsfenster öffnet nicht mehr mit hervorgehobenem „Schließen“.',
+      },
+    ],
+  },
+  {
     version: '0.879.2',
     date: '2026-10-30',
     changes: [

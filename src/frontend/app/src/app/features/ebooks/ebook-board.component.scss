@@ -55,6 +55,11 @@
 .eb-game-head { margin: 0; font-size: .85rem; color: var(--mat-sys-on-surface-variant); overflow-wrap: anywhere; }
 .eb-game-nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .eb-game-diagram { margin-left: auto; }
+.eb-game-at-diagram {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: .85rem;
+  color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
 .eb-game-moves { border-top: 1px solid var(--mat-sys-outline-variant); padding-top: 4px; }
 .eb-gm-row { display: grid; grid-template-columns: 2.6em 1fr 1fr; align-items: baseline; }
 .eb-gm {

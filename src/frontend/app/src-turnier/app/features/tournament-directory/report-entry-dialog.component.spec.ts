@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { ReportEntryDialogComponent } from './report-entry-dialog.component';
 import { DirectoryEntry } from './tournament-directory.model';
 
@@ -106,6 +106,17 @@ describe('ReportEntryDialogComponent', () => {
     const component = setup();
 
     expect(component.summary).toContain('St. Veit in Defereggen');
+  });
+
+  // d9-t-melden-aktuell-gespeichert-ligen-ausblenden: der Zustand heißt „Liga“, nicht der Filterschalter „Ligen ausblenden“
+  it('nennt eine Liga im gespeicherten Stand „Liga“, nicht „Ligen ausblenden“', () => {
+    const component = setup();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { tournamentDirectory: { hideLeagues: 'Ligen ausblenden', report: { league: 'Liga' } } });
+    translate.use('de');
+
+    expect(component.summary.split(' · ')).toContain('Liga');
+    expect(component.summary).not.toContain('ausblenden');
   });
 
   it('lässt den Dialog nach einem Fehlschlag offen', () => {

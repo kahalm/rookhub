@@ -113,6 +113,8 @@
     "ebook_file_missing": "Die Datei fehlt auf dem Server."
   },
   "common": {
+    "optional": "Optional",
+    "pickFriendFirst": "Erst mindestens einen Freund wählen.",
     "durationMinSec": "{{m}} min {{s}} s",
     "durationSec": "{{s}} s",
     "paginator": {
@@ -1553,7 +1555,9 @@
       "modeCrazy": "Verrückt",
       "visualization": "Visualisierung",
       "vizArrow": "Gegnerzug-Pfeil",
-      "stockfishDepth": "Stockfish-Tiefe",
+      "stockfishDepth": "Rechentiefe des Computers",
+      "stockfishDepthHint": "Höher = stärkere Antworten und genauere Prüfung deiner Züge, dauert aber länger.",
+      "showExplanation": "Erklärung anzeigen",
       "enPassantForced": "En passant forciert",
       "enPassantForcedHint": "Anarchy-Brett: Wenn ein En-passant-Schlag möglich ist, ist er Pflicht.",
       "offPathWarn": "Warnung bei falscher Abbiegung",
@@ -2111,7 +2115,7 @@
       "videoUrl": "Video-URL",
       "publishAt": "Freigabe-Zeitpunkt",
       "publishRequired": "Erst den Freigabe-Zeitpunkt wählen.",
-      "testerPreviewAt": "Tester-Vorschau (optional)",
+      "testerPreviewAt": "Tester-Vorschau",
       "hint": "Tester sehen dieses Kapitel ab dem Tester-Zeitpunkt, alle anderen ab der Freigabe. Ohne Tester-Zeitpunkt gibt es keinen Frühzugang.",
       "watchVideo": "Video ansehen",
       "releasesOn": "kommt am {{date}}",
@@ -2198,7 +2202,6 @@
     "fromChapter": {
       "button": "Aus Buch-Kapitel",
       "title": "Wochenpost aus Buch-Kapitel",
-      "pickBookFirst": "Erst ein Buch wählen.",
       "needBook": "Erst ein Buch und ein Kapitel wählen.",
       "needChapter": "Erst ein Kapitel wählen.",
       "needSchedule": "Erst Datum und Uhrzeit wählen.",
@@ -3022,7 +3025,7 @@
       "busy": "Die KI wetzt die Zunge …",
       "share": "Teilen",
       "notConfigured": "Das Roasten ist auf diesem Server nicht eingerichtet.",
-      "noAnalysis": "Erst die Partie analysieren lassen — ohne Analyse gibt es nichts zu roasten.",
+      "noAnalysis": "Die Partie ist noch nicht analysiert – ohne Analyse gibt es nichts zu roasten.",
       "error": {
         "notConfigured": "Das Roasten ist auf diesem Server nicht eingerichtet.",
         "noAnalysis": "Erst die Partie analysieren lassen.",
@@ -4569,6 +4572,7 @@
       "title": "Falschen Eintrag melden",
       "lead": "Sag uns, was hier falsch steht. Alles ist freiwillig — auch der Text: Absenden ohne ein Wort sagt immerhin „mit dem hier stimmt etwas nicht\".",
       "current": "Aktuell gespeichert",
+      "league": "Liga",
       "message": "Was ist falsch?",
       "learnTitle": "Zwei Fragen, die über dieses eine Turnier hinaus helfen",
       "namePattern": "Wie heißen solche Turniere in deiner Region?",
@@ -5082,7 +5086,9 @@
       "selected": "{{count}} von {{max}} gewählt",
       "depth": "Tiefe",
       "submit": "Vergleichen",
-      "noEngine": "Dafür steht gerade keine Engine bereit — richte im Profil eine Hintergrund-Engine ein.",
+      "noEngine": "Der Vergleich rechnet auf dem Server, nicht im Browser — dort ist gerade keine Engine frei. Mit einer eigenen Engine im Profil geht es jederzeit.",
+      "noEngineWhy": "Gerade keine Server-Engine frei",
+      "toProfile": "Zum Profil",
       "houseEngine": "Gerechnet wird auf der Haus-Engine (höchstens Tiefe {{depth}}).",
       "noExplanations": "Ohne Sprachmodell gibt es nur die gerechneten Linien, keine Begründung."
     },
@@ -5521,7 +5527,7 @@
   },
   "ebooks": {
     "anonymous": {
-      "banner": "Du bist nicht angemeldet: Du siehst die für alle freigegebenen Bücher. Was du hochlädst, bleibt deins und wandert beim Anmelden in dein Konto.",
+      "banner": "Ohne Anmeldung siehst du nur die für alle freigegebenen Bücher.",
       "signIn": "Anmelden",
       "uploadHint": "Ohne Konto siehst nur du das Buch, auf diesem Gerät (bis {{max}}). Beim Anmelden wandert es in dein Konto; nicht übernommene Bücher werden nach 30 Tagen gelöscht."
     },
@@ -5586,7 +5592,8 @@
       "gameNav": "Durch die Partie gehen",
       "gameStart": "Partieanfang",
       "gameEnd": "Partieende",
-      "gameToDiagram": "Diagramm",
+      "gameToDiagram": "Zum Diagramm",
+      "gameAtDiagram": "Diagrammstellung",
       "gameHint": "Klick auf einen Zug springt dorthin; eigene Züge werden zur Nebenlinie.",
       "gameBack": "Zurück zur Partie"
     },
@@ -5618,6 +5625,7 @@
       "eloRange": "Elo {{from}}–{{to}}",
       "language": "Sprache",
       "languageUnknown": "Unbekannt",
+      "languageChip": "Sprache: {{lang}}",
       "translatedInto": "Übersetzung: {{lang}}"
     },
     "empty": "Noch keine E-Books – lade das erste hoch.",
@@ -5640,6 +5648,7 @@
       "onlyMe": "Nur ich",
       "everyone": "Alle Angemeldeten",
       "groups": "{{n}} Gruppen",
+      "groupsOne": "{{n}} Gruppe",
       "onlyMeHint": "Keine Gruppe angehakt: nur du (und Admins) sehen dieses Buch.",
       "groupsHint": "Mitglieder der angehakten Gruppen sehen dieses Buch.",
       "noGroups": "Du bist noch in keiner Gruppe – das Buch bleibt nur für dich sichtbar. Ein Admin kann dich einer Gruppe zuordnen."
@@ -5806,8 +5815,8 @@
       },
       "title": "Buch-Übersetzungen",
       "off": "Die Übersetzung ist auf diesem Server ausgeschaltet.",
-      "noModel": "Kein Modell auf eigener Hardware eingestellt — Bücher werden nur über die Spark übersetzt.",
-      "quiet": "Sperrzeit der Spark — weiter um {{until}}.",
+      "noModel": "Kein eigenes Modell eingestellt — Bücher werden nur über den Übersetzungsserver übersetzt.",
+      "quiet": "Übersetzung pausiert bis {{until}}.",
       "active": "Übersetzt gerade.",
       "idle": "Gerade nichts zu übersetzen.",
       "progress": "{{done}} von {{total}} Texten",
@@ -5829,7 +5838,7 @@
       "undetected": "noch nicht geprüft",
       "badgeHint": "Auch auf Englisch lesbar (Umschalter im Leser)",
       "enqueue": "Als Nächstes ins Englische übersetzen",
-      "enqueued": "Eingereiht — wird im nächsten freien Zeitfenster der Spark übersetzt."
+      "enqueued": "Eingereiht — wird im nächsten freien Zeitfenster übersetzt."
     },
     "tags": {
       "opening": "Eröffnung",

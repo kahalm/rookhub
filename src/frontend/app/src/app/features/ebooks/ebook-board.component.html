@@ -178,7 +178,13 @@
           <button mat-icon-button type="button" (click)="gameStep(-1)" [disabled]="gamePly() === 0 && played().length === 0" [appIconLabel]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
           <button mat-icon-button type="button" (click)="gameStep(1)" [disabled]="played().length > 0 || gamePly() >= (gameLine()?.sans?.length ?? 0)" [appIconLabel]="'common.next' | translate"><mat-icon>chevron_right</mat-icon></button>
           <button mat-icon-button type="button" (click)="gameGo(gameLine()?.sans?.length ?? 0)" [disabled]="played().length === 0 && gamePly() >= (gameLine()?.sans?.length ?? 0)" [appIconLabel]="'ebooks.board.gameEnd' | translate"><mat-icon>last_page</mat-icon></button>
-          <button mat-button type="button" class="eb-game-diagram" (click)="gameGo(gameLine()?.game?.ply ?? 0)" [disabled]="played().length === 0 && gamePly() === (gameLine()?.game?.ply ?? 0)">{{ 'ebooks.board.gameToDiagram' | translate }}</button>
+          <!-- d9-rk-diagramm-knopf-gesperrt-ohne-grund: kein grauer Knopf auf der Diagrammstellung (DESIGN 2.8) — dort steht
+               der Zustand als leise Marke, sonst der Knopf „Zum Diagramm“. -->
+          @if (atGameDiagram()) {
+            <span class="eb-game-diagram eb-game-at-diagram"><mat-icon>center_focus_strong</mat-icon>{{ 'ebooks.board.gameAtDiagram' | translate }}</span>
+          } @else {
+            <button mat-button type="button" class="eb-game-diagram" (click)="gameGo(gameLine()?.game?.ply ?? 0)"><mat-icon>center_focus_strong</mat-icon>{{ 'ebooks.board.gameToDiagram' | translate }}</button>
+          }
         </div>
         <!-- Zugliste: eine Zeile je Vollzug (DESIGN „Zuglisten“), läuft mit der Brett-Spalte (kein Kasten im Kasten). -->
         <div class="eb-game-moves" role="list">

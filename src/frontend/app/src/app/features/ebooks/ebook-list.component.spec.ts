@@ -136,7 +136,8 @@ describe('EbookListComponent', () => {
     c.setVisibility([c.items[0]]);   // lädt die Gruppen (Everyone = 5)
     expect(c.visibilityKey(book({ groupIds: [] }))).toBe('onlyMe');
     expect(c.visibilityKey(book({ groupIds: [5, 7] }))).toBe('everyone');
-    expect(c.visibilityKey(book({ groupIds: [7] }))).toBe('groups');
+    expect(c.visibilityKey(book({ groupIds: [7] }))).toBe('groupsOne');   // d9-rk-ebooks-gruppen-mehrzahl
+    expect(c.visibilityKey(book({ groupIds: [7, 8] }))).toBe('groups');
   });
 
   it('ohne Anmeldung: keine Freigabe-Gruppen vom Server, Hochladen-Dialog mit Hinweis statt Sichtbarkeit', () => {
@@ -507,5 +508,51 @@ describe('EbookListComponent', () => {
     expect(sort.getBoundingClientRect().top).toBe(search.getBoundingClientRect().top);
     expect(mine.getBoundingClientRect().top).toBeGreaterThan(search.getBoundingClientRect().top);
     row.remove();
+  });
+
+  // ── Design-Runde d9 ─────────────────────────────────────────────────────────────────────────
+  it('d9-rk-ebooks-gruppen-mehrzahl: eine Gruppe → „1 Gruppe“ (groupsOne), mehrere → groups', async () => {
+    for (const [lang, one, many] of [['de', '1 Gruppe', '2 Gruppen'], ['en', '1 group', '2 groups']]) {
+      const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
+      const vis = (await res.json()).ebooks.visibility;
+      expect(vis.groupsOne.replace('{{n}}', '1')).withContext(lang).toBe(one);
+      expect(vis.groups.replace('{{n}}', '2')).withContext(lang).toBe(many);
+    }
+    const fixture = render([book({ groupIds: [7] })]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.eb-vis')!.textContent).toContain('ebooks.visibility.groupsOne');
+    fixture.destroy();
+  });
+
+  it('d9-rk-ebook-chip-unbekannt-ohne-kontext: aktiver Sprachfilter-Chip mit Präfix „Sprache:“', async () => {
+    const fixture = render([book()], { languages: [{ language: 'unknown', count: 1 }] }, { language: 'unknown' });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { ebooks: { filter: { languageChip: 'Sprache: {{lang}}', languageUnknown: 'Unbekannt' } } });
+    translate.use('de');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const chips = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.eb-active .eb-chip')).map(c => c.textContent!.replace(/\s+/g, ' '));
+    expect(chips.some(t => t.includes('Sprache: Unbekannt'))).withContext(chips.join(' | ')).toBeTrue();
+    sessionStorage.removeItem('rh.ebooks.listState');
+    fixture.destroy();
+  });
+
+  it('d9-rk-ebook-anon-handy-banner-vorlauf: Gast-Banner ein Satz, am Handy einzeilig gebaut (Knopf rechts in derselben Zeile)', async () => {
+    for (const lang of ['de', 'en', 'hr']) {
+      const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
+      const banner: string = (await res.json()).ebooks.anonymous.banner;
+      expect(banner.split(/[.!?](\s|$)/).filter(x => x && x.trim()).length).withContext(lang).toBe(1);
+    }
+    const css = compactCss(EbookListComponent);
+    const mobile = css.slice(css.indexOf('@media(max-width:599.98px)'));
+    expect(mobile).toMatch(/\.eb-anon(\[[^\]]*\])?\{flex-wrap:nowrap;padding-block:4px;font-size:0\.875rem/);
+    expect(mobile).toMatch(/\.eb-anon(\[[^\]]*\])?>span(\[[^\]]*\])?\{flex:110;min-width:0/);
+    expect(mobile).toMatch(/\.eb-anon(\[[^\]]*\])?>a(\[[^\]]*\])?\{flex:none/);
+  });
+
+  it('d9-rk-ebook-cover-beschnitten: Titelbild nie beschnitten (contain auf getönter Fläche)', () => {
+    const css = compactCss(EbookListComponent);
+    expect(css).toMatch(/\.eb-cover(\[[^\]]*\])?img(\[[^\]]*\])?\{width:100%;height:100%;object-fit:contain/);
+    expect(css).not.toContain('object-fit:cover');
   });
 });

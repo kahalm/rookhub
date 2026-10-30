@@ -103,8 +103,9 @@ export interface PuzzleSettingsDialogResult {
         <div class="psd-row">
           <span class="psd-label">
             {{ 'puzzles.settings.visualization' | translate }}
-            <button type="button" class="psd-info-btn" (click)="showVizInfo = !showVizInfo" [class.active]="showVizInfo">
-              <mat-icon>info_outline</mat-icon>
+            <button type="button" class="psd-info-btn" (click)="showVizInfo = !showVizInfo" [class.active]="showVizInfo"
+                    [attr.aria-label]="'puzzles.settings.showExplanation' | translate" [attr.aria-expanded]="showVizInfo">
+              <mat-icon>help_outline</mat-icon>
             </button>
           </span>
           <mat-select [(ngModel)]="visualizationModeEdit" class="psd-select">
@@ -133,7 +134,11 @@ export interface PuzzleSettingsDialogResult {
 
         @if (data.mode !== 'endless') {
           <div class="psd-row">
-            <span class="psd-label">{{ 'puzzles.settings.stockfishDepth' | translate }}</span>
+            <!-- d9-rk-einstellungen-info-statt-hilfesymbol: Klartext statt „Stockfish-Tiefe“, Wirkung in der Unterzeile. -->
+            <span class="psd-label">
+              {{ 'puzzles.settings.stockfishDepth' | translate }}
+              <span class="psd-sublabel">{{ 'puzzles.settings.stockfishDepthHint' | translate }}</span>
+            </span>
             <input class="psd-number-input" type="number" [(ngModel)]="stockfishDepthEdit" min="1" max="24" step="1">
           </div>
         }
@@ -150,8 +155,9 @@ export interface PuzzleSettingsDialogResult {
           <div class="psd-row">
             <span class="psd-label">
               {{ 'puzzles.filters.difficulty' | translate }}
-              <button type="button" class="psd-info-btn" (click)="showDifficultyInfo = !showDifficultyInfo" [class.active]="showDifficultyInfo">
-                <mat-icon>info_outline</mat-icon>
+              <button type="button" class="psd-info-btn" (click)="showDifficultyInfo = !showDifficultyInfo" [class.active]="showDifficultyInfo"
+                      [attr.aria-label]="'puzzles.settings.showExplanation' | translate" [attr.aria-expanded]="showDifficultyInfo">
+                <mat-icon>help_outline</mat-icon>
               </button>
             </span>
             <mat-select [(ngModel)]="difficultyEdit" class="psd-select">

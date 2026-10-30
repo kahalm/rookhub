@@ -54,6 +54,7 @@ import { MaiaSparring } from './maia/maia-sparring';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { TablebasePanelComponent, TablebaseVerdict } from './tablebase-panel.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { fullscreenSupported } from '../../shared/fullscreen/fullscreen.util';
 import { NextMoveChoice, nextMoveKey, openNextMoveChoice, siblingLine } from './next-move-choice';
 import { GamesService } from '../games/games.service';
 import { AnalyzeGameService } from '../games/analyze-game.service';
@@ -75,6 +76,9 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   styleUrl: './analysis.component.scss',
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
+  /** Das Brett trägt oben die Vollbild-Knopfzeile (nur wo der Browser Element-Vollbild kann) — die Bewertungsleiste
+   *  rückt um deren Höhe nach unten und fluchtet so mit dem Brett (d9-rk-analyse-bewertungsleiste-ueberstand). */
+  readonly fsRow = fullscreenSupported();
   /** Breitbild-Stufe (u1-rk-analyse-3spalten, ab 2400 px): drei Spalten, der Explorer steht offen in der dritten. */
   readonly wideLayout = mediaSignal();
   /** Herkunft für den „+"-Knopf (0.749.0): das Analysebrett kennt keine Partie. */

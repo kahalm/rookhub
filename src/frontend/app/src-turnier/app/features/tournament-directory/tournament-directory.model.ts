@@ -348,6 +348,38 @@ export function displayLocation(location: string | null | undefined, translate: 
   return isPlaceholderLocation(location) ? translate('tournamentDirectory.variousVenues') : location;
 }
 
+/** Leerwerte, die chess-results als Region liefert („-", „–", „?") — sie zählen nicht als Inhalt (d9-t-region-platzhalter). */
+function blankRegion(value: string | null | undefined): boolean {
+  return !value || /^[\s\-–—?]*$/.test(value);
+}
+
+/**
+ * Region zur Anzeige: „Tirol (AUT)", ohne echte Region nur der Verband („AUT"), ohne beides `null` (d9-t-region-platzhalter:
+ * vorher stand „- (AUT)" da).
+ */
+export function regionText(entry: Pick<DirectoryEntry, 'state' | 'federation'>): string | null {
+  const state = blankRegion(entry.state) ? null : entry.state!.trim();
+  const fed = blankRegion(entry.federation) ? null : entry.federation!.trim();
+  if (state && fed) return `${state} (${fed})`;
+  return state ?? fed;
+}
+
+/**
+ * Länge, auf die die Trefferliste der chess-results-Turniersuche Namen kappt — ohne Auslassungszeichen, oft mitten im
+ * Wort („… ABSOLUTO 202"). Auf Prod waren am 30.10.2026 rund 24 000 von 58 000 Einträgen genau so lang
+ * (d9-t-kartentitel-ohne-ellipse); der Server lädt den vollen Namen bisher nicht nach.
+ */
+export const CHESS_RESULTS_NAME_CAP = 50;
+
+/**
+ * Der Name zur Anzeige: von chess-results genau auf {@link CHESS_RESULTS_NAME_CAP} Zeichen gekappt → mit „…" (DESIGN 5.2).
+ * Ein zufällig genau 50 Zeichen langer vollständiger Name bekommt ebenfalls „…" — das ist der kleinere Fehler.
+ */
+export function displayName(entry: Pick<DirectoryEntry, 'name' | 'chessResultsId'>): string {
+  const name = entry.name ?? '';
+  return entry.chessResultsId && name.length === CHESS_RESULTS_NAME_CAP ? name.trimEnd() + '…' : name;
+}
+
 /**
  * Gleichnamige Turniere am selben Tag, die NICHT zu einer Karte zusammengefasst sind (UI-Sweep 2026-10-11,
  * r2-t-dup-cards). Liefert die Ids der Eintraege, die einen solchen Doppelgaenger in derselben Liste haben.

@@ -60,6 +60,28 @@ describe('GameRoastDialogComponent', () => {
     expect(el.querySelector('.error')!.textContent).toContain('games.roast.error.dailyLimit');
   });
 
+  it('d9: ohne Analyse bietet der Dialog „Partie analysieren“ (schließt mit analyze) statt nur „Schließen“', () => {
+    const closed: unknown[] = [];
+    TestBed.overrideProvider(MatDialogRef, { useValue: { close: (v: unknown) => closed.push(v) } });
+    const { fixture, http, el } = setup({ gameId: 7, shareUrl: null, canAnalyze: true });
+    http.expectOne('/api/games/7/roasts?lang=en').flush({ available: true, hasAnalysis: false, items: [] });
+    fixture.detectChanges();
+    const labels = Array.from(el.querySelectorAll('[mat-dialog-actions] button'), b => b.textContent!.trim());
+    expect(labels.some(l => l.includes('games.analyze'))).toBeTrue();
+    expect(labels).toContain('common.cancel');
+    expect(labels).not.toContain('common.close');
+    (el.querySelector('button.analyze') as HTMLButtonElement).click();
+    expect(closed).toEqual(['analyze']);
+  });
+
+  it('d9: kann der Aufrufer nicht analysieren, bleibt es bei „Schließen“', () => {
+    const { fixture, http, el } = setup({ gameId: 7, shareUrl: null });
+    http.expectOne('/api/games/7/roasts?lang=en').flush({ available: true, hasAnalysis: false, items: [] });
+    fixture.detectChanges();
+    expect(el.querySelector('button.analyze')).toBeNull();
+    expect(el.querySelector('[mat-dialog-actions]')!.textContent).toContain('common.close');
+  });
+
   it('Partie mit diesem Roast teilen: gibt frei, kopiert /g/{token}?roast={id}, „Nicht mehr teilen" nimmt zurück', async () => {
     const { fixture, http, el } = setup({ gameId: 7, shareUrl: 'https://x/g/abc', shareToken: 'abc' });
     http.expectOne(r => r.url === '/api/games/7/roasts' && r.method === 'GET')

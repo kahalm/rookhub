@@ -85,6 +85,14 @@ describe('CalcEditionDialogComponent', () => {
     expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
+  it('d9: „optional“ steht als Hinweis unter der Tester-Vorschau, nicht im Label; die Freigabe hat keinen', async () => {
+    const { el } = await open({ chapter: 'KW 8' });
+    const [publish, tester] = Array.from(el.querySelectorAll('app-date-time-fields'));
+    expect(publish.querySelector('mat-hint')).toBeNull();
+    expect(tester.querySelector('mat-hint')!.textContent!.trim()).toBe('common.optional');
+    expect(tester.querySelector('mat-label')!.textContent!.trim()).toBe('calc.series.testerPreviewAt');
+  });
+
   it('d8: ohne Löschen kein Abstandhalter vor dem Grund (sonst schob er den Grund nach rechts)', async () => {
     const { el } = await open({ chapter: 'KW 8' });
     expect(el.querySelector('mat-dialog-actions .spacer')).toBeNull();

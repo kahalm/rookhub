@@ -361,10 +361,12 @@ export class EbookListComponent implements OnInit, OnDestroy {
   }
 
   /** Kurzform der Sichtbarkeit für die Karte eines verwaltbaren Buchs. */
-  visibilityKey(book: Ebook): 'onlyMe' | 'everyone' | 'groups' {
+  /** d9-rk-ebooks-gruppen-mehrzahl: genau eine Gruppe → Einzahl-Schlüssel `groupsOne` (DESIGN 5.13). */
+  visibilityKey(book: Ebook): 'onlyMe' | 'everyone' | 'groups' | 'groupsOne' {
     if (!book.groupIds || book.groupIds.length === 0) return 'onlyMe';
     const everyone = this.groups?.find(g => g.isEveryone)?.id;
-    return everyone != null && book.groupIds.includes(everyone) ? 'everyone' : 'groups';
+    if (everyone != null && book.groupIds.includes(everyone)) return 'everyone';
+    return book.groupIds.length === 1 ? 'groupsOne' : 'groups';
   }
 
   size(bytes: number): string { return formatBytes(bytes, this.translate.currentLang() ?? undefined); }

@@ -68,15 +68,20 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
         }
         @if (saveError()) { <p class="mp-msg err" role="alert">{{ saveError() }}</p> }
         @if (saved()) { <p class="mp-msg ok" role="status">Gespeichert.</p> }
+        <!-- d9-l-plus-fenster-speichern-abstand: ein gesperrtes „Speichern“ nennt seinen Grund (DESIGN 2, Grundsatz 8) -->
+        @if (editing() && !dirty() && !busy() && !saved()) {
+          <p class="mp-why" id="mp-why">Zum Speichern erst eine Klassifizierung oder Bemerkung ändern.</p>
+        }
       } @else {
         <p class="mp-msg">Keine interessanten Stellungen.</p>
       }
     </mat-dialog-content>
-    <mat-dialog-actions>
+    <mat-dialog-actions class="mp-actions">
       @if (current(); as it) { <button type="button" class="btn-link" (click)="show(it)">In der Partie zeigen</button> }
       <span class="spacer"></span>
       <button type="button" class="btn-link" mat-dialog-close>Schließen</button>
-      @if (current() && editing()) { <button type="button" class="btn-sec mp-save" [disabled]="busy() || !dirty()" (click)="save()">Speichern</button> }
+      @if (current() && editing()) { <button type="button" class="btn-pri mp-save" [disabled]="busy() || !dirty()" [attr.aria-busy]="busy() || null"
+                                                          [attr.aria-describedby]="!dirty() && !busy() ? 'mp-why' : null" (click)="save()">Speichern</button> }
     </mat-dialog-actions>
   `,
   styles: [`
@@ -99,6 +104,9 @@ interface Item { game: MarkedPositionsGame; mark: ReplayMark; }
     .mp-msg { margin: 8px 0; }
     .mp-msg.err { color: var(--red); }
     .spacer { flex: 1; }
+    /* d9: Material gibt den Abstand nur mat-buttons — „Schließen“ klebte am Rahmen von „Speichern“ (DESIGN 3.2: 8 px) */
+    .mp-actions { gap: 8px; flex-wrap: wrap; }
+    .mp-why { margin: 8px 0 0; font-size: 0.85rem; color: var(--muted); }
   `],
 })
 export class MarkedPositionsDialogComponent {

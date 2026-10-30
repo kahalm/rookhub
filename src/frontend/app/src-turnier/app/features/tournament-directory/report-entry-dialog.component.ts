@@ -150,7 +150,7 @@ export class ReportEntryDialogComponent {
       this.translate.instant('tournamentDirectory.kind.' + entry.kind),
       this.translate.instant('tournamentDirectory.speed.' + entry.speed),
     ];
-    if (entry.isLeague) parts.push(this.translate.instant('tournamentDirectory.hideLeagues'));
+    if (entry.isLeague) parts.push(this.translate.instant('tournamentDirectory.report.league'));   // d9: Zustand „Liga“, nicht der Filterschalter „Ligen ausblenden“
     for (const group of entry.ageGroups) {
       parts.push(this.translate.instant('tournamentDirectory.age.' + group));
     }

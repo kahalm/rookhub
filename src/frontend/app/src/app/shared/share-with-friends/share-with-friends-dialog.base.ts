@@ -91,6 +91,11 @@ export const SHARE_DIALOG_TEMPLATE = `
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
+      <!-- d9-rk-share-dialog-button-grund: gesperrtes „Teilen (0)“ sagt, was fehlt (DESIGN 5.6, Gestaltung global in
+           styles.scss). Ohne Freunde steht schon „noFriends“ im Inhalt — dann kein zweiter Grund. -->
+      @if (!loading && !busy && selected.size === 0 && selectableFriends.length > 0) {
+        <span class="why" role="status">{{ 'common.pickFriendFirst' | translate }}</span>
+      }
       <button mat-button (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
       <button mat-flat-button color="primary" [disabled]="selected.size === 0 || busy" (click)="share()">
         {{ tk('shareButton') | translate:{ count: selected.size } }}

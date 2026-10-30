@@ -69,6 +69,25 @@ describe('MarkedPositionsDialogComponent', () => {
     expect(chips()).toEqual(['markPosition.tag.opening']);
   });
 
+  // d9-l-plus-fenster-speichern-abstand: gesperrtes Speichern nennt den Grund, ist Hauptknopf, „Schließen“ mit 8 px Abstand
+  it('Bearbeiten: „Speichern“ gesperrt mit Grund, Hauptknopf, Abstand zu „Schließen“; Grund weg, sobald etwas geändert ist', async () => {
+    const { fixture, c, el } = await setup({ clubGameMarks: () => Promise.resolve([MAIN]) });
+    (el.querySelector('.mn-pencil') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const save = el.querySelector('.mp-save') as HTMLButtonElement;
+    expect(save.disabled).toBeTrue();
+    expect(save.classList).toContain('btn-pri');
+    expect(el.querySelector('#mp-why')?.textContent).toContain('erst eine Klassifizierung oder Bemerkung ändern');
+    expect(save.getAttribute('aria-describedby')).toBe('mp-why');
+    expect(getComputedStyle(el.querySelector('.mp-actions')!).columnGap).toBe('8px');
+    expect(getComputedStyle(save).cursor).not.toBe('progress');
+    c.comment.set('anders');
+    fixture.detectChanges();
+    expect((el.querySelector('.mp-save') as HTMLButtonElement).disabled).toBeFalse();
+    expect(el.querySelector('#mp-why')).toBeNull();
+    expect(el.querySelector('.mp-save')!.getAttribute('aria-describedby')).toBeNull();
+  });
+
   it('Speichern schickt die eigenen Notizen und bleibt auf der Stellung; „In der Partie zeigen" schließt mit ihr', async () => {
     const saved = { ...VAR, myTags: ['trap'], myComment: 'neu', mine: true, count: 2 };
     const put = jasmine.createSpy('put').and.returnValue(Promise.resolve([MAIN, saved]));

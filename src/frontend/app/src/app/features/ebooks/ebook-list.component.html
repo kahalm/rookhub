@@ -111,7 +111,7 @@
           }
           @if (language) {
             <button type="button" class="eb-chip eb-chip--on" aria-pressed="true" (click)="setLanguage(null)">
-              <mat-icon>language</mat-icon>{{ languageLabel(language) }}<mat-icon>close</mat-icon>
+              <mat-icon>language</mat-icon>{{ 'ebooks.filter.languageChip' | translate: { lang: languageLabel(language) } }}<mat-icon>close</mat-icon>
             </button>
           }
           @if (translation) {

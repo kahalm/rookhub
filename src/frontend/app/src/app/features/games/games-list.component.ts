@@ -624,7 +624,7 @@ export class GamesListComponent implements OnInit {
   /** ⋮-Aktionen: eine Fassung mit der Partieseite (V33, `GameActionsService`); die Liste lädt das PGN je Aktion nach. */
   /** „Roast my game" (0.535.0). */
   roast(g: SavedGame): void {
-    this.actions.roast(g.id, g.shareToken ?? null);
+    this.actions.roast(g.id, g.shareToken ?? null, () => this.analyze(g));
   }
 
   /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */

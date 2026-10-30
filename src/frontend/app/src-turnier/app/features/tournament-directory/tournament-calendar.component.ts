@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DirectoryCalendarDay, DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
+import { DirectoryNamePipe } from './directory-name.pipe';
 
 interface CalendarCell {
   date: string;
@@ -42,7 +43,7 @@ interface AgendaWeek {
   selector: 'app-tournament-calendar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [CommonModule, MatButtonModule, MatIconModule, TranslatePipe, DirectoryNamePipe],
   templateUrl: './tournament-calendar.component.html',
   styleUrls: ['./tournament-calendar.component.scss'],
 })

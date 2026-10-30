@@ -33,6 +33,8 @@
     "ebook_file_missing": "A fájl hiányzik a szerverről."
   },
   "common": {
+    "optional": "Nem kötelező",
+    "pickFriendFirst": "Előbb válassz legalább egy barátot.",
     "durationMinSec": "{{m}} perc {{s}} mp",
     "durationSec": "{{s}} mp",
     "paginator": {
@@ -1349,7 +1351,9 @@
       "modeCrazy": "Őrült",
       "visualization": "Vizualizáció",
       "vizArrow": "Ellenfél lépésének nyila",
-      "stockfishDepth": "Stockfish-mélység",
+      "stockfishDepth": "A gép számítási mélysége",
+      "stockfishDepthHint": "Magasabb = erősebb válaszok és pontosabb lépésellenőrzés, de tovább tart.",
+      "showExplanation": "Magyarázat megjelenítése",
       "enPassantForced": "Kötelező en passant",
       "enPassantForcedHint": "Anarchy-tábla: ha van en passant ütés, akkor kötelező eljátszani.",
       "offPathWarn": "Figyelmeztetés rossz elágazásnál",
@@ -1782,7 +1786,6 @@
     "fromChapter": {
       "button": "Könyvfejezetből",
       "title": "Heti poszt könyvfejezetből",
-      "pickBookFirst": "Előbb válassz könyvet.",
       "needBook": "Előbb válassz könyvet és fejezetet.",
       "needChapter": "Előbb válassz fejezetet.",
       "needSchedule": "Előbb válassz dátumot és időpontot.",
@@ -3188,7 +3191,7 @@
       "videoUrl": "Videó-URL",
       "publishAt": "Megjelenés időpontja",
       "publishRequired": "Előbb válaszd ki a megjelenés időpontját.",
-      "testerPreviewAt": "Tesztelői előnézet (opcionális)",
+      "testerPreviewAt": "Tesztelői előnézet",
       "hint": "A tesztelők a tesztelői időponttól látják ezt a fejezetet, mindenki más a megjelenéstől. Hagyd üresen a tesztelői mezőt, ha nincs korai hozzáférés.",
       "watchVideo": "Videó megtekintése",
       "releasesOn": "megjelenik: {{date}}",
@@ -3397,7 +3400,7 @@
       "busy": "Az AI élesíti a nyelvét …",
       "share": "Megosztás",
       "notConfigured": "A roastolás nincs beállítva ezen a szerveren.",
-      "noAnalysis": "Előbb elemeztesd a játszmát — elemzés nélkül nincs mit roastolni.",
+      "noAnalysis": "A játszma még nincs elemezve – elemzés nélkül nincs mit roastolni.",
       "error": {
         "notConfigured": "A roastolás nincs beállítva ezen a szerveren.",
         "noAnalysis": "Előbb elemeztesd a játszmát.",
@@ -4194,6 +4197,7 @@
       "title": "Hibás bejegyzés jelentése",
       "lead": "Mondd el, mi a hibás itt. Minden mező szabadon hagyható — a szöveg is: ha egy szó nélkül küldöd el, az is annyit mond, hogy „ezzel itt valami nem stimmel”.",
       "current": "Jelenleg tárolva",
+      "league": "Csapatbajnokság",
       "message": "Mi a hiba?",
       "learnTitle": "Két kérdés, amely ezen az egy versenyen túl is segít",
       "namePattern": "Hogyan hívják az ilyen versenyeket a te vidékeden?",
@@ -5082,7 +5086,9 @@
       "selected": "{{count}} / {{max}} kiválasztva",
       "depth": "Mélység",
       "submit": "Összehasonlítás",
-      "noEngine": "Ehhez most nem áll rendelkezésre motor — állíts be háttérmotort a profilodban.",
+      "noEngine": "Az összehasonlítás a szerveren fut, nem a böngészőben — ott most nincs szabad motor. Saját motorral a profilodban bármikor működik.",
+      "noEngineWhy": "Most nincs szabad szervermotor",
+      "toProfile": "A profilhoz",
       "houseEngine": "A számolás a házi motoron fut (legfeljebb {{depth}} mélységig).",
       "noExplanations": "Nyelvi modell nélkül csak a kiszámolt változatokat kapod, magyarázatot nem."
     },
@@ -5521,7 +5527,7 @@
   },
   "ebooks": {
     "anonymous": {
-      "banner": "Nem vagy bejelentkezve: a mindenkivel megosztott könyveket látod. Amit feltöltesz, a tiéd marad, és bejelentkezéskor átkerül a fiókodba.",
+      "banner": "Bejelentkezés nélkül csak a mindenkivel megosztott könyveket látod.",
       "signIn": "Bejelentkezés",
       "uploadHint": "Fiók nélkül csak te látod a könyvet ezen az eszközön (legfeljebb {{max}}). Bejelentkezéskor átkerül a fiókodba; az át nem vett könyveket 30 nap után töröljük."
     },
@@ -5586,7 +5592,8 @@
       "gameNav": "Lépkedés a játszmában",
       "gameStart": "Játszma eleje",
       "gameEnd": "Játszma vége",
-      "gameToDiagram": "Ábra",
+      "gameToDiagram": "Vissza az ábrához",
+      "gameAtDiagram": "Ábraállás",
       "gameHint": "Egy lépésre kattintva oda ugrik; a saját lépések mellékváltozatot nyitnak.",
       "gameBack": "Vissza a játszmához"
     },
@@ -5618,6 +5625,7 @@
       "eloRange": "Élő {{from}}–{{to}}",
       "language": "Nyelv",
       "languageUnknown": "Ismeretlen",
+      "languageChip": "Nyelv: {{lang}}",
       "translatedInto": "Fordítás: {{lang}}"
     },
     "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
@@ -5640,6 +5648,7 @@
       "onlyMe": "Csak én",
       "everyone": "Minden bejelentkezett",
       "groups": "{{n}} csoport",
+      "groupsOne": "{{n}} csoport",
       "onlyMeHint": "Nincs csoport bejelölve: ezt a könyvet csak te (és az adminisztrátorok) látod.",
       "groupsHint": "A bejelölt csoportok tagjai látják ezt a könyvet.",
       "noGroups": "Még nem vagy tagja egy csoportnak sem – a könyv csak számodra marad látható. Egy adminisztrátor hozzáadhat egy csoporthoz."
@@ -5806,8 +5815,8 @@
       },
       "title": "Könyvfordítások",
       "off": "A fordítás ezen a szerveren ki van kapcsolva.",
-      "noModel": "Nincs saját hardveres modell beállítva — a könyveket csak a Sparkon fordítjuk.",
-      "quiet": "A Spark tiltott ideje — folytatás {{until}}-kor.",
+      "noModel": "Nincs saját modell beállítva — a könyveket csak a fordítószerver fordítja.",
+      "quiet": "A fordítás szünetel eddig: {{until}}.",
       "active": "Éppen fordít.",
       "idle": "Most nincs mit fordítani.",
       "progress": "{{done}} / {{total}} szöveg",
@@ -5829,7 +5838,7 @@
       "undetected": "még nincs ellenőrizve",
       "badgeHint": "Angolul is olvasható (váltó az olvasóban)",
       "enqueue": "Következőként angolra fordítani",
-      "enqueued": "Sorba állítva — a Spark következő szabad idősávjában fordítjuk."
+      "enqueued": "Sorba állítva — a következő szabad idősávban fordítjuk."
     },
     "tags": {
       "opening": "Megnyitás",

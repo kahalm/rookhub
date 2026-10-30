@@ -10,7 +10,8 @@ import { MoveCompareDialogComponent, legalMoves } from './move-compare-dialog.co
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 describe('MoveCompareDialogComponent', () => {
-  function make(candidates = [{ uci: 'e2e4', evalText: '+0.30' }, { uci: 'd2d4', evalText: '+0.25' }, { uci: 'g1f3', evalText: '+0.20' }]) {
+  function make(candidates = [{ uci: 'e2e4', evalText: '+0.30' }, { uci: 'd2d4', evalText: '+0.25' }, { uci: 'g1f3', evalText: '+0.20' }],
+                engineAvailable = true) {
     const ref = jasmine.createSpyObj<MatDialogRef<MoveCompareDialogComponent>>('MatDialogRef', ['close']);
     TestBed.configureTestingModule({
       imports: [MoveCompareDialogComponent],
@@ -23,7 +24,7 @@ describe('MoveCompareDialogComponent', () => {
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/move-comparisons/status').flush({
-      engineAvailable: true, ownEngine: false, explanations: true, maxCandidates: 4, defaultDepth: 22, maxDepth: 24,
+      engineAvailable, ownEngine: false, explanations: true, maxCandidates: 4, defaultDepth: 22, maxDepth: 24,
       openComparisons: 0, maxOpen: 3,
     });
     fixture.detectChanges();
@@ -72,5 +73,32 @@ describe('MoveCompareDialogComponent', () => {
     fixture.detectChanges();
     expect(c.error()).toBe('moveCompare.error.too-many-open');
     expect(c.busy()).toBeFalse();
+  });
+
+  // d9-rk-vergleichen-dialog-engine-hinweis: ohne Server-Engine sagt der Dialog, dass der Vergleich auf dem SERVER rechnet
+  // (die Browser-Engine zählt nicht), färbt das leise statt als Warnung, verlinkt das Profil, zeigt den Grund neben dem
+  // gesperrten Knopf und keinen Zähler/keine Tiefe, die nichts bewirken.
+  it('without a server engine explains it quietly, links the profile and names the reason next to the locked button', () => {
+    const { c, fixture, ref } = make(undefined, false);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(c.noEngine()).toBeTrue();
+    expect(c.canSubmit()).toBeFalse();
+    const note = el.querySelector('.note.no-engine')!;
+    expect(note.textContent).toContain('moveCompare.dialog.noEngine');
+    expect(el.querySelector('p.warn')).toBeNull();
+    const link = note.querySelector('a[href="/profile"]') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    link.click();
+    expect(ref.close).toHaveBeenCalled();
+    expect(el.querySelector('mat-dialog-actions .why')?.textContent).toContain('moveCompare.dialog.noEngineWhy');
+    expect(el.querySelector('.foot')).toBeNull();
+  });
+
+  it('with an engine shows neither the note nor a reason', () => {
+    const { fixture } = make();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.no-engine')).toBeNull();
+    expect(el.querySelector('mat-dialog-actions .why')).toBeNull();
+    expect(el.querySelector('.foot')).not.toBeNull();
   });
 });

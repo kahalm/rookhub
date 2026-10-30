@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
 import { TournamentTablesComponent } from './tournament-tables.component';
@@ -81,6 +82,18 @@ describe('PublicTournamentComponent', () => {
     http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
     const open = spyOn((fixture.componentInstance as unknown as { dialog: MatDialog }).dialog, 'open').and.returnValue({} as never);
     fixture.componentInstance.share();
+    expect(open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ autoFocus: 'dialog' }));
+  });
+
+  // d9-t-team-dialog-schliessen-gefuellt
+  it('öffnet das Mannschaftsfenster mit Fokus auf der Dialogfläche (autoFocus dialog)', async () => {
+    const { fixture, http } = await render();
+    http.expectOne(`/api/tournaments/${id}/players`).flush(players);
+    http.expectOne(`/api/tournaments/${id}/teams`).flush(teams);
+    const c = fixture.componentInstance as unknown as { dialog: MatDialog; tournaments: { getTeam: unknown } };
+    spyOn(c.tournaments as never, 'getTeam').and.returnValue(of({ name: 'Red', players: [] }) as never);
+    const open = spyOn(c.dialog, 'open').and.returnValue({} as never);
+    fixture.componentInstance.showTeamPlayers('Red');
     expect(open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ autoFocus: 'dialog' }));
   });
 

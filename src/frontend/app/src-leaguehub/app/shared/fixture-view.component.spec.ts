@@ -170,6 +170,45 @@ describe('FixtureViewComponent', () => {
     });
   }
 
+  // d9-l-prognose-brettpaarung-handy-namen-umbruch: ohne Abzeichen keine unsichtbaren Platzhalter im Stapel (~147 → ~100 px)
+  it('Brettpaarungen am Handy ohne Abzeichen: Zeile ≤ 110 px, Abzeichen-Baustein belegt keinen Platz', async () => {
+    api.fixtureGames.and.resolveTo([
+      { board: 1, white: 'Baumgartner, Armin', whiteElo: 1904, black: 'Köll, Hannes', blackElo: 1850, result: '1 - 0',
+        forfeit: false, pgn: '1. e4 1-0', source: 'club', clubGameId: 10 },
+      { board: 2, white: 'Mitteregger, Gottfried', whiteElo: 1826, black: 'Niedermayer, Anton', blackElo: 1987, result: '0 - 1',
+        forfeit: false, pgn: '1. d4 0-1', source: 'club', clubGameId: 11 },
+    ]);
+    lineupsApi.clubGameMarkCounts.and.resolveTo({ '11': 1 });
+    (fixture.componentInstance as unknown as { rookHub: string }).rookHub = 'https://rookhub.example';
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '390px';
+    fixture.componentRef.setInput('leagueTnr', 1479345);
+    render({ ...OPEN, status: 'played', score: '3 : 3' });
+    for (let i = 0; i < 3; i++) { await fixture.whenStable(); await new Promise(r => setTimeout(r)); }
+    fixture.detectChanges();
+    const rows = host.querySelectorAll<HTMLElement>('.pairings tbody tr');
+    const bare = rows[0].querySelector('lh-game-badges') as HTMLElement;
+    expect(bare).not.toBeNull();
+    expect(getComputedStyle(bare).display).toBe('none');
+    expect(rows[0].getBoundingClientRect().height).toBeLessThanOrEqual(110);
+    // mit einem Abzeichen: nur das echte steht im Stapel, der leere „!!"-Platz nicht
+    const slot = rows[1].querySelector('.gb-slot') as HTMLElement;
+    expect(getComputedStyle(slot).display).toBe('none');
+    expect(rows[1].querySelector('.gb-mark')).not.toBeNull();
+  });
+
+  // d9-l-ergebnis-zeilenumbruch-gespielt: „1 : 0“ mit geschützten Leerzeichen und nowrap
+  it('Gespielt-Zeile: Ergebnis bleibt zusammen („1 : 0“, kein Umbruch, Strich nicht am Zeilenanfang)', () => {
+    const el = render({ ...OPEN, status: 'played', boards: [
+      { ...OPEN.boards![0], actual: { n: 'Baumgartner, Armin', elo: 1904, rank: 1, score: '1', own: '0', vs: 'Köll, Hannes', vs_elo: null } },
+    ] });
+    const res = el.querySelector('.played .res') as HTMLElement;
+    expect(res.textContent).toBe('1\u00a0:\u00a00');
+    expect(getComputedStyle(res).whiteSpace).toBe('nowrap');
+    expect(el.querySelector('.played')!.textContent).toContain('(1904)\u00a0– ');
+  });
+
   it('gespielte Runde: erste Züge je Brett aus den Aufstellungen, „Züge eingeben" wo erlaubt (2026-10-08)', async () => {
     api.fixtureGames.and.resolveTo([
       { board: 1, white: 'Ackermann, Anna', whiteElo: 2040, black: 'Brunner, Bert', blackElo: 2100, result: '1 - 0', forfeit: false,

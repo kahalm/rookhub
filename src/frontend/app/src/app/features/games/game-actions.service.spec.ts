@@ -5,7 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GameActionsService } from './game-actions.service';
@@ -131,7 +131,19 @@ describe('GameActionsService', () => {
     const open = spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({} as never);
     actions.roast(3, 'tok');
     expect(open.calls.mostRecent().args[0]).toBe(GameRoastDialogComponent);
-    expect(open.calls.mostRecent().args[1]!.data).toEqual({ gameId: 3, shareUrl: `${window.location.origin}/g/tok`, shareToken: 'tok' });
+    expect(open.calls.mostRecent().args[1]!.data).toEqual({ gameId: 3, shareUrl: `${window.location.origin}/g/tok`, shareToken: 'tok', canAnalyze: false });
+  });
+
+  it('d9: Roast ohne Analyse — „Partie analysieren“ im Dialog startet die Analyse des Aufrufers', () => {
+    const closed = new Subject<string | undefined>();
+    const open = spyOn(TestBed.inject(MatDialog), 'open').and.returnValue({ afterClosed: () => closed } as never);
+    let analyzed = 0;
+    actions.roast(3, null, () => analyzed++);
+    expect(open.calls.mostRecent().args[1]!.data).toEqual(jasmine.objectContaining({ canAnalyze: true }));
+    closed.next('analyze');
+    expect(analyzed).toBe(1);
+    closed.next(undefined);
+    expect(analyzed).toBe(1);
   });
 
   it('Lc0: meldet Start bzw. Fehlschlag', () => {

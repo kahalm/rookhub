@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { By } from '@angular/platform-browser';
@@ -127,6 +128,17 @@ describe('TournamentDetailComponent', () => {
     const fixture = await render({ active: false, activeUntil: null });
     const open = spyOn((fixture.componentInstance as unknown as { dialog: MatDialog }).dialog, 'open').and.returnValue({} as never);
     fixture.componentInstance.share();
+    expect(open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ autoFocus: 'dialog' }));
+  });
+
+  // d9-t-team-dialog-schliessen-gefuellt: sonst bekommt „Schließen“ den Fokus und erscheint als Tonfläche
+  it('öffnet das Mannschaftsfenster mit Fokus auf der Dialogfläche (autoFocus dialog)', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const c = fixture.componentInstance as unknown as { dialog: MatDialog; api: { getTeamDetails: unknown }; teams: unknown[] };
+    c.teams = [{ snr: 3, name: 'Reinter Snina' }];
+    spyOn(c.api as never, 'getTeamDetails').and.returnValue(of({ name: 'Reinter Snina', players: [] }) as never);
+    const open = spyOn(c.dialog, 'open').and.returnValue({} as never);
+    fixture.componentInstance.showTeamPlayers('Reinter Snina');
     expect(open.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ autoFocus: 'dialog' }));
   });
 

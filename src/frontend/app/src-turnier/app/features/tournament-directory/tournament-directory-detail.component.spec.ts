@@ -69,6 +69,22 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.verify();
   });
 
+  // d9-t-region-platzhalter / d9-t-kartentitel-ohne-ellipse
+  it('zeigt bei Region „-" nur den Verband und gekappte chess-results-Namen mit „…“', async () => {
+    await setup('1457129');
+    const cut = 'Brno Open 2026 - B FIDE open15th International Che';
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129', { state: '-', name: cut }));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const dts = Array.from(el.querySelectorAll('dt'));
+    const region = dts.find(d => d.textContent?.includes('tournamentDirectory.detail.region'));
+    expect(region?.nextElementSibling?.textContent?.trim()).toBe('AUT');
+    expect(el.textContent).not.toContain('- (AUT)');
+    expect(el.querySelector('h1')?.textContent?.trim()).toBe(cut + '…');
+    http.verify();
+  });
+
   it('sagt es, wenn das Turnier nicht im Verzeichnis steht', async () => {
     await setup('999');
     http.expectOne('/api/tournament-directory/999')

@@ -154,6 +154,8 @@ export class EbookBoardComponent implements OnChanges {
   readonly gameLine = signal<EbookGameLine | null>(null);
   readonly gameState = signal<'idle' | 'loading' | 'ready' | 'missing'>('idle');
   readonly gamePly = signal(0);
+  /** Brett steht genau auf der Diagrammstellung der Partie (ohne eigene Züge) — dann Marke statt Knopf „Zum Diagramm“. */
+  readonly atGameDiagram = computed(() => this.played().length === 0 && this.gamePly() === (this.gameLine()?.game?.ply ?? 0));
   private gameRequest = 0;
 
   /** Engine-Leiste (zuschaltbar in jedem Modus). */

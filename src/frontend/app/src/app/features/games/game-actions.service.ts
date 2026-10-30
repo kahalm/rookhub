@@ -10,7 +10,7 @@ import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
 import { GameAnalysisService } from '../analysis/game-analysis.service';
 import { GamesService, SavedGameDetail } from './games.service';
-import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
+import { GameRoastData, GameRoastDialogComponent, GameRoastResult } from './game-roast-dialog.component';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 
@@ -145,12 +145,15 @@ export class GameActionsService {
     });
   }
 
-  /** „Roast my game" (0.535.0) — nur die eigene Partie. */
-  roast(gameId: number, shareToken: string | null): void {
-    this.dialog.open(GameRoastDialogComponent, {
-      data: { gameId, shareUrl: shareToken ? this.games.shareUrl(shareToken) : null, shareToken: shareToken ?? null } satisfies GameRoastData,
+  /** „Roast my game" (0.535.0) — nur die eigene Partie. `analyze`: startet die Analyse, wenn der Dialog mangels
+   *  Analyse „Partie analysieren“ anbietet und der Nutzer das wählt (d9-rk-roast-dialog-sackgasse). */
+  roast(gameId: number, shareToken: string | null, analyze?: () => void): void {
+    const ref = this.dialog.open<GameRoastDialogComponent, GameRoastData, GameRoastResult>(GameRoastDialogComponent, {
+      data: { gameId, shareUrl: shareToken ? this.games.shareUrl(shareToken) : null, shareToken: shareToken ?? null,
+        canAnalyze: !!analyze } satisfies GameRoastData,
       maxWidth: '96vw',
     });
+    if (analyze) ref.afterClosed().subscribe(r => { if (r === 'analyze') analyze(); });
   }
 
   /** „Mit Lc0 analysieren": den Auftrag anlegen; `started` läuft nur nach Erfolg. */

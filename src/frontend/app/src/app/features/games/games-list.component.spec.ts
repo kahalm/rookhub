@@ -448,11 +448,11 @@ describe('GamesListComponent', () => {
 
     it('Roast und Formular-Foto öffnen ihre Dialoge; Foto herunterladen meldet einen Ladefehler', async () => {
       const { c, http, fixture, warn } = await loaded();
-      const open = spyOn(fixture.debugElement.injector.get(MatDialog), 'open').and.returnValue({} as never);
+      const open = spyOn(fixture.debugElement.injector.get(MatDialog), 'open').and.returnValue({ afterClosed: () => of(undefined) } as never);
       c.roast(c.games[0]);
       expect(open.calls.mostRecent().args[0]).toBe(GameRoastDialogComponent);
       expect(open.calls.mostRecent().args[1]).toEqual({
-        data: { gameId: 4, shareUrl: `${window.location.origin}/g/t`, shareToken: 't' }, maxWidth: '96vw' });
+        data: { gameId: 4, shareUrl: `${window.location.origin}/g/t`, shareToken: 't', canAnalyze: true }, maxWidth: '96vw' });
       c.photo(c.games[0], false);
       expect(open.calls.mostRecent().args[0]).toBe(ScoresheetPhotoDialogComponent);
       expect(open.calls.mostRecent().args[1]!.data).toEqual({ gameId: 4, page: 1 });

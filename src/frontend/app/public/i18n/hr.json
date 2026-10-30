@@ -113,6 +113,8 @@
     "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
   },
   "common": {
+    "optional": "Neobavezno",
+    "pickFriendFirst": "Najprije odaberi barem jednog prijatelja.",
     "durationMinSec": "{{m}} min {{s}} s",
     "durationSec": "{{s}} s",
     "paginator": {
@@ -1553,7 +1555,9 @@
       "modeCrazy": "Ludo",
       "visualization": "Vizualizacija",
       "vizArrow": "Strelica protivnika",
-      "stockfishDepth": "Stockfish dubina",
+      "stockfishDepth": "Dubina računanja računala",
+      "stockfishDepthHint": "Više = jači odgovori i točnija provjera tvojih poteza, ali traje dulje.",
+      "showExplanation": "Prikaži objašnjenje",
       "enPassantForced": "En passant obavezan",
       "enPassantForcedHint": "Anarchy ploča: kad je en passant moguć, obavezan je.",
       "offPathWarn": "Upozorenje na krivo skretanje",
@@ -2111,7 +2115,7 @@
       "videoUrl": "URL videozapisa",
       "publishAt": "Vrijeme objave",
       "publishRequired": "Najprije odaberi vrijeme objave.",
-      "testerPreviewAt": "Pregled za testere (opcionalno)",
+      "testerPreviewAt": "Pregled za testere",
       "hint": "Testeri vide ovo poglavlje od termina za testere, ostali od objave. Bez termina za testere nema ranog pristupa.",
       "watchVideo": "Pogledaj videozapis",
       "releasesOn": "objava {{date}}",
@@ -2198,7 +2202,6 @@
     "fromChapter": {
       "button": "Iz poglavlja knjige",
       "title": "Tjedna objava iz poglavlja knjige",
-      "pickBookFirst": "Najprije odaberi knjigu.",
       "needBook": "Najprije odaberi knjigu i poglavlje.",
       "needChapter": "Najprije odaberi poglavlje.",
       "needSchedule": "Najprije odaberi datum i vrijeme.",
@@ -3022,7 +3025,7 @@
       "busy": "AI oštri jezik …",
       "share": "Podijeli",
       "notConfigured": "Roastanje nije postavljeno na ovom poslužitelju.",
-      "noAnalysis": "Prvo analiziraj partiju — bez analize nema se što roastati.",
+      "noAnalysis": "Partija još nije analizirana – bez analize nema se što roastati.",
       "error": {
         "notConfigured": "Roastanje nije postavljeno na ovom poslužitelju.",
         "noAnalysis": "Prvo analiziraj partiju.",
@@ -4569,6 +4572,7 @@
       "title": "Prijavi pogrešan unos",
       "lead": "Reci nam što je ovdje pogrešno. Sve je neobavezno — i tekst: slanje bez ijedne riječi ipak kaže „s ovim nešto nije u redu\".",
       "current": "Trenutno zapisano",
+      "league": "Liga",
       "message": "Što je pogrešno?",
       "learnTitle": "Dva pitanja koja pomažu i izvan ovog jednog turnira",
       "namePattern": "Kako se takvi turniri zovu u tvojoj regiji?",
@@ -5082,7 +5086,9 @@
       "selected": "Odabrano {{count}} od {{max}}",
       "depth": "Dubina",
       "submit": "Usporedi",
-      "noEngine": "Trenutno nema dostupnog enginea — postavi pozadinski engine u profilu.",
+      "noEngine": "Usporedba se računa na poslužitelju, ne u pregledniku — ondje trenutno nema slobodnog enginea. S vlastitim engineom u profilu radi uvijek.",
+      "noEngineWhy": "Trenutno nema slobodnog enginea na poslužitelju",
+      "toProfile": "Na profil",
       "houseEngine": "Računa se na kućnom engineu (najviše dubina {{depth}}).",
       "noExplanations": "Bez jezičnog modela dobivaš samo izračunate linije, bez objašnjenja."
     },
@@ -5521,7 +5527,7 @@
   },
   "ebooks": {
     "anonymous": {
-      "banner": "Nisi prijavljen: vidiš knjige podijeljene sa svima. Ono što učitaš ostaje tvoje i prelazi u tvoj račun kad se prijaviš.",
+      "banner": "Bez prijave vidiš samo knjige podijeljene sa svima.",
       "signIn": "Prijava",
       "uploadHint": "Bez računa knjigu vidiš samo ti, na ovom uređaju (do {{max}}). Kad se prijaviš, prelazi u tvoj račun; nepreuzete knjige brišu se nakon 30 dana."
     },
@@ -5586,7 +5592,8 @@
       "gameNav": "Prolazak kroz partiju",
       "gameStart": "Početak partije",
       "gameEnd": "Kraj partije",
-      "gameToDiagram": "Dijagram",
+      "gameToDiagram": "Natrag na dijagram",
+      "gameAtDiagram": "Pozicija dijagrama",
       "gameHint": "Klik na potez skače na njega; vlastiti potezi postaju sporedna varijanta.",
       "gameBack": "Natrag na partiju"
     },
@@ -5618,6 +5625,7 @@
       "eloRange": "Elo {{from}}–{{to}}",
       "language": "Jezik",
       "languageUnknown": "Nepoznat",
+      "languageChip": "Jezik: {{lang}}",
       "translatedInto": "Prijevod: {{lang}}"
     },
     "empty": "Još nema e-knjiga – prenesi prvu.",
@@ -5640,6 +5648,7 @@
       "onlyMe": "Samo ja",
       "everyone": "Svi prijavljeni",
       "groups": "{{n}} grupa",
+      "groupsOne": "{{n}} grupa",
       "onlyMeHint": "Nijedna grupa nije označena: ovu knjigu vidiš samo ti (i administratori).",
       "groupsHint": "Članovi označenih grupa vide ovu knjigu.",
       "noGroups": "Još nisi ni u jednoj grupi – knjiga ostaje vidljiva samo tebi. Administrator te može dodati u grupu."
@@ -5806,8 +5815,8 @@
       },
       "title": "Prijevodi knjiga",
       "off": "Prevođenje je na ovom poslužitelju isključeno.",
-      "noModel": "Nije postavljen model na vlastitom hardveru — knjige se prevode samo preko Sparka.",
-      "quiet": "Vrijeme mirovanja Sparka — nastavlja se u {{until}}.",
+      "noModel": "Nije postavljen vlastiti model — knjige se prevode samo preko poslužitelja za prijevod.",
+      "quiet": "Prevođenje je pauzirano do {{until}}.",
       "active": "Upravo prevodi.",
       "idle": "Trenutno nema ništa za prevesti.",
       "progress": "{{done}} od {{total}} tekstova",
@@ -5829,7 +5838,7 @@
       "undetected": "još nije provjereno",
       "badgeHint": "Može se čitati i na engleskom (prekidač u čitaču)",
       "enqueue": "Sljedeće prevesti na engleski",
-      "enqueued": "U redu — prevest će se u sljedećem slobodnom terminu Sparka."
+      "enqueued": "U redu — prevest će se u sljedećem slobodnom terminu."
     },
     "tags": {
       "opening": "Otvaranje",

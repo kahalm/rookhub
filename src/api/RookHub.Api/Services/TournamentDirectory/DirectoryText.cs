@@ -20,6 +20,13 @@ public static class DirectoryText
         value is null ? null : value.Length <= max ? value : value[..max];
 
     /// <summary>
+    /// Reine Platzhalter („-", „–", „—", „?", nur Leerzeichen) als <c>null</c> — chess-results liefert fuer ein fehlendes
+    /// Bundesland einen Strich, die Turnierseite zeigte daraus „- (AUT)" (UI-Sweep d9-t-region-platzhalter).
+    /// </summary>
+    public static string? NullIfPlaceholder(string? value) =>
+        value is null || value.All(c => char.IsWhiteSpace(c) || c is '-' or '\u2013' or '\u2014' or '?') ? null : value;
+
+    /// <summary>
     /// Ein Datum aus einer Kalender-Antwort des Crawlers (dort ISO <c>yyyy-MM-dd</c>), nachsichtig
     /// mit invarianter Kultur gelesen; unlesbar oder leer → <c>null</c>.
     ///

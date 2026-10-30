@@ -42,7 +42,8 @@ function localInputToIso(local: string): string | null {
       <app-date-time-fields class="full" [(value)]="publishLocal" [required]="true"
                             [dateLabel]="'calc.series.publishAt' | translate" [timeLabel]="'weekly.fields.time' | translate" />
       <app-date-time-fields class="full" [(value)]="testerLocal"
-                            [dateLabel]="'calc.series.testerPreviewAt' | translate" [timeLabel]="'weekly.fields.time' | translate" />
+                            [dateLabel]="'calc.series.testerPreviewAt' | translate" [timeLabel]="'weekly.fields.time' | translate"
+                            [hint]="'common.optional' | translate" />
       <p class="hint">{{ 'calc.series.hint' | translate }}</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">

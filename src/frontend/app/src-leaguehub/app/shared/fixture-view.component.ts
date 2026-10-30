@@ -278,7 +278,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                         [attr.aria-label]="colorName(b)" [attr.title]="colorName(b)"></span>
                   <div class="cands">
                     @if (b.actual; as a) {
-                      <p class="played">Gespielt: <b>{{ a.n }}</b>@if (a.elo) { ({{ a.elo }})} – {{ a.score ?? '–' }} : {{ a.own ?? '–' }} gegen {{ a.vs }}
+                      <p class="played">Gespielt: <b>{{ a.n }}</b>@if (a.elo) { ({{ a.elo }})}&nbsp;– <span class="res">{{ a.score ?? '–' }}&nbsp;:&nbsp;{{ a.own ?? '–' }}</span> gegen {{ a.vs }}
                         @if (!inTop(b) && b.actual_p != null) { <span class="miss">– war nicht unter den Vorschlägen ({{ pct(b.actual_p) }})</span> }</p>
                     }
                     @for (c of b.cand; track c.n; let i = $index) {

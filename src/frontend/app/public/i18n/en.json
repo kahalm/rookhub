@@ -113,6 +113,8 @@
     "ebook_file_missing": "The file is missing on the server."
   },
   "common": {
+    "optional": "Optional",
+    "pickFriendFirst": "Choose at least one friend first.",
     "durationMinSec": "{{m}} min {{s}} s",
     "durationSec": "{{s}} s",
     "paginator": {
@@ -1553,7 +1555,9 @@
       "modeCrazy": "Crazy",
       "visualization": "Visualization",
       "vizArrow": "Opponent move arrow",
-      "stockfishDepth": "Stockfish depth",
+      "stockfishDepth": "Computer search depth",
+      "stockfishDepthHint": "Higher = stronger replies and a more precise check of your moves, but takes longer.",
+      "showExplanation": "Show explanation",
       "enPassantForced": "En passant forced",
       "enPassantForcedHint": "Anarchy board: when an en passant capture is available, it's mandatory.",
       "offPathWarn": "Wrong-turn warning",
@@ -2111,7 +2115,7 @@
       "videoUrl": "Video URL",
       "publishAt": "Release date/time",
       "publishRequired": "Choose the release date and time first.",
-      "testerPreviewAt": "Tester preview (optional)",
+      "testerPreviewAt": "Tester preview",
       "hint": "Testers see this chapter from the tester date, everyone else from the release date. Leave the tester field empty for no early access.",
       "watchVideo": "Watch video",
       "releasesOn": "releases {{date}}",
@@ -2198,7 +2202,6 @@
     "fromChapter": {
       "button": "From book chapter",
       "title": "Weekly post from a book chapter",
-      "pickBookFirst": "Pick a book first.",
       "needBook": "Pick a book and a chapter first.",
       "needChapter": "Pick a chapter first.",
       "needSchedule": "Pick a date and time first.",
@@ -3022,7 +3025,7 @@
       "busy": "The AI is sharpening its tongue …",
       "share": "Share",
       "notConfigured": "Roasting is not set up on this server.",
-      "noAnalysis": "Analyse the game first — without an analysis there is nothing to roast.",
+      "noAnalysis": "This game has not been analysed yet – without an analysis there is nothing to roast.",
       "error": {
         "notConfigured": "Roasting is not set up on this server.",
         "noAnalysis": "Analyse the game first.",
@@ -4569,6 +4572,7 @@
       "title": "Report a wrong entry",
       "lead": "Tell us what is wrong here. Everything is optional — even the text: pressing send with nothing filled in still says “something is off with this one”.",
       "current": "Currently stored",
+      "league": "League",
       "message": "What is wrong?",
       "learnTitle": "Two questions that help beyond this one tournament",
       "namePattern": "What are tournaments like this called in your region?",
@@ -5082,7 +5086,9 @@
       "selected": "{{count}} of {{max}} selected",
       "depth": "Depth",
       "submit": "Compare",
-      "noEngine": "No engine is available for this right now — set up a background engine in your profile.",
+      "noEngine": "The comparison runs on the server, not in your browser — no engine is free there right now. With your own engine in your profile it works any time.",
+      "noEngineWhy": "No server engine free right now",
+      "toProfile": "Go to profile",
       "houseEngine": "Calculated on the house engine (up to depth {{depth}}).",
       "noExplanations": "Without a language model you get the calculated lines only, no explanation."
     },
@@ -5521,7 +5527,7 @@
   },
   "ebooks": {
     "anonymous": {
-      "banner": "You are not signed in: you see the books shared with everyone. Books you upload stay yours and move into your account when you sign in.",
+      "banner": "Without signing in you only see the books shared with everyone.",
       "signIn": "Sign in",
       "uploadHint": "Without an account the book is visible only to you on this device (up to {{max}}). When you sign in, it moves into your account; books not taken over are deleted after 30 days."
     },
@@ -5586,7 +5592,8 @@
       "gameNav": "Step through the game",
       "gameStart": "Start of game",
       "gameEnd": "End of game",
-      "gameToDiagram": "Diagram",
+      "gameToDiagram": "Back to diagram",
+      "gameAtDiagram": "Diagram position",
       "gameHint": "Click a move to jump there; your own moves start a side line.",
       "gameBack": "Back to the game"
     },
@@ -5618,6 +5625,7 @@
       "eloRange": "Elo {{from}}–{{to}}",
       "language": "Language",
       "languageUnknown": "Unknown",
+      "languageChip": "Language: {{lang}}",
       "translatedInto": "Translation: {{lang}}"
     },
     "empty": "No e-books yet – upload the first one.",
@@ -5640,6 +5648,7 @@
       "onlyMe": "Only me",
       "everyone": "All signed-in users",
       "groups": "{{n}} groups",
+      "groupsOne": "{{n}} group",
       "onlyMeHint": "No group ticked: only you (and admins) see this book.",
       "groupsHint": "Members of the ticked groups see this book.",
       "noGroups": "You are not in any group yet – the book stays visible to you only. An admin can add you to a group."
@@ -5806,8 +5815,8 @@
       },
       "title": "Book translations",
       "off": "Translation is switched off on this server.",
-      "noModel": "No model on own hardware configured — books are only translated via the Spark.",
-      "quiet": "Quiet hours of the Spark — continues at {{until}}.",
+      "noModel": "No own model configured — books are only translated via the translation server.",
+      "quiet": "Translation paused until {{until}}.",
       "active": "Translating now.",
       "idle": "Nothing to translate at the moment.",
       "progress": "{{done}} of {{total}} texts",
@@ -5829,7 +5838,7 @@
       "undetected": "not checked yet",
       "badgeHint": "Also readable in English (switch in the reader)",
       "enqueue": "Translate into English next",
-      "enqueued": "Queued — it will be translated in the next free window of the Spark."
+      "enqueued": "Queued — it will be translated in the next free time slot."
     },
     "tags": {
       "opening": "Opening",

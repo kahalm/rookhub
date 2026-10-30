@@ -41,6 +41,23 @@ public class DirectorySweepMergeTests
         Assert.False(string.IsNullOrEmpty(entry.GroupKey));
     }
 
+    // d9-t-region-platzhalter: chess-results liefert für ein fehlendes Bundesland „-" — gespeichert wird nichts
+    [Theory]
+    [InlineData("-", null)]
+    [InlineData(" – ", null)]
+    [InlineData("?", null)]
+    [InlineData("", null)]
+    [InlineData("STMK", "STMK")]
+    [InlineData("Baden-Württemberg", "Baden-Württemberg")]
+    public void Map_StatePlaceholder_StoredAsNull(string state, string? expected)
+    {
+        var entry = new TournamentDirectoryEntry { PublicId = "1", ChessResultsId = "1" };
+
+        DirectorySweepMerge.Map(Row("1") with { State = state }, entry, Now, artMap: null);
+
+        Assert.Equal(expected, entry.State);
+    }
+
     [Fact]
     public void Map_WithoutArtMap_KeepsKnownKindAndSystem()
     {

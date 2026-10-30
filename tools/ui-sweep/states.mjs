@@ -55,8 +55,9 @@ export const STATES = [
   // ---------------------------------------------------------------- RookHub: Kopfleiste
   { of: 'rookhub__dashboard', name: 'menue', steps: [{ click: 'mat-toolbar button.msg-mail' }], expect: MENU },
   { of: 'rookhub__dashboard', name: 'menue-konto', auth: LOGGED_IN,
-    steps: [{ click: 'mat-toolbar button.msg-mail' }, { click: '.mat-mdc-menu-panel button:has(mat-icon:text-is("account_circle"))' }],
-    // über die Symbole statt der Beschriftung — sprachunabhängig (im --lang-en-Lauf scheiterte „Konto“, 17.10.2026)
+    steps: [{ click: 'mat-toolbar button.msg-mail' }, { press: 'Enter', sel: '.mat-mdc-menu-panel button:has(mat-icon:text-is("account_circle"))' }],
+    // über die Symbole statt der Beschriftung — sprachunabhängig (im --lang-en-Lauf scheiterte „Konto“, 17.10.2026).
+    // Enter statt Klick: am Handy öffnet schon das Überfahren das Untermenü, es deckt den Eintrag ab → Klick-Timeout (30.10.).
     expect: '.mat-mdc-menu-panel button.changelog-item' },
   { of: 'rookhub__dashboard', name: 'glocke', steps: [{ click: 'mat-toolbar button.notif-bell' }], expect: '.mat-mdc-menu-panel.notif-menu' },
   { of: 'rookhub__puzzles', name: 'menue-gast', auth: ['anon'], steps: [EASY, { click: 'mat-toolbar button.anon-menu' }], expect: MENU },
@@ -169,7 +170,9 @@ export const STATES = [
   // muss im Kapitel-iframe eine Tabelle `rh-moves` stehen. Nicht das erste: im Kapitel der ersten Partie von „My 60
   // Memorable Games“ trägt jede Zugtabelle Figurinen-Bilder — solche Tabellen lässt compactMoveTables absichtlich stehen.
   { of: 'rookhub__ebooks-partien', name: 'zugtabellen',
-    steps: [{ clickIf: '.rd-toolbar .rd-diag-btn' }, { click: '.rd-panel-head button.rd-jump >> nth=1' }, { wait: 1500 }],
+    // auf die Tabelle warten statt fester 1,5 s (einmal von 16 zu früh, 30.10.)
+    steps: [{ clickIf: '.rd-toolbar .rd-diag-btn' }, { click: '.rd-panel-head button.rd-jump >> nth=1' },
+      { waitFor: '.rd-viewer iframe >> internal:control=enter-frame >> table.rh-moves' }],
     expect: '.rd-viewer iframe >> internal:control=enter-frame >> table.rh-moves' },
   // Brett-Modus „Partie“ (0.831.0): Startmodus des Buchs (seed.mjs setzt ihn wie bei Prod #2250), Partie geladen.
   { of: 'rookhub__ebooks-partien', name: 'partie',

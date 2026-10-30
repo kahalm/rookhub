@@ -69,6 +69,24 @@ describe('PuzzleSettingsDialogComponent', () => {
       expect(el.querySelectorAll('mat-dialog-actions button').length).toBe(2);
     });
 
+    it('Erklär-Knöpfe zeigen das Standard-? statt ⓘ, mit Namen; die Rechentiefe erklärt sich in einer Unterzeile (d9-rk-einstellungen-info-statt-hilfesymbol)', () => {
+      const { fixture, el } = render();
+      const icons = Array.from(el.querySelectorAll('mat-icon')).map(i => i.textContent!.trim());
+      expect(icons).not.toContain('info_outline');
+      const btns = Array.from(el.querySelectorAll<HTMLButtonElement>('button.psd-info-btn'));
+      expect(btns.length).toBe(2);   // Visualisierung + Schwierigkeit (Standard-Modus)
+      for (const b of btns) {
+        expect(b.querySelector('mat-icon')!.textContent!.trim()).toBe('help_outline');
+        expect(b.getAttribute('aria-label')).toBe('puzzles.settings.showExplanation');
+        expect(b.getAttribute('aria-expanded')).toBe('false');
+      }
+      btns[0].click();
+      fixture.detectChanges();
+      expect(btns[0].getAttribute('aria-expanded')).toBe('true');
+      const depthRow = Array.from(el.querySelectorAll('.psd-label')).find(l => l.textContent!.includes('puzzles.settings.stockfishDepth'))!;
+      expect(depthRow.querySelector('.psd-sublabel')!.textContent).toContain('puzzles.settings.stockfishDepthHint');
+    });
+
     it('Inhalt trägt den Weiterscroll-Schatten (d7-rk-einstellungen-dialog-scroll-ohne-hinweis)', () => {
       const { el } = render();
       const content = el.querySelector<HTMLElement>('mat-dialog-content')!;

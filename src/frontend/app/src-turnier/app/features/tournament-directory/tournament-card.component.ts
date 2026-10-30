@@ -19,6 +19,7 @@ import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entr
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { DirectoryEntry, DirectoryIgnoredChange, isPlaceholderLocation, SameNameMark } from './tournament-directory.model';
 import { Subject } from 'rxjs';
+import { DirectoryNamePipe } from './directory-name.pipe';
 
 /**
  * Die Kurzansicht EINES Turniers — Name, Termin, Ort, Merkmale und vier Aktionen.
@@ -44,6 +45,7 @@ import { Subject } from 'rxjs';
   // Melde-Dialog selbst, und sie steht in drei verschiedenen Eltern (Liste, Karten-Popup,
   // Kalender-Fenster) — auf deren Importe darf sie sich nicht verlassen.
   imports: [
+    DirectoryNamePipe,
     CommonModule, MatButtonModule, MatDialogModule, MatIconModule, MatTooltipModule,
     TranslatePipe,
   ],
@@ -53,7 +55,7 @@ import { Subject } from 'rxjs';
       <div class="tc-head">
         <button type="button" class="tc-name" (click)="selected.emit(entry)"
                 [matTooltip]="'tournamentDirectory.card.openDetail' | translate">
-          {{ entry.name }}
+          {{ entry | directoryName }}
         </button>
       </div>
 

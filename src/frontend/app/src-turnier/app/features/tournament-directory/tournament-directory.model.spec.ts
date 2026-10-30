@@ -1,4 +1,4 @@
-import { DirectoryEntry, directoryPageSize, displayLocation, groupSameName, isPlaceholderLocation, sameNameSiblings } from './tournament-directory.model';
+import { DirectoryEntry, directoryPageSize, displayLocation, displayName, groupSameName, isPlaceholderLocation, regionText, sameNameSiblings } from './tournament-directory.model';
 
 /** UI-Sweep 2026-10-11 (r2-t-various, r2-t-dup-cards): reine Helfer der Turnierkarten. */
 describe('tournament-directory.model', () => {
@@ -50,5 +50,25 @@ describe('tournament-directory.model', () => {
     ];
     expect(groupSameName(list).map(x => x.id)).toEqual(['a', 'd', 'b', 'c', 'e']);
     expect(groupSameName([])).toEqual([]);
+  });
+
+  // d9-t-region-platzhalter: „-" von chess-results ist keine Region
+  it('Region: Platzhalter fallen weg, Verband allein bleibt', () => {
+    expect(regionText({ state: 'Tirol', federation: 'AUT' })).toBe('Tirol (AUT)');
+    expect(regionText({ state: '-', federation: 'AUT' })).toBe('AUT');
+    expect(regionText({ state: ' – ', federation: 'AUT' })).toBe('AUT');
+    expect(regionText({ state: '?', federation: null })).toBeNull();
+    expect(regionText({ state: 'Tirol', federation: null })).toBe('Tirol');
+    expect(regionText({ state: null, federation: null })).toBeNull();
+  });
+
+  // d9-t-kartentitel-ohne-ellipse: chess-results kappt Namen in der Trefferliste auf 50 Zeichen
+  it('Name: genau 50 Zeichen aus chess-results enden mit „…“, sonst unverändert', () => {
+    const cut = 'CAMPEONATO MINEIRO DE XADREZ CLÁSSICO ABSOLUTO 202';
+    expect(cut.length).toBe(50);
+    expect(displayName({ name: cut, chessResultsId: '1' })).toBe(cut + '…');
+    expect(displayName({ name: cut, chessResultsId: null })).toBe(cut);
+    expect(displayName({ name: 'Open Graz', chessResultsId: '1' })).toBe('Open Graz');
+    expect(displayName({ name: cut + 'X', chessResultsId: '1' })).toBe(cut + 'X');
   });
 });

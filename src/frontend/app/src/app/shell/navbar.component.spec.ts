@@ -19,7 +19,7 @@ import { EinkService } from '../core/eink.service';
 import { HandoffService } from '../core/handoff.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
-import { FEEDBACK_URL } from '../core/community';
+import { DISCORD_INVITE_URL, FEEDBACK_URL, KOFI_URL } from '../core/community';
 import { environment } from '../../environments/environment';
 
 describe('NavbarComponent', () => {
@@ -517,6 +517,48 @@ describe('NavbarComponent Anmelden/Registrieren behalten das Ziel (UX-020)', () 
     const menu = el.querySelector('mat-toolbar button[aria-label="nav.menu"]')!;
     expect(login.nextElementSibling).toBe(register);
     expect(register.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // d9-rk-gastmenue-icons-uneinheitlich: im Gast-Menü tragen nur die externen Ziele Discord und Ko-fi ein Symbol (wie
+  // angemeldet), die Rechtslinks stehen zuletzt.
+  it('ausgeloggt: ☰ — Symbole nur bei Discord und Ko-fi, Rechtslinks am Ende', async () => {
+    const { el } = await renderAt('/puzzles');
+    (el.querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement).click();
+    const panel = document.querySelector('.cdk-overlay-container .nav-main-menu')!;
+    const items = Array.from(panel.querySelectorAll<HTMLElement>('[mat-menu-item]'))
+      .filter(i => getComputedStyle(i).display !== 'none');
+    expect(items.length).toBeGreaterThan(8);
+    const withIcon = items.filter(i => i.querySelector('mat-icon:not(.mat-mdc-menu-submenu-icon)'));
+    expect(withIcon.map(i => i.getAttribute('href'))).toEqual([DISCORD_INVITE_URL, KOFI_URL]);
+    expect(withIcon.every(i => i.getAttribute('target') === '_blank')).toBeTrue();
+    const last = items.slice(-2).map(i => i.textContent?.trim());
+    expect(last).toEqual(['legal.privacy.link', 'legal.impressum.title']);
+    const texts = items.map(i => i.textContent?.trim() ?? '');
+    expect(texts.findIndex(t => t.includes('nav.help'))).toBeLessThan(texts.findIndex(t => t.includes('nav.discord')));
+    expect(texts.findIndex(t => t.includes('nav.support'))).toBeLessThan(texts.findIndex(t => t.includes('nav.language')));
+  });
+
+  // d9-rk-reader-titel-abgeschnitten: angedockt (E-Book-Leser) unter 1100 px nur „Anmelden“ in der Leiste, „Registrieren“ im ☰.
+  it('Gast angedockt unter 1100 px: „Registrieren“ wandert ins ☰', async () => {
+    const { el } = await renderAt('/puzzles');
+    const register = el.querySelector<HTMLElement>('mat-toolbar a[routerLink="/register"]')!;
+    expect(register.classList).toContain('nav-register');
+    document.body.classList.add('nav-docked');
+    try {
+      const narrow = window.innerWidth < 1100;
+      expect(getComputedStyle(register).display === 'none').withContext('Leiste').toBe(narrow || window.innerWidth <= 480);
+      (el.querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement).click();
+      const item = document.querySelector<HTMLElement>('.cdk-overlay-container .nav-main-menu .nav-register-item')!;
+      expect(item).not.toBeNull();
+      expect(getComputedStyle(item).display !== 'none').withContext('☰').toBe(narrow || window.innerWidth <= 480);
+    } finally {
+      document.body.classList.remove('nav-docked');
+    }
+    const css = (((NavbarComponent as unknown as { ɵcmp: { styles?: string[] } }).ɵcmp.styles) ?? []).join('\n').replace(/\s/g, '');
+    const at = css.indexOf('@media(max-width:1099.98px)');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at)).toMatch(/body\.nav-docked[^{]*\.nav-register(\[[^\]]*\])?\{display:none/);
+    expect(css.slice(at)).toMatch(/body\.nav-docked\.nav-main-menu\.anon-narrow\.nav-register-item\{display:flex/);
   });
 
   it('auf einer offenen Seite: zurück zu genau dieser Seite', async () => {

@@ -93,6 +93,14 @@ describe('TournamentCardComponent', () => {
     expect(slots[3].querySelector('mat-icon')!.textContent!.trim()).toBe('flag');
   });
 
+  // d9-t-kartentitel-ohne-ellipse
+  it('zeigt einen von chess-results auf 50 Zeichen gekappten Namen mit „…“', () => {
+    const cut = 'U18 Halloween Champion + U18 Schachmatt Meister 20';
+    setup({ name: cut, chessResultsId: '1405166' });
+    const name = (fixture.nativeElement as HTMLElement).querySelector('.tc-name')!;
+    expect(name.textContent!.trim()).toBe(cut + '…');
+  });
+
   it('bietet vier Aktionen an', () => {
     setup();
 

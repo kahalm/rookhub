@@ -39,10 +39,7 @@
           <span class="rd-page-count">{{ epubPercent() }}&nbsp;%</span>
           <button mat-icon-button (click)="epubNext()" [appIconLabel]="'common.paginator.nextPage' | translate"><mat-icon>chevron_right</mat-icon></button>
           @if (epubToc().length > 0) {
-            <button mat-icon-button [matMenuTriggerFor]="tocMenu" [appIconLabel]="'ebooks.reader.toc' | translate"><mat-icon>toc</mat-icon></button>
-            <mat-menu #tocMenu="matMenu">
-              @for (t of epubToc(); track t.href) { <button mat-menu-item (click)="epubGo(t.href)">{{ t.label }}</button> }
-            </mat-menu>
+            <button mat-icon-button class="rd-toc" [matMenuTriggerFor]="tocMenu" [appIconLabel]="'ebooks.reader.toc' | translate"><mat-icon>toc</mat-icon></button>
           }
         </div>
         <div class="rd-zoom">
@@ -99,7 +96,28 @@
       <button mat-icon-button class="rd-more" [matMenuTriggerFor]="moreMenu" [appIconLabel]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
+      <!-- Inhaltsverzeichnis außerhalb der @if-Blöcke: Knopf in der Leiste UND Eintrag im ⋮ (unter 1100 px) öffnen es. -->
+      <mat-menu #tocMenu="matMenu">
+        @for (t of epubToc(); track t.href) { <button mat-menu-item (click)="epubGo(t.href)">{{ t.label }}</button> }
+      </mat-menu>
       <mat-menu #moreMenu="matMenu">
+        <!-- d9-rk-reader-titel-abgeschnitten: unter 1100 px stehen „Inhalt“ und Schrift/Zoom nicht in der Leiste (dort blieben
+             am Tablet ≈ 40 px für den Titel), sondern hier oben im ⋮ (.rd-more-narrow, breiter per CSS aus). -->
+        @if (readable && isEpub) {
+          @if (epubToc().length > 0) {
+            <button mat-menu-item class="rd-more-narrow" [matMenuTriggerFor]="tocMenu"><mat-icon>toc</mat-icon><span>{{ 'ebooks.reader.toc' | translate }}</span></button>
+          }
+          <button mat-menu-item class="rd-more-narrow" (click)="epubFontBy(-1)" [disabled]="epubFont() <= 80"><mat-icon>text_decrease</mat-icon><span>{{ 'ebooks.reader.fontSmaller' | translate }}</span></button>
+          <button mat-menu-item class="rd-more-narrow" (click)="epubFontBy(1)" [disabled]="epubFont() >= 200"><mat-icon>text_increase</mat-icon><span>{{ 'ebooks.reader.fontLarger' | translate }}</span></button>
+          <button mat-menu-item class="rd-more-narrow" (click)="toggleEpubLayout()">
+            <mat-icon>{{ epubLayout() === 'scroll' ? 'auto_stories' : 'view_day' }}</mat-icon>
+            <span>{{ (epubLayout() === 'scroll' ? 'ebooks.reader.layoutPages' : 'ebooks.reader.layoutScroll') | translate }}</span>
+          </button>
+        } @else if (readable) {
+          <button mat-menu-item class="rd-more-narrow" (click)="zoomBy(-1)"><mat-icon>remove</mat-icon><span>{{ 'ebooks.reader.zoomOut' | translate }}</span></button>
+          <button mat-menu-item class="rd-more-narrow" (click)="fitWidth()"><mat-icon>fit_screen</mat-icon><span>{{ 'ebooks.reader.fitWidth' | translate }}</span></button>
+          <button mat-menu-item class="rd-more-narrow" (click)="zoomBy(1)"><mat-icon>add</mat-icon><span>{{ 'ebooks.reader.zoomIn' | translate }}</span></button>
+        }
         @for (f of ebook.files; track f.id) {
           <a mat-menu-item [href]="downloadUrl(f.id)" [download]="f.fileName">
             <mat-icon>download</mat-icon>

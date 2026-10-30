@@ -198,7 +198,7 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</button>
           @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
           <!-- d5-rk-konto-menue-sprache-icon: ohne Globus wie alle Nachbarn im Konto-Menü (fluchtet mit Profil, Statistik …);
-               das Untermenü zeigt der Pfeil ▸. Im Gast-Menü bleibt der Globus — dort tragen die Nachbarn Symbole. -->
+               das Untermenü zeigt der Pfeil ▸. Seit d9 gilt das auch im Gast-Menü. -->
           <button mat-menu-item class="lang-item" [matMenuTriggerFor]="langMenu">{{ 'nav.language' | translate }}</button>
           <button mat-menu-item class="changelog-item" (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }} <span class="menu-version">v{{ version }}</span></button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
@@ -229,36 +229,22 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
           <mat-icon>menu</mat-icon>
         </button>
         <mat-menu #anonMenu="matMenu" class="nav-main-menu">
+          <!-- d9-rk-gastmenue-icons-uneinheitlich: Symbole wie im angemeldeten Menü nur bei den externen Zielen (Discord,
+               Ko-fi) — sonst sprang die Textkante mitten in der Liste. Reihenfolge: Seiten | Hilfe, Info, Changelog,
+               Feedback | Discord, Unterstützen | Design, Sprache | Rechtslinks zuletzt (wie im Konto-Menü). -->
           @if (!onAuthPage) {
-            <a mat-menu-item class="anon-narrow" routerLink="/register" [queryParams]="authQuery">
-              <mat-icon>person_add</mat-icon>
-              <span>{{ 'nav.register' | translate }}</span>
-            </a>
+            <a mat-menu-item class="anon-narrow nav-register-item" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
             @if (fsSupported) {
-              <button mat-menu-item class="anon-narrow" (click)="toggleAppFullscreen()">
-                <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
-                <span>{{ fsLabel }}</span>
-              </button>
+              <button mat-menu-item class="anon-narrow" (click)="toggleAppFullscreen()">{{ fsLabel }}</button>
             }
           }
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
-          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</button>
-          @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
-          <button mat-menu-item (click)="quickstartClick.emit()">
-            <mat-icon>info_outline</mat-icon>
-            <span>{{ 'nav.info' | translate }}</span>
-          </button>
+          <button mat-menu-item (click)="quickstartClick.emit()">{{ 'nav.info' | translate }}</button>
+          <button mat-menu-item class="changelog-item" (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }} <span class="menu-version">v{{ version }}</span></button>
           <!-- Rueckmeldung und Version: am Handy ist die Fusszeile aus, das Menue ist der einzige Weg (UX-053). -->
-          <a mat-menu-item class="feedback-item" [href]="feedbackUrl" target="_blank" rel="noopener noreferrer">
-            <mat-icon>bug_report</mat-icon>
-            <span>{{ 'app.feedback' | translate }}</span>
-          </a>
-          <button mat-menu-item class="changelog-item" (click)="changelogClick.emit()">
-            <mat-icon>history</mat-icon>
-            <span>{{ 'nav.changelog' | translate }} <span class="menu-version">v{{ version }}</span></span>
-          </button>
+          <a mat-menu-item class="feedback-item" [href]="feedbackUrl" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
             <mat-icon svgIcon="discord"></mat-icon>
             <span>{{ 'nav.discord' | translate }}</span>
@@ -282,15 +268,11 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
               <span>{{ 'profile.theme.einkForcesLight' | translate }}</span>
             </div>
           } @else {
-            <button mat-menu-item [matMenuTriggerFor]="themeMenu" class="theme-menu-trigger">
-              <mat-icon>contrast</mat-icon>
-              <span>{{ 'nav.theme' | translate }}</span>
-            </button>
+            <button mat-menu-item [matMenuTriggerFor]="themeMenu" class="theme-menu-trigger">{{ 'nav.theme' | translate }}</button>
           }
-          <button mat-menu-item [matMenuTriggerFor]="langMenu">
-            <mat-icon>language</mat-icon>
-            <span>{{ 'nav.language' | translate }}</span>
-          </button>
+          <button mat-menu-item class="lang-item" [matMenuTriggerFor]="langMenu">{{ 'nav.language' | translate }}</button>
+          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.link' | translate }}</button>
+          @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
         </mat-menu>
       }
       <mat-menu #themeMenu="matMenu" class="nav-submenu">
@@ -421,6 +403,12 @@ export function trackNavWidth(host: HTMLElement, destroyRef: DestroyRef): void {
     :host-context(body.nav-docked) .logo,
     :host-context(body.nav-docked) .spacer,
     :host-context(body.nav-docked) .nav-anon { display: none; }
+    /* d9-rk-reader-titel-abgeschnitten: angedockt (E-Book-Leser) unter 1100 px steht für Gäste nur „Anmelden“ in der Leiste,
+       „Registrieren“ im ☰ wie unter 480 px — die Kopfleiste nahm dem Buchtitel am Tablet sonst ≈ 110 px. */
+    @media (max-width: 1099.98px) {
+      :host-context(body.nav-docked) .nav-register { display: none; }
+      ::ng-deep body.nav-docked .nav-main-menu .anon-narrow.nav-register-item { display: flex; }
+    }
     /* d3-rk-leser-glocken-abzeichen-abgeschnitten: angedockt sitzt die Leiste am Fensterrand (y = 0) — das Abzeichen
        (über dem Knopf, Rand −12 px, pulsiert ×1,28) ragte darüber hinaus und wurde oben abgeschnitten. */
     :host-context(body.nav-docked) .notif-bell.mat-badge-overlap ::ng-deep .mat-badge-content,

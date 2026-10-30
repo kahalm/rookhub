@@ -48,4 +48,17 @@ describe('EbookTranslationDialogComponent', () => {
     expect(c.languageLabel('notext')).toBe('ebooks.translation.noTextLabel');
     expect(c.languageLabel('es')).not.toBe('es');
   });
+
+  // d9-rk-spark-jargon-uebersetzungsdialog: „Sperrzeit der Spark“ — interner Gerätename im Dialog (DESIGN 2 Nr. 7).
+  it('d9: Statustexte ohne Gerätenamen „Spark“, Gedankenstrich mit U+00A0 davor', async () => {
+    for (const lang of ['de', 'en', 'hr', 'hu']) {
+      const res = await fetch(`/i18n/${lang}.json`).then(r => r.ok ? r : fetch(`/base/i18n/${lang}.json`));
+      const t = (await res.json()).ebooks.translation as Record<string, unknown>;
+      for (const [k, v] of Object.entries(t)) {
+        if (typeof v !== 'string') continue;
+        expect(v).withContext(`${lang} ${k}`).not.toMatch(/Spark/);
+      }
+      for (const k of ['noModel', 'enqueued']) expect(t[k] as string).withContext(`${lang} ${k}`).toContain('\u00a0—');
+    }
+  });
 });

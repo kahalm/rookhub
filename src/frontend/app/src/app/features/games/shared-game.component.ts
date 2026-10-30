@@ -427,7 +427,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   /** „Roast my game" (0.535.0) — nur die eigene Partie. */
   roast(): void {
-    if (this.gameId) this.actions.roast(this.gameId, this.shareToken);
+    if (this.gameId) this.actions.roast(this.gameId, this.shareToken, () => this.analyze());
   }
 
   /** Das Formular-Foto der eigenen, eingelesenen Partie anzeigen (Dialog) oder herunterladen. */

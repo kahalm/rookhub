@@ -156,6 +156,19 @@
   .rd-panel { flex: 0 0 var(--rd-panel-w, clamp(460px, calc(100dvh - 220px), 46vw)); }
 }
 
+/* d9-rk-reader-titel-abgeschnitten: am Tablet (820 px, abgemeldet) blieben für Titel und Autor ≈ 40 px („Pro…“). Unter
+   1100 px wandern „Inhalt“ und Schrift/Zoom ins ⋮ (.rd-more-narrow), der Titel behält eine Mindestbreite; reicht die
+   Breite trotzdem nicht (600–700 px), bricht die Leiste um, statt waagerecht überzustehen. */
+.rd-more-narrow { display: none; }
+@media (max-width: 1099.98px) {
+  .rd-zoom, .rd-toc { display: none; }
+  .rd-more-narrow { display: flex; }
+}
+@media (max-width: 1099.98px) and (min-width: 600px) {
+  .rd-title { min-width: min(11rem, 28vw); }
+  .rd-toolbar { flex-wrap: wrap; }
+}
+
 /* Ab 600 px hält die Leiste rechts die Breite der angedockten Kopfleiste frei (gemessen: --rh-nav-w). */
 @media (min-width: 600px) {
   :host-context(body.nav-docked) .rd-toolbar { padding-right: calc(8px + var(--rh-nav-w, 96px)); }

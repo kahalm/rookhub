@@ -70,7 +70,9 @@
 .eb-cover {
   display: block; position: relative; aspect-ratio: 2 / 3; overflow: hidden;
   background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
-  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* d9-rk-ebook-cover-beschnitten: Titelbild nie beschneiden — Seiten kommen im Originalformat (PDF-Seite, EPUB-Cover),
+     `cover` schnitt Titel und Autor ab; die Restfläche trägt die getönte Fläche (DESIGN 8.1). */
+  img { width: 100%; height: 100%; object-fit: contain; display: block; }
 }
 .eb-cover-fallback {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -152,6 +154,11 @@
   .eb-act .eb-act-label { display: none; }
   .eb-act mat-icon { margin: 0; }
   .eb-select { top: 8px; left: 8px; }
+  /* d9-rk-ebook-anon-handy-banner-vorlauf: Gast-Banner am Handy einzeilig gebaut — ein Satz, „Anmelden“ rechts in derselben
+     Zeile statt in einer eigenen vierten; das erste Buch rückt von ≈ 43 % auf ≈ 32 % der Höhe. */
+  .eb-anon { flex-wrap: nowrap; padding-block: 4px; font-size: 0.875rem; line-height: 1.35; }
+  .eb-anon > span { flex: 1 1 0; min-width: 0; }
+  .eb-anon > a { flex: none; }
 }
 
 // Sammlungen (0.787.0): Ordner-Karte + Kopf der geöffneten Sammlung.

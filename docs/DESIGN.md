@@ -395,6 +395,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   ein Knopf allein in einer eigenen Zeile (Partie-Analysen, 0.759.2).
 - **Polster sichtbar gleich:** endet eine Karte mit einer Zeile Textknöpfe (`mat-button`, ≈ 8 px unsichtbarer Rand unter der
   Schrift), ist das untere Polster um diese 8 px kleiner (Zeitkarte der Löser, `calc(1rem - 8px)`, d8-rk-zeitkarte-polster-unten).
+- **Outline-Feld direkt unter dem Kartentitel:** `mat-card-content` bekommt oben 20 px, damit die schwebende Beschriftung
+  nicht an der Überschrift klebt — global in `styles.scss` (`.mat-mdc-card-header + .mat-mdc-card-content:has(> :first-child
+  .mat-form-field-appearance-outline)`), keine Ausgleiche je Karte (Wochenpost hochladen, d9-rk-wochenpost-karte-titel-eng).
 
 ### 5.3 Listen und Tabellen
 
@@ -470,6 +473,9 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
   anzuschneiden (b1-rk-nav-konto-untermenue-handy). Solange ein Untermenü offen ist, sind die Menüs darunter (☰, bei
   Konto → Sprache auch Konto) ausgeblendet — eine Fläche statt zweier versetzter Rahmen (`class="nav-main-menu"` am ☰,
   d8-rk-konto-menue-doppelt).
+- **☰-Menüs (Gast und angemeldet): Symbole nur bei externen Zielen** (Discord, Ko-fi, Turnierseite) — alle anderen
+  Einträge ohne Symbol, damit die Textkante fluchtet; Untermenüs zeigt der Pfeil ▸. Im Gast-Menü stehen die
+  Rechtslinks (Datenschutz, Impressum) zuletzt (d9-rk-gastmenue-icons-uneinheitlich).
 - Selten gebrauchte Werkzeugkarten stehen nicht von vornherein auf der Seite: ein ⋮-Eintrag blendet sie ein (und
   scrollt sie in Sicht), ein ✕ in ihrer Kopfzeile wieder aus; solange sie arbeiten, bleiben sie ohne ✕ stehen
   (Analysebrett: „Sparring gegen Maia“ im ⋮ der Stellung, sichtbar während eines Sparrings, 0.760.0).
@@ -507,6 +513,16 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - **Hinweistext im Dialog** im Ton von `mat-hint` (`var(--mat-sys-on-surface-variant)`), nicht `currentColor 60 %` —
   im Dialog ist currentColor schon on-surface-variant, 60 % davon lag bei ≈ 3,1:1 (d7-rk-dialog-hint-kontrast; Wache
   `dialog-hint-contrast.spec` für `.hint`/`.hint-small`/`.empty` in allen Dialog-Dateien, d8).
+- **Feld mit Hinweis (`mat-hint`) im Dialog:** 12 px Abstand darunter, sonst klebt der Hinweis an der schwebenden
+  Beschriftung des nächsten Felds — global in `styles.scss` (`.mat-mdc-dialog-content .mat-mdc-form-field:has(.mat-mdc-form-field-hint)`),
+  Wache `dialog-field-spacing.spec` (≥ 12 px Hinweis → nächstes Label). Ein Grund steht **einmal**: nennt ihn die Knopfleiste
+  (`.why`), kein zweiter `mat-hint` am Feld (d9-rk-dialog-hinweis-eng, d9-rk-weekly-dialog-hinweis-abstand).
+- **„Optional“ nicht ins Label**, sondern als Hinweis unter das Feld (ein Pflichtfeld trägt das Sternchen); bei
+  `app-date-time-fields` über `hint` — ein langes Label stieß sonst ans Kalender-Symbol (d9-rk-datepicker-label-eng).
+- **Kein Dialog als Sackgasse:** fehlt eine Voraussetzung, die die App selbst schaffen kann (Roast ohne Analyse), bietet der
+  Dialog sie als Hauptknopf an („Partie analysieren“, „Schließen“ wird „Abbrechen“; d9-rk-roast-dialog-sackgasse).
+- **QR-Code** (`app-qr-code`) mit 4 Modulen weißer Ruhezone (`QR_QUIET_ZONE`), auch auf dunkler Dialogfläche
+  (d9-rk-qr-ruhezone-zu-klein).
 - **Gesperrter Dialogknopf:** der Grund steht links in der Knopfleiste (`<span class="why" role="status">` als direktes
   Kind von `mat-dialog-actions`) — Pflichtfeld mit `required` (Sternchen). Die Gestaltung kommt **global aus `styles.scss`**
   (`.mat-mdc-dialog-actions > .why`, keine Kopien je Dialog): ≤ 280 px, 0,85 rem, on-surface-variant; der **Grund schrumpft**
@@ -832,7 +848,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - E-Book-Bibliothek (`features/ebooks/`, 0.764.0): Karten als **Regal** — Titelbild im Verhältnis 2:3 oben (ohne Bild:
   Symbol + Titel auf getönter Fläche), Lesestand als dünner Balken an der Bildunterkante, Titel zweizeilig mit „…“,
   Formate/Seitenzahl/Sichtbarkeit als `.chip`-Abzeichen, Aktionszeile unten (Hauptaktion links, ⋮ rechts); Raster
-  `repeat(auto-fill, minmax(170px, 1fr))`, am Handy 150 px. Filter-Chips (`.eb-chip`, `aria-pressed`) wie 5.9. Der Leser
+  `repeat(auto-fill, minmax(170px, 1fr))`, am Handy 150 px. Titelbild **nie beschneiden** (`object-fit: contain` auf der
+  getönten Fläche, d9). Gast-Banner: ein Satz, am Handy einzeilig gebaut („Anmelden“ rechts in derselben Zeile, d9). Filter-Chips (`.eb-chip`, `aria-pressed`) wie 5.9. Der Leser
   ist ein Sonderlayout (4.5): Werkzeugleiste + Seiten in der Resthöhe, eigener Scrollkasten, Seiten auf dunklem Grund.
   Mit erkannten Diagrammen zweispaltig: Buch links, Brett rechts (`clamp(300px, 32vw, 460px)`); unter 900 px Brett als
   Vollbild über dem Buch (0.780.2; vorher Leiste unten, 0.766.0), erst nach dem ersten Doppelklick, Kopf mit ‹ › und Schließen
@@ -849,7 +866,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   **EINE Leiste oben (0.785.x):** ist das Buch geladen, setzt der Leser `body.nav-docked` — die App-Kopfleiste verliert Logo
   und Hintergrund und dockt als 48 px hoher Block oben rechts auf der Leser-Leiste an (dieselbe Instanz, Glocke/☰/Vollbild
   unverändert, Gast ohne die Text-Links Puzzles/Analyse); die Leser-Leiste ist 48 px hoch und hält rechts die gemessene
-  Breite der Kopfleiste frei (`--rh-nav-w`), am Handy in ihrer Titelzeile. Lade-/Fehlerzustände behalten die normale
+  Breite der Kopfleiste frei (`--rh-nav-w`), am Handy in ihrer Titelzeile. Unter 1100 px stehen „Inhalt“ und Schrift/Zoom im ⋮
+  des Lesers (oben, `.rd-more-narrow`), der Titel behält ab 600 px `min(11rem, 28vw)`, Gäste sehen angedockt nur „Anmelden“
+  („Registrieren“ im ☰; d9). Lade-/Fehlerzustände behalten die normale
   Kopfleiste. Andere Seiten mit eigener Werkzeugleiste dürfen `nav-docked` genauso nutzen.
   Brett-Leiste (`app-ebook-board`, 0.777.0, kompakt 0.785.x): **eine** Zeile über dem Brett — fünf Modi als Symbolknöpfe
   (Name + Erklärung als Tooltip/`aria-label`, gewählter Modus in Primärfarbe getönt, `aria-pressed`): Ansehen, Ziehen,
@@ -911,7 +930,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - Datenschutz mit eigener Einleitung (`LegalSiteKind 'turnier'`).
 - **Kalender am Handy** (Agenda, d7): 3 Turniere je Tag („+n weitere“ klappt auf), nach Kalenderwochen gegliedert
   (Kopf „KW 41 · 5.–11. Okt.“) mit Wochen-Sprungleiste darüber (nicht klebend — die Reiter-Hülle ist ein
-  Scroll-Container). Mannschaftsfenster filtert Titel wie die Tabellen (`chessTitle`), ohne echten Titel keine Spalte.
+  Scroll-Container). Mannschaftsfenster filtert Titel wie die Tabellen (`chessTitle`), ohne echten Titel keine Spalte,
+  öffnet mit `autoFocus: 'dialog'` (sonst trägt „Schließen“ die Fokus-Tonfläche, d9).
+- Verzeichnis-Einträge (d9): Region über `regionText()` — Platzhalter („-“, „?“) zählen nicht, dann nur der Verband;
+  Namen über die Pipe `directoryName` — von chess-results genau auf 50 Zeichen gekappte enden mit „…“. Im Melden-Dialog
+  heißt der Zustand „Liga“ (`tournamentDirectory.report.league`), nie die Filter-Beschriftung.
   E-Ink: Umkreis-Regler mit schwarz umrandeter weißer Spur, schwarzem Füllteil, weißem Griff mit Rahmen
   (komponentenlokal per `:host-context(html.eink)`).
 - **Kalender-Filterfeld** (b1): Zeilen nach Sinn statt Fließblock — Zeitraum/Umkreis (Handy; sonst nur eigener
@@ -1014,7 +1037,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   linksbündig; Sperrkarten `.gate` höchstens 760 px (b1-l-sperrkarte-breit).
 - Links ohne eigene Klasse in `--ink` (unterstrichen), nie Browserblau; Bereichsregeln (`.foot a` …) gehen vor.
 - Häkchen ohne eigene Regel 18 px mit `accent-color: var(--ink)` (Grundregel in `:where()`, Spezifität 0), nie Browserblau.
-- Gesperrte Knöpfe `.btn-pri`/`.btn-sec` mit festen Farben (`--muted` auf `--track` bzw. `--line`-Rahmen), nicht per Deckkraft.
+- Gesperrte Knöpfe `.btn-pri`/`.btn-sec` mit festen Farben (`--muted` auf `--track` bzw. `--line`-Rahmen), nicht per Deckkraft;
+  Zeiger `not-allowed`, `progress` nur mit `aria-busy="true"`. Ein gesperrtes „Speichern“ nennt den Grund darüber
+  („+“-Fenster: „Zum Speichern erst eine Klassifizierung oder Bemerkung ändern.“), Aktionszeile mit 8 px Abstand (d9).
 - Wer mehrere Konto-Vorschläge hat (`.sugg-group.multi`), steht als umrahmte Fläche mit „N Konten“ im Kopf, Knöpfe auf einer Höhe.
 - ⋮-Menüs: **jedes** `mat-menu` in LeagueHub trägt `class="lh-menu"` (Fläche `--surface`, 1 px `--line`, Radius 8, Barlow; auch
   Brett-⋮ der Prognose und Kontomenü, d8), „Löschen“ zuletzt mit `.delete-item` in `--red`. Dialoge öffnen mit
@@ -1029,7 +1054,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   rechts aus dem Bild zu schieben (Prognose-ⓘ).
 - Brettpaarungen der Prognoseseite (`.pairings` in `.pairings-wrap`, Containerabfrage < 480 px): Namen brechen um
   (`overflow-wrap: anywhere`), Elo in der zweiten Zeile, Abzeichen, Analyse-Symbol und ⋮ gestapelt in einer Spalte, Analyse
-  und ⋮ 44 × 44 px; die Tabelle bleibt bei 390/360 px ganz im Bild (0.869.5, lh-brettmenue).
+  und ⋮ 44 × 44 px; gestapelt ohne die unsichtbaren Abzeichen-Platzhalter `.gb-slot` (d9); die Tabelle bleibt bei 390/360 px
+  ganz im Bild (0.869.5, lh-brettmenue). „Gespielt: …“-Zeile: Ergebnis „1 : 0“ als `.res` (`nowrap`, U+00A0), Strich mit
+  U+00A0 davor (d9).
 - Abzeichen an Partien (0.852.0, ersetzt den Text-Marker „◆ n“/„!! n“ von 0.848.0–0.851.1): `lh-game-badges` — runde
   Knöpfe (20 px hoch, Radius 10 px, 12 px fett), „+“ auf Gold (`MOVE_CLASS_COLORS.inaccuracy`) = interessante Stellungen wie
   der „+“-Knopf, „!!“ auf Türkis (`MOVE_CLASS_COLORS.brilliant`) = brillante Züge; Schrift dunkel auf beiden (≥ 4,5:1, Spec),
@@ -1158,6 +1185,8 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-30 | 0.880.0 · Runde d9 · Dialoge, Analyse, LeagueHub, Turnier | Dialogfelder mit `mat-hint` 12 px Abstand zum nächsten Feld, Karten mit Outline-Feld in Zeile 1 oben 20 px (5.2/5.6); „optional“ als Hinweis; Grund am gesperrten Teilen-Knopf; Roast ohne Analyse bietet „Partie analysieren“; QR-Ruhezone 4 Module; ☰-Symbole nur an externen Links, Rechtslinks zuletzt (5.5); Bewertungsleiste fluchtet mit dem Brett; LeagueHub-Paarungen am Handy ohne Abzeichen-Platzhalter, „1 : 0“ geschützt, gesperrter Knopf `not-allowed` + Grund (8.4); Turnier: Region ohne Platzhalter, gekürzte Namen mit „…“, Mannschaftsdialog `autoFocus: 'dialog'` (8.2) | Hinweise klebten am nächsten Label, Sackgassen-Dialoge, gesperrte Knöpfe ohne Grund, QR ohne Ruhezone, 147 px hohe Paarungszeilen, „- (AUT)“ | UI-Sweep d9 (d9-rk-*, d9-l-*, d9-t-*) |
+| 2026-10-30 | 0.880.0 · Runde d9 · E-Books | Regal-Titelbild `contain` statt `cover`; Gast-Banner ein Satz, am Handy einzeilig; Leser unter 1100 px: Inhalt/Schrift/Zoom im ⋮, Titel mit Mindestbreite, angedockt für Gäste nur „Anmelden“; Kapitelzeile am Handy ohne Balken: Name `flex: 1 1 0`, ⋮ in Zeile 1 (5.5) | Titel/Autor im Titelbild abgeschnitten; Regal am Handy bei 43 % Vorlauf; Lesertitel am Tablet „Pro…“; d8-Fix brach das ⋮ weiter allein um (Name-Grundbreite calc(100% − 9rem)) | d9-rk-ebook-cover-beschnitten, d9-rk-ebook-anon-handy-banner-vorlauf, d9-rk-reader-titel-abgeschnitten, d9-rk-kapitelzeile-leerraum-handy |
 | 2026-10-29 | 0.877.2 | E-Books: Sortierung und „Meine Uploads“ auf jeder Breite hinter „Filter ▾“ (vorher ab 600 px in der Zeile); aktives „Meine Uploads“ zugeklappt als Chip | Nutzerwunsch 29.10.: „my uploads gehört auch in filtercomponente“, „sort by auch in filter“ | Nutzer |
 | 2026-10-29 | 0.877.0 | E-Books: Schlagwörter, Sprache und Elo-Spanne auf jeder Breite in EINER Filter-Komponente hinter „Filter ▾“ (Zahl der aktiven Filter, zugeklappt Chips), Sortierung/„Meine Uploads“ ab 600 px weiter in der Zeile; Schlagwörter in der Oberflächensprache beschriftet und danach sortiert; leise Gesamtzeile „N Bücher · M Dateien (Formate)“ über dem Regal | Nutzerwunsch 29.10.: „versteck die tags in einer filterkomponente“, „tags müssen mehrsprachig sein“, Gesamtmenge passend zur Filterung | Nutzer |
 | 2026-10-29 | 0.876.0 · Buch-Übersetzung | Leser: Sprachschalter als `translate`-Symbolknopf mit Menü Original/Englisch (aktiv = Primärfarbe), je Gerät gemerkt; Regal: Abzeichen `translate` + „EN“; Verwalter-Übersicht als 560-px-Dialog aus dem Bibliotheks-⋮ (8.1) | Bücher werden ins Englische übersetzt — umschalten muss im Leser ohne neue Leiste gehen | Nutzerwunsch 29.10. |

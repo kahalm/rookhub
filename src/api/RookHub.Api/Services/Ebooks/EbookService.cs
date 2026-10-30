@@ -562,39 +562,75 @@ public class EbookService
         if (caller.IsAnonymous) manageAll = false;
         if (!await EbookAccess.CanAccessAsync(_db, caller, id, manageAll, ct)) throw new NotFoundException("E-book not found.");
         if (page < 1) throw new DomainValidationException("Page must be at least 1.");
+        // locator == null: Stand ohne Fundstelle (PDF) behält die gespeicherte; zu lange Fundstellen werden verworfen.
+        string? NewLocator(string? stored) => locator == null ? stored : locator.Length > 300 ? null : locator;
         if (caller.UserId is not int userId)
         {
             if (caller.AnonId == null) throw new DomainValidationException("A visitor id is required to remember the reading position.");
-            var a = await _db.EbookAnonymousProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.SessionId == caller.AnonId, ct);
-            var newLocator = locator == null ? a?.Locator : locator.Length > 300 ? null : locator;
-            if (a != null && IsUnchanged(a.Page, a.PageCount, a.Locator, a.UpdatedAt, page, pageCount, newLocator))
+            var anonId = caller.AnonId;
+            var a = await _db.EbookAnonymousProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.SessionId == anonId, ct);
+            if (a != null && IsUnchanged(a.Page, a.PageCount, a.Locator, a.UpdatedAt, page, pageCount, NewLocator(a.Locator)))
                 return new EbookProgressDto { Page = a.Page, PageCount = a.PageCount, Locator = a.Locator, UpdatedAt = a.UpdatedAt };
+            void ApplyAnon(EbookAnonymousProgress row)
+            {
+                row.Page = page;
+                if (pageCount is > 0) row.PageCount = pageCount;
+                row.Locator = NewLocator(row.Locator);
+                row.UpdatedAt = DateTime.UtcNow;
+            }
+            var anonIsNew = a == null;
             if (a == null)
             {
-                a = new EbookAnonymousProgress { EbookId = id, SessionId = caller.AnonId };
+                a = new EbookAnonymousProgress { EbookId = id, SessionId = anonId };
                 _db.EbookAnonymousProgresses.Add(a);
             }
-            a.Page = page;
-            if (pageCount is > 0) a.PageCount = pageCount;
-            a.Locator = newLocator;
-            a.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
+            ApplyAnon(a);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex) when (anonIsNew && AuthService.IsUniqueViolation(ex))
+            {
+                // Zwei Speichervorgänge desselben Buchs (zwei Fenster, Seitenwechsel + Verlassen) legten beide die erste
+                // Zeile an — der zweite starb mit „Duplicate entry“ (500). Jetzt: die inzwischen vorhandene Zeile laden und
+                // darauf schreiben (letzter Stand gewinnt).
+                _db.Entry(a).State = EntityState.Detached;
+                a = await _db.EbookAnonymousProgresses.FirstAsync(x => x.EbookId == id && x.SessionId == anonId, ct);
+                ApplyAnon(a);
+                await _db.SaveChangesAsync(ct);
+            }
             return new EbookProgressDto { Page = a.Page, PageCount = a.PageCount, Locator = a.Locator, UpdatedAt = a.UpdatedAt };
         }
         var p = await _db.EbookProgresses.FirstOrDefaultAsync(x => x.EbookId == id && x.UserId == userId, ct);
-        var locatorToStore = locator == null ? p?.Locator : locator.Length > 300 ? null : locator;
-        if (p != null && IsUnchanged(p.Page, p.PageCount, p.Locator, p.UpdatedAt, page, pageCount, locatorToStore))
+        if (p != null && IsUnchanged(p.Page, p.PageCount, p.Locator, p.UpdatedAt, page, pageCount, NewLocator(p.Locator)))
             return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
+        void Apply(EbookProgress row)
+        {
+            row.Page = page;
+            if (pageCount is > 0) row.PageCount = pageCount;
+            row.Locator = NewLocator(row.Locator);
+            row.UpdatedAt = DateTime.UtcNow;
+        }
+        var isNew = p == null;
         if (p == null)
         {
             p = new EbookProgress { EbookId = id, UserId = userId };
             _db.EbookProgresses.Add(p);
         }
-        p.Page = page;
-        if (pageCount is > 0) p.PageCount = pageCount;
-        p.Locator = locatorToStore;
-        p.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
+        Apply(p);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (isNew && AuthService.IsUniqueViolation(ex))
+        {
+            // Prod 30.10.2026: „Duplicate entry '461-25' for key 'PRIMARY'“ — zwei gleichzeitige PUTs desselben Buchs und
+            // Nutzers legten beide die erste Zeile an. Idempotent: vorhandene Zeile laden und aktualisieren.
+            _db.Entry(p).State = EntityState.Detached;
+            p = await _db.EbookProgresses.FirstAsync(x => x.EbookId == id && x.UserId == userId, ct);
+            Apply(p);
+            await _db.SaveChangesAsync(ct);
+        }
         return new EbookProgressDto { Page = p.Page, PageCount = p.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt };
     }
 

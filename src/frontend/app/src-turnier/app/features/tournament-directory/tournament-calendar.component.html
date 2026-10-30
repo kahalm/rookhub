@@ -28,7 +28,7 @@
           @for (entry of visibleEntries(cell); track trackById($index, entry)) {
             <button type="button" class="cal-entry" [class.cancelled]="entry.cancelled"
                     (click)="entrySelected.emit(entry)" [title]="entry.name">
-              {{ entry.name }}
+              {{ entry | directoryName }}
             </button>
           }
           @if (hiddenCount(cell) > 0) {
@@ -66,7 +66,7 @@
           @for (entry of visibleAgendaEntries(day); track trackById($index, entry)) {
             <button type="button" class="agenda-entry" [class.cancelled]="entry.cancelled"
                     (click)="entrySelected.emit(entry)">
-              <span class="agenda-name">{{ entry.name }}</span>
+              <span class="agenda-name">{{ entry | directoryName }}</span>
               @if (entry.location) {
                 <!-- „various" ist kein Ort: uebersetzt und kursiv (UI-Sweep 2026-10-11, r2-t-various). -->
                 @if (isVarious(entry)) {

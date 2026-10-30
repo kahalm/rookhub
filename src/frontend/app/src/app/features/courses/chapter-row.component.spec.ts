@@ -100,4 +100,40 @@ describe('ChapterRowComponent', () => {
     const quiz = await render();
     expect(quiz.el.querySelector('.chapter-counts')!.matches(rule)).withContext('mit Balken: Zeile 2 wie bisher').toBeFalse();
   });
+
+  // d9-rk-kapitelzeile-leerraum-handy: der d8-Test prüfte nur den CSS-Text — die Zeile selbst brach trotzdem um (Name mit
+  // Grundbreite calc(100% - 9rem) + Zähler 5.5rem + ⋮ > 366 px). Jetzt nachgestellt: Handy-Regeln ohne Media-Bedingung,
+  // Zeile 366 px breit → ⋮ in derselben Zeile wie der Name; mit Balken bleibt Zeile 2 wie bisher.
+  it('d9: am Handy (366 px) steht das ⋮ ohne Balken in derselben Zeile wie der Name', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = ((ChapterRowComponent as any).ɵcmp.styles as string[]).join('\n');
+    expect(raw).toContain('@media (max-width: 599.98px)');
+    const layout = async (inputs: Record<string, unknown>) => {
+      TestBed.resetTestingModule();
+      const r = await render(inputs);
+      const row = r.el.querySelector<HTMLElement>('.chapter-row')!;
+      const attr = Array.from(row.attributes).map(a => a.name).find(n => n.startsWith('_ngcontent-'))!;
+      const style = document.createElement('style');
+      style.textContent = raw.replace(/@media \(max-width: 599\.98px\)/g, '@media all').replace(/%COMP%/g, attr.slice('_ngcontent-'.length));
+      document.head.appendChild(style);
+      r.el.style.cssText = 'display:block;width:366px';
+      document.body.appendChild(r.el);
+      const top = (sel: string) => r.el.querySelector<HTMLElement>(sel)!.getBoundingClientRect().top;
+      const res = { name: top('.chapter-name'), actions: top('.chapter-actions'), counts: top('.chapter-counts'), height: row.getBoundingClientRect().height };
+      r.el.remove();
+      style.remove();
+      return res;
+    };
+    const longName = 'E. A. Snosko-Borovski';
+    const study = await layout({ label: longName, chapter: chapter({ name: longName, quizCount: 0, solvedCount: 0, progressPercent: 0, lineCount: 6 }) });
+    expect(Math.abs(study.actions - study.name)).withContext('⋮ in Zeile 1').toBeLessThan(12);
+    expect(Math.abs(study.counts - study.name)).withContext('Zähler in Zeile 1').toBeLessThan(12);
+    expect(study.height).withContext('eine Zeile').toBeLessThan(60);
+    // Kurs ohne Aufgaben: quizCount 0 (sonst hängt „· courses.detail.quizCount“ als roher Schlüssel am Zähler).
+    const empty = await layout({ isEmptyQuiz: true, chapter: chapter({ quizCount: 0, solvedCount: 0, progressPercent: 0 }) });
+    expect(Math.abs(empty.actions - empty.name)).withContext('Kurs ohne Aufgaben').toBeLessThan(12);
+    const quiz = await layout({});
+    expect(Math.abs(quiz.actions - quiz.name)).withContext('mit Balken: ⋮ in Zeile 1').toBeLessThan(12);
+    expect(quiz.counts).withContext('mit Balken: Zähler in Zeile 2').toBeGreaterThan(quiz.name + 12);
+  });
 });

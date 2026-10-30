@@ -19,7 +19,7 @@
     </mat-card>
   } @else if (entry(); as entry) {
     <mat-card class="detail-card" [class.cancelled]="entry.cancelled">
-      <h1>{{ entry.name }}</h1>
+      <h1>{{ entry | directoryName }}</h1>
 
       <div class="badges">
         @if (entry.speed !== 'Unknown') {
@@ -58,9 +58,9 @@
             <dd>{{ entry.location }}</dd>
           }
         }
-        @if (entry.state) {
+        @if (region(entry); as r) {
           <dt>{{ 'tournamentDirectory.detail.region' | translate }}</dt>
-          <dd>{{ entry.state }}@if (entry.federation) { <span> ({{ entry.federation }})</span> }</dd>
+          <dd>{{ r }}</dd>
         }
         @if (entry.timeControl) {
           <dt>{{ 'tournamentDirectory.detail.timeControl' | translate }}</dt>

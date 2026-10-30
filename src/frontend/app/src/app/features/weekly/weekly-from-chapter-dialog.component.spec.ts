@@ -111,9 +111,9 @@ describe('WeeklyFromChapterDialogComponent Grund für gesperrtes Anlegen', () =>
     expect(c.canCreate()).toBeTrue();
   });
 
-  it('Vorlage: Grundzeile in der Knopfleiste und Hinweis „erst ein Buch“ am gesperrten Kapitelfeld', async () => {
+  it('Vorlage: Grundzeile in der Knopfleiste, KEIN doppelter Hinweis „erst ein Buch“ am Kapitelfeld (d9)', async () => {
     const src = await (await fetch('/base/src/app/features/weekly/weekly-from-chapter-dialog.component.ts')).text();
     expect(src).toMatch(/@if \(blockReason && !saving\) \{ <span class="why" role="status">/);
-    expect(src).toContain("'weekly.fromChapter.pickBookFirst' | translate");
+    expect(src).not.toContain('pickBookFirst');
   });
 });

@@ -263,6 +263,16 @@ html .mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content:h
 html .mat-mdc-dialog-container :has(> .mat-mdc-dialog-title) + .mat-mdc-dialog-content:has(.mat-mdc-form-field) {
   padding-top: 8px;
 }
+/* - d9-rk-dialog-hinweis-eng: ein Feld mit Hinweis (`mat-hint`) — die Outline-Beschriftung des NÄCHSTEN Felds ragt ~8 px
+     über dessen Rahmen und fraß den Abstand (Token-Dialog „Bereich“ → „Ablauf“: ≈ 4 px). 12 px mehr unter dem Feld, nur
+     wenn ein Hinweis da ist (Felder ohne Hinweis behalten ihre Reihe); Fehlertexte nicht, sonst springt das Formular. */
+html .mat-mdc-dialog-content .mat-mdc-form-field:has(.mat-mdc-form-field-hint) { margin-bottom: 12px; }
+/* - d9-rk-wochenpost-karte-titel-eng: dasselbe für Karten — Material setzt `mat-card-header` unten und `mat-card-content`
+     oben auf 0; ein Outline-Feld in der ersten Inhaltszeile klebte mit seiner Beschriftung an der Kartenüberschrift. */
+html .mat-mdc-card-header + .mat-mdc-card-content:has(> :first-child .mat-form-field-appearance-outline,
+                                                      > .mat-form-field-appearance-outline:first-child) {
+  padding-top: 20px;
+}
 /* - d7-rk-dialog-dunkel-kaum-abgesetzt / d7-rk-token-dialog-flaeche: im Dunkeln war die Dialogfläche `surface` — die
      Seitenfarbe; eine abgedunkelte Karte dahinter lag bei 17/18/21 gegen 18/19/22, und der Schatten ist auf Dunkel
      unsichtbar. Fläche eine Stufe heller (surface-container-high) + 1-px-Rahmen (3.4: Rahmen statt Schatten). Wer die

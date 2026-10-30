@@ -1983,15 +1983,15 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
 
 /** Die echte Vorlage mit Query-Parametern; die schweren Kind-Komponenten fallen weg (wie oben). Mit `lang` gelten die
  *  echten Texte aus `public/i18n` (Karma serviert sie), sonst stehen die Schlüssel da. */
-async function renderAnalysis(params: Record<string, string> = {}, lang?: string): Promise<ComponentFixture<AnalysisComponent>> {
+async function renderAnalysis(params: Record<string, string> = {}, lang?: string, keepBoard = false): Promise<ComponentFixture<AnalysisComponent>> {
   const engine: any = {
     analysis$: new Subject(), engineFatalError$: new Subject(), remoteFallback$: new Subject(), remoteInterrupted$: new Subject(),
     setMultiPv: () => {}, setDepth: () => {}, setRemoteEngine: () => {},
     analyze: () => Promise.resolve(), stop: () => {}, destroy: () => {},
   };
   TestBed.overrideComponent(AnalysisComponent, {
-    remove: { imports: [AnalysisBoardComponent, PositionSetupComponent, PositionRepertoiresComponent, HelpHintComponent,
-      OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent] },
+    remove: { imports: [...(keepBoard ? [] : [AnalysisBoardComponent]), PositionSetupComponent, PositionRepertoiresComponent,
+      HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent] },
     add: { schemas: [NO_ERRORS_SCHEMA] },
   });
   await TestBed.configureTestingModule({
@@ -2478,3 +2478,23 @@ describe('AnalysisComponent gemerkte Einstellungen + Adresse (Charakterisierung 
     c.ngOnDestroy();
   });
 });
+
+// d9-rk-analyse-bewertungsleiste-ueberstand: die Leiste lief neben der Vollbild-Knopfzeile über dem Brett 25 px höher als
+// das Brett und endete unten darunter. Gemessen am echten Brett: Leiste und Brett fluchten oben und unten.
+describe('AnalysisComponent Bewertungsleiste fluchtet mit dem Brett (d9-rk-analyse-bewertungsleiste-ueberstand)', () => {
+  it('Oberkante und Unterkante von .eval-bar und .ab-board liegen gleich (±1 px)', async () => {
+    const fixture = await renderAnalysis({}, undefined, true);
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    fixture.detectChanges();
+    await new Promise(r => setTimeout(r, 50));
+    const bar = el.querySelector('.eval-bar')!.getBoundingClientRect();
+    const board = el.querySelector('.ab-board')!.getBoundingClientRect();
+    expect(board.height).toBeGreaterThan(200);
+    expect(Math.abs(bar.top - board.top)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bar.bottom - board.bottom)).toBeLessThanOrEqual(1);
+    fixture.destroy();
+    el.remove();
+  });
+});
+

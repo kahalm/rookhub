@@ -220,7 +220,7 @@ internal sealed class DirectorySweepMerge
     {
         entry.Name = Truncate(row.Name, 500);
         entry.Federation = Truncate(row.Federation, 3);
-        entry.State = Truncate(row.State, 100);
+        entry.State = Truncate(DirectoryText.NullIfPlaceholder(row.State), 100);   // „-“ → null (d9-t-region-platzhalter)
         entry.StartDate = row.StartDate;
         entry.EndDate = row.EndDate;
         entry.StartsOnWeekend = row.StartDate is { } d

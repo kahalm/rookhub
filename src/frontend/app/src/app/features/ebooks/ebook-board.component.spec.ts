@@ -616,6 +616,28 @@ describe('EbookBoardComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.eb-mode').length).toBe(6);
   });
 
+  it('d9-rk-diagramm-knopf-gesperrt-ohne-grund: auf der Diagrammstellung eine Marke statt gesperrtem Knopf, sonst „Zum Diagramm“', () => {
+    const { fixture, http } = makeGame();
+    http.expectOne('/api/ebooks/9/diagrams/21/game').flush(GAME);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const c = fixture.componentInstance;
+    expect(c.atGameDiagram()).toBeTrue();
+    expect(el.querySelector('.eb-game-nav button.eb-game-diagram')).toBeNull();
+    expect(el.querySelector('.eb-game-nav button:not([disabled]).mat-mdc-button:not(.mat-mdc-icon-button)')).toBeNull();
+    expect(el.querySelector('.eb-game-at-diagram')?.textContent).toContain('ebooks.board.gameAtDiagram');
+    c.gameStep(1);
+    fixture.detectChanges();
+    const btn = el.querySelector('.eb-game-nav button.eb-game-diagram') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.disabled).toBeFalse();
+    expect(btn.textContent).toContain('ebooks.board.gameToDiagram');
+    btn.click();
+    fixture.detectChanges();
+    expect(c.gamePly()).toBe(5);
+    expect(el.querySelector('.eb-game-at-diagram')).not.toBeNull();
+  });
+
   it('Partie: eine unspielbare Zugfolge wird beim ersten falschen Zug abgeschnitten', () => {
     const line = EbookBoardComponent.replay({ ...GAME, moves: ['e4', 'e5', 'Qxf7', 'Nc6'] });
     expect(line.sans).toEqual(['e4', 'e5']);

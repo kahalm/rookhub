@@ -347,7 +347,8 @@ export class PublicTournamentComponent implements OnInit {
         this.dialog.open(TeamPlayersDialogComponent, {
           data: { teamName: result.name, players: result.players || [] },
           width: '500px',
-          maxWidth: '95vw'
+          maxWidth: '95vw',
+          autoFocus: 'dialog'   // d9-t-team-dialog-schliessen-gefuellt: sonst trägt „Schließen“ beim Öffnen die Fokus-Tonfläche
         });
       },
       error: () => {

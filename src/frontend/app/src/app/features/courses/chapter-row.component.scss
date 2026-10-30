@@ -101,6 +101,10 @@
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
+  /* d9-rk-kapitelzeile-leerraum-handy: der d8-Fix allein reichte nicht — der Name behielt die Grundbreite
+     `calc(100% - 9rem)` (≈ 222 px bei 366 px), dazu Pfeil 28 + Zähler 88 + ⋮ 40 + Lücken ≈ 397 px: das ⋮ brach allein in
+     eine zweite, sonst leere Zeile um. Ohne Balken teilt sich der Name die Zeile mit Zähler und ⋮ und bricht selbst um. */
+  .chapter-row:not(:has(> .chapter-progress:not(.chapter-progress--none))) > .chapter-name { flex: 1 1 0; min-width: 0; }
 }
 
 .rename-input {

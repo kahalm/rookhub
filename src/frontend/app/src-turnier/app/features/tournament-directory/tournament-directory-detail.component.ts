@@ -24,8 +24,9 @@ import { TournamentDatePipe } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
-import { DIRECTORY_SOURCE_KINDS, DirectoryEntry, isPlaceholderLocation } from './tournament-directory.model';
+import { DIRECTORY_SOURCE_KINDS, DirectoryEntry, isPlaceholderLocation, regionText } from './tournament-directory.model';
 import { directoryCalendarEvent, directoryChessResultsUrl } from './directory-calendar-event';
+import { DirectoryNamePipe } from './directory-name.pipe';
 
 const KNOWN_SOURCE_KINDS: ReadonlySet<string> = new Set(DIRECTORY_SOURCE_KINDS);
 
@@ -66,6 +67,7 @@ export function directorySourceNote(kind: string): string | null {
   selector: 'app-tournament-directory-detail',
   standalone: true,
   imports: [
+    DirectoryNamePipe,
     CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule,
     TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, TournamentMapComponent, TournamentDatePipe,
   ],
@@ -106,6 +108,8 @@ export class TournamentDirectoryDetailComponent implements OnInit {
 
   /** Ort ist nur ein Platzhalter wie „various" (UI-Sweep 2026-10-11, r2-t-various). */
   various(entry: DirectoryEntry): boolean { return isPlaceholderLocation(entry.location); }
+  /** Region + Verband ohne Platzhalter wie „-" (d9-t-region-platzhalter). */
+  region(entry: DirectoryEntry): string | null { return regionText(entry); }
   readonly loading = signal(true);
   readonly notFound = signal(false);
   /**

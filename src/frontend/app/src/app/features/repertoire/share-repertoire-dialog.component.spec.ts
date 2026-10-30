@@ -82,4 +82,19 @@ describe('ShareRepertoireDialogComponent', () => {
     f.detectChanges();
     expect(dialogRef.close).toHaveBeenCalled();
   });
+
+  it('d9: gesperrtes „Teilen (0)“ nennt den Grund, bis ein Freund angehakt ist; ohne Freunde keiner', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const why = () => el.querySelector('mat-dialog-actions > .why');
+    expect(why()?.textContent).toContain('common.pickFriendFirst');
+    expect(why()?.getAttribute('role')).toBe('status');
+    component.toggle(2, true);
+    fixture.detectChanges();
+    expect(why()).toBeNull();
+
+    friendsService.getFriends.and.returnValue(of([]));
+    const f = TestBed.createComponent(ShareRepertoireDialogComponent);
+    f.detectChanges();
+    expect((f.nativeElement as HTMLElement).querySelector('mat-dialog-actions > .why')).toBeNull();
+  });
 });

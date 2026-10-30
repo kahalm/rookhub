@@ -7,9 +7,10 @@ import { DateTimeFieldsComponent, splitLocalDateTime } from './date-time-fields.
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DateTimeFieldsComponent],
-  template: `<app-date-time-fields [(value)]="value" dateLabel="Freigabe" timeLabel="Uhrzeit" [required]="true" />`,
+  template: `<app-date-time-fields [(value)]="value" dateLabel="Freigabe" timeLabel="Uhrzeit" [required]="true"
+                                   [hint]="hint()" />`,
 })
-class HostComponent { value = signal(''); }
+class HostComponent { value = signal(''); hint = signal(''); }
 
 /** d8-rk-ausgabe-datetime-us-format (DESIGN 5.13): Datum + Uhrzeit in der App-Sprache statt datetime-local. */
 describe('DateTimeFieldsComponent', () => {
@@ -58,5 +59,22 @@ describe('DateTimeFieldsComponent', () => {
     expect(cmp.timeValue!.getHours()).toBe(0);
     cmp.onDate(null);
     expect(host.value()).toBe('');
+  });
+
+  it('d9: Hinweis nur auf Wunsch unter dem Datum; das Datum bekommt den Platz, die Uhrzeit bleibt schmal', () => {
+    const { fixture, host: h, el } = make('');
+    expect(el.querySelector('mat-hint')).toBeNull();
+    h.hint.set('Optional');
+    fixture.detectChanges();
+    expect(el.querySelector('.dtf-date mat-hint')!.textContent!.trim()).toBe('Optional');
+    expect(el.querySelector('.dtf-time mat-hint')).toBeNull();
+    const host = el.querySelector('app-date-time-fields') as HTMLElement;
+    host.style.width = '400px';
+    document.body.appendChild(el);
+    const date = el.querySelector('.dtf-date')!.getBoundingClientRect().width;
+    const time = el.querySelector('.dtf-time')!.getBoundingClientRect().width;
+    el.remove();
+    expect(time).toBeLessThanOrEqual(120);
+    expect(date).toBeGreaterThan(2 * time);
   });
 });
