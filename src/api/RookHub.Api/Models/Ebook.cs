@@ -523,3 +523,21 @@ public class EbookDiagramCorrection
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+
+/// <summary>
+/// Eröffnungsbaum eines Buchs (0.881.0): alle Linien des Buchs als Zugbaum ab der Grundstellung — der Leser zeigt ihn im
+/// Brett-Modus „Baum“, Nutzer können daraus ein Repertoire speichern. Eigene Tabelle (nicht auf <see cref="Ebook"/>),
+/// weil die Bücherliste Ebook-Zeilen lädt und der Baum bis zu einigen MB groß sein kann.
+/// </summary>
+public class EbookTree
+{
+    /// <summary>Zugleich Primärschlüssel: höchstens ein Baum je Buch.</summary>
+    public int EbookId { get; set; }
+    public Ebook Ebook { get; set; } = null!;
+
+    /// <summary>JSON-Feld aus <c>[parentIndex, san]</c>-Paaren. Eintrag i (0-basiert) ist Knoten i+1, Knoten 0 die
+    /// Grundstellung; <c>parentIndex</c> zeigt immer auf einen früheren Knoten. SAN englisch.</summary>
+    [Required] public string Nodes { get; set; } = "[]";
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

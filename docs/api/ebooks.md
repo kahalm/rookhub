@@ -518,6 +518,44 @@ sich eine Partie). Gelöscht wird mit dem Buch.
   (Zurücknehmen, „Zurück zur Partie“). Die Engine-Leiste ist wie in allen Modi über ⋮ zuschaltbar. Eine unspielbare
   Zugfolge wird beim ersten falschen Zug abgeschnitten (`EbookBoardComponent.replay`).
 
+## Eröffnungsbaum: Modus „Baum“ (0.881.0)
+
+Für Eröffnungsbücher (z. B. „Danish Dynamite“), die keine Aufgabenbücher sind: die Linien des Buchs als Zugbaum ab der
+Grundstellung zum Durchklicken im Leser, mit „Als Repertoire speichern“. Daten: Tabelle `EbookTrees` (PK = FK `EbookId`,
+Cascade; `Nodes` longtext; `UpdatedAt`) — bewusst NICHT auf `Ebooks`, weil die Bücherliste Ebook-Zeilen lädt. Gelöscht
+wird mit dem Buch (`EbookService.RemoveBookAsync`).
+
+- **Format** `Nodes`: JSON-Feld aus `[parentIndex, san]`. Eintrag i (0-basiert) ist Knoten i+1, Knoten 0 die Grundstellung;
+  `parentIndex` zeigt immer auf einen früheren Knoten (0 = Grundstellung). SAN englisch. Beispiel
+  `[[0,"e4"],[1,"e5"],[2,"d4"],[3,"exd4"],[4,"c3"],[4,"Nf3"]]`. Der Server prüft nur die Form, nicht die Legalität.
+- `PUT /api/admin/ebooks/{id}/tree` (`ebooks.manage`) `{ nodes }` → `{ ebookId, nodes: <Anzahl> }`, ersetzt einen
+  vorhandenen Baum. 400 `ebook_tree_invalid` bei leerem/fehlendem Feld, Eintrag ≠ `[int, string]`, Eltern nicht davor,
+  SAN leer oder > 10 Zeichen, mehr als 200 000 Knoten; unbekanntes Buch 404. Gespeichert kompakt neu geschrieben.
+- `DELETE /api/admin/ebooks/{id}/tree` → 204 (auch ohne Baum); unbekanntes Buch 404.
+- `GET /api/ebooks/{id}/tree` (ohne Anmeldung, Zugriff wie die Diagrammliste) → `{ nodes }` (gespeicherter Text
+  unverändert); unsichtbares Buch oder kein Baum → 404. `EbookDto.hasTree` sagt dem Leser, ob es einen gibt.
+- Brett-Modus `tree` („Baum“, auch als `DefaultBoardMode` wählbar — der Bearbeiten-Dialog bietet ihn nur mit Baum an):
+  Knopf nur bei `hasTree`; braucht keine regelgerechte Diagrammstellung. Der Leser holt den Baum einmal je Buch
+  (`EbookService.tree`), baut alle Stellungen mit chess.js (`ebook-tree.util.ts`, `EbookOpeningTree`: Tiefensuche mit
+  Zug/Zurücknehmen; ein illegaler Zug kappt seinen Teilbaum) und sucht die Diagrammstellung über die FIGURENSTELLUNG
+  (Zugrecht/Zähler egal, auch um 180° gedreht gesetzte Diagramme; bei Zugumstellung gewinnt die geringste Tiefe). Nicht
+  gefunden → Hinweis „Stellung nicht im Buchbaum“, Start bei der Grundstellung. Anzeige (`app-ebook-tree-panel`):
+  Schrittleiste (Grundstellung, ◀ = Knoten davor, ▶ = Hauptfortsetzung) + „Als Repertoire speichern“, der Weg ab der
+  Grundstellung als klickbare Zugfolge, die Fortsetzungen im Buch (meiste Linien darunter zuerst, je „n Linien“). Ein
+  Brettzug, der im Buch steht, geht dorthin; ein anderer wird kurz gezeigt, „Nicht im Buch“, zurückgenommen. ← / →
+  steuern den Baum, solange der Fokus im Brett-Bereich liegt (sonst blättern sie weiter das Buch).
+- **Als Repertoire speichern** (nur mit Konto): Dialog mit Name (Vorschlag „<Buchtitel> – <letzte drei Halbzüge>“), Umfang
+  „Ab dieser Stellung“ (Vorgabe, wenn nicht an der Grundstellung) / „Ganzer Baum“ und Farbe. Die Farbe ist mit der Seite
+  vorbelegt, die in der Mehrheit der Linien des gewählten Umfangs den letzten Zug macht (dieselbe Heuristik wie die
+  Kapitel-Erkennung der Repertoires, Gleichstand → Weiß); wählt man selbst, bleibt die Wahl beim Umschalten des Umfangs.
+  Erzeugt wird EINE Partie mit Varianten: Züge bis zur Stellung als Hauptlinie, danach der Teilbaum, Hauptfortsetzung =
+  Kind mit den meisten Linien; Kopf `Event`/`White` = Buchtitel, `Black` = Name (Kapitel), `Annotator "RookHub book
+  tree"`, `ChessableColor` = Farbe. Angelegt über den vorhandenen Weg (`RepertoireService.create` privat, Art
+  „Eröffnung“, + `uploadFile` `buchbaum.pgn`), Snackbar mit „Öffnen“. Mehr als 20 000 Züge → Hinweis, ab einer späteren
+  Stellung zu speichern (`TREE_EXPORT_MAX_NODES`).
+- Offen: den Baum eines Buchs erzeugt bisher niemand automatisch — er kommt per Admin-Endpunkt von außen (z. B. aus der
+  PGN des Buchs bzw. dessen Linien).
+
 ## Ohne Anmeldung (0.778.0)
 
 Bibliothek und Leser gehen auch ohne Konto (Routen ohne `authGuard`, Menüpunkt `ebooks` steht standardmäßig auf `All` —

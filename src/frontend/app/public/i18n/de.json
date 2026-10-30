@@ -110,7 +110,8 @@
     "ebook_reflow_unsupported": "Ein Fließtext-EPUB entsteht nur aus einem Text-PDF mit erkannten Diagrammen (kein Scan, noch kein EPUB).",
     "ebook_duplicate_file": "Diese Datei ist schon in der Bibliothek.",
     "ebook_duplicate_book": "Dieses Buch ist schon in der Bibliothek.",
-    "ebook_file_missing": "Die Datei fehlt auf dem Server."
+    "ebook_file_missing": "Die Datei fehlt auf dem Server.",
+    "ebook_tree_invalid": "Der Buchbaum ist ungültig."
   },
   "common": {
     "optional": "Optional",
@@ -5544,7 +5545,8 @@
         "calc": "Kalkulieren",
         "solve": "Lösen",
         "maia": "Maia",
-        "game": "Partie"
+        "game": "Partie",
+        "tree": "Baum"
       },
       "modeHint": {
         "view": "Nur die Stellung aus dem Buch",
@@ -5552,7 +5554,8 @@
         "calc": "Varianten notieren, ohne die Figuren endgültig zu ziehen – später prüfen",
         "solve": "Finde den Zug selbst; geprüft wird mit der Buchlösung, fehlt sie, mit dem Computer",
         "maia": "Die Stellung gegen Maia ausspielen",
-        "game": "die Partie nachspielen, aus der das Diagramm stammt"
+        "game": "die Partie nachspielen, aus der das Diagramm stammt",
+        "tree": "Die Eröffnungslinien des Buchs durchklicken"
       },
       "calcHint": "Zieh Varianten – sie werden als Linien notiert.",
       "calcSaveFailed": "Varianten ließen sich auf diesem Gerät nicht speichern.",
@@ -5925,6 +5928,25 @@
       "files": "{{n}} Dateien",
       "filesOne": "1 Datei",
       "label": "Passend zur aktuellen Filterung"
+    },
+    "tree": {
+      "loading": "Buchbaum wird geladen …",
+      "missing": "Der Buchbaum ließ sich nicht laden.",
+      "notInTree": "Stellung nicht im Buchbaum — Start bei der Grundstellung.",
+      "notInBook": "Nicht im Buch",
+      "path": "Züge ab der Grundstellung",
+      "next": "Fortsetzungen im Buch",
+      "end": "Ende der Buchlinie",
+      "lines": "{{n}} Linien",
+      "linesOne": "1 Linie",
+      "save": "Als Repertoire speichern",
+      "scope": "Umfang",
+      "scopeAll": "Ganzer Baum",
+      "scopeHere": "Ab dieser Stellung",
+      "tooLarge": "Zu groß für ein Repertoire ({{n}} Züge, höchstens {{max}}) — ab einer späteren Stellung speichern.",
+      "description": "Aus dem Buchbaum von „{{book}}“.",
+      "saved": "Repertoire „{{name}}“ angelegt.",
+      "saveFailed": "Das Repertoire ließ sich nicht anlegen."
     }
   },
   "woodpecker": {

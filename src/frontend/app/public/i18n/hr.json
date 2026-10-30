@@ -110,7 +110,8 @@
     "ebook_reflow_unsupported": "Prilagodljivi EPUB može nastati samo iz tekstualnog PDF-a s prepoznatim dijagramima (bez skena, bez postojećeg EPUB-a).",
     "ebook_duplicate_file": "Ova je datoteka već u knjižnici.",
     "ebook_duplicate_book": "Ova je knjiga već u knjižnici.",
-    "ebook_file_missing": "Datoteka nedostaje na poslužitelju."
+    "ebook_file_missing": "Datoteka nedostaje na poslužitelju.",
+    "ebook_tree_invalid": "Stablo otvaranja nije ispravno."
   },
   "common": {
     "optional": "Neobavezno",
@@ -5544,7 +5545,8 @@
         "calc": "Računanje",
         "solve": "Rješavanje",
         "maia": "Maia",
-        "game": "Partija"
+        "game": "Partija",
+        "tree": "Stablo"
       },
       "modeHint": {
         "view": "Samo pozicija iz knjige",
@@ -5552,7 +5554,8 @@
         "calc": "Zapiši varijante bez konačnog pomicanja figura – provjeri ih kasnije",
         "solve": "Sam pronađi potez; provjerava se prema rješenju iz knjige, a ako ga nema, računalom",
         "maia": "Odigraj poziciju protiv Maie",
-        "game": "odigraj partiju iz koje potječe dijagram"
+        "game": "odigraj partiju iz koje potječe dijagram",
+        "tree": "Prođi kroz linije otvaranja iz knjige"
       },
       "calcHint": "Igraj varijante – bilježe se kao linije.",
       "calcSaveFailed": "Varijante se nisu mogle spremiti na ovom uređaju.",
@@ -5925,6 +5928,25 @@
       "files": "{{n}} datoteka",
       "filesOne": "1 datoteka",
       "label": "Prema trenutačnim filtrima"
+    },
+    "tree": {
+      "loading": "Učitavanje stabla otvaranja…",
+      "missing": "Stablo otvaranja nije se moglo učitati.",
+      "notInTree": "Pozicija nije u stablu knjige — kreće se od početne pozicije.",
+      "notInBook": "Nije u knjizi",
+      "path": "Potezi od početne pozicije",
+      "next": "Nastavci u knjizi",
+      "end": "Kraj linije iz knjige",
+      "lines": "{{n}} linija",
+      "linesOne": "1 linija",
+      "save": "Spremi kao repertoar",
+      "scope": "Opseg",
+      "scopeAll": "Cijelo stablo",
+      "scopeHere": "Od ove pozicije",
+      "tooLarge": "Preveliko za jedan repertoar ({{n}} poteza, najviše {{max}}) — spremi od kasnije pozicije.",
+      "description": "Iz stabla otvaranja knjige „{{book}}“.",
+      "saved": "Repertoar „{{name}}“ je stvoren.",
+      "saveFailed": "Repertoar se nije mogao stvoriti."
     }
   },
   "woodpecker": {

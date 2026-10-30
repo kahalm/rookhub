@@ -147,6 +147,13 @@ public class EbooksController : BaseApiController
     public async Task<ActionResult<EbookGameDto>> GetDiagramGame(int id, int diagramId, [FromServices] EbookGameService games, CancellationToken ct)
         => Ok(await games.GetForDiagramAsync(Caller, await ManageAllAsync(), id, diagramId, ct));
 
+    /// <summary>Eröffnungsbaum (0.881.0) für den Brett-Modus „Baum“ → <c>{ nodes: [[parentIndex, san], …] }</c>; Zugriff wie
+    /// bei den Diagrammen, ohne Baum 404. Der gespeicherte JSON-Text geht unverändert hinaus (bis 200 000 Knoten).</summary>
+    [HttpGet("{id:int}/tree")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetTree(int id, [FromServices] EbookTreeService trees, CancellationToken ct)
+        => Content("{\"nodes\":" + await trees.GetNodesJsonAsync(Caller, await ManageAllAsync(), id, ct) + "}", "application/json");
+
     // ── Sammlungen (0.787.0) — Literal-Routen, verwalten nur mit ebooks.manage ─────────────────────────
 
     [HttpGet("collections")]

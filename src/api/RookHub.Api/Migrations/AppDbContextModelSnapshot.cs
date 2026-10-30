@@ -2956,6 +2956,23 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookTranslations");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookTree", b =>
+                {
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nodes")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("EbookId");
+
+                    b.ToTable("EbookTrees");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EndlessProgress", b =>
                 {
                     b.Property<int>("Id")
@@ -9867,6 +9884,17 @@ namespace RookHub.Api.Migrations
                     b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
                         .WithMany()
                         .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ebook");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookTree", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", "Ebook")
+                        .WithOne()
+                        .HasForeignKey("RookHub.Api.Models.EbookTree", "EbookId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

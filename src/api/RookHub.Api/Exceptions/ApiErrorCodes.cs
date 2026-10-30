@@ -42,6 +42,7 @@ public static class ApiErrorCodes
     public const string EbookFileMissing = "ebook_file_missing";
     public const string EbookAnonymousUploadDisabled = "ebook_anonymous_upload_disabled";
     public const string EbookReflowUnsupported = "ebook_reflow_unsupported";
+    public const string EbookTreeInvalid = "ebook_tree_invalid";
     public const string AdminSelfChange = "admin_self_change";
     public const string UserDeleteReferences = "user_delete_references";
 

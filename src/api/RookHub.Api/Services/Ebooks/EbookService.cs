@@ -241,6 +241,7 @@ public class EbookService
         var translations = (await _db.EbookTranslations.Where(t => ids.Contains(t.EbookId) && t.State == EbookTranslationState.Done)
                 .Select(t => new { t.EbookId, t.Language }).ToListAsync(ct))
             .GroupBy(t => t.EbookId).ToDictionary(g => g.Key, g => g.Select(t => t.Language).OrderBy(l => l).ToList());
+        var treeIds = (await _db.EbookTrees.Where(t => ids.Contains(t.EbookId)).Select(t => t.EbookId).ToListAsync(ct)).ToHashSet();
         var manageableIds = items.Where(b => EbookAccess.CanManage(b, caller, manageAll)).Select(b => b.Id).ToList();
         var groups = manageableIds.Count == 0
             ? new Dictionary<int, List<int>>()
@@ -280,6 +281,7 @@ public class EbookService
                     : null,
                 Language = b.Language,
                 Translations = translations.TryGetValue(b.Id, out var tr) ? tr : [],
+                HasTree = treeIds.Contains(b.Id),
                 CreatedAt = b.CreatedAt,
                 UpdatedAt = b.UpdatedAt,
             };
@@ -471,6 +473,7 @@ public class EbookService
         _db.EbookAnonymousProgresses.RemoveRange(_db.EbookAnonymousProgresses.Where(p => p.EbookId == id));
         _db.EbookDiagrams.RemoveRange(_db.EbookDiagrams.Where(d => d.EbookId == id));
         _db.EbookGames.RemoveRange(_db.EbookGames.Where(g => g.EbookId == id));
+        _db.EbookTrees.RemoveRange(_db.EbookTrees.Where(t => t.EbookId == id));
         _db.CourseLineEbookRefs.RemoveRange(_db.CourseLineEbookRefs.Where(r => r.EbookId == id));
         _db.EbookDiagramReports.RemoveRange(_db.EbookDiagramReports.Where(r => r.EbookId == id));
         _db.EbookMissedDiagrams.RemoveRange(_db.EbookMissedDiagrams.Where(m => m.EbookId == id));

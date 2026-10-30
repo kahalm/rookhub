@@ -5,7 +5,7 @@
   <div class="eb-modes" role="group" [attr.aria-label]="'ebooks.board.modes' | translate">
     @for (m of visibleModes; track m) {
       <button mat-icon-button type="button" class="eb-mode" [class.eb-mode--on]="mode() === m" [attr.aria-pressed]="mode() === m"
-              [disabled]="m !== 'view' && !legal()" (click)="setMode(m)"
+              [disabled]="needsLegal(m) && !legal()" (click)="setMode(m)"
               [appIconLabel]="(('ebooks.board.mode.' + m) | translate) + ' – ' + (('ebooks.board.modeHint.' + m) | translate)">
         <mat-icon>{{ modeIcon(m) }}</mat-icon>
       </button>
@@ -209,6 +209,19 @@
           </div>
         } @else {
           <p class="eb-note eb-game-hint">{{ 'ebooks.board.gameHint' | translate }}</p>
+        }
+      }
+    }
+  }
+  @case ('tree') {
+    <!-- Baum (0.881.0): Eröffnungsbaum des Buchs — Schrittleiste, Weg ab der Grundstellung, Fortsetzungen mit Linienzahl. -->
+    @switch (treeState()) {
+      @case ('loading') { <div class="eb-busy"><mat-progress-bar mode="indeterminate" /><span>{{ 'ebooks.tree.loading' | translate }}</span></div> }
+      @case ('missing') { <p class="eb-note">{{ 'ebooks.tree.missing' | translate }}</p> }
+      @case ('ready') {
+        @if (openingTree(); as t) {
+          <app-ebook-tree-panel [tree]="t" [cursor]="treeCursor()" [notInTree]="treeNotInTree()" [bookTitle]="bookTitle()"
+                                [canSave]="canSaveRepertoire()" (go)="treeGo($event)" />
         }
       }
     }

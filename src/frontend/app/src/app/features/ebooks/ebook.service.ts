@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpEvent, HttpParams } from '@angular/common/http';
 import { Observable, distinctUntilChanged, map, of, shareReplay, skip, tap } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
+import { EbookTreeWire } from './ebook-tree.util';
 
 /** Eine Datei (ein Format) eines E-Books. */
 export interface EbookFile {
@@ -31,7 +32,9 @@ export interface Ebook {
   description: string | null;
   targetMinElo: number | null;
   /** Startmodus des Bretts neben dem Buch (0.781.0); der Server liefert immer einen, Standard „solve“. */
-  defaultBoardMode?: 'view' | 'free' | 'calc' | 'solve' | 'maia';
+  defaultBoardMode?: 'view' | 'free' | 'calc' | 'solve' | 'maia' | 'game' | 'tree';
+  /** Es gibt einen Eröffnungsbaum (0.881.0) — das Brett bietet den Modus „Baum“ an. */
+  hasTree?: boolean;
   source: 'upload' | 'library';
   pageCount: number | null;
   hasCover: boolean;
@@ -384,6 +387,16 @@ export class EbookService {
   diagramGame(id: number, diagramId: number): Observable<EbookGame> {
     return this.http.get<EbookGame>(`/api/ebooks/${id}/diagrams/${diagramId}/game`);
   }
+
+  /** Eröffnungsbaum des Buchs (0.881.0, `[parentIndex, san]` je Knoten); 404 = keiner. Einmal je Buch geholt — der zuletzt
+   *  geladene bleibt im Speicher (ein Fehlschlag nicht, der nächste Aufruf fragt neu). */
+  tree(id: number): Observable<EbookTreeWire> {
+    if (this.treeCache?.id !== id) {
+      this.treeCache = { id, data: this.http.get<{ nodes: EbookTreeWire }>(`/api/ebooks/${id}/tree`).pipe(map(r => r.nodes ?? []), shareReplay(1)) };
+    }
+    return this.treeCache.data;
+  }
+  private treeCache: { id: number; data: Observable<EbookTreeWire> } | null = null;
 
   /** „Ist hier ein Diagramm, das nicht erkannt wurde?“ — Antwort zur späteren Auswertung (0.788.0). */
   reportMissedDiagram(id: number, page: number, x: number, y: number, isDiagram: boolean, epub?: EpubMissedSpot): Observable<void> {

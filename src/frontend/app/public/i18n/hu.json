@@ -30,7 +30,8 @@
     "ebook_reflow_unsupported": "Újratördelhető EPUB csak felismert diagramokat tartalmazó szöveges PDF-ből készülhet (nem szkennelt, és még nincs EPUB).",
     "ebook_duplicate_file": "Ez a fájl már a könyvtárban van.",
     "ebook_duplicate_book": "Ez a könyv már a könyvtárban van.",
-    "ebook_file_missing": "A fájl hiányzik a szerverről."
+    "ebook_file_missing": "A fájl hiányzik a szerverről.",
+    "ebook_tree_invalid": "A megnyitási fa érvénytelen."
   },
   "common": {
     "optional": "Nem kötelező",
@@ -5544,7 +5545,8 @@
         "calc": "Számolás",
         "solve": "Megoldás",
         "maia": "Maia",
-        "game": "Játszma"
+        "game": "Játszma",
+        "tree": "Fa"
       },
       "modeHint": {
         "view": "Csak a könyv állása",
@@ -5552,7 +5554,8 @@
         "calc": "Változatok lejegyzése a bábuk végleges mozgatása nélkül – később ellenőrizhető",
         "solve": "Találd meg magad a lépést; a könyv megoldása ellenőrzi, ha nincs, a számítógép",
         "maia": "Az állás lejátszása Maia ellen",
-        "game": "a játszma végigjátszása, amelyből az ábra származik"
+        "game": "a játszma végigjátszása, amelyből az ábra származik",
+        "tree": "Kattints végig a könyv megnyitási változatain"
       },
       "calcHint": "Játssz változatokat – vonalakként jegyzi fel őket.",
       "calcSaveFailed": "A változatokat nem sikerült ezen az eszközön menteni.",
@@ -5925,6 +5928,25 @@
       "files": "{{n}} fájl",
       "filesOne": "1 fájl",
       "label": "A jelenlegi szűrésnek megfelelően"
+    },
+    "tree": {
+      "loading": "Megnyitási fa betöltése…",
+      "missing": "A megnyitási fát nem sikerült betölteni.",
+      "notInTree": "Az állás nincs a könyv fájában — indulás az alapállásból.",
+      "notInBook": "Nincs a könyvben",
+      "path": "Lépések az alapállástól",
+      "next": "Folytatások a könyvben",
+      "end": "A könyvi változat vége",
+      "lines": "{{n}} változat",
+      "linesOne": "1 változat",
+      "save": "Mentés repertoárként",
+      "scope": "Terjedelem",
+      "scopeAll": "Teljes fa",
+      "scopeHere": "Ettől az állástól",
+      "tooLarge": "Túl nagy egy repertoárhoz ({{n}} lépés, legfeljebb {{max}}) — ments egy későbbi állástól.",
+      "description": "A(z) „{{book}}” megnyitási fájából.",
+      "saved": "A(z) „{{name}}” repertoár létrejött.",
+      "saveFailed": "A repertoárt nem sikerült létrehozni."
     }
   },
   "woodpecker": {

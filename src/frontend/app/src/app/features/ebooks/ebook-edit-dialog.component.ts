@@ -158,7 +158,9 @@ export class EbookEditDialogComponent {
   selected = new Set<number>(this.data.ebook?.groupIds ?? []);
   /** Startmodus des Bretts (0.781.0), Standard „Lösen“. */
   boardMode: string = this.data.ebook?.defaultBoardMode ?? 'solve';
-  readonly boardModes = ['solve', 'view', 'free', 'calc', 'maia', 'game'];
+  /** „Baum“ nur für Bücher mit Eröffnungsbaum (0.881.0) — oder wenn das Buch schon darauf steht. */
+  readonly boardModes = ['solve', 'view', 'free', 'calc', 'maia', 'game',
+    ...(this.data.ebook?.hasTree || this.data.ebook?.defaultBoardMode === 'tree' ? ['tree'] : [])];
   readonly busy = signal(false);
   readonly progress = signal<number | null>(null);
 

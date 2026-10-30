@@ -110,7 +110,8 @@
     "ebook_reflow_unsupported": "A reflowable EPUB can only be made from a text PDF with recognised diagrams (no scan, no existing EPUB).",
     "ebook_duplicate_file": "This file is already in the library.",
     "ebook_duplicate_book": "This book is already in the library.",
-    "ebook_file_missing": "The file is missing on the server."
+    "ebook_file_missing": "The file is missing on the server.",
+    "ebook_tree_invalid": "The opening tree is invalid."
   },
   "common": {
     "optional": "Optional",
@@ -5544,7 +5545,8 @@
         "calc": "Calculate",
         "solve": "Solve",
         "maia": "Maia",
-        "game": "Game"
+        "game": "Game",
+        "tree": "Tree"
       },
       "modeHint": {
         "view": "Only the position from the book",
@@ -5552,7 +5554,8 @@
         "calc": "Write down variations without moving the pieces for good – check them later",
         "solve": "Find the move yourself; it is checked against the book solution, or by the computer if there is none",
         "maia": "Play the position out against Maia",
-        "game": "play through the game this diagram comes from"
+        "game": "play through the game this diagram comes from",
+        "tree": "Click through the book’s opening lines"
       },
       "calcHint": "Play variations – they are noted as lines.",
       "calcSaveFailed": "Variations could not be saved on this device.",
@@ -5925,6 +5928,25 @@
       "files": "{{n}} files",
       "filesOne": "1 file",
       "label": "Matching the current filters"
+    },
+    "tree": {
+      "loading": "Loading the opening tree…",
+      "missing": "The opening tree could not be loaded.",
+      "notInTree": "Position not in the book tree — starting from the initial position.",
+      "notInBook": "Not in the book",
+      "path": "Moves from the initial position",
+      "next": "Continuations in the book",
+      "end": "End of the book line",
+      "lines": "{{n}} lines",
+      "linesOne": "1 line",
+      "save": "Save as repertoire",
+      "scope": "Scope",
+      "scopeAll": "Whole tree",
+      "scopeHere": "From this position",
+      "tooLarge": "Too large for one repertoire ({{n}} moves, at most {{max}}) — save from a later position.",
+      "description": "From the opening tree of “{{book}}”.",
+      "saved": "Repertoire “{{name}}” created.",
+      "saveFailed": "The repertoire could not be created."
     }
   },
   "woodpecker": {

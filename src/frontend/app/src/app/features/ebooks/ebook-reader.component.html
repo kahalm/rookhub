@@ -200,6 +200,7 @@
                 <p class="rd-sol-note rd-sol-note--warn"><mat-icon>warning_amber</mat-icon>{{ note | translate }}</p>
               }
               <app-ebook-board [diagram]="d" [ebookId]="ebook.id" [defaultMode]="ebook.defaultBoardMode" (solutionPage)="goToSolutionPage($event)"
+                               [hasTree]="!!ebook.hasTree" [bookTitle]="ebook.title" [canSaveRepertoire]="loggedIn"
                                [reportable]="loggedIn" (report)="toggleReport(d)" (solvedNext)="autoNextDiagram()"
                                [correctable]="loggedIn && ebook.canManage" (correct)="correctPosition(d)" />
             } @else {

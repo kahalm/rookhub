@@ -15,6 +15,7 @@ public static partial class DomainServicesSetup
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookCourseBuilder>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookCollectionService>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookGameService>();
+        services.AddScoped<RookHub.Api.Services.Ebooks.EbookTreeService>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookLibraryImporter>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookCoverRenderer>();
         // Diagramme aus Schach-Font-PDFs (0.766.0): Text-Diagramme → FEN je Diagramm, im Hintergrund je Buch.

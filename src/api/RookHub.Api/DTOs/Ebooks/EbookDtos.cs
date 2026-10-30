@@ -61,6 +61,8 @@ public class EbookDto
     public string? Language { get; set; }
     /// <summary>Fertige Übersetzungen (Zielsprachen, z. B. <c>["en"]</c>) — der Leser bietet „Original / English“ an (0.876.0).</summary>
     public List<string> Translations { get; set; } = new();
+    /// <summary>Es gibt einen Eröffnungsbaum (0.881.0) — der Leser bietet den Brett-Modus „Baum“ an.</summary>
+    public bool HasTree { get; set; }
     /// <summary>Sammlung des Buchs (0.787.0); <c>null</c> = keine.</summary>
     public EbookCollectionDto? Collection { get; set; }
     /// <summary>Dieser Eintrag steht in der Liste STELLVERTRETEND für seine Sammlung (Ordner-Karte, Titelbild von ihm).</summary>
@@ -460,4 +462,11 @@ public class CourseEbookLinkResultDto
     public string? EbookTitle { get; set; }
     public int Linked { get; set; }
     public int Lines { get; set; }
+}
+
+/// <summary>Eröffnungsbaum eines Buchs setzen (0.881.0, <c>PUT /api/admin/ebooks/{id}/tree</c>): <c>[parentIndex, san]</c>-Paare,
+/// Eintrag i = Knoten i+1, Knoten 0 = Grundstellung. Gelesen wird derselbe Rumpf (<c>GET /api/ebooks/{id}/tree</c>).</summary>
+public class EbookTreeDto
+{
+    public List<List<System.Text.Json.JsonElement>>? Nodes { get; set; }
 }

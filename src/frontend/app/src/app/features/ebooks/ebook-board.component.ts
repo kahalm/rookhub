@@ -1,6 +1,6 @@
 import {
-  ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnChanges, Output, SimpleChanges,
-  computed, effect, inject, signal, untracked,
+  ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges,
+  computed, effect, inject, input, signal, untracked,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -30,9 +30,12 @@ import { tryFreeMove, tryLoadFen } from '../../shared/chess/puzzle-move.util';
 import { EbookDiagram, EbookGame, EbookService } from './ebook.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { sideToMove, whiteToMove } from '../../shared/chess/fen-side';
+import { isBoardHotkey } from '../../shared/keyboard.util';
+import { EbookOpeningTree } from './ebook-tree.util';
+import { EbookTreePanelComponent } from './ebook-tree-panel.component';
 
 /** Was das Brett gerade tut (0.777.0). */
-export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia' | 'game';
+export type EbookBoardMode = 'view' | 'free' | 'calc' | 'solve' | 'maia' | 'game' | 'tree';
 
 /** Partie im Modus „Partie“ (0.831.0): Kopf, Hauptlinie und die Stellung nach jedem Halbzug (Index 0 = Grundstellung). */
 export interface EbookGameLine {
@@ -61,6 +64,8 @@ export const ENGINE_SOLUTION_PLIES = 7;
  * - **Gegen Maia** — Sparring ab der Buchstellung; man spielt die Seite am Zug, Maia antwortet in der gewählten Stärke.
  * - **Partie** (0.831.0, Partiensammlungen) — die ganze Partie, aus der das Diagramm stammt, ab der Diagrammstellung zum
  *   Durchklicken; eigene Züge werden zur Nebenlinie (Zurück führt in die Partie). Nur mit hinterlegter Partie.
+ * - **Baum** (0.881.0, Eröffnungsbücher) — der Eröffnungsbaum des Buchs ab der Diagrammstellung ({@link EbookTreePanelComponent});
+ *   Brettzüge, die im Buch stehen, gehen weiter, andere werden mit „nicht im Buch“ zurückgenommen. Nur mit Baum.
  * Die Engine (Stockfish im Browser, {@link LiveEngineSession}) ist in jedem Modus zuschaltbar.
  */
 @Component({
@@ -68,7 +73,8 @@ export const ENGINE_SOLUTION_PLIES = 7;
   selector: 'app-ebook-board',
   standalone: true,
   imports: [RouterLink, NgTemplateOutlet, MatButtonModule, MatIconModule, MatMenuModule, MatProgressBarModule,
-    TranslatePipe, IconLabelDirective, ChessBoardComponent, PuzzleBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent],
+    TranslatePipe, IconLabelDirective, ChessBoardComponent, PuzzleBoardComponent, CalcLinesComponent, LiveEnginePanelComponent, HelpHintComponent,
+    EbookTreePanelComponent],
   templateUrl: './ebook-board.component.html',
   styleUrls: ['./ebook-board.component.scss'],
 })
@@ -88,6 +94,12 @@ export class EbookBoardComponent implements OnChanges {
   @Input() correctable = false;
   /** „Stellung korrigieren“ angeklickt — der Leser öffnet den Editor und speichert; die neue Stellung kommt über `diagram`. */
   @Output() correct = new EventEmitter<void>();
+  /** Das Buch hat einen Eröffnungsbaum (0.881.0) — Modus „Baum“ sichtbar. */
+  readonly hasTree = input(false);
+  /** Buchtitel (Name und Kopf eines aus dem Baum gespeicherten Repertoires). */
+  readonly bookTitle = input('');
+  /** „Als Repertoire speichern“ anbieten — nur mit Konto. */
+  readonly canSaveRepertoire = input(false);
   /** Gelöst und „Automatisch weiter“ an: der Leser springt zum nächsten Diagramm. */
   @Output() solvedNext = new EventEmitter<void>();
 
@@ -99,11 +111,17 @@ export class EbookBoardComponent implements OnChanges {
   readonly maia = inject(MaiaEngineService);
   readonly prefs = inject(PreferencesService);
 
-  readonly modes: EbookBoardMode[] = ['view', 'free', 'calc', 'solve', 'maia', 'game'];
-  /** Sichtbare Modi: „Partie“ nur, wenn das Diagramm eine Partie hat oder das Buch auf „Partie“ steht (Partiensammlung). */
+  readonly modes: EbookBoardMode[] = ['view', 'free', 'calc', 'solve', 'maia', 'game', 'tree'];
+  /** Sichtbare Modi: „Partie“ nur, wenn das Diagramm eine Partie hat oder das Buch auf „Partie“ steht (Partiensammlung);
+   *  „Baum“ nur bei Büchern mit Eröffnungsbaum. */
   get visibleModes(): EbookBoardMode[] {
-    return this.diagram?.hasGame || this.defaultMode === 'game' || this.mode() === 'game' ? this.modes : this.modes.filter(m => m !== 'game');
+    const game = this.diagram?.hasGame || this.defaultMode === 'game' || this.mode() === 'game';
+    const tree = this.hasTree() || this.mode() === 'tree';
+    return this.modes.filter(m => (m !== 'game' || game) && (m !== 'tree' || tree));
   }
+
+  /** Modus braucht eine regelgerechte Buchstellung — „Ansehen“ und „Baum“ (eigene Stellungen ab der Grundstellung) nicht. */
+  needsLegal(m: EbookBoardMode): boolean { return m !== 'view' && m !== 'tree'; }
   private readonly ebooks = inject(EbookService);
 
   readonly mode = signal<EbookBoardMode>('solve');
@@ -158,6 +176,17 @@ export class EbookBoardComponent implements OnChanges {
   readonly atGameDiagram = computed(() => this.played().length === 0 && this.gamePly() === (this.gameLine()?.game?.ply ?? 0));
   private gameRequest = 0;
 
+  /** Baum (0.881.0): gebauter Baum, Lade-Zustand, gewählter Knoten, „Diagramm nicht im Baum“ und die Stellung eines kurz
+   *  gezeigten Zugs, der nicht im Buch steht. */
+  readonly openingTree = signal<EbookOpeningTree | null>(null);
+  readonly treeState = signal<'idle' | 'loading' | 'ready' | 'missing'>('idle');
+  readonly treeCursor = signal(0);
+  readonly treeNotInTree = signal(false);
+  readonly treeOffFen = signal<string | null>(null);
+  private treeRequest = 0;
+  /** Zuletzt gebauter Baum (ein Buch) — das Brett entsteht je Diagrammauswahl neu, der Baum nicht. */
+  private static treeCache: { ebookId: number; tree: EbookOpeningTree } | null = null;
+
   /** Engine-Leiste (zuschaltbar in jedem Modus). */
   readonly engine = signal<LiveEngineSession | null>(null);
   private engineIndex = 0;
@@ -176,6 +205,10 @@ export class EbookBoardComponent implements OnChanges {
     if (this.mode() === 'game') {
       const g = this.gameLine();
       return this.played().at(-1)?.fen ?? (g ? g.fens[this.gamePly()] : d.fen);
+    }
+    if (this.mode() === 'tree') {
+      const t = this.openingTree();
+      return this.treeOffFen() ?? (t && this.treeState() === 'ready' ? t.fen[this.treeCursor()] : d.fen);
     }
     if (this.mode() === 'calc') {
       this.calcRevision();
@@ -201,6 +234,7 @@ export class EbookBoardComponent implements OnChanges {
   readonly noDests = new Map<Key, Key[]>();
 
   readonly playable = computed(() => {
+    if (this.mode() === 'tree') return this.treeState() === 'ready' && this.treeOffFen() === null;
     if (!this.legal()) return false;
     switch (this.mode()) {
       case 'view': return false;
@@ -239,18 +273,20 @@ export class EbookBoardComponent implements OnChanges {
     this.solveState.set('idle');
     this.maiaThinking.set(false);
     this.flipped.set(!whiteToMove(this.diagram.fen));
-    if (!this.legal() && this.mode() !== 'view') this.mode.set('view');
+    if (this.mode() === 'tree' && !this.hasTree()) this.mode.set('solve');
+    if (!this.legal() && this.needsLegal(this.mode())) this.mode.set('view');
     if (!this.hasStoredSolution) this.solveSource.set('engine');
     if (this.mode() === 'calc') this.loadCalc();
     if (this.mode() === 'solve') this.startSolving();
     if (this.mode() === 'maia') void this.maia.prepare();
     if (this.mode() === 'game') this.loadGame();
+    if (this.mode() === 'tree') this.loadTree();
   }
 
   // ---------------------------------------------------------------- Modus
 
   setMode(m: EbookBoardMode): void {
-    if (m !== 'view' && !this.legal()) return;
+    if (this.needsLegal(m) && !this.legal()) return;
     this.clearTimer();
     this.played.set([]);
     this.solveState.set('idle');
@@ -260,6 +296,7 @@ export class EbookBoardComponent implements OnChanges {
     if (m === 'solve') this.startSolving();
     if (m === 'maia') void this.maia.prepare();
     if (m === 'game') this.loadGame();
+    if (m === 'tree') this.loadTree();
   }
 
   /** Seite am Zug in der Buchstellung — die spielt man beim Lösen und gegen Maia. */
@@ -287,6 +324,9 @@ export class EbookBoardComponent implements OnChanges {
         break;
       case 'game':
         this.gameMove(m, uci);
+        break;
+      case 'tree':
+        this.treeMove(m);
         break;
     }
   }
@@ -652,6 +692,77 @@ export class EbookBoardComponent implements OnChanges {
     return EbookBoardComponent.numbered(parts.join(' '), this.played().map(p => p.san));
   }
 
+  // ---------------------------------------------------------------- Baum
+
+  /** Baum laden (einmal je Buch) und den Knoten der Diagrammstellung suchen; nicht gefunden → Grundstellung mit Hinweis. */
+  private loadTree(): void {
+    const req = ++this.treeRequest;
+    this.treeOffFen.set(null);
+    const cached = EbookBoardComponent.treeCache;
+    if (cached && cached.ebookId === this.ebookId) { this.openingTree.set(cached.tree); this.treeState.set('ready'); this.locateTree(); return; }
+    if (!this.ebookId) { this.treeState.set('missing'); return; }
+    this.treeState.set('loading');
+    this.ebooks.tree(this.ebookId).subscribe({
+      next: wire => {
+        if (req !== this.treeRequest) return;
+        const tree = new EbookOpeningTree(wire);
+        EbookBoardComponent.treeCache = { ebookId: this.ebookId, tree };
+        this.openingTree.set(tree);
+        this.treeState.set('ready');
+        this.locateTree();
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        if (req !== this.treeRequest) return;
+        this.openingTree.set(null);
+        this.treeState.set('missing');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private locateTree(): void {
+    const t = this.openingTree();
+    if (!t || !this.diagram) return;
+    const hit = t.find(this.diagram.fen);
+    this.treeCursor.set(hit.node ?? 0);
+    this.treeNotInTree.set(hit.node === null);
+    // Gedreht gesetztes Diagramm (Schwarz unten): so zeigen, wie das Buch es zeigt.
+    if (hit.rotated) this.flipped.set(true);
+  }
+
+  treeGo(node: number): void {
+    const t = this.openingTree();
+    if (!t || node < 0 || node >= t.fen.length || (node > 0 && t.parent[node] < 0)) return;
+    this.treeOffFen.set(null);
+    this.treeCursor.set(node);
+  }
+
+  /** Brettzug: steht er im Buch, geht es dorthin; sonst kurz zeigen, „nicht im Buch“, zurück. */
+  private treeMove(m: UserBoardMove): void {
+    const t = this.openingTree();
+    if (!t) return;
+    const child = t.children[this.treeCursor()].find(c => t.san[c] === m.san);
+    if (child !== undefined) { this.treeGo(child); return; }
+    this.treeOffFen.set(m.fen);
+    this.snackbar.quick(this.translate.instant('ebooks.tree.notInBook'));
+    this.clearTimer();
+    this.timer = setTimeout(() => { this.treeOffFen.set(null); this.cdr.markForCheck(); }, 600);
+  }
+
+  /** ← / → im Baum (Knoten davor / Hauptfortsetzung), solange der Fokus im Brett-Bereich liegt — sonst blättern die Pfeile
+   *  weiter das Buch (der Leser lässt eine schon verarbeitete Taste liegen). */
+  @HostListener('keydown', ['$event'])
+  onTreeKey(e: KeyboardEvent): void {
+    if (this.mode() !== 'tree' || this.treeState() !== 'ready' || !isBoardHotkey(e)) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const t = this.openingTree()!;
+    const cur = this.treeCursor();
+    if (e.key === 'ArrowLeft' && cur > 0) this.treeGo(t.parent[cur]);
+    if (e.key === 'ArrowRight' && t.children[cur].length > 0) this.treeGo(t.children[cur][0]);
+    e.preventDefault();   // auch am Rand des Baums: kein Blättern im Buch, während man im Baum ist
+  }
+
   // ---------------------------------------------------------------- Maia
 
   setMaiaElo(elo: number): void { this.maiaElo.set(elo); }
@@ -737,7 +848,7 @@ export class EbookBoardComponent implements OnChanges {
   }
 
   modeIcon(m: EbookBoardMode): string {
-    return { view: 'visibility', free: 'pan_tool_alt', calc: 'account_tree', solve: 'extension', maia: 'smart_toy', game: 'replay' }[m];
+    return { view: 'visibility', free: 'pan_tool_alt', calc: 'account_tree', solve: 'extension', maia: 'smart_toy', game: 'replay', tree: 'park' }[m];
   }
 
   private clearTimer(): void {

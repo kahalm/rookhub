@@ -644,6 +644,107 @@ describe('EbookBoardComponent', () => {
     expect(line.fens.length).toBe(3);
   });
 
+  // ---------------------------------------------------------------- Baum (0.881.0)
+
+  describe('Baum', () => {
+    // 1.e4 e5 2.Nf3 (2.d4) Nc6
+    const TREE: [number, string][] = [[0, 'e4'], [1, 'e5'], [2, 'Nf3'], [2, 'd4'], [3, 'Nc6']];
+    const AFTER_E5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+    const TD: EbookDiagram = { ...D, id: 31, fen: AFTER_E5.replace(' w KQkq - 0 2', ' b - - 0 1'), solutionUci: null, solutionSan: null, solutionText: null, solutionPage: null };
+
+    beforeEach(() => { (EbookBoardComponent as unknown as { treeCache: unknown }).treeCache = null; });
+
+    function makeTree(d: EbookDiagram = TD): { fixture: ComponentFixture<EbookBoardComponent>; http: HttpTestingController } {
+      const fixture = make(d);
+      fixture.componentRef.setInput('hasTree', true);
+      fixture.componentRef.setInput('bookTitle', 'Danish Dynamite');
+      fixture.detectChanges();
+      const http = TestBed.inject(HttpTestingController);
+      fixture.componentInstance.setMode('tree');
+      http.expectOne('/api/ebooks/9/tree').flush({ nodes: TREE });
+      fixture.detectChanges();
+      return { fixture, http };
+    }
+
+    it('der Modus-Knopf erscheint nur bei Büchern mit Baum; „Baum“ braucht keine regelgerechte Diagrammstellung', () => {
+      const fixture = make();
+      expect(fixture.componentInstance.visibleModes).not.toContain('tree');
+      fixture.componentRef.setInput('hasTree', true);
+      expect(fixture.componentInstance.visibleModes).toContain('tree');
+      expect(fixture.componentInstance.needsLegal('tree')).toBeFalse();
+      expect(fixture.componentInstance.needsLegal('free')).toBeTrue();
+    });
+
+    it('findet die Diagrammstellung im Baum (Zugrecht egal) und zeigt Weg und Fortsetzungen', () => {
+      const { fixture } = makeTree();
+      const c = fixture.componentInstance;
+      expect(c.treeCursor()).toBe(2);
+      expect(c.treeNotInTree()).toBeFalse();
+      expect(c.boardFen()).toBe(AFTER_E5);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelectorAll('app-ebook-tree-panel .etp-step').length).toBe(2);
+      expect(el.querySelectorAll('app-ebook-tree-panel .etp-child').length).toBe(2);
+    });
+
+    it('nicht im Baum → Hinweis, Start bei der Grundstellung; der Baum wird je Buch nur einmal geholt', () => {
+      const { fixture, http } = makeTree(D);
+      const c = fixture.componentInstance;
+      expect(c.treeNotInTree()).toBeTrue();
+      expect(c.treeCursor()).toBe(0);
+      expect(fixture.nativeElement.querySelector('.etp-not-in-tree')).not.toBeNull();
+      fixture.componentRef.setInput('diagram', TD);
+      fixture.detectChanges();
+      http.expectNone('/api/ebooks/9/tree');
+      expect(c.treeCursor()).toBe(2);
+      expect(c.treeNotInTree()).toBeFalse();
+    });
+
+    it('Brettzug im Buch geht weiter, ein anderer wird mit „nicht im Buch“ zurückgenommen', fakeAsync(() => {
+      const { fixture } = makeTree();
+      const c = fixture.componentInstance;
+      const snack = TestBed.inject(SnackbarService) as unknown as { quick: jasmine.Spy };
+      c.onBoardMove({ from: 'd2', to: 'd4', san: 'd4', fen: 'x' });
+      expect(c.treeCursor()).toBe(4);
+      c.treeGo(2);
+      c.onBoardMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: 'off-fen' });
+      expect(c.treeCursor()).toBe(2);
+      expect(c.boardFen()).toBe('off-fen');
+      expect(c.playable()).toBeFalse();
+      expect(snack.quick).toHaveBeenCalledWith('ebooks.tree.notInBook');
+      tick(600);
+      expect(c.boardFen()).toBe(AFTER_E5);
+    }));
+
+    it('← / → im Brett-Bereich: Elternknoten bzw. Hauptfortsetzung, Taste gilt als verarbeitet', () => {
+      const { fixture } = makeTree();
+      const c = fixture.componentInstance;
+      const key = (k: string) => { const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }); fixture.nativeElement.dispatchEvent(e); return e; };
+      expect(key('ArrowRight').defaultPrevented).toBeTrue();
+      expect(c.treeCursor()).toBe(3);
+      key('ArrowRight');
+      expect(c.treeCursor()).toBe(5);
+      key('ArrowLeft'); key('ArrowLeft');
+      expect(c.treeCursor()).toBe(2);
+      c.setMode('view');
+      expect(key('ArrowLeft').defaultPrevented).toBeFalse();
+    });
+
+    it('Baum lässt sich nicht laden → Hinweis', () => {
+      const fixture = make(TD);
+      fixture.componentRef.setInput('hasTree', true);
+      fixture.componentInstance.setMode('tree');
+      TestBed.inject(HttpTestingController).expectOne('/api/ebooks/9/tree').flush({}, { status: 404, statusText: 'nf' });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.treeState()).toBe('missing');
+      expect(fixture.nativeElement.textContent).toContain('ebooks.tree.missing');
+    });
+
+    it('Startmodus „Baum“ ohne Baum fällt auf „Lösen“ zurück', () => {
+      const fixture = make(TD, 'tree');
+      expect(fixture.componentInstance.mode()).toBe('solve');
+    });
+  });
+
 });
 
 describe('Maia-Hinweis hält „etwa 46 MB“ zusammen (c2-eb-maia-46mb-umbruch)', () => {

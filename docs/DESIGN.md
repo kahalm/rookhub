@@ -879,6 +879,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Statuszeile (Zustand, „Nochmal“, Lösung zeigen als Symbol; „jeder Zug, der das Ergebnis hält“ als Tooltip). Lösen startet
   in „Training“, die eigene Wahl ist auf dem Gerät gemerkt. Brett ab 900 px bis `100dvh − 220px` (vorher − 394 px).
   Engine-Linien wie auf der Partieseite (`app-live-engine-panel`).
+  **Baum (0.881.0, Eröffnungsbücher):** Modus-Symbol `park`, nur bei Büchern mit Eröffnungsbaum. Unter dem Brett eine
+  Schrittleiste (Grundstellung, ◀, ▶ = Hauptfortsetzung) mit „Als Repertoire speichern“ (`bookmark_add`, Textknopf rechts,
+  nur mit Konto); darunter der Weg ab der Grundstellung als fließende Zugfolge (Zugnummern leise, aktueller Zug getönt wie
+  in der Partie-Zugliste, Klick springt), darunter „Fortsetzungen im Buch“ als Liste ganzer Zeilen (Zug halbfett links,
+  „n Linien“ leise rechts, meiste Linien zuerst, 36 px bzw. 44 px bei Touch). Kein eigener Scrollkasten. Stellung nicht im
+  Baum → leiser Hinweissatz über der Leiste. Speichern-Dialog 440 px: Name, Umfang und Farbe als `mat-button-toggle`-Paare
+  (Umfang mit Zugzahl), Abbrechen + Speichern.
   **Übersetzung (0.876.0):** gibt es eine fertige Übersetzung, steht in der Leser-Leiste vor dem ⋮ ein Symbolknopf
   `translate` („Sprache des Buchs“) mit Menü „Original“ / „Englisch“ (Häkchen am gewählten, `menuitemradio`); liest man
   die Übersetzung, ist das Symbol in Primärfarbe getönt. Die Wahl gilt je Gerät für alle Bücher. Regal-Karte: Abzeichen
@@ -1185,6 +1192,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-10-30 | 0.881.0 · E-Book-Baum | E-Book-Brett: Modus „Baum“ (8.1) — Schrittleiste + „Als Repertoire speichern“, Weg ab der Grundstellung als Zugfolge, Fortsetzungen als Zeilen mit „n Linien“; Speichern-Dialog 440 px mit Umschalt-Paaren für Umfang und Farbe | Eröffnungsbücher sind keine Aufgabenbücher — Linien durchklicken und als Repertoire mitnehmen | Nutzerwunsch 30.10. (Prod #1071 „Danish Dynamite“) |
 | 2026-10-30 | 0.880.0 · Runde d9 · Dialoge, Analyse, LeagueHub, Turnier | Dialogfelder mit `mat-hint` 12 px Abstand zum nächsten Feld, Karten mit Outline-Feld in Zeile 1 oben 20 px (5.2/5.6); „optional“ als Hinweis; Grund am gesperrten Teilen-Knopf; Roast ohne Analyse bietet „Partie analysieren“; QR-Ruhezone 4 Module; ☰-Symbole nur an externen Links, Rechtslinks zuletzt (5.5); Bewertungsleiste fluchtet mit dem Brett; LeagueHub-Paarungen am Handy ohne Abzeichen-Platzhalter, „1 : 0“ geschützt, gesperrter Knopf `not-allowed` + Grund (8.4); Turnier: Region ohne Platzhalter, gekürzte Namen mit „…“, Mannschaftsdialog `autoFocus: 'dialog'` (8.2) | Hinweise klebten am nächsten Label, Sackgassen-Dialoge, gesperrte Knöpfe ohne Grund, QR ohne Ruhezone, 147 px hohe Paarungszeilen, „- (AUT)“ | UI-Sweep d9 (d9-rk-*, d9-l-*, d9-t-*) |
 | 2026-10-30 | 0.880.0 · Runde d9 · E-Books | Regal-Titelbild `contain` statt `cover`; Gast-Banner ein Satz, am Handy einzeilig; Leser unter 1100 px: Inhalt/Schrift/Zoom im ⋮, Titel mit Mindestbreite, angedockt für Gäste nur „Anmelden“; Kapitelzeile am Handy ohne Balken: Name `flex: 1 1 0`, ⋮ in Zeile 1 (5.5) | Titel/Autor im Titelbild abgeschnitten; Regal am Handy bei 43 % Vorlauf; Lesertitel am Tablet „Pro…“; d8-Fix brach das ⋮ weiter allein um (Name-Grundbreite calc(100% − 9rem)) | d9-rk-ebook-cover-beschnitten, d9-rk-ebook-anon-handy-banner-vorlauf, d9-rk-reader-titel-abgeschnitten, d9-rk-kapitelzeile-leerraum-handy |
 | 2026-10-29 | 0.877.2 | E-Books: Sortierung und „Meine Uploads“ auf jeder Breite hinter „Filter ▾“ (vorher ab 600 px in der Zeile); aktives „Meine Uploads“ zugeklappt als Chip | Nutzerwunsch 29.10.: „my uploads gehört auch in filtercomponente“, „sort by auch in filter“ | Nutzer |

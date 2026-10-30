@@ -35,6 +35,20 @@ public class EbooksAdminController : BaseApiController
     public async Task<ActionResult<EbookGamesImportResultDto>> ImportGames(int id, [FromBody] EbookGamesImportDto dto, [FromServices] EbookGameService games, CancellationToken ct)
         => Ok(await games.ImportAsync(id, dto, ct));
 
+    /// <summary>Eröffnungsbaum (0.881.0) setzen bzw. ersetzen: <c>{ nodes: [[parentIndex, san], …] }</c> → <c>{ ebookId, nodes }</c>.
+    /// Ungültig → 400 <c>ebook_tree_invalid</c>, unbekanntes Buch → 404.</summary>
+    [HttpPut("{id:int}/tree")]
+    public async Task<IActionResult> SetTree(int id, [FromBody] EbookTreeDto dto, [FromServices] EbookTreeService trees, CancellationToken ct)
+        => Ok(new { ebookId = id, nodes = await trees.SetAsync(id, dto, ct) });
+
+    /// <summary>Eröffnungsbaum entfernen → 204 (auch ohne Baum); unbekanntes Buch → 404.</summary>
+    [HttpDelete("{id:int}/tree")]
+    public async Task<IActionResult> DeleteTree(int id, [FromServices] EbookTreeService trees, CancellationToken ct)
+    {
+        await trees.DeleteAsync(id, ct);
+        return NoContent();
+    }
+
     /// <summary>Gemeldete falsche Diagramme (neueste zuerst, höchstens 500) — Grundlage für Font-Korrekturen.</summary>
     [HttpGet("diagram-reports")]
     public async Task<ActionResult<List<EbookDiagramReportDto>>> DiagramReports(CancellationToken ct)

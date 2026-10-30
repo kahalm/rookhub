@@ -59,6 +59,17 @@ describe('EbookEditDialogComponent', () => {
     expect(c.canSave).toBeTrue();
   });
 
+  it('Brett-Modus „Baum“ steht nur bei Büchern mit Eröffnungsbaum zur Wahl (0.881.0)', async () => {
+    const book = {
+      id: 3, title: 'T', author: 'A', year: null, tags: [], description: null, targetMinElo: null, source: 'upload' as const,
+      pageCount: null, hasCover: false, diagramState: 'done' as const, diagramCount: 0, ownerUserId: 1, ownerName: null, isOwner: true, canManage: true, groupIds: [],
+      files: [], primaryFormat: null, progress: null, createdAt: '', updatedAt: '',
+    };
+    expect((await make({ ebook: book, groups: [], maxFileBytes: 1 })).boardModes).not.toContain('tree');
+    TestBed.resetTestingModule();
+    expect((await make({ ebook: { ...book, hasTree: true }, groups: [], maxFileBytes: 1 })).boardModes).toContain('tree');
+  });
+
   it('c1-eb-upload-disabled-no-reason: der gesperrte Knopf nennt, was fehlt — erst die Datei, dann der Titel', async () => {
     const c = await make({ ebook: null, groups: [], maxFileBytes: 10_000 });
     const fixture = TestBed.createComponent(EbookEditDialogComponent);

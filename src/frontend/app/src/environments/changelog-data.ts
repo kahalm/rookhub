@@ -11,6 +11,20 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.881.0',
+    date: '2026-10-30',
+    changes: [
+      {
+        en: 'E-book reader: opening books get a new board mode „Tree“ — the book’s lines as an opening tree starting from the current diagram. Click through the moves from the initial position, see every continuation with the number of book lines below it, play moves on the board (moves outside the book are taken back with „Not in the book“), use ← and → to step. Signed-in users can save the whole tree or the part from the current position as a repertoire (name, colour and scope in a small dialog).',
+        de: 'E-Book-Leser: Eröffnungsbücher bekommen den Brett-Modus „Baum“ — die Linien des Buchs als Eröffnungsbaum ab dem aktuellen Diagramm. Die Züge ab der Grundstellung durchklicken, jede Fortsetzung mit der Zahl der Buchlinien darunter sehen, auf dem Brett ziehen (Züge außerhalb des Buchs werden mit „Nicht im Buch“ zurückgenommen), mit ← und → blättern. Angemeldet lässt sich der ganze Baum oder der Teil ab der aktuellen Stellung als Repertoire speichern (Name, Farbe und Umfang in einem kleinen Dialog).',
+      },
+      {
+        en: 'Admins can store an opening tree per e-book (PUT/DELETE /api/admin/ebooks/{id}/tree); readers fetch it with GET /api/ebooks/{id}/tree, and the book carries „hasTree“.',
+        de: 'Verwalter hinterlegen je E-Book einen Eröffnungsbaum (PUT/DELETE /api/admin/ebooks/{id}/tree); der Leser holt ihn über GET /api/ebooks/{id}/tree, das Buch trägt „hasTree“.',
+      },
+    ],
+  },
+  {
     version: '0.880.0',
     date: '2026-10-30',
     changes: [

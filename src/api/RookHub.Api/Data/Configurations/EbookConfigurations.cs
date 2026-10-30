@@ -132,6 +132,18 @@ internal sealed class EbookGameConfiguration : IEntityTypeConfiguration<EbookGam
     }
 }
 
+// Eröffnungsbaum (0.881.0): ein Baum je Buch, Schlüssel = Buch; fällt das Buch weg, fällt der Baum mit.
+internal sealed class EbookTreeConfiguration : IEntityTypeConfiguration<EbookTree>
+{
+    public void Configure(EntityTypeBuilder<EbookTree> e)
+    {
+        e.HasKey(t => t.EbookId);
+        e.Property(t => t.EbookId).ValueGeneratedNever();
+        e.HasOne(t => t.Ebook).WithOne().HasForeignKey<EbookTree>(t => t.EbookId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(t => t.Nodes).HasColumnType("longtext");
+    }
+}
+
 internal sealed class EbookDiagramReportConfiguration : IEntityTypeConfiguration<EbookDiagramReport>
 {
     public void Configure(EntityTypeBuilder<EbookDiagramReport> e)
