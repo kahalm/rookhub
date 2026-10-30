@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.881.1',
+    date: '2026-10-30',
+    changes: [
+      {
+        en: 'Tests: the e-book opening tree endpoint is on the list of endpoints that are deliberately reachable without login (like the diagrams).',
+        de: 'Tests: der Endpunkt für den E-Book-Eröffnungsbaum steht auf der Liste der bewusst ohne Anmeldung erreichbaren Endpunkte (wie die Diagramme).',
+      },
+    ],
+  },
+  {
     version: '0.881.0',
     date: '2026-10-30',
     changes: [
