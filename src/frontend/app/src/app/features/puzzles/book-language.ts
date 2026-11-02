@@ -8,6 +8,7 @@ export interface BookLanguageHost {
   readonly inWeekly: boolean;
   readonly isDaily: boolean;
   readonly standalone: boolean;
+  readonly inWoodpecker?: boolean;
   readonly course: { readonly bookId: number | null; readonly isAnon: boolean; refreshAnonCache(bookId: number): void; autoCache(): void };
   readonly courseLang: CourseLanguageService;
   readonly puzzleService: PuzzleService;
@@ -22,11 +23,11 @@ export interface BookLanguageHost {
 export class BookLanguageController {
   constructor(private readonly h: BookLanguageHost) {}
 
-  /** Gibt es hier eine Sprachwahl? Kurs und Einzel-Linie im Buch — nicht Tagespuzzle/Wochenpost
+  /** Gibt es hier eine Sprachwahl? Kurs, Woodpecker (Linien aus Kursen) und Einzel-Linie im Buch — nicht Tagespuzzle/Wochenpost
    *  (die bleiben bewusst im Original). */
   get enabled(): boolean {
     const h = this.h;
-    return (h.inCourse || h.standalone) && !h.isDaily && !h.inWeekly;
+    return (h.inCourse || h.standalone || !!h.inWoodpecker) && !h.isDaily && !h.inWeekly;
   }
 
   /** Der Kurs dieser Ansicht für die Sprachwahl: im Kurs über die bookId, beim Einzel-Puzzle über den

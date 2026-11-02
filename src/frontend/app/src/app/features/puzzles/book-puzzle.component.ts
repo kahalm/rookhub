@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -55,6 +55,8 @@ import { BookLastSolved, bookShareData } from './book-last-solved';
 import { BookCommentView, VariationPreview } from './book-comment-view';
 import { BookSettingsController } from './book-settings';
 import { BookHints } from './book-hints';
+import { BookWoodpeckerMode } from './book-woodpecker-mode';
+import { WoodpeckerService } from '../woodpecker/woodpecker.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -80,11 +82,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   inCourse = false;
   // Wochenpost-Modus: /weekly/:weeklyId — Puzzles eines Posts sequenziell durchspielen (BookWeeklyMode).
   inWeekly = false;
+  // Woodpecker: /woodpecker/:planId/solve — dieselbe Oberfläche wie im Kurs, Aufgaben + Wertung vom Plan (BookWoodpeckerMode).
+  inWoodpecker = false;
   /** Modus-Strategien (Zerlegung Z18): Laden der nächsten Aufgabe, Ergebnis melden, Navigation je Modus. */
   readonly course: BookCourseMode;
   readonly weekly: BookWeeklyMode;
   readonly daily: BookDailyMode;
   readonly book: BookStandaloneMode;
+  readonly woodpecker: BookWoodpeckerMode;
+  readonly woodpeckerService = inject(WoodpeckerService);
 
   /** Spielweise (Training/Einfach) für Kurs, Tagespuzzle und Buch-Puzzle — der Wochenpost hat seine eigene Abfrage. */
   readonly solveModes: BookSolveModeController;
@@ -132,7 +138,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   private readonly review = new BookReviewController();
 
   /** Standalone-Buch-Puzzle (/puzzles/book/:id) — nicht Kurs-/Wochenpost-Kontext. */
-  get standalone(): boolean { return !this.inCourse && !this.inWeekly; }
+  get standalone(): boolean { return !this.inCourse && !this.inWeekly && !this.inWoodpecker; }
   /** Buch-Navigation (nächstes/zufälliges im selben Buch) anbieten — entfällt für ein direkt
    *  geteiltes Einzel-Puzzle (`?single=1`) und im Tagespuzzle (Datums-Navigation). */
   get browseInBook(): boolean { return this.standalone && !this.isDaily && !this.singlePuzzle; }
@@ -196,6 +202,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     this.weekly = new BookWeeklyMode(this);
     this.daily = new BookDailyMode(this);
     this.book = new BookStandaloneMode(this);
+    this.woodpecker = new BookWoodpeckerMode(this);
     this.solveModes = new BookSolveModeController(this);
     this.lang = new BookLanguageController(this);
     this.comments = new BookCommentView(this);
@@ -363,13 +370,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
 
   /** Strategie des aktiven Modus mit eigener Puzzle-Folge (Tagespuzzle läuft über `book`, navigiert aber per Datum). */
   private get modeStrategy(): BookModeStrategy {
-    return this.inCourse ? this.course : this.inWeekly ? this.weekly : this.book;
+    return this.inCourse ? this.course : this.inWeekly ? this.weekly : this.inWoodpecker ? this.woodpecker : this.book;
   }
 
   /** Versuch an alle Modi melden — jede Strategie prüft selbst, ob sie zuständig ist (Reihenfolge wie bisher). */
   private recordAttempt(solved: boolean): void {
     this.course.recordAttempt(solved);
     this.weekly.recordAttempt(solved);
+    this.woodpecker.recordAttempt(solved);
     this.book.recordAttempt(solved);
   }
 
@@ -411,6 +419,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
       this.inWeekly = true;
       this.weekly.id = Number(weeklyIdParam);
       this.weekly.load();
+      return;
+    }
+
+    const planIdParam = this.route.snapshot.paramMap.get('planId');
+    if (planIdParam) {
+      this.inWoodpecker = true;
+      this.woodpecker.start(Number(planIdParam));
       return;
     }
 
@@ -535,6 +550,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
     if (!sameAttempt) {
       this.book.resetAttempt();
       this.course.attemptRecorded = false;
+      this.woodpecker.attemptRecorded = false;
     }
     this.hintLevel = 0;
     // Tipps werden pro erwartetem Zug on-the-fly aus der aktuellen Stellung erzeugt (currentMoveHint) —
@@ -618,6 +634,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   retry(): void {
     if (!this.puzzle) return;
     this.gaveUp = false;
+    // Woodpecker: der erste Versuch je Zyklus ist schon gewertet — sagen, dass Wiederholen nichts mehr ändert.
+    if (this.inWoodpecker) this.woodpecker.repeatHint = this.woodpecker.attemptRecorded;
     this.setupPuzzle(this.puzzle, true);   // Übung am selben Puzzle (P-1): kein zweiter Versuch
   }
 
@@ -713,6 +731,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   private advanceKeyAction(): boolean {
     if (this.inWeekly) { this.weekly.next(); return true; }
     if (this.inCourse) { this.course.next(); return true; }
+    if (this.inWoodpecker) { this.woodpecker.next(); return true; }
     if (this.browseInBook) { if (!this.book.navLoading) this.book.next(); return true; }
     return false;
   }
@@ -725,6 +744,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
       this.book.recordAttempt(false);
     // Wochenpost: Reset nach mind. einem Zug zählt als ✗ (gespielt, nicht gelöst).
     if (this.inWeekly && this.moveLog.length > 0) this.weekly.recordAttempt(false);
+    // Woodpecker: Zurücksetzen nach einem Zug zählt wie ein Fehlversuch — sonst ließe sich jede Aufgabe „gratis“ neu beginnen.
+    if (this.inWoodpecker && this.moveLog.length > 0 && this.state !== 'FAILED' && this.state !== 'SOLVED')
+      this.woodpecker.recordAttempt(false);
     // „Track solves": Reset zählt als failed (alles mit Reset gilt als nicht gelöst).
     this.book.recordTrack(false);
     this.aborted = true;

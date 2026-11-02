@@ -4,7 +4,9 @@
 
 Die Woodpecker-Methode (Axel Smith / Hans Tikkanen, „The Woodpecker Method“, Quality Chess 2018, Instructions
 S. 26–29) über einen oder mehrere **Kurse** (`Book` mit Quiz-Linien). Menüpunkt `woodpecker` (Training), Seiten
-`/woodpecker` (Übersicht) und `/woodpecker/:planId/solve` (Löser). Der Nutzer stellt **nichts** ein außer den Kursen
+`/woodpecker` (Übersicht) und `/woodpecker/:planId/solve` (Löser — seit 0.882.0 der Kurs-Löser `BookPuzzleComponent` mit der
+Strategie `BookWoodpeckerMode`: dieselbe Oberfläche wie im Kurs, Plan-Kopf in der Kontext-Karte, Spielweise je Plan
+`woodpecker:<id>` mit Kurs-Grundwahl, Kommentar-Sprache wie im Kurs). Der Nutzer stellt **nichts** ein außer den Kursen
 und dem (rückdatierbaren) Beginn — die Regeln stehen fest in `Services/Courses/WoodpeckerRules.cs`:
 
 | Regel | Wert |
@@ -34,7 +36,7 @@ diese Aufgaben im Satz. Umgekehrt schreibt der Woodpecker-Löser KEINE `CourseAt
 | PUT | `/api/woodpecker/{id}/start` | `{ startedAt }` — Beginn des laufenden Zyklus verschieben: nicht in die Zukunft, nicht hinter dessen ersten Versuch, nicht vor das Ende des vorigen. Die Oberfläche bietet es nur in Zyklus 1 an |
 | POST | `/api/woodpecker/{id}/finish-set` | Zyklus 1 vorzeitig beenden (Satz leer → 400) |
 | POST | `/api/woodpecker/{id}/next-cycle` | nächsten Zyklus beginnen (Pause < 24 h oder Zyklus läuft → 409) |
-| GET | `/api/woodpecker/{id}/next` | `{ puzzle: BookPuzzleDto \| null, plan }` — `null`, wenn der Zyklus erledigt ist |
+| GET | `/api/woodpecker/{id}/next` | `{ puzzle: BookPuzzleDto \| null, plan }` — `null`, wenn der Zyklus erledigt ist; `?lang=` übersetzt die Kommentare wie `GET /api/courses/{id}/next` (0.882.0) |
 | POST | `/api/woodpecker/{id}/attempts` | `{ bookPuzzleId, solved, timeSeconds }` → `plan`; Aufgabe nicht im Plan (Zyklus 1: nicht in den Kursen, ab 2: nicht im Satz) → 404; zweiter Versuch im selben Zyklus ändert nichts |
 
 `WoodpeckerPlanDto.status`: `solving` (Zyklus läuft), `break` (Pause bis `nextCycleAt`), `ready`, `completed`.

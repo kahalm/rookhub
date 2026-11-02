@@ -8,6 +8,9 @@ export interface BookSolveModeHost {
   readonly inCourse: boolean;
   readonly inWeekly: boolean;
   readonly isDaily: boolean;
+  /** Woodpecker-Training (eigener Bereich je Plan, sonst wie im Kurs). */
+  readonly inWoodpecker?: boolean;
+  readonly woodpecker?: { readonly planId: number | null; readonly plan: { readonly name: string } | null };
   readonly course: { readonly bookId: number | null };
   readonly displayBookName: string;
   readonly translate: TranslateService;
@@ -48,6 +51,7 @@ export class BookSolveModeController {
     const h = this.h;
     if (h.inWeekly) return null;
     if (h.inCourse) return h.course.bookId != null ? SolveModeService.scopeCourse(h.course.bookId) : null;
+    if (h.inWoodpecker) return h.woodpecker?.planId != null ? SolveModeService.scopeWoodpecker(h.woodpecker.planId) : null;
     return h.isDaily ? 'daily' : 'book';
   }
 
@@ -74,8 +78,9 @@ export class BookSolveModeController {
     this.scopeAsked = scope;
     h.holdForSolveMode(puzzle);
     // UI-Sweep 2026-10-11 (r2-rp-mode-title): im Kurs „Wie möchtest du Kurse spielen?", der Buchtitel nur als Unterzeile.
-    const courseDialog = h.inCourse
-      ? { title: h.translate.instant('solveMode.titleCourses'), subtitle: h.displayBookName || undefined }
+    const courseDialog = h.inCourse || h.inWoodpecker
+      ? { title: h.translate.instant('solveMode.titleCourses'),
+          subtitle: (h.inWoodpecker ? h.woodpecker?.plan?.name : h.displayBookName) || undefined }
       : { scopeLabel: this.label };
     h.solveMode.ensure(scope, courseDialog).subscribe(mode => {
       h.awaitingSolveMode = false;

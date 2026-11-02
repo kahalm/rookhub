@@ -50,4 +50,44 @@ describe('BookContextCardComponent (Zerlegung Z18)', () => {
     expect(daily.c.day()?.toISOString()).toBe('2026-07-14T00:00:00.000Z');
     expect(daily.el.querySelector('.daily-chip-row')).not.toBeNull();
   });
+  // 0.882.0: Woodpecker läuft im Kurs-Löser — der Plan-Kopf des alten Lösers steht in der Kontext-Karte.
+  const wpPlan = (over: Record<string, unknown> = {}): any => ({
+    id: 3, name: '100 Endspiele, die Sie kennen müssen — Band zwei', setSize: 10, availableCount: 287,
+    currentCycle: 2, maxCycles: 7, status: 'solving', cycles: [], ...over,
+  });
+
+  it('Woodpecker: Plan-Chip, Zyklus · Fortschritt · Resttage, Fortschrittsbalken; Rückpfeil zur Übersicht', () => {
+    const { el, c } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
+      woodpeckerPlan: wpPlan(), woodpeckerAttempted: 4, woodpeckerPercent: 40, woodpeckerDaysLeft: 3 });
+    expect(el.querySelector('.wp-chip')?.textContent).toContain('100 Endspiele');
+    const parts = Array.from(el.querySelectorAll('.wp-meta > span')).map(x => x.textContent!.trim());
+    expect(parts).toEqual(['woodpecker.cycleOf', 'woodpecker.cycleProgress', 'woodpecker.daysLeft']);
+    expect(el.querySelector('mat-progress-bar')).not.toBeNull();
+    let back = 0;
+    c.back.subscribe(() => back++);
+    (el.querySelector('.ctx-back') as HTMLButtonElement).click();
+    expect(back).toBe(1);
+  });
+
+  it('Woodpecker Zyklus 1 (d3-rk-wp-loeser-im-satz-beschriftung): spricht vom wachsenden Satz, ohne Balken', () => {
+    const { el } = make({ hasPuzzle: true, state: 'AWAITING_USER_MOVE', inWoodpecker: true,
+      woodpeckerPlan: wpPlan({ currentCycle: 1, setSize: 12 }), woodpeckerRepeatHint: true });
+    expect(el.querySelector('.wp-meta')?.textContent).toContain('woodpecker.setGrowing');
+    expect(el.querySelector('mat-progress-bar')).toBeNull();
+    expect(el.querySelector('.wp-repeat')?.textContent).toContain('woodpecker.repeatHint');
+  });
+
+  it('Woodpecker ohne Aufgabe: Abschluss bzw. „gibt es nicht (mehr)“ (c1-wp-loeser-404-verbindung), je mit „Zur Übersicht“', () => {
+    const done = make({ hasPuzzle: false, state: 'COURSE_DONE', inWoodpecker: true, woodpeckerDoneText: 'Zyklus 2 geschafft' });
+    expect(done.el.querySelector('.wp-done')?.textContent).toContain('Zyklus 2 geschafft');
+    let over = 0;
+    done.c.woodpeckerOverview.subscribe(() => over++);
+    (done.el.querySelector('.wp-overview') as HTMLButtonElement).click();
+    expect(over).toBe(1);
+    TestBed.resetTestingModule();
+    const missing = make({ hasPuzzle: false, state: 'COURSE_DONE', inWoodpecker: true, woodpeckerMissing: true });
+    expect(missing.el.querySelector('.wp-missing')?.textContent).toContain('woodpecker.notFound');
+    expect(missing.el.querySelector('.wp-done')).toBeNull();
+    expect(missing.el.querySelector('.wp-overview')).not.toBeNull();
+  });
 });

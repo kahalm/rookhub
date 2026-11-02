@@ -1,9 +1,12 @@
+import { Injector, runInInjectionContext } from '@angular/core';
+import { WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { of, throwError } from 'rxjs';
 import { discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { BookPuzzleComponent } from './book-puzzle.component';
 import { saveBookOffline, getDailyOffline, saveDailyOffline } from './book-offline.util';
 import { CourseLanguageService } from '../courses/course-language.service';
 import { formatUtcDate, shiftDailyDate } from './book-nav.util';
+import { HttpErrorResponse } from '@angular/common/http';
 
 /**
  * Charakterisierung der vier Modi des Buch-Lösers (Kurs, Wochenpost, Tagespuzzle, einzelnes Buch-Puzzle):
@@ -13,7 +16,7 @@ import { formatUtcDate, shiftDailyDate } from './book-nav.util';
 const FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const P = (id: number, extra: Record<string, unknown> = {}): any => ({ id, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b.pgn', ...extra });
 
-function makeComponent(opts: { loggedIn?: boolean; params?: Record<string, string> } = {}): any {
+function makeComponent(opts: { loggedIn?: boolean; params?: Record<string, string>; woodpecker?: any } = {}): any {
   const prefs: any = { boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0 };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const params = opts.params ?? {};
@@ -46,11 +49,13 @@ function makeComponent(opts: { loggedIn?: boolean; params?: Record<string, strin
     levelFor: () => 0, modeForLevel: (l: number) => (l > 0 ? 'training' : 'easy'), openDialog: () => of({ mode: 'training' }),
   };
   const worksheets: any = { sendAndNotify: () => {} };
-  const c: any = new BookPuzzleComponent(
+  const c: any = runInInjectionContext(
+    Injector.create({ providers: [{ provide: WoodpeckerService, useValue: opts.woodpecker ?? {} }] }),
+    () => new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, {} as any, courseService, weeklyService,
     router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites,
     solveMode, worksheets, new CourseLanguageService(translate),
-  );
+  ));
   c.__route = route;
   return c;
 }
@@ -628,5 +633,115 @@ describe('BookPuzzle Tagespuzzle schickt die Startmarke (A2-014)', () => {
     c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(of(null));
     c.book.recordAttempt(true);
     expect(c.puzzleService.recordBookAttempt.calls.mostRecent().args[5]).toBeNull();
+  });
+});
+
+describe('BookPuzzle Modus Woodpecker (0.882.0: dieselbe Oberfläche wie im Kurs)', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  const plan = (over: Record<string, unknown> = {}): any => ({
+    id: 3, name: 'WP', createdAt: '', completedAt: null, books: [], setSize: 10, availableCount: 100,
+    currentCycle: 2, maxCycles: 7, status: 'solving', nextCycleAt: null,
+    cycles: [
+      { number: 1, targetDays: 28, startedAt: '', deadline: '', finishedAt: '', attempted: 10, solved: 8, timeSeconds: 600 },
+      { number: 2, targetDays: 14, startedAt: '', deadline: new Date(Date.now() + 14 * 86_400_000).toISOString(), finishedAt: null, attempted: 4, solved: 4, timeSeconds: 100 },
+    ],
+    ...over,
+  });
+  // Ta8# — ein Zug, Weiß am Zug.
+  const WP = { id: 501, lineId: 'l', bookFileName: 'wp.pgn', round: '1', fen: '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1', moves: 'a1a8', startPly: -1 };
+
+  function make(next: any) {
+    const svc: any = {
+      next: jasmine.createSpy('next').and.returnValue(next),
+      recordAttempt: jasmine.createSpy('recordAttempt').and.returnValue(
+        of(plan({ cycles: [plan().cycles[0], { ...plan().cycles[1], attempted: 5 }] }))),
+    };
+    const c = makeComponent({ params: { planId: '3' }, woodpecker: svc });
+    // Echter Lös-Automat: die Engine-Bewertung beim Start bleibt offen (im Test nicht nötig).
+    c.stockfish.getBestMove = () => new Promise(() => {});
+    c.ngOnInit();
+    return { c, svc };
+  }
+
+  it('ngOnInit /woodpecker/:planId/solve lädt die nächste Aufgabe des Plans in den Kurs-Löser', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    expect(c.inWoodpecker).toBeTrue();
+    expect(c.inCourse).toBeFalse();
+    expect(c.standalone).toBeFalse();
+    expect(svc.next).toHaveBeenCalledWith(3, 'en');   // mit Sprachwahl wie im Kurs
+    expect(c.puzzle.id).toBe(501);
+    expect(c.state).toBe('AWAITING_USER_MOVE');
+    expect(c.woodpecker.plan.name).toBe('WP');
+    expect(c.woodpecker.percent).toBe(40);
+    expect(c.woodpecker.daysLeft).toBe(14);
+    expect(c.lang.enabled).toBeTrue();
+    expect(c.solveModes.scope).toBe('woodpecker:3');
+  });
+
+  it('richtiger Zug löst und meldet einmal als gelöst; der Kopf übernimmt den Serverstand', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.onMoveMade({ orig: 'a1', dest: 'a8' });
+    expect(c.state).toBe('SOLVED');
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, true, jasmine.any(Number));
+    expect(c.woodpecker.cycle.attempted).toBe(5);
+    c.ngOnDestroy();
+  });
+
+  it('Aufgeben meldet genau einen Fehlversuch; „Nochmal“ zeigt den Hinweis und meldet nichts mehr', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.giveUp();
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number));
+    c.retry();
+    expect(c.woodpecker.repeatHint).toBeTrue();
+    c.giveUp();
+    expect(svc.recordAttempt).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
+  });
+
+  it('Zurücksetzen nach einem Zug zählt als Fehlversuch', () => {
+    const two = { ...WP, fen: '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1', moves: 'a1a7 g8f8 a7a8' };
+    const { c, svc } = make(of({ puzzle: two, plan: plan() }));
+    c.moveLog.push('a1a7');
+    c.resetPuzzle();
+    expect(svc.recordAttempt).toHaveBeenCalledOnceWith(3, 501, false, jasmine.any(Number));
+    c.ngOnDestroy();
+  });
+
+  it('Weiter (Leertaste/Auto-Weiter) holt die nächste Aufgabe vom Plan', () => {
+    const { c, svc } = make(of({ puzzle: { ...WP }, plan: plan() }));
+    c.solvedAutoNextPublic();
+    expect(svc.next).toHaveBeenCalledTimes(2);
+    c.ngOnDestroy();
+  });
+
+  it('keine Aufgabe mehr → Abschlusskarte (COURSE_DONE) mit Zyklus-Text', () => {
+    const { c } = make(of({ puzzle: null, plan: plan({ status: 'break' }) }));
+    expect(c.puzzle).toBeNull();
+    expect(c.state).toBe('COURSE_DONE');
+    expect(c.woodpecker.missing).toBeFalse();
+    expect(c.woodpecker.doneText).toBe('woodpecker.doneCycle');
+    c.woodpecker.backToOverview();
+    expect(c.router.navigate).toHaveBeenCalledWith(['/woodpecker']);
+  });
+
+  // c1-wp-loeser-404-verbindung: fremdes/gelöschtes Training ist kein Verbindungsfehler.
+  for (const status of [404, 403]) {
+    it(`${status}: „gibt es nicht (mehr)“ statt Ladefehler`, () => {
+      const { c } = make(throwError(() => new HttpErrorResponse({ status })));
+      expect(c.woodpecker.missing).toBeTrue();
+      expect(c.state).toBe('COURSE_DONE');
+      expect(c.loadError).toBeFalse();
+    });
+  }
+
+  it('Netz/5xx bleibt Ladefehler mit „Erneut versuchen“', () => {
+    const { c, svc } = make(throwError(() => new HttpErrorResponse({ status: 0 })));
+    expect(c.loadError).toBeTrue();
+    svc.next.and.returnValue(of({ puzzle: { ...WP }, plan: plan() }));
+    c.retryLoad();
+    expect(c.puzzle.id).toBe(501);
+    c.ngOnDestroy();
   });
 });

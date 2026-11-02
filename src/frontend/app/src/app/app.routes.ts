@@ -92,7 +92,7 @@ export const routes: Routes = [
   // sichern die Endpunkte (404). authGuard statt des frueheren courseAccessGuard (F1-017): gleiche Bedingung, aber
   // Gaeste behalten Ruecksprungziel und Anmelde-Hinweis.
   { path: 'woodpecker', loadComponent: () => import('./features/woodpecker/woodpecker-list.component').then(m => m.WoodpeckerListComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
-  { path: 'woodpecker/:planId/solve', loadComponent: () => import('./features/woodpecker/woodpecker-solve.component').then(m => m.WoodpeckerSolveComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
+  { path: 'woodpecker/:planId/solve', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [authGuard, menuGuard('woodpecker')] },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'catalog', loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent), canActivate: [authGuard, menuGuard('catalog')] },
   { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },

@@ -2,10 +2,10 @@
   <mat-card class="context-card">
     <mat-card-content>
       <div class="ctx-head">
-        @if ((inWeekly() && canOpenWeeklyOverview()) || inCourse()) {
+        @if ((inWeekly() && canOpenWeeklyOverview()) || inCourse() || inWoodpecker()) {
           <button mat-icon-button class="ctx-back"
                   (click)="back.emit()"
-                  [appIconLabel]="(inWeekly() ? 'book.weekly.backToWeekly' : courseBackLabel()) | translate">
+                  [appIconLabel]="(inWeekly() ? 'book.weekly.backToWeekly' : inWoodpecker() ? 'woodpecker.toOverview' : courseBackLabel()) | translate">
             <mat-icon>arrow_back</mat-icon>
           </button>
         }
@@ -17,6 +17,22 @@
               @if (weeklyTotal() > 0) {
                 <span class="weekly-pos">{{ 'book.weekly.position' | translate:{n: weeklyDisplayIndex(), total: weeklyTotal()} }}</span>
               }
+            </div>
+          }
+          <!-- Woodpecker: Plan als Chip, darunter Zyklus · Satz bzw. Fortschritt · Resttage (Trenner über .rh-dots, DESIGN
+               5.13; d3-rk-wp-loeser-im-satz-beschriftung: Zyklus 1 mit demselben Wortlaut wie die Übersichtskarte). -->
+          @if (inWoodpecker() && woodpeckerPlan(); as p) {
+            <div class="weekly-chip-row">
+              <span class="weekly-chip wp-chip">{{ p.name }}</span>
+            </div>
+            <div class="wp-meta rh-dots">
+              <span>{{ 'woodpecker.cycleOf' | translate: { n: p.currentCycle, max: p.maxCycles } }}</span>
+              @if (p.currentCycle === 1) {
+                <span>{{ (p.setSize === 1 ? 'woodpecker.setGrowingOne' : 'woodpecker.setGrowing') | translate: { n: p.setSize, total: p.availableCount } }}</span>
+              } @else {
+                <span>{{ 'woodpecker.cycleProgress' | translate: { done: woodpeckerAttempted(), total: p.setSize } }}</span>
+              }
+              <span>{{ (woodpeckerDaysLeft() === 1 ? 'woodpecker.daysLeftOne' : 'woodpecker.daysLeft') | translate: { days: woodpeckerDaysLeft() } }}</span>
             </div>
           }
           <!-- d4-rk-daily-puzzle-ohne-tagesbezug: das Tagespuzzle sagt, dass es eins ist und für welchen Tag
@@ -120,6 +136,15 @@
           }
         </div>
       }
+      @if (inWoodpecker() && (woodpeckerPlan()?.currentCycle ?? 1) > 1) {
+        <div class="ctx-progress">
+          <mat-progress-bar mode="determinate" [value]="woodpeckerPercent()"
+                            [attr.aria-label]="'woodpecker.cycleProgress' | translate: { done: woodpeckerAttempted(), total: woodpeckerPlan()?.setSize }"></mat-progress-bar>
+        </div>
+      }
+      @if (inWoodpecker() && woodpeckerRepeatHint()) {
+        <p class="wp-repeat">{{ 'woodpecker.repeatHint' | translate }}</p>
+      }
       <!-- Fortschritt (ganzes Buch + Kapitel) erst auf das ⓘ neben der Sprachwahl (Wunsch 2026-10-20). -->
       @if (inCourse() && courseTotal() > 0 && statsOpen()) {
         <app-course-stats-panel [bookStats]="courseBookStats()" [chapterStats]="courseChapterStats()"
@@ -220,10 +245,22 @@
       }
     </mat-card-content>
   </mat-card>
-} @else if ((inWeekly() || inCourse()) && state() !== 'LOADING') {
-  <!-- Kein Puzzle: Weekly ohne Puzzles oder Kurs bereits abgeschlossen -->
+} @else if ((inWeekly() || inCourse() || inWoodpecker()) && state() !== 'LOADING') {
+  <!-- Kein Puzzle: Weekly ohne Puzzles, Kurs bereits abgeschlossen, Woodpecker-Zyklus geschafft bzw. Training fehlt -->
   <mat-card class="context-card">
     <mat-card-content>
+      @if (inWoodpecker()) {
+        <!-- c1-wp-loeser-404-verbindung: fremdes/gelöschtes Training — „Wiederholen“ hülfe nie; Weg zurück statt
+             Verbindungsfehler (DESIGN 5.10/5.11). -->
+        @if (woodpeckerMissing()) {
+          <p class="wp-missing">{{ 'woodpecker.notFound' | translate }}</p>
+        } @else {
+          <p class="ctx-done wp-done"><mat-icon>emoji_events</mat-icon> {{ woodpeckerDoneText() }}</p>
+        }
+        <div class="ctx-nav">
+          <button mat-flat-button color="primary" class="wp-overview" (click)="woodpeckerOverview.emit()">{{ 'woodpecker.toOverview' | translate }}</button>
+        </div>
+      }
       @if (inWeekly()) {
         <p class="ctx-done">
           <mat-icon>{{ weeklyTotal() === 0 ? 'info' : 'emoji_events' }}</mat-icon>

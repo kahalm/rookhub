@@ -60,12 +60,16 @@ export class SolveModeService {
   /** Bereichs-Schlüssel. Kurse/Bücher bekommen ihre Id angehängt. */
   static scopeCourse(bookId: number): string { return `course:${bookId}`; }
   static scopeWeekly(weeklyId: number): string { return `weekly:${weeklyId}`; }
+  /** Woodpecker-Training: Linien aus Kursen — eigener Bereich je Plan, fällt wie ein Kurs auf die Kurs-Grundwahl zurück. */
+  static scopeWoodpecker(planId: number): string { return `woodpecker:${planId}`; }
 
   /** Bereich ohne Id (puzzles, daily, book, endless)? Nur dort gilt die Grundwahl. */
   static isShared(scope: string): boolean { return scope !== GRUNDWAHL && !scope.includes(':'); }
 
-  /** Ein einzelner Kurs (nicht die Kurs-Grundwahl selbst)? */
-  static isCourse(scope: string): boolean { return scope.startsWith('course:') && scope !== KURS_GRUNDWAHL; }
+  /** Ein einzelner Kurs (nicht die Kurs-Grundwahl selbst)? Ein Woodpecker-Plan zählt mit (seine Linien sind Kurslinien). */
+  static isCourse(scope: string): boolean {
+    return (scope.startsWith('course:') && scope !== KURS_GRUNDWAHL) || scope.startsWith('woodpecker:');
+  }
 
   /** Gemerkte Wahl, oder null wenn für diesen Bereich noch nie gefragt wurde. Ein Bereich ohne
    *  eigene Wahl fällt auf die Grundwahl zurück, sofern er einer ohne Id ist. */

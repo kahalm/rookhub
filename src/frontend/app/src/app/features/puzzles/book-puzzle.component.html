@@ -82,6 +82,10 @@
                „keine Puzzles“/„Kurs abgeschlossen“ (Wochenpost/Kurs). -->
           <app-book-context-card
             [hasPuzzle]="!!puzzle" [state]="state" [inCourse]="inCourse" [inWeekly]="inWeekly" [isDaily]="isDaily"
+            [inWoodpecker]="inWoodpecker" [woodpeckerPlan]="woodpecker.plan" [woodpeckerAttempted]="woodpecker.cycle?.attempted ?? 0"
+            [woodpeckerPercent]="woodpecker.percent" [woodpeckerDaysLeft]="woodpecker.daysLeft"
+            [woodpeckerMissing]="woodpecker.missing" [woodpeckerDoneText]="woodpecker.doneText"
+            [woodpeckerRepeatHint]="woodpecker.repeatHint"
             [browseInBook]="browseInBook" [isLoggedIn]="isLoggedIn"
             [titleDisplay]="titleDisplay" [chapterDisplay]="chapterDisplay" [bookName]="displayBookName"
             [sourceGame]="puzzle?.sourceGame ?? null" [difficulty]="puzzle?.difficulty" [bookRating]="puzzle?.bookRating"
@@ -99,10 +103,10 @@
             [linkedCourseBookId]="course.linkedBookId" [linkedCourseName]="course.linkedName"
             [courseBackLabel]="course.backKey('book.course.backToCourses')" [courseOverviewLabel]="course.backKey('book.course.toOverview')"
             [bookNavLoading]="book.navLoading" [canGoForwardDaily]="daily.canGoForward"
-            (back)="inWeekly ? weekly.backToOverview() : course.backToCourses()" (languagePicked)="lang.pick($event)"
+            (back)="inWeekly ? weekly.backToOverview() : inWoodpecker ? woodpecker.backToOverview() : course.backToCourses()" (languagePicked)="lang.pick($event)"
             (statsToggled)="statsOpen.set(!statsOpen())" (switchLinked)="course.switchToLinked()"
             (weeklyModeToggled)="weekly.toggleMode()" (weeklyOverview)="weekly.backToOverview()"
-            (courseOverview)="course.backToCourses()" (retryFailed)="course.retryFailed()" (restartCourse)="course.restart()"
+            (courseOverview)="course.backToCourses()" (woodpeckerOverview)="woodpecker.backToOverview()" (retryFailed)="course.retryFailed()" (restartCourse)="course.restart()"
             (courseNext)="course.next()" (nextInBook)="book.next()" (randomInBook)="book.random()"
             (prevDaily)="daily.prev()" (nextDaily)="daily.next()" />
 

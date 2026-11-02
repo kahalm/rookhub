@@ -20,7 +20,6 @@ import { WorksheetDetailComponent } from './worksheets/worksheet-detail.componen
 import { ReconstructListComponent } from './reconstruct/reconstruct-list.component';
 import { ReconstructDetailComponent } from './reconstruct/reconstruct-detail.component';
 import { WoodpeckerListComponent } from './woodpecker/woodpecker-list.component';
-import { WoodpeckerSolveComponent } from './woodpecker/woodpecker-solve.component';
 import { EbookListComponent } from './ebooks/ebook-list.component';
 
 /**
@@ -97,9 +96,8 @@ const WIDE_PAGES: [string, Type<unknown>, string][] = [
   // b1-rk-recon-breitstufe: Rekonstruktion — Kartenraster (Liste) und Brett-Editor (Bearbeiten).
   ['Rekonstruktionen', ReconstructListComponent, 'page'],
   ['Rekonstruktion bearbeiten', ReconstructDetailComponent, 'page'],
-  // c1-wp-uebersicht-ultrawide / c1-wp-loeser-ultrawide-brett: Woodpecker-Kartenraster und -Löser.
+  // c1-wp-uebersicht-ultrawide: Woodpecker-Kartenraster (der Löser ist seit 0.882.0 der Kurs-Löser).
   ['Woodpecker', WoodpeckerListComponent, 'page'],
-  ['Woodpecker-Löser', WoodpeckerSolveComponent, 'page'],
   // c1-eb-ultrawide-not-wide: E-Book-Bibliothek (Regal = Kartenraster).
   ['E-Book-Bibliothek', EbookListComponent, 'eb-page'],
 ];

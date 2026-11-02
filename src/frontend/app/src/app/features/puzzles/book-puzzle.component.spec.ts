@@ -1,3 +1,5 @@
+import { Injector, runInInjectionContext } from '@angular/core';
+import { WoodpeckerService } from '../woodpecker/woodpecker.service';
 import { Chess } from 'chess.js';
 import { of, Subject, throwError } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
@@ -85,11 +87,13 @@ function makeComponent(): any {
   const favorites: any = { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) };
   const solveMode: any = makeSolveModeStub(prefs);
   const worksheets: any = { sendAndNotify: jasmine.createSpy('sendAndNotify') };
-  return new BookPuzzleComponent(
+  return runInInjectionContext(
+    Injector.create({ providers: [{ provide: WoodpeckerService, useValue: {} }] }),
+    () => new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, dialog, courseService, weeklyService,
     router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites,
     solveMode, worksheets, new CourseLanguageService(translate),
-  );
+  ));
 }
 
 const FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';

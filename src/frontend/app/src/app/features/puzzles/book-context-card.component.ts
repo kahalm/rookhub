@@ -11,6 +11,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { CourseLangPickerComponent } from '../courses/course-lang-picker.component';
 import { CourseLineEbookRef, CourseMode, CourseScopeStats } from '../courses/course.service';
 import { WeeklyMode } from '../weekly/weekly.service';
+import { WoodpeckerPlan } from '../woodpecker/woodpecker.service';
 import { BookPuzzleDto } from './puzzle.service';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { CourseStatsPanelComponent } from './course-stats-panel.component';
@@ -40,6 +41,7 @@ export class BookContextCardComponent {
   readonly inCourse = input(false);
   readonly inWeekly = input(false);
   readonly isDaily = input(false);
+  readonly inWoodpecker = input(false);
   readonly browseInBook = input(false);
   readonly isLoggedIn = input(false);
 
@@ -93,6 +95,18 @@ export class BookContextCardComponent {
   readonly courseBackLabel = input('book.course.backToCourses');
   readonly courseOverviewLabel = input('book.course.toOverview');
 
+  // ---- Woodpecker (Plan-Kopf: Zyklus, Satz bzw. Fortschritt, Resttage — wie bis 0.881 über dem eigenen Löser)
+  readonly woodpeckerPlan = input<WoodpeckerPlan | null>(null);
+  /** Bearbeitet im laufenden Zyklus (ab Zyklus 2 der Fortschritt). */
+  readonly woodpeckerAttempted = input(0);
+  readonly woodpeckerPercent = input(0);
+  readonly woodpeckerDaysLeft = input(0);
+  /** Training gibt es nicht (mehr) bzw. gehört jemand anderem. */
+  readonly woodpeckerMissing = input(false);
+  readonly woodpeckerDoneText = input('');
+  /** Nach „Nochmal“: der erste Versuch dieses Zyklus ist schon gewertet. */
+  readonly woodpeckerRepeatHint = input(false);
+
   // ---- Buch / Tagespuzzle
   readonly bookNavLoading = input(false);
   readonly canGoForwardDaily = input(false);
@@ -105,6 +119,7 @@ export class BookContextCardComponent {
   readonly weeklyModeToggled = output<void>();
   readonly weeklyOverview = output<void>();
   readonly courseOverview = output<void>();
+  readonly woodpeckerOverview = output<void>();
   readonly retryFailed = output<void>();
   readonly restartCourse = output<void>();
   readonly courseNext = output<void>();

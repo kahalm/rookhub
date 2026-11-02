@@ -66,8 +66,10 @@ export class WoodpeckerService {
     return this.http.post<WoodpeckerPlan>(`${this.base}/${planId}/next-cycle`, {});
   }
 
-  next(planId: number): Observable<WoodpeckerNext> {
-    return this.http.get<WoodpeckerNext>(`${this.base}/${planId}/next`);
+  /** `lang`: Kommentare in dieser Sprache, wo der Kurs eine Übersetzung hat (wie `GET /api/courses/{id}/next`). */
+  next(planId: number, lang?: string | null): Observable<WoodpeckerNext> {
+    const params: Record<string, string> = lang ? { lang } : {};
+    return this.http.get<WoodpeckerNext>(`${this.base}/${planId}/next`, { params });
   }
 
   recordAttempt(planId: number, bookPuzzleId: number, solved: boolean, timeSeconds: number): Observable<WoodpeckerPlan> {

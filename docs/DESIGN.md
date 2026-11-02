@@ -908,8 +908,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Übungszyklen im ⋮, d4). Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
   schrumpft der Zusatz zuerst (d4). Lernen: solange der Trainer den Zug vorspielt (Brett gesperrt), ohne Imperativ —
   „Schwarz am Zug — das ist dein Repertoirezug.“ (d4). Linienliste: neue Linie mit umrandeter 44-px-Pille „⊕ Üben“
-  (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Woodpecker-Löser: Titel bricht um (Seitenkopf, 5.1), Meta mit
-  `.rh-dots` (d4). Kalkulieren im E-Book-Brett: ein Satz, Rest hinter ? (d4). Statistik: Elo-Kopf `flex-wrap` mit
+  (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Woodpecker-Löser: seit 0.882.0 der Kurs-Löser (gleiche Oberfläche
+  wie im Kurs), Plan-Kopf (Plan-Chip, Zyklus · Satz/Fortschritt · Resttage mit `.rh-dots`, ab Zyklus 2 Balken) in der
+  Kontext-Karte; kein „Überspringen“ (der Server gäbe dieselbe Aufgabe wieder). Kalkulieren im E-Book-Brett: ein Satz, Rest hinter ? (d4). Statistik: Elo-Kopf `flex-wrap` mit
   8/12-px-Lücke, Level-Feld am Handy volle Breite unter dem Titel (d4). Repertoire-Ansicht: Brett aus Sicht der Kapitelfarbe (gewählte Linie,
   sonst gedreht, wenn alle Kapitel Schwarz sind). Lochfinder: Quelle/Datenbank mit sichtbarer Zeilenbeschriftung,
   die Seite einfarbiger Repertoires als eigener Chip darüber.
@@ -1343,3 +1344,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-28 | 0.865.0 | RookHub + LeagueHub, Notizen-Editor der „+“-Stellungen: öffnet zum Lesen — nur die vergebenen Schlagworte (eigene gefüllt, die anderer gestrichelt), die Bemerkung als Text, Bemerkungen anderer als Zitat; rechts neben „Klassifizierung“ ein kleiner runder Bleistift (28 px, leise), der in die Bearbeitung mit allen Chips und Textfeld schaltet; „Speichern“ erst dann, sonst nur „Schließen“; leere Stellung öffnet gleich in der Bearbeitung | Erst sehen, was hinterlegt ist, ohne Formularwand | Nutzer |
 | 2026-10-28 | 0.866.0 | LeagueHub-Vereinsübersicht: jede Liga ein Aufklapper (`details.ov-league`, Kopf = `<h2>` in `summary`, ≥ 44 px, ▸ in `--red`, dreht sich beim Öffnen, Linie in `--line`); zugeklappte Ligen merkt sich der Browser; „+n“ im Kopf öffnet das Stellungsfenster, ohne zu klappen | Am Handy die Ligen einzeln überblicken | Nutzer |
 | 2026-11-02 | 0.881.2 | RookHub-Löser: langer Buch-/Kurs-Kommentar scrollt in seiner ~5-Zeilen-Höhe (`overflow-y: auto`, dünner Balken) statt abgeschnitten mit Verlauf | Züge in den unteren Zeilen waren nicht anklickbar, nur über „Ganz lesen“ | Wunsch User |
+| 2026-11-02 | 0.882.0 | Woodpecker-Löser = Kurs-Löser: Kommentare, Tipps, Spielweise, Aktionszeile, Sprachwahl wie im Kurs; Plan-Kopf (Chip, Zyklus · Satz/Fortschritt · Resttage, Balken ab Zyklus 2, Wiederholen-Hinweis) und Abschluss-/„gibt es nicht“-Karte in der Kontext-Karte | eigener schlanker Löser ohne Kommentare/Tipps, andere Anordnung als im Kurs | Wunsch User („egal ob über Woodpecker oder Kurs — die UI soll die gleiche sein“) |

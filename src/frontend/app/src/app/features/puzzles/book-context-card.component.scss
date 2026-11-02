@@ -51,3 +51,9 @@
   gap: 4px;
   color: color-mix(in srgb, currentColor 70%, transparent);
 }
+
+/* Woodpecker-Kopf (Zyklus · Satz · Resttage): bricht um, ein Eintrag nie mitten im Text (DESIGN 5.13). */
+.wp-meta { row-gap: 2px; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }
+.wp-meta > span { white-space: nowrap; }
+.wp-chip { overflow-wrap: anywhere; }
+.context-card .wp-repeat, .context-card .wp-missing { margin: 0.5rem 0 0; font-size: .85rem; color: var(--mat-sys-on-surface-variant); }

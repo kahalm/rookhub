@@ -15,8 +15,15 @@ namespace RookHub.Api.Controllers.Courses;
 public class WoodpeckerController : BaseApiController
 {
     private readonly WoodpeckerService _service;
+    /// <summary>Kurs-Übersetzung der Aufgaben (<c>?lang=</c>), wie im Kurs-Löser. Optional wie dort — ohne ihn bleibt
+    /// <c>lang</c> wirkungslos (Original).</summary>
+    private readonly CourseCommentLocalizer? _localizer;
 
-    public WoodpeckerController(WoodpeckerService service) => _service = service;
+    public WoodpeckerController(WoodpeckerService service, CourseCommentLocalizer? localizer = null)
+    {
+        _service = service;
+        _localizer = localizer;
+    }
 
     /// <summary>Eigene Woodpecker-Trainings, neueste zuerst.</summary>
     [HttpGet]
@@ -53,10 +60,15 @@ public class WoodpeckerController : BaseApiController
     public async Task<IActionResult> StartNextCycle(int planId, CancellationToken ct) =>
         Ok(await _service.StartNextCycleAsync(GetUserId(), planId, ct));
 
-    /// <summary>Nächste Aufgabe: Zyklus 1 in Kursreihenfolge, danach zufällig aus dem Satz.</summary>
+    /// <summary>Nächste Aufgabe: Zyklus 1 in Kursreihenfolge, danach zufällig aus dem Satz. <c>?lang=</c> liefert die
+    /// Kommentare übersetzt, wo der Kurs aktuelle Übersetzungen hat (seit 0.882.0 läuft Woodpecker im Kurs-Löser).</summary>
     [HttpGet("{planId:int}/next")]
-    public async Task<IActionResult> Next(int planId, CancellationToken ct) =>
-        Ok(await _service.GetNextAsync(GetUserId(), planId, ct));
+    public async Task<IActionResult> Next(int planId, [FromQuery] string? lang = null, CancellationToken ct = default)
+    {
+        var next = await _service.GetNextAsync(GetUserId(), planId, ct);
+        if (_localizer is not null) await _localizer.ApplyAsync(next.Puzzle, lang, ct);
+        return Ok(next);
+    }
 
     /// <summary>Versuch an einer Aufgabe im laufenden Zyklus (je Zyklus zählt der erste).</summary>
     [HttpPost("{planId:int}/attempts")]

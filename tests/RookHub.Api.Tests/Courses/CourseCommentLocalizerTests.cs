@@ -323,6 +323,33 @@ public class CourseCommentLocalizerTests : IDisposable
         Assert.Equal("Kapitel DE", detail.Chapters[0].Label);
     }
 
+    /// <summary>Seit 0.882.0 läuft Woodpecker im Kurs-Löser — mit derselben Sprachwahl, also auch übersetzt.</summary>
+    [Fact]
+    public async Task WoodpeckerNext_MitLang_Uebersetzt_OhneLang_Original()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "u", Email = "u@t.com", PasswordHash = "h" });
+        var book = await BookAsync(isPublic: true);
+        await FullyTranslatedAsync(book);
+        var service = new WoodpeckerService(_db, TimeProvider.System);
+        var plan = await service.CreateAsync(1, true, new CreateWoodpeckerPlanDto { BookIds = [book.Id] });
+        var controller = new WoodpeckerController(service, _localizer)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "1")], "Test")),
+                },
+            },
+        };
+
+        var german = (WoodpeckerNextDto)((OkObjectResult)await controller.Next(plan.Id, "de")).Value!;
+        var plain = (WoodpeckerNextDto)((OkObjectResult)await controller.Next(plan.Id)).Value!;
+
+        Assert.Equal("Kommentar DE", german.Puzzle!.Comment);
+        Assert.Equal("Kommentar", plain.Puzzle!.Comment);
+    }
+
     [Fact]
     public async Task BookPuzzleEndpoints_MitLang_Uebersetzt()
     {

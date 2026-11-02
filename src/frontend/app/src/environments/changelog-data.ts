@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.882.0',
+    date: '2026-11-02',
+    changes: [
+      {
+        en: 'Woodpecker: puzzles now open in the same solver as courses — with comments, hints, play mode, comment language and the action bar. Cycle, set and days left are shown in the info card above the clock.',
+        de: 'Woodpecker: die Aufgaben öffnen jetzt im selben Löser wie die Kurse — mit Kommentaren, Tipps, Spielweise, Kommentar-Sprache und Aktionszeile. Zyklus, Satz und Resttage stehen in der Info-Karte über der Uhr.',
+      },
+    ],
+  },
+  {
     version: '0.881.3',
     date: '2026-11-02',
     changes: [
