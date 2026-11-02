@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.881.3',
+    date: '2026-11-02',
+    changes: [
+      {
+        en: 'Tests: the solver layout test expects the long comment to scroll (follow-up to 0.881.2).',
+        de: 'Tests: der Löser-Layout-Test erwartet, dass der lange Kommentar scrollt (Nachtrag zu 0.881.2).',
+      },
+    ],
+  },
+  {
     version: '0.881.2',
     date: '2026-11-02',
     changes: [

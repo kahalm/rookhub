@@ -294,7 +294,7 @@ describe('Kurs-Löser: langer Kommentar hinter der Bedienung (a1-rk-kommentar-sc
     // (d5-rk-kommentar-abgeschnitten-ohne-link / -fenster-link-verblasst / -kasten-abgeschnitten).
     const text = comment.querySelector('.ctx-comment-text') as HTMLElement;
     expect(getComputedStyle(text).maxHeight).withContext('auf ~5 Zeilen gekürzt').not.toBe('none');
-    expect(getComputedStyle(text).overflow).toBe('hidden');
+    expect(getComputedStyle(text).overflowY).withContext('scrollt statt abzuschneiden (0.881.3)').toBe('auto');
     const expand = comment.querySelector('.ctx-comment-expand') as HTMLElement;
     expect(text.contains(expand)).withContext('„Ganz lesen“ außerhalb der Kappung').toBeFalse();
     for (let a = expand.parentElement; a && a !== comment; a = a.parentElement) {
