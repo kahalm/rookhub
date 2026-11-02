@@ -679,7 +679,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   Kommentar → Status-Card (Uhr; „Eval“, „Überspringen“, „Aufgeben“) → Aktionszeile (Teilen + ⋮). Der Kurs-Fortschritt
   (ganzes Buch + Kapitel) liegt hinter einem ⓘ neben der Sprachwahl (zu beim Öffnen); „Überspringen“ steht neben
   „Aufgeben“; die Spielweise wechselt man nur im ⋮ (der Wochenpost behält seinen Knopf). Lange Kommentare sind auf
-  ~5 Zeilen gekürzt (Verlauf, ganzer Text im Dialog), damit die Bedienung über der Falz bleibt.
+  ~5 Zeilen gekürzt und scrollen dort (ganzer Text zusätzlich im Dialog), damit die Bedienung über der Falz bleibt
+  und die Züge der unteren Zeilen anklickbar sind (0.881.2).
 - **Puzzle-Löser** (alle drei Modi): zweispaltig erst ab 900 px; 769–899 px einspaltig, Brett mittig bis Fensterhöhe
   (`min(100%, 100vh - 180px)`), Seitenkarten volle Breite darunter. In der Seitenspalte zuerst die Bedienung
   (Kontext-Card mit Fortschritt/„Überspringen“, Status-Card, Aktionsleiste), der ungekürzte Kurs-Kommentar als eigener
@@ -1341,3 +1342,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-28 | 0.864.0 | Runde d6, KidHub: Sternenjagd: Markierungen nur auf ein Brett ≥ 8 Gerätepixel, nach jedem Neuaufbau mit frischen Maßen neu gesetzt; `kidBoardSize` misst nach jedem Neubau von `cg-board`. Registrieren: nur der Kasten „Für Eltern“ (8.3) | Sterne fehlten nach kurzem Mini-Fenster (`translate(NaN,NaN)`), zwei Kästen mit demselben Anfang vor dem ersten Feld | UI-Sweep d6: d6-k-sternenjagd-sterne-fehlen, d6-k-register-doppelter-hinweis |
 | 2026-10-28 | 0.865.0 | RookHub + LeagueHub, Notizen-Editor der „+“-Stellungen: öffnet zum Lesen — nur die vergebenen Schlagworte (eigene gefüllt, die anderer gestrichelt), die Bemerkung als Text, Bemerkungen anderer als Zitat; rechts neben „Klassifizierung“ ein kleiner runder Bleistift (28 px, leise), der in die Bearbeitung mit allen Chips und Textfeld schaltet; „Speichern“ erst dann, sonst nur „Schließen“; leere Stellung öffnet gleich in der Bearbeitung | Erst sehen, was hinterlegt ist, ohne Formularwand | Nutzer |
 | 2026-10-28 | 0.866.0 | LeagueHub-Vereinsübersicht: jede Liga ein Aufklapper (`details.ov-league`, Kopf = `<h2>` in `summary`, ≥ 44 px, ▸ in `--red`, dreht sich beim Öffnen, Linie in `--line`); zugeklappte Ligen merkt sich der Browser; „+n“ im Kopf öffnet das Stellungsfenster, ohne zu klappen | Am Handy die Ligen einzeln überblicken | Nutzer |
+| 2026-11-02 | 0.881.2 | RookHub-Löser: langer Buch-/Kurs-Kommentar scrollt in seiner ~5-Zeilen-Höhe (`overflow-y: auto`, dünner Balken) statt abgeschnitten mit Verlauf | Züge in den unteren Zeilen waren nicht anklickbar, nur über „Ganz lesen“ | Wunsch User |

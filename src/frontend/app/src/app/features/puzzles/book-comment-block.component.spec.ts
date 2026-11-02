@@ -37,4 +37,24 @@ describe('BookCommentBlockComponent (Zerlegung Z18)', () => {
     expect(only.el.querySelector('.ctx-comment')).toBeNull();
     expect(only.el.querySelector('.ctx-offline-lang')).not.toBeNull();
   });
+
+  it('langer Kommentar scrollt statt abzuschneiden — untere Züge bleiben anklickbar (0.881.2)', () => {
+    const many = Array.from({ length: 30 }, (_, i) => [{ text: `Zeile ${i} ` }, { ...seg, move: `M${i}` } as CommentSegment]);
+    const { el, c } = make({ hasLines: true, blocks: many, long: true });
+    document.body.appendChild(el);
+    try {
+      const text = el.querySelector('.ctx-comment-text') as HTMLElement;
+      expect(getComputedStyle(text).overflowY).toBe('auto');
+      expect(text.scrollHeight).toBeGreaterThan(text.clientHeight);
+      const last = el.querySelectorAll('.cmt-move')[29] as HTMLButtonElement;
+      last.scrollIntoView();
+      const r = last.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      expect(hit).toBe(last);
+      const picked: string[] = [];
+      c.movePicked.subscribe(s => picked.push(s.move!));
+      last.click();
+      expect(picked).toEqual(['M29']);
+    } finally { el.remove(); }
+  });
 });

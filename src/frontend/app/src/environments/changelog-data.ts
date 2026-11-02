@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.881.2',
+    date: '2026-11-02',
+    changes: [
+      {
+        en: 'Puzzles: a long book or course comment now scrolls inside its box instead of being cut off, so the moves in the lower lines can be clicked.',
+        de: 'Puzzles: ein langer Buch- oder Kurs-Kommentar scrollt jetzt in seinem Kasten, statt abgeschnitten zu werden — die Züge in den unteren Zeilen lassen sich anklicken.',
+      },
+    ],
+  },
+  {
     version: '0.881.1',
     date: '2026-10-30',
     changes: [

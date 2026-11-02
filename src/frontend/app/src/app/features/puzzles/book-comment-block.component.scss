@@ -29,11 +29,12 @@
    Bedienung wieder unter die Falz schieben (a1-rk-kommentar-schiebt-aktionen) — daher auf ~5 Zeilen mit Verlauf,
    der ganze Text im Dialog („Ganz lesen“, Klick auf den Text). Gekürzt werden NUR die Absätze (.ctx-comment-text):
    „Ganz lesen“, Variantenleiste und Maschinen-Hinweis stehen darunter und bleiben sichtbar
-   (d5-rk-kommentar-abgeschnitten-ohne-link). */
+   (d5-rk-kommentar-abgeschnitten-ohne-link). Seit 0.881.2 scrollt der gekürzte Text statt abzuschneiden: die
+   Züge in den unteren Zeilen bleiben anklickbar (Wunsch 2026-11-02); Verlauf entfällt, sonst verblasst die letzte
+   Zeile auch ganz unten gescrollt. */
 .ctx-comment-long .ctx-comment-text {
-  max-height: 7.5em; overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
-  mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  max-height: 7.5em; overflow-y: auto; overscroll-behavior: contain;
+  padding-right: 4px; scrollbar-width: thin;
 }
 .ctx-comment .ctx-comment-expand {
   align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
