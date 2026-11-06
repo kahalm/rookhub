@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.883.0',
+    date: '2026-11-06',
+    changes: [
+      {
+        en: 'Scoresheet reading: on Android you can now share a photo straight to RookHub („Share → RookHub“ in the gallery or camera app, up to three photos). It lands in „Read scoresheet“ ready to go – just pick the language and press read. Works in the installed web app right away; the Android app (APK) needs the next app update.',
+        de: 'Partieformular einlesen: Auf Android lässt sich ein Foto jetzt direkt an RookHub teilen („Teilen → RookHub“ in Galerie oder Kamera-App, bis zu drei Fotos). Es liegt dann fertig in „Partieformular einlesen“ – nur noch Sprache wählen und einlesen. Wirkt in der installierten Web-App sofort; die Android-App (APK) braucht dafür das nächste App-Update.',
+      },
+    ],
+  },
+  {
     version: '0.882.0',
     date: '2026-11-02',
     changes: [

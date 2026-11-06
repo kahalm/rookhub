@@ -200,6 +200,9 @@ public class EndpointAuthInventoryTests
         "POST /api/external-engine/work/{id}",                       // ExternalEngineController.Submit (Upload; die Kennung des abgeholten Auftrags IST der Nachweis)
         "POST /api/puzzles/random-batch",                            // PuzzleController.GetRandomBatch
         "POST /api/puzzles/{id}/attempt/anonymous",                  // PuzzleController.RecordAnonymousAttempt
+        // „Teilen → RookHub“ (0.883.0): Android schickt das geteilte Foto ohne Bearer; es liegt nur kurz unter einem
+        // Zufallsschlüssel, abgeholt wird angemeldet (GET/DELETE /api/scoresheets/share/{token} bleiben hinter Auth).
+        "POST /api/scoresheets/share",                               // ScoresheetShareController.Share
         "POST /api/token/test",                                      // TokenController.Test (Vorabpruefung des Engine-Providers; der Token steht im RUMPF, Lichess-Form)
         "PUT /api/endless/progress/anonymous",                       // EndlessController.SaveAnonymousProgress
     ];

@@ -341,3 +341,23 @@ Ende), nie übernommene **Liga-Einlesungen ohne Konto** (Teilen-Link, auch nie g
 (365 Tage) — bisher nur beim nächsten Abschluss einer Liga-Einlesung mitgeräumt. Fotos übernommener RookHub-Einlesungen
 bleiben bei ihrer Partie. Übersicht aller Fristen: [speicherdauer.md](speicherdauer.md).
 
+
+## Teilen → RookHub (Web Share Target, 0.883.0)
+
+Ein Foto aus Galerie/Kamera-App lässt sich auf Android direkt an RookHub „teilen“. `public/manifest.webmanifest` trägt
+`share_target` (POST multipart, Teil `file`, bis 3 Bilder) mit Ziel `POST /api/scoresheets/share` — die App-Adresse
+liegt unter `/api/scoresheets`, also gilt die 64-MB-location von nginx, und der ngsw lässt POSTs ohnehin durch.
+
+* **Warum über den Server:** Android schickt das Bild ohne Bearer (die Anmeldung liegt im Browser-Speicher, nicht in
+  einem Cookie). `ScoresheetShareController.Share` (anonym, Policy `anonymous-write`) legt die Fotos deshalb in die
+  `ScoresheetShareInbox` (Singleton, nur im Speicher, 15 min, höchstens 50 Einträge / 200 MB) unter einem
+  128-Bit-Zufallsschlüssel und antwortet **303** auf `/games/scoresheet?share=<schlüssel>` — bei Absage
+  `?shareError=<grund>` (`noFile`, `tooManyPages`, `tooLarge`, `unsupportedImage`, `busy`), damit der Nutzer eine Seite
+  sieht und keinen JSON-Fehler.
+* **Abholen (angemeldet):** `GET /api/scoresheets/share/{token}` → `{ count }`, `GET …/{token}/{index}` → Bilddaten,
+  `DELETE …/{token}` räumt. Die Einlese-Seite legt die Fotos als Seiten in die Auswahl und nimmt den Parameter aus der
+  Adresse; gelesen wird erst auf Knopfdruck (Sprache/eigene Seite stehen noch zur Wahl). Ohne Anmeldung führt der
+  authGuard über `/login?returnUrl=…` zurück — der Schlüssel überlebt das, solange die 15 Minuten reichen.
+* **Android-App:** Als Web-App (Chrome/WebAPK) wirkt das neue Manifest nach Chromes Manifest-Abgleich. Die TWA-APK
+  braucht `shareTarget` in `twa/twa-manifest*.json` (seit App 1.2.0 / versionCode 3) und damit einen neuen
+  APK-Build + Release; danach `APK_VERSION` heben.

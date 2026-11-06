@@ -143,6 +143,22 @@ export class ScoresheetService {
     return this.http.post<ScoresheetScan>('/api/scoresheets', form);
   }
 
+  /** Über „Teilen → RookHub“ geteilte Fotos (0.883.0): wie viele unter dem Abholschlüssel liegen (404 = abgelaufen). */
+  sharedInfo(token: string): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`/api/scoresheets/share/${encodeURIComponent(token)}`);
+  }
+
+  /** Ein geteiltes Foto als Datei (Name/Typ wie geteilt), bereit für die Seitenauswahl. */
+  sharedPhoto(token: string, index: number): Observable<File> {
+    return this.http.get(`/api/scoresheets/share/${encodeURIComponent(token)}/${index}`, { responseType: 'blob' })
+      .pipe(map(b => new File([b], `shared-${index + 1}.${b.type.split('/')[1] || 'jpg'}`, { type: b.type })));
+  }
+
+  /** Abgeholt: die Ablage am Server räumen. */
+  sharedDone(token: string): Observable<void> {
+    return this.http.delete<void>(`/api/scoresheets/share/${encodeURIComponent(token)}`);
+  }
+
   /** Eigene Einlesung löschen (0.840.0): 204; 404 fremd/schon weg; 409 `{ reason: "busy" }`, solange sie wartet oder
    *  gelesen wird. Eine daraus gespeicherte Partie bleibt (ohne Foto). */
   delete(id: number): Observable<void> {

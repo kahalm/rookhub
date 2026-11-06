@@ -64,6 +64,7 @@ public class AnonymousRateLimitTests
                      "Endless.SaveAnonymousProgress", "Endless.RecordAnonymousSession", "Endless.BulkImportAnonymousSessions",
                  })
             Assert.Equal("anonymous-write", p[key]);
+        Assert.Equal("anonymous-write", p["ScoresheetShare.Share"]);   // geteilte Formular-Fotos (0.883.0)
         var guess = p.Where(kv => kv.Key.StartsWith("GuessSessionAnonymous.", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(guess);
         Assert.All(guess, kv => Assert.Equal("anonymous-write", kv.Value));

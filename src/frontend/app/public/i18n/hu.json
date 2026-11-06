@@ -5062,7 +5062,8 @@
       "userDailyBudget": "A mai olvasási kereted elfogyott — próbáld holnap.",
       "userMonthlyBudget": "Az elmúlt 30 napra szóló olvasási kereted elfogyott.",
       "globalBudget": "A beolvasás mára szünetel — az összes felhasználó kerete elfogyott.",
-      "tooManyPages": "Legfeljebb három fénykép lapuként."
+      "tooManyPages": "Legfeljebb három fénykép lapuként.",
+      "busy": "A szerver éppen túlterhelt – kérjük, próbáld újra néhány perc múlva."
     },
     "budget": "az olvasási kereted {{percent}}%-a elfogyott",
     "side": "Ezzel játszottam",
@@ -5075,7 +5076,10 @@
     "page": "{{n}}. oldal",
     "removePage": "Fénykép eltávolítása",
     "morePages": "Folytatódik a játszma egy másik lapon? Add hozzá a következő oldalt — legfeljebb {{max}} oldal, helyes sorrendben.",
-    "leaveHint": "Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között."
+    "leaveHint": "Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
+    "shareFailed": "A megosztott fotót nem sikerült átvenni: {{reason}}",
+    "shareExpired": "A megosztott fotó lejárt – kérjük, oszd meg újra.",
+    "shareLoadFailed": "A megosztott fotót nem sikerült betölteni – kérjük, oszd meg újra."
   },
   "moveCompare": {
     "menu": "Lépések összehasonlítása",

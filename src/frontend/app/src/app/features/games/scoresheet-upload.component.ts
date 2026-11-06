@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, comp
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { EMPTY, Subscription, timer } from 'rxjs';
+import { EMPTY, Subscription, forkJoin, timer } from 'rxjs';
 import { catchError, switchMap, takeWhile } from 'rxjs/operators';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
@@ -272,6 +272,8 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
   private snackbar = inject(SnackbarService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   readonly status = signal<ScoresheetStatus | null>(null);
   /** Status konnte nicht geladen werden (Netz/Server) — dann „Erneut versuchen" statt „nicht eingerichtet" (F4-011). */
@@ -311,6 +313,37 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     } catch { /* privat: Vorgabe */ }
     this.loadStatus();
     this.loadRecent();
+    this.takeShared();
+  }
+
+  /** „Teilen → RookHub“ (0.883.0): Android hat Fotos an den Server geschickt und leitet mit `?share=<schlüssel>` hierher
+   *  (bzw. `?shareError=<grund>`). Die Fotos kommen in die Auswahl, als hätte man sie gewählt; Lesen startet man selbst
+   *  (Sprache und Seite stehen ja noch zur Wahl). Danach verschwinden die Parameter aus der Adresse. */
+  private takeShared(): void {
+    const q = this.route.snapshot.queryParamMap;
+    const token = q.get('share');
+    const failed = q.get('shareError');
+    if (!token && !failed) return;
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { share: null, shareError: null },
+      queryParamsHandling: 'merge', replaceUrl: true });
+    if (failed) {
+      this.error.set(this.translate.instant('scoresheet.shareFailed', { reason: this.translate.instant('scoresheet.error.' + failed) }));
+      return;
+    }
+    this.service.sharedInfo(token!).pipe(
+      switchMap(info => info.count > 0
+        ? forkJoin(Array.from({ length: Math.min(info.count, MAX_PAGES) }, (_, i) => this.service.sharedPhoto(token!, i)))
+        : EMPTY),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: files => {
+        this.clearPages();
+        this.pages.set(files.map(file => ({ file, url: URL.createObjectURL(file) })));
+        this.service.sharedDone(token!).subscribe({ error: () => { /* läuft ohnehin ab */ } });
+      },
+      error: (err: unknown) => this.error.set(this.translate.instant(
+        err instanceof HttpErrorResponse && err.status === 404 ? 'scoresheet.shareExpired' : 'scoresheet.shareLoadFailed')),
+    });
   }
 
   ngOnDestroy(): void {

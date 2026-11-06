@@ -5062,7 +5062,8 @@
       "userDailyBudget": "Dein Lese-Budget für heute ist aufgebraucht — bitte morgen wieder.",
       "userMonthlyBudget": "Dein Lese-Budget für die letzten 30 Tage ist aufgebraucht.",
       "globalBudget": "Das Einlesen pausiert für heute — das Budget für alle Nutzer ist aufgebraucht.",
-      "tooManyPages": "Höchstens drei Fotos je Formular."
+      "tooManyPages": "Höchstens drei Fotos je Formular.",
+      "busy": "Der Server ist gerade ausgelastet – bitte in ein paar Minuten noch einmal."
     },
     "budget": "{{percent}} % deines Lese-Budgets verbraucht",
     "side": "Ich spielte",
@@ -5075,7 +5076,10 @@
     "page": "Seite {{n}}",
     "removePage": "Foto entfernen",
     "morePages": "Geht die Partie über ein weiteres Blatt? Dann die nächste Seite dazunehmen — bis zu {{max}} Seiten, in der richtigen Reihenfolge.",
-    "leaveHint": "Du kannst die Seite verlassen — die Partie erscheint in deinen Partien."
+    "leaveHint": "Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
+    "shareFailed": "Das geteilte Foto konnte nicht übernommen werden: {{reason}}",
+    "shareExpired": "Das geteilte Foto ist abgelaufen – bitte noch einmal teilen.",
+    "shareLoadFailed": "Das geteilte Foto konnte nicht geladen werden – bitte noch einmal teilen."
   },
   "moveCompare": {
     "menu": "Züge vergleichen",

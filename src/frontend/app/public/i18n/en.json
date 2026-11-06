@@ -5062,7 +5062,8 @@
       "userDailyBudget": "Your reading budget for today is used up — please try again tomorrow.",
       "userMonthlyBudget": "Your reading budget for the last 30 days is used up.",
       "globalBudget": "Reading is paused for today — the budget for all users is used up.",
-      "tooManyPages": "At most three photos per scoresheet."
+      "tooManyPages": "At most three photos per scoresheet.",
+      "busy": "The server is busy right now – please try again in a few minutes."
     },
     "budget": "{{percent}}% of your reading budget used",
     "side": "I played",
@@ -5075,7 +5076,10 @@
     "page": "Page {{n}}",
     "removePage": "Remove photo",
     "morePages": "Does the game continue on another sheet? Then add the next page — up to {{max}} pages, in the right order.",
-    "leaveHint": "You can leave the page — the game will appear in your games."
+    "leaveHint": "You can leave the page — the game will appear in your games.",
+    "shareFailed": "The shared photo could not be taken: {{reason}}",
+    "shareExpired": "The shared photo has expired – please share it again.",
+    "shareLoadFailed": "The shared photo could not be loaded – please share it again."
   },
   "moveCompare": {
     "menu": "Compare moves",

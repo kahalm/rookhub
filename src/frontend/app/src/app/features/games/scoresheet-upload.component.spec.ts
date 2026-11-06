@@ -1,7 +1,8 @@
 import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
@@ -362,5 +363,54 @@ describe('ScoresheetUploadComponent — Einlesung löschen', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.recent().length).toBe(2);
     expect(snackbar.warn).toHaveBeenCalledWith('scoresheet.deleteFailed');
+  });
+});
+
+// „Teilen → RookHub“ (0.883.0): Android leitet nach dem Teilen mit ?share=<schlüssel> bzw. ?shareError=<grund> hierher.
+describe('ScoresheetUploadComponent – geteilte Fotos', () => {
+  async function open(url: string) {
+    await TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
+        provideRouter([{ path: 'games/scoresheet', component: ScoresheetUploadComponent }]),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const harness = await RouterTestingHarness.create();
+    const http = TestBed.inject(HttpTestingController);
+    const c = await harness.navigateByUrl(url, ScoresheetUploadComponent);
+    http.expectOne('/api/scoresheets/status').flush({ available: true, dailyLimit: 20, usedToday: 0, languages: [] });
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    return { c, http, harness };
+  }
+
+  it('holt die geteilten Fotos als Seiten in die Auswahl, räumt die Ablage und nimmt den Schlüssel aus der Adresse', async () => {
+    const { c, http, harness } = await open('/games/scoresheet?share=abc123');
+    http.expectOne('/api/scoresheets/share/abc123').flush({ count: 2 });
+    http.expectOne('/api/scoresheets/share/abc123/0').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    http.expectOne('/api/scoresheets/share/abc123/1').flush(new Blob([new Uint8Array([2])], { type: 'image/png' }));
+    http.expectOne({ method: 'DELETE', url: '/api/scoresheets/share/abc123' }).flush(null);
+    await harness.fixture.whenStable();
+
+    expect(c.pages().map(p => p.file.name)).toEqual(['shared-1.jpeg', 'shared-2.png']);
+    expect(c.pages().map(p => p.file.type)).toEqual(['image/jpeg', 'image/png']);
+    expect(TestBed.inject(Router).url).toBe('/games/scoresheet');
+    // Gelesen wird erst auf Knopfdruck — Sprache und eigene Seite stehen noch zur Wahl.
+    http.expectNone({ method: 'POST', url: '/api/scoresheets' });
+  });
+
+  it('abgelaufener Schlüssel (404): Hinweis, noch einmal zu teilen', async () => {
+    const { c, http } = await open('/games/scoresheet?share=old');
+    http.expectOne('/api/scoresheets/share/old').flush(null, { status: 404, statusText: 'Not Found' });
+    expect(c.error()).toBe('scoresheet.shareExpired');
+    expect(c.pages().length).toBe(0);
+  });
+
+  it('vom Server abgelehntes Teilen zeigt den Grund', async () => {
+    const { c, http, harness } = await open('/games/scoresheet?shareError=unsupportedImage');
+    await harness.fixture.whenStable();
+    http.expectNone(r => r.url.startsWith('/api/scoresheets/share'));
+    expect(c.error()).toBe('scoresheet.shareFailed');
+    expect(TestBed.inject(Router).url).toBe('/games/scoresheet');
   });
 });

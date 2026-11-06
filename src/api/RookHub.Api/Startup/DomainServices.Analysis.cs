@@ -108,5 +108,6 @@ public static partial class DomainServicesSetup
         // Engine-Prüfung der Lesung (0.646.0): Stockfish aus dem API-Image (/usr/games/stockfish), ein Prozess je Prüfung.
         services.AddSingleton<IScoresheetEngine, StockfishScoresheetEngine>();
         services.AddSingleton<ScoresheetScanSignal>();
+        services.AddSingleton<ScoresheetShareInbox>();
     }
 }

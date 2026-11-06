@@ -5062,7 +5062,8 @@
       "userDailyBudget": "Tvoj budžet za čitanje za danas je potrošen — pokušaj sutra.",
       "userMonthlyBudget": "Tvoj budžet za čitanje za zadnjih 30 dana je potrošen.",
       "globalBudget": "Čitanje je za danas pauzirano — budžet za sve korisnike je potrošen.",
-      "tooManyPages": "Najviše tri fotografije po obrascu."
+      "tooManyPages": "Najviše tri fotografije po obrascu.",
+      "busy": "Poslužitelj je trenutno zauzet – pokušajte ponovno za nekoliko minuta."
     },
     "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje",
     "side": "Igrao sam",
@@ -5075,7 +5076,10 @@
     "page": "Stranica {{n}}",
     "removePage": "Ukloni fotografiju",
     "morePages": "Nastavlja li se partija na drugom listu? Dodaj sljedeću stranicu — do {{max}} stranice, pravilnim redoslijedom.",
-    "leaveHint": "Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama."
+    "leaveHint": "Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama.",
+    "shareFailed": "Podijeljena fotografija nije mogla biti preuzeta: {{reason}}",
+    "shareExpired": "Podijeljena fotografija je istekla – podijelite je ponovno.",
+    "shareLoadFailed": "Podijeljenu fotografiju nije bilo moguće učitati – podijelite je ponovno."
   },
   "moveCompare": {
     "menu": "Usporedi poteze",
