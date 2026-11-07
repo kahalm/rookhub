@@ -446,6 +446,27 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).not.toBe('LINE_DONE');
   });
 
+  it('Linienende: Klick ins Brett geht nur weiter, wenn nicht analysiert wird (Engine aus, nicht weggeblättert)', () => {
+    const c = make('w', 'Chapter A');
+    const s = (c as any).session;
+    const toLineEnd = () => { s.phase = 'LINE_DONE'; s.pendingRepeat = false; s.reviewPly = s.currentPly; };
+    // weggeblättert: bleibt stehen
+    toLineEnd(); s.reviewPly = s.currentPly - 1;
+    expect(s.reviewing).toBeTrue();
+    c.onPlayClick();
+    expect(c.phase).toBe('LINE_DONE');
+    // Engine an (und verfügbar): bleibt stehen
+    toLineEnd();
+    c.reviewEngineOn = true;
+    spyOnProperty(c, 'reviewEngineAvailable', 'get').and.returnValue(true);
+    c.onPlayClick();
+    expect(c.phase).toBe('LINE_DONE');
+    // nichts davon: Klick geht weiter
+    c.reviewEngineOn = false;
+    c.onPlayClick();
+    expect(c.phase).not.toBe('LINE_DONE');
+  });
+
   it('movesInLine hides the unplayed current move in quiz PLAYING (no spoiler), reveals it otherwise', () => {
     const c = make('w', 'Chapter A');
     // Quiz + PLAYING, currentPly 0: der noch nicht gespielte eigene Zug darf NICHT erscheinen

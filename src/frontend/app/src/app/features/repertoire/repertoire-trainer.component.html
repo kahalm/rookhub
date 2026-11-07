@@ -366,7 +366,10 @@
             <button mat-flat-button color="primary" (click)="continueLine(); $event.stopPropagation()">
               {{ (pendingRepeat ? 'repertoireTrainer.repeatLine' : 'repertoireTrainer.nextLine') | translate }}
             </button>
-            <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+            <!-- Beim Analysieren (Engine an / weggeblättert) führt ein Tipp aufs Brett NICHT weiter — dann kein „Aufs Brett tippen". -->
+            @if (!analysingLineEnd) {
+              <p class="tap-hint">{{ 'repertoireTrainer.pressToContinue' | translate }}</p>
+            }
           </div>
         }
       </div>

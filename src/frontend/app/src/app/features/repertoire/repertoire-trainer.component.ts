@@ -692,7 +692,18 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   }
 
   /** Klick/Tippen aufs Brett = „Weiter" (Linie fertig, Kommentar, Vorzeigen mit Kommentar, Feedback überspringen). */
-  onPlayClick(): void { this.s.tap(); }
+  onPlayClick(): void {
+    // Linie fertig: Klick ins Brett geht nur dann zur nächsten Linie, wenn nicht analysiert wird (Wunsch 2026-11-07) —
+    // also weder die Engine zugeschaltet noch in der Zugliste von der Schlussstellung weggeblättert. Sonst bleibt der
+    // Klick beim Brett; weiter geht es mit dem Knopf, Leertaste oder Enter.
+    if (this.s.phase === 'LINE_DONE' && this.analysingLineEnd) return;
+    this.s.tap();
+  }
+
+  /** Am Linienende wird analysiert: Engine an (und verfügbar) oder von der Schlussstellung weggeblättert. */
+  get analysingLineEnd(): boolean {
+    return this.s.reviewing || (this.reviewEngineOn && this.reviewEngineAvailable);
+  }
 
   /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen, „p" = Linie pausieren,
    *  „k" = Kommentare zeigen an/aus;

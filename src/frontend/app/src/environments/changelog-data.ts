@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.3", date: "2026-11-07", changes: [
+    { en: "Repertoire trainer, end of a line: a click on the board only moves on to the next line if you are not analysing — with the engine switched on or after stepping back through the line, the click stays on the board. The button, Space and Enter still move on.",
+      de: "Repertoire-Trainer, Linienende: ein Klick aufs Brett geht nur dann zur nächsten Linie, wenn du nicht analysierst — mit zugeschalteter Engine oder nachdem du in der Linie zurückgeblättert hast, bleibt der Klick beim Brett. Knopf, Leertaste und Enter gehen weiterhin weiter." },
+  ] },
   { version: "0.894.2", date: "2026-11-07", changes: [
     { en: "Repertoire trainer: a correct move no longer flashes a short “Correct” box — the counter ✓ keeps track. Tolerated and wrong moves still get their box.",
       de: "Repertoire-Trainer: nach einem richtigen Zug blitzt kein kurzer „Richtig“-Kasten mehr auf — der Zähler ✓ zählt mit. Geduldete und falsche Züge bekommen ihren Kasten weiterhin." },
