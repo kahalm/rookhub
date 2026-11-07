@@ -1212,7 +1212,9 @@
       "offlineRemoveTooltip": "Offline-Kopie entfernen",
       "offlineSaved": "„{{name}}“ offline gespeichert",
       "offlineRemoved": "„{{name}}“ aus dem Offline-Cache entfernt",
-      "offlineFailed": "Repertoire konnte nicht offline gespeichert werden"
+      "offlineFailed": "Repertoire konnte nicht offline gespeichert werden",
+      "sectionRecent": "Letzte Woche",
+      "sectionRecentHint": "In den letzten 7 Tagen trainiert oder angelegt."
     },
     "detail": {
       "parsing": "Repertoire wird gelesen … {{done}} von {{total}} Linien",

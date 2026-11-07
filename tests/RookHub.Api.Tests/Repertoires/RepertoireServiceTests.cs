@@ -149,6 +149,29 @@ public class RepertoireServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAll_LastTrainedAt_IsTheUsersNewestReviewPerRepertoire()
+    {
+        var userId = await CreateUserAsync();
+        var otherId = await CreateUserAsync();
+        var trained = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "Trainiert" });
+        var never = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "Nie" });
+        var t1 = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc);
+        var t2 = new DateTime(2026, 11, 6, 18, 30, 0, DateTimeKind.Utc);
+        _db.RepertoireCardStates.AddRange(
+            new Models.RepertoireCardState { UserId = userId, RepertoireId = trained.Id, CardKey = "a", LastReviewedAt = t1 },
+            new Models.RepertoireCardState { UserId = userId, RepertoireId = trained.Id, CardKey = "b", LastReviewedAt = t2 },
+            new Models.RepertoireCardState { UserId = userId, RepertoireId = trained.Id, CardKey = "c", LastReviewedAt = null },
+            // ein anderer Nutzer zählt nicht
+            new Models.RepertoireCardState { UserId = otherId, RepertoireId = never.Id, CardKey = "x", LastReviewedAt = t2 });
+        await _db.SaveChangesAsync();
+
+        var all = await _repertoireService.GetAllAsync(userId);
+
+        Assert.Equal(t2, all.Single(r => r.Id == trained.Id).LastTrainedAt);
+        Assert.Null(all.Single(r => r.Id == never.Id).LastTrainedAt);
+    }
+
+    [Fact]
     public async Task CreateRepertoire_DefaultKindIsNone()
     {
         var userId = await CreateUserAsync();

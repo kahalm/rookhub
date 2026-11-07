@@ -933,7 +933,9 @@
       "offlineRemoveTooltip": "Offline másolat eltávolítása",
       "offlineSaved": "A „{{name}}” offline mentve",
       "offlineRemoved": "A „{{name}}” eltávolítva az offline tárból",
-      "offlineFailed": "A repertoárt nem sikerült offline menteni"
+      "offlineFailed": "A repertoárt nem sikerült offline menteni",
+      "sectionRecent": "Múlt hét",
+      "sectionRecentHint": "Az elmúlt 7 napban gyakorolt vagy létrehozott."
     },
     "detail": {
       "parsing": "Repertoár beolvasása … {{done}} / {{total}} sor",

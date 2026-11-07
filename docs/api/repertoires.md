@@ -102,3 +102,10 @@ chessable line".
 - Geduldeter Zug (`[%alt]`) steht 3,5 s (`TOLERATED_HOLD_MS`) mit „Auch spielbar — jetzt den Hauptzug.", Klick/Leertaste/
   Enter überspringt.
 - Linien mit `[ChessableOid]` zeigen hinter dem Linienlabel einen Textlink „Chessable" (`https://www.chessable.com/variation/<oid>/`).
+
+## Bereich „Letzte Woche" (0.888.0)
+
+`GET /api/repertoires` liefert je Eintrag `lastTrainedAt` = jüngstes `RepertoireCardState.LastReviewedAt` DES AUFRUFERS (eine
+gruppierte Abfrage, `RepertoireService.FillLastTrainedAsync`), `null` = nie trainiert. Die Liste zeigt ganz oben
+„Letzte Woche": Repertoires mit Aktivität (max(lastTrainedAt, createdAt)) in den letzten 7 Tagen, jüngste zuerst, höchstens 8
+(`recentRepertoires` in `repertoire-list.component.ts`); die Karten stehen zusätzlich in ihrem eigentlichen Bereich.

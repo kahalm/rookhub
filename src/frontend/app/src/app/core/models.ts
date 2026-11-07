@@ -164,6 +164,8 @@ export interface Repertoire {
   isShared?: boolean;
   /** Benutzername des Teilenden (nur wenn isShared) — für das „von X"-Badge. */
   sharedByUsername?: string | null;
+  /** Letztes Training des Nutzers in diesem Repertoire (ISO), null = nie — Bereich „Letzte Woche". */
+  lastTrainedAt?: string | null;
 }
 
 export interface RepertoireDetail {

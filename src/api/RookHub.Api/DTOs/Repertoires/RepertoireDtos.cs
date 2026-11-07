@@ -27,6 +27,10 @@ public class RepertoireDto
 
     /// <summary>Benutzername des Teilenden, wenn <see cref="IsShared"/> — für das „von X"-Badge.</summary>
     public string? SharedByUsername { get; set; }
+
+    /// <summary>Wann der aufrufende Nutzer zuletzt eine Linie dieses Repertoires trainiert hat (jüngstes
+    /// <c>RepertoireCardState.LastReviewedAt</c>), <c>null</c> = nie. Für den Bereich „Letzte Woche" der Liste.</summary>
+    public DateTime? LastTrainedAt { get; set; }
 }
 
 /// <summary>Eingabe: mit welchen Nutzern ein Repertoire geteilt werden soll (Batch, analog Kurs).</summary>

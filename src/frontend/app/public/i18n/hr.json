@@ -1212,7 +1212,9 @@
       "offlineRemoveTooltip": "Ukloni offline kopiju",
       "offlineSaved": "\"{{name}}\" spremljeno offline",
       "offlineRemoved": "\"{{name}}\" uklonjeno iz offline pohrane",
-      "offlineFailed": "Spremanje repertoara offline nije uspjelo"
+      "offlineFailed": "Spremanje repertoara offline nije uspjelo",
+      "sectionRecent": "Prošli tjedan",
+      "sectionRecentHint": "Trenirano ili izrađeno u zadnjih 7 dana."
     },
     "detail": {
       "parsing": "Repertoar se učitava … {{done}} od {{total}} linija",

@@ -407,3 +407,25 @@ describe('RepertoireListComponent Kartentitel ab 2400 px', () => {
     expect(css).toMatch(/@media\(min-width:2400px\)\{\.rep-name(\[[^\]]*\])?\{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;?\}/);
   });
 });
+
+describe('Repertoire-Liste: Bereich „Letzte Woche"', () => {
+  const now = Date.parse('2026-11-07T12:00:00Z');
+  const day = 24 * 3600 * 1000;
+  const rep = (id: number, created: number, trained: number | null) => ({
+    id, name: `R${id}`, description: null, isPublic: false, kind: 0, fileCount: 1, useForExtension: true,
+    createdAt: new Date(now - created * day).toISOString(), updatedAt: new Date(now).toISOString(), chessableCourseId: null,
+    lastTrainedAt: trained == null ? null : new Date(now - trained * day).toISOString(),
+  }) as any;
+
+  it('zeigt trainierte oder neu angelegte der letzten 7 Tage, jüngste Aktivität zuerst', async () => {
+    const { recentRepertoires } = await import('./repertoire-list.component');
+    const list = [rep(1, 100, 3), rep(2, 2, null), rep(3, 100, null), rep(4, 100, 8), rep(5, 100, 0.5)];
+    expect(recentRepertoires(list, now).map(r => r.id)).toEqual([5, 2, 1]);
+  });
+
+  it('höchstens RECENT_MAX', async () => {
+    const { recentRepertoires, RECENT_MAX } = await import('./repertoire-list.component');
+    const list = Array.from({ length: RECENT_MAX + 3 }, (_, i) => rep(i + 1, 100, i * 0.1));
+    expect(recentRepertoires(list, now).length).toBe(RECENT_MAX);
+  });
+});

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.888.0", date: "2026-11-07", changes: [
+    { en: "My Repertoires: a new “Last week” section at the very top shows the repertoires you trained or created in the last 7 days, most recent first — so the ones you are working on are always one tap away.",
+      de: "Meine Repertoires: ganz oben zeigt ein neuer Bereich „Letzte Woche“ die Repertoires, die du in den letzten 7 Tagen trainiert oder angelegt hast, das jüngste zuerst — so liegen die, an denen du gerade arbeitest, immer gleich oben." },
+  ] },
   {
     version: '0.887.0',
     date: '2026-11-07',

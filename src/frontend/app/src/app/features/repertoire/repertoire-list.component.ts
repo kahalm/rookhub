@@ -27,6 +27,23 @@ import { downloadBlob } from '../../shared/download.util';
 import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 
+export const RECENT_DAYS = 7;
+export const RECENT_MAX = 8;
+
+/** Letzte Aktivität eines Repertoires: jüngeres von letztem Training und Anlegen (ms), 0 = unbekannt. */
+export function lastActivity(r: Repertoire): number {
+  const t = (s: string | null | undefined) => (s ? Date.parse(s) || 0 : 0);
+  return Math.max(t(r.lastTrainedAt), t(r.createdAt));
+}
+
+/** Repertoires mit Aktivität in den letzten {@link RECENT_DAYS} Tagen, jüngste zuerst, höchstens {@link RECENT_MAX}. */
+export function recentRepertoires(list: readonly Repertoire[], now: number): Repertoire[] {
+  const since = now - RECENT_DAYS * 24 * 3600 * 1000;
+  return list.filter(r => lastActivity(r) >= since)
+    .sort((a, b) => lastActivity(b) - lastActivity(a))
+    .slice(0, RECENT_MAX);
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-repertoire-list',
@@ -86,6 +103,22 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
               </button>
             }
           </mat-form-field>
+        }
+        @if (recentRepertoires.length > 0) {
+          <!-- Ganz oben (Wunsch 2026-11-07): was in den letzten 7 Tagen trainiert oder angelegt wurde, jüngstes zuerst.
+               Die Karten stehen zusätzlich in ihrem eigentlichen Bereich weiter unten. -->
+          <section class="repertoire-section recent-section">
+            <h2 class="section-title">
+              <mat-icon class="section-icon">history</mat-icon>
+              {{ 'repertoire.list.sectionRecent' | translate }}
+            </h2>
+            <p class="section-hint">{{ 'repertoire.list.sectionRecentHint' | translate }}</p>
+            <div class="repertoire-grid">
+              @for (rep of recentRepertoires; track rep.id) {
+                <ng-container *ngTemplateOutlet="repCard; context: { $implicit: rep }"></ng-container>
+              }
+            </div>
+          </section>
         }
         @if (extensionRepertoires.length > 0) {
           <section class="repertoire-section">
@@ -304,6 +337,12 @@ export class RepertoireListComponent implements OnInit {
     if (!q) return this.repertoires;
     return this.repertoires.filter(r =>
       (r.name || '').toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q));
+  }
+
+  /** Zuletzt benutzt: in den letzten {@link RECENT_DAYS} Tagen trainiert oder angelegt (auch geteilte), jüngste
+   *  Aktivität zuerst, höchstens {@link RECENT_MAX}. */
+  get recentRepertoires(): Repertoire[] {
+    return recentRepertoires(this.filteredRepertoires, Date.now());
   }
 
   /** Für die RepCheck-Extension aktive Repertoires — als eigener Block oben (nur eigene). */

@@ -119,7 +119,20 @@ public class RepertoireService
 
         var all = owned.Concat(shared).ToList();
         await MarkNeedsReimportAsync(all);
+        await FillLastTrainedAsync(all, userId);
         return all;
+    }
+
+    /// <summary>Jüngstes Training des Nutzers je Repertoire (eine gruppierte Abfrage über seine Linien-Zustände).</summary>
+    private async Task FillLastTrainedAsync(List<RepertoireDto> items, int userId)
+    {
+        if (items.Count == 0) return;
+        var last = await _db.RepertoireCardStates
+            .Where(c => c.UserId == userId && c.LastReviewedAt != null)
+            .GroupBy(c => c.RepertoireId)
+            .Select(g => new { RepertoireId = g.Key, Last = g.Max(c => c.LastReviewedAt) })
+            .ToDictionaryAsync(x => x.RepertoireId, x => x.Last);
+        foreach (var i in items) i.LastTrainedAt = last.GetValueOrDefault(i.Id);
     }
 
     /// <summary>

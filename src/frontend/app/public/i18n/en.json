@@ -1212,7 +1212,9 @@
       "offlineRemoveTooltip": "Remove offline copy",
       "offlineSaved": "“{{name}}” saved offline",
       "offlineRemoved": "“{{name}}” removed from offline",
-      "offlineFailed": "Could not save repertoire offline"
+      "offlineFailed": "Could not save repertoire offline",
+      "sectionRecent": "Last week",
+      "sectionRecentHint": "Trained or created in the last 7 days."
     },
     "detail": {
       "parsing": "Reading the repertoire … {{done}} of {{total}} lines",
