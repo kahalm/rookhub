@@ -219,10 +219,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         logger?.LogInformation(
             "Trainingslinien: {Total} ms gesamt — Repertoires laden+parsen {Parse} ms ({Repertoires} Rep., {Sections} Abschnitte), "
             + "Partien laden {Games} ms ({GameCount}), Zählen {Count} ms, Explorer {Explorer} ms ({Positions} Stellungen, {Hits} Treffer, "
-            + "aus Speicher {FromMemory}, neu angefragt {Asked}, {Pending} offen, davon {Capped} über dem Deckel, Budget {Budget} ms "
+            + "aus Speicher {FromMemory}, aus DB {FromDb}, neu angefragt {Asked}, {Pending} offen, davon {Capped} über dem Deckel, Budget {Budget} ms "
             + "erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien, Anfrage abgebrochen: {Aborted}",
             clock.ElapsedMilliseconds, parseMs, list.Count, byRep.Sum(x => x.Sections.Count), gamesMs, gameList.Count, countMs,
-            explorerMs, need.Count, found?.Stats.Count ?? 0, found?.FromMemory ?? 0, found?.Asked ?? 0, pending.Count, found?.Capped ?? 0,
+            explorerMs, need.Count, found?.Stats.Count ?? 0, found?.FromMemory ?? 0, found?.FromDb ?? 0, found?.Asked ?? 0, pending.Count, found?.Capped ?? 0,
             (long)budget.TotalMilliseconds, pending.Count > (found?.Capped ?? 0), rankMs, ranked.Lines.Count, ct.IsCancellationRequested);
         // Offen geblieben: im Hintergrund fertig rechnen lassen (höchstens einmal je Nutzer gleichzeitig)
         var running = background;
@@ -233,7 +233,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count, running);
     }
 
-    /// <summary>Startet die Fortsetzung: die restlichen Stellungen in Priorisierungs-Reihenfolge (8 gleichzeitig, eigenes Zeitlimit),
+    /// <summary>Startet die Fortsetzung: die restlichen Stellungen in Priorisierungs-Reihenfolge (<see cref="TrainingLinesContinuation.Parallelism"/>
+    /// gleichzeitig, Vorgabe 16, eigenes Zeitlimit),
     /// danach die Reihung aus dem Speicher — vollständig, dann in den 15-min-Speicher unter <paramref name="cacheKey"/>.</summary>
     private bool StartContinuation(int userId, string cacheKey, List<RepertoireReach.Node> ordered, int elo, RepertoireReach.Graph graph,
         List<string> chapters, OpponentTrainingLines.Analysis analysis, List<RepertoireInfo> infos, int? selected, char color,
@@ -244,7 +245,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         return continuation!.TryStart(userId, cacheKey, async (sp, limit, token) =>
         {
             var ex = sp.GetRequiredService<ITrainingExplorer>();
-            await ex.StatsAsync(userId, ordered, elo, limit, int.MaxValue, token, TrainingLinesContinuation.Parallelism);
+            await ex.StatsAsync(userId, ordered, elo, limit, int.MaxValue, token, continuation.Parallelism);
             // jetzt alles aus dem Speicher: Reihung wie im Vordergrund
             var final = await ex.StatsAsync(userId, ordered, elo, TimeSpan.Zero, 0, CancellationToken.None);
             var estimate = new OpponentTrainingLines.Estimate(n => final.Stats.GetValueOrDefault(n.Key), minOwn, final.Pending);
@@ -254,6 +255,34 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             logger?.LogInformation("Trainingslinien: Fortsetzung {Key} — {Hits} Treffer, {Pending} offen", cacheKey, final.Stats.Count,
                 final.Pending.Count);
         });
+    }
+
+    /// <summary>
+    /// Fürs nächtliche Vorrechnen (<see cref="TrainingPrewarm"/>): alle Stellungen, die eine Schätzung gegen IRGENDEINEN Gegner
+    /// brauchen kann — dieselbe Ermittlung wie für einen Gegner ohne eigene Partien (<see cref="OpponentTrainingLines.NeedsExplorer"/>
+    /// mit leerer Analyse = alle Gegnerzug-Knoten der Hauptvarianten ab der Grundstellung), je Farbe über ALLE markierten Repertoires,
+    /// Kapitelfarben wie der Trainer (eigene Festlegungen der Karte kennt der Server nicht). Eigene Partien eines Gegners verkleinern
+    /// die Menge nur. Ohne Doppel, Weiß zuerst.
+    /// </summary>
+    internal async Task<List<RepertoireReach.Node>> PrewarmPositionsAsync(int userId, CancellationToken ct)
+    {
+        var byColor = new Dictionary<char, List<ParsedSection>> { ['w'] = [], ['b'] = [] };
+        foreach (var rep in await RepertoiresAsync(userId, ct))
+        {
+            var sections = RawSections(await repertoires.GetCombinedPgnAsync(rep.Id, userId))
+                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed)).Select(x => x.Parsed).ToList();
+            var colors = ChapterColors(sections, ChapterOverrides.None.Flat);
+            foreach (var section in sections) byColor[colors.GetValueOrDefault(Chapter(section), 'w')].Add(section);
+        }
+        var result = new Dictionary<string, RepertoireReach.Node>(StringComparer.Ordinal);
+        foreach (var (color, sections) in byColor)
+        {
+            if (sections.Count == 0) continue;
+            var graph = RepertoireReach.Build(sections, color);
+            foreach (var node in OpponentTrainingLines.NeedsExplorer(graph, OpponentTrainingLines.Analyze(graph, []), MinOwn))
+                result.TryAdd(node.Key, node);
+        }
+        return result.Values.ToList();
     }
 
     /// <summary>

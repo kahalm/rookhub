@@ -106,5 +106,6 @@ public static partial class DomainServicesSetup
         // Fortsetzung unvollständiger Schätzungen im Hintergrund (0.725.2): ein Durchlauf je Nutzer, eigener DI-Bereich.
         services.AddSingleton<RookHub.Api.Services.Prep.TrainingLinesContinuation>();
         services.AddScoped<RookHub.Api.Services.Prep.TrainingLinesService>();
+        services.AddScoped<RookHub.Api.Services.Prep.TrainingPrewarm>();
     }
 }

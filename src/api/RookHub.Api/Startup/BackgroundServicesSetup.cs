@@ -43,6 +43,7 @@ namespace RookHub.Api.Startup;
 /// TacticHarvestScheduler              intern: TacticHarvest:Enabled         Taktik-Ernte aus fertigen Analysen
 /// MoveClassHarvestWorker              immer                                 Zug-Klassen vorrechnen (Version)
 /// LineStudyWorker                     immer                                 Linien „ohne Engine" rechnen
+/// TrainingPrewarmScheduler            intern: Prep:TrainingPrewarm+LocalUrl Trainingslinien-Schätzung nachts vorrechnen
 /// LeagueOnlineSyncScheduler           intern: LeagueOnline:Enabled          Online-Partien der Ligaspieler
 /// AnonymousDataRetentionService       immer (auch ohne Chessable)           Aufbewahrungsfristen (anonyme Senken, Retention:*)
 /// NotificationRetentionScheduler      immer                                 Benachrichtigungen 180 Tage
@@ -103,6 +104,8 @@ public static class BackgroundServicesSetup
         services.AddHostedService<MoveClassHarvestWorker>();
         // „Ohne Engine analysieren" (0.855.0): Stellungen der eigenen Linien gedrosselt rechnen und übernehmen.
         services.AddHostedService<LineStudyWorker>();
+        // Trainingslinien nachts vorrechnen (0.884.0): Explorer-Stellungen aller markierten Repertoires in den dauerhaften Speicher.
+        services.AddHostedService<RookHub.Api.Services.Prep.TrainingPrewarmScheduler>();
         services.AddHostedService<LeagueOnlineSyncScheduler>();
         // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
         // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension

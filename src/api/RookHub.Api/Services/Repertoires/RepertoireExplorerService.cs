@@ -327,8 +327,9 @@ public class RepertoireExplorerService
     /// <param name="FromMemory">Schon im Speicher (kosten nichts).</param>
     /// <param name="Asked">Neu angefragt (höchstens <c>maxNew</c>).</param>
     /// <param name="Capped">Fehlende über dem Deckel <c>maxNew</c> — gar nicht angefragt, offen.</param>
+    /// <param name="FromDb">Aus dem dauerhaften Speicher (<see cref="LocalExplorerPosition"/>), nicht im Arbeitsspeicher gewesen.</param>
     public sealed record BatchResult(Dictionary<string, ExplorerPositionStats> Stats, HashSet<string> Pending, int FromMemory = 0, int Asked = 0,
-        int Capped = 0);
+        int Capped = 0, int FromDb = 0);
 
     /// <summary>So lange bleiben Stellungen aus <see cref="BatchStatsAsync"/> im Arbeitsspeicher — die lokalen Daten ändern sich
     /// nur mit einem Import (monatlich); so kommt die nächste Anfrage dort weiter, wo die letzte aufhörte.</summary>
@@ -350,7 +351,7 @@ public class RepertoireExplorerService
     public async Task<BatchResult> BatchStatsAsync(IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query,
         CancellationToken ct, TimeSpan? budget = null, int maxNew = int.MaxValue, int? parallelism = null)
     {
-        int fromMemory = 0, asked = 0, capped = 0;
+        int fromMemory = 0, asked = 0, capped = 0, fromDb = 0;
         var result = new ConcurrentDictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
         var wanted = positions.GroupBy(p => p.Key, StringComparer.Ordinal).Select(g => g.First()).ToList();
         if (wanted.Count > 0 && _local.IsConfigured)
@@ -361,6 +362,18 @@ public class RepertoireExplorerService
                 if (_memory.TryGetValue<ExplorerPositionStats>(MemoryKey(p.Key), out var hit) && hit is not null) result[p.Key] = hit;
                 else missing.Add(p);
             fromMemory = result.Count;
+            // Dann der dauerhafte Speicher — gesammelt (IN in Portionen), nicht je Stellung; bewusst ohne den Abbruch der Anfrage
+            if (missing.Count > 0 && LocalStoreDays > 0)
+            {
+                var stored = await LoadLocalAsync(query, missing.Select(p => p.Key).ToList(), CancellationToken.None);
+                foreach (var (key, stats) in stored)
+                {
+                    result[key] = stats;
+                    _memory.Set(MemoryKey(key), stats, BatchMemoryTtl);
+                }
+                fromDb = stored.Count;
+                if (fromDb > 0) missing = missing.Where(p => !stored.ContainsKey(p.Key)).ToList();
+            }
             if (missing.Count > Math.Max(0, maxNew))
             {
                 capped = missing.Count - Math.Max(0, maxNew);
@@ -370,6 +383,8 @@ public class RepertoireExplorerService
             if (missing.Count > 0 && left > TimeSpan.Zero)
             {
                 asked = missing.Count;
+                var fresh = new ConcurrentQueue<(string Key, ExplorerPositionStats Stats)>();
+                using var flushing = new SemaphoreSlim(1, 1);
                 using var deadline = new CancellationTokenSource(left);    // bewusst NICHT mit ct verknüpft (siehe oben)
                 try
                 {
@@ -381,13 +396,217 @@ public class RepertoireExplorerService
                             if (stats is null) return;
                             result[p.Key] = stats;
                             _memory.Set(MemoryKey(p.Key), stats, BatchMemoryTtl);
+                            fresh.Enqueue((p.Key, stats));
+                            // Ein langer Lauf (Fortsetzung, Minuten) schreibt zwischendurch — ein Abbruch verliert dann nicht alles.
+                            // Der DbContext ist nur hier im Spiel, und nur einer schreibt zugleich.
+                            if (fresh.Count >= StoreFlushEvery && flushing.Wait(0))
+                            {
+                                try { await StoreLocalAsync(query, Drain(fresh), CancellationToken.None); }
+                                finally { flushing.Release(); }
+                            }
                         });
                 }
                 catch (OperationCanceledException) { /* Frist um: der Rest bleibt offen */ }
+                await flushing.WaitAsync(CancellationToken.None);
+                try { await StoreLocalAsync(query, Drain(fresh), CancellationToken.None); }
+                finally { flushing.Release(); }
             }
         }
         var pending = wanted.Where(p => !result.ContainsKey(p.Key)).Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
-        return new BatchResult(new Dictionary<string, ExplorerPositionStats>(result, StringComparer.Ordinal), pending, fromMemory, asked, capped);
+        return new BatchResult(new Dictionary<string, ExplorerPositionStats>(result, StringComparer.Ordinal), pending, fromMemory, asked, capped,
+            fromDb);
+    }
+
+    private static List<(string Key, ExplorerPositionStats Stats)> Drain(ConcurrentQueue<(string Key, ExplorerPositionStats Stats)> queue)
+    {
+        var list = new List<(string, ExplorerPositionStats)>();
+        while (queue.TryDequeue(out var x)) list.Add(x);
+        return list;
+    }
+
+    // ── Dauerhafter Speicher des lokalen Explorers (Trainingslinien, 0.884.0) ─────────────────────
+
+    /// <summary>So viele Tage gilt eine gespeicherte Antwort des lokalen Explorers (dessen Daten ändern sich mit dem monatlichen
+    /// Import); 0 = kein dauerhafter Speicher, nur der Arbeitsspeicher wie bisher.</summary>
+    public const int DefaultLocalStoreDays = 45;
+    public const string LocalStoreDaysKey = "LichessExplorer:LocalStoreDays";
+    public int LocalStoreDays => int.TryParse(_config[LocalStoreDaysKey], out var d) ? Math.Clamp(d, 0, 3650) : DefaultLocalStoreDays;
+    /// <summary>Zwischendurch schreiben ab so vielen neuen Antworten; eine Schreib-Anweisung trägt höchstens <see cref="StoreChunk"/> Zeilen.</summary>
+    internal const int StoreFlushEvery = 500;
+    private const int StoreChunk = 200;
+
+    /// <summary>Schlüssel einer Stellung im dauerhaften Speicher: 16 Byte SHA-256 über <c>local|{Auswahl}{Stellung}</c>, hex.</summary>
+    internal static string LocalStoreKey(ExplorerQuery query, string positionKey) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes("local|" + query.CachePrefix + positionKey)).AsSpan(0, 16));
+
+    internal static byte[] Pack(ExplorerPositionStats stats)
+    {
+        var json = System.Text.Encoding.UTF8.GetBytes(stats.ToJson());
+        var buffer = new byte[System.IO.Compression.BrotliEncoder.GetMaxCompressedLength(json.Length)];
+        return System.IO.Compression.BrotliEncoder.TryCompress(json, buffer, out var written, quality: 5, window: 22)
+            ? buffer[..written] : throw new InvalidOperationException("Brotli");
+    }
+
+    internal static ExplorerPositionStats? Unpack(byte[] payload)
+    {
+        try
+        {
+            using var input = new MemoryStream(payload);
+            using var brotli = new System.IO.Compression.BrotliStream(input, System.IO.Compression.CompressionMode.Decompress);
+            using var reader = new StreamReader(brotli, System.Text.Encoding.UTF8);
+            return ExplorerPositionStats.FromJson(reader.ReadToEnd());
+        }
+        catch (InvalidDataException) { return null; }
+    }
+
+    /// <summary>Gültige gespeicherte Antworten zu <paramref name="positionKeys"/>, gesammelt in Portionen (<see cref="CacheChunk"/>).
+    /// Nie eine Ausnahme: eine nicht lesbare Datenbank heißt nur „nichts gespeichert".</summary>
+    internal async Task<Dictionary<string, ExplorerPositionStats>> LoadLocalAsync(ExplorerQuery query, IReadOnlyList<string> positionKeys,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<string, ExplorerPositionStats>(StringComparer.Ordinal);
+        var byHash = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var k in positionKeys) byHash.TryAdd(LocalStoreKey(query, k), k);
+        var since = _time.GetUtcNow().UtcDateTime.AddDays(-LocalStoreDays);
+        try
+        {
+            foreach (var chunk in byHash.Keys.Chunk(CacheChunk))
+            {
+                var rows = await _db.LocalExplorerPositions.AsNoTracking()
+                    .Where(e => chunk.Contains(e.KeyHash) && e.FetchedAt >= since)
+                    .Select(e => new { e.KeyHash, e.Payload })
+                    .ToListAsync(ct);
+                foreach (var row in rows)
+                    if (Unpack(row.Payload) is { } stats) result[byHash[row.KeyHash]] = stats;
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(e, "Lokaler Explorer: dauerhafter Speicher nicht lesbar");
+        }
+        return result;
+    }
+
+    /// <summary>Welche der Stellungen schon GÜLTIG gespeichert sind (nur die Schlüssel, ohne Inhalt) — fürs Vorrechnen.</summary>
+    internal async Task<HashSet<string>> StoredLocalKeysAsync(ExplorerQuery query, IReadOnlyList<string> positionKeys, CancellationToken ct)
+    {
+        var byHash = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var k in positionKeys) byHash.TryAdd(LocalStoreKey(query, k), k);
+        var since = _time.GetUtcNow().UtcDateTime.AddDays(-LocalStoreDays);
+        var found = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var chunk in byHash.Keys.Chunk(CacheChunk))
+            foreach (var hash in await _db.LocalExplorerPositions.AsNoTracking()
+                         .Where(e => chunk.Contains(e.KeyHash) && e.FetchedAt >= since).Select(e => e.KeyHash).ToListAsync(ct))
+                found.Add(byHash[hash]);
+        return found;
+    }
+
+    /// <summary>Schreibt Antworten gebündelt (MariaDB: <c>INSERT … ON DUPLICATE KEY UPDATE</c> je <see cref="StoreChunk"/> Zeilen).
+    /// Nie eine Ausnahme — der Speicher ist eine Beschleunigung, kein Muss.</summary>
+    internal async Task StoreLocalAsync(ExplorerQuery query, IReadOnlyList<(string Key, ExplorerPositionStats Stats)> items, CancellationToken ct)
+    {
+        if (items.Count == 0 || LocalStoreDays <= 0) return;
+        var now = _time.GetUtcNow().UtcDateTime;
+        var rows = items.GroupBy(x => LocalStoreKey(query, x.Key), StringComparer.Ordinal)
+            .Select(g => (Hash: g.Key, Payload: Pack(g.Last().Stats))).ToList();
+        try
+        {
+            if (_db.Database.IsRelational())
+            {
+                foreach (var chunk in rows.Chunk(StoreChunk))
+                {
+                    var sql = new System.Text.StringBuilder("INSERT INTO `LocalExplorerPositions` (`KeyHash`, `Payload`, `FetchedAt`) VALUES ");
+                    var args = new object[chunk.Length * 3];
+                    for (var i = 0; i < chunk.Length; i++)
+                    {
+                        if (i > 0) sql.Append(", ");
+                        sql.Append($"({{{i * 3}}}, {{{i * 3 + 1}}}, {{{i * 3 + 2}}})");
+                        args[i * 3] = chunk[i].Hash;
+                        args[i * 3 + 1] = chunk[i].Payload;
+                        args[i * 3 + 2] = now;
+                    }
+                    sql.Append(" ON DUPLICATE KEY UPDATE `Payload` = VALUES(`Payload`), `FetchedAt` = VALUES(`FetchedAt`)");
+                    await _db.Database.ExecuteSqlRawAsync(sql.ToString(), args, ct);
+                }
+            }
+            else
+            {
+                // Testweg (InMemory): dieselbe Wirkung über den Tracker, danach wieder losgelöst
+                var hashes = rows.Select(r => r.Hash).ToList();
+                var existing = await _db.LocalExplorerPositions.Where(e => hashes.Contains(e.KeyHash)).ToDictionaryAsync(e => e.KeyHash, ct);
+                var touched = new List<LocalExplorerPosition>();
+                foreach (var (hash, payload) in rows)
+                {
+                    if (!existing.TryGetValue(hash, out var row))
+                        _db.LocalExplorerPositions.Add(row = new LocalExplorerPosition { KeyHash = hash });
+                    row.Payload = payload;
+                    row.FetchedAt = now;
+                    touched.Add(row);
+                }
+                await _db.SaveChangesAsync(ct);
+                foreach (var row in touched) _db.Entry(row).State = EntityState.Detached;
+            }
+            StoreWrites += rows.Count;
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(e, "Lokaler Explorer: {Count} Antworten nicht gespeichert", rows.Count);
+        }
+    }
+
+    /// <summary>So viele Zeilen hat dieser Dienst geschrieben (Tests: gebündelt statt je Stellung).</summary>
+    internal int StoreWrites { get; private set; }
+
+    /// <summary>Löscht abgelaufene Einträge des dauerhaften Speichers → Anzahl.</summary>
+    internal async Task<int> PurgeLocalAsync(CancellationToken ct)
+    {
+        if (LocalStoreDays <= 0) return 0;
+        var since = _time.GetUtcNow().UtcDateTime.AddDays(-LocalStoreDays);
+        if (_db.Database.IsRelational())
+            return await _db.LocalExplorerPositions.Where(e => e.FetchedAt < since).ExecuteDeleteAsync(ct);
+        var old = await _db.LocalExplorerPositions.Where(e => e.FetchedAt < since).ToListAsync(ct);
+        _db.LocalExplorerPositions.RemoveRange(old);
+        await _db.SaveChangesAsync(ct);
+        return old.Count;
+    }
+
+    /// <summary>Ergebnis von <see cref="PrewarmAsync"/>: schon gültig gespeichert, neu geholt und gespeichert, ohne Antwort.</summary>
+    public sealed record PrewarmResult(int Present, int Fetched, int Failed);
+
+    /// <summary>
+    /// Nächtliches Vorrechnen (0.884.0): holt die noch nicht gültig gespeicherten Stellungen aus dem LOKALEN Explorer
+    /// (<paramref name="parallelism"/> gleichzeitig) und legt sie NUR in den dauerhaften Speicher — nicht in den Arbeitsspeicher
+    /// (Zehntausende Stellungen je Nutzer). Abbruch über <paramref name="ct"/> (Fensterende, Herunterfahren): was schon da ist,
+    /// wird noch geschrieben, dann fliegt die <see cref="OperationCanceledException"/>.
+    /// </summary>
+    public async Task<PrewarmResult> PrewarmAsync(IReadOnlyList<(string Key, string Fen)> positions, ExplorerQuery query, int parallelism,
+        CancellationToken ct)
+    {
+        if (!_local.IsConfigured || LocalStoreDays <= 0 || positions.Count == 0) return new PrewarmResult(0, 0, 0);
+        var wanted = positions.GroupBy(p => p.Key, StringComparer.Ordinal).Select(g => g.First()).ToList();
+        var present = await StoredLocalKeysAsync(query, wanted.Select(p => p.Key).ToList(), ct);
+        var missing = wanted.Where(p => !present.Contains(p.Key)).ToList();
+        var fresh = new ConcurrentQueue<(string Key, ExplorerPositionStats Stats)>();
+        var failed = 0;
+        var fetched = 0;
+        try
+        {
+            await Parallel.ForEachAsync(missing, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, parallelism), CancellationToken = ct },
+                async (p, token) =>
+                {
+                    var stats = await _local.FetchAsync(p.Fen, query, token);
+                    if (stats is null) Interlocked.Increment(ref failed);
+                    else fresh.Enqueue((p.Key, stats));
+                });
+        }
+        finally
+        {
+            var done = Drain(fresh);
+            fetched = done.Count;
+            await StoreLocalAsync(query, done, CancellationToken.None);
+        }
+        return new PrewarmResult(present.Count, fetched, failed);
     }
 
     /// <summary>Welche Quellen es gibt — die Oberfläche zeigt „lokal" nur, wenn eingerichtet.</summary>

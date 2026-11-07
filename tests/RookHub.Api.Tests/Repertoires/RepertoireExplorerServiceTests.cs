@@ -56,7 +56,7 @@ public class RepertoireExplorerServiceTests : IDisposable
 
     private readonly MemoryCache _memory = new(new MemoryCacheOptions());
 
-    private RepertoireExplorerService Service()
+    private RepertoireExplorerService Service(IMemoryCache? memory = null)
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(_settings).Build();
         var client = new LichessExplorerClient(
@@ -65,7 +65,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         var localHttp = new HttpClient(_localHandler);
         if (_localConfigured) localHttp.BaseAddress = new Uri("http://rookhub-explorer:9002/");
         var local = new LocalExplorerClient(localHttp, NullLogger<LocalExplorerClient>.Instance);
-        return new RepertoireExplorerService(_db, TestServices.Repertoire(_db), client, local, _memory, _gate, _encryption,
+        return new RepertoireExplorerService(_db, TestServices.Repertoire(_db), client, local, memory ?? _memory, _gate, _encryption,
             config, NullLogger<RepertoireExplorerService>.Instance, _time);
     }
 
@@ -783,6 +783,154 @@ public class RepertoireExplorerServiceTests : IDisposable
         var r = await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default, TimeSpan.Zero);
         Assert.Contains(StartKey, r.Pending);
         Assert.Empty(_localHandler.Urls);
+    }
+
+    // ── Dauerhafter Speicher des lokalen Explorers (0.884.0) ──────────────────────────────────────
+
+    private const string E4Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+    private const string D4Fen = "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1";
+
+    [Fact]
+    public async Task Store_SecondCallWithoutExplorer_AndAfterRestartFromTheDatabase()
+    {
+        _localHandler.Respond(StartKey, StartJson);
+        var first = await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Equal((0, 0, 1), (first.FromMemory, first.FromDb, first.Asked));
+        Assert.Single(_localHandler.Urls);
+        Assert.Equal(1, await _db.LocalExplorerPositions.CountAsync());
+
+        await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Single(_localHandler.Urls);                         // Arbeitsspeicher
+
+        using var restarted = new MemoryCache(new MemoryCacheOptions());   // „Neustart": leerer Arbeitsspeicher
+        var after = await Service(restarted).BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Single(_localHandler.Urls);                         // nicht gefragt — aus der Datenbank
+        Assert.Equal((0, 1, 0), (after.FromMemory, after.FromDb, after.Asked));
+        Assert.Equal(first.Stats[StartKey], after.Stats[StartKey], new StatsComparer());
+        Assert.True(restarted.TryGetValue(RepertoireExplorerService.LocalMemoryKey(TrainingQuery, StartKey), out _));   // und wieder im Speicher
+
+        // eine andere Auswahl (Stufen) ist eine andere Zeile
+        var other = ExplorerQuery.Create("lichess", [1600], ["blitz", "rapid", "classical"]);
+        await Service(restarted).BatchStatsAsync([(StartKey, StartFen)], other, default);
+        Assert.Equal(2, _localHandler.Urls.Count);
+    }
+
+    [Fact]
+    public async Task Store_ExpiresAfter45Days_Configurable()
+    {
+        Assert.Equal(45, RepertoireExplorerService.DefaultLocalStoreDays);
+        _localHandler.Respond(StartKey, StartJson);
+        await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+
+        _time.Advance(TimeSpan.FromDays(44));
+        using (var m = new MemoryCache(new MemoryCacheOptions()))
+            Assert.Equal(1, (await Service(m).BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default)).FromDb);
+        Assert.Single(_localHandler.Urls);
+
+        _time.Advance(TimeSpan.FromDays(2));                       // 46 Tage alt
+        using (var m = new MemoryCache(new MemoryCacheOptions()))
+            Assert.Equal((0, 1), await Service(m).BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default) is var r ? (r.FromDb, r.Asked) : default);
+        Assert.Equal(2, _localHandler.Urls.Count);
+        Assert.Equal(1, await _db.LocalExplorerPositions.CountAsync());   // dieselbe Zeile erneuert, nicht verdoppelt
+
+        _settings[RepertoireExplorerService.LocalStoreDaysKey] = "1";
+        _time.Advance(TimeSpan.FromDays(2));
+        using (var m = new MemoryCache(new MemoryCacheOptions()))
+            await Service(m).BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Equal(3, _localHandler.Urls.Count);                 // 2 Tage > 1 Tag
+        _time.Advance(TimeSpan.FromDays(2));
+        Assert.Equal(1, await Service().PurgeLocalAsync(default));
+        Assert.Equal(0, await _db.LocalExplorerPositions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Store_Off_WithZeroDays_WritesNothing()
+    {
+        _settings[RepertoireExplorerService.LocalStoreDaysKey] = "0";
+        _localHandler.Respond(StartKey, StartJson);
+        await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Equal(0, await _db.LocalExplorerPositions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Store_WritesBundled_ReadsInChunks()
+    {
+        var saves = new SaveCounter();
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).AddInterceptors(saves).Options);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(_settings).Build();
+        var localHttp = new HttpClient(_localHandler) { BaseAddress = new Uri("http://rookhub-explorer:9002/") };
+        RepertoireExplorerService Svc(IMemoryCache m) => new(db, TestServices.Repertoire(db),
+            new LichessExplorerClient(new HttpClient(_handler) { BaseAddress = new Uri(LichessExplorerClient.BaseUrl) }, _gate,
+                NullLogger<LichessExplorerClient>.Instance),
+            new LocalExplorerClient(localHttp, NullLogger<LocalExplorerClient>.Instance), m, _gate, _encryption, config,
+            NullLogger<RepertoireExplorerService>.Instance, _time);
+
+        // 3 Stellungen auf einmal → EINE Schreibrunde
+        using (var m = new MemoryCache(new MemoryCacheOptions()))
+            await Svc(m).BatchStatsAsync([(StartKey, StartFen), (RepertoireReach.Key(E4Fen), E4Fen), (RepertoireReach.Key(D4Fen), D4Fen)],
+                TrainingQuery, default);
+        Assert.Equal(1, saves.Count);
+        Assert.Equal(3, await db.LocalExplorerPositions.CountAsync());
+
+        // über 500 (eine IN-Portion) gespeicherte Stellungen kommen vollständig zurück
+        var keys = Enumerable.Range(0, 1200).Select(i => $"k{i}").ToList();
+        var stats = new ExplorerPositionStats(7, [new ExplorerMoveStat("e2e4", "e4", 7, null, null)]);
+        var svc = Svc(new MemoryCache(new MemoryCacheOptions()));
+        await svc.StoreLocalAsync(TrainingQuery, keys.Select(k => (k, stats)).ToList(), default);
+        Assert.Equal(2, saves.Count);                              // 1 200 Zeilen = eine Schreibrunde (InMemory; MariaDB: 6 Anweisungen à 200)
+        var loaded = await svc.LoadLocalAsync(TrainingQuery, keys, default);
+        Assert.Equal(1200, loaded.Count);
+        Assert.Equal(7, loaded["k1199"].Total);
+    }
+
+    [Fact]
+    public async Task Prewarm_SkipsStored_WritesOnlyTheDatabase_NotTheMemory()
+    {
+        _localHandler.Respond(StartKey, StartJson);
+        await Service().BatchStatsAsync([(StartKey, StartFen)], TrainingQuery, default);
+        Assert.Single(_localHandler.Urls);
+
+        using var memory = new MemoryCache(new MemoryCacheOptions());
+        var r = await Service(memory).PrewarmAsync([(StartKey, StartFen), (RepertoireReach.Key(E4Fen), E4Fen)], TrainingQuery, 4, default);
+        Assert.Equal((1, 1, 0), (r.Present, r.Fetched, r.Failed));
+        Assert.Equal(2, _localHandler.Urls.Count);                 // nur die fehlende
+        Assert.Equal(2, await _db.LocalExplorerPositions.CountAsync());
+        Assert.Equal(0, memory.Count);
+
+        _localConfigured = false;
+        Assert.Equal(new RepertoireExplorerService.PrewarmResult(0, 0, 0),
+            await Service().PrewarmAsync([(RepertoireReach.Key(D4Fen), D4Fen)], TrainingQuery, 4, default));
+    }
+
+    [Fact]
+    public void Store_KeyIsAHash_PayloadRoundTrips()
+    {
+        var key = RepertoireExplorerService.LocalStoreKey(TrainingQuery, StartKey);
+        Assert.Equal(32, key.Length);
+        Assert.NotEqual(key, RepertoireExplorerService.LocalStoreKey(ExplorerQuery.Create("lichess", [1600], ["blitz"]), StartKey));
+        var stats = new ExplorerPositionStats(1000, [new ExplorerMoveStat("e2e4", "e4", 600, "King's Pawn", "B00", 240, 120, 240, 1900)], 400, 200, 400);
+        var back = RepertoireExplorerService.Unpack(RepertoireExplorerService.Pack(stats))!;
+        Assert.Equal(stats, back, new StatsComparer());
+        Assert.Null(RepertoireExplorerService.Unpack([1, 2, 3]));
+    }
+
+    private sealed class StatsComparer : IEqualityComparer<ExplorerPositionStats>
+    {
+        public bool Equals(ExplorerPositionStats? a, ExplorerPositionStats? b) => a!.ToJson() == b!.ToJson();
+        public int GetHashCode(ExplorerPositionStats s) => s.ToJson().GetHashCode();
+    }
+
+    private sealed class SaveCounter : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public int Count;
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref Count);
+            return ValueTask.FromResult(result);
+        }
     }
 
     private sealed class StubHandler : HttpMessageHandler

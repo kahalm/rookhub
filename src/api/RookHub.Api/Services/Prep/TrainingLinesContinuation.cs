@@ -7,13 +7,17 @@ namespace RookHub.Api.Services.Prep;
 /// in den Speicher legt. Ohne Anfrage-Token, mit eigenem Zeitlimit (<see cref="Limit"/>); höchstens EIN Durchlauf je Nutzer
 /// gleichzeitig. Singleton; die Arbeit läuft in einem eigenen DI-Bereich (<see cref="IServiceScopeFactory"/>).
 /// </summary>
-public sealed class TrainingLinesContinuation(IServiceScopeFactory scopes, ILogger<TrainingLinesContinuation> logger)
+public sealed class TrainingLinesContinuation(IServiceScopeFactory scopes, ILogger<TrainingLinesContinuation> logger,
+    IConfiguration? config = null)
 {
     /// <summary>So lange darf ein Durchlauf höchstens laufen.</summary>
     public TimeSpan Limit { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>So viele gleichzeitige Explorer-Abfragen — weniger als eine Anfrage im Vordergrund, damit der Lochfinder nicht leidet.</summary>
-    public const int Parallelism = 8;
+    /// <summary>So viele gleichzeitige Explorer-Abfragen (<see cref="ParallelismKey"/>, Vorgabe <see cref="DefaultParallelism"/>, 1–64) —
+    /// 0.884.0 von 8 auf 16: Prod 07.11. brauchte ein Gegner mit 4 177 Lücken 162 s bei 8.</summary>
+    public int Parallelism { get; } = int.TryParse(config?[ParallelismKey], out var n) ? Math.Clamp(n, 1, 64) : DefaultParallelism;
+    public const int DefaultParallelism = 16;
+    public const string ParallelismKey = "Prep:TrainingContinuationParallelism";
 
     private readonly object _lock = new();
     /// <summary>Nutzer → Schlüssel der Rechnung, die gerade für ihn läuft.</summary>

@@ -5772,6 +5772,30 @@ namespace RookHub.Api.Migrations
                     b.ToTable("LineStudyPositions");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.LocalExplorerPosition", b =>
+                {
+                    b.Property<string>("KeyHash")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("char(32)")
+                        .IsFixedLength();
+
+                    MySqlPropertyBuilderExtensions.HasCharSet(b.Property<string>("KeyHash"), "ascii");
+
+                    b.Property<DateTime>("FetchedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte[]>("Payload")
+                        .IsRequired()
+                        .HasColumnType("mediumblob");
+
+                    b.HasKey("KeyHash");
+
+                    b.HasIndex("FetchedAt");
+
+                    b.ToTable("LocalExplorerPositions");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.ManualActivity", b =>
                 {
                     b.Property<int>("Id")

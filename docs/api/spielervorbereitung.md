@@ -151,6 +151,30 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Hintergrund-Durchlauf: alle restlichen Stellungen in Priorisierungs-Reihenfolge, 8 gleichzeitig, Zeitlimit 5 min, kein
   Anfrage-Token, höchstens EIN Lauf je Nutzer; danach Reihung aus dem Speicher und das vollständige Ergebnis in den
   15-min-Cache. Während er läuft, liest der Vordergrund nur den Speicher (budget 0, maxNew 0). Antwort `explorerRunning`.
+- Dauerhafter Stellungs-Speicher + nächtliches Vorrechnen (0.884.0, Prod-Log 07.11.: 4 177 Lücken eines Gegners = 162 s im
+  Hintergrund, jedes Deploy leerte den 24-h-Arbeitsspeicher): Antworten des LOKALEN Explorers liegen zusätzlich in der Tabelle
+  `LocalExplorerPositions` (`KeyHash` char(32) ascii = 16 Byte SHA-256 über `local|{query.CachePrefix}{Stellungsschlüssel}`,
+  `Payload` = Brotli-gepacktes kompaktes JSON von `ExplorerPositionStats`, `FetchedAt`, Index auf `FetchedAt`). Bewusst NICHT
+  `LichessExplorerCacheEntries` (Online-Explorer): andere Gültigkeit, ein Vielfaches an Zeilen, gebündeltes Schreiben statt
+  Lesen-dann-Schreiben je Stellung, 255-Zeichen-Textindex. `BatchStatsAsync` liest Arbeitsspeicher → DB (gesammelt per `IN`,
+  Portionen à 500, ohne den Abbruch der Anfrage; Treffer zurück in den Arbeitsspeicher, `BatchResult.FromDb`, Logzeile „aus DB")
+  → Explorer; Neues gebündelt per `INSERT … ON DUPLICATE KEY UPDATE` (200 Zeilen je Anweisung, im langen Lauf alle 500
+  Antworten zwischendurch). Gültig `LichessExplorer:LocalStoreDays` Tage (Vorgabe 45, 0 = aus); Fehler der DB nur als Warnung.
+  `TrainingLinesContinuation` jetzt `Prep:TrainingContinuationParallelism` gleichzeitig (Vorgabe 16, vorher fest 8).
+  **Vorrechnen** `TrainingPrewarmScheduler` (PeriodicWorker, pausierbar, Takt 5 min, Schalter `Prep:TrainingPrewarm` Vorgabe an,
+  nie ohne `LichessExplorer:LocalUrl`): nur im Fenster `Prep:TrainingPrewarmWindow` (Vorgabe `03:30-05:30`,
+  `Prep:TrainingPrewarmTimeZone` Vorgabe Europe/Vienna), bricht am Fensterende ab; eine vollständige Nacht ruht bis zur nächsten.
+  `TrainingPrewarm` löscht zuerst Abgelaufenes, nimmt dann jeden Nutzer mit `UseForExtension`-Repertoires, ermittelt
+  (`TrainingLinesService.PrewarmPositionsAsync`) die Gegnerzug-Knoten aller markierten Repertoires je Farbe wie für einen Gegner
+  ohne Partien (`NeedsExplorer` mit leerer Analyse, Kapitelfarben wie der Trainer) und holt für JEDE Stufenkombination
+  (`TrainingExplorer.StageSets(LocalRatings)` = 8: 1600 | 1600,1800 | 1600,1800,2000 | 1800,2000 | 1800,2000,2200 | 2000,2200 |
+  2200,2500 | 2500) die fehlenden in Portionen à 1 000 (`Prep:TrainingPrewarmParallelism`, Vorgabe 8; nur DB, nicht der
+  Arbeitsspeicher). Zwischen den Portionen fragt er den Admin-Schalter „Hintergrundjobs pausieren" (dann Ende). Je Nutzer/Kombination
+  eine INFO-Zeile „Trainingslinien vorrechnen: Nutzer …, Stufen … — … Stellungen, … vorhanden, … geholt, … ohne Antwort, … ms".
+  Größe: Payload im Mittel ~560 B (gemessen an 152 Stellungen des lokalen Explorers, max ~920 B), mit Schlüssel, Index und
+  InnoDB-Verschnitt ≈ 0,9 KB je Zeile; ein Nutzer mit ~7 500 Gegnerzug-Stellungen × 8 Kombinationen ≈ 60 000 Zeilen ≈ 55 MB.
+  Nicht abgedeckt: eigene Kapitelfarben der Karte (`chapterColors`) und Linien mit eigener Startstellung, die ein Gegner erreicht
+  hat — die holt weiter die Abfrage selbst.
 - Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
   Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
   Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der

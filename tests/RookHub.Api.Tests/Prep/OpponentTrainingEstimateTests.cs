@@ -511,7 +511,7 @@ public class OpponentTrainingEstimateTests
         Assert.True(first["explorerRunning"]!.GetValue<bool>());
         await WaitUntil(() => explorer.BackgroundCalls == 1 && continuation.RunningCount == 0);
         Assert.Equal(3, explorer.Calls.Count);                        // Vordergrund, Fortsetzung, Reihung aus dem Speicher
-        Assert.Equal(TrainingLinesContinuation.Parallelism, explorer.Calls[1].Parallelism);
+        Assert.Equal(TrainingLinesContinuation.DefaultParallelism, explorer.Calls[1].Parallelism);   // 0.884.0: 16 statt 8
         Assert.Equal(int.MaxValue, explorer.Calls[1].MaxNew);
 
         // danach: vollständig aus dem Speicher (ohne Rechnung)

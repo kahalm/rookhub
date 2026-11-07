@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.884.0',
+    date: '2026-11-07',
+    changes: [
+      {
+        en: 'Training lines (player preparation): the Lichess estimate is much faster. Explorer statistics are now kept in the database for 45 days (they survive restarts and deploys), are precomputed every night between 03:30 and 05:30 for all positions of your repertoires marked „Use for extension and preparation“ and all rating bands, and the background run asks twice as many positions at once.',
+        de: 'Trainingslinien (Spielervorbereitung): die Lichess-Schätzung ist deutlich schneller. Die Explorer-Zahlen liegen jetzt 45 Tage in der Datenbank (überstehen Neustarts und Deploys), werden jede Nacht zwischen 03:30 und 05:30 für alle Stellungen der Repertoires mit „Für Extension und Vorbereitung verwenden“ und alle Wertungsbänder vorgerechnet, und der Hintergrundlauf fragt doppelt so viele Stellungen gleichzeitig.',
+      },
+    ],
+  },
+  {
     version: '0.883.0',
     date: '2026-11-06',
     changes: [

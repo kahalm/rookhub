@@ -365,8 +365,8 @@ public class LichessExplorerClient
 /// Der LOKALE Eröffnungs-Explorer (<c>lila-openingexplorer</c> im eigenen Stack, Adresse aus
 /// <c>LichessExplorer:LocalUrl</c>): dieselben Endpunkte und Antworten wie
 /// <c>explorer.lichess.ovh</c>, aber ohne Token, ohne Drossel und mit wenigen Millisekunden je Stellung.
-/// Deshalb auch keine Leitung (<see cref="LichessExplorerGate"/>) und kein Datenbank-Speicher — die
-/// Daten wachsen dort jeden Monat, und die Abfrage ist billiger als ein Speicher-Eintrag.
+/// Deshalb auch keine Leitung (<see cref="LichessExplorerGate"/>). Datenbank-Speicher nur für die Schätzung der
+/// Trainingslinien (<see cref="Models.LocalExplorerPosition"/>, 45 Tage, 0.884.0): dort sind es Tausende Stellungen je Abfrage.
 ///
 /// <para>Datenstand dort (Absprache mit der Stack-Sitzung, 2026-09-22): Lichess-Partien erst ab
 /// Elo-Schnitt 1600 und ohne (Ultra-)Bullet — eine Auswahl darunter liefert korrekt 0 Partien —,

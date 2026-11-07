@@ -17,11 +17,16 @@ public interface ITrainingExplorer
     /// <param name="parallelism">Gleichzeitige Abfragen (Hintergrund weniger als Vordergrund); <c>null</c> = Vorgabe.</param>
     Task<TrainingExplorerResult> StatsAsync(int userId, IReadOnlyList<RepertoireReach.Node> positions, int elo, TimeSpan budget, int maxNew,
         CancellationToken ct, int? parallelism = null);
+
+    /// <summary>Nächtliches Vorrechnen: fehlende Stellungen der Stufen <paramref name="stages"/> holen und dauerhaft speichern
+    /// (nichts im Arbeitsspeicher). Vorgabe: nichts zu tun (Test-Attrappen).</summary>
+    Task<RepertoireExplorerService.PrewarmResult> PrewarmAsync(IReadOnlyList<RepertoireReach.Node> positions, IReadOnlyList<int> stages,
+        int parallelism, CancellationToken ct) => Task.FromResult(new RepertoireExplorerService.PrewarmResult(0, 0, 0));
 }
 
 /// <param name="Band">Anzeige des Bands, z. B. „2000–2300".</param>
 public sealed record TrainingExplorerResult(IReadOnlyDictionary<string, ExplorerPositionStats> Stats, IReadOnlySet<string> Pending, string Band,
-    int FromMemory = 0, int Asked = 0, int Capped = 0);
+    int FromMemory = 0, int Asked = 0, int Capped = 0, int FromDb = 0);
 
 /// <summary>
 /// Explorer-Anbindung der Trainingslinien (Wunsch 2026-10-07: „nimm lichesspartien, +100 - +400 elo"): Spieler im Band
@@ -43,9 +48,37 @@ public sealed class TrainingExplorer(RepertoireExplorerService explorer, LocalEx
     {
         if (!Available)
             return new TrainingExplorerResult(new Dictionary<string, ExplorerPositionStats>(), new HashSet<string>(), Band(elo));
-        var query = ExplorerQuery.Create(ExplorerQuery.Lichess, Stages(elo, LocalExplorerClient.LocalRatings), Speeds);
+        var query = Query(Stages(elo, LocalExplorerClient.LocalRatings));
         var r = await explorer.BatchStatsAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), query, ct, budget, maxNew, parallelism);
-        return new TrainingExplorerResult(r.Stats, r.Pending, Band(elo), r.FromMemory, r.Asked, r.Capped);
+        return new TrainingExplorerResult(r.Stats, r.Pending, Band(elo), r.FromMemory, r.Asked, r.Capped, r.FromDb);
+    }
+
+    /// <summary>Die Auswahl der Schätzung zu Explorer-Stufen <paramref name="stages"/> (Bedenkzeiten fest, <see cref="Speeds"/>).</summary>
+    public static ExplorerQuery Query(IReadOnlyList<int> stages) => ExplorerQuery.Create(ExplorerQuery.Lichess, stages, Speeds);
+
+    public Task<RepertoireExplorerService.PrewarmResult> PrewarmAsync(IReadOnlyList<RepertoireReach.Node> positions, IReadOnlyList<int> stages,
+        int parallelism, CancellationToken ct) =>
+        !Available ? Task.FromResult(new RepertoireExplorerService.PrewarmResult(0, 0, 0))
+            : explorer.PrewarmAsync(positions.Select(n => (n.Key, n.Fen)).ToList(), Query(stages), parallelism, ct);
+
+    /// <summary>
+    /// Alle Stufenkombinationen, die <see cref="Stages"/> für irgendeine Elo liefern kann (fürs nächtliche Vorrechnen) — aus den
+    /// Stufen selbst abgeleitet: das Band [Elo+100, Elo+400] wechselt seine Treffer nur, wenn eine seiner Grenzen eine Stufe
+    /// kreuzt; abgetastet wird jede Elo von „ganz darunter" bis „ganz darüber" in 10er-Schritten (die Stufen sind Vielfache von 100).
+    /// Reihenfolge: aufsteigend nach Elo.
+    /// </summary>
+    public static List<List<int>> StageSets(IReadOnlyList<int> available)
+    {
+        var sets = new List<List<int>>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var lo = available.Min() - 500;
+        var hi = available.Max() + 100;
+        for (var elo = lo; elo <= hi; elo += 10)
+        {
+            var set = Stages(elo, available);
+            if (seen.Add(string.Join(',', set))) sets.Add(set);
+        }
+        return sets;
     }
 
     /// <summary>„2000–2300" für Elo 1900.</summary>

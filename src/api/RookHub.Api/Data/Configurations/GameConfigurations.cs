@@ -280,6 +280,19 @@ internal sealed class LichessExplorerCacheEntryConfiguration : IEntityTypeConfig
     }
 }
 
+internal sealed class LocalExplorerPositionConfiguration : IEntityTypeConfiguration<LocalExplorerPosition>
+{
+    public void Configure(EntityTypeBuilder<LocalExplorerPosition> e)
+    {
+        // Schlüssel = Hash (32 Hex-Zeichen, ASCII): schmaler Index, Nachschlagen gesammelt per IN.
+        e.HasKey(x => x.KeyHash);
+        e.Property(x => x.KeyHash).HasMaxLength(32).IsFixedLength().IsUnicode(false).HasCharSet("ascii");
+        e.Property(x => x.Payload).HasColumnType("mediumblob");
+        // Aufräumen abgelaufener Einträge (nächtliches Vorrechnen)
+        e.HasIndex(x => x.FetchedAt);
+    }
+}
+
 internal sealed class LibraryGameConfiguration : IEntityTypeConfiguration<LibraryGame>
 {
     public void Configure(EntityTypeBuilder<LibraryGame> e)
