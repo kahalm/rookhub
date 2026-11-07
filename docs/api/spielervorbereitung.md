@@ -214,8 +214,10 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Trainingslinien (`TrainingLinesService.LoadSourcesAsync`, gemeinsam mit `ComputeCoreAsync`), Rechnung `OpponentDeviations.Find`:
   Partien des Gegners mit der anderen Farbe als Präfixbaum (40 Halbzüge) durch EIN Brett; Abweichung = Repertoire-Stellung
   (`RepertoireReach.Key`), Gegner am Zug, sein Zug führt in eine Stellung, die das Repertoire nicht kennt (Zugumstellung zurück
-  ins Repertoire = keine). Gleiche Stellung + gleicher Zug über verschiedene Wege = eine Abweichung (Partien addiert, Pfad = der
-  häufigste Weg). Reihung: Partien ↓, jüngstes Jahr ↓, kürzerer Pfad (mit seinen eigenen Zahlen ist „Häufigkeit × Wahrscheinlichkeit
+  ins Repertoire = keine). Gleiche Stellung + gleicher Zug über verschiedene Wege = eine Abweichung (Partien addiert). Pfad
+  (0.893.1) = Weg durch das REPERTOIRE (`RepertoirePaths`: kürzester ab der Grundstellung, bei Gleichstand größte Summe
+  „von ihm erreicht“), nie sein Partienweg — sonst stünden Zugumstellungs-Züge wie 1…c5 im Pfad, die der Nutzer nicht spielt;
+  Stellungen nur über `[FEN]`-Linien erreichbar fallen weg. Reihung: Partien ↓, jüngstes Jahr ↓, kürzerer Pfad (mit seinen eigenen Zahlen ist „Häufigkeit × Wahrscheinlichkeit
   des Pfads" genau die Partienzahl; keine Lichess-Schätzung — eine Abweichung stammt immer aus seinen Partien). Antwort
   `{ repertoires, repertoire, color, colors, games, elo, total, deviations[{ path, fen, san, games, reached, lastYear,
   repertoire }], more, positions }`; `positions` = Schlüssel → `{ n, y, m: { SAN: Partien } }` für die Pfad-Stellungen und den

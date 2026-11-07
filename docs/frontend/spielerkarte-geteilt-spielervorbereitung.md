@@ -84,7 +84,9 @@
   `DeviationJudge`: Stellung vor der Antwort MultiPV 3 bis Tiefe 16 schon während des Überlegens, Stellung danach Tiefe 12
   ≤ 1,5 s; gut = höchstens Schwelle cp schlechter, Vorgabe 30, wählbar 10/30/50/100, `rookhub_deviation_threshold`; Tiefe der
   Engine danach zurück), Nachbetrachtung (`TrainerReviewEngine`) und die Partien-Anzeige des Trainers. Ablauf
-  `DeviationSession`: PATH (Weg zur Abweichung, meine Züge abgefragt, „Auf dem Weg … kommt hier …") → OPP → ASK („Hier spielt
+  `DeviationSession`: Farbe aus der Antwort (`start(…, d.color)`, nicht aus der Adresse; Karte gibt `chapterColors` mit),
+  PATH (Weg zur Abweichung, meine Züge abgefragt per Stellungsvergleich, „Auf dem Weg … kommt hier …"; „Im Repertoire
+  stattdessen: …" erst nach dem Abweichungszug) → OPP → ASK („Hier spielt
   Maras 4…h6 (7×) — das steht nicht in deinem Repertoire") → JUDGING → GOOD/BAD (Nochmal, Lösung zeigen) → seine Fortsetzung
   aus `positions` (häufigste weiter, weitere Gegnerzüge als eigene Linien direkt dahinter, ohne Abfrage aufgestellt) oder END:
   „Gegen Maia weiterspielen (2200)" = `/analysis?fen=<Schluss>&orientation=&maia=<Elo>` im neuen Tab (Analysebrett:

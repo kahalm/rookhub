@@ -6184,7 +6184,7 @@
     "none": "{{who}} játszmáiban nincs eltérés a repertoárodtól.",
     "done": "Mind a(z) {{n}} változat kész — {{good}} jó válasz, {{bad}} nem optimális.",
     "progress": "{{done}}. változat / {{total}}",
-    "instead": "A repertoárod: {{moves}}",
+    "instead": "A repertoárodban helyette: {{moves}}.",
     "playPath": "Játszd a repertoárod lépéseit az eltérésig.",
     "pathHint": "Az eltéréshez vezető úton itt {{move}} következik.",
     "opponentMoves": "{{who}} lép …",

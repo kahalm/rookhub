@@ -108,4 +108,41 @@ describe('DeviationSession (Abweichungen trainieren, 0.892.0)', () => {
     empty.start([], {});
     expect(empty.phase).toBe('EMPTY');
   }));
+
+  it('Hotfix 0.893.1: Farbe aus der Server-Antwort; Schwarz zieht nur schwarze Züge, Weiß kommt von selbst; SAN mit „+" zählt', fakeAsync(() => {
+    // Französisch-Vorstoß aus dem Schwarz-Repertoire bis 5…Db6, Abweichung 6.Le2 statt 6.a3 — die Adresse sagte 'w', der Server 'b'
+    const path = ['e4', 'e6', 'd4', 'd5', 'e5', 'c5', 'c3', 'Nc6', 'Nf3', 'Qb6'];
+    const d: Deviation = { path, fen: fenAfter(path), san: 'Be2', games: 4, reached: 4, lastYear: 2026, repertoire: ['a3'] };
+    const { s } = setup();
+    s.start(linesOf([d]), {}, 'b');
+    expect(s.color).toBe('b');
+    expect(s.phase).toBe('OPP');                                 // 1.e4 kommt von selbst
+    tick(DEV_OPP_DELAY_MS);
+    expect(s.phase).toBe('PATH');
+    expect(s.userToMove).toBeTrue();
+    s.onMove('c7', 'c5');                                        // 1…c5 steht nicht im Repertoire: Hinweis 1…e6
+    expect(s.pathHint).toBe('e6');
+    const moves: [string, string][] = [['e7', 'e6'], ['d7', 'd5'], ['c7', 'c5'], ['b8', 'c6'], ['d8', 'b6']];
+    for (const [from, to] of moves) {
+      expect(s.phase).toBe('PATH');
+      s.onMove(from, to);
+      tick(DEV_OPP_DELAY_MS);                                    // Weiß antwortet von selbst
+    }
+    expect(s.phase).toBe('ASK');
+    expect(s.askSan).toBe('Be2');
+    expect(s.played).toEqual([...path, 'Be2']);
+
+    // Server-SAN mit Schachzeichen: der Stellungsvergleich nimmt den Zug trotzdem an
+    const check: Deviation = { path: ['e4', 'e5', 'Bc4', 'Nc6', 'Bxf7+'], fen: fenAfter(['e4', 'e5', 'Bc4', 'Nc6', 'Bxf7+']), san: 'Ke7',
+      games: 1, reached: 1, lastYear: null, repertoire: ['Kxf7'] };
+    const w = setup().s;
+    w.start(linesOf([check]), {}, 'w');
+    w.onMove('e2', 'e4'); tick(DEV_OPP_DELAY_MS);
+    w.onMove('f1', 'c4'); tick(DEV_OPP_DELAY_MS);
+    w.onMove('c4', 'f7');
+    expect(w.pathHint).toBeNull();
+    tick(DEV_OPP_DELAY_MS);
+    expect(w.phase).toBe('ASK');
+    expect(w.askSan).toBe('Ke7');
+  }));
 });

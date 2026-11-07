@@ -282,10 +282,13 @@ export class TrainingLinesComponent {
   async trainDeviations(d: TrainingLines): Promise<void> {
     const opp = this.api.trainerParams?.(this.key()) ?? { opponent: `league:${this.key()}` };
     const { opponent, ...rest } = opp;
+    const chapterColors = this.overrides(d.repertoire, d.repertoires.map(x => x.id));
     const params: Record<string, string> = {
       deviations: opponent, ...rest,
       ...(d.color ? { color: d.color } : {}),
       ...(d.repertoire !== null ? { repertoire: String(d.repertoire) } : {}),
+      // dieselben Kapitelfarben wie die Karte (Hotfix 0.893.1) — sonst rechnet die Seite womöglich eine andere Farbe
+      ...(chapterColors ? { chapterColors: JSON.stringify(chapterColors) } : {}),
       ...(this.name() ? { name: this.who() } : {}),
       ...trainingFilterParams(this.filter()),
     };

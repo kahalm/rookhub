@@ -6184,7 +6184,7 @@
     "none": "In the games of {{who}} there is no deviation from your repertoire.",
     "done": "All {{n}} lines done — {{good}} good answers, {{bad}} not optimal.",
     "progress": "Line {{done}} of {{total}}",
-    "instead": "Your repertoire: {{moves}}",
+    "instead": "Your repertoire has {{moves}} instead.",
     "playPath": "Play your repertoire moves up to the deviation.",
     "pathHint": "On the way to the deviation, {{move}} comes here.",
     "opponentMoves": "{{who}} is moving …",

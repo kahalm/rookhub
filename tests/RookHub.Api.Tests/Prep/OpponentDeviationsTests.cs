@@ -95,10 +95,108 @@ public class OpponentDeviationsTests
         var a3 = r.Deviations.Single(d => d.San == "a3");
         Assert.Equal(3, a3.Games);                                    // beide Wege zusammen
         Assert.Equal(3, a3.Reached);
-        Assert.Equal(new[] { "c4", "e6", "Nc3", "Nf6", "d4", "Bb4" }, a3.Path);   // der häufigere Weg
+        // Pfad aus dem REPERTOIRE (1.c4 steht dort nicht), obwohl er die Stellung meist über 1.c4 erreicht hat (Hotfix 0.893.1)
+        Assert.Equal(new[] { "d4", "Nf6", "c4", "e6", "Nc3", "Bb4" }, a3.Path);
         Assert.Equal(new[] { "Qc2" }, a3.Repertoire);
         Assert.Equal("a3", r.Deviations[0].San);                     // mehr Partien zuerst
         Assert.Equal(2, r.Deviations.Count);
+    }
+
+    /// <summary>Repertoire-Pfad (alle Züge im Repertoire) — prüft, dass jeder Halbzug eine Kante des Graphen ist.</summary>
+    private static void AssertRepertoirePath(RepertoireReach.Graph g, IReadOnlyList<string> path)
+    {
+        var node = g.Nodes[RepertoireReach.StandardStartKey];
+        var b = new Chess.ChessBoard();
+        foreach (var san in path)
+        {
+            Assert.True(b.Move(san), san);
+            var next = RepertoireReach.Key(b.ToFen());
+            Assert.Contains(node.Children, c => c.Child.Key == next);
+            node = g.Nodes[next];
+        }
+    }
+
+    [Fact]
+    public void Path_ComesFromTheRepertoire_NotFromHisTransposingGames()
+    {
+        // Prod-Befund 2026-11-07 (Gegner Maras, Nutzer Schwarz): „Auf dem Weg zur Abweichung kommt hier 1…c5" — c5 steht nicht im
+        // Repertoire. Repertoire Schwarz: 1.e4 e6 2.d4 d5 3.e5 c5 4.c3 Nc6 5.Nf3 Qb6 6.a3. Seine Partien (er Weiß) erreichen die
+        // Stellung nach 5…Qb6 nur über 1.e4 c5 2.c3 e6 3.d4 d5 4.e5 Nc6 5.Nf3 Qb6 und spielen dort 6.Be2 statt 6.a3.
+        var g = Graph('b', "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 Nc6 5. Nf3 Qb6 6. a3");
+        var games = Times(4, "e4 c5 c3 e6 d4 d5 e5 Nc6 Nf3 Qb6 Be2 cxd4", true, 2026);
+
+        var r = OpponentDeviations.Find(g, games);
+
+        var d = Assert.Single(r.Deviations);
+        Assert.Equal("Be2", d.San);
+        Assert.Equal(new[] { "e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3", "Qb6" }, d.Path);
+        Assert.Equal("e6", d.Path[1]);                                // kein 1…c5
+        AssertRepertoirePath(g, d.Path);
+        Assert.Equal(new[] { "a3" }, d.Repertoire);                 // der Repertoire-Zug des GEGNERS (Weiß) an dieser Stellung
+        Assert.Equal(4, d.Games);
+        Assert.Equal(4, d.Reached);                                 // Häufigkeit je Stellung (Zugumstellung zählt mit)
+        Assert.Equal(2026, d.LastYear);
+        // die Pfad-Stellungen tragen seine Zahlen, soweit er sie erreicht hat (nach 1.e4 e6 nie — dann fehlt sie)
+        Assert.Equal(4, r.Positions[Key("e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6")].Reached);
+        Assert.False(r.Positions.ContainsKey(Key("e4 e6")));
+    }
+
+    [Fact]
+    public void Path_AmongEquallyShortRepertoirePaths_PrefersTheOneHisGamesReach()
+    {
+        // Zwei gleich lange Repertoire-Wege zur Stellung nach 1.d4 Nf6 2.c4 e6; er spielt nur 1.c4 Nf6 2.d4 e6 3.g3 (Abweichung)
+        var g = Graph('b', "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4", "1. c4 Nf6 2. d4 e6 3. Nc3 Bb4");
+        var r = OpponentDeviations.Find(g, Times(3, "c4 Nf6 d4 e6 g3", true));
+        var d = Assert.Single(r.Deviations);
+        Assert.Equal(new[] { "c4", "Nf6", "d4", "e6" }, d.Path);
+        Assert.Equal(new[] { "Nc3" }, d.Repertoire);
+    }
+
+    [Theory]
+    [InlineData('b')]
+    [InlineData('w')]
+    public void Colors_UserColorRepertoire_OpponentMovesAreTheOtherColor(char color)
+    {
+        // Beide Farben im Repertoire; jede Seite sieht nur ihre Farbe, Abweichungen sind Züge der GEGNERFARBE, der Nutzer zieht
+        // im Pfad nur Züge seiner Farbe (ungerade/gerade Halbzüge), Repertoire-Züge an der Abweichung sind Gegnerzüge.
+        var white = Graph('w', "1. e4 e5 2. Nf3 Nc6 3. Bb5");
+        var black = Graph('b', "1. e4 e6 2. d4 d5 3. e5 c5");
+        var g = color == 'w' ? white : black;
+        var games = Times(2, "e4 e5 Nf3 d6", false)                 // er Schwarz: weicht 2…d6 vom Weiß-Repertoire ab
+            .Concat(Times(3, "e4 e6 d4 d5 Nc3", true));                // er Weiß: weicht 3.Nc3 vom Schwarz-Repertoire ab
+
+        var r = OpponentDeviations.Find(g, games);
+
+        var d = Assert.Single(r.Deviations);
+        if (color == 'w')
+        {
+            Assert.Equal(2, r.Games);
+            Assert.Equal("d6", d.San);
+            Assert.Equal(new[] { "e4", "e5", "Nf3" }, d.Path);
+            Assert.Equal(new[] { "Nc6" }, d.Repertoire);
+            Assert.False(Chess.ChessBoard.LoadFromFen(d.Fen).Turn == Chess.PieceColor.White);   // Gegner (Schwarz) am Zug
+        }
+        else
+        {
+            Assert.Equal(3, r.Games);
+            Assert.Equal("Nc3", d.San);
+            Assert.Equal(new[] { "e4", "e6", "d4", "d5" }, d.Path);
+            Assert.Equal(new[] { "e5" }, d.Repertoire);
+            Assert.True(Chess.ChessBoard.LoadFromFen(d.Fen).Turn == Chess.PieceColor.White);    // Gegner (Weiß) am Zug
+        }
+        AssertRepertoirePath(g, d.Path);
+    }
+
+    [Fact]
+    public void LineWithOwnStartFen_NotReachableFromTheStartPosition_IsLeftOut()
+    {
+        // Linie ab eigener Stellung (nach 1.e4 c5 2.Nf3 d6), Grundstellung erreicht sie im Repertoire nicht → keine Abweichung dort
+        var sections = PgnMoveTree.ParseSections(
+            "[Event \"x\"]\n[FEN \"rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3\"]\n[SetUp \"1\"]\n\n3. d4 cxd4 4. Nxd4 *\n"
+            + "\n[Event \"y\"]\n\n1. d4 d5 *\n");
+        var g = RepertoireReach.Build(sections.Where(s => s.Moves.Count > 0), 'w');
+        var r = OpponentDeviations.Find(g, Times(2, "e4 c5 Nf3 d6 d4 Nf6", false));
+        Assert.Empty(r.Deviations);
     }
 
     [Fact]
@@ -215,6 +313,52 @@ public class OpponentDeviationsTests
         Assert.Equal(TrainingExplorer.DefaultElo, noElo["elo"]!.GetValue<int>());
         Assert.Null(await svc.DeviationsAsync(1, Q(foreign), games, default));
         Assert.Equal(id, r["repertoires"]!.AsArray().Single()!["id"]!.GetValue<int>());
+    }
+
+    [Theory]
+    [InlineData("b")]
+    [InlineData("w")]
+    public async Task Service_Deviations_MyColorOnly_HisGamesWithTheOtherColor(string color)
+    {
+        // Wunsch 2026-11-07 (Maras mit Weiß gegen mich mit Schwarz): „du matcht seinen Eröffnungsbaum gegen meine Repertoires und gibst
+        // die Lines, wo er einen Zug macht, der von mir nicht abgedeckt wird." Ein Repertoire mit einem Weiß-Kapitel (Vorstoß-Franzose
+        // aus weißer Sicht, 5…Db6 6.a3) und einem Schwarz-Kapitel (5…Ld7 6.Le2 Sge7). Ich Schwarz → nur das Schwarz-Kapitel, nur seine
+        // Weißpartien; ich Weiß → spiegelbildlich. 6.a3 und 5…Db6 (Weiß-Kapitel) dürfen bei „ich Schwarz" nie vorkommen.
+        using var db = new Db();
+        await db.RepertoireAsync(1, "Gemischt",
+            "[Event \"x\"]\n[White \"?\"]\n[Black \"Weiß: Vorstoß\"]\n\n1. e4 e6 2. d4 d5 3. e5 c5 4. c3 Nc6 5. Nf3 Qb6 6. a3 *\n\n"
+            + "[Event \"x\"]\n[White \"?\"]\n[Black \"Schwarz: Französisch\"]\n\n1. e4 e6 2. d4 d5 3. e5 c5 4. c3 Nc6 5. Nf3 Bd7 6. Be2 Nge7 *\n");
+        var svc = db.Service();
+        var games = Times(3, "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Bd7 a3 Qb6", true, 2026)       // er Weiß: 6.a3 statt 6.Le2
+            .Concat(Times(2, "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Nh6", false, 2025));                 // er Schwarz: 5…Sh6 statt 5…Db6
+
+        var r = (await svc.DeviationsAsync(1, Q(color: color), () => GamesOf(games), default))!;
+
+        Assert.Equal(color, r["color"]!.GetValue<string>());
+        var d = Assert.Single(r["deviations"]!.AsArray())!;
+        var path = d["path"]!.AsArray().Select(x => x!.GetValue<string>()).ToList();
+        var repertoire = d["repertoire"]!.AsArray().Select(x => x!.GetValue<string>()).ToList();
+        var fenBefore = d["fen"]!.GetValue<string>();
+        if (color == "b")
+        {
+            Assert.Equal(3, r["games"]!.GetValue<int>());                          // nur seine Weißpartien
+            Assert.Equal("a3", d["san"]!.GetValue<string>());
+            Assert.Equal(new[] { "e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3", "Bd7" }, path);
+            Assert.Equal(new[] { "Be2" }, repertoire);                             // Weißzug MEINES Schwarz-Repertoires
+            Assert.DoesNotContain("Qb6", path);
+            Assert.Equal("w", fenBefore.Split(' ')[1]);                            // er (Weiß) am Zug
+            // meine Züge im Pfad (ungerade Halbzüge) sind Schwarzzüge des Schwarz-Kapitels
+            Assert.Equal(new[] { "e6", "d5", "c5", "Nc6", "Bd7" }, path.Where((_, i) => i % 2 == 1));
+        }
+        else
+        {
+            Assert.Equal(2, r["games"]!.GetValue<int>());                          // nur seine Schwarzpartien
+            Assert.Equal("Nh6", d["san"]!.GetValue<string>());
+            Assert.Equal(new[] { "e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3" }, path);
+            Assert.Equal(new[] { "Qb6" }, repertoire);                             // Schwarzzug MEINES Weiß-Repertoires
+            Assert.Equal("b", fenBefore.Split(' ')[1]);                            // er (Schwarz) am Zug
+            Assert.Equal(new[] { "e4", "d4", "e5", "c3", "Nf3" }, path.Where((_, i) => i % 2 == 0));
+        }
     }
 
     [Fact]

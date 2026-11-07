@@ -99,8 +99,12 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
     const color = q.get('color');
     if (color === 'w' || color === 'b') params = params.set('color', color);
     const rep = Number(q.get('repertoire')) || null;
-    if (rep) {
-      params = params.set('repertoire', rep);
+    if (rep) params = params.set('repertoire', rep);
+    // Kapitelfarben wie auf der Karte (Hotfix 0.893.1): die Karte gibt ihre mit (auch je Repertoire bei „Alle markierten") —
+    // sonst ordnete der Server Kapitel anders zu als die Karte und rechnete womöglich eine andere Farbe.
+    const passed = q.get('chapterColors');
+    if (passed && passed.length <= 100_000) params = params.set('chapterColors', passed);
+    else if (rep) {
       const flat = readChapterColorOverrides(rep);
       if (Object.keys(flat).length) params = params.set('chapterColors', JSON.stringify(flat));
     }
@@ -109,7 +113,7 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
       next: d => {
         if (this.destroyed) return;
         this.data = d;
-        this.session.start(linesOf(d.deviations), d.positions);
+        this.session.start(linesOf(d.deviations), d.positions, d.color);
       },
       error: () => { this.loadError = true; this.session.phase = 'EMPTY'; this.cdr.markForCheck(); },
     });
@@ -159,10 +163,13 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
       { who: this.who, move, n: this.s.askGames });
   }
 
-  /** „statt 3…Sf6" der laufenden Abweichung. */
+  /** „Im Repertoire stattdessen: 3…Sf6" der laufenden Abweichung — erst NACH dem Abweichungszug (Hotfix 0.893.1: vorher stand
+   *  „Dein Repertoire: 6.a3" neben der Aufforderung, 5…Db6 zu spielen, und las sich wie ein Zug für den Nutzer). */
   get insteadText(): string {
-    const d = this.s.current?.deviation;
-    return d && d.repertoire.length ? this.translate.instant('deviations.instead', { moves: deviationText(d, this.lang).instead }) : '';
+    const line = this.s.current;
+    const d = line?.deviation;
+    if (!line || !d || !d.repertoire.length || this.s.played.length <= d.path.length) return '';
+    return this.translate.instant('deviations.instead', { moves: deviationText(d, this.lang).instead, who: this.who });
   }
 
   get pathHintText(): string {

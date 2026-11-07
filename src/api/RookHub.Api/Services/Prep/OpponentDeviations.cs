@@ -11,7 +11,15 @@ namespace RookHub.Api.Services.Prep;
 /// <para><b>Abweichung.</b> Eine Stellung des Repertoires (Schlüssel wie <see cref="RepertoireReach.Key"/> — Zugumstellungen fallen
 /// zusammen), Gegner am Zug, und sein Zug führt in eine Stellung, die das Repertoire NICHT kennt. Führt sein Zug über eine andere
 /// Zugfolge zurück ins Repertoire, ist das keine Abweichung. Gleiche Stellung + gleiche Folgestellung über verschiedene Wege =
-/// EINE Abweichung (Partien addiert); als Pfad gilt der Weg, den er dorthin am häufigsten genommen hat.</para>
+/// EINE Abweichung (Partien addiert).</para>
+///
+/// <para><b>Pfad</b> (Hotfix 0.893.1): der Weg zur Abweichung kommt aus dem REPERTOIRE, nicht aus seinen Partien — der Trainer lässt
+/// den Nutzer den Pfad als „deine Repertoire-Züge" spielen. Erreichte er die Stellung über eine Zugumstellung (z. B. über 1…c5 seiner
+/// damaligen Gegner, das im Repertoire gar nicht steht), stünde sonst ein fremder Zug im Pfad. Gesucht wird der kürzeste Weg im
+/// Repertoire-Graphen ab der Grundstellung; unter gleich kurzen der, dessen Stellungen er in seinen Partien am häufigsten erreicht
+/// hat (Summe <see cref="PositionStat.Reached"/>), dann der alphabetisch erste. Stellungen, die nur Linien mit eigener
+/// <c>[FEN]</c>-Startstellung erreichen, fallen weg (die Seite spielt ab der Grundstellung). Die Zahlen (Partien, erreicht, Jahr)
+/// stammen weiter je STELLUNG aus seinen Partien — Zugumstellungen zählen mit.</para>
 ///
 /// <para><b>Reihung.</b> Nach Partien mit dem Abweichungszug, dann jüngstes Jahr, dann kürzerer Pfad. Alles stammt aus seinen Partien:
 /// „Häufigkeit × Wahrscheinlichkeit, den Pfad zu erreichen" ist mit seinen eigenen Zahlen genau die Zahl der Partien mit der
@@ -32,7 +40,8 @@ public static class OpponentDeviations
     public const int MaxDeviations = 50;
 
     /// <summary>Eine Abweichung.</summary>
-    /// <param name="Path">Halbzüge (englische SAN) ab der Grundstellung bis zur Stellung VOR dem Abweichungszug.</param>
+    /// <param name="Path">Halbzüge (englische SAN) ab der Grundstellung bis zur Stellung VOR dem Abweichungszug — ein Weg durch das
+    /// Repertoire (alle Züge, die des Nutzers wie die des Gegners, stehen im Repertoire).</param>
     /// <param name="Fen">Stellung vor dem Abweichungszug.</param>
     /// <param name="San">Der Abweichungszug.</param>
     /// <param name="Games">Partien mit diesem Zug in dieser Stellung.</param>
@@ -66,7 +75,6 @@ public static class OpponentDeviations
         public required IReadOnlyList<string> Repertoire;
         public int Games;
         public int? LastYear;
-        public int BestPathCount = -1;
         public List<string> Path = [];
     }
 
@@ -92,14 +100,22 @@ public static class OpponentDeviations
         var all = new Dictionary<string, PositionStat>(StringComparer.Ordinal);   // jede Stellung seiner Partien
         var found = new Dictionary<string, Acc>(StringComparer.Ordinal);          // Stellung + Folgestellung → Abweichung
         var tails = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);   // Abweichung → Stellungen ihrer Fortsetzung
-        var paths = new Dictionary<string, List<string>>(StringComparer.Ordinal);      // Stellung → Weg (für die Pfad-Stellungen)
         if (root.Count == 0) return new Result(relevant.Count, [], 0, new());
 
         var board = new ChessBoard();
-        var path = new List<string>();
         Walk(root, RepertoireReach.Key(board.ToFen()), null, 0);
 
-        var ranked = found.Values
+        // Pfade durch das Repertoire; Abweichungen an Stellungen, die die Grundstellung im Repertoire nicht erreicht, fallen weg
+        var repPaths = RepertoirePaths(graph, all);
+        var reachable = new List<Acc>();
+        foreach (var a in found.Values)
+        {
+            if (!repPaths.TryGetValue(RepertoireReach.Key(a.Fen), out var p)) continue;
+            a.Path = p;
+            reachable.Add(a);
+        }
+
+        var ranked = reachable
             .OrderByDescending(a => a.Games).ThenByDescending(a => a.LastYear ?? 0).ThenBy(a => a.Path.Count)
             .ThenBy(a => string.Join(' ', a.Path), StringComparer.Ordinal).ThenBy(a => a.San, StringComparer.Ordinal)
             .ToList();
@@ -140,7 +156,6 @@ public static class OpponentDeviations
                 if (!ok) continue;                     // unlesbarer Zug: die Partie endet hier
                 var next = RepertoireReach.Key(board.ToFen());
                 if (opponentToMove) st.Moves[san] = st.Moves.GetValueOrDefault(san) + child.Count;
-                path.Add(san);
 
                 string? childTail = tailOf;
                 var childDepth = depth + 1;
@@ -162,11 +177,6 @@ public static class OpponentDeviations
                     }
                     acc.Games += child.Count;
                     if (child.LastYear is { } cy && (acc.LastYear is not { } ay || cy > ay)) acc.LastYear = cy;
-                    if (child.Count > acc.BestPathCount)
-                    {
-                        acc.BestPathCount = child.Count;
-                        acc.Path = path.Take(path.Count - 1).ToList();
-                    }
                     childTail = id;
                     childDepth = 0;
                 }
@@ -183,10 +193,48 @@ public static class OpponentDeviations
                     last.Reached += child.Count;
                     tails[childTail].Add(next);
                 }
-                path.RemoveAt(path.Count - 1);
                 board.Cancel();
             }
         }
+    }
+
+    /// <summary>Je Stellung, die die Grundstellung im Repertoire erreicht, der Weg dorthin (SAN der Repertoire-Kanten): Breitensuche
+    /// Schicht für Schicht — kürzester Weg; unter gleich kurzen der mit der größten Summe „in seinen Partien erreicht" über seine
+    /// Stellungen, dann der alphabetisch erste.</summary>
+    internal static Dictionary<string, List<string>> RepertoirePaths(RepertoireReach.Graph graph, IReadOnlyDictionary<string, PositionStat> stats)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        if (!graph.Nodes.TryGetValue(RepertoireReach.StandardStartKey, out var start)) return result;
+        long Reach(RepertoireReach.Node n) => stats.TryGetValue(n.Key, out var st) ? st.Reached : 0;
+
+        var best = new Dictionary<string, (long Score, string Joined, List<string> Path)>(StringComparer.Ordinal)
+        {
+            [start.Key] = (Reach(start), "", []),
+        };
+        var layer = new List<RepertoireReach.Node> { start };
+        while (layer.Count > 0)
+        {
+            var next = new Dictionary<string, RepertoireReach.Node>(StringComparer.Ordinal);
+            var cand = new Dictionary<string, (long Score, string Joined, List<string> Path)>(StringComparer.Ordinal);
+            foreach (var n in layer)
+            {
+                var (score, joined, path) = best[n.Key];
+                foreach (var (san, child) in n.Children)
+                {
+                    if (best.ContainsKey(child.Key)) continue;             // früher (kürzer) erreicht
+                    var s = score + Reach(child);
+                    var j = joined.Length == 0 ? san : joined + " " + san;
+                    if (cand.TryGetValue(child.Key, out var have)
+                        && (have.Score > s || (have.Score == s && string.CompareOrdinal(have.Joined, j) <= 0))) continue;
+                    cand[child.Key] = (s, j, [.. path, san]);
+                    next[child.Key] = child;
+                }
+            }
+            foreach (var (k, v) in cand) best[k] = v;
+            layer = next.Values.ToList();
+        }
+        foreach (var (k, v) in best) result[k] = v.Path;
+        return result;
     }
 
     private static void Touch(Trie t, int? year)

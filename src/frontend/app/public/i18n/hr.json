@@ -6184,7 +6184,7 @@
     "none": "U partijama igrača {{who}} nema odstupanja od tvog repertoara.",
     "done": "Svih {{n}} varijanti gotovo — {{good}} dobrih odgovora, {{bad}} nije optimalno.",
     "progress": "Varijanta {{done}} od {{total}}",
-    "instead": "Tvoj repertoar: {{moves}}",
+    "instead": "U tvom repertoaru umjesto toga: {{moves}}.",
     "playPath": "Igraj poteze svog repertoara do odstupanja.",
     "pathHint": "Na putu do odstupanja ovdje dolazi {{move}}.",
     "opponentMoves": "{{who}} vuče …",

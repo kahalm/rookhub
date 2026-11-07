@@ -6184,7 +6184,7 @@
     "none": "In den Partien von {{who}} gibt es keine Abweichung von deinem Repertoire.",
     "done": "Alle {{n}} Linien durch — {{good}} gute Antworten, {{bad}} nicht optimal.",
     "progress": "Linie {{done}} von {{total}}",
-    "instead": "Dein Repertoire: {{moves}}",
+    "instead": "Im Repertoire stattdessen: {{moves}}.",
     "playPath": "Spiele deine Repertoire-Züge bis zur Abweichung.",
     "pathHint": "Auf dem Weg zur Abweichung kommt hier {{move}}.",
     "opponentMoves": "{{who}} zieht …",

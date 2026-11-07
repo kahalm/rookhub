@@ -77,7 +77,7 @@ export class DeviationSession {
   /** Generation: ein spätes Urteil einer verlassenen Stellung zählt nicht. */
   private epoch = 0;
 
-  constructor(private readonly hooks: DeviationHooks, private readonly userColor: 'w' | 'b',
+  constructor(private readonly hooks: DeviationHooks, private userColor: 'w' | 'b',
               private readonly clock: TrainerClock = browserClock) {}
 
   get current(): DeviationLine | undefined { return this.queue[this.index]; }
@@ -86,7 +86,10 @@ export class DeviationSession {
   /** Das Brett nimmt Züge an. */
   get playable(): boolean { return (this.phase === 'PATH' || this.phase === 'ASK') && this.userToMove; }
 
-  start(lines: DeviationLine[], positions: OpponentPositions): void {
+  /** `color` = die Farbe, für die der Server Repertoire und Abweichungen gerechnet hat (Hotfix 0.893.1: maßgeblich ist SEINE
+   *  Antwort, nicht die Adresse — fällt er auf die andere Farbe zurück, müssen Brett, Abfrage und Gegnerzüge mitgehen). */
+  start(lines: DeviationLine[], positions: OpponentPositions, color?: 'w' | 'b' | null): void {
+    if (color === 'w' || color === 'b') this.userColor = color;
     this.queue = lines;
     this.positions = positions ?? {};
     this.index = 0;
@@ -156,10 +159,15 @@ export class DeviationSession {
     if (!line) return;
     if (this.phase === 'PATH') {
       const expected = line.path[this.played.length];
-      let san: string;
-      try { san = new Chess(this.chess.fen()).move({ from: orig, to: dest, promotion: promotion ?? 'q' }).san; }
-      catch { return; }
-      if (san !== expected) { this.pathHint = expected; this.hooks.changed(); return; }
+      let san: string, after: string;
+      try {
+        const c = new Chess(this.chess.fen());
+        san = c.move({ from: orig, to: dest, promotion: promotion ?? 'q' }).san;
+        after = c.fen();
+      } catch { return; }
+      // Stellungsvergleich statt SAN-Vergleich (Hotfix 0.893.1): der Pfad kommt aus dem Repertoire (Server-SAN), „Bb5" und „Bb5+"
+      // sind derselbe Zug.
+      if (positionKey(after) !== this.keyAfter(expected)) { this.pathHint = expected; this.hooks.changed(); return; }
       this.pathHint = null;
       this.apply(san);
       this.sync();
@@ -257,6 +265,12 @@ export class DeviationSession {
       this.lastMove = [mv.from as Key, mv.to as Key];
       return true;
     } catch { return false; }
+  }
+
+  /** Stellungs-Schlüssel nach `san` in der laufenden Stellung (`null` = unlesbar). */
+  private keyAfter(san: string | undefined): string | null {
+    if (!san) return null;
+    try { const c = new Chess(this.chess.fen()); c.move(san); return positionKey(c.fen()); } catch { return null; }
   }
 
   private undoLast(): void {

@@ -106,6 +106,29 @@ describe('DeviationTrainerComponent (Abweichungen trainieren, 0.892.0)', () => {
     c.ngOnDestroy();
   }));
 
+  it('Hotfix 0.893.1: Farbe der Antwort gilt (Brett, Abfrage), Kapitelfarben der Karte gehen mit, „statt" erst nach der Abweichung', fakeAsync(() => {
+    const per = JSON.stringify({ '3': { 'Französisch': 'b' } });
+    const c = setup({ deviations: 'prep:42', color: 'w', chapterColors: per });
+    const req = http.expectOne(() => true);
+    expect(req.request.params.get('chapterColors')).toBe(per);
+    const path = ['e4', 'e6'];
+    req.flush({ ...ANSWER, color: 'b', colors: ['b'],
+      deviations: [{ path, fen: fenAfter(path), san: 'Nf3', games: 2, reached: 2, lastYear: 2025, repertoire: ['d4'] }] });
+    fixture.detectChanges();
+    expect(c.orientation).toBe('black');
+    expect(c.session.color).toBe('b');
+    expect(c.insteadText).toBe('');                               // 1.e4 läuft gerade — noch keine Abweichung
+    tick(DEV_OPP_DELAY_MS);
+    expect(c.session.phase).toBe('PATH');
+    expect(c.insteadText).toBe('');
+    c.onMove({ orig: 'e7' as any, dest: 'e6' as any });
+    tick(DEV_OPP_DELAY_MS);
+    expect(c.session.phase).toBe('ASK');
+    expect(c.insteadText).toBe('deviations.instead');
+    c.ngOnDestroy();
+    tick(5000);
+  }));
+
   it('Schwelle je Gerät gemerkt; ungültige Adresse = leer ohne Anfrage', () => {
     const c = setup({ deviations: 'evil:1' });
     http.expectNone(() => true);
