@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
@@ -190,6 +190,10 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
 export class AdminGithubActionsComponent implements OnInit {
   private http = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
+  /** Die Admin-Seite ist OnPush, und Angular 22 zeichnet nach einer HTTP-Antwort oder einem Timer nicht von
+   *  selbst neu: ohne markForCheck erschienen die Daten erst beim nächsten Klick oder Mausereignis — die Seite
+   *  wirkte mal schnell, mal minutenlang leer, obwohl die API in Millisekunden antwortete (gemeldet 07.11.2026). */
+  private cdr = inject(ChangeDetectorRef);
 
   overview: CiOverview | null = null;
   loading = true;
@@ -225,6 +229,7 @@ export class AdminGithubActionsComponent implements OnInit {
       this.buildSha = sha && sha !== 'unknown' ? sha : null;
       const ref = info?.ref;
       this.buildRef = ref ? ref : null;
+      this.cdr.markForCheck();
     });
 
     // Normaler Voll-Abruf: sofort + danach alle 2 min (schont das GitHub-Rate-Limit).
@@ -235,6 +240,7 @@ export class AdminGithubActionsComponent implements OnInit {
       this.loading = false;
       if (data) { this.overview = data; this.lastUpdated = new Date(); }
       this.recomputeEta();
+      this.cdr.markForCheck();
     });
 
     // „👁 beobachten"-Schnell-Poll: alle 10 s NUR die aktiv beobachteten Repos einzeln frisch abrufen.
@@ -245,6 +251,7 @@ export class AdminGithubActionsComponent implements OnInit {
     timer(1000, 1000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.nowMs = Date.now();
       this.recomputeEta();
+      this.cdr.markForCheck();
     });
   }
 
@@ -340,6 +347,7 @@ export class AdminGithubActionsComponent implements OnInit {
         if (i >= 0) this.overview.repos[i] = dto;
         this.lastUpdated = new Date();
         this.recomputeEta();
+        this.cdr.markForCheck();
       });
   }
 

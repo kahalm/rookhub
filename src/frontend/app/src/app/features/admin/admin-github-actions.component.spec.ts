@@ -1,4 +1,5 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -225,4 +226,36 @@ describe('AdminGithubActionsComponent ETA', () => {
 
     expect(comp.running[0].remaining).toBeNull();
   });
+});
+
+/** Die Admin-Seite ist OnPush — wie hier der Host. Ohne markForCheck in der CI-Komponente blieb die Übersicht
+ *  nach der HTTP-Antwort leer, bis irgendein Klick die Seite neu zeichnete (07.11.2026). */
+@Component({
+  selector: 'app-onpush-host',
+  standalone: true,
+  imports: [AdminGithubActionsComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: '<app-admin-github-actions />',
+})
+class OnPushHostComponent {}
+
+describe('AdminGithubActionsComponent unter einem OnPush-Elternteil', () => {
+  it('zeigt die Übersicht direkt nach der Antwort, ohne Klick', fakeAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [OnPushHostComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' }), provideHttpClient(), provideHttpClientTesting()],
+    });
+    const fixture = TestBed.createComponent(OnPushHostComponent);
+    const httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    tick(0);
+    httpMock.match('/build-info.json').forEach(r => r.flush(null));
+    httpMock.expectOne('/api/admin/ci/runs').flush({
+      configured: true, fetchedAt: '',
+      repos: [{ repo: 'mein-testrepo-xyz', error: null, runs: [] }],
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('mein-testrepo-xyz');
+    discardPeriodicTasks();
+  }));
 });

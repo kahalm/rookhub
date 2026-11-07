@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.893.3", date: "2026-11-07", changes: [
+    { en: "Fix (admin, CI tab): the build overview sometimes stayed empty or stale for a long time and then suddenly appeared. The server answered in milliseconds, but the page only redrew on the next click or mouse movement. It now shows new data as soon as it arrives, and the countdown runs on its own.",
+      de: "Fix (Admin, CI-Tab): die Build-Übersicht blieb manchmal lange leer oder veraltet und erschien dann plötzlich. Der Server antwortete in Millisekunden, die Seite zeichnete aber erst beim nächsten Klick oder bei einer Mausbewegung neu. Jetzt erscheinen neue Daten sofort, und der Countdown läuft von selbst." },
+  ] },
   { version: "0.893.2", date: "2026-11-07", changes: [
     { en: "Train deviations: explanatory side lines in a repertoire (e.g. “(1.e4 c5 {transposes to a Sicilian})” in a French course) no longer count as deviations. Such a mention ends right there; before, every opponent move after it was a “deviation” and the trainer asked you to play 1…c5. Deviations now only appear where your repertoire continues.",
       de: "Abweichungen trainieren: Erklär-Varianten im Repertoire (z. B. „(1.e4 c5 {leitet in einen Sizilianer über})“ in einem Französisch-Kurs) zählen nicht mehr als Abweichung. So eine Erwähnung endet dort; bisher war jeder Zug des Gegners danach eine „Abweichung“, und der Trainer verlangte 1…c5 von dir. Abweichungen gibt es jetzt nur dort, wo dein Repertoire weitergeht." },
