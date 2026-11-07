@@ -64,7 +64,7 @@ public class LeagueTrainingController : BaseApiController
         {
             r = await lines.CreateRepertoireAsync(GetUserId(), string.IsNullOrWhiteSpace(n) ? fide : n, req.ToQuery(),
                 () => Task.FromResult(games), ct, () => lines.LeagueEloAsync(fide, ct), req.Replace == true,
-                TrainingLinesService.Scope($"league:{fide}", filter));
+                TrainingLinesService.Scope($"league:{fide}", filter), req.Opponent($"league:{fide}", n));
         }
         catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
         catch (TrainingLinesService.RepertoireExistsException e) { return Conflict(new { reason = "exists", id = e.Id, name = e.Name }); }

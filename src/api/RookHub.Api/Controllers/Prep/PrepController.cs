@@ -178,7 +178,7 @@ public class PrepController : BaseApiController
         {
             r = await lines.CreateRepertoireAsync(GetUserId(), l.Player.Name, req.ToQuery(), () => cards.TrainingGamesAsync(l, filter, ct), ct,
                 () => lines.PrepEloAsync(l.Player.Id, l.Player.MaxElo, ct), req.Replace == true,
-                TrainingLinesService.Scope($"prep:{id}:{req.All == true}:{req.Twin == true}", filter));
+                TrainingLinesService.Scope($"prep:{id}:{req.All == true}:{req.Twin == true}", filter), req.Opponent($"prep:{id}", l.Player.Name));
         }
         catch (TrainingLinesService.SameRepertoireException e) { return BadRequest(new { reason = "sameRepertoire", message = e.Message }); }
         catch (TrainingLinesService.RepertoireExistsException e) { return Conflict(new { reason = "exists", id = e.Id, name = e.Name }); }

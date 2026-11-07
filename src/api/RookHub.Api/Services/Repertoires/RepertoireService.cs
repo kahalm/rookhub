@@ -201,7 +201,8 @@ public class RepertoireService
             Files = files,
             UseForExtension = rep.UseForExtension,
             ChessableCourseId = rep.ChessableCourseId,
-            IsOwner = rep.UserId == userId
+            IsOwner = rep.UserId == userId,
+            Opponent = RepertoireOpponentDto.Parse(rep.OpponentJson),
         };
     }
 

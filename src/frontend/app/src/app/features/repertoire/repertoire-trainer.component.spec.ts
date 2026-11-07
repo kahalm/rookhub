@@ -1417,3 +1417,63 @@ describe('RepertoireTrainerComponent: Partien des Gegners zur Stellung (?opponen
     expect(c.opponentNote).toBeNull();
   });
 });
+
+describe('RepertoireTrainerComponent: gespeicherter Gegner eines „Prep: …"-Repertoires (ohne ?opponent=, 0.894.0)', () => {
+  const fensOf = (sans: string[]) => { const ch = new Chess(); return [ch.fen(), ...sans.map(s => { ch.move(s); return ch.fen(); })]; };
+  const F = fensOf(['e4', 'e5']);
+  const key = (fen: string) => fen.split(' ').slice(0, 3).join(' ');
+  const STORED = { opponent: 'league:1608169', name: 'Moritz', color: 'w' as const, params: { source: 'both', years: '3', evil: 'x' } };
+
+  function make(query: Record<string, string>, opponent: typeof STORED | null) {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => query[k] ?? null } } };
+    const training: any = {
+      getPgn: () => of(PGN), getLineStates: () => of([state(KEY_A, PAST()), state(KEY_B, PAST())]),
+      getRepertoireMeta: () => of({ name: 'Prep: Moritz, Christian Mag. 2026', opponent }),
+      reviewLine: () => of(state(KEY_A, FUTURE())), promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
+    };
+    const get = jasmine.createSpy('get').and.returnValue(of({
+      repertoires: [], repertoire: 1, color: 'w', colors: ['w'], games: 14, total: 2, more: 0, lichessBand: null,
+      lines: [KEY_B, KEY_A].map(k => ({ key: k, end: '', start: null, chapter: '', moves: [], probability: 0.5, reached: 1, lastYear: 2024, neverReached: false })),
+      positions: { [key(F[0])]: { n: 14, y: 2024, m: {} }, [key(F[1])]: { n: 14, y: 2024, m: { e5: 9 } } },
+    }));
+    const translate: any = { instant: (k: string, p?: any) => `${k}|${JSON.stringify(p ?? {})}`, getCurrentLang: () => 'de' };
+    const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any, translate,
+      { markForCheck: () => {} } as any, { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any, NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, { get } as any);
+    c.ngOnInit();
+    return { c, get };
+  }
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_1'));
+
+  it('lädt die Trainingslinien des gespeicherten Gegners (positions, Filter, meine Farbe) und zeigt die Gegner-Zeile', () => {
+    const { c, get } = make({}, STORED);
+    expect(get).toHaveBeenCalledTimes(1);
+    const [url, opts] = get.calls.mostRecent().args;
+    expect(url).toBe('/api/league/player/1608169/training-lines');
+    expect(opts.params.get('positions')).toBe('true');
+    expect(opts.params.get('color')).toBe('w');
+    expect(opts.params.get('source')).toBe('both');
+    expect(opts.params.get('years')).toBe('3');
+    expect(opts.params.get('evil')).toBeNull();
+    expect(c.opponent).toBe('league:1608169');
+    expect(c.opponentNotice).toBe('repertoireTrainer.opponentOrder');
+    expect(c.queue.map(l => l.headers['White'])[0]).toBe('1.d4 d5');           // Reihenfolge des Gegners (B vor A)
+    expect(c.repertoireName).toBe('Prep: Moritz, Christian Mag. 2026');
+  });
+
+  it('Gegner-Zeile nennt den gespeicherten Namen', () => {
+    const { c } = make({ line: KEY_A }, STORED);                                // Einstieg 1.e4 e5 …
+    expect(c.opponentNote!.text).toContain('opponentNote.reached');
+    expect(c.opponentNote!.text).toContain('Moritz');
+  });
+
+  it('?opponent= in der Adresse geht vor; ohne gespeicherten Gegner bleibt alles wie bisher', () => {
+    const viaUrl = make({ opponent: 'prep:42', color: 'w', name: 'Maras' }, STORED);
+    expect(viaUrl.get.calls.mostRecent().args[0]).toBe('/api/prep/player/42/training-lines');
+    expect(viaUrl.get.calls.mostRecent().args[1].params.get('years')).toBeNull();
+    const none = make({}, null);
+    expect(none.get).not.toHaveBeenCalled();
+    expect(none.c.opponent).toBeNull();
+  });
+});

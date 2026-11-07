@@ -38,6 +38,20 @@ export interface LineReviewRequest {
   hinted?: boolean;
 }
 
+/** Gegner eines „Prep: …"-Trainings-Repertoires (Server `RepertoireOpponentDto`): `opponent` wie `?opponent=` des Trainers,
+ *  `name` für „in den Partien von …", `color` = MEINE Farbe, `params` = Filter (`TRAINER_PASS_THROUGH`). */
+export interface RepertoireOpponent {
+  opponent: string;
+  name: string | null;
+  color: 'w' | 'b' | null;
+  params: Record<string, string>;
+}
+
+export interface RepertoireMeta {
+  name: string | null;
+  opponent: RepertoireOpponent | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RepertoireTrainingService {
   private readonly repertoires = inject(RepertoireService);
@@ -51,7 +65,13 @@ export class RepertoireTrainingService {
 
   /** Nur der Name des Repertoires (Kopf des Trainers, d3-rk-trainer-leer-zwei-aktionen). */
   getRepertoireName(repertoireId: number): Observable<string | null> {
-    return this.http.get<{ name?: string | null }>(`/api/repertoires/${repertoireId}`).pipe(map(r => r?.name?.trim() || null));
+    return this.getRepertoireMeta(repertoireId).pipe(map(r => r.name));
+  }
+
+  /** Name + gespeicherter Gegner eines „Prep: …"-Repertoires (0.894.0) aus `GET /api/repertoires/{id}` — EIN Abruf für den Trainer. */
+  getRepertoireMeta(repertoireId: number): Observable<RepertoireMeta> {
+    return this.http.get<{ name?: string | null; opponent?: RepertoireOpponent | null }>(`/api/repertoires/${repertoireId}`)
+      .pipe(map(r => ({ name: r?.name?.trim() || null, opponent: r?.opponent ?? null })));
   }
 
   /** SR-Zustände aller (schon gelernten/pausierten) Linien. */

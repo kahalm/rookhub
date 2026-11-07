@@ -232,3 +232,10 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
 - Partien je Stellung für den Trainer (0.891.0, Wunsch 07.11.: „rechts eine meldung ab wann ich von gespielten partien abgewichen
   bin"): `training-lines?positions=true` liefert zusätzlich `positions` (Form wie oben, aus `OpponentTrainingLines.Analysis`: nur
   Repertoire-Stellungen, die er erreicht hat, `m` = seine Züge über `NextSan`) — einmal je Sitzung, nicht je Zug.
+- Gegner bleibt am „Prep: …" (0.894.0, Prod 07.11.: Trainer von der Detailseite ohne Gegner-Zeile): Spalte
+  `Repertoires.OpponentJson` (varchar 1000, Migration `RepertoireOpponentJson`), Form `RepertoireOpponentDto`
+  `{ opponent: "prep:<id>"|"league:<fide>", name, color, params }` — `name` = Teil vor dem ersten Komma (wie die Karte),
+  `color` = MEINE Farbe aus der Reihung, `params` nur `source/speeds/years/unsure/all/twin` aus dem Rumpf
+  (`CreateRequest.Opponent`). Beide `training-repertoire`-Endpunkte setzen sie, auch beim Ersetzen (`CreateRepertoireAsync`
+  `trainer:`). `GET /api/repertoires/{id}` liefert sie als `opponent` (`RepertoireOpponentDto.Parse`: ungültig → `null`).
+  Kopieren/Klonen übernimmt sie nicht; ältere „Prep: …" bleiben ohne (kein Backfill).

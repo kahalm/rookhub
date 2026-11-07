@@ -11,13 +11,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, forkJoin } from 'rxjs';
+import { Observable, Subscription, catchError, forkJoin, map, of } from 'rxjs';
 import { Key } from 'chessground/types';
 
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
-import { RepertoireTrainingService, LineStateDto } from './repertoire-training.service';
+import { RepertoireTrainingService, LineStateDto, RepertoireMeta, RepertoireOpponent } from './repertoire-training.service';
 import { TrainerSrSync } from './repertoire-trainer-sr-sync';
 import { buildRepertoireGraph } from './repertoire-tree.util';
 import { chapterColorsOf, TrainColor } from '../../shared/repertoire/repertoire-color.util';
@@ -161,6 +161,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private opponentBand: string | null = null;
   /** Name des Gegners für die Anzeige (`?name=` von der Karte). */
   private opponentName: string | null = null;
+  /** Filter für die Trainingslinien (`TRAINER_PASS_THROUGH`): aus der Adresse oder — ohne `?opponent=` — vom gespeicherten Gegner. */
+  private opponentParams: Record<string, string> = {};
   private opponentSub: Subscription | null = null;
   /** Erstes Laden (PGN + Zustände); wird beim Verlassen abbestellt (Codereview F3-025). */
   private loadSub: Subscription | null = null;
@@ -322,19 +324,22 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.opponentName = this.route.snapshot.queryParamMap.get('name');
     const oc = this.route.snapshot.queryParamMap.get('color');
     this.opponentColor = oc === 'w' || oc === 'b' ? oc : null;
+    if (this.opponent) {
+      for (const k of TRAINER_PASS_THROUGH) {
+        const v = this.route.snapshot.queryParamMap.get(k);
+        if (v) this.opponentParams[k] = v;
+      }
+    }
     this.stockfish.init().catch(() => {});
-    // Name nur fürs Kopf-Label: ein Fehler ändert nichts (Titel bleibt „Repertoire-Trainer“). Getrennt vom forkJoin,
-    // damit ein Ausfall hier nicht in die Offline-Kopie fällt. `?.`: Test-Doubles ohne die Methode.
-    this.training.getRepertoireName?.(this.repertoireId)?.subscribe({
-      next: name => { if (name && !this.repertoireName) { this.repertoireName = name; this.cdr.markForCheck(); } },
-      error: () => {},
-    });
 
     this.loadSub = forkJoin({
       pgn: this.training.getPgn(this.repertoireId),
       states: this.training.getLineStates(this.repertoireId),
+      meta: this.loadMeta(),
     }).subscribe({
-      next: ({ pgn, states }) => {
+      next: ({ pgn, states, meta }) => {
+        if (meta?.name && !this.repertoireName) this.repertoireName = meta.name;
+        this.useStoredOpponent(meta?.opponent ?? null);
         // Eine vorhandene Offline-Kopie beim Online-Öffnen aktuell halten (No-op ohne Kopie).
         refreshRepertoireOffline(this.repertoireId, pgn, states);
         void this.initSession(pgn, states);
@@ -355,6 +360,29 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         }
       },
     });
+  }
+
+  /** Name + gespeicherter Gegner (`GET /api/repertoires/{id}`). Ein Ausfall ändert nichts (Titel bleibt „Repertoire-Trainer“, kein
+   *  Gegner) und fällt NICHT in die Offline-Kopie. `?.`: Test-Doubles ohne die Methode(n). */
+  private loadMeta(): Observable<RepertoireMeta | null> {
+    const meta: Observable<RepertoireMeta | null> = this.training.getRepertoireMeta?.(this.repertoireId)
+      ?? this.training.getRepertoireName?.(this.repertoireId)?.pipe(map((name): RepertoireMeta => ({ name, opponent: null })))
+      ?? of(null);
+    return meta.pipe(catchError(() => of(null)));
+  }
+
+  /** Ohne `?opponent=` in der Adresse gilt der Gegner, den ein „Prep: …"-Repertoire beim Anlegen behalten hat (0.894.0) —
+   *  egal ob der Trainer von der Detailseite, der Liste oder dem Dashboard kommt. Die Adresse geht immer vor. */
+  private useStoredOpponent(o: RepertoireOpponent | null): void {
+    if (this.opponent || !o || !trainingLinesUrl(o.opponent)) return;
+    this.opponent = o.opponent;
+    this.opponentName ??= o.name || null;
+    if (!this.opponentColor && (o.color === 'w' || o.color === 'b')) this.opponentColor = o.color;
+    this.opponentParams = {};
+    for (const k of TRAINER_PASS_THROUGH) {
+      const v = o.params?.[k];
+      if (typeof v === 'string' && v) this.opponentParams[k] = v;
+    }
   }
 
   /** Session aus PGN + SR-Zuständen aufbauen (frisch vom Server oder aus der Offline-Kopie). */
@@ -407,10 +435,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     let params = new HttpParams().set('repertoire', this.repertoireId).set('take', TRAINING_LINES_ALL).set('positions', 'true')
       .set('chapterColors', JSON.stringify(Object.fromEntries(this.chapterColors)));
     if (this.opponentColor) params = params.set('color', this.opponentColor);
-    for (const k of TRAINER_PASS_THROUGH) {
-      const v = this.route.snapshot.queryParamMap.get(k);
-      if (v) params = params.set(k, v);
-    }
+    for (const [k, v] of Object.entries(this.opponentParams)) params = params.set(k, v);
     this.opponentSub = this.http.get<TrainingLines>(url, { params }).subscribe({
       next: r => {
         this.opponentRank = new Map(r.lines.map((l, i) => [l.key, i]));

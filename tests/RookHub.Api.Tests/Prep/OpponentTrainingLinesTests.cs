@@ -415,6 +415,51 @@ public class OpponentTrainingLinesTests
         Assert.Equal(1, db.Ctx.RepertoireFiles.Count(f => f.RepertoireId == created.Id));
     }
 
+    [Fact]
+    public async Task CreateRepertoire_RemembersTheOpponent_ReplaceUpdatesIt_DetailReturnsIt()
+    {
+        using var db = new Db();
+        var source = await db.RepertoireAsync(1, "Weiß-Repertoire", Section("Offen", "1. e4 e5 2. Nf3 Nc6 3. Bb5") + Section("Sizilianisch", "1. e4 c5 2. Nf3 d6 3. d4"));
+        var svc = db.Service();
+        var req = new TrainingLinesService.CreateRequest(source, "w", null, "both", "blitz,rapid", 3, null, true, null);
+
+        var created = (await svc.CreateRepertoireAsync(1, "Moritz, Christian Mag.", req.ToQuery(), NoGames, default,
+            trainer: req.Opponent("prep:42", "Moritz, Christian Mag.")))!;
+        var detail = await new RepertoireService(db.Ctx, new RepertoireAnalyzeService(db.Ctx, new MemoryCache(new MemoryCacheOptions())),
+            new FriendService(db.Ctx, new NotificationService(db.Ctx)), new NotificationService(db.Ctx)).GetByIdAsync(created.Id, 1);
+        var o = Assert.IsType<RookHub.Api.DTOs.Repertoires.RepertoireOpponentDto>(detail.Opponent);
+        Assert.Equal("prep:42", o.Opponent);
+        Assert.Equal("Moritz", o.Name);                 // wie die Karte: Teil vor dem Komma
+        Assert.Equal("w", o.Color);                     // meine Farbe
+        Assert.Equal(new Dictionary<string, string> { ["source"] = "both", ["speeds"] = "blitz,rapid", ["years"] = "3", ["all"] = "true" }, o.Params);
+
+        // Ersetzen setzt den Gegner neu (anderer Schlüssel, andere Filter)
+        var req2 = new TrainingLinesService.CreateRequest(source, "w", null, "board", null, null, null, null, null, true);
+        await svc.CreateRepertoireAsync(1, "Moritz, Christian Mag.", req2.ToQuery(), NoGames, default, replace: true,
+            trainer: req2.Opponent("league:1608169", "Moritz, Christian Mag."));
+        var after = RookHub.Api.DTOs.Repertoires.RepertoireOpponentDto.Parse(db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == created.Id).OpponentJson)!;
+        Assert.Equal("league:1608169", after.Opponent);
+        Assert.Equal(new Dictionary<string, string> { ["source"] = "board" }, after.Params);
+
+        // ohne Gegner (alte Aufrufe) bleibt die Spalte leer; die Quelle hat nie einen
+        Assert.Null(db.Ctx.Repertoires.AsNoTracking().Single(r => r.Id == source).OpponentJson);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("kaputt")]
+    [InlineData("{\"opponent\":\"evil:1\"}")]
+    public void OpponentDto_Unusable_IsNull(string? json) => Assert.Null(RookHub.Api.DTOs.Repertoires.RepertoireOpponentDto.Parse(json));
+
+    [Fact]
+    public void OpponentDto_DropsUnknownParamsAndColors()
+    {
+        var o = RookHub.Api.DTOs.Repertoires.RepertoireOpponentDto.Parse("{\"opponent\":\"league:1608169\",\"color\":\"x\",\"params\":{\"source\":\"both\",\"evil\":\"1\"}}")!;
+        Assert.Null(o.Color);
+        Assert.Equal(new Dictionary<string, string> { ["source"] = "both" }, o.Params);
+    }
+
     // ── Chessable-Stand + Alternativen (0.885.0) ──────────────────────────────────────────────────
 
     private static string ChessableSection(string oid, string white, string moves) =>

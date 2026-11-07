@@ -63,6 +63,15 @@ public class Repertoire
     /// </summary>
     public DateTime? CacheMissAt { get; set; }
 
+    /// <summary>
+    /// Gegner eines „Prep: …"-Trainings-Repertoires (Wunsch 2026-11-07) als JSON
+    /// (<see cref="DTOs.Repertoires.RepertoireOpponentDto"/>: Schlüssel <c>prep:&lt;Id&gt;</c>/<c>league:&lt;FIDE&gt;</c>, Anzeigename,
+    /// meine Farbe, Filter). Gesetzt von <c>POST …/training-repertoire</c> (auch beim Ersetzen); damit zeigt der Trainer Gegner-Zeile
+    /// und Reihenfolge, egal von wo er geöffnet wird. <c>null</c> = kein Gegner (alle anderen und ältere „Prep: …").
+    /// </summary>
+    [MaxLength(1000)]
+    public string? OpponentJson { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

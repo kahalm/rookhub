@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.0", date: "2026-11-07", changes: [
+    { en: "Player preparation: a “Prep: …” training repertoire now remembers its opponent (key, name, your colour, filters). Wherever you start its trainer — detail page, repertoire list, dashboard — it shows the opponent line (“In Moritz’s games: reached n×” / “From 7.Nf3 no more games by Moritz”) and trains in the order for this opponent. Before, that only worked straight from the player card. Replacing the repertoire updates the opponent; older “Prep: …” repertoires stay as they were.",
+      de: "Spielervorbereitung: Ein „Prep: …“-Trainingsrepertoire merkt sich jetzt seinen Gegner (Schlüssel, Name, deine Farbe, Filter). Egal wo du den Trainer startest — Detailseite, Repertoire-Liste, Dashboard —, er zeigt die Gegner-Zeile („In den Partien von Moritz: n× erreicht“ / „Ab 7.Sf3 keine Partien von Moritz mehr“) und trainiert in der Reihenfolge nach diesem Gegner. Vorher ging das nur direkt von der Spielerkarte aus. Ersetzen aktualisiert den Gegner; ältere „Prep: …“ bleiben wie bisher." },
+  ] },
   { version: "0.893.6", date: "2026-11-07", changes: [
     { en: "Sparring against Maia with “Keep evaluation bar”: every move now gets its evaluation in the move list. Before, Maia replied after half a second, before the engine had a reliable value, so your own moves stayed without one. Maia now waits for the evaluation (at most 4 seconds).",
       de: "Sparring gegen Maia mit „Bewertungsleiste anlassen“: Jeder Zug bekommt jetzt seine Bewertung in der Zugliste. Vorher antwortete Maia nach einer halben Sekunde, bevor die Engine einen belastbaren Wert hatte, und die eigenen Züge blieben ohne Bewertung. Maia wartet jetzt auf die Bewertung (höchstens 4 Sekunden)." },

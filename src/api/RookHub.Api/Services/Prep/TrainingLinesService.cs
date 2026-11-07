@@ -104,6 +104,22 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         string? Speeds, int? Years, bool? Unsure, bool? All, bool? Twin, bool? Replace = null)
     {
         public Query ToQuery() => new(Repertoire, Color, ParseOverrides(ChapterColors?.ToJsonString()), null);
+
+        /// <summary>Der Gegner, den das angelegte Repertoire behält (<see cref="RookHub.Api.Models.Repertoire.OpponentJson"/>):
+        /// <paramref name="key"/> wie <c>?opponent=</c> des Trainers, Anzeigename = Teil vor dem ersten Komma (wie die Karte),
+        /// dazu die gewählten Filter. Die Farbe setzt <see cref="CreateRepertoireAsync"/> (erst dort steht sie fest).</summary>
+        public RepertoireOpponentDto Opponent(string key, string? name)
+        {
+            var p = new Dictionary<string, string>();
+            if (!string.IsNullOrWhiteSpace(Source)) p["source"] = Source.Trim();
+            if (!string.IsNullOrWhiteSpace(Speeds)) p["speeds"] = Speeds.Trim();
+            if (Years is { } y) p["years"] = y.ToString(CultureInfo.InvariantCulture);
+            if (Unsure == true) p["unsure"] = "true";
+            if (All == true) p["all"] = "true";
+            if (Twin == true) p["twin"] = "true";
+            var who = (name ?? "").Split(',')[0].Trim();
+            return new RepertoireOpponentDto { Opponent = key, Name = who.Length == 0 ? null : who[..Math.Min(who.Length, 100)], Params = p };
+        }
     }
 
     /// <summary>Ein Abschnitt eines Repertoires: der unveränderte PGN-Text und was der Parser daraus macht.</summary>
@@ -570,9 +586,11 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <c>null</c> = Repertoire fremd/nicht markiert; <see cref="DomainValidationException"/>, wenn es keine Linien gibt.
     /// </summary>
     /// <param name="replace">Ein gleichnamiges eigenes Repertoire ersetzen; sonst <see cref="RepertoireExistsException"/>.</param>
+    /// <param name="trainer">Gegner, den das Repertoire dauerhaft behält (<see cref="CreateRequest.Opponent"/>; Farbe = die
+    /// ermittelte eigene) — auch beim Ersetzen neu gesetzt. <c>null</c> = keiner.</param>
     public async Task<Created?> CreateRepertoireAsync(int userId, string opponent, Query q,
         Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct, Func<Task<int?>>? elo = null, bool replace = false,
-        string? scope = null)
+        string? scope = null, RepertoireOpponentDto? trainer = null)
     {
         var now = DateTime.UtcNow;
         var name = RepertoireName(opponent, now.Year);
@@ -621,6 +639,13 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         }
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(pgn));
         await repertoires.UploadFileAsync(id, userId, "prep-training.pgn", stream);
+        // Gegner merken (Wunsch 2026-11-07): der Trainer zeigt Gegner-Zeile + Reihenfolge auch ohne ?opponent= in der Adresse
+        if (await db.Repertoires.FirstOrDefaultAsync(r => r.Id == id, ct) is { } entity)
+        {
+            if (trainer is not null) trainer.Color = c.Color is 'b' ? "b" : c.Color is 'w' ? "w" : null;
+            entity.OpponentJson = trainer?.ToJson();
+            await db.SaveChangesAsync(ct);
+        }
         return new Created(id, name, picked.Count, existing is not null);
     }
 

@@ -57,6 +57,11 @@
   Hintergrund (`loadOpponentOrder(false)` → `extendOpponentQueue`), danach die Linien nach ihr; ohne Fälligkeit und ohne
   Modus-Wechsel (`opponentLines`); Ende `DONE` mit „Alle {{n}} Linien gegen diesen Gegner durch" (`opponentTotal`),
   „Von vorn" (`restart`, ganze Reihung) und „Zurück zur Spielerkarte" (`history.back()`). Ohne `?opponent=` unverändert.
+- Gespeicherter Gegner (0.894.0): ohne `?opponent=` nimmt der Trainer den Gegner des Repertoires aus
+  `GET /api/repertoires/{id}` (`RepertoireTrainingService.getRepertoireMeta` → `{ name, opponent }`, im `forkJoin` mit PGN und
+  Zuständen, Ausfall = kein Gegner, nie Offline-Kopie) — `useStoredOpponent` setzt `opponent`, `opponentName`, `opponentColor`
+  (falls nicht in der Adresse) und `opponentParams` (`TRAINER_PASS_THROUGH`). Damit Gegner-Zeile und Reihenfolge auch von
+  Detailseite, Liste und Dashboard. Die Adresse geht immer vor. Nach dem Anlegen führt die Karte weiter auf die Detailseite.
 - Unvollständige Schätzung (0.725.1): `.tl-incomplete` „Schätzung unvollständig — {{n}} Stellungen offen" (`explorerPending`)
   mit `.tl-continue` „Weiter rechnen" (dieselbe Abfrage); automatisch nach 3 s, höchstens 3 Runden
   (`AutoContinueMs`/`AutoContinueRounds`, Wecker außerhalb der Zone, damit `whenStable` nicht wartet; Wahl/Öffnen setzt

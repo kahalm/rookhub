@@ -6810,6 +6810,10 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<string>("OpponentJson")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
                     b.Property<string>("SrIntervalsJson")
                         .HasColumnType("longtext");
 

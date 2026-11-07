@@ -79,6 +79,47 @@ public class RepertoireDetailDto
     /// <summary><c>true</c> = der Aufrufer ist der Besitzer (darf bearbeiten/Dateien verwalten).
     /// <c>false</c> = das Repertoire ist ihm nur geteilt (nur ansehen/herunterladen/trainieren).</summary>
     public bool IsOwner { get; set; }
+
+    /// <summary>Gespeicherter Gegner eines „Prep: …"-Trainings-Repertoires (<see cref="Repertoire.OpponentJson"/>), sonst <c>null</c>.
+    /// Der Trainer nimmt ihn, wenn die Adresse kein <c>?opponent=</c> hat.</summary>
+    public RepertoireOpponentDto? Opponent { get; set; }
+}
+
+/// <summary>
+/// Gegner eines Trainings-Repertoires (gespeichert in <see cref="Repertoire.OpponentJson"/>): <see cref="Opponent"/> wie
+/// <c>?opponent=</c> des Trainers (<c>prep:&lt;Id&gt;</c> / <c>league:&lt;FIDE&gt;</c>), <see cref="Name"/> für „in den Partien von …",
+/// <see cref="Color"/> = MEINE Farbe (<c>w</c>/<c>b</c>), <see cref="Params"/> = Filter der Karte (nur <see cref="ParamKeys"/>).
+/// </summary>
+public sealed class RepertoireOpponentDto
+{
+    /// <summary>Was der Trainer an die Trainingslinien weiterreicht (wie <c>TRAINER_PASS_THROUGH</c> im Frontend).</summary>
+    public static readonly string[] ParamKeys = ["source", "speeds", "years", "unsure", "all", "twin"];
+
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web);
+    private static readonly System.Text.RegularExpressions.Regex Key = new(@"^(prep|league):[\w-]{1,32}$");
+
+    public string Opponent { get; set; } = string.Empty;
+    public string? Name { get; set; }
+    public string? Color { get; set; }
+    public Dictionary<string, string> Params { get; set; } = new();
+
+    public string ToJson() => System.Text.Json.JsonSerializer.Serialize(this, Json);
+
+    /// <summary>Gespeicherten Gegner lesen; unbrauchbar (kein gültiger Schlüssel, kaputtes JSON) → <c>null</c>.</summary>
+    public static RepertoireOpponentDto? Parse(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var o = System.Text.Json.JsonSerializer.Deserialize<RepertoireOpponentDto>(json, Json);
+            if (o is null || !Key.IsMatch(o.Opponent ?? "")) return null;
+            if (o.Color is not ("w" or "b")) o.Color = null;
+            o.Params = (o.Params ?? new()).Where(p => ParamKeys.Contains(p.Key) && !string.IsNullOrEmpty(p.Value))
+                .ToDictionary(p => p.Key, p => p.Value);
+            return o;
+        }
+        catch (System.Text.Json.JsonException) { return null; }
+    }
 }
 
 public class RepertoireFileDto
