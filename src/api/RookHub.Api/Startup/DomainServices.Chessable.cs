@@ -14,6 +14,8 @@ public static partial class DomainServicesSetup
         services.AddScoped<ChessableRateLimiter>();
         services.AddScoped<ChessableCourseRefreshService>();
         services.AddScoped<ChessableTrainedLineService>();
+        // Chessable-Stand je Linie (zuletzt trainiert, Stufe, Fehler je Zug, Alternativen) aus den Extension-Mitschnitten (0.885.0).
+        services.AddScoped<ChessableLineHistory>();
         services.AddScoped<ChessableProblemMoveService>();
         services.AddScoped<ChessableResponseAlertService>();
         services.AddScoped<ChessableReviewLineService>();

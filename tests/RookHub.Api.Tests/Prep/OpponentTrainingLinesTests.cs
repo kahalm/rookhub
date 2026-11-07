@@ -415,6 +415,70 @@ public class OpponentTrainingLinesTests
         Assert.Equal(1, db.Ctx.RepertoireFiles.Count(f => f.RepertoireId == created.Id));
     }
 
+    // ── Chessable-Stand + Alternativen (0.885.0) ──────────────────────────────────────────────────
+
+    private static string ChessableSection(string oid, string white, string moves) =>
+        $"[Event \"x\"]\n[White \"{white}\"]\n[Black \"Spanisch\"]\n[ChessableOid \"{oid}\"]\n\n{moves} *\n\n";
+
+    private void AddSession(Db db, string oid, string json, DateTime at) =>
+        db.Ctx.ChessableSessionMoves.Add(new ChessableSessionMove { UserId = 1, Bid = "1", Oid = oid, MovesJson = json, CreatedAt = at });
+
+    [Fact]
+    public async Task Alternatives_OnlyTrainedOnesStay_MainLinesAlways_CountedAndNamed()
+    {
+        using var db = new Db();
+        var pgn = ChessableSection("10", "1 | Spanisch | Hauptlinie", "1. e4 e5 2. Nf3 Nc6 3. Bb5")                        // Hauptlinie, ungelernt
+                  + ChessableSection("11", "12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1", "1. e4 e5 2. Nf3 d6 3. d4")  // Alternative, trainiert
+                  + ChessableSection("12", "12 | Steinitz | Alternative 3...f5 #2", "1. e4 e5 2. Nf3 f5 3. exf5")          // Alternative, übersprungen
+                  + ChessableSection("13", "Alternative 2...Nf6", "1. e4 e5 2. Nf3 Nf6 3. Nxe5");                        // Alternative, nie trainiert
+        var id = await db.RepertoireAsync(1, "Weiß", pgn);
+        var at = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        AddSession(db, "11", """[{"mid":0,"practiceMode":"w","level":4}]""", at);
+        AddSession(db, "12", """[{"mid":0,"practiceMode":"w","level":0,"alternativeSkipped":true}]""", at);
+        await db.Ctx.SaveChangesAsync();
+
+        var r = (await db.Service().LinesAsync(1, Q(id, "w"), NoGames, default))!;
+        var firstMoves = r["lines"]!.AsArray().Select(l => l!["moves"]!.AsArray()[3]!.GetValue<string>()).Order().ToList();
+        Assert.Equal(["Nc6", "d6"], firstMoves.Order(StringComparer.Ordinal));
+        Assert.Equal(2, r["skippedAlternatives"]!.GetValue<int>());
+        var trained = r["lines"]!.AsArray().Single(l => l!["moves"]!.AsArray()[3]!.GetValue<string>() == "d6")!;
+        Assert.Equal("2026-11-01", trained["chessableLastTrained"]!.GetValue<string>());
+        Assert.Equal(4, trained["chessableLevel"]!.GetValue<int>());
+        Assert.Equal("https://www.chessable.com/variation/11/", trained["chessableUrl"]!.GetValue<string>());
+        var main = r["lines"]!.AsArray().Single(l => l!["moves"]!.AsArray()[3]!.GetValue<string>() == "Nc6")!;
+        Assert.Null(main["chessableLastTrained"]);
+        Assert.Equal("https://www.chessable.com/variation/10/", main["chessableUrl"]!.GetValue<string>());
+
+        var created = (await db.Service().CreateRepertoireAsync(1, "Huber", Q(id, "w"), NoGames, default))!;
+        Assert.Equal(2, created.Lines);
+        var rep = db.Ctx.Repertoires.AsNoTracking().Single(x => x.Id == created.Id);
+        Assert.Contains("2 ungelernte Alternativen ausgelassen.", rep.Description);
+        var file = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id).PgnContent;
+        Assert.Contains("[ChessableLastTrained \"2026.11.01\"]", file);
+        Assert.Contains("[ChessableLevel \"4\"]", file);
+        Assert.Contains("{Chessable: zuletzt trainiert 01.11.2026, Stufe 4 — https://www.chessable.com/variation/11/}", file);
+        Assert.Contains("{Chessable: noch nicht trainiert — https://www.chessable.com/variation/10/}", file);
+        Assert.Contains("[ChessableUrl \"https://www.chessable.com/variation/10/\"]", file);
+        // dieselben Linien-Schlüssel wie die Liste
+        var keys = r["lines"]!.AsArray().Select(l => l!["key"]!.GetValue<string>()).ToList();
+        Assert.Equal(keys, RepertoireReach.Build(TrainingLinesService.Sections(file), 'w').Mainlines.Select(KeyOf));
+    }
+
+    [Fact]
+    public async Task CreateRepertoire_WrongMovesFromChessable_CommentAtTheMove()
+    {
+        using var db = new Db();
+        var id = await db.RepertoireAsync(1, "Weiß", ChessableSection("20", "Spanisch", "1. e4 e5 2. Nf3 Nc6 3. Bb5"));
+        var at = new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc);
+        AddSession(db, "20", """[{"mid":1,"practiceMode":"w","level":2,"wrong":["Bc4"]}]""", at);
+        AddSession(db, "20", """[{"mid":1,"practiceMode":"w","level":3,"wrong":["Nc3","d4"]}]""", at.AddDays(1));
+        await db.Ctx.SaveChangesAsync();
+        var created = (await db.Service().CreateRepertoireAsync(1, "Huber", Q(id, "w"), NoGames, default))!;
+        var file = db.Ctx.RepertoireFiles.AsNoTracking().Single(f => f.RepertoireId == created.Id).PgnContent;
+        Assert.Contains("{Chessable: hier 3× falsch (zuletzt 2.d4)} 2. Nf3", file);
+        Assert.Contains("Stufe 3", file);
+    }
+
     private static string KeyOf(List<RepertoireReach.Node> nodes)
     {
         var sans = new List<string>();

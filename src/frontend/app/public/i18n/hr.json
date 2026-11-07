@@ -5364,7 +5364,13 @@
       "running": "Procjena u tijeku — još {{n}} od {{total}} pozicija.",
       "deviatesOne": "odstupa: on ovdje igra {{move}} ({{n}} partija)",
       "deviatesMany": "odstupa: on ovdje igra {{move}} ({{n}} partija)",
-      "deviatesTip": "Proturječi njegovim partijama — procijenjeno kao da je ovdje nastavio kao tipičan igrač njegove jačine"
+      "deviatesTip": "Proturječi njegovim partijama — procijenjeno kao da je ovdje nastavio kao tipičan igrač njegove jačine",
+      "chessable": "Chessable",
+      "chessableLevel": "Chessable · razina {{level}}",
+      "chessableTrained": "Otvori na Chessableu — zadnji trening {{date}}, razina {{level}}",
+      "chessableLevelOnly": "Otvori na Chessableu — razina {{level}}, datum treninga nije zabilježen",
+      "chessableNever": "Otvori na Chessableu — tamo još nije trenirano",
+      "skippedAlternatives": "Izostavljeno {{n}} nenaučenih Chessable alternativa."
     },
     "title": "Priprema za protivnika",
     "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",

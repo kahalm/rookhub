@@ -11,6 +11,20 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.885.0',
+    date: '2026-11-07',
+    changes: [
+      {
+        en: 'Player preparation: a training repertoire „Prep: …“ now notes for every Chessable line when you last trained it there and at which level (or „not trained yet“), links to the line on Chessable, and marks moves you have often got wrong on Chessable („here 3× wrong (last 7…Nc6)“). The training lines on the card show the same link with the level.',
+        de: 'Spielervorbereitung: Ein Trainings-Repertoire „Prep: …“ vermerkt jetzt bei jeder Chessable-Linie, wann du sie dort zuletzt trainiert hast und auf welcher Stufe (oder „noch nicht trainiert“), verlinkt die Linie auf Chessable und markiert Züge, die du auf Chessable oft falsch gespielt hast („hier 3× falsch (zuletzt 7…Sc6)“). Die Trainingslinien der Karte zeigen denselben Link mit der Stufe.',
+      },
+      {
+        en: 'Chessable alternatives you have never trained there are left out of the training lines and the „Prep: …“ repertoire (they no longer count towards the 50); the card says how many were left out. Main lines stay, trained or not.',
+        de: 'Chessable-Alternativen, die du dort nie trainiert hast, fallen aus den Trainingslinien und dem „Prep: …“-Repertoire heraus (sie zählen nicht mehr gegen die 50); die Karte nennt, wie viele ausgelassen wurden. Hauptlinien bleiben, ob trainiert oder nicht.',
+      },
+    ],
+  },
+  {
     version: '0.884.0',
     date: '2026-11-07',
     changes: [

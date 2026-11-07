@@ -124,6 +124,27 @@ describe('TrainingLinesComponent', () => {
     expect(el().querySelector('.tl-other')).toBeNull();
   });
 
+  it('0.885.0: Chessable-Link je Linie (neuer Tab, noopener) mit Stufe und Datum, ausgelassene Alternativen genannt', async () => {
+    build();
+    const data: TrainingLines = { ...DATA, skippedAlternatives: 3, lines: [
+      { ...DATA.lines[0], chessableLastTrained: '2026-11-05', chessableLevel: 7, chessableUrl: 'https://www.chessable.com/variation/123/' },
+      { ...DATA.lines[1], chessableUrl: 'https://www.chessable.com/variation/124/' },
+      ...DATA.lines.slice(2)] };
+    trainingLines.and.resolveTo(data);
+    await openSection();
+    const links = Array.from(el().querySelectorAll<HTMLAnchorElement>('a.tl-chessable'));
+    expect(links.length).toBe(2);
+    expect(links[0].href).toBe('https://www.chessable.com/variation/123/');
+    expect(links[0].target).toBe('_blank');
+    expect(links[0].rel).toBe('noopener');
+    expect(links[0].textContent).toContain('Chessable · Stufe 7');
+    expect(links[0].title).toContain('zuletzt trainiert');
+    expect(links[0].title).toContain('Stufe 7');
+    expect(links[1].textContent!.trim()).toBe('Chessable');
+    expect(links[1].title).toContain('noch nicht trainiert');
+    expect(el().querySelector('.tl-skipped')!.textContent).toContain('3 ungelernte Chessable-Alternativen ausgelassen.');
+  });
+
   it('ohne freigegebenes Repertoire: sagt, wo man es einschaltet', async () => {
     build();
     trainingLines.and.resolveTo({ ...DATA, repertoires: [], repertoire: null, color: null, colors: [], lines: [], total: 0, more: 0, games: 0 });

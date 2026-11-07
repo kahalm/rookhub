@@ -5364,7 +5364,13 @@
       "running": "Estimate running — {{n}} of {{total}} positions still open.",
       "deviatesOne": "deviates: he plays {{move}} here ({{n}} game)",
       "deviatesMany": "deviates: he plays {{move}} here ({{n}} games)",
-      "deviatesTip": "Contradicts his games — estimated as if he had continued here like a typical player of his strength"
+      "deviatesTip": "Contradicts his games — estimated as if he had continued here like a typical player of his strength",
+      "chessable": "Chessable",
+      "chessableLevel": "Chessable · level {{level}}",
+      "chessableTrained": "Open on Chessable — last trained {{date}}, level {{level}}",
+      "chessableLevelOnly": "Open on Chessable — level {{level}}, training date not recorded",
+      "chessableNever": "Open on Chessable — not trained there yet",
+      "skippedAlternatives": "{{n}} unlearned Chessable alternatives left out."
     },
     "title": "Prepare for an opponent",
     "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Exceptions;
+using RookHub.Api.Services.Chessable;
 using RookHub.Api.Services.League;
 using RookHub.Api.Services.Repertoires;
 using RookHub.Api.DTOs.Repertoires;
@@ -23,8 +24,11 @@ namespace RookHub.Api.Services.Prep;
 /// </summary>
 public sealed class TrainingLinesService(AppDbContext db, RepertoireService repertoires, IConfiguration config,
     ITrainingExplorer? explorer = null, IMemoryCache? cache = null, ILogger<TrainingLinesService>? logger = null,
-    TrainingLinesContinuation? continuation = null)
+    TrainingLinesContinuation? continuation = null, ChessableLineHistory? chessableHistory = null)
 {
+    /// <summary>Chessable-Stand der Linien (Mitschnitte der Extension) — ohne DI eigener über dieselbe Datenbank.</summary>
+    private ChessableLineHistory Chessable => chessableHistory ?? new ChessableLineHistory(db);
+
     /// <summary>So lange bleibt eine fertige Reihung (samt Schätzung) im Speicher — je Nutzer, Gegner und Auswahl; ein geändertes
     /// Repertoire (<c>UpdatedAt</c>) rechnet sofort neu (Tempo, 2026-10-08: gemessen 21–22 s je Abfrage auf Prod).</summary>
     public static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(15);
@@ -115,7 +119,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// Farbe gibt es keine Linien (oder gar kein markiertes Repertoire). <see cref="Mine"/> läuft parallel zu den Hauptvarianten.</summary>
     internal sealed record Computed(List<RepertoireInfo> Repertoires, int? Selected, char? Color, List<char> Colors,
         OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources, string? Band = null,
-        bool ExplorerIncomplete = false, int ExplorerPending = 0, bool ExplorerRunning = false);
+        bool ExplorerIncomplete = false, int ExplorerPending = 0, bool ExplorerRunning = false, int SkippedAlternatives = 0);
 
     /// <summary>
     /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
@@ -184,6 +188,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         if (pick is not { } color) return new Computed(infos, q.Repertoire, null, available, null, [], refs);
 
         var mine = sources.SelectMany(x => x.Sections.Where(s => s.Color == color).Select(s => new Source(x.Rep, s.Section))).ToList();
+        // Ungelernte Chessable-Alternativen gar nicht erst (Wunsch 2026-11-07); sie zählen auch nicht gegen die 50
+        var (kept, skippedAlternatives) = await WithoutUnlearnedAlternativesAsync(userId, mine, ct);
+        mine = kept;
         var graph = RepertoireReach.Build(mine.Select(x => x.Section.Parsed), color);
         var chapters = mine.Select(x => Chapter(x.Section.Parsed)).ToList();
         var t0 = clock.ElapsedMilliseconds;
@@ -192,7 +199,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         t0 = clock.ElapsedMilliseconds;
         var analysis = OpponentTrainingLines.Analyze(graph, gameList);
         var countMs = clock.ElapsedMilliseconds - t0;
-        if (explorer is null) return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, analysis, null), mine, refs);
+        if (explorer is null) return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, analysis, null), mine, refs,
+            SkippedAlternatives: skippedAlternatives);
 
         // Lücken schätzen: nur die Gegner-Stellungen, für die seine Partien nicht reichen, je einmal (Wunsch 2026-10-07).
         // Ohne lokalen Explorer keine Schätzung: seine Züge zählen weiter, Lücken bleiben ohne Quelle (Auffüllregel), nichts offen.
@@ -228,9 +236,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var running = background;
         if (pending.Count > 0 && cacheKey is not null && continuation is not null && !background)
             running = StartContinuation(userId, cacheKey, ordered, opponentElo, graph, chapters, analysis, infos, q.Repertoire, color, available,
-                mine, refs);
+                mine, refs, skippedAlternatives);
         return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs,
-            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count, running);
+            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count, running, skippedAlternatives);
     }
 
     /// <summary>Startet die Fortsetzung: die restlichen Stellungen in Priorisierungs-Reihenfolge (<see cref="TrainingLinesContinuation.Parallelism"/>
@@ -238,7 +246,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// danach die Reihung aus dem Speicher — vollständig, dann in den 15-min-Speicher unter <paramref name="cacheKey"/>.</summary>
     private bool StartContinuation(int userId, string cacheKey, List<RepertoireReach.Node> ordered, int elo, RepertoireReach.Graph graph,
         List<string> chapters, OpponentTrainingLines.Analysis analysis, List<RepertoireInfo> infos, int? selected, char color,
-        List<char> available, List<Source> mine, List<RepertoireRef> refs)
+        List<char> available, List<Source> mine, List<RepertoireRef> refs, int skippedAlternatives)
     {
         var minOwn = MinOwn;
         var band = TrainingExplorer.Band(elo);
@@ -250,11 +258,47 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             var final = await ex.StatsAsync(userId, ordered, elo, TimeSpan.Zero, 0, CancellationToken.None);
             var estimate = new OpponentTrainingLines.Estimate(n => final.Stats.GetValueOrDefault(n.Key), minOwn, final.Pending);
             var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
-            var computed = new Computed(infos, selected, color, available, ranked, mine, refs, band, final.Pending.Count > 0, final.Pending.Count);
+            var computed = new Computed(infos, selected, color, available, ranked, mine, refs, band, final.Pending.Count > 0, final.Pending.Count,
+                SkippedAlternatives: skippedAlternatives);
             if (!computed.ExplorerIncomplete) sp.GetService<IMemoryCache>()?.Set(cacheKey, computed, CacheFor);
             logger?.LogInformation("Trainingslinien: Fortsetzung {Key} — {Hits} Treffer, {Pending} offen", cacheKey, final.Stats.Count,
                 final.Pending.Count);
         });
+    }
+
+    /// <summary>
+    /// Lässt Chessable-ALTERNATIVEN weg, die der Nutzer dort nie gelernt hat (Wunsch 2026-11-07: „alternativen als lines aus
+    /// chessable nur ziehen wenn ich sie dort trainiert habe"): Alternative = Namensteil „Alternative …" im White-/Black-Header
+    /// (<see cref="ChessableLineHistory.IsAlternative"/>); gelernt = mindestens ein Durchlauf ohne <c>alternativeSkipped</c>
+    /// (<see cref="ChessableLineHistory.TrainedAsync"/>, eine Abfrage). Hauptlinien bleiben immer, auch ungelernte.
+    /// </summary>
+    private async Task<(List<Source> Kept, int Skipped)> WithoutUnlearnedAlternativesAsync(int userId, List<Source> mine, CancellationToken ct)
+    {
+        var alternatives = mine.Where(x => ChessableLineHistory.IsAlternative(x.Section.Parsed.White, x.Section.Parsed.Black)).ToList();
+        if (alternatives.Count == 0) return (mine, 0);
+        var oids = alternatives.Select(x => ChessableLineHistory.OidOf(x.Section.Raw)).OfType<string>().ToList();
+        var trained = oids.Count == 0 ? new HashSet<string>() : await Chessable.TrainedAsync(userId, oids, ct);
+        var drop = alternatives.Where(x => ChessableLineHistory.OidOf(x.Section.Raw) is not { } oid || !trained.Contains(oid)).ToHashSet();
+        return drop.Count == 0 ? (mine, 0) : (mine.Where(x => !drop.Contains(x)).ToList(), drop.Count);
+    }
+
+    /// <summary>Chessable-Stand der gegebenen Linien (Index in <see cref="Computed.Mine"/>) in EINER Abfrage je Tabelle.</summary>
+    private async Task<Dictionary<int, (string? Oid, ChessableLineHistory.Status? Status)>> ChessableStatusAsync(int userId, Computed c,
+        IEnumerable<int> indexes, CancellationToken ct)
+    {
+        var color = c.Color ?? 'w';
+        var refs = indexes.Distinct().Select(i => (Index: i, Oid: ChessableLineHistory.OidOf(c.Mine[i].Section.Raw),
+            Black: !FenFields.WhiteToMove(c.Mine[i].Section.Parsed.StartFen ?? ""))).ToList();
+        var lines = refs.Where(r => r.Oid is not null).Select(r => new ChessableLineHistory.LineRef(r.Oid!, color, r.Black)).ToList();
+        var status = lines.Count == 0 ? new Dictionary<string, ChessableLineHistory.Status>() : await Chessable.LoadAsync(userId, lines, ct);
+        return refs.ToDictionary(r => r.Index, r => (r.Oid, r.Oid is null ? null : status.GetValueOrDefault(r.Oid)));
+    }
+
+    /// <summary>Zugnummer, mit der der Abschnitt beginnt (FEN-Feld 6, sonst 1).</summary>
+    private static int StartMoveNumber(string? fen)
+    {
+        var parts = (fen ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 6 && int.TryParse(parts[5], NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) && n > 0 ? n : 1;
     }
 
     /// <summary>
@@ -336,7 +380,10 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         o["explorerPending"] = c.ExplorerPending;
         o["explorerRunning"] = c.ExplorerRunning;
         o["total"] = lines.Count;
-        o["lines"] = new JsonArray(lines.Take(n).Select(l => (JsonNode)new JsonObject
+        o["skippedAlternatives"] = c.SkippedAlternatives;
+        var shown = lines.Take(n).ToList();
+        var chessable = await ChessableStatusAsync(userId, c, shown.Select(l => l.Index), ct);
+        o["lines"] = new JsonArray(shown.Select(l => (JsonNode)new JsonObject
         {
             ["key"] = l.Key,
             ["end"] = l.End,
@@ -361,6 +408,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             ["deviationPly"] = l.DeviationPly,
             ["deviationSan"] = l.DeviationSan,
             ["deviationGames"] = l.DeviationGames,
+            ["chessableLastTrained"] = chessable[l.Index].Status?.LastTrained?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["chessableLevel"] = chessable[l.Index].Status?.Level,
+            ["chessableUrl"] = chessable[l.Index].Oid is { } oid ? ChessableLineHistory.VariationUrl(oid) : null,
         }).ToArray());
         o["more"] = Math.Max(0, lines.Count - n);
         return o;
@@ -396,7 +446,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <summary>Beschreibung des angelegten „Prep: …" (Wunsch 2026-10-10): aus Sicht des Gegners UND eigener Farbe ausgeschrieben —
     /// „(Weiß)" hinter dem Gegnernamen war mehrdeutig (gemeint war die eigene Farbe). <paramref name="myColor"/> = die eigene Farbe
     /// ('w'/'b'), <paramref name="sources"/> = nur die Repertoires, aus denen Linien stammen.</summary>
-    internal static string Description(string opponent, char myColor, IReadOnlyList<string> sources, DateTime when, int games, int picked, int total)
+    internal static string Description(string opponent, char myColor, IReadOnlyList<string> sources, DateTime when, int games, int picked, int total,
+        int skippedAlternatives = 0)
     {
         var mine = myColor == 'b' ? "Schwarz" : "Weiß";
         var his = myColor == 'b' ? "Weiß" : "Schwarz";
@@ -404,7 +455,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var description = $"Trainingslinien gegen {who} — er hat {his}, ich spiele {mine} — aus "
                           + string.Join(", ", sources.Select(n => $"„{n}“")) + ", "
                           + $"{when.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)}, {games} Partien gezählt, "
-                          + $"{picked} von {total} Linien.";
+                          + $"{picked} von {total} Linien."
+                          + (skippedAlternatives > 0 ? $" {skippedAlternatives} ungelernte Alternativen ausgelassen." : "");
         return description.Length > 1000 ? description[..997] + "…" : description;
     }
 
@@ -430,11 +482,21 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
 
         var n = Math.Min(DefaultTakeFromConfig, MaxRepertoireLines);
         var picked = ranked.Lines.Take(n).ToList();
-        var pgn = string.Join("\n\n", picked.Select(l => c.Mine[l.Index].Section.Raw.Trim())) + "\n";
+        // je Linie der Chessable-Stand (zuletzt trainiert, Stufe, Fehler je Zug, Link) — Züge und Schlüssel bleiben unverändert
+        var chessable = await ChessableStatusAsync(userId, c, picked.Select(l => l.Index), ct);
+        var pgn = string.Join("\n\n", picked.Select(l =>
+        {
+            var section = c.Mine[l.Index].Section;
+            var (oid, status) = chessable[l.Index];
+            if (oid is null) return section.Raw.Trim();     // keine Chessable-Linie: unverändert
+            return ChessableLineHistory.Annotate(section.Raw.Trim(), status, oid, !FenFields.WhiteToMove(section.Parsed.StartFen ?? ""),
+                StartMoveNumber(section.Parsed.StartFen));
+        })) + "\n";
 
         // nur die Repertoires, die wirklich Linien beigesteuert haben — in der Reihenfolge der Quellen
         var contributed = c.Sources.Where(r => picked.Any(l => c.Mine[l.Index].Rep.Id == r.Id)).Select(r => r.Name).ToList();
-        var description = Description(opponent, c.Color ?? 'w', contributed, now, ranked.Games, picked.Count, ranked.Lines.Count);
+        var description = Description(opponent, c.Color ?? 'w', contributed, now, ranked.Games, picked.Count, ranked.Lines.Count,
+            c.SkippedAlternatives);
         var sourceIds = c.Sources.Select(r => r.Id).ToList();
         var kinds = await db.Repertoires.AsNoTracking().Where(r => sourceIds.Contains(r.Id)).Select(r => r.Kind).Distinct().ToListAsync(ct);
         var kind = kinds.Count == 1 ? kinds[0] : RookHub.Api.Models.RepertoireKind.None;

@@ -8,8 +8,8 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/shared/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
-import { cardLang } from './card-lang';
-import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
+import { cardDate, cardLang } from './card-lang';
+import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, chessableInfo, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
 /** Was eine Abfrage will: Repertoire (null = alle markierten) und MEINE Farbe (null = der Server wählt die mit den meisten Linien). */
@@ -93,12 +93,19 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
               </div>
               @if (d.repertoire === null) { <p class="muted small tl-all-hint">{{ t('trainAllHint') }}</p> }
               @if (createNote(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
+              @if (d.skippedAlternatives) {
+                <p class="muted small tl-skipped">{{ t('skippedAlternatives', { n: d.skippedAlternatives }) }}</p>
+              }
               <ol class="tl-list">
                 @for (l of d.lines; track l.key) {
                   <li [class.never]="l.neverReached">
                     <div class="tl-line">
                       <span class="tl-moves">{{ text(l) }}</span>
                       <span class="muted small tl-chapter">{{ origin(d, l) }}</span>
+                      @if (l.chessableUrl) {
+                        <a class="tl-tag tl-chessable" [href]="l.chessableUrl" target="_blank" rel="noopener"
+                           [title]="chessableTip(l)">{{ chessableLabel(l) }}</a>
+                      }
                       @if (l.source === 'lichess') {
                         <span class="tl-tag" [title]="t('estimatedTip', { band: d.lichessBand })">{{ t('estimated') }}</span>
                       } @else if (l.source === 'mixed' && l.lichessFrom !== null) {
@@ -209,6 +216,14 @@ export class TrainingLinesComponent {
   /** Gibt es geschätzte Linien? */
   readonly estimated = (d: TrainingLines) => !!d.lichessBand && d.lines.some(l => l.source === 'lichess' || l.source === 'mixed');
   readonly deviation = (l: TrainingLine) => deviationLabel(l, this.lang);
+  /** Chessable-Link: „Chessable · Stufe 5" bzw. „Chessable"; Titel mit Datum des letzten Trainings. */
+  readonly chessableLabel = (l: TrainingLine) =>
+    l.chessableLevel != null ? this.t('chessableLevel', { level: l.chessableLevel }) : this.t('chessable');
+  readonly chessableTip = (l: TrainingLine) => {
+    const info = chessableInfo(l, iso => cardDate(iso.replace(/-/g, '.'), this.lang));
+    return info.kind === 'trained' ? this.t('chessableTrained', { date: info.date, level: info.level ?? '–' })
+      : info.kind === 'level' ? this.t('chessableLevelOnly', { level: info.level }) : this.t('chessableNever');
+  };
   readonly from = (l: TrainingLine) => l.lichessFrom === null ? '' : plyLabel(l.moves, l.start, l.lichessFrom, this.lang);
   /** „6 Partien, zuletzt 2025". */
   reachedText(n: number, lastYear: number | null): string {
@@ -444,6 +459,12 @@ const GERMAN: Record<string, string> = {
   estimatedTip: 'Geschätzt mit Lichess-Partien von Spielern der Stufe {{band}}',
   estimatedFrom: 'ab {{move}} geschätzt (Lichess {{band}})',
   pending: 'Schätzung unvollständig',
+  chessable: 'Chessable',
+  chessableLevel: 'Chessable · Stufe {{level}}',
+  chessableTrained: 'Auf Chessable öffnen — zuletzt trainiert {{date}}, Stufe {{level}}',
+  chessableLevelOnly: 'Auf Chessable öffnen — Stufe {{level}}, Trainingsdatum nicht mitgeschnitten',
+  chessableNever: 'Auf Chessable öffnen — dort noch nicht trainiert',
+  skippedAlternatives: '{{n}} ungelernte Chessable-Alternativen ausgelassen.',
   headerFew: 'Von {{who}} nur {{n}} passende Partien — Lücken mit Lichess-Partien der Stufe {{band}} geschätzt.',
   headerNone: 'Von {{who}} keine passenden Partien — geschätzt mit Lichess-Partien der Stufe {{band}} (ein typischer Spieler seiner Stärke).',
   headerGaps: 'Wo {{who}} zu wenige Partien hat, sind die Linien mit Lichess-Partien der Stufe {{band}} geschätzt.',

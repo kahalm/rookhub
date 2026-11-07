@@ -50,6 +50,11 @@ export interface TrainingLine {
   lichessFrom: number | null;
   /** Eine nötige Explorer-Stellung kam nicht rechtzeitig an. */
   pending: boolean;
+  /** Chessable-Stand (0.885.0, Mitschnitte der Extension): zuletzt trainiert (`yyyy-MM-dd`), Linienstufe, Link zur Variante
+   *  (nur Linien mit `[ChessableOid]`). */
+  chessableLastTrained?: string | null;
+  chessableLevel?: number | null;
+  chessableUrl?: string | null;
 }
 
 /** Antwort von `POST …/training-repertoire` („Show me lines to train"). */
@@ -111,6 +116,8 @@ export interface TrainingLines {
   /** Der Server rechnet die offenen Stellungen gerade im Hintergrund fertig — die Seite fragt nach. */
   explorerRunning?: boolean;
   total: number;
+  /** So viele Chessable-Alternativen ohne Training wurden ausgelassen (0.885.0). */
+  skippedAlternatives?: number;
   lines: TrainingLine[];
   /** So viele Linien mehr gibt es (ohne `take` höchstens 50 in der Antwort). */
   more: number;
@@ -211,4 +218,12 @@ export function deviationLabel(l: { moves: string[]; start: string | null; devia
   const moves = [...l.moves];
   moves[l.deviationPly] = l.deviationSan;
   return plyLabel(moves, l.start, l.deviationPly, lang);
+}
+
+/** Hinweis am Chessable-Link einer Linie: „zuletzt trainiert …, Stufe …" bzw. „noch nicht trainiert" (Datum `yyyy-MM-dd`). */
+export function chessableInfo(l: Pick<TrainingLine, 'chessableLastTrained' | 'chessableLevel'>, date: (iso: string) => string):
+    { kind: 'trained' | 'level' | 'never'; date?: string; level?: number } {
+  if (l.chessableLastTrained) return { kind: 'trained', date: date(l.chessableLastTrained), level: l.chessableLevel ?? undefined };
+  if (l.chessableLevel != null) return { kind: 'level', level: l.chessableLevel };
+  return { kind: 'never' };
 }

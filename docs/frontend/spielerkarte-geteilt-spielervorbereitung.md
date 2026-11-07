@@ -28,6 +28,10 @@
   Vorgabe `league:<fide>`); `LeagueApiService` hat dafür genau EINE Methode. Trainer: `?opponent=prep:<id>|league:<fide>
   &color=…` (+ Filter) holt alle Trainingslinien, sortiert danach statt zu mischen, nur Kapitel der Farbe; leer → einmal
   anderer Modus. Ohne den Parameter unverändert. Hilfen in `shared/player-card/training-lines.ts`.
+- Chessable je Linie (0.885.0): `a.tl-chessable` hinter dem Kapitel, nur mit `chessableUrl` (neuer Tab, `rel="noopener"`),
+  Text „Chessable · Stufe n" bzw. „Chessable", Titel mit „zuletzt trainiert …" (`chessableInfo` in `training-lines.ts`);
+  `skippedAlternatives` > 0 → Zeile `.tl-skipped` über der Liste. Texte `prep.trainingRepertoire.chessable*` /
+  `skippedAlternatives` (en/de/hr/hu).
 - „Show me lines to train" (0.706.0): Knopf `button.tl-create` im Abschnitt (i18n `prep.trainingRepertoire.*` in
   en/de/hr/hu; in LeagueHub ohne gesetzte Sprache die deutschen Texte aus der Komponente), Rückfrage über
   `ConfirmService` (nennt den Namen, sagt „gleichnamiges wird ersetzt"), dann zur neuen Seite `/repertoires/{id}

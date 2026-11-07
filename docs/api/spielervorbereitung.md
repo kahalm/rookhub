@@ -175,6 +175,24 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   InnoDB-Verschnitt ≈ 0,9 KB je Zeile; ein Nutzer mit ~7 500 Gegnerzug-Stellungen × 8 Kombinationen ≈ 60 000 Zeilen ≈ 55 MB.
   Nicht abgedeckt: eigene Kapitelfarben der Karte (`chapterColors`) und Linien mit eigener Startstellung, die ein Gegner erreicht
   hat — die holt weiter die Abfrage selbst.
+- Chessable-Stand je Linie + ungelernte Alternativen (0.885.0, Wünsche 07.11.: „wann ich die das letztemal auf chessable
+  trainiert habe und auf welcher stufe", „wie oft der schon falsch war", „link zur chessable line", „ungelernte alternativen
+  brauchst du mir nicht bringen"): `Services/Chessable/ChessableLineHistory` liest je Nutzer und Linie (`[ChessableOid]`, ohne
+  bid — Varianten-Ids sind bei Chessable kursübergreifend eindeutig) gebündelt `ChessableSessionMoves` (jüngstes `CreatedAt` =
+  zuletzt trainiert; Stufe = niedrigste `level` der eigenen, nicht-informativen Züge dieses Durchlaufs, `practiceMode` =
+  Trainingsfarbe; `wrong[]` je `mid` über alle Durchläufe summiert) und als Rückfall für die Stufe `ChessableReviewLines`
+  (`level` = Weiß, `level_b` = Schwarz laut Fixture, Hinweis „Stand vom …"). `mid` = Zeile (voller Zug) → Halbzug 2·mid (+1 für
+  Schwarz, −1 wenn die Linie mit Schwarz am Zug beginnt). **Anlegen „Prep: …"**: je Linie mit oid Kopfzeilen
+  `[ChessableLastTrained "yyyy.MM.dd"]`, `[ChessableLevel "n"]` (nur bekannt), `[ChessableUrl "https://www.chessable.com/variation/<oid>/"]`,
+  Anfangskommentar `{Chessable: zuletzt trainiert 05.11.2026, Stufe 7 — <url>}` bzw. `{Chessable: noch nicht trainiert — <url>}`
+  und vor jedem Zug mit Fehlern `{Chessable: hier 3× falsch (zuletzt 7…Sc6)}` (Zug wie mitgeschnitten); Züge, Varianten und
+  Linien-Schlüssel bleiben (Tests Server + Trainer-Parser). Linien ohne oid bleiben unverändert. **Liste**: je gezeigter Linie
+  `chessableLastTrained` (`yyyy-MM-dd`), `chessableLevel`, `chessableUrl` (eine Abfrage je Tabelle für die gezeigten Linien).
+  **Alternativen**: eine Linie, deren White- oder Black-Header einen durch „|" getrennten Teil mit „Alternative" am Anfang trägt
+  (z. B. „12 | Steinitz ohne f2-f4 | Alternative 7...a5 #1"), bleibt nur, wenn es einen Durchlauf ohne `alternativeSkipped` gibt;
+  sonst fällt sie vor der Reihung weg (zählt nicht gegen die 50), Antwort `skippedAlternatives`, Beschreibung des „Prep: …"
+  „N ungelernte Alternativen ausgelassen.". Die `alternative`-Flags der getReview-Rohdaten werden NICHT ausgewertet (ohne
+  Beispieldaten nicht prüfbar, und es hieße, je Anfrage alle LONGTEXT-Rohantworten zu laden).
 - Eigene Startstellung (0.717.0, Screenshot 08.10.: „Prep: Stoettner" bestand aus 50 Chessable-Übungen aus Modellpartien):
   Eine Linie mit `[FEN]` zählt nur, wenn er ihre Startstellung in einer Partie erreicht hat (`OpponentTrainingLines.StartReached`:
   Grundstellung oder `Stats[start].Reached > 0`); sonst bleibt sie „nie erreicht"/`source = none` — OHNE Schätzung, denn der

@@ -5364,7 +5364,13 @@
       "running": "Schätzung läuft — noch {{n}} von {{total}} Stellungen.",
       "deviatesOne": "weicht ab: er spielt hier {{move}} ({{n}} Partie)",
       "deviatesMany": "weicht ab: er spielt hier {{move}} ({{n}} Partien)",
-      "deviatesTip": "Widerspricht seinen Partien — geschätzt, als wäre er hier wie ein typischer Spieler seiner Stärke weitergegangen"
+      "deviatesTip": "Widerspricht seinen Partien — geschätzt, als wäre er hier wie ein typischer Spieler seiner Stärke weitergegangen",
+      "chessable": "Chessable",
+      "chessableLevel": "Chessable · Stufe {{level}}",
+      "chessableTrained": "Auf Chessable öffnen — zuletzt trainiert {{date}}, Stufe {{level}}",
+      "chessableLevelOnly": "Auf Chessable öffnen — Stufe {{level}}, Trainingsdatum nicht mitgeschnitten",
+      "chessableNever": "Auf Chessable öffnen — dort noch nicht trainiert",
+      "skippedAlternatives": "{{n}} ungelernte Chessable-Alternativen ausgelassen."
     },
     "title": "Gegner vorbereiten",
     "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",
