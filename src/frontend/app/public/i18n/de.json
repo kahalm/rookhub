@@ -78,6 +78,8 @@
     "skipLineTip": "Linie überspringen (Taste S): ohne Bewertung zur nächsten Linie — ein schon gemachter Fehler zählt trotzdem.",
     "pauseLine": "Linie pausieren",
     "pauseLineTip": "Linie pausieren (Taste P): sie kommt nicht mehr, bis du sie in der Linienliste fortsetzt — ohne Bewertung, ein schon gemachter Fehler zählt trotzdem.",
+    "showComments": "Kommentare zeigen",
+    "showCommentsTip": "Kommentare zeigen (Taste K): der Kommentar der letzten Züge erscheint während des Spiels neben dem Brett, ohne anzuhalten. Pfeile und Felder aus den Kommentaren kommen erst am Linienende.",
     "linePaused": "Linie pausiert — in der Linienliste wieder fortsetzen",
     "pausedNote": "Diese Linie ist pausiert — sie erscheint nur, weil du sie ausgewählt hast.",
     "reviewNav": "Durch die Linie klicken",

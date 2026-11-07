@@ -16,7 +16,7 @@ export {
   ADVANCE_MS, HINT_PLAYED_MS, LEARN_GAP_MS, LEARN_REPEATS, LEARN_SHOW_MS, OPP_MOVE_DELAY_MS, TOLERATED_HOLD_MS, browserClock,
 } from './repertoire-trainer-state';
 export type {
-  BoardMove, TrainerClock, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSessionHooks,
+  BoardMove, PlayedComment, TrainerClock, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSessionHooks,
 } from './repertoire-trainer-state';
 
 /**

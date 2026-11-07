@@ -34,7 +34,7 @@ import { EvalCompare } from './repertoire-trainer-eval-compare';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { TrainerFrequencyLoader } from './repertoire-trainer-frequency-loader';
 import { TrainerLineSet, byRank, extendQueue, lineKeyOf, opponentLines, playableLines } from './repertoire-trainer-queue.util';
-import { BoardMove, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSession } from './repertoire-trainer-session';
+import { BoardMove, PlayedComment, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSession } from './repertoire-trainer-session';
 import { LineMoveToken } from './repertoire-trainer-line-view.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
@@ -48,6 +48,8 @@ import { cardLang } from '../../shared/player-card/card-lang';
 import { TrainerReviewEngine, readReviewEngineOn, saveReviewEngineOn } from './repertoire-trainer-review-engine';
 import { ChessableMisses, MissInfo, chessableOid, chessableUrl, missAt } from './repertoire-trainer-misses.util';
 
+const NO_COMMENTS: PlayedComment[] = [];
+
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
 
@@ -57,6 +59,17 @@ function readFreqOrder(): boolean {
 
 function saveFreqOrder(on: boolean): void {
   writeRaw(localStore(), FREQ_ORDER_KEY, on ? '1' : '0');   // gesperrt/voll → nur diese Sitzung
+}
+
+/** „Kommentare zeigen" (0.893.0) merkt sich ebenfalls das Gerät; Vorgabe aus. */
+export const SHOW_COMMENTS_KEY = 'rookhub_rep_train_show_comments';
+
+function readShowComments(): boolean {
+  return readRaw(localStore(), SHOW_COMMENTS_KEY) === '1';
+}
+
+function saveShowComments(on: boolean): void {
+  writeRaw(localStore(), SHOW_COMMENTS_KEY, on ? '1' : '0');   // gesperrt/voll → nur diese Sitzung
 }
 
 /**
@@ -122,6 +135,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Modus „Häufigste zuerst": Linien, die man in echten Partien öfter erreicht, kommen zuerst
    *  (Lichess-Explorer, gerechnet am Server wie der Lochfinder). Aus = bisherige Reihenfolge. */
   freqOrder = readFreqOrder();
+  /** „Kommentare zeigen" (0.893.0): Kommentare der zuletzt gespielten Züge während des Spiels in allen Modi, ohne Halt.
+   *  Aus = wie bisher (Abfragen ohne Kommentare; Lern-Kontextkarte und COMMENT-Halt bleiben). Formen kommen nie
+   *  während des Spiels, nur am Linienende. */
+  showComments = readShowComments();
   /** Häufigkeiten über den Explorer (Fortschritt, Hinweis, Sortierung). */
   private readonly freq = new TrainerFrequencyLoader(() => this.explorer, () => this.cdr.markForCheck(), () => this.buildQueue());
 
@@ -202,6 +219,17 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   get canHint(): boolean { return this.s.canHint; }
   get canSkip(): boolean { return this.s.canSkip; }
   get boardShapes(): DrawShape[] { return this.s.boardShapes; }
+  /** Der Schalter „Kommentare zeigen" steht, solange eine Linie läuft (nicht im Lade-/Leer-/Fertig-Zustand). */
+  get canToggleComments(): boolean { return !['LOADING', 'EMPTY', 'DONE'].includes(this.s.phase); }
+  /** Kommentare der zuletzt gespielten Züge — nur mit „Kommentare zeigen". */
+  get playedComments(): PlayedComment[] { return this.showComments ? this.s.playedComments : NO_COMMENTS; }
+
+  /** „Kommentare zeigen" an/aus (Taste K); gemerkt je Gerät. Hält das Spiel nicht an. */
+  toggleShowComments(): void {
+    this.showComments = !this.showComments;
+    saveShowComments(this.showComments);
+    this.cdr.markForCheck();
+  }
 
   /** Chessable-Fehler je Linie (0.886.0) — einmal je Repertoire geladen; `null` = (noch) keine. */
   private chessableMisses: ChessableMisses | null = null;
@@ -641,7 +669,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Klick/Tippen aufs Brett = „Weiter" (Linie fertig, Kommentar, Vorzeigen mit Kommentar, Feedback überspringen). */
   onPlayClick(): void { this.s.tap(); }
 
-  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen, „p" = Linie pausieren;
+  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen, „p" = Linie pausieren,
+   *  „k" = Kommentare zeigen an/aus;
    *  im „Linie fertig"-Kasten ←/→/Pos1/Ende = durch die Linie klicken. */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
@@ -654,12 +683,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       e.preventDefault();
       return;
     }
-    if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter' && key !== 'h' && key !== 's' && key !== 'p') return;
+    if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter' && key !== 'h' && key !== 's' && key !== 'p' && key !== 'k') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!isBoardHotkey(e)) return;
     if (key === 'h') { if (this.s.canHint) { this.s.hint(); e.preventDefault(); } return; }
     if (key === 's') { if (this.s.canSkip) { this.s.skipLine(); e.preventDefault(); } return; }
     if (key === 'p') { if (this.canPause) { this.pauseLine(); e.preventDefault(); } return; }
+    if (key === 'k') { if (this.canToggleComments) { this.toggleShowComments(); e.preventDefault(); } return; }
     if (this.s.tap()) e.preventDefault();
   }
 }

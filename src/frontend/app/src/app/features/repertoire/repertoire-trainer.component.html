@@ -209,6 +209,19 @@
             </div>
           }
         }
+        <!-- „Kommentare zeigen" (0.893.0): Kommentar der zuletzt gespielten Züge während des Spiels, ohne Halt und ohne
+             Formen (die stehen nur am Linienende) — dieselbe Kontextkarte wie im Lern-Modus. -->
+        @for (c of playedComments; track c.ply) {
+          <div class="ctx-comment played-comment" role="status" [attr.aria-label]="'repertoireTrainer.moveComment' | translate">
+            <div class="ctx-head">
+              <mat-icon>chat_bubble</mat-icon>
+              <span>{{ c.label }}</span>
+            </div>
+            @for (p of c.paragraphs; track $index) {
+              <p>{{ p }}</p>
+            }
+          </div>
+        }
         <!-- d4-rk-lernen-anweisung-widerspruch: in LEARN_SHOW spielt der Trainer den Zug selbst vor (Brett gesperrt) —
              dort ohne Imperativ „spiel …“. -->
         <p class="prompt">{{ (phase === 'LEARN_SHOW'
@@ -284,7 +297,7 @@
           <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
         <p *ngIf="phase === 'PLAYING'" class="hint">{{ (mode === 'learn' ? 'repertoireTrainer.learnPlay' : 'repertoireTrainer.playYourMove') | translate }}</p>
-        @if (canHint || canSkip) {
+        @if (canHint || canSkip || canToggleComments) {
           <div class="trainer-actions">
             @if (canHint) {
               <button mat-stroked-button class="hint-btn" (click)="hint(); $event.stopPropagation()"
@@ -302,6 +315,14 @@
               <button mat-stroked-button class="pause-btn" (click)="pauseLine(); $event.stopPropagation()"
                       [matTooltip]="'repertoireTrainer.pauseLineTip' | translate">
                 <mat-icon>pause_circle</mat-icon>{{ 'repertoireTrainer.pauseLine' | translate }}
+              </button>
+            }
+            @if (canToggleComments) {
+              <!-- 0.893.0: Schalter wie „Häufigste zuerst“ (Häkchen + aria-pressed), gemerkt je Gerät, Taste K -->
+              <button mat-stroked-button class="comments-toggle" [class.comments-on]="showComments" [attr.aria-pressed]="showComments"
+                      (click)="toggleShowComments(); $event.stopPropagation()"
+                      [matTooltip]="'repertoireTrainer.showCommentsTip' | translate">
+                <mat-icon>{{ showComments ? 'check' : 'chat_bubble_outline' }}</mat-icon>{{ 'repertoireTrainer.showComments' | translate }}
               </button>
             }
           </div>

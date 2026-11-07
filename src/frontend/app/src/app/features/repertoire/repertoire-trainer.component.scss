@@ -28,7 +28,7 @@
       background: color-mix(in srgb, currentColor 12%, transparent); font-weight: 500; font-size: .85rem; }
     .chapter-chip mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .offline-chip { background: color-mix(in srgb, var(--rh-warn) 22%, transparent); }
-    .freq-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
+    .freq-on, .comments-on { color: var(--mat-sys-primary); background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent); }
     .freq-notice { margin: -4px 0 8px; font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .freq-progress { font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
     .counts .freq { display: inline-flex; align-items: center; gap: 2px; }

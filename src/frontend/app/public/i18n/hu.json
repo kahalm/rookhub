@@ -2946,6 +2946,8 @@
     "skipLineTip": "Változat kihagyása (S billentyű): értékelés nélkül a következőre — a már elkövetett hiba így is számít.",
     "pauseLine": "Változat szüneteltetése",
     "pauseLineTip": "Változat szüneteltetése (P billentyű): nem jön többé, amíg a változatlistában nem folytatod — értékelés nélkül, a már elkövetett hiba így is számít.",
+    "showComments": "Megjegyzések mutatása",
+    "showCommentsTip": "Megjegyzések mutatása (K billentyű): az utolsó lépések megjegyzése játék közben a tábla mellett jelenik meg, megállás nélkül. A megjegyzések nyilai és mezői csak a változat végén látszanak.",
     "linePaused": "Változat szüneteltetve — a változatlistában folytathatod",
     "pausedNote": "Ez a változat szünetel — csak azért jelenik meg, mert kiválasztottad.",
     "reviewNav": "Lépkedés a változatban",

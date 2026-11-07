@@ -78,6 +78,8 @@
     "skipLineTip": "Preskoči varijantu (tipka S): na sljedeću bez ocjene — već učinjena greška se ipak računa.",
     "pauseLine": "Pauziraj varijantu",
     "pauseLineTip": "Pauziraj varijantu (tipka P): više se ne pojavljuje dok je ne nastaviš u popisu varijanti — bez ocjene, već učinjena greška se ipak računa.",
+    "showComments": "Prikaži komentare",
+    "showCommentsTip": "Prikaži komentare (tipka K): komentar posljednjih poteza pojavljuje se uz ploču tijekom igre, bez zaustavljanja. Strelice i polja iz komentara prikazuju se tek na kraju varijante.",
     "linePaused": "Varijanta pauzirana — nastavi je u popisu varijanti",
     "pausedNote": "Ova varijanta je pauzirana — prikazuje se samo jer si je odabrao.",
     "reviewNav": "Prođi kroz varijantu",

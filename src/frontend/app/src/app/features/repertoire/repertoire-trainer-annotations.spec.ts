@@ -62,7 +62,7 @@ function playToEnd(s: TrainerSession, clock: ManualClock): void {
   }
 }
 
-describe('Pfeile/Felder aus dem PGN-Kommentar im Repertoire-Trainer (0.887.0)', () => {
+describe('Pfeile/Felder aus dem PGN-Kommentar im Repertoire-Trainer (0.887.0, ab 0.893.0 nur am Linienende)', () => {
   it('der Parser reicht [%cal]/[%csl] je Halbzug durch, der Kommentartext bleibt ohne die Befehle', () => {
     const [g] = parsePgnText(USER_LINE);
     const last = g.moves.length - 1;
@@ -94,46 +94,57 @@ describe('Pfeile/Felder aus dem PGN-Kommentar im Repertoire-Trainer (0.887.0)', 
     expect(s.boardShapes).toEqual(FINAL as any);
   });
 
-  it('Marker eines Zugs stehen bis zum nächsten Zug — eigener Pfeil, dann Gegner-Feld, dann weg', () => {
+  it('während des Spiels keine Kommentar-Formen (0.893.0) — weder nach dem eigenen noch nach dem Gegnerzug', () => {
     const { s, clock, lines } = setup(MID, 'w');
     s.start(lines);
     expect(s.boardShapes).toEqual([]);
     s.onMove({ orig: 'e2' as any, dest: 'e4' as any });
-    expect(s.boardShapes).toEqual([{ orig: 'e4', dest: 'd5', brush: 'green' }] as any);
-    clock.advance(300);                                            // Gegnerzug-Pause: noch der eigene Pfeil
+    expect(s.boardShapes).toEqual([]);                             // 1. e4 hätte den Pfeil e4d5
+    clock.advance(300);
     expect(s.oppMoving).toBeTrue();
-    expect(s.boardShapes).toEqual([{ orig: 'e4', dest: 'd5', brush: 'green' }] as any);
-    clock.advance(1000);                                           // 1… e5 gespielt
+    expect(s.boardShapes).toEqual([]);
+    clock.advance(1000);                                           // 1… e5 gespielt (Feld f7 im Kommentar)
     expect(s.oppMoving).toBeFalse();
-    expect(s.boardShapes).toEqual([{ orig: 'f7', brush: 'red' }] as any);
-    s.onMove({ orig: 'g1' as any, dest: 'f3' as any });
     expect(s.boardShapes).toEqual([]);
   });
 
-  it('Tipp-Pfeil und Fehlzug kommen ZUSÄTZLICH zu den Markern, statt sie zu ersetzen', () => {
+  it('Tipp-Pfeil und Fehlzug bleiben während des Spiels (ohne Kommentar-Formen)', () => {
     const { s, clock, lines } = setup(MID, 'w');
     s.start(lines);
     s.onMove({ orig: 'e2' as any, dest: 'e4' as any });
     clock.advance(2000);
-    const f7 = { orig: 'f7', brush: 'red' };
     s.hint();
-    expect(s.boardShapes).toEqual([f7, { orig: 'g1', brush: 'green' }] as any);
+    expect(s.boardShapes).toEqual([{ orig: 'g1', brush: 'green' }] as any);
     s.hint();
-    expect(s.boardShapes).toEqual([f7, { orig: 'g1', dest: 'f3', brush: 'green' }] as any);
+    expect(s.boardShapes).toEqual([{ orig: 'g1', dest: 'f3', brush: 'green' }] as any);
     s.onMove({ orig: 'a2' as any, dest: 'a3' as any });           // Fehlzug bleibt stehen
     expect(s.wrongShown).toBeTrue();
-    expect(s.boardShapes).toEqual([f7, { orig: 'a2', dest: 'a3', brush: 'red' }] as any);
-    s.tap();                                                       // zurückgenommen: Marker + der laufende Tipp
-    expect(s.boardShapes).toEqual([f7, { orig: 'g1', dest: 'f3', brush: 'green' }] as any);
+    expect(s.boardShapes).toEqual([{ orig: 'a2', dest: 'a3', brush: 'red' }] as any);
+    s.tap();                                                       // zurückgenommen: der laufende Tipp bleibt
+    expect(s.boardShapes).toEqual([{ orig: 'g1', dest: 'f3', brush: 'green' }] as any);
   });
 
-  it('Lernmodus: der vorgezeigte Zug zeigt seinen Pfeil, der Kommentartext steht ohne [%…]', () => {
+  it('Lernmodus: der vorgezeigte Zug zeigt KEINEN Pfeil mehr, der Kommentartext steht ohne [%…]', () => {
     const { s, lines } = setup(MID, 'w', 'learn');
     s.start(lines);
     expect(s.phase).toBe('LEARN_SHOW');
     expect(s.learnComment).toBe('Zentrum.');
+    expect(s.boardShapes).toEqual([]);
+    s.tap();
+    expect(s.boardShapes).toEqual([]);
+  });
+
+  it('Nachbetrachtung: die Formen folgen der gewählten Stellung', () => {
+    const { s, clock, lines } = setup(MID, 'w');
+    s.start(lines);
+    playToEnd(s, clock);
+    expect(s.phase).toBe('LINE_DONE');
+    expect(s.boardShapes).toEqual([]);                             // Schluss 2… Nc6 ohne Marker
+    s.reviewTo(1);
     expect(s.boardShapes).toEqual([{ orig: 'e4', dest: 'd5', brush: 'green' }] as any);
-    s.tap();                                                       // zurückgenommen → Ausgangsstellung ohne Marker
+    s.reviewTo(2);
+    expect(s.boardShapes).toEqual([{ orig: 'f7', brush: 'red' }] as any);
+    s.reviewTo(0);
     expect(s.boardShapes).toEqual([]);
   });
 
@@ -144,3 +155,49 @@ describe('Pfeile/Felder aus dem PGN-Kommentar im Repertoire-Trainer (0.887.0)', 
     expect(s.boardShapes).toBe(s.boardShapes);
   });
 });
+
+/** Kommentare der zuletzt gespielten Züge für „Kommentare zeigen" (0.893.0). */
+describe('TrainerSession.playedComments (Kommentare zeigen, 0.893.0)', () => {
+  const COMM = '[Event "R"]\n[White "c"]\n[Black "A"]\n\n1. e4 {[%cal Ge4d5]Zentrum.} e5 {[%csl Rf7]Antwort [%clk 0:01:00] des Gegners.} 2. Nf3 Nc6 *\n';
+
+  it('Abfragen: eigener Zug sofort, nach dem Gegnerzug beide — ohne [%…], ohne Halt', () => {
+    const { s, clock, lines } = setup(COMM, 'w');
+    s.start(lines);
+    expect(s.playedComments).toEqual([]);
+    s.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    expect(s.playedComments.map(c => [c.label, c.paragraphs.join()])).toEqual([['1. e4', 'Zentrum.']]);
+    clock.advance(2000);
+    expect(s.phase).toBe('PLAYING');                               // kein Halt
+    const all = s.playedComments;
+    expect(all.map(c => c.ply)).toEqual([0, 1]);
+    expect(all[1].paragraphs.join()).not.toContain('[%');
+    expect(all[1].paragraphs.join()).toContain('des Gegners.');
+    expect(s.playedComments).toBe(all);                            // gleiche Liste = gleiches Array (OnPush)
+    s.onMove({ orig: 'g1' as any, dest: 'f3' as any });
+    expect(s.playedComments.map(c => c.ply)).toEqual([1]);         // 2. Nf3 ohne Kommentar → nur noch die Antwort davor
+  });
+
+  it('am Linienende keine (die Nachbetrachtung zeigt den Kommentar je Stellung)', () => {
+    const { s, clock, lines } = setup(COMM, 'w');
+    s.start(lines);
+    playToEnd(s, clock);
+    expect(s.phase).toBe('LINE_DONE');
+    expect(s.playedComments).toEqual([]);
+    s.reviewTo(1);
+    expect(s.reviewComment).toBe('Zentrum.');
+  });
+
+  it('Lernmodus: der Kommentar des vorgezeigten Zugs steht nur in der Kontextkarte, der Gegnerkommentar nur im Halt', () => {
+    const { s, clock, lines } = setup(COMM, 'w', 'learn');
+    s.start(lines);
+    expect(s.phase).toBe('LEARN_SHOW');
+    expect(s.playedComments).toEqual([]);                          // Halbzug 0 = currentComment (Kontextkarte)
+    s.tap();                                                       // zurückgenommen
+    s.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    clock.advance(2000);                                           // 1… e5 mit Kommentar → Halt
+    expect(s.phase).toBe('COMMENT');
+    expect(s.holdComment).toContain('des Gegners.');
+    expect(s.playedComments.map(c => c.ply)).toEqual([0]);         // der eigene Zug, nicht die Antwort doppelt
+  });
+});
+

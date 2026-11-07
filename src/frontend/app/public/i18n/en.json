@@ -78,6 +78,8 @@
     "skipLineTip": "Skip line (key S): go to the next line without a rating — a mistake already made still counts.",
     "pauseLine": "Pause line",
     "pauseLineTip": "Pause line (key P): it won’t come up any more until you resume it in the line list — no rating, a mistake already made still counts.",
+    "showComments": "Show comments",
+    "showCommentsTip": "Show comments (key K): the comment of the last moves appears beside the board while you play, without stopping. Arrows and squares from the comments are only shown at the end of the line.",
     "linePaused": "Line paused — resume it in the line list",
     "pausedNote": "This line is paused — it only shows up because you picked it.",
     "reviewNav": "Step through the line",

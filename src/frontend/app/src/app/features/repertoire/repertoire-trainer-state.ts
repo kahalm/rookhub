@@ -13,6 +13,8 @@ export type TrainerPhase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE'
 export type TrainerOutcome = 'correct' | 'tolerated' | 'wrong';
 export type TrainerMode = 'quiz' | 'learn';
 export interface BoardMove { orig: Key; dest: Key; promotion?: string }
+/** Ein Kommentar eines gespielten Zugs für „Kommentare zeigen“ (0.893.0). */
+export interface PlayedComment { ply: number; label: string; paragraphs: string[] }
 
 // Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
 // weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct: 1,5 s → 600 →
@@ -190,24 +192,60 @@ export abstract class TrainerSessionState {
   }
 
   /**
-   * [%cal]/[%csl] des Halbzugs, dessen Stellung gerade auf dem Brett steht (0.887.0): nach einem eigenen oder Gegnerzug
-   * mit Markern stehen sie bis zum nächsten Zug, in der Schlussstellung bis zur nächsten Linie. Über die Stellung
-   * bestimmt statt über einen eigenen Zähler — so passt es in jeder Phase (Abfragen, Lernen, „Lösung zeigen", Tipp 3).
-   * Ein stehender Fehlzug zählt als Ausgangsstellung (deren Marker bleiben, der rote Pfeil kommt dazu); ein geduldeter
-   * Alternativzug ist keine Stellung der Linie → keine Marker.
+   * [%cal]/[%csl] aus dem PGN-Kommentar — seit 0.893.0 NUR am Linienende: in der Schlussstellung und in der
+   * Nachbetrachtung je gewählter Stellung (Nutzerwunsch 07.11.: während des Spiels verraten die Pfeile den nächsten
+   * Zug bzw. lenken ab). Während des Spiels (Abfragen, Lernen, Gegner-Modus) bleibt das Brett ohne Kommentar-Formen;
+   * Tipp- und Fehlzug-Markierungen ({@link feedbackShapes}) kommen weiter.
    */
   get annotationShapes(): DrawShape[] {
     const line = this.currentLine;
-    if (!line?.shapes) return [];
-    if (this.reviewing) return line.shapes[this.reviewPly - 1] ?? [];
+    if (!line?.shapes || this.phase !== 'LINE_DONE') return [];
+    return line.shapes[this.reviewPly - 1] ?? [];
+  }
+
+  /**
+   * Halbzug, dessen Stellung während des Spiels auf dem Brett steht (-1 = Anfangsstellung der Linie), `null` = keine
+   * Stellung der Linie (z. B. geduldeter Alternativzug). Über die Stellung bestimmt statt über einen eigenen Zähler —
+   * so passt es in jeder Phase (Abfragen, Lernen, „Lösung zeigen", Tipp 3). Ein stehender Fehlzug zählt als
+   * Ausgangsstellung.
+   */
+  get shownPly(): number | null {
+    const line = this.currentLine;
+    if (!line) return null;
     const shown = normFen(this.wrongShown && this.startFen ? this.startFen : this.fen);
-    // Stellung vor bzw. nach dem aktuellen Halbzug (fens[p + 1] = Stellung nach Halbzug p, p = -1 = Anfangsstellung)
+    // Stellung vor bzw. nach dem aktuellen Halbzug (fens[p + 1] = Stellung nach Halbzug p)
     for (const p of [this.currentPly - 1, this.currentPly]) {
       const f = line.fens[p + 1];
-      if (f && normFen(f) === shown) return line.shapes[p] ?? [];
+      if (f && normFen(f) === shown) return p;
     }
-    return [];
+    return null;
   }
+
+  /**
+   * „Kommentare zeigen" (0.893.0): Kommentare der zuletzt gespielten Züge während des Spiels — der Halbzug der
+   * Brettstellung und der davor (eigener Zug + Antwort des Gegners), damit der Kommentar des eigenen Zugs nicht nach dem
+   * sofortigen Gegnerzug verschwindet. Ohne `[%…]`, ohne Halt. Nicht doppelt: in der COMMENT-Phase steht der
+   * Gegnerkommentar schon in der Halte-Box, im Lern-Modus der des aktuellen Zugs in der Kontextkarte; am Linienende
+   * übernimmt die Nachbetrachtung.
+   */
+  get playedComments(): PlayedComment[] {
+    const line = this.currentLine;
+    if (!line || !['PLAYING', 'FEEDBACK', 'COMMENT', 'LEARN_SHOW'].includes(this.phase)) return [];
+    const top = this.shownPly;
+    if (top === null) return [];
+    const out: PlayedComment[] = [];
+    for (let p = Math.max(0, top - 1); p <= top; p++) {
+      if (this.phase === 'COMMENT' && p === this.currentPly - 1) continue;
+      if (this.mode === 'learn' && p === this.currentPly) continue;
+      const text = plyComment(line, p).replace(/\[%[^\]]*\]/g, '').trim();
+      if (text) out.push({ ply: p, label: plyPrettyLabel(line, p), paragraphs: commentParagraphs(text) });
+    }
+    const key = out.map(c => `${c.ply}:${c.paragraphs.join('\n')}`).join('|');
+    if (key !== this.playedCache.key) this.playedCache = { key, list: out };
+    return this.playedCache.list;
+  }
+
+  private playedCache: { key: string; list: PlayedComment[] } = { key: '', list: [] };
 
   /** Ein Tipp ist möglich: Abfragen, eigener Zug gesucht (auch nach einem Fehlzug, vor „Lösung zeigen"), noch nicht ausgespielt. */
   get canHint(): boolean {
