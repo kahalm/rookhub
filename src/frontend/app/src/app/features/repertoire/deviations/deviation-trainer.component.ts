@@ -145,12 +145,24 @@ export class DeviationTrainerComponent implements OnInit, OnDestroy {
   get reviewing(): boolean { return this.s.phase === 'END' && this.reviewPly !== this.s.played.length; }
   get fen(): string { return this.reviewing ? this.s.fens[this.reviewPly] : this.s.fen; }
   get turnColor(): 'white' | 'black' { return this.fen.split(' ')[1] === 'b' ? 'black' : 'white'; }
-  get dests(): Map<Key, Key[]> { return this.s.playable ? destsAt(this.s.fen) : new Map(); }
+  /** Zielfelder je Stellung FESTGEHALTEN (Hotfix 0.893.5): eine neue Map bei jeder Prüfung meldete dem Brett „dests geändert",
+   *  und es schrieb zwischen Loslassen und Zug-Meldung die alte Stellung zurück — die gezogene Figur sprang zurück (vgl. 0.888.1). */
+  get dests(): Map<Key, Key[]> {
+    const key = (this.s.playable ? 'p|' : 'x|') + this.s.fen;
+    if (key !== this.destsKey) { this.destsKey = key; this.destsMap = this.s.playable ? destsAt(this.s.fen) : new Map(); }
+    return this.destsMap;
+  }
+  private destsKey = '';
+  private destsMap: Map<Key, Key[]> = new Map();
+  /** Letzter Zug der Nachbetrachtung, je Halbzug festgehalten (gleicher Grund wie bei {@link dests}). */
+  private reviewMoveKey = '';
+  private reviewMove: [Key, Key] | undefined;
   get lastMove(): [Key, Key] | undefined { return this.reviewing ? this.reviewLastMove : this.s.lastMove; }
   private get reviewLastMove(): [Key, Key] | undefined {
     if (this.reviewPly === 0) return undefined;
-    const before = this.s.fens[this.reviewPly - 1], after = this.s.fens[this.reviewPly];
-    return diffSquares(before, after);
+    const before = this.s.fens[this.reviewPly - 1], after = this.s.fens[this.reviewPly], key = before + '|' + after;
+    if (this.reviewMoveKey !== key) { this.reviewMoveKey = key; this.reviewMove = diffSquares(before, after); }
+    return this.reviewMove;
   }
 
   /** „Hier spielt Maras 4…h6 (7×) — das steht nicht in deinem Repertoire." */

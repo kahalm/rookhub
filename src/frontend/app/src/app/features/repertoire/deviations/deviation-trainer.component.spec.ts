@@ -53,6 +53,18 @@ describe('DeviationTrainerComponent (Abweichungen trainieren, 0.892.0)', () => {
 
   afterEach(() => { localStorage.removeItem(DEVIATION_THRESHOLD_KEY); fixture?.destroy(); });
 
+  it('Drag & Drop: dests und lastMove bleiben bei gleicher Stellung dasselbe Objekt (sonst springt die gezogene Figur zurück, 0.893.5)', () => {
+    const c = setup({ deviations: 'league:1606921', color: 'w', name: 'Maras' });
+    http.expectOne(r => r.url === '/api/league/player/1606921/deviations').flush(ANSWER);
+    fixture.detectChanges();
+    expect(c.s.playable).toBeTrue();
+    const d1 = c.dests, d2 = c.dests;
+    expect(d1.size).toBeGreaterThan(0);
+    expect(d2).toBe(d1);
+    expect(c.lastMove).toBe(c.lastMove);
+    c.ngOnDestroy();
+  });
+
   it('lädt die Abweichungen des Gegners mit Farbe und Filter, spielt den Pfad, fragt nach der Abweichung', fakeAsync(() => {
     const c = setup({ deviations: 'league:1606921', color: 'w', name: 'Maras', source: 'both', years: '3', evil: 'x' });
     const req = http.expectOne(r => r.url === '/api/league/player/1606921/deviations');

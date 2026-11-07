@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.893.5", date: "2026-11-07", changes: [
+    { en: "Train deviations: a piece moved by drag and drop no longer jumps back to its start square and slides over again. The page handed the board a new list of target squares on every check, and the board then rewrote the old position over the piece just dropped.",
+      de: "Abweichungen trainieren: Eine per Drag & Drop gezogene Figur springt nicht mehr aufs Ausgangsfeld zurück und gleitet erneut hin. Die Seite gab dem Brett bei jeder Prüfung eine neue Liste der Zielfelder, und das Brett schrieb daraufhin die alte Stellung über die gerade abgelegte Figur." },
+  ] },
   { version: "0.893.4", date: "2026-11-07", changes: [
     { en: "Fix (deviation trainer, training lines, hole finder): for Chessable courses only the trained main line counts as your repertoire. Variations in brackets are the author’s explanations. Before, the trainer could ask for a move that the course only mentions, e.g. “5…Qb6 comes here” in a French course that trains 5…Bd7.",
       de: "Fix (Abweichungen trainieren, Trainingslinien, Lochfinder): bei Chessable-Kursen zählt nur noch die trainierte Hauptlinie als dein Repertoire. Varianten in Klammern sind Erklärungen des Autors. Vorher konnte der Trainer einen Zug verlangen, den der Kurs nur erwähnt, z. B. „5…Db6 kommt hier“ in einem Französisch-Kurs, der 5…Ld7 trainiert." },
