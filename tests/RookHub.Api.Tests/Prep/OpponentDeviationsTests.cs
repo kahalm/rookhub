@@ -36,6 +36,27 @@ public class OpponentDeviationsTests
         return RepertoireReach.Key(b.ToFen());
     }
 
+    /// <summary>Fall 2026-11-07 (Maras): der Weg zur Abweichung lief über 5…Db6 aus einer Kommentar-Variante des Chessable-Kurses —
+    /// er erreicht die Db6-Stellungen öfter. Bei einer Chessable-Linie zählt nur die Hauptlinie, der Weg geht über 5…Ld7.</summary>
+    [Fact]
+    public void ChessableCommentVariation_IsNotPartOfThePath()
+    {
+        var g = RepertoireReach.Build(PgnMoveTree.ParseSections(
+            "[Event \"Kurs\"]\n[Black \"Schnellstarter\"]\n[ChessableOid \"1\"]\n\n"
+            + "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 Nc6 5. Nf3 Bd7 ({Der andere Hauptzug wäre} 5... Qb6 6. a3 c4) 6. a3 c4 *\n"), 'b');
+        // Er spielt nach 5…Db6 6.Ld3 (5×) und nach 5…Ld7 6.Ld3 (2×)
+        var games = Times(5, "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 Bd3", true)
+            .Concat(Times(2, "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Bd7 Bd3", true));
+
+        var r = OpponentDeviations.Find(g, games);
+
+        var d = Assert.Single(r.Deviations);
+        Assert.Equal("Bd3", d.San);
+        Assert.Equal(2, d.Games);
+        Assert.Equal(new[] { "e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3", "Bd7" }, d.Path);
+        Assert.DoesNotContain(r.Deviations, x => x.Path.Contains("Qb6"));
+    }
+
     [Fact]
     public void MoveNotInRepertoire_IsADeviation_WithPathCountsAndRepertoireMoves()
     {

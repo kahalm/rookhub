@@ -7,8 +7,11 @@ public sealed record PgnMove(string San, List<List<PgnMove>> Variations);
 
 /// <summary>Ein PGN-Abschnitt (eine Partie): die Header, die hier überhaupt jemand liest, plus den
 /// Zugbaum. <see cref="StartFen"/> ist <c>null</c> = Grundstellung, <see cref="White"/>/<see
-/// cref="Black"/> sind <c>null</c>, wenn der Header fehlt.</summary>
-public sealed record ParsedSection(string? White, string? Black, string? StartFen, List<PgnMove> Moves);
+/// cref="Black"/> sind <c>null</c>, wenn der Header fehlt.
+/// <para><see cref="IsChessableLine"/>: der Abschnitt trägt einen <c>[ChessableOid]</c>-Kopf — eine Chessable-Linie. Dort ist
+/// die HAUPTLINIE der trainierte Zugweg; Klammer-Varianten sind Erklärungen des Autors („der andere Hauptzug wäre 5…Db6“) und
+/// gehören nicht zum Repertoire (siehe <see cref="Repertoires.RepertoireReach.Build"/>).</para></summary>
+public sealed record ParsedSection(string? White, string? Black, string? StartFen, List<PgnMove> Moves, bool IsChessableLine = false);
 
 /// <summary>
 /// DER PGN-Baumparser des Servers: Abschnitte trennen, Movetext herausschneiden, tokenisieren,
@@ -40,6 +43,7 @@ public static class PgnMoveTree
     private static readonly Regex EventHeaderSplit = new(@"(?=\[Event\s)", RegexOptions.Compiled);
     private static readonly Regex WhiteHeaderRegex = new(@"^\[White\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     private static readonly Regex BlackHeaderRegex = new(@"^\[Black\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex ChessableOidHeaderRegex = new(@"^\[ChessableOid\s+""[^""]*""\]", RegexOptions.Compiled | RegexOptions.Multiline);
     // Chessable-Importe (via piratechess) tragen je Linie die Startstellung der Variante im
     // [FEN]-Header. Ohne ihn beginnt der Walk in der Grundstellung: der erste Zug ist dort illegal
     // (Linie fehlt still im Positions-Set) oder zufällig legal — dann gelten FALSCHE Stellungen als
@@ -79,7 +83,8 @@ public static class PgnMoveTree
                 white.Success ? white.Groups[1].Value.Trim() : null,
                 black.Success ? black.Groups[1].Value.Trim() : null,
                 StartFenOf(section),
-                moves));
+                moves,
+                ChessableOidHeaderRegex.IsMatch(section)));
         }
         return sections;
     }

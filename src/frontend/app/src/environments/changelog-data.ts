@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.893.4", date: "2026-11-07", changes: [
+    { en: "Fix (deviation trainer, training lines, hole finder): for Chessable courses only the trained main line counts as your repertoire. Variations in brackets are the author’s explanations. Before, the trainer could ask for a move that the course only mentions, e.g. “5…Qb6 comes here” in a French course that trains 5…Bd7.",
+      de: "Fix (Abweichungen trainieren, Trainingslinien, Lochfinder): bei Chessable-Kursen zählt nur noch die trainierte Hauptlinie als dein Repertoire. Varianten in Klammern sind Erklärungen des Autors. Vorher konnte der Trainer einen Zug verlangen, den der Kurs nur erwähnt, z. B. „5…Db6 kommt hier“ in einem Französisch-Kurs, der 5…Ld7 trainiert." },
+  ] },
   { version: "0.893.3", date: "2026-11-07", changes: [
     { en: "Fix (admin, CI tab): the build overview sometimes stayed empty or stale for a long time and then suddenly appeared. The server answered in milliseconds, but the page only redrew on the next click or mouse movement. It now shows new data as soon as it arrives, and the countdown runs on its own.",
       de: "Fix (Admin, CI-Tab): die Build-Übersicht blieb manchmal lange leer oder veraltet und erschien dann plötzlich. Der Server antwortete in Millisekunden, die Seite zeichnete aber erst beim nächsten Klick oder bei einer Mausbewegung neu. Jetzt erscheinen neue Daten sofort, und der Countdown läuft von selbst." },

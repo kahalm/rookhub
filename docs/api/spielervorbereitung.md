@@ -218,6 +218,10 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   „(1.e4 c5 {Sizilianer})“ sind Linienende, keine Abweichung, und liegen damit nie auf dem Pfad). Gleiche Stellung + gleicher Zug über verschiedene Wege = eine Abweichung (Partien addiert). Pfad
   (0.893.1) = Weg durch das REPERTOIRE (`RepertoirePaths`: kürzester ab der Grundstellung, bei Gleichstand größte Summe
   „von ihm erreicht“), nie sein Partienweg — sonst stünden Zugumstellungs-Züge wie 1…c5 im Pfad, die der Nutzer nicht spielt;
+  bei Chessable-Linien (Kopf `[ChessableOid]`) nimmt der Graph seit 0.893.4 NUR die Hauptlinie (`ParsedSection.IsChessableLine`,
+  `RepertoireReach.Build`) — Klammer-Varianten sind dort Erklärungen des Autors (Fall Maras: „5…Db6 kommt hier“, obwohl
+  Martinovićs Französisch 5…Ld7 trainiert und 5…Db6 nur als „der andere Hauptzug wäre …“ nennt); gilt ebenso für
+  Trainingslinien und Lochfinder;
   Stellungen nur über `[FEN]`-Linien erreichbar fallen weg. Reihung: Partien ↓, jüngstes Jahr ↓, kürzerer Pfad (mit seinen eigenen Zahlen ist „Häufigkeit × Wahrscheinlichkeit
   des Pfads" genau die Partienzahl; keine Lichess-Schätzung — eine Abweichung stammt immer aus seinen Partien). Antwort
   `{ repertoires, repertoire, color, colors, games, elo, total, deviations[{ path, fen, san, games, reached, lastYear,

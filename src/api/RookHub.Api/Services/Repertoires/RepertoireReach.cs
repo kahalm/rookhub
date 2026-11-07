@@ -101,21 +101,25 @@ public static class RepertoireReach
             var start = GetOrAdd(g, board);
             if (!g.Starts.Contains(start)) g.Starts.Add(start);
             var mainline = new List<Node> { start };
-            Walk(g, board, section.Moves, start, mainline);
+            Walk(g, board, section.Moves, start, mainline, withVariations: !section.IsChessableLine);
             g.Mainlines.Add(mainline);
         }
         return g;
     }
 
-    private static void Walk(Graph g, ChessBoard board, List<PgnMove> moves, Node from, List<Node>? mainline)
+    /// <param name="withVariations">Klammer-Varianten mitnehmen. Bei Chessable-Linien NICHT (Wunsch 2026-11-07): dort sind sie
+    /// Erklärungen des Autors, trainiert wird nur die Hauptlinie. Sonst stand z. B. im Abweichungs-Trainer „5…Db6 kommt hier“,
+    /// obwohl der Kurs 5…Ld7 trainiert und Db6 nur im Kommentar „der andere Hauptzug wäre …“ nennt.</param>
+    private static void Walk(Graph g, ChessBoard board, List<PgnMove> moves, Node from, List<Node>? mainline, bool withVariations = true)
     {
         int made = 0;
         var cur = from;
         foreach (var move in moves)
         {
             // Varianten sind Alternativen zu DIESEM Zug — sie zweigen in der Stellung davor ab.
-            foreach (var variation in move.Variations)
-                Walk(g, board, variation, cur, null);
+            if (withVariations)
+                foreach (var variation in move.Variations)
+                    Walk(g, board, variation, cur, null);
 
             bool ok;
             try { ok = board.Move(move.San); }

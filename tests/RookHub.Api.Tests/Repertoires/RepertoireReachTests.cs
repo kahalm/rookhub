@@ -220,4 +220,20 @@ public class RepertoireReachTests
     [InlineData("Nf3", "Ng3", false)]
     public void SameSan_IgnoresCheckSigns(string a, string b, bool same) =>
         Assert.Equal(same, RepertoireReach.SameSan(a, b));
+
+    /// <summary>Chessable-Linie (Kopf <c>[ChessableOid]</c>): nur die Hauptlinie ist Repertoire, Klammer-Varianten sind Erklärungen
+    /// des Autors (Fall 2026-11-07: Martinovićs Französisch trainiert 5…Ld7, nennt 5…Db6 nur im Kommentar). Ohne den Kopf bleibt
+    /// eine Variante ein echter Zweig (selbst gebautes Repertoire).</summary>
+    [Fact]
+    public void ChessableLine_OnlyMainlineCounts_OtherPgnKeepsVariations()
+    {
+        const string movetext = "1. e4 e6 2. d4 d5 3. e5 c5 4. c3 Nc6 5. Nf3 Bd7 ({Der andere Hauptzug wäre} 5... Qb6 6. a3) 6. Be2 *";
+        var chessable = Graph('b', $"[Event \"Kurs\"]\n[Black \"Schnellstarter\"]\n[ChessableOid \"20733094\"]\n\n{movetext}\n");
+        var own = Graph('b', $"[Event \"Eigenes\"]\n[Black \"Franzoesisch\"]\n\n{movetext}\n");
+
+        var key = KeyAfter("e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3");
+        Assert.Equal(new[] { "Bd7" }, chessable.Nodes[key].Children.Select(c => c.San));
+        Assert.False(chessable.Nodes.ContainsKey(KeyAfter("e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3", "Qb6")));
+        Assert.Equal(new[] { "Bd7", "Qb6" }, own.Nodes[key].Children.Select(c => c.San).OrderBy(x => x, StringComparer.Ordinal));
+    }
 }
