@@ -119,7 +119,8 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// Farbe gibt es keine Linien (oder gar kein markiertes Repertoire). <see cref="Mine"/> läuft parallel zu den Hauptvarianten.</summary>
     internal sealed record Computed(List<RepertoireInfo> Repertoires, int? Selected, char? Color, List<char> Colors,
         OpponentTrainingLines.Result? Ranked, List<Source> Mine, List<RepertoireRef> Sources, string? Band = null,
-        bool ExplorerIncomplete = false, int ExplorerPending = 0, bool ExplorerRunning = false, int SkippedAlternatives = 0);
+        bool ExplorerIncomplete = false, int ExplorerPending = 0, bool ExplorerRunning = false, int SkippedAlternatives = 0,
+        OpponentTrainingLines.Analysis? Analysis = null);
 
     /// <summary>
     /// Die gemeinsame Rechnung. Quellen: das gewählte Repertoire oder — ohne Wahl — ALLE markierten (Wunsch 2026-10-07: „nicht ein
@@ -152,10 +153,14 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         return computed;
     }
 
-    private async Task<Computed?> ComputeCoreAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
-        string? exclude, Func<Task<int?>>? elo, string? cacheKey)
+    /// <summary>Die Quellen einer Rechnung (Trainingslinien wie Abweichungen): alle markierten Repertoires mit ihren Farben, die Wahl der
+    /// Farbe und die Abschnitte dieser Farbe (ohne ungelernte Chessable-Alternativen) samt Stellungsgraph. <c>null</c> = das verlangte
+    /// Repertoire gehört dem Nutzer nicht / ist nicht markiert; <see cref="Loaded.Color"/> <c>null</c> = keine Abschnitte.</summary>
+    internal sealed record Loaded(List<RepertoireInfo> Infos, List<char> Available, List<RepertoireRef> Refs, char? Color, List<Source> Mine,
+        RepertoireReach.Graph? Graph, int SkippedAlternatives, int RepertoireCount, int SectionCount);
+
+    internal async Task<Loaded?> LoadSourcesAsync(int userId, Query q, string? exclude, CancellationToken ct)
     {
-        var clock = System.Diagnostics.Stopwatch.StartNew();
         var list = await RepertoiresAsync(userId, ct);
         if (q.Repertoire is { } want && list.All(r => r.Id != want)) return null;
 
@@ -170,7 +175,6 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             var colors = ChapterColors(sections.Select(x => x.Parsed), q.ChapterColors.For(rep.Id, q.Repertoire == rep.Id));
             byRep.Add((rep, sections.Select(x => (x, colors.GetValueOrDefault(Chapter(x.Parsed), 'w'))).ToList()));
         }
-        var parseMs = clock.ElapsedMilliseconds;
         var infos = byRep.Select(x => new RepertoireInfo(x.Rep,
             new[] { 'w', 'b' }.Where(c => x.Sections.Any(s => s.Color == c)).ToList())).ToList();
 
@@ -185,13 +189,24 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         char? pick = q.Color is "w" or "b" && counts[q.Color[0]] > 0 ? q.Color[0]
             : available.Count == 0 ? null : available.OrderByDescending(c => counts[c]).ThenBy(c => c == 'w' ? 0 : 1).First();
         var refs = sources.Select(x => x.Rep).ToList();
-        if (pick is not { } color) return new Computed(infos, q.Repertoire, null, available, null, [], refs);
+        var sectionCount = byRep.Sum(x => x.Sections.Count);
+        if (pick is not { } color) return new Loaded(infos, available, refs, null, [], null, 0, list.Count, sectionCount);
 
         var mine = sources.SelectMany(x => x.Sections.Where(s => s.Color == color).Select(s => new Source(x.Rep, s.Section))).ToList();
         // Ungelernte Chessable-Alternativen gar nicht erst (Wunsch 2026-11-07); sie zählen auch nicht gegen die 50
         var (kept, skippedAlternatives) = await WithoutUnlearnedAlternativesAsync(userId, mine, ct);
-        mine = kept;
-        var graph = RepertoireReach.Build(mine.Select(x => x.Section.Parsed), color);
+        var graph = RepertoireReach.Build(kept.Select(x => x.Section.Parsed), color);
+        return new Loaded(infos, available, refs, color, kept, graph, skippedAlternatives, list.Count, sectionCount);
+    }
+
+    private async Task<Computed?> ComputeCoreAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
+        string? exclude, Func<Task<int?>>? elo, string? cacheKey)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        if (await LoadSourcesAsync(userId, q, exclude, ct) is not { } loaded) return null;
+        var parseMs = clock.ElapsedMilliseconds;
+        var (infos, available, refs, mine, skippedAlternatives) = (loaded.Infos, loaded.Available, loaded.Refs, loaded.Mine, loaded.SkippedAlternatives);
+        if (loaded.Color is not { } color || loaded.Graph is not { } graph) return new Computed(infos, q.Repertoire, null, available, null, [], refs);
         var chapters = mine.Select(x => Chapter(x.Section.Parsed)).ToList();
         var t0 = clock.ElapsedMilliseconds;
         var gameList = await games();
@@ -200,7 +215,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         var analysis = OpponentTrainingLines.Analyze(graph, gameList);
         var countMs = clock.ElapsedMilliseconds - t0;
         if (explorer is null) return new Computed(infos, q.Repertoire, color, available, OpponentTrainingLines.Rank(graph, chapters, analysis, null), mine, refs,
-            SkippedAlternatives: skippedAlternatives);
+            SkippedAlternatives: skippedAlternatives, Analysis: analysis);
 
         // Lücken schätzen: nur die Gegner-Stellungen, für die seine Partien nicht reichen, je einmal (Wunsch 2026-10-07).
         // Ohne lokalen Explorer keine Schätzung: seine Züge zählen weiter, Lücken bleiben ohne Quelle (Auffüllregel), nichts offen.
@@ -229,7 +244,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             + "Partien laden {Games} ms ({GameCount}), Zählen {Count} ms, Explorer {Explorer} ms ({Positions} Stellungen, {Hits} Treffer, "
             + "aus Speicher {FromMemory}, aus DB {FromDb}, neu angefragt {Asked}, {Pending} offen, davon {Capped} über dem Deckel, Budget {Budget} ms "
             + "erreicht: {BudgetHit}), Reihen {Rank} ms, {Lines} Linien, Anfrage abgebrochen: {Aborted}",
-            clock.ElapsedMilliseconds, parseMs, list.Count, byRep.Sum(x => x.Sections.Count), gamesMs, gameList.Count, countMs,
+            clock.ElapsedMilliseconds, parseMs, loaded.RepertoireCount, loaded.SectionCount, gamesMs, gameList.Count, countMs,
             explorerMs, need.Count, found?.Stats.Count ?? 0, found?.FromMemory ?? 0, found?.FromDb ?? 0, found?.Asked ?? 0, pending.Count, found?.Capped ?? 0,
             (long)budget.TotalMilliseconds, pending.Count > (found?.Capped ?? 0), rankMs, ranked.Lines.Count, ct.IsCancellationRequested);
         // Offen geblieben: im Hintergrund fertig rechnen lassen (höchstens einmal je Nutzer gleichzeitig)
@@ -238,7 +253,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             running = StartContinuation(userId, cacheKey, ordered, opponentElo, graph, chapters, analysis, infos, q.Repertoire, color, available,
                 mine, refs, skippedAlternatives);
         return new Computed(infos, q.Repertoire, color, available, ranked, mine, refs,
-            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count, running, skippedAlternatives);
+            explorer.Available ? TrainingExplorer.Band(opponentElo) : null, pending.Count > 0, pending.Count, running, skippedAlternatives, analysis);
     }
 
     /// <summary>Startet die Fortsetzung: die restlichen Stellungen in Priorisierungs-Reihenfolge (<see cref="TrainingLinesContinuation.Parallelism"/>
@@ -259,7 +274,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             var estimate = new OpponentTrainingLines.Estimate(n => final.Stats.GetValueOrDefault(n.Key), minOwn, final.Pending);
             var ranked = OpponentTrainingLines.Rank(graph, chapters, analysis, estimate);
             var computed = new Computed(infos, selected, color, available, ranked, mine, refs, band, final.Pending.Count > 0, final.Pending.Count,
-                SkippedAlternatives: skippedAlternatives);
+                SkippedAlternatives: skippedAlternatives, Analysis: analysis);
             if (!computed.ExplorerIncomplete) sp.GetService<IMemoryCache>()?.Set(cacheKey, computed, CacheFor);
             logger?.LogInformation("Trainingslinien: Fortsetzung {Key} — {Hits} Treffer, {Pending} offen", cacheKey, final.Stats.Count,
                 final.Pending.Count);
@@ -356,8 +371,11 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     /// <paramref name="games"/> wird nur gerufen, wenn es überhaupt Linien gibt.
     /// </summary>
     /// <param name="elo">Elo des Gegners für das Wertungsband der Schätzung (ohne: <see cref="TrainingExplorer.DefaultElo"/>).</param>
+    /// <param name="positions">Zusätzlich <c>positions</c>: die Partien des Gegners je Stellung des Repertoires (Schlüssel wie
+    /// <see cref="RepertoireReach.Key"/>; <c>n</c> erreicht, <c>y</c> jüngstes Jahr, <c>m</c> SAN → Partien seiner Züge) — für die Anzeige
+    /// „in seinen Partien n× erreicht / ab hier keine Partien mehr" im Trainer (Wunsch 2026-11-07), einmal je Sitzung.</param>
     public async Task<JsonObject?> LinesAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
-        Func<Task<int?>>? elo = null, string? scope = null)
+        Func<Task<int?>>? elo = null, string? scope = null, bool positions = false)
     {
         if (await ComputeAsync(userId, q, games, ct, elo: elo, scope: scope) is not { } c) return null;
         var o = new JsonObject
@@ -413,6 +431,88 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             ["chessableUrl"] = chessable[l.Index].Oid is { } oid ? ChessableLineHistory.VariationUrl(oid) : null,
         }).ToArray());
         o["more"] = Math.Max(0, lines.Count - n);
+        if (positions) o["positions"] = PositionsJson(c.Analysis);
+        return o;
+    }
+
+    /// <summary>Partien des Gegners je Repertoire-Stellung als kompaktes JSON (nur erreichte Stellungen; die Seite am Zug steht im Schlüssel,
+    /// <c>m</c> trägt seine Züge nur, wo er am Zug war — die Züge seiner Gegner braucht die Anzeige nicht).</summary>
+    internal static JsonObject PositionsJson(OpponentTrainingLines.Analysis? analysis)
+    {
+        var o = new JsonObject();
+        if (analysis is null) return o;
+        foreach (var (key, st) in analysis.Stats.OrderBy(x => x.Key, StringComparer.Ordinal))
+        {
+            if (st.Reached <= 0) continue;
+            var moves = new JsonObject();
+            foreach (var (next, count) in st.Next.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal))
+                if (st.NextSan.TryGetValue(next, out var san)) moves[san] = count;
+            o[key] = new JsonObject { ["n"] = st.Reached, ["y"] = st.LastYear, ["m"] = moves };
+        }
+        return o;
+    }
+
+    // ── Abweichungen (Wunsch 2026-11-07: „trainiere abweichungen") ───────────────────────────────
+
+    /// <summary>
+    /// Abweichungen des Gegners vom eigenen Repertoire (<see cref="OpponentDeviations"/>) — dieselben Quellen, Farbwahl und Partien wie
+    /// <see cref="LinesAsync"/>, ohne Lichess-Schätzung (eine Abweichung stammt immer aus seinen Partien). Je Abweichung Pfad, Zug,
+    /// Partien, erreicht, jüngstes Jahr und die Repertoire-Züge an der Stellung; dazu <c>positions</c> (Pfade + Fortsetzungsbaum, Form wie
+    /// bei den Trainingslinien, <c>m</c> nur seine Züge) und <c>elo</c> (für die Maia-Stufe: jüngste Elo bzw. Meldeliste, sonst
+    /// <see cref="TrainingExplorer.DefaultElo"/>). <see cref="CacheFor"/> lang gehalten wie die Trainingslinien. <c>null</c> = fremdes Repertoire.
+    /// </summary>
+    public async Task<JsonObject?> DeviationsAsync(int userId, Query q, Func<Task<List<OpponentTrainingLines.Game>>> games, CancellationToken ct,
+        Func<Task<int?>>? elo = null, string? scope = null)
+    {
+        string? key = null;
+        if (scope is not null && cache is not null)
+        {
+            var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.UseForExtension)
+                .OrderBy(r => r.Id).Select(r => new { r.Id, r.UpdatedAt }).ToListAsync(ct);
+            var overrides = string.Join(";", q.ChapterColors.Flat.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => x.Key + "=" + x.Value))
+                + "|" + string.Join(";", q.ChapterColors.PerRepertoire.OrderBy(x => x.Key).Select(x => x.Key + ":" + string.Join(",",
+                    x.Value.OrderBy(y => y.Key, StringComparer.Ordinal).Select(y => y.Key + "=" + y.Value))));
+            key = $"deviations:{userId}:{scope}:{q.Repertoire}:{q.Color}:{q.Take}:{overrides}:"
+                  + string.Join(",", stamps.Select(x => $"{x.Id}@{x.UpdatedAt.Ticks}"));
+            if (cache.TryGetValue(key, out JsonObject? hit) && hit is not null) return (JsonObject)hit.DeepClone();
+        }
+        if (await LoadSourcesAsync(userId, q, null, ct) is not { } loaded) return null;
+        var o = new JsonObject
+        {
+            ["repertoires"] = new JsonArray(loaded.Infos.Select(r => (JsonNode)new JsonObject
+            {
+                ["id"] = r.Rep.Id, ["name"] = r.Rep.Name,
+                ["colors"] = new JsonArray(r.Colors.Select(x => (JsonNode)x.ToString()).ToArray()),
+            }).ToArray()),
+            ["repertoire"] = q.Repertoire,
+            ["color"] = loaded.Color?.ToString(),
+            ["colors"] = new JsonArray(loaded.Available.Select(x => (JsonNode)x.ToString()).ToArray()),
+        };
+        var result = loaded.Graph is { } graph ? OpponentDeviations.Find(graph, await games(), Math.Clamp(q.Take ?? OpponentDeviations.MaxDeviations, 1,
+            OpponentDeviations.MaxDeviations)) : null;
+        o["games"] = result?.Games ?? 0;
+        o["elo"] = (elo is null ? null : await elo()) ?? TrainingExplorer.DefaultElo;
+        o["total"] = result?.Total ?? 0;
+        o["deviations"] = new JsonArray((result?.Deviations ?? []).Select(d => (JsonNode)new JsonObject
+        {
+            ["path"] = new JsonArray(d.Path.Select(x => (JsonNode)x).ToArray()),
+            ["fen"] = d.Fen,
+            ["san"] = d.San,
+            ["games"] = d.Games,
+            ["reached"] = d.Reached,
+            ["lastYear"] = d.LastYear,
+            ["repertoire"] = new JsonArray(d.Repertoire.Select(x => (JsonNode)x).ToArray()),
+        }).ToArray());
+        o["more"] = Math.Max(0, (result?.Total ?? 0) - (result?.Deviations.Count ?? 0));
+        var pos = new JsonObject();
+        foreach (var (k, st) in (result?.Positions ?? new()).OrderBy(x => x.Key, StringComparer.Ordinal))
+        {
+            var moves = new JsonObject();
+            foreach (var (san, count) in st.Moves.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal)) moves[san] = count;
+            pos[k] = new JsonObject { ["n"] = st.Reached, ["y"] = st.LastYear, ["m"] = moves };
+        }
+        o["positions"] = pos;
+        if (key is not null) cache!.Set(key, (JsonObject)o.DeepClone(), CacheFor);
         return o;
     }
 

@@ -208,3 +208,20 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   — er hat Weiß, ich spiele Schwarz — aus …") und nennt nur die Repertoires, aus denen übernommene Linien stammen
   (vorher „gegen Hess, Max (Weiß)" = meine Farbe, dazu alle Quellen). Oberfläche: Haupt-`src/frontend/CLAUDE.md`
   „Spielerkarte geteilt + Spielervorbereitung".
+- Abweichungen (0.891.0, Wunsch 07.11.: „in welchem zug er einen zug macht den ich nicht kenne … trainiere abweichungen"):
+  `GET /api/prep/player/{id}/deviations` (prep.view) und `GET /api/league/player/{fide}/deviations` (`LeagueTrainingController`,
+  league.view, kein Teilen-Link), Parameter wie `training-lines` (`take` höchstens 50). Quellen/Farbe/Kapitelfarben wie die
+  Trainingslinien (`TrainingLinesService.LoadSourcesAsync`, gemeinsam mit `ComputeCoreAsync`), Rechnung `OpponentDeviations.Find`:
+  Partien des Gegners mit der anderen Farbe als Präfixbaum (40 Halbzüge) durch EIN Brett; Abweichung = Repertoire-Stellung
+  (`RepertoireReach.Key`), Gegner am Zug, sein Zug führt in eine Stellung, die das Repertoire nicht kennt (Zugumstellung zurück
+  ins Repertoire = keine). Gleiche Stellung + gleicher Zug über verschiedene Wege = eine Abweichung (Partien addiert, Pfad = der
+  häufigste Weg). Reihung: Partien ↓, jüngstes Jahr ↓, kürzerer Pfad (mit seinen eigenen Zahlen ist „Häufigkeit × Wahrscheinlichkeit
+  des Pfads" genau die Partienzahl; keine Lichess-Schätzung — eine Abweichung stammt immer aus seinen Partien). Antwort
+  `{ repertoires, repertoire, color, colors, games, elo, total, deviations[{ path, fen, san, games, reached, lastYear,
+  repertoire }], more, positions }`; `positions` = Schlüssel → `{ n, y, m: { SAN: Partien } }` für die Pfad-Stellungen und den
+  Fortsetzungsbaum (bis `TailPlies` = 16 Halbzüge nach der Abweichung; `m` nur in Stellungen, in denen ER am Zug war — für meine
+  Antworten gibt es keine Vorgabe, der Trainer urteilt per Engine und schlägt die Stellung nach meiner Antwort nach). `elo` für die
+  Maia-Stufe (Prep jüngste Elo/`MaxElo`, Liga Meldeliste, sonst 1800). 15 min im `IMemoryCache` wie die Trainingslinien.
+- Partien je Stellung für den Trainer (0.891.0, Wunsch 07.11.: „rechts eine meldung ab wann ich von gespielten partien abgewichen
+  bin"): `training-lines?positions=true` liefert zusätzlich `positions` (Form wie oben, aus `OpponentTrainingLines.Analysis`: nur
+  Repertoire-Stellungen, die er erreicht hat, `m` = seine Züge über `NextSan`) — einmal je Sitzung, nicht je Zug.

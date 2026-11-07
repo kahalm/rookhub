@@ -127,10 +127,29 @@ public class PrepController : BaseApiController
     /// (<c>repertoire</c>, nur eigene mit „Für Extension und Vorbereitung verwenden"; fremd → 404) von wahrscheinlich nach unwahrscheinlich,
     /// gemessen an den Partien der Karte (Grenze/Zwilling wie dort) — <c>source</c> Vorgabe <c>both</c>, sonst Filter wie das Profil
     /// (<c>unsure=true</c> nur mit <c>prep.manage</c>). <c>color</c> w/b, <c>chapterColors</c> = eigene Farb-Festlegungen (JSON),
-    /// <c>take</c> = so viele Linien.</summary>
+    /// <c>take</c> = so viele Linien, <c>positions=true</c> = dazu die Partien je Stellung (Trainer-Anzeige).</summary>
     [HttpGet("player/{id:int}/training-lines")]
     [HasPermission(Permissions.PrepView)]
     public async Task<IActionResult> TrainingLines(int id, [FromQuery] int? repertoire, [FromQuery] string? color,
+        [FromQuery] string? chapterColors, [FromQuery] int? take, [FromQuery] string? source, [FromQuery] string? speeds,
+        [FromQuery] int? years, [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin, [FromQuery] bool? positions,
+        [FromServices] PrepCardService cards, [FromServices] TrainingLinesService lines, CancellationToken ct)
+    {
+        if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
+        var filter = await FilterAsync(source ?? "both", speeds, years, unsure);
+        var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
+        var r = await lines.LinesAsync(GetUserId(), q, () => cards.TrainingGamesAsync(l, filter, ct), ct,
+            () => lines.PrepEloAsync(l.Player.Id, l.Player.MaxElo, ct), TrainingLinesService.Scope($"prep:{id}:{all == true}:{twin == true}", filter),
+            positions == true);
+        return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
+    }
+
+    /// <summary>Abweichungen dieses Spielers vom eigenen Repertoire (<see cref="TrainingLinesService.DeviationsAsync"/>, Wunsch 2026-11-07
+    /// „trainiere abweichungen"): Stellungen des Repertoires, in denen er einen Zug gespielt hat, den das Repertoire nicht kennt, mit
+    /// Pfad, Häufigkeit und seinem Fortsetzungsbaum. Parameter und Rechte wie <c>training-lines</c>; <c>take</c> höchstens 50.</summary>
+    [HttpGet("player/{id:int}/deviations")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Deviations(int id, [FromQuery] int? repertoire, [FromQuery] string? color,
         [FromQuery] string? chapterColors, [FromQuery] int? take, [FromQuery] string? source, [FromQuery] string? speeds,
         [FromQuery] int? years, [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin,
         [FromServices] PrepCardService cards, [FromServices] TrainingLinesService lines, CancellationToken ct)
@@ -138,7 +157,7 @@ public class PrepController : BaseApiController
         if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
         var filter = await FilterAsync(source ?? "both", speeds, years, unsure);
         var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
-        var r = await lines.LinesAsync(GetUserId(), q, () => cards.TrainingGamesAsync(l, filter, ct), ct,
+        var r = await lines.DeviationsAsync(GetUserId(), q, () => cards.TrainingGamesAsync(l, filter, ct), ct,
             () => lines.PrepEloAsync(l.Player.Id, l.Player.MaxElo, ct), TrainingLinesService.Scope($"prep:{id}:{all == true}:{twin == true}", filter));
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
     }

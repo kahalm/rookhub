@@ -24,11 +24,26 @@ public class LeagueTrainingController : BaseApiController
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> TrainingLines(string fide, [FromQuery] int? repertoire, [FromQuery] string? color,
         [FromQuery] string? chapterColors, [FromQuery] int? take, [FromQuery] string? source, [FromQuery] string? speeds,
-        [FromQuery] int? years, [FromQuery] bool? unsure, [FromServices] TrainingLinesService lines, CancellationToken ct)
+        [FromQuery] int? years, [FromQuery] bool? unsure, [FromQuery] bool? positions, [FromServices] TrainingLinesService lines, CancellationToken ct)
     {
         var filter = LeagueProfileStore.TreeFilter.Parse(source ?? "both", speeds, years, onlySure: unsure != true);
         var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
         var r = await lines.LinesAsync(GetUserId(), q, async () => (await lines.LeagueGamesAsync(fide, filter, ct)).Games, ct,
+            () => lines.LeagueEloAsync(fide, ct), TrainingLinesService.Scope($"league:{fide}", filter), positions == true);
+        return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
+    }
+
+    /// <summary>Wie <c>/api/prep/player/{id}/deviations</c>, für einen Ligaspieler (Partien wie <c>training-lines</c>). Nur angemeldet,
+    /// keine Fassung über einen Teilen-Link.</summary>
+    [HttpGet("player/{fide}/deviations")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Deviations(string fide, [FromQuery] int? repertoire, [FromQuery] string? color,
+        [FromQuery] string? chapterColors, [FromQuery] int? take, [FromQuery] string? source, [FromQuery] string? speeds,
+        [FromQuery] int? years, [FromQuery] bool? unsure, [FromServices] TrainingLinesService lines, CancellationToken ct)
+    {
+        var filter = LeagueProfileStore.TreeFilter.Parse(source ?? "both", speeds, years, onlySure: unsure != true);
+        var q = new TrainingLinesService.Query(repertoire, color, TrainingLinesService.ParseOverrides(chapterColors), take);
+        var r = await lines.DeviationsAsync(GetUserId(), q, async () => (await lines.LeagueGamesAsync(fide, filter, ct)).Games, ct,
             () => lines.LeagueEloAsync(fide, ct), TrainingLinesService.Scope($"league:{fide}", filter));
         return r is null ? NotFound(new { reason = "repertoire" }) : Ok(r);
     }
