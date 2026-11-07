@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.893.6", date: "2026-11-07", changes: [
+    { en: "Sparring against Maia with “Keep evaluation bar”: every move now gets its evaluation in the move list. Before, Maia replied after half a second, before the engine had a reliable value, so your own moves stayed without one. Maia now waits for the evaluation (at most 4 seconds).",
+      de: "Sparring gegen Maia mit „Bewertungsleiste anlassen“: Jeder Zug bekommt jetzt seine Bewertung in der Zugliste. Vorher antwortete Maia nach einer halben Sekunde, bevor die Engine einen belastbaren Wert hatte, und die eigenen Züge blieben ohne Bewertung. Maia wartet jetzt auf die Bewertung (höchstens 4 Sekunden)." },
+  ] },
   { version: "0.893.5", date: "2026-11-07", changes: [
     { en: "Train deviations: a piece moved by drag and drop no longer jumps back to its start square and slides over again. The page handed the board a new list of target squares on every check, and the board then rewrote the old position over the piece just dropped.",
       de: "Abweichungen trainieren: Eine per Drag & Drop gezogene Figur springt nicht mehr aufs Ausgangsfeld zurück und gleitet erneut hin. Die Seite gab dem Brett bei jeder Prüfung eine neue Liste der Zielfelder, und das Brett schrieb daraufhin die alte Stellung über die gerade abgelegte Figur." },

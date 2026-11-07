@@ -65,6 +65,11 @@ wirkt sofort (`refresh()`). Regeln, die nicht kippen dürfen:
   Linienwechsel, `restartSearches`), nie die Vergleichs-Engine; Linien, Pfeile und Kandidaten bleiben LEER — sie verrieten den
   besten Zug. Leiste und `node.evalText` nur mit „Bewertungsleiste anlassen"; ohne sie ist die Leiste neutral. Die Vorlage
   bleibt: der Engine-Schalter ist gesperrt, „Engine pausiert während des Sparrings" stimmt für das, was man SIEHT.
+* **Jeder Zug bekommt seine Bewertung** (0.893.6): `node.evalText` wird nur geschrieben, solange die Stellung auf dem Brett
+  steht. Mit „Bewertungsleiste anlassen" (ohne Zug-Prüfung) wartet Maias Antwort deshalb auf eine belastbare Bewertung der
+  Stellung nach dem eigenen Zug (`awaitSettledEval`: ab `EVAL_SETTLE_DEPTH`, Matt oder Suchende, höchstens `maiaCheckTimeoutMs`
+  4 s) — vorher zog sie nach 0,5 s, und eigene Züge blieben in der Zugliste ohne Wert. Maias Züge bekommen ihren Wert, während
+  der Nutzer überlegt.
 * **Tiefen-Spur** (`evalTrack`): je Stellung die Bewertung der besten Linie je Tiefe (Weiß-Sicht), bei `refresh()` für die neue
   Stellung geleert. Ein EIGENER Zug am Brett (`onMove`, nicht Explorer/Repertoire, nie einer für Maias Seite) nimmt die Spur der
   Stellung davor mit (`pendingBefore`).

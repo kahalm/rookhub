@@ -88,7 +88,12 @@ export class MaiaSparring {
     fen: string; mover: Color; before: EvalPoint[]; epoch: number;
     resolve: (v: BadMoveVerdict | null) => void; timer: ReturnType<typeof setTimeout>;
   } | null = null;
-  /** Spätestens so lange wartet Maias Antwort auf das Urteil (Specs: klein). */
+  /** „Bewertungsleiste anlassen" ohne Zug-Prüfung: Maias Antwort wartet, bis die Stellung eine belastbare Bewertung hat
+   *  (sonst zöge sie nach 0,5 s, bevor die stille Engine Tiefe EVAL_SETTLE_DEPTH erreicht — der Zug bliebe ohne Bewertung). */
+  private pendingSettle: {
+    fen: string; epoch: number; resolve: () => void; timer: ReturnType<typeof setTimeout>;
+  } | null = null;
+  /** Spätestens so lange wartet Maias Antwort auf das Urteil bzw. die Bewertung (Specs: klein). */
   maiaCheckTimeoutMs = 4000;
 
   constructor(private host: MaiaSparringHost) {
@@ -229,7 +234,12 @@ export class MaiaSparring {
     const check = before && this.warnBadMoves && this.sparring
       ? this.awaitMoveCheck(node.fen, this.sparring.userColor, before.points, epoch)
       : Promise.resolve(null);
-    Promise.all([this.host.maia.chooseMove(node.fen, this.maiaElo), pause, check]).then(
+    // „Bewertungsleiste anlassen": jeder Zug bekommt seine Bewertung in der Zugliste — sie wird nur geschrieben, solange
+    // die Stellung auf dem Brett steht, also wartet Maia auf sie (die Zug-Prüfung oben wartet ohnehin tiefer).
+    const settle = this.keepEvalBar && this.sparring && !(before && this.warnBadMoves)
+      ? this.awaitSettledEval(node.fen, epoch)
+      : Promise.resolve();
+    Promise.all([this.host.maia.chooseMove(node.fen, this.maiaElo), pause, check, settle]).then(
       ([uci, , verdict]) => {
         if (!this.maiaStillWanted(epoch, node)) return;
         this.maiaThinking = false;
@@ -339,8 +349,43 @@ export class MaiaSparring {
     });
   }
 
-  /** Aus onEngineUpdate: ist die Prüfung dieser Stellung so weit? */
+  /** Warten, bis die Stellung `fen` eine belastbare Bewertung hat (ab EVAL_SETTLE_DEPTH, Matt, oder die Suche endet) —
+   *  spätestens nach `maiaCheckTimeoutMs`. Löst nie mit Fehler auf. */
+  private awaitSettledEval(fen: string, epoch: number): Promise<void> {
+    this.cancelSettle();
+    return new Promise(resolve => {
+      const timer = setTimeout(() => this.finishSettle(), this.maiaCheckTimeoutMs);
+      this.pendingSettle = { fen, epoch, resolve, timer };
+      this.serveSettle(fen);
+    });
+  }
+
+  private serveSettle(fen: string): void {
+    const settle = this.pendingSettle;
+    if (!settle || settle.fen !== fen) return;
+    const deepest = this.deepestPoint(fen);
+    if (!deepest) return;
+    const mate = this.evalTrack.points.some(p => p.scoreType === 'mate');
+    if (deepest.depth >= EVAL_SETTLE_DEPTH || mate || !this.host.running()) this.finishSettle();
+  }
+
+  private finishSettle(): void {
+    const settle = this.pendingSettle;
+    if (!settle) return;
+    clearTimeout(settle.timer);
+    this.pendingSettle = null;
+    settle.resolve();
+  }
+
+  /** Ein offenes Warten auf die Bewertung beenden — nur das eines bestimmten Aufrufs, wenn `epoch` angegeben ist. */
+  private cancelSettle(epoch?: number): void {
+    if (!this.pendingSettle || (epoch !== undefined && this.pendingSettle.epoch !== epoch)) return;
+    this.finishSettle();
+  }
+
+  /** Aus onEngineUpdate: ist die Prüfung (bzw. die Bewertung für die Leiste) dieser Stellung so weit? */
   serveMoveCheck(fen: string): void {
+    this.serveSettle(fen);
     const check = this.pendingCheck;
     if (!check || check.fen !== fen) return;
     const after = this.deepestPoint(fen);
@@ -359,6 +404,7 @@ export class MaiaSparring {
   /** Eine offene Prüfung ohne Urteil beenden (Navigation, Abbruch, Ende) — nur die eines bestimmten Aufrufs, wenn
    *  `epoch` angegeben ist. */
   private cancelMoveCheck(epoch?: number): void {
+    this.cancelSettle(epoch);
     const check = this.pendingCheck;
     if (!check || (epoch !== undefined && check.epoch !== epoch)) return;
     clearTimeout(check.timer);

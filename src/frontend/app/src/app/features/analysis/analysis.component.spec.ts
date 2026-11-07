@@ -1709,17 +1709,48 @@ describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anla
     expect(quietOutput(c)).toEqual(NOTHING);      // keine Linien, Pfeile, Kandidaten
 
     c.onMove({ orig: 'e2', dest: 'e4' });
+    const e4 = c.currentNode;
     expect(c.__engine.analyze).toHaveBeenCalledWith(AFTER_E4);
     expect(c.evalText).toBe('+0.35');             // die Leiste hält ihren Wert bis zur nächsten belastbaren Tiefe
+    // Maia hat ihren Zug schneller als die Engine ihre Tiefe — sie wartet auf die Bewertung des eigenen Zugs.
+    c.spar.maiaCheckTimeoutMs = 60_000;
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.currentNode).toBe(e4);
+    emit(c, 6, 30);                               // noch zu flach
+    await flush();
+    expect(c.currentNode).toBe(e4);
     emit(c, 12, 30);
     expect(c.evalText).toBe('+0.30');
-    expect(c.currentNode.evalText).toBe('+0.30');
+    expect(e4.evalText).toBe('+0.30');            // der eigene Zug trägt seine Bewertung in der Zugliste
     expect(quietOutput(c)).toEqual(NOTHING);
-    // Ohne „Schlechte Züge melden" wartet Maia auf nichts.
-    c.__maia.calls[0].resolve('e7e5');
     await flush();
     expect(c.currentNode.san).toBe('e5');
     expect(c.spar.sparringWarning).toBeNull();
+    // Maias Zug bekommt seine Bewertung, während der Nutzer überlegt.
+    emit(c, 12, 25);
+    expect(c.currentNode.evalText).toBe('+0.25');
+    c.ngOnDestroy();
+  });
+
+  it('„Bewertungsleiste anlassen": Maia wartet höchstens maiaCheckTimeoutMs; endet die Suche flach, zieht sie sofort', async () => {
+    const c = sparring({ bar: true });
+    c.spar.maiaCheckTimeoutMs = 20;
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.currentNode.san).toBe('e4');
+    await wait(40);                               // keine Engine-Zeile: nach dem Deckel zieht sie trotzdem
+    expect(c.currentNode.san).toBe('e5');
+
+    c.spar.maiaCheckTimeoutMs = 60_000;
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    const nf3 = c.currentNode;
+    c.__maia.calls[1].resolve('b8c6');
+    emit(c, 8, 20, { running: false });           // Suche zu Ende (z. B. Tiefe 8 eingestellt)
+    await flush();
+    expect(nf3.evalText).toBe('+0.20');
+    expect(c.currentNode.san).toBe('Nc6');
     c.ngOnDestroy();
   });
 
