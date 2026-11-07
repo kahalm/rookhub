@@ -2948,6 +2948,14 @@
     "pauseLineTip": "Változat szüneteltetése (P billentyű): nem jön többé, amíg a változatlistában nem folytatod — értékelés nélkül, a már elkövetett hiba így is számít.",
     "linePaused": "Változat szüneteltetve — a változatlistában folytathatod",
     "pausedNote": "Ez a változat szünetel — csak azért jelenik meg, mert kiválasztottad.",
+    "reviewNav": "Lépkedés a változatban",
+    "reviewStart": "Az elejére",
+    "reviewEnd": "A záróállásra",
+    "reviewEngine": "Motor",
+    "reviewEngineTip": "Motor be/ki (mint az elemzőtáblán) — ez az eszköz megjegyzi",
+    "reviewEngineOffline": "Offline nincs motor — a lépkedés így is működik",
+    "openInAnalysis": "Megnyitás az elemzőtáblán",
+    "reviewKeys": "← → lépkedés a változatban, Home/End ugrás; szóköz/Enter = következő változat",
     "openOnChessable": "A változat megnyitása a Chessable-ön"
   },
   "srConfig": {

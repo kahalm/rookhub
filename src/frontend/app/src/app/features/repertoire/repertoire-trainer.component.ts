@@ -41,6 +41,8 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import type { DrawShape } from 'chessground/draw';
+import { AnalysisEngineService } from '../analysis/analysis-engine.service';
+import { TrainerReviewEngine, readReviewEngineOn, saveReviewEngineOn } from './repertoire-trainer-review-engine';
 import { ChessableMisses, MissInfo, chessableOid, chessableUrl, missAt } from './repertoire-trainer-misses.util';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
@@ -105,7 +107,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   });
   /** Das Abspielen der Linien (Phasen, Timer, Zugurteil). */
   readonly session = new TrainerSession({
-    changed: () => this.cdr.markForCheck(),
+    changed: () => { this.syncReviewEngine(); this.cdr.markForCheck(); },
     colorOf: line => this.colorOf(line),
     lineLearned: key => this.sr.promoteLearned(key),
     lineReviewed: req => this.sr.review(req, dueAt => this.session.showNextRepeat(dueAt)),
@@ -145,9 +147,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   get color(): TrainColor { return this.s.color; }
   get queue(): ParsedGame[] { return this.s.queue; }
   get qIndex(): number { return this.s.qIndex; }
-  get fen(): string { return this.s.fen; }
+  /** Brett: beim Durchklicken der fertigen Linie deren Stellung (Nachbetrachtung, 0.890.0). */
+  get fen(): string { return this.s.viewFen; }
   get dests(): Map<Key, Key[]> { return this.s.dests; }
-  get lastMove(): [Key, Key] | undefined { return this.s.lastMove; }
+  get lastMove(): [Key, Key] | undefined { return this.s.viewLastMove; }
   get correct(): number { return this.s.correct; }
   get wrong(): number { return this.s.wrong; }
   get currentStreak(): number { return this.s.currentStreak; }
@@ -222,7 +225,54 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private confirm: ConfirmService,
     /** Nur für die Reihenfolge nach einem Gegner (`?opponent=`); optional, damit die Specs ohne HTTP bauen. */
     @Optional() private http: HttpClient | null = null,
+    /** Engine der Nachbetrachtung (dieselbe wie im Analysebrett); optional wie `http`. */
+    @Optional() private analysisEngine: AnalysisEngineService | null = null,
   ) {}
+
+  // ===== Nachbetrachtung (0.890.0): fertige Linie durchklicken, Engine zuschalten =====
+
+  /** Schalter „Engine" der Nachbetrachtung (gemerkt je Gerät, Vorgabe aus). */
+  reviewEngineOn = readReviewEngineOn();
+  private readonly reviewEngine = new TrainerReviewEngine(() => this.analysisEngine, () => this.cdr.markForCheck());
+
+  get canReview(): boolean { return this.s.canReview; }
+  get reviewPly(): number { return this.s.reviewPly; }
+  /** Halbzüge der fertigen Linie (Schluss der Nachbetrachtung). */
+  get reviewMax(): number { return this.s.currentPly; }
+  get reviewComment(): string { return this.s.reviewComment; }
+  /** Offline (und ohne Engine-Dienst) gibt es keine Engine — Durchklicken geht trotzdem. */
+  get reviewEngineAvailable(): boolean { return !this.offlineSession && !!this.analysisEngine; }
+  get reviewEngineRunning(): boolean { return this.reviewEngine.active; }
+  get reviewEvalText(): string { return this.reviewEngine.evalText; }
+  get reviewWhiteHeight(): number { return this.reviewEngine.whiteHeight; }
+  get reviewBestLine(): string { return this.reviewEngine.bestLine; }
+  get reviewDepth(): number { return this.reviewEngine.depth; }
+
+  reviewTo(ply: number): void { this.s.reviewTo(ply); }
+  reviewStep(delta: number): void { this.s.reviewStep(delta); }
+
+  toggleReviewEngine(): void {
+    if (!this.reviewEngineAvailable) return;
+    this.reviewEngineOn = !this.reviewEngineOn;
+    saveReviewEngineOn(this.reviewEngineOn);
+    this.syncReviewEngine();
+    this.cdr.markForCheck();
+  }
+
+  /** Engine nur im „Linie fertig"-Kasten mit eingeschaltetem Schalter; sonst aus (bei jedem Zustandswechsel abgeglichen). */
+  private syncReviewEngine(): void {
+    const want = this.s.canReview && this.reviewEngineOn && this.reviewEngineAvailable && !this.destroyed;
+    this.reviewEngine.sync(want ? this.s.viewFen : null);
+  }
+
+  /** Die gespielte Linie im Analysebrett (neuer Tab): Ausgangsstellung + Züge als UCI, Brett aus Sicht der Trainingsfarbe. */
+  get analysisLink(): string | null {
+    const line = this.s.currentLine;
+    if (!line) return null;
+    const moves = line.moves.slice(0, this.s.currentPly).map(m => m.from + m.to + (m.promotion ?? ''));
+    const q = new URLSearchParams({ fen: line.fens[0], moves: moves.join(' '), orientation: this.userColorName });
+    return '/analysis?' + q.toString();
+  }
 
   ngOnInit(): void {
     this.repertoireId = Number(this.route.snapshot.paramMap.get('id')) || 0;
@@ -305,6 +355,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.destroyed = true;
     this.loadSub?.unsubscribe();
     this.s.clearTimers(); this.freq.dispose(); this.opponentSub?.unsubscribe();
+    this.reviewEngine.dispose();
   }
 
   /** Die Trainingslinien gegen den Gegner holen (alle, nicht nur die ersten 50). <paramref name="wait"/>: bis dahin „Lädt";
@@ -565,10 +616,19 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Klick/Tippen aufs Brett = „Weiter" (Linie fertig, Kommentar, Vorzeigen mit Kommentar, Feedback überspringen). */
   onPlayClick(): void { this.s.tap(); }
 
-  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen, „p" = Linie pausieren. */
+  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen, „p" = Linie pausieren;
+   *  im „Linie fertig"-Kasten ←/→/Pos1/Ende = durch die Linie klicken. */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (this.s.canReview && (key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Home' || key === 'End')) {
+      if (e.ctrlKey || e.metaKey || e.altKey || !isBoardHotkey(e)) return;
+      if (key === 'ArrowLeft') this.s.reviewStep(-1);
+      else if (key === 'ArrowRight') this.s.reviewStep(1);
+      else this.s.reviewTo(key === 'Home' ? 0 : this.s.currentPly);
+      e.preventDefault();
+      return;
+    }
     if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter' && key !== 'h' && key !== 's' && key !== 'p') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!isBoardHotkey(e)) return;

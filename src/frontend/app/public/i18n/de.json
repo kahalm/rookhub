@@ -80,6 +80,14 @@
     "pauseLineTip": "Linie pausieren (Taste P): sie kommt nicht mehr, bis du sie in der Linienliste fortsetzt — ohne Bewertung, ein schon gemachter Fehler zählt trotzdem.",
     "linePaused": "Linie pausiert — in der Linienliste wieder fortsetzen",
     "pausedNote": "Diese Linie ist pausiert — sie erscheint nur, weil du sie ausgewählt hast.",
+    "reviewNav": "Durch die Linie klicken",
+    "reviewStart": "Zum Anfang",
+    "reviewEnd": "Zur Schlussstellung",
+    "reviewEngine": "Engine",
+    "reviewEngineTip": "Engine an/aus (wie im Analysebrett) — merkt sich dieses Gerät",
+    "reviewEngineOffline": "Offline keine Engine — Durchklicken geht trotzdem",
+    "openInAnalysis": "Im Analysebrett öffnen",
+    "reviewKeys": "← → durch die Linie, Pos1/Ende springen; Leertaste/Enter = nächste Linie",
     "openOnChessable": "Diese Linie auf Chessable öffnen"
   },
   "srConfig": {

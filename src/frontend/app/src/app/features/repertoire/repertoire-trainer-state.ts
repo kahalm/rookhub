@@ -114,12 +114,49 @@ export abstract class TrainerSessionState {
   learnPass = 0;
   /** LINE_DONE: true = beim „Weiter" wird DIESELBE Linie erneut gestartet (Learn-Wiederholung). */
   pendingRepeat = false;
+  /** Nachbetrachtung (LINE_DONE, 0.890.0): angezeigte Stellung als Halbzug-Zahl (0 = Anfang … `currentPly` = Schluss). */
+  reviewPly = 0;
 
   advanceTimer: unknown = null;
   protected oppTimer: unknown = null;
   protected learnTimer: unknown = null;
 
   constructor(protected readonly hooks: TrainerSessionHooks, protected readonly clock: TrainerClock = browserClock) {}
+
+  // ===== Nachbetrachtung (0.890.0) =====
+
+  /** Im „Linie fertig"-Kasten steht eine FRÜHERE Stellung der Linie auf dem Brett (durchgeklickt). */
+  get reviewing(): boolean { return this.phase === 'LINE_DONE' && this.reviewPly !== this.currentPly; }
+
+  /** Durchklicken geht: Linie fertig (Abfragen, Lernen, Gegner-Modus). */
+  get canReview(): boolean { return this.phase === 'LINE_DONE' && !!this.currentLine; }
+
+  /** Stellung auf dem Brett — beim Durchklicken die der Linie, sonst die der Sitzung. */
+  get viewFen(): string {
+    if (!this.reviewing) return this.fen;
+    return this.currentLine?.fens[this.reviewPly] ?? this.fen;
+  }
+
+  /** Letzter Zug der angezeigten Stellung (beim Durchklicken aus der Linie). */
+  get viewLastMove(): [Key, Key] | undefined {
+    if (!this.reviewing) return this.lastMove;
+    const m = this.reviewPly > 0 ? this.currentLine?.moves[this.reviewPly - 1] : undefined;
+    return m ? [m.from as Key, m.to as Key] : undefined;
+  }
+
+  /** Kommentar zur angezeigten Stellung (zum Zug, der zu ihr führte). */
+  get reviewComment(): string { return this.reviewPly > 0 ? plyComment(this.currentLine, this.reviewPly - 1) : ''; }
+
+  /** Zu einer Stellung der fertigen Linie springen (geklemmt auf 0 … Schluss). */
+  reviewTo(ply: number): void {
+    if (!this.canReview) return;
+    const p = Math.max(0, Math.min(this.currentPly, ply));
+    if (p === this.reviewPly) return;
+    this.reviewPly = p;
+    this.hooks.changed();
+  }
+
+  reviewStep(delta: number): void { this.reviewTo(this.reviewPly + delta); }
 
   // ===== Anzeige =====
 
@@ -162,6 +199,7 @@ export abstract class TrainerSessionState {
   get annotationShapes(): DrawShape[] {
     const line = this.currentLine;
     if (!line?.shapes) return [];
+    if (this.reviewing) return line.shapes[this.reviewPly - 1] ?? [];
     const shown = normFen(this.wrongShown && this.startFen ? this.startFen : this.fen);
     // Stellung vor bzw. nach dem aktuellen Halbzug (fens[p + 1] = Stellung nach Halbzug p, p = -1 = Anfangsstellung)
     for (const p of [this.currentPly - 1, this.currentPly]) {

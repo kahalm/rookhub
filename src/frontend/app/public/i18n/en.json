@@ -80,6 +80,14 @@
     "pauseLineTip": "Pause line (key P): it won’t come up any more until you resume it in the line list — no rating, a mistake already made still counts.",
     "linePaused": "Line paused — resume it in the line list",
     "pausedNote": "This line is paused — it only shows up because you picked it.",
+    "reviewNav": "Step through the line",
+    "reviewStart": "To the start",
+    "reviewEnd": "To the final position",
+    "reviewEngine": "Engine",
+    "reviewEngineTip": "Engine on/off (as on the analysis board) — remembered on this device",
+    "reviewEngineOffline": "No engine offline — stepping through still works",
+    "openInAnalysis": "Open on analysis board",
+    "reviewKeys": "← → step through the line, Home/End jump; Space/Enter = next line",
     "openOnChessable": "Open this line on Chessable"
   },
   "srConfig": {

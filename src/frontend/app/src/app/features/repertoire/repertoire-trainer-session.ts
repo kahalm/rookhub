@@ -86,6 +86,7 @@ export class TrainerSession extends TrainerLearnMode {
     this.oppMoving = false;
     this.nextRepeatAt = null;
     this.holdComment = '';
+    this.reviewPly = 0;
     this.fen = this.chess.fen();
     this.lastMove = undefined;
     this.advanceToUserMove();
@@ -149,6 +150,7 @@ export class TrainerSession extends TrainerLearnMode {
     const line = this.queue[this.qIndex];
     this.oppMoving = false;
     this.nextRepeatAt = null;
+    this.reviewPly = this.currentPly;   // Nachbetrachtung beginnt in der Schlussstellung
 
     // Learn-Modus: eine Linie muss LEARN_REPEATS-mal durchgespielt werden, bevor sie in den Pool wandert.
     if (this.mode === 'learn' && line) {

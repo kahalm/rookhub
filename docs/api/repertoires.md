@@ -106,6 +106,13 @@ chessable line".
   Bewertungsantwort dreht die lokale Pause nicht zurück. Pausierte Linien fehlen in Abfragen, Lernen UND der
   Gegner-Reihenfolge; nur eine ausdrücklich gewählte (`?line=` bzw. Gegner-Einstieg) erscheint, mit Hinweis „pausiert"
   (dann kein Pausieren-Knopf). „Überspringen" lässt Pool/Pause unverändert — die Linie kommt in der nächsten Runde wieder.
+- Nachbetrachtung (0.890.0): im „Linie fertig"-Kasten (`LINE_DONE`, alle Modi) durch die gespielte Linie klicken —
+  `TrainerSessionState.reviewPly` (0 … `currentPly`), Brett/letzter Zug/Formen/Kommentar über `viewFen`/`viewLastMove`/
+  `annotationShapes`/`reviewComment`; ◀ ▶-Knöpfe, ←/→/Pos1/Ende (nur dort, lösen kein „Weiter" aus), Klick auf einen Zug.
+  Schalter „Engine" (`rookhub_rep_train_review_engine`, Vorgabe aus) → `TrainerReviewEngine` nutzt den
+  `AnalysisEngineService` des Analysebretts (MultiPV 1; Bewertungsleiste quer + beste Linie), startet/stoppt bei jedem
+  Zustandswechsel über `syncReviewEngine`; offline deaktiviert. „Im Analysebrett öffnen" = `/analysis?fen=&moves=<UCI>&orientation=`
+  im neuen Tab. Die SR-Bewertung geht wie bisher beim Linienende raus; Durchklicken ändert nichts.
 - Geduldeter Zug (`[%alt]`) steht 3,5 s (`TOLERATED_HOLD_MS`) mit „Auch spielbar — jetzt den Hauptzug.", Klick/Leertaste/
   Enter überspringt.
 - Linien mit `[ChessableOid]` zeigen hinter dem Linienlabel einen Textlink „Chessable" (`https://www.chessable.com/variation/<oid>/`).

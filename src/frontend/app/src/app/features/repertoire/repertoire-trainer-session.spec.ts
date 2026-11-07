@@ -433,6 +433,39 @@ describe('TrainerSession — 0.886.0: Fehlzug bleibt stehen, Tipp, Überspringen
     expect(s.phase).toBe('PLAYING');
   });
 
+  it('Nachbetrachtung: im „Linie fertig"-Kasten durch die Linie klicken (geklemmt), Brett/letzter Zug/Kommentar folgen; nächste Linie setzt zurück', () => {
+    const pgn = '[Event "R"]\n[White "c"]\n[Black "A"]\n\n1. e4 {Zentrum.} e5 2. Nf3 Nc6 *\n' + PGN;
+    const { s, clock, calls, lines } = setup({ pgn });
+    s.start(lines);
+    expect(s.canReview).toBeFalse();
+    s.reviewTo(0);                                              // außerhalb von LINE_DONE: nichts
+    expect(s.reviewPly).toBe(0);
+    s.onMove({ orig: 'e2' as any, dest: 'e4' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    s.onMove({ orig: 'g1' as any, dest: 'f3' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    expect(s.phase).toBe('LINE_DONE');
+    expect(calls.reviewed.length).toBe(1);
+    const finalFen = s.fen;
+    expect(s.reviewPly).toBe(4);
+    expect(s.reviewing).toBeFalse();
+    expect(s.viewFen).toBe(finalFen);
+    s.reviewStep(1);                                            // über das Ende hinaus: bleibt
+    expect(s.reviewPly).toBe(4);
+    s.reviewTo(1);
+    expect(s.reviewing).toBeTrue();
+    expect(s.viewFen).toBe(lines[0].fens[1]);
+    expect(s.viewLastMove).toEqual(['e2' as any, 'e4' as any]);
+    expect(s.reviewComment).toBe('Zentrum.');
+    s.reviewStep(-5);
+    expect(s.reviewPly).toBe(0);
+    expect(s.viewLastMove).toBeUndefined();
+    expect(s.phase).toBe('LINE_DONE');
+    expect(calls.reviewed.length).toBe(1);                      // Durchklicken bewertet nichts
+    s.continueLine();
+    expect(s.qIndex).toBe(1);
+    expect(s.reviewing).toBeFalse();
+    expect(s.reviewPly).toBe(0);
+  });
+
   it('geduldeter Zug steht 3,5 s (TOLERATED_HOLD_MS), Tippen überspringt', () => {
     expect(TOLERATED_HOLD_MS).toBe(3500);
     expect(ADVANCE_MS.tolerated).toBe(TOLERATED_HOLD_MS);

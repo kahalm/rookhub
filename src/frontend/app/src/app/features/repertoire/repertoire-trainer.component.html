@@ -183,7 +183,13 @@
           <div class="line-moves" [attr.aria-label]="'repertoireTrainer.movesInLine' | translate">
             @for (m of movesInLine; track m.ply) {
               @if (m.num !== null) { <span class="mv-num">{{ m.num }}.</span> }
-              <span class="mv" [ngClass]="m.state">{{ m.san }}</span>
+              @if (canReview) {
+                <!-- Nachbetrachtung (0.890.0): Zug anklicken = Stellung nach diesem Zug -->
+                <button type="button" class="mv mv-btn" [ngClass]="m.state" [class.active]="m.ply === reviewPly - 1"
+                        (click)="reviewTo(m.ply + 1); $event.stopPropagation()">{{ m.san }}</button>
+              } @else {
+                <span class="mv" [ngClass]="m.state">{{ m.san }}</span>
+              }
             }
           </div>
           @if (mode === 'learn' && currentComment) {
@@ -303,6 +309,33 @@
               <p class="repeat-due"><mat-icon>schedule</mat-icon>
                 {{ 'repertoireTrainer.repeatIn' | translate: { when: nextRepeatLabel } }}</p>
             }
+            <!-- Nachbetrachtung (0.890.0): durch die Linie klicken, Engine zuschalten — wie im Analysebrett -->
+            <div class="review" (click)="$event.stopPropagation()">
+              <div class="review-nav" role="group" [attr.aria-label]="'repertoireTrainer.reviewNav' | translate">
+                <button mat-icon-button (click)="reviewTo(0)" [disabled]="reviewPly === 0" [appIconLabel]="'repertoireTrainer.reviewStart' | translate"><mat-icon>first_page</mat-icon></button>
+                <button mat-icon-button (click)="reviewStep(-1)" [disabled]="reviewPly === 0" [appIconLabel]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
+                <button mat-icon-button (click)="reviewStep(1)" [disabled]="reviewPly >= reviewMax" [appIconLabel]="'common.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+                <button mat-icon-button (click)="reviewTo(reviewMax)" [disabled]="reviewPly >= reviewMax" [appIconLabel]="'repertoireTrainer.reviewEnd' | translate"><mat-icon>last_page</mat-icon></button>
+                <button mat-stroked-button class="engine-toggle" [class.on]="reviewEngineOn && reviewEngineAvailable" [attr.aria-pressed]="reviewEngineOn"
+                        (click)="toggleReviewEngine()" [disabled]="!reviewEngineAvailable"
+                        [matTooltip]="(reviewEngineAvailable ? 'repertoireTrainer.reviewEngineTip' : 'repertoireTrainer.reviewEngineOffline') | translate">
+                  <mat-icon>{{ reviewEngineOn && reviewEngineAvailable ? 'check' : 'memory' }}</mat-icon>{{ 'repertoireTrainer.reviewEngine' | translate }}
+                </button>
+                @if (analysisLink; as link) {
+                  <a mat-button class="to-analysis" [href]="link" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>{{ 'repertoireTrainer.openInAnalysis' | translate }}</a>
+                }
+              </div>
+              @if (reviewEngineRunning) {
+                <div class="review-eval">
+                  <div class="eval-strip" [attr.aria-label]="reviewEvalText"><div class="eval-white" [style.width.%]="reviewWhiteHeight"></div></div>
+                  <span class="eval-text">{{ reviewEvalText || '…' }}</span>
+                  @if (reviewDepth) { <span class="eval-depth">{{ 'analysis.depth' | translate }} {{ reviewDepth }}</span> }
+                </div>
+                @if (reviewBestLine) { <p class="best-line">{{ reviewBestLine }}</p> }
+              }
+              @if (reviewComment) { <p class="review-comment">{{ reviewComment }}</p> }
+              <p class="tap-hint">{{ 'repertoireTrainer.reviewKeys' | translate }}</p>
+            </div>
             <button mat-flat-button color="primary" (click)="continueLine(); $event.stopPropagation()">
               {{ (pendingRepeat ? 'repertoireTrainer.repeatLine' : 'repertoireTrainer.nextLine') | translate }}
             </button>

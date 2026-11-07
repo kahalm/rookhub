@@ -80,6 +80,14 @@
     "pauseLineTip": "Pauziraj varijantu (tipka P): više se ne pojavljuje dok je ne nastaviš u popisu varijanti — bez ocjene, već učinjena greška se ipak računa.",
     "linePaused": "Varijanta pauzirana — nastavi je u popisu varijanti",
     "pausedNote": "Ova varijanta je pauzirana — prikazuje se samo jer si je odabrao.",
+    "reviewNav": "Prođi kroz varijantu",
+    "reviewStart": "Na početak",
+    "reviewEnd": "Na završnu poziciju",
+    "reviewEngine": "Engine",
+    "reviewEngineTip": "Engine uklj./isklj. (kao na ploči za analizu) — pamti se na ovom uređaju",
+    "reviewEngineOffline": "Bez enginea offline — prolazak kroz poteze i dalje radi",
+    "openInAnalysis": "Otvori na ploči za analizu",
+    "reviewKeys": "← → kroz varijantu, Home/End skok; razmaknica/Enter = sljedeća varijanta",
     "openOnChessable": "Otvori ovu varijantu na Chessableu"
   },
   "srConfig": {

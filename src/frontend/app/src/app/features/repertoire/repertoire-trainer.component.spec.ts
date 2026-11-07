@@ -1217,3 +1217,142 @@ describe('RepertoireTrainerComponent: Linie pausieren (Taste p, 0.889.0)', () =>
     });
   });
 });
+
+describe('RepertoireTrainerComponent: Nachbetrachtung nach dem Linienende (0.890.0)', () => {
+  function engineStub() {
+    const analysis$ = new Subject<any>();
+    return {
+      analysis$,
+      analyze: jasmine.createSpy('analyze').and.returnValue(Promise.resolve()),
+      stop: jasmine.createSpy('stop'),
+      setMultiPv: jasmine.createSpy('setMultiPv'),
+    };
+  }
+
+  function setup(engine: any = engineStub()) {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w' }));
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => k === 'chapter' ? 'Chapter A' : null } } };
+    const reviewLine = jasmine.createSpy('reviewLine').and.returnValue(of(state(KEY_A, FUTURE())));
+    const training: any = {
+      getPgn: () => of(PGN + '\n[Event "Rep"]\n[White "1.e4 e5 3"]\n[Black "Chapter A"]\n\n1. e4 e5 2. Bc4 Nc6 *\n'),
+      getLineStates: () => of([state(KEY_A, PAST()), state(lineKeyFromSans(['e4', 'e5', 'Bc4', 'Nc6']), PAST())]),
+      reviewLine, promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
+    };
+    const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any, { enqueue: () => {} } as any,
+      NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, null, engine);
+    c.ngOnInit();
+    return { c, engine, reviewLine };
+  }
+
+  /** Die laufende Linie fehlerfrei zu Ende spielen (beide Linien beginnen mit e4, dann Nf3 bzw. Bc4). */
+  function finishLine(c: RepertoireTrainerComponent): void {
+    const second = (c as any).session.currentLine.moves[2].san === 'Bc4' ? ['f1', 'c4'] : ['g1', 'f3'];
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any }); tick(600);
+    c.onMove({ orig: second[0] as any, dest: second[1] as any }); tick(600);
+  }
+
+  const key = (k: string) => new KeyboardEvent('keydown', { key: k, cancelable: true });
+
+  beforeEach(() => localStorage.removeItem('rookhub_rep_train_review_engine'));
+  afterEach(() => {
+    localStorage.removeItem('rookhub_rep_train_chaptercolor_1');
+    localStorage.removeItem('rookhub_rep_train_review_engine');
+  });
+
+  it('Pfeiltasten/Pos1/Ende klicken durch die Linie (verhindern den Standard), lösen aber kein „Weiter" aus', fakeAsync(() => {
+    const { c, reviewLine } = setup();
+    finishLine(c);
+    expect(c.phase).toBe('LINE_DONE');
+    expect(reviewLine).toHaveBeenCalledTimes(1);
+    const line = (c as any).session.currentLine;
+    const left = key('ArrowLeft');
+    c.onKeyDown(left);
+    expect(left.defaultPrevented).toBeTrue();
+    expect(c.reviewPly).toBe(3);
+    expect(c.fen).toBe(line.fens[3]);
+    c.onKeyDown(key('Home'));
+    expect(c.reviewPly).toBe(0);
+    expect(c.fen).toBe(line.fens[0]);
+    c.onKeyDown(key('ArrowRight'));
+    expect(c.lastMove).toEqual(['e2' as any, 'e4' as any]);
+    c.onKeyDown(key('End'));
+    expect(c.reviewPly).toBe(4);
+    expect(c.phase).toBe('LINE_DONE');
+    expect(c.qIndex).toBe(0);
+    expect(reviewLine).toHaveBeenCalledTimes(1);               // SR unverändert
+    c.reviewTo(2);                                              // Klick auf einen Zug der Liste
+    expect(c.fen).toBe(line.fens[2]);
+    c.onKeyDown(key(' '));                                      // Leertaste = nächste Linie
+    expect(c.qIndex).toBe(1);
+    expect(c.phase).toBe('PLAYING');
+    expect(reviewLine).toHaveBeenCalledTimes(1);
+  }));
+
+  it('vor dem Linienende tun die Pfeiltasten nichts', () => {
+    const { c } = setup();
+    const ev = key('ArrowLeft');
+    c.onKeyDown(ev);
+    expect(ev.defaultPrevented).toBeFalse();
+    expect(c.canReview).toBeFalse();
+  });
+
+  it('Engine-Schalter: Vorgabe aus; an → rechnet die angezeigte Stellung, folgt beim Durchklicken; Weiter stoppt; gemerkt', fakeAsync(() => {
+    const { c, engine } = setup();
+    expect(c.reviewEngineOn).toBeFalse();
+    finishLine(c);
+    expect(engine.analyze).not.toHaveBeenCalled();
+    c.toggleReviewEngine();
+    expect(localStorage.getItem('rookhub_rep_train_review_engine')).toBe('1');
+    expect(engine.analyze).toHaveBeenCalledWith(c.fen);
+    engine.analysis$.next({ fen: c.fen, depth: 12, lines: [{ multipv: 1, depth: 12, scoreType: 'cp', score: 35, evalText: '+0.35', pvUci: ['d2d4'] }], running: true, nodes: 0, nps: 0 });
+    expect(c.reviewEvalText).toBe('+0.35');
+    expect(c.reviewBestLine).toContain('d4');
+    expect(c.reviewDepth).toBe(12);
+    c.reviewStep(-1);
+    expect(engine.analyze.calls.mostRecent().args[0]).toBe(c.fen);
+    expect(c.reviewEvalText).toBe('');                          // alte Bewertung gehört zur alten Stellung
+    c.continueLine();
+    expect(engine.stop).toHaveBeenCalled();
+    expect(c.reviewEngineRunning).toBeFalse();
+    // nächste fertige Linie: Schalter steht noch → rechnet wieder
+    finishLine(c);
+    expect(engine.analyze.calls.mostRecent().args[0]).toBe(c.fen);
+    c.toggleReviewEngine();
+    expect(engine.stop).toHaveBeenCalledTimes(2);
+    expect(localStorage.getItem('rookhub_rep_train_review_engine')).toBe('0');
+    c.ngOnDestroy();
+  }));
+
+  it('gemerkter Schalter startet die Engine am Linienende von selbst; ngOnDestroy stoppt sie', fakeAsync(() => {
+    localStorage.setItem('rookhub_rep_train_review_engine', '1');
+    const { c, engine } = setup();
+    expect(engine.analyze).not.toHaveBeenCalled();             // während des Spielens nie
+    finishLine(c);
+    expect(engine.analyze).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
+    expect(engine.stop).toHaveBeenCalled();
+  }));
+
+  it('offline: kein Engine-Schalter (deaktiviert), Durchklicken geht', fakeAsync(() => {
+    const { c, engine } = setup();
+    c.offlineSession = true;
+    finishLine(c);
+    expect(c.reviewEngineAvailable).toBeFalse();
+    c.toggleReviewEngine();
+    expect(engine.analyze).not.toHaveBeenCalled();
+    c.reviewStep(-1);
+    expect(c.reviewPly).toBe(3);
+  }));
+
+  it('„Im Analysebrett öffnen": Ausgangsstellung, Züge als UCI, Orientierung', fakeAsync(() => {
+    const { c } = setup();
+    finishLine(c);
+    const url = new URL(c.analysisLink!, 'http://x');
+    expect(url.pathname).toBe('/analysis');
+    expect(url.searchParams.get('moves')).toMatch(/^e2e4 e7e5 (g1f3|f1c4) b8c6$/);
+    expect(url.searchParams.get('orientation')).toBe('white');
+    expect(url.searchParams.get('fen')).toContain('rnbqkbnr/pppppppp');
+  }));
+});

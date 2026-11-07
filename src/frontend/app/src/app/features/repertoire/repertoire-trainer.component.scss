@@ -136,6 +136,20 @@
     .chessable-link { margin-left: 6px; font-size: 12px; }
     .paused-note { display: flex; align-items: center; gap: 4px; margin: 0 0 6px; font-size: 13px; color: var(--rh-warn); }
     .paused-note mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    /* 0.890.0: Nachbetrachtung im „Linie fertig“-Kasten */
+    .mv-btn { border: 0; background: none; padding: 0 2px; font: inherit; color: inherit; cursor: pointer; border-radius: 3px; }
+    .mv-btn.active { background: color-mix(in srgb, var(--rh-accent) 25%, transparent); font-weight: 600; }
+    .review { margin: 8px 0; min-width: 0; }
+    .review-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 4px; }
+    .review-nav .engine-toggle.on { border-color: var(--rh-accent); }
+    .review-eval { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .eval-strip { position: relative; flex: 1; max-width: 220px; height: 10px; background: rgb(58 58 58); border-radius: 3px; overflow: hidden;
+      border: 1px solid var(--mat-sys-outline); }
+    .eval-strip .eval-white { position: absolute; top: 0; bottom: 0; left: 0; background: rgb(245 245 245); transition: width .3s; }
+    .eval-text { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .eval-depth { font-size: 12px; opacity: .7; }
+    .best-line { margin: 4px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+    .review-comment { margin: 6px 0 0; font-size: 13px; white-space: pre-line; }
 
 /* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
 :host-context(.app-fullscreen) .bar { display: none; }
