@@ -102,6 +102,26 @@ public class OpponentDeviationsTests
         Assert.Equal(2, r.Deviations.Count);
     }
 
+    [Fact]
+    public void ExplanatoryVariation_DeadEnd_IsNoDeviation_AndNeverPartOfThePath()
+    {
+        // Prod-Befund 2026-11-07 (Gegner 1608169/Maras, Nutzer Schwarz, Martinović-Französisch): „will auf 1.e4 c5 von mir" — das Kapitel
+        // erwähnt Sizilianisch nur als Erklär-Variante „(… 1.e4 c5 {…})" bzw. „(1...c5 {…})". Die Stellung nach 1.e4 c5 ist im Graph eine
+        // Sackgasse; jeder seiner Weißzüge dort war eine „Abweichung" mit Weg 1.e4 c5.
+        var g = Graph('b', "1. e4 ({Sizilianer (} 1.e4 c5 {)}) 1... e6 (1...c5 {es tun}) 2. d4 d5 3. Nd2 c5 4. exd5 exd5");
+        Assert.True(g.Nodes.ContainsKey(Key("e4 c5")));               // die Erwähnung steht im Graph …
+        var games = Times(5, "e4 c5 Nf3 d6 d4", true, 2026)              // … er spielt Sizilianisch-Partien dorthin
+            .Concat(Times(2, "e4 e6 d4 d5 Nd2 c5 Ngf3 Nc6", true, 2025));
+
+        var r = OpponentDeviations.Find(g, games);
+
+        var d = Assert.Single(r.Deviations);                           // nur die echte Abweichung 4.Ngf3 statt 4.exd5
+        Assert.Equal("Ngf3", d.San);
+        Assert.Equal(new[] { "e4", "e6", "d4", "d5", "Nd2", "c5" }, d.Path);
+        Assert.Equal(new[] { "exd5" }, d.Repertoire);
+        Assert.DoesNotContain(r.Deviations, x => x.Path.Count >= 2 && x.Path[1] == "c5");
+    }
+
     /// <summary>Repertoire-Pfad (alle Züge im Repertoire) — prüft, dass jeder Halbzug eine Kante des Graphen ist.</summary>
     private static void AssertRepertoirePath(RepertoireReach.Graph g, IReadOnlyList<string> path)
     {

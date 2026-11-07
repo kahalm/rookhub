@@ -214,7 +214,8 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   Trainingslinien (`TrainingLinesService.LoadSourcesAsync`, gemeinsam mit `ComputeCoreAsync`), Rechnung `OpponentDeviations.Find`:
   Partien des Gegners mit der anderen Farbe als Präfixbaum (40 Halbzüge) durch EIN Brett; Abweichung = Repertoire-Stellung
   (`RepertoireReach.Key`), Gegner am Zug, sein Zug führt in eine Stellung, die das Repertoire nicht kennt (Zugumstellung zurück
-  ins Repertoire = keine). Gleiche Stellung + gleicher Zug über verschiedene Wege = eine Abweichung (Partien addiert). Pfad
+  ins Repertoire = keine; seit 0.893.2 nur, wo das Repertoire an der Stellung weitergeht — Sackgassen aus Erklär-Varianten wie
+  „(1.e4 c5 {Sizilianer})“ sind Linienende, keine Abweichung, und liegen damit nie auf dem Pfad). Gleiche Stellung + gleicher Zug über verschiedene Wege = eine Abweichung (Partien addiert). Pfad
   (0.893.1) = Weg durch das REPERTOIRE (`RepertoirePaths`: kürzester ab der Grundstellung, bei Gleichstand größte Summe
   „von ihm erreicht“), nie sein Partienweg — sonst stünden Zugumstellungs-Züge wie 1…c5 im Pfad, die der Nutzer nicht spielt;
   Stellungen nur über `[FEN]`-Linien erreichbar fallen weg. Reihung: Partien ↓, jüngstes Jahr ↓, kürzerer Pfad (mit seinen eigenen Zahlen ist „Häufigkeit × Wahrscheinlichkeit

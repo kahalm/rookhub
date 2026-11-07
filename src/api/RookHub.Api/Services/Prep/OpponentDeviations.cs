@@ -159,7 +159,11 @@ public static class OpponentDeviations
 
                 string? childTail = tailOf;
                 var childDepth = depth + 1;
-                if (tailOf is null && opponentToMove && gNode is not null && !graph.Nodes.ContainsKey(next))
+                // Nur wo das Repertoire hier weitergeht (Hotfix 0.893.2): Erklär-Varianten wie „(1.e4 c5 {Sizilianer})" bzw.
+                // „(1...c5 {…})" legen eine Sackgasse ins Repertoire — von dort war jeder seiner Züge eine „Abweichung", und der Weg
+                // dorthin verlangte 1…c5, obwohl c5 nicht zum Repertoire gehört. Eine Stellung ohne Repertoire-Fortsetzung ist
+                // Linienende, keine Abweichung; der kürzeste Weg führt damit nie über eine solche Erwähnung.
+                if (tailOf is null && opponentToMove && gNode is { Children.Count: > 0 } && !graph.Nodes.ContainsKey(next))
                 {
                     // Abweichung: aus einer Repertoire-Stellung heraus in eine, die das Repertoire nicht kennt
                     var id = key + "|" + san;
