@@ -241,6 +241,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (p.engine) this.picker.requestedId = p.engine;
     if (p.depth != null) this.depthSetting = p.depth;
     if (p.lines != null) this.linesCount = p.lines;
+    // aus dem Abweichungs-Trainer (0.892.0): Maia-Karte offen, Stärke des Gegners — nur für diesen Aufruf
+    if (p.maia != null) { this.spar.maiaElo = p.maia; this.maiaCardOpen = true; }
   }
 
   /** Engine einstellen und ihre Ströme abonnieren (Linien, Absturz, Rückfall, Abriss) samt Sekundentakt. */

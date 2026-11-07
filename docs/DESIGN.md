@@ -914,7 +914,11 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Aktionszeile `.trainer-actions` aus Rahmenknöpfen: „Tipp“ (`lightbulb`, beschriftet mit der nächsten Stufe: Tipp → Pfeil
   zeigen → Zug ausspielen; Tipp-Markierung GRÜN, Startfeld bzw. Pfeil), „Linie überspringen“ (`skip_next`) und „Linie
   pausieren“ (`pause_circle`, 0.889.0; Snackbar mit „Rückgängig“), Tasten H/S/P im Tooltip; eine ausdrücklich gewählte
-  pausierte Linie zeigt unter dem Label `.paused-note` (`pause_circle`, `--rh-warn`); im „Linie fertig“-Kasten (0.890.0) eine
+  pausierte Linie zeigt unter dem Label `.paused-note` (`pause_circle`, `--rh-warn`); im Gegner-Modus (0.892.0) unter dem
+  Label `.opponent-note` (Randlinie links `--rh-info`, `person_search`; ab dem ersten Zug ohne Partien des Gegners `--rh-warn`,
+  fett, `call_split`, bleibt bis Linienende) — derselbe Baustein im Abweichungs-Trainer (`/repertoires/deviations`: Aufbau wie der
+  Trainer, Schwelle als kleines `select` in der Kopfzeile, Frage `.ask` in `--rh-info`, gut/nicht optimal in
+  `--rh-success`/`--rh-error`, am Ende ein Primärknopf „Gegen Maia weiterspielen (Elo)“ als Link in neuem Tab); im „Linie fertig“-Kasten (0.890.0) eine
   Nachbetrachtungs-Zeile `.review`: Symbolknöpfe `first_page`/`chevron_left`/`chevron_right`/`last_page`, Rahmenknopf
   „Engine“ (Häkchen + `aria-pressed` wie „Häufigste zuerst“), Textknopf „Im Analysebrett öffnen“ (`open_in_new`); bei
   laufender Engine eine QUERE Bewertungsleiste (10 px, Farben wie die Leiste des Analysebretts) mit Wert + Tiefe und die
@@ -1205,6 +1209,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-07 | 0.892.0 · Repertoire-Trainer + Spielerkarte | `.opponent-note` (Partien des Gegners zur Stellung, Umschlag warn), Abweichungs-Trainer als eigene Seite im Trainer-Aufbau, Karte: Rahmenknopf „Abweichungen trainieren (N)“ neben dem Anlegen-Knopf + aufklappbare Liste | Nutzerwünsche 07.11.: „trainiere abweichungen“, „meldung ab wann ich von gespielten partien abgewichen bin“ | Wunsch des Users über die betreuende Sitzung |
 | 2026-11-07 | 0.889.0/0.890.0 · Repertoire-Trainer | „Linie pausieren“ neben „Überspringen“ (Snackbar mit Rückgängig, Hinweis `.paused-note`); Nachbetrachtung im „Linie fertig“-Kasten: Durchklicken, Engine-Schalter, quere Bewertungsleiste, Analysebrett-Link | Nutzerwünsche 07.11.: „pause line“, „durch die züge klicken und die engine zuschalten“ | Wunsch des Users über die betreuende Sitzung |
 | 2026-11-07 | 0.886.0 · Repertoire-Trainer | Fehlzug bleibt rot stehen bis „Nochmal“/Tippen (Brett gesperrt); Zeile „schon n× falsch“ nur mit Daten; Aktionszeile `.trainer-actions` (Rahmenknöpfe „Tipp“ mit Stufenbeschriftung, „Linie überspringen“), Tipp-Markierung grün; Tipp-Zähler in `--rh-hint`; Chessable-Textlink hinter dem Linienlabel (8.1) | Nutzerwünsche 07.11.: „stellung stehen lassen“, „wie oft der schon falsch war“, „hintfunktion“, „button skip line“, „link zur chessable line“ | Wunsch des Users über die betreuende Sitzung |
 | 2026-10-30 | 0.881.0 · E-Book-Baum | E-Book-Brett: Modus „Baum“ (8.1) — Schrittleiste + „Als Repertoire speichern“, Weg ab der Grundstellung als Zugfolge, Fortsetzungen als Zeilen mit „n Linien“; Speichern-Dialog 440 px mit Umschalt-Paaren für Umfang und Farbe | Eröffnungsbücher sind keine Aufgabenbücher — Linien durchklicken und als Repertoire mitnehmen | Nutzerwunsch 30.10. (Prod #1071 „Danish Dynamite“) |

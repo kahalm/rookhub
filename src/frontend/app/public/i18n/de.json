@@ -5396,7 +5396,12 @@
       "chessableTrained": "Auf Chessable öffnen — zuletzt trainiert {{date}}, Stufe {{level}}",
       "chessableLevelOnly": "Auf Chessable öffnen — Stufe {{level}}, Trainingsdatum nicht mitgeschnitten",
       "chessableNever": "Auf Chessable öffnen — dort noch nicht trainiert",
-      "skippedAlternatives": "{{n}} ungelernte Chessable-Alternativen ausgelassen."
+      "skippedAlternatives": "{{n}} ungelernte Chessable-Alternativen ausgelassen.",
+      "deviationsButton": "Abweichungen trainieren ({{n}})",
+      "deviationsHint": "Die Stellen, an denen er dein Repertoire verlassen hat: du spielst den Weg dorthin, er spielt seinen Zug, du suchst die beste Antwort (Engine urteilt); danach seine Fortsetzungen und am Ende auf Wunsch gegen Maia.",
+      "deviationsList": "Wo er abweicht ({{n}})",
+      "deviationItem": "{{move}} statt {{instead}} — {{n}}× gespielt",
+      "deviationItemOne": "{{move}} statt {{instead}} — {{n}}× gespielt"
     },
     "title": "Gegner vorbereiten",
     "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",
@@ -6158,5 +6163,42 @@
       "flagCleared": "Markierung entfernt.",
       "flagError": "Markierung konnte nicht gespeichert werden."
     }
+  },
+  "opponentNote": {
+    "thisOpponent": "des Gegners",
+    "reached": "In den Partien von {{who}}: {{n}}× erreicht (zuletzt {{year}})",
+    "reachedNoYear": "In den Partien von {{who}}: {{n}}× erreicht",
+    "played": "er spielte hier {{moves}}",
+    "never": "Diese Stellung kommt in den Partien von {{who}} nicht vor.",
+    "leftEstimated": "Ab {{move}} keine Partien von {{who}} mehr — ab hier geschätzt (Lichess {{band}})",
+    "leftRepertoire": "Ab {{move}} keine Partien von {{who}} mehr — ab hier nur dein Repertoire",
+    "leftEngine": "Ab {{move}} keine Partien von {{who}} mehr — ab hier urteilt nur die Engine"
+  },
+  "deviations": {
+    "title": "Abweichungen von {{who}}",
+    "threshold": "Gut bis",
+    "thresholdTip": "Eine Antwort gilt als gut, wenn sie höchstens so viele Hundertstel Bauern schlechter ist als der beste Zug (Engine).",
+    "loadFailed": "Die Abweichungen konnten nicht geladen werden.",
+    "none": "In den Partien von {{who}} gibt es keine Abweichung von deinem Repertoire.",
+    "done": "Alle {{n}} Linien durch — {{good}} gute Antworten, {{bad}} nicht optimal.",
+    "progress": "Linie {{done}} von {{total}}",
+    "instead": "Dein Repertoire: {{moves}}",
+    "playPath": "Spiele deine Repertoire-Züge bis zur Abweichung.",
+    "pathHint": "Auf dem Weg zur Abweichung kommt hier {{move}}.",
+    "opponentMoves": "{{who}} zieht …",
+    "askDeviation": "Hier spielt {{who}} {{move}} ({{n}}×) — das steht nicht in deinem Repertoire. Was ist die beste Antwort?",
+    "askContinuation": "In seinen Partien folgt {{move}} ({{n}}×). Was ist die beste Antwort?",
+    "judging": "Engine prüft deine Antwort …",
+    "good": "{{move}} ist gut.",
+    "bestWere": "Engine: {{moves}}",
+    "notOptimal": "{{move}} ist nicht optimal (−{{loss}}).",
+    "better": "Besser wäre: {{moves}}",
+    "retry": "Nochmal",
+    "showSolution": "Lösung zeigen",
+    "end": "Weiter hat {{who}} hier nicht gespielt.",
+    "maia": "Gegen Maia weiterspielen ({{elo}})",
+    "maiaHint": "Öffnet das Analysebrett ab dieser Stellung mit Maia in der Stärke {{elo}} — so stark wie {{who}}.",
+    "next": "Nächste Linie",
+    "skip": "Linie überspringen"
   }
 }

@@ -203,6 +203,23 @@ describe('AnalysisComponent query-param preload', () => {
     c.ngOnDestroy();
   });
 
+  it('?maia=<Elo> (Abweichungs-Trainer, 0.892.0): Maia-Karte offen, nächste Stufe, nicht gespeichert', () => {
+    localStorage.removeItem('rookhub_analysis_maia_elo');
+    const fen = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    const c = makeComponent({ fen, orientation: 'black', maia: '2143' });
+    c.ngOnInit();
+    expect(c.maiaCardVisible).toBeTrue();
+    expect(c.spar.maiaElo).toBe(2200);
+    expect(c.startFen).toBe(fen);
+    expect(c.orientation).toBe('black');
+    expect(localStorage.getItem('rookhub_analysis_maia_elo')).toBeNull();
+    c.ngOnDestroy();
+    const plain = makeComponent({ fen });
+    plain.ngOnInit();
+    expect(plain.maiaCardVisible).toBeFalse();
+    plain.ngOnDestroy();
+  });
+
   it('without moves it just starts at the given fen (ply 0)', () => {
     const c = makeComponent({ fen: START });
     c.ngOnInit();

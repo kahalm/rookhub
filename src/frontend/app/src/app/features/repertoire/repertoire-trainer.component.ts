@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, Optional, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -42,6 +42,9 @@ import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesU
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import type { DrawShape } from 'chessground/draw';
 import { AnalysisEngineService } from '../analysis/analysis-engine.service';
+import { OpponentPositions } from '../../shared/player-card/opponent-positions';
+import { OpponentNoteView, opponentNoteView } from './opponent-note.util';
+import { cardLang } from '../../shared/player-card/card-lang';
 import { TrainerReviewEngine, readReviewEngineOn, saveReviewEngineOn } from './repertoire-trainer-review-engine';
 import { ChessableMisses, MissInfo, chessableOid, chessableUrl, missAt } from './repertoire-trainer-misses.util';
 
@@ -135,6 +138,12 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   private opponentStart: string | null = null;
   /** So viele Linien umfasst die Gegner-Sitzung (für „Alle N Linien … durch"). */
   opponentTotal = 0;
+  /** Seine Partien je Stellung (0.892.0, `positions=true`) — für „in seinen Partien n× erreicht / ab hier keine mehr". */
+  private opponentPositions: OpponentPositions | null = null;
+  /** Wertungsband der Lichess-Schätzung („2000–2300"), `null` = keine Schätzung. */
+  private opponentBand: string | null = null;
+  /** Name des Gegners für die Anzeige (`?name=` von der Karte). */
+  private opponentName: string | null = null;
   private opponentSub: Subscription | null = null;
   /** Erstes Laden (PGN + Zustände); wird beim Verlassen abbestellt (Codereview F3-025). */
   private loadSub: Subscription | null = null;
@@ -225,9 +234,11 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private confirm: ConfirmService,
     /** Nur für die Reihenfolge nach einem Gegner (`?opponent=`); optional, damit die Specs ohne HTTP bauen. */
     @Optional() private http: HttpClient | null = null,
-    /** Engine der Nachbetrachtung (dieselbe wie im Analysebrett); optional wie `http`. */
-    @Optional() private analysisEngine: AnalysisEngineService | null = null,
   ) {}
+
+  /** Engine der Nachbetrachtung (dieselbe wie im Analysebrett). Optional: Specs bauen die Komponente ohne Injektor und setzen sie
+   *  selbst. */
+  private analysisEngine: AnalysisEngineService | null = injectOptional(AnalysisEngineService);
 
   // ===== Nachbetrachtung (0.890.0): fertige Linie durchklicken, Engine zuschalten =====
 
@@ -280,6 +291,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.s.mode = this.route.snapshot.queryParamMap.get('mode') === 'learn' ? 'learn' : 'quiz';
     this.singleLineKey = this.route.snapshot.queryParamMap.get('line');
     this.opponent = trainingLinesUrl(this.route.snapshot.queryParamMap.get('opponent')) ? this.route.snapshot.queryParamMap.get('opponent') : null;
+    this.opponentName = this.route.snapshot.queryParamMap.get('name');
     const oc = this.route.snapshot.queryParamMap.get('color');
     this.opponentColor = oc === 'w' || oc === 'b' ? oc : null;
     this.stockfish.init().catch(() => {});
@@ -364,7 +376,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const url = trainingLinesUrl(this.opponent);
     if (!url || !this.http) { this.opponent = null; if (wait) this.buildQueue(); return; }
     if (wait) this.s.phase = 'LOADING';
-    let params = new HttpParams().set('repertoire', this.repertoireId).set('take', TRAINING_LINES_ALL)
+    let params = new HttpParams().set('repertoire', this.repertoireId).set('take', TRAINING_LINES_ALL).set('positions', 'true')
       .set('chapterColors', JSON.stringify(Object.fromEntries(this.chapterColors)));
     if (this.opponentColor) params = params.set('color', this.opponentColor);
     for (const k of TRAINER_PASS_THROUGH) {
@@ -374,6 +386,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.opponentSub = this.http.get<TrainingLines>(url, { params }).subscribe({
       next: r => {
         this.opponentRank = new Map(r.lines.map((l, i) => [l.key, i]));
+        this.opponentPositions = r.positions ?? null;
+        this.opponentBand = r.lichessBand ?? null;
         if (r.color === 'w' || r.color === 'b') this.opponentColor = r.color;
         this.opponentNotice = 'repertoireTrainer.opponentOrder';
         if (wait) this.buildQueue(); else this.extendOpponentQueue();
@@ -580,6 +594,17 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   hint(): void { this.s.hint(); }
   /** Linie überspringen (Taste „s"): ohne SR-Bewertung zur nächsten (ein schon gemachter Fehler zählt). */
   skipLine(): void { this.s.skipLine(); }
+  /** Anzeige zur Stellung aus Sicht seiner Partien (Gegner-Modus, 0.892.0); `null` = nichts zu sagen. */
+  get opponentNote(): OpponentNoteView | null {
+    const line = this.s.currentLine;
+    if (!line || !this.opponentPositions) return null;
+    const ply = this.s.phase === 'LINE_DONE' ? this.s.reviewPly : this.s.currentPly;
+    return opponentNoteView(line.fens, line.moves.map(m => m.san), ply, this.opponentPositions, {
+      who: this.opponentName, band: this.opponentBand, lang: cardLang(this.translate),
+      t: (k, p) => this.translate.instant(k, p),
+    });
+  }
+
   /** Die laufende Linie ist pausiert (nur bei ausdrücklicher Wahl über `?line=` bzw. als Gegner-Einstieg) → Hinweis. */
   get currentLinePaused(): boolean {
     const line = this.s.currentLine;
@@ -637,4 +662,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     if (key === 'p') { if (this.canPause) { this.pauseLine(); e.preventDefault(); } return; }
     if (this.s.tap()) e.preventDefault();
   }
+}
+
+/** `inject(…, { optional: true })`, außerhalb eines Injektors (Specs mit `new`) `null`. */
+function injectOptional<T>(token: new (...args: never[]) => T): T | null {
+  try { return inject(token, { optional: true }); } catch { return null; }
 }

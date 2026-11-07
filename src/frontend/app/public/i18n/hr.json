@@ -5396,7 +5396,12 @@
       "chessableTrained": "Otvori na Chessableu — zadnji trening {{date}}, razina {{level}}",
       "chessableLevelOnly": "Otvori na Chessableu — razina {{level}}, datum treninga nije zabilježen",
       "chessableNever": "Otvori na Chessableu — tamo još nije trenirano",
-      "skippedAlternatives": "Izostavljeno {{n}} nenaučenih Chessable alternativa."
+      "skippedAlternatives": "Izostavljeno {{n}} nenaučenih Chessable alternativa.",
+      "deviationsButton": "Treniraj odstupanja ({{n}})",
+      "deviationsHint": "Mjesta na kojima je napustio tvoj repertoar: igraš put do tamo, on igra svoj potez, ti tražiš najbolji odgovor (sudi engine); zatim njegovi nastavci i na kraju po želji protiv Maie.",
+      "deviationsList": "Gdje odstupa ({{n}})",
+      "deviationItem": "{{move}} umjesto {{instead}} — igrano {{n}}×",
+      "deviationItemOne": "{{move}} umjesto {{instead}} — igrano {{n}}×"
     },
     "title": "Priprema za protivnika",
     "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",
@@ -6158,5 +6163,42 @@
       "flagCleared": "Oznaka uklonjena.",
       "flagError": "Oznaku nije moguće spremiti."
     }
+  },
+  "opponentNote": {
+    "thisOpponent": "protivnika",
+    "reached": "U partijama igrača {{who}}: dosegnuto {{n}}× (zadnji put {{year}})",
+    "reachedNoYear": "U partijama igrača {{who}}: dosegnuto {{n}}×",
+    "played": "ovdje je igrao {{moves}}",
+    "never": "Ova pozicija se ne pojavljuje u partijama igrača {{who}}.",
+    "leftEstimated": "Od {{move}} više nema partija igrača {{who}} — odavde procijenjeno (Lichess {{band}})",
+    "leftRepertoire": "Od {{move}} više nema partija igrača {{who}} — odavde samo tvoj repertoar",
+    "leftEngine": "Od {{move}} više nema partija igrača {{who}} — odavde sudi samo engine"
+  },
+  "deviations": {
+    "title": "Odstupanja igrača {{who}}",
+    "threshold": "Dobro do",
+    "thresholdTip": "Odgovor je dobar ako je najviše toliko stotinki pješaka lošiji od najboljeg poteza (engine).",
+    "loadFailed": "Odstupanja se nisu mogla učitati.",
+    "none": "U partijama igrača {{who}} nema odstupanja od tvog repertoara.",
+    "done": "Svih {{n}} varijanti gotovo — {{good}} dobrih odgovora, {{bad}} nije optimalno.",
+    "progress": "Varijanta {{done}} od {{total}}",
+    "instead": "Tvoj repertoar: {{moves}}",
+    "playPath": "Igraj poteze svog repertoara do odstupanja.",
+    "pathHint": "Na putu do odstupanja ovdje dolazi {{move}}.",
+    "opponentMoves": "{{who}} vuče …",
+    "askDeviation": "Ovdje {{who}} igra {{move}} ({{n}}×) — to nije u tvom repertoaru. Koji je najbolji odgovor?",
+    "askContinuation": "U njegovim partijama slijedi {{move}} ({{n}}×). Koji je najbolji odgovor?",
+    "judging": "Engine provjerava tvoj odgovor …",
+    "good": "{{move}} je dobar.",
+    "bestWere": "Engine: {{moves}}",
+    "notOptimal": "{{move}} nije optimalan (−{{loss}}).",
+    "better": "Bolje bi bilo: {{moves}}",
+    "retry": "Ponovo",
+    "showSolution": "Pokaži rješenje",
+    "end": "{{who}} odavde nije dalje igrao.",
+    "maia": "Igraj dalje protiv Maie ({{elo}})",
+    "maiaHint": "Otvara ploču za analizu od ove pozicije s Maiom jačine {{elo}} — jakom kao {{who}}.",
+    "next": "Sljedeća varijanta",
+    "skip": "Preskoči varijantu"
   }
 }

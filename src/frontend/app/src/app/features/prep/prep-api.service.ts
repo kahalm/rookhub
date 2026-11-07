@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { filterParams } from '@lh/core/league-api.service';
-import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody } from '@rh/shared/player-card/training-lines';
+import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody, Deviations } from '@rh/shared/player-card/training-lines';
 import { Account, AccountChecks, OpeningTree, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
 import { PrepCardJson, PrepHit, PrepOptions, PrepSuggestionList } from './prep.models';
 
@@ -38,6 +38,11 @@ export class PrepApiService {
   /** Trainingslinien gegen diesen Spieler (2026-10-07) — Grenze/Zwilling wie die Karte. */
   trainingLines(id: number, o: PrepOptions, q: TrainingLinesQuery): Promise<TrainingLines> {
     return firstValueFrom(this.http.get<TrainingLines>(`/api/prep/player/${id}/training-lines`, { params: opts(trainingLinesParams(q), o) }));
+  }
+
+  /** Abweichungen vom eigenen Repertoire (0.892.0) — Grenze/Zwilling wie die Karte. */
+  deviations(id: number, o: PrepOptions, q: TrainingLinesQuery): Promise<Deviations> {
+    return firstValueFrom(this.http.get<Deviations>(`/api/prep/player/${id}/deviations`, { params: opts(trainingLinesParams(q), o) }));
   }
 
   /** „Show me lines to train": Trainings-Repertoire anlegen — Grenze/Zwilling wie die Karte. */

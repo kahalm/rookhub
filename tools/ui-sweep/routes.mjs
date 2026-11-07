@@ -118,6 +118,8 @@ export const ROUTES = [
   r('rookhub', '/analysis/compare/{comparisonId}', 'user', { main: ['.board-col app-chess-board', '.cmp-page mat-card'] }),
   r('rookhub', '/prep', 'user', { main: ['ul.hits > li', '.prep-search .hint', '.prep-search .q'] }),
   r('rookhub', '/prep/{prepId}', 'user', { main: ['.prep-card-scope lh-player-card', '.prep-card-scope'] }),
+  // Abweichungs-Trainer (0.892.0): ohne Abweichungen bzw. Prep-Recht zeigt er den Leerzustand (mat-card.msg)
+  r('rookhub', '/repertoires/deviations?deviations=prep:{prepId}', 'user', { label: 'repertoires-deviations', main: ['.play app-puzzle-board', 'mat-card.msg'] }),
   r('rookhub', '/games', 'user', { main: ['.games-page .row.game', '.games-page mat-card.empty-state', '.games-page .center'] }),
   r('rookhub', '/games/mistakes', 'user', { main: ['.page .board-wrap app-chess-board', '.page button.start', '.page .empty-state', '.page > p.hint'] }),
   r('rookhub', '/games/scoresheet', 'user', { main: ['.sheet-page mat-card.upload', '.sheet-page mat-card.notice', '.sheet-page .center'] }),

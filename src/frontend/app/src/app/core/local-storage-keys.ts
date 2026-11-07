@@ -113,6 +113,7 @@ export const STORAGE_KEYS: readonly StorageKeyEntry[] = [
   d('rookhub_position_reps_', 'Stellungssuche: Modus und Ähnlichkeit', true),
   d('rookhub_rep_train_freq_order', 'Repertoire-Training: Reihenfolge'),
   d('rookhub_rep_train_review_engine', 'Repertoire-Training: Engine in der Nachbetrachtung an/aus'),
+  d('rookhub_deviation_threshold', 'Abweichungs-Trainer: Schwelle „gut“ in Zentibauern'),
   d('rookhub_scoresheet_', 'Formular-Upload: Sprache und Seite', true),
   d('rookhub_apk_seen_version', 'zuletzt gesehene App-Version'),
   d('rookhub_sw_recovery_reload', 'Service-Worker-Wiederanlauf (technisch)'),

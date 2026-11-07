@@ -73,3 +73,27 @@
   Hat die Begegnungsfarbe keine markierten Linien (`colors` ohne sie), zeigt `.tl-other` „Für Schwarz hast du keine
   markierten Linien — gezeigt werden deine Linien mit Weiß". Knopf und Ersetzen-Rückfrage nennen die Farbe
   (`{{side}}` = `asWhite`/`asBlack`, „ich mit Schwarz"; Parameter NICHT `as` nennen — Schlüsselwort im Template).
+- Abweichungen trainieren (0.892.0, Wunsch 07.11.: „mach dafür einen 2. knopf — trainiere abweichungen"): `lh-training-lines`
+  lädt nach den Trainingslinien still `PlayerCardApi.deviations` (Prep: `PrepApiService.deviations`, LeagueHub:
+  `LeagueApiService.deviations`, `GET …/deviations`, dieselbe Auswahl) und zeigt in `.tl-actions` „Abweichungen trainieren (N)"
+  (`.tl-deviations`, nur bei `total > 0`) plus aufklappbare Liste `.tl-dev-list` („5…Sc6 statt 5…a6 — 7× gespielt",
+  `deviationText`). Klick → `/repertoires/deviations?deviations=<opponent>&color=&repertoire=&name=` + Filter (LeagueHub per
+  `jumpToRookHub`). Die Seite `features/repertoire/deviations/` ist bewusst EIGEN statt ein Modus des Repertoire-Trainers: die
+  Abweichungen gehören zu keinem einzelnen Repertoire (alle markierten), ab der Abweichung gibt es keine Linie zum Abfragen
+  (die Engine urteilt), und am Ende steht Maia. Wiederverwendet: `PuzzleBoardComponent`, `AnalysisEngineService` (Urteil
+  `DeviationJudge`: Stellung vor der Antwort MultiPV 3 bis Tiefe 16 schon während des Überlegens, Stellung danach Tiefe 12
+  ≤ 1,5 s; gut = höchstens Schwelle cp schlechter, Vorgabe 30, wählbar 10/30/50/100, `rookhub_deviation_threshold`; Tiefe der
+  Engine danach zurück), Nachbetrachtung (`TrainerReviewEngine`) und die Partien-Anzeige des Trainers. Ablauf
+  `DeviationSession`: PATH (Weg zur Abweichung, meine Züge abgefragt, „Auf dem Weg … kommt hier …") → OPP → ASK („Hier spielt
+  Maras 4…h6 (7×) — das steht nicht in deinem Repertoire") → JUDGING → GOOD/BAD (Nochmal, Lösung zeigen) → seine Fortsetzung
+  aus `positions` (häufigste weiter, weitere Gegnerzüge als eigene Linien direkt dahinter, ohne Abfrage aufgestellt) oder END:
+  „Gegen Maia weiterspielen (2200)" = `/analysis?fen=<Schluss>&orientation=&maia=<Elo>` im neuen Tab (Analysebrett:
+  `?maia=` öffnet die Maia-Karte mit der nächsten Stufe `nearestMaiaElo`, nicht gespeichert); Durchklicken + Engine wie im
+  Trainer. Kein SR (Abweichungen sind keine Repertoire-Karten).
+- Partien des Gegners zur Stellung (0.892.0, Wunsch 07.11.: „rechts eine meldung ab wann ich von gespielten partien abgewichen
+  bin"): Trainer mit `?opponent=` holt `training-lines` mit `positions=true` (einmal), der Abweichungs-Trainer hat `positions`
+  in seiner Antwort. `shared/player-card/opponent-positions.ts` (`opponentNote`, Schlüssel = erste drei FEN-Felder) +
+  `features/repertoire/opponent-note.util.ts` (Text): „In den Partien von Maras: 14× erreicht (zuletzt 2024)" + „er spielte hier
+  1…e5 9×, 1…c5 5×"; ab dem ersten Halbzug ohne seine Partien `.opponent-note.left` „Ab 2.Sf3 keine Partien von Maras mehr — ab
+  hier geschätzt (Lichess …)" bzw. „… nur dein Repertoire" (Abweichungs-Trainer: „… urteilt nur die Engine"), bleibt bis zum
+  Linienende. Name kommt als `?name=` von der Karte (Nachname).

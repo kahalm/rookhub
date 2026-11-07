@@ -52,7 +52,7 @@ export class TrainerReviewEngine {
       });
     }
     engine.setMultiPv(1);
-    engine.analyze(fen).catch(() => {});
+    engine.analyze(fen).catch(() => undefined);   // Fehler zeigt der Dienst selbst (engineFatalError$)
   }
 
   get evalText(): string { return this.best ? evalBar(this.best, null).evalText : ''; }

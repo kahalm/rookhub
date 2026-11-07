@@ -5396,7 +5396,12 @@
       "chessableTrained": "Open on Chessable — last trained {{date}}, level {{level}}",
       "chessableLevelOnly": "Open on Chessable — level {{level}}, training date not recorded",
       "chessableNever": "Open on Chessable — not trained there yet",
-      "skippedAlternatives": "{{n}} unlearned Chessable alternatives left out."
+      "skippedAlternatives": "{{n}} unlearned Chessable alternatives left out.",
+      "deviationsButton": "Train deviations ({{n}})",
+      "deviationsHint": "The places where he left your repertoire: you play the way there, he plays his move, you find the best answer (the engine judges); then his continuations and, if you like, against Maia at the end.",
+      "deviationsList": "Where he deviates ({{n}})",
+      "deviationItem": "{{move}} instead of {{instead}} — played {{n}}×",
+      "deviationItemOne": "{{move}} instead of {{instead}} — played {{n}}×"
     },
     "title": "Prepare for an opponent",
     "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",
@@ -6158,5 +6163,42 @@
       "flagCleared": "Mark removed.",
       "flagError": "Could not save the mark."
     }
+  },
+  "opponentNote": {
+    "thisOpponent": "the opponent",
+    "reached": "In the games of {{who}}: reached {{n}}× (last {{year}})",
+    "reachedNoYear": "In the games of {{who}}: reached {{n}}×",
+    "played": "he played {{moves}} here",
+    "never": "This position does not occur in the games of {{who}}.",
+    "leftEstimated": "From {{move}} no more games of {{who}} — estimated from here (Lichess {{band}})",
+    "leftRepertoire": "From {{move}} no more games of {{who}} — only your repertoire from here",
+    "leftEngine": "From {{move}} no more games of {{who}} — only the engine judges from here"
+  },
+  "deviations": {
+    "title": "Deviations of {{who}}",
+    "threshold": "Good up to",
+    "thresholdTip": "An answer counts as good if it is at most this many hundredths of a pawn worse than the best move (engine).",
+    "loadFailed": "The deviations could not be loaded.",
+    "none": "In the games of {{who}} there is no deviation from your repertoire.",
+    "done": "All {{n}} lines done — {{good}} good answers, {{bad}} not optimal.",
+    "progress": "Line {{done}} of {{total}}",
+    "instead": "Your repertoire: {{moves}}",
+    "playPath": "Play your repertoire moves up to the deviation.",
+    "pathHint": "On the way to the deviation, {{move}} comes here.",
+    "opponentMoves": "{{who}} is moving …",
+    "askDeviation": "Here {{who}} plays {{move}} ({{n}}×) — that is not in your repertoire. What is the best answer?",
+    "askContinuation": "In his games {{move}} follows ({{n}}×). What is the best answer?",
+    "judging": "The engine is checking your answer …",
+    "good": "{{move}} is good.",
+    "bestWere": "Engine: {{moves}}",
+    "notOptimal": "{{move}} is not optimal (−{{loss}}).",
+    "better": "Better would be: {{moves}}",
+    "retry": "Try again",
+    "showSolution": "Show solution",
+    "end": "{{who}} did not play on from here.",
+    "maia": "Play on against Maia ({{elo}})",
+    "maiaHint": "Opens the analysis board from this position with Maia at strength {{elo}} — as strong as {{who}}.",
+    "next": "Next line",
+    "skip": "Skip line"
   }
 }

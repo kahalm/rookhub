@@ -9,6 +9,7 @@ import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { readChapterColorOverrides } from '@rh/shared/repertoire/repertoire-color.util';
 import { PLAYER_CARD_API } from './player-card-api';
 import { cardDate, cardLang } from './card-lang';
+import { Deviations, deviationText } from './training-lines';
 import { ChapterColorOverrides, TRAINING_LINES_KEY, TRAINING_REPERTOIRE_MAX, TrainingLine, TrainingRepertoireResult, chessableInfo, deviationLabel, plyLabel, TrainingLines, lineText, matchedUntil, percent, trainingFilterParams,
   trainingRepertoireName } from './training-lines';
 
@@ -90,7 +91,26 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
                 @if (d.repertoire !== null) {
                   <button type="button" class="btn-sec tl-all" [disabled]="busy()" (click)="trainAll(d)">{{ t('playerCard.lines.trainAll') }}</button>
                 }
+                @if (deviations(); as dv) {
+                  @if (dv.total > 0) {
+                    <!-- 0.892.0: wo er dein Repertoire verlassen hat — durchspielen, beste Antwort finden, dann gegen Maia -->
+                    <button type="button" class="btn-sec tl-deviations" [disabled]="busy()" [title]="t('deviationsHint')"
+                            (click)="trainDeviations(d)">{{ t('deviationsButton', { n: dv.total }) }}</button>
+                  }
+                }
               </div>
+              @if (deviations(); as dv) {
+                @if (dv.deviations.length) {
+                  <details class="tl-dev-list">
+                    <summary class="small">{{ t('deviationsList', { n: dv.total }) }}</summary>
+                    <ol class="small">
+                      @for (x of dv.deviations; track $index) {
+                        <li>{{ devText(x) }}</li>
+                      }
+                    </ol>
+                  </details>
+                }
+              }
               @if (d.repertoire === null) { <p class="muted small tl-all-hint">{{ t('trainAllHint') }}</p> }
               @if (createNote(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.text }}</p> }
               @if (d.skippedAlternatives) {
@@ -176,6 +196,8 @@ interface Want { repertoire: number | null; color: 'w' | 'b' | null }
     .tl-tag-warn { border-color: var(--warn, #b45309); color: var(--warn, #b45309); }
     .tl-estimate { margin: .2rem 0 .4rem; padding: .35rem .5rem; border-left: 3px solid var(--focus, #1c5fd4); }
     .tl-incomplete { border-left-color: var(--warn, #b45309); }
+    .tl-dev-list { margin: 0 0 .5rem; }
+    .tl-dev-list ol { margin: .3rem 0 0; padding-left: 1.4rem; max-height: 14rem; overflow-y: auto; overflow-wrap: anywhere; }
   `],
 })
 export class TrainingLinesComponent {
@@ -203,6 +225,9 @@ export class TrainingLinesComponent {
   readonly busy = signal(false);
   readonly creating = signal(false);
   readonly createNote = signal<{ text: string; err: boolean } | null>(null);
+  /** Abweichungen für dieselbe Auswahl (0.892.0) — nur der Knopf mit Zahl und die aufklappbare Liste; `null` = (noch) keine. */
+  readonly deviations = signal<Deviations | null>(null);
+  private devSeq = 0;
   /** „Show me lines to train" anbieten: die API kann es (Spielervorbereitung, LeagueHub). */
   readonly canCreate = !!this.api.trainingRepertoire;
   readonly who = computed(() => (this.name() || '').split(',')[0].trim() || this.t('playerCard.lines.thisOpponent'));
@@ -229,6 +254,49 @@ export class TrainingLinesComponent {
   reachedText(n: number, lastYear: number | null): string {
     const games = this.t(n === 1 ? 'playerCard.lines.gamesOne' : 'playerCard.lines.games', { n });
     return lastYear ? games + this.t('playerCard.lines.lastYear', { year: lastYear }) : games;
+  }
+
+  /** „3…a6 statt 3…Sf6 — 7× gespielt" (Liste unter dem Knopf). */
+  devText(x: Deviations['deviations'][number]): string {
+    const { move, instead } = deviationText(x, this.lang);
+    return this.t(x.games === 1 ? 'deviationItemOne' : 'deviationItem', { move, instead, n: x.games });
+  }
+
+  /** Abweichungen derselben Auswahl nachladen (still: ohne sie fehlt nur der Knopf). */
+  private async loadDeviations(d: TrainingLines): Promise<void> {
+    const fetch = this.api.deviations;
+    if (!fetch || !d.repertoires.length) { this.deviations.set(null); return; }
+    const my = ++this.devSeq;
+    try {
+      const r = await fetch.call(this.api, this.key(), {
+        repertoire: d.repertoire, color: d.color, filter: this.filter(),
+        chapterColors: this.overrides(d.repertoire, d.repertoires.map(x => x.id)),
+      });
+      if (my === this.devSeq) this.deviations.set(r);
+    } catch {
+      if (my === this.devSeq) this.deviations.set(null);
+    }
+  }
+
+  /** „Abweichungen trainieren": eigene Seite der Haupt-App (`/repertoires/deviations?deviations=…`), Farbe, Auswahl und Filter. */
+  async trainDeviations(d: TrainingLines): Promise<void> {
+    const opp = this.api.trainerParams?.(this.key()) ?? { opponent: `league:${this.key()}` };
+    const { opponent, ...rest } = opp;
+    const params: Record<string, string> = {
+      deviations: opponent, ...rest,
+      ...(d.color ? { color: d.color } : {}),
+      ...(d.repertoire !== null ? { repertoire: String(d.repertoire) } : {}),
+      ...(this.name() ? { name: this.who() } : {}),
+      ...trainingFilterParams(this.filter()),
+    };
+    const path = 'repertoires/deviations';
+    this.busy.set(true);
+    try {
+      if (this.handoff.rookHubUrl) await this.handoff.jumpToRookHub(`${path}?${new URLSearchParams(params).toString()}`);
+      else await this.router.navigate(['/' + path], { queryParams: params });
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   /** Woher die Linie stammt: bei „Alle markierten" Repertoire · Kapitel, sonst das Kapitel. */
@@ -372,6 +440,7 @@ export class TrainingLinesComponent {
       }
       this.data.set(d);
       this.loadedFor = `${key}|${JSON.stringify(filter)}`;
+      if (!d.explorerRunning) void this.loadDeviations(d);
       // rechnet der Server noch: in 3 s wieder fragen (bis er fertig ist oder die Seite zu)
       this.clearAuto();
       if (d.explorerRunning) this.pendingStart.update(v => Math.max(v, d.explorerPending ?? 0));
@@ -428,6 +497,8 @@ export class TrainingLinesComponent {
       ...this.api.trainerParams?.(this.key()) ?? { opponent: `league:${this.key()}` },
       ...(d.color ? { color: d.color } : {}),
       ...trainingFilterParams(this.filter()),
+      // Name für die Anzeige „in den Partien von …" im Trainer (0.892.0)
+      ...(this.name() ? { name: this.who() } : {}),
     };
     for (const [k, v] of Object.entries(extra)) if (v) params[k] = v;
     const path = `repertoires/${repertoire}/train`;
@@ -478,6 +549,11 @@ const GERMAN: Record<string, string> = {
   asBlack: 'ich mit Schwarz',
   noLinesWhite: 'Für Weiß hast du keine markierten Linien — gezeigt werden deine Linien mit Schwarz.',
   noLinesBlack: 'Für Schwarz hast du keine markierten Linien — gezeigt werden deine Linien mit Weiß.',
+  deviationsButton: 'Abweichungen trainieren ({{n}})',
+  deviationsHint: 'Die Stellen, an denen er dein Repertoire verlassen hat: du spielst den Weg dorthin, er spielt seinen Zug, du suchst die beste Antwort (Engine urteilt); danach seine Fortsetzungen und am Ende auf Wunsch gegen Maia.',
+  deviationsList: 'Wo er abweicht ({{n}})',
+  deviationItem: '{{move}} statt {{instead}} — {{n}}× gespielt',
+  deviationItemOne: '{{move}} statt {{instead}} — {{n}}× gespielt',
   trainAllHint: '„Alle in dieser Reihenfolge trainieren“ gibt es für ein einzelnes Repertoire. Für alle markierten zusammen: „Trainings-Repertoire anlegen“ — das sammelt die wichtigsten Linien in einem Repertoire, das du dann trainierst.',
   // Abschnitt selbst (e1-rk-prep-card-german) — dieselben wie `playerCard.lines.*` in de.json
   'playerCard.lines.close': 'Trainingslinien schließen',

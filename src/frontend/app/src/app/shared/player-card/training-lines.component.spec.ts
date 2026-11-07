@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { HandoffService } from '@rh/core/handoff.service';
 import { PLAYER_CARD_API } from './player-card-api';
-import { TRAINING_LINES_KEY, TrainingLines } from './training-lines';
+import { Deviations, TRAINING_LINES_KEY, TrainingLines } from './training-lines';
 import { TrainingLinesComponent } from './training-lines.component';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { TranslateService } from '@ngx-translate/core';
@@ -24,6 +24,14 @@ const DATA: TrainingLines = {
   ],
 };
 
+const DEVS: Deviations = {
+  repertoires: DATA.repertoires, repertoire: 7, color: 'w', colors: ['w', 'b'], games: 12, elo: 2100, total: 23, more: 21, positions: {},
+  deviations: [
+    { path: ['e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3'], fen: 'x', san: 'Nc6', games: 7, reached: 9, lastYear: 2024, repertoire: ['a6'] },
+    { path: ['e4'], fen: 'y', san: 'e6', games: 1, reached: 12, lastYear: null, repertoire: ['c5'] },
+  ],
+};
+
 describe('TrainingLinesComponent', () => {
   let fixture: ComponentFixture<TrainingLinesComponent>;
   let trainingLines: jasmine.Spy;
@@ -31,6 +39,7 @@ describe('TrainingLinesComponent', () => {
   let router: jasmine.SpyObj<Router>;
   let handoff: { rookHubUrl: string | null; jumpToRookHub: jasmine.Spy };
   let trainingRepertoire: jasmine.Spy;
+  let deviations: jasmine.Spy;
   let confirmAsk: jasmine.Spy;
   let lang: string | undefined;
   const el = () => fixture.nativeElement as HTMLElement;
@@ -40,12 +49,13 @@ describe('TrainingLinesComponent', () => {
     trainingLines = jasmine.createSpy('trainingLines').and.resolveTo(DATA);
     trainingRepertoire = jasmine.createSpy('trainingRepertoire').and.resolveTo({ id: 501, name: 'Prep: Huber, Franz 2026', lines: 4, replaced: false });
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
+    deviations = jasmine.createSpy('deviations').and.resolveTo(DEVS);
     trainerParams = withPrepParams ? jasmine.createSpy('trainerParams').and.returnValue({ opponent: 'prep:42', all: 'true' }) : undefined;
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
     router.navigate.and.resolveTo(true);
     handoff = { rookHubUrl: null, jumpToRookHub: jasmine.createSpy('jumpToRookHub').and.resolveTo() };
     const api = { card: jasmine.createSpy(), profile: jasmine.createSpy(), recent: jasmine.createSpy(), tree: jasmine.createSpy(),
-      pgn: jasmine.createSpy(), trainingLines, trainingRepertoire, ...(trainerParams ? { trainerParams } : {}) };
+      pgn: jasmine.createSpy(), trainingLines, trainingRepertoire, deviations, ...(trainerParams ? { trainerParams } : {}) };
     const translate = { getCurrentLang: () => lang,
       instant: (k: string, p: Record<string, unknown>) => k === 'prep.trainingRepertoire.button' ? `Show me lines to train (${p['side']})`
         : k === 'prep.trainingRepertoire.asWhite' ? 'me with White'
@@ -251,11 +261,11 @@ describe('TrainingLinesComponent', () => {
     buttons('Trainieren').find(b => b.classList.contains('tl-train'))!.click();
     await fixture.whenStable();
     expect(router.navigate).toHaveBeenCalledWith(['/repertoires/7/train'], { queryParams: {
-      opponent: 'prep:42', all: 'true', color: 'w', source: 'both', speeds: 'blitz', years: '3', line: 'lA', chapter: 'Najdorf' } });
+      opponent: 'prep:42', all: 'true', color: 'w', source: 'both', speeds: 'blitz', years: '3', name: 'Huber', line: 'lA', chapter: 'Najdorf' } });
     buttons('Alle in dieser Reihenfolge')[0].click();
     await fixture.whenStable();
     expect(router.navigate.calls.mostRecent().args[1]).toEqual({ queryParams: {
-      opponent: 'prep:42', all: 'true', color: 'w', source: 'both', speeds: 'blitz', years: '3' } });
+      opponent: 'prep:42', all: 'true', color: 'w', source: 'both', speeds: 'blitz', years: '3', name: 'Huber' } });
     expect(handoff.jumpToRookHub).not.toHaveBeenCalled();
   });
 
@@ -272,6 +282,63 @@ describe('TrainingLinesComponent', () => {
     expect(q.get('line')).toBe('lA');
     expect(q.get('color')).toBe('w');
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  describe('„Abweichungen trainieren" (0.892.0)', () => {
+    async function openWithDeviations(prep = true): Promise<void> {
+      build(prep);
+      await openSection();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('Knopf mit Zahl für dieselbe Auswahl; Liste „5…Sc6 statt 5…a6 — 7× gespielt"', async () => {
+      await openWithDeviations();
+      expect(deviations).toHaveBeenCalledWith('42', jasmine.objectContaining({ repertoire: 7, color: 'w' }));
+      expect(buttons('Abweichungen trainieren (23)').length).toBe(1);
+      const items = Array.from(el().querySelectorAll('.tl-dev-list li')).map(li => li.textContent!.trim());
+      expect(items).toEqual(['5…Sc6 statt 5…a6 — 7× gespielt', '1…e6 statt 1…c5 — 1× gespielt']);
+    });
+
+    it('öffnet den Abweichungs-Trainer der Haupt-App mit Gegner, Farbe, Auswahl, Name und Filter', async () => {
+      await openWithDeviations();
+      buttons('Abweichungen trainieren')[0].click();
+      await fixture.whenStable();
+      expect(router.navigate).toHaveBeenCalledWith(['/repertoires/deviations'], { queryParams: {
+        deviations: 'prep:42', all: 'true', color: 'w', repertoire: '7', name: 'Huber', source: 'both', speeds: 'blitz', years: '3' } });
+    });
+
+    it('LeagueHub: per Einmal-Code hinüber', async () => {
+      build();
+      handoff.rookHubUrl = 'https://rookhub.example';
+      await openSection();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      buttons('Abweichungen trainieren')[0].click();
+      await fixture.whenStable();
+      const path = handoff.jumpToRookHub.calls.mostRecent().args[0] as string;
+      expect(path.startsWith('repertoires/deviations?')).toBeTrue();
+      expect(new URLSearchParams(path.split('?')[1]).get('deviations')).toBe('league:1606921');
+    });
+
+    it('ohne Abweichungen kein Knopf', async () => {
+      build();
+      deviations.and.resolveTo({ ...DEVS, total: 0, deviations: [] });
+      await openSection();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(buttons('Abweichungen trainieren').length).toBe(0);
+    });
+
+    it('Fehler beim Laden: still, kein Knopf (die Trainingslinien bleiben)', async () => {
+      build();
+      deviations.and.rejectWith(new HttpErrorResponse({ status: 500 }));
+      await openSection();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(buttons('Abweichungen trainieren').length).toBe(0);
+      expect(el().querySelectorAll('.tl-list li').length).toBe(4);
+    });
   });
 
   it('am Handy (390 px) läuft nichts quer über', async () => {

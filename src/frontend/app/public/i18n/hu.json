@@ -5396,7 +5396,12 @@
       "chessableTrained": "Megnyitás a Chessable-ön — utoljára gyakorolva: {{date}}, {{level}}. szint",
       "chessableLevelOnly": "Megnyitás a Chessable-ön — {{level}}. szint, a gyakorlás dátuma nincs rögzítve",
       "chessableNever": "Megnyitás a Chessable-ön — ott még nem gyakoroltad",
-      "skippedAlternatives": "{{n}} meg nem tanult Chessable-alternatíva kihagyva."
+      "skippedAlternatives": "{{n}} meg nem tanult Chessable-alternatíva kihagyva.",
+      "deviationsButton": "Eltérések edzése ({{n}})",
+      "deviationsHint": "Azok a helyek, ahol elhagyta a repertoárodat: eljátszod az odavezető utat, ő lépi a saját lépését, te megkeresed a legjobb választ (a motor dönt); aztán az ő folytatásai, a végén igény szerint Maia ellen.",
+      "deviationsList": "Hol tér el ({{n}})",
+      "deviationItem": "{{move}} {{instead}} helyett — {{n}}× játszva",
+      "deviationItemOne": "{{move}} {{instead}} helyett — {{n}}× játszva"
     },
     "title": "Felkészülés ellenfélre",
     "intro": "Keressen meg bármely játékost a játszmaadatbázisban (ChessBase Megabase és Lumbra GigaBase): megnyitási profil, megnyitásfa és a legutóbbi játszmák visszajátszásra.",
@@ -6158,5 +6163,42 @@
       "flagCleared": "Megjelölés eltávolítva.",
       "flagError": "A megjelölést nem sikerült menteni."
     }
+  },
+  "opponentNote": {
+    "thisOpponent": "az ellenfél",
+    "reached": "{{who}} játszmáiban: {{n}}× elérve (utoljára {{year}})",
+    "reachedNoYear": "{{who}} játszmáiban: {{n}}× elérve",
+    "played": "itt ezt játszotta: {{moves}}",
+    "never": "Ez az állás nem fordul elő {{who}} játszmáiban.",
+    "leftEstimated": "{{move}} után már nincs {{who}} játszma — innen becsült (Lichess {{band}})",
+    "leftRepertoire": "{{move}} után már nincs {{who}} játszma — innen csak a repertoárod",
+    "leftEngine": "{{move}} után már nincs {{who}} játszma — innen csak a motor dönt"
+  },
+  "deviations": {
+    "title": "{{who}} eltérései",
+    "threshold": "Jó eddig",
+    "thresholdTip": "Egy válasz akkor jó, ha legfeljebb ennyi század gyaloggal rosszabb a legjobb lépésnél (motor).",
+    "loadFailed": "Az eltéréseket nem sikerült betölteni.",
+    "none": "{{who}} játszmáiban nincs eltérés a repertoárodtól.",
+    "done": "Mind a(z) {{n}} változat kész — {{good}} jó válasz, {{bad}} nem optimális.",
+    "progress": "{{done}}. változat / {{total}}",
+    "instead": "A repertoárod: {{moves}}",
+    "playPath": "Játszd a repertoárod lépéseit az eltérésig.",
+    "pathHint": "Az eltéréshez vezető úton itt {{move}} következik.",
+    "opponentMoves": "{{who}} lép …",
+    "askDeviation": "Itt {{who}} ezt játssza: {{move}} ({{n}}×) — ez nincs a repertoárodban. Mi a legjobb válasz?",
+    "askContinuation": "A játszmáiban {{move}} következik ({{n}}×). Mi a legjobb válasz?",
+    "judging": "A motor ellenőrzi a válaszodat …",
+    "good": "{{move}} jó.",
+    "bestWere": "Motor: {{moves}}",
+    "notOptimal": "{{move}} nem optimális (−{{loss}}).",
+    "better": "Jobb lenne: {{moves}}",
+    "retry": "Újra",
+    "showSolution": "Megoldás mutatása",
+    "end": "{{who}} innen nem játszott tovább.",
+    "maia": "Folytatás Maia ellen ({{elo}})",
+    "maiaHint": "Megnyitja az elemzőtáblát ettől az állástól, {{elo}} erősségű Maiával — olyan erős, mint {{who}}.",
+    "next": "Következő változat",
+    "skip": "Változat kihagyása"
   }
 }

@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from '@rh/core/auth.service';
 import { OpeningTree, PlayerCard, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
 import { PlayerCardApi } from '@rh/shared/player-card/player-card-api';
-import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult } from '@rh/shared/player-card/training-lines';
+import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, Deviations } from '@rh/shared/player-card/training-lines';
 import { PrepApiService } from './prep-api.service';
 import { PrepCardJson, PrepOptions, PrepScope } from './prep.models';
 
@@ -58,6 +58,10 @@ export class PrepCardApi implements PlayerCardApi {
 
   trainingLines(key: string, q: TrainingLinesQuery): Promise<TrainingLines> {
     return this.api.trainingLines(Number(key), this.options(), q);
+  }
+
+  deviations(key: string, q: TrainingLinesQuery): Promise<Deviations> {
+    return this.api.deviations(Number(key), this.options(), q);
   }
 
   trainingRepertoire(key: string, q: TrainingLinesQuery, replace = false): Promise<TrainingRepertoireResult> {

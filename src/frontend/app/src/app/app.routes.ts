@@ -27,6 +27,9 @@ export const routes: Routes = [
   { path: 'friends/:userId/stats', loadComponent: () => import('./features/friends/friend-stats.component').then(m => m.FriendStatsComponent), canActivate: [authGuard, menuGuard('friends')] },
   { path: 'friends/:userId/revenge', loadComponent: () => import('./features/friends/friend-revenge.component').then(m => m.FriendRevengeComponent), canActivate: [authGuard, menuGuard('friends')] },
   { path: 'repertoires', loadComponent: () => import('./features/repertoire/repertoire-list.component').then(m => m.RepertoireListComponent), canActivate: [authGuard, menuGuard('repertoires')] },
+  // Abweichungs-Trainer (0.892.0): gehört zu keinem einzelnen Repertoire — VOR 'repertoires/:id'; Rechte prüft die API
+  // (prep.view bzw. league.view je Gegner-Quelle), daher nur Anmeldung + Menüpunkt wie die Repertoires.
+  { path: 'repertoires/deviations', loadComponent: () => import('./features/repertoire/deviations/deviation-trainer.component').then(m => m.DeviationTrainerComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'repertoires/:id/train', loadComponent: () => import('./features/repertoire/repertoire-trainer.component').then(m => m.RepertoireTrainerComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'repertoires/:id/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [authGuard, menuGuard('repertoires')] },
   { path: 'repertoires/:id', loadComponent: () => import('./features/repertoire/repertoire-detail.component').then(m => m.RepertoireDetailComponent), canActivate: [authGuard, menuGuard('repertoires')] },

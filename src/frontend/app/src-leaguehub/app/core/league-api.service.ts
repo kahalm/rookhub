@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Account, AccountChecks, AccountInput, AdminClub, Broadcast, ClubInput, FixturePairing, ForecastStats, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, RhGroup, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
-import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody } from '@rh/shared/player-card/training-lines';
+import { TrainingLines, TrainingLinesQuery, TrainingRepertoireResult, trainingLinesParams, trainingRepertoireBody, Deviations } from '@rh/shared/player-card/training-lines';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -87,6 +87,12 @@ export class LeagueApiService {
   /** Trainingslinien gegen diesen Spieler (2026-10-07): eigene Repertoires, gereiht nach seinen Partien — nur angemeldet. */
   trainingLines(fide: string, q: TrainingLinesQuery): Promise<TrainingLines> {
     return firstValueFrom(this.http.get<TrainingLines>(`/api/league/player/${encodeURIComponent(fide)}/training-lines`,
+      { params: trainingLinesParams(q) }));
+  }
+
+  /** Abweichungen des Spielers vom eigenen Repertoire (0.892.0) — nur angemeldet. */
+  deviations(fide: string, q: TrainingLinesQuery): Promise<Deviations> {
+    return firstValueFrom(this.http.get<Deviations>(`/api/league/player/${encodeURIComponent(fide)}/deviations`,
       { params: trainingLinesParams(q) }));
   }
 

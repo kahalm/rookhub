@@ -1241,7 +1241,8 @@ describe('RepertoireTrainerComponent: Nachbetrachtung nach dem Linienende (0.890
     const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
       { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any, { enqueue: () => {} } as any,
-      NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, null, engine);
+      NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, null);
+    (c as any).analysisEngine = engine;
     c.ngOnInit();
     return { c, engine, reviewLine };
   }
@@ -1355,4 +1356,64 @@ describe('RepertoireTrainerComponent: Nachbetrachtung nach dem Linienende (0.890
     expect(url.searchParams.get('orientation')).toBe('white');
     expect(url.searchParams.get('fen')).toContain('rnbqkbnr/pppppppp');
   }));
+});
+
+describe('RepertoireTrainerComponent: Partien des Gegners zur Stellung (?opponent=, 0.892.0)', () => {
+  const fensOf = (sans: string[]) => { const ch = new Chess(); return [ch.fen(), ...sans.map(s => { ch.move(s); return ch.fen(); })]; };
+  const F = fensOf(['e4', 'e5', 'Nf3', 'Nc6']);
+  const key = (fen: string) => fen.split(' ').slice(0, 3).join(' ');
+
+  function make(band: string | null) {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w' }));
+    const query: Record<string, string> = { opponent: 'prep:42', color: 'w', name: 'Maras' };
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => query[k] ?? null } } };
+    const training: any = {
+      getPgn: () => of(PGN), getLineStates: () => of([state(KEY_A, PAST()), state(KEY_B, PAST())]),
+      reviewLine: () => of(state(KEY_A, FUTURE())), promote: () => of({ affected: 1 }), makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
+    };
+    const get = jasmine.createSpy('get').and.returnValue(of({
+      repertoires: [], repertoire: 1, color: 'w', colors: ['w'], games: 14, total: 2, more: 0, lichessBand: band,
+      lines: [KEY_A, KEY_B].map(k => ({ key: k, end: '', start: null, chapter: '', moves: [], probability: 0.5, reached: 1, lastYear: 2024, neverReached: false })),
+      // er erreicht die Stellung nach 1.e4 (14×, spielt 1…e5 9× / 1…c5 5×) und nach 1…e5, aber nie die nach 2.Nf3
+      positions: { [key(F[0])]: { n: 14, y: 2024, m: {} }, [key(F[1])]: { n: 14, y: 2024, m: { e5: 9, c5: 5 } }, [key(F[2])]: { n: 9, y: 2023, m: {} } },
+    }));
+    const translate: any = { instant: (k: string, p?: any) => `${k}|${JSON.stringify(p ?? {})}`, getCurrentLang: () => 'de' };
+    const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any, translate,
+      { markForCheck: () => {} } as any, { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
+      { enqueue: () => {} } as any, NO_EXPLORER, NO_SNACKBAR, CONFIRM_YES, { get } as any);
+    c.ngOnInit();
+    return { c, get };
+  }
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_1'));
+
+  it('fragt die Partien je Stellung EINMAL mit (positions=true) und zeigt sie zur Stellung; Umschlag am ersten Zug ohne Partien', fakeAsync(() => {
+    const { c, get } = make(null);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get.calls.mostRecent().args[1].params.get('positions')).toBe('true');
+    // Linie 1.e4 e5 2.Nf3 Nc6 zuerst (Reihung A, B)
+    expect(c.queue[0].headers['White']).toBe('1.e4 e5');
+    expect(c.opponentNote!.text).toContain('opponentNote.reached');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any });
+    tick(600);                                                    // er antwortet 1…e5 — Stellung nach 1…e5 noch in seinen Partien
+    expect(c.opponentNote!.left).toBeFalse();
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any });
+    tick(600);                                                    // nach 2.Nf3 keine seiner Partien mehr
+    expect(c.phase).toBe('LINE_DONE');
+    expect(c.opponentNote).toEqual({ text: 'opponentNote.leftRepertoire|{"move":"2.Sf3","who":"Maras","band":null}', moves: null, left: true });
+    c.reviewTo(1);                                                // zurückgeklickt: nach 1.e4 seine Züge
+    expect(c.opponentNote!.moves).toBe('opponentNote.played|{"moves":"1…e5 9×, 1…c5 5×"}');
+  }));
+
+  it('mit Lichess-Schätzung: „ab hier geschätzt (Lichess …)"', fakeAsync(() => {
+    const { c } = make('2143–2443');
+    c.onMove({ orig: 'e2' as any, dest: 'e4' as any }); tick(600);
+    c.onMove({ orig: 'g1' as any, dest: 'f3' as any }); tick(600);
+    expect(c.opponentNote!.text).toBe('opponentNote.leftEstimated|{"move":"2.Sf3","who":"Maras","band":"2143–2443"}');
+  }));
+
+  it('ohne Gegner keine Anzeige', () => {
+    const c = make(null).c;
+    (c as any).opponentPositions = null;
+    expect(c.opponentNote).toBeNull();
+  });
 });

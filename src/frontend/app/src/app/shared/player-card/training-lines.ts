@@ -3,6 +3,7 @@ import { TreeFilter } from '@lh/core/league.models';
 import { cardFormatLocale, cardSan } from './card-lang';
 import { formatPct } from '@rh/shared/format/pct';
 import { whiteToMove } from '../chess/fen-side';
+import type { OpponentPositions } from './opponent-positions';
 
 /**
  * Trainingslinien gegen einen Gegner (2026-10-07): Antwort von `GET /api/prep/player/{id}/training-lines` bzw.
@@ -121,6 +122,40 @@ export interface TrainingLines {
   lines: TrainingLine[];
   /** So viele Linien mehr gibt es (ohne `take` höchstens 50 in der Antwort). */
   more: number;
+  /** Nur mit `positions=true` (Trainer, 0.892.0): seine Partien je Repertoire-Stellung. */
+  positions?: OpponentPositions;
+}
+
+/** Eine Abweichung des Gegners vom eigenen Repertoire (0.892.0, `GET …/deviations`). */
+export interface Deviation {
+  /** Halbzüge (englische SAN) ab der Grundstellung bis vor den Abweichungszug. */
+  path: string[];
+  /** Stellung vor dem Abweichungszug. */
+  fen: string;
+  /** Sein Zug, den das Repertoire nicht kennt. */
+  san: string;
+  /** Partien mit diesem Zug hier. */
+  games: number;
+  /** Partien, die die Stellung erreicht haben. */
+  reached: number;
+  lastYear: number | null;
+  /** Die Repertoire-Züge an der Stellung („statt …"). */
+  repertoire: string[];
+}
+
+export interface Deviations {
+  repertoires: { id: number; name: string; colors: ('w' | 'b')[] }[];
+  repertoire: number | null;
+  color: 'w' | 'b' | null;
+  colors: ('w' | 'b')[];
+  games: number;
+  /** Elo des Gegners für die Maia-Stufe (jüngste Elo bzw. Meldeliste, sonst 1800). */
+  elo: number;
+  total: number;
+  deviations: Deviation[];
+  more: number;
+  /** Seine Partien je Stellung: Pfade + Fortsetzungsbaum (`m` nur seine Züge). */
+  positions: OpponentPositions;
 }
 
 /** Eigene Farb-Festlegungen: flach `{ Kapitel: 'w' }` (ein gewähltes Repertoire, so schickt sie der Trainer) oder je Repertoire
@@ -170,6 +205,19 @@ export function trainingLinesUrl(opponent: string | null | undefined): string | 
   const m = /^(prep|league):([\w-]{1,32})$/.exec(opponent ?? '');
   if (!m) return null;
   return m[1] === 'prep' ? `/api/prep/player/${m[2]}/training-lines` : `/api/league/player/${encodeURIComponent(m[2])}/training-lines`;
+}
+
+/** Der Gegner im Abweichungs-Trainer (`?deviations=`): `prep:<Id>` oder `league:<FIDE>` → Adresse der Abweichungen; sonst `null`. */
+export function deviationsUrl(opponent: string | null | undefined): string | null {
+  return trainingLinesUrl(opponent)?.replace(/\/training-lines$/, '/deviations') ?? null;
+}
+
+/** „3…a6 statt 3…Sf6" — Abweichungszug mit Zugnummer, dazu die Repertoire-Züge. */
+export function deviationText(d: Pick<Deviation, 'path' | 'san' | 'repertoire'>, lang = 'de'): { move: string; instead: string } {
+  const at = d.path.length;
+  const move = plyLabel([...d.path, d.san], null, at, lang);
+  const instead = d.repertoire.map(r => plyLabel([...d.path, r], null, at, lang)).join(', ');
+  return { move, instead };
 }
 
 /** Was der Trainer an die Trainingslinien weiterreicht (Filter der Karte und — Spielervorbereitung — `all`/`twin`). */

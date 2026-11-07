@@ -176,6 +176,11 @@
             }
           </p>
         }
+        @if (opponentNote; as on) {
+          <!-- 0.892.0: aus Sicht seiner Partien — ab dem ersten Zug ohne Partien bleibt die Meldung bis zum Linienende -->
+          <p class="opponent-note" [class.left]="on.left" role="status"><mat-icon>{{ on.left ? 'call_split' : 'person_search' }}</mat-icon>
+            <span>{{ on.text }}@if (on.moves) {<br><span class="on-moves">{{ on.moves }}</span>}</span></p>
+        }
         @if (currentLinePaused) {
           <p class="paused-note" role="status"><mat-icon>pause_circle</mat-icon>{{ 'repertoireTrainer.pausedNote' | translate }}</p>
         }

@@ -1,0 +1,109 @@
+<div class="dev">
+  <div class="bar">
+    <button mat-button (click)="back()"><mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}</button>
+    <span class="title">{{ 'deviations.title' | translate: { who: who } }}</span>
+    <!-- Schwelle „gut“ (Vorgabe 30 cp, je Gerät) -->
+    <label class="threshold" [matTooltip]="'deviations.thresholdTip' | translate">
+      <span>{{ 'deviations.threshold' | translate }}</span>
+      <select [value]="threshold" (change)="setThreshold(+$any($event.target).value)">
+        @for (o of thresholdOptions; track o) { <option [value]="o" [selected]="o === threshold">{{ o }} cp</option> }
+      </select>
+    </label>
+  </div>
+
+  @switch (s.phase) {
+    @case ('LOADING') { <p class="center">{{ 'common.loading' | translate }}</p> }
+    @case ('EMPTY') {
+      <mat-card class="msg">
+        <mat-icon>{{ loadError ? 'error_outline' : 'check_circle' }}</mat-icon>
+        <p>{{ (loadError ? 'deviations.loadFailed' : 'deviations.none') | translate: { who: who } }}</p>
+        <button mat-stroked-button (click)="back()">{{ 'common.back' | translate }}</button>
+      </mat-card>
+    }
+    @case ('DONE') {
+      <mat-card class="msg">
+        <mat-icon>celebration</mat-icon>
+        <p>{{ 'deviations.done' | translate: { n: s.queue.length, good: s.good, bad: s.bad } }}</p>
+        <button mat-stroked-button (click)="back()">{{ 'common.back' | translate }}</button>
+      </mat-card>
+    }
+    @default {
+      <div class="play" (click)="s.tap()">
+        <app-puzzle-board
+          [fen]="fen" [orientation]="orientation" [turnColor]="turnColor"
+          [dests]="dests" [lastMove]="lastMove" [viewOnly]="!s.playable"
+          [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
+          (moveMade)="onMove($event)">
+        </app-puzzle-board>
+
+        <div class="side" (click)="$event.stopPropagation()">
+          <div class="counts">
+            <span>{{ 'deviations.progress' | translate: progress }}</span>
+            <span class="ok">✓ {{ s.good }}</span>
+            <span class="bad">✗ {{ s.bad }}</span>
+          </div>
+          @if (insteadText) { <p class="instead">{{ insteadText }}</p> }
+          @if (note; as on) {
+            <p class="opponent-note" [class.left]="on.left" role="status"><mat-icon>{{ on.left ? 'call_split' : 'person_search' }}</mat-icon>
+              <span>{{ on.text }}@if (on.moves) {<br><span class="on-moves">{{ on.moves }}</span>}</span></p>
+          }
+
+          @switch (s.phase) {
+            @case ('PATH') {
+              <p class="hint">{{ 'deviations.playPath' | translate }}</p>
+              @if (pathHintText) { <p class="warn" role="status">{{ pathHintText }}</p> }
+            }
+            @case ('OPP') { <p class="hint">{{ 'deviations.opponentMoves' | translate: { who: who } }}</p> }
+            @case ('ASK') {
+              <p class="ask" role="status"><mat-icon>help_outline</mat-icon>{{ askText }}</p>
+            }
+            @case ('JUDGING') { <p class="hint">{{ 'deviations.judging' | translate }}</p> }
+            @case ('GOOD') {
+              <p class="good" role="status"><mat-icon>check_circle</mat-icon>{{ 'deviations.good' | translate: { move: answerLabel } }}</p>
+              @if (verdictBest) { <p class="small">{{ 'deviations.bestWere' | translate: { moves: verdictBest } }}</p> }
+            }
+            @case ('BAD') {
+              <p class="bad-msg" role="status"><mat-icon>cancel</mat-icon>{{ 'deviations.notOptimal' | translate: { move: answerLabel, loss: lossPawns } }}</p>
+              <p>{{ 'deviations.better' | translate: { moves: verdictBest } }}</p>
+              <div class="actions">
+                <button mat-flat-button color="primary" (click)="retry()"><mat-icon>undo</mat-icon>{{ 'deviations.retry' | translate }}</button>
+                <button mat-stroked-button (click)="showSolution()"><mat-icon>visibility</mat-icon>{{ 'deviations.showSolution' | translate }}</button>
+              </div>
+            }
+            @case ('END') {
+              <div class="end">
+                <p class="hint"><mat-icon>flag</mat-icon>{{ 'deviations.end' | translate: { who: who } }}</p>
+                <a mat-flat-button color="primary" class="maia" [href]="maiaLink" target="_blank" rel="noopener">
+                  <mat-icon>smart_toy</mat-icon>{{ 'deviations.maia' | translate: { elo: maiaElo } }}</a>
+                <p class="small">{{ 'deviations.maiaHint' | translate: { elo: maiaElo, who: who } }}</p>
+                <div class="review-nav" role="group" [attr.aria-label]="'repertoireTrainer.reviewNav' | translate">
+                  <button mat-icon-button (click)="reviewTo(0)" [disabled]="reviewPly === 0" [appIconLabel]="'repertoireTrainer.reviewStart' | translate"><mat-icon>first_page</mat-icon></button>
+                  <button mat-icon-button (click)="reviewTo(reviewPly - 1)" [disabled]="reviewPly === 0" [appIconLabel]="'common.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
+                  <button mat-icon-button (click)="reviewTo(reviewPly + 1)" [disabled]="reviewPly >= s.played.length" [appIconLabel]="'common.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+                  <button mat-icon-button (click)="reviewTo(s.played.length)" [disabled]="reviewPly >= s.played.length" [appIconLabel]="'repertoireTrainer.reviewEnd' | translate"><mat-icon>last_page</mat-icon></button>
+                  <button mat-stroked-button class="engine-toggle" [attr.aria-pressed]="reviewEngineOn" (click)="toggleReviewEngine()"
+                          [matTooltip]="'repertoireTrainer.reviewEngineTip' | translate">
+                    <mat-icon>{{ reviewEngineOn ? 'check' : 'memory' }}</mat-icon>{{ 'repertoireTrainer.reviewEngine' | translate }}
+                  </button>
+                  <a mat-button [href]="analysisLink" target="_blank" rel="noopener"><mat-icon>open_in_new</mat-icon>{{ 'repertoireTrainer.openInAnalysis' | translate }}</a>
+                </div>
+                @if (reviewEngineRunning) {
+                  <div class="review-eval">
+                    <div class="eval-strip"><div class="eval-white" [style.width.%]="reviewWhiteHeight"></div></div>
+                    <span class="eval-text">{{ reviewEvalText || '…' }}</span>
+                  </div>
+                  @if (reviewBestLine) { <p class="small">{{ reviewBestLine }}</p> }
+                }
+                <button mat-flat-button color="primary" (click)="next()">{{ 'deviations.next' | translate }}</button>
+                <p class="tap-hint">{{ 'repertoireTrainer.reviewKeys' | translate }}</p>
+              </div>
+            }
+          }
+          @if (s.phase !== 'END') {
+            <div class="actions"><button mat-stroked-button (click)="skip()"><mat-icon>skip_next</mat-icon>{{ 'deviations.skip' | translate }}</button></div>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

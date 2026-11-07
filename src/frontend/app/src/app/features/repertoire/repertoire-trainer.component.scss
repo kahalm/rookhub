@@ -136,6 +136,12 @@
     .chessable-link { margin-left: 6px; font-size: 12px; }
     .paused-note { display: flex; align-items: center; gap: 4px; margin: 0 0 6px; font-size: 13px; color: var(--rh-warn); }
     .paused-note mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    /* 0.892.0: Partien des Gegners zur Stellung (Gegner-Modus) */
+    .opponent-note { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 8px; padding: 4px 8px; font-size: 13px;
+      border-left: 3px solid var(--rh-info); overflow-wrap: anywhere; min-width: 0; }
+    .opponent-note.left { border-left-color: var(--rh-warn); font-weight: 600; }
+    .opponent-note mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; }
+    .opponent-note .on-moves { font-weight: 400; opacity: .85; }
     /* 0.890.0: Nachbetrachtung im „Linie fertig“-Kasten */
     .mv-btn { border: 0; background: none; padding: 0 2px; font: inherit; color: inherit; cursor: pointer; border-radius: 3px; }
     .mv-btn.active { background: color-mix(in srgb, var(--rh-accent) 25%, transparent); font-weight: 600; }
