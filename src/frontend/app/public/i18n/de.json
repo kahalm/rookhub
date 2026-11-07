@@ -89,7 +89,11 @@
     "reviewEngineOffline": "Offline keine Engine — Durchklicken geht trotzdem",
     "openInAnalysis": "Im Analysebrett öffnen",
     "reviewKeys": "← → durch die Linie, Pos1/Ende springen; Leertaste/Enter = nächste Linie",
-    "openOnChessable": "Diese Linie auf Chessable öffnen"
+    "openOnChessable": "Diese Linie auf Chessable öffnen",
+    "evalBetter": "Laut Engine ist dein Zug um {{delta}} Bauern besser als der Repertoirezug.",
+    "evalUnavailable": "Für diesen Zug liegt keine Engine-Bewertung vor.",
+    "lineNew": "(neu)",
+    "lineNewTip": "Diese Linie hast du noch nie trainiert — weder hier noch auf Chessable."
   },
   "srConfig": {
     "title": "Übungszyklen",

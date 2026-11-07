@@ -35,6 +35,8 @@ export function compareEvals(sPlayer: string, sRep: string, color: TrainColor): 
  */
 export class EvalCompare {
   loading = false;
+  /** Der Vergleich lief, aber die Engine lieferte keine Bewertung (sonst stünde nach einem Fehlzug gar nichts da). */
+  failed = false;
   deltaPawns: number | null = null;
   mateNote: EvalMateNote | null = null;
   private epoch = 0;
@@ -43,7 +45,7 @@ export class EvalCompare {
 
   /** Anzeige leeren und einen laufenden Vergleich verwerfen (Neuversuch nach dem Fehlzug). */
   reset(): void {
-    this.loading = false; this.deltaPawns = null; this.mateNote = null; this.epoch++;
+    this.loading = false; this.failed = false; this.deltaPawns = null; this.mateNote = null; this.epoch++;
   }
 
   /** Betrag des Unterschieds ohne überflüssige Nullen („0.5“, „1.25“); leer ohne Ergebnis. */
@@ -56,6 +58,7 @@ export class EvalCompare {
   start(startFen: string, fenAfterPlayer: string, expectedSan: string, color: TrainColor): void {
     const epoch = ++this.epoch;
     this.loading = true;
+    this.failed = false;
     this.deltaPawns = null;
     this.mateNote = null;
 
@@ -64,7 +67,7 @@ export class EvalCompare {
       const c = new Chess(startFen);
       c.move(expectedSan);
       fenAfterRep = c.fen();
-    } catch { this.loading = false; this.changed(); return; }
+    } catch { this.loading = false; this.failed = true; this.changed(); return; }
 
     Promise.all([
       this.source.getEval(fenAfterPlayer, EVAL_COMPARE_DEPTH).catch(() => ''),
@@ -72,7 +75,7 @@ export class EvalCompare {
     ]).then(([sPlayer, sRep]) => {
       if (epoch !== this.epoch) return;
       this.loading = false;
-      if (!sPlayer || !sRep) { this.changed(); return; }
+      if (!sPlayer || !sRep) { this.failed = true; this.changed(); return; }
       const r = compareEvals(sPlayer, sRep, color);
       this.mateNote = r.mateNote;
       this.deltaPawns = r.deltaPawns;
@@ -80,6 +83,7 @@ export class EvalCompare {
     }).catch(() => {
       if (epoch !== this.epoch) return;
       this.loading = false;
+      this.failed = true;
       this.changed();
     });
   }

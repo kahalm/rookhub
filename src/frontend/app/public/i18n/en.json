@@ -89,7 +89,11 @@
     "reviewEngineOffline": "No engine offline — stepping through still works",
     "openInAnalysis": "Open on analysis board",
     "reviewKeys": "← → step through the line, Home/End jump; Space/Enter = next line",
-    "openOnChessable": "Open this line on Chessable"
+    "openOnChessable": "Open this line on Chessable",
+    "evalBetter": "By the engine, your move is {{delta}} pawns better than the repertoire move.",
+    "evalUnavailable": "No engine evaluation available for this move.",
+    "lineNew": "(new)",
+    "lineNewTip": "You have never trained this line — neither here nor on Chessable."
   },
   "srConfig": {
     "title": "Practice cycles",

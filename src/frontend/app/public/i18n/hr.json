@@ -89,7 +89,11 @@
     "reviewEngineOffline": "Bez enginea offline — prolazak kroz poteze i dalje radi",
     "openInAnalysis": "Otvori na ploči za analizu",
     "reviewKeys": "← → kroz varijantu, Home/End skok; razmaknica/Enter = sljedeća varijanta",
-    "openOnChessable": "Otvori ovu varijantu na Chessableu"
+    "openOnChessable": "Otvori ovu varijantu na Chessableu",
+    "evalBetter": "Prema engineu tvoj je potez za {{delta}} pješaka bolji od poteza iz repertoara.",
+    "evalUnavailable": "Za ovaj potez nema procjene enginea.",
+    "lineNew": "(novo)",
+    "lineNewTip": "Ovu liniju još nikad nisi trenirao — ni ovdje ni na Chessableu."
   },
   "srConfig": {
     "title": "Ciklusi vježbanja",

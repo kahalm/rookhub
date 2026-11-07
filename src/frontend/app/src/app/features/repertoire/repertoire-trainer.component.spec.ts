@@ -446,6 +446,26 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(c.phase).not.toBe('LINE_DONE');
   });
 
+  it('„(neu)“: nur ohne RookHub-Durchlauf, ohne Chessable-Stand im Kopf und ohne Chessable-Fehler', () => {
+    const c = make('w', 'Chapter A');
+    const line = (c as any).session.currentLine;
+    expect(line).toBeTruthy();
+    expect(c.currentLineNew).withContext('trainierte Linie aus dem Pool').toBeFalse();
+    (c as any).sr.setStates([]);
+    expect(c.currentLineNew).withContext('kein Zustand → neu').toBeTrue();
+    (c as any).sr.setStates([state(c.lineKeyOf(line), PAST(), { level: 0, reps: 0 })]);
+    expect(c.currentLineNew).withContext('im Pool, aber nie abgefragt → neu').toBeTrue();
+    (c as any).sr.setStates([state(c.lineKeyOf(line), PAST())]);
+    expect(c.currentLineNew).withContext('in RookHub trainiert').toBeFalse();
+    (c as any).sr.setStates([]);
+    line.headers['ChessableLastTrained'] = '2026.10.01';
+    expect(c.currentLineNew).withContext('auf Chessable trainiert (Prep-Kopf)').toBeFalse();
+    delete line.headers['ChessableLastTrained'];
+    line.headers['ChessableOid'] = '4711';
+    (c as any).chessableMisses = { '4711': [{ mid: 1, mode: null, count: 2, last: null }] };
+    expect(c.currentLineNew).withContext('Chessable-Fehler = trainiert').toBeFalse();
+  });
+
   it('Linienende: Klick ins Brett geht nur weiter, wenn nicht analysiert wird (Engine aus, nicht weggeblättert)', () => {
     const c = make('w', 'Chapter A');
     const s = (c as any).session;

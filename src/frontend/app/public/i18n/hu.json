@@ -2957,7 +2957,11 @@
     "reviewEngineOffline": "Offline nincs motor — a lépkedés így is működik",
     "openInAnalysis": "Megnyitás az elemzőtáblán",
     "reviewKeys": "← → lépkedés a változatban, Home/End ugrás; szóköz/Enter = következő változat",
-    "openOnChessable": "A változat megnyitása a Chessable-ön"
+    "openOnChessable": "A változat megnyitása a Chessable-ön",
+    "evalBetter": "A motor szerint a lépésed {{delta}} gyaloggal jobb a repertoár lépésénél.",
+    "evalUnavailable": "Ehhez a lépéshez nincs motorértékelés.",
+    "lineNew": "(új)",
+    "lineNewTip": "Ezt a változatot még sosem gyakoroltad — sem itt, sem a Chessable-ön."
   },
   "srConfig": {
     "title": "Gyakorlási ciklusok",

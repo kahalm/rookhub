@@ -50,7 +50,10 @@ describe('EvalCompare', () => {
     flushMicrotasks();
     expect(cmp.loading).toBeFalse();
     expect(cmp.deltaPawns).toBeNull();
+    expect(cmp.failed).withContext('Anzeige „keine Bewertung“').toBeTrue();
     expect(changed).toHaveBeenCalled();
+    cmp.reset();
+    expect(cmp.failed).toBeFalse();
   }));
 
   it('nicht spielbarer Repertoirezug: sofort fertig, keine Engine', () => {

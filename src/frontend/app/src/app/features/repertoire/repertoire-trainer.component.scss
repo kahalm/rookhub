@@ -174,3 +174,6 @@
     .side { max-height: calc(100vh - 1rem); overflow-y: auto; max-width: none; }
   }
 }
+
+/* „(neu)“ hinter dem Zähler: Linie noch nie trainiert (RookHub + Chessable). */
+.line-new { font-weight: 600; color: var(--rh-info, currentColor); }

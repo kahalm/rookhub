@@ -215,6 +215,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   get evalDeltaPawns(): number | null { return this.evalCmp.deltaPawns; }
   get evalMateNote(): 'missed' | 'allowed' | null { return this.evalCmp.mateNote; }
   get evalDeltaAbsDisplay(): string { return this.evalCmp.deltaAbsDisplay; }
+  get evalFailed(): boolean { return this.evalCmp.failed; }
   get wrongShown(): boolean { return this.s.wrongShown; }
   get hints(): number { return this.s.hints; }
   get hintLevel(): number { return this.s.hintLevel; }
@@ -522,6 +523,21 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Stabiler Linien-Schlüssel (identisch zur Linienliste) aus der SAN-Zugfolge. */
   lineKeyOf(line: ParsedGame): string { return lineKeyOf(line); }
+
+  /** Die aktuelle Linie wurde noch nie trainiert — weder in RookHub (kein Durchlauf) noch auf Chessable (kein Stand im
+   *  Kopf `[ChessableLastTrained]`/`[ChessableLevel]`, keine Chessable-Fehler zu ihrer oid). Anzeige „(neu)“ hinter dem
+   *  Zähler (Wunsch 2026-11-07). Auf Chessable Trainiertes kommt über die Erweiterung auch als RookHub-Stand an. */
+  get currentLineNew(): boolean {
+    const line = this.s.currentLine;
+    if (!line) return false;
+    const st = this.sr.stateOf(lineKeyOf(line));
+    if (st && (st.reps > 0 || st.level > 0 || !!st.lastReviewedAt)) return false;
+    const h = line.headers;
+    if ((h['ChessableLastTrained'] ?? '').trim() || (h['ChessableLevel'] ?? '').trim()) return false;
+    const oid = chessableOid(line);
+    if (oid && (this.chessableMisses?.[oid]?.length ?? 0) > 0) return false;
+    return true;
+  }
 
   /** Fällig = im Pool, nicht pausiert und DueAt ≤ jetzt. Noch nicht gelernte Linien (kein Zustand)
    * sind NICHT im Pool und werden nicht abgefragt. */

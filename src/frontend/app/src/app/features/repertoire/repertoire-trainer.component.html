@@ -167,6 +167,9 @@
               <mat-icon>local_fire_department</mat-icon>{{ currentStreak }}
             </span>
           }
+          @if (currentLineNew) {
+            <span class="line-new" [matTooltip]="'repertoireTrainer.lineNewTip' | translate">{{ 'repertoireTrainer.lineNew' | translate }}</span>
+          }
         </div>
         @if (currentLineLabel || currentChessableUrl) {
           <p class="line-label" [matTooltip]="currentLineChapter || ''">{{ currentLineLabel }}
@@ -279,6 +282,15 @@
             </p>
             <p class="eval-info" *ngIf="!evalLoading && evalMateNote === null && evalDeltaPawns !== null && evalDeltaPawns >= -0.05 && evalDeltaPawns <= 0.05">
               <mat-icon>drag_handle</mat-icon> {{ 'repertoireTrainer.evalEqual' | translate }}
+            </p>
+            <!-- Gemeldet 2026-11-07: war der eigene Zug BESSER als der Repertoirezug oder lieferte die Engine nichts, stand
+                 gar keine Bewertung da. -->
+            <p class="eval-info" *ngIf="!evalLoading && evalMateNote === null && evalDeltaPawns !== null && evalDeltaPawns > 0.05">
+              <mat-icon>trending_up</mat-icon>
+              {{ 'repertoireTrainer.evalBetter' | translate: { delta: evalDeltaAbsDisplay } }}
+            </p>
+            <p class="eval-info" *ngIf="evalFailed">
+              <mat-icon>help_outline</mat-icon> {{ 'repertoireTrainer.evalUnavailable' | translate }}
             </p>
             <div class="wrong-actions" *ngIf="!wrongRevealed">
               @if (wrongShown) {

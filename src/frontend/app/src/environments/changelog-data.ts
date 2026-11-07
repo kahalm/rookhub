@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.4", date: "2026-11-07", changes: [
+    { en: "Repertoire trainer: after a move outside the repertoire there is now always an engine verdict — also when your move is better than the repertoire move (“your move is 0.4 pawns better …”) or when the engine could not evaluate it. Lines you have never trained, neither here nor on Chessable, are marked “(new)” next to the counters.",
+      de: "Repertoire-Trainer: nach einem Zug außerhalb des Repertoires steht jetzt immer eine Engine-Einschätzung da — auch wenn dein Zug besser ist als der Repertoirezug („dein Zug ist um 0,4 Bauern besser …“) oder die Engine ihn nicht bewerten konnte. Linien, die du noch nie trainiert hast, weder hier noch auf Chessable, stehen mit „(neu)“ neben den Zählern." },
+  ] },
   { version: "0.894.3", date: "2026-11-07", changes: [
     { en: "Repertoire trainer, end of a line: a click on the board only moves on to the next line if you are not analysing — with the engine switched on or after stepping back through the line, the click stays on the board. The button, Space and Enter still move on.",
       de: "Repertoire-Trainer, Linienende: ein Klick aufs Brett geht nur dann zur nächsten Linie, wenn du nicht analysierst — mit zugeschalteter Engine oder nachdem du in der Linie zurückgeblättert hast, bleibt der Klick beim Brett. Knopf, Leertaste und Enter gehen weiterhin weiter." },
