@@ -146,6 +146,10 @@ interface KeyboardFeedback { key: string; params?: Record<string, string>; }
   `]
 })
 export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy {
+  /** Eingaben, die Stellung oder Zug-Interaktion bestimmen — nur sie lösen in ngOnChanges ein `ground.set` aus. */
+  static readonly PositionInputs = ['fen', 'orientation', 'turnColor', 'dests', 'lastMove', 'viewOnly', 'check', 'premovable',
+    'visualization'] as const;
+
   @Input() fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   @Input() orientation: Color = 'white';
   @Input() turnColor: Color = 'white';
@@ -715,22 +719,28 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
     const vizActive = this.visualization > 0;
     const interactionDisabled = this.viewOnly || vizActive;
 
-    this.ground.set({
-      fen: this.fen,
-      orientation: this.orientation,
-      turnColor: this.turnColor,
-      check: this.check,
-      lastMove: this.lastMove as Key[] | undefined,
-      movable: {
-        free: false,
-        color: interactionDisabled ? undefined : this.orientation,
-        dests: interactionDisabled ? undefined : this.dests,
-        showDests: true
-      },
-      premovable: {
-        enabled: this.premovable && !vizActive
-      }
-    });
+    // Stellung + Interaktion NUR neu setzen, wenn sich etwas davon geändert hat. Ändern sich bloß Markierungen
+    // (`reviewShapes` …), würde `set({ fen })` die noch ALTE Bindung zurückschreiben: zwischen dem Loslassen einer Figur
+    // und der Zug-Meldung (chessground ruft sie 1 ms später) prüft Angular einmal — lieferte der Aufrufer dabei ein neues
+    // Markierungs-Array, sprang die gezogene Figur aufs Ausgangsfeld zurück und glitt dann wieder hin (Trainer 0.886.0).
+    if (PuzzleBoardComponent.PositionInputs.some(k => k in changes)) {
+      this.ground.set({
+        fen: this.fen,
+        orientation: this.orientation,
+        turnColor: this.turnColor,
+        check: this.check,
+        lastMove: this.lastMove as Key[] | undefined,
+        movable: {
+          free: false,
+          color: interactionDisabled ? undefined : this.orientation,
+          dests: interactionDisabled ? undefined : this.dests,
+          showDests: true
+        },
+        premovable: {
+          enabled: this.premovable && !vizActive
+        }
+      });
+    }
 
     this.applyAutoSelect();
 

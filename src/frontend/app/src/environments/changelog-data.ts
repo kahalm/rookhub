@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.888.1", date: "2026-11-07", changes: [
+    { en: "Repertoire trainer and puzzles: a piece moved by drag and drop now stays where you drop it. Before, it could jump back to its starting square for a moment and then slide to the target again.",
+      de: "Repertoire-Trainer und Puzzles: eine per Drag & Drop gezogene Figur bleibt jetzt dort liegen, wo du sie loslässt. Vorher konnte sie kurz auf ihr Ausgangsfeld zurückspringen und dann noch einmal zum Ziel gleiten." },
+  ] },
   { version: "0.888.0", date: "2026-11-07", changes: [
     { en: "My Repertoires: a new “Last week” section at the very top shows the repertoires you trained or created in the last 7 days, most recent first — so the ones you are working on are always one tap away.",
       de: "Meine Repertoires: ganz oben zeigt ein neuer Bereich „Letzte Woche“ die Repertoires, die du in den letzten 7 Tagen trainiert oder angelegt hast, das jüngste zuerst — so liegen die, an denen du gerade arbeitest, immer gleich oben." },

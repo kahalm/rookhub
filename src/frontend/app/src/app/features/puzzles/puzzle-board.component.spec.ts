@@ -1,3 +1,4 @@
+import { SimpleChange } from '@angular/core';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -259,6 +260,40 @@ describe('PuzzleBoardComponent Promotion-Erkennung (Premove)', () => {
   it('ist kein Umwandlungszug, wenn das Zielfeld nicht auf Grundreihe liegt', () => {
     const p = withPieces([['e2' as Key, { role: 'pawn', color: 'white' }]]) as unknown as Priv;
     expect(p.isPromotion('e2' as Key, 'e4' as Key, true)).toBe(false);
+  });
+});
+
+/**
+ * Drag & Drop (Trainer 0.886.0): ändern sich nur Markierungen, darf das Brett NICHT die (noch alte) Stellung
+ * zurückschreiben — sonst springt die gerade gezogene Figur zurück und gleitet dann wieder hin.
+ */
+describe('PuzzleBoardComponent ngOnChanges: Stellung nur bei Stellungs-Eingaben', () => {
+  function withFakeGround() {
+    const comp = new PuzzleBoardComponent();
+    const set = jasmine.createSpy('set');
+    (comp as unknown as { ground: unknown }).ground = {
+      set, setAutoShapes: () => {}, selectSquare: () => {}, cancelPremove: () => {},
+      state: { premovable: {}, pieces: new Map(), drawable: { autoShapes: [] }, selected: undefined },
+    };
+    return { comp, set };
+  }
+  const change = (v: unknown) => new SimpleChange(undefined, v, false);
+
+  it('nur reviewShapes geändert: kein set (keine alte Stellung über die gezogene Figur)', () => {
+    const { comp, set } = withFakeGround();
+    comp.ngOnChanges({ reviewShapes: change([]) });
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('Stellung oder Interaktion geändert: set mit der neuen Bindung', () => {
+    const { comp, set } = withFakeGround();
+    comp.fen = 'rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+    comp.ngOnChanges({ fen: change(comp.fen), reviewShapes: change([]) });
+    expect(set).toHaveBeenCalledTimes(1);
+    expect(set.calls.mostRecent().args[0].fen).toBe(comp.fen);
+    set.calls.reset();
+    comp.ngOnChanges({ viewOnly: change(true) });
+    expect(set).toHaveBeenCalledTimes(1);
   });
 });
 
