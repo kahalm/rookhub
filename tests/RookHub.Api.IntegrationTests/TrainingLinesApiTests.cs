@@ -95,7 +95,8 @@ public class TrainingLinesApiTests(TrainingLinesFixture fixture) : IAsyncLifetim
 
         using var viewer = Client(viewerJwt);
         Assert.Equal(HttpStatusCode.NotFound, (await viewer.GetAsync($"{url}?repertoire={foreign}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await viewer.GetAsync($"{url}?repertoire={off}")).StatusCode);
+        // eigenes, nicht markiertes Repertoire ausdrücklich verlangt: wird gerechnet (Trainer eines „Prep: …"-Repertoires, 0.894.5)
+        Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync($"{url}?repertoire={off}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await viewer.GetAsync("/api/prep/player/987654321/training-lines")).StatusCode);
 
         var r = JsonNode.Parse(await viewer.GetStringAsync(url))!;

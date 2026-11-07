@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.6", date: "2026-11-07", changes: [
+    { en: "Tests: the integration test of the training lines now expects an explicitly requested own repertoire that is not marked to be answered (like the trainer of a “Prep: …” repertoire since 0.894.5) instead of 404.",
+      de: "Tests: Der Integrationstest der Trainingslinien erwartet für ein ausdrücklich verlangtes eigenes, nicht markiertes Repertoire jetzt eine Antwort (wie der Trainer eines „Prep: …“-Repertoires seit 0.894.5) statt 404." },
+  ] },
   { version: "0.894.5", date: "2026-11-07", changes: [
     { en: "Repertoire trainer of a “Prep: …” repertoire: the opponent’s order and the line about his games load again. Before, the trainer said “The opponent’s order could not be loaded”, because prep repertoires are deliberately not marked for the extension and preparation, and the server only accepted marked ones.",
       de: "Repertoire-Trainer eines „Prep: …“-Repertoires: Die Reihenfolge nach dem Gegner und die Zeile zu seinen Partien laden wieder. Bisher meldete der Trainer „Die Reihenfolge des Gegners konnte nicht geladen werden“, weil Prep-Repertoires bewusst nicht für Extension und Vorbereitung markiert sind und der Server nur markierte annahm." },
