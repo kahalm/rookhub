@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.1", date: "2026-11-07", changes: [
+    { en: "Training against an opponent: chapters with reference or model games (Chessable “Reference Games”, “Model Games”, “Game 1” …, German “Musterpartien”) no longer count — neither in the training lines on the player card, nor in a newly created “Prep: …” repertoire, nor in “Train deviations”. Chapters like “Center Game” or “Italian Game: …” stay. An existing “Prep: …” loses such lines the next time you replace it.",
+      de: "Training gegen einen Gegner: Kapitel mit Referenz- oder Musterpartien (Chessable „Reference Games“, „Model Games“, „Game 1“ …, „Musterpartien“) zählen nicht mehr — weder in den Trainingslinien der Spielerkarte noch in einem neu angelegten „Prep: …“-Repertoire noch in „Abweichungen trainieren“. Kapitel wie „Center Game“ oder „Italian Game: …“ bleiben. Ein schon angelegtes „Prep: …“ verliert solche Linien beim nächsten Ersetzen." },
+  ] },
   { version: "0.894.0", date: "2026-11-07", changes: [
     { en: "Player preparation: a “Prep: …” training repertoire now remembers its opponent (key, name, your colour, filters). Wherever you start its trainer — detail page, repertoire list, dashboard — it shows the opponent line (“In Moritz’s games: reached n×” / “From 7.Nf3 no more games by Moritz”) and trains in the order for this opponent. Before, that only worked straight from the player card. Replacing the repertoire updates the opponent; older “Prep: …” repertoires stay as they were.",
       de: "Spielervorbereitung: Ein „Prep: …“-Trainingsrepertoire merkt sich jetzt seinen Gegner (Schlüssel, Name, deine Farbe, Filter). Egal wo du den Trainer startest — Detailseite, Repertoire-Liste, Dashboard —, er zeigt die Gegner-Zeile („In den Partien von Moritz: n× erreicht“ / „Ab 7.Sf3 keine Partien von Moritz mehr“) und trainiert in der Reihenfolge nach diesem Gegner. Vorher ging das nur direkt von der Spielerkarte aus. Ersetzen aktualisiert den Gegner; ältere „Prep: …“ bleiben wie bisher." },

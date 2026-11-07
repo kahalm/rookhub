@@ -239,3 +239,9 @@ Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt i
   (`CreateRequest.Opponent`). Beide `training-repertoire`-Endpunkte setzen sie, auch beim Ersetzen (`CreateRepertoireAsync`
   `trainer:`). `GET /api/repertoires/{id}` liefert sie als `opponent` (`RepertoireOpponentDto.Parse`: ungültig → `null`).
   Kopieren/Klonen übernimmt sie nicht; ältere „Prep: …" bleiben ohne (kein Backfill).
+- Referenz-/Musterpartien raus (0.894.1, Wunsch 07.11.: „reference games auch ausnehmen … beide varianten", Prod Repertoire 14
+  „Reference Games" in „Prep: Moritz"): `TrainingLinesService.IsReferenceGamesChapter(Kapitel = [Black])` — Regex
+  `(reference|model|illustrative|sample|annotated) game(s)`, `Referenz-/Muster-/Beispiel-/Modellpartie(n)`, `^Game <n>$`
+  (Groß/klein egal); „Center Game", „Vienna Game 2.Nc3", „Italian Game: …", „Learning the Game" bleiben. Angewendet in
+  `LoadSourcesAsync` (Trainingslinien, „Prep: …"-Anlegen, Abweichungen) und im nächtlichen Vorrechnen. Ein schon angelegtes
+  „Prep: …" behält solche Linien bis zum nächsten Ersetzen.

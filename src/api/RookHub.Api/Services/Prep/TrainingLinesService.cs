@@ -187,7 +187,9 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
             var sections = RawSections(await repertoires.GetCombinedPgnAsync(rep.Id, userId))
                 // Abschnitte, die RepertoireReach.Build überspränge (kaputte [FEN]), gar nicht erst — sonst liefen Hauptvarianten,
                 // Kapitel und PGN-Text auseinander.
-                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed)).ToList();
+                // Referenz-/Musterpartien (Chessable-Kapitel „Reference Games", „Model Games" …) sind keine Linien, die man gegen einen
+                // Gegner trainiert — weder in Trainingslinien/„Prep: …" noch in den Abweichungen (Wunsch 2026-11-07)
+                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed) && !IsReferenceGamesChapter(Chapter(x.Parsed))).ToList();
             var colors = ChapterColors(sections.Select(x => x.Parsed), q.ChapterColors.For(rep.Id, q.Repertoire == rep.Id));
             byRep.Add((rep, sections.Select(x => (x, colors.GetValueOrDefault(Chapter(x.Parsed), 'w'))).ToList()));
         }
@@ -345,7 +347,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         foreach (var rep in await RepertoiresAsync(userId, ct))
         {
             var sections = RawSections(await repertoires.GetCombinedPgnAsync(rep.Id, userId))
-                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed)).Select(x => x.Parsed).ToList();
+                .Where(x => x.Parsed.Moves.Count > 0 && Loadable(x.Parsed) && !IsReferenceGamesChapter(Chapter(x.Parsed))).Select(x => x.Parsed).ToList();
             var colors = ChapterColors(sections, ChapterOverrides.None.Flat);
             foreach (var section in sections) byColor[colors.GetValueOrDefault(Chapter(section), 'w')].Add(section);
         }
@@ -724,6 +726,16 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     }
 
     private static string Chapter(ParsedSection s) => (s.Black ?? "").Trim();
+
+    private static readonly Regex ReferenceGames = new(
+        @"\b(reference|model|illustrative|sample|annotated)\s+games?\b|\b(referenz|muster|beispiel|modell)partien?\b|^game\s+\d+$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>Kapitel mit Referenz-/Musterpartien (Chessable: „Reference Games", „IV.D4) Other Sicilians: Model Games",
+    /// „Musterpartien", „Game 3") — sie fallen aus Trainingslinien, „Prep: …" und Abweichungen heraus. „Center Game",
+    /// „Vienna Game 2.Nc3", „Italian Game: …" und „Learning the Game" bleiben.</summary>
+    internal static bool IsReferenceGamesChapter(string? chapter) =>
+        !string.IsNullOrWhiteSpace(chapter) && ReferenceGames.IsMatch(chapter.Trim());
 
     /// <summary>
     /// Trainingsfarbe je Kapitel — der Spiegel von <c>chapterColorsOf</c> (<c>repertoire-color.util.ts</c>): die Seite, die in der

@@ -357,6 +357,45 @@ public class OpponentDeviationsTests
     }
 
     [Theory]
+    [InlineData("Reference Games", true)]
+    [InlineData("Model Games", true)]
+    [InlineData("IV.A10) Model Games: 2...d6 Sicilian #1: Najdorf", true)]
+    [InlineData("IV.D4) Other Sicilians: Model Games", true)]
+    [InlineData("Musterpartien", true)]
+    [InlineData("Game 1", true)]
+    [InlineData("game 9", true)]
+    [InlineData("Illustrative Games", true)]
+    [InlineData("Center Game", false)]
+    [InlineData("Vienna Game 2.Nc3", false)]
+    [InlineData("Italian Game: Giuoco Piano", false)]
+    [InlineData("Learning the Game", false)]
+    [InlineData("Game 1 Overview", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void ReferenceGamesChapter_Recognised(string? chapter, bool expected) =>
+        Assert.Equal(expected, TrainingLinesService.IsReferenceGamesChapter(chapter));
+
+    [Fact]
+    public async Task Service_ReferenceGamesChapter_GivesNoLineAndNoDeviation()
+    {
+        // Wunsch 2026-11-07 („reference games auch ausnehmen"): Prod Repertoire 14, Kapitel „Reference Games" landete im „Prep: …".
+        // Hier deckt die Referenzpartie 1…c5 ab — zählte sie mit, wäre 1…c5 keine Abweichung und eine eigene Linie.
+        using var db = new Db();
+        await db.RepertoireAsync(1, "Weiß",
+            "[Event \"x\"]\n[White \"?\"]\n[Black \"Offen\"]\n\n1. e4 e5 2. Nf3 *\n\n"
+            + "[Event \"x\"]\n[White \"Spielmann, Rudolf vs. Reti, Richard, Berlin 1928\"]\n[Black \"Reference Games\"]\n\n1. e4 c5 2. Nf3 d6 3. d4 *\n");
+        var svc = db.Service();
+        Task<List<OpponentTrainingLines.Game>> games() => GamesOf(Times(3, "e4 c5 Nf3 d6", false, 2022));
+
+        var lines = (await svc.LinesAsync(1, Q(null, "w"), games, default))!;
+        Assert.All(lines["lines"]!.AsArray(), l => Assert.Equal("Offen", l!["chapter"]!.GetValue<string>()));
+        Assert.Single(lines["lines"]!.AsArray());
+
+        var dev = (await svc.DeviationsAsync(1, Q(null, "w"), games, default))!;
+        Assert.Equal("c5", Assert.Single(dev["deviations"]!.AsArray())!["san"]!.GetValue<string>());
+    }
+
+    [Theory]
     [InlineData("b")]
     [InlineData("w")]
     public async Task Service_Deviations_MyColorOnly_HisGamesWithTheOtherColor(string color)
