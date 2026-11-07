@@ -410,6 +410,41 @@ export class TrainerSession extends TrainerLearnMode {
     this.startCurrentLine();
   }
 
+  /**
+   * „Linie pausieren" (0.889.0, Taste „p"): wie Überspringen (keine SR-Bewertung, ein schon gemachter Fehler zählt), aber die Linie
+   * verlässt die Warteschlange dieser Sitzung; danach die nächste (im Gegner-Modus die nächste in Gegner-Reihenfolge). Das Pausieren am
+   * Server macht der Aufrufer. Liefert die entfernte Linie (für „Rückgängig") oder `null`, wenn gerade keine Linie läuft.
+   */
+  pauseLine(): ParsedGame | null {
+    if (!this.canSkip) return null;
+    const line = this.queue[this.qIndex];
+    if (!line) return null;
+    this.clearTimers();
+    if (this.phase !== 'LINE_DONE') {   // im „Linie fertig"-Kasten ist die Linie schon bewertet
+      this.countPendingWrong();
+      if (this.mode === 'quiz' && this.lineHadWrong) {
+        const label = (line.headers['White'] || '').trim().slice(0, 120);
+        this.hooks.lineReviewed({ lineKey: lineKeyOf(line), label, correct: false });
+      }
+    }
+    this.queue = [...this.queue.slice(0, this.qIndex), ...this.queue.slice(this.qIndex + 1)];
+    this.learnPass = 0;
+    this.pendingRepeat = false;
+    this.startCurrentLine();          // qIndex zeigt jetzt auf die nächste Linie (oder hinter das Ende → DONE)
+    return line;
+  }
+
+  /** „Rückgängig" nach dem Pausieren: die Linie an der aktuellen Stelle wieder einreihen und sofort mit ihr weitermachen. */
+  reinsertLine(line: ParsedGame): void {
+    this.clearTimers();
+    const at = Math.min(this.qIndex, this.queue.length);
+    this.queue = [...this.queue.slice(0, at), line, ...this.queue.slice(at)];
+    this.qIndex = at;
+    this.learnPass = 0;
+    this.pendingRepeat = false;
+    this.startCurrentLine();
+  }
+
   /** Nach „Lösung zeigen": der erwartete Zug ist gespielt → mit der Linie fortfahren. */
   continueAfterWrong(): void {
     this.currentPly++;

@@ -912,8 +912,9 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   stehen (Brett gesperrt), „Nochmal“ (Rahmenknopf, `undo`) bzw. Tippen/Leertaste/Enter nimmt ihn zurück; darunter in einer
   Zeile, wie oft dort schon falsch (Chessable je Zug, RookHub je Linie) — nur mit Daten. Unter der Anweisung eine
   Aktionszeile `.trainer-actions` aus Rahmenknöpfen: „Tipp“ (`lightbulb`, beschriftet mit der nächsten Stufe: Tipp → Pfeil
-  zeigen → Zug ausspielen; Tipp-Markierung GRÜN, Startfeld bzw. Pfeil) und „Linie überspringen“ (`skip_next`), Tasten H/S
-  im Tooltip; benutzte Tipps als `lightbulb`-Zähler in `--rh-hint` neben ✓/✗. Chessable-Link als kleiner Textlink hinter dem
+  zeigen → Zug ausspielen; Tipp-Markierung GRÜN, Startfeld bzw. Pfeil), „Linie überspringen“ (`skip_next`) und „Linie
+  pausieren“ (`pause_circle`, 0.889.0; Snackbar mit „Rückgängig“), Tasten H/S/P im Tooltip; eine ausdrücklich gewählte
+  pausierte Linie zeigt unter dem Label `.paused-note` (`pause_circle`, `--rh-warn`); benutzte Tipps als `lightbulb`-Zähler in `--rh-hint` neben ✓/✗. Chessable-Link als kleiner Textlink hinter dem
   Linienlabel (neuer Tab). Woodpecker-Löser: seit 0.882.0 der Kurs-Löser (gleiche Oberfläche
   wie im Kurs), Plan-Kopf (Plan-Chip, Zyklus · Satz/Fortschritt · Resttage mit `.rh-dots`, ab Zyklus 2 Balken) in der
   Kontext-Karte; kein „Überspringen“ (der Server gäbe dieselbe Aufgabe wieder). Kalkulieren im E-Book-Brett: ein Satz, Rest hinter ? (d4). Statistik: Elo-Kopf `flex-wrap` mit

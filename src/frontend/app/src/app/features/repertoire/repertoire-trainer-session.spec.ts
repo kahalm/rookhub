@@ -404,6 +404,35 @@ describe('TrainerSession — 0.886.0: Fehlzug bleibt stehen, Tipp, Überspringen
     expect(s.qIndex).toBe(1);
   });
 
+  it('Pausieren: Linie verlässt die Warteschlange, nächste Linie, keine Bewertung; Rückgängig reiht sie wieder ein', () => {
+    const { s, calls, lines } = setup({});
+    s.start(lines);
+    const paused = s.pauseLine();
+    expect(paused).toBe(lines[0]);
+    expect(calls.reviewed).toEqual([]);
+    expect(s.queue).toEqual([lines[1]]);
+    expect(s.qIndex).toBe(0);
+    expect(s.currentLine).toBe(lines[1]);
+    expect(s.phase).toBe('PLAYING');
+    s.reinsertLine(paused!);
+    expect(s.queue).toEqual([lines[0], lines[1]]);
+    expect(s.currentLine).toBe(lines[0]);
+    expect(s.phase).toBe('PLAYING');
+  });
+
+  it('Pausieren mit offenem Fehler bewertet correct=false; letzte Linie → DONE; ohne laufende Linie → null', () => {
+    const { s, calls, lines } = setup({ lines: 1 });
+    s.start(lines);
+    s.onMove({ orig: 'a2' as any, dest: 'a3' as any });
+    expect(s.pauseLine()).toBe(lines[0]);
+    expect(calls.reviewed).toEqual([{ lineKey: KEY_A, correct: false }]);
+    expect(s.wrong).toBe(1);
+    expect(s.phase).toBe('DONE');
+    expect(s.pauseLine()).toBeNull();
+    s.reinsertLine(lines[0]);                                     // Rückgängig nach dem Ende: wieder spielbar
+    expect(s.phase).toBe('PLAYING');
+  });
+
   it('geduldeter Zug steht 3,5 s (TOLERATED_HOLD_MS), Tippen überspringt', () => {
     expect(TOLERATED_HOLD_MS).toBe(3500);
     expect(ADVANCE_MS.tolerated).toBe(TOLERATED_HOLD_MS);

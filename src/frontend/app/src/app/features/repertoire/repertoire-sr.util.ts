@@ -102,6 +102,16 @@ export function applyPromote(prev: LineStateDto | undefined, lineKey: string, no
   };
 }
 
+/** Lokale (Offline-)Pause einer Linie — Spiegel von Backend `SetPausedAsync`: ein vorhandener Zustand ändert nur `paused`;
+ * eine noch unbekannte Linie bekommt beim Pausieren einen Zustand außerhalb des Pools (Fortsetzen ohne Zustand = nichts). */
+export function applyPause(prev: LineStateDto | undefined, lineKey: string, paused: boolean, now: number): LineStateDto {
+  if (prev) return { ...prev, paused };
+  return {
+    lineKey, level: 0, reps: 0, lapses: 0, dueAt: new Date(now).toISOString(), lastReviewedAt: null,
+    inPool: false, paused,
+  };
+}
+
 /** Fisher–Yates in-place-Kopie. Reihenfolge der fälligen Trainings-Linien wird pro Session gemischt. */
 export function shuffle<T>(arr: readonly T[]): T[] {
   const out = arr.slice();

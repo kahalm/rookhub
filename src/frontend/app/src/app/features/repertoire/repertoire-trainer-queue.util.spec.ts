@@ -53,4 +53,11 @@ describe('repertoire-trainer-queue.util', () => {
     expect(extendQueue([b], 0, [a, c])).toEqual([b, a, c]);
     expect(extendQueue([], 0, [a, c])).toEqual([a, c]);
   });
+
+  it('opponentLines: pausierte Linien fallen weg — außer der ausdrücklich gewählten Einstiegslinie', () => {
+    const isPaused = (k: string) => k === KEY('A');
+    expect(names(opponentLines(set(), { color: 'w', rank: null, start: null, isPaused }))).toEqual(['B']);
+    const rank = new Map([[KEY('A'), 0], [KEY('B'), 1]]);
+    expect(names(opponentLines(set(), { color: 'w', rank, start: KEY('A'), isPaused }))).toEqual(['A', 'B']);
+  });
 });

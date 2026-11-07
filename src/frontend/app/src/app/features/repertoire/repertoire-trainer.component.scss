@@ -134,6 +134,8 @@
     .counts .hints { display: inline-flex; align-items: center; gap: 2px; color: var(--rh-hint); }
     .counts .hints mat-icon { font-size: 16px; width: 16px; height: 16px; }
     .chessable-link { margin-left: 6px; font-size: 12px; }
+    .paused-note { display: flex; align-items: center; gap: 4px; margin: 0 0 6px; font-size: 13px; color: var(--rh-warn); }
+    .paused-note mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
 /* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
 :host-context(.app-fullscreen) .bar { display: none; }

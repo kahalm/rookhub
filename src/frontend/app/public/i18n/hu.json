@@ -2944,6 +2944,10 @@
     "hintsCount": "{{n}} tipp felhasználva",
     "skipLine": "Változat kihagyása",
     "skipLineTip": "Változat kihagyása (S billentyű): értékelés nélkül a következőre — a már elkövetett hiba így is számít.",
+    "pauseLine": "Változat szüneteltetése",
+    "pauseLineTip": "Változat szüneteltetése (P billentyű): nem jön többé, amíg a változatlistában nem folytatod — értékelés nélkül, a már elkövetett hiba így is számít.",
+    "linePaused": "Változat szüneteltetve — a változatlistában folytathatod",
+    "pausedNote": "Ez a változat szünetel — csak azért jelenik meg, mert kiválasztottad.",
     "openOnChessable": "A változat megnyitása a Chessable-ön"
   },
   "srConfig": {

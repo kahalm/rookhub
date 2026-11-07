@@ -1,12 +1,13 @@
 import { Observable } from 'rxjs';
 import type { LineReviewRequest, LineStateDto, SrLevel } from './repertoire-training.service';
-import { DEFAULT_SR_LEVELS, applyPromote, applySrReview } from './repertoire-sr.util';
+import { DEFAULT_SR_LEVELS, applyPause, applyPromote, applySrReview } from './repertoire-sr.util';
 import { getRepertoireOffline, updateRepertoireOfflineStates } from './repertoire-offline.util';
 
 /** Die Server-Aufrufe, die der Abgleich braucht (`RepertoireTrainingService`). */
 export interface SrSyncTraining {
   promote(repertoireId: number, lineKeys: string[]): Observable<unknown>;
   reviewLine(repertoireId: number, req: LineReviewRequest): Observable<LineStateDto>;
+  setPaused(repertoireId: number, lineKeys: string[], paused: boolean): Observable<unknown>;
 }
 
 /** Offline-Queue (`OfflineQueueService.enqueue`). */
@@ -66,11 +67,29 @@ export class TrainerSrSync {
     }
   }
 
+  /** Linie pausieren bzw. fortsetzen (Trainer-Knopf „Linie pausieren", 0.889.0). Wie {@link promoteLearned}: lokal IMMER
+   *  nachziehen (Kopie spiegeln); offline bzw. bei einem Fehler geht der Request in die Offline-Queue. */
+  setPaused(key: string, paused: boolean): void {
+    this.states.set(key, applyPause(this.states.get(key), key, paused, this.now));
+    this.persist();
+    const url = `/api/repertoires/${this.repId}/training/pause`;
+    const body = { lineKeys: [key], paused };
+    if (this.offline) {
+      this.deps.queue().enqueue('POST', url, body);
+    } else {
+      this.deps.training().setPaused(this.repId, [key], paused)
+        .subscribe({ next: () => { /* Zustand steht schon lokal */ }, error: () => this.deps.queue().enqueue('POST', url, body) });
+    }
+  }
+
   /** Urteil über eine Linie melden; `onDue` bekommt die neue Fälligkeit (Server-Antwort oder lokal gerechnet). */
   review(req: LineReviewRequest, onDue: (dueAt: string) => void): void {
     if (this.offline) { this.applyLocal(req, onDue); return; }
     this.deps.training().reviewLine(this.repId, req).subscribe({
       next: st => {
+        // Die Pause bestimmt der Trainer selbst (ein parallel laufendes „Pausieren" darf die Antwort nicht zurückdrehen).
+        const prev = this.states.get(st.lineKey);
+        if (prev && prev.paused !== st.paused) st = { ...st, paused: prev.paused };
         this.states.set(st.lineKey, st);
         this.persist();
         onDue(st.dueAt);
@@ -81,7 +100,9 @@ export class TrainerSrSync {
 
   /** Offline-/Fehlerpfad der Bewertung: Stufen-Übergang lokal, Kopie nachziehen, Request vormerken. */
   private applyLocal(req: LineReviewRequest, onDue: (dueAt: string) => void): void {
-    const st = applySrReview(this.states.get(req.lineKey), req.lineKey, req.correct, this.effectiveSrLevels(), this.now, req.hinted);
+    const prev = this.states.get(req.lineKey);
+    // Die Bewertung lässt die Pause stehen (wie der Server).
+    const st = { ...applySrReview(prev, req.lineKey, req.correct, this.effectiveSrLevels(), this.now, req.hinted), paused: !!prev?.paused };
     this.states.set(st.lineKey, st);
     this.persist();
     this.deps.queue().enqueue('POST', `/api/repertoires/${this.repId}/training/line-review`, req);

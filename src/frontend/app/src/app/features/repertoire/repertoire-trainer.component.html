@@ -176,6 +176,9 @@
             }
           </p>
         }
+        @if (currentLinePaused) {
+          <p class="paused-note" role="status"><mat-icon>pause_circle</mat-icon>{{ 'repertoireTrainer.pausedNote' | translate }}</p>
+        }
         @if (movesInLine.length > 0) {
           <div class="line-moves" [attr.aria-label]="'repertoireTrainer.movesInLine' | translate">
             @for (m of movesInLine; track m.ply) {
@@ -282,6 +285,12 @@
               <button mat-stroked-button class="skip-btn" (click)="skipLine(); $event.stopPropagation()"
                       [matTooltip]="'repertoireTrainer.skipLineTip' | translate">
                 <mat-icon>skip_next</mat-icon>{{ 'repertoireTrainer.skipLine' | translate }}
+              </button>
+            }
+            @if (canPause) {
+              <button mat-stroked-button class="pause-btn" (click)="pauseLine(); $event.stopPropagation()"
+                      [matTooltip]="'repertoireTrainer.pauseLineTip' | translate">
+                <mat-icon>pause_circle</mat-icon>{{ 'repertoireTrainer.pauseLine' | translate }}
               </button>
             }
           </div>

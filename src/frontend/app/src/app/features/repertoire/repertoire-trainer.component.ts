@@ -343,7 +343,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Die Linien der Gegner-Sitzung (Farbe, Reihung, Einstieg). */
   private opponentLines(): ParsedGame[] {
-    return opponentLines(this.lineSet, { color: this.opponentColor, rank: this.opponentRank, start: this.opponentStart });
+    return opponentLines(this.lineSet, {
+      color: this.opponentColor, rank: this.opponentRank, start: this.opponentStart, isPaused: k => this.isPausedKey(k),
+    });
   }
 
   /** Die Reihung kam, während die Einstiegslinie läuft: die weiteren Linien hinten anhängen, die laufende bleibt. */
@@ -409,6 +411,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     return isStateDue(this.sr.stateOf(this.lineKeyOf(line)), now);
   }
 
+  private isPausedKey(lineKey: string): boolean { return !!this.sr.stateOf(lineKey)?.paused; }
+
   /** Learn-Kandidat = noch NICHT im Pool und nicht pausiert. */
   private isLearnable(line: ParsedGame): boolean {
     return isStateLearnable(this.sr.stateOf(this.lineKeyOf(line)));
@@ -421,7 +425,10 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     const now = Date.now();
     const usable = playableLines(this.lineSet, this.singleLineKey);
     const againstOpponent = !!this.opponent && !this.offlineSession;
-    const queue = againstOpponent
+    // Eine ausdrücklich gewählte (`?line=`) PAUSIERTE Linie wird trotzdem gezeigt — mit Hinweis „pausiert" (0.889.0).
+    const explicitPaused = !!this.singleLineKey && usable.length === 1 && this.isPausedKey(this.singleLineKey);
+    const queue = explicitPaused ? usable
+      : againstOpponent
       ? this.opponentLines()                                       // der Reihe nach, unabhängig von Fälligkeit und Modus
       : this.mode === 'learn'
         ? this.ordered(usable.filter(l => this.isLearnable(l)))   // sonst PGN-Reihenfolge
@@ -522,18 +529,52 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   hint(): void { this.s.hint(); }
   /** Linie überspringen (Taste „s"): ohne SR-Bewertung zur nächsten (ein schon gemachter Fehler zählt). */
   skipLine(): void { this.s.skipLine(); }
+  /** Die laufende Linie ist pausiert (nur bei ausdrücklicher Wahl über `?line=` bzw. als Gegner-Einstieg) → Hinweis. */
+  get currentLinePaused(): boolean {
+    const line = this.s.currentLine;
+    return !!line && this.isPausedKey(this.lineKeyOf(line));
+  }
+
+  /** „Linie pausieren" geht, wo „Überspringen" geht — außer die Linie ist schon pausiert. */
+  get canPause(): boolean { return this.s.canSkip && !this.currentLinePaused; }
+
+  /**
+   * Linie pausieren (Taste „p", 0.889.0): am Server pausieren (offline über die Offline-Queue, wie die Bewertungen), aus der
+   * Warteschlange nehmen und zur nächsten — keine SR-Bewertung, ein schon gemachter Fehler zählt. Fortsetzen in der Linienliste;
+   * die Snackbar bietet „Rückgängig".
+   */
+  pauseLine(): void {
+    if (!this.canPause) return;
+    const line = this.s.pauseLine();
+    if (!line) return;
+    const key = this.lineKeyOf(line);
+    this.sr.setPaused(key, true);
+    if (this.opponentTotal > 0) this.opponentTotal--;
+    this.snackbar.show(this.translate.instant('repertoireTrainer.linePaused'), { action: 'common.undo', duration: 6000 })
+      .onAction().subscribe(() => this.undoPause(line));
+  }
+
+  /** „Rückgängig": Pause sofort aufheben und die Linie an der aktuellen Stelle wieder einreihen. */
+  private undoPause(line: ParsedGame): void {
+    if (this.destroyed) return;
+    this.sr.setPaused(this.lineKeyOf(line), false);
+    if (this.opponent && !this.offlineSession) this.opponentTotal++;
+    this.s.reinsertLine(line);
+  }
+
   /** Klick/Tippen aufs Brett = „Weiter" (Linie fertig, Kommentar, Vorzeigen mit Kommentar, Feedback überspringen). */
   onPlayClick(): void { this.s.tap(); }
 
-  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen. */
+  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen, „p" = Linie pausieren. */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter' && key !== 'h' && key !== 's') return;
+    if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter' && key !== 'h' && key !== 's' && key !== 'p') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!isBoardHotkey(e)) return;
     if (key === 'h') { if (this.s.canHint) { this.s.hint(); e.preventDefault(); } return; }
     if (key === 's') { if (this.s.canSkip) { this.s.skipLine(); e.preventDefault(); } return; }
+    if (key === 'p') { if (this.canPause) { this.pauseLine(); e.preventDefault(); } return; }
     if (this.s.tap()) e.preventDefault();
   }
 }

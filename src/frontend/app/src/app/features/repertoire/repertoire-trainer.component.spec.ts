@@ -1089,3 +1089,131 @@ describe('RepertoireTrainerComponent: Reihenfolge nach einem Gegner (?opponent=,
     });
   });
 });
+
+describe('RepertoireTrainerComponent: Linie pausieren (Taste p, 0.889.0)', () => {
+  const PGN3 = [
+    '[Event "Rep"]', '[White "1.e4 e5"]', '[Black "Chapter A"]', '', '1. e4 e5 2. Nf3 Nc6 *', '',
+    '[Event "Rep"]', '[White "1.d4 d5"]', '[Black "Chapter B"]', '', '1. d4 d5 2. c4 e6 *', '',
+    '[Event "Rep"]', '[White "1.c4 e5"]', '[Black "Chapter C"]', '', '1. c4 e5 2. Nc3 Nf6 *', '',
+  ].join('\n');
+  const KEY_C = lineKeyFromSans(['c4', 'e5', 'Nc3', 'Nf6']);
+  const ALL = () => [state(KEY_A, PAST()), state(KEY_B, PAST()), state(KEY_C, PAST())];
+
+  function setup(query: Record<string, string> = {}, states: LineStateDto[] = ALL(), http: any = null) {
+    localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify({ 'Chapter A': 'w', 'Chapter B': 'w', 'Chapter C': 'w' }));
+    const route: any = { snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: (k: string) => query[k] ?? null } } };
+    const setPaused = jasmine.createSpy('setPaused').and.returnValue(of({ affected: 1 }));
+    const promote = jasmine.createSpy('promote').and.returnValue(of({ affected: 1 }));
+    const reviewLine = jasmine.createSpy('reviewLine').and.returnValue(of(state(KEY_A, FUTURE())));
+    const training: any = {
+      getPgn: () => of(PGN3), getLineStates: () => of(states), reviewLine, promote, setPaused,
+      makeDue: () => of({ affected: 1 }), reset: () => of({ deleted: 0 }),
+    };
+    const undo = new Subject<void>();
+    const snackbar: any = { warn: () => ({}), show: jasmine.createSpy('show').and.returnValue({ onAction: () => undo }) };
+    const c = new RepertoireTrainerComponent(route, training, { boardTheme: 'brown', pieceSet: 'cburnett' } as any,
+      { instant: (k: string) => k } as any, { markForCheck: () => {} } as any,
+      { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any, { enqueue: () => {} } as any,
+      NO_EXPLORER, snackbar, CONFIRM_YES, http);
+    c.ngOnInit();
+    return { c, setPaused, promote, reviewLine, snackbar, undo };
+  }
+  const key = (c: RepertoireTrainerComponent) => c.lineKeyOf((c as any).session.currentLine);
+
+  afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_1'));
+
+  it('pausieren ruft setPaused(repId, [lineKey], true), nimmt die Linie aus der Warteschlange und springt zur nächsten', () => {
+    const { c, setPaused, reviewLine, snackbar } = setup();
+    const first = key(c);
+    expect(c.canPause).toBeTrue();
+    c.pauseLine();
+    expect(setPaused).toHaveBeenCalledWith(1, [first], true);
+    expect(reviewLine).not.toHaveBeenCalled();
+    expect(c.queue.length).toBe(2);
+    expect(c.queue.map(l => c.lineKeyOf(l))).not.toContain(first);
+    expect(key(c)).not.toBe(first);
+    expect(c.phase).toBe('PLAYING');
+    expect(snackbar.show).toHaveBeenCalledWith('repertoireTrainer.linePaused', jasmine.objectContaining({ action: 'common.undo' }));
+    // „Von vorn": die pausierte Linie bleibt draußen
+    c.restart();
+    expect(c.queue.map(l => c.lineKeyOf(l))).not.toContain(first);
+  });
+
+  it('Rückgängig hebt die Pause sofort auf und reiht die Linie wieder ein', () => {
+    const { c, setPaused, undo } = setup();
+    const first = key(c);
+    c.pauseLine();
+    undo.next();
+    expect(setPaused.calls.mostRecent().args).toEqual([1, [first], false]);
+    expect(key(c)).toBe(first);
+    expect(c.queue.length).toBe(3);
+    c.restart();
+    expect(c.queue.map(l => c.lineKeyOf(l))).toContain(first);
+  });
+
+  it('Überspringen lässt den Pool unverändert: kein setPaused/promote, Zustand gleich, kommt in der nächsten Runde wieder', () => {
+    const { c, setPaused, promote } = setup();
+    const first = key(c);
+    const before = { ...(c as any).sr.stateOf(first) };
+    c.skipLine();
+    expect(setPaused).not.toHaveBeenCalled();
+    expect(promote).not.toHaveBeenCalled();
+    expect((c as any).sr.stateOf(first)).toEqual(before);
+    c.restart();
+    expect(c.queue.map(l => c.lineKeyOf(l))).toContain(first);
+  });
+
+  it('Taste p pausiert (verhindert den Standard); nicht, wenn keine Linie läuft', () => {
+    const { c, setPaused } = setup();
+    const ev = new KeyboardEvent('keydown', { key: 'p', cancelable: true });
+    c.onKeyDown(ev);
+    expect(ev.defaultPrevented).toBeTrue();
+    expect(setPaused).toHaveBeenCalledTimes(1);
+    c.onKeyDown(new KeyboardEvent('keydown', { key: 'P' }));
+    c.onKeyDown(new KeyboardEvent('keydown', { key: 'p' }));
+    expect(setPaused).toHaveBeenCalledTimes(3);
+    expect(c.phase).toBe('DONE');
+    const idle = new KeyboardEvent('keydown', { key: 'p', cancelable: true });
+    c.onKeyDown(idle);
+    expect(idle.defaultPrevented).toBeFalse();
+    expect(setPaused).toHaveBeenCalledTimes(3);
+  });
+
+  it('?line= auf eine pausierte Linie: wird gezeigt, mit Hinweis „pausiert", ohne Pausieren-Knopf', () => {
+    const { c } = setup({ line: KEY_B }, [state(KEY_A, PAST()), state(KEY_B, PAST(), { paused: true })]);
+    expect(c.queue.length).toBe(1);
+    expect(key(c)).toBe(KEY_B);
+    expect(c.currentLinePaused).toBeTrue();
+    expect(c.canPause).toBeFalse();
+    expect(c.canSkip).toBeTrue();
+  });
+
+  describe('Gegner-Modus', () => {
+    const answer = (keys: string[]) => ({
+      repertoires: [], repertoire: 1, color: 'w', colors: ['w', 'b'], games: 9, total: keys.length, more: 0,
+      lines: keys.map(k => ({ key: k, end: '', start: null, chapter: '', moves: [], probability: 0.5, reached: 1, lastYear: 2024, neverReached: false })),
+    });
+
+    it('pausierte Linien fehlen in der Gegner-Reihenfolge; Pausieren springt zur nächsten in Gegner-Reihenfolge', () => {
+      const get = () => of(answer([KEY_C, KEY_A, KEY_B]));
+      const { c, setPaused } = setup({ opponent: 'prep:42', color: 'w' },
+        [state(KEY_A, PAST(), { paused: true }), state(KEY_B, PAST()), state(KEY_C, PAST())], { get });
+      expect(c.queue.map(l => c.lineKeyOf(l))).toEqual([KEY_C, KEY_B]);
+      expect(c.opponentTotal).toBe(2);
+      c.pauseLine();
+      expect(setPaused).toHaveBeenCalledWith(1, [KEY_C], true);
+      expect(key(c)).toBe(KEY_B);
+      expect(c.opponentTotal).toBe(1);
+      c.restart();
+      expect(c.queue.map(l => c.lineKeyOf(l))).toEqual([KEY_B]);
+    });
+
+    it('eine pausierte Einstiegslinie (?line=) wird gezeigt, mit Hinweis', () => {
+      const get = () => of(answer([KEY_A, KEY_B, KEY_C]));
+      const { c } = setup({ opponent: 'prep:42', color: 'w', line: KEY_A },
+        [state(KEY_A, PAST(), { paused: true }), state(KEY_B, PAST()), state(KEY_C, PAST())], { get });
+      expect(c.queue.map(l => c.lineKeyOf(l))).toEqual([KEY_A, KEY_B, KEY_C]);
+      expect(c.currentLinePaused).toBeTrue();
+    });
+  });
+});

@@ -20,6 +20,8 @@ export interface OpponentOrder {
   color: TrainColor | null;
   rank: Map<string, number> | null;
   start: string | null;
+  /** Pausierte Linien bleiben draußen — außer der ausdrücklich gewählten Einstiegslinie (`start`). */
+  isPaused?: (lineKey: string) => boolean;
 }
 
 /** Stabiler Linien-Schlüssel (identisch zur Linienliste) aus der SAN-Zugfolge. */
@@ -51,11 +53,13 @@ export function byRank(lines: ParsedGame[], rank: Map<string, number>): ParsedGa
 }
 
 /** Die Linien der Gegner-Sitzung: alle der Farbe (Kapitel-Filter gilt), in seiner Reihenfolge — OHNE Fälligkeit und
- *  ohne Modus-Wechsel; mit Einstieg nur die Einstiegslinie und die nach ihr. */
+ *  ohne Modus-Wechsel, aber ohne pausierte Linien; mit Einstieg nur die Einstiegslinie und die nach ihr. */
 export function opponentLines(set: TrainerLineSet, opp: OpponentOrder): ParsedGame[] {
   let lines = playableLines(set);
   if (opp.color) lines = lines.filter(l => set.colorOf(l) === opp.color);
   const start = opp.start;
+  const isPaused = opp.isPaused;
+  if (isPaused) lines = lines.filter(l => { const k = lineKeyOf(l); return k === start || !isPaused(k); });
   if (!opp.rank) return start ? lines.filter(l => lineKeyOf(l) === start) : lines;
   const ordered = byRank(lines, opp.rank);
   if (!start) return ordered;

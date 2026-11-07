@@ -101,4 +101,38 @@ describe('TrainerSrSync', () => {
     sync.review({ lineKey: KEY, label: '', correct: true }, d => due = d);
     expect(Date.parse(due) - NOW).toBe(3 * 3_600_000);
   });
+
+  it('setPaused online: lokal sofort pausiert + gespiegelt, Server-Aufruf, keine Queue', () => {
+    const setPaused = jasmine.createSpy('setPaused').and.returnValue(of({ affected: 1 }));
+    const { sync, enqueue } = make({ setPaused });
+    sync.setStates([st()]);
+    sync.setPaused(KEY, true);
+    expect(setPaused).toHaveBeenCalledWith(5, [KEY], true);
+    expect(sync.stateOf(KEY)).toEqual(st({ paused: true }));
+    expect(cachedStates()).toEqual([st({ paused: true })]);
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it('setPaused offline bzw. bei Fehler: über die Offline-Queue; unbekannte Linie bekommt einen Zustand außerhalb des Pools', () => {
+    const off = make({}, true);
+    off.sync.setPaused(KEY, true);
+    expect(off.enqueue).toHaveBeenCalledWith('POST', '/api/repertoires/5/training/pause', { lineKeys: [KEY], paused: true });
+    expect(off.sync.stateOf(KEY)).toEqual(jasmine.objectContaining({ inPool: false, paused: true }));
+    const failing = make({ setPaused: () => throwError(() => new Error('500')) });
+    failing.sync.setStates([st({ paused: true })]);
+    failing.sync.setPaused(KEY, false);
+    expect(failing.enqueue).toHaveBeenCalledWith('POST', '/api/repertoires/5/training/pause', { lineKeys: [KEY], paused: false });
+    expect(failing.sync.stateOf(KEY)?.paused).toBeFalse();
+  });
+
+  it('eine Bewertung dreht eine lokale Pause nicht zurück (online und offline)', () => {
+    const online = make({ reviewLine: () => of(st({ level: 1, paused: false })) });
+    online.sync.setStates([st({ paused: true })]);
+    online.sync.review({ lineKey: KEY, label: 'L', correct: false }, () => {});
+    expect(online.sync.stateOf(KEY)?.paused).toBeTrue();
+    const offline = make({}, true);
+    offline.sync.setStates([st({ paused: true })]);
+    offline.sync.review({ lineKey: KEY, label: 'L', correct: false }, () => {});
+    expect(offline.sync.stateOf(KEY)?.paused).toBeTrue();
+  });
 });

@@ -99,6 +99,13 @@ chessable line".
 - „Linie überspringen" (Taste S): ohne SR-Bewertung zur nächsten Linie der Warteschlange (im Gegner-Modus ist die
   Warteschlange die Gegner-Reihenfolge); hatte die Linie schon einen Fehler (auch einen noch offenen), geht `correct: false`
   raus. Im „Linie fertig"-Kasten = „Weiter".
+- „Linie pausieren" (Taste P, 0.889.0): wie Überspringen (keine Bewertung, ein schon gemachter Fehler geht als
+  `correct: false` raus), dazu `POST …/training/pause { lineKeys: [key], paused: true }` und die Linie verlässt die
+  Warteschlange (Gegner-Modus: nächste in Gegner-Reihenfolge). Snackbar „Rückgängig" → `paused: false`, Linie wieder an die
+  aktuelle Stelle. Lokal sofort gespiegelt (Offline-Kopie, `applyPause`), offline/bei Fehler über die Offline-Queue; eine
+  Bewertungsantwort dreht die lokale Pause nicht zurück. Pausierte Linien fehlen in Abfragen, Lernen UND der
+  Gegner-Reihenfolge; nur eine ausdrücklich gewählte (`?line=` bzw. Gegner-Einstieg) erscheint, mit Hinweis „pausiert"
+  (dann kein Pausieren-Knopf). „Überspringen" lässt Pool/Pause unverändert — die Linie kommt in der nächsten Runde wieder.
 - Geduldeter Zug (`[%alt]`) steht 3,5 s (`TOLERATED_HOLD_MS`) mit „Auch spielbar — jetzt den Hauptzug.", Klick/Leertaste/
   Enter überspringt.
 - Linien mit `[ChessableOid]` zeigen hinter dem Linienlabel einen Textlink „Chessable" (`https://www.chessable.com/variation/<oid>/`).

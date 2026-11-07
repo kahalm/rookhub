@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.889.0", date: "2026-11-07", changes: [
+    { en: "Repertoire trainer: next to “Skip line” there is now “Pause line” (key P). The line leaves the current session and won’t come up again — not in later rounds, not when training against an opponent — until you resume it in the line list. No rating; a mistake already made in the line still counts. The confirmation offers “Undo”. Works offline too (synced later). “Skip line” keeps the line in the pool as before. A paused line you open on purpose is still shown, marked as paused.",
+      de: "Repertoire-Trainer: neben „Linie überspringen“ gibt es jetzt „Linie pausieren“ (Taste P). Die Linie verlässt die laufende Sitzung und kommt nicht mehr — weder in späteren Runden noch beim Training gegen einen Gegner —, bis du sie in der Linienliste fortsetzt. Keine Bewertung; ein in der Linie schon gemachter Fehler zählt weiter. Die Bestätigung bietet „Rückgängig“. Geht auch offline (wird nachgereicht). „Linie überspringen“ lässt die Linie wie bisher im Pool. Eine pausierte Linie, die du gezielt öffnest, wird weiterhin gezeigt — mit Hinweis „pausiert“." },
+  ] },
   { version: "0.888.1", date: "2026-11-07", changes: [
     { en: "Repertoire trainer and puzzles: a piece moved by drag and drop now stays where you drop it. Before, it could jump back to its starting square for a moment and then slide to the target again.",
       de: "Repertoire-Trainer und Puzzles: eine per Drag & Drop gezogene Figur bleibt jetzt dort liegen, wo du sie loslässt. Vorher konnte sie kurz auf ihr Ausgangsfeld zurückspringen und dann noch einmal zum Ziel gleiten." },

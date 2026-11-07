@@ -76,6 +76,10 @@
     "hintsCount": "{{n}} Tipps benutzt",
     "skipLine": "Linie überspringen",
     "skipLineTip": "Linie überspringen (Taste S): ohne Bewertung zur nächsten Linie — ein schon gemachter Fehler zählt trotzdem.",
+    "pauseLine": "Linie pausieren",
+    "pauseLineTip": "Linie pausieren (Taste P): sie kommt nicht mehr, bis du sie in der Linienliste fortsetzt — ohne Bewertung, ein schon gemachter Fehler zählt trotzdem.",
+    "linePaused": "Linie pausiert — in der Linienliste wieder fortsetzen",
+    "pausedNote": "Diese Linie ist pausiert — sie erscheint nur, weil du sie ausgewählt hast.",
     "openOnChessable": "Diese Linie auf Chessable öffnen"
   },
   "srConfig": {
