@@ -152,7 +152,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     {
         if (scope is null || cache is null) return await ComputeCoreAsync(userId, q, games, ct, exclude, elo, null);
         // Schlüssel mit Stand (UpdatedAt) jedes markierten Repertoires: ändert sich eines oder die Markierung, rechnet es neu
-        var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.UseForExtension)
+        var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && (r.UseForExtension || r.Id == q.Repertoire))
             .OrderBy(r => r.Id).Select(r => new { r.Id, r.UpdatedAt }).ToListAsync(ct);
         var overrides = JsonSerializer.Serialize(new
         {
@@ -178,7 +178,16 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
     internal async Task<Loaded?> LoadSourcesAsync(int userId, Query q, string? exclude, CancellationToken ct)
     {
         var list = await RepertoiresAsync(userId, ct);
-        if (q.Repertoire is { } want && list.All(r => r.Id != want)) return null;
+        if (q.Repertoire is { } want && list.All(r => r.Id != want))
+        {
+            // Ausdrücklich verlangtes EIGENES Repertoire auch ohne Markierung (Hotfix 0.894.5): der Trainer eines „Prep: …"-Repertoires
+            // fragt die Reihenfolge mit repertoire=<seine Id> ab — Prep-Repertoires sind bewusst NICHT markiert (sonst liefen sie selbst
+            // in die Trainingslinien), also kam 404 und „Die Reihenfolge des Gegners konnte nicht geladen werden".
+            var own = await db.Repertoires.AsNoTracking().Where(r => r.Id == want && r.UserId == userId)
+                .Select(r => new RepertoireRef(r.Id, r.Name)).FirstOrDefaultAsync(ct);
+            if (own is null) return null;
+            list = [.. list, own];
+        }
 
         // Alle markierten laden — die Karte braucht die Farben jedes Repertoires für die Auswahl.
         var byRep = new List<(RepertoireRef Rep, List<(Section Section, char Color)> Sections)>();
@@ -485,7 +494,7 @@ public sealed class TrainingLinesService(AppDbContext db, RepertoireService repe
         string? key = null;
         if (scope is not null && cache is not null)
         {
-            var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && r.UseForExtension)
+            var stamps = await db.Repertoires.AsNoTracking().Where(r => r.UserId == userId && (r.UseForExtension || r.Id == q.Repertoire))
                 .OrderBy(r => r.Id).Select(r => new { r.Id, r.UpdatedAt }).ToListAsync(ct);
             var overrides = string.Join(";", q.ChapterColors.Flat.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => x.Key + "=" + x.Value))
                 + "|" + string.Join(";", q.ChapterColors.PerRepertoire.OrderBy(x => x.Key).Select(x => x.Key + ":" + string.Join(",",

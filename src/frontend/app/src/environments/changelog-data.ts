@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.5", date: "2026-11-07", changes: [
+    { en: "Repertoire trainer of a “Prep: …” repertoire: the opponent’s order and the line about his games load again. Before, the trainer said “The opponent’s order could not be loaded”, because prep repertoires are deliberately not marked for the extension and preparation, and the server only accepted marked ones.",
+      de: "Repertoire-Trainer eines „Prep: …“-Repertoires: Die Reihenfolge nach dem Gegner und die Zeile zu seinen Partien laden wieder. Bisher meldete der Trainer „Die Reihenfolge des Gegners konnte nicht geladen werden“, weil Prep-Repertoires bewusst nicht für Extension und Vorbereitung markiert sind und der Server nur markierte annahm." },
+  ] },
   { version: "0.894.4", date: "2026-11-07", changes: [
     { en: "Repertoire trainer: after a move outside the repertoire there is now always an engine verdict — also when your move is better than the repertoire move (“your move is 0.4 pawns better …”) or when the engine could not evaluate it. Lines you have never trained, neither here nor on Chessable, are marked “(new)” next to the counters.",
       de: "Repertoire-Trainer: nach einem Zug außerhalb des Repertoires steht jetzt immer eine Engine-Einschätzung da — auch wenn dein Zug besser ist als der Repertoirezug („dein Zug ist um 0,4 Bauern besser …“) oder die Engine ihn nicht bewerten konnte. Linien, die du noch nie trainiert hast, weder hier noch auf Chessable, stehen mit „(neu)“ neben den Zählern." },

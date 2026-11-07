@@ -275,7 +275,7 @@ public class OpponentTrainingLinesTests
     private static Task<List<OpponentTrainingLines.Game>> NoGames() => Task.FromResult(new List<OpponentTrainingLines.Game>());
 
     [Fact]
-    public async Task Service_ListsOnlyOwnRepertoiresForExtension_ForeignOrUnflaggedIs404()
+    public async Task Service_ListsOnlyOwnRepertoiresForExtension_ForeignIs404_OwnUnflaggedOnlyWhenAskedFor()
     {
         using var db = new Db();
         var mine = await db.RepertoireAsync(1, "B-Sizilianisch", Section("Sizilianisch", "1. e4 c5 2. Nf3 d6"));
@@ -291,7 +291,13 @@ public class OpponentTrainingLinesTests
         Assert.Equal(new[] { "b" }, reps[0]!["colors"]!.AsArray().Select(x => x!.GetValue<string>()));
         Assert.Null(r["repertoire"]);                                       // ohne Wahl: alle markierten
         Assert.Equal(mine, r["lines"]!.AsArray()[0]!["repertoireId"]!.GetValue<int>());
-        Assert.Null(await svc.LinesAsync(1, new TrainingLinesService.Query(off, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default));
+        // Eigenes, nicht markiertes Repertoire ausdrücklich verlangt (so fragt der Trainer eines „Prep: …"-Repertoires, Hotfix
+        // 0.894.5 — vorher 404 = „Reihenfolge des Gegners konnte nicht geladen werden"): wird gerechnet, bleibt aber aus der Liste
+        // der Auswahl ohne Wahl draußen (oben).
+        var asked = await svc.LinesAsync(1, new TrainingLinesService.Query(off, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default);
+        Assert.NotNull(asked);
+        Assert.Equal(off, asked!["repertoire"]!.GetValue<int>());
+        Assert.Equal(off, asked["lines"]!.AsArray()[0]!["repertoireId"]!.GetValue<int>());
         Assert.Null(await svc.LinesAsync(1, new TrainingLinesService.Query(foreign, null, TrainingLinesService.ParseOverrides(null), null), NoGames, default));
     }
 
