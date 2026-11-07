@@ -1,11 +1,20 @@
 <div class="analysis-page">
   <div class="header">
     <h1>{{ 'analysis.title' | translate }}</h1>
+    <span class="header-actions">
+    @if (!study) {
+      <!-- Freies Brett mit/ohne Engine umschalten (0.895.0) — die Adresse zieht mit (`?blind=1`). -->
+      <button mat-stroked-button type="button" class="blind-btn" (click)="toggleNoEngine()" [attr.aria-pressed]="noEngine">
+        <mat-icon>{{ noEngine ? 'visibility' : 'visibility_off' }}</mat-icon>
+        {{ (noEngine ? 'analysis.withEngine' : 'analysis.withoutEngine') | translate }}
+      </button>
+    }
     @if (auth.isLoggedIn) {
       <button mat-stroked-button type="button" class="history-btn" (click)="openHistory()">
         <mat-icon>history</mat-icon> {{ 'analysis.history.open' | translate }}
       </button>
     }
+    </span>
   </div>
   <div class="analysis-layout">
     <div class="board-col" [class.editing]="editing" [class.fs-row]="fsRow">

@@ -68,3 +68,13 @@ schreiben“. Die Leiste zeigt nach dem Aufdecken nur noch die Zähler („84/13
 jeden eigenen Zug ab Ungenauigkeit steht als farbiges ?!/?/?? direkt am Zug in der Zugliste (`AnalysisNode.verdict`, gesetzt von
 `LineStudySession.applyEvals`, Tooltip „→ besserer Zug“), die Bewertung steht jetzt auch in Varianten hinter dem Zug. Mit
 „Engine ausschalten“ (0.859.0) blendet die Zugliste beides wieder aus (`hideEngine`).
+
+## Nachtrag 0.895.0 — freies Brett ohne Engine, oben umschaltbar
+
+Wunsch 2026-11-07: „einfacher Weg zwischen `/analysis?blind=1` und `/analysis` zu wechseln“. Bisher wirkte `?blind=1` nur
+mit einer Partie (und Konto) — ohne blieb das Brett normal. Jetzt: `?blind=1` ohne Linien-Baum = `noEngine` im
+`AnalysisComponent` (dasselbe Ausblenden wie oben, `blind`-Getter; Engine aus, die gespeicherte Einstellung bleibt
+unberührt und kommt beim Zurückschalten wieder). Knopf „Ohne Engine“ / „Mit Engine“ in der Kopfzeile (`toggleNoEngine`)
+schaltet um und ersetzt die Adresse (`?blind=1` dazu bzw. weg, `replaceUrl`). Mit Linien-Baum ist der Knopf weg — dort
+gelten „Engine einschalten/ausschalten“ der Karte. Kein Linien-Baum, kein Hintergrund: das freie Brett speichert wie sonst
+in den Analyse-Verlauf.

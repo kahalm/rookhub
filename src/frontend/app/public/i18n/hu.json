@@ -2591,7 +2591,9 @@
       "hide": "Motor kikapcsolása",
       "progressShort": "{{done}}/{{total}} elemezve",
       "bestShort": "{{best}}/{{rated}} legjobb"
-    }
+    },
+    "withoutEngine": "Motor nélkül",
+    "withEngine": "Motorral"
   },
   "stats": {
     "puzzleRating": "Értékelés {{rating}}",

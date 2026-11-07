@@ -3481,7 +3481,9 @@
       "hide": "Switch engine off",
       "progressShort": "{{done}}/{{total}} analysed",
       "bestShort": "{{best}}/{{rated}} best"
-    }
+    },
+    "withoutEngine": "Without engine",
+    "withEngine": "With engine"
   },
   "stats": {
     "puzzleRating": "Rated {{rating}}",

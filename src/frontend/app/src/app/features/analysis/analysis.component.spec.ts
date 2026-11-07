@@ -344,6 +344,37 @@ describe('AnalysisComponent ohne Engine: wieder wegschalten', () => {
   });
 });
 
+describe('AnalysisComponent freies Brett ohne Engine (0.895.0)', () => {
+  it('?blind=1 ohne Partie blendet aus und schaltet die Engine ab; oben umschalten führt die Adresse mit', () => {
+    const c = makeComponent({ blind: '1' });
+    c.engineOn = true;
+    c.ngOnInit();
+    expect(c.study).toBeNull();
+    expect(c.blind).toBeTrue();
+    expect(c.engineOn).toBeFalse();
+    c.toggleNoEngine();
+    expect(c.blind).toBeFalse();
+    expect(c.engineOn).toBeTrue();
+    expect(c.__router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { blind: null }, replaceUrl: true }));
+    c.toggleNoEngine();
+    expect(c.blind).toBeTrue();
+    expect(c.__router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { blind: 1 }, queryParamsHandling: 'merge' }));
+    c.ngOnDestroy();
+  });
+
+  it('ohne ?blind läuft alles wie bisher, und mit Linien-Baum tut der Kopf-Schalter nichts', () => {
+    const c = makeComponent({});
+    c.ngOnInit();
+    expect(c.blind).toBeFalse();
+    c.study = { revealed: true, schedule: () => {} } as any;
+    c.toggleNoEngine();
+    expect(c.noEngine).toBeFalse();
+    expect(c.__router.navigate).not.toHaveBeenCalled();
+    c.study = null;
+    c.ngOnDestroy();
+  });
+});
+
 describe('AnalysisComponent back-to-puzzle + depth', () => {
   it('reads the from param and navigates back to it', () => {
     const c = makeComponent({ fen: START, from: '/puzzles/123' });

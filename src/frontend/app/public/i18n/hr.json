@@ -3481,7 +3481,9 @@
       "hide": "Isključi engine",
       "progressShort": "{{done}}/{{total}} analizirano",
       "bestShort": "{{best}}/{{rated}} najboljih"
-    }
+    },
+    "withoutEngine": "Bez enginea",
+    "withEngine": "S engineom"
   },
   "stats": {
     "puzzleRating": "Rejting {{rating}}",

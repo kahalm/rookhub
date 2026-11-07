@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.895.0", date: "2026-11-07", changes: [
+    { en: "Analysis board: a “Without engine” / “With engine” button at the top switches between the board with and without engine (no evaluation bar, engine, explorer or evaluations). The address follows (“?blind=1”), and “/analysis?blind=1” now also works without a game.",
+      de: "Analysebrett: Oben schaltet ein Knopf „Ohne Engine“ / „Mit Engine“ zwischen dem Brett mit und ohne Engine um (ohne Bewertungsleiste, Engine, Explorer und Bewertungen). Die Adresse zieht mit („?blind=1“), und „/analysis?blind=1“ wirkt jetzt auch ohne Partie." },
+  ] },
   { version: "0.894.6", date: "2026-11-07", changes: [
     { en: "Tests: the integration test of the training lines now expects an explicitly requested own repertoire that is not marked to be answered (like the trainer of a “Prep: …” repertoire since 0.894.5) instead of 404.",
       de: "Tests: Der Integrationstest der Trainingslinien erwartet für ein ausdrücklich verlangtes eigenes, nicht markiertes Repertoire jetzt eine Antwort (wie der Trainer eines „Prep: …“-Repertoires seit 0.894.5) statt 404." },

@@ -133,7 +133,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Eigene Linien zu einer Partie ohne Bewertung; `null` = normales Analysebrett. */
   study: LineStudySession | null = null;
   /** Ohne Engine und noch nicht aufgedeckt: keine Leiste, keine Engine, kein Explorer, keine Bewertungen. */
-  get blind(): boolean { return !!this.study && (!this.study.revealed || this.studyEngineHidden); }
+  get blind(): boolean { return this.study ? !this.study.revealed || this.studyEngineHidden : this.noEngine; }
+  /** „Ohne Engine“ auf dem freien Brett (0.895.0, `?blind=1` ohne Partie): dasselbe Ausblenden, aber ohne Linien-Baum —
+   *  oben umschaltbar ({@link toggleNoEngine}), die Adresse zieht mit. */
+  noEngine = false;
+  /** Engine-Schalter vor „Ohne Engine“ — beim Zurückschalten wieder so (die gespeicherte Einstellung bleibt unberührt). */
+  private engineOnBeforeBlind = true;
   /** Nach dem Aufdecken wieder weggeschaltet (0.859.0, „Engine ausschalten") — nur auf dieser Seite, aufgedeckt bleibt aufgedeckt. */
   studyEngineHidden = false;
 
@@ -274,6 +279,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.history.get(p.historyId).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
       return;
     }
+    // `?blind=1` ohne Partie (oder ohne Konto): freies Brett ohne Engine — oben wieder einschaltbar (0.895.0)
+    if (p.blind && !(pgn && this.lineStudies && this.auth.isLoggedIn)) this.setNoEngine(true);
     if (pgn && this.lineStudies && this.auth.isLoggedIn && (window.history.state?.blind === true || p.blind)) {
       this.pgnInput = pgn;
       this.startWithoutEngine();
@@ -320,6 +327,22 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (!this.study) return;
     if (this.study.revealed) { this.studyEngineHidden = false; this.engineOn = true; this.refresh(); return; }
     this.study.reveal();
+  }
+
+  /** Oben „Ohne Engine“ / „Mit Engine“ (0.895.0): umschalten und `?blind=1` in der Adresse mitführen (ersetzt den Eintrag). */
+  toggleNoEngine(): void {
+    if (this.study) return;
+    this.setNoEngine(!this.noEngine);
+    this.router.navigate([], { relativeTo: this.route, queryParams: { blind: this.noEngine ? 1 : null },
+      queryParamsHandling: 'merge', replaceUrl: true });
+    this.refresh();
+  }
+
+  private setNoEngine(on: boolean): void {
+    if (on === this.noEngine) return;
+    this.noEngine = on;
+    if (on) { this.engineOnBeforeBlind = this.engineOn; this.engineOn = false; }
+    else this.engineOn = this.engineOnBeforeBlind;
   }
 
   /** „Engine ausschalten" (0.859.0): wieder wie ohne Engine — keine Leiste, keine Engine, keine Bewertungen. */

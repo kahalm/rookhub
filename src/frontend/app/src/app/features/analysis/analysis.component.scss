@@ -65,6 +65,7 @@
    nur halb, und ohne Vollbild-Knopf (Safari/iOS) klebte „Verlauf" 4 px über dem Brett. */
 .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .header h1 { margin: 0; }
+.header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .star-btn.on mat-icon { color: #f9a825; }
 .star-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 8px; }
 .star-jumps .star-icon { color: #f9a825; font-size: 18px; width: 18px; height: 18px; }
