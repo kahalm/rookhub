@@ -2875,7 +2875,6 @@
     "again": "Újabb gyakorlás",
     "whiteToMove": "Világos lép — játszd a repertoárlépésedet.",
     "blackToMove": "Sötét lép — játszd a repertoárlépésedet.",
-    "correct": "Helyes!",
     "toleratedPlayable": "Ez is játszható — most a fő lépést lépd.",
     "wrong": "Nincs a repertoárban. A lépés: {{move}}.",
     "wrongNoHint": "Nincs a repertoárban — próbáld újra, vagy kérd a megoldást.",

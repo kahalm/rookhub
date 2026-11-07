@@ -252,8 +252,9 @@
           </div>
         }
 
-        <div *ngIf="phase === 'FEEDBACK'" class="feedback" [ngClass]="outcome">
-          <p *ngIf="outcome === 'correct'"><mat-icon>check_circle</mat-icon> {{ 'repertoireTrainer.correct' | translate }}</p>
+        <!-- Richtiger Zug: kein Kasten (Wunsch 2026-11-07: „spar dir das" — er blitzte nur kurz gelb-grün auf); der Zähler ✓
+             zählt mit, geduldete und falsche Züge bekommen ihren Kasten weiter. -->
+        <div *ngIf="phase === 'FEEDBACK' && outcome !== 'correct'" class="feedback" [ngClass]="outcome">
           <p *ngIf="outcome === 'tolerated'"><mat-icon>info</mat-icon> {{ 'repertoireTrainer.toleratedPlayable' | translate }}</p>
           <ng-container *ngIf="outcome === 'wrong'">
             <p *ngIf="!wrongRevealed"><mat-icon>cancel</mat-icon> {{ 'repertoireTrainer.wrongNoHint' | translate }}</p>

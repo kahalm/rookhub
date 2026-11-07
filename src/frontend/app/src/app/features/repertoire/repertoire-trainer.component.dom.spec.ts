@@ -1,3 +1,4 @@
+import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -13,6 +14,7 @@ import { lineKeyFromSans } from './repertoire-line-key.util';
 
 /** Gerenderte Lern-Ansicht des Trainers (UI-Sweep 2026-10-12, v1-rk-trainer-learn-*). */
 describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
+  let lastFixture: ComponentFixture<RepertoireTrainerComponent> | null = null;
   afterEach(() => localStorage.removeItem('rookhub_rep_train_chaptercolor_1'));
 
   async function render(pgn: string): Promise<HTMLElement> {
@@ -32,6 +34,7 @@ describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(RepertoireTrainerComponent);
+    lastFixture = fixture;
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -54,6 +57,18 @@ describe('RepertoireTrainerComponent (gerendert, Lernmodus)', () => {
     const prompt = el.querySelector('.prompt')!.textContent!;
     expect(prompt).toContain('repertoireTrainer.whiteToMoveLearn');
     expect(prompt).not.toMatch(/repertoireTrainer\.whiteToMove(?!Learn)/);
+  });
+
+  it('richtiger Zug: kein Rückmeldungs-Kasten (nur der Zähler); geduldeter Zug behält seinen', async () => {
+    await render('[Event "Rep"]\n[White "1.e4"]\n[Black "Chapter A"]\n\n1. e4 e5 2. Nf3 *');
+    const fixture = lastFixture!;
+    const s = (fixture.componentInstance as unknown as { session: { phase: string; outcome: string } }).session;
+    s.phase = 'FEEDBACK'; s.outcome = 'correct';
+    fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.feedback')).toBeNull();
+    s.outcome = 'tolerated';
+    fixture.componentRef.injector.get(ChangeDetectorRef).markForCheck(); fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.feedback.tolerated')).not.toBeNull();
   });
 
   it('ein PGN-Platzhalter „?" als Linienname erscheint nicht', async () => {

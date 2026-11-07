@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.894.2", date: "2026-11-07", changes: [
+    { en: "Repertoire trainer: a correct move no longer flashes a short “Correct” box — the counter ✓ keeps track. Tolerated and wrong moves still get their box.",
+      de: "Repertoire-Trainer: nach einem richtigen Zug blitzt kein kurzer „Richtig“-Kasten mehr auf — der Zähler ✓ zählt mit. Geduldete und falsche Züge bekommen ihren Kasten weiterhin." },
+  ] },
   { version: "0.894.1", date: "2026-11-07", changes: [
     { en: "Training against an opponent: chapters with reference or model games (Chessable “Reference Games”, “Model Games”, “Game 1” …, German “Musterpartien”) no longer count — neither in the training lines on the player card, nor in a newly created “Prep: …” repertoire, nor in “Train deviations”. Chapters like “Center Game” or “Italian Game: …” stay. An existing “Prep: …” loses such lines the next time you replace it.",
       de: "Training gegen einen Gegner: Kapitel mit Referenz- oder Musterpartien (Chessable „Reference Games“, „Model Games“, „Game 1“ …, „Musterpartien“) zählen nicht mehr — weder in den Trainingslinien der Spielerkarte noch in einem neu angelegten „Prep: …“-Repertoire noch in „Abweichungen trainieren“. Kapitel wie „Center Game“ oder „Italian Game: …“ bleiben. Ein schon angelegtes „Prep: …“ verliert solche Linien beim nächsten Ersetzen." },

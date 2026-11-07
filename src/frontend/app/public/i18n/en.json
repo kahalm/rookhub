@@ -7,7 +7,6 @@
     "again": "Train again",
     "whiteToMove": "White to move — play your repertoire move.",
     "blackToMove": "Black to move — play your repertoire move.",
-    "correct": "Correct!",
     "toleratedPlayable": "Also playable — now play the main move.",
     "wrong": "Not in the repertoire. The move is {{move}}.",
     "wrongNoHint": "Not in the repertoire — try again or reveal the solution.",

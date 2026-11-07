@@ -7,7 +7,6 @@
     "again": "Erneut trainieren",
     "whiteToMove": "Weiß am Zug — spiel deinen Repertoirezug.",
     "blackToMove": "Schwarz am Zug — spiel deinen Repertoirezug.",
-    "correct": "Richtig!",
     "toleratedPlayable": "Auch spielbar — jetzt den Hauptzug.",
     "wrong": "Nicht im Repertoire. Der Zug ist {{move}}.",
     "wrongNoHint": "Nicht im Repertoire — nochmal versuchen oder Lösung zeigen.",
