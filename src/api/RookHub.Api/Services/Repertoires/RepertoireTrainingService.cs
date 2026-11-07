@@ -156,7 +156,7 @@ public class RepertoireTrainingService
             _db.RepertoireCardStates.Add(card);
         }
         card.InPool = true;   // eine bewertete Linie ist im Pool
-        ScheduleLevel(card, req.Correct, hours, DateTime.UtcNow);
+        ScheduleLevel(card, req.Correct, hours, DateTime.UtcNow, req.Hinted);
         if (!string.IsNullOrEmpty(req.Label)) card.ExpectedMove = req.Label;
 
         try { await _db.SaveChangesAsync(ct); }
@@ -169,7 +169,7 @@ public class RepertoireTrainingService
                 .FirstOrDefaultAsync(c => c.UserId == userId && c.RepertoireId == repertoireId && c.CardKey == req.LineKey, ct);
             if (card == null) throw;
             card.InPool = true;
-            ScheduleLevel(card, req.Correct, hours, DateTime.UtcNow);
+            ScheduleLevel(card, req.Correct, hours, DateTime.UtcNow, req.Hinted);
             if (!string.IsNullOrEmpty(req.Label)) card.ExpectedMove = req.Label;
             await _db.SaveChangesAsync(ct);
         }
@@ -246,9 +246,10 @@ public class RepertoireTrainingService
 
     /// <summary>9-Stufen-Leiter: richtig → +1 Stufe (max 9), falsch → Stufe 1. Fälligkeit aus dem
     /// Intervall der neuen Stufe. <paramref name="hoursByLevel"/> hat 9 Einträge (Index 0 = Stufe 1).</summary>
-    internal static void ScheduleLevel(RepertoireCardState card, bool correct, double[] hoursByLevel, DateTime now)
+    internal static void ScheduleLevel(RepertoireCardState card, bool correct, double[] hoursByLevel, DateTime now, bool hinted = false)
     {
-        if (correct) { card.Level = Math.Min(Math.Max(card.Level, 0) + 1, 9); card.Reps++; }
+        if (correct && hinted) card.Level = Math.Clamp(card.Level, 1, 9);   // mit Tipp: bleibt stehen (kein Vorrücken, kein Fehler)
+        else if (correct) { card.Level = Math.Min(Math.Max(card.Level, 0) + 1, 9); card.Reps++; }
         else { card.Level = 1; card.Lapses++; }
         var idx = Math.Clamp(card.Level - 1, 0, hoursByLevel.Length - 1);
         card.DueAt = now.AddHours(hoursByLevel[idx]);

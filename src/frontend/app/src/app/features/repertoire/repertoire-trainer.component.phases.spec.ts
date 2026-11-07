@@ -126,7 +126,9 @@ describe('RepertoireTrainerComponent — Phasenfolge (Charakterisierung Z21)', (
     c.onMove(mv('a2', 'a3'));
     expect(c.outcome).toBe('wrong');
     expect(c.phase).toBe('FEEDBACK');
-    expect(c.isPlayable).toBeTrue();            // sofortiger Neuversuch erlaubt
+    expect(c.isPlayable).toBeFalse();           // 0.886.0: der Fehlzug bleibt stehen, Brett gesperrt
+    c.retryWrong();                             // „Nochmal" (oder Tippen/Leertaste/Enter)
+    expect(c.isPlayable).toBeTrue();
     expect(c.dests.size).toBeGreaterThan(0);
     expect(c.wrong).toBe(0);                    // noch kein echter Fehler
     c.onMove(mv('e2', 'e4'));
@@ -265,6 +267,7 @@ describe('RepertoireTrainerComponent — Phasenfolge (Charakterisierung Z21)', (
     it('ein Neuversuch verwirft ein spät eintreffendes Ergebnis', fakeAsync(() => {
       const c = make({ query: { chapter: 'Chapter A' }, stockfish: withEvals('0.2', '0.7') });
       c.onMove(mv('a2', 'a3'));
+      c.retryWrong();
       c.onMove(mv('e2', 'e4'));                 // Neuversuch → alter Vergleich ungültig
       flushMicrotasks();
       expect(c.evalLoading).toBeFalse();

@@ -11,6 +11,24 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.886.0',
+    date: '2026-11-07',
+    changes: [
+      {
+        en: 'Repertoire trainer: after a wrong move the position stays on the board (red arrow) until you press „Try again“, tap or hit Space/Enter, and it tells you how often you have already got this move wrong on Chessable (and with which move last time) and how often this line went wrong in RookHub.',
+        de: 'Repertoire-Trainer: Nach einem falschen Zug bleibt die Stellung stehen (roter Pfeil), bis du „Nochmal“ drückst, tippst oder Leertaste/Enter drückst, und er sagt dir, wie oft du diesen Zug auf Chessable schon falsch gespielt hast (und womit zuletzt) und wie oft die Linie in RookHub schiefging.',
+      },
+      {
+        en: 'Repertoire trainer: new hint button (key H) in three steps — piece, arrow, play the move. A hint is not a mistake, but the line does not move up a level. New „Skip line“ button (key S) jumps to the next line without a rating (a mistake already made still counts).',
+        de: 'Repertoire-Trainer: neuer Tipp-Knopf (Taste H) in drei Stufen — Figur, Pfeil, Zug ausspielen. Ein Tipp ist kein Fehler, aber die Linie steigt keine Stufe auf. Neuer Knopf „Linie überspringen“ (Taste S) springt ohne Bewertung zur nächsten Linie (ein schon gemachter Fehler zählt trotzdem).',
+      },
+      {
+        en: 'Repertoire trainer: a playable alternative now stays for 3.5 seconds („Also playable — now play the main move.“) before it is taken back, and Chessable lines show a link to the line on Chessable.',
+        de: 'Repertoire-Trainer: Ein spielbarer Alternativzug bleibt jetzt 3,5 Sekunden stehen („Auch spielbar — jetzt den Hauptzug.“), bevor er zurückgenommen wird, und Chessable-Linien zeigen einen Link zur Linie auf Chessable.',
+      },
+    ],
+  },
+  {
     version: '0.885.0',
     date: '2026-11-07',
     changes: [

@@ -121,6 +121,43 @@ public sealed class ChessableLineHistory(AppDbContext db)
         return result;
     }
 
+    /// <summary>Fehler an einer Zeile in einer Farbe, über alle Durchläufe summiert (Repertoire-Trainer: der Client kennt Farbe und
+    /// Startseite der Linie und rechnet <c>mid</c> selbst in den Halbzug um).</summary>
+    public sealed record RawMiss(int Mid, string? Mode, int Count, string? Last);
+
+    /// <summary>Fehler je Linie (oid) für den Repertoire-Trainer — EINE Abfrage (Portionen à 500 oids); nur Linien mit Fehlern.</summary>
+    public async Task<Dictionary<string, List<RawMiss>>> MissesByOidAsync(int userId, IReadOnlyCollection<string> oids, CancellationToken ct)
+    {
+        var result = new Dictionary<string, List<RawMiss>>(StringComparer.Ordinal);
+        foreach (var chunk in oids.Distinct(StringComparer.Ordinal).Chunk(Chunk))
+        {
+            var rows = await db.ChessableSessionMoves.AsNoTracking()
+                .Where(s => s.UserId == userId && chunk.Contains(s.Oid))
+                .OrderBy(s => s.CreatedAt).ThenBy(s => s.Id)
+                .Select(s => new { s.Oid, s.MovesJson }).ToListAsync(ct);
+            foreach (var group in rows.GroupBy(r => r.Oid, StringComparer.Ordinal))
+            {
+                var acc = new Dictionary<(int, string?), RawMiss>();
+                foreach (var row in group)
+                    foreach (var e in Entries(row.MovesJson))
+                    {
+                        if (e.Wrong.Count == 0 || e.Mid is not { } mid) continue;
+                        var mode = string.IsNullOrEmpty(e.Mode) ? null : char.ToLowerInvariant(e.Mode[0]).ToString();
+                        var before = acc.GetValueOrDefault((mid, mode));
+                        acc[(mid, mode)] = new RawMiss(mid, mode, (before?.Count ?? 0) + e.Wrong.Count, e.Wrong[^1]);
+                    }
+                if (acc.Count > 0) result[group.Key] = acc.Values.OrderBy(m => m.Mid).ToList();
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Alle numerischen oids eines PGN (beliebig viele Abschnitte).</summary>
+    public static List<string> OidsIn(string? pgn) =>
+        string.IsNullOrEmpty(pgn) ? []
+            : ChessablePgnBlocks.ChessableOidRegex.Matches(pgn).Select(m => m.Groups[1].Value)
+                .Where(o => o.Length <= 32 && o.All(char.IsAsciiDigit)).Distinct(StringComparer.Ordinal).ToList();
+
     /// <summary>Welche der oids mindestens einen Durchlauf haben, in dem die Linie NICHT übersprungen wurde (kein Zug mit
     /// <c>alternativeSkipped</c>) — eine Alternative gilt dann als gelernt.</summary>
     public async Task<HashSet<string>> TrainedAsync(int userId, IReadOnlyCollection<string> oids, CancellationToken ct)

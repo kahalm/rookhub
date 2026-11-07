@@ -131,6 +131,20 @@ public class ChessableLineHistoryTests : IDisposable
     }
 
     [Fact]
+    public async Task MissesByOid_SumsPerMidAndColor_OverRuns_OnlyOwnUser()
+    {
+        Session("5", Nov5.AddDays(-1), """[{"mid":1,"practiceMode":"w","wrong":["Bc4"]},{"mid":2,"practiceMode":"b","wrong":["e5"]}]""");
+        Session("5", Nov5, """[{"mid":1,"practiceMode":"W","wrong":["Nc3","d4"]},{"mid":3,"wrong":[]}]""");
+        Session("5", Nov5, """[{"mid":1,"practiceMode":"w","wrong":["h4"]}]""", user: 2);
+        Session("6", Nov5, """[{"mid":0,"level":3}]""");
+        await _db.SaveChangesAsync();
+        var m = await new ChessableLineHistory(_db).MissesByOidAsync(1, ["5", "6"], default);
+        Assert.Equal([new ChessableLineHistory.RawMiss(1, "w", 3, "d4"), new ChessableLineHistory.RawMiss(2, "b", 1, "e5")], m["5"]);
+        Assert.False(m.ContainsKey("6"));                                      // ohne Fehler nichts
+        Assert.Equal(["1", "22"], ChessableLineHistory.OidsIn("[ChessableOid \"1\"]\n[ChessableOid \"22\"]\n[ChessableOid \"x\"]\n[ChessableOid \"1\"]"));
+    }
+
+    [Fact]
     public void Ply_FromMidAndColor()
     {
         Assert.Equal(0, ChessableLineHistory.Ply(0, 'w', false));

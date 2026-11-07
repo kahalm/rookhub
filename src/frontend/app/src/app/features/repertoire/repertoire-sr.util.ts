@@ -64,19 +64,21 @@ export function hoursOfLevel(l: SrLevel): number {
 
 /**
  * Lokale (Offline-)SR-Bewertung einer Linie — Spiegel von Backend `ScheduleLevel`:
- * richtig → Stufe+1 (max 9, Reps+1), falsch → Stufe 1 (Lapses+1); DueAt = jetzt + Intervall der
+ * richtig → Stufe+1 (max 9, Reps+1), falsch → Stufe 1 (Lapses+1), richtig mit Tipp → Stufe bleibt; DueAt = jetzt + Intervall der
  * neuen Stufe. Liefert den NEUEN Zustand (Eingabe bleibt unverändert); `prev` fehlt bei einer
  * noch nie bewerteten Linie (Server legt die Karte beim Replay ebenfalls neu an).
  */
 export function applySrReview(prev: LineStateDto | undefined, lineKey: string, correct: boolean,
-                              levels: readonly SrLevel[], now: number): LineStateDto {
+                              levels: readonly SrLevel[], now: number, hinted = false): LineStateDto {
   const eff = levels.length ? levels : DEFAULT_SR_LEVELS;
-  const level = correct ? Math.min(Math.max(prev?.level ?? 0, 0) + 1, 9) : 1;
+  // mit Tipp (0.886.0): Stufe bleibt (mindestens 1), weder Wiederholung noch Fehlversuch — Spiegel von `ScheduleLevel(…, hinted)`
+  const held = correct && hinted;
+  const level = held ? Math.min(Math.max(prev?.level ?? 0, 1), 9) : correct ? Math.min(Math.max(prev?.level ?? 0, 0) + 1, 9) : 1;
   const idx = Math.min(Math.max(level - 1, 0), eff.length - 1);
   return {
     lineKey,
     level,
-    reps: (prev?.reps ?? 0) + (correct ? 1 : 0),
+    reps: (prev?.reps ?? 0) + (correct && !held ? 1 : 0),
     lapses: (prev?.lapses ?? 0) + (correct ? 0 : 1),
     dueAt: new Date(now + hoursOfLevel(eff[idx]) * 3_600_000).toISOString(),
     lastReviewedAt: new Date(now).toISOString(),

@@ -1,3 +1,4 @@
+using RookHub.Api.Services.Chessable;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
@@ -70,6 +71,30 @@ public class RepertoireControllerTests : IDisposable
         _db.Repertoires.Add(rep);
         await _db.SaveChangesAsync();
         return rep;
+    }
+
+    // ---- Chessable-Fehler je Linie (0.886.0) ----
+
+    [Fact]
+    public async Task ChessableMisses_OnlyOidsOfThisRepertoire_ForeignRepertoireIs404()
+    {
+        var user = await CreateUserAsync();
+        var rep = await CreateRepertoireAsync(user.Id);
+        const string pgn = "[Event \"x\"]\n[ChessableOid \"41\"]\n\n1. e4 e5 *\n";
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = rep.Id, FileName = "a.pgn", PgnContent = pgn, FileSize = pgn.Length });
+        _db.ChessableSessionMoves.Add(new ChessableSessionMove { UserId = user.Id, Bid = "1", Oid = "41", MovesJson = """[{"mid":0,"practiceMode":"w","wrong":["d4"]}]""" });
+        _db.ChessableSessionMoves.Add(new ChessableSessionMove { UserId = user.Id, Bid = "1", Oid = "42", MovesJson = """[{"mid":0,"practiceMode":"w","wrong":["c4"]}]""" });
+        await _db.SaveChangesAsync();
+        SetUser(user.Id);
+
+        var ok = Assert.IsType<OkObjectResult>((await _controller.ChessableMisses(rep.Id, new ChessableLineHistory(_db), default)).Result);
+        var map = Assert.IsType<Dictionary<string, List<ChessableLineHistory.RawMiss>>>(ok.Value);
+        Assert.Equal(["41"], map.Keys);
+        Assert.Equal(new ChessableLineHistory.RawMiss(0, "w", 1, "d4"), Assert.Single(map["41"]));
+
+        var other = await CreateUserAsync("other");
+        SetUser(other.Id);
+        await Assert.ThrowsAnyAsync<Exception>(() => _controller.ChessableMisses(rep.Id, new ChessableLineHistory(_db), default));
     }
 
     // ---- Lochfinder ----

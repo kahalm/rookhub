@@ -81,7 +81,7 @@ export class TrainerSrSync {
 
   /** Offline-/Fehlerpfad der Bewertung: Stufen-Übergang lokal, Kopie nachziehen, Request vormerken. */
   private applyLocal(req: LineReviewRequest, onDue: (dueAt: string) => void): void {
-    const st = applySrReview(this.states.get(req.lineKey), req.lineKey, req.correct, this.effectiveSrLevels(), this.now);
+    const st = applySrReview(this.states.get(req.lineKey), req.lineKey, req.correct, this.effectiveSrLevels(), this.now, req.hinted);
     this.states.set(st.lineKey, st);
     this.persist();
     this.deps.queue().enqueue('POST', `/api/repertoires/${this.repId}/training/line-review`, req);

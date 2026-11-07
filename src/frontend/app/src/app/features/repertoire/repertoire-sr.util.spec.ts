@@ -164,6 +164,15 @@ describe('applySrReview / applyPromote / hoursOfLevel', () => {
   });
 
   // Die Stufe waehlt ueber den INDEX (Stufe 1 = Index 0) — haelt die konkreten Abstaende fest.
+  it('0.886.0: correct with a hint keeps the level (at least 1), no rep, no lapse — like the backend', () => {
+    const prev = { lineKey: 'k', level: 5, reps: 4, lapses: 1, dueAt: '', lastReviewedAt: null, inPool: true, paused: false };
+    const held = applySrReview(prev, 'k', true, DEFAULT_SR_LEVELS, NOW, true);
+    expect([held.level, held.reps, held.lapses]).toEqual([5, 4, 1]);
+    expect(held.dueAt).toBe(new Date(NOW + hoursOfLevel(DEFAULT_SR_LEVELS[4]) * 3_600_000).toISOString());
+    expect(applySrReview(undefined, 'k', true, DEFAULT_SR_LEVELS, NOW, true).level).toBe(1);
+    expect(applySrReview(prev, 'k', false, DEFAULT_SR_LEVELS, NOW, true).level).toBe(1);   // a mistake beats the hint
+  });
+
   it('the first default level is four hours, the last six months', () => {
     expect(hoursOfLevel(DEFAULT_SR_LEVELS[0])).toBe(4);
     expect(hoursOfLevel(DEFAULT_SR_LEVELS[DEFAULT_SR_LEVELS.length - 1])).toBe(6 * 24 * 30);

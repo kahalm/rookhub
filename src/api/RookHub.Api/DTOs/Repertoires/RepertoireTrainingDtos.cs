@@ -78,6 +78,10 @@ public class LineReviewRequest
     public string Label { get; set; } = string.Empty;
 
     public bool Correct { get; set; }
+
+    /// <summary>Fehlerfrei, aber mit Tipp (Trainer-Knopf 💡, 0.886.0): die Karte rückt NICHT vor (Stufe bleibt, mindestens 1),
+    /// wird nach dem Intervall ihrer Stufe wieder fällig; weder Wiederholung noch Fehlversuch. Ohne Wirkung bei <c>Correct = false</c>.</summary>
+    public bool Hinted { get; set; }
 }
 
 /// <summary>Effektive SR-Konfiguration für ein Repertoire: die tatsächlich wirksamen Intervalle

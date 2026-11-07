@@ -2,7 +2,8 @@ import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 import { buildRepertoireGraph } from './repertoire-tree.util';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import {
-  ADVANCE_MS, LEARN_GAP_MS, LEARN_SHOW_MS, OPP_MOVE_DELAY_MS, TrainerClock, TrainerMode, TrainerPhase, TrainerSession,
+  ADVANCE_MS, HINT_PLAYED_MS, LEARN_GAP_MS, LEARN_SHOW_MS, OPP_MOVE_DELAY_MS, TOLERATED_HOLD_MS, TrainerClock, TrainerMode, TrainerPhase,
+  TrainerSession,
 } from './repertoire-trainer-session';
 
 /** Von Hand weitergestellte Uhr — die Specs warten nicht, sie stellen die Zeit vor. */
@@ -41,7 +42,7 @@ const KEY_A = lineKeyFromSans(['e4', 'e5', 'Nf3', 'Nc6']);
 
 type Step =
   | ['move', string, string] | ['tick', number] | ['tap'] | ['slip'] | ['solve'] | ['afterWrong']
-  | ['continue'] | ['comment'];
+  | ['continue'] | ['comment'] | ['retry'];
 
 interface Row {
   name: string;
@@ -58,12 +59,13 @@ interface Row {
 function setup(row: Pick<Row, 'pgn' | 'color' | 'mode' | 'lines'>) {
   const pgn = row.pgn ?? PGN;
   const clock = new ManualClock();
-  const calls = { learned: [] as string[], reviewed: [] as { lineKey: string; correct: boolean }[], wrong: 0, retry: 0, changed: 0 };
+  const calls = { learned: [] as string[], reviewed: [] as { lineKey: string; correct: boolean }[], hinted: [] as boolean[], wrong: 0,
+    retry: 0, changed: 0 };
   const s = new TrainerSession({
     changed: () => calls.changed++,
     colorOf: () => row.color ?? 'w',
     lineLearned: k => calls.learned.push(k),
-    lineReviewed: r => calls.reviewed.push({ lineKey: r.lineKey, correct: r.correct }),
+    lineReviewed: r => { calls.reviewed.push({ lineKey: r.lineKey, correct: r.correct }); calls.hinted.push(!!r.hinted); },
     wrongMove: () => calls.wrong++,
     retryAfterWrong: () => calls.retry++,
   }, clock);
@@ -83,6 +85,7 @@ function run(s: TrainerSession, clock: ManualClock, step: Step): void {
     case 'afterWrong': s.continueAfterWrong(); break;
     case 'continue': s.continueLine(); break;
     case 'comment': s.continueFromComment(); break;
+    case 'retry': s.retryWrong(); break;
   }
 }
 
@@ -114,9 +117,9 @@ const ROWS: Row[] = [
     steps: [[['move', 'a2', 'a3'], 'FEEDBACK'], [['solve'], 'FEEDBACK'], [['afterWrong'], 'PLAYING'], [['tick', OPP_MOVE_DELAY_MS], 'PLAYING']],
   },
   {
-    name: 'Abfragen: falsch → sofortiger Neuversuch richtig → FEEDBACK',
+    name: 'Abfragen: falsch → Zug bleibt stehen → Tippen nimmt zurück → Neuversuch richtig → FEEDBACK',
     lines: 1, start: 'PLAYING',
-    steps: [[['move', 'a2', 'a3'], 'FEEDBACK'], [['move', 'e2', 'e4'], 'FEEDBACK'], [['tick', ADVANCE_MS.correct], 'PLAYING']],
+    steps: [[['move', 'a2', 'a3'], 'FEEDBACK'], [['tap'], 'FEEDBACK'], [['move', 'e2', 'e4'], 'FEEDBACK'], [['tick', ADVANCE_MS.correct], 'PLAYING']],
   },
   {
     name: 'Abfragen: geduldet → Timer nimmt zurück → PLAYING',
@@ -201,6 +204,8 @@ describe('TrainerSession — Zähler, Urteile und Meldungen', () => {
     s.start(lines);
     s.onMove({ orig: 'a2' as any, dest: 'a3' as any });
     expect(calls.wrong).toBe(1);
+    expect(s.isPlayable).toBeFalse();                 // 0.886.0: der Fehlzug steht, Brett gesperrt
+    s.retryWrong();
     expect(s.isPlayable).toBeTrue();
     s.onMove({ orig: 'e2' as any, dest: 'e4' as any });
     expect(calls.retry).toBe(1);
@@ -290,5 +295,125 @@ describe('TrainerSession — Zähler, Urteile und Meldungen', () => {
     s.onMove({ orig: 'e2' as any, dest: 'e4' as any });
     expect(s.movesInLine.map(m => m.san)).toEqual(['e4']);
     expect(s.currentLineLabel).toBe('1.e4 e5');
+  });
+});
+
+describe('TrainerSession — 0.886.0: Fehlzug bleibt stehen, Tipp, Überspringen, längeres Dulden', () => {
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+  it('falscher Zug bleibt auf dem Brett (rot markiert, gesperrt), zurück erst nach Bestätigung; Mausrutscher wie bisher', () => {
+    const { s, lines } = setup({ lines: 1 });
+    s.start(lines);
+    s.onMove({ orig: 'a2' as any, dest: 'a3' as any });
+    expect(s.wrongShown).toBeTrue();
+    expect(s.fen.startsWith('rnbqkbnr/pppppppp/8/8/8/P7/1PPPPPPP/RNBQKBNR b')).toBeTrue();
+    expect(s.dests.size).toBe(0);
+    expect(s.isPlayable).toBeFalse();
+    expect(s.boardShapes).toEqual([{ orig: 'a2' as any, dest: 'a3' as any, brush: 'red' }]);
+    s.onMove({ orig: 'e2' as any, dest: 'e4' as any });          // gesperrt: nichts passiert
+    expect(s.wrongShown).toBeTrue();
+    expect(s.tap()).toBeTrue();                                   // Tippen/Leertaste/Enter/Brettklick = zurücknehmen
+    expect(s.wrongShown).toBeFalse();
+    expect(s.fen).toBe(START);
+    expect(s.isPlayable).toBeTrue();
+    expect(s.pendingWrong).toBeTrue();                            // Mausrutscher geht weiter
+    s.mouseslip();
+    expect(s.phase).toBe('PLAYING');
+  });
+
+  it('„Lösung zeigen" direkt aus dem stehenden Fehlzug', () => {
+    const { s, lines } = setup({ lines: 1 });
+    s.start(lines);
+    s.onMove({ orig: 'a2' as any, dest: 'a3' as any });
+    s.showSolution();
+    expect(s.wrongShown).toBeFalse();
+    expect(s.lastMove).toEqual(['e2' as any, 'e4' as any]);
+  });
+
+  it('Tipp: Stufe 1 Startfeld, Stufe 2 Pfeil, Stufe 3 spielt den Zug; kein Fehler, aber SR „hinted"', () => {
+    const { s, clock, calls, lines } = setup({ lines: 1 });
+    s.start(lines);
+    expect(s.canHint).toBeTrue();
+    s.hint();
+    expect(s.boardShapes).toEqual([{ orig: 'e2' as any, brush: 'green' }]);
+    s.hint();
+    expect(s.boardShapes).toEqual([{ orig: 'e2' as any, dest: 'e4' as any, brush: 'green' }]);
+    s.hint();
+    expect(s.phase).toBe('FEEDBACK');
+    expect(s.lastMove).toEqual(['e2' as any, 'e4' as any]);
+    expect(s.canHint).toBeFalse();
+    expect(s.hints).toBe(1);
+    expect(s.wrong).toBe(0);
+    expect(s.correct).toBe(0);
+    clock.advance(HINT_PLAYED_MS + OPP_MOVE_DELAY_MS);
+    expect(s.phase).toBe('PLAYING');
+    expect(s.boardShapes).toEqual([]);                            // neue Stellung: kein Tipp mehr
+    s.onMove({ orig: 'g1' as any, dest: 'f3' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    expect(calls.reviewed).toEqual([{ lineKey: KEY_A, correct: true }]);
+    expect(calls.hinted).toEqual([true]);
+  });
+
+  it('Tipp nach einem Fehlzug nimmt ihn zuerst zurück; der Fehler zählt weiter (SR falsch, nicht hinted)', () => {
+    const { s, clock, calls, lines } = setup({ lines: 1 });
+    s.start(lines);
+    s.onMove({ orig: 'a2' as any, dest: 'a3' as any });
+    s.hint();
+    expect(s.wrongShown).toBeFalse();
+    expect(s.fen).toBe(START);
+    expect(s.boardShapes).toEqual([{ orig: 'e2' as any, brush: 'green' }]);
+    s.onMove({ orig: 'e2' as any, dest: 'e4' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    s.onMove({ orig: 'g1' as any, dest: 'f3' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    expect(calls.reviewed[0].correct).toBeFalse();
+    expect(calls.hinted).toEqual([false]);
+    expect(s.wrong).toBe(1);
+  });
+
+  it('kein Tipp im Lernmodus und nicht im Gegnerzug-Fenster', () => {
+    const learn = setup({ lines: 1, mode: 'learn' });
+    learn.s.start(learn.lines);
+    expect(learn.s.canHint).toBeFalse();
+    const black = setup({ lines: 1, color: 'b' });
+    black.s.start(black.lines);
+    expect(black.s.oppMoving).toBeTrue();
+    expect(black.s.canHint).toBeFalse();
+  });
+
+  it('Überspringen: keine SR-Bewertung, nächste Linie; ein schon gemachter Fehler zählt (correct=false)', () => {
+    const { s, calls, lines } = setup({});
+    s.start(lines);
+    s.skipLine();
+    expect(calls.reviewed).toEqual([]);
+    expect(s.qIndex).toBe(1);
+    expect(s.phase).toBe('PLAYING');
+    s.onMove({ orig: 'a2' as any, dest: 'a3' as any });           // Fehler in Linie 2 (noch offen)
+    s.skipLine();
+    expect(calls.reviewed.length).toBe(1);
+    expect(calls.reviewed[0].correct).toBeFalse();
+    expect(s.wrong).toBe(1);
+    expect(s.phase).toBe('DONE');
+  });
+
+  it('Überspringen im „Linie fertig"-Kasten bewertet nicht doppelt', () => {
+    const { s, clock, calls, lines } = setup({});
+    s.start(lines);
+    s.onMove({ orig: 'e2' as any, dest: 'e4' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    s.onMove({ orig: 'g1' as any, dest: 'f3' as any }); clock.advance(ADVANCE_MS.correct + OPP_MOVE_DELAY_MS);
+    expect(s.phase).toBe('LINE_DONE');
+    s.skipLine();
+    expect(calls.reviewed.length).toBe(1);
+    expect(s.qIndex).toBe(1);
+  });
+
+  it('geduldeter Zug steht 3,5 s (TOLERATED_HOLD_MS), Tippen überspringt', () => {
+    expect(TOLERATED_HOLD_MS).toBe(3500);
+    expect(ADVANCE_MS.tolerated).toBe(TOLERATED_HOLD_MS);
+    const { s, clock, lines } = setup({ pgn: ALT });
+    s.start(lines);
+    s.onMove({ orig: 'd2' as any, dest: 'd4' as any });
+    expect(s.outcome).toBe('tolerated');
+    clock.advance(3000);
+    expect(s.phase).toBe('FEEDBACK');
+    s.tap();
+    expect(s.phase).toBe('PLAYING');
   });
 });

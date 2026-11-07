@@ -7,13 +7,13 @@ import { normFen } from './repertoire-tree.util';
 import { destsAt, userMoveCount } from './repertoire-trainer.util';
 import { lineKeyOf } from './repertoire-trainer-queue.util';
 import {
-  ADVANCE_MS, BoardMove, LEARN_GAP_MS, LEARN_REPEATS, OPP_MOVE_DELAY_MS,
+  ADVANCE_MS, BoardMove, HINT_PLAYED_MS, LEARN_GAP_MS, LEARN_REPEATS, OPP_MOVE_DELAY_MS,
 } from './repertoire-trainer-state';
 import { TrainerLearnMode } from './repertoire-trainer-learn';
 
 // Typen, Zeiten und Uhr stehen seit W7a in repertoire-trainer-state.ts — hier weiter erreichbar wie bisher.
 export {
-  ADVANCE_MS, LEARN_GAP_MS, LEARN_REPEATS, LEARN_SHOW_MS, OPP_MOVE_DELAY_MS, browserClock,
+  ADVANCE_MS, HINT_PLAYED_MS, LEARN_GAP_MS, LEARN_REPEATS, LEARN_SHOW_MS, OPP_MOVE_DELAY_MS, TOLERATED_HOLD_MS, browserClock,
 } from './repertoire-trainer-state';
 export type {
   BoardMove, TrainerClock, TrainerMode, TrainerOutcome, TrainerPhase, TrainerSessionHooks,
@@ -44,6 +44,7 @@ export class TrainerSession extends TrainerLearnMode {
     this.learnPass = 0;
     this.correct = 0;
     this.wrong = 0;
+    this.hints = 0;
     this.currentStreak = 0;
     this.bestStreak = 0;
     this.sessionUserMoves = this.countUserMoves(queue);
@@ -77,7 +78,11 @@ export class TrainerSession extends TrainerLearnMode {
     this.chess = new Chess(line.fens[0]);
     this.currentPly = 0;
     this.lineHadWrong = false;
+    this.lineHadHint = false;
     this.pendingWrong = false;
+    this.wrongShown = false;
+    this.hintLevel = 0;
+    this.hintUci = null;
     this.oppMoving = false;
     this.nextRepeatAt = null;
     this.holdComment = '';
@@ -96,6 +101,8 @@ export class TrainerSession extends TrainerLearnMode {
       // User ist am Zug.
       this.oppMoving = false;
       this.startFen = this.fen;
+      this.hintLevel = 0;
+      this.hintUci = null;
       if (this.mode === 'learn') {
         // Nur der ERSTE Durchlauf (learnPass 0) zeigt den erwarteten Zug vor (geführtes Lernen);
         // die Wiederholungs-Durchläufe verlangen ihn aus dem Gedächtnis.
@@ -160,7 +167,9 @@ export class TrainerSession extends TrainerLearnMode {
       this.pendingRepeat = false;
       this.phase = 'LINE_DONE';
       const label = (line.headers['White'] || '').trim().slice(0, 120);
-      this.hooks.lineReviewed({ lineKey: lineKeyOf(line), label, correct: !this.lineHadWrong });
+      // Mit Tipp, aber ohne Fehler: die Karte rückt nicht vor (`hinted`), zählt aber nicht als Fehler.
+      this.hooks.lineReviewed({ lineKey: lineKeyOf(line), label, correct: !this.lineHadWrong,
+        ...(this.lineHadHint && !this.lineHadWrong ? { hinted: true } : {}) });
     }
     // Nicht mehr automatisch weiter — der User rückt per „Weiter" vor. Timer werden BEWUSST hier NICHT
     // geräumt: `startCurrentLine` räumt sie beim Übergang zur nächsten Linie.
@@ -194,6 +203,7 @@ export class TrainerSession extends TrainerLearnMode {
     else if (this.phase === 'COMMENT') this.continueFromComment();
     else if (this.phase === 'LEARN_SHOW' && this.learnComment) this.learnRetract();
     else if (this.phase === 'FEEDBACK' && this.outcome !== 'wrong' && this.advanceTimer !== null) this.runAdvance();
+    else if (this.phase === 'FEEDBACK' && this.outcome === 'wrong' && this.wrongShown) this.retryWrong();
     else return false;
     return true;
   }
@@ -226,7 +236,7 @@ export class TrainerSession extends TrainerLearnMode {
     const line = this.queue[this.qIndex];
     if (!line || this.currentPly >= line.moves.length) return;
     if (this.mode === 'learn') { this.onLearnMove(ev); return; }
-    const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
+    const wrongRetry = this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed && !this.wrongShown;
     if (this.phase !== 'PLAYING' && !wrongRetry) return;
     if (wrongRetry) this.hooks.retryAfterWrong();
 
@@ -263,9 +273,11 @@ export class TrainerSession extends TrainerLearnMode {
       this.bumpStreak();
       this.fen = fenAfterPlayer;
     } else {
-      // Falscher Zug: NOCH nicht als Fehler zählen — der User kann „Mausrutscher" sagen.
+      // Falscher Zug: NOCH nicht als Fehler zählen — der User kann „Mausrutscher" sagen. Der Zug BLEIBT stehen (0.886.0,
+      // Wunsch: „lass die stellung stehen"), Brett gesperrt; zurück erst mit „Nochmal"/Tippen/Leertaste/Enter.
       this.outcome = 'wrong'; this.pendingWrong = true;
-      this.fen = this.startFen;
+      this.fen = fenAfterPlayer;
+      this.wrongShown = true;
       this.lastMove = [ev.orig, ev.dest];
     }
 
@@ -275,7 +287,7 @@ export class TrainerSession extends TrainerLearnMode {
 
     if (this.outcome === 'wrong') {
       this.hooks.wrongMove(this.startFen, fenAfterPlayer, expectedMove.san, this.color);
-      this.dests = destsAt(this.startFen);
+      this.dests = new Map();
     } else {
       this.scheduleAdvance(ADVANCE_MS[this.outcome]);
     }
@@ -294,6 +306,7 @@ export class TrainerSession extends TrainerLearnMode {
   showSolution(): void {
     if (this.wrongRevealed) return;
     this.wrongRevealed = true;
+    this.wrongShown = false;
     this.wrong++;
     this.currentStreak = 0;   // „Lösung zeigen" bricht die Serie (Mausrutscher tut das NICHT).
     this.lineHadWrong = true;
@@ -302,6 +315,10 @@ export class TrainerSession extends TrainerLearnMode {
     const board = expected ? tryLoadFen(this.startFen) : null;
     // `null` = in dieser Stellung nicht auflösbar (mehrdeutige SAN, kaputte Linie) → nur Text-Reveal.
     const uci = board && expected ? resolveExpectedUci(board, { san: expected.san }) : null;
+    // der stehende Fehlzug verschwindet in jedem Fall (0.886.0)
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    this.dests = new Map();
     if (uci) {
       try {
         this.chess.load(this.startFen);
@@ -320,11 +337,77 @@ export class TrainerSession extends TrainerLearnMode {
     this.pendingWrong = false;
     this.outcome = 'correct';   // Feedback-Kasten schließen
     this.wrongRevealed = false;
+    this.wrongShown = false;
     this.fen = this.startFen;
     this.lastMove = undefined;
     this.dests = destsAt(this.startFen);
     this.phase = 'PLAYING';
     this.hooks.changed();
+  }
+
+  /** „Nochmal" nach einem Fehlzug: den stehenden falschen Zug zurücknehmen, die Stellung wieder spielbar (der Fehler bleibt
+   *  offen wie bisher — Mausrutscher oder Lösung zeigen gehen weiter). */
+  retryWrong(): void {
+    if (this.phase !== 'FEEDBACK' || this.outcome !== 'wrong' || !this.wrongShown || this.wrongRevealed) return;
+    this.wrongShown = false;
+    this.fen = this.startFen;
+    this.lastMove = undefined;
+    this.dests = destsAt(this.startFen);
+    this.hooks.changed();
+  }
+
+  /**
+   * Gestufter Tipp (0.886.0, Taste „h"): Stufe 1 markiert das Startfeld, Stufe 2 zeigt den Pfeil, Stufe 3 spielt den Zug aus und
+   * rückt weiter. Ein Tipp ist KEIN Fehler (Zähler `hints`), aber die Linie rückt im SR nicht vor (`lineHadHint` → `hinted`).
+   * Steht noch ein Fehlzug, wird er zuerst zurückgenommen; ein offener Fehler zählt beim Ausspielen weiter.
+   */
+  hint(): void {
+    if (!this.canHint) return;
+    if (this.wrongShown) this.retryWrong();
+    const expected = this.queue[this.qIndex]?.moves[this.currentPly];
+    const board = expected ? tryLoadFen(this.startFen || this.fen) : null;
+    const uci = board && expected ? resolveExpectedUci(board, { san: expected.san }) : null;
+    if (!uci || !expected) return;
+    if (this.hintLevel === 0) { this.hints++; this.lineHadHint = true; }
+    this.hintUci = uci;
+    this.hintLevel++;
+    if (this.hintLevel < 3) { this.hooks.changed(); return; }
+    // Stufe 3: den Zug ausspielen (wie ein richtiger Zug, aber ohne „richtig"-Zähler und Serie)
+    this.countPendingWrong();
+    try {
+      this.chess.load(this.startFen);
+      const mv = applyUci(this.chess, uci);
+      this.fen = this.chess.fen();
+      this.lastMove = [mv.from as Key, mv.to as Key];
+    } catch { return; }
+    this.dests = new Map();
+    this.expectedDisplay = expected.san;
+    this.outcome = 'correct';
+    this.wrongRevealed = false;
+    this.phase = 'FEEDBACK';
+    this.scheduleAdvance(HINT_PLAYED_MS);
+    this.hooks.changed();
+  }
+
+  /**
+   * „Linie überspringen" (0.886.0, Taste „s"): die laufende Linie abbrechen und zur nächsten der Warteschlange (im Gegner-Modus
+   * die nächste in Gegner-Reihenfolge — die Warteschlange IST diese Reihenfolge). Keine SR-Bewertung — außer die Linie hatte
+   * schon einen Fehler: der zählt weiter (Überspringen macht keinen Fehler ungeschehen). Im „Linie fertig"-Kasten = „Weiter".
+   */
+  skipLine(): void {
+    if (!this.canSkip) return;
+    if (this.phase === 'LINE_DONE') { this.continueLine(); return; }
+    const line = this.queue[this.qIndex];
+    this.clearTimers();
+    this.countPendingWrong();
+    if (this.mode === 'quiz' && this.lineHadWrong && line) {
+      const label = (line.headers['White'] || '').trim().slice(0, 120);
+      this.hooks.lineReviewed({ lineKey: lineKeyOf(line), label, correct: false });
+    }
+    this.qIndex++;
+    this.learnPass = 0;
+    this.pendingRepeat = false;
+    this.startCurrentLine();
   }
 
   /** Nach „Lösung zeigen": der erwartete Zug ist gespielt → mit der Linie fortfahren. */

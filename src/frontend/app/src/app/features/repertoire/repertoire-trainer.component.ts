@@ -40,6 +40,8 @@ import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { TRAINER_PASS_THROUGH, TRAINING_LINES_ALL, TrainingLines, trainingLinesUrl } from '../../shared/player-card/training-lines';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import type { DrawShape } from 'chessground/draw';
+import { ChessableMisses, MissInfo, chessableOid, chessableUrl, missAt } from './repertoire-trainer-misses.util';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -182,6 +184,29 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   get evalDeltaPawns(): number | null { return this.evalCmp.deltaPawns; }
   get evalMateNote(): 'missed' | 'allowed' | null { return this.evalCmp.mateNote; }
   get evalDeltaAbsDisplay(): string { return this.evalCmp.deltaAbsDisplay; }
+  get wrongShown(): boolean { return this.s.wrongShown; }
+  get hints(): number { return this.s.hints; }
+  get hintLevel(): number { return this.s.hintLevel; }
+  get canHint(): boolean { return this.s.canHint; }
+  get canSkip(): boolean { return this.s.canSkip; }
+  get boardShapes(): DrawShape[] { return this.s.boardShapes; }
+
+  /** Chessable-Fehler je Linie (0.886.0) — einmal je Repertoire geladen; `null` = (noch) keine. */
+  private chessableMisses: ChessableMisses | null = null;
+
+  /** Nach einem Fehlzug: wie oft schon falsch (Chessable an diesem Zug, RookHub die Linie); `null` = nichts anzeigen. */
+  get currentMiss(): MissInfo | null {
+    if (this.s.phase !== 'FEEDBACK' || this.s.outcome !== 'wrong') return null;
+    const line = this.s.currentLine;
+    const lapses = line ? this.sr.stateOf(this.lineKeyOf(line))?.lapses ?? 0 : 0;
+    return missAt(line, this.s.currentPly, this.s.color, this.chessableMisses, lapses);
+  }
+
+  /** Link der aktuellen Linie auf Chessable (nur mit `[ChessableOid]`). */
+  get currentChessableUrl(): string | null {
+    const oid = chessableOid(this.s.currentLine);
+    return oid ? chessableUrl(oid) : null;
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -223,6 +248,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         // Eine vorhandene Offline-Kopie beim Online-Öffnen aktuell halten (No-op ohne Kopie).
         refreshRepertoireOffline(this.repertoireId, pgn, states);
         void this.initSession(pgn, states);
+        this.loadChessableMisses(pgn);
       },
       error: () => {
         // Server unerreichbar → heruntergeladene Kopie verwenden (Offline-Training); ohne Kopie
@@ -264,6 +290,15 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     }
     else if (this.freqOrder && !this.offlineSession) this.loadFrequencies();
     else this.buildQueue();
+  }
+
+  /** Chessable-Fehler nachladen — nur, wenn das Repertoire Chessable-Linien hat; ein Ausfall ändert nichts (Anzeige fehlt dann). */
+  private loadChessableMisses(pgn: string): void {
+    if (!pgn.includes('[ChessableOid ')) return;
+    this.training.getChessableMisses?.(this.repertoireId)?.subscribe({
+      next: m => { if (!this.destroyed) { this.chessableMisses = m; this.cdr.markForCheck(); } },
+      error: () => {},
+    });
   }
 
   ngOnDestroy(): void {
@@ -482,14 +517,23 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   showSolution(): void { this.s.showSolution(); }
   mouseslip(): void { this.s.mouseslip(); }
   continueAfterWrong(): void { this.s.continueAfterWrong(); }
+  retryWrong(): void { this.s.retryWrong(); }
+  /** 💡 Tipp (Taste „h"): Figur → Pfeil → Zug ausspielen. */
+  hint(): void { this.s.hint(); }
+  /** Linie überspringen (Taste „s"): ohne SR-Bewertung zur nächsten (ein schon gemachter Fehler zählt). */
+  skipLine(): void { this.s.skipLine(); }
   /** Klick/Tippen aufs Brett = „Weiter" (Linie fertig, Kommentar, Vorzeigen mit Kommentar, Feedback überspringen). */
   onPlayClick(): void { this.s.tap(); }
 
-  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen). */
+  /** Leertaste/Enter = „Weiter" (wie Klick/Tippen); „h" = Tipp, „s" = Linie überspringen. */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return;
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (key !== ' ' && key !== 'Spacebar' && key !== 'Enter' && key !== 'h' && key !== 's') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!isBoardHotkey(e)) return;
+    if (key === 'h') { if (this.s.canHint) { this.s.hint(); e.preventDefault(); } return; }
+    if (key === 's') { if (this.s.canSkip) { this.s.skipLine(); e.preventDefault(); } return; }
     if (this.s.tap()) e.preventDefault();
   }
 }

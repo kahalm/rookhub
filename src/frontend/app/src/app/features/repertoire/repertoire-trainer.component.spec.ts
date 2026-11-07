@@ -3,6 +3,7 @@ import { EMPTY, Subject, of, throwError } from 'rxjs';
 import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { lineKeyFromSans } from './repertoire-line-key.util';
 import { LineStateDto } from './repertoire-training.service';
+import { TOLERATED_HOLD_MS } from './repertoire-trainer-session';
 import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
 import { parsePgnText } from '../../shared/pgn-viewer/pgn-parser';
 import { Chess } from 'chess.js';
@@ -231,7 +232,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     const startFen = c.fen;
     c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // geduldete Alternative zu e4
     expect(c.outcome).toBe('tolerated');
-    tick(1500);
+    tick(TOLERATED_HOLD_MS);
     expect(c.fen).toBe(startFen);
     expect(c.phase).toBe('PLAYING');
   }));
@@ -759,7 +760,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
     const startFen = c.fen;
     c.onMove({ orig: 'd2' as any, dest: 'd4' as any });   // [%alt d4]
     expect(c.outcome).toBe('tolerated');
-    tick(1500);                                           // zurücknehmen → dieselbe Stellung
+    tick(TOLERATED_HOLD_MS);                              // zurücknehmen → dieselbe Stellung
     expect(c.fen).toBe(startFen);
     expect(c.phase).toBe('PLAYING');
     c.onMove({ orig: 'e2' as any, dest: 'e4' as any });   // erst der Hauptzug führt weiter
@@ -800,7 +801,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
     c.onMove({ orig: 'b1' as any, dest: 'd2' as any });
     expect(c.outcome).toBe('wrong');
     expect(c.phase).toBe('FEEDBACK');
-    expect(c.fen).toBe(startFen);
+    expect(c.wrongShown).toBeTrue();                      // 0.886.0: der Fehlzug steht, bis „Nochmal"/„Lösung zeigen"
     c.showSolution();
     expect(c.wrongRevealed).toBeTrue();
     expect(c.expectedDisplay).toBe('Nd2');

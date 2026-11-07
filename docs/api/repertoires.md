@@ -72,3 +72,33 @@ Detailseite: Brett im Baum spielbar, `onTreeBoardMove` → `treeService.selectCh
 `rh.repertoire.treeArrows`.
 Zurück (0.835.0): im Brett-Vollbild Knopf `.tree-fs-back` (über `ng-content select="[boardFsOverlay]"` der Brett-Komponente in deren Vollbild-Teilbaum), dazu Pfeil links im Baum → `treeBack()` = `treeService.goUp()`.
 Eigene Züge (0.837.1): ist in der Baum-Stellung die Seite des Repertoires am Zug (Brett-Ausrichtung = Kapitelfarben), richtet sich die Pfeilbreite nach der Linienzahl je Zug (`TreeChild.count`), nicht nach Lichess (`treeArrows(…, ownMove)`).
+
+## Trainer: Fehler stehen lassen, Fehlerzähler, Tipp, Überspringen (0.886.0)
+
+Wünsche des Users 07.11.: „bei einem falschen zug lass die stellung stehen", „wenn ich einen falschen zug mache schreib wie
+oft der schon falsch war", „hintfunktion", „button skip line", „beim playable move … länger stehen lassen", „link zur
+chessable line".
+
+- `GET /api/repertoires/{id:int}/training/chessable-misses` (Lesezugriff wie das PGN, sonst 404) → `{ "<oid>": [{ mid, mode,
+  count, last }] }`: aus `ChessableSessionMoves.MovesJson` (`wrong[]` je `mid` und `practiceMode`, über alle Durchläufe
+  summiert, `last` = zuletzt falsch gespielter Zug wie mitgeschnitten), nur oids, die im PGN des Repertoires als
+  `[ChessableOid]` stehen, nur Linien mit Fehlern; EINE Abfrage je Repertoire (`ChessableLineHistory.MissesByOidAsync`). Der
+  Trainer lädt das einmal (nur wenn das PGN `[ChessableOid` enthält) und rechnet `mid` mit Farbe und Startseite der Linie in
+  den Halbzug um (`repertoire-trainer-misses.util.ts`): 2·mid (+1 Schwarz, −1 wenn die Linie mit Schwarz beginnt).
+- Nach einem Fehlzug zeigt der Trainer „Hier auf Chessable schon n× falsch — zuletzt mit 7…Sc6" (nur Einträge der eigenen
+  Farbe) und „Diese Linie in RookHub: bisher n× falsch" (`lapses` der SR-Karte — RookHub speichert Fehler je LINIE, nicht je
+  Zug); ohne Daten nichts. Der falsche Zug bleibt rot stehen, Brett gesperrt; „Nochmal"/Tippen/Leertaste/Enter nimmt ihn
+  zurück (der Fehler bleibt offen wie vorher: „Mausrutscher" verzeiht, ein Neuversuch zählt ihn).
+- `POST …/training/line-review` hat `hinted` (bool): fehlerfrei, aber mit Tipp → die Karte rückt NICHT vor (Stufe bleibt,
+  mindestens 1; weder `Reps` noch `Lapses`), fällig nach dem Intervall ihrer Stufe (`ScheduleLevel(…, hinted)`, Spiegel
+  `applySrReview(…, hinted)` für offline). Ein Fehler in der Linie schlägt den Tipp (Stufe 1). Begründung: das SR-Modell
+  kennt nur richtig/falsch; „falsch" hätte die Karte auf Stufe 1 geworfen und als Fehlversuch gezählt — der Tipp soll aber
+  ausdrücklich kein Fehler sein, nur kein Fortschritt.
+- Tipp (💡, Taste H, nur Abfragen, auch `?opponent=`): Stufe 1 grünes Startfeld, Stufe 2 grüner Pfeil, Stufe 3 spielt den
+  Zug und rückt weiter (ohne „richtig"-Zähler). Sitzungszähler `hints`, nicht `wrong`.
+- „Linie überspringen" (Taste S): ohne SR-Bewertung zur nächsten Linie der Warteschlange (im Gegner-Modus ist die
+  Warteschlange die Gegner-Reihenfolge); hatte die Linie schon einen Fehler (auch einen noch offenen), geht `correct: false`
+  raus. Im „Linie fertig"-Kasten = „Weiter".
+- Geduldeter Zug (`[%alt]`) steht 3,5 s (`TOLERATED_HOLD_MS`) mit „Auch spielbar — jetzt den Hauptzug.", Klick/Leertaste/
+  Enter überspringt.
+- Linien mit `[ChessableOid]` zeigen hinter dem Linienlabel einen Textlink „Chessable" (`https://www.chessable.com/variation/<oid>/`).

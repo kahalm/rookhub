@@ -85,6 +85,27 @@ public class RepertoireTrainingServiceTests : IDisposable
     }
 
     [Fact]
+    public void ScheduleLevel_CorrectWithHint_StaysOnItsLevel_NoRepNoLapse_DueByItsInterval()
+    {
+        // 0.886.0: ein Tipp ist kein Fehler, aber die Karte rückt nicht vor
+        var hours = RepertoireTrainingService.DefaultLevels.Select(RepertoireTrainingService.HoursOf).ToArray();
+        var card = new RepertoireCardState { Level = 5, Reps = 4 };
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        RepertoireTrainingService.ScheduleLevel(card, correct: true, hours, now, hinted: true);
+
+        Assert.Equal((5, 4, 0), (card.Level, card.Reps, card.Lapses));
+        Assert.Equal(now.AddHours(hours[4]), card.DueAt);
+
+        var fresh = new RepertoireCardState();                        // nie bewertet → Stufe 1
+        RepertoireTrainingService.ScheduleLevel(fresh, correct: true, hours, now, hinted: true);
+        Assert.Equal((1, 0), (fresh.Level, fresh.Reps));
+
+        RepertoireTrainingService.ScheduleLevel(card, correct: false, hours, now, hinted: true);   // Fehler schlägt Tipp
+        Assert.Equal((1, 1), (card.Level, card.Lapses));
+    }
+
+    [Fact]
     public void HoursOf_ConvertsUnits()
     {
         Assert.Equal(4, RepertoireTrainingService.HoursOf(new(4, "h")));

@@ -141,7 +141,7 @@
         [fen]="fen" [orientation]="userColorName"
         [turnColor]="boardTurn"
         [dests]="dests" [lastMove]="lastMove" [viewOnly]="!isPlayable && !premovable"
-        [premovable]="premovable"
+        [premovable]="premovable" [reviewShapes]="boardShapes"
         [boardTheme]="prefs.boardTheme" [pieceSet]="prefs.pieceSet"
         (moveMade)="onMove($event)">
       </app-puzzle-board>
@@ -157,14 +157,24 @@
           }
           <span class="ok">✓ {{ correct }}</span>
           <span class="bad">✗ {{ wrong }}</span>
+          @if (hints > 0) {
+            <span class="hints" [matTooltip]="'repertoireTrainer.hintsCount' | translate: { n: hints }">
+              <mat-icon>lightbulb</mat-icon>{{ hints }}
+            </span>
+          }
           @if (currentStreak >= 2) {
             <span class="streak" [matTooltip]="'repertoireTrainer.streakTooltip' | translate: { best: bestStreak }">
               <mat-icon>local_fire_department</mat-icon>{{ currentStreak }}
             </span>
           }
         </div>
-        @if (currentLineLabel) {
-          <p class="line-label" [matTooltip]="currentLineChapter || ''">{{ currentLineLabel }}</p>
+        @if (currentLineLabel || currentChessableUrl) {
+          <p class="line-label" [matTooltip]="currentLineChapter || ''">{{ currentLineLabel }}
+            @if (currentChessableUrl) {
+              <a class="chessable-link" [href]="currentChessableUrl" target="_blank" rel="noopener"
+                 [attr.aria-label]="'repertoireTrainer.openOnChessable' | translate" (click)="$event.stopPropagation()">Chessable</a>
+            }
+          </p>
         }
         @if (movesInLine.length > 0) {
           <div class="line-moves" [attr.aria-label]="'repertoireTrainer.movesInLine' | translate">
@@ -220,6 +230,16 @@
           <p *ngIf="outcome === 'tolerated'"><mat-icon>info</mat-icon> {{ 'repertoireTrainer.toleratedPlayable' | translate }}</p>
           <ng-container *ngIf="outcome === 'wrong'">
             <p *ngIf="!wrongRevealed"><mat-icon>cancel</mat-icon> {{ 'repertoireTrainer.wrongNoHint' | translate }}</p>
+            @if (currentMiss; as m) {
+              <p class="miss-info">
+                @if (m.chessable > 0) {
+                  {{ (m.last ? 'repertoireTrainer.missChessableLast' : 'repertoireTrainer.missChessable') | translate: { n: m.chessable, move: m.last } }}
+                }
+                @if (m.rookhub > 0) {
+                  <span class="miss-rookhub">{{ 'repertoireTrainer.missRookhub' | translate: { n: m.rookhub } }}</span>
+                }
+              </p>
+            }
             <p *ngIf="wrongRevealed"><mat-icon>cancel</mat-icon>
               {{ 'repertoireTrainer.wrong' | translate: { move: expectedDisplay } }}</p>
             <p class="eval-info" *ngIf="evalLoading"><mat-icon>hourglass_top</mat-icon> {{ 'repertoireTrainer.evalLoading' | translate }}</p>
@@ -233,6 +253,11 @@
               <mat-icon>drag_handle</mat-icon> {{ 'repertoireTrainer.evalEqual' | translate }}
             </p>
             <div class="wrong-actions" *ngIf="!wrongRevealed">
+              @if (wrongShown) {
+                <button mat-stroked-button class="retry-wrong" (click)="retryWrong(); $event.stopPropagation()">
+                  <mat-icon>undo</mat-icon> {{ 'repertoireTrainer.tryAgain' | translate }}
+                </button>
+              }
               <button mat-stroked-button (click)="mouseslip(); $event.stopPropagation()">
                 <mat-icon>back_hand</mat-icon> {{ 'repertoireTrainer.mouseslip' | translate }}
               </button>
@@ -245,6 +270,22 @@
           <p *ngIf="outcome !== 'wrong'" class="tap-hint">{{ 'repertoireTrainer.tapToContinue' | translate }}</p>
         </div>
         <p *ngIf="phase === 'PLAYING'" class="hint">{{ (mode === 'learn' ? 'repertoireTrainer.learnPlay' : 'repertoireTrainer.playYourMove') | translate }}</p>
+        @if (canHint || canSkip) {
+          <div class="trainer-actions">
+            @if (canHint) {
+              <button mat-stroked-button class="hint-btn" (click)="hint(); $event.stopPropagation()"
+                      [matTooltip]="'repertoireTrainer.hintTip' | translate">
+                <mat-icon>lightbulb</mat-icon>{{ (hintLevel === 0 ? 'repertoireTrainer.hint' : hintLevel === 1 ? 'repertoireTrainer.hintArrow' : 'repertoireTrainer.hintPlay') | translate }}
+              </button>
+            }
+            @if (canSkip) {
+              <button mat-stroked-button class="skip-btn" (click)="skipLine(); $event.stopPropagation()"
+                      [matTooltip]="'repertoireTrainer.skipLineTip' | translate">
+                <mat-icon>skip_next</mat-icon>{{ 'repertoireTrainer.skipLine' | translate }}
+              </button>
+            }
+          </div>
+        }
         @if (phase === 'LINE_DONE') {
           <div class="line-done">
             <p class="hint"><mat-icon>done_all</mat-icon>

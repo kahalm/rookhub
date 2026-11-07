@@ -1,3 +1,4 @@
+import type { ChessableMisses } from './repertoire-trainer-misses.util';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
@@ -33,6 +34,8 @@ export interface LineReviewRequest {
   lineKey: string;
   label: string;
   correct: boolean;
+  /** Fehlerfrei, aber mit Tipp: die Karte rückt nicht vor (0.886.0). */
+  hinted?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -67,7 +70,12 @@ export class RepertoireTrainingService {
     return this.http.get<LineStateDto[]>(`/api/repertoires/${repertoireId}/training/lines`);
   }
 
-  /** Ergebnis einer geübten Linie melden (richtig → +1 Stufe, falsch → Stufe 1). */
+  /** Chessable-Fehler je Linie (oid → Zeile/Farbe/Anzahl/zuletzt) aus den Extension-Mitschnitten — EIN Aufruf je Repertoire (0.886.0). */
+  getChessableMisses(repertoireId: number): Observable<ChessableMisses> {
+    return this.http.get<ChessableMisses>(`/api/repertoires/${repertoireId}/training/chessable-misses`);
+  }
+
+  /** Ergebnis einer geübten Linie melden (richtig → +1 Stufe, falsch → Stufe 1, richtig mit Tipp → Stufe bleibt). */
   reviewLine(repertoireId: number, req: LineReviewRequest): Observable<LineStateDto> {
     return this.http.post<LineStateDto>(`/api/repertoires/${repertoireId}/training/line-review`, req);
   }

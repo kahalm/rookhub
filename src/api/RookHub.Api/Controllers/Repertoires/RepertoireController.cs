@@ -195,6 +195,18 @@ public class RepertoireController : BaseApiController
         return lines is null ? RepertoireNotFound() : Ok(lines);
     }
 
+    /// <summary>Chessable-Fehler je Linie dieses Repertoires (0.886.0, Wunsch 2026-11-07: „wenn ich einen falschen zug mache schreib
+    /// wie oft der schon falsch war"): <c>{ "&lt;oid&gt;": [{ mid, mode, count, last }] }</c> aus den Mitschnitten der Extension, nur
+    /// Linien mit <c>[ChessableOid]</c> und Fehlern; eine Abfrage je Repertoire. 404 ohne Lesezugriff.</summary>
+    [HttpGet("{id:int}/training/chessable-misses")]
+    public async Task<ActionResult<Dictionary<string, List<ChessableLineHistory.RawMiss>>>> ChessableMisses(int id,
+        [FromServices] ChessableLineHistory history, CancellationToken ct)
+    {
+        var pgn = await _repertoireService.GetCombinedPgnAsync(id, GetUserId());
+        var oids = ChessableLineHistory.OidsIn(pgn);
+        return Ok(oids.Count == 0 ? new Dictionary<string, List<ChessableLineHistory.RawMiss>>() : await history.MissesByOidAsync(GetUserId(), oids, ct));
+    }
+
     /// <summary>Bewertet eine geübte Linie (richtig → +1 Stufe, falsch → Stufe 1) und plant sie neu.</summary>
     [HttpPost("{id:int}/training/line-review")]
     public async Task<ActionResult<LineStateDto>> TrainingLineReview(int id, [FromBody] LineReviewRequest req, CancellationToken ct)

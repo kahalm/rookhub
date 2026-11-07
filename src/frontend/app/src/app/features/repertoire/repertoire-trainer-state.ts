@@ -1,4 +1,5 @@
 import { Key } from 'chessground/types';
+import type { DrawShape } from 'chessground/draw';
 import { whiteToMove } from '../../shared/chess/fen-side';
 import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import type { LineReviewRequest } from './repertoire-training.service';
@@ -16,8 +17,11 @@ export interface BoardMove { orig: Key; dest: Key; promotion?: string }
 // Wie lange das „Correct/Tolerated"-Feedback nach einem Zug stehen bleibt, bevor automatisch
 // weitergerückt wird (der User kann per Klick/Leertaste/Enter überspringen). correct: 1,5 s → 600 →
 // 300 ms (der grüne Haken blitzt kurz, dann kommt zügig der Gegnerzug). Geduldet bleibt länger
-// stehen (der Alternativzug soll wirken).
-export const ADVANCE_MS: Record<TrainerOutcome, number> = { correct: 300, tolerated: 1500, wrong: 0 };
+// stehen (der Alternativzug soll wirken): 1,5 s → 3,5 s (0.886.0, Wunsch: „beim playable move … länger stehen lassen").
+export const TOLERATED_HOLD_MS = 3500;
+export const ADVANCE_MS: Record<TrainerOutcome, number> = { correct: 300, tolerated: TOLERATED_HOLD_MS, wrong: 0 };
+/** Nach Tipp-Stufe 3 (Zug ausgespielt) so lange stehen lassen, dann weiter. */
+export const HINT_PLAYED_MS = 900;
 export const OPP_MOVE_DELAY_MS = 250;   // kurze Pause vor jedem automatischen Gegnerzug
 export const LEARN_SHOW_MS = 1000;      // Zug im Learn-Modus ohne Kommentar so lange zeigen, dann zurücknehmen
 export const LEARN_GAP_MS = 400;        // Learn: Pause zwischen Gegnerzug und dem Zeigen des eigenen Zugs (fühlte sich beim Wiederholen zu lang an, halbiert von 800)
@@ -88,6 +92,16 @@ export abstract class TrainerSessionState {
   lineHadWrong = false;
   /** Ein offener Fehler an der aktuellen Stellung, der noch als Mausrutscher verziehen werden kann. */
   pendingWrong = false;
+  /** Der falsche Zug steht noch auf dem Brett (0.886.0): Brett gesperrt, bis „Nochmal"/Tippen/Leertaste/Enter. */
+  wrongShown = false;
+  /** Tipp-Stufe an der aktuellen Stellung (0 = keiner, 1 = Figur, 2 = Pfeil, 3 = Zug ausgespielt). */
+  hintLevel = 0;
+  /** Der erwartete Zug als UCI, solange ein Tipp läuft. */
+  hintUci: string | null = null;
+  /** Tipps dieser Sitzung (Statistik — zählen NICHT als Fehler). */
+  hints = 0;
+  /** Die aktuelle Linie brauchte einen Tipp (SR: rückt nicht vor, `hinted`). */
+  lineHadHint = false;
   /** LINE_DONE (Abfragen): wann die gerade beendete Linie erneut fällig wird (ISO); null solange offen bzw. Lernen. */
   nextRepeatAt: string | null = null;
   /** true, während der Gegnerzug automatisch gespielt wird — erlaubt einen Premove. */
@@ -111,8 +125,30 @@ export abstract class TrainerSessionState {
 
   get isPlayable(): boolean {
     if (this.phase === 'PLAYING') return true;
-    // Nach falschem Zug UND vor „Lösung zeigen": weiter spielbar (sofortiger Retry).
-    return this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed;
+    // Nach falschem Zug, sobald er zurückgenommen ist, UND vor „Lösung zeigen": weiter spielbar.
+    return this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed && !this.wrongShown;
+  }
+
+  /** Markierungen fürs Brett: der stehende Fehlzug rot, ein Tipp grün (Stufe 1 Startfeld, Stufe 2 Pfeil). */
+  get boardShapes(): DrawShape[] {
+    if (this.wrongShown && this.lastMove) return [{ orig: this.lastMove[0], dest: this.lastMove[1], brush: 'red' }];
+    const uci = this.hintUci;
+    if (!uci || this.hintLevel === 0 || this.hintLevel >= 3) return [];
+    const from = uci.slice(0, 2) as Key;
+    return this.hintLevel === 1 ? [{ orig: from, brush: 'green' }] : [{ orig: from, dest: uci.slice(2, 4) as Key, brush: 'green' }];
+  }
+
+  /** Ein Tipp ist möglich: Abfragen, eigener Zug gesucht (auch nach einem Fehlzug, vor „Lösung zeigen"), noch nicht ausgespielt. */
+  get canHint(): boolean {
+    if (this.mode !== 'quiz' || this.oppMoving || this.hintLevel >= 3) return false;
+    const line = this.queue[this.qIndex];
+    if (!line || this.currentPly >= line.moves.length) return false;
+    return this.phase === 'PLAYING' || (this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed);
+  }
+
+  /** „Linie überspringen" ist möglich: eine Linie läuft. */
+  get canSkip(): boolean {
+    return !!this.queue[this.qIndex] && ['PLAYING', 'FEEDBACK', 'COMMENT', 'LEARN_SHOW', 'LINE_DONE'].includes(this.phase);
   }
 
   get progressPct(): number {

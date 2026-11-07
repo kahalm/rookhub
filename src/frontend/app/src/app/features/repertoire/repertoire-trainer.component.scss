@@ -127,6 +127,13 @@
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); display: flex; align-items: center; gap: 6px; }
     .wrong-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .eval-info { font-size: 13px; opacity: .85; margin: 0 0 8px; }
+    /* 0.886.0: wie oft schon falsch, Tipp/Überspringen, Chessable-Link */
+    .miss-info { font-size: 13px; margin: 0 0 8px; }
+    .miss-info .miss-rookhub { display: block; opacity: .8; }
+    .trainer-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .counts .hints { display: inline-flex; align-items: center; gap: 2px; color: var(--rh-hint); }
+    .counts .hints mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .chessable-link { margin-left: 6px; font-size: 12px; }
 
 /* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
 :host-context(.app-fullscreen) .bar { display: none; }

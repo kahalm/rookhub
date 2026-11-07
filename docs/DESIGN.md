@@ -908,7 +908,13 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
   Übungszyklen im ⋮, d4). Unter 900 px steht nur der Name (Zusatz visuell versteckt, für Bildschirmleser da), darüber
   schrumpft der Zusatz zuerst (d4). Lernen: solange der Trainer den Zug vorspielt (Brett gesperrt), ohne Imperativ —
   „Schwarz am Zug — das ist dein Repertoirezug.“ (d4). Linienliste: neue Linie mit umrandeter 44-px-Pille „⊕ Üben“
-  (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Woodpecker-Löser: seit 0.882.0 der Kurs-Löser (gleiche Oberfläche
+  (`playlist_add`) statt eines „+“ im Abzeichen-Stil (d4). Abfragen (0.886.0): ein falscher Zug bleibt mit ROTEM Pfeil
+  stehen (Brett gesperrt), „Nochmal“ (Rahmenknopf, `undo`) bzw. Tippen/Leertaste/Enter nimmt ihn zurück; darunter in einer
+  Zeile, wie oft dort schon falsch (Chessable je Zug, RookHub je Linie) — nur mit Daten. Unter der Anweisung eine
+  Aktionszeile `.trainer-actions` aus Rahmenknöpfen: „Tipp“ (`lightbulb`, beschriftet mit der nächsten Stufe: Tipp → Pfeil
+  zeigen → Zug ausspielen; Tipp-Markierung GRÜN, Startfeld bzw. Pfeil) und „Linie überspringen“ (`skip_next`), Tasten H/S
+  im Tooltip; benutzte Tipps als `lightbulb`-Zähler in `--rh-hint` neben ✓/✗. Chessable-Link als kleiner Textlink hinter dem
+  Linienlabel (neuer Tab). Woodpecker-Löser: seit 0.882.0 der Kurs-Löser (gleiche Oberfläche
   wie im Kurs), Plan-Kopf (Plan-Chip, Zyklus · Satz/Fortschritt · Resttage mit `.rh-dots`, ab Zyklus 2 Balken) in der
   Kontext-Karte; kein „Überspringen“ (der Server gäbe dieselbe Aufgabe wieder). Kalkulieren im E-Book-Brett: ein Satz, Rest hinter ? (d4). Statistik: Elo-Kopf `flex-wrap` mit
   8/12-px-Lücke, Level-Feld am Handy volle Breite unter dem Titel (d4). Repertoire-Ansicht: Brett aus Sicht der Kapitelfarbe (gewählte Linie,
@@ -1194,6 +1200,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-07 | 0.886.0 · Repertoire-Trainer | Fehlzug bleibt rot stehen bis „Nochmal“/Tippen (Brett gesperrt); Zeile „schon n× falsch“ nur mit Daten; Aktionszeile `.trainer-actions` (Rahmenknöpfe „Tipp“ mit Stufenbeschriftung, „Linie überspringen“), Tipp-Markierung grün; Tipp-Zähler in `--rh-hint`; Chessable-Textlink hinter dem Linienlabel (8.1) | Nutzerwünsche 07.11.: „stellung stehen lassen“, „wie oft der schon falsch war“, „hintfunktion“, „button skip line“, „link zur chessable line“ | Wunsch des Users über die betreuende Sitzung |
 | 2026-10-30 | 0.881.0 · E-Book-Baum | E-Book-Brett: Modus „Baum“ (8.1) — Schrittleiste + „Als Repertoire speichern“, Weg ab der Grundstellung als Zugfolge, Fortsetzungen als Zeilen mit „n Linien“; Speichern-Dialog 440 px mit Umschalt-Paaren für Umfang und Farbe | Eröffnungsbücher sind keine Aufgabenbücher — Linien durchklicken und als Repertoire mitnehmen | Nutzerwunsch 30.10. (Prod #1071 „Danish Dynamite“) |
 | 2026-10-30 | 0.880.0 · Runde d9 · Dialoge, Analyse, LeagueHub, Turnier | Dialogfelder mit `mat-hint` 12 px Abstand zum nächsten Feld, Karten mit Outline-Feld in Zeile 1 oben 20 px (5.2/5.6); „optional“ als Hinweis; Grund am gesperrten Teilen-Knopf; Roast ohne Analyse bietet „Partie analysieren“; QR-Ruhezone 4 Module; ☰-Symbole nur an externen Links, Rechtslinks zuletzt (5.5); Bewertungsleiste fluchtet mit dem Brett; LeagueHub-Paarungen am Handy ohne Abzeichen-Platzhalter, „1 : 0“ geschützt, gesperrter Knopf `not-allowed` + Grund (8.4); Turnier: Region ohne Platzhalter, gekürzte Namen mit „…“, Mannschaftsdialog `autoFocus: 'dialog'` (8.2) | Hinweise klebten am nächsten Label, Sackgassen-Dialoge, gesperrte Knöpfe ohne Grund, QR ohne Ruhezone, 147 px hohe Paarungszeilen, „- (AUT)“ | UI-Sweep d9 (d9-rk-*, d9-l-*, d9-t-*) |
 | 2026-10-30 | 0.880.0 · Runde d9 · E-Books | Regal-Titelbild `contain` statt `cover`; Gast-Banner ein Satz, am Handy einzeilig; Leser unter 1100 px: Inhalt/Schrift/Zoom im ⋮, Titel mit Mindestbreite, angedockt für Gäste nur „Anmelden“; Kapitelzeile am Handy ohne Balken: Name `flex: 1 1 0`, ⋮ in Zeile 1 (5.5) | Titel/Autor im Titelbild abgeschnitten; Regal am Handy bei 43 % Vorlauf; Lesertitel am Tablet „Pro…“; d8-Fix brach das ⋮ weiter allein um (Name-Grundbreite calc(100% − 9rem)) | d9-rk-ebook-cover-beschnitten, d9-rk-ebook-anon-handy-banner-vorlauf, d9-rk-reader-titel-abgeschnitten, d9-rk-kapitelzeile-leerraum-handy |
