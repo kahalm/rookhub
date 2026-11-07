@@ -4,7 +4,7 @@ import { whiteToMove } from '../../shared/chess/fen-side';
 import type { ParsedGame } from '../../shared/pgn-viewer/pgn-parser';
 import type { LineReviewRequest } from './repertoire-training.service';
 import type { TrainColor } from '../../shared/repertoire/repertoire-color.util';
-import { RepertoireGraph } from './repertoire-tree.util';
+import { RepertoireGraph, normFen } from './repertoire-tree.util';
 import {
   LineMoveToken, commentParagraphs, lineChapterTitle, lineLabel, lineMoveTokens, plyComment, plyPrettyLabel,
 } from './repertoire-trainer-line-view.util';
@@ -129,13 +129,46 @@ export abstract class TrainerSessionState {
     return this.phase === 'FEEDBACK' && this.outcome === 'wrong' && !this.wrongRevealed && !this.wrongShown;
   }
 
-  /** Markierungen fürs Brett: der stehende Fehlzug rot, ein Tipp grün (Stufe 1 Startfeld, Stufe 2 Pfeil). */
+  /** Zuletzt gelieferte Brett-Markierungen: dieselbe Liste bleibt dasselbe Array (OnPush-Input, keine Dauer-Neuzeichnung). */
+  private shapesCache: { key: string; shapes: DrawShape[] } = { key: '', shapes: [] };
+
+  /**
+   * Markierungen fürs Brett: die Pfeile/Felder aus dem PGN-Kommentar ({@link annotationShapes}) und ZUSÄTZLICH der
+   * stehende Fehlzug rot bzw. ein Tipp grün (Stufe 1 Startfeld, Stufe 2 Pfeil) — nichts ersetzt das andere (0.887.0).
+   */
   get boardShapes(): DrawShape[] {
+    const shapes = [...this.annotationShapes, ...this.feedbackShapes];
+    const key = shapes.map(s => `${s.orig}${s.dest ?? ''}:${s.brush ?? ''}`).join(',');
+    if (key !== this.shapesCache.key) this.shapesCache = { key, shapes };
+    return this.shapesCache.shapes;
+  }
+
+  /** Fehlzug-/Tipp-Markierungen (0.886.0). */
+  private get feedbackShapes(): DrawShape[] {
     if (this.wrongShown && this.lastMove) return [{ orig: this.lastMove[0], dest: this.lastMove[1], brush: 'red' }];
     const uci = this.hintUci;
     if (!uci || this.hintLevel === 0 || this.hintLevel >= 3) return [];
     const from = uci.slice(0, 2) as Key;
     return this.hintLevel === 1 ? [{ orig: from, brush: 'green' }] : [{ orig: from, dest: uci.slice(2, 4) as Key, brush: 'green' }];
+  }
+
+  /**
+   * [%cal]/[%csl] des Halbzugs, dessen Stellung gerade auf dem Brett steht (0.887.0): nach einem eigenen oder Gegnerzug
+   * mit Markern stehen sie bis zum nächsten Zug, in der Schlussstellung bis zur nächsten Linie. Über die Stellung
+   * bestimmt statt über einen eigenen Zähler — so passt es in jeder Phase (Abfragen, Lernen, „Lösung zeigen", Tipp 3).
+   * Ein stehender Fehlzug zählt als Ausgangsstellung (deren Marker bleiben, der rote Pfeil kommt dazu); ein geduldeter
+   * Alternativzug ist keine Stellung der Linie → keine Marker.
+   */
+  get annotationShapes(): DrawShape[] {
+    const line = this.currentLine;
+    if (!line?.shapes) return [];
+    const shown = normFen(this.wrongShown && this.startFen ? this.startFen : this.fen);
+    // Stellung vor bzw. nach dem aktuellen Halbzug (fens[p + 1] = Stellung nach Halbzug p, p = -1 = Anfangsstellung)
+    for (const p of [this.currentPly - 1, this.currentPly]) {
+      const f = line.fens[p + 1];
+      if (f && normFen(f) === shown) return line.shapes[p] ?? [];
+    }
+    return [];
   }
 
   /** Ein Tipp ist möglich: Abfragen, eigener Zug gesucht (auch nach einem Fehlzug, vor „Lösung zeigen"), noch nicht ausgespielt. */

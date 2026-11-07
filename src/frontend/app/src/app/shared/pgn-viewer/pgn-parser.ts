@@ -1,10 +1,15 @@
 import { Chess, Move } from 'chess.js';
+import type { DrawShape } from 'chessground/draw';
+import { parseCalCsl } from './pgn-shapes';
 
 export interface ParsedGame {
   headers: Record<string, string>;
   moves: Move[];
   fens: string[];
   comments: { [moveIndex: number]: string };
+  /** Pfeile/Felder ([%cal]/[%csl]) je Halbzug-Index wie {@link comments} (-1 = vor dem ersten Zug) — gehören auf die
+   *  Stellung NACH diesem Halbzug. Nur Indizes mit Markern; fehlt bei Partien, die nicht über diesen Parser kamen. */
+  shapes?: { [moveIndex: number]: DrawShape[] };
 }
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -134,16 +139,22 @@ function stripNags(moveText: string): string {
  * Extract comments from cleaned move text and associate with move indices.
  * Comments appear as {text} in PGN. Chessbase annotations like [%csl ...],
  * [%cal ...], [%tqu ...] are stripped from display text.
- * Returns a map of moveIndex -> comment text. Index -1 = before first move.
+ * Returns a map of moveIndex -> comment text (and the [%cal]/[%csl] shapes). Index -1 = before first move.
  */
-function extractComments(cleanedMoveText: string): { [moveIndex: number]: string } {
+function extractComments(cleanedMoveText: string): {
+  comments: { [moveIndex: number]: string }; shapes: { [moveIndex: number]: DrawShape[] };
+} {
   const comments: { [moveIndex: number]: string } = {};
+  const shapes: { [moveIndex: number]: DrawShape[] } = {};
   const segments = cleanedMoveText.split(/(\{[^}]*\})/);
   let moveIndex = -1;
 
   for (const segment of segments) {
     if (segment.startsWith('{')) {
       let text = segment.slice(1, -1).trim();
+      // Pfeile/Felder VOR dem Wegschneiden mitnehmen (0.887.0 — vorher gingen sie hier verloren, der Trainer sah sie nie)
+      const marks = parseCalCsl(text);
+      if (marks.length) shapes[moveIndex] = [...(shapes[moveIndex] || []), ...marks];
       // Strip Chessbase annotations
       text = text.replace(/\[%[^\]]*\]/g, '').trim();
       if (text) {
@@ -160,7 +171,7 @@ function extractComments(cleanedMoveText: string): { [moveIndex: number]: string
     }
   }
 
-  return comments;
+  return { comments, shapes };
 }
 
 // Eingabe-Limits, damit ein riesiges/kombiniertes PGN den synchronen
@@ -256,7 +267,7 @@ export function parseOneGame(raw: string, opts?: ParsePgnOptions): ParsedGameWit
       moveText = moveText.replace(/\}\s*\{/g, ' ');
 
       // Extract comments before feeding to chess.js (which strips them)
-      const comments = extractComments(moveText);
+      const { comments, shapes } = extractComments(moveText);
 
       // Reconstruct cleaned PGN
       const cleanedPgn = headers.join('\n') + '\n\n' + moveText;
@@ -274,7 +285,7 @@ export function parseOneGame(raw: string, opts?: ParsePgnOptions): ParsedGameWit
         fens.push(move.after);
       }
 
-      return { game: { headers: gameHeaders, moves, fens, comments }, raw: trimmed };
+      return { game: { headers: gameHeaders, moves, fens, comments, shapes }, raw: trimmed };
     } catch (err) {
       // Unparsebares Spiel ueberspringen, aber fuer Diagnose sichtbar machen
       // statt es voellig stumm zu verwerfen.

@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.887.0',
+    date: '2026-11-07',
+    changes: [
+      {
+        en: 'Repertoire trainer: arrows and highlighted squares from the course comments (as on Chessable) now appear on the board — after every move that has them until the next move, and in the final position of a line until you go on to the next one. Hint and wrong-move arrows are drawn on top instead of replacing them.',
+        de: 'Repertoire-Trainer: Pfeile und markierte Felder aus den Kurs-Kommentaren (wie auf Chessable) erscheinen jetzt auf dem Brett — nach jedem Zug, der welche hat, bis zum nächsten Zug, und in der Schlussstellung einer Linie, bis du zur nächsten weitergehst. Tipp- und Fehlzug-Pfeile kommen dazu, statt sie zu ersetzen.',
+      },
+    ],
+  },
+  {
     version: '0.886.0',
     date: '2026-11-07',
     changes: [
