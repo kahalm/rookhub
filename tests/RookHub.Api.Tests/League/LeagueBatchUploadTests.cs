@@ -105,6 +105,26 @@ public class LeagueBatchUploadTests : IDisposable
         Assert.False(await _svc.WriteZipAsync(id, new MemoryStream(), default));
     }
 
+    /// <summary>Wunsch 2026-11-08: „da wär auch ein Erledigt-Knopf gut" — markieren, wieder öffnen, Zeit bleibt beim zweiten Mal.</summary>
+    [Fact]
+    public async Task SetDone_MarksAndReopens_KeepsTheFirstTime_UnknownIsNotFound()
+    {
+        var me = Uploader.User(7, TestClubs.HomeId);
+        var b = await _svc.StartAsync(me, null, default);
+        var id = (await _db.LeagueBatchUploads.SingleAsync()).Id;
+        Assert.Null(Assert.Single(await _svc.ListAsync(default)).DoneAt);
+
+        var (found, first) = await _svc.SetDoneAsync(id, true, default);
+        Assert.True(found);
+        Assert.NotNull(first);
+        Assert.Equal(first, (await _svc.SetDoneAsync(id, true, default)).DoneAt);
+        Assert.Equal(first, Assert.Single(await _svc.ListAsync(default)).DoneAt);
+
+        Assert.Equal((true, (DateTime?)null), await _svc.SetDoneAsync(id, false, default));
+        Assert.Null(Assert.Single(await _svc.ListAsync(default)).DoneAt);
+        Assert.False((await _svc.SetDoneAsync(9999, true, default)).Found);
+    }
+
     [Fact]
     public async Task Anonymous_DailyLimitPerAddress()
     {

@@ -127,6 +127,9 @@ Rollenverwaltung an).
   Konto, sonst der klickende Admin. Vermerk am Stapel: `ReadQueuedAt` + `ReadScanIds` (kommagetrennt, über alle Klicks;
   Migration `LeagueBatchReadQueued`), in `GET /api/admin/league-uploads` als `readQueuedAt`/`readScanIds`. Zweiter Klick →
   409 `{ reason: "alreadyQueued", queuedAt, scanIds }`, nur mit `force` noch einmal. Antwort `{ scanIds, skipped, queuedAt }`.
+  **Erledigt** (0.903.0, Wunsch 2026-11-08): `PUT /api/admin/league-uploads/{id}/done` `{ done }` → `{ doneAt }` setzt bzw.
+  leert `LeagueBatchUpload.DoneAt` (Migration `LeagueBatchDone`; ein zweites „erledigt“ behält die erste Zeit), in der Liste
+  als `doneAt`. Der Watcher liest Stapel mit `DoneAt` nicht mehr ein (filtert erst, wenn die Spalte auf Prod existiert).
   Gelöscht wird nichts — die Einlesungen tragen eigene Kopien der Bilder, „Löschen" bleibt Handarbeit. Gelesen wird wie jede
   wartende Einlesung: bei `Scoresheet:Reader=external` holt der Watcher (`~/claude/formulare-bot/watch.sh`, Teil 2
   „einzelne Einlesungen", `Status IN (0,1)` der letzten 7 Tage) sie von selbst ab — ohne Bot-Änderung. Achtung: Teil 1 des

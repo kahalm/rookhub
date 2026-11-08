@@ -2861,6 +2861,9 @@
       "readQueued": "Stvoreno očitanja: {{count}} ({{ids}}) — automatski se očitavaju.",
       "readSkipped": "Preskočeno datoteka: {{count}} (nije JPEG, PNG ili WebP slika).",
       "readMark": "očitano {{when}} →",
+      "done": "Gotovo",
+      "reopen": "Ponovno otvori",
+      "doneMark": "gotovo {{when}}",
       "readErrors": {
         "failed": "Očitavanje nije uspjelo",
         "tooManyPages": "Previše slika za jednu partiju (najviše 3 stranice)",

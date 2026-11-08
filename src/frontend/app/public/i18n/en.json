@@ -2861,6 +2861,9 @@
       "readQueued": "{{count}} read(s) created: {{ids}} — they are read automatically.",
       "readSkipped": "{{count}} file(s) skipped (not a JPEG/PNG/WebP image).",
       "readMark": "read in {{when}} →",
+      "done": "Done",
+      "reopen": "Reopen",
+      "doneMark": "done {{when}}",
       "readErrors": {
         "failed": "Reading in failed",
         "tooManyPages": "Too many images for one game (at most 3 pages)",

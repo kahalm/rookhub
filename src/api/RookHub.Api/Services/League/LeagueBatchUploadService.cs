@@ -145,15 +145,16 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
     /// <param name="DownloadName">Dateiname des ZIP (0.901.0): <see cref="DownloadNameOf"/>.</param>
     /// <param name="ReadQueuedAt">Zuletzt direkt eingelesen (<see cref="LeagueBatchReadService"/>, 0.901.0).</param>
     /// <param name="ReadScanIds">Die daraus entstandenen Einlesungen.</param>
+    /// <param name="DoneAt">Als erledigt markiert (Wunsch 2026-11-08), <c>null</c> = offen.</param>
     public sealed record AdminRow(int Id, DateTime CreatedAt, DateTime? FinishedAt, string? User, bool ViaShare, int Files, long Bytes,
         string? Comment, int ClubId = 0, string? Club = null, string DownloadName = "", DateTime? ReadQueuedAt = null,
-        List<int>? ReadScanIds = null);
+        List<int>? ReadScanIds = null, DateTime? DoneAt = null);
 
     public async Task<List<AdminRow>> ListAsync(CancellationToken ct)
     {
         var rows = await db.LeagueBatchUploads.AsNoTracking().OrderByDescending(b => b.CreatedAt)
             .Select(b => new { b.Id, b.CreatedAt, b.FinishedAt, b.UserId, b.ShareHash, b.FileCount, b.TotalBytes, b.Comment, b.ClubId,
-                b.ReadQueuedAt, b.ReadScanIds })
+                b.ReadQueuedAt, b.ReadScanIds, b.DoneAt })
             .ToListAsync(ct);
         var ids = rows.Where(r => r.UserId != null).Select(r => r.UserId!.Value).Distinct().ToList();
         var names = await db.AppUsers.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
@@ -161,7 +162,7 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
         var files = DownloadNames(rows.Select(r => (r.Id, r.CreatedAt, r.UserId is { } u ? names.GetValueOrDefault(u) : null)));
         return rows.Select(r => new AdminRow(r.Id, r.CreatedAt, r.FinishedAt, r.UserId is { } u ? names.GetValueOrDefault(u) : null,
             r.UserId is null, r.FileCount, r.TotalBytes, r.Comment, r.ClubId, clubs.GetValueOrDefault(r.ClubId), files[r.Id],
-            r.ReadQueuedAt, LeagueBatchReadService.ParseIds(r.ReadScanIds))).ToList();
+            r.ReadQueuedAt, LeagueBatchReadService.ParseIds(r.ReadScanIds), r.DoneAt)).ToList();
     }
 
     /// <summary>Dateiname des ZIP eines Stapels (ohne „.zip"), <c>null</c> = gibt es nicht.</summary>
@@ -222,6 +223,17 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
             await s.WriteAsync(f.Data, ct);
         }
         return true;
+    }
+
+    /// <summary>Als erledigt markieren bzw. wieder öffnen; ein zweites „erledigt" behält die erste Zeit. → die Zeit oder
+    /// <c>null</c> (offen); <c>false</c> im ersten Feld, wenn es den Stapel nicht gibt.</summary>
+    public async Task<(bool Found, DateTime? DoneAt)> SetDoneAsync(int id, bool done, CancellationToken ct)
+    {
+        var b = await db.LeagueBatchUploads.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (b is null) return (false, null);
+        b.DoneAt = done ? b.DoneAt ?? DateTime.UtcNow : null;
+        await db.SaveChangesAsync(ct);
+        return (true, b.DoneAt);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct)

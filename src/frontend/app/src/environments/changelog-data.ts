@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.903.0", date: "2026-11-08", changes: [
+    { en: "Admin → Uploads: a batch can now be marked as “Done” (and reopened). Done batches stay in the list, dimmed with a “done …” note, and the scoresheet reader no longer picks them up.",
+      de: "Admin → Uploads: Ein Stapel lässt sich jetzt als „Erledigt“ markieren (und wieder öffnen). Erledigte Stapel bleiben in der Liste, gedämpft mit dem Vermerk „erledigt …“, und der Formular-Leser holt sie nicht mehr ab." },
+  ] },
   { version: "0.902.0", date: "2026-11-08", changes: [
     { en: "Scoresheet reading: when other scoresheets are ahead of yours, the waiting line now says “number N in line” – the reader takes one scoresheet after another. A long wait in line no longer shows the warning that the reader is probably not running.",
       de: "Formular einlesen: Stehen noch andere Formulare vor deinem an, steht beim Warten jetzt „Platz N in der Warteschlange“ – der Leser nimmt ein Formular nach dem anderen. Langes Warten in der Schlange zeigt nicht mehr den Hinweis, dass der Leser wohl nicht läuft." },

@@ -2416,6 +2416,9 @@
       "readQueued": "{{count}} beolvasás létrehozva: {{ids}} — automatikusan beolvasódnak.",
       "readSkipped": "{{count}} fájl kihagyva (nem JPEG-, PNG- vagy WebP-kép).",
       "readMark": "beolvasva: {{when}} →",
+      "done": "Kész",
+      "reopen": "Újranyitás",
+      "doneMark": "kész {{when}}",
       "readErrors": {
         "failed": "A beolvasás nem sikerült",
         "tooManyPages": "Túl sok kép egy játszmához (legfeljebb 3 oldal)",

@@ -2861,6 +2861,9 @@
       "readQueued": "{{count}} Einlesung(en) angelegt: {{ids}} — sie werden automatisch gelesen.",
       "readSkipped": "{{count}} Datei(en) übersprungen (kein JPEG-, PNG- oder WebP-Bild).",
       "readMark": "eingelesen {{when}} →",
+      "done": "Erledigt",
+      "reopen": "Wieder öffnen",
+      "doneMark": "erledigt {{when}}",
       "readErrors": {
         "failed": "Einlesen fehlgeschlagen",
         "tooManyPages": "Zu viele Bilder für eine Partie (höchstens 3 Seiten)",

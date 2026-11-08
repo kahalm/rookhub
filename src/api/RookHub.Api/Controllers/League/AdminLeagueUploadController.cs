@@ -129,6 +129,16 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
 
     public sealed record ReadRequest(string? Mode, bool Force = false);
 
+    /// <summary>Stapel als erledigt markieren (<c>{"done": true}</c>) oder wieder öffnen (Wunsch 2026-11-08) → <c>{doneAt}</c>.</summary>
+    [HttpPut("{id:int}/done")]
+    public async Task<IActionResult> Done(int id, [FromBody] DoneRequest req, CancellationToken ct)
+    {
+        var (found, doneAt) = await batches.SetDoneAsync(id, req.Done, ct);
+        return found ? Ok(new { doneAt }) : NotFound();
+    }
+
+    public sealed record DoneRequest(bool Done);
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) => await batches.DeleteAsync(id, ct) ? NoContent() : NotFound();
 }

@@ -131,6 +131,37 @@ describe('AdminLeagueUploadsComponent', () => {
     expect(items[1].disabled).toBeFalse();
   });
 
+  // Wunsch 2026-11-08: „da wär auch ein Erledigt-Knopf gut (markiert als erledigt)"
+  it('„Erledigt" markiert ohne Rückfrage, dämpft die Zeile; „Wieder öffnen" nimmt es zurück', async () => {
+    fixture.detectChanges();
+    http.expectOne('/api/admin/league-uploads').flush([
+      { id: 3, createdAt: '2026-11-08T18:16:00Z', finishedAt: '2026-11-08T18:16:01Z', user: 'claude-prod', viaShare: false, files: 2, bytes: 700000, comment: null },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('.done-btn') as HTMLButtonElement).click();
+    const put = http.expectOne('/api/admin/league-uploads/3/done');
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({ done: true });
+    put.flush({ doneAt: '2026-11-08T19:00:00Z' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(asked).toEqual([]);
+    expect(el.querySelector('tbody tr')!.classList).toContain('done');
+    expect(el.querySelector('.done-mark')).not.toBeNull();
+    expect(el.querySelector('.done-btn')!.textContent).toContain('admin.uploads.reopen');
+
+    (el.querySelector('.done-btn') as HTMLButtonElement).click();
+    const back = http.expectOne('/api/admin/league-uploads/3/done');
+    expect(back.request.body).toEqual({ done: false });
+    back.flush({ doneAt: null });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('tbody tr')!.classList).not.toContain('done');
+    expect(el.querySelector('.done-mark')).toBeNull();
+  });
+
   it('LeagueHub-Adresse der Einlesung aus der RookHub-Adresse', () => {
     expect(leagueHubScanUrl(5, 'https://rookhub.oberschmid.homes')).toBe('https://leaguehub.oberschmid.homes/verein/formular/5');
     expect(leagueHubScanUrl(5, 'http://rookhub-dev.oberschmid.homes')).toBe('http://leaguehub-dev.oberschmid.homes/verein/formular/5');

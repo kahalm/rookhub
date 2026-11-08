@@ -20,6 +20,8 @@ export interface LeagueUploadBatch {
   downloadName?: string;
   /** Zuletzt direkt eingelesen (0.901.0) und die Einlesungen, die daraus entstanden sind. */
   readQueuedAt?: string | null; readScanIds?: number[] | null;
+  /** Als erledigt markiert (Wunsch 2026-11-08), `null` = offen. */
+  doneAt?: string | null;
 }
 
 /** Wie die Bilder eines Stapels zu Einlesungen werden: alle = eine Partie (Seiten in Reihenfolge) oder jedes einzeln. */
@@ -59,7 +61,7 @@ export function leagueHubScanUrl(scanId: number, origin: string = window.locatio
             </tr></thead>
             <tbody>
               @for (b of list; track b.id) {
-                <tr>
+                <tr [class.done]="!!b.doneAt">
                   <td>{{ b.id }}</td>
                   <td>{{ b.createdAt | date:'mediumDate' }}, {{ b.createdAt | date:'shortTime' }}@if (!b.finishedAt) { <span class="muted"> · {{ 'admin.uploads.open' | translate }}</span> }
                     @if (b.readQueuedAt) {
@@ -69,6 +71,7 @@ export function leagueHubScanUrl(scanId: number, origin: string = window.locatio
                         }
                       </div>
                     }
+                    @if (b.doneAt) { <div class="done-mark">✓ {{ 'admin.uploads.doneMark' | translate:{ when: (b.doneAt | date:'short') } }}</div> }
                   </td>
                   <td>{{ b.viaShare ? ('admin.uploads.viaShare' | translate) : b.user }}@if (b.club) { <span class="muted club"> · {{ b.club }}</span> }</td>
                   <td class="num">{{ b.files }}</td>
@@ -80,6 +83,8 @@ export function leagueHubScanUrl(scanId: number, origin: string = window.locatio
                       <mat-icon>document_scanner</mat-icon> {{ 'admin.uploads.read' | translate }}</button>
                     <button mat-stroked-button type="button" [disabled]="busy() === b.id || !b.files" (click)="download(b)">
                       <mat-icon>download</mat-icon> {{ 'admin.uploads.download' | translate }}</button>
+                    <button mat-stroked-button type="button" class="done-btn" [disabled]="busy() === b.id" (click)="toggleDone(b)">
+                      <mat-icon>{{ b.doneAt ? 'undo' : 'task_alt' }}</mat-icon> {{ (b.doneAt ? 'admin.uploads.reopen' : 'admin.uploads.done') | translate }}</button>
                     <button mat-button type="button" color="warn" [disabled]="busy() === b.id" (click)="remove(b)">
                       {{ 'common.delete' | translate }}</button>
                   </td>
@@ -112,7 +117,9 @@ export function leagueHubScanUrl(scanId: number, origin: string = window.locatio
     .acts { white-space: nowrap; }
     .muted { opacity: .7; }
     .acts button + button { margin-left: 4px; }
-    .read-mark { font-size: .85em; color: var(--mat-sys-on-surface-variant); }
+    .read-mark, .done-mark { font-size: .85em; color: var(--mat-sys-on-surface-variant); }
+    /* Erledigt: gedämpft, aber lesbar und wieder zu öffnen */
+    tr.done td:not(.acts) { opacity: .55; }
     .why { display: block; font-size: .8em; color: var(--mat-sys-on-surface-variant); }
   `],
 })
@@ -196,6 +203,19 @@ export class AdminLeagueUploadsComponent implements OnInit {
       const reason = e instanceof HttpErrorResponse ? e.error?.reason : null;
       const known = ['tooManyPages', 'unsupportedImage', 'notFinished'];
       this.snack.warn(this.translate.instant(known.includes(reason) ? `admin.uploads.readErrors.${reason}` : 'admin.uploads.readErrors.failed'));
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  /** Als erledigt markieren bzw. wieder öffnen (Wunsch 2026-11-08) — ohne Rückfrage, es lässt sich ja zurücknehmen. */
+  async toggleDone(b: LeagueUploadBatch): Promise<void> {
+    this.busy.set(b.id);
+    try {
+      const res = await firstValueFrom(this.http.put<{ doneAt: string | null }>(`/api/admin/league-uploads/${b.id}/done`, { done: !b.doneAt }));
+      this.rows.update(r => (r ?? []).map(x => x.id === b.id ? { ...x, doneAt: res.doneAt } : x));
+    } catch {
+      this.snack.warn(this.translate.instant('common.error'));
     } finally {
       this.busy.set(null);
     }

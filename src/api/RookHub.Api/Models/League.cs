@@ -548,6 +548,9 @@ public class LeagueBatchUpload
     /// <summary>Zuletzt direkt zum Einlesen eingereiht (Admin-Tab „Uploads" → „Einlesen", 0.901.0): die Bilder sind dann als
     /// normale wartende Einlesungen angelegt (<c>LeagueBatchReadService</c>); <c>null</c> = nie.</summary>
     public DateTime? ReadQueuedAt { get; set; }
+    /// <summary>Von einem Admin als erledigt markiert (Admin-Tab „Uploads" → „Erledigt", Wunsch 2026-11-08); <c>null</c> = offen.
+    /// Der Formular-Watcher liest erledigte Stapel nicht mehr ein.</summary>
+    public DateTime? DoneAt { get; set; }
     /// <summary>Die Einlesungen, die daraus entstanden sind, kommagetrennt (über alle Klicks, älteste zuerst).</summary>
     public string? ReadScanIds { get; set; }
     public List<LeagueBatchUploadFile> Files { get; set; } = new();

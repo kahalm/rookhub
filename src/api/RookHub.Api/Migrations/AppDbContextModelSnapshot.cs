@@ -4324,6 +4324,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("DoneAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("FileCount")
                         .HasColumnType("int");
 
