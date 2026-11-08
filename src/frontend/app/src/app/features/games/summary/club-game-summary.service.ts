@@ -13,6 +13,20 @@ export interface ClubGameSummary {
   stale: boolean;
   model: string | null;
   error: string | null;
+  /** Nur bei offener Anforderung (0.914.0): wie weit die Hintergrund-Rechnung ist; Claude schreibt erst bei `ready`. */
+  readiness?: ClubGameSummaryReadiness | null;
+}
+
+export interface ClubGameSummaryReadiness {
+  ready: boolean;
+  hasAnalysis: boolean;
+  analysisDone: boolean;
+  refining: boolean;
+  refinedPositions: number;
+  totalPositions: number;
+  comparisonsPlanned: boolean;
+  comparisonsDone: number;
+  comparisonsTotal: number;
 }
 
 @Injectable({ providedIn: 'root' })

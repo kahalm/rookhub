@@ -8,7 +8,15 @@ namespace RookHub.Api.Services.League;
 /// <c>running</c> | <c>done</c> | <c>failed</c>; <c>Markdown</c> ist auch während einer neuen Anforderung die letzte fertige
 /// Fassung. <c>Stale</c> = die Partie wurde nach dem Schreiben korrigiert.</summary>
 public sealed record ClubGameSummaryDto(string Status, string? Markdown, DateTime? DoneAt, DateTime? RequestedAt, bool Stale,
-    string? Model, string? Error);
+    string? Model, string? Error, ClubGameSummaryReadiness? Readiness = null);
+
+/// <summary>Was die Hintergrund-Rechnung schon hat (0.914.0, Wunsch 2026-11-08: „wenn die Backgrounddinger noch nicht fertig
+/// sind, darauf hinweisen — die Summary kommt erst, wenn die durch sind"). <c>Ready</c> = Claude darf schreiben: Analyse fertig,
+/// Vertiefung fertig (falls vorgesehen) und jeder Fehler-Vergleich gerechnet (falls eingeschaltet).
+/// <c>RefinedPositions/TotalPositions</c> zählen nur bei vorgesehener Vertiefung; <c>ComparisonsTotal</c> ist 0, solange die
+/// Vergleiche noch nicht angelegt sind (<c>ComparisonsPlanned</c> = false).</summary>
+public sealed record ClubGameSummaryReadiness(bool Ready, bool HasAnalysis, bool AnalysisDone, bool Refining,
+    int RefinedPositions, int TotalPositions, bool ComparisonsPlanned, int ComparisonsDone, int ComparisonsTotal);
 
 /// <summary>Ein offener Auftrag für den Watcher: Partie und Verein (für <c>?club=</c> an den Lese-Wegen der Partie).</summary>
 public sealed record ClubGameSummaryJob(int ClubGameId, int ClubId, DateTime RequestedAt, int? RequestedByUserId);
@@ -18,8 +26,46 @@ public sealed record ClubGameSummaryJob(int ClubGameId, int ClubId, DateTime Req
 /// und geschrieben wird außerhalb des Servers (Formular-Watcher mit Claude, ohne API-Schlüssel), über die Admin-Warteschlange
 /// <c>api/admin/club-game-summaries</c>. Lesen darf, wer die Partie sieht.
 /// </summary>
-public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = null)
+public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = null, Microsoft.Extensions.Configuration.IConfiguration? config = null)
 {
+    private bool ComparisonsEnabled => config?.GetValue<bool?>("ClubMistakeComparisons:Enabled") ?? true;
+
+    /// <summary>
+    /// Ist die Hintergrund-Rechnung der Partie durch? Hauptanalyse (Origin Club, ohne EngineId, die jüngste) fertig, ihre
+    /// Vertiefung fertig und — wenn die Fehler-Vergleiche eingeschaltet sind — alle angelegt und gerechnet (fertig oder
+    /// gescheitert). Eine gescheiterte Analyse zählt als fertig: dann schreibt Claude ohne (oder meldet fail).
+    /// </summary>
+    public async Task<ClubGameSummaryReadiness> ReadinessAsync(int clubGameId, CancellationToken ct = default)
+    {
+        var a = await db.GameAnalyses.AsNoTracking()
+            .Where(x => x.LeagueClubGameId == clubGameId && x.Origin == GameAnalysisOrigin.Club && x.EngineId == null)
+            .OrderByDescending(x => x.Id)
+            .Select(x => new { x.Id, x.Status, x.RefineDepth, x.RefinedAt, x.MistakeComparisonsAt })
+            .FirstOrDefaultAsync(ct);
+        if (a is null) return new(false, false, false, false, 0, 0, false, 0, 0);
+        var failed = a.Status == GameAnalysisStatus.Failed;
+        var done = a.Status == GameAnalysisStatus.Done || failed;
+        var refining = !failed && a.RefineDepth != null && a.RefinedAt == null;
+        int refined = 0, total = 0;
+        if (a.RefineDepth != null && !failed)
+        {
+            var positions = db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == a.Id);
+            total = await positions.CountAsync(ct);
+            refined = await positions.CountAsync(p => p.Refined, ct);
+        }
+        var planned = a.MistakeComparisonsAt != null;
+        int cDone = 0, cTotal = 0;
+        if (planned)
+        {
+            var cs = await db.MoveComparisons.AsNoTracking().Where(c => c.GameAnalysisId == a.Id && c.Ply != null)
+                .Select(c => c.Status).ToListAsync(ct);
+            cTotal = cs.Count;
+            cDone = cs.Count(st => st == MoveComparisonStatus.Done || st == MoveComparisonStatus.Failed);
+        }
+        var comparisonsReady = failed || !ComparisonsEnabled || (planned && cDone == cTotal);
+        return new(done && !refining && comparisonsReady, true, done, refining, refined, total, planned, cDone, cTotal);
+    }
+
     /// <summary>So lange darf ein Auftrag „läuft" stehen; danach gilt der Watcher als abgestürzt und die Warteschlange gibt ihn
     /// wieder her.</summary>
     public static readonly TimeSpan StaleRunning = TimeSpan.FromMinutes(90);
@@ -45,9 +91,11 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         if (hash is null) return null;
         var s = await db.ClubGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.ClubGameId == clubGameId, ct);
         if (s is null) return new ClubGameSummaryDto("none", null, null, null, false, null, null);
+        var open = s.Status is ClubGameSummaryStatus.Requested or ClubGameSummaryStatus.Running;
         return new ClubGameSummaryDto(StatusOf(s.Status), s.Markdown, s.DoneAt, s.RequestedAt,
             s.Markdown != null && s.MovesHash != null && s.MovesHash != hash.MovesHash, s.Model,
-            s.Status == ClubGameSummaryStatus.Failed ? s.Error : null);
+            s.Status == ClubGameSummaryStatus.Failed ? s.Error : null,
+            open ? await ReadinessAsync(clubGameId, ct) : null);
     }
 
     /// <summary>Anfordern bzw. neu anfordern (auch nach Fehler oder wenn schon fertig). Läuft gerade einer, bleibt es dabei.
@@ -73,8 +121,17 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         return await GetAsync(club, clubGameId, ct);
     }
 
-    /// <summary>Offene Aufträge, älteste zuerst: angefordert, oder „läuft" länger als <see cref="StaleRunning"/>.</summary>
+    /// <summary>Offene Aufträge, älteste zuerst: angefordert, oder „läuft" länger als <see cref="StaleRunning"/> — nur die,
+    /// deren Hintergrund-Rechnung durch ist (<see cref="ReadinessAsync"/>); die anderen warten still weiter.</summary>
     public async Task<List<ClubGameSummaryJob>> QueueAsync(CancellationToken ct = default)
+    {
+        var ready = new List<ClubGameSummaryJob>();
+        foreach (var job in await OpenAsync(ct))
+            if ((await ReadinessAsync(job.ClubGameId, ct)).Ready) ready.Add(job);
+        return ready;
+    }
+
+    private async Task<List<ClubGameSummaryJob>> OpenAsync(CancellationToken ct)
     {
         var cutoff = Now - StaleRunning;
         return await (from s in db.ClubGameSummaries.AsNoTracking()
@@ -95,7 +152,7 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         if (s is null) return Outcome.NotFound;
         var open = s.Status == ClubGameSummaryStatus.Requested
             || (s.Status == ClubGameSummaryStatus.Running && s.StartedAt < Now - StaleRunning);
-        if (!open) return Outcome.Conflict;
+        if (!open || !(await ReadinessAsync(clubGameId, ct)).Ready) return Outcome.Conflict;
         s.Status = ClubGameSummaryStatus.Running;
         s.StartedAt = Now;
         await db.SaveChangesAsync(ct);

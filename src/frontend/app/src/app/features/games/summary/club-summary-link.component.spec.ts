@@ -42,4 +42,28 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     expect(el.querySelector('.summary-wait')).not.toBeNull();
     expect(el.querySelector('.summary-request')).toBeNull();
   });
+
+  it('0.914.0: angefordert, Hintergrund noch nicht durch — Hinweis mit Fortschritt statt nur „angefordert"', () => {
+    const { f, http, el } = setup(true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'requested', readiness: {
+      ready: false, hasAnalysis: true, analysisDone: true, refining: true, refinedPositions: 56, totalPositions: 62,
+      comparisonsPlanned: false, comparisonsDone: 0, comparisonsTotal: 0 } });
+    f.detectChanges();
+    const text = el.querySelector('.summary-wait')?.textContent ?? '';
+    expect(text).toContain('games.summary.waitingForAnalysis');
+    expect(text).toContain('games.summary.progressRefine');
+    expect(text).toContain('games.summary.progressComparisonsPending');
+    expect(f.componentInstance.progressText({ ready: false, hasAnalysis: true, analysisDone: true, refining: false,
+      refinedPositions: 62, totalPositions: 62, comparisonsPlanned: true, comparisonsDone: 3, comparisonsTotal: 11 }))
+      .toBe('games.summary.progressComparisons');
+  });
+
+  it('0.914.0: bereit — wieder der normale Wartevermerk', () => {
+    const { f, http, el } = setup(true);
+    http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'running', readiness: {
+      ready: true, hasAnalysis: true, analysisDone: true, refining: false, refinedPositions: 62, totalPositions: 62,
+      comparisonsPlanned: true, comparisonsDone: 11, comparisonsTotal: 11 } });
+    f.detectChanges();
+    expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.running');
+  });
 });

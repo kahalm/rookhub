@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.914.0", date: "2026-11-08", changes: [
+    { en: "Game summary: Claude now only writes it once the background analysis of the game is complete – deepened to depth 30 and every mistake compared with the best move. Until then the game page says so after the request and shows how far it is (e.g. “deepening 56/62 positions · mistake comparisons 0/11”), refreshing every minute.",
+      de: "Zusammenfassung der Partie: Claude schreibt sie erst, wenn die Hintergrund-Analyse der Partie ganz durch ist – auf Tiefe 30 vertieft und jeder Fehler mit dem besten Zug verglichen. Bis dahin sagt die Partieseite das nach dem Anfordern und zeigt, wie weit es ist (z. B. „Vertiefung 56/62 Stellungen · Fehler-Vergleiche 0/11“), jede Minute aktualisiert." },
+  ] },
   { version: "0.913.0", date: "2026-11-08", changes: [
     { en: "Club games: an admin can request a game summary on the game page. Claude writes it from the engine analysis and the mistake comparisons – the course of the game, the key positions with diagrams, what was better and why, a rule of thumb each, and what to take away. It gets its own page, linked from the game as “Summary”; a diagram jumps to that position in the game. If the game is corrected afterwards, the page says so.",
       de: "Vereinspartien: Ein Admin kann auf der Partieseite eine Zusammenfassung anfordern. Claude schreibt sie aus der Engine-Analyse und den Fehler-Vergleichen – Verlauf der Partie, die Schlüsselstellungen mit Diagrammen, was besser war und warum, je ein Merksatz und was man mitnehmen kann. Sie bekommt eine eigene Seite, bei der Partie als „Zusammenfassung“ verlinkt; ein Diagramm springt zu dieser Stellung in der Partie. Wird die Partie danach korrigiert, steht das auf der Seite." },

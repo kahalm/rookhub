@@ -3356,7 +3356,13 @@
       "stale": "Partija je ispravljena nakon što je sažetak napisan.",
       "none": "Za ovu partiju još nema sažetka.",
       "showInGame": "Prikaži u partiji",
-      "writtenBy": "Napisao {{model}} na temelju analize enginea."
+      "writtenBy": "Napisao {{model}} na temelju analize enginea.",
+      "waitingForAnalysis": "Zatraženo – čeka se analiza u pozadini, sažetak slijedi kad bude gotova:",
+      "progressAnalysis": "analiza još traje",
+      "progressRefine": "produbljivanje {{done}}/{{total}} pozicija",
+      "progressComparisons": "usporedbe grešaka {{done}}/{{total}}",
+      "progressComparisonsPending": "usporedbe grešaka još nisu započele",
+      "requestedWaitingToast": "Zatraženo – analiza u pozadini još nije gotova; Claude piše sažetak čim bude."
     }
   },
   "analysis": {

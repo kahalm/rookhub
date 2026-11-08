@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,7 +6,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth.service';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { apiErrorText } from '../../../core/api-error';
-import { ClubGameSummary, ClubGameSummaryService } from './club-game-summary.service';
+import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } from './club-game-summary.service';
 
 /**
  * Kopfzeile der Vereinspartie (0.913.0): „Zusammenfassung" führt zur eigenen Seite, sobald es eine gibt. Ein Admin kann
@@ -28,7 +28,13 @@ import { ClubGameSummary, ClubGameSummaryService } from './club-game-summary.ser
         @if (s.status === 'requested' || s.status === 'running') {
           <span class="summary-wait">
             <mat-icon>hourglass_top</mat-icon>
-            {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
+            @if (waiting(); as w) {
+              <!-- 0.914.0: angefordert, aber die Hintergrund-Rechnung ist noch nicht durch — Claude schreibt erst danach -->
+              <span class="wait-text">{{ 'games.summary.waitingForAnalysis' | translate }}
+                <span class="wait-progress">{{ progressText(w) }}</span></span>
+            } @else {
+              {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
+            }
           </span>
         } @else {
           <button mat-button class="summary-request" [disabled]="busy()" (click)="request()">
@@ -43,7 +49,9 @@ import { ClubGameSummary, ClubGameSummaryService } from './club-game-summary.ser
     :host { display: contents; }
     .summary-wait { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem;
       color: var(--mat-sys-on-surface-variant); }
-    .summary-wait mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .summary-wait mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
+    .wait-text { display: inline-flex; flex-wrap: wrap; gap: 0 6px; }
+    .wait-progress { white-space: nowrap; }
   `],
 })
 export class ClubSummaryLinkComponent implements OnInit {
@@ -57,10 +65,39 @@ export class ClubSummaryLinkComponent implements OnInit {
   readonly isAdmin = this.auth.isAdmin;
   readonly state = signal<ClubGameSummary | null>(null);
   readonly busy = signal(false);
+  /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). */
+  readonly waiting = computed<ClubGameSummaryReadiness | null>(() => {
+    const s = this.state();
+    const r = s?.readiness;
+    return s && (s.status === 'requested' || s.status === 'running') && r && !r.ready ? r : null;
+  });
 
-  ngOnInit(): void {
+  constructor() {
+    // Solange eine Anforderung offen ist, jede Minute nachsehen (Fortschritt, fertig) — still bei Fehlern.
+    const timer = setInterval(() => {
+      const st = this.state()?.status;
+      if (st === 'requested' || st === 'running') this.load();
+    }, 60_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+  }
+
+  ngOnInit(): void { this.load(); }
+
+  private load(): void {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
     this.service.get(this.gameId()).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
+  }
+
+  /** „Vertiefung 56/62 · Fehler-Vergleiche 0/11" — was noch fehlt, knapp. */
+  progressText(r: ClubGameSummaryReadiness): string {
+    const t = (k: string, p?: object) => this.translate.instant('games.summary.' + k, p);
+    if (!r.hasAnalysis || !r.analysisDone) return t('progressAnalysis');
+    const parts: string[] = [];
+    if (r.refining) parts.push(t('progressRefine', { done: r.refinedPositions, total: r.totalPositions }));
+    parts.push(r.comparisonsPlanned
+      ? t('progressComparisons', { done: r.comparisonsDone, total: r.comparisonsTotal })
+      : t('progressComparisonsPending'));
+    return parts.join(' · ');
   }
 
   request(): void {
@@ -69,7 +106,8 @@ export class ClubSummaryLinkComponent implements OnInit {
       next: s => {
         this.state.set(s);
         this.busy.set(false);
-        this.snackbar.show(this.translate.instant('games.summary.requestedToast'));
+        const waits = !!s.readiness && !s.readiness.ready;
+        this.snackbar.show(this.translate.instant(waits ? 'games.summary.requestedWaitingToast' : 'games.summary.requestedToast'));
       },
       error: e => {
         this.busy.set(false);

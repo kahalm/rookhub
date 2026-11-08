@@ -3356,7 +3356,13 @@
       "stale": "Die Partie wurde nach dieser Zusammenfassung korrigiert.",
       "none": "Zu dieser Partie gibt es noch keine Zusammenfassung.",
       "showInGame": "In der Partie zeigen",
-      "writtenBy": "Geschrieben von {{model}} aus der Engine-Analyse."
+      "writtenBy": "Geschrieben von {{model}} aus der Engine-Analyse.",
+      "waitingForAnalysis": "Angefordert – wartet auf die Hintergrund-Analyse, die Zusammenfassung kommt, sobald sie durch ist:",
+      "progressAnalysis": "Analyse läuft noch",
+      "progressRefine": "Vertiefung {{done}}/{{total}} Stellungen",
+      "progressComparisons": "Fehler-Vergleiche {{done}}/{{total}}",
+      "progressComparisonsPending": "Fehler-Vergleiche noch nicht begonnen",
+      "requestedWaitingToast": "Angefordert – die Hintergrund-Analyse ist noch nicht durch; Claude schreibt die Zusammenfassung, sobald sie fertig ist."
     }
   },
   "analysis": {

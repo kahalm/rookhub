@@ -3733,7 +3733,13 @@
       "stale": "A játszmát az összefoglaló megírása után javították.",
       "none": "Ehhez a játszmához még nincs összefoglaló.",
       "showInGame": "Mutasd a játszmában",
-      "writtenBy": "Írta: {{model}}, a motoros elemzés alapján."
+      "writtenBy": "Írta: {{model}}, a motoros elemzés alapján.",
+      "waitingForAnalysis": "Kérve – a háttérelemzésre vár, az összefoglaló utána következik:",
+      "progressAnalysis": "az elemzés még fut",
+      "progressRefine": "mélyítés {{done}}/{{total}} állás",
+      "progressComparisons": "hibaösszevetések {{done}}/{{total}}",
+      "progressComparisonsPending": "a hibaösszevetések még nem kezdődtek el",
+      "requestedWaitingToast": "Kérve – a háttérelemzés még nem kész; Claude megírja az összefoglalót, amint elkészül."
     }
   },
   "analysisJobs": {

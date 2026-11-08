@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -32,6 +33,74 @@ public class ClubGameSummariesTests : IDisposable
         return g.Id;
     }
 
+    /// <summary>Hauptanalyse der Partie anlegen: fertig, Vertiefung erledigt, Vergleiche angelegt (alle gerechnet) — „bereit".</summary>
+    private async Task<GameAnalysis> ReadyAsync(int gameId, GameAnalysisStatus status = GameAnalysisStatus.Done, bool refined = true,
+        bool comparisonsPlanned = true, params MoveComparisonStatus[] comparisons)
+    {
+        var a = new GameAnalysis
+        {
+            UserId = 1, Pgn = "", StartFen = "", Origin = GameAnalysisOrigin.Club, LeagueClubGameId = gameId, Status = status,
+            PlyCount = 2, White = "W", Black = "S", RefineDepth = 30, RefinedAt = refined ? DateTime.UtcNow : null,
+            MistakeComparisonsAt = comparisonsPlanned ? DateTime.UtcNow : null,
+            Positions = [new GameAnalysisPosition { Ply = 0, Fen = "x", GameMoveUci = "e2e4", Refined = true },
+                         new GameAnalysisPosition { Ply = 1, Fen = "y", GameMoveUci = "e7e5", Refined = refined }],
+        };
+        _db.GameAnalyses.Add(a);
+        await _db.SaveChangesAsync();
+        var ply = 0;
+        foreach (var st in comparisons)
+            _db.MoveComparisons.Add(new MoveComparison { UserId = 1, GameAnalysisId = a.Id, Ply = ply++, Fen = "x", Status = st });
+        await _db.SaveChangesAsync();
+        return a;
+    }
+
+    [Fact]
+    public async Task Readiness_WaitsForRefinementAndEveryComparison()
+    {
+        var id = await GameAsync();
+        Assert.False((await Svc.ReadinessAsync(id)).HasAnalysis);
+
+        var a = await ReadyAsync(id, refined: false, comparisonsPlanned: false);
+        var r = await Svc.ReadinessAsync(id);
+        Assert.Equal((false, true, true, 1, 2, false), (r.Ready, r.AnalysisDone, r.Refining, r.RefinedPositions, r.TotalPositions, r.ComparisonsPlanned));
+
+        a.RefinedAt = DateTime.UtcNow;
+        a.Positions.ForEach(p => p.Refined = true);
+        a.MistakeComparisonsAt = DateTime.UtcNow;
+        _db.MoveComparisons.AddRange(
+            new MoveComparison { UserId = 1, GameAnalysisId = a.Id, Ply = 3, Fen = "x", Status = MoveComparisonStatus.Done },
+            new MoveComparison { UserId = 1, GameAnalysisId = a.Id, Ply = 7, Fen = "x", Status = MoveComparisonStatus.Waiting });
+        await _db.SaveChangesAsync();
+        r = await Svc.ReadinessAsync(id);
+        Assert.Equal((false, false, 1, 2), (r.Ready, r.Refining, r.ComparisonsDone, r.ComparisonsTotal));
+
+        // offene Anforderung: nicht in der Warteschlange, Start abgelehnt, Stand im DTO
+        await Svc.RequestAsync(TestClubs.Home, id, 7);
+        Assert.Empty(await Svc.QueueAsync());
+        Assert.Equal(ClubGameSummaries.Outcome.Conflict, await Svc.StartAsync(id));
+        Assert.Equal(1, (await Svc.GetAsync(TestClubs.Home, id))!.Readiness!.ComparisonsDone);
+
+        (await _db.MoveComparisons.SingleAsync(c => c.Ply == 7)).Status = MoveComparisonStatus.Failed;   // gescheitert zählt als durch
+        await _db.SaveChangesAsync();
+        Assert.True((await Svc.ReadinessAsync(id)).Ready);
+        Assert.Single(await Svc.QueueAsync());
+    }
+
+    [Fact]
+    public async Task Readiness_FailedAnalysis_OrComparisonsSwitchedOff_DoNotBlock()
+    {
+        var id = await GameAsync();
+        await ReadyAsync(id, GameAnalysisStatus.Failed, refined: false, comparisonsPlanned: false);
+        Assert.True((await Svc.ReadinessAsync(id)).Ready);
+
+        var other = await GameAsync(hash: "h2");
+        await ReadyAsync(other, comparisonsPlanned: false);
+        Assert.False((await Svc.ReadinessAsync(other)).Ready);
+        var off = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ClubMistakeComparisons:Enabled"] = "false" }).Build();
+        Assert.True((await new ClubGameSummaries(_db, _clock, off).ReadinessAsync(other)).Ready);
+    }
+
     [Fact]
     public async Task Get_WithoutRequest_IsNone_ForeignGameIsNull()
     {
@@ -46,6 +115,7 @@ public class ClubGameSummariesTests : IDisposable
     public async Task Request_Start_Complete_ShowsMarkdown_AndLeavesTheQueue()
     {
         var id = await GameAsync();
+        await ReadyAsync(id, comparisons: MoveComparisonStatus.Done);
         Assert.Equal("requested", (await Svc.RequestAsync(TestClubs.Home, id, 7))!.Status);
         var job = Assert.Single(await Svc.QueueAsync());
         Assert.Equal((id, TestClubs.HomeId, 7), (job.ClubGameId, job.ClubId, job.RequestedByUserId));
@@ -65,6 +135,7 @@ public class ClubGameSummariesTests : IDisposable
     public async Task RequestAgain_KeepsTheOldText_UntilTheNewOneIsThere()
     {
         var id = await GameAsync();
+        await ReadyAsync(id);
         await Svc.CompleteAsync(id, "alt", null);
         var again = (await Svc.RequestAsync(TestClubs.Home, id, 7))!;
         Assert.Equal(("requested", "alt"), (again.Status, again.Markdown));
@@ -78,6 +149,7 @@ public class ClubGameSummariesTests : IDisposable
     public async Task Running_TooLong_ComesBackIntoTheQueue()
     {
         var id = await GameAsync();
+        await ReadyAsync(id);
         await Svc.RequestAsync(TestClubs.Home, id, 7);
         await Svc.StartAsync(id);
         _clock.Advance(ClubGameSummaries.StaleRunning + TimeSpan.FromMinutes(1));
