@@ -112,7 +112,7 @@ public class TacticHarvestTests : IDisposable
             HomePlayer = "Streiter, Gerhard", AwayPlayer = "Moser, Axel", HomeFide = "1621530", AwayFide = "24602094",
             HomeColor = "s", Result = "½ - ½",
         });
-        var g = new LeagueClubGame { Id = 158, Year = 2026, White = "Moser, Axel", WhiteFide = "24602094", Black = "Testdorf",
+        var g = new LeagueClubGame { Id = 158, Year = 2026, White = "Moser, Axel", WhiteFide = "24602094", Black = "Testdorf", BlackRealFide = "1621530",
             ClubId = TestClubs.HomeId, Result = "1/2-1/2", Anonymized = true, Pgn = "", MovesHash = "h" };
         _db.LeagueClubGames.Add(g);
         var a = new GameAnalysis { Id = 5, UserId = 1, Origin = GameAnalysisOrigin.Club, LeagueClubGameId = 158, Pgn = "", StartFen = "x",

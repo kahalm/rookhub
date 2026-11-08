@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.905.0", date: "2026-11-08", changes: [
+    { en: "LeagueHub round view: a club game is only guessed for a board if both players match (by FIDE ID or surname) and the result does not contradict. Before, the anonymised club name matched any player of your own club – an old open-tournament game against the same opponent could show up as another team-mate’s league game.",
+      de: "LeagueHub-Rundenansicht: Eine Vereinspartie wird einem Brett nur noch zugeraten, wenn beide Spieler passen (über FIDE-ID oder Nachname) und das Ergebnis nicht widerspricht. Bisher passte der anonymisierte Vereinsname auf jeden eigenen Spieler – eine alte Open-Partie gegen denselben Gegner konnte so als Ligapartie eines Mannschaftskollegen erscheinen." },
+  ] },
   { version: "0.904.0", date: "2026-11-08", changes: [
     { en: "Bell “Analysis finished”: whoever clicks “Analyse game” (also as a guest on a share link or via the extension) or uploads a game – in RookHub or LeagueHub – gets a bell notification as soon as the game is fully analysed, i.e. after the deeper second pass, not after the quick first one. The link leads to their own game; already finished analyses and the Lc0 second analysis do not ring.",
       de: "Glocke „Analyse fertig“: Wer „Partie analysieren“ klickt (auch als Gast über einen Teilen-Link oder über die Erweiterung) oder eine Partie hochlädt – in RookHub oder LeagueHub –, bekommt eine Glocke, sobald die Partie tief analysiert ist, also nach der Vertiefung und nicht schon nach dem schnellen ersten Durchgang. Der Link führt auf die eigene Partie; schon fertige Analysen und die Lc0-Zweitanalyse melden sich nicht." },

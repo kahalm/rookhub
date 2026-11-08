@@ -11,8 +11,10 @@ namespace RookHub.Api.Services.League;
 /// <item>Paarungen aus <see cref="LeagueGame"/> (chess-results, öffentlich): Brett, Weiß/Schwarz samt Elo, Ergebnis.</item>
 /// <item>Partie zuerst aus der Vereins-Datenbank DES VEREINS DER ANFRAGE (Mandanten-Schritt 2026-10-07; über einen Teilen-Link
 /// der Verein des Links): Jahr der Runde, Farben passen, jede Seite über die FIDE-ID (an der Partie bzw. intern hinter der
-/// anonymisierten Seite), über den Nachnamen oder als <see cref="LeagueClub.AnonName"/> für einen Spieler des eigenen Vereins —
-/// mindestens eine Seite muss über FIDE-ID oder Namen passen. Mehrere Treffer: die jüngste Partie.</item>
+/// anonymisierten Seite) oder über den Nachnamen — BEIDE Seiten, und das Ergebnis darf nicht widersprechen (0.905.0, gemeldet
+/// 2026-11-08: die Kufstein-Open-Partie des Users gegen Neuschmied stand bei Streiter – Neuschmied, weil „Schwaz" ohne FIDE-ID
+/// dahinter für JEDEN eigenen Spieler galt und nur das Jahr verglichen wurde). Eine anonymisierte Seite ohne hinterlegte FIDE-ID
+/// (alte Vereinspartien) wird darum nie geraten, nur fest zugeordnet. Mehrere Treffer: die jüngste Partie.</item>
 /// <item>Sonst aus den Spielerkarten (<see cref="LeaguePlayerProfile.Pgn"/>: chess-results, Übertragungen …): Datum höchstens
 /// <see cref="DayTolerance"/> Tage neben dem Rundentermin, Nachname des Gegners auf der anderen Farbe.</item>
 /// </list>
@@ -100,11 +102,11 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
             var forfeit = g.Forfeit != 0 || w.Item1 is null || b.Item1 is null;
             if (!forfeit)
             {
+                var boardResult = WhiteBlackResult(g.Result, homeWhite);
                 var hit = linked.GetValueOrDefault(g.Id) ?? clubGames.FirstOrDefault(c => !guessed.Contains(c.Id)
-                    && SideMatches(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2, w.Item4)
-                    && SideMatches(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2, b.Item4)
-                    && (Strong(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
-                        || Strong(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)));
+                    && Strong(club, c.White, c.WhiteFide ?? c.WhiteRealFide, w.Item1, w.Item2)
+                    && Strong(club, c.Black, c.BlackFide ?? c.BlackRealFide, b.Item1, b.Item2)
+                    && ResultsAgree(c.Result, boardResult));
                 if (hit is not null)
                 {
                     if (!linked.ContainsKey(g.Id)) guessed.Add(hit.Id);
@@ -176,17 +178,25 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
         return parts.Length == 2 ? $"{parts[1]} - {parts[0]}" : result;
     }
 
-    /// <summary>Passt eine Seite der Vereinspartie zum Spieler am Brett? FIDE-ID, Nachname oder die anonymisierte Seite des
-    /// Vereins (<see cref="LeagueClub.AnonName"/>) für einen seiner Spieler.</summary>
-    internal static bool SideMatches(LeagueClub club, string name, string? fide, string? player, string? playerFide, string playerTeam) =>
-        Strong(club, name, fide, player, playerFide)
-        || (club.IsAnon(name, fide) && club.OwnsTeam(playerTeam));
-
-    private static bool Strong(LeagueClub club, string name, string? fide, string? player, string? playerFide) =>
+    /// <summary>Passt eine Seite der Vereinspartie zum Spieler am Brett? Über die FIDE-ID (bei der anonymisierten Seite die
+    /// intern hinterlegte), sonst über den Nachnamen — der Vereinsname (<see cref="LeagueClub.AnonName"/>) allein passt nie.</summary>
+    internal static bool Strong(LeagueClub club, string name, string? fide, string? player, string? playerFide) =>
         !string.IsNullOrEmpty(fide) && !string.IsNullOrEmpty(playerFide)
             ? fide == playerFide
             : player is not null && name.Trim() != club.AnonName
               && LeagueProfileBuilder.LastName(name) == LeagueProfileBuilder.LastName(player);
+
+    /// <summary>Widerspricht das Ergebnis der Vereinspartie („1-0", „1/2-1/2" …) dem des Bretts aus Sicht Weiß („1 - 0", „½ - ½")?
+    /// Unbekannt auf einer Seite („*", leer, kampflos) widerspricht nicht.</summary>
+    internal static bool ResultsAgree(string? clubResult, string boardResult)
+    {
+        static string? Norm(string? r) => r?.Replace(" ", "").Replace("½", "1/2") switch
+        {
+            "1-0" => "1-0", "0-1" => "0-1", "1/2-1/2" => "1/2-1/2", _ => null,
+        };
+        var (a, b) = (Norm(clubResult), Norm(boardResult));
+        return a is null || b is null || a == b;
+    }
 
     /// <summary>Die Partie aus der Karte eines der beiden Spieler: Datum nahe am Rundentermin, Gegner auf der anderen Farbe.</summary>
     internal static string? FromProfiles(IReadOnlyDictionary<string, string> profiles, DateOnly date,

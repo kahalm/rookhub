@@ -194,8 +194,10 @@ Rollenverwaltung an).
   direkt anzeigen, inkl. Link zu Partien"): `GET /api/league/{tnr}/round/{round}/games?team=` (league.view) bzw.
   `GET /api/league/s/{token}/games` (Begegnung des Links) → je Brett `{ board, white, whiteElo, black, blackElo, result, forfeit,
   pgn, source (club|profile), clubGameId }` aus `LeagueGames` (`Services/League/LeagueFixtureGames.cs`). Partie zuerst aus der
-  Vereins-Datenbank (Jahr der Runde, Farben passen, je Seite FIDE-ID — auch intern hinter „Schwaz" — oder Nachname oder „Schwaz"
-  für den eigenen Verein, mindestens eine Seite über ID/Namen; mehrere: die jüngste), sonst aus den Spielerkarten (Datum ±3 Tage
+  Vereins-Datenbank (Jahr der Runde, Farben passen, BEIDE Seiten über FIDE-ID — bei „Schwaz" die intern hinterlegte — oder
+  Nachnamen, Ergebnis widerspricht nicht; „Schwaz" ohne hinterlegte FIDE-ID wird nie geraten, nur fest zugeordnet — 0.905.0,
+  vorher passte „Schwaz" auf jeden eigenen Spieler und Vereinspartie 38 (Kufstein Open) stand bei Streiter – Neuschmied;
+  mehrere: die jüngste), sonst aus den Spielerkarten (Datum ±3 Tage
   um den Rundentermin, beide Nachnamen auf ihrer Farbe). Ausgegeben wird nur das PGN der Quelle. Oberfläche: Tabelle unter dem
   Ergebnis in `fixture-view.component.ts` (Eingabe `leagueTnr`), „Nachspielen" klappt `lh-game-replay` auf (Vereinspartie mit Kurve,
   nur angemeldet). Seit 0.675.0 an einer Vereinspartie (angemeldet) dazu „Analyse" (RookHub `club-games/{id}`) — seit 0.838.3 auch

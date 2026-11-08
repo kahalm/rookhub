@@ -24,7 +24,8 @@ public class LeagueFixtureGamesTests : IDisposable
             new LeagueGame { Tnr = 1, Round = 2, Board = 1, HomeTeam = "Andere", AwayTeam = "Fremde", HomePlayer = "X", AwayPlayer = "Y",
                 HomeColor = "w", Result = "1 - 0" });
         _db.LeagueClubGames.AddRange(
-            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 10, Year = 2026, White = "Hess, Max", WhiteFide = "24656666", Black = "Testdorf", UploadedByUserId = 7,
+            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 10, Year = 2026, White = "Hess, Max", WhiteFide = "24656666", Black = "Testdorf", BlackRealFide = "1616951",
+                Result = "1/2-1/2", UploadedByUserId = 7,
                 Pgn = "[White \"Hess, Max\"]\n[Black \"Schwaz\"]\n\n1. e4 e5 1/2-1/2", MovesHash = "a" },
             new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 11, Year = 2025, White = "Ciolek, Andreas", WhiteFide = "12906727", Black = "Testdorf",
                 Pgn = "alt", MovesHash = "b" },   // anderes Jahr
@@ -75,11 +76,41 @@ public class LeagueFixtureGamesTests : IDisposable
     }
 
     [Fact]
-    public void SideMatches_SchwazNurFuerDenEigenenVerein()
+    public void Strong_VereinsnameAlleinPasstNie_FideSchlaegtDenNamen()
     {
-        Assert.True(LeagueFixtureGames.SideMatches(TestClubs.Home, "Testdorf", null, "Binder, Moriz", "1616951", "Testdorf 1"));
-        Assert.False(LeagueFixtureGames.SideMatches(TestClubs.Home, "Testdorf", null, "Hess, Max", "24656666", "Schach Ohne Grenzen"));
-        Assert.False(LeagueFixtureGames.SideMatches(TestClubs.Home, "Hess, Max", "999", "Hess, Max", "24656666", "X"));   // FIDE-ID schlägt den Namen
+        Assert.False(LeagueFixtureGames.Strong(TestClubs.Home, "Testdorf", null, "Binder, Moriz", "1616951"));
+        Assert.True(LeagueFixtureGames.Strong(TestClubs.Home, "Testdorf", "1616951", "Binder, Moriz", "1616951"));   // hinterlegte FIDE-ID
+        Assert.False(LeagueFixtureGames.Strong(TestClubs.Home, "Hess, Max", "999", "Hess, Max", "24656666"));
+        Assert.True(LeagueFixtureGames.Strong(TestClubs.Home, "Hess, Max", null, "Hess, Max", null));
+    }
+
+    [Fact]
+    public void ResultsAgree_UnbekanntWiderSprichtNicht()
+    {
+        Assert.True(LeagueFixtureGames.ResultsAgree("1-0", "1 - 0"));
+        Assert.True(LeagueFixtureGames.ResultsAgree("1/2-1/2", "½ - ½"));
+        Assert.False(LeagueFixtureGames.ResultsAgree("0-1", "1 - 0"));
+        Assert.True(LeagueFixtureGames.ResultsAgree("*", "1 - 0"));
+        Assert.True(LeagueFixtureGames.ResultsAgree(null, "½ - ½"));
+    }
+
+    /// <summary>Gemeldet 2026-11-08 (Vereinspartie 38): eine alte eigene Partie gegen denselben Gegner (Kufstein Open), „Schwaz" ohne
+    /// FIDE-ID dahinter, nur das Jahr bekannt — stand als Partie bei einem ANDEREN eigenen Spieler. Ebenso kein Treffer bei
+    /// widersprechendem Ergebnis.</summary>
+    [Fact]
+    public async Task ForFixture_RaetNichtUeberDenVereinsnamenOhneFide_UndNichtGegenDasErgebnis()
+    {
+        _db.LeagueGames.AddRange(Board(6, "Neuschmied, Siegfried", "1602446", "Streiter, Gerhard", "1621530", "w", "1 - 0"),
+            Board(7, "Mair, Anton", "5", "Huber, Hans", "6", "w", "1 - 0"));
+        _db.LeagueClubGames.AddRange(
+            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 38, Year = 2026, White = "Neuschmied, Siegfried", WhiteFide = "1602446",
+                Black = "Testdorf", Result = "1-0", Anonymized = true, Pgn = "kufstein open", MovesHash = "k" },
+            new LeagueClubGame { ClubId = TestClubs.HomeId, Id = 39, Year = 2026, White = "Mair, Anton", WhiteFide = "5", Black = "Huber, Hans",
+                BlackFide = "6", Result = "0-1", Pgn = "andere partie", MovesHash = "m" });
+        _db.SaveChanges();
+        var list = await new LeagueFixtureGames(_db).ForFixtureAsync(TestClubs.Home, 1, 2, "Testdorf", default);
+        Assert.Null(list.Single(p => p.Board == 6).ClubGameId);
+        Assert.Null(list.Single(p => p.Board == 7).ClubGameId);
     }
 
     [Fact]
