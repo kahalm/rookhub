@@ -121,12 +121,13 @@ public class LeagueEngineTests
         Assert.Equal("Sa 03.10.2026", LeagueViewBuilder.FmtDate(new DateOnly(2026, 10, 3)));
 
     [Fact]
-    public void ShareExpires_SevenDaysAfterRound()
+    public void ShareExpires_ThreeMonthsAfterRound()
     {
-        Assert.Equal(new DateOnly(2026, 10, 10), LeagueService.ExpiresFor("Sa 03.10.2026", new DateOnly(2026, 9, 27)));
-        Assert.Equal(new DateOnly(2026, 10, 27), LeagueService.ExpiresFor(null, new DateOnly(2026, 9, 27)));
-        // Runde längst gespielt: der frische Link gilt trotzdem sieben Tage ab heute, statt tot anzukommen
-        Assert.Equal(new DateOnly(2026, 10, 27), LeagueService.ExpiresFor("Sa 03.10.2026", new DateOnly(2026, 10, 20)));
+        // 0.897.0, Wunsch 2026-11-08: „Freigabelinks von LeagueHub sollen für 3 Monate gelten"
+        Assert.Equal(new DateOnly(2027, 1, 3), LeagueService.ExpiresFor("Sa 03.10.2026", new DateOnly(2026, 9, 27)));
+        Assert.Equal(new DateOnly(2026, 12, 27), LeagueService.ExpiresFor(null, new DateOnly(2026, 9, 27)));
+        // Runde längst gespielt: der frische Link gilt trotzdem drei Monate ab heute, statt früher abzulaufen
+        Assert.Equal(new DateOnly(2027, 2, 8), LeagueService.ExpiresFor("Sa 03.10.2026", new DateOnly(2026, 11, 8)));
     }
 
     [Fact]
@@ -539,7 +540,7 @@ public class LeagueEngineTests
         var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
         Assert.NotNull(s);
         Assert.NotEqual("abgelaufenabgelaufen1234", s!.Token);
-        Assert.True(s.Expires >= DateOnly.FromDateTime(DateTime.UtcNow).AddDays(LeagueService.ShareKeepDays));
+        Assert.True(s.Expires >= DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(LeagueService.ShareKeepMonths));
         Assert.NotNull(await svc.PublicShareAsync(s.Token, default));
         Assert.Single(db.LeagueShares.Where(x => x.Tnr == 1 && x.Round == 1 && x.Team == "A"));
         db.Dispose();

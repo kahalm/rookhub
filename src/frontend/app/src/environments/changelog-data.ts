@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.897.0", date: "2026-11-08", changes: [
+    { en: "LeagueHub: share links now stay valid for 3 months after the round (at least 3 months from creating them) instead of 7 days.", de: "LeagueHub: Teilen-Links gelten jetzt 3 Monate nach der Runde (mindestens 3 Monate ab dem Anlegen) statt 7 Tage." },
+  ] },
   { version: "0.896.1", date: "2026-11-08", changes: [
     { en: "LeagueHub: while “Update data” runs (it takes several minutes), the button itself says “Updating … (running for 3 min)”, and the progress note stays visible on the phone even with the selection folded.", de: "LeagueHub: Während „Daten aktualisieren“ läuft (das dauert einige Minuten), sagt der Knopf selbst „Aktualisiere … (läuft seit 3 Min.)“, und der Hinweis bleibt am Handy auch bei zugeklappter Auswahl sichtbar." },
   ] },

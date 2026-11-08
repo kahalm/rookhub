@@ -23,7 +23,7 @@ Rollenverwaltung an).
   selbst offengelegte: Klarname im Profil, Land passt, Name unter FIDE-Spielern eindeutig; keine Minderjährigen; seit 0.605.0
   zusätzlich von Verwaltern gepflegte, seit 0.610.0 auch Minderjähriger — deren Konto bleibt verborgen, siehe „Online-Konten +
   Online-Partien"), `LeagueOnlineGames` (deren geholte Partien),
-  `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab — frühestens 7 Tage nach dem Anlegen; ein abgelaufener, noch nicht aufgeräumter Link wird beim erneuten Teilen durch einen frischen ersetzt), `LeagueViews`
+  `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 3 Monate nach der Runde ab — frühestens 3 Monate nach dem Anlegen (seit 0.897.0, vorher 7 Tage); ein abgelaufener, noch nicht aufgeräumter Link wird beim erneuten Teilen durch einen frischen ersetzt), `LeagueViews`
   (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf; `Json` ist Concurrency-Token:
   Ansichten nur über `LeagueService.PatchViewsAsync` bzw. `RebuildViewsAsync` schreiben (Kollision → neu laden), nie
   direkt laden-ändern-speichern — Codereview N4-007).

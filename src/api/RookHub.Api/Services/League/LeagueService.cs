@@ -17,7 +17,8 @@ namespace RookHub.Api.Services.League;
 /// </summary>
 public sealed class LeagueService
 {
-    public const int ShareKeepDays = 7;
+    /// <summary>So lange gilt ein Teilen-Link (seit 0.897.0, Wunsch 2026-11-08: „Freigabelinks sollen für 3 Monate gelten"; vorher 7 Tage).</summary>
+    public const int ShareKeepMonths = 3;
     private static readonly JsonSerializerOptions Compact = new() { WriteIndented = false };
 
     private readonly AppDbContext _db;
@@ -379,14 +380,14 @@ public sealed class LeagueService
     /// Primaerschluessel ist (eine Kollision scheitert laut am Insert).</summary>
     public static string NewToken() => ShareTokens.New(18);
 
-    /// <summary>Ablauf: <see cref="ShareKeepDays"/> nach der Runde — bei einer schon gespielten Runde aber nie vor
-    /// heute + <see cref="ShareKeepDays"/>, sonst wäre ein frisch angelegter Link zu einer älteren Runde sofort tot.</summary>
+    /// <summary>Ablauf: <see cref="ShareKeepMonths"/> Monate nach der Runde — bei einer schon gespielten (oder undatierten) Runde
+    /// <see cref="ShareKeepMonths"/> Monate ab heute, ein frisch angelegter Link gilt also immer mindestens so lange.</summary>
     public static DateOnly ExpiresFor(string? date, DateOnly today)
     {
         var d = (date ?? "").Split(' ').LastOrDefault();
-        var day = LeagueDates.Parse(d) ?? today.AddDays(30 - ShareKeepDays);
+        var day = LeagueDates.Parse(d) ?? today;
         if (day < today) day = today;
-        return day.AddDays(ShareKeepDays);
+        return day.AddMonths(ShareKeepMonths);
     }
 
     /// <summary>Link anlegen (gleiche Begegnung = gleicher Link, solange er gilt — je Verein). null = nicht teilbar. Der Link
