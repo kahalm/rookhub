@@ -2393,7 +2393,7 @@
       "groupRolesSaved": "A csoport szerepkörei elmentve — azonnal érvényesek."
     },
     "uploads": {
-      "intro": "LeagueHub csomagos feltöltések: lapképek, amelyeket csak eltároltunk, nem olvastunk be. Töltsd le, dolgozd fel, aztán töröld.",
+      "intro": "LeagueHub csoportos feltöltések: csak eltárolt, be nem olvasott játszmalap-képek. Olvasd be őket közvetlenül (szokásos, várakozó beolvasások lesznek, amelyek automatikusan feldolgozódnak), vagy töltsd le; utána töröld.",
       "empty": "Nincs csomagos feltöltés.",
       "when": "Mikor",
       "who": "Kitől",
@@ -2405,7 +2405,23 @@
       "download": "ZIP letöltése",
       "deleteConfirm": "Véglegesen törlöd a(z) #{{id}} csomagot ({{count}} kép)?",
       "deleted": "Csomag törölve",
-      "downloadError": "A letöltés nem sikerült"
+      "downloadError": "A letöltés nem sikerült",
+      "read": "Beolvasás",
+      "readOne": "Minden kép = egy játszma (oldalak sorrendben)",
+      "readOneTooMany": "Játszmánként legfeljebb {{max}} oldal",
+      "readEach": "Minden kép külön ({{count}} beolvasás)",
+      "readConfirmOne": "Beolvasod a(z) #{{id}} csomagot EGY játszmaként, {{count}} oldallal? Várakozó beolvasásként jelenik meg a LeagueHubban, és automatikusan beolvasódik.",
+      "readConfirmEach": "Külön-külön beolvasod a(z) #{{id}} csomag {{count}} képét? Minden kép külön várakozó beolvasás lesz a LeagueHubban; ugyanannak a játszmának az oldalai ott utólag összevonhatók.",
+      "readAgain": "A(z) #{{id}} csomagot már beolvastad ekkor: {{when}} ({{ids}}). Újra létrehozod a beolvasásokat?",
+      "readQueued": "{{count}} beolvasás létrehozva: {{ids}} — automatikusan beolvasódnak.",
+      "readSkipped": "{{count}} fájl kihagyva (nem JPEG-, PNG- vagy WebP-kép).",
+      "readMark": "beolvasva: {{when}} →",
+      "readErrors": {
+        "failed": "A beolvasás nem sikerült",
+        "tooManyPages": "Túl sok kép egy játszmához (legfeljebb 3 oldal)",
+        "unsupportedImage": "Ebben a csomagban nincs olvasható kép (csak JPEG, PNG és WebP olvasható)",
+        "notFinished": "A csomag feltöltése még nem fejeződött be"
+      }
     },
     "jobs": {
       "title": "Háttérfeladatok",

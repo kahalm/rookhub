@@ -2838,7 +2838,7 @@
       "groupRolesSaved": "Uloge grupe spremljene — vrijede odmah."
     },
     "uploads": {
-      "intro": "LeagueHub skupni prijenosi: slike obrazaca koje su samo pohranjene, nisu očitane. Preuzmite, obradite, zatim izbrišite.",
+      "intro": "LeagueHub skupni prijenosi: slike obrazaca koje su samo spremljene, a nisu očitane. Očitaj ih izravno (postaju obična očitanja na čekanju koja se automatski obrađuju) ili ih preuzmi; nakon toga izbriši.",
       "empty": "Nema skupnih prijenosa.",
       "when": "Kada",
       "who": "Od",
@@ -2850,7 +2850,23 @@
       "download": "Preuzmi ZIP",
       "deleteConfirm": "Trajno izbrisati skup #{{id}} s {{count}} slika?",
       "deleted": "Skup izbrisan",
-      "downloadError": "Preuzimanje nije uspjelo"
+      "downloadError": "Preuzimanje nije uspjelo",
+      "read": "Očitaj",
+      "readOne": "Sve slike = jedna partija (stranice redom)",
+      "readOneTooMany": "Najviše {{max}} stranice po partiji",
+      "readEach": "Svaka slika zasebno ({{count}} očitanja)",
+      "readConfirmOne": "Očitati skup #{{id}} kao JEDNU partiju s {{count}} stranica? Pojavit će se kao očitanje na čekanju u LeagueHubu i automatski se očitati.",
+      "readConfirmEach": "Očitati {{count}} slika skupa #{{id}} zasebno? Svaka slika postaje zasebno očitanje na čekanju u LeagueHubu; stranice iste partije tamo se poslije mogu spojiti.",
+      "readAgain": "Skup #{{id}} već je očitan {{when}} ({{ids}}). Ponovno stvoriti očitanja?",
+      "readQueued": "Stvoreno očitanja: {{count}} ({{ids}}) — automatski se očitavaju.",
+      "readSkipped": "Preskočeno datoteka: {{count}} (nije JPEG, PNG ili WebP slika).",
+      "readMark": "očitano {{when}} →",
+      "readErrors": {
+        "failed": "Očitavanje nije uspjelo",
+        "tooManyPages": "Previše slika za jednu partiju (najviše 3 stranice)",
+        "unsupportedImage": "U ovom skupu nema čitljive slike (očitavaju se samo JPEG, PNG i WebP)",
+        "notFinished": "Prijenos ovog skupa još nije završen"
+      }
     },
     "jobs": {
       "title": "Pozadinski poslovi",

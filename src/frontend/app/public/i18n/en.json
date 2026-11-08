@@ -2838,7 +2838,7 @@
       "groupRolesSaved": "Group roles saved — they apply immediately."
     },
     "uploads": {
-      "intro": "LeagueHub batch uploads: scoresheet images that were only stored, not read. Download, process, then delete.",
+      "intro": "LeagueHub batch uploads: scoresheet images that were only stored, not read. Read them in directly (they become normal pending reads that are picked up automatically) or download them; delete afterwards.",
       "empty": "No batch uploads.",
       "when": "When",
       "who": "From",
@@ -2850,7 +2850,23 @@
       "download": "Download ZIP",
       "deleteConfirm": "Delete batch #{{id}} with {{count}} images for good?",
       "deleted": "Batch deleted",
-      "downloadError": "Download failed"
+      "downloadError": "Download failed",
+      "read": "Read in",
+      "readOne": "All images = one game (pages in order)",
+      "readOneTooMany": "At most {{max}} pages per game",
+      "readEach": "Each image separately ({{count}} reads)",
+      "readConfirmOne": "Read batch #{{id}} as ONE game with {{count}} pages? It will appear as a pending read in LeagueHub and is read automatically.",
+      "readConfirmEach": "Read the {{count}} images of batch #{{id}} separately? Each image becomes its own pending read in LeagueHub; pages of the same game can be merged there afterwards.",
+      "readAgain": "Batch #{{id}} was already read in on {{when}} ({{ids}}). Create the reads again?",
+      "readQueued": "{{count}} read(s) created: {{ids}} — they are read automatically.",
+      "readSkipped": "{{count}} file(s) skipped (not a JPEG/PNG/WebP image).",
+      "readMark": "read in {{when}} →",
+      "readErrors": {
+        "failed": "Reading in failed",
+        "tooManyPages": "Too many images for one game (at most 3 pages)",
+        "unsupportedImage": "No readable image in this batch (only JPEG, PNG and WebP can be read)",
+        "notFinished": "The upload of this batch is not finished yet"
+      }
     },
     "jobs": {
       "title": "Background jobs",

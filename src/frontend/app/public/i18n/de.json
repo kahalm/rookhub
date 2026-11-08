@@ -2838,7 +2838,7 @@
       "groupRolesSaved": "Gruppenrollen gespeichert — sie gelten sofort."
     },
     "uploads": {
-      "intro": "LeagueHub-Stapel-Uploads: Formular-Bilder, die nur abgelegt und nicht eingelesen wurden. Herunterladen, bearbeiten, danach löschen.",
+      "intro": "LeagueHub-Stapel-Uploads: Formular-Bilder, die nur abgelegt und nicht eingelesen wurden. Direkt einlesen (sie werden normale wartende Einlesungen und automatisch gelesen) oder herunterladen; danach löschen.",
       "empty": "Keine Stapel-Uploads.",
       "when": "Wann",
       "who": "Von",
@@ -2850,7 +2850,23 @@
       "download": "ZIP herunterladen",
       "deleteConfirm": "Stapel #{{id}} mit {{count}} Bildern endgültig löschen?",
       "deleted": "Stapel gelöscht",
-      "downloadError": "Download fehlgeschlagen"
+      "downloadError": "Download fehlgeschlagen",
+      "read": "Einlesen",
+      "readOne": "Alle Bilder = eine Partie (Seiten in Reihenfolge)",
+      "readOneTooMany": "Höchstens {{max}} Seiten je Partie",
+      "readEach": "Jedes Bild einzeln ({{count}} Einlesungen)",
+      "readConfirmOne": "Stapel #{{id}} als EINE Partie mit {{count}} Seiten einlesen? Sie erscheint als wartende Einlesung in LeagueHub und wird automatisch gelesen.",
+      "readConfirmEach": "Die {{count}} Bilder von Stapel #{{id}} einzeln einlesen? Jedes Bild wird eine eigene wartende Einlesung in LeagueHub; Seiten derselben Partie lassen sich dort danach zusammenführen.",
+      "readAgain": "Stapel #{{id}} wurde am {{when}} schon eingelesen ({{ids}}). Die Einlesungen noch einmal anlegen?",
+      "readQueued": "{{count}} Einlesung(en) angelegt: {{ids}} — sie werden automatisch gelesen.",
+      "readSkipped": "{{count}} Datei(en) übersprungen (kein JPEG-, PNG- oder WebP-Bild).",
+      "readMark": "eingelesen {{when}} →",
+      "readErrors": {
+        "failed": "Einlesen fehlgeschlagen",
+        "tooManyPages": "Zu viele Bilder für eine Partie (höchstens 3 Seiten)",
+        "unsupportedImage": "Kein lesbares Bild in diesem Stapel (gelesen werden nur JPEG, PNG und WebP)",
+        "notFinished": "Der Upload dieses Stapels ist noch nicht abgeschlossen"
+      }
     },
     "jobs": {
       "title": "Hintergrundjobs",

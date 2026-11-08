@@ -117,6 +117,25 @@ Rollenverwaltung an).
   darauf; `views` werden Ansichten derselben Seite (`ScoresheetScanView`, wie „weiteres Foto dieser Seite"), dieselbe
   `fileId` darf mehrfach vorkommen (ein Foto, zwei Ausschnitte). 400 zusätzlich `invalidTransform`, `invalidLayout`,
   `tooManyViews`.
+  **Direkt einlesen** (0.901.0, Wunsch 2026-11-08: „den Stapel direkt wieder einlesen, nicht erst herunterladen"): `POST
+  /api/admin/league-uploads/{id}/read` `{ mode: "one" | "each", force? }` (messages.admin wie der ganze Tab) →
+  `Services/League/LeagueBatchReadService.cs` legt aus den Bildern normale WARTENDE Liga-Einlesungen an
+  (`ScoresheetScanService.CreateQueuedAsync`: Status 0, Purpose `league`, Verein des Stapels, Sprache/Seite `auto`, ohne
+  Tageszahl und ohne „höchstens drei offen"). `one` = alle Bilder EINE Einlesung, Seiten in Upload-Reihenfolge (≤ 3, sonst
+  400 `tooManyPages`; ein PDF/HEIC darunter → `unsupportedImage`); `each` = jedes Bild eine Einlesung (nicht lesbare Dateien
+  werden übersprungen, `skipped`; Seiten einer Partie lassen sich in LeagueHub zusammenführen). Besitzer = der Hochladende mit
+  Konto, sonst der klickende Admin. Vermerk am Stapel: `ReadQueuedAt` + `ReadScanIds` (kommagetrennt, über alle Klicks;
+  Migration `LeagueBatchReadQueued`), in `GET /api/admin/league-uploads` als `readQueuedAt`/`readScanIds`. Zweiter Klick →
+  409 `{ reason: "alreadyQueued", queuedAt, scanIds }`, nur mit `force` noch einmal. Antwort `{ scanIds, skipped, queuedAt }`.
+  Gelöscht wird nichts — die Einlesungen tragen eigene Kopien der Bilder, „Löschen" bleibt Handarbeit. Gelesen wird wie jede
+  wartende Einlesung: bei `Scoresheet:Reader=external` holt der Watcher (`~/claude/formulare-bot/watch.sh`, Teil 2
+  „einzelne Einlesungen", `Status IN (0,1)` der letzten 7 Tage) sie von selbst ab — ohne Bot-Änderung. Achtung: Teil 1 des
+  Watchers liest einen noch nicht bearbeiteten Stapel zusätzlich als Ganzes; „Einlesen" ist für Stapel gedacht, die der
+  Watcher schon hinter sich hat (sonst doppelt). Oberfläche: Knopf „Einlesen" je Zeile mit Menü der beiden Arten, Rückfrage,
+  Vermerk „eingelesen … → #id" mit Links auf `leaguehub…/verein/formular/{id}`.
+  **ZIP-Dateiname** (0.901.0): `<absender>-<jjjj-mm-tt>.zip` (Wiener Tag, Absender = Benutzername, ohne Konto `anonym`,
+  dateinamensicher), mehrere Stapel desselben Absenders am selben Tag mit `-1`, `-2` … in Upload-Reihenfolge
+  (`LeagueBatchUploadService.DownloadNames`); als `downloadName` in der Liste und im `Content-Disposition` des ZIP.
 - **Formular-Archiv + Datums-Bias (0.655.0**, Wunsch 2026-10-04: „merk dir Bild und Erkennung für Optimierungen, vorerst
   365 Tage" / „beim Datum heavily bias zu heuer"): `ScoresheetScanService.CloseLeagueScanAsync(actor, id, finalPgn)` kopiert
   vor dem Leeren je Seite Foto + (Seite 1) TranscriptionJson/ResolutionJson/FinalPgn in `ScoresheetScanArchives`

@@ -447,6 +447,11 @@ Ist: Klassen `.head` (15×) und `.header` (11×) — **Regel ab jetzt:** `.heade
 - **Gesperrter Knopf → Grund sichtbar darunter** (leise Zeile), nicht nur im Tooltip (r2-rg-analyze-disabled) —
   am Handy gibt es keinen Hover. In einer Knopfzeile stehen Knopf und Grund in einer eigenen schmalen Spalte
   (≤ 280 px), nie als 100-%-Zeile im Aktionsblock — sonst rutscht das ⋮ allein in eine Zeile (a1-rk-shared-kopf-grund).
+- **Aktion mit Arten** (Admin-Tab „Uploads“ → „Einlesen“, 0.901.0): ein `mat-stroked-button` mit Symbol öffnet ein
+  `mat-menu` mit den Arten als ganze Sätze („Alle Bilder = eine Partie …“, „Jedes Bild einzeln (n …)“); eine gerade
+  nicht mögliche Art bleibt sichtbar, gesperrt, mit dem Grund als zweite leise Zeile im Eintrag (`.why`). Nach der Wahl
+  fragt `ConfirmService.ask` mit dem Handlungsnamen als Knopf nach; das Ergebnis steht danach als leiser Vermerk in der Zeile
+  (Zeit → verlinkte Ids), nicht nur in der Snackbar.
 - Kein zweiter gleicher Hauptknopf auf einer Seite (Punktepartie: nur ein „Zur Aufgabe“, 0.750.1). Hat ein Modus
   seine eigene Hauptaktion im Panel (Lochfinder „Löcher suchen“), tritt der Kopfknopf dort als `mat-stroked-button`
   zurück (a1-rk-holes-zwei-hauptknoepfe).
@@ -1372,3 +1377,4 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 | 2026-10-28 | 0.866.0 | LeagueHub-Vereinsübersicht: jede Liga ein Aufklapper (`details.ov-league`, Kopf = `<h2>` in `summary`, ≥ 44 px, ▸ in `--red`, dreht sich beim Öffnen, Linie in `--line`); zugeklappte Ligen merkt sich der Browser; „+n“ im Kopf öffnet das Stellungsfenster, ohne zu klappen | Am Handy die Ligen einzeln überblicken | Nutzer |
 | 2026-11-02 | 0.881.2 | RookHub-Löser: langer Buch-/Kurs-Kommentar scrollt in seiner ~5-Zeilen-Höhe (`overflow-y: auto`, dünner Balken) statt abgeschnitten mit Verlauf | Züge in den unteren Zeilen waren nicht anklickbar, nur über „Ganz lesen“ | Wunsch User |
 | 2026-11-02 | 0.882.0 | Woodpecker-Löser = Kurs-Löser: Kommentare, Tipps, Spielweise, Aktionszeile, Sprachwahl wie im Kurs; Plan-Kopf (Chip, Zyklus · Satz/Fortschritt · Resttage, Balken ab Zyklus 2, Wiederholen-Hinweis) und Abschluss-/„gibt es nicht“-Karte in der Kontext-Karte | eigener schlanker Löser ohne Kommentare/Tipps, andere Anordnung als im Kurs | Wunsch User („egal ob über Woodpecker oder Kurs — die UI soll die gleiche sein“) |
+| 2026-11-08 | 0.901.0 | Admin „Uploads“: „Einlesen“ als Knopf mit Menü der Arten (gesperrte Art mit Grund im Eintrag), Rückfrage mit „Einlesen“ als Knopf, Vermerk „eingelesen … → #id“ mit Links in der Zeile (5.4) | Stapel musste zum Einlesen heruntergeladen und neu hochgeladen werden | Wunsch User |

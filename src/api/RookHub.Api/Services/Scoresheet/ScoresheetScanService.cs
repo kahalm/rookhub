@@ -181,6 +181,10 @@ public class ScoresheetScanService
     internal static List<List<ScoresheetUpload>>? SheetGroups(IReadOnlyList<ScoresheetUpload> uploads) =>
         ScoresheetIntake.SheetGroups(uploads);
 
+    /// <summary>Wartende Liga-Einlesung aus einem Stapel-Upload, vom Admin eingereiht (<see cref="ScoresheetIntake.CreateQueuedAsync"/>).</summary>
+    public Task<(ScoresheetScanDto? Scan, string? Reason)> CreateQueuedAsync(int ownerUserId, IReadOnlyList<ScoresheetUpload> pages,
+        int clubId) => _intake.CreateQueuedAsync(ownerUserId, pages, clubId);
+
     /// <summary>Liga-Einlesung aus einer FERTIGEN Lesung, ohne Modell-Aufruf (<see cref="ScoresheetIntake.CreateManualAsync"/>).</summary>
     public Task<(ScoresheetScanDto? Scan, string? Reason)> CreateManualAsync(int ownerUserId, IReadOnlyList<ScoresheetUpload> pages,
         string transcriptionJson, int? clubGameId, CancellationToken ct = default, int? clubId = null) =>

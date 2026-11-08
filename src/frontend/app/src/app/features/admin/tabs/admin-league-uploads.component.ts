@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
@@ -15,6 +16,21 @@ export interface LeagueUploadBatch {
   comment: string | null;
   /** Der Verein, für den hochgeladen wurde (LeagueHub mit mehreren Vereinen, 0.698.0). */
   clubId?: number; club?: string | null;
+  /** Dateiname des ZIP ohne „.zip": Absender + Tag, bei mehreren am Tag mit Nummer (0.901.0). */
+  downloadName?: string;
+  /** Zuletzt direkt eingelesen (0.901.0) und die Einlesungen, die daraus entstanden sind. */
+  readQueuedAt?: string | null; readScanIds?: number[] | null;
+}
+
+/** Wie die Bilder eines Stapels zu Einlesungen werden: alle = eine Partie (Seiten in Reihenfolge) oder jedes einzeln. */
+export type LeagueUploadReadMode = 'one' | 'each';
+
+/** Höchstens so viele Seiten hat eine Einlesung (`ScoresheetScanService.MaxPages`). */
+export const READ_MAX_PAGES = 3;
+
+/** Adresse einer Einlesung in LeagueHub: rookhub(-dev).… → leaguehub(-dev).…, sonst (lokal) dieselbe Herkunft. */
+export function leagueHubScanUrl(scanId: number, origin: string = window.location.origin): string {
+  return `${origin.replace('//rookhub', '//leaguehub')}/verein/formular/${scanId}`;
 }
 
 /**
@@ -25,7 +41,7 @@ export interface LeagueUploadBatch {
   selector: 'app-admin-league-uploads',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, MatButtonModule, MatIconModule, TranslatePipe, LoadErrorComponent],
+  imports: [DatePipe, MatButtonModule, MatIconModule, MatMenuModule, TranslatePipe, LoadErrorComponent],
   template: `
     <div class="uploads">
       <p class="intro">{{ 'admin.uploads.intro' | translate }}</p>
@@ -45,12 +61,23 @@ export interface LeagueUploadBatch {
               @for (b of list; track b.id) {
                 <tr>
                   <td>{{ b.id }}</td>
-                  <td>{{ b.createdAt | date:'mediumDate' }}, {{ b.createdAt | date:'shortTime' }}@if (!b.finishedAt) { <span class="muted"> · {{ 'admin.uploads.open' | translate }}</span> }</td>
+                  <td>{{ b.createdAt | date:'mediumDate' }}, {{ b.createdAt | date:'shortTime' }}@if (!b.finishedAt) { <span class="muted"> · {{ 'admin.uploads.open' | translate }}</span> }
+                    @if (b.readQueuedAt) {
+                      <div class="read-mark">{{ 'admin.uploads.readMark' | translate:{ when: (b.readQueuedAt | date:'short') } }}
+                        @for (sid of b.readScanIds ?? []; track sid; let last = $last) {
+                          <a [href]="scanUrl(sid)" target="_blank" rel="noopener">#{{ sid }}</a>@if (!last) {, }
+                        }
+                      </div>
+                    }
+                  </td>
                   <td>{{ b.viaShare ? ('admin.uploads.viaShare' | translate) : b.user }}@if (b.club) { <span class="muted club"> · {{ b.club }}</span> }</td>
                   <td class="num">{{ b.files }}</td>
                   <td class="num">{{ mb(b.bytes) }}</td>
                   <td class="comment">{{ b.comment }}</td>
                   <td class="acts">
+                    <button mat-stroked-button type="button" [disabled]="busy() === b.id || !b.files || !b.finishedAt"
+                      [matMenuTriggerFor]="readMenu" [matMenuTriggerData]="{ b: b }">
+                      <mat-icon>document_scanner</mat-icon> {{ 'admin.uploads.read' | translate }}</button>
                     <button mat-stroked-button type="button" [disabled]="busy() === b.id || !b.files" (click)="download(b)">
                       <mat-icon>download</mat-icon> {{ 'admin.uploads.download' | translate }}</button>
                     <button mat-button type="button" color="warn" [disabled]="busy() === b.id" (click)="remove(b)">
@@ -60,6 +87,17 @@ export interface LeagueUploadBatch {
               }
             </tbody>
           </table>
+          <mat-menu #readMenu="matMenu">
+            <ng-template matMenuContent let-b="b">
+              <button mat-menu-item type="button" [disabled]="b.files > maxPages" (click)="read(b, 'one')">
+                <span class="mode">{{ 'admin.uploads.readOne' | translate }}</span>
+                @if (b.files > maxPages) { <span class="why">{{ 'admin.uploads.readOneTooMany' | translate:{ max: maxPages } }}</span> }
+              </button>
+              <button mat-menu-item type="button" (click)="read(b, 'each')">
+                <span class="mode">{{ 'admin.uploads.readEach' | translate:{ count: b.files } }}</span>
+              </button>
+            </ng-template>
+          </mat-menu>
         }
       }
     </div>
@@ -73,6 +111,9 @@ export interface LeagueUploadBatch {
     .comment { max-width: 32ch; overflow-wrap: anywhere; }
     .acts { white-space: nowrap; }
     .muted { opacity: .7; }
+    .acts button + button { margin-left: 4px; }
+    .read-mark { font-size: .85em; color: var(--mat-sys-on-surface-variant); }
+    .why { display: block; font-size: .8em; color: var(--mat-sys-on-surface-variant); }
   `],
 })
 export class AdminLeagueUploadsComponent implements OnInit {
@@ -84,6 +125,7 @@ export class AdminLeagueUploadsComponent implements OnInit {
   readonly rows = signal<LeagueUploadBatch[] | null>(null);
   readonly error = signal(false);
   readonly busy = signal<number | null>(null);
+  readonly maxPages = READ_MAX_PAGES;
 
   ngOnInit(): void {
     void this.load();
@@ -109,11 +151,51 @@ export class AdminLeagueUploadsComponent implements OnInit {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `leaguehub-stapel-${b.id}.zip`;
+      a.download = `${b.downloadName || b.id}.zip`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch {
       this.snack.warn(this.translate.instant('admin.uploads.downloadError'));
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  scanUrl(scanId: number): string {
+    return leagueHubScanUrl(scanId);
+  }
+
+  /**
+   * Stapel direkt einlesen (0.901.0): der Server legt aus den Bildern wartende Liga-Einlesungen an, die der Leser von
+   * selbst abholt — kein Herunterladen und neu Hochladen. Schon eingereiht (409) → eigene Rückfrage, dann mit `force`.
+   */
+  async read(b: LeagueUploadBatch, mode: LeagueUploadReadMode): Promise<void> {
+    const key = mode === 'one' ? 'admin.uploads.readConfirmOne' : 'admin.uploads.readConfirmEach';
+    const label = { confirm: this.translate.instant('admin.uploads.read') };
+    if (!await firstValueFrom(this.confirm.ask(key, { id: b.id, count: b.files }, label))) return;
+    this.busy.set(b.id);
+    try {
+      let res: { scanIds: number[]; skipped: number; queuedAt: string };
+      try {
+        res = await firstValueFrom(this.http.post<typeof res>(`/api/admin/league-uploads/${b.id}/read`, { mode }));
+      } catch (e) {
+        if (!(e instanceof HttpErrorResponse) || e.status !== 409) throw e;
+        const prev: number[] = e.error?.scanIds ?? [];
+        const when = e.error?.queuedAt ? new Date(e.error.queuedAt).toLocaleString(this.translate.currentLang() || undefined) : '';
+        if (!await firstValueFrom(this.confirm.ask('admin.uploads.readAgain',
+          { id: b.id, when, ids: prev.map(i => '#' + i).join(', ') }, label))) return;
+        res = await firstValueFrom(this.http.post<typeof res>(`/api/admin/league-uploads/${b.id}/read`, { mode, force: true }));
+      }
+      this.rows.update(r => (r ?? []).map(x => x.id !== b.id ? x
+        : { ...x, readQueuedAt: res.queuedAt, readScanIds: [...(x.readScanIds ?? []), ...res.scanIds] }));
+      const ids = res.scanIds.map(i => '#' + i).join(', ');
+      let msg = this.translate.instant('admin.uploads.readQueued', { count: res.scanIds.length, ids });
+      if (res.skipped) msg += ' ' + this.translate.instant('admin.uploads.readSkipped', { count: res.skipped });
+      this.snack.success(msg, { duration: 8000 });
+    } catch (e) {
+      const reason = e instanceof HttpErrorResponse ? e.error?.reason : null;
+      const known = ['tooManyPages', 'unsupportedImage', 'notFinished'];
+      this.snack.warn(this.translate.instant(known.includes(reason) ? `admin.uploads.readErrors.${reason}` : 'admin.uploads.readErrors.failed'));
     } finally {
       this.busy.set(null);
     }

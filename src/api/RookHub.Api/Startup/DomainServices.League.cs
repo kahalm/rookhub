@@ -24,6 +24,7 @@ public static partial class DomainServicesSetup
             sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<RookHub.Api.Services.Accounts.PermissionResolver>()));
         services.AddScoped<RookHub.Api.Services.League.LeagueClubAdminService>();
         services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
+        services.AddScoped<RookHub.Api.Services.League.LeagueBatchReadService>();
         // Deckel der Uploads über Teilen-Links (je Link und Tag, im Arbeitsspeicher) — MUSS ein Singleton sein, sonst hätte
         // jeder Request seinen eigenen Zähler (LeagueClubService fällt ohne auf einen eigenen je Dienst zurück).
         services.AddSingleton<RookHub.Api.Services.League.LeagueShareUploadQuota>();

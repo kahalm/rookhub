@@ -4335,6 +4335,12 @@ namespace RookHub.Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
 
+                    b.Property<DateTime?>("ReadQueuedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ReadScanIds")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("ShareHash")
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)");

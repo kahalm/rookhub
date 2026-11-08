@@ -31,7 +31,7 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
         {
             if (!await batches.WriteZipAsync(id, fs, ct)) { await fs.DisposeAsync(); return NotFound(); }
             fs.Position = 0;
-            return File(fs, "application/zip", $"leaguehub-stapel-{id}.zip");
+            return File(fs, "application/zip", $"{await batches.DownloadNameAsync(id, ct) ?? id.ToString()}.zip");
         }
         catch
         {
@@ -106,6 +106,28 @@ public class AdminLeagueUploadController(LeagueBatchUploadService batches) : Bas
     public sealed record ManualScanPage(int FileId, int? Rotate = null, List<double>? Crop = null, List<ManualScanView>? Views = null);
 
     public sealed record ManualScanView(int FileId, int? Rotate = null, List<double>? Crop = null);
+
+    /// <summary>
+    /// Den Stapel direkt einlesen (0.901.0): legt aus seinen Bildern wartende Liga-Einlesungen an, die der Leser von selbst
+    /// abholt (<see cref="LeagueBatchReadService"/>). <c>mode</c> = <c>one</c> (alle Bilder eine Partie, höchstens drei Seiten)
+    /// oder <c>each</c> (jedes Bild eine Einlesung). Schon eingereiht → 409 <c>alreadyQueued</c> mit den alten Ids, außer mit
+    /// <c>force</c>. 400 <c>reason</c> ∈ invalidMode/notFinished/empty/tooManyPages/unsupportedImage/….
+    /// </summary>
+    [HttpPost("{id:int}/read")]
+    public async Task<IActionResult> Read(int id, [FromBody] ReadRequest? req, [FromServices] LeagueBatchReadService reader,
+        CancellationToken ct)
+    {
+        var (result, reason) = await reader.QueueAsync(id, GetUserId(), req?.Mode, req?.Force == true, ct);
+        return reason switch
+        {
+            null => Ok(result),
+            "notFound" => NotFound(),
+            "alreadyQueued" => Conflict(new { reason, queuedAt = result!.QueuedAt, scanIds = result.PreviousScanIds }),
+            _ => BadRequest(new { reason }),
+        };
+    }
+
+    public sealed record ReadRequest(string? Mode, bool Force = false);
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) => await batches.DeleteAsync(id, ct) ? NoContent() : NotFound();

@@ -56,8 +56,18 @@ internal sealed class ScoresheetIntake
         string? language, string? ownerSide = null, string? purpose = null, int? clubId = null) =>
         await CreateCoreAsync(userId, pages, language, ownerSide, purpose, null, null, clubId);
 
+    /// <summary>
+    /// Liga-Einlesung, die ein ADMIN aus einem Stapel-Upload einreiht (Admin-Tab „Uploads" → „Einlesen", 0.901.0): wartet wie
+    /// eine hochgeladene, der Leser (von außen: der Watcher) holt sie ab. Ohne Tageszahl und ohne „höchstens drei offen" —
+    /// das sind Bremsen für Nutzer, ein Stapel mit 64 Bildern soll in einem Klick drin sein.
+    /// </summary>
+    public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateQueuedAsync(int ownerUserId, IReadOnlyList<ScoresheetUpload> pages,
+        int clubId) =>
+        await CreateCoreAsync(ownerUserId, pages, "auto", null, ScoresheetScan.PurposeLeague, null, null, clubId, skipLimits: true);
+
     private async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateCoreAsync(int? userId, IReadOnlyList<ScoresheetUpload> pages,
-        string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash, int? clubId = null)
+        string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash, int? clubId = null,
+        bool skipLimits = false)
     {
         if (!External && !_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
@@ -77,7 +87,7 @@ internal sealed class ScoresheetIntake
         var spent = await _quota.SpentAsync(userId);
         var admin = spent.IsAdmin;
         var since = DateTime.UtcNow.AddDays(-1);
-        if (userId is int uid)
+        if (userId is int uid && !skipLimits)
         {
             if (!admin && await _quota.CountingSince(uid, since, purpose).CountAsync() >= _quota.LimitFor(purpose))
                 return (null, "dailyLimit");
@@ -85,7 +95,7 @@ internal sealed class ScoresheetIntake
                     && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= ScoresheetScanService.MaxOpenPerUser)
                 return (null, "tooManyOpen");
         }
-        if (!External && _quota.AllowanceFor(userId, spent).Blocked is { } blocked) return (null, blocked);   // von außen: keine Kosten
+        if (!External && !skipLimits && _quota.AllowanceFor(userId, spent).Blocked is { } blocked) return (null, blocked);   // von außen: keine Kosten
 
         var stored = new List<List<(byte[] Photo, string Type, string? Name)>>();
         foreach (var group in groups)

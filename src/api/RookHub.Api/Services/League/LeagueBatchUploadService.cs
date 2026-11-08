@@ -142,19 +142,63 @@ public sealed class LeagueBatchUploadService(AppDbContext db, AdminMessageServic
     // ── Admin ──
 
     /// <param name="Club">Name des Vereins, für den hochgeladen wurde (Mandanten-Schritt 2026-10-07).</param>
+    /// <param name="DownloadName">Dateiname des ZIP (0.901.0): <see cref="DownloadNameOf"/>.</param>
+    /// <param name="ReadQueuedAt">Zuletzt direkt eingelesen (<see cref="LeagueBatchReadService"/>, 0.901.0).</param>
+    /// <param name="ReadScanIds">Die daraus entstandenen Einlesungen.</param>
     public sealed record AdminRow(int Id, DateTime CreatedAt, DateTime? FinishedAt, string? User, bool ViaShare, int Files, long Bytes,
-        string? Comment, int ClubId = 0, string? Club = null);
+        string? Comment, int ClubId = 0, string? Club = null, string DownloadName = "", DateTime? ReadQueuedAt = null,
+        List<int>? ReadScanIds = null);
 
     public async Task<List<AdminRow>> ListAsync(CancellationToken ct)
     {
         var rows = await db.LeagueBatchUploads.AsNoTracking().OrderByDescending(b => b.CreatedAt)
-            .Select(b => new { b.Id, b.CreatedAt, b.FinishedAt, b.UserId, b.ShareHash, b.FileCount, b.TotalBytes, b.Comment, b.ClubId })
+            .Select(b => new { b.Id, b.CreatedAt, b.FinishedAt, b.UserId, b.ShareHash, b.FileCount, b.TotalBytes, b.Comment, b.ClubId,
+                b.ReadQueuedAt, b.ReadScanIds })
             .ToListAsync(ct);
         var ids = rows.Where(r => r.UserId != null).Select(r => r.UserId!.Value).Distinct().ToList();
         var names = await db.AppUsers.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
         var clubs = await db.LeagueClubs.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+        var files = DownloadNames(rows.Select(r => (r.Id, r.CreatedAt, r.UserId is { } u ? names.GetValueOrDefault(u) : null)));
         return rows.Select(r => new AdminRow(r.Id, r.CreatedAt, r.FinishedAt, r.UserId is { } u ? names.GetValueOrDefault(u) : null,
-            r.UserId is null, r.FileCount, r.TotalBytes, r.Comment, r.ClubId, clubs.GetValueOrDefault(r.ClubId))).ToList();
+            r.UserId is null, r.FileCount, r.TotalBytes, r.Comment, r.ClubId, clubs.GetValueOrDefault(r.ClubId), files[r.Id],
+            r.ReadQueuedAt, LeagueBatchReadService.ParseIds(r.ReadScanIds))).ToList();
+    }
+
+    /// <summary>Dateiname des ZIP eines Stapels (ohne „.zip"), <c>null</c> = gibt es nicht.</summary>
+    public async Task<string?> DownloadNameAsync(int id, CancellationToken ct) =>
+        (await ListAsync(ct)).FirstOrDefault(r => r.Id == id)?.DownloadName;
+
+    private static readonly TimeZoneInfo Vienna = TimeZoneInfo.FindSystemTimeZoneById(QuietHours.DefaultTimeZone);
+
+    /// <summary>
+    /// Dateinamen der ZIPs (0.901.0, Wunsch 2026-11-08): Absender + Tag statt „leaguehub-stapel-&lt;id&gt;" —
+    /// <c>kahalm-2026-10-11</c>, ohne Konto <c>anonym-…</c>. Mehrere Stapel desselben Absenders am selben Tag (Wiener Zeit)
+    /// bekommen in Upload-Reihenfolge <c>-1</c>, <c>-2</c> …; ein einzelner bleibt ohne Nummer.
+    /// </summary>
+    internal static Dictionary<int, string> DownloadNames(IEnumerable<(int Id, DateTime CreatedAt, string? User)> batches)
+    {
+        var result = new Dictionary<int, string>();
+        var groups = batches.Select(b => (b.Id, b.CreatedAt, Base: DownloadNameOf(b.User, DateOnly.FromDateTime(
+                TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(b.CreatedAt, DateTimeKind.Utc), Vienna)))))
+            .GroupBy(b => b.Base, StringComparer.OrdinalIgnoreCase);
+        foreach (var g in groups)
+        {
+            var ordered = g.OrderBy(b => b.CreatedAt).ThenBy(b => b.Id).ToList();
+            for (var i = 0; i < ordered.Count; i++)
+                result[ordered[i].Id] = ordered.Count == 1 ? ordered[i].Base : $"{ordered[i].Base}-{i + 1}";
+        }
+        return result;
+    }
+
+    /// <summary>„&lt;absender&gt;-&lt;jjjj-mm-tt&gt;", dateinamensicher: Umlaute umschrieben, alles außer Buchstaben, Ziffern,
+    /// Punkt und Unterstrich → „-".</summary>
+    internal static string DownloadNameOf(string? user, DateOnly day)
+    {
+        var name = (user ?? "").Trim().Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue").Replace("Ä", "Ae")
+            .Replace("Ö", "Oe").Replace("Ü", "Ue").Replace("ß", "ss");
+        name = System.Text.RegularExpressions.Regex.Replace(name, "[^A-Za-z0-9._]+", "-").Trim('-', '.');
+        if (name.Length > 60) name = name[..60].Trim('-', '.');
+        return $"{(name.Length == 0 ? "anonym" : name)}-{day:yyyy-MM-dd}";
     }
 
     /// <summary>Den Stapel als ZIP in <paramref name="output"/> schreiben (Bild für Bild aus der Datenbank, nicht alles auf
