@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.904.0", date: "2026-11-08", changes: [
+    { en: "Bell “Analysis finished”: whoever clicks “Analyse game” (also as a guest on a share link or via the extension) or uploads a game – in RookHub or LeagueHub – gets a bell notification as soon as the game is fully analysed, i.e. after the deeper second pass, not after the quick first one. The link leads to their own game; already finished analyses and the Lc0 second analysis do not ring.",
+      de: "Glocke „Analyse fertig“: Wer „Partie analysieren“ klickt (auch als Gast über einen Teilen-Link oder über die Erweiterung) oder eine Partie hochlädt – in RookHub oder LeagueHub –, bekommt eine Glocke, sobald die Partie tief analysiert ist, also nach der Vertiefung und nicht schon nach dem schnellen ersten Durchgang. Der Link führt auf die eigene Partie; schon fertige Analysen und die Lc0-Zweitanalyse melden sich nicht." },
+    { en: "Bell “Scoresheet waiting for approval”: when a scoresheet uploaded via a LeagueHub share link without an account has been read, the club’s managers (admins and league managers of that club) get a bell notification that leads straight to the reading in LeagueHub.",
+      de: "Glocke „Formular wartet auf Freigabe“: Ist ein über einen LeagueHub-Teilen-Link ohne Konto hochgeladenes Partieformular gelesen, bekommen die Verwalter des Vereins (Admins und Liga-Verwalter dieses Vereins) eine Glocke, die direkt zur Einlesung in LeagueHub führt." },
+  ] },
   { version: "0.903.0", date: "2026-11-08", changes: [
     { en: "Admin → Uploads: a batch can now be marked as “Done” (and reopened). Done batches stay in the list, dimmed with a “done …” note, and the scoresheet reader no longer picks them up.",
       de: "Admin → Uploads: Ein Stapel lässt sich jetzt als „Erledigt“ markieren (und wieder öffnen). Erledigte Stapel bleiben in der Liste, gedämpft mit dem Vermerk „erledigt …“, und der Formular-Leser holt sie nicht mehr ab." },

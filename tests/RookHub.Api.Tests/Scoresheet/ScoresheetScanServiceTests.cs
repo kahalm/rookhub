@@ -544,6 +544,61 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(Written.Length, state.Plies.Count);
     }
 
+    /// <summary>Wunsch 2026-11-08: ein Formular über einen Teilen-Link ohne Konto wartet nach dem Lesen auf Übernahme — Glocke an
+    /// die Verwalter DIESES Vereins (Admins + league.manage mit Mitgliedschaft), Link direkt auf die Einlesung in LeagueHub.</summary>
+    [Fact]
+    public async Task ProcessReading_AnonymousLeagueScan_RingsTheClubManagers_WithALeagueHubLink()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Reader"] = "external", ["App:LeagueHubBaseUrl"] = "https://liga.example/",
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db), NullLogger<ScoresheetScanService>.Instance, config);
+        await TestClubs.SeedAsync(_db);
+        var admin = await UserAsync("admin");
+        admin.IsAdmin = true;
+        var homeManager = await UserAsync("home");
+        var otherManager = await UserAsync("other");
+        var plain = await UserAsync("plain");
+        _db.Roles.Add(new Role { Id = 70, Key = "lm", Name = "Liga verwalten" });
+        _db.RolePermissions.Add(new RolePermission { RoleId = 70, Permission = Permissions.LeagueManage });
+        _db.UserRoles.AddRange(new UserRole { UserId = homeManager.Id, RoleId = 70 }, new UserRole { UserId = otherManager.Id, RoleId = 70 });
+        _db.Groups.AddRange(new Group { Id = 80, Name = "Heim" }, new Group { Id = 81, Name = "Fremd" });
+        _db.LeagueClubMembers.AddRange(new LeagueClubMember { ClubId = TestClubs.HomeId, GroupId = 80 },
+            new LeagueClubMember { ClubId = TestClubs.OtherId, GroupId = 81 });
+        _db.UserGroups.AddRange(new UserGroup { UserId = homeManager.Id, GroupId = 80 }, new UserGroup { UserId = otherManager.Id, GroupId = 81 },
+            new UserGroup { UserId = plain.Id, GroupId = 80 });
+        await _db.SaveChangesAsync();
+        var (scan, _, _) = await _service.CreateAnonymousAsync(new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "s.jpg") },
+            "de", null, "ip", TestClubs.HomeId);
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        var bells = await _db.Notifications.Where(n => n.Type == NotificationType.LeagueScanAwaiting).OrderBy(n => n.UserId).ToListAsync();
+        Assert.Equal(new[] { admin.Id, homeManager.Id }, bells.Select(b => b.UserId).ToArray());
+        Assert.All(bells, b => Assert.Equal($"https://liga.example/verein/formular/{scan.Id}", b.Link));
+        Assert.Contains("\"white\":\"Didi\"", bells[0].DataJson);
+    }
+
+    [Fact]
+    public async Task ProcessReading_LeagueScanWithAccount_RingsNoManager()
+    {
+        WithExternalReader();
+        await TestClubs.SeedAsync(_db);
+        var admin = await UserAsync("admin");
+        admin.IsAdmin = true;
+        var u = await UserAsync();
+        await _db.SaveChangesAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "auto",
+            purpose: ScoresheetScan.PurposeLeague, clubId: TestClubs.HomeId);
+
+        await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+
+        Assert.Empty(await _db.Notifications.Where(n => n.Type == NotificationType.LeagueScanAwaiting).ToListAsync());
+    }
+
     [Fact]
     public async Task ProcessReading_BadInput_IsRejected_AndTheScanStaysPending()
     {

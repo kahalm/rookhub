@@ -39,6 +39,15 @@ public static class NotificationType
     public const string ScoresheetRead = "scoresheet_read";
     /// <summary>Ein Partieformular ließ sich nicht einlesen (→ Glocke, Link auf die Einlese-Seite). Daten: reason.</summary>
     public const string ScoresheetFailed = "scoresheet_failed";
+    /// <summary>Eine Partie ist fertig TIEF analysiert — erster Durchgang UND Vertiefung durch (0.904.0). An jeden, der es
+    /// wollte (<see cref="GameAnalysisWatcher"/>: „Partie analysieren" geklickt, Partie hochgeladen — RookHub oder LeagueHub),
+    /// Link auf SEINE Partie. Daten: white, black.</summary>
+    public const string GameAnalysisFinished = "game_analysis_finished";
+    /// <summary>Ein Partieformular, über einen LeagueHub-Teilen-Link OHNE Konto hochgeladen, ist gelesen und wartet darauf,
+    /// dass es jemand als Vereinspartie übernimmt (0.904.0, Wunsch 2026-11-08) → Glocke der Verwalter dieses Vereins
+    /// (Admins + league.manage mit Vereinsmitgliedschaft), Link auf die Einlesung in LeagueHub (<c>App:LeagueHubBaseUrl</c>
+    /// + <c>/verein/formular/{id}</c>, ohne Konfiguration kein Link). Daten: white, black, club.</summary>
+    public const string LeagueScanAwaiting = "league_scan_awaiting";
     public const string FriendRequestReceived = "friend_request_received";
     public const string FriendRequestAccepted = "friend_request_accepted";
     public const string RevengePerformed = "revenge_performed";

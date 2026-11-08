@@ -110,7 +110,8 @@ public class ScoresheetScanService
         External = string.Equals(config?["Scoresheet:Reader"], "external", StringComparison.OrdinalIgnoreCase);
 
         _quota = new ScoresheetQuota(db, vision, _budget, dailyLimit, leagueDailyLimit, ipSecret, External);
-        _processor = new ScoresheetProcessor(db, vision, games, notifications, logger, _budget, reader, checkEngine, startMode, _quota);
+        _processor = new ScoresheetProcessor(db, vision, games, notifications, logger, _budget, reader, checkEngine, startMode, _quota,
+            config?["App:LeagueHubBaseUrl"]);
         _league = new LeagueScoresheetScans(db, logger);
         _correction = new ScoresheetCorrection(db);
         _intake = new ScoresheetIntake(db, vision, logger, _quota, _processor, _league, External);

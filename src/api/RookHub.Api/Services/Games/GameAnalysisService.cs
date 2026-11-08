@@ -5,6 +5,7 @@ using RookHub.Api.Models;
 using RookHub.Api.Services.EngineBroker;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Library;
+using RookHub.Api.Services.Social;
 using RookHub.Api.DTOs.Games;
 using RookHub.Api.DTOs.Engines;
 
@@ -44,12 +45,14 @@ public class GameAnalysisService
     /// Werkzeuge) passiert nichts.</param>
     /// <param name="quiet">Sperrzeiten — die Meisterpartien-Analyse (<see cref="GameAnalysisOrigin.Library"/>) reiht
     /// darin keine Stellungen ein. Ohne (Tests, Werkzeuge): nie gesperrt.</param>
+    /// <param name="notifications">Glocke „Analyse fertig" (<see cref="GameAnalysisWatchers"/>) mit Web-Push; ohne nur die Glocke.</param>
     public GameAnalysisService(AppDbContext db, AnalysisJobService jobs, CommentSetService comments,
-        ILogger<GameAnalysisService> logger, IGameReviewTextScheduler? reviewTexts = null, QuietHours? quiet = null)
+        ILogger<GameAnalysisService> logger, IGameReviewTextScheduler? reviewTexts = null, QuietHours? quiet = null,
+        NotificationService? notifications = null)
     {
         _queries = new GameAnalysisQueries(db);
         _deletion = new GameAnalysisDeletion(db, jobs, logger);
-        _pump = new GameAnalysisPump(db, jobs, logger, reviewTexts, quiet);
+        _pump = new GameAnalysisPump(db, jobs, logger, reviewTexts, quiet, new GameAnalysisWatchers(db, notifications));
         _intake = new GameAnalysisIntake(db, jobs, comments, logger, _pump, _queries, _deletion);
     }
 

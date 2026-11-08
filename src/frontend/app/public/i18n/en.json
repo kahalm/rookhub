@@ -221,6 +221,8 @@
       "tournament_nearby_new": "{{count}} new tournaments within {{radiusKm}} km of “{{profileName}}”, e.g. {{firstName}}",
       "tournament_changed": "“{{tournamentName}}” has changed: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "“{{tournamentName}}” ({{date}}) has disappeared from chess-results — probably cancelled",
+      "game_analysis_finished": "Analysis finished: {{white}} – {{black}} is fully analysed",
+      "league_scan_awaiting": "Scoresheet from a share link is waiting for approval: {{white}} – {{black}} ({{club}})",
       "scoresheet_read": "Scoresheet read: {{white}} – {{black}}, {{moves}} half-moves, {{uncertain}} uncertain",
       "scoresheet_failed": "Scoresheet could not be read: {{reason}}",
       "league_batch_uploaded": "{{count}} scoresheet images were uploaded via a LeagueHub share link",

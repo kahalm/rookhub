@@ -93,7 +93,10 @@ internal sealed class SavedGameAnalysisLink
             var linked = await _analyses.GetHeadUncheckedAsync(linkedId, ct);
             // Eine gescheiterte ist kein Ergebnis: wer erneut klickt, will neu rechnen.
             if (linked is not null && linked.Status != "failed")
+            {
+                await WatchAsync(userId, game, linkedId, ct);
                 return new GameAnalyzeResultDto { Analysis = linked, Reused = true };
+            }
         }
 
         var ownId = await _db.GameAnalyses.AsNoTracking()
@@ -108,6 +111,7 @@ internal sealed class SavedGameAnalysisLink
                 game.GameAnalysisId = id;
                 await _db.SaveChangesAsync(ct);
             }
+            await WatchAsync(userId, game, id, ct);
             return new GameAnalyzeResultDto { Analysis = await _analyses.GetHeadUncheckedAsync(id, ct), Reused = true };
         }
 
@@ -119,6 +123,7 @@ internal sealed class SavedGameAnalysisLink
                 game.GameAnalysisId = clubId;
                 await _db.SaveChangesAsync(ct);
             }
+            await WatchAsync(userId, game, clubId, ct);
             return new GameAnalyzeResultDto { Analysis = await _analyses.GetHeadUncheckedAsync(clubId, ct), Reused = true };
         }
 
@@ -132,9 +137,21 @@ internal sealed class SavedGameAnalysisLink
             game.GameAnalysisId = created.Analysis.Id;
             await _db.SaveChangesAsync(ct);
         }
+        await WatchAsync(userId, game, created.Analysis.Id, ct);
         // Die Stellungen braucht die Antwort nicht — die Seite holt sich gleich die Bewertungen.
         created.Analysis.Positions = null;
         return new GameAnalyzeResultDto { Analysis = created.Analysis };
+    }
+
+    /// <summary>Glocke, sobald die Analyse endgültig (samt Vertiefung) fertig ist (0.904.0, <see cref="GameAnalysisWatchers"/>) —
+    /// Link auf die Partie, wie DIESER Nutzer sie sieht: der Besitzer seine Partieseite, ein Gast den Teilen-Link. Schon
+    /// fertig = keine Glocke (die Seite zeigt es). Ein Fehler beim Merken lässt „Partie analysieren" nicht scheitern.</summary>
+    internal async Task WatchAsync(int userId, SavedGame game, int analysisId, CancellationToken ct)
+    {
+        var link = game.UserId == userId || string.IsNullOrEmpty(game.ShareToken) ? $"/games/{game.Id}" : $"/g/{game.ShareToken}";
+        var watchers = new GameAnalysisWatchers(_db);
+        try { await watchers.WatchAsync(userId, analysisId, link, ct); }
+        catch (DbUpdateException) { watchers.Forget(); }   // zwei gleichzeitige Klicks: die andere Zeile steht schon
     }
 
     /// <summary>

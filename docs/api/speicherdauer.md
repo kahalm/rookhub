@@ -28,6 +28,7 @@ je DELETE), ohne große Spalten zu laden.
 | Datenart | Frist | Job | Config-Schlüssel (Vorgabe) |
 |---|---|---|---|
 | Benachrichtigungen (gelesen) | 180 Tage | `NotificationRetentionScheduler` (05:00 UTC) | fest (`NotificationService.SeenRetention`) |
+| Wartende der Glocke „Analyse fertig“ (`GameAnalysisWatchers`) | bis zur Glocke, liegengebliebene 60 Tage | `NotificationRetentionScheduler` (05:00 UTC) | fest (`GameAnalysisWatchers.StaleAfter`) |
 | Admin-/Direktnachrichten (gelesen) | 365 Tage; ungelesene bleiben | Aufräumlauf | `Retention:MessagesDays` (365) |
 | Formular-Einlesungen, gescheitert | Foto + Lesung nach 30 Tagen geleert (Zeile bleibt fürs Kontingent) | Aufräumlauf | `Retention:ScoresheetFailedDays` (30) |
 | Formular-Einlesungen, übernommen (RookHub) | Foto bleibt bei der Partie; geht mit der Partie, dem Konto oder per `DELETE /api/scoresheets/{id}` | — | — |

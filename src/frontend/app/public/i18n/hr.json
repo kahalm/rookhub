@@ -221,6 +221,8 @@
       "tournament_nearby_new": "{{count}} novih turnira u polumjeru od {{radiusKm}} km oko „{{profileName}}“, npr. {{firstName}}",
       "tournament_changed": "„{{tournamentName}}“ se promijenio: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) je nestao s chess-resultsa — vjerojatno otkazan",
+      "game_analysis_finished": "Analiza gotova: {{white}} – {{black}} je temeljito analizirana",
+      "league_scan_awaiting": "Obrazac s poveznice za dijeljenje čeka odobrenje: {{white}} – {{black}} ({{club}})",
       "scoresheet_read": "Zapisnik učitan: {{white}} – {{black}}, {{moves}} polupoteza, nesigurno: {{uncertain}}",
       "scoresheet_failed": "Zapisnik nije bilo moguće učitati: {{reason}}",
       "league_batch_uploaded": "Putem LeagueHub poveznice za dijeljenje preneseno je {{count}} slika obrazaca",

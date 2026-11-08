@@ -1,3 +1,6 @@
+using RookHub.Api.Data;
+using RookHub.Api.Services.Games;
+
 namespace RookHub.Api.Services.Social;
 
 /// <summary>
@@ -30,6 +33,9 @@ public class NotificationRetentionScheduler : PeriodicWorker
     {
         var (purged, anonymized) = await services.GetRequiredService<NotificationService>()
             .RunRetentionAsync(DateTime.UtcNow, ct);
+        // Glocke „Analyse fertig" (0.904.0): Zeilen, deren Analyse nie fertig wurde, verfallen nach 60 Tagen.
+        var stale = await new GameAnalysisWatchers(services.GetRequiredService<AppDbContext>()).PurgeStaleAsync(DateTime.UtcNow, ct);
+        if (stale > 0) _logger.LogInformation("Benachrichtigungs-Retention: {Stale} liegengebliebene Analyse-Wartende entfernt", stale);
         if (purged > 0 || anonymized > 0)
             _logger.LogInformation(
                 "Benachrichtigungs-Retention: {Purged} gelesene gelöscht, {Anonymized} Namen gelöschter Konten ersetzt",

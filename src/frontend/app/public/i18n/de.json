@@ -221,6 +221,8 @@
       "tournament_nearby_new": "{{count}} neue Turniere im Umkreis von {{radiusKm}} km um „{{profileName}}“, z. B. {{firstName}}",
       "tournament_changed": "„{{tournamentName}}“ hat sich geändert: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) ist von chess-results verschwunden — vermutlich abgesagt",
+      "game_analysis_finished": "Analyse fertig: {{white}} – {{black}} ist tief analysiert",
+      "league_scan_awaiting": "Formular über Teilen-Link wartet auf Freigabe: {{white}} – {{black}} ({{club}})",
       "scoresheet_read": "Partieformular gelesen: {{white}} – {{black}}, {{moves}} Halbzüge, {{uncertain}} unsicher",
       "scoresheet_failed": "Partieformular konnte nicht gelesen werden: {{reason}}",
       "league_batch_uploaded": "Über einen LeagueHub-Teilen-Link wurden {{count}} Formular-Bilder abgelegt",

@@ -29,11 +29,16 @@ internal sealed class ScoresheetProcessor
     private readonly IScoresheetEngine? _engine;
     private readonly ScoresheetReadMode _startMode;
     private readonly ScoresheetQuota _quota;
+    private readonly string? _leagueHubBaseUrl;
 
+    /// <param name="leagueHubBaseUrl"><c>App:LeagueHubBaseUrl</c> — Ziel der Glocke „Formular wartet auf Übernahme";
+    /// ohne kommt die Glocke ohne Link.</param>
     internal ScoresheetProcessor(AppDbContext db, IScoresheetVisionClient vision, SavedGameService games,
         NotificationService notifications, ILogger<ScoresheetScanService> logger, ScoresheetBudget budget,
-        ScoresheetReader reader, IScoresheetEngine? engine, ScoresheetReadMode startMode, ScoresheetQuota quota)
+        ScoresheetReader reader, IScoresheetEngine? engine, ScoresheetReadMode startMode, ScoresheetQuota quota,
+        string? leagueHubBaseUrl = null)
     {
+        _leagueHubBaseUrl = string.IsNullOrWhiteSpace(leagueHubBaseUrl) ? null : leagueHubBaseUrl.Trim().TrimEnd('/');
         _db = db;
         _vision = vision;
         _games = games;
@@ -280,6 +285,9 @@ internal sealed class ScoresheetProcessor
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Formular-Einlesung {ScanId} (Vereins-Datenbank) fertig: {Plies} Halbzüge, {Uncertain} unsicher",
                 scan.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain));
+            // Über einen Teilen-Link ohne Konto: übernimmt der Hochladende die Partie nicht selbst, bleibt sie liegen, bis ein
+            // Verwalter sie freigibt — die erfahren es per Glocke (0.904.0, Wunsch 2026-11-08). Mit Konto übernimmt man selbst.
+            if (scan.UserId is null && scan.ClubId is int clubId) await NotifyLeagueManagersAsync(scan, clubId, t, ct);
             return;
         }
 
@@ -374,6 +382,35 @@ internal sealed class ScoresheetProcessor
     }
 
     /// <summary>Benachrichtigen, ohne dass ein Fehler dabei die Einlesung scheitern lässt.</summary>
+    /// <summary>Glocke <see cref="NotificationType.LeagueScanAwaiting"/> an die Verwalter des Vereins: Admins und wer
+    /// <c>league.manage</c> hat UND zum Verein gehört (dieselbe Regel wie <c>LeagueClubResolver.CanManageAsync</c>). Beiwerk —
+    /// ein Fehler lässt die Einlesung nicht scheitern.</summary>
+    internal async Task NotifyLeagueManagersAsync(ScoresheetScan scan, int clubId, ScoresheetTranscription t, CancellationToken ct)
+    {
+        try
+        {
+            var holders = await Accounts.PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.LeagueManage, ct);
+            var admins = (await _db.AppUsers.AsNoTracking().Where(u => holders.Contains(u.Id) && u.IsAdmin).Select(u => u.Id)
+                .ToListAsync(ct)).ToHashSet();
+            var recipients = new List<int>();
+            foreach (var id in holders)
+                if (admins.Contains(id) || (await League.LeagueClubResolver.ClubIdsOfAsync(_db, id, ct)).Contains(clubId))
+                    recipients.Add(id);
+            if (recipients.Count == 0) return;
+            var club = await _db.LeagueClubs.AsNoTracking().Where(c => c.Id == clubId).Select(c => c.Name).FirstOrDefaultAsync(ct);
+            await _notifications.CreateManyAsync(recipients, NotificationType.LeagueScanAwaiting, new Dictionary<string, string>
+            {
+                ["white"] = Blank(t.White) ?? "?",
+                ["black"] = Blank(t.Black) ?? "?",
+                ["club"] = club ?? "",
+            }, _leagueHubBaseUrl is null ? null : $"{_leagueHubBaseUrl}/verein/formular/{scan.Id}");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Formular-Einlesung {ScanId}: Glocke an die Verwalter fehlgeschlagen", scan.Id);
+        }
+    }
+
     private async Task NotifyAsync(int userId, string type, Dictionary<string, string> data, string link)
     {
         try { await _notifications.CreateAsync(userId, type, data, link); }

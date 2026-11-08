@@ -127,12 +127,28 @@ internal sealed class ClubGameWriter
         g.CreatedAt = now;
     }
 
-    internal async Task SaveAsync(List<LeagueClubGame> games, CancellationToken ct)
+    /// <param name="uploaderUserId">Mit Konto hochgeladen: dieses Konto bekommt die Glocke, sobald die Analyse der Partie
+    /// tief durch ist (0.904.0, <see cref="GameAnalysisWatchers"/>) — auch bei „Schwaz"-Partien, die den Hochladenden
+    /// sonst nicht speichern (die Zeile ist intern und geht mit der Glocke).</param>
+    internal async Task SaveAsync(List<LeagueClubGame> games, CancellationToken ct, int? uploaderUserId = null)
     {
         if (games.Count == 0) return;
         _db.LeagueClubGames.AddRange(games);
         await _db.SaveChangesAsync(ct);
+        if (uploaderUserId is int uid) await WatchAsync(uid, games.Select(g => g.Id), ct);
         await RefreshCardsAsync(games.SelectMany(g => new[] { g.WhiteFide, g.BlackFide }), ct);
+    }
+
+    /// <summary>Glocke „Analyse fertig" vormerken — Beiwerk: ein Fehler dabei lässt den Upload nicht scheitern.</summary>
+    private async Task WatchAsync(int userId, IEnumerable<int> clubGameIds, CancellationToken ct)
+    {
+        var watchers = new GameAnalysisWatchers(_db);
+        try { await watchers.WatchClubGamesAsync(userId, clubGameIds, ct); }
+        catch (DbUpdateException ex)
+        {
+            _log.LogWarning(ex, "Vereins-Datenbank: Glocke „Analyse fertig“ nicht vorgemerkt");
+            watchers.Forget();
+        }
     }
 
     /// <summary>Spielerkarten der betroffenen Ligaspieler neu rechnen und die Partienzahl in den Ansichten nachziehen.</summary>
@@ -339,6 +355,7 @@ internal sealed class ClubGameWriter
         }
         await _db.SaveChangesAsync(ct);
         if (games.Count > 0) _log.LogInformation("Vereins-Datenbank: {Count} anonym hochgeladene Partien einem Konto zugeordnet", games.Count);
+        await WatchAsync(userId, games.Select(g => g.Id), ct);
         return games.Count;
     }
 

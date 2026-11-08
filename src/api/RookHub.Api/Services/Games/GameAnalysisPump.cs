@@ -23,10 +23,12 @@ internal sealed class GameAnalysisPump
     private readonly IGameReviewTextScheduler? _reviewTexts;
     private readonly GameAnalysisIngest _ingest;
     private readonly GameAnalysisTurns _turns;
+    private readonly GameAnalysisWatchers? _watchers;
 
     internal GameAnalysisPump(AppDbContext db, AnalysisJobService jobs, ILogger logger,
-        IGameReviewTextScheduler? reviewTexts, QuietHours? quiet)
+        IGameReviewTextScheduler? reviewTexts, QuietHours? quiet, GameAnalysisWatchers? watchers = null)
     {
+        _watchers = watchers;
         _db = db;
         _jobs = jobs;
         _logger = logger;
@@ -100,6 +102,8 @@ internal sealed class GameAnalysisPump
         }
         // Erst NACH dem Speichern: der Hintergrund-Lauf liest die Analyse aus einem eigenen Scope.
         if (finished) _reviewTexts?.Schedule(analysis.Id, refined: false);
+        // Ohne Vertiefung ist das schon das endgültige Ende — sonst meldet RefineStepAsync.
+        if (finished) await NotifyWatchersAsync(analysis, ct);
         return changed;
     }
 
@@ -131,7 +135,18 @@ internal sealed class GameAnalysisPump
         }
         // Die genauere Rechnung kann Bestzug und Klasse verschieben — die Erklärungen werden neu geschrieben.
         if (refined) _reviewTexts?.Schedule(analysis.Id, refined: true);
+        if (refined) await NotifyWatchersAsync(analysis, ct);
         return changed;
+    }
+
+    /// <summary>Glocke „Analyse fertig" an alle, die darauf warten (<see cref="GameAnalysisWatchers"/>) — nur beim
+    /// ENDGÜLTIGEN Ende (prüft der Dienst selbst). Ein Fehler dabei hält die Pumpe nicht an: die Analyse ist gespeichert.</summary>
+    private async Task NotifyWatchersAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        if (_watchers is null) return;
+        try { await _watchers.NotifyFinishedAsync(analysis, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { _logger.LogWarning(ex, "GameAnalysis {Id}: Glocke „Analyse fertig“ nicht verschickt", analysis.Id); }
     }
 
     /// <summary>Vertiefungs-Auftraege nachlegen — hoechstens <see cref="GameAnalysisTurnRules.RefineJobCap"/> offen, als

@@ -2855,6 +2855,8 @@
       "tournament_nearby_new": "{{count}} új verseny {{radiusKm}} km-en belül — „{{profileName}}”, például {{firstName}}",
       "tournament_changed": "„{{tournamentName}}” megváltozott: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "„{{tournamentName}}” ({{date}}) eltűnt a chess-resultsról — valószínűleg elmarad",
+      "game_analysis_finished": "Elemzés kész: {{white}} – {{black}} mélyen elemezve",
+      "league_scan_awaiting": "Megosztási linkről érkezett játszmalap jóváhagyásra vár: {{white}} – {{black}} ({{club}})",
       "scoresheet_read": "Játszmalap beolvasva: {{white}} – {{black}}, {{moves}} féllépés, {{uncertain}} bizonytalan",
       "scoresheet_failed": "A játszmalapot nem sikerült beolvasni: {{reason}}",
       "league_batch_uploaded": "Egy LeagueHub megosztási linken {{count}} lapkép lett feltöltve",

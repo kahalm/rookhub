@@ -270,6 +270,8 @@ internal sealed class SavedGameImport
             };
             _db.SavedGames.Add(entity);
             await _db.SaveChangesAsync(ct);
+            // Hochgeladen und die Analyse der Vereinspartie läuft noch: Glocke, sobald sie tief durch ist (0.904.0).
+            if (entity.GameAnalysisId is int analysisId) await _link.WatchAsync(userId, entity, analysisId, ct);
             ownGames++;
             ownChars += gamePgn.Length;
             result.Imported++;

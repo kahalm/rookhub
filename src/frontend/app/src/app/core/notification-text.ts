@@ -1,3 +1,4 @@
+import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { AppNotification } from './in-app-notification.service';
 
@@ -66,6 +67,7 @@ export function notificationCategory(type: string): NotificationCategory {
       return 'tournaments';
     case 'new_user_registered':
     case 'league_batch_uploaded':
+    case 'league_scan_awaiting':
     case 'ebook_uploaded':
       return 'admin';
     default:
@@ -103,6 +105,20 @@ export function notificationIcon(n: AppNotification): string {
     case 'calc_series_edition_released': return 'event_available';
     case 'scoresheet_read': return 'document_scanner';
     case 'scoresheet_failed': return 'error_outline';
+    case 'game_analysis_finished': return 'insights';
+    case 'league_scan_awaiting': return 'pending_actions';
     default: return 'notifications';
   }
+}
+
+/**
+ * Ziel einer Benachrichtigung öffnen: eine RookHub-Route über den Router, eine ABSOLUTE Adresse (0.904.0: das in LeagueHub
+ * wartende Partieformular — eine andere Oberfläche, die der Router nicht kennt) per Seitenwechsel. Absolute Ziele kommen
+ * nur vom Server (fester Konfigurationswert `App:LeagueHubBaseUrl`), nie aus Nutzereingaben.
+ */
+export function openNotificationLink(router: Router, link: string | null | undefined,
+                                     assign: (url: string) => void = url => window.location.assign(url)): void {
+  if (!link) return;
+  if (/^https?:\/\//i.test(link)) assign(link);
+  else void router.navigateByUrl(link);
 }

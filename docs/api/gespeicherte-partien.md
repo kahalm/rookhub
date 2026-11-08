@@ -265,3 +265,7 @@ flachere), aber mit eigenem Ursprung
 Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh_…`). Bei ApiToken muss `scope=extension` sein (sonst 403); ein Token mit Scope `engine` erreicht ausschließlich `/api/external-engine/*` (`PatScopeFenceMiddleware.AllowedPrefixesByScope`, siehe „Eigener Engine-Broker“). Policy-Scheme im Auth-Stack routet das Bearer-Format automatisch zum passenden Handler.
 
 CORS (Codereview A10-007): keine `ExtensionPolicy` mehr — sie öffnete die Extension-Endpunkte für Skripte auf chess.com, lichess.org und chessable.com, für das entfallene Userscript. Die RepCheck-Extension ruft RookHub nur aus ihrem Background-Worker (`rookhub-fetch`, host_permissions, CORS-frei; Content-Scripts fetchen nur chess.com/lichess/chessable). Die Default-Policy (`http://localhost:4200` + `http://localhost:8085`, ohne `AllowCredentials`) gibt es nur in Development (`Startup/CorsSetup.cs`, `CorsSetupTests`).
+
+**Glocke „Analyse fertig" (0.904.0):** „Partie analysieren" (auch als Gast auf `/g/{token}` und über die Erweiterung) merkt
+den Nutzer vor; ist die Analyse samt Vertiefung durch, kommt eine Glocke mit Link auf seine Partie. Schon fertige Analysen
+melden nichts. Einzelheiten: `docs/api/benachrichtigungen-glocke.md`, Abschnitt „Analyse fertig".

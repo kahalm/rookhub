@@ -1,6 +1,7 @@
 import { TranslateService } from '@ngx-translate/core';
 import { AppNotification } from './in-app-notification.service';
-import { notificationText, notificationIcon, notificationCategory, NOTIFICATION_CATEGORIES } from './notification-text';
+import { Router } from '@angular/router';
+import { notificationText, notificationIcon, notificationCategory, NOTIFICATION_CATEGORIES, openNotificationLink } from './notification-text';
 
 /** Fake TranslateService: gibt den (aufgelösten) Key zurück, damit Tests die Key-Wahl prüfen können. */
 function fakeTranslate(): TranslateService {
@@ -131,5 +132,25 @@ describe('Turnierverzeichnis-Benachrichtigungen', () => {
     const t = fakeTranslate();
     expect(notificationText(t, notif('tournament_changed', { tournamentName: 'Open Braunau' })))
       .toBe('notifications.type.tournament_changed');
+  });
+});
+
+describe('Glocke „Analyse fertig“ + „Formular wartet auf Freigabe“ (0.904.0)', () => {
+  it('maps both new types to their icon and the analysis bell to its text key', () => {
+    expect(notificationIcon(notif('game_analysis_finished'))).toBe('insights');
+    expect(notificationIcon(notif('league_scan_awaiting'))).toBe('pending_actions');
+    expect(notificationText(fakeTranslate(), notif('game_analysis_finished', { white: 'A', black: 'B' })))
+      .toBe('notifications.type.game_analysis_finished');
+    expect(notificationCategory('league_scan_awaiting')).toBe('admin');
+  });
+
+  it('opens a RookHub route via the router, an absolute LeagueHub address via a page change', () => {
+    const urls: string[] = [];
+    const router = { navigateByUrl: (u: string) => { urls.push('router:' + u); return Promise.resolve(true); } } as unknown as Router;
+    const assign = (u: string) => urls.push('page:' + u);
+    openNotificationLink(router, '/games/5', assign);
+    openNotificationLink(router, 'https://leaguehub.example/verein/formular/7', assign);
+    openNotificationLink(router, null, assign);
+    expect(urls).toEqual(['router:/games/5', 'page:https://leaguehub.example/verein/formular/7']);
   });
 });

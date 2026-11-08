@@ -3486,6 +3486,44 @@ namespace RookHub.Api.Migrations
                     b.ToTable("GameAnalysisPositions");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.GameAnalysisWatcher", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("GameAnalysisId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LeagueClubGameId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Link")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GameAnalysisId", "UserId")
+                        .IsUnique();
+
+                    b.HasIndex("LeagueClubGameId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("GameAnalysisWatchers");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.GameMistakeProgress", b =>
                 {
                     b.Property<int>("Id")
@@ -10032,6 +10070,31 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("GameAnalysis");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.GameAnalysisWatcher", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.GameAnalysis", "GameAnalysis")
+                        .WithMany()
+                        .HasForeignKey("GameAnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("RookHub.Api.Models.LeagueClubGame", "LeagueClubGame")
+                        .WithMany()
+                        .HasForeignKey("LeagueClubGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameAnalysis");
+
+                    b.Navigation("LeagueClubGame");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.GameMistakeProgress", b =>

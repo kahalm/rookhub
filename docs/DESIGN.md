@@ -1223,6 +1223,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-08 | 0.904.0 · Glocke | Neue Glocken-Typen „Analyse fertig“ (`insights`, Link auf die eigene Partie) und „Formular wartet auf Freigabe“ (`pending_actions`, Kategorie Admin); ein Glocken-Ziel mit absoluter Adresse (LeagueHub) öffnet per Seitenwechsel statt über den Router (`openNotificationLink`) | Wunsch 08.11.: „informier ihn via glocke wenn fertig tief analysiert“, „gib mir einen Glockenping“ bei wartender Freigabe — die Freigabe liegt in LeagueHub, einer anderen Oberfläche | User |
 | 2026-11-08 | 0.902.0 · Formular-Leser | Wartende Einlesung zeigt „Platz N in der Warteschlange“ statt des Nachsatzes, sobald andere davor stehen; dann kein Warnhinweis nach 15 min (5.10) | Zwei Formulare zugleich: das zweite zählte nur „wartet“ hoch und sah nach Ausfall aus | Nutzerwunsch 08.11. |
 | 2026-11-08 | 0.900.0 · Partieseite + Analysebrett | Partieseite = „Mit Engine“; Kopfzeile dort „Ohne Engine“ (`mat-stroked-button`, `visibility_off`, vorn in `.header-actions`); im Analysebrett führt „Mit Engine“ mit `?game=` zurück zur Partieseite | Wunsch 08.11.: „Mit Engine → club-games/236, Ohne Engine → …?blind=1“ | User |
 | 2026-11-08 | 0.898.0 · Analysebrett | Partie immer im Linien-Baum; Kopf-Knopf „Ohne/Mit Engine“ schaltet auch dort den Modus, Dialog = nur Startmodus | Wunsch 08.11.: „zwischen den beiden Modi einfach wechseln können“ | User |

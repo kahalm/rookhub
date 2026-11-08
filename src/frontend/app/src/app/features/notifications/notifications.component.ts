@@ -11,7 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { InAppNotificationService, AppNotification } from '../../core/in-app-notification.service';
 import {
   notificationText, notificationIcon, notificationCategory,
-  NotificationCategory, NOTIFICATION_CATEGORIES,
+  NotificationCategory, NOTIFICATION_CATEGORIES, openNotificationLink,
 } from '../../core/notification-text';
 import { PushService } from '../../core/push.service';
 import { AuthService } from '../../core/auth.service';
@@ -278,7 +278,7 @@ export class NotificationsComponent implements OnInit {
 
   open(n: AppNotification): void {
     if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); n.seen = true; }
-    if (n.link) this.router.navigateByUrl(n.link);
+    openNotificationLink(this.router, n.link);
   }
 
   text(n: AppNotification): string { return notificationText(this.translate, n); }

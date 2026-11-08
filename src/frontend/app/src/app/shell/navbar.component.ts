@@ -18,7 +18,7 @@ import { CatalogService } from '../features/catalog/catalog.service';
 import { MenuService } from '../core/menu.service';
 import { InAppNotificationService, AppNotification } from '../core/in-app-notification.service';
 import { MessageService } from '../core/message.service';
-import { notificationText, notificationIcon } from '../core/notification-text';
+import { notificationText, notificationIcon, openNotificationLink } from '../core/notification-text';
 import { LocaleService } from '../core/locale.service';
 import { ThemeService, AppTheme } from '../core/theme.service';
 import { EinkService } from '../core/eink.service';
@@ -598,7 +598,7 @@ export class NavbarComponent implements OnInit {
   openNotification(n: AppNotification): void {
     if (!n.seen) { this.notif.markSeen(n.id).subscribe({ error: () => {} }); }
     this.notifications = this.notifications.filter(x => x.id !== n.id);
-    if (n.link) this.router.navigateByUrl(n.link);
+    openNotificationLink(this.router, n.link);
   }
 
   /** Material-Icon je Benachrichtigungstyp. */

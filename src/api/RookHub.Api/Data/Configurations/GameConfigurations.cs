@@ -408,6 +408,19 @@ internal sealed class GameMoveExplanationConfiguration : IEntityTypeConfiguratio
     }
 }
 
+internal sealed class GameAnalysisWatcherConfiguration : IEntityTypeConfiguration<GameAnalysisWatcher>
+{
+    public void Configure(EntityTypeBuilder<GameAnalysisWatcher> e)
+    {
+        e.HasOne(w => w.User).WithMany().HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(w => w.GameAnalysis).WithMany().HasForeignKey(w => w.GameAnalysisId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne(w => w.LeagueClubGame).WithMany().HasForeignKey(w => w.LeagueClubGameId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(w => w.Link).HasMaxLength(300);
+        e.HasIndex(w => new { w.GameAnalysisId, w.UserId }).IsUnique();
+        e.HasIndex(w => new { w.LeagueClubGameId, w.UserId }).IsUnique();
+    }
+}
+
 internal sealed class GameAnalysisPositionConfiguration : IEntityTypeConfiguration<GameAnalysisPosition>
 {
     public void Configure(EntityTypeBuilder<GameAnalysisPosition> e)

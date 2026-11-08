@@ -164,6 +164,7 @@ public partial class AppDbContext : DbContext
     public DbSet<CourseTranslationJob> CourseTranslationJobs => Set<CourseTranslationJob>();
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
+    public DbSet<GameAnalysisWatcher> GameAnalysisWatchers => Set<GameAnalysisWatcher>();
     public DbSet<GameMoveExplanation> GameMoveExplanations => Set<GameMoveExplanation>();
     public DbSet<GameRoast> GameRoasts => Set<GameRoast>();
     public DbSet<GameRecap> GameRecaps => Set<GameRecap>();

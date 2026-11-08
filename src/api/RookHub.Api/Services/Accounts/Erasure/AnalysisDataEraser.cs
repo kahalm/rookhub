@@ -5,7 +5,7 @@ namespace RookHub.Api.Services.Accounts.Erasure;
 /// <summary>Kontolöschung, Bereich Analyse: Aufträge, Verlauf, Zugvergleiche, Kalk-Bäume, Punktepartien, Partie-Analysen.</summary>
 internal static class AnalysisDataEraser
 {
-    /// <summary>Hintergrund-Aufträge, Analyse-Verlauf, Zugvergleiche.</summary>
+    /// <summary>Hintergrund-Aufträge, Analyse-Verlauf, Wartende der Glocke „Analyse fertig“, Zugvergleiche.</summary>
     internal static async Task JobsAndHistoryAsync(UserErasureContext ctx)
     {
         var (db, userId) = (ctx.Db, ctx.UserId);
@@ -14,6 +14,8 @@ internal static class AnalysisDataEraser
         db.AnalysisJobs.RemoveRange(await db.AnalysisJobs.Where(x => x.UserId == userId).ToListAsync());
         // Analyse-Verlauf (0.603.0): Stellungen und Zugfolgen des Nutzers.
         db.AnalysisHistoryEntries.RemoveRange(await db.AnalysisHistoryEntries.Where(h => h.UserId == userId).ToListAsync());
+        // Glocke „Analyse fertig" (0.904.0): wer auf welche Partie wartet — samt „Schwaz"-Uploads.
+        db.GameAnalysisWatchers.RemoveRange(await db.GameAnalysisWatchers.Where(w => w.UserId == userId).ToListAsync());
         // „Ohne Engine analysieren" (0.855.0): eigene Linien je Partie samt ihren Stellungen (unter InMemory ausdrücklich).
         var studies = await db.LineStudies.Include(s => s.Positions).Where(s => s.UserId == userId).ToListAsync();
         db.LineStudyPositions.RemoveRange(studies.SelectMany(s => s.Positions));
