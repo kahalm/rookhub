@@ -8,14 +8,17 @@ namespace RookHub.Api.Services.Engines;
 /// <summary>
 /// Zugvergleiche zu den Fehlern einer Vereinspartie (0.908.0, Wunsch 2026-11-08: „bei Ligapartien lässt du ja Fehler
 /// nachspielen — kannst du für diese Fehler auch immer gleich den Fehlzug mit dem besten Zug vergleichen? Denke da an
-/// Compare Moves, die beiden Tiefe 35 oder so vergleichen." und „Ligapartien dürfen an der Stelle alle mit 35 rechnen").
+/// Compare Moves, die beiden Tiefe 35 oder so vergleichen." und „Ligapartien dürfen an der Stelle alle mit 35 rechnen"; seit
+/// 0.909.0 „vertiefe Ligapartien auf 30 und vergleiche auch 30" — die Analyse vertieft auf 30, die Vergleiche rechnen 30).
 ///
 /// <list type="bullet">
 /// <item><b>Was</b>: je Fehler (<see cref="GameMistakeSelection"/>, der Spiegel von „Fehler nachspielen") ein normaler
 /// Zugvergleich (<see cref="MoveComparisonService"/>) „bester Zug gegen Partiezug" mit <see cref="DefaultDepth"/>, Begründung
 /// auf Deutsch (<see cref="Language"/> — LeagueHub ist eine deutschsprachige Oberfläche, die Vereine sind Tiroler).</item>
 /// <item><b>Wann</b>: sobald die HAUPTanalyse der Vereinspartie endgültig fertig ist (<see cref="GameAnalysisWatchers.IsFinal"/>,
-/// Origin Club ohne <see cref="GameAnalysis.EngineId"/> — die Lc0-Zweitanalyse nie): die Pumpe der Partie-Analysen ruft
+/// Origin Club ohne <see cref="GameAnalysis.EngineId"/> — die Lc0-Zweitanalyse nie). Seit 0.909.0 heißt das: NACH der
+/// Vertiefung auf 30 (<see cref="GameAnalysisDefaults.ClubRefineDepth"/>), die Fehler und besten Züge kommen also aus den
+/// Zahlen der Tiefe 30, auch für den Nachtrag (eine noch zu vertiefende Analyse ist nicht fertig). Die Pumpe der Partie-Analysen ruft
 /// <see cref="EnqueueAsync"/>. Was davor schon fertig war, holt der Nachtrag (<see cref="TickAsync"/>) nach — immer nur eine
 /// Partie, wenn nichts mehr wartet, die zuletzt fertig gewordene zuerst.</item>
 /// <item><b>Wie gerechnet</b>: angelegt wird nur die Zeile (<see cref="MoveComparisonStatus.Waiting"/>); die Pumpe startet
@@ -26,11 +29,11 @@ namespace RookHub.Api.Services.Engines;
 /// <item><b>Weg damit</b>: mit der Analyse (Löschen der Partie, Cascade) und beim Korrigieren der Züge
 /// (<see cref="DeleteForAnalysisAsync"/> aus dem Umbau — danach legt das neue Ende sie neu an).</item>
 /// </list>
-/// Konfiguration: <c>ClubMistakeComparisons:Enabled</c> (Vorgabe an), <c>:Depth</c> (35), <c>:MaxActive</c> (1).
+/// Konfiguration: <c>ClubMistakeComparisons:Enabled</c> (Vorgabe an), <c>:Depth</c> (30, seit 0.909.0; vorher 35), <c>:MaxActive</c> (1).
 /// </summary>
 public sealed class ClubMistakeComparisons
 {
-    public const int DefaultDepth = 35;
+    public const int DefaultDepth = GameAnalysisDefaults.ClubRefineDepth;
     public const int DefaultMaxActive = 1;
     public const string Language = "de";
 

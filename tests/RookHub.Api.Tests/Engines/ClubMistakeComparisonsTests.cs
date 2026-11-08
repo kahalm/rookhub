@@ -97,7 +97,7 @@ public class ClubMistakeComparisonsTests : IDisposable
     }
 
     [Fact]
-    public async Task Enqueue_OneWaitingComparisonPerMistake_Depth35_German_Idempotent()
+    public async Task Enqueue_OneWaitingComparisonPerMistake_Depth30_German_Idempotent()
     {
         var a = await AnalysisAsync();
         Assert.Equal(2, await ClubMistakeComparisons.EnqueueAsync(_db, a));
@@ -107,7 +107,7 @@ public class ClubMistakeComparisonsTests : IDisposable
         Assert.All(rows, r =>
         {
             Assert.Equal(MoveComparisonStatus.Waiting, r.Status);
-            Assert.Equal(35, r.Depth);
+            Assert.Equal(30, r.Depth);
             Assert.Equal("de", r.Language);
             Assert.Equal(House, r.UserId);
             Assert.Equal(a.Id, r.GameAnalysisId);
@@ -144,7 +144,7 @@ public class ClubMistakeComparisonsTests : IDisposable
         Assert.Equal(MoveComparisonStatus.Waiting, rows[1].Status);
         var jobs = await _db.AnalysisJobs.ToListAsync();
         Assert.Equal(2, jobs.Count);   // bester Zug + Partiezug
-        Assert.All(jobs, j => { Assert.True(j.Background); Assert.True(j.Batch); Assert.Equal(35, j.TargetDepth); });
+        Assert.All(jobs, j => { Assert.True(j.Background); Assert.True(j.Batch); Assert.Equal(30, j.TargetDepth); });
 
         // Für das Haus-Konto unsichtbar und ohne Wirkung auf seine Deckel.
         Assert.Empty(await _svc.ListAsync(House));

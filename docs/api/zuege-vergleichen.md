@@ -51,6 +51,8 @@ den `IClaudeJsonClient` hinein — dort tauschen, wer die Begründungen schreibt
 
 Wunsch 2026-11-08: „bei Ligapartien lässt du ja Fehler nachspielen — kannst du für diese Fehler auch immer gleich den
 Fehlzug mit dem besten Zug vergleichen? … Tiefe 35" und „Ligapartien dürfen an der Stelle alle mit 35 rechnen".
+Seit 0.909.0 („vertiefe Ligapartien auf 30 und vergleiche auch 30"): Tiefe 30, und erst NACH der Vertiefung der Analyse
+auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung auf 30").
 `Services/Engines/ClubMistakeComparisons.cs`, Auswahl `Services/Games/GameMistakeSelection.cs`, lesen
 `Services/League/ClubGameComparisons.cs`.
 
@@ -58,15 +60,18 @@ Fehlzug mit dem besten Zug vergleichen? … Tiefe 35" und „Ligapartien dürfen
   `GameMoveClasses`, Codes I/M/P und Miss X), beide Seiten, ohne Bestzug / Bestzug = Partiezug / unspielbaren Bestzug. Ohne
   Buchzüge und ohne „nicht mehr zeigen" — beides hängt am Betrachter, der Server nimmt die Obermenge. Literal-Test auf
   beiden Seiten: `GameMistakeSelectionTests` ↔ `mistakes.util.spec.ts` („server mirror").
-* **Wann**: am endgültigen Ende der HAUPTanalyse (Origin Club, ohne EngineId — Lc0 nie; `GameAnalysisWatchers.IsFinal`) ruft
+* **Wann**: am endgültigen Ende der HAUPTanalyse (Origin Club, ohne EngineId — Lc0 nie; `GameAnalysisWatchers.IsFinal`, seit
+  0.909.0 also nach der Vertiefung auf 30 — Fehler und beste Züge stammen aus den Zahlen der Tiefe 30) ruft
   `GameAnalysisPump` an derselben Stelle wie die Glocke `ClubMistakeComparisons.EnqueueAsync`: je Fehler ein Vergleich
   [bester Zug der Analyse, Partiezug] mit Status `Waiting` (5), `GameAnalysisId` + `Ply` gesetzt (eindeutig je Analyse und
   Halbzug), Marke `GameAnalyses.MistakeComparisonsAt`. Doppelt aufgerufen passiert nichts.
 * **Nachtrag** (Altbestand, auch Partie 236): die Pumpe (`MoveComparisonPumpService` → `TickAsync`) legt EINE Partie je Takt
-  an, und nur, wenn kein Vergleich mehr wartet — die zuletzt fertig gewordene zuerst. Neue Partien stehen so nie hinter dem
+  an, und nur, wenn kein Vergleich mehr wartet — die zuletzt fertig gewordene zuerst. Eine Analyse mit offener Vertiefung (der per
+  `DeepenClubAnalyses` nachvertiefte Altbestand) ist nicht fertig und wird übersprungen, bis ihre Vertiefung durch ist —
+  danach legt sie die Pumpe am Ende ohnehin selbst an. Neue Partien stehen so nie hinter dem
   Altbestand.
 * **Rechnen**: höchstens `ClubMistakeComparisons:MaxActive` (1) gleichzeitig in `Candidates`/`Replies`, wartende nach
-  `FinishedAt` der Analyse (neueste zuerst), dann Halbzug. Tiefe `ClubMistakeComparisons:Depth` (35, NUR hier — eigene
+  `FinishedAt` der Analyse (neueste zuerst), dann Halbzug. Tiefe `ClubMistakeComparisons:Depth` (30 = `ClubRefineDepth`; 0.908.0: 35; NUR hier — eigene
   Vergleiche auf der Haus-Engine bleiben bei `HouseMaxDepth` 24). Aufträge als Stapel-Hintergrundarbeit (`Background` +
   `Batch`, wie die Analyse der Vereinspartien): nach allem, worauf jemand wartet, und in den Sperrzeiten nicht. Ist die
   Haus-Engine nicht mehr freigegeben (nur bei gesetztem `EngineOwnerUserId`) oder der Auftragsdeckel voll, bleibt der Rest
@@ -84,6 +89,8 @@ Fehlzug mit dem besten Zug vergleichen? … Tiefe 35" und „Ligapartien dürfen
   von Hand mit Tiefe 24: 11 Fehler, je 1,5–3 min. Tiefe 35 ist 11 Halbzüge tiefer — grob Faktor 20–80 → etwa 0,5–4 h je
   Vergleich auf einer Engine, also Wochen für den ganzen Altbestand. Deshalb einer nach dem anderen, nur im Leerlauf, neueste
   zuerst; Tiefe und Gleichzeitigkeit sind Schlüssel.
+  Seit 0.909.0 (Tiefe 30): Prod-Messung der Tiefe-30-Vergleiche (3 Stück) im Schnitt 5 min je Vergleich → ~2 300 Fehler
+  der 230 Altpartien ≈ 190 Engine-Stunden bei `MaxActive` 1, also ca. 8 Tage Dauerlauf, dazu die Vertiefung selbst (siehe dort).
 
 **Vergleichsmodus (0.375.0)**: Der Waagen-Knopf startet eine ZWEITE Engine auf derselben
 Stellung (`compareEngine`), beide Linienlisten stehen untereinander. Möglich ohne Umbau, weil

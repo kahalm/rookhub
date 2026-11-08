@@ -154,15 +154,26 @@ internal sealed class GameAnalysisIntake
     /// Eine Vereinspartie fuer den Stapel anlegen (<see cref="GameAnalysisOrigin.Club"/>) — genau wie
     /// <see cref="CreateLibraryBatchAsync"/>, nur mit dem Verweis auf die Partie der Vereins-Datenbank. Der Titel kommt
     /// aus dem Kopf des PGN (Weiss – Schwarz). Wirft <see cref="ArgumentException"/> bei einem unspielbaren PGN.
+    /// <para>Seit 0.909.0 (Wunsch 2026-11-08: „vertiefe Ligapartien auf 30 und vergleiche auch 30") mit Vertiefung wie
+    /// „Partie analysieren": erst Tiefe 20, dann <see cref="GameAnalysisDefaults.ClubRefineDepth"/> (30, fünf Linien) —
+    /// als Stapel-Hintergrundarbeit (<see cref="GameAnalysisTurns.IsOwnersRefineTurnAsync"/>). Erst danach ist die Analyse
+    /// endgültig fertig: Glocke und Zugvergleiche der Fehler kommen mit den Zahlen der Tiefe 30.</para>
     /// </summary>
-    internal Task<GameAnalysisDto> CreateClubBatchAsync(int ownerUserId, int leagueClubGameId, string pgn,
+    internal async Task<GameAnalysisDto> CreateClubBatchAsync(int ownerUserId, int leagueClubGameId, string pgn,
         CancellationToken ct = default)
-        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
+    {
+        var dto = await CreateAsync(ownerUserId, new CreateGameAnalysisRequest
         {
             Pgn = pgn,
             TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
             MultiPv = GameAnalysisDefaults.MultiPv,
         }, ct, GameAnalysisOrigin.Club, engineOwnerUserId: ownerUserId, leagueClubGameId: leagueClubGameId);
+        var entity = await _db.GameAnalyses.FirstAsync(g => g.Id == dto.Id, ct);
+        entity.RefineDepth = GameAnalysisDefaults.ClubRefineDepth;
+        entity.RefineMultiPv = GameAnalysisDefaults.MultiPv;
+        await _db.SaveChangesAsync(ct);
+        return dto;
+    }
 
     /// <summary>Eine Liga-Partie aus einem Spielerprofil für den Stapel anlegen (<see cref="GameAnalysisOrigin.League"/>,
     /// 0.665.0) — wie <see cref="CreateClubBatchAsync"/>, erkannt über den Zug-Schlüssel.</summary>

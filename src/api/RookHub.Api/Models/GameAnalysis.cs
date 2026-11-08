@@ -284,6 +284,11 @@ public static class GameAnalysisDefaults
     /// </summary>
     public const int SavedGameTargetDepth = 30;
 
+    /// <summary>Tiefe der Vertiefung der Vereinspartien (<see cref="GameAnalysisOrigin.Club"/>, Hauptanalyse ohne feste Engine) —
+    /// dieselbe wie bei „Partie analysieren" (seit 0.909.0, gewünscht 2026-11-08). Die Lc0-Zweitanalyse (Knotenziel) und die
+    /// Liga-Partien aus Spielerprofilen (<see cref="GameAnalysisOrigin.League"/>) vertiefen nicht.</summary>
+    public const int ClubRefineDepth = SavedGameTargetDepth;
+
     /// <summary>So viele eingeworfene Partien darf ein Nutzer gleichzeitig offen haben. Der Deckel
     /// zaehlt <see cref="GameAnalysisOrigin.Guess"/> UND <see cref="GameAnalysisOrigin.SavedGame"/>
     /// zusammen — beide rechnen auf fremder Rechenzeit, und getrennte Deckel hiessen doppelt so viele

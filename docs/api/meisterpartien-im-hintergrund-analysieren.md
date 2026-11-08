@@ -45,6 +45,23 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   Weiß · Schwarz bzw. Fortschritt) und „Nachspielen" (klappt `lh-game-replay` mit `evalsUrl` auf — darunter RookHubs
   `GameReviewComponent` mit `[withExplanations]="false"`: „Warum war das ein Fehler?" gibt es für Vereinspartien nicht,
   jede Nachfrage wäre ein 404). Über Teilen-Links bleibt die Vereins-Datenbank unlesbar.
+- **Vertiefung auf 30** (0.909.0, Wunsch 2026-11-08: „ja, vertiefe Ligapartien auf 30 und vergleiche auch 30"): die
+  HAUPTanalyse einer Vereinspartie (Origin Club, ohne `EngineId`) bekommt dieselbe Vertiefung wie „Partie analysieren" —
+  erst Tiefe 20 mit fünf Linien, dann `RefineDepth = GameAnalysisDefaults.ClubRefineDepth` (= `SavedGameTargetDepth`, 30,
+  fünf Linien), gesetzt in `GameAnalysisIntake.CreateClubBatchAsync`. Der Altbestand bekam sie per Datenmigration
+  `DeepenClubAnalyses` (`UPDATE GameAnalyses SET RefineDepth=30, RefineMultiPv=5, RefinedAt=NULL WHERE Origin=4 AND EngineId
+  IS NULL AND RefineDepth IS NULL`). NICHT vertieft: die Lc0-Zweitanalyse (Knotenziel) und die Liga-Partien aus
+  Spielerprofilen (Origin League). Gerechnet wird wie der erste Durchgang des Stapels: Aufträge `Background` + `Batch`
+  (`GameAnalysisPump.EnqueueRefineAsync`), ohne nutzbare Engine (Zeitplan/Sperrzeiten) kommt nichts Neues dazu. Reihenfolge
+  (`GameAnalysisTurns.UnrefinedPliesOfOlderGamesAsync`, zwei Spuren): eigene Partien des Haus-Kontos untereinander wie
+  bisher (älteste zuerst) und OHNE Rücksicht auf den Stapel; eine Stapel-Vertiefung wartet auf alle offenen eigenen
+  Vertiefungen und unter dem Stapel auf die JÜNGEREN (das letzte Liga-Wochenende vor dem Altbestand) — jeweils mit dem
+  Schwanz (`TailMayAdvance`). Am Ende der Vertiefung rechnet die Pumpe Genauigkeit und Zug-Klassen (`GameMoveClasses.Store`)
+  neu; erst dann ist die Analyse endgültig fertig (`GameAnalysisWatchers.IsFinal`): Glocke und Zugvergleiche der Fehler
+  (`docs/api/zuege-vergleichen.md`) kommen mit den Zahlen der Tiefe 30. Die Taktik-Ernte liest weiter beim ersten Ende.
+  Kosten (Prod 08.11.): 230 Altanalysen mit zusammen 18 868 Stellungen; die letzten Vertiefungen von „Partie analysieren"
+  brauchten 3 300–3 600 s für 72–114 Halbzüge (28 Hintergrund-Engines, geteilt mit dem Stapel) — grob 1 h je Vereinspartie,
+  also etwa 230 h (~10 Tage) für den Altbestand, jüngste zuerst; neue Partien vom Wochenende gehen vor.
 - **„Analyse" = RookHubs Partieseite** (0.653.0, Wunsch 2026-10-04: „sollte das Spiel wie aus Meine Games aufmachen, mit
   unten den vorberechneten Werten"): der Knopf springt per Einmal-Code auf `/club-games/{id}` — `SharedGameComponent` mit
   `data.mode = 'club'`: Partie aus `GET /api/league/club/games/{id}`, Kurve aus `…/evals`, kein „Partie analysieren", keine
@@ -54,7 +71,7 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   Club-Analyse einer Vereinspartie mit GENAU denselben Zügen ab der Grundstellung (`LeagueClubService.HashOf` über die SAN,
   dieselbe Schreibweise wie beim Upload). Der PGN-Import (`POST /api/games/import`, also auch „Zu meinen Partien" aus
   LeagueHub) verknüpft sie gleich beim Anlegen, „Partie analysieren" nimmt sie als dritte Stufe vor dem Neu-Einwerfen.
-  Preis: die Kopie bekommt die Vereins-Analyse (Tiefe 20, keine Vertiefung auf 30). Die umgekehrte Richtung (eine schon
+  Preis bis 0.908.0: die Kopie bekam die Vereins-Analyse (Tiefe 20, keine Vertiefung auf 30) — seit 0.909.0 vertieft auch sie (unten). Die umgekehrte Richtung (eine schon
   analysierte eigene Partie wird in die Vereins-Datenbank hochgeladen) rechnet weiterhin neu.
 - **Liga-Partien danach** (0.665.0, Wunsch „analysier im Hintergrund auch alle Partien für LeagueHub — zumindest von
   Spielern, die aktuell in der Liga mitspielen; erst die neuesten (2 Jahre zurück), dann bevorzugt die Gegner von Schwaz

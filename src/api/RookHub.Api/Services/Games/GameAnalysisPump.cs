@@ -160,6 +160,9 @@ internal sealed class GameAnalysisPump
     /// (<see cref="GameAnalysisTurnRules.SuspectPlies"/>), dann der Rest, jeweils in Zugreihenfolge.</summary>
     private async Task<bool> EnqueueRefineAsync(GameAnalysis analysis, CancellationToken ct)
     {
+        // Der Stapel (Vereinspartien, seit 0.909.0 mit Vertiefung) haelt sich auch hier an Zeitplan bzw. Sperrzeiten —
+        // wie beim ersten Durchgang (EnqueueNextAsync): ohne nutzbare Engine kommt nichts Neues dazu.
+        if (GameAnalysisOrigins.IsBatch(analysis.Origin) && (await _turns.UsableEnginesAsync(analysis, ct)).Count == 0) return false;
         var open = analysis.Positions.Count(p => !p.Refined && p.AnalysisJobId != null);
         var room = GameAnalysisTurnRules.RefineJobCap(await _turns.EngineSlotsAsync(analysis, ct)) - open;
         if (room <= 0) return false;

@@ -135,14 +135,24 @@ internal sealed class GameAnalysisTurns
             || GameAnalysisTurnRules.TailMayAdvance(olderUnrefined, await EngineSlotsAsync(analysis, ct));
     }
 
-    /// <summary>Noch nicht vertiefte Stellungen der AELTEREN Partien des Nutzers, die gerade vertieft werden —
-    /// dieselbe Reihenfolge (<c>CreatedAt</c>, dann <c>Id</c>) wie <see cref="OpenPliesOfOlderGamesAsync"/>.</summary>
+    /// <summary>Noch nicht vertiefte Stellungen der Partien des Nutzers, die VOR dieser vertieft werden.
+    ///
+    /// <para>Zwei Spuren (seit 0.909.0, als die Vereinspartien des Stapels eine Vertiefung bekamen): die eigenen Partien
+    /// („Partie analysieren") untereinander wie bisher, die aelteste zuerst (<c>CreatedAt</c>, dann <c>Id</c>) — der Stapel
+    /// zaehlt fuer sie NICHT mit, sonst stuende die eigene Partie des Haus-Engine-Kontos hinter Hunderten nachgetragener
+    /// Vereinspartien. Eine Stapel-Partie wartet dagegen auf ALLE offenen eigenen Vertiefungen und unter dem Stapel auf
+    /// die JUENGEREN: die Partien vom letzten Liga-Wochenende sollen nicht hinter dem Altbestand stehen.</para></summary>
     private Task<int> UnrefinedPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
-        => _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
-                && g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null
-                && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
-            .SumAsync(g => g.Positions.Count(p => !p.Refined), ct);
+    {
+        var refining = _db.GameAnalyses.Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
+            && g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null);
+        var ahead = GameAnalysisOrigins.IsBatch(analysis.Origin)
+            ? refining.Where(g => (g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League)
+                || g.CreatedAt > analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id > analysis.Id))
+            : refining.Where(g => g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club && g.Origin != GameAnalysisOrigin.League
+                && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)));
+        return ahead.SumAsync(g => g.Positions.Count(p => !p.Refined), ct);
+    }
 
     /// <summary>Rechnet diese Analyse auf einer FREMDEN Haus-Engine, deren Freigabe inzwischen weg ist (Haekchen
     /// zurueckgenommen, Admin-Rolle verloren, Hintergrund-Liste leer)? Geprueft wird vor JEDEM Nachlegen, nicht nur beim
