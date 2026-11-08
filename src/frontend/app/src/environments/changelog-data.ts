@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.906.0", date: "2026-11-08", changes: [
+    { en: "Correcting a scoresheet: changing a move in the middle no longer makes all later moves uncertain again. Moves you had already confirmed stay confirmed, and moves you set yourself stay as long as they are still legal.",
+      de: "Formular korrigieren: Wer einen Zug in der Mitte ändert, muss die späteren Züge nicht mehr neu bestätigen. Schon bestätigte Züge bleiben bestätigt, selbst gesetzte bleiben, solange sie noch legal sind." },
+  ] },
   { version: "0.905.0", date: "2026-11-08", changes: [
     { en: "LeagueHub round view: a club game is only guessed for a board if both players match (by FIDE ID or surname) and the result does not contradict. Before, the anonymised club name matched any player of your own club – an old open-tournament game against the same opponent could show up as another team-mate’s league game.",
       de: "LeagueHub-Rundenansicht: Eine Vereinspartie wird einem Brett nur noch zugeraten, wenn beide Spieler passen (über FIDE-ID oder Nachname) und das Ergebnis nicht widerspricht. Bisher passte der anonymisierte Vereinsname auf jeden eigenen Spieler – eine alte Open-Partie gegen denselben Gegner konnte so als Ligapartie eines Mannschaftskollegen erscheinen." },

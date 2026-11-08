@@ -59,6 +59,42 @@ export function revalidate(plies: readonly EditPly[], startFen = START_FEN): Edi
   });
 }
 
+/**
+ * Was der Nutzer im Rest schon entschieden hatte, über das Neu-Aufbereiten retten (gemeldet 2026-11-08: „wenn ich in der Mitte
+ * einen Zug anpasse, sind alle späteren Züge wieder unsicher und ich muss sie wieder bestätigen"). Der Server liest den Rest
+ * ab dem geänderten Zug neu und kennt keine Bestätigungen; je Formular-Eintrag (`w`) gilt darum:
+ * - derselbe Zug wie vorher → bestätigt bleibt bestätigt, der Kommentar und „von Hand" bleiben;
+ * - vorher von Hand ein anderer Zug gesetzt → der bleibt, wenn er und der ganze weitere Rest in der neuen Stellung legal sind;
+ * - sonst gilt die neue Lesung.
+ * `head` = die Halbzüge bis einschließlich der Änderung, `oldTail` = der Rest davor, `newTail` = der Rest vom Server.
+ */
+export function keepDecisions(head: readonly EditPly[], oldTail: readonly EditPly[], newTail: readonly EditPly[],
+  startFen = START_FEN): EditPly[] {
+  const byEntry = new Map(oldTail.filter(p => p.w != null).map(p => [p.w!, p]));
+  if (!byEntry.size) return [...newTail];
+  const chess = new Chess(startFen);
+  try { for (const p of head) chess.move(p.san); } catch { return [...newTail]; }
+  const restLegal = (fen: string, first: string, rest: readonly EditPly[]) => {
+    const c = new Chess(fen);
+    try { c.move(first); for (const p of rest) c.move(p.san); return true; } catch { return false; }
+  };
+  const out: EditPly[] = [];
+  for (let k = 0; k < newTail.length; k++) {
+    const p = newTail[k];
+    const old = p.w != null ? byEntry.get(p.w) : undefined;
+    let next = p;
+    if (old && old.uci === p.uci) {
+      next = { ...p, confirmed: p.confirmed || old.confirmed, uncertain: p.uncertain && !old.confirmed,
+        comment: old.comment ?? p.comment, match: old.match === 'user' ? 'user' : p.match };
+    } else if (old && old.match === 'user' && restLegal(chess.fen(), old.san, newTail.slice(k + 1))) {
+      next = { ...old, w: p.w, written: p.written, illegal: false };
+    }
+    try { chess.move(next.san); } catch { return [...out, ...newTail.slice(k)]; }
+    out.push(next);
+  }
+  return out;
+}
+
 /** Der Formular-Eintrag, der zu Halbzug `i` gehört: sein eigener, sonst der nächste noch offene. */
 export function writtenIndexAt(plies: readonly EditPly[], i: number): number {
   if (i < plies.length && plies[i].w != null) return plies[i].w!;

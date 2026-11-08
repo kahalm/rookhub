@@ -12,6 +12,12 @@ in `club-side-form.component.ts`, Ausgabe in `scan-export.ts`, Zusammenführen i
 Die Seite gibt nur mit, woher der Rest kommt (`resolve`), und hängt das Abonnement an ihre Lebensdauer (`bind`). Wer an
 der Korrektur etwas ändert, ändert es hier — sonst laufen die beiden Seiten auseinander.
 
+**Entscheidungen im Rest bleiben (0.906.0, gemeldet 2026-11-08).** Nach einer Änderung in der Mitte liest der Server den
+Rest neu und kennt keine Bestätigungen. `keepDecisions` (`game-edit.util.ts`) gleicht je Formular-Eintrag (`w`) mit dem Rest
+von vorher ab: derselbe Zug → bestätigt/Kommentar/„von Hand" bleiben; vorher von Hand ein anderer Zug → der bleibt, wenn er
+und der ganze weitere Rest in der neuen Stellung legal sind; sonst gilt die neue Lesung. Fällt das Neulesen aus, bleibt der
+alte Rest ohnehin stehen.
+
 Seit 0.646.0 trägt ein Halbzug den Befund der Engine-Prüfung beim Einlesen (`EditPly.check`/`ScoresheetPly.check`:
 `replaced` | `suggested`, Server: „Engine-Prüfung der Lesung" im Haupt-CLAUDE.md). Beide Seiten zeigen ihn als Chip neben
 „unsicher" („von der Engine korrigiert" / „Engine zweifelt", Erklärung im `title`), solange der Zug nicht bestätigt ist;

@@ -4,7 +4,7 @@ import { Chess } from 'chess.js';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { ScoresheetOption, ScoresheetPly, ScoresheetResolveResult } from './scoresheet.service';
 import {
-  EditPly, START_FEN, cropView, fensOf, fromServer, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly,
+  EditPly, START_FEN, cropView, fensOf, fromServer, keepDecisions, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly,
   writtenIndexAt,
 } from './game-edit.util';
 
@@ -296,7 +296,9 @@ export class SheetEditSession {
     const call = this.host.resolve(req.prefix, req.writtenFrom);
     (this.host.bind ? this.host.bind(call) : call).subscribe({
       next: res => {
-        this.plies.set(revalidate([...head, ...fromServer(res.plies)], this.startFen()));
+        // Bestätigungen und von Hand gesetzte Züge im Rest bleiben (gemeldet 2026-11-08)
+        const tail = keepDecisions(head, fallbackTail, fromServer(res.plies), this.startFen());
+        this.plies.set(revalidate([...head, ...tail], this.startFen()));
         this.unresolved.set(res.unresolved);
         this.unresolvedFrom.set(res.unresolvedFrom ?? null);
         this.busy.set(false);

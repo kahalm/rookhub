@@ -43,7 +43,7 @@ describe('SheetEditSession – Zug löschen rückgängig', () => {
     expect(s.busy()).toBeTrue();
     expect(s.canUndoRemove()).toBeTrue();
 
-    // Der Server liest den Rest anders: die Bestätigung von …Nc6 ist weg, ein Eintrag bleibt offen.
+    // Der Server liest den Rest anders: ein Eintrag bleibt offen.
     respond({ plies: [ply(3, 'Nc6', 'b8c6')], unresolved: ['Lb5'], unresolvedFrom: 4 });
     expect(s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nc6']);
     expect(s.unresolved()).toEqual(['Lb5']);
@@ -88,5 +88,51 @@ describe('SheetEditSession – Zug löschen rückgängig', () => {
     s.undoRemove();
     expect(s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3']);
     expect(s.cursor()).toBe(1);
+  });
+});
+
+/** Gemeldet 2026-11-08: „wenn ich in der Mitte einen Zug anpasse, sind alle späteren Züge wieder unsicher". */
+describe('SheetEditSession – Änderung in der Mitte behält die Entscheidungen danach', () => {
+  const ply = (w: number, san: string, uci: string, extra: Partial<ScoresheetPly> = {}): ScoresheetPly =>
+    ({ w, written: san, san, uci, match: 'written', uncertain: false, ...extra });
+
+  function scanned() {
+    let pending = new Subject<ScoresheetResolveResult>();
+    const host = { resolve: jasmine.createSpy('resolve').and.callFake(() => { pending = new Subject(); return pending; }) };
+    const s = new SheetEditSession(host);
+    // 1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 — 2…Nc6 und 3.Bc4 unsicher gelesen
+    s.loadSheet({
+      plies: [
+        ply(0, 'e4', 'e2e4'), ply(1, 'e5', 'e7e5'), ply(2, 'Nf3', 'g1f3'),
+        ply(3, 'Nc6', 'b8c6', { uncertain: true }), ply(4, 'Bc4', 'f1c4', { uncertain: true }), ply(5, 'Bc5', 'f8c5', { uncertain: true }),
+      ],
+      unresolved: [], unresolvedFrom: null,
+    });
+    return { s, respond: (r: ScoresheetResolveResult) => pending.next(r) };
+  }
+
+  it('bestätigte Züge danach bleiben bestätigt, wenn der Server sie wieder so liest', () => {
+    const { s, respond } = scanned();
+    s.go(3); s.confirm();                       // 2…Nc6 bestätigt
+    s.go(4); s.confirm();                       // 3.Bc4 bestätigt
+    s.go(2); s.play('Nc3');                     // jetzt 2.Nf3 → 2.Nc3 geändert
+    // Der Server liest den Rest neu, ohne Bestätigungen und wieder als unsicher
+    respond({ plies: [ply(3, 'Nc6', 'b8c6', { uncertain: true }), ply(4, 'Bc4', 'f1c4', { uncertain: true }),
+      ply(5, 'Bc5', 'f8c5', { uncertain: true })], unresolved: [], unresolvedFrom: null });
+    const p = s.plies();
+    expect(p.map(x => x.san)).toEqual(['e4', 'e5', 'Nc3', 'Nc6', 'Bc4', 'Bc5']);
+    expect([p[3].confirmed, p[4].confirmed, p[5].confirmed]).toEqual([true, true, false]);
+    expect(s.uncertainLeft()).toBe(1);          // nur 3…Bc5, das nie bestätigt war
+  });
+
+  it('ein später von Hand gesetzter Zug bleibt, solange er in der neuen Stellung legal ist', () => {
+    const { s, respond } = scanned();
+    s.go(5); s.play('Nf6');                     // 3…Bc5 → 3…Nf6 von Hand
+    respond({ plies: [], unresolved: [], unresolvedFrom: null });
+    s.go(2); s.play('Nc3');
+    respond({ plies: [ply(3, 'Nc6', 'b8c6'), ply(4, 'Bc4', 'f1c4'), ply(5, 'Bc5', 'f8c5', { uncertain: true })],
+      unresolved: [], unresolvedFrom: null });
+    expect(s.plies().map(x => x.san)).toEqual(['e4', 'e5', 'Nc3', 'Nc6', 'Bc4', 'Nf6']);
+    expect(s.plies()[5].match).toBe('user');
   });
 });
