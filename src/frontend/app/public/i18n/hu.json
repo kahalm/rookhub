@@ -3601,6 +3601,13 @@
         "noGames": "Ehhez a kiválasztáshoz nincs parti.",
         "sourceOne": "{{mistakes}} hiba 1 partiból",
         "source": "{{mistakes}} hiba {{games}} partiból"
+      },
+      "compare": {
+        "pending": "A játszmában lépett lépés összevetése a legjobb lépéssel …",
+        "title": "Játszmalépés a legjobb lépés ellen (mélység {{depth}})",
+        "played": "Játszmalépés",
+        "best": "Legjobb lépés",
+        "open": "Teljes összehasonlítás megnyitása"
       }
     },
     "live": {
@@ -5171,7 +5178,8 @@
         "replies": "A legjobb válaszok ellenőrzése a legjobb lépés ellen …",
         "explaining": "A magyarázat készül …",
         "done": "Kész.",
-        "failed": "Sikertelen: {{error}}"
+        "failed": "Sikertelen: {{error}}",
+        "waiting": "Várakozás a motorra …"
       },
       "progress": "{{total}} állásból még {{pending}} nyitott",
       "startPosition": "Kiinduló állás",
@@ -5194,7 +5202,8 @@
       "delete": "Összehasonlítás törlése",
       "deleteConfirm": "Törlöd ezt az összehasonlítást?",
       "deleteFailed": "Az összehasonlítást nem sikerült törölni.",
-      "notFound": "Ez az összehasonlítás nem létezik (már)."
+      "notFound": "Ez az összehasonlítás nem létezik (már).",
+      "backToGame": "Vissza a játszmához"
     }
   },
   "promotion": {

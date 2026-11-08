@@ -143,6 +143,12 @@ internal sealed class GameAnalysisPump
     /// ENDGÜLTIGEN Ende (prüft der Dienst selbst). Ein Fehler dabei hält die Pumpe nicht an: die Analyse ist gespeichert.</summary>
     private async Task NotifyWatchersAsync(GameAnalysis analysis, CancellationToken ct)
     {
+        // Dieselbe Stelle: die Zugvergleiche zu den Fehlern einer Vereinspartie einreihen (0.908.0, prüft selbst, ob es eine
+        // endgültig fertige Hauptanalyse ist). Ein Fehler dabei hält die Pumpe nicht an — der Nachtrag holt es nach.
+        try { await ClubMistakeComparisons.EnqueueAsync(_db, analysis, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { _logger.LogWarning(ex, "GameAnalysis {Id}: Zugvergleiche der Fehler nicht eingereiht", analysis.Id); }
+
         if (_watchers is null) return;
         try { await _watchers.NotifyFinishedAsync(analysis, ct); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }

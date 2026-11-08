@@ -5,7 +5,7 @@ import { whiteToMove } from '../../shared/chess/fen-side';
 
 /** „Züge vergleichen" (0.602.0) — siehe `MoveComparisonService` in der API. Bewertungen aus Sicht der Seite am Zug
  *  der Ausgangsstellung (`whiteToMove`), wie die Begründung (d3; vorher Weiß-Sicht). */
-export type MoveComparisonStatus = 'candidates' | 'replies' | 'explaining' | 'done' | 'failed';
+export type MoveComparisonStatus = 'waiting' | 'candidates' | 'replies' | 'explaining' | 'done' | 'failed';
 export type MoveComparisonLineState = 'pending' | 'done' | 'failed' | 'illegal';
 
 export interface MoveComparisonReply { uci: string; san: string; evalText: string | null; line: string[]; }
@@ -53,6 +53,11 @@ export class MoveComparisonService {
 
   get(id: number): Observable<MoveComparison> {
     return this.http.get<MoveComparison>(`/api/move-comparisons/${id}`);
+  }
+
+  /** Ein Zugvergleich zu einem Fehler einer Vereinspartie (0.908.0) — gelesen über die Partie (`league.view`). */
+  getClub(clubGameId: number, id: number): Observable<MoveComparison> {
+    return this.http.get<MoveComparison>(`/api/league/club/games/${clubGameId}/comparisons/${id}`);
   }
 
   /** 400 trägt `{ reason, message }` (invalid-move, too-few-moves, too-many-open, no-engine …). */

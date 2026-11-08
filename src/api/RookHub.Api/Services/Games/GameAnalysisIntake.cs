@@ -253,6 +253,8 @@ internal sealed class GameAnalysisIntake
             if (a.RefineDepth != null && fresh.Any(p => !p.Refined)) a.RefinedAt = null;
             _db.GameMoveExplanations.RemoveRange(await _db.GameMoveExplanations.Where(x => x.GameAnalysisId == a.Id).ToListAsync(ct));
             _db.TacticCandidates.RemoveRange(await _db.TacticCandidates.Where(x => x.GameAnalysisId == a.Id).ToListAsync(ct));
+            // Die Zugvergleiche zu den Fehlern (0.908.0) hängen an Halbzügen: weg damit, das neue Ende legt sie neu an.
+            await ClubMistakeComparisons.DeleteForAnalysisAsync(_db, _jobs, a, ct);
             _logger.LogInformation("GameAnalysis {Id}: auf korrigierte Vereinspartie {ClubGameId} umgebaut — {Reused} von {Total} Stellungen übernommen",
                 a.Id, game.Id, fresh.Count(p => p.CandidatesJson != null), fresh.Count);
         }

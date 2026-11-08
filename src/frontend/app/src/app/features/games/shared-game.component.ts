@@ -24,6 +24,7 @@ import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
 import { DeepStored } from './deep-analysis.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
+import type { ClubMistakeComparison } from './mistake-comparison.component';
 import { GameTrainingController } from './game-training-controller';
 import { MistakeJudgeService } from './mistake-judge.service';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
@@ -96,6 +97,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Vereinspartie aus LeagueHub (`/club-games/:id`, 0.653.0): Bewertungen aus der Hintergrund-Analyse des Vereins,
    *  kein „Partie analysieren" (die rechnet von selbst), keine Erklärungen (die gibt es dort nicht). */
   club = false;
+  /** Vereinspartie, deren Zugvergleiche geladen werden (0.908.0; nicht über einen Teilen-Link). */
+  clubComparisonGameId: number | null = null;
+  readonly comparisons = signal<ReadonlyMap<number, ClubMistakeComparison> | null>(null);
   /** Teilen-Token der eigenen Partie (für „Teilen-Link kopieren"). */
   shareToken: string | null = null;
 
@@ -308,7 +312,21 @@ export class SharedGameComponent implements OnInit, DoCheck {
    */
   ngDoCheck(): void { this.engine.sync(); }
 
-  trainMistakes(): void { this.trainer.trainMistakes(); }
+  trainMistakes(): void {
+    this.trainer.trainMistakes();
+    this.loadComparisons();   // Vereinspartie: der Stand kann sich seit dem Öffnen geändert haben
+  }
+
+  /** Zugvergleiche zu den Fehlern einer Vereinspartie (0.908.0) — nur angemeldet über RookHub, nicht über den Teilen-Link.
+   *  Still bei Fehlern: der Trainer zeigt dann einfach keinen Vergleich. */
+  private loadComparisons(): void {
+    const id = this.clubComparisonGameId;
+    if (id == null) return;
+    this.games.clubComparisons(id).subscribe({
+      next: list => this.comparisons.set(new Map(list.map(x => [x.ply, x]))),
+      error: () => {},
+    });
+  }
 
   /** Alle ausgeblendeten Fehler dieser Partie wieder einblenden. */
   restoreDismissed(): void { this.trainer.restoreDismissed(); }
@@ -349,6 +367,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       // über den Link, der Server gibt nur Partien der geteilten Begegnung her und nie das Bearbeitungsrecht.
       const shareToken = mode === 'club-share' ? (this.route.snapshot.paramMap.get('token') || '') : null;
       this.markSource = { clubGameId: id };
+      if (shareToken === null) { this.clubComparisonGameId = id; this.loadComparisons(); }
       this.evalsUrl = shareToken !== null ? this.games.sharedClubEvalsUrl(shareToken, id) : this.games.clubEvalsUrl(id);
       (shareToken !== null ? this.games.sharedClubGame(shareToken, id) : this.games.clubGame(id)).subscribe({
         next: g => this.show(g),

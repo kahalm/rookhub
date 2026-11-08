@@ -536,6 +536,12 @@ internal sealed class MoveComparisonConfiguration : IEntityTypeConfiguration<Mov
          .WithMany()
          .HasForeignKey(c => c.UserId)
          .OnDelete(DeleteBehavior.Cascade);
+        // Vergleiche zu den Fehlern einer Vereinspartie (0.908.0): je Analyse und Halbzug höchstens einer.
+        e.HasIndex(c => new { c.GameAnalysisId, c.Ply }).IsUnique();
+        e.HasOne(c => c.GameAnalysis)
+         .WithMany()
+         .HasForeignKey(c => c.GameAnalysisId)
+         .OnDelete(DeleteBehavior.Cascade);
     }
 }
 

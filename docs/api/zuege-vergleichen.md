@@ -38,6 +38,53 @@ Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpSer
 | POST | `/api/move-comparisons` | `{ fen, moves[] (UCI, Rochade auch König-schlägt-Turm), depth?, lang?, title? }`; 400 `reason` ∈ invalid-fen/game-over/invalid-move/too-few-moves/too-many-moves/too-many-open/no-engine/too-many-jobs |
 | DELETE | `/api/move-comparisons/{id}` | Löschen samt offener Aufträge |
 
+**Antwort nach dem besten Zug muss derselbe Zug sein (0.908.0)**: `MoveComparisonService.ReplyTransfers` — eine beste
+Antwort auf den schwächeren Zug wird nach dem besten nur gerechnet, wenn auf ihrem Startfeld dieselbe Figur steht und sie,
+falls sie dort etwas schlug, auch hier etwas schlägt (Befund an Vereinspartie 236: „Sxd7" mit +6,52, der Springer zog nach
+dem besten Zug gratis auf ein leeres Feld). Sonst Zeilenstatus `Skipped`: kein Auftrag, nicht im DTO, nicht in den Fakten der
+Begründung. Still dort und schlagend hier bleibt — genau das kann der Grund sein. Die Seite zeigt nur Antworten mit Test.
+**Erklärdienst an EINER Stelle**: die Registrierung von `MoveComparisonService` in `Startup/DomainServices.Analysis.cs` reicht
+den `IClaudeJsonClient` hinein — dort tauschen, wer die Begründungen schreibt (heute nur ein Modell auf eigener Hardware,
+`ExplanationsAvailable`).
+
+## Zugvergleiche zu den Fehlern der Vereinspartien (0.908.0)
+
+Wunsch 2026-11-08: „bei Ligapartien lässt du ja Fehler nachspielen — kannst du für diese Fehler auch immer gleich den
+Fehlzug mit dem besten Zug vergleichen? … Tiefe 35" und „Ligapartien dürfen an der Stelle alle mit 35 rechnen".
+`Services/Engines/ClubMistakeComparisons.cs`, Auswahl `Services/Games/GameMistakeSelection.cs`, lesen
+`Services/League/ClubGameComparisons.cs`.
+
+* **Auswahl** = Spiegel von `collectMistakes` (`mistakes.util.ts`): Grundklasse Ungenauigkeit/Fehler/grober Fehler (Klassen aus
+  `GameMoveClasses`, Codes I/M/P und Miss X), beide Seiten, ohne Bestzug / Bestzug = Partiezug / unspielbaren Bestzug. Ohne
+  Buchzüge und ohne „nicht mehr zeigen" — beides hängt am Betrachter, der Server nimmt die Obermenge. Literal-Test auf
+  beiden Seiten: `GameMistakeSelectionTests` ↔ `mistakes.util.spec.ts` („server mirror").
+* **Wann**: am endgültigen Ende der HAUPTanalyse (Origin Club, ohne EngineId — Lc0 nie; `GameAnalysisWatchers.IsFinal`) ruft
+  `GameAnalysisPump` an derselben Stelle wie die Glocke `ClubMistakeComparisons.EnqueueAsync`: je Fehler ein Vergleich
+  [bester Zug der Analyse, Partiezug] mit Status `Waiting` (5), `GameAnalysisId` + `Ply` gesetzt (eindeutig je Analyse und
+  Halbzug), Marke `GameAnalyses.MistakeComparisonsAt`. Doppelt aufgerufen passiert nichts.
+* **Nachtrag** (Altbestand, auch Partie 236): die Pumpe (`MoveComparisonPumpService` → `TickAsync`) legt EINE Partie je Takt
+  an, und nur, wenn kein Vergleich mehr wartet — die zuletzt fertig gewordene zuerst. Neue Partien stehen so nie hinter dem
+  Altbestand.
+* **Rechnen**: höchstens `ClubMistakeComparisons:MaxActive` (1) gleichzeitig in `Candidates`/`Replies`, wartende nach
+  `FinishedAt` der Analyse (neueste zuerst), dann Halbzug. Tiefe `ClubMistakeComparisons:Depth` (35, NUR hier — eigene
+  Vergleiche auf der Haus-Engine bleiben bei `HouseMaxDepth` 24). Aufträge als Stapel-Hintergrundarbeit (`Background` +
+  `Batch`, wie die Analyse der Vereinspartien): nach allem, worauf jemand wartet, und in den Sperrzeiten nicht. Ist die
+  Haus-Engine nicht mehr freigegeben (nur bei gesetztem `EngineOwnerUserId`) oder der Auftragsdeckel voll, bleibt der Rest
+  liegen. `ClubMistakeComparisons:Enabled=false` hält alles an. Begründung auf Deutsch (`Language` „de" — LeagueHub ist
+  deutschsprachig).
+* **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
+  Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
+  Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,
+  playedUci, analysisBestUci, comparison }`) und `GET /api/league/club/games/{id}/comparisons/{comparisonId}` (wie
+  `GET /api/move-comparisons/{id}`), beide `league.view` im Verein der Partie; nicht über Teilen-Links.
+* **Weg damit**: Partie gelöscht → Analyse gelöscht (`GameAnalysisDeletion` räumt Zeilen + offene Aufträge, die DB kaskadiert
+  `FK_MoveComparisons_GameAnalyses_GameAnalysisId`); Züge korrigiert → `RebaseClubGameAsync` löscht sie und setzt die Marke
+  zurück, das neue Ende legt sie neu an.
+* **Kosten** (Stand 08.11.): Prod hatte 230 Vereinspartien mit fertiger Hauptanalyse (Tiefe 20, ohne Vertiefung). Partie 236
+  von Hand mit Tiefe 24: 11 Fehler, je 1,5–3 min. Tiefe 35 ist 11 Halbzüge tiefer — grob Faktor 20–80 → etwa 0,5–4 h je
+  Vergleich auf einer Engine, also Wochen für den ganzen Altbestand. Deshalb einer nach dem anderen, nur im Leerlauf, neueste
+  zuerst; Tiefe und Gleichzeitigkeit sind Schlüssel.
+
 **Vergleichsmodus (0.375.0)**: Der Waagen-Knopf startet eine ZWEITE Engine auf derselben
 Stellung (`compareEngine`), beide Linienlisten stehen untereinander. Möglich ohne Umbau, weil
 `AnalysisEngineService` weder Konstruktor noch `inject()` hat — er lässt sich schlicht per `new`

@@ -37,6 +37,8 @@ public class MoveComparisonPumpService : BackgroundService, IBackgroundJobInfo
             {
                 using var scope = _scopes.CreateScope();
                 await scope.ServiceProvider.GetRequiredService<MoveComparisonService>().PumpAllAsync(stoppingToken);
+                // Zugvergleiche der Vereinspartien (0.908.0): Nachtrag + wartende starten (gedeckelt, Stapel-Vorrang).
+                await scope.ServiceProvider.GetRequiredService<ClubMistakeComparisons>().TickAsync(stoppingToken);
                 Pause.MarkTick();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

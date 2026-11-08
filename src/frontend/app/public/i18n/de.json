@@ -3224,6 +3224,13 @@
         "noGames": "Für diese Auswahl gibt es keine Partien.",
         "sourceOne": "{{mistakes}} Fehler aus 1 Partie",
         "source": "{{mistakes}} Fehler aus {{games}} Partien"
+      },
+      "compare": {
+        "pending": "Der Partiezug wird mit dem besten Zug verglichen …",
+        "title": "Partiezug gegen besten Zug (Tiefe {{depth}})",
+        "played": "Partiezug",
+        "best": "Bester Zug",
+        "open": "Ganzen Vergleich öffnen"
       }
     },
     "live": {
@@ -5171,7 +5178,8 @@
         "replies": "Die besten Antworten werden gegen den besten Zug geprüft …",
         "explaining": "Die Begründung wird geschrieben …",
         "done": "Fertig.",
-        "failed": "Gescheitert: {{error}}"
+        "failed": "Gescheitert: {{error}}",
+        "waiting": "Wartet auf die Engine …"
       },
       "progress": "{{pending}} von {{total}} Stellungen noch offen",
       "startPosition": "Ausgangsstellung",
@@ -5194,7 +5202,8 @@
       "delete": "Vergleich löschen",
       "deleteConfirm": "Diesen Vergleich löschen?",
       "deleteFailed": "Der Vergleich konnte nicht gelöscht werden.",
-      "notFound": "Diesen Vergleich gibt es nicht (mehr)."
+      "notFound": "Diesen Vergleich gibt es nicht (mehr).",
+      "backToGame": "Zur Partie"
     }
   },
   "promotion": {

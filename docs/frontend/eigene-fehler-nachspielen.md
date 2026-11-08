@@ -62,3 +62,10 @@ Beenden steht man dort.
   steht nach einem falschen Zug dessen Stellung im Signal und „Nochmal" schreibt die Ausgangsstellung
   zurück. Wer erst danebengreift oder die Lösung zeigen lässt, bekommt die Aufgabe nicht als selbst
   gefunden gutgeschrieben.
+
+**Zugvergleich am Fehler (0.908.0, nur Vereinspartien)**: nach dem Urteil (gefunden/gezeigt) zeigt der Trainer unter der
+Kosten-Zeile `app-mistake-comparison` (`features/games/mistake-comparison.component.ts`): Partiezug und besten Zug mit Bewertung
+(Sicht der Seite am Zug) und Engine-Linie aus dem automatischen Zugvergleich (Tiefe 35), die Begründung und „Ganzen Vergleich
+öffnen“ (`/analysis/compare/:id?clubGame=`). Die Partieseite lädt die Vergleiche (`GamesService.clubComparisons`) beim Öffnen
+und bei jedem Start des Trainers neu; über einen Teilen-Link nicht. Läuft der Vergleich noch: eine leise Zeile; keiner: nichts.
+Server: `docs/api/zuege-vergleichen.md`, Abschnitt „Zugvergleiche zu den Fehlern der Vereinspartien“.

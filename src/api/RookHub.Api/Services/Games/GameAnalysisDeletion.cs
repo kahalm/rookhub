@@ -57,6 +57,10 @@ internal sealed class GameAnalysisDeletion
                 await _db.GuessSessions.Where(s => sessions.Contains(s.Id)).ToListAsync(ct));
         }
 
+        // Zugvergleiche zu den Fehlern (Vereinspartien, 0.908.0) samt offener Aufträge — die Datenbank kaskadiert die Zeilen,
+        // die Aufträge nicht.
+        await ClubMistakeComparisons.DeleteForAnalysisAsync(_db, _jobs, analysis, ct);
+
         _db.GameAnalysisPositions.RemoveRange(analysis.Positions);
         _db.GameAnalyses.Remove(analysis);
         await _db.SaveChangesAsync(ct);

@@ -218,6 +218,11 @@ public class GameAnalysis
     /// Stand wird vom Erntelauf neu gerechnet.</summary>
     public int? MoveClassesVersion { get; set; }
 
+    /// <summary>Wann die Zugvergleiche „Fehlzug gegen besten Zug" für die Fehler dieser Analyse angelegt wurden (0.908.0, nur
+    /// Hauptanalysen von Vereinspartien, <see cref="Services.Engines.ClubMistakeComparisons"/>); <c>null</c> = noch nicht —
+    /// dann holt der Nachtrag sie nach. Korrigierte Züge setzen es zurück.</summary>
+    public DateTime? MistakeComparisonsAt { get; set; }
+
     [MaxLength(500)] public string? LastError { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

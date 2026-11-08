@@ -1,3 +1,5 @@
+using RookHub.Api.Data;
+using RookHub.Api.Services;
 using RookHub.Api.Services.Engines;
 using RookHub.Api.Services.Games;
 using RookHub.Api.Services.Library;
@@ -37,7 +39,15 @@ public static partial class DomainServicesSetup
         services.AddScoped<AnalysisHistoryService>();
         services.AddScoped<LineStudyService>();   // „ohne Engine analysieren" (0.855.0)
         services.AddSingleton<MoveComparisonExplainJobs>();
-        services.AddScoped<MoveComparisonService>();
+        // Erklärdienst der Zugvergleiche (auch der automatischen der Vereinspartien, 0.908.0): EINE Stelle — wer die Begründungen
+        // von einem anderen Modell schreiben lassen will, gibt hier einen anderen IClaudeJsonClient hinein (und prüft
+        // MoveComparisonService.ExplanationsAvailable: heute nur Modelle auf eigener Hardware). Vorerst das lokale Modell.
+        services.AddScoped<MoveComparisonService>(sp => new MoveComparisonService(
+            sp.GetRequiredService<AppDbContext>(), sp.GetRequiredService<AnalysisJobService>(),
+            sp.GetRequiredService<IClaudeJsonClient>(),
+            sp.GetRequiredService<MoveComparisonExplainJobs>(), sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<ILogger<MoveComparisonService>>()));
+        services.AddScoped<ClubMistakeComparisons>();   // Zugvergleiche zu den Fehlern der Vereinspartien (0.908.0)
         // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
         services.AddSingleton<StockfishAnalyzer>();
         services.AddSingleton<TablebaseGate>();

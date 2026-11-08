@@ -44,7 +44,12 @@ const POLL_MS = 3_000;
     <div class="cmp-page">
       <!-- b1-rk-zuege-vergleichen-zwei-knoepfe: „Zum Analysebrett" ist ein Rücklink über dem Titel (Textknopf), nicht ein
            zweiter gleicher Knopf neben „Im Analysebrett öffnen" — so bleibt im Kopf genau eine Aktion. -->
-      <a mat-button routerLink="/analysis" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.back' | translate }}</a>
+      <!-- Vergleich zu einem Fehler einer Vereinspartie (0.908.0, ?clubGame=): zurück zur Partie statt zum Analysebrett. -->
+      @if (clubGame(); as g) {
+        <a mat-button [routerLink]="['/club-games', g]" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.backToGame' | translate }}</a>
+      } @else {
+        <a mat-button routerLink="/analysis" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.back' | translate }}</a>
+      }
       <div class="header">
         <h1>{{ 'moveCompare.page.title' | translate }}</h1>
         @if (data(); as d) {
@@ -138,7 +143,7 @@ const POLL_MS = 3_000;
                         </tr>
                       </thead>
                       <tbody>
-                        @for (r of w.replies; track r.uci) {
+                        @for (r of shownReplies(w); track r.uci) {
                           <tr>
                             <td>
                               <button type="button" class="cell" [class.active]="view()?.key === 'r:' + w.uci + ':' + r.uci" (click)="showReply(w, r)">
@@ -271,6 +276,9 @@ export class MoveComparisonComponent implements OnInit {
   readonly view = signal<BoardView | null>(null);
   readonly history = signal<MoveComparisonSummary[]>([]);
   readonly currentId = signal(0);
+  /** Vereinspartie (`?clubGame=`, 0.908.0): der Vergleich gehört zu einem ihrer Fehler — gelesen über die Partie, ohne
+   *  „Frühere Vergleiche" (die sind die eigenen). */
+  readonly clubGame = signal<number | null>(null);
   private loading = false;
 
   readonly running = computed(() => { const s = this.data()?.status; return !!s && s !== 'done' && s !== 'failed'; });
@@ -290,6 +298,8 @@ export class MoveComparisonComponent implements OnInit {
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(p => {
       const id = Number(p.get('id'));
+      const club = Number(this.route.snapshot?.queryParamMap?.get('clubGame'));
+      this.clubGame.set(Number.isInteger(club) && club > 0 ? club : null);
       this.currentId.set(id);
       this.data.set(null);
       this.view.set(null);
@@ -307,7 +317,8 @@ export class MoveComparisonComponent implements OnInit {
     const id = this.currentId();
     if (!id || this.loading) return;
     this.loading = true;
-    this.api.get(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const club = this.clubGame();
+    (club ? this.api.getClub(club, id) : this.api.get(id)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: d => {
         this.loading = false;
         this.loadError.set(false);
@@ -324,6 +335,7 @@ export class MoveComparisonComponent implements OnInit {
   }
 
   private loadHistory(): void {
+    if (this.clubGame()) { this.history.set([]); return; }
     this.api.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: h => this.history.set(h), error: () => {} });
   }
 
@@ -353,6 +365,19 @@ export class MoveComparisonComponent implements OnInit {
   /** Schlecht für die Seite am Zug (die Werte kommen aus ihrer Sicht) — rot. Der beste Zug wird nie rot gefärbt. */
   isNeg(ev: string | null | undefined): boolean {
     return !!ev && ev.startsWith('-') || !!ev && ev.startsWith('#-');
+  }
+
+  /**
+   * Die Zeilen der Tabelle: nur Antworten, zu denen es einen Test gibt — einen, der nach dem besten Zug ein ANDERER Zug wäre,
+   * lässt der Server weg (0.908.0, `ReplyTransfers`). Beim Vergleich zu einem Fehler einer Vereinspartie zusätzlich ohne
+   * „geht nicht" (Befund Partie 236: dort sagen sie dem Leser nichts).
+   */
+  shownReplies(w: MoveComparisonCandidate): MoveComparisonReply[] {
+    const club = !!this.clubGame();
+    return w.replies.filter(r => {
+      const t = this.testFor(w, r.uci);
+      return !!t && !(club && t.state === 'illegal');
+    });
   }
 
   testFor(w: MoveComparisonCandidate, replyUci: string): MoveComparisonTest | null {

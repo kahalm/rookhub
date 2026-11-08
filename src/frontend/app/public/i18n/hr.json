@@ -3224,6 +3224,13 @@
         "noGames": "Za ovaj odabir nema partija.",
         "sourceOne": "{{mistakes}} pogrešaka iz 1 partije",
         "source": "{{mistakes}} pogrešaka iz {{games}} partija"
+      },
+      "compare": {
+        "pending": "Potez iz partije uspoređuje se s najboljim potezom …",
+        "title": "Potez iz partije protiv najboljeg poteza (dubina {{depth}})",
+        "played": "Potez iz partije",
+        "best": "Najbolji potez",
+        "open": "Otvori cijelu usporedbu"
       }
     },
     "live": {
@@ -5171,7 +5178,8 @@
         "replies": "Najbolji odgovori provjeravaju se protiv najboljeg poteza …",
         "explaining": "Piše se objašnjenje …",
         "done": "Gotovo.",
-        "failed": "Neuspjelo: {{error}}"
+        "failed": "Neuspjelo: {{error}}",
+        "waiting": "Čeka se engine …"
       },
       "progress": "Još otvoreno {{pending}} od {{total}} pozicija",
       "startPosition": "Početna pozicija",
@@ -5194,7 +5202,8 @@
       "delete": "Obriši usporedbu",
       "deleteConfirm": "Obrisati ovu usporedbu?",
       "deleteFailed": "Usporedba se nije mogla obrisati.",
-      "notFound": "Ova usporedba ne postoji (više)."
+      "notFound": "Ova usporedba ne postoji (više).",
+      "backToGame": "Natrag na partiju"
     }
   },
   "promotion": {

@@ -11,6 +11,7 @@ import { MistakesSession } from './mistakes-session';
 import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-position-button.component';
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
+import { ClubMistakeComparison, MistakeComparisonComponent } from './mistake-comparison.component';
 
 /**
  * „Eigene Fehler nachspielen" — die Leiste UNTER dem Brett der Partie-Seite: Aufgabe, Rückmeldung,
@@ -22,7 +23,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
   selector: 'app-mistakes-trainer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.Default,
-  imports: [IconLabelDirective, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent],
+  imports: [IconLabelDirective, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, TranslatePipe, MarkPositionButtonComponent, MistakeComparisonComponent],
   template: `
     <div class="top">
       <span class="title">{{ (title || 'games.mistakes.title') | translate: titleParams }}</span>
@@ -100,6 +101,10 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
           <p class="cost">{{ 'games.mistakes.alsoGood' | translate: { moves: rest } }}</p>
         }
         <p class="cost">{{ 'games.mistakes.cost' | translate: { san: m.playedSan, percent: lost(m) } }}</p>
+        <!-- Vereinspartie (0.908.0): erst NACH dem Urteil der Vergleich Partiezug ↔ bester Zug (vorher verriete er die Lösung). -->
+        @if (comparisons) {
+          <app-mistake-comparison [entry]="comparisons.get(m.ply) ?? null" [clubGameId]="clubGameId" />
+        }
       }
 
       <div class="actions">
@@ -189,6 +194,10 @@ export class MistakesTrainerComponent {
   @Input() titleParams: Record<string, unknown> = {};
   /** Aus welcher Partie die Aufgaben stammen (für den „+"-Knopf); in der Sammlung trägt jede Aufgabe ihre `gameId`. */
   @Input() markSource: Partial<MarkOrigin> = {};
+  /** Zugvergleiche je Halbzug (nur Vereinspartien, 0.908.0); `null` = gibt es hier nicht. */
+  @Input() comparisons: ReadonlyMap<number, ClubMistakeComparison> | null = null;
+  /** Vereinspartie der Vergleiche — für den Link auf die volle Vergleichsseite. */
+  @Input() clubGameId: number | null = null;
   private readonly originCache = new Map<Mistake, MarkOrigin>();
 
   /** Herkunft der Aufgabe für die Markierung — je Aufgabe einmal gebaut (stabiles Objekt fürs Signal-Input). */

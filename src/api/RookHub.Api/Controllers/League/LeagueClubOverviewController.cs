@@ -77,6 +77,23 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
         return Ok(await marks.CountsForClubAsync(c, list, ct));
     });
 
+    /// <summary>Zugvergleiche „Fehlzug gegen besten Zug" zu den Fehlern einer Vereinspartie (0.908.0, <see cref="ClubGameComparisons"/>)
+    /// → <c>[{ ply, playedUci, analysisBestUci, comparison }]</c> nach Halbzug (leer = keine/noch keine); 404 unbekannt oder aus
+    /// einem anderen Verein.</summary>
+    [HttpGet("games/{id:int}/comparisons")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Comparisons(int id, [FromServices] ClubGameComparisons comparisons, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await comparisons.ForGameAsync(c, id, ct) is { } list ? Ok(list) : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+
+    /// <summary>EIN Zugvergleich dieser Vereinspartie (volle Vergleichsseite, auch während er rechnet) → wie
+    /// <c>GET /api/move-comparisons/{id}</c>; 404 Partie/Vergleich unbekannt oder fremd.</summary>
+    [HttpGet("games/{id:int}/comparisons/{comparisonId:int}")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Comparison(int id, int comparisonId, [FromServices] ClubGameComparisons comparisons, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await comparisons.GetAsync(c, id, comparisonId, ct) is { } dto ? Ok(dto) : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+
     private static List<int> IdList(string? ids) =>
         (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();

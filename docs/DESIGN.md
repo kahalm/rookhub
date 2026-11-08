@@ -947,6 +947,14 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 - `index.html` theme-color `#3f51b5`.
 - Kursfortschritt im Löser dreigeteilt (`app-course-progress-split`, 2026-10-15): Leiste 6 px mit Abschnitten `--rh-success` (ohne Hilfe) / `--rh-hint` (mit Tipp/Neustart; bis 0.807 `--rh-warn`, hell fast rot) / `--rh-error` (aufgegeben), Rest = offen; darunter die drei Zahlen mit Symbol (✓ / Glühbirne / ✗) und „von N“, Bedeutung im Tooltip.
 
+- Zugvergleich am Fehler (0.908.0, Vereinspartien): im Trainer „Fehler nachspielen“ erst NACH dem Urteil (gefunden oder
+  gezeigt) — vorher verriete er die Lösung. Unter der Kosten-Zeile, durch eine feine Linie abgesetzt: Kopf „Partiezug gegen
+  besten Zug (Tiefe N)“ (0,8 rem, halbfett), zwei Zeilen Beschriftung · Zug (Mono) · ggf. Pille „bester Zug“ · Bewertung
+  rechts (Mono, Bester grün, der andere rot), darunter je die Engine-Linie (6 Halbzüge, Mono, leise, eingerückt; am Handy
+  ohne Einzug), dann die Begründung als normaler Text und ein Textknopf „Ganzen Vergleich öffnen“ (`compare_arrows`) auf
+  die Vergleichsseite (`?clubGame=` → Rücklink „Zur Partie“, keine „Früheren Vergleiche“, keine „geht nicht“-Zeilen).
+  Läuft der Vergleich noch: EINE leise Zeile, kein Ladebalken; keiner da oder gescheitert: nichts (kein Leerzustand).
+
 ### 8.2 Turnierseite (`src-turnier/`)
 
 - Gleiches Material-Thema und gleicher Design-Modus wie RookHub (Cookie geteilt); theme-color `#172345`.
@@ -1223,6 +1231,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-08 | 0.908.0 · Fehler nachspielen | Zugvergleich Partiezug ↔ bester Zug unter dem Urteil (8.1): zwei Zeilen mit Bewertung + Engine-Linie, Begründung, Textknopf zur Vergleichsseite; laufend eine leise Zeile, sonst nichts; Vergleichsseite mit `?clubGame=` ohne Verlauf und ohne „geht nicht“ | Wunsch 08.11.: „für diese Fehler auch immer gleich den Fehlzug mit dem besten Zug vergleichen“ | User |
 | 2026-11-08 | 0.904.0 · Glocke | Neue Glocken-Typen „Analyse fertig“ (`insights`, Link auf die eigene Partie) und „Formular wartet auf Freigabe“ (`pending_actions`, Kategorie Admin); ein Glocken-Ziel mit absoluter Adresse (LeagueHub) öffnet per Seitenwechsel statt über den Router (`openNotificationLink`) | Wunsch 08.11.: „informier ihn via glocke wenn fertig tief analysiert“, „gib mir einen Glockenping“ bei wartender Freigabe — die Freigabe liegt in LeagueHub, einer anderen Oberfläche | User |
 | 2026-11-08 | 0.902.0 · Formular-Leser | Wartende Einlesung zeigt „Platz N in der Warteschlange“ statt des Nachsatzes, sobald andere davor stehen; dann kein Warnhinweis nach 15 min (5.10) | Zwei Formulare zugleich: das zweite zählte nur „wartet“ hoch und sah nach Ausfall aus | Nutzerwunsch 08.11. |
 | 2026-11-08 | 0.900.0 · Partieseite + Analysebrett | Partieseite = „Mit Engine“; Kopfzeile dort „Ohne Engine“ (`mat-stroked-button`, `visibility_off`, vorn in `.header-actions`); im Analysebrett führt „Mit Engine“ mit `?game=` zurück zur Partieseite | Wunsch 08.11.: „Mit Engine → club-games/236, Ohne Engine → …?blind=1“ | User |

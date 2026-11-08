@@ -276,6 +276,7 @@
           </div>
           @if (training(); as t) {
             <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
+                                  [comparisons]="comparisons()" [clubGameId]="clubComparisonGameId"
                                   [title]="own ? '' : 'games.mistakes.titleSide'" [titleParams]="{ player: sidePlayer(t.side()) }"
                                   [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()" />
             @if (trainingAnalysis(); as a) {

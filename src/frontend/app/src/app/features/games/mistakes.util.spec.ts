@@ -240,4 +240,26 @@ describe('mistakes.util', () => {
       expect(isEquivalentAfter({ score: { cp: -500 }, fen: matt }, { score: { mate: 0 }, fen: matt }, false)).toBeTrue();
     });
   });
+  // 0.908.0 — Spiegel am Server: `GameMistakeSelection` wählt die Fehler für die Zugvergleiche der Vereinspartien. DIESELBE
+  // Partie mit denselben LITERALEN Werten prüft `GameMistakeSelectionTests.Select_SmallGame_SameAsClient` — wer die Auswahl
+  // hier oder dort ändert, zieht die andere Seite im selben Commit nach.
+  it('server mirror: same small game, same mistakes as GameMistakeSelection', () => {
+    const g = play(['e4', 'e5', 'Qh5', 'Nc6', 'Bc4', 'Nf6']);
+    expect(g.fens[6]).toBe('r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4');
+    const plies: GameEvalPly[] = [
+      { ply: 0, depth: 20, cp: 30, bestUci: 'e2e4', playedUci: 'e2e4' },
+      { ply: 1, depth: 20, cp: 30, bestUci: 'd7d5', playedUci: 'e7e5' },
+      { ply: 2, depth: 20, cp: 30, bestUci: 'g1f3', playedUci: 'd1h5' },
+      { ply: 3, depth: 20, cp: -60, bestUci: 'b8c6', playedUci: 'b8c6' },
+      { ply: 4, depth: 20, cp: -60, bestUci: 'e1e3', playedUci: 'f1c4' },
+      { ply: 5, depth: 20, cp: -300, bestUci: 'g7g6', playedUci: 'g8f6' },
+    ];
+    const e: GameEvals = { ...evals(plies, 6), final: { cp: null, mate: 1 } };
+    const ucis = ['e2e4', 'e7e5', 'd1h5', 'b8c6', 'f1c4', 'g8f6'];
+    const all = collectMistakes(reviewGame(e, g.fens, ucis), e, g.fens, g.moves);
+    const picked = [...all.white, ...all.black].sort((a, b) => a.ply - b.ply);
+    expect(picked.map(m => m.ply)).toEqual([2, 5]);
+    expect(picked.map(m => m.playedUci)).toEqual(['d1h5', 'g8f6']);
+    expect(picked.map(m => m.bestUci)).toEqual(['g1f3', 'g7g6']);
+  });
 });

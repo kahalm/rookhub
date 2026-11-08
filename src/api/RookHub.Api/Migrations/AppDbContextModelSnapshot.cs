@@ -3327,6 +3327,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("LibraryGameId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("MistakeComparisonsAt")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("MoveClasses")
                         .HasColumnType("TEXT");
 
@@ -6083,6 +6086,9 @@ namespace RookHub.Api.Migrations
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("GameAnalysisId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasMaxLength(8)
@@ -6091,6 +6097,9 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("Model")
                         .HasMaxLength(80)
                         .HasColumnType("varchar(80)");
+
+                    b.Property<int?>("Ply")
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -6108,6 +6117,9 @@ namespace RookHub.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("GameAnalysisId", "Ply")
+                        .IsUnique();
 
                     b.HasIndex("UserId", "CreatedAt");
 
@@ -10514,11 +10526,18 @@ namespace RookHub.Api.Migrations
 
             modelBuilder.Entity("RookHub.Api.Models.MoveComparison", b =>
                 {
+                    b.HasOne("RookHub.Api.Models.GameAnalysis", "GameAnalysis")
+                        .WithMany()
+                        .HasForeignKey("GameAnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("GameAnalysis");
 
                     b.Navigation("User");
                 });

@@ -4,6 +4,7 @@ import { Observable, catchError, map, of } from 'rxjs';
 import { LibraryGame } from '../guess/library.service';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { GameEvals } from './game-review.util';
+import type { ClubMistakeComparison } from './mistake-comparison.component';
 
 /** Listeneintrag einer gespeicherten Partie (ohne PGN). */
 export interface SavedGame {
@@ -287,6 +288,11 @@ export class GamesService {
   /** Vereinspartie aus LeagueHub (0.653.0) in der Form der Partieseite — braucht `league.view`, sonst 403/404. */
   clubGame(id: number): Observable<SharedGame> {
     return this.http.get<ClubGameDto>(`/api/league/club/games/${id}`).pipe(map(toClubGame));
+  }
+
+  /** Zugvergleiche „Fehlzug gegen besten Zug" zu den Fehlern einer Vereinspartie (0.908.0), nach Halbzug. */
+  clubComparisons(id: number): Observable<ClubMistakeComparison[]> {
+    return this.http.get<ClubMistakeComparison[]>(`/api/league/club/games/${id}/comparisons`);
   }
 
   /** Bewertungen der Hintergrund-Analyse einer Vereinspartie (dieselbe Form wie bei der eigenen Partie). */

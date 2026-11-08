@@ -3224,6 +3224,13 @@
         "noGames": "There are no games for this selection.",
         "sourceOne": "{{mistakes}} mistakes from 1 game",
         "source": "{{mistakes}} mistakes from {{games}} games"
+      },
+      "compare": {
+        "pending": "Comparing the game move with the best move …",
+        "title": "Game move vs. best move (depth {{depth}})",
+        "played": "Game move",
+        "best": "Best move",
+        "open": "Open full comparison"
       }
     },
     "live": {
@@ -5171,7 +5178,8 @@
         "replies": "Testing the best replies against the best move …",
         "explaining": "Writing the explanation …",
         "done": "Done.",
-        "failed": "Failed: {{error}}"
+        "failed": "Failed: {{error}}",
+        "waiting": "Waiting for the engine …"
       },
       "progress": "{{pending}} of {{total}} positions still open",
       "startPosition": "Starting position",
@@ -5194,7 +5202,8 @@
       "delete": "Delete comparison",
       "deleteConfirm": "Delete this comparison?",
       "deleteFailed": "The comparison could not be deleted.",
-      "notFound": "This comparison does not exist (any more)."
+      "notFound": "This comparison does not exist (any more).",
+      "backToGame": "Back to the game"
     }
   },
   "promotion": {

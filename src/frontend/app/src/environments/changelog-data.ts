@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.908.0", date: "2026-11-08", changes: [
+    { en: "Club games – “Replay mistakes”: every mistake of a club game is now automatically compared with the best move, like “Compare moves”, at depth 35. After you found or revealed the solution, the trainer shows the game move against the best move, each with its evaluation and engine line, the explanation and a link to the full comparison. While it is still being calculated it says so; the comparisons run in the background on the house engine, one after the other, after everything people are waiting for – newest games first, older games follow.",
+      de: "Vereinspartien – „Fehler nachspielen“: Jeder Fehler einer Vereinspartie wird jetzt automatisch mit dem besten Zug verglichen, wie bei „Züge vergleichen“, mit Tiefe 35. Nachdem du die Lösung gefunden oder dir zeigen lassen hast, zeigt der Trainer Partiezug gegen besten Zug, je mit Bewertung und Engine-Linie, dazu die Begründung und einen Link zum ganzen Vergleich. Solange noch gerechnet wird, steht das dort; die Vergleiche laufen im Hintergrund auf der Haus-Engine, einer nach dem anderen und nach allem, worauf jemand wartet – neueste Partien zuerst, ältere folgen." },
+    { en: "Compare moves: an opponent’s answer to the weaker move is only tested against the better move if it is still the same move there – same piece, and if it captured something, it still captures. Before, e.g. a knight “capture” could be tested that simply moved to an empty square and got a meaningless evaluation.",
+      de: "Züge vergleichen: Eine Antwort des Gegners auf den schwächeren Zug wird gegen den besseren nur noch geprüft, wenn sie dort derselbe Zug ist – gleiche Figur, und wenn sie etwas schlug, schlägt sie auch dort. Bisher konnte z. B. ein „Schlagzug“ des Springers geprüft werden, der einfach auf ein leeres Feld zog und eine sinnlose Bewertung bekam." },
+  ] },
   { version: "0.907.0", date: "2026-11-08", changes: [
     { en: "A club game opened from LeagueHub now shows from your club’s side: the board is turned towards your player, and “Replay mistakes” takes your player’s mistakes (both still switchable).", de: "Eine aus LeagueHub geöffnete Vereinspartie zeigt jetzt die Sicht des eigenen Vereins: Das Brett steht aus der Richtung des eigenen Spielers, und „Fehler nachspielen“ nimmt seine Fehler (beides lässt sich weiter umschalten)." },
   ] },

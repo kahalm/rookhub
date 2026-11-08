@@ -92,7 +92,7 @@ public sealed class MoveComparisonService
 
     public async Task<List<MoveComparisonSummaryDto>> ListAsync(int userId, CancellationToken ct = default)
     {
-        var rows = await _db.MoveComparisons.AsNoTracking().Where(c => c.UserId == userId)
+        var rows = await _db.MoveComparisons.AsNoTracking().Where(c => c.UserId == userId && c.GameAnalysisId == null)
             .OrderByDescending(c => c.CreatedAt).Take(20)
             .Select(c => new
             {
@@ -108,7 +108,7 @@ public sealed class MoveComparisonService
     public async Task<MoveComparisonDto?> GetAsync(int userId, int id, CancellationToken ct = default)
     {
         var c = await _db.MoveComparisons.AsNoTracking().Include(x => x.Lines)
-            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId && x.GameAnalysisId == null, ct);
         return c is null ? null : await BuildDtoAsync(c, ct);
     }
 
@@ -182,7 +182,8 @@ public sealed class MoveComparisonService
 
     public async Task<bool> DeleteAsync(int userId, int id, CancellationToken ct = default)
     {
-        var c = await _db.MoveComparisons.Include(x => x.Lines).FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
+        var c = await _db.MoveComparisons.Include(x => x.Lines)
+            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId && x.GameAnalysisId == null, ct);
         if (c is null) return false;
         foreach (var jobId in c.Lines.Where(l => l.AnalysisJobId != null).Select(l => l.AnalysisJobId!.Value))
             await _jobs.DeleteAsync(userId, jobId, ct);
@@ -192,25 +193,82 @@ public sealed class MoveComparisonService
     }
 
     private Task<int> OpenCountAsync(int userId, CancellationToken ct)
-        => _db.MoveComparisons.CountAsync(c => c.UserId == userId
+        => _db.MoveComparisons.CountAsync(c => c.UserId == userId && c.GameAnalysisId == null
             && c.Status != MoveComparisonStatus.Done && c.Status != MoveComparisonStatus.Failed, ct);
 
     /// <summary>Hält höchstens <see cref="MaxKeptPerUser"/> fertige Vergleiche je Nutzer — der älteste geht zuerst.</summary>
     private async Task TrimAsync(int userId, CancellationToken ct)
     {
-        var old = await _db.MoveComparisons.Where(c => c.UserId == userId
+        var old = await _db.MoveComparisons.Where(c => c.UserId == userId && c.GameAnalysisId == null
                 && (c.Status == MoveComparisonStatus.Done || c.Status == MoveComparisonStatus.Failed))
             .OrderByDescending(c => c.CreatedAt).Skip(MaxKeptPerUser - 1).ToListAsync(ct);
         if (old.Count > 0) _db.MoveComparisons.RemoveRange(old);
     }
 
+    /// <summary>Ein Auftrag des Vergleichs. Vergleiche einer Vereinspartie (<see cref="MoveComparison.GameAnalysisId"/>) rechnen
+    /// als Stapel-Hintergrundarbeit wie die Analyse der Vereinspartien selbst (<see cref="AnalysisJob.Background"/> +
+    /// <see cref="AnalysisJob.Batch"/>): nach allem, worauf jemand wartet, und in den Sperrzeiten der Haus-Engine nicht.</summary>
     private async Task<int> CreateJobAsync(MoveComparison c, string fen, int multiPv, CancellationToken ct)
     {
+        var club = c.GameAnalysisId != null;
         var job = await _jobs.CreateAsync(c.UserId, new CreateAnalysisJobRequest
         {
             Fen = fen, TargetDepth = c.Depth, MultiPv = multiPv, Title = JobTitle,
-        }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId);
+        }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId, background: club, batch: club);
         return job.Id;
+    }
+
+    /// <summary>
+    /// Einen wartenden Vergleich (<see cref="MoveComparisonStatus.Waiting"/>, Vereinspartien) starten: je offenem Kandidaten
+    /// ein Auftrag, Status <see cref="MoveComparisonStatus.Candidates"/>. Scheitert ein Auftrag (Deckel, keine Engine), kommen
+    /// die schon angelegten wieder weg, der Vergleich bleibt wartend und die Ausnahme geht an den Aufrufer.
+    /// </summary>
+    internal async Task StartWaitingAsync(MoveComparison c, CancellationToken ct)
+    {
+        var created = new List<int>();
+        try
+        {
+            foreach (var line in c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate && l.State == MoveComparisonLineState.Pending))
+            {
+                line.AnalysisJobId = await CreateJobAsync(c, line.Fen, CandidateLines, ct);
+                created.Add(line.AnalysisJobId.Value);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            foreach (var jobId in created) await _jobs.DeleteAsync(c.UserId, jobId, CancellationToken.None);
+            foreach (var line in c.Lines) line.AnalysisJobId = null;
+            throw;
+        }
+        c.Status = MoveComparisonStatus.Candidates;
+        c.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        await PumpOneAsync(c.Id, ct);   // eine Stellung, die matt setzt, braucht keinen Auftrag
+    }
+
+    /// <summary>Die Vergleiche zu den Fehlern einer Analyse (Vereinspartie), nach Halbzug — für jeden, der die Partie sieht
+    /// (die Prüfung macht der Aufrufer).</summary>
+    public async Task<List<ClubMistakeComparisonDto>> ListForAnalysisAsync(int analysisId, CancellationToken ct = default)
+    {
+        var rows = await _db.MoveComparisons.AsNoTracking().Include(x => x.Lines)
+            .Where(x => x.GameAnalysisId == analysisId && x.Ply != null).OrderBy(x => x.Ply).ToListAsync(ct);
+        var result = new List<ClubMistakeComparisonDto>();
+        foreach (var c in rows)
+        {
+            // Angelegt als [bester Zug der Analyse, Partiezug] (ClubMistakeComparisons.EnqueueAsync).
+            var cands = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate).OrderBy(l => l.Ordinal).ToList();
+            if (cands.Count < 2) continue;
+            result.Add(new ClubMistakeComparisonDto(c.Ply!.Value, cands[1].CandidateUci, cands[0].CandidateUci, await BuildDtoAsync(c, ct)));
+        }
+        return result;
+    }
+
+    /// <summary>Ein Vergleich zu einem Fehler dieser Analyse; <c>null</c> = gibt es nicht (oder gehört zu einer anderen).</summary>
+    public async Task<MoveComparisonDto?> GetForAnalysisAsync(int analysisId, int id, CancellationToken ct = default)
+    {
+        var c = await _db.MoveComparisons.AsNoTracking().Include(x => x.Lines)
+            .FirstOrDefaultAsync(x => x.Id == id && x.GameAnalysisId == analysisId, ct);
+        return c is null ? null : await BuildDtoAsync(c, ct);
     }
 
     // ── Pumpe ──────────────────────────────────────────────────────────────────────────────────────
@@ -322,6 +380,7 @@ public sealed class MoveComparisonService
                 };
                 var after = bestOver ? null : PlayUci(best.Fen, replies[k].Uci);
                 if (after is null) line.State = MoveComparisonLineState.Illegal;
+                else if (!ReplyTransfers(weak.Fen, best.Fen, replies[k].Uci)) line.State = MoveComparisonLineState.Skipped;
                 else
                 {
                     line.Fen = after;
@@ -341,6 +400,48 @@ public sealed class MoveComparisonService
                 line.State = MoveComparisonLineState.Failed;
             }
         }
+    }
+
+    /// <summary>
+    /// Ist die Antwort auf den schwächeren Zug nach dem besten noch DERSELBE Zug (0.908.0, Befund an Vereinspartie 236: nach
+    /// 11...c5 stand der Test „Sxd7" mit +6,52 da — der Springer zog nach dem besten Zug einfach gratis nach d7, nichts wurde
+    /// geschlagen)? Nein, wenn auf dem Startfeld eine andere (oder keine) Figur steht, oder wenn die Antwort nach dem schwächeren
+    /// Zug etwas schlug und hier nichts schlägt. Umgekehrt (still dort, schlägt hier) bleibt sie: genau das kann der Grund sein.
+    /// </summary>
+    internal static bool ReplyTransfers(string weakFen, string bestFen, string uci)
+    {
+        if (string.IsNullOrEmpty(uci) || uci.Length < 4) return false;
+        var from = uci[..2];
+        var to = uci.Substring(2, 2);
+        var piece = PieceAt(weakFen, from);
+        if (piece is null || piece != PieceAt(bestFen, from)) return false;
+        bool Captures(string fen)
+        {
+            var target = PieceAt(fen, to);
+            if (target is { } t) return char.IsUpper(t) != char.IsUpper(piece.Value);   // eigene Figur = Rochade (König schlägt Turm)
+            return char.ToLowerInvariant(piece.Value) == 'p' && from[0] != to[0];      // en passant
+        }
+        return !Captures(weakFen) || Captures(bestFen);
+    }
+
+    /// <summary>Figur auf einem Feld („e4") laut FEN, <c>null</c> = leer oder unlesbar.</summary>
+    internal static char? PieceAt(string fen, string square)
+    {
+        if (string.IsNullOrEmpty(fen) || square.Length != 2) return null;
+        var file = square[0] - 'a';
+        var rank = square[1] - '1';
+        if (file is < 0 or > 7 || rank is < 0 or > 7) return null;
+        var rows = fen.Split(' ')[0].Split('/');
+        if (rows.Length != 8) return null;
+        var col = 0;
+        foreach (var ch in rows[7 - rank])
+        {
+            if (char.IsDigit(ch)) { col += ch - '0'; continue; }
+            if (col == file) return ch;
+            col++;
+            if (col > file) return null;
+        }
+        return null;
     }
 
     /// <summary>Gerechnete Kandidaten, der beste (für die Seite am Zug) zuerst.</summary>
@@ -464,7 +565,8 @@ public sealed class MoveComparisonService
         var weakSan = SanOf(c.Fen, weak.CandidateUci);
         if (bestSan is null || weakSan is null) return null;
         var weakReplies = Pvs(weak.Fen, weak.ResultJson);
-        var tests = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply && l.CandidateUci == weak.CandidateUci)
+        var tests = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply && l.CandidateUci == weak.CandidateUci
+                && l.State != MoveComparisonLineState.Skipped)
             .OrderBy(l => l.Ordinal)
             .Select(l =>
             {
@@ -652,7 +754,8 @@ public sealed class MoveComparisonService
                 var (json, depth) = Current(l);
                 var ev = EvalOf(l.Fen, json);
                 var replies = Pvs(l.Fen, json);
-                var tests = c.Lines.Where(r => r.Kind == MoveComparisonLineKind.Reply && r.CandidateUci == l.CandidateUci)
+                var tests = c.Lines.Where(r => r.Kind == MoveComparisonLineKind.Reply && r.CandidateUci == l.CandidateUci
+                        && r.State != MoveComparisonLineState.Skipped)   // ein anderer Zug — nicht zeigen (ReplyTransfers)
                     .OrderBy(r => r.Ordinal)
                     .Select(r =>
                     {
@@ -708,6 +811,7 @@ public sealed class MoveComparisonService
         MoveComparisonStatus.Replies => "replies",
         MoveComparisonStatus.Explaining => "explaining",
         MoveComparisonStatus.Done => "done",
+        MoveComparisonStatus.Waiting => "waiting",
         _ => "failed",
     };
 

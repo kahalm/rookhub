@@ -214,4 +214,26 @@ describe('MoveComparisonComponent', () => {
     expect(at).toBeGreaterThan(-1);
     expect(css.slice(at)).toMatch(/^@media\(min-width:1200px\)\{\.body(\[[^\]]*\])?\{grid-template-columns:minmax\(260px,min\(620px,(calc\()?100vh-260px\)?\)\)1fr/);
   });
+  it('club game (?clubGame=): reads through the game, back to the game, no history, hides „not possible“ tests', fakeAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [MoveComparisonComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: {
+          paramMap: of(convertToParamMap({ id: '7' })), snapshot: { queryParamMap: convertToParamMap({ clubGame: '236' }) } } }],
+    });
+    const fixture = TestBed.createComponent(MoveComparisonComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/league/club/games/236/comparisons/7').flush(comparison());
+    http.expectNone('/api/move-comparisons');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('moveCompare.page.backToGame');
+    expect(el.textContent).not.toContain('moveCompare.page.notPossible');
+    expect(el.textContent).toContain('3.c4 c6');
+    expect(fixture.componentInstance.shownReplies(fixture.componentInstance.weaker()[0]).map(r => r.san)).toEqual(['Nf6']);
+    http.verify();
+    discardPeriodicTasks();
+  }));
 });

@@ -39,3 +39,8 @@ public record MoveComparisonDto(
 
 public record MoveComparisonSummaryDto(int Id, string Fen, string? Title, string Status, DateTime CreatedAt,
     IReadOnlyList<string> Moves, string? BestSan);
+
+/// <summary>Zugvergleich zu einem Fehler einer Vereinspartie (0.908.0): <see cref="Ply"/> = Halbzug des Fehlers,
+/// <see cref="PlayedUci"/> = der Partiezug, <see cref="AnalysisBestUci"/> = der beste Zug laut Partie-Analyse (der Vergleich
+/// rechnet tiefer und kann anders urteilen — <see cref="MoveComparisonDto.BestUci"/>).</summary>
+public record ClubMistakeComparisonDto(int Ply, string PlayedUci, string AnalysisBestUci, MoveComparisonDto Comparison);

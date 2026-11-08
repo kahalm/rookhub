@@ -12,6 +12,9 @@ public enum MoveComparisonStatus
     Explaining = 2,
     Done = 3,
     Failed = 4,
+    /// <summary>Zugvergleich einer Vereinspartie (0.908.0, <see cref="Services.Engines.ClubMistakeComparisons"/>): angelegt,
+    /// aber noch kein Auftrag — die Pumpe startet höchstens wenige gleichzeitig, als Stapel-Hintergrundarbeit.</summary>
+    Waiting = 5,
 }
 
 public enum MoveComparisonLineKind
@@ -29,6 +32,10 @@ public enum MoveComparisonLineState
     Failed = 2,
     /// <summary>Die Antwort geht nach dem besten Zug gar nicht — selbst schon eine Auskunft.</summary>
     Illegal = 3,
+    /// <summary>Die Antwort ginge zwar, ist nach dem besten Zug aber ein ANDERER Zug (0.908.0): andere Figur auf dem Startfeld,
+    /// oder sie schlug nach dem schwächeren Zug etwas und schlägt hier nichts — ohne Auftrag, nicht gezeigt, nicht erklärt.
+    /// Regel: <see cref="Services.Engines.MoveComparisonService.ReplyTransfers"/>.</summary>
+    Skipped = 4,
 }
 
 /// <summary>
@@ -41,8 +48,19 @@ public class MoveComparison
 {
     public int Id { get; set; }
 
+    /// <summary>Besitzer. Bei einem Vergleich einer Vereinspartie (<see cref="GameAnalysisId"/> gesetzt) der Besitzer der
+    /// Analyse (das Haus-Engine-Konto) — er sieht ihn trotzdem nicht in seiner Liste, und er zählt nicht in seine Deckel.</summary>
     public int UserId { get; set; }
     public AppUser? User { get; set; }
+
+    /// <summary>Automatischer Vergleich „Fehlzug gegen besten Zug" zu einem Fehler dieser Analyse einer Vereinspartie (0.908.0,
+    /// <see cref="Services.Engines.ClubMistakeComparisons"/>); <c>null</c> = ein Vergleich, den ein Nutzer selbst angelegt hat.
+    /// Lesen darf, wer die Vereinspartie sieht; die Zeile geht mit der Analyse (Cascade) bzw. beim Korrigieren der Züge.</summary>
+    public int? GameAnalysisId { get; set; }
+    public GameAnalysis? GameAnalysis { get; set; }
+
+    /// <summary>Halbzug des Fehlers in der Partie (0 = erster Zug) — nur mit <see cref="GameAnalysisId"/>.</summary>
+    public int? Ply { get; set; }
 
     [Required, MaxLength(120)]
     public string Fen { get; set; } = string.Empty;
