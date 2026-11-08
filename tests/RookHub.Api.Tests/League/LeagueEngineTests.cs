@@ -546,6 +546,35 @@ public class LeagueEngineTests
         db.Dispose();
     }
 
+    /// <summary>0.899.0, Wunsch 2026-11-08: „der anonyme Link soll es ermöglichen, innerhalb der Liga, in der er geteilt wurde, die
+    /// Runden zu wechseln" — <c>{token}~{runde}</c> zeigt dieselbe Mannschaft in einer anderen teilbaren Runde.</summary>
+    [Fact]
+    public async Task Share_RoundSuffix_SwitchesRoundWithinLeague()
+    {
+        var (db, svc) = ShareFixture();
+        var s = await svc.CreateShareAsync(TestClubs.Home, 1, 1, "A", 7, default);
+        var pub = await svc.PublicShareAsync(s!.Token, default);
+        var rounds = pub!["rounds"]!.AsArray().Select(r => r!["round"]!.GetValue<int>()).ToList();
+        Assert.Contains(1, rounds);
+        Assert.Contains(2, rounds);
+
+        var other = await svc.PublicShareAsync(s.Token + "~2", default);
+        Assert.NotNull(other);
+        Assert.Equal(2, other!["round"]!.GetValue<int>());
+        Assert.Equal("A", other["team"]!.GetValue<string>());
+        Assert.Equal((1, 2, "A"), await svc.ShareFixtureAsync(s.Token + "~2", default));
+        Assert.Equal(s.Token, await svc.ValidShareTokenAsync(s.Token + "~2", default));   // Deckel/Vermerk am Link, nicht an der Runde
+        Assert.NotEqual(pub["fixture"]!.ToJsonString(), other["fixture"]!.ToJsonString());
+
+        Assert.Null(await svc.PublicShareAsync(s.Token + "~99", default));   // gibt es in der Liga nicht
+        Assert.Null(await svc.ShareFixtureAsync(s.Token + "~99", default));
+        Assert.Null(await svc.PublicShareAsync("unbekanntunbekannt123456~2", default));
+        Assert.Equal(("abc", (int?)null), LeagueService.SplitShareToken("abc"));
+        Assert.Equal(("abc~x", (int?)null), LeagueService.SplitShareToken("abc~x"));
+        Assert.Equal(("abc", (int?)3), LeagueService.SplitShareToken("abc~3"));
+        db.Dispose();
+    }
+
     [Fact]
     public async Task Share_Expired_IsHidden()
     {

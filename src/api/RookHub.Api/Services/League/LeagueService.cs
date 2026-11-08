@@ -452,10 +452,58 @@ public sealed class LeagueService
         return club is null ? null : (s.Token, club);
     }
 
+    /// <summary>Trenner zwischen Token und gewählter Runde (0.899.0): <c>{token}~{runde}</c>. Base64url kennt kein „~".</summary>
+    public const char ShareRoundSeparator = '~';
+
+    /// <summary>„abc~5" → („abc", 5); ohne oder mit unlesbarer Runde → (Eingabe, null).</summary>
+    internal static (string Token, int? Round) SplitShareToken(string token)
+    {
+        var i = token.LastIndexOf(ShareRoundSeparator);
+        if (i <= 0) return (token, null);
+        return int.TryParse(token.AsSpan(i + 1), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var r) && r > 0
+            ? (token[..i], r) : (token, null);
+    }
+
+    /// <summary>Gültiger Link — mit <c>{token}~{runde}</c> (0.899.0, Wunsch 2026-11-08: „der anonyme Link soll es ermöglichen, innerhalb
+    /// der Liga, in der er geteilt wurde, die Runden zu wechseln") eine Kopie, die auf DIESE Runde derselben Liga und Mannschaft zeigt,
+    /// sofern sie teilbar ist (<see cref="ShareRoundsAsync"/>); alles, was am Link hängt (Token, Verein, Ablauf), bleibt das des Links.</summary>
     private async Task<LeagueShare?> ValidShareAsync(string token, CancellationToken ct)
     {
+        var (raw, round) = SplitShareToken(token);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        return await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(s => s.Token == token && s.Expires >= today, ct);
+        var s = await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(x => x.Token == raw && x.Expires >= today, ct);
+        if (s is null || round is null || round == s.Round) return s;
+        if (!(await ShareRoundsAsync(s, ct)).Any(r => r.Round == round)) return null;
+        return new LeagueShare
+        {
+            Token = s.Token, ClubId = s.ClubId, Tnr = s.Tnr, Round = round.Value, Team = s.Team, Expires = s.Expires,
+            CreatedByUserId = s.CreatedByUserId, CreatedAt = s.CreatedAt,
+        };
+    }
+
+    /// <summary>Eine teilbare Runde der Mannschaft des Links (Auswahl auf der Teilen-Seite).</summary>
+    public sealed record ShareRound(int Round, string? Date, string? Opp, bool? Home, string? Status);
+
+    private sealed record ShareRoundsKey(int Tnr, string Team, DateTime GeneratedAt);
+
+    /// <summary>Die teilbaren Runden der Liga des Links für seine Mannschaft, aufsteigend — im Cache bis zum nächsten Rechnen der Ansicht.</summary>
+    private async Task<IReadOnlyList<ShareRound>> ShareRoundsAsync(LeagueShare s, CancellationToken ct)
+    {
+        var generated = await _db.LeagueViews.AsNoTracking().Where(v => v.Tnr == s.Tnr)
+            .Select(v => (DateTime?)v.GeneratedAt).FirstOrDefaultAsync(ct);
+        if (generated is null) return Array.Empty<ShareRound>();
+        var key = new ShareRoundsKey(s.Tnr, s.Team, generated.Value);
+        if (_cache != null && _cache.TryGetValue(key, out IReadOnlyList<ShareRound>? hit) && hit != null) return hit;
+        var json = await LeagueJsonAsync(s.Tnr, ct);
+        var list = new List<ShareRound>();
+        if (json != null && JsonNode.Parse(json)?["fixtures"]?[s.Team] is JsonObject byRound)
+            foreach (var (k, v) in byRound)
+                if (int.TryParse(k, out var r) && v is JsonObject fx && Shareable(fx))
+                    list.Add(new ShareRound(r, fx["date"]?.GetValue<string>(), fx["opp"]?.GetValue<string>(),
+                        fx["home"]?.GetValue<bool>(), fx["status"]?.GetValue<string>()));
+        list.Sort((a, b) => a.Round.CompareTo(b.Round));
+        _cache?.Set(key, (IReadOnlyList<ShareRound>)list, new MemoryCacheEntryOptions { Size = 1, SlidingExpiration = LeagueProfileStore.CacheIdle });
+        return list;
     }
 
     /// <summary>Wohin ein Teilen-Link zeigt — AUCH wenn er abgelaufen ist (0.846.4, Wunsch 2026-10-26: „wenn man eingeloggt ist und
@@ -465,14 +513,15 @@ public sealed class LeagueService
     /// <see cref="ValidShareAsync"/>.</summary>
     public async Task<(int Tnr, int Round, string Team, DateOnly Expires, bool Expired)?> ShareTargetAsync(string token, CancellationToken ct)
     {
-        var s = await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(x => x.Token == token, ct);
-        return s is null ? null : (s.Tnr, s.Round, s.Team, s.Expires, s.Expires < DateOnly.FromDateTime(DateTime.UtcNow));
+        var (raw, round) = SplitShareToken(token);
+        var s = await _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(x => x.Token == raw, ct);
+        return s is null ? null : (s.Tnr, round ?? s.Round, s.Team, s.Expires, s.Expires < DateOnly.FromDateTime(DateTime.UtcNow));
     }
 
     /// <summary>So lange hält der Cache die fertige Teilen-Ansicht eines Links (Codereview N4-003).</summary>
     internal static readonly TimeSpan ShareViewTtl = TimeSpan.FromSeconds(60);
 
-    private sealed record ShareViewKey(string Token, DateOnly Expires, DateTime? GeneratedAt, long Epoch);
+    private sealed record ShareViewKey(string Token, int Round, DateOnly Expires, DateTime? GeneratedAt, long Epoch);
 
     /// <summary>Öffentliche Ansicht eines Links: genau diese Begegnung, Online-Konten nur „sicher".
     /// <para>Jeder Aufruf der Seite (und <c>/sources</c>) parste die GANZE Liga-Ansicht und klonte die Begegnung (Codereview
@@ -485,7 +534,7 @@ public sealed class LeagueService
         var s = await ValidShareAsync(token, ct);
         if (s is null) return null;
         var gen = await _db.LeagueViews.AsNoTracking().Where(v => v.Tnr == s.Tnr).Select(v => (DateTime?)v.GeneratedAt).FirstOrDefaultAsync(ct);
-        var key = new ShareViewKey(s.Token, s.Expires, gen, ViewsEpoch);
+        var key = new ShareViewKey(s.Token, s.Round, s.Expires, gen, ViewsEpoch);
         if (_cache != null && _cache.TryGetValue(key, out JsonObject? hit) && hit != null) return (JsonObject)hit.DeepClone();
         var view = await BuildPublicShareAsync(s, gen ?? default, ct);
         if (view != null)
@@ -505,8 +554,14 @@ public sealed class LeagueService
             r!["acc"] = new JsonArray(acc.Where(a => a?["conf"]?.GetValue<string>() == "sicher").Select(a => a!.DeepClone()).ToArray());
         }
         var club = await _db.LeagueClubs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == s.ClubId, ct);
+        var rounds = new JsonArray((await ShareRoundsAsync(s, ct)).Select(r => (JsonNode)new JsonObject
+        {
+            ["round"] = r.Round, ["date"] = r.Date, ["opp"] = r.Opp, ["home"] = r.Home, ["status"] = r.Status,
+        }).ToArray());
         return new JsonObject
         {
+            // 0.899.0: die teilbaren Runden derselben Liga für die Mannschaft — die Seite wechselt mit {token}~{runde} dorthin
+            ["rounds"] = rounds,
             // der Verein des Links (Name + Anonymisierungs-Name) — die Seite des Links ersetzt mit SEINEM Namen
             ["club"] = club is null ? null : new JsonObject { ["id"] = club.Id, ["name"] = club.Name, ["anonName"] = club.AnonName },
             ["league"] = f.Value.League["name"]?.DeepClone(), ["season"] = f.Value.League["season"]?.DeepClone(),

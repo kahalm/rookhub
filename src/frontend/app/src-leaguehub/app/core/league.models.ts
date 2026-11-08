@@ -266,7 +266,11 @@ export interface SharedFixture {
   league: string; season: string; round: number; team: string; fixture: Fixture; generated: string; expires: string;
   /** Der Verein des Links (0.698.0) — die Seite ersetzt mit SEINEM Namen; fehlt bei älteren Servern. */
   club?: { id: number; name: string; anonName: string } | null;
+  /** Teilbare Runden derselben Liga für die Mannschaft (0.899.0) — die Teilen-Seite wechselt mit `{token}~{runde}`. */
+  rounds?: SharedRound[];
 }
+
+export interface SharedRound { round: number; date: string | null; opp: string | null; home: boolean | null; status: string | null }
 
 export interface UpdateStatus { running: boolean; started: string | null; finished: string | null; ok: boolean | null; message: string | null }
 

@@ -15,7 +15,7 @@ describe('SharePageComponent', () => {
   /** Anmeldestand (0.846.4): abgelaufener Link → angemeldet zur Prognose. */
   let auth: { isLoggedIn: boolean; has: () => boolean };
 
-  function create() {
+  function create(query: Record<string, string> = {}) {
     TestBed.configureTestingModule({
       imports: [SharePageComponent],
       providers: [
@@ -23,7 +23,7 @@ describe('SharePageComponent', () => {
         { provide: LeagueApiService, useValue: api },
         { provide: LineupsApiService, useValue: lineups },
         { provide: AuthService, useValue: auth },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }), queryParamMap: convertToParamMap({}) } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }), queryParamMap: convertToParamMap(query) } } },
       ],
     });
     const f = TestBed.createComponent(SharePageComponent);
@@ -44,6 +44,48 @@ describe('SharePageComponent', () => {
       league: { players: 226, board: { Lumbra: 12106 }, boardTotal: 12106, online: { 'chess.com': { games: 13132, accounts: 25 } }, onlineTotal: 13132, onlineAccounts: 25 },
       opponent: { players: 11, board: { Lumbra: 187 }, boardTotal: 187, online: { 'chess.com': { games: 12, accounts: 1 } }, onlineTotal: 12, onlineAccounts: 1 },
     });
+  });
+
+  // 0.899.0, Wunsch 2026-11-08: „der anonyme Link soll es ermöglichen, innerhalb der Liga, in der er geteilt wurde, die Runden zu wechseln"
+  const ROUNDS = [
+    { round: 2, date: 'Sa 24.10.2026', opp: 'Wörgl', home: true, status: 'played' },
+    { round: 3, date: 'Sa 07.11.2026', opp: 'Kufstein', home: false, status: 'open' },
+  ];
+  it('Runde wechseln: Auswahl der teilbaren Runden, Wahl lädt über {token}~{runde} und steht in der Adresse', async () => {
+    api.shared.and.callFake(async (t: string) => ({
+      league: 'Landesliga', season: '2026/27', round: t.endsWith('~3') ? 3 : 2, team: 'Schwaz/', generated: '27.09.2026 21:00',
+      expires: '2027-01-24', rounds: ROUNDS,
+      fixture: { opp: t.endsWith('~3') ? 'Kufstein' : 'Wörgl', home: !t.endsWith('~3'), status: 'open', boards: [], roster: [] },
+    }) as any);
+    const f = create();
+    await f.whenStable();
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const sel = el.querySelector('.share-round select') as HTMLSelectElement;
+    expect([...sel.options].map(o => o.textContent!.trim())).toEqual(['Runde 2 · Sa 24.10. · gegen Wörgl (gespielt)', 'Runde 3 · Sa 07.11. · bei Kufstein']);
+    expect(sel.value).toBe('2');
+    const nav = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    sel.value = '3';
+    sel.dispatchEvent(new Event('change'));
+    await f.whenStable();
+    f.detectChanges();
+    expect(api.shared).toHaveBeenCalledWith('TOKEN123~3');
+    expect(api.sources).toHaveBeenCalledWith('TOKEN123~3');
+    expect(nav).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { runde: 3 } }));
+    expect(el.querySelector('.match')?.textContent).toContain('Kufstein');
+    expect((el.querySelector('.cta-actions a') as HTMLAnchorElement).getAttribute('href')).toContain('TOKEN123~3');
+  });
+
+  it('Runde aus der Adresse (?runde=3) gilt gleich beim Laden; nur eine Runde → keine Auswahl', async () => {
+    api.shared.and.resolveTo({
+      league: 'Landesliga', season: '2026/27', round: 3, team: 'Schwaz/', generated: '27.09.2026 21:00', expires: '2027-01-24',
+      rounds: [ROUNDS[1]], fixture: { opp: 'Kufstein', home: false, status: 'open', boards: [], roster: [] },
+    } as any);
+    const f = create({ runde: '3' });
+    await f.whenStable();
+    f.detectChanges();
+    expect(api.shared).toHaveBeenCalledWith('TOKEN123~3');
+    expect((f.nativeElement as HTMLElement).querySelector('.share-round')).toBeNull();
   });
 
   it('zeigt die geteilte Begegnung ohne „Link teilen"', async () => {

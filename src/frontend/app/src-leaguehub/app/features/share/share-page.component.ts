@@ -4,7 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
-import { GameSources, SharedFixture } from '../../core/league.models';
+import { GameSources, SharedFixture, SharedRound } from '../../core/league.models';
 import { SOURCES_RETRIES, SOURCES_RETRY_MS } from '../../core/game-sources';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { RoundLineupsComponent } from '../../shared/round-lineups.component';
@@ -18,6 +18,9 @@ import { AuthService } from '@rh/core/auth.service';
  * Seit 0.838.0 (Wunsch 2026-10-25: „die Aufstellung für die Runde soll auch bei den anonymen Links verfügbar sein") darunter
  * derselbe Knopf wie auf der Ligaseite, „Alle Aufstellungen der Runde N" (`lh-round-lineups` über den Link, nur lesen;
  * Zustand in der Adresse `?aufstellungen=1`).
+ * Seit 0.899.0 (Wunsch 2026-11-08: „der anonyme Link soll es ermöglichen, innerhalb der Liga, in der er geteilt wurde, die Runden zu
+ * wechseln"): ein Auswahlfeld „Runde" über der Begegnung; die Wahl steht in der Adresse (`?runde=N`), alle Abfragen laufen dann über
+ * `{token}~{runde}` — der Server zeigt dieselbe Mannschaft in dieser Runde (nur teilbare Runden derselben Liga).
  */
 @Component({
   selector: 'lh-share-page',
@@ -58,12 +61,20 @@ import { AuthService } from '@rh/core/auth.service';
             nicht gespeichert, wer hochgeladen hat.</p>
         }
         <div class="cta-actions">
-          <a class="btn-pri" [routerLink]="['/s', token, 'hochladen']" [queryParams]="{ art: 'formular' }">Formular fotografieren</a>
-          <a class="btn-sec" [routerLink]="['/s', token, 'hochladen']" title="PGN-Datei hochladen">PGN</a>
+          <a class="btn-pri" [routerLink]="['/s', token(), 'hochladen']" [queryParams]="{ art: 'formular' }">Formular fotografieren</a>
+          <a class="btn-sec" [routerLink]="['/s', token(), 'hochladen']" title="PGN-Datei hochladen">PGN</a>
         </div>
       </section>
+      @if ((d.rounds ?? []).length > 1) {
+        <label class="share-round">Runde
+          <select (change)="pickRound(+$any($event.target).value)" aria-label="Runde wählen">
+            @for (r of d.rounds; track r.round) { <option [value]="r.round" [selected]="r.round === d.round">{{ roundText(r) }}</option> }
+          </select>
+        </label>
+      }
       <p class="stand share-stand">Nur zum Ansehen<span class="desk-only"> · Stand der Daten: {{ d.generated }}</span> · <span class="desk-only">Link </span>gültig bis {{ until(d.expires) }}</p>
-      <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" [sources]="sources()" />
+      @for (t of [token()]; track t) {
+      <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="t" [sources]="sources()" />
       <!-- 0.838.0: alle Aufstellungen der Runde auch über den Link — derselbe Textknopf wie auf der Ligaseite, nur lesen. -->
       <div class="lineups-toggle share-lineups">
         <button type="button" class="btn-link" [attr.aria-expanded]="showLineups()" aria-controls="round-lineups" (click)="toggleLineups()">
@@ -73,7 +84,8 @@ import { AuthService } from '@rh/core/auth.service';
         </button>
       </div>
       @if (showLineups()) {
-        <div id="round-lineups"><lh-round-lineups [shareToken]="token" [shareTeam]="d.team" [coveredFides]="covered()" /></div>
+        <div id="round-lineups"><lh-round-lineups [shareToken]="t" [shareTeam]="d.team" [coveredFides]="covered()" /></div>
+      }
       }
       <div class="foot-note">
         <p>Quelle: Paarungen und Meldelisten von chess-results.com bzw. dem Ligamanager des Bayerischen Schachbunds; Partien aus Lumbra's
@@ -85,6 +97,9 @@ import { AuthService } from '@rh/core/auth.service';
     }
   `,
   styles: [`
+    .share-round { display: grid; gap: 4px; max-width: 420px; margin: 0 0 10px; font: 600 14px/1.2 var(--cond); color: var(--muted); }
+    .share-round select { font: 500 16px/1.2 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+      border-radius: 6px; padding: 10px; min-height: 44px; }
     .share-lineups { margin: 14px 0 6px; }
     .share-lineups .btn-link { display: inline-flex; align-items: center; gap: 6px; }
   `],
@@ -100,7 +115,12 @@ export class SharePageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   /** Angemeldet (0.846.4): ein abgelaufener Link führt zur Prognose der Begegnung, ein widerrufener bietet „Zu den Prognosen". */
   readonly loggedIn = this.auth.isLoggedIn;
-  readonly token = this.route.snapshot.paramMap.get('token') ?? '';
+  /** Das Token aus der Adresse — ohne Runde. */
+  readonly baseToken = this.route.snapshot.paramMap.get('token') ?? '';
+  /** Gewählte Runde (0.899.0, `?runde=N`); `null` = die Runde des Links. */
+  readonly pickedRound = signal<number | null>(Number(this.route.snapshot.queryParamMap?.get('runde')) || null);
+  /** Token für alle Abfragen: mit gewählter Runde `{token}~{runde}`. */
+  readonly token = computed(() => this.pickedRound() ? `${this.baseToken}~${this.pickedRound()}` : this.baseToken);
   readonly data = signal<SharedFixture | null>(null);
   /** Alle Aufstellungen der Runde aufgeklappt (0.838.0) — in der Adresse `?aufstellungen=1`. */
   readonly showLineups = signal(this.route.snapshot.queryParamMap?.get('aufstellungen') === '1');
@@ -123,7 +143,7 @@ export class SharePageComponent implements OnInit {
   async load(): Promise<void> {
     this.loadError.set(null);
     try {
-      const d = await this.api.shared(this.token);
+      const d = await this.api.shared(this.token());
       this.data.set(d);
       this.clubs.useShareClub(d.club ?? null);
       this.title.setTitle(`${tn(d.team)} – Runde ${d.round} | LeagueHub`);
@@ -146,7 +166,7 @@ export class SharePageComponent implements OnInit {
     for (let attempt = 0; ; attempt++) {
       let s: GameSources;
       try {
-        s = await this.api.sources(this.token);
+        s = await this.api.sources(this.token());
       } catch {
         this.sources.set(null);
         return;
@@ -167,12 +187,29 @@ export class SharePageComponent implements OnInit {
    *  (widerrufen) oder der Angemeldete die Prognosen nicht sehen darf (403). */
   private async redirectToTarget(): Promise<boolean> {
     try {
-      const t = await this.api.shareTarget(this.token);
+      const t = await this.api.shareTarget(this.token());
       await this.router.navigate(['/'], { queryParams: { liga: t.tnr, runde: t.round, verein: t.team }, replaceUrl: true });
       return true;
     } catch {
       return false;
     }
+  }
+
+  /** Andere Runde derselben Liga (0.899.0): Adresse merken und neu laden. */
+  pickRound(round: number): void {
+    const own = this.data()?.round;
+    if (!round || round === own) return;
+    this.pickedRound.set(round);
+    this.sources.set(null);
+    void this.router.navigate([], { queryParams: { runde: round }, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.load();
+  }
+
+  /** „Runde 4 · Sa 07.11. · gegen Wörgl" (+ „gespielt"). */
+  roundText(r: SharedRound): string {
+    const date = r.date ? ` · ${r.date.replace(/\d{4}$/, '')}` : '';
+    const opp = r.opp ? ` · ${r.home === false ? 'bei' : 'gegen'} ${tn(r.opp)}` : '';
+    return `Runde ${r.round}${date}${opp}${r.status === 'played' ? ' (gespielt)' : ''}`;
   }
 
   toggleLineups(): void {

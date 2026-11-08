@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.899.0", date: "2026-11-08", changes: [
+    { en: "LeagueHub share link: a “Round” picker above the match lets the recipient switch to the other rounds of the same league for the same team — without signing in. Uploads made there land in that round.", de: "LeagueHub-Teilen-Link: Über der Begegnung wechselt ein Auswahlfeld „Runde“ zu den anderen Runden derselben Liga für dieselbe Mannschaft — ohne Anmeldung. Was dort hochgeladen wird, landet in dieser Runde." },
+  ] },
   { version: "0.898.0", date: "2026-11-08", changes: [
     { en: "Analyse a game: you can now switch between “With engine” and “Without engine” at any time (button at the top of the analysis board); the choice in the dialog only decides how the board starts. Your lines of a game are always saved for you alone and evaluated in the background — also with the engine on — and show the evaluation and the better move at each move. They do not count towards the game’s accuracy or move classes.",
       de: "Partie analysieren: Zwischen „Mit Engine“ und „Ohne Engine“ schaltest du jetzt jederzeit um (Knopf oben im Analysebrett); die Wahl im Fenster bestimmt nur noch, wie das Brett startet. Deine Linien zu einer Partie werden immer nur für dich gespeichert und im Hintergrund bewertet — auch mit eingeschalteter Engine — und zeigen an jedem Zug Bewertung und besseren Zug. In Genauigkeit und Zug-Klassen der Partie zählen sie nicht." },
