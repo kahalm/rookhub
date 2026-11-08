@@ -23,6 +23,8 @@ export interface AnalysisRouteParams {
   historyId: number | null;
   /** „Ohne Engine analysieren" (`?blind=1`, 0.855.0) — zusammen mit einer Partie (`?pgn=` bzw. Router-State). */
   blind: boolean;
+  /** Partieseite der Partie (`?game=`, 0.900.0, nur seiteneigene Pfade): „Mit Engine“ oben führt dorthin zurück. */
+  gamePage: string | null;
   /** „Gegen Maia weiterspielen" (`?maia=<Elo>`, 0.892.0, Abweichungs-Trainer): Maia-Karte offen, Stärke = nächste Maia-Stufe;
    *  `null` = nichts vorgegeben. Gilt nur für diesen Aufruf (nicht gespeichert). */
   maia: number | null;
@@ -34,6 +36,9 @@ export function nearestMaiaElo(elo: number): number {
   for (const o of MAIA_ELO_OPTIONS) if (Math.abs(o - elo) <= Math.abs(best - elo)) best = o;
   return best;
 }
+
+/** Nur seiteneigene Pfade — kein Sprung auf fremde Seiten. */
+function isOwnPath(p: string): boolean { return p.startsWith('/') && !p.startsWith('//') && !p.includes('://') && !p.includes('\\'); }
 
 /** Adress-Parameter lesen und prüfen; `isValidFen` entscheidet über `?fen=`. */
 export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string) => boolean): AnalysisRouteParams {
@@ -49,10 +54,11 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
   const pgn = params.get('pgn');
   const historyId = parseInt(params.get('history') || '', 10);
   const maia = parseInt(params.get('maia') || '', 10);
+  const game = params.get('game');
   return {
     fen: fen && isValidFen(fen) ? fen : null,
     orientation: orientation === 'white' || orientation === 'black' ? orientation : null,
-    returnTo: from && from.startsWith('/') && !from.startsWith('//') && !from.includes('://') ? from : null,
+    returnTo: from && isOwnPath(from) ? from : null,
     engine: engine && /^[A-Za-z0-9_-]{1,64}$/.test(engine) ? engine : null,
     depth: DEPTH_OPTIONS.includes(depth) ? depth : null,
     lines: isLinesCount(lines) ? lines : null,
@@ -60,6 +66,7 @@ export function readAnalysisParams(params: QueryParams, isValidFen: (fen: string
     pgn: pgn?.trim() ? pgn : null,
     historyId: historyId > 0 ? historyId : null,
     blind: params.get('blind') === '1',
+    gamePage: game && isOwnPath(game) ? game : null,
     maia: maia > 0 && maia < 4000 ? nearestMaiaElo(maia) : null,
   };
 }

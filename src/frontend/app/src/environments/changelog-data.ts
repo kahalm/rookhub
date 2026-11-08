@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.900.0", date: "2026-11-08", changes: [
+    { en: "Game page and analysis without engine are now one switch: on the game page (e.g. a club game) “Without engine” at the top opens the board without evaluation, and there “With engine” at the top takes you straight back to the game page with graph and move classes. “?blind=1” on a game page (e.g. /club-games/236?blind=1) opens the game directly without engine. Your lines stay saved and evaluated in the background.",
+      de: "Partieseite und Analyse ohne Engine sind jetzt ein Umschalter: Auf der Partieseite (z. B. einer Vereinspartie) öffnet oben „Ohne Engine“ das Brett ohne Bewertung, dort führt oben „Mit Engine“ direkt zurück auf die Partieseite mit Kurve und Zug-Klassen. „?blind=1“ an einer Partieseite (z. B. /club-games/236?blind=1) öffnet die Partie gleich ohne Engine. Deine Linien bleiben gespeichert und werden im Hintergrund bewertet." },
+  ] },
   { version: "0.899.0", date: "2026-11-08", changes: [
     { en: "LeagueHub share link: a “Round” picker above the match lets the recipient switch to the other rounds of the same league for the same team — without signing in. Uploads made there land in that round.", de: "LeagueHub-Teilen-Link: Über der Begegnung wechselt ein Auswahlfeld „Runde“ zu den anderen Runden derselben Liga für dieselbe Mannschaft — ohne Anmeldung. Was dort hochgeladen wird, landet in dieser Runde." },
   ] },

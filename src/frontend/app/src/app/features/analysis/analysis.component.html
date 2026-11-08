@@ -65,7 +65,7 @@
       @if (study; as s) {
         <!-- „Ohne Engine analysieren" (0.855.0): Fortschritt der Hintergrundrechnung, „Engine einschalten", danach der Vergleich. -->
         <app-line-study-card [revealed]="s.revealed" [hidden]="studyEngineHidden" [analyzed]="s.analyzed" [total]="s.total"
-                             [comparison]="s.comparison" (reveal)="studyEngineHidden && toggleNoEngine()" (hide)="!studyEngineHidden && toggleNoEngine()" />
+                             [comparison]="s.comparison" (reveal)="studyEngineHidden && toggleNoEngine(true)" (hide)="!studyEngineHidden && toggleNoEngine(true)" />
       }
       @if (engineCrashed) {
         <mat-card style="background:var(--mat-sys-error);color:var(--mat-sys-on-error);">

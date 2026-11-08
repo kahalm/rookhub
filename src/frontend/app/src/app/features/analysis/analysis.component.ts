@@ -138,6 +138,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** „Ohne Engine“ auf dem freien Brett (0.895.0, `?blind=1` ohne Partie): dasselbe Ausblenden, aber ohne Linien-Baum —
    *  oben umschaltbar ({@link toggleNoEngine}), die Adresse zieht mit. */
   noEngine = false;
+  /** Partieseite der Partie (`?game=`, 0.900.0): „Mit Engine“ oben führt dorthin (Kurve, Klassen), statt hier aufzudecken. */
+  gamePage: string | null = null;
   /** Engine-Schalter vor „Ohne Engine“ — beim Zurückschalten wieder so (die gespeicherte Einstellung bleibt unberührt). */
   private engineOnBeforeBlind = true;
   /** Modus einer Partie mit Linien-Baum: `true` = ohne Engine. Seit 0.898.0 jederzeit umschaltbar (Kopf-Knopf, Karte);
@@ -246,6 +248,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.model.root = createRoot(p.fen ?? START_FEN);
     if (p.orientation) this.orientation = p.orientation;
     if (p.returnTo) this.returnTo = p.returnTo;
+    this.gamePage = p.gamePage;
     if (p.engine) this.picker.requestedId = p.engine;
     if (p.depth != null) this.depthSetting = p.depth;
     if (p.lines != null) this.linesCount = p.lines;
@@ -343,7 +346,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** Oben „Ohne Engine“ / „Mit Engine“ (0.895.0, mit Linien-Baum seit 0.898.0): umschalten und `?blind=1` in der Adresse
    *  mitführen (ersetzt den Eintrag; der Router-State mit der Partie bleibt fürs Neuladen erhalten). */
-  toggleNoEngine(): void {
+  toggleNoEngine(here = false): void {
+    // Ohne Engine, von einer Partieseite gekommen: „Mit Engine“ oben = zurück auf die Partieseite (Wunsch 2026-11-08). Die
+    // Linien speichert die Sitzung beim Verlassen (ngOnDestroy → flush). Die Leiste deckt dagegen HIER auf (`here`) — für die
+    // Bewertungen der eigenen Linien.
+    if (this.blind && this.gamePage && !here) { void this.router.navigateByUrl(this.gamePage); return; }
     if (this.study) {
       if (this.studyEngineHidden) this.revealStudy(); else this.hideStudyEngine();
     } else {

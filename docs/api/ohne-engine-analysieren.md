@@ -96,3 +96,18 @@ fließen nicht in die !! und in die Genauigkeit ein, sollen mir aber schnell zei
   deckt auf dem Server auf, danach nur noch Anzeige. Ein schon aufgedeckter Baum öffnet „Ohne Engine“ jetzt verdeckt (vorher
   sprang er beim Wiederöffnen auf).
 
+## Nachtrag 0.900.0 — Partieseite ⇄ Analysebrett ohne Engine
+
+Klarstellung des Users 2026-11-08: „wenn ich oben auf *Mit Engine* klicke, will ich auf `club-games/236` landen, bei *Ohne
+Engine* auf `analysis?blind=1` — vermutlich besser `games/236?blind=1`“. Also zwei Seiten, ein Umschalter:
+
+- **Partieseite** (`SharedGameComponent`: `/games/:id`, `/club-games/:id`, Teilen-Links) = „Mit Engine“ (Kurve, Klassen,
+  Genauigkeit). Oben in der Kopfzeile „Ohne Engine“ (`analyzeWithoutEngine`). `?blind=1` an der Partieseite springt gleich
+  dorthin (Adresse ersetzt) — so ist `/club-games/236?blind=1` der Einsprung.
+- **Analysebrett** bekommt die Partieseite als `?game=<Pfad>` (`AnalyzeGameService.startWithoutEngine(url, pgn, gamePage)`,
+  nur seiteneigene Pfade, `readAnalysisParams.gamePage`). Ohne Engine führt „Mit Engine“ oben dann per `navigateByUrl` zurück;
+  die Linien speichert die Sitzung beim Verlassen. Die Leiste „Ohne Engine“ deckt weiterhin HIER auf (Bewertungen der eigenen
+  Linien, `toggleNoEngine(true)`). Ohne `?game=` (z. B. „Im Analysebrett öffnen“ aus der Liste) schaltet der Kopf-Knopf wie in
+  0.898.0 auf der Seite um.
+- Ohne Konto geht der Weg auch, nur ohne gespeicherte Linien (freies Brett ohne Engine, 0.895.0).
+

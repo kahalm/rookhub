@@ -54,6 +54,6 @@ describe('AnalyzeGameService — mit/ohne Engine (0.855.0)', () => {
     svc.analyze('/api/games/4/analyze', null, '1. e4 *').subscribe(s => started = s);
     expect(started as boolean | null).toBeFalse();
     expect(http.expectOne(r => r.url.startsWith('/api/games/4/analyze')).request.method).toBe('POST');
-    expect(nav).toHaveBeenCalledWith(['/analysis'], { state: { pgn: '1. e4 *', blind: true }, queryParams: { blind: 1 } });
+    expect(nav).toHaveBeenCalledWith(['/analysis'], { state: { pgn: '1. e4 *', blind: true }, queryParams: { blind: 1, game: null }, replaceUrl: false });
   });
 });

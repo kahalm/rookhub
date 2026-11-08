@@ -383,6 +383,20 @@ describe('AnalysisComponent freies Brett ohne Engine (0.895.0)', () => {
   });
 });
 
+describe('AnalysisComponent Rücksprung auf die Partieseite (0.900.0)', () => {
+  it('ohne Engine mit ?game=: „Mit Engine“ oben führt zur Partieseite, die Leiste deckt hier auf', () => {
+    const c = makeComponent({ blind: '1', game: '/club-games/236' });
+    c.ngOnInit();
+    expect(c.blind).toBeTrue();
+    c.toggleNoEngine();
+    expect(c.__router.navigateByUrl).toHaveBeenCalledWith('/club-games/236');
+    expect(c.blind).toBeTrue();
+    c.toggleNoEngine(true);
+    expect(c.blind).toBeFalse();
+    c.ngOnDestroy();
+  });
+});
+
 describe('AnalysisComponent Partie immer im Linien-Baum (0.898.0)', () => {
   const pgn = '[White "A"]\n[Black "B"]\n\n1. e4 e5 2. Nf3 1-0\n';
   function fakeStudies() {

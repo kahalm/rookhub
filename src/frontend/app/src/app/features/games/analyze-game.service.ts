@@ -98,9 +98,11 @@ export class AnalyzeGameService {
 
   /** „Ohne Engine": die Partie still im Hintergrund rechnen lassen (falls noch nicht geschehen) und das Analysebrett ohne
    *  Bewertungen öffnen — auch direkt aus dem ⋮ einer Partie, die schon analysiert ist. */
-  startWithoutEngine(url: string | null, pgn: string): void {
+  startWithoutEngine(url: string | null, pgn: string, gamePage?: string | null, replaceUrl = false): void {
     if (url) this.games.analyze(url, this.lang()).pipe(catchError(() => of(null))).subscribe();
-    void this.router.navigate(['/analysis'], { state: { pgn, blind: true }, queryParams: { blind: 1 } });
+    // `game` = Partieseite (0.900.0): dort führt „Mit Engine“ oben im Analysebrett wieder hin
+    void this.router.navigate(['/analysis'], { state: { pgn, blind: true },
+      queryParams: { blind: 1, game: gamePage || null }, replaceUrl });
   }
 
   private lang(): string {

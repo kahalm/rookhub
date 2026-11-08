@@ -807,7 +807,25 @@ describe('SharedGameComponent', () => {
     http.expectOne('/api/games/4').flush({ id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', moveCount: 2, pgn,
       createdAt: '2026-07-16T00:00:00Z' });
     http.expectOne('/api/view-state/analyze.choice').flush({ mode: 'blind' });
-    expect(nav).toHaveBeenCalledWith(['/analysis'], { state: { pgn, blind: true }, queryParams: { blind: 1 } });
+    expect(nav).toHaveBeenCalledWith(['/analysis'], jasmine.objectContaining({ state: { pgn, blind: true },
+      queryParams: { blind: 1, game: jasmine.any(String) } }));
+  });
+
+  // 0.900.0 (Wunsch 2026-11-08): Partieseite = „Mit Engine“, oben „Ohne Engine“ → Analysebrett mit Rücksprung hierher;
+  // `?blind=1` springt gleich dorthin (Adresse ersetzt).
+  it('?blind=1: gleich aufs Analysebrett ohne Engine, mit der Partieseite als Rücksprung', async () => {
+    const route = { snapshot: { paramMap: convertToParamMap({ id: '4' }), queryParamMap: convertToParamMap({ blind: '1' }), data: { mode: 'own' } } };
+    const { fixture, http } = await setup(true, true, [{ provide: ActivatedRoute, useValue: route }]);
+    const router = TestBed.inject(Router);
+    const nav = spyOn(router, 'navigate').and.resolveTo(true);
+    spyOnProperty(router, 'url').and.returnValue('/games/4?blind=1');
+    fixture.detectChanges();
+    const pgn = '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1';
+    http.expectOne('/api/games/4').flush({ id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', moveCount: 2, pgn,
+      createdAt: '2026-07-16T00:00:00Z' });
+    http.match(() => true).forEach(r => r.request.method === 'POST' ? r.flush({ analysis: { id: 1 }, reused: true }) : null);
+    expect(nav).toHaveBeenCalledWith(['/analysis'], { state: { pgn, blind: true },
+      queryParams: { blind: 1, game: '/games/4' }, replaceUrl: true });
   });
 
   it('own mode: a missing game says so (not the „shared link" text) and leads back to my games', async () => {

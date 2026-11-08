@@ -47,6 +47,13 @@
         <!-- Am PC in die Kopfzeile: als eigene Zeile unter Brett und Zugliste war der Knopf so breit wie
              die Karte und stand mitten im Leeren. Auf dem Handy fällt die Kopfzeile in eine Spalte. -->
         <div class="header-actions">
+          <!-- Umschalter Partieseite ⇄ Analysebrett ohne Engine (0.900.0): hier „Mit Engine“, der Knopf führt zu „Ohne Engine“
+               (dort zurück hierher). -->
+          @if (game.pgn) {
+            <button mat-stroked-button class="blind-btn" (click)="analyzeWithoutEngine()">
+              <mat-icon>visibility_off</mat-icon> {{ 'analysis.withoutEngine' | translate }}
+            </button>
+          }
           <!-- Die Partie wird im Hintergrund gerechnet (Haus-Engine, feste Tiefe), die Bewertungskurve erscheint
                darauf unter dem Brett. Ohne Anmeldung führt der Klick zur Anmeldung und wieder hierher zurück —
                der Knopf bleibt sichtbar, damit man weiß, dass es den Weg gibt. Ist die Kurve fertig, entfällt

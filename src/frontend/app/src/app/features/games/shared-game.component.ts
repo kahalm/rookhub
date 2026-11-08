@@ -406,6 +406,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
     const ply = Number(this.route.snapshot.queryParamMap?.get('ply'));
     if (Number.isInteger(ply) && ply > 0) this.service.goToMove(ply - 1);
     this.loading = false;
+    // `?blind=1` (0.900.0, Wunsch 2026-11-08: „games/236?blind=1“): gleich aufs Brett ohne Engine, die Adresse ersetzt
+    if (this.route.snapshot.queryParamMap?.get('blind') === '1' && g.pgn) { this.analyzeWithoutEngine(true); return; }
     if (this.auth.isLoggedIn) {
       this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));
       this.askAnalyzeMode(g);
@@ -421,7 +423,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     if (this.route.snapshot.queryParamMap?.get('ask') !== '1' || !g.pgn) return;
     void this.router.navigate([], { relativeTo: this.route, queryParams: { ask: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.analyzeGame.choose().subscribe(choice => {
-      if (choice === 'blind') this.analyzeGame.startWithoutEngine(null, g.pgn);
+      if (choice === 'blind') this.analyzeGame.startWithoutEngine(null, g.pgn, this.gamePage());
     });
   }
 
@@ -440,9 +442,14 @@ export class SharedGameComponent implements OnInit, DoCheck {
   openInAnalysis(): void { this.actions.openInAnalysis(this.game?.pgn, this.router.url); }
 
   /** „Ohne Engine analysieren" aus dem ⋮ (0.855.0) — auch für schon analysierte Partien. */
-  analyzeWithoutEngine(): void {
-    if (this.game?.pgn) this.analyzeGame.startWithoutEngine(this.analyzeUrl || null, this.game.pgn);
+  analyzeWithoutEngine(replaceUrl = false): void {
+    if (!this.game?.pgn) return;
+    // ohne Konto kein Hintergrund-Einwurf — das Brett ohne Engine geht trotzdem (ohne gespeicherte Linien)
+    this.analyzeGame.startWithoutEngine(this.auth.isLoggedIn ? this.analyzeUrl || null : null, this.game.pgn, this.gamePage(), replaceUrl);
   }
+
+  /** Pfad dieser Partieseite ohne Abfrage — Rücksprung „Mit Engine“ aus dem Analysebrett (0.900.0). */
+  private gamePage(): string { return this.router.url.split(/[?#]/)[0]; }
 
   /** „Mit Lc0 analysieren" — angemeldet, Vereinsmitglied, und die Partie hat noch keine Lc0-Analyse. */
   canLc0(): boolean {
