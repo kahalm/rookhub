@@ -63,11 +63,15 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               @for (p of pairings(); track p.board) {
                 <tr>
                   <td class="num">{{ p.board }}</td>
-                  <!-- 0.910.0, Wunsch 2026-11-08 („in der Übersicht machst du das mit den Farben hübsch — mach das auch hier"): Farbpunkt
-                       wie in der Vereinsübersicht, Weiß vor dem linken, Schwarz hinter dem rechten Namen. -->
-                  <td class="pw"><span class="sq mini w" role="img" aria-label="Weiß"></span>{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted elo"> {{ p.whiteElo }}</span>}</td>
-                  <td class="pr">{{ p.result }}</td>
-                  <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted elo"> {{ p.blackElo }}</span>}<span class="sq mini s pb-sq" role="img" aria-label="Schwarz"></span></td>
+                  <!-- 0.910.0, Wunsch 2026-11-08 („in der Übersicht machst du das mit den Farben hübsch — mach das auch hier"): Farbpunkte
+                       wie in der Vereinsübersicht. Seit 0.912.0 („schau, dass die Heimmannschaft links und die andere rechts steht, gleich
+                       wie bei der Übersicht"): Heim links, Gast rechts, das Ergebnis aus Sicht Heim – Gast; der Punkt sagt die Farbe. -->
+                  @let sd = sides(p, e.status === 'played' ? 'nicht besetzt' : 'offen');
+                  <td class="pw"><span class="sq mini" [class.w]="sd.leftWhite" [class.s]="!sd.leftWhite" role="img"
+                        [attr.aria-label]="sd.leftWhite ? 'Weiß' : 'Schwarz'"></span>{{ sd.left }}@if (sd.leftElo) { <span class="muted elo"> {{ sd.leftElo }}</span>}</td>
+                  <td class="pr">{{ sd.result }}</td>
+                  <td class="pb">{{ sd.right }}@if (sd.rightElo) { <span class="muted elo"> {{ sd.rightElo }}</span>}<span class="sq mini pb-sq"
+                        [class.w]="!sd.leftWhite" [class.s]="sd.leftWhite" role="img" [attr.aria-label]="sd.leftWhite ? 'Schwarz' : 'Weiß'"></span></td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
                          dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link seit 0.838.3 auch „Analyse"
@@ -528,6 +532,16 @@ export class FixtureViewComponent {
     const token = this.shareToken();
     // `?ask=1` (0.855.1): drüben fragt die Partieseite „mit/ohne Engine" — über den Teilen-Link nicht (ohne Konto kein „ohne Engine").
     void this.handoff.jumpToRookHub(token ? `s/${encodeURIComponent(token)}/club-games/${id}` : `club-games/${id}?ask=1`);
+  }
+
+  /** Eine Brettpaarung als Heim (links) – Gast (rechts) mit Farbe und Ergebnis aus Sicht Heim (0.912.0). */
+  sides(p: FixturePairing, empty: string): { left: string; leftElo: number | null; right: string; rightElo: number | null; leftWhite: boolean; result: string } {
+    const homeWhite = p.homeWhite !== false;
+    const white = { n: p.white ?? empty, e: p.whiteElo }, black = { n: p.black ?? empty, e: p.blackElo };
+    const [l, r] = homeWhite ? [white, black] : [black, white];
+    const parts = (p.result ?? '').split(' - ');
+    const result = homeWhite || parts.length !== 2 ? p.result : `${parts[1]} - ${parts[0]}`;
+    return { left: l.n, leftElo: l.e, right: r.n, rightElo: r.e, leftWhite: homeWhite, result };
   }
 
   colorName(b: Board): string {

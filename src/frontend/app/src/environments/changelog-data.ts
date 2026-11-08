@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.912.0", date: "2026-11-08", changes: [
+    { en: "LeagueHub: the board pairings of a round now list the home team on the left and the away team on the right, like the club overview; the colour dot shows who had white, and the result reads home – away.", de: "LeagueHub: Die Brettpaarungen einer Runde stehen jetzt wie in der Vereinsübersicht mit der Heimmannschaft links und der Gastmannschaft rechts; der Farbpunkt zeigt, wer Weiß hatte, und das Ergebnis steht aus Sicht Heim – Gast." },
+  ] },
   { version: "0.911.0", date: "2026-11-08", changes: [
     { en: "Club games from 6 November 2026 on: the explanation of each automatic mistake comparison is now written by Claude Fable – in German for club players, with the concrete refutation line from the engine, what the best move achieves and a rule of thumb. Older games keep the local model; if Fable is unavailable or the daily limit is reached, the local model writes it.",
       de: "Vereinspartien ab dem 6. November 2026: Die Begründung jedes automatischen Fehler-Vergleichs schreibt jetzt Claude Fable – auf Deutsch für Klubspieler, mit der konkreten Widerlegungslinie der Engine, dem, was der beste Zug erreicht, und einem Merksatz. Ältere Partien bleiben beim lokalen Modell; ist Fable nicht erreichbar oder das Tageslimit erreicht, schreibt das lokale Modell." },

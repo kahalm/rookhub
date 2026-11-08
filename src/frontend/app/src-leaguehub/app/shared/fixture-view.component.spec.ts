@@ -76,7 +76,7 @@ describe('FixtureViewComponent', () => {
       { board: 1, white: 'Hess, Max', whiteElo: 2040, black: 'Binder, Moriz', blackElo: 2100, result: '½ - ½', forfeit: false,
         pgn: '[White "Hess, Max"]\n[Black "Schwaz"]\n\n1. e4 e5 1/2-1/2', source: 'club', clubGameId: 10, canEdit: true },
       { board: 2, white: 'Gruber, Michael', whiteElo: null, black: 'Ciolek, Andreas', blackElo: 1900, result: '0 - 1', forfeit: false,
-        pgn: null, source: null, clubGameId: null },
+        pgn: null, source: null, clubGameId: null, homeWhite: false },
     ]);
     fixture.componentRef.setInput('leagueTnr', 1479345);
     render({ ...OPEN, status: 'played', score: '3 : 3' });
@@ -92,6 +92,13 @@ describe('FixtureViewComponent', () => {
     // 0.910.0, Wunsch 2026-11-08: Farbpunkte wie in der Vereinsübersicht — Weiß links vorn, Schwarz rechts hinten
     expect(rows[0].querySelector('.pw')!.firstElementChild!.matches('.sq.w[aria-label="Weiß"]')).toBeTrue();
     expect(rows[0].querySelector('.pb')!.lastElementChild!.matches('.sq.s[aria-label="Schwarz"]')).toBeTrue();
+    // 0.912.0, Wunsch 2026-11-08: Heim links, Gast rechts — an Brett 2 hatte Heim Schwarz: Ciolek links mit schwarzem Punkt,
+    // das Ergebnis aus Sicht Heim (Schwarz gewann → „1 - 0")
+    expect(rows[1].querySelector('.pw')!.textContent).toContain('Ciolek, Andreas');
+    expect(rows[1].querySelector('.pw')!.firstElementChild!.matches('.sq.s[aria-label="Schwarz"]')).toBeTrue();
+    expect(rows[1].querySelector('.pb')!.textContent).toContain('Gruber, Michael');
+    expect(rows[1].querySelector('.pb')!.lastElementChild!.matches('.sq.w[aria-label="Weiß"]')).toBeTrue();
+    expect(rows[1].querySelector('.pr')!.textContent!.trim()).toBe('1 - 0');
     expect(rows[1].querySelector('.pg button')).toBeNull();
     // 0.679.2: „Analyse" nur als Symbol (ohne RookHub-Adresse in Tests nicht da), alles andere im ⋮
     expect(rows[0].querySelectorAll('.pg .icon-btn').length).toBe(0);

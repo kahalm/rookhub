@@ -25,7 +25,9 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
     public const int DayTolerance = 3;
 
     /// <param name="Provisional">0.739.0: die Spieler stammen aus der zugeordneten Vereinspartie, weil chess-results die Runde
-    /// noch nicht hat — dann sagt <paramref name="HomeWhite"/>, welche Farbe die Heimmannschaft hatte.</param>
+    /// noch nicht hat.</param>
+    /// <param name="HomeWhite">Hatte die Heimmannschaft an diesem Brett Weiß? Seit 0.912.0 an jeder Paarung (vorher nur vorläufig) —
+    /// die Seite stellt Heim links, Gast rechts wie die Vereinsübersicht.</param>
     public sealed record Pairing(int Board, string? White, int? WhiteElo, string? Black, int? BlackElo, string Result,
         bool Forfeit, string? Pgn, string? Source, int? ClubGameId, bool CanEdit = false, bool Provisional = false,
         bool? HomeWhite = null, string? WhiteFide = null, string? BlackFide = null);
@@ -112,7 +114,7 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
                     if (!linked.ContainsKey(g.Id)) guessed.Add(hit.Id);
                     var canEdit = userId is { } me && (canManage || hit.UploadedByUserId == me);
                     result[g.Id] = new Pairing(g.Board, w.Item1, w.Item3, b.Item1, b.Item3, WhiteBlackResult(g.Result, homeWhite),
-                        false, hit.Pgn, "club", hit.Id, canEdit);
+                        false, hit.Pgn, "club", hit.Id, canEdit, HomeWhite: homeWhite);
                     continue;
                 }
             }
@@ -129,7 +131,8 @@ public sealed class LeagueFixtureGames(AppDbContext db, ILogger<LeagueFixtureGam
             string? pgn = null, source = null;
             if (!forfeit && date is { } d && FromProfiles(profiles, d, w.Name!, w.Fide, b.Name!, b.Fide) is { } raw)
                 (pgn, source) = (raw, "profile");
-            result[g.Id] = new Pairing(g.Board, w.Name, w.Elo, b.Name, b.Elo, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, null);
+            result[g.Id] = new Pairing(g.Board, w.Name, w.Elo, b.Name, b.Elo, WhiteBlackResult(g.Result, homeWhite), forfeit, pgn, source, null,
+                HomeWhite: homeWhite);
         }
         return result;
     }

@@ -56,6 +56,8 @@ public class LeagueFixtureGamesTests : IDisposable
         Assert.Null(list[2].Pgn);   // falsches Jahr bzw. falsche Farbe
         Assert.True(list[3].Forfeit);
         Assert.Null(list[3].Pgn);
+        // 0.912.0: die Heimfarbe an jeder Paarung (die Seite stellt Heim links, Gast rechts)
+        Assert.Equal(new bool?[] { true, false, true, true }, list.Select(p => p.HomeWhite));
     }
 
     [Fact]

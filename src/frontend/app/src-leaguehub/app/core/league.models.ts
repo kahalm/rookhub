@@ -53,6 +53,8 @@ export interface FixturePairing {
   canEdit?: boolean;
   /** 0.739.0: Spieler aus der zugeordneten Vereinspartie — chess-results hat die Runde noch nicht. */
   provisional?: boolean;
+  /** Hatte die Heimmannschaft an diesem Brett Weiß? (seit 0.912.0 an jeder Paarung; fehlt = wie Weiß) */
+  homeWhite?: boolean | null;
 }
 
 export interface Board {
