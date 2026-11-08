@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.910.0", date: "2026-11-08", changes: [
+    { en: "LeagueHub: the board pairings of a round show the colour dots like the club overview — white before the left name, black after the right one.", de: "LeagueHub: Die Brettpaarungen einer Runde zeigen die Farbpunkte wie die Vereinsübersicht — Weiß vor dem linken, Schwarz hinter dem rechten Namen." },
+  ] },
   { version: "0.909.0", date: "2026-11-08", changes: [
     { en: "Club games are now analysed as deeply as your own games: after the quick first pass at depth 20 the analysis is refined to depth 30 with five lines in the background – already analysed club games too, newest first. Only then is the analysis final: the “analysis finished” bell and the automatic mistake comparisons (now also at depth 30 instead of 35) use the depth-30 numbers. Your own games still go first.",
       de: "Vereinspartien werden jetzt so tief analysiert wie eigene Partien: Nach dem schnellen ersten Durchgang mit Tiefe 20 wird die Analyse im Hintergrund auf Tiefe 30 mit fünf Linien vertieft – auch die schon analysierten Vereinspartien, neueste zuerst. Erst danach ist die Analyse fertig: Die Glocke „Analyse fertig“ und die automatischen Fehler-Vergleiche (jetzt ebenfalls mit Tiefe 30 statt 35) nehmen die Zahlen der Tiefe 30. Eigene Partien gehen weiterhin vor." },

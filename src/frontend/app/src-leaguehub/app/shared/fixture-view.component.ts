@@ -63,9 +63,11 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               @for (p of pairings(); track p.board) {
                 <tr>
                   <td class="num">{{ p.board }}</td>
-                  <td class="pw">{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted elo"> {{ p.whiteElo }}</span>}</td>
+                  <!-- 0.910.0, Wunsch 2026-11-08 („in der Übersicht machst du das mit den Farben hübsch — mach das auch hier"): Farbpunkt
+                       wie in der Vereinsübersicht, Weiß vor dem linken, Schwarz hinter dem rechten Namen. -->
+                  <td class="pw"><span class="sq mini w" role="img" aria-label="Weiß"></span>{{ p.white ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.whiteElo) { <span class="muted elo"> {{ p.whiteElo }}</span>}</td>
                   <td class="pr">{{ p.result }}</td>
-                  <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted elo"> {{ p.blackElo }}</span>}</td>
+                  <td class="pb">{{ p.black ?? (e.status === 'played' ? 'nicht besetzt' : 'offen') }}@if (p.blackElo) { <span class="muted elo"> {{ p.blackElo }}</span>}<span class="sq mini s pb-sq" role="img" aria-label="Schwarz"></span></td>
                   <td class="pg">
                     <!-- 0.679.2 (Wunsch 2026-10-06): „Analyse" als Symbol, der Rest im ⋮ dahinter. An einer Vereinspartie
                          dieselben Wege wie in der Vereinsliste — angemeldet; über einen Teilen-Link seit 0.838.3 auch „Analyse"

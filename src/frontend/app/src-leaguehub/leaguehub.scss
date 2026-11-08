@@ -202,6 +202,7 @@ main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
 .pairings .num { width: 1.8em; color: var(--muted); text-align: right; }
 .pairings .pr { white-space: nowrap; text-align: center; font-weight: 700; }
 .pairings .pb { text-align: right; }
+.pairings .pb .pb-sq { margin: 0 0 0 4px; }   /* 0.910.0: Farbpunkt hinter dem schwarzen Namen, gespiegelt zum weißen */
 .pairings .pg { text-align: right; }
 .pairings .pg .btn-link { margin-left: 6px; white-space: nowrap; }
 .pairings .pg lh-game-badges { margin-right: 4px; }   /* 0.852.0: vor dem Analyse-Symbol */

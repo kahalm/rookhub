@@ -89,6 +89,9 @@ describe('FixtureViewComponent', () => {
     expect(rows.length).toBe(2);
     expect(rows[0].textContent).toContain('Hess, Max');
     expect(rows[0].textContent).toContain('½ - ½');
+    // 0.910.0, Wunsch 2026-11-08: Farbpunkte wie in der Vereinsübersicht — Weiß links vorn, Schwarz rechts hinten
+    expect(rows[0].querySelector('.pw')!.firstElementChild!.matches('.sq.w[aria-label="Weiß"]')).toBeTrue();
+    expect(rows[0].querySelector('.pb')!.lastElementChild!.matches('.sq.s[aria-label="Schwarz"]')).toBeTrue();
     expect(rows[1].querySelector('.pg button')).toBeNull();
     // 0.679.2: „Analyse" nur als Symbol (ohne RookHub-Adresse in Tests nicht da), alles andere im ⋮
     expect(rows[0].querySelectorAll('.pg .icon-btn').length).toBe(0);
