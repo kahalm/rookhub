@@ -52,6 +52,31 @@ describe('BasePuzzleSolver mouseslip after Stockfish error', () => {
   }));
 });
 
+describe('BasePuzzleSolver mouseslip in den 400 ms nach der Gegenantwort', () => {
+  it('nimmt Fehlzug UND Antwort zurück, solange der Zustand noch THINKING ist (E2E „mouseslip restores“)', fakeAsync(() => {
+    const stockfish = { getBestMove: () => Promise.resolve({ move: 'h2h3', eval: 0 }) } as unknown as StockfishService;
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    tick(600);
+    const afterSetup = solver.fen;
+
+    solver.onMoveMade({ orig: 'a7' as Key, dest: 'a6' as Key });   // Fehlzug → Stockfish antwortet sofort
+    tick();                                                          // Antwort gespielt, 400-ms-Timer läuft noch
+    expect(solver.state).toBe('THINKING');
+
+    solver.mouseslip();
+    expect(solver.fen).toBe(afterSetup);                             // vorher blieb a6 stehen, Weiß war nicht am Zug
+    expect(solver.lastMove).toEqual(['e2' as Key, 'e4' as Key]);   // nicht mehr h2–h3 bzw. a7–a6
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    tick(1000);
+    expect(solver.state).toBe('AWAITING_USER_MOVE');                 // der alte Timer schaltet nicht auf PLAYING
+    solver.onMoveMade({ orig: 'e7' as Key, dest: 'e5' as Key });     // danach zählt der Lösungszug wieder
+    tick(400);
+    expect(solver.moveIdx).toBe(3);
+    discardPeriodicTasks();
+  }));
+});
+
 describe('BasePuzzleSolver Level-1 „Anzeigen" (Toggle, läuft nicht ab)', () => {
   it('deckt beim Drücken die tatsächliche Stellung auf und verbirgt sie erst beim erneuten Drücken', fakeAsync(() => {
     const stockfish = { getBestMove: () => Promise.reject('x') } as unknown as StockfishService;

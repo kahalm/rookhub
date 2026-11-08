@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { solverCdr } from './solver-board-base';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -159,6 +160,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver<EndlessEndState> im
   /** Ansicht (Brett, Figuren, Visualisierung, Einstellungs-Dialog) und Spielweise (Training/Einfach). */
   readonly view = new EndlessViewSettings(this);
   get solveModeChoice(): SolveMode | null { return this.view.solveModeChoice; }
+
+  private readonly cdr = solverCdr();
+  /** Angular 22: nach Timern/Stockfish/chessground die Ansicht selbst vormerken (siehe SolverBoardBase.requestRender). */
+  protected override requestRender(): void { this.cdr?.markForCheck(); }
 
   constructor(
     private puzzleService: PuzzleService,

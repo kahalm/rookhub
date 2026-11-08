@@ -1,3 +1,4 @@
+import { ChangeDetectorRef, inject } from '@angular/core';
 import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml } from './puzzle-move.util';
@@ -15,6 +16,12 @@ export type SolverCoreState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THIN
  * Tipps/Eval/Stoppuhr liegen in {@link SolverAssistBase}, Durchsicht/Countdown in {@link SolverReviewBase},
  * die Zug-Bewertung in {@link BasePuzzleSolver}.
  */
+/** ChangeDetectorRef der Löser-Komponente — `null` in Specs, die die Komponente mit `new` oder über
+ *  `runInInjectionContext` ohne Ansicht bauen (dort gibt es nichts zu zeichnen). */
+export function solverCdr(): ChangeDetectorRef | null {
+  try { return inject(ChangeDetectorRef, { optional: true }); } catch { return null; }
+}
+
 export abstract class SolverBoardBase<S extends string = never> {
   // ---- Brett-Präsentation (von Templates gelesen) ----
   boardFen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -131,8 +138,17 @@ export abstract class SolverBoardBase<S extends string = never> {
     return true;
   }
 
+  /**
+   * Ansicht zum Neuzeichnen vormerken — die Komponenten rufen `markForCheck()`. Angular 22 zeichnet nach Timern
+   * (Antwortzug nach 400 ms), Stockfish-Promises und chessground-Rückrufen eine unmarkierte Ansicht NICHT neu; bisher
+   * holte das zufällig die Lösezeit-Uhr nach. Nach dem ersten Fehlzug steht die Uhr — dann fror das Brett ein
+   * (E2E „mouseslip restores“ seit 26.10. rot).
+   */
+  protected requestRender(): void { /* Basis (Specs): nichts */ }
+
   /** Brett-Präsentation (FEN, Zugziele, Schach) aus dem Lös-Zustand neu ableiten. */
   updateBoard(): void {
+    this.requestRender();
     this.actualFen = this.chess.fen();
     // Visualisierung: Brett auf der eingefrorenen Startstellung halten, solange gelöst wird;
     // am Ende (Endzustand der Komponente) das echte Brett aufdecken.

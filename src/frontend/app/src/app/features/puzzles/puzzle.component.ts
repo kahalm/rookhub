@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { solverCdr } from './solver-board-base';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -108,6 +109,10 @@ export class PuzzleComponent extends BasePuzzleSolver<PuzzleEndState> implements
   readonly view: StandardViewSettings;
   /** Gewählte Spielweise für „Puzzles"; `null` = bewusst nicht gefragt (fester Link, Einzelkontext). */
   get solveModeChoice(): SolveMode | null { return this.view.solveModeChoice; }
+
+  private readonly cdr = solverCdr();
+  /** Angular 22: nach Timern/Stockfish/chessground die Ansicht selbst vormerken (siehe SolverBoardBase.requestRender). */
+  protected override requestRender(): void { this.cdr?.markForCheck(); }
 
   constructor(
     readonly puzzleService: PuzzleService,

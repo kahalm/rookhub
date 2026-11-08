@@ -266,7 +266,9 @@ test.describe('Offline-Modus (Service Worker + heruntergeladene Inhalte)', () =>
       await page.goto('/', { waitUntil: 'domcontentloaded' });
       await page.evaluate(auth => localStorage.setItem('rookhub_user', JSON.stringify(auth)), shared!.auth);
       await page.goto('/repertoires', { waitUntil: 'domcontentloaded' });
-      const toggle = page.locator('mat-card', { hasText: name }).locator('.offline-toggle');
+      // Ein frisch angelegtes Repertoire steht seit den Abschnitten der Liste zweimal da („Letzte Woche“ und
+      // „Für RepCheck …“) — derselbe Knopf, also den ersten nehmen (strict mode, E2E rot 08.11.).
+      const toggle = page.locator('mat-card', { hasText: name }).locator('.offline-toggle').first();
       await expect(toggle).toContainText('cloud_download', { timeout: 20_000 });
       await toggle.click();
       await expect(toggle).toContainText('cloud_done', { timeout: 20_000 });
@@ -277,7 +279,7 @@ test.describe('Offline-Modus (Service Worker + heruntergeladene Inhalte)', () =>
       await test.step('Server weg: Liste zeigt die Kopie', async () => {
         await page.goto('/repertoires', { waitUntil: 'domcontentloaded' });
         await expect(page.locator('.offline-banner')).toBeVisible({ timeout: 20_000 });
-        await expect(page.locator('mat-card', { hasText: name })).toBeVisible();
+        await expect(page.locator('mat-card', { hasText: name }).first()).toBeVisible();
       });
       await test.step('Server weg: Training aus der Kopie', async () => {
         await page.goto(`/repertoires/${id}/train?mode=learn`, { waitUntil: 'domcontentloaded' });

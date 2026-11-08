@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, HostListener, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { solverCdr } from './solver-board-base';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -90,6 +91,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver<BookEndState> implemen
   readonly daily: BookDailyMode;
   readonly book: BookStandaloneMode;
   readonly woodpecker: BookWoodpeckerMode;
+  private readonly cdr = solverCdr();
+  /** Angular 22: nach Timern/Stockfish/chessground die Ansicht selbst vormerken (siehe SolverBoardBase.requestRender). */
+  protected override requestRender(): void { this.cdr?.markForCheck(); }
+
   readonly woodpeckerService = inject(WoodpeckerService);
 
   /** Spielweise (Training/Einfach) für Kurs, Tagespuzzle und Buch-Puzzle — der Wochenpost hat seine eigene Abfrage. */

@@ -373,7 +373,9 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     // der Gegnerzug. Im Stockfish-Fehlerpfad ist state zwar PLAYING, aber es wurde KEIN
     // Gegnerzug gespielt -> dann nur 1 Ply zuruecknehmen, sonst faellt ein gueltiger
     // Loesungszug mit weg.
-    const undoCount = (this.state === 'PLAYING' && this.lastOpponentReplied) ? 2 : 1;
+    // Hat Stockfish schon geantwortet, auch wenn der Zustand noch THINKING ist (400 ms bis PLAYING, der Knopf steht
+    // nach dem ersten Zug schon da — E2E seit 26.10. rot), müssen BEIDE Plies weg, sonst bleibt der Fehlzug stehen.
+    const undoCount = this.lastOpponentReplied ? 2 : 1;
     for (let i = 0; i < undoCount; i++) this.chess.undo();
     // Visualisierungs-Modus: Brett bleibt eingefroren → die zurückgenommenen Züge auch aus der
     // SAN-Zugliste entfernen, sonst „passiert" sichtbar nichts und die Liste ist inkonsistent.
@@ -383,6 +385,8 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     // Zurück auf den Lösungspfad — sonst ginge der nächste User-Zug wieder in handleOffPathMove.
     this.onSolutionPath = true;
     this.resetOffPathTracking();
+    const before = this.chess.history({ verbose: true }).at(-1);   // „Letzter Zug“ nicht auf dem zurückgenommenen stehen lassen
+    this.lastMove = before ? [before.from as Key, before.to as Key] : undefined;
     this.aborted = false;
     this.state = 'AWAITING_USER_MOVE';
     this.moveStartTime = Date.now();

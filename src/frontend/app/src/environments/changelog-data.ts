@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.897.1", date: "2026-11-08", changes: [
+    { en: "Puzzles: “Mouseslip” right after the opponent’s reply now takes back both your wrong move and the reply. Before, only the reply was undone, your wrong move stayed and the board was stuck with the wrong side to move. The board also redraws reliably again after the opponent’s reply once the solve clock has stopped (after the first wrong move it froze until the next click).",
+      de: "Puzzles: „Mausrutscher“ direkt nach der Antwort des Gegners nimmt jetzt deinen Fehlzug und die Antwort zurück. Bisher ging nur die Antwort weg, dein Fehlzug blieb stehen und das Brett hing mit der falschen Seite am Zug. Außerdem zeichnet sich das Brett nach der Gegenantwort wieder verlässlich neu, auch wenn die Lösezeit-Uhr steht (nach dem ersten Fehlzug fror es bis zum nächsten Klick ein)." },
+  ] },
   { version: "0.897.0", date: "2026-11-08", changes: [
     { en: "LeagueHub: share links now stay valid for 3 months after the round (at least 3 months from creating them) instead of 7 days.", de: "LeagueHub: Teilen-Links gelten jetzt 3 Monate nach der Runde (mindestens 3 Monate ab dem Anlegen) statt 7 Tage." },
   ] },
