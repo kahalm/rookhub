@@ -5677,7 +5677,9 @@
       "language": "Nyelv",
       "languageUnknown": "Ismeretlen",
       "languageChip": "Nyelv: {{lang}}",
-      "translatedInto": "Fordítás: {{lang}}"
+      "translatedInto": "Fordítás: {{lang}}",
+      "allLanguages": "Minden nyelv",
+      "readableHint": "Csak a saját nyelveden és angolul írt vagy ezekre lefordított könyvek"
     },
     "empty": "Még nincs e-könyv – töltsd fel az elsőt.",
     "emptyFiltered": "Ehhez a szűrőhöz semmi sem illik.",

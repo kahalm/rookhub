@@ -336,6 +336,43 @@ public class EbookTranslationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TranslateTitles_DoneWithoutTitle_GetsTranslatedTitle_OthersUntouched()
+    {
+        var ru = await BookAsync("Учебник шахмат", "ru");
+        var es = await BookAsync("Ajedrez", "es");
+        var pending = await BookAsync("Шахматы", "ru");
+        var titled = await BookAsync("Этюды", "ru");
+        _kit.Db.EbookTranslations.AddRange(
+            new EbookTranslation { EbookId = ru.Id, Language = "en", State = EbookTranslationState.Done },
+            new EbookTranslation { EbookId = es.Id, Language = "en", State = EbookTranslationState.Done },
+            new EbookTranslation { EbookId = pending.Id, Language = "en", State = EbookTranslationState.Pending },
+            new EbookTranslation { EbookId = titled.Id, Language = "en", State = EbookTranslationState.Done, Title = "Studies" });
+        await _kit.Db.SaveChangesAsync();
+
+        Assert.Equal(2, await Service().TranslateTitlesAsync(30, CancellationToken.None));
+        string? Title(int id) => _kit.Db.EbookTranslations.Single(t => t.EbookId == id).Title;
+        Assert.Equal("xxxxxxx xxxxxx", Title(ru.Id));   // der Test-Übersetzer macht aus jedem Buchstaben ein x
+        Assert.Equal("xxxxxxx", Title(es.Id));
+        Assert.Null(Title(pending.Id));
+        Assert.Equal("Studies", Title(titled.Id));
+        Assert.Equal(2, _llm.Calls.Count);   // ein Auftrag je Sprachpaar (ru→en, es→en)
+        Assert.Equal(0, await Service().TranslateTitlesAsync(30, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task TranslateTitles_SparkUnreachable_LeavesTitlesOpen()
+    {
+        var ru = await BookAsync("Учебник", "ru");
+        _kit.Db.EbookTranslations.Add(new EbookTranslation { EbookId = ru.Id, Language = "en", State = EbookTranslationState.Done });
+        await _kit.Db.SaveChangesAsync();
+        var svc = new EbookTranslationService(_kit.Db, _kit.Storage, new FailingTranslator(),
+            Options.Create(new EbookTranslationOptions { Languages = "en" }), _signal, NullLogger<EbookTranslationService>.Instance);
+
+        Assert.Equal(0, await svc.TranslateTitlesAsync(30, CancellationToken.None));
+        Assert.Null(_kit.Db.EbookTranslations.Single().Title);
+    }
+
+    [Fact]
     public async Task Run_PdfOnlyBookWithoutReflow_IsNoText()
     {
         var book = await BookAsync("Scan", "es", "pdf");

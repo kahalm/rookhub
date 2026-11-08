@@ -393,6 +393,38 @@ public class EbookTranslationService
         return EbookTranslationOutcome.Done;
     }
 
+    // ── Titel ───────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Übersetzte Titel nachholen (0.896.0): für bis zu <paramref name="batch"/> fertige Übersetzungen ohne
+    /// <see cref="EbookTranslation.Title"/> den Buchtitel in die Zielsprache bringen — je Quell-/Zielsprache EIN Auftrag.
+    /// Kommt ein Titel nicht brauchbar zurück, bleibt der Originaltitel stehen (sonst käme dasselbe Buch jede Runde wieder).
+    /// Antwort = Anzahl gesetzter Titel; Spark nicht erreichbar → 0, nichts geändert.
+    /// </summary>
+    public async Task<int> TranslateTitlesAsync(int batch, CancellationToken ct)
+    {
+        var rows = await _db.EbookTranslations.Where(t => t.State == EbookTranslationState.Done && t.Title == null)
+            .Join(_db.Ebooks, t => t.EbookId, b => b.Id, (t, b) => new { Row = t, b.Title, b.Language })
+            .OrderBy(x => x.Row.Id).Take(batch).ToListAsync(ct);
+        var set = 0;
+        foreach (var group in rows.GroupBy(r => (From: r.Language, To: r.Row.Language)))
+        {
+            var list = group.ToList();
+            var answer = await _translator.TranslateAsync(list.Select((r, i) => (i, r.Title)).ToList(),
+                group.Key.From, group.Key.To, TranslationSubject.EbookText, null, ct);
+            if (answer == null && _translator.IsUnreachable) return set;
+            for (var i = 0; i < list.Count; i++)
+            {
+                var title = answer != null && answer.TryGetValue(i, out var t) && !string.IsNullOrWhiteSpace(t) ? t.Trim() : list[i].Title;
+                list[i].Row.Title = title.Length > 300 ? title[..300] : title;
+                set++;
+            }
+            await _db.SaveChangesAsync(ct);
+        }
+        if (set > 0) _logger.LogInformation("E-Book-Übersetzung: {Count} Titel übersetzt", set);
+        return set;
+    }
+
     private async Task SaveProgressAsync(EbookTranslation row, EbookTranslationSignal.Run run, CancellationToken ct)
     {
         try

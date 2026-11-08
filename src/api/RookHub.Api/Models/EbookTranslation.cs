@@ -59,6 +59,11 @@ public class EbookTranslation
     [MaxLength(300)]
     public string? RelativePath { get; set; }
 
+    /// <summary>Buchtitel in der Zielsprache (0.896.0) — die Bibliothek zeigt ihn statt des Originals, sobald die Übersetzung
+    /// fertig ist. <c>null</c> = noch nicht übersetzt (der Worker holt es im Leerlauf nach; eine Titeländerung setzt zurück).</summary>
+    [MaxLength(300)]
+    public string? Title { get; set; }
+
     public long SizeBytes { get; set; }
 
     /// <summary>Verschiedene Texte des Buchs (jeder geht nur EINMAL ans Modell) und davon schon übersetzte.</summary>

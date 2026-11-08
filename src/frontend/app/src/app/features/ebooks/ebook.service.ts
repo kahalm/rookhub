@@ -61,6 +61,8 @@ export interface Ebook {
   language?: string | null;
   /** Fertige Übersetzungen (Zielsprachen, z. B. `['en']`) — der Leser bietet „Original / English“ an. */
   translations?: string[];
+  /** Übersetzte Titel je fertiger Zielsprache (0.896.0), z. B. `{ en: '…' }` — siehe `ebookDisplayTitle`. */
+  translatedTitles?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
   /** Nur in der Antwort des Uploads (0.863.0): vorhandene Bücher, die wahrscheinlich dasselbe sind. */
@@ -170,6 +172,28 @@ export interface EbookDiagramList {
 export interface EbookTagFacet { tag: string; count: number; }
 
 /** Sprach-Facette (0.877.0): ISO 639-1, `null` = Sprache nicht bestimmt (Filterwert `unknown`). */
+/**
+ * Sprachen, in denen man liest (0.896.0): die Oberflächensprache + Englisch — die Bibliothek zeigt per Vorgabe nur Bücher
+ * darin (bzw. mit fertiger Übersetzung dorthin).
+ */
+export function ebookReadableLanguages(uiLang: string | null | undefined): string[] {
+  const own = (uiLang || 'en').toLowerCase().split('-')[0];
+  return own === 'en' ? ['en'] : [own, 'en'];
+}
+
+/**
+ * Anzeigetitel (0.896.0): ein Buch in einer fremden Sprache mit übersetztem Titel zeigt die Übersetzung — zuerst in die
+ * Oberflächensprache, sonst ins Englische. Bücher in der eigenen Sprache oder auf Englisch behalten ihren Titel.
+ */
+export function ebookDisplayTitle(book: Pick<Ebook, 'title' | 'language' | 'translatedTitles'>, uiLang: string | null | undefined): string {
+  const titles = book.translatedTitles;
+  if (!titles) return book.title;
+  const langs = ebookReadableLanguages(uiLang);
+  if (book.language && langs.includes(book.language)) return book.title;
+  for (const l of langs) if (titles[l]) return titles[l];
+  return book.title;
+}
+
 export interface EbookLanguageFacet { language: string | null; count: number; }
 
 /** Dateien eines Formats in der gefilterten Menge (0.877.0). */
@@ -225,6 +249,8 @@ export interface EbookQuery {
   language?: string | null;
   /** Nur Bücher mit fertiger Übersetzung in diese Sprache (0.877.0). */
   translation?: string | null;
+  /** Nur Bücher, die man in einer dieser Sprachen lesen kann (0.896.0): Buchsprache oder fertige Übersetzung. */
+  readable?: string[] | null;
   /** Nur die Bücher dieser Sammlung; ohne erscheinen Sammlungen als je ein Ordner. */
   collection?: number | null;
   sort?: EbookSort;
@@ -346,6 +372,7 @@ export class EbookService {
     if (q.maxElo != null) params = params.set('maxElo', String(q.maxElo));
     if (q.language) params = params.set('language', q.language);
     if (q.translation) params = params.set('translation', q.translation);
+    if (q.readable?.length) params = params.set('readable', q.readable.join(','));
     if (q.collection) params = params.set('collection', String(q.collection));
     if (q.sort) params = params.set('sort', q.sort);
     if (q.page) params = params.set('page', String(q.page));

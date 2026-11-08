@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.896.0", date: "2026-11-08", changes: [
+    { en: "E-book library: by default only books in your own language and in English are shown — plus every book with a finished translation into one of them. In the filter, “All languages” shows everything again (or pick a single language).",
+      de: "E-Book-Bibliothek: Per Vorgabe stehen nur Bücher in deiner Sprache und auf Englisch da — dazu jedes Buch mit fertiger Übersetzung in eine davon. Im Filter zeigt „Alle Sprachen“ wieder alles (oder man wählt eine einzelne Sprache)." },
+    { en: "Translated books now show their translated title (e.g. English instead of Russian) in the library and the reader; the original title is in the tooltip, and the search finds both. The translation service translates the titles of already translated books by itself.",
+      de: "Übersetzte Bücher zeigen jetzt ihren übersetzten Titel (z. B. Englisch statt Russisch) in der Bibliothek und im Leser; der Originaltitel steht im Tooltip, die Suche findet beide. Der Übersetzungsdienst übersetzt die Titel schon übersetzter Bücher selbst nach." },
+  ] },
   { version: "0.895.0", date: "2026-11-07", changes: [
     { en: "Analysis board: a “Without engine” / “With engine” button at the top switches between the board with and without engine (no evaluation bar, engine, explorer or evaluations). The address follows (“?blind=1”), and “/analysis?blind=1” now also works without a game.",
       de: "Analysebrett: Oben schaltet ein Knopf „Ohne Engine“ / „Mit Engine“ zwischen dem Brett mit und ohne Engine um (ohne Bewertungsleiste, Engine, Explorer und Bewertungen). Die Adresse zieht mit („?blind=1“), und „/analysis?blind=1“ wirkt jetzt auch ohne Partie." },

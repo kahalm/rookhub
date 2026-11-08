@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
-import { EbookService, formatBytes } from './ebook.service';
+import { EbookService, ebookDisplayTitle, ebookReadableLanguages, formatBytes } from './ebook.service';
 import { coarseCfi, epubPageAt } from './ebook.service';
 
 describe('EbookService', () => {
@@ -51,6 +51,25 @@ describe('EbookService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({ bookId: 7, displayName: 'Awerbach' });
     expect(id).toBe(7);
+  });
+
+  it('0.896.0: lesbare Sprachen als Komma-Liste, leer/null schickt nichts', () => {
+    service.list({ readable: ['de', 'en'] }).subscribe();
+    expect(http.expectOne(r => r.url === '/api/ebooks').request.params.get('readable')).toBe('de,en');
+    service.list({ readable: null }).subscribe();
+    expect(http.expectOne(r => r.url === '/api/ebooks').request.params.has('readable')).toBeFalse();
+  });
+
+  it('0.896.0: eigene Sprache + Englisch; Anzeigetitel übersetzt nur fremdsprachige Bücher', () => {
+    expect(ebookReadableLanguages('de')).toEqual(['de', 'en']);
+    expect(ebookReadableLanguages('en')).toEqual(['en']);
+    expect(ebookReadableLanguages(undefined)).toEqual(['en']);
+    const ru = { title: 'Учебник', language: 'ru', translatedTitles: { en: 'Textbook' } };
+    expect(ebookDisplayTitle(ru, 'de')).toBe('Textbook');
+    expect(ebookDisplayTitle({ ...ru, translatedTitles: { en: 'Textbook', de: 'Lehrbuch' } }, 'de')).toBe('Lehrbuch');
+    expect(ebookDisplayTitle({ ...ru, translatedTitles: {} }, 'de')).toBe('Учебник');
+    expect(ebookDisplayTitle({ title: 'Schach', language: 'de', translatedTitles: { en: 'Chess' } }, 'de')).toBe('Schach');
+    expect(ebookDisplayTitle({ title: 'Chess', language: 'en' }, 'de')).toBe('Chess');
   });
 
   it('schickt nur gesetzte Filter als Query', () => {

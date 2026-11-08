@@ -22,8 +22,8 @@
       <a mat-icon-button routerLink="/ebooks" class="rd-back" [appIconLabel]="'ebooks.reader.back' | translate">
         <mat-icon>arrow_back</mat-icon>
       </a>
-      <div class="rd-title" [matTooltip]="ebook.title">
-        <span class="rd-title-text">{{ ebook.title }}</span>
+      <div class="rd-title" [matTooltip]="titleTooltip(ebook)">
+        <span class="rd-title-text">{{ displayTitle(ebook) }}</span>
         @if (ebook.author) {
           <span class="rd-author">
             @for (n of authorNames(ebook.author); track n; let last = $last) {

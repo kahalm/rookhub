@@ -5677,7 +5677,9 @@
       "language": "Jezik",
       "languageUnknown": "Nepoznat",
       "languageChip": "Jezik: {{lang}}",
-      "translatedInto": "Prijevod: {{lang}}"
+      "translatedInto": "Prijevod: {{lang}}",
+      "allLanguages": "Svi jezici",
+      "readableHint": "Samo knjige na tvom jeziku i engleskom ili s gotovim prijevodom na njih"
     },
     "empty": "Još nema e-knjiga – prenesi prvu.",
     "emptyFiltered": "Ništa ne odgovara ovom filtru.",

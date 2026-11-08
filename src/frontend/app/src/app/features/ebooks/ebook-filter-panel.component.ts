@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EBOOK_LANGUAGE_UNKNOWN, EbookLanguageFacet, EbookTagFacet } from './ebook.service';
 import { EbookTagLabelPipe, ebookTagLabel } from './ebook-tags';
@@ -33,7 +34,7 @@ export function ebookLanguageLabel(code: string | null | undefined, translate: P
   selector: 'app-ebook-filter-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslatePipe, EbookTagLabelPipe],
+  imports: [FormsModule, MatFormFieldModule, MatIconModule, MatInputModule, MatTooltipModule, TranslatePipe, EbookTagLabelPipe],
   template: `
     @if (tags().length > 0) {
       <section class="ebf-group">
@@ -56,6 +57,11 @@ export function ebookLanguageLabel(code: string | null | undefined, translate: P
       <section class="ebf-group">
         <h3 class="ebf-head" id="ebf-lang">{{ 'ebooks.filter.language' | translate }}</h3>
         <div class="eb-langs" role="group" aria-labelledby="ebf-lang">
+          <!-- 0.896.0: Vorgabe nur lesbare Bücher (eigene Sprache + Englisch); „Alle Sprachen“ hebt das auf. -->
+          <button type="button" class="eb-chip" [class.eb-chip--on]="!allLanguages() && !language()" [attr.aria-pressed]="!allLanguages() && !language()"
+                  data-scope="readable" [matTooltip]="'ebooks.filter.readableHint' | translate" (click)="allLanguagesChange.emit(false)">{{ readableLabel() }}</button>
+          <button type="button" class="eb-chip" [class.eb-chip--on]="allLanguages() && !language()" [attr.aria-pressed]="allLanguages() && !language()"
+                  data-scope="all" (click)="allLanguagesChange.emit(true)">{{ 'ebooks.filter.allLanguages' | translate }}</button>
           @for (o of languageOptions(); track o.value) {
             <button type="button" class="eb-chip" [class.eb-chip--on]="language() === o.value" [attr.aria-pressed]="language() === o.value"
                     [attr.data-lang]="o.value" (click)="languageChange.emit(o.value)">{{ o.label }} <span class="eb-chip-count">{{ o.count }}</span></button>
@@ -122,6 +128,9 @@ export class EbookFilterPanelComponent {
   readonly tag = input<string | null>(null);
   readonly language = input<string | null>(null);
   readonly translation = input<string | null>(null);
+  /** 0.896.0: Sprachen, in denen man liest (Oberflächensprache + Englisch), und ob trotzdem alle gezeigt werden. */
+  readonly readable = input<string[]>([]);
+  readonly allLanguages = input(false);
   readonly minElo = input<number | null>(null);
   readonly maxElo = input<number | null>(null);
 
@@ -129,6 +138,7 @@ export class EbookFilterPanelComponent {
   readonly tagChange = output<string>();
   readonly languageChange = output<string>();
   readonly translationChange = output<string>();
+  readonly allLanguagesChange = output<boolean>();
   readonly eloChange = output<{ which: 'min' | 'max'; value: string | number | null }>();
 
   /** Schlagwort-Gruppe ganz aufgeklappt (sonst nur die häufigsten + das aktive). */
@@ -153,6 +163,12 @@ export class EbookFilterPanelComponent {
     if (all.length <= EBOOK_TAGS_COLLAPSED) return all;
     const active = this.tag();
     return all.filter((t, i) => i < EBOOK_TAGS_COLLAPSED || t.tag === active);
+  });
+
+  /** „Deutsch + Englisch“ in der Oberflächensprache. */
+  readonly readableLabel = computed(() => {
+    const lang = this.uiLang();
+    return this.readable().map(l => ebookLanguageLabel(l, this.translate, lang)).join(' + ');
   });
 
   readonly languageOptions = computed<EbookLanguageOption[]>(() => {

@@ -17,7 +17,7 @@ import { AuthService } from '../../core/auth.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { EBOOK_READ_LANG_KEY, Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, coarseCfi, ebookAuthorNames, formatBytes } from './ebook.service';
+import { EBOOK_READ_LANG_KEY, Ebook, EbookDiagram, EbookFile, EbookService, EpubMissedSpot, READABLE_FORMATS, coarseCfi, ebookAuthorNames, ebookDisplayTitle, formatBytes } from './ebook.service';
 import { PdfViewerComponent, PdfZone } from './pdf-viewer.component';
 import { EpubDiagramImage, EpubLayout, EpubLocation, EpubTocEntry, EpubViewerComponent } from './epub-viewer.component';
 import { readRaw, localStore, writeRaw } from '../../core/local-json-store';
@@ -108,6 +108,13 @@ export class EbookReaderComponent implements OnInit, DoCheck, OnDestroy {
   get loggedIn(): boolean { return this.auth.isLoggedIn; }
   readonly authorNames = ebookAuthorNames;
   private translate = inject(TranslateService);
+
+  /** Übersetzter Titel bei fremdsprachigen Büchern (0.896.0); der Tooltip nennt dann zusätzlich das Original. */
+  displayTitle(book: Ebook): string { return ebookDisplayTitle(book, this.translate.currentLang()); }
+  titleTooltip(book: Ebook): string {
+    const shown = this.displayTitle(book);
+    return shown === book.title ? shown : `${shown} — ${book.title}`;
+  }
   private cdr = inject(ChangeDetectorRef);
   /** E-Ink-Modus: Pfeil hoch/runter blättert eine Bildschirmseite, Tippzonen links/rechts am Buch (DESIGN 3.6). */
   readonly eink = inject(EinkService).enabled;

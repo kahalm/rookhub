@@ -83,6 +83,7 @@
         <app-ebook-filter-panel id="eb-filter-panel"
           [tags]="list.tags" [languages]="list.languages ?? []" [translations]="list.translations ?? []"
           [tag]="tag" [language]="language" [translation]="translation" [minElo]="minElo" [maxElo]="maxElo"
+          [readable]="readableLanguages" [allLanguages]="allLanguages" (allLanguagesChange)="setAllLanguages($event)"
           (tagChange)="setTag($event)" (languageChange)="setLanguage($event)" (translationChange)="setTranslation($event)"
           (eloChange)="setElo($event.which, $event.value)" />
       }
@@ -209,13 +210,13 @@
             </mat-card>
           } @else {
           <mat-card class="eb-card" [class.eb-card--selected]="selected().has(book.id)">
-            <a class="eb-cover" [routerLink]="['/ebooks', book.id]" [attr.aria-label]="book.title">
+            <a class="eb-cover" [routerLink]="['/ebooks', book.id]" [attr.aria-label]="bookTitle(book)">
               @if (coverUrl(book); as url) {
                 <img [src]="url" [alt]="''" loading="lazy" decoding="async" />
               } @else {
                 <span class="eb-cover-fallback" aria-hidden="true">
                   <mat-icon>{{ readable(book) ? 'picture_as_pdf' : 'book' }}</mat-icon>
-                  <span class="eb-cover-title">{{ book.title }}</span>
+                  <span class="eb-cover-title">{{ bookTitle(book) }}</span>
                 </span>
               }
               @if (progressPercent(book); as pct) {
@@ -224,10 +225,10 @@
             </a>
             @if (selecting() && book.canManage) {
               <mat-checkbox class="eb-select" [checked]="selected().has(book.id)" (change)="toggleSelected(book, $event.checked)"
-                            [attr.aria-label]="book.title"></mat-checkbox>
+                            [attr.aria-label]="bookTitle(book)"></mat-checkbox>
             }
             <mat-card-content class="eb-body">
-              <a class="eb-title" [routerLink]="['/ebooks', book.id]" [title]="book.title">{{ book.title }}</a>
+              <a class="eb-title" [routerLink]="['/ebooks', book.id]" [title]="bookTitleTooltip(book)">{{ bookTitle(book) }}</a>
               <div class="eb-meta">
                 @if (book.author) {
                   <span class="eb-author">

@@ -5677,7 +5677,9 @@
       "language": "Language",
       "languageUnknown": "Unknown",
       "languageChip": "Language: {{lang}}",
-      "translatedInto": "Translation: {{lang}}"
+      "translatedInto": "Translation: {{lang}}",
+      "allLanguages": "All languages",
+      "readableHint": "Only books in your language and English, or with a finished translation into them"
     },
     "empty": "No e-books yet – upload the first one.",
     "emptyFiltered": "Nothing matches this filter.",

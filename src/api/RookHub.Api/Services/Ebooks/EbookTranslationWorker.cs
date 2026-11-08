@@ -37,6 +37,9 @@ public class EbookTranslationWorker : BackgroundService, IBackgroundJobInfo
     /// <summary>Fertige Übersetzungen je Leerlauf-Durchgang gegen ihre Quelle prüfen.</summary>
     public const int VerifyBatch = 3;
 
+    /// <summary>Titel je Durchgang (0.896.0) — ein Auftrag je Sprachpaar, kurz genug für jede Fuhre.</summary>
+    public const int TitleBatch = 30;
+
     private readonly IServiceScopeFactory _scopes;
     private readonly EbookTranslationSignal _signal;
     private readonly ILogger<EbookTranslationWorker> _logger;
@@ -112,6 +115,7 @@ public class EbookTranslationWorker : BackgroundService, IBackgroundJobInfo
                 return detected > 0 ? TimeSpan.FromSeconds(1) : quiet;
             if (!svc.IsAvailable) return detected > 0 ? TimeSpan.FromSeconds(1) : NotConfiguredPoll;
             if (svc.IsUnreachable) return UnreachablePoll;
+            if (await svc.TranslateTitlesAsync(TitleBatch, stoppingToken) > 0) return TimeSpan.Zero;   // 0.896.0: erst die Titel
             claimed = await svc.ClaimNextAsync(stoppingToken);
             if (claimed == null)
             {

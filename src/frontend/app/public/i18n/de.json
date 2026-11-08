@@ -5677,7 +5677,9 @@
       "language": "Sprache",
       "languageUnknown": "Unbekannt",
       "languageChip": "Sprache: {{lang}}",
-      "translatedInto": "Übersetzung: {{lang}}"
+      "translatedInto": "Übersetzung: {{lang}}",
+      "allLanguages": "Alle Sprachen",
+      "readableHint": "Nur Bücher in deiner Sprache und auf Englisch oder mit fertiger Übersetzung dorthin"
     },
     "empty": "Noch keine E-Books – lade das erste hoch.",
     "emptyFiltered": "Zu diesem Filter passt nichts.",

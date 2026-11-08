@@ -6,7 +6,8 @@ import { EBOOK_TAGS_COLLAPSED, EbookFilterPanelComponent, ebookLanguageLabel } f
 import { EbookLanguageFacet, EbookTagFacet } from './ebook.service';
 
 describe('EbookFilterPanelComponent', () => {
-  async function render(inputs: { tags?: EbookTagFacet[]; languages?: EbookLanguageFacet[]; translations?: EbookLanguageFacet[]; tag?: string | null }, lang = 'en') {
+  async function render(inputs: { tags?: EbookTagFacet[]; languages?: EbookLanguageFacet[]; translations?: EbookLanguageFacet[]; tag?: string | null;
+    readable?: string[]; allLanguages?: boolean; language?: string | null }, lang = 'en') {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [EbookFilterPanelComponent],
@@ -15,7 +16,7 @@ describe('EbookFilterPanelComponent', () => {
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('en', { ebooks: {
       tags: { opening: 'Opening', endgame: 'Endgame', tactics: 'Tactics', strategy: 'Strategy' },
-      filter: { languageUnknown: 'Unknown', translatedInto: 'Translation: {{lang}}' },
+      filter: { languageUnknown: 'Unknown', translatedInto: 'Translation: {{lang}}', allLanguages: 'All languages' },
     } });
     translate.setTranslation('de', { ebooks: {
       tags: { opening: 'Eröffnung', endgame: 'Endspiel', tactics: 'Taktik', strategy: 'Strategie' },
@@ -27,6 +28,9 @@ describe('EbookFilterPanelComponent', () => {
     fixture.componentRef.setInput('languages', inputs.languages ?? []);
     fixture.componentRef.setInput('translations', inputs.translations ?? []);
     fixture.componentRef.setInput('tag', inputs.tag ?? null);
+    fixture.componentRef.setInput('readable', inputs.readable ?? []);
+    fixture.componentRef.setInput('allLanguages', inputs.allLanguages ?? false);
+    fixture.componentRef.setInput('language', inputs.language ?? null);
     fixture.detectChanges();
     return fixture;
   }
@@ -73,6 +77,25 @@ describe('EbookFilterPanelComponent', () => {
     const enTwo = await render({ tags: reordered });
     enTwo.componentInstance.tagsOpen.set(true);
     expect(enTwo.componentInstance.visibleTags().map(t => t.tag)).toEqual(['Eröffnung', 'Taktik']);   // Opening < Tactics
+  });
+
+  it('0.896.0: „German + English“ (Vorgabe) und „All languages“ vor den Einzelsprachen', async () => {
+    const fixture = await render({ languages: [{ language: 'ru', count: 3 }], readable: ['de', 'en'] });
+    const el: HTMLElement = fixture.nativeElement;
+    const readable = el.querySelector<HTMLButtonElement>('[data-scope="readable"]')!;
+    const all = el.querySelector<HTMLButtonElement>('[data-scope="all"]')!;
+    expect(readable.textContent!.trim()).toBe('German + English');
+    expect(all.textContent!.trim()).toBe('All languages');
+    expect([readable.getAttribute('aria-pressed'), all.getAttribute('aria-pressed')]).toEqual(['true', 'false']);
+    const got: boolean[] = [];
+    fixture.componentInstance.allLanguagesChange.subscribe(v => got.push(v));
+    all.click();
+    readable.click();
+    expect(got).toEqual([true, false]);
+    // Eine gewählte Einzelsprache: keiner der beiden ist an.
+    fixture.componentRef.setInput('language', 'ru');
+    fixture.detectChanges();
+    expect([readable.getAttribute('aria-pressed'), all.getAttribute('aria-pressed')]).toEqual(['false', 'false']);
   });
 
   it('Sprachen in der Oberflächensprache, unbestimmte als „Unknown“, Übersetzungen als eigener Wahlpunkt', async () => {

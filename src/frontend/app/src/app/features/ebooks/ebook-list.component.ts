@@ -26,7 +26,7 @@ import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { mediaSignal } from '../../shared/layout/wide-media';
-import { Ebook, EbookGroupOption, EbookList, EbookService, EbookSort, READABLE_FORMATS, ebookAuthorNames, formatBytes } from './ebook.service';
+import { Ebook, EbookGroupOption, EbookList, EbookService, EbookSort, READABLE_FORMATS, ebookAuthorNames, ebookDisplayTitle, ebookReadableLanguages, formatBytes } from './ebook.service';
 import { EbookFilterPanelComponent, ebookLanguageLabel } from './ebook-filter-panel.component';
 import { EbookTagLabelPipe } from './ebook-tags';
 import { EbookEditDialogComponent, EbookEditDialogData } from './ebook-edit-dialog.component';
@@ -44,6 +44,8 @@ export interface EbookListState {
   search: string; tag: string | null; author?: string | null; sort: EbookSort; mine: boolean; minElo?: number | null; maxElo?: number | null;
   /** Sprache des Buchs (ISO 639-1 oder `unknown`) bzw. fertige Übersetzung (0.877.0). */
   language?: string | null; translation?: string | null;
+  /** „Alle Sprachen“ (0.896.0) — sonst nur Bücher in der eigenen Sprache + Englisch (oder mit Übersetzung dorthin). */
+  allLanguages?: boolean;
   page: number; collection?: number | null;
 }
 
@@ -109,6 +111,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Sprache des Buchtexts (ISO 639-1 oder `unknown`) und „hat fertige Übersetzung in …“ (0.877.0). */
   language: string | null = null;
   translation: string | null = null;
+  /** 0.896.0: Vorgabe = nur lesbare Bücher (eigene Sprache + Englisch); „Alle Sprachen“ im Filter hebt das auf. */
+  allLanguages = false;
   page = 1;
   readonly pageSize = EBOOK_PAGE_SIZE;
   readonly sorts: EbookSort[] = ['title', 'newest', 'recent'];
@@ -165,7 +169,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     if (q && q.keys.length > 0) {
       st = { search: q.get('q') ?? '', tag: q.get('tag'), author: q.get('author'), sort: (q.get('sort') as EbookSort) ?? 'newest',
         mine: q.get('mine') === '1', minElo: eloParam(q.get('eloMin')), maxElo: eloParam(q.get('eloMax')),
-        language: q.get('lang'), translation: q.get('tr'), page: Number(q.get('page')) || 1,
+        language: q.get('lang'), translation: q.get('tr'), allLanguages: q.get('langs') === 'all', page: Number(q.get('page')) || 1,
         collection: Number(q.get('collection')) || null };
     } else {
       const store = sessionStore();
@@ -181,6 +185,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.maxElo = st.maxElo ?? null;
     this.language = st.language || null;
     this.translation = st.translation || null;
+    this.allLanguages = !!st.allLanguages;
     this.page = Math.max(1, Math.floor(st.page ?? 1));
     this.collection = st.collection ?? null;
   }
@@ -188,13 +193,13 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Aktuelle Ansicht in Sitzung + Adresse (replaceUrl: kein neuer Verlaufseintrag je Tastendruck). */
   private saveState(): void {
     const st: EbookListState = { search: this.search.trim(), tag: this.tag, author: this.author, sort: this.sort, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo,
-      language: this.language, translation: this.translation, page: this.page, collection: this.collection };
+      language: this.language, translation: this.translation, allLanguages: this.allLanguages, page: this.page, collection: this.collection };
     const store = sessionStore();
     if (store) writeJson(store, EBOOK_LIST_STATE_KEY, st);
     const queryParams: Record<string, string | null> = {
       q: st.search || null, tag: st.tag, author: st.author || null, sort: st.sort !== 'newest' ? st.sort : null,
       mine: st.mine ? '1' : null, eloMin: st.minElo != null ? String(st.minElo) : null, eloMax: st.maxElo != null ? String(st.maxElo) : null,
-      lang: st.language || null, tr: st.translation || null, page: st.page > 1 ? String(st.page) : null,
+      lang: st.language || null, tr: st.translation || null, langs: st.allLanguages ? 'all' : null, page: st.page > 1 ? String(st.page) : null,
       collection: st.collection ? String(st.collection) : null,
     };
     void this.router?.navigate([], { relativeTo: this.route ?? undefined, queryParams, replaceUrl: true });
@@ -205,7 +210,8 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.loading = this.list == null;
     this.error = false;
     this.ebooks.list({ search: this.search.trim() || undefined, tag: this.tag, author: this.author, mine: this.mine, minElo: this.minElo, maxElo: this.maxElo,
-      language: this.language, translation: this.translation, collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
+      language: this.language, translation: this.translation, readable: this.allLanguages ? null : this.readableLanguages,
+      collection: this.collection, sort: this.sort, page: this.page, pageSize: this.pageSize })
       .subscribe({
         next: list => {
           this.list = list;
@@ -227,6 +233,24 @@ export class EbookListComponent implements OnInit, OnDestroy {
   /** Zahl der aktiven Filter am Knopf „Filter ▾“. Die Suche steht sichtbar daneben und zählt nicht. */
   get activeFilterCount(): number {
     return (this.tag ? 1 : 0) + (this.mine ? 1 : 0) + (this.eloActive ? 1 : 0) + (this.language ? 1 : 0) + (this.translation ? 1 : 0);
+  }
+
+  /** Sprachen, in denen man liest (0.896.0): Oberflächensprache + Englisch. */
+  get readableLanguages(): string[] { return ebookReadableLanguages(this.translate.currentLang()); }
+
+  /** Anzeigetitel: bei fremdsprachigen Büchern der übersetzte (0.896.0); der Tooltip nennt dann auch das Original. */
+  bookTitle(book: Ebook): string { return ebookDisplayTitle(book, this.translate.currentLang()); }
+  bookTitleTooltip(book: Ebook): string {
+    const shown = this.bookTitle(book);
+    return shown === book.title ? shown : `${shown} — ${book.title}`;
+  }
+
+  /** „Eigene Sprachen“ ⇄ „Alle Sprachen“; eine gewählte Einzelsprache fällt dabei weg. */
+  setAllLanguages(all: boolean): void {
+    this.allLanguages = all;
+    this.language = null;
+    this.page = 1;
+    this.load();
   }
 
   /** Sprachname für den Chip des aktiven Sprachfilters (Oberflächensprache). */
@@ -258,6 +282,7 @@ export class EbookListComponent implements OnInit, OnDestroy {
     this.maxElo = null;
     this.language = null;
     this.translation = null;
+    this.allLanguages = false;
     this.page = 1;
     // Über den Such-Strom, damit distinctUntilChanged den alten Suchbegriff vergisst (sonst lädt dieselbe Suche nie wieder).
     if (hadSearch) this.onSearch(''); else this.load();

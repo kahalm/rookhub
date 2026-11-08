@@ -61,6 +61,9 @@ public class EbookDto
     public string? Language { get; set; }
     /// <summary>Fertige Übersetzungen (Zielsprachen, z. B. <c>["en"]</c>) — der Leser bietet „Original / English“ an (0.876.0).</summary>
     public List<string> Translations { get; set; } = new();
+    /// <summary>Übersetzte Titel je fertiger Zielsprache (0.896.0, z. B. <c>{ "en": "…" }</c>) — die Bibliothek zeigt den Titel
+    /// in der Sprache, in der man das Buch lesen kann; fehlt eine Sprache, ist der Titel noch nicht übersetzt.</summary>
+    public Dictionary<string, string> TranslatedTitles { get; set; } = new();
     /// <summary>Es gibt einen Eröffnungsbaum (0.881.0) — der Leser bietet den Brett-Modus „Baum“ an.</summary>
     public bool HasTree { get; set; }
     /// <summary>Sammlung des Buchs (0.787.0); <c>null</c> = keine.</summary>
@@ -164,6 +167,11 @@ public class EbookQuery
     public string? Language { get; set; }
     /// <summary>Nur Bücher mit fertiger Übersetzung in diese Sprache (0.877.0, z. B. <c>en</c>).</summary>
     public string? Translation { get; set; }
+    /// <summary>Nur Bücher, die man in einer dieser Sprachen lesen kann (0.896.0, Komma-Liste, z. B. <c>de,en</c>): Buchsprache
+    /// darunter ODER fertige Übersetzung in eine davon. Die Oberfläche schickt per Vorgabe die eigene Sprache + Englisch,
+    /// „Alle Sprachen“ lässt es weg. Gilt nicht, sobald <see cref="Language"/> gesetzt ist (eine gewählte Sprache zeigt alle
+    /// Bücher dieser Sprache).</summary>
+    public string? Readable { get; set; }
     /// <summary><c>title</c> (Vorgabe), <c>newest</c>, <c>recent</c> (zuletzt gelesen zuerst).</summary>
     public string? Sort { get; set; }
     public int Page { get; set; } = 1;

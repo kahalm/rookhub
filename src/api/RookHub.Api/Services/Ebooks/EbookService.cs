@@ -73,6 +73,7 @@ public class EbookService
             if (q.WithDiagrams) query = query.Where(b => b.DiagramState == EbookDiagramState.Done && b.DiagramCount >= MinDiagramsForFilter);
             if (q.MinElo is int minElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo >= minElo);
             if (q.MaxElo is int maxElo) query = query.Where(b => b.TargetMinElo != null && b.TargetMinElo <= maxElo);
+            if (language && string.IsNullOrWhiteSpace(q.Language)) query = EbookReadable.Filter(query, _db, EbookReadable.Parse(q.Readable));   // 0.896.0
             if (language && !string.IsNullOrWhiteSpace(q.Language))
             {
                 var lang = q.Language.Trim().ToLowerInvariant();
@@ -86,7 +87,7 @@ public class EbookService
             if (!string.IsNullOrWhiteSpace(q.Search))
             {
                 var term = q.Search.Trim().ToLowerInvariant();
-                query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term) || b.Tags.ToLower().Contains(term));
+                query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term) || b.Tags.ToLower().Contains(term) || EbookReadable.TitleMatches(_db, term).Contains(b.Id));
             }
             if (!string.IsNullOrWhiteSpace(q.Author))
             {
@@ -239,8 +240,8 @@ public class EbookService
             : (await _db.EbookProgresses.Where(p => p.UserId == userId && ids.Contains(p.EbookId)).ToListAsync(ct))
                 .ToDictionary(p => p.EbookId, p => (p.Page, p.PageCount, p.Locator, p.UpdatedAt));
         var translations = (await _db.EbookTranslations.Where(t => ids.Contains(t.EbookId) && t.State == EbookTranslationState.Done)
-                .Select(t => new { t.EbookId, t.Language }).ToListAsync(ct))
-            .GroupBy(t => t.EbookId).ToDictionary(g => g.Key, g => g.Select(t => t.Language).OrderBy(l => l).ToList());
+                .Select(t => new { t.EbookId, t.Language, t.Title }).ToListAsync(ct))
+            .GroupBy(t => t.EbookId).ToDictionary(g => g.Key, g => g.OrderBy(t => t.Language).ToList());
         var treeIds = (await _db.EbookTrees.Where(t => ids.Contains(t.EbookId)).Select(t => t.EbookId).ToListAsync(ct)).ToHashSet();
         var manageableIds = items.Where(b => EbookAccess.CanManage(b, caller, manageAll)).Select(b => b.Id).ToList();
         var groups = manageableIds.Count == 0
@@ -280,7 +281,8 @@ public class EbookService
                     ? new EbookProgressDto { Page = p.Page, PageCount = p.PageCount ?? b.PageCount, Locator = p.Locator, UpdatedAt = p.UpdatedAt }
                     : null,
                 Language = b.Language,
-                Translations = translations.TryGetValue(b.Id, out var tr) ? tr : [],
+                Translations = translations.TryGetValue(b.Id, out var tr) ? tr.Select(t => t.Language).ToList() : [],
+                TranslatedTitles = tr?.Where(t => !string.IsNullOrWhiteSpace(t.Title)).ToDictionary(t => t.Language, t => t.Title!) ?? [],
                 HasTree = treeIds.Contains(b.Id),
                 CreatedAt = b.CreatedAt,
                 UpdatedAt = b.UpdatedAt,
@@ -434,6 +436,7 @@ public class EbookService
         {
             var t = meta.Title.Trim();
             if (t.Length == 0) throw new DomainValidationException("The title must not be empty.");
+            if (Clip(t, 300) != ebook.Title) await EbookReadable.ResetTitlesAsync(_db, id, ct);   // 0.896.0
             ebook.Title = Clip(t, 300);
         }
         if (meta.Author != null) ebook.Author = Clip(meta.Author.Trim(), 300);

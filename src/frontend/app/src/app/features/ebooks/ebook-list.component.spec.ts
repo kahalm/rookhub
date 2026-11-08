@@ -180,6 +180,30 @@ describe('EbookListComponent', () => {
     expect(calls[calls.length - 1]).toEqual(jasmine.objectContaining({ minElo: null, maxElo: null }));
   }));
 
+  it('0.896.0: per Vorgabe nur lesbare Sprachen, „Alle Sprachen“ hebt auf und bleibt gemerkt, Zurücksetzen stellt die Vorgabe her', () => {
+    sessionStorage.removeItem('rh.ebooks.listState');
+    const c = make([book()]);
+    c.load();
+    expect(calls[calls.length - 1]).toEqual(jasmine.objectContaining({ readable: ['en'] }));
+    c.setLanguage('ru');
+    c.setAllLanguages(true);
+    expect(c.language).toBeNull();
+    expect(calls[calls.length - 1]).toEqual(jasmine.objectContaining({ readable: null }));
+    const again = make([book()]);
+    expect(again.allLanguages).toBeTrue();
+    again.resetFilters();
+    expect(again.allLanguages).toBeFalse();
+    sessionStorage.removeItem('rh.ebooks.listState');
+  });
+
+  it('0.896.0: fremdsprachiges Buch zeigt den übersetzten Titel, Tooltip mit Original', () => {
+    const c = make([book()]);
+    const ru = book({ title: 'Учебник', language: 'ru', translatedTitles: { en: 'Textbook' } });
+    expect(c.bookTitle(ru)).toBe('Textbook');
+    expect(c.bookTitleTooltip(ru)).toBe('Textbook — Учебник');
+    expect(c.bookTitleTooltip(book({ title: 'Chess', language: 'en' }))).toBe('Chess');
+  });
+
   it('eloParam: ganze Zahl 0–3500, sonst null', () => {
     expect([eloParam('1600'), eloParam(' '), eloParam(null), eloParam('-5'), eloParam('4000'), eloParam('0')]).toEqual([1600, null, null, null, null, 0]);
   });

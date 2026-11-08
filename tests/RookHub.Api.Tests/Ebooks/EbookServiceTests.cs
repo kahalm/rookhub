@@ -280,6 +280,50 @@ public class EbookServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_Readable_OwnLanguagesPlusTranslated_TranslatedTitleShownAndSearchable()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var everyone = await _kit.GroupAsync("Everyone", everyone: true);
+        foreach (var (title, lang) in new (string, string?)[] { ("Deutsch", "de"), ("English", "en"), ("Русский", "ru"), ("Русский 2", "ru"), ("Unklar", null) })
+            (await _kit.BookAsync(title, owner.Id, "epub", null, everyone.Id)).Language = lang;
+        var ru = _kit.Db.Ebooks.Single(b => b.Title == "Русский");
+        var ru2 = _kit.Db.Ebooks.Single(b => b.Title == "Русский 2");
+        _kit.Db.EbookTranslations.Add(new EbookTranslation { EbookId = ru.Id, Language = "en", State = EbookTranslationState.Done, Title = "Russian Book" });
+        _kit.Db.EbookTranslations.Add(new EbookTranslation { EbookId = ru2.Id, Language = "en", State = EbookTranslationState.Pending });
+        await _kit.Db.SaveChangesAsync();
+
+        async Task<EbookListDto> List(EbookQuery q) { q.Sort = "title"; return await _kit.Service.ListAsync(owner.Id, false, q); }
+        // Eigene Sprache + Englisch + russisches Buch mit fertiger englischer Übersetzung; ohne fertige Übersetzung nicht.
+        var readable = await List(new EbookQuery { Readable = "de, EN" });
+        Assert.Equal(["Deutsch", "English", "Русский"], readable.Items.Select(i => i.Title));
+        Assert.Equal("Russian Book", readable.Items.Single(i => i.Id == ru.Id).TranslatedTitles["en"]);
+        Assert.Empty(readable.Items.Single(i => i.Title == "Deutsch").TranslatedTitles);
+        // Sprach-Chips bleiben vollständig (ohne den Lesbar-Filter), damit „Russisch“ wählbar bleibt …
+        Assert.Contains(readable.Languages, f => f.Language == "ru" && f.Count == 2);
+        // … und eine gewählte Sprache hebt den Lesbar-Filter auf.
+        Assert.Equal(["Русский", "Русский 2"], (await List(new EbookQuery { Readable = "de,en", Language = "ru" })).Items.Select(i => i.Title));
+        // Ohne Readable (oder „all“) alles.
+        Assert.Equal(5, (await List(new EbookQuery())).Total);
+        Assert.Equal(5, (await List(new EbookQuery { Readable = "all" })).Total);
+        // Suche trifft auch den übersetzten Titel.
+        Assert.Equal(["Русский"], (await List(new EbookQuery { Search = "russian" })).Items.Select(i => i.Title));
+    }
+
+    [Fact]
+    public async Task Update_TitleChanged_ResetsTranslatedTitles()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var book = await _kit.BookAsync("Alt", owner.Id, "epub");
+        _kit.Db.EbookTranslations.Add(new EbookTranslation { EbookId = book.Id, Language = "en", State = EbookTranslationState.Done, Title = "Old" });
+        await _kit.Db.SaveChangesAsync();
+
+        await _kit.Service.UpdateAsync(owner.Id, false, book.Id, new EbookMetaDto { Title = "Alt" });
+        Assert.Equal("Old", _kit.Db.EbookTranslations.Single().Title);   // gleicher Titel → bleibt
+        await _kit.Service.UpdateAsync(owner.Id, false, book.Id, new EbookMetaDto { Title = "Neu" });
+        Assert.Null(_kit.Db.EbookTranslations.Single().Title);
+    }
+
+    [Fact]
     public async Task List_FiltersByEloRange_BooksWithoutEloDropOut_AndZeroIsBeginner()
     {
         var owner = await _kit.UserAsync("owner");
