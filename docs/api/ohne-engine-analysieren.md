@@ -78,3 +78,21 @@ unberührt und kommt beim Zurückschalten wieder). Knopf „Ohne Engine“ / „
 schaltet um und ersetzt die Adresse (`?blind=1` dazu bzw. weg, `replaceUrl`). Mit Linien-Baum ist der Knopf weg — dort
 gelten „Engine einschalten/ausschalten“ der Karte. Kein Linien-Baum, kein Hintergrund: das freie Brett speichert wie sonst
 in den Analyse-Verlauf.
+
+## Nachtrag 0.898.0 — eine Partie, ein Baum, Modus jederzeit umschaltbar
+
+Wunsch 2026-11-08 (Screenshot des Auswahl-Dialogs): „zwischen den beiden Modi einfach wechseln können; Linien, die ich ohne
+Engine analysiert habe, müssen bei mir gespeichert bleiben (jeweils nur beim User) und im Hintergrund mitbewertet werden —
+fließen nicht in die !! und in die Genauigkeit ein, sollen mir aber schnell zeigen, was der richtige Zug/die Bewertung ist.“
+
+- Jede Partie im Analysebrett (PGN aus Router-State oder `?pgn=`, angemeldet) läuft jetzt über den Linien-Baum
+  (`startStudy(blind)`), auch „Mit Engine“. Gespeichert wird also immer in `/api/line-studies` (je Nutzer), nicht mehr in den
+  Analyse-Verlauf; der Hintergrund rechnet jede Stellung wie bisher (`LineStudyPosition`, eigene Aufträge — keine Wirkung auf
+  Bewertungskurve, Zug-Klassen oder Genauigkeit der Partie).
+- Der Dialog bestimmt nur noch den Start: „Mit Engine“ deckt den Baum gleich auf (`LineStudySession.revealWhenReady()` —
+  wartet, bis der Baum eine Kennung hat), „Ohne Engine“ startet verdeckt.
+- Umschalten: Kopf-Knopf „Ohne Engine“/„Mit Engine“ (`toggleNoEngine`, führt `?blind=1` in der Adresse mit, Router-State
+  bleibt fürs Neuladen) und die Knöpfe der Leiste. `studyEngineHidden` ist der Modus (`blind`-Getter); das erste „Mit Engine“
+  deckt auf dem Server auf, danach nur noch Anzeige. Ein schon aufgedeckter Baum öffnet „Ohne Engine“ jetzt verdeckt (vorher
+  sprang er beim Wiederöffnen auf).
+

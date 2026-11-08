@@ -53,6 +53,20 @@ describe('LineStudySession (ohne Engine, 0.855.0)', () => {
     s.destroy();
   }));
 
+  it('revealWhenReady vor der ersten Kennung: deckt nach dem Anlegen genau einmal auf (0.898.0)', () => {
+    evals = { revealed: true, analyzed: 1, total: 3, nodes: [] };   // nach dem Aufdecken meldet der Server „aufgedeckt“
+    const reveal = spyOn(api, 'reveal').and.callThrough();
+    const s = new LineStudySession(api, host(), 'g:k', ['e2e4', 'e7e5'], null);
+    s.revealWhenReady();          // noch keine Kennung → vorgemerkt
+    expect(reveal).not.toHaveBeenCalled();
+    s.open();                     // 404 → anlegen → Kennung 7 → aufdecken
+    expect(reveal).toHaveBeenCalledOnceWith(7);
+    expect(s.revealed).toBeTrue();
+    s.revealWhenReady();          // schon aufgedeckt → nichts
+    expect(reveal).toHaveBeenCalledTimes(1);
+    s.destroy();
+  });
+
   it('vorhanden: legt den gespeicherten Baum aufs Brett', () => {
     api.get = () => of({ ...study, tree: { n: [{ p: -1, u: 'd2d4' }] }, current: 0 });
     const s = new LineStudySession(api, host(), 'g:k', ['d2d4'], null);

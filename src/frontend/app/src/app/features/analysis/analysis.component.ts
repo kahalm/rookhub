@@ -132,14 +132,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private readonly lineStudies?: LineStudyService;
   /** Eigene Linien zu einer Partie ohne Bewertung; `null` = normales Analysebrett. */
   study: LineStudySession | null = null;
-  /** Ohne Engine und noch nicht aufgedeckt: keine Leiste, keine Engine, kein Explorer, keine Bewertungen. */
-  get blind(): boolean { return this.study ? !this.study.revealed || this.studyEngineHidden : this.noEngine; }
+  /** Ohne Engine: keine Leiste, keine Engine, kein Explorer, keine Bewertungen. Mit Linien-Baum entscheidet der Modus
+   *  ({@link studyEngineHidden}), sonst {@link noEngine}. */
+  get blind(): boolean { return this.study ? this.studyEngineHidden : this.noEngine; }
   /** „Ohne Engine“ auf dem freien Brett (0.895.0, `?blind=1` ohne Partie): dasselbe Ausblenden, aber ohne Linien-Baum —
    *  oben umschaltbar ({@link toggleNoEngine}), die Adresse zieht mit. */
   noEngine = false;
   /** Engine-Schalter vor „Ohne Engine“ — beim Zurückschalten wieder so (die gespeicherte Einstellung bleibt unberührt). */
   private engineOnBeforeBlind = true;
-  /** Nach dem Aufdecken wieder weggeschaltet (0.859.0, „Engine ausschalten") — nur auf dieser Seite, aufgedeckt bleibt aufgedeckt. */
+  /** Modus einer Partie mit Linien-Baum: `true` = ohne Engine. Seit 0.898.0 jederzeit umschaltbar (Kopf-Knopf, Karte);
+   *  der Baum ist in beiden Modi derselbe, gespeichert je Nutzer und im Hintergrund bewertet. Einmal aufgedeckt bleibt
+   *  aufgedeckt (Server), verdeckt wird nur auf dieser Seite. */
   studyEngineHidden = false;
 
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
@@ -279,11 +282,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.history.get(p.historyId).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
       return;
     }
+    const blind = window.history.state?.blind === true || p.blind;
     // `?blind=1` ohne Partie (oder ohne Konto): freies Brett ohne Engine — oben wieder einschaltbar (0.895.0)
-    if (p.blind && !(pgn && this.lineStudies && this.auth.isLoggedIn)) this.setNoEngine(true);
-    if (pgn && this.lineStudies && this.auth.isLoggedIn && (window.history.state?.blind === true || p.blind)) {
+    if (blind && !(pgn && this.lineStudies && this.auth.isLoggedIn)) this.setNoEngine(true);
+    if (pgn && this.lineStudies && this.auth.isLoggedIn) {
+      // Partie, angemeldet (0.898.0): immer der eigene Linien-Baum — mit wie ohne Engine, umschaltbar
       this.pgnInput = pgn;
-      this.startWithoutEngine();
+      this.startStudy(blind);
     } else if (pgn) {
       this.pgnInput = pgn;
       this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
@@ -303,11 +308,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * „Ohne Engine" (0.855.0): Engine aus (nur für diese Seite, nicht als Einstellung), die Partie laden und ihren eigenen Baum
-   * holen bzw. anlegen. Gespeichert wird dann in den Linien-Baum statt in den Analyse-Verlauf.
+   * Partie im eigenen Linien-Baum (0.855.0 „Ohne Engine“, seit 0.898.0 für jede Partie mit Anmeldung): Partie laden und ihren
+   * Baum holen bzw. anlegen. Gespeichert wird in den Linien-Baum statt in den Analyse-Verlauf, der Server bewertet jede
+   * Stellung im Hintergrund (nur für diesen Nutzer, nicht in Genauigkeit/Zug-Klassen der Partie). `blind` = Start ohne
+   * Engine (Engine aus nur für diese Seite); sonst wird der Baum gleich aufgedeckt.
    */
-  private startWithoutEngine(): void {
-    this.engineOn = false;
+  private startStudy(blind: boolean): void {
+    this.studyEngineHidden = blind;
+    if (blind) { this.engineOnBeforeBlind = this.engineOn; this.engineOn = false; }
     const parsed = parsePgnTree(this.pgnInput.trim());
     if (!parsed) { this.loadPgn(true); return; }
     const gameUcis = mainline(parsed.root).map(n => n.uci);
@@ -315,27 +323,35 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       root: () => this.root,
       current: () => this.currentNode,
       setTree: (root, current) => this.setTree(root, current),
-      revealed: () => { this.studyEngineHidden = false; this.engineOn = true; this.refresh(); },
+      // aufgedeckt (Server): die Bewertungen hängen am Baum; ob sie zu sehen sind, entscheidet der Modus
+      revealed: () => { this.cdr.markForCheck(); },
       changed: () => { this.treeVersion++; this.cdr.markForCheck(); },
     }, lineStudyKey(parsed.root.fen, gameUcis), gameUcis, pgnTitle(parsed.headers));
     this.loadPgn(true);
     this.study.open();
+    if (!blind) this.study.revealWhenReady();
   }
 
-  /** „Engine einschalten" auf der Karte „Ohne Engine". */
+  /** „Engine einschalten" (Karte bzw. Kopf-Knopf): sofort mit Live-Engine, beim ersten Mal den Baum aufdecken. */
   revealStudy(): void {
     if (!this.study) return;
-    if (this.study.revealed) { this.studyEngineHidden = false; this.engineOn = true; this.refresh(); return; }
-    this.study.reveal();
+    this.studyEngineHidden = false;
+    this.engineOn = true;
+    this.study.revealWhenReady();
+    this.refresh();
   }
 
-  /** Oben „Ohne Engine“ / „Mit Engine“ (0.895.0): umschalten und `?blind=1` in der Adresse mitführen (ersetzt den Eintrag). */
+  /** Oben „Ohne Engine“ / „Mit Engine“ (0.895.0, mit Linien-Baum seit 0.898.0): umschalten und `?blind=1` in der Adresse
+   *  mitführen (ersetzt den Eintrag; der Router-State mit der Partie bleibt fürs Neuladen erhalten). */
   toggleNoEngine(): void {
-    if (this.study) return;
-    this.setNoEngine(!this.noEngine);
-    this.router.navigate([], { relativeTo: this.route, queryParams: { blind: this.noEngine ? 1 : null },
-      queryParamsHandling: 'merge', replaceUrl: true });
-    this.refresh();
+    if (this.study) {
+      if (this.studyEngineHidden) this.revealStudy(); else this.hideStudyEngine();
+    } else {
+      this.setNoEngine(!this.noEngine);
+      this.refresh();
+    }
+    this.router.navigate([], { relativeTo: this.route, queryParams: { blind: this.blind ? 1 : null },
+      queryParamsHandling: 'merge', replaceUrl: true, state: window.history.state ?? undefined });
   }
 
   private setNoEngine(on: boolean): void {
@@ -347,6 +363,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** „Engine ausschalten" (0.859.0): wieder wie ohne Engine — keine Leiste, keine Engine, keine Bewertungen. */
   hideStudyEngine(): void {
+    if (!this.studyEngineHidden) this.engineOnBeforeBlind = this.engineOn;
     this.studyEngineHidden = true;
     this.engineOn = false;
     this.refresh();

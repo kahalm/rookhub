@@ -3312,7 +3312,7 @@
       "engine": "With engine",
       "engineDesc": "Evaluation graph, move classes and your mistakes — as before.",
       "blind": "Without engine",
-      "blindDesc": "Click through the game and your own lines with no evaluation. They are saved for you and analysed in the background; switch the engine on when you are done.",
+      "blindDesc": "Click through the game and your own lines with no evaluation. They are saved for you and analysed in the background (not in the game’s accuracy); switch the engine on and off at any time.",
       "remember": "Remember my choice (change it in your profile)"
     }
   },

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.898.0", date: "2026-11-08", changes: [
+    { en: "Analyse a game: you can now switch between “With engine” and “Without engine” at any time (button at the top of the analysis board); the choice in the dialog only decides how the board starts. Your lines of a game are always saved for you alone and evaluated in the background — also with the engine on — and show the evaluation and the better move at each move. They do not count towards the game’s accuracy or move classes.",
+      de: "Partie analysieren: Zwischen „Mit Engine“ und „Ohne Engine“ schaltest du jetzt jederzeit um (Knopf oben im Analysebrett); die Wahl im Fenster bestimmt nur noch, wie das Brett startet. Deine Linien zu einer Partie werden immer nur für dich gespeichert und im Hintergrund bewertet — auch mit eingeschalteter Engine — und zeigen an jedem Zug Bewertung und besseren Zug. In Genauigkeit und Zug-Klassen der Partie zählen sie nicht." },
+  ] },
   { version: "0.897.1", date: "2026-11-08", changes: [
     { en: "Puzzles: “Mouseslip” right after the opponent’s reply now takes back both your wrong move and the reply. Before, only the reply was undone, your wrong move stayed and the board was stuck with the wrong side to move. The board also redraws reliably again after the opponent’s reply once the solve clock has stopped (after the first wrong move it froze until the next click).",
       de: "Puzzles: „Mausrutscher“ direkt nach der Antwort des Gegners nimmt jetzt deinen Fehlzug und die Antwort zurück. Bisher ging nur die Antwort weg, dein Fehlzug blieb stehen und das Brett hing mit der falschen Seite am Zug. Außerdem zeichnet sich das Brett nach der Gegenantwort wieder verlässlich neu, auch wenn die Lösezeit-Uhr steht (nach dem ersten Fehlzug fror es bis zum nächsten Klick ein)." },

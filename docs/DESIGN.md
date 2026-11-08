@@ -668,7 +668,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
   (Titel + Aufklapp-Pfeil) und fragt erst aufgeklappt; ein auf dem Gerät gemerkter Zustand gilt weiter (0.760.0).
 - Analysebrett: Kopfzeile rechts `.header-actions` — „Ohne Engine“/„Mit Engine“ (`mat-stroked-button`, Symbol
   `visibility_off`/`visibility`, `aria-pressed`) vor „Verlauf“; auf dem freien Brett, nicht mit Linien-Baum (dort die
-  Karte „Ohne Engine“). Die Adresse führt `?blind=1` mit (0.895.0).
+  Karte „Ohne Engine“). Die Adresse führt `?blind=1` mit (0.895.0). Seit 0.898.0 auch mit Linien-Baum (Partie): derselbe Knopf schaltet
+  den Modus, die Leiste „Ohne Engine“ bleibt (Fortschritt, Zähler).
 - Stellung markieren: `app-mark-position-button` („+“, markiert grün gefüllt, `aria-pressed`).
 - Analysebrett: Brettspalte klebt erst ab **900 px**, wo Brett und Seitenspalte sicher nebeneinander stehen (Brettspalte
   lässt dort 300 px frei); 769–899 px steht das Brett mittig einspaltig und scrollt mit. Bewertungsleiste mit 1-px-Rahmen
@@ -1212,6 +1213,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-08 | 0.898.0 · Analysebrett | Partie immer im Linien-Baum; Kopf-Knopf „Ohne/Mit Engine“ schaltet auch dort den Modus, Dialog = nur Startmodus | Wunsch 08.11.: „zwischen den beiden Modi einfach wechseln können“ | User |
 | 2026-11-07 | 0.895.0 · Analysebrett | Kopf-Schalter „Ohne Engine“/„Mit Engine“ (`.header-actions`), führt `?blind=1` in der Adresse mit | Wunsch 07.11.: „einfacher Weg zwischen /analysis?blind=1 und /analysis zu wechseln“ | User |
 | 2026-11-07 | 0.893.0 · Repertoire-Trainer | Kommentar-Formen nur noch am Linienende (Schlussstellung + Nachbetrachtung); Schalter „Kommentare zeigen“ (Taste K, je Gerät) in `.trainer-actions`, Kommentare der letzten Züge als Kontextkarte ohne Halt | Nutzerwunsch 07.11.: Formen während des Spiels stören, Kommentare auf Wunsch auch beim Abfragen | Wunsch des Users über die betreuende Sitzung |
 | 2026-11-07 | 0.892.0 · Repertoire-Trainer + Spielerkarte | `.opponent-note` (Partien des Gegners zur Stellung, Umschlag warn), Abweichungs-Trainer als eigene Seite im Trainer-Aufbau, Karte: Rahmenknopf „Abweichungen trainieren (N)“ neben dem Anlegen-Knopf + aufklappbare Liste | Nutzerwünsche 07.11.: „trainiere abweichungen“, „meldung ab wann ich von gespielten partien abgewichen bin“ | Wunsch des Users über die betreuende Sitzung |

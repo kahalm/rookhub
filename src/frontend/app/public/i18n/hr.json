@@ -3312,7 +3312,7 @@
       "engine": "S engineom",
       "engineDesc": "Graf ocjene, klase poteza i tvoje greške — kao do sada.",
       "blind": "Bez enginea",
-      "blindDesc": "Prođi partiju i vlastite varijante bez ikakve ocjene. Spremaju se za tebe i analiziraju u pozadini; na kraju uključi engine.",
+      "blindDesc": "Prođi partiju i vlastite varijante bez ikakve ocjene. Spremaju se za tebe i ocjenjuju u pozadini (ne ulaze u točnost partije); engine uključuješ i isključuješ kad god želiš.",
       "remember": "Zapamti moj izbor (može se promijeniti u profilu)"
     }
   },

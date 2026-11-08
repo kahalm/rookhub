@@ -3689,7 +3689,7 @@
       "engine": "Motorral",
       "engineDesc": "Értékelési görbe, lépésosztályok és a hibáid — mint eddig.",
       "blind": "Motor nélkül",
-      "blindDesc": "Kattints végig a játszmán és a saját változataidon értékelés nélkül. Elmentjük neked és a háttérben elemezzük; a végén kapcsold be a motort.",
+      "blindDesc": "Kattints végig a játszmán és a saját változataidon értékelés nélkül. Elmentjük neked és a háttérben értékeljük (nem számít bele a játszma pontosságába); a motort bármikor be- és kikapcsolhatod.",
       "remember": "Emlékezz a döntésemre (a profilban módosítható)"
     }
   },

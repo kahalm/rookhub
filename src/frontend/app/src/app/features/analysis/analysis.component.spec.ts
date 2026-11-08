@@ -324,7 +324,7 @@ describe('AnalysisComponent ohne Engine: wieder wegschalten', () => {
     const c = makeComponent({ fen: START, moves: 'e2e4' });
     c.ngOnInit();
     const reveal = jasmine.createSpy('reveal');
-    c.study = { revealed: true, reveal, schedule: () => {} } as any;
+    c.study = { revealed: true, reveal, revealWhenReady: () => {}, schedule: () => {} } as any;
     expect(c.blind).toBeFalse();
     c.engineOn = true;
     c.hideStudyEngine();
@@ -362,15 +362,62 @@ describe('AnalysisComponent freies Brett ohne Engine (0.895.0)', () => {
     c.ngOnDestroy();
   });
 
-  it('ohne ?blind läuft alles wie bisher, und mit Linien-Baum tut der Kopf-Schalter nichts', () => {
+  it('ohne ?blind läuft alles wie bisher; mit Linien-Baum schaltet der Kopf-Knopf den Modus (0.898.0)', () => {
     const c = makeComponent({});
     c.ngOnInit();
     expect(c.blind).toBeFalse();
-    c.study = { revealed: true, schedule: () => {} } as any;
+    const revealWhenReady = jasmine.createSpy('revealWhenReady');
+    c.study = { revealed: false, revealWhenReady, schedule: () => {} } as any;
+    c.engineOn = true;
     c.toggleNoEngine();
-    expect(c.noEngine).toBeFalse();
-    expect(c.__router.navigate).not.toHaveBeenCalled();
+    expect(c.blind).toBeTrue();
+    expect(c.engineOn).toBeFalse();
+    expect(c.__router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { blind: 1 } }));
+    c.toggleNoEngine();
+    expect(c.blind).toBeFalse();
+    expect(c.engineOn).toBeTrue();
+    expect(revealWhenReady).toHaveBeenCalled();
+    expect(c.__router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { blind: null } }));
     c.study = null;
+    c.ngOnDestroy();
+  });
+});
+
+describe('AnalysisComponent Partie immer im Linien-Baum (0.898.0)', () => {
+  const pgn = '[White "A"]\n[Black "B"]\n\n1. e4 e5 2. Nf3 1-0\n';
+  function fakeStudies() {
+    const study = { id: 7, revealed: false, analyzed: 0, total: 3 };
+    return {
+      get: jasmine.createSpy('get').and.returnValue(throwError(() => ({ status: 404 }))),
+      save: jasmine.createSpy('save').and.returnValue(of(study)),
+      reveal: jasmine.createSpy('reveal').and.returnValue(of({ ...study, revealed: true })),
+      evals: jasmine.createSpy('evals').and.returnValue(of({ revealed: true, analyzed: 3, total: 3, nodes: [] })),
+    };
+  }
+
+  it('„Mit Engine“: Baum angelegt und gleich aufgedeckt, Engine sichtbar', () => {
+    const c = makeComponent({ pgn }, { loggedIn: true });
+    const api = fakeStudies();
+    (c as any).lineStudies = api;
+    c.ngOnInit();
+    expect(c.study).not.toBeNull();
+    expect(c.blind).toBeFalse();
+    expect(api.save).toHaveBeenCalled();
+    expect(api.reveal).toHaveBeenCalledWith(7);
+    c.ngOnDestroy();
+  });
+
+  it('„Ohne Engine“ (?blind=1): derselbe Baum, verdeckt, nichts aufgedeckt — umschaltbar', () => {
+    const c = makeComponent({ pgn, blind: '1' }, { loggedIn: true });
+    const api = fakeStudies();
+    (c as any).lineStudies = api;
+    c.ngOnInit();
+    expect(c.study).not.toBeNull();
+    expect(c.blind).toBeTrue();
+    expect(api.reveal).not.toHaveBeenCalled();
+    c.toggleNoEngine();
+    expect(c.blind).toBeFalse();
+    expect(api.reveal).toHaveBeenCalledWith(7);
     c.ngOnDestroy();
   });
 });

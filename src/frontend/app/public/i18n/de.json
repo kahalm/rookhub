@@ -3312,7 +3312,7 @@
       "engine": "Mit Engine",
       "engineDesc": "Bewertungskurve, Zug-Klassen und deine Fehler — wie bisher.",
       "blind": "Ohne Engine",
-      "blindDesc": "Partie und eigene Linien ohne jede Bewertung durchklicken. Sie werden für dich gespeichert und im Hintergrund analysiert; am Ende schaltest du die Engine ein.",
+      "blindDesc": "Partie und eigene Linien ohne jede Bewertung durchklicken. Sie werden für dich gespeichert und im Hintergrund bewertet (nicht in der Genauigkeit der Partie); die Engine schaltest du jederzeit ein und wieder aus.",
       "remember": "Entscheidung merken (im Profil änderbar)"
     }
   },

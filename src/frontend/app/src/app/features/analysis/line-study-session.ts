@@ -41,6 +41,8 @@ export class LineStudySession {
   private savedFlat: AnalysisNode[] = [];
   private savedRoot: AnalysisNode | null = null;
   private destroyed = false;
+  /** „Mit Engine“ gewählt, bevor der Baum eine Kennung hat — aufdecken, sobald er gespeichert bzw. geladen ist. */
+  private revealPending = false;
 
   constructor(private readonly api: LineStudyService, private readonly host: LineStudyHost,
               readonly gameKey: string, private readonly gameUcis: readonly string[], private readonly title: string | null) {}
@@ -89,6 +91,12 @@ export class LineStudySession {
     if (this.dirty) this.saveNow(go); else go();
   }
 
+  /** Aufdecken, sobald möglich (0.898.0: Brett startet „Mit Engine“ bzw. Kopf-Schalter vor dem ersten Speichern). */
+  revealWhenReady(): void {
+    if (this.revealed) return;
+    if (this.id != null) this.reveal(); else this.revealPending = true;
+  }
+
   destroy(): void {
     this.flush();
     this.destroyed = true;
@@ -126,6 +134,10 @@ export class LineStudySession {
       if (this.savedFlat.length === 0 || this.savedFlat[0]?.parent !== root) this.savedFlat = flatNodes(root);
     }
     this.host.changed();
+    if (this.revealPending && this.id != null) {
+      this.revealPending = false;
+      if (!this.revealed) this.reveal();
+    }
   }
 
   /** Fortschritt (und nach dem Einschalten die Bewertungen) holen; solange noch gerechnet wird, alle 15 s wieder. */
