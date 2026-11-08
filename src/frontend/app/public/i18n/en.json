@@ -3342,6 +3342,21 @@
       "blind": "Without engine",
       "blindDesc": "Click through the game and your own lines with no evaluation. They are saved for you and analysed in the background (not in the game’s accuracy); switch the engine on and off at any time.",
       "remember": "Remember my choice (change it in your profile)"
+    },
+    "summary": {
+      "title": "Game summary",
+      "open": "Summary",
+      "request": "Request summary",
+      "requestAgain": "Rewrite summary",
+      "requested": "Summary requested …",
+      "running": "Summary is being written …",
+      "requestedToast": "Summary requested — Claude writes it in a few minutes.",
+      "requestFailed": "Could not request the summary.",
+      "toGame": "To the game",
+      "stale": "The game was corrected after this summary was written.",
+      "none": "There is no summary for this game yet.",
+      "showInGame": "Show in the game",
+      "writtenBy": "Written by {{model}} from the engine analysis."
     }
   },
   "analysis": {

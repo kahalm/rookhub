@@ -619,3 +619,33 @@ public class LeagueClubMember
     public int GroupId { get; set; }
     public Group? Group { get; set; }
 }
+
+/// <summary>Stand einer Partie-Zusammenfassung (<see cref="ClubGameSummary"/>).</summary>
+public enum ClubGameSummaryStatus { Requested = 0, Running = 1, Done = 2, Failed = 3 }
+
+/// <summary>
+/// Zusammenfassung einer Vereinspartie als eigene Seite (0.913.0, Wunsch 2026-11-08: „auf Wunsch vom Admin soll Claude
+/// auch eine Zusammenfassung der Partie machen — eine eigene Webseite, bei der Partie verlinkt, mit Diagrammen der
+/// Schlüsselstellungen"). Ein Admin fordert sie an, der Formular-Watcher (<c>~/claude/formulare-bot/watch.sh</c>, Schiene
+/// <c>summary</c>) holt sie ab, lässt Claude aus PGN, Analyse und Fehler-Vergleichen Markdown schreiben und liefert es
+/// zurück. Eine Zeile je Partie; neu anfordern behält den alten Text, bis der neue da ist. Regeln:
+/// <c>Services/League/ClubGameSummaries.cs</c>.
+/// </summary>
+public class ClubGameSummary
+{
+    public int Id { get; set; }
+    public int ClubGameId { get; set; }
+    public ClubGameSummaryStatus Status { get; set; }
+    /// <summary>Der Text (Markdown mit <c>```diagram</c>-Blöcken, siehe docs/api/partie-zusammenfassung.md); <c>null</c> bis
+    /// zur ersten fertigen Fassung.</summary>
+    public string? Markdown { get; set; }
+    /// <summary><see cref="LeagueClubGame.MovesHash"/> beim Abliefern — weicht er später ab, wurde die Partie seither korrigiert.</summary>
+    public string? MovesHash { get; set; }
+    /// <summary>Welches Modell geschrieben hat (Angabe des Watchers, nur zur Anzeige).</summary>
+    public string? Model { get; set; }
+    public int? RequestedByUserId { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? DoneAt { get; set; }
+    public string? Error { get; set; }
+}

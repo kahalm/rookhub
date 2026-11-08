@@ -3719,6 +3719,21 @@
       "blind": "Motor nélkül",
       "blindDesc": "Kattints végig a játszmán és a saját változataidon értékelés nélkül. Elmentjük neked és a háttérben értékeljük (nem számít bele a játszma pontosságába); a motort bármikor be- és kikapcsolhatod.",
       "remember": "Emlékezz a döntésemre (a profilban módosítható)"
+    },
+    "summary": {
+      "title": "A játszma összefoglalója",
+      "open": "Összefoglaló",
+      "request": "Összefoglaló kérése",
+      "requestAgain": "Összefoglaló újraírása",
+      "requested": "Összefoglaló kérve …",
+      "running": "Az összefoglaló készül …",
+      "requestedToast": "Összefoglaló kérve – Claude néhány perc alatt megírja.",
+      "requestFailed": "Az összefoglalót nem sikerült kérni.",
+      "toGame": "A játszmához",
+      "stale": "A játszmát az összefoglaló megírása után javították.",
+      "none": "Ehhez a játszmához még nincs összefoglaló.",
+      "showInGame": "Mutasd a játszmában",
+      "writtenBy": "Írta: {{model}}, a motoros elemzés alapján."
     }
   },
   "analysisJobs": {

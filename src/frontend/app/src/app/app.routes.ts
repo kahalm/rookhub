@@ -82,6 +82,7 @@ export const routes: Routes = [
   { path: 'games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard, menuGuard('games')], data: { mode: 'own' } },
   // Vereinspartie aus LeagueHub (0.653.0): dieselbe Partieseite, Bewertungen aus der Hintergrund-Analyse des Vereins.
   // Kein menuGuard — das Recht prüft der Server (`league.view`, sonst 404 → „konnte nicht geladen werden").
+  { path: 'club-games/:id/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), canActivate: [authGuard] },
   { path: 'club-games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard], data: { mode: 'club' } },
   { path: 'reconstruct', loadComponent: () => import('./features/reconstruct/reconstruct-list.component').then(m => m.ReconstructListComponent), canActivate: [authGuard, menuGuard('reconstruct')] },
   { path: 'reconstruct/:id', loadComponent: () => import('./features/reconstruct/reconstruct-detail.component').then(m => m.ReconstructDetailComponent), canActivate: [authGuard, menuGuard('reconstruct')] },

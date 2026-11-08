@@ -94,6 +94,25 @@ public class LeagueClubOverviewController(LeagueClubResolver clubs, LeagueClubOv
         await WithClubAsync(ct, async c => await comparisons.GetAsync(c, id, comparisonId, ct) is { } dto ? Ok(dto) : NotFound(),
             await club.ClubOfGameAsync(id, ct));
 
+    /// <summary>Zusammenfassung der Vereinspartie (0.913.0, <see cref="ClubGameSummaries"/>) → <c>{ status, markdown, doneAt,
+    /// requestedAt, stale, model, error }</c>, <c>status</c> = <c>none</c> ohne Anforderung; 404 unbekannt oder fremd.</summary>
+    [HttpGet("games/{id:int}/summary")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Summary(int id, [FromServices] ClubGameSummaries summaries, CancellationToken ct) =>
+        await WithClubAsync(ct, async c => await summaries.GetAsync(c, id, ct) is { } dto ? Ok(dto) : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+
+    /// <summary>Zusammenfassung anfordern bzw. neu anfordern — nur Admins (Wunsch 2026-11-08: „auf Wunsch vom Admin");
+    /// geschrieben wird vom Watcher. → wie <c>GET …/summary</c>; 403 kein Admin, 404 unbekannt oder fremd.</summary>
+    [HttpPost("games/{id:int}/summary")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> RequestSummary(int id, [FromServices] ClubGameSummaries summaries, CancellationToken ct)
+    {
+        if (!IsAdmin) return Forbid();
+        return await WithClubAsync(ct, async c => await summaries.RequestAsync(c, id, GetUserId(), ct) is { } dto ? Ok(dto) : NotFound(),
+            await club.ClubOfGameAsync(id, ct));
+    }
+
     private static List<int> IdList(string? ids) =>
         (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(x => int.TryParse(x, out var n) ? n : 0).Where(n => n > 0).Distinct().ToList();

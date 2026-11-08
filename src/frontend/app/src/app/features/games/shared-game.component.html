@@ -74,6 +74,10 @@
               }
             </div>
           }
+          <!-- Zusammenfassung von Claude (0.913.0): Link zur eigenen Seite, Admins fordern sie hier an. Nur angemeldet. -->
+          @if (clubComparisonGameId !== null) {
+            <app-club-summary-link [gameId]="clubComparisonGameId" />
+          }
           @if (game.sourceUrl) {
             <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">
               <mat-icon>open_in_new</mat-icon> {{ 'games.openOriginal' | translate }}

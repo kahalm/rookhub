@@ -273,6 +273,21 @@ internal sealed class LeagueBatchUploadConfiguration : IEntityTypeConfiguration<
     }
 }
 
+internal sealed class ClubGameSummaryConfiguration : IEntityTypeConfiguration<ClubGameSummary>
+{
+    public void Configure(EntityTypeBuilder<ClubGameSummary> e)
+    {
+        e.HasIndex(s => s.ClubGameId).IsUnique();
+        e.HasIndex(s => s.Status);
+        e.Property(s => s.Markdown).HasColumnType("LONGTEXT");
+        e.Property(s => s.MovesHash).HasMaxLength(64);
+        e.Property(s => s.Model).HasMaxLength(60);
+        e.Property(s => s.Error).HasMaxLength(1000);
+        // Die Zusammenfassung geht mit der Partie.
+        e.HasOne<LeagueClubGame>().WithMany().HasForeignKey(s => s.ClubGameId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class LeagueBatchUploadFileConfiguration : IEntityTypeConfiguration<LeagueBatchUploadFile>
 {
     public void Configure(EntityTypeBuilder<LeagueBatchUploadFile> e)

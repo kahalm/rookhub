@@ -24,6 +24,7 @@ import { GameReviewComponent } from './game-review.component';
 import { GameEvalsStatus } from './game-review.util';
 import { DeepStored } from './deep-analysis.util';
 import { MistakesTrainerComponent } from './mistakes-trainer.component';
+import { ClubSummaryLinkComponent } from './summary/club-summary-link.component';
 import type { ClubMistakeComparison } from './mistake-comparison.component';
 import { GameTrainingController } from './game-training-controller';
 import { MistakeJudgeService } from './mistake-judge.service';
@@ -67,7 +68,7 @@ const TAP_MAX_MS = 500;
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MarkPositionButtonComponent, MatMenuModule, MatDialogModule,
-    SimilarGamesComponent, GameRecapComponent, LoadErrorComponent,
+    SimilarGamesComponent, GameRecapComponent, LoadErrorComponent, ClubSummaryLinkComponent,
   ],
   providers: [PgnViewerService, GameActionsService],
   templateUrl: './shared-game.component.html',

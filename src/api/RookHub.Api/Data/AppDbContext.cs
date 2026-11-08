@@ -68,6 +68,7 @@ public partial class AppDbContext : DbContext
     public DbSet<LeagueNameAlias> LeagueNameAliases => Set<LeagueNameAlias>();
     public DbSet<LeagueClubDraft> LeagueClubDrafts => Set<LeagueClubDraft>();
     public DbSet<LeagueBatchUpload> LeagueBatchUploads => Set<LeagueBatchUpload>();
+    public DbSet<ClubGameSummary> ClubGameSummaries => Set<ClubGameSummary>();
     public DbSet<LeagueBatchUploadFile> LeagueBatchUploadFiles => Set<LeagueBatchUploadFile>();
     public DbSet<LeagueClub> LeagueClubs => Set<LeagueClub>();
     public DbSet<LeagueClubMember> LeagueClubMembers => Set<LeagueClubMember>();

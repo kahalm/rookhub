@@ -142,6 +142,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Stellungsfilter (`/api/guess-tree`) — der Eroeffnungsbaum der Punktepartie → `docs/api/stellungsfilter.md`
 - Anmerkungen in mehreren Sprachen (`CommentSets`) → `docs/api/anmerkungen-in-mehreren-sprachen.md`
 - Partieformular einlesen (auth, 0.529.0) → `docs/api/partieformular-einlesen.md`
+- Partie-Zusammenfassung durch Claude (Admin fordert an, Watcher schreibt, 0.913.0) → `docs/api/partie-zusammenfassung.md`
 - Partie rekonstruieren (auth) → `docs/api/partie-rekonstruieren.md`
 - Client-Diagnostik (offen) → `docs/api/client-diagnostik.md`
 - Bestenlisten (auth) → `docs/api/bestenlisten.md`

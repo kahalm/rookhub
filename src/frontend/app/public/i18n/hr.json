@@ -3342,6 +3342,21 @@
       "blind": "Bez enginea",
       "blindDesc": "Prođi partiju i vlastite varijante bez ikakve ocjene. Spremaju se za tebe i ocjenjuju u pozadini (ne ulaze u točnost partije); engine uključuješ i isključuješ kad god želiš.",
       "remember": "Zapamti moj izbor (može se promijeniti u profilu)"
+    },
+    "summary": {
+      "title": "Sažetak partije",
+      "open": "Sažetak",
+      "request": "Zatraži sažetak",
+      "requestAgain": "Ponovno napiši sažetak",
+      "requested": "Sažetak zatražen …",
+      "running": "Sažetak se piše …",
+      "requestedToast": "Sažetak zatražen – Claude ga piše za nekoliko minuta.",
+      "requestFailed": "Sažetak nije moguće zatražiti.",
+      "toGame": "Na partiju",
+      "stale": "Partija je ispravljena nakon što je sažetak napisan.",
+      "none": "Za ovu partiju još nema sažetka.",
+      "showInGame": "Prikaži u partiji",
+      "writtenBy": "Napisao {{model}} na temelju analize enginea."
     }
   },
   "analysis": {

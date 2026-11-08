@@ -127,6 +127,8 @@ export const ROUTES = [
   r('rookhub', '/games/{gameId}/edit', 'user', { main: ['.edit-page .board-card app-chess-board', '.edit-page mat-card.empty-state', '.edit-page .center'] }),
   r('rookhub', '/games/{analyzedGameId}', 'user', { label: 'games-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/club-games/{clubGameId}', 'user', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/club\/games\/\d+ → 403$/] }),
+  // Zusammenfassung einer Vereinspartie (0.913.0): Text mit Diagrammen, ohne Anforderung der Leersatz
+  r('rookhub', '/club-games/{clubGameId}/summary', 'user', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'], expectedFailures: [/^GET \/api\/league\/club\/games\/\d+(\/summary)? → (403|404)$/] }),
   // Vereinspartie über den LeagueHub-Teilen-Link (0.838.3, „Analyse“ ohne Konto)
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),

@@ -3342,6 +3342,21 @@
       "blind": "Ohne Engine",
       "blindDesc": "Partie und eigene Linien ohne jede Bewertung durchklicken. Sie werden für dich gespeichert und im Hintergrund bewertet (nicht in der Genauigkeit der Partie); die Engine schaltest du jederzeit ein und wieder aus.",
       "remember": "Entscheidung merken (im Profil änderbar)"
+    },
+    "summary": {
+      "title": "Zusammenfassung der Partie",
+      "open": "Zusammenfassung",
+      "request": "Zusammenfassung anfordern",
+      "requestAgain": "Zusammenfassung neu schreiben",
+      "requested": "Zusammenfassung angefordert …",
+      "running": "Zusammenfassung wird geschrieben …",
+      "requestedToast": "Zusammenfassung angefordert – Claude schreibt sie in ein paar Minuten.",
+      "requestFailed": "Die Zusammenfassung konnte nicht angefordert werden.",
+      "toGame": "Zur Partie",
+      "stale": "Die Partie wurde nach dieser Zusammenfassung korrigiert.",
+      "none": "Zu dieser Partie gibt es noch keine Zusammenfassung.",
+      "showInGame": "In der Partie zeigen",
+      "writtenBy": "Geschrieben von {{model}} aus der Engine-Analyse."
     }
   },
   "analysis": {
