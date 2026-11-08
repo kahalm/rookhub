@@ -203,6 +203,10 @@ public class LeagueClubGameDto
     /// <summary>Die ersten Züge („1.e4 c5 2.Nf3 d6").</summary>
     public string Opening { get; set; } = string.Empty;
     public bool Anonymized { get; set; }
+    /// <summary>Die Seite des eigenen Vereins („white"/„black"; 0.907.0, Wunsch 2026-11-08: „wenn ich aus der League eine Partie
+    /// öffne, zeig sie standardmäßig aus der Sicht des Schwazers — Brettrichtung + Fehler nachspielen") — nur in der Einzelansicht
+    /// (<c>GET …/games/{id}</c>); <c>null</c>, wenn keine oder beide Seiten eigene sind.</summary>
+    public string? OwnSide { get; set; }
     /// <summary>Darf der Aufrufer sie löschen (Verwalter, oder eigene NICHT anonymisierte).</summary>
     public bool CanDelete { get; set; }
     /// <summary>Die zugeordnete Brettpaarung (0.678.0) — NUR für wer bearbeiten darf: Liga + Runde + Brett machten eine

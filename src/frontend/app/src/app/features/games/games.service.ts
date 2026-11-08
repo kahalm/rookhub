@@ -118,6 +118,8 @@ export interface SharedGame {
 interface ClubGameDto {
   id: number; year: number | null; white: string; black: string; whiteElo: number | null; blackElo: number | null;
   result: string; event: string | null; pgn: string; canDelete?: boolean;
+  /** Seite des eigenen Vereins (0.907.0) — die Partieseite zeigt sie wie die eigene Partie: Brett von dort, Fehler dieser Seite. */
+  ownSide?: 'white' | 'black' | null;
 }
 
 /** Antwort auf „Partie analysieren" (`POST …/analyze`): neu eingereiht oder wiederverwendet. */
@@ -216,7 +218,7 @@ export interface SimilarGames {
 function toClubGame(g: ClubGameDto): SharedGame {
   return {
     source: g.event || 'LeagueHub', white: g.white, black: g.black, result: g.result, pgn: g.pgn,
-    clubId: g.id, clubCanCorrect: !!g.canDelete,
+    clubId: g.id, clubCanCorrect: !!g.canDelete, ownerSide: g.ownSide ?? null,
     whiteElo: g.whiteElo, blackElo: g.blackElo, year: g.year, createdAt: '', playedAt: null,
   };
 }

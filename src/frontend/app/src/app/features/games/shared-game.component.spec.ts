@@ -121,11 +121,14 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
     http.expectOne('/api/league/s/TOK/club/games/12').flush({
       id: 12, year: 2026, white: 'Schwaz', black: 'Hengl, Philip', whiteElo: null, blackElo: 1850, result: '1-0',
-      event: 'Landesliga', pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n\n1. e4 c5 1-0', canDelete: false,
+      event: 'Landesliga', pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n\n1. e4 c5 1-0', canDelete: false, ownSide: 'black',
     });
     fixture.detectChanges();
     const c = fixture.componentInstance;
     expect(c.club).toBeTrue();
+    // 0.907.0, Wunsch 2026-11-08: aus der Sicht des eigenen Vereins — Brett gedreht, Fehler dieser Seite
+    expect(c.flipped).toBeTrue();
+    expect(c.mistakeSide()).toBe('black');
     expect(c.evalsUrl).toBe('/api/league/s/TOK/club/games/12/evals');
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.players')!.textContent).toContain('Hengl, Philip');

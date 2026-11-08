@@ -238,6 +238,7 @@ internal sealed class ClubGameReader
         var g = await Games(club).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return null;
         var dto = ToDto(g, userId, canManage);
+        dto.OwnSide = OwnSideOf(club, g);
         await FillAnalysisAsync(new List<LeagueClubGameDto> { dto }, ct);
         await FillPairingLabelsAsync(club, new List<LeagueClubGameDto> { dto }, ct);
         return dto;
@@ -292,6 +293,15 @@ internal sealed class ClubGameReader
             result[g.Id] = new ClubGameReviewInput(g.Pgn, evals, null);
         }
         return result;
+    }
+
+    /// <summary>Die Seite des eigenen Vereins: die ersetzte („Schwaz", bzw. mit internem Klarnamen) — „white"/„black", <c>null</c> bei
+    /// keiner oder beiden (0.907.0).</summary>
+    internal static string? OwnSideOf(LeagueClub club, LeagueClubGame g)
+    {
+        var w = g.WhiteRealName != null || club.IsAnon(g.White, g.WhiteFide);
+        var b = g.BlackRealName != null || club.IsAnon(g.Black, g.BlackFide);
+        return w == b ? null : w ? "white" : "black";
     }
 
     internal static LeagueClubGameDto ToDto(LeagueClubGame g, int userId, bool canManage) => new()

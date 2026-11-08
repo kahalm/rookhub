@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.907.0", date: "2026-11-08", changes: [
+    { en: "A club game opened from LeagueHub now shows from your club’s side: the board is turned towards your player, and “Replay mistakes” takes your player’s mistakes (both still switchable).", de: "Eine aus LeagueHub geöffnete Vereinspartie zeigt jetzt die Sicht des eigenen Vereins: Das Brett steht aus der Richtung des eigenen Spielers, und „Fehler nachspielen“ nimmt seine Fehler (beides lässt sich weiter umschalten)." },
+  ] },
   { version: "0.906.0", date: "2026-11-08", changes: [
     { en: "Correcting a scoresheet: changing a move in the middle no longer makes all later moves uncertain again. Moves you had already confirmed stay confirmed, and moves you set yourself stay as long as they are still legal.",
       de: "Formular korrigieren: Wer einen Zug in der Mitte ändert, muss die späteren Züge nicht mehr neu bestätigen. Schon bestätigte Züge bleiben bestätigt, selbst gesetzte bleiben, solange sie noch legal sind." },
