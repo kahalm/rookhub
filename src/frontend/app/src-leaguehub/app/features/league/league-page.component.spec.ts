@@ -452,6 +452,36 @@ describe('LeaguePageComponent', () => {
     expect(api.updateStatus).not.toHaveBeenCalled();
   });
 
+  // 0.896.1, Wunsch 2026-11-08: „auf Daten aktualisieren geklickt, aber es passiert nix" — der Knopf sagt, dass es läuft und seit wann
+  it('Aktualisieren: Knopf zeigt „Aktualisiere … (läuft seit n Min.)" nach der Startzeit des Servers, danach wieder den alten Text', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const started = new Date(Date.now() - 3 * 60000 - 5000).toISOString();
+    api.startUpdate.and.resolveTo({ running: true, started, finished: null, ok: null, message: null });
+    api.updateStatus.and.returnValues(
+      Promise.resolve({ running: true, started, finished: null, ok: null, message: null }),
+      Promise.resolve({ running: false, started, finished: 'y', ok: true, message: '4 Ligen neu geholt' }),
+    );
+    const btn = () => el.querySelector('.stand button.btn-sec')!.textContent!.trim();
+    expect(btn()).toBe('Daten aktualisieren');
+    void fixture.componentInstance.startUpdate();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(btn()).toBe('Aktualisiere … (läuft seit 3 Min.)');
+    tick(4000); flushMicrotasks();
+    tick(4000); flushMicrotasks();
+    fixture.detectChanges();
+    expect(btn()).toBe('Daten aktualisieren');
+  }));
+
+  it('Aktualisieren: frisch gestartet ohne Startzeit „gerade gestartet"', () => {
+    create();
+    const c = fixture.componentInstance;
+    c.updating.set(true);
+    expect(c.updateLabel()).toBe('Aktualisiere … (gerade gestartet)');
+  });
+
   it('Aktualisieren: fragt nach, bis der Lauf fertig ist, und lädt dann frisch', fakeAsync(() => {
     const el = create();
     flushMicrotasks();

@@ -132,7 +132,7 @@ main.wrap.mid > lh-club-add-page { display: block; max-width: 748px; }
   .pick-change { flex: 0 0 auto; }
   /* z1-l-prognosen-vorlauf-laptop: „Alle Aufstellungen" steht in der .stand-Zeile — zugeklappt bleibt nur er sichtbar. */
   .pick-area:not(.open) > :not(.stand),
-  .pick-area:not(.open) .stand > :not(.lineups-toggle) { display: none; }
+  .pick-area:not(.open) .stand > :not(.lineups-toggle):not(.update-msg) { display: none; }
   .pick-area:not(.open) .stand { margin: 0 0 14px; }
 }
 

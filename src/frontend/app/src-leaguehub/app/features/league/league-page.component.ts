@@ -108,7 +108,9 @@ interface Pick { liga?: number; verein?: string }
           <ng-container *ngTemplateOutlet="allToggle" />
           <span class="stand-at">Stand der Daten: {{ ix.generated ?? '–' }}</span>
           @if (canManage) {
-            <button type="button" class="btn-sec" [disabled]="updating()" (click)="startUpdate()">Daten aktualisieren</button>
+            <!-- Wunsch 2026-11-08 („auf Daten aktualisieren geklickt, aber es passiert nix"): während des Laufs sagt der Knopf selbst,
+                 dass und wie lange es schon läuft (0.896.1). -->
+            <button type="button" class="btn-sec" [class.busy]="updating()" [disabled]="updating()" (click)="startUpdate()">{{ updateLabel() }}</button>
           }
           <!-- 2026-10-08, Wunsch: „für jede Runde einen Knopf, der mir alle Aufstellungen für diese Runde anzeigt" — aufklappbar,
                der Zustand steht in der Adresse (&aufstellungen=1) und mit der gemerkten Runde im Tab. -->
@@ -199,6 +201,16 @@ export class LeaguePageComponent implements OnInit {
   readonly updating = signal(false);
   readonly updateMsg = signal('');
   readonly updateErr = signal(false);
+  /** Beginn des laufenden Aktualisierens (Server-Zeit) und die Uhr, die bei jeder Nachfrage weiterzählt (0.896.1). */
+  readonly updateSince = signal<number | null>(null);
+  readonly clock = signal(Date.now());
+  /** „Daten aktualisieren" bzw. „Aktualisiere … (läuft seit 3 Min.)". */
+  readonly updateLabel = computed(() => {
+    if (!this.updating()) return 'Daten aktualisieren';
+    const since = this.updateSince();
+    const min = since == null ? 0 : Math.floor(Math.max(0, this.clock() - since) / 60000);
+    return min < 1 ? 'Aktualisiere … (gerade gestartet)' : `Aktualisiere … (läuft seit ${min} Min.)`;
+  });
 
   /** Alle Aufstellungen der gewählten Runde aufgeklappt (2026-10-08) — in der Adresse `&aufstellungen=1`. */
   readonly showLineups = signal(false);
@@ -260,7 +272,8 @@ export class LeaguePageComponent implements OnInit {
     await this.loadIndex();
     if (this.canManage) {
       try {
-        if ((await this.api.updateStatus()).running) this.poll();
+        const st = await this.api.updateStatus();
+        if (st.running) { this.noteRunning(st); this.poll(); }
       } catch { /* Status ist Beiwerk */ }
     }
   }
@@ -366,7 +379,7 @@ export class LeaguePageComponent implements OnInit {
   async startUpdate(): Promise<void> {
     this.updating.set(true);
     try {
-      await this.api.startUpdate();
+      this.noteRunning(await this.api.startUpdate());
       this.poll();
     } catch (err) {
       const status = err instanceof HttpErrorResponse ? err.status : 0;
@@ -388,8 +401,9 @@ export class LeaguePageComponent implements OnInit {
       if (this.destroyed) return;
       let s;
       try { s = await this.api.updateStatus(); } catch { this.pollTimer = setTimeout(tick, POLL_MS); return; }
-      if (s.running) { this.pollTimer = setTimeout(tick, POLL_MS); return; }
+      if (s.running) { this.noteRunning(s); this.pollTimer = setTimeout(tick, POLL_MS); return; }
       this.polling = false;
+      this.updateSince.set(null);
       this.updating.set(false);
       if (s.ok) {
         this.api.clearCache();
@@ -407,6 +421,14 @@ export class LeaguePageComponent implements OnInit {
       }
     };
     this.pollTimer = setTimeout(tick, POLL_MS);
+  }
+
+  /** Laufbeginn vom Server übernehmen und die Uhr weiterstellen (Knopftext „läuft seit n Min."). */
+  private noteRunning(s: { started: string | null } | null | undefined): void {
+    const t = s?.started ? Date.parse(s.started) : NaN;
+    if (!Number.isNaN(t)) this.updateSince.set(t);
+    else if (this.updateSince() == null) this.updateSince.set(Date.now());
+    this.clock.set(Date.now());
   }
 
   private setMsg(text: string, err: boolean): void {

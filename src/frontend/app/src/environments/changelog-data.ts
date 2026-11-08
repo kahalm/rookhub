@@ -10,6 +10,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.896.1", date: "2026-11-08", changes: [
+    { en: "LeagueHub: while “Update data” runs (it takes several minutes), the button itself says “Updating … (running for 3 min)”, and the progress note stays visible on the phone even with the selection folded.", de: "LeagueHub: Während „Daten aktualisieren“ läuft (das dauert einige Minuten), sagt der Knopf selbst „Aktualisiere … (läuft seit 3 Min.)“, und der Hinweis bleibt am Handy auch bei zugeklappter Auswahl sichtbar." },
+  ] },
   { version: "0.896.0", date: "2026-11-08", changes: [
     { en: "E-book library: by default only books in your own language and in English are shown — plus every book with a finished translation into one of them. In the filter, “All languages” shows everything again (or pick a single language).",
       de: "E-Book-Bibliothek: Per Vorgabe stehen nur Bücher in deiner Sprache und auf Englisch da — dazu jedes Buch mit fertiger Übersetzung in eine davon. Im Filter zeigt „Alle Sprachen“ wieder alles (oder man wählt eine einzelne Sprache)." },
