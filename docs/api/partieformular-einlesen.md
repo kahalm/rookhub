@@ -126,7 +126,12 @@ dabei nicht nötig (`Available` gilt auch ohne), und Tageszahl/Anzahl offener ge
 `POST /api/admin/scoresheets/{id}/start` (Status `running`, `StartedAt`). Die Seiten zeigen seit 0.817.0 zwei Schritte mit
 Uhr (`SheetReadingStatusComponent`, RookHub-Upload und LeagueHub „Formular prüfen“): „Wartet auf den Leser“ ab dem Hochladen,
 nach dem Abholen ✓ dahinter (mit der Wartezeit) und „Wird gelesen“ ab `ScoresheetScanDto.StartedAt`; nach 15 min Warten
-der Hinweis, dass der Leser wohl nicht läuft. (Die alte Schätzung „1–2 Sekunden pro Zug“ ist seit 0.815.2 weg.)
+der Hinweis, dass der Leser wohl nicht läuft. Seit 0.902.0 trägt der Abruf einer wartenden Einlesung (`GET
+/api/scoresheets/{id}`, LeagueHub-Einlesungsstand) `QueueAhead`: offene Einlesungen (wartend oder gerade gelesen, letzte 7
+Tage wie der Watcher) mit kleinerer Id — der Leser nimmt sie der Reihe nach. Ab 1 davor zeigt die Seite „Platz N in der
+Warteschlange“ statt „schaut jede Minute nach“, und der 15-min-Hinweis entfällt. Der Watcher (`formulare-bot/watch.sh`) fährt
+seit 08.11.2026 zwei Schienen mit eigenem Lock: Stapel (Admin → Uploads) und einzelne Einlesungen — ein langer Stapel hält
+keine einzelne Einlesung mehr auf; zwei einzelne gleichzeitig laufen weiter nacheinander. (Die alte Schätzung „1–2 Sekunden pro Zug“ ist seit 0.815.2 weg.)
 
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT

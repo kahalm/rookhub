@@ -67,6 +67,9 @@ public class ScoresheetScanDto
     /// <summary>Seit wann gelesen wird (0.817.0): der Leser hat die Einlesung abgeholt — die Seite zeigt „Wartet auf den Leser ✓“
     /// und zählt „Wird gelesen“ ab hier. <c>null</c>, solange sie wartet.</summary>
     public DateTime? StartedAt { get; set; }
+    /// <summary>Wie viele offene Einlesungen der Leser vor dieser abholt (Wunsch 2026-11-08: „x in line") — nur beim Abfragen
+    /// einer einzelnen wartenden Einlesung gesetzt, sonst <c>null</c>; 0 = sie ist die nächste.</summary>
+    public int? QueueAhead { get; set; }
     public DateTime? FinishedAt { get; set; }
     /// <summary>Lese-Durchgänge beim Modell (1 = auf Anhieb).</summary>
     public int Rounds { get; set; }

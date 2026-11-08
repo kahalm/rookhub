@@ -97,6 +97,7 @@ internal sealed class LeagueScoresheetScans
         var scan = await q.FirstOrDefaultAsync(ct);
         if (scan == null) return null;
         var dto = new LeagueScanStateDto { Scan = ToDto(scan), PageCount = Math.Max(1, scan.PageCount) };
+        dto.Scan.QueueAhead = await QueueAheadAsync(_db, scan, ct);
         dto.ViewCounts = await ViewCountsAsync(_db, scan.Id, dto.PageCount, ct);
         if (scan.Status != ScoresheetScanStatus.Done) return dto;
         var json = await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scan.Id)

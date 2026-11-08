@@ -608,7 +608,8 @@ Fehler einer **Nutzeraktion** werden immer gemeldet; still nur bei Hintergrund-A
 - **Wartezeit auf den Formular-Leser** (0.817.0): zwei Schritte mit Uhr statt einer Zeile — „Wartet auf den Leser“ (Uhr ab
   dem Hochladen, Nachsatz „schaut jede Minute nach“), nach dem Abholen ✓ dahinter samt Wartezeit und darunter „Wird gelesen“
   mit eigener Uhr; ab 15 min Warten ein Hinweis in Warnfarbe. EIN Bauteil für RookHub und LeagueHub
-  (`app-sheet-reading-status`); Uhr h:mm:ss ab einer Stunde.
+  (`app-sheet-reading-status`); Uhr h:mm:ss ab einer Stunde. Stehen andere davor (`queueAhead`, 0.902.0), ersetzt
+  „Platz N in der Warteschlange“ den Nachsatz, und der 15-min-Hinweis entfällt (Warten in der Schlange ist kein Ausfall).
 
 - Leer heißt „erklären, warum“: leerer Kurs vs. reiner Partien-Kurs (r2-rp-empty-course), freundlicher
   Leerzustand der KidHub-Kursseite (k-courses-empty).
@@ -1219,6 +1220,7 @@ Neue Komponenten `ChangeDetectionStrategy.OnPush`.
 
 | Datum | Version | Entscheidung | Grund | Quelle |
 |---|---|---|---|---|
+| 2026-11-08 | 0.902.0 · Formular-Leser | Wartende Einlesung zeigt „Platz N in der Warteschlange“ statt des Nachsatzes, sobald andere davor stehen; dann kein Warnhinweis nach 15 min (5.10) | Zwei Formulare zugleich: das zweite zählte nur „wartet“ hoch und sah nach Ausfall aus | Nutzerwunsch 08.11. |
 | 2026-11-08 | 0.900.0 · Partieseite + Analysebrett | Partieseite = „Mit Engine“; Kopfzeile dort „Ohne Engine“ (`mat-stroked-button`, `visibility_off`, vorn in `.header-actions`); im Analysebrett führt „Mit Engine“ mit `?game=` zurück zur Partieseite | Wunsch 08.11.: „Mit Engine → club-games/236, Ohne Engine → …?blind=1“ | User |
 | 2026-11-08 | 0.898.0 · Analysebrett | Partie immer im Linien-Baum; Kopf-Knopf „Ohne/Mit Engine“ schaltet auch dort den Modus, Dialog = nur Startmodus | Wunsch 08.11.: „zwischen den beiden Modi einfach wechseln können“ | User |
 | 2026-11-07 | 0.895.0 · Analysebrett | Kopf-Schalter „Ohne Engine“/„Mit Engine“ (`.header-actions`), führt `?blind=1` in der Adresse mit | Wunsch 07.11.: „einfacher Weg zwischen /analysis?blind=1 und /analysis zu wechseln“ | User |

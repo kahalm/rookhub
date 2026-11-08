@@ -248,7 +248,10 @@ internal sealed class ScoresheetIntake
     public async Task<ScoresheetScanDto?> GetAsync(int userId, int id)
     {
         var scan = await ScanHeads(_db).FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
-        return scan == null ? null : ToDto(scan);
+        if (scan == null) return null;
+        var dto = ToDto(scan);
+        dto.QueueAhead = await QueueAheadAsync(_db, scan);
+        return dto;
     }
 
     /// <summary>Die letzten Einlesungen des Nutzers (ohne Foto) — für die Seite, falls man sie verlassen hat.</summary>

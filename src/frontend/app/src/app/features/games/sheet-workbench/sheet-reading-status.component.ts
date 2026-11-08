@@ -14,6 +14,9 @@ export const LONG_WAIT_SECONDS = 15 * 60;
  * 2. Hat er sie abgeholt (`startedAt`, `POST /api/admin/scoresheets/{id}/start`), bekommt Zeile 1 ein ✓ samt der
  *    Wartezeit, und **Wird gelesen** zählt ab dem Abholen.
  *
+ * Stehen noch andere Formulare vor diesem an (`queueAhead`, Wunsch 2026-11-08: „schreib in dem Fall dazu x in line"), sagt
+ * Zeile 1 statt des Nachsatzes „Platz N in der Warteschlange" — der Leser nimmt eine Einlesung nach der anderen.
+ *
  * Geteilt von RookHub (Formular hochladen) und LeagueHub (Formular prüfen). Die Uhr läuft nur, solange gewartet/gelesen wird.
  */
 @Component({
@@ -35,7 +38,11 @@ export const LONG_WAIT_SECONDS = 15 * 60;
           <span class="rs-time"><ng-container *ngTemplateOutlet="clock; context: { $implicit: waitSeconds() }" /></span>
         } @else {
           <b class="rs-clock"><ng-container *ngTemplateOutlet="clock; context: { $implicit: waitSeconds() }" /></b>
-          <span class="rs-why">{{ 'sheetEdit.status.waitingWhy' | translate }}</span>
+          @if (queuePlace(); as n) {
+            <span class="rs-why rs-queue">{{ 'sheetEdit.status.queued' | translate: { n: n } }}</span>
+          } @else {
+            <span class="rs-why">{{ 'sheetEdit.status.waitingWhy' | translate }}</span>
+          }
         }
       </p>
       @if (started()) {
@@ -70,6 +77,8 @@ export class SheetReadingStatusComponent implements OnDestroy {
   readonly status = input.required<string>();
   readonly createdAt = input<string | null | undefined>(null);
   readonly startedAt = input<string | null | undefined>(null);
+  /** Offene Einlesungen vor dieser (vom Server, nur solange sie wartet). */
+  readonly queueAhead = input<number | null | undefined>(null);
 
   private readonly ticker = new SecondsTicker();
   /** Abgeholt: der Server meldet „läuft" (auch ohne Startzeit, ältere Antworten) oder eine Startzeit. */
@@ -95,7 +104,13 @@ export class SheetReadingStatusComponent implements OnDestroy {
     return one ? 'sheetEdit.status.sinceDaysOne' : 'sheetEdit.status.sinceDays';
   }
   protected readonly longClock = formatLongClock;
-  readonly longWait = computed(() => !this.started() && this.waitSeconds() >= LONG_WAIT_SECONDS);
+  /** Platz in der Warteschlange — nur, wenn wirklich jemand davor ist (Platz 1 = „wartet auf den Leser" allein). */
+  readonly queuePlace = computed(() => {
+    const ahead = this.queueAhead() ?? 0;
+    return !this.started() && ahead > 0 ? ahead + 1 : null;
+  });
+  /** Steht sie in der Warteschlange, ist langes Warten kein Zeichen, dass der Leser steht. */
+  readonly longWait = computed(() => !this.started() && !this.queuePlace() && this.waitSeconds() >= LONG_WAIT_SECONDS);
 
   constructor() {
     effect(() => {

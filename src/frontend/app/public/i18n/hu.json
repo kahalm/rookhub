@@ -6137,6 +6137,7 @@
       "waiting": "Az olvasóra vár",
       "picked": "átvéve",
       "waitingWhy": "az olvasó percenként keres új játszmalapokat",
+      "queued": "{{n}}. a sorban – az olvasó egymás után dolgozza fel a játszmalapokat",
       "reading": "Olvasás folyamatban",
       "readingWhy": "ez általában néhány percig tart",
       "longWait": "A szokásosnál tovább tart – az olvasó most valószínűleg nem fut. A játszmalap mentve marad.",

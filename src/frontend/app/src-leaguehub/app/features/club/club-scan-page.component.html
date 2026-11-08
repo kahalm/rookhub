@@ -56,7 +56,7 @@
       @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
       @else {
         <!-- 0.817.0 (Wunsch 2026-10-21): „Wartet auf den Leser" → ✓ + „Wird gelesen", je mit Uhr — geteilt mit RookHub. -->
-        <app-sheet-reading-status class="muted" [status]="st.scan.status" [createdAt]="st.scan.createdAt" [startedAt]="st.scan.startedAt" />
+        <app-sheet-reading-status class="muted" [status]="st.scan.status" [createdAt]="st.scan.createdAt" [startedAt]="st.scan.startedAt" [queueAhead]="st.scan.queueAhead" />
       }
     } @else {
       @if (hintOpen()) {

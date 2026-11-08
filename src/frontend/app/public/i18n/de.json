@@ -6137,6 +6137,7 @@
       "waiting": "Wartet auf den Leser",
       "picked": "abgeholt",
       "waitingWhy": "der Leser schaut jede Minute nach neuen Formularen",
+      "queued": "Platz {{n}} in der Warteschlange – der Leser nimmt ein Formular nach dem anderen",
       "reading": "Wird gelesen",
       "readingWhy": "das dauert meist ein paar Minuten",
       "longWait": "Länger als üblich – der Leser läuft gerade wohl nicht. Das Formular bleibt gespeichert.",

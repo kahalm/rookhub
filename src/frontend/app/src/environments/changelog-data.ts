@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.902.0", date: "2026-11-08", changes: [
+    { en: "Scoresheet reading: when other scoresheets are ahead of yours, the waiting line now says “number N in line” – the reader takes one scoresheet after another. A long wait in line no longer shows the warning that the reader is probably not running.",
+      de: "Formular einlesen: Stehen noch andere Formulare vor deinem an, steht beim Warten jetzt „Platz N in der Warteschlange“ – der Leser nimmt ein Formular nach dem anderen. Langes Warten in der Schlange zeigt nicht mehr den Hinweis, dass der Leser wohl nicht läuft." },
+  ] },
   { version: "0.901.0", date: "2026-11-08", changes: [
     { en: "Admin → Uploads: a LeagueHub batch can now be read in directly with “Read in” instead of downloading the images and uploading them again. Choose “All images = one game (pages in order)” (up to 3 pages) or “Each image separately”; the images become normal pending scoresheet reads in LeagueHub (owned by the uploader, otherwise by you) and are read automatically. The row then shows “read in … → #id” with links to the reads; a second click asks before creating them again. Nothing is deleted automatically.",
       de: "Admin → Uploads: Ein LeagueHub-Stapel lässt sich jetzt mit „Einlesen“ direkt einlesen, statt die Bilder herunterzuladen und neu hochzuladen. Wählbar sind „Alle Bilder = eine Partie (Seiten in Reihenfolge)“ (bis 3 Seiten) oder „Jedes Bild einzeln“; die Bilder werden normale wartende Formular-Einlesungen in LeagueHub (Besitzer ist der Hochladende, sonst du) und werden automatisch gelesen. Die Zeile zeigt danach „eingelesen … → #id“ mit Links zu den Einlesungen; ein zweiter Klick fragt nach, bevor er sie noch einmal anlegt. Gelöscht wird nichts automatisch." },

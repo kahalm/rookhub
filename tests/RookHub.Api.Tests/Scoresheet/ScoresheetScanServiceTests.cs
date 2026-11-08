@@ -578,6 +578,25 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal("notPending", await _service.StartExternalAsync(scan.Id));
     }
 
+    /// <summary>Wunsch 2026-11-08: zwei Formulare zugleich — das zweite sagt „Platz 2", solange das erste noch wartet oder gelesen wird.</summary>
+    [Fact]
+    public async Task Get_WhileWaiting_CountsTheOpenScansAhead()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var v = await UserAsync("second");                                               // ein anderer Nutzer zur selben Zeit
+        var (first, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        var (second, _) = await _service.CreateAsync(v.Id, Jpeg(), "image/jpeg", "b.jpg", "de");
+
+        Assert.Equal(0, (await _service.GetAsync(u.Id, first!.Id))!.QueueAhead);
+        Assert.Equal(1, (await _service.GetAsync(v.Id, second!.Id))!.QueueAhead);
+        await _service.StartExternalAsync(first.Id);
+        Assert.Null((await _service.GetAsync(u.Id, first.Id))!.QueueAhead);           // abgeholt: keine Warteschlange mehr
+        Assert.Equal(1, (await _service.GetAsync(v.Id, second.Id))!.QueueAhead);        // das erste wird gerade gelesen
+        await _service.ProcessReadingAsync(first.Id, Answer(Written));
+        Assert.Equal(0, (await _service.GetAsync(v.Id, second.Id))!.QueueAhead);
+    }
+
     [Fact]
     public async Task FailExternal_EndsTheScanWithTheBell_OnlyForKnownReasons()
     {

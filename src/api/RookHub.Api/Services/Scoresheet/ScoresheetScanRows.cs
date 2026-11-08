@@ -192,6 +192,19 @@ internal static class ScoresheetScanRows
         };
     }
 
+    /// <summary>Tage, die der Leser zurückschaut (wie der Watcher, <c>formulare-bot/watch.sh</c>) — ältere offene zählen nicht.</summary>
+    internal const int QueueLookbackDays = 7;
+
+    /// <summary>Offene Einlesungen (wartend oder gerade gelesen), die der Leser vor <paramref name="scan"/> abholt — er nimmt sie
+    /// nach Id, eine nach der anderen. <c>null</c>, wenn sie nicht mehr wartet.</summary>
+    internal static async Task<int?> QueueAheadAsync(AppDbContext db, ScoresheetScan scan, CancellationToken ct = default)
+    {
+        if (scan.Status != ScoresheetScanStatus.Pending) return null;
+        var since = DateTime.UtcNow.AddDays(-QueueLookbackDays);
+        return await db.ScoresheetScans.AsNoTracking().CountAsync(s => s.Id < scan.Id && s.PageCount > 0 && s.CreatedAt > since
+            && s.FileName != DiscardedMark && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running), ct);
+    }
+
     internal static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     internal static string? CleanFileName(string? name)

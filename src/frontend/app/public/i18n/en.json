@@ -6137,6 +6137,7 @@
       "waiting": "Waiting for the reader",
       "picked": "picked up",
       "waitingWhy": "the reader checks for new scoresheets every minute",
+      "queued": "number {{n}} in line – the reader takes one scoresheet after another",
       "reading": "Reading",
       "readingWhy": "this usually takes a few minutes",
       "longWait": "Longer than usual – the reader is probably not running right now. The scoresheet stays saved.",

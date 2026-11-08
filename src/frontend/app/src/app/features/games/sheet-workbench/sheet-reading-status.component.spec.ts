@@ -10,12 +10,13 @@ const DE = { sheetEdit: { status: {
 } } };
 
 describe('SheetReadingStatusComponent', () => {
-  function render(status: string, createdAgoS: number, startedAgoS: number | null) {
+  function render(status: string, createdAgoS: number, startedAgoS: number | null, queueAhead: number | null = null) {
     TestBed.configureTestingModule({ imports: [SheetReadingStatusComponent], providers: [provideTranslateService({ fallbackLang: 'en' })] });
     const f = TestBed.createComponent(SheetReadingStatusComponent);
     f.componentRef.setInput('status', status);
     f.componentRef.setInput('createdAt', new Date(Date.now() - createdAgoS * 1000).toISOString());
     f.componentRef.setInput('startedAt', startedAgoS == null ? null : new Date(Date.now() - startedAgoS * 1000).toISOString());
+    f.componentRef.setInput('queueAhead', queueAhead);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
     return { f, el, lines: Array.from(el.querySelectorAll('.rs-line')) as HTMLElement[] };
@@ -44,6 +45,25 @@ describe('SheetReadingStatusComponent', () => {
     expect(lines[0].querySelector('.rs-clock')?.textContent?.trim()).toBe('3:00:05');
     expect(el.querySelector('.rs-long')).not.toBeNull();
     f.destroy();
+  });
+
+  // Wunsch 2026-11-08: zwei Formulare zugleich — das zweite sagt, dass es in der Reihe steht, statt nur zu warten.
+  it('in der Warteschlange: „Platz N" statt des Nachsatzes, und langes Warten ist dann kein Alarm', () => {
+    const { el, lines, f } = render('pending', 3 * 3600, null, 2);
+    expect(lines[0].querySelector('.rs-queue')?.textContent).toContain('sheetEdit.status.queued');
+    expect(f.componentInstance.queuePlace()).toBe(3);
+    expect(el.querySelector('.rs-long')).toBeNull();
+    f.destroy();
+  });
+
+  it('niemand davor oder schon abgeholt: kein Platz', () => {
+    const a = render('pending', 30, null, 0);
+    expect(a.el.querySelector('.rs-queue')).toBeNull();
+    a.f.destroy();
+    TestBed.resetTestingModule();
+    const b = render('running', 90, 10, 3);
+    expect(b.el.querySelector('.rs-queue')).toBeNull();
+    b.f.destroy();
   });
 
   // d6-l-wartet-leser-gedankenstrich: nach 12 Tagen stand „298:59:11", und am Handy rutschte der Nachsatz als eigenes

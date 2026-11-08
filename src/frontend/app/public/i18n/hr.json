@@ -6137,6 +6137,7 @@
       "waiting": "Čeka čitača",
       "picked": "preuzeto",
       "waitingWhy": "čitač svake minute provjerava nove zapisnike",
+      "queued": "{{n}}. u redu čekanja – čitač uzima zapisnik po zapisnik",
       "reading": "Čita se",
       "readingWhy": "to obično traje nekoliko minuta",
       "longWait": "Dulje nego obično – čitač trenutno vjerojatno ne radi. Zapisnik ostaje spremljen.",

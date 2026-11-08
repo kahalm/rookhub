@@ -182,7 +182,7 @@ export const MAX_PAGES = 3;
               <div class="running">
                 <mat-spinner diameter="28"></mat-spinner>
                 <!-- 0.817.0: „Wartet auf den Leser" → ✓ + „Wird gelesen", je mit Uhr (geteilt mit LeagueHub). -->
-                <app-sheet-reading-status [status]="scan.status" [createdAt]="scan.createdAt" [startedAt]="scan.startedAt">
+                <app-sheet-reading-status [status]="scan.status" [createdAt]="scan.createdAt" [startedAt]="scan.startedAt" [queueAhead]="scan.queueAhead">
                   <div class="facts">{{ 'scoresheet.leaveHint' | translate }}</div>
                 </app-sheet-reading-status>
               </div>

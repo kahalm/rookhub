@@ -20,6 +20,8 @@ export interface ScoresheetScan {
   createdAt: string;
   /** Seit wann der Leser die Einlesung hat (0.817.0) — `null`, solange sie wartet. */
   startedAt?: string | null;
+  /** Wie viele offene Einlesungen der Leser vor dieser abholt (nur solange sie wartet; 0 = sie ist die nächste). */
+  queueAhead?: number | null;
   finishedAt?: string | null;
   rounds: number;
   moveCount: number;
