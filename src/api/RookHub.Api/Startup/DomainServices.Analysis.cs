@@ -41,12 +41,17 @@ public static partial class DomainServicesSetup
         services.AddSingleton<MoveComparisonExplainJobs>();
         // Erklärdienst der Zugvergleiche (auch der automatischen der Vereinspartien, 0.908.0): EINE Stelle — wer die Begründungen
         // von einem anderen Modell schreiben lassen will, gibt hier einen anderen IClaudeJsonClient hinein (und prüft
-        // MoveComparisonService.ExplanationsAvailable: heute nur Modelle auf eigener Hardware). Vorerst das lokale Modell.
+        // MoveComparisonService.ExplanationsAvailable: heute nur Modelle auf eigener Hardware).
+        // Seit 0.911.0 schreibt Claude Fable die Begründungen der Vereinspartien ab dem Stichtag (ClubFableExplanations, eigener
+        // Anthropic-Client mit dem Konto-Schlüssel — ausdrücklich erlaubt), Rückfall aufs lokale Modell.
+        services.AddSingleton(sp => new ClubFableExplanations(
+            ClubFableExplanations.CreateClient(configuration, sp.GetRequiredService<ILoggerFactory>().CreateLogger<AnthropicJsonClient>()),
+            configuration, sp.GetRequiredService<ILogger<ClubFableExplanations>>()));
         services.AddScoped<MoveComparisonService>(sp => new MoveComparisonService(
             sp.GetRequiredService<AppDbContext>(), sp.GetRequiredService<AnalysisJobService>(),
             sp.GetRequiredService<IClaudeJsonClient>(),
             sp.GetRequiredService<MoveComparisonExplainJobs>(), sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<ILogger<MoveComparisonService>>()));
+            sp.GetRequiredService<ILogger<MoveComparisonService>>(), sp.GetRequiredService<ClubFableExplanations>()));
         services.AddScoped<ClubMistakeComparisons>();   // Zugvergleiche zu den Fehlern der Vereinspartien (0.908.0)
         // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
         services.AddSingleton<StockfishAnalyzer>();

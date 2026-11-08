@@ -77,6 +77,28 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   Haus-Engine nicht mehr freigegeben (nur bei gesetztem `EngineOwnerUserId`) oder der Auftragsdeckel voll, bleibt der Rest
   liegen. `ClubMistakeComparisons:Enabled=false` hält alles an. Begründung auf Deutsch (`Language` „de" — LeagueHub ist
   deutschsprachig).
+* **Begründung über Claude Fable** (0.911.0, Wunsch 2026-11-08: „mache dann (nur für Ligapartien ab dem 6.11.) auch die
+  Analyse mit Fable über Token"): `Services/Engines/ClubFableExplanations.cs` (Singleton) + `Services/AnthropicJsonClient.cs`.
+  Für Vergleiche mit `GameAnalysisId`, deren Vereinspartie am oder nach `ClubMistakeComparisons:FableFrom` (2026-11-06)
+  gespielt wurde, schreibt `claude-fable-5-1` (`:AnthropicModel`) die Begründung statt des lokalen Modells; ältere bleiben lokal.
+  **Spieldatum** (`GameDateAsync`): die Partie trägt nur das Jahr, deshalb das Datum der zugeordneten Ligarunde
+  (`LeagueClubGame.LeagueTnr/LeagueRound` → `LeagueRounds.Date`), sonst `LeagueClubGame.CreatedAt` (auf Prod fast immer leer),
+  sonst `CreatedAt` der Hauptanalyse (≈ Hochladen). **Prompt**: Deutsch, Klubspieler 1500–2000, zwei Absätze + „Merksatz: …“,
+  höchstens 170 Wörter — was der Fehlzug übersieht/zulässt mit der konkreten Widerlegungslinie (3–6 Halbzüge), was der beste
+  Zug erreicht, nichts erfinden, kleine Unterschiede (< 0,5) ehrlich als klein, deutsche Figurenbuchstaben; als Fakten derselbe
+  `UserPrompt` wie beim lokalen Modell (FEN, beide Züge, Bewertungen, Kandidatenlinien, gefilterte Antwort-Tests). Der Text wird
+  wie beim lokalen Modell geprüft (nur Züge aus den Linien, `MentionsOnly` nach `EnglishSan`) und in englischer SAN gespeichert
+  (die Anzeige setzt die Figurenbuchstaben der Sprache ein); `MoveComparison.Model` = `claude-fable-5-1`. Ein Vergleich darf
+  auch ohne lokales Modell in „wird erklärt“ gehen, wenn Fable an ist (`CanExplain`).
+  **Schlüssel und Schalter**: `:ExplainWithAnthropic` (Code-Vorgabe AUS — die Dev-Stacks tragen denselben Konto-Schlüssel;
+  `compose.vpn.yml` setzt `${CLUB_MISTAKE_EXPLAIN_WITH_ANTHROPIC:-true}`, die Dev-Composes `:-false`), Schlüssel
+  `:AnthropicApiKey`, sonst der Konto-Schlüssel `Anthropic:ApiKey` (ausdrücklich erlaubt, `.claude/rules/llm-text-clients.md`);
+  leer/Platzhalter = aus. **Kostenbremse**: `:AnthropicDailyCap` (200 Aufrufe je UTC-Tag, auch Fehlschläge und die eine
+  Wiederholung; nach einem Neustart zählen die heute mit Fable fertig gewordenen Vergleiche), `:AnthropicMaxTokens` (6000, Denken
+  inklusive — Fable denkt immer), `:AnthropicEffort` (low). Fehler, Ablehnung (`refusal`), Deckel oder zweimal ein fremder Zug →
+  das lokale Modell schreibt. Verbrauch je Aufruf im Log („Anthropic club-mistake-fable (…): n Eingabe-, m Ausgabe-Tokens“),
+  Schlüssel und Antwort nie. Kosten: Fable $10/$50 je Mio. Tokens; je Begründung grob 2 000–3 000 Eingabe- und 1 000–3 000
+  Ausgabe-Tokens (mit Denken) ≈ 0,07–0,18 $, Deckel 200/Tag ≈ höchstens ~60 $/Tag (6000 Ausgabe-Tokens je Aufruf).
 * **Besitz und Sichtbarkeit**: Besitzer ist der Besitzer der Analyse (Haus-Engine-Konto). Alle Nutzerwege (`/api/move-comparisons`
   Liste/Lesen/Löschen, `MaxOpenPerUser`, `MaxKeptPerUser`) filtern `GameAnalysisId == null` — die Zeilen zählen nirgends mit.
   Lesen darf, wer die Vereinspartie sieht: `GET /api/league/club/games/{id}/comparisons` (alle, nach Halbzug: `{ ply,

@@ -192,6 +192,12 @@ services:
       # Optional: Claude-API-Key für die Buch-Puzzle-Tipp-Generierung (nur Import-/Reprocess-Pfad).
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
       Anthropic__TextApiKey: ${ANTHROPIC_TEXT_API_KEY:-}
+      # Begründungen der Fehler-Vergleiche der Vereinspartien ab FableFrom über Claude Fable (0.911.0); Schlüssel leer =
+      # Anthropic__ApiKey. Dev standardmäßig aus (kostet je Aufruf).
+      ClubMistakeComparisons__ExplainWithAnthropic: ${CLUB_MISTAKE_EXPLAIN_WITH_ANTHROPIC:-true}
+      ClubMistakeComparisons__AnthropicApiKey: ${CLUB_MISTAKE_ANTHROPIC_API_KEY:-}
+      ClubMistakeComparisons__FableFrom: ${CLUB_MISTAKE_FABLE_FROM:-2026-11-06}
+      ClubMistakeComparisons__AnthropicDailyCap: ${CLUB_MISTAKE_ANTHROPIC_DAILY_CAP:-200}
       TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}
       TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}
       TextLlm__Model: ${TEXT_LLM_MODEL:-}

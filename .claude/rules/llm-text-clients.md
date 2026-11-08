@@ -21,6 +21,10 @@ paths:
   der beiden und schreibt es hier dazu; `ClaudeJsonClientTests` haelt fest, dass der Konto-Schluessel den Text-Client NICHT
   einschaltet. Der Discord-Bot (`CLAUDE_API_KEY` im Bot-Stack) und der log-watcher (eigener Schluessel) haengen nicht an
   RookHub — der Bot-Chat wurde am 2026-09-25 durch Entfernen des Schluessels abgeschaltet.
+  **Ausnahme seit 0.911.0 (Nutzer 2026-11-08, ausdrücklich):** die Begründungen der Fehler-Vergleiche der Vereinspartien ab
+  dem Stichtag (`ClubFableExplanations`, Claude Fable über `AnthropicJsonClient`) dürfen den Konto-Schlüssel nutzen —
+  `ClubMistakeComparisons:AnthropicApiKey`, sonst `Anthropic:ApiKey`; an nur mit `ClubMistakeComparisons:ExplainWithAnthropic`
+  (Code-Vorgabe aus, Prod-Compose an), Tagesdeckel `:AnthropicDailyCap`. Doku `docs/api/zuege-vergleichen.md`.
   **Seit 0.533.3 gibt es fuer Tipps und Uebersetzung einen dritten Weg: eigene Hardware.** `TextLlm:BaseUrl`
   (Compose `TEXT_LLM_BASE_URL`, OpenAI-kompatibel bis `/v1`, z. B. vLLM auf dem DGX Spark) + `TextLlm:ApiKey`
   (`TEXT_LLM_API_KEY`) + `TextLlm:Model` (`TEXT_LLM_MODEL`, leer = erstes Modell unter `/models` — auf dem Spark

@@ -65,10 +65,14 @@ public sealed class MoveComparisonService
     private readonly MoveComparisonExplainJobs _running;
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<MoveComparisonService> _logger;
+    private readonly ClubFableExplanations? _fable;
 
+    /// <param name="fable">Begründungen der Vereinspartien ab dem Stichtag über Claude Fable (0.911.0); <c>null</c> = nur lokal.</param>
     public MoveComparisonService(AppDbContext db, AnalysisJobService jobs, IClaudeJsonClient llm,
-        MoveComparisonExplainJobs running, IServiceScopeFactory scopes, ILogger<MoveComparisonService> logger)
+        MoveComparisonExplainJobs running, IServiceScopeFactory scopes, ILogger<MoveComparisonService> logger,
+        ClubFableExplanations? fable = null)
     {
+        _fable = fable;
         _db = db;
         _jobs = jobs;
         _llm = llm;
@@ -79,6 +83,10 @@ public sealed class MoveComparisonService
 
     /// <summary>Begründungen nur mit einem Modell auf eigener Hardware (über Claude kostete jeder Vergleich Geld).</summary>
     public bool ExplanationsAvailable => _llm.IsConfigured && _llm.IsLocal;
+
+    /// <summary>Kann für DIESEN Vergleich jemand begründen? Lokal immer, Fable nur für die Vergleiche der Vereinspartien (ob die
+    /// Partie nach dem Stichtag liegt, entscheidet erst <see cref="ExplainAsync"/> — davor reicht „könnte").</summary>
+    private bool CanExplain(MoveComparison c) => ExplanationsAvailable || (c.GameAnalysisId != null && _fable?.Available == true);
 
     // ── Lesen ──────────────────────────────────────────────────────────────────────────────────────
 
@@ -308,10 +316,10 @@ public sealed class MoveComparisonService
         if (c.Status == MoveComparisonStatus.Replies
             && c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply).All(l => l.State != MoveComparisonLineState.Pending))
         {
-            c.Status = ExplanationsAvailable && WeakerCandidates(c).Any() ? MoveComparisonStatus.Explaining : MoveComparisonStatus.Done;
+            c.Status = CanExplain(c) && WeakerCandidates(c).Any() ? MoveComparisonStatus.Explaining : MoveComparisonStatus.Done;
             changed = true;
         }
-        if (c.Status == MoveComparisonStatus.Explaining && !ExplanationsAvailable)
+        if (c.Status == MoveComparisonStatus.Explaining && !CanExplain(c))
         {
             c.Status = MoveComparisonStatus.Done;
             changed = true;
@@ -491,16 +499,24 @@ public sealed class MoveComparisonService
         if (c is null || c.Status != MoveComparisonStatus.Explaining) return;
         var system = SystemPrompt(c.Language);
         var pairs = WeakerCandidates(c).Select(w => (Line: w, Facts: PairFactsOf(c, w))).Where(p => p.Facts is not null).ToList();
+        // Vereinspartie ab dem Stichtag: erst Fable (eigener Kontext — der Abfrage-Kontext läuft nicht parallel), Rückfall lokal.
+        var fable = _fable != null && await _fable.AppliesAsync(_db, c, ct);
+        var fableTexts = new string?[pairs.Count];
+        if (fable)
+            for (var i = 0; i < pairs.Count; i++) fableTexts[i] = await _fable!.ExplainAsync(_db, pairs[i].Facts!, ct);
         using var gate = new SemaphoreSlim(Parallel);
-        var texts = await Task.WhenAll(pairs.Select(async p =>
+        var texts = await Task.WhenAll(pairs.Select(async (p, i) =>
         {
+            if (fableTexts[i] is { } done) return done;
+            if (!ExplanationsAvailable) return null;
             await gate.WaitAsync(ct);
             try { return await ExplainPairAsync(p.Facts!, system, ct); }
             finally { gate.Release(); }
         }));
         for (var i = 0; i < pairs.Count; i++) pairs[i].Line.Explanation = texts[i];
         c.Status = MoveComparisonStatus.Done;
-        c.Model = _llm.TranslationModel is { Length: > 80 } m ? m[..80] : _llm.TranslationModel;
+        var model = fableTexts.Any(t => t != null) ? _fable!.Model : _llm.TranslationModel;
+        c.Model = model is { Length: > 80 } m ? m[..80] : model;
         c.UpdatedAt = DateTime.UtcNow;
         c.FinishedAt = c.UpdatedAt;
         await _db.SaveChangesAsync(ct);
