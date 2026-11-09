@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.938.4',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Operations fixes from the November code review (backend, part 2): club games are no longer re-analysed after the Lc0 engine re-registers; engine job scheduling puts much less load on the database; used or expired password-reset and hand-off codes are deleted after 7 days; impersonation sessions are bound more tightly to the admin’s account and admin areas recognise a new admin right immediately; every CI job has a timeout; the engine-provider guide downloads its patch pinned and checksum-verified; RepCheck error reports and reported Chessable training time are rate-limited; one faulty analysis no longer blocks move-class harvesting; marking the same position twice at once no longer errors; a Chessable fetch no longer restarts endlessly when jobs are lost; the local opening explorer is protected against overload; the analysis pump computes the refinement order more efficiently; two timing-dependent tests are stable.',
+        de: 'Betriebskorrekturen aus dem Codereview vom November (Backend, Teil 2): Vereinspartien werden nach dem Neuanmelden der Lc0-Engine nicht erneut gerechnet; die Auftragsverteilung der Engines belastet die Datenbank deutlich weniger; erledigte Passwort-Reset- und Übergabe-Codes werden nach 7 Tagen gelöscht; „Als Nutzer einsteigen“ ist enger an das Konto des Admins gebunden und Admin-Bereiche erkennen eine neue Admin-Ernennung sofort; alle CI-Jobs haben eine Zeitgrenze; die Engine-Provider-Anleitung lädt ihren Patch gepinnt und geprüft; RepCheck-Fehlermeldungen und gemeldete Chessable-Trainingszeit sind gedrosselt; eine fehlerhafte Analyse hält die Zug-Klassen-Ernte nicht mehr auf; gleichzeitiges Markieren derselben Stellung führt nicht mehr zu einem Fehler; ein Chessable-Abruf startet bei verlorenen Jobs nicht mehr endlos neu; der lokale Eröffnungs-Explorer ist gegen Überlast geschützt; die Analyse-Pumpe rechnet die Vertiefungs-Reihenfolge effizienter; zwei zeitabhängige Tests sind stabil.' },
+    ],
+  },
+  {
     version: '0.938.3',
     date: '2026-11-09',
     changes: [
