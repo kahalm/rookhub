@@ -28,6 +28,8 @@ internal static class BrokerFailurePolicy
     /// <summary>
     /// Eine Absage mit Statuscode:
     /// <list type="bullet">
+    /// <item>400 wegen ungültiger Stellung (<paramref name="invalidWork"/>: RookHub hat sie selbst geprüft und gar nicht
+    /// erst gesendet, auch auf dem Lichess-Weg) → sofort gescheitert, mit dem Grund.</item>
     /// <item>400 vom EIGENEN Broker → gescheitert: er weist nur ab, was die Stellung selbst betrifft (Sanitizer: Gegner
     /// im Schach, falsche Rochaderechte …) — das ändert sich durch Warten nicht.</item>
     /// <item>400 von Lichess → Fehlversuch (A4-006); ab <see cref="AnalysisJob.MaxFruitlessAttempts"/> gescheitert, sonst
@@ -40,9 +42,10 @@ internal static class BrokerFailurePolicy
     /// <item>Alles andere → 120 s warten.</item>
     /// </list>
     /// </summary>
-    internal static BrokerStatusDecision OnStatus(int code, bool localEngine, int fruitlessAttempts, string? error)
+    internal static BrokerStatusDecision OnStatus(int code, bool localEngine, int fruitlessAttempts, string? error,
+        bool invalidWork = false)
     {
-        if (code == 400 && localEngine) return new(RunOutcome.Fail($"Stellung abgewiesen: {error}"));
+        if (code == 400 && (localEngine || invalidWork)) return new(RunOutcome.Fail($"Stellung abgewiesen: {error}"));
         var backoff = RunOutcome.Pause($"Broker antwortete {code}", TimeSpan.FromSeconds(120),
             code == 400 ? FruitlessChange.Increment : FruitlessChange.Keep);
         if (code == 400 && fruitlessAttempts + 1 >= AnalysisJob.MaxFruitlessAttempts)

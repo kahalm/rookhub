@@ -84,7 +84,7 @@ public class EngineControllerTests : IDisposable
         var registry = new EngineRegistry(_db, _encryption, _lichess, _directory, brokerOptions);
         var broker = new EngineBrokerRouter(
             new LocalEngineBroker(hub, brokerOptions, NullLogger<LocalEngineBroker>.Instance),
-            new LichessEngineBroker(_lichess));
+            new LichessEngineBroker(_lichess, NullLogger<LichessEngineBroker>.Instance));
         return new EngineController(_db, _encryption, registry, broker, activity ?? new EngineActivityTracker(),
             logger ?? NullLogger<EngineController>.Instance);
     }
@@ -302,6 +302,37 @@ public class EngineControllerTests : IDisposable
         Assert.Equal(22, work.GetProperty("depth").GetInt32());
         Assert.Equal("chess", work.GetProperty("variant").GetString());
         Assert.Equal("e2e4", work.GetProperty("moves")[0].GetString());
+    }
+
+    [Fact]
+    public async Task Analyse_UngueltigeStellung_400_OhneLichessAufruf()
+    {
+        await CreateUserAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        var req = ValidRequest();
+        req.InitialFen = "8/8/8/4p3/8/8/8/8 w - - 0 1";   // kein König (Chessable-Info-Diagramm)
+        req.Moves = [];
+
+        var result = Assert.IsType<BadRequestObjectResult>(await _controller.Analyse("eei_abc", req, CancellationToken.None));
+
+        Assert.Contains("Invalid position", JsonSerializer.Serialize(result.Value));
+        Assert.Equal(0, _handler.AnalyseCalls);
+    }
+
+    [Fact]
+    public async Task LichessBroker_UngueltigeStellung_WirdNichtGesendet_InvalidWork()
+    {
+        var broker = new LichessEngineBroker(_lichess, NullLogger<LichessEngineBroker>.Instance);
+        var engine = new EngineRef("eei_abc", "SF", 8, 512, EngineSource.Lichess,
+            Lichess: new LichessExternalEngine("eei_abc", "SF", 8, 512, "ees_secret1"));
+        var work = new EngineWork("s1", 1, 16, 1, "4k3/4R3/8/8/8/8/8/4K3 w - - 0 1", [], Depth: 10);
+
+        await using var session = await broker.AnalyseAsync(engine, work, CancellationToken.None);
+
+        Assert.Equal(400, session.StatusCode);
+        Assert.True(session.InvalidWork);
+        Assert.StartsWith("invalid work: illegal initial position", session.Error);
+        Assert.Equal(0, _handler.AnalyseCalls);
     }
 
     [Fact]

@@ -640,7 +640,14 @@ Warum das ueberhaupt auffaellt: nps taugen NICHT als Vergleich zwischen Versione
 rechnet langsamer und spielt trotzdem staerker). Der Maszstab ist Elo aus der Veroeffentlichung —
 Stockfish 19 nennt gegen 18 bis zu 44 Elo.
 
-## [ ] Stellungen pruefen, BEVOR sie an die Engine gehen (2026-09-10)
+## [x] Stellungen pruefen, BEVOR sie an die Engine gehen (2026-09-10, ERLEDIGT 2026-11-09, Version folgt)
+
+> **Stand 2026-11-09: alle Sendewege geprueft.** Die Regeln des `WorkSanitizer` gibt es jetzt auch einzeln als
+> `WorkSanitizer.PositionError(fen, moves)` (neben `PermissiveSan`, nicht darin). Der Lichess-Broker (Cloud-Engines,
+> `eei_`) sendet eine ungueltige Stellung nicht mehr, sondern antwortet selbst 400 mit `InvalidWork` — der Worker setzt
+> den Auftrag sofort auf `Failed` („Stellung abgewiesen: …") statt drei Fehlversuche im Zwei-Minuten-Takt. Die
+> Live-Analyse lehnt sie mit 400 `Invalid position: …` ab, bevor eine Engine aufgeloest wird. Die Stockfish-CLI der
+> Tipp-Generierung (`StockfishAnalyzer`) startet fuer so eine Stellung keinen Prozess (Tipp ohne Engine-Signal).
 
 > **Stand 0.537.0: fuer DIREKT angemeldete Engines erledigt.** Der eigene Broker weist so eine Stellung vor
 > der Schlange ab (`WorkSanitizer`, 400; Test mit genau dieser koeniglosen FEN in `WorkSanitizerTests`), der

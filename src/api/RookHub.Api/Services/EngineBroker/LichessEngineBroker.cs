@@ -8,12 +8,21 @@ namespace RookHub.Api.Services.EngineBroker;
 /// <see cref="EngineAnalysisSession"/> verpackt, damit Controller und Worker beide Quellen gleich behandeln.
 /// Die Semantik des Lichess-Pfads ändert sich dadurch nicht: der Broker bekommt dasselbe <c>work</c>, und
 /// jede Antwort außer 2xx kommt mit ihrem Status zurück (503/504 ⇒ der Worker wechselt die Engine).
+/// <para>Vor dem Senden prüft RookHub die Stellung selbst (<see cref="WorkSanitizer.PositionError"/>, dieselben
+/// Regeln wie beim eigenen Broker): eine ungültige geht nicht an Lichess, sondern kommt als 400 mit Grund und
+/// <see cref="EngineAnalysisSession.InvalidWork"/> zurück — Lichess sagte bei 400 nicht, woran es lag, und der
+/// Provider hinter der Cloud-Engine (Stockfish 19) beendet sich an so einer Stellung.</para>
 /// </summary>
-public sealed class LichessEngineBroker(LichessEngineService lichess)
+public sealed class LichessEngineBroker(LichessEngineService lichess, ILogger<LichessEngineBroker> logger)
 {
     public async Task<EngineAnalysisSession> AnalyseAsync(EngineRef engine, EngineWork work, CancellationToken ct)
     {
         var target = engine.Lichess ?? throw new ArgumentException("Not a Lichess engine", nameof(engine));
+        if (WorkSanitizer.PositionError(work.InitialFen, work.Moves) is { } reason)
+        {
+            logger.LogInformation("Lichess-Broker: Auftrag nicht gesendet engine={EngineId}: {Reason}", engine.Id, reason);
+            return EngineAnalysisSession.RejectedInvalidWork(reason);
+        }
         var upstream = await lichess.AnalyseAsync(target, work.ToJson(), ct);
         if (!upstream.IsSuccessStatusCode)
         {

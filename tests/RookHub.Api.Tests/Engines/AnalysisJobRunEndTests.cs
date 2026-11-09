@@ -104,6 +104,18 @@ public class AnalysisJobRunEndTests
         Assert.Equal(tryOther, d.TryOtherEngine);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(Max - 1)]
+    public void BrokerFailurePolicy_UngueltigeStellungVomLichessWeg_ScheitertSofort(int fruitless)
+    {
+        // RookHub hat die Stellung selbst abgewiesen (WorkSanitizer.PositionError) — kein Fehlversuch-Zähler,
+        // kein Zwei-Minuten-Takt gegen Lichess.
+        var d = BrokerFailurePolicy.OnStatus(400, localEngine: false, fruitless, "invalid work: x", invalidWork: true);
+        Assert.Equal("Failed|Stellung abgewiesen: invalid work: x|-|Keep", Show(d.Outcome));
+        Assert.False(d.TryOtherEngine);
+    }
+
     [Fact]
     public void BrokerFailurePolicy_festeUebergaenge()
     {

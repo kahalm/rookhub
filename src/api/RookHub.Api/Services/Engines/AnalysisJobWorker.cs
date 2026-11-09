@@ -270,7 +270,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl, IBackgr
     {
         var code = upstream.StatusCode;
         var decision = BrokerFailurePolicy.OnStatus(code, engine.Source == EngineSource.Local,
-            job.FruitlessAttempts, upstream.Error);
+            job.FruitlessAttempts, upstream.Error, upstream.InvalidWork);
         var alt = job.EngineId;
         if (decision.TryOtherEngine
             && await BackgroundEngineRotation.SwitchAsync(db, job, AnalysisJobEngineResolver.OwnerOf(job), _settings.ExplicitOnly, CancellationToken.None))

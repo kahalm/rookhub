@@ -31,7 +31,7 @@ public sealed class LocalEngineBroker(EngineHub hub, LocalBrokerOptions options,
         catch (InvalidWorkException ex)
         {
             logger.LogInformation("EngineBroker: Auftrag abgewiesen engine={EngineId}: {Reason}", engine.Id, ex.Message);
-            return EngineAnalysisSession.Rejected(400, "invalid work: " + ex.Message);
+            return EngineAnalysisSession.RejectedInvalidWork(ex.Message);
         }
 
         var job = new PendingJob(target.Selector, engine.Id, EngineJson(target.Engine), sanitized.Work, sanitized.RootFen);

@@ -65,6 +65,10 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
   BEENDET sich bei so einer Stellung samt Provider (siehe Dockerfile); eine krumme Stellung kostete sonst den ganzen
   Engine-Pool einen Neustart. Der Worker setzt so einen Auftrag bei einer `rhe_`-Engine sofort auf `Failed`
   („Stellung abgewiesen: …“) statt ihn zwei Minuten zurückzustellen — Warten ändert daran nichts.
+  **Dieselbe Prüfung auf den übrigen Wegen** (`WorkSanitizer.PositionError`, neben `PermissiveSan`, nicht darin):
+  der Lichess-Broker (`eei_`) sendet eine ungültige Stellung gar nicht erst (400 mit `InvalidWork` → der Auftrag
+  scheitert ebenso sofort), die Live-Analyse lehnt sie vor der Engine-Auflösung mit 400 `Invalid position: …` ab, und
+  die Stockfish-CLI der Tipp-Generierung (`StockfishAnalyzer`) startet dafür keinen Prozess (Tipp ohne Engine-Signal).
 
 **Fallen, an denen es STILL scheitert** (alle mit Test festgenagelt):
 1. **Kestrels Mindest-Datenrate**: ein Upload schweigt zwischen zwei tiefen Iterationen minutenlang (nur das Keepalive

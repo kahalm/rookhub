@@ -32,6 +32,19 @@ public class EngineStreamProxyTests
     }
 
     [Fact]
+    public void ValidateWork_ungueltigeStellung_400MitGrund()
+    {
+        var r = Valid(); r.InitialFen = "8/8/8/4p3/8/8/8/8 w - - 0 1";   // kein König — Stockfish 19 beendet sich
+        Assert.StartsWith("Invalid position: illegal initial position", EngineStreamProxy.ValidateWork(r));
+        r = Valid(); r.InitialFen = "4k3/4R3/8/8/8/8/8/4K3 w - - 0 1";   // Gegner im Schach
+        Assert.StartsWith("Invalid position: illegal initial position", EngineStreamProxy.ValidateWork(r));
+        r = Valid(); r.Moves = ["e2e4", "e2e4"];
+        Assert.Equal("Invalid position: illegal uci move: e2e4", EngineStreamProxy.ValidateWork(r));
+        r = Valid(); r.Moves = ["e2e4", "e7e5", "g1f3"];
+        Assert.Null(EngineStreamProxy.ValidateWork(r));
+    }
+
+    [Fact]
     public void WorkFor_klemmtThreadsUndHashAufDieEngine_undSchicktGenauEinLimit()
     {
         var r = Valid(); r.Threads = 64; r.Hash = 99_999;

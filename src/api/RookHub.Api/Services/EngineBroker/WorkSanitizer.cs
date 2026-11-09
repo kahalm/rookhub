@@ -70,17 +70,7 @@ public static class WorkSanitizer
         if (work.MultiPv > MaxMultiPv) throw new InvalidWorkException(EngineProtocol.MultiPvRangeError);
         if (work.Moves.Count > MaxMoves) throw new InvalidWorkException("too many moves");
 
-        var fen = NormalizeFen(work.InitialFen);
-        var board = LoadStrict(fen);
-
-        var moves = new List<string>(work.Moves.Count);
-        foreach (var raw in work.Moves)
-        {
-            if (!UciLineParser.TryParseMove(raw ?? string.Empty, out var uci))
-                throw new InvalidWorkException($"illegal uci move: {raw}");
-            var played = BrokerChess.TryPlay(board, uci) ?? throw new InvalidWorkException($"illegal uci move: {raw}");
-            moves.Add(played);
-        }
+        var (fen, board, moves) = PlayStrict(work.InitialFen, work.Moves);
 
         var sanitized = work with
         {
@@ -107,10 +97,38 @@ public static class WorkSanitizer
 
     /// <summary>Darf eine Engine diese Stellung bekommen? Gleiche Regeln wie für Broker-Aufträge (Gegner im Schach,
     /// Bauern auf der Grundreihe, Rochade, en passant) — Stockfish stürzt an solchen Stellungen ab.</summary>
-    public static bool IsEngineSafe(string fen)
+    public static bool IsEngineSafe(string fen) => PositionError(fen) is null;
+
+    /// <summary>
+    /// Die Stellungsprüfung von <see cref="Sanitize"/> allein — für die Sendewege, die NICHT über den eigenen Broker
+    /// laufen (Lichess-Broker, Live-Analyse, lokale Stockfish-CLI der Tipp-Generierung). Genau zwei Könige (Gera.Chess),
+    /// Gegner nicht im Schach, keine Bauern auf der Grundreihe, Rochaderechte nur mit König/Turm am Startfeld, gültiges
+    /// en-passant-Feld, und jeder Zug der Folge legal. Stockfish 19 beendet sich an einer solchen Stellung.
+    /// <para>Steht bewusst NEBEN <see cref="PermissiveSan"/> (das illegale Stellungen absichtlich nachspielt) und nicht
+    /// darin: hier wird abgewiesen, dort geduldet.</para>
+    /// </summary>
+    /// <returns><c>null</c> = darf an die Engine; sonst der Grund (englisch, wie die Broker-Antwort).</returns>
+    public static string? PositionError(string? fen, IEnumerable<string?>? moves = null)
     {
-        try { LoadStrict(NormalizeFen(fen)); return true; }
-        catch (InvalidWorkException) { return false; }
+        try { PlayStrict(fen, moves ?? []); return null; }
+        catch (InvalidWorkException ex) { return ex.Message; }
+    }
+
+    /// <summary>Ausgangsstellung streng laden und die Züge darauf nachspielen (Rochade als König-schlägt-Turm).</summary>
+    private static (string Fen, ChessBoard Board, List<string> Moves) PlayStrict(string? initialFen, IEnumerable<string?> rawMoves)
+    {
+        var fen = NormalizeFen(initialFen);
+        var board = LoadStrict(fen);
+
+        var moves = new List<string>();
+        foreach (var raw in rawMoves)
+        {
+            if (!UciLineParser.TryParseMove(raw ?? string.Empty, out var uci))
+                throw new InvalidWorkException($"illegal uci move: {raw}");
+            var played = BrokerChess.TryPlay(board, uci) ?? throw new InvalidWorkException($"illegal uci move: {raw}");
+            moves.Add(played);
+        }
+        return (fen, board, moves);
     }
 
     private static ChessBoard LoadStrict(string fen)

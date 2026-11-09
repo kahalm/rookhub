@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using RookHub.Api.Services.EngineBroker;
 
 namespace RookHub.Api.Services.Engines;
 
@@ -43,6 +44,14 @@ public class StockfishAnalyzer
         if (positionCmd is null)
         {
             _logger.LogWarning("StockfishAnalyzer: Stellung oder Setup-Zuege abgewiesen (kein einzeiliges FEN/UCI)");
+            return null;
+        }
+        // Dieselben Regeln wie der eigene Broker (genau zwei Koenige, Gegner nicht im Schach …, Setup-Zuege legal):
+        // Stockfish 19 beendet sich an einer ungueltigen Stellung. Der Tipp laeuft dann ohne Engine-Signal weiter.
+        if (WorkSanitizer.PositionError(fen,
+                setupMovesUci?.Split(' ', StringSplitOptions.RemoveEmptyEntries)) is { } reason)
+        {
+            _logger.LogWarning("StockfishAnalyzer: ungueltige Stellung abgewiesen ({Reason})", reason);
             return null;
         }
         try

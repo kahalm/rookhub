@@ -47,6 +47,9 @@ internal static class EngineStreamProxy
         if (r.Depth is < 1 or > MaxDepth) return "Invalid depth";
         if (r.Movetime is < 1 or > MaxMovetimeMs) return "Invalid movetime";
         if (r.Nodes is < 1 or > MaxNodes) return "Invalid nodes";
+        // Zuletzt die Stellung selbst — für BEIDE Broker, bevor eine Engine aufgelöst wird: Stockfish 19 beendet sich
+        // an einer ungültigen (kein/zwei Könige, Gegner im Schach …). Dieselben Regeln wie der eigene Broker.
+        if (WorkSanitizer.PositionError(r.InitialFen, r.Moves) is { } reason) return "Invalid position: " + reason;
         return null;
     }
 

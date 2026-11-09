@@ -109,6 +109,35 @@ public class StockfishAnalyzerTests
         Assert.DoesNotContain(logger.Messages, m => m.Contains("nicht verfügbar"));
     }
 
+    [Theory]
+    [InlineData("8/8/8/4p3/8/8/8/8 w - - 0 1", null)]                         // kein König — Stockfish 19 beendet sich
+    [InlineData("4k3/4R3/8/8/8/8/8/4K3 w - - 0 1", null)]                     // Gegner im Schach
+    [InlineData("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "e2e5")]   // illegaler Setup-Zug
+    public async Task AnalyzeAsync_ungueltigeStellung_startetKeineEngine(string fen, string? setup)
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Stockfish:Path"] = "/nonexistent/stockfish" })
+            .Build();
+        var logger = new CollectingLogger();
+
+        Assert.Null(await new StockfishAnalyzer(config, logger).AnalyzeAsync(fen, setup));
+        Assert.Contains(logger.Messages, m => m.Contains("ungueltige Stellung abgewiesen"));
+        Assert.DoesNotContain(logger.Messages, m => m.Contains("nicht verfügbar"));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_gueltigeStellung_kommtBisZumProzessstart()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Stockfish:Path"] = "/nonexistent/stockfish" })
+            .Build();
+        var logger = new CollectingLogger();
+
+        Assert.Null(await new StockfishAnalyzer(config, logger).AnalyzeAsync(StartFen, "e2e4 e7e5 e1e2"));
+        Assert.DoesNotContain(logger.Messages, m => m.Contains("abgewiesen"));
+        Assert.Contains(logger.Messages, m => m.Contains("nicht verfügbar"));
+    }
+
     private sealed class CollectingLogger : Microsoft.Extensions.Logging.ILogger<StockfishAnalyzer>
     {
         public List<string> Messages { get; } = new();

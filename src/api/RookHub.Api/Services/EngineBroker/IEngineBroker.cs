@@ -28,7 +28,16 @@ public sealed class EngineAnalysisSession : IAsyncDisposable
     public Stream? Ndjson { get; }
     public string? Error { get; }
 
+    /// <summary>Abgewiesen, weil die STELLUNG (Ausgangsstellung/Zugfolge) ungültig ist — RookHub hat sie selbst
+    /// geprüft (<see cref="WorkSanitizer"/>), bei welchem Broker auch immer. Warten oder eine andere Engine ändert daran
+    /// nichts; der Worker setzt den Auftrag sofort auf gescheitert.</summary>
+    public bool InvalidWork { get; private init; }
+
     public static EngineAnalysisSession Rejected(int statusCode, string error) => new(statusCode, null, error);
+
+    /// <summary>400 wegen ungültiger Stellung (siehe <see cref="InvalidWork"/>).</summary>
+    public static EngineAnalysisSession RejectedInvalidWork(string reason) =>
+        new(400, null, "invalid work: " + reason) { InvalidWork = true };
 
     public async ValueTask DisposeAsync()
     {

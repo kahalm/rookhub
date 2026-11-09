@@ -88,6 +88,41 @@ public class WorkSanitizerTests
         Assert.Throws<InvalidWorkException>(() => WorkSanitizer.Sanitize(Work(fen), 8, 1024));
     }
 
+    // ===== PositionError: dieselbe Prüfung für die Wege ohne eigenen Broker (Lichess, Live-Analyse, Tipp-Stockfish) =====
+
+    [Theory]
+    [InlineData("8/8/8/4p3/8/8/8/8 w - - 0 1")]
+    [InlineData("4k3/8/8/8/8/8/8/K3K3 w - - 0 1")]
+    [InlineData("4k3/4R3/8/8/8/8/8/4K3 w - - 0 1")]
+    [InlineData("4k3/8/8/8/8/8/8/P3K3 w - - 0 1")]
+    [InlineData("4k3/8/8/8/8/8/8/4K3 w KQkq - 0 1")]
+    [InlineData("garbage")]
+    [InlineData("")]
+    public void PositionError_GleicheRegelnWieSanitize(string fen)
+    {
+        var reason = WorkSanitizer.PositionError(fen);
+        Assert.NotNull(reason);
+        Assert.StartsWith("illegal initial position", reason);
+        Assert.False(WorkSanitizer.IsEngineSafe(fen));
+    }
+
+    [Fact]
+    public void PositionError_GueltigeStellungUndZuege_IstNull()
+    {
+        Assert.Null(WorkSanitizer.PositionError(Start));
+        Assert.Null(WorkSanitizer.PositionError(Start, ["e2e4", "e7e5", "g1f3"]));
+        // Rochade in beiden Schreibweisen (Standard und König-schlägt-Turm) — wie Sanitize.
+        Assert.Null(WorkSanitizer.PositionError("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", ["e1g1"]));
+        Assert.Null(WorkSanitizer.PositionError("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", ["e1h1"]));
+    }
+
+    [Fact]
+    public void PositionError_IllegalerZug_NenntIhn()
+    {
+        Assert.Equal("illegal uci move: e2e5", WorkSanitizer.PositionError(Start, ["e2e4", "e2e5"]));
+        Assert.Equal("illegal uci move: zz", WorkSanitizer.PositionError(Start, ["zz"]));
+    }
+
     [Theory]
     [InlineData("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")]
     [InlineData("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR  w  KQkq - 3", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 3 1")]
