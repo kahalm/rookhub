@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule, formatDate } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -325,10 +325,10 @@ export class EndlessHistoryComponent implements OnInit {
   displayedColumns = ['select', 'date', 'maxRating', 'elo', 'solved', 'duration', 'config', 'mistakes'];
   selection = new SelectionModel<SessionRow>(true, []);
 
-  constructor(
-    private http: HttpClient, public router: Router, private locale: LocaleService,
-    private snackbar: SnackbarService, private translate: TranslateService,
-  ) {}
+  private readonly snackbar = inject(SnackbarService);
+  private readonly translate = inject(TranslateService);
+
+  constructor(private http: HttpClient, public router: Router, private locale: LocaleService) {}
 
   get archiveFilterValue(): string {
     if (this.archiveFilter === null) return 'all';

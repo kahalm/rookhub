@@ -3,14 +3,24 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { EndlessHistoryComponent, durationText } from './endless-history.component';
 import { registerFormatLocaleData } from '../../core/locale-data';
 
+/** Direkt gebaut (ohne TestBed); Snackbar/Übersetzung kommen per inject() aus einem Mini-Injector. */
+function makeHistory(http: any, router: any, locale: any): EndlessHistoryComponent {
+  const injector = Injector.create({ providers: [
+    { provide: SnackbarService, useValue: { warn: () => {} } },
+    { provide: TranslateService, useValue: { instant: (k: string) => k } },
+  ] });
+  return runInInjectionContext(injector, () => new EndlessHistoryComponent(http, router, locale));
+}
+
 // Die Elo-Delta-Methoden hängen nicht von HttpClient/Router/Locale ab → direkte Instanziierung reicht.
 function makeComponent(): EndlessHistoryComponent {
-  return new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
+  return makeHistory({} as any, {} as any, { current: 'en' } as any);
 }
 
 function session(maxRating: number, configJson: string): any {
@@ -52,20 +62,20 @@ describe('EndlessHistoryComponent formatDate uses the active locale', () => {
   beforeAll(() => registerFormatLocaleData());
 
   it('formats with the locale from LocaleService (de uses dotted date, not US slashes)', () => {
-    const de = new EndlessHistoryComponent({} as any, {} as any, { current: 'de' } as any, {} as any, {} as any);
+    const de = makeHistory({} as any, {} as any, { current: 'de' } as any);
     expect(de.formatDate(ts)).toContain('.');
     expect(de.formatDate(ts)).not.toContain('/');
   });
 
   it('returns - for an invalid timestamp', () => {
-    const en = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
+    const en = makeHistory({} as any, {} as any, { current: 'en' } as any);
     expect(en.formatDate(NaN)).toBe('-');
   });
 });
 
 describe('EndlessHistoryComponent toRow precomputes display fields', () => {
   it('computes config/mistakes/elo text once instead of parsing JSON per CD cycle', () => {
-    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
+    const c = makeHistory({} as any, {} as any, { current: 'en' } as any);
     const dto = {
       id: 1, timestamp: Date.UTC(2021, 2, 5, 12, 0), totalSolved: 5, maxRating: 1840,
       durationSeconds: 90, configJson: JSON.stringify({ startElo: 1500, fasttrackThreshold1: 3 }),
@@ -95,7 +105,7 @@ describe('EndlessHistoryComponent Dauer in der App-Sprache', () => {
 
 describe('EndlessHistoryComponent Start-Rating ohne Wert (z1-rk-endless-history-config)', () => {
   it('zeigt „-“ statt „?“, wenn das Start-Rating fehlt', () => {
-    const c = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
+    const c = makeHistory({} as any, {} as any, { current: 'en' } as any);
     expect(c.formatConfig(JSON.stringify({ fasttrackThreshold1: 3 }))).toBe('-');
     expect(c.formatConfig('kaputt')).toBe('-');
     expect(c.formatConfig(JSON.stringify({ startElo: 1200 }))).toBe('1200');
@@ -112,14 +122,14 @@ describe('EndlessHistoryComponent UI-Sweep a1', () => {
   const ts = new Date(2026, 9, 10, 0, 20).getTime();
 
   it('a1-rk-endless-verlauf-tabelle-datum: knappes Locale-Format short statt langem Eigenformat', () => {
-    const de = new EndlessHistoryComponent({} as any, {} as any, { current: 'de' } as any, {} as any, {} as any);
-    const en = new EndlessHistoryComponent({} as any, {} as any, { current: 'en' } as any, {} as any, {} as any);
+    const de = makeHistory({} as any, {} as any, { current: 'de' } as any);
+    const en = makeHistory({} as any, {} as any, { current: 'en' } as any);
     expect(de.formatDate(ts)).toBe('10.10.26, 00:20');
     expect(en.formatDate(ts).replace(/\s/g, ' ')).toBe('10/10/26, 12:20 AM');
   });
 
   it('Sprache ohne Locale-Daten fällt auf en zurück statt zu werfen', () => {
-    const fr = new EndlessHistoryComponent({} as any, {} as any, { current: 'fr' } as any, {} as any, {} as any);
+    const fr = makeHistory({} as any, {} as any, { current: 'fr' } as any);
     expect(fr.formatDate(ts).replace(/\s/g, ' ')).toBe('10/10/26, 12:20 AM');
   });
 

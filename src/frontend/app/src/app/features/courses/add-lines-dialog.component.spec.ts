@@ -1,3 +1,4 @@
+import { Injector, runInInjectionContext } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -21,12 +22,14 @@ function make(data: Partial<AddLinesDialogData>, result?: AddCourseLinesResult |
       return of(result ?? { added: 1, chapter, issues: [], totalLines: 1 });
     },
   };
-  const component = new AddLinesDialogComponent(
+  const injector = Injector.create({ providers: [
+    { provide: TranslateService, useValue: { instant: (k: string) => (k === 'apiErrors.not_found' ? 'Nicht gefunden.' : k) } },
+  ] });
+  const component = runInInjectionContext(injector, () => new AddLinesDialogComponent(
     { close: (v: unknown) => closed.push(v) } as unknown as MatDialogRef<AddLinesDialogComponent, boolean>,
     courses as unknown as CourseService,
     { bookId: 58, displayName: 'TestNoel', chapterLocked: false, ...data } as AddLinesDialogData,
-    { instant: (k: string) => (k === 'apiErrors.not_found' ? 'Nicht gefunden.' : k) } as unknown as TranslateService,
-  );
+  ));
   return { component, sent, closed };
 }
 

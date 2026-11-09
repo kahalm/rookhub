@@ -1,4 +1,4 @@
-import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -114,6 +114,7 @@ export class AddLinesDialogComponent {
   result: AddCourseLinesResult | null = null;
   /** Wurde etwas eingefügt? Steuert, ob die Seite nach dem Schließen neu lädt. */
   private changed = false;
+  private readonly translate = inject(TranslateService);
 
   readonly placeholder =
     '1: r2q1r1k/1pp1bppb/p1np4/4p1Pp/2B1P2N/2PPB2P/PP1Q1P2/R3R1K1 w - - 0 18\n' +
@@ -123,7 +124,6 @@ export class AddLinesDialogComponent {
     private ref: MatDialogRef<AddLinesDialogComponent, boolean>,
     private courses: CourseService,
     @Inject(MAT_DIALOG_DATA) public data: AddLinesDialogData,
-    private translate: TranslateService,
   ) {
     if (data.chapterLocked && typeof data.chapter === 'string') this.chapter = data.chapter;
   }
