@@ -437,6 +437,37 @@ describe('CourseBrowseComponent Layout', () => {
     TestBed.resetTestingModule();
   });
 
+  // Delta-Review 2026-11-09, F1-016: role=listbox mit Kästchen/Knöpfen war ARIA-widrig, der Status nur ein aria-hidden-Symbol.
+  it('Linienliste ohne listbox/option, gewählte Linie per aria-current, Status als Text (F1-016)', () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => k === 'bookId' ? '5' : null } } } },
+        { provide: Router, useValue: {} },
+        { provide: CourseService, useValue: {
+          getBookPuzzles: () => of([{ id: 7, lineId: 'l', bookFileName: 'b.pgn', round: '1', fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', moves: 'e2e4' }]),
+          getChapters: () => of([]), getLineStatus: () => of({ solvedIds: [7], failedIds: [] }),
+          getFlashcardMarks: () => of({ lineIds: [] }), setFlashcardMark: () => of({ marked: true }) } },
+        { provide: PreferencesService, useValue: { boardTheme: 'brown', pieceSet: 'cburnett' } },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+        { provide: FavoritesService, useValue: { list: () => of([]) } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+        { provide: WorksheetService, useValue: {} },
+      ],
+    });
+    TestBed.overrideComponent(CourseBrowseComponent, { set: { imports: [CommonModule, TranslatePipe, MatMenuModule, SanPipe], schemas: [NO_ERRORS_SCHEMA] } });
+    const fixture = TestBed.createComponent(CourseBrowseComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role="listbox"], [role="option"]')).toBeNull();
+    const item = el.querySelector('.line-row button.line-item') as HTMLButtonElement;
+    expect(item.getAttribute('aria-current')).toBe('true');
+    expect(item.querySelector('.status-icon .sr-only')!.textContent!.trim()).toBe('courses.browse.solved');
+    TestBed.resetTestingModule();
+  });
+
   // UI-Sweep v1 (v1-rk-browse-zugliste-handy-abgeschnitten): Zugleiste ohne eigenen Scrollkasten (DESIGN 5.11).
   it('sperrt die Zugleiste nicht in einen Scrollkasten', () => {
     const plain = css.replace(/\[_ngcontent-%COMP%\]/g, '');

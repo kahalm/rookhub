@@ -129,7 +129,9 @@ interface ChapterGroup {
       } @else {
         <div class="browse-body">
           <!-- Linien-Liste -->
-          <aside class="line-list" role="listbox">
+          <!-- Einfache Liste statt role=listbox (F1-016): die Zeilen tragen Kästchen und Knöpfe, eine Listbox darf nur
+               Optionen enthalten und verlangt Pfeiltasten-Bedienung. Die gewählte Linie meldet aria-current. -->
+          <aside class="line-list" [attr.aria-label]="'courses.browse.lines' | translate">
             @for (g of groups; track g.name) {
               @if (chapterName === undefined && groups.length > 1) {
                 @if (foldChapters()) {
@@ -155,15 +157,17 @@ interface ChapterGroup {
                            [matTooltip]="'courses.flashcards.pick' | translate"
                            [attr.aria-label]="'courses.flashcards.pick' | translate" />
                   </label>
-                  <button class="line-item" role="option"
-                          [attr.aria-selected]="selected?.id === line.id"
+                  <button type="button" class="line-item"
+                          [attr.aria-current]="selected?.id === line.id ? 'true' : null"
                           (click)="selectLine(line)">
                     @if (!line.isInfoOnly) {
                       <span class="status-icon" [ngClass]="'status-' + lineStatus(line)">
                         @if (lineStatus(line) === 'solved') {
                           <mat-icon [matTooltip]="'courses.browse.solved' | translate">check_circle</mat-icon>
+                          <span class="sr-only">{{ 'courses.browse.solved' | translate }}</span>
                         } @else if (lineStatus(line) === 'failed') {
                           <mat-icon [matTooltip]="'courses.browse.failed' | translate">cancel</mat-icon>
+                          <span class="sr-only">{{ 'courses.browse.failed' | translate }}</span>
                         }
                       </span>
                     }
@@ -326,6 +330,8 @@ interface ChapterGroup {
     }
     .line-row.active .line-item { font-weight: 600; }
     .status-icon { display: inline-flex; width: 18px; flex: none; }
+    /* Status für Screenreader (das Symbol ist aria-hidden, der Tooltip hängt an einem nicht fokussierbaren Element). */
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     .status-icon mat-icon { font-size: 18px; width: 18px; height: 18px; }
     .status-icon.status-solved mat-icon { color: var(--rh-success); }
     .status-icon.status-failed mat-icon { color: color-mix(in srgb, var(--rh-error) 80%, currentColor); }

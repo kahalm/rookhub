@@ -92,13 +92,15 @@
             <h4 class="review-title">{{ 'endless.gameOver.puzzleReview' | translate }}</h4>
             <div class="review-list">
               @for (attempt of puzzles(); track attempt.puzzleNumber) {
-                <div class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle.emit(attempt.puzzleId)">
+                <!-- Knopf statt <div (click)> (F1-016): per Tastatur erreichbar, Status auch als Text. -->
+                <button type="button" class="review-item" [class.review-failed]="!attempt.solved" (click)="openPuzzle.emit(attempt.puzzleId)">
                   <span class="review-number">#{{ attempt.puzzleNumber }}</span>
                   <span class="review-rating">{{ attempt.rating }}</span>
                   <mat-icon [class]="attempt.solved ? 'review-icon solved' : 'review-icon failed'">
                     {{ attempt.solved ? 'check_circle' : 'cancel' }}
                   </mat-icon>
-                </div>
+                  <span class="sr-only">{{ (attempt.solved ? 'courses.browse.solved' : 'courses.browse.failed') | translate }}</span>
+                </button>
               }
             </div>
           </div>

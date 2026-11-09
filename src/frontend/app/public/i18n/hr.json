@@ -1954,7 +1954,8 @@
       "failed": "Nije uspjelo",
       "favorite": "Zavoli liniju",
       "unfavorite": "Ukloni iz omiljenih",
-      "share": "Podijeli liniju"
+      "share": "Podijeli liniju",
+      "lines": "Linije"
     },
     "themes": {
       "title": "Teme tečaja",

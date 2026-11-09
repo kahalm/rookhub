@@ -41,6 +41,22 @@ describe('EndlessResultComponent', () => {
     expect(opened).toEqual([9]);
   });
 
+  // Delta-Review 2026-11-09, F1-016: die Ergebnisliste war ein <div (click)> — per Tastatur nicht erreichbar.
+  it('Ergebnisliste: Einträge sind Knöpfe mit Status als Text (F1-016)', () => {
+    const { el, cmp } = render({ kind: 'gameover', puzzles: [
+      { puzzleNumber: 1, puzzleId: 9, rating: 1500, solved: false }, { puzzleNumber: 2, puzzleId: 10, rating: 1600, solved: true }] });
+    const items = Array.from(el.querySelectorAll('.review-item')) as HTMLButtonElement[];
+    expect(items.map(b => b.tagName)).toEqual(['BUTTON', 'BUTTON']);
+    expect(items.map(b => b.type)).toEqual(['button', 'button']);
+    expect(items.map(b => b.querySelector('.sr-only')!.textContent!.trim())).toEqual(['courses.browse.failed', 'courses.browse.solved']);
+    const opened: number[] = [];
+    cmp.openPuzzle.subscribe(id => opened.push(id));
+    items[1].focus();
+    expect(document.activeElement).toBe(items[1]);
+    items[1].click();
+    expect(opened).toEqual([10]);
+  });
+
   it('Archivieren folgt den Inputs (OnPush: Änderung der Lauf-Id kommt an)', () => {
     const { fixture, el, cmp } = render({ kind: 'gameover', isLoggedIn: true });
     expect(el.querySelector('.archive-btn')).toBeNull();
