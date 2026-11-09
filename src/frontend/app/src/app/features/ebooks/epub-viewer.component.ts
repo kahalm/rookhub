@@ -27,19 +27,27 @@ export function expandSelfClosing(html: string): string {
 /** `.html`/`.htm`-Kapitel: epub.js parst sie mit dem HTML-Parser (nicht als XHTML) — schon dabei landet alles nach einem
  * `<div …/>` in diesem div. Scribd-Umwandlungen („50 Chess Traps in the Opening“, Prod #2250) haben `<div style="width:
  * 6.25%" />` als Trennlinie → Text und Diagramme in einer 6-%-Spalte, Bilder 15 px breit (0.867.2; der Serialize-Hook aus
- * 0.867.1 kam zu spät). Darum vor dem Parsen ausschreiben, in beiden Lademodi (Ordner: `book.request`, Archiv: `archive.request`). */
-export function patchHtmlRequests(book: Pick<EpubBook, 'request' | 'archive'>): void {
+ * 0.867.1 kam zu spät). Darum vor dem Parsen ausschreiben, in beiden Lademodi (Ordner: `book.request`, Archiv: `archive.request`).
+ *
+ * `onDenied` (Ordner-Modus, GL-FE2-02/F2-005): der Server lehnt einen Buch-Eintrag mit 401/403 ab (Ausweis im Pfad
+ * abgelaufen). epub.js verschluckt solche Ladefehler beim Blättern (`next()`/`prev()` lösen trotzdem auf) — hier, im
+ * Abruf selbst, sieht der Viewer sie noch. Der Fehler wird danach wie bisher weitergeworfen. */
+export function patchHtmlRequests(book: Pick<EpubBook, 'request' | 'archive'>, onDenied?: (status: number) => void): void {
   const isHtml = (url: string, type?: string | null) => !type || type === 'html' || type === 'htm'
     ? /\.html?(?:[?#]|$)/i.test(url) : false;
   const parse = (text: string) => new DOMParser().parseFromString(expandSelfClosing(text), 'text/html');
+  const denied = (status: unknown) => { if (status === 401 || status === 403) onDenied?.(status); };
   const orig = book.request;
   if (orig) {
     book.request = (url, type, withCredentials, headers) => isHtml(url, type)
       ? fetch(url, { credentials: withCredentials ? 'include' : 'same-origin', headers }).then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          if (!r.ok) { denied(r.status); throw new Error(`HTTP ${r.status}`); }
           return r.text();
         }).then(parse)
-      : orig(url, type, withCredentials, headers);
+      : onDenied
+        // epub.js' eigener Abruf (.xhtml, OPF, …) lehnt mit `{ status, … }` ab.
+        ? orig(url, type, withCredentials, headers).catch((e: unknown) => { denied((e as { status?: unknown } | null)?.status); throw e; })
+        : orig(url, type, withCredentials, headers);
   }
   const archive = book.archive;
   if (archive) {
@@ -189,6 +197,8 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
   private book: EpubBook | null = null;
   private rendition: EpubRendition | null = null;
   private destroyed = false;
+  /** Abgelehnter Eintrag schon als `pageFailed` gemeldet (siehe {@link onEntryDenied}). */
+  private deniedReported = false;
   private touchStart: { x: number; y: number } | null = null;
   /** Absolute Basis, wenn das Buch als Ordner offen ist (für die Bildzuordnung). */
   private dirBase: string | null = null;
@@ -245,7 +255,7 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (this.dirSrc) {
       const base = new URL(this.dirSrc, document.baseURI).href;
       const book = ePub({ replacements: 'none' });
-      patchHtmlRequests(book);
+      patchHtmlRequests(book, status => this.onEntryDenied(status));
       try {
         await withTimeout(book.open(base, 'directory'), DIRECTORY_OPEN_TIMEOUT_MS);
         if (this.destroyed) { book.destroy(); return null; }
@@ -437,6 +447,17 @@ export class EpubViewerComponent implements AfterViewInit, OnChanges, OnDestroy 
 
   next(): void { this.turnPage(this.rendition?.next()); }
   prev(): void { this.turnPage(this.rendition?.prev()); }
+
+  /**
+   * Ein Buch-Eintrag wurde NACH dem Öffnen abgelehnt (401/403, Ausweis abgelaufen, GL-FE2-02): als `pageFailed` melden,
+   * damit der Leser den Ausweis erneuert und neu aufbaut. Einmal je Viewer — der Neuaufbau bringt einen neuen Viewer;
+   * die Vermessung im Hintergrund lädt alle Kapitel und würde sonst je Kapitel melden. Beim Öffnen gilt weiter `failed`.
+   */
+  private onEntryDenied(status: number): void {
+    if (this.destroyed || this.loading() || this.deniedReported) return;
+    this.deniedReported = true;
+    this.zone.run(() => this.pageFailed.emit({ status }));
+  }
 
   private turnPage(p: Promise<unknown> | undefined): void {
     void p?.catch((e: unknown) => { if (!this.destroyed) this.zone.run(() => this.pageFailed.emit(e)); });

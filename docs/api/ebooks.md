@@ -621,6 +621,10 @@ im Backend `EbookCaller` (ein `int` wird implizit zum angemeldeten Aufrufer):
   Der Leser verlangt beim Öffnen 2 h Restlaufzeit (`accessToken(READER_TOKEN_MIN_MS)`, sonst neuer Ausweis); scheitert
   danach eine Seite bzw. ein Kapitel (`pageFailed` von pdf-/epub-viewer, meist 401 nach Ablauf), holt er höchstens einmal
   je Minute einen frischen Ausweis und baut an derselben Stelle neu auf, sonst Hinweis `ebooks.reader.pageFailed` (F2-005).
+  EPUB: epub.js verschluckt Kapitel-Ladefehler beim Blättern (`next()`/`prev()` lösen trotzdem auf) — der Viewer meldet
+  darum im Ordner-Modus die 401/403 eines Kapitel-/Buch-Abrufs aus seinem `book.request`-Wrapper (`patchHtmlRequests`,
+  einmal je Viewer, erst nach dem Öffnen; GL-FE2-02). Bilder/CSS lädt das Kapitel-iframe selbst — deren 401 sieht der
+  Viewer nicht.
 - **Übernahme** beim Anmelden/Registrieren (`AuthService.claimAnonymousPuzzleSession` → `POST /api/ebooks/claim-session
   { sessionId }`, `[Authorize]`): die anonymen Uploads gehören dem Konto, anonyme Lesestände werden übernommen (je Buch
   gewinnt der jüngere) und gelöscht. Antwort `{ claimed }` = Zahl der Bücher.

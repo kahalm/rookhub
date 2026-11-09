@@ -96,6 +96,21 @@ describe('patchHtmlRequests', () => {
     expect(await book.request!('https://x/epub/book.epub', 'binary')).toBe('orig');
     expect(window.fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('directory mode: 401/403 eines Eintrags meldet onDenied und wirft weiter, andere Fehler nicht (GL-FE2-02)', async () => {
+    const orig = jasmine.createSpy('request').and.callFake((url: string) =>
+      Promise.reject({ status: url.includes('forbidden') ? 403 : 404 }));
+    spyOn(window, 'fetch').and.callFake(async (u: RequestInfo | URL) =>
+      new Response('nope', { status: String(u).includes('gone') ? 404 : 401 }));
+    const denied: number[] = [];
+    const book: Parameters<typeof patchHtmlRequests>[0] = { request: orig };
+    patchHtmlRequests(book, s => denied.push(s));
+    await expectAsync(book.request!('https://x/epub/OEBPS/Text/c.html', null)).toBeRejectedWithError('HTTP 401');
+    await expectAsync(book.request!('https://x/epub/OEBPS/Text/gone.html', null)).toBeRejectedWithError('HTTP 404');
+    await expectAsync(book.request!('https://x/epub/OEBPS/Text/forbidden.xhtml', null)).toBeRejected();
+    await expectAsync(book.request!('https://x/epub/OEBPS/Text/missing.xhtml', null)).toBeRejected();
+    expect(denied).toEqual([401, 403]);
+  });
 });
 
 describe('EpubViewerComponent', () => {
@@ -185,6 +200,30 @@ describe('EpubViewerComponent', () => {
     const next = spyOn(c, 'next');
     c.onWheel(new WheelEvent('wheel', { deltaY: 300 }));
     expect(next).not.toHaveBeenCalled();
+  });
+
+  // GL-FE2-02: epub.js verschluckt Kapitel-Ladefehler beim Blättern (next()/prev() lösen auf) — der Viewer muss die
+  // Ablehnung im eigenen Abruf-Wrapper sehen. Echter Ablauf: Ordner-Modus öffnen, danach liefert der Server 401.
+  it('Ordner-Modus: abgelaufener Ausweis (401 beim Kapitel-Abruf) nach dem Öffnen → pageFailed, einmal je Viewer', async () => {
+    const c = make('/api/ebooks/9/epub/tok/');
+    let book: { request?: (url: string, type?: string | null) => Promise<unknown> } = {};
+    const ePub = () => {
+      book = { ...fakeBook(() => Promise.resolve()), request: () => Promise.resolve('orig') } as typeof book;
+      return book;
+    };
+    const opened = await (c as unknown as { openBook(f: unknown): Promise<unknown> }).openBook(ePub);
+    expect(opened).toBe(book);
+    spyOn(window, 'fetch').and.resolveTo(new Response('unauthorized', { status: 401 }));
+    const seen: unknown[] = [];
+    c.pageFailed.subscribe(e => seen.push(e));
+
+    await expectAsync(book.request!('http://rh.test/api/ebooks/9/epub/tok/OEBPS/c1.html', null)).toBeRejected();
+    expect(seen).toEqual([]);                        // noch beim Öffnen: dort gilt `failed`, nicht pageFailed
+
+    c.loading.set(false);
+    await expectAsync(book.request!('http://rh.test/api/ebooks/9/epub/tok/OEBPS/c2.html', null)).toBeRejected();
+    await expectAsync(book.request!('http://rh.test/api/ebooks/9/epub/tok/OEBPS/c3.html', null)).toBeRejected();
+    expect(seen).toEqual([{ status: 401 }]);         // einmal — der Leser baut danach einen neuen Viewer
   });
 
   it('Blättern scheitert (Kapitel nicht ladbar): pageFailed statt still (F2-005)', async () => {
