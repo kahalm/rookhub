@@ -36,7 +36,7 @@ public class ChessMaximsController : BaseApiController
         var ids = ChessMaxims.All.SelectMany(m => m.Sources).Select(s => s.EbookId).Distinct().ToList();
         var visible = (await EbookAccess.Visible(_db, caller, manageAll).Where(b => ids.Contains(b.Id)).Select(b => b.Id)
             .ToListAsync(ct)).ToHashSet();
-        return Ok(ChessMaxims.All.Select(m => new ChessMaximDto(m.Id, m.Text, m.Category, m.When,
+        return Ok(ChessMaxims.All.Select(m => new ChessMaximDto(m.Id, m.Text, m.Category, m.When, m.TextEn, m.CategoryEn, m.WhenEn,
             m.Sources.Select(s => new ChessMaximSourceDto(s.EbookId, s.Author, s.Title, s.Year, s.Location, s.Page, s.Percent,
                 s.Quote, visible.Contains(s.EbookId))).ToList())).ToList());
     }

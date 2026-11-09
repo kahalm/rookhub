@@ -4,9 +4,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { map } from 'rxjs';
-import { ChessMaxim, ChessMaximSource, ChessMaximsService, readerJump } from '../../shared/maxims/chess-maxims.service';
+import { ChessMaxim, ChessMaximSource, ChessMaximsService, localizeMaxim, readerJump } from '../../shared/maxims/chess-maxims.service';
 
 /**
  * Seite „Merksätze“ (0.917.0, Wunsch 2026-11-09: „mach irgendwo in RookHub einen Link, wo diese Merksätze aufgelistet sind —
@@ -80,6 +80,7 @@ import { ChessMaxim, ChessMaximSource, ChessMaximsService, readerJump } from '..
 })
 export class MaximsComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly translate = inject(TranslateService);
   readonly list = toSignal(inject(ChessMaximsService).all$);
   readonly openId = toSignal(this.route.queryParamMap.pipe(map(q => q.get('m'))), { initialValue: null });
   private readonly scrolled = signal(false);
@@ -87,7 +88,8 @@ export class MaximsComponent {
   /** Kategorien in der Reihenfolge der Liste. */
   readonly groups = computed(() => {
     const out: { category: string; items: ChessMaxim[] }[] = [];
-    for (const m of this.list() ?? []) {
+    const lang = this.translate.currentLang();
+    for (const m of (this.list() ?? []).map(x => localizeMaxim(x, lang))) {
       const g = out.find(x => x.category === m.category);
       if (g) g.items.push(m); else out.push({ category: m.category, items: [m] });
     }

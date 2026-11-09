@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslatePipe } from '@ngx-translate/core';
-import { ChessMaxim, ChessMaximSource, ChessMaximsService, readerJump } from './chess-maxims.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { ChessMaxim, ChessMaximSource, ChessMaximsService, localizeMaxim, readerJump } from './chess-maxims.service';
 
 /**
  * Der Merksatz unter einer Erklärung (0.917.0, Wunsch 2026-11-09: „mach dahinter immer ein (i), mit dem du auf die
@@ -63,9 +63,13 @@ export class MaximNoteComponent {
   /** Der Wortlaut des Merksatzes (aus der Erklärung). */
   readonly text = input.required<string>();
   readonly open = signal(false);
+  private readonly translate = inject(TranslateService);
   private readonly all = toSignal(inject(ChessMaximsService).all$, { initialValue: [] as ChessMaxim[] });
   /** Der passende Eintrag der Liste — nur dann gibt es das (i). */
-  readonly maxim = computed(() => ChessMaximsService.byText(this.all(), this.text()));
+  readonly maxim = computed(() => {
+    const m = ChessMaximsService.byText(this.all(), this.text());
+    return m && localizeMaxim(m, this.translate.currentLang());
+  });
 
   readonly jump = readerJump;
 

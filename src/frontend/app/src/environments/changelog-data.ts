@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.936.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Rules of thumb now also appear in English: the rule, when it applies and its category follow the interface language wherever they are shown, including under explanations and in the (i) details. German stays for German; English is used for all other languages. Book quotes stay in their original wording.',
+        de: 'Merksätze gibt es jetzt auch auf Englisch: Satz, „Wann er passt“ und Kategorie folgen überall, wo sie angezeigt werden, der Oberflächensprache, auch unter Erklärungen und im (i). Bei Deutsch bleibt alles deutsch, alle anderen Sprachen zeigen Englisch. Die Buchzitate bleiben im Originalwortlaut.' },
+    ],
+  },
+  {
     version: '0.935.0',
     date: '2026-11-09',
     changes: [

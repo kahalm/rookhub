@@ -8,8 +8,10 @@ namespace RookHub.Api.Services.Engines;
 public sealed record ChessMaximSource(int EbookId, string? Author, string? Title, string? Year, string? Location, int? Page,
     int? Percent, string? Quote);
 
-/// <summary>Ein Merksatz der kuratierten Liste: feste Kennung, fester Wortlaut, wann er passt, Belege.</summary>
-public sealed record ChessMaxim(string Id, string Text, string Category, string When, IReadOnlyList<ChessMaximSource> Sources);
+/// <summary>Ein Merksatz der kuratierten Liste: feste Kennung, fester Wortlaut, wann er passt, Belege. Die Felder <c>…En</c> sind die
+/// englische Fassung für die Anzeige; Modell-Auftrag und gespeicherte Erklärungen bleiben beim deutschen Wortlaut.</summary>
+public sealed record ChessMaxim(string Id, string Text, string Category, string When, string TextEn, string CategoryEn, string WhenEn,
+    IReadOnlyList<ChessMaximSource> Sources);
 
 /// <summary>
 /// Die vom User freigegebene Liste der Merksätze (0.917.0, Wunsch 2026-11-09: „nicht selbst erfinden die Merksätze, sondern aus

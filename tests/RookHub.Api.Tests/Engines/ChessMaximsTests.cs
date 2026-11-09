@@ -28,6 +28,25 @@ public class ChessMaximsTests
     }
 
     [Fact]
+    public void Jeder_Satz_hat_eine_vollstaendige_englische_Fassung()
+    {
+        var all = ChessMaxims.All;
+        Assert.All(all, m =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(m.TextEn), m.Id);
+            Assert.False(string.IsNullOrWhiteSpace(m.CategoryEn), m.Id);
+            Assert.False(string.IsNullOrWhiteSpace(m.WhenEn), m.Id);
+            // Kein deutscher Rest und keine versehentlich übernommene Quelle.
+            Assert.DoesNotMatch("[äöüÄÖÜß„“]", m.TextEn + m.CategoryEn + m.WhenEn);
+            Assert.NotEqual(m.Text, m.TextEn);
+            Assert.NotEqual(m.When, m.WhenEn);
+        });
+        Assert.Equal(all.Count, all.Select(m => m.TextEn).Distinct().Count());
+        // Dieselbe deutsche Kategorie hat genau eine englische.
+        Assert.All(all.GroupBy(m => m.Category), g => Assert.Single(g.Select(m => m.CategoryEn).Distinct()));
+    }
+
+    [Fact]
     public void Canonicalize_Kennung_wird_Wortlaut_Erfundenes_faellt_weg()
     {
         var m = ChessMaxims.ById("raum-und-tausch")!;
@@ -80,6 +99,9 @@ public class ChessMaximsControllerTests : IDisposable
         Assert.All(m.Sources.Where(s => s.EbookId == open), s => Assert.True(s.Accessible));
         Assert.All(m.Sources.Where(s => s.EbookId == closed), s => Assert.False(s.Accessible));
         Assert.Equal(ChessMaxims.All.Count, list.Count);
+        Assert.Equal(ChessMaxims.ById("raum-und-tausch")!.TextEn, m.TextEn);
+        Assert.False(string.IsNullOrWhiteSpace(m.WhenEn));
+        Assert.False(string.IsNullOrWhiteSpace(m.CategoryEn));
     }
 }
 

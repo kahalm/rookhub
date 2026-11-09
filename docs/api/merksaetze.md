@@ -10,6 +10,10 @@ meidet den Tausch; wer beengt steht, dem hilft jeder Tausch.“).
   (`ebookId`, Autor, Titel, Jahr, `location`, `page` = PDF-Seitenindex der Datei, `percent` = Anteil im EPUB, `quote`).
   Erzeugt aus `/srv/media/claude-sessions/merksaetze/` (scripts/entries.py → build.py prüft jedes Zitat gegen den Buchtext
   → merksaetze.json) mit `~/claude/merksaetze/export_rookhub.py <merksaetze.json> <Asset>`. Änderungen nur mit Freigabe des Users.
+- **Englisch**: `textEn`/`categoryEn`/`whenEn` je Eintrag, gepflegt in `/srv/media/claude-sessions/merksaetze/en.json` (Kennung → Felder), `export_rookhub.py`
+  mischt sie ein und warnt laut, wenn etwas fehlt. `GET /api/maxims` liefert beide Sprachen, `localizeMaxim()` wählt nach der Oberflächensprache (`de` = Deutsch,
+  alle anderen = Englisch; wechselt zur Laufzeit). Zitate bleiben im Original. Gespeicherte Erklärungen und der Modell-Auftrag behalten den deutschen Wortlaut;
+  `byText()` findet den Satz darüber und zeigt ihn übersetzt.
 - **Dienst**: `Services/Engines/ChessMaxims.cs` — `All`, `ById`, `PromptList()` (Liste für das Modell), `Canonicalize(text)`:
   „Merksatz: &lt;Kennung&gt;“ bzw. der genaue Wortlaut → „Merksatz: &lt;Wortlaut&gt;“, alles andere fällt weg, höchstens einer.
 - **Fable** (`ClubFableExplanations`): Auftrag nennt die Liste, das Modell gibt höchstens eine Kennung (oder keine) aus;

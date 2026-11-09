@@ -3,7 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { firstValueFrom } from 'rxjs';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { MaximsComponent } from './maxims.component';
 import { ChessMaxim } from '../../shared/maxims/chess-maxims.service';
 
@@ -32,5 +33,33 @@ describe('MaximsComponent (0.917.0)', () => {
     expect(links.map(a => a.getAttribute('href'))).toEqual(['/ebooks/1314?page=12&fmt=pdf']);
     expect(el.textContent).toContain('Secrets of Practical Chess');
     expect(el.textContent).toContain('maxims.noAccess');
+  });
+
+  it('zeigt Satz, Kategorie und „wann“ in der Oberflächensprache, Zitate bleiben im Original', async () => {
+    TestBed.configureTestingModule({
+      imports: [MaximsComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const f = TestBed.createComponent(MaximsComponent);
+    f.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/maxims').flush(LIST.map(m => ({
+      ...m, textEn: 'EN ' + m.id, categoryEn: 'Cat ' + m.category, whenEn: 'When ' + m.id,
+    })));
+    const translate = TestBed.inject(TranslateService);
+    const el = f.nativeElement as HTMLElement;
+    const heads = () => Array.from(el.querySelectorAll('h2')).map(h => h.textContent);
+
+    await firstValueFrom(translate.use('de'));
+    f.detectChanges();
+    expect(heads()).toEqual(['Figuren', 'Taktik']);
+    expect(el.textContent).toContain('Springer am Rand bringt Kummer und Schand.');
+
+    await firstValueFrom(translate.use('hr'));
+    f.detectChanges();
+    expect(heads()).toEqual(['Cat Figuren', 'Cat Taktik']);
+    expect(el.textContent).toContain('EN springer-am-rand');
+    expect(el.textContent).not.toContain('Springer am Rand bringt');
+    expect(el.textContent).toContain('Loose pieces drop off');
   });
 });

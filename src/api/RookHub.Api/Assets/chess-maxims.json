@@ -4,6 +4,9 @@
   "text": "In der Eröffnung ein, zwei Bauernzüge, nicht mehr.",
   "category": "Eröffnung",
   "when": "In den ersten etwa 12 Zügen mehrere Bauernzüge (besonders Rand- oder Flügelbauern), während Leichtfiguren noch auf der Grundreihe stehen.",
+  "textEn": "In the opening, one or two pawn moves, no more.",
+  "categoryEn": "Opening",
+  "whenEn": "In the first 12 or so moves, several pawn moves (especially rook or flank pawns) while minor pieces are still on the back rank.",
   "sources": [
    {
     "ebookId": 1512,
@@ -48,6 +51,9 @@
   "text": "Vor vollendeter Entwicklung keine Figur zweimal ziehen.",
   "category": "Eröffnung",
   "when": "Dieselbe Leichtfigur oder Dame wird in der Eröffnung mehrfach gezogen (ohne taktischen Grund), andere Figuren bleiben stehen.",
+  "textEn": "Don't move a piece twice before completing your development.",
+  "categoryEn": "Opening",
+  "whenEn": "The same minor piece or the queen is moved repeatedly in the opening (without a tactical reason) while other pieces stay at home.",
   "sources": [
    {
     "ebookId": 1512,
@@ -101,6 +107,9 @@
   "text": "Die Dame nicht zu früh ins Spiel.",
   "category": "Eröffnung",
   "when": "Die Dame zieht früh heraus und verliert durch Angriffe gegnerischer Leichtfiguren Tempi.",
+  "textEn": "Don't bring the queen out too early.",
+  "categoryEn": "Opening",
+  "whenEn": "The queen comes out early and loses tempi to attacks by enemy minor pieces.",
   "sources": [
    {
     "ebookId": 1377,
@@ -145,6 +154,9 @@
   "text": "Wer nicht rochiert, verliert.",
   "category": "Eröffnung",
   "when": "Der König steht noch auf e1/e8, während Linien im Zentrum aufgehen oder der Gegner entwickelt ist; Rochade wurde verschleppt.",
+  "textEn": "Fail to castle and you lose.",
+  "categoryEn": "Opening",
+  "whenEn": "The king is still on e1/e8 while lines are opening in the center or the opponent is developed; castling has been put off.",
   "sources": [
    {
     "ebookId": 605,
@@ -189,6 +201,9 @@
   "text": "Mit Entwicklungsvorsprung öffne das Spiel.",
   "category": "Eröffnung",
   "when": "Eine Seite hat klar mehr Figuren entwickelt, spielt aber langsam und lässt die Stellung geschlossen (oder die rückständige Seite öffnet selbst).",
+  "textEn": "With a lead in development, open the game.",
+  "categoryEn": "Opening",
+  "whenEn": "One side has clearly more pieces developed but plays slowly and keeps the position closed (or the side that is behind opens it itself).",
   "sources": [
    {
     "ebookId": 1168,
@@ -242,6 +257,9 @@
   "text": "Spiele nie bei unvollendeter Entwicklung auf Bauerngewinn.",
   "category": "Eröffnung",
   "when": "Ein Spieler schlägt einen (oft Flügel-)Bauern mit Dame oder Figur und gerät dadurch weiter in Entwicklungsrückstand oder in einen Angriff.",
+  "textEn": "Never go pawn-grabbing while your development is unfinished.",
+  "categoryEn": "Opening",
+  "whenEn": "A player captures a pawn (often a flank pawn) with the queen or a piece and falls further behind in development or walks into an attack.",
   "sources": [
    {
     "ebookId": 1265,
@@ -295,6 +313,9 @@
   "text": "Wer das Zentrum beherrscht, sichert sich die Initiative.",
   "category": "Eröffnung",
   "when": "Ein Spieler überlässt dem Gegner kampflos das Zentrum (z. B. Randzüge statt e4/d4/c4/f4 oder Figurenkontrolle von d4/e4/d5/e5).",
+  "textEn": "Whoever controls the center secures the initiative.",
+  "categoryEn": "Opening",
+  "whenEn": "A player gives up the center without a fight (e.g., moves on the edge of the board instead of e4/d4/c4/f4 or piece control of d4/e4/d5/e5).",
   "sources": [
    {
     "ebookId": 1328,
@@ -330,6 +351,9 @@
   "text": "Ein Fehler mit einem Bauernzug ist unwiderruflich.",
   "category": "Bauernstruktur",
   "when": "Ein unnötiger Bauernzug schafft ein Loch oder einen schwachen Bauern, den der Gegner später ausnutzt.",
+  "textEn": "A mistake with a pawn move cannot be undone.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "An unnecessary pawn move creates a hole or a weak pawn that the opponent later exploits.",
   "sources": [
    {
     "ebookId": 6561,
@@ -365,6 +389,9 @@
   "text": "Richte den Angriff gegen die Basis der Bauernkette.",
   "category": "Bauernstruktur",
   "when": "Geschlossene Bauernkette (z. B. Französisch d4-e5, Königsindisch d5-e4); ein Spieler greift die Spitze statt des hintersten Kettenbauern an oder wählt den falschen Hebel.",
+  "textEn": "Attack the pawn chain at its base.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "Closed pawn chain (e.g., French d4-e5, King's Indian d5-e4); a player attacks the head instead of the rearmost pawn of the chain, or picks the wrong pawn break.",
   "sources": [
    {
     "ebookId": 1265,
@@ -418,6 +445,9 @@
   "text": "Spiele in Richtung deiner Bauernkette.",
   "category": "Bauernstruktur",
   "when": "Bei geschlossener Bauernkette startet ein Spieler sein Spiel auf dem falschen Flügel statt dort, wohin die Kette weist (Raumvorteil).",
+  "textEn": "Play where your pawn chain points.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "With a closed pawn chain, a player starts action on the wrong wing instead of where the chain points (space advantage).",
   "sources": [
    {
     "ebookId": 6625,
@@ -462,6 +492,9 @@
   "text": "Gegen den Isolani: erst blockieren, dann angreifen, und Figuren tauschen.",
   "category": "Bauernstruktur",
   "when": "Der Gegner hat einen Isolani (oft d4/d5); der Spieler lässt ihn vorrücken (d4-d5-Durchbruch) oder vermeidet den Figurentausch.",
+  "textEn": "Against the isolani: first blockade, then attack, and trade pieces.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "The opponent has an isolani (often on d4/d5); the player lets it advance (the d4-d5 break) or avoids exchanging pieces.",
   "sources": [
    {
     "ebookId": 1168,
@@ -497,6 +530,9 @@
   "text": "Mit dem Isolani spiel aktiv: Nach dem Figurentausch bleibt nur die Schwäche.",
   "category": "Bauernstruktur",
   "when": "Der Spieler mit Isolani tauscht passiv Figuren ab oder spielt defensiv, statt Initiative (Vorposten e5/c5, Königsangriff, d4-d5) zu suchen.",
+  "textEn": "With the isolani, play actively: once the pieces are traded, only the weakness remains.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "The player with the isolani passively trades pieces or defends instead of seeking the initiative (outposts on e5/c5, a kingside attack, d4-d5).",
   "sources": [
    {
     "ebookId": 1264,
@@ -532,6 +568,9 @@
   "text": "Jede gesunde Bauernmehrheit muss einen Freibauern ergeben; der Bauer ohne Gegenüber geht voran.",
   "category": "Bauernstruktur",
   "when": "Ein Spieler hat eine Bauernmehrheit auf einem Flügel (z. B. Damenflügel 3:2), mobilisiert sie aber nicht oder zieht den falschen Bauern zuerst.",
+  "textEn": "Every healthy pawn majority must yield a passed pawn; the unopposed pawn leads the way.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "A player has a pawn majority on one wing (e.g., 3:2 on the queenside) but does not mobilize it or advances the wrong pawn first.",
   "sources": [
    {
     "ebookId": 1265,
@@ -567,6 +606,9 @@
   "text": "Ein Freibauer gehört hinter Schloss und Riegel, am besten hinter einen Springer.",
   "category": "Bauernstruktur",
   "when": "Ein gegnerischer Freibauer kann ungehindert vorrücken, weil das Feld vor ihm nicht mit einer Figur besetzt wurde.",
+  "textEn": "A passed pawn must be kept under lock and key, ideally by a knight.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "An enemy passed pawn can advance unhindered because the square in front of it was not occupied by a piece.",
   "sources": [
    {
     "ebookId": 1264,
@@ -620,6 +662,9 @@
   "text": "Freibauern müssen laufen.",
   "category": "Bauernstruktur",
   "when": "Ein Spieler hat einen (gedeckten oder verbundenen) Freibauern, lässt ihn aber stehen, bis der Gegner ihn blockiert.",
+  "textEn": "Passed pawns must be pushed.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "A player has a (protected or connected) passed pawn but leaves it standing until the opponent blockades it.",
   "sources": [
    {
     "ebookId": 605,
@@ -673,6 +718,9 @@
   "text": "Hast du die Wahl, schlage mit dem Bauern zur Mitte hin.",
   "category": "Bauernstruktur",
   "when": "Bauernschlag mit Wahl (z. B. bxc oder dxc), bei dem vom Zentrum weg geschlagen wird und die Struktur ohne Not schlechter wird.",
+  "textEn": "Given the choice, capture toward the center with your pawn.",
+  "categoryEn": "Pawn structure",
+  "whenEn": "A pawn capture with a choice (e.g., bxc or dxc) that goes away from the center and needlessly worsens the structure.",
   "sources": [
    {
     "ebookId": 6625,
@@ -717,6 +765,9 @@
   "text": "Wer Raum hat, meidet den Tausch; wer beengt steht, dem hilft jeder Tausch.",
   "category": "Figuren",
   "when": "Die Seite mit klarem Raumvorteil tauscht Figuren ab und befreit damit den Gegner; oder die beengte Seite weicht Tauschangeboten aus und stellt ihre Figuren weiter zusammen, statt durch Abtausch Luft zu schaffen.",
+  "textEn": "With more space, avoid exchanges; when cramped, every exchange helps.",
+  "categoryEn": "Pieces",
+  "whenEn": "The side with a clear space advantage exchanges pieces and thereby frees the opponent; or the cramped side dodges offers to exchange and keeps its pieces crammed together instead of gaining air through trades.",
   "sources": [
    {
     "ebookId": 1391,
@@ -842,6 +893,9 @@
   "text": "Hast du einen Läufer, stell die Bauern auf die andere Farbe; hat ihn der Gegner, auf seine.",
   "category": "Figuren",
   "when": "Ein Spieler legt seine Bauern auf die Farbe seines einzigen Läufers fest (schlechter Läufer), oder er stellt sie (besonders vom König gestützte Freibauern) auf die Farbe, die der gegnerische Läufer nicht beherrscht — besonders beim Übergang ins Endspiel.",
+  "textEn": "If you have a bishop, put your pawns on the opposite color; if your opponent has one, on its color.",
+  "categoryEn": "Pieces",
+  "whenEn": "A player fixes their pawns on the color of their only bishop (bad bishop), or places them (especially passed pawns supported by the king) on the color the enemy bishop does not control, particularly when heading into the endgame.",
   "sources": [
    {
     "ebookId": 6636,
@@ -903,6 +957,9 @@
   "text": "Mit Bauern auf beiden Flügeln ist der Läufer besser als der Springer.",
   "category": "Figuren",
   "when": "Tausch von Läufer gegen Springer (oder Abwicklung ins Endspiel), obwohl Bauern auf beiden Brettseiten stehen und das Spiel offen ist.",
+  "textEn": "With pawns on both wings, the bishop is better than the knight.",
+  "categoryEn": "Pieces",
+  "whenEn": "Exchanging a bishop for a knight (or transposing into an endgame) even though there are pawns on both sides of the board and the game is open.",
   "sources": [
    {
     "ebookId": 2315,
@@ -955,6 +1012,9 @@
   "text": "Springer am Rand bringt Kummer und Schand.",
   "category": "Figuren",
   "when": "Ein Springer wird ohne konkreten Grund auf die a- oder h-Linie gezogen und verliert dort an Wirkung.",
+  "textEn": "A knight on the rim is dim.",
+  "categoryEn": "Pieces",
+  "whenEn": "A knight is moved to the a- or h-file without a concrete reason and loses its effectiveness there.",
   "sources": [
    {
     "ebookId": 1328,
@@ -1008,6 +1068,9 @@
   "text": "Ein Springer auf einem Vorposten, den kein Bauer vertreiben kann, ist sehr stark.",
   "category": "Figuren",
   "when": "Ein geschütztes Feld im gegnerischen Lager (z. B. d5, e5, c5) bleibt ungenutzt, oder man lässt einen gegnerischen Springer dort dauerhaft stehen.",
+  "textEn": "A knight on an outpost that no pawn can drive away is very strong.",
+  "categoryEn": "Pieces",
+  "whenEn": "A protected square in the enemy camp (e.g., d5, e5, c5) goes unused, or an enemy knight is allowed to stay there permanently.",
   "sources": [
    {
     "ebookId": 1168,
@@ -1043,6 +1106,9 @@
   "text": "Der Besitzer des Läuferpaares muss offenes Spiel anstreben.",
   "category": "Figuren",
   "when": "Der Besitzer des Läuferpaars hält die Stellung geschlossen (oder der Gegner öffnet sie ihm ohne Not).",
+  "textEn": "The player with the bishop pair must aim for open play.",
+  "categoryEn": "Pieces",
+  "whenEn": "The player with the bishop pair keeps the position closed (or the opponent needlessly opens it for them).",
   "sources": [
    {
     "ebookId": 1375,
@@ -1087,6 +1153,9 @@
   "text": "Türme gehören auf offene Linien.",
   "category": "Figuren",
   "when": "Ein Turm bleibt hinter eigenen Bauern stehen, während eine offene Linie frei ist oder vom Gegner besetzt wird.",
+  "textEn": "Rooks belong on open files.",
+  "categoryEn": "Pieces",
+  "whenEn": "A rook stays behind its own pawns while an open file is available or is being taken over by the opponent.",
   "sources": [
    {
     "ebookId": 1168,
@@ -1140,6 +1209,9 @@
   "text": "Die siebte Reihe ist das Ziel jeder offenen Linie.",
   "category": "Figuren",
   "when": "Ein Turm könnte auf die 7. (bzw. 2.) Reihe eindringen und Bauern angreifen oder den König einsperren, wird aber nicht dorthin geführt (oder der Gegner wird hineingelassen).",
+  "textEn": "The seventh rank is the goal of every open file.",
+  "categoryEn": "Pieces",
+  "whenEn": "A rook could penetrate to the 7th (or 2nd) rank and attack pawns or confine the king, but is not brought there (or the opponent is allowed in).",
   "sources": [
    {
     "ebookId": 1265,
@@ -1175,6 +1247,9 @@
   "text": "Verbessere deine schlechteste Figur.",
   "category": "Figuren",
   "when": "In ruhiger Stellung ohne konkrete Drohungen zieht ein Spieler bereits gut stehende Figuren, während eine Figur untätig bleibt.",
+  "textEn": "Improve your worst piece.",
+  "categoryEn": "Pieces",
+  "whenEn": "In a quiet position with no concrete threats, a player moves pieces that are already well placed while one piece stays idle.",
   "sources": [
    {
     "ebookId": 1157,
@@ -1210,6 +1285,9 @@
   "text": "Tausche deine schlechte Figur gegen eine gute des Gegners.",
   "category": "Figuren",
   "when": "Ein Spieler tauscht seine aktive Figur gegen eine passive des Gegners ab (oder lässt die Gelegenheit aus, seinen schlechten Läufer loszuwerden).",
+  "textEn": "Trade your bad piece for a good enemy piece.",
+  "categoryEn": "Pieces",
+  "whenEn": "A player exchanges an active piece for a passive enemy piece (or misses the chance to get rid of a bad bishop).",
   "sources": [
    {
     "ebookId": 4204,
@@ -1245,6 +1323,9 @@
   "text": "Einen Flügelangriff beantwortet man am besten mit einem Gegenstoß im Zentrum.",
   "category": "Angriff/Verteidigung",
   "when": "Der Gegner greift am Flügel an, während das Zentrum offen oder beweglich ist; der Verteidiger reagiert nur passiv am Flügel.",
+  "textEn": "A wing attack is best met by a counterattack in the center.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "The opponent attacks on the wing while the center is open or mobile; the defender only reacts passively on the wing.",
   "sources": [
    {
     "ebookId": 1023,
@@ -1289,6 +1370,9 @@
   "text": "Wer im Vorteil ist, ist zum Angriff verpflichtet.",
   "category": "Angriff/Verteidigung",
   "when": "Ein Spieler hat einen (oft vorübergehenden) Vorteil wie Entwicklungsvorsprung oder Initiative, spielt aber abwartend, bis der Vorteil verschwunden ist.",
+  "textEn": "The player with the advantage is obliged to attack.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "A player has an (often temporary) advantage such as a lead in development or the initiative, but waits until the advantage has gone.",
   "sources": [
    {
     "ebookId": 1536,
@@ -1324,6 +1408,9 @@
   "text": "Ziehe keinen Rochadebauern ohne Not.",
   "category": "Angriff/Verteidigung",
   "when": "Züge wie h3/h6, g4/g5 oder f3/f6 vor dem eigenen rochierten König ohne Zwang, die Angriffsziele oder Löcher schaffen.",
+  "textEn": "Don't move a pawn in front of your castled king without need.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "Moves like h3/h6, g4/g5, or f3/f6 in front of one's own castled king, made without compulsion, that create targets or holes.",
   "sources": [
    {
     "ebookId": 605,
@@ -1368,6 +1455,9 @@
   "text": "Bei entgegengesetzten Rochaden stürmen die Bauern rücksichtslos gegen den König.",
   "category": "Angriff/Verteidigung",
   "when": "Ungleichseitige Rochaden; ein Spieler verliert Zeit mit Verteidigungszügen oder zieht Bauern vor dem eigenen König, statt seinen Bauernsturm zu beschleunigen.",
+  "textEn": "With opposite-side castling, the pawns storm the enemy king ruthlessly.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "Opposite-side castling; a player loses time on defensive moves or moves pawns in front of their own king instead of speeding up their pawn storm.",
   "sources": [
    {
     "ebookId": 6702,
@@ -1403,6 +1493,9 @@
   "text": "Der Angreifer tauscht die Verteidiger ab, der Verteidiger die Angreifer.",
   "category": "Angriff/Verteidigung",
   "when": "Der Angreifer häuft weitere Figuren an, statt einen Verteidiger des Ziels (König, schwacher Bauer, Feld) abzutauschen; oder der Verteidiger weicht dem Tausch gegen die gefährlichsten Angriffsfiguren aus.",
+  "textEn": "The attacker trades off the defenders, the defender trades off the attackers.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "The attacker piles up more pieces instead of exchanging a defender of the target (king, weak pawn, square); or the defender avoids exchanging the most dangerous attacking pieces.",
   "sources": [
    {
     "ebookId": 1265,
@@ -1465,6 +1558,9 @@
   "text": "Ungleichfarbige Läufer helfen im Mittelspiel dem Angreifer, im Endspiel dem Verteidiger.",
   "category": "Angriff/Verteidigung",
   "when": "Bei ungleichfarbigen Läufern mit vielen Figuren unterschätzt ein Spieler den Angriff auf die Felder, die der gegnerische Läufer nicht decken kann; oder ein Spieler mit Mehrbauern tauscht in ein Endspiel mit ungleichfarbigen Läufern ab, bzw. der Verteidiger übersieht diese Rettung.",
+  "textEn": "Opposite-colored bishops help the attacker in the middlegame and the defender in the endgame.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "With opposite-colored bishops and many pieces on the board, a player underestimates the attack on the squares the enemy bishop cannot cover; or a player with extra pawns trades into an opposite-colored-bishop endgame, or the defender overlooks this saving resource.",
   "sources": [
    {
     "ebookId": 29,
@@ -1536,6 +1632,9 @@
   "text": "Schaffe deinem König rechtzeitig ein Luftloch.",
   "category": "Angriff/Verteidigung",
   "when": "Der König steht hinter unbewegten Bauern (z. B. f2-g2-h2) und die Grundreihe ist nur schwach gedeckt; eine Grundreihen-Taktik wird möglich.",
+  "textEn": "Make luft for your king in good time.",
+  "categoryEn": "Attack/Defense",
+  "whenEn": "The king stands behind unmoved pawns (e.g., f2-g2-h2) and the back rank is only weakly covered; a back-rank tactic becomes possible.",
   "sources": [
    {
     "ebookId": 2140,
@@ -1562,6 +1661,9 @@
   "text": "Prüfe vor jedem Zug die Schachs, Schläge und Drohungen des Gegners.",
   "category": "Taktik",
   "when": "Ein Zug stellt Material ein oder erlaubt eine einfache Kombination, weil die forcierenden Antworten des Gegners nicht geprüft wurden.",
+  "textEn": "Before every move, consider your opponent's checks, captures, and threats.",
+  "categoryEn": "Tactics",
+  "whenEn": "A move loses material or allows a simple combination because the opponent's forcing replies were not examined.",
   "sources": [
    {
     "ebookId": 882,
@@ -1588,6 +1690,9 @@
   "text": "Ungedeckte Figuren fallen.",
   "category": "Taktik",
   "when": "Eine ungedeckte Figur fällt einer Gabel, einem Doppelangriff oder Abzug zum Opfer.",
+  "textEn": "Loose pieces drop off.",
+  "categoryEn": "Tactics",
+  "whenEn": "A loose piece falls victim to a fork, double attack, or discovered attack.",
   "sources": [
    {
     "ebookId": 1328,
@@ -1623,6 +1728,9 @@
   "text": "Die Drohung ist stärker als die Ausführung.",
   "category": "Taktik",
   "when": "Ein Spieler führt eine Drohung (Schlag, Tausch, Abzug) sofort aus und löst damit die Spannung, obwohl das Aufrechterhalten den Gegner stärker gebunden hätte.",
+  "textEn": "The threat is stronger than the execution.",
+  "categoryEn": "Tactics",
+  "whenEn": "A player carries out a threat (capture, exchange, discovered attack) at once and releases the tension, although maintaining it would have tied the opponent down more.",
   "sources": [
    {
     "ebookId": 1914,
@@ -1667,6 +1775,9 @@
   "text": "Im Endspiel ist der König eine starke Figur.",
   "category": "Endspiel",
   "when": "Nach dem Damentausch bleibt der König am Rand oder auf der Grundreihe, statt aktiv ins Zentrum oder zu den Bauern zu gehen.",
+  "textEn": "In the endgame, the king is a strong piece.",
+  "categoryEn": "Endgame",
+  "whenEn": "After the queens come off, the king stays on the edge or the back rank instead of heading actively to the center or the pawns.",
   "sources": [
    {
     "ebookId": 1265,
@@ -1729,6 +1840,9 @@
   "text": "Der Turm gehört hinter den Freibauern, hinter den eigenen wie hinter den feindlichen.",
   "category": "Endspiel",
   "when": "Im Turmendspiel steht der Turm vor oder neben einem Freibauern (eigenem oder gegnerischem) statt dahinter.",
+  "textEn": "The rook belongs behind the passed pawn, your own and the enemy's alike.",
+  "categoryEn": "Endgame",
+  "whenEn": "In a rook endgame the rook stands in front of or beside a passed pawn (own or enemy) instead of behind it.",
   "sources": [
    {
     "ebookId": 1265,
@@ -1791,6 +1905,9 @@
   "text": "Wer mehr Material hat, tauscht Figuren; wer weniger hat, tauscht Bauern.",
   "category": "Endspiel",
   "when": "Die stärkere Seite vermeidet Figurentausch oder tauscht Bauern ab; oder die schwächere Seite tauscht Figuren ab, statt Bauern abzutauschen und auf ein theoretisches Remis hinzuarbeiten.",
+  "textEn": "The side with more material trades pieces; the side with less trades pawns.",
+  "categoryEn": "Endgame",
+  "whenEn": "The stronger side avoids exchanging pieces or trades pawns; or the weaker side trades pieces instead of exchanging pawns and working toward a theoretical draw.",
   "sources": [
    {
     "ebookId": 605,
@@ -1844,6 +1961,9 @@
   "text": "Eine Schwäche zu verteidigen ist schwer, mehrere fast unmöglich.",
   "category": "Endspiel",
   "when": "Ein Spieler greift im Endspiel mit Vorteil immer nur dieselbe Schwäche an, die der Gegner ausreichend decken kann.",
+  "textEn": "One weakness is hard to defend, several almost impossible.",
+  "categoryEn": "Endgame",
+  "whenEn": "With an endgame advantage, a player keeps attacking only the same weakness, which the opponent can adequately defend.",
   "sources": [
    {
     "ebookId": 129,
@@ -1906,6 +2026,9 @@
   "text": "Im besseren Endspiel gilt: Nicht eilen!",
   "category": "Endspiel",
   "when": "Ein Spieler mit klarem Endspielvorteil sucht die sofortige Entscheidung (voreiliger Bauernvorstoß, Abtausch), statt zuerst König und Figuren optimal zu postieren.",
+  "textEn": "In a better endgame: do not hurry!",
+  "categoryEn": "Endgame",
+  "whenEn": "A player with a clear endgame advantage seeks an immediate decision (premature pawn advance, exchange) instead of first placing king and pieces optimally.",
   "sources": [
    {
     "ebookId": 816,
@@ -1950,6 +2073,9 @@
   "text": "Im Turmendspiel ist die Aktivität des Turms das oberste Prinzip.",
   "category": "Endspiel",
   "when": "Im Turmendspiel verteidigt ein Turm passiv einen Bauern von hinten/von der Seite, statt aktiv Gegenspiel zu suchen, oder man opfert ungern einen Bauern für Turmaktivität.",
+  "textEn": "In rook endgames, rook activity is the supreme principle.",
+  "categoryEn": "Endgame",
+  "whenEn": "In a rook endgame a rook passively defends a pawn from behind or from the side instead of actively seeking counterplay, or a player is reluctant to give up a pawn for rook activity.",
   "sources": [
    {
     "ebookId": 1155,
@@ -1985,6 +2111,9 @@
   "text": "Ohne Opposition keine Umwandlung.",
   "category": "Endspiel",
   "when": "König-und-Bauern-Endspiel, in dem ein König den falschen Zug macht und dem Gegner die Opposition überlässt.",
+  "textEn": "Without the opposition, no promotion.",
+  "categoryEn": "Endgame",
+  "whenEn": "King-and-pawn endgame in which a king makes the wrong move and hands the opponent the opposition.",
   "sources": [
    {
     "ebookId": 29,
@@ -2029,6 +2158,9 @@
   "text": "Steht der König im Quadrat des Bauern, holt er ihn ein.",
   "category": "Endspiel",
   "when": "Bauernwettlauf, in dem ein Spieler falsch einschätzt, ob sein König den gegnerischen Freibauern noch einholt.",
+  "textEn": "If the king is inside the pawn's square, it catches the pawn.",
+  "categoryEn": "Endgame",
+  "whenEn": "Pawn race in which a player misjudges whether their king can still catch the enemy passed pawn.",
   "sources": [
    {
     "ebookId": 1328,
@@ -2073,6 +2205,9 @@
   "text": "Ins Bauernendspiel geht man nur nach genauer Rechnung.",
   "category": "Endspiel",
   "when": "Ein Spieler tauscht die letzten Figuren ab und landet in einem verlorenen Bauernendspiel (oder verpasst ein gewonnenes).",
+  "textEn": "Enter a pawn endgame only after precise calculation.",
+  "categoryEn": "Endgame",
+  "whenEn": "A player trades off the last pieces and lands in a lost pawn endgame (or misses a won one).",
   "sources": [
    {
     "ebookId": 803,
@@ -2108,6 +2243,9 @@
   "text": "Suche zuerst alle Kandidatenzüge, bevor du einen davon tief rechnest.",
   "category": "Praxis/Denken",
   "when": "Ein Spieler rechnet den erstbesten Zug und übersieht eine stärkere Alternative (oft eine einfache Taktik oder einen ruhigen Zug).",
+  "textEn": "First find all the candidate moves before calculating any of them deeply.",
+  "categoryEn": "Practice/Thinking",
+  "whenEn": "A player calculates the first move that comes to mind and overlooks a stronger alternative (often a simple tactic or a quiet move).",
   "sources": [
    {
     "ebookId": 734,
@@ -2143,6 +2281,9 @@
   "text": "Siehst du einen guten Zug, such einen besseren.",
   "category": "Praxis/Denken",
   "when": "Ein Spieler spielt einen naheliegenden guten Zug, obwohl es einen deutlich stärkeren (z. B. Kombination, Zwischenzug) gab.",
+  "textEn": "When you see a good move, look for a better one.",
+  "categoryEn": "Practice/Thinking",
+  "whenEn": "A player plays an obvious good move although there was a considerably stronger one (e.g., a combination or a zwischenzug).",
   "sources": [
    {
     "ebookId": 1023,
@@ -2169,6 +2310,9 @@
   "text": "Frage dich bei jedem Zug: Was will der Gegner?",
   "category": "Praxis/Denken",
   "when": "Ein Spieler verfolgt nur seinen eigenen Plan und übersieht die Idee oder Drohung hinter dem letzten gegnerischen Zug.",
+  "textEn": "On every move, ask yourself: what does my opponent want?",
+  "categoryEn": "Practice/Thinking",
+  "whenEn": "A player only pursues their own plan and overlooks the idea or threat behind the opponent's last move.",
   "sources": [
    {
     "ebookId": 1081,
@@ -2213,6 +2357,9 @@
   "text": "Der Plan ergibt sich aus dem Charakter der Stellung.",
   "category": "Praxis/Denken",
   "when": "Ziellose Züge (hin und her, Einzelaktionen) ohne Bezug zu Bauernstruktur, Schwächen oder Figurenverteilung.",
+  "textEn": "The plan follows from the character of the position.",
+  "categoryEn": "Practice/Thinking",
+  "whenEn": "Aimless moves (shuffling back and forth, isolated actions) unrelated to pawn structure, weaknesses, or piece placement.",
   "sources": [
    {
     "ebookId": 1914,
@@ -2257,6 +2404,9 @@
   "text": "Wer besser steht, unterbindet zuerst das gegnerische Gegenspiel.",
   "category": "Praxis/Denken",
   "when": "Ein Spieler mit Vorteil stürmt sofort los und erlaubt dem Gegner aktives Gegenspiel, statt dessen Möglichkeiten zuerst einzuschränken.",
+  "textEn": "When you stand better, first shut down your opponent's counterplay.",
+  "categoryEn": "Practice/Thinking",
+  "whenEn": "A player with an advantage storms ahead at once and allows the opponent active counterplay instead of first limiting their options.",
   "sources": [
    {
     "ebookId": 1314,
@@ -2292,6 +2442,9 @@
   "text": "Läufer sind wie Scharfschützen: Sie stehen hinten und greifen aus der Ferne an.",
   "category": "Figuren",
   "when": "Ein Läufer wird ohne Not weit nach vorn ins Gedränge gezogen, wo er von Bauern oder Leichtfiguren vertrieben wird oder eigenen Figuren im Weg steht, statt aus sicherer Entfernung (lange Diagonale, Fianchetto) zu wirken.",
+  "textEn": "Bishops are like snipers: they stay back and attack from afar.",
+  "categoryEn": "Pieces",
+  "whenEn": "A bishop is needlessly moved far forward into the fray, where it is driven away by pawns or minor pieces or gets in the way of its own pieces, instead of working from a safe distance (long diagonal, fianchetto).",
   "sources": [
    {
     "ebookId": 1377,

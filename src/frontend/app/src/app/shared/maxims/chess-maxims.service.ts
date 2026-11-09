@@ -11,7 +11,17 @@ export interface ChessMaximSource {
 }
 
 /** Ein Merksatz der kuratierten Liste (`GET /api/maxims`). */
-export interface ChessMaxim { id: string; text: string; category: string; when: string; sources: ChessMaximSource[]; }
+export interface ChessMaxim {
+  id: string; text: string; category: string; when: string; sources: ChessMaximSource[];
+  /** Englische Fassung (Anzeige in jeder Sprache außer Deutsch); `text` bleibt der Schlüssel der gespeicherten Erklärungen. */
+  textEn?: string | null; categoryEn?: string | null; whenEn?: string | null;
+}
+
+/** Der Merksatz in der Oberflächensprache: Deutsch nur bei `de`, sonst Englisch als Rückfall für alle weiteren Sprachen. */
+export function localizeMaxim(m: ChessMaxim, lang: string | null | undefined): ChessMaxim {
+  if (/^de\b/i.test(lang ?? '')) return m;
+  return { ...m, text: m.textEn || m.text, category: m.categoryEn || m.category, when: m.whenEn || m.when };
+}
 
 /** Sprung in den Leser: PDF-Seite (`fmt=pdf` — sonst öffnet das bevorzugte EPUB ohne Seiten) bzw. Anteil im EPUB. */
 export function readerJump(s: ChessMaximSource): Record<string, string | number> {
@@ -36,9 +46,9 @@ export class ChessMaximsService {
   readonly all$: Observable<ChessMaxim[]> = this.http.get<ChessMaxim[]>('/api/maxims').pipe(
     catchError(() => of([] as ChessMaxim[])), shareReplay(1));
 
-  /** Der Merksatz mit genau diesem Wortlaut (die Erklärung trägt den festen Text, nicht die Kennung). */
+  /** Der Merksatz mit genau diesem Wortlaut, deutsch oder englisch (die Erklärung trägt den festen Text, nicht die Kennung). */
   static byText(all: readonly ChessMaxim[], text: string): ChessMaxim | null {
     const norm = (s: string) => s.trim().replace(/[.„“"]+$/g, '').replace(/^[„"]/, '');
-    return all.find(m => m.id === text.trim() || norm(m.text) === norm(text)) ?? null;
+    return all.find(m => m.id === text.trim() || norm(m.text) === norm(text) || (!!m.textEn && norm(m.textEn) === norm(text))) ?? null;
   }
 }
