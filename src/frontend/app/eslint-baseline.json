@@ -11,7 +11,11 @@
   "@angular-eslint/prefer-standalone": 0,
   "@angular-eslint/use-lifecycle-interface": 0,
   "@typescript-eslint/ban-ts-comment": 0,
+<<<<<<< HEAD
   "@typescript-eslint/no-empty-function": 77,
+=======
+  "@typescript-eslint/no-empty-function": 73,
+>>>>>>> 79ca705e5 (chore(lint): Ratschen-Baselines gesenkt (no-empty-function, OnPush, color-no-hex, disallowed-list))
   "@typescript-eslint/no-explicit-any": 15,
   "no-alert": 0,
   "no-console": 7,
