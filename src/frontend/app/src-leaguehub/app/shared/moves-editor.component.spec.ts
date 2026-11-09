@@ -1,3 +1,5 @@
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -19,13 +21,51 @@ describe('MovesEditorComponent', () => {
     return fixture.componentInstance;
   }
 
+  let ask: jasmine.Spy;
+
   beforeEach(() => {
     api = jasmine.createSpyObj<LineupsApiService>('LineupsApiService', ['lineups', 'saveMoves']);
     explorer = jasmine.createSpyObj<ExplorerPathsService>('ExplorerPathsService', ['hasLocal', 'paths']);
     explorer.hasLocal.and.resolveTo(true);
+    ask = jasmine.createSpy('ask').and.returnValue(of(false));
     TestBed.configureTestingModule({ imports: [MovesEditorComponent], providers: [{ provide: LineupsApiService, useValue: api },
-      { provide: ExplorerPathsService, useValue: explorer }, provideTranslateService({ fallbackLang: 'de' })] });
+      { provide: ExplorerPathsService, useValue: explorer }, provideTranslateService({ fallbackLang: 'de' }),
+      { provide: ConfirmService, useValue: { ask } }] });
     fixture = TestBed.createComponent(MovesEditorComponent);
+  });
+
+  // Codereview F4-006: Escape/Hintergrund/Abbrechen verwarfen getippte Züge ohne Rückfrage; der Fokus ging nicht zurück.
+  it('Schließen ohne Änderung sofort, mit getippten Zügen erst nach Rückfrage', async () => {
+    const c = render('e4');
+    let closed = 0;
+    c.closed.subscribe(() => closed++);
+    await c.requestClose();
+    expect(closed).toBe(1);
+    expect(ask).not.toHaveBeenCalled();
+
+    c.onType('1.e4 e5');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await fixture.whenStable();
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(closed).toBe(1);                                         // „nein“: bleibt offen
+    ask.and.returnValue(of(true));
+    (Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button'))
+      .find(b => b.textContent?.trim() === 'Abbrechen')!).click();
+    await fixture.whenStable();
+    expect(closed).toBe(2);
+  });
+
+  it('Fokus bleibt im Dialog (Fokusfalle) und geht beim Schließen an den Auslöser zurück', () => {
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+    try {
+      render();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('section[role=dialog]')?.hasAttribute('cdktrapfocus')).toBeTrue();
+      fixture.destroy();
+      expect(document.activeElement).toBe(trigger);
+    } finally { trigger.remove(); }
   });
 
   it('startet mit den hinterlegten Zügen in deutscher Schreibweise', () => {

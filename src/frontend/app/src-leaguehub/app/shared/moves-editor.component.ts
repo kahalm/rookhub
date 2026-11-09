@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { LineupsApiService, MAX_PLIES, MovesKey, fenAfter, formatMoves, lastMoveOf, movesErrorText, parseMoves } from '../core/lineups';
@@ -25,16 +28,18 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
   selector: 'lh-moves-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent, SetupBoardComponent],
+  imports: [ChessBoardComponent, SetupBoardComponent, A11yModule],
   template: `
-    <div class="me-back" (click)="closed.emit()"></div>
-    <section class="me-dialog" role="dialog" aria-modal="true" aria-labelledby="me-title">
+    <div class="me-back" (click)="requestClose()"></div>
+    <!-- Codereview F4-006: Fokus bleibt im Dialog (cdkTrapFocus), geht beim Schließen an den Auslöser zurück; Schließen mit
+         ungespeicherter Eingabe fragt nach. -->
+    <section class="me-dialog" role="dialog" aria-modal="true" aria-labelledby="me-title" cdkTrapFocus>
       <h2 id="me-title" class="me-title">Züge · {{ title() }}</h2>
       <div class="me-modes" role="tablist" aria-label="Eingabe">
         <button type="button" role="tab" class="me-mode" [class.on]="mode() === 'moves'" [attr.aria-selected]="mode() === 'moves'"
-                (click)="setMode('moves')">Züge</button>
+                [attr.tabindex]="mode() === 'moves' ? 0 : -1" (click)="setMode('moves')" (keydown)="onTabKey($event)">Züge</button>
         <button type="button" role="tab" class="me-mode" [class.on]="mode() === 'position'" [attr.aria-selected]="mode() === 'position'"
-                (click)="setMode('position')">Stellung</button>
+                [attr.tabindex]="mode() === 'position' ? 0 : -1" (click)="setMode('position')" (keydown)="onTabKey($event)">Stellung</button>
       </div>
       @if (mode() === 'moves') {
         <div class="me-body">
@@ -55,7 +60,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
               @if (initial()) {
                 <button type="button" class="btn-link" (click)="remove()" [disabled]="busy()">Löschen</button>
               }
-              <button type="button" class="btn-link" (click)="closed.emit()">Abbrechen</button>
+              <button type="button" class="btn-link" (click)="requestClose()">Abbrechen</button>
             </div>
           </div>
         </div>
@@ -156,7 +161,7 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
               </div>
             }
             <div class="me-actions">
-              <button type="button" class="btn-link" (click)="closed.emit()">Abbrechen</button>
+              <button type="button" class="btn-link" (click)="requestClose()">Abbrechen</button>
             </div>
           </div>
         </div>
@@ -212,9 +217,16 @@ import { SetupBoardComponent, pieceName, pieceSrc } from './setup-board.componen
     }
   `],
 })
-export class MovesEditorComponent implements OnInit {
+export class MovesEditorComponent implements OnInit, OnDestroy {
   private readonly api = inject(LineupsApiService);
   private readonly host = inject(ElementRef);
+  private readonly confirm = inject(ConfirmService);
+  /** Wer den Dialog geöffnet hat (Knopf „Züge eingeben/ändern“) — bekommt beim Schließen den Fokus zurück. */
+  private returnFocus: HTMLElement | null = null;
+  /** Text beim Öffnen — davon abweichend gilt die Eingabe als ungespeichert. */
+  private startText = '';
+  /** Eine Rückfrage steht offen (Escape darf keine zweite öffnen). */
+  private asking = false;
 
   readonly key = input.required<MovesKey>();
   /** „Brett 2: Ackermann – Brunner". */
@@ -282,15 +294,50 @@ export class MovesEditorComponent implements OnInit {
   readonly pieceName = pieceName;
 
   ngOnInit(): void {
+    const active = document.activeElement;
+    this.returnFocus = active instanceof HTMLElement && active !== document.body ? active : null;
     const p = parseMoves(this.initial() ?? '');
     this.plies.set(p.sans);
     this.text.set(formatMoves(p.sans));
+    this.startText = this.text();
     setTimeout(() => (this.host.nativeElement as HTMLElement).querySelector<HTMLTextAreaElement>('.me-text')?.focus());
+  }
+
+  ngOnDestroy(): void {
+    // Fokus zurück an den Auslöser — sonst stand er nach dem Schließen am Seitenanfang (F4-006).
+    if (this.returnFocus?.isConnected) this.returnFocus.focus();
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (!this.busy()) this.closed.emit();
+    void this.requestClose();
+  }
+
+  /** Ungespeichert: anderer Text als beim Öffnen, oder im Modus „Stellung“. */
+  dirty(): boolean {
+    return this.text() !== this.startText || this.mode() !== 'moves';
+  }
+
+  /** Escape, Hintergrund, „Abbrechen“: mit ungespeicherter Eingabe erst nach Rückfrage schließen (F4-006). */
+  async requestClose(): Promise<void> {
+    if (this.busy() || this.asking) return;
+    if (this.dirty()) {
+      this.asking = true;
+      try {
+        if (!(await firstValueFrom(this.confirm.ask('Die eingegebenen Züge sind nicht gespeichert. Trotzdem schließen?'), { defaultValue: false }))) return;
+      } finally {
+        this.asking = false;
+      }
+    }
+    this.closed.emit();
+  }
+
+  /** Pfeiltasten auf den Reitern „Züge/Stellung“ (Rollenmuster tablist). */
+  onTabKey(e: KeyboardEvent): void {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    this.setMode(this.mode() === 'moves' ? 'position' : 'moves');
+    setTimeout(() => (this.host.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.me-mode.on')?.focus());
   }
 
   /** Getippt: das Brett folgt bis zum ersten falschen Zug, der Text bleibt, wie er getippt ist. */
