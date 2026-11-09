@@ -151,4 +151,19 @@ public class OgLeagueCardTests
         Assert.Contains("content=\"a &amp; b\"", html);
         Assert.Contains("x.png?c=2&amp;v=1", html);
     }
+
+    /// <summary>Die Turnierseite hat feste og-Tags in ihrer index.html; sie standen vor den eingefügten, und Messenger nehmen
+    /// das erste og:image — der Kalendereintrag zeigte so die allgemeine Vorschau statt seiner eigenen.</summary>
+    [Fact]
+    public void Inject_RemovesTheShellsOwnPreviewTags()
+    {
+        const string shell = "<html><head>\n  <meta property=\"og:title\" content=\"Turniere\">\n  <meta property=\"og:image\" content=\"/og-image.png\">\n"
+            + "  <meta name=\"twitter:card\" content=\"summary_large_image\">\n  <meta name=\"description\" content=\"bleibt\">\n</head><body></body></html>";
+        var html = OgController.Inject(shell, new OgPage("Open Innsbruck", "x", "https://t.example/api/og/img/calendar/1.png", "https://t.example/x"));
+        Assert.DoesNotContain("og-image.png", html);
+        Assert.DoesNotContain("content=\"Turniere\"", html);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "property=\"og:image\""));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(html, "name=\"twitter:card\""));
+        Assert.Contains("name=\"description\" content=\"bleibt\"", html);
+    }
 }

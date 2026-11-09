@@ -137,9 +137,16 @@ public class OgController : ControllerBase
         sb.Append("<link rel=\"canonical\" href=\"").Append(Esc(page.CanonicalUrl)).Append("\">\n");
 
         var block = sb.ToString();
+        // Feste Vorgaben der Shell (Turnierseite/KidHub tragen og:title, og:image … für die Startseite) entfernen: sie stünden
+        // VOR den eingefügten Tags, und viele Messenger nehmen das erste og:image — die Seite bekäme dann die allgemeine Vorschau.
+        html = ShellPreviewTags.Replace(html, string.Empty);
         var idx = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
         return idx < 0 ? html : html.Insert(idx, block);
     }
+
+    private static readonly System.Text.RegularExpressions.Regex ShellPreviewTags = new(
+        @"[ \t]*<meta\s+(?:property|name)=""(?:og|twitter):[^""]*""[^>]*>\r?\n?",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled);
 
     private static string Esc(string s) => HttpUtility.HtmlAttributeEncode(s) ?? string.Empty;
 }
