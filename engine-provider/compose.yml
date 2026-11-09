@@ -34,6 +34,21 @@ services:
     # ENGINE_BACKGROUND_NAME/ENGINE_BACKGROUND_MAX_THREADS, ENGINE_BACKGROUND_COUNT) — siehe README. Die Aufteilung ist gemessen:
     # eine Suche wird von 1 auf 8 Threads nur um den Faktor 1,13 schneller, vier Suchen
     # nebeneinander um fast das Dreifache.
+    #
+    # CPU-Druck: bei anhaltender Ueberlast beendet der Container selbst Hintergrund-Engines (hoechste Nummer
+    # zuerst, die Live-Engine bleibt) und startet sie bei Ruhe wieder — README, Abschnitt „CPU-Druck".
+    # Gehoert normalerweise in die .env; hier die Vorgaben zum Abschreiben:
+    # environment:
+    #   ENGINE_CPU_PRESSURE: "auto"              # off = alle Engines laufen immer
+    #   ENGINE_CPU_PRESSURE_MIN: "0"             # Hintergrund-Engines, die auch unter Druck bleiben
+    #   ENGINE_CPU_PRESSURE_INTERVAL: "30"       # Sekunden zwischen zwei Messungen
+    #   ENGINE_CPU_PRESSURE_HIGH_PSI: "25"       # PSI some avg60 in % — ab hier Druck
+    #   ENGINE_CPU_PRESSURE_LOW_PSI: "10"        # darunter ruhig
+    #   ENGINE_CPU_PRESSURE_HIGH_LOAD: "1.5"     # Load je Kern, nur ohne PSI
+    #   ENGINE_CPU_PRESSURE_LOW_LOAD: "0.9"
+    #   ENGINE_CPU_PRESSURE_HIGH_COUNT: "2"      # Druck-Messungen in Folge → eine Engine weniger
+    #   ENGINE_CPU_PRESSURE_LOW_COUNT: "10"      # ruhige Messungen in Folge → eine mehr
+    #   ENGINE_CPU_PRESSURE_COOLDOWN: "60"       # Sekunden zwischen zwei Senkungen
 
   # ZWEITER CONTAINER ÜBER LICHESS (optional, neben dem direkten)
   # -------------------------------------------------------------

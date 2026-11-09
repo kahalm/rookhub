@@ -93,7 +93,7 @@ RUN curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/${
 COPY patch_force_close.py /opt/
 RUN python3 /opt/patch_force_close.py /opt/provider.py
 
-COPY entrypoint.sh preflight.py /opt/
+COPY entrypoint.sh preflight.py cpu_pressure.py /opt/
 RUN chmod +x /opt/entrypoint.sh
 
 # Unprivilegiert laufen: der Provider braucht keine Rechte außer ausgehendem Netz.

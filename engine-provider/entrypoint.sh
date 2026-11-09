@@ -191,6 +191,7 @@ fi
 #
 # Prüfen, ohne etwas zu starten (zeigt Prozent und Zahl der Engines zu diesem Zeitpunkt):
 #     docker compose run --rm -e ENGINE_SCHEDULE_AT="Mo 09:00" engine-provider
+SCHEDULE_TICK_GIVEN="${SCHEDULE_TICK:-}"
 SCHEDULE_TICK="${SCHEDULE_TICK:-20}"
 
 # Worauf sich der Prozentsatz bezieht:
@@ -376,6 +377,30 @@ if [ -n "${ENGINE_SCHEDULE:-}" ]; then
     schedule_validate || exit 1
 fi
 
+# ===========================================================================
+# CPU-DRUCK (ENGINE_CPU_PRESSURE) — bei Ueberlast selbst weniger Hintergrund-Engines
+# ===========================================================================
+# Anlass 09.11.2026: fuenf Engines neben Builds und anderen Lasten, Load bis 200 — jede Engine bekam rund
+# anderthalb Kerne, ein Tiefe-30-Auftrag kam kaum voran, und der Rest der Maschine wurde mit ausgebremst.
+# Mehr Engines als freie Kerne bringen keinen Durchsatz. Mit `auto` (Vorgabe) misst die Aufsicht deshalb
+# regelmaessig den CPU-Druck (PSI, sonst Load je Kern — cpu_pressure.py) und beendet bei ANHALTENDEM Druck
+# die Hintergrund-Engine mit der hoechsten Nummer, bei anhaltender Ruhe startet sie sie wieder. Die
+# Live-Engine (1) bleibt immer; mehr als der Zeitplan erlaubt laeuft nie (Ziel = min(Zeitplan, Druck)).
+# Schwellen und Zaehler: ENGINE_CPU_PRESSURE_* (README, Abschnitt „CPU-Druck"). `off` = wie bisher.
+# Bei einer einzelnen Engine gibt es nichts abzuschalten — dort bleibt alles beim Alten.
+ENGINE_CPU_PRESSURE="${ENGINE_CPU_PRESSURE:-auto}"
+case "$ENGINE_CPU_PRESSURE" in
+    auto|off) ;;
+    *) echo "FEHLER: ENGINE_CPU_PRESSURE muss 'auto' oder 'off' sein (ist '$ENGINE_CPU_PRESSURE')." >&2; exit 1 ;;
+esac
+CPU_PRESSURE_ACTIVE=""
+if [ "$ENGINE_CPU_PRESSURE" = auto ] && [ "$ENGINE_COUNT" -gt 1 ]; then CPU_PRESSURE_ACTIVE=1; fi
+# Takt der Aufsicht: mit CPU-Druck und ohne ausdrueckliches SCHEDULE_TICK das halbe Messintervall (Vorgabe
+# 30 s → 15 s), damit jede zweite Runde genau eine Messung faellt statt alle 40 s bei einem Takt von 20 s.
+if [ -n "$CPU_PRESSURE_ACTIVE" ] && [ -z "$SCHEDULE_TICK_GIVEN" ]; then
+    SCHEDULE_TICK=$(awk -v i="${ENGINE_CPU_PRESSURE_INTERVAL:-30}" 'BEGIN { t = int(i / 2); if (t < 1) t = 1; if (t > 20) t = 20; print t }' 2>/dev/null || echo 15)
+fi
+
 # `--engine` ist für den Provider eine SHELL-Zeile (er startet sie mit `sh -c`), nicht ein
 # fertiges Argument. Ein Pfad mit Leerzeichen („/engine/my stockfish") würde dort zerlegt.
 # Deshalb hier in einfache Anführungszeichen fassen (enthaltene ' korrekt maskiert) — dass es
@@ -510,43 +535,83 @@ if [ -n "${ENGINE_SCHEDULE_AT:-}" ]; then
     exit 0
 fi
 
+# Kaputte Schwellen fallen beim Start auf, nicht erst bei der ersten Ueberlast.
+if [ -n "$CPU_PRESSURE_ACTIVE" ]; then
+    python /opt/cpu_pressure.py check || exit 1
+fi
+
 # Token vorab prüfen, damit ein fehlender Scope als Klartext-Satz erscheint statt als
 # 401-Stacktrace, der sich unter `restart: unless-stopped` endlos wiederholt.
 python /opt/preflight.py
 
-# MIT ZEITPLAN: nicht einmal starten und warten, sondern im Takt nachsehen, wie viele Engines
-# gerade laufen SOLLEN, und die Differenz herstellen. Deshalb hier auch kein `exec` bei einer
+# MIT ZEITPLAN ODER CPU-DRUCK: nicht einmal starten und warten, sondern im Takt nachsehen, wie viele
+# Engines gerade laufen SOLLEN, und die Differenz herstellen. Deshalb hier auch kein `exec` bei einer
 # einzelnen Engine — die Aufsicht muss am Leben bleiben, um sie später wieder anzuwerfen.
-if [ -n "${ENGINE_SCHEDULE:-}" ]; then
+if [ -n "${ENGINE_SCHEDULE:-}" ] || [ -n "$CPU_PRESSURE_ACTIVE" ]; then
     declare -a PID=()
     for ((i = 1; i <= ENGINE_COUNT; i++)); do PID[i]=""; done
 
+    # Einen Provider beenden. Der Provider hat keinen eigenen Signal-Handler: SIGTERM beendet ihn sofort,
+    # der Kernel schliesst seine Verbindungen, und der Broker sieht den abgerissenen Upload sofort als
+    # „Provider weg" (EngineUploadPump: ProviderGone) — der Anfragende bekommt den letzten Stand, der Worker
+    # stellt den Auftrag mit der erreichten Tiefe zurueck und vergibt ihn neu. Dasselbe wie bei `docker stop`
+    # und beim Abschalten durch den Zeitplan. Die Engine darunter (Stockfish, per `exec` direktes Kind des Providers) wuerde am
+    # geschlossenen stdin selbst enden; sie wird trotzdem ausdruecklich mitbeendet — eine Engine, die das
+    # nicht tut, rechnete sonst als Waise weiter, und genau die CPU, die frei werden soll, bliebe belegt.
     stop_engine() {
-        local i="$1"
+        local i="$1" kids=""
         [ -n "${PID[i]}" ] || return 0
+        kids=$(cat /proc/"${PID[i]}"/task/*/children 2>/dev/null || true)
         kill "${PID[i]}" 2>/dev/null || true
         wait "${PID[i]}" 2>/dev/null || true
+        # shellcheck disable=SC2086 # Liste von PIDs, bewusst zerlegt
+        if [ -n "$kids" ]; then kill $kids 2>/dev/null || true; fi
         PID[i]=""
     }
     stop_all() { local i; for ((i = 1; i <= ENGINE_COUNT; i++)); do stop_engine "$i"; done; }
-    trap 'stop_all; exit 143' TERM INT
 
-    echo "Zeitplan aktiv ($ENGINE_SCHEDULE_TZ): $ENGINE_SCHEDULE"
+    CPU_STATE=""
+    if [ -n "$CPU_PRESSURE_ACTIVE" ]; then CPU_STATE=$(mktemp); fi
+    trap 'stop_all; [ -n "$CPU_STATE" ] && rm -f "$CPU_STATE" "$CPU_STATE.tmp"; exit 143' TERM INT
+
+    if [ -n "${ENGINE_SCHEDULE:-}" ]; then echo "Zeitplan aktiv ($ENGINE_SCHEDULE_TZ): $ENGINE_SCHEDULE"; fi
+    if [ -n "$CPU_PRESSURE_ACTIVE" ]; then
+        echo "CPU-Druck aktiv: weniger Hintergrund-Engines ab PSI ${ENGINE_CPU_PRESSURE_HIGH_PSI:-25} % (ohne PSI: Load/Kern ${ENGINE_CPU_PRESSURE_HIGH_LOAD:-1.5}), mindestens ${ENGINE_CPU_PRESSURE_MIN:-0} Hintergrund-Engine(s) — jetzt: $(python /opt/cpu_pressure.py measure 2>&1 | head -1)"
+    fi
     report_schedule &
     reported_at=$(date +%s)
     last=-1
+    cpu_limit="$ENGINE_COUNT"
+    cpu_warned=""
     while :; do
         pct=$(schedule_percent_now)
-        target=$(schedule_target_count "$pct")
-        if [ "$target" -ne "$last" ]; then
-            echo "Zeitplan: $pct % — $target von $ENGINE_COUNT Engine(s)"
-            last="$target"
+        sched=$(schedule_target_count "$pct")
+        if [ -n "${ENGINE_SCHEDULE:-}" ] && [ "$sched" -ne "$last" ]; then
+            echo "Zeitplan: $pct % — $sched von $ENGINE_COUNT Engine(s)"
         fi
+        last="$sched"
 
-        # Zu viele: von hinten abschalten, die Live-Engine (1) geht als letzte.
+        # CPU-Druck: cpu_pressure.py misst (hoechstens einmal je Intervall), entscheidet und meldet eine
+        # Aenderung als eine Zeile mit beiden Messwerten. Faellt die Messung aus, bleibt die Zahl, wie sie ist.
+        if [ -n "$CPU_PRESSURE_ACTIVE" ]; then
+            if cpu_out=$(python /opt/cpu_pressure.py tick --state "$CPU_STATE" --cap "$sched" --total "$ENGINE_COUNT" 2>&1) \
+                && [[ "${cpu_out%%$'\n'*}" =~ ^[0-9]+$ ]]; then
+                cpu_limit="${cpu_out%%$'\n'*}"
+                if [ "$cpu_out" != "$cpu_limit" ]; then printf '%s\n' "${cpu_out#*$'\n'}"; fi
+            elif [ -z "$cpu_warned" ]; then
+                echo "WARNUNG: CPU-Druck-Messung fehlgeschlagen — die Zahl der Engines bleibt: $(printf '%s' "$cpu_out" | tail -1)" >&2
+                cpu_warned=1
+            fi
+        fi
+        target="$sched"
+        if [ "$cpu_limit" -lt "$target" ]; then target="$cpu_limit"; fi
+
+        # Zu viele: von hinten abschalten, die Live-Engine (1) geht als letzte. Von hinten heisst auch: die
+        # Namen bleiben stabil — „Hintergrund 4" kommt als „Hintergrund 4" zurueck, mit derselben Kennung.
         for ((i = ENGINE_COUNT; i > target; i--)); do
             if [ -n "${PID[i]}" ]; then
-                echo "Zeitplan: beende '$(engine_name "$i")'"
+                if [ "$i" -gt "$sched" ]; then why="Zeitplan"; else why="CPU-Druck"; fi
+                echo "$why: beende '$(engine_name "$i")'"
                 stop_engine "$i"
             fi
         done
@@ -562,6 +627,7 @@ if [ -n "${ENGINE_SCHEDULE:-}" ]; then
                 echo "FEHLER: Engine-Provider '$(engine_name "$i")' hat sich beendet (Exit $code) — alle Engines werden neu gestartet." >&2
                 PID[i]=""
                 stop_all
+                if [ -n "$CPU_STATE" ]; then rm -f "$CPU_STATE" "$CPU_STATE.tmp"; fi
                 [ "$code" -eq 0 ] && code=70
                 exit "$code"
             fi
@@ -569,7 +635,8 @@ if [ -n "${ENGINE_SCHEDULE:-}" ]; then
                 sleep "$PROVIDER_START_DELAY"
             fi
             build_args "$i"
-            echo "Zeitplan: starte '$(engine_name "$i")'"
+            if [ -n "${ENGINE_SCHEDULE:-}" ]; then echo "Zeitplan: starte '$(engine_name "$i")'"
+            else echo "Starte Engine-Provider $i/$ENGINE_COUNT: $ENGINE_PATH als '$(engine_name "$i")'"; fi
             python /opt/provider.py "${ARGS[@]}" &
             PID[i]=$!
             started=$((started + 1))

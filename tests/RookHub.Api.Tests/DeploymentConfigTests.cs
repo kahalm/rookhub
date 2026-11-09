@@ -274,6 +274,9 @@ public class DeploymentConfigTests
         Assert.Contains("test/entrypoint.test.sh", text);
         Assert.Contains("test/supervisor.test.sh", text);
         Assert.Contains("test/provider.test.py", text);
+        // CPU-Druck (weniger Hintergrund-Engines bei Ueberlast): Regeln und Aufsicht, beide muessen laufen.
+        Assert.Contains("test/cpu_pressure.test.py", text);
+        Assert.Contains("test/cpu_pressure.test.sh", text);
         // Der eine Eingriff in den Provider (frische Verbindung je Upload) wird VOR dem Vertragstest
         // angewandt — sonst prüft die CI einen anderen Provider als das Image ausliefert.
         Assert.Contains("patch_force_close.py", text);

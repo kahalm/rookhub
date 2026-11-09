@@ -154,7 +154,10 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | `ENGINE_SCHEDULE` | Zeitplan: wann wie viel gerechnet wird (leer = immer alles) — siehe unten |
 | `ENGINE_SCHEDULE_SCOPE` | Worauf der Prozentsatz zielt: `background` (Vorgabe, Live-Engine bleibt an) oder `all` |
 | `TZ` | Zeitzone des Zeitplans (Vorgabe `Europe/Vienna`; der Container selbst liefe sonst in UTC) |
-| `SCHEDULE_TICK` | Sekunden zwischen zwei Blicken auf die Uhr (leer = 20) |
+| `SCHEDULE_TICK` | Sekunden zwischen zwei Blicken auf die Uhr (leer = 20; mit CPU-Druck das halbe Messintervall, also 15) |
+| `ENGINE_CPU_PRESSURE` | `auto` (Vorgabe): bei anhaltendem CPU-Druck selbst weniger Hintergrund-Engines; `off` = wie früher — siehe unten |
+| `ENGINE_CPU_PRESSURE_MIN` | So viele Hintergrund-Engines bleiben auch unter Druck (Vorgabe 0 = nur die Live-Engine) |
+| `ENGINE_CPU_PRESSURE_*` | Schwellen, Zähler, Messintervall, Abkühlzeit — Tabelle unter „CPU-Druck" |
 
 Nach einer Änderung an der `.env` den Container neu starten, sonst gilt weiter der alte Stand:
 
@@ -288,6 +291,93 @@ fällt für diese Engines auf seine Sperrzeiten zurück.
 > der Hintergrund-Liste. Die bis dahin erreichte Tiefe bleibt erhalten, die Suche setzt dort wieder
 > an. Steht die abgeschaltete Engine als EINZIGE in der Liste, wartet der Auftrag, bis sie
 > wiederkommt.
+
+### CPU-Druck (`ENGINE_CPU_PRESSURE`)
+
+Mehr Engines als freie Kerne bringen keinen Durchsatz, nur Wartezeit für alle. Anlass war der 09.11.2026:
+auf dem Server liefen fünf Engines neben Builds und anderen Lasten, die Load stieg bis 200 — jede Engine
+bekam rund anderthalb Kerne, ein Auftrag auf Tiefe 30 kam kaum voran, und der Rest der Maschine wurde
+mit ausgebremst. Seitdem misst der Container selbst, ob die CPU unter Druck steht, und **beendet bei
+anhaltendem Druck eine Hintergrund-Engine nach der anderen**; wird es wieder ruhig, startet er sie
+nacheinander wieder. Die **Live-Engine bleibt immer** — dort wartet ein Mensch auf eine Stellung.
+
+**Was gemessen wird** (alle `ENGINE_CPU_PRESSURE_INTERVAL` Sekunden, Vorgabe 30):
+
+| Quelle | Bedeutung |
+|---|---|
+| PSI `some avg60` des eigenen cgroups (`/sys/fs/cgroup/cpu.pressure`) | Anteil der letzten Minute, in dem mindestens eine **unserer** Engines auf die CPU warten musste |
+| PSI `some avg60` systemweit (`/proc/pressure/cpu`) | dasselbe für **alle** Prozesse der Maschine |
+| Rückfall ohne PSI: 1-min-Load (`/proc/loadavg`) je Kern | Kerne = Quota aus `cpu.max` (`cpus:` in der compose.yml), sonst die erlaubten Kerne (`nproc`) |
+
+Von den beiden PSI-Werten zählt der **höhere**: verhungern die eigenen Engines, rechnen sie ohnehin kaum;
+verhungern die anderen, bremsen wir sie. Gibt es PSI, entscheidet PSI allein — die Load zählt auch
+Prozesse, die auf die Platte warten (Swap, Builds), und `/proc/loadavg` gilt im Container für den ganzen
+Host. Sie springt nur ein, wenn der Kernel kein PSI liefert. **Die eigene Last der Engines zählt mit**,
+das ist gewollt: 17 Engines auf 16 Kernen SIND Druck. Füllen die Engines die Kerne genau (z. B. 4 × 2
+Threads bei `cpus: 8`), wartet niemand, PSI bleibt niedrig, und es läuft alles.
+
+**Wie entschieden wird** — mit Hysterese, damit nichts flattert:
+
+| Regel | Vorgabe |
+|---|---|
+| **Senken** um 1, wenn `HIGH_COUNT` Messungen in Folge über der oberen Schwelle liegen | 2 Messungen (1 min): PSI ≥ 25 % (ohne PSI: Load/Kern ≥ 1,5) |
+| … frühestens `COOLDOWN` Sekunden nach der letzten Senkung | 60 s |
+| **Anheben** um 1, wenn `LOW_COUNT` Messungen in Folge unter der unteren Schwelle liegen | 10 Messungen (5 min): PSI < 10 % (ohne PSI: Load/Kern < 0,9) |
+| dazwischen | nichts — es bleibt, wie es ist |
+| Untergrenze `ENGINE_CPU_PRESSURE_MIN` (Hintergrund-Engines) | 0: unter Druck darf es bis auf die Live-Engine allein hinuntergehen |
+
+Nach jeder Änderung beginnt die Zählung von vorn: zurück von 0 auf 1 Hintergrund-Engine geht es also
+genauso erst nach 10 ruhigen Messungen wie von 3 auf 4. Abgeschaltet wird **von hinten** — die Engine mit
+der höchsten Nummer zuerst („…Hintergrund 4", dann „…Hintergrund 3" …), wieder angeworfen in umgekehrter
+Reihenfolge. So bleiben die Namen und damit die Registrierungen stabil: eine Engine kommt mit derselben
+Kennung zurück, die Hintergrund-Auswahl im Profil bleibt gültig.
+
+| Variable | Vorgabe | Wofür |
+|---|---|---|
+| `ENGINE_CPU_PRESSURE` | `auto` | `off` = keine Messung, alle Engines laufen (wie vor dieser Fassung) |
+| `ENGINE_CPU_PRESSURE_MIN` | `0` | Mindestzahl Hintergrund-Engines unter Druck (z. B. `1`, wenn immer eine weiterrechnen soll) |
+| `ENGINE_CPU_PRESSURE_INTERVAL` | `30` | Sekunden zwischen zwei Messungen |
+| `ENGINE_CPU_PRESSURE_HIGH_PSI` / `_LOW_PSI` | `25` / `10` | PSI-Schwellen in Prozent |
+| `ENGINE_CPU_PRESSURE_HIGH_LOAD` / `_LOW_LOAD` | `1.5` / `0.9` | Load je Kern (nur ohne PSI) |
+| `ENGINE_CPU_PRESSURE_HIGH_COUNT` / `_LOW_COUNT` | `2` / `10` | Messungen in Folge zum Senken / Anheben |
+| `ENGINE_CPU_PRESSURE_COOLDOWN` | `60` | Sekunden zwischen zwei Senkungen |
+
+Eine unsinnige Angabe (Buchstaben, untere über oberer Schwelle, negative Mindestzahl) beendet den
+Container beim Start mit einem `FEHLER:`-Satz. Bei einer einzelnen Engine (ohne Hintergrund) gibt es
+nichts abzuschalten — dort ändert sich nichts.
+
+**Im Log** steht beim Start eine Zeile mit den Schwellen und der ersten Messung, danach je Änderung eine
+Zeile mit beiden Messwerten:
+
+```text
+CPU-Druck aktiv: weniger Hintergrund-Engines ab PSI 25 % (ohne PSI: Load/Kern 1.5), mindestens 0 Hintergrund-Engine(s) — jetzt: PSI some avg60 3.0 % (cgroup 0.0, System 3.0), Load 10.17 / 8.0 Kerne = 1.27 → low
+CPU-Druck: PSI some avg60 41.2 % (cgroup 38.0, System 41.2), Load 23.50 / 8.0 Kerne = 2.94 — senke auf 4 von 5 Engine(s) (vorher 5; 2 Messungen in Folge über der Schwelle).
+CPU-Druck: beende 'RookHub Server 19 Hintergrund 4'
+```
+
+Nachsehen, was der Container gerade misst: `docker compose exec engine-provider python /opt/cpu_pressure.py measure`.
+
+**Was mit dem laufenden Auftrag passiert:** dasselbe wie beim Zeitplan und bei `docker stop`. Der Provider
+wird mit SIGTERM beendet (die Engine darunter gleich mit), seine Verbindung reißt, RookHub sieht das sofort,
+stellt den Auftrag mit der erreichten Tiefe zurück und vergibt ihn an eine andere Engine der
+Hintergrund-Liste. Bekommt eine eben abgeschaltete Engine noch einen neuen Auftrag, geht er nach 15 s (503)
+an die nächste — wie bei einem ausgeschalteten Rechner.
+
+**Zusammenspiel:**
+
+- **Zeitplan**: es läuft nie mehr, als der Zeitplan erlaubt — die Zahl ist `min(Zeitplan, CPU-Druck)`.
+  Die Meldung an RookHub (siehe „RookHub erfährt den Zeitplan") enthält nur den Zeitplan, nicht den Druck.
+- **`cpu_shares`/`cpu.weight`** (z. B. `cpu_shares: 128` auf einem Server, der vor allem anderes tun soll):
+  die niedrige Gewichtung lässt den Kernel die Engines zuerst warten lassen. Genau das zeigt der PSI-Wert
+  des eigenen cgroups — mit `cpu_shares` stecken die Engines also nicht nur je Zeitscheibe zurück, sondern
+  der Container gibt bei anhaltender Konkurrenz ganze Engines ab, deren Hashtabellen sonst im Speicher lägen.
+- **`cpus:`** (Quota): mehr Threads als Quota warten ebenfalls (PSI des cgroups) — passt `MAX_THREADS` nicht
+  zur Quota, wird das sichtbar.
+- **Neustart**: der Zustand liegt nur im Speicher. Nach einem Neustart des Containers laufen erst wieder alle
+  Engines, unter Druck geht es dann binnen weniger Minuten wieder hinunter.
+- Mit `ENGINE_CPU_PRESSURE=auto` (oder einem Zeitplan) arbeitet der Container mit der Aufsicht, die im Takt
+  nachsieht: stirbt ein Provider, endet der Container wie bisher mit dessen Exit-Code — nur bis zu einem
+  Takt (15 s) später als ohne.
 
 ### Gestaffelte Starts (`PROVIDER_START_DELAY`)
 
@@ -543,6 +633,15 @@ Nachrechnen ohne Start:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File C:\stockfish\run_provider.ps1 -At "Mo 09:00"
 ```
+
+Auch den **CPU-Druck** gibt es dort (`$cpuPressure` und die `$cpu…`-Zeilen am Kopf), mit denselben Regeln wie
+oben. Gemessen wird die mittlere Prozessorauslastung je Takt (`\Processor(_Total)\% Processor Time` über
+`Get-Counter`, auf deutschem Windows mit seinen übersetzten Zählernamen über WMI), Schwellen 85 % / 60 %,
+2 Messungen zum Senken, 15 (= 5 min bei `$scheduleTick = 20`) zum Anheben. **Vorgabe dort `off`**: eine
+Auslastung in Prozent kann volle Kerne nicht von Überlast unterscheiden — ist der Rechner wie empfohlen mit
+Hintergrund-Engines gefüllt, steht sie bei jeder Analyse nahe 100 %, und `auto` schaltete Engine um Engine
+ab, obwohl niemand anderes wartet. `auto` passt auf einen Rechner, auf dem die Engines nur einen Teil der
+Kerne belegen und der nebenbei für anderes gebraucht wird.
 
 `run_provider.ps1` startet **eine Live-Engine und mehrere Hintergrund-Engines** aus einem Skript:
 je Engine ein eigener Provider-Prozess mit eigenen Log-Dateien unter `C:\stockfish\logs\`, jeder

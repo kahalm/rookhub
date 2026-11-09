@@ -29,6 +29,10 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
 * **`EngineRegistry`** löst eine Kennung auf (lokal/Lichess), **`IEngineBroker`** (`EngineBrokerRouter` →
   `LocalEngineBroker` bzw. `LichessEngineBroker`) liefert beiden Aufrufern denselben Strom. `EngineController`
   (live) und `AnalysisJobWorker` (Hintergrund, damit auch `GameAnalysisService`) kennen nur noch diese zwei.
+* **CPU-Druck im Client** (`ENGINE_CPU_PRESSURE`, Vorgabe `auto`): der Docker-Provider beendet bei anhaltendem
+  CPU-Druck (PSI, sonst Load je Kern) selbst Hintergrund-Engines, höchste Nummer zuerst, und startet sie bei Ruhe
+  wieder; für den Broker sieht das aus wie ein abgeschalteter Provider (Upload reißt → `ProviderGone`, danach offline)
+  — Regeln und Variablen in `engine-provider/README.md`, Abschnitt „CPU-Druck".
 * Nimmt kein Provider einen Auftrag binnen `ProviderTimeoutSeconds` (15) an, ist das ein **503** wie beim
   Lichess-Broker (der Worker wechselt dann die Engine); ebenso eine Schlange über `MaxQueuedPerEngine` (64).
   „online“ = gepollt in den letzten `OnlineWindowSeconds` (30) (`EngineSelectorDirectory`; `LastSeenAt` schreibt

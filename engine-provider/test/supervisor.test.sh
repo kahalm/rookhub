@@ -38,8 +38,10 @@ mkdir -p "$work/opt"; cp "$ROOT/preflight.py" "$work/opt/" 2>/dev/null || true
 sed -i "s#/opt/preflight.py#$work/opt/preflight.py#; s#/opt/provider.py#$work/opt/provider.py#" "$work/entrypoint.sh"
 : > "$work/opt/provider.py"
 
+# ENGINE_CPU_PRESSURE=off: geprueft wird der Supervisor OHNE Verwaltungsschleife (sofortiges `wait -n`); die
+# Schleife mit CPU-Druck hat ihren eigenen Test (test/cpu_pressure.test.sh).
 out=$(cd "$work" && PATH="$work:$PATH" env -i PATH="$work:$PATH" LICHESS_API_TOKEN=x ENGINE_PATH="$fake_engine" \
-      ENGINE_COUNT=2 ENGINE_1_NAME="Engine 1" ENGINE_2_NAME="Engine 2" PROVIDER_START_DELAY=1 bash "$work/entrypoint.sh" 2>&1)
+      ENGINE_COUNT=2 ENGINE_1_NAME="Engine 1" ENGINE_2_NAME="Engine 2" PROVIDER_START_DELAY=1 ENGINE_CPU_PRESSURE=off bash "$work/entrypoint.sh" 2>&1)
 code=$?
 
 if [ "$code" -ne 0 ]; then echo "ok   Exit-Code != 0 ($code)"; else echo "FAIL Exit 0 — Container startet nicht neu"; fails=$((fails+1)); fi

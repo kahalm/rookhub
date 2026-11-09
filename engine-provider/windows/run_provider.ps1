@@ -111,6 +111,25 @@ $scheduleTick = 20     # Sekunden zwischen zwei Blicken auf die Uhr
 # 0 % haelt in beiden Faellen alles an.
 $scheduleScope = "background"
 
+# --- CPU-DRUCK: bei Ueberlast selbst weniger Hintergrund-Engines -----------
+# "auto" misst im Takt $scheduleTick die mittlere Prozessorauslastung (\Processor(_Total)\% Processor Time,
+# auf deutschem Windows ueber WMI) und beendet bei ANHALTENDER Last die Hintergrund-Engine mit der
+# hoechsten Nummer; ist es lange ruhig, startet sie wieder. Die Live-Engine bleibt immer, mehr als der
+# Zeitplan erlaubt laeuft nie. Siehe README, Abschnitt "CPU-Druck".
+#
+# VORGABE "off" — mit Absicht: die Auslastung in Prozent kann VOLLE Kerne nicht von UEBERLAST
+# unterscheiden. Ist der Rechner wie oben empfohlen mit Hintergrund-Engines gefuellt ($bgCount *
+# $bgThreads = Kerne), steht sie bei jeder Analyse nahe 100 %, und "auto" schaltete Engine um Engine ab,
+# obwohl niemand anderes auf die CPU wartet. Sinnvoll ist "auto" auf einem Rechner, auf dem die Engines
+# nur einen Teil der Kerne belegen und der nebenbei fuer anderes gebraucht wird.
+$cpuPressure      = "off"   # "auto" oder "off"
+$cpuHighPercent   = 85      # ab hier Druck (Mittel ueber einen Takt)
+$cpuLowPercent    = 60      # darunter ruhig
+$cpuHighCount     = 2       # so viele Druck-Messungen in Folge -> eine Engine weniger
+$cpuLowCount      = 15      # so viele ruhige Messungen in Folge -> eine mehr (15 x 20 s = 5 min)
+$cpuCooldown      = 60      # Sekunden: frueheste naechste Senkung
+$cpuMinBackground = 0       # so viele Hintergrund-Engines bleiben mindestens (0 = nur die Live-Engine)
+
 # ===========================================================================
 
 $wrapperLog = Join-Path $logDir "wrapper.log"
@@ -221,6 +240,57 @@ function Get-TargetCount([int]$pct, [int]$total) {
     return 1 + $n
 }
 
+# Mittlere Prozessorauslastung ueber $seconds Sekunden (ersetzt zugleich den Schlaf der Schleife).
+# Get-Counter kennt die Zaehler nur unter ihren LOKALISIERTEN Namen ("\Prozessor(_Total)\Prozessorzeit (%)"
+# auf deutschem Windows) und wirft sonst sofort; dann gilt WMI, das ueberall gleich heisst. $null = nicht messbar.
+$script:counterWorks = $true
+function Measure-CpuPercent([int]$seconds) {
+    if ($seconds -lt 1) { $seconds = 1 }
+    if ($script:counterWorks) {
+        try {
+            $c = Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples $seconds -ErrorAction Stop
+            return ($c.CounterSamples | Measure-Object -Property CookedValue -Average).Average
+        } catch { $script:counterWorks = $false }
+    }
+    $vals = @()
+    for ($k = 0; $k -lt $seconds; $k++) {
+        try { $vals += [double](Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop).PercentProcessorTime } catch { }
+        Start-Sleep -Seconds 1
+    }
+    if ($vals.Count -gt 0) { return ($vals | Measure-Object -Average).Average }
+    return $null
+}
+
+# Einordnung einer Messung: "high" / "low" / "mid" / "unknown".
+function Get-CpuLevel($percent) {
+    if ($null -eq $percent) { return "unknown" }
+    if ($percent -ge $cpuHighPercent) { return "high" }
+    if ($percent -lt $cpuLowPercent) { return "low" }
+    return "mid"
+}
+
+# Wie viele gleiche Eintraege stehen am ENDE der Liste?
+function Get-TrailingCount($levels, [string]$what) {
+    $n = 0
+    for ($k = $levels.Count - 1; $k -ge 0; $k--) { if ($levels[$k] -ne $what) { break }; $n++ }
+    return $n
+}
+
+# Neue Hoechstzahl laufender Engines (Live eingeschlossen) - dieselben Regeln wie cpu_pressure.py `decide`
+# im Docker-Image (dort mit Tabellen-Tests): $levels = Messungen SEIT der letzten Aenderung, $limit = bisherige
+# Hoechstzahl, $cap = Zeitplan, $total = alle Engines, $lastDown = Zeitpunkt der letzten Senkung oder $null.
+function Get-PressureLimit($levels, [int]$limit, [int]$cap, [int]$total, [datetime]$now, $lastDown) {
+    if ($cpuPressure -ne 'auto' -or $total -le 1) { return $total }
+    $limit = [math]::Max(1, [math]::Min($limit, $total))
+    if ($cap -le 0) { return $limit }
+    $floor = [math]::Min($total, 1 + $cpuMinBackground)
+    $effective = [math]::Min($limit, $cap)
+    $cooled = ($null -eq $lastDown) -or (($now - $lastDown).TotalSeconds -ge $cpuCooldown)
+    if ((Get-TrailingCount $levels 'high') -ge $cpuHighCount -and $effective -gt $floor -and $cooled) { return $effective - 1 }
+    if ((Get-TrailingCount $levels 'low') -ge $cpuLowCount -and $limit -lt [math]::Min($cap, $total)) { return $limit + 1 }
+    return $limit
+}
+
 function Write-WrapperLog([string]$message) {
     # Ohne Rotation waechst die Datei bei 17 Prozessen und jahrelangem Lauf endlos.
     if ((Test-Path $wrapperLog) -and ((Get-Item $wrapperLog).Length -gt 2MB)) {
@@ -259,6 +329,15 @@ $engines += [pscustomobject]@{ Slot = 1; Name = $liveName; Threads = $liveThread
 for ($i = 1; $i -le $bgCount; $i++) {
     $name = if ($i -eq 1) { $bgName } else { "$bgName $i" }
     $engines += [pscustomobject]@{ Slot = $i + 1; Name = $name; Threads = $bgThreads; Hash = $bgHash }
+}
+
+if ($cpuPressure -ne 'auto' -and $cpuPressure -ne 'off') {
+    Write-Host "FEHLER: `$cpuPressure muss 'auto' oder 'off' sein (ist '$cpuPressure')."
+    exit 1
+}
+if ($cpuLowPercent -gt $cpuHighPercent -or $cpuHighCount -lt 1 -or $cpuLowCount -lt 1 -or $cpuMinBackground -lt 0) {
+    Write-Host "FEHLER: CPU-Druck-Einstellungen widersprechen sich (untere Schwelle ueber der oberen, Zaehler < 1 oder Mindestzahl < 0)."
+    exit 1
 }
 
 # Kaputter Zeitplan: lieber hier stehenbleiben als stillschweigend immer 100 % fahren.
@@ -370,6 +449,13 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::S
 # eine von siebzehn Engines, soll genau die neu starten und nicht der ganze Verband.
 $running = @{}
 $lastTarget = -1
+$cpuLimit = $engines.Count
+$cpuLevels = New-Object System.Collections.Generic.List[string]
+$cpuLastDown = $null
+$cpuWarned = $false
+$cpuActive = ($cpuPressure -eq 'auto' -and $engines.Count -gt 1)
+if ($cpuActive) { Write-WrapperLog "CPU-Druck aktiv: weniger Hintergrund-Engines ab $cpuHighPercent % Auslastung ($cpuHighCount Messungen in Folge), mehr unter $cpuLowPercent % ($cpuLowCount Messungen), mindestens $cpuMinBackground Hintergrund-Engine(s)" }
+$cpuPercent = $null
 $nextReport = Get-Date          # sofort beim Start melden, danach alle sechs Stunden
 while ($true) {
     if ((Get-Date) -ge $nextReport) {
@@ -379,17 +465,40 @@ while ($true) {
     $now = Get-Date
     $day = [int]$now.DayOfWeek; if ($day -eq 0) { $day = 7 }   # .NET zaehlt Sonntag als 0
     $pct = Get-SchedulePercent $day ($now.Hour * 60 + $now.Minute)
-    $target = Get-TargetCount $pct $engines.Count
-    if ($target -ne $lastTarget) {
-        Write-WrapperLog "Zeitplan: $pct % - $target von $($engines.Count) Engine(s)"
-        $lastTarget = $target
+    $sched = Get-TargetCount $pct $engines.Count
+    if ($sched -ne $lastTarget) {
+        Write-WrapperLog "Zeitplan: $pct % - $sched von $($engines.Count) Engine(s)"
+        $lastTarget = $sched
     }
 
-    # Zu viele: von hinten abschalten, die Live-Engine (Platz 1) geht als letzte.
+    # CPU-Druck: die Messung des letzten Taktes (gemessen waehrend des Schlafs unten) einordnen und entscheiden.
+    if ($cpuActive -and $null -ne $script:cpuMeasured) {
+        $level = Get-CpuLevel $cpuPercent
+        if ($level -eq 'unknown' -and -not $cpuWarned) {
+            Write-WrapperLog "CPU-Druck: keine Messung moeglich (weder Get-Counter noch WMI) - die Zahl der Engines bleibt"
+            $cpuWarned = $true
+        }
+        $cpuLevels.Add($level)
+        while ($cpuLevels.Count -gt [math]::Max($cpuHighCount, $cpuLowCount)) { $cpuLevels.RemoveAt(0) }
+        $newLimit = Get-PressureLimit $cpuLevels $cpuLimit $sched $engines.Count (Get-Date) $cpuLastDown
+        if ($newLimit -ne $cpuLimit) {
+            $verb = if ($newLimit -lt $cpuLimit) { "senke" } else { "hebe" }
+            if ($newLimit -lt $cpuLimit) { $cpuLastDown = Get-Date }
+            Write-WrapperLog ("CPU-Druck: Auslastung {0:N1} % im Mittel ueber {1} s - {2} auf {3} von {4} Engine(s) (vorher {5})" -f `
+                $cpuPercent, $scheduleTick, $verb, [math]::Min($newLimit, $sched), $engines.Count, [math]::Min($cpuLimit, $sched))
+            $cpuLimit = $newLimit
+            $cpuLevels.Clear()
+        }
+    }
+    $target = [math]::Min($sched, $cpuLimit)
+
+    # Zu viele: von hinten abschalten, die Live-Engine (Platz 1) geht als letzte. Von hinten heisst auch: die
+    # Namen bleiben stabil, "Hintergrund 16" kommt mit derselben Kennung zurueck.
     foreach ($e in ($engines | Sort-Object Slot -Descending)) {
         if ($e.Slot -le $target) { continue }
         if ($running.ContainsKey($e.Slot) -and $null -ne $running[$e.Slot]) {
-            Write-WrapperLog "Zeitplan: beende '$($e.Name)'"
+            $why = if ($e.Slot -gt $sched) { "Zeitplan" } else { "CPU-Druck" }
+            Write-WrapperLog "$($why): beende '$($e.Name)'"
             Stop-Provider $running[$e.Slot]
             $running.Remove($e.Slot)
         }
@@ -408,5 +517,11 @@ while ($true) {
         Write-WrapperLog "gestartet: '$($e.Name)' ($($e.Threads) Threads, $($e.Hash) MiB) PID $($running[$e.Slot].Id)"
     }
 
-    Start-Sleep -Seconds $scheduleTick
+    # Mit CPU-Druck IST der Schlaf die Messung: Get-Counter nimmt $scheduleTick Proben im Sekundentakt.
+    if ($cpuActive) {
+        $cpuPercent = Measure-CpuPercent $scheduleTick
+        $script:cpuMeasured = $true
+    } else {
+        Start-Sleep -Seconds $scheduleTick
+    }
 }

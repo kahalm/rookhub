@@ -110,7 +110,9 @@ sed -i "s#__STARTS__#$work/starts#" "$work/python"
 chmod +x "$work/python"
 cp "$ROOT/entrypoint.sh" "$work/entrypoint.sh"
 mkdir -p "$work/opt"; : > "$work/opt/provider.py"; : > "$work/opt/preflight.py"
-sed -i "s#/opt/preflight.py#$work/opt/preflight.py#; s#/opt/provider.py#$work/opt/provider.py#" "$work/entrypoint.sh"
+sed -i "s#/opt/preflight.py#$work/opt/preflight.py#; s#/opt/provider.py#$work/opt/provider.py#; s#/opt/cpu_pressure.py#$ROOT/cpu_pressure.py#g" "$work/entrypoint.sh"
+# Diese Laeufe pruefen den ZEITPLAN: der CPU-Druck (test/cpu_pressure.test.sh) bleibt aus, sonst haengt die
+# erwartete Zahl der Engines an der Last des Rechners, auf dem der Test laeuft.
 
 # Stub-„date": die Aufsicht fragt die Uhr (`date +%u/+%H/+%M`). Mit SCHEDULE_NOW antwortet sie fuer
 # diesen festen Zeitpunkt (GNU `date -d`, in der Zeitzone, die das Skript setzt), ohne die echte.
@@ -136,7 +138,7 @@ run_plan() {   # run_plan "<Zeitplan>" "<Sekunden>" "<SCHEDULE_NOW>"; Ausgabe: Z
     # setsid: die Aufsicht bekommt eine EIGENE Prozessgruppe, und am Ende geht die ganze Gruppe weg.
     # Ein `pkill -f sleep` traefe sonst auch Prozesse ausserhalb des Tests — und den Test selbst.
     ( cd "$work" && exec setsid env -i PATH="$work:$PATH" LICHESS_API_TOKEN=x ENGINE_PATH="$fake_engine" \
-        ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=3 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 SCHEDULE_NOW="$3" \
+        ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=3 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 ENGINE_CPU_PRESSURE=off SCHEDULE_NOW="$3" \
         ENGINE_SCHEDULE="$1" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
     local sup=$!
     sleep "$2"
@@ -158,7 +160,7 @@ printf '200'
 CURL
 sed -i "s#__REPORTS__#$work/reports#" "$work/curl"; chmod +x "$work/curl"; : > "$work/reports"
 ( cd "$work" && exec setsid env -i PATH="$work:$PATH" ROOKHUB_URL=https://rh.example ROOKHUB_API_TOKEN=rkh_x \
-    ENGINE_PATH="$fake_engine" ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=1 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 \
+    ENGINE_PATH="$fake_engine" ENGINE_NAME=T ENGINE_BACKGROUND_COUNT=1 PROVIDER_START_DELAY=0 SCHEDULE_TICK=1 ENGINE_CPU_PRESSURE=off \
     SCHEDULE_NOW="$FR_10" ENGINE_SCHEDULE="Fr 08:00-17:00 100%" bash "$work/entrypoint.sh" > "$work/log" 2>&1 ) &
 sup=$!; sleep 3; kill -TERM -"$sup" 2>/dev/null || kill -TERM "$sup" 2>/dev/null; wait "$sup" 2>/dev/null
 if grep -q '^PUT https://rh.example/api/external-engine/schedule {' "$work/reports"; then ok "Zeitplan per PUT an RookHub gemeldet"
