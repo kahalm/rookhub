@@ -104,8 +104,9 @@ import { EbookService, EbookTranslationStatus } from './ebook.service';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       @if (status(); as s) {
-        @if (s.targets.length > 0) {
-          <button mat-button type="button" (click)="retryFailed()" [disabled]="busy()">
+        @if (hasFailed(s)) {
+          <!-- F2-024: nur, wenn es Gescheiterte gibt — sonst täte der Knopf nichts („0 neu eingereiht“). -->
+          <button mat-button type="button" class="et-retry" (click)="retryFailed()" [disabled]="busy()">
             <mat-icon>replay</mat-icon>{{ 'ebooks.translation.retryFailed' | translate }}
           </button>
         }
@@ -163,6 +164,11 @@ export class EbookTranslationDialogComponent implements OnInit {
   }
 
   /** Sprachname in der Oberflächensprache (Intl), Sonderwerte übersetzt. */
+  /** Gibt es gescheiterte Übersetzungen (Liste oder Zähler je Zielsprache)? */
+  hasFailed(s: EbookTranslationStatus): boolean {
+    return s.failed.length > 0 || s.targets.some(t => t.failed > 0);
+  }
+
   languageLabel(code: string | null | undefined): string {
     if (!code || code === 'und') return this.translate.instant('ebooks.translation.unclear');
     if (code === 'notext') return this.translate.instant('ebooks.translation.noTextLabel');

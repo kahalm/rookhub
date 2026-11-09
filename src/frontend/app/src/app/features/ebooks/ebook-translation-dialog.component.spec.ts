@@ -42,6 +42,16 @@ describe('EbookTranslationDialogComponent', () => {
     expect(service.translationStatus).toHaveBeenCalledTimes(2);
   });
 
+  it('„Fehlgeschlagene erneut versuchen“ nur, wenn es Fehlschläge gibt (F2-024)', () => {
+    const fixture = TestBed.createComponent(EbookTranslationDialogComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.et-retry')).not.toBeNull();
+    service.translationStatus.and.returnValue(of({ ...STATUS, failed: [], targets: [{ ...STATUS.targets[0], failed: 0 }] }));
+    const clean = TestBed.createComponent(EbookTranslationDialogComponent);
+    clean.detectChanges();
+    expect(clean.nativeElement.querySelector('.et-retry')).toBeNull();
+  });
+
   it('Sprachnamen: Sonderwerte übersetzt, ISO-Code als Name', () => {
     const c = TestBed.createComponent(EbookTranslationDialogComponent).componentInstance;
     expect(c.languageLabel('und')).toBe('ebooks.translation.unclear');
