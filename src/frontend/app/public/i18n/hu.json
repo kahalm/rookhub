@@ -2947,7 +2947,8 @@
       "unsupported": "A böngésződ vagy az eszközöd nem támogatja a push-értesítéseket.",
       "notConfigured": "A push-értesítések ezen a kiszolgálón még nem érhetők el.",
       "denied": "Az értesítések le vannak tiltva a böngésződben — engedélyezd őket ehhez az oldalhoz.",
-      "enableError": "A push-értesítéseket nem sikerült módosítani."
+      "enableError": "A push-értesítéseket nem sikerült módosítani.",
+      "notOnDevice": "Ezen az eszközön még nem érkeznek push-értesítések. Kapcsolj be egy területet (vagy kapcsold ki, majd újra be), hogy itt is beállítsd őket."
     }
   },
   "repertoireTrainer": {

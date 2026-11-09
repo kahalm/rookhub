@@ -42,6 +42,11 @@ export class PushService {
     }
   }
 
+  /** Hat der Nutzer Benachrichtigungen für diese Seite schon erlaubt (dann geht ein Abo ohne Rückfrage)? */
+  get permissionGranted(): boolean {
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  }
+
   getConfig(): Observable<PushConfig> {
     return this.http.get<PushConfig>('/api/notifications/push/config');
   }

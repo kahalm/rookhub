@@ -261,7 +261,8 @@
       "unsupported": "Your browser or device does not support push notifications.",
       "notConfigured": "Push notifications are not available on this server yet.",
       "denied": "Notifications are blocked in your browser settings — allow them for this site to use push.",
-      "enableError": "Could not change push notifications."
+      "enableError": "Could not change push notifications.",
+      "notOnDevice": "Push notifications are not yet set up on this device. Switch an area on (or off and on again) to set them up here."
     }
   },
   "catalog": {

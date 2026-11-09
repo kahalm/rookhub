@@ -261,7 +261,8 @@
       "unsupported": "Tvoj preglednik ili uređaj ne podržava push obavijesti.",
       "notConfigured": "Push obavijesti još nisu dostupne na ovom poslužitelju.",
       "denied": "Obavijesti su blokirane u postavkama preglednika — dopusti ih za ovu stranicu da koristiš push.",
-      "enableError": "Push obavijesti nije moguće promijeniti."
+      "enableError": "Push obavijesti nije moguće promijeniti.",
+      "notOnDevice": "Na ovom uređaju push obavijesti još ne stižu. Uključi neko područje (ili ga isključi pa ponovno uključi) da ih ovdje postaviš."
     }
   },
   "catalog": {

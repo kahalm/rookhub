@@ -261,7 +261,8 @@
       "unsupported": "Dein Browser oder Gerät unterstützt keine Push-Benachrichtigungen.",
       "notConfigured": "Push-Benachrichtigungen sind auf diesem Server noch nicht verfügbar.",
       "denied": "Benachrichtigungen sind in deinen Browser-Einstellungen blockiert — erlaube sie für diese Seite, um Push zu nutzen.",
-      "enableError": "Push-Benachrichtigungen konnten nicht geändert werden."
+      "enableError": "Push-Benachrichtigungen konnten nicht geändert werden.",
+      "notOnDevice": "Auf diesem Gerät kommen noch keine Push-Benachrichtigungen an. Schalte einen Bereich ein (oder aus und wieder ein), um sie hier einzurichten."
     }
   },
   "catalog": {

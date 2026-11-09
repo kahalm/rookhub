@@ -101,6 +101,9 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
               <span class="push-title">{{ 'notifications.push.title' | translate }}</span>
             </div>
             <p class="push-hint">{{ 'notifications.push.hint' | translate }}</p>
+            @if (pushDeviceInactive && !pushDenied) {
+              <p class="push-hint push-device">{{ 'notifications.push.notOnDevice' | translate }}</p>
+            }
             @if (pushDenied) {
               <p class="push-hint push-denied">{{ 'notifications.push.denied' | translate }}</p>
             }
@@ -168,6 +171,9 @@ export class NotificationsComponent implements OnInit {
   /** Aktuell für Push aktivierte Bereiche. */
   private pushEnabled = new Set<NotificationCategory>();
   pushBusy = false;
+  /** Bereiche sind am Konto an, aber dieses Gerät hat kein Abo (nach Ab-/Anmelden, neues Gerät) und ohne erteilte
+   *  Berechtigung lässt es sich nicht still anlegen (Codereview F3-008). */
+  pushDeviceInactive = false;
 
   constructor(
     private notif: InAppNotificationService,
@@ -188,9 +194,22 @@ export class NotificationsComponent implements OnInit {
       next: cfg => {
         this.pushPublicKey = cfg.publicKey;
         this.pushEnabled = new Set(cfg.enabledCategories as NotificationCategory[]);
+        if (this.pushEnabled.size > 0) void this.ensureDeviceSubscribed();
       },
       error: () => {},
     });
+  }
+
+  /** Die Push-Bereiche gehören dem KONTO, das Abo dem GERÄT: Abmelden löscht das Abo, die Bereiche bleiben. Sind
+   *  Bereiche an, meldet die Seite das Gerät still (wieder) an — mit schon erteilter Berechtigung; sonst zeigt sie
+   *  „auf diesem Gerät nicht aktiv“ (Codereview F3-008). */
+  private async ensureDeviceSubscribed(): Promise<void> {
+    if (!this.pushPublicKey) return;
+    if (this.push.permissionGranted) {
+      try { await this.push.ensureSubscribed(this.pushPublicKey); this.pushDeviceInactive = false; return; }
+      catch { /* unten: Hinweis */ }
+    }
+    this.pushDeviceInactive = true;
   }
 
   get pushSupported(): boolean { return this.push.supported; }
@@ -208,9 +227,11 @@ export class NotificationsComponent implements OnInit {
     if (checked) next.add(cat); else next.delete(cat);
     this.pushBusy = true;
     try {
-      if (checked && this.pushEnabled.size === 0) {
-        // Erstes Aktivieren → Berechtigung + Subscription (kann bei Ablehnung werfen).
+      if (checked) {
+        // Aktivieren → Berechtigung + Subscription (kann bei Ablehnung werfen). Auch wenn schon Bereiche an sind: das
+        // Gerät kann nach Ab-/Anmelden ohne Abo sein (F3-008); ensureSubscribed nimmt ein vorhandenes Abo wieder.
         await this.push.ensureSubscribed(this.pushPublicKey);
+        this.pushDeviceInactive = false;
       }
       const eff = await this.push.setPreferences([...next]).toPromise();
       this.pushEnabled = new Set((eff?.categories ?? [...next]) as NotificationCategory[]);

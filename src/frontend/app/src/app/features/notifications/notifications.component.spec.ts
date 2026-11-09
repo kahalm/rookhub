@@ -215,6 +215,50 @@ describe('NotificationsComponent', () => {
       expect(admin.checked).toBeFalse();
       expect(c.isPushOn('friends')).toBeTrue();
     });
+
+    // Codereview F3-008: nach Ab-/Anmelden hat das Gerät kein Abo mehr, die Bereiche des Kontos sind aber an.
+    it('meldet das Gerät auch an, wenn schon ein Bereich an ist', async () => {
+      const ensure = jasmine.createSpy('ensure').and.resolveTo();
+      const { c } = withPush({
+        getConfig: () => of({ publicKey: 'vapid', enabledCategories: ['messages'] }),
+        permissionGranted: false,
+        ensureSubscribed: ensure,
+        setPreferences: jasmine.createSpy('prefs').and.callFake((cats: string[]) => of({ categories: cats })),
+      });
+      c.ngOnInit();
+      await Promise.resolve();
+      expect(c.pushDeviceInactive).toBeTrue();
+      expect(ensure).not.toHaveBeenCalled();
+      await c.togglePush('friends', true, { checked: true });
+      expect(ensure).toHaveBeenCalledOnceWith('vapid');
+      expect(c.pushDeviceInactive).toBeFalse();
+    });
+
+    it('Seite öffnen mit Bereichen an und erteilter Berechtigung: still neu abonnieren', async () => {
+      const ensure = jasmine.createSpy('ensure').and.resolveTo();
+      const { c } = withPush({
+        getConfig: () => of({ publicKey: 'vapid', enabledCategories: ['messages'] }),
+        permissionGranted: true,
+        ensureSubscribed: ensure,
+      });
+      c.ngOnInit();
+      await new Promise(r => setTimeout(r));
+      expect(ensure).toHaveBeenCalledOnceWith('vapid');
+      expect(c.pushDeviceInactive).toBeFalse();
+    });
+
+    it('ohne Bereiche wird beim Öffnen nichts abonniert', async () => {
+      const ensure = jasmine.createSpy('ensure').and.resolveTo();
+      const { c } = withPush({
+        getConfig: () => of({ publicKey: 'vapid', enabledCategories: [] }),
+        permissionGranted: true,
+        ensureSubscribed: ensure,
+      });
+      c.ngOnInit();
+      await new Promise(r => setTimeout(r));
+      expect(ensure).not.toHaveBeenCalled();
+      expect(c.pushDeviceInactive).toBeFalse();
+    });
   });
 });
 
