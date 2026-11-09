@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.940.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Game review: a move that merely resolves a fork — two or more of your pieces were attacked before, fewer afterwards — is no longer a „brilliant“ sacrifice (the piece that remains en prise was already hanging). A piece deliberately left hanging still counts, as on chess.com. Move classes are re-harvested for all analyses (rule version 2).',
+        de: 'Partie-Rückblick: Ein Zug, der nur eine Gabel auflöst — vorher hingen zwei oder mehr eigene Figuren, danach weniger — gilt nicht mehr als „brillantes“ Opfer (die verbleibende Figur hing schon vorher). Eine bewusst stehen gelassene Figur zählt weiter, wie bei chess.com. Die Zug-Klassen aller Analysen werden neu geerntet (Regelstand 2).' },
+    ],
+  },
+  {
     version: '0.940.0',
     date: '2026-11-09',
     changes: [
