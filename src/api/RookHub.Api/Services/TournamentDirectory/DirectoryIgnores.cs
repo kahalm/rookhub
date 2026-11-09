@@ -14,12 +14,16 @@ namespace RookHub.Api.Services.TournamentDirectory;
 public static class DirectoryIgnores
 {
     /// <summary>Nur Einträge, die <paramref name="userId"/> weder selbst noch über eine andere Gruppe desselben Turniers
-    /// ausgeblendet hat (EXISTS-Unterabfrage, nichts wird materialisiert).</summary>
+    /// ausgeblendet hat (EXISTS-Unterabfragen, nichts wird materialisiert). Zwei getrennte NOT EXISTS ohne OR (GA-06): die
+    /// frühere Fassung mit einem OR in EINER Unterabfrage lief auf MariaDB je Kandidatenzeile alle Ausblendungen des
+    /// Nutzers ab. So greift das erste NOT EXISTS den eindeutigen Index (UserId, PublicId), das zweite den GroupKey-Index
+    /// und darin wieder (UserId, PublicId). <c>o.GroupKey != null</c> steht für die SQL-Semantik: ohne Gruppe gibt es keine
+    /// Geschwister (in C# wäre <c>null == null</c> wahr).</summary>
     public static IQueryable<TournamentDirectoryEntry> WhereNotIgnored(
         this IQueryable<TournamentDirectoryEntry> source, AppDbContext db, int userId) =>
-        source.Where(e => !db.TournamentDirectoryIgnores.Any(i => i.UserId == userId
-            && (i.PublicId == e.PublicId
-                || (e.GroupKey != null && db.TournamentDirectoryEntries.Any(o => o.PublicId == i.PublicId && o.GroupKey == e.GroupKey)))));
+        source.Where(e => !db.TournamentDirectoryIgnores.Any(i => i.UserId == userId && i.PublicId == e.PublicId)
+            && !db.TournamentDirectoryEntries.Any(o => o.GroupKey != null && o.GroupKey == e.GroupKey
+                && db.TournamentDirectoryIgnores.Any(i => i.UserId == userId && i.PublicId == o.PublicId)));
 
     /// <summary>Welche der <paramref name="ids"/> hat der Nutzer ausgeblendet (direkt oder über eine Gruppe desselben
     /// Turniers)?</summary>

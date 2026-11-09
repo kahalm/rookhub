@@ -133,4 +133,40 @@ public class DirectorySqlTranslationTests
         Assert.Contains("ORDER BY", sql);
         Assert.Contains("LIMIT", sql);
     }
+
+    /// <summary>GA-06 (G1-001): der Ausblende-Filter übersetzt sich in zwei getrennte NOT EXISTS ohne OR — vorher EINE
+    /// abhängige Unterabfrage mit OR und innerem EXISTS, die MariaDB je Kandidatenzeile über alle Ausblendungen des
+    /// Nutzers laufen ließ. Ob der Planer die Indizes wirklich nimmt, zeigt nur EXPLAIN auf MariaDB.</summary>
+    [Fact]
+    public void Ausblendefilter_ohneOr_zweiNotExists()
+    {
+        using var db = MySqlContext();
+
+        var sql = db.TournamentDirectoryEntries.WhereNotIgnored(db, 5).Select(e => e.Id).ToQueryString();
+
+        Assert.DoesNotContain(" OR ", sql);
+        Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(sql, "NOT EXISTS").Count);
+    }
+
+    /// <summary>GA-06: die Umformung behält das Verhalten — direkt ausgeblendet, über eine andere Gruppe desselben Turniers
+    /// ausgeblendet, und zwei Einträge OHNE Gruppenschlüssel sind keine Geschwister (null ist kein gemeinsamer Schlüssel).</summary>
+    [Fact]
+    public async Task Ausblendefilter_DirektGruppeUndOhneGruppe()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        TournamentDirectoryEntry E(string id, string? group) => new()
+        {
+            PublicId = id, ChessResultsId = id, Name = "T" + id, GroupKey = group, FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+        };
+        db.TournamentDirectoryEntries.AddRange(E("1", null), E("2", null), E("3", "g"), E("4", "g"), E("5", "h"));
+        db.TournamentDirectoryIgnores.AddRange(
+            new TournamentDirectoryIgnore { UserId = 5, PublicId = "1" },    // ohne Gruppe: nur er selbst
+            new TournamentDirectoryIgnore { UserId = 5, PublicId = "3" },    // Gruppe g: 3 und 4
+            new TournamentDirectoryIgnore { UserId = 6, PublicId = "5" });   // fremder Nutzer: zählt nicht
+        await db.SaveChangesAsync();
+
+        var visible = await db.TournamentDirectoryEntries.WhereNotIgnored(db, 5).Select(e => e.PublicId).OrderBy(x => x).ToListAsync();
+
+        Assert.Equal(["2", "5"], visible);
+    }
 }
