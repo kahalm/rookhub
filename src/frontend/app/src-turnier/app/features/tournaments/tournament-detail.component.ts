@@ -450,19 +450,31 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   // --- Favorites (server-side) ---
 
-  private loadFavorites(): void {
+  /** Favoriten oder Filtereinstellung kamen nicht (Codereview F4-007): leere Sterne sähen sonst wie „keine Favoriten“
+   *  aus, und wer sie neu setzte, hielt sie für verloren. Hinweis mit „Wiederholen“, die Sterne ruhen bis dahin. */
+  favoritesFailed = false;
+
+  loadFavorites(): void {
+    this.favoritesFailed = false;
     this.api.getFavorites(this.id).subscribe({
       next: (favs) => {
         this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr!));
         this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr!));
         this.refreshDisplayed();
       },
-      error: () => {}
+      error: () => { this.favoritesFailed = true; }
     });
     this.api.getFavoriteSettings(this.id).subscribe({
       next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; this.refreshDisplayed(); },
-      error: () => {}
+      error: () => { this.favoritesFailed = true; }
     });
+  }
+
+  /** Solange die Favoriten nicht geladen sind, setzt ein Stern nichts (der Stand dahinter ist unbekannt). */
+  private favoritesUnknown(): boolean {
+    if (!this.favoritesFailed) return false;
+    this.snackbar.warn(this.translate.instant('tournaments.favorites.loadFailed'));
+    return true;
   }
 
   /**
@@ -514,6 +526,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   toggleFavorite(player: TournamentPlayer): void {
+    if (this.loggedIn && this.favoritesUnknown()) return;
     const add = !this.favoriteSnrs.has(player.snr);
     this.favoriteSnrs = withSnr(this.favoriteSnrs, player.snr, add);
     this.refreshDisplayed();
@@ -529,6 +542,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   toggleTeamFavorite(team: TournamentTeam): void {
+    if (this.loggedIn && this.favoritesUnknown()) return;
     const add = !this.favoriteTeamSnrs.has(team.snr);
     this.favoriteTeamSnrs = withSnr(this.favoriteTeamSnrs, team.snr, add);
     this.refreshDisplayed();

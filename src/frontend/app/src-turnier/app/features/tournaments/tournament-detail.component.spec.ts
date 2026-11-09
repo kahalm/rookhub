@@ -77,7 +77,7 @@ describe('TournamentDetailComponent', () => {
 
   /** Rendert die Detailseite bis zur Aktionsleiste; alle Start-Requests werden mit Leerdaten beantwortet. */
   async function render(monitor: { active: boolean; activeUntil: string | null }, groups?: TournamentGroup[],
-                        opts: { chessResultsId?: string; subscriptions?: Subscription[] } = {}): Promise<ComponentFixture<TournamentDetailComponent>> {
+                        opts: { chessResultsId?: string; subscriptions?: Subscription[]; favoritesError?: boolean } = {}): Promise<ComponentFixture<TournamentDetailComponent>> {
     await TestBed.configureTestingModule({
       imports: [TournamentDetailComponent],
       providers: [
@@ -94,7 +94,8 @@ describe('TournamentDetailComponent', () => {
     const fixture = TestBed.createComponent(TournamentDetailComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges(); // ngOnInit
-    http.expectOne('/api/tournament-favorites?tournamentId=4711').flush([]);
+    const favs = http.expectOne('/api/tournament-favorites?tournamentId=4711');
+    if (opts.favoritesError) favs.flush('x', { status: 503, statusText: 'down' }); else favs.flush([]);
     http.expectOne('/api/tournament-favorites/settings/4711').flush({ showFavoritesOnly: false });
     http.expectOne('/api/tournaments/4711').flush({
       id: 1, name: 'Schach Tirol Open', chessResultsId: opts.chessResultsId ?? '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
@@ -463,6 +464,27 @@ describe('TournamentDetailComponent', () => {
 
   const kollege = { snr: 7, name: 'Kollege' } as TournamentPlayer;
   const verein = { snr: 3, name: 'SK Schwaz' } as TournamentTeam;
+
+  /** Codereview F4-007: ein gescheiterter Abruf der Favoriten sah wie „keine Favoriten“ aus. */
+  it('Favoriten nicht geladen: Hinweis mit Wiederholen, ein Stern setzt bis dahin nichts', async () => {
+    const fixture = await render({ active: false, activeUntil: null }, undefined, { favoritesError: true });
+    const http = TestBed.inject(HttpTestingController);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.fav-failed')?.textContent).toContain('tournaments.favorites.loadFailed');
+
+    fixture.componentInstance.toggleFavorite(kollege);
+    expect(fixture.componentInstance.isFavorite(kollege)).toBeFalse();
+    expect(warn).toHaveBeenCalledWith('tournaments.favorites.loadFailed');
+    http.expectNone(r => r.method === 'POST' && r.url === '/api/tournament-favorites');
+
+    (el.querySelector('.fav-failed button') as HTMLButtonElement).click();
+    http.expectOne('/api/tournament-favorites?tournamentId=4711').flush([{ id: 1, playerSnr: 7 }]);
+    http.expectOne('/api/tournament-favorites/settings/4711').flush({ showFavoritesOnly: false });
+    fixture.detectChanges();
+    expect(el.querySelector('.fav-failed')).toBeNull();
+    expect(fixture.componentInstance.isFavorite(kollege)).toBeTrue();
+  });
 
   /** Erfolg: Stern an, die Bestaetigung erst mit der Serverantwort. */
   it('bestaetigt einen Spieler-Favoriten erst nach der Serverantwort', async () => {

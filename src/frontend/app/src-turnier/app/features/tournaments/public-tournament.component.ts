@@ -122,7 +122,8 @@ export class PublicTournamentComponent implements OnInit {
     if (!this.auth.isLoggedIn) return;
     this.api.getSubscriptions().subscribe({
       next: (subs) => { this.subscriptions = subs; this.matchSubscription(); },
-      error: () => {},
+      // Sonst stünde „Merken“ statt „Gemerkt“, ohne dass jemand erfährt, warum (Codereview F4-007).
+      error: () => this.snackbar.info(this.translate.instant('tournaments.detail.loadSubscriptionFailed')),
     });
   }
 

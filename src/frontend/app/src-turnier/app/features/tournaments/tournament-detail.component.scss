@@ -3,6 +3,7 @@
 .load-failed { padding: 1rem; }
 .load-failed p { margin: 0 0 0.75rem; }
 .load-failed-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.fav-failed { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 0.5rem 0; color: var(--rh-error); }
 
 /* Gruppen-Umschaltung: am Handy darf die Leiste seitlich scrollen statt die Seite zu verbreitern. */
 .group-switch { padding: 0 16px 8px; overflow-x: auto; }

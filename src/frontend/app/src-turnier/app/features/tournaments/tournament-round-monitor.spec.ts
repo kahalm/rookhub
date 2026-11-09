@@ -81,6 +81,15 @@ describe('TournamentRoundMonitor', () => {
     destroy();
   });
 
+  it('Stand nicht geladen: Hinweis statt still „nicht beobachtet“ (F4-007)', () => {
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    monitor.load();
+    http.expectOne('/api/tournament-monitors/4711').flush('x', { status: 503, statusText: 'down' });
+    expect(info).toHaveBeenCalledWith('tournaments.monitor.loadFailed');
+    expect(monitor.monitoring()).toBeFalse();
+    destroy();
+  });
+
   it('fragt abgemeldet gar nicht erst', () => {
     signedIn = false;
     monitor.load();

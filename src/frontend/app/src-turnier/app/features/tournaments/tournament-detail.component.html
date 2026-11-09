@@ -96,6 +96,12 @@
           }
         </mat-card>
 
+        @if (favoritesFailed) {
+          <p class="fav-failed" role="alert">
+            {{ 'tournaments.favorites.loadFailed' | translate }}
+            <button mat-button type="button" (click)="loadFavorites()">{{ 'common.retry' | translate }}</button>
+          </p>
+        }
         <app-tournament-tables
           [players]="players"
           [teams]="teams"

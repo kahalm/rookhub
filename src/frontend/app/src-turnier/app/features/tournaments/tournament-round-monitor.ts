@@ -60,7 +60,8 @@ export class TournamentRoundMonitor {
           this.startPoll();
         }
       },
-      error: () => {},
+      // Sonst wirkte die Beobachtung aus, obwohl sie läuft (Codereview F4-007).
+      error: () => this.snackbar.info(this.translate.instant('tournaments.monitor.loadFailed')),
     });
   }
 

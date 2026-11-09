@@ -1,3 +1,4 @@
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { of } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
@@ -26,6 +27,24 @@ describe('PublicTournamentComponent', () => {
     }).compileComponents();
     const fixture = TestBed.createComponent(PublicTournamentComponent);
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  it('Merkstatus nicht geladen: Hinweis statt still „Merken“ (F4-007)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PublicTournamentComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '990025' }) } } },
+      ],
+    }).compileComponents();
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.returnValue(true);
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    const fixture = TestBed.createComponent(PublicTournamentComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.match(r => r.url === '/api/subscriptions').forEach(r => r.flush('x', { status: 503, statusText: 'down' }));
+    expect(info).toHaveBeenCalledWith('tournaments.detail.loadSubscriptionFailed');
   });
 
   // ----- Favoriten-Ansicht ueber tournament-favorites.util, gecacht (W5 F6-024) -----
