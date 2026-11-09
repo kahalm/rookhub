@@ -422,6 +422,18 @@ public class LeagueGameMovesTests : IDisposable
         Assert.IsType<NotFoundResult>(await shareClub.Game("LINK1", other.Id, fixtures, default));   // nicht an einem Brett des Links
         Assert.IsType<NotFoundResult>(await shareClub.GameEvals("LINK1", other.Id, fixtures, default));
         Assert.IsType<NotFoundResult>(await shareClub.Game("ALT", c.Id, fixtures, default));
+
+        // Wunsch 2026-11-09: Zusammenfassung über den Link nur lesend — nur der fertige Text, nie Warte-Stand/Modell/Fehler.
+        var summaries = new ClubGameSummaries(_db);
+        var none = (ClubGameSummaryDto)((OkObjectResult)await shareClub.GameSummary("LINK1", c.Id, fixtures, summaries, default)).Value!;
+        Assert.Equal(("none", (string?)null), (none.Status, none.Markdown));
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = c.Id, Status = ClubGameSummaryStatus.Requested, Markdown = "# Text", Model = "fable",
+            RequestedAt = Now, MovesHash = c.MovesHash });
+        await _db.SaveChangesAsync();
+        var done = (ClubGameSummaryDto)((OkObjectResult)await shareClub.GameSummary("LINK1", c.Id, fixtures, summaries, default)).Value!;
+        Assert.Equal(("done", "# Text", (string?)null, (ClubGameSummaryReadiness?)null), (done.Status, done.Markdown, done.Model, done.Readiness));
+        Assert.IsType<NotFoundResult>(await shareClub.GameSummary("LINK1", other.Id, fixtures, summaries, default));
+        Assert.IsType<NotFoundResult>(await shareClub.GameSummary("ALT", c.Id, fixtures, summaries, default));
     }
 
     [Fact]

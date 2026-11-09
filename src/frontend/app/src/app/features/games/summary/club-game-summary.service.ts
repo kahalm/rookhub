@@ -44,6 +44,11 @@ export class ClubGameSummaryService {
     return this.http.get<ClubGameSummary>(`/api/league/club/games/${gameId}/summary`);
   }
 
+  /** Vereinspartie über den Teilen-Link, nur lesend (Wunsch 2026-11-09): nur der fertige Text. */
+  getShared(token: string, gameId: number): Observable<ClubGameSummary> {
+    return this.http.get<ClubGameSummary>(`/api/league/s/${encodeURIComponent(token)}/club/games/${gameId}/summary`);
+  }
+
   /** Eigene Partie (0.923.0, `GET /api/games/{id}/summary`). */
   getOwn(savedGameId: number): Observable<ClubGameSummary> {
     return this.http.get<ClubGameSummary>(`/api/games/${savedGameId}/summary`);

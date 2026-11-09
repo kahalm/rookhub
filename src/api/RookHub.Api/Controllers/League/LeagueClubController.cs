@@ -521,6 +521,27 @@ public class LeagueShareClubController : ControllerBase
         await ClubOfLinkedGameAsync(token, id, fixtures, ct) is { } club && await _club.EvalsAsync(club, id, ct) is { } e
             ? Ok(e) : NotFound();
 
+    /// <summary>Fehler-Vergleiche samt Erklärungen derselben Partie, nur lesend (Wunsch 2026-11-09), Regel wie <see cref="Game"/>.
+    /// Ohne <c>Title</c> (trägt Spielernamen) und <c>Error</c> (Technik) — beides braucht der Trainer nicht.</summary>
+    [HttpGet("games/{id:int}/comparisons")]
+    public async Task<IActionResult> GameComparisons(string token, int id, [FromServices] LeagueFixtureGames fixtures,
+        [FromServices] ClubGameComparisons comparisons, CancellationToken ct) =>
+        await ClubOfLinkedGameAsync(token, id, fixtures, ct) is { } club && await comparisons.ForGameAsync(club, id, ct) is { } list
+            ? Ok(list.Select(x => x with { Comparison = x.Comparison with { Title = null, Error = null } }).ToList()) : NotFound();
+
+    /// <summary>Fertige Zusammenfassung derselben Partie, nur lesend (Wunsch 2026-11-09), Regel wie <see cref="Game"/>: ohne Text
+    /// <c>none</c>; Warte-Stand, Modell und Fehler bleiben den Vereinsmitgliedern vorbehalten.</summary>
+    [HttpGet("games/{id:int}/summary")]
+    public async Task<IActionResult> GameSummary(string token, int id, [FromServices] LeagueFixtureGames fixtures,
+        [FromServices] ClubGameSummaries summaries, CancellationToken ct)
+    {
+        if (await ClubOfLinkedGameAsync(token, id, fixtures, ct) is not { } club || await summaries.GetAsync(club, id, ct) is not { } s)
+            return NotFound();
+        return Ok(s.Markdown is null
+            ? new ClubGameSummaryDto("none", null, null, null, false, null, null)
+            : new ClubGameSummaryDto("done", s.Markdown, s.DoneAt, null, s.Stale, null, null));
+    }
+
     [HttpPost("games/preview")]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
     public async Task<IActionResult> Preview(string token, [FromBody] LeagueClubPreviewRequest req, CancellationToken ct)

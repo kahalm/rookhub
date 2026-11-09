@@ -79,6 +79,9 @@
             <app-club-summary-link [gameId]="clubComparisonGameId" />
           } @else if (ownComparisonGameId !== null) {
             <app-club-summary-link [gameId]="ownComparisonGameId" kind="own" />
+          } @else if (clubShareToken !== null && clubShareGameId !== null) {
+            <!-- Teilen-Link (Wunsch 2026-11-09): nur lesend, nur wenn es einen fertigen Text gibt. -->
+            <app-club-summary-link [gameId]="clubShareGameId" [shareToken]="clubShareToken" />
           }
           @if (game.sourceUrl) {
             <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">

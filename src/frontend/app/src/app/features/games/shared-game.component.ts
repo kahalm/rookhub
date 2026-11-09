@@ -100,6 +100,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
   club = false;
   /** Vereinspartie, deren Zugvergleiche geladen werden (0.908.0; nicht über einen Teilen-Link). */
   clubComparisonGameId: number | null = null;
+  /** LeagueHub-Teilen-Link der Vereinspartie (Wunsch 2026-11-09): Vergleiche und Zusammenfassung nur lesend. */
+  clubShareToken: string | null = null;
+  clubShareGameId: number | null = null;
   /** Eigene Partie (0.923.0): Vergleiche und Zusammenfassung laufen über die gespeicherte Partie. */
   ownComparisonGameId: number | null = null;
   readonly comparisons = signal<ReadonlyMap<number, ClubMistakeComparison> | null>(null);
@@ -325,9 +328,10 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Zugvergleiche zu den Fehlern einer Vereinspartie (0.908.0) — nur angemeldet über RookHub, nicht über den Teilen-Link.
    *  Still bei Fehlern: der Trainer zeigt dann einfach keinen Vergleich. */
   private loadComparisons(): void {
-    const id = this.clubComparisonGameId ?? this.ownComparisonGameId;
+    const id = this.clubComparisonGameId ?? this.ownComparisonGameId ?? this.clubShareGameId;
     if (id == null) return;
-    (this.clubComparisonGameId != null ? this.games.clubComparisons(id) : this.games.ownComparisons(id)).subscribe({
+    (this.clubShareToken !== null ? this.games.sharedClubComparisons(this.clubShareToken, id)
+      : this.clubComparisonGameId != null ? this.games.clubComparisons(id) : this.games.ownComparisons(id)).subscribe({
       next: list => this.comparisons.set(new Map(list.map(x => [x.ply, x]))),
       error: () => {},
     });
@@ -372,7 +376,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
       // über den Link, der Server gibt nur Partien der geteilten Begegnung her und nie das Bearbeitungsrecht.
       const shareToken = mode === 'club-share' ? (this.route.snapshot.paramMap.get('token') || '') : null;
       this.markSource = { clubGameId: id };
-      if (shareToken === null) { this.clubComparisonGameId = id; this.loadComparisons(); }
+      if (shareToken === null) this.clubComparisonGameId = id;
+      else { this.clubShareToken = shareToken; this.clubShareGameId = id; }
+      this.loadComparisons();
       this.evalsUrl = shareToken !== null ? this.games.sharedClubEvalsUrl(shareToken, id) : this.games.clubEvalsUrl(id);
       (shareToken !== null ? this.games.sharedClubGame(shareToken, id) : this.games.clubGame(id)).subscribe({
         next: g => this.show(g),

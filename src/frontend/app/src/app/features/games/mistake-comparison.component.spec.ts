@@ -83,6 +83,19 @@ describe('MistakeComparisonComponent', () => {
     expect(got!.at).toBe(3);
   });
 
+  it('without a game id (share link): no button to the full comparison page', () => {
+    TestBed.configureTestingModule({
+      imports: [MistakeComparisonComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const f = TestBed.createComponent(MistakeComparisonComponent);
+    f.componentRef.setInput('entry', entry());
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Nach Dh5 entwickelt');
+    expect(el.querySelector('a.open')).toBeNull();
+  });
+
   it('pending: one quiet line, nothing else', () => {
     const el = make(entry('candidates'));
     expect(el.textContent).toContain('games.mistakes.compare.pending');

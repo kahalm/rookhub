@@ -20,7 +20,7 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
   template: `
     @if (state(); as s) {
       @if (s.markdown) {
-        <a mat-stroked-button class="summary-link" [routerLink]="[kind() === 'own' ? '/games' : '/club-games', gameId(), 'summary']">
+        <a mat-stroked-button class="summary-link" [routerLink]="summaryLink()">
           <mat-icon>article</mat-icon> {{ 'games.summary.open' | translate }}
         </a>
       }
@@ -65,6 +65,13 @@ export class ClubSummaryLinkComponent implements OnInit {
   readonly allowAgain = input(false);
   /** `own` (0.923.0): eigene Partie — der Besitzer fordert an (Kontingent); `club`: Vereinspartie, nur Admins. */
   readonly kind = input<'club' | 'own'>('club');
+  /** LeagueHub-Teilen-Link (Wunsch 2026-11-09): nur der Link zur fertigen Zusammenfassung, nichts anfordern. */
+  readonly shareToken = input<string | null>(null);
+  summaryLink(): (string | number)[] {
+    const token = this.shareToken();
+    return token !== null ? ['/s', token, 'club-games', this.gameId(), 'summary']
+      : [this.kind() === 'own' ? '/games' : '/club-games', this.gameId(), 'summary'];
+  }
 
   private service = inject(ClubGameSummaryService);
   private auth = inject(AuthService);
@@ -72,7 +79,7 @@ export class ClubSummaryLinkComponent implements OnInit {
   private translate = inject(TranslateService);
 
   readonly isAdmin = this.auth.isAdmin;
-  readonly canRequest = computed(() => this.kind() === 'own' || this.isAdmin);
+  readonly canRequest = computed(() => this.shareToken() === null && (this.kind() === 'own' || this.isAdmin));
   readonly state = signal<ClubGameSummary | null>(null);
   readonly busy = signal(false);
   /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). */
@@ -95,7 +102,9 @@ export class ClubSummaryLinkComponent implements OnInit {
 
   private load(): void {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
-    (this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
+    const token = this.shareToken();
+    (token !== null ? this.service.getShared(token, this.gameId())
+      : this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
   }
 
   /** „Vertiefung 56/62 · Fehler-Vergleiche 0/11" — was noch fehlt, knapp. */

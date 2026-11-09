@@ -43,6 +43,27 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     expect(page.el.querySelector('.summary-request')?.textContent).toContain('games.summary.requestAgain');
   });
 
+  it('Teilen-Link: liest über den Link, zeigt den Text-Link, nie einen Anforder-Knopf — auch für Admins', () => {
+    TestBed.configureTestingModule({
+      imports: [ClubSummaryLinkComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: { isAdmin: true } }],
+    });
+    const f = TestBed.createComponent(ClubSummaryLinkComponent);
+    f.componentRef.setInput('gameId', 236);
+    f.componentRef.setInput('shareToken', 'abc');
+    f.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/league/s/abc/club/games/236/summary').flush({ ...none, status: 'none' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.summary-request')).toBeNull();
+    expect(el.querySelector('a.summary-link')).toBeNull();
+    f.componentInstance.state.set({ ...none, status: 'done', markdown: '# x' } as never);
+    f.detectChanges();
+    expect(el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/s/abc/club-games/236/summary');
+    expect(el.querySelector('.summary-request')).toBeNull();
+  });
+
   it('Admin: anfordern schickt POST und zeigt danach den Wartestand', () => {
     const { f, http, el } = setup(true);
     http.expectOne('/api/league/club/games/236/summary').flush(none);

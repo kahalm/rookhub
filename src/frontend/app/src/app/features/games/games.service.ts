@@ -308,6 +308,10 @@ export class GamesService {
   sharedClubGame(token: string, id: number): Observable<SharedGame> {
     return this.http.get<ClubGameDto>(`/api/league/s/${encodeURIComponent(token)}/club/games/${id}`).pipe(map(toClubGame));
   }
+  /** Fehler-Vergleiche über den Teilen-Link, nur lesend (Wunsch 2026-11-09). */
+  sharedClubComparisons(token: string, id: number): Observable<ClubMistakeComparison[]> {
+    return this.http.get<ClubMistakeComparison[]>(`/api/league/s/${encodeURIComponent(token)}/club/games/${id}/comparisons`);
+  }
   sharedClubEvalsUrl(token: string, id: number): string { return `/api/league/s/${encodeURIComponent(token)}/club/games/${id}/evals`; }
   /** „Partie analysieren" auf der geteilten Partie — jeder Angemeldete. */
   sharedAnalyzeUrl(token: string): string { return `/api/games/shared/${encodeURIComponent(token)}/analyze`; }

@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.925.0", date: "2026-11-09", changes: [
+    { en: "League share links: a club game opened without an account now also shows the mistake comparisons with explanations and rules of thumb, and the finished summary — read-only.",
+      de: "Liga-Teilen-Links: Eine Vereinspartie zeigt auch ohne Konto die Fehler-Vergleiche mit Erklärungen und Merksätzen sowie die fertige Zusammenfassung — nur lesend." },
+  ] },
   { version: "0.924.1", date: "2026-11-09", changes: [
     { en: "Club games: a new game is queued for analysis right away instead of waiting for the league or master game currently running.",
       de: "Vereinspartien: Eine neue Partie wird sofort zur Analyse angelegt und wartet nicht mehr auf die gerade laufende Liga- oder Meisterpartie." },

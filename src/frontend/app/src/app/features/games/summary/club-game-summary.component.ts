@@ -58,7 +58,7 @@ interface ResolvedDiagram {
               <a mat-stroked-button [routerLink]="gameLink()" class="to-game">
                 <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
               </a>
-              <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" />
+              @if (shareToken === null) { <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" /> }
             </div>
           </div>
           @if (summary()?.stale) {
@@ -163,7 +163,11 @@ export class ClubGameSummaryComponent implements OnInit {
   gameId = 0;
   /** `/games/:id/summary` (0.923.0): eigene Partie statt Vereinspartie. */
   own = false;
-  gameLink(): (string | number)[] { return [this.own ? '/games' : '/club-games', this.gameId]; }
+  /** `/s/:token/club-games/:id/summary` (Wunsch 2026-11-09): über den LeagueHub-Teilen-Link, ohne Anmeldung, nur lesend. */
+  shareToken: string | null = null;
+  gameLink(): (string | number)[] {
+    return this.shareToken !== null ? ['/s', this.shareToken, 'club-games', this.gameId] : [this.own ? '/games' : '/club-games', this.gameId];
+  }
   readonly loading = signal(true);
   readonly failed = signal(false);
   readonly game = signal<SharedGame | null>(null);
@@ -174,13 +178,17 @@ export class ClubGameSummaryComponent implements OnInit {
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
     this.own = this.route.snapshot.data?.['mode'] === 'own';
+    if (this.route.snapshot.data?.['mode'] === 'club-share') this.shareToken = this.route.snapshot.paramMap.get('token') || '';
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.failed.set(false);
-    const load: Observable<[SharedGame, ClubGameSummary]> = this.own
+    const token = this.shareToken;
+    const load: Observable<[SharedGame, ClubGameSummary]> = token !== null
+      ? forkJoin([this.games.sharedClubGame(token, this.gameId), this.summaries.getShared(token, this.gameId)])
+      : this.own
       ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])
       : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
     load.subscribe({

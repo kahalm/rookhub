@@ -94,9 +94,12 @@ function afterFen(fen: string, uci: string): string | null {
           }
           <!-- Merksatz aus der kuratierten Liste mit (i) → Buchstellen (0.917.0). -->
           @if (maxim(); as mx) { <app-maxim-note [text]="mx" /> }
+          <!-- Die volle Vergleichsseite braucht ein Konto: über den Teilen-Link (beide Ids leer) kein Knopf. -->
+          @if (clubGameId() || ownGameId()) {
           <a mat-button class="open" [routerLink]="['/analysis/compare', e.comparison.id]" [queryParams]="ownGameId() ? { ownGame: ownGameId() } : { clubGame: clubGameId() }">
             <mat-icon>compare_arrows</mat-icon> {{ 'games.mistakes.compare.open' | translate }}
           </a>
+          }
         </div>
       }
     }
