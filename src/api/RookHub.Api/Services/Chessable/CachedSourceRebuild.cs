@@ -9,7 +9,7 @@ namespace RookHub.Api.Services.Chessable;
 /// Grundlage von <see cref="StaleAction.Cache"/>, für Kurse (<c>BookSource.SourcePgn</c>) UND Repertoires
 /// (<c>RepertoireFile.PgnContent</c>, je Datei). EINE Textfunktion für beide, damit ein Kurs und ein Repertoire aus
 /// demselben Chessable-Kurs nach dem „Aktualisieren" denselben Zugtext tragen. Reine Textarbeit, ohne DB und Netz:
-/// den Cache fragt <see cref="ImportReprocessService"/>; danach bereitet ein Kurs über
+/// den Cache fragen <see cref="CourseCacheRebuild"/> bzw. <see cref="RepertoireCacheRebuild"/>; danach bereitet ein Kurs über
 /// <see cref="PgnImportService.ImportFileAsync"/> auf, ein Repertoire wird nur geschrieben (der Trainer wertet live aus).
 ///
 /// <para><b>Warum nur der Zugtext:</b> die Header tragen die Identität der Linie IM KURS. <c>Round</c> kommt aus

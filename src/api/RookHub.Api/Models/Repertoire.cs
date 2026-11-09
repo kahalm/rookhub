@@ -53,7 +53,7 @@ public class Repertoire
     /// <summary>
     /// Wann der „Aktualisieren"-Lauf dieses veraltete Chessable-Repertoire zuletzt aus dem Linien-Cache erneuern
     /// wollte und dabei NICHTS übernehmen konnte, ohne dass es ein vorübergehender Grund war — keine Kurs-Id, keine
-    /// einzige Linie im Cache, keine Linie übernehmbar (<c>ImportReprocessService.RebuildRepertoireFromCacheAsync</c>).
+    /// einzige Linie im Cache, keine Linie übernehmbar (<c>RepertoireCacheRebuild.RebuildAsync</c>).
     /// Gilt, solange es nicht jünger ist als <see cref="UpdatedAt"/>
     /// (<see cref="Services.StaleContentRule.ActionForRepertoire"/>): dann zählt der Status das Repertoire nicht mehr
     /// als aktualisierbar, sondern als „braucht Re-Import" — sonst verspricht das Banner bei jedem Aufruf ein

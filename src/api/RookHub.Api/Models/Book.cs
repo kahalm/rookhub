@@ -131,7 +131,7 @@ public class Book
 
     /// <summary>
     /// Wann der „Aktualisieren"-Lauf dieses veraltete Chessable-Buch zuletzt aus dem Linien-Cache erneuern wollte
-    /// und KEINE einzige seiner Linien dort fand (<c>ImportReprocessService.RebuildFromCacheAsync</c>). Gilt, solange
+    /// und KEINE einzige seiner Linien dort fand (<c>CourseCacheRebuild.RebuildAsync</c>). Gilt, solange
     /// es nicht jünger ist als <see cref="UpdatedAt"/> (<see cref="Services.StaleContentRule.ActionForBook"/>): dann
     /// zählt der Status das Buch nicht mehr als aktualisierbar, sondern als „braucht Re-Import" — sonst verspricht
     /// das Banner bei jedem Aufruf ein Aktualisieren, das der Lauf jedes Mal überspringt (gemeldet 2026-10-05:

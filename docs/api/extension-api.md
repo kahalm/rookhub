@@ -134,7 +134,7 @@ Refetch: ein veraltetes Buch mit gespeicherter Quelle wird LOKAL aufbereitet (da
 Zug-Kommentare, nur die `[ChessableOid]` fehlen weiter), eines ohne Quelle zaehlt als „braucht
 Re-Import". Vorher zaehlte der Status es als aktualisierbar, der Lauf sprang es an und meldete
 „uebersprungen" — das Banner „1 Kurs kann aktualisiert werden" stand dauerhaft (gemeldet 2026-09-20,
-Prod-Log: `0 lokal, 0 eingereiht, 6 uebersprungen`). `EnqueueRefetchesAsync` legt ohne den Schalter
+Prod-Log: `0 lokal, 0 eingereiht, 6 uebersprungen`). `ChessableRefetchQueue.EnqueueAsync` legt ohne den Schalter
 ausserdem gar keinen Auftrag mehr an — er wuerde nie abgearbeitet und blockierte den Kurs. Ein Re-Fetch prüft das
 Eigentum am Kurs wie der Import, samt Drossel der Kursliste (`CourseListRefreshCooldown`, 5 min; Codereview A3-014).
 
@@ -170,7 +170,7 @@ bestehende Kurse — der Re-Fetch-Weg ist auf PROD seit 2026-09-09 aus. Regeln:
   als das Banner verspricht, nie weniger. Ein piratechess-Ausfall liefert ebenfalls „nichts gecacht" und markiert
   damit zu Unrecht — der nächste Lauf heilt das.
 * **Dasselbe für Repertoires: `Repertoire.CacheMissAt`** (0.693.3, gemeldet 2026-10-06: 5 Repertoires auf Prod, 4× „keine
-  der N Linien im Linien-Cache", 1× „keine Kurs-Id"). `RebuildRepertoireFromCacheAsync` markiert bei jedem
+  der N Linien im Linien-Cache", 1× „keine Kurs-Id"). `RepertoireCacheRebuild.RebuildAsync` markiert bei jedem
   DAUERHAFTEN Nichts — keine Kurs-Id, keine oids, kein Cache-Treffer, keine Linie übernehmbar —, nicht aber, wenn das
   Repertoire währenddessen geändert wurde oder eine Portion warf. Status (`ActionFor(r, forDisplay: true)`) und
   `RepertoireService.MarkNeedsReimportAsync` reichen `cacheMissed` an `ActionForRepertoire`; der Lauf fragt ohne.
