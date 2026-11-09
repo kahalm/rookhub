@@ -11,6 +11,18 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.938.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Link previews: shared links now show an informative preview card in messengers — games (final or linked position, players, result, event, evaluation curve), marked positions, reconstructions, repertoire lines, worksheets (grid of up to six diagrams, no solutions), puzzles (from the solver’s point of view, never the solution), the daily puzzle with its date and the weekly post.',
+        de: 'Link-Vorschau: Geteilte Links zeigen in Messengern jetzt eine aussagekräftige Vorschaukarte — Partien (End- oder verlinkte Stellung, Spieler, Ergebnis, Ereignis, Bewertungskurve), markierte Stellungen, Rekonstruktionen, Repertoire-Linien, Aufgabenblätter (Raster aus bis zu sechs Diagrammen, ohne Lösungen), Puzzles (aus Sicht des Lösers, nie die Lösung), das Tagespuzzle mit Datum und die Wochenpost.' },
+      { en: 'LeagueHub: shared pairings (/s/…) and shared league games (/partie/…) get a preview card too — league, round, teams, date and the most likely line-up with percentages; anonymised names stay anonymised. Deploy the API before the frontend images.',
+        de: 'LeagueHub: Geteilte Begegnungen (/s/…) und geteilte Ligapartien (/partie/…) bekommen ebenfalls eine Vorschaukarte — Liga, Runde, Mannschaften, Termin und die wahrscheinlichste Aufstellung mit Prozenten; anonymisierte Namen bleiben anonymisiert. Beim Ausrollen zuerst die API, dann die Frontend-Images.' },
+      { en: 'Puzzle previews previously showed the position before the setup move from the opponent’s side; fixed. Fixed og tags of the tournament and KidHub shells no longer compete with the generated ones.',
+        de: 'Puzzle-Vorschauen zeigten bisher die Stellung vor dem Setup-Zug aus Gegnersicht; behoben. Feste og-Tags der Turnier- und KidHub-Shell konkurrieren nicht mehr mit den erzeugten.' },
+    ],
+  },
+  {
     version: '0.937.1',
     date: '2026-11-09',
     changes: [
