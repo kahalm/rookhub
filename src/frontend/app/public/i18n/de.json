@@ -30,6 +30,8 @@
     "nextDue": "Gerade nichts fällig. Nächste Wiederholung in {{when}}.",
     "repeatIn": "Nächste Wiederholung in {{when}}",
     "nothingInPool": "Noch keine Linien im Übungspool — füge welche hinzu, um zu starten.",
+    "loadFailed": "Das Repertoire konnte nicht geladen werden.",
+    "notAvailable": "Dieses Repertoire gibt es nicht (mehr), oder es ist nicht für dich freigegeben.",
     "addAllToPool": "Alle Linien in den Pool",
     "makeAllDue": "Alle jetzt fällig machen",
     "poolFailed": "Der Übungspool konnte nicht geändert werden – bitte erneut versuchen.",

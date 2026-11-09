@@ -30,6 +30,8 @@
     "nextDue": "Trenutno ništa nije na redu. Sljedeće ponavljanje za {{when}}.",
     "repeatIn": "Sljedeće ponavljanje za {{when}}",
     "nothingInPool": "Još nema linija u bazenu za vježbanje — dodaj neke za početak.",
+    "loadFailed": "Repertoar se nije mogao učitati.",
+    "notAvailable": "Ovaj repertoar više ne postoji ili nije podijeljen s tobom.",
     "addAllToPool": "Dodaj sve linije u bazen",
     "makeAllDue": "Učini sve dospjelim sada",
     "poolFailed": "Bazen za vježbanje nije bilo moguće promijeniti – pokušaj ponovno.",

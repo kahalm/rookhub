@@ -47,6 +47,8 @@ import { OpponentNoteView, opponentNoteView } from './opponent-note.util';
 import { cardLang } from '../../shared/player-card/card-lang';
 import { TrainerReviewEngine, readReviewEngineOn, saveReviewEngineOn } from './repertoire-trainer-review-engine';
 import { ChessableMisses, MissInfo, chessableOid, chessableUrl, missAt } from './repertoire-trainer-misses.util';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { loadErrorKind } from '../../shared/load-error/load-error-cause';
 
 const NO_COMMENTS: PlayedComment[] = [];
 
@@ -91,6 +93,7 @@ function saveShowComments(on: boolean): void {
   imports: [IconLabelDirective,
     CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule,
     MatIconModule, MatProgressBarModule, MatTooltipModule, MatDialogModule, MatMenuModule, TranslatePipe, PuzzleBoardComponent,
+    LoadErrorComponent,
   ],
   templateUrl: './repertoire-trainer.component.html',
   styleUrls: ['./repertoire-trainer.component.scss'],
@@ -332,7 +335,24 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
       }
     }
     this.stockfish.init().catch(() => {});
+    this.loadRepertoire();
+  }
 
+  /** Ladefehler ohne Offline-Kopie (G3-003): dann steht im Leerzustand app-load-error bzw. „gibt es nicht (mehr)“
+   *  statt „Noch keine Linien im Übungspool“ samt wirkungslosem „Alle in den Pool“. */
+  loadError: unknown = null;
+  get loadMissing(): boolean { return this.loadError !== null && loadErrorKind(this.loadError) === 'missing'; }
+
+  /** „Erneut versuchen“ nach einem Ladefehler. */
+  retryLoad(): void {
+    this.loadError = null;
+    this.s.phase = 'LOADING';
+    this.cdr.markForCheck();
+    this.loadRepertoire();
+  }
+
+  private loadRepertoire(): void {
+    this.loadSub?.unsubscribe();
     this.loadSub = forkJoin({
       pgn: this.training.getPgn(this.repertoireId),
       states: this.training.getLineStates(this.repertoireId),
@@ -346,9 +366,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         void this.initSession(pgn, states);
         this.loadChessableMisses(pgn);
       },
-      error: () => {
+      error: err => {
         // Server unerreichbar → heruntergeladene Kopie verwenden (Offline-Training); ohne Kopie
-        // bleibt es bei der leeren Ansicht.
+        // zeigt der Leerzustand den Ladefehler (nie „keine Linien“).
         const cached = getRepertoireOffline(this.repertoireId);
         if (cached) {
           this.offlineSession = true;
@@ -356,6 +376,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
           this.sr.setSrLevels(cached.config);
           void this.initSession(cached.pgn, cached.states);
         } else {
+          this.loadError = err ?? true;
           this.s.phase = 'EMPTY';
           this.cdr.markForCheck();
         }

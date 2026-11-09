@@ -30,6 +30,8 @@
     "nextDue": "Nothing due right now. Next review in {{when}}.",
     "repeatIn": "Next review in {{when}}",
     "nothingInPool": "No lines in your practice pool yet — add some to start.",
+    "loadFailed": "The repertoire could not be loaded.",
+    "notAvailable": "This repertoire no longer exists or is not shared with you.",
     "addAllToPool": "Add all lines to pool",
     "makeAllDue": "Make all due now",
     "poolFailed": "The practice pool could not be changed – please try again.",

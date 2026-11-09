@@ -1,11 +1,11 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { EMPTY, of } from 'rxjs';
+import { EMPTY, of, throwError } from 'rxjs';
 import { RepertoireTrainerComponent } from './repertoire-trainer.component';
 import { RepertoireTrainingService } from './repertoire-training.service';
 import { RepertoireExplorerService, DEFAULT_EXPLORER_SETTINGS } from './repertoire-explorer.service';
@@ -256,5 +256,55 @@ describe('RepertoireTrainerComponent Brettgröße (a1)', () => {
     expect(w).toMatch(/\.side(\[[^\]]*\])?\{max-width:640px/);
     expect(w).toMatch(/\.play(\[[^\]]*\])?\{justify-content:center/);
     expect(css.slice(0, css.indexOf('@media(min-width:2400px)'))).not.toContain('1100px');
+  });
+});
+
+/** G3-003: ein Ladefehler ohne Offline-Kopie ist kein leerer Übungspool. */
+describe('RepertoireTrainerComponent Ladefehler (G3-003)', () => {
+  async function render(getPgn: () => unknown): Promise<ComponentFixture<RepertoireTrainerComponent>> {
+    await TestBed.configureTestingModule({
+      imports: [RepertoireTrainerComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '990003' }, queryParamMap: { get: () => null } } } },
+        { provide: RepertoireTrainingService, useValue: { getPgn, getLineStates: () => of([]) } },
+        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+        { provide: RepertoireExplorerService, useValue: { run: () => EMPTY, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RepertoireTrainerComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('Serverfehler: app-load-error statt „Noch keine Linien“, kein „Alle in den Pool“; Erneut lädt nach', async () => {
+    let fail = true;
+    const pgn = '[Event "Rep"]\n[White "1.e4"]\n[Black "Chapter A"]\n\n1. e4 e5 2. Nf3 *';
+    const getPgn = jasmine.createSpy('getPgn').and.callFake(() =>
+      fail ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(pgn));
+    const fixture = await render(getPgn);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.textContent).not.toContain('repertoireTrainer.nothingInPool');
+    expect(el.textContent).not.toContain('repertoireTrainer.addAllToPool');
+
+    fail = false;
+    (el.querySelector('app-load-error button.retry') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(getPgn).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('app-load-error')).toBeNull();
+  });
+
+  it('404/403: eigener Text „gibt es nicht (mehr)“, ohne Erneut-Knopf und ohne Pool-Knopf', async () => {
+    const fixture = await render(() => throwError(() => new HttpErrorResponse({ status: 404 })));
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.load-missing')?.textContent).toContain('repertoireTrainer.notAvailable');
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.textContent).not.toContain('repertoireTrainer.addAllToPool');
   });
 });

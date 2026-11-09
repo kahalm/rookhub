@@ -2986,6 +2986,8 @@
     "nextDue": "Most nincs esedékes. A következő ismétlés: {{when}}.",
     "repeatIn": "Következő ismétlés: {{when}}",
     "nothingInPool": "Még nincs változat a gyakorlókészletben — vegyél fel párat a kezdéshez.",
+    "loadFailed": "A repertoárt nem sikerült betölteni.",
+    "notAvailable": "Ez a repertoár már nem létezik, vagy nincs megosztva veled.",
     "addAllToPool": "Minden változat a készletbe",
     "makeAllDue": "Mind legyen most esedékes",
     "poolFailed": "A gyakorlókészletet nem sikerült módosítani – próbáld újra.",

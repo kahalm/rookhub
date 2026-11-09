@@ -592,7 +592,9 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect((c as any).session.advanceTimer).toBeNull();
   });
 
-  it('LOADING failure sets phase to EMPTY', () => {
+  // G3-003: Phase bleibt EMPTY (Kopf ohne Spielfläche), aber mit loadError — das Template zeigt dann app-load-error
+  // statt „Noch keine Linien im Übungspool“ (früher hielt dieser Test nur die EMPTY-Phase fest).
+  it('LOADING failure sets phase to EMPTY and records the load error', () => {
     const route: any = {
       snapshot: { paramMap: { get: () => '1' }, queryParamMap: { get: () => null } },
     };
@@ -610,6 +612,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     );
     c.ngOnInit();
     expect(c.phase).toBe('EMPTY');
+    expect(c.loadError).toBeTruthy();
   });
 });
 

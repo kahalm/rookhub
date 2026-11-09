@@ -78,7 +78,16 @@
     </div>
 
     <mat-card *ngSwitchCase="'EMPTY'" class="msg">
-      @if (mode === 'learn') {
+      @if (loadError) {
+        <!-- G3-003: ein Ladefehler ist kein leerer Übungspool. -->
+        @if (loadMissing) {
+          <mat-icon>block</mat-icon>
+          <!-- Keine eigene Aktion: „Zurück“ steht schon in der Kopfzeile (DESIGN 5.10, höchstens eine Aktion). -->
+          <p class="load-missing">{{ 'repertoireTrainer.notAvailable' | translate }}</p>
+        } @else {
+          <app-load-error messageKey="repertoireTrainer.loadFailed" [error]="loadError" (retry)="retryLoad()" />
+        }
+      } @else if (mode === 'learn') {
         <mat-icon>school</mat-icon>
         <p>{{ 'repertoireTrainer.nothingToLearn' | translate }}</p>
         <div class="msg-actions">
