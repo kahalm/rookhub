@@ -37,6 +37,6 @@ Ohne Service Worker (LeagueHub): `SwUpdate` ist in beiden Diensten optional inji
 `false`), Stufe 2 läuft. Spec `src-leaguehub/app/not-found-ohne-service-worker.spec.ts` erzeugt die Seite ohne
 `SwUpdate`-Anbieter.
 
-Grenzen: `version.json` wird (wie `changelog.json`) nur ins Projekt `app` kopiert (angular.json) — in LeagueHub findet
-Stufe 2 darum heute nie etwas und zeigt nach dem Ladekreis die normale Seite. Turnierseite, KidHub und ClubHub haben
+`version.json` wird in die Projekte `app` und `leaguehub` kopiert (angular.json; `changelog.json` nur nach `app`), Stufe 2
+greift also auch in LeagueHub. Grenzen: Turnierseite, KidHub und ClubHub haben
 keine Nicht-gefunden-Seite (`'**'` leitet auf die Startseite um).
