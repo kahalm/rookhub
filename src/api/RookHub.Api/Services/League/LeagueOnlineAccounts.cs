@@ -435,17 +435,24 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
 /// und Kommentar verlassen den Server nie (Karte, Meldeliste, Teilen-Links, Vorschläge). Verborgen ist, wessen Jahrgang laut
 /// Konto-Suche unter <see cref="LeagueAccountFinder.AdultAge"/> liegt. Ein UNBEKANNTER Jahrgang verbirgt seit 0.616.0 nicht mehr
 /// (Wunsch des Nutzers: „alle mit gesichertem Geburtsdatum unter 18 ausblenden, alle anderen anzeigen"); ebenso gilt ein Konto
-/// ohne Such-Eintrag (nie abgesucht) als sichtbar. Mit 18 wird es von selbst sichtbar.
+/// ohne Such-Eintrag (nie abgesucht) als sichtbar. Sichtbar wird es von selbst, aber erst im Jahr NACH dem 18. Geburtstag:
+/// es gibt nur den Jahrgang, und im Jahr des 18. Geburtstags kann der Spieler noch 17 sein (R2-011, Entscheidung E7 —
+/// konservativ: <c>Jahr − Jahrgang ≥ 19</c>, vorher gab der 1. Jänner die Konten bis zu knapp zwölf Monate zu früh frei).
 /// </summary>
 public static class LeagueHiddenAccounts
 {
-    public static bool Hides(int? birthYear, DateTime? now = null) =>
-        birthYear is { } y && (now ?? DateTime.UtcNow).Year - y < LeagueAccountFinder.AdultAge;
+    /// <summary>Ab diesem Abstand Jahr − Jahrgang sind die Konten sichtbar (<see cref="LeagueAccountFinder.AdultAge"/> + 1).</summary>
+    public const int VisibleFromYearsSinceBirthYear = LeagueAccountFinder.AdultAge + 1;
 
-    /// <summary>Die FIDE-IDs aus <paramref name="fides"/> (<c>null</c> = alle), deren Konten verborgen bleiben.</summary>
-    public static async Task<HashSet<string>> FidesAsync(AppDbContext db, IEnumerable<string>? fides, CancellationToken ct)
+    public static bool Hides(int? birthYear, DateTime? now = null) =>
+        birthYear is { } y && (now ?? DateTime.UtcNow).Year - y < VisibleFromYearsSinceBirthYear;
+
+    /// <summary>Die FIDE-IDs aus <paramref name="fides"/> (<c>null</c> = alle), deren Konten verborgen bleiben — dieselbe Grenze
+    /// wie <see cref="Hides"/>.</summary>
+    public static async Task<HashSet<string>> FidesAsync(AppDbContext db, IEnumerable<string>? fides, CancellationToken ct,
+        DateTime? now = null)
     {
-        var limit = DateTime.UtcNow.Year - LeagueAccountFinder.AdultAge;
+        var limit = (now ?? DateTime.UtcNow).Year - VisibleFromYearsSinceBirthYear;
         var q = db.LeagueAccountScans.AsNoTracking().Where(s => s.BirthYear != null && s.BirthYear > limit);
         if (fides is not null)
         {

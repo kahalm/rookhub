@@ -367,8 +367,9 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   anzeigen"; bis dahin galt auch „Jahrgang unbekannt" als verborgen) gilt `LeagueHiddenAccounts`: Seite, Nutzername, Adresse, Profilangaben und
   Kommentar verlassen den Server nie — Vorschläge (`hidden: true`, nur Hinweise + Spieler), Konto-JSON (`JsonAsync`/`ToJson(…,
   hidden)`), Karte (angemeldet nur DASS es ein Konto gibt, über einen Teilen-Link gar nichts), Meldeliste der Ansichten
-  (`RebuildViewsAsync`, `PatchViewsAsync`: leer). Die Partien zählen nur im Eröffnungsbaum (Züge, keine Gegner/Links). Mit 18 wird
-  das Konto von selbst sichtbar. Ohne Such-Eintrag (nie abgesucht) gilt ein Konto als sichtbar — die Suche erfasst jeden Spieler
+  (`RebuildViewsAsync`, `PatchViewsAsync`: leer). Die Partien zählen nur im Eröffnungsbaum (Züge, keine Gegner/Links). Sichtbar
+  wird das Konto von selbst, aber erst ab `Jahr − Jahrgang ≥ 19` (R2-011: es gibt nur den Jahrgang, im Jahr des 18. Geburtstags
+  kann der Spieler noch 17 sein; `LeagueHiddenAccounts.Hides` und `FidesAsync` ziehen dieselbe Grenze). Ohne Such-Eintrag (nie abgesucht) gilt ein Konto als sichtbar — die Suche erfasst jeden Spieler
   der laufenden Saison. In DB und Server-Log steht die Verknüpfung weiter (nur Betreiber). Testfall
   `Minors_AreSearched_ButNothingIdentifyingLeavesTheServer` prüft ALLE Ausgaben auf den Nutzernamen.
   **Ausnahme ADMINS** (0.625.0, Wunsch „Admins sollen auch bei Minderjährigen die Onlinekonten für die Prüfung auf

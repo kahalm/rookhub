@@ -318,7 +318,25 @@ public class LeagueAccountFinderTests : IDisposable
         var now = new DateTime(2026, 9, 30);
         Assert.False(LeagueHiddenAccounts.Hides(null, now));                                   // unbekannt = sichtbar (0.616.0)
         Assert.True(LeagueHiddenAccounts.Hides(2009, now));                                    // 17
-        Assert.False(LeagueHiddenAccounts.Hides(2008, now));                                   // 18
+        // R2-011: im Jahr des 18. Geburtstags noch verborgen (der Spieler kann noch 17 sein); vorher hier schon sichtbar.
+        Assert.True(LeagueHiddenAccounts.Hides(2008, now));
+        Assert.False(LeagueHiddenAccounts.Hides(2007, now));                                   // sicher volljährig
+    }
+
+    /// <summary>R2-011: die Datenbank-Abfrage zieht dieselbe Grenze wie <see cref="LeagueHiddenAccounts.Hides"/>.</summary>
+    [Fact]
+    public async Task HiddenFides_spiegelnHides()
+    {
+        var now = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        var years = new Dictionary<string, int?> { ["a"] = 2009, ["b"] = 2008, ["c"] = 2007, ["d"] = null };
+        foreach (var (fide, y) in years)
+            _db.LeagueAccountScans.Add(new LeagueAccountScan { FideId = fide, BirthYear = y, ScannedAt = now, Version = 1 });
+        await _db.SaveChangesAsync();
+
+        var hidden = await LeagueHiddenAccounts.FidesAsync(_db, null, default, now);
+
+        Assert.Equal(years.Where(kv => LeagueHiddenAccounts.Hides(kv.Value, now)).Select(kv => kv.Key).Order(), hidden.Order());
+        Assert.Equal(["a", "b"], hidden.Order());
     }
 
     /// <summary>0.610.0 (Wunsch: „du linkst sie, aber zeigst niemandem den Namen/Account"): Minderjährige werden gesucht,
