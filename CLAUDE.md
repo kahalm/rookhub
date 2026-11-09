@@ -95,6 +95,7 @@ Diese Datei lädt in JEDE Sitzung — sie enthält nur Arbeitsregeln, Befehle un
 - Extension API (auth, CORS für chess.com) → `docs/api/extension-api.md`
 - Gespeicherte Partien (auth + öffentlicher Teilen-Link) → `docs/api/gespeicherte-partien.md`
 - Markierte Stellungen („+“, auch ohne Anmeldung, 0.847.0) → `docs/api/markierte-stellungen.md`
+- Link-Vorschau (Open Graph) — Vorschaubilder je geteilter Route aller Oberflächen, OG-Weiche im nginx → `docs/api/link-vorschau.md`
 - Turnier-Proxy (leitet an Crawler weiter; lesen und Turnier holen ohne Anmeldung) → `docs/api/turnier-proxy.md`
 - Chessable-Integration (auth, leitet an piratechess-API weiter) → `docs/api/chessable-integration.md`
 - Turnierverlauf (auth) → `docs/api/turnierverlauf.md`

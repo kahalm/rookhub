@@ -9,6 +9,21 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [~] Link-Vorschau: Vorschaubilder für geteilte Seiten — gebaut 2026-11-09 in 0.938.0, Reste bewusst offen
+
+Gebaut (Details `docs/api/link-vorschau.md`): Karten mit Text für Partie (+ `?ply=`), Repertoire-Linie, Rekonstruktion,
+Aufgabenblatt, Puzzles (Löser-Sicht statt Gegner-Sicht), Tagespuzzle mit Datum, Wochenpost, geteilte Stellung
+`/analysis?fen=`, LeagueHub-Begegnung `/s/{token}` und Ligapartie `/partie/{token}` (eigene Site `leaguehub`).
+Offen, bewusst nicht gemacht:
+- [ ] Turnier `/t/{id}` und Kalendereintrag als Karte mit Text (heute textfreie Grundstellung + Name/Eckdaten im Meta)
+- [ ] Vereinspartie über Liga-Link auf RookHub (`/s/{token}/club-games/{id}`) — die Prüfung „Partie hängt an der Begegnung
+      des Links" steckt privat in `LeagueShareClubController`; erst in einen Dienst ziehen
+- [ ] Öffentliche Kurse `/{slug}` (`/{slug}/{kapitel}`): Weiche müsste jedes Einzelsegment an die API schicken
+- [ ] `/maxims`, `/guess/{id}`, E-Book-Titelbild öffentlicher Bücher; allgemeine Standard-Vorschau (og-Tags in der
+      index.html) für RookHub, LeagueHub, ClubHub — heute ohne jede Vorschau auf allen übrigen Seiten
+- [ ] Schrift: Karten mit DejaVu Sans; Roboto/Barlow als TTF einbetten, falls die Marke enger sitzen soll
+- [ ] Sprache: RookHub-Karten englisch (wie Trainingskarte); die alte Partie-Beschreibung ist noch deutsch — vereinheitlichen?
+
 ## [x] Formular-Leser: d/e verwechselbar + Engine nur als Gleichstands-Entscheider (2026-10-08, ERLEDIGT 2026-11-09 in 0.937.0)
 
 Erledigt: d/e stand schon seit 0.737.1 in `Confusable` (Se7 und Sa7 kosten aus „Sd7" jetzt je 2,0, Sd4 2,5 — ein echter

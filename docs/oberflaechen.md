@@ -36,9 +36,10 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
 - **Link-Vorschau**: `/t/{id}` lebt jetzt auf der Turnierseite. Der nginx sagt der API über
   `X-Og-Site` (aus `$host` abgeleitet), welche SPA-Shell sie anreichern soll und welche Domain in
   `og:url` gehört (`App:TurnierBaseUrl`) — sonst bekäme der Besucher die RookHub-Shell serviert
-  und landete auf dem Dashboard. KidHub-, LeagueHub- und ClubHub-Hosts setzen `X-Og-Site` auf `none`: der nginx
+  und landete auf dem Dashboard. KidHub- und ClubHub-Hosts setzen `X-Og-Site` auf `none`: der nginx
   liefert dort die EIGENE `index.html` (keine Vorschau); OG-Antworten tragen nur noch das Cache-Control der nginx-map,
-  das der API wird verborgen (Codereview F8-012).
+  das der API wird verborgen (Codereview F8-012). LeagueHub-Hosts setzen seit 2026-11-09 `leaguehub`: die API reichert
+  die LeagueHub-Shell an (`/s/{token}`, `/partie/{token}`). Alle Routen mit Vorschau: `docs/api/link-vorschau.md`.
 - **Ohne Konto benutzbar** (0.643.0, Wunsch „vor allem Turniersuche und Turnier-Detailseiten; Speichern von Filtern und
   Turnieren braucht natuerlich einen Account"): `tournaments/calendar`, `tournaments/calendar/:id` und `tournaments/:id`
   tragen keinen `authGuard` mehr; `/tournaments` (Gemerkt), `/tournaments/history`, `/profile` und `/admin` schon. Jede
@@ -234,7 +235,8 @@ Kinderseite" unter REST API.
   zurücknehmen.
 - **Routen** `/`, `/levels`, `/levels/:level`, `/courses`, `/courses/:bookId`, `/login`, `/register`,
   `/forgot-password`, `/reset-password`, `/privacy`, `/account-deletion` — bewusst
-  keine mit `/g`, `/t`, `/puzzles`: diese Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API.
+  keine mit `/g`, `/t`, `/puzzles`, `/l`, `/r`, `/w`, `/s`, `/partie`, `/weekly` und kein genaues `/analysis`: diese
+  Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API (KidHub/ClubHub: auf die eigene Shell umgeschrieben).
 - **Symbole** (0.560.0, Vorlagen 2+3 seit 0.560.2): gezeichnete Vorlagen `design/kidhub/KidHub{,2,3}.png` (Bild-KI),
   alles in `public-kidhub/` leitet `design/kidhub/derive.py` ab — es stellt bei `KidHub.png` die WEISSEN Ecken frei
   (die Vorlage hat keinen Alphakanal) und färbt ein rotlila Stück Umriss um, schneidet `KidHub2.png` (maskable) um
