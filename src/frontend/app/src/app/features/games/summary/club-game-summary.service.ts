@@ -38,9 +38,21 @@ export interface ClubGameSummaryReadiness {
   analyzedPositions?: number;
 }
 
+/** Ein Buch der „Empfohlenen Literatur“ (`GET /api/ebook-suggestions`). */
+export interface EbookSuggestionInfo { id: number; title: string; author: string | null; year: string | null; accessible: boolean; blocked: boolean; }
+
 @Injectable({ providedIn: 'root' })
 export class ClubGameSummaryService {
   private http = inject(HttpClient);
+
+  suggestions(ids: number[]): Observable<EbookSuggestionInfo[]> {
+    return this.http.get<EbookSuggestionInfo[]>('/api/ebook-suggestions', { params: { ids: ids.join(',') } });
+  }
+  /** „Nicht mehr vorschlagen“ setzen bzw. zurücknehmen. */
+  setSuggestionBlocked(id: number, blocked: boolean): Observable<void> {
+    const url = `/api/ebook-suggestions/${id}/block`;
+    return blocked ? this.http.put<void>(url, {}) : this.http.delete<void>(url);
+  }
 
   get(gameId: number): Observable<ClubGameSummary> {
     return this.http.get<ClubGameSummary>(`/api/league/club/games/${gameId}/summary`);

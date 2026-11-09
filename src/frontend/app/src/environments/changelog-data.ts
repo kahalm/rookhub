@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.929.0", date: "2026-11-09", changes: [
+    { en: "Game summaries: rules of thumb now come only from the curated list, with an (i) showing the books. At the end, “Recommended reading” suggests 2–3 books matching the mistakes and playing strength, each with a reason and “Never suggest again”. Older summaries get this when requested again.",
+      de: "Partie-Zusammenfassungen: Merksätze kommen nur noch aus der kuratierten Liste, mit (i) zu den Büchern. Am Ende schlägt „Empfohlene Literatur“ 2–3 Bücher passend zu den Fehlern und zur Spielstärke vor, je mit Begründung und „Nicht mehr vorschlagen“. Ältere Zusammenfassungen bekommen das beim Neu-Anfordern." },
+    { en: "Requested summary: the header stays short, the progress is behind an (i) — the long sentence squeezed the player names. The deepening count no longer includes the final position (69/69 instead of 69/70).",
+      de: "Angeforderte Zusammenfassung: Die Kopfzeile bleibt kurz, der Fortschritt steht hinter einem (i) — der lange Satz quetschte die Spielernamen zusammen. Die Vertiefung zählt die Endstellung nicht mehr mit (69/69 statt 69/70)." },
+  ] },
   {
     version: '0.928.0',
     date: '2026-11-09',

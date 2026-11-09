@@ -11,6 +11,7 @@ internal static class GamesDataEraser
         var (db, userId) = (ctx.Db, ctx.UserId);
         // Öffentlich abrufbare Inhalte mit Klarnamen/Fremddaten: geteilte Partien (/g/{token}) und
         // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.
+        db.EbookSuggestionBlocks.RemoveRange(await db.EbookSuggestionBlocks.Where(b => b.UserId == userId).ToListAsync());
         db.OwnGameSummaries.RemoveRange(await db.OwnGameSummaries.Where(s => s.UserId == userId).ToListAsync());
         db.OwnGameSummaryRequests.RemoveRange(await db.OwnGameSummaryRequests.Where(r => r.UserId == userId).ToListAsync());
         db.SavedGames.RemoveRange(await db.SavedGames.Where(g => g.UserId == userId).ToListAsync());

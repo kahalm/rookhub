@@ -39,6 +39,6 @@ export class ChessMaximsService {
   /** Der Merksatz mit genau diesem Wortlaut (die Erklärung trägt den festen Text, nicht die Kennung). */
   static byText(all: readonly ChessMaxim[], text: string): ChessMaxim | null {
     const norm = (s: string) => s.trim().replace(/[.„“"]+$/g, '').replace(/^[„"]/, '');
-    return all.find(m => norm(m.text) === norm(text)) ?? null;
+    return all.find(m => m.id === text.trim() || norm(m.text) === norm(text)) ?? null;
   }
 }

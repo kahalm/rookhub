@@ -84,10 +84,13 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
       ready: false, hasAnalysis: true, analysisDone: true, refining: true, refinedPositions: 56, totalPositions: 62,
       comparisonsPlanned: false, comparisonsDone: 0, comparisonsTotal: 0 } });
     f.detectChanges();
-    const text = el.querySelector('.summary-wait')?.textContent ?? '';
-    expect(text).toContain('games.summary.waitingForAnalysis');
-    expect(text).toContain('games.summary.progressRefine');
-    expect(text).toContain('games.summary.progressComparisonsPending');
+    // Kurz in der Kopfzeile, der Fortschritt steckt im (i) (Wunsch 2026-11-09).
+    expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.requested');
+    expect(el.querySelector('.summary-wait')?.textContent).not.toContain('waitingForAnalysis');
+    const detail = el.querySelector('.wait-info')?.getAttribute('aria-label') ?? '';
+    expect(detail).toContain('games.summary.waitingForAnalysis');
+    expect(detail).toContain('games.summary.progressRefine');
+    expect(detail).toContain('games.summary.progressComparisonsPending');
     expect(f.componentInstance.progressText({ ready: false, hasAnalysis: true, analysisDone: true, refining: false,
       refinedPositions: 62, totalPositions: 62, comparisonsPlanned: true, comparisonsDone: 3, comparisonsTotal: 11 }))
       .toBe('games.summary.progressComparisons');

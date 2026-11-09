@@ -12,6 +12,7 @@ public static partial class DomainServicesSetup
         services.AddSingleton<RookHub.Api.Services.Ebooks.EbookStorage>();
         services.AddSingleton<RookHub.Api.Services.Ebooks.EbookAccessTokens>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookService>();
+        services.AddScoped<RookHub.Api.Services.Ebooks.EbookSuggestions>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookCourseBuilder>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookCollectionService>();
         services.AddScoped<RookHub.Api.Services.Ebooks.EbookGameService>();

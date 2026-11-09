@@ -3385,7 +3385,10 @@
       "requestedWaitingToast": "Angefordert – die Hintergrund-Analyse ist noch nicht durch; Claude schreibt die Zusammenfassung, sobald sie fertig ist.",
       "progressFast": "schnelle Analyse {{done}}/{{total}} Stellungen",
       "progressRefineNext": "Vertiefung folgt",
-      "quotaUsed": "Das Tageskontingent von {{limit}} Zusammenfassungen ist verbraucht – morgen wieder."
+      "quotaUsed": "Das Tageskontingent von {{limit}} Zusammenfassungen ist verbraucht – morgen wieder.",
+      "neverSuggest": "Nicht mehr vorschlagen",
+      "neverSuggestDone": "Wird dir nicht mehr vorgeschlagen.",
+      "neverSuggestFailed": "Das ließ sich nicht speichern."
     }
   },
   "analysis": {

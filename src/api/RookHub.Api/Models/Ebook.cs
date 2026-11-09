@@ -214,6 +214,15 @@ public class EbookFile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+/// <summary>„Nicht mehr vorschlagen“ (Wunsch 2026-11-09): dieses Buch empfiehlt die Literatur-Liste einer Zusammenfassung dem
+/// Nutzer nie wieder.</summary>
+public class EbookSuggestionBlock
+{
+    public int UserId { get; set; }
+    public int EbookId { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 /// <summary>Gruppe, die ein E-Book sehen darf (n:m, zusammengesetzter Schlüssel) — wie <see cref="BookGroupAccess"/>.</summary>
 public class EbookGroupAccess
 {

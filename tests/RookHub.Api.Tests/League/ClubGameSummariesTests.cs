@@ -87,6 +87,17 @@ public class ClubGameSummariesTests : IDisposable
     }
 
     [Fact]
+    public async Task Readiness_Endstellung_zaehltNichtMit()
+    {
+        var id = await GameAsync();
+        var a = await ReadyAsync(id, refined: false, comparisonsPlanned: false);
+        a.Positions.Add(new GameAnalysisPosition { Ply = 2, Fen = "z" });   // Endstellung: kein Zug, wird nie vertieft
+        await _db.SaveChangesAsync();
+        var r = await Svc.ReadinessAsync(id);
+        Assert.Equal((1, 2), (r.RefinedPositions, r.TotalPositions));
+    }
+
+    [Fact]
     public async Task Readiness_SchnellerDurchgang_zaehltGerechneteStellungen()
     {
         var id = await GameAsync();

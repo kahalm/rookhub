@@ -59,6 +59,16 @@ internal sealed class EbookFileConfiguration : IEntityTypeConfiguration<EbookFil
     }
 }
 
+internal sealed class EbookSuggestionBlockConfiguration : IEntityTypeConfiguration<EbookSuggestionBlock>
+{
+    public void Configure(EntityTypeBuilder<EbookSuggestionBlock> e)
+    {
+        e.HasKey(x => new { x.UserId, x.EbookId });
+        e.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        e.HasOne<Ebook>().WithMany().HasForeignKey(x => x.EbookId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class EbookGroupAccessConfiguration : IEntityTypeConfiguration<EbookGroupAccess>
 {
     public void Configure(EntityTypeBuilder<EbookGroupAccess> e)

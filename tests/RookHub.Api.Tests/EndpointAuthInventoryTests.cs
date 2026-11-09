@@ -23,6 +23,7 @@ public class EndpointAuthInventoryTests
     /// </summary>
     private static readonly string[] ExpectedAnonymous =
     [
+        "GET /api/ebook-suggestions",                                // EbookSuggestionsController.Info (nur Bücher der Merksatz-Belege)
         "GET /api/maxims",                                           // ChessMaximsController.List (kuratierte Merksätze, 0.917.0)
         "GET /api/book-puzzles/books",                               // BookPuzzleController.GetBooks
         "GET /api/book-puzzles/by-line-id",                          // BookPuzzleController.GetByLineId

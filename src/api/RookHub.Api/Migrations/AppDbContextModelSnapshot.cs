@@ -2926,6 +2926,24 @@ namespace RookHub.Api.Migrations
                     b.ToTable("EbookProgresses");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.EbookSuggestionBlock", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EbookId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("UserId", "EbookId");
+
+                    b.HasIndex("EbookId");
+
+                    b.ToTable("EbookSuggestionBlocks");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.EbookTranslation", b =>
                 {
                     b.Property<int>("Id")
@@ -10121,6 +10139,21 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Ebook");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.EbookSuggestionBlock", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Ebook", null)
+                        .WithMany()
+                        .HasForeignKey("EbookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.EbookTranslation", b =>

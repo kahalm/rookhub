@@ -3762,7 +3762,10 @@
       "requestedWaitingToast": "Kérve – a háttérelemzés még nem kész; Claude megírja az összefoglalót, amint elkészül.",
       "progressFast": "gyors elemzés {{done}}/{{total}} állás",
       "progressRefineNext": "mélyítés következik",
-      "quotaUsed": "A napi {{limit}} összefoglaló elfogyott – próbáld holnap."
+      "quotaUsed": "A napi {{limit}} összefoglaló elfogyott – próbáld holnap.",
+      "neverSuggest": "Ne javasold többé",
+      "neverSuggestDone": "Többé nem javasoljuk.",
+      "neverSuggestFailed": "Nem sikerült menteni."
     }
   },
   "analysisJobs": {

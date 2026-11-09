@@ -3385,7 +3385,10 @@
       "requestedWaitingToast": "Zatraženo – analiza u pozadini još nije gotova; Claude piše sažetak čim bude.",
       "progressFast": "brza analiza {{done}}/{{total}} pozicija",
       "progressRefineNext": "slijedi produbljivanje",
-      "quotaUsed": "Dnevna kvota od {{limit}} sažetaka je potrošena – pokušaj sutra."
+      "quotaUsed": "Dnevna kvota od {{limit}} sažetaka je potrošena – pokušaj sutra.",
+      "neverSuggest": "Ne predlaži više",
+      "neverSuggestDone": "Više ti se neće predlagati.",
+      "neverSuggestFailed": "Spremanje nije uspjelo."
     }
   },
   "analysis": {

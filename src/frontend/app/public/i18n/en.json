@@ -3385,7 +3385,10 @@
       "requestedWaitingToast": "Requested – the background analysis is not finished yet; Claude writes the summary as soon as it is.",
       "progressFast": "fast analysis {{done}}/{{total}} positions",
       "progressRefineNext": "deepening follows",
-      "quotaUsed": "Today's quota of {{limit}} summaries is used up – try again tomorrow."
+      "quotaUsed": "Today's quota of {{limit}} summaries is used up – try again tomorrow.",
+      "neverSuggest": "Never suggest again",
+      "neverSuggestDone": "Won’t be suggested to you again.",
+      "neverSuggestFailed": "Could not save that."
     }
   },
   "analysis": {

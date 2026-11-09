@@ -60,8 +60,9 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
         int refined = 0, total = 0, analyzed = 0;
         if (!failed && (!done || a.RefineDepth != null))
         {
+            // Ohne die Endstellung (kein Zug, wird nicht vertieft) — sonst stand dort 69/70, während die Analyse 69/69 meldet.
             // 0.919.3 (Wunsch 09.11.: „zeig mir den Fortschritt, x/x tief/schnell“): auch der schnelle Durchgang zählt mit.
-            var positions = db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == a.Id);
+            var positions = db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == a.Id && p.GameMoveUci != "");
             total = await positions.CountAsync(ct);
             analyzed = done ? total : await positions.CountAsync(p => p.AnalyzedAt != null, ct);
             if (a.RefineDepth != null) refined = await positions.CountAsync(p => p.Refined, ct);

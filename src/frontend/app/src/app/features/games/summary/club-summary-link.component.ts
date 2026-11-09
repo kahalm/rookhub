@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth.service';
 import { SnackbarService } from '../../../core/snackbar.service';
@@ -16,7 +17,7 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
   selector: 'app-club-summary-link',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatTooltipModule, TranslatePipe],
   template: `
     @if (state(); as s) {
       @if (s.markdown) {
@@ -29,9 +30,14 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
           <span class="summary-wait">
             <mat-icon>hourglass_top</mat-icon>
             @if (waiting(); as w) {
-              <!-- 0.914.0: angefordert, aber die Hintergrund-Rechnung ist noch nicht durch — Claude schreibt erst danach -->
-              <span class="wait-text">{{ 'games.summary.waitingForAnalysis' | translate }}
-                <span class="wait-progress">{{ progressText(w) }}</span></span>
+              <!-- Angefordert, die Hintergrund-Rechnung läuft noch: kurz in der Kopfzeile, der Fortschritt hinter dem (i)
+                   (Wunsch 2026-11-09 — der lange Satz quetschte die Spielernamen zusammen). Antippen geht auch am Handy. -->
+              {{ 'games.summary.requested' | translate }}
+              <button type="button" class="wait-info" #tip="matTooltip" (click)="tip.toggle()"
+                      [matTooltip]="('games.summary.waitingForAnalysis' | translate) + ' ' + progressText(w)"
+                      [attr.aria-label]="('games.summary.waitingForAnalysis' | translate) + ' ' + progressText(w)">
+                <mat-icon>info_outline</mat-icon>
+              </button>
             } @else {
               {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
               @if (elapsed(); as e) { <span class="summary-timer">{{ e }}</span> }
@@ -56,9 +62,10 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
     .summary-wait { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem;
       color: var(--mat-sys-on-surface-variant); }
     .summary-wait mat-icon { font-size: 18px; width: 18px; height: 18px; flex: 0 0 auto; }
-    .wait-text { display: inline-flex; flex-wrap: wrap; gap: 0 6px; }
-    .wait-progress { white-space: nowrap; }
     .summary-timer { font-variant-numeric: tabular-nums; }
+    .summary-wait { white-space: nowrap; }
+    .wait-info { all: unset; cursor: pointer; display: inline-flex; color: inherit; border-radius: 50%; }
+    .wait-info:hover, .wait-info:focus-visible { color: var(--rh-accent, currentColor); }
   `],
 })
 export class ClubSummaryLinkComponent implements OnInit {

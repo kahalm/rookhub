@@ -88,3 +88,7 @@ eine eigene Partie die Kennung `o<id>`; gegen eine ältere API (404, fehlende Ta
 
 
 **Zähler (0.926.1)**: Die Stand-Antwort trägt `runningSeconds` (nur Status `running`, vom Server gerechnet). Die Kopfzeile zählt daraus je Sekunde hoch und fragt beim Schreiben alle 10 s nach dem Stand.
+
+## Merksätze und Empfohlene Literatur (0.929.0)
+
+Claude schreibt `> **Merksatz:** <kennung>` (nur aus `merksaetze.md`, siehe `docs/api/merksaetze.md`); die Seite zeigt den festen Wortlaut mit (i), Unbekanntes (alte, erfundene Sätze) gar nicht. Letzter Abschnitt „Empfohlene Literatur“: 2–3 `book`-Blöcke mit `id:` und `why:`, nur Bücher aus den Merksatz-Belegen (`EbookSuggestions`). `GET /api/admin/ebook-suggestions/candidates?game=237|o143` (Watcher, ohne Sperren des Anfordernden), `GET /api/ebook-suggestions?ids=` (offen: Titel, `accessible`, `blocked`), `PUT|DELETE /api/ebook-suggestions/{id}/block` (je Konto, Tabelle `EbookSuggestionBlocks`).

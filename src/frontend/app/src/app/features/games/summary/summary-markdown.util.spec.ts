@@ -4,7 +4,7 @@ describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
     const md = [
       '# Partie 236', '', 'Erster Satz', 'geht weiter.', '', '## Fehler', '- eins', '- **zwei**', '1. a', '2. b',
-      '> **Merksatz:** Loch mit Leichtfigur', '---', '| Zug | Bewertung |', '|---|---|', '| 22.Td6 | +1,7 |',
+      '> Ein Zitat', '---', '| Zug | Bewertung |', '|---|---|', '| 22.Td6 | +1,7 |',
     ].join('\n');
     const b = parseSummary(md);
     expect(b.map(x => x.kind)).toEqual(['heading', 'paragraph', 'heading', 'list', 'list', 'quote', 'rule', 'table']);
@@ -49,5 +49,18 @@ describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
     expect(moveLabel(43, 'Td6')).toBe('22.Td6');
     expect(moveLabel(44, 'c5')).toBe('22…c5');
     expect(moveLabel(0)).toBe('');
+  });
+});
+
+describe('parseSummary: Merksatz und Literatur (Wunsch 2026-11-09)', () => {
+  it('Merksatz-Zitat wird Merksatz-Block, anderes Zitat bleibt', () => {
+    expect(parseSummary('> **Merksatz:** raum-und-tausch\n\n> Nur ein Zitat')).toEqual([
+      { kind: 'maxim', value: 'raum-und-tausch' },
+      { kind: 'quote', parts: [{ text: 'Nur ein Zitat' }] },
+    ] as never);
+  });
+  it('book-Block trägt Kennung und Begründung, ohne Kennung fällt er weg', () => {
+    expect(parseSummary('```book\nid: 1314\nwhy: Passt: zweimal Raum verschenkt.\n```\n\n```book\nwhy: x\n```'))
+      .toEqual([{ kind: 'book', id: 1314, why: 'Passt: zweimal Raum verschenkt.' }]);
   });
 });

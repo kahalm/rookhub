@@ -69,6 +69,7 @@ public partial class AppDbContext : DbContext
     public DbSet<LeagueClubDraft> LeagueClubDrafts => Set<LeagueClubDraft>();
     public DbSet<LeagueBatchUpload> LeagueBatchUploads => Set<LeagueBatchUpload>();
     public DbSet<ClubGameSummary> ClubGameSummaries => Set<ClubGameSummary>();
+    public DbSet<EbookSuggestionBlock> EbookSuggestionBlocks => Set<EbookSuggestionBlock>();
     public DbSet<OwnGameSummary> OwnGameSummaries => Set<OwnGameSummary>();
     public DbSet<OwnGameSummaryRequest> OwnGameSummaryRequests => Set<OwnGameSummaryRequest>();
     public DbSet<LeagueBatchUploadFile> LeagueBatchUploadFiles => Set<LeagueBatchUploadFile>();

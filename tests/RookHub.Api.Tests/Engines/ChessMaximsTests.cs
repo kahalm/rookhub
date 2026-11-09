@@ -82,3 +82,36 @@ public class ChessMaximsControllerTests : IDisposable
         Assert.Equal(ChessMaxims.All.Count, list.Count);
     }
 }
+
+/// <summary>„Empfohlene Literatur“ (Wunsch 2026-11-09): nur Bücher der Merksatz-Belege, Sperre je Konto.</summary>
+public class EbookSuggestionsTests : IDisposable
+{
+    private readonly RookHub.Api.Data.AppDbContext _db = new(new DbContextOptionsBuilder<RookHub.Api.Data.AppDbContext>()
+        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+    public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public async Task Sperre_gilt_je_Konto_fremde_Buecher_bleiben_unsichtbar()
+    {
+        var known = ChessMaxims.ById("raum-und-tausch")!.Sources[0].EbookId;
+        const int foreign = 987654;
+        _db.Ebooks.Add(new RookHub.Api.Models.Ebook { Id = known, Title = "Belegt", Source = RookHub.Api.Models.EbookSource.Library });
+        _db.Ebooks.Add(new RookHub.Api.Models.Ebook { Id = foreign, Title = "Privat", Source = RookHub.Api.Models.EbookSource.Library });
+        await _db.SaveChangesAsync();
+        var svc = new RookHub.Api.Services.Ebooks.EbookSuggestions(_db);
+
+        Assert.False(await svc.SetBlockedAsync(1, foreign, true, DateTime.UtcNow));
+        var info = await svc.InfoAsync([known, foreign], 1, false);
+        Assert.Equal((known, false, false), (Assert.Single(info).Id, info[0].Blocked, info[0].Accessible));
+
+        Assert.True(await svc.SetBlockedAsync(1, known, true, DateTime.UtcNow));
+        Assert.True((await svc.InfoAsync([known], 1, false))[0].Blocked);
+        Assert.False((await svc.InfoAsync([known], 2, false))[0].Blocked);
+        Assert.Empty(await svc.CandidatesAsync(1));
+        var c = Assert.Single(await svc.CandidatesAsync(2));
+        Assert.Contains("raum-und-tausch", c.Maxims);
+
+        Assert.True(await svc.SetBlockedAsync(1, known, false, DateTime.UtcNow));
+        Assert.Single(await svc.CandidatesAsync(1));
+    }
+}

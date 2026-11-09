@@ -25,7 +25,11 @@ export type SummaryBlock =
   | { kind: 'quote'; parts: InlinePart[] }
   | { kind: 'rule' }
   | { kind: 'table'; head: InlinePart[][]; rows: InlinePart[][][] }
-  | { kind: 'diagram'; spec: DiagramSpec };
+  | { kind: 'diagram'; spec: DiagramSpec }
+  /** `> **Merksatz:** <Kennung oder Wortlaut>` — nur Sätze der kuratierten Liste werden gezeigt, mit (i). */
+  | { kind: 'maxim'; value: string }
+  /** ```book-Block der „Empfohlenen Literatur“: Buch und warum es passt. */
+  | { kind: 'book'; id: number; why: string };
 
 /** `**fett**`, `*kursiv*` / `_kursiv_`, `` `Code` `` — nicht verschachtelt, unvollständige Zeichen bleiben Text. */
 export function parseInline(text: string): InlinePart[] {
@@ -96,6 +100,10 @@ export function parseSummary(markdown: string): SummaryBlock[] {
       if (fence[1].toLowerCase() === 'diagram') {
         const spec = parseDiagram(body);
         if (spec) blocks.push({ kind: 'diagram', spec });
+      } else if (fence[1].toLowerCase() === 'book') {
+        const kv = new Map(body.map(l => [l.slice(0, l.indexOf(':')).trim().toLowerCase(), l.slice(l.indexOf(':') + 1).trim()]));
+        const id = Number(kv.get('id'));
+        if (id > 0) blocks.push({ kind: 'book', id, why: kv.get('why') ?? '' });
       } else if (body.length) {
         blocks.push({ kind: 'paragraph', parts: [{ text: body.join('\n'), code: true }] });
       }
@@ -113,7 +121,8 @@ export function parseSummary(markdown: string): SummaryBlock[] {
       const q: string[] = [];
       while (i < lines.length && lines[i].trim().startsWith('>')) q.push(lines[i++].trim().replace(/^>\s?/, ''));
       i--;
-      blocks.push({ kind: 'quote', parts: parseInline(q.join(' ')) });
+      const maxim = /^\*{0,2}Merksatz:\*{0,2}\s*(.+)$/.exec(q.join(' ').trim());
+      blocks.push(maxim ? { kind: 'maxim', value: maxim[1].trim() } : { kind: 'quote', parts: parseInline(q.join(' ')) });
       continue;
     }
     const item = /^([-*+]|\d+[.)])\s+(.*)$/;

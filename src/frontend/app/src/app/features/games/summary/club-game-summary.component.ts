@@ -5,13 +5,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, forkJoin } from 'rxjs';
 import { ChessBoardComponent, BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { PreferencesService } from '../../../core/preferences.service';
 import { GamesService, SharedGame } from '../games.service';
-import { ClubGameSummary, ClubGameSummaryService } from './club-game-summary.service';
+import { AuthService } from '../../../core/auth.service';
+import { SnackbarService } from '../../../core/snackbar.service';
+import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component';
+import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo } from './club-game-summary.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent } from './summary-game-board.component';
 import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, parseSummary, positionsOf } from './summary-markdown.util';
@@ -36,7 +39,7 @@ interface ResolvedDiagram {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, NgTemplateOutlet, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressSpinnerModule, TranslatePipe,
-    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent],
+    ChessBoardComponent, LoadErrorComponent, ClubSummaryLinkComponent, SummaryGameBoardComponent, MaximNoteComponent],
   template: `
     <div class="summary-page" [class.with-board]="hasBoard()">
       @if (loading()) {
@@ -70,7 +73,7 @@ interface ResolvedDiagram {
             <p class="note empty">{{ 'games.summary.none' | translate }}</p>
           } @else {
             <article class="summary-text">
-              @for (b of blocks(); track $index) {
+              @for (b of visibleBlocks(); track $index) {
                 @switch (b.kind) {
                   @case ('heading') {
                     @if (b.level === 1) { <h1><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></h1> }
@@ -80,6 +83,30 @@ interface ResolvedDiagram {
                   @case ('paragraph') { <p><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></p> }
                   @case ('quote') { <blockquote><ng-container *ngTemplateOutlet="inline; context: { $implicit: b.parts }" /></blockquote> }
                   @case ('rule') { <hr /> }
+                  @case ('maxim') { <app-maxim-note class="maxim" [text]="b.value" /> }
+                  @case ('book') {
+                    @if (books().get(b.id); as info) {
+                      <div class="book">
+                        <div class="book-title">
+                          @if (info.accessible) { <a [routerLink]="['/ebooks', info.id]"><strong>{{ info.title }}</strong></a> }
+                          @else { <strong>{{ info.title }}</strong> }
+                          @if (info.author) { <span> — {{ info.author }}</span> }
+                          @if (info.year) { <span> ({{ info.year }})</span> }
+                        </div>
+                        @if (justBlocked().has(b.id)) {
+                          <p class="book-why">{{ 'games.summary.neverSuggestDone' | translate }}
+                            <button mat-button (click)="setBlocked(b.id, false)">{{ 'common.undo' | translate }}</button></p>
+                        } @else {
+                          <p class="book-why">{{ b.why }}</p>
+                          @if (loggedIn) {
+                            <button mat-button class="never" (click)="setBlocked(b.id, true)">
+                              <mat-icon>block</mat-icon> {{ 'games.summary.neverSuggest' | translate }}
+                            </button>
+                          }
+                        }
+                      </div>
+                    }
+                  }
                   @case ('list') {
                     @if (b.ordered) {
                       <ol>@for (it of b.items; track $index) { <li><ng-container *ngTemplateOutlet="inline; context: { $implicit: it }" /></li> }</ol>
@@ -153,6 +180,10 @@ interface ResolvedDiagram {
     .summary-text h1 { font-size: 1.5rem; margin: 16px 0 8px; }
     .summary-text h2 { font-size: 1.25rem; margin: 24px 0 8px; }
     .summary-text h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+    .summary-text .book { margin: 10px 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 6px; }
+    .summary-text .book-title a { color: inherit; }
+    .summary-text .book-why { margin: 4px 0; }
+    .summary-text .never { margin-left: -8px; opacity: 0.75; }
     .summary-text blockquote { margin: 12px 0; padding: 4px 12px; border-left: 3px solid var(--rh-accent);
       background: color-mix(in srgb, var(--rh-accent) 8%, transparent); }
     .summary-text code { font-family: monospace; font-size: 0.9em; }
@@ -171,6 +202,8 @@ export class ClubGameSummaryComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private games = inject(GamesService);
   private summaries = inject(ClubGameSummaryService);
+  private snackbar = inject(SnackbarService);
+  private translate = inject(TranslateService);
   readonly preferences = inject(PreferencesService);
 
   gameId = 0;
@@ -186,6 +219,23 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly game = signal<SharedGame | null>(null);
   readonly summary = signal<ClubGameSummary | null>(null);
   readonly blocks = computed<SummaryBlock[]>(() => parseSummary(this.summary()?.markdown ?? ''));
+  /** „Empfohlene Literatur“ (Wunsch 2026-11-09): nur Bücher, die der Server kennt und dieser Leser nicht gesperrt hat. */
+  readonly books = signal<ReadonlyMap<number, EbookSuggestionInfo>>(new Map());
+  /** In dieser Sitzung gesperrt — die Zeile bleibt mit „Rückgängig“ stehen. */
+  readonly justBlocked = signal<ReadonlySet<number>>(new Set());
+  readonly loggedIn = inject(AuthService).isLoggedIn;
+  /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
+  readonly visibleBlocks = computed<SummaryBlock[]>(() => {
+    const shown = (b: SummaryBlock) => b.kind !== 'book' || this.books().has(b.id);
+    const all = this.blocks();
+    return all.filter((b, i) => {
+      if (!shown(b)) return false;
+      if (b.kind !== 'heading') return true;
+      let j = i + 1;
+      while (all[j]?.kind === 'book') j++;
+      return j === i + 1 || all.slice(i + 1, j).some(shown);
+    });
+  });
   private readonly positions = computed(() => positionsOf(this.game()?.pgn ?? ''));
   /** Seitenbrett nur, wenn es Text gibt, neben dem es steht, und Züge zum Durchklicken. */
   readonly hasBoard = computed(() => !!this.summary()?.markdown && this.positions().sans.length > 0);
@@ -208,8 +258,25 @@ export class ClubGameSummaryComponent implements OnInit {
       ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])
       : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
     load.subscribe({
-      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); },
+      next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); this.loadBooks(); },
       error: () => { this.failed.set(true); this.loading.set(false); },
+    });
+  }
+
+  private loadBooks(): void {
+    const ids = this.blocks().flatMap(b => b.kind === 'book' ? [b.id] : []);
+    if (!ids.length) return;
+    this.summaries.suggestions(ids).subscribe({
+      next: list => this.books.set(new Map(list.filter(x => !x.blocked).map(x => [x.id, x]))),
+      error: () => this.books.set(new Map()),   // still: dann eben keine Literatur-Liste
+    });
+  }
+
+  /** „Nicht mehr vorschlagen“ (je Konto) bzw. zurücknehmen. */
+  setBlocked(id: number, blocked: boolean): void {
+    this.summaries.setSuggestionBlocked(id, blocked).subscribe({
+      next: () => this.justBlocked.update(s => { const n = new Set(s); if (blocked) n.add(id); else n.delete(id); return n; }),
+      error: () => this.snackbar.warn(this.translate.instant('games.summary.neverSuggestFailed')),
     });
   }
 
