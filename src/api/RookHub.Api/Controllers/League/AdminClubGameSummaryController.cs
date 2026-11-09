@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
+using RookHub.Api.Models;
 using RookHub.Api.Services.League;
 
 namespace RookHub.Api.Controllers.League;
@@ -12,7 +14,7 @@ namespace RookHub.Api.Controllers.League;
 /// </summary>
 [ApiController]
 [Route("api/admin/club-game-summaries")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.AdminOnly)]
 public class AdminClubGameSummaryController(ClubGameSummaries summaries) : BaseApiController
 {
     /// <summary>Offene Aufträge, älteste zuerst → <c>[{ clubGameId, clubId, requestedAt, requestedByUserId }]</c>.</summary>

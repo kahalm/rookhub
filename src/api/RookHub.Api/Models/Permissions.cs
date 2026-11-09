@@ -74,6 +74,14 @@ public static class Permissions
     /// (2026-10-13). Hochladen und das eigene Buch verwalten darf jeder Angemeldete — dafür braucht es kein Recht.</summary>
     public const string EbooksManage = "ebooks.manage";
 
+    /// <summary>
+    /// Nur das Admin-Flag erfüllt es (R1-004): bewusst NICHT in <see cref="All"/> — keine Rolle kann es vergeben
+    /// (<c>RoleAdminService</c> nimmt nur bekannte Schlüssel). Ersetzt <c>[Authorize(Roles = "Admin")]</c>, das nur die Rolle im
+    /// Token las: ein frisch ernanntes Konto bekam dort 403 bis zum nächsten Anmelden, während der Live-Stand
+    /// (<c>PermissionResolver</c>, Admin-Flag aus der Datenbank) es schon kannte — und ein Entzug galt bis zum Token-Ablauf.
+    /// </summary>
+    public const string AdminOnly = "system.admin";
+
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
     {

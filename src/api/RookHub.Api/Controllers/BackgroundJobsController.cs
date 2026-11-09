@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
+using RookHub.Api.Models;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -13,7 +15,7 @@ namespace RookHub.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/admin/background-jobs")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.AdminOnly)]
 public class BackgroundJobsController : BaseApiController
 {
     private readonly BackgroundPause _pause;

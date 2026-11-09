@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
+using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Controllers.Games;
@@ -8,7 +10,7 @@ namespace RookHub.Api.Controllers.Games;
 /// <c>api/admin/club-game-summaries</c>, dazu die Lese-Wege der Partie. Nur Admins.</summary>
 [ApiController]
 [Route("api/admin/own-game-summaries")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.AdminOnly)]
 public class AdminOwnGameSummaryController(OwnGameSummaries summaries) : BaseApiController
 {
     /// <summary>Offene Aufträge → <c>[{ savedGameId, userId, requestedAt }]</c>.</summary>

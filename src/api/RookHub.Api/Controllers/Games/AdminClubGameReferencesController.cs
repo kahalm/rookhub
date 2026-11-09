@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
+using RookHub.Api.Models;
 using RookHub.Api.Services.Games;
 
 namespace RookHub.Api.Controllers.Games;
@@ -7,7 +9,7 @@ namespace RookHub.Api.Controllers.Games;
 /// <summary>Kopien von Vereinspartien in „Meine Partien" zu Verweisen umstellen (0.924.0, <see cref="ClubGameReferences"/>). Nur Admins.</summary>
 [ApiController]
 [Route("api/admin/club-game-references")]
-[Authorize(Roles = "Admin")]
+[HasPermission(Permissions.AdminOnly)]
 public class AdminClubGameReferencesController(ClubGameReferences references) : BaseApiController
 {
     /// <summary>Probelauf: ändert nichts → <c>{ applied: false, convert, waiting, done, diverged, analysesDeleted, items[] }</c>.</summary>
