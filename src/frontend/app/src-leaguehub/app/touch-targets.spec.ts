@@ -46,6 +46,7 @@ describe('LeagueHub: Bedienziele am Handy (UX-069)', () => {
       <div class="row-acts"><button type="button" class="btn-link" id="link">Bearbeiten</button>
         <a class="btn-link" id="alink" href="#">Analyse</a></div>
       <div class="seg" role="group"><button type="button" id="seg" aria-pressed="true">Ersetzen</button><button type="button">Davor einfügen</button></div>
+      <div class="seg forecast-side" role="group"><button type="button" id="side" aria-pressed="true">Gegner</button><button type="button" id="side2">Eigene Aufstellung</button></div>
       <div class="moves"><span class="no">1.</span><button type="button" class="ply" id="ply">e4</button><button type="button" class="ply">e5</button></div>
       <div class="cand"><span class="name" style="display:block;margin-top:40px"><button type="button" class="pl" id="pl">Hengl, Philip</button></span></div>
       <div class="sugg-actions"><button type="button" class="btn-sec sa-btn" id="sa">Unsicher</button>
@@ -89,7 +90,7 @@ describe('LeagueHub: Bedienziele am Handy (UX-069)', () => {
 
   it('bei 390 px sind Knöpfe, Links, Umschalter, Züge, Fußzeile und Rücklink mindestens 44 px hoch', async () => {
     const doc = await render(390);
-    for (const id of ['login', 'back', 'sec', 'pri', 'link', 'alink', 'seg', 'ply', 'sa', 'imp', 'priv']) {
+    for (const id of ['login', 'back', 'sec', 'pri', 'link', 'alink', 'seg', 'side', 'side2', 'ply', 'sa', 'imp', 'priv']) {
       expect(height(doc, id)).withContext(id).toBeGreaterThanOrEqual(44);
     }
   });

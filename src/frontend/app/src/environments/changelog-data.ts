@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.941.0', date: '2026-11-09', changes: [
+    { en: 'LeagueHub: a „Opponent | Own lineup“ switch above the forecast shows, for every round, the forecast of your own team (signed in only; not on share links, bye rounds or locked rounds).',
+      de: 'LeagueHub: Umschalter „Gegner | Eigene Aufstellung“ über der Prognose zeigt je Runde die Prognose der eigenen Mannschaft (nur angemeldet; nicht auf Teilen-Links, in spielfreien oder gesperrten Runden).' },
+  ] },
   {
     version: '0.940.4',
     date: '2026-11-09',

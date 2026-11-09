@@ -173,6 +173,9 @@ export interface RosterEntry {
 
 export type Phase = 'R1' | 'R2+' | 'So vorab' | 'So nach Sa';
 
+/** Wessen Aufstellung die Prognose zeigt (Umschalter in `lh-fixture`). */
+export type ForecastSide = 'opp' | 'own';
+
 export interface Fixture {
   bye?: boolean;
   opp?: string;

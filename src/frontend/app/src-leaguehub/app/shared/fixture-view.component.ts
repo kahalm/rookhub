@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, output, signal, viewChild } from '@angular/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { PHASE_TEXT, pct, shareText, shortTeam, tn } from '../core/league-format';
-import { Board, Candidate, Fixture, FixturePairing, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
+import { Board, Candidate, Fixture, FixturePairing, ForecastSide, ForecastStats, ForecastTally, GameSources } from '../core/league.models';
 import { GameSourcesComponent } from './game-sources.component';
 import { thousands } from '../core/game-sources';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
@@ -22,7 +22,8 @@ import { AuthService } from '@rh/core/auth.service';
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,
  * Farbe des Gegners), bei gespielten Runden die echte Aufstellung, die Meldeliste des Gegners und die
  * Knöpfe „Auf WhatsApp teilen" (Text) und „Link teilen" (nur im Admin-Bereich). Genutzt von der
- * Liga-Seite und der geteilten Ansicht (<see cref="shareToken"/> gesetzt = ohne Anmeldung).
+ * Liga-Seite und der geteilten Ansicht (<see cref="shareToken"/> gesetzt = ohne Anmeldung). Angemeldet schaltet „Gegner | Eigene
+ * Aufstellung" die Prognose auf `ownFixture` um; der Umschalter fehlt auf Teilen-Links, in spielfreien und gesperrten Runden.
  */
 interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; copied?: boolean; url: string; token: string; until: string }
 
@@ -144,25 +145,37 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
             </ng-template>
           </mat-menu>
         }
-        @switch (e.status) {
+        <!-- Wunsch 2026-11-09: die Prognose der EIGENEN Aufstellung — die Rechnung des Gegners (Sicht seiner Begegnung), nur angemeldet.
+             Paarungen oben bleiben: sie gehören zur gespielten Begegnung, nicht zur Prognose. -->
+        @let f = shown() ?? e;
+        @if (canSwitchSide()) {
+          <div class="seg forecast-side" role="group" aria-label="Wessen Aufstellung die Prognose zeigt">
+            <button type="button" class="side-opp" [attr.aria-pressed]="!ownView()" (click)="sideChange.emit('opp')">Gegner</button>
+            <button type="button" class="side-own" [attr.aria-pressed]="ownView()" (click)="sideChange.emit('own')">Eigene Aufstellung</button>
+          </div>
+        }
+        @if (ownMissing()) {
+          <p class="note own-missing">Für {{ tn(team()) }} gibt es in dieser Runde keine Prognose.</p>
+        } @else {
+        @switch (f.status) {
           @case ('locked') {
-            <p class="note">Die Prognose für diese Runde erscheint, sobald Runde {{ e.unlock_after }} gespielt ist.
+            <p class="note">Die Prognose für diese Runde erscheint, sobald Runde {{ f.unlock_after }} gespielt ist.
               Erst dann ist bekannt, wer zuletzt gespielt hat, und das ist der stärkste Hinweis auf die nächste Aufstellung.</p>
           }
           @case ('nodata') {
-            <p class="note">Für {{ tn(e.opp) }} gibt es noch keine Meldeliste.</p>
+            <p class="note">Für {{ tn(f.opp) }} gibt es noch keine Meldeliste.</p>
           }
           @default {
-            @if (e.provisional) {
+            @if (f.provisional) {
               <!-- 2026-10-06: spätere Runden mit vorläufiger Prognose statt gesperrt -->
               <p class="note provisional">Vorläufige Prognose — mit dem Stand von heute gerechnet. Genauer wird sie, sobald
-                Runde {{ e.unlock_after }} gespielt ist; jedes Aktualisieren rechnet sie neu.</p>
+                Runde {{ f.unlock_after }} gespielt ist; jedes Aktualisieren rechnet sie neu.</p>
             }
             <!-- Wunsch 2026-10-04: der Text am Anfang hinter zwei (i) — Partien der Begegnung und die Prognose samt Treffern. -->
             <div class="infos">
               @if (sources(); as s) {
                 <p class="info-line">
-                  <span>Partien {{ tn(e.opp) }}: <b>{{ gamesCount(s) }}</b></span>
+                  <span>Partien {{ tn(f.opp) }}: <b>{{ gamesCount(s) }}</b></span>
                   <button type="button" class="chk-btn" [attr.aria-expanded]="openInfo() === 'games'" aria-label="Partien je Quelle"
                           title="Partien je Quelle" (click)="toggleInfo('games')">i</button>
                 </p>
@@ -176,17 +189,17 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               </p>
             </div>
             @if (openInfo() === 'games' && sources(); as s) {
-              <div class="info-panel"><lh-game-sources [sources]="s" [league]="leagueName()" [opponent]="e.opp" /></div>
+              <div class="info-panel"><lh-game-sources [sources]="s" [league]="leagueName()" [opponent]="f.opp" /></div>
             }
             @if (openInfo() === 'forecast') {
               <div class="info-panel">
                 <p class="note">
-                  @if (e.status === 'played') { Pro Brett oben, wer tatsächlich gespielt hat, darunter die Prognose, die vor der Runde galt. }
-                  @else { Prognose für {{ tn(e.opp) }}: pro Brett die drei wahrscheinlichsten Spieler. }
-                  @if (e.hit) { In alten Saisonen lagen in dieser Lage ({{ phaseText() }}) im Schnitt {{ hitText() }} von {{ e.boards?.length }} vorhergesagten Spielern richtig. }
-                  Der Kreis neben der Brettnummer zeigt die Farbe des Gegners. In Klammer hinter dem Namen: Partien im Bestand.
+                  @if (f.status === 'played') { Pro Brett oben, wer tatsächlich gespielt hat, darunter die Prognose, die vor der Runde galt. }
+                  @else { Prognose für {{ tn(f.opp) }}: pro Brett die drei wahrscheinlichsten Spieler. }
+                  @if (f.hit) { In alten Saisonen lagen in dieser Lage ({{ phaseText() }}) im Schnitt {{ hitText() }} von {{ f.boards?.length }} vorhergesagten Spielern richtig. }
+                  Der Kreis neben der Brettnummer zeigt die Farbe {{ ownView() ? 'der eigenen Mannschaft' : 'des Gegners' }}. In Klammer hinter dem Namen: Partien im Bestand.
                 </p>
-                @if (e.eval; as v) {
+                @if (f.eval; as v) {
                   @if (v.top1 != null) {
                     <p class="note">In dieser Begegnung saß an {{ v.top1 }} von {{ v.of }} Brettern genau der erste Vorschlag, an {{ v.top2 }} der erste
                       oder zweite, an {{ v.top3 }} einer der drei.</p>
@@ -248,9 +261,10 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 }
               </div>
             }
+            @if (!ownView()) {
             <div class="share">
               <div class="actions">
-                @if (e.status === 'open') { <button type="button" class="btn-sec" (click)="shareWhatsApp()">Auf WhatsApp teilen</button> }
+                @if (f.status === 'open') { <button type="button" class="btn-sec" (click)="shareWhatsApp()">Auf WhatsApp teilen</button> }
                 @if (canShareLink()) { <button type="button" class="btn-sec" (click)="shareLink()">Link teilen</button> }
               </div>
               @if (shareOut(); as o) {
@@ -276,14 +290,15 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
                 </div>
               }
             </div>
+            }
             <!-- z1-l-farbquadrat: die Farbe des Gegners als Steinchen (○/●) statt als Kästchen, einmal erklärt über den Brettern
                  (der Tooltip fehlt am Handy) -->
-            @if (e.boards?.length) {
-              <p class="sq-legend muted small"><span class="sq mini w" aria-hidden="true"></span>Gegner hat Weiß ·
-                <span class="sq mini s" aria-hidden="true"></span>Gegner hat Schwarz</p>
+            @if (f.boards?.length) {
+              <p class="sq-legend muted small"><span class="sq mini w" aria-hidden="true"></span>{{ sideName() }} hat Weiß ·
+                <span class="sq mini s" aria-hidden="true"></span>{{ sideName() }} hat Schwarz</p>
             }
             <ol class="boards">
-              @for (b of e.boards; track b.board) {
+              @for (b of f.boards; track b.board) {
                 <li class="board">
                   <span class="bno" [attr.aria-label]="'Brett ' + b.board">{{ b.board }}</span>
                   <span class="sq" [class.w]="b.opp_color === 'w'" [class.s]="b.opp_color === 's'" role="img"
@@ -314,12 +329,12 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               }
             </ol>
             <details class="roster">
-              <summary>Alle Gemeldeten von {{ tn(e.opp) }} mit Einsatz-Wahrscheinlichkeit</summary>
+              <summary>Alle Gemeldeten von {{ tn(f.opp) }} mit Einsatz-Wahrscheinlichkeit</summary>
               <div class="roster-scroll"><table class="rtable">
                 <thead><tr><th class="num">Meld.</th><th>Spieler</th><th class="num">Elo</th><th class="num">spielt</th>
                   <th class="num">Partien</th><th>Online</th><th class="hide-s">Vorsaison (Partien/Runden)</th><th class="hide-s">diese Saison</th></tr></thead>
                 <tbody>
-                  @for (r of e.roster; track $index) {
+                  @for (r of f.roster; track $index) {
                     <tr>
                       <td class="num">{{ r.rb ?? '' }}</td>
                       <td>@if (r.fide || r.key) { <button type="button" class="pl" (click)="openCard((r.fide || r.key)!, null, null)">{{ r.n }}</button> } @else { {{ r.n }} }</td>
@@ -339,6 +354,7 @@ interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; cop
               </table></div>
             </details>
           }
+        }
         }
       </article>
     }
@@ -361,6 +377,11 @@ export class FixtureViewComponent {
   readonly shareToken = input<string | null>(null);
   /** Partien je Quelle (Gesamt | Liga | Begegnung) — steht seit 0.650.0 hinter dem (i) „Partien". */
   readonly sources = input<GameSources | null>(null);
+  /** Die Prognose für die eigene Mannschaft: die Begegnung aus Sicht des Gegners (dort ist `opp` die eigene Mannschaft). */
+  readonly ownFixture = input<Fixture | undefined>(undefined);
+  /** Welche Prognose gezeigt wird; der Zustand gehört der Seite (Adresse), Vorgabe „Gegner". */
+  readonly side = input<ForecastSide>('opp');
+  readonly sideChange = output<ForecastSide>();
 
   /** Welches (i) offen ist: Partien je Quelle oder Prognose samt Treffer-Statistik. */
   readonly openInfo = signal<'games' | 'forecast' | null>(null);
@@ -371,7 +392,7 @@ export class FixtureViewComponent {
    *  Liga, verschwindet es (sonst stünde der Link der vorigen Begegnung unter der neuen, und „In WhatsApp öffnen"
    *  schickte die alte Adresse mit den neuen Mannschaftsnamen). */
   readonly shareOut = linkedSignal({
-    source: () => [this.fixture(), this.round(), this.team()] as const,
+    source: () => [this.fixture(), this.round(), this.team(), this.side()] as const,
     computation: (): ShareOut | null => null,
   });
   readonly copied = signal(false);
@@ -392,8 +413,24 @@ export class FixtureViewComponent {
   private readonly auth = inject(AuthService);
   /** Eine einzelne Partie teilen: angemeldet mit Liga-Leserecht, nie auf einem Teilen-Link (Wunsch 2026-11-09). */
   readonly canShareGame = computed(() => !this.shareToken() && this.leagueTnr() !== null && this.auth.has('league.view'));
-  readonly phaseText = computed(() => PHASE_TEXT[this.fixture()?.phase ?? 'R1'] ?? this.fixture()?.phase);
-  readonly hitText = computed(() => String(this.fixture()?.hit ?? '').replace('.', ','));
+  /** Umschalter „Gegner | Eigene Aufstellung": angemeldet, nicht auf einem Teilen-Link, und nur wenn die Runde eine Prognose haben kann. */
+  readonly canSwitchSide = computed(() => {
+    const e = this.fixture();
+    return !this.shareToken() && this.leagueTnr() !== null && this.auth.has('league.view') && !!e && !e.bye && e.status !== 'locked';
+  });
+  readonly ownView = computed(() => this.canSwitchSide() && this.side() === 'own');
+  /** Die Begegnung, aus der der Prognose-Teil liest. Kopf und Paarungen bleiben immer bei `fixture()`. */
+  readonly shown = computed(() => (this.ownView() ? this.ownFixture() : this.fixture()));
+  /** Eigene Sicht ohne Bretter: Hinweis statt leerer Fläche („nodata" hat seinen eigenen Text). */
+  readonly ownMissing = computed(() => {
+    if (!this.ownView()) return false;
+    const f = this.ownFixture();
+    return !f || !!f.bye || (f.status !== 'nodata' && f.status !== 'locked' && !f.boards?.length);
+  });
+  /** Wessen Farbe der Kreis am Brett zeigt. */
+  readonly sideName = computed(() => (this.ownView() ? 'Eigene Mannschaft' : 'Gegner'));
+  readonly phaseText = computed(() => PHASE_TEXT[this.shown()?.phase ?? 'R1'] ?? this.shown()?.phase);
+  readonly hitText = computed(() => String(this.shown()?.hit ?? '').replace('.', ','));
 
   /** Brettpaarungen samt Partien der gespielten Begegnung (0.673.0); späte Antworten einer anderen Begegnung fallen weg. */
   readonly pairings = signal<FixturePairing[]>([]);
@@ -554,7 +591,7 @@ export class FixtureViewComponent {
   }
 
   colorName(b: Board): string {
-    return b.opp_color === 'w' ? 'Gegner hat Weiß' : 'Gegner hat Schwarz';
+    return `${this.sideName()} hat ${b.opp_color === 'w' ? 'Weiß' : 'Schwarz'}`;
   }
 
   inTop(b: Board): boolean {

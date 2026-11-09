@@ -563,4 +563,119 @@ describe('FixtureViewComponent', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.share-out .err')?.textContent).toContain('Runde ist gesperrt');
   });
+
+  describe('Umschalter „Gegner | Eigene Aufstellung" (Wunsch 2026-11-09)', () => {
+    const OWN: Fixture = { ...OPEN, opp: 'Schwaz', home: false, hit: 4.1, boards: [
+      { board: 1, opp_color: 'w', other: 0, cand: [{ n: 'Eigen, Erste', elo: 2000, rb: 1, p: 0.8, fide: '901' }] },
+    ], roster: [{ rb: 1, n: 'Eigen, Erste', elo: 2000, p: 0.8, prev: '', cur: '', fide: '901', g: 0, acc: [] }] };
+    const allow = () => { (TestBed.inject(AuthService) as unknown as { has: (p: string) => boolean }).has = p => p === 'league.view'; };
+    function renderSide(e: Fixture, own: Fixture | undefined, side: 'opp' | 'own' = 'own'): HTMLElement {
+      fixture.componentRef.setInput('leagueTnr', 1479345);
+      fixture.componentRef.setInput('ownFixture', own);
+      fixture.componentRef.setInput('side', side);
+      return render(e, { tnr: 1479345 });
+    }
+    const sw = (el: HTMLElement) => el.querySelector('.forecast-side');
+
+    it('Standard „Gegner": Bretter des Gegners, Knopf meldet die Wahl, Text bleibt', () => {
+      allow();
+      const el = renderSide(OPEN, OWN, 'opp');
+      expect(sw(el)!.querySelector('.side-opp')!.getAttribute('aria-pressed')).toBe('true');
+      expect(el.querySelector('.boards')!.textContent).toContain('Polterauer');
+      expect(el.querySelector('.sq-legend')!.textContent).toContain('Gegner hat Weiß');
+      const seen: string[] = [];
+      fixture.componentInstance.sideChange.subscribe(s => seen.push(s));
+      (el.querySelector('.side-own') as HTMLButtonElement).click();
+      expect(seen).toEqual(['own']);
+    });
+
+    it('ohne Anmeldung (kein league.view) kein Umschalter, auch nicht bei gesetztem side', () => {
+      const el = renderSide(OPEN, OWN);
+      expect(sw(el)).toBeNull();
+      expect(el.querySelector('.boards')!.textContent).toContain('Polterauer');
+    });
+
+    it('auf dem Teilen-Link kein Umschalter und immer die Gegner-Bretter', () => {
+      allow();
+      fixture.componentRef.setInput('leagueTnr', null);
+      fixture.componentRef.setInput('ownFixture', OWN);
+      fixture.componentRef.setInput('side', 'own');
+      const el = render(OPEN, { token: 'abc' });
+      expect(sw(el)).toBeNull();
+      expect(el.querySelector('.boards')!.textContent).toContain('Polterauer');
+    });
+
+    it('eigene Sicht: Bretter der eigenen Mannschaft, passende Texte, ohne WhatsApp und Link teilen', () => {
+      allow();
+      const el = renderSide(OPEN, OWN);
+      expect(el.querySelector('.side-own')!.getAttribute('aria-pressed')).toBe('true');
+      const boards = el.querySelector('.boards')!.textContent!;
+      expect(boards).toContain('Eigen, Erste');
+      expect(boards).not.toContain('Polterauer');
+      expect(el.querySelector('.sq-legend')!.textContent).toContain('Eigene Mannschaft hat Weiß');
+      expect(el.querySelector('.board .sq')!.getAttribute('aria-label')).toBe('Eigene Mannschaft hat Weiß');
+      expect(el.querySelector('.roster summary')!.textContent).toContain('Schwaz');
+      expect(el.querySelector('.share')).toBeNull();
+      // Kopf bleibt die Begegnung, aus Sicht der gewählten Mannschaft
+      expect(el.querySelector('.match .me')!.textContent).toContain('Schwaz');
+      fixture.componentInstance.toggleInfo('forecast');
+      fixture.detectChanges();
+      const info = el.querySelector('.info-panel')!.textContent!;
+      expect(info).toContain('Prognose für Schwaz');
+      expect(info).not.toContain('Spg Kufstein');
+      expect(info).toContain('Farbe der eigenen Mannschaft');
+    });
+
+    it('gespielte Runde: Paarungen bleiben oben (mit Partie teilen fürs gewählte Team), darunter die eigene Prognose mit „Gespielt"', async () => {
+      allow();
+      api.fixtureGames.and.resolveTo([{ board: 1, white: 'Hess, Max', whiteElo: 2040, black: 'Binder, Moriz', blackElo: 2100, result: '1 - 0', forfeit: false,
+        pgn: '1. e4 e5 1-0', source: 'club', clubGameId: 10, canEdit: false }]);
+      const own: Fixture = { ...OWN, status: 'played', score: '3 : 3', boards: [{ ...OWN.boards![0],
+        actual: { n: 'Eigen, Erste', elo: 2000, rank: 1, score: '1', own: '0', vs: 'Hess, Max', vs_elo: 2040 } }] };
+      const el = renderSide({ ...OPEN, status: 'played', score: '3 : 3' }, own);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(el.querySelector('.pairings')!.textContent).toContain('Binder, Moriz');
+      expect(el.querySelector('.boards .played')!.textContent).toContain('Eigen, Erste');
+      expect(api.fixtureGames).toHaveBeenCalledWith(1479345, 1, 'Schwaz', null);
+    });
+
+    it('vorläufige Runde: eigene Sicht nimmt den Hinweis der eigenen Prognose', () => {
+      allow();
+      const el = renderSide({ ...OPEN, provisional: true, unlock_after: 2 }, { ...OWN, provisional: true, unlock_after: 2 });
+      expect(el.querySelector('.note.provisional')!.textContent).toContain('Runde 2');
+      expect(el.querySelector('.boards')!.textContent).toContain('Eigen, Erste');
+    });
+
+    it('gesperrte Runde: kein Umschalter, die Sperr-Notiz bleibt, auch mit gemerkter eigener Sicht', () => {
+      allow();
+      const el = renderSide({ opp: 'X', home: true, status: 'locked', unlock_after: 2 }, undefined);
+      expect(sw(el)).toBeNull();
+      expect(el.textContent).toContain('erscheint, sobald Runde 2');
+      expect(el.querySelector('.own-missing')).toBeNull();
+    });
+
+    it('spielfrei: kein Umschalter', () => {
+      allow();
+      const el = renderSide({ bye: true }, undefined);
+      expect(sw(el)).toBeNull();
+      expect(el.textContent).toContain('spielfrei');
+    });
+
+    it('fehlt die eigene Prognose: Hinweis statt leerer Fläche', () => {
+      allow();
+      for (const own of [undefined, { ...OWN, boards: [] }] as (Fixture | undefined)[]) {
+        const el = renderSide(OPEN, own);
+        expect(el.querySelector('.own-missing')!.textContent).toContain('keine Prognose');
+        expect(el.querySelector('.boards')).toBeNull();
+      }
+    });
+
+    it('Meldeliste fehlt nur beim Gegner: Umschalter bleibt, eigene Bretter kommen', () => {
+      allow();
+      const el = renderSide({ opp: 'X', home: true, status: 'nodata' }, OWN);
+      expect(sw(el)).not.toBeNull();
+      expect(el.querySelector('.boards')!.textContent).toContain('Eigen, Erste');
+    });
+  });
 });

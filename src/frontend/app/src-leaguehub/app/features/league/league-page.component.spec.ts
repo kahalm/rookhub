@@ -528,4 +528,68 @@ describe('LeaguePageComponent', () => {
     tick(20000); flushMicrotasks();
     expect(api.updateStatus.calls.count()).toBe(calls);
   }));
+
+  describe('Eigene Aufstellung (Wunsch 2026-11-09)', () => {
+    const board = (name: string) => ({ board: 1, opp_color: 'w' as const, other: 0, cand: [{ n: name, elo: 2000, rb: 1, p: 0.8, fide: name }] });
+    function paired(): League {
+      const L = league(10, ['Kufstein', 'Testdorf', 'Wörgl']);
+      L.fixtures['Testdorf']['2'] = { opp: 'Kufstein', home: true, status: 'open', boards: [board('Gegner, Gustav')],
+        roster: [{ rb: 1, n: 'Gegner, Gustav', elo: 2000, p: 0.8, prev: '', cur: '', fide: 'gg', g: 0, acc: [] }] };
+      L.fixtures['Kufstein']['2'] = { opp: 'Testdorf', home: false, status: 'open', boards: [board('Heim, Hanna')],
+        roster: [{ rb: 1, n: 'Heim, Hanna', elo: 2000, p: 0.8, prev: '', cur: '', fide: 'hh', g: 0, acc: [] }] };
+      L.fixtures['Testdorf']['1'] = { opp: 'Kufstein', home: true, status: 'played', boards: [board('Gegner, Runde1')], roster: [] };
+      L.fixtures['Kufstein']['1'] = { opp: 'Testdorf', home: false, status: 'played', boards: [board('Heim, Runde1')], roster: [] };
+      return L;
+    }
+    const lastParams = () => router.navigate.calls.mostRecent().args[1]!.queryParams as Record<string, unknown>;
+
+    beforeEach(() => {
+      api.league.and.callFake(async () => paired());
+      perms = new Set(['league.view']);
+    });
+
+    it('Standard Gegner, Adresse ohne Zusatz; Umschalten zeigt die Sicht des Gegners und merkt sie beim Rundenwechsel', async () => {
+      query = { liga: '10', runde: '2', verein: 'Testdorf' };
+      const el = create();
+      await settle();
+      expect(el.querySelector('.boards')!.textContent).toContain('Gegner, Gustav');
+      expect(lastParams()['sicht']).toBeUndefined();
+      (el.querySelector('.side-own') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(el.querySelector('.boards')!.textContent).toContain('Heim, Hanna');
+      expect(lastParams()['sicht']).toBe('eigene');
+      fixture.componentInstance.pickRound(1);
+      fixture.detectChanges();
+      expect(el.querySelector('.boards')!.textContent).toContain('Heim, Runde1');
+      expect(lastParams()['sicht']).toBe('eigene');
+    });
+
+    it('holt die Partienzahl für die Meldeliste der gezeigten Seite', async () => {
+      query = { liga: '10', runde: '2', verein: 'Testdorf' };
+      const el = create();
+      await settle();
+      (el.querySelector('.side-own') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      await settle();
+      expect(api.sources.calls.mostRecent().args[1]).toEqual(['hh']);
+    });
+
+    it('`sicht=eigene` in der Adresse stellt die Sicht wieder her', async () => {
+      query = { liga: '10', runde: '2', verein: 'Testdorf', sicht: 'eigene' };
+      const el = create();
+      await settle();
+      expect(el.querySelector('.boards')!.textContent).toContain('Heim, Hanna');
+    });
+
+    it('ein Gegner ohne passende Gegenrichtung liefert keine fremde Prognose', async () => {
+      const L = paired();
+      L.fixtures['Kufstein']['2'] = { opp: 'Wörgl', home: true, status: 'open', boards: [board('Falsch, Franz')], roster: [] };
+      api.league.and.callFake(async () => L);
+      query = { liga: '10', runde: '2', verein: 'Testdorf', sicht: 'eigene' };
+      const el = create();
+      await settle();
+      expect(el.querySelector('.own-missing')).not.toBeNull();
+      expect(el.textContent).not.toContain('Falsch, Franz');
+    });
+  });
 });

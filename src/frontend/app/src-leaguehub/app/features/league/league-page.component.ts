@@ -8,7 +8,7 @@ import { LeagueApiService } from '../../core/league-api.service';
 import { roundLabel, tn } from '../../core/league-format';
 import { SOURCES_RETRIES, SOURCES_RETRY_MS } from '../../core/game-sources';
 import { loadErrorText } from '../../core/club-format';
-import { GameSources, League, LeagueIndex } from '../../core/league.models';
+import { ForecastSide, GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 import { ClubContextService, ownsTeam } from '../../core/club-context.service';
@@ -136,7 +136,8 @@ interface Pick { liga?: number; verein?: string }
 
         @if (league(); as L) {
           <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [leagueTnr]="L.tnr" [round]="round()" [team]="team()"
-                      [fixture]="fixture()" [sources]="sources()" />
+                      [fixture]="fixture()" [sources]="sources()"
+                      [ownFixture]="ownFixture()" [side]="forecastSide()" (sideChange)="pickSide($event)" />
         } @else if (leagueError(); as e) {
           <!-- F7-010: eine Liga, die nicht kommt, nimmt nicht die ganze Seite mit — Auswahl bleibt, andere Liga geht. -->
           <section class="gate" role="alert">
@@ -187,8 +188,8 @@ export class LeaguePageComponent implements OnInit {
   readonly clubName = computed(() => this.index()?.club?.name ?? this.clubs.current()?.name ?? 'deinem Verein');
   /** Partien je Quelle (0.626.0, Wunsch: „x Spiele aus Lumbra, y aus ChessBase, z aus Lichess, w aus chess.com"). */
   readonly sources = signal<GameSources | null>(null);
-  /** Meldeliste des Gegners in der gewählten Begegnung — ändert sie sich (oder die Liga), werden „Liga" und „Begegnung" neu geholt (0.628.0). */
-  private readonly oppFides = computed(() => (this.fixture()?.roster ?? []).map(r => r.fide).filter((f): f is string => !!f));
+  /** Meldeliste der gezeigten Prognose (Gegner bzw. eigene Mannschaft) — ändert sie sich (oder die Liga), werden „Liga" und „Begegnung" neu geholt (0.628.0). */
+  private readonly oppFides = computed(() => ((this.forecastSide() === 'own' ? this.ownFixture() ?? this.fixture() : this.fixture())?.roster ?? []).map(r => r.fide).filter((f): f is string => !!f));
   private sourcesKey = '';
   readonly league = signal<League | null>(null);
   readonly tnr = signal(0);
@@ -217,6 +218,14 @@ export class LeaguePageComponent implements OnInit {
   readonly teamPrefix = computed(() => this.index()?.club?.teamPrefix ?? this.clubs.current()?.teamPrefix ?? null);
 
   readonly fixture = computed(() => this.league()?.fixtures[this.team()]?.[String(this.round())]);
+  /** „Gegner | Eigene Aufstellung" (Wunsch 2026-11-09) — bleibt beim Rundenwechsel, in der Adresse `&sicht=eigene`. */
+  readonly forecastSide = signal<ForecastSide>('opp');
+  /** Die Prognose für die eigene Mannschaft ist die Begegnung aus Sicht des Gegners der Runde — keine eigene Rechnung nötig. */
+  readonly ownFixture = computed(() => {
+    const opp = this.fixture()?.opp;
+    const own = opp ? this.league()?.fixtures[opp]?.[String(this.round())] : undefined;
+    return own?.opp === this.team() ? own : undefined;
+  });
   /** Auswahl am Handy aufgeklappt (d2-l-prognosen-filter) — beim Öffnen immer zu (z1-l-prognosen-filter-zu). */
   readonly pickOpen = signal(false);
   /** „1. Bundesliga · R1 · Schachklub Schwaz" — die aktive Wahl in der zugeklappten Zeile. */
@@ -287,6 +296,7 @@ export class LeaguePageComponent implements OnInit {
     // z1-l-prognosen-filter-zu: am Handy immer zugeklappt starten — eine Vorwahl (erste eigene Liga, Verein) gibt es immer,
     // die Zeile „Liga · R1 · Verein" zeigt sie; wer anderes will, klappt auf.
     if (!keep) this.pickOpen.set(false);
+    if (!keep) this.forecastSide.set(q.get('sicht') === 'eigene' ? 'own' : 'opp');
     const pref = keep ?? {
       liga: Number(q.get('liga')) || saved.liga || 0,
       runde: Number(q.get('runde')) || 0,
@@ -338,6 +348,11 @@ export class LeaguePageComponent implements OnInit {
     this.remember();
   }
 
+  pickSide(side: ForecastSide): void {
+    this.forecastSide.set(side);
+    this.remember();
+  }
+
   /** Liga laden und Runde/Verein wählen: gewünschte Runde, sonst die erste offene, sonst die letzte. */
   private async showLeague(tnr: number, wantRound: number, wantTeam: string, fresh = false): Promise<void> {
     this.lastShow = [tnr, wantRound, wantTeam, fresh];
@@ -369,7 +384,8 @@ export class LeaguePageComponent implements OnInit {
 
   private remember(): void {
     void this.router.navigate([], {
-      queryParams: { liga: this.tnr(), runde: this.round(), verein: this.team(), ...(this.showLineups() ? { aufstellungen: 1 } : {}) },
+      queryParams: { liga: this.tnr(), runde: this.round(), verein: this.team(), ...(this.showLineups() ? { aufstellungen: 1 } : {}),
+        ...(this.forecastSide() === 'own' ? { sicht: 'eigene' } : {}) },
       replaceUrl: true,
     });
     writeJson(localStore(), PICK_KEY, { liga: this.tnr(), verein: this.team() } satisfies Pick);

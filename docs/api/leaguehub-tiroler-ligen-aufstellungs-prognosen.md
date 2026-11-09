@@ -519,3 +519,5 @@ Marke ist mit dem DataProtection-Schlüsselbund versiegelt, deshalb nicht einzel
 PGN ausgibt (Vereinspartie des Vereins oder Partie aus einer Spielerkarte); kampflose Bretter und Paarungen ohne Partie nicht. Ablauf wie die
 Liga-Teilen-Links (3 Monate nach der Runde, frühestens ab heute). Beim Lesen wird das Brett neu aufgelöst und muss noch dieselbe Vereinspartie tragen.
 Anonymisierte Vereinspartie: Namen der Partie, Elo der eigenen Seite fehlt, kein Brett, keine Mannschaften.
+
+**Eigene Aufstellung (0.941.0):** Die Liga-Antwort rechnet je Begegnung zwei Prognosen (`fixtures[Team][Runde]` = Prognose des Gegners von `Team`). Der Umschalter „Gegner | Eigene Aufstellung“ in `lh-fixture` liest für die eigene Sicht `fixtures[opp][Runde]` (dort ist `opp` die gewählte Mannschaft) — kein neuer Endpunkt, Adresse `&sicht=eigene`. Nur angemeldet (`league.view`), nicht auf Teilen-Links; WhatsApp/„Link teilen“ gibt es nur in der Gegnersicht.

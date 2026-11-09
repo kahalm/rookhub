@@ -227,6 +227,7 @@ export const ROUTES = [
   r('leaguehub', '/', 'user', { label: 'start', main: LH_FIXTURE }),
   // Gespielte Runde mit Partien (Ergebnisse, „Partie vorhanden“, „+“/„!!“) und alle Aufstellungen dieser Runde (28.10.2026)
   r('leaguehub', '/?liga={playedLiga}&runde={playedRunde}&verein={playedVerein}', 'user', { label: 'start-gespielt', main: LH_FIXTURE }),
+  r('leaguehub', '/?liga={playedLiga}&runde={playedRunde}&verein={playedVerein}&sicht=eigene', 'user', { label: 'start-eigene-aufstellung', main: LH_FIXTURE }),
   r('leaguehub', '/?liga={playedLiga}&runde={playedRunde}&verein={playedVerein}&aufstellungen=1', 'user',
     { label: 'start-aufstellungen', main: ['lh-round-lineups article.lu-match', 'lh-round-lineups', ...LH_FIXTURE] }),
   r('leaguehub', '/verein', 'user', { main: ['table.club-table tr.game', 'section.empty', 'section.gate', 'form.club-search'] }),
