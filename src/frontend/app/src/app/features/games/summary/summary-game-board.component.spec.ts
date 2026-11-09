@@ -75,6 +75,58 @@ describe('SummaryGameBoardComponent', () => {
     expect(c.ply()).toBe(6);
   });
 
+  const mv = (san: string, fen: string) => ({ san, uci: 'x', fen, from: 'a1', to: 'a2' });
+  const FEN_A = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+
+  it('showLine: solange die Linie der Partie folgt, ist es ein Partiezug', () => {
+    const line = ['e4', 'e5', 'Nf3'].map(s => mv(s, 'f'));
+    c.showLine(line, 2);
+    expect(c.ply()).toBe(2);
+    expect(c.variation()).toBeNull();
+  });
+
+  it('showLine: Abzweig wird Variante, ←/→ laufen durch, ← am Anfang führt zur Partie', () => {
+    const line = [mv('e4', 'a'), mv('c5', FEN_A), mv('Nf3', FEN_A)];
+    c.showLine(line, 3);
+    fixture.detectChanges();
+    expect(c.variation()!.base).toBe(1);
+    expect(c.variation()!.at).toBe(2);
+    expect(c.ply()).toBe(1);
+    expect(el().querySelector('.var-move.active')!.textContent).toContain('Nf3');
+    c.back();
+    expect(c.variation()!.at).toBe(1);
+    c.back();
+    expect(c.variation()!.at).toBe(0);
+    expect(c.currentFen()).toBe(c.positions().fens[1]);
+    c.back();
+    expect(c.variation()).toBeNull();
+    expect(c.ply()).toBe(1);
+  });
+
+  it('eigener Zug: Partiezug läuft weiter, anderer Zug ist eine Variante, Blättern verwirft sie', () => {
+    c.onUserMove({ from: 'e2', to: 'e4', san: 'e4', fen: c.positions().fens[1] });
+    expect(c.ply()).toBe(1);
+    expect(c.variation()).toBeNull();
+    c.onUserMove({ from: 'c7', to: 'c5', san: 'c5', fen: FEN_A });
+    expect(c.variation()!.line.map(m => m.san)).toEqual(['c5']);
+    expect(c.currentFen()).toBe(FEN_A);
+    c.onUserMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: FEN_A });
+    c.goToVariation(1);
+    c.onUserMove({ from: 'b1', to: 'c3', san: 'Nc3', fen: FEN_A });
+    expect(c.variation()!.line.map(m => m.san)).toEqual(['c5', 'Nc3']);
+    c.goTo(4);
+    expect(c.variation()).toBeNull();
+    expect(c.ply()).toBe(4);
+  });
+
+  it('Knopf „zurück zur Partie“ beendet die Variante', () => {
+    c.onUserMove({ from: 'd2', to: 'd4', san: 'd4', fen: FEN_A });
+    fixture.detectChanges();
+    click('.var-exit');
+    expect(c.variation()).toBeNull();
+    expect(c.ply()).toBe(0);
+  });
+
   it('Blickrichtung ohne Sprung kommt vom Aufrufer', () => {
     expect(c.isFlipped()).toBeFalse();
     fixture.componentRef.setInput('flipped', true);
@@ -111,6 +163,25 @@ describe('ClubGameSummaryComponent mit Seitenbrett', () => {
     expect(board.isFlipped()).toBeFalse();
     expect(host.querySelector('.to-ply')).not.toBeNull();
     expect(host.querySelector('.summary-page.with-board')).not.toBeNull();
+  });
+
+  it('Züge im Text sind klickbar: Partiezug springt, Variante zeigt sich, Fettschrift bleibt', () => {
+    const fixture = setup(PGN, '**2.Sf3** war gut, besser wäre 2.Sc3 Sf6 3.f4 gewesen.\n\n```diagram\nply: 1\ncaption: Nach 1.e4\n```\n');
+    const host = fixture.nativeElement as HTMLElement;
+    const buttons = Array.from(host.querySelectorAll<HTMLButtonElement>('button.mv'));
+    expect(buttons.map(b => b.textContent)).toEqual(['2.Sf3', '2.Sc3', 'Sf6', '3.f4', '1.e4']);
+    expect(buttons[0].classList).toContain('mv-b');
+    const board = fixture.componentInstance.sideBoard()!;
+    buttons[0].click();
+    expect(board.ply()).toBe(3);
+    expect(board.variation()).toBeNull();
+    buttons[3].click();
+    expect(board.ply()).toBe(2);
+    expect(board.variation()!.line.map(m => m.san)).toEqual(['Nc3', 'Nf6', 'f4']);
+    expect(board.variation()!.at).toBe(3);
+    buttons[4].click();
+    expect(board.ply()).toBe(1);
+    expect(board.variation()).toBeNull();
   });
 
   it('ohne Züge kein Brett und kein Knopf', () => {

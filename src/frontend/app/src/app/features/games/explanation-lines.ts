@@ -10,7 +10,9 @@ import { LiveMove } from './live-engine-session';
  */
 export interface ExplanationPart { text: string; line?: LiveMove[]; at?: number; }
 
-interface Known { fen: string; path: LiveMove[]; }
+/** Eine bekannte Stellung und der Weg dorthin ab der Wurzel. */
+export interface KnownPosition { fen: string; path: LiveMove[]; }
+type Known = KnownPosition;
 
 const START = /(^|[\s(„"'])(\d{1,3})(\.{3}|…|\.)\s?/g;
 const MARKER = /^(\d{1,3})(\.{3}|…|\.)\s?/;
@@ -73,10 +75,15 @@ function readSequence(text: string, pos: number, fen: string): Parsed {
  * nach dem zuvor genannten Zug an. Deshalb merkt sich der Zerleger jede Stellung, die eine Folge erreicht, und setzt
  * eine neue Folge an der zuletzt genannten Stellung an, deren Zugnummer und Seite passen und in der ihr erster Zug
  * legal ist. Was nicht passt, bleibt Text — eine Folge, die nicht stimmt, wird nie klickbar.
+ *
+ * Mit `game` (jede Stellung der Partie, Index = Halbzüge; Partie-Zusammenfassung): zuerst der tatsächliche Partiezug zu Nummer
+ * und Seite, dann die zuletzt genannten Stellungen, zuletzt die Partiestellung als Abzweig einer Variante. `shared` hält die
+ * genannten Stellungen über mehrere Textstücke desselben Absatzes.
  */
-export function explanationParts(text: string, rootFen: string): ExplanationPart[] {
+export function explanationParts(text: string, rootFen: string, game?: readonly Known[], shared?: Known[]): ExplanationPart[] {
   const parts: ExplanationPart[] = [];
-  const known: Known[] = [{ fen: rootFen, path: [] }];
+  const known: Known[] = shared ?? [{ fen: rootFen, path: [] }];
+  const matches = (c: Known, number: number, black: boolean) => fullmove(c.fen) === number && blackToMove(c.fen) === black;
   let last = 0;
   START.lastIndex = 0;
   let m: RegExpExecArray | null;
@@ -86,11 +93,20 @@ export function explanationParts(text: string, rootFen: string): ExplanationPart
     const number = parseInt(m[2], 10);
     const black = m[3] !== '.';
     let best: { from: Known; seq: Parsed } | null = null;
-    for (let k = known.length - 1; k >= 0; k--) {
+    const index = game?.findIndex(c => matches(c, number, black)) ?? -1;
+    if (game && index >= 0 && index + 1 < game.length) {
+      const seq = readSequence(text, pos, game[index].fen);
+      if (seq.moves[0]?.move.san === game[index + 1].path[index].san) best = { from: game[index], seq };
+    }
+    for (let k = known.length - 1; k >= 0 && !best; k--) {
       const cand = known[k];
-      if (fullmove(cand.fen) !== number || blackToMove(cand.fen) !== black) continue;
+      if (!matches(cand, number, black)) continue;
       const seq = readSequence(text, pos, cand.fen);
-      if (seq.moves.length) { best = { from: cand, seq }; break; }
+      if (seq.moves.length) best = { from: cand, seq };
+    }
+    if (!best && game && index >= 0) {
+      const seq = readSequence(text, pos, game[index].fen);
+      if (seq.moves.length) best = { from: game[index], seq };
     }
     if (!best) continue;
     if (pos > last) parts.push({ text: text.slice(last, pos) });

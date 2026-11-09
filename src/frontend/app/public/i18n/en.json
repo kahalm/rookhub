@@ -3376,6 +3376,8 @@
       "none": "There is no summary for this game yet.",
       "showInGame": "Show in the game",
       "showOnBoard": "Show on board",
+      "variation": "Variation",
+      "backToGame": "Back to the game",
       "writtenBy": "Written by {{model}} from the engine analysis.",
       "waitingForAnalysis": "Requested – waiting for the background analysis, the summary follows once it is done:",
       "progressAnalysis": "analysis still running",

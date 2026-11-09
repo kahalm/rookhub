@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.932.0", date: "2026-11-09", changes: [
+    { en: "Game summaries: moves in the text are clickable. A game move jumps to that position on the side board, a side line appears there and can be stepped through. You can also play your own moves on that board; such variations stay on the page and are not saved.",
+      de: "Partie-Zusammenfassung: Züge im Text sind anklickbar. Ein Partiezug springt auf dem Seitenbrett an seine Stelle, eine Variante erscheint dort und lässt sich durchklicken. Eigene Züge auf dem Brett ergeben ebenfalls eine Variante; sie bleibt nur auf dieser Seite und wird nicht gespeichert." },
+  ] },
   { version: "0.931.0", date: "2026-11-09", changes: [
     { en: "Game summaries: recommended books are now listed separately for White and Black, chosen for that player's mistakes and strength; a heading disappears when you have blocked all the books beneath it.",
       de: "Partie-Zusammenfassung: „Empfohlene Literatur“ steht jetzt getrennt für Weiß und Schwarz, passend zu Fehlern und Spielstärke des jeweiligen Spielers; eine Überschrift verschwindet, wenn alle Bücher darunter gesperrt sind." },

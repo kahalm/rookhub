@@ -17,7 +17,7 @@ import { MaximNoteComponent } from '../../../shared/maxims/maxim-note.component'
 import { ClubGameSummary, ClubGameSummaryService, EbookSuggestionInfo } from './club-game-summary.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 import { SummaryGameBoardComponent } from './summary-game-board.component';
-import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
+import { DiagramSpec, InlinePart, SummaryBlock, moveLabel, linkSummaryMoves, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
 
 /** Ein fertig aufgelöstes Diagramm: Stellung, letzter Zug, Pfeile, Blickrichtung. */
 interface ResolvedDiagram {
@@ -153,7 +153,8 @@ interface ResolvedDiagram {
 
     <ng-template #inline let-parts>
       @for (p of parts; track $index) {
-        @if (p.bold) { <strong>{{ p.text }}</strong> }
+        @if (p.line) { <button type="button" class="mv" [class.mv-b]="p.bold" [class.mv-i]="p.italic" (click)="showMove(p)">{{ p.text }}</button> }
+        @else if (p.bold) { <strong>{{ p.text }}</strong> }
         @else if (p.italic) { <em>{{ p.text }}</em> }
         @else if (p.code) { <code>{{ p.text }}</code> }
         @else { {{ p.text }} }
@@ -194,6 +195,11 @@ interface ResolvedDiagram {
     .diagram { margin: 16px auto; max-width: 360px; }
     .diagram-board { width: 100%; }
     .diagram figcaption { margin-top: 6px; font-size: 0.875rem; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+    .mv { all: unset; cursor: pointer; font-weight: 500; color: var(--rh-accent, inherit); border-radius: 3px;
+      text-decoration: underline dotted; text-underline-offset: 2px; }
+    .mv:hover, .mv:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); outline: none; }
+    .mv.mv-b { font-weight: 700; }
+    .mv.mv-i { font-style: italic; }
     .to-ply { margin-left: auto; }
     .to-board { background: none; border: 0; padding: 0; font: inherit; color: var(--rh-accent); text-decoration: underline; cursor: pointer; }
   `],
@@ -225,7 +231,9 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly justBlocked = signal<ReadonlySet<number>>(new Set());
   readonly loggedIn = inject(AuthService).isLoggedIn;
   /** Ohne Bücher und ohne deren Überschrift, wenn von der Literatur-Liste nichts übrig bleibt. */
-  readonly visibleBlocks = computed<SummaryBlock[]>(() => visibleSummaryBlocks(this.blocks(), b => this.books().has(b.id)));
+  /** Züge im Text werden klickbar, sobald es das Seitenbrett gibt, das sie zeigen kann. */
+  private readonly linkedBlocks = computed<SummaryBlock[]>(() => this.hasBoard() ? linkSummaryMoves(this.blocks(), this.positions()) : this.blocks());
+  readonly visibleBlocks = computed<SummaryBlock[]>(() => visibleSummaryBlocks(this.linkedBlocks(), b => this.books().has(b.id)));
   private readonly positions = computed(() => positionsOf(this.game()?.pgn ?? ''));
   /** Seitenbrett nur, wenn es Text gibt, neben dem es steht, und Züge zum Durchklicken. */
   readonly hasBoard = computed(() => !!this.summary()?.markdown && this.positions().sans.length > 0);
@@ -268,6 +276,11 @@ export class ClubGameSummaryComponent implements OnInit {
       next: () => this.justBlocked.update(s => { const n = new Set(s); if (blocked) n.add(id); else n.delete(id); return n; }),
       error: () => this.snackbar.warn(this.translate.instant('games.summary.neverSuggestFailed')),
     });
+  }
+
+  /** Klick auf einen Zug im Text: Partiezug oder Variante aufs Seitenbrett. */
+  showMove(p: InlinePart): void {
+    if (p.line && p.at) this.sideBoard()?.showLine(p.line, p.at);
   }
 
   /** Diagramm-Block → Brett; `null`, wenn der Halbzug außerhalb der Partie liegt (dann lieber keins als ein falsches). */

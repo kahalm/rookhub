@@ -1,4 +1,4 @@
-import { moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
+import { linkSummaryMoves, moveLabel, parseInline, parseSummary, positionsOf, visibleSummaryBlocks } from './summary-markdown.util';
 
 describe('summary-markdown.util (Partie-Zusammenfassung, 0.913.0)', () => {
   it('zerlegt Überschriften, Absätze, Listen, Zitat, Trennlinie und Tabelle', () => {
@@ -84,5 +84,26 @@ describe('visibleSummaryBlocks (Literatur je Seite, Wunsch 2026-11-09)', () => {
     const flat = parseSummary('## Empfohlene Literatur\n\n```book\nid: 1\nwhy: a\n```\n\n## Leer\n');
     expect(visibleSummaryBlocks(flat, () => false).map(b => b.kind)).toEqual(['heading']);
     expect(visibleSummaryBlocks(flat, () => true).length).toBe(3);
+  });
+});
+
+describe('linkSummaryMoves (klickbare Züge)', () => {
+  const pos = positionsOf('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *');
+  const para = (md: string) => {
+    const b = linkSummaryMoves(parseSummary(md), pos)[0];
+    return b.kind === 'paragraph' ? b.parts : [];
+  };
+
+  it('Partiezug vor Variante, auch nach einer genannten Variante', () => {
+    const p = para('Statt 3.Lb5 besser 3.Lc4 Sf6 und dann 3...a6 im Spiel.').filter(x => x.line);
+    expect(p.map(x => x.text)).toEqual(['3.Lb5', '3.Lc4', 'Sf6', '3...a6']);
+    expect(p[0].line!.map(m => m.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']);
+    expect(p[1].line!.map(m => m.san).slice(-3)).toEqual(['Nc6', 'Bc4', 'Nf6']);
+    expect(p[3].line!.length).toBe(6);
+  });
+
+  it('Illegales und Code bleiben Text, englische Buchstaben gehen', () => {
+    expect(para('Hier 9.Dh5 und `2.Nf3`.').some(x => x.line)).toBeFalse();
+    expect(para('Hier 2.Nf3 stark.').filter(x => x.line).map(x => x.at)).toEqual([3]);
   });
 });

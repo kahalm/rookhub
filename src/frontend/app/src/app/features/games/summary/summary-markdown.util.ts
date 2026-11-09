@@ -1,4 +1,6 @@
 import { Chess } from 'chess.js';
+import { KnownPosition, explanationParts } from '../explanation-lines';
+import type { LiveMove } from '../live-engine-session';
 
 /**
  * Partie-Zusammenfassung (0.913.0): der Markdown-Text, den Claude für eine Vereinspartie schreibt, in Blöcke zerlegen —
@@ -7,7 +9,11 @@ import { Chess } from 'chess.js';
  * über innerHTML — fremder Text kann so kein HTML einschleusen.
  */
 
-export interface InlinePart { text: string; bold?: boolean; italic?: boolean; code?: boolean; }
+export interface InlinePart {
+  text: string; bold?: boolean; italic?: boolean; code?: boolean;
+  /** Klickbarer Zug: die Zugfolge ab Partieanfang und wie weit sie bis einschließlich dieses Zugs reicht. */
+  line?: LiveMove[]; at?: number;
+}
 
 /** Ein Diagramm: Stellung nach `ply` Halbzügen der Partie (0 = Anfang) oder eine freie `fen`. */
 export interface DiagramSpec {
@@ -160,6 +166,43 @@ export function parseSummary(markdown: string): SummaryBlock[] {
   }
   flush();
   return blocks;
+}
+
+type Positions = ReturnType<typeof positionsOf>;
+
+/** Jede Stellung der Partie samt Weg dorthin (Index = Halbzüge). */
+export function gamePositions({ fens, lastMoves, sans }: Positions): KnownPosition[] {
+  const out: KnownPosition[] = [{ fen: fens[0], path: [] }];
+  let path: LiveMove[] = [];
+  sans.forEach((san, i) => {
+    const [from, to] = lastMoves[i + 1]!;
+    const promotion = /=([QRBN])/.exec(san)?.[1].toLowerCase() ?? '';
+    path = [...path, { san, uci: from + to + promotion, fen: fens[i + 1], from, to }];
+    out.push({ fen: fens[i + 1], path });
+  });
+  return out;
+}
+
+/** Züge in Überschriften, Absätzen, Listen, Zitaten, Tabellen und Bildunterschriften klickbar machen; Unauflösbares bleibt Text. */
+export function linkSummaryMoves(blocks: SummaryBlock[], positions: Positions): SummaryBlock[] {
+  const game = gamePositions(positions);
+  const link = (parts: InlinePart[]): InlinePart[] => {
+    const known: KnownPosition[] = [];   // je Absatz: „Nach 12.Sd3 kann Schwarz 12...b6“ bezieht sich aufeinander
+    return parts.flatMap(p => {
+      if (p.code) return [p];
+      const { text: _, ...style } = p;
+      return explanationParts(p.text, game[0].fen, game, known).map(x => ({ ...style, ...x }));
+    });
+  };
+  return blocks.map(b => {
+    switch (b.kind) {
+      case 'heading': case 'paragraph': case 'quote': return { ...b, parts: link(b.parts) };
+      case 'list': return { ...b, items: b.items.map(link) };
+      case 'table': return { ...b, head: b.head.map(link), rows: b.rows.map(r => r.map(link)) };
+      case 'diagram': return b.spec.caption ? { ...b, spec: { ...b.spec, caption: link(b.spec.caption) } } : b;
+      default: return b;
+    }
+  });
 }
 
 /**
