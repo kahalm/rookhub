@@ -151,7 +151,7 @@ export class TournamentCalendarComponent implements OnChanges {
   isVarious(entry: DirectoryEntry): boolean { return isPlaceholderLocation(entry.location); }
 
   private buildWeekdayLabels(): void {
-    const formatter = new Intl.DateTimeFormat(this.locale, { weekday: 'short' });
+    const formatter = new Intl.DateTimeFormat(this.locale, { weekday: 'short', timeZone: 'UTC' });
     // 2024-01-01 war ein Montag — die Woche beginnt hier bewusst montags (europäische Lesart).
     this.weekdayLabels = Array.from({ length: 7 },
       (_, i) => formatter.format(new Date(Date.UTC(2024, 0, 1 + i))));
@@ -160,7 +160,9 @@ export class TournamentCalendarComponent implements OnChanges {
   private buildGrid(): void {
     if (!this.year || !this.month) return;
 
-    this.monthLabel = new Intl.DateTimeFormat(this.locale, { month: 'long', year: 'numeric' })
+    // Alle Formatierer in UTC wie das Raster (Date.UTC) — sonst steht westlich von Greenwich der Vortag bzw.
+    // Vormonat da (G3-008: New York sah „Oktober 2026“ über dem November und „So“ über der Montags-Spalte).
+    this.monthLabel = new Intl.DateTimeFormat(this.locale, { month: 'long', year: 'numeric', timeZone: 'UTC' })
       .format(new Date(Date.UTC(this.year, this.month - 1, 1)));
 
     const byDate = new Map(this.days.map(d => [d.date.slice(0, 10), d.items]));
@@ -198,7 +200,7 @@ export class TournamentCalendarComponent implements OnChanges {
     this.expanded.clear();
 
     const dayFormatter = new Intl.DateTimeFormat(this.locale,
-      { weekday: 'short', day: 'numeric', month: 'short' });
+      { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
     // Nur Tage des angezeigten Monats: beim Blaettern setzt der Elter Jahr/Monat sofort, `days`
     // aber erst mit der Antwort (Mobilfunk 1–3 s, nach einem Ladefehler gar nicht). Bis dahin
     // standen unter „Oktober 2026" die September-Turniere. Das Raster hat das Problem nicht,

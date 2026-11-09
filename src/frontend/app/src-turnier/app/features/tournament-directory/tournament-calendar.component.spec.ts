@@ -200,6 +200,29 @@ describe('TournamentCalendarComponent', () => {
     expect(component.weekdayLabels[0]).toBe('Mon');
   });
 
+  describe('Formatierer westlich von UTC (G3-008)', () => {
+    const RealDtf = Intl.DateTimeFormat;
+    beforeEach(() => {
+      // Zeitzone des Betrachters simulieren: ohne ausdrückliche timeZone formatiert Intl in New York.
+      const stub = function (locale?: string | string[], opts?: Intl.DateTimeFormatOptions) {
+        return new RealDtf(locale, { timeZone: 'America/New_York', ...opts });
+      } as unknown as typeof Intl.DateTimeFormat;
+      (Intl as { DateTimeFormat: typeof Intl.DateTimeFormat }).DateTimeFormat = stub;
+    });
+    afterEach(() => { (Intl as { DateTimeFormat: typeof Intl.DateTimeFormat }).DateTimeFormat = RealDtf; });
+
+    it('Monatsname, Wochentagsköpfe und Agenda-Tage bleiben auf dem UTC-Tag', () => {
+      component.month = 11;
+      component.days = [day('2026-11-06', 'Open Wels')];
+      apply({ days: component.days, month: 11 });
+
+      expect(component.monthLabel).toBe('November 2026');
+      expect(component.weekdayLabels[0]).toBe('Mo');
+      expect(component.agenda[0].label).toContain('6.');
+      expect(component.agenda[0].label).toContain('Fr');
+    });
+  });
+
   describe('Heute-Markierung in Ortszeit (UX-076)', () => {
     afterEach(() => jasmine.clock().uninstall());
 
