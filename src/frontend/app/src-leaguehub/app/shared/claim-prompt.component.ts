@@ -7,6 +7,11 @@ import { claimKeys, clearClaimKeys } from '../core/claim-keys';
  * ob sie dem Konto zugeordnet werden sollen. Erst bei JA wird gespeichert, wer sie hochgeladen hat — bei anonymisierten Partien
  * ist das genau die Zustimmung, die das Häkchen beim Hochladen verspricht. NEIN lässt sie ohne Hochladenden; beide
  * Antworten verbrauchen die Schlüssel.
+ *
+ * Bewusst so gelassen (Codereview F4-001, Entscheidung E7 der Fixwelle B8): die Schlüssel gelten je BROWSER ohne Zeitfenster
+ * (Wunsch 2026-10-04) — auf einem geteilten Vereinsgerät kann deshalb der Nächste, der sich anmeldet, fremde anonyme Uploads
+ * angeboten bekommen; er muss aktiv zustimmen. Zeitfenster je Schlüssel (Client UND Server) und Datum/Begegnung im Angebot
+ * wären der Weg, falls das geändert werden soll.
  */
 @Component({
   selector: 'lh-claim-prompt',
