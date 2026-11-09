@@ -247,7 +247,8 @@ public class BackgroundPauseTests : IAsyncDisposable
         var type = typeof(BackgroundJobsController);
         var authorize = type.GetCustomAttribute<AuthorizeAttribute>();
         Assert.NotNull(authorize);
-        Assert.Equal("Admin", authorize!.Roles);
+        // Seit R1-004 live über das Admin-Flag ([HasPermission(Permissions.AdminOnly)]) statt über die Rolle im Token.
+        Assert.Equal("perm:" + RookHub.Api.Models.Permissions.AdminOnly, authorize!.Policy);
         Assert.Equal("api/admin/background-jobs", type.GetCustomAttribute<RouteAttribute>()!.Template);
         Assert.DoesNotContain(type.GetMethods(), m => m.GetCustomAttribute<AllowAnonymousAttribute>() != null);
         Assert.Null(type.GetCustomAttribute<AllowAnonymousAttribute>());

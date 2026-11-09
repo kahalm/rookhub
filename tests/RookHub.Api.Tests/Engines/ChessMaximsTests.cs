@@ -227,10 +227,11 @@ public class EbookSuggestionsTests : IDisposable
     [Fact]
     public void Strength_nur_fuer_Admins()
     {
+        // Seit R1-004 live über das Admin-Flag statt über die Rolle im Token.
         var a = typeof(RookHub.Api.Controllers.Ebooks.EbookSuggestionsController).GetMethod("Strength")!
-            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
-            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>().Single();
-        Assert.Equal("Admin", a.Roles);
+            .GetCustomAttributes(typeof(RookHub.Api.Authorization.HasPermissionAttribute), false)
+            .Cast<RookHub.Api.Authorization.HasPermissionAttribute>().Single();
+        Assert.Equal("perm:" + RookHub.Api.Models.Permissions.AdminOnly, a.Policy);
     }
 
     [Fact]
