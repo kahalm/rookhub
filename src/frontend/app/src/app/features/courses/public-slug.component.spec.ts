@@ -6,6 +6,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Observable, Subject, TimeoutError, of, throwError } from 'rxjs';
 import { PublicSlugComponent } from './public-slug.component';
+import { AppUpdateService } from '../../core/app-update.service';
 import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './course.service';
 
 interface Nav { commands: unknown[]; queryParams?: Record<string, unknown> }
@@ -99,9 +100,13 @@ describe('PublicSlugComponent', () => {
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => (k === 'slug' ? 'profil' : null) } } } },
         { provide: CourseService, useValue: { resolvePublicSlug: () => answer(404) } },
+        // Die Nicht-gefunden-Seite prüft zuerst die Server-Version (U1, Ladekreis) — hier ohne Fund, damit der Text steht.
+        { provide: AppUpdateService, useValue: { checkNow: () => Promise.resolve({ available: false, version: null }) } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(PublicSlugComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('app-not-found h1')?.textContent).toContain('app.notFound.title');
   });
