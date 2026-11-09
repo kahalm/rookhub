@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -59,6 +59,21 @@ describe('GuessListComponent', () => {
     });
     http.expectOne('/api/guess-sessions').flush([]);
   }
+
+  // Codereview F3-012: kam die Liste erst nach dem Verlassen der Seite, legte syncPoll ein verwaistes interval an.
+  it('nach dem Verlassen der Seite: späte Antwort mit rechnender Partie legt kein Nachfassen mehr an', fakeAsync(() => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([]);
+    const own = http.expectOne('/api/game-analyses');
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/guess-sessions').flush([]);
+
+    fixture.destroy();
+    if (!own.cancelled) own.flush([analysis({ status: 'running' })]);
+    tick(30000);
+    http.expectNone('/api/game-analyses');
+  }));
 
   it('wirft ein PGN OHNE Tiefe und Linienzahl ein — die setzt der Server', () => {
     const fixture = setup();

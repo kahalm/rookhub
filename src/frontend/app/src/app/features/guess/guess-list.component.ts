@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -469,6 +470,9 @@ export class GuessListComponent implements OnInit, OnDestroy {
   private analyses = inject(GameAnalysisService);
   private auth = inject(AuthService);
   private viewState = inject(ViewStateService);
+  private destroyRef = inject(DestroyRef);
+  /** Seite verlassen: eine späte Antwort darf kein neues Nachfassen mehr anlegen (Codereview F3-012). */
+  private destroyed = false;
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackbar = inject(SnackbarService);
@@ -679,7 +683,7 @@ export class GuessListComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.poll?.unsubscribe(); }
+  ngOnDestroy(): void { this.destroyed = true; this.poll?.unsubscribe(); this.poll = undefined; }
 
   /**
    * Die eigenen Analysen — anders als der kuratierte Bestand AUCH die noch rechnenden. Frueher
@@ -690,7 +694,9 @@ export class GuessListComponent implements OnInit, OnDestroy {
    * <p>Der kuratierte Bestand steht oben schon, hier ginge er sonst doppelt durch.</p>
    */
   private loadOwnGames(): void {
-    this.analyses.list().subscribe({
+    // An die Lebensdauer gebunden: kam die Antwort nach dem Verlassen der Seite, legte syncPoll ein interval an, das
+    // niemand mehr abbestellte (Codereview F3-012).
+    this.analyses.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => {
         this.ownGames = list.filter(a => !a.isPublic);
         this.syncPoll();
@@ -704,6 +710,7 @@ export class GuessListComponent implements OnInit, OnDestroy {
    *  Muster wie auf der Auftragsseite). */
   private syncPoll(): void {
     const busy = this.ownGames.some(g => g.status === 'pending' || g.status === 'running');
+    if (this.destroyed) return;
     if (busy && !this.poll) {
       this.poll = interval(10000).subscribe(() => this.loadOwnGames());
     } else if (!busy && this.poll) {
