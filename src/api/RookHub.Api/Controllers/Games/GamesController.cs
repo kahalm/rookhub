@@ -26,12 +26,13 @@ public class GamesController : BaseApiController
         _mistakes = mistakes;
     }
 
-    /// <summary>Eigene gespeicherte Partien (neueste zuerst, ohne PGN) samt Stand des Fehler-Trainings.</summary>
+    /// <summary>Eigene gespeicherte Partien (neueste zuerst, ohne PGN) samt Stand des Fehler-Trainings; <c>q</c> = Freitextsuche
+    /// über alle eigenen Partien (Wörter UND-verknüpft, siehe <see cref="SavedGameSearch"/>).</summary>
     [HttpGet]
-    public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200, CancellationToken ct = default)
+    public async Task<ActionResult<List<SavedGameDto>>> List([FromQuery] int take = 200, [FromQuery] string? q = null, CancellationToken ct = default)
     {
         var userId = GetUserId();
-        var games = await _service.ListAsync(userId, take);
+        var games = await _service.ListAsync(userId, take, q);
         // EINE Abfrage fuer die ganze Liste statt einer je Partie.
         var stand = await _mistakes.ForGamesAsync(userId, games.Select(g => g.Id).ToList(), ct);
         foreach (var g in games)

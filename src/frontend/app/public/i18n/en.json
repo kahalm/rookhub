@@ -3032,6 +3032,13 @@
     }
   },
   "games": {
+    "search": {
+      "label": "Search games",
+      "placeholder": "Player, event, opening, ECO…",
+      "clear": "Clear search",
+      "none": "No game matches “{{query}}”.",
+      "truncated": "Showing only the newest {{count}} matches – narrow your search."
+    },
     "filterRemove": "Remove filter {{value}}",
     "filtersToggle": "Filter",
     "title": "Saved games",

@@ -50,16 +50,16 @@ internal sealed class SavedGameListing
             .ToList();
     }
 
-    /// <summary>Gespeicherte Partien des Users, neueste zuerst (ohne PGN).</summary>
-    public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200)
+    /// <summary>Gespeicherte Partien des Users, neueste zuerst (ohne PGN); mit <paramref name="search"/> nur die Treffer
+    /// der Freitextsuche (<see cref="SavedGameSearch"/>) aus ALLEN Partien des Users.</summary>
+    public async Task<List<SavedGameDto>> ListAsync(int userId, int take = 200, string? search = null)
     {
         take = Math.Clamp(take, 1, 500);
         // Das PGN (LONGTEXT) wird NUR fuer Zeilen mitgeholt, deren Zaehler noch fehlt. Frueher
         // stand hier CountPlies(g.Pgn) in der Projektion - eine C#-Methode, die EF nicht
         // uebersetzen kann: die Spalte wanderte damit fuer JEDE der bis zu 500 Partien ueber die
         // Leitung, obwohl das Listen-DTO das PGN gar nicht traegt.
-        var rows = await _db.SavedGames.AsNoTracking()
-            .Where(g => g.UserId == userId)
+        var rows = await SavedGameSearch.Apply(_db.SavedGames.AsNoTracking().Where(g => g.UserId == userId), search)
             .OrderByDescending(g => g.CreatedAt)
             .Take(take)
             .Select(g => new

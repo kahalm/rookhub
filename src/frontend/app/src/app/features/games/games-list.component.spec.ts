@@ -5,7 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { ANALYSIS_POLL_MS, GamesListComponent } from './games-list.component';
+import { ANALYSIS_POLL_MS, GamesListComponent, SEARCH_DEBOUNCE_MS, SEARCH_TAKE } from './games-list.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -325,6 +325,7 @@ describe('GamesListComponent', () => {
     expect(el.querySelector('.no-engine mat-icon')).not.toBeNull();
     expect(parseFloat(getComputedStyle(el.querySelector('.no-engine')!).marginTop)).withContext('Abstand zu den Filtern').toBeGreaterThanOrEqual(8);
     // Der Strich der Spalte trägt denselben Satz als Tooltip (MatTooltip hängt ihn per aria-describedby an).
+    await fixture.whenStable(); // MatTooltip beschreibt asynchron; mit dem Suchfeld (mat-form-field) im selben Lauf erst danach
     expect(el.querySelector('.acc-cell .no-analysis')!.getAttribute('aria-describedby')).toMatch(/cdk-describedby-message/);
     expect(el.querySelectorAll('button.analyze').length).toBe(0);
     expect(el.querySelectorAll('.acc-cell .no-analysis').length).toBe(2);
@@ -474,6 +475,148 @@ describe('GamesListComponent', () => {
 });
 
 /** v1-rk-games-mobile-fold-lead-filters-open: Handy-Regeln (Karma läuft mit 1400 px, die Media-Query greift dort nicht). */
+describe('GamesListComponent Freitextsuche', () => {
+  const partie = (id: number, extra: object = {}) => ({ id, source: 'pgn', white: 'a', black: 'b', result: '1-0', moveCount: 3, shareToken: `t${id}`, createdAt: '2026-07-16T00:00:00Z', ...extra });
+  const istListe = (r: { method: string; url: string }) => r.method === 'GET' && r.url.startsWith('/api/games?');
+
+  async function setup() {
+    await TestBed.configureTestingModule({
+      imports: [GamesListComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    TestBed.inject(TranslateService).use('en');
+    return { fixture: TestBed.createComponent(GamesListComponent), http: TestBed.inject(HttpTestingController) };
+  }
+
+  /** Startet die Seite mit der ungesuchten Liste. */
+  function start(fixture: { detectChanges(): void }, http: HttpTestingController, partien: unknown[]) {
+    fixture.detectChanges();
+    http.expectOne('/api/games?take=200').flush(partien);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    fixture.detectChanges();
+  }
+
+  it('debounces typing, sends one encoded request for the last value and shows the hits', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1), partie(2)]);
+    const c = fixture.componentInstance;
+
+    c.onSearch('car');
+    tick(SEARCH_DEBOUNCE_MS - 1);
+    http.expectNone(istListe);
+    c.onSearch('  carlsen & wijk ');
+    tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=carlsen%20%26%20wijk`).flush([partie(9)]);
+    fixture.detectChanges();
+
+    expect(c.shownGames().map(g => g.id)).toEqual([9]);
+    expect(fixture.nativeElement.querySelector('.games-search')).not.toBeNull();
+  }));
+
+  it('a late answer of an older search does not replace the current hits', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1)]);
+    const c = fixture.componentInstance;
+
+    c.onSearch('alt'); tick(SEARCH_DEBOUNCE_MS);
+    const alt = http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=alt`);
+    c.onSearch('neu'); tick(SEARCH_DEBOUNCE_MS);
+    expect(alt.cancelled).toBeTrue();
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=neu`).flush([partie(5)]);
+    expect(c.games.map(g => g.id)).toEqual([5]);
+  }));
+
+  it('no hits: keeps the search field, says so, and clearing loads the full list again', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1)]);
+    const c = fixture.componentInstance;
+
+    c.onSearch('xyz'); tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=xyz`).flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.no-hits')).not.toBeNull();
+    expect(el.querySelector('.empty-state')).toBeNull();
+    expect(el.querySelector('.games-search')).not.toBeNull();
+
+    (el.querySelector('.no-hits-clear') as HTMLButtonElement).click();
+    tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne('/api/games?take=200').flush([partie(1)]);
+    fixture.detectChanges();
+    expect(el.querySelector('.no-hits')).toBeNull();
+    expect(c.shownGames().length).toBe(1);
+  }));
+
+  it('combines with a classifier filter even if the hits do not contain its value', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1, { classifier1: 'Landesliga' }), partie(2, { classifier1: 'Blitz' })]);
+    const c = fixture.componentInstance;
+    c.filter1 = 'Landesliga';
+
+    c.onSearch('x'); tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=x`).flush([partie(2, { classifier1: 'Blitz' })]);
+    expect(c.firstOptions()).toContain('Landesliga');
+    expect(c.shownGames()).toEqual([]);
+  }));
+
+  it('polling keeps the active search', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1)]);
+    const c = fixture.componentInstance;
+
+    c.onSearch('x'); tick(SEARCH_DEBOUNCE_MS);
+    const laufend = partie(2, { analysis: { status: 'running', analyzed: 1, total: 2 } });
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=x`).flush([laufend]);
+    tick(ANALYSIS_POLL_MS);
+    const nachgefragt = http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=x`);
+    expect(nachgefragt.request.url).toContain('q=x');
+    nachgefragt.flush([partie(2)]);
+    discardPeriodicTasks();
+  }));
+
+  it('a failed search shows the error with retry and the next search still works', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1)]);
+    const c = fixture.componentInstance;
+
+    c.onSearch('x'); tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=x`).flush('boom', { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-load-error')).not.toBeNull();
+
+    c.onSearch('y'); tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=y`).flush([partie(3)]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-load-error')).toBeNull();
+    expect(c.games.map(g => g.id)).toEqual([3]);
+  }));
+
+  it('at the server cap it asks to narrow the search', fakeAsync(() => {
+    let ctx!: Awaited<ReturnType<typeof setup>>;
+    setup().then(c => ctx = c); tick();
+    const { fixture, http } = ctx;
+    start(fixture, http, [partie(1)]);
+    const c = fixture.componentInstance;
+
+    c.onSearch('x'); tick(SEARCH_DEBOUNCE_MS);
+    http.expectOne(`/api/games?take=${SEARCH_TAKE}&q=x`).flush(Array.from({ length: SEARCH_TAKE }, (_, i) => partie(i + 1)));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.search-truncated')).not.toBeNull();
+  }));
+});
+
 describe('GamesListComponent Layout', () => {
   const css = ((GamesListComponent as any).ɵcmp.styles as string[]).join('\n').replace(/\s+/g, ' ')
     .replace(/\[_ngcontent-%COMP%\]/g, '');

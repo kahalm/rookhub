@@ -11,6 +11,13 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.933.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Saved games: free-text search over all your games — players, event, site, opening, ECO, source, classifiers and tags; several words must all match.', de: 'Gespeicherte Partien: Freitextsuche über alle eigenen Partien — Spieler, Turnier, Ort, Eröffnung, ECO, Quelle, Klassifizierer und Tags; mehrere Wörter müssen alle treffen.' },
+    ],
+  },
+  {
     version: '0.932.2',
     date: '2026-11-09',
     changes: [

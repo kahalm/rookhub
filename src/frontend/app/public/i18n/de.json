@@ -3032,6 +3032,13 @@
     }
   },
   "games": {
+    "search": {
+      "label": "Partien durchsuchen",
+      "placeholder": "Spieler, Turnier, Eröffnung, ECO …",
+      "clear": "Suche leeren",
+      "none": "Keine Partie passt zu „{{query}}“.",
+      "truncated": "Nur die neuesten {{count}} Treffer – grenze die Suche ein."
+    },
     "filterRemove": "Filter {{value}} entfernen",
     "filtersToggle": "Filter",
     "title": "Gespeicherte Partien",

@@ -3439,6 +3439,13 @@
     }
   },
   "games": {
+    "search": {
+      "label": "Játszmák keresése",
+      "placeholder": "Játékos, verseny, megnyitás, ECO…",
+      "clear": "Keresés törlése",
+      "none": "Nincs a következőnek megfelelő játszma: „{{query}}”.",
+      "truncated": "Csak a legújabb {{count}} találat látható – szűkítsd a keresést."
+    },
     "filterRemove": "{{value}} szűrő eltávolítása",
     "filtersToggle": "Szűrők",
     "title": "Mentett játszmák",

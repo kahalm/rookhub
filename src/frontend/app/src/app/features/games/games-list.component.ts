@@ -7,14 +7,16 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatInputModule } from '@angular/material/input';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, timer } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, Subject, Subscription, of, timer } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 import { GamesService, PgnImportResult, SavedGame } from './games.service';
 import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
@@ -33,6 +35,10 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 
 /** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
 export const ANALYSIS_POLL_MS = 10_000;
+/** Entprellung des Suchfelds. */
+export const SEARCH_DEBOUNCE_MS = 300;
+/** So viele Treffer holt die Suche (Serverdeckel); sind es so viele, bittet die Seite ums Eingrenzen. */
+export const SEARCH_TAKE = 500;
 
 /** Was die Liste zu einer Partie zeigt: Knopf (keine/gescheiterte Analyse), Prozent (läuft) oder nichts (fertig). */
 export type AnalysisState = 'none' | 'running' | 'done';
@@ -44,7 +50,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
   // Je Seite bereitgestellt (wie auf der Partieseite): die Dialoge öffnen über den MatDialog dieser Seite.
   providers: [GameActionsService],
   imports: [IconLabelDirective,
-    CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatInputModule, LoadErrorComponent,
     MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, MatFormFieldModule, MatSelectModule,
     TranslatePipe, PctPipe, HelpHintComponent,
   ],
@@ -56,10 +62,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
           <!-- d5-rk-games-erster-blick-vorlauf: in niedrigen Fenstern (Boox 200 %) steht der Erklärsatz im ⓘ am Titel
                (DESIGN 4.6 „Erklärsatz im ⓘ am Titel“) — nur bei gefüllter Liste; im Leerzustand bleibt er sichtbar
                (er nennt den RepCheck-Weg). -->
-          <h1>{{ 'games.title' | translate }}@if (games.length > 0) { <app-help-hint class="hint-i" icon="info_outline" [text]="'games.hint' | translate" />}</h1>
+          <h1>{{ 'games.title' | translate }}@if (hasGames()) { <app-help-hint class="hint-i" icon="info_outline" [text]="'games.hint' | translate" />}</h1>
           <div class="header-actions">
             <!-- d3-rk-games-leer-pgn-doppelt: im Leerzustand steht die eine Aktion in der Leerkarte (DESIGN 5.10). -->
-            @if (loading || games.length > 0) {
+            @if (loading || hasGames()) {
               <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
                 <mat-icon>upload_file</mat-icon>
                 <!-- Am Handy Kurztext, damit beide Kopfknöpfe in eine Zeile passen (v1-rk-games-mobile-fold-lead-filters-open). -->
@@ -68,7 +74,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
               </button>
             }
             <!-- Fehler mehrerer Partien am Stück (0.748.0) — übernimmt die gewählte Liga/Saison. -->
-            @if (games.length > 0) {
+            @if (hasGames()) {
               <a mat-stroked-button class="mistakes-collection" routerLink="/games/mistakes" [queryParams]="collectionParams()">
                 <mat-icon>replay</mat-icon>
                 <span class="label-long">{{ 'games.mistakes.collection.button' | translate }}</span>
@@ -77,7 +83,23 @@ export type AnalysisState = 'none' | 'running' | 'done';
             }
           </div>
         </div>
-        <p class="hint" [class.has-games]="games.length > 0">{{ 'games.hint' | translate }}</p>
+        <p class="hint" [class.has-games]="hasGames()">{{ 'games.hint' | translate }}</p>
+        <!-- Freitextsuche: der Server sucht über ALLE Partien des Kontos, nicht nur über die geladenen 200. -->
+        @if (hasGames()) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="games-search">
+            <mat-label>{{ 'games.search.label' | translate }}</mat-label>
+            <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+            <input matInput type="search" name="gamesSearch" maxlength="200" autocomplete="off"
+                   [placeholder]="'games.search.placeholder' | translate"
+                   [ngModel]="searchText" (ngModelChange)="onSearch($event)">
+            @if (searchText) {
+              <button mat-icon-button matSuffix type="button" class="search-clear" (click)="clearSearch()"
+                      [appIconLabel]="'games.search.clear' | translate">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+        }
         <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
              wenn es überhaupt welche gibt, sonst stünde ein Schalter da, der nichts tut. -->
         @if (withOpenMistakes() > 0) {
@@ -141,6 +163,13 @@ export type AnalysisState = 'none' | 'running' | 'done';
 
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
+      } @else if (activeQuery && searchFailed) {
+        <app-load-error (retry)="retrySearch()" />
+      } @else if (activeQuery && shownGames().length === 0) {
+        <div class="no-hits">
+          <p>{{ 'games.search.none' | translate: { query: activeQuery } }}</p>
+          <button mat-stroked-button type="button" class="no-hits-clear" (click)="clearSearch()">{{ 'games.search.clear' | translate }}</button>
+        </div>
       } @else if (games.length === 0) {
         <mat-card class="empty-state">
           <mat-icon>sports_esports</mat-icon>
@@ -161,6 +190,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
              Spalte „–“); als Info-Zeile mit Symbol und Abstand zu den Filtern, damit er nicht wie deren Beschriftung wirkt. -->
         @if (uploadStatus?.engineAvailable === false) {
           <p class="no-engine" id="games-no-engine"><mat-icon aria-hidden="true">info_outline</mat-icon><span>{{ 'games.listNoEngine' | translate }}</span></p>
+        }
+        @if (activeQuery && games.length >= searchTake) {
+          <p class="search-truncated">{{ 'games.search.truncated' | translate: { count: searchTake } }}</p>
         }
         <div class="table">
           <div class="row head-row">
@@ -309,6 +341,10 @@ export type AnalysisState = 'none' | 'running' | 'done';
     .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
     .empty-state > mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
     .only-open { margin-top: 4px; }
+    .games-search { display: block; width: 100%; max-width: 640px; margin-top: 8px; }
+    .no-hits { padding: 24px 0; text-align: center; color: var(--mat-sys-on-surface-variant); }
+    .no-hits p { margin: 0 0 12px; overflow-wrap: anywhere; }
+    .search-truncated { margin: 8px 0; font-size: 0.875rem; color: var(--mat-sys-on-surface-variant); }
     .classifier-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 8px; }
     .filter-field { width: 200px; max-width: 100%; }
     .filters-bar { display: none; }
@@ -458,7 +494,50 @@ export class GamesListComponent implements OnInit {
   uploadStatus: GuessUploadStatus | null = null;
   /** Partien mit mindestens einem noch nicht selbst gefundenen Fehler. */
   withOpenMistakes(): number {
-    return this.games.filter(g => (g.mistakes?.open ?? 0) > 0).length;
+    return this.filterBase().filter(g => (g.mistakes?.open ?? 0) > 0).length;
+  }
+
+  /** Inhalt des Suchfelds. */
+  searchText = '';
+  /** Die Suche, zu der `games` gehört (entprellt, getrimmt); leer = keine. */
+  activeQuery = '';
+  searchFailed = false;
+  readonly searchTake = SEARCH_TAKE;
+  private search$ = new Subject<string>();
+  /** Die Liste ohne Suche: Grundlage der Filterwerte. Sonst verschwände ein gewählter Filter, sobald die Treffer ihn nicht
+   *  enthalten, und `shownGames` nähme ihn zurück — Suche und Filter müssen sich aber UND-verknüpfen. */
+  private unsearched: SavedGame[] = [];
+
+  private filterBase(): SavedGame[] { return this.activeQuery ? this.unsearched : this.games; }
+  /** Hat das Konto überhaupt Partien — unabhängig davon, ob die aktuelle Suche etwas findet. */
+  hasGames(): boolean { return this.filterBase().length > 0; }
+
+  onSearch(value: string): void {
+    this.searchText = value;
+    this.search$.next(value.trim());
+  }
+
+  clearSearch(): void { this.onSearch(''); }
+
+  retrySearch(): void {
+    this.searchFailed = false;
+    this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => this.applyList(list),
+      error: () => { this.searchFailed = true; },
+    });
+  }
+
+  /** Die Liste zur aktuellen Suche. Eine Antwort, die zu einer inzwischen geänderten Suche gehört, fällt weg. */
+  private fetchList(): Observable<SavedGame[]> {
+    const q = this.activeQuery;
+    return (q ? this.service.list(SEARCH_TAKE, q) : this.service.list()).pipe(filter(() => q === this.activeQuery));
+  }
+
+  private applyList(list: SavedGame[]): void {
+    this.games = list;
+    this.searchFailed = false;
+    if (!this.activeQuery) this.unsearched = list;
+    this.schedulePoll();
   }
 
   /** Filter der Klassifizierer (leer = alle) — wie `onlyOpen` bewusst nicht gemerkt. */
@@ -466,7 +545,7 @@ export class GamesListComponent implements OnInit {
   filter2 = '';
   /** Tag-Filter (leer = alle). */
   filterTag = '';
-  tagOptions(): string[] { return distinctTags(this.games); }
+  tagOptions(): string[] { return distinctTags(this.filterBase()); }
   readonly none = NO_CLASSIFIER;
   /** Filter am Handy aufgeklappt? Vorgabe zu (v1-rk-games-mobile-fold-lead-filters-open); am PC immer offen. */
   readonly filtersOpen = signal(false);
@@ -488,10 +567,10 @@ export class GamesListComponent implements OnInit {
     return { c1: classifierToParam(this.filter1), c2: classifierToParam(this.filter2) };
   }
 
-  firstOptions(): string[] { return distinctClassifiers(this.games, 1); }
-  secondOptions(): string[] { return distinctClassifiers(this.games, 2); }
-  unclassified1(): boolean { return hasUnclassified(this.games, 1); }
-  unclassified2(): boolean { return hasUnclassified(this.games, 2); }
+  firstOptions(): string[] { return distinctClassifiers(this.filterBase(), 1); }
+  secondOptions(): string[] { return distinctClassifiers(this.filterBase(), 2); }
+  unclassified1(): boolean { return hasUnclassified(this.filterBase(), 1); }
+  unclassified2(): boolean { return hasUnclassified(this.filterBase(), 2); }
 
   /** Die angezeigte Liste — ungefiltert, oder nur die mit offenen Fehlern bzw. dem gewählten Klassifizierer. */
   shownGames(): SavedGame[] {
@@ -535,10 +614,18 @@ export class GamesListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: list => { this.games = list; this.loading = false; this.schedulePoll(); },
+    this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => { this.loading = false; this.applyList(list); },
       error: () => { this.loading = false; },
     });
+    this.search$.pipe(
+      debounceTime(SEARCH_DEBOUNCE_MS),
+      distinctUntilChanged(),
+      tap(q => { this.activeQuery = q; this.poll?.unsubscribe(); }),
+      // Innen gefangen: ein Fehlschlag darf die Suche nicht für den Rest des Seitenbesuchs beenden.
+      switchMap(() => this.fetchList().pipe(catchError(() => { this.searchFailed = true; return of(null); }))),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(list => { if (list) this.applyList(list); });
     this.analyzeGame.status().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(u => this.uploadStatus = u);
   }
 
@@ -578,8 +665,8 @@ export class GamesListComponent implements OnInit {
 
   /** Stand aller Partien neu holen — und weiter nachfragen, solange irgendwo gerechnet wird. */
   private refresh(): void {
-    this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: list => { this.games = list; this.schedulePoll(); },
+    this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => this.applyList(list),
       error: () => this.schedulePoll(),
     });
   }
@@ -589,10 +676,10 @@ export class GamesListComponent implements OnInit {
     this.poll?.unsubscribe();
     if (!this.games.some(g => this.analysisState(g) === 'running')) return;
     this.poll = timer(ANALYSIS_POLL_MS).pipe(
-      switchMap(() => this.service.list()),
+      switchMap(() => this.fetchList()),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
-      next: list => { this.games = list; this.schedulePoll(); },
+      next: list => this.applyList(list),
       error: () => this.schedulePoll(),
     });
   }
@@ -617,7 +704,7 @@ export class GamesListComponent implements OnInit {
           this.router.navigate(['/games', r.ids[0]]);
           return;
         }
-        this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(list => { this.games = list; this.schedulePoll(); });
+        this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(list => this.applyList(list));
       });
   }
 
@@ -659,6 +746,9 @@ export class GamesListComponent implements OnInit {
 
   /** Löschen mit Rückfrage; danach fällt die Zeile aus der Liste. */
   remove(g: SavedGame): void {
-    this.actions.deleteGame(g.id).subscribe(() => { this.games = this.games.filter(x => x.id !== g.id); });
+    this.actions.deleteGame(g.id).subscribe(() => {
+      this.games = this.games.filter(x => x.id !== g.id);
+      this.unsearched = this.unsearched.filter(x => x.id !== g.id);
+    });
   }
 }

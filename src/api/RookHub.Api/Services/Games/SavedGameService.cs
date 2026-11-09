@@ -116,7 +116,7 @@ public class SavedGameService
         _listing.KnownAsync(userId, source, externalIds, ct);
 
     /// <summary>Gespeicherte Partien des Users, neueste zuerst (ohne PGN; <see cref="SavedGameListing.ListAsync"/>).</summary>
-    public Task<List<SavedGameDto>> ListAsync(int userId, int take = 200) => _listing.ListAsync(userId, take);
+    public Task<List<SavedGameDto>> ListAsync(int userId, int take = 200, string? search = null) => _listing.ListAsync(userId, take, search);
 
     /// <summary>Detail einer eigenen Partie inkl. PGN; null wenn nicht gefunden / fremd.</summary>
     public async Task<SavedGameDetailDto?> GetAsync(int userId, int id)

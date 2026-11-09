@@ -3032,6 +3032,13 @@
     }
   },
   "games": {
+    "search": {
+      "label": "Pretraži partije",
+      "placeholder": "Igrač, turnir, otvaranje, ECO…",
+      "clear": "Očisti pretragu",
+      "none": "Nijedna partija ne odgovara upitu „{{query}}”.",
+      "truncated": "Prikazano je samo najnovijih {{count}} rezultata – suzi pretragu."
+    },
     "filterRemove": "Ukloni filtar {{value}}",
     "filtersToggle": "Filtri",
     "title": "Spremljene partije",

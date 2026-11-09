@@ -235,8 +235,10 @@ export class GamesService {
     return this.http.post<PgnImportResult>('/api/games/import', ownerSide ? { pgn, ownerSide } : { pgn });
   }
 
-  list(take = 200): Observable<SavedGame[]> {
-    return this.http.get<SavedGame[]>(`/api/games?take=${take}`);
+  /** `q` = Freitextsuche des Servers über alle eigenen Partien; ohne die neuesten `take`. */
+  list(take = 200, q?: string): Observable<SavedGame[]> {
+    const search = q ? `&q=${encodeURIComponent(q)}` : '';
+    return this.http.get<SavedGame[]>(`/api/games?take=${take}${search}`);
   }
 
   get(id: number): Observable<SavedGameDetail> {
