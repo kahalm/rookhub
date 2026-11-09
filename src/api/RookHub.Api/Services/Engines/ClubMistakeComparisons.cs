@@ -57,9 +57,17 @@ public sealed class ClubMistakeComparisons
     }
 
     /// <summary>Gilt die Analyse für die Vergleiche (Hauptanalyse einer Vereinspartie, endgültig fertig)?</summary>
-    public static bool Applies(GameAnalysis a) =>
-        a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && a.LeagueClubGameId != null
+    public static bool Applies(GameAnalysis a, bool ownSummaryWanted = false) =>
+        a.EngineId == null && (ownSummaryWanted || (a.Origin == GameAnalysisOrigin.Club && a.LeagueClubGameId != null))
         && GameAnalysisWatchers.IsFinal(a.Status, a.RefineDepth, a.RefinedAt);
+
+    /// <summary>Analysen eigener Partien mit offener Zusammenfassung (0.923.0): nur für sie gibt es dort Vergleiche und Fable.</summary>
+    public static IQueryable<int> OwnSummaryAnalyses(AppDbContext db) =>
+        from s in db.OwnGameSummaries
+        where s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running
+        join g in db.SavedGames on s.SavedGameId equals g.Id
+        where g.GameAnalysisId != null
+        select g.GameAnalysisId!.Value;
 
     /// <summary>
     /// Je Fehler der Analyse einen wartenden Vergleich anlegen (mit geladenen <see cref="GameAnalysis.Positions"/>). Doppelt
@@ -69,7 +77,8 @@ public sealed class ClubMistakeComparisons
     public static async Task<int> EnqueueAsync(AppDbContext db, GameAnalysis analysis, CancellationToken ct = default,
         int depth = DefaultDepth)
     {
-        if (!Applies(analysis) || analysis.MistakeComparisonsAt != null) return 0;
+        if (analysis.MistakeComparisonsAt != null
+            || !Applies(analysis, await OwnSummaryAnalyses(db).AnyAsync(id => id == analysis.Id, ct))) return 0;
         var known = (await db.MoveComparisons.AsNoTracking().Where(c => c.GameAnalysisId == analysis.Id && c.Ply != null)
             .Select(c => c.Ply!.Value).ToListAsync(ct)).ToHashSet();
         var now = DateTime.UtcNow;
@@ -127,6 +136,17 @@ public sealed class ClubMistakeComparisons
     /// </summary>
     internal async Task<bool> BackfillStepAsync(CancellationToken ct)
     {
+        // Eigene Partie mit angeforderter Zusammenfassung: jemand wartet, also vor dem Altbestand und ohne dessen Bremse.
+        var ownIds = OwnSummaryAnalyses(_db);
+        var ownId = await _db.GameAnalyses.AsNoTracking()
+            .Where(a => ownIds.Contains(a.Id) && a.EngineId == null && a.MistakeComparisonsAt == null && a.Status == GameAnalysisStatus.Done
+                && (a.RefineDepth == null || a.RefinedAt != null))
+            .OrderBy(a => a.Id).Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
+        if (ownId is int wanted)
+        {
+            await EnqueueAsync(_db, await _db.GameAnalyses.Include(a => a.Positions).FirstAsync(a => a.Id == wanted, ct), ct, _depth);
+            return true;
+        }
         if (await _db.MoveComparisons.AnyAsync(c => c.GameAnalysisId != null && c.Status == MoveComparisonStatus.Waiting, ct)) return false;
         var id = await _db.GameAnalyses.AsNoTracking()
             .Where(a => a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && a.LeagueClubGameId != null
@@ -147,9 +167,10 @@ public sealed class ClubMistakeComparisons
     /// (Wunsch 2026-11-09): sie starten am <c>MaxActive</c>-Deckel vorbei und ihre Aufträge laufen als normale
     /// Hintergrundarbeit statt als Stapel — sonst stünde die Zusammenfassung hinter dem ganzen Nachtrag.
     /// </summary>
-    public static Task<bool> SummaryWantedAsync(AppDbContext db, int analysisId, CancellationToken ct = default) =>
-        db.GameAnalyses.AnyAsync(a => a.Id == analysisId && db.ClubGameSummaries.Any(s => s.ClubGameId == a.LeagueClubGameId
-            && (s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)), ct);
+    public static async Task<bool> SummaryWantedAsync(AppDbContext db, int analysisId, CancellationToken ct = default) =>
+        await db.GameAnalyses.AnyAsync(a => a.Id == analysisId && db.ClubGameSummaries.Any(s => s.ClubGameId == a.LeagueClubGameId
+            && (s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)), ct)
+        || await OwnSummaryAnalyses(db).AnyAsync(id => id == analysisId, ct);
 
     /// <summary>Wartende Vergleiche starten: zuerst die der Partien mit angeforderter Zusammenfassung (ohne Deckel, siehe
     /// <see cref="SummaryWantedAsync"/>), dann die übrigen, solange weniger als <c>MaxActive</c> rechnen — die jüngste Analyse
@@ -161,12 +182,14 @@ public sealed class ClubMistakeComparisons
             && (c.Status == MoveComparisonStatus.Candidates || c.Status == MoveComparisonStatus.Replies), ct);
         var started = 0;
         var startedNormal = 0;
+        var ownIds = OwnSummaryAnalyses(_db);
         while (true)
         {
             var next = await _db.MoveComparisons.Include(c => c.Lines)
                 .Where(c => c.GameAnalysisId != null && c.Status == MoveComparisonStatus.Waiting)
                 .OrderByDescending(c => _db.ClubGameSummaries.Any(s => s.ClubGameId == c.GameAnalysis!.LeagueClubGameId
-                    && (s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)))
+                    && (s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running))
+                    || ownIds.Contains(c.GameAnalysisId!.Value))
                 .ThenByDescending(c => c.GameAnalysis!.FinishedAt).ThenByDescending(c => c.GameAnalysisId).ThenBy(c => c.Ply)
                 .FirstOrDefaultAsync(ct);
             if (next is null) break;

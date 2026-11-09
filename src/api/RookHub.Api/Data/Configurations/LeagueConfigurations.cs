@@ -273,6 +273,24 @@ internal sealed class LeagueBatchUploadConfiguration : IEntityTypeConfiguration<
     }
 }
 
+internal sealed class OwnGameSummaryConfiguration : IEntityTypeConfiguration<OwnGameSummary>
+{
+    public void Configure(EntityTypeBuilder<OwnGameSummary> e)
+    {
+        e.HasIndex(s => s.SavedGameId).IsUnique();
+        e.HasIndex(s => s.Status);
+        e.Property(s => s.Markdown).HasColumnType("LONGTEXT");
+        e.Property(s => s.MovesHash).HasMaxLength(64);
+        e.Property(s => s.Model).HasMaxLength(60);
+        e.Property(s => s.Error).HasMaxLength(1000);
+    }
+}
+
+internal sealed class OwnGameSummaryRequestConfiguration : IEntityTypeConfiguration<OwnGameSummaryRequest>
+{
+    public void Configure(EntityTypeBuilder<OwnGameSummaryRequest> e) => e.HasIndex(r => new { r.UserId, r.At });
+}
+
 internal sealed class ClubGameSummaryConfiguration : IEntityTypeConfiguration<ClubGameSummary>
 {
     public void Configure(EntityTypeBuilder<ClubGameSummary> e)

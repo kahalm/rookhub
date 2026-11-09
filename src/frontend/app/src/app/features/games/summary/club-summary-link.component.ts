@@ -20,11 +20,11 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
   template: `
     @if (state(); as s) {
       @if (s.markdown) {
-        <a mat-stroked-button class="summary-link" [routerLink]="['/club-games', gameId(), 'summary']">
+        <a mat-stroked-button class="summary-link" [routerLink]="[kind() === 'own' ? '/games' : '/club-games', gameId(), 'summary']">
           <mat-icon>article</mat-icon> {{ 'games.summary.open' | translate }}
         </a>
       }
-      @if (isAdmin) {
+      @if (canRequest()) {
         @if (s.status === 'requested' || s.status === 'running') {
           <span class="summary-wait">
             <mat-icon>hourglass_top</mat-icon>
@@ -36,6 +36,9 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
               {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
             }
           </span>
+        } @else if (kind() === 'own' && s.quotaLeft === 0 && (!s.markdown || allowAgain())) {
+          <!-- 0.923.0: Tageskontingent verbraucht — sagen, statt einen Knopf anzubieten, der nur scheitert -->
+          <span class="summary-wait">{{ 'games.summary.quotaUsed' | translate: { limit: s.quotaLimit } }}</span>
         } @else if (!s.markdown || allowAgain()) {
           <!-- 0.916.0 (Wunsch 2026-11-09): „Neu schreiben" nicht prominent in der Partie-Kopfzeile, nur auf der
                Zusammenfassungsseite selbst; die Kopfzeile bietet nur das erste Anfordern an. -->
@@ -60,6 +63,8 @@ export class ClubSummaryLinkComponent implements OnInit {
   readonly gameId = input.required<number>();
   /** Darf eine vorhandene Zusammenfassung hier neu angefordert werden? Nur auf der Zusammenfassungsseite (0.916.0). */
   readonly allowAgain = input(false);
+  /** `own` (0.923.0): eigene Partie — der Besitzer fordert an (Kontingent); `club`: Vereinspartie, nur Admins. */
+  readonly kind = input<'club' | 'own'>('club');
 
   private service = inject(ClubGameSummaryService);
   private auth = inject(AuthService);
@@ -67,6 +72,7 @@ export class ClubSummaryLinkComponent implements OnInit {
   private translate = inject(TranslateService);
 
   readonly isAdmin = this.auth.isAdmin;
+  readonly canRequest = computed(() => this.kind() === 'own' || this.isAdmin);
   readonly state = signal<ClubGameSummary | null>(null);
   readonly busy = signal(false);
   /** Offene Anforderung, deren Hintergrund-Rechnung noch läuft (0.914.0). */
@@ -89,7 +95,7 @@ export class ClubSummaryLinkComponent implements OnInit {
 
   private load(): void {
     // still bei Fehlern: ohne Stand gibt es einfach keinen Knopf
-    this.service.get(this.gameId()).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
+    (this.kind() === 'own' ? this.service.getOwn(this.gameId()) : this.service.get(this.gameId())).subscribe({ next: s => this.state.set(s), error: () => this.state.set(null) });
   }
 
   /** „Vertiefung 56/62 · Fehler-Vergleiche 0/11" — was noch fehlt, knapp. */
@@ -112,7 +118,9 @@ export class ClubSummaryLinkComponent implements OnInit {
 
   request(): void {
     this.busy.set(true);
-    this.service.request(this.gameId()).subscribe({
+    (this.kind() === 'own'
+      ? this.service.requestOwn(this.gameId(), this.translate.getCurrentLang() || 'de')
+      : this.service.request(this.gameId())).subscribe({
       next: s => {
         this.state.set(s);
         this.busy.set(false);

@@ -154,6 +154,8 @@ public class SavedGameService
             await ScoresheetScanService.PageKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
         ScoresheetScanService.RemoveViewsWithoutLoading(_db,
             await ScoresheetScanService.ViewKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
+        // Die Zusammenfassung gehört zur Partie; die Kontingent-Zeilen bleiben (sonst hieße Löschen neues Kontingent).
+        _db.OwnGameSummaries.RemoveRange(await _db.OwnGameSummaries.Where(s => s.SavedGameId == id).ToListAsync());
         _db.SavedGames.Remove(g);
         await _db.SaveChangesAsync();
         return true;

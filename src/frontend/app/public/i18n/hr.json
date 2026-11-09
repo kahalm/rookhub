@@ -140,7 +140,10 @@
     "ebook_duplicate_file": "Ova je datoteka već u knjižnici.",
     "ebook_duplicate_book": "Ova je knjiga već u knjižnici.",
     "ebook_file_missing": "Datoteka nedostaje na poslužitelju.",
-    "ebook_tree_invalid": "Stablo otvaranja nije ispravno."
+    "ebook_tree_invalid": "Stablo otvaranja nije ispravno.",
+    "summary_quota": "Današnji sažeci su potrošeni.",
+    "summary_analysis_unavailable": "Ova partija nema analizu i nije ju bilo moguće pokrenuti.",
+    "summary_unsupported_start": "Sažeci su dostupni samo za partije iz početne pozicije."
   },
   "common": {
     "optional": "Neobavezno",
@@ -3380,7 +3383,8 @@
       "progressComparisonsPending": "usporedbe grešaka još nisu započele",
       "requestedWaitingToast": "Zatraženo – analiza u pozadini još nije gotova; Claude piše sažetak čim bude.",
       "progressFast": "brza analiza {{done}}/{{total}} pozicija",
-      "progressRefineNext": "slijedi produbljivanje"
+      "progressRefineNext": "slijedi produbljivanje",
+      "quotaUsed": "Dnevna kvota od {{limit}} sažetaka je potrošena – pokušaj sutra."
     }
   },
   "analysis": {

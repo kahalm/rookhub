@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -104,7 +104,7 @@ import { LiveMove } from './live-engine-session';
         <p class="cost">{{ 'games.mistakes.cost' | translate: { san: m.playedSan, percent: lost(m) } }}</p>
         <!-- Vereinspartie (0.908.0): erst NACH dem Urteil der Vergleich Partiezug ↔ bester Zug (vorher verriete er die Lösung). -->
         @if (comparisons) {
-          <app-mistake-comparison [entry]="comparisons.get(m.ply) ?? null" [clubGameId]="clubGameId" (showLine)="showLine.emit($event)" />
+          <app-mistake-comparison [entry]="comparisons.get(m.ply) ?? null" [clubGameId]="clubGameId" [ownGameId]="ownGameId()" (showLine)="showLine.emit($event)" />
         }
       }
 
@@ -201,6 +201,8 @@ export class MistakesTrainerComponent {
   @Output() showLine = new EventEmitter<{ fen: string; line: LiveMove[]; at: number }>();
   /** Vereinspartie der Vergleiche — für den Link auf die volle Vergleichsseite. */
   @Input() clubGameId: number | null = null;
+  /** Eigene Partie der Vergleiche (0.923.0). */
+  readonly ownGameId = input<number | null>(null);
   private readonly originCache = new Map<Mistake, MarkOrigin>();
 
   /** Herkunft der Aufgabe für die Markierung — je Aufgabe einmal gebaut (stabiles Objekt fürs Signal-Input). */

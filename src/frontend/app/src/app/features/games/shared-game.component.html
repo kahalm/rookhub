@@ -77,6 +77,8 @@
           <!-- Zusammenfassung von Claude (0.913.0): Link zur eigenen Seite, Admins fordern sie hier an. Nur angemeldet. -->
           @if (clubComparisonGameId !== null) {
             <app-club-summary-link [gameId]="clubComparisonGameId" />
+          } @else if (ownComparisonGameId !== null) {
+            <app-club-summary-link [gameId]="ownComparisonGameId" kind="own" />
           }
           @if (game.sourceUrl) {
             <a mat-stroked-button [href]="game.sourceUrl" target="_blank" rel="noopener" class="original wide-only">
@@ -280,7 +282,7 @@
           </div>
           @if (training(); as t) {
             <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
-                                  [comparisons]="comparisons()" [clubGameId]="clubComparisonGameId"
+                                  [comparisons]="comparisons()" [clubGameId]="clubComparisonGameId" [ownGameId]="ownComparisonGameId"
                                   [title]="own ? '' : 'games.mistakes.titleSide'" [titleParams]="{ player: sidePlayer(t.side()) }"
                                   [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()"
                                   (showLine)="showTrainingLine($event)" />

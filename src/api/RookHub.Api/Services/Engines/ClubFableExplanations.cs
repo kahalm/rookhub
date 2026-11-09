@@ -78,7 +78,10 @@ public sealed class ClubFableExplanations
 
     /// <summary>Gilt Fable für diesen Vergleich (Vereinspartie ab dem Stichtag)?</summary>
     public async Task<bool> AppliesAsync(AppDbContext db, MoveComparison c, CancellationToken ct = default)
-        => Available && c.GameAnalysisId is int id && await GameDateAsync(db, id, ct) is { } date && date >= From;
+        => Available && c.GameAnalysisId is int id
+            && (await GameDateAsync(db, id, ct) is { } date && date >= From
+                // Eigene Partie (0.923.0): nur mit angeforderter Zusammenfassung; der Tagesdeckel gilt genauso.
+                || await ClubMistakeComparisons.OwnSummaryAnalyses(db).AnyAsync(a => a == id, ct));
 
     /// <summary>Spieldatum der Vereinspartie hinter einer Analyse (siehe Klassenkommentar); <c>null</c> = keine Vereinspartie.</summary>
     public static async Task<DateOnly?> GameDateAsync(AppDbContext db, int analysisId, CancellationToken ct = default)

@@ -291,6 +291,11 @@ export class GamesService {
   }
 
   /** Zugvergleiche „Fehlzug gegen besten Zug" zu den Fehlern einer Vereinspartie (0.908.0), nach Halbzug. */
+  /** Zugvergleiche der Fehler einer eigenen Partie (0.923.0). */
+  ownComparisons(id: number): Observable<ClubMistakeComparison[]> {
+    return this.http.get<ClubMistakeComparison[]>(`/api/games/${id}/comparisons`);
+  }
+
   clubComparisons(id: number): Observable<ClubMistakeComparison[]> {
     return this.http.get<ClubMistakeComparison[]>(`/api/league/club/games/${id}/comparisons`);
   }

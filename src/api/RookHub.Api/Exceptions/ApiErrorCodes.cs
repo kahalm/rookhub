@@ -17,6 +17,10 @@ public static class ApiErrorCodes
 {
     public const string RateLimited = "rate_limited";
 
+    public const string SummaryQuota = "summary_quota";
+    public const string SummaryAnalysisUnavailable = "summary_analysis_unavailable";
+    public const string SummaryUnsupportedStart = "summary_unsupported_start";
+
     public const string LoginInvalid = "login_invalid";
     public const string LoginThrottled = "login_throttled";
     public const string AccountLocked = "account_locked";

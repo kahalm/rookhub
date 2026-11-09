@@ -31,7 +31,10 @@
     "ebook_duplicate_file": "Ez a fájl már a könyvtárban van.",
     "ebook_duplicate_book": "Ez a könyv már a könyvtárban van.",
     "ebook_file_missing": "A fájl hiányzik a szerverről.",
-    "ebook_tree_invalid": "A megnyitási fa érvénytelen."
+    "ebook_tree_invalid": "A megnyitási fa érvénytelen.",
+    "summary_quota": "A mai összefoglalóid elfogytak.",
+    "summary_analysis_unavailable": "Ehhez a játszmához nincs elemzés, és nem sikerült elindítani.",
+    "summary_unsupported_start": "Összefoglaló csak az alapállásból induló játszmákhoz érhető el."
   },
   "common": {
     "optional": "Nem kötelező",
@@ -3757,7 +3760,8 @@
       "progressComparisonsPending": "a hibaösszevetések még nem kezdődtek el",
       "requestedWaitingToast": "Kérve – a háttérelemzés még nem kész; Claude megírja az összefoglalót, amint elkészül.",
       "progressFast": "gyors elemzés {{done}}/{{total}} állás",
-      "progressRefineNext": "mélyítés következik"
+      "progressRefineNext": "mélyítés következik",
+      "quotaUsed": "A napi {{limit}} összefoglaló elfogyott – próbáld holnap."
     }
   },
   "analysisJobs": {

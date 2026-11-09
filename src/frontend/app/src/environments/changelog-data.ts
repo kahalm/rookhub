@@ -11,6 +11,14 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.923.0',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Your own games can now get a summary by Claude: request it on the game page (two per day), it is visible only to you and comes with mistake comparisons and explanations.',
+        de: 'Eigene Partien können jetzt eine Zusammenfassung von Claude bekommen: auf der Partieseite anfordern (zwei pro Tag), sichtbar nur für dich, samt Fehler-Vergleichen und Erklärungen.' },
+    ],
+  },
+  {
     version: '0.922.0',
     date: '2026-11-09',
     changes: [

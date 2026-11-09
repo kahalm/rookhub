@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
+import { Observable, forkJoin } from 'rxjs';
 import { ChessBoardComponent, BoardArrow } from '../../../shared/pgn-viewer/chess-board.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { PreferencesService } from '../../../core/preferences.service';
@@ -45,7 +45,7 @@ interface ResolvedDiagram {
       } @else if (game(); as g) {
         <mat-card class="summary-card">
           <div class="head">
-            <a mat-icon-button [routerLink]="['/club-games', gameId]" class="back" [attr.aria-label]="'common.back' | translate">
+            <a mat-icon-button [routerLink]="gameLink()" class="back" [attr.aria-label]="'common.back' | translate">
               <mat-icon>arrow_back</mat-icon>
             </a>
             <div class="head-main">
@@ -55,10 +55,10 @@ interface ResolvedDiagram {
                 @if (summary()?.doneAt) { · {{ summary()!.doneAt | date:'mediumDate' }} }</span>
             </div>
             <div class="head-actions">
-              <a mat-stroked-button [routerLink]="['/club-games', gameId]" class="to-game">
+              <a mat-stroked-button [routerLink]="gameLink()" class="to-game">
                 <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
               </a>
-              <app-club-summary-link [gameId]="gameId" [allowAgain]="true" />
+              <app-club-summary-link [gameId]="gameId" [allowAgain]="true" [kind]="own ? 'own' : 'club'" />
             </div>
           </div>
           @if (summary()?.stale) {
@@ -102,7 +102,7 @@ interface ResolvedDiagram {
                           @if (d.label) { <strong>{{ d.label }}</strong> }
                           @if (d.caption) { <ng-container *ngTemplateOutlet="inline; context: { $implicit: d.caption }" /> }
                           @if (b.spec.ply !== undefined) {
-                            <a [routerLink]="['/club-games', gameId]" [queryParams]="{ ply: b.spec.ply }" class="to-ply">{{ 'games.summary.showInGame' | translate }}</a>
+                            <a [routerLink]="gameLink()" [queryParams]="{ ply: b.spec.ply }" class="to-ply">{{ 'games.summary.showInGame' | translate }}</a>
                           }
                         </figcaption>
                       </figure>
@@ -161,6 +161,9 @@ export class ClubGameSummaryComponent implements OnInit {
   readonly preferences = inject(PreferencesService);
 
   gameId = 0;
+  /** `/games/:id/summary` (0.923.0): eigene Partie statt Vereinspartie. */
+  own = false;
+  gameLink(): (string | number)[] { return [this.own ? '/games' : '/club-games', this.gameId]; }
   readonly loading = signal(true);
   readonly failed = signal(false);
   readonly game = signal<SharedGame | null>(null);
@@ -170,13 +173,17 @@ export class ClubGameSummaryComponent implements OnInit {
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
+    this.own = this.route.snapshot.data?.['mode'] === 'own';
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.failed.set(false);
-    forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]).subscribe({
+    const load: Observable<[SharedGame, ClubGameSummary]> = this.own
+      ? forkJoin([this.games.get(this.gameId), this.summaries.getOwn(this.gameId)])
+      : forkJoin([this.games.clubGame(this.gameId), this.summaries.get(this.gameId)]);
+    load.subscribe({
       next: ([g, s]) => { this.game.set(g); this.summary.set(s); this.loading.set(false); },
       error: () => { this.failed.set(true); this.loading.set(false); },
     });

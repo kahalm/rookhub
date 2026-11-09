@@ -38,12 +38,22 @@ public sealed class ClubGameSummaries(AppDbContext db, TimeProvider? clock = nul
     /// </summary>
     public async Task<ClubGameSummaryReadiness> ReadinessAsync(int clubGameId, CancellationToken ct = default)
     {
-        var a = await db.GameAnalyses.AsNoTracking()
+        var id = await db.GameAnalyses.AsNoTracking()
             .Where(x => x.LeagueClubGameId == clubGameId && x.Origin == GameAnalysisOrigin.Club && x.EngineId == null)
-            .OrderByDescending(x => x.Id)
+            .OrderByDescending(x => x.Id).Select(x => (int?)x.Id).FirstOrDefaultAsync(ct);
+        return id is int analysisId ? await ReadinessOfAnalysisAsync(analysisId, ct) : NoAnalysis;
+    }
+
+    /// <summary>Stand, solange es noch keine Analyse gibt.</summary>
+    public static readonly ClubGameSummaryReadiness NoAnalysis = new(false, false, false, false, 0, 0, false, 0, 0);
+
+    /// <summary>Der Stand einer bestimmten Analyse (0.923.0: auch für eigene Partien, <see cref="Games.OwnGameSummaries"/>).</summary>
+    public async Task<ClubGameSummaryReadiness> ReadinessOfAnalysisAsync(int analysisId, CancellationToken ct = default)
+    {
+        var a = await db.GameAnalyses.AsNoTracking().Where(x => x.Id == analysisId)
             .Select(x => new { x.Id, x.Status, x.RefineDepth, x.RefinedAt, x.MistakeComparisonsAt })
             .FirstOrDefaultAsync(ct);
-        if (a is null) return new(false, false, false, false, 0, 0, false, 0, 0);
+        if (a is null) return NoAnalysis;
         var failed = a.Status == GameAnalysisStatus.Failed;
         var done = a.Status == GameAnalysisStatus.Done || failed;
         var refining = !failed && a.RefineDepth != null && a.RefinedAt == null;

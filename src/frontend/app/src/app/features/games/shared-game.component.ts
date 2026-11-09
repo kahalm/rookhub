@@ -100,6 +100,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   club = false;
   /** Vereinspartie, deren Zugvergleiche geladen werden (0.908.0; nicht über einen Teilen-Link). */
   clubComparisonGameId: number | null = null;
+  /** Eigene Partie (0.923.0): Vergleiche und Zusammenfassung laufen über die gespeicherte Partie. */
+  ownComparisonGameId: number | null = null;
   readonly comparisons = signal<ReadonlyMap<number, ClubMistakeComparison> | null>(null);
   /** Teilen-Token der eigenen Partie (für „Teilen-Link kopieren"). */
   shareToken: string | null = null;
@@ -323,9 +325,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Zugvergleiche zu den Fehlern einer Vereinspartie (0.908.0) — nur angemeldet über RookHub, nicht über den Teilen-Link.
    *  Still bei Fehlern: der Trainer zeigt dann einfach keinen Vergleich. */
   private loadComparisons(): void {
-    const id = this.clubComparisonGameId;
+    const id = this.clubComparisonGameId ?? this.ownComparisonGameId;
     if (id == null) return;
-    this.games.clubComparisons(id).subscribe({
+    (this.clubComparisonGameId != null ? this.games.clubComparisons(id) : this.games.ownComparisons(id)).subscribe({
       next: list => this.comparisons.set(new Map(list.map(x => [x.ply, x]))),
       error: () => {},
     });
@@ -381,6 +383,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
     if (this.own) {
       const id = Number(this.route.snapshot.paramMap.get('id'));
       this.gameId = id;
+      this.ownComparisonGameId = id;
+      this.loadComparisons();
       this.markSource = { savedGameId: id };
       this.evalsUrl = this.games.evalsUrl(id);
       this.similarUrl = this.games.similarUrl(id);

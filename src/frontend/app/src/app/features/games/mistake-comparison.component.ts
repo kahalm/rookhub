@@ -94,7 +94,7 @@ function afterFen(fen: string, uci: string): string | null {
           }
           <!-- Merksatz aus der kuratierten Liste mit (i) → Buchstellen (0.917.0). -->
           @if (maxim(); as mx) { <app-maxim-note [text]="mx" /> }
-          <a mat-button class="open" [routerLink]="['/analysis/compare', e.comparison.id]" [queryParams]="{ clubGame: clubGameId() }">
+          <a mat-button class="open" [routerLink]="['/analysis/compare', e.comparison.id]" [queryParams]="ownGameId() ? { ownGame: ownGameId() } : { clubGame: clubGameId() }">
             <mat-icon>compare_arrows</mat-icon> {{ 'games.mistakes.compare.open' | translate }}
           </a>
         </div>
@@ -129,6 +129,7 @@ export class MistakeComparisonComponent {
   /** Der Vergleich zu DIESEM Fehler; `null` = keiner — dann zeigt die Komponente nichts. */
   readonly entry = input<ClubMistakeComparison | null>(null);
   readonly clubGameId = input<number | null>(null);
+  readonly ownGameId = input<number | null>(null);
 
   readonly pending = computed(() => { const e = this.entry(); return !!e && comparisonPending(e.comparison); });
   readonly rows = computed(() => { const e = this.entry(); return e ? comparisonRows(e, this.translate.currentLang() ?? 'en') : null; });

@@ -15,6 +15,11 @@ export interface ClubGameSummary {
   error: string | null;
   /** Nur bei offener Anforderung (0.914.0): wie weit die Hintergrund-Rechnung ist; Claude schreibt erst bei `ready`. */
   readiness?: ClubGameSummaryReadiness | null;
+  /** Eigene Partie (0.923.0): `club` = der Text gehört zur verbundenen Vereinspartie. */
+  source?: 'own' | 'club';
+  /** Eigene Partie: heute noch mögliche Anforderungen; `null` = unbegrenzt (Admin). */
+  quotaLeft?: number | null;
+  quotaLimit?: number;
 }
 
 export interface ClubGameSummaryReadiness {
@@ -37,6 +42,16 @@ export class ClubGameSummaryService {
 
   get(gameId: number): Observable<ClubGameSummary> {
     return this.http.get<ClubGameSummary>(`/api/league/club/games/${gameId}/summary`);
+  }
+
+  /** Eigene Partie (0.923.0, `GET /api/games/{id}/summary`). */
+  getOwn(savedGameId: number): Observable<ClubGameSummary> {
+    return this.http.get<ClubGameSummary>(`/api/games/${savedGameId}/summary`);
+  }
+
+  /** Eigene Partie anfordern — Kontingent je Tag, Server 429 wenn verbraucht. */
+  requestOwn(savedGameId: number, lang: string): Observable<ClubGameSummary> {
+    return this.http.post<ClubGameSummary>(`/api/games/${savedGameId}/summary`, { lang });
   }
 
   /** Anfordern bzw. neu anfordern — nur Admins (Server: 403 sonst). */

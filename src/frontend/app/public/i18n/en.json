@@ -140,7 +140,10 @@
     "ebook_duplicate_file": "This file is already in the library.",
     "ebook_duplicate_book": "This book is already in the library.",
     "ebook_file_missing": "The file is missing on the server.",
-    "ebook_tree_invalid": "The opening tree is invalid."
+    "ebook_tree_invalid": "The opening tree is invalid.",
+    "summary_quota": "You have used up today's summaries.",
+    "summary_analysis_unavailable": "This game has no analysis yet and none could be started.",
+    "summary_unsupported_start": "Summaries are only available for games from the starting position."
   },
   "common": {
     "optional": "Optional",
@@ -3380,7 +3383,8 @@
       "progressComparisonsPending": "mistake comparisons not started yet",
       "requestedWaitingToast": "Requested – the background analysis is not finished yet; Claude writes the summary as soon as it is.",
       "progressFast": "fast analysis {{done}}/{{total}} positions",
-      "progressRefineNext": "deepening follows"
+      "progressRefineNext": "deepening follows",
+      "quotaUsed": "Today's quota of {{limit}} summaries is used up – try again tomorrow."
     }
   },
   "analysis": {

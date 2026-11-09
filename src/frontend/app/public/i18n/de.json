@@ -140,7 +140,10 @@
     "ebook_duplicate_file": "Diese Datei ist schon in der Bibliothek.",
     "ebook_duplicate_book": "Dieses Buch ist schon in der Bibliothek.",
     "ebook_file_missing": "Die Datei fehlt auf dem Server.",
-    "ebook_tree_invalid": "Der Buchbaum ist ungültig."
+    "ebook_tree_invalid": "Der Buchbaum ist ungültig.",
+    "summary_quota": "Deine Zusammenfassungen für heute sind verbraucht.",
+    "summary_analysis_unavailable": "Für diese Partie gibt es keine Analyse und es ließ sich keine starten.",
+    "summary_unsupported_start": "Zusammenfassungen gibt es nur für Partien ab der Grundstellung."
   },
   "common": {
     "optional": "Optional",
@@ -3380,7 +3383,8 @@
       "progressComparisonsPending": "Fehler-Vergleiche noch nicht begonnen",
       "requestedWaitingToast": "Angefordert – die Hintergrund-Analyse ist noch nicht durch; Claude schreibt die Zusammenfassung, sobald sie fertig ist.",
       "progressFast": "schnelle Analyse {{done}}/{{total}} Stellungen",
-      "progressRefineNext": "Vertiefung folgt"
+      "progressRefineNext": "Vertiefung folgt",
+      "quotaUsed": "Das Tageskontingent von {{limit}} Zusammenfassungen ist verbraucht – morgen wieder."
     }
   },
   "analysis": {

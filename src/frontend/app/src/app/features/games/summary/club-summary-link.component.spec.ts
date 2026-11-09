@@ -76,6 +76,45 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
       .toBe('games.summary.progressFast · games.summary.progressRefineNext');
   });
 
+  function setupOwn() {
+    TestBed.configureTestingModule({
+      imports: [ClubSummaryLinkComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false } }],
+    });
+    const f = TestBed.createComponent(ClubSummaryLinkComponent);
+    f.componentRef.setInput('gameId', 142);
+    f.componentRef.setInput('kind', 'own');
+    f.detectChanges();
+    return { f, http: TestBed.inject(HttpTestingController), el: f.nativeElement as HTMLElement };
+  }
+
+  it('0.923.0: eigene Partie — der Besitzer ohne Adminrechte fordert über die Partie an', () => {
+    const { f, http, el } = setupOwn();
+    http.expectOne('/api/games/142/summary').flush({ ...none, quotaLeft: 2, quotaLimit: 2 });
+    f.detectChanges();
+    (el.querySelector('.summary-request') as HTMLButtonElement).click();
+    const req = http.expectOne('/api/games/142/summary');
+    expect(req.request.method).toBe('POST');
+    req.flush({ ...none, status: 'requested', quotaLeft: 1, quotaLimit: 2 });
+    f.detectChanges();
+    expect(el.querySelector('.summary-wait')).not.toBeNull();
+  });
+
+  it('0.923.0: Kontingent verbraucht — Hinweis statt Knopf, Link führt zur eigenen Seite', () => {
+    const { f, http, el } = setupOwn();
+    http.expectOne('/api/games/142/summary').flush({ ...none, quotaLeft: 0, quotaLimit: 2 });
+    f.detectChanges();
+    expect(el.querySelector('.summary-request')).toBeNull();
+    expect(el.querySelector('.summary-wait')?.textContent).toContain('games.summary.quotaUsed');
+    TestBed.resetTestingModule();
+    const done = setupOwn();
+    done.http.expectOne('/api/games/142/summary').flush({ ...none, status: 'done', markdown: '# x', quotaLeft: 0, quotaLimit: 2 });
+    done.f.detectChanges();
+    expect(done.el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/games/142/summary');
+  });
+
   it('0.914.0: bereit — wieder der normale Wartevermerk', () => {
     const { f, http, el } = setup(true);
     http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'running', readiness: {

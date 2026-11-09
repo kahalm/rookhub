@@ -56,6 +56,11 @@ export class MoveComparisonService {
   }
 
   /** Ein Zugvergleich zu einem Fehler einer Vereinspartie (0.908.0) — gelesen über die Partie (`league.view`). */
+  /** Vergleich zu einem Fehler einer eigenen Partie (0.923.0). */
+  getOwn(savedGameId: number, id: number): Observable<MoveComparison> {
+    return this.http.get<MoveComparison>(`/api/games/${savedGameId}/comparisons/${id}`);
+  }
+
   getClub(clubGameId: number, id: number): Observable<MoveComparison> {
     return this.http.get<MoveComparison>(`/api/league/club/games/${clubGameId}/comparisons/${id}`);
   }

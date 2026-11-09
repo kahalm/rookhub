@@ -80,6 +80,7 @@ export const routes: Routes = [
   // Partie korrigieren (Züge, Kopfdaten; bei eingelesenen Partien mit Foto und Lesarten).
   { path: 'games/:id/edit', loadComponent: () => import('./features/games/game-edit.component').then(m => m.GameEditComponent), canActivate: [authGuard, menuGuard('games')], canDeactivate: [unsavedChangesGuard] },
   // Eigene Partie als SEITE (statt Dialog, gemeldet 2026-09-23): dieselbe Komponente wie der Teilen-Link, im Modus „own".
+  { path: 'games/:id/summary', loadComponent: () => import('./features/games/summary/club-game-summary.component').then(m => m.ClubGameSummaryComponent), canActivate: [authGuard, menuGuard('games')], data: { mode: 'own' } },
   { path: 'games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard, menuGuard('games')], data: { mode: 'own' } },
   // Vereinspartie aus LeagueHub (0.653.0): dieselbe Partieseite, Bewertungen aus der Hintergrund-Analyse des Vereins.
   // Kein menuGuard — das Recht prüft der Server (`league.view`, sonst 404 → „konnte nicht geladen werden").

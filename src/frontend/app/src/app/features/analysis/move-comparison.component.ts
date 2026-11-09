@@ -49,6 +49,8 @@ const POLL_MS = 3_000;
       <!-- Vergleich zu einem Fehler einer Vereinspartie (0.908.0, ?clubGame=): zurück zur Partie statt zum Analysebrett. -->
       @if (clubGame(); as g) {
         <a mat-button [routerLink]="['/club-games', g]" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.backToGame' | translate }}</a>
+      } @else if (ownGame(); as g) {
+        <a mat-button [routerLink]="['/games', g]" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.backToGame' | translate }}</a>
       } @else {
         <a mat-button routerLink="/analysis" class="back-link"><mat-icon>arrow_back</mat-icon> {{ 'moveCompare.page.back' | translate }}</a>
       }
@@ -286,6 +288,8 @@ export class MoveComparisonComponent implements OnInit {
   /** Vereinspartie (`?clubGame=`, 0.908.0): der Vergleich gehört zu einem ihrer Fehler — gelesen über die Partie, ohne
    *  „Frühere Vergleiche" (die sind die eigenen). */
   readonly clubGame = signal<number | null>(null);
+  /** Eigene Partie (`?ownGame=`, 0.923.0): wie `clubGame`, gelesen über die gespeicherte Partie. */
+  readonly ownGame = signal<number | null>(null);
   private loading = false;
 
   readonly running = computed(() => { const s = this.data()?.status; return !!s && s !== 'done' && s !== 'failed'; });
@@ -307,6 +311,8 @@ export class MoveComparisonComponent implements OnInit {
       const id = Number(p.get('id'));
       const club = Number(this.route.snapshot?.queryParamMap?.get('clubGame'));
       this.clubGame.set(Number.isInteger(club) && club > 0 ? club : null);
+      const own = Number(this.route.snapshot?.queryParamMap?.get('ownGame'));
+      this.ownGame.set(Number.isInteger(own) && own > 0 ? own : null);
       this.currentId.set(id);
       this.data.set(null);
       this.view.set(null);
@@ -325,7 +331,8 @@ export class MoveComparisonComponent implements OnInit {
     if (!id || this.loading) return;
     this.loading = true;
     const club = this.clubGame();
-    (club ? this.api.getClub(club, id) : this.api.get(id)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const own = this.ownGame();
+    (club ? this.api.getClub(club, id) : own ? this.api.getOwn(own, id) : this.api.get(id)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: d => {
         this.loading = false;
         this.loadError.set(false);
@@ -342,7 +349,7 @@ export class MoveComparisonComponent implements OnInit {
   }
 
   private loadHistory(): void {
-    if (this.clubGame()) { this.history.set([]); return; }
+    if (this.clubGame() || this.ownGame()) { this.history.set([]); return; }
     this.api.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: h => this.history.set(h), error: () => {} });
   }
 
@@ -380,7 +387,7 @@ export class MoveComparisonComponent implements OnInit {
    * „geht nicht" (Befund Partie 236: dort sagen sie dem Leser nichts).
    */
   shownReplies(w: MoveComparisonCandidate): MoveComparisonReply[] {
-    const club = !!this.clubGame();
+    const club = !!this.clubGame() || !!this.ownGame();
     return w.replies.filter(r => {
       const t = this.testFor(w, r.uci);
       return !!t && !(club && t.state === 'illegal');

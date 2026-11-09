@@ -209,8 +209,14 @@ public class MasterAnalysisScheduler : BackgroundService, IBackgroundJobInfo
     {
         var summaries = db.ClubGameSummaries.Where(s => s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)
             .Select(s => s.ClubGameId);
+        // Eigene Zusammenfassung an einem Eintrag, der auf die Vereinspartie zeigt (0.923.0): dieselbe Analyse, also auch sie
+        var ownWanted = from s in db.OwnGameSummaries
+                        where s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running
+                        join g in db.SavedGames on s.SavedGameId equals g.Id
+                        where g.LeagueClubGameId != null
+                        select g.LeagueClubGameId!.Value;
         var waiting = db.GameAnalyses.Where(a => a.Origin == GameAnalysisOrigin.Club && a.EngineId == null && !a.Expedited
-            && a.LeagueClubGameId != null && summaries.Contains(a.LeagueClubGameId.Value)
+            && a.LeagueClubGameId != null && (summaries.Contains(a.LeagueClubGameId.Value) || ownWanted.Contains(a.LeagueClubGameId.Value))
             && (a.Status == GameAnalysisStatus.Pending || a.Status == GameAnalysisStatus.Running
                 || (a.Status == GameAnalysisStatus.Done && a.RefineDepth != null && a.RefinedAt == null)));
         foreach (var a in await waiting.ToListAsync(ct))
