@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Puzzles;
@@ -801,22 +802,34 @@ public class WeeklyPostControllerTests : IDisposable
         var bookId = await SeedBookWithChaptersAsync();
         SetUser(1, admin: true);
 
-        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        // R3-012: Domänen-Ausnahme statt BadRequest im Controller; der DomainExceptionFilter macht daraus 400 { message }.
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
         {
             BookId = bookId, ChapterIndex = 9, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
-        });
-        Assert.IsType<BadRequestObjectResult>(res);
+        }));
+        Assert.Equal(400, FilteredStatus(ex));
     }
 
     [Fact]
     public async Task CreateFromChapter_UnknownBook_ReturnsBadRequest()
     {
         SetUser(1, admin: true);
-        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
         {
             BookId = 999, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
-        });
-        Assert.IsType<BadRequestObjectResult>(res);
+        }));
+        Assert.Equal(400, FilteredStatus(ex));
+    }
+
+    /// <summary>Status, den der globale <see cref="RookHub.Api.Filters.DomainExceptionFilter"/> für die Ausnahme setzt (R3-012).</summary>
+    private static int? FilteredStatus(Exception ex)
+    {
+        var ctx = new Microsoft.AspNetCore.Mvc.Filters.ExceptionContext(
+            new Microsoft.AspNetCore.Mvc.ActionContext(new DefaultHttpContext(), new Microsoft.AspNetCore.Routing.RouteData(),
+                new Microsoft.AspNetCore.Mvc.Abstractions.ActionDescriptor()), []) { Exception = ex };
+        new RookHub.Api.Filters.DomainExceptionFilter().OnException(ctx);
+        Assert.True(ctx.ExceptionHandled);
+        return Assert.IsType<ObjectResult>(ctx.Result).StatusCode;
     }
 
     // ---- A2-017: Zugriff aufs Quellbuch, keine Kalkulationslösungen ----
@@ -827,12 +840,13 @@ public class WeeklyPostControllerTests : IDisposable
         var bookId = await SeedBookWithChaptersAsync();   // nicht öffentlich, kein Besitzer, keine Freigabe
         SetUser(7);                                        // weeklyposts.manage ohne Admin
 
-        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(() => _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
         {
             BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
-        });
+        }));
 
-        Assert.Equal(403, Assert.IsAssignableFrom<ObjectResult>(res).StatusCode);
+        Assert.Equal(403, FilteredStatus(ex));
+        Assert.Equal("No access to this course.", ex.Message);
         Assert.False(await _db.WeeklyPosts.AnyAsync());
     }
 
@@ -860,12 +874,12 @@ public class WeeklyPostControllerTests : IDisposable
         await _db.SaveChangesAsync();
         SetUser(1, admin: true);
 
-        var res = await _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _controller.CreateFromChapter(new CreateWeeklyFromChapterDto
         {
             BookId = bookId, ChapterIndex = 0, ScheduledAt = new DateTime(2025, 6, 8, 19, 0, 0),
-        });
+        }));
 
-        Assert.IsType<BadRequestObjectResult>(res);
+        Assert.Equal(400, FilteredStatus(ex));
         Assert.False(await _db.WeeklyPosts.AnyAsync());
     }
 

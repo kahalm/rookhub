@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services.Courses;
 using RookHub.Api.Services.Social;
@@ -138,30 +139,30 @@ public class WeeklyPostService
 
     /// <summary>
     /// Legt einen Wochenpost aus EINEM Kapitel eines Buchs an. <paramref name="chapterIndex"/> ist die
-    /// 0-basierte Position aus der Kapitel-Liste. Wirft <see cref="ArgumentException"/> (→ 400), wenn das
+    /// 0-basierte Position aus der Kapitel-Liste. Wirft <see cref="DomainValidationException"/> (→ 400), wenn das
     /// Buch fehlt, der Index ungültig ist, das Kapitel keine (Quiz-)Puzzles enthält oder das Buch ein
     /// Kalkulationskurs ist (dessen Lösungen gäbe der anonyme Abruf preis). Wirft
-    /// <see cref="UnauthorizedAccessException"/> (→ 403), wenn der Aufrufer das Buch nicht als Kurs sehen darf
-    /// (<see cref="CourseAccess.CanAccessAsync"/>, A2-017).
+    /// <see cref="ForbiddenException"/> (→ 403), wenn der Aufrufer das Buch nicht als Kurs sehen darf
+    /// (<see cref="CourseAccess.CanAccessAsync"/>, A2-017). Beide übersetzt der <c>DomainExceptionFilter</c> (R3-012).
     /// </summary>
     public async Task<WeeklyPost> CreateFromChapterAsync(int userId, bool isAdmin, int bookId, int chapterIndex,
         DateTime scheduledAt, string? title, string? description)
     {
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId)
-            ?? throw new ArgumentException("Book not found.");
+            ?? throw new DomainValidationException("Book not found.");
         if (!await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin))
-            throw new UnauthorizedAccessException("No access to this course.");
+            throw new ForbiddenException("No access to this course.");
         if (book.IsCalculation)
-            throw new ArgumentException("Calculation courses cannot be used as a weekly post.");
+            throw new DomainValidationException("Calculation courses cannot be used as a weekly post.");
 
         var names = await GetOrderedChapterNamesAsync(bookId);
         if (chapterIndex < 0 || chapterIndex >= names.Count)
-            throw new ArgumentException("Chapter index out of range.");
+            throw new DomainValidationException("Chapter index out of range.");
         var chapterName = names[chapterIndex];
 
         var count = await ChapterQuizPuzzles(bookId, chapterName).CountAsync();
         if (count == 0)
-            throw new ArgumentException("Chapter has no puzzles.");
+            throw new DomainValidationException("Chapter has no puzzles.");
 
         var bookName = string.IsNullOrWhiteSpace(book.DisplayName) ? book.FileName : book.DisplayName;
         var finalTitle = string.IsNullOrWhiteSpace(title)

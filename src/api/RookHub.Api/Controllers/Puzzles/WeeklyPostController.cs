@@ -261,20 +261,10 @@ public class WeeklyPostController : BaseApiController
     [HasPermission(Permissions.WeeklyPostsManage)]
     public async Task<IActionResult> CreateFromChapter([FromBody] CreateWeeklyFromChapterDto dto)
     {
-        try
-        {
-            var post = await _progress.CreateFromChapterAsync(GetUserId(), IsAdmin, dto.BookId, dto.ChapterIndex,
-                dto.ScheduledAt, dto.Title, dto.Description);
-            return Ok(ToDto(post));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
-        }
+        // 400/403 { message } kommen als Domänen-Ausnahme über den DomainExceptionFilter (R3-012).
+        var post = await _progress.CreateFromChapterAsync(GetUserId(), IsAdmin, dto.BookId, dto.ChapterIndex,
+            dto.ScheduledAt, dto.Title, dto.Description);
+        return Ok(ToDto(post));
     }
 
     [HttpPut("/api/admin/weekly-posts/{id}")]
