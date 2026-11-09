@@ -1386,6 +1386,33 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Empty(await _db.Notifications.ToListAsync());
     }
 
+    /// <summary>
+    /// G1-001: Ausblenden gilt je Turnier — eine andere Gruppe desselben Turniers (gleicher GroupKey)
+    /// wird ebenfalls nicht gemeldet.
+    /// </summary>
+    [Fact]
+    public async Task NotifyNearby_OtherGroupOfIgnoredTournament_IsNotReported()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = userId, Name = "Zuhause", Lat = 48.2, Lon = 13.0, RadiusKm = 100, NotifyNew = true,
+        });
+        TournamentDirectoryEntry Group(string id) => new()
+        {
+            PublicId = id, ChessResultsId = id, Name = "Open " + id, Federation = "AUT", GroupKey = "grp-open",
+            StartDate = Today.AddDays(30), EndDate = Today.AddDays(31), Lat = 48.21, Lon = 13.01,
+        };
+        var a = Group("111");
+        var b = Group("112");
+        _db.TournamentDirectoryEntries.AddRange(a, b);
+        _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore { UserId = userId, PublicId = "111" });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(0, await CreateService("[]").NotifyNearbyAsync([b.Id], Today));
+        Assert.Empty(await _db.Notifications.ToListAsync());
+    }
+
     /// <summary>Die Gegenprobe: ohne Ausblendung wird gemeldet.</summary>
     [Fact]
     public async Task NotifyNearby_WithoutIgnore_IsReported()

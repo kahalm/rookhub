@@ -1701,4 +1701,45 @@ public class TournamentDirectoryControllerTests : IDisposable
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
+
+    // ----- Ausblenden je Turnier, nicht je Gruppe (G1-001) -----------------
+
+    /// <summary>
+    /// Die Karte eines mehrgruppigen Turniers traegt nur die Nummer ihres Hauptvertreters. Vorher fiel
+    /// beim Ausblenden nur Gruppe A weg, und B/C standen nach dem Neuladen als neue Karte wieder da.
+    /// </summary>
+    [Fact]
+    public async Task Search_IgnoredPrimaryOfGroup_HidesWholeTournament()
+    {
+        var userId = await CreateUserAsync();
+        await AddGroupedAsync("Open Braunau 2026 A", "801");
+        await AddGroupedAsync("Open Braunau 2026 B", "802");
+        await AddGroupedAsync("Open Braunau 2026 C", "803");
+        await AddGroupedAsync("Landesliga", "900");
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Ignore("801", default));
+
+        var page = await SearchAsync(userId: userId);
+        Assert.Equal("900", Assert.Single(page.Items).ChessResultsId);
+
+        var withIgnored = await SearchAsync(userId: userId, audience: new DirectoryAudienceQuery { IncludeIgnored = true });
+        Assert.True(withIgnored.Items.Single(i => i.GroupSize == 3).Ignored);
+        Assert.False(withIgnored.Items.Single(i => i.ChessResultsId == "900").Ignored);
+    }
+
+    /// <summary>„Wieder zeigen“ ueber die Karte hebt die Sperre auf, auch wenn sie an einer anderen Gruppe haengt.</summary>
+    [Fact]
+    public async Task Unignore_AnyGroupMember_BringsWholeTournamentBack()
+    {
+        var userId = await CreateUserAsync();
+        await AddGroupedAsync("Open Braunau 2026 A", "801");
+        await AddGroupedAsync("Open Braunau 2026 B", "802");
+        await CreateController(userId).Ignore("802", default);
+        Assert.Empty((await SearchAsync(userId: userId)).Items);
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore("801", default));
+
+        Assert.Equal(2, Assert.Single((await SearchAsync(userId: userId)).Items).GroupSize);
+        Assert.Empty(await _db.TournamentDirectoryIgnores.ToListAsync());
+    }
 }

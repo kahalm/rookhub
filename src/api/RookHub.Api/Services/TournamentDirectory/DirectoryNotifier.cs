@@ -119,22 +119,20 @@ public sealed class DirectoryNotifier
         // ueber ein Turnier, das man weggeklickt hat, ist genau die Art Meldung, die einen dazu
         // bringt, alle abzuschalten. Nur die Nutzer mit meldenden Profilen und nur die
         // Kandidaten-Nummern werden geladen — das sind wenige Zeilen.
+        // Je TURNIER (G1-001): eine ausgeblendete Gruppe blendet auch die übrigen Gruppen desselben GroupKey aus.
         var candidateIds = candidates.Select(e => e.PublicId).ToList();
+        var candidateGroups = candidates.Where(e => e.GroupKey != null).Select(e => e.GroupKey!).Distinct().ToList();
         var userIds = profiles.Select(p => p.UserId).Distinct().ToList();
-        var ignored = (await _db.TournamentDirectoryIgnores.AsNoTracking()
-                .Where(i => userIds.Contains(i.UserId) && candidateIds.Contains(i.PublicId))
-                .Select(i => new { i.UserId, i.PublicId })
-                .ToListAsync(ct))
-            .GroupBy(i => i.UserId)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.PublicId).ToHashSet(StringComparer.Ordinal));
+        var ignored = await DirectoryIgnores.HiddenAsync(_db, userIds, candidateIds, candidateGroups, ct);
 
         var notified = 0;
         foreach (var profile in profiles)
         {
-            var hidden = ignored.GetValueOrDefault(profile.UserId);
+            var hidden = ignored.TryGetValue(profile.UserId, out var h) ? h : default;
             var matches = candidates
                 .Where(e => MatchesProfile(e, profile))
-                .Where(e => hidden is null || !hidden.Contains(e.PublicId))
+                .Where(e => hidden.PublicIds is null
+                            || (!hidden.PublicIds.Contains(e.PublicId) && (e.GroupKey is null || !hidden.GroupKeys.Contains(e.GroupKey))))
                 .OrderBy(e => e.StartDate)
                 .ToList();
             if (matches.Count == 0) continue;

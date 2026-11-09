@@ -301,11 +301,14 @@ public class TournamentDirectoryController : BaseApiController
         if (!DirectoryPublicId.IsValid(id)) return BadRequest(new { message = "Invalid tournament ID." });
 
         var userId = GetUserId();
-        var row = await _db.TournamentDirectoryIgnores
-            .FirstOrDefaultAsync(i => i.UserId == userId && i.PublicId == id, ct);
-        if (row is not null)
+        // Ausblenden gilt je Turnier (G1-001) — „wieder zeigen“ hebt deshalb die Sperre jeder Gruppe auf.
+        var ids = await DirectoryIgnores.TournamentPublicIdsAsync(_db, id, ct);
+        var rows = await _db.TournamentDirectoryIgnores
+            .Where(i => i.UserId == userId && ids.Contains(i.PublicId))
+            .ToListAsync(ct);
+        if (rows.Count > 0)
         {
-            _db.TournamentDirectoryIgnores.Remove(row);
+            _db.TournamentDirectoryIgnores.RemoveRange(rows);
             await _db.SaveChangesAsync(ct);
         }
         return NoContent();
@@ -548,11 +551,8 @@ public class TournamentDirectoryController : BaseApiController
 
         // Ohne Anmeldung gibt es nichts Ausgeblendetes.
         if (GetUserIdOrNull() is not { } userId) return [];
-        return (await _db.TournamentDirectoryIgnores
-                .Where(i => i.UserId == userId && list.Contains(i.PublicId))
-                .Select(i => i.PublicId)
-                .ToListAsync(ct))
-            .ToHashSet(StringComparer.Ordinal);
+        // Je Turnier (G1-001): eine ausgeblendete Gruppe markiert jede Karte desselben GroupKey.
+        return await DirectoryIgnores.IgnoredAmongAsync(_db, userId, list, ct);
     }
 
     /// <summary>

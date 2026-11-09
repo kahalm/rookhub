@@ -537,12 +537,10 @@ public class TournamentDirectoryQueryService
             source = source.Where(e => e.RemovedAt == null);
 
         // Als EXISTS-Unterabfrage und nicht als materialisierte Liste: wer viel wegklickt, hat
-        // sonst irgendwann einen Filter mit hunderten Nummern in jeder Abfrage.
+        // sonst irgendwann einen Filter mit hunderten Nummern in jeder Abfrage. Je TURNIER, nicht je
+        // Gruppe (G1-001): eine ausgeblendete Gruppe blendet alle mit demselben GroupKey aus.
         if (query.ForUserId is { } userId && !query.IncludeIgnored)
-        {
-            source = source.Where(e => !_db.TournamentDirectoryIgnores
-                .Any(i => i.UserId == userId && i.PublicId == e.PublicId));
-        }
+            source = source.WhereNotIgnored(_db, userId);
 
         // Ueberlappung statt Enthaltensein: ein zehntaegiges Open, das in den Zeitraum
         // hineinragt, gehoert in den Kalender - auch wenn es davor begann.
