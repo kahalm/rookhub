@@ -6259,6 +6259,7 @@
     "status": {
       "loading": "Puzzle wird geladen…",
       "watchOpponent": "Beobachte den Zug des Gegners…",
+      "invalidPuzzle": "Diese Aufgabe ist nicht spielbar: Die Züge passen nicht zur Stellung.",
       "correct": "Richtig!",
       "checkmate": "Schachmatt!",
       "altSolution": "Alternative Lösung — das Puzzle hatte eine andere beabsichtigte Zugfolge.",

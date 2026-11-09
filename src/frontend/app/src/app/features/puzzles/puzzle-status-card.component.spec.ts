@@ -42,6 +42,26 @@ describe('PuzzleStatusCardComponent', () => {
     expect(el.querySelector('.psc-show-solution')).toBeNull();
   });
 
+  it('ERROR (unspielbare Zugfolge): Meldung statt „Watch the opponent\'s move…“, Überspringen nur mit showSkip (TODO 2026-09-13)', async () => {
+    const fixture = await setup();
+    fixture.componentRef.setInput('mode', 'book');
+    fixture.componentRef.setInput('state', 'ERROR');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.psc-invalid')).not.toBeNull();
+    expect(el.textContent).toContain('solver.status.invalidPuzzle');   // ohne geladene Übersetzung: der Schlüssel
+    expect(el.textContent).not.toContain('solver.status.watchOpponent');
+    expect(el.querySelector('.psc-invalid button')).toBeNull();
+
+    fixture.componentRef.setInput('showSkip', true);
+    fixture.detectChanges();
+    const btn = el.querySelector('.psc-invalid button') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    let n = 0; fixture.componentInstance.skipClicked.subscribe(() => n++);
+    btn.click();
+    expect(n).toBe(1);
+  });
+
   it('creates (template AOT-compiles + DI resolves)', async () => {
     const fixture = await setup();
     expect(fixture.componentInstance).toBeTruthy();

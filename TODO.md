@@ -478,7 +478,12 @@ Wenn der Kurs-Cache wieder gebraucht wird: kleiner Endpunkt bei piratechess
 Kursstruktur im Linien-Cache liegen. Bewusst nicht mitgebaut — der Fall trat bisher ohnehin nur bei
 Importen auf, die ganz durchliefen.
 
-## [ ] Puzzle mit ungueltiger Zugfolge friert den Solver still ein (2026-09-13)
+## [x] Puzzle mit ungueltiger Zugfolge friert den Solver still ein (2026-09-13, ERLEDIGT 2026-11-09, Version folgt)
+
+> **Erledigt, beide Stellen:** der CSV-Import spielt jede Zugfolge auf der FEN nach (`WorkSanitizer.PositionError`)
+> und verwirft unpassende Zeilen — Antwort `{ imported, rejectedInvalidMoves, rejectedLineNumbers }` (erste zehn
+> Zeilennummern). Der Solver faengt den Wurf beim Vorspiel-/Setup-Zug und geht in `ERROR` mit der Meldung
+> `solver.status.invalidPuzzle` (Standard: „Naechstes Puzzle", Kurs/Wochenpost: „Ueberspringen").
 
 Gefunden im E2E-Lauf: sechs der zehn Seed-Puzzles (`e2e/fixtures/test-puzzles.csv`) trugen Zuege,
 die zu ihrer FEN nicht passen — der Admin-CSV-Import (`POST /api/admin/puzzles/import`) hat sie

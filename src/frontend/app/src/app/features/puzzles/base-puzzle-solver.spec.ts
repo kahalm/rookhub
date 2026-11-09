@@ -23,6 +23,9 @@ class TestSolver extends BasePuzzleSolver<'SOLVED' | 'FAILED'> {
     return ['off1', 'off2', n != null ? `wrong-${n}` : 'wrong-any'];
   }
   setup(fen: string, moves: string): void { this.setupSolver(fen, moves, 0); }
+  setupAt(fen: string, moves: string, startPly: number): void { this.setupSolver(fen, moves, startPly); }
+  invalidHookCount = 0;
+  protected override onInvalidPuzzle(): void { this.invalidHookCount++; }
   setAlts(map: Record<number, string[]>): void { this.altMovesByPly = map; }
   get moveIdx(): number { return (this as unknown as { moveIndex: number }).moveIndex; }
   get fen(): string { return (this as unknown as { chess: { fen(): string } }).chess.fen(); }
@@ -49,6 +52,44 @@ describe('BasePuzzleSolver mouseslip after Stockfish error', () => {
     // Fix: nur a6 zurueck (1 Ply); der Setup-Zug e4 bleibt erhalten.
     // Vor dem Fix wurden 2 Plies zurueckgenommen -> auch e4 weg.
     expect(solver.fen).toBe(afterSetup);
+  }));
+});
+
+describe('BasePuzzleSolver unspielbare Zugfolge (TODO 2026-09-13)', () => {
+  const stockfish = { getBestMove: () => Promise.reject('unused') } as unknown as StockfishService;
+
+  it('Setup-Zug passt nicht zur FEN: ERROR statt ewig SETUP („Watch the opponent\'s move…“)', fakeAsync(() => {
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e5 e7e5');   // e2–e5 gibt es nicht — chess.js wirft „Invalid move“ im Timer
+    expect(solver.state).toBe('SETUP');
+    expect(() => tick(600)).not.toThrow();
+    expect(solver.state).toBe('ERROR');
+    expect(solver.invalidPuzzle).toBeTrue();
+    expect(solver.invalidHookCount).toBe(1);
+    expect(solver.isSolving).toBeFalse();
+    expect(solver.fen).toBe(START);      // nichts gezogen
+  }));
+
+  it('Vorspiel (startPly > 0) mit illegalem Zug: sofort ERROR, kein Timer', fakeAsync(() => {
+    const solver = new TestSolver(stockfish);
+    expect(() => solver.setupAt(START, 'e2e4 e2e4 g1f3 b8c6', 2)).not.toThrow();
+    expect(solver.state).toBe('ERROR');
+    expect(solver.invalidPuzzle).toBeTrue();
+    tick(1000);
+    expect(solver.state).toBe('ERROR');
+  }));
+
+  it('das nächste (gültige) Puzzle setzt den Fehler zurück und läuft normal', fakeAsync(() => {
+    const solver = new TestSolver(stockfish);
+    solver.setup(START, 'e2e5 e7e5');
+    tick(600);
+    expect(solver.state).toBe('ERROR');
+
+    solver.setup(START, 'e2e4 e7e5 g1f3 b8c6');
+    expect(solver.invalidPuzzle).toBeFalse();
+    tick(600);
+    expect(solver.state).toBe('AWAITING_USER_MOVE');
+    discardPeriodicTasks();
   }));
 });
 

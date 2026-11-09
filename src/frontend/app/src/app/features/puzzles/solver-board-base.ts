@@ -8,7 +8,8 @@ import { previewPosition } from './solver-setup.util';
 
 /** Zustände, die der Lös-Automat selbst setzt; die Endzustände (SOLVED/FAILED/…) bringt jede Komponente als
  *  Typ-Parameter mit ({@link BasePuzzleSolver}). */
-export type SolverCoreState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING';
+/** `ERROR` = das Puzzle ist nicht spielbar (Zugfolge passt nicht zur FEN, siehe `BasePuzzleSolver.invalidPuzzle`). */
+export type SolverCoreState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'ERROR';
 
 /**
  * Unterste Schicht des Lös-Automaten ({@link BasePuzzleSolver}): Brett-Präsentation (FEN, Zugziele, Schach,

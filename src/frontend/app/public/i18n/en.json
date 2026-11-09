@@ -6259,6 +6259,7 @@
     "status": {
       "loading": "Loading puzzle…",
       "watchOpponent": "Watch the opponent's move…",
+      "invalidPuzzle": "This puzzle can't be played: its moves don't fit the position.",
       "correct": "Correct!",
       "checkmate": "Checkmate!",
       "altSolution": "Alternative solution — the puzzle had a different intended move sequence.",

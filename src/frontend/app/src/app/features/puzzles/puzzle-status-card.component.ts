@@ -212,6 +212,20 @@ const CK = {
                 </div>
               </div>
             }
+            @case ('ERROR') {
+              <!-- Zugfolge passt nicht zur Stellung (BasePuzzleSolver.invalidPuzzle) — nicht spielbar. -->
+              <div class="psc-center psc-failed psc-invalid">
+                <mat-icon class="psc-result-icon">error_outline</mat-icon>
+                <p class="psc-text">{{ 'solver.status.invalidPuzzle' | translate }}</p>
+                @if (showSkip) {
+                  <div class="psc-actions">
+                    <button mat-flat-button color="primary" (click)="skipClicked.emit()">
+                      <mat-icon>skip_next</mat-icon> {{ 'book.actions.skip' | translate }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
             @case ('FAILED') {
               <div class="psc-center psc-failed">
                 <mat-icon class="psc-result-icon" [class.psc-gave-up-icon]="gaveUp">

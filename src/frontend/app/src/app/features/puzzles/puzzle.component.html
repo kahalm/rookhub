@@ -137,16 +137,25 @@
                           ? 'puzzles.status.offlinePoolExhausted'
                           : offlineNoCache
                             ? 'puzzles.status.offlineNoCache'
-                            : 'puzzles.status.loadFailed') | translate }}
+                            : (invalidPuzzle && puzzle)
+                              ? 'solver.status.invalidPuzzle'
+                              : 'puzzles.status.loadFailed') | translate }}
                   </p>
                   @if (offlinePoolExhausted) {
                     <button mat-flat-button color="primary" (click)="replayLastPuzzle()">
                       <mat-icon>replay</mat-icon> {{ 'puzzles.status.replayLast' | translate }}
                     </button>
                   }
-                  <button mat-raised-button [color]="offlinePoolExhausted ? '' : 'primary'" (click)="loadNext()">
-                    <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
-                  </button>
+                  @if (invalidPuzzle && puzzle) {
+                    <!-- Unspielbares Puzzle: nicht „Nochmal" (dasselbe scheitert wieder), sondern das nächste. -->
+                    <button mat-raised-button color="primary" (click)="onNext()">
+                      <mat-icon>skip_next</mat-icon> {{ 'solver.actions.nextPuzzle' | translate }}
+                    </button>
+                  } @else {
+                    <button mat-raised-button [color]="offlinePoolExhausted ? '' : 'primary'" (click)="loadNext()">
+                      <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+                    </button>
+                  }
                 </div>
               </mat-card-content>
             </mat-card>

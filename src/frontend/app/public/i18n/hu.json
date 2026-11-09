@@ -6259,6 +6259,7 @@
     "status": {
       "loading": "Feladvány betöltése…",
       "watchOpponent": "Figyeld az ellenfél lépését…",
+      "invalidPuzzle": "Ez a feladat nem játszható: a lépések nem illenek az álláshoz.",
       "correct": "Helyes!",
       "checkmate": "Matt!",
       "altSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt lépéssorozata.",

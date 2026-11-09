@@ -81,6 +81,24 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
   get hasMadeFirstMove(): boolean { return this.moveLog.length > 0; }
 
   /**
+   * Die Zugfolge passt nicht zur FEN: chess.js warf beim Vorspiel- bzw. Setup-Zug `Invalid move` (TODO 2026-09-13 —
+   * ein Import ohne Prüfung hatte so ein Puzzle eingeschleust). Dann steht der Löser in `ERROR`, und die Statuskarte
+   * zeigt `solver.status.invalidPuzzle`, statt für immer auf „Watch the opponent's move…" zu hängen.
+   */
+  invalidPuzzle = false;
+
+  /** Nach dem Wechsel in `ERROR` wegen einer unspielbaren Zugfolge (z. B. Fehler melden, Weiter anbieten). */
+  protected onInvalidPuzzle(): void { /* Basis: nichts — die Statuskarte zeigt die Meldung */ }
+
+  private failInvalidSetup(): void {
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.invalidPuzzle = true;
+    this.state = 'ERROR';
+    this.onInvalidPuzzle();
+    this.updateBoard();
+  }
+
+  /**
    * Puzzle aufsetzen. `startPly`: -1 = FEN ist Trainingsstellung (lösen ab moves[0]);
    * 0 = klassisch (moves[0] Setup, lösen ab moves[1]); k = Vorspiel bis moves[k].
    */
@@ -113,9 +131,15 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
     this.clearVizOpponentArrow();
     this.endVisualizationHide();
     this.solutionHidden = false;
+    this.invalidPuzzle = false;
     this.onSetupStart();
 
-    for (let i = 0; i < this.startPly; i++) applyUci(this.chess, this.solutionMoves[i]);
+    try {
+      for (let i = 0; i < this.startPly; i++) applyUci(this.chess, this.solutionMoves[i]);
+    } catch {
+      this.failInvalidSetup();
+      return;
+    }
     this.lastMove = undefined;
 
     if (this.startPly < 0) {
@@ -135,7 +159,12 @@ export abstract class BasePuzzleSolver<S extends string = never> extends SolverR
 
     this.autoAdvanceTimer = setTimeout(() => {
       if (this.state !== 'SETUP') return;
-      this.playMove(this.solutionMoves[this.startPly]);
+      try {
+        this.playMove(this.solutionMoves[this.startPly]);
+      } catch {
+        this.failInvalidSetup();   // vorher: Wurf im Timer, Karte blieb auf „Watch the opponent's move…"
+        return;
+      }
       this.moveIndex = this.startPly + 1;
       this.beginSolving();
       this.state = 'AWAITING_USER_MOVE';
