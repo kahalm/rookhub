@@ -254,13 +254,14 @@ public class EbooksController : BaseApiController
     /// Ein einzelner Eintrag aus dem EPUB-ZIP (<see cref="EbookEpubEntries"/>): der EPUB-Leser öffnet das Buch als Ordner
     /// unter <c>…/epub/{token}/</c> und holt nur Container, OPF, Navigation, das gezeigte Kapitel und dessen Bilder. Der
     /// Ausweis steht im PFAD, damit epub.js relative Adressen (Bilder, CSS, Kapitel) ohne Query-Parameter auflösen kann;
-    /// Prüfung wie bei <see cref="GetFile"/> (Bearer oder Ausweis, Sichtbarkeit je Anfrage). Fehlender Eintrag → 404.
+    /// Prüfung wie bei <see cref="GetFile"/> (Bearer oder Ausweis, Sichtbarkeit je Anfrage). Fehlender Eintrag und Skript-Einträge (<c>.js</c>) → 404; jede Antwort trägt die Sandbox-CSP (<see cref="IsolateEpubEntryResponse"/>).
     /// </summary>
     [HttpGet("{id:int}/epub/{token}/{**path}")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPartitions.EbookEntriesPolicy)]
     public async Task<IActionResult> GetEpubEntry(int id, string token, string? path, CancellationToken ct)
     {
+        IsolateEpubEntryResponse();
         var caller = await ResolveCallerAsync(token, ct);
         if (caller == null) return Unauthorized();
         var file = await _service.ResolveEpubAsync(caller.Value.Caller, caller.Value.ManageAll, id, ct);
@@ -268,7 +269,6 @@ public class EbooksController : BaseApiController
         if (entry == null) return NotFound();
         // Der Inhalt eines Buchs ändert sich nicht; der Ausweis im Pfad wechselt ohnehin alle 12 h.
         Response.Headers.CacheControl = "private, max-age=86400";
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
         return File(entry.Bytes, entry.ContentType);
     }
 
@@ -282,6 +282,7 @@ public class EbooksController : BaseApiController
     [EnableRateLimiting(RateLimitPartitions.EbookEntriesPolicy)]
     public async Task<IActionResult> GetTranslatedEpubEntry(int id, string lang, string token, string? path, CancellationToken ct)
     {
+        IsolateEpubEntryResponse();
         var caller = await ResolveCallerAsync(token, ct);
         if (caller == null) return Unauthorized();
         var (_, file) = await _service.ResolveTranslationAsync(caller.Value.Caller, caller.Value.ManageAll, id, lang, ct);
@@ -289,8 +290,16 @@ public class EbooksController : BaseApiController
         if (entry == null) return NotFound();
         // Kürzer als beim Original: eine Übersetzung wird erneuert, wenn sich die Quelle ändert.
         Response.Headers.CacheControl = "private, max-age=3600";
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
         return File(entry.Bytes, entry.ContentType);
+    }
+
+    /// <summary>Auf JEDE Antwort der beiden Eintrags-Routen (auch 401/404, unabhängig von der Endung): Sandbox-CSP + nosniff
+    /// (R3-001, <see cref="EbookEpubEntries.EntryContentSecurityPolicy"/>). Die serverweiten nginx-Header bleiben daneben
+    /// stehen; der Browser wendet beide CSPs an.</summary>
+    private void IsolateEpubEntryResponse()
+    {
+        Response.Headers.ContentSecurityPolicy = EbookEpubEntries.EntryContentSecurityPolicy;
+        Response.Headers.XContentTypeOptions = "nosniff";
     }
 
     /// <summary>Das übersetzte EPUB als Datei (Leser-Rückfall „ganzes Archiv“ bzw. <c>?download=true</c>).</summary>

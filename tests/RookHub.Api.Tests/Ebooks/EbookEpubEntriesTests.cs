@@ -99,5 +99,27 @@ public class EbookEpubEntriesTests : IDisposable
     [InlineData("f.ttf", "font/ttf")]
     [InlineData("mimetype", "application/octet-stream")]
     [InlineData("dir.v2/file", "application/octet-stream")]
+    [InlineData("a/b.js", "application/octet-stream")]   // R3-001: nie als Skript-Typ
     public void ContentType_ByExtension(string path, string expected) => Assert.Equal(expected, EbookEpubEntries.ContentType(path));
+
+    [Theory]
+    [InlineData("OEBPS/b.js")]
+    [InlineData("OEBPS/B.JS")]
+    [InlineData("OEBPS/m.mjs")]
+    public async Task ReadAsync_ScriptEntries_AreNeverServed(string path)
+    {
+        // R3-001: ein Skript-Eintrag wäre unter /api/ebooks ein „'self'“-Skript für die CSP der App.
+        var file = Write(TinyEpub((path, "alert(1)")));
+        Assert.True(EbookEpubEntries.IsScript(path));
+        Assert.Null(await EbookEpubEntries.ReadAsync(file, path));
+    }
+
+    [Fact]
+    public void EntryCsp_IsSandboxedWithoutScripts()
+    {
+        var csp = EbookEpubEntries.EntryContentSecurityPolicy;
+        Assert.Contains("sandbox", csp);
+        Assert.StartsWith("default-src 'none'", csp);
+        Assert.DoesNotContain("script-src", csp);
+    }
 }

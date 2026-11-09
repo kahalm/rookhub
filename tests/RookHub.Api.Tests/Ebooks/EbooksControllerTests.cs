@@ -175,6 +175,85 @@ public class EbooksControllerTests : IDisposable
         Assert.IsType<FileContentResult>(await Controller(null).GetEpubEntry(epub.Id, anonToken, "META-INF/container.xml", CancellationToken.None));
     }
 
+    /// <summary>Ein EPUB wie <see cref="EbookEpubEntriesTests.TinyEpub"/> mit Kapitel, Skript und SVG (R3-001).</summary>
+    private static byte[] HostileEpub() => EbookEpubEntriesTests.TinyEpub(
+        ("OEBPS/a.xhtml", "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><script src=\"b.js\"></script></body></html>"),
+        ("OEBPS/b.js", "alert(localStorage.rookhub_user)"),
+        ("OEBPS/c.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>"),
+        ("OEBPS/d.html", "<script>alert(1)</script>"));
+
+    private static void AssertIsolated(EbooksController c)
+    {
+        var h = c.ControllerContext.HttpContext.Response.Headers;
+        Assert.Equal(EbookEpubEntries.EntryContentSecurityPolicy, h.ContentSecurityPolicy.ToString());
+        Assert.Contains("sandbox", h.ContentSecurityPolicy.ToString());
+        Assert.Equal("nosniff", h.XContentTypeOptions.ToString());
+    }
+
+    [Theory]
+    [InlineData("OEBPS/a.xhtml")]
+    [InlineData("OEBPS/c.svg")]
+    [InlineData("OEBPS/d.html")]
+    [InlineData("OEBPS/content.opf")]
+    [InlineData("META-INF/container.xml")]
+    [InlineData("OEBPS/Images/Board 1.png")]
+    public async Task EpubEntry_EveryResponseIsSandboxed_RegardlessOfExtension(string path)
+    {
+        var owner = await _kit.UserAsync("owner");
+        var epub = await _kit.UploadAsync(owner.Id, false, HostileEpub(), "evil.epub");
+        var (token, _) = _tokens.Issue(owner.Id);
+        var c = Controller(null);
+        Assert.IsType<FileContentResult>(await c.GetEpubEntry(epub.Id, token, path, CancellationToken.None));
+        AssertIsolated(c);
+    }
+
+    [Fact]
+    public async Task EpubEntry_ScriptIs404_AndErrorResponsesAreSandboxedToo()
+    {
+        const string visitor = "0123456789abcdef0123456789abcdef";
+        var anonUpload = Controller(null, visitorId: visitor);
+        var form = new EbookUploadForm { File = new FormFile(new MemoryStream(HostileEpub()), 0, HostileEpub().Length, "file", "evil.epub") };
+        var created = Assert.IsType<EbookDto>(Assert.IsType<CreatedAtActionResult>((await anonUpload.Upload(form, CancellationToken.None)).Result).Value);
+        var token = Assert.IsType<EbookAccessTokenDto>(Assert.IsType<OkObjectResult>(anonUpload.AccessToken().Result).Value).Token;
+
+        // Der anonyme Ausweis sieht den eigenen Upload — das Skript bekommt er trotzdem nicht.
+        var c = Controller(null);
+        Assert.IsType<NotFoundResult>(await c.GetEpubEntry(created.Id, token, "OEBPS/b.js", CancellationToken.None));
+        AssertIsolated(c);
+        var ok = Controller(null);
+        Assert.IsType<FileContentResult>(await ok.GetEpubEntry(created.Id, token, "OEBPS/a.xhtml", CancellationToken.None));
+        AssertIsolated(ok);
+        // Ohne Ausweis (401) ebenfalls mit Sandbox-CSP.
+        var anon = Controller(null);
+        Assert.IsType<UnauthorizedResult>(await anon.GetEpubEntry(created.Id, "kaputt", "OEBPS/a.xhtml", CancellationToken.None));
+        AssertIsolated(anon);
+    }
+
+    [Fact]
+    public async Task TranslatedEpubEntry_IsSandboxed_AndScriptIs404()
+    {
+        var owner = await _kit.UserAsync("owner");
+        var epub = await _kit.UploadAsync(owner.Id, false, EbookEpubEntriesTests.TinyEpub(), "b.epub");
+        Directory.CreateDirectory(Path.Combine(_kit.Root, "translations"));
+        File.WriteAllBytes(Path.Combine(_kit.Root, "translations", epub.Id + "-en.epub"), HostileEpub());
+        _kit.Db.EbookTranslations.Add(new EbookTranslation
+        {
+            EbookId = epub.Id, Language = "en", State = EbookTranslationState.Done, RelativePath = "translations/" + epub.Id + "-en.epub",
+        });
+        await _kit.Db.SaveChangesAsync();
+        var (token, _) = _tokens.Issue(owner.Id);
+
+        foreach (var path in new[] { "OEBPS/a.xhtml", "OEBPS/c.svg", "OEBPS/content.opf" })
+        {
+            var c = Controller(null);
+            Assert.IsType<FileContentResult>(await c.GetTranslatedEpubEntry(epub.Id, "en", token, path, CancellationToken.None));
+            AssertIsolated(c);
+        }
+        var js = Controller(null);
+        Assert.IsType<NotFoundResult>(await js.GetTranslatedEpubEntry(epub.Id, "en", token, "OEBPS/b.js", CancellationToken.None));
+        AssertIsolated(js);
+    }
+
     [Fact]
     public async Task Cover_Is404UntilRendered_Then200WithSniffedType()
     {

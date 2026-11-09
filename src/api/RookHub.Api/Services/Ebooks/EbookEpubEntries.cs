@@ -11,9 +11,30 @@ public sealed record EpubEntry(byte[] Bytes, string ContentType);
 /// 84 MB) vor der ersten Seite. Der Pfad wird NUR als ZIP-Eintrag aufgelöst (nie im Dateisystem); <c>..</c>, absolute
 /// Pfade, Backslashes und Steuerzeichen werden abgewiesen. Groß-/Kleinschreibung wie im ZIP. Das Archiv wird je Anfrage
 /// geöffnet — gelesen wird dabei nur das zentrale Verzeichnis am Dateiende, nicht das ganze Buch.
+///
+/// <para><b>Isoliert</b> (R3-001): die Einträge stammen aus fremden (auch anonymen) Uploads und kommen vom Ursprung der App.
+/// Darum setzen beide Eintrags-Routen auf JEDE Antwort <see cref="EntryContentSecurityPolicy"/> (mit <c>sandbox</c>: ein
+/// direkt geöffnetes Kapitel läuft in einem opaken Ursprung ohne Skripte, auch XML/OPF/NCX/SMIL, die der Browser als
+/// XML-Dokument rendert), und Skript-Einträge (<see cref="IsScript"/>) werden gar nicht ausgeliefert — sonst wäre jeder
+/// <c>.js</c>-Eintrag ein „'self'“-Skript für die CSP der App. Der Leser ist davon unberührt: epub.js holt die Kapitel per
+/// fetch/XHR und schreibt sie in ein eigenes iframe (dort gilt die CSP der App-Seite), Bilder/CSS/Schriften sind
+/// Unterressourcen, auf die eine Antwort-CSP nicht wirkt.</para>
 /// </summary>
 public static class EbookEpubEntries
 {
+    /// <summary>CSP für jede Antwort der EPUB-Eintrags-Routen (Original und Übersetzung), unabhängig von der Endung.</summary>
+    public const string EntryContentSecurityPolicy =
+        "default-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; sandbox";
+
+    /// <summary>Skript-Einträge (<c>.js</c>, <c>.mjs</c>) liefert die Route nie aus (404) — epub.js führt Buch-Skripte ohnehin
+    /// nicht aus.</summary>
+    public static bool IsScript(string path)
+    {
+        var dot = path.LastIndexOf('.');
+        var ext = dot < 0 || dot < path.LastIndexOf('/') ? "" : path[(dot + 1)..].ToLowerInvariant();
+        return ext is "js" or "mjs" or "cjs";
+    }
+
     /// <summary>Größter Eintrag, der ausgeliefert wird (Kapitel/Bilder sind weit darunter).</summary>
     public const long MaxEntryBytes = 64L * 1024 * 1024;
 
@@ -46,7 +67,6 @@ public static class EbookEpubEntries
             "ncx" => "application/x-dtbncx+xml",
             "xml" => "application/xml",
             "smil" => "application/smil+xml",
-            "js" => "text/javascript",
             "json" => "application/json",
             "txt" => "text/plain; charset=utf-8",
             "jpg" or "jpeg" => "image/jpeg",
@@ -65,12 +85,12 @@ public static class EbookEpubEntries
         };
     }
 
-    /// <summary>Einen Eintrag lesen; <c>null</c>, wenn der Pfad ungültig ist, fehlt, ein Ordner oder zu groß ist, oder
-    /// die Datei kein lesbares ZIP ist.</summary>
+    /// <summary>Einen Eintrag lesen; <c>null</c>, wenn der Pfad ungültig ist, ein Skript (<see cref="IsScript"/>), fehlt,
+    /// ein Ordner oder zu groß ist, oder die Datei kein lesbares ZIP ist.</summary>
     public static async Task<EpubEntry?> ReadAsync(string zipFile, string? entryPath, CancellationToken ct = default)
     {
         var path = NormalizePath(entryPath);
-        if (path == null) return null;
+        if (path == null || IsScript(path)) return null;
         try
         {
             await using var fs = new FileStream(zipFile, FileMode.Open, FileAccess.Read, FileShare.Read, 16 * 1024, FileOptions.RandomAccess | FileOptions.Asynchronous);

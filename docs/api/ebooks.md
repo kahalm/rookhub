@@ -49,7 +49,7 @@ die Datenbank (Admin-Flag ebenfalls aus der DB, nicht aus dem Ausweis). Ohne Aus
 | DELETE | `/api/ebooks/{id:int}` | Besitzer/Verwalter | Löscht Buch, Freigaben, Lesestände und die HOCHGELADENE Datei + Titelbild (Bibliotheksdateien bleiben) → 204 |
 | GET/PUT | `/api/ebooks/{id:int}/progress` | Auth | Lesestand `{ page, pageCount? }` (1-basiert; `pageCount` bleibt, wenn keiner mitkommt). Unsichtbar → 404 |
 | GET | `/api/ebooks/{id:int}/file?t=&fileId=&download=` | **AllowAnonymous** (Ausweis oder Bearer) | Die Hauptdatei bzw. `fileId`, mit Bereichsanfragen (`PhysicalFile(enableRangeProcessing)`) — der PDF-Leser holt nur die Seiten, die er zeigt. `download=true` → Anhang „<Titel>.<format>“ (Dateisystem-sichere Zeichen). Datei auf der Platte weg → 404 `ebook_file_missing` |
-| GET | `/api/ebooks/{id:int}/epub/{token}/{**path}` | **AllowAnonymous** (Ausweis im PFAD oder Bearer), Rate-Limit `ebook-entries` | EIN Eintrag aus dem EPUB-ZIP (`EbookEpubEntries`) für den EPUB-Leser „als Ordner“. Ausweis im Pfad, damit epub.js relative Adressen (Kapitel, Bilder, CSS) ohne Query auflösen kann; Sichtbarkeit wie `…/file`, gewählt wird die EPUB-Datei des Buchs (kein EPUB → 404). Pfad nur als ZIP-Eintrag (nie Dateisystem), `..`/absolut/Backslash → 404, Schreibweise wie im ZIP, Content-Type nach Endung, `Cache-Control: private, max-age=86400`, Einträge > 64 MB → 404. Eigener Deckel 600/min je Adresse statt des globalen 100/min-Topfs (ein Kapitel mit 50 Diagrammbildern = 50+ Anfragen) |
+| GET | `/api/ebooks/{id:int}/epub/{token}/{**path}` | **AllowAnonymous** (Ausweis im PFAD oder Bearer), Rate-Limit `ebook-entries` | EIN Eintrag aus dem EPUB-ZIP (`EbookEpubEntries`) für den EPUB-Leser „als Ordner“. Ausweis im Pfad, damit epub.js relative Adressen (Kapitel, Bilder, CSS) ohne Query auflösen kann; Sichtbarkeit wie `…/file`, gewählt wird die EPUB-Datei des Buchs (kein EPUB → 404). Pfad nur als ZIP-Eintrag (nie Dateisystem), `..`/absolut/Backslash → 404, Schreibweise wie im ZIP, Content-Type nach Endung, Sandbox-CSP auf jeder Antwort, Skript-Einträge → 404 (siehe „Sicherheit der Auslieferung“), `Cache-Control: private, max-age=86400`, Einträge > 64 MB → 404. Eigener Deckel 600/min je Adresse statt des globalen 100/min-Topfs (ein Kapitel mit 50 Diagrammbildern = 50+ Anfragen) |
 | GET | `/api/ebooks/{id:int}/cover?t=` | **AllowAnonymous** (Ausweis oder Bearer) | Titelbild (JPEG/PNG, Typ an den Bytes erkannt) oder 404, solange keines da ist; `Cache-Control: private, max-age=86400` |
 | GET | `/api/admin/ebooks/library` | `ebooks.manage` | `{ configured, uploadsEnabled, imported, coversPending }` |
 | POST | `/api/admin/ebooks/{id:int}/reflow` | `ebooks.manage` | Fließtext-EPUB aus dem Text-PDF bauen (0.802.0, Prototyp, synchron ~10–20 s je 400 Seiten) → `{ ebookId, fileId, sizeBytes, pages, chapters, paragraphs, diagrams, diagramsLinked }`. Ersetzt ein vorhandenes. 400 `ebook_reflow_unsupported`: kein Original-PDF, schon ein echtes EPUB, Diagramme noch nicht erkannt, keine Textebene (Scan). Siehe „Fließtext-EPUB aus Text-PDFs“ |
@@ -67,6 +67,20 @@ werden nur sichtbare Seiten ± eine Sichtfeldhöhe (Leinwände weiter weg werden
 (`disableAutoFetch`), „Breite füllen" als Vorgabe, Zoomstufen in `reader-progress.util.ts`; der Lesestand geht 1,5 s nach dem
 letzten Seitenwechsel an den Server und wird beim nächsten Öffnen angesprungen. EPUB/DJVU/CBZ/… zeigen eine Download-Karte
 (ein EPUB-Leser im Browser ist offen, siehe TODO).
+
+## Sicherheit der Auslieferung und Verarbeitung (Fixwelle B8)
+
+Bücher kommen auch aus anonymen Uploads; ihr Inhalt ist fremder Code bzw. fremde Daten.
+
+- **Eintrags-Routen isoliert** (`…/epub/{token}/{**path}` und `…/translations/{lang}/epub/{token}/{**path}`): JEDE
+  Antwort (auch 401/404, unabhängig von der Endung — XHTML, HTML, SVG, aber auch XML/OPF/NCX/SMIL rendert der Browser als
+  Dokument) trägt `Content-Security-Policy: default-src 'none'; img-src 'self' data: blob:; style-src 'self'
+  'unsafe-inline'; font-src 'self'; sandbox` und `X-Content-Type-Options: nosniff` (gesetzt in der API,
+  `EbookEpubEntries.EntryContentSecurityPolicy`; die serverweiten nginx-Header bleiben daneben, der Browser wendet beide
+  an). Ein direkt geöffnetes Kapitel läuft damit in einem opaken Ursprung ohne Skripte. Skript-Einträge (`.js`, `.mjs`,
+  `.cjs`) liefert die Route nie aus (404), ein unbekannter Typ kommt als `application/octet-stream`. Der Leser bleibt
+  unberührt: epub.js holt Kapitel per fetch/XHR und schreibt sie in sein eigenes iframe (dort gilt die CSP der App-Seite);
+  Bilder, CSS und Schriften sind Unterressourcen, auf die eine Antwort-CSP nicht wirkt.
 
 ## Upload-Dublettenprüfung (0.863.0)
 
