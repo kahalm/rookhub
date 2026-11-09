@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input } f
 import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { IconLabelDirective } from '../icon-label/icon-label.directive';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 import { MarkOrigin, MarkedPositionsService, positionKey } from './marked-positions.service';
 import { MarkNotesDialogComponent, MarkNotesDialogData, MarkNotesDialogResult } from './mark-notes-dialog.component';
 
@@ -46,6 +48,8 @@ import { MarkNotesDialogComponent, MarkNotesDialogData, MarkNotesDialogResult } 
 export class MarkPositionButtonComponent implements OnInit {
   private readonly service = inject(MarkedPositionsService);
   private readonly dialog = inject(MatDialog);
+  private readonly snackbar = inject(SnackbarService);
+  private readonly translate = inject(TranslateService);
 
   /** Die Stellung, die der Knopf meint (FEN). */
   readonly fen = input<string | null | undefined>(null);
@@ -69,7 +73,8 @@ export class MarkPositionButtonComponent implements OnInit {
     this.service.mark(fen, origin).subscribe({
       next: () => this.dialog.open<MarkNotesDialogComponent, MarkNotesDialogData, MarkNotesDialogResult>(MarkNotesDialogComponent,
         { data: { fen, origin }, width: '440px', maxWidth: '94vw' }),
-      error: () => { /* Knopf ist schon zurückgedreht */ },
+      // Der Knopf ist schon zurückgedreht; die Nutzeraktion braucht trotzdem eine Meldung (G3-006).
+      error: err => this.snackbar.warn(apiErrorText(err, this.translate, 'markPosition.saveFailed')),
     });
   }
 }

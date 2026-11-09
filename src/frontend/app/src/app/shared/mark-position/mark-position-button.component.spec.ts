@@ -6,6 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { MarkPositionButtonComponent } from './mark-position-button.component';
+import { SnackbarService } from '../../core/snackbar.service';
 import { MarkedPositionsService, positionKey } from './marked-positions.service';
 
 describe('MarkPositionButtonComponent', () => {
@@ -65,10 +66,12 @@ describe('MarkPositionButtonComponent', () => {
     TestBed.inject(MarkedPositionsService).keys.set(new Set());
     fixture.detectChanges();
     btn().click(); fixture.detectChanges();
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
     http.expectOne(r => r.method === 'POST').flush('fail', { status: 500, statusText: 'x' });
     fixture.detectChanges();
     expect(btn().classList).not.toContain('on');
     expect(dialog.open).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledOnceWith('markPosition.saveFailed');   // G3-006: nicht mehr still
   });
 
   // 0.847.0 (Wunsch 2026-10-26): auch ohne Anmeldung — der Server ordnet die Markierung der Besucher-Kennung zu.

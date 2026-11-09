@@ -589,11 +589,12 @@ export class DashboardComponent implements OnInit {
     this.menu.visible$.pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(set => this.menuKeys = set);
 
-    // Freundeszahl reaktiv nachziehen, wenn eine Benachrichtigung eintrifft.
+    // Freundeszahl reaktiv nachziehen, wenn eine Benachrichtigung eintrifft. Scheitert der Abruf, bleibt die
+    // bisherige Zahl stehen (null statt [] — wie im forkJoin unten; sonst sprang die Kachel auf „0“, G3-006).
     this.notif.arrived$.pipe(
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(() => this.dashboardService.getFriends().pipe(catchError(() => of([])))
-      .subscribe(friends => this.friendCount = friends.length));
+    ).subscribe(() => this.dashboardService.getFriends().pipe(catchError(() => of(null)))
+      .subscribe(friends => { if (friends) this.friendCount = friends.length; }));
 
     // Chessable-Admin (F5-005: Recht chessable.admin, wie der Server): aktive Queue laufend anzeigen (sofort + alle 10 s).
     if (this.auth.has('chessable.admin')) {

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { FriendsComponent } from './friends.component';
 import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
@@ -470,5 +470,59 @@ describe('FriendsComponent Freundeszeile', () => {
     expect(del).not.toBeNull();
     expect(del.textContent).toContain('friends.aria.removeFriend');
     httpMock.verify();
+  });
+});
+
+/** G3-006: gescheiterte Listen zeigen app-load-error statt „keine …“ — ein Ladefehler ist kein Leerzustand. */
+describe('FriendsComponent Ladefehler je Liste (G3-006)', () => {
+  function setup(tab: string, challenge: { getIncoming: () => unknown; getOutgoing: () => unknown }) {
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: challenge },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ tab }) } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    return { fixture, http: TestBed.inject(HttpTestingController), el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('Herausforderungen: Fehler beim Laden → app-load-error, kein „keine Herausforderungen“; Erneut lädt nach', () => {
+    let fail = true;
+    const incoming = jasmine.createSpy('getIncoming').and.callFake(() => fail ? throwError(() => new Error('x')) : of([]));
+    const outgoing = jasmine.createSpy('getOutgoing').and.callFake(() => fail ? throwError(() => new Error('x')) : of([]));
+    const { fixture, http, el } = setup('challenges', { getIncoming: incoming, getOutgoing: outgoing });
+    http.expectOne('/api/friends').flush([]);
+    http.expectOne('/api/friends/requests').flush([]);
+    http.expectOne('/api/friends/requests/sent').flush([]);
+    fixture.detectChanges();
+
+    expect(el.querySelectorAll('app-load-error').length).toBe(2);
+    expect(el.textContent).not.toContain('friends.challenges.emptyInbox');
+    expect(el.textContent).not.toContain('friends.challenges.emptySent');
+
+    fail = false;
+    (el.querySelector('app-load-error button.retry') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.textContent).toContain('friends.challenges.emptyInbox');
+    http.verify();
+  });
+
+  it('gesendete Anfragen: Fehler beim Laden → app-load-error statt „keine gesendeten Anfragen“', () => {
+    const { fixture, http, el } = setup('requests', { getIncoming: () => of([]), getOutgoing: () => of([]) });
+    http.expectOne('/api/friends').flush([]);
+    http.expectOne('/api/friends/requests').flush([]);
+    http.expectOne('/api/friends/requests/sent').flush('x', { status: 500, statusText: 'x' });
+    fixture.detectChanges();
+
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.textContent).not.toContain('friends.requests.emptySent');
+    http.verify();
   });
 });

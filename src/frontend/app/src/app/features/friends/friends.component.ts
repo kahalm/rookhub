@@ -26,12 +26,13 @@ import { InAppNotificationService } from '../../core/in-app-notification.service
 import { apiErrorText } from '../../core/api-error';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-friends',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatListModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTabsModule, IconLabelDirective, MatBadgeModule, MatMenuModule, TranslatePipe, LoadingSpinnerComponent, PuzzleThemePipe, LoadErrorComponent],
   template: `
     <div class="friends-container">
       <h1>{{ 'friends.title' | translate }}</h1>
@@ -140,7 +141,11 @@ import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
                 </button>
               </mat-list-item>
             } @empty {
-              <p class="empty-state">{{ 'friends.requests.emptySent' | translate }}</p>
+              @if (sentError) {
+                <app-load-error [error]="sentError" (retry)="loadSentRequests()" />
+              } @else {
+                <p class="empty-state">{{ 'friends.requests.emptySent' | translate }}</p>
+              }
             }
           </mat-list>
         </mat-tab>
@@ -161,7 +166,11 @@ import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
                 </div>
               </mat-list-item>
             } @empty {
-              <p class="empty-state">{{ 'friends.challenges.emptyInbox' | translate }}</p>
+              @if (incomingError) {
+                <app-load-error [error]="incomingError" (retry)="loadChallenges()" />
+              } @else {
+                <p class="empty-state">{{ 'friends.challenges.emptyInbox' | translate }}</p>
+              }
             }
           </mat-list>
 
@@ -179,7 +188,11 @@ import { PuzzleThemePipe, puzzleThemeList } from '../puzzles/puzzle-theme.pipe';
                 </span>
               </mat-list-item>
             } @empty {
-              <p class="empty-state">{{ 'friends.challenges.emptySent' | translate }}</p>
+              @if (outgoingError) {
+                <app-load-error [error]="outgoingError" (retry)="loadChallenges()" />
+              } @else {
+                <p class="empty-state">{{ 'friends.challenges.emptySent' | translate }}</p>
+              }
             }
           </mat-list>
 
@@ -262,6 +275,10 @@ export class FriendsComponent implements OnInit {
   searchResults: UserSearchResult[] = [];
   incoming: IncomingChallenge[] = [];
   outgoing: OutgoingChallenge[] = [];
+  /** Ladefehler je Liste (G3-006): dann steht dort app-load-error statt des Leerzustands „keine …“. */
+  sentError: unknown = null;
+  incomingError: unknown = null;
+  outgoingError: unknown = null;
   revengeNotifications: RevengeNotification[] = [];
   searchQuery = '';
   loading = true;
@@ -347,17 +364,27 @@ export class FriendsComponent implements OnInit {
       next: r => { this.requests = r; this.resolveHighlight(); },
       error: () => this.snackbar.info(this.translate.instant('friends.errors.loadRequests'))
     });
-    this.friendsService.getSentRequests().subscribe({
-      next: r => this.sentRequests = r,
-      error: () => {}
-    });
+    this.loadSentRequests();
     this.loadChallenges();
+  }
+
+  loadSentRequests(): void {
+    this.friendsService.getSentRequests().subscribe({
+      next: r => { this.sentRequests = r; this.sentError = null; },
+      error: err => this.sentError = err ?? true,
+    });
   }
 
   loadChallenges(): void {
     // getIncoming() aktualisiert dabei den Navbar-Badge-Zähler.
-    this.challenge.getIncoming().subscribe({ next: c => this.incoming = c, error: () => {} });
-    this.challenge.getOutgoing().subscribe({ next: c => this.outgoing = c, error: () => {} });
+    this.challenge.getIncoming().subscribe({
+      next: c => { this.incoming = c; this.incomingError = null; },
+      error: err => this.incomingError = err ?? true,
+    });
+    this.challenge.getOutgoing().subscribe({
+      next: c => { this.outgoing = c; this.outgoingError = null; },
+      error: err => this.outgoingError = err ?? true,
+    });
     // Revanche-Benachrichtigungen laden und (da der User sie jetzt sieht) als gelesen markieren → Badge leert sich.
     // Flach via switchMap statt verschachteltem subscribe (kein subscribe-in-subscribe).
     this.revenge.getNotifications().pipe(

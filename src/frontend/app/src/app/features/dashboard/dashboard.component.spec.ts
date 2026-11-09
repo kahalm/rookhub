@@ -83,6 +83,17 @@ describe('DashboardComponent friend-count reactivity', () => {
     arrived.next();
     expect(fixture.componentInstance.friendCount).toBe(3);
   });
+
+  it('keeps the friend count when the refresh after a notification fails (G3-006)', () => {
+    const arrived = new Subject<void>();
+    let fail = false;
+    const { component } = setup({ friends: [{}, {}], arrived });
+    const svc = TestBed.inject(DashboardService) as unknown as { getFriends: () => unknown };
+    svc.getFriends = () => fail ? throwError(() => new Error('offline')) : of([{}, {}]);
+    fail = true;
+    arrived.next();
+    expect(component.friendCount).toBe(2);
+  });
 });
 
 describe('DashboardComponent cached snapshot', () => {
