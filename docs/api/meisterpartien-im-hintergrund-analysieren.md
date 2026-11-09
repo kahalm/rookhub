@@ -58,7 +58,9 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   Vertiefungen und unter dem Stapel auf die JÜNGEREN (das letzte Liga-Wochenende vor dem Altbestand) — jeweils mit dem
   Schwanz (`TailMayAdvance`). Am Ende der Vertiefung rechnet die Pumpe Genauigkeit und Zug-Klassen (`GameMoveClasses.Store`)
   neu; erst dann ist die Analyse endgültig fertig (`GameAnalysisWatchers.IsFinal`): Glocke und Zugvergleiche der Fehler
-  (`docs/api/zuege-vergleichen.md`) kommen mit den Zahlen der Tiefe 30. Die Taktik-Ernte liest weiter beim ersten Ende.
+  (`docs/api/zuege-vergleichen.md`) kommen mit den Zahlen der Tiefe 30 — und die Vergleiche ÜBERNEHMEN seit 2026-11-09 Kandidaten
+  und Linien aus den vertieften Stellungen (`Refined`, Tiefe ≥ 30, Hauptvariante gespeichert), statt sie neu zu rechnen
+  (`MoveComparisonFromAnalysis`). Die Taktik-Ernte liest weiter beim ersten Ende.
   Kosten (Prod 08.11.): 230 Altanalysen mit zusammen 18 868 Stellungen; die letzten Vertiefungen von „Partie analysieren"
   brauchten 3 300–3 600 s für 72–114 Halbzüge (28 Hintergrund-Engines, geteilt mit dem Stapel) — grob 1 h je Vereinspartie,
   also etwa 230 h (~10 Tage) für den Altbestand, jüngste zuerst; neue Partien vom Wochenende gehen vor.

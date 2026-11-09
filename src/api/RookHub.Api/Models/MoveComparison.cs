@@ -17,6 +17,19 @@ public enum MoveComparisonStatus
     Waiting = 5,
 }
 
+/// <summary>Woher die Zahlen eines Vergleichs stammen (Wunsch 2026-11-09: „wenn du die Partie tief analysiert hast, warum die
+/// Fehler nochmals eigens analysieren?"). <c>null</c> in der Spalte = vor dieser Unterscheidung angelegt und noch nicht geprüft.
+/// Regeln: <see cref="Services.Engines.MoveComparisonFromAnalysis"/>.</summary>
+public enum MoveComparisonSource
+{
+    /// <summary>Alles über eigene Engine-Aufträge (der Weg bis 0.937, und jeder selbst angelegte Vergleich).</summary>
+    Engine = 0,
+    /// <summary>Kandidaten und Antwort-Tests komplett aus der vertieften Partie-Analyse — kein einziger Auftrag.</summary>
+    Analysis = 1,
+    /// <summary>Ein Teil aus der Analyse, der Rest (meist ein, zwei Antwort-Tests) über Aufträge.</summary>
+    Mixed = 2,
+}
+
 public enum MoveComparisonLineKind
 {
     /// <summary>Stellung nach einem Kandidatenzug.</summary>
@@ -75,6 +88,10 @@ public class MoveComparison
     public string Language { get; set; } = "en";
 
     public MoveComparisonStatus Status { get; set; } = MoveComparisonStatus.Candidates;
+
+    /// <summary>Herkunft der Zahlen (<see cref="MoveComparisonSource"/>); <c>null</c> = Altbestand, noch nicht geprüft — die
+    /// Pumpe sieht bei wartenden Vergleichen einer Vereinspartie dann erst in der Analyse nach.</summary>
+    public MoveComparisonSource? Source { get; set; }
 
     /// <summary>Wessen Engine rechnet (<c>null</c> = der Nutzer selbst) — wie <see cref="AnalysisJob.EngineOwnerUserId"/>.</summary>
     public int? EngineOwnerUserId { get; set; }

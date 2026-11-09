@@ -145,7 +145,7 @@ internal sealed class GameAnalysisPump
     {
         // Dieselbe Stelle: die Zugvergleiche zu den Fehlern einer Vereinspartie einreihen (0.908.0, prüft selbst, ob es eine
         // endgültig fertige Hauptanalyse ist). Ein Fehler dabei hält die Pumpe nicht an — der Nachtrag holt es nach.
-        try { await ClubMistakeComparisons.EnqueueAsync(_db, analysis, ct); }
+        try { await ClubMistakeComparisons.EnqueueAsync(_db, analysis, ct, logger: _logger); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) { _logger.LogWarning(ex, "GameAnalysis {Id}: Zugvergleiche der Fehler nicht eingereiht", analysis.Id); }
 

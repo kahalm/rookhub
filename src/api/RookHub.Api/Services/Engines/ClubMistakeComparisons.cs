@@ -75,7 +75,7 @@ public sealed class ClubMistakeComparisons
     /// → Zahl der neuen Vergleiche.
     /// </summary>
     public static async Task<int> EnqueueAsync(AppDbContext db, GameAnalysis analysis, CancellationToken ct = default,
-        int depth = DefaultDepth)
+        int depth = DefaultDepth, ILogger? logger = null)
     {
         if (analysis.MistakeComparisonsAt != null
             || !Applies(analysis, await OwnSummaryAnalyses(db).AnyAsync(id => id == analysis.Id, ct))) return 0;
@@ -83,6 +83,8 @@ public sealed class ClubMistakeComparisons
             .Select(c => c.Ply!.Value).ToListAsync(ct)).ToHashSet();
         var now = DateTime.UtcNow;
         var added = 0;
+        var fromAnalysis = 0;
+        var mixed = 0;
         foreach (var m in GameMistakeSelection.FromPositions(analysis.Positions, analysis.PlyCount))
         {
             if (known.Contains(m.Ply)) continue;
@@ -102,11 +104,18 @@ public sealed class ClubMistakeComparisons
                 c.Lines.Add(line);
             }
             if (c.Lines.Count < MoveComparisonService.MinCandidates) continue;
+            // Was die vertiefte Analyse schon gerechnet hat, nicht noch einmal (2026-11-09, MoveComparisonFromAnalysis).
+            MoveComparisonFromAnalysis.Apply(c, analysis.Positions, depth);
             db.MoveComparisons.Add(c);
             added++;
+            if (c.Source == MoveComparisonSource.Analysis) fromAnalysis++;
+            else if (c.Source == MoveComparisonSource.Mixed) mixed++;
         }
         analysis.MistakeComparisonsAt = now;
         await db.SaveChangesAsync(ct);
+        if (added > 0)
+            logger?.LogInformation("Zugvergleiche Analyse {Id}: {Count} Fehler, davon {FromAnalysis} ganz aus der Analyse, {Mixed} teilweise",
+                analysis.Id, added, fromAnalysis, mixed);
         return added;
     }
 
@@ -126,7 +135,27 @@ public sealed class ClubMistakeComparisons
     {
         if (!_enabled) return;
         await BackfillStepAsync(ct);
+        await ApplyAnalysisToUncheckedAsync(ct);
         await StartWaitingAsync(ct);
+    }
+
+    /// <summary>
+    /// Altbestand (angelegt vor 2026-11-09, <see cref="MoveComparison.Source"/> <c>null</c>): wartende Vergleiche und solche, die
+    /// noch ihre Kandidaten rechnen, sehen einmal in der Analyse nach (<see cref="MoveComparisonFromAnalysis"/>) — danach trägt
+    /// jeder eine Herkunft und wird nie wieder geprüft. Am Deckel vorbei: das kostet keine Engine. → Zahl geprüft.
+    /// </summary>
+    internal async Task<int> ApplyAnalysisToUncheckedAsync(CancellationToken ct)
+    {
+        var rows = await _db.MoveComparisons.Include(c => c.Lines)
+            .Where(c => c.GameAnalysisId != null && c.Ply != null && c.Source == null
+                && (c.Status == MoveComparisonStatus.Waiting || c.Status == MoveComparisonStatus.Candidates))
+            .OrderBy(c => c.GameAnalysisId).ThenBy(c => c.Ply).Take(100).ToListAsync(ct);
+        foreach (var group in rows.GroupBy(c => c.GameAnalysisId!.Value))
+        {
+            var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == group.Key).ToListAsync(ct);
+            foreach (var c in group) await _comparisons.ApplyAnalysisAsync(c, positions, _depth, ct);
+        }
+        return rows.Count;
     }
 
     /// <summary>
@@ -144,7 +173,7 @@ public sealed class ClubMistakeComparisons
             .OrderBy(a => a.Id).Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
         if (ownId is int wanted)
         {
-            await EnqueueAsync(_db, await _db.GameAnalyses.Include(a => a.Positions).FirstAsync(a => a.Id == wanted, ct), ct, _depth);
+            await EnqueueAsync(_db, await _db.GameAnalyses.Include(a => a.Positions).FirstAsync(a => a.Id == wanted, ct), ct, _depth, _logger);
             return true;
         }
         if (await _db.MoveComparisons.AnyAsync(c => c.GameAnalysisId != null && c.Status == MoveComparisonStatus.Waiting, ct)) return false;
@@ -156,7 +185,7 @@ public sealed class ClubMistakeComparisons
             .Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
         if (id is null) return false;
         var analysis = await _db.GameAnalyses.Include(a => a.Positions).FirstAsync(a => a.Id == id, ct);
-        var added = await EnqueueAsync(_db, analysis, ct, _depth);
+        var added = await EnqueueAsync(_db, analysis, ct, _depth, _logger);
         _logger.LogInformation("Zugvergleiche Vereinspartie {ClubGameId} (Analyse {Id}) nachgetragen: {Count} Fehler",
             analysis.LeagueClubGameId, analysis.Id, added);
         return true;
@@ -196,7 +225,9 @@ public sealed class ClubMistakeComparisons
             var wanted = await SummaryWantedAsync(_db, next.GameAnalysisId!.Value, ct);
             if (!wanted && active + startedNormal >= _maxActive) break;
             if (next.EngineOwnerUserId is int owner && !await EngineOwnerResolver.IsHouseEngineSharedAsync(_db, owner, ct)) break;
-            if (next.Depth != _depth) next.Depth = _depth;   // eine geänderte Tiefe gilt auch für schon angelegte, nicht gestartete
+            // Eine geänderte Tiefe gilt auch für schon angelegte, nicht gestartete — außer die Zahlen kommen (teils) schon aus der
+            // Analyse: dann bleibt deren Tiefe (≥ der verlangten), mit der auch die offenen Antwort-Tests rechnen.
+            if (next.Depth != _depth && next.Source is null or MoveComparisonSource.Engine) next.Depth = _depth;
             try { await _comparisons.StartWaitingAsync(next, ct); }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
             {

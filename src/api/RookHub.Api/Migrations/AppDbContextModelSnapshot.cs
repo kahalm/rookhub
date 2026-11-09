@@ -6182,6 +6182,9 @@ namespace RookHub.Api.Migrations
                     b.Property<int?>("Ply")
                         .HasColumnType("int");
 
+                    b.Property<int?>("Source")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 

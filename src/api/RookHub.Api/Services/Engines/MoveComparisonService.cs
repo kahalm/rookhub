@@ -151,7 +151,7 @@ public sealed class MoveComparisonService
         {
             UserId = userId, Fen = fen, Title = title is { Length: > 200 } ? title[..200] : title, Depth = depth,
             Language = GameMoveExplanationService.NormalizeLanguage(req.Lang), Status = MoveComparisonStatus.Candidates,
-            EngineOwnerUserId = owner == userId ? null : owner, CreatedAt = now, UpdatedAt = now,
+            EngineOwnerUserId = owner == userId ? null : owner, CreatedAt = now, UpdatedAt = now, Source = MoveComparisonSource.Engine,
         };
         for (var i = 0; i < ucis.Count; i++)
         {
@@ -241,12 +241,16 @@ public sealed class MoveComparisonService
     /// </summary>
     internal async Task StartWaitingAsync(MoveComparison c, CancellationToken ct)
     {
+        // Aus der Analyse vorbefüllt (MoveComparisonFromAnalysis): Kandidaten fertig, die Antwort-Tests stehen schon da — nur
+        // die offenen davon rechnen (eine Linie je Test), weiter ab „Antworten".
+        var replies = c.Lines.Any(l => l.Kind == MoveComparisonLineKind.Reply);
         var created = new List<int>();
         try
         {
-            foreach (var line in c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate && l.State == MoveComparisonLineState.Pending))
+            foreach (var line in c.Lines.Where(l => l.Kind == (replies ? MoveComparisonLineKind.Reply : MoveComparisonLineKind.Candidate)
+                && l.State == MoveComparisonLineState.Pending && l.AnalysisJobId == null))
             {
-                line.AnalysisJobId = await CreateJobAsync(c, line.Fen, CandidateLines, ct);
+                line.AnalysisJobId = await CreateJobAsync(c, line.Fen, replies ? 1 : CandidateLines, ct);
                 created.Add(line.AnalysisJobId.Value);
             }
         }
@@ -256,10 +260,35 @@ public sealed class MoveComparisonService
             foreach (var line in c.Lines) line.AnalysisJobId = null;
             throw;
         }
-        c.Status = MoveComparisonStatus.Candidates;
+        c.Status = replies ? MoveComparisonStatus.Replies : MoveComparisonStatus.Candidates;
+        c.Source ??= MoveComparisonSource.Engine;
         c.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         await PumpOneAsync(c.Id, ct);   // eine Stellung, die matt setzt, braucht keinen Auftrag
+    }
+
+    /// <summary>
+    /// Altbestand (<see cref="MoveComparison.Source"/> <c>null</c>): ein Vergleich einer Partie-Analyse, der noch wartet oder
+    /// seine Kandidaten rechnet, bekommt, was die vertiefte Analyse schon weiß (<see cref="MoveComparisonFromAnalysis.Apply"/>);
+    /// die Aufträge der übernommenen Zeilen kommen weg. Danach weiter wie gewohnt (Pumpe). → ob etwas übernommen wurde.
+    /// </summary>
+    internal async Task<bool> ApplyAnalysisAsync(MoveComparison c, IEnumerable<GameAnalysisPosition> positions, int minDepth, CancellationToken ct)
+    {
+        var jobs = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate && l.State == MoveComparisonLineState.Pending)
+            .ToDictionary(l => l, l => l.AnalysisJobId);
+        var filled = MoveComparisonFromAnalysis.Apply(c, positions, minDepth);
+        foreach (var line in filled)
+            if (jobs.TryGetValue(line, out var jobId) && jobId is int id)
+            {
+                await _jobs.DeleteAsync(c.UserId, id, ct);   // hält einen laufenden Auftrag an
+                line.AnalysisJobId = null;
+            }
+        c.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        if (filled.Count > 0)
+            _logger.LogInformation("Zugvergleich {Id} (Analyse {AnalysisId}, Halbzug {Ply}): {Count} Kandidaten aus der Analyse, Herkunft {Source}, Status {Status}",
+                c.Id, c.GameAnalysisId, c.Ply, filled.Count, c.Source, c.Status);
+        return filled.Count > 0;
     }
 
     /// <summary>Die Vergleiche zu den Fehlern einer Analyse (Vereinspartie), nach Halbzug — für jeden, der die Partie sieht
@@ -375,12 +404,33 @@ public sealed class MoveComparisonService
     /// besten Zug einreihen.</summary>
     private async Task StartRepliesAsync(MoveComparison c, CancellationToken ct)
     {
+        if (!AddReplyLines(c)) return;
+        // Vereinspartie: die Antwort, die schon die Hauptvariante nach dem besten Zug ist, braucht keinen Auftrag (2026-11-09).
+        if (c.GameAnalysisId != null) MoveComparisonFromAnalysis.DeriveRepliesFromBest(c);
+        c.Status = MoveComparisonStatus.Replies;
+        await _db.SaveChangesAsync(ct);
+        foreach (var line in c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply && l.State == MoveComparisonLineState.Pending))
+        {
+            try { line.AnalysisJobId = await CreateJobAsync(c, line.Fen, 1, ct); }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+            {
+                _logger.LogWarning("Zugvergleich {Id}: Antwort {Reply} nicht eingereiht: {Message}", c.Id, line.ReplyUci, ex.Message);
+                line.State = MoveComparisonLineState.Failed;
+            }
+        }
+    }
+
+    /// <summary>Kandidaten fertig: den besten bestimmen (<see cref="MoveComparison.BestUci"/>) und je schwächerem Kandidaten
+    /// dessen beste Antworten als Zeilen nach dem besten Zug anlegen (offen, ohne Auftrag; unmöglich/anderer Zug/Matt gleich
+    /// erledigt). <c>false</c> = kein Kandidat bewertbar, der Vergleich ist <see cref="MoveComparisonStatus.Failed"/>.</summary>
+    internal static bool AddReplyLines(MoveComparison c)
+    {
         var ranked = Ranked(c);
         if (ranked.Count == 0)
         {
             c.Status = MoveComparisonStatus.Failed;
             c.Error = "No candidate move could be calculated";
-            return;
+            return false;
         }
         var best = ranked[0].Line;
         c.BestUci = best.CandidateUci;
@@ -405,17 +455,7 @@ public sealed class MoveComparisonService
                 c.Lines.Add(line);
             }
         }
-        c.Status = MoveComparisonStatus.Replies;
-        await _db.SaveChangesAsync(ct);
-        foreach (var line in c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Reply && l.State == MoveComparisonLineState.Pending))
-        {
-            try { line.AnalysisJobId = await CreateJobAsync(c, line.Fen, 1, ct); }
-            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
-            {
-                _logger.LogWarning("Zugvergleich {Id}: Antwort {Reply} nicht eingereiht: {Message}", c.Id, line.ReplyUci, ex.Message);
-                line.State = MoveComparisonLineState.Failed;
-            }
-        }
+        return true;
     }
 
     /// <summary>
@@ -471,6 +511,9 @@ public sealed class MoveComparisonService
             .OrderByDescending(x => x.Score).ThenBy(x => x.Line.Ordinal)
             .ToList();
     }
+
+    /// <summary>Gibt es etwas zu begründen (einen gerechneten schwächeren Kandidaten)?</summary>
+    internal static bool HasWeakerCandidates(MoveComparison c) => WeakerCandidates(c).Any();
 
     private static IEnumerable<MoveComparisonLine> WeakerCandidates(MoveComparison c)
         => c.BestUci is null ? [] : c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate
@@ -804,7 +847,7 @@ public sealed class MoveComparisonService
             : candidates.OrderByDescending(x => x.Ranked).ThenByDescending(x => x.Score).ThenBy(x => x.Ordinal);
         return new MoveComparisonDto(c.Id, c.Fen, c.Title, c.Depth, StatusText(c.Status), c.Error, moverWhite, c.BestUci,
             c.Language, ExplanationsAvailable, c.Lines.Count(l => l.State == MoveComparisonLineState.Pending), c.Lines.Count,
-            c.CreatedAt, c.FinishedAt, ordered.Select(x => x.Dto).ToList());
+            c.CreatedAt, c.FinishedAt, ordered.Select(x => x.Dto).ToList(), SourceText(c.Source));
     }
 
     // d3-rk-vergleich-vorzeichen-widerspruch: die ganze Seite zeigt die Bewertung aus Sicht der Seite am Zug der
@@ -837,6 +880,13 @@ public sealed class MoveComparisonService
         MoveComparisonStatus.Done => "done",
         MoveComparisonStatus.Waiting => "waiting",
         _ => "failed",
+    };
+
+    private static string SourceText(MoveComparisonSource? s) => s switch
+    {
+        MoveComparisonSource.Analysis => "analysis",
+        MoveComparisonSource.Mixed => "mixed",
+        _ => "engine",
     };
 
     private static string StateText(MoveComparisonLineState s) => s switch

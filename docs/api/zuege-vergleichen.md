@@ -79,6 +79,35 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
   Haus-Engine nicht mehr freigegeben (nur bei gesetztem `EngineOwnerUserId`) oder der Auftragsdeckel voll, bleibt der Rest
   liegen. `ClubMistakeComparisons:Enabled=false` hält alles an. Begründung auf Deutsch (`Language` „de" — LeagueHub ist
   deutschsprachig).
+* **Aus der vertieften Analyse statt neu gerechnet** (Wunsch 2026-11-09 an Partie 145: „warum musst du eigentlich, wenn du die
+  Partie tief analysiert hast, die Fehler nochmals eigens analysieren? Sollten da nicht die bestehenden greifen?"):
+  `Services/Engines/MoveComparisonFromAnalysis.cs`, Spalte `MoveComparisons.Source` (Migration `MoveComparisonSource`;
+  `0` Engine, `1` Analysis = kein Auftrag, `2` Mixed = Rest gerechnet, `null` = Altbestand, noch nicht geprüft; im DTO `source`
+  `engine`/`analysis`/`mixed`, Log-Zeilen „… ganz aus der Analyse, … teilweise“). Angewendet beim Anlegen (`EnqueueAsync`) und
+  von der Pumpe einmal auf jeden ungeprüften Vergleich in `Waiting` oder `Candidates` (`ApplyAnalysisToUncheckedAsync`, am
+  `MaxActive`-Deckel vorbei; Aufträge übernommener Zeilen werden gelöscht).
+  * **Kandidat = Partiezug**: die Folgestellung (Halbzug + 1) IST die Stellung danach — ihre bis zu `CandidateLines` (3) besten
+    Linien sind die besten Antworten wie bei einem eigenen Auftrag. **Sonst** (bester Zug, oder Partiezug ohne brauchbare
+    Folgestellung): der Kandidat in der Stellung des Fehlers, seine Hauptvariante ab dem 2. Halbzug = EINE Linie der Stellung
+    danach (der beste Zug zeigt dann nur seine beste Antwort — mehr verwendet die Begründung ohnehin nicht).
+  * **Schwellen**: Stellung `Refined` UND `Depth` ≥ `ClubMistakeComparisons:Depth` (`Refined` steht auch bei aufgegebener
+    Vertiefung, dann bliebe Tiefe 20), Stellung passt (Brett/Zugrecht/Rochade), Linie ≥ 2 Halbzüge (Antwort des Gegners und die
+    eigene Erwiderung — beides braucht die Begründung) oder sie endet matt/patt; aus der Folgestellung muss deren BESTE Linie
+    taugen (sonst stimmte die Bewertung nicht). `Depth` des Vergleichs = die kleinste Tiefe der übernommenen Daten; sie bleibt
+    beim Start stehen (keine Angleichung an `:Depth`).
+  * **Vorzeichen**: `CandidatesJson` speichert die Sicht der Seite am Zug JENER Stellung (bei der Folgestellung also des
+    Gegners), die Zeilen des Vergleichs (`ResultJson`) die Weiß-Sicht wie eine Broker-Zeile (`{"depth":30,"pvs":[{"moves":[…],"cp":…}]}`)
+    — umgerechnet beim Übernehmen, gelesen wie jede Broker-Zeile.
+  * **Antwort-Tests** (beste Antworten auf den Fehlzug, gespielt nach dem besten Zug) sind NEUE Stellungen, die die Analyse nicht
+    kennt. Ausnahme: ist die Antwort genau die beste Antwort auf den besten Zug (dessen Hauptvariante), steht die eigene
+    Erwiderung schon dort (Fortsetzung, Bewertung des besten Zuges, Tiefe − 2) — `DeriveRepliesFromBest`, für alle Vergleiche
+    mit `GameAnalysisId`, auch gerechnete. Unmögliche / „anderer Zug“ / Matt brauchen ohnehin keinen Auftrag.
+  * **Rückfall**: nichts übernehmbar → wie bisher (`Engine`). Teilweise (ein Kandidat fehlt, oder offene Antwort-Tests) →
+    `Mixed`: nur das Fehlende wird gerechnet; die Schrittstruktur bleibt (offene Kandidaten → Status `Candidates`, sonst gleich
+    `Replies` mit je EINER Linie je offenem Test), gedeckelt wie gewohnt. Alles da → direkt `Explaining` (bzw. `Done`).
+  * **Kosten neu**: der teure Schritt (2 Kandidaten-Aufträge × 3 Linien, Tiefe 30) entfällt bei vertieften Partien fast immer;
+    übrig bleiben je Fehler 0–3 Antwort-Tests mit einer Linie, viele Vergleiche ganz ohne Auftrag (Schätzung, nicht gemessen:
+    statt ~5 min je Vergleich etwa 0–3 min).
 * **Begründung über Claude Fable** (0.911.0, Wunsch 2026-11-08: „mache dann (nur für Ligapartien ab dem 6.11.) auch die
   Analyse mit Fable über Token"): `Services/Engines/ClubFableExplanations.cs` (Singleton) + `Services/AnthropicJsonClient.cs`.
   Für Vergleiche mit `GameAnalysisId`, deren Vereinspartie am oder nach `ClubMistakeComparisons:FableFrom` (2026-11-06)
@@ -109,7 +138,7 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
 * **Weg damit**: Partie gelöscht → Analyse gelöscht (`GameAnalysisDeletion` räumt Zeilen + offene Aufträge, die DB kaskadiert
   `FK_MoveComparisons_GameAnalyses_GameAnalysisId`); Züge korrigiert → `RebaseClubGameAsync` löscht sie und setzt die Marke
   zurück, das neue Ende legt sie neu an.
-* **Kosten** (Stand 08.11.): Prod hatte 230 Vereinspartien mit fertiger Hauptanalyse (Tiefe 20, ohne Vertiefung). Partie 236
+* **Kosten** (Stand 08.11., vor der Übernahme aus der Analyse — siehe oben): Prod hatte 230 Vereinspartien mit fertiger Hauptanalyse (Tiefe 20, ohne Vertiefung). Partie 236
   von Hand mit Tiefe 24: 11 Fehler, je 1,5–3 min. Tiefe 35 ist 11 Halbzüge tiefer — grob Faktor 20–80 → etwa 0,5–4 h je
   Vergleich auf einer Engine, also Wochen für den ganzen Altbestand. Deshalb einer nach dem anderen, nur im Leerlauf, neueste
   zuerst; Tiefe und Gleichzeitigkeit sind Schlüssel.

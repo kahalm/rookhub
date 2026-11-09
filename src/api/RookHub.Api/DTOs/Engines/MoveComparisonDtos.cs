@@ -31,11 +31,12 @@ public record MoveComparisonCandidateDto(
 /// <summary>Bewertungen immer aus Sicht der Seite am Zug in <see cref="Fen"/> (<see cref="WhiteToMove"/>) — auch die der
 /// Antworten und Erwiderungen, also dieselbe Sicht wie die Begründung (<c>+0.35</c> = gut für sie, <c>#3</c> sie setzt
 /// matt, <c>#-2</c> sie wird matt; d3, vorher Weiß-Sicht). Kandidaten nach Stärke, der beste zuerst (noch nicht
-/// gerechnete hinten).</summary>
+/// gerechnete hinten). <see cref="Source"/>: <c>engine</c> / <c>analysis</c> (alles aus der vertieften Partie-Analyse) /
+/// <c>mixed</c> (Teil aus der Analyse, Rest gerechnet) — 2026-11-09.</summary>
 public record MoveComparisonDto(
     int Id, string Fen, string? Title, int Depth, string Status, string? Error, bool WhiteToMove, string? BestUci,
     string Language, bool ExplanationsAvailable, int Pending, int Total, DateTime CreatedAt, DateTime? FinishedAt,
-    IReadOnlyList<MoveComparisonCandidateDto> Candidates);
+    IReadOnlyList<MoveComparisonCandidateDto> Candidates, string Source = "engine");
 
 public record MoveComparisonSummaryDto(int Id, string Fen, string? Title, string Status, DateTime CreatedAt,
     IReadOnlyList<string> Moves, string? BestSan);
