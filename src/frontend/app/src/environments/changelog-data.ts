@@ -11,6 +11,16 @@ import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.940.3',
+    date: '2026-11-09',
+    changes: [
+      {
+        en: 'Internal clean-up of the move comparison behind the mistake explanations (code split into smaller parts, Codereview 2026-11-09, package Z1b) — no visible change in behaviour.',
+        de: 'Technischer Umbau am Zugvergleich hinter den Fehler-Erklärungen (Code in kleinere Teile zerlegt, Codereview 2026-11-09, Paket Z1b) — kein sichtbares Verhalten geändert.',
+      },
+    ],
+  },
+  {
     version: '0.940.2',
     date: '2026-11-09',
     changes: [
