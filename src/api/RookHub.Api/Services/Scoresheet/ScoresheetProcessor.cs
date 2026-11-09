@@ -95,6 +95,35 @@ internal sealed class ScoresheetProcessor
         var t = ScoresheetTranscription.Parse(json);
         if (t == null) return (null, "invalidTranscription");
 
+        // Quer fotografiert (gemeldet 2026-11-09 an LeagueHub-Formular 110): die Server-Lesung dreht das Foto selbst
+        // (ProcessAsync), die Lesung von außen bisher nicht — die Korrekturseite zeigte das Blatt quer. Dieselbe Erkennung
+        // aus den Kästen; die Kästen werden mitgedreht, damit die Ausschnitte je Zug passen.
+        if (sizes.All(x => x != null) && sizes.Count == photos.Count)
+        {
+            var turns = Enumerable.Range(1, photos.Count).Select(p => ScoresheetOrientation.Detect(t, p)).ToList();
+            var upright = photos.Select((p, i) => turns[i] == 0 ? p : ScoresheetImage.Rotate(p, turns[i])).ToList();
+            if (turns.Any(d => d != 0) && upright.All(p => p != null)
+                && ScoresheetTranscription.RotateBoxes(transcriptionJson, turns, sizes.Select(x => x!.Value).ToList()) is { } turned)
+            {
+                var turnedSizes = sizes.Select((x, i) => turns[i] is 90 or 270 ? (x!.Value.Height, x.Value.Width) : x!.Value).ToList();
+                if (ScoresheetTranscription.Parse(ScoresheetTranscription.WithImageSize(turned, turnedSizes)) is { } tt)
+                {
+                    _logger.LogInformation("Formular-Einlesung {ScanId}: Foto der Lesung von außen gedreht ({Turns}°)",
+                        scan.Id, string.Join("/", turns));
+                    json = ScoresheetTranscription.WithImageSize(turned, turnedSizes);
+                    t = tt;
+                    if (turns[0] != 0) { scan.Photo = upright[0]!; scan.ContentType = "image/jpeg"; }
+                    if (photos.Count > 1)
+                    {
+                        var pages = await _db.ScoresheetScanPages.Where(p => p.ScoresheetScanId == scan.Id)
+                            .OrderBy(p => p.Page).ToListAsync(ct);
+                        for (var i = 0; i < pages.Count && i + 1 < upright.Count; i++)
+                            if (turns[i + 1] != 0) { pages[i].Photo = upright[i + 1]!; pages[i].ContentType = "image/jpeg"; }
+                    }
+                }
+            }
+        }
+
         scan.Status = ScoresheetScanStatus.Running;
         scan.StartedAt ??= DateTime.UtcNow;
         scan.Attempts++;
@@ -285,9 +314,10 @@ internal sealed class ScoresheetProcessor
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Formular-Einlesung {ScanId} (Vereins-Datenbank) fertig: {Plies} Halbzüge, {Uncertain} unsicher",
                 scan.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain));
-            // Über einen Teilen-Link ohne Konto: übernimmt der Hochladende die Partie nicht selbst, bleibt sie liegen, bis ein
-            // Verwalter sie freigibt — die erfahren es per Glocke (0.904.0, Wunsch 2026-11-08). Mit Konto übernimmt man selbst.
-            if (scan.UserId is null && scan.ClubId is int clubId) await NotifyLeagueManagersAsync(scan, clubId, t, ct);
+            // Die Verwalter des Vereins erfahren es per Glocke (0.904.0 über einen Teilen-Link ohne Konto, Wunsch 2026-11-08).
+            // Seit 0.917.1 auch, wenn ein Mitglied mit Konto hochlud (Formular 110 lag eine Nacht unbemerkt) — nur nicht
+            // der Hochladende selbst, der steht ja gerade davor.
+            if (scan.ClubId is int clubId) await NotifyLeagueManagersAsync(scan, clubId, t, ct, except: scan.UserId);
             return;
         }
 
@@ -385,7 +415,8 @@ internal sealed class ScoresheetProcessor
     /// <summary>Glocke <see cref="NotificationType.LeagueScanAwaiting"/> an die Verwalter des Vereins: Admins und wer
     /// <c>league.manage</c> hat UND zum Verein gehört (dieselbe Regel wie <c>LeagueClubResolver.CanManageAsync</c>). Beiwerk —
     /// ein Fehler lässt die Einlesung nicht scheitern.</summary>
-    internal async Task NotifyLeagueManagersAsync(ScoresheetScan scan, int clubId, ScoresheetTranscription t, CancellationToken ct)
+    internal async Task NotifyLeagueManagersAsync(ScoresheetScan scan, int clubId, ScoresheetTranscription t, CancellationToken ct,
+        int? except = null)
     {
         try
         {
@@ -393,7 +424,7 @@ internal sealed class ScoresheetProcessor
             var admins = (await _db.AppUsers.AsNoTracking().Where(u => holders.Contains(u.Id) && u.IsAdmin).Select(u => u.Id)
                 .ToListAsync(ct)).ToHashSet();
             var recipients = new List<int>();
-            foreach (var id in holders)
+            foreach (var id in holders.Where(h => h != except))
                 if (admins.Contains(id) || (await League.LeagueClubResolver.ClubIdsOfAsync(_db, id, ct)).Contains(clubId))
                     recipients.Add(id);
             if (recipients.Count == 0) return;

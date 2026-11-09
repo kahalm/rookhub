@@ -10,6 +10,16 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.917.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Scoresheets read by the background reader: a sideways photo is now stored upright (with the move boxes turned along), so the review page no longer shows the sheet on its side.',
+        de: 'Partieformulare, die der Hintergrund-Leser liest: ein quer fotografiertes Blatt wird jetzt aufrecht gespeichert (die Zug-Kästen mitgedreht) — die Prüfseite zeigt es nicht mehr quer.' },
+      { en: 'LeagueHub: when a club member uploads a scoresheet with their account, the club managers now get a bell notification once it has been read (not the uploader).',
+        de: 'LeagueHub: lädt ein Vereinsmitglied ein Formular mit Konto hoch, bekommen die Verwalter des Vereins nach dem Lesen jetzt eine Glocke (der Hochladende nicht).' },
+    ],
+  },
   { version: "0.917.0", date: "2026-11-09", changes: [
     { en: "Rules of thumb: the explanations of club-game mistakes no longer invent their own maxim. Claude picks at most one from a fixed, curated list of 51 classic rules (“A knight on the rim is dim”, “Loose pieces drop off”, Capablanca’s bishop rule …), each backed by passages from chess books — the wording is always the same.",
       de: "Merksätze: Die Erklärungen der Fehler in Vereinspartien erfinden keinen eigenen Merksatz mehr. Claude wählt höchstens einen aus einer festen, kuratierten Liste von 51 klassischen Regeln („Springer am Rand bringt Kummer und Schand“, „Ungedeckte Figuren fallen“, Capablancas Läuferregel …), jede mit Stellen aus Schachbüchern belegt — der Wortlaut ist immer derselbe." },

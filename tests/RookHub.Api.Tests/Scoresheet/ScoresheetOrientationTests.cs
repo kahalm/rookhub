@@ -91,4 +91,20 @@ public class ScoresheetOrientationTests
         Assert.Null(ScoresheetImage.Transform(jpeg, 0, (0.6, 0, 0.4, 1)));
         Assert.Null(ScoresheetImage.Transform(jpeg, 0, (0, 0, 1.2, 1)));
     }
+
+    /// <summary>Formular 110 (0.917.1): Kästen einer Lesung von außen werden mit dem Foto gedreht — je Seite ihr Winkel.</summary>
+    [Fact]
+    public void RotateBoxes_TurnsEachPageByItsOwnAngle()
+    {
+        const string json = """{"moves":[{"box":[10,20,30,40],"page":1},{"box":[10,20,30,40],"page":2},{"box":[1,2,3]},{"note":"x"}]}""";
+
+        var turned = ScoresheetTranscription.RotateBoxes(json, new[] { 180, 270 }, new[] { (100, 200), (100, 200) });
+
+        var m = System.Text.Json.Nodes.JsonNode.Parse(turned!)!["moves"]!.AsArray();
+        Assert.Equal("[70,160,90,180]", m[0]!["box"]!.ToJsonString());   // 180°: (W − x, H − y)
+        Assert.Equal("[20,70,40,90]", m[1]!["box"]!.ToJsonString());      // 270°: (y, W − x)
+        Assert.Equal("[1,2,3]", m[2]!["box"]!.ToJsonString());            // unbrauchbar bleibt, wie es ist
+        Assert.Null(ScoresheetTranscription.RotateBoxes(json, new[] { 45 }, new[] { (100, 200) }));
+        Assert.Null(ScoresheetTranscription.RotateBoxes("kein json", new[] { 90 }, new[] { (100, 200) }));
+    }
 }

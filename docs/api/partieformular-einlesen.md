@@ -120,7 +120,9 @@ Einlesung (RookHub UND LeagueHub, mit Konto oder über einen Teilen-Link) bleibt
 (`~/claude/formulare-bot/watch.sh`, Claude in einer eingeschränkten Sitzung) sie über `/api/admin/scoresheets` liest und
 die Lesung zurückgibt. `ProcessReadingAsync` nimmt sie in der Form der Modell-Antwort (Kästen in Pixeln des aufrechten,
 auf 2000 px verkleinerten Fotos) und geht danach denselben Weg wie eine gelesene (`FinishAsync`: Auflösung,
-Engine-Prüfung, Liga → offen zum Prüfen, eigene → Partie + Glocke); `Model = "claude-manual"`. Der Schlüssel ist
+Engine-Prüfung, Liga → offen zum Prüfen, eigene → Partie + Glocke); `Model = "claude-manual"`. Quer fotografiert (aus den Kästen
+erkannt, `ScoresheetOrientation`) → das gespeicherte Foto wird aufrecht gedreht und die Kästen mit
+(`ScoresheetTranscription.RotateBoxes`, seit 0.917.1; vorher drehte nur die Server-Lesung, Formular 110 stand quer). Der Schlüssel ist
 dabei nicht nötig (`Available` gilt auch ohne), und Tageszahl/Anzahl offener gelten weiter, die Kostenbremse nicht
 (keine Kosten). Der Watcher läuft seit 21.10.2026 jede Minute (crontab, vorher alle 5) und meldet das Abholen über
 `POST /api/admin/scoresheets/{id}/start` (Status `running`, `StartedAt`). Die Seiten zeigen seit 0.817.0 zwei Schritte mit

@@ -582,8 +582,10 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Contains("\"white\":\"Didi\"", bells[0].DataJson);
     }
 
+    /// <summary>Gemeldet 2026-11-09 (Formular 110): ein Mitglied lud MIT Konto hoch, die Lesung lag eine Nacht, ohne dass ein
+    /// Verwalter davon wusste. Seit 0.917.1 läutet die Glocke auch dann — nur nicht beim Hochladenden selbst.</summary>
     [Fact]
-    public async Task ProcessReading_LeagueScanWithAccount_RingsNoManager()
+    public async Task ProcessReading_LeagueScanWithAccount_RingsTheManagers_ButNotTheUploader()
     {
         WithExternalReader();
         await TestClubs.SeedAsync(_db);
@@ -593,10 +595,47 @@ public class ScoresheetScanServiceTests : IDisposable
         await _db.SaveChangesAsync();
         var (scan, _) = await _service.CreateAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "a.jpg") }, "auto",
             purpose: ScoresheetScan.PurposeLeague, clubId: TestClubs.HomeId);
+        var (byAdmin, _) = await _service.CreateAsync(admin.Id, new[] { new ScoresheetUpload(Jpeg(), "image/jpeg", "b.jpg") }, "auto",
+            purpose: ScoresheetScan.PurposeLeague, clubId: TestClubs.HomeId);
 
         await _service.ProcessReadingAsync(scan!.Id, Answer(Written));
+        await _service.ProcessReadingAsync(byAdmin!.Id, Answer(Written));
 
-        Assert.Empty(await _db.Notifications.Where(n => n.Type == NotificationType.LeagueScanAwaiting).ToListAsync());
+        var bells = await _db.Notifications.Where(n => n.Type == NotificationType.LeagueScanAwaiting).ToListAsync();
+        var bell = Assert.Single(bells);                                   // nur für das Formular des Mitglieds
+        Assert.Equal(admin.Id, bell.UserId);
+    }
+
+    /// <summary>Gemeldet 2026-11-09 (Formular 110): quer fotografiert, von außen gelesen — die Korrekturseite zeigte das Blatt
+    /// quer, weil nur die Server-Lesung drehte. Jetzt wird auch hier aufrecht gespeichert, die Kästen mitgedreht.</summary>
+    [Fact]
+    public async Task ProcessReading_SidewaysPhoto_IsStoredUpright_WithTurnedBoxes()
+    {
+        WithExternalReader();
+        var u = await UserAsync();
+        var (scan, _) = await _service.CreateAsync(u.Id, new[] { new ScoresheetUpload(Jpeg(400, 300), "image/jpeg", "a.jpg") }, "auto",
+            purpose: ScoresheetScan.PurposeLeague);
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        for (var i = 0; i < moves.Count; i++)
+        {
+            // Aufrecht (300 × 400): Zug n in Zeile n, Weiß x 50, Schwarz x 200. Im queren Foto (400 × 300) liegt der
+            // aufrechte Punkt (x, y) bei (y, 300 − x) — gedreht wird also um 90° im Uhrzeigersinn.
+            var (x, y) = (50 + (i % 2) * 150, 20 + (i / 2) * 10);
+            var (px, py) = (y, 300 - x);
+            moves[i]!["box"] = new JsonArray(px - 2, py - 2, px + 2, py + 2);
+        }
+
+        var (done, reason) = await _service.ProcessReadingAsync(scan!.Id, json.ToJsonString());
+
+        Assert.Null(reason);
+        Assert.Equal("done", done!.Status);
+        var stored = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal((300, 400), ScoresheetImage.Size(stored.Photo));
+        var t = JsonNode.Parse(stored.TranscriptionJson!)!;
+        Assert.Equal(300, (int)t["imageWidth"]!);
+        Assert.Equal(400, (int)t["imageHeight"]!);
+        Assert.Equal("[48,18,52,22]", t["moves"]![0]!["box"]!.ToJsonString());
     }
 
     [Fact]

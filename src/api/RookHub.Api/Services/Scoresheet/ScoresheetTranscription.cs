@@ -50,6 +50,48 @@ public sealed class ScoresheetTranscription
         catch (JsonException) { return json; }
     }
 
+    /// <summary>
+    /// Die Kästen (Pixel des Bildes mit <paramref name="sizes"/> je Seite) so umrechnen, als wäre Seite i um
+    /// <paramref name="turns"/>[i] Grad im Uhrzeigersinn gedreht (0/90/180/270) — für ein Foto, das nach einer Lesung von
+    /// außen aufrecht gedreht wird (0.917.1, Formular 110). <c>null</c> bei kaputtem JSON oder falschem Winkel; Einträge
+    /// ohne brauchbaren Kasten bleiben unverändert.
+    /// </summary>
+    public static string? RotateBoxes(string json, IReadOnlyList<int> turns, IReadOnlyList<(int Width, int Height)> sizes)
+    {
+        if (turns.Any(d => d is not (0 or 90 or 180 or 270)) || turns.Count != sizes.Count) return null;
+        try
+        {
+            if (System.Text.Json.Nodes.JsonNode.Parse(json) is not System.Text.Json.Nodes.JsonObject o) return null;
+            if (o["moves"] is not System.Text.Json.Nodes.JsonArray moves) return o.ToJsonString();
+            foreach (var m in moves.OfType<System.Text.Json.Nodes.JsonObject>())
+            {
+                var page = turns.Count > 1 && m["page"] is System.Text.Json.Nodes.JsonValue pv && pv.TryGetValue<int>(out var pg)
+                    ? Math.Clamp(pg, 1, turns.Count) : 1;
+                var turn = turns[page - 1];
+                if (turn == 0 || m["box"] is not System.Text.Json.Nodes.JsonArray { Count: 4 } box) continue;
+                var v = new double[4];
+                var ok = true;
+                for (var i = 0; i < 4; i++)
+                    if (box[i] is System.Text.Json.Nodes.JsonValue jv && jv.TryGetValue<double>(out var d)) v[i] = d; else ok = false;
+                if (!ok) continue;
+                var (w, h) = sizes[page - 1];
+                (double X, double Y) P(double x, double y) => turn switch
+                {
+                    90 => (h - y, x),
+                    180 => (w - x, h - y),
+                    _ => (y, w - x),   // 270
+                };
+                var a = P(v[0], v[1]);
+                var b = P(v[2], v[3]);
+                m["box"] = new System.Text.Json.Nodes.JsonArray(
+                    (int)Math.Round(Math.Min(a.X, b.X)), (int)Math.Round(Math.Min(a.Y, b.Y)),
+                    (int)Math.Round(Math.Max(a.X, b.X)), (int)Math.Round(Math.Max(a.Y, b.Y)));
+            }
+            return o.ToJsonString();
+        }
+        catch (JsonException) { return null; }
+    }
+
     /// <summary>Je Eintrag seine Seite (1-basiert), in 1..<see cref="PageCount"/> geklemmt — bei einer Seite immer 1.</summary>
     public List<int> EntryPages() => Moves.Select(m => PageOf(m)).ToList();
 

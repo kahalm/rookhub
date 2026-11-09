@@ -152,7 +152,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   Teilen-Links liefern die Vereinspartien im PGN mit („pgn sind nicht geschützt").
 * **Partieformular**: dieselbe Einlesung wie in RookHub (`ScoresheetScan.Purpose = "league"`) und dieselbe Kostenbremse,
   aber eine EIGENE Tageszahl: **10 je Nutzer und 24 h** (`Scoresheet:LeagueDailyLimit`, RookHub bleibt bei 1); KEINE
-  Partie in „Meine Partien", keine Glocke, nicht in `GET /api/scoresheets`. **Ohne Konto** (Teilen-Link):
+  Partie in „Meine Partien", nicht in `GET /api/scoresheets`; fertig gelesen → Glocke `league_scan_awaiting` an die
+  Verwalter des Vereins (Admins + `league.manage` mit Mitgliedschaft, Link auf `/verein/formular/{id}`) — seit 0.904.0 ohne
+  Konto, seit 0.917.1 auch mit Konto (gemeldet 09.11.: Formular 110 lag eine Nacht unbemerkt), nie an den Hochladenden. **Ohne Konto** (Teilen-Link):
   `ScoresheetScan.UserId` ist `null`, die Einlesung gehört dem Browser mit dem geheimen `AccessKey` (32 Hex, einmal beim
   Hochladen ausgegeben, LeagueHub merkt ihn im localStorage `lh-anon-scans`); **höchstens 10 je IP und 100 je Tag für
   alle zusammen** (`AnonPerIpDailyLimit`, `AnonDailyLimit`, Absage `dailyLimit` bzw. `anonDailyLimit`), drei offene je
