@@ -1,4 +1,6 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
@@ -29,8 +31,10 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
     /// <summary>Höchstens <paramref name="max"/> Analysen nachrechnen; gibt die Zahl der gerechneten zurück (öffentlich für
     /// Tests). Fehlerfang je Analyse (R4-007): eine werfende Analyse stand vorher bei jedem Takt wieder vorn
     /// (OrderByDescending(Id)) und hielt alle älteren dauerhaft auf. Jetzt wird sie mit dem aktuellen Regelstand und OHNE
-    /// Klassen vermerkt (Warnung im Log) — die nächste Regeländerung versucht sie erneut. <paramref name="store"/> nur für
-    /// Tests (Vorgabe <see cref="GameMoveClasses.Store"/>).</summary>
+    /// Klassen vermerkt (Warnung im Log) — die nächste Regeländerung versucht sie erneut. Das gilt nur für Fehler, die an der
+    /// Analyse selbst hängen: ein Datenbank- oder Abbruchfehler (<see cref="IsTransient"/>, z. B. Lock-Wait-Timeout im
+    /// nächtlichen Backup-Fenster) lässt die Analyse unvermerkt, der nächste Takt versucht sie erneut (GL-BE3-01).
+    /// <paramref name="store"/> nur für Tests (Vorgabe <see cref="GameMoveClasses.Store"/>).</summary>
     public static async Task<int> HarvestAsync(AppDbContext db, int max, CancellationToken ct = default, ILogger? logger = null,
         Action<GameAnalysis>? store = null)
     {
@@ -51,6 +55,10 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
                 await db.SaveChangesAsync(ct);
                 done++;
             }
+            catch (Exception ex) when (!ct.IsCancellationRequested && IsTransient(ex))
+            {
+                logger?.LogWarning(ex, "Zug-Klassen ernten: Analyse {AnalysisId} wegen eines Datenbankfehlers ausgelassen, nächster Takt versucht sie erneut", id);
+            }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
                 db.ChangeTracker.Clear();
@@ -64,6 +72,11 @@ public class MoveClassHarvestWorker(IServiceScopeFactory scopeFactory, ILogger<M
         }
         return done;
     }
+
+    /// <summary>Vorübergehende Fehler, die nichts über die Analyse sagen: Speichern/Laden in der Datenbank (auch nach
+    /// erschöpften Wiederholungen der Execution-Strategy) und Abbrüche/Zeitüberschreitungen.</summary>
+    internal static bool IsTransient(Exception ex) =>
+        ex is DbUpdateException or DbException or RetryLimitExceededException or OperationCanceledException or TimeoutException;
 
     /// <summary>Unrechenbare Analyse als „auf diesem Regelstand gesehen, ohne Klassen" vermerken.</summary>
     private static async Task SkipAsync(AppDbContext db, int id, CancellationToken ct)

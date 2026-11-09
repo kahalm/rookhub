@@ -110,4 +110,33 @@ public class GameMoveClassesTests
         Assert.NotNull(rows[990111].MoveClasses);
         Assert.Equal(((string?)null, (int?)GameMoveClasses.Version), (rows[990112].MoveClasses, rows[990112].MoveClassesVersion));
     }
+
+    /// <summary>GL-BE3-01: ein vorübergehender Datenbank- oder Abbruchfehler vermerkt die Analyse NICHT als „ohne Klassen“ —
+    /// sie bleibt offen und wird beim nächsten Takt gerechnet.</summary>
+    [Theory]
+    [InlineData("db")]
+    [InlineData("cancel")]
+    [InlineData("timeout")]
+    public async Task Harvest_VoruebergehenderFehler_bleibtOffen_naechsterTaktRechnet(string kind)
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.GameAnalyses.Add(new GameAnalysis { Id = 990121, UserId = 1, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done, PlyCount = 71, Positions = Game228().Positions });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        void Failing(GameAnalysis a) => throw (kind switch
+        {
+            "db" => (Exception)new DbUpdateException("Lock wait timeout exceeded"),
+            "cancel" => new OperationCanceledException(),
+            _ => new TimeoutException(),
+        });
+
+        Assert.Equal(0, await MoveClassHarvestWorker.HarvestAsync(db, 10, store: Failing));
+        var row = await db.GameAnalyses.AsNoTracking().SingleAsync(a => a.Id == 990121);
+        Assert.Null(row.MoveClassesVersion);   // nicht dauerhaft als „ohne Klassen“ vermerkt
+
+        Assert.Equal(1, await MoveClassHarvestWorker.HarvestAsync(db, 10));
+        row = await db.GameAnalyses.AsNoTracking().SingleAsync(a => a.Id == 990121);
+        Assert.Equal(GameMoveClasses.Version, row.MoveClassesVersion);
+        Assert.NotNull(row.MoveClasses);
+    }
 }
