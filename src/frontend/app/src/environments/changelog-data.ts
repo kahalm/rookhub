@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.941.8", date: "2026-11-09", changes: [
+    { en: "UI sweep: many more views are now captured — every admin tab, the training-goal and friends tabs, analysis without engine, the login hint for pages that need an account, „delete account“, the error page of every share link, LeagueHub’s single shared game, lineups on the share link and the other upload kinds, plus the tournament map and calendar tabs. The route check now also verifies tab links and nested routes; a cancelled twin request on the summary error pages no longer counts as a finding, and the test data clean up their own stuck scoresheet uploads.",
+      de: "UI-Sweep: Deutlich mehr Ansichten werden fotografiert — jeder Admin-Reiter, die Reiter der Trainingsziele und Freunde, die Analyse ohne Engine, der Anmeldehinweis für Seiten mit Konto, „Konto löschen“, die Fehlerseite jedes Teilen-Links, die einzelne geteilte Ligapartie in LeagueHub, die Aufstellungen am Teilen-Link und die anderen Eingabearten sowie Karte und Kalender der Turnierseite. Der Routen-Abgleich prüft jetzt auch Reiter-Links und Kind-Routen; eine abgebrochene Schwester-Anfrage auf den Fehlerseiten der Zusammenfassung zählt nicht mehr als Befund, und die Testdaten räumen ihre eigenen hängenden Formular-Einlesungen auf." },
+  ] },
   { version: "0.941.7", date: "2026-11-09", changes: [
     { en: "LeagueHub: on a phone, the round picker of a shared match no longer makes the whole page scroll sideways — it stays within the screen width.",
       de: "LeagueHub: Am Handy lässt die Rundenauswahl eines geteilten Links nicht mehr die ganze Seite seitlich scrollen — sie bleibt in der Bildschirmbreite." },

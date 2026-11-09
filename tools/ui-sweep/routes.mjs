@@ -28,13 +28,17 @@ export const APPS = {
 //                die mit 404 „nein" sagt). Liste von RegExps auf die Berichtszeile `METHODE /pfad?abfrage → STATUS`
 //                (wie in `failedRequests`); Treffer zählen nicht als Befund, sie stehen unter `expectedFailed`. Eng
 //                fassen (Methode, Pfad UND Status) und im Kommentar sagen, wo im Frontend die Absicht steht.
-//                Zustände (states.mjs) erben die Liste ihrer Route.
+//                Zustände (states.mjs) erben die Liste ihrer Route. Gilt auch für abgebrochene Anfragen (Zeile
+//                `METHODE /pfad — net::ERR_ABORTED`): bricht die Seite nach einer erwarteten Fehlantwort eine zweite,
+//                parallele Anfrage ab (forkJoin), steht das abgebrochene Gegenstück ebenfalls hier — eng gefasst.
+//   roles      — nur diese Rollen (z. B. ['admin'] für die Admin-Reiter, die ein normales Konto nie sieht); ohne Angabe
+//                alle, die `auth` zulässt. Zustände erben die Einschränkung.
 const r = (app, url, auth = 'any', o = {}) => {
-  const { label, main = null, foldExempt = false, expectedFailures = [] } = typeof o === 'string' ? { label: o } : o;
-  return { app, url, auth, label, main, foldExempt, expectedFailures };
+  const { label, main = null, foldExempt = false, expectedFailures = [], roles = null } = typeof o === 'string' ? { label: o } : o;
+  return { app, url, auth, label, main, foldExempt, expectedFailures, roles };
 };
 
-/** Ist diese Fehlantwort (Zeile wie in `failedRequests`, „GET /api/x/1 → 404") für die Route erwartet? */
+/** Ist diese Fehlantwort (Zeile wie in `failedRequests`, „GET /api/x/1 → 404“ bzw. „GET /api/x/1 — net::ERR_ABORTED“) für die Route erwartet? */
 export function isExpectedFailure(route, line) {
   return (route?.expectedFailures ?? []).some(re => re.test(line));
 }
@@ -56,6 +60,14 @@ const LH_UPLOAD = ['section.panel', '.seg.club-kind', 'section.gate'];
 const LH_FIXTURE = ['lh-fixture article.fixture', 'lh-fixture .empty', 'section.gate', 'section.empty', 'section.cta'];
 const KID_PUZZLE = ['kid-puzzle cg-board', 'kid-puzzle app-puzzle-board', 'p.info', 'kid-error'];
 const KID_STARS = ['kid-stars-play cg-board', 'app-puzzle-board', 'p.info'];
+const SUMMARY = ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'];
+// Admin-Reiter (`/admin?tab=<key>`, Schlüssel aus admin-tabs.ts): Hauptsache = erstes Kind der Reiter-Komponente.
+const ADMIN_TAB = comp => [`.admin-container app-${comp} > *`, `.admin-container app-${comp}`, '.admin-container mat-tab-group'];
+const ADMIN_TABS = { books: 'admin-books-tab', daily: 'admin-daily-puzzle', puzzles: 'admin-puzzle-tags', groups: 'admin-groups-tab',
+  menu: 'admin-menu-visibility', messages: 'admin-messages', courseDl: 'admin-chessable-download', ci: 'admin-github-actions',
+  roles: 'admin-roles', uploads: 'admin-league-uploads', jobs: 'admin-background-jobs' };
+// Reiter der Trainingsziele (`?tab=`, TABS in training-goals.component.ts): der Inhalt des AKTIVEN Reiters.
+const TG_TAB = ['.tg-tabs .mat-mdc-tab-body-active .tab-body > *', '.tg-container app-load-error', '.tg-container app-loading-spinner'];
 const COURSE_BROWSE = ['.browse-container .board-pane app-puzzle-board', '.browse-container .line-list .line-row', '.browse-container .empty-state', '.browse-container app-loading-spinner'];
 
 export const ROUTES = [
@@ -63,12 +75,19 @@ export const ROUTES = [
   // Start: angemeldet → /dashboard, abgemeldet → /puzzles (GUEST_START_URL) — Selektoren für beide.
   r('rookhub', '/', 'any', { label: 'start', main: ['.dashboard-grid > mat-card', '.board-section app-puzzle-board'] }),
   r('rookhub', '/login', 'anon', { main: AUTH_FORM, expectedFailures: [/^POST \/api\/auth\/login → 401$/] }),
+  // So landet ein Gast auf der Maske, wenn er eine Seite mit Konto öffnet (authGuard): Hinweis „… um fortzufahren“ samt Bereich.
+  r('rookhub', '/login?authRequired=1&returnUrl=%2Fcourses', 'anon', { label: 'login-anmeldung-noetig', main: AUTH_FORM }),
   r('rookhub', '/register', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/forgot-password', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/reset-password?token=ui-sweep', 'anon', { main: AUTH_FORM }),
   r('rookhub', '/dashboard', 'user', { main: ['.dashboard-grid > mat-card', '.dashboard-grid'] }),
   r('rookhub', '/profile', 'user', { main: ['app-theme-card .theme-section', '.profile-form', '.profile-container .retry-btn', '.profile-container mat-card'] }),
+  // „Konto löschen …“ aus den Rechtsseiten (UX-023): `?section=delete` klappt die Karte auf und scrollt zu ihr — ein Sprungziel
+  // weit unten, die Falz-Messung (Seite oben) passt nicht: Ausnahme.
+  r('rookhub', '/profile?section=delete', 'user', { label: 'profile-konto-loeschen', main: ['app-delete-account-card mat-card', 'app-delete-account-card'], foldExempt: true }),
   r('rookhub', '/friends', 'user', { main: ['.friends-tabs mat-list-item', '.friends-tabs .empty-state'] }),
+  // Dritter Reiter „Herausforderungen“ über den Glocken-Link `?tab=challenges` (der zweite, Anfragen: Zustand `anfragen`).
+  r('rookhub', '/friends?tab=challenges', 'user', { label: 'friends-challenges', main: ['.friends-tabs .mat-mdc-tab-body-active mat-list-item', '.friends-tabs .mat-mdc-tab-body-active .empty-state', '.friends-tabs'] }),
   r('rookhub', '/friends/{friendId}/stats', 'user', { main: ['.compare-card .compare-table tbody tr', '.compare-card'] }),
   r('rookhub', '/friends/{friendId}/revenge', 'user', { main: ['.rev-item', '.rev-container .empty-state'] }),
   r('rookhub', '/repertoires', 'user', { main: ['.repertoire-grid .rep-card', '.repertoire-container .empty-state'] }),
@@ -85,6 +104,7 @@ export const ROUTES = [
   r('rookhub', '/repertoires/{repertoireEndgameId}', 'user', { label: 'repertoires-endgame', main: ['.viewer-layout app-chess-board', '.detail-header .train-btn'] }),
   r('rookhub', '/repertoires/{repertoireEndgameId}/train', 'user', { label: 'repertoires-endgame-train', main: ['.play app-puzzle-board', 'mat-card.msg'] }),
   r('rookhub', '/l/{lineToken}', 'any', { main: ['.viewer app-chess-board', '.shared-page .empty-state'] }),
+  r('rookhub', '/l/ungueltig', 'any', { label: 'l-invalid', main: ['.shared-page .empty-state', '.viewer app-chess-board'], expectedFailures: [/^GET \/api\/[\w/-]*\/ungueltig → 404$/] }),
   r('rookhub', '/puzzles', 'any', { main: PUZZLE_BOARD }),
   r('rookhub', '/puzzles/{puzzleId}', 'any', { main: PUZZLE_BOARD }),
   r('rookhub', '/puzzles/endless', 'any', { main: ['.play-screen app-puzzle-board', '.config-card .start-btn-top', '.config-screen'] }),
@@ -114,6 +134,8 @@ export const ROUTES = [
   r('rookhub', '/guess', 'any', { main: ['.game-row', '.lists .start-card', '.gl-container .start-card'] }),
   r('rookhub', '/guess/{guessId}', 'any', { main: ['.board-col app-chess-board', '.gb-container mat-card'] }),
   r('rookhub', '/analysis', 'any', { main: ['.board-wrap app-analysis-board', '.board-col app-position-setup.editor-full'] }),
+  // „Ohne Engine analysieren“ (0.855.0/0.895.0): eigene Linien, keine Bewertung — so öffnet `?blind=1` von jeder Partieseite.
+  r('rookhub', '/analysis?blind=1&moves=e2e4,e7e5,g1f3,b8c6,f1b5', 'any', { label: 'analysis-ohne-engine', main: ['.board-wrap app-analysis-board', '.board-col app-position-setup.editor-full'] }),
   r('rookhub', '/analysis/games', 'user', { main: ['mat-card.ga', '.ga-container .empty-state', '.new-card'] }),
   r('rookhub', '/analysis/games/{analysisId}', 'user', { main: ['.board-col app-chess-board', '.gad-container mat-card'] }),
   r('rookhub', '/analysis/jobs', 'user', { main: ['mat-card.job', '.jobs-container .empty-state'] }),
@@ -135,23 +157,38 @@ export const ROUTES = [
   // Vereinspartie über den LeagueHub-Teilen-Link (0.838.3, „Analyse“ ohne Konto)
   r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}', 'any', { main: GAME_BOARD }),
   r('rookhub', '/g/{gameShareToken}', 'any', { main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
-  r('rookhub', '/g/{gameShareToken}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
+  r('rookhub', '/g/{gameShareToken}/summary', 'any', { main: SUMMARY }),
   // 0.939.0/0.925.0: Vereinspartie über eigenen Link (/cg/…) und Zusammenfassung über den Liga-Teilen-Link. Den /cg/-Token
   // legt der Seed an (`clubGameLinkToken`, als claude-dev); die Ungültig-Zeilen prüfen die Fehlerseite (wie /partie/ungueltig).
-  r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
+  r('rookhub', '/s/{leagueShareGameToken}/club-games/{shareClubGameId}/summary', 'any', { main: SUMMARY }),
   r('rookhub', '/cg/{clubGameLinkToken}', 'any', { main: GAME_BOARD }),
-  r('rookhub', '/cg/{clubGameLinkToken}/summary', 'any', { main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'] }),
+  r('rookhub', '/cg/{clubGameLinkToken}/summary', 'any', { main: SUMMARY }),
   r('rookhub', '/cg/ungueltig', 'any', { label: 'cg-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/s-club-game\/ungueltig(\/\w+)? → 404$/] }),
-  r('rookhub', '/cg/ungueltig/summary', 'any', { label: 'cg-summary-invalid', main: ['.summary-page .summary-card', '.summary-page .load-card', '.summary-page .center'], expectedFailures: [/^GET \/api\/league\/s-club-game\/ungueltig(\/\w+)? → 404$/] }),
+  // Die Zusammenfassung holt Partie und Text gemeinsam (forkJoin, club-game-summary.component.ts): kommt die erste 404, bricht
+  // RxJS die zweite ab — Chromium meldet sie als net::ERR_ABORTED. Welche zuerst antwortet, ist Zufall.
+  r('rookhub', '/cg/ungueltig/summary', 'any', { label: 'cg-summary-invalid', main: SUMMARY, expectedFailures: [
+    /^GET \/api\/league\/s-club-game\/ungueltig(\/summary)? → 404$/, /^GET \/api\/league\/s-club-game\/ungueltig(\/summary)? — net::ERR_ABORTED$/] }),
+  // Ungültige Teilen-Links der übrigen Token-Seiten (2026-11-09): je die Fehlerseite statt einer leeren Seite.
+  r('rookhub', '/g/ungueltig', 'any', { label: 'g-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/shared\/ungueltig(\/[\w-]+)? → 404$/] }),
+  r('rookhub', '/g/ungueltig/summary', 'any', { label: 'g-summary-invalid', main: SUMMARY, expectedFailures: [
+    /^GET \/api\/games\/shared\/ungueltig(\/summary)? → 404$/, /^GET \/api\/games\/shared\/ungueltig(\/summary)? — net::ERR_ABORTED$/] }),
+  r('rookhub', '/s/ungueltig/club-games/1', 'any', { label: 's-club-game-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/league\/s\/ungueltig\/club\/games\/1(\/[\w-]+)? → 404$/] }),
+  r('rookhub', '/s/ungueltig/club-games/1/summary', 'any', { label: 's-club-game-summary-invalid', main: SUMMARY, expectedFailures: [
+    /^GET \/api\/league\/s\/ungueltig\/club\/games\/1(\/summary)? → 404$/, /^GET \/api\/league\/s\/ungueltig\/club\/games\/1(\/summary)? — net::ERR_ABORTED$/] }),
   r('rookhub', '/g/{analyzedShareToken}', 'any', { label: 'g-analyzed', main: GAME_BOARD, expectedFailures: [/^GET \/api\/games\/\d+\/mistakes → 404$/] }),
   r('rookhub', '/reconstruct', 'user', { main: ['.page mat-card.item', '.page .empty-state', '.page mat-card.new-card'] }),
   r('rookhub', '/reconstruct/{reconstructionId}', 'user', { main: ['.parts mat-card.part', '.parts .add-row', '.page > p.muted'] }),
   r('rookhub', '/r/{reconstructionToken}', 'any', { main: GAME_BOARD }),
+  r('rookhub', '/r/ungueltig', 'any', { label: 'r-invalid', main: GAME_BOARD, expectedFailures: [/^GET \/api\/reconstructions\/[\w/-]*ungueltig → 404$/] }),
   r('rookhub', '/w/{worksheetToken}', 'any', { main: ['.wsv-board app-puzzle-board', 'mat-card.wsv-done', 'mat-card.wsv-empty', '.wsv-center'] }),
+  r('rookhub', '/w/ungueltig', 'any', { label: 'w-invalid', main: ['mat-card.wsv-empty', '.wsv-center', 'mat-card'], expectedFailures: [/^GET \/api\/worksheets\/[\w/-]*ungueltig → 404$/] }),
   r('rookhub', '/remembered', 'user', { main: ['.remembered-page mat-card.item', '.remembered-page mat-card.empty-state', '.remembered-page .center'] }),
   r('rookhub', '/stats', 'user', { main: ['.stats-container .cards mat-card.stat', '.stats-container app-load-error', '.stats-container app-loading-spinner'] }),
   r('rookhub', '/leaderboards', 'user', { main: ['.lb-page .lb-row', '.lb-page .lb-card .empty-state', '.lb-page .lb-error', '.lb-page app-loading-spinner'] }),
   r('rookhub', '/training-goals', 'user', { main: ['.tg-container .tg-tabs .tab-body mat-card', '.tg-container app-load-error', '.tg-container app-loading-spinner'] }),
+  // Die übrigen Reiter über `?tab=` (Verlauf, Protokoll, Chessable) — je eine eigene Ansicht, sonst nie fotografiert.
+  ...['history', 'log', 'chessable'].map(tab =>
+    r('rookhub', `/training-goals?tab=${tab}`, 'user', { label: `training-goals-${tab}`, main: TG_TAB })),
   r('rookhub', '/notifications', 'user', { main: ['.notif-container .list button.row', '.notif-container .empty-state', '.notif-container app-load-error'] }),
   r('rookhub', '/messages', 'user', { main: ['.msg-container .thread .bubble-row', '.msg-container .empty-state', '.msg-container mat-card.admin-hint', '.msg-container .reply', '.msg-container app-load-error'] }),
   r('rookhub', '/courses', 'user', { main: ['.courses-container .course-grid mat-card.course-card', '.courses-container .empty-state', '.courses-container app-loading-spinner'] }),
@@ -179,6 +216,10 @@ export const ROUTES = [
   r('rookhub', '/ui-sweep-gibt-es-nicht', 'any', { label: 'slug-not-found', main: ['section.not-found .nf-actions', 'section.not-found'], expectedFailures: [/^GET \/api\/courses\/by-slug\/[^ ]+ → 404$/] }),
   r('rookhub', '/chessable', 'user', { main: ['.extension-note .store-links', '.extension-note'] }),
   r('rookhub', '/admin', 'user', { main: ['.admin-container table.users-table tr.mat-mdc-row', '.admin-container .users-table-wrap', '.admin-container mat-tab-group'] }),
+  // Jeder weitere Admin-Reiter über seinen Deep-Link (`?tab=`, so verlinken auch die Glocken). Nur das Admin-Konto: ein normales
+  // Konto prallt am adminAreaGuard ab (das zeigt schon `/admin`); der erste Reiter („users“) ist `/admin` selbst.
+  ...Object.entries(ADMIN_TABS).map(([tab, comp]) =>
+    r('rookhub', `/admin?tab=${tab}`, 'user', { label: `admin-${tab}`, roles: ['admin'], main: ADMIN_TAB(comp) })),
   r('rookhub', '/help', 'any', { main: ['.help-container mat-card.help-section', '.help-container .help-toc'] }),
   r('rookhub', '/install', 'any', { main: ['.install-container mat-card.pwa-section', '.install-container mat-card.install-section'] }),
   // Rechtstexte: Hauptsache = erster Inhaltsblock.
@@ -240,6 +281,9 @@ export const ROUTES = [
   r('leaguehub', '/verein', 'user', { main: ['table.club-table tr.game', 'section.empty', 'section.gate', 'form.club-search'] }),
   r('leaguehub', '/verein/uebersicht', 'user', { main: ['article.lu-match', 'section.ov-league', 'details.ov-league', 'section.gate', 'p.muted'] }),
   r('leaguehub', '/verein/neu', 'user', { main: LH_UPLOAD }),
+  // Die anderen Eingabearten über `?art=` (club-add-page.component.ts): Formularfoto bzw. Züge am RookHub-Brett.
+  r('leaguehub', '/verein/neu?art=formular', 'user', { label: 'verein-neu-formular', main: LH_UPLOAD }),
+  r('leaguehub', '/verein/neu?art=brett', 'user', { label: 'verein-neu-brett', main: LH_UPLOAD }),
   r('leaguehub', '/verein/formular/{scanId}', 'user', { main: LH_SCAN }),
   // 404 auf …/sheet = kein Formular aufbewahrt → Korrektur am Brett (club-scan-page.component.ts, clubSheet-catch).
   r('leaguehub', '/verein/partie/{clubGameId}/korrigieren', 'user', { main: LH_SCAN,
@@ -250,10 +294,19 @@ export const ROUTES = [
   // Unbekannte Adresse (UX-026): Hinweisseite statt Umleitung.
   r('leaguehub', '/diese-seite-gibt-es-nicht', 'any', { label: 'not-found', main: ['section.not-found .nf-actions a', 'section.not-found'] }),
   // Einzelne geteilte Ligapartie: ohne Marke im Seed die Seite „Link ungültig“.
-  r('leaguehub', '/partie/ungueltig', 'any', { label: 'shared-game-invalid', main: ['section.gate'] }),
+  r('leaguehub', '/partie/ungueltig', 'any', { label: 'shared-game-invalid', main: ['section.gate'], expectedFailures: [/^GET \/api\/league\/s-game\/ungueltig → 404$/] }),
+  // Eine gültige geteilte Ligapartie (seed.mjs legt den Link an einer gespielten Runde an, `leagueGameShareToken`).
+  r('leaguehub', '/partie/{leagueGameShareToken}', 'any', { label: 'shared-game', main: ['article.fixture lh-game-replay', 'article.fixture', 'section.gate'] }),
   r('leaguehub', '/s/{leagueShareToken}', 'any', { main: LH_FIXTURE }),
+  // Alle Aufstellungen der Runde aufgeklappt (`?aufstellungen=1`, share-page.component.ts) und ein ungültiger Link.
+  // Hauptsache bleibt die Begegnung — die Aufstellungen stehen auf der Teilen-Seite darunter (am Handy ~2 Bildschirme tiefer).
+  r('leaguehub', '/s/{leagueShareToken}?aufstellungen=1', 'any', { label: 's-aufstellungen', main: LH_FIXTURE }),
+  // Angemeldet fragt die Seite zusätzlich, wohin der Link zeigt (shareTarget, 0.846.4) — 404 = nie vergeben.
+  r('leaguehub', '/s/ungueltig', 'any', { label: 's-invalid', main: ['section.gate', ...LH_FIXTURE], expectedFailures: [
+    /^GET \/api\/league\/s\/ungueltig(\/[\w-]+)?(\?[^ ]*)? → 404$/, /^GET \/api\/league\/share\/ungueltig(\?club=\d+)? → 404$/] }),
   r('leaguehub', '/s/{leagueShareToken}/hochladen', 'anon', { main: LH_UPLOAD }),
   r('leaguehub', '/s/{leagueShareToken}/formular/{shareScanKey}', 'anon', { main: LH_SCAN }),
+  r('leaguehub', '/s/{leagueShareToken}/formular/ungueltig', 'anon', { label: 's-formular-invalid', main: ['section.gate', ...LH_SCAN], expectedFailures: [/^GET \/api\/league\/s\/[\w-]+\/club\/scans\/ungueltig(\/[\w-]+)?(\?[^ ]*)? → 404$/] }),
   r('leaguehub', '/login', 'anon', { main: AUTH_FORM }),
   r('leaguehub', '/register', 'anon', { main: AUTH_FORM }),
   r('leaguehub', '/forgot-password', 'anon', { main: AUTH_FORM }),
@@ -287,7 +340,7 @@ export const AREAS = [
   ['repertoire', r => r.app === 'rookhub' && /^\/(repertoires|remembered|l\/)/.test(r.url)],
   ['puzzles', r => r.app === 'rookhub' && /^\/(puzzles|favorites|stats|leaderboards)/.test(r.url)],
   ['wochenpost', r => r.app === 'rookhub' && /^\/weekly/.test(r.url)],
-  ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|club-games)/.test(r.url)],
+  ['partien', r => r.app === 'rookhub' && /^\/(games|g\/|club-games|cg\/|s\/)/.test(r.url)],
   ['analyse', r => r.app === 'rookhub' && /^\/analysis/.test(r.url)],
   ['punktepartie', r => r.app === 'rookhub' && /^\/guess/.test(r.url)],
   ['vorbereitung', r => r.app === 'rookhub' && /^\/prep/.test(r.url)],

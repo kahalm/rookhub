@@ -104,6 +104,29 @@ test('erwartete Fehlantworten: nur Methode + Pfad + Status der Route, Zustände 
   for (const r of ROUTES) for (const re of r.expectedFailures) assert.ok(re instanceof RegExp, `${routeId(r)}: keine RegExp`);
 });
 
+test('abgebrochene Schwester-Anfrage (forkJoin) nur dort erwartet, wo die Route sie nennt', () => {
+  const sum = ROUTES.find(r => routeId(r) === 'rookhub__cg-summary-invalid');
+  assert.ok(isExpectedFailure(sum, 'GET /api/league/s-club-game/ungueltig/summary → 404'));
+  assert.ok(isExpectedFailure(sum, 'GET /api/league/s-club-game/ungueltig — net::ERR_ABORTED'));
+  assert.ok(isExpectedFailure(sum, 'GET /api/league/s-club-game/ungueltig/summary — net::ERR_ABORTED'));
+  assert.ok(!isExpectedFailure(sum, 'GET /api/league/s-club-game/ungueltig/evals — net::ERR_ABORTED'), 'andere Anfrage bleibt Befund');
+  assert.ok(!isExpectedFailure(sum, 'GET /api/league/s-club-game/ungueltig — net::ERR_FAILED'), 'anderer Fehler bleibt Befund');
+  const cg = ROUTES.find(r => routeId(r) === 'rookhub__cg-invalid');
+  assert.ok(!isExpectedFailure(cg, 'GET /api/league/s-club-game/ungueltig — net::ERR_ABORTED'), 'ohne forkJoin kein Abbruch erwartet');
+});
+
+test('Rollen-Einschränkung (roles): Admin-Reiter nur für admin, Zustände erben sie', () => {
+  const tabs = ROUTES.filter(r => /^\/admin\?tab=/.test(r.url));
+  assert.ok(tabs.length >= 10);
+  for (const r of tabs) assert.deepEqual(r.roles, ['admin'], routeId(r));
+  for (const r of ROUTES) if (r.roles) assert.ok(r.roles.every(a => r.auth === 'any' || (r.auth === 'user' ? a !== 'anon' : a === r.auth)), routeId(r));
+  for (const d of withStates(ROUTES, routeId)) {
+    const base = ROUTES.find(r => routeId(r) === d.stateOf);
+    assert.equal(d.roles, base.roles);
+    if (base.roles && d.stateAuth) assert.ok(d.stateAuth.every(a => base.roles.includes(a)), `${routeId(d)}: Rolle außerhalb der Route`);
+  }
+});
+
 test('Lese-POSTs gehen zum Server (kein Echo): same-game liefert sonst ein Objekt statt einer Liste', async () => {
   const { writeDecision } = await import('./states.mjs');
   const st = { steps: [{ click: 'x' }] };

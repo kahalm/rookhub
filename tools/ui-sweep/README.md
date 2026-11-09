@@ -127,7 +127,9 @@ Sprach-Achse, damit der Vergleich mit älteren Läufen weiter greift.
   `GET /api/… → 404`) zählen nicht: z. B. der Turnierkalender fragt mit `GET /api/tournaments/{chessResultsId}`, ob ein
   Turnier schon importiert ist (404 = nein), die Partiekorrektur in LeagueHub mit `…/games/{id}/sheet`, ob ein Formular
   aufbewahrt ist. Treffer stehen im Bericht unter `expectedFailed`; Zustände erben die Liste ihrer Route. Eng fassen
-  (Methode, Pfad, Status) und im Katalog die Stelle im Frontend nennen, die den Fehler absichtlich abfängt.
+  (Methode, Pfad, Status) und im Katalog die Stelle im Frontend nennen, die den Fehler absichtlich abfängt. Dieselbe Liste
+  gilt für abgebrochene Anfragen (`GET /api/… — net::ERR_ABORTED`): holt eine Seite zwei Dinge gemeinsam (`forkJoin`) und
+  das erste kommt mit 404, bricht RxJS das zweite ab — z. B. `/cg/ungueltig/summary`. Auch dann nur das Paar nennen.
 - **weitergeleitet** — die Seite landete woanders (z. B. auf der Anmeldung).
 
 ### Erster Blick und Scrollen (DESIGN.md 4.6, ohne Modell gemessen)
@@ -160,14 +162,23 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
 ## Routen und Testdaten
 
 - **`routes.mjs`** ist der Katalog. Neue Seite in einer App → dort eintragen (`auth`: `any` = ab- und angemeldet,
-  `user` = nur angemeldet, `anon` = nur abgemeldet). Platzhalter `{name}` kommen aus `seed.mjs`.
+  `user` = nur angemeldet, `anon` = nur abgemeldet; `roles: ['admin']` engt weiter ein — die Admin-Reiter
+  `/admin?tab=<key>` sieht nur das Admin-Konto, Zustände erben das). Platzhalter `{name}` kommen aus `seed.mjs`.
+  Eigene Zeilen bekommen auch Ansichten, die nur eine Abfrage öffnet (`?tab=`, `?art=`, `?aufstellungen=1`, `?blind=1`,
+  `?section=delete`, `?authRequired=1`) und die Fehlerseite jeder Teilen-Route (`…/ungueltig`).
+- **`routes-coverage.test.mjs`** hält den Katalog vollständig: jede Angular-Route aller fünf Oberflächen braucht eine
+  Zeile (eine Route reicht im Quelltext bis zum nächsten `path:`, reine Weiterleitungen zählen nicht, Funktionsziele schon);
+  Kind-Routen (`children`/`loadChildren`) oder weitere `*.routes.ts` lassen den Test scheitern, bis der Abgleich sie
+  versteht; und jeder `?tab=`-Reiter aus dem Quelltext (`TAB_PAGES`: Admin, Trainingsziele, Freunde, Turnier) braucht eine
+  Zeile mit genau diesem `tab` oder einen Zustand, der ihn anklickt.
 - **`seed.mjs`** sucht die Parameter über die API des Kontos `claude-dev` und legt fehlende an (eine Partie, ein
   Aufgabenblatt mit Teilen-Link, eine Rekonstruktion, eine geteilte Repertoire-Linie, für das normale
   Konto einen eigenen Kalkulationskurs „Kalkulation (ui-sweep)", eine offene LeagueHub-Einlesung — alle mit „ui-sweep" im Namen, beim nächsten Lauf
   wiedergefunden; einmalig wird die Partie zur Analyse eingeworfen). Gefundene Werte merkt sich `runs/params-dev.json`;
   das Zufallspuzzle und der LeagueHub-Teilen-Link werden von dort weiterbenutzt. Den Teilen-Link EINER Vereinspartie
   (`clubGameLinkToken` für `/cg/…`, 0.939.0) legt der Seed per `POST /api/league/club/games/{id}/share` an — bevorzugt an
-  einer Partie mit fertiger Zusammenfassung — und benutzt ihn weiter, solange er gilt. Fehlt ein Parameter (kein Freund,
+  einer Partie mit fertiger Zusammenfassung — und benutzt ihn weiter, solange er gilt. Ebenso den Link auf EINE Ligapartie
+  (`leagueGameShareToken` für LeagueHub `/partie/…`, `POST /api/league/game-share` an der gespielten Runde, erstes Brett mit Partie). Fehlt ein Parameter (kein Freund,
   keine Kinderkurse auf Dev), wird die Route übersprungen und in der Übersicht unter „nicht auflösbar" genannt.
 - **Rollen** (`--auth`): `admin` = das Admin-Konto `claude-dev` (`ROOKHUB_DEV_USER`/`_PASSWORD`),
   `user` = ein normales Konto ohne Sonderrechte (`ROOKHUB_DEV_PLAIN_USER`/`_PASSWORD`), `empty` = ein frisch registriertes
@@ -200,6 +211,10 @@ Die Prüfungen ersetzen das Hinsehen nicht — Gestaltung („wirkt das gut?") s
   Prod) — ein hochgeladenes Testbild (`ui-sweep-formular.png`, ein gezeichnetes Blatt) bleibt „wartet aufs Einlesen"
   stehen, ohne Schlüssel. Je Konto eine (`scanId`, wird wiedergefunden), dazu eine anonyme über den Teilen-Link
   (`shareScanKey`, gemerkt in `runs/params-dev.json`). Die Seite zeigt eine laufende Uhr — sie ist bei jedem Vergleich „verändert".
+  Ohne Konto sind je Adresse höchstens drei offen (`tooManyOpen`), und auf Dev bleibt jede offen: eine neue legt der Seed
+  nur an, wenn die Nachfrage (`…/scans/lookup`) sicher „gibt es nicht mehr“ sagt; meldet das Hochladen `tooManyOpen`,
+  verwirft das Admin-Konto die Sweep-eigenen anonymen Einlesungen des Vereins (`ui-sweep-formular.png` über den
+  Teilen-Link — deren Schlüssel sind verloren) und lädt einmal neu hoch. Verworfene zählen erst ab API 0.941.6 nicht mehr mit.
   `--env prod` rendert nur abgemeldet und legt nichts an.
 - **Bestand des normalen Kontos**: `node seed-user.mjs` gibt ihm, was ein Nutzer auf Prod typischerweise hat — Kurse über
   eine Gruppe (drei angepinnt, drei angefangen), vier Repertoires, eigene Partien, ein Aufgabenblatt, Trainingsziel,

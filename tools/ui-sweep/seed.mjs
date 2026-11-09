@@ -79,7 +79,7 @@ export function api(base, token) {
     const text = await res.text();
     return text ? JSON.parse(text) : null;
   };
-  return { get: p => call('GET', p), post: (p, b) => call('POST', p, b ?? {}), put: (p, b) => call('PUT', p, b ?? {}) };
+  return { get: p => call('GET', p), post: (p, b) => call('POST', p, b ?? {}), put: (p, b) => call('PUT', p, b ?? {}), del: p => call('DELETE', p) };
 }
 
 const list = x => Array.isArray(x) ? x : (x?.items ?? []);
@@ -507,6 +507,25 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
     return { _why: 'keine Vereinspartie an einer Ligapaarung des eigenen Teams' };
   });
 
+  // Link auf EINE Ligapartie (`/partie/{token}` in LeagueHub, `POST /api/league/game-share`) — bisher sah der Sweep nur
+  // „Link ungültig“. An der gespielten Runde von oben, erstes Brett mit Partie (404 = an dem Brett keine); der Link vom
+  // letzten Lauf gilt bis zu seinem Ablauf.
+  await step(['leagueGameShareToken'], async () => {
+    if (previous.leagueGameShareToken) {
+      const ok = await fetch(`${base}/api/league/s-game/${previous.leagueGameShareToken}`).then(r => r.ok, () => false);
+      if (ok) return { leagueGameShareToken: previous.leagueGameShareToken };
+    }
+    if (!p.playedLiga) return { _why: 'keine gespielte Runde (playedLiga)' };
+    const club = (await a.get('/api/league/me')).clubs?.[0];
+    if (!club) return { _why: 'kein Verein' };
+    for (let board = 1; board <= 8; board++) {
+      const s = await a.post(`/api/league/game-share?club=${club.id}`,
+        { tnr: Number(p.playedLiga), round: Number(p.playedRunde), team: decodeURIComponent(p.playedVerein), board }).catch(() => null);
+      if (s?.token) return { leagueGameShareToken: s.token };
+    }
+    return { _why: 'an keinem Brett der gespielten Runde eine Partie' };
+  });
+
   // Eine „+“-Stellung an einer Partie der LeagueHub-Vereinsübersicht — sonst fehlt dort jedes „+n“, und das
   // Stellungsfenster (Zustände `verein-uebersicht--plus-fenster` / `--in-partie-zeigen`) lässt sich nicht öffnen
   // (Dev hatte am 28.10. keine). Markiert wird die Stellung nach Halbzug 12 mit dem Kommentar „ui-sweep“, als claude-dev;
@@ -547,16 +566,33 @@ export async function resolveParams(base, token, log = () => {}, previous = {}, 
   });
   // Dasselbe ohne Konto über den Teilen-Link (/s/{token}/formular/{key}) — der Schlüssel lässt sich nicht auflisten,
   // also wie der Teilen-Link aus dem letzten Lauf weiterbenutzen, solange die Einlesung offen ist.
+  // Je Adresse höchstens drei offene ohne Konto (`tooManyOpen`), und Dev liest nie: jede Einlesung, deren Schlüssel verloren
+  // ging, blieb für immer offen (28.–30.10. drei Stück → Seed scheiterte). Deshalb: (1) eine scheiternde Nachfrage legt
+  // KEINE neue an (nur „gibt es nicht mehr“ tut das), (2) bei `tooManyOpen` verwirft das Admin-Konto die Sweep-eigenen
+  // anonymen Einlesungen des Vereins (Dateiname „ui-sweep-formular.png“, über den Teilen-Link) — ihre Schlüssel sind ohnehin
+  // weg — und lädt einmal neu hoch. Nur auf Dev (seed.mjs läuft nie gegen Prod). Zählen verworfene erst ab 0.941.6 nicht mehr
+  // mit (ScoresheetIntake), hilft (2) erst mit dieser API-Fassung.
   await step(['shareScanKey'], async () => {
     const token = p.leagueShareToken;
     if (!token) return { _why: 'kein LeagueHub-Teilen-Link' };
     const anon = api(base, null);
     if (previous.shareScanKey) {
-      const found = await anon.post(`/api/league/s/${token}/club/scans/lookup`, { keys: [previous.shareScanKey] }).catch(() => []);
+      const found = await anon.post(`/api/league/s/${token}/club/scans/lookup`, { keys: [previous.shareScanKey] });
       if (list(found).length) return { shareScanKey: previous.shareScanKey };
     }
-    const r = await anon.post(`/api/league/s/${token}/club/scans`, scanForm());
-    return { shareScanKey: r?.key };
+    const upload = () => anon.post(`/api/league/s/${token}/club/scans`, scanForm());
+    try {
+      return { shareScanKey: (await upload())?.key };
+    } catch (e) {
+      if (!/tooManyOpen/.test(e.message)) throw e;
+      const club = (await a.get('/api/league/me')).clubs?.[0];
+      if (!club) throw e;
+      const own = list(await a.get(`/api/league/club/admin/scans?club=${club.id}`))
+        .filter(x => x.viaShareLink && x.scan?.fileName === `${SWEEP_TAG}-formular.png`);
+      for (const x of own) await a.del(`/api/league/club/scans/${x.scan.id}?club=${club.id}`);
+      console.log(`  shareScanKey: ${own.length} verwaiste Sweep-Einlesung(en) ohne Konto verworfen`);
+      return { shareScanKey: (await upload())?.key };
+    }
   });
 
   return p;

@@ -59,6 +59,11 @@ export const STATES = [
     // über die Symbole statt der Beschriftung — sprachunabhängig (im --lang-en-Lauf scheiterte „Konto“, 17.10.2026).
     // Enter statt Klick: am Handy öffnet schon das Überfahren das Untermenü, es deckt den Eintrag ab → Klick-Timeout (30.10.).
     expect: '.mat-mdc-menu-panel button.changelog-item' },
+  // Änderungsprotokoll aus dem Kontomenü (Fußzeile am Handy aus, dort der einzige Weg, UX-053) — eigene Ebene über der Seite.
+  { of: 'rookhub__dashboard', name: 'changelog', auth: LOGGED_IN,
+    steps: [{ click: 'mat-toolbar button.msg-mail' }, { press: 'Enter', sel: '.mat-mdc-menu-panel button:has(mat-icon:text-is("account_circle"))' },
+      { click: '.mat-mdc-menu-panel button.changelog-item' }],
+    expect: '.changelog-overlay .changelog-content' },
   { of: 'rookhub__dashboard', name: 'glocke', steps: [{ click: 'mat-toolbar button.notif-bell' }], expect: '.mat-mdc-menu-panel.notif-menu' },
   { of: 'rookhub__puzzles', name: 'menue-gast', auth: ['anon'], steps: [EASY, { click: 'mat-toolbar button.anon-menu' }], expect: MENU },
 
@@ -87,6 +92,10 @@ export const STATES = [
   { of: 'rookhub__puzzles-endless', name: 'gestartet',
     steps: [{ click: '.config-screen button.start-btn-top, .config-screen .resume-banner button.start-btn' }, EASY],
     expect: '.play-screen app-puzzle-board' },
+  // Punktepartie: zweiter Reiter „Eigene Partien“ (nur angemeldet gibt es die Reiterleiste).
+  { of: 'rookhub__guess', name: 'eigene', auth: [...LOGGED_IN, 'empty'],
+    steps: [{ click: '.lists .mat-mdc-tab-labels > [role="tab"]:nth-child(2)' }],
+    expect: '.lists [role="tab"]:nth-child(2)[aria-selected="true"]' },
   { of: 'rookhub__stats', name: 'kurse', auth: [...LOGGED_IN, 'empty'],
     steps: [{ click: '.stats-container .mode-toggle mat-button-toggle[value="course"] button' }],
     expect: '.mode-toggle mat-button-toggle[value="course"].mat-button-toggle-checked' },
@@ -301,6 +310,11 @@ export const STATES = [
   { of: 'turnier__tournaments-calendar', name: 'kalender-karte',
     steps: [{ click: '.mat-mdc-tab-labels > [role="tab"]:last-child' }, { click: 'app-tournament-calendar :is(.cal-entry, .agenda-entry):visible' }],
     expect: `${DIALOG} app-tournament-card-dialog app-tournament-card` },
+  // Die Reiter Karte (Leaflet + OSM-Kacheln) und Kalender selbst — bisher nur als Durchgang zur Kalender-Karte im Bild.
+  { of: 'turnier__tournaments-calendar', name: 'karte',
+    steps: [{ click: '.mat-mdc-tab-labels > [role="tab"]:nth-child(2)' }, { waitFor: 'app-tournament-map' }], expect: 'app-tournament-map' },
+  { of: 'turnier__tournaments-calendar', name: 'kalender',
+    steps: [{ click: '.mat-mdc-tab-labels > [role="tab"]:last-child' }], expect: 'app-tournament-calendar' },
   { of: 'turnier__tournaments-calendar', name: 'fehlt-melden', auth: LOGGED_IN,
     steps: [{ click: '.missing-row button' }], expect: dlg('app-missing-tournament-dialog') },
   { of: 'turnier__tournaments-calendar', name: 'suchprofil', auth: LOGGED_IN,

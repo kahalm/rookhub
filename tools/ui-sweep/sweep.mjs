@@ -374,6 +374,7 @@ async function main() {
       : route.auth === 'user' ? opts.auth.filter(a => a !== 'anon') : opts.auth.filter(a => a === route.auth);
     for (const auth of wanted) {
       if (route.stateAuth && !route.stateAuth.includes(auth)) continue;
+      if (route.roles && !route.roles.includes(auth)) continue;
       if (auth === 'anon' && [...route.url.matchAll(/\{(\w+)\}/g)].some(m => ANON_SKIP.has(m[1]))) continue;
       const { url, missing, noData } = fill(route.url, auth);
       if (missing.length) { unresolved.push({ id: `${routeId(route)} (${auth})`, url: route.url, missing }); continue; }
@@ -565,7 +566,14 @@ async function main() {
     page.on('request', () => { net.inflight++; net.lastActivity = Date.now(); });
     const finish = () => { net.inflight = Math.max(0, net.inflight - 1); net.lastActivity = Date.now(); };
     page.on('requestfinished', finish);
-    page.on('requestfailed', req => { finish(); if (!/favicon|\.woff/.test(req.url())) failed.push(`${req.method()} ${shortUrl(req.url())} — ${req.failure()?.errorText}`); });
+    page.on('requestfailed', req => {
+      finish();
+      if (/favicon|\.woff/.test(req.url())) return;
+      // Abgebrochene Anfragen gehen durch dieselbe Liste wie Fehlantworten (routes.mjs `expectedFailures`): bricht die Seite
+      // nach einer erwarteten 404 die parallele Schwester-Anfrage ab (forkJoin auf /cg/ungueltig/summary), ist das kein Befund.
+      const line = `${req.method()} ${shortUrl(req.url())} — ${req.failure()?.errorText}`;
+      if (isExpectedFailure(job.route, line)) expectedFailed.push(line); else failed.push(line);
+    });
     page.on('response', res => {
       if (!res.url().includes('/api/')) return;
       if (res.status() >= 400) {
