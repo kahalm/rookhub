@@ -86,9 +86,8 @@ public class LeagueClubController : BaseApiController
     {
         if (await CorrectableAsync(club, id, ct) is { } denied) return denied;
         if (await _scans.ClubPhotoAsync(id, page, ct, view) is not { } p) return NotFound();
-        Response.Headers.CacheControl = "private, max-age=3600";
         Response.Headers["X-Page-Count"] = p.PageCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        return File(p.Data, p.ContentType);
+        return Scoresheet.ScoresheetPhotoResponse.File(this, p.Data, p.ContentType);
     });
 
     [HttpPost("games/{id:int}/sheet/resolve")]
@@ -818,8 +817,7 @@ internal static class ClubUpload
     public static IActionResult PhotoResult(ControllerBase c, (byte[] Data, string ContentType)? p)
     {
         if (p is not { } photo) return c.NotFound();
-        c.Response.Headers.CacheControl = "private, max-age=3600";
-        return c.File(photo.Data, photo.ContentType);
+        return Scoresheet.ScoresheetPhotoResponse.File(c, photo.Data, photo.ContentType);
     }
 
     public static async Task<IActionResult> ResolveAsync(ControllerBase c,

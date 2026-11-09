@@ -173,10 +173,9 @@ public class GameCorrectionController : BaseApiController
         if (photo is null && await CorrectableClubGameAsync(id) is { } clubId && await _scans.ClubPhotoAsync(clubId, page) is { } cp)
             photo = (cp.Data, cp.ContentType, "formular.jpg", cp.PageCount);   // Formular der Vereinspartie (0.660.0)
         if (photo is not { } p) return NotFound();
-        Response.Headers.CacheControl = "private, max-age=3600";
         // Wie viele Seiten es gibt — der Foto-Dialog blättert damit, ohne die Einlesung abzufragen.
         Response.Headers["X-Page-Count"] = p.PageCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        return download ? File(p.Data, p.ContentType, p.FileName) : File(p.Data, p.ContentType);
+        return ScoresheetPhotoResponse.File(this, p.Data, p.ContentType, download ? p.FileName : null);
     }
 
     /// <summary>Formular-Einträge + Stand je Halbzug (Korrekturseite). 404 ohne Einlesung.</summary>

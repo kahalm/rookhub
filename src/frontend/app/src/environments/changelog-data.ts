@@ -10,6 +10,14 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '0.919.1',
+    date: '2026-11-09',
+    changes: [
+      { en: 'Scoresheet photos are no longer kept in the browser cache for an hour: a photo that was turned upright afterwards now shows up straight away.',
+        de: 'Formular-Fotos bleiben nicht mehr eine Stunde im Browser-Speicher: ein nachträglich aufrecht gedrehtes Foto erscheint jetzt sofort.' },
+    ],
+  },
   { version: "0.919.0", date: "2026-11-09", changes: [
     { en: "Profile, external engines: offline engines are hidden by default (a button shows them), and each one says when it was last seen.",
       de: "Profil, externe Engines: Offline-Engines sind standardmäßig ausgeblendet (ein Knopf zeigt sie), und bei jeder steht, wann sie zuletzt da war." },
