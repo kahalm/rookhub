@@ -164,6 +164,9 @@ public sealed partial class LeagueGameMoves(AppDbContext db, Func<DateTime>? now
         if (!canManage && !club.OwnsTeam(game.HomeTeam) && !club.OwnsTeam(game.AwayTeam)) return new("foreignMatch");
         var entry = await db.LeagueGameMoves
             .FirstOrDefaultAsync(m => m.Tnr == tnr && m.Round == round && m.MatchNo == matchNo && m.Board == board, ct);
+        // R2-003 (Delta-Review 2026-11-09): canManage gilt ohne Bezug zum Verein der Begegnung — ein Verwalter IRGENDEINES Vereins
+        // darf so auch Einträge anderer Vereine ersetzen/löschen (und entry.ClubId wird unten auf seinen Verein umgeschrieben).
+        // Produktentscheidung offen (Züge global vs. je Verein, zusammen mit R2-002) — bewusst unverändert.
         if (entry is not null && !canManage && entry.UpdatedByUserId != userId) return new("notYours");
 
         var parsed = Parse(text);

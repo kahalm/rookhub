@@ -69,7 +69,9 @@ public sealed class OwnGameSummaries(AppDbContext db, SavedGameService games, Cl
         var s = await db.OwnGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.SavedGameId == savedGameId, ct);
         if (s is null || (s.Markdown is null && !Open(s.Status) && s.Status != ClubGameSummaryStatus.Failed))
         {
-            // Verbundene Vereinspartie: deren fertiger Text gilt auch hier, solange es keinen eigenen gibt.
+            // Verbundene Vereinspartie: deren fertiger Text gilt auch hier, solange es keinen eigenen gibt. Bewusst OHNE erneute
+            // Prüfung der Vereinszugehörigkeit (R4-015, Entscheidung E7 „so lassen"): die Verbindung entsteht nur für Mitglieder
+            // (SavedGameAnalysisLink) und gilt danach als bleibend wie die übernommene Analyse — auch nach einem Austritt.
             if (g.LeagueClubGameId is int clubId
                 && await db.ClubGameSummaries.AsNoTracking().FirstOrDefaultAsync(x => x.ClubGameId == clubId && x.Markdown != null, ct) is { } club)
                 return new OwnGameSummaryDto("done", club.Markdown, club.DoneAt, club.RequestedAt, club.MovesHash != null && club.MovesHash != MovesHashOf(g.Pgn),

@@ -530,7 +530,12 @@ public class LeagueShareClubController : ControllerBase
             ? Ok(list.Select(x => x with { Comparison = x.Comparison with { Title = null, Error = null } }).ToList()) : NotFound();
 
     /// <summary>Fertige Zusammenfassung derselben Partie, nur lesend (Wunsch 2026-11-09), Regel wie <see cref="Game"/>: ohne Text
-    /// <c>none</c>; Warte-Stand, Modell und Fehler bleiben den Vereinsmitgliedern vorbehalten.</summary>
+    /// <c>none</c>; Warte-Stand, Modell und Fehler bleiben den Vereinsmitgliedern vorbehalten.
+    /// <para>R2-010 (Delta-Review 2026-11-09): über diesen Link kann auch anonym eine Partie mit freiem Event/Namen hereinkommen,
+    /// deren Kopf später im Watcher-Prompt landet. Die Gegenwehr liegt bei R4-005 (Abliefern nur für eine vorhandene Zeile, bei
+    /// eigenen Partien nur für den laufenden Auftrag; Watcher nimmt nur die Id seines Laufs) und der Darstellung ohne
+    /// <c>innerHTML</c> (<c>summary-markdown.util.ts</c>). Ob über Links hochgeladene Partien überhaupt zusammengefasst werden,
+    /// ist offen (User).</para></summary>
     [HttpGet("games/{id:int}/summary")]
     public async Task<IActionResult> GameSummary(string token, int id, [FromServices] LeagueFixtureGames fixtures,
         [FromServices] ClubGameSummaries summaries, CancellationToken ct)
