@@ -36,7 +36,9 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
               {{ (s.status === 'running' ? 'games.summary.running' : 'games.summary.requested') | translate }}
             }
           </span>
-        } @else {
+        } @else if (!s.markdown || allowAgain()) {
+          <!-- 0.916.0 (Wunsch 2026-11-09): „Neu schreiben" nicht prominent in der Partie-Kopfzeile, nur auf der
+               Zusammenfassungsseite selbst; die Kopfzeile bietet nur das erste Anfordern an. -->
           <button mat-button class="summary-request" [disabled]="busy()" (click)="request()">
             <mat-icon>auto_awesome</mat-icon>
             {{ (s.markdown ? 'games.summary.requestAgain' : 'games.summary.request') | translate }}
@@ -56,6 +58,8 @@ import { ClubGameSummary, ClubGameSummaryReadiness, ClubGameSummaryService } fro
 })
 export class ClubSummaryLinkComponent implements OnInit {
   readonly gameId = input.required<number>();
+  /** Darf eine vorhandene Zusammenfassung hier neu angefordert werden? Nur auf der Zusammenfassungsseite (0.916.0). */
+  readonly allowAgain = input(false);
 
   private service = inject(ClubGameSummaryService);
   private auth = inject(AuthService);

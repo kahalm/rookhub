@@ -7,7 +7,7 @@ import { AuthService } from '../../../core/auth.service';
 import { ClubSummaryLinkComponent } from './club-summary-link.component';
 
 describe('ClubSummaryLinkComponent (0.913.0)', () => {
-  function setup(isAdmin: boolean) {
+  function setup(isAdmin: boolean, allowAgain = false) {
     TestBed.configureTestingModule({
       imports: [ClubSummaryLinkComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
@@ -16,6 +16,7 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     });
     const f = TestBed.createComponent(ClubSummaryLinkComponent);
     f.componentRef.setInput('gameId', 236);
+    if (allowAgain) f.componentRef.setInput('allowAgain', true);
     f.detectChanges();
     return { f, http: TestBed.inject(HttpTestingController), el: f.nativeElement as HTMLElement };
   }
@@ -27,6 +28,19 @@ describe('ClubSummaryLinkComponent (0.913.0)', () => {
     f.detectChanges();
     expect(el.querySelector('a.summary-link')?.getAttribute('href')).toBe('/club-games/236/summary');
     expect(el.querySelector('.summary-request')).toBeNull();
+  });
+
+  it('0.916.0: vorhandener Text — „neu anfordern" nur auf der Zusammenfassungsseite, nicht in der Partie-Kopfzeile', () => {
+    const header = setup(true);
+    header.http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'done', markdown: '# x' });
+    header.f.detectChanges();
+    expect(header.el.querySelector('a.summary-link')).not.toBeNull();
+    expect(header.el.querySelector('.summary-request')).toBeNull();
+    TestBed.resetTestingModule();
+    const page = setup(true, true);
+    page.http.expectOne('/api/league/club/games/236/summary').flush({ ...none, status: 'done', markdown: '# x' });
+    page.f.detectChanges();
+    expect(page.el.querySelector('.summary-request')?.textContent).toContain('games.summary.requestAgain');
   });
 
   it('Admin: anfordern schickt POST und zeigt danach den Wartestand', () => {

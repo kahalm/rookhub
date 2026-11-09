@@ -58,7 +58,7 @@ interface ResolvedDiagram {
               <a mat-stroked-button [routerLink]="['/club-games', gameId]" class="to-game">
                 <mat-icon>sports_esports</mat-icon> {{ 'games.summary.toGame' | translate }}
               </a>
-              <app-club-summary-link [gameId]="gameId" />
+              <app-club-summary-link [gameId]="gameId" [allowAgain]="true" />
             </div>
           </div>
           @if (summary()?.stale) {

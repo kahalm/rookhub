@@ -33,7 +33,7 @@ import { MarkOrigin } from '../../shared/mark-position/marked-positions.service'
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { ExternalEngineInfo, ExternalEngineService, engineTagKey, isEngineOffline } from '../analysis/external-engine.service';
 import { GameEngineController } from './game-engine-controller';
-import { LiveEngineSession } from './live-engine-session';
+import { LiveEngineSession, LiveMove } from './live-engine-session';
 import { LiveEnginePanelComponent } from './live-engine-panel.component';
 import { PositionMenuComponent } from '../analysis/position-menu.component';
 import { BoardBadge } from './move-badge.util';
@@ -303,6 +303,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   chooseLiveEngine(e: ExternalEngineInfo | null): void { this.engine.chooseLiveEngine(e); }
 
   toggleTrainingAnalysis(): void { this.engine.toggleTrainingAnalysis(); }
+  /** Zug der Fehler-Erklärung geklickt (0.915.0): die Folge in die Trainings-Analyse. */
+  showTrainingLine(e: { fen: string; line: LiveMove[]; at: number }): void { this.engine.showTrainingLine(e.fen, e.line, e.at); }
 
   stopTrainingAnalysis(): void { this.engine.stopTrainingAnalysis(); }
 

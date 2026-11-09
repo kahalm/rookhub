@@ -61,6 +61,28 @@ describe('MistakeComparisonComponent', () => {
     expect(link.getAttribute('href')).toBe('/analysis/compare/41?clubGame=236');
   });
 
+  it('explanation: numbered moves are buttons that emit the line from the task position', () => {
+    const e = entry();
+    e.comparison.candidates[1].explanation = 'Nach 2.Dh5 Sc6 3.Lc4 g6 jagt Schwarz die Dame. Besser 2.Sf3.';
+    TestBed.configureTestingModule({
+      imports: [MistakeComparisonComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(MistakeComparisonComponent);
+    fixture.componentRef.setInput('entry', e);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const buttons = Array.from(el.querySelectorAll('.expl button.mv')) as HTMLButtonElement[];
+    expect(buttons.map(b => b.textContent)).toEqual(['2.Dh5', 'Sc6', '3.Lc4', 'g6', '2.Sf3']);
+    expect(el.querySelector('.expl')!.textContent).toBe('Nach 2.Dh5 Sc6 3.Lc4 g6 jagt Schwarz die Dame. Besser 2.Sf3.');
+    let got: { fen: string; line: { san: string }[]; at: number } | undefined;
+    fixture.componentInstance.showLine.subscribe(v => got = v);
+    buttons[2].click();
+    expect(got!.fen).toBe(FEN);
+    expect(got!.line.map(m => m.san)).toEqual(['Qh5', 'Nc6', 'Bc4', 'g6']);
+    expect(got!.at).toBe(3);
+  });
+
   it('pending: one quiet line, nothing else', () => {
     const el = make(entry('candidates'));
     expect(el.textContent).toContain('games.mistakes.compare.pending');

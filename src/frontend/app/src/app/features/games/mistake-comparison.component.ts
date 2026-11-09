@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { MoveComparison, MoveComparisonCandidate, numberedLine } from '../analysis/move-comparison.service';
 import { localizeSanText } from '../../shared/chess/keyboard-move.util';
+import { ExplanationPart, explanationParts } from './explanation-lines';
+import { LiveMove } from './live-engine-session';
 
 /** Zugvergleich zu einem Fehler einer Vereinspartie (0.908.0, `GET /api/league/club/games/{id}/comparisons`). */
 export interface ClubMistakeComparison {
@@ -83,7 +85,11 @@ function afterFen(fen: string, uci: string): string | null {
             </div>
             @if (r.line) { <div class="line">{{ r.line }}</div> }
           }
-          @if (explanation(); as text) { <p class="expl">{{ text }}</p> }
+          <!-- Züge der Erklärung klickbar (0.915.0): zeigt die Stellung auf dem Brett der Seite, ← → laufen weiter. -->
+          @if (explanationParts(); as parts) {
+            <p class="expl">@for (p of parts; track $index) {@if (p.line) {<button type="button" class="mv"
+              (click)="showLine.emit({ fen: e.comparison.fen, line: p.line, at: p.at! })">{{ p.text }}</button>} @else {{{ p.text }}}}</p>
+          }
           <a mat-button class="open" [routerLink]="['/analysis/compare', e.comparison.id]" [queryParams]="{ clubGame: clubGameId() }">
             <mat-icon>compare_arrows</mat-icon> {{ 'games.mistakes.compare.open' | translate }}
           </a>
@@ -107,6 +113,9 @@ function afterFen(fen: string, uci: string): string | null {
     .line { font-size: 0.78rem; padding: 0 0 4px 6.5em; overflow-wrap: anywhere;
       color: color-mix(in srgb, currentColor 65%, transparent); }
     .expl { margin: 6px 0 2px; font-size: 0.88rem; line-height: 1.45; }
+    .mv { all: unset; cursor: pointer; font-weight: 500; color: var(--rh-accent, inherit); border-radius: 3px;
+      text-decoration: underline dotted; text-underline-offset: 2px; }
+    .mv:hover, .mv:focus-visible { background: color-mix(in srgb, currentColor 12%, transparent); outline: none; }
     .open { margin-left: -8px; }
     @media (max-width: 480px) { .line { padding-left: 0; } .label { min-width: 0; } }
   `],
@@ -120,4 +129,12 @@ export class MistakeComparisonComponent {
   readonly pending = computed(() => { const e = this.entry(); return !!e && comparisonPending(e.comparison); });
   readonly rows = computed(() => { const e = this.entry(); return e ? comparisonRows(e, this.translate.currentLang() ?? 'en') : null; });
   readonly explanation = computed(() => { const e = this.entry(); return e ? comparisonExplanation(e.comparison) : null; });
+  /** Die Erklärung als Text + klickbare Züge (Folgen, die auf dem Brett nicht aufgehen, bleiben Text). */
+  readonly explanationParts = computed<ExplanationPart[] | null>(() => {
+    const e = this.entry();
+    const text = this.explanation();
+    return e && text ? explanationParts(text, e.comparison.fen) : null;
+  });
+  /** Klick auf einen Zug der Erklärung: die Folge ab der Aufgabe, man steht nach `at` Zügen. */
+  readonly showLine = output<{ fen: string; line: LiveMove[]; at: number }>();
 }

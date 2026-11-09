@@ -12,6 +12,7 @@ import { MarkPositionButtonComponent } from '../../shared/mark-position/mark-pos
 import { MarkOrigin } from '../../shared/mark-position/marked-positions.service';
 import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { ClubMistakeComparison, MistakeComparisonComponent } from './mistake-comparison.component';
+import { LiveMove } from './live-engine-session';
 
 /**
  * „Eigene Fehler nachspielen" — die Leiste UNTER dem Brett der Partie-Seite: Aufgabe, Rückmeldung,
@@ -103,7 +104,7 @@ import { ClubMistakeComparison, MistakeComparisonComponent } from './mistake-com
         <p class="cost">{{ 'games.mistakes.cost' | translate: { san: m.playedSan, percent: lost(m) } }}</p>
         <!-- Vereinspartie (0.908.0): erst NACH dem Urteil der Vergleich Partiezug ↔ bester Zug (vorher verriete er die Lösung). -->
         @if (comparisons) {
-          <app-mistake-comparison [entry]="comparisons.get(m.ply) ?? null" [clubGameId]="clubGameId" />
+          <app-mistake-comparison [entry]="comparisons.get(m.ply) ?? null" [clubGameId]="clubGameId" (showLine)="showLine.emit($event)" />
         }
       }
 
@@ -196,6 +197,8 @@ export class MistakesTrainerComponent {
   @Input() markSource: Partial<MarkOrigin> = {};
   /** Zugvergleiche je Halbzug (nur Vereinspartien, 0.908.0); `null` = gibt es hier nicht. */
   @Input() comparisons: ReadonlyMap<number, ClubMistakeComparison> | null = null;
+  /** Klick auf einen Zug der Fehler-Erklärung (0.915.0) — die Seite zeigt die Folge auf ihrem Brett. */
+  @Output() showLine = new EventEmitter<{ fen: string; line: LiveMove[]; at: number }>();
   /** Vereinspartie der Vergleiche — für den Link auf die volle Vergleichsseite. */
   @Input() clubGameId: number | null = null;
   private readonly originCache = new Map<Mistake, MarkOrigin>();

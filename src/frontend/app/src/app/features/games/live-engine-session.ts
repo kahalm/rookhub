@@ -119,6 +119,15 @@ export class LiveEngineSession {
     this.analyze(move.fen);
   }
 
+  /** Eine ganze Zugfolge auf einmal (klickbarer Zug einer Fehler-Erklärung, 0.915.0): ab `gameFen`, man steht nach
+   *  `cursor` Zügen; → läuft weiter durch die Folge. Gerechnet wird nur die eine Stellung. */
+  load(gameFen: string, moves: LiveMove[], cursor: number): void {
+    this.baseFen = gameFen;
+    this.moves.set([...moves]);
+    this.cursor.set(Math.max(0, Math.min(cursor, moves.length)));
+    this.analyze(this.fen(gameFen));
+  }
+
   /** Einen eigenen Zug zurück (←) — er bleibt gemerkt, → holt ihn wieder. */
   undo(gameFen: string): void {
     if (this.cursor() === 0) return;

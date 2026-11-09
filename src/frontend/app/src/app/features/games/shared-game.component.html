@@ -282,7 +282,8 @@
             <app-mistakes-trainer class="trainer-slot" [session]="t" (closed)="endTraining()" [markSource]="markSource"
                                   [comparisons]="comparisons()" [clubGameId]="clubComparisonGameId"
                                   [title]="own ? '' : 'games.mistakes.titleSide'" [titleParams]="{ player: sidePlayer(t.side()) }"
-                                  [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()" />
+                                  [analyzing]="!!trainingAnalysis()" (analyze)="toggleTrainingAnalysis()"
+                                  (showLine)="showTrainingLine($event)" />
             @if (trainingAnalysis(); as a) {
               <app-live-engine-panel class="live-slot" [session]="a.session" [gameFen]="a.base" (closed)="stopTrainingAnalysis()" />
             }

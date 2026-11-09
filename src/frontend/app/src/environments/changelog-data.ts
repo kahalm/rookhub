@@ -10,6 +10,12 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.916.0", date: "2026-11-09", changes: [
+    { en: "Club games, “Replay mistakes”: the moves in Claude’s explanation under the move comparison are now clickable. A click shows the position after that move on the board of the game page (whole line from the task position, ← and → step through it, the live engine evaluates along).",
+      de: "Vereinspartien, „Fehler nachspielen“: Die Züge in Claudes Erklärung unter dem Zugvergleich sind jetzt anklickbar. Ein Klick zeigt die Stellung nach diesem Zug auf dem Brett der Partieseite (die ganze Zugfolge ab der Aufgabe, ← und → laufen durch sie, die Live-Engine rechnet mit)." },
+    { en: "Club games: once a summary exists, the game header only links to it — “Request again” moved to the summary page itself.",
+      de: "Vereinspartien: Gibt es schon eine Zusammenfassung, verlinkt die Kopfzeile der Partie nur noch darauf — „Neu anfordern“ steht jetzt auf der Zusammenfassungsseite selbst." },
+  ] },
   { version: "0.915.0", date: "2026-11-09", changes: [
     { en: "Repertoires: besides single lines you can now share a whole chapter as one link (chapter ⋮ menu → “Share chapter”). The recipient needs no account and clicks through every line of the chapter – choose the line from a list or step with the arrows (arrow up/down on the keyboard). Share links now expire 30 days after sharing; sharing the same line or chapter again keeps the link and renews it. The share dialog and “My share links” in the profile show the expiry date. Links created before this version do not expire.",
       de: "Repertoires: Neben einzelnen Linien lässt sich jetzt ein ganzes Kapitel als ein Link teilen (⋮-Menü des Kapitels → „Kapitel teilen“). Das Gegenüber braucht kein Konto und klickt alle Linien des Kapitels durch – Linie aus einer Liste wählen oder mit den Pfeilen weiterschalten (Tastatur: Pfeil hoch/runter). Teilen-Links laufen jetzt 30 Tage nach dem Teilen ab; dieselbe Linie bzw. dasselbe Kapitel erneut teilen behält den Link und verlängert ihn. Teilen-Dialog und „Meine Teilen-Links“ im Profil zeigen das Ablaufdatum. Links von vor dieser Version laufen nicht ab." },

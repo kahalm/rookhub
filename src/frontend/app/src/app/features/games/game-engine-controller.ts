@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ExternalEngineInfo, ExternalEngineService } from '../analysis/external-engine.service';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
-import { LiveEngineSession } from './live-engine-session';
+import { LiveEngineSession, LiveMove } from './live-engine-session';
 import { MistakesSession } from './mistakes-session';
 
 /** Was die Engine-Steuerung von der Partieseite braucht. */
@@ -126,6 +126,25 @@ export class GameEngineController {
     }
     this.useStoredRemoteEngine(session);
     this.trainingAnalysis.set({ session, base: m.fenBefore, index: t.index(), side: t.side() });
+  }
+
+  /**
+   * Klick auf einen Zug der Fehler-Erklärung (0.915.0): die ganze Zugfolge ab der Aufgabe in die Trainings-Analyse
+   * laden, das Brett steht nach dem geklickten Zug, ← und → laufen durch die Folge, die Live-Engine rechnet mit.
+   */
+  showTrainingLine(base: string, moves: LiveMove[], at: number): void {
+    const t = this.host.training();
+    if (!t?.current()) return;
+    let a = this.trainingAnalysis();
+    if (!a || a.base !== base) {
+      this.stopTrainingAnalysis();
+      const session = this.host.createSession();
+      session.sync(-2, base);
+      this.useStoredRemoteEngine(session);
+      a = { session, base, index: t.index(), side: t.side() };
+      this.trainingAnalysis.set(a);
+    }
+    a.session.load(base, moves, at);
   }
 
   stopTrainingAnalysis(): void {
