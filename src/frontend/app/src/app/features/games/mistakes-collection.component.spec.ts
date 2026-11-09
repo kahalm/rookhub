@@ -5,7 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angul
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { MistakesCollectionComponent } from './mistakes-collection.component';
 import { GamesService, SavedGame } from './games.service';
 import { MistakeJudgeService } from './mistake-judge.service';
@@ -98,5 +98,33 @@ describe('MistakesCollectionComponent (UI-Sweep 2026-10-11)', () => {
     expect(navigate).toHaveBeenCalled();
     const extras = navigate.calls.mostRecent().args[1]!;
     expect(extras.queryParams).toEqual(jasmine.objectContaining({ c1: 'Landesliga' }));
+  });
+});
+
+describe('MistakesCollectionComponent: Ladefehler (F2-006)', () => {
+  it('zeigt app-load-error statt „keine Partien“; Erneut versuchen lädt', async () => {
+    let fail = true;
+    const list = jasmine.createSpy('list').and.callFake(() => (fail ? throwError(() => ({ status: 500 })) : of([])));
+    TestBed.configureTestingModule({
+      imports: [MistakesCollectionComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: GamesService, useValue: { list } },
+        { provide: MistakeJudgeService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+    });
+    const fixture = TestBed.createComponent(MistakesCollectionComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-load-error')).toBeTruthy();
+    expect(el.querySelector('.filters')).toBeNull();
+    fail = false;
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.filters')).toBeTruthy();
   });
 });

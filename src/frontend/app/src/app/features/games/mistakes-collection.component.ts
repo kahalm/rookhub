@@ -12,6 +12,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Subscription, forkJoin, from, of } from 'rxjs';
 import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { PreferencesService } from '../../core/preferences.service';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { GamesService, SavedGame } from './games.service';
 import { distinctClassifiers, filterByClassifiers, hasUnclassified, NO_CLASSIFIER } from './classifier.util';
@@ -36,7 +37,7 @@ const LOAD_CONCURRENCY = 4;
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [FormsModule, RouterLink, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatSelectModule, MatIconModule,
     MatProgressSpinnerModule,
-    TranslatePipe, ChessBoardComponent, MistakesTrainerComponent],
+    TranslatePipe, ChessBoardComponent, MistakesTrainerComponent, LoadErrorComponent],
   template: `
     <div class="page">
       <div class="header">
@@ -44,7 +45,10 @@ const LOAD_CONCURRENCY = 4;
         <h1>{{ 'games.mistakes.collection.title' | translate }}</h1>
       </div>
 
-      @if (!games()) {
+      @if (loadError(); as err) {
+        <!-- F2-006: Ladefehler nicht als „keine analysierten Partien“ zeigen. -->
+        <app-load-error [error]="err" (retry)="load()" />
+      } @else if (!games()) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
       } @else if (!training()) {
         <!-- Falz-Runde 16.10. (Handy 56 % bis „Starten“): Erklärsatz UNTER den Startknopf, die Auswahlzahl neben ihn,
@@ -136,6 +140,8 @@ export class MistakesCollectionComponent implements OnInit {
   readonly none = NO_CLASSIFIER;
   /** Die eigenen Partien (Liste ohne PGN); `null` = lädt noch. */
   readonly games = signal<SavedGame[] | null>(null);
+  /** Laden der Partienliste gescheitert (F2-006). */
+  readonly loadError = signal<unknown>(null);
   readonly filter1Sig = signal('');
   readonly filter2Sig = signal('');
   get filter1(): string { return this.filter1Sig(); }
@@ -174,9 +180,16 @@ export class MistakesCollectionComponent implements OnInit {
     const q = this.route.snapshot.queryParamMap;
     this.filter1Sig.set(classifierFromParam(q?.get('c1')));
     this.filter2Sig.set(classifierFromParam(q?.get('c2')));
+    this.load();
+  }
+
+  /** Partienliste holen — beim Start und über „Erneut versuchen“. */
+  load(): void {
+    this.loadError.set(null);
+    this.games.set(null);
     this.service.list(500).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => this.games.set(list),
-      error: () => this.games.set([]),
+      error: (err: unknown) => this.loadError.set(err ?? true),
     });
   }
 

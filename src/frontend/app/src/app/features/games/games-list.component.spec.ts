@@ -34,6 +34,23 @@ describe('GamesListComponent', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  it('a failed load shows app-load-error with retry, not the empty state (F2-006)', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    const isList = (req: { method: string; url: string }) => req.method === 'GET' && req.url.startsWith('/api/games') && !req.url.startsWith('/api/games/');
+    http.expectOne(isList).flush(null, { status: 500, statusText: 'Server Error' });
+    http.match('/api/game-analyses/guess/status').forEach(r => r.flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 }));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-load-error')).toBeTruthy();
+    expect(el.querySelector('.empty-state')).toBeNull();
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    http.expectOne(isList).flush([]);
+    fixture.detectChanges();
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.querySelector('.empty-state')).toBeTruthy();
+  });
+
   // d2-rk-games-kopfaktionen: „PGN hochladen" schwebte mitten in der Kopfzeile — beide Knöpfe stehen gruppiert rechts
   // in .header-actions (DESIGN 5.1), sekundär zuerst.
   it('groups the header buttons in .header-actions next to the title', async () => {

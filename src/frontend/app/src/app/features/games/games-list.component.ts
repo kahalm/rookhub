@@ -170,6 +170,9 @@ export type AnalysisState = 'none' | 'running' | 'done';
           <p>{{ 'games.search.none' | translate: { query: activeQuery } }}</p>
           <button mat-stroked-button type="button" class="no-hits-clear" (click)="clearSearch()">{{ 'games.search.clear' | translate }}</button>
         </div>
+      } @else if (loadError && games.length === 0) {
+        <!-- F2-006: ein gescheitertes Laden ist nicht „noch keine Partien“. -->
+        <app-load-error class="list-load-error" [error]="loadError" (retry)="reloadList()" />
       } @else if (games.length === 0) {
         <mat-card class="empty-state">
           <mat-icon>sports_esports</mat-icon>
@@ -502,6 +505,8 @@ export class GamesListComponent implements OnInit {
   /** Die Suche, zu der `games` gehört (entprellt, getrimmt); leer = keine. */
   activeQuery = '';
   searchFailed = false;
+  /** Erstes Laden der Liste gescheitert (F2-006) — `app-load-error` statt Leerzustand. */
+  loadError: unknown = null;
   readonly searchTake = SEARCH_TAKE;
   private search$ = new Subject<string>();
   /** Die Liste ohne Suche: Grundlage der Filterwerte. Sonst verschwände ein gewählter Filter, sobald die Treffer ihn nicht
@@ -527,6 +532,16 @@ export class GamesListComponent implements OnInit {
     });
   }
 
+  /** Liste (neu) laden — beim Start und über „Erneut versuchen“ (F2-006). */
+  reloadList(): void {
+    this.loading = true;
+    this.loadError = null;
+    this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: list => { this.loading = false; this.applyList(list); },
+      error: (err: unknown) => { this.loading = false; this.loadError = err ?? true; },
+    });
+  }
+
   /** Die Liste zur aktuellen Suche. Eine Antwort, die zu einer inzwischen geänderten Suche gehört, fällt weg. */
   private fetchList(): Observable<SavedGame[]> {
     const q = this.activeQuery;
@@ -536,6 +551,7 @@ export class GamesListComponent implements OnInit {
   private applyList(list: SavedGame[]): void {
     this.games = list;
     this.searchFailed = false;
+    this.loadError = null;
     if (!this.activeQuery) this.unsearched = list;
     this.schedulePoll();
   }
@@ -614,10 +630,7 @@ export class GamesListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.fetchList().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: list => { this.loading = false; this.applyList(list); },
-      error: () => { this.loading = false; },
-    });
+    this.reloadList();
     this.search$.pipe(
       debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
