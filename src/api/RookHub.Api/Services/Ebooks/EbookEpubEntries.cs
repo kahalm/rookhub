@@ -99,7 +99,14 @@ public static class EbookEpubEntries
             if (entry == null || entry.FullName.EndsWith('/') || entry.Length > MaxEntryBytes) return null;
             await using var s = entry.Open();
             using var ms = new MemoryStream((int)Math.Min(entry.Length, int.MaxValue));
-            await s.CopyToAsync(ms, ct);
+            // Gezählt statt der Längenangabe im ZIP zu trauen (R3-009): mehr als MaxEntryBytes entpackt → wie zu groß.
+            var buf = new byte[81920];
+            int n;
+            while ((n = await s.ReadAsync(buf, ct)) > 0)
+            {
+                if (ms.Length + n > MaxEntryBytes) return null;
+                ms.Write(buf, 0, n);
+            }
             return new EpubEntry(ms.ToArray(), ContentType(path));
         }
         catch (InvalidDataException) { return null; }

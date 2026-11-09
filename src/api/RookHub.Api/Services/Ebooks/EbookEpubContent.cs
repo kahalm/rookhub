@@ -43,20 +43,57 @@ public static class EbookEpubContent
             .Select(id => manifest[id!]).ToList();
     }
 
-    /// <summary>Alle Blöcke des Buchs; <see cref="EpubBlock.Spine"/> ist 1-basiert.</summary>
-    public static List<EpubBlock> Read(ZipArchive zip)
+    /// <summary>Größtes Kapitel (entpackt), das gelesen wird; größere werden übersprungen (R3-009: ein Kapitel aus 1 GB
+    /// Leerzeichen packt sich auf 1 MB). Echte Kapitel liegen weit darunter.</summary>
+    public const long MaxChapterBytes = 16L * 1024 * 1024;
+
+    /// <summary>Vorgabe für die Summe aller gelesenen Kapitel (entpackt); danach endet <see cref="Read"/> (R3-009).</summary>
+    public const long MaxTotalBytes = 128L * 1024 * 1024;
+
+    /// <summary>Alle Blöcke des Buchs; <see cref="EpubBlock.Spine"/> ist 1-basiert. Gedeckelt (R3-009): ein Kapitel über
+    /// <see cref="MaxChapterBytes"/> wird übersprungen (gezählt wird beim Lesen, der Längenangabe im ZIP wird nicht
+    /// vertraut), nach <paramref name="maxTotalBytes"/> entpackten Bytes endet das Lesen, und ein Spine-Pfad, der mehrfach
+    /// in der Spine steht, wird nur beim ersten Mal gelesen (die Nummerierung der übrigen Kapitel bleibt).</summary>
+    public static List<EpubBlock> Read(ZipArchive zip, long maxTotalBytes = MaxTotalBytes)
     {
         var result = new List<EpubBlock>();
         var spine = Spine(zip);
-        for (var s = 0; s < spine.Count; s++)
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        long total = 0;
+        for (var s = 0; s < spine.Count && total < maxTotalBytes; s++)
         {
+            if (!seen.Add(spine[s])) continue;
             var entry = zip.GetEntry(spine[s]);
-            if (entry == null) continue;
-            string html;
-            using (var r = new StreamReader(entry.Open(), Encoding.UTF8)) html = r.ReadToEnd();
-            result.AddRange(Parse(s + 1, DirOf(spine[s]), html));
+            if (entry == null || entry.Length > MaxChapterBytes) continue;
+            var limit = Math.Min(MaxChapterBytes, maxTotalBytes - total);
+            var bytes = ReadCapped(entry, limit);
+            if (bytes == null) { total += limit; continue; }   // länger als angegeben bzw. über dem Rest: überspringen
+            total += bytes.Length;
+            result.AddRange(Parse(s + 1, DirOf(spine[s]), DecodeUtf8(bytes)));
         }
         return result;
+    }
+
+    /// <summary>Eintrag entpacken, höchstens <paramref name="limit"/> Bytes; <c>null</c> = länger.</summary>
+    internal static byte[]? ReadCapped(ZipArchiveEntry entry, long limit)
+    {
+        using var s = entry.Open();
+        using var ms = new MemoryStream((int)Math.Min(Math.Max(entry.Length, 0), limit));
+        var buf = new byte[81920];
+        int n;
+        while ((n = s.Read(buf, 0, buf.Length)) > 0)
+        {
+            if (ms.Length + n > limit) return null;
+            ms.Write(buf, 0, n);
+        }
+        return ms.ToArray();
+    }
+
+    /// <summary>Wie zuvor <c>new StreamReader(…, Encoding.UTF8).ReadToEnd()</c>: BOM-Erkennung (UTF-8/UTF-16/UTF-32), sonst UTF-8.</summary>
+    private static string DecodeUtf8(byte[] bytes)
+    {
+        using var r = new StreamReader(new MemoryStream(bytes), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return r.ReadToEnd();
     }
 
     internal static List<EpubBlock> Parse(int spine, string dir, string html)

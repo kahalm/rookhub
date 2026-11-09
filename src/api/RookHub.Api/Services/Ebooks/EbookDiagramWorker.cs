@@ -69,6 +69,16 @@ public class EbookDiagramWorker : PeriodicWorker
                 await results.NoFileAsync(ebook, ct);
                 continue;
             }
+            // Versuchszähler (R3-009): ein Buch, das den Prozess schon mehrmals hart abstürzen ließ, nicht wieder anfassen.
+            var attempts = new EbookDiagramAttempts(storage.Root);
+            if (!attempts.TryBegin(ebook.Id))
+            {
+                Logger.LogWarning("E-Book {EbookId}: Diagramm-Erkennung {Max}× ohne Ende abgebrochen — als Fehler abgeschlossen",
+                    ebook.Id, EbookDiagramAttempts.MaxAttempts);
+                attempts.End(ebook.Id);
+                await results.FailedAsync(ebook, ct);
+                continue;
+            }
             try
             {
                 var path = storage.ResolveFile(ebook, plan.Primary);
@@ -89,6 +99,7 @@ public class EbookDiagramWorker : PeriodicWorker
                 Logger.LogWarning(ex, "E-Book {EbookId}: Diagramme nicht lesbar", ebook.Id);
                 await results.FailedAsync(ebook, ct);
             }
+            finally { attempts.End(ebook.Id); }
         }
     }
 

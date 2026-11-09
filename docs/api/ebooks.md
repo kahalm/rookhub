@@ -81,6 +81,18 @@ Bücher kommen auch aus anonymen Uploads; ihr Inhalt ist fremder Code bzw. fremd
   `.cjs`) liefert die Route nie aus (404), ein unbekannter Typ kommt als `application/octet-stream`. Der Leser bleibt
   unberührt: epub.js holt Kapitel per fetch/XHR und schreibt sie in sein eigenes iframe (dort gilt die CSP der App-Seite);
   Bilder, CSS und Schriften sind Unterressourcen, auf die eine Antwort-CSP nicht wirkt.
+- **Deckel der Verarbeitung** (gilt für Upload-Fingerabdruck, Spracherkennung und Diagramm-Erkennung):
+  `EbookEpubContent.Read` liest ein Spine-Kapitel nur bis 16 MB entpackt (`MaxChapterBytes`, beim Lesen gezählt — der
+  Längenangabe im ZIP wird nicht vertraut; größere werden übersprungen), höchstens 128 MB je Buch (`MaxTotalBytes`; der
+  Fingerabdruck im Upload-Request nur 16 MB, `EbookFingerprint.FingerprintEpubBytes`) und jeden Spine-Pfad nur einmal
+  (wiederholte `itemref`s zählen in der Nummerierung weiter, werden aber nicht erneut gelesen). Ein ausgelieferter
+  Eintrag wird ebenfalls gezählt gelesen (> 64 MB → 404). Bilder: `EbookBoardImage.DecodeGray` liest zuerst den Kopf
+  (`SKCodec`): über 120 MP → kein Bild, über 50 MP verkleinert dekodiert (JPEG/WebP) bzw. abgelehnt (PNG); darunter
+  unverändert.
+- **Versuchszähler im Diagramm-Worker** (`EbookDiagramAttempts`): vor der Erkennung eine Marke
+  `<Upload-Wurzel>/diagram-attempts/<id>`, nach jedem geordneten Ende (Erfolg, Fehler, Herunterfahren) gelöscht. Nur ein
+  harter Absturz (OOM-Kill) lässt sie stehen; nach drei solchen Abbrüchen schließt der Worker das Buch als `Failed` ab,
+  statt es nach jedem Neustart wieder zu nehmen.
 
 ## Upload-Dublettenprüfung (0.863.0)
 

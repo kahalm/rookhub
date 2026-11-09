@@ -272,6 +272,9 @@ public static class EbookFingerprint
         return new EbookFileFingerprint(CombineIsbns(meta.ToString(), front.ToString()), MinHash(words));
     }
 
+    /// <summary>Höchstens so viel entpacktes Kapitel-HTML liest der EPUB-Fingerabdruck (läuft synchron im Upload).</summary>
+    internal const long FingerprintEpubBytes = 16L * 1024 * 1024;
+
     private static EbookFileFingerprint FromEpub(string path, CancellationToken ct)
     {
         using var zip = ZipFile.OpenRead(path);
@@ -281,7 +284,8 @@ public static class EbookFingerprint
             using (var r = new StreamReader(opfPath.Open(), Encoding.UTF8)) opf = r.ReadToEnd();
         ct.ThrowIfCancellationRequested();
         var text = new StringBuilder();
-        foreach (var block in EbookEpubContent.Read(zip))
+        // Das Fenster braucht ~61 000 Wörter (≤ 2 MB Text): 16 MB Kapitel-HTML reichen weit (R3-009, Upload-Request).
+        foreach (var block in EbookEpubContent.Read(zip, FingerprintEpubBytes))
         {
             if (block.Text == null) continue;
             text.Append(block.Text).Append('\n');

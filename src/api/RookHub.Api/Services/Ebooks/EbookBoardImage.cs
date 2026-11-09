@@ -13,10 +13,21 @@ public static class EbookBoardImage
     public const int Cell = 32;
     private const string Pieces = "PNBRQKpnbrqk";
 
-    /// <summary>Bild dekodieren und in Grau wandeln (0,299 R + 0,587 G + 0,114 B; Transparenz auf Weiß). <c>null</c> = kein Bild.</summary>
-    public static float[,]? DecodeGray(byte[] data, int maxSide = 1600)
+    /// <summary>Größtes Bild (laut Kopf), das überhaupt angefasst wird (R3-009): eine stark komprimierbare PNG von 8 MB kann
+    /// 30 000 × 30 000 px haben (3,6 GB als Bitmap). Echte Diagrammbilder haben ≤ 2000 × 2000 px.</summary>
+    public const long MaxPixels = 120_000_000;
+
+    /// <summary>Bis hierhin wird wie immer in voller Größe dekodiert (Ergebnis byte-gleich); größere Bilder liefert der
+    /// Codec gleich verkleinert (JPEG in Achteln, WebP beliebig) — wer das nicht kann (PNG), wird abgelehnt.</summary>
+    public const long MaxDecodePixels = 50_000_000;
+
+    /// <summary>Bild dekodieren und in Grau wandeln (0,299 R + 0,587 G + 0,114 B; Transparenz auf Weiß). <c>null</c> = kein Bild
+    /// oder zu groß (Kopf geprüft VOR dem Dekodieren: <see cref="MaxPixels"/>, <see cref="MaxDecodePixels"/>).</summary>
+    public static float[,]? DecodeGray(byte[] data, int maxSide = 1600) => DecodeGray(data, maxSide, MaxPixels, MaxDecodePixels);
+
+    internal static float[,]? DecodeGray(byte[] data, int maxSide, long maxPixels, long maxDecodePixels)
     {
-        using var raw = SKBitmap.Decode(data);
+        using var raw = DecodeCapped(data, maxPixels, maxDecodePixels);
         if (raw == null || raw.Width < 64 || raw.Height < 64) return null;
         // Große Bilder (z. B. 2000 × 2000 px je Brett in „How to Win at Chess“) verkleinern statt verwerfen.
         var scale = Math.Min(1.0, (double)maxSide / Math.Max(raw.Width, raw.Height));
@@ -44,6 +55,33 @@ public static class EbookBoardImage
                 g[y, x] = (float)((r * 0.299 + gr * 0.587 + b * 0.114) / 255.0);
             }
         return g;
+    }
+
+    /// <summary>Wie <see cref="SKBitmap.Decode(byte[])"/>, aber erst nach einem Blick in den Bildkopf: bis
+    /// <paramref name="maxDecodePixels"/> unverändert in voller Größe, darüber verkleinert (falls der Codec das kann),
+    /// über <paramref name="maxPixels"/> oder nicht verkleinerbar → <c>null</c>.</summary>
+    internal static SKBitmap? DecodeCapped(byte[] data, long maxPixels, long maxDecodePixels)
+    {
+        using var codec = SKCodec.Create(new SKMemoryStream(data));
+        if (codec == null) return null;
+        var info = codec.Info;
+        if (info.Width <= 0 || info.Height <= 0) return null;
+        var pixels = (long)info.Width * info.Height;
+        if (pixels > maxPixels) return null;
+        if (pixels <= maxDecodePixels) return SKBitmap.Decode(codec);
+        var scale = Math.Sqrt((double)maxDecodePixels / pixels);
+        for (var i = 0; i < 16; i++, scale *= 0.9)
+        {
+            var d = codec.GetScaledDimensions((float)scale);
+            if (d.Width <= 0 || d.Height <= 0 || (long)d.Width * d.Height > maxDecodePixels) continue;
+            var target = new SKImageInfo(d.Width, d.Height, SKImageInfo.PlatformColorType, SKAlphaType.Premul);
+            var bmp = new SKBitmap(target);
+            var r = codec.GetPixels(target, bmp.GetPixels());
+            if (r is SKCodecResult.Success or SKCodecResult.IncompleteInput) return bmp;
+            bmp.Dispose();
+            return null;
+        }
+        return null;
     }
 
     /// <summary>Brett-Rechteck (x0, y0, x1, y1): größte dunkle Komponente (8er-Nachbarschaft, &lt; 235/255), annähernd
