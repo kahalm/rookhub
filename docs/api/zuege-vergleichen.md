@@ -73,7 +73,9 @@ auf 30 (`docs/api/meisterpartien-im-hintergrund-analysieren.md`, „Vertiefung a
 * **Rechnen**: höchstens `ClubMistakeComparisons:MaxActive` (1) gleichzeitig in `Candidates`/`Replies`, wartende nach
   `FinishedAt` der Analyse (neueste zuerst), dann Halbzug. Tiefe `ClubMistakeComparisons:Depth` (30 = `ClubRefineDepth`; 0.908.0: 35; NUR hier — eigene
   Vergleiche auf der Haus-Engine bleiben bei `HouseMaxDepth` 24). Aufträge als Stapel-Hintergrundarbeit (`Background` +
-  `Batch`, wie die Analyse der Vereinspartien): nach allem, worauf jemand wartet, und in den Sperrzeiten nicht. Ist die
+  `Batch`, wie die Analyse der Vereinspartien): nach allem, worauf jemand wartet, und in den Sperrzeiten nicht. **Vorrang
+  (0.916.1)**: Partien mit angeforderter/laufender Zusammenfassung (`ClubGameSummaries` Requested/Running) starten zuerst, am
+  `MaxActive`-Deckel vorbei, und ihre Aufträge sind nur `Background` (kein `Batch`). Ist die
   Haus-Engine nicht mehr freigegeben (nur bei gesetztem `EngineOwnerUserId`) oder der Auftragsdeckel voll, bleibt der Rest
   liegen. `ClubMistakeComparisons:Enabled=false` hält alles an. Begründung auf Deutsch (`Language` „de" — LeagueHub ist
   deutschsprachig).

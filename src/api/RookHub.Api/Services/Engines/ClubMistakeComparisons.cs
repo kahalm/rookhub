@@ -22,7 +22,7 @@ namespace RookHub.Api.Services.Engines;
 /// <see cref="EnqueueAsync"/>. Was davor schon fertig war, holt der Nachtrag (<see cref="TickAsync"/>) nach — immer nur eine
 /// Partie, wenn nichts mehr wartet, die zuletzt fertig gewordene zuerst.</item>
 /// <item><b>Wie gerechnet</b>: angelegt wird nur die Zeile (<see cref="MoveComparisonStatus.Waiting"/>); die Pumpe startet
-/// höchstens <see cref="DefaultMaxActive"/> gleichzeitig, jüngste Analyse zuerst, und die Aufträge laufen als
+/// höchstens <see cref="DefaultMaxActive"/> gleichzeitig (angeforderte Zusammenfassung: vorne und ohne Deckel), jüngste Analyse zuerst, und die Aufträge laufen als
 /// Stapel-Hintergrundarbeit wie die Analyse der Vereinspartien (verdrängt nichts, Sperrzeiten gelten). Besitzer ist der
 /// Besitzer der Analyse (Haus-Engine-Konto); die Deckel der Nutzer (<see cref="MoveComparisonService.MaxOpenPerUser"/>,
 /// <see cref="MoveComparisonService.MaxKeptPerUser"/>) und seine Liste sehen diese Zeilen nicht.</item>
@@ -142,20 +142,36 @@ public sealed class ClubMistakeComparisons
         return true;
     }
 
-    /// <summary>Wartende Vergleiche starten, solange weniger als <c>MaxActive</c> rechnen — die jüngste Analyse zuerst, darin nach
-    /// Halbzug. Ohne freigegebene Haus-Engine oder bei vollem Deckel bleibt der Rest liegen (nächster Takt). → Zahl gestartet.</summary>
+    /// <summary>
+    /// Wartet auf die Vergleiche dieser Analyse eine Zusammenfassung (angefordert oder in Arbeit)? Dann gehen sie vor
+    /// (Wunsch 2026-11-09): sie starten am <c>MaxActive</c>-Deckel vorbei und ihre Aufträge laufen als normale
+    /// Hintergrundarbeit statt als Stapel — sonst stünde die Zusammenfassung hinter dem ganzen Nachtrag.
+    /// </summary>
+    public static Task<bool> SummaryWantedAsync(AppDbContext db, int analysisId, CancellationToken ct = default) =>
+        db.GameAnalyses.AnyAsync(a => a.Id == analysisId && db.ClubGameSummaries.Any(s => s.ClubGameId == a.LeagueClubGameId
+            && (s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)), ct);
+
+    /// <summary>Wartende Vergleiche starten: zuerst die der Partien mit angeforderter Zusammenfassung (ohne Deckel, siehe
+    /// <see cref="SummaryWantedAsync"/>), dann die übrigen, solange weniger als <c>MaxActive</c> rechnen — die jüngste Analyse
+    /// zuerst, darin nach Halbzug. Ohne freigegebene Haus-Engine oder bei vollem Deckel bleibt der Rest liegen (nächster
+    /// Takt). → Zahl gestartet.</summary>
     internal async Task<int> StartWaitingAsync(CancellationToken ct)
     {
         var active = await _db.MoveComparisons.CountAsync(c => c.GameAnalysisId != null
             && (c.Status == MoveComparisonStatus.Candidates || c.Status == MoveComparisonStatus.Replies), ct);
         var started = 0;
-        while (active + started < _maxActive)
+        var startedNormal = 0;
+        while (true)
         {
             var next = await _db.MoveComparisons.Include(c => c.Lines)
                 .Where(c => c.GameAnalysisId != null && c.Status == MoveComparisonStatus.Waiting)
-                .OrderByDescending(c => c.GameAnalysis!.FinishedAt).ThenByDescending(c => c.GameAnalysisId).ThenBy(c => c.Ply)
+                .OrderByDescending(c => _db.ClubGameSummaries.Any(s => s.ClubGameId == c.GameAnalysis!.LeagueClubGameId
+                    && (s.Status == ClubGameSummaryStatus.Requested || s.Status == ClubGameSummaryStatus.Running)))
+                .ThenByDescending(c => c.GameAnalysis!.FinishedAt).ThenByDescending(c => c.GameAnalysisId).ThenBy(c => c.Ply)
                 .FirstOrDefaultAsync(ct);
             if (next is null) break;
+            var wanted = await SummaryWantedAsync(_db, next.GameAnalysisId!.Value, ct);
+            if (!wanted && active + startedNormal >= _maxActive) break;
             if (next.EngineOwnerUserId is int owner && !await EngineOwnerResolver.IsHouseEngineSharedAsync(_db, owner, ct)) break;
             if (next.Depth != _depth) next.Depth = _depth;   // eine geänderte Tiefe gilt auch für schon angelegte, nicht gestartete
             try { await _comparisons.StartWaitingAsync(next, ct); }
@@ -165,6 +181,7 @@ public sealed class ClubMistakeComparisons
                 break;
             }
             started++;
+            if (!wanted) startedNormal++;
         }
         return started;
     }

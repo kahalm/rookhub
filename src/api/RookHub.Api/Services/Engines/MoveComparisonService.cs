@@ -215,14 +215,16 @@ public sealed class MoveComparisonService
 
     /// <summary>Ein Auftrag des Vergleichs. Vergleiche einer Vereinspartie (<see cref="MoveComparison.GameAnalysisId"/>) rechnen
     /// als Stapel-Hintergrundarbeit wie die Analyse der Vereinspartien selbst (<see cref="AnalysisJob.Background"/> +
-    /// <see cref="AnalysisJob.Batch"/>): nach allem, worauf jemand wartet, und in den Sperrzeiten der Haus-Engine nicht.</summary>
+    /// <see cref="AnalysisJob.Batch"/>): nach allem, worauf jemand wartet, und in den Sperrzeiten der Haus-Engine nicht. Wartet
+    /// eine Zusammenfassung der Partie darauf, nur Hintergrund, kein Stapel (<see cref="ClubMistakeComparisons.SummaryWantedAsync"/>).</summary>
     private async Task<int> CreateJobAsync(MoveComparison c, string fen, int multiPv, CancellationToken ct)
     {
         var club = c.GameAnalysisId != null;
+        var batch = club && !await ClubMistakeComparisons.SummaryWantedAsync(_db, c.GameAnalysisId!.Value, ct);
         var job = await _jobs.CreateAsync(c.UserId, new CreateAnalysisJobRequest
         {
             Fen = fen, TargetDepth = c.Depth, MultiPv = multiPv, Title = JobTitle,
-        }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId, background: club, batch: club);
+        }, ct, remember: false, engineOwnerUserId: c.EngineOwnerUserId ?? c.UserId, background: club, batch: batch);
         return job.Id;
     }
 

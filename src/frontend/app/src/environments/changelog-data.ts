@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.916.1", date: "2026-11-09", changes: [
+    { en: "Club games: when a summary has been requested, that game’s mistake comparisons now jump the queue and run as normal background work instead of waiting behind the whole backlog.",
+      de: "Vereinspartien: Ist eine Zusammenfassung angefordert, kommen die Fehler-Vergleiche dieser Partie jetzt in der Warteschlange nach vorne und rechnen als normale Hintergrundarbeit, statt hinter dem ganzen Nachtrag zu warten." },
+  ] },
   { version: "0.916.0", date: "2026-11-09", changes: [
     { en: "Club games, “Replay mistakes”: the moves in Claude’s explanation under the move comparison are now clickable. A click shows the position after that move on the board of the game page (whole line from the task position, ← and → step through it, the live engine evaluates along).",
       de: "Vereinspartien, „Fehler nachspielen“: Die Züge in Claudes Erklärung unter dem Zugvergleich sind jetzt anklickbar. Ein Klick zeigt die Stellung nach diesem Zug auf dem Brett der Partieseite (die ganze Zugfolge ab der Aufgabe, ← und → laufen durch sie, die Live-Engine rechnet mit)." },

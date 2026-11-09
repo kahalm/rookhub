@@ -170,6 +170,36 @@ public class ClubMistakeComparisonsTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_SummaryRequested_GoesFirst_PastTheCap_NotAsBatch()
+    {
+        const int otherGame = 990202;
+        _db.LeagueClubGames.Add(new LeagueClubGame { Id = otherGame, ClubId = 990301, Year = 2026, White = "W", Black = "S",
+            Result = "1-0", Plies = 6, Pgn = "1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 1-0", MovesHash = "y" });
+        await _db.SaveChangesAsync();
+        var fresh = await AnalysisAsync(990106, finished: DateTime.UtcNow);
+        var old = await AnalysisAsync(990107, finished: DateTime.UtcNow.AddDays(-3));
+        old.LeagueClubGameId = otherGame;
+        await _db.SaveChangesAsync();
+        await ClubMistakeComparisons.EnqueueAsync(_db, fresh);
+        await ClubMistakeComparisons.EnqueueAsync(_db, old);
+
+        await Club().TickAsync();   // ohne Zusammenfassung: die jüngste Analyse, als Stapel
+        Assert.Equal(fresh.Id, (await _db.MoveComparisons.SingleAsync(c => c.Status == MoveComparisonStatus.Candidates)).GameAnalysisId);
+
+        _db.ClubGameSummaries.Add(new ClubGameSummary { ClubGameId = otherGame, Status = ClubGameSummaryStatus.Requested, RequestedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        await Club().TickAsync();   // Deckel voll — die angeforderte Partie startet trotzdem, alle ihre Fehler
+
+        var urgent = await _db.MoveComparisons.Where(c => c.GameAnalysisId == old.Id).ToListAsync();
+        Assert.All(urgent, c => Assert.Equal(MoveComparisonStatus.Candidates, c.Status));
+        var urgentJobs = await _db.MoveComparisonLines.Where(l => l.Comparison!.GameAnalysisId == old.Id && l.AnalysisJobId != null)
+            .Select(l => l.AnalysisJobId!.Value).ToListAsync();
+        Assert.NotEmpty(urgentJobs);
+        Assert.All(await _db.AnalysisJobs.Where(j => urgentJobs.Contains(j.Id)).ToListAsync(), j => { Assert.True(j.Background); Assert.False(j.Batch); });
+        Assert.Equal(MoveComparisonStatus.Waiting, (await _db.MoveComparisons.SingleAsync(c => c.GameAnalysisId == fresh.Id && c.Ply == 5)).Status);
+    }
+
+    [Fact]
     public async Task DeleteForAnalysis_RemovesRowsAndJobs_ResetsMarker()
     {
         var a = await AnalysisAsync();
