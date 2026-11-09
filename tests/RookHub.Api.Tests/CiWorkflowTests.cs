@@ -233,6 +233,37 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// Jeder Job aller Workflows trägt <c>timeout-minutes</c> (R1-007): ohne läuft ein hängender Job bis zum 6-h-Standard,
+    /// und die Concurrency-Gruppe <c>docker-${{ github.ref_type }}</c> hält solange jeden weiteren master-Lauf bzw. Tag an.
+    /// Ausgenommen sind nur Aufrufe wiederverwendbarer Workflows (<c>uses:</c> auf Job-Ebene) — dort ist das Feld nicht
+    /// erlaubt; die aufgerufenen Jobs tragen es selbst.
+    /// </summary>
+    [Fact]
+    public void EveryJob_HasATimeout()
+    {
+        var missing = new List<string>();
+        foreach (var file in Directory.GetFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml"))
+        {
+            var text = File.ReadAllText(file);
+            var jobsAt = Regex.Match(text, @"(?m)^jobs:\s*$");
+            Assert.True(jobsAt.Success, $"{Path.GetFileName(file)} ohne jobs:");
+            var rest = text[(jobsAt.Index + jobsAt.Length)..];
+            var end = Regex.Match(rest, @"(?m)^\S");
+            if (end.Success) rest = rest[..end.Index];
+            var heads = Regex.Matches(rest, @"(?m)^  ([A-Za-z0-9_-]+):\s*$");
+            for (var i = 0; i < heads.Count; i++)
+            {
+                var from = heads[i].Index + heads[i].Length;
+                var body = rest[from..(i + 1 < heads.Count ? heads[i + 1].Index : rest.Length)];
+                if (Regex.IsMatch(body, @"(?m)^    uses:")) continue;
+                if (!Regex.IsMatch(body, @"(?m)^    timeout-minutes: \d+\s*$"))
+                    missing.Add($"{Path.GetFileName(file)}/{heads[i].Groups[1].Value}");
+            }
+        }
+        Assert.True(missing.Count == 0, "Jobs ohne timeout-minutes:\n  " + string.Join("\n  ", missing));
+    }
+
+    /// <summary>
     /// Die Tests der Betriebs-Skripte (<c>scripts/tests/</c>) liefen in keinem Workflow (Codereview
     /// I1-015) — darunter der, der „kein Passwort im argv" fuer das Backup festhaelt. Jede Datei dort
     /// muss im Job <c>test-scripts</c> aufgerufen werden; ein neuer Test, den niemand eintraegt,

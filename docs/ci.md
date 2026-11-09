@@ -51,6 +51,10 @@
   `test.yml` lässt genau die aus (`already-green`). Vom Pfadfilter ausgelassene Jobs zählen nicht und laufen im
   Tag — ein früherer roter oder ersetzter Push kann deren Bereich ungetestet geändert haben. Kein fertiger grüner
   Lauf, API-Fehler oder Handstart: alle Tests laufen. Die sechs `build-*`-Jobs haben `timeout-minutes: 10`.
+  **Jeder Job hat `timeout-minutes`** (R1-007, `CiWorkflowTests.EveryJob_HasATimeout`; ausgenommen nur `uses:`-Aufrufe
+  wiederverwendbarer Workflows): Tests/Frontend-Build 30, Crawler-Vertrag 20, Engine-Provider 15, Vorbau 20, Image-Tags
+  10, `changes`/Meldungen 5, Audit 15, Android 30/15/10 — großzügig über den gemessenen Laufzeiten (≤ 6 min), damit ein
+  Hänger die Concurrency-Gruppe nicht 6 h hält.
   **Ein Lauf je bewegliches Tag** (Codereview I1-012): `docker.yml` hat `concurrency: { group: docker-${{ github.ref_type }},
   cancel-in-progress: false }`. `:dev` hängt nur ein master-Lauf um, `:latest` nur ein Tag-Lauf; ohne Gruppe gewann der
   zuletzt fertige Lauf, ein älterer Stand konnte einen neueren überschreiben (Watchtower rollt um 02:00 aus). Gruppe am

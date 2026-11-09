@@ -46,6 +46,7 @@ jobs:
   # und ein Release mit einem ausgelassenen Image waere unvollstaendig.
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       api: ${{ steps.filter.outputs.api }}
       frontend: ${{ steps.filter.outputs.frontend }}
@@ -171,6 +172,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -201,6 +203,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -230,6 +233,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.turnier == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -258,6 +262,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.kidhub == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -286,6 +291,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.leaguehub == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -314,6 +320,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.clubhub == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -602,6 +609,7 @@ jobs:
     needs: [changes, build-api, build-frontend, build-turnier, build-kidhub, build-leaguehub, build-clubhub]
     if: ${{ needs.changes.outputs.release == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

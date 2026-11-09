@@ -49,6 +49,7 @@ permissions: {}
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # Nur lesen — hier laeuft der ganze npm-Baum von Bubblewrap, also weder Secrets noch Schreibrecht.
     permissions:
       contents: read
@@ -206,6 +207,7 @@ jobs:
   sign:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Nur lesen: hier liegt der Schluessel, also kein Schreibrecht und kein Checkout.
     permissions:
       contents: read
@@ -271,6 +273,7 @@ jobs:
     needs: [build, sign]
     if: inputs.variant == 'prod'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
