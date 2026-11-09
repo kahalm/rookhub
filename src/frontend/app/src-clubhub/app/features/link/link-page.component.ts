@@ -6,6 +6,11 @@ import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { LinkState } from '../../core/club.models';
 import { LinkStateStore } from '../../core/link-state.store';
 
+/** Rückfrage vor dem Einlösen eines Codes (F4-015). */
+export const LINK_CONSENT_QUESTION = 'Dein Konto mit dem Karteiblatt verknüpfen, zu dem dieser Code gehört? Die Trainer der Kartei sehen '
+  + 'danach Trainingsminuten, gelöste Puzzles und geschaffte Stufen deines Kontos — keine einzelnen Aufgaben oder Partien. '
+  + 'Trennen kannst du die Verknüpfung hier jederzeit.';
+
 /**
  * „Konto verknüpfen": hier löst ein KIND (bzw. seine Eltern) den Code ein, den der Trainer ausgegeben hat — angemeldet mit
  * dem eigenen RookHub-/KidHub-Konto. Das Einlösen ist die Einwilligung, dass der Trainer sieht, wie viel das Konto
@@ -79,6 +84,10 @@ export class LinkPageComponent implements OnInit {
       this.host.querySelector<HTMLInputElement>('.code-input')?.focus();
       return;
     }
+    // Codereview F4-015 (Entscheidung E7): das Einlösen ist die Einwilligung — der Code kommt oft vorbefüllt über einen
+    // Link, deshalb vorher ausdrücklich sagen, was freigegeben wird, und fragen. (Verein/Blatt schon VOR dem Einlösen zu
+    // nennen bräuchte einen Vorschau-Endpunkt — offen, Umfang entscheidet der Betreiber.)
+    if (!(await firstValueFrom(this.confirm.ask(LINK_CONSENT_QUESTION)))) return;
     await this.run(async () => this.setState(await this.api.redeem(code)), 'Verknüpfen hat nicht geklappt.');
   }
 

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
-import { LinkPageComponent } from './link-page.component';
+import { LINK_CONSENT_QUESTION, LinkPageComponent } from './link-page.component';
 import { LinkStateStore } from '../../core/link-state.store';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
@@ -45,6 +45,17 @@ describe('LinkPageComponent (Konto verknüpfen)', () => {
     expect(api.redeem).toHaveBeenCalledWith('ABCDE-FGHJK');
     expect(el().querySelector('.linked')!.textContent).toContain('Karteiblatt von Daniel');
     expect(el().querySelector('form')).toBeNull();
+  });
+
+  // Codereview F4-015: der vorbefüllte Code war mit einem Tipp eingelöst — die Einwilligung ohne Rückfrage.
+  it('Einlösen fragt vorher, was freigegeben wird; „nein“ löst nichts ein', async () => {
+    confirmAsk.and.returnValue(of(false));
+    await create({ code: 'ABCDE-FGHJK' });
+    await fixture.componentInstance.redeem();
+    expect(confirmAsk).toHaveBeenCalledWith(LINK_CONSENT_QUESTION);
+    expect(LINK_CONSENT_QUESTION).toContain('Trainingsminuten');
+    expect(api.redeem).not.toHaveBeenCalled();
+    expect(el().querySelector('form')).not.toBeNull();
   });
 
   it('ein unbekannter oder abgelaufener Code: die Begründung des Servers, das Feld bleibt', async () => {
