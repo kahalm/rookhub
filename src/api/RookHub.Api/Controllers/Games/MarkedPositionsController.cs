@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Games;
@@ -36,6 +37,7 @@ public class MarkedPositionsController : BaseApiController
     /// <c>noVisitor</c> (ohne Anmeldung und ohne gültige <c>X-Visitor-Id</c>).</summary>
     [HttpPost]
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]   // je Konto bzw. Adresse (R4-003): die Kennung ist frei wählbar
     public async Task<ActionResult<MarkedPositionDto>> Mark([FromBody] MarkPositionInputDto body, CancellationToken ct)
     {
         if (body is null) return BadRequest(new { reason = "invalidFen" });
@@ -46,6 +48,7 @@ public class MarkedPositionsController : BaseApiController
     /// <summary>Markierung zurücknehmen (<c>?fen=</c>, Zugzähler egal). 404, wenn die Stellung nicht markiert war.</summary>
     [HttpDelete]
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]   // je Konto bzw. Adresse (R4-003): die Kennung ist frei wählbar
     public async Task<IActionResult> Unmark([FromQuery] string fen, CancellationToken ct)
         => await _service.UnmarkAsync(Caller, fen, ct) ? NoContent() : NotFound();
 
@@ -53,6 +56,7 @@ public class MarkedPositionsController : BaseApiController
     /// 400 <c>{ reason: "invalid" }</c> bei zu vielen/zu langen Schlagworten oder zu langem Kommentar.</summary>
     [HttpPut("notes")]
     [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]   // je Konto bzw. Adresse (R4-003): die Kennung ist frei wählbar
     public async Task<ActionResult<MarkedPositionDto>> SetNotes([FromBody] MarkedPositionNotesDto body, CancellationToken ct)
     {
         if (body is null) return NotFound();

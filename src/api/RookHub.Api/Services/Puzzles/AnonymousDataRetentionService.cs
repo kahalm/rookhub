@@ -25,7 +25,8 @@ namespace RookHub.Api.Services.Puzzles;
 /// PRIVACY.md 90 Tage zusagt. Dieser Dienst läuft IMMER.</para>
 ///
 /// <para>Dazu die vier anonymen Versuchs-Senken (<see cref="AnonymousSinkRetention"/>, A2-012): Frist
-/// <c>Retention:AnonymousDays</c> und Gesamtdeckel <c>Retention:AnonymousCap</c> je Senke (<see cref="RetentionOptions"/>).</para>
+/// <c>Retention:AnonymousDays</c> und Gesamtdeckel <c>Retention:AnonymousCap</c> je Senke (<see cref="RetentionOptions"/>), nach
+/// denselben Werten die anonymen „+“-Markierungen samt Notiz-Fassungen (<see cref="Games.AnonymousMarkRetention"/>, R4-003).</para>
 ///
 /// <para>Und gelesene Admin-/Direktnachrichten nach <c>Retention:MessagesDays</c> (<see cref="Social.AdminMessageRetention"/>),
 /// Formular-Fotos (<see cref="Scoresheet.ScoresheetPhotoRetention"/>: gescheiterte nach 30, offene ohne Konto nach 14 Tagen,
@@ -95,6 +96,14 @@ public class AnonymousDataRetentionService : PeriodicWorker
                 RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
             if (pruned > 0)
                 _logger.LogInformation("Anonyme Versuchs-Retention: {Count} Zeilen gelöscht", pruned);
+            return pruned;
+        }, ct);
+        removed += await TryAsync("Markierungs-Retention fehlgeschlagen", async sp =>
+        {
+            var pruned = await Games.AnonymousMarkRetention.PruneAsync(sp.GetRequiredService<AppDbContext>(), now,
+                RetentionOptions.From(sp.GetService<IConfiguration>()), ct: ct);
+            if (pruned > 0)
+                _logger.LogInformation("Markierungs-Retention: {Count} anonyme Markierungen/Notiz-Fassungen gelöscht", pruned);
             return pruned;
         }, ct);
         removed += await TryAsync("Nachrichten-Retention fehlgeschlagen", async sp =>

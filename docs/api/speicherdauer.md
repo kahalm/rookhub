@@ -17,6 +17,7 @@ je DELETE), ohne große Spalten zu laden.
 | Buch-/Tagespuzzle-Versuche ohne Konto (`BookPuzzleAttempts`) | 90 Tage; Deckel wie oben | Aufräumlauf | dieselben |
 | Versuche an geteilten Puzzles ohne Konto (`SharedPuzzleAttempts`, Kennung `s:…`) | 90 Tage; Deckel wie oben | Aufräumlauf | dieselben |
 | Puzzle-Versuche ohne Konto (`PuzzleAttempts`) | 90 Tage; Deckel wie oben | Aufräumlauf | dieselben |
+| „+“-Markierungen ohne Konto samt Schlagworten/Kommentar (`MarkedPositions`) und ihre Notiz-Fassungen (`MarkedPositionNoteRevisions`, `UserId` leer) | 90 Tage ab Anlegen; Deckel wie oben (R4-003, `AnonymousMarkRetention`); Schreibwege je Adresse gedrosselt (`anonymous-puzzle`) | Aufräumlauf | dieselben |
 | getReview-Linien der Extension ohne Konto (`AnonymousChessableReviewLines`) | 90 Tage; uids ohne verknüpftes Konto 14 Tage | Aufräumlauf | fest |
 | Liga-Entwürfe über Teilen-Link (`LeagueClubDrafts`, `UserId` leer) | 30 Tage ohne Bewegung; 5 je Anschluss (IPv6: /64), Gesamtdeckel | beim Anlegen/Auflisten | `Retention:AnonymousLeagueDraftsCap` (500); Frist fest |
 | Formular-Einlesungen ohne Konto (Liga, Teilen-Link), nie übernommen | Foto + Lesung nach 14 Tagen geleert (Zeile bleibt fürs Kontingent) | Aufräumlauf | `Retention:ScoresheetOpenAnonymousDays` (14) |
