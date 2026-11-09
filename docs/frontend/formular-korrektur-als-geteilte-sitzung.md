@@ -16,7 +16,9 @@ der Korrektur etwas ändert, ändert es hier — sonst laufen die beiden Seiten 
 Rest neu und kennt keine Bestätigungen. `keepDecisions` (`game-edit.util.ts`) gleicht je Formular-Eintrag (`w`) mit dem Rest
 von vorher ab: derselbe Zug → bestätigt/Kommentar/„von Hand" bleiben; vorher von Hand ein anderer Zug → der bleibt, wenn er
 und der ganze weitere Rest in der neuen Stellung legal sind; sonst gilt die neue Lesung. Fällt das Neulesen aus, bleibt der
-alte Rest ohnehin stehen.
+alte Rest ohnehin stehen. Was der Nutzer WÄHREND des Neulesens entscheidet („Stimmt so“, Kommentar — beides bleibt
+bedienbar), legt `keepLocalEdits` auf die Antwort (bzw. den Rückfall-Rest): Vorlauf über die Stelle, Rest über den
+Formular-Eintrag, je nur bei gleichem Zug (G3-004).
 
 Seit 0.646.0 trägt ein Halbzug den Befund der Engine-Prüfung beim Einlesen (`EditPly.check`/`ScoresheetPly.check`:
 `replaced` | `suggested`, Server: „Engine-Prüfung der Lesung" im Haupt-CLAUDE.md). Beide Seiten zeigen ihn als Chip neben

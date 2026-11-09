@@ -4,7 +4,7 @@ import { Chess } from 'chess.js';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { ScoresheetOption, ScoresheetPly, ScoresheetResolveResult } from './scoresheet.service';
 import {
-  EditPly, START_FEN, cropView, fensOf, fromServer, keepDecisions, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly,
+  EditPly, START_FEN, cropView, fensOf, fromServer, keepDecisions, keepLocalEdits, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly,
   writtenIndexAt,
 } from './game-edit.util';
 
@@ -254,7 +254,7 @@ export class SheetEditSession {
       this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)], this.startFen()));
       return;
     }
-    this.reResolve(resolveRequest(list, i, 'delete'), list.slice(0, i), list.slice(i + 1), i);
+    this.reResolve(resolveRequest(list, i, 'delete'), list.slice(0, i), list.slice(i + 1), i, false, i);
   }
 
   /** Das letzte „Zug löschen" zurücknehmen: Züge, Lesarten, Bestätigungen und Cursor wie davor. Nicht während der Rest
@@ -291,14 +291,18 @@ export class SheetEditSession {
    * das, bleibt der bisherige Rest stehen, soweit er noch legal ist — `fallbackTail`.
    */
   private reResolve(req: { prefix: string[]; writtenFrom: number }, head: EditPly[], fallbackTail: EditPly[],
-    nextCursor: number, thenNextUncertain = false): void {
+    nextCursor: number, thenNextUncertain = false, stableHead = head.length - 1): void {
     this.busy.set(true);
+    // „Stimmt so“ und Kommentar bleiben während des Neu-Einlesens bedienbar — was dabei entschieden wird, geht beim
+    // Eintreffen der Antwort nicht verloren (G3-004).
+    const before = this.plies();
+    const withLocal = (list: EditPly[]) => keepLocalEdits(before, this.plies(), list, stableHead);
     const call = this.host.resolve(req.prefix, req.writtenFrom);
     (this.host.bind ? this.host.bind(call) : call).subscribe({
       next: res => {
         // Bestätigungen und von Hand gesetzte Züge im Rest bleiben (gemeldet 2026-11-08)
         const tail = keepDecisions(head, fallbackTail, fromServer(res.plies), this.startFen());
-        this.plies.set(revalidate([...head, ...tail], this.startFen()));
+        this.plies.set(revalidate(withLocal([...head, ...tail]), this.startFen()));
         this.unresolved.set(res.unresolved);
         this.unresolvedFrom.set(res.unresolvedFrom ?? null);
         this.busy.set(false);
@@ -306,7 +310,7 @@ export class SheetEditSession {
       },
       error: () => {
         this.busy.set(false);
-        this.plies.set(revalidate([...head, ...fallbackTail], this.startFen()));
+        this.plies.set(revalidate(withLocal([...head, ...fallbackTail]), this.startFen()));
         this.go(nextCursor);
         this.host.resolveFailed?.();
       },

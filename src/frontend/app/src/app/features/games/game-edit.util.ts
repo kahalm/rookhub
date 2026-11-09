@@ -95,6 +95,28 @@ export function keepDecisions(head: readonly EditPly[], oldTail: readonly EditPl
   return out;
 }
 
+/**
+ * Was der Nutzer WÄHREND des Neu-Einlesens entschieden hat („Stimmt so“, Kommentar — die bleiben bedienbar), auf das
+ * Ergebnis legen (G3-004). `before` = die Halbzüge beim Absenden, `current` = beim Eintreffen der Antwort; geändert ist,
+ * was nicht mehr dasselbe Objekt ist (confirm/setComment ersetzen nur den einen Halbzug). Zugeordnet wird über die
+ * Stelle im unveränderten Vorlauf (`stableHead` Halbzüge), sonst über den Formular-Eintrag — beides nur bei gleichem Zug.
+ */
+export function keepLocalEdits(before: readonly EditPly[], current: readonly EditPly[], result: readonly EditPly[],
+  stableHead: number): EditPly[] {
+  if (current === before) return [...result];
+  const out = [...result];
+  current.forEach((c, k) => {
+    if (c === before[k]) return;
+    let at = -1;
+    if (k < stableHead && out[k]?.uci === c.uci) at = k;
+    else if (c.w != null) at = out.findIndex((p, j) => j >= stableHead && p.w === c.w && p.uci === c.uci);
+    if (at < 0) return;
+    const p = out[at];
+    out[at] = { ...p, confirmed: p.confirmed || !!c.confirmed, uncertain: p.uncertain && !c.confirmed, comment: c.comment };
+  });
+  return out;
+}
+
 /** Der Formular-Eintrag, der zu Halbzug `i` gehört: sein eigener, sonst der nächste noch offene. */
 export function writtenIndexAt(plies: readonly EditPly[], i: number): number {
   if (i < plies.length && plies[i].w != null) return plies[i].w!;

@@ -135,4 +135,33 @@ describe('SheetEditSession – Änderung in der Mitte behält die Entscheidungen
     expect(s.plies().map(x => x.san)).toEqual(['e4', 'e5', 'Nc3', 'Nc6', 'Bc4', 'Nf6']);
     expect(s.plies()[5].match).toBe('user');
   });
+
+  // G3-004: „Stimmt so“ und Kommentar sind während des Neu-Einlesens bedienbar — die Antwort darf sie nicht überschreiben.
+  it('während des Neu-Einlesens bestätigt oder kommentiert: bleibt nach der Antwort erhalten (Rest und Vorlauf)', () => {
+    const { s, respond } = scanned();
+    s.go(2); s.play('Nc3');                     // liest neu …
+    expect(s.busy()).toBeTrue();
+    s.go(4); s.confirm();                       // 3.Bc4 bestätigt, während die Antwort aussteht
+    s.go(5); s.setComment('Läufer nach c5?');
+    s.go(1); s.setComment('klassisch');         // Vorlauf: 1…e5 kommentiert
+    respond({ plies: [ply(3, 'Nc6', 'b8c6', { uncertain: true }), ply(4, 'Bc4', 'f1c4', { uncertain: true }),
+      ply(5, 'Bc5', 'f8c5', { uncertain: true })], unresolved: [], unresolvedFrom: null });
+    const p = s.plies();
+    expect(p.map(x => x.san)).toEqual(['e4', 'e5', 'Nc3', 'Nc6', 'Bc4', 'Bc5']);
+    expect([p[4].confirmed, p[4].uncertain]).toEqual([true, false]);
+    expect(p[5].comment).toBe('Läufer nach c5?');
+    expect(p[1].comment).toBe('klassisch');
+    expect(p[3].confirmed).toBeFalsy();         // nicht angefasst → Lesung des Servers
+  });
+
+  it('auch wenn das Neu-Einlesen scheitert, bleibt eine Bestätigung aus der Wartezeit', () => {
+    let pending = new Subject<ScoresheetResolveResult>();
+    const s = new SheetEditSession({ resolve: () => { pending = new Subject(); return pending; } });
+    s.loadSheet({ plies: [ply(0, 'e4', 'e2e4'), ply(1, 'e5', 'e7e5'), ply(2, 'Nf3', 'g1f3'),
+      ply(3, 'Nc6', 'b8c6', { uncertain: true })], unresolved: [], unresolvedFrom: null });
+    s.go(2); s.play('Nc3');
+    s.go(3); s.confirm();
+    pending.error(new Error('offline'));
+    expect(s.plies()[3].confirmed).toBeTrue();
+  });
 });
