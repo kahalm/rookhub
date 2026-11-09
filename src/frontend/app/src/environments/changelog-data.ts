@@ -10,6 +10,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.921.0", date: "2026-11-09", changes: [
+    { en: "Game analysis: a position that has already been calculated deeply enough is taken over instead of being calculated again.",
+      de: "Partie-Analyse: Eine Stellung, die schon tief genug gerechnet wurde, wird übernommen statt noch einmal gerechnet." },
+  ] },
   {
     version: '0.920.1',
     date: '2026-11-09',

@@ -186,6 +186,14 @@ internal sealed class GameAnalysisPump
         foreach (var pos in next)
         {
             ct.ThrowIfCancellationRequested();
+            if (await GameAnalysisPositionCache.FindAsync(_db, analysis, pos.Fen, analysis.RefineDepth!.Value,
+                    analysis.RefineMultiPv ?? analysis.MultiPv, ct) is { } cached)
+            {
+                GameAnalysisPositionCache.Apply(pos, cached);
+                pos.Refined = true;
+                changed = true;
+                continue;
+            }
             try
             {
                 var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest
@@ -250,6 +258,12 @@ internal sealed class GameAnalysisPump
         foreach (var pos in next)
         {
             ct.ThrowIfCancellationRequested();
+            if (await GameAnalysisPositionCache.FindAsync(_db, analysis, pos.Fen, analysis.TargetDepth, analysis.MultiPv, ct) is { } cached)
+            {
+                GameAnalysisPositionCache.Apply(pos, cached);
+                changed = true;
+                continue;
+            }
             try
             {
                 var job = await _jobs.CreateAsync(analysis.UserId, new CreateAnalysisJobRequest

@@ -176,3 +176,8 @@ Hintergrund-Liste des Besitzers, die frei ist, nichts Eigenes wartend hat und di
 (`EngineAvailability.UsableAsync`). Reihenfolge wie `PickNextForEngineAsync`. Nie angefasst: Engines außerhalb der
 Liste (von Hand gewählt) und Nur-auf-Anforderung-Engines (Lc0). Anlass 09.11.2026: vier neue Server-Engines saßen leer,
 während 67 Aufträge auf drei Gross-Engines warteten.
+
+**Stellungs-Cache (0.921.0, `GameAnalysisPositionCache`)**: Vor jedem Auftrag für eine Partie-Analyse (erster Durchgang und
+Vertiefung) sucht die Pumpe dieselbe Stellung in fertigen Analysen anderer Partien: gleich bis auf die Zugzähler, mindestens
+so tief, mindestens so viele Linien. Treffer werden kopiert, ohne Engine. Lc0-Analysen und Knotenziele bleiben außen vor.
+Index `(Fen, Depth)`; die Spalte vergleicht ohne Groß-/Kleinschreibung, der genaue Vergleich läuft danach im Speicher.

@@ -3537,6 +3537,8 @@ namespace RookHub.Api.Migrations
 
                     b.HasIndex("AnalysisJobId", "GameAnalysisId");
 
+                    b.HasIndex("Fen", "Depth");
+
                     b.HasIndex("GameAnalysisId", "Ply")
                         .IsUnique();
 

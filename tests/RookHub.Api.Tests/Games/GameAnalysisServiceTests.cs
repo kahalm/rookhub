@@ -1247,8 +1247,7 @@ public class GameAnalysisServiceTests : IDisposable
         await _svc.PumpOneAsync(a);                             // A: erster Durchgang fertig
 
         // Eine zweite Partie kommt dazu — ihr schneller Durchgang geht vor.
-        var other = Game.Replace("[White \"", "[White \"X");
-        var b = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = other },
+        var b = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = OtherGame },
             origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
         await _svc.PumpOneAsync(b);
         await _svc.PumpOneAsync(a);
@@ -1285,7 +1284,7 @@ public class GameAnalysisServiceTests : IDisposable
 [Black "Kieseritzky"]
 [Result "1-0"]
 
-1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5 1-0
+1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 Nbd7 7. Rc1 c6 1-0
 """;
 
     [Fact]
@@ -1772,5 +1771,88 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Null(await _svc.SharedAlternativeEvalsAsync("tok-lc0", linked.Id));        // die Kurve selbst gibt es schon
         Assert.Empty(await _svc.SharedAlternativesAsync("tok-ohne"));                     // ohne verknüpfte Analyse
         Assert.Empty(await _svc.SharedAlternativesAsync("unbekannt"));
+    }
+
+    private const string CacheFen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
+
+    private async Task<GameAnalysis> CacheAnalysisAsync(int userId, string? engineId = null, int multiPv = 1)
+    {
+        var a = new GameAnalysis { UserId = userId, Pgn = "", StartFen = "", Status = GameAnalysisStatus.Done, PlyCount = 1,
+            TargetDepth = 20, MultiPv = multiPv, White = "W", Black = "S", EngineId = engineId };
+        _db.GameAnalyses.Add(a);
+        await _db.SaveChangesAsync();
+        return a;
+    }
+
+    private async Task SourceAsync(GameAnalysis a, string fen, int depth, string json = "[{\"uci\":\"e7e5\",\"cp\":10}]")
+    {
+        _db.GameAnalysisPositions.Add(new GameAnalysisPosition { GameAnalysisId = a.Id, Ply = 1, Fen = fen, GameMoveUci = "e7e5",
+            GameMoveSan = "e5", Depth = depth, CandidatesJson = json, EvalText = "+0.10" });
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task PositionCache_FindsSamePosition_IgnoringMoveCounters_DepthAndLinesMustSuffice()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var source = await CacheAnalysisAsync(user.Id);
+        var target = await CacheAnalysisAsync(user.Id);
+        await SourceAsync(source, CacheFen.Replace(" 0 1", " 7 19"), 25);
+
+        var hit = await GameAnalysisPositionCache.FindAsync(_db, target, CacheFen, 20, 1, default);
+        Assert.Equal(25, hit!.Depth);
+        Assert.Equal("+0.10", hit.EvalText);
+        Assert.Null(await GameAnalysisPositionCache.FindAsync(_db, target, CacheFen, 30, 1, default));   // zu flach
+        Assert.Null(await GameAnalysisPositionCache.FindAsync(_db, target, CacheFen, 20, 5, default));   // zu wenig Linien
+        Assert.Null(await GameAnalysisPositionCache.FindAsync(_db, source, CacheFen, 20, 1, default));   // nie aus sich selbst
+    }
+
+    [Fact]
+    public async Task PositionCache_OtherSideOrCase_OrLc0_DoesNotCount()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var lc0 = await CacheAnalysisAsync(user.Id, engineId: "rhe_lc0");
+        var other = await CacheAnalysisAsync(user.Id);
+        var target = await CacheAnalysisAsync(user.Id);
+        await SourceAsync(lc0, CacheFen, 30);
+        await SourceAsync(other, CacheFen.Replace(" b KQkq", " w KQkq"), 30);
+        Assert.Null(await GameAnalysisPositionCache.FindAsync(_db, target, CacheFen, 20, 1, default));
+
+        var swapped = "RNBQKBNR/PPPPPPPP/8/8/4p3/8/pppp1ppp/rnbqkbnr b KQkq - 0 1";   // nur die Groß-/Kleinschreibung anders
+        await SourceAsync(other, swapped, 30);
+        Assert.Null(await GameAnalysisPositionCache.FindAsync(_db, target, CacheFen, 20, 1, default));
+
+        var pinned = await CacheAnalysisAsync(user.Id, engineId: "rhe_lc0");
+        await SourceAsync(other, CacheFen, 30);
+        Assert.Null(await GameAnalysisPositionCache.FindAsync(_db, pinned, CacheFen, 20, 1, default));
+    }
+
+    [Fact]
+    public async Task Pump_CachedPositions_NeedNoJob_AndFinishTheAnalysis()
+    {
+        var user = await CreateUserWithEngineAsync();
+        var dto = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var analysis = await _db.GameAnalyses.Include(g => g.Positions).SingleAsync(g => g.Id == dto.Id);
+        foreach (var jobId in analysis.Positions.Where(p => p.AnalysisJobId != null).Select(p => p.AnalysisJobId!.Value).ToList())
+            _db.AnalysisJobs.Remove(await _db.AnalysisJobs.FindAsync(jobId) ?? throw new InvalidOperationException());
+        foreach (var p in analysis.Positions) p.AnalysisJobId = null;
+        await _db.SaveChangesAsync();
+
+        var source = await CacheAnalysisAsync(user.Id, multiPv: analysis.MultiPv);
+        var lines = "[" + string.Join(',', Enumerable.Range(0, analysis.MultiPv).Select(i => $"{{\"uci\":\"e2e4\",\"cp\":{i}}}")) + "]";
+        var ply = 100;
+        foreach (var p in analysis.Positions.ToList())
+            _db.GameAnalysisPositions.Add(new GameAnalysisPosition { GameAnalysisId = source.Id, Ply = ply++, Fen = p.Fen, GameMoveUci = "",
+                GameMoveSan = "", Depth = analysis.TargetDepth, CandidatesJson = lines });
+        await _db.SaveChangesAsync();
+
+        for (var i = 0; i < analysis.Positions.Count + 2 && analysis.Status != GameAnalysisStatus.Done; i++)
+        {
+            await _svc.PumpOneAsync(dto.Id);
+            await _db.Entry(analysis).ReloadAsync();
+        }
+
+        Assert.Equal(GameAnalysisStatus.Done, analysis.Status);
+        Assert.Empty(_db.AnalysisJobs);
     }
 }

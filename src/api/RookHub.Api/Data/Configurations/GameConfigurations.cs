@@ -432,6 +432,8 @@ internal sealed class GameAnalysisPositionConfiguration : IEntityTypeConfigurati
         // Verknuepfung zur Analyse gleich mitliefert (deckend, kein Zeilenzugriff); NULL-Zeilen (fertige Stellungen,
         // die grosse Mehrheit) stehen gebuendelt am Anfang und kosten die Suche nichts.
         e.HasIndex(p => new { p.AnalysisJobId, p.GameAnalysisId });
+        // Stellungs-Cache (GameAnalysisPositionCache, 0.921.0): Suche nach FEN-Anfang, die Tiefe prüft schon der Index.
+        e.HasIndex(p => new { p.Fen, p.Depth });
         e.HasOne(p => p.GameAnalysis)
          .WithMany(g => g.Positions)
          .HasForeignKey(p => p.GameAnalysisId)
