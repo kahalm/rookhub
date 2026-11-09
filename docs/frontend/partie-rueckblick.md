@@ -91,8 +91,11 @@ Daten AUSSCHLIESSLICH aus RookHubs eigener Partie-Analyse (`GET /api/games/{id}/
 - `features/games/game-review.component.ts` — lädt, fragt alle 10 s nach, SOLANGE `pending`/`running`
   (nicht bei `none`/`done`/`failed`, nicht nach dem Schließen), zeigt bei `none` nichts; `statusChange` sagt
   der Seite, wann „Partie analysieren" gesperrt (läuft) oder ausgeblendet (fertig) wird, `reload()` nach dem
-  Einwurf. Die Seiten halten Knopf-Zustand und Status in SIGNALEN (Angular 22 zeichnet sonst nach der
-  HTTP-Antwort nicht neu). Im Dialog macht das Brett der Kurve Platz (`.with-review`, 90-vh-Dialog).
+  Einwurf. Die Seiten halten Knopf-Zustand und Status in SIGNALEN — das stammt aus der Zeit vor
+  `renderAfterHttpInterceptor` (`core/render-after-http.interceptor.ts`, 0.435.0): seither löst jede fertige oder
+  gescheiterte HTTP-Antwort einmal `appRef.tick()` aus, sodass auch Default-Komponenten mit Feldern (Partieseite,
+  Partienliste) deterministisch neu zeichnen. Signale bleiben richtig und für OnPush-Komponenten nötig; Pflicht für jede
+  Seite sind sie nicht mehr (Delta-Review 09.11., F2-016). Im Dialog macht das Brett der Kurve Platz (`.with-review`, 90-vh-Dialog).
   Die Seiten reichen `game.moves` (chess.js `Move`) als `[moves]` herein — daraus werden die UCIs für die
   Sonderklassen. Das Abzeichen des aktuellen Zugs erklärt Brilliant (geopferte Figur + Feld), Great (Abstand
   zum Zweitbesten; mit Matt im Spiel ohne Zahl) und Miss per Tooltip. „!" gehört Great, Excellent trägt 👍.
