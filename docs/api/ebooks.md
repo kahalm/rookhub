@@ -618,6 +618,9 @@ im Backend `EbookCaller` (ein `int` wird implizit zum angemeldeten Aufrufer):
 - **Ausweis** für Datei/Titelbild: `GET access-token` gibt anonym einen Ausweis mit „a:“ + Kennung aus
   (`EbookAccessTokens`); die Sichtbarkeit wird je Anfrage neu geprüft. Das Frontend vergisst den Ausweis bei jedem
   Wechsel des Nutzers (An-/Abmelden), sonst sähe ein Abgemeldeter am selben Gerät noch die Bücher des Kontos.
+  Der Leser verlangt beim Öffnen 2 h Restlaufzeit (`accessToken(READER_TOKEN_MIN_MS)`, sonst neuer Ausweis); scheitert
+  danach eine Seite bzw. ein Kapitel (`pageFailed` von pdf-/epub-viewer, meist 401 nach Ablauf), holt er höchstens einmal
+  je Minute einen frischen Ausweis und baut an derselben Stelle neu auf, sonst Hinweis `ebooks.reader.pageFailed` (F2-005).
 - **Übernahme** beim Anmelden/Registrieren (`AuthService.claimAnonymousPuzzleSession` → `POST /api/ebooks/claim-session
   { sessionId }`, `[Authorize]`): die anonymen Uploads gehören dem Konto, anonyme Lesestände werden übernommen (je Buch
   gewinnt der jüngere) und gelöscht. Antwort `{ claimed }` = Zahl der Bücher.
