@@ -18,7 +18,7 @@ internal sealed class RepertoireCacheRebuild(AppDbContext db, ICachedLineSource?
 {
     /// <summary>
     /// Cache-Weg für EIN Repertoire (<see cref="StaleAction.Cache"/>) — dieselben Regeln wie
-    /// <c>ImportReprocessService.RebuildFromCacheAsync</c> für Kurse, nur ohne Import danach (der Trainer wertet das PGN live aus):
+    /// <see cref="CourseCacheRebuild.RebuildAsync"/> für Kurse, nur ohne Import danach (der Trainer wertet das PGN live aus):
     /// je Datei mit <c>[ChessableOid]</c> die Zugtexte aus dem geteilten Linien-Cache über
     /// <see cref="CachedSourceRebuild"/> (Header bleiben, ausgeblendete Partien bleiben, Modus je DATEI), dann Text
     /// schreiben und die Version setzen.

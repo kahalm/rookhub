@@ -24,11 +24,11 @@ public class BookSourceIncludeGuardTests
         // ImportFileAsync + ReprocessFromStoredSourceAsync — Import/Neu-Aufbereitung EINES Buchs. ImportFileAsync
         // schließt den Text nur ein, wenn es ihn ersetzt oder zusammenführt (Teil-/Lücken-Import: SQL-Leer-Prüfung).
         ["Services/Courses/PgnImportService.cs"] = 2,
-        // RebuildFromCacheAsync („Aktualisieren", StaleAction.Cache): EIN Buch, AsNoTracking. Der Text wird
+        // CourseCacheRebuild.RebuildAsync („Aktualisieren", StaleAction.Cache): EIN Buch, AsNoTracking. Der Text wird
         // gebraucht, weil genau er umgeschrieben wird — die Zugtexte kommen je oid aus dem Linien-Cache, die
         // Header (Round → LineId) aus dem gespeicherten PGN. ReprocessFromStoredSourceAsync geht dafür nicht:
         // es bereitet den Text unverändert auf. Das Ergebnis geht an ImportFileAsync (lädt selbst, schreibt).
-        ["Services/Chessable/ImportReprocessService.cs"] = 1,
+        ["Services/Chessable/CourseCacheRebuild.cs"] = 1,
     };
 
     /// <summary>Direkter Zugriff auf <c>_db.BookSources</c> (außerhalb des DbSets selbst).</summary>

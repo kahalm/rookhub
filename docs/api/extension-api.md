@@ -140,7 +140,7 @@ Eigentum am Kurs wie der Import, samt Drossel der Kursliste (`CourseListRefreshC
 
 **Chessable-Kurse mit oids kommen aus dem Linien-Cache (0.509.0, `StaleAction.Cache`).** Ein veralteter
 Chessable-Kurs, dessen Quelle `[ChessableOid]` traegt, wird beim „Aktualisieren" nicht mehr nur lokal
-umgeparst: je Linie holt `ImportReprocessService.RebuildFromCacheAsync` den ZUGTEXT frisch aus dem geteilten
+umgeparst: je Linie holt `CourseCacheRebuild.RebuildAsync` den ZUGTEXT frisch aus dem geteilten
 piratechess-Linien-Cache (`ChessableProxyService.GetCachedLinePgnsAsync` ueber `ICachedLineSource`, mit der
 AKTUELLEN piratechess-Logik), `CachedSourceRebuild.Rebuild` setzt ihn in den gespeicherten Block, und
 `PgnImportService.ImportFileAsync` bereitet in-place auf. Vorher kamen Fixes an der PGN-Erzeugung in
