@@ -123,6 +123,9 @@ export class AuthService {
    * es gleich mit. Und ohne Navigation — wohin es danach geht, entscheidet der Aufrufer.</p>
    */
   switchToSharedSession(user: AuthResponse): void {
+    // Push-Abo des Geräts am VORIGEN Konto abmelden (sein Token gilt noch) — Codereview F3-001.
+    const previous = this.session.value;
+    if (previous && previous.userId !== user.userId) this.dropPushSubscription(previous.token);
     this.session.clearLocalTraces();
     this.adoptSession({ ...user, adopted: true });
   }
@@ -241,7 +244,9 @@ export class AuthService {
 
   /**
    * Das Push-Abo dieses Geräts beim Abmelden mit abmelden (Codereview F1-011) — sonst bekäme das Gerät
-   * weiter die Benachrichtigungen des abgemeldeten Kontos. Das Token wird mitgegeben, weil die Sitzung
+   * weiter die Benachrichtigungen des abgemeldeten Kontos. Ebenso bei jedem anderen Nutzerwechsel: Wechsel auf die
+   * geteilte Anmeldung eines anderen Kontos und Kontowechsel über die Anmeldemaske (F3-001; der Ablauf löst nur das
+   * Browser-Abo, siehe `SessionStore.endExpiredSession`). Das Token wird mitgegeben, weil die Sitzung
    * gleich danach geleert ist. Best effort: PushService lazy holen (Apps ohne Service Worker haben kein
    * SwPush), jeder Fehler wird geschluckt — ein Abmelden darf daran nie scheitern.
    */
@@ -301,7 +306,11 @@ export class AuthService {
     // und ohne vorige Sitzung auch nicht, denn dann gehoeren die lokalen Laeufe dem, der sich gerade
     // anmeldet (anonym gespielt, jetzt registriert). Kein session/end: das Cookie gehoert schon dem neuen.
     const previous = this.session.validUser();
-    if (previous && previous.userId !== user.userId) this.session.clearLocalTraces();
+    if (previous && previous.userId !== user.userId) {
+      // Push-Abo des Geräts gehörte dem vorigen Konto: mit dessen Token abmelden (Codereview F3-001).
+      this.dropPushSubscription(previous.token);
+      this.session.clearLocalTraces();
+    }
     this.session.setSessionEndPending(false);   // die Anmeldung hat das Cookie eben neu geschrieben
     this.session.persist(user);
     this.session.set(user);

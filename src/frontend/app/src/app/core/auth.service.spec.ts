@@ -953,6 +953,34 @@ describe('AuthService logout meldet das Push-Abo ab', () => {
     expect(b.navigate).toHaveBeenCalledWith(['/login']);
   });
 
+  // Codereview F3-001: jeder Nutzerwechsel am Gerät, nicht nur logout(), meldet das Abo am VORIGEN Konto ab.
+  it('Kontowechsel über die Anmeldemaske (?switch=1) meldet das Abo mit dem Token des vorigen Kontos ab', () => {
+    const remove = jasmine.createSpy('removeSubscription').and.resolveTo();
+    const { svc } = setup(remove);
+    svc.login('b', 'pw').subscribe();
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/login')
+      .flush({ token: jwt(3600), username: 'b', userId: 4, isAdmin: false });
+    expect(remove).toHaveBeenCalledOnceWith(user.token);
+    expect(svc.currentUser?.userId).toBe(4);
+  });
+
+  it('dasselbe Konto erneut angemeldet: Abo bleibt', () => {
+    const remove = jasmine.createSpy('removeSubscription').and.resolveTo();
+    const { svc } = setup(remove);
+    svc.login('u', 'pw').subscribe();
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/login')
+      .flush({ token: jwt(7200), username: 'u', userId: 3, isAdmin: false });
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('Wechsel auf die geteilte Anmeldung eines anderen Kontos meldet das Abo des vorigen ab', () => {
+    const remove = jasmine.createSpy('removeSubscription').and.resolveTo();
+    const { svc } = setup(remove);
+    svc.switchToSharedSession({ token: jwt(3600), username: 'b', userId: 4, isAdmin: false });
+    expect(remove).toHaveBeenCalledOnceWith(user.token);
+    expect(svc.currentUser?.userId).toBe(4);
+  });
+
   it('ruft removeSubscription nicht ohne Anmeldung', () => {
     const remove = jasmine.createSpy('removeSubscription').and.resolveTo();
     const { svc } = setup(remove);

@@ -1,5 +1,6 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { SwPush } from '@angular/service-worker';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthResponse, isTokenExpired } from './auth-response';
 import { OfflineService } from './offline.service';
@@ -80,6 +81,21 @@ export class SessionStore {
     } catch { /* unlesbar → wie die eigene behandeln */ }
     try { localStorage.removeItem(SessionStore.UserKey); } catch { /* Storage gesperrt */ }
     this.clearLocalTraces();
+    this.dropBrowserPush();
+  }
+
+  /**
+   * Beim Ablauf das Push-Abo des Browsers lösen (Codereview F3-001): sonst kämen die Benachrichtigungen des
+   * abgelaufenen Kontos weiter auf diesem Gerät an. Nur der Browser-Teil — mit dem abgelaufenen Token ginge die
+   * Abmeldung am Server nicht durch (und HTTP ist hier tabu, siehe oben); der tote Endpunkt fällt beim nächsten
+   * Versand (410) aus der Tabelle. `SwPush` direkt (ohne `PushService`, der über HttpClient am AuthService hängt);
+   * Oberflächen ohne Service Worker haben keins → still.
+   */
+  private dropBrowserPush(): void {
+    try {
+      const sw = this.injector.get(SwPush, null);
+      if (sw?.isEnabled) void sw.unsubscribe().catch(() => undefined);
+    } catch { /* kein Service Worker in dieser Oberfläche */ }
   }
 
   /**

@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { OfflineService } from './offline.service';
 import { SessionStore } from './session-store';
+import { SwPush } from '@angular/service-worker';
 
 function jwt(expSecondsFromNow: number): string {
   return `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }))}.s`;
@@ -33,6 +34,24 @@ describe('SessionStore (Zerlegung Z34)', () => {
     expect(localStorage.getItem('rookhub_user')).toBeNull();
     expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
     expect(clear).toHaveBeenCalled();
+  });
+
+  it('Ablauf löst das Push-Abo des Browsers (F3-001); ohne Service Worker still', () => {
+    const unsubscribe = jasmine.createSpy('unsubscribe').and.resolveTo();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [{ provide: SwPush, useValue: { isEnabled: true, unsubscribe } }] });
+    const store = TestBed.inject(SessionStore);
+    const expired = { ...user, token: jwt(-1) };
+    localStorage.setItem('rookhub_user', JSON.stringify(expired));
+    store.set(expired);
+    expect(store.validUser()).toBeNull();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    const bare = TestBed.inject(SessionStore);
+    bare.set(expired);
+    expect(() => bare.validUser()).not.toThrow();
   });
 
   it('persist schreibt die Sitzung und setzt storageFull zurück', () => {
